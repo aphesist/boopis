@@ -1,0 +1,45 @@
+# Development tooling only (ruff, pyright, pytest). This file has no [project] table on purpose:
+# Hermes's plugin manager treats a tooling-only pyproject as "no packaging" and the plugin has no
+# runtime dependencies of its own. contraprova is declared in plugin.yaml (python_dependencies).
+#
+# Dev setup (contraprova pinned to the generalised branch, hx/generalize @ 74fabe9):
+#   uv venv && . .venv/bin/activate
+#   uv pip install -e /path/to/contraprova pytest hypothesis ruamel.yaml
+#   ruff check . ../../tests/e2e && ruff format --check . ../../tests/e2e && pyright && pytest
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["tests/fixtures"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "C4", "SIM", "RUF", "PL", "BLE", "S"]
+ignore = [
+  "PLR0911", "PLR0912", "PLR0913", "PLR0915", "PLR2004",  # shape rules the 60-line soft limit already covers
+  "S101",                                                   # assert in tests
+  "PLC0415",                                                # lazy imports are the rule here (STANDARDS section 8)
+  "RUF012",
+  "PLW0603",                                                # process-wide singletons (runtime, bound ctx)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"prompt.py" = ["E501"]  # prose, one paragraph per line
+"tests/**" = ["S", "PLR", "BLE001"]
+"../../tests/e2e/**" = ["S", "PLR", "BLE001"]
+
+[tool.pyright]
+include = ["."]
+exclude = ["tests", "**/__pycache__"]
+pythonVersion = "3.11"
+typeCheckingMode = "strict"
+reportMissingTypeStubs = false
+reportUnknownMemberType = false
+reportUnknownVariableType = false
+reportUnknownArgumentType = false
+reportMissingModuleSource = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "../../tests/e2e"]
+pythonpath = [".."]
+addopts = "-q"
+markers = ["e2e: starts a real Hermes gateway; skipped when the install is absent"]

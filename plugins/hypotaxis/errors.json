@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "protocol": "hx-v1",
+  "_comment": "Codes owned by the Python plugin. Same shape as crates/hx-proto/errors.json; merge into it when both are on one branch.",
+  "errors": [
+    {"code": "hx.config.invalid", "rpc_code": -32000, "description": "A settings file or the plugin settings failed schema validation. data.errors lists file, key, expected and found for each problem."},
+    {"code": "hx.policy.denied", "rpc_code": -32000, "description": "The permission policy blocked a tool call. A policy decision is surfaced to the model as a tool error, and to RPC callers with this code."},
+    {"code": "hx.mode.locked", "rpc_code": -32000, "description": "The session's mode can no longer change: the first prompt has been submitted and the system prompt is frozen for prompt caching."},
+    {"code": "hx.ledger.chain_broken", "rpc_code": -32000, "description": "The session ledger failed verification. It is never repaired silently. data.broken_at_seq names the first bad event when known."},
+    {"code": "hx.ledger.invalid_transition", "rpc_code": -32000, "description": "The ledger refused an event that contraprova's task projection does not allow. The event was not written."},
+    {"code": "hx.ledger.unavailable", "rpc_code": -32000, "description": "The ledger could not be opened or written (I/O error, lock timeout)."},
+    {"code": "hx.budget.blocked", "rpc_code": -32000, "description": "The session reached its cost cap. New turns are blocked until the cap is raised."}
+  ]
+}
