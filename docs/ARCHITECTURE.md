@@ -161,7 +161,9 @@ It registers:
 - **Sandbox:** workspace read-only, writable scratch, network off unless allowed.
   - Linux: bubblewrap, Landlock and seccomp.
   - macOS: Seatbelt.
-  - Windows (the owner's daily platform): AppContainer.
+  - Windows: AppContainer.
+
+  Linux is the owner's main platform and the first one built and verified end to end; Windows and macOS are supported and built by CI.
   Codex's Apache-2.0 sandbox crates are the reference.
 - **Checkpoints:** every passing ship is a commit on `refs/hypotaxis/checkpoints/<session>`, so rewind to any turn comes free.
 
@@ -254,4 +256,4 @@ study/                     pre-registration and run scripts (phase 2)
 - **Phase 2:** team chat; remote homes, vault backup and restore, and cloud sessions phase C1 (control plane, Docker runner, egress and git proxies, session store); teammates and the Bots section (profiles, cron, approvals on chat platforms), the dock widgets driven by the ledger, the study's pre-registration.
 - **Phase 3:** the phone app; local artifacts with the git server, the macOS VM and remote Mac, EAS, Hermes desktop-plugin hosting.
 
-Each phase ends on a test anyone can run.
+Each phase ends on a test anyone can run. **Platform order:** Linux first (the owner's main platform; built, packaged and tested end to end in CI and on the build machine), then Windows and macOS, built by CI and verified on real machines before release.
