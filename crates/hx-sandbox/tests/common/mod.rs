@@ -97,6 +97,7 @@ pub fn code(r: &RunResult) -> Option<i32> {
 
 /// Whether process `pid` is gone or a zombie (zombies are dead; nobody reaps orphans in a
 /// container without an init).
+#[cfg(target_os = "linux")]
 pub fn is_dead(pid: u32) -> bool {
     match std::fs::read_to_string(format!("/proc/{pid}/stat")) {
         Err(_) => true,
@@ -104,6 +105,16 @@ pub fn is_dead(pid: u32) -> bool {
             .rsplit_once(')')
             .is_some_and(|(_, rest)| rest.trim_start().starts_with('Z')),
     }
+}
+
+/// Whether process `pid` is gone, asked of `kill -0`. A zombie still answers, so a caller
+/// on macOS must give the tree a moment to be reaped.
+#[cfg(not(target_os = "linux"))]
+pub fn is_dead(pid: u32) -> bool {
+    std::process::Command::new("/bin/kill")
+        .args(["-0", &pid.to_string()])
+        .output()
+        .is_ok_and(|o| !o.status.success())
 }
 
 pub fn read_pids(path: &Path) -> Vec<u32> {

@@ -19,7 +19,7 @@ use tokio::io::{AsyncRead, AsyncWrite};
 #[cfg(unix)]
 mod unix;
 #[cfg(unix)]
-mod unix_sys;
+pub(crate) mod unix_sys;
 
 #[cfg(target_os = "linux")]
 pub(crate) mod linux;

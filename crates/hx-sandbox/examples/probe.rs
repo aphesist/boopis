@@ -17,14 +17,18 @@
     reason = "seconds are the unit the tests reason in"
 )]
 
+#[cfg(unix)]
 use std::io::{Read, Write};
+#[cfg(unix)]
 use std::path::Path;
 
+#[cfg(unix)]
 fn fail(msg: impl std::fmt::Display) -> ! {
     println!("err: {msg}");
     std::process::exit(3)
 }
 
+#[cfg(unix)]
 fn record(pidfile: &str, pid: u32) {
     let mut f = std::fs::OpenOptions::new()
         .create(true)
@@ -34,6 +38,7 @@ fn record(pidfile: &str, pid: u32) {
     writeln!(f, "{pid}").unwrap_or_else(|e| fail(e));
 }
 
+#[cfg(unix)]
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let arg = |i: usize| {
@@ -184,6 +189,7 @@ fn main() {
             f.read_exact(&mut reply).unwrap_or_else(|e| fail(e));
             println!("reply {}", String::from_utf8_lossy(&reply));
         }
+        #[cfg(target_os = "linux")]
         "ptrace" => {
             // SAFETY: PTRACE_TRACEME takes no pointers.
             let rc = unsafe { libc::ptrace(libc::PTRACE_TRACEME, 0, 0, 0) };
@@ -199,6 +205,7 @@ fn main() {
                 }
             );
         }
+        #[cfg(target_os = "linux")]
         "io_uring" => {
             // SAFETY: a null params pointer makes the kernel return EFAULT or EPERM, never write.
             let rc =
@@ -219,3 +226,6 @@ fn main() {
         other => fail(format!("unknown subcommand {other}")),
     }
 }
+
+#[cfg(not(unix))]
+fn main() {}

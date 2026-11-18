@@ -87,16 +87,17 @@ pub(super) struct ChildPlan {
 
 impl ChildPlan {
     fn fail(&self, id: u8, errno: i32) -> io::Error {
-        sys::child_report(self.status_fd, id);
+        crate::platform::unix_sys::child_report(self.status_fd, id);
         io::Error::from_raw_os_error(errno)
     }
 
     /// Applies the plan in the child. Returns the OS error of the first failing step.
     pub(super) fn run(&self) -> io::Result<()> {
-        sys::child_setsid().map_err(|e| self.fail(step::SETSID, e))?;
+        crate::platform::unix_sys::child_setsid().map_err(|e| self.fail(step::SETSID, e))?;
         sys::child_cloexec_all();
         if self.inherit_fd >= 0 {
-            sys::child_keep_fd(self.inherit_fd).map_err(|e| self.fail(step::INHERIT_FD, e))?;
+            crate::platform::unix_sys::child_keep_fd(self.inherit_fd)
+                .map_err(|e| self.fail(step::INHERIT_FD, e))?;
         }
         if let Some(net) = &self.netns {
             setup_netns(net).map_err(|(id, e)| self.fail(id, e))?;
@@ -114,7 +115,7 @@ impl ChildPlan {
         if let Some(program) = &self.seccomp {
             seccompiler::apply_filter(program).map_err(|e| match e {
                 seccompiler::Error::Prctl(io) | seccompiler::Error::Seccomp(io) => {
-                    sys::child_report(self.status_fd, step::SECCOMP);
+                    crate::platform::unix_sys::child_report(self.status_fd, step::SECCOMP);
                     io
                 }
                 _ => self.fail(step::SECCOMP, libc::EINVAL),

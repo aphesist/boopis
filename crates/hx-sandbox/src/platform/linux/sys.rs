@@ -184,38 +184,6 @@ impl Ruleset {
 // Child-side helpers. Async-signal-safe: raw syscalls only.
 // ------------------------------------------------------------------------------------------
 
-/// Reports a failed setup step to the parent through the status pipe.
-pub(super) fn child_report(status_fd: RawFd, step: u8) {
-    if status_fd >= 0 {
-        // SAFETY: writes one byte from a live local to a descriptor the parent opened.
-        unsafe {
-            libc::write(status_fd, (&raw const step).cast(), 1);
-        }
-    }
-}
-
-pub(super) fn child_setsid() -> Result<(), i32> {
-    // SAFETY: no arguments.
-    if unsafe { libc::setsid() } < 0 {
-        Err(errno())
-    } else {
-        Ok(())
-    }
-}
-
-pub(super) fn child_keep_fd(fd: RawFd) -> Result<(), i32> {
-    // SAFETY: fcntl on a descriptor the parent passed in; no memory is passed.
-    let flags = unsafe { libc::fcntl(fd, libc::F_GETFD) };
-    if flags < 0 {
-        return Err(errno());
-    }
-    // SAFETY: as above.
-    if unsafe { libc::fcntl(fd, libc::F_SETFD, flags & !libc::FD_CLOEXEC) } < 0 {
-        return Err(errno());
-    }
-    Ok(())
-}
-
 pub(super) fn child_unshare(flags: libc::c_int) -> Result<(), i32> {
     // SAFETY: unshare takes only flags.
     if unsafe { libc::unshare(flags) } < 0 {

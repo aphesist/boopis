@@ -5,9 +5,9 @@
 )]
 
 use std::io;
-use std::os::fd::AsRawFd;
 #[cfg(not(target_os = "linux"))]
 use std::os::fd::BorrowedFd;
+use std::os::fd::{AsRawFd, RawFd};
 
 /// Sends `sig` to every process in group `pgid`. A group that no longer exists is not an error.
 pub(super) fn killpg(pgid: libc::pid_t, sig: libc::c_int) {
@@ -22,7 +22,7 @@ pub(super) fn killpg(pgid: libc::pid_t, sig: libc::c_int) {
     }
 }
 
-/// Sets or clears FD_CLOEXEC on `fd`.
+/// Sets or clears `FD_CLOEXEC` on `fd`.
 #[cfg(not(target_os = "linux"))]
 pub(super) fn set_cloexec(fd: BorrowedFd<'_>, on: bool) -> io::Result<()> {
     let raw = fd.as_raw_fd();
@@ -101,4 +101,68 @@ pub(super) fn read_byte(fd: &std::os::fd::OwnedFd) -> Option<u8> {
     // SAFETY: the buffer is one valid, writable byte and the length passed is 1.
     let n = unsafe { libc::read(fd.as_raw_fd(), std::ptr::addr_of_mut!(byte).cast(), 1) };
     (n == 1).then_some(byte)
+}
+
+// ------------------------------------------------------------------------------------------
+// Child-side helpers shared by the backends. Async-signal-safe: raw syscalls only.
+// ------------------------------------------------------------------------------------------
+
+fn errno() -> i32 {
+    io::Error::last_os_error()
+        .raw_os_error()
+        .unwrap_or(libc::EIO)
+}
+
+/// Reports a failed setup step to the parent through the status pipe.
+pub(super) fn child_report(status_fd: RawFd, step: u8) {
+    if status_fd >= 0 {
+        // SAFETY: writes one byte from a live local to a descriptor the parent opened.
+        unsafe {
+            libc::write(status_fd, (&raw const step).cast(), 1);
+        }
+    }
+}
+
+pub(super) fn child_setsid() -> Result<(), i32> {
+    // SAFETY: no arguments.
+    if unsafe { libc::setsid() } < 0 {
+        Err(errno())
+    } else {
+        Ok(())
+    }
+}
+
+pub(super) fn child_keep_fd(fd: RawFd) -> Result<(), i32> {
+    // SAFETY: fcntl on a descriptor the parent passed in; no memory is passed.
+    let flags = unsafe { libc::fcntl(fd, libc::F_GETFD) };
+    if flags < 0 {
+        return Err(errno());
+    }
+    // SAFETY: as above.
+    if unsafe { libc::fcntl(fd, libc::F_SETFD, flags & !libc::FD_CLOEXEC) } < 0 {
+        return Err(errno());
+    }
+    Ok(())
+}
+
+/// Marks every descriptor from 3 up close-on-exec (macOS has no `close_range`). The bound is the
+/// soft descriptor limit, capped so a huge limit cannot stall the spawn.
+#[cfg(target_os = "macos")]
+pub(super) fn child_cloexec_all() {
+    // SAFETY: an all-zero rlimit is a valid out-buffer for getrlimit.
+    let mut limit: libc::rlimit = unsafe { std::mem::zeroed() };
+    // SAFETY: `limit` is valid and writable.
+    let max = if unsafe { libc::getrlimit(libc::RLIMIT_NOFILE, &raw mut limit) } == 0 {
+        i32::try_from(limit.rlim_cur)
+            .unwrap_or(i32::MAX)
+            .min(65_536)
+    } else {
+        4096
+    };
+    for fd in 3..max {
+        // SAFETY: fcntl on an arbitrary descriptor number is memory-safe; EBADF is ignored.
+        unsafe {
+            libc::fcntl(fd, libc::F_SETFD, libc::FD_CLOEXEC);
+        }
+    }
 }

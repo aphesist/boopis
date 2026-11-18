@@ -30,6 +30,14 @@ pub mod policy;
 mod process;
 mod program;
 pub mod report;
+#[cfg_attr(
+    not(any(target_os = "macos", test)),
+    allow(
+        dead_code,
+        reason = "only the macOS backend runs the generator; it is compiled and tested everywhere"
+    )
+)]
+mod seatbelt;
 pub mod wire;
 
 pub use capabilities::{Capabilities, Capability};
