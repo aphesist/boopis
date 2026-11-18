@@ -2,7 +2,7 @@
 
 The engine behind hypotaxis's `pack` tool. One call returns everything a model needs to read: search hits with surrounding code, whole files, line ranges, single symbols, outlines and git status. Output is byte-capped, secrets are redacted, and `.env` and key files are never returned.
 
-It is a **pure library**: request and response types (`serde` + `schemars`), one `Error` enum whose variants map to `hx.pack.*` codes, and a `handle_*` function per method. The `hx` binary wires them to JSON-RPC (see `INTEGRATION.md`). Nothing here talks to a wire, a model or a terminal.
+Request and response types (`serde` + `schemars`), one `Error` enum whose variants map to catalog codes, a `handle_*` function per method, and `PackHandler`, the `hx-proto` `Handler` that `hx` registers under the `pack` namespace (see `INTEGRATION.md`). Nothing here talks to a wire, a model or a terminal; `hx` does the I/O.
 
 ## API
 
@@ -15,14 +15,14 @@ It is a **pure library**: request and response types (`serde` + `schemars`), one
 | `pack.status` | `root` | `handle_status` | branch, HEAD, upstream, changed paths and counts |
 | `pack.bundle` | `root, requests[], max_bytes` | `handle_bundle` | any of the above in one call, sharing one byte budget |
 
-Handlers block; call them from `spawn_blocking`. The `*_with` variants take a `Control` (cancel flag and deadline). `method_schemas()` returns the JSON Schema of every request and response for the OpenRPC contract. The full contract is in the rustdoc (`cargo doc -p hx-pack --open`).
+Handlers block; `PackHandler` runs them on the blocking pool. The `*_with` variants take a `Control`: a cancellation token, a deadline and an optional `WalkCache`. `add_schema` adds the six methods to the `hx-v1` schema. The full contract is in the rustdoc (`cargo doc -p hx-pack --open`).
 
 Output text uses three numbered-line styles: `12:text` for a match, `12-text` for a context line (ripgrep's convention), `12|text` for plain source.
 
 ## Rules the code keeps
 
-- **Paths cannot escape the root.** Absolute paths, `..`, drive prefixes and NUL are rejected lexically (`RelPath`). Every file is then opened through a `cap-std` directory handle, which refuses symlinks that leave the root even if one is swapped in after the check. Walks never follow symlinks. Globs may not name paths outside the root.
-- **Never packed:** `.env*`, keys, certificates, credential files and similar, from `never_pack.json`. A file on the list is withheld even when a request names it, and the response says so (`withheld`, or `status: withheld` for `pack.read`). Withheld files are never opened.
+- **Paths cannot escape the root.** A requested path goes through `hx_txn::paths` (the shared safe-path module): absolute paths, `..`, drive prefixes and NUL are rejected, and symlinks are resolved inside the root and rejected if they leave it. Resolution returns the *canonical* path, so the never-pack check sees the real file even when a request names it through a link. Every file is then opened through a `cap-std` directory handle, which refuses to leave the root even if a link is swapped in after the check. Walks never follow symlinks. Globs may not name paths outside the root.
+- **Never packed:** `.env*`, keys, certificates, credential files and similar, from `never_pack.json`. A file on the list is withheld even when a request names it, and the response says so (`withheld`, or `status: withheld` for `pack.read`). Withheld files are never opened. The one exception is a short allow list of templates, `.env.example`, `.env.sample` and `.env.template`, which are readable and still pass through redaction; every other `.env*` stays withheld.
 - **Redaction:** patterns from `redact.rules.json` plus Shannon-entropy detection. Each hit becomes `[REDACTED:<rule>]` and is counted in `redactions`. A file is redacted **as a whole before it is sliced**, so a private key cut by a context window or a line range is still caught. Multi-line matches keep their newlines, so line numbers match the file on disk.
 - **No probing.** `pack.search` finds candidate files on raw text, then redacts the file and searches again; only that second result is reported. A pattern cannot confirm a hidden secret one regex at a time. The price: the placeholder text itself is not searchable.
 - **The budget is a hard cap.** Output is charged to a `Budget` before it is added; nothing is built and then cut. The cost of an item is its text plus 32 bytes plus its path. `bytes` in every response is the exact charge, and is at most `max_bytes`. A block that does not fit is cut at a line boundary, and `truncated` says why (`max_bytes`, `max_matches`, `max_items`, `line_clipped`).
@@ -40,7 +40,7 @@ The entropy pass looks at runs of `[A-Za-z0-9+/_-]` of 32 or more characters (`=
 - path-like tokens (two or more slashes, mostly lowercase words);
 - pure hex tokens (hashes, git SHAs) unless the same line names a secret (`token`, `secret`, `password`, ...).
 
-Tests run the entropy pass over this crate's source, the repository docs, the first-pass `pack.rs` and six generated lockfiles and require zero hits. Known limit: a hex secret on a line that does not name it is not caught, and an attacker who controls a file can put `integrity` on a line to opt it out. The goal is accidental leaks, not hostile content.
+`LogRedactor` applies the same rules to every `hx` log line. Tests run the entropy pass over this crate's source, the repository docs, the first-pass `pack.rs` and six generated lockfiles and require zero hits. Known limit: a hex secret on a line that does not name it is not caught, and an attacker who controls a file can put `integrity` on a line to opt it out. The goal is accidental leaks, not hostile content.
 
 ## Languages
 
@@ -54,25 +54,46 @@ Grammar cost: all five grammars plus the tree-sitter core add about 6 s of CPU t
 
 ## `pack.status` and `git`
 
-It runs `git status --porcelain=v2 --branch -z` rather than linking `gix`. `git` is already required by the product (ship's checkpoint refs), its status is the reference output, and `gix`'s status support would add a large dependency tree and compile time for a call that takes a few milliseconds. The child gets an allowlisted environment (`PATH`, `HOME`, temp dirs, plus `LC_ALL=C`, no prompts, no optional locks), a timeout and an output cap, and `core.fsmonitor` is forced off (a test proves a repository's `fsmonitor` hook does not run). Not covered: clean and smudge filters named by an untrusted repository's own config. Call `pack.status` only on trusted workspaces.
+It runs `git status --porcelain=v2 --branch -z` rather than linking `gix`. `git` is already required by the product (ship's checkpoint refs), its status is the reference output, and `gix`'s status support would add a large dependency tree and compile time for a call that takes a few milliseconds.
+
+A repository's own configuration must not run a program through this call, so each call:
+- lists the configured filter drivers (`git config --name-only --get-regexp '^filter\.'`) and switches each one off with `-c filter.<name>.clean= -c filter.<name>.smudge= -c filter.<name>.process= -c filter.<name>.required=false` (`status` runs clean filters to compare contents); a driver whose name cannot be passed that way fails the call;
+- passes `-c core.fsmonitor=false` and `-c core.hooksPath=<fresh empty directory>`, `--no-optional-locks`, and sets `GIT_CONFIG_NOSYSTEM=1`;
+- runs with an allowlisted environment, a timeout and an output cap (the stand-in `proc.rs`, which `hx-sandbox::process` will replace).
+
+Tests use a repository whose filter and whose `fsmonitor` hook would write a marker file: a control proves plain `git status` writes it, and `pack.status` leaves no marker.
+
+## The walk cache
+
+`hx serve` keeps one `WalkCache` per process (`pack.walk_cache` capability). A whole-tree search, outline or symbol lookup (no directory-anchored glob) takes its file list from the cache when it is still valid. File contents are never cached.
+
+An entry is valid only if all of these hold (the rule is also in `src/cache.rs`):
+1. **No mutation:** `hx` clears the cache after every `txn.apply`, `txn.restore`, `txn.recover` and `txn.discard`, successful or not.
+2. **Directory times:** the walk records the modification time of every directory and every `.gitignore`/`.ignore`/`.rgignore` (and `.git/info/exclude`); each is stat-ed again on access and any difference rejects the entry. About a millisecond per thousand directories.
+3. **TTL:** 60 seconds.
+
+A walk of a tree changed in the last two seconds is not stored, so a change in the same clock tick cannot hide. At most four roots are kept. The cache serves the same answer as a fresh walk; a test compares them for many globs.
 
 ## Performance
 
-Measured on a 4-vCPU VM, release build, warm page cache, on a generated tree of 100,000 source files in 1,000 directories (plus 20,000 files under `node_modules` and `target` that the walk skips). Run it with:
+Measured on a 4-vCPU shared VM, release build, warm page cache, on a generated tree of 100,000 source files in 1,000 directories (plus 20,000 files under `node_modules` and `target` that the walk skips). Run it with:
 
 ```sh
 cargo test -p hx-pack --release --test perf -- --ignored --nocapture
 ```
 
+The machine was loaded by other jobs during every run (load average 3 to 5 on 4 cores), so the spread is wide. Figures are p50 / p95 over 20 runs after a warm-up:
+
 | call | p50 | p95 |
 |---|---|---|
-| rare literal, whole tree (reads all 100k files) | ~280 ms | 300 to 530 ms |
-| common literal, `max_matches` 200 (stops early) | ~65 ms | ~75 ms |
+| rare literal, whole tree, no cache (reads all 100k files) | 280 to 480 ms | 300 to 690 ms |
+| rare literal, whole tree, warm walk cache | 260 to 355 ms | 335 to 505 ms |
+| common literal, `max_matches` 200 (stops early) | ~65 to 75 ms | ~75 to 95 ms |
 | glob `src/mod_0420/**` (one directory) | ~3 ms | ~4 ms |
-| rare literal, glob `*.go` | ~80 ms | ~100 ms |
+| rare literal, glob `*.go` | ~80 to 100 ms | ~100 to 130 ms |
 | known file range | < 1 ms | < 1 ms |
 
-The worst case (a rare pattern with no glob) must open every file. The walk costs about 57 ms; the rest is four syscalls per file (`openat2`, two `read`, `close`). It is as fast as `rg -l` on the same machine, so the floor is the kernel, not the code. The spread in p95 comes from the other jobs on that machine. Globs that name a directory start the walk there; globs filter names before any file is opened; a pattern with many hits stops as soon as the ordered prefix is full. Further wins need state kept between calls (a cached file list, a trigram index) and the invalidation rule that comes with it.
+A whole-tree search with a rare pattern must open every file. The cache removes the walk (about 55 ms), but the rest is four syscalls per file (`openat2`, two `read`, `close`); on a 20k-file tree this code was faster than `rg -l`, so the floor is the kernel, not the code. Under load the 300 ms p95 budget is not met for that case. Meeting it reliably needs an index of file contents (for example trigrams) with its own invalidation rule; that is not built.
 
 ## Tests
 
@@ -91,5 +112,4 @@ Unit tests sit beside the code. `tests/` holds integration tests per method, `in
 | `redact.rules.json` | redaction rules and entropy settings, shared with Python |
 | `never_pack.json` | never-pack globs, shared with Python |
 | `languages.json`, `queries/*.scm` | the language registry |
-| `error_codes.json` | the `hx.pack.*` codes for `hx-proto/errors.json` |
-| `INTEGRATION.md` | how to register the handlers |
+| `INTEGRATION.md` | how `hx` registers the handlers |
