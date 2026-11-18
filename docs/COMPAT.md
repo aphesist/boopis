@@ -21,7 +21,7 @@ Anything not verified is marked **[verify]** with how to verify it.
 4. Project content is **trust-gated** (section 11). Fail closed: untrusted means inert.
 5. Nothing is fabricated (invariant 5). A feature with no faithful mapping is **unsupported**, listed in the inventory, and never approximated silently.
 6. Translation is deterministic and idempotent. The same inputs produce the same bytes, which also keeps the prompt prefix stable across sessions.
-7. Foreign files are never modified, with one named exception (section 5.2).
+7. Foreign files and repositories are never modified. Compat writes only under `<profile home>/hypotaxis/` (and installs plugins under the profile `plugins/`).
 
 ## 1. What Hermes already does natively (verified)
 
@@ -58,12 +58,12 @@ The model is `F§10`. Every concept carries `source{tool,scope,path,plugin?}`, `
 |---|---|---|
 | MemoryDoc (not natively loaded) | Always-on text: section 8.1 (section if it fits, else the first user turn) | session |
 | Rule | always: as MemoryDoc. glob: index plus a tool-result append. model_decision: a skill. manual: a `/` skill | session; append on first matching touch |
-| Skill | Project: projected into `<root>/.agents/skills/`. Plugin: generated Agent Plugin v1 skills dir | session / install |
+| Skill | Project and user scope: `ctx.register_skill` from the per-project cache (5.2). Plugin: generated Agent Plugin v1 skills dir | session / install |
 | Command | A skill (model-invocable) or `ctx.register_command` (user-only) | session |
 | Subagent | A delegation-provider route, optionally a profile (teammate) | session; promotion is explicit |
 | Hook | Python callbacks on `ctx.register_hook` (section 4) | callbacks registered at plugin load; the project's hook set is read from a session-frozen snapshot |
 | PermissionRule | The hypotaxis policy in `pre_tool_call` (deny > ask > allow) | session snapshot |
-| McpServer | Compat-owned entries in `config.yaml` `mcp_servers` | session (next session sees it) |
+| McpServer | **Hosted by the plugin and exposed through exec** (section 7). Never written to the user's `config.yaml`. | session |
 | Plugin / Marketplace | Generated skills plugin plus lock file | install |
 | OutputStyle | **Unsupported.** Hermes has no hook to replace the system prompt after build. | none |
 | Settings (`env`, `model`) | `env` applies only to translated hook and MCP child processes. `model` is ignored (hypotaxis ladder). | session |
@@ -84,7 +84,7 @@ Legend: **N** native (no work), **T** translate (our code), **U** unsupported (r
 | `settings.json` hooks | **T** | Section 4. |
 | `settings.json` permissions | **T** | Into the hypotaxis policy. Section 10. |
 | `settings.json` `env` | T | Child processes only. |
-| `.claude/skills/<n>/SKILL.md` | **T** | Projection, section 5.2. Most skills load as-is because Hermes ignores unknown keys. CC-only keys are handled in section 5.1. |
+| `.claude/skills/<n>/SKILL.md` | **T** | Registration, section 5.2. Most skills load as-is because Hermes ignores unknown keys. CC-only keys are handled in section 5.1. |
 | `.claude/commands/**/*.md`, `~/.claude/commands` | **T** | Section 5.1. The importer skips them. |
 | `.claude/agents/*.md`, `--agents` JSON | **T** | Section 6. |
 | `.mcp.json`, `~/.claude.json` (local and user scope) | **T** | Section 7. |
@@ -97,7 +97,7 @@ Legend: **N** native (no work), **T** translate (our code), **U** unsupported (r
 | Item | Status |
 |---|---|
 | `<dir>/SKILL.md` in `.agents/skills`, `.hermes/skills` | **N** |
-| `~/.agents/skills`, `/etc/codex/skills` | **T**: user-scope skills are exposed through `skills.external_dirs` entries owned by compat. These are lowest precedence and **profile-global**, which is acceptable because they are user-owned. |
+| `~/.agents/skills`, `/etc/codex/skills` | **T** through `ctx.register_skill` from the cache (5.2). Never through `skills.external_dirs`. |
 | Spec fields `name, description, license, compatibility, metadata, allowed-tools` | **N**: unknown keys are ignored by Hermes. `allowed-tools` is **U** (Hermes has no per-skill pre-approval). |
 | `skills-ref validate` | Test oracle only (section 12). |
 
@@ -130,7 +130,7 @@ Legend: **N** native (no work), **T** translate (our code), **U** unsupported (r
 | Item | Status |
 |---|---|
 | `AGENTS.md` | **N** |
-| `.cursorrules`, top-level `.cursor/rules/*.mdc` | **N** only when no higher type wins. It is **over-inclusive**: globs are ignored. Otherwise T. |
+| `.cursorrules`, top-level `.cursor/rules/*.mdc` | **N but wrong for `.mdc`**: loaded only when no `.hermes.md`, `AGENTS.md` or `CLAUDE.md` wins, always-on, frontmatter included. Compat **honours the frontmatter** (section 8.1). `.cursorrules` is N. |
 | `.cursor/rules/**/*.mdc` nested, frontmatter-aware types | **T**: section 8 |
 | `.cursor/mcp.json`, `~/.cursor/mcp.json` | **T**, mostly verbatim since Hermes already understands `${env:VAR}`, `${workspaceFolder}`, `${userHome}` |
 | `auth{CLIENT_ID,...}` | T to `oauth:{client_id,client_secret,scope}` |
@@ -226,13 +226,13 @@ Environment of the child:
 ### 4.3 Execution
 
 - Handler types: `command` (shell string, or exec form `command` plus `args` with `shell=False`). `http` is supported (POST the payload, no redirects, trust-gated URL). `mcp_tool` is T through the MCP client. `prompt` and `agent` are **unsupported**.
-- A shell-form `command` runs through the platform shell, as Claude does. This is the one sanctioned shell string in the codebase: it is trust-approved content and not untrusted input. It needs an ADR (open question 3).
+- A shell-form `command` runs through the platform shell, as Claude does. This is accepted by **ADR-0013**: a Claude Code hook command is a shell string by definition. It runs through the platform shell (`sh -c`, `cmd /c`), **only after the project is trusted**, with an allowlisted environment, a timeout and an output cap, with cwd at the project root. It is **unsandboxed**, as in Claude Code. Exec-form `command`+`args` uses `shell=False`.
 - Hooks for one event run **in parallel**. The strictest result wins. A block beats `ask`, which beats `allow`, which beats none.
 - `matcher`: empty, `*` or absent matches all. A string made only of `[A-Za-z0-9_\- ,|]` is an exact name or `|`/`,` list. Anything else is an unanchored regex (Python `re.search`; ECMAScript differences covered by golden tests). It is matched against the **Claude-aliased tool name**. `if` uses the PermissionRule syntax and applies to tool events only.
 - **Timeouts.**
-  - The runner enforces the handler's own timeout (default 600s; 30s for UserPromptSubmit) by killing the process group.
-  - The effective timeout is `min(declared, plugins.hook_callback_timeout - 1)`. Hermes abandons a callback past that bound and `pre_tool_call` then **fails closed**.
-  - A clamped timeout is reported in the inventory. Raising `plugins.hook_callback_timeout` (default 30, max 600) is an explicit user setting, and compat never changes it silently.
+  - The runner enforces the handler's own timeout (per `F§1.3`: 600s default, 30s for UserPromptSubmit; **[verify]** the 60s default the owner recalls against the Claude Code docs) by killing the process group.
+  - At install the plugin sets `plugins.hook_callback_timeout` to **120** **only if it is lower**, and records the change in its settings. It never lowers it.
+  - The effective timeout is `min(declared, hook_callback_timeout - 1)`. A per-hook timeout above that limit is **clamped**, with a warning in `compat.inventory`. Hermes abandons a callback past the bound and `pre_tool_call` then **fails closed**.
   - A handler timeout discards its output and follows Claude: PreToolUse **proceeds**. Hermes's own abandonment still blocks.
 
 ### 4.4 Exit codes and JSON output
@@ -249,7 +249,7 @@ Environment of the child:
 |---|---|
 | `hookSpecificOutput.permissionDecision: "deny"` or top-level `decision:"block"` | `{"action":"block","message":reason}` |
 | `permissionDecision: "ask"` | `{"action":"approve","message":reason,"rule_key":"compat:<hook id>"}` (Hermes human gate) |
-| `permissionDecision: "allow"` | **no-op.** Hermes has no auto-allow, so its own approval may still prompt. This is a documented divergence. |
+| `permissionDecision: "allow"` | **Skips hypotaxis-level approval prompts for that call.** Hermes's own approvals (`pre_approval_request`) and **hardline blocks still apply**. It never overrides a `deny` (from any source) or a hypotaxis scope or protected-path veto. It is not a Hermes directive, so the call proceeds to Hermes's gates unchanged. Hermes has no auto-allow. |
 | `permissionDecision: "defer"` | treated as `ask` |
 | `updatedInput` | `{"action":"modify","args":...}` (shallow merge, argument names translated back) **[verify]** `updatedInput` is not in `F§1.3` verified fields. |
 | `additionalContext` (cap 10,000 chars) | `pre_llm_call` context, or a suffix on the tool result |
@@ -316,23 +316,24 @@ Rules:
   - Then user, then plugin.
   - Same-tier duplicates are refused and listed. Compat never guesses.
 
-### 5.2 Skills projection
+### 5.2 Skills registration (no files in the repo or the profile)
 
-- Hermes reads project skills only from `<git root>/.hermes/skills` and `.agents/skills`, and only for roots in `skills.trusted_project_dirs`.
-- `compat/` projects `.claude/skills/*`, Gemini `.agents/skills`, Antigravity legacy `.agent/skills` and **translated commands** into `<git root>/.agents/skills/<name>/`. This is the one place compat writes inside a repo:
-  - Each projected directory carries a `.hx-compat.json` marker (source, source hash, schema version).
-  - The directories are listed in `.git/info/exclude`, never in a tracked file.
-  - A real native skill of the same name is **never overwritten** (native wins and is reported).
-  - Windows uses copies and POSIX uses copies too, hashed. Symlinks are not used.
-- A Claude skill that uses no CC-only semantics is copied verbatim.
-- CC-only keys are handled on copy:
+Claude skills, Gemini and Antigravity skill dirs, and translated commands are **never copied into the repository, `.agents/skills` or any profile-global directory**.
+- At `session` time compat parses them into the per-project cache `<profile home>/hypotaxis/projects/<cwd-hash>/` (normalized `SKILL.md` files plus a manifest of content hashes; `<cwd-hash>` is the hash of the realpath).
+- It then registers each with `ctx.register_skill(name, <cache path>/SKILL.md, description, frontmatter)`.
+- The target namespace is **`claude:<name>`**. Gemini and Antigravity sources use `gemini:` and `agy:`. A native skill of the same name is untouched (native wins).
+- **[verify] exact Hermes behaviour**, read from `H:hermes_cli/plugins_content.py`:
+  1. `register_skill` derives the namespace from the **registering plugin's manifest name** and forbids `:` in the skill name. So `claude:` needs a second tiny generated plugin named `claude` (no Python logic beyond the register calls). Otherwise the fallback is `hypotaxis:claude-<name>`.
+  2. The registry `manager._plugin_skills` is **process-global**, and enabled plugin skills appear in every session's `<available_skills>`. Check whether a session in another cwd sees them.
+  3. If it is global, scope with the `skills` list of `session.create` (an allowed create field, `H:gateway/session_policy.py` `CREATE_FIELDS`): the host passes only the cwd's `claude:*` names. **[verify]** whether that field filters the index or only preloads. If it only preloads, register at `on_session_open` and release (`PluginRegistration`) when the last session of that cwd closes, and accept the one-session visibility window.
+- CC-only keys are handled when writing the cache copy:
   - `allowed-tools`, `disallowed-tools`, `model`, `effort` are moved into compat metadata and applied as in 5.1.
   - `disable-model-invocation` and `user-invocable: false` are dropped, because Hermes has no flag. The skill stays visible to the model, and this is reported.
   - `paths` makes the skill a glob rule (section 8).
-  - `hooks` is registered scoped to the skill's invocation turn.
-  - `$ARGUMENTS`-style substitution is applied when invoked through a compat command, and left alone when the model loads the skill with `skill_view` (it reads the raw body).
-- The projection runs at `session` time and is idempotent. A second Hermes `skills` scan sees only complete directories (write to a temp directory, then rename).
-- Project skills then follow Hermes's own gate: `skills.trusted_project_dirs` plus the quarantine scan. Compat's trust grant (section 11) is what writes that entry, so there is **one** decision.
+  - `hooks` is registered scoped to the skill's invocation turn, and is trust-gated as a hook.
+  - `$ARGUMENTS`-style substitution applies when invoked through a compat command, and is left alone when the model loads the skill with `skill_view` (it reads the raw body).
+  - `` !`cmd` `` injections are trust-gated (section 11).
+- Skills are prompt material and are **not** trust-gated, except for `!` injections and hooks. Hermes's own `skills.trusted_project_dirs` gate applies only to native `.agents/skills` and `.hermes/skills`.
 
 ## 6. Subagents
 
@@ -364,14 +365,30 @@ Only **one** delegation provider is active (`delegation.backend`). If the user s
 
 ## 7. MCP
 
-All translated servers become **compat-owned entries in `config.yaml` `mcp_servers`**, written with Hermes's comment-preserving atomic writer pattern (as `OP:agent-importers` does).
-- A manifest `<home>/hypotaxis/compat/mcp-manifest.json` records every owned entry, its source and its hash.
-- Names: `<name>` for user and plugin scope. For project scope, `hx-<project slug>-<name>`.
-- Entries are removed when trust is revoked.
-- The portable plugin adapter cannot carry OAuth, SSE, env defaults or `headersHelper`, so it is used for **skills only** (section 9).
-- A server is visible only to sessions whose toolsets (or the exec catalog in governed mode) include `mcp-<server>`. The compat prepare step returns the allowed set to the host.
-- A newly written server reaches **new** sessions only (`/reload-mcp` is never called on a running session).
-- **[verify]** whether `config.yaml` tolerates extra keys. Compat adds none, which is why the manifest is separate.
+**Compat never writes project, plugin or other-tool servers into the user's `config.yaml`.**
+
+**What Hermes has (verified).**
+- `session.create` accepts `editor.mcp_servers` (`H:gateway/session_local_editor.py`, `session_local_mcp.py`): session-scoped, frozen into the prompt prefix, at most 16 servers and 64 KB, ACP-schema stdio, http or sse entries.
+- It is **accepted only from `source: "acp"`**, and it forces `edit_approval_policy: "ask"` (one approval per edit, which conflicts with `ship`). hypotaxis launches with `source: "gui"`.
+- The entries carry no OAuth block and no `${...}` interpolation.
+- Plugins have no API to register an MCP server (`ctx.call_mcp` only reaches servers already in config).
+- The only other sources are `config.yaml` and portable Agent Plugin `mcp.json`, and both are profile-global.
+
+**Gap, stated plainly:** Hermes has **no session-scoped MCP mechanism usable by hypotaxis**. Two fallbacks:
+
+| Fallback | Cost |
+|---|---|
+| A. A project-scoped profile overlay (a generated Hermes profile carrying the servers) | Separate memory, skills and sessions. This breaks ADR-0006 (attach to the active profile). |
+| B. **The plugin hosts the servers** and exposes them through `exec` (and `dispatch`) | The plugin runs an MCP client for these servers only. No Hermes change, no profile pollution. In governed mode MCP tools are reachable only through `exec` anyway (ARCHITECTURE section 7). |
+
+**Recommendation: B.**
+- Servers are exposed as exec functions `mcp.<server>.<tool>`. Inner calls run through the hook runner under their **original** names `mcp__<server>__<tool>` (4.5).
+- Phase 1 supports stdio and streamable HTTP with static headers. SSE is accepted as deprecated.
+- **OAuth servers are unsupported in project and plugin scope** until Hermes exposes a session-scoped API, because the plugin must not re-implement OAuth. They are listed in the inventory. A user who wants one adds it natively with `hermes mcp`, and Hermes then owns it.
+- In ungoverned mode with Hermes default tools, translated MCP servers are **unavailable** (listed). Only natively configured ones work.
+- User-scope servers of Claude, Codex and Cursor are the importer's, so they are native.
+- Servers start lazily on first call, per session, and stop with it. **[verify]** the Python `mcp` SDK Hermes depends on is importable from a plugin under the public API rule. If not, B needs a small vendored client and an ADR.
+- Server names are plain `<name>`. A native entry of the same name wins and the translated one is dropped.
 
 | Source | Shape | Translation |
 |---|---|---|
@@ -379,7 +396,7 @@ All translated servers become **compat-owned entries in `config.yaml` `mcp_serve
 | `headersHelper` | command printing JSON headers | **U** in phase 1 (it is a hook-like command run per connect, so it is trust-gated and needs its own runner). The server is imported without it and flagged. |
 | Codex `[mcp_servers.<id>]` | `command` or `url`, `http_headers`, `env_http_headers`, `bearer_token_env_var`, `enabled_tools`, `disabled_tools`, `startup_timeout_sec`, `tool_timeout_sec` | `env_http_headers`/`bearer_token_env_var` become `headers: {Authorization: "Bearer ${VAR}"}`. Tool lists become `tools.include/exclude`. `tool_timeout_sec` becomes `timeout`. `enabled:false` becomes `enabled:false`. |
 | Gemini `mcpServers` | `command`, `url` (SSE), `httpUrl` (streamable), `trust`, `includeTools`, `excludeTools` (wins) | `httpUrl` becomes `url`. `url` becomes `url`+`transport: sse`. `trust` is dropped. Priority `httpUrl` > `url` > `command`. |
-| Cursor `mcp.json` | `command` / `url`, `envFile`, `auth` | verbatim. `envFile` is read at translation time. Secrets are never copied into config (they are referenced as `${VAR}`). |
+| Cursor `mcp.json` | `command` / `url`, `envFile`, `auth` | verbatim. `envFile` is read at translation time. Secrets are never copied (they are referenced as `${VAR}`). |
 | Grok Bot connectors | URL (+headers/OAuth client) or command | as Cursor remote and stdio |
 
 **Environment expansion.** Hermes natively expands `${VAR}`, `${env:VAR}`, `${workspaceFolder}`, `${userHome}`, `${workspaceFolderBasename}` and `${/}`. Compat rewrites the rest at translation time.
@@ -440,6 +457,24 @@ Sources: Cursor `.mdc` (`alwaysApply`, `globs`, `description`), Claude `.claude/
 5. Antigravity: an invalid or missing `trigger` drops the rule. Limits are applied as in 3.6.
 6. Rule text passes the redaction and injection scan, and is labelled as project data.
 
+### 8.1 `.mdc` handling and the native load
+
+We **strip the frontmatter and honour `alwaysApply`, `globs` and `description`**. Hermes does not (`H:agent/prompt_builder.py` `_load_cursorrules`): every top-level `.mdc` is always-on with its frontmatter included.
+
+**Is suppression needed?** Only in one case, and it cannot be done without patching Hermes.
+- The native `.mdc` load is active only when no `.hermes.md`, `AGENTS.md` or `CLAUDE.md` is found. When any of those exists, Hermes does not load `.mdc` at all, and compat delivers the rules alone. There is no double inclusion.
+- When `.cursor/rules` is the winning type, Hermes has already put every top-level `.mdc` into the system prompt. Compat cannot remove it.
+  - `ignore_rules` on `session.create` is rejected, because it also drops memory and `SOUL.md` (`H:gateway/session_execution.py`).
+  - Creating a higher-priority file in the repo is forbidden (section 0, rule 7).
+  - Compat detects this case by re-evaluating the same priority order (`.hermes.md`, `AGENTS.md` chain, `CLAUDE.md`, `.cursorrules`).
+
+**Rule in that case:** compat delivers **nothing twice**.
+- It skips every top-level `.mdc` that Hermes loaded, and any later glob delivery for them.
+- It delivers only what Hermes missed: nested `.cursor/rules/**` files, and `.claude/rules`, Antigravity and other sources.
+- It reports each skipped file as `native_overinclusion` in `compat.inventory`, because glob, description-only and manual rules are always-on there.
+
+The real fix is upstream (deferred, section 13). Where a project needs the exact semantics, a committed `AGENTS.md` makes Hermes skip the native `.mdc` load, and compat then applies the frontmatter.
+
 ## 9. Plugins and marketplaces
 
 | Format | Manifest | Handled as |
@@ -460,7 +495,7 @@ Sources: Cursor `.mdc` (`alwaysApply`, `globs`, `description`), Claude `.claude/
 3. Compute `tree_sha256` (sorted path and content hashes). Write `lock.json`: `{schema, source, sha, tree_sha256, version, installed_at, components, user_config(non-sensitive)}`.
 4. Show the **install prompt** (section 11): the full component list, every hook command, MCP server and agent, requested `userConfig`, and the hash.
 5. On consent, generate a **portable Agent Plugin v1** at `<home>/plugins/<slug>/` containing only `plugin.json` and `skills/<n>/SKILL.md`, with frontmatter normalized to v1 (`name` equals the directory, strings only). Skills that fail validation are skipped and reported. Hermes then provides native namespacing `<slug>:<skill>` and enable and disable. Run `hermes plugins enable <slug>`.
-6. Hooks, commands, agents, rules and MCP servers are read from `source/`. They are active **iff Hermes reports the generated plugin enabled** and the trust grant matches. **Hermes's enabled flag is the single source of truth for enable and disable as a unit.** Disable also sets `enabled:false` on the plugin's MCP entries. Uninstall removes `plugins/<slug>`, the `source/` directory, the MCP entries and the trust records.
+6. Hooks, commands, agents, rules and MCP servers are read from `source/`. They are active **iff Hermes reports the generated plugin enabled** and the trust grant matches. **Hermes's enabled flag is the single source of truth for enable and disable as a unit.** Disabled plugins' hosted MCP servers do not start. Uninstall removes `plugins/<slug>`, the `source/` directory and the trust records.
 7. `plugin.update`: re-resolve, show the **component diff**, re-prompt (hash changed), then swap atomically. Claude's `${CLAUDE_PLUGIN_ROOT}` changes on update (as in Claude), and `${CLAUDE_PLUGIN_DATA}` persists.
 
 Other rules:
@@ -478,7 +513,7 @@ General rule (STANDARDS section 2): **managed > CLI > project-local > project > 
 | Settings scalars | managed (`/etc/claude-code`, `/etc/hermes`, ...), `--settings`, `.claude/settings.local.json`, `.claude/settings.json`, `~/.claude/settings.json` | arrays union, `env` per key. Keys Claude ignores in repo files stay ignored (`defaultMode: bypassPermissions`). |
 | Permissions | **deny > ask > allow**, first match wins, source irrelevant | Project `allow` waits for trust. `deny` and `ask` apply immediately (restrictive). Bash matching follows `F§1.2` (wrapper stripping, compound commands, `Bash(ls *)` vs `lsof`). |
 | Memory and rules text | **Concatenate, never override.** Native Hermes block first (whichever type won). Then translated docs in this fixed order: managed, user, ancestors root to cwd, project, local. Per directory, `CLAUDE.md` then `AGENTS.md` then `GEMINI.md`. | Content duplicated by digest is dropped (same rule as Hermes's AGENTS chain). Codex `AGENTS.override.md` replaces its sibling. |
-| Skills | trusted project (native `.hermes`, `.agents`) > projected project > local profile > `create_dir` > `external_dirs` > plugin (namespaced, no clash). Within one root: native dialect, then `.agents`. | Hermes's own tier order. Same-tier clash refused. A skill beats a same-named command. |
+| Skills | trusted project (native `.hermes`, `.agents`) > registered `claude:`/`gemini:`/`agy:` project skills > local profile > `create_dir` > `external_dirs` > plugin (namespaced, no clash). Within one root: native dialect, then `.agents`. | Hermes's own tier order. Same-tier clash refused. A skill beats a same-named command. |
 | Commands | built-in > skill > project > user > plugin | 5.1 |
 | Subagents | managed > `--agents` > project > user > plugin | by `name` |
 | MCP | native `config.yaml` > project > user > plugin > connectors | whole-entry replacement |
@@ -495,14 +530,14 @@ General rule (STANDARDS section 2): **managed > CLI > project-local > project > 
 | `hooks` | every hook handler, including plugin and frontmatter hooks |
 | `mcp` | every project, plugin and Codex-project server |
 | `plugins` | install and update |
-| `agents` | agent definitions (they can carry prompts, hooks and tool grants) |
-| `instructions` | translated project memory and rules. This is **stricter than Hermes**, which loads `AGENTS.md` ungated. Natively loaded files cannot be gated. |
-| `commands` and `skills` | project commands and skills, via Hermes's `skills.trusted_project_dirs` |
-| `permissions` | project `allow` rules only |
+| `commands` | `` !`cmd` `` and `!{}` injections in commands and skills |
+| `permissions` | project `allow` rules only (kept gated: an `allow` widens, so fail closed) |
+
+**Not gated: translated memory, rules, skills and agent prompts.** They are prompt material, which matches Hermes (it loads `AGENTS.md` ungated). They still pass the redaction and injection scan and are labelled as project data. Trust gates only what **executes code**.
 
 `deny` and `ask` rules and the native Hermes behaviour are never gated.
 
-**Prompt contents** (rendered by the host, never by the repo): the project path and git remote, then per kind each item's exact text. For hooks, the full command line, the event, the matcher, the timeout, and the script file when the command is a path (with its hash). For MCP, the command or URL, argument list, header and env **names** (values redacted), the transport and OAuth use. For plugins, source, SHA, tree hash, component list, `userConfig` requests. For rules, the file list and byte count. On a re-prompt, the **diff** against the approved set. Options: approve the kind, approve selected items, or decline. Declining leaves the items listed as untrusted.
+**Prompt contents** (rendered by the host, never by the repo): the project path and git remote, then per kind each item's exact text. For hooks, the full command line, the event, the matcher, the timeout, and the script file when the command is a path (with its hash). For MCP, the command or URL, argument list, header and env **names** (values redacted), the transport and OAuth use. For plugins, source, SHA, tree hash, component list, `userConfig` requests. On a re-prompt, the **diff** against the approved set. Options: approve the kind, approve selected items, or decline. Declining leaves the items listed as untrusted.
 
 **Storage:** `<home>/hypotaxis/compat/trust.json` (versioned schema, atomic write, mode 0600). Entries:
 `{project_id (realpath + git remote hash), kind, item_id, content_hash, decided_at, decided_by:"user"}`.
@@ -559,12 +594,13 @@ The suite lives in `plugins/hypotaxis/tests/compat/`. Fixtures are pinned in `te
 
 A fixture passes only if every item is **loaded or listed with a reason**. A silent drop fails.
 
-## 13. Open questions (the owner's call)
+## 13. Open questions and deferred scope
 
-1. **Skills projection location.** Hermes has no per-project dynamic skill root, so section 5.2 writes marked, git-excluded copies into `<repo>/.agents/skills/`. The alternatives are a profile-global `skills.external_dirs` (leaks one project's skills into others) or no project skills from Claude (a visible feature gap). Which?
-2. **Project MCP exposure.** Project-scope servers are written into the active profile's `config.yaml` with an `hx-` prefix and `lazy`. They reach plain Hermes sessions in the same profile unless toolsets exclude them **[verify]**. Is that acceptable, or must project MCP be limited to a dedicated hypotaxis profile (ADR-0006's setting)?
-3. **The shell-string exception.** Claude's `command` hooks are shell strings. STANDARDS section 5 forbids building shell strings. Approve a narrow ADR: trust-approved hook commands only, through `hypotaxis.util.proc`?
-4. **`allow` is a no-op.** Hermes has no auto-allow, so a hook's `permissionDecision: allow` cannot suppress Hermes's own approval. Accept, or should the hypotaxis approval transport implement it for hooks that were trust-approved?
-5. **`plugins.hook_callback_timeout`.** Handlers over 30s are clamped by default. May the installer raise it to 600 in the active profile?
-6. **Instruction gating.** Gating translated project memory and rules is stricter than Hermes (which loads `AGENTS.md` ungated). Keep it, or follow Hermes?
-7. **Phase 2 scope.** Codex, Gemini and Antigravity hooks and Antigravity plugins are deferred (payloads unverified). Confirm the order after Claude hooks, or promote one.
+**Open questions for the owner:** none at this revision. Decisions are folded in above (skills registration, hosted MCP, ADR-0013, `allow`, timeout, instruction trust).
+
+**Deferred (phase 2):**
+- Codex, Gemini and Antigravity hooks (payloads unverified, 4.6).
+- Antigravity plugins.
+- OAuth MCP servers in project and plugin scope (needs a Hermes session-scoped API).
+- `headersHelper`, `bin/` on `PATH`, `.lsp.json`.
+- An upstream request to Hermes to strip `.mdc` frontmatter and honour `alwaysApply` and `globs` (8.1). This is a contribution, not a patch.
