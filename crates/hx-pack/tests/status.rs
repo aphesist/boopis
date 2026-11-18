@@ -199,3 +199,78 @@ fn a_repository_cannot_run_a_program_through_status() {
     assert!(r.is_repo);
     assert!(!marker.exists(), "fsmonitor hook ran");
 }
+
+/// A repository whose `filter.evil.clean` would write a marker file if git ran it.
+fn repo_with_evil_filter() -> (Tree, std::path::PathBuf) {
+    let t = Tree::new();
+    git(t.path(), &["init", "-q", "-b", "main"]);
+    let marker = t.path().join("filter-ran-marker");
+    t.write(".gitattributes", "*.dat filter=evil\n");
+    t.write("a.dat", "one\n");
+    t.write("plain.txt", "p\n");
+    git(t.path(), &["add", "."]);
+    git(t.path(), &["commit", "-q", "-m", "first"]);
+    let script = format!("touch '{}'; cat", marker.display());
+    for key in ["clean", "smudge", "process"] {
+        // `process` is a long-running-filter command; any command string will do here.
+        git(
+            t.path(),
+            &["config", &format!("filter.evil.{key}"), &script],
+        );
+    }
+    git(t.path(), &["config", "filter.evil.required", "true"]);
+    // A second driver whose name needs care on the command line.
+    git(t.path(), &["config", "filter.my driver.clean", &script]);
+    // Same size, different bytes: git must run the clean filter to compare them.
+    t.write("a.dat", "two\n");
+    (t, marker)
+}
+
+#[test]
+fn the_test_repository_really_would_run_its_filter() {
+    // The control: plain `git status` runs the filter, so the next test means something.
+    let (t, marker) = repo_with_evil_filter();
+    // The filter may make git fail (it is not a real filter); only the marker matters.
+    let _ = Command::new("git")
+        .args(["status", "--porcelain"])
+        .current_dir(t.path())
+        .output()
+        .unwrap();
+    assert!(
+        marker.exists(),
+        "the fixture must trigger the filter without protection"
+    );
+}
+
+#[test]
+fn a_configured_filter_cannot_run_a_program_through_status() {
+    let (t, marker) = repo_with_evil_filter();
+    let r = status_at(t.root(), 10);
+    assert!(r.is_repo);
+    assert!(!marker.exists(), "the clean filter ran");
+    assert_eq!(
+        r.entries
+            .iter()
+            .map(|e| e.path.as_str())
+            .collect::<Vec<_>>(),
+        ["a.dat"]
+    );
+}
+
+#[test]
+fn hooks_in_the_repository_do_not_run_either() {
+    let t = repo();
+    let marker = t.path().join("hook-ran-marker");
+    let hook = t.write(
+        ".git/hooks/fsmonitor-watchman",
+        &format!("#!/bin/sh\ntouch {}\n", marker.display()),
+    );
+    Command::new("chmod").arg("+x").arg(&hook).status().unwrap();
+    git(
+        t.path(),
+        &["config", "core.fsmonitor", ".git/hooks/fsmonitor-watchman"],
+    );
+    t.write("a.txt", "dirty\n");
+    status_at(t.root(), 10);
+    assert!(!marker.exists());
+}

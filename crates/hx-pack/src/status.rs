@@ -5,9 +5,11 @@
 //! (ship's checkpoint refs are written with it), its status is the reference
 //! other tools compare against, and `gix`'s status support would add a large
 //! dependency tree and compile time for a call that takes a few milliseconds.
-//! The child gets an allowlisted environment, a timeout and an output cap, and
-//! `core.fsmonitor` is forced off so a repository's own config cannot run a
-//! program through this call.
+//! The child gets an allowlisted environment, a timeout and an output cap. A
+//! repository's own configuration cannot run a program through this call:
+//! `core.fsmonitor` is off, `core.hooksPath` is an empty directory, and every
+//! configured `filter.<name>` driver (clean, smudge, process) is switched off for
+//! the call, because `git status` runs clean filters to compare file contents.
 
 use std::time::Duration;
 
@@ -15,8 +17,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::error::{Error, Result};
-use crate::paths::Root;
 use crate::proc;
+use crate::root::Root;
 use crate::types::{Truncation, note};
 
 const OUTPUT_CAP: usize = 8 * 1024 * 1024;
@@ -135,14 +137,73 @@ const GIT_ENV: &[(&str, &str)] = &[
     ("GIT_PAGER", "cat"),
 ];
 
-fn git(root: &Root, args: &[&str], timeout: Duration, cap: usize) -> Result<proc::Output> {
-    let mut full = vec![
-        "-c",
-        "core.fsmonitor=false",
-        "-c",
-        "core.quotepath=off",
-        "--no-pager",
-    ];
+/// Settings that stop a repository's own configuration from running a program during a
+/// status call. Built once per call; keeps the empty hooks directory alive.
+struct Safety {
+    /// `-c key=value` pairs, flattened.
+    config: Vec<String>,
+    _hooks_dir: tempfile::TempDir,
+}
+
+impl Safety {
+    /// The base settings: no fsmonitor, no hooks.
+    fn base() -> Result<Self> {
+        let hooks_dir = tempfile::tempdir()
+            .map_err(|e| Error::GitFailed(format!("cannot make an empty hooks directory: {e}")))?;
+        let config = [
+            "-c".to_owned(),
+            "core.fsmonitor=false".to_owned(),
+            "-c".to_owned(),
+            format!("core.hooksPath={}", hooks_dir.path().display()),
+            "-c".to_owned(),
+            "core.quotepath=off".to_owned(),
+        ]
+        .to_vec();
+        Ok(Self {
+            config,
+            _hooks_dir: hooks_dir,
+        })
+    }
+
+    /// Adds, for every `filter.<name>.*` the repository or the user configures, settings that
+    /// turn the driver off. `status` runs clean filters to compare file contents, so a
+    /// configured filter is a program the repository chooses.
+    fn neutralise_filters(&mut self, names: &str) -> Result<()> {
+        let mut seen = std::collections::BTreeSet::new();
+        for line in names.lines().filter(|l| !l.is_empty()) {
+            let Some(rest) = line.strip_prefix("filter.") else {
+                continue;
+            };
+            let Some((name, _key)) = rest.rsplit_once('.') else {
+                continue;
+            };
+            // `-c name=value` splits at the first `=`, so such a driver cannot be switched
+            // off. Fail closed rather than run it.
+            if name.contains(['=', '\n', '\0']) {
+                return Err(Error::GitFailed(format!(
+                    "cannot neutralise the git filter {name:?}"
+                )));
+            }
+            if seen.insert(name.to_owned()) {
+                for key in ["clean=", "smudge=", "process=", "required=false"] {
+                    self.config.push("-c".to_owned());
+                    self.config.push(format!("filter.{name}.{key}"));
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+fn git(
+    root: &Root,
+    safety: &Safety,
+    args: &[&str],
+    timeout: Duration,
+    cap: usize,
+) -> Result<proc::Output> {
+    let mut full: Vec<&str> = safety.config.iter().map(String::as_str).collect();
+    full.extend(["--no-optional-locks", "--no-pager"]);
     full.extend_from_slice(args);
     let mut cmd = proc::command("git", &full, GIT_ENV);
     cmd.current_dir(root.path());
@@ -160,7 +221,14 @@ fn not_a_repo(stderr: &str) -> bool {
 pub fn status(root: &Root, p: &StatusParams) -> Result<StatusResponse> {
     let timeout = Duration::from_millis(p.timeout_ms.max(1));
     // Paths in porcelain output are relative to the repository top; the root may be a subdirectory.
-    let prefix = git(root, &["rev-parse", "--show-prefix"], timeout, 4096)?;
+    let mut safety = Safety::base()?;
+    let prefix = git(
+        root,
+        &safety,
+        &["rev-parse", "--show-prefix"],
+        timeout,
+        4096,
+    )?;
     if !prefix.success {
         return if not_a_repo(&prefix.stderr) {
             Ok(StatusResponse::default())
@@ -169,8 +237,23 @@ pub fn status(root: &Root, p: &StatusParams) -> Result<StatusResponse> {
         };
     }
     let prefix = String::from_utf8_lossy(&prefix.stdout).trim().to_owned();
+    // Exit status 1 means no match, which is the common case.
+    let filters = git(
+        root,
+        &safety,
+        &["config", "--name-only", "--get-regexp", "^filter\\."],
+        timeout,
+        64 * 1024,
+    )?;
+    if filters.capped {
+        return Err(Error::GitFailed(
+            "too many git filters to neutralise".into(),
+        ));
+    }
+    safety.neutralise_filters(&String::from_utf8_lossy(&filters.stdout))?;
     let out = git(
         root,
+        &safety,
         &[
             "status",
             "--porcelain=v2",
@@ -364,6 +447,47 @@ u UU N... 100644 100644 100644 100644 a b c conflict.rs\0\
         assert!(r.detached && r.branch.is_none() && r.head.is_none());
         assert_eq!(r.entries[0].path, "x.txt");
         assert_eq!(r.entries[1].path, "other/y.txt");
+    }
+
+    #[test]
+    fn every_configured_filter_is_switched_off_once() {
+        let mut safety = Safety::base().unwrap();
+        let base = safety.config.len();
+        safety
+            .neutralise_filters("filter.lfs.clean\nfilter.lfs.smudge\nfilter.lfs.process\nfilter.my driver.clean\nnot.a.filter\n")
+            .unwrap();
+        let added: Vec<&str> = safety.config[base..]
+            .iter()
+            .map(String::as_str)
+            .filter(|a| *a != "-c")
+            .collect();
+        assert_eq!(
+            added,
+            [
+                "filter.lfs.clean=",
+                "filter.lfs.smudge=",
+                "filter.lfs.process=",
+                "filter.lfs.required=false",
+                "filter.my driver.clean=",
+                "filter.my driver.smudge=",
+                "filter.my driver.process=",
+                "filter.my driver.required=false",
+            ]
+        );
+        assert!(
+            safety
+                .config
+                .iter()
+                .any(|a| a.starts_with("core.hooksPath="))
+        );
+        assert!(safety.config.iter().any(|a| a == "core.fsmonitor=false"));
+    }
+
+    #[test]
+    fn a_filter_that_cannot_be_named_on_the_command_line_fails_closed() {
+        let mut safety = Safety::base().unwrap();
+        let e = safety.neutralise_filters("filter.a=b.clean\n").unwrap_err();
+        assert_eq!(e.code(), "hx.pack.git_failed");
     }
 
     #[test]
