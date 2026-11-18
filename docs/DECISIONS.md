@@ -138,5 +138,17 @@ Hermes's rules are "the core is a narrow waist; capability lives at the edges". 
 ## ADR-0011 Hermes desktop plugins come later
 Hermes desktop plugins (`plugin.js` against `@hermes/plugin-sdk`) are React and Electron-specific. Phase 3 hosts a compatible subset of the SDK in a sandboxed pane. Until then, the Python halves of unified Hermes plugins work and their desktop halves are listed but not loaded.
 
+## ADR-0013 Claude Code hook commands run as shell strings
+**Context.** STANDARDS section 5 forbids building shell strings. Claude Code hook commands *are* shell strings, and compatibility requires running them unchanged.
+
+**Decision.** Translated hook commands from Claude Code settings and plugins run through the platform shell (`sh -c`, `cmd /c`). Conditions:
+- only after the user trusts the project or plugin (content-hash pinned);
+- with an allowlisted environment plus Claude Code's documented variables;
+- with the hook's timeout, clamped to Hermes's callback limit;
+- with an output cap;
+- with the project root as cwd.
+
+They're not sandboxed, matching Claude Code. This is the only exception to the no-shell-string rule.
+
 ## ADR-0012 Prices
 Prices come from Hermes's models.dev data, with a user override table. Rates are absolute per bucket (input, output, cache read, cache write, reasoning), never vendor multipliers. Dollars are always computed from tokens and never stored. A subscription provider prices at zero, with an API-equivalent projection shown beside it.
