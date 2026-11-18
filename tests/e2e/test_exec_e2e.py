@@ -97,7 +97,10 @@ def tool_results(fake: FakeModelServer, start: int) -> list[JsonObject]:
         for m in request.messages:
             if m.get("role") == "tool" and m.get("tool_call_id") not in seen:
                 seen.add(m["tool_call_id"])
-                out.append(json.loads(m["content"]))
+                try:
+                    out.append(json.loads(m["content"]))
+                except ValueError:  # Hermes's own text for a call it cancelled
+                    out.append({"text": m["content"]})
     return out
 
 

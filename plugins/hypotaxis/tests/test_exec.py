@@ -262,7 +262,7 @@ def test_every_kernel_call_writes_tool_called_with_hashed_arguments(make_kit: Ma
     kit.run("await harness.tool('pack', items=['secret-token-123'])")
     (entry,) = kit.calls()
     assert entry["tool"] == "pack" and entry["status"] == "ok"
-    assert entry["tool_call_id"] == "tc1:1" and entry["exec_tool_call_id"] == "tc1"
+    assert entry["tool_call_id"] == "tc1:1" and entry["cell_id"]
     assert len(entry["args_sha256"]) == 64
     assert "secret-token-123" not in json.dumps(kit.ledger())
     assert kit.rt.ledger(kit.state).verify()[0] is True
@@ -570,13 +570,19 @@ def test_a_session_end_stops_its_kernel(make_kit: MakeKit) -> None:
     assert not kit.registry._kernels  # pyright: ignore[reportPrivateUsage]
 
 
-def test_the_stop_hook_cancels_the_running_cell(make_kit: MakeKit) -> None:
+def test_a_call_hermes_gave_up_on_has_its_cell_cancelled_and_the_kernel_stays(make_kit: MakeKit) -> None:
     kit = make_kit()
+    kit.run("held = 1")
     thread, out = kit.background("import asyncio\nawait harness.tool('signal', name='r')\nawait asyncio.sleep(60)")
     assert kit.signal("r").wait(30)
-    hooks.agent_loop_stopped(session_key=SID, reason="user_stop")
+    # a finished exec call (ok or error) is not an abandoned one: nothing happens to the running cell
+    hooks.post_tool_call(tool_name="exec", args={}, session_id=SID, tool_call_id="x", status="error")
+    assert thread.is_alive()
+    # Hermes gave up on the call while its handler still runs (what an interrupt does, verified end to end)
+    hooks.post_tool_call(tool_name="exec", args={}, session_id=SID, tool_call_id="y", status="cancelled")
     thread.join(30)
     assert out[0]["status"] == "cancelled"
+    assert kit.run("held")["result"] == "1"
 
 
 def test_one_kernel_per_session_serialises_concurrent_calls(make_kit: MakeKit) -> None:

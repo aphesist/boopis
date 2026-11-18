@@ -154,6 +154,9 @@ class KernelRegistry:
             kernel = self._kernels.get(key)
         return kernel.cancel() if kernel is not None else False
 
+    def abandon(self, session_id: str) -> bool:
+        return self.interrupt(session_id)
+
     def shutdown(self) -> None:
         self._stop.set()
         with self._lock:

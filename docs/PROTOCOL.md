@@ -108,7 +108,10 @@ Cancellation uses `$/cancelRequest`. The plugin keeps one warm `hx serve` child 
 ## 5. Plugin and exec kernel: `hx-kernel-v1`
 - **Plugin to kernel:** `cell.run {code, timeout_ms}` streams `cell.output` notifications and ends with `{status: "ok"|"error"|"cancelled"|"timeout", result_repr?, error?}`; `cell.cancel`; `kernel.reset`.
 - **Kernel to plugin:** `tool.call {name, args}` goes through `ctx.dispatch_tool`; `mcp.call {server, tool, args}` goes through `ctx.call_mcp`; also `blank.open {question, options, blocks}`, `diagnostics {paths}` and `apple.*` (phase 3).
-- `harness.parallel([...])` is `asyncio.gather` over `tool.call`. Concurrency is capped by `code_execution.max_tool_calls` and a per-cell limit.
+- `harness.parallel([...])` is `asyncio.gather` over `tool.call`. The plugin bounds concurrency (`exec.max_concurrency`) and counts every request of a cell against `exec.max_calls_per_cell`.
+- Framing: one JSON object per line. The kernel sends `kernel.ready {protocol, pid, python, cwd, scratch}` first. `cell.run {cell_id, code, timeout_ms, output_cap_bytes, spill_cap_bytes, result_cap_bytes}` answers `{status, result_repr?, error?, output: {stdout, stderr: {bytes, shown, spill}}, execution_count, duration_ms}`; `status` `timeout` is the kernel's soft timeout (the cell was cancelled, state kept). Past the output cap, the whole stream is also written to `spill`, a file in the scratch directory. Requests also carry `cell_id`; the plugin refuses one that is not the running cell's.
+- Also kernel to plugin: `sh.call {argv, command}` (judged as a `terminal` call, answers `{call_id}`) and `sh.done {call_id, status, exit, timed_out, duration_ms}` around a command the kernel runs in its own sandbox; `form.open {kind, title, body, schema, wait}` (a stub, see `docs/FORMS.md`).
+- A plugin refusal is an error with `data.code`: `hx.policy.denied`, `hx.exec.call_limit`, `hx.exec.unsupported`, `hx.exec.invalid`.
 
 ## 6. Error codes
 **Transport note** (verified on Hermes v0.23.2): an exception in a plugin RPC handler reaches the client as error `plugin_rpc_failed`, with detail `"<ExceptionClass>: <code>: <message>"`. The plugin can't set `data.code` on that path, so its handlers raise with the stable code first in the message, and clients parse it from there. `hx` and kernel errors carry `data.code` normally.

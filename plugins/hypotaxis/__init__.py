@@ -19,7 +19,6 @@ HOOKS = (
     "pre_llm_call",
     "on_session_start",
     "on_session_finalize",
-    "agent_loop_stopped",
 )
 RPC_METHODS = (
     "describe",

@@ -12,7 +12,7 @@ import sys
 from .registry import registry
 from .run import run_exec, to_json
 
-__all__ = ["available", "interrupt", "run_exec", "shutdown", "stop_session", "to_json"]
+__all__ = ["abandon", "available", "interrupt", "run_exec", "shutdown", "stop_session", "to_json"]
 
 
 def available() -> bool:
@@ -22,6 +22,11 @@ def available() -> bool:
 
 def stop_session(session_id: str, why: str) -> None:
     registry().stop_session(session_id, why)
+
+
+def abandon(session_id: str) -> bool:
+    """Cancel the session's running cell: the exec call that started it was given up on by Hermes."""
+    return registry().abandon(session_id)
 
 
 def interrupt(key: str) -> bool:

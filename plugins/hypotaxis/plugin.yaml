@@ -19,7 +19,6 @@ provides_hooks:
   - pre_llm_call
   - on_session_start
   - on_session_finalize
-  - agent_loop_stopped
 # Nothing here needs a granted capability: no tool override, no host-owned LLM calls.
 capabilities: []
 config_schema:

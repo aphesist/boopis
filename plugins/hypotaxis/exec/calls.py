@@ -119,7 +119,7 @@ class CellServices:
         record.ms = int((time.monotonic() - started) * 1000)
         try:
             payload = tool_called_payload(cell.call_id(record), tool, status, record.ms, args, error_code=code)
-            payload.update(via="exec", exec_tool_call_id=cell.tool_call_id, **extra)
+            payload.update(via="exec", cell_id=cell.id, **extra)
             self._rt.ledger(self._state).append("tool.called", self._state.actor(), payload)
         except Exception:  # noqa: BLE001 - the call already happened; a ledger fault is logged, never hidden by lying
             _log.error("tool.called for exec call %s not recorded", record.n, exc_info=True)

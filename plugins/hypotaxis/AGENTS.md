@@ -9,7 +9,8 @@ The hypotaxis Hermes plugin (Python, stdlib only at runtime). It adds governance
 | `__init__.py` | thin `register(ctx)`: lazy wrappers only, so import stays far under 150 ms |
 | `hooks.py` | the Hermes hook callbacks. Policy hooks fail closed, observers never raise |
 | `session.py` | `Runtime` and `SessionState`: the lock at first prompt, `session.opened`, spend |
-| `tools/` | the `pack` and `ship` tools (toolset `hypotaxis`): schemas in `tools/schemas.json`, handlers return JSON strings and never raise |
+| `exec/` | the `exec` tool: `kernel_main.py` and `kernel_harness.py` run **inside the hx sandbox** (stdlib only, never import the plugin); `launcher.py` (`sandbox.spawn` + channel), `kernel.py` (one process), `calls.py` (policy, dispatch and ledger for every kernel call), `registry.py` (LRU, idle reaper), `run.py` (the tool), `blanks.py` (blanks, forms stub) |
+| `tools/` | the `pack`, `exec` and `ship` tools (toolset `hypotaxis`): schemas in `tools/schemas.json`, handlers return JSON strings and never raise |
 | `ship/` | the `ship` engine: `run.py` (validate, apply, gate, keep or restore), `gate.py` (contraprova's gates on a temp copy), `checkpoint.py` (git plumbing), `recover.py`, `edits.py`, `evidence.py` |
 | `hx/` | the hx client (`client.py`) and the **generated** wire types (`types.py`) |
 | `_vendor/contraprova/` | exact copy of contraprova's engine at a pinned commit (see below). Never edit |
@@ -36,6 +37,17 @@ The hypotaxis Hermes plugin (Python, stdlib only at runtime). It adds governance
 - **Only `ship` writes the workspace**, through `txn.validate` then `txn.apply` with the explicit effective `protected` list (shared defaults, the plugin's extras and the project's). A pass discards the journal and commits `refs/hypotaxis/checkpoints/<session>`; a failure restores. The gate runs on a temp copy with **no sandbox yet**: every `gate.decided` says `enforcement: degraded:unsandboxed`. Never describe it as sandboxed until `hx sandbox.run` is wired.
 - **No runtime dependencies.** `pyproject.toml` is tooling only and must not gain a `[project]` table (Hermes would treat the plugin as a package).
 - RPC errors: Hermes turns an exception into `plugin_rpc_failed` with `detail` `"<Class>: hx.<code>: <message>"`. The code is first in `str(exc)` on purpose.
+
+## exec (ADR-0005)
+- **Every kernel call passes the plugin's policy.** `ctx.dispatch_tool` bypasses hooks, so `exec/calls.py` runs `policy.check(ToolCall(..., source="kernel"))`, then `dispatch_tool` (or `call_mcp`), then `tool.called` (`hooks.tool_called_payload`, `via: "exec"`). The plugin counts the per-cell calls and bounds concurrency (its pool); the kernel is never trusted to. An `approve` answer is a refusal from a cell.
+- **Governed mode:** write tools, `terminal` and `exec` itself are refused from the kernel; shell work is `harness.sh`, judged as a `terminal` call (`source="kernel_sh"`) by the user's deny and ask rules. `harness.sh` runs **in the kernel's own sandbox** (children inherit Landlock and seccomp), not through a second `sandbox.run`: that would hold one of hx's few request slots per command. A grandchild that calls `setsid` escapes `harness.sh`'s cancel (the kernel has no `/proc` to find it); it dies when the kernel does.
+- **Cancel vs kill.** A cancel or the soft timeout cancels the cell's asyncio task (and the tasks it started) and keeps the kernel. A cell that never yields (`while True: pass`, `time.sleep`) cannot be cancelled: after timeout plus `kill_grace_ms` the plugin kills the kernel and the answer says `hx.kernel.dead`, variables lost. The next call starts a fresh kernel and says so in `notes`.
+- **Interrupt.** Hermes reports an interrupted exec call as `post_tool_call` with status `cancelled` while the handler still runs (verified on v0.23.2); `hooks.post_tool_call` then cancels that session's cell. `agent_loop_stopped` is not fired by the desktop gateway's `session.interrupt`, so it is not used. The handler's kwargs carry no `tool_call_id`, so kernel calls are numbered `<cell id>:<n>`.
+- **Windows:** no channel yet, so `exec_ready()` hides the tool and `run_exec` answers `hx.sandbox.unavailable`. Never run the kernel unsandboxed.
+- **Stubs, said plainly:** forms (`request_input`, `request_credential`) emit `form.opened` and answer `pending`; nothing stores or answers them, and `wait=true` is refused. contraprova has no `form.*` ledger types yet, so the call is a `tool.called`. `diagnostics` answers `unsupported`. Kernel start, stop and death go to the log (`exec.kernel`), not the ledger (no such event types exist upstream).
+- The generated `SandboxWaitResult.from_wire` cannot parse a finished child (it reads the exit tag as `op`, hx sends `kind`), so `launcher.py` parses `sandbox.wait` itself.
+- `exec/data/system_read.json` mirrors `crates/hx-sandbox/src/defaults.rs` without the account files (Hermes's plugin scan rejects a file naming them).
+- Hermes's generic tool deadline (about 420 s) ends a call it has not heard from; keep `exec.max_timeout_ms` under it.
 
 ## Hermes facts this code depends on (verified on v0.23.2)
 - `post_api_request.usage` is Hermes's normalised usage: `input_tokens` is already uncached. Do not subtract the cache read again.

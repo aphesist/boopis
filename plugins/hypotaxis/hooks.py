@@ -174,8 +174,20 @@ def post_tool_call(tool_name: str = "", args: Any = None, **kw: Any) -> None:
             task_id=str(kw.get("task_id") or ""),
         )
         rt.ledger(state).append("tool.called", state.actor(), payload)
+        if tool_name == "exec" and kw.get("status") not in _STATUSES:
+            _abandon_cell(session_id)
     except Exception:  # noqa: BLE001
         _log.error("tool.called not recorded", exc_info=True)
+
+
+def _abandon_cell(session_id: str) -> None:
+    """Hermes reports an exec call ``cancelled`` (not ok, error or blocked) when it gave up on it while its
+    handler still runs: the owner stopped the turn, or a deadline passed (verified on v0.23.2: the interrupt
+    arrives as ``post_tool_call`` with status ``cancelled``). Nobody is waiting for that cell, so it is
+    cancelled; the kernel and its variables stay."""
+    from .exec import abandon
+
+    abandon(session_id)
 
 
 def _record_usage(kw: Mapping[str, Any], *, auxiliary: bool) -> None:
@@ -254,16 +266,6 @@ def _stop_kernel(session_id: str) -> None:
         stop_session(session_id, "the session ended")
     except Exception:  # noqa: BLE001
         _log.error("exec kernel not stopped", exc_info=True)
-
-
-def agent_loop_stopped(**kw: Any) -> None:
-    """The owner stopped the turn: cancel the cell it was waiting on (state survives; the kernel stays)."""
-    try:
-        from .exec import interrupt
-
-        interrupt(str(kw.get("session_key") or kw.get("session_id") or ""))
-    except Exception:  # noqa: BLE001
-        _log.error("exec interrupt failed", exc_info=True)
 
 
 def recover_on_start() -> None:
