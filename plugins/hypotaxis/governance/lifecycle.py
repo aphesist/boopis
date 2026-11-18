@@ -21,6 +21,8 @@ import hashlib
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from .._vendor.contraprova.log import read_events
+from .._vendor.contraprova.projections import TERMINAL, project_tasks
 from ..session import Runtime, SessionState
 from ..util.log import get_logger
 from . import handover
@@ -95,7 +97,13 @@ def on_stop(rt: Runtime, **kw: Any) -> None:
             _advance(rt, state, run, link, kw)
         except Exception as exc:  # noqa: BLE001
             _log.error("the cascade could not advance after attempt %d", link.attempt, exc_info=True)
-            fail(rt, state, run, f"internal error after attempt {link.attempt}: {type(exc).__name__}: {exc}")
+            fail(
+                rt,
+                state,
+                run,
+                f"internal error after attempt {link.attempt}: {type(exc).__name__}: {exc}",
+                code="internal_error",
+            )
 
 
 def _advance(rt: Runtime, state: SessionState, run: TaskRun, link: WorkerLink, kw: Mapping[str, Any]) -> None:
@@ -243,6 +251,18 @@ def outcome_text(rt: Runtime, state: SessionState, run: TaskRun, attempts: Seque
     return "\n".join(lines)
 
 
+def close_task(rt: Runtime, state: SessionState, run: TaskRun, reason: str, detail: str = "") -> None:
+    """``task.closed``: contraprova's projection reaches ``failed`` only when a block meets ``max_attempts``, so a task
+    that ends unsolved sooner (the ladder spent early, a launch that failed) is closed explicitly. Nothing is written
+    for a task that is already terminal."""
+    ledger = rt.ledger(state)
+    task = project_tasks(read_events(ledger.path)).get(run.task_id)
+    if task is None or task.status in TERMINAL:
+        return
+    payload = {"task_id": run.task_id, "status": "failed", "reason": reason}
+    ledger.append("task.closed", "plugin", payload | ({"detail": detail[:500]} if detail else {}))
+
+
 def finish(rt: Runtime, state: SessionState, run: TaskRun, attempts: Sequence[Attempt], status: str) -> None:
     """The gate ended the task: ``outcome.scored`` (the gate's verdict, labelled as that, never a hidden score), the
     outcome kept for the orchestrator's next turn, and ``cascade.updated``."""
@@ -262,14 +282,20 @@ def finish(rt: Runtime, state: SessionState, run: TaskRun, attempts: Sequence[At
             "evidence": {"source": "project gate", "tier": tier.name, "attempts": len(attempts)},
         },
     )
+    if not passed:
+        close_task(rt, state, run, "ladder_spent", f"{last.number} attempt(s); the last tier, {tier.name}, was blocked")
     message = outcome_text(rt, state, run, attempts, status)
     run.final = Final("passed" if passed else "failed", tier.name, len(attempts), message)
     announce(rt, state, run, run.final.status, last.tier_index, last.number)
 
 
-def fail(rt: Runtime, state: SessionState, run: TaskRun, reason: str) -> None:
-    """The task ended without a gate verdict (a launch that failed, the cost cap, an internal error): said as that.
-    No ``outcome.scored``: nothing was scored."""
+def fail(rt: Runtime, state: SessionState, run: TaskRun, reason: str, code: str = "launch_failed") -> None:
+    """The task ended without a gate verdict (a launch that failed, the cost cap, an internal error): said as that,
+    and closed in the ledger (``task.closed``, ``code`` as its reason). No ``outcome.scored``: nothing was scored."""
+    try:
+        close_task(rt, state, run, code, reason)
+    except Exception:  # noqa: BLE001 - the task still ends, and the orchestrator is still told
+        _log.error("task.closed not recorded", exc_info=True)
     attempts = replay(rt.ledger(state).read(), run.task_id)
     index = attempts[-1].tier_index if attempts else run.start_index
     tier = run.ladder.tiers[index]

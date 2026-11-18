@@ -1,13 +1,12 @@
-"""The orchestrator's brief, read with contraprova's rules (``config/claude-code/scripts/gate.py``, ``parse_brief``).
+"""The orchestrator's brief, read by contraprova's own parser (``contracts.parse_brief``, vendored).
 
 Free text whose lines start ``scope: <comma-separated paths or globs>``, ``test: <command>`` and
-``goal: <one or two sentences>``, then the approach. A line is ``^\\s*[-*]?\\s*(scope|test|goal)\\s*:\\s*(.*)$``,
-case-insensitive, the first occurrence of each key wins, backticks are stripped, and the scope splits on
-commas and whitespace.
+``goal: <one or two sentences>``, then the approach; contraprova's rules decide what counts as a line, which
+occurrence wins and how the scope splits. This module only adds what the plugin needs around them: a scope is
+required, entries must be project-relative, a directory means everything under it, and the size is bounded.
 
 **The test command is never taken from the brief.** The gate runs the project's own pinned, trusted command
 (``gate.command``); a brief's ``test:`` line is read only so that the result can say it was ignored.
-(Upstream has no importable parser, so the rules are restated here; they should move into contraprova.)
 """
 
 from __future__ import annotations
@@ -15,14 +14,13 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-_LINE = re.compile(r"^\s*[-*]?\s*(scope|test|goal)\s*:\s*(.*)$", re.IGNORECASE)
-_SPLIT = re.compile(r"[,\s]+")
+from .._vendor.contraprova.contracts import parse_brief as cp_parse_brief
 
 
 @dataclass(frozen=True, slots=True)
 class Brief:
-    """A brief that has a scope. ``text`` is what the worker is shown: the orchestrator's words without the
-    ``test:`` line, which means nothing to a worker whose only check is the gate."""
+    """A brief that has a scope. ``text`` is what the worker is shown: the scope and goal lines and the approach,
+    without the ``test:`` line, which means nothing to a worker whose only check is the gate."""
 
     text: str
     scope: tuple[str, ...]
@@ -59,26 +57,16 @@ def parse_brief(text: str, max_chars: int) -> tuple[Brief | None, list[str]]:
         return None, ["the brief is empty"]
     if len(text) > max_chars:
         return None, [f"the brief is {len(text)} characters; the limit is {max_chars}. Shorten it."]
-    found: dict[str, str] = {}
-    kept: list[str] = []
-    for line in text.splitlines():
-        match = _LINE.match(line)
-        if match is None:
-            kept.append(line)
-            continue
-        key, value = match.group(1).lower(), match.group(2).strip().strip("`")
-        if key == "test" and "test" not in found:
-            found["test"] = value
-            continue  # not shown to the worker
-        if key not in found:
-            found[key] = value
-        kept.append(line)
-    scope = [_normalise(p) for p in _SPLIT.split(found.get("scope", "")) if p.strip().strip("`")]
-    scope = [p for p in scope if p]
+    parsed = cp_parse_brief(text)
+    scope = [e for e in (_normalise(p) for p in parsed.scope or []) if e]
     problems: list[str] = []
     if not scope:
         problems.append("the brief has no 'scope:' line, so what the worker may change is unknown")
     problems += scope_problems(scope)
     if problems:
         return None, problems
-    return Brief("\n".join(kept).strip(), tuple(scope), found.get("goal", ""), found.get("test") or None), []
+    goal = parsed.goal or ""
+    shown = "\n".join(
+        part for part in (f"scope: {', '.join(scope)}", f"goal: {goal}" if goal else "", parsed.body) if part
+    )
+    return Brief(shown, tuple(scope), goal, parsed.test), []

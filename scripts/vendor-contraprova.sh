@@ -4,13 +4,13 @@
 #   scripts/vendor-contraprova.sh <40-hex sha>     write plugins/hypotaxis/_vendor/contraprova at that commit
 #   scripts/vendor-contraprova.sh --check          re-fetch the pinned commit and compare every byte
 #
-# The source is branch hx/generalize of aphesist/contraprova. Override the repository with
-# CONTRAPROVA_REPO (a URL or a local path), e.g. to test against a checkout. Changes are made
+# The source is a branch of aphesist/contraprova (CONTRAPROVA_BRANCH, recorded in VENDOR.json; the commit is what
+# counts). Override the repository with CONTRAPROVA_REPO (a URL or a local path), e.g. to test against a checkout. Changes are made
 # upstream and re-vendored, never edited here.
 set -euo pipefail
 
 REPO="${CONTRAPROVA_REPO:-https://github.com/aphesist/contraprova.git}"
-BRANCH="hx/generalize"
+BRANCH="${CONTRAPROVA_BRANCH:-hx/cascade-support}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DEST="$ROOT/plugins/hypotaxis/_vendor/contraprova"
 # The engine and its stdlib-only dependencies. Not the harness, analysis, ope, router, llm or cli.

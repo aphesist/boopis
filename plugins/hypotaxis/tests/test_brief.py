@@ -29,6 +29,18 @@ def test_rules_match_contraprovas_parser() -> None:
     assert brief.ignored_test == "first"
 
 
+def test_the_brief_is_read_by_contraprovas_own_parser() -> None:
+    from hypotaxis._vendor.contraprova.contracts import parse_brief as upstream
+
+    text = "- scope: a.py, b.py\ngoal: g\ntest: t\nthe approach"
+    ours, _ = parse_brief(text, MAX)
+    theirs = upstream(text)
+    assert ours is not None
+    assert list(ours.scope) == theirs.scope
+    assert (ours.goal, ours.ignored_test) == (theirs.goal, theirs.test)
+    assert theirs.body in ours.text
+
+
 def test_a_directory_scope_means_everything_under_it() -> None:
     brief, _ = parse_brief("scope: ./src/\ngoal: g", MAX)
     assert brief is not None

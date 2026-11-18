@@ -1,8 +1,8 @@
 {
   "name": "contraprova",
   "repo": "https://github.com/aphesist/contraprova",
-  "branch": "hx/generalize",
-  "sha": "74fabe93d989233da7e8601cbfde3e96647ed3e8",
+  "branch": "hx/cascade-support",
+  "sha": "a16236776bbd5beac2dadf3c4434fc8e4b0e8ba2",
   "licence": "Apache-2.0",
   "note": "Exact copy. Edit upstream and re-vendor with scripts/vendor-contraprova.sh; CI runs --check."
 }

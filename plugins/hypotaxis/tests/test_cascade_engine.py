@@ -410,6 +410,67 @@ def test_the_provider_declares_no_task_parameters_so_hermes_refuses_a_requested_
     assert route["model"] == "model-a"  # the plugin's tier, not the one asked for
 
 
+def _status(setup: Setup) -> str:
+    """The task's status in contraprova's own projection of the ledger."""
+    from hypotaxis._vendor.contraprova.log import read_events
+    from hypotaxis._vendor.contraprova.projections import project_tasks
+
+    tasks = project_tasks(read_events(setup.rt.ledger(setup.state).path))
+    return tasks[setup.payloads("task.created")[0]["task_id"]].status
+
+
+def test_a_ladder_spent_before_max_attempts_is_closed_so_the_projection_shows_failed(setup: Setup) -> None:
+    setup.dispatch()
+    setup.decide("child-1", "block")
+    assert _status(setup) == "in_progress"  # the next tier has claimed it: still open
+    setup.decide("child-2", "block")  # two of the four allowed attempts: contraprova alone would say todo
+    (closed,) = setup.payloads("task.closed")
+    assert (closed["status"], closed["reason"]) == ("failed", "ladder_spent")
+    assert _status(setup) == "failed"
+    assert setup.rt.ledger(setup.state).verify()[0] is True
+
+
+def test_a_pass_writes_no_task_closed(setup: Setup) -> None:
+    setup.dispatch()
+    setup.decide("child-1", "pass")
+    assert setup.payloads("task.closed") == []
+    assert _status(setup) == "done"
+
+
+def test_a_task_that_reached_max_attempts_is_already_failed_and_is_not_closed_twice(setup: Setup) -> None:
+    setup.dispatch()
+    for child, gate in (
+        ("child-1", "T0.scope"),
+        ("child-2", "T0.scope"),
+        ("child-3", "T0.scope"),
+        ("child-4", "T0.scope"),
+    ):
+        setup.decide(child, "block", gate)
+    assert len(setup.payloads("gate.decided")) == 4  # max_attempts
+    assert setup.payloads("task.closed") == []
+    assert _status(setup) == "failed"
+
+
+def test_a_launch_that_fails_after_route_decided_closes_the_task(setup: Setup) -> None:
+    setup.ctx.hermes.reply = json.dumps({"error": "Delegation depth limit reached"})
+    setup.dispatch()
+    assert len(setup.payloads("route.decided")) == 1  # the attempt was decided, then the launch failed
+    (closed,) = setup.payloads("task.closed")
+    assert (closed["status"], closed["reason"]) == ("failed", "launch_failed")
+    assert "depth limit" in closed["detail"]
+    assert _status(setup) == "failed"
+    assert setup.rt.ledger(setup.state).verify()[0] is True
+
+
+def test_a_next_tier_that_cannot_launch_closes_the_task(setup: Setup) -> None:
+    setup.dispatch()
+    setup.ctx.hermes.reply = json.dumps({"error": "pool at capacity"})
+    setup.decide("child-1", "block")
+    (closed,) = setup.payloads("task.closed")
+    assert closed["reason"] == "launch_failed"
+    assert _status(setup) == "failed"
+
+
 def _cascade_state(setup: Setup) -> dict[str, Any]:
     from hypotaxis import rpc
 
