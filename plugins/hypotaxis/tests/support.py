@@ -17,6 +17,7 @@ class FakeCtx:
         self.hooks: dict[str, Callable[..., Any]] = {}
         self.rpc: dict[str, Callable[..., Any]] = {}
         self.sections: dict[str, Any] = {}
+        self.tools: dict[str, dict[str, Any]] = {}
         self.emitted: list[tuple[str, str, dict[str, Any]]] = []
 
     def get_config(self, key: str, default: Any = None) -> Any:
@@ -31,6 +32,11 @@ class FakeCtx:
 
     def register_hook(self, hook_name: str, callback: Callable[..., Any]) -> None:
         self.hooks[hook_name] = callback
+
+    def register_tool(
+        self, name: str, toolset: str, schema: dict[str, Any], handler: Callable[..., Any], **kw: Any
+    ) -> None:
+        self.tools[name] = {"toolset": toolset, "schema": schema, "handler": handler, **kw}
 
     def register_rpc(self, name: str, handler: Callable[..., Any]) -> None:
         self.rpc[name] = handler

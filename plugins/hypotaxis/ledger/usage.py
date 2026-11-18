@@ -62,7 +62,7 @@ def usage_event_payload(
 ) -> dict[str, Any] | None:
     """The ``usage.recorded`` payload for one API request, or None when Hermes reported no usage
     (unknown is not recorded as zero)."""
-    from contraprova.usage import anthropic_usage_payload
+    from .._vendor.contraprova.usage import anthropic_usage_payload
 
     if not usage:
         return None

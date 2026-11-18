@@ -20,7 +20,7 @@ from pathlib import PurePosixPath
 
 
 @lru_cache(maxsize=512)
-def compile_glob(pattern: str) -> re.Pattern[str]:
+def compile_glob(pattern: str, ignore_case: bool = False) -> re.Pattern[str]:
     """The regex of one gitignore-style pattern, matched against a whole relative path."""
     pat = pattern.replace("\\", "/").rstrip("/")
     anchored = "/" in pat
@@ -36,7 +36,7 @@ def compile_glob(pattern: str) -> re.Pattern[str]:
     body = "".join(parts)
     prefix = "" if anchored else "(?:.*/)?"
     # A match also covers everything beneath it: a rule on a directory covers its files.
-    return re.compile(f"^{prefix}{body}(?:/.*)?$", re.DOTALL)
+    return re.compile(f"^{prefix}{body}(?:/.*)?$", re.DOTALL | (re.IGNORECASE if ignore_case else 0))
 
 
 def _segment_regex(seg: str) -> str:
@@ -64,9 +64,9 @@ def _segment_regex(seg: str) -> str:
     return "".join(out)
 
 
-def glob_match(pattern: str, path: str) -> bool:
+def glob_match(pattern: str, path: str, *, ignore_case: bool = False) -> bool:
     """Whether ``path`` (POSIX, relative or absolute) is matched by ``pattern``."""
-    return compile_glob(pattern).match(path.lstrip("/")) is not None
+    return compile_glob(pattern, ignore_case).match(path.lstrip("/")) is not None
 
 
 def normalise_path(raw: str, root: str) -> str:

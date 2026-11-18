@@ -14,6 +14,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,6 +27,8 @@ AUX_TASKS = (
     "goal_judge", "group_router", "curator", "monitor", "background_review", "moa_reference", "moa_aggregator",
 )  # fmt: skip
 PLUGIN_SRC = Path(__file__).resolve().parents[2] / "plugins" / "hypotaxis"
+sys.path.insert(0, str(PLUGIN_SRC.parent))  # the plugin package is importable as `hypotaxis` (trust-store helpers)
+HX_BIN = os.environ.get("HX_BIN", "")  # a built hx (cargo build -p hx); the pack and ship tests skip without it
 IGNORE = shutil.ignore_patterns("__pycache__", "tests", ".pytest_cache", ".ruff_cache", "*.pyc")
 
 
@@ -53,13 +56,6 @@ def find_install() -> HermesInstall | None:
     if not venvs or not (venvs[0] / "bin" / "hermes").exists():
         return None
     return HermesInstall(root, venvs[0])
-
-
-def contraprova_src() -> Path:
-    """Where contraprova is importable from in the test process: Hermes's venv does not have it yet."""
-    import contraprova
-
-    return Path(contraprova.__file__).resolve().parents[1]
 
 
 class HermesStack:
@@ -96,7 +92,6 @@ class HermesStack:
             "UV_PYTHON_INSTALL_DIR": str(spike / "uv-python"),
             "UV_CACHE_DIR": str(spike / "uv-cache"),
             "PATH": f"{self.install.venv / 'bin'}{os.pathsep}{base.get('PATH', '')}",
-            "PYTHONPATH": str(contraprova_src()),  # until contraprova is installable by `hermes pm repair`
             "NO_PROXY": "127.0.0.1,localhost,::1",
             "no_proxy": "127.0.0.1,localhost,::1",
         }

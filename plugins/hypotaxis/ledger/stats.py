@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Collection, Mapping, Sequence
 from typing import Any
 
-from .prices import project_costs
+from .prices import PriceBook, project_costs
 
 _TOKEN_FIELDS = {
     "input_uncached": "input_tokens",
@@ -22,8 +22,7 @@ def usage_records(events: Sequence[Mapping[str, Any]]) -> list[Mapping[str, Any]
 
 def compute_stats(
     events: Sequence[Mapping[str, Any]],
-    table: Any,
-    price_table_version: str,
+    book: PriceBook,
     subscription: Collection[str],
 ) -> dict[str, Any]:
     """The ``ledger.stats`` result (docs/PROTOCOL.md section 3) for one session's events."""
@@ -32,7 +31,7 @@ def compute_stats(
     tokens["cache_write"] = sum(
         int(r.get("cache_write_5m_tokens", 0) or 0) + int(r.get("cache_write_1h_tokens", 0) or 0) for r in records
     )
-    costs = project_costs(records, table, subscription)
+    costs = project_costs(records, book, subscription)
     kinds = [e["type"] for e in events]
     return {
         "tokens": tokens,
@@ -46,5 +45,5 @@ def compute_stats(
         "rollbacks": kinds.count("ship.restored"),
         "blanks": kinds.count("blank.opened"),
         "approvals": kinds.count("approval.requested"),
-        "price_table": price_table_version,
+        "price_table": book.version,
     }

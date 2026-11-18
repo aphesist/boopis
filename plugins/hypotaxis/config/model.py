@@ -23,13 +23,34 @@ class PermissionRules:
 
 
 @dataclass(frozen=True, slots=True)
+class PricesSettings:
+    """``prices``: where rates come from (docs/DECISIONS.md ADR-0012).
+
+    ``overrides`` (``provider/model`` -> USD per million tokens per bucket) win over the models.dev
+    catalogue. ``aliases`` map a Hermes provider name to the catalogue's provider id.
+    """
+
+    refresh_enabled: bool = True
+    overrides: Mapping[str, Mapping[str, float]] = field(default_factory=dict)
+    aliases: Mapping[str, str] = field(default_factory=dict)
+
+
+@dataclass(frozen=True, slots=True)
+class PackSettings:
+    """``pack``: the byte budget of one ``pack`` call (everything in it shares it)."""
+
+    max_bytes: int = 131072
+
+
+@dataclass(frozen=True, slots=True)
 class Settings:
     """The plugin settings (``plugins.entries.hypotaxis.settings``)."""
 
     mode: Mode = "governed"
     ladder: Mapping[str, Any] | None = None  # validated; contraprova's TierLadder.from_dict reads it
     cost_cap_usd: float | None = None
-    prices: Mapping[str, Mapping[str, float]] = field(default_factory=dict)
+    prices: PricesSettings = PricesSettings()
+    pack: PackSettings = PackSettings()
     subscription_providers: tuple[str, ...] = ()
     permissions: PermissionRules = PermissionRules()
     hx_path: str = ""

@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from contraprova.usage import provider_usage_payload
+from hypotaxis._vendor.contraprova.usage import provider_usage_payload
 from hypotaxis.ledger.usage import usage_event_payload
 
 CASES: list[dict[str, Any]] = json.loads((Path(__file__).parent / "fixtures" / "usage_shapes.json").read_text())
@@ -149,8 +149,8 @@ def test_garbage_counts_are_zero() -> None:
 
 
 def test_the_payload_is_valid_for_contraprova_cost() -> None:
-    from contraprova.interfaces import ModelRef
-    from contraprova.pricing import Price, PriceTable, request_cost
+    from hypotaxis._vendor.contraprova.interfaces import ModelRef
+    from hypotaxis._vendor.contraprova.pricing import Price, PriceTable, request_cost
 
     payload = usage_event_payload(by_name("openai_chat")["hook_usage"], model="gpt", provider="openai")
     assert payload is not None

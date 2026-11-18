@@ -20,7 +20,9 @@ from ..util.schema import JsonObject, validate
 from .model import (
     Fallback,
     Mode,
+    PackSettings,
     PermissionRules,
+    PricesSettings,
     ProjectConfig,
     ProjectSettings,
     Settings,
@@ -77,7 +79,10 @@ def parse_settings(raw: Mapping[str, Any], *, source: str = "plugins.entries.hyp
         f"{source}{'.' + i.path if i.path else ''}: expected {i.expected}, found {i.found}"
         for i in validate(dict(raw), schema("plugin-settings"))
     ]
-    issues += _price_key_problems(raw.get("prices"), source) + _ladder_problems(raw.get("ladder"), source)
+    prices_raw: Mapping[str, Any] = raw.get("prices") or {}
+    pack_raw: Mapping[str, Any] = raw.get("pack") or {}
+    issues += _price_key_problems(prices_raw.get("overrides"), f"{source}.prices")
+    issues += _ladder_problems(raw.get("ladder"), source)
     if issues:
         return Loaded(default_settings(), tuple(issues))
     ladder = raw.get("ladder")
@@ -87,9 +92,20 @@ def parse_settings(raw: Mapping[str, Any], *, source: str = "plugins.entries.hyp
         mode=cast(Mode, raw.get("mode", schema_default("plugin-settings", "mode"))),
         ladder=dict(ladder) if ladder else None,
         cost_cap_usd=None if cap is None else float(cap),
-        prices={k: {r: float(v) for r, v in rates.items()} for k, rates in (raw.get("prices") or {}).items()},
+        prices=PricesSettings(
+            refresh_enabled=bool(
+                prices_raw.get("refresh_enabled", schema_default("plugin-settings", "prices", "refresh_enabled"))
+            ),
+            overrides={
+                k: {r: float(v) for r, v in rates.items()} for k, rates in (prices_raw.get("overrides") or {}).items()
+            },
+            aliases=dict(prices_raw.get("aliases") or {}),
+        ),
         subscription_providers=tuple(raw.get("subscription_providers", ())),
         permissions=_rules(perms, cast(Fallback, schema_default("plugin-settings", "permissions", "default"))),
+        pack=PackSettings(
+            max_bytes=int(pack_raw.get("max_bytes", schema_default("plugin-settings", "pack", "max_bytes")))
+        ),
         hx_path=str(raw.get("hx_path", "")),
         ledger_dir=str(raw.get("ledger_dir", "")),
     )
@@ -100,7 +116,7 @@ def _price_key_problems(prices: Any, source: str) -> list[str]:
     if not isinstance(prices, Mapping):
         return []
     return [
-        f"{source}.prices.{key}: expected a 'provider/model' key, found {key!r}"
+        f"{source}.overrides.{key}: expected a 'provider/model' key, found {key!r}"
         for key in cast(Mapping[str, Any], prices)
         if "/" not in key or key.startswith("/") or key.endswith("/")
     ]

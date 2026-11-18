@@ -20,7 +20,15 @@ HOOKS = (
     "on_session_start",
     "on_session_finalize",
 )
-RPC_METHODS = ("describe", "mode.set", "ledger.tail", "ledger.verify", "ledger.stats", "cascade.state")
+RPC_METHODS = (
+    "describe",
+    "mode.set",
+    "ledger.tail",
+    "ledger.verify",
+    "ledger.stats",
+    "cascade.state",
+    "prices.refresh",
+)
 
 
 def _lazy(module: str, name: str) -> Callable[..., Any]:
@@ -44,10 +52,38 @@ def _rpc(method: str) -> Callable[..., Any]:
 
 def register(ctx: Any) -> None:
     from .hermes_api import bind
+    from .tools import TOOLSET, hx_ready, pack_handler, ship_handler, tool_schemas
 
     bind(ctx)
+    handlers = {"pack": pack_handler, "ship": ship_handler}
+    for name, schema in tool_schemas().items():
+        ctx.register_tool(
+            name=name,
+            toolset=TOOLSET,
+            schema=schema,
+            handler=handlers[name],
+            check_fn=hx_ready,
+            description=schema["description"],
+        )
+
     for hook in HOOKS:
         ctx.register_hook(hook, _lazy("hooks", hook))
     for method in RPC_METHODS:
         ctx.register_rpc(method, _rpc(method))
     ctx.register_system_prompt_section("hypotaxis", _lazy("hooks", "system_prompt_section"))
+    _start_recovery()
+    on_unload = getattr(ctx, "on_unload", None)
+    if callable(on_unload):
+        on_unload(_lazy("hx", "shutdown"))
+
+
+def _start_recovery() -> None:
+    """``txn.recover`` at plugin start, off the load path (the plugin's import budget is 150 ms). The
+    thread runs in a copy of this context, so it sees the same Hermes home as the load."""
+    import contextvars
+    import threading
+
+    context = contextvars.copy_context()
+    threading.Thread(
+        target=context.run, args=(_lazy("hooks", "recover_on_start"),), daemon=True, name="hypotaxis-recover"
+    ).start()

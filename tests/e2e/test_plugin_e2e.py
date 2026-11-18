@@ -8,6 +8,8 @@ with the kwargs the plugin reads, routes ``plugin.hypotaxis.*`` RPC, and deliver
 from __future__ import annotations
 
 import json
+import os
+import stat
 import subprocess
 import sys
 import time
@@ -39,7 +41,7 @@ SUBSCRIPTIONS: dict[str, str] = {}  # session id -> the viewer subscription sess
 
 @pytest.fixture(scope="module")
 def stack(hermes_install: HermesInstall, stack_root: Path, fake_model: FakeModelServer) -> Iterator[HermesStack]:
-    settings = {"prices": PRICES, "cost_cap_usd": CAP}
+    settings = {"prices": {"overrides": PRICES}, "cost_cap_usd": CAP}
     yield from run_stack(hermes_install, stack_root, fake_model.url, settings)
 
 
@@ -59,9 +61,8 @@ def create_session(gw: GatewayClient, stack: HermesStack, **extra: Any) -> str:
         "request_id": f"req-{time.time_ns()}",
         "model": "fake-a",
         "provider": "main",
-        # Hermes rejects toolsets: ["hypotaxis"] while the plugin registers no tool (verified: session.create
-        # answers 4001 "unknown or invalid toolset name"). The built-in file and terminal toolsets give the
-        # model write tools to attempt, which is what the policy has to stop.
+        # The built-in file and terminal toolsets give the model write tools to attempt, which is what the
+        # policy has to stop; the tools tests below use toolsets: ["hypotaxis"].
         "toolsets": ["file", "terminal"],
         "client": {"name": "hypotaxis-e2e", "version": "0"},
         **extra,
@@ -229,3 +230,206 @@ def test_closing_a_session_writes_session_closed(gateway: GatewayClient, stack: 
     assert ledger[-1]["type"] == "session.closed"
     assert ledger[-1]["payload"]["session_id"] == sid
     assert contraprova_verify(stack.ledger_dir / f"{sid}.jsonl").returncode == 0
+
+
+# ------------------------------------------------------ the tools: pack and ship, governed, through real Hermes
+
+HX_BIN = os.environ.get("HX_BIN", "")
+GATE_SCRIPT = (
+    "import pathlib, sys\n"
+    "src = pathlib.Path('src/a.py').read_text()\n"
+    "if 'BREAK' in src:\n"
+    "    print('AssertionError: BREAK found in src/a.py line 2, called from src/util.py')\n"
+    "    sys.exit(1)\n"
+)
+
+
+def git(root: Path, *args: str) -> str:
+    return subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, check=True).stdout.strip()
+
+
+@pytest.fixture(scope="module")
+def tools_stack(hermes_install: HermesInstall, stack_root: Path, fake_model: FakeModelServer) -> Iterator[HermesStack]:
+    if not HX_BIN:
+        pytest.skip("set HX_BIN to a built hx (cargo build -p hx)")
+    settings = {"hx_path": HX_BIN, "prices": {"overrides": PRICES}}
+    yield from run_stack(hermes_install, stack_root / "tools", fake_model.url, settings)
+
+
+@pytest.fixture(scope="module")
+def tools_gateway(tools_stack: HermesStack, stack_root: Path) -> Iterator[GatewayClient]:
+    gw = GatewayClient(
+        hermes_bin=str(tools_stack.install.hermes), env=tools_stack.env, frames_log=stack_root / "tools-frames.jsonl"
+    )
+    gw.connect()
+    gw.handshake()
+    yield gw
+    gw.close()
+
+
+@pytest.fixture(scope="module")
+def project(tools_stack: HermesStack, tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """A git project with a pinned gate command in .hermes/hypotaxis.yaml that the user has approved."""
+    from hypotaxis.config import KIND_SETTINGS, TrustStore, content_hash
+
+    root = tmp_path_factory.mktemp("project")
+    (root / "src").mkdir()
+    (root / "tests").mkdir()
+    (root / "src" / "a.py").write_text("def hello():\n    return 1\n")
+    (root / "src" / "util.py").write_text("def helper():\n    return 0\n")
+    (root / "tests" / "test_a.py").write_text("def test_a():\n    assert True\n")
+    (root / "check.py").write_text(GATE_SCRIPT)
+    (root / "run.sh").write_text("#!/bin/sh\necho original\n")
+    (root / "run.sh").chmod(0o750)
+    (root / ".hermes").mkdir()
+    (root / ".hermes" / "hypotaxis.yaml").write_text(f"gate:\n  command: {sys.executable} check.py\n  timeout_s: 60\n")
+    (tools_stack.root / "home").mkdir(parents=True, exist_ok=True)
+    (tools_stack.root / "home" / ".gitconfig").write_text("[user]\n\tname = The Owner\n\temail = owner@example.com\n")
+    git(root, "init", "-q")
+    git(root, "add", "-A")
+    git(root, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "init")
+    approved = content_hash((root / ".hermes" / "hypotaxis.yaml").read_bytes())
+    TrustStore(tools_stack.home).approve(root, KIND_SETTINGS, "hypotaxis.yaml", approved)
+    return root
+
+
+def tool_results(fake: FakeModelServer, start: int) -> list[dict[str, Any]]:
+    """The tool messages the fake model received after request index ``start``, parsed."""
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for request in fake.chat_requests()[start:]:
+        for m in request.messages:
+            if m.get("role") == "tool" and m.get("tool_call_id") not in seen:
+                seen.add(m["tool_call_id"])
+                out.append(json.loads(m["content"]))
+    return out
+
+
+def test_a_governed_session_uses_pack_and_ship_end_to_end(
+    tools_gateway: GatewayClient, tools_stack: HermesStack, project: Path, fake_model: FakeModelServer
+) -> None:
+    sid_params: JsonObject = {
+        "source": "gui",
+        "cwd": str(project),
+        "request_id": f"req-{time.time_ns()}",
+        "model": "fake-a",
+        "provider": "main",
+        "toolsets": ["hypotaxis"],
+        "client": {"name": "hypotaxis-e2e", "version": "0"},
+    }
+    created = tools_gateway.result("session.create", sid_params)
+    sid = created["session_id"]
+    # Hermes does not tell a plugin a session's cwd before its first prompt: unknown is reported as unknown
+    # (ctx.session_cwd() inside an RPC answers the profile's directory, which would be a wrong answer)
+    assert tools_gateway.result("plugin.hypotaxis.describe", {"session_id": sid})["session"]["cwd"] is None
+    assert tools_gateway.result("plugin.hypotaxis.mode.set", {"session_id": sid, "mode": "governed"}) == {}
+
+    a_py = project / "src" / "a.py"
+    run_sh = project / "run.sh"
+    before = {p: (p.read_bytes(), stat.S_IMODE(p.stat().st_mode)) for p in (a_py, run_sh, project / "src" / "util.py")}
+
+    def call(name: str, args: JsonObject) -> str:
+        return f"@@call {name} {json.dumps(args)}@@"
+
+    start = len(fake_model.chat_requests())
+    prompt = " ".join(
+        [
+            call(
+                "pack",
+                {
+                    "items": [
+                        {"op": "search", "pattern": "return"},
+                        {"op": "read", "path": "src/a.py"},
+                        {"op": "status"},
+                    ]
+                },
+            ),
+            call(
+                "ship", {"edits": [{"op": "replace", "path": "src/a.py", "old": "return 1", "new": "return 2"}]}
+            ),  # passes
+            call(
+                "ship",
+                {  # the gate fails: everything must come back, mode included
+                    "edits": [
+                        {"op": "replace", "path": "src/a.py", "old": "return 2", "new": "return 'BREAK'"},
+                        {"op": "replace", "path": "run.sh", "old": "original", "new": "changed"},
+                        {"op": "create", "path": "src/brand_new.py", "content": "x = 1\n"},
+                    ]
+                },
+            ),
+            call(
+                "ship",
+                {"edits": [{"op": "replace", "path": "tests/test_a.py", "old": "assert True", "new": "assert False"}]},
+            ),
+            "@@reply all done@@",
+        ]
+    )
+    run_prompt(tools_gateway, sid, prompt, timeout=120)
+
+    # after the first prompt the session's cwd is known to RPC callers, from the prompt section's info
+    assert tools_gateway.result("plugin.hypotaxis.describe", {"session_id": sid})["session"]["cwd"] == str(project)
+
+    # the model's whole tool surface is the hypotaxis toolset
+    first = fake_model.chat_requests()[start]
+    assert {"pack", "ship"} <= set(first.tool_names)
+    assert not {"write_file", "patch", "terminal"} & set(first.tool_names)
+
+    packed, passed, failed, blocked = tool_results(fake_model, start)[:4]
+    assert "[search]" in packed["text"]
+    assert "[read] src/a.py" in packed["text"]
+    assert "[status]" in packed["text"]
+
+    assert passed["status"] == "shipped"
+    assert passed["gate"]["gates"] == ["T0.scope", "T0.visible_tests"]
+    ref, commit = passed["checkpoint"]["ref"], passed["checkpoint"]["commit"]
+    assert ref == f"refs/hypotaxis/checkpoints/{sid}"
+    assert git(project, "rev-parse", ref) == commit
+    assert "return 2" in git(project, "show", f"{commit}:src/a.py")
+    assert git(project, "log", "-1", "--format=%an", commit) == "The Owner"
+
+    assert failed["status"] == "restored"
+    assert "BREAK found in src/a.py" in failed["output"]
+    assert failed["failure_points_at_files_this_call_did_not_change"] == ["src/util.py"]
+    assert "return 2" in a_py.read_text()  # the first ship stands; the failed one is undone byte for byte
+    assert run_sh.read_bytes() == before[run_sh][0]
+    assert stat.S_IMODE(run_sh.stat().st_mode) == before[run_sh][1]
+    assert not (project / "src" / "brand_new.py").exists()
+
+    # a ship at a protected test file never reaches hx: the policy hook blocks it first (hx would too)
+    assert "protected" in blocked["error"]
+    assert "tests/test_a.py" in blocked["error"]
+    assert (project / "tests" / "test_a.py").read_text() == "def test_a():\n    assert True\n"
+
+    # the ledger tells the same story and verifies
+    path = tools_stack.ledger_dir / f"{sid}.jsonl"
+    assert contraprova_verify(path).returncode == 0
+    ledger = read_ledger(tools_stack, sid)
+    kinds = [e["type"] for e in ledger]
+    assert kinds.count("checkpoint.committed") == 1
+    assert kinds.count("ship.restored") == 1
+    assert kinds.count("ship.applied") == 2  # the blocked ship never reached the journal
+    decisions = [e["payload"]["verdict"] for e in ledger if e["type"] == "gate.decided"]
+    assert decisions == ["pass", "block"]
+    assert all(e["payload"]["enforcement"] == "degraded:unsandboxed" for e in ledger if e["type"] == "gate.decided")
+    called = [(e["payload"]["tool"], e["payload"]["status"]) for e in ledger if e["type"] == "tool.called"]
+    assert called == [("pack", "ok"), ("ship", "ok"), ("ship", "ok"), ("ship", "blocked")]  # outcomes are not errors
+    blocked_call = [e["payload"] for e in ledger if e["type"] == "tool.called"][-1]
+    assert blocked_call["error_code"] == "hx.policy.denied"
+    assert "return 'BREAK'" not in path.read_text()  # edit text is never stored
+
+    shipped = [e["payload"]["status"] for e in tools_gateway.events_of("plugin.hypotaxis.ship.completed", sid)]
+    assert shipped == ["shipped", "restored"]
+    streamed = {e["payload"]["type"] for e in tools_gateway.events_of("plugin.hypotaxis.ledger.appended", sid)}
+    assert {"ship.applied", "gate.decided", "checkpoint.committed", "ship.restored"} <= streamed
+
+
+def test_governed_mode_still_blocks_the_hermes_write_tools_even_if_the_host_exposes_them(
+    tools_gateway: GatewayClient, tools_stack: HermesStack, project: Path
+) -> None:
+    sid = create_session(tools_gateway, tools_stack, cwd=str(project), toolsets=["hypotaxis", "file"])
+    tools_gateway.result("plugin.hypotaxis.mode.set", {"session_id": sid, "mode": "governed"})
+    target = project / "sneaky.txt"
+    run_prompt(tools_gateway, sid, f"@@call write_file {json.dumps({'path': str(target), 'content': 'x'})}@@")
+    assert not target.exists()
+    called = [e["payload"] for e in read_ledger(tools_stack, sid) if e["type"] == "tool.called"]
+    assert [(c["tool"], c["status"]) for c in called] == [("write_file", "blocked")]
