@@ -12,8 +12,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{Error, ErrorBody, Result};
 use crate::outline::{OutlineParams, OutlineResponse, outline};
-use crate::paths::Root;
 use crate::read::{ReadParams, ReadResponse, read};
+use crate::root::Root;
 use crate::search::{SearchParams, SearchResponse, search};
 use crate::status::{StatusParams, StatusResponse, status};
 use crate::symbol::{SymbolParams, SymbolResponse, symbol};

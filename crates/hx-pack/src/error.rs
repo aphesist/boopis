@@ -1,8 +1,8 @@
 //! The one error type of this crate.
 //!
-//! Every variant maps to a stable string code in the `hx.pack.*` namespace
-//! ([`Error::code`]). The listing lives in `error_codes.json` for
-//! `crates/hx-proto/errors.json`, and a test keeps the two in step.
+//! Every variant maps to a stable string code from the catalog in
+//! `crates/hx-proto/errors.json` ([`Error::code`]): the `hx.pack.*` codes, plus the shared
+//! `hx.cancelled`. A test keeps this list and the catalog in step.
 //!
 //! Tool *outcomes* are not errors: a file that was withheld, a binary file or
 //! a symbol that matched nothing are fields of a successful result
@@ -10,6 +10,7 @@
 
 use std::io;
 
+use hx_proto::{AppError, codes};
 use serde::Serialize;
 
 /// A `Result` whose error is [`Error`].
@@ -64,38 +65,39 @@ pub enum Error {
 }
 
 impl Error {
-    /// Every code this crate can produce, in the order of `error_codes.json`.
+    /// Every code this crate can produce, in the catalog's order. `Cancelled` uses the
+    /// catalog's shared `hx.cancelled`; pack changes nothing, so the contract holds.
     pub const ALL_CODES: &'static [&'static str] = &[
-        "hx.pack.invalid_request",
-        "hx.pack.invalid_pattern",
-        "hx.pack.invalid_root",
-        "hx.pack.path_escape",
-        "hx.pack.not_found",
-        "hx.pack.unsupported_language",
-        "hx.pack.parse_failed",
-        "hx.pack.git_failed",
-        "hx.pack.timeout",
-        "hx.pack.cancelled",
-        "hx.pack.config_invalid",
-        "hx.pack.io",
+        codes::HX_PACK_INVALID_REQUEST,
+        codes::HX_PACK_INVALID_PATTERN,
+        codes::HX_PACK_INVALID_ROOT,
+        codes::HX_PACK_PATH_ESCAPE,
+        codes::HX_PACK_NOT_FOUND,
+        codes::HX_PACK_UNSUPPORTED_LANGUAGE,
+        codes::HX_PACK_PARSE_FAILED,
+        codes::HX_PACK_GIT_FAILED,
+        codes::HX_PACK_TIMEOUT,
+        codes::HX_CANCELLED,
+        codes::HX_PACK_CONFIG_INVALID,
+        codes::HX_PACK_IO,
     ];
 
-    /// The stable wire code, `hx.pack.<snake_case>`.
+    /// The stable wire code from the catalog (`crates/hx-proto/errors.json`).
     #[must_use]
     pub fn code(&self) -> &'static str {
         match self {
-            Self::InvalidRequest(_) => "hx.pack.invalid_request",
-            Self::InvalidPattern(_) => "hx.pack.invalid_pattern",
-            Self::InvalidRoot(_) => "hx.pack.invalid_root",
-            Self::PathEscape(_) => "hx.pack.path_escape",
-            Self::NotFound(_) => "hx.pack.not_found",
-            Self::UnsupportedLanguage(_) => "hx.pack.unsupported_language",
-            Self::ParseFailed(_) => "hx.pack.parse_failed",
-            Self::GitFailed(_) => "hx.pack.git_failed",
-            Self::Timeout => "hx.pack.timeout",
-            Self::Cancelled => "hx.pack.cancelled",
-            Self::ConfigInvalid(_) => "hx.pack.config_invalid",
-            Self::Io { .. } => "hx.pack.io",
+            Self::InvalidRequest(_) => codes::HX_PACK_INVALID_REQUEST,
+            Self::InvalidPattern(_) => codes::HX_PACK_INVALID_PATTERN,
+            Self::InvalidRoot(_) => codes::HX_PACK_INVALID_ROOT,
+            Self::PathEscape(_) => codes::HX_PACK_PATH_ESCAPE,
+            Self::NotFound(_) => codes::HX_PACK_NOT_FOUND,
+            Self::UnsupportedLanguage(_) => codes::HX_PACK_UNSUPPORTED_LANGUAGE,
+            Self::ParseFailed(_) => codes::HX_PACK_PARSE_FAILED,
+            Self::GitFailed(_) => codes::HX_PACK_GIT_FAILED,
+            Self::Timeout => codes::HX_PACK_TIMEOUT,
+            Self::Cancelled => codes::HX_CANCELLED,
+            Self::ConfigInvalid(_) => codes::HX_PACK_CONFIG_INVALID,
+            Self::Io { .. } => codes::HX_PACK_IO,
         }
     }
 
@@ -120,6 +122,12 @@ impl Error {
     }
 }
 
+impl From<Error> for AppError {
+    fn from(e: Error) -> Self {
+        AppError::new(e.code(), e.to_string())
+    }
+}
+
 /// The `{code, message}` pair a bundle item carries when it fails.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct ErrorBody {
@@ -134,25 +142,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn codes_are_namespaced_unique_and_match_the_shared_listing() {
-        let listing: serde_json::Value =
-            serde_json::from_str(include_str!("../error_codes.json")).unwrap();
-        let listed: Vec<&str> = listing["codes"]
-            .as_array()
-            .unwrap()
+    fn codes_are_the_catalogs_pack_codes_plus_the_shared_cancel() {
+        let catalog: Vec<&str> = hx_proto::error::entries()
             .iter()
-            .map(|c| c["code"].as_str().unwrap())
+            .map(|e| e.code.as_str())
+            .filter(|c| c.starts_with("hx.pack."))
             .collect();
-        assert_eq!(listed, Error::ALL_CODES);
+        let mine: Vec<&str> = Error::ALL_CODES
+            .iter()
+            .copied()
+            .filter(|c| c.starts_with("hx.pack."))
+            .collect();
+        assert_eq!(catalog, mine);
+        assert!(Error::ALL_CODES.contains(&"hx.cancelled"));
         let mut seen = std::collections::BTreeSet::new();
         for code in Error::ALL_CODES {
-            assert!(code.starts_with("hx.pack."), "{code}");
-            assert!(
-                code[8..]
-                    .bytes()
-                    .all(|b| b.is_ascii_lowercase() || b == b'_'),
-                "{code}"
-            );
             assert!(seen.insert(*code), "duplicate {code}");
         }
     }

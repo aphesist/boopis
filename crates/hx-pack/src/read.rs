@@ -6,9 +6,9 @@ use serde::{Deserialize, Serialize};
 use crate::error::{Error, Result};
 use crate::files::{self, Loaded};
 use crate::never_pack::NeverPack;
-use crate::paths::{RelPath, Root};
 use crate::redact::Redactor;
 use crate::render::{self, Line, SEP_SOURCE};
+use crate::root::Root;
 use crate::types::{
     Budget, DEFAULT_MAX_BYTES, DEFAULT_MAX_LINE_BYTES, Redactions, Truncation, WalkOptions,
     WithheldFile, note,
@@ -107,9 +107,9 @@ pub struct ReadResponse {
 }
 
 impl ReadResponse {
-    fn empty(path: &RelPath, status: ReadStatus) -> Self {
+    fn empty(path: &str, status: ReadStatus) -> Self {
         Self {
-            path: path.to_string(),
+            path: path.to_owned(),
             status,
             total_lines: 0,
             segments: Vec::new(),
@@ -215,29 +215,33 @@ pub fn read(root: &Root, p: &ReadParams) -> Result<ReadResponse> {
     if p.max_bytes() == 0 {
         return Err(Error::InvalidRequest("max_bytes must be positive".into()));
     }
-    let rel = RelPath::parse(&p.path)?;
-    if let Some(reason) = NeverPack::embedded()?.check(&rel) {
-        let mut r = ReadResponse::empty(&rel, ReadStatus::Withheld);
+    // Resolve first: the never-pack check must see the real file, not the name it was asked by.
+    let target = root.target(&p.path)?;
+    let rel = target.rel.as_str();
+    if let Some(reason) = NeverPack::embedded()?.check(rel) {
+        let mut r = ReadResponse::empty(rel, ReadStatus::Withheld);
         r.withheld = Some(WithheldFile {
-            path: rel.to_string(),
+            path: rel.to_owned(),
             reason: reason.to_owned(),
         });
         return Ok(r);
     }
-    if root.is_dir(&rel)? {
-        return Err(Error::InvalidRequest(format!("{rel} is a directory")));
+    if !target.is_file() {
+        return Err(Error::InvalidRequest(format!(
+            "{rel:?} is not a regular file"
+        )));
     }
     let mut buf = Vec::new();
-    match files::load(root, &rel, p.walk.max_file_bytes(), &mut buf)? {
-        Loaded::Binary => return Ok(ReadResponse::empty(&rel, ReadStatus::Binary)),
-        Loaded::TooLarge => return Ok(ReadResponse::empty(&rel, ReadStatus::TooLarge)),
+    match files::load(root, rel, p.walk.max_file_bytes(), &mut buf)? {
+        Loaded::Binary => return Ok(ReadResponse::empty(rel, ReadStatus::Binary)),
+        Loaded::TooLarge => return Ok(ReadResponse::empty(rel, ReadStatus::TooLarge)),
         Loaded::Text => {}
     }
     let redactor = Redactor::embedded()?;
     let lossy = String::from_utf8_lossy(&buf);
     // The whole file is redacted before any slicing, so a secret that spans
     // the edge of a requested range is still caught.
-    let (text, _) = redactor.redact(rel.as_str(), &lossy);
+    let (text, _) = redactor.redact(rel, &lossy);
     let starts = files::line_starts(&text);
     let total = starts.len();
     let ranges = if p.ranges.is_empty() && total > 0 {
@@ -249,20 +253,13 @@ pub fn read(root: &Root, p: &ReadParams) -> Result<ReadResponse> {
         p.ranges.clone()
     };
     let (plan, unsatisfied) = plan_ranges(&ranges, total)?;
-    let mut resp = ReadResponse::empty(&rel, ReadStatus::Ok);
+    let mut resp = ReadResponse::empty(rel, ReadStatus::Ok);
     resp.total_lines = u32::try_from(total).unwrap_or(u32::MAX);
     resp.unsatisfied = unsatisfied;
     let mut budget = Budget::new(p.max_bytes());
     let mut clipped = false;
     for range in plan {
-        let (seg, complete) = take_segment(
-            &text,
-            &starts,
-            range,
-            rel.as_str(),
-            &mut budget,
-            &mut clipped,
-        );
+        let (seg, complete) = take_segment(&text, &starts, range, rel, &mut budget, &mut clipped);
         resp.segments.extend(seg);
         if !complete {
             note(&mut resp.truncated, Truncation::MaxBytes);

@@ -13,7 +13,7 @@ use serde::Deserialize;
 use tree_sitter::Query;
 
 use crate::error::{Error, Result};
-use crate::paths::RelPath;
+use crate::root::extension;
 
 const LANGUAGES_JSON: &str = include_str!("../languages.json");
 
@@ -199,8 +199,8 @@ impl Registry {
 
     /// The language of a file, by extension.
     #[must_use]
-    pub fn for_path(&self, path: &RelPath) -> Option<&Language> {
-        let ext = path.extension()?.to_lowercase();
+    pub fn for_path(&self, path: &str) -> Option<&Language> {
+        let ext = extension(path)?.to_lowercase();
         self.by_ext.get(&ext).and_then(|&i| self.langs.get(i))
     }
 
@@ -243,11 +243,10 @@ mod tests {
             ("a.go", "go"),
             ("DIR/A.RS", "rust"),
         ] {
-            let rel = RelPath::parse(path).unwrap();
-            assert_eq!(reg.for_path(&rel).map(Language::id), Some(id), "{path}");
+            assert_eq!(reg.for_path(path).map(Language::id), Some(id), "{path}");
         }
-        assert!(reg.for_path(&RelPath::parse("a.cpp").unwrap()).is_none());
-        assert!(reg.for_path(&RelPath::parse("Makefile").unwrap()).is_none());
+        assert!(reg.for_path("a.cpp").is_none());
+        assert!(reg.for_path("Makefile").is_none());
         for lang in reg.languages() {
             lang.query().unwrap();
         }

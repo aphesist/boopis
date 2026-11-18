@@ -7,33 +7,65 @@
 //! opened.
 
 use std::collections::HashSet;
-use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
+use std::time::SystemTime;
 
 use globset::{GlobBuilder, GlobSet, GlobSetBuilder};
 use ignore::{WalkBuilder, WalkState};
 
+use crate::cache::Snapshot;
 use crate::error::{Error, Result};
 use crate::never_pack::NeverPack;
-use crate::paths::{RelPath, Root};
+use crate::root::Root;
 use crate::types::{Control, WalkOptions, Withheld, WithheldFile};
+use hx_txn::paths::RelPath;
 
-/// Which files to list.
+/// Which files to list. `starts` holds canonical relative paths; the empty string is the root.
 pub(crate) struct WalkSpec<'a> {
     /// Gitignore-style globs; empty means everything. A leading `!` excludes.
     pub globs: &'a [String],
     /// Directories or files to start from; empty means the root.
-    pub starts: &'a [RelPath],
+    pub starts: &'a [String],
     /// Extra name filter on the relative path, applied before globs.
     pub name_filter: Option<&'a (dyn Fn(&str) -> bool + Sync)>,
     /// Skip list and size cap.
     pub opts: &'a WalkOptions,
 }
 
+/// A list of file paths, owned or shared with the walk cache.
+#[derive(Debug)]
+pub(crate) enum Files {
+    Own(Vec<String>),
+    Shared(Arc<Snapshot>),
+}
+
+impl Default for Files {
+    fn default() -> Self {
+        Self::Own(Vec::new())
+    }
+}
+
+impl Files {
+    pub(crate) fn as_slice(&self) -> &[String] {
+        match self {
+            Self::Own(v) => v,
+            Self::Shared(s) => &s.files,
+        }
+    }
+
+    pub(crate) fn into_vec(self) -> Vec<String> {
+        match self {
+            Self::Own(v) => v,
+            Self::Shared(s) => s.files.clone(),
+        }
+    }
+}
+
 /// The files a walk found, sorted by path, and the ones it withheld.
 #[derive(Debug, Default)]
 pub(crate) struct Walked {
-    pub files: Vec<RelPath>,
+    pub files: Files,
     pub withheld: Withheld,
 }
 
@@ -43,6 +75,16 @@ pub(crate) struct GlobFilter {
     exclude: Option<GlobSet>,
     /// Directories the includes are confined to; empty means the whole root.
     prefixes: Vec<String>,
+}
+
+/// A glob is a pattern, but it must not name a path outside the root. Wildcards are replaced
+/// by a letter and the result goes through the shared path parser.
+fn check_glob_path(body: &str) -> Result<()> {
+    let probe = body.replace(['*', '?', '[', ']', '{', '}'], "x");
+    match RelPath::parse(&probe) {
+        Ok(_) | Err(hx_txn::paths::PathError::Empty) => Ok(()),
+        Err(_) => Err(Error::PathEscape(body.escape_debug().to_string())),
+    }
 }
 
 fn has_meta(s: &str) -> bool {
@@ -72,7 +114,7 @@ impl GlobFilter {
                 return Err(Error::InvalidRequest("empty glob".into()));
             }
             // Globs are patterns, but they must not name paths outside the root.
-            RelPath::parse(&body.replace(['*', '?', '[', ']', '{', '}'], "x"))?;
+            check_glob_path(body)?;
             let body = body.trim_end_matches('/');
             let literal = !has_meta(body);
             let mut pats = Vec::new();
@@ -126,6 +168,11 @@ impl GlobFilter {
             && !self.exclude.as_ref().is_some_and(|s| s.is_match(rel))
     }
 
+    /// True when there are no globs at all.
+    pub(crate) fn is_empty(&self) -> bool {
+        self.include.is_none() && self.exclude.is_none()
+    }
+
     pub(crate) fn prefixes(&self) -> &[String] {
         &self.prefixes
     }
@@ -144,17 +191,103 @@ fn literal_prefix(glob: &str) -> Option<String> {
 
 /// Lists the files `spec` selects.
 ///
+/// A walk of the whole root can be served from the control's [`WalkCache`].
+///
 /// # Errors
 /// Path errors for starts that escape the root, request errors for bad globs,
 /// and cancellation.
 pub(crate) fn collect(root: &Root, spec: &WalkSpec<'_>, ctl: &Control) -> Result<Walked> {
-    let never = NeverPack::embedded()?;
     let filter = GlobFilter::new(spec.globs)?;
     let starts = resolve_starts(root, spec.starts, &filter)?;
+    let whole_root = starts.len() == 1 && starts[0].is_empty();
+    let skip = spec.opts.skip_dirs();
+    if whole_root && let Some(cache) = ctl.cache() {
+        let snap = if let Some(hit) = cache.get(root, &skip) {
+            hit
+        } else {
+            let started = SystemTime::now();
+            let snap = Arc::new(walk_dirs(root, &starts, &skip, None, ctl, true)?);
+            cache.put(root, &skip, &snap, started);
+            snap
+        };
+        return Ok(filter_snapshot(snap, &filter, spec.name_filter));
+    }
+    let raw = walk_dirs(
+        root,
+        &starts,
+        &skip,
+        Some(Filters {
+            globs: &filter,
+            name: spec.name_filter,
+        }),
+        ctl,
+        false,
+    )?;
+    Ok(Walked {
+        files: Files::Own(raw.files),
+        withheld: withheld_of(raw.withheld),
+    })
+}
+
+fn withheld_of(all: Vec<WithheldFile>) -> Withheld {
+    let mut w = Withheld::default();
+    for f in all {
+        w.push(f);
+    }
+    w
+}
+
+/// Applies the glob and name filters to a cached list. With no filters the cached list is
+/// shared, not copied.
+fn filter_snapshot(
+    snap: Arc<Snapshot>,
+    globs: &GlobFilter,
+    name: Option<&(dyn Fn(&str) -> bool + Sync)>,
+) -> Walked {
+    let keep = |p: &str| name.is_none_or(|f| f(p)) && globs.matches(p);
+    if name.is_none() && globs.is_empty() {
+        let withheld = withheld_of(snap.withheld.clone());
+        return Walked {
+            files: Files::Shared(snap),
+            withheld,
+        };
+    }
+    let files = snap.files.iter().filter(|p| keep(p)).cloned().collect();
+    let withheld = withheld_of(
+        snap.withheld
+            .iter()
+            .filter(|w| keep(&w.path))
+            .cloned()
+            .collect(),
+    );
+    Walked {
+        files: Files::Own(files),
+        withheld,
+    }
+}
+
+/// The filters a walk applies while it lists, so non-matching names are never kept.
+#[derive(Clone, Copy)]
+struct Filters<'a> {
+    globs: &'a GlobFilter,
+    name: Option<&'a (dyn Fn(&str) -> bool + Sync)>,
+}
+
+/// Walks `starts` in parallel. With `record`, also notes the modification time of every
+/// directory and ignore file seen, which is what the cache validates against.
+fn walk_dirs(
+    root: &Root,
+    starts: &[String],
+    skip: &[String],
+    filters: Option<Filters<'_>>,
+    ctl: &Control,
+    record: bool,
+) -> Result<Snapshot> {
+    let never = NeverPack::embedded()?;
     let Some((first, rest)) = starts.split_first() else {
-        return Ok(Walked::default());
+        return Ok(Snapshot::default());
     };
-    let skip: HashSet<String> = spec.opts.skip_dirs().into_iter().collect();
+    let skip: HashSet<String> = skip.iter().cloned().collect();
     let mut builder = WalkBuilder::new(root.abs(first));
     for s in rest {
         builder.add(root.abs(s));
@@ -177,8 +310,8 @@ pub(crate) fn collect(root: &Root, spec: &WalkSpec<'_>, ctl: &Control) -> Result
         let mut v = Visitor {
             root,
             never,
-            filter: &filter,
-            name_filter: spec.name_filter,
+            filters,
+            record,
             ctl,
             shared: &shared,
             failed: &failed,
@@ -194,43 +327,47 @@ pub(crate) fn collect(root: &Root, spec: &WalkSpec<'_>, ctl: &Control) -> Result
     {
         return Err(e);
     }
-    let mut out = Walked::default();
+    let mut out = Snapshot::default();
     for local in shared
         .into_inner()
         .unwrap_or_else(std::sync::PoisonError::into_inner)
     {
         out.files.extend(local.files);
-        out.withheld.merge(local.withheld);
+        out.withheld.extend(local.withheld);
+        out.stamps.extend(local.stamps);
     }
     out.files.sort_unstable();
     out.files.dedup();
+    out.withheld.sort_by(|a, b| a.path.cmp(&b.path));
+    if record {
+        // Not walked (`.git` is skipped) but it holds ignore rules.
+        out.stamps.push((
+            ".git/info/exclude".to_owned(),
+            root.modified(".git/info/exclude"),
+        ));
+        out.stamps.sort();
+    }
     Ok(out)
 }
 
 /// Turns the request's starts and the globs' prefixes into the directories to walk.
-fn resolve_starts(root: &Root, starts: &[RelPath], filter: &GlobFilter) -> Result<Vec<RelPath>> {
-    let mut wanted: Vec<RelPath> = starts.to_vec();
+fn resolve_starts(root: &Root, starts: &[String], filter: &GlobFilter) -> Result<Vec<String>> {
+    let mut wanted: Vec<String> = starts.to_vec();
     for p in filter.prefixes() {
-        wanted.push(RelPath::parse(p)?);
+        // A prefix that names nothing matches nothing; one that escapes is an error.
+        if let Some(t) = root.target_if_exists(p)? {
+            wanted.push(t.rel);
+        }
     }
-    if wanted.is_empty() || wanted.iter().any(RelPath::is_root) {
-        return Ok(vec![RelPath::root()]);
+    if starts.is_empty() && filter.prefixes().is_empty() || wanted.iter().any(String::is_empty) {
+        return Ok(vec![String::new()]);
     }
     wanted.sort();
     wanted.dedup();
-    let mut kept: Vec<RelPath> = Vec::new();
+    let mut kept: Vec<String> = Vec::new();
     for w in wanted {
-        let exists = match (root.is_dir(&w), root.is_file(&w)) {
-            (Ok(true), _) | (_, Ok(true)) => true,
-            (Err(e @ Error::PathEscape(_)), _) | (_, Err(e @ Error::PathEscape(_))) => {
-                return Err(e);
-            }
-            _ => false,
-        };
-        let covered = kept
-            .iter()
-            .any(|k| w.as_str().starts_with(&format!("{}/", k.as_str())));
-        if exists && !covered {
+        let covered = kept.iter().any(|k| w.starts_with(&format!("{k}/")));
+        if !covered {
             kept.push(w);
         }
     }
@@ -239,15 +376,19 @@ fn resolve_starts(root: &Root, starts: &[RelPath], filter: &GlobFilter) -> Resul
 
 #[derive(Default)]
 struct Local {
-    files: Vec<RelPath>,
-    withheld: Withheld,
+    files: Vec<String>,
+    withheld: Vec<WithheldFile>,
+    stamps: Vec<(String, Option<SystemTime>)>,
 }
+
+/// File names whose content changes what a walk lists.
+const IGNORE_FILES: &[&str] = &[".gitignore", ".ignore", ".rgignore"];
 
 struct Visitor<'a> {
     root: &'a Root,
     never: &'a NeverPack,
-    filter: &'a GlobFilter,
-    name_filter: Option<&'a (dyn Fn(&str) -> bool + Sync)>,
+    filters: Option<Filters<'a>>,
+    record: bool,
     ctl: &'a Control,
     shared: &'a Mutex<Vec<Local>>,
     failed: &'a Mutex<Option<Error>>,
@@ -274,28 +415,43 @@ impl Visitor<'_> {
         let Ok(entry) = entry else {
             return WalkState::Continue;
         };
-        if !entry.file_type().is_some_and(|t| t.is_file()) {
+        let Some(file_type) = entry.file_type() else {
             return WalkState::Continue;
-        }
+        };
         let Ok(rel) = entry.path().strip_prefix(self.root.path()) else {
             return WalkState::Continue;
         };
         let Some(rel) = rel.to_str() else {
             return WalkState::Continue; // names that are not UTF-8 cannot be reported
         };
-        if self.name_filter.is_some_and(|f| !f(rel)) || !self.filter.matches(rel) {
+        if self.record
+            && (file_type.is_dir()
+                || file_type.is_file()
+                    && entry
+                        .file_name()
+                        .to_str()
+                        .is_some_and(|n| IGNORE_FILES.contains(&n)))
+        {
+            let mtime = entry.metadata().ok().and_then(|m| m.modified().ok());
+            self.local.stamps.push((rel.to_owned(), mtime));
+        }
+        if !file_type.is_file() {
             return WalkState::Continue;
         }
-        let Ok(rel) = RelPath::parse(rel) else {
+        if let Some(f) = self.filters
+            && (f.name.is_some_and(|n| !n(rel)) || !f.globs.matches(rel))
+        {
             return WalkState::Continue;
-        };
-        if let Some(reason) = self.never.check(&rel) {
+        }
+        // The walk lists names the file system returned, so they hold no `..`; every open
+        // still goes through the root's capability handle.
+        if let Some(reason) = self.never.check(rel) {
             self.local.withheld.push(WithheldFile {
-                path: rel.to_string(),
+                path: rel.to_owned(),
                 reason: reason.to_owned(),
             });
         } else {
-            self.local.files.push(rel);
+            self.local.files.push(rel.to_owned());
         }
         WalkState::Continue
     }

@@ -21,7 +21,7 @@ use std::os::unix::fs::symlink;
 use common::Tree;
 use hx_pack::{
     BundleItem, BundleParams, BundleRequest, LineRange, OutlineParams, OutlineRequest, ReadParams,
-    ReadRequest, RelPath, SearchParams, SearchRequest, SymbolParams, SymbolRequest, handle_bundle,
+    ReadRequest, SearchParams, SearchRequest, SymbolParams, SymbolRequest, handle_bundle,
     handle_outline, handle_read, handle_search, handle_symbol,
 };
 use proptest::prelude::*;
@@ -65,23 +65,6 @@ fn jail() -> Tree {
 
 proptest! {
     #![proptest_config(ProptestConfig { failure_persistence: None, ..ProptestConfig::with_cases(400) })]
-
-    #[test]
-    fn parsed_paths_are_clean_and_relative(s in path_string()) {
-        if let Ok(p) = RelPath::parse(&s) {
-            let text = p.as_str();
-            prop_assert!(!text.starts_with('/'));
-            prop_assert!(text.is_empty() || text.split('/').all(|c| !c.is_empty() && c != "." && c != ".."));
-        }
-    }
-
-    #[test]
-    fn arbitrary_strings_never_parse_into_an_escape(s in "\\PC{0,24}") {
-        if let Ok(p) = RelPath::parse(&s) {
-            prop_assert!(p.as_str().split('/').all(|c| c != ".."));
-            prop_assert!(!p.as_str().starts_with('/'));
-        }
-    }
 
     #[test]
     fn no_method_returns_content_from_outside_the_root(path in path_string(), glob in path_string()) {

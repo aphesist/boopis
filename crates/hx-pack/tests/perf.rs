@@ -25,11 +25,14 @@ mod common;
 use std::fmt::Write as _;
 use std::fs;
 use std::path::Path;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use common::Tree;
+use hx_pack::search::search as search_in;
 use hx_pack::{
-    PatternMode, ReadParams, ReadRequest, SearchParams, SearchRequest, handle_read, handle_search,
+    Control, PatternMode, ReadParams, ReadRequest, Root, SearchParams, SearchRequest, WalkCache,
+    handle_read, handle_search,
 };
 
 const FILES: usize = 100_000;
@@ -204,6 +207,31 @@ fn search_on_a_100k_file_tree() {
     worst = worst.max(measure("rare literal, glob *.go", || {
         search(by_ext.clone());
     }));
+    // A per-root cached file list, as `hx serve` keeps. The fixture was written a moment
+    // ago, and a tree changed in the last two seconds is deliberately not cached, so wait.
+    std::thread::sleep(Duration::from_secs(3));
+    let cache = Arc::new(WalkCache::default());
+    let ctl = Control::none().with_cache(Arc::clone(&cache));
+    let open = Root::open(&root).unwrap();
+    let cached_search = |p: &SearchParams| {
+        std::hint::black_box(search_in(&open, p, &ctl).unwrap());
+    };
+    cached_search(&lit);
+    assert_eq!(cache.len(), 1, "the walk must have been cached");
+    let warm = measure("rare literal, whole tree, WARM walk cache", || {
+        cached_search(&lit);
+    });
+    worst = worst.max(measure("rare regex, whole tree, WARM walk cache", || {
+        cached_search(&SearchParams::new(r"RARE_NEEDLE_[0-9a-f]{4}"));
+    }));
+    assert!(
+        cache.stats().hits > 40,
+        "the runs were served from the cache"
+    );
+    eprintln!(
+        "warm-cache whole-tree literal p95: {:.1} ms (budget 300 ms)",
+        ms(warm)
+    );
     let range = measure("read of a known file range (lines 10-30)", || {
         let r = handle_read(&ReadRequest {
             root: root.clone(),

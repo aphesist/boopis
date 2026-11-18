@@ -16,9 +16,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{Error, Result};
 use crate::files::{self, Skip};
-use crate::paths::{RelPath, Root};
 use crate::redact::Redactor;
 use crate::render::{self, Line, SEP_CONTEXT, SEP_MATCH};
+use crate::root::Root;
 use crate::scan::{self, Weight};
 use crate::types::{
     Budget, Control, DEFAULT_MAX_BYTES, DEFAULT_MAX_LINE_BYTES, Redactions, Skipped, Truncation,
@@ -264,7 +264,7 @@ fn match_lines(
     Ok((lines, capped))
 }
 
-fn search_file(ctx: &Ctx<'_>, rel: &RelPath, sc: &mut Scratch) -> Result<FileResult> {
+fn search_file(ctx: &Ctx<'_>, rel: &str, sc: &mut Scratch) -> Result<FileResult> {
     let mut out = FileResult::default();
     if let Some(skip) = files::load_walked(ctx.root, rel, ctx.max_file, &mut sc.buf)? {
         out.skip = Some(skip);
@@ -278,7 +278,7 @@ fn search_file(ctx: &Ctx<'_>, rel: &RelPath, sc: &mut Scratch) -> Result<FileRes
     }
     // Phase two, on the redacted text: what is reported.
     let text = String::from_utf8_lossy(&sc.buf);
-    let (red, counts) = ctx.redactor.redact(rel.as_str(), &text);
+    let (red, counts) = ctx.redactor.redact(rel, &text);
     let haystack = if counts.total == 0 {
         text.as_bytes()
     } else {
@@ -315,7 +315,7 @@ fn search_file(ctx: &Ctx<'_>, rel: &RelPath, sc: &mut Scratch) -> Result<FileRes
             lines.push(line);
         }
         let w = Window { lines };
-        out.cost += w.cost(rel.as_str());
+        out.cost += w.cost(rel);
         out.windows.push(w);
         i = j;
     }
@@ -348,7 +348,7 @@ pub fn search(root: &Root, p: &SearchParams, ctl: &Control) -> Result<SearchResp
         max_file: p.walk.max_file_bytes(),
     };
     let slots = scan::ordered(
-        &walked.files,
+        walked.files.as_slice(),
         ctl,
         Weight {
             matches: p.max_matches,
@@ -377,7 +377,7 @@ fn assemble(
     redactor: &Redactor,
 ) -> SearchResponse {
     let mut resp = SearchResponse {
-        files_walked: walked.files.len(),
+        files_walked: walked.files.as_slice().len(),
         withheld: Withheld {
             count: walked.withheld.count,
             files: walked.withheld.files.clone(),
@@ -386,7 +386,7 @@ fn assemble(
     };
     let mut budget = Budget::new(p.max_bytes());
     let total = slots.len();
-    'files: for (idx, (rel, slot)) in walked.files.iter().zip(slots).enumerate() {
+    'files: for (idx, (rel, slot)) in walked.files.as_slice().iter().zip(slots).enumerate() {
         let Some(fr) = slot else {
             // The scan stopped early because the finished prefix met a limit.
             note(

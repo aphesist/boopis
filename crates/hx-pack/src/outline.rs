@@ -7,9 +7,9 @@ use crate::error::{Error, Result};
 use crate::files::{self, Skip};
 use crate::languages::Registry;
 use crate::never_pack::NeverPack;
-use crate::paths::{RelPath, Root};
 use crate::redact::Redactor;
 use crate::render;
+use crate::root::Root;
 use crate::scan::{self, Weight};
 use crate::symbols::{self, Symbol};
 use crate::types::{
@@ -109,13 +109,13 @@ fn outline_file(
     root: &Root,
     registry: &Registry,
     redactor: &Redactor,
-    rel: &RelPath,
+    rel: &str,
     max_file: u64,
     buf: &mut Vec<u8>,
 ) -> Result<FileOutline> {
     let lang = registry.for_path(rel);
     let mut out = FileOutline {
-        path: rel.to_string(),
+        path: rel.to_owned(),
         language: lang.map(|l| l.id().to_owned()),
         status: OutlineStatus::Unsupported,
         symbols: Vec::new(),
@@ -134,7 +134,7 @@ fn outline_file(
     }
     let lossy = String::from_utf8_lossy(buf);
     // Parse the redacted text so that signatures cannot carry a secret.
-    let (text, _) = redactor.redact(rel.as_str(), &lossy);
+    let (text, _) = redactor.redact(rel, &lossy);
     match symbols::definitions(lang, &text) {
         Ok(defs) => {
             out.status = OutlineStatus::Ok;
@@ -172,31 +172,32 @@ pub fn outline_with(
     let never = NeverPack::embedded()?;
     let redactor = Redactor::embedded()?;
     let mut resp = OutlineResponse::default();
-    let mut targets: Vec<RelPath> = Vec::new();
-    let mut dirs: Vec<RelPath> = Vec::new();
+    let mut targets: Vec<String> = Vec::new();
+    let mut dirs: Vec<String> = Vec::new();
     let paths = if p.paths.is_empty() {
         vec![String::new()]
     } else {
         p.paths.clone()
     };
     for raw in &paths {
-        let rel = RelPath::parse(raw)?;
-        if root.is_dir(&rel)? {
-            dirs.push(rel);
-        } else if let Some(reason) = never.check(&rel) {
+        let target = root.target(raw)?;
+        if target.is_dir() {
+            dirs.push(target.rel);
+        } else if let Some(reason) = never.check(&target.rel) {
             resp.withheld.push(WithheldFile {
-                path: rel.to_string(),
+                path: target.rel,
                 reason: reason.to_owned(),
             });
-        } else if root.is_file(&rel)? {
-            targets.push(rel);
+        } else if target.is_file() {
+            targets.push(target.rel);
         } else {
-            return Err(Error::NotFound(rel.to_string()));
+            return Err(Error::InvalidRequest(format!(
+                "{raw:?} is not a file or directory"
+            )));
         }
     }
     if !dirs.is_empty() {
-        let filter =
-            |name: &str| RelPath::parse(name).is_ok_and(|r| registry.for_path(&r).is_some());
+        let filter = |name: &str| registry.for_path(name).is_some();
         let walked = walk::collect(
             root,
             &WalkSpec {
@@ -208,7 +209,7 @@ pub fn outline_with(
             ctl,
         )?;
         resp.withheld.merge(walked.withheld);
-        targets.extend(walked.files);
+        targets.extend(walked.files.into_vec());
     }
     targets.sort();
     targets.dedup();

@@ -480,3 +480,25 @@ fn class_count(s: &str) -> usize {
 pub fn redact<'a>(path: &str, text: &'a str) -> Result<(Cow<'a, str>, Redactions)> {
     Ok(Redactor::embedded()?.redact(path, text))
 }
+
+/// The redactor `hx` hands to its logger (`hx_proto::log::Redactor`): the embedded rules,
+/// applied to every log line.
+#[derive(Debug, Clone, Copy)]
+pub struct LogRedactor(&'static Redactor);
+
+impl LogRedactor {
+    /// Loads the embedded rules.
+    ///
+    /// # Errors
+    /// [`Error::ConfigInvalid`] if they are broken: the binary should refuse to start
+    /// rather than log unredacted.
+    pub fn embedded() -> Result<Self> {
+        Ok(Self(Redactor::embedded()?))
+    }
+}
+
+impl hx_proto::log::Redactor for LogRedactor {
+    fn redact<'a>(&self, line: &'a str) -> Cow<'a, str> {
+        self.0.redact("", line).0
+    }
+}

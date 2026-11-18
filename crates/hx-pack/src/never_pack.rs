@@ -10,7 +10,7 @@ use globset::{Glob, GlobBuilder, GlobSet, GlobSetBuilder};
 use serde::Deserialize;
 
 use crate::error::{Error, Result};
-use crate::paths::RelPath;
+use crate::root::file_name;
 
 const RULES_JSON: &str = include_str!("../never_pack.json");
 
@@ -23,6 +23,8 @@ struct Entry {
 #[derive(Deserialize)]
 struct File {
     schema_version: u32,
+    #[serde(default)]
+    allow: Vec<Entry>,
     names: Vec<Entry>,
     paths: Vec<Entry>,
 }
@@ -30,6 +32,7 @@ struct File {
 /// The compiled never-pack list.
 #[derive(Debug)]
 pub struct NeverPack {
+    allow: GlobSet,
     names: GlobSet,
     paths: GlobSet,
     name_reasons: Vec<String>,
@@ -66,9 +69,11 @@ impl NeverPack {
                 file.schema_version
             )));
         }
+        let (allow, _) = build(&file.allow)?;
         let (names, name_reasons) = build(&file.names)?;
         let (paths, path_reasons) = build(&file.paths)?;
         Ok(Self {
+            allow,
             names,
             paths,
             name_reasons,
@@ -90,12 +95,14 @@ impl NeverPack {
 
     /// The reason `path` is withheld, or `None` when it may be packed.
     #[must_use]
-    pub fn check(&self, path: &RelPath) -> Option<&str> {
-        let name = path.file_name();
-        if let Some(i) = self.names.matches(name).first() {
+    pub fn check(&self, path: &str) -> Option<&str> {
+        let name = file_name(path);
+        if !self.allow.is_match(name)
+            && let Some(i) = self.names.matches(name).first()
+        {
             return self.name_reasons.get(*i).map(String::as_str);
         }
-        if let Some(i) = self.paths.matches(path.as_str()).first() {
+        if let Some(i) = self.paths.matches(path).first() {
             return self.path_reasons.get(*i).map(String::as_str);
         }
         None
@@ -107,10 +114,7 @@ mod tests {
     use super::*;
 
     fn withheld(p: &str) -> bool {
-        NeverPack::embedded()
-            .unwrap()
-            .check(&RelPath::parse(p).unwrap())
-            .is_some()
+        NeverPack::embedded().unwrap().check(p).is_some()
     }
 
     #[test]
@@ -130,9 +134,28 @@ mod tests {
             "sub/.git/HEAD",
             "terraform/prod.tfvars",
             "k/.kube/config",
+            ".env.local",
+            ".env.example.bak",
+            ".env.production",
+            "a/.env.examples",
         ] {
             assert!(withheld(p), "{p} should be withheld");
         }
+    }
+
+    #[test]
+    fn env_templates_are_allowed_and_nothing_else_named_env() {
+        for p in [
+            ".env.example",
+            ".env.sample",
+            "a/b/.env.template",
+            ".ENV.EXAMPLE",
+        ] {
+            assert!(!withheld(p), "{p} should be readable");
+        }
+        // The allow list is by name only: the path rules still apply.
+        assert!(withheld(".aws/.env.example"));
+        assert!(withheld(".ssh/.env.sample"));
     }
 
     #[test]

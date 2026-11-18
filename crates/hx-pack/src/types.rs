@@ -3,11 +3,13 @@
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use tokio_util::sync::CancellationToken;
+
+use crate::cache::WalkCache;
 
 use crate::error::{Error, Result};
 
@@ -65,11 +67,12 @@ impl WalkOptions {
     }
 }
 
-/// Cancellation and deadline, checked between files.
+/// The per-call environment: cancellation, a deadline and an optional walk cache.
 #[derive(Debug, Clone, Default)]
 pub struct Control {
-    cancel: Option<Arc<AtomicBool>>,
+    cancel: Option<CancellationToken>,
     deadline: Option<Instant>,
+    cache: Option<Arc<WalkCache>>,
 }
 
 impl Control {
@@ -79,11 +82,22 @@ impl Control {
         Self::default()
     }
 
-    /// Cancel when `flag` becomes true.
+    /// Cancel when `token` is cancelled.
     #[must_use]
-    pub fn with_cancel(mut self, flag: Arc<AtomicBool>) -> Self {
-        self.cancel = Some(flag);
+    pub fn with_cancel(mut self, token: CancellationToken) -> Self {
+        self.cancel = Some(token);
         self
+    }
+
+    /// Serve whole-tree walks from `cache`.
+    #[must_use]
+    pub fn with_cache(mut self, cache: Arc<WalkCache>) -> Self {
+        self.cache = Some(cache);
+        self
+    }
+
+    pub(crate) fn cache(&self) -> Option<&WalkCache> {
+        self.cache.as_deref()
     }
 
     /// Fail with [`Error::Timeout`] once `deadline` has passed.
@@ -101,7 +115,7 @@ impl Control {
         if self
             .cancel
             .as_ref()
-            .is_some_and(|f| f.load(Ordering::Relaxed))
+            .is_some_and(CancellationToken::is_cancelled)
         {
             return Err(Error::Cancelled);
         }
@@ -304,11 +318,11 @@ mod tests {
     #[test]
     fn control_reports_cancel_and_deadline() {
         assert!(Control::none().check().is_ok());
-        let flag = Arc::new(AtomicBool::new(false));
-        let ctl = Control::none().with_cancel(Arc::clone(&flag));
+        let token = CancellationToken::new();
+        let ctl = Control::none().with_cancel(token.clone());
         assert!(ctl.check().is_ok());
-        flag.store(true, Ordering::Relaxed);
-        assert_eq!(ctl.check().unwrap_err().code(), "hx.pack.cancelled");
+        token.cancel();
+        assert_eq!(ctl.check().unwrap_err().code(), "hx.cancelled");
         let past = Control::none().with_deadline(Instant::now());
         assert_eq!(past.check().unwrap_err().code(), "hx.pack.timeout");
     }

@@ -3,7 +3,7 @@
 use std::io::Read;
 
 use crate::error::{Error, Result};
-use crate::paths::{RelPath, Root};
+use crate::root::Root;
 
 /// How many leading bytes are inspected for a NUL.
 const BINARY_PROBE: usize = 8192;
@@ -23,19 +23,14 @@ pub(crate) enum Loaded {
 ///
 /// # Errors
 /// Path and I/O errors from [`Root::open_file`] or the read.
-pub(crate) fn load(
-    root: &Root,
-    rel: &RelPath,
-    max_bytes: u64,
-    buf: &mut Vec<u8>,
-) -> Result<Loaded> {
+pub(crate) fn load(root: &Root, rel: &str, max_bytes: u64, buf: &mut Vec<u8>) -> Result<Loaded> {
     buf.clear();
     let file = root.open_file(rel)?;
     // `take` bounds the read even if the file grows while we read it.
     let mut limited = file.take(max_bytes.saturating_add(1));
     limited
         .read_to_end(buf)
-        .map_err(|e| Error::from_io(rel.as_str(), e))?;
+        .map_err(|e| Error::from_io(rel, e))?;
     if buf.len() as u64 > max_bytes {
         buf.clear();
         return Ok(Loaded::TooLarge);
@@ -87,7 +82,7 @@ pub(crate) enum Skip {
 /// Only errors that are not about this one file (none today; kept for symmetry).
 pub(crate) fn load_walked(
     root: &Root,
-    rel: &RelPath,
+    rel: &str,
     max_bytes: u64,
     buf: &mut Vec<u8>,
 ) -> Result<Option<Skip>> {

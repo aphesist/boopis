@@ -218,3 +218,25 @@ fn invalid_utf8_is_replaced_not_fatal() {
     let r = read(&t, params("l1.txt", &[])).unwrap();
     assert!(r.segments[0].text.starts_with("1|caf\u{fffd}\n"));
 }
+
+#[test]
+fn env_templates_are_readable_but_redacted_and_other_env_files_are_not() {
+    let t = Tree::new();
+    t.write(
+        ".env.example",
+        "API_URL=https://example.com\nSTRIPE_KEY=sk_live_abcdefghijklmnop1234\n# fill in\n",
+    );
+    t.write(".env.local", "SECRET=1\n");
+    t.write(".env.production", "SECRET=2\n");
+    let r = read(&t, params(".env.example", &[])).unwrap();
+    assert_eq!(r.status, ReadStatus::Ok);
+    assert!(r.segments[0].text.contains("API_URL=https://example.com"));
+    assert!(r.segments[0].text.contains("[REDACTED:stripe_key]"));
+    assert!(!r.segments[0].text.contains("sk_live"));
+    for name in [".env.local", ".env.production"] {
+        assert_eq!(
+            read(&t, params(name, &[])).unwrap().status,
+            ReadStatus::Withheld
+        );
+    }
+}

@@ -7,9 +7,9 @@ use crate::error::{Error, Result};
 use crate::files::{self, Skip};
 use crate::languages::Registry;
 use crate::never_pack::NeverPack;
-use crate::paths::{RelPath, Root};
 use crate::redact::Redactor;
 use crate::render::{self, Line, SEP_SOURCE};
+use crate::root::Root;
 use crate::scan::{self, Weight};
 use crate::symbols::{self, Symbol};
 use crate::types::{
@@ -181,7 +181,7 @@ struct Search<'a> {
 }
 
 impl Search<'_> {
-    fn in_file(&self, rel: &RelPath, buf: &mut Vec<u8>) -> Result<FileFound> {
+    fn in_file(&self, rel: &str, buf: &mut Vec<u8>) -> Result<FileFound> {
         let mut out = FileFound::default();
         let Some(lang) = self
             .registry
@@ -200,7 +200,7 @@ impl Search<'_> {
         if !lossy.contains(needle) {
             return Ok(out);
         }
-        let (text, _) = self.redactor.redact(rel.as_str(), &lossy);
+        let (text, _) = self.redactor.redact(rel, &lossy);
         if !text.contains(needle) {
             return Ok(out);
         }
@@ -212,9 +212,9 @@ impl Search<'_> {
         let starts = files::line_starts(&text);
         for d in defs.iter().filter(|d| self.target.matches(d)) {
             let body = source_text(&text, &starts, d, self.cap);
-            out.cost += render::block_overhead(rel.as_str()) + d.signature.len() + body.len();
+            out.cost += render::block_overhead(rel) + d.signature.len() + body.len();
             out.found.push(Found {
-                path: rel.to_string(),
+                path: rel.to_owned(),
                 kind: d.kind.clone(),
                 name: d.name.clone(),
                 parent: d.parent.clone(),
@@ -235,36 +235,36 @@ fn candidates(
     ctl: &Control,
     wanted: &(dyn Fn(&str) -> bool + Sync),
     resp: &mut SymbolResponse,
-) -> Result<Vec<RelPath>> {
-    let start = match &p.path {
-        Some(raw) => RelPath::parse(raw)?,
-        None => RelPath::root(),
-    };
-    if root.is_dir(&start)? {
+) -> Result<Vec<String>> {
+    let start = root.target(p.path.as_deref().unwrap_or(""))?;
+    if start.is_dir() {
         let walked = walk::collect(
             root,
             &WalkSpec {
                 globs: &[],
-                starts: std::slice::from_ref(&start),
+                starts: std::slice::from_ref(&start.rel),
                 name_filter: Some(wanted),
                 opts: &p.walk,
             },
             ctl,
         )?;
         resp.withheld = walked.withheld;
-        return Ok(walked.files);
+        return Ok(walked.files.into_vec());
     }
-    if let Some(reason) = NeverPack::embedded()?.check(&start) {
+    if let Some(reason) = NeverPack::embedded()?.check(&start.rel) {
         resp.withheld.push(WithheldFile {
-            path: start.to_string(),
+            path: start.rel,
             reason: reason.to_owned(),
         });
         return Ok(Vec::new());
     }
-    if root.is_file(&start)? {
-        Ok(vec![start])
+    if start.is_file() {
+        Ok(vec![start.rel])
     } else {
-        Err(Error::NotFound(start.to_string()))
+        Err(Error::InvalidRequest(format!(
+            "{:?} is not a file or directory",
+            start.rel
+        )))
     }
 }
 
@@ -301,11 +301,9 @@ pub fn symbol_with(
         None => None,
     };
     let wanted = |name: &str| {
-        RelPath::parse(name).ok().is_some_and(|r| {
-            registry
-                .for_path(&r)
-                .is_some_and(|l| only_lang.as_deref().is_none_or(|id| id == l.id()))
-        })
+        registry
+            .for_path(name)
+            .is_some_and(|l| only_lang.as_deref().is_none_or(|id| id == l.id()))
     };
     let mut resp = SymbolResponse::default();
     let list = candidates(root, p, ctl, &wanted, &mut resp)?;

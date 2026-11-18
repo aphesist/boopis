@@ -372,8 +372,6 @@ fn request_json_matches_the_documented_shape() {
 
 #[test]
 fn cancellation_and_deadlines_abort_the_call() {
-    use std::sync::Arc;
-    use std::sync::atomic::AtomicBool;
     use std::time::Instant;
 
     let t = Tree::new();
@@ -384,10 +382,11 @@ fn cancellation_and_deadlines_abort_the_call() {
         root: t.root().to_owned(),
         params: SearchParams::new("needle"),
     };
-    let flag = Arc::new(AtomicBool::new(true));
-    let ctl = hx_pack::Control::none().with_cancel(flag);
+    let token = tokio_util::sync::CancellationToken::new();
+    token.cancel();
+    let ctl = hx_pack::Control::none().with_cancel(token);
     let e = hx_pack::handle_search_with(&req, &ctl).unwrap_err();
-    assert_eq!(e.code(), "hx.pack.cancelled");
+    assert_eq!(e.code(), "hx.cancelled");
     let ctl = hx_pack::Control::none().with_deadline(Instant::now());
     let e = hx_pack::handle_search_with(&req, &ctl).unwrap_err();
     assert_eq!(e.code(), "hx.pack.timeout");

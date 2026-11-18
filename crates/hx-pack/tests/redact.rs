@@ -271,3 +271,20 @@ proptest! {
         prop_assert_eq!(once, twice);
     }
 }
+
+#[test]
+fn the_log_redactor_masks_secrets_in_json_log_lines() {
+    use hx_proto::log::Redactor as _;
+    let log = hx_pack::LogRedactor::embedded().unwrap();
+    let line = r#"{"level":"INFO","fields":{"message":"called","method":"sk-ant-api03-abcdefghijklmnopqrstuv"}}"#;
+    let out = log.redact(line);
+    assert!(
+        !out.contains("abcdefghij") && out.contains("[REDACTED:anthropic_key]"),
+        "{out}"
+    );
+    let clean = r#"{"level":"INFO","fields":{"message":"hx serving on stdio","version":"0.1.0"}}"#;
+    assert!(
+        matches!(log.redact(clean), std::borrow::Cow::Borrowed(_)),
+        "clean lines are not copied"
+    );
+}

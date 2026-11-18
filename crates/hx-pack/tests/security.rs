@@ -21,7 +21,7 @@ use std::os::unix::fs::symlink;
 
 use common::Tree;
 use hx_pack::{
-    OutlineParams, OutlineRequest, ReadParams, ReadRequest, RelPath, SearchParams, SearchRequest,
+    OutlineParams, OutlineRequest, ReadParams, ReadRequest, SearchParams, SearchRequest,
     SymbolParams, SymbolRequest, handle_outline, handle_read, handle_search, handle_symbol,
 };
 
@@ -82,10 +82,9 @@ fn lexical_escapes_are_rejected() {
         let e = j.read(p).unwrap_err();
         assert_eq!(e.code(), "hx.pack.path_escape", "{p:?}");
     }
-    assert!(RelPath::parse("./sub//deep.rs").is_ok());
-    assert_eq!(
-        RelPath::parse("./sub//deep.rs").unwrap().as_str(),
-        "sub/deep.rs"
+    assert!(
+        j.read("./sub//deep.rs").is_ok(),
+        "dots and doubled slashes are normalised"
     );
 }
 
@@ -208,4 +207,18 @@ fn the_root_itself_may_be_a_symlink() {
     .unwrap();
     assert_eq!(s.blocks.len(), 1);
     assert!(fs::metadata(&link).is_ok());
+}
+
+#[test]
+fn a_link_named_innocently_cannot_smuggle_a_never_pack_file() {
+    let j = Jail::new();
+    std::fs::write(j.parent.path().join("root/.env"), "TOKEN_VALUE=hunter2\n").unwrap();
+    j.link("notes.txt", ".env");
+    j.link("dir_to_env", ".");
+    for p in ["notes.txt", "dir_to_env/.env"] {
+        let r = j.read(p).unwrap();
+        assert_eq!(r.status, hx_pack::ReadStatus::Withheld, "{p}");
+        assert_eq!(r.path, ".env", "the answer names the real file");
+        assert!(!serde_json::to_string(&r).unwrap().contains("hunter2"));
+    }
 }
