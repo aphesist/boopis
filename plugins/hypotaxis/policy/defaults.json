@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "_comment": "Data for the permission policy (docs/STANDARDS.md rule 6). Tool names are Hermes v0.23.2's.",
+  "own_tools": ["pack", "exec", "ship", "dispatch"],
+  "read_only_tools": [
+    "read_file", "search_files", "web_search", "web_extract", "session_search",
+    "skills_list", "skill_view", "todo_list", "clarify", "vision_analyze", "video_analyze"
+  ],
+  "shell_tools": ["terminal"],
+  "write_tools": ["write_file", "patch", "ship"],
+  "path_arguments": {
+    "read_file": ["path"],
+    "search_files": ["path"],
+    "write_file": ["path"],
+    "patch": ["path"],
+    "pack": ["path", "paths"],
+    "ship": ["path", "paths"]
+  },
+  "path_object_lists": {"ship": ["edits", "files"]},
+  "aliases": {
+    "Bash": ["terminal"],
+    "Read": ["read_file", "pack"],
+    "Grep": ["search_files", "pack"],
+    "Glob": ["search_files", "pack"],
+    "Edit": ["patch", "write_file", "ship"],
+    "MultiEdit": ["patch", "ship"],
+    "Write": ["write_file", "ship"],
+    "WebFetch": ["web_extract"],
+    "WebSearch": ["web_search"],
+    "Agent": ["delegate_task", "dispatch"],
+    "Task": ["delegate_task", "dispatch"],
+    "TodoWrite": ["todo_list"],
+    "Skill": ["skill_view"]
+  },
+  "read_path_tools": ["Read", "Grep", "Glob"],
+  "edit_path_tools": ["Edit", "MultiEdit", "Write"],
+  "protected_defaults": [
+    ".env", ".env.*", "**/*.pem", "**/*.key", "**/id_rsa*", "**/id_ed25519*", "**/id_ecdsa*",
+    ".git/**", ".hermes/hypotaxis.yaml"
+  ],
+  "command_wrappers": ["timeout", "time", "nice", "nohup", "stdbuf", "command", "builtin", "noglob"],
+  "safe_env_assignments": ["LANG", "LC_ALL", "TZ", "NO_COLOR", "FORCE_COLOR", "CI", "RUST_BACKTRACE", "PYTHONUNBUFFERED"],
+  "read_only_commands": {
+    "ls": {}, "cat": {}, "head": {}, "tail": {}, "wc": {}, "pwd": {}, "stat": {}, "file": {},
+    "grep": {}, "diff": {}, "cut": {}, "du": {}, "df": {}, "which": {}, "date": {}, "whoami": {},
+    "basename": {}, "dirname": {}, "realpath": {}, "readlink": {}, "echo": {}, "printf": {},
+    "true": {}, "false": {}, "tree": {"deny_flags": ["-o"]},
+    "sort": {"deny_flags": ["-o", "--output"]},
+    "rg": {"deny_flags": ["--pre", "--hostname-bin"]},
+    "find": {"deny_flags": ["-exec", "-execdir", "-ok", "-okdir", "-delete", "-fprint", "-fprint0", "-fprintf", "-fls"]},
+    "git": {
+      "subcommands": ["status", "diff", "log", "show", "ls-files", "rev-parse", "blame", "grep", "describe"],
+      "deny_flags": ["--output", "-o", "--ext-diff", "--textconv", "--open-files-in-pager", "-O"]
+    }
+  }
+}

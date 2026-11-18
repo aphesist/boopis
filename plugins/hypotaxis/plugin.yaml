@@ -1,0 +1,52 @@
+name: hypotaxis
+version: 0.1.0
+manifest_version: 2
+description: "Governed execution plane for Hermes: permission policy, a hash-chained ledger in contraprova's format, a cost cap and a plugin RPC namespace (plugin.hypotaxis.*)."
+author: aphesist
+license: Apache-2.0
+kind: standalone
+requires_hermes: ">=0.23.2"
+# contraprova is the ledger kernel (ADR-0003). Hermes never installs this itself: `hermes pm repair` does.
+python_dependencies:
+  - contraprova>=0.2
+# Tools (pack, exec, ship, dispatch) arrive in later parts; nothing is declared before it is registered.
+provides_tools: []
+provides_hooks:
+  - pre_tool_call
+  - post_tool_call
+  - post_api_request
+  - post_auxiliary_call
+  - pre_llm_call
+  - on_session_start
+  - on_session_finalize
+# Nothing here needs a granted capability: no tool override, no host-owned LLM calls.
+capabilities: []
+config_schema:
+  mode:
+    type: string
+    default: governed
+    description: "Mode of new sessions: governed (only hypotaxis tools plus read-only Hermes tools) or ungoverned. Locked at the first prompt of a session."
+  ladder:
+    type: object
+    description: "Tier ladder, cheapest first: {same_tier_scope_retry, tiers: [{name, model: 'provider/id', effort, max_tokens, retries}]}. Unset means no ladder is configured."
+  cost_cap_usd:
+    type: number
+    description: "Block new turns once a session's spend reaches this many US dollars. Unset means no cap. Dollars are computed from tokens and the price table, never stored."
+  prices:
+    type: object
+    description: "Price table, USD per million tokens, keyed 'provider/model': {input, output, cache_read, cache_write_5m, cache_write_1h, reasoning}. Needed for the cost cap and for ledger.stats costs."
+  subscription_providers:
+    type: list
+    default: []
+    description: "Providers billed to a plan. Their usage costs zero against the cap and is recorded with subscription: true."
+  permissions:
+    type: object
+    description: "Permission rules: {allow: [], ask: [], deny: [], default: allow|ask|deny}, in Claude Code's Tool(specifier) syntax. deny beats ask beats allow."
+  hx_path:
+    type: string
+    default: ""
+    description: "Path to the hx binary. Empty means look it up on PATH."
+  ledger_dir:
+    type: string
+    default: ""
+    description: "Directory of ledger files. Empty means <profile home>/hypotaxis/ledger."
