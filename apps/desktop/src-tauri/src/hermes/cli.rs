@@ -69,6 +69,7 @@ pub struct Output {
 pub struct Cli {
     short: Duration,
     cap: usize,
+    extra: Vec<(String, String)>,
 }
 
 impl Cli {
@@ -78,7 +79,15 @@ impl Cli {
         Self {
             short: limits.cli_timeout,
             cap: 1024 * 1024,
+            extra: Vec::new(),
         }
+    }
+
+    /// Add variables every child gets on top of the allowlist (the integration tests point Hermes at a scratch install).
+    #[must_use]
+    pub fn with_env(mut self, extra: Vec<(String, String)>) -> Self {
+        self.extra = extra;
+        self
     }
 
     /// The timeout for a short call.
@@ -102,6 +111,7 @@ impl Cli {
         cmd.args(args)
             .env_clear()
             .envs(std::env::vars_os().filter(|(k, _)| k.to_str().is_some_and(passes)))
+            .envs(self.extra.iter().map(|(k, v)| (k, v)))
             .env("HERMES_HOME", home)
             .stdin(Stdio::null())
             .stdout(Stdio::piped())

@@ -90,6 +90,13 @@ pub fn run() {
             builder.mount_events(app);
             let limits = config::Limits::default();
             let supervisor = Arc::new(hermes::Supervisor::new(hermes::Environment::from_process(), limits.clone()));
+            // Find Hermes while the UI loads, so the first connect does not pay for `hermes --version` (about 0.2 s).
+            let warm = supervisor.clone();
+            tauri::async_runtime::spawn(async move {
+                if let Err(e) = warm.info().await {
+                    tracing::info!(error = %e, "Hermes is not ready yet");
+                }
+            });
             let handle = app.handle().clone();
             let emitter: state::StatusEmitter = Arc::new(move |profile, status| {
                 let event = ConnectionStateEvent {

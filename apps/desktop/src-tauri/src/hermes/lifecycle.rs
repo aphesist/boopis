@@ -71,6 +71,13 @@ impl Supervisor {
         }
     }
 
+    /// Give every `hermes` child these variables too (for tests that run a scratch install).
+    #[must_use]
+    pub fn with_child_env(mut self, extra: Vec<(String, String)>) -> Self {
+        self.cli = self.cli.with_env(extra);
+        self
+    }
+
     /// The environment this supervisor reads.
     #[must_use]
     pub fn environment(&self) -> &Environment {
