@@ -11,13 +11,18 @@ use schemars::generate::SchemaSettings;
 use serde_json::{Map, Value, json};
 
 use crate::describe::{DescribeResult, PROTOCOL};
+use crate::error::codes;
 use crate::method;
 use crate::txn::{
-    ApplyParams, ApplyResult, DiscardResult, JournalRef, RecoverParams, RecoverResult,
-    RestoreResult, ValidateParams, ValidateResult,
+    AbortedBeforeWriteData, ApplyFailedData, ApplyParams, ApplyResult, DiscardResult, JournalData,
+    JournalRef, PathsData, RecoverParams, RecoverResult, RestoreResult, ValidateParams,
+    ValidateResult,
 };
 
-/// Builds the schema document: `{ $schema, title, protocol, methods: {name: {params, result}}, $defs }`.
+/// Builds the schema document:
+/// `{ $schema, title, protocol, methods: {name: {params, result}}, errors: {code: {data}}, $defs }`.
+///
+/// `errors` types the extra fields of `error.data` for the codes that carry any.
 ///
 /// Output is deterministic (sorted keys), so it diffs cleanly.
 #[must_use]
@@ -43,12 +48,34 @@ pub fn schema_document() -> Value {
     method!(method::TXN_DISCARD, JournalRef, DiscardResult);
     method!(method::TXN_RECOVER, RecoverParams, RecoverResult);
 
+    let mut errors = Map::new();
+    macro_rules! error_data {
+        ($code:expr, $data:ty) => {{
+            let data = generator.subschema_for::<$data>().to_value();
+            errors.insert($code.to_owned(), json!({ "data": data }));
+        }};
+    }
+    error_data!(codes::HX_TXN_ABORTED_BEFORE_WRITE, AbortedBeforeWriteData);
+    error_data!(codes::HX_TXN_SCOPE_VIOLATION, PathsData);
+    error_data!(codes::HX_TXN_PROTECTED_PATH, PathsData);
+    error_data!(codes::HX_TXN_APPLY_FAILED, ApplyFailedData);
+    for code in [
+        codes::HX_TXN_JOURNAL_NOT_FOUND,
+        codes::HX_TXN_JOURNAL_CORRUPT,
+        codes::HX_TXN_JOURNAL_BUSY,
+        codes::HX_TXN_INVALID_STATE,
+        codes::HX_TXN_RESTORE_FAILED,
+    ] {
+        error_data!(code, JournalData);
+    }
+
     let defs = generator.take_definitions(true);
     json!({
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "title": "hx-v1",
         "protocol": PROTOCOL,
         "methods": methods,
+        "errors": errors,
         "$defs": defs,
     })
 }
@@ -104,5 +131,14 @@ mod tests {
             assert!(methods[name].get("result").is_some(), "{name}");
         }
         assert!(doc["$defs"].get("Edit").is_some());
+        // The failure types ride in error data, so they must be in the schema too.
+        for def in ["EditFailure", "FailureKind", "ClosestMatch"] {
+            assert!(doc["$defs"].get(def).is_some(), "{def}");
+        }
+        assert!(doc["errors"]["hx.txn.aborted_before_write"]["data"].is_object());
+        // Every key is a real catalog code.
+        for code in doc["errors"].as_object().unwrap().keys() {
+            assert!(codes::ALL.contains(&code.as_str()), "{code}");
+        }
     }
 }

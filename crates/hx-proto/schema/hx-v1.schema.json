@@ -1,5 +1,34 @@
 {
   "$defs": {
+    "AbortedBeforeWriteData": {
+      "description": "`data` of `hx.txn.aborted_before_write` (next to `data.code`).",
+      "properties": {
+        "failures": {
+          "description": "Every failed edit, in request order.",
+          "items": {
+            "$ref": "#/$defs/EditFailure"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "failures"
+      ],
+      "type": "object"
+    },
+    "ApplyFailedData": {
+      "description": "`data` of `hx.txn.apply_failed`.",
+      "properties": {
+        "restored": {
+          "description": "Always true: the workspace was restored before the error was returned.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "restored"
+      ],
+      "type": "object"
+    },
     "ApplyParams": {
       "description": "Parameters of `txn.apply`.",
       "properties": {
@@ -64,6 +93,53 @@
       "required": [
         "journal_id",
         "files"
+      ],
+      "type": "object"
+    },
+    "ClosestMatch": {
+      "description": "The closest place in the file to what an edit looked for.",
+      "properties": {
+        "end_line": {
+          "description": "Last line of the closest region, 1-based and inclusive.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "first_diff_line": {
+          "description": "The first line, 1-based, where the region differs from the request.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "similarity": {
+          "description": "0.0 to 1.0.",
+          "format": "double",
+          "type": "number"
+        },
+        "snippet": {
+          "description": "The region's text, capped in size.",
+          "type": "string"
+        },
+        "start_line": {
+          "description": "First line of the closest region, 1-based.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "whitespace_only": {
+          "description": "True when the region differs from the request only in whitespace. The edit is **not**\napplied in that case; resend it with the exact text.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "start_line",
+        "end_line",
+        "snippet",
+        "similarity",
+        "whitespace_only"
       ],
       "type": "object"
     },
@@ -215,6 +291,130 @@
         }
       ]
     },
+    "EditFailure": {
+      "description": "One failed edit in an `hx.txn.aborted_before_write` error.",
+      "properties": {
+        "candidate_lines": {
+          "description": "For `ambiguous`, the first line of each candidate, 1-based.",
+          "items": {
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "closest": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ClosestMatch"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The closest region, for `no_match`."
+        },
+        "edit_index": {
+          "description": "Index into the request's `edits`.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "hunk": {
+          "description": "For a diff edit, the zero-based hunk that failed.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "kind": {
+          "$ref": "#/$defs/FailureKind",
+          "description": "What went wrong."
+        },
+        "message": {
+          "description": "A human-readable explanation.",
+          "type": "string"
+        },
+        "path": {
+          "description": "The path the edit named (or the diff section's path).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "edit_index",
+        "path",
+        "kind",
+        "message"
+      ],
+      "type": "object"
+    },
+    "FailureKind": {
+      "description": "Why one edit failed validation.",
+      "oneOf": [
+        {
+          "const": "no_match",
+          "description": "The text was not found. See `closest`.",
+          "type": "string"
+        },
+        {
+          "const": "ambiguous",
+          "description": "The text matched in several places. See `candidate_lines`.",
+          "type": "string"
+        },
+        {
+          "const": "not_found",
+          "description": "The file does not exist.",
+          "type": "string"
+        },
+        {
+          "const": "already_exists",
+          "description": "The file exists and the edit would create it.",
+          "type": "string"
+        },
+        {
+          "const": "not_utf8",
+          "description": "The file is not valid UTF-8, so it cannot take a text edit.",
+          "type": "string"
+        },
+        {
+          "const": "invalid_diff",
+          "description": "The diff text could not be parsed.",
+          "type": "string"
+        },
+        {
+          "const": "path_unsafe",
+          "description": "The path is absolute, contains `..`, or escapes the workspace through a symlink.",
+          "type": "string"
+        },
+        {
+          "const": "is_directory",
+          "description": "The path is a directory.",
+          "type": "string"
+        },
+        {
+          "const": "not_regular",
+          "description": "The path is not a regular file or symlink.",
+          "type": "string"
+        },
+        {
+          "const": "unreadable",
+          "description": "The file exists but cannot be read.",
+          "type": "string"
+        },
+        {
+          "const": "too_large",
+          "description": "The file or the transaction exceeds a size limit.",
+          "type": "string"
+        },
+        {
+          "const": "unsupported",
+          "description": "The edit asks for something unsupported, such as a rename in a diff.",
+          "type": "string"
+        }
+      ]
+    },
     "FileChange": {
       "description": "One touched file in a result.",
       "properties": {
@@ -252,6 +452,19 @@
       ],
       "type": "object"
     },
+    "JournalData": {
+      "description": "`data` of the journal errors (`journal_not_found`, `journal_corrupt`, `journal_busy`,\n`invalid_state`, `restore_failed`).",
+      "properties": {
+        "journal_id": {
+          "description": "The journal the error is about.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "journal_id"
+      ],
+      "type": "object"
+    },
     "JournalRef": {
       "description": "Parameters of `txn.restore` and `txn.discard`.",
       "properties": {
@@ -267,6 +480,22 @@
       "required": [
         "journal_dir",
         "journal_id"
+      ],
+      "type": "object"
+    },
+    "PathsData": {
+      "description": "`data` of `hx.txn.scope_violation` and `hx.txn.protected_path`.",
+      "properties": {
+        "paths": {
+          "description": "The offending paths, as normalised from the request.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "paths"
       ],
       "type": "object"
     },
@@ -442,6 +671,53 @@
     }
   },
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "errors": {
+    "hx.txn.aborted_before_write": {
+      "data": {
+        "$ref": "#/$defs/AbortedBeforeWriteData"
+      }
+    },
+    "hx.txn.apply_failed": {
+      "data": {
+        "$ref": "#/$defs/ApplyFailedData"
+      }
+    },
+    "hx.txn.invalid_state": {
+      "data": {
+        "$ref": "#/$defs/JournalData"
+      }
+    },
+    "hx.txn.journal_busy": {
+      "data": {
+        "$ref": "#/$defs/JournalData"
+      }
+    },
+    "hx.txn.journal_corrupt": {
+      "data": {
+        "$ref": "#/$defs/JournalData"
+      }
+    },
+    "hx.txn.journal_not_found": {
+      "data": {
+        "$ref": "#/$defs/JournalData"
+      }
+    },
+    "hx.txn.protected_path": {
+      "data": {
+        "$ref": "#/$defs/PathsData"
+      }
+    },
+    "hx.txn.restore_failed": {
+      "data": {
+        "$ref": "#/$defs/JournalData"
+      }
+    },
+    "hx.txn.scope_violation": {
+      "data": {
+        "$ref": "#/$defs/PathsData"
+      }
+    }
+  },
   "methods": {
     "hx.describe": {
       "params": null,

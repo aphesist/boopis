@@ -120,6 +120,35 @@ pub struct EditFailure {
     pub candidate_lines: Vec<u32>,
 }
 
+/// `data` of `hx.txn.aborted_before_write` (next to `data.code`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct AbortedBeforeWriteData {
+    /// Every failed edit, in request order.
+    pub failures: Vec<EditFailure>,
+}
+
+/// `data` of `hx.txn.scope_violation` and `hx.txn.protected_path`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct PathsData {
+    /// The offending paths, as normalised from the request.
+    pub paths: Vec<String>,
+}
+
+/// `data` of `hx.txn.apply_failed`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct ApplyFailedData {
+    /// Always true: the workspace was restored before the error was returned.
+    pub restored: bool,
+}
+
+/// `data` of the journal errors (`journal_not_found`, `journal_corrupt`, `journal_busy`,
+/// `invalid_state`, `restore_failed`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct JournalData {
+    /// The journal the error is about.
+    pub journal_id: String,
+}
+
 /// Parameters of `txn.validate`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct ValidateParams {

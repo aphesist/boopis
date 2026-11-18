@@ -10,7 +10,7 @@ The wire contract between the hypotaxis plugin (Python) and `hx` (Rust). Pure ty
 | `error` | `AppError`, the catalog reader, and `codes::*` constants generated at build time from `errors.json` |
 | `describe` | `hx.describe` result: `{version, protocol: "hx-v1", capabilities}` |
 | `txn` | request and response types for `txn.validate`, `txn.apply`, `txn.restore`, `txn.discard`, `txn.recover` |
-| `schema` | builds `schema/hx-v1.schema.json` from the types above |
+| `schema` | builds `schema/hx-v1.schema.json`: every method's params and result, plus the `error.data` types for the codes that carry any |
 | `registry` | the `Handler` trait and the `Dispatcher`; each crate registers its handlers |
 | `method` | method names and the `Namespace` enum (`hx`, `txn`, `pack`, `sandbox`) |
 | `log` | `tracing` JSON logging to a rotating file or stderr, through a `Redactor` |

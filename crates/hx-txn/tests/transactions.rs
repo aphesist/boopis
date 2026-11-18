@@ -696,3 +696,37 @@ fn concurrent_transactions_on_one_workspace_serialise() {
     }
     assert!(fx.journal_entries().is_empty());
 }
+
+#[test]
+fn error_data_matches_the_types_in_the_schema() {
+    let fx = fixture();
+    put(&fx.root, "a.txt", "x\n", 0o644);
+    let err = engine()
+        .apply(
+            &fx.apply_params(vec![replace("a.txt", "nope", "y")]),
+            &never(),
+        )
+        .unwrap_err();
+    let rpc = hx_proto::AppError::from(err).to_rpc_error();
+    let data: hx_proto::txn::AbortedBeforeWriteData =
+        serde_json::from_value(rpc.data.unwrap()).unwrap();
+    assert_eq!(data.failures[0].kind, FailureKind::NoMatch);
+
+    let mut p = fx.apply_params(vec![replace("a.txt", "x", "y")]);
+    p.allowed = Some(vec!["src/**".into()]);
+    let rpc = hx_proto::AppError::from(engine().apply(&p, &never()).unwrap_err()).to_rpc_error();
+    let data: hx_proto::txn::PathsData = serde_json::from_value(rpc.data.unwrap()).unwrap();
+    assert_eq!(data.paths, vec!["a.txt"]);
+
+    let rpc = hx_proto::AppError::from(
+        engine()
+            .restore(
+                &fx.journal_ref("01a1f0b0-98be-758e-b0df-01d07097ef4d"),
+                &never(),
+            )
+            .unwrap_err(),
+    )
+    .to_rpc_error();
+    let data: hx_proto::txn::JournalData = serde_json::from_value(rpc.data.unwrap()).unwrap();
+    assert_eq!(data.journal_id, "01a1f0b0-98be-758e-b0df-01d07097ef4d");
+}
