@@ -10,13 +10,13 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
-from typing import Any, ClassVar
+from typing import Any
 
 
 class HypotaxisError(Exception):
     """Base of every error the plugin raises on purpose."""
 
-    code: ClassVar[str] = "hx.internal_error"
+    code: str = "hx.internal_error"
 
     def __init__(self, message: str, *, data: Mapping[str, Any] | None = None) -> None:
         super().__init__(f"{self.code}: {message}")
@@ -26,6 +26,23 @@ class HypotaxisError(Exception):
 
 class ConfigError(HypotaxisError):
     code = "hx.config.invalid"
+
+
+class HxUnavailableError(HypotaxisError):
+    code = "hx.process.unavailable"
+
+
+class HxTimeoutError(HypotaxisError):
+    code = "hx.process.timeout"
+
+
+class HxCallError(HypotaxisError):
+    """An error answered by hx itself. ``code`` is the one hx sent (``data.code``), so it is set per
+    instance, not per class."""
+
+    def __init__(self, code: str, message: str, *, data: Mapping[str, Any] | None = None) -> None:
+        self.code = code
+        super().__init__(message, data=data)
 
 
 class InvalidParamsError(HypotaxisError):

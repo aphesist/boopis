@@ -16,6 +16,16 @@ jobs:
           base="${{ github.event.pull_request.base.sha || github.event.before }}"
           if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then base=$(git rev-list --max-parents=0 HEAD | tail -1); fi
           sh scripts/check-commit-identity.sh "$base..HEAD"
+  shared:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: shared data files are copies of their sources (ADR-0016)
+        run: scripts/sync-shared-data.sh --check
+      - name: vendored contraprova is a byte-exact copy of its pinned commit (ADR-0015)
+        run: scripts/vendor-contraprova.sh --check
+      - name: generated hx types match the schema
+        run: python3 scripts/gen-hx-types.py --check
   rust:
     runs-on: ubuntu-latest
     if: ${{ hashFiles('crates/*/Cargo.toml') != '' }}
@@ -31,7 +41,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - run: cd plugins/hypotaxis && uv run --extra dev ruff check . && uv run --extra dev pyright && uv run --extra dev pytest -q
+      - run: cargo build -p hx
+      - name: ruff, pyright and the unit tests (pyproject.toml is tooling only)
+        run: |
+          cd plugins/hypotaxis
+          uvx ruff check . && uvx ruff format --check .
+          uvx --with ruamel.yaml pyright
+          HX_BIN="$GITHUB_WORKSPACE/target/debug/hx" uv run --no-project --with pytest --with ruamel.yaml pytest -q tests
   ui:
     runs-on: ubuntu-latest
     if: ${{ hashFiles('apps/desktop/ui/package.json') != '' }}
