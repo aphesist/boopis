@@ -21,7 +21,7 @@ export function mountList(root: HTMLElement): void {
     return ui.html.row({
       title: s.title, end: ui.esc(s.running ? 'now' : (s.when || '')), current: isCur, archived, value: s.id, acts,
       lead: archived ? '' : ui.html.leadFor({ running: !!s.running, attention: needs, current: isCur }),
-      attrs: { 'data-id': s.id, 'aria-label': s.title + (needs ? ', needs you' : '') + (s.running ? ', running' : '') + (archived ? ', archived' : ''), 'data-hx-focus': isCur ? 'list' : null }
+      attrs: { 'data-id': s.id, 'aria-label': s.title + ' ' + (s.running ? 'now' : (s.when || '')) + (needs ? ', needs you' : '') + (s.running ? ', running' : '') + (archived ? ', archived' : ''), 'data-hx-focus': isCur ? 'list' : null }
     });
   }
   const rows = (): HTMLElement[] => [...root.querySelectorAll<HTMLElement>('.ui-row')].filter((r) => r.offsetParent !== null);

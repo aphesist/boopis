@@ -1,0 +1,115 @@
+/* The dialogs: Settings (General, Appearance = the theme customizer, Keyboard), the shortcut sheet and the account menu.
+   On Appearance the dialog steps aside to the right edge and drops its scrim, so every change shows on the whole app
+   as it is made. Tab cycles inside a dialog (KEYMAP section 10). */
+import { $, $$ } from '../../core/dom';
+import { setState, state, toggle } from '../../core/state';
+import { ui } from '../../components';
+import { data } from '../../data';
+import { mountThemePanel } from '../../styles/theme-panel';
+import { els, sh } from './ctx';
+import { FOCUSABLE, visible } from './regions';
+import { keysTableHTML } from './keymap';
+import { closePalette } from './palette';
+
+export const closeMenu = (returnFocus?: boolean): void => ui.menu.close(returnFocus);
+
+/* ───────── the shortcut sheet ───────── */
+export function openKeys(): void {
+  closePalette(true); closeMenu(false);
+  const d = $<HTMLDialogElement>('#hx-keys-sheet', sh.app);
+  const input = $<HTMLInputElement>('#hx-keys-filter', d);
+  input.value = '';
+  $('#hx-keys-body', d).innerHTML = keysTableHTML('');
+  if (!d.open) { try { d.showModal(); } catch { d.setAttribute('open', ''); } }
+  input.focus();
+}
+
+/* ───────── settings ───────── */
+let themeMounted = false;
+function showSettingsSection(section?: string): void {
+  const d = els().settings;
+  const sec = ['general', 'appearance', 'keys'].includes(section ?? '') ? (section as string) : 'general';
+  for (const t of $$('.hx-dtab', d)) {
+    const on = t.dataset['section'] === sec;
+    t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1;
+  }
+  for (const p of $$('.hx-dpanel', d)) p.hidden = p.id !== 'hx-dpanel-' + sec;
+  if (sec === 'appearance' && !themeMounted) { mountThemePanel($('#hx-dpanel-appearance')); themeMounted = true; mountOrbGrow(); }
+  d.classList.toggle('is-side', sec === 'appearance');
+  $('.hx-dialog__body', d).scrollTop = 0;
+}
+function mountOrbGrow(): void {
+  const panel = $('#hx-dpanel-appearance'); if (!panel || panel.querySelector('#hx-set-orb-grow')) return;
+  const sec = document.createElement('section');
+  sec.className = 'hx-set'; sec.setAttribute('aria-labelledby', 'hx-set-bots-h');
+  sec.innerHTML = '<h3 class="ui-set__head" id="hx-set-bots-h">Bots</h3>' + ui.html.setRow({ for: 'hx-set-orb-grow', label: 'Grow bots on hover', hint: 'Bots in the dock grow under the pointer.',
+    control: ui.html.switch({ id: 'hx-set-orb-grow', checked: state.orbGrow }) });
+  const colours = panel.querySelector('[aria-labelledby="hxt-h-colours"]');
+  panel.insertBefore(sec, colours);
+  ui.hydrate(sec);
+  $('#hx-set-orb-grow', sec).addEventListener('ui:change', (e) => setState({ orbGrow: !!(e as CustomEvent<{ value: boolean }>).detail.value }));
+}
+export function openSettings(section?: string): void {
+  closePalette(); closeMenu(false);
+  const d = els().settings;
+  showSettingsSection(section);
+  if (!d.open) { try { d.showModal(); } catch { d.setAttribute('open', ''); } }
+  const card = $('.hx-dialog__card', d); card.tabIndex = -1; card.focus({ preventScroll: true });
+}
+
+/* ───────── the account menu ───────── */
+export function openMenu(): void {
+  ui.tooltip.hide();
+  const U = data().user.get();
+  const m = ui.menu.open(els().btnAccount, [
+    { title: U.name },
+    { label: 'Settings', value: 'settings', keys: 'mod+,', role: 'menuitem' },
+    { label: 'Keyboard shortcuts', value: 'shortcuts', keys: 'mod+/', role: 'menuitem' },
+    '-',
+    { label: 'Show the dock', value: 'dock', role: 'menuitemcheckbox', checked: state.dock === 'on', keys: 'mod+J' },
+    { label: 'Show session details', value: 'right', role: 'menuitemcheckbox', checked: state.right === 'open', keys: 'mod+I', disabled: state.tab !== 'session' }
+  ], { place: 'above', label: 'Account', onSelect: menuAction });
+  // an account menu starts at its first item (the library starts a choice menu at the checked one)
+  const first = m && m.querySelector<HTMLElement>('.ui-menu__item:not(:disabled)'); if (first) first.focus({ preventScroll: true });
+}
+function menuAction(act: string): void {
+  // the menu returns focus to the account button as it closes, so a dialog opens on the next tick and keeps it
+  if (act === 'settings') setTimeout(() => openSettings(), 0);
+  else if (act === 'shortcuts') setTimeout(openKeys, 0);
+  else if (act === 'dock') toggle('dock');
+  else if (act === 'right') toggle('right');
+}
+
+/* ───────── wiring ───────── */
+export function wireDialogs(): void {
+  const el = els();
+  $('#hx-set-dock').addEventListener('change', (e) => setState({ dock: (e.target as HTMLInputElement).checked ? 'on' : 'off' }));
+  $('#hx-settings-close').addEventListener('click', () => el.settings.close());
+  for (const t of $$('.hx-dtab', el.settings)) t.addEventListener('click', () => showSettingsSection(t.dataset['section']));
+  $('.hx-dtabs', el.settings).addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    const tabs = $$('.hx-dtab', el.settings), i = tabs.findIndex((t) => t.getAttribute('aria-selected') === 'true');
+    const n = tabs[(i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
+    if (n) { showSettingsSection(n.dataset['section']); n.focus(); }
+  });
+  el.settings.addEventListener('click', (e) => { if (e.target === el.settings) el.settings.close(); });
+  const ks = $<HTMLDialogElement>('#hx-keys-sheet', sh.app);
+  $('#hx-keys-close', ks).addEventListener('click', () => ks.close());
+  $<HTMLInputElement>('#hx-keys-filter', ks).addEventListener('input', (e) => { $('#hx-keys-body', ks).innerHTML = keysTableHTML((e.target as HTMLInputElement).value); });
+  ks.addEventListener('click', (e) => { if (e.target === ks) ks.close(); });
+  // close on Esc explicitly: a module's window-level key handler must never be able to keep a dialog open
+  for (const d of [ks, el.settings]) d.addEventListener('keydown', (e) => { if (e.key === 'Escape' && d.open) { e.preventDefault(); e.stopPropagation(); d.close(); } });
+  // Tab cycles inside a dialog: a modal dialog would otherwise hand focus to the browser after its last control
+  const tabStops = (d: HTMLElement): HTMLElement[] => $$(FOCUSABLE, d).filter((n) => {
+    const r = n as HTMLInputElement;
+    return visible(n) && n.tabIndex >= 0 && !(r.type === 'radio' && !r.checked && $$<HTMLInputElement>('input[type="radio"][name="' + r.name + '"]', d).some((x) => x.checked));
+  });
+  for (const d of [ks, el.settings]) d.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab' || !d.open || ui.popover.current) return;
+    const f = tabStops(d); if (!f.length) return;
+    const first = f[0] as HTMLElement, last = f[f.length - 1] as HTMLElement, a = document.activeElement;
+    if (e.shiftKey && (a === first || (!f.includes(a as HTMLElement) && !d.contains(a)))) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && a === last) { e.preventDefault(); first.focus(); }
+  });
+}

@@ -35,3 +35,22 @@ export function callProvided(name: ProviderName, detail: ProvideDetail): boolean
   }
   return false;
 }
+
+/* ───────── the dock's hooks for the shell (`window.hxDock` of the mock-up): the shell never imports the dock ───────── */
+export interface DockApi {
+  setMode(mode: string): void;
+  setOn(on: boolean): void;
+  goPage(id: string): void;
+  focus(): void;
+  /** KEYMAP section 3: the n-th bot (1-based) as the dock shows them */
+  botAt(n: number): string | null;
+  openSession(id: string): void;
+  closeSession(): void;
+  readonly state: { mode: string; page: string; card: string | null; pages: ReadonlyArray<{ id: string; on: boolean }>; waits: number; hover: boolean; focusIn: boolean };
+  /** tests slow or speed the springs */
+  timeScale(f: number): void;
+  hover(x: number | null): void;
+}
+let dockApi: DockApi | null = null;
+export const setDockApi = (a: DockApi): void => { dockApi = a; };
+export const getDockApi = (): DockApi | null => dockApi;

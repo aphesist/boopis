@@ -11,7 +11,7 @@ import { orbHtml } from './orb';
 
 type U<T> = T | undefined;
 
-const keys = (k: U<string>): string => (k ? '<span class="ui-keys" aria-hidden="true">' + String(k).split('+').map((x) => '<kbd class="ui-kbd">' + esc(keyLabel(x)) + '</kbd>').join('') + '</span>' : '');
+const keys = (k: U<string>): string => (k ? '<span class="ui-keys" aria-hidden="true">' + String(k).split('+').map((x) => '<kbd class="ui-kbd">' + esc(keyLabel(x)) + '</kbd>').join(' ') + '</span>' : '');
 const code = (text: string): string => '<code class="ui-code">' + esc(text) + '</code>';
 /** inline `code` in a data string -> chips; everything else escaped */
 const inline = (text: string): string => esc(text).replace(/`([^`]+)`/g, '<code class="ui-code">$1</code>');
@@ -94,8 +94,8 @@ function row(o: RowOpts): string {
   const r = '<' + tag + (tag === 'button' ? ' type="button"' : '') + ' class="' + cx('ui-row', two && 'ui-row--2', o.class) + '"' +
     attrs({ 'aria-current': o.current ? 'true' : null, 'data-archived': o.archived, 'data-value': o.value, tabindex: o.tabindex, ...o.attrs }) + '>' +
     '<span class="ui-row__lead">' + (o.lead ?? '') + '</span>' +
-    '<span class="ui-row__text"><span class="ui-row__title">' + (o.titleHTML ?? esc(o.title)) + '</span>' + (two ? '<span class="ui-row__sub">' + esc(o.sub) + '</span>' : '') + '</span>' +
-    (o.end ? '<span class="ui-row__end"' + attrs({ 'data-tone': o.endTone, 'data-swap': o.acts ? '' : null }) + '>' + o.end + '</span>' : '') + '</' + tag + '>';
+    '<span class="ui-row__text"><span class="ui-row__title">' + (o.titleHTML ?? esc(o.title)) + '</span>' + (two ? ' <span class="ui-row__sub">' + esc(o.sub) + '</span>' : '') + '</span>' +
+    (o.end ? ' <span class="ui-row__end"' + attrs({ 'data-tone': o.endTone, 'data-swap': o.acts ? '' : null }) + '>' + o.end + '</span>' : '') + '</' + tag + '>';
   /* --acts: how many action buttons show on hover or focus, so the title can make room for them */
   return o.acts ? '<li class="ui-row-wrap" style="--acts:' + (o.acts.match(/<button/g) ?? []).length + '">' + r + '<span class="ui-row__acts">' + o.acts + '</span></li>' : '<li>' + r + '</li>';
 }

@@ -2,7 +2,6 @@
    Importing this module registers the factory the component library's `ui.card` calls. */
 import { setCardFactory } from '../../components/card-registry';
 import type { CardFactory } from '../../components/card-registry';
-import "./cards.css";
 import { create } from './card';
 import { KINDS } from './kinds';
 import { queue } from './queue';

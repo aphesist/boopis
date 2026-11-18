@@ -5,7 +5,6 @@
    Listens: hx:bot-select {id}, hx:new-bot, hx:bot-settings {open}, hx:nav {action}, hx:state, hx:tab, hx:theme
    Emits: hx:attention {source:'bots', tab:'bots', count, ids}, hx:bot-select {id, from}, hx:view-inset, hx:title
    Provides: bot-settings, stop. The provider owns the bots, their threads, their runs and their approvals. */
-import './bots.css';
 import { on } from '../../core/bus';
 import { provide, register } from '../../core/registry';
 import { state } from '../../core/state';
@@ -50,12 +49,12 @@ function wire(): void {
   const onState = (): void => { syncListVisibility(); syncRail(); };
   on('hx:state', onState); on('hx:tab', onState);
   on('hx:theme', () => requestAnimationFrame(repaintOrbs));
-  provide('bot-settings', (d) => { if (state.tab !== 'bots' || S.view !== 'bot') return false; if (d.toggle) return toggleSettings(); openSettings(S.sel); return true; });
+  /* mod+I on the Bots tab always answers: from the new-bot form it returns to the open bot's settings, as in v6 */
+  provide('bot-settings', (d) => { if (state.tab !== 'bots') return false; if (d.toggle) return toggleSettings(); openSettings(S.sel); return true; });
   provide('stop', (d) => (d.tab === 'bots' ? stopRun() : false));
   setTimeout(announceAttention, 0);
 }
 
-initModel();
 leadOrb();
 register('bots-list', { mount(root) { wire(); mountList(root); } });
 register('bots', { mount(root) { wire(); mountView(root); } });

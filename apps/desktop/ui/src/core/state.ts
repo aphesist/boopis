@@ -100,3 +100,9 @@ export function toggle(key: 'left' | 'right' | 'dock' | 'tab'): Readonly<AppStat
   if (key === 'dock') return setState({ dock: state.dock === 'on' ? 'off' : 'on' });
   return setState({ tab: state.tab === 'session' ? 'bots' : 'session' });
 }
+
+/* the last layout the shell computed (`HX.layout`); the dock and the shell's Esc rules read it */
+import type { Layout } from './types';
+let layout: Layout | null = null;
+export const setLayout = (l: Layout): void => { layout = l; };
+export const getLayout = (): Layout | null => layout;

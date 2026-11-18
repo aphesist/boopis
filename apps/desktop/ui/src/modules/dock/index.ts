@@ -6,7 +6,6 @@
    Registers as the `dock` module. Listens: hx:layout, hx:state, hx:attention, hx:theme, hx:nav, and the provider's
    bots, waits, run, schedules and context streams. Emits: hx:bot-select, hx:new-bot, hx:open-panel, hx:attention,
    hx:dock. Every decision, message, stop and setting is a provider command. */
-import './dock.css';
 import { on } from '../../core/bus';
 import { KEYS, readJSON } from '../../core/settings';
 import { register, setDockApi } from '../../core/registry';

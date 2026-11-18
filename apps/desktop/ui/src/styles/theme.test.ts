@@ -1,0 +1,95 @@
+import { describe, expect, it } from 'vitest';
+import { EDITABLE, PAIRS, PRESETS, blank, composite, lum, parseColor, ratio, sanitize, themeApi, toHex } from './theme';
+
+describe('colour parsing', () => {
+  it('reads the rgb() Chrome reports for a plain colour', () => {
+    expect(parseColor('rgb(18, 17, 16)')).toEqual([18, 17, 16, 1]);
+    expect(parseColor('rgba(255, 0, 0, 0.5)')).toEqual([255, 0, 0, 0.5]);
+  });
+  it('reads the color(srgb ...) Chrome reports for a color-mix(), channels 0 to 1', () => {
+    const c = parseColor('color(srgb 0.5 0.25 1 / 0.4)');
+    expect(c.map((v) => Math.round(v * 1000) / 1000)).toEqual([127.5, 63.75, 255, 0.4]);
+    expect(parseColor('color(srgb 1 1 1)')[3]).toBe(1);
+  });
+  it('toHex rounds each channel', () => {
+    expect(toHex([0, 127.5, 255])).toBe('#0080ff');
+  });
+});
+
+describe('contrast maths (WCAG 2.x)', () => {
+  it('black on white is 21:1 and the ratio is symmetric', () => {
+    expect(ratio('#000000', '#ffffff')).toBeCloseTo(21, 5);
+    expect(ratio('#ffffff', '#000000')).toBeCloseTo(21, 5);
+  });
+  it('the same colour is 1:1', () => { expect(ratio('#777777', '#777777')).toBeCloseTo(1, 5); });
+  it('relative luminance of the primaries', () => {
+    expect(lum('#ffffff')).toBeCloseTo(1, 5);
+    expect(lum('#000000')).toBe(0);
+    expect(lum('#ff0000')).toBeCloseTo(0.2126, 4);
+  });
+  it('a known pair: #767676 on white is the 4.5:1 boundary', () => {
+    expect(ratio('#767676', '#ffffff')).toBeGreaterThan(4.5);
+    expect(ratio('#777777', '#ffffff')).toBeLessThan(4.6);
+  });
+  it('composite lays a translucent colour over a solid one', () => {
+    expect(composite([255, 255, 255, 0.5], [0, 0, 0, 1])).toBe('#808080');
+    expect(composite([10, 20, 30, 1], [200, 200, 200, 1])).toBe('#0a141e');
+  });
+});
+
+describe('the contrast table', () => {
+  it('every pair names two tokens and a floor of 3 or 4.5 (WCAG 1.4.3 and 1.4.11)', () => {
+    expect(PAIRS.length).toBeGreaterThan(30);
+    for (const [fg, bg, min, label] of PAIRS) { expect(fg).toMatch(/^--/); expect(bg).toMatch(/^--/); expect([3, 4.5]).toContain(min); expect(label.length).toBeGreaterThan(3); }
+  });
+  it('the dock pairs include inactive marks at 3:1 on black', () => {
+    expect(PAIRS.some(([fg, , min, , scope]) => fg === '--mark-off' && scope === 'dock' && min === 3)).toBe(true);
+  });
+  it('contrast() reports every pair with a ratio (the browser resolves the tokens)', () => {
+    const rows = themeApi.contrast();
+    expect(rows).toHaveLength(PAIRS.length);
+    for (const r of rows) expect(typeof r.pass).toBe('boolean');
+  });
+});
+
+describe('importing a theme', () => {
+  it('sanitize keeps a known preset, #rrggbb colours of editable tokens, known fonts and modes', () => {
+    const t = sanitize({ preset: 'bone', colors: { '--text': '#ABCDEF', bg: '#000', '--brass': 'red', '--bg-1': '#101010' }, sans: 'Geist', mono: 'Nope', case: 'lower', corners: 'weird', density: 'compact', logo: 'open', extra: 1 });
+    expect(t).toEqual({ ...blank(), preset: 'bone', colors: { '--text': '#abcdef', '--bg-1': '#101010' }, sans: 'Geist', case: 'lower', density: 'compact', logo: 'open' });
+  });
+  it('sanitize rejects what is not an object, and falls back to the default preset', () => {
+    expect(sanitize(null)).toBeNull();
+    expect(sanitize('x')).toBeNull();
+    expect(sanitize({ preset: 'nope' })?.preset).toBe('catalog');
+  });
+  it('importJSON refuses text that is not a hypotaxis theme, with a precise message', () => {
+    expect(() => themeApi.importJSON('{oops')).toThrow('not valid JSON');
+    expect(() => themeApi.importJSON('{"preset":"bone"}')).toThrow('hypotaxis-theme');
+  });
+  it('the four presets exist and each names its fonts', () => {
+    expect(Object.keys(PRESETS)).toEqual(['catalog', 'graphite', 'bone', 'typewriter']);
+    expect(PRESETS.typewriter.case).toBe('lower');
+    expect(PRESETS.typewriter.corners).toBe('round');
+  });
+  it('every editable colour is a custom property', () => { for (const t of EDITABLE) expect(t).toMatch(/^--[a-z0-9-]+$/); });
+});
+
+describe('theme presets', () => {
+  it('preset() sets the attributes on <html> and exportJSON round-trips the choice', () => {
+    themeApi.preset('typewriter');
+    expect(document.documentElement.dataset['hxPreset']).toBe('typewriter');
+    expect(document.documentElement.dataset['hxCase']).toBe('lower');
+    expect(document.documentElement.dataset['hxCorners']).toBe('round');
+    expect(JSON.parse(themeApi.exportJSON())).toMatchObject({ format: 'hypotaxis-theme', version: 1, preset: 'typewriter', case: 'lower' });
+    themeApi.preset('catalog');
+  });
+  it('an override equal to the preset is dropped, so the preset stays meaningful', () => {
+    themeApi.preset('catalog');
+    themeApi.set({ corners: 'default' });
+    expect(themeApi.get().corners).toBeNull();
+    themeApi.set({ corners: 'sharp' });
+    expect(themeApi.get().corners).toBe('sharp');
+    themeApi.reset();
+    expect(themeApi.get().corners).toBeNull();
+  });
+});
