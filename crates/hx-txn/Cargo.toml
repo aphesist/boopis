@@ -1,0 +1,36 @@
+[package]
+name = "hx-txn"
+description = "Capability-safe file transactions behind ship: validate, journal, apply atomically, restore, recover."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+# Fault injection for the property and crash tests. Never enabled in the binary.
+dev-fixtures = []
+
+[dependencies]
+hx-proto.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+cap-std.workspace = true
+globset.workspace = true
+sha2.workspace = true
+hex.workspace = true
+uuid.workspace = true
+tokio = { workspace = true, features = ["rt"] }
+tokio-util.workspace = true
+
+[dev-dependencies]
+hx-txn = { path = ".", features = ["dev-fixtures"] }
+tempfile.workspace = true
+proptest.workspace = true
+tokio = { workspace = true, features = ["rt", "macros"] }

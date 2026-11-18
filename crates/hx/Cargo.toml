@@ -1,0 +1,34 @@
+[package]
+name = "hx"
+description = "The hx binary: JSON-RPC over stdio for the hypotaxis plugin, plus one-shot subcommands."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true
+
+[lib]
+name = "hx"
+path = "src/lib.rs"
+
+[[bin]]
+name = "hx"
+path = "src/main.rs"
+
+[dependencies]
+hx-proto.workspace = true
+hx-txn.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "io-util", "io-std", "macros", "signal", "sync", "time"] }
+tokio-util.workspace = true
+clap = { version = "4", features = ["derive"] }
+anyhow = "1"
+
+[dev-dependencies]
+tempfile.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "io-util", "macros", "sync", "time"] }
