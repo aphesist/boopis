@@ -1,0 +1,16 @@
+[package]
+name = "local-artifacts"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+hypotaxis-contracts = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+axum = { workspace = true }
+chrono = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }

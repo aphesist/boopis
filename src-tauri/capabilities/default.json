@@ -1,0 +1,9 @@
+{
+  "$schema": "https://schemas.tauri.app/config/2/capability.json",
+  "identifier": "default",
+  "description": "Default capability for Hypotaxis desktop window",
+  "windows": ["main"],
+  "permissions": [
+    "core:default"
+  ]
+}

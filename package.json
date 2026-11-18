@@ -1,0 +1,10 @@
+{
+  "name": "hypotaxis",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev:ui": "pnpm --dir ui dev",
+    "build:ui": "pnpm --dir ui build",
+    "test:ui": "pnpm --dir ui test"
+  }
+}
