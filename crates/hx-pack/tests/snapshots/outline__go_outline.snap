@@ -1,0 +1,13 @@
+---
+source: crates/hx-pack/tests/outline.rs
+expression: "snapshot(\"lang/sample.go\")"
+---
+sample.go [Ok]
+    5-8   struct    Server | Server struct { (@6)
+   10-12  interface Handler | Handler interface { (@10)
+   14-14  type      ID | ID int (@14)
+   17-17  struct    Left | Left struct{} (@17)
+   18-18  struct    Right | Right struct{} (@18)
+   21-24  function  NewServer | func NewServer(addr string) *Server (@22)
+   26-30  method    Server.Start | func (s *Server) Start() error (@27)
+   32-34  function  helper | func helper(a, b int) int (@32)
