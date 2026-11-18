@@ -1,0 +1,495 @@
+{
+  "$defs": {
+    "ApplyParams": {
+      "description": "Parameters of `txn.apply`.",
+      "properties": {
+        "allowed": {
+          "description": "If set, every touched path must match one of these globs.",
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "edits": {
+          "description": "The edits.",
+          "items": {
+            "$ref": "#/$defs/Edit"
+          },
+          "type": "array"
+        },
+        "journal_dir": {
+          "description": "Where journals live, under the Hermes profile. Created 0700 if missing.",
+          "type": "string"
+        },
+        "protected": {
+          "description": "Paths that may not be touched. Omitted means the built-in defaults; an explicit list,\neven an empty one, replaces them.",
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "root": {
+          "description": "The workspace root directory.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "root",
+        "journal_dir",
+        "edits"
+      ],
+      "type": "object"
+    },
+    "ApplyResult": {
+      "description": "Result of `txn.apply`.",
+      "properties": {
+        "files": {
+          "description": "What changed. Files whose content is unchanged are listed with equal hashes.",
+          "items": {
+            "$ref": "#/$defs/FileChange"
+          },
+          "type": "array"
+        },
+        "journal_id": {
+          "description": "The journal to pass to `txn.restore` or `txn.discard`. A `UUIDv7`.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "journal_id",
+        "files"
+      ],
+      "type": "object"
+    },
+    "DescribeResult": {
+      "description": "Result of `hx.describe`.",
+      "properties": {
+        "capabilities": {
+          "description": "Sorted capability strings, such as `txn.edit.diff`. Gate features on these.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "protocol": {
+          "description": "Always `\"hx-v1\"`.",
+          "type": "string"
+        },
+        "version": {
+          "description": "The `hx` binary's semantic version.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "protocol",
+        "capabilities"
+      ],
+      "type": "object"
+    },
+    "DiscardResult": {
+      "description": "Result of `txn.discard`.",
+      "properties": {
+        "journal_id": {
+          "description": "The journal that was removed.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "journal_id"
+      ],
+      "type": "object"
+    },
+    "Edit": {
+      "description": "One edit. Edits apply in order, each seeing the result of the previous ones.",
+      "oneOf": [
+        {
+          "description": "Search and replace. `old` must match exactly once, tolerating CRLF and a uniform indent\nshift. A whitespace-only difference is reported, never applied.",
+          "properties": {
+            "new": {
+              "description": "The replacement.",
+              "type": "string"
+            },
+            "old": {
+              "description": "The text to find.",
+              "type": "string"
+            },
+            "op": {
+              "const": "replace",
+              "type": "string"
+            },
+            "path": {
+              "description": "The file to edit; it must exist.",
+              "type": "string"
+            },
+            "replace_all": {
+              "default": false,
+              "description": "Replace every exact occurrence instead of requiring exactly one.",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "op",
+            "path",
+            "old",
+            "new"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "Create a whole file, with parent directories.",
+          "properties": {
+            "content": {
+              "description": "The full UTF-8 content.",
+              "type": "string"
+            },
+            "op": {
+              "const": "create",
+              "type": "string"
+            },
+            "overwrite": {
+              "default": false,
+              "description": "Replace the file if it already exists. Without it, an existing file is a failure.",
+              "type": "boolean"
+            },
+            "path": {
+              "description": "The file to create.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "path",
+            "content"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "Delete a file. A symlink is removed itself, not its target.",
+          "properties": {
+            "op": {
+              "const": "delete",
+              "type": "string"
+            },
+            "path": {
+              "description": "The file to delete; it must exist.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "op",
+            "path"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "Apply unified-diff hunks. The diff may carry file headers (`--- a/x`, `+++ b/x`,\n`/dev/null` for create or delete) and several files.",
+          "properties": {
+            "diff": {
+              "description": "The unified diff text.",
+              "type": "string"
+            },
+            "op": {
+              "const": "diff",
+              "type": "string"
+            },
+            "path": {
+              "description": "The only file the hunks apply to. Required when the diff has no file headers.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "op",
+            "diff"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "FileChange": {
+      "description": "One touched file in a result.",
+      "properties": {
+        "created": {
+          "description": "The transaction created the file.",
+          "type": "boolean"
+        },
+        "deleted": {
+          "description": "The transaction deleted the file.",
+          "type": "boolean"
+        },
+        "path": {
+          "description": "The real path, workspace-relative, after resolving symlinks inside the workspace.",
+          "type": "string"
+        },
+        "sha256_after": {
+          "description": "SHA-256 of the content after, or null if the file was deleted.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sha256_before": {
+          "description": "SHA-256 of the content before, or null if the file did not exist.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "path",
+        "created",
+        "deleted"
+      ],
+      "type": "object"
+    },
+    "JournalRef": {
+      "description": "Parameters of `txn.restore` and `txn.discard`.",
+      "properties": {
+        "journal_dir": {
+          "description": "The journal directory the transaction used.",
+          "type": "string"
+        },
+        "journal_id": {
+          "description": "The id `txn.apply` returned.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "journal_dir",
+        "journal_id"
+      ],
+      "type": "object"
+    },
+    "RecoverFailure": {
+      "description": "A journal `txn.recover` could not finish.",
+      "properties": {
+        "code": {
+          "description": "The stable error code.",
+          "type": "string"
+        },
+        "journal_id": {
+          "description": "The journal id (the directory name when the manifest is unreadable).",
+          "type": "string"
+        },
+        "message": {
+          "description": "What happened.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "journal_id",
+        "code",
+        "message"
+      ],
+      "type": "object"
+    },
+    "RecoverParams": {
+      "description": "Parameters of `txn.recover`.",
+      "properties": {
+        "journal_dir": {
+          "description": "The journal directory to scan.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "journal_dir"
+      ],
+      "type": "object"
+    },
+    "RecoverResult": {
+      "description": "Result of `txn.recover`.",
+      "properties": {
+        "busy": {
+          "description": "Journals held by a live transaction. Left alone.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "discarded": {
+          "description": "Journals that never reached the workspace and were just removed.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "failed": {
+          "description": "Journals that could not be recovered; they are kept.",
+          "items": {
+            "$ref": "#/$defs/RecoverFailure"
+          },
+          "type": "array"
+        },
+        "pending": {
+          "description": "Completed transactions still waiting for `txn.restore` or `txn.discard`. Left alone.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "restored": {
+          "description": "Interrupted transactions that were rolled back.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "restored",
+        "discarded",
+        "pending",
+        "busy",
+        "failed"
+      ],
+      "type": "object"
+    },
+    "RestoreResult": {
+      "description": "Result of `txn.restore`.",
+      "properties": {
+        "journal_id": {
+          "description": "The journal that was consumed.",
+          "type": "string"
+        },
+        "removed": {
+          "description": "Paths the transaction had created, now removed.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "restored": {
+          "description": "Paths whose bytes and metadata were put back (including recreated deletions).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "journal_id",
+        "restored",
+        "removed"
+      ],
+      "type": "object"
+    },
+    "ValidateParams": {
+      "description": "Parameters of `txn.validate`.",
+      "properties": {
+        "allowed": {
+          "description": "If set, every touched path must match one of these globs.",
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "edits": {
+          "description": "The edits.",
+          "items": {
+            "$ref": "#/$defs/Edit"
+          },
+          "type": "array"
+        },
+        "protected": {
+          "description": "Paths that may not be touched. Omitted means the built-in defaults\n(`crates/hx-txn/protected.default.json`); an explicit list, even an empty one, replaces them.",
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "root": {
+          "description": "The workspace root directory.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "root",
+        "edits"
+      ],
+      "type": "object"
+    },
+    "ValidateResult": {
+      "description": "Result of `txn.validate`.",
+      "properties": {
+        "files": {
+          "description": "What `txn.apply` would change. Nothing was written.",
+          "items": {
+            "$ref": "#/$defs/FileChange"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "files"
+      ],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "methods": {
+    "hx.describe": {
+      "params": null,
+      "result": {
+        "$ref": "#/$defs/DescribeResult"
+      }
+    },
+    "txn.apply": {
+      "params": {
+        "$ref": "#/$defs/ApplyParams"
+      },
+      "result": {
+        "$ref": "#/$defs/ApplyResult"
+      }
+    },
+    "txn.discard": {
+      "params": {
+        "$ref": "#/$defs/JournalRef"
+      },
+      "result": {
+        "$ref": "#/$defs/DiscardResult"
+      }
+    },
+    "txn.recover": {
+      "params": {
+        "$ref": "#/$defs/RecoverParams"
+      },
+      "result": {
+        "$ref": "#/$defs/RecoverResult"
+      }
+    },
+    "txn.restore": {
+      "params": {
+        "$ref": "#/$defs/JournalRef"
+      },
+      "result": {
+        "$ref": "#/$defs/RestoreResult"
+      }
+    },
+    "txn.validate": {
+      "params": {
+        "$ref": "#/$defs/ValidateParams"
+      },
+      "result": {
+        "$ref": "#/$defs/ValidateResult"
+      }
+    }
+  },
+  "protocol": "hx-v1",
+  "title": "hx-v1"
+}
