@@ -1,0 +1,43 @@
+name: ci
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  identity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: every commit is the owner's alone
+        run: |
+          base="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then base=$(git rev-list --max-parents=0 HEAD | tail -1); fi
+          sh scripts/check-commit-identity.sh "$base..HEAD"
+  rust:
+    runs-on: ubuntu-latest
+    if: ${{ hashFiles('crates/*/Cargo.toml') != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace
+  plugin:
+    runs-on: ubuntu-latest
+    if: ${{ hashFiles('plugins/hypotaxis/pyproject.toml') != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: cd plugins/hypotaxis && uv run --extra dev ruff check . && uv run --extra dev pyright && uv run --extra dev pytest -q
+  ui:
+    runs-on: ubuntu-latest
+    if: ${{ hashFiles('apps/desktop/ui/package.json') != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: cd apps/desktop/ui && pnpm install --frozen-lockfile && pnpm typecheck && pnpm test

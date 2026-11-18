@@ -1,0 +1,59 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+# apps/desktop/src-tauri joins once the host crate exists (W4).
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97"
+license = "UNLICENSED"
+repository = "https://github.com/aphesist/hypotaxis"
+authors = ["aphesist <126630868+aphesist@users.noreply.github.com>"]
+
+[workspace.dependencies]
+hx-proto = { path = "crates/hx-proto" }
+hx-pack = { path = "crates/hx-pack" }
+hx-txn = { path = "crates/hx-txn" }
+hx-sandbox = { path = "crates/hx-sandbox" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", default-features = false }
+tokio-util = "0.7"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+schemars = "1"
+uuid = { version = "1", features = ["v7", "serde"] }
+cap-std = "3"
+ignore = "0.4"
+globset = "0.4"
+grep-searcher = "0.1"
+grep-regex = "0.1"
+grep-matcher = "0.1"
+regex = "1"
+sha2 = "0.10"
+hex = "0.4"
+tempfile = "3"
+proptest = "1"
+insta = { version = "1", features = ["json"] }
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+module_name_repetitions = "allow"
+missing_errors_doc = "allow"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"

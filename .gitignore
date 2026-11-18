@@ -2,7 +2,11 @@ target/
 **/target/
 node_modules/
 **/node_modules/
-ui/dist/
+dist/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
 .DS_Store
 *.log
 *.tmp
