@@ -1,6 +1,6 @@
 # Protocols
 
-Status: draft v1. Items marked **[verify]** wait on the S0 spike against a live Hermes v0.23.2. Wire rules (JSON-RPC 2.0, naming, additive evolution, capabilities, errors) are in `docs/STANDARDS.md` section 7. The source of truth for every type is `apps/shared/hypotaxis-v1.openrpc.json`. Python, Rust and TypeScript types are generated from it.
+Status: v1. Verified against a live Hermes v0.23.2 in the S0 spike (`docs/research/spike-s0.md`), except where marked **[verify]**. Wire rules (JSON-RPC 2.0, naming, additive evolution, capabilities, errors) are in `docs/STANDARDS.md` section 7. The source of truth for every type is `apps/shared/hypotaxis-v1.openrpc.json`. Python, Rust and TypeScript types are generated from it.
 
 There are four seams, and each has one protocol:
 
@@ -48,7 +48,12 @@ Hermes's own protocol, used exactly as Hermes Desktop uses it (`apps/shared` in 
   - `toolsets: ["hypotaxis"]` (governed) or the profile's ungoverned set;
   - `skills`.
   Never `safe_mode`, because that would skip plugin discovery and drop hypotaxis.
-- **Approvals:** handle both the canonical `approval.request` event (answered with `approval.respond`) and the legacy server request `approval` (answered with `{choice}`), until Hermes finishes migrating. **[verify which path fires with `server_requests: true`]**
+- **Approvals:** canonical only, as verified in S0. The flow is event `approval.request {prompt_id, execution_generation, command, description, choices: once|deny|session|always, timeout_s}`, then `approval.respond {session_id, execution_generation, prompt_id, choice}`, then event `approval.settled`. Server requests still carry `clarify`, `secret`, `sudo`, `vault.*`, `preview.*` and `theme.*`.
+- **Call rules:**
+  - `prompt.submit` requires `submission_id`;
+  - `session.steer` requires the `execution_generation` from an event envelope;
+  - `session.mutate` takes `expected_revision` and `expected_generation`, which come from the `revision_conflict` refusal;
+  - `session.create` must omit `base_url` when using a named provider.
 - **Generated client:** the TypeScript client reuses `@hermes/shared`'s generated contract (`gateway-contract.generated.ts`, MIT), vendored per Hermes tag and diffed on every bump.
 
 ## 3. UI and plugin: `hypotaxis-v1`

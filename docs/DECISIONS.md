@@ -73,7 +73,11 @@ Hermes's rules are "the core is a narrow waist; capability lives at the edges". 
 
 **Decision.**
 - An asyncio Python kernel, started inside the `hx` sandbox, talks to the plugin over a private socket, never stdout.
-- The plugin executes tool calls with `ctx.dispatch_tool` and `ctx.call_mcp`, so they pass Hermes's approvals, redaction and budgets.
+- The plugin executes tool calls with `ctx.dispatch_tool` and `ctx.call_mcp`.
+- The S0 spike showed `dispatch_tool` bypasses hooks, middleware and toolset gating; only Hermes's dangerous-command approval still fires. So the plugin runs **its own policy and ledger step** before every kernel-originated call, through the same function `pre_tool_call` uses:
+  - one implementation, two entry points;
+  - in governed mode, write-capable tools (`write_file`, `patch`, a `terminal` that writes) are denied from exec;
+  - shell work inside exec runs through `hx sandbox.run`.
 - An interrupt cancels the running cell without killing the kernel. A hard timeout kills it and says so.
 
 **Consequences.**
@@ -96,12 +100,21 @@ Hermes's rules are "the core is a narrow waist; capability lives at the edges". 
 - hypotaxis sessions are visible in the Hermes CLI and TUI.
 - Our tools are scoped by `session.create {toolsets}`, so other clients' sessions are unaffected unless they opt in.
 
-## ADR-0007 Per-attempt model selection (pending the S0 spike)
-**Context.** The cascade runs each attempt on a tier's model. There are two candidates:
-- **(a)** `delegate_task` subagents with a per-task model route;
-- **(b)** a session-scoped model switch between attempts.
+## ADR-0007 Per-attempt model selection: a hypotaxis delegation provider
+**Context.** The S0 spike (`research/spike-s0.md` 4e, 4f) confirmed two mechanisms:
+- `delegate_task` routed by a delegation-provider plugin: `route_task -> {provider, model}`, children in the background;
+- `session.mutate {operation: "model"}`, with revision fences and named providers only.
 
-**Decision.** (a) if the spike confirms subagents can run on another provider and model; otherwise (b). This record is updated with the spike's evidence.
+**Decision.**
+- **Governed attempts** are `delegate_task` children routed by the plugin's delegation provider (`delegation.backend: hypotaxis`). The provider ignores any tier the model asks for: it reads the task's cascade state from the ledger and returns the next tier's `ModelRef`.
+- Children complete in the background and re-enter the orchestrator as a turn, which is contraprova's own orchestrator loop: the orchestrator reads the gate verdict and calls `dispatch` again or stops. The tier is always the plugin's choice.
+- **Pinned models** (Smart off) and ungoverned sessions use `session.mutate` with named providers. The host and plugin never use the bare `custom` provider.
+- Every provider hypotaxis configures is a named entry under `providers:`.
+
+**Consequences.**
+- Escalation works in plain Hermes too.
+- Each attempt costs one orchestrator turn, as in the measured system.
+- The tier ladder and the provider entries must stay in sync. The plugin writes both from one ladder definition.
 
 ## ADR-0008 Ledger format is contraprova's
 **Decision.**
@@ -149,6 +162,17 @@ Hermes desktop plugins (`plugin.js` against `@hermes/plugin-sdk`) are React and 
 - with the project root as cwd.
 
 They're not sandboxed, matching Claude Code. This is the only exception to the no-shell-string rule.
+
+## ADR-0014 Direct tool surface: tool_search off in hypotaxis sessions
+**Context.**
+- Hermes defers every plugin and MCP tool behind three `tool_search` bridge tools unless `tools.tool_search.enabled: "off"` (`tools/tool_search.py`).
+- No plugin flag exempts a toolset.
+- Governed and ungoverned sessions must show `pack`, `exec`, `ship` (and `dispatch`) directly.
+
+**Decision.**
+- At setup, with the user's consent, hypotaxis sets `tools.tool_search.enabled: "off"` in the profile it uses, and explains the effect: other clients of that profile see plugin and MCP tools eagerly too.
+- If the user declines, hypotaxis offers a dedicated profile (ADR-0006's alternative).
+- We open an upstream Hermes pull request for a per-toolset "direct surface" declaration (manifest or `register_tool` flag). Once it ships, the global switch is dropped.
 
 ## ADR-0012 Prices
 Prices come from Hermes's models.dev data, with a user override table. Rates are absolute per bucket (input, output, cache read, cache write, reasoning), never vendor multipliers. Dollars are always computed from tokens and never stored. A subscription provider prices at zero, with an API-equivalent projection shown beside it.
