@@ -1,0 +1,41 @@
+{
+  "description": "A tool call made inside a subagent carries the parent's session id and the agent's identity.",
+  "event": "PreToolUse",
+  "setup": [
+    {
+      "hook": "subagent_start",
+      "kwargs": {
+        "parent_session_id": "sess-1",
+        "child_session_id": "child-1",
+        "child_subagent_id": "sa_1",
+        "child_role": "leaf",
+        "child_goal": "look"
+      }
+    }
+  ],
+  "call": {
+    "hook": "pre_tool_call",
+    "kwargs": {
+      "tool_name": "read_file",
+      "args": {
+        "path": "src/a.py"
+      },
+      "session_id": "child-1",
+      "tool_call_id": "call-2"
+    }
+  },
+  "payload": {
+    "session_id": "sess-1",
+    "transcript_path": "{transcript}",
+    "cwd": "{cwd}",
+    "permission_mode": "default",
+    "hook_event_name": "PreToolUse",
+    "agent_id": "sa_1",
+    "agent_type": "leaf",
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "{cwd}/src/a.py"
+    },
+    "tool_use_id": "call-2"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "env": {"MY_FLAG": "1"},
+  "hooks": {
+    "PostToolUse": [
+      {"matcher": "Edit|Write", "hooks": [{"type": "command", "command": "echo edited"}]}
+    ]
+  }
+}

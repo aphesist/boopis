@@ -19,8 +19,15 @@ provides_hooks:
   - pre_llm_call
   - on_session_start
   - on_session_finalize
+  # compat/: the Claude Code hooks bridge (docs/COMPAT.md section 4)
+  - transform_tool_result
+  - post_llm_call
+  - on_session_open
+  - on_session_reset
+  - post_compaction
   - subagent_start
   - subagent_stop
+  - on_human_input_request
 # Nothing here needs a granted capability: no tool override, no host-owned LLM calls.
 capabilities: []
 config_schema:

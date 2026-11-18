@@ -57,6 +57,9 @@ def register(ctx: Any) -> None:
     from .tools import TOOLSET, dispatch_handler, hx_ready, pack_handler, ship_handler, tool_schemas
 
     bind(ctx)
+    from .compat import register as register_compat
+
+    register_compat(ctx)  # before the policy hooks: a Claude hook's `allow` must be on record when the policy asks
     handlers = {"pack": pack_handler, "ship": ship_handler, "dispatch": dispatch_handler}
     for name, schema in tool_schemas().items():
         ctx.register_tool(

@@ -9,6 +9,7 @@ The hypotaxis Hermes plugin (Python, stdlib only at runtime). It adds governance
 | `__init__.py` | thin `register(ctx)`: lazy wrappers only, so import stays far under 150 ms |
 | `hooks.py` | the Hermes hook callbacks. Policy hooks fail closed, observers never raise |
 | `session.py` | `Runtime` and `SessionState`: the lock at first prompt, `session.opened`, spend |
+| `compat/` | Claude Code files and hooks on Hermes (readers, merge, trust, hooks bridge, inventory RPC). Area guide: `compat/AGENTS.md` |
 | `tools/` | the `pack` and `ship` tools (toolset `hypotaxis`): schemas in `tools/schemas.json`, handlers return JSON strings and never raise |
 | `governance/` | governed mode, contraprova's cascade run by the plugin (see below): `ladder`, `brief`, `state`, `handover` (pure), `links`, `runs`, `host`, `engine` (`dispatch`, `launch`), `lifecycle` (`subagent_start`/`stop`, outcomes), `delegation` (the provider) |
 | `budget.py` | the cost cap, one implementation for the `pre_llm_call` hook and the cascade's launches |
@@ -62,6 +63,11 @@ Known limits: the delegation provider reads the attempt from a context variable,
 - The prompt section callable runs at a session's first prompt, before `on_session_start` and `pre_llm_call`.
 - `on_session_end` fires every turn; `on_session_finalize` ends a session.
 - `ctx.session_cwd()` is right only inside a turn (hooks, tool handlers) and in the prompt section `info`.
+
+## Setup the plugin depends on (set by the host's setup, with the user's consent)
+- `tools.tool_search.enabled: "off"` in the profile in use, so `pack`, `ship` and `dispatch` show directly (ADR-0014).
+- `delegation.backend: hypotaxis`, so governed `dispatch` can route attempts to their tier.
+- `plugins.entries.hypotaxis.allow_gateway_injection: true`, so a Claude Code Stop hook that blocks can re-enter through `ctx.inject_message`. Without it a Stop block is logged and ignored, and `compat.inventory` warns.
 
 ## Test and check
 ```sh

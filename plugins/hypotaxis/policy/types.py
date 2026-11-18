@@ -84,5 +84,6 @@ class SessionPolicy:
     default: Fallback = "allow"
     protected: tuple[str, ...] = ()
     config_error: str = ""
+    hook_allow: bool = True  # a Claude Code hook's allow skips this policy's approval prompts (docs/COMPAT.md 4.4)
     role: Role = "orchestrator"  # the session model, or a delegated worker attempt (governed mode)
     ship_closed: str = ""  # a worker whose attempt is over (or has no task): why ship is refused; empty = open

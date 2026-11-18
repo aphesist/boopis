@@ -174,7 +174,7 @@ Verified kwargs are from `H:website/docs/user-guide/features/hooks.md` and `herm
 | UserPromptSubmit | `pre_llm_call(user_message,session_id,turn_id,...)`. Fires **once per user prompt**, before inference. Returns context, which is joined into the user message, or `{"action":"block"}`. | Full. **[verify]** whether a blocked prompt stays in history, since Claude erases it. |
 | SessionStart | `on_session_start(session_id,model,platform)` for `startup`, `on_session_open(reason=create\|resume)` for `resume`, `on_session_reset` for `clear`, `post_compaction` for `compact` | Observers fire **after** the system prompt is built. `additionalContext` is therefore delivered through the next `pre_llm_call`, and never the system prompt. |
 | SessionEnd | `on_session_finalize` | Partial: Claude's `reason` set is mapped to `other` unless the surface supplies `reason`. |
-| Stop | Non-blocking: `on_session_end` (**fires after every turn**). Blocking (exit 2 or `decision:"block"`): `pre_verify` returns `{"action":"continue","message"}` | **Partial.** `pre_verify` fires only when the turn edited files, and at most `max_verify_nudges` times. A Stop-block on a non-editing turn is ignored. **[verify]** that `ship` writes count as edits (`_record_file_mutation_result`). |
+| Stop | `post_llm_call`, which Hermes fires once when the tool loop ends in a final answer (not when interrupted). A block (exit 2 or `decision:"block"`) is fed back with `ctx.inject_message`. | **Partial.** Hermes has no turn-end hook that can continue a turn, and `pre_verify` fires only after `write_file` or `patch` edits (verified: `ship` writes do not count), so hypotaxis does not use it. The reason re-enters as a user-role message queued in the session's own FIFO: a **new turn after the answer**, not a continuation inside it. It needs `plugins.entries.hypotaxis.allow_gateway_injection: true` (reported in `compat.inventory`). Upstream proposal: `compat/UPSTREAM.md`. |
 | SubagentStart / SubagentStop | `subagent_start(child_goal,child_role,...)` / `subagent_stop(child_summary,child_status,...)` | Observe only. A SubagentStop block cannot force continuation. |
 | Notification | `on_human_input_request(kind=approval\|clarify\|sudo, prompt)`. `approval` becomes `permission_prompt`, `clarify` becomes `elicitation_dialog`. Do not also use `pre_approval_request`. | Partial. `idle_prompt` and `auth_success` do not exist. |
 | PostCompact | `post_compaction(session_id,old_session_id,kind,reason)` | Full |
@@ -211,7 +211,7 @@ Built per call from Hermes kwargs. Keys are exactly Claude's (`F§1.3`).
 | PostToolUse `tool_response`, `duration_ms` | `result`, `duration_ms`. `error` and `is_interrupt` for failures. |
 | UserPromptSubmit `prompt` | `user_message` |
 | SessionStart `source`, `model` | per the 4.1 map |
-| Stop `stop_hook_active`, `last_assistant_message` | `pre_verify.final_response`, the attempt number |
+| Stop `stop_hook_active`, `last_assistant_message` | whether the turn began with our own continuation message (matched by its exact text), `post_llm_call.assistant_response` |
 | SubagentStop `agent_id`, `agent_type`, `last_assistant_message` | `child_session_id`, `child_role`, `child_summary` |
 | Notification `message`, `notification_type` | `prompt`, the kind map |
 
@@ -256,7 +256,7 @@ Environment of the child:
 | `continue:false`, `stopReason` | block with `stopReason` (PreToolUse, UserPromptSubmit); otherwise ignored |
 | `systemMessage` | shown through `ctx.post_message` |
 | `suppressOutput`, `terminalSequence` | ignored |
-| Stop-block loop cap | 8 consecutive continuations, and never above `max_verify_nudges` |
+| Stop-block loop cap | 8 consecutive continuations; a real user prompt resets the count. `UserPromptSubmit` does not run for a continuation. |
 
 ### 4.5 Tool-name aliasing
 
@@ -532,12 +532,13 @@ General rule (STANDARDS section 2): **managed > CLI > project-local > project > 
 | `plugins` | install and update |
 | `commands` | `` !`cmd` `` and `!{}` injections in commands and skills |
 | `permissions` | project `allow` rules only (kept gated: an `allow` widens, so fail closed) |
+| `imports` | a `CLAUDE.md` `@path` import that resolves outside the project root (3.1). Keyed by the import path in its importing file; the hash is the imported file's bytes. User and managed files import freely. |
 
 **Not gated: translated memory, rules, skills and agent prompts.** They are prompt material, which matches Hermes (it loads `AGENTS.md` ungated). They still pass the redaction and injection scan and are labelled as project data. Trust gates only what **executes code**.
 
 `deny` and `ask` rules and the native Hermes behaviour are never gated.
 
-**Prompt contents** (rendered by the host, never by the repo): the project path and git remote, then per kind each item's exact text. For hooks, the full command line, the event, the matcher, the timeout, and the script file when the command is a path (with its hash). For MCP, the command or URL, argument list, header and env **names** (values redacted), the transport and OAuth use. For plugins, source, SHA, tree hash, component list, `userConfig` requests. On a re-prompt, the **diff** against the approved set. Options: approve the kind, approve selected items, or decline. Declining leaves the items listed as untrusted.
+**Prompt contents** (rendered by the host, never by the repo): the project path and git remote, then per kind each item's exact text. For hooks, the full command line, the event, the matcher, the timeout, and the script file when the command is a path (with its hash). For MCP, the command or URL, argument list, header and env **names** (values redacted), the transport and OAuth use. For imports, the importing file, the import path and the imported file's hash. For plugins, source, SHA, tree hash, component list, `userConfig` requests. On a re-prompt, the **diff** against the approved set. Options: approve the kind, approve selected items, or decline. Declining leaves the items listed as untrusted.
 
 **Storage:** `<home>/hypotaxis/compat/trust.json` (versioned schema, atomic write, mode 0600). Entries:
 `{project_id (realpath + git remote hash), kind, item_id, content_hash, decided_at, decided_by:"user"}`.

@@ -1,0 +1,32 @@
+{
+  "description": "A session reset (/new).",
+  "event": "SessionStart",
+  "setup": [
+    {
+      "hook": "on_session_reset",
+      "kwargs": {
+        "session_id": "sess-1",
+        "platform": "cli",
+        "reason": "new"
+      }
+    }
+  ],
+  "call": {
+    "hook": "pre_llm_call",
+    "kwargs": {
+      "session_id": "sess-1",
+      "user_message": "hello again",
+      "is_first_turn": true,
+      "model": "fake-a"
+    }
+  },
+  "payload": {
+    "session_id": "sess-1",
+    "transcript_path": "{transcript}",
+    "cwd": "{cwd}",
+    "permission_mode": "default",
+    "hook_event_name": "SessionStart",
+    "source": "clear",
+    "model": "fake-a"
+  }
+}
