@@ -17,6 +17,7 @@ _PROTECTED = Path(__file__).resolve().parent.parent / "data" / "protected.defaul
 class Defaults:
     own_tools: frozenset[str]
     read_only_tools: frozenset[str]
+    kernel_denied_tools: frozenset[str]
     shell_tools: frozenset[str]
     write_tools: frozenset[str]
     path_arguments: Mapping[str, tuple[str, ...]]
@@ -46,6 +47,7 @@ def load_defaults() -> Defaults:
     return Defaults(
         own_tools=frozenset(raw["own_tools"]),
         read_only_tools=frozenset(raw["read_only_tools"]),
+        kernel_denied_tools=frozenset(raw["kernel_denied_tools"]),
         shell_tools=frozenset(raw["shell_tools"]),
         write_tools=frozenset(raw["write_tools"]),
         path_arguments=_tuples(raw["path_arguments"]),

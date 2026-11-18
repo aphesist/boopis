@@ -20,6 +20,9 @@
     "vision_analyze",
     "video_analyze"
   ],
+  "kernel_denied_tools": [
+    "exec"
+  ],
   "shell_tools": [
     "terminal"
   ],

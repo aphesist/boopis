@@ -137,6 +137,25 @@ def _record_budget(rt: Runtime, state: SessionState, cap: float, reason: str) ->
 # ---------------------------------------------------------------- observers
 
 
+def tool_called_payload(
+    call_id: str, tool: str, status: str, duration_ms: int, args: Any, *, error_code: str = "", task_id: str = ""
+) -> dict[str, Any]:
+    """The ``tool.called`` payload, shared by the Hermes hook and the exec kernel's calls (one shape).
+    Arguments are hashed, never stored."""
+    payload: dict[str, Any] = {
+        "tool_call_id": call_id,
+        "tool": tool,
+        "status": status if status in _STATUSES else "error",
+        "duration_ms": max(int(duration_ms or 0), 0),
+        "args_sha256": _args_digest(args),
+    }
+    if error_code:
+        payload["error_code"] = error_code
+    if task_id:
+        payload["task_id"] = task_id
+    return payload
+
+
 def post_tool_call(tool_name: str = "", args: Any = None, **kw: Any) -> None:
     """``tool.called``: the call's outcome and duration. Arguments are hashed, never stored."""
     try:
@@ -144,21 +163,16 @@ def post_tool_call(tool_name: str = "", args: Any = None, **kw: Any) -> None:
         session_id = str(kw.get("session_id") or "")
         state = _locked(rt, session_id)
         call_id = str(kw.get("tool_call_id") or "")
-        status = kw.get("status")
-        payload: dict[str, Any] = {
-            "tool_call_id": call_id,
-            "tool": tool_name,
-            "status": status if status in _STATUSES else "error",
-            "duration_ms": max(int(kw.get("duration_ms") or 0), 0),
-            "args_sha256": _args_digest(args),
-        }
-        code = state.blocked_calls.pop(call_id, None)
-        if code:
-            payload["error_code"] = code
-        elif kw.get("error_type"):
-            payload["error_code"] = str(kw["error_type"])
-        if kw.get("task_id"):
-            payload["task_id"] = str(kw["task_id"])
+        code = state.blocked_calls.pop(call_id, None) or (str(kw["error_type"]) if kw.get("error_type") else "")
+        payload = tool_called_payload(
+            call_id,
+            tool_name,
+            str(kw.get("status")),
+            int(kw.get("duration_ms") or 0),
+            args,
+            error_code=code,
+            task_id=str(kw.get("task_id") or ""),
+        )
         rt.ledger(state).append("tool.called", state.actor(), payload)
     except Exception:  # noqa: BLE001
         _log.error("tool.called not recorded", exc_info=True)
@@ -221,6 +235,7 @@ def on_session_finalize(**kw: Any) -> None:
     """``session.closed``. A session that never reached its first prompt has nothing to close."""
     try:
         rt = runtime()
+        _stop_kernel(str(kw.get("session_id") or ""))
         state = rt.forget(str(kw.get("session_id") or ""))
         if state is None or state.policy is None:
             return
@@ -229,6 +244,26 @@ def on_session_finalize(**kw: Any) -> None:
         )
     except Exception:  # noqa: BLE001
         _log.error("session.closed not recorded", exc_info=True)
+
+
+def _stop_kernel(session_id: str) -> None:
+    """A finished session's exec kernel goes with it. Never raises."""
+    try:
+        from .exec import stop_session
+
+        stop_session(session_id, "the session ended")
+    except Exception:  # noqa: BLE001
+        _log.error("exec kernel not stopped", exc_info=True)
+
+
+def agent_loop_stopped(**kw: Any) -> None:
+    """The owner stopped the turn: cancel the cell it was waiting on (state survives; the kernel stays)."""
+    try:
+        from .exec import interrupt
+
+        interrupt(str(kw.get("session_key") or kw.get("session_id") or ""))
+    except Exception:  # noqa: BLE001
+        _log.error("exec interrupt failed", exc_info=True)
 
 
 def recover_on_start() -> None:

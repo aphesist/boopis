@@ -75,6 +75,10 @@ def _check(call: ToolCall, session: SessionPolicy, defaults: Defaults) -> Decisi
     for rule in _parsed(session.deny):
         if match_rule(rule, call, root, defaults, deny_like=True) is not Match.NO:
             return block(f"Blocked by the permission rule {rule.text}.", "deny_rule", rule.text)
+    if call.source != "hook" and call.tool in defaults.kernel_denied_tools:
+        return block(
+            f"{call.tool} cannot be called from inside exec: it would wait on its own kernel.", "kernel_denied"
+        )
     protected = _protected(call, session, defaults)
     if protected is not None:
         return protected
