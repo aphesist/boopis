@@ -1,0 +1,41 @@
+[package]
+name = "hx-pack"
+description = "The engine behind hypotaxis's pack tool: search, read, symbols, outlines, git status, redaction."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+cap-std.workspace = true
+globset.workspace = true
+grep-matcher.workspace = true
+grep-regex.workspace = true
+grep-searcher.workspace = true
+ignore.workspace = true
+regex.workspace = true
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+# Tree-sitter core and the five starting grammars. These are not shared with
+# other crates yet, so they are declared here rather than in the root manifest.
+streaming-iterator = "0.1"
+tree-sitter = "0.27"
+tree-sitter-go = "0.25"
+tree-sitter-javascript = "0.25"
+tree-sitter-python = "0.25"
+tree-sitter-rust = "0.24"
+tree-sitter-typescript = "0.23"
+
+[dev-dependencies]
+insta.workspace = true
+proptest.workspace = true
+tempfile.workspace = true

@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "description": "Error codes hx-pack needs in crates/hx-proto/errors.json. Each maps to a JSON-RPC application error (-32000) with the string code in data.code. Tool outcomes (a withheld file, a binary file, a symbol with no match) are NOT errors: they are fields of a successful result.",
+  "codes": [
+    {"code": "hx.pack.invalid_request", "variant": "InvalidRequest", "when": "A parameter is out of range or malformed: empty pattern, zero budget, bad line range, bad glob."},
+    {"code": "hx.pack.invalid_pattern", "variant": "InvalidPattern", "when": "The search pattern does not compile as a regular expression."},
+    {"code": "hx.pack.invalid_root", "variant": "InvalidRoot", "when": "root is not an existing directory."},
+    {"code": "hx.pack.path_escape", "variant": "PathEscape", "when": "A path is absolute, contains .., or resolves through a symlink outside root."},
+    {"code": "hx.pack.not_found", "variant": "NotFound", "when": "A named file or directory does not exist under root."},
+    {"code": "hx.pack.unsupported_language", "variant": "UnsupportedLanguage", "when": "lang was given explicitly and no grammar is registered for it."},
+    {"code": "hx.pack.parse_failed", "variant": "ParseFailed", "when": "tree-sitter could not produce a tree (parser setup failure or internal timeout)."},
+    {"code": "hx.pack.git_failed", "variant": "GitFailed", "when": "The git CLI is missing, exited with an error or printed output that could not be parsed."},
+    {"code": "hx.pack.timeout", "variant": "Timeout", "when": "The deadline passed before the call finished."},
+    {"code": "hx.pack.cancelled", "variant": "Cancelled", "when": "The caller set the cancel flag."},
+    {"code": "hx.pack.config_invalid", "variant": "ConfigInvalid", "when": "An embedded data file (redact.rules.json, never_pack.json, languages.json) or a query does not load. Fails closed."},
+    {"code": "hx.pack.io", "variant": "Io", "when": "An unexpected operating-system error while reading under root."}
+  ]
+}
