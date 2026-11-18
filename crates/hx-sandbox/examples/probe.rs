@@ -304,6 +304,23 @@ fn main() {
                 println!("{n} {target}");
             }
         }
+        #[cfg(unix)]
+        "fdenv" => {
+            // probe fdenv NAME: like `fd`, but the descriptor number comes from the environment,
+            // which is how sandbox.spawn tells the child about its channel.
+            use std::io::Read;
+            use std::os::fd::FromRawFd;
+            let n: i32 = std::env::var(arg(1))
+                .unwrap_or_else(|e| fail(e))
+                .parse()
+                .unwrap_or_else(|e| fail(e));
+            // SAFETY: hx-sandbox passes a descriptor it opened for us under this number.
+            let mut f = unsafe { std::fs::File::from_raw_fd(n) };
+            f.write_all(b"hello-from-child").unwrap_or_else(|e| fail(e));
+            let mut reply = [0u8; 5];
+            f.read_exact(&mut reply).unwrap_or_else(|e| fail(e));
+            println!("reply {}", String::from_utf8_lossy(&reply));
+        }
         #[cfg(windows)]
         "handle" => {
             // probe handle N: write a greeting to the inherited pipe handle whose value is N.

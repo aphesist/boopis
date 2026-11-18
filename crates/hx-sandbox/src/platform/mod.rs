@@ -45,6 +45,12 @@ pub(crate) use unsupported as sys;
 
 pub(crate) use sys::{Child, Prepared, TreeKiller, capabilities, prepare};
 
+/// The effective user id, for checking who connects to a channel socket.
+#[cfg(unix)]
+pub(crate) fn current_uid() -> u32 {
+    unix_sys::effective_uid()
+}
+
 /// A readable child stream.
 pub(crate) type BoxRead = Box<dyn AsyncRead + Send + Unpin>;
 /// A writable child stream.

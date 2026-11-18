@@ -1,16 +1,18 @@
 //! The `hx` binary's library: the dispatcher wiring, the stdio server and the one-shot runner.
 //!
-//! - [`build_dispatcher`] registers every handler crate. `hx-pack` and `hx-sandbox` add
-//!   theirs here when they exist.
+//! - [`build_dispatcher`] registers every handler crate. `hx-pack` adds its handler
+//!   here when it lands; `hx-sandbox` is registered.
 //! - [`serve`] speaks newline-delimited JSON-RPC 2.0 over any async reader and writer.
 //! - [`oneshot`] runs a single method for debugging and tests, through the same dispatcher.
 
 pub mod oneshot;
+pub mod schema;
 pub mod serve;
 
 use std::sync::Arc;
 
 use hx_proto::Dispatcher;
+use hx_sandbox::SandboxHandler;
 use hx_txn::TxnHandler;
 
 /// The crate version, reported by `hx.describe`.
@@ -29,6 +31,10 @@ pub fn build_dispatcher() -> Dispatcher {
     dispatcher
         .register(Arc::new(TxnHandler::new()))
         .expect("txn methods are unique and in the txn namespace");
+    #[allow(clippy::expect_used)]
+    dispatcher
+        .register(Arc::new(SandboxHandler::new()))
+        .expect("sandbox methods are unique and in the sandbox namespace");
     dispatcher
 }
 
@@ -47,11 +53,17 @@ mod tests {
             "txn.restore",
             "txn.discard",
             "txn.recover",
+            "sandbox.run",
+            "sandbox.capabilities",
+            "sandbox.spawn",
+            "sandbox.wait",
+            "sandbox.kill",
         ] {
             assert!(methods.contains(&m), "{m}");
         }
         let caps = d.describe().capabilities;
         assert!(caps.contains(&"txn.edit.diff".to_owned()));
+        assert!(caps.contains(&"sandbox.run".to_owned()));
         assert_eq!(d.describe().protocol, "hx-v1");
     }
 }

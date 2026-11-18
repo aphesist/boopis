@@ -189,7 +189,6 @@ pub(super) fn child_setrlimit(resource: RlimitResource, soft: u64, hard: u64) ->
 }
 
 /// The effective user id of this process.
-#[cfg(target_os = "macos")]
 pub(crate) fn effective_uid() -> u32 {
     // SAFETY: no arguments, cannot fail.
     unsafe { libc::geteuid() }

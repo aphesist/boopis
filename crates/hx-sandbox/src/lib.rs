@@ -22,8 +22,10 @@
 
 mod capabilities;
 mod capture;
+mod channel;
 mod defaults;
 mod error;
+mod handler;
 pub mod normalize;
 mod platform;
 pub mod policy;
@@ -57,8 +59,13 @@ pub use normalize::{ResolvedLimits, ResolvedPath, ResolvedPolicy};
 pub use policy::{
     CpuLimit, DEFAULT_ENV_ALLOWLIST, Degraded, NetworkPolicy, ResourceLimits, SandboxPolicy, limits,
 };
-pub use process::{ChildReader, ChildWriter, Handle, InheritedHandle, SpawnOptions, run, spawn};
+pub use process::{
+    ChildReader, ChildWriter, Handle, InheritedHandle, KillSwitch, SpawnOptions, run, spawn,
+};
 pub use report::{Captured, DimensionReport, Enforcement, ExitOutcome, RunResult, Status};
+
+pub use handler::SandboxHandler;
+pub use wire::add_schema;
 
 /// What this host can enforce, from live probes. The first call may take a few milliseconds on
 /// Linux (it forks short-lived probe children); the result is cached. Call it once at start-up

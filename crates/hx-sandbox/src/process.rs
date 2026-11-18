@@ -229,6 +229,24 @@ pub async fn run(argv: &[String], policy: &SandboxPolicy) -> Result<RunResult> {
     })
 }
 
+/// Kills a spawned child's whole process tree. See [`Handle::kill_switch`].
+#[derive(Clone)]
+pub struct KillSwitch(TreeKiller);
+
+impl std::fmt::Debug for KillSwitch {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("KillSwitch")
+    }
+}
+
+impl KillSwitch {
+    /// Kills the tree. Call it only while the child is still running or was just reaped: the
+    /// group id is not reserved afterwards.
+    pub fn kill(&self) {
+        self.0.kill();
+    }
+}
+
 /// A long-lived sandboxed child.
 ///
 /// Its output streams are capped like [`run`]'s: the child is never blocked, the excess is
@@ -366,6 +384,13 @@ impl Handle {
     #[must_use]
     pub fn stderr_stats(&self) -> StreamStats {
         self.stderr_stats.clone()
+    }
+
+    /// A cloneable switch that kills the tree without borrowing the handle, so another task can
+    /// stop a child while one task is waiting on it.
+    #[must_use]
+    pub fn kill_switch(&self) -> KillSwitch {
+        KillSwitch(self.killer.clone())
     }
 
     /// Kills the whole process tree now. Safe to call more than once and after exit.

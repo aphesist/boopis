@@ -23,6 +23,11 @@
     {"code": "hx.txn.journal_busy", "rpc_code": -32000, "description": "The journal is in use by a live transaction."},
     {"code": "hx.txn.invalid_state", "rpc_code": -32000, "description": "The journal is not in a state that allows this operation."},
     {"code": "hx.txn.restore_failed", "rpc_code": -32000, "description": "Restoring from the journal failed. The journal is kept; run txn.recover or retry txn.restore."},
-    {"code": "hx.txn.io_error", "rpc_code": -32000, "description": "An unexpected I/O failure before any workspace write."}
+    {"code": "hx.txn.io_error", "rpc_code": -32000, "description": "An unexpected I/O failure before any workspace write."},
+    {"code": "hx.sandbox.unavailable", "rpc_code": -32000, "description": "The platform cannot enforce a requested sandbox dimension and the policy did not allow degrading it. Nothing ran. data.dimension and data.reason say which."},
+    {"code": "hx.sandbox.denied", "rpc_code": -32000, "description": "The OS refused while the sandbox was being built or applied, so the command did not run. data.step names the setup step."},
+    {"code": "hx.sandbox.spawn_failed", "rpc_code": -32000, "description": "A long-lived sandboxed child could not be started (`sandbox.spawn` only; `sandbox.run` reports the same condition as the exit kind `spawn_failed`)."},
+    {"code": "hx.sandbox.unknown_handle", "rpc_code": -32000, "description": "No running sandbox child has that handle: it never existed, or sandbox.wait already returned its exit."},
+    {"code": "hx.sandbox.too_many", "rpc_code": -32000, "description": "Too many sandbox children are running at once; wait for or kill one."}
   ]
 }

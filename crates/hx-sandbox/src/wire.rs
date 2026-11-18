@@ -16,6 +16,13 @@ use crate::policy::{CpuLimit, Degraded, NetworkPolicy, ResourceLimits, SandboxPo
 pub const METHOD_RUN: &str = "sandbox.run";
 /// The method name for [`crate::Capabilities`]: no params, `Capabilities` result.
 pub const METHOD_CAPABILITIES: &str = "sandbox.capabilities";
+/// Starts a long-lived sandboxed child (the exec kernel): [`SandboxSpawnParams`] to
+/// [`SandboxSpawnResult`].
+pub const METHOD_SPAWN: &str = "sandbox.spawn";
+/// Waits for a spawned child: [`SandboxWaitParams`] to [`SandboxWaitResult`].
+pub const METHOD_WAIT: &str = "sandbox.wait";
+/// Kills a spawned child's process tree: [`SandboxKillParams`] to [`SandboxKillResult`].
+pub const METHOD_KILL: &str = "sandbox.kill";
 
 /// Named network modes for [`Net`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -143,6 +150,142 @@ impl SandboxRunParams {
         };
         (self.argv, policy)
     }
+}
+
+/// Default environment variable that tells the child which descriptor is its channel.
+pub const DEFAULT_CHANNEL_ENV: &str = "HX_CHANNEL_FD";
+/// Default time the host waits for the plugin to connect to the channel socket.
+pub const DEFAULT_CHANNEL_ACCEPT_MS: u64 = 60_000;
+
+/// Asks `sandbox.spawn` for a private channel between the plugin and the child.
+///
+/// `hx` creates a connected socket pair, gives the child one end under a descriptor number it
+/// learns from the environment variable `env`, binds a Unix socket in a private directory
+/// (mode 0700, the socket 0600), and bridges the first connection to it onto the other end.
+/// The child needs no network and no path access to use it, so it works with `net: false`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+pub struct ChannelRequest {
+    /// Name of the environment variable that receives the descriptor number in the child.
+    #[serde(default = "default_channel_env")]
+    pub env: String,
+    /// A directory for the socket. Created with mode 0700 if missing; default: a fresh one
+    /// under the system temporary directory.
+    #[serde(default)]
+    pub dir: Option<PathBuf>,
+    /// How long to wait for the plugin to connect before closing the child's end.
+    #[serde(default)]
+    pub accept_timeout_ms: Option<u64>,
+}
+
+fn default_channel_env() -> String {
+    DEFAULT_CHANNEL_ENV.to_owned()
+}
+
+/// Params of `sandbox.spawn`: everything `sandbox.run` takes, plus the channel.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+pub struct SandboxSpawnParams {
+    /// The same fields as `sandbox.run`. `timeout_ms` is the child's maximum lifetime.
+    #[serde(flatten)]
+    pub run: SandboxRunParams,
+    /// Ask for a private channel to the child. Unix only for now.
+    #[serde(default)]
+    pub channel: Option<ChannelRequest>,
+}
+
+/// Where the plugin connects to reach the child's channel.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+pub struct ChannelInfo {
+    /// `unix_socket`.
+    pub kind: String,
+    /// The socket path. Connect once; the first connection is bridged to the child and the
+    /// socket is removed.
+    pub path: String,
+    /// The environment variable the child reads its descriptor number from.
+    pub env: String,
+    /// The descriptor number the child sees.
+    pub fd: i32,
+}
+
+/// Result of `sandbox.spawn`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+pub struct SandboxSpawnResult {
+    /// Opaque id (`UUIDv7`) for `sandbox.wait` and `sandbox.kill`.
+    pub handle: String,
+    /// The child's process id.
+    pub pid: u32,
+    /// What was enforced.
+    pub enforcement: crate::report::Enforcement,
+    /// The channel, when one was requested.
+    pub channel: Option<ChannelInfo>,
+}
+
+/// Params of `sandbox.wait`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+pub struct SandboxWaitParams {
+    /// From `sandbox.spawn`.
+    pub handle: String,
+    /// How long to wait for the exit. `0` (the default) polls: it returns at once.
+    #[serde(default)]
+    pub timeout_ms: u64,
+}
+
+/// Result of `sandbox.wait`. While the child runs, `running` is true and the output is what it
+/// has written so far (each stream capped). After the exit the handle is gone.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+pub struct SandboxWaitResult {
+    /// Whether the child is still running.
+    pub running: bool,
+    /// How it ended, once it has.
+    pub exit: Option<crate::report::ExitOutcome>,
+    /// Standard output so far.
+    pub stdout: crate::report::Captured,
+    /// Standard error so far.
+    pub stderr: crate::report::Captured,
+    /// Milliseconds since `sandbox.spawn`.
+    pub duration_ms: u64,
+}
+
+/// Params of `sandbox.kill`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+pub struct SandboxKillParams {
+    /// From `sandbox.spawn`.
+    pub handle: String,
+}
+
+/// Result of `sandbox.kill`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+pub struct SandboxKillResult {
+    /// The kill was sent. Call `sandbox.wait` to collect the exit.
+    pub killed: bool,
+}
+
+/// `error.data` of `hx.sandbox.unavailable`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+pub struct UnavailableData {
+    /// The dimension that cannot be enforced.
+    pub dimension: crate::error::Dimension,
+    /// Why.
+    pub reason: String,
+}
+
+/// `error.data` of `hx.sandbox.denied`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+pub struct DeniedData {
+    /// The setup step that failed.
+    pub step: String,
+    /// The OS error.
+    pub os_error: String,
+}
+
+/// Adds the `sandbox.*` methods and error data types to the `hx-v1` schema.
+pub fn add_schema(b: &mut hx_proto::schema::SchemaBuilder) {
+    b.method::<SandboxRunParams, SandboxRunResult>(METHOD_RUN);
+    b.method_without_params::<crate::Capabilities>(METHOD_CAPABILITIES);
+    b.method::<SandboxSpawnParams, SandboxSpawnResult>(METHOD_SPAWN);
+    b.method::<SandboxWaitParams, SandboxWaitResult>(METHOD_WAIT);
+    b.method::<SandboxKillParams, SandboxKillResult>(METHOD_KILL);
+    b.error_data::<UnavailableData>(hx_proto::codes::HX_SANDBOX_UNAVAILABLE);
+    b.error_data::<DeniedData>(hx_proto::codes::HX_SANDBOX_DENIED);
 }
 
 /// Result of `sandbox.run`: a tool outcome. A non-zero exit is still a successful call.

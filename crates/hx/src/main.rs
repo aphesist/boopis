@@ -5,6 +5,7 @@
 //! hx describe                   print the hx.describe result
 //! hx schema                     print the hx-v1 JSON Schema
 //! hx txn validate|apply|restore|discard|recover --json <file|->
+//! hx sandbox run --json <file|->     |     hx sandbox capabilities
 //! ```
 //!
 //! Stdout carries protocol frames (serve) or one JSON-RPC response (one-shot) and nothing else.
@@ -57,6 +58,19 @@ enum Command {
         #[command(subcommand)]
         action: TxnAction,
     },
+    /// Run a command in the OS sandbox, or report what the sandbox can enforce here.
+    Sandbox {
+        #[command(subcommand)]
+        action: SandboxAction,
+    },
+}
+
+#[derive(Subcommand)]
+enum SandboxAction {
+    /// Run one command to completion (`sandbox.run`).
+    Run(Input),
+    /// What this host can enforce (`sandbox.capabilities`).
+    Capabilities,
 }
 
 #[derive(Subcommand)]
@@ -177,7 +191,7 @@ async fn run(cli: Cli) -> Result<ExitCode> {
             run_oneshot(method::DESCRIBE, None).await
         }
         Command::Schema => {
-            print!("{}", hx_proto::schema::schema_text()?);
+            print!("{}", hx::schema::schema_text()?);
             Ok(ExitCode::SUCCESS)
         }
         Command::Txn { action } => {
@@ -190,6 +204,17 @@ async fn run(cli: Cli) -> Result<ExitCode> {
                 TxnAction::Recover(i) => (method::TXN_RECOVER, i),
             };
             run_oneshot(name, Some(&input.json)).await
+        }
+        Command::Sandbox { action } => {
+            init_logging(&cli, "warn")?;
+            match action {
+                SandboxAction::Run(input) => {
+                    run_oneshot(hx_sandbox::wire::METHOD_RUN, Some(&input.json)).await
+                }
+                SandboxAction::Capabilities => {
+                    run_oneshot(hx_sandbox::wire::METHOD_CAPABILITIES, None).await
+                }
+            }
         }
     }
 }

@@ -12,12 +12,14 @@ authors.workspace = true
 workspace = true
 
 [dependencies]
+hx-proto.workspace = true
+uuid.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 schemars.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
-tokio = { workspace = true, features = ["rt", "sync", "time", "io-util", "process", "macros"] }
+tokio = { workspace = true, features = ["rt", "sync", "time", "io-util", "process", "macros", "net"] }
 tokio-util.workspace = true
 
 [target.'cfg(unix)'.dependencies]
