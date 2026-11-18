@@ -10,7 +10,7 @@
 [tool.ruff]
 line-length = 120
 target-version = "py311"
-extend-exclude = ["tests/fixtures"]
+extend-exclude = ["tests/fixtures", "_vendor", "hx/types.py"]  # types.py is generated, byte for byte
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "C4", "SIM", "RUF", "PL", "BLE", "S"]
@@ -30,6 +30,7 @@ ignore = [
 [tool.pyright]
 include = ["."]
 exclude = ["tests", "**/__pycache__"]
+ignore = ["_vendor"]  # exact copies of upstream code: not ours to type-check
 pythonVersion = "3.11"
 typeCheckingMode = "strict"
 reportMissingTypeStubs = false

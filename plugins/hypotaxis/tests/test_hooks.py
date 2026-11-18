@@ -248,7 +248,7 @@ def test_tool_called_hashes_arguments(make_runtime: MakeRuntime) -> None:
     assert "TOPSECRET" not in raw
     assert "secret.txt" not in raw
     called = [e for e in events(rt) if e["type"] == "tool.called"][-1]
-    from contraprova.events import canonical_json
+    from hypotaxis._vendor.contraprova.events import canonical_json
 
     assert called["payload"] == {
         "tool_call_id": "c9",

@@ -6,9 +6,6 @@ author: aphesist
 license: Apache-2.0
 kind: standalone
 requires_hermes: ">=0.23.2"
-# contraprova is the ledger kernel (ADR-0003). Hermes never installs this itself: `hermes pm repair` does.
-python_dependencies:
-  - contraprova>=0.2
 # Tools (pack, exec, ship, dispatch) arrive in later parts; nothing is declared before it is registered.
 provides_tools: []
 provides_hooks:

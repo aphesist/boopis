@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, cast
 
 _FILE = Path(__file__).with_name("defaults.json")
+_PROTECTED = Path(__file__).resolve().parent.parent / "data" / "protected.default.json"
 
 
 @dataclass(frozen=True, slots=True)
@@ -31,6 +32,14 @@ def _tuples(raw: Mapping[str, Any]) -> dict[str, tuple[str, ...]]:
     return {k: tuple(v) for k, v in raw.items()}
 
 
+def protected_patterns() -> tuple[str, ...]:
+    """The shared default protected globs (``crates/hx-txn/protected.default.json``, copied by
+    ``scripts/sync-shared-data.sh``). Fails if the file is missing: a policy with no protected list
+    must not start."""
+    raw = cast(Mapping[str, Any], json.loads(_PROTECTED.read_text(encoding="utf-8")))
+    return tuple(raw["patterns"])
+
+
 @lru_cache(maxsize=1)
 def load_defaults() -> Defaults:
     raw = cast(Mapping[str, Any], json.loads(_FILE.read_text(encoding="utf-8")))
@@ -42,7 +51,7 @@ def load_defaults() -> Defaults:
         path_arguments=_tuples(raw["path_arguments"]),
         path_object_lists=_tuples(raw["path_object_lists"]),
         aliases=_tuples(raw["aliases"]),
-        protected_defaults=tuple(raw["protected_defaults"]),
+        protected_defaults=protected_patterns() + tuple(raw["protected_extra"]),
         command_wrappers=frozenset(raw["command_wrappers"]),
         safe_env=frozenset(raw["safe_env_assignments"]),
         read_only_commands=cast(Mapping[str, Mapping[str, Any]], raw["read_only_commands"]),

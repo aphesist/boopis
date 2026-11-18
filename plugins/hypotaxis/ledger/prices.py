@@ -19,9 +19,9 @@ def build_table(settings: Settings) -> Any:
     ledger that names it can be re-priced under exactly that table."""
     import hashlib
 
-    from contraprova.events import canonical_json
-    from contraprova.interfaces import ModelRef
-    from contraprova.pricing import Price, PriceTable
+    from .._vendor.contraprova.events import canonical_json
+    from .._vendor.contraprova.interfaces import ModelRef
+    from .._vendor.contraprova.pricing import Price, PriceTable
 
     digest = hashlib.sha256(canonical_json(dict(settings.prices)).encode("utf-8")).hexdigest()[:12]
     entries = {
@@ -54,7 +54,7 @@ class Costs:
 def project_costs(records: Iterable[Mapping[str, Any]], table: Any, subscription: Collection[str]) -> Costs:
     """Price ``records`` under ``table``. A record from a provider in ``subscription`` bills zero,
     with or without a price (the price only gives its API-equivalent)."""
-    from contraprova.pricing import request_cost_detail
+    from .._vendor.contraprova.pricing import request_cost_detail
 
     billed = api = 0.0
     missing: set[str] = set()

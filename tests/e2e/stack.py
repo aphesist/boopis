@@ -55,13 +55,6 @@ def find_install() -> HermesInstall | None:
     return HermesInstall(root, venvs[0])
 
 
-def contraprova_src() -> Path:
-    """Where contraprova is importable from in the test process: Hermes's venv does not have it yet."""
-    import contraprova
-
-    return Path(contraprova.__file__).resolve().parents[1]
-
-
 class HermesStack:
     """A gateway over a temp ``HERMES_HOME``. ``start`` writes config, installs the plugin, ensures the
     gateway; ``stop`` always stops it."""
@@ -96,7 +89,6 @@ class HermesStack:
             "UV_PYTHON_INSTALL_DIR": str(spike / "uv-python"),
             "UV_CACHE_DIR": str(spike / "uv-cache"),
             "PATH": f"{self.install.venv / 'bin'}{os.pathsep}{base.get('PATH', '')}",
-            "PYTHONPATH": str(contraprova_src()),  # until contraprova is installable by `hermes pm repair`
             "NO_PROXY": "127.0.0.1,localhost,::1",
             "no_proxy": "127.0.0.1,localhost,::1",
         }

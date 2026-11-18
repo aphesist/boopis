@@ -52,7 +52,7 @@ def describe(params: Mapping[str, Any], *, session_id: str | None = None, **_: A
 def _tier_ladder(ladder: Any) -> Mapping[str, Any]:
     """A ``Tier[]`` from ``mode.set`` (``model`` as ``{provider, id}`` or ``'provider/id'``) as the
     settings' ladder form, validated by contraprova's own ``TierLadder``."""
-    from contraprova.interfaces import TierLadder
+    from .._vendor.contraprova.interfaces import TierLadder
 
     if not isinstance(ladder, list) or not ladder:
         raise InvalidParamsError("ladder must be a non-empty list of tiers")
@@ -120,7 +120,7 @@ def ledger_stats(params: Mapping[str, Any], *, session_id: str | None = None, **
 
 def _ladder_tiers(state: SessionState) -> list[dict[str, Any]]:
     """The configured ladder as protocol ``Tier`` objects; empty when none is configured."""
-    from contraprova.interfaces import TierLadder
+    from .._vendor.contraprova.interfaces import TierLadder
 
     raw = state.ladder if state.ladder is not None else state.settings.ladder
     if raw is None:

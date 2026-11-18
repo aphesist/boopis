@@ -43,7 +43,7 @@ def _block(message: str) -> dict[str, Any]:
 
 def _args_digest(args: Any) -> str:
     """sha256 of the arguments' canonical JSON. The arguments themselves are never stored."""
-    from contraprova.events import canonical_json
+    from ._vendor.contraprova.events import canonical_json
 
     try:
         text = canonical_json(args if args is not None else {})
