@@ -32,6 +32,17 @@ HX_BIN = os.environ.get("HX_BIN", "")  # a built hx (cargo build -p hx); the pac
 IGNORE = shutil.ignore_patterns("__pycache__", "tests", ".pytest_cache", ".ruff_cache", "*.pyc")
 
 
+def merge(base: dict[str, Any], extra: Mapping[str, Any]) -> dict[str, Any]:
+    """``extra`` laid over ``base``: mappings merge key by key, anything else replaces."""
+    out = dict(base)
+    for key, value in extra.items():
+        if isinstance(value, Mapping) and isinstance(out.get(key), dict):
+            out[key] = merge(out[key], value)
+        else:
+            out[key] = value
+    return out
+
+
 @dataclass(frozen=True)
 class HermesInstall:
     root: Path  # $SP of the spike install
@@ -68,11 +79,13 @@ class HermesStack:
         root: Path,
         model_url: str,
         plugin_settings: Mapping[str, Any] | None = None,
+        extra_config: Mapping[str, Any] | None = None,
     ) -> None:
         self.install = install
         self.root = root
         self.model_url = model_url
         self.plugin_settings = dict(plugin_settings or {})
+        self.extra_config = dict(extra_config or {})
         self.home = root / "hermes-home"
         self.workdir = root / "work"
         self.started = False
@@ -105,7 +118,7 @@ class HermesStack:
             "discover_models": False,
             "models": {"fake-a": {"context_length": 200000}},
         }
-        return {
+        config: dict[str, Any] = {
             "model": {"provider": "main", "default": "fake-a"},
             "updates": {"check": False},
             "model_catalog": {"enabled": False},
@@ -113,8 +126,12 @@ class HermesStack:
             "tools": {"tool_search": {"enabled": "off"}},  # ADR-0014: direct tool surface
             "providers": {"main": provider},
             "auxiliary": {t: {"provider": "main", "model": "fake-a"} for t in AUX_TASKS},
-            "plugins": {"enabled": ["hypotaxis"], "entries": {"hypotaxis": {"settings": self.plugin_settings}}},
+            "plugins": {
+                "enabled": ["hypotaxis"],
+                "entries": {"hypotaxis": {"settings": self.plugin_settings}},
+            },
         }
+        return merge(config, self.extra_config)
 
     def start(self) -> dict[str, Any]:
         (self.root / "home").mkdir(parents=True, exist_ok=True)
@@ -134,7 +151,12 @@ class HermesStack:
 
     def hermes(self, *args: str, timeout: float = 60) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
-            [str(self.install.hermes), *args], capture_output=True, text=True, timeout=timeout, env=self.env, check=True
+            [str(self.install.hermes), *args],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=self.env,
+            check=True,
         )
 
     def stop(self) -> None:
@@ -152,10 +174,14 @@ class HermesStack:
 
 
 def run_stack(
-    install: HermesInstall, root: Path, model_url: str, plugin_settings: Mapping[str, Any]
+    install: HermesInstall,
+    root: Path,
+    model_url: str,
+    plugin_settings: Mapping[str, Any],
+    extra_config: Mapping[str, Any] | None = None,
 ) -> Iterator[HermesStack]:
     """A fixture body: start a stack, yield it, always stop it."""
-    stack = HermesStack(install, root, model_url, plugin_settings)
+    stack = HermesStack(install, root, model_url, plugin_settings, extra_config)
     try:
         stack.start()
         yield stack

@@ -101,7 +101,8 @@ def test_hermes_loaded_the_plugin_and_serves_its_rpc(gateway: GatewayClient, sta
     assert described["config"]["errors"] == []
     assert gateway.result("plugin.hypotaxis.mode.set", {"session_id": sid, "mode": "governed"}) == {}
     state = gateway.result("plugin.hypotaxis.cascade.state", {"session_id": sid})
-    assert state == {"ladder": [], "status": "idle"}
+    assert state["status"] == "idle"
+    assert [t["name"] for t in state["ladder"]] == ["haiku", "sonnet", "opus"]  # contraprova's measured default
 
 
 def test_a_prompt_writes_a_verifiable_ledger_with_the_models_usage(gateway: GatewayClient, stack: HermesStack) -> None:
@@ -305,7 +306,7 @@ def tool_results(fake: FakeModelServer, start: int) -> list[dict[str, Any]]:
     return out
 
 
-def test_a_governed_session_uses_pack_and_ship_end_to_end(
+def test_an_ungoverned_session_uses_pack_and_ship_end_to_end(
     tools_gateway: GatewayClient, tools_stack: HermesStack, project: Path, fake_model: FakeModelServer
 ) -> None:
     sid_params: JsonObject = {
@@ -322,7 +323,8 @@ def test_a_governed_session_uses_pack_and_ship_end_to_end(
     # Hermes does not tell a plugin a session's cwd before its first prompt: unknown is reported as unknown
     # (ctx.session_cwd() inside an RPC answers the profile's directory, which would be a wrong answer)
     assert tools_gateway.result("plugin.hypotaxis.describe", {"session_id": sid})["session"]["cwd"] is None
-    assert tools_gateway.result("plugin.hypotaxis.mode.set", {"session_id": sid, "mode": "governed"}) == {}
+    # ship is a worker's tool in governed mode (see test_cascade_e2e.py); a session that ships itself is ungoverned
+    assert tools_gateway.result("plugin.hypotaxis.mode.set", {"session_id": sid, "mode": "ungoverned"}) == {}
 
     a_py = project / "src" / "a.py"
     run_sh = project / "run.sh"

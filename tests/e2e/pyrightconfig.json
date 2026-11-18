@@ -1,6 +1,6 @@
 {
   "include": ["."],
-  "extraPaths": ["."],
+  "extraPaths": [".", "../../plugins"],
   "pythonVersion": "3.11",
   "typeCheckingMode": "standard",
   "reportMissingModuleSource": false
