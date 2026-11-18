@@ -12,6 +12,7 @@ use std::sync::OnceLock;
 
 use tokio::process::Command;
 
+use super::rlimits::{self, RlimitContext, RlimitSpec};
 use super::unix::{StatusPipe, start};
 use super::{Launch, LaunchSpec};
 use crate::capabilities::{Capabilities, Capability};
@@ -28,6 +29,7 @@ pub(crate) struct Prepared {
     enforcement: Enforcement,
     policy: ResolvedPolicy,
     profile: Profile,
+    rlimits: Vec<RlimitSpec>,
 }
 
 /// Whether `sandbox-exec` exists and can apply a profile from this process. It cannot when this
@@ -92,7 +94,7 @@ pub(crate) fn prepare(policy: &ResolvedPolicy) -> Result<Prepared> {
         NetworkPolicy::On => DimensionReport::unrestricted("network unrestricted by request"),
         NetworkPolicy::Allowlist(hosts) => {
             if policy.degraded.network {
-                effective.network = NetworkPolicy::On;
+                effective.network = NetworkPolicy::Off;
                 degraded_network(&format!("allowlist of {} host(s)", hosts.len()))
             } else {
                 return Err(Error::unavailable(
@@ -102,6 +104,14 @@ pub(crate) fn prepare(policy: &ResolvedPolicy) -> Result<Prepared> {
             }
         }
     };
+    // macOS ignores RLIMIT_AS, counts RLIMIT_NPROC per user (baseline unknown here, so the
+    // allowance is the raw number), and exempts uid 0 from it.
+    let context = RlimitContext {
+        baseline_tasks: 0,
+        enforces_address_space: false,
+        enforces_process_count: super::unix_sys::effective_uid() != 0,
+    };
+    let limits = rlimits::plan(&policy.resources, policy.kill_grace, context);
     let enforcement = Enforcement {
         platform: "macos".to_owned(),
         fs,
@@ -114,8 +124,11 @@ pub(crate) fn prepare(policy: &ResolvedPolicy) -> Result<Prepared> {
             ),
         ),
         process: DimensionReport::enforced(
-            &["setsid+killpg", "timeout", "output-cap"],
-            "the tree is killed through its process group, so a descendant that calls setsid or setpgid can outlive a kill; no seccomp-style syscall filter exists on macOS beyond the profile",
+            &["setsid+killpg", "timeout", "output-cap", "rlimits"],
+            format!(
+                "the tree is killed through its process group, so a descendant that calls setsid or setpgid can outlive a kill; no seccomp-style syscall filter exists on macOS beyond the profile; rlimits: {}",
+                rlimits::describe(&limits, &policy.resources, context)
+            ),
         ),
     };
     let profile = seatbelt::build(&effective);
@@ -123,6 +136,7 @@ pub(crate) fn prepare(policy: &ResolvedPolicy) -> Result<Prepared> {
         enforcement,
         policy: effective,
         profile,
+        rlimits: limits,
     })
 }
 
@@ -151,7 +165,7 @@ impl Prepared {
         for (key, value) in &self.policy.env {
             cmd.env(key, value);
         }
-        spawn::install(&mut cmd, inherit_fd, status.write.as_raw_fd());
+        spawn::install(&mut cmd, inherit_fd, status.write.as_raw_fd(), self.rlimits);
         let launch = start(cmd, spec.stdin, Some(status), spawn::step_name);
         drop(spec.inherit);
         launch

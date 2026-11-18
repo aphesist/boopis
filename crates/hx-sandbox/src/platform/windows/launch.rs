@@ -17,7 +17,8 @@ use windows_sys::Win32::Storage::FileSystem::{
     CreateFileW, FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING,
 };
 use windows_sys::Win32::System::JobObjects::{
-    AssignProcessToJobObject, CreateJobObjectW, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
+    AssignProcessToJobObject, CreateJobObjectW, JOB_OBJECT_LIMIT_ACTIVE_PROCESS,
+    JOB_OBJECT_LIMIT_JOB_MEMORY, JOB_OBJECT_LIMIT_JOB_TIME, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
     JOBOBJECT_BASIC_UI_RESTRICTIONS, JOBOBJECT_EXTENDED_LIMIT_INFORMATION,
     JobObjectBasicUIRestrictions, JobObjectExtendedLimitInformation, SetInformationJobObject,
     TerminateJobObject,
@@ -32,23 +33,39 @@ use windows_sys::Win32::System::Threading::{
 };
 
 use super::sys::{own, raw, set_inheritable, wide};
+use crate::normalize::ResolvedLimits;
 use crate::winpolicy::JOB_UI_LIMITS;
 use windows_sys::Win32::Security::SECURITY_CAPABILITIES;
 
-/// A kill-on-close job object with UI restrictions.
-pub(super) fn create_job() -> io::Result<OwnedHandle> {
+/// A kill-on-close job object with UI restrictions and the resource limits.
+pub(super) fn create_job(limits: &ResolvedLimits) -> io::Result<OwnedHandle> {
     // SAFETY: null attributes and name create an anonymous job.
     let job = own(unsafe { CreateJobObjectW(null(), null()) })?;
 
     // SAFETY: an all-zero struct is a valid starting value for both information classes.
-    let mut limits: JOBOBJECT_EXTENDED_LIMIT_INFORMATION = unsafe { zeroed() };
-    limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
-    // SAFETY: the pointer and size describe `limits` exactly.
+    let mut limits_info: JOBOBJECT_EXTENDED_LIMIT_INFORMATION = unsafe { zeroed() };
+    let info = &mut limits_info;
+    info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+    if let Some(bytes) = limits.memory_bytes {
+        info.BasicLimitInformation.LimitFlags |= JOB_OBJECT_LIMIT_JOB_MEMORY;
+        info.JobMemoryLimit = usize::try_from(bytes).unwrap_or(usize::MAX);
+    }
+    if let Some(n) = limits.max_processes {
+        info.BasicLimitInformation.LimitFlags |= JOB_OBJECT_LIMIT_ACTIVE_PROCESS;
+        info.BasicLimitInformation.ActiveProcessLimit = u32::try_from(n).unwrap_or(u32::MAX);
+    }
+    if let Some(secs) = limits.cpu_seconds {
+        // The unit is 100 nanoseconds. Exceeding it terminates the job.
+        info.BasicLimitInformation.LimitFlags |= JOB_OBJECT_LIMIT_JOB_TIME;
+        info.BasicLimitInformation.PerJobUserTimeLimit =
+            i64::try_from(secs.saturating_mul(10_000_000)).unwrap_or(i64::MAX);
+    }
+    // SAFETY: the pointer and size describe `limits_info` exactly.
     let ok = unsafe {
         SetInformationJobObject(
             raw(&job),
             JobObjectExtendedLimitInformation,
-            (&raw const limits).cast::<c_void>(),
+            (&raw const limits_info).cast::<c_void>(),
             u32::try_from(size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>()).unwrap_or(0),
         )
     };

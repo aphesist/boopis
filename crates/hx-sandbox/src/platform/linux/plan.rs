@@ -2,7 +2,7 @@
 //! Pure over [`Probe`] and the resolved policy, so it is tested with synthetic probes.
 
 use super::landlock::MIN_ABI;
-use super::probe::{Netns, Probe};
+use super::probe::{NsAccess, Probe};
 use super::seccomp::SocketMode;
 use crate::error::{Dimension, Error, Result};
 use crate::normalize::ResolvedPolicy;
@@ -16,8 +16,10 @@ pub(super) struct Plan {
     pub landlock_abi: Option<u32>,
     /// Install a seccomp program in this mode (None: seccomp is not usable here).
     pub socket_mode: Option<SocketMode>,
-    /// Put the child in a private network namespace.
-    pub netns: Option<Netns>,
+    /// Put the child in a private network namespace (how it is entered).
+    pub netns: Option<NsAccess>,
+    /// Put the child in a PID namespace (how it is entered).
+    pub pidns: Option<NsAccess>,
     /// The filesystem report.
     pub fs: DimensionReport,
     /// The network report.
@@ -36,13 +38,35 @@ fn fs_reason(probe: &Probe) -> String {
     }
 }
 
-fn degrade_network(why: &str, requested: &str) -> DimensionReport {
-    DimensionReport::degraded(
-        &[],
-        format!(
-            "requested network {requested} cannot be enforced ({why}); running with unrestricted network because the policy allows degrading it"
-        ),
-    )
+/// The requested network mode cannot be enforced and the policy allows degrading: fall back to
+/// network off, the strictest mode, when seccomp can hold it. Only when even that is
+/// impossible does the run go ahead unrestricted.
+fn degrade_network(
+    why: &str,
+    requested: &str,
+    seccomp_ok: bool,
+) -> (DimensionReport, Option<SocketMode>) {
+    if seccomp_ok {
+        (
+            DimensionReport::degraded(
+                &["seccomp"],
+                format!(
+                    "network: off ({requested} unavailable: {why}); seccomp denies inet sockets and Unix socket paths"
+                ),
+            ),
+            Some(SocketMode::Off),
+        )
+    } else {
+        (
+            DimensionReport::degraded(
+                &[],
+                format!(
+                    "requested network {requested} cannot be enforced ({why}) and neither can network off (no seccomp); running with unrestricted network because the policy allows degrading it"
+                ),
+            ),
+            None,
+        )
+    }
 }
 
 /// Makes the plan or fails with `Unavailable`.
@@ -84,26 +108,24 @@ pub(super) fn make(probe: &Probe, policy: &ResolvedPolicy) -> Result<Plan> {
                     None,
                 ),
                 Err(e) if policy.degraded.network => {
-                    (degrade_network(&e.to_string(), "off"), None, None)
+                    let (report, mode) = degrade_network(&e.to_string(), "off", false);
+                    (report, mode, None)
                 }
                 Err(e) => return Err(e),
             }
         }
         NetworkPolicy::Loopback => {
-            if probe.netns == Netns::None {
+            if probe.netns == NsAccess::None {
                 let why = "no network namespace can be created here (needs CAP_SYS_ADMIN or unprivileged user namespaces)";
                 if policy.degraded.network {
-                    (
-                        degrade_network(why, "loopback"),
-                        seccomp_ok.then_some(SocketMode::Open),
-                        None,
-                    )
+                    let (report, mode) = degrade_network(why, "loopback", seccomp_ok);
+                    (report, mode, None)
                 } else {
                     return Err(Error::unavailable(Dimension::Network, why));
                 }
             } else {
                 let how = match probe.netns {
-                    Netns::Direct => "direct unshare(CLONE_NEWNET)",
+                    NsAccess::Direct => "direct unshare(CLONE_NEWNET)",
                     _ => "unprivileged user namespace",
                 };
                 (
@@ -121,11 +143,12 @@ pub(super) fn make(probe: &Probe, policy: &ResolvedPolicy) -> Result<Plan> {
         NetworkPolicy::Allowlist(hosts) => {
             let why = "no OS mechanism here filters by host name; that needs an egress proxy outside hx-sandbox";
             if policy.degraded.network {
-                (
-                    degrade_network(why, &format!("allowlist of {} host(s)", hosts.len())),
-                    seccomp_ok.then_some(SocketMode::Open),
-                    None,
-                )
+                let (report, mode) = degrade_network(
+                    why,
+                    &format!("allowlist of {} host(s)", hosts.len()),
+                    seccomp_ok,
+                );
+                (report, mode, None)
             } else {
                 return Err(Error::unavailable(Dimension::Network, why));
             }
@@ -141,10 +164,12 @@ pub(super) fn make(probe: &Probe, policy: &ResolvedPolicy) -> Result<Plan> {
         ),
     };
 
+    let pidns = (probe.pidns != NsAccess::None).then_some(probe.pidns);
     Ok(Plan {
         landlock_abi,
         socket_mode,
         netns,
+        pidns,
         fs,
         network,
     })

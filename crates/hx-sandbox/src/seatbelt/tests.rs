@@ -23,6 +23,7 @@ fn policy(network: NetworkPolicy) -> ResolvedPolicy {
         output_cap: 1,
         kill_grace: Duration::ZERO,
         degraded: Degraded::default(),
+        resources: crate::normalize::ResolvedLimits::default(),
     }
 }
 

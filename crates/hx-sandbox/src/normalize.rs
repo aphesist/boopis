@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use crate::error::{Error, Result};
-use crate::policy::{Degraded, NetworkPolicy, SandboxPolicy, limits};
+use crate::policy::{CpuLimit, Degraded, NetworkPolicy, ResourceLimits, SandboxPolicy, limits};
 
 /// One policy path after resolution.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -47,6 +47,49 @@ pub struct ResolvedPolicy {
     pub kill_grace: Duration,
     /// Which dimensions may degrade.
     pub degraded: Degraded,
+    /// Resource limits with the CPU limit worked out.
+    pub resources: ResolvedLimits,
+}
+
+/// [`ResourceLimits`] with the CPU limit turned into seconds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct ResolvedLimits {
+    /// Address space (Unix) or tree memory (Windows), in bytes.
+    pub memory_bytes: Option<u64>,
+    /// Processes and threads the tree may add.
+    pub max_processes: Option<u64>,
+    /// Largest file a process may write.
+    pub max_file_bytes: Option<u64>,
+    /// CPU seconds.
+    pub cpu_seconds: Option<u64>,
+}
+
+fn resolve_limits(r: &ResourceLimits, timeout_ms: u64) -> Result<ResolvedLimits> {
+    if let Some(m) = r.memory_bytes
+        && m < limits::MIN_MEMORY_BYTES
+    {
+        return Err(Error::invalid(format!(
+            "memory_bytes must be at least {} (below that nothing can start)",
+            limits::MIN_MEMORY_BYTES
+        )));
+    }
+    if r.max_processes == Some(0) || r.max_file_bytes == Some(0) {
+        return Err(Error::invalid(
+            "max_processes and max_file_bytes must be at least 1",
+        ));
+    }
+    let cpu_seconds = match r.cpu {
+        CpuLimit::TiedToTimeout => Some(timeout_ms.div_ceil(1000).max(1)),
+        CpuLimit::Seconds(0) => return Err(Error::invalid("cpu seconds must be at least 1")),
+        CpuLimit::Seconds(s) => Some(s),
+        CpuLimit::Unlimited => None,
+    };
+    Ok(ResolvedLimits {
+        memory_bytes: r.memory_bytes,
+        max_processes: r.max_processes,
+        max_file_bytes: r.max_file_bytes,
+        cpu_seconds,
+    })
 }
 
 impl ResolvedPolicy {
@@ -140,6 +183,7 @@ impl SandboxPolicy {
             output_cap: self.output_cap_bytes,
             kill_grace: Duration::from_millis(self.kill_grace_ms),
             degraded: self.degraded,
+            resources: resolve_limits(&self.resources, self.timeout_ms)?,
         })
     }
 }

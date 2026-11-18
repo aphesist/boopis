@@ -53,8 +53,10 @@ pub use capture::StreamStats;
 pub use error::{
     CODE_DENIED, CODE_INVALID_POLICY, CODE_SPAWN_FAILED, CODE_UNAVAILABLE, Dimension, Error, Result,
 };
-pub use normalize::{ResolvedPath, ResolvedPolicy};
-pub use policy::{DEFAULT_ENV_ALLOWLIST, Degraded, NetworkPolicy, SandboxPolicy, limits};
+pub use normalize::{ResolvedLimits, ResolvedPath, ResolvedPolicy};
+pub use policy::{
+    CpuLimit, DEFAULT_ENV_ALLOWLIST, Degraded, NetworkPolicy, ResourceLimits, SandboxPolicy, limits,
+};
 pub use process::{ChildReader, ChildWriter, Handle, InheritedHandle, SpawnOptions, run, spawn};
 pub use report::{Captured, DimensionReport, Enforcement, ExitOutcome, RunResult, Status};
 

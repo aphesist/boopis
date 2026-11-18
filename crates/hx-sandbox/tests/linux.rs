@@ -286,7 +286,7 @@ async fn an_allowlist_of_loopback_names_is_loopback() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn a_host_allowlist_fails_closed_and_degrades_only_when_allowed() {
+async fn a_host_allowlist_fails_closed_and_degrades_to_network_off() {
     let w = World::new();
     let al = NetworkPolicy::Allowlist(vec!["pypi.org".into()]);
     let err = run(&probe(&["exit", "0"]), &w.policy().with_network(al.clone()))
@@ -305,22 +305,29 @@ async fn a_host_allowlist_fails_closed_and_degrades_only_when_allowed() {
     );
 
     let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = listener.local_addr().unwrap().to_string();
     let mut p = w.policy().with_network(al);
     p.degraded = Degraded {
         network: true,
         ..Degraded::default()
     };
-    let r = run(
-        &probe(&["connect", &listener.local_addr().unwrap().to_string()]),
-        &p,
-    )
-    .await
-    .unwrap();
-    assert_eq!(code(&r), Some(0), "{r:?}");
+    let r = run(&probe(&["connect", &addr]), &p).await.unwrap();
+    // Degraded means network OFF, not on: even the host's loopback listener is unreachable.
+    assert_eq!(code(&r), Some(3), "{r:?}");
+    assert!(
+        r.stdout.text.contains("Operation not permitted"),
+        "{}",
+        r.stdout.text
+    );
     assert_eq!(r.enforcement.network.status, Status::Degraded);
+    assert_eq!(r.enforcement.network.mechanisms, ["seccomp"]);
+    let detail = r.enforcement.network.detail.as_deref().unwrap();
+    assert!(
+        detail.contains("network: off (allowlist of 1 host(s) unavailable"),
+        "{detail}"
+    );
     assert!(r.enforcement.is_degraded());
 }
-
 // ---- environment --------------------------------------------------------------------------
 
 #[tokio::test(flavor = "multi_thread")]
@@ -374,12 +381,13 @@ async fn an_allowlisted_host_variable_is_copied_and_others_are_not() {
 #[tokio::test(flavor = "multi_thread")]
 async fn a_timeout_kills_the_whole_tree_including_grandchildren() {
     let w = World::new();
-    let pidfile = w.scratch.join("pids");
+    let base = w.scratch.join("beat");
+    let beats = beat_files(&base, &["top", "mid", "leaf"]);
     let mut p = w.policy();
     p.timeout_ms = 1_000;
     p.kill_grace_ms = 200;
     let started = Instant::now();
-    let r = run(&probe(&["tree", pidfile.to_str().unwrap()]), &p)
+    let r = run(&probe(&["tree", base.to_str().unwrap()]), &p)
         .await
         .unwrap();
     assert_eq!(r.exit, ExitOutcome::TimedOut, "{r:?}");
@@ -388,17 +396,15 @@ async fn a_timeout_kills_the_whole_tree_including_grandchildren() {
         "took {:?}",
         started.elapsed()
     );
-    let pids = read_pids(&pidfile);
-    assert_eq!(
-        pids.len(),
-        3,
-        "tree, mid and leaf should all have started: {pids:?}"
+    assert!(
+        all_started(&beats),
+        "tree, mid and leaf should all have started"
     );
-    for pid in pids {
-        assert!(is_dead(pid), "process {pid} survived the timeout");
-    }
+    assert!(
+        heartbeats_stopped(&beats),
+        "a process of the tree survived the timeout"
+    );
 }
-
 #[tokio::test(flavor = "multi_thread")]
 async fn a_term_ignoring_process_is_killed_after_the_grace() {
     let w = World::new();
@@ -424,30 +430,31 @@ async fn a_term_ignoring_process_is_killed_after_the_grace() {
 #[tokio::test(flavor = "multi_thread")]
 async fn background_processes_do_not_outlive_their_parent() {
     let w = World::new();
-    let pidfile = w.scratch.join("bg.pid");
-    let script = format!("sleep 300 & echo $! > {}; echo started", pidfile.display());
+    let beat = w.scratch.join("bg.beat");
+    let script = format!(
+        "{} heartbeat {} & echo started",
+        probe_path().display(),
+        beat.display()
+    );
     let started = Instant::now();
     let r = run(&argv(&["/bin/sh", "-c", &script]), &w.policy())
         .await
         .unwrap();
     assert_eq!(code(&r), Some(0), "{r:?}");
     assert!(r.stdout.text.contains("started"));
-    // The sleeper held the output pipes open; run() must still return promptly.
+    // The background process held the output pipes open; run() must still return promptly.
     assert!(
         started.elapsed() < Duration::from_secs(10),
         "took {:?}",
         started.elapsed()
     );
-    let pid: u32 = std::fs::read_to_string(&pidfile)
-        .unwrap()
-        .trim()
-        .parse()
-        .unwrap();
-    assert!(is_dead(pid), "the background sleeper survived");
+    assert!(
+        heartbeats_stopped(std::slice::from_ref(&beat)),
+        "the background process survived"
+    );
 }
-
 #[tokio::test(flavor = "multi_thread")]
-async fn the_child_leads_its_own_session_and_group() {
+async fn the_child_leads_its_own_session_and_group_or_is_init_of_a_pid_namespace() {
     let w = World::new();
     let r = run(&probe(&["ids"]), &w.policy()).await.unwrap();
     let ids: Vec<i64> = r
@@ -456,11 +463,20 @@ async fn the_child_leads_its_own_session_and_group() {
         .split_whitespace()
         .map(|s| s.parse().unwrap())
         .collect();
-    assert_eq!(ids[0], ids[1], "pgid should equal pid: {ids:?}");
-    assert_eq!(ids[0], ids[2], "sid should equal pid: {ids:?}");
     assert_ne!(ids[0], i64::from(std::process::id()));
+    if r.enforcement
+        .process
+        .mechanisms
+        .contains(&"pid-namespace".to_owned())
+    {
+        // Inside a PID namespace the program is pid 1; its group id belongs to the parent
+        // namespace and reads as 0 from in here.
+        assert_eq!(ids[0], 1, "{ids:?}");
+    } else {
+        assert_eq!(ids[0], ids[1], "pgid should equal pid: {ids:?}");
+        assert_eq!(ids[0], ids[2], "sid should equal pid: {ids:?}");
+    }
 }
-
 #[tokio::test(flavor = "multi_thread")]
 async fn output_is_capped_without_blocking_the_child() {
     let w = World::new();
@@ -493,12 +509,10 @@ async fn exit_codes_and_signals_are_reported() {
     let w = World::new();
     let r = run(&probe(&["exit", "7"]), &w.policy()).await.unwrap();
     assert_eq!(r.exit, ExitOutcome::Exited { code: 7 });
-    let r = run(&argv(&["/bin/sh", "-c", "kill -9 $$"]), &w.policy())
-        .await
-        .unwrap();
-    assert_eq!(r.exit, ExitOutcome::Signaled { signal: 9 });
+    // A real fault kills even a PID namespace's init, and the supervisor mirrors the signal.
+    let r = run(&probe(&["crash"]), &w.policy()).await.unwrap();
+    assert_eq!(r.exit, ExitOutcome::Signaled { signal: 11 }, "{r:?}");
 }
-
 #[tokio::test(flavor = "multi_thread")]
 async fn a_missing_program_is_spawn_failed_not_an_error() {
     let w = World::new();
@@ -531,27 +545,25 @@ async fn a_missing_program_is_spawn_failed_not_an_error() {
 #[tokio::test(flavor = "multi_thread")]
 async fn dropping_the_run_future_kills_the_tree() {
     let w = World::new();
-    let pidfile = w.scratch.join("cancel.pids");
-    let pf = pidfile.clone();
+    let base = w.scratch.join("cancel");
+    let beats = beat_files(&base, &["top", "mid", "leaf"]);
     let policy = w.policy();
-    let args = probe(&["tree", pf.to_str().unwrap()]);
+    let args = probe(&["tree", base.to_str().unwrap()]);
     let task = tokio::spawn(async move { run(&args, &policy).await });
     for _ in 0..100 {
-        if read_pids(&pidfile).len() == 3 {
+        if all_started(&beats) {
             break;
         }
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
-    let pids = read_pids(&pidfile);
-    assert_eq!(pids.len(), 3, "{pids:?}");
+    assert!(all_started(&beats));
     task.abort();
     let _ = task.await;
-    tokio::time::sleep(Duration::from_millis(300)).await;
-    for pid in pids {
-        assert!(is_dead(pid), "{pid} outlived the cancelled run");
-    }
+    assert!(
+        heartbeats_stopped(&beats),
+        "the tree outlived the cancelled run"
+    );
 }
-
 // ---- the report matches what the child can observe -----------------------------------------
 
 #[tokio::test(flavor = "multi_thread")]
@@ -741,27 +753,28 @@ async fn the_spawn_watchdog_enforces_the_lifetime() {
 #[tokio::test(flavor = "multi_thread")]
 async fn dropping_a_handle_kills_the_tree() {
     let w = World::new();
-    let pidfile = w.scratch.join("drop.pids");
+    let base = w.scratch.join("drop");
+    let beats = beat_files(&base, &["top", "mid", "leaf"]);
     let h = spawn(
-        &probe(&["tree", pidfile.to_str().unwrap()]),
+        &probe(&["tree", base.to_str().unwrap()]),
         &w.policy(),
         SpawnOptions::new(),
     )
     .await
     .unwrap();
     for _ in 0..100 {
-        if read_pids(&pidfile).len() == 3 {
+        if all_started(&beats) {
             break;
         }
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
-    let pids = read_pids(&pidfile);
-    assert_eq!(pids.len(), 3);
+    assert!(all_started(&beats));
     drop(h);
-    tokio::time::sleep(Duration::from_millis(300)).await;
-    assert!(pids.into_iter().all(is_dead));
+    assert!(
+        heartbeats_stopped(&beats),
+        "the tree outlived the dropped handle"
+    );
 }
-
 #[tokio::test(flavor = "multi_thread")]
 async fn spawn_output_streams_are_capped_too() {
     let w = World::new();
@@ -825,4 +838,258 @@ async fn descriptors_leaked_by_the_host_do_not_reach_the_child() {
         "descriptor {leaked_fd} leaked into the sandbox: {seen:?}"
     );
     drop(leaked);
+}
+
+// ---- PID namespace --------------------------------------------------------------------------
+
+fn pid_namespace_available() -> bool {
+    let caps = hx_sandbox::capabilities();
+    let yes = caps
+        .process_tree_kill
+        .mechanism
+        .as_deref()
+        .is_some_and(|m| m.contains("pid-namespace"));
+    if !yes {
+        eprintln!(
+            "SKIPPED: no PID namespace here: {}",
+            caps.process_tree_kill.detail
+        );
+    }
+    yes
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_grandchild_that_calls_setsid_dies_on_timeout_with_a_pid_namespace() {
+    if !pid_namespace_available() {
+        return;
+    }
+    let w = World::new();
+    let base = w.scratch.join("esc");
+    let beats = beat_files(&base, &["top", "escaped"]);
+    let mut p = w.policy();
+    p.timeout_ms = 1_000;
+    p.kill_grace_ms = 200;
+    let r = run(&probe(&["escape", base.to_str().unwrap()]), &p)
+        .await
+        .unwrap();
+    assert_eq!(r.exit, ExitOutcome::TimedOut, "{r:?}");
+    assert!(
+        r.enforcement
+            .process
+            .mechanisms
+            .contains(&"pid-namespace".to_owned())
+    );
+    assert!(
+        all_started(&beats),
+        "the escaping grandchild should have started"
+    );
+    assert!(
+        heartbeats_stopped(&beats),
+        "a process that left the group with setsid survived"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_setsid_escapee_does_not_outlive_a_normal_exit_either() {
+    if !pid_namespace_available() {
+        return;
+    }
+    let w = World::new();
+    let beat = w.scratch.join("late.beat");
+    // The leader starts a session-leading background process and exits at once.
+    let script = format!(
+        "setsid {probe} heartbeat {beat} </dev/null >/dev/null 2>&1 & sleep 0.3; echo done",
+        probe = probe_path().display(),
+        beat = beat.display()
+    );
+    let mut p = w.policy();
+    p.ro_paths.push("/usr".into());
+    let r = run(&argv(&["/bin/sh", "-c", &script]), &p).await.unwrap();
+    assert_eq!(code(&r), Some(0), "{r:?}");
+    assert!(
+        heartbeats_stopped(std::slice::from_ref(&beat)),
+        "the setsid process survived the leader's exit"
+    );
+}
+
+// ---- resource limits ------------------------------------------------------------------------
+
+fn limited(
+    w: &World,
+    f: impl FnOnce(&mut hx_sandbox::ResourceLimits),
+) -> hx_sandbox::SandboxPolicy {
+    let mut p = w.policy();
+    f(&mut p.resources);
+    p
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_fork_bomb_is_capped_and_a_control_is_not() {
+    let w = World::new();
+    let capped = limited(&w, |r| r.max_processes = Some(20));
+    let r = run(&probe(&["forkbomb", "200"]), &capped).await.unwrap();
+    if r.enforcement
+        .process
+        .detail
+        .as_deref()
+        .is_some_and(|d| d.contains("process count NOT limited"))
+    {
+        // uid 0 is exempt from RLIMIT_NPROC and the report says so. The cap is exercised when the
+        // suite runs as an ordinary user: setpriv --reuid=65534 --regid=65534 --clear-groups <bin>.
+        eprintln!("SKIPPED: running as uid 0, which RLIMIT_NPROC does not bind");
+        return;
+    }
+    assert_eq!(code(&r), Some(0), "{r:?}");
+    let started: usize = r
+        .stdout
+        .text
+        .split_whitespace()
+        .nth(1)
+        .unwrap()
+        .parse()
+        .unwrap();
+    assert!(
+        started < 200,
+        "the limit did not stop the bomb: {}",
+        r.stdout.text
+    );
+    assert!(
+        r.stdout.text.contains("Resource temporarily unavailable"),
+        "{}",
+        r.stdout.text
+    );
+
+    let free = limited(&w, |r| r.max_processes = None);
+    let r = run(&probe(&["forkbomb", "200"]), &free).await.unwrap();
+    assert!(
+        r.stdout.text.starts_with("started 200"),
+        "control must start them all: {}",
+        r.stdout.text
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn an_oversized_file_write_fails() {
+    let w = World::new();
+    let target = w.scratch.join("big.bin");
+    let capped = limited(&w, |r| r.max_file_bytes = Some(1 << 20));
+    let r = run(
+        &probe(&["bigwrite", target.to_str().unwrap(), &(4 << 20).to_string()]),
+        &capped,
+    )
+    .await
+    .unwrap();
+    // Either the write returns EFBIG (exit 3) or SIGXFSZ ends the process (signal 25).
+    assert!(
+        code(&r) == Some(3) || matches!(r.exit, ExitOutcome::Signaled { signal: 25 }),
+        "{r:?}"
+    );
+    assert!(std::fs::metadata(&target).unwrap().len() <= 1 << 20);
+
+    let free = limited(&w, |r| r.max_file_bytes = None);
+    let r = run(
+        &probe(&["bigwrite", target.to_str().unwrap(), &(4 << 20).to_string()]),
+        &free,
+    )
+    .await
+    .unwrap();
+    assert_eq!(code(&r), Some(0), "{r:?}");
+    assert_eq!(std::fs::metadata(&target).unwrap().len(), 4 << 20);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_memory_limit_stops_a_large_allocation() {
+    let w = World::new();
+    let capped = limited(&w, |r| r.memory_bytes = Some(256 << 20));
+    let r = run(&probe(&["alloc", "1024"]), &capped).await.unwrap();
+    assert_eq!(
+        code(&r),
+        Some(3),
+        "a 1 GiB allocation must fail under a 256 MiB limit: {r:?}"
+    );
+    let r = run(&probe(&["alloc", "64"]), &capped).await.unwrap();
+    assert_eq!(code(&r), Some(0), "a small allocation still works: {r:?}");
+    let free = limited(&w, |r| r.memory_bytes = None);
+    let r = run(&probe(&["alloc", "1024"]), &free).await.unwrap();
+    assert_eq!(
+        code(&r),
+        Some(0),
+        "control: unlimited memory allows it: {r:?}"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_cpu_limit_ends_a_spinner_before_the_wall_clock_timeout() {
+    let w = World::new();
+    let mut p = limited(&w, |r| r.cpu = hx_sandbox::CpuLimit::Seconds(1));
+    p.timeout_ms = 60_000;
+    let started = Instant::now();
+    let r = run(&probe(&["spin"]), &p).await.unwrap();
+    // SIGXCPU (24) at the soft limit, SIGKILL (9) at the hard one.
+    assert!(
+        matches!(r.exit, ExitOutcome::Signaled { signal: 24 | 9 }),
+        "{r:?}"
+    );
+    assert!(
+        started.elapsed() < Duration::from_secs(20),
+        "took {:?}",
+        started.elapsed()
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_cpu_limit_defaults_to_the_timeout() {
+    let w = World::new();
+    let mut p = w.policy();
+    p.timeout_ms = 2_000;
+    let resolved = p.resolve().unwrap();
+    assert_eq!(resolved.resources.cpu_seconds, Some(2));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_report_states_the_limits_the_child_actually_has() {
+    let w = World::new();
+    let mut p = limited(&w, |r| {
+        r.memory_bytes = Some(512 << 20);
+        r.max_file_bytes = Some(8 << 20);
+        r.cpu = hx_sandbox::CpuLimit::Seconds(77);
+    });
+    p.ro_paths.push("/proc".into());
+    let r = run(&probe(&["limits"]), &p).await.unwrap();
+    assert_eq!(code(&r), Some(0), "{r:?}");
+    let seen = &r.stdout.text;
+    assert!(
+        seen.contains("Max address space") && seen.contains("536870912"),
+        "{seen}"
+    );
+    assert!(
+        seen.contains("Max file size") && seen.contains("8388608"),
+        "{seen}"
+    );
+    assert!(
+        seen.contains("Max cpu time") && seen.contains(" 77 "),
+        "{seen}"
+    );
+    let core = seen
+        .lines()
+        .find(|l| l.starts_with("Max core file size"))
+        .unwrap();
+    assert!(
+        core.split_whitespace().skip(4).take(2).all(|v| v == "0"),
+        "core dumps must be off: {core}"
+    );
+    let detail = r.enforcement.process.detail.as_deref().unwrap();
+    assert!(
+        r.enforcement
+            .process
+            .mechanisms
+            .contains(&"rlimits".to_owned())
+    );
+    assert!(
+        detail.contains("as=536870912")
+            && detail.contains("fsize=8388608")
+            && detail.contains("cpu=77s")
+            && detail.contains("core=0"),
+        "{detail}"
+    );
 }

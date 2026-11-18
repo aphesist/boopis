@@ -115,11 +115,40 @@ pub(crate) struct Prepared {
 
 fn degraded_network(requested: &str, why: &str) -> DimensionReport {
     DimensionReport::degraded(
-        &[],
+        &["appcontainer"],
         format!(
-            "requested network {requested} cannot be enforced ({why}); the container gets the internet capabilities because the policy allows degrading the network"
+            "network: off ({requested} unavailable: {why}); the container gets no network capabilities"
         ),
     )
+}
+
+/// Creates the job object and the process-dimension report.
+fn job_and_report(policy: &ResolvedPolicy) -> Result<(Option<OwnedHandle>, DimensionReport)> {
+    Ok(match launch::create_job(&policy.resources) {
+        Ok(job) => (
+            Some(job),
+            DimensionReport::enforced(
+                &["job-object", "job-limits", "timeout", "output-cap"],
+                format!(
+                    "kill-on-close job object: ending the job (timeout, cancel, drop) ends every process in the tree, and a child cannot leave it; UI restrictions block clipboard, desktop and display changes; the AppContainer token is already low-integrity with no privileges. No polite stop exists, so the grace period is skipped; job limits: {}",
+                    job_limits_text(&policy.resources)
+                ),
+            ),
+        ),
+        Err(e) if policy.degraded.process => (
+            None,
+            DimensionReport::degraded(
+                &["timeout", "output-cap"],
+                format!("no job object ({e}); only the leader process is terminated on timeout"),
+            ),
+        ),
+        Err(e) => {
+            return Err(Error::unavailable(
+                Dimension::Process,
+                format!("job object cannot be created: {e}"),
+            ));
+        }
+    })
 }
 
 /// Builds the container and grants the paths, or fails with `Unavailable`.
@@ -130,9 +159,9 @@ pub(crate) fn prepare(policy: &ResolvedPolicy) -> Result<Prepared> {
     let mut plan: NetworkPlan = match winpolicy::network_plan(&policy.network) {
         Ok(plan) => plan,
         Err(why) if policy.degraded.network => {
-            effective.network = NetworkPolicy::On;
+            effective.network = NetworkPolicy::Off;
             network_report = Some(degraded_network("allowlist", why));
-            winpolicy::network_plan(&NetworkPolicy::On)
+            winpolicy::network_plan(&NetworkPolicy::Off)
                 .map_err(|e| Error::unavailable(Dimension::Network, e))?
         }
         Err(why) => return Err(Error::unavailable(Dimension::Network, why)),
@@ -142,9 +171,9 @@ pub(crate) fn prepare(policy: &ResolvedPolicy) -> Result<Prepared> {
         if !policy.degraded.network {
             return Err(Error::unavailable(Dimension::Network, why));
         }
-        effective.network = NetworkPolicy::On;
+        effective.network = NetworkPolicy::Off;
         network_report = Some(degraded_network("loopback", why));
-        plan = winpolicy::network_plan(&NetworkPolicy::On)
+        plan = winpolicy::network_plan(&NetworkPolicy::Off)
             .map_err(|e| Error::unavailable(Dimension::Network, e))?;
     }
 
@@ -176,28 +205,7 @@ pub(crate) fn prepare(policy: &ResolvedPolicy) -> Result<Prepared> {
         None
     };
 
-    let (job, process_report) = match launch::create_job() {
-        Ok(job) => (
-            Some(job),
-            DimensionReport::enforced(
-                &["job-object", "timeout", "output-cap"],
-                "kill-on-close job object: ending the job (timeout, cancel, drop) ends every process in the tree, and a child cannot leave it; UI restrictions block clipboard, desktop and display changes; the AppContainer token is already low-integrity with no privileges. No polite stop exists, so the grace period is skipped",
-            ),
-        ),
-        Err(e) if policy.degraded.process => (
-            None,
-            DimensionReport::degraded(
-                &["timeout", "output-cap"],
-                format!("no job object ({e}); only the leader process is terminated on timeout"),
-            ),
-        ),
-        Err(e) => {
-            return Err(Error::unavailable(
-                Dimension::Process,
-                format!("job object cannot be created: {e}"),
-            ));
-        }
-    };
+    let (job, process_report) = job_and_report(policy)?;
 
     let enforcement = Enforcement {
         platform: "windows".to_owned(),
@@ -227,6 +235,19 @@ pub(crate) fn prepare(policy: &ResolvedPolicy) -> Result<Prepared> {
         loopback,
         job,
     })
+}
+
+/// The job limits as the report states them. Windows has no file-size limit, and the process
+/// limit counts active processes, not threads.
+fn job_limits_text(r: &crate::normalize::ResolvedLimits) -> String {
+    let show =
+        |v: Option<u64>, unit: &str| v.map_or_else(|| "none".to_owned(), |n| format!("{n}{unit}"));
+    format!(
+        "memory={} (job total), processes={} (active processes), cpu={} (job user time, then the job is terminated), file size NOT limited (Windows has no equivalent)",
+        show(r.memory_bytes, " bytes"),
+        show(r.max_processes, ""),
+        show(r.cpu_seconds, "s"),
+    )
 }
 
 fn getrandom(buf: &mut [u8; 16]) {

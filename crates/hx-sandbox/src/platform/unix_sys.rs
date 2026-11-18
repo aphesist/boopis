@@ -166,3 +166,31 @@ pub(super) fn child_cloexec_all() {
         }
     }
 }
+
+/// The type `setrlimit` takes for the resource id (glibc uses a dedicated enum type).
+#[cfg(all(target_os = "linux", target_env = "gnu"))]
+pub(crate) type RlimitResource = libc::__rlimit_resource_t;
+/// The type `setrlimit` takes for the resource id.
+#[cfg(not(all(target_os = "linux", target_env = "gnu")))]
+pub(crate) type RlimitResource = libc::c_int;
+
+/// Sets one resource limit of the calling process.
+pub(super) fn child_setrlimit(resource: RlimitResource, soft: u64, hard: u64) -> Result<(), i32> {
+    let limit = libc::rlimit {
+        rlim_cur: soft as libc::rlim_t,
+        rlim_max: hard as libc::rlim_t,
+    };
+    // SAFETY: `limit` is a valid rlimit for the duration of the call.
+    if unsafe { libc::setrlimit(resource, &raw const limit) } < 0 {
+        Err(errno())
+    } else {
+        Ok(())
+    }
+}
+
+/// The effective user id of this process.
+#[cfg(target_os = "macos")]
+pub(crate) fn effective_uid() -> u32 {
+    // SAFETY: no arguments, cannot fail.
+    unsafe { libc::geteuid() }
+}

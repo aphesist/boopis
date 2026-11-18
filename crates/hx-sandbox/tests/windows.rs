@@ -269,4 +269,58 @@ async fn a_host_allowlist_fails_closed() {
         .await
         .unwrap_err();
     assert!(matches!(err, Error::Unavailable { .. }), "{err}");
+
+    // Degraded means network off, reported as such.
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let mut p = w
+        .policy()
+        .with_network(NetworkPolicy::Allowlist(vec!["pypi.org".into()]));
+    p.degraded = Degraded {
+        network: true,
+        ..Degraded::default()
+    };
+    let r = run(
+        &probe(&["connect", &listener.local_addr().unwrap().to_string()]),
+        &p,
+    )
+    .await
+    .unwrap();
+    assert_eq!(code(&r), Some(3), "{r:?}");
+    assert_eq!(r.enforcement.network.status, Status::Degraded);
+    assert!(
+        r.enforcement
+            .network
+            .detail
+            .unwrap()
+            .contains("network: off (allowlist")
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_job_limits_cap_the_process_count() {
+    if !appcontainer_available() {
+        return;
+    }
+    let w = World::new();
+    let mut p = w.policy();
+    p.resources.max_processes = Some(5);
+    let r = run(&probe(&["forkbomb", "100"]), &p).await.unwrap();
+    let started: usize = r
+        .stdout
+        .text
+        .split_whitespace()
+        .nth(1)
+        .unwrap_or("100")
+        .parse()
+        .unwrap();
+    assert!(
+        started < 100,
+        "the active-process limit did not stop the bomb: {r:?}"
+    );
+    assert!(
+        r.enforcement
+            .process
+            .mechanisms
+            .contains(&"job-limits".to_owned())
+    );
 }

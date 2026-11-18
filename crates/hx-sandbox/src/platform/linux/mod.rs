@@ -15,14 +15,15 @@ use std::os::fd::AsRawFd;
 use seccompiler::BpfProgram;
 use tokio::process::Command;
 
+use super::rlimits::{self, RlimitContext, RlimitSpec};
 use super::unix::{StatusPipe, start};
 use super::{Launch, LaunchSpec};
 use crate::capabilities::{Capabilities, Capability};
 use crate::error::{Error, Result};
 use crate::normalize::ResolvedPolicy;
 use crate::report::{DimensionReport, Enforcement};
-use child::{ChildPlan, NetnsPlan, UserMaps, step_name};
-use probe::{Netns, Probe};
+use child::{ChildPlan, NamespacePlan, UserMaps, step_name};
+use probe::{NsAccess, Probe};
 
 pub(crate) use super::unix::{Child, TreeKiller};
 
@@ -32,7 +33,8 @@ pub(crate) struct Prepared {
     policy: ResolvedPolicy,
     ruleset: Option<landlock::Built>,
     seccomp: Option<BpfProgram>,
-    netns: Option<Netns>,
+    namespaces: Option<NamespacePlan>,
+    rlimits: Vec<RlimitSpec>,
     drop_bounding_to: Option<u32>,
 }
 
@@ -54,14 +56,11 @@ impl Prepared {
             Some(fd) => fd.as_raw_fd(),
             None => -1,
         };
-        let (uid, gid, _) = sys::ids();
-        let netns = self.netns.map(|kind| NetnsPlan {
-            userns: (kind == Netns::ViaUserns).then(|| UserMaps::identity(uid, gid)),
-        });
         let plan = ChildPlan {
             inherit_fd,
             status_fd: status.write.as_raw_fd(),
-            netns,
+            namespaces: self.namespaces,
+            rlimits: self.rlimits,
             drop_bounding_to: self.drop_bounding_to,
             no_new_privs: self.ruleset.is_some() || self.seccomp.is_some(),
             landlock_fd: self.ruleset.as_ref().map(|b| b.ruleset.raw_fd()),
@@ -117,27 +116,49 @@ pub(crate) fn prepare(policy: &ResolvedPolicy) -> Result<Prepared> {
     }
 
     // Emptying the bounding set needs CAP_SETPCAP, which a user namespace also grants.
-    let can_drop = probe.can_drop_bounding || plan.netns == Some(Netns::ViaUserns);
+    let use_userns =
+        plan.netns == Some(NsAccess::ViaUserns) || plan.pidns == Some(NsAccess::ViaUserns);
+    let can_drop = probe.can_drop_bounding || use_userns;
     let drop_bounding_to = can_drop.then_some(probe.cap_last);
+
+    let namespaces = (plan.netns.is_some() || plan.pidns.is_some()).then(|| {
+        let (uid, gid, _) = sys::ids();
+        NamespacePlan {
+            net: plan.netns.is_some(),
+            pid: plan.pidns.is_some(),
+            userns: use_userns.then(|| UserMaps::identity(uid, gid)),
+        }
+    });
+    // A fresh user namespace counts processes from zero; otherwise RLIMIT_NPROC counts every
+    // task the user already has.
+    let context = RlimitContext {
+        baseline_tasks: if use_userns { 0 } else { task_count() },
+        enforces_address_space: true,
+        enforces_process_count: !probe.is_root,
+    };
+    let rlimits = rlimits::plan(&policy.resources, policy.kill_grace, context);
 
     let enforcement = Enforcement {
         platform: "linux".to_owned(),
         fs,
         network: plan.network,
         env: env_report(policy),
-        process: process_report(
+        process: process_report(&ProcessFacts {
             probe,
-            plan.socket_mode,
-            ruleset.is_some(),
-            drop_bounding_to.is_some(),
-        ),
+            mode: plan.socket_mode,
+            landlocked: ruleset.is_some(),
+            bounding: drop_bounding_to.is_some(),
+            pid_namespace: plan.pidns,
+            rlimits: rlimits::describe(&rlimits, &policy.resources, context),
+        }),
     };
     Ok(Prepared {
         enforcement,
         policy: policy.clone(),
         ruleset,
         seccomp,
-        netns: plan.netns,
+        namespaces,
+        rlimits,
         drop_bounding_to,
     })
 }
@@ -169,29 +190,49 @@ fn env_report(policy: &ResolvedPolicy) -> DimensionReport {
     )
 }
 
-fn process_report(
-    probe: &Probe,
+/// Everything the process report states.
+struct ProcessFacts<'a> {
+    probe: &'a Probe,
     mode: Option<seccomp::SocketMode>,
     landlocked: bool,
     bounding: bool,
-) -> DimensionReport {
-    let mut mechanisms = vec!["setsid+killpg", "timeout", "output-cap"];
-    let mut notes = vec![
-        "the tree is killed through its process group, so a descendant that calls setsid or setpgid can outlive a kill".to_owned(),
-    ];
-    if landlocked || mode.is_some() {
+    pid_namespace: Option<NsAccess>,
+    rlimits: String,
+}
+
+/// Tasks (processes and threads) on the system, from `/proc/loadavg` ("running/total"). This
+/// over-counts the user's own tasks, which only makes the process allowance more generous.
+fn task_count() -> u64 {
+    std::fs::read_to_string("/proc/loadavg")
+        .ok()
+        .and_then(|s| s.split_whitespace().nth(3)?.split_once('/')?.1.parse().ok())
+        .unwrap_or(0)
+}
+
+fn process_report(f: &ProcessFacts<'_>) -> DimensionReport {
+    let mut notes = Vec::new();
+    let mut mechanisms = Vec::new();
+    if f.pid_namespace.is_some() {
+        mechanisms.push("pid-namespace");
+        notes.push("the program is init of a PID namespace, so when it exits (or the tree is killed) the kernel kills every descendant, including ones that called setsid or setpgid; SIGTERM does not reach an init without a handler, so the polite stop is cut short".to_owned());
+    } else {
+        notes.push("no PID namespace is available here, so the tree is killed through its process group and a descendant that calls setsid or setpgid can outlive a kill".to_owned());
+    }
+    mechanisms.extend(["setsid+killpg", "timeout", "output-cap", "rlimits"]);
+    notes.push(format!("rlimits: {}", f.rlimits));
+    if f.landlocked || f.mode.is_some() {
         mechanisms.push("no_new_privs");
     }
-    if mode.is_some() {
+    if f.mode.is_some() {
         mechanisms.push("seccomp-hardening");
         notes.push("ptrace, process_vm_*, io_uring, bpf, mount, kexec, keyrings and module loading are denied".to_owned());
     } else {
         notes.push("seccomp is unavailable: hardening syscall denials are NOT applied".to_owned());
     }
     mechanisms.push("capabilities-cleared");
-    if bounding {
+    if f.bounding {
         mechanisms.push("bounding-set-cleared");
-    } else if probe.is_root {
+    } else if f.probe.is_root {
         notes.push("running as root without CAP_SETPCAP: the capability bounding set is retained, so exec of a root program can regain those capabilities".to_owned());
     }
     DimensionReport::enforced(&mechanisms, notes.join("; "))
@@ -227,14 +268,14 @@ pub(crate) fn capabilities() -> Capabilities {
         )
     };
     let loopback = match p.netns {
-        Netns::Direct => {
+        NsAccess::Direct => {
             Capability::yes("netns", "unshare(CLONE_NEWNET) works (CAP_SYS_ADMIN held)")
         }
-        Netns::ViaUserns => Capability::yes(
+        NsAccess::ViaUserns => Capability::yes(
             "netns",
             "unprivileged user namespace + network namespace works",
         ),
-        Netns::None => Capability::no(
+        NsAccess::None => Capability::no(
             Some("netns"),
             "neither CAP_SYS_ADMIN nor unprivileged user namespaces are available",
         ),
@@ -249,10 +290,17 @@ pub(crate) fn capabilities() -> Capabilities {
             None,
             "host-name filtering needs an egress proxy; no OS mechanism here does it",
         ),
-        process_tree_kill: Capability::yes(
-            "setsid+killpg",
-            "descendants that leave the process group are not reached",
-        ),
+        process_tree_kill: if p.pidns == NsAccess::None {
+            Capability::yes(
+                "setsid+killpg",
+                "descendants that leave the process group are not reached (no PID namespace here)",
+            )
+        } else {
+            Capability::yes(
+                "pid-namespace+killpg",
+                "a PID namespace reaps every descendant when its init exits, setsid included",
+            )
+        },
         inherited_handle: Capability::yes(
             "fd",
             "one descriptor numbered 3 or higher keeps its number in the child",

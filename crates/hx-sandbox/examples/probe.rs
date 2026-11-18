@@ -25,13 +25,14 @@ fn fail(msg: impl std::fmt::Display) -> ! {
     std::process::exit(3)
 }
 
-fn record(pidfile: &str, pid: u32) {
-    let mut f = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(pidfile)
-        .unwrap_or_else(|e| fail(e));
-    writeln!(f, "{pid}").unwrap_or_else(|e| fail(e));
+/// Writes an ever-increasing counter to `path` every 50 ms, forever.
+fn heartbeat(path: &str) -> ! {
+    let mut n = 0u64;
+    loop {
+        let _ = std::fs::write(path, n.to_string());
+        n += 1;
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
 }
 
 fn main() {
@@ -154,27 +155,124 @@ fn main() {
         "exit" => std::process::exit(arg(1).parse().unwrap_or(1)),
         "sleep" => std::thread::sleep(std::time::Duration::from_secs(arg(1).parse().unwrap_or(1))),
         "tree" => {
-            // probe tree PIDFILE: this process, a child and a grandchild, all sleeping.
+            // probe tree BASE: this process, a child and a grandchild, each writing a heartbeat
+            // file (BASE.top, BASE.mid, BASE.leaf). The tests judge liveness by the heartbeat
+            // stopping, because pids inside a PID namespace mean nothing outside it.
             let me = std::env::current_exe().unwrap_or_else(|e| fail(e));
-            record(arg(1), std::process::id());
+            let base = arg(1).to_owned();
+            let top = format!("{base}.top");
+            std::thread::spawn(move || heartbeat(&top));
             let mut mid = std::process::Command::new(me)
-                .args(["mid", arg(1)])
+                .args(["mid", &base])
                 .spawn()
                 .unwrap_or_else(|e| fail(e));
             let _ = mid.wait();
         }
         "mid" => {
             let me = std::env::current_exe().unwrap_or_else(|e| fail(e));
-            record(arg(1), std::process::id());
+            let base = arg(1).to_owned();
+            let path = format!("{base}.mid");
+            std::thread::spawn(move || heartbeat(&path));
             let mut leaf = std::process::Command::new(me)
-                .args(["leaf", arg(1)])
+                .args(["leaf", &base])
                 .spawn()
                 .unwrap_or_else(|e| fail(e));
             let _ = leaf.wait();
         }
-        "leaf" => {
-            record(arg(1), std::process::id());
-            std::thread::sleep(std::time::Duration::from_secs(300));
+        "leaf" => heartbeat(&format!("{}.leaf", arg(1))),
+        "heartbeat" => heartbeat(arg(1)),
+        "escape" => {
+            // probe escape BASE: a child that leaves the process group with setsid, then lives on.
+            let me = std::env::current_exe().unwrap_or_else(|e| fail(e));
+            let base = arg(1).to_owned();
+            let top = format!("{base}.top");
+            std::thread::spawn(move || heartbeat(&top));
+            let mut child = std::process::Command::new(me)
+                .args(["detached", &base])
+                .spawn()
+                .unwrap_or_else(|e| fail(e));
+            let _ = child.wait();
+        }
+        #[cfg(unix)]
+        "detached" => {
+            // SAFETY: setsid has no arguments.
+            unsafe { libc::setsid() };
+            heartbeat(&format!("{}.escaped", arg(1)));
+        }
+        "forkbomb" => {
+            // probe forkbomb N: start up to N sleeping children and say how many started.
+            let n: usize = arg(1).parse().unwrap_or_else(|e| fail(e));
+            let me = std::env::current_exe().unwrap_or_else(|e| fail(e));
+            let mut kids = Vec::new();
+            let mut error = String::new();
+            for _ in 0..n {
+                match std::process::Command::new(&me)
+                    .args(["sleep", "30"])
+                    .spawn()
+                {
+                    Ok(k) => kids.push(k),
+                    Err(e) => {
+                        error = e.to_string();
+                        break;
+                    }
+                }
+            }
+            println!("started {} error {error}", kids.len());
+            for k in &mut kids {
+                let _ = k.kill();
+            }
+        }
+        "bigwrite" => {
+            // probe bigwrite PATH BYTES: write BYTES of data and say how far it got.
+            let n: usize = arg(2).parse().unwrap_or_else(|e| fail(e));
+            let mut f = std::fs::File::create(arg(1)).unwrap_or_else(|e| fail(e));
+            let chunk = vec![b'z'; 65536];
+            let mut written = 0usize;
+            while written < n {
+                let k = chunk.len().min(n - written);
+                if let Err(e) = f.write_all(&chunk[..k]) {
+                    println!("stopped at {written}: {e}");
+                    std::process::exit(3);
+                }
+                written += k;
+            }
+            println!("wrote {written}");
+        }
+        "alloc" => {
+            // probe alloc MIB: try to reserve that much memory.
+            let mib: usize = arg(1).parse().unwrap_or_else(|e| fail(e));
+            let mut v: Vec<u8> = Vec::new();
+            match v.try_reserve_exact(mib << 20) {
+                Ok(()) => println!("ok {mib}"),
+                Err(e) => fail(e),
+            }
+        }
+        "spin" => {
+            let mut x = 0u64;
+            loop {
+                x = std::hint::black_box(x.wrapping_add(1));
+            }
+        }
+        "crash" => {
+            // A real hardware fault, which the kernel cannot ignore even for a PID namespace's init.
+            // SAFETY: deliberately invalid; the point is to die with SIGSEGV.
+            unsafe { std::ptr::null_mut::<u8>().write_volatile(1) };
+        }
+        "limits" => {
+            let s = std::fs::read_to_string("/proc/self/limits").unwrap_or_else(|e| fail(e));
+            for l in s.lines().filter(|l| {
+                [
+                    "Max address space",
+                    "Max processes",
+                    "Max file size",
+                    "Max cpu time",
+                    "Max core file size",
+                ]
+                .iter()
+                .any(|p| l.starts_with(p))
+            }) {
+                println!("{l}");
+            }
         }
         #[cfg(unix)]
         "fd" => {

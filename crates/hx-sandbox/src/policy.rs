@@ -22,6 +22,76 @@ pub mod limits {
     pub const DEFAULT_KILL_GRACE_MS: u64 = 2_000;
     /// Largest kill grace a policy may ask for.
     pub const MAX_KILL_GRACE_MS: u64 = 60_000;
+    /// Default address-space limit per process: 4 GiB.
+    pub const DEFAULT_MEMORY_BYTES: u64 = 4 << 30;
+    /// Smallest address-space limit a policy may ask for: below this nothing starts.
+    pub const MIN_MEMORY_BYTES: u64 = 16 << 20;
+    /// Default number of processes the child tree may add.
+    pub const DEFAULT_MAX_PROCESSES: u64 = 512;
+    /// Default largest file a process may write: 1 GiB.
+    pub const DEFAULT_MAX_FILE_BYTES: u64 = 1 << 30;
+}
+
+/// CPU time limit for the child tree.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum CpuLimit {
+    /// As many CPU seconds as the wall-clock timeout allows, rounded up. A busy multi-threaded
+    /// child burns CPU faster than the clock, so this ends it sooner than the timeout would.
+    #[default]
+    TiedToTimeout,
+    /// This many CPU seconds.
+    Seconds(u64),
+    /// No CPU limit beyond the timeout.
+    Unlimited,
+}
+
+/// Resource limits, all overridable. `None` means no limit for that resource.
+///
+/// - Linux and macOS use `setrlimit` in the child (`RLIMIT_AS`, `RLIMIT_NPROC`, `RLIMIT_FSIZE`,
+///   `RLIMIT_CPU`, and `RLIMIT_CORE` always 0). macOS does not enforce `RLIMIT_AS`.
+/// - Windows uses job-object limits (job memory, active processes, job user time). It has no
+///   file-size limit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(default)]
+pub struct ResourceLimits {
+    /// Address space (virtual memory) per process on Unix, committed memory of the whole tree
+    /// on Windows.
+    pub memory_bytes: Option<u64>,
+    /// How many processes and threads the child tree may add. Linux counts relative to the
+    /// number of tasks already running when the sandbox is built, because `RLIMIT_NPROC` counts
+    /// every task of the user.
+    pub max_processes: Option<u64>,
+    /// The largest file any process in the tree may write or grow to.
+    pub max_file_bytes: Option<u64>,
+    /// CPU time.
+    pub cpu: CpuLimit,
+}
+
+impl Default for ResourceLimits {
+    fn default() -> Self {
+        Self {
+            memory_bytes: Some(limits::DEFAULT_MEMORY_BYTES),
+            max_processes: Some(limits::DEFAULT_MAX_PROCESSES),
+            max_file_bytes: Some(limits::DEFAULT_MAX_FILE_BYTES),
+            cpu: CpuLimit::default(),
+        }
+    }
+}
+
+impl ResourceLimits {
+    /// No limits at all (core dumps are still disabled where `setrlimit` exists).
+    #[must_use]
+    pub fn unlimited() -> Self {
+        Self {
+            memory_bytes: None,
+            max_processes: None,
+            max_file_bytes: None,
+            cpu: CpuLimit::Unlimited,
+        }
+    }
 }
 
 /// Environment variable names copied from the parent by default. Nothing else is inherited, so
@@ -52,8 +122,8 @@ pub enum NetworkPolicy {
     Loopback,
     /// Only these hosts. No OS in scope can filter by host name, so this is enforceable only
     /// when every host is a loopback name (it then becomes [`NetworkPolicy::Loopback`]).
-    /// Anything else needs an egress proxy outside this crate and is `unavailable` unless the
-    /// policy allows degrading the network dimension.
+    /// Anything else is `unavailable`, or with `degraded.network` falls back to network off.
+    /// A real allowlist needs a host-side proxy (see the README).
     Allowlist(Vec<String>),
     /// Unrestricted network.
     On,
@@ -68,7 +138,9 @@ pub enum NetworkPolicy {
 pub struct Degraded {
     /// Run without filesystem confinement if the platform has none.
     pub fs: bool,
-    /// Run with unrestricted network if the requested mode cannot be enforced.
+    /// Fall back to **network off** when the requested mode (a host allowlist, or loopback
+    /// without the privilege for it) cannot be enforced. Only if even off is impossible does
+    /// the run go ahead with an unrestricted network, and the report says so.
     pub network: bool,
     /// Run without the OS-level process-tree guarantee (the timeout and output cap still apply).
     pub process: bool,
@@ -115,6 +187,9 @@ pub struct SandboxPolicy {
     /// Dimensions that may run degraded.
     #[serde(default)]
     pub degraded: Degraded,
+    /// Memory, process, file-size and CPU limits.
+    #[serde(default)]
+    pub resources: ResourceLimits,
 }
 
 fn default_env_allowlist() -> Vec<String> {
@@ -149,6 +224,7 @@ impl SandboxPolicy {
             output_cap_bytes: default_output_cap(),
             kill_grace_ms: default_kill_grace_ms(),
             degraded: Degraded::default(),
+            resources: ResourceLimits::default(),
         }
     }
 

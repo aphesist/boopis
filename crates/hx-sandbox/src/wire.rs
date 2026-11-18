@@ -10,7 +10,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::policy::{Degraded, NetworkPolicy, SandboxPolicy, limits};
+use crate::policy::{CpuLimit, Degraded, NetworkPolicy, ResourceLimits, SandboxPolicy, limits};
 
 /// The method name of [`SandboxRunParams`] / [`SandboxRunResult`].
 pub const METHOD_RUN: &str = "sandbox.run";
@@ -90,9 +90,22 @@ pub struct SandboxRunParams {
     /// Grace between the polite and the forced kill. Default: two seconds.
     #[serde(default)]
     pub kill_grace_ms: Option<u64>,
-    /// Dimensions that may run degraded instead of failing with `hx.sandbox.unavailable`.
+    /// Dimensions that may run degraded instead of failing with `hx.sandbox.unavailable`. A
+    /// degraded network is network **off**.
     #[serde(default)]
     pub degraded: Degraded,
+    /// Memory limit in bytes. Default 4 GiB; send `0` for no limit.
+    #[serde(default)]
+    pub memory_bytes: Option<u64>,
+    /// Processes the tree may add. Default 512; send `0` for no limit.
+    #[serde(default)]
+    pub max_processes: Option<u64>,
+    /// Largest file a process may write, in bytes. Default 1 GiB; send `0` for no limit.
+    #[serde(default)]
+    pub max_file_bytes: Option<u64>,
+    /// CPU seconds. Default: as many as the timeout; send `0` for no limit.
+    #[serde(default)]
+    pub cpu_seconds: Option<u64>,
 }
 
 impl SandboxRunParams {
@@ -111,6 +124,23 @@ impl SandboxRunParams {
         policy.output_cap_bytes = self.output_cap.unwrap_or(limits::DEFAULT_OUTPUT_CAP_BYTES);
         policy.kill_grace_ms = self.kill_grace_ms.unwrap_or(limits::DEFAULT_KILL_GRACE_MS);
         policy.degraded = self.degraded;
+        // A value overrides the default; 0 turns that limit off.
+        let over = |given: Option<u64>, default: Option<u64>| match given {
+            None => default,
+            Some(0) => None,
+            Some(n) => Some(n),
+        };
+        let defaults = ResourceLimits::default();
+        policy.resources = ResourceLimits {
+            memory_bytes: over(self.memory_bytes, defaults.memory_bytes),
+            max_processes: over(self.max_processes, defaults.max_processes),
+            max_file_bytes: over(self.max_file_bytes, defaults.max_file_bytes),
+            cpu: match self.cpu_seconds {
+                None => CpuLimit::TiedToTimeout,
+                Some(0) => CpuLimit::Unlimited,
+                Some(n) => CpuLimit::Seconds(n),
+            },
+        };
         (self.argv, policy)
     }
 }
@@ -201,5 +231,22 @@ mod tests {
         assert_eq!(policy.timeout_ms, limits::DEFAULT_TIMEOUT_MS);
         assert!(policy.env_allowlist.contains(&"PATH".to_owned()));
         assert_eq!(policy.degraded, Degraded::default());
+        assert_eq!(policy.resources, ResourceLimits::default());
+    }
+
+    #[test]
+    fn resource_overrides_and_zero_meaning_unlimited() {
+        let p: SandboxRunParams = serde_json::from_value(serde_json::json!({
+            "argv": ["x"], "cwd": "/w", "memory_bytes": 0, "max_processes": 9, "cpu_seconds": 30
+        }))
+        .unwrap();
+        let (_, policy) = p.into_policy();
+        assert_eq!(policy.resources.memory_bytes, None);
+        assert_eq!(policy.resources.max_processes, Some(9));
+        assert_eq!(
+            policy.resources.max_file_bytes,
+            Some(limits::DEFAULT_MAX_FILE_BYTES)
+        );
+        assert_eq!(policy.resources.cpu, CpuLimit::Seconds(30));
     }
 }

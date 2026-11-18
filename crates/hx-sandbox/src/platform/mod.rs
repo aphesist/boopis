@@ -17,6 +17,8 @@ use std::path::Path;
 use tokio::io::{AsyncRead, AsyncWrite};
 
 #[cfg(unix)]
+pub(crate) mod rlimits;
+#[cfg(unix)]
 mod unix;
 #[cfg(unix)]
 pub(crate) mod unix_sys;

@@ -138,6 +138,38 @@ fn is_dead_now(pid: u32) -> bool {
         .is_ok_and(|o| !o.status.success())
 }
 
+/// The heartbeat files a `tree` or `escape` probe writes: `base.<suffix>` for each suffix.
+pub fn beat_files(base: &Path, suffixes: &[&str]) -> Vec<PathBuf> {
+    suffixes
+        .iter()
+        .map(|s| PathBuf::from(format!("{}.{s}", base.display())))
+        .collect()
+}
+
+/// Whether every file exists and has content (the processes have started beating).
+pub fn all_started(files: &[PathBuf]) -> bool {
+    files
+        .iter()
+        .all(|f| std::fs::read_to_string(f).is_ok_and(|c| !c.is_empty()))
+}
+
+/// Whether every heartbeat has stopped: the counters do not move over a window of four beats,
+/// tried a few times to let a dying process finish.
+pub fn heartbeats_stopped(files: &[PathBuf]) -> bool {
+    let snapshot = || {
+        files
+            .iter()
+            .map(|f| std::fs::read_to_string(f).unwrap_or_default())
+            .collect::<Vec<_>>()
+    };
+    (0..10).any(|_| {
+        let before = snapshot();
+        std::thread::sleep(std::time::Duration::from_millis(250));
+        before == snapshot()
+    })
+}
+
+#[allow(dead_code)]
 pub fn read_pids(path: &Path) -> Vec<u32> {
     std::fs::read_to_string(path)
         .unwrap_or_default()

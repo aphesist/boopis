@@ -193,6 +193,56 @@ pub(super) fn child_unshare(flags: libc::c_int) -> Result<(), i32> {
     }
 }
 
+/// After `unshare(CLONE_NEWPID)`: forks. The child (the namespace's init, pid 1 inside) gets
+/// `Ok(())` and goes on to become the program. The parent becomes a supervisor: it closes every
+/// descriptor it does not need (the standard library's exec-status pipe among them, so the
+/// host's spawn is not held up), waits for the init, and ends the same way the init did.
+pub(super) fn child_become_pid_namespace_init() -> Result<(), i32> {
+    // SAFETY: fork has no arguments; the supervisor branch below calls only
+    // async-signal-safe functions and never returns.
+    let pid = unsafe { libc::fork() };
+    if pid < 0 {
+        return Err(errno());
+    }
+    if pid == 0 {
+        return Ok(());
+    }
+    // SAFETY: close_range takes integers only. Descriptors 0-2 stay (the output pipes).
+    unsafe {
+        libc::syscall(
+            libc::SYS_close_range,
+            3 as libc::c_uint,
+            u32::MAX,
+            0 as libc::c_uint,
+        );
+    }
+    let mut status = 0;
+    loop {
+        // SAFETY: waits for our own child; `status` is a valid out-pointer.
+        let r = unsafe { libc::waitpid(pid, &raw mut status, 0) };
+        if r == pid {
+            break;
+        }
+        if r < 0 && errno() != libc::EINTR {
+            // SAFETY: `_exit` skips destructors, as a forked child must.
+            unsafe { libc::_exit(127) }
+        }
+    }
+    if libc::WIFSIGNALED(status) {
+        let sig = libc::WTERMSIG(status);
+        // SAFETY: restore the default action then raise the same signal, so the host sees the
+        // same "killed by signal" outcome the init had.
+        unsafe {
+            libc::signal(sig, libc::SIG_DFL);
+            libc::kill(libc::getpid(), sig);
+        }
+        // SAFETY: only reached if the signal was ignored or blocked.
+        unsafe { libc::_exit(128 + sig) }
+    }
+    // SAFETY: `_exit` skips destructors, as a forked child must.
+    unsafe { libc::_exit(libc::WEXITSTATUS(status)) }
+}
+
 /// Writes `data` to the file at `path` (used for the `/proc/self/*_map` files).
 pub(super) fn child_write_file(path: &std::ffi::CStr, data: &[u8]) -> Result<(), i32> {
     // SAFETY: `path` is NUL-terminated.

@@ -4,14 +4,14 @@
 
 use std::sync::OnceLock;
 
-use super::child::{NetnsPlan, UserMaps, setup_netns};
+use super::child::{NamespacePlan, UserMaps, setup_namespaces};
 use super::landlock::{MIN_ABI, handled_fs, scopes};
 use super::seccomp::{SocketMode, build};
 use super::sys;
 
-/// How a private network namespace can be had.
+/// How a namespace can be had.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum Netns {
+pub(super) enum NsAccess {
     /// Not at all.
     None,
     /// Directly (the caller has `CAP_SYS_ADMIN`).
@@ -35,7 +35,9 @@ pub(super) struct Probe {
     /// A seccomp filter was installed in a child and denied an inet socket.
     pub seccomp_enforces: bool,
     /// How a network namespace with a working loopback can be created.
-    pub netns: Netns,
+    pub netns: NsAccess,
+    /// How a PID namespace (with a forked init) can be created.
+    pub pidns: NsAccess,
     /// Highest capability number the kernel knows.
     pub cap_last: u32,
     /// The process holds `CAP_SETPCAP`, so the bounding set can be emptied.
@@ -87,7 +89,8 @@ fn run() -> Probe {
     let landlock_abi = sys::landlock_abi().map_err(errno_text);
     let landlock_enforces = landlock_abi.as_ref().is_ok_and(|abi| probe_landlock(*abi));
     let seccomp_enforces = probe_seccomp();
-    let netns = probe_netns(uid, gid);
+    let netns = probe_ns(uid, gid, true, false);
+    let pidns = probe_ns(uid, gid, false, true);
     let cap_last = std::fs::read_to_string("/proc/sys/kernel/cap_last_cap")
         .ok()
         .and_then(|s| s.trim().parse().ok())
@@ -102,6 +105,7 @@ fn run() -> Probe {
         landlock_enforces,
         seccomp_enforces,
         netns,
+        pidns,
         cap_last,
         can_drop_bounding: cap_eff & CAP_SETPCAP != 0,
         is_root: euid == 0,
@@ -129,18 +133,27 @@ fn probe_seccomp() -> bool {
     })
 }
 
-fn probe_netns(uid: u32, gid: u32) -> Netns {
-    let direct = NetnsPlan { userns: None };
-    if sys::fork_probe(|| setup_netns(&direct).is_ok()) {
-        return Netns::Direct;
+/// Tries to enter the namespaces in a forked child: directly, then through a user namespace.
+fn probe_ns(uid: u32, gid: u32, net: bool, pid: bool) -> NsAccess {
+    let direct = NamespacePlan {
+        net,
+        pid,
+        userns: None,
+    };
+    // With a PID namespace the body continues only in the init, which then reports success;
+    // the supervisor mirrors that exit status back to this probe.
+    if sys::fork_probe(|| setup_namespaces(&direct).is_ok()) {
+        return NsAccess::Direct;
     }
-    let via_user = NetnsPlan {
+    let via_user = NamespacePlan {
+        net,
+        pid,
         userns: Some(UserMaps::identity(uid, gid)),
     };
-    if sys::fork_probe(|| setup_netns(&via_user).is_ok()) {
-        return Netns::ViaUserns;
+    if sys::fork_probe(|| setup_namespaces(&via_user).is_ok()) {
+        return NsAccess::ViaUserns;
     }
-    Netns::None
+    NsAccess::None
 }
 
 #[cfg(test)]
