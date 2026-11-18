@@ -11,7 +11,9 @@ The hypotaxis Hermes plugin (Python, stdlib only at runtime). It adds governance
 | `session.py` | `Runtime` and `SessionState`: the lock at first prompt, `session.opened`, spend |
 | `compat/` | Claude Code files and hooks on Hermes (readers, merge, trust, hooks bridge, inventory RPC). Area guide: `compat/AGENTS.md` |
 | `tools/` | the `pack` and `ship` tools (toolset `hypotaxis`): schemas in `tools/schemas.json`, handlers return JSON strings and never raise |
-| `ship/` | the `ship` engine: `run.py` (validate, apply, gate, keep or restore), `gate.py` (contraprova's gates on a temp copy), `checkpoint.py` (git plumbing), `recover.py`, `edits.py`, `evidence.py` |
+| `governance/` | governed mode, contraprova's cascade run by the plugin (see below): `ladder`, `brief`, `state`, `handover` (pure), `links`, `runs`, `host`, `engine` (`dispatch`, `launch`), `lifecycle` (`subagent_start`/`stop`, outcomes), `delegation` (the provider) |
+| `budget.py` | the cost cap, one implementation for the `pre_llm_call` hook and the cascade's launches |
+| `ship/` | the `ship` engine: `run.py` (validate, apply), `finish.py` (gate, keep or restore), `attempt.py` (a worker's ship is its attempt), `common.py`, `gate.py` (contraprova's gates on a temp copy), `checkpoint.py` (git plumbing), `recover.py`, `edits.py`, `evidence.py` |
 | `hx/` | the hx client (`client.py`) and the **generated** wire types (`types.py`) |
 | `_vendor/contraprova/` | exact copy of contraprova's engine at a pinned commit (see below). Never edit |
 | `data/` | copies of shared data files (`errors.json`, `protected.default.json`, hx-pack's rules). Never edit |
@@ -38,7 +40,22 @@ The hypotaxis Hermes plugin (Python, stdlib only at runtime). It adds governance
 - **No runtime dependencies.** `pyproject.toml` is tooling only and must not gain a `[project]` table (Hermes would treat the plugin as a package).
 - RPC errors: Hermes turns an exception into `plugin_rpc_failed` with `detail` `"<Class>: hx.<code>: <message>"`. The code is first in `str(exc)` on purpose.
 
+## Governed mode: the cascade
+The orchestrator (the session model) has `pack` and `dispatch(brief)`; workers (delegated children) have `pack`, `exec` (when it exists) and `ship`. `policy.check` enforces that by role. Only a worker started by the plugin is a worker (a link made at `subagent_start`); never infer a role from `conversation_id` or `parent_session_id`, which an ordinary session has after its context is compressed.
+
+Flow: `dispatch` refuses unless the ladder's providers exist in Hermes, `delegation.backend` is `hypotaxis` and the project's trusted gate command exists (the brief's `test:` line is never used). It writes `task.created` (`max_attempts` from the ladder), then `launch` writes `route.decided` (propensity 1) and calls `ctx.dispatch_tool("delegate_task", ...)` with the orchestrator's agent as `parent_agent`. `delegation.route_task` reads the tier back from the ledger (the attempt's `route.decided`, the ladder in `session.opened`) and ignores everything else. The worker's `ship` ends at the gate and writes `gate.decided` for the task and tier; the policy then refuses a second `ship` in that attempt. A pure scope or protected block (the `T0.scope` gate, which hx can reach before writing) earns one same-tier retry (`TierLadder.next_index`); anything else climbs. The ledger is the state: `state.replay` rebuilds attempts, so there is no second copy to drift. A task that ends before using every allowed attempt stays `todo` in contraprova's projection (it only knows `failed` at `max_attempts`); `outcome.scored` (labelled `source: project gate`, never a hidden score) and `cascade.updated` carry the end. A launch that fails ends the task with no `outcome.scored`: nothing was scored.
+
+**Mechanism chosen: (i), the plugin launches the next tier on the child's `subagent_stop`.** Reasons, all verified on real Hermes: the hook runs on the child's thread after its last tool call and before its result re-enters the orchestrator; the orchestrator's agent is still bound there (a context variable Hermes copies into the thread), so `delegate_task` works from it and runs in the background; the worker's verdict is already in the ledger. Nothing then depends on a model: a worker cannot claim success (the gate's verdict is read, not its report) and an orchestrator cannot give up or pick a tier. (ii), the orchestrator calling `dispatch` again, makes every escalation depend on the model remembering to. Noise: Hermes re-enters each child's completion as a turn. The completion of a blocked attempt, while the next tier already runs, is vetoed in `pre_llm_call` with a one-line status (no model call); the completion that ends the task carries the outcome as injected context (`lifecycle.turn_directive`), once. A completion that is not recognised (`ASYNC DELEGATION` in the message) is not vetoed: the model then gets a note and costs one turn.
+
+Known limits: the delegation provider reads the attempt from a context variable, so it works in-process, not under `plugins.isolation: host`. `max_tokens` is carried in the ladder but Hermes's delegation route has no such key, so it is not applied. Forks are refused (`forks: true`). A launch that fails after `route.decided` leaves that attempt open in the ledger.
+
 ## Hermes facts this code depends on (verified on v0.23.2)
+- `ctx.dispatch_tool` passes no `parent_agent` in the gateway; pass `parent_agent=agent.subagent_lifecycle.get_active_subagent_parent()` (public API), bound in tool handlers, hooks of the turn and `subagent_stop`.
+- `delegate_task` has no per-task `toolsets`: a spawn inherits the parent's toolsets minus `delegate_task`, so a worker sees `dispatch`. The policy is the guarantee.
+- A child is its own session. `subagent_start` fires on the launching thread after `route_task` (same context variables) with `child_session_id`; the child's hooks and tool handlers carry that id, `task_id` is its `sa-...` id. Hermes fires **no `post_tool_call` for a child's tools** (`pre_tool_call` does fire): worker `tool.called` is written by `pre_tool_call` (blocked) and the hypotaxis tool handlers.
+- A child's first message is `CONTEXT:` then `TASK:`; Hermes renders plugin prompt sections for children too.
+- `subagent_stop` carries `child_summary` (a self-report), `child_status`, a metadata-only `tool_call_history`.
+- Several completions that arrive together are coalesced into one orchestrator turn.
 - `post_api_request.usage` is Hermes's normalised usage: `input_tokens` is already uncached. Do not subtract the cache read again.
 - `pre_llm_call` fires once per user turn, so the cost cap is checked per turn. `pre_api_request` cannot block (its return is ignored: `agent/turn_api_request.py`), so a per-request cap is not possible with hooks; a turn that makes many requests can overshoot the cap by the cost of that turn. (`llm_execution` middleware could wrap the call; not used.)
 - `session.create` accepts `toolsets: ["hypotaxis"]` only once a tool is registered in that toolset.
@@ -46,6 +63,11 @@ The hypotaxis Hermes plugin (Python, stdlib only at runtime). It adds governance
 - The prompt section callable runs at a session's first prompt, before `on_session_start` and `pre_llm_call`.
 - `on_session_end` fires every turn; `on_session_finalize` ends a session.
 - `ctx.session_cwd()` is right only inside a turn (hooks, tool handlers) and in the prompt section `info`.
+
+## Setup the plugin depends on (set by the host's setup, with the user's consent)
+- `tools.tool_search.enabled: "off"` in the profile in use, so `pack`, `ship` and `dispatch` show directly (ADR-0014).
+- `delegation.backend: hypotaxis`, so governed `dispatch` can route attempts to their tier.
+- `plugins.entries.hypotaxis.allow_gateway_injection: true`, so a Claude Code Stop hook that blocks can re-enter through `ctx.inject_message`. Without it a Stop block is logged and ignored, and `compat.inventory` warns.
 
 ## Test and check
 ```sh

@@ -43,11 +43,24 @@ class PackSettings:
 
 
 @dataclass(frozen=True, slots=True)
+class CascadeSettings:
+    """``cascade``: how much of a failed attempt the next tier is told (the brief itself is always whole).
+    ``brief_max_chars`` bounds a brief that ``dispatch`` accepts."""
+
+    output_tail_chars: int = 3000
+    diff_chars: int = 6000
+    brief_max_chars: int = 8000
+
+
+@dataclass(frozen=True, slots=True)
 class Settings:
     """The plugin settings (``plugins.entries.hypotaxis.settings``)."""
 
     mode: Mode = "governed"
     ladder: Mapping[str, Any] | None = None  # validated; contraprova's TierLadder.from_dict reads it
+    start_tier: str | None = None  # the tier a governed task starts at; None means the first
+    forks: bool = False  # contraprova's control replicates: a study feature, refused when true (not yet supported)
+    cascade: CascadeSettings = CascadeSettings()
     cost_cap_usd: float | None = None
     prices: PricesSettings = PricesSettings()
     pack: PackSettings = PackSettings()

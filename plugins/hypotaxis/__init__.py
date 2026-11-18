@@ -19,6 +19,8 @@ HOOKS = (
     "pre_llm_call",
     "on_session_start",
     "on_session_finalize",
+    "subagent_start",
+    "subagent_stop",
 )
 RPC_METHODS = (
     "describe",
@@ -52,13 +54,13 @@ def _rpc(method: str) -> Callable[..., Any]:
 
 def register(ctx: Any) -> None:
     from .hermes_api import bind
-    from .tools import TOOLSET, hx_ready, pack_handler, ship_handler, tool_schemas
+    from .tools import TOOLSET, dispatch_handler, hx_ready, pack_handler, ship_handler, tool_schemas
 
     bind(ctx)
     from .compat import register as register_compat
 
     register_compat(ctx)  # before the policy hooks: a Claude hook's `allow` must be on record when the policy asks
-    handlers = {"pack": pack_handler, "ship": ship_handler}
+    handlers = {"pack": pack_handler, "ship": ship_handler, "dispatch": dispatch_handler}
     for name, schema in tool_schemas().items():
         ctx.register_tool(
             name=name,
@@ -74,10 +76,23 @@ def register(ctx: Any) -> None:
     for method in RPC_METHODS:
         ctx.register_rpc(method, _rpc(method))
     ctx.register_system_prompt_section("hypotaxis", _lazy("hooks", "system_prompt_section"))
+    _register_delegation(ctx)
     _start_recovery()
     on_unload = getattr(ctx, "on_unload", None)
     if callable(on_unload):
         on_unload(_lazy("hx", "shutdown"))
+
+
+def _register_delegation(ctx: Any) -> None:
+    """The delegation provider that routes each cascade attempt to its tier. Hermes's base class is only importable
+    inside Hermes, so a context without ``register_delegation_provider`` (an older Hermes, a test double) just
+    goes without: ``dispatch`` then refuses, saying ``delegation.backend`` cannot be ``hypotaxis``."""
+    register = getattr(ctx, "register_delegation_provider", None)
+    if not callable(register):
+        return
+    from .governance.delegation import make_provider
+
+    register(make_provider())
 
 
 def _start_recovery() -> None:

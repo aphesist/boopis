@@ -96,3 +96,25 @@ def test_claudes_own_ask_rule_still_prompts_after_a_hook_allow(write: Write, env
     approve_all(env)
     got = make_bridge(ctx, env).pre_tool_call(tool_name="terminal", args={"command": "curl https://x.test"}, **CALL)
     assert got is not None and got["action"] == "approve"  # a Claude ask rule is not a hypotaxis-level prompt
+
+
+# ---------------------------------------------------------------- one policy.check keeps both behaviours
+
+
+def test_the_roles_and_the_grant_live_in_the_same_policy() -> None:
+    from hypotaxis.policy import SessionPolicy, ToolCall, check
+
+    ship = {"edits": [{"op": "create", "path": "a.py", "content": "x"}]}
+    worker_closed = SessionPolicy(mode="governed", role="worker", ship_closed="this attempt already shipped")
+    add_allow("s1", "ship-1")  # a hook allowed the call
+    closed = check(ToolCall("ship", ship, "s1", "ship-1"), worker_closed)
+    assert (closed.kind, closed.reason) == ("block", "attempt_over")  # the worker role still closes ship
+    open_worker = SessionPolicy(mode="governed", role="worker", ask=("ship",))
+    add_allow("s1", "ship-2")
+    assert check(ToolCall("ship", ship, "s1", "ship-2"), open_worker).kind == "allow"  # and the grant skips its ask
+    assert check(ToolCall("ship", ship, "s1", "ship-3"), open_worker).kind == "approve"  # no grant, no skip
+    no_hooks = SessionPolicy(mode="governed", role="worker", ask=("ship",), hook_allow=False)
+    add_allow("s1", "ship-4")
+    assert check(ToolCall("ship", ship, "s1", "ship-4"), no_hooks).kind == "approve"  # hook_allow=False ignores grants
+    orchestrator = SessionPolicy(mode="governed", role="orchestrator")
+    assert check(ToolCall("write_file", {"path": "a.py", "content": "x"}, "s1", "w1"), orchestrator).kind == "block"
