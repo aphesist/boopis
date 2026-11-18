@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from ..config.trust import TrustStore
+from .data import limit
 from .model.items import Command, Hook, McpServer, PermissionRule, Plugin, Skill
 from .readers.common import is_inside, real
 
@@ -79,17 +80,95 @@ def _expand(token: str, project_dir: Path, plugin_root: str) -> str:
     return os.path.expanduser(_VAR.sub(sub, token))
 
 
-def script_files(command: str, args: Sequence[str] | None, project_dir: Path, plugin_root: str = "") -> dict[str, str]:
-    """The files a hook command names that the repository (or the plugin) controls, with their SHA-256.
+_OPERATORS = frozenset({";", "&&", "||", "|", "&", "|&", "(", ")", "\n"})
+_REDIRECTS = frozenset({">", ">>", "<", "<<", "<<<", "&>", "&>>", ">&", "2>", "2>>", "1>", "1>>", ">|"})
+_ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+_DURATION = re.compile(r"^\d+(?:\.\d+)?[smhd]?$")
 
-    A token that resolves to an existing regular file inside the project or the plugin is a script: its bytes
-    are part of the hook's hash, so editing the script re-asks even when the command line is unchanged.
-    System binaries live outside both roots and are not hashed. What a script itself calls is not followed.
-    """
+
+def _segments(command: str) -> list[list[str]]:
+    """The simple commands of a shell string, as words, with redirections dropped. ``a > f; b`` is ``[[a], [b]]``."""
+    command = command.replace("\n", " ; ")
     try:
-        tokens = [*shlex.split(command), *(args or ())] if args is None else [command, *args]
+        lexer = shlex.shlex(command, posix=True, punctuation_chars=True)
+        lexer.whitespace_split = True
+        tokens = list(lexer)
     except ValueError:
         tokens = command.split()
+    segments: list[list[str]] = [[]]
+    skip = False
+    for token in tokens:
+        if skip:
+            skip = False
+        elif token in _OPERATORS:
+            segments.append([])
+        elif token in _REDIRECTS or re.fullmatch(r"\d*[<>]+", token):
+            skip = True  # the next word is a redirection target, not an argument
+        elif re.fullmatch(r"\d*[<>]+&\d+", token):
+            continue  # 2>&1 is complete in itself
+        else:
+            segments[-1].append(token)
+    return [s for s in segments if s]
+
+
+def executed_paths(command: str, *, depth: int = 0) -> list[str]:
+    """The tokens a shell string *runs*, as paths: each simple command's program when it names a path, and the
+    first argument of an interpreter (``sh hooks/x.sh``, ``python3 -m`` excepted). Redirection targets and plain
+    arguments are not scripts: a hook that logs into the repository must not change its own hash by logging."""
+    interpreters = set(limit("script_interpreters"))
+    wrappers = set(limit("script_wrappers"))
+    found: list[str] = []
+    for words in _segments(command):
+        i = 0
+        while i < len(words) and (
+            _ASSIGNMENT.match(words[i])
+            or words[i] in wrappers
+            or (i > 0 and (words[i].startswith("-") or _DURATION.match(words[i])))  # a wrapper's own options
+        ):
+            i += 1
+        if i >= len(words):
+            continue
+        program, rest = words[i], words[i + 1 :]
+        if "/" in program or program.startswith("."):
+            found.append(program)
+        if os.path.basename(program) in interpreters:
+            _interpreter_args(rest, found, depth)
+    return found
+
+
+def _interpreter_args(rest: list[str], found: list[str], depth: int) -> None:
+    j = 0
+    while j < len(rest):
+        arg = rest[j]
+        if arg == "-m":  # python -m module: a module, not a file in the project
+            return
+        if arg.startswith("-") and arg.lstrip("-") and set(arg.lstrip("-")) <= set("lcxeuo"):
+            if "c" in arg and j + 1 < len(rest) and depth < 3:  # sh -c 'inner script': read that too
+                found.extend(executed_paths(rest[j + 1], depth=depth + 1))
+                return
+            j += 1
+            continue
+        if arg.startswith("-"):
+            j += 1
+            continue
+        found.append(arg)
+        return
+
+
+def script_files(command: str, args: Sequence[str] | None, project_dir: Path, plugin_root: str = "") -> dict[str, str]:
+    """The files a hook command runs that the repository (or the plugin) controls, with their SHA-256.
+
+    A program or interpreter argument that resolves to an existing regular file inside the project or the plugin
+    is a script: its bytes are part of the hook's hash, so editing the script asks again even when the command line
+    is unchanged. System binaries live outside both roots and are not hashed, and neither are files the command
+    merely reads or writes. What a script itself calls is not followed.
+    """
+    tokens = [command, *args] if args is not None else executed_paths(command)
+    if args is not None:  # exec form: the program, and the first argument of an interpreter
+        interpreters = set(limit("script_interpreters"))
+        tokens = [command]
+        if os.path.basename(command) in interpreters:
+            _interpreter_args(list(args), tokens, 0)
     roots = [real(project_dir)] + ([real(plugin_root)] if plugin_root else [])
     found: dict[str, str] = {}
     for token in tokens:

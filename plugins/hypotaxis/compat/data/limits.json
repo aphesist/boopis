@@ -22,5 +22,44 @@
       "bypassPermissions",
       "auto"
     ]
-  }
+  },
+  "script_interpreters": [
+    "sh",
+    "bash",
+    "zsh",
+    "dash",
+    "ksh",
+    "fish",
+    "python",
+    "python2",
+    "python3",
+    "node",
+    "nodejs",
+    "deno",
+    "bun",
+    "ruby",
+    "perl",
+    "php",
+    "lua",
+    "pwsh",
+    "powershell",
+    "uv",
+    "npx",
+    "tsx",
+    "ts-node",
+    "source",
+    "."
+  ],
+  "script_wrappers": [
+    "env",
+    "exec",
+    "time",
+    "nohup",
+    "nice",
+    "command",
+    "builtin",
+    "timeout",
+    "stdbuf",
+    "sudo"
+  ]
 }

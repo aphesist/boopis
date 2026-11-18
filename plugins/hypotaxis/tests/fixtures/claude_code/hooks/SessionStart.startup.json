@@ -1,0 +1,32 @@
+{
+  "description": "A new session: on_session_start notes the model, the hooks run at the first prompt.",
+  "event": "SessionStart",
+  "setup": [
+    {
+      "hook": "on_session_start",
+      "kwargs": {
+        "session_id": "sess-1",
+        "model": "fake-a",
+        "platform": "desktop"
+      }
+    }
+  ],
+  "call": {
+    "hook": "pre_llm_call",
+    "kwargs": {
+      "session_id": "sess-1",
+      "user_message": "hi",
+      "is_first_turn": true,
+      "model": "fake-a"
+    }
+  },
+  "payload": {
+    "session_id": "sess-1",
+    "transcript_path": "{transcript}",
+    "cwd": "{cwd}",
+    "permission_mode": "default",
+    "hook_event_name": "SessionStart",
+    "source": "startup",
+    "model": "fake-a"
+  }
+}

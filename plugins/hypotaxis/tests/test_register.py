@@ -42,8 +42,11 @@ def test_register_wires_hooks_rpc_and_the_prompt_section() -> None:
 
     ctx = FakeCtx()
     hypotaxis.register(ctx)
-    assert set(ctx.hooks) == set(hypotaxis.HOOKS)
-    assert set(ctx.rpc) == {"describe", "mode.set", "ledger.tail", "ledger.verify", "ledger.stats", "cascade.state"}
+    from hypotaxis import compat
+
+    assert set(ctx.hooks) == set(hypotaxis.HOOKS) | set(compat.HOOKS)
+    own = {"describe", "mode.set", "ledger.tail", "ledger.verify", "ledger.stats", "cascade.state"}
+    assert set(ctx.rpc) == own | set(compat.RPC_METHODS)
     assert list(ctx.sections) == ["hypotaxis"]
 
 
@@ -84,8 +87,11 @@ def test_importing_and_registering_stays_inside_the_budget() -> None:
     """Load the package the way Hermes does (by path, as ``hermes_plugins.hypotaxis``) in a fresh
     interpreter, and time import plus ``register``."""
     code = f"""
-import importlib.util, sys, time
+import importlib.util, sys, time, types
 sys.path = [p for p in sys.path if 'contraprova' not in p]
+ns = types.ModuleType('hermes_plugins')  # Hermes creates this namespace parent before it loads a plugin
+ns.__path__ = []
+sys.modules['hermes_plugins'] = ns
 t0 = time.perf_counter()
 spec = importlib.util.spec_from_file_location('hermes_plugins.hypotaxis', {str(PLUGIN_DIR / "__init__.py")!r},
                                               submodule_search_locations=[{str(PLUGIN_DIR)!r}])

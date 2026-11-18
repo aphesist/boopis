@@ -46,6 +46,9 @@ def register(ctx: Any) -> None:
     from .hermes_api import bind
 
     bind(ctx)
+    from .compat import register as register_compat
+
+    register_compat(ctx)  # before the policy hooks: a Claude hook's `allow` must be on record when the policy asks
     for hook in HOOKS:
         ctx.register_hook(hook, _lazy("hooks", hook))
     for method in RPC_METHODS:

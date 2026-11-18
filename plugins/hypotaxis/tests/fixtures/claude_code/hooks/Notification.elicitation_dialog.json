@@ -1,0 +1,25 @@
+{
+  "description": "A clarify question becomes elicitation_dialog.",
+  "event": "Notification",
+  "setup": [],
+  "call": {
+    "hook": "on_human_input_request",
+    "kwargs": {
+      "kind": "clarify",
+      "request_id": "r2",
+      "session_id": "sess-1",
+      "session_key": "k",
+      "platform": "desktop",
+      "prompt": "Which database?"
+    }
+  },
+  "payload": {
+    "session_id": "sess-1",
+    "transcript_path": "{transcript}",
+    "cwd": "{cwd}",
+    "permission_mode": "default",
+    "hook_event_name": "Notification",
+    "message": "Which database?",
+    "notification_type": "elicitation_dialog"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "description": "The user's prompt, on the first turn of a session.",
+  "event": "UserPromptSubmit",
+  "setup": [],
+  "call": {
+    "hook": "pre_llm_call",
+    "kwargs": {
+      "session_id": "sess-1",
+      "user_message": "fix the bug",
+      "is_first_turn": true,
+      "model": "fake-a",
+      "turn_id": "turn-1",
+      "conversation_history": []
+    }
+  },
+  "payload": {
+    "session_id": "sess-1",
+    "prompt_id": "turn-1",
+    "transcript_path": "{transcript}",
+    "cwd": "{cwd}",
+    "permission_mode": "default",
+    "hook_event_name": "UserPromptSubmit",
+    "prompt": "fix the bug"
+  }
+}

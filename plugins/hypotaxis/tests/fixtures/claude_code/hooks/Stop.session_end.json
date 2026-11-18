@@ -1,0 +1,36 @@
+{
+  "description": "A turn that did not edit: Stop runs from on_session_end with the last answer post_llm_call saw.",
+  "event": "Stop",
+  "setup": [
+    {
+      "hook": "post_llm_call",
+      "kwargs": {
+        "session_id": "sess-1",
+        "user_message": "q",
+        "assistant_response": "All done.",
+        "conversation_history": [],
+        "model": "fake-a",
+        "platform": "cli"
+      }
+    }
+  ],
+  "call": {
+    "hook": "on_session_end",
+    "kwargs": {
+      "session_id": "sess-1",
+      "completed": true,
+      "interrupted": false,
+      "model": "fake-a",
+      "platform": "cli"
+    }
+  },
+  "payload": {
+    "session_id": "sess-1",
+    "transcript_path": "{transcript}",
+    "cwd": "{cwd}",
+    "permission_mode": "default",
+    "hook_event_name": "Stop",
+    "stop_hook_active": false,
+    "last_assistant_message": "All done."
+  }
+}

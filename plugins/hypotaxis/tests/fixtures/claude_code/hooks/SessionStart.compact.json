@@ -1,0 +1,50 @@
+{
+  "description": "After a compaction.",
+  "event": "SessionStart",
+  "setup": [
+    {
+      "hook": "on_session_start",
+      "kwargs": {
+        "session_id": "sess-1",
+        "model": "fake-a",
+        "platform": "cli"
+      }
+    },
+    {
+      "hook": "pre_llm_call",
+      "kwargs": {
+        "session_id": "sess-1",
+        "user_message": "first",
+        "is_first_turn": true,
+        "model": "fake-a"
+      }
+    },
+    {
+      "hook": "post_compaction",
+      "kwargs": {
+        "session_id": "sess-1",
+        "old_session_id": "",
+        "kind": "summarize",
+        "reason": "pre_api"
+      }
+    }
+  ],
+  "call": {
+    "hook": "pre_llm_call",
+    "kwargs": {
+      "session_id": "sess-1",
+      "user_message": "second",
+      "is_first_turn": false,
+      "model": "fake-a"
+    }
+  },
+  "payload": {
+    "session_id": "sess-1",
+    "transcript_path": "{transcript}",
+    "cwd": "{cwd}",
+    "permission_mode": "default",
+    "hook_event_name": "SessionStart",
+    "source": "compact",
+    "model": "fake-a"
+  }
+}

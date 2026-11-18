@@ -14,8 +14,6 @@ sys.path.insert(0, str(Path(__file__).parent))  # import-mode=importlib: make co
 
 from compat_support import FIXTURES, RecordingCtx, make_env
 
-pytest_plugins: list[str] = []
-
 
 @pytest.fixture
 def fixtures() -> Path:

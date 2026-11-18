@@ -1,0 +1,25 @@
+{
+  "description": "An approval prompt becomes permission_prompt.",
+  "event": "Notification",
+  "setup": [],
+  "call": {
+    "hook": "on_human_input_request",
+    "kwargs": {
+      "kind": "approval",
+      "request_id": "r1",
+      "session_id": "sess-1",
+      "session_key": "k",
+      "platform": "desktop",
+      "prompt": "rm -rf build"
+    }
+  },
+  "payload": {
+    "session_id": "sess-1",
+    "transcript_path": "{transcript}",
+    "cwd": "{cwd}",
+    "permission_mode": "default",
+    "hook_event_name": "Notification",
+    "message": "rm -rf build",
+    "notification_type": "permission_prompt"
+  }
+}

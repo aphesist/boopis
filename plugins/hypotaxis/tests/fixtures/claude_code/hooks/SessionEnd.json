@@ -1,0 +1,20 @@
+{
+  "description": "A session torn down: Hermes does not say why, so the reason is other.",
+  "event": "SessionEnd",
+  "setup": [],
+  "call": {
+    "hook": "on_session_finalize",
+    "kwargs": {
+      "session_id": "sess-1",
+      "platform": "cli"
+    }
+  },
+  "payload": {
+    "session_id": "sess-1",
+    "transcript_path": "{transcript}",
+    "cwd": "{cwd}",
+    "permission_mode": "default",
+    "hook_event_name": "SessionEnd",
+    "reason": "other"
+  }
+}

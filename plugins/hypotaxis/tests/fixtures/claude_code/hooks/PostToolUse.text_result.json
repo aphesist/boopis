@@ -1,0 +1,31 @@
+{
+  "description": "A result that is not JSON is passed as the string it is.",
+  "event": "PostToolUse",
+  "setup": [],
+  "call": {
+    "hook": "transform_tool_result",
+    "kwargs": {
+      "tool_name": "web_search",
+      "args": {
+        "query": "hermes"
+      },
+      "result": "plain text",
+      "status": "ok",
+      "session_id": "sess-1",
+      "tool_call_id": "call-4"
+    }
+  },
+  "payload": {
+    "session_id": "sess-1",
+    "transcript_path": "{transcript}",
+    "cwd": "{cwd}",
+    "permission_mode": "default",
+    "hook_event_name": "PostToolUse",
+    "tool_name": "WebSearch",
+    "tool_input": {
+      "query": "hermes"
+    },
+    "tool_use_id": "call-4",
+    "tool_response": "plain text"
+  }
+}
