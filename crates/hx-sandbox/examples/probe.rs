@@ -190,16 +190,21 @@ fn main() {
             println!("reply {}", String::from_utf8_lossy(&reply));
         }
         "fds" => {
-            // Open descriptors of this process, from /proc/self/fd (the listing's own fd included).
-            let mut fds: Vec<u32> = std::fs::read_dir("/proc/self/fd")
+            // Open descriptors of this process as "N target" lines, from /proc/self/fd. The
+            // listing's own directory descriptor shows up too, with a /proc target.
+            let mut fds: Vec<(u32, String)> = std::fs::read_dir("/proc/self/fd")
                 .unwrap_or_else(|e| fail(e))
-                .filter_map(|e| e.ok()?.file_name().to_str()?.parse().ok())
+                .filter_map(|e| {
+                    let e = e.ok()?;
+                    let n = e.file_name().to_str()?.parse().ok()?;
+                    let target = std::fs::read_link(e.path()).ok()?;
+                    Some((n, target.display().to_string()))
+                })
                 .collect();
-            fds.sort_unstable();
-            println!(
-                "{}",
-                fds.iter().map(u32::to_string).collect::<Vec<_>>().join(" ")
-            );
+            fds.sort();
+            for (n, target) in fds {
+                println!("{n} {target}");
+            }
         }
         #[cfg(windows)]
         "handle" => {

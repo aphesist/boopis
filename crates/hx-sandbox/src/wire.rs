@@ -118,6 +118,22 @@ impl SandboxRunParams {
 /// Result of `sandbox.run`: a tool outcome. A non-zero exit is still a successful call.
 pub type SandboxRunResult = crate::report::RunResult;
 
+/// The JSON Schemas of the `sandbox.*` methods, for the generated contract:
+/// `{"sandbox.run": {"params": .., "result": ..}, "sandbox.capabilities": {"result": ..}}`.
+#[must_use]
+pub fn json_schemas() -> serde_json::Value {
+    let schema = |s: schemars::Schema| serde_json::to_value(s).unwrap_or(serde_json::Value::Null);
+    serde_json::json!({
+        METHOD_RUN: {
+            "params": schema(schemars::schema_for!(SandboxRunParams)),
+            "result": schema(schemars::schema_for!(SandboxRunResult)),
+        },
+        METHOD_CAPABILITIES: {
+            "result": schema(schemars::schema_for!(crate::Capabilities)),
+        },
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -137,6 +153,34 @@ mod tests {
             let net: Net = serde_json::from_str(json).unwrap();
             assert_eq!(NetworkPolicy::from(net), want, "{json}");
         }
+    }
+
+    #[test]
+    fn schemas_describe_the_documented_fields() {
+        let schemas = json_schemas();
+        let params = &schemas[METHOD_RUN]["params"]["properties"];
+        for field in [
+            "argv",
+            "cwd",
+            "ro",
+            "rw",
+            "net",
+            "env",
+            "timeout_ms",
+            "output_cap",
+            "degraded",
+        ] {
+            assert!(params.get(field).is_some(), "params schema lacks {field}");
+        }
+        let result = &schemas[METHOD_RUN]["result"]["properties"];
+        for field in ["exit", "stdout", "stderr", "duration_ms", "enforcement"] {
+            assert!(result.get(field).is_some(), "result schema lacks {field}");
+        }
+        assert!(
+            schemas[METHOD_CAPABILITIES]["result"]["properties"]
+                .get("fs")
+                .is_some()
+        );
     }
 
     #[test]

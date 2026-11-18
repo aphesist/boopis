@@ -806,18 +806,22 @@ async fn descriptors_leaked_by_the_host_do_not_reach_the_child() {
     policy.ro_paths.push("/proc".into());
     let r = run(&probe(&["fds"]), &policy).await.unwrap();
     assert_eq!(code(&r), Some(0), "{r:?}");
-    let seen: Vec<i32> = r
+    let seen: Vec<(i32, &str)> = r
         .stdout
         .text
-        .split_whitespace()
-        .map(|n| n.parse().unwrap())
+        .lines()
+        .filter_map(|l| l.split_once(' '))
+        .map(|(n, target)| (n.parse().unwrap(), target))
         .collect();
+    for std_fd in 0..=2 {
+        assert!(seen.iter().any(|(n, _)| *n == std_fd), "{seen:?}");
+    }
+    // Judge by what the descriptor points at: the child's own directory listing may reuse the
+    // number the host leaked.
     assert!(
-        seen.contains(&0) && seen.contains(&1) && seen.contains(&2),
-        "{seen:?}"
-    );
-    assert!(
-        !seen.contains(&leaked_fd),
+        !seen
+            .iter()
+            .any(|(_, target)| target.ends_with("source.txt")),
         "descriptor {leaked_fd} leaked into the sandbox: {seen:?}"
     );
     drop(leaked);

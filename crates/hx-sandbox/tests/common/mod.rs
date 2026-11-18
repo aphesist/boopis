@@ -95,10 +95,22 @@ pub fn code(r: &RunResult) -> Option<i32> {
     }
 }
 
-/// Whether process `pid` is gone or a zombie (zombies are dead; nobody reaps orphans in a
-/// container without an init).
-#[cfg(target_os = "linux")]
+/// Whether process `pid` is gone, allowing a moment for a signalled process to finish dying
+/// (SIGKILL delivery is asynchronous).
 pub fn is_dead(pid: u32) -> bool {
+    (0..60).any(|_| {
+        let dead = is_dead_now(pid);
+        if !dead {
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+        dead
+    })
+}
+
+/// Whether process `pid` is gone or a zombie right now (zombies are dead; nobody reaps orphans
+/// in a container without an init).
+#[cfg(target_os = "linux")]
+fn is_dead_now(pid: u32) -> bool {
     match std::fs::read_to_string(format!("/proc/{pid}/stat")) {
         Err(_) => true,
         Ok(stat) => stat
@@ -109,7 +121,7 @@ pub fn is_dead(pid: u32) -> bool {
 
 /// Whether process `pid` is gone, asked of `tasklist`.
 #[cfg(windows)]
-pub fn is_dead(pid: u32) -> bool {
+fn is_dead_now(pid: u32) -> bool {
     std::process::Command::new("tasklist")
         .args(["/FI", &format!("PID eq {pid}"), "/NH"])
         .output()
@@ -119,7 +131,7 @@ pub fn is_dead(pid: u32) -> bool {
 /// Whether process `pid` is gone, asked of `kill -0`. A zombie still answers, so a caller
 /// on macOS must give the tree a moment to be reaped.
 #[cfg(all(unix, not(target_os = "linux")))]
-pub fn is_dead(pid: u32) -> bool {
+fn is_dead_now(pid: u32) -> bool {
     std::process::Command::new("/bin/kill")
         .args(["-0", &pid.to_string()])
         .output()
