@@ -174,5 +174,30 @@ They're not sandboxed, matching Claude Code. This is the only exception to the n
 - If the user declines, hypotaxis offers a dedicated profile (ADR-0006's alternative).
 - We open an upstream Hermes pull request for a per-toolset "direct surface" declaration (manifest or `register_tool` flag). Once it ships, the global switch is dropped.
 
+## ADR-0015 contraprova is vendored by exact copy
+**Context.**
+- The plugin needs contraprova's kernel modules.
+- Contraprova isn't on PyPI.
+- Hermes admits plugin dependencies only through its package manager, which may not accept git URLs.
+
+**Decision.**
+- `plugins/hypotaxis/_vendor/contraprova/` holds an **exact copy** of contraprova's engine modules at a pinned commit, written by `scripts/vendor-contraprova.sh <sha>`, with the commit SHA and licence recorded in `_vendor/contraprova/VENDOR.json`.
+- CI re-fetches that commit and fails if the copy differs by a single byte.
+- Changes are made upstream and re-vendored, never edited in place.
+
+**Consequences.** No fork can drift. The plugin installs with no external Python dependency.
+
+## ADR-0016 Shared data files are copied, never re-typed
+**Decision.**
+- `errors.json` (from `crates/hx-proto`), `redact.rules.json` and `never_pack.json` (from `crates/hx-pack`) and `protected.default.json` (from `crates/hx-txn`) have one source of truth each.
+- `scripts/sync-shared-data.sh` copies them into the plugin package, so the plugin installs standalone.
+- CI fails if a copy differs from its source.
+- Codes the plugin owns (`hx.config.*`, `hx.policy.*`, `hx.mode.*`, `hx.ledger.*`, `hx.budget.*`) are added to `crates/hx-proto/errors.json`, not kept in a second catalogue.
+
 ## ADR-0012 Prices
-Prices come from Hermes's models.dev data, with a user override table. Rates are absolute per bucket (input, output, cache read, cache write, reasoning), never vendor multipliers. Dollars are always computed from tokens and never stored. A subscription provider prices at zero, with an API-equivalent projection shown beside it.
+Prices come from the models.dev catalogue plus a user override table. Hermes's models.dev data is not reachable through its public plugin API, so:
+- the plugin reads a cached catalogue file, `<profile home>/hypotaxis/prices/models-dev.json`;
+- the host refreshes that file daily;
+- in plain Hermes, the plugin can fetch it itself through RPC `prices.refresh` (one HTTPS GET to models.dev, on by default, switchable off in settings).
+
+An unpriced model shows unknown cost, never zero. A session with a cost cap blocks on unknown cost. Rates are absolute per bucket (input, output, cache read, cache write, reasoning), never vendor multipliers. Dollars are always computed from tokens and never stored. A subscription provider prices at zero, with an API-equivalent projection shown beside it.

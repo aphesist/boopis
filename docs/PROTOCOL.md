@@ -111,6 +111,8 @@ Cancellation uses `$/cancelRequest`. The plugin keeps one warm `hx serve` child 
 - `harness.parallel([...])` is `asyncio.gather` over `tool.call`. Concurrency is capped by `code_execution.max_tool_calls` and a per-cell limit.
 
 ## 6. Error codes
+**Transport note** (verified on Hermes v0.23.2): an exception in a plugin RPC handler reaches the client as error `plugin_rpc_failed`, with detail `"<ExceptionClass>: <code>: <message>"`. The plugin can't set `data.code` on that path, so its handlers raise with the stable code first in the message, and clients parse it from there. `hx` and kernel errors carry `data.code` normally.
+
 Stable string codes in `data.code`, listed in `crates/hx-proto/errors.json` (shared by all languages):
 - `hx.config.invalid`;
 - `hx.policy.denied`;
