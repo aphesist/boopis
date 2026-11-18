@@ -7,6 +7,20 @@
     "ship",
     "dispatch"
   ],
+  "roles": {
+    "orchestrator": [
+      "pack",
+      "dispatch"
+    ],
+    "worker": [
+      "pack",
+      "exec",
+      "ship"
+    ]
+  },
+  "governed_only_tools": [
+    "dispatch"
+  ],
   "read_only_tools": [
     "read_file",
     "search_files",

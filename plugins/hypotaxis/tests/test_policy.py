@@ -219,8 +219,8 @@ GOVERNED: list[tuple[str, dict[str, Any], str]] = [
     ("web_search", {"query": "x"}, "allow"),
     ("skill_view", {"name": "x"}, "allow"),
     ("pack", {}, "allow"),
-    ("exec", {"code": "1"}, "allow"),
-    ("ship", {"edits": [{"path": "src/a.py"}]}, "allow"),
+    ("exec", {"code": "1"}, "block"),  # a worker's tool, not the orchestrator's
+    ("ship", {"edits": [{"path": "src/a.py"}]}, "block"),  # a worker's tool, not the orchestrator's
     ("dispatch", {"brief": "x"}, "allow"),
     ("write_file", {"path": "a.py", "content": "x"}, "block"),
     ("patch", {"path": "a.py", "old_string": "a", "new_string": "b"}, "block"),
@@ -371,3 +371,54 @@ def test_the_kernel_entry_point_gets_the_same_answer(tmp_path: Path) -> None:
     hook = ToolCall("write_file", {"path": "a.py"}, source="hook")
     kernel = ToolCall("write_file", {"path": "a.py"}, source="kernel")
     assert check(hook, s) == check(kernel, s)
+
+
+# ---------------------------------------------------------------- governed mode, by role
+
+WORKER: list[tuple[str, dict[str, Any], str]] = [
+    ("pack", {}, "allow"),
+    ("exec", {"code": "1"}, "allow"),
+    ("ship", {"edits": [{"op": "replace", "path": "src/a.py"}]}, "allow"),
+    (
+        "dispatch",
+        {"brief": "x"},
+        "block",
+    ),  # a worker sees it (Hermes hands a child its parent's toolset) and cannot use it
+    ("delegate_task", {}, "block"),
+    ("write_file", {"path": "a.py", "content": "x"}, "block"),
+    ("read_file", {"path": "a.py"}, "allow"),
+    ("terminal", {"command": "rm -rf x"}, "block"),
+]
+
+
+@pytest.mark.parametrize(("tool", "args", "expected"), WORKER)
+def test_a_worker_has_pack_exec_and_ship_only(tmp_path: Path, tool: str, args: dict[str, Any], expected: str) -> None:
+    got = check(ToolCall(tool, args), SessionPolicy(mode="governed", cwd=str(tmp_path), role="worker")).kind
+    assert got == expected
+
+
+def test_a_worker_whose_attempt_is_over_cannot_ship_again(tmp_path: Path) -> None:
+    session = SessionPolicy(mode="governed", cwd=str(tmp_path), role="worker", ship_closed="The attempt is over.")
+    shipped = check(ToolCall("ship", {"edits": [{"op": "replace", "path": "src/a.py"}]}), session)
+    assert (shipped.kind, shipped.reason, shipped.message) == ("block", "attempt_over", "The attempt is over.")
+    assert check(ToolCall("pack", {}), session).kind == "allow"  # it can still read
+
+
+def test_the_orchestrator_cannot_ship_or_exec_but_can_dispatch_and_pack(tmp_path: Path) -> None:
+    session = SessionPolicy(mode="governed", cwd=str(tmp_path))
+    assert session.role == "orchestrator"
+    kinds = {
+        t: check(ToolCall(t, {"edits": [{"path": "a"}]}), session).kind for t in ("pack", "dispatch", "ship", "exec")
+    }
+    assert kinds == {"pack": "allow", "dispatch": "allow", "ship": "block", "exec": "block"}
+    assert check(ToolCall("ship", {"edits": [{"path": "a"}]}), session).reason == "governed_role"
+
+
+def test_dispatch_means_nothing_outside_governed_mode(tmp_path: Path) -> None:
+    got = check(ToolCall("dispatch", {"brief": "x"}), SessionPolicy(mode="ungoverned", cwd=str(tmp_path)))
+    assert (got.kind, got.reason) == ("block", "ungoverned")
+
+
+def test_a_role_cannot_be_widened_by_an_allow_rule(tmp_path: Path) -> None:
+    session = SessionPolicy(mode="governed", cwd=str(tmp_path), role="worker", allow=("dispatch",))
+    assert check(ToolCall("dispatch", {"brief": "x"}), session).kind == "block"

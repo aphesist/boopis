@@ -11,24 +11,82 @@
           "items": {
             "type": "object",
             "properties": {
-              "op": {"type": "string", "enum": ["search", "read", "symbol", "outline", "status"]},
-              "pattern": {"type": "string", "description": "search: the text or regex to find."},
-              "literal": {"type": "boolean", "description": "search: treat pattern as plain text, not a regex."},
-              "globs": {"type": "array", "items": {"type": "string"}, "description": "search: only these files, gitignore-style (prefix ! to exclude)."},
-              "context": {"type": "integer", "description": "search: lines of context around each match (default 2)."},
-              "max_matches": {"type": "integer", "description": "search: stop after this many matching lines (default 200)."},
-              "path": {"type": "string", "description": "read: the file. symbol: limit to this file or directory."},
-              "ranges": {"type": "array", "items": {"type": "array", "items": {"type": "integer"}}, "description": "read: [[first, last], ...] 1-based, inclusive. Omit for the whole file."},
-              "name": {"type": "string", "description": "symbol: the name, or Type.method."},
-              "lang": {"type": "string", "description": "symbol: limit to a language (py, rs, ts, go, ...)."},
-              "paths": {"type": "array", "items": {"type": "string"}, "description": "outline: files or directories. Omit for the whole project."}
+              "op": {
+                "type": "string",
+                "enum": [
+                  "search",
+                  "read",
+                  "symbol",
+                  "outline",
+                  "status"
+                ]
+              },
+              "pattern": {
+                "type": "string",
+                "description": "search: the text or regex to find."
+              },
+              "literal": {
+                "type": "boolean",
+                "description": "search: treat pattern as plain text, not a regex."
+              },
+              "globs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "search: only these files, gitignore-style (prefix ! to exclude)."
+              },
+              "context": {
+                "type": "integer",
+                "description": "search: lines of context around each match (default 2)."
+              },
+              "max_matches": {
+                "type": "integer",
+                "description": "search: stop after this many matching lines (default 200)."
+              },
+              "path": {
+                "type": "string",
+                "description": "read: the file. symbol: limit to this file or directory."
+              },
+              "ranges": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  }
+                },
+                "description": "read: [[first, last], ...] 1-based, inclusive. Omit for the whole file."
+              },
+              "name": {
+                "type": "string",
+                "description": "symbol: the name, or Type.method."
+              },
+              "lang": {
+                "type": "string",
+                "description": "symbol: limit to a language (py, rs, ts, go, ...)."
+              },
+              "paths": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "outline: files or directories. Omit for the whole project."
+              }
             },
-            "required": ["op"]
+            "required": [
+              "op"
+            ]
           }
         },
-        "max_bytes": {"type": "integer", "description": "Total size cap for the answer. Lower it for a quick look; the plugin's limit still applies."}
+        "max_bytes": {
+          "type": "integer",
+          "description": "Total size cap for the answer. Lower it for a quick look; the plugin's limit still applies."
+        }
       },
-      "required": ["items"]
+      "required": [
+        "items"
+      ]
     }
   },
   "ship": {
@@ -43,20 +101,70 @@
           "items": {
             "type": "object",
             "properties": {
-              "op": {"type": "string", "enum": ["replace", "create", "delete", "diff"], "description": "replace: swap old for new once (or every occurrence with replace_all). create: write a whole new file. delete: remove a file. diff: apply a unified diff."},
-              "path": {"type": "string", "description": "The file. Optional for a diff that names its files."},
-              "old": {"type": "string", "description": "replace: the exact existing text. It must occur exactly once unless replace_all is set."},
-              "new": {"type": "string", "description": "replace: the replacement text (may be empty)."},
-              "replace_all": {"type": "boolean", "description": "replace: replace every occurrence."},
-              "content": {"type": "string", "description": "create: the full file content."},
-              "overwrite": {"type": "boolean", "description": "create: allow replacing an existing file."},
-              "diff": {"type": "string", "description": "diff: the unified diff text."}
+              "op": {
+                "type": "string",
+                "enum": [
+                  "replace",
+                  "create",
+                  "delete",
+                  "diff"
+                ],
+                "description": "replace: swap old for new once (or every occurrence with replace_all). create: write a whole new file. delete: remove a file. diff: apply a unified diff."
+              },
+              "path": {
+                "type": "string",
+                "description": "The file. Optional for a diff that names its files."
+              },
+              "old": {
+                "type": "string",
+                "description": "replace: the exact existing text. It must occur exactly once unless replace_all is set."
+              },
+              "new": {
+                "type": "string",
+                "description": "replace: the replacement text (may be empty)."
+              },
+              "replace_all": {
+                "type": "boolean",
+                "description": "replace: replace every occurrence."
+              },
+              "content": {
+                "type": "string",
+                "description": "create: the full file content."
+              },
+              "overwrite": {
+                "type": "boolean",
+                "description": "create: allow replacing an existing file."
+              },
+              "diff": {
+                "type": "string",
+                "description": "diff: the unified diff text."
+              }
             },
-            "required": ["op"]
+            "required": [
+              "op"
+            ]
           }
         }
       },
-      "required": ["edits"]
+      "required": [
+        "edits"
+      ]
+    }
+  },
+  "dispatch": {
+    "name": "dispatch",
+    "description": "Hand one task to the governed model cascade. Write a brief that starts with `scope:` (the project-relative paths or globs the worker may change) and `goal:`, then the approach. The system picks the model, runs a worker on the cheapest tier, and climbs to a stronger one only when the project's gate blocks; you never choose a model. Returns at once; the outcome (passed at some tier, or failed after the last tier) arrives later as a message. One task at a time.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "brief": {
+          "type": "string",
+          "description": "The brief: lines `scope: <paths or globs>` and `goal: <one or two sentences>`, then the files and functions to change, the approach and edge cases, in about 250 words. No test line: the gate runs the project's own command."
+        }
+      },
+      "required": [
+        "brief"
+      ]
     }
   }
 }

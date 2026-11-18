@@ -8,12 +8,13 @@ cannot work. Heavy modules load on the first call.
 from __future__ import annotations
 
 import json
+import time
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
 TOOLSET = "hypotaxis"
-TOOLS = ("pack", "ship")
+TOOLS = ("pack", "ship", "dispatch")
 SCHEMAS = Path(__file__).with_name("schemas.json")
 
 
@@ -34,23 +35,37 @@ def hx_ready() -> bool:
 
 
 def _session(args: Mapping[str, Any], kw: Mapping[str, Any]) -> Any:
+    """The runtime and the caller of a tool call: the session itself, or a worker (a delegated child, which works in
+    its parent's session, ledger and workspace). ``(rt, None)`` when Hermes gave no session."""
     from ..hooks import runtime
 
     rt = runtime()
     sid = str(kw.get("session_id") or "")
     if not sid:
         return rt, None
-    return rt, rt.lock(sid)
+    return rt, rt.caller(sid)
+
+
+def _worker_call(caller: Any, name: str, args: Mapping[str, Any], started: float, result: str) -> str:
+    """Record a worker's call (Hermes fires no ``post_tool_call`` for a child's tools) and pass ``result`` through."""
+    if caller is not None and caller.worker:
+        from ..hooks import record_worker_call
+
+        parsed = json.loads(result)
+        failed = isinstance(parsed, dict) and "error" in parsed
+        record_worker_call(caller, name, args, round((time.monotonic() - started) * 1000), failed)
+    return result
 
 
 def pack_handler(args: Mapping[str, Any], **kw: Any) -> str:
     from .pack import run_pack, to_json
 
+    started = time.monotonic()
     try:
-        rt, state = _session(args, kw)
-        if state is None:
+        rt, caller = _session(args, kw)
+        if caller is None:
             return to_json({"error": "pack needs a session", "code": "hx.config.invalid"})
-        return to_json(run_pack(rt, state, args))
+        return _worker_call(caller, "pack", args, started, to_json(run_pack(rt, caller.state, args)))
     except Exception as exc:  # noqa: BLE001
         return json.dumps({"error": f"pack failed: {type(exc).__name__}: {exc}", "code": "hx.internal_error"})
 
@@ -58,10 +73,26 @@ def pack_handler(args: Mapping[str, Any], **kw: Any) -> str:
 def ship_handler(args: Mapping[str, Any], **kw: Any) -> str:
     from ..ship import run_ship
 
+    started = time.monotonic()
     try:
-        rt, state = _session(args, kw)
-        if state is None:
+        rt, caller = _session(args, kw)
+        if caller is None:
             return json.dumps({"error": "ship needs a session", "code": "hx.config.invalid"})
-        return json.dumps(run_ship(rt, state, args), ensure_ascii=False)
+        shipped = json.dumps(run_ship(rt, caller.state, args, caller.link), ensure_ascii=False)
+        return _worker_call(caller, "ship", args, started, shipped)
     except Exception as exc:  # noqa: BLE001
         return json.dumps({"error": f"ship failed: {type(exc).__name__}: {exc}", "code": "hx.internal_error"})
+
+
+def dispatch_handler(args: Mapping[str, Any], **kw: Any) -> str:
+    from ..governance.engine import dispatch
+
+    try:
+        rt, caller = _session(args, kw)
+        if caller is None:
+            return json.dumps({"error": "dispatch needs a session", "code": "hx.config.invalid"})
+        if caller.worker:  # the policy refuses this first; a handler that is reached any other way refuses too
+            return json.dumps({"status": "refused", "launched": False, "reason": "a worker cannot dispatch"})
+        return json.dumps(dispatch(rt, caller.state, dict(args)), ensure_ascii=False)
+    except Exception as exc:  # noqa: BLE001
+        return json.dumps({"error": f"dispatch failed: {type(exc).__name__}: {exc}", "code": "hx.internal_error"})
