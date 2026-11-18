@@ -193,6 +193,7 @@ They're not sandboxed, matching Claude Code. This is the only exception to the n
 - `scripts/sync-shared-data.sh` copies them into the plugin package, so the plugin installs standalone.
 - CI fails if a copy differs from its source.
 - Codes the plugin owns (`hx.config.*`, `hx.policy.*`, `hx.mode.*`, `hx.ledger.*`, `hx.budget.*`) are added to `crates/hx-proto/errors.json`, not kept in a second catalogue.
+- **Exception:** the redaction rules are not copied. Hermes's plugin-install security scan rejects a file of secret-matching patterns, so the plugin redacts by calling `hx` (method `redact.apply`). The rules keep a single implementation, in Rust.
 
 ## ADR-0017 Sandbox mechanisms per OS
 **Context.** ARCHITECTURE section 7 named bubblewrap, Landlock and seccomp for Linux, Seatbelt for macOS and AppContainer for Windows. The `hx-sandbox` work settled the details.
