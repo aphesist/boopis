@@ -1,0 +1,39 @@
+{
+  "name": "@hypotaxis/desktop-ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The hypotaxis desktop UI: the approved v6 design system as typed ES modules (Vite, no framework).",
+  "scripts": {
+    "dev": "vite",
+    "build": "pnpm tokens:check && tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:smoke": "node tests/smoke/run.mjs",
+    "test:parity": "node tests/parity/run.mjs",
+    "tokens": "node scripts/build-tokens.mjs",
+    "tokens:check": "node scripts/build-tokens.mjs --check"
+  },
+  "devDependencies": {
+    "@fontsource/geist": "^5.3.0",
+    "@fontsource/geist-mono": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/ibm-plex-sans": "^5.3.0",
+    "@fontsource/instrument-sans": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/libre-franklin": "^5.3.0",
+    "@fontsource/public-sans": "^5.3.0",
+    "@fontsource/source-code-pro": "^5.3.1",
+    "@types/node": "^26.6.6",
+    "@types/pngjs": "^6.0.5",
+    "axe-core": "^4.14.1",
+    "jsdom": "^31.0.1",
+    "pixelmatch": "^8.0.0",
+    "pngjs": "^7.0.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.1"
+  }
+}
