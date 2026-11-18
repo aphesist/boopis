@@ -9,10 +9,10 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from conftest import FakeCtx
 from hypotaxis import hooks, rpc
 from hypotaxis.errors import InvalidParamsError, ModeLockedError, parse_code
 from hypotaxis.session import Runtime
+from support import FakeCtx
 
 SID = "local-test-1"
 MakeRuntime = Callable[..., tuple[Runtime, FakeCtx]]
@@ -308,8 +308,17 @@ def test_auxiliary_calls_are_recorded_and_tagged(make_runtime: MakeRuntime) -> N
     hooks.post_auxiliary_call(
         session_id=SID, model="m", provider="p", usage=HERMES_USAGE, aux_task="title_generation", api_duration=0.1
     )
-    payload = [e for e in events(rt) if e["type"] == "usage.recorded"][-1]["payload"]
-    assert (payload["role"], payload["aux_task"]) == ("auxiliary", "title_generation")
+    last = [e for e in events(rt) if e["type"] == "usage.recorded"][-1]
+    assert (last["payload"]["role"], last["payload"]["aux_task"]) == ("auxiliary", "title_generation")
+    assert last["actor"] == "plugin"  # a side call is not the session's model
+    assert rt.state(SID).provider == "p"  # and does not change which model the session is on
+
+
+def test_an_auxiliary_call_on_another_model_does_not_become_the_session_model(make_runtime: MakeRuntime) -> None:
+    rt, ctx = make_runtime()
+    first_prompt(rt, ctx)
+    hooks.post_auxiliary_call(session_id=SID, model="titler", provider="other", usage=HERMES_USAGE, api_duration=0.1)
+    assert (rt.state(SID).provider, rt.state(SID).model) == ("p", "m")
 
 
 def test_subscription_providers_are_flagged(make_runtime: MakeRuntime) -> None:

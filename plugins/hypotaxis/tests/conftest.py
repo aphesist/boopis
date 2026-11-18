@@ -10,6 +10,8 @@ from typing import Any
 
 import pytest
 
+sys.path.insert(0, str(Path(__file__).parent))  # import-mode=importlib: make support.py importable
+
 # hermes_yaml is Hermes's public YAML loader. Outside Hermes it is found through HX_HERMES_SRC
 # (a Hermes source tree) when set; tests that need it skip otherwise.
 _src = os.environ.get("HX_HERMES_SRC")
@@ -19,39 +21,7 @@ if _src and _src not in sys.path:
 from hypotaxis import hooks  # noqa: E402
 from hypotaxis.hermes_api import bind  # noqa: E402
 from hypotaxis.session import Runtime  # noqa: E402
-
-
-class FakeCtx:
-    """The slice of Hermes's PluginContext the plugin uses, recording what it is given."""
-
-    plugin_id = "hypotaxis"
-
-    def __init__(self, config: Mapping[str, Any] | None = None, cwd: str = "") -> None:
-        self.config: dict[str, Any] = dict(config or {})
-        self.cwd = cwd
-        self.hooks: dict[str, Callable[..., Any]] = {}
-        self.rpc: dict[str, Callable[..., Any]] = {}
-        self.sections: dict[str, Any] = {}
-        self.emitted: list[tuple[str, str, dict[str, Any]]] = []
-
-    def get_config(self, key: str, default: Any = None) -> Any:
-        return self.config.get(key, default)
-
-    def session_cwd(self) -> str:
-        return self.cwd
-
-    def emit_to_session(self, session_id: str, event: str, payload: dict[str, Any] | None = None) -> bool:
-        self.emitted.append((session_id, event, dict(payload or {})))
-        return True
-
-    def register_hook(self, hook_name: str, callback: Callable[..., Any]) -> None:
-        self.hooks[hook_name] = callback
-
-    def register_rpc(self, name: str, handler: Callable[..., Any]) -> None:
-        self.rpc[name] = handler
-
-    def register_system_prompt_section(self, id: str, content: Any, *, position: str = "after_memory") -> None:
-        self.sections[id] = content
+from support import FakeCtx  # noqa: E402
 
 
 @pytest.fixture

@@ -164,11 +164,12 @@ def post_tool_call(tool_name: str = "", args: Any = None, **kw: Any) -> None:
         _log.error("tool.called not recorded", exc_info=True)
 
 
-def _record_usage(kw: Mapping[str, Any], *, role: str | None) -> None:
+def _record_usage(kw: Mapping[str, Any], *, auxiliary: bool) -> None:
     rt = runtime()
     state = _locked(rt, str(kw.get("session_id") or ""))
     provider, model = str(kw.get("provider") or ""), str(kw.get("model") or "")
-    state.provider, state.model = provider or state.provider, model or state.model
+    if not auxiliary:  # a side call (a title, a compression) is not the session's model
+        state.provider, state.model = provider or state.provider, model or state.model
     subscription = provider in state.settings.subscription_providers
     payload = usage_event_payload(
         kw.get("usage"),
@@ -180,11 +181,10 @@ def _record_usage(kw: Mapping[str, Any], *, role: str | None) -> None:
     )
     if payload is None:
         return
-    if role:
-        payload["role"] = role
-        if kw.get("aux_task"):
-            payload["aux_task"] = str(kw["aux_task"])
-    rt.ledger(state).append("usage.recorded", state.actor(), payload)
+    payload["role"] = "auxiliary" if auxiliary else "orchestrator"
+    if auxiliary and kw.get("aux_task"):
+        payload["aux_task"] = str(kw["aux_task"])
+    rt.ledger(state).append("usage.recorded", "plugin" if auxiliary else state.actor(), payload)
     costs = project_costs([payload], state.price_table, state.settings.subscription_providers)
     if costs.billed_usd is None:
         state.unpriced.update(costs.billed_unpriced)
@@ -195,7 +195,7 @@ def _record_usage(kw: Mapping[str, Any], *, role: str | None) -> None:
 def post_api_request(**kw: Any) -> None:
     """``usage.recorded`` for one model request of the session's own model."""
     try:
-        _record_usage(kw, role="orchestrator")
+        _record_usage(kw, auxiliary=False)
     except Exception:  # noqa: BLE001
         _log.error("usage.recorded not recorded", exc_info=True)
 
@@ -203,7 +203,7 @@ def post_api_request(**kw: Any) -> None:
 def post_auxiliary_call(**kw: Any) -> None:
     """Hermes's side calls (titles, compression, ...) cost money too, so they are recorded, tagged."""
     try:
-        _record_usage(kw, role="auxiliary")
+        _record_usage(kw, auxiliary=True)
     except Exception:  # noqa: BLE001
         _log.error("auxiliary usage not recorded", exc_info=True)
 

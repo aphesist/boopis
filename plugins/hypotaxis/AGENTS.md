@@ -40,11 +40,11 @@ The hypotaxis Hermes plugin (Python, stdlib only at runtime). It adds governance
 # dev env: contraprova editable at the pinned commit (hx/generalize @ 74fabe9), plus pytest and ruamel.yaml
 export HX_HERMES_SRC=<a Hermes source tree>     # lets tests import hermes_yaml; those tests skip without it
 ruff check --config pyproject.toml . ../../tests/e2e && ruff format --check --config pyproject.toml . ../../tests/e2e
-pyright
+pyright && pyright -p ../../tests/e2e
 pytest                       # unit tests, then ../../tests/e2e (skips cleanly without a Hermes install)
 hermes plugins validate .
 ```
-End-to-end tests: see `tests/e2e/README` in the module docstring of `tests/e2e/conftest.py` (`HX_E2E_HERMES_HOME`).
+End-to-end tests (`../../tests/e2e`) start a real, unmodified Hermes gateway against a fake OpenAI-compatible model (`fake_model_server.py`) with this plugin copied into a temp `HERMES_HOME`. Set `HX_E2E_HERMES_ENV` to the directory the spike's `install.sh` produced (it holds `hermes-home/installs`, `runtime`, `uv-python`); without it they skip. Hermes's venv has no contraprova yet, so the stack puts the test process's contraprova on `PYTHONPATH`. Type-check them with `pyright -p ../../tests/e2e`.
 
 ## Do not
 - Import Hermes internals, patch Hermes, or register a tool before it works.

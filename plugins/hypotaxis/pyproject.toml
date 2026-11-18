@@ -41,5 +41,5 @@ reportMissingModuleSource = false
 [tool.pytest.ini_options]
 testpaths = ["tests", "../../tests/e2e"]
 pythonpath = [".."]
-addopts = "-q"
+addopts = "-q --import-mode=importlib"
 markers = ["e2e: starts a real Hermes gateway; skipped when the install is absent"]

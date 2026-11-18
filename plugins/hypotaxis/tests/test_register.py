@@ -5,12 +5,11 @@ from __future__ import annotations
 import importlib.util
 import subprocess
 import sys
-import time
 from pathlib import Path
 from typing import Any
 
 import pytest
-from conftest import FakeCtx
+from support import FakeCtx
 
 PLUGIN_DIR = Path(__file__).resolve().parent.parent
 IMPORT_BUDGET_MS = 150  # docs/STANDARDS.md section 6
