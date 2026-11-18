@@ -255,6 +255,19 @@ They're not sandboxed, matching Claude Code. This is the only exception to the n
 - Phase 1 builds only the seams: the `Cloud` endpoint kind, headless-safe plugin and `hx`, checkpoint pushes, one storage interface.
 - The control plane is the one internet-facing component the user runs, so it gets the strictest review.
 
+## ADR-0020 Forms: one schema-driven card for every request to the user
+**Context.** The owner's rule: usability first. Nobody should leave the app to set up keys or settings when the agent or a teammate could send a form. Claude Code shows how: a credential card that saves and wires the key without the model seeing it, multiple-choice questions, permission prompts, plan approval, environment-change approvals, trust prompts, sign-in. Hermes has its own interactive requests (clarify, approval, secret, sudo, vault), and MCP has elicitation.
+
+**Decision.**
+- One form primitive (`docs/FORMS.md`): MCP elicitation's schema plus hypotaxis extensions (secret, multi-select, other, previews, pickers, upload, sign-in, hold-to-approve), drawn by one renderer in the card family.
+- `kind` templates decide where the result goes: credential, question, approval, permission, signin, setup, connector, choice, plan, feedback.
+- Hermes's requests and MCP elicitations are adapted onto it. Agents and teammates send forms through `request_input`.
+- Secret values go from the UI to the host and on to the keychain or control plane, never to the agent, the transcript, the ledger or logs.
+
+**Consequences.**
+- New needs become a new `kind` (a template plus an effect), never a new component.
+- The owner designs the visual family as an extension of the approved cards.
+
 ## ADR-0012 Prices
 Prices come from the models.dev catalogue plus a user override table. Hermes's models.dev data is not reachable through its public plugin API, so:
 - the plugin reads a cached catalogue file, `<profile home>/hypotaxis/prices/models-dev.json`;

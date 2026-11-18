@@ -117,6 +117,7 @@ It registers:
 - **System prompt section** (`register_system_prompt_section`) for the governed-mode contract, so it's cache-stable.
 - **RPC namespace** `plugin.hypotaxis.*` and session events through `ctx.emit_to_session`: feedforward, blanks, ledger stream, cascade state, compat inventory (`docs/PROTOCOL.md`).
 - **Approval transport** `hypotaxis`: approval prompts render as cards in the app. Chat-platform buttons keep working through Hermes's own transports.
+- **Forms** (`docs/FORMS.md`): one schema-driven card for every request to the user (credentials, questions, approvals, permissions, sign-in, setup, connectors). Agents and teammates send them with `request_input`, and secrets never reach the agent.
 - **Settings** through `config_schema`, stored by Hermes under `plugins.entries.hypotaxis.settings`. Project-pinned settings (the gate command, protected paths, data policy) live in `<project>/.hermes/hypotaxis.yaml` and are trust-gated.
 
 ## 6. Models, routing and the cascade
