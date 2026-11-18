@@ -1,0 +1,10 @@
+---
+source: crates/hx-pack/tests/outline.rs
+expression: "snapshot(\"lang/sample.tsx\")"
+---
+sample.tsx [Ok]
+    3-5   interface ButtonProps | interface ButtonProps (@3)
+    7-9   function  Button | function Button({ label }: ButtonProps) (@7)
+   11-11  function  Card | const Card = ({ label }: ButtonProps) => <div>{label}</div>; (@11)
+   13-17  class     Page | class Page extends React.Component<ButtonProps> (@13)
+   14-16  method    Page.render | render() (@14)

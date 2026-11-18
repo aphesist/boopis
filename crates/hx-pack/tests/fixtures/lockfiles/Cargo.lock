@@ -1,0 +1,40 @@
+[[package]]
+name = "left-pad"
+version = "1.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0f72ef9657ad7176809cb66850ca8c7a988f1ba91b36291d690c59df11cc3b42"
+
+[[package]]
+name = "lodash"
+version = "4.17.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "24b957f4b19fca9f2ee71026e0bc6fdf810d39adfe88e5cfa57530d89c04f2ba"
+
+[[package]]
+name = "babel-core"
+version = "7.22.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ab118784d853029f903f653874469ccbd1d8e67d6d8b3d6b8b81ca745fb7f82"
+
+[[package]]
+name = "react-dom"
+version = "18.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f7a8c5b1429dcdad40352d30cf1f06d7892f82df9875e0cd4ba8e288e84fba54"
+
+[[package]]
+name = "typescript"
+version = "5.4.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a65aaeaff44812485b8341b8d0f95bc0bb21acb6c8f62d44c3e0c240ac2de7de"
+
+[[package]]
+name = "zod"
+version = "3.23.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c41d761d17489dd4c6a182c49e6e409aef9087ad33d0ce21612e488093360207"
+
+[[package]]
+name = "gitdep"
+version = "0.1.0"
+source = "git+https://github.com/example/gitdep?rev=54fd1711209f#54fd1711209fb1c0781092374132c66e79e2241b"

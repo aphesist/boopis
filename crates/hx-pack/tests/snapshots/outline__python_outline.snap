@@ -1,0 +1,12 @@
+---
+source: crates/hx-pack/tests/outline.rs
+expression: "snapshot(\"lang/sample.py\")"
+---
+sample.py [Ok]
+    6-10  function  top_level | def top_level(a, b=2): (@6)
+   13-15  function  cached | def cached(n: int) -> int: (@14)
+   18-36  class     Account | class Account: (@19)
+   22-23  method    Account.__init__ | def __init__(self, owner: str) -> None: (@22)
+   25-27  method    Account.label | def label(self) -> str: (@26)
+   29-33  method    Account.deposit | async def deposit(self, amount: int) -> None: (@29)
+   35-36  class     Account.Meta | class Meta: (@35)

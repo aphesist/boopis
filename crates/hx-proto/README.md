@@ -10,7 +10,7 @@ The wire contract between the hypotaxis plugin (Python) and `hx` (Rust). Pure ty
 | `error` | `AppError`, the catalog reader, and `codes::*` constants generated at build time from `errors.json` |
 | `describe` | `hx.describe` result: `{version, protocol: "hx-v1", capabilities}` |
 | `txn` | request and response types for `txn.validate`, `txn.apply`, `txn.restore`, `txn.discard`, `txn.recover` |
-| `schema` | builds `schema/hx-v1.schema.json`: every method's params and result, plus the `error.data` types for the codes that carry any |
+| `schema` | `SchemaBuilder`: every crate adds its methods' params and results and the `error.data` types; `hx::schema` builds `schema/hx-v1.schema.json` from them |
 | `registry` | the `Handler` trait and the `Dispatcher`; each crate registers its handlers |
 | `method` | method names and the `Namespace` enum (`hx`, `txn`, `pack`, `sandbox`) |
 | `log` | `tracing` JSON logging to a rotating file or stderr, through a `Redactor` |
@@ -21,7 +21,7 @@ The wire contract between the hypotaxis plugin (Python) and `hx` (Rust). Pure ty
 - **Stdout carries frames only.** Logging never writes to stdout.
 - **Application errors are `-32000`** with the stable string code in `data.code`. Protocol errors keep the spec's numbers and also carry `data.code`.
 - **The code list is one data file.** `errors.json` is the source; Rust constants are generated from it, Python reads the same file. Adding a code means editing that file only.
-- **The schema is generated, never edited.** `schema/hx-v1.schema.json` comes from the Rust types. A test fails if it is stale. Update it with `cargo test -p hx-proto -- --ignored bless_schema`.
+- **The schema is generated, never edited.** `schema/hx-v1.schema.json` comes from the Rust types. The full document is built by `hx::schema` (this crate cannot depend on the crates that depend on it); a test in `hx` fails if the committed file is stale. Update it with `cargo test -p hx -- --ignored bless_schema`.
 - **Wire types ignore unknown fields** on read. New fields are optional and additive; removing or renaming one is a new method name.
 - **The dispatcher never drops a running handler.** Handlers poll `CallContext::cancel` at safe points and return `hx.cancelled` only when they have changed nothing, so a response always tells the truth.
 - **Every log line passes the `Redactor`** before it is written. The rules come from `hx-pack`; this crate defines only the trait (and `NoRules`, for startup before the rules exist).
@@ -29,7 +29,7 @@ The wire contract between the hypotaxis plugin (Python) and `hx` (Rust). Pure ty
 ## Adding a method
 
 1. Add the request and result types to a module here, deriving `Serialize`, `Deserialize` and `JsonSchema`.
-2. Add the method to `schema::schema_document` and bless the schema.
+2. Add the method to a `SchemaBuilder` (`schema::add_core` here, or the owning crate's `add_schema`) and bless the schema.
 3. Implement `Handler` in the owning crate and register it in the binary.
 4. Add any new error codes to `errors.json`.
 

@@ -15,4 +15,7 @@ pub struct DescribeResult {
     pub protocol: String,
     /// Sorted capability strings, such as `txn.edit.diff`. Gate features on these.
     pub capabilities: Vec<String>,
+    /// Sorted names of every method the binary serves, `hx.describe` included.
+    #[serde(default)]
+    pub methods: Vec<String>,
 }

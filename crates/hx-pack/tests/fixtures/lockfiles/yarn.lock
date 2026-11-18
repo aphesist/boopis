@@ -1,0 +1,31 @@
+# yarn lockfile v1
+
+left-pad@^1.3.0:
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/left-pad/-/left-pad-1.3.0.tgz#69138ef3a9521ce6e9acc0361cf21627e7145208"
+  integrity sha512-4bNE8iDzkIX8spwnbGvPqBcNlxT5C5EMnT9y6STq4O2KATz0t7YWaSz98MkQGoU9jsbapMReCqTHfYUIL4H4oA==
+
+lodash@^4.17.21:
+  version "4.17.21"
+  resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.21.tgz#40200088452ce6b4810fc67d9e057ca3cdc7d758"
+  integrity sha512-J5dFqWVZHd4YBE3WdYJYLzW1lSM8DoGb/ZoJK0Mn3C+8y8zDRi6resVoCBlzV3mRqUukZ14VHMpMzWhszS12vA==
+
+@babel/core@^7.22.5:
+  version "7.22.5"
+  resolved "https://registry.yarnpkg.com/@babel/core/-/core-7.22.5.tgz#d2f15af6267025ddd50348b59d4cdec52aed306c"
+  integrity sha512-IV5xz3CzyHjlWTGHNup4ClPDSA785GEpL8LNP3cOCJJA520zY6YXEuykkNOb99w32POIZyY6bh1uaFcLtgt+qg==
+
+react-dom@^18.2.0:
+  version "18.2.0"
+  resolved "https://registry.yarnpkg.com/react-dom/-/react-dom-18.2.0.tgz#132a74fd62c9364b90ffbe0cafe8a8608455e0e9"
+  integrity sha512-MR/ZlXdsCBMN7Ye4NjCTRbKlXP3ROKJuyL0I5GlmPEmibYmvB1M8J23GElWrnOgFK9yOCa4iWtSCe/LYqQ+FSQ==
+
+typescript@^5.4.5:
+  version "5.4.5"
+  resolved "https://registry.yarnpkg.com/typescript/-/typescript-5.4.5.tgz#bb16f1c311b609d0a3c95049e955d0337d8e190c"
+  integrity sha512-wLFJ4oGh2N7OL5X9MIF5cDmjvlTIoo5rRr1FwIzTvnYhSjboTyNdQIBR2CgyTC3ki3LWgwrhNSsvKd+aYvyrpQ==
+
+zod@^3.23.8:
+  version "3.23.8"
+  resolved "https://registry.yarnpkg.com/zod/-/zod-3.23.8.tgz#18bb2155a35e117c2399a94ffe7f61353df742ee"
+  integrity sha512-FyBdGm+NtQaXpETN0lMYYSR3oHm32XDFT246H9p5CRUiMseRTRKT3SThneoA+p31MCVhyaFIi8xlso7DVlcNug==

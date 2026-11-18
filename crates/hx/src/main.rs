@@ -5,6 +5,7 @@
 //! hx describe                   print the hx.describe result
 //! hx schema                     print the hx-v1 JSON Schema
 //! hx txn validate|apply|restore|discard|recover --json <file|->
+//! hx pack search|read|symbol|outline|status|bundle --json <file|->
 //! ```
 //!
 //! Stdout carries protocol frames (serve) or one JSON-RPC response (one-shot) and nothing else.
@@ -19,7 +20,8 @@ use anyhow::{Context, Result};
 use clap::{Args, Parser, Subcommand};
 use hx::serve::{ServeOptions, serve};
 use hx::{build_dispatcher, oneshot};
-use hx_proto::log::{LogConfig, LogSink, NoRules};
+use hx_pack::LogRedactor;
+use hx_proto::log::{LogConfig, LogSink};
 use hx_proto::method;
 use tokio_util::sync::CancellationToken;
 
@@ -57,6 +59,27 @@ enum Command {
         #[command(subcommand)]
         action: TxnAction,
     },
+    /// Search, read, symbols, outlines and git status.
+    Pack {
+        #[command(subcommand)]
+        action: PackAction,
+    },
+}
+
+#[derive(Subcommand)]
+enum PackAction {
+    /// Matches with surrounding lines (`pack.search`).
+    Search(Input),
+    /// A file or line ranges (`pack.read`).
+    Read(Input),
+    /// The source of named definitions (`pack.symbol`).
+    Symbol(Input),
+    /// The definitions of files and directories (`pack.outline`).
+    Outline(Input),
+    /// Git status, branch and HEAD (`pack.status`).
+    Status(Input),
+    /// Several of the above under one byte budget (`pack.bundle`).
+    Bundle(Input),
 }
 
 #[derive(Subcommand)]
@@ -81,7 +104,9 @@ struct Input {
 }
 
 fn init_logging(cli: &Cli, default_filter: &str) -> Result<()> {
-    let mut config = LogConfig::new(Arc::new(NoRules));
+    // Fail closed: without working redaction rules hx does not log at all.
+    let redactor = LogRedactor::embedded().context("the redaction rules do not load")?;
+    let mut config = LogConfig::new(Arc::new(redactor));
     config.filter = cli
         .log_level
         .clone()
@@ -177,7 +202,7 @@ async fn run(cli: Cli) -> Result<ExitCode> {
             run_oneshot(method::DESCRIBE, None).await
         }
         Command::Schema => {
-            print!("{}", hx_proto::schema::schema_text()?);
+            print!("{}", hx::schema::schema_text()?);
             Ok(ExitCode::SUCCESS)
         }
         Command::Txn { action } => {
@@ -188,6 +213,18 @@ async fn run(cli: Cli) -> Result<ExitCode> {
                 TxnAction::Restore(i) => (method::TXN_RESTORE, i),
                 TxnAction::Discard(i) => (method::TXN_DISCARD, i),
                 TxnAction::Recover(i) => (method::TXN_RECOVER, i),
+            };
+            run_oneshot(name, Some(&input.json)).await
+        }
+        Command::Pack { action } => {
+            init_logging(&cli, "warn")?;
+            let (name, input) = match action {
+                PackAction::Search(i) => (method::PACK_SEARCH, i),
+                PackAction::Read(i) => (method::PACK_READ, i),
+                PackAction::Symbol(i) => (method::PACK_SYMBOL, i),
+                PackAction::Outline(i) => (method::PACK_OUTLINE, i),
+                PackAction::Status(i) => (method::PACK_STATUS, i),
+                PackAction::Bundle(i) => (method::PACK_BUNDLE, i),
             };
             run_oneshot(name, Some(&input.json)).await
         }
