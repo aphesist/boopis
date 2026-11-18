@@ -117,6 +117,7 @@ It registers:
 - **System prompt section** (`register_system_prompt_section`) for the governed-mode contract, so it's cache-stable.
 - **RPC namespace** `plugin.hypotaxis.*` and session events through `ctx.emit_to_session`: feedforward, blanks, ledger stream, cascade state, compat inventory (`docs/PROTOCOL.md`).
 - **Approval transport** `hypotaxis`: approval prompts render as cards in the app. Chat-platform buttons keep working through Hermes's own transports.
+- **Forms** (`docs/FORMS.md`): one schema-driven card for every request to the user (credentials, questions, approvals, permissions, sign-in, setup, connectors). Agents and teammates send them with `request_input`, and secrets never reach the agent.
 - **Settings** through `config_schema`, stored by Hermes under `plugins.entries.hypotaxis.settings`. Project-pinned settings (the gate command, protected paths, data policy) live in `<project>/.hermes/hypotaxis.yaml` and are trust-gated.
 
 ## 6. Models, routing and the cascade
@@ -160,7 +161,9 @@ It registers:
 - **Sandbox:** workspace read-only, writable scratch, network off unless allowed.
   - Linux: bubblewrap, Landlock and seccomp.
   - macOS: Seatbelt.
-  - Windows (the owner's daily platform): AppContainer.
+  - Windows: AppContainer.
+
+  Linux is the owner's main platform and the first one built and verified end to end; Windows and macOS are supported and built by CI.
   Codex's Apache-2.0 sandbox crates are the reference.
 - **Checkpoints:** every passing ship is a commit on `refs/hypotaxis/checkpoints/<session>`, so rewind to any turn comes free.
 
@@ -197,7 +200,35 @@ One hash-chained JSONL per session at `<profile home>/hypotaxis/ledger/<session_
   - the mock data layer is replaced by the gateway and plugin streams.
 - **Hermes desktop plugins** (`desktop-plugins/<id>/plugin.js`) are a separate surface. A later phase hosts a compatible subset of `@hermes/plugin-sdk` in a sandboxed pane.
 
-## 11. Repository layout (mirrors hermes-agent)
+## 10a. Teammates and team chat
+- **Teammates** are Hermes profiles (ADR-0006), each with its own SOUL.md, memory, skills, schedule, policy and orb.
+- **Team chat** is a shared channel where the user and several teammates talk, @mention each other, and hand off work. A large hand-off carries a contract lane, so its scope and tests travel with it.
+- Team chat builds on Hermes's multi-profile primitives, never on new infrastructure:
+  - group sessions (`groups.*`);
+  - bot relay (`bot_relay.*`: roster, deliver, reply);
+  - agent-to-agent forwarding (`a2a.forward`);
+  - the shared Kanban board (`kanban.db`) for durable task hand-offs.
+  **[verify]**: a phase-2 spike settles which primitive carries chat versus hand-offs.
+- **Attribution at a glance:** every card and message carries an **origin**:
+  - one teammate (its orb, name and colour);
+  - several (stacked orbs with a count);
+  - the coding agent (model name only, since it has no name);
+  - the plugin, Hermes, an MCP server, or the host (its glyph).
+  The origin is one shared slot of the card system, used the same way in the conversation, the dock, the Bots section and team chat.
+
+## 11. Homes, vaults and devices (ADR-0018)
+- **A home** runs the work: Hermes, the plugin, `hx` and the workspace. It's local by default, or any machine the user owns that can run programs.
+- **Devices attach** to the home over `hermes-gateway-v1`: the desktop app, a phone app (Tauri v2 mobile, same UI) and a web client. Transports are SSH, a tailnet, a Cloudflare Tunnel, or TLS with device tokens. One session continues live across devices.
+- **A vault** stores encrypted snapshots in any storage the user picks (Google Drive, OneDrive, S3, R2, B2, WebDAV, SFTP, a local drive) through Apache OpenDAL. A lease names the single live home.
+- **Cloud sessions** (`docs/CLOUD.md`, ADR-0019) run the whole stack in a fresh container on infrastructure the user owns. They keep working with the laptop closed and open from any device, like Claude Code's cloud sessions.
+- **Phase 1 builds only the seams:**
+  - an endpoint abstraction for the gateway connection (`Local`, `Remote`, `Cloud`);
+  - a plugin and `hx` that run headless in a container;
+  - checkpoint pushes to a branch;
+  - home-relative paths in the UI;
+  - one storage interface for everything hypotaxis persists.
+
+## 12. Repository layout (mirrors hermes-agent)
 
 ```
 AGENTS.md                  hub: invariants + routing table to per-area AGENTS.md
@@ -215,14 +246,14 @@ scripts/  tests/           tooling, end-to-end tests (fake model server, live ga
 study/                     pre-registration and run scripts (phase 2)
 ```
 
-## 12. Phases
+## 13. Phases
 
 - **Phase 1 (MVP):** the Sessions section good enough to replace Claude Code for a week, covering:
   - plugin tools, the ledger and governance;
   - host plus UI, connected to a real Hermes gateway;
   - Claude Code compatibility;
   - the Claude subscription and API-key providers.
-- **Phase 2:** teammates and the Bots section (profiles, cron, approvals on chat platforms), the dock widgets driven by the ledger, the study's pre-registration.
-- **Phase 3:** local artifacts with the git server, the macOS VM and remote Mac, EAS, Hermes desktop-plugin hosting.
+- **Phase 2:** team chat; remote homes, vault backup and restore, and cloud sessions phase C1 (control plane, Docker runner, egress and git proxies, session store); teammates and the Bots section (profiles, cron, approvals on chat platforms), the dock widgets driven by the ledger, the study's pre-registration.
+- **Phase 3:** the phone app; local artifacts with the git server, the macOS VM and remote Mac, EAS, Hermes desktop-plugin hosting.
 
-Each phase ends on a test anyone can run.
+Each phase ends on a test anyone can run. **Platform order:** Linux first (the owner's main platform; built, packaged and tested end to end in CI and on the build machine), then Windows and macOS, built by CI and verified on real machines before release.

@@ -1,0 +1,21 @@
+---
+source: crates/hx-pack/tests/outline.rs
+expression: "snapshot(\"lang/sample.rs\")"
+---
+sample.rs [Ok]
+    5-10  struct    Point | pub struct Point (@7)
+   12-15  enum      Shape | pub enum Shape (@12)
+   17-23  trait     Area | pub trait Area (@18)
+   19-19  method    Area.area | fn area(&self) -> f64; (@19)
+   20-22  method    Area.name | fn name(&self) -> String (@20)
+   25-42  impl      Point | impl Point (@25)
+   26-29  method    Point.origin | pub const fn origin() -> Self (@27)
+   31-41  method    Point.distance | pub fn distance(&self, other: &Point) -> f64 (@31)
+   44-48  impl      Point | impl fmt::Display for Point (@44)
+   45-47  method    Point.fmt | fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result (@45)
+   50-50  type      Pair | pub type Pair = (Point, Point); (@50)
+   52-52  const     LIMIT | const LIMIT: usize = 10; (@52)
+   53-53  static    GREETING | static GREETING: &str = "hello"; (@53)
+   55-59  macro     twice | macro_rules! twice { (@55)
+   61-65  module    geometry | pub mod geometry (@61)
+   62-64  function  geometry.unit | pub fn unit() -> f64 (@62)

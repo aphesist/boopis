@@ -1,9 +1,0 @@
-name: ship_stub
-version: 0.0.1
-manifest_version: 2
-kind: standalone
-description: "Test-only stand-in for hypotaxis's ship tool, so the compat end-to-end tests can aim a Claude Code hook at a tool named ship. It writes a marker when it runs and changes nothing else."
-author: aphesist
-license: Apache-2.0
-provides_tools:
-  - ship

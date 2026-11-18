@@ -1,0 +1,143 @@
+; Derived from OpenAI Codex, codex-rs/sandboxing/src/seatbelt_read_only_platform_defaults.sbpl
+; (Copyright 2025 OpenAI, Apache License 2.0; see NOTICE in the crate root).
+; What this is: the least a macOS process needs to start (dyld, libSystem, the system
+; frameworks, the loader's metadata walks, /dev basics).
+; Changes: dropped the broad reads of /etc, /private/etc, /Library/Preferences,
+; /opt/homebrew/lib and /usr/local/lib (grant those through ro_paths if a tool needs them),
+; the master.passwd literal, the terminal and pty rules, and the app-sandbox extension rules.
+; Added: file-read-metadata everywhere (stat of an unlisted path reveals existence and size but
+; never contents; the same is true on Linux under Landlock).
+
+; Metadata walks: every path-based call stats its ancestors.
+(allow file-read-metadata)
+(allow file-test-existence)
+
+; Read access to standard system paths
+(allow file-read* file-test-existence
+  (subpath "/Library/Apple")
+  (subpath "/Library/Filesystems/NetFSPlugins")
+  (subpath "/Library/Preferences/Logging")
+  (subpath "/private/var/db/DarwinDirectory/local/recordStore.data")
+  (subpath "/private/var/db/timezone")
+  (subpath "/usr/lib")
+  (subpath "/usr/share")
+  (subpath "/var/db")
+  (subpath "/private/var/db"))
+
+; Map system frameworks + dylibs for loader.
+(allow file-map-executable
+  (subpath "/Library/Apple/System/Library/Frameworks")
+  (subpath "/Library/Apple/System/Library/PrivateFrameworks")
+  (subpath "/Library/Apple/usr/lib")
+  (subpath "/System/Library/Extensions")
+  (subpath "/System/Library/Frameworks")
+  (subpath "/System/Library/PrivateFrameworks")
+  (subpath "/System/Library/SubFrameworks")
+  (subpath "/System/iOSSupport/System/Library/Frameworks")
+  (subpath "/System/iOSSupport/System/Library/PrivateFrameworks")
+  (subpath "/System/iOSSupport/System/Library/SubFrameworks")
+  (subpath "/usr/lib"))
+
+; System Framework and AppKit resources
+(allow file-read* file-test-existence
+  (subpath "/Library/Apple/System/Library/Frameworks")
+  (subpath "/Library/Apple/System/Library/PrivateFrameworks")
+  (subpath "/Library/Apple/usr/lib")
+  (subpath "/System/Library/Frameworks")
+  (subpath "/System/Library/PrivateFrameworks")
+  (subpath "/System/Library/SubFrameworks")
+  (subpath "/System/iOSSupport/System/Library/Frameworks")
+  (subpath "/System/iOSSupport/System/Library/PrivateFrameworks")
+  (subpath "/System/iOSSupport/System/Library/SubFrameworks")
+  (subpath "/usr/lib"))
+
+; Allow guarded vnodes.
+(allow system-mac-syscall (mac-policy-name "vnguard"))
+
+; Determine whether a container is expected.
+(allow system-mac-syscall
+  (require-all
+    (mac-policy-name "Sandbox")
+    (mac-syscall-number 67)))
+
+; Allow processes to get their current working directory.
+(allow file-read* file-test-existence
+  (literal "/"))
+
+; Allow FSIOC_CAS_BSDFLAGS as alternate chflags.
+(allow system-fsctl (fsctl-command FSIOC_CAS_BSDFLAGS))
+
+; Standard special files.
+(allow file-read* file-test-existence
+  (literal "/dev/autofs_nowait")
+  (literal "/dev/random")
+  (literal "/dev/urandom")
+  (literal "/private/etc/passwd")
+  (literal "/private/etc/protocols")
+  (literal "/private/etc/services"))
+
+; Null/zero read/write.
+(allow file-read* file-test-existence file-write-data
+  (literal "/dev/null")
+  (literal "/dev/zero"))
+
+; Read/write access to the file descriptors.
+(allow file-read-data file-test-existence file-write-data
+  (subpath "/dev/fd"))
+
+; Debugger helpers.
+(allow file-read* file-test-existence file-write-data file-ioctl
+  (literal "/dev/dtracehelper"))
+
+(allow file-read* file-test-existence
+  (literal "/System/Library/CoreServices")
+  (literal "/System/Library/CoreServices/.SystemVersionPlatform.plist")
+  (literal "/System/Library/CoreServices/SystemVersion.plist"))
+
+; IOKit access for root domain services.
+(allow iokit-open
+  (iokit-registry-entry-class "RootDomainUserClient"))
+
+; Allow IPC to logging, trust, and other system agents.
+(allow mach-lookup
+  (global-name "com.apple.analyticsd")
+  (global-name "com.apple.analyticsd.messagetracer")
+  (global-name "com.apple.appsleep")
+  (global-name "com.apple.bsd.dirhelper")
+  (global-name "com.apple.diagnosticd")
+  (global-name "com.apple.dt.automationmode.reader")
+  (global-name "com.apple.espd")
+  (global-name "com.apple.logd")
+  (global-name "com.apple.logd.events")
+  (global-name "com.apple.secinitd")
+  (global-name "com.apple.system.DirectoryService.libinfo_v1")
+  (global-name "com.apple.system.logger")
+  (global-name "com.apple.system.notification_center")
+  (global-name "com.apple.system.opendirectoryd.membership")
+  (global-name "com.apple.trustd")
+  (global-name "com.apple.trustd.agent")
+  (global-name "com.apple.xpc.activity.unmanaged"))
+
+; IPC to the syslog socket for logging.
+(allow network-outbound (literal "/private/var/run/syslog"))
+
+; macOS Notifications
+(allow ipc-posix-shm-read*
+  (ipc-posix-name "apple.shm.notification_center"))
+
+; Regulatory domain support.
+(allow file-read*
+  (literal "/private/var/db/eligibilityd/eligibility.plist"))
+
+; The minimum system runtime so exec works.
+(allow file-read-data (subpath "/bin"))
+(allow file-read-data (subpath "/sbin"))
+(allow file-read-data (subpath "/usr/bin"))
+(allow file-read-data (subpath "/usr/sbin"))
+(allow file-read-data (subpath "/usr/libexec"))
+(allow file-map-executable (subpath "/bin") (subpath "/sbin") (subpath "/usr/bin") (subpath "/usr/sbin") (subpath "/usr/libexec"))
+
+; Terminal basics for the standard descriptors.
+(allow file-read* (regex "^/dev/fd/(0|1|2)$"))
+(allow file-write* (regex "^/dev/fd/(1|2)$"))
+(allow file-read* file-write* (literal "/dev/null"))

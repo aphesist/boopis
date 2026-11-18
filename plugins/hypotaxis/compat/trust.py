@@ -45,7 +45,7 @@ _FENCE_BANG = re.compile(r"^[ \t]*```!\s*\n(.*?)^[ \t]*```", re.MULTILINE | re.D
 
 def canonical_hash(value: Any) -> str:
     """SHA-256 of the canonical JSON of ``value``. The canonical form is contraprova's, never a copy."""
-    from contraprova.events import canonical_json
+    from .._vendor.contraprova.events import canonical_json
 
     return hashlib.sha256(canonical_json(value).encode("utf-8")).hexdigest()
 

@@ -294,6 +294,10 @@ PROTECTED: list[tuple[str, str, bool]] = [
     ("write_file", ".git/config", True),
     ("write_file", ".hermes/hypotaxis.yaml", True),
     ("patch", "sub/id_ed25519", True),
+    ("write_file", ".ENV", True),  # protected paths match case-insensitively, as in hx-txn
+    ("write_file", "tests/test_a.py", True),
+    ("write_file", "pkg/test_x.py", True),
+    ("write_file", "web/__tests__/a.ts", True),
     ("write_file", "src/main.py", False),
     ("write_file", "environment.md", False),
 ]

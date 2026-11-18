@@ -1,0 +1,311 @@
+/* hypotaxis v6 · cards: the card layer of the shared library (owner: cards agent; HX.ui.card points here)
+   Load after components/components.css. Shared parts are the library's and are not re-styled here: buttons
+   (.ui-btn), the hold to approve (.ui-hold), stamps (.ui-stamp), dots (.ui-dot), code chips (.ui-code), orbs
+   (.ui-orb), the ladder (.ui-ladder), page dots (.ui-pages), the blank mark (.ui-blank), screen-reader text (.ui-sr)
+   and the dock ground ([data-ground="dock"]). What is left is the card itself: its surface, regions, wells, the
+   file table, the foot and receipts, the one-row size, the blank's options, the escalation rule, the schedule,
+   the queue. Every colour, font, size and radius is a token from tokens.css.
+   Cards animate their height when their state changes (owner decision: the conversation must not jump). */
+
+/* ------------------------------------------------------------------ grounds
+   The card is one step off whatever it sits on; its inner well shows the ground again. */
+hx-card, .cd-queue {
+  --cd-surface: var(--bg-0);   /* on the ground (the conversation) */
+  --cd-well: var(--bg-2);
+}
+hx-card[data-ground="chrome"], .cd-queue[data-ground="chrome"] { --cd-surface: var(--bg-0); --cd-well: var(--bg-1); }
+/* in the dock the library's [data-ground="dock"] re-derives every role; the card takes the dock's --surface */
+hx-card[data-ground="dock"], .cd-queue[data-ground="dock"] { --cd-surface: var(--surface); --cd-well: var(--dock-bg); }
+
+/* ------------------------------------------------------------------ base */
+
+hx-card {
+  display: block;
+  position: relative;
+  box-sizing: border-box;
+  font-family: var(--sans);
+  font-size: var(--fs-s);
+  font-weight: 400;
+  line-height: var(--lh);
+  letter-spacing: var(--track);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  text-align: left;
+}
+hx-card *, hx-card *::before, hx-card *::after { box-sizing: border-box; }
+hx-card ::selection { background: var(--brass-soft); color: var(--text-strong); }
+hx-card p, hx-card ol { margin: 0; padding: 0; }
+/* interface labels follow the interface case; content (quotes, the agent's words, data, code) never does */
+.cd-lead, .cd-text, .cd-note, .cd-meta, .cd-receipt, .cd-week b, .cd-mini__meta, .cd-queue__done, .cd-file--more,
+.cd-free input::placeholder { text-transform: var(--ui-case); }
+.cd-mono, .cd-quote, .cd-well, .cd-opt, .cd-free input, .cd-files, .cd-out, .cd-raw, hx-card .ui-code { text-transform: none; }
+
+/* a card is a nesting container (DESIGN-SYSTEM.md §8): its radius is --r-card where a context sets one (the dock's
+   wait view, under the slab's corner), else --r-m; what sits in its corners takes --r-in. The padding is one value
+   (--pad) so the gap is equal on both sides of every corner. */
+hx-card[data-size="inline"],
+hx-card[data-size="compact"],
+hx-card[data-size="popover"] {
+  --r-outer: var(--r-card, var(--r-m));
+  --pad: var(--sp-4);
+  --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad)));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  column-gap: var(--sp-3);
+  background: var(--cd-surface);
+  border-radius: var(--r-outer);
+  padding: var(--pad);
+}
+/* the inner blocks fit the card: the well, the buttons and chips, the stamp, the connector tile, the option rows.
+   Where a card is not a container (a one-row mini, the blank in its sentence, the escalation rule) --r-in is unset
+   and each piece keeps its own step. */
+hx-card[data-kind="blank"][data-size="inline"], hx-card[data-kind="escalation"][data-size="inline"] { --r-in: initial; }
+hx-card .cd-well, hx-card .cd-foot .ui-btn, hx-card .cd-rule .ui-btn, hx-card .cd-opt, hx-card .cd-free { border-radius: var(--r-in, var(--r-s)); }
+hx-card .ui-code, hx-card .ui-stamp, hx-card .cd-tile { border-radius: var(--r-in, var(--r-xs)); }
+hx-card[data-size="inline"] { width: min(100%, 520px); --cd-orb: 24px; }
+hx-card[data-size="compact"] { width: 100%; max-width: 360px; --cd-orb: 20px; }
+hx-card[data-side] { grid-template-columns: var(--cd-orb) minmax(0, 1fr); }
+
+.cd-side { display: flex; justify-content: center; align-items: flex-start; min-width: 0; padding-top: 1px; }
+.cd-side:empty { display: none; }
+.cd-main { position: relative; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-3); }
+.cd-main > [data-r]:empty { display: none; }
+.cd-main > [data-r="body"] { display: flex; flex-direction: column; gap: var(--sp-2); }
+.cd-ghost { z-index: 0; }
+
+/* ------------------------------------------------------------------ text */
+
+.cd-headrow { display: flex; align-items: flex-start; gap: var(--sp-3); }
+.cd-lead {
+  flex: 1 1 auto; min-width: 0;
+  font-size: var(--fs-m); font-weight: 600; line-height: var(--lh-ui);
+  color: var(--text-strong); text-wrap: pretty;
+  padding-top: 2px;
+  transition: color var(--dur-2) var(--ease);
+}
+.cd-quote { margin-top: var(--sp-1); color: var(--text-dim); text-wrap: pretty; }
+.cd-text { color: var(--text); text-wrap: pretty; }
+.cd-note { color: var(--text-quiet); font-size: var(--fs-xs); line-height: var(--lh); text-wrap: pretty; }
+.cd-dim { color: var(--text-dim); }
+.cd-mono { font-family: var(--mono); letter-spacing: var(--track-mono); font-weight: 400; }
+.cd-lead .cd-mono { font-size: var(--fs-s); font-weight: 500; }
+hx-card[data-size="compact"] .cd-quote {
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* decided cards recede: the title and the well's first line step back to dim (still AA) */
+hx-card[data-resolved] .cd-lead,
+hx-card[data-resolved] .cd-well__strong { color: var(--text-dim); }
+
+/* a phrase that explains itself on click: a dotted underline, as in the composer */
+.cd-token {
+  appearance: none; border: 0; background: none; padding: 0; margin: 0;
+  font: inherit; color: inherit; letter-spacing: inherit; cursor: pointer;
+  text-decoration: underline dotted; text-decoration-color: var(--text-quiet);
+  text-underline-offset: 4px; text-decoration-thickness: 1px;
+  border-radius: var(--r-xs);
+  transition: text-decoration-color var(--dur-out) var(--ease);
+}
+.cd-token:hover { text-decoration-color: var(--text); transition-duration: var(--dur-1); }
+.cd-token[aria-expanded="true"] { text-decoration-style: solid; text-decoration-color: var(--text); }
+
+/* ------------------------------------------------------------------ wells */
+
+.cd-well {
+  background: var(--cd-well);
+  border-radius: var(--r-s);
+  padding: var(--sp-2) var(--sp-3);
+  line-height: var(--lh);
+  color: var(--text-dim);
+  min-width: 0;
+}
+.cd-well__strong { color: var(--text); transition: color var(--dur-2) var(--ease); }
+.cd-well__line { display: flex; flex-wrap: wrap; column-gap: var(--sp-3); min-width: 0; }
+.cd-well__line > span { min-width: 0; overflow-wrap: anywhere; }
+.cd-well__line--first > span { font-family: var(--mono); font-size: var(--fs-xs); letter-spacing: var(--track-mono); }
+.cd-out { font-family: var(--mono); font-size: var(--fs-2xs); line-height: 1.6; letter-spacing: var(--track-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.cd-out__hit { color: var(--text); }
+
+/* ship: the changed files */
+.cd-files {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; column-gap: var(--sp-3);
+  font-family: var(--mono); font-size: var(--fs-xs); letter-spacing: var(--track-mono);
+}
+.cd-file { display: contents; }
+.cd-file > span { line-height: 22px; }
+.cd-file__path { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cd-file__dir { color: var(--text-quiet); }
+.cd-file__n { text-align: right; color: var(--text); }
+.cd-file__n--del { color: var(--text-dim); }
+.cd-file--more > span { color: var(--text-quiet); font-family: var(--sans); }
+hx-card[data-resolved] .cd-file__path,
+hx-card[data-resolved] .cd-file__n { color: var(--text-dim); }
+/* diffstat: five dots per file, added filled, removed hollow */
+.cd-diffdots { display: inline-flex; gap: var(--sp-1); align-items: center; flex: none; }
+.cd-diffdots i, .cd-week i { display: block; width: 5px; height: 5px; border-radius: var(--r-pill); corner-shape: round; flex: none; }
+.cd-diffdots i { background: var(--bg-3); }
+.cd-diffdots i[data-d="add"] { background: var(--text); }
+.cd-diffdots i[data-d="del"] { background: transparent; box-shadow: inset 0 0 0 1px var(--text-dim); }
+hx-card[data-size="compact"] .cd-files { grid-template-columns: minmax(0, 1fr) auto auto; }
+hx-card[data-size="compact"] .cd-files .cd-diffdots { display: none; }
+
+/* ------------------------------------------------------------------ foot: the decision, or its receipt */
+
+.cd-foot {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-3);
+  min-height: var(--ctl);
+}
+.cd-meta {
+  display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-1) var(--sp-3);
+  color: var(--text-quiet); min-width: 0;
+  font-family: var(--mono); font-size: var(--fs-2xs); line-height: 1.45; letter-spacing: var(--track-mono);
+}
+.cd-actions { display: flex; align-items: center; gap: var(--sp-2); margin-left: auto; }
+.cd-receipt { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--ctl); color: var(--text-dim); }
+.cd-receipt .cd-mono { font-size: var(--fs-xs); }
+.cd-ico { width: 12px; height: 12px; flex: none; color: var(--text); }
+
+/* ------------------------------------------------------------------ side: orb, tile */
+
+.cd-side .ui-orb { align-self: flex-start; }
+.cd-tile {
+  display: grid; place-items: center; flex: none;
+  width: var(--cd-orb); height: var(--cd-orb); border-radius: var(--r-xs);
+  background: var(--bg-3); color: var(--text);
+  font-family: var(--sans); font-size: var(--fs-xs); font-weight: 600; line-height: 1;
+}
+
+/* ------------------------------------------------------------------ mini: one row */
+
+hx-card[data-size="mini"] { width: 100%; max-width: 360px; }
+.cd-mini {
+  appearance: none; border: 0; margin: 0;
+  display: flex; align-items: center; gap: var(--sp-2);
+  width: 100%; height: var(--row-h); padding: 0 var(--sp-3);
+  border-radius: var(--r-card, var(--r-s));
+  background: var(--cd-surface); color: var(--text);
+  font-family: var(--sans); font-size: var(--fs-s); line-height: var(--lh-ui); letter-spacing: var(--track);
+  text-align: left; cursor: pointer;
+  transition: background-color var(--dur-out) var(--ease);
+}
+.cd-mini:hover { background: var(--bg-3); transition-duration: var(--dur-1); }
+.cd-mini__text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cd-mini__meta { flex: none; color: var(--text-quiet); font-family: var(--mono); font-size: var(--fs-2xs); letter-spacing: var(--track-mono); display: inline-flex; align-items: center; gap: var(--sp-2); }
+.cd-mini .cd-tile { --cd-orb: 16px; font-size: var(--fs-2xs); }
+.cd-mini .cd-mono { font-size: var(--fs-xs); }
+hx-card[data-size="mini"][data-resolved] .cd-mini__text { color: var(--text-dim); }
+
+/* ------------------------------------------------------------------ blank: in the sentence (the library's mark) */
+
+hx-card[data-kind="blank"][data-size="inline"] {
+  display: inline; background: none; padding: 0; border-radius: 0; width: auto;
+  font: inherit; line-height: inherit; letter-spacing: inherit;
+}
+
+/* the expanded blank: drawn in place (a side panel, a specimen) or, opened from the gap, in the library's layer */
+hx-card[data-size="popover"] {
+  width: 360px; max-width: calc(100vw - 24px);
+  --cd-surface: var(--bg-1);
+  --cd-well: var(--bg-0);
+  --pad: var(--sp-3);
+  box-shadow: inset 0 0 0 1px var(--line), var(--shadow-pop);
+}
+hx-card[data-size="popover"] .cd-lead { font-size: var(--fs-s); padding: 2px 6px 0; }
+hx-card[data-size="popover"][data-layer] {
+  position: fixed; z-index: var(--z-menu);
+  opacity: 0; translate: 0 -6px;
+  transition: opacity var(--dur-2) var(--ease), translate var(--dur-2) var(--ease);
+}
+hx-card[data-size="popover"][data-layer][data-place="above"] { translate: 0 6px; }
+hx-card[data-size="popover"][data-layer].is-in { opacity: 1; translate: 0 0; }
+.cd-opts { display: flex; flex-direction: column; gap: 2px; margin: 0 calc(-1 * var(--sp-1)); }
+hx-card[data-size="compact"] .cd-opts { margin: 0 calc(-1 * var(--sp-2)); }
+/* option rows are radio rows with the menu item's look: 30px, radius 6; focus = --current + inset ring; chosen = brass */
+.cd-opt {
+  appearance: none; border: 0; margin: 0;
+  display: flex; align-items: center; gap: var(--sp-3);
+  min-height: var(--row-h); padding: 5px 10px; border-radius: var(--r-s);
+  background: transparent; color: var(--text);
+  font-family: var(--sans); font-size: var(--fs-s); line-height: var(--lh-ui); letter-spacing: var(--track); text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur-out) var(--ease);
+}
+.cd-opt:hover { background: var(--hover); transition-duration: var(--dur-1); }
+.cd-opt:focus-visible { background: var(--current); outline: none; box-shadow: inset 0 0 0 2px var(--focus); }
+.cd-opt__ring {
+  width: 6px; height: 6px; border-radius: var(--r-pill); corner-shape: round; flex: none;
+  box-shadow: inset 0 0 0 1px var(--mark-off);
+}
+.cd-opt[aria-checked="true"] { color: var(--text-strong); }
+.cd-opt[aria-checked="true"] .cd-opt__ring { background: var(--brass); box-shadow: none; }
+.cd-opt__key { margin-left: auto; color: var(--text-dim); font-family: var(--mono); font-size: var(--fs-2xs); }
+/* the free answer is a field: radius 6, drawer on frame, the field line (3:1), the ring on the field */
+.cd-free {
+  display: flex; align-items: center; gap: var(--sp-3);
+  min-height: var(--ctl); padding: 0 10px; margin: var(--sp-1) 0 0;
+  border-radius: var(--r-s); background: var(--cd-well);
+  box-shadow: inset 0 0 0 1px var(--line-field);
+}
+.cd-free:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+.cd-free[data-on] .cd-opt__ring { background: var(--brass); box-shadow: none; }
+.cd-free input {
+  flex: 1; min-width: 0; height: calc(var(--ctl) - 2px); border: 0; padding: 0; background: none;
+  font-family: var(--sans); font-size: var(--fs-s); color: var(--text); letter-spacing: var(--track); caret-color: var(--brass);
+}
+.cd-free input::placeholder { color: var(--text-quiet); }
+.cd-free input:focus, .cd-free input:focus-visible { outline: none; }
+
+/* ------------------------------------------------------------------ escalation: a rule across the answer */
+
+hx-card[data-kind="escalation"][data-size="inline"] { display: block; background: none; padding: 0; border-radius: 0; }
+.cd-rule {
+  display: flex; align-items: center; gap: var(--sp-3);
+  min-height: var(--ctl);
+  font-size: var(--fs-xs); line-height: var(--lh-ui); color: var(--text-quiet);
+}
+.cd-rule__what { color: var(--text); white-space: nowrap; display: inline-flex; align-items: center; gap: var(--sp-2); text-transform: var(--ui-case); }
+.cd-rule__what .cd-mono { font-size: var(--fs-xs); }
+.cd-rule__why { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cd-rule__line { flex: 1 1 24px; height: 1px; background: var(--hair); min-width: 24px; }
+.cd-rule__meta { white-space: nowrap; font-family: var(--mono); font-size: var(--fs-2xs); letter-spacing: var(--track-mono); }
+.cd-rule .cd-actions { margin-left: 0; }
+
+/* ------------------------------------------------------------------ schedule */
+
+.cd-sched { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2) var(--sp-5); }
+.cd-week { display: grid; grid-template-columns: repeat(7, 16px); row-gap: var(--sp-1); justify-items: center; }
+.cd-week b { font-weight: 500; font-size: var(--fs-xs); line-height: var(--lh-ui); color: var(--text-quiet); }
+.cd-week i { background: transparent; box-shadow: inset 0 0 0 1px var(--mark-off); }
+.cd-week i[data-on] { background: var(--text); box-shadow: none; }
+.cd-sched__when { display: flex; flex-direction: column; gap: 2px; min-width: 0; line-height: var(--lh-ui); }
+.cd-sched__time { color: var(--text-strong); display: flex; align-items: center; gap: var(--sp-3); font-family: var(--mono); font-size: var(--fs-s); letter-spacing: var(--track-mono); }
+.cd-sched__when .cd-dim { font-size: var(--fs-xs); }
+
+/* ------------------------------------------------------------------ queue: the next card peeks */
+
+.cd-queue { position: relative; width: 100%; max-width: 360px; }
+.cd-queue[data-size="inline"] { max-width: 520px; }
+.cd-queue__stage { position: relative; padding-bottom: var(--cd-peek, 0px); }
+.cd-queue__stage > hx-card { position: relative; z-index: 3; }
+.cd-queue__peek {
+  position: absolute; left: var(--sp-3); right: var(--sp-3); bottom: calc(var(--cd-peek, 0px) - 7px); height: 40px; z-index: 2;
+  background: var(--cd-surface); border-radius: 0 0 var(--r-card, var(--r-m)) var(--r-card, var(--r-m));
+  box-shadow: inset 0 -1px 0 var(--hair);
+  opacity: .9;
+  transition: opacity var(--dur-2) var(--ease), transform var(--dur-3) var(--spring);
+}
+.cd-queue__peek + .cd-queue__peek { left: var(--sp-5); right: var(--sp-5); bottom: 0; z-index: 1; opacity: .55; }
+.cd-queue__peek[hidden] { display: block; opacity: 0; transform: translateY(-7px); }
+.cd-queue__done {
+  display: flex; align-items: center; gap: var(--sp-2);
+  min-height: var(--row-h); padding: 5px var(--sp-3); border-radius: var(--r-s);
+  background: var(--cd-surface); color: var(--text-dim);
+  font-family: var(--sans); font-size: var(--fs-s); line-height: var(--lh-ui);
+}
+
+/* ------------------------------------------------------------------ motion preferences */
+
+@media (prefers-reduced-motion: reduce) {
+  hx-card *, .cd-queue * { transition-duration: 1ms !important; }
+}

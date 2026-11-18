@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from . import policy
+from . import hx, policy
 from .config import (
     Loaded,
     Mode,
@@ -25,9 +25,10 @@ from .config import (
     load_project,
     load_settings,
 )
-from .errors import ModeLockedError
+from .errors import ModeLockedError, PricesError
 from .hermes_api import PluginCtx, hermes_home, hermes_version
-from .ledger import SessionLedger, build_table, ledger_filename, project_costs, usage_records
+from .hx import HxClient
+from .ledger import PriceBook, SessionLedger, build_book, ledger_filename, load_catalogue, project_costs, usage_records
 from .ledger.store import LedgerEvent
 from .policy import SessionPolicy
 from .util.log import get_logger
@@ -47,12 +48,13 @@ class SessionState:
     profile: str = ""
     ladder: Mapping[str, Any] | None = None  # from mode.set; overrides the settings' ladder
     gate_enabled: bool | None = None  # from mode.set
+    allowed: tuple[str, ...] | None = None  # the lane or brief scope, set by dispatch; None means unrestricted
     settings: Settings = field(default_factory=default_settings)
     config_errors: tuple[str, ...] = ()
     project: ProjectConfig | None = None
     policy: SessionPolicy | None = None
     ledger: SessionLedger | None = None
-    price_table: Any = None
+    book: PriceBook | None = None
     spend_usd: float = 0.0
     unpriced: set[str] = field(default_factory=set)
     blocked_calls: dict[str, str] = field(default_factory=dict)  # tool_call_id -> error code we set
@@ -83,6 +85,38 @@ class Runtime:
     def load_settings(self) -> Loaded:
         return load_settings(self.ctx.get_config)
 
+    def price_book(self, settings: Settings) -> PriceBook:
+        """The catalogue (cached file) with the settings' overrides over it. A cached file that is not a
+        valid catalogue is logged and left out: models then read as unpriced, never as free."""
+        try:
+            catalogue = load_catalogue(self.home)
+        except PricesError:
+            _log.error("the cached price catalogue is unusable; pricing from overrides only", exc_info=True)
+            catalogue = None
+        return build_book(settings, catalogue)
+
+    def hx_client(self) -> HxClient | None:
+        """The process's warm hx, None when no binary can be found."""
+        settings = self.load_settings().value
+        return hx.get_client(settings.hx_path, self.home / "logs" / "hypotaxis" / "hx.log")
+
+    def recover_journals(self) -> None:
+        """``txn.recover`` for this profile's journal directories, once, at plugin start. Starts hx only when
+        there is a journal to look at. Each rolled-back ship is written to its session's ledger."""
+        from .ship.recover import journals_root, recover_all
+
+        if not journals_root(self.home).is_dir():
+            return
+        client = self.hx_client()
+        if client is None:
+            _log.warning("journals exist but hx was not found; they stay until it is available")
+            return
+
+        def ledger_for(stem: str) -> SessionLedger:
+            return SessionLedger(self.ledger_path(stem))
+
+        recover_all(client, self.home, ledger_for)
+
     def ledger_path(self, session_id: str, settings: Settings | None = None) -> Path:
         configured = (settings or self.load_settings().value).ledger_dir
         base = Path(configured) if configured else self.home / "hypotaxis" / "ledger"
@@ -100,6 +134,15 @@ class Runtime:
                 self._recover(found)
                 self._sessions[session_id] = found
             return found
+
+    def cwd_of(self, session_id: str) -> str:
+        """The session's working directory, empty until its first prompt.
+
+        Hermes only tells a plugin where a session works at its first prompt (the prompt section's
+        ``info``) and inside its turns. ``ctx.session_cwd()`` called from an RPC or from
+        ``on_session_open`` answers the profile's terminal directory instead (verified on v0.23.2), so
+        nothing records a cwd from there: unknown stays unknown."""
+        return self.state(session_id).cwd
 
     def forget(self, session_id: str) -> SessionState | None:
         with self._registry_lock:
@@ -168,7 +211,7 @@ class Runtime:
                 self._fill(state, model, provider)
                 return state
             state.locked = True
-            state.cwd = cwd or state.cwd or self._session_cwd()
+            state.cwd = cwd or state.cwd or self._session_cwd()  # the section's info is authoritative
             state.profile = profile or state.profile
             self._fill(state, model, provider)
             loaded = self.load_settings()
@@ -176,7 +219,7 @@ class Runtime:
             # a recovered session keeps its recorded mode even if the default setting changed
             project = load_project(state.cwd, self.home) if state.cwd else None
             state.project = project
-            state.price_table = build_table(state.settings)
+            state.book = self.price_book(state.settings)
             state.policy = self._build_policy(state)
             self._bootstrap_spend(state)
             self._write_opened(state)
@@ -229,7 +272,7 @@ class Runtime:
         except Exception:  # noqa: BLE001
             return
         if records:
-            costs = project_costs(records, state.price_table, state.settings.subscription_providers)
+            costs = project_costs(records, self.price_book(state.settings), state.settings.subscription_providers)
             state.spend_usd = costs.billed_usd or 0.0
             state.unpriced.update(costs.billed_unpriced)
 
@@ -243,7 +286,7 @@ class Runtime:
             "hermes_version": hermes_version(),
             "plugin_version": PLUGIN_VERSION,
             "profile": state.profile,
-            "price_table": state.price_table.version,
+            "price_table": self.price_book(state.settings).version,
         }
         ladder = state.ladder if state.ladder is not None else settings.ladder
         if ladder is not None:

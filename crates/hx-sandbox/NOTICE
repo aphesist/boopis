@@ -1,0 +1,36 @@
+hx-sandbox
+Part of hypotaxis.
+
+This crate contains material derived from OpenAI Codex
+(https://github.com/openai/codex, commit fecf5cc672538029b3b1adc00204a78e416a19a3),
+Copyright 2025 OpenAI, licensed under the Apache License, Version 2.0. The licence text is in
+LICENSE-APACHE. Each derived file carries a header that says what was taken and what changed.
+
+Derived files:
+
+  src/platform/linux/seccomp.rs
+    From codex-rs/linux-sandbox/src/seccomp.rs. Taken: the deny-list approach to
+    socket()/socketpair() domains, the x32 syscall-number aliases on x86_64, and the list of
+    syscalls that get around socket-family rules or the sandbox (io_uring, ptrace,
+    process_vm_*). Changed: the filter is built from a three-mode enum (off, loopback, open)
+    instead of Codex's proxy-routing modes; Unix socket path access (connect, bind, listen,
+    datagram sockets) is closed when the network is off; the always-denied list is larger;
+    the code is rewritten against this crate's types.
+
+  src/seatbelt/base.sbpl
+    From codex-rs/sandboxing/src/seatbelt_base_policy.sbpl. Changed: removed the
+    pseudo-terminal rules and the PyTorch/OpenMP shared-memory rule.
+
+  src/seatbelt/platform.sbpl
+    From codex-rs/sandboxing/src/seatbelt_read_only_platform_defaults.sbpl. Changed: dropped
+    the broad reads of /etc, /Library/Preferences, /opt/homebrew/lib and /usr/local/lib,
+    the master.passwd literal, terminal rules and app-sandbox extension rules; added
+    file-read-metadata.
+
+  src/seatbelt/network_on.sbpl
+    From codex-rs/sandboxing/src/seatbelt_network_policy.sbpl. Changed: added the
+    (allow network*) rule itself and dropped the proxy hooks.
+
+Studied but not copied: the Windows sandbox (codex-rs/windows-sandbox-rs) and the Linux
+bubblewrap launcher. The Windows backend here is written from the Win32 documentation around
+AppContainer and job objects; see the README for why it differs from Codex's.

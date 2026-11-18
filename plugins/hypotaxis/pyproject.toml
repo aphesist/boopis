@@ -10,12 +10,12 @@
 [tool.ruff]
 line-length = 120
 target-version = "py311"
-extend-exclude = ["tests/fixtures"]
+extend-exclude = ["tests/fixtures", "_vendor", "hx/types.py"]  # types.py is generated, byte for byte
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "C4", "SIM", "RUF", "PL", "BLE", "S"]
 ignore = [
-  "PLR0911", "PLR0912", "PLR0913", "PLR0915", "PLR2004",  # shape rules the 60-line soft limit already covers
+  "PLR0911", "PLR0912", "PLR0913", "PLR0915", "PLR0917", "PLR2004",  # shape rules the 60-line soft limit already covers
   "S101",                                                   # assert in tests
   "PLC0415",                                                # lazy imports are the rule here (STANDARDS section 8)
   "RUF012",
@@ -24,12 +24,13 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "prompt.py" = ["E501"]  # prose, one paragraph per line
-"tests/**" = ["S", "PLR", "BLE001"]
+"tests/**" = ["S", "PLR", "BLE001", "E501", "PLW1510", "RUF059"]
 "../../tests/e2e/**" = ["S", "PLR", "BLE001"]
 
 [tool.pyright]
 include = ["."]
 exclude = ["tests", "**/__pycache__"]
+ignore = ["_vendor"]  # exact copies of upstream code: not ours to type-check
 pythonVersion = "3.11"
 typeCheckingMode = "strict"
 reportMissingTypeStubs = false
