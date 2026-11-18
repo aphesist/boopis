@@ -43,6 +43,7 @@ from .trust import Trust, import_item
 
 _log = get_logger("compat.scan")
 TOOL = "claude"
+CLAUDE_JSON_LIMIT = 64 * 1024 * 1024
 
 
 def find_git_root(start: Path) -> Path | None:
@@ -293,7 +294,7 @@ class _Scan:
             self.diags.extend(diags)
         claude_json = env.user_home / ".claude.json"
         self.watch(claude_json)
-        raw, _text, diags = parse_json(claude_json)
+        raw, _text, diags = parse_json(claude_json, limit=CLAUDE_JSON_LIMIT)  # it holds every project's history
         self.diags.extend(diags)
         if raw is not None:
             user, d1 = parse_servers(raw.get("mcpServers"), self.source("user", claude_json), str(claude_json))

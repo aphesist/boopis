@@ -9,6 +9,7 @@ The hypotaxis Hermes plugin (Python, stdlib only at runtime). It adds governance
 | `__init__.py` | thin `register(ctx)`: lazy wrappers only, so import stays far under 150 ms |
 | `hooks.py` | the Hermes hook callbacks. Policy hooks fail closed, observers never raise |
 | `session.py` | `Runtime` and `SessionState`: the lock at first prompt, `session.opened`, spend |
+| `compat/` | Claude Code files and hooks on Hermes (readers, merge, trust, hooks bridge, inventory RPC). Area guide: `compat/AGENTS.md` |
 | `config/` | settings and trust-gated project settings, validated against `config/schemas/*.json` |
 | `policy/` | `check(call, session) -> Decision`, the one permission function. Data in `policy/defaults.json` |
 | `ledger/` | `SessionLedger` over contraprova's `EventLog`; usage mapping; prices; stats |

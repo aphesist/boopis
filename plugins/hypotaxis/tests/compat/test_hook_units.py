@@ -132,6 +132,12 @@ def test_a_rewrite_that_cannot_be_applied_is_a_problem_so_the_call_is_blocked(to
     assert out.patch == {}
 
 
+def test_updated_input_replaces_the_object_so_an_omitted_key_is_noted_not_removed() -> None:
+    out = update("terminal", {"command": "ls", "timeout": 5}, {"command": "ls -la"})
+    assert out.patch == {"command": "ls -la"}
+    assert "left out 'timeout'" in out.notes[0]  # Hermes merges a patch and cannot remove an argument
+
+
 def test_unchanged_updated_input_is_a_noop() -> None:
     calls = claude_calls("terminal", {"command": "ls"}, cwd=CWD)
     assert apply_updated_input("terminal", {"command": "ls"}, calls, calls[0].tool_input, cwd=CWD).patch == {}

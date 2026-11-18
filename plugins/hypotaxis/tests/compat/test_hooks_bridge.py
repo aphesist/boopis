@@ -686,3 +686,38 @@ def test_the_exec_kernel_entry_point_runs_the_same_hooks(write: Write, env: Any,
         "post", "s1", "terminal", {"command": "ls"}, tool_call_id="k1", result="out", status="ok"
     )
     assert isinstance(out, str) and out.endswith("seen")
+
+
+# ---------------------------------------------------------------- details that were bugs once
+
+
+def test_a_compound_command_matches_an_if_rule_when_any_part_matches(
+    write: Write, env: Any, ctx: RecordingCtx, project: Path
+) -> None:
+    marker = project / "commit-hook-ran"
+    setup(write, env, {"PreToolUse": [{"matcher": "Bash", "if": "Bash(git commit*)", "command": f"touch {marker}"}]})
+    make_bridge(ctx, env).pre_tool_call(tool_name="terminal", args={"command": "git add . && git commit -m x"}, **PRE)
+    assert marker.exists()  # a guard must not miss the part it guards
+
+
+def test_session_open_and_reset_do_not_build_a_snapshot_because_they_carry_no_cwd(
+    write: Write, env: Any, ctx: RecordingCtx
+) -> None:
+    from hypotaxis.compat.hooks.bridge import Bridge
+
+    built: list[str] = []
+
+    def factory(session_id: str, cwd: str, home: Path) -> Any:
+        from hypotaxis.compat.snapshot import build
+
+        built.append(cwd)
+        return build(session_id, cwd, home, env)
+
+    setup(write, env, {"SessionStart": [{"command": "echo noted"}]})
+    bridge = Bridge(ctx, home=env.home, factory=factory, cwd_of=lambda _s: str(env.cwd))
+    bridge.on_session_open(session_id="s1", reason="resume")
+    bridge.on_session_reset(session_id="s2")
+    assert built == []  # a snapshot built here would scan whatever directory the gateway happened to be in
+    assert bridge.pre_llm_call(session_id="s1", user_message="x", is_first_turn=False) == {"context": "noted"}
+    assert built == [str(env.cwd)]
+    assert bridge.pre_llm_call(session_id="s2", user_message="x", is_first_turn=True) == {"context": "noted"}  # clear

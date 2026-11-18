@@ -273,15 +273,22 @@ def apply_updated_input(
         return Update(problem=f"it rewrote the input of {tool}, which maps to {len(calls)} calls")
     original = calls[0].tool_input
     changed = {k: v for k, v in updated.items() if original.get(k) != v}
+    # Claude Code's updatedInput replaces the whole object, so a key it omits is removed. Hermes merges a patch over the
+    # original arguments and cannot remove one: the original value stays, and the notes say so.
+    removed = tuple(
+        f"updatedInput left out {k!r}; Hermes cannot remove an argument, so the original value stays"
+        for k in original
+        if k not in updated
+    )
     if not changed:
-        return Update()
+        return Update(notes=removed)
     if tool == "ship":
         return _ship_update(args, calls[0], changed, cwd)
     default = table("tool_aliases")["hermes_default"].get(tool)
     if default is None:
         if tool in ("pack", "dispatch", "web_extract", "delegate_task", "search_files"):
             return Update(problem=f"it rewrote the input of {tool}, which cannot be mapped back")
-        return Update(patch=dict(changed))  # an unaliased tool keeps its own argument names
+        return Update(patch=dict(changed), notes=removed)  # an unaliased tool keeps its own argument names
     inverse = {claude: hermes for hermes, claude in default["fields"].items()}
     scale = default.get("scale", {})
     known = {*args, *default["fields"], *scale}  # names Hermes has for this tool
@@ -296,7 +303,7 @@ def apply_updated_input(
         if name in scale and isinstance(raw, (int, float)) and not isinstance(raw, bool):
             value = max(int(-(-raw // scale[name])), 1)  # milliseconds back to whole seconds, rounded up
         patch[name] = value
-    return Update(patch=patch, notes=tuple(notes))
+    return Update(patch=patch, notes=(*removed, *notes))
 
 
 def _ship_update(args: Mapping[str, Any], call: ClaudeCall, changed: dict[str, Any], cwd: str) -> Update:

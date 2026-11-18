@@ -47,6 +47,7 @@ class SessionEvents(Core):
     # ------------------------------------------------------------------ session start
 
     def on_session_start(self, session_id: str = "", model: str = "", **_: Any) -> None:
+        """Fires while Hermes builds the system prompt, in the agent's own thread, so the session's cwd is known."""
         try:
             self.snapshot(session_id).model = model
         except Exception:  # noqa: BLE001
@@ -55,20 +56,15 @@ class SessionEvents(Core):
     def on_session_open(self, session_id: str = "", reason: str = "", **_: Any) -> None:
         try:
             if reason == "resume":
-                self._note(session_id, "resume")
+                self.note_source(session_id, "resume")
         except Exception:  # noqa: BLE001
             _log.error("compat on_session_open failed", exc_info=True)
 
     def on_session_reset(self, session_id: str = "", **_: Any) -> None:
         try:
-            self._note(session_id, "clear")
+            self.note_source(session_id, "clear")
         except Exception:  # noqa: BLE001
             _log.error("compat on_session_reset failed", exc_info=True)
-
-    def _note(self, session_id: str, source: str) -> None:
-        snap = self.snapshot(session_id)
-        with snap.lock:
-            snap.pending_sources.append(source)
 
     def post_compaction(self, session_id: str = "", reason: str = "", **_: Any) -> None:
         """PostCompact runs now. SessionStart (``compact``) runs at the next prompt, which can carry its context."""
@@ -76,7 +72,7 @@ class SessionEvents(Core):
             snap = self.snapshot(session_id)
             trigger = "manual" if reason == "manual" else "auto"
             self._fire(snap, session_id, "PostCompact", trigger, pl.post_compact(trigger))
-            self._note(session_id, "compact")
+            self.note_source(session_id, "compact")
         except Exception:  # noqa: BLE001
             _log.error("compat post_compaction failed", exc_info=True)
 

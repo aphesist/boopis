@@ -36,9 +36,9 @@ class ToolEvents(Core):
             return True
         try:
             rule = parse_rule(text)
-            return (
-                match_rule(rule, ToolCall(tool_name, args), snap.cwd, load_defaults(), deny_like=False) is not Match.NO
-            )
+            # deny_like: a compound command matches when any of its parts does, so a guard never misses a part
+            call = ToolCall(tool_name, args)
+            return match_rule(rule, call, snap.cwd, load_defaults(), deny_like=True) is not Match.NO
         except ValueError:
             return True
 

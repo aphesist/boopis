@@ -53,6 +53,7 @@ class Core:
         self._cwd_of = cwd_of
         self._snapshots: dict[str, Snapshot] = {}
         self._children: dict[str, str] = {}  # child session id -> the parent whose snapshot it uses
+        self._early: dict[str, list[str]] = {}  # SessionStart sources noted before the session's snapshot exists
         self._lock = threading.Lock()
 
     @property
@@ -75,8 +76,20 @@ class Core:
             found = self._snapshots.get(key)
             if found is None:
                 found = self._factory(key, self._cwd(key), self.home)
+                found.pending_sources.extend(self._early.pop(key, []))
                 self._snapshots[key] = found
             return found
+
+    def note_source(self, session_id: str, source: str) -> None:
+        """Note a SessionStart source for a session. Hermes's open and reset hooks carry no cwd, so they must not
+        build the snapshot (it would scan the wrong directory): the note waits until the first event that has one."""
+        with self._lock:
+            found = self._snapshots.get(self._children.get(session_id, session_id))
+            if found is None:
+                self._early.setdefault(session_id, []).append(source)
+                return
+        with found.lock:
+            found.pending_sources.append(source)
 
     def existing(self, session_id: str) -> Snapshot | None:
         with self._lock:
@@ -112,6 +125,7 @@ class Core:
     def forget(self, session_id: str) -> None:
         with self._lock:
             self._snapshots.pop(session_id, None)
+            self._early.pop(session_id, None)
             for child in [c for c, p in self._children.items() if session_id in (p, c)]:
                 self._children.pop(child, None)
 

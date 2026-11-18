@@ -270,3 +270,14 @@ def test_a_symlinked_skills_directory_is_followed_once(
 
 
 def _unused(_: Any) -> None: ...
+
+
+def test_a_large_claude_json_is_still_read(
+    need_yaml: None, project: Path, env: ScanEnv, user_home: Path, write: Write
+) -> None:
+    history = {f"/work/p{i}": {"history": ["x" * 200] * 20} for i in range(600)}  # about 2.4 MB, as a real one grows
+    write(".claude.json", {"mcpServers": {"u": {"command": "user-srv"}}, "projects": history}, root=user_home)
+    assert (user_home / ".claude.json").stat().st_size > 2 * 1024 * 1024
+    result = scanned(env)
+    assert [s.name for s in result.mcp_servers] == ["u"]
+    assert [d.code for d in result.diagnostics] == []
