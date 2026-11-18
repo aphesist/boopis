@@ -12,6 +12,7 @@ from .loader import (
     schema_default,
 )
 from .model import (
+    CascadeSettings,
     Fallback,
     Mode,
     PackSettings,
@@ -26,6 +27,7 @@ from .trust import KIND_SETTINGS, TrustStore, content_hash, project_id
 
 __all__ = [
     "KIND_SETTINGS",
+    "CascadeSettings",
     "Fallback",
     "Loaded",
     "Mode",
