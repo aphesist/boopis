@@ -34,6 +34,17 @@
     {"code": "hx.txn.journal_busy", "rpc_code": -32000, "description": "The journal is in use by a live transaction."},
     {"code": "hx.txn.invalid_state", "rpc_code": -32000, "description": "The journal is not in a state that allows this operation."},
     {"code": "hx.txn.restore_failed", "rpc_code": -32000, "description": "Restoring from the journal failed. The journal is kept; run txn.recover or retry txn.restore."},
-    {"code": "hx.txn.io_error", "rpc_code": -32000, "description": "An unexpected I/O failure before any workspace write."}
+    {"code": "hx.txn.io_error", "rpc_code": -32000, "description": "An unexpected I/O failure before any workspace write."},
+    {"code": "hx.pack.invalid_request", "rpc_code": -32000, "description": "A parameter is out of range or malformed: empty pattern, zero budget, bad line range, bad glob."},
+    {"code": "hx.pack.invalid_pattern", "rpc_code": -32000, "description": "The search pattern does not compile as a regular expression."},
+    {"code": "hx.pack.invalid_root", "rpc_code": -32000, "description": "root is not an existing directory."},
+    {"code": "hx.pack.path_escape", "rpc_code": -32000, "description": "A path is absolute, contains .., or resolves through a symlink outside root."},
+    {"code": "hx.pack.not_found", "rpc_code": -32000, "description": "A named file or directory does not exist under root."},
+    {"code": "hx.pack.unsupported_language", "rpc_code": -32000, "description": "lang was given explicitly and no grammar is registered for it."},
+    {"code": "hx.pack.parse_failed", "rpc_code": -32000, "description": "`tree-sitter` could not produce a tree (parser setup failure or internal timeout)."},
+    {"code": "hx.pack.git_failed", "rpc_code": -32000, "description": "The `git` CLI is missing, exited with an error or printed output that could not be parsed."},
+    {"code": "hx.pack.timeout", "rpc_code": -32000, "description": "The deadline passed before the call finished."},
+    {"code": "hx.pack.config_invalid", "rpc_code": -32000, "description": "An embedded data file (`redact.rules.json`, `never_pack.json`, `languages.json`) or a query does not load. Fails closed."},
+    {"code": "hx.pack.io", "rpc_code": -32000, "description": "An unexpected operating-system error while reading under root."}
   ]
 }

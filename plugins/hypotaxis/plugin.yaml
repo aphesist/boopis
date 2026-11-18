@@ -6,8 +6,10 @@ author: aphesist
 license: Apache-2.0
 kind: standalone
 requires_hermes: ">=0.23.2"
-# Tools (pack, exec, ship, dispatch) arrive in later parts; nothing is declared before it is registered.
-provides_tools: []
+# exec and dispatch arrive in later parts; nothing is declared before it is registered.
+provides_tools:
+  - pack
+  - ship
 provides_hooks:
   - pre_tool_call
   - post_tool_call
@@ -40,6 +42,9 @@ config_schema:
   permissions:
     type: object
     description: "Permission rules: {allow: [], ask: [], deny: [], default: allow|ask|deny}, in Claude Code's Tool(specifier) syntax. deny beats ask beats allow."
+  pack:
+    type: object
+    description: "The pack tool: {max_bytes: byte budget of one call, default 131072}."
   hx_path:
     type: string
     default: ""

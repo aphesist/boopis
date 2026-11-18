@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from . import policy
+from . import hx, policy
 from .config import (
     Loaded,
     Mode,
@@ -27,6 +27,7 @@ from .config import (
 )
 from .errors import ModeLockedError, PricesError
 from .hermes_api import PluginCtx, hermes_home, hermes_version
+from .hx import HxClient
 from .ledger import PriceBook, SessionLedger, build_book, ledger_filename, load_catalogue, project_costs, usage_records
 from .ledger.store import LedgerEvent
 from .policy import SessionPolicy
@@ -47,6 +48,7 @@ class SessionState:
     profile: str = ""
     ladder: Mapping[str, Any] | None = None  # from mode.set; overrides the settings' ladder
     gate_enabled: bool | None = None  # from mode.set
+    allowed: tuple[str, ...] | None = None  # the lane or brief scope, set by dispatch; None means unrestricted
     settings: Settings = field(default_factory=default_settings)
     config_errors: tuple[str, ...] = ()
     project: ProjectConfig | None = None
@@ -92,6 +94,11 @@ class Runtime:
             _log.error("the cached price catalogue is unusable; pricing from overrides only", exc_info=True)
             catalogue = None
         return build_book(settings, catalogue)
+
+    def hx_client(self) -> HxClient | None:
+        """The process's warm hx, None when no binary can be found."""
+        settings = self.load_settings().value
+        return hx.get_client(settings.hx_path, self.home / "logs" / "hypotaxis" / "hx.log")
 
     def ledger_path(self, session_id: str, settings: Settings | None = None) -> Path:
         configured = (settings or self.load_settings().value).ledger_dir

@@ -53,8 +53,20 @@ def _rpc(method: str) -> Callable[..., Any]:
 
 def register(ctx: Any) -> None:
     from .hermes_api import bind
+    from .tools import TOOLSET, hx_ready, pack_handler, ship_handler, tool_schemas
 
     bind(ctx)
+    handlers = {"pack": pack_handler, "ship": ship_handler}
+    for name, schema in tool_schemas().items():
+        ctx.register_tool(
+            name=name,
+            toolset=TOOLSET,
+            schema=schema,
+            handler=handlers[name],
+            check_fn=hx_ready,
+            description=schema["description"],
+        )
+
     for hook in HOOKS:
         ctx.register_hook(hook, _lazy("hooks", hook))
     for method in RPC_METHODS:

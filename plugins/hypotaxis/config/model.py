@@ -36,6 +36,13 @@ class PricesSettings:
 
 
 @dataclass(frozen=True, slots=True)
+class PackSettings:
+    """``pack``: the byte budget of one ``pack`` call (everything in it shares it)."""
+
+    max_bytes: int = 131072
+
+
+@dataclass(frozen=True, slots=True)
 class Settings:
     """The plugin settings (``plugins.entries.hypotaxis.settings``)."""
 
@@ -43,6 +50,7 @@ class Settings:
     ladder: Mapping[str, Any] | None = None  # validated; contraprova's TierLadder.from_dict reads it
     cost_cap_usd: float | None = None
     prices: PricesSettings = PricesSettings()
+    pack: PackSettings = PackSettings()
     subscription_providers: tuple[str, ...] = ()
     permissions: PermissionRules = PermissionRules()
     hx_path: str = ""

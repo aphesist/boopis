@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import importlib
 import sys
+from typing import Any
 
 _MODULES = ("contracts", "events", "interfaces", "sandbox")
 
@@ -27,3 +28,13 @@ def activate() -> None:
     sys.modules["contraprova"] = package
     for name in _MODULES:
         sys.modules[f"contraprova.{name}"] = importlib.import_module(f"{__name__}.contraprova.{name}")
+
+
+def load(module: str) -> Any:
+    """A vendored contraprova module (``"gates"``, ``"contracts"``, ...), after ``activate``.
+
+    Typed ``Any`` on purpose: ``gates`` imports its siblings by absolute name, so a type checker that
+    can also see a separately installed ``contraprova`` would see two unrelated copies of each class.
+    """
+    activate()
+    return importlib.import_module(f"{__name__}.contraprova.{module}")

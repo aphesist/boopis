@@ -28,7 +28,8 @@ def test_the_manifest_is_honest(manifest: dict[str, Any]) -> None:
     ctx = FakeCtx()
     hypotaxis.register(ctx)
     assert set(manifest["provides_hooks"]) == set(ctx.hooks)
-    assert manifest["provides_tools"] == []  # no tool is declared before it is registered
+    assert set(manifest["provides_tools"]) == set(ctx.tools)  # exactly the tools register() registers
+    assert {t["toolset"] for t in ctx.tools.values()} == {"hypotaxis"}
     assert manifest["version"] == PLUGIN_VERSION
     assert manifest["kind"] == "standalone"
     assert manifest["manifest_version"] == 2
@@ -102,12 +103,13 @@ sys.modules['hermes_plugins.hypotaxis'] = mod
 spec.loader.exec_module(mod)
 class Ctx:
     plugin_id = 'hypotaxis'
+    def register_tool(self, *a, **k): pass
     def register_hook(self, *a, **k): pass
     def register_rpc(self, *a, **k): pass
     def register_system_prompt_section(self, *a, **k): pass
 mod.register(Ctx())
 elapsed = (time.perf_counter() - t0) * 1000
-heavy = [m for m in sys.modules if m.split('.')[0] in ('contraprova', 'hermes_yaml', 'ruamel')]
+heavy = [m for m in sys.modules if 'contraprova' in m or m.split('.')[0] in ('hermes_yaml', 'ruamel')]
 print(elapsed, ','.join(heavy))
 """
     best = None

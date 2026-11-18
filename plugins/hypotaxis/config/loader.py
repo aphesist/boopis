@@ -20,6 +20,7 @@ from ..util.schema import JsonObject, validate
 from .model import (
     Fallback,
     Mode,
+    PackSettings,
     PermissionRules,
     PricesSettings,
     ProjectConfig,
@@ -79,6 +80,7 @@ def parse_settings(raw: Mapping[str, Any], *, source: str = "plugins.entries.hyp
         for i in validate(dict(raw), schema("plugin-settings"))
     ]
     prices_raw: Mapping[str, Any] = raw.get("prices") or {}
+    pack_raw: Mapping[str, Any] = raw.get("pack") or {}
     issues += _price_key_problems(prices_raw.get("overrides"), f"{source}.prices")
     issues += _ladder_problems(raw.get("ladder"), source)
     if issues:
@@ -101,6 +103,9 @@ def parse_settings(raw: Mapping[str, Any], *, source: str = "plugins.entries.hyp
         ),
         subscription_providers=tuple(raw.get("subscription_providers", ())),
         permissions=_rules(perms, cast(Fallback, schema_default("plugin-settings", "permissions", "default"))),
+        pack=PackSettings(
+            max_bytes=int(pack_raw.get("max_bytes", schema_default("plugin-settings", "pack", "max_bytes")))
+        ),
         hx_path=str(raw.get("hx_path", "")),
         ledger_dir=str(raw.get("ledger_dir", "")),
     )

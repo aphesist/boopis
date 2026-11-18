@@ -13,6 +13,7 @@ codes that carry any. Standard library only.
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -23,6 +24,12 @@ OUT = ROOT / "plugins/hypotaxis/hx/types.py"
 
 Schema = dict[str, Any]
 PRIMITIVES = {"string": "str", "integer": "int", "number": "float", "boolean": "bool"}
+
+
+def scalar_default(s: Schema) -> Any:
+    """The schema's default when it is a scalar; an object or list default means "leave it to hx"."""
+    default = s.get("default")
+    return None if isinstance(default, (dict, list)) else default
 
 
 def ref_name(ref: str) -> str:
@@ -129,7 +136,7 @@ class Gen:
             if key in required:
                 out.append(f"    {key}: {ann}")
             else:
-                default = props[key].get("default")
+                default = scalar_default(props[key])
                 out.append(f"    {key}: {ann} = {default!r}" if default is not None else f"    {key}: {ann} | None = None" if "| None" not in ann else f"    {key}: {ann} = None")
         if not props:
             out.append("    pass")
@@ -138,7 +145,7 @@ class Gen:
             out.append(f"        out[{tag[0]!r}] = {tag[1]!r}")
         for key in required + optional:
             schema = props[key]
-            default = schema.get("default")
+            default = scalar_default(schema)
             if key in required:
                 out.append(f"        out[{key!r}] = {self.to_wire(schema, f'self.{key}')}")
             elif default is not None:  # never None: always sent
@@ -150,7 +157,7 @@ class Gen:
         for key in required:
             out.append(f"            {key}={self.from_wire(props[key], f'data[{key!r}]')},")
         for key in optional:
-            default = props[key].get("default")
+            default = scalar_default(props[key])
             expr = self.from_wire(props[key], f"data[{key!r}]")
             fallback = repr(default) if default is not None else "None"
             out.append(f"            {key}={expr} if {key!r} in data else {fallback},")
@@ -164,7 +171,7 @@ class Gen:
         for v in s["oneOf"]:
             disc = next(k for k, p in v["properties"].items() if "const" in p)
             value = v["properties"][disc]["const"]
-            cname = f"{value.title().replace('_', '')}{name}"
+            cname = "".join(w.capitalize() for w in re.split(r"[^0-9A-Za-z]+", value) if w) + name
             body = {**v, "properties": {k: p for k, p in v["properties"].items() if k != disc}}
             out += self.cls(cname, body, (disc, value))
             table.append((value, cname))
@@ -205,6 +212,8 @@ class Gen:
                 body += self.variants(name, s)
             elif "properties" in s:
                 body += self.cls(name, s)
+            else:  # an untagged union (anyOf): kept as the raw wire value
+                aliases += [f"{name} = Any", ""]
         tail: list[str] = []
         for name in sorted(self.unions):
             tail += self.union_tail(name)

@@ -14,6 +14,7 @@ from .loader import (
 from .model import (
     Fallback,
     Mode,
+    PackSettings,
     PermissionRules,
     PricesSettings,
     ProjectConfig,
@@ -28,6 +29,7 @@ __all__ = [
     "Fallback",
     "Loaded",
     "Mode",
+    "PackSettings",
     "PermissionRules",
     "PricesSettings",
     "ProjectConfig",

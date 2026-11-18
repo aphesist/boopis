@@ -101,6 +101,7 @@ def tool_matches(rule: Rule, call_tool: str, defaults: Defaults, *, widen_reads:
 
 # ---------------------------------------------------------------- paths
 
+_DIFF_PATH = re.compile(r"^(?:---|\+\+\+) (?:[ab]/)?(?P<path>\S+)", re.MULTILINE)
 _V4A_PATH = re.compile(r"^\*\*\* (?:Update File|Add File|Delete File|Move to):\s*(?P<path>.+?)\s*$", re.MULTILINE)
 
 
@@ -124,6 +125,11 @@ def paths_of(call: ToolCall, defaults: Defaults) -> list[str] | None:
                     p = item.get("path")
                     if isinstance(p, str) and p:
                         found.append(p)
+                    diff = item.get("diff")
+                    if isinstance(diff, str):
+                        found.extend(
+                            m.group("path") for m in _DIFF_PATH.finditer(diff) if m.group("path") != "/dev/null"
+                        )
     patch_text = call.args.get("patch")
     if call.tool == "patch" and isinstance(patch_text, str):
         found.extend(m.group("path") for m in _V4A_PATH.finditer(patch_text))

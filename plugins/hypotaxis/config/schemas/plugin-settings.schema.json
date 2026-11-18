@@ -192,6 +192,21 @@
     "ledger_dir": {
       "type": "string",
       "default": ""
+    },
+    "pack": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "max_bytes": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 4194304,
+          "default": 131072
+        }
+      }
     }
   }
 }

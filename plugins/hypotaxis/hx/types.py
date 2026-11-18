@@ -101,6 +101,241 @@ class ApplyResult:
 
 
 @dataclass(frozen=True, slots=True)
+class Block:
+    """A run of consecutive lines around one or more matches."""
+
+    end_line: int
+    match_lines: list[int]
+    path: str
+    start_line: int
+    text: str
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['end_line'] = self.end_line
+        out['match_lines'] = [x for x in self.match_lines]
+        out['path'] = self.path
+        out['start_line'] = self.start_line
+        out['text'] = self.text
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "Block":
+        return cls(
+            end_line=data['end_line'],
+            match_lines=[x for x in data['match_lines']],
+            path=data['path'],
+            start_line=data['start_line'],
+            text=data['text'],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class BundleEntry:
+    """One item's outcome."""
+
+    bytes: int
+    index: int
+    method: str
+    ok: bool
+    error: ErrorBody | None = None
+    result: ItemOutput | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['bytes'] = self.bytes
+        out['index'] = self.index
+        out['method'] = self.method
+        out['ok'] = self.ok
+        if self.error is not None:
+            out['error'] = self.error.to_wire()
+        if self.result is not None:
+            out['result'] = self.result
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "BundleEntry":
+        return cls(
+            bytes=data['bytes'],
+            index=data['index'],
+            method=data['method'],
+            ok=data['ok'],
+            error=(None if data['error'] is None else ErrorBody.from_wire(data['error'])) if 'error' in data else None,
+            result=(None if data['result'] is None else data['result']) if 'result' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class PackSearchBundleItem:
+    """`pack.search`."""
+
+    params: SearchParams
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['method'] = 'pack.search'
+        out['params'] = self.params.to_wire()
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "PackSearchBundleItem":
+        return cls(
+            params=SearchParams.from_wire(data['params']),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class PackReadBundleItem:
+    """`pack.read`."""
+
+    params: ReadParams
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['method'] = 'pack.read'
+        out['params'] = self.params.to_wire()
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "PackReadBundleItem":
+        return cls(
+            params=ReadParams.from_wire(data['params']),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class PackSymbolBundleItem:
+    """`pack.symbol`."""
+
+    params: SymbolParams
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['method'] = 'pack.symbol'
+        out['params'] = self.params.to_wire()
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "PackSymbolBundleItem":
+        return cls(
+            params=SymbolParams.from_wire(data['params']),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class PackOutlineBundleItem:
+    """`pack.outline`."""
+
+    params: OutlineParams
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['method'] = 'pack.outline'
+        out['params'] = self.params.to_wire()
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "PackOutlineBundleItem":
+        return cls(
+            params=OutlineParams.from_wire(data['params']),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class PackStatusBundleItem:
+    """`pack.status`."""
+
+    params: StatusParams
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['method'] = 'pack.status'
+        out['params'] = self.params.to_wire()
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "PackStatusBundleItem":
+        return cls(
+            params=StatusParams.from_wire(data['params']),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class BundleRequest:
+    """The request of `pack.bundle`."""
+
+    requests: list[BundleItem]
+    root: str
+    max_bytes: int = 131072
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['requests'] = [x.to_wire() for x in self.requests]
+        out['root'] = self.root
+        out['max_bytes'] = self.max_bytes
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "BundleRequest":
+        return cls(
+            requests=[_bundle_item_from_wire(x) for x in data['requests']],
+            root=data['root'],
+            max_bytes=data['max_bytes'] if 'max_bytes' in data else 131072,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class BundleResponse:
+    """The response of `pack.bundle`."""
+
+    bytes: int
+    max_bytes: int
+    results: list[BundleEntry]
+    truncated: list[BundleTruncation]
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['bytes'] = self.bytes
+        out['max_bytes'] = self.max_bytes
+        out['results'] = [x.to_wire() for x in self.results]
+        out['truncated'] = [x.to_wire() for x in self.truncated]
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "BundleResponse":
+        return cls(
+            bytes=data['bytes'],
+            max_bytes=data['max_bytes'],
+            results=[BundleEntry.from_wire(x) for x in data['results']],
+            truncated=[BundleTruncation.from_wire(x) for x in data['truncated']],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class BundleTruncation:
+    """An item that did not finish, and why."""
+
+    index: int
+    method: str
+    reasons: list[Truncation]
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['index'] = self.index
+        out['method'] = self.method
+        out['reasons'] = [x for x in self.reasons]
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "BundleTruncation":
+        return cls(
+            index=data['index'],
+            method=data['method'],
+            reasons=[x for x in data['reasons']],
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class ClosestMatch:
     """The closest place in the file to what an edit looked for."""
 
@@ -141,12 +376,15 @@ class DescribeResult:
     capabilities: list[str]
     protocol: str
     version: str
+    methods: list[str] | None = None
 
     def to_wire(self) -> dict[str, Any]:
         out: dict[str, Any] = {}
         out['capabilities'] = [x for x in self.capabilities]
         out['protocol'] = self.protocol
         out['version'] = self.version
+        if self.methods is not None:
+            out['methods'] = [x for x in self.methods]
         return out
 
     @classmethod
@@ -155,6 +393,7 @@ class DescribeResult:
             capabilities=[x for x in data['capabilities']],
             protocol=data['protocol'],
             version=data['version'],
+            methods=[x for x in data['methods']] if 'methods' in data else None,
         )
 
 
@@ -311,6 +550,27 @@ class EditFailure:
 
 
 @dataclass(frozen=True, slots=True)
+class ErrorBody:
+    """The `{code, message}` pair a bundle item carries when it fails."""
+
+    code: str
+    message: str
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['code'] = self.code
+        out['message'] = self.message
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "ErrorBody":
+        return cls(
+            code=data['code'],
+            message=data['message'],
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class FileChange:
     """One touched file in a result."""
 
@@ -339,6 +599,74 @@ class FileChange:
             path=data['path'],
             sha256_after=(None if data['sha256_after'] is None else data['sha256_after']) if 'sha256_after' in data else None,
             sha256_before=(None if data['sha256_before'] is None else data['sha256_before']) if 'sha256_before' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class FileOutline:
+    """The outline of one file."""
+
+    path: str
+    status: OutlineStatus
+    symbols: list[Symbol]
+    language: str | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['path'] = self.path
+        out['status'] = self.status
+        out['symbols'] = [x.to_wire() for x in self.symbols]
+        if self.language is not None:
+            out['language'] = self.language
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "FileOutline":
+        return cls(
+            path=data['path'],
+            status=data['status'],
+            symbols=[Symbol.from_wire(x) for x in data['symbols']],
+            language=(None if data['language'] is None else data['language']) if 'language' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class Found:
+    """One definition with its source."""
+
+    end_line: int
+    kind: str
+    name: str
+    path: str
+    signature: str
+    start_line: int
+    text: str
+    parent: str | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['end_line'] = self.end_line
+        out['kind'] = self.kind
+        out['name'] = self.name
+        out['path'] = self.path
+        out['signature'] = self.signature
+        out['start_line'] = self.start_line
+        out['text'] = self.text
+        if self.parent is not None:
+            out['parent'] = self.parent
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "Found":
+        return cls(
+            end_line=data['end_line'],
+            kind=data['kind'],
+            name=data['name'],
+            path=data['path'],
+            signature=data['signature'],
+            start_line=data['start_line'],
+            text=data['text'],
+            parent=(None if data['parent'] is None else data['parent']) if 'parent' in data else None,
         )
 
 
@@ -382,6 +710,118 @@ class JournalRef:
 
 
 @dataclass(frozen=True, slots=True)
+class LineRange:
+    """An inclusive, 1-based line range."""
+
+    start: int
+    end: int | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['start'] = self.start
+        if self.end is not None:
+            out['end'] = self.end
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "LineRange":
+        return cls(
+            start=data['start'],
+            end=(None if data['end'] is None else data['end']) if 'end' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class OutlineParams:
+    """The parameters of `pack.outline` apart from the root."""
+
+    max_bytes: int | None = None
+    max_files: int = 200
+    paths: list[str] | None = None
+    walk: WalkOptions | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        if self.max_bytes is not None:
+            out['max_bytes'] = self.max_bytes
+        out['max_files'] = self.max_files
+        if self.paths is not None:
+            out['paths'] = [x for x in self.paths]
+        if self.walk is not None:
+            out['walk'] = self.walk.to_wire()
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "OutlineParams":
+        return cls(
+            max_bytes=(None if data['max_bytes'] is None else data['max_bytes']) if 'max_bytes' in data else None,
+            max_files=data['max_files'] if 'max_files' in data else 200,
+            paths=[x for x in data['paths']] if 'paths' in data else None,
+            walk=WalkOptions.from_wire(data['walk']) if 'walk' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class OutlineRequest:
+    """The request of `pack.outline`."""
+
+    root: str
+    max_bytes: int | None = None
+    max_files: int = 200
+    paths: list[str] | None = None
+    walk: WalkOptions | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['root'] = self.root
+        if self.max_bytes is not None:
+            out['max_bytes'] = self.max_bytes
+        out['max_files'] = self.max_files
+        if self.paths is not None:
+            out['paths'] = [x for x in self.paths]
+        if self.walk is not None:
+            out['walk'] = self.walk.to_wire()
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "OutlineRequest":
+        return cls(
+            root=data['root'],
+            max_bytes=(None if data['max_bytes'] is None else data['max_bytes']) if 'max_bytes' in data else None,
+            max_files=data['max_files'] if 'max_files' in data else 200,
+            paths=[x for x in data['paths']] if 'paths' in data else None,
+            walk=WalkOptions.from_wire(data['walk']) if 'walk' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class OutlineResponse:
+    """The response of `pack.outline`."""
+
+    bytes: int
+    files: list[FileOutline]
+    truncated: list[Truncation]
+    withheld: Withheld
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['bytes'] = self.bytes
+        out['files'] = [x.to_wire() for x in self.files]
+        out['truncated'] = [x for x in self.truncated]
+        out['withheld'] = self.withheld.to_wire()
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "OutlineResponse":
+        return cls(
+            bytes=data['bytes'],
+            files=[FileOutline.from_wire(x) for x in data['files']],
+            truncated=[x for x in data['truncated']],
+            withheld=Withheld.from_wire(data['withheld']),
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class PathsData:
     """`data` of `hx.txn.scope_violation` and `hx.txn.protected_path`."""
 
@@ -396,6 +836,112 @@ class PathsData:
     def from_wire(cls, data: Mapping[str, Any]) -> "PathsData":
         return cls(
             paths=[x for x in data['paths']],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class ReadParams:
+    """The parameters of `pack.read` apart from the root."""
+
+    path: str
+    max_bytes: int | None = None
+    ranges: list[LineRange] | None = None
+    walk: WalkOptions | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['path'] = self.path
+        if self.max_bytes is not None:
+            out['max_bytes'] = self.max_bytes
+        if self.ranges is not None:
+            out['ranges'] = [x.to_wire() for x in self.ranges]
+        if self.walk is not None:
+            out['walk'] = self.walk.to_wire()
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "ReadParams":
+        return cls(
+            path=data['path'],
+            max_bytes=(None if data['max_bytes'] is None else data['max_bytes']) if 'max_bytes' in data else None,
+            ranges=[LineRange.from_wire(x) for x in data['ranges']] if 'ranges' in data else None,
+            walk=WalkOptions.from_wire(data['walk']) if 'walk' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class ReadRequest:
+    """The request of `pack.read`."""
+
+    path: str
+    root: str
+    max_bytes: int | None = None
+    ranges: list[LineRange] | None = None
+    walk: WalkOptions | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['path'] = self.path
+        out['root'] = self.root
+        if self.max_bytes is not None:
+            out['max_bytes'] = self.max_bytes
+        if self.ranges is not None:
+            out['ranges'] = [x.to_wire() for x in self.ranges]
+        if self.walk is not None:
+            out['walk'] = self.walk.to_wire()
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "ReadRequest":
+        return cls(
+            path=data['path'],
+            root=data['root'],
+            max_bytes=(None if data['max_bytes'] is None else data['max_bytes']) if 'max_bytes' in data else None,
+            ranges=[LineRange.from_wire(x) for x in data['ranges']] if 'ranges' in data else None,
+            walk=WalkOptions.from_wire(data['walk']) if 'walk' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class ReadResponse:
+    """The response of `pack.read`."""
+
+    bytes: int
+    path: str
+    redactions: Redactions
+    segments: list[Segment]
+    status: ReadStatus
+    total_lines: int
+    truncated: list[Truncation]
+    unsatisfied: list[LineRange]
+    withheld: WithheldFile | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['bytes'] = self.bytes
+        out['path'] = self.path
+        out['redactions'] = self.redactions.to_wire()
+        out['segments'] = [x.to_wire() for x in self.segments]
+        out['status'] = self.status
+        out['total_lines'] = self.total_lines
+        out['truncated'] = [x for x in self.truncated]
+        out['unsatisfied'] = [x.to_wire() for x in self.unsatisfied]
+        if self.withheld is not None:
+            out['withheld'] = self.withheld.to_wire()
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "ReadResponse":
+        return cls(
+            bytes=data['bytes'],
+            path=data['path'],
+            redactions=Redactions.from_wire(data['redactions']),
+            segments=[Segment.from_wire(x) for x in data['segments']],
+            status=data['status'],
+            total_lines=data['total_lines'],
+            truncated=[x for x in data['truncated']],
+            unsatisfied=[LineRange.from_wire(x) for x in data['unsatisfied']],
+            withheld=(None if data['withheld'] is None else WithheldFile.from_wire(data['withheld'])) if 'withheld' in data else None,
         )
 
 
@@ -472,6 +1018,27 @@ class RecoverResult:
 
 
 @dataclass(frozen=True, slots=True)
+class Redactions:
+    """How many redactions the returned text contains, in total and per rule."""
+
+    by_rule: dict[str, Any]
+    total: int
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['by_rule'] = self.by_rule
+        out['total'] = self.total
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "Redactions":
+        return cls(
+            by_rule=data['by_rule'],
+            total=data['total'],
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class RestoreResult:
     """Result of `txn.restore`."""
 
@@ -492,6 +1059,498 @@ class RestoreResult:
             journal_id=data['journal_id'],
             removed=[x for x in data['removed']],
             restored=[x for x in data['restored']],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class SearchParams:
+    """The parameters of `pack.search` apart from the root (a bundle shares one root)."""
+
+    pattern: str
+    case: CaseMode = 'smart'
+    context_after: int = 2
+    context_before: int = 2
+    globs: list[str] | None = None
+    max_bytes: int | None = None
+    max_matches: int = 200
+    mode: PatternMode = 'regex'
+    walk: WalkOptions | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['pattern'] = self.pattern
+        out['case'] = self.case
+        out['context_after'] = self.context_after
+        out['context_before'] = self.context_before
+        if self.globs is not None:
+            out['globs'] = [x for x in self.globs]
+        if self.max_bytes is not None:
+            out['max_bytes'] = self.max_bytes
+        out['max_matches'] = self.max_matches
+        out['mode'] = self.mode
+        if self.walk is not None:
+            out['walk'] = self.walk.to_wire()
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "SearchParams":
+        return cls(
+            pattern=data['pattern'],
+            case=data['case'] if 'case' in data else 'smart',
+            context_after=data['context_after'] if 'context_after' in data else 2,
+            context_before=data['context_before'] if 'context_before' in data else 2,
+            globs=[x for x in data['globs']] if 'globs' in data else None,
+            max_bytes=(None if data['max_bytes'] is None else data['max_bytes']) if 'max_bytes' in data else None,
+            max_matches=data['max_matches'] if 'max_matches' in data else 200,
+            mode=data['mode'] if 'mode' in data else 'regex',
+            walk=WalkOptions.from_wire(data['walk']) if 'walk' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class SearchRequest:
+    """The request of `pack.search`."""
+
+    pattern: str
+    root: str
+    case: CaseMode = 'smart'
+    context_after: int = 2
+    context_before: int = 2
+    globs: list[str] | None = None
+    max_bytes: int | None = None
+    max_matches: int = 200
+    mode: PatternMode = 'regex'
+    walk: WalkOptions | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['pattern'] = self.pattern
+        out['root'] = self.root
+        out['case'] = self.case
+        out['context_after'] = self.context_after
+        out['context_before'] = self.context_before
+        if self.globs is not None:
+            out['globs'] = [x for x in self.globs]
+        if self.max_bytes is not None:
+            out['max_bytes'] = self.max_bytes
+        out['max_matches'] = self.max_matches
+        out['mode'] = self.mode
+        if self.walk is not None:
+            out['walk'] = self.walk.to_wire()
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "SearchRequest":
+        return cls(
+            pattern=data['pattern'],
+            root=data['root'],
+            case=data['case'] if 'case' in data else 'smart',
+            context_after=data['context_after'] if 'context_after' in data else 2,
+            context_before=data['context_before'] if 'context_before' in data else 2,
+            globs=[x for x in data['globs']] if 'globs' in data else None,
+            max_bytes=(None if data['max_bytes'] is None else data['max_bytes']) if 'max_bytes' in data else None,
+            max_matches=data['max_matches'] if 'max_matches' in data else 200,
+            mode=data['mode'] if 'mode' in data else 'regex',
+            walk=WalkOptions.from_wire(data['walk']) if 'walk' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class SearchResponse:
+    """The response of `pack.search`."""
+
+    blocks: list[Block]
+    bytes: int
+    files_matched: int
+    files_scanned: int
+    files_walked: int
+    matches: int
+    redactions: Redactions
+    skipped: Skipped
+    truncated: list[Truncation]
+    withheld: Withheld
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['blocks'] = [x.to_wire() for x in self.blocks]
+        out['bytes'] = self.bytes
+        out['files_matched'] = self.files_matched
+        out['files_scanned'] = self.files_scanned
+        out['files_walked'] = self.files_walked
+        out['matches'] = self.matches
+        out['redactions'] = self.redactions.to_wire()
+        out['skipped'] = self.skipped.to_wire()
+        out['truncated'] = [x for x in self.truncated]
+        out['withheld'] = self.withheld.to_wire()
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "SearchResponse":
+        return cls(
+            blocks=[Block.from_wire(x) for x in data['blocks']],
+            bytes=data['bytes'],
+            files_matched=data['files_matched'],
+            files_scanned=data['files_scanned'],
+            files_walked=data['files_walked'],
+            matches=data['matches'],
+            redactions=Redactions.from_wire(data['redactions']),
+            skipped=Skipped.from_wire(data['skipped']),
+            truncated=[x for x in data['truncated']],
+            withheld=Withheld.from_wire(data['withheld']),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class Segment:
+    """A run of numbered lines."""
+
+    end_line: int
+    start_line: int
+    text: str
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['end_line'] = self.end_line
+        out['start_line'] = self.start_line
+        out['text'] = self.text
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "Segment":
+        return cls(
+            end_line=data['end_line'],
+            start_line=data['start_line'],
+            text=data['text'],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class Skipped:
+    """Files that were looked at and left out, by reason."""
+
+    binary: int
+    too_large: int
+    unreadable: int
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['binary'] = self.binary
+        out['too_large'] = self.too_large
+        out['unreadable'] = self.unreadable
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "Skipped":
+        return cls(
+            binary=data['binary'],
+            too_large=data['too_large'],
+            unreadable=data['unreadable'],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class StatusCounts:
+    """Counts over all entries, not only the listed ones."""
+
+    conflicted: int
+    staged: int
+    unstaged: int
+    untracked: int
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['conflicted'] = self.conflicted
+        out['staged'] = self.staged
+        out['unstaged'] = self.unstaged
+        out['untracked'] = self.untracked
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "StatusCounts":
+        return cls(
+            conflicted=data['conflicted'],
+            staged=data['staged'],
+            unstaged=data['unstaged'],
+            untracked=data['untracked'],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class StatusEntry:
+    """One changed path."""
+
+    index: str
+    kind: EntryKind
+    path: str
+    worktree: str
+    orig_path: str | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['index'] = self.index
+        out['kind'] = self.kind
+        out['path'] = self.path
+        out['worktree'] = self.worktree
+        if self.orig_path is not None:
+            out['orig_path'] = self.orig_path
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "StatusEntry":
+        return cls(
+            index=data['index'],
+            kind=data['kind'],
+            path=data['path'],
+            worktree=data['worktree'],
+            orig_path=(None if data['orig_path'] is None else data['orig_path']) if 'orig_path' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class StatusParams:
+    """The parameters of `pack.status` apart from the root."""
+
+    max_entries: int = 500
+    timeout_ms: int = 10000
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['max_entries'] = self.max_entries
+        out['timeout_ms'] = self.timeout_ms
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "StatusParams":
+        return cls(
+            max_entries=data['max_entries'] if 'max_entries' in data else 500,
+            timeout_ms=data['timeout_ms'] if 'timeout_ms' in data else 10000,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class StatusRequest:
+    """The request of `pack.status`."""
+
+    root: str
+    max_entries: int = 500
+    timeout_ms: int = 10000
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['root'] = self.root
+        out['max_entries'] = self.max_entries
+        out['timeout_ms'] = self.timeout_ms
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "StatusRequest":
+        return cls(
+            root=data['root'],
+            max_entries=data['max_entries'] if 'max_entries' in data else 500,
+            timeout_ms=data['timeout_ms'] if 'timeout_ms' in data else 10000,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class StatusResponse:
+    """The response of `pack.status`."""
+
+    bytes: int
+    counts: StatusCounts
+    detached: bool
+    entries: list[StatusEntry]
+    is_repo: bool
+    truncated: list[Truncation]
+    ahead: int | None = None
+    behind: int | None = None
+    branch: str | None = None
+    head: str | None = None
+    upstream: str | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['bytes'] = self.bytes
+        out['counts'] = self.counts.to_wire()
+        out['detached'] = self.detached
+        out['entries'] = [x.to_wire() for x in self.entries]
+        out['is_repo'] = self.is_repo
+        out['truncated'] = [x for x in self.truncated]
+        if self.ahead is not None:
+            out['ahead'] = self.ahead
+        if self.behind is not None:
+            out['behind'] = self.behind
+        if self.branch is not None:
+            out['branch'] = self.branch
+        if self.head is not None:
+            out['head'] = self.head
+        if self.upstream is not None:
+            out['upstream'] = self.upstream
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "StatusResponse":
+        return cls(
+            bytes=data['bytes'],
+            counts=StatusCounts.from_wire(data['counts']),
+            detached=data['detached'],
+            entries=[StatusEntry.from_wire(x) for x in data['entries']],
+            is_repo=data['is_repo'],
+            truncated=[x for x in data['truncated']],
+            ahead=(None if data['ahead'] is None else data['ahead']) if 'ahead' in data else None,
+            behind=(None if data['behind'] is None else data['behind']) if 'behind' in data else None,
+            branch=(None if data['branch'] is None else data['branch']) if 'branch' in data else None,
+            head=(None if data['head'] is None else data['head']) if 'head' in data else None,
+            upstream=(None if data['upstream'] is None else data['upstream']) if 'upstream' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class Symbol:
+    """One definition in a file."""
+
+    end_line: int
+    kind: str
+    line: int
+    name: str
+    signature: str
+    start_line: int
+    parent: str | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['end_line'] = self.end_line
+        out['kind'] = self.kind
+        out['line'] = self.line
+        out['name'] = self.name
+        out['signature'] = self.signature
+        out['start_line'] = self.start_line
+        if self.parent is not None:
+            out['parent'] = self.parent
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "Symbol":
+        return cls(
+            end_line=data['end_line'],
+            kind=data['kind'],
+            line=data['line'],
+            name=data['name'],
+            signature=data['signature'],
+            start_line=data['start_line'],
+            parent=(None if data['parent'] is None else data['parent']) if 'parent' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class SymbolParams:
+    """The parameters of `pack.symbol` apart from the root."""
+
+    name: str
+    lang: str | None = None
+    max_bytes: int | None = None
+    max_definitions: int = 20
+    path: str | None = None
+    walk: WalkOptions | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['name'] = self.name
+        if self.lang is not None:
+            out['lang'] = self.lang
+        if self.max_bytes is not None:
+            out['max_bytes'] = self.max_bytes
+        out['max_definitions'] = self.max_definitions
+        if self.path is not None:
+            out['path'] = self.path
+        if self.walk is not None:
+            out['walk'] = self.walk.to_wire()
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "SymbolParams":
+        return cls(
+            name=data['name'],
+            lang=(None if data['lang'] is None else data['lang']) if 'lang' in data else None,
+            max_bytes=(None if data['max_bytes'] is None else data['max_bytes']) if 'max_bytes' in data else None,
+            max_definitions=data['max_definitions'] if 'max_definitions' in data else 20,
+            path=(None if data['path'] is None else data['path']) if 'path' in data else None,
+            walk=WalkOptions.from_wire(data['walk']) if 'walk' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class SymbolRequest:
+    """The request of `pack.symbol`."""
+
+    name: str
+    root: str
+    lang: str | None = None
+    max_bytes: int | None = None
+    max_definitions: int = 20
+    path: str | None = None
+    walk: WalkOptions | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['name'] = self.name
+        out['root'] = self.root
+        if self.lang is not None:
+            out['lang'] = self.lang
+        if self.max_bytes is not None:
+            out['max_bytes'] = self.max_bytes
+        out['max_definitions'] = self.max_definitions
+        if self.path is not None:
+            out['path'] = self.path
+        if self.walk is not None:
+            out['walk'] = self.walk.to_wire()
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "SymbolRequest":
+        return cls(
+            name=data['name'],
+            root=data['root'],
+            lang=(None if data['lang'] is None else data['lang']) if 'lang' in data else None,
+            max_bytes=(None if data['max_bytes'] is None else data['max_bytes']) if 'max_bytes' in data else None,
+            max_definitions=data['max_definitions'] if 'max_definitions' in data else 20,
+            path=(None if data['path'] is None else data['path']) if 'path' in data else None,
+            walk=WalkOptions.from_wire(data['walk']) if 'walk' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class SymbolResponse:
+    """The response of `pack.symbol`."""
+
+    bytes: int
+    definitions: list[Found]
+    files_scanned: int
+    redactions: Redactions
+    skipped: Skipped
+    truncated: list[Truncation]
+    withheld: Withheld
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['bytes'] = self.bytes
+        out['definitions'] = [x.to_wire() for x in self.definitions]
+        out['files_scanned'] = self.files_scanned
+        out['redactions'] = self.redactions.to_wire()
+        out['skipped'] = self.skipped.to_wire()
+        out['truncated'] = [x for x in self.truncated]
+        out['withheld'] = self.withheld.to_wire()
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "SymbolResponse":
+        return cls(
+            bytes=data['bytes'],
+            definitions=[Found.from_wire(x) for x in data['definitions']],
+            files_scanned=data['files_scanned'],
+            redactions=Redactions.from_wire(data['redactions']),
+            skipped=Skipped.from_wire(data['skipped']),
+            truncated=[x for x in data['truncated']],
+            withheld=Withheld.from_wire(data['withheld']),
         )
 
 
@@ -542,7 +1601,101 @@ class ValidateResult:
         )
 
 
+@dataclass(frozen=True, slots=True)
+class WalkOptions:
+    """Options for every call that walks a tree."""
+
+    max_file_bytes: int | None = None
+    skip_dirs: list[str] | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        if self.max_file_bytes is not None:
+            out['max_file_bytes'] = self.max_file_bytes
+        if self.skip_dirs is not None:
+            out['skip_dirs'] = [x for x in self.skip_dirs]
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "WalkOptions":
+        return cls(
+            max_file_bytes=(None if data['max_file_bytes'] is None else data['max_file_bytes']) if 'max_file_bytes' in data else None,
+            skip_dirs=(None if data['skip_dirs'] is None else [x for x in data['skip_dirs']]) if 'skip_dirs' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class Withheld:
+    """Files withheld by the never-pack list."""
+
+    count: int
+    files: list[WithheldFile]
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['count'] = self.count
+        out['files'] = [x.to_wire() for x in self.files]
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "Withheld":
+        return cls(
+            count=data['count'],
+            files=[WithheldFile.from_wire(x) for x in data['files']],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class WithheldFile:
+    """A file pack refused to return, and why."""
+
+    path: str
+    reason: str
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['path'] = self.path
+        out['reason'] = self.reason
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "WithheldFile":
+        return cls(
+            path=data['path'],
+            reason=data['reason'],
+        )
+
+
+CaseMode = Literal['smart', 'sensitive', 'insensitive']
+
+EntryKind = Literal['changed', 'renamed', 'conflicted', 'untracked']
+
 FailureKind = Literal['no_match', 'ambiguous', 'not_found', 'already_exists', 'not_utf8', 'invalid_diff', 'path_unsafe', 'is_directory', 'not_regular', 'unreadable', 'too_large', 'unsupported']
+
+ItemOutput = Any
+
+OutlineStatus = Literal['ok', 'unsupported', 'binary', 'too_large', 'parse_failed', 'unreadable']
+
+PatternMode = Literal['regex', 'literal']
+
+ReadStatus = Literal['ok', 'withheld', 'binary', 'too_large']
+
+Truncation = Literal['max_bytes', 'max_matches', 'max_items', 'line_clipped']
+
+BundleItem = PackSearchBundleItem | PackReadBundleItem | PackSymbolBundleItem | PackOutlineBundleItem | PackStatusBundleItem
+
+_bundle_item_variants: dict[str, Any] = {
+    'pack.search': PackSearchBundleItem,
+    'pack.read': PackReadBundleItem,
+    'pack.symbol': PackSymbolBundleItem,
+    'pack.outline': PackOutlineBundleItem,
+    'pack.status': PackStatusBundleItem,
+}
+
+
+def _bundle_item_from_wire(data: Mapping[str, Any]) -> BundleItem:
+    return cast(BundleItem, _bundle_item_variants[data['op']].from_wire(data))
+
 
 Edit = ReplaceEdit | CreateEdit | DeleteEdit | DiffEdit
 
@@ -560,6 +1713,12 @@ def _edit_from_wire(data: Mapping[str, Any]) -> Edit:
 
 METHODS: dict[str, tuple[type | None, type | None]] = {
     'hx.describe': (None, DescribeResult),
+    'pack.bundle': (BundleRequest, BundleResponse),
+    'pack.outline': (OutlineRequest, OutlineResponse),
+    'pack.read': (ReadRequest, ReadResponse),
+    'pack.search': (SearchRequest, SearchResponse),
+    'pack.status': (StatusRequest, StatusResponse),
+    'pack.symbol': (SymbolRequest, SymbolResponse),
     'txn.apply': (ApplyParams, ApplyResult),
     'txn.discard': (JournalRef, DiscardResult),
     'txn.recover': (RecoverParams, RecoverResult),
