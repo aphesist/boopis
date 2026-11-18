@@ -1,111 +1,53 @@
-# Wiring hx-sandbox into `hx`
+# hx-sandbox in `hx`
 
-For whoever owns `hx-proto` and the `hx` binary. `hx-sandbox` has no dependency on `hx-proto`; everything below is glue that lives in the `hx` crate (or a thin `SandboxHandler` module next to `TxnHandler`).
+`hx-sandbox` is wired into the dispatcher. This file says what is registered, what the plugin calls, and how a spawned kernel's streams reach the plugin.
 
-## 1. Dependency
+## What is registered
 
-```toml
-# crates/hx/Cargo.toml
-hx-sandbox.workspace = true   # already in [workspace.dependencies]
-```
+`hx::build_dispatcher` registers `hx_sandbox::SandboxHandler` (namespace `sandbox`). `hx.describe` lists `sandbox.run`, `sandbox.capabilities`, `sandbox.spawn`, `sandbox.wait`, `sandbox.kill` and these capability strings, only for what is enforceable on the host: `sandbox.fs`, `sandbox.net.off`, `sandbox.net.loopback`, `sandbox.process_tree_kill`, `sandbox.inherited_handle`, `sandbox.channel.unix_socket`, plus `sandbox.platform.<os>`. The plugin should refuse a governed session that needs `sandbox.fs` when it is missing, rather than find out at the first gate.
 
-`hx-sandbox` needs a Tokio runtime with the blocking pool (it uses `spawn_blocking` for path resolution and sandbox construction) and the `process`, `time` and `io-util` features, which it enables itself.
+`hx sandbox run --json <file|->` and `hx sandbox capabilities` are one-shots through the same dispatcher. `hx schema` prints the schema including these methods; `hx-proto/schema/hx-v1.schema.json` is regenerated with `cargo test -p hx -- --ignored bless_schema`. The schema builder lives in `hx::schema` (`hx_sandbox::add_schema` adds this crate's methods and the `error.data` types of `hx.sandbox.unavailable` and `hx.sandbox.denied`).
 
-## 2. The handler
+Error codes (in `crates/hx-proto/errors.json`, all `-32000`): `hx.sandbox.unavailable` (`data.dimension`, `data.reason`), `hx.sandbox.denied` (`data.step`, `data.os_error`), `hx.sandbox.spawn_failed`, `hx.sandbox.unknown_handle`, `hx.sandbox.too_many`. An invalid policy is the existing `hx.invalid_params`. A cancelled `sandbox.run` kills the process tree and answers `hx.cancelled`.
 
-`sandbox.run` follows `TxnHandler`'s shape. The error mapping is mechanical: `Error::code()` is a `&'static str` already in the catalog, `Error::data()` is the optional details object.
+## Methods
 
-```rust
-use hx_proto::method::Namespace;
-use hx_proto::registry::{BoxFuture, CallContext, Handler, HandlerResult, parse_params, to_result};
-use hx_proto::{AppError, codes};
-use hx_sandbox::wire::{METHOD_CAPABILITIES, METHOD_RUN, SandboxRunParams};
-
-#[derive(Debug, Default)]
-pub struct SandboxHandler;
-
-const METHODS: &[&str] = &[METHOD_RUN, METHOD_CAPABILITIES];
-
-fn app_error(e: &hx_sandbox::Error) -> AppError {
-    // `code()` is one of hx.sandbox.unavailable | denied | spawn_failed | hx.invalid_params.
-    let mut err = AppError::new(e.code(), e.to_string());
-    if let Some(serde_json::Value::Object(map)) = e.data() {
-        for (k, v) in map { err = err.with(&k, v); }
-    }
-    err
-}
-
-impl Handler for SandboxHandler {
-    fn namespace(&self) -> Namespace { Namespace::Sandbox }
-    fn methods(&self) -> &'static [&'static str] { METHODS }
-
-    fn capabilities(&self) -> Vec<String> {
-        // Live probes; the first call forks short-lived probe children on Linux (a few ms).
-        hx_sandbox::capabilities().capability_strings()
-    }
-
-    fn call<'a>(&'a self, method: &'a str, params: serde_json::Value, ctx: CallContext)
-        -> BoxFuture<'a, HandlerResult>
-    {
-        Box::pin(async move {
-            match method {
-                METHOD_CAPABILITIES => to_result(&hx_sandbox::capabilities()),
-                METHOD_RUN => {
-                    let p: SandboxRunParams = parse_params(params)?;
-                    let (argv, policy) = p.into_policy();
-                    // Dropping the run future kills the whole process tree, so cancelling is
-                    // safe and changes nothing in the workspace.
-                    tokio::select! {
-                        () = ctx.cancel.cancelled() => Err(AppError::cancelled()),
-                        r = hx_sandbox::run(&argv, &policy) => match r {
-                            Ok(result) => to_result(&result),
-                            Err(e) => Err(app_error(&e)),
-                        },
-                    }
-                }
-                other => Err(AppError::new(codes::HX_METHOD_NOT_FOUND, format!("no handler for `{other}`"))),
-            }
-        })
-    }
-}
-```
-
-(Names are as they appear in `hx-proto` on `w2/hx-core`; adjust to whatever the merged names are. Add the three codes below to `errors.json` first, so `codes::HX_SANDBOX_*` exist and `rpc_code_for` knows them; until then `AppError::new(e.code(), ..)` still works because `Error::code()` returns the string itself.)
-
-Register it in `build_dispatcher` next to `TxnHandler`. Warm the probes once at start-up (call `hx_sandbox::capabilities()` before serving) so the first `sandbox.run` does not pay for them.
-
-## 3. Protocol changes (PROTOCOL.md section 4)
-
-`sandbox.run` is richer than the one-liner in the doc. The wire types are `hx_sandbox::wire::{SandboxRunParams, SandboxRunResult}` and their JSON Schemas come from `hx_sandbox::wire::json_schemas()` (a map `method -> {params, result}`), ready for the schema builder.
+**`sandbox.run`**: `{argv, cwd, ro[], rw[], net, env, env_allowlist?, timeout_ms?, output_cap?, kill_grace_ms?, degraded?, memory_bytes?, max_processes?, max_file_bytes?, cpu_seconds?}`.
 
 | Param | Notes |
 |---|---|
 | `argv`, `cwd` | `argv` is a vector, never a shell string. `cwd` must lie inside `ro` or `rw` |
 | `ro[]`, `rw[]` | absolute paths; canonicalised; a `ro` path inside an `rw` path is rejected |
-| `net` | `false` (off, default), `true` (on), `"loopback"`, or a host list (only loopback names are enforceable; anything else is `hx.sandbox.unavailable` unless degraded) |
-| `env` | variables to set. **New:** `env_allowlist` (names copied from `hx`'s environment; default `PATH`, locale, `TERM`, `TZ`) |
-| `timeout_ms`, `output_cap` | defaults 120 000 ms and 1 MiB per stream; ceilings 1 h and 64 MiB. **New:** `kill_grace_ms` (default 2000) |
-| **New:** `degraded` | `{fs, network, process}` booleans, all false by default |
+| `net` | `false` (off, default), `true` (on), `"loopback"`, or a host list. Only loopback names are enforceable; any other list is `hx.sandbox.unavailable` unless `degraded.network`, which means network **off** |
+| `env`, `env_allowlist` | `env` is set in the child. `env_allowlist` names are copied from `hx`'s environment (default `PATH`, locale, `TERM`, `TZ`) |
+| `timeout_ms`, `output_cap` | defaults 120 000 ms and 1 MiB per stream; ceilings 1 h and 64 MiB. `kill_grace_ms` default 2000 |
+| `memory_bytes`, `max_processes`, `max_file_bytes`, `cpu_seconds` | resource limits, default 4 GiB, 512, 1 GiB, as many seconds as the timeout; `0` turns a limit off |
+| `degraded` | `{fs, network, process}`, all false by default |
 
-Result: `{exit: {kind: "exited", code} | {kind: "signaled", signal} | {kind: "timed_out"} | {kind: "spawn_failed", reason}, stdout: {text, truncated, total_bytes}, stderr, duration_ms, enforcement}`, where `enforcement` is `{platform, fs, network, env, process}` and each dimension is `{status: "enforced"|"degraded"|"unrestricted", mechanisms[], detail}`. A non-zero exit, a timeout and a missing program are results, not errors.
+Result: `{exit: {kind: "exited", code} | {kind: "signaled", signal} | {kind: "timed_out"} | {kind: "spawn_failed", reason}, stdout: {text, truncated, total_bytes}, stderr, duration_ms, enforcement}`. `enforcement` is `{platform, fs, network, env, process}`, each `{status: "enforced"|"degraded"|"unrestricted", mechanisms[], detail}`. A non-zero exit, a timeout and a missing program are results, not errors.
 
-New method `sandbox.capabilities`: no params, result `Capabilities`.
+**`sandbox.spawn`**: the same params plus `channel?: {env?, dir?, accept_timeout_ms?}`. `timeout_ms` is the child's maximum lifetime. Returns `{handle, pid, enforcement, channel?: {kind: "unix_socket", path, env, fd}}`.
 
-Error codes to add to `crates/hx-proto/errors.json` (all `-32000`):
+**`sandbox.wait`** `{handle, timeout_ms = 0}`: `0` polls. Returns `{running, exit?, stdout, stderr, duration_ms}`; once the exit is returned the handle is gone. **`sandbox.kill`** `{handle}` kills the whole tree; call `sandbox.wait` to collect the exit. **`sandbox.capabilities`** returns what the host can enforce.
 
-```json
-{"code": "hx.sandbox.unavailable", "rpc_code": -32000, "description": "The platform cannot enforce a requested sandbox dimension and the policy did not allow degrading it. Nothing ran. data.dimension and data.reason say which."},
-{"code": "hx.sandbox.denied", "rpc_code": -32000, "description": "The OS refused while the sandbox was being built or applied, so the command did not run. data.step names the setup step."},
-{"code": "hx.sandbox.spawn_failed", "rpc_code": -32000, "description": "A long-lived sandboxed child could not be started (spawn only; sandbox.run reports the same condition as exit.kind spawn_failed)."}
-```
+At most 32 spawned children live at once (`hx.sandbox.too_many`). Dropping `hx` kills them all (each is a kill-on-drop tree).
 
-The first two are already listed in PROTOCOL section 6 but not in `errors.json`; `spawn_failed` is new. An invalid policy maps to the existing `hx.invalid_params`.
+## How the plugin gets a spawned child's streams
 
-Capability strings advertised through `hx.describe`: `sandbox.run`, `sandbox.spawn`, `sandbox.platform.<os>`, and, only when enforceable on this host, `sandbox.fs`, `sandbox.net.off`, `sandbox.net.loopback`, `sandbox.process_tree_kill`, `sandbox.inherited_handle`. The plugin should refuse to start a governed session that needs `sandbox.fs` when it is missing, rather than discover it at the first gate.
+Chosen: **a socket path returned to the caller** for the child's private channel, and **captured output returned by `sandbox.wait`** for stdout and stderr. Not notifications over `hx`'s stdio. Why:
 
-## 4. How the callers use it
+- The kernel speaks its own JSON-RPC (`hx-kernel-v1`) to the plugin, with `cell.output` streaming, `tool.call` round trips and large cell results. Carrying that inside `hx`'s JSON-RPC would wrap every byte twice, queue it behind unrelated requests on one stdio pipe, and make `hx` parse and re-serialise payloads it has no business reading (and that the redactor would then have to consider).
+- A byte bridge is binary-safe and unframed. `hx` copies bytes between the plugin's connection and the child's inherited end of a socket pair, without looking at them.
+- It works with the network off. The child has no path access to a socket and its `connect` is denied; it only needs the descriptor it inherited, whose number it reads from the environment variable named in `channel.env` (default `HX_CHANNEL_FD`).
+- `hx` has no unsolicited-notification path today (the dispatcher answers requests), and the kernel's stdout and stderr are diagnostics, not data the plugin must react to as it arrives. `sandbox.wait` with `timeout_ms: 0` is the poll; the capture is capped like every output.
 
-**Gate commands (`ship`).** Workspace read-only, a writable scratch and any build-output directory writable, network off:
+The channel: `hx` creates a connected socket pair, binds `<dir>/channel.sock` (the directory is mode 0700, the socket 0600; the default directory is a fresh one under the temporary directory, removed afterwards) and bridges the **first** connection to the child's end. The listener closes after one accept or after `accept_timeout_ms` (default 60 s), and the connecting peer's uid must equal `hx`'s. Nobody connecting in time closes the child's end, so the kernel sees EOF and exits.
+
+Plugin side, in order: `sandbox.spawn` with `channel` set, connect to `channel.path`, speak `hx-kernel-v1` on that stream, `sandbox.wait` for the exit (or `sandbox.kill` for an interrupt-hard-timeout). The kernel reads `os.environ[channel.env]` and wraps that descriptor (`socket.socket(fileno=int(...))`).
+
+On Windows the channel is not implemented yet: `sandbox.spawn` with `channel` returns `hx.invalid_params`. The library can already pass one handle (`SpawnOptions::with_inherit`); a named-pipe bridge is the missing piece and needs a real Windows machine to test.
+
+## Calling the library directly
 
 ```rust
 let policy = SandboxPolicy::new(&workspace)
@@ -115,17 +57,13 @@ let policy = SandboxPolicy::new(&workspace)
 let result = hx_sandbox::run(&argv, &policy).await?;
 ```
 
-Call `policy.resolve()?.ensure_rw_within(&[scratch_root, workspace])` first when any writable path comes from a project or an agent: it proves no symlink makes a writable grant resolve elsewhere.
+Call `policy.resolve()?.ensure_rw_within(&[scratch_root, workspace])` first when any writable path comes from a project or an agent: it proves no symlink makes a writable grant resolve elsewhere. Call `hx_sandbox::capabilities()` once at start-up so the first run does not pay for the Linux probes.
 
-**Exec kernel (long-lived, with a private channel).** The kernel must not talk over stdout, and with `network: off` it cannot connect to anything by path. So `hx` owns the channel:
+`hx-pack`'s `proc.rs` is a stand-in for the process spawn this crate provides. When it is replaced, use `hx_sandbox::run` with a read-only policy for the repository and `network: off`.
 
-1. `hx` creates a connected pair (a `UnixStream::pair()`, or an anonymous pipe pair on Windows), keeps one end for the plugin side, and passes the other to the kernel: `read the fd number first`, put it in `argv` or `env_set` (for example `HX_KERNEL_FD=7`), then `spawn(&argv, &policy, SpawnOptions::new().with_inherit(fd.into()))`. The child sees the descriptor under the same number.
-2. How the plugin reaches its end is a design decision for the protocol, not for this crate. The natural shape is a `sandbox.spawn` method that returns `{handle, pid, enforcement}` and streams `sandbox.stdout`/`sandbox.stderr` events, plus `sandbox.kill` and `sandbox.wait`, with `hx` bridging the kernel's channel to the plugin's private socket. `hx-sandbox` exposes everything that needs: `Handle::take_stdout/stderr/stdin`, `kill()`, `wait()`, `pid()`, and the lifetime watchdog from `timeout_ms`.
-3. Set `timeout_ms` to the kernel's maximum lifetime (it is enforced by a watchdog); the interrupt-without-kill behaviour of ADR-0005 is a kernel-protocol matter, not a sandbox one.
+## Decisions still open
 
-## 5. Things to decide
-
-- **Allowlist degrade.** A non-loopback host list is `unavailable`; with `degraded.network` it runs with the network fully **on**. If you would rather it degrade to *off*, that is a one-line change in each backend's `plan`/`prepare`. Which is right depends on whether a failing build is worse than an unfiltered one. A real allowlist needs an egress proxy: `hx` would start it, give the child `network: loopback` plus `HTTPS_PROXY`, and enforce the host list there.
-- **ADR.** Landlock and seccomp instead of bubblewrap on Linux (README, "Deviations"), AppContainer instead of Codex's user-based design on Windows.
-- **`rw` inside `ro` and not the reverse.** If the gate needs a read-only subtree inside a writable one (for example `.git` inside a writable checkout), the backends cannot express it today. The workaround is to grant the writable subdirectories instead of the parent.
-- **Windows elevation.** `loopback` is unavailable without an elevated `hx`. The kernel channel does not need it (inherited handle), but any test that binds a local server does.
+- **Windows channel** (above).
+- **Real allowlist**: the host-side CONNECT proxy in the README's design note.
+- **`rw` inside `ro` only**: a read-only subtree inside a writable tree (for example `.git` inside a writable checkout) cannot be expressed; grant the writable subdirectories instead.
+- **Windows elevation**: `loopback` needs an elevated `hx`; the kernel channel does not.
