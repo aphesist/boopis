@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "description": "Paths a transaction may not touch unless the caller passes its own `protected` list. Globs with literal separators: `*` does not cross `/`, `**` does. Matched case-insensitively. Explicit forms only; never bare `*test*` substrings.",
+  "patterns": [
+    "tests/**",
+    "**/test_*.py",
+    "**/*_test.go",
+    "**/*.spec.*",
+    "**/__tests__/**",
+    "**/.git",
+    "**/.git/**",
+    "**/.env*",
+    "**/*.pem",
+    "**/id_rsa*"
+  ]
+}
