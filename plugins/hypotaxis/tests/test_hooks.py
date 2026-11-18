@@ -437,9 +437,13 @@ def test_ledger_rpc_for_an_unknown_session_is_empty_not_an_error(make_runtime: M
     assert rpc.ledger_verify({"session_id": "nope"}) == {"ok": True, "events": 0}
 
 
-def test_cascade_state_is_a_stub_that_invents_nothing(make_runtime: MakeRuntime) -> None:
+def test_cascade_state_with_no_task_is_idle_and_shows_the_default_ladder(make_runtime: MakeRuntime) -> None:
     make_runtime()
-    assert rpc.cascade_state({"session_id": SID}) == {"ladder": [], "status": "idle"}
+    got = rpc.cascade_state({"session_id": SID})
+    assert got["status"] == "idle"
+    assert "task_id" not in got  # nothing has run, so no task, tier or attempt is invented
+    assert [t["name"] for t in got["ladder"]] == ["haiku", "sonnet", "opus"]  # contraprova's measured ladder
+    assert {t["model"]["provider"] for t in got["ladder"]} == {"anthropic"}
 
 
 def test_cascade_state_returns_the_configured_ladder(make_runtime: MakeRuntime) -> None:

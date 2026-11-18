@@ -521,7 +521,7 @@ def test_the_tools_are_registered_in_toolset_hypotaxis_and_hidden_without_hx(
 
     rt, state, ctx = make_session()
     hypotaxis.register(ctx)
-    assert set(ctx.tools) == {"pack", "ship"}
+    assert set(ctx.tools) == {"pack", "ship", "dispatch"}
     assert {t["toolset"] for t in ctx.tools.values()} == {"hypotaxis"}
     assert hx_ready() is True
     # the handler is the tool: JSON string in, JSON string out, never an exception

@@ -13,7 +13,6 @@ from typing import Any, cast
 from ..errors import InvalidParamsError, PricesDisabledError
 from ..hooks import runtime
 from ..ledger import compute_stats, refresh
-from ..session import SessionState
 from ..version import PLUGIN_VERSION, PROTOCOL
 
 Handler = Callable[..., Any]
@@ -49,9 +48,11 @@ def describe(params: Mapping[str, Any], *, session_id: str | None = None, **_: A
     loaded = rt.load_settings()
     session: dict[str, Any] | None = None
     sid = params.get("session_id") or session_id
+    ladder_errors: list[str] = []
     if isinstance(sid, str) and sid:
         state = rt.state(sid)
         session = {"session_id": sid, "mode": state.mode, "locked": state.locked, "cwd": state.cwd or None}
+        ladder_errors = _ladder_errors(rt, state)
     return {
         "session": session,
         "version": PLUGIN_VERSION,
@@ -59,8 +60,21 @@ def describe(params: Mapping[str, Any], *, session_id: str | None = None, **_: A
         "capabilities": list(CAPABILITIES),
         "hx": None,  # the hx binary is not wired in this part
         "kernel": None,  # nor is the exec kernel
-        "config": {"mode": loaded.value.mode, "errors": list(loaded.errors)},
+        "config": {"mode": loaded.value.mode, "errors": list(loaded.errors), "ladder_errors": ladder_errors},
     }
+
+
+def _ladder_errors(rt: Any, state: Any) -> list[str]:
+    """Why the session's tier ladder cannot run (a provider Hermes has no configuration for, an unknown start tier);
+    empty when it can, or when the session is not governed and has no cascade."""
+    from ..governance.ladder import ladder_problems
+
+    if state.mode != "governed":
+        return []
+    try:
+        return ladder_problems(rt.ladder_of(state), rt.provider_known, rt.start_tier_of(state))
+    except (ValueError, KeyError) as exc:
+        return [f"the tier ladder is invalid: {exc}"]
 
 
 def _tier_ladder(ladder: Any) -> Mapping[str, Any]:
@@ -98,7 +112,10 @@ def mode_set(params: Mapping[str, Any], *, session_id: str | None = None, **_: A
         if not isinstance(gate, Mapping) or not isinstance(cast("Mapping[str, Any]", gate).get("enabled"), bool):
             raise InvalidParamsError("gate must be an object {enabled: boolean}")
         enabled = cast("Mapping[str, Any]", gate)["enabled"]
-    runtime().set_mode(sid, mode, ladder=ladder, gate_enabled=enabled)
+    start = params.get("start_tier")
+    if start is not None and (not isinstance(start, str) or not start):
+        raise InvalidParamsError("start_tier must be the name of a tier", data={"found": repr(start)})
+    runtime().set_mode(sid, mode, ladder=ladder, gate_enabled=enabled, start_tier=start)
     return {}
 
 
@@ -129,30 +146,14 @@ def ledger_stats(params: Mapping[str, Any], *, session_id: str | None = None, **
     return compute_stats(rt.ledger(state).read(), book, state.settings.subscription_providers)
 
 
-def _ladder_tiers(state: SessionState) -> list[dict[str, Any]]:
-    """The configured ladder as protocol ``Tier`` objects; empty when none is configured."""
-    from .._vendor.contraprova.interfaces import TierLadder
-
-    raw = state.ladder if state.ladder is not None else state.settings.ladder
-    if raw is None:
-        return []
-    ladder = TierLadder.from_dict(raw)
-    return [
-        {
-            "name": t.name,
-            "model": {"provider": t.model.provider, "id": t.model.id},
-            "effort": t.effort.value,
-            "max_tokens": t.max_tokens,
-            "retries": t.retries,
-        }
-        for t in ladder.tiers
-    ]
-
-
 def cascade_state(params: Mapping[str, Any], *, session_id: str | None = None, **_: Any) -> dict[str, Any]:
-    """The cascade is not built yet: the configured ladder, and ``status: idle``. No task, no tier."""
+    """Where the session's cascade is: its ladder, and the current task, tier, attempt and status (``idle`` when no
+    task has run). ``governance.engine.state_view`` reads the ledger and the live run."""
+    from ..governance.engine import state_view
+
     sid = _session_id(params, session_id)
-    return {"ladder": _ladder_tiers(runtime().state(sid)), "status": "idle"}
+    rt = runtime()
+    return state_view(rt, rt.state(sid))
 
 
 def prices_refresh(params: Mapping[str, Any], *, session_id: str | None = None, **_: Any) -> dict[str, Any]:
