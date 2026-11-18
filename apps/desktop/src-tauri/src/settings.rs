@@ -1,0 +1,139 @@
+//! Host settings: versioned, validated at load, never half-applied (`docs/STANDARDS.md` sections 1 and 2). They are
+//! persisted with the Tauri store (`settings.json` in the app's config directory). Secrets never live here.
+
+use serde::{Deserialize, Serialize};
+use specta::Type;
+
+use crate::error::{Error, Result};
+
+/// The current schema version.
+pub const SCHEMA_VERSION: u32 = 1;
+
+/// What the host remembers.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+pub struct AppSettings {
+    /// The schema version of this value.
+    pub version: u32,
+    /// A dedicated Hermes profile to attach to; `None` is the user's active profile (ADR-0006).
+    pub profile: Option<String>,
+    /// Whether the host may show desktop notifications.
+    pub notifications: bool,
+}
+
+impl Default for AppSettings {
+    fn default() -> Self {
+        Self {
+            version: SCHEMA_VERSION,
+            profile: None,
+            notifications: true,
+        }
+    }
+}
+
+impl AppSettings {
+    /// Check a value the UI sends.
+    ///
+    /// # Errors
+    /// `Config` with the key, what was expected and what was found.
+    pub fn validate(&self) -> Result<()> {
+        if self.version != SCHEMA_VERSION {
+            return Err(Error::Config(format!(
+                "settings.version: expected {SCHEMA_VERSION}, found {}",
+                self.version
+            )));
+        }
+        if let Some(p) = &self.profile {
+            let ok = p == "default"
+                || (!p.is_empty()
+                    && p.len() <= 64
+                    && p.chars().all(|c| {
+                        c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '_'
+                    }));
+            if !ok {
+                return Err(Error::Config(format!(
+                    "settings.profile: expected [a-z0-9_-]{{1,64}}, found {p:?}"
+                )));
+            }
+        }
+        Ok(())
+    }
+
+    /// Read what the store holds: an older version is migrated, a newer one is refused, a bad one is an error.
+    ///
+    /// # Errors
+    /// `Config` when the stored value is from a newer version or does not validate.
+    pub fn migrate(stored: Option<&serde_json::Value>) -> Result<Self> {
+        let Some(v) = stored else {
+            return Ok(Self::default());
+        };
+        let version = v
+            .get("version")
+            .and_then(serde_json::Value::as_u64)
+            .unwrap_or(0);
+        if version > u64::from(SCHEMA_VERSION) {
+            return Err(Error::Config(format!(
+                "settings.version: this build reads up to {SCHEMA_VERSION}, found {version}"
+            )));
+        }
+        // v0 had no version field and only `profile` and `notifications`; v1 adds the version.
+        let settings = Self {
+            version: SCHEMA_VERSION,
+            profile: v.get("profile").and_then(|p| p.as_str()).map(str::to_owned),
+            notifications: v
+                .get("notifications")
+                .and_then(serde_json::Value::as_bool)
+                .unwrap_or(true),
+        };
+        settings.validate()?;
+        Ok(settings)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn nothing_stored_gives_the_defaults() {
+        assert_eq!(AppSettings::migrate(None).unwrap(), AppSettings::default());
+    }
+
+    #[test]
+    fn version_zero_migrates_to_one() {
+        let s = AppSettings::migrate(Some(&json!({"profile": "work", "notifications": false})))
+            .unwrap();
+        assert_eq!(
+            s,
+            AppSettings {
+                version: 1,
+                profile: Some("work".into()),
+                notifications: false
+            }
+        );
+    }
+
+    #[test]
+    fn a_newer_version_is_refused_not_half_read() {
+        let e = AppSettings::migrate(Some(&json!({"version": 2, "profile": "x"}))).unwrap_err();
+        assert_eq!(e.code(), "hx.config.invalid");
+        assert!(e.to_string().contains("settings.version"));
+    }
+
+    #[test]
+    fn bad_values_say_which_key() {
+        let e =
+            AppSettings::migrate(Some(&json!({"version": 1, "profile": "../etc"}))).unwrap_err();
+        assert!(e.to_string().contains("settings.profile") && e.to_string().contains("../etc"));
+        let ok = AppSettings {
+            profile: Some("nina".into()),
+            ..AppSettings::default()
+        };
+        assert!(ok.validate().is_ok());
+        let wrong = AppSettings {
+            version: 7,
+            ..AppSettings::default()
+        };
+        assert!(wrong.validate().is_err());
+    }
+}

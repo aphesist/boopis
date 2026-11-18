@@ -1,0 +1,27 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main",
+  "description": "The main window: exactly the host commands the UI uses, and event listening for the typed events.",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "allow-hermes-status",
+    "allow-hermes-install",
+    "allow-hermes-retry",
+    "allow-gateway-connect",
+    "allow-gateway-send",
+    "allow-gateway-disconnect",
+    "allow-gateway-stats",
+    "allow-secret-set",
+    "allow-secret-delete",
+    "allow-secret-exists",
+    "allow-app-settings-get",
+    "allow-app-settings-set",
+    "allow-notify",
+    "allow-pick-folder",
+    "allow-open-external"
+  ]
+}

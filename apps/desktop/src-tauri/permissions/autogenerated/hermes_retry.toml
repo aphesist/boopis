@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-hermes-retry"
+description = "Enables the hermes_retry command without any pre-configured scope."
+commands.allow = ["hermes_retry"]
+
+[[permission]]
+identifier = "deny-hermes-retry"
+description = "Denies the hermes_retry command without any pre-configured scope."
+commands.deny = ["hermes_retry"]

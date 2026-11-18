@@ -1,0 +1,58 @@
+[package]
+name = "hypotaxis-host"
+description = "The hypotaxis desktop host: the machine authority (Hermes lifecycle, gateway proxy, keychain, OS integration) of the Tauri app."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true
+
+[lib]
+name = "hypotaxis_host"
+path = "src/lib.rs"
+
+[[bin]]
+name = "hypotaxis"
+path = "src/main.rs"
+
+[features]
+# Test doubles (an in-memory secret store, a scripted gateway) for integration tests and local runs. Never a fallback.
+dev-fixtures = []
+
+[build-dependencies]
+tauri-build = "2"
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-specta = { version = "=2.0.0-rc.29", features = ["derive", "typescript"] }
+specta = { version = "=2.0.0-rc.28", features = ["serde_json"] }
+specta-typescript = "0.0.15"
+tauri-plugin-store = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+serde.workspace = true
+serde_json = { workspace = true, features = ["raw_value"] }
+thiserror.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "sync", "time", "process", "io-util", "net", "fs"] }
+tokio-util.workspace = true
+tokio-tungstenite = { version = "0.30", default-features = false, features = ["handshake"] }
+futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
+async-trait = "0.1"
+keyring = "4"
+url = "2"
+uuid.workspace = true
+subtle = "2"
+getrandom = "0.3"
+hex.workspace = true
+dirs = "6"
+
+[dev-dependencies]
+tempfile.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "sync", "time", "process", "io-util", "net", "fs"] }
