@@ -180,6 +180,7 @@ impl Dispatcher {
             version: self.version.clone(),
             protocol: PROTOCOL.to_owned(),
             capabilities,
+            methods: self.methods().into_iter().map(str::to_owned).collect(),
         }
     }
 

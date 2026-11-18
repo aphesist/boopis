@@ -1,13 +1,16 @@
-//! The generated JSON Schema for the whole `hx-v1` wire contract.
+//! The generated JSON Schema for the `hx-v1` wire contract.
 //!
-//! `schema/hx-v1.schema.json` is committed. A test fails if it is stale. Python types are
-//! generated from it. To update it after changing a wire type:
+//! Each crate that serves methods adds them to a [`SchemaBuilder`]. The binary's library
+//! (`hx::schema`) builds the full document, commits it as `schema/hx-v1.schema.json` in this
+//! crate, and a test fails if it is stale. Python types are generated from it. To update it
+//! after changing a wire type:
 //!
 //! ```text
-//! cargo test -p hx-proto -- --ignored bless_schema
+//! cargo test -p hx -- --ignored bless_schema
 //! ```
 
-use schemars::generate::SchemaSettings;
+use schemars::JsonSchema;
+use schemars::generate::{SchemaGenerator, SchemaSettings};
 use serde_json::{Map, Value, json};
 
 use crate::describe::{DescribeResult, PROTOCOL};
@@ -19,46 +22,96 @@ use crate::txn::{
     ValidateResult,
 };
 
-/// Builds the schema document:
-/// `{ $schema, title, protocol, methods: {name: {params, result}}, errors: {code: {data}}, $defs }`.
-///
-/// `errors` types the extra fields of `error.data` for the codes that carry any.
-///
-/// Output is deterministic (sorted keys), so it diffs cleanly.
-#[must_use]
-pub fn schema_document() -> Value {
-    let mut generator = SchemaSettings::draft2020_12().into_generator();
-    let mut methods = Map::new();
+/// Collects methods and error data types from every crate that serves methods, then builds
+/// the schema document. One generator is shared, so a type used by two methods appears once
+/// in `$defs`.
+pub struct SchemaBuilder {
+    generator: SchemaGenerator,
+    methods: Map<String, Value>,
+    errors: Map<String, Value>,
+}
 
-    macro_rules! method {
-        ($name:expr, $params:ty, $result:ty) => {{
-            let params = generator.subschema_for::<$params>().to_value();
-            let result = generator.subschema_for::<$result>().to_value();
-            methods.insert($name.to_owned(), json!({ "params": params, "result": result }));
-        }};
+impl Default for SchemaBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl std::fmt::Debug for SchemaBuilder {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SchemaBuilder")
+            .field("methods", &self.methods.keys().collect::<Vec<_>>())
+            .finish_non_exhaustive()
+    }
+}
+
+impl SchemaBuilder {
+    /// An empty builder.
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            generator: SchemaSettings::draft2020_12().into_generator(),
+            methods: Map::new(),
+            errors: Map::new(),
+        }
     }
 
-    methods.insert(
-        method::DESCRIBE.to_owned(),
-        json!({ "params": null, "result": generator.subschema_for::<DescribeResult>().to_value() }),
-    );
-    method!(method::TXN_VALIDATE, ValidateParams, ValidateResult);
-    method!(method::TXN_APPLY, ApplyParams, ApplyResult);
-    method!(method::TXN_RESTORE, JournalRef, RestoreResult);
-    method!(method::TXN_DISCARD, JournalRef, DiscardResult);
-    method!(method::TXN_RECOVER, RecoverParams, RecoverResult);
-
-    let mut errors = Map::new();
-    macro_rules! error_data {
-        ($code:expr, $data:ty) => {{
-            let data = generator.subschema_for::<$data>().to_value();
-            errors.insert($code.to_owned(), json!({ "data": data }));
-        }};
+    /// Adds a method with typed params and result.
+    pub fn method<P: JsonSchema, R: JsonSchema>(&mut self, name: &str) -> &mut Self {
+        let params = self.generator.subschema_for::<P>().to_value();
+        let result = self.generator.subschema_for::<R>().to_value();
+        self.methods.insert(
+            name.to_owned(),
+            json!({ "params": params, "result": result }),
+        );
+        self
     }
-    error_data!(codes::HX_TXN_ABORTED_BEFORE_WRITE, AbortedBeforeWriteData);
-    error_data!(codes::HX_TXN_SCOPE_VIOLATION, PathsData);
-    error_data!(codes::HX_TXN_PROTECTED_PATH, PathsData);
-    error_data!(codes::HX_TXN_APPLY_FAILED, ApplyFailedData);
+
+    /// Adds a method that takes no params.
+    pub fn method_without_params<R: JsonSchema>(&mut self, name: &str) -> &mut Self {
+        let result = self.generator.subschema_for::<R>().to_value();
+        self.methods
+            .insert(name.to_owned(), json!({ "params": null, "result": result }));
+        self
+    }
+
+    /// Types the extra fields of `error.data` for a catalog code.
+    pub fn error_data<D: JsonSchema>(&mut self, code: &str) -> &mut Self {
+        let data = self.generator.subschema_for::<D>().to_value();
+        self.errors.insert(code.to_owned(), json!({ "data": data }));
+        self
+    }
+
+    /// The finished document:
+    /// `{ $schema, title, protocol, methods: {name: {params, result}}, errors: {code: {data}}, $defs }`.
+    ///
+    /// Output is deterministic (sorted keys), so it diffs cleanly.
+    #[must_use]
+    pub fn finish(mut self) -> Value {
+        let defs = self.generator.take_definitions(true);
+        json!({
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "hx-v1",
+            "protocol": PROTOCOL,
+            "methods": self.methods,
+            "errors": self.errors,
+            "$defs": defs,
+        })
+    }
+}
+
+/// Adds the methods this crate defines: `hx.describe` and `txn.*`.
+pub fn add_core(b: &mut SchemaBuilder) {
+    b.method_without_params::<DescribeResult>(method::DESCRIBE);
+    b.method::<ValidateParams, ValidateResult>(method::TXN_VALIDATE);
+    b.method::<ApplyParams, ApplyResult>(method::TXN_APPLY);
+    b.method::<JournalRef, RestoreResult>(method::TXN_RESTORE);
+    b.method::<JournalRef, DiscardResult>(method::TXN_DISCARD);
+    b.method::<RecoverParams, RecoverResult>(method::TXN_RECOVER);
+    b.error_data::<AbortedBeforeWriteData>(codes::HX_TXN_ABORTED_BEFORE_WRITE);
+    b.error_data::<PathsData>(codes::HX_TXN_SCOPE_VIOLATION);
+    b.error_data::<PathsData>(codes::HX_TXN_PROTECTED_PATH);
+    b.error_data::<ApplyFailedData>(codes::HX_TXN_APPLY_FAILED);
     for code in [
         codes::HX_TXN_JOURNAL_NOT_FOUND,
         codes::HX_TXN_JOURNAL_CORRUPT,
@@ -66,59 +119,27 @@ pub fn schema_document() -> Value {
         codes::HX_TXN_INVALID_STATE,
         codes::HX_TXN_RESTORE_FAILED,
     ] {
-        error_data!(code, JournalData);
+        b.error_data::<JournalData>(code);
     }
-
-    let defs = generator.take_definitions(true);
-    json!({
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "title": "hx-v1",
-        "protocol": PROTOCOL,
-        "methods": methods,
-        "errors": errors,
-        "$defs": defs,
-    })
 }
 
-/// The schema as committed: pretty-printed with a trailing newline.
-///
-/// # Errors
-/// Never in practice; serialising a `Value` cannot fail.
-pub fn schema_text() -> Result<String, serde_json::Error> {
-    let mut text = serde_json::to_string_pretty(&schema_document())?;
-    text.push('\n');
-    Ok(text)
+/// The schema of this crate's own methods only. The full `hx-v1` document, which adds the
+/// methods of every handler crate, is built by the `hx` binary's library (`hx::schema`)
+/// because `hx-proto` cannot depend on the crates that depend on it.
+#[must_use]
+pub fn core_document() -> Value {
+    let mut b = SchemaBuilder::new();
+    add_core(&mut b);
+    b.finish()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
-
-    fn committed_path() -> PathBuf {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("schema/hx-v1.schema.json")
-    }
-
-    #[test]
-    fn committed_schema_is_current() {
-        let expected = schema_text().unwrap();
-        let actual = std::fs::read_to_string(committed_path()).unwrap_or_default();
-        assert!(
-            actual == expected,
-            "schema/hx-v1.schema.json is stale; run `cargo test -p hx-proto -- --ignored bless_schema`"
-        );
-    }
-
-    /// Rewrites the committed schema. Run it after changing a wire type.
-    #[test]
-    #[ignore = "writes schema/hx-v1.schema.json"]
-    fn bless_schema() {
-        std::fs::write(committed_path(), schema_text().unwrap()).unwrap();
-    }
 
     #[test]
     fn every_method_has_params_and_result() {
-        let doc = schema_document();
+        let doc = core_document();
         let methods = doc["methods"].as_object().unwrap();
         for name in [
             "hx.describe",

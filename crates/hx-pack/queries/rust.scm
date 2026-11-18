@@ -1,0 +1,12 @@
+(function_item name: (identifier) @name) @definition.function
+(function_signature_item name: (identifier) @name) @definition.function
+(struct_item name: (type_identifier) @name) @definition.struct
+(enum_item name: (type_identifier) @name) @definition.enum
+(union_item name: (type_identifier) @name) @definition.union
+(trait_item name: (type_identifier) @name) @definition.trait
+(type_item name: (type_identifier) @name) @definition.type
+(const_item name: (identifier) @name) @definition.const
+(static_item name: (identifier) @name) @definition.static
+(mod_item name: (identifier) @name) @definition.module
+(macro_definition name: (identifier) @name) @definition.macro
+(impl_item type: (_) @name) @definition.impl

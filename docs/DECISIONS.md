@@ -194,6 +194,42 @@ They're not sandboxed, matching Claude Code. This is the only exception to the n
 - CI fails if a copy differs from its source.
 - Codes the plugin owns (`hx.config.*`, `hx.policy.*`, `hx.mode.*`, `hx.ledger.*`, `hx.budget.*`) are added to `crates/hx-proto/errors.json`, not kept in a second catalogue.
 
+## ADR-0017 Sandbox mechanisms per OS
+**Context.** ARCHITECTURE section 7 named bubblewrap, Landlock and seccomp for Linux, Seatbelt for macOS and AppContainer for Windows. The `hx-sandbox` work settled the details.
+
+**Decision.**
+- **Linux:** Landlock (ABI 3 or later, probed at runtime) for the filesystem, seccomp for network syscalls and a syscall deny-list, and a private network namespace for loopback-only. Every child also gets `setsid` plus `killpg`, a PID namespace when user namespaces allow it, `no_new_privs`, dropped capabilities and rlimits. There's no bubblewrap and no setuid helper.
+- **macOS:** a Seatbelt profile run through `sandbox-exec`, with paths passed as parameters, ported from Codex (Apache-2.0, notice kept).
+- **Windows:** a per-run AppContainer with filesystem ACLs and capability SIDs for the network, plus a kill-on-close job object with limits. This beats Codex's dedicated-user design for us: no elevated setup, and reads are actually blocked.
+- **Fail closed everywhere:** a dimension the platform can't enforce returns `hx.sandbox.unavailable` unless the policy explicitly accepts degraded enforcement, and every run reports what was enforced. A host allowlist the OS can't enforce falls back to network off. A real allowlist comes later through a host-side proxy.
+
+**Consequences.** Linux is verified with real processes in CI. macOS and Windows compile in CI and are verified on real machines before release (`crates/hx-sandbox/tests/{macos,windows}.rs`).
+
+## ADR-0018 Homes and vaults: multi-device and user-owned cloud
+**Context.** The owner wants sessions on any device (desktop, a phone app, other machines), stored in infrastructure they choose: Google Drive, OneDrive, S3, R2, B2, WebDAV, SFTP, a hosted server, a local server or a drive.
+
+**Decision.** Two separate concepts.
+- **A home** is where the work runs: Hermes, the plugin, `hx` and the workspace. Only a machine that can run programs can be a home: the desktop (default), a home server, a VPS, a cloud VM.
+  - Every device attaches to the home over `hermes-gateway-v1`, which Hermes's own desktop already does for remote backends (SSH, URL plus token).
+  - Transports: SSH, a tailnet (Tailscale or WireGuard), a Cloudflare Tunnel, or TLS with per-device tokens, which are revocable and kept in the OS keychain.
+  - There is exactly one live home per Hermes home directory (Hermes's rule).
+- **A vault** is where the data rests: any storage the user picks, reached through **Apache OpenDAL** (Rust, Apache-2.0), which covers S3-compatible stores, Google Drive, OneDrive, WebDAV, SFTP and the local filesystem.
+  - Data is encrypted on the device before upload, with the key in the OS keychain.
+  - The vault holds **snapshots, not live files**: Hermes state through `hermes backup`; ledgers, which are append-only and hash-verified so they sync safely; artifacts and settings.
+  - A lease file in the vault names the live home, so a second machine can take over only after the lease is released or expires. That makes a "travelling home" possible.
+- **Clients:**
+  - the desktop app;
+  - a phone app from the same UI through Tauri v2 mobile (Android directly; iOS through the macOS VM path or a rented Mac);
+  - a web client served by the home.
+  Hermes's chat platforms already reach phones meanwhile.
+
+**Seams built now (phase 1):**
+- The host's gateway connection is an endpoint abstraction, `Local` (ensure/attach) or `Remote` (URL plus token, SSH, tailnet), behind one interface.
+- The UI never assumes it runs on the home's machine: paths are home-relative, and file pickers and opening files go through the home.
+- Everything hypotaxis persists (ledgers, artifacts, the price cache, settings) goes through one storage interface, so a vault can mirror it.
+
+**Phases.** Remote homes and vault backup and restore are phase 2. The phone app is phase 3.
+
 ## ADR-0012 Prices
 Prices come from the models.dev catalogue plus a user override table. Hermes's models.dev data is not reachable through its public plugin API, so:
 - the plugin reads a cached catalogue file, `<profile home>/hypotaxis/prices/models-dev.json`;

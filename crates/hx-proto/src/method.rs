@@ -12,6 +12,18 @@ pub const TXN_RESTORE: &str = "txn.restore";
 pub const TXN_DISCARD: &str = "txn.discard";
 /// `txn.recover`: restore every incomplete journal after a crash.
 pub const TXN_RECOVER: &str = "txn.recover";
+/// `pack.search`: matches with surrounding lines.
+pub const PACK_SEARCH: &str = "pack.search";
+/// `pack.read`: a file or line ranges.
+pub const PACK_READ: &str = "pack.read";
+/// `pack.symbol`: the source of named definitions.
+pub const PACK_SYMBOL: &str = "pack.symbol";
+/// `pack.outline`: the definitions of files and directories.
+pub const PACK_OUTLINE: &str = "pack.outline";
+/// `pack.status`: git status, branch and HEAD.
+pub const PACK_STATUS: &str = "pack.status";
+/// `pack.bundle`: several of the above under one byte budget.
+pub const PACK_BUNDLE: &str = "pack.bundle";
 /// `$/cancelRequest`: notification `{id}` that cancels an in-flight request.
 pub const CANCEL_REQUEST: &str = "$/cancelRequest";
 

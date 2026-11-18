@@ -1,0 +1,18 @@
+---
+source: crates/hx-pack/tests/outline.rs
+expression: "snapshot(\"lang/sample.ts\")"
+---
+sample.ts [Ok]
+    3-6   interface User | interface User (@3)
+    8-9   type      UserId | type UserId = number | string; (@9)
+   11-14  enum      Role | enum Role (@11)
+   16-22  class     Repo | abstract class Repo<T> (@16)
+   17-17  method    Repo.find | abstract find(id: number): T | undefined (@17)
+   19-21  method    Repo.save | save(item: T): void (@19)
+   24-30  class     UserRepo | class UserRepo extends Repo<User> (@24)
+   27-29  method    UserRepo.find | find(id: number): User | undefined (@27)
+   32-35  function  greet | function greet(user: User): string (@32)
+   37-37  function  double | const double = (n: number): number => n * 2; (@37)
+   39-41  function  helper | const helper = function (a: number) { (@39)
+   43-45  module    Util | namespace Util (@43)
+   44-44  function  Util.noop | function noop() (@44)
