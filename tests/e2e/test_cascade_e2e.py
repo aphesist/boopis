@@ -314,6 +314,12 @@ def test_a_gate_block_climbs_to_the_stronger_model_and_the_orchestrator_hears_th
     assert b_requests
     assert {r.model for r in b_requests} == {"model-b"}
     assert not [r for r in b_requests if r.model != "model-b"]
+    # each role read its own cache-stable prompt section: the worker's, not the orchestrator's
+    system = next(m["content"] for m in a_requests[0].messages if m.get("role") == "system")
+    assert "hypotaxis: governed worker" in system
+    assert "You are the orchestrator" not in system
+    orch_system = next(m["content"] for m in one.chat_requests()[before[0] :][0].messages if m.get("role") == "system")
+    assert "You are the orchestrator" in orch_system
     # the next tier was handed the brief and the failure, not the transcript
     handed = user_text(b_requests[0])
     assert "Previous attempt failed" in handed
