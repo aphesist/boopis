@@ -2,6 +2,10 @@
 //! the sandbox and reporting what it could and could not do.
 #![cfg(target_os = "linux")]
 #![allow(
+    unsafe_code,
+    reason = "one test clears FD_CLOEXEC on purpose to prove the sandbox re-marks it"
+)]
+#![allow(
     clippy::unwrap_used,
     clippy::expect_used,
     clippy::panic,
@@ -780,4 +784,41 @@ async fn spawn_output_streams_are_capped_too() {
     assert!(stats.truncated());
     assert_eq!(stats.total_bytes(), 100_000);
     assert_eq!(h.wait().await.unwrap(), ExitOutcome::Exited { code: 0 });
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn descriptors_leaked_by_the_host_do_not_reach_the_child() {
+    // Simulate a C library that opened a descriptor without close-on-exec: clear the flag on
+    // purpose. The sandbox must mark it close-on-exec before the program starts.
+    let w = World::new();
+    let leaked = std::fs::File::open(w.work.join("source.txt")).unwrap();
+    let leaked_fd = leaked.as_raw_fd();
+    // SAFETY: fcntl on a descriptor this test owns and keeps open for the whole test.
+    let flags = unsafe { libc::fcntl(leaked_fd, libc::F_GETFD) };
+    assert!(flags >= 0);
+    // SAFETY: as above.
+    assert_eq!(
+        unsafe { libc::fcntl(leaked_fd, libc::F_SETFD, flags & !libc::FD_CLOEXEC) },
+        0
+    );
+
+    let mut policy = w.policy();
+    policy.ro_paths.push("/proc".into());
+    let r = run(&probe(&["fds"]), &policy).await.unwrap();
+    assert_eq!(code(&r), Some(0), "{r:?}");
+    let seen: Vec<i32> = r
+        .stdout
+        .text
+        .split_whitespace()
+        .map(|n| n.parse().unwrap())
+        .collect();
+    assert!(
+        seen.contains(&0) && seen.contains(&1) && seen.contains(&2),
+        "{seen:?}"
+    );
+    assert!(
+        !seen.contains(&leaked_fd),
+        "descriptor {leaked_fd} leaked into the sandbox: {seen:?}"
+    );
+    drop(leaked);
 }

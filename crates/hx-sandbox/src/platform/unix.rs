@@ -11,21 +11,27 @@ use super::{BoxRead, BoxWrite, Launch, StdinMode, Streams, unix_sys};
 use crate::error::{Error, Result};
 use crate::report::ExitOutcome;
 
-/// Ends a whole process tree. Cheap to copy; valid for as long as the tree has a live member,
+/// Ends a whole process tree. Cheap to clone; valid for as long as the tree has a live member,
 /// so callers use it only while they still hold the [`Child`] or right after it was reaped.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub(crate) struct TreeKiller {
     pgid: libc::pid_t,
 }
 
 impl TreeKiller {
-    /// Asks the tree to stop (SIGTERM to the group).
-    pub(crate) fn terminate(self) {
+    /// Asks the tree to stop (SIGTERM to the group). Returns whether a polite request exists on
+    /// this platform, so the caller knows whether to wait out the grace period.
+    #[allow(
+        clippy::unused_self,
+        reason = "keeps the signature the same as the other backends"
+    )]
+    pub(crate) fn terminate(&self) -> bool {
         unix_sys::killpg(self.pgid, libc::SIGTERM);
+        true
     }
 
     /// Kills the tree (SIGKILL to the group).
-    pub(crate) fn kill(self) {
+    pub(crate) fn kill(&self) {
         unix_sys::killpg(self.pgid, libc::SIGKILL);
     }
 }
@@ -44,7 +50,7 @@ impl Child {
     }
 
     pub(crate) fn killer(&self) -> TreeKiller {
-        self.killer
+        self.killer.clone()
     }
 
     /// Hands out the pipes. Call once.

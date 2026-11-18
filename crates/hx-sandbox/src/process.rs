@@ -178,7 +178,7 @@ pub async fn run(argv: &[String], policy: &SandboxPolicy) -> Result<RunResult> {
         Begun::Started(child, enforcement) => (child, enforcement),
     };
     let killer = child.killer();
-    let mut guard = TreeGuard(Some(killer));
+    let mut guard = TreeGuard(Some(killer.clone()));
     let (timeout, grace, cap) = (
         Duration::from_millis(policy.timeout_ms),
         Duration::from_millis(policy.kill_grace_ms),
@@ -198,8 +198,8 @@ pub async fn run(argv: &[String], policy: &SandboxPolicy) -> Result<RunResult> {
     let exit = match tokio::time::timeout(timeout, child.wait()).await {
         Ok(status) => status?,
         Err(_elapsed) => {
-            killer.terminate();
-            if tokio::time::timeout(grace, child.wait()).await.is_err() {
+            let polite = killer.terminate();
+            if !polite || tokio::time::timeout(grace, child.wait()).await.is_err() {
                 killer.kill();
                 child.wait().await?;
             }
@@ -286,7 +286,7 @@ pub async fn spawn(
     let watchdog = CancellationToken::new();
     let timed_out = Arc::new(AtomicBool::new(false));
     tokio::spawn(watch(
-        killer,
+        killer.clone(),
         watchdog.clone(),
         timed_out.clone(),
         Duration::from_millis(policy.timeout_ms),
@@ -322,8 +322,8 @@ async fn watch(
         return; // the child ended (or the handle was dropped) first
     }
     timed_out.store(true, Ordering::SeqCst);
-    killer.terminate();
-    if tokio::time::timeout(grace, done.cancelled()).await.is_err() {
+    let polite = killer.terminate();
+    if !polite || tokio::time::timeout(grace, done.cancelled()).await.is_err() {
         killer.kill();
     }
 }

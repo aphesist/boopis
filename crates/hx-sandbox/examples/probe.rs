@@ -17,18 +17,14 @@
     reason = "seconds are the unit the tests reason in"
 )]
 
-#[cfg(unix)]
-use std::io::{Read, Write};
-#[cfg(unix)]
+use std::io::Write;
 use std::path::Path;
 
-#[cfg(unix)]
 fn fail(msg: impl std::fmt::Display) -> ! {
     println!("err: {msg}");
     std::process::exit(3)
 }
 
-#[cfg(unix)]
 fn record(pidfile: &str, pid: u32) {
     let mut f = std::fs::OpenOptions::new()
         .create(true)
@@ -38,7 +34,6 @@ fn record(pidfile: &str, pid: u32) {
     writeln!(f, "{pid}").unwrap_or_else(|e| fail(e));
 }
 
-#[cfg(unix)]
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let arg = |i: usize| {
@@ -74,6 +69,7 @@ fn main() {
             Ok(()) => println!("ok"),
             Err(e) => fail(e),
         },
+        #[cfg(unix)]
         "exec" => {
             use std::os::unix::process::CommandExt;
             let e = std::process::Command::new(arg(1)).exec();
@@ -90,6 +86,7 @@ fn main() {
                 Err(e) => fail(e),
             }
         }
+        #[cfg(unix)]
         "unix" => match std::os::unix::net::UnixStream::connect(arg(1)) {
             Ok(_) => println!("ok"),
             Err(e) => fail(e),
@@ -130,6 +127,7 @@ fn main() {
                 println!("{l}");
             }
         }
+        #[cfg(unix)]
         "ids" => {
             // SAFETY: getsid/getpgid/getpid have no preconditions.
             let ids = unsafe { [libc::getpid(), libc::getpgid(0), libc::getsid(0)] };
@@ -178,8 +176,10 @@ fn main() {
             record(arg(1), std::process::id());
             std::thread::sleep(std::time::Duration::from_secs(300));
         }
+        #[cfg(unix)]
         "fd" => {
             // probe fd N: write a greeting to the inherited descriptor N, read the reply.
+            use std::io::Read;
             use std::os::fd::FromRawFd;
             let n: i32 = arg(1).parse().unwrap_or_else(|e| fail(e));
             // SAFETY: the test passes a descriptor it opened for us under this number.
@@ -188,6 +188,27 @@ fn main() {
             let mut reply = [0u8; 5];
             f.read_exact(&mut reply).unwrap_or_else(|e| fail(e));
             println!("reply {}", String::from_utf8_lossy(&reply));
+        }
+        "fds" => {
+            // Open descriptors of this process, from /proc/self/fd (the listing's own fd included).
+            let mut fds: Vec<u32> = std::fs::read_dir("/proc/self/fd")
+                .unwrap_or_else(|e| fail(e))
+                .filter_map(|e| e.ok()?.file_name().to_str()?.parse().ok())
+                .collect();
+            fds.sort_unstable();
+            println!(
+                "{}",
+                fds.iter().map(u32::to_string).collect::<Vec<_>>().join(" ")
+            );
+        }
+        #[cfg(windows)]
+        "handle" => {
+            // probe handle N: write a greeting to the inherited pipe handle whose value is N.
+            use std::os::windows::io::FromRawHandle;
+            let n: usize = arg(1).parse().unwrap_or_else(|e| fail(e));
+            // SAFETY: the test passes a pipe handle it opened for us under this value.
+            let mut f = unsafe { std::fs::File::from_raw_handle(n as *mut std::ffi::c_void) };
+            f.write_all(b"hello-from-child").unwrap_or_else(|e| fail(e));
         }
         #[cfg(target_os = "linux")]
         "ptrace" => {
@@ -226,6 +247,3 @@ fn main() {
         other => fail(format!("unknown subcommand {other}")),
     }
 }
-
-#[cfg(not(unix))]
-fn main() {}

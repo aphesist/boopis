@@ -107,9 +107,18 @@ pub fn is_dead(pid: u32) -> bool {
     }
 }
 
+/// Whether process `pid` is gone, asked of `tasklist`.
+#[cfg(windows)]
+pub fn is_dead(pid: u32) -> bool {
+    std::process::Command::new("tasklist")
+        .args(["/FI", &format!("PID eq {pid}"), "/NH"])
+        .output()
+        .is_ok_and(|o| !String::from_utf8_lossy(&o.stdout).contains(&pid.to_string()))
+}
+
 /// Whether process `pid` is gone, asked of `kill -0`. A zombie still answers, so a caller
 /// on macOS must give the tree a moment to be reaped.
-#[cfg(not(target_os = "linux"))]
+#[cfg(all(unix, not(target_os = "linux")))]
 pub fn is_dead(pid: u32) -> bool {
     std::process::Command::new("/bin/kill")
         .args(["-0", &pid.to_string()])

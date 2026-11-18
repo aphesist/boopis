@@ -38,6 +38,14 @@ pub mod report;
     )
 )]
 mod seatbelt;
+#[cfg_attr(
+    not(any(windows, test)),
+    allow(
+        dead_code,
+        reason = "only the Windows backend applies these; they are compiled and tested everywhere"
+    )
+)]
+mod winpolicy;
 pub mod wire;
 
 pub use capabilities::{Capabilities, Capability};

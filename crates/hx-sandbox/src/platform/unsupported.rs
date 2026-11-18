@@ -8,12 +8,14 @@ use crate::report::{Enforcement, ExitOutcome};
 
 pub(crate) struct Prepared;
 pub(crate) struct Child;
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub(crate) struct TreeKiller;
 
 impl TreeKiller {
-    pub(crate) fn terminate(self) {}
-    pub(crate) fn kill(self) {}
+    pub(crate) fn terminate(&self) -> bool {
+        false
+    }
+    pub(crate) fn kill(&self) {}
 }
 
 impl Child {
