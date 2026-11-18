@@ -38,13 +38,19 @@ def test_defaults_come_from_the_schema() -> None:
     assert s.cost_cap_usd is None
     assert s.ladder is None
     assert s.permissions.default == "allow"
+    assert s.prices.refresh_enabled is True
+    assert s.prices.overrides == {}
 
 
 def test_load_settings_reads_through_get_config() -> None:
     cfg = {
         "mode": "ungoverned",
         "cost_cap_usd": 2.5,
-        "prices": {"anthropic/claude-haiku-5-5": {"input": 1, "output": 5, "cache_read": 0.1}},
+        "prices": {
+            "overrides": {"anthropic/claude-haiku-5-5": {"input": 1, "output": 5, "cache_read": 0.1}},
+            "aliases": {"custom": "deepseek"},
+            "refresh_enabled": False,
+        },
         "subscription_providers": ["claude-subscription"],
         "permissions": {"deny": ["Bash(rm *)"], "default": "ask"},
         "hx_path": "/usr/bin/hx",
@@ -55,7 +61,9 @@ def test_load_settings_reads_through_get_config() -> None:
     assert loaded.errors == ()
     s = loaded.value
     assert (s.mode, s.cost_cap_usd, s.hx_path, s.ledger_dir) == ("ungoverned", 2.5, "/usr/bin/hx", "/tmp/l")
-    assert s.prices["anthropic/claude-haiku-5-5"] == {"input": 1.0, "output": 5.0, "cache_read": 0.1}
+    assert s.prices.overrides["anthropic/claude-haiku-5-5"] == {"input": 1.0, "output": 5.0, "cache_read": 0.1}
+    assert s.prices.aliases == {"custom": "deepseek"}
+    assert s.prices.refresh_enabled is False
     assert s.permissions.deny == ("Bash(rm *)",)
     assert s.permissions.default == "ask"
     assert s.subscription_providers == ("claude-subscription",)
@@ -79,11 +87,29 @@ def test_get_config_returning_nothing_gives_defaults() -> None:
         ({"cost_cap_usd": "3"}, "settings.cost_cap_usd: expected number or null, found string '3'"),
         ({"bogus": 1}, "settings.bogus: expected one of the known keys"),
         (
-            {"prices": {"nomodel": {"input": 1, "output": 1}}},
-            "settings.prices.nomodel: expected a 'provider/model' key",
+            {"prices": {"overrides": {"nomodel": {"input": 1, "output": 1}}}},
+            "settings.prices.overrides.nomodel: expected a 'provider/model' key",
         ),
-        ({"prices": {"a/b": {"input": 1}}}, "settings.prices.a/b.output: expected a value (required), found missing"),
-        ({"prices": {"a/b": {"input": -1, "output": 1}}}, "settings.prices.a/b.input: expected a number >= 0"),
+        (
+            {"prices": {"refresh_enabled": "yes"}},
+            "settings.prices.refresh_enabled: expected boolean, found string 'yes'",
+        ),
+        (
+            {"prices": {"aliases": {"custom": ""}}},
+            "settings.prices.aliases.custom: expected at least 1 characters",
+        ),
+        (
+            {"prices": {"extra": 1}},
+            "settings.prices.extra: expected one of the known keys",
+        ),
+        (
+            {"prices": {"overrides": {"a/b": {"input": 1}}}},
+            "settings.prices.overrides.a/b.output: expected a value (required), found missing",
+        ),
+        (
+            {"prices": {"overrides": {"a/b": {"input": -1, "output": 1}}}},
+            "settings.prices.overrides.a/b.input: expected a number >= 0",
+        ),
         ({"ladder": {"tiers": []}}, "settings.ladder.tiers: expected at least 1 items"),
         (
             {"ladder": {"tiers": [{"name": "a", "model": "nomodel"}]}},

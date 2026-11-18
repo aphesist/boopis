@@ -1,0 +1,12 @@
+github.com/example/left-pad v1.3.0 h1:D3LvlletcXaAnLZoUMqMepiPG6kbNikdaQxZ3xHMO0I=
+github.com/example/left-pad v1.3.0/go.mod h1:sbE7S9Q5QztG4v4uKL6q8tlBS552cuV5YHSntlAm090=
+github.com/example/lodash v4.17.21 h1:JLlX9LGfyp8u5xAm4Lxv34ENOa3+iOXPpXUw2JwE8ro=
+github.com/example/lodash v4.17.21/go.mod h1:g12LjQkw6MHfV2MNDO7knLeJbdj42R+dupYR+dnO4mU=
+github.com/example/babel-core v7.22.5 h1:G+CM7slC9jI/5Vg7lkE5hTaUHb571j2DjgsdChArqg8=
+github.com/example/babel-core v7.22.5/go.mod h1:vJnOnRSyHkJz9eZsNa9hm7XZ0UT3pDMxZvJFoaReRtM=
+github.com/example/react-dom v18.2.0 h1:96jFsUKdza1ANS0wzx8G14kvgt+YdeDNS6jiiOhPulQ=
+github.com/example/react-dom v18.2.0/go.mod h1:cARwkm38ywXAkvjrYAIr/CdbrXt7ioR/kZdrFH7vong=
+github.com/example/typescript v5.4.5 h1:plqur/RIEkhbg0G40PlbwLshrLbI9i1Ew+DCQKwt594=
+github.com/example/typescript v5.4.5/go.mod h1:gjh92N86EjDNrBGEk6gsIAEPZTFiSWzAThfdHQ19fBs=
+github.com/example/zod v3.23.8 h1:xB12HRdIndTGoYLEnm5Amu+Qh60z0M4hYS5IgJM2Agc=
+github.com/example/zod v3.23.8/go.mod h1:0WQGGiG1U+p1PxGb5Tis1u1d2gpVSMRJFtDAUmDRypY=

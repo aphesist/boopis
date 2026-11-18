@@ -101,6 +101,7 @@ def tool_matches(rule: Rule, call_tool: str, defaults: Defaults, *, widen_reads:
 
 # ---------------------------------------------------------------- paths
 
+_DIFF_PATH = re.compile(r"^(?:---|\+\+\+) (?:[ab]/)?(?P<path>\S+)", re.MULTILINE)
 _V4A_PATH = re.compile(r"^\*\*\* (?:Update File|Add File|Delete File|Move to):\s*(?P<path>.+?)\s*$", re.MULTILINE)
 
 
@@ -124,6 +125,11 @@ def paths_of(call: ToolCall, defaults: Defaults) -> list[str] | None:
                     p = item.get("path")
                     if isinstance(p, str) and p:
                         found.append(p)
+                    diff = item.get("diff")
+                    if isinstance(diff, str):
+                        found.extend(
+                            m.group("path") for m in _DIFF_PATH.finditer(diff) if m.group("path") != "/dev/null"
+                        )
     patch_text = call.args.get("patch")
     if call.tool == "patch" and isinstance(patch_text, str):
         found.extend(m.group("path") for m in _V4A_PATH.finditer(patch_text))
@@ -156,23 +162,23 @@ def resolve_path(raw: str, root: str) -> ResolvedPath:
     return ResolvedPath(real.replace(os.sep, "/"), rel)
 
 
-def path_spec_matches(spec: str, path: ResolvedPath, root: str) -> bool:
+def path_spec_matches(spec: str, path: ResolvedPath, root: str, *, ignore_case: bool = False) -> bool:
     """One path specifier against one resolved path."""
     if spec.startswith("//"):
-        return compile_glob(spec[1:]).match(path.absolute.lstrip("/")) is not None
+        return compile_glob(spec[1:], ignore_case).match(path.absolute.lstrip("/")) is not None
     if spec.startswith("~/"):
         home = os.path.expanduser("~").replace(os.sep, "/")
-        return compile_glob(home + spec[1:]).match(path.absolute.lstrip("/")) is not None
+        return compile_glob(home + spec[1:], ignore_case).match(path.absolute.lstrip("/")) is not None
     if path.relative is None:
         return False
-    return compile_glob(spec).match(path.relative) is not None
+    return compile_glob(spec, ignore_case).match(path.relative) is not None
 
 
 def protected_match(globs: tuple[str, ...], raw_path: str, root: str) -> str | None:
     """The first of ``globs`` that protects ``raw_path`` (matched against the project-relative path)."""
     path = resolve_path(raw_path, root)
     for glob in globs:
-        if path_spec_matches(glob, path, root):
+        if path_spec_matches(glob, path, root, ignore_case=True):  # hx-txn matches protected paths case-insensitively
             return glob
     return None
 

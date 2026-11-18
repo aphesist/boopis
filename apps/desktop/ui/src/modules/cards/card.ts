@@ -1,0 +1,346 @@
+/* <hx-card>: the card layer of the shared library.
+   create(kind, data, opts) -> <hx-card>     el.update(patch)     el.state
+   Events (bubble from the card, cancelable): 'hx:card-action' {kind, action, data, state, value, card}
+     preventDefault() keeps the card where it is, so the host can drive state with el.update({state}).
+   'hx:card-state' {kind, state, prev, data, card} after every state change.
+   `hx:attention` {source: 'cards', count} whenever the number of cards waiting on the user changes.
+   Sizes: inline (in the measure, up to 520px), compact (dock, side panel, up to 360px), mini (one row);
+   blank also has popover (the expanded blank).
+   Keys (KEYMAP section 6): hold Space or Enter twice on Hold to approve; x denies while focus is in an approval; d opens
+   the diff from a ship card; 1-9 pick a blank option; Esc closes the popover. Every item waiting on the user marks
+   its focusable element with data-hx-attention, so F8 / shift+F8 can find it.
+   OWNER DECISION: a card that changes state grows or shrinks over --dur-3 on --spring, so the conversation under
+   it never jumps (the one height animation; under reduced motion it snaps). */
+import { emit } from '../../core/bus';
+import { nid, reduced } from '../../core/dom';
+import { holdOf, wireHold } from '../../components/hold';
+import { data as provider } from '../../data';
+import type { CardKind, CardOpts, CardSize } from '../../components/card-registry';
+import { bot, expiryText, KINDS, parts } from './kinds';
+import { animate, easeToken, motion } from './motion';
+import type { Ctx, Data, Kind } from './types';
+import { blankValue, wireBlankOptions } from './options';
+
+export interface CardActionDetail { kind: CardKind; action: string; data: Data; state: string; value: string | null | undefined; card: HxCard }
+export interface CardStateDetail { kind: CardKind; state: string; prev: string; data: Data; card: HxCard }
+
+const LIVE = new Set<HxCard>();
+export const QUEUES = new Set<QueueRoot>();
+export interface QueueRoot extends HTMLElement { _waiting(): number }
+let lastAttn = -1, attnQueued = false;
+export function emitAttention(): void {
+  if (attnQueued) return;
+  attnQueued = true;
+  queueMicrotask(() => {
+    attnQueued = false;
+    let n = 0;
+    for (const c of LIVE) if (c.attn()) n++;
+    for (const q of QUEUES) if (q.isConnected) n += q._waiting();
+    if (n !== lastAttn) { lastAttn = n; emit('hx:attention', { source: 'cards', count: n }); }
+  });
+}
+
+/* swap one region's content in place: the old content fades out first, then the new one settles in */
+function swapRegion(el: HTMLElement, html: string): void {
+  if (el.childNodes.length) {
+    const g = el.cloneNode(true) as HTMLElement;
+    g.removeAttribute('data-r'); g.removeAttribute('id');
+    for (const n of g.querySelectorAll('[id]')) n.removeAttribute('id');
+    g.classList.add('cd-ghost'); g.setAttribute('aria-hidden', 'true'); g.inert = true;
+    g.style.cssText += ';position:absolute;margin:0;pointer-events:none;left:' + el.offsetLeft + 'px;top:' + el.offsetTop + 'px;width:' + el.offsetWidth + 'px';
+    el.parentNode?.appendChild(g);
+    const a = g.animate([{ opacity: 1 }, { opacity: 0 }], { duration: reduced() ? 1 : 90, easing: easeToken(), fill: 'forwards' });
+    a.onfinish = () => g.remove();
+  }
+  el.innerHTML = html;
+  if (html) animate(el, [{ opacity: 0, transform: 'translateY(4px)' }, { opacity: 1, transform: 'none' }], { preset: 'fade', delay: 70, fill: 'backwards' });
+}
+
+export class HxCard extends HTMLElement {
+  kind!: CardKind;
+  state!: string;
+  data!: Data;
+  size!: CardSize;
+  opts!: CardOpts;
+  /** the inline blank a popover was opened from */
+  source: HxCard | null = null;
+  blankPop: HxCard | null = null;
+  private K!: Kind;
+  private cardId = '';
+  private sig: Record<string, string> = {};
+  private at = 0;
+  private inlineOnly = false;
+  private live: HTMLElement | null = null;
+  private regions: Record<string, HTMLElement> = {};
+  private expiresAt = 0;
+  private timer = 0;
+  private hAnim: Animation | null = null;
+
+  connectedCallback(): void {
+    if (!this.kind) return;
+    LIVE.add(this);
+    if (this.kind === 'approval') { this.tick(); this.timer = this.timer || window.setInterval(() => this.tick(), 1000); }
+    if (this.state === 'holding' && typeof this.data.progress === 'number') requestAnimationFrame(() => { const h = this.holdBtn(); const c = holdOf(h); if (c) c.show(this.data.progress ?? 0); });
+    emitAttention();
+  }
+  disconnectedCallback(): void {
+    LIVE.delete(this);
+    clearInterval(this.timer); this.timer = 0;
+    const h = this.holdBtn(); const c = holdOf(h);
+    if (h && c && h.dataset['state'] !== 'done') c.reset();
+    emitAttention();
+  }
+
+  init(kind: CardKind, d: Data, opts: CardOpts): void {
+    /* the modules' own shapes: bots pass {bot: id}; the dock's waits carry {bot, lines, cost} */
+    if (!d.from && d.bot && bot(d.bot)) d.from = d.bot;
+    if (!d.item && Array.isArray(d.lines)) d.item = d.lines;
+    if (d.cost && kind === 'approval') { d.meta = parts(d.meta).concat(parts(d.cost)).join(' · '); delete d.cost; }
+    if (kind === 'ship' && !Array.isArray(d.files)) {
+      /* a count only: use the session's change list when it matches */
+      const ch = provider().details.changes.get();
+      d.files = ch.length && (d.files == null || +d.files === ch.length) ? ch.map((x) => [x[0], x[1], x[2]] as const) : [];
+    }
+    this.kind = kind; this.data = d; this.opts = opts; this.K = KINDS[kind];
+    this.size = opts.size ?? 'inline';
+    if (kind !== 'blank' && this.size === 'popover') this.size = 'compact';
+    this.cardId = nid('cd'); this.sig = {};
+    this.state = opts.state ?? d.state ?? this.K.initial;
+    delete d.state;
+    if (!this.K.states.includes(this.state)) this.state = this.K.initial;
+    this.at = d.decidedAt || Date.now();
+    this.dataset['kind'] = kind; this.dataset['size'] = this.size;
+    if (opts.ground) this.dataset['ground'] = opts.ground;
+    this.inlineOnly = this.size === 'inline' && !!this.K.inline;
+    if (this.size === 'mini') this.innerHTML = '<div data-r="row"></div>';
+    else if (this.inlineOnly) this.innerHTML = kind === 'blank' ? '<span data-r="row"></span>' : '<div data-r="row"></div>';
+    else {
+      this.innerHTML = '<div class="cd-side" data-r="side"></div><div class="cd-main"><div data-r="head"></div><div data-r="body"></div><div data-r="foot"></div></div>';
+      if (this.size === 'popover') { this.setAttribute('role', 'dialog'); this.setAttribute('aria-modal', 'true'); }
+      else this.setAttribute('role', 'article');
+      this.setAttribute('aria-labelledby', this.cardId + '-t');
+    }
+    const live = document.createElement('span');
+    live.className = 'ui-sr'; live.setAttribute('aria-live', 'polite'); live.setAttribute('role', 'status');
+    this.append(live); this.live = live;
+    this.regions = {};
+    for (const r of this.querySelectorAll<HTMLElement>('[data-r]')) this.regions[r.dataset['r'] ?? ''] = r;
+    if (kind === 'approval') this.armExpiry(false);
+    this.addEventListener('click', (e) => this.onClick(e));
+    this.addEventListener('keydown', (e) => this.onKey(e));
+    this.renderCard(false);
+    if (opts.enter) animate(this, [{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { preset: 'settle' });
+  }
+
+  private ctx(): Ctx {
+    const K = this.K;
+    const c: Ctx = { d: this.data, s: this.state, size: this.size, id: this.cardId, at: clock(this.at), q: this.opts.queue, card: this, plain: '', tone: 'none', owe: '' };
+    try { c.plain = K.text ? String(K.text(c)).replace(/`/g, '') : ''; } catch { c.plain = ''; }
+    c.tone = K.tone(c) || 'none';
+    /* what the card owes the user, in the stamp's words; nothing inside the popover (its question sits right above) */
+    c.owe = c.tone === 'red' && this.size !== 'popover' ? (K.stamp ? K.stamp(c) : 'needs you') : '';
+    return c;
+  }
+  plainText(): string { return this.ctx().plain; }
+
+  update(patch: Record<string, unknown>): this {
+    const p = { ...(patch ?? {}) } as Record<string, unknown>;
+    const next = p['state'] as string | undefined;
+    delete p['state'];
+    Object.assign(this.data, p);
+    if (next && next !== this.state && this.K.states.includes(next)) return this.setState(next);
+    this.renderCard(true);
+    return this;
+  }
+
+  setState(next: string): this {
+    const prev = this.state;
+    if (prev === next) return this;
+    this.state = next;
+    const quiet = this.K.quiet?.[prev + '>' + next];
+    if (!quiet) {
+      this.at = Date.now();
+      if (this.kind === 'approval' && (next === 'pending' || next === 'holding')) {
+        if (this.expiresAt && this.expiresAt <= Date.now() + 1000) this.expiresAt = 0;
+        this.armExpiry(false);
+      }
+      this.renderCard(true);
+      if (this.K.say) this.announce(this.K.say(this.ctx()));
+    } else this.dataset['state'] = next;
+    this.dispatchEvent(new CustomEvent<CardStateDetail>('hx:card-state', { bubbles: true, composed: true, detail: { kind: this.kind, state: next, prev, data: this.data, card: this } }));
+    emitAttention();
+    return this;
+  }
+
+  announce(text: string): void {
+    const live = this.live;
+    if (!text || !live) return;
+    live.textContent = '';
+    setTimeout(() => { live.textContent = text; }, 30);
+  }
+
+  attn(): boolean {
+    if (this.size === 'popover') return false;
+    const c = { d: this.data, s: this.state, size: this.size };
+    if (this.K.attention) return this.K.attention(c);
+    return this.K.tone(c) === 'red';
+  }
+
+  private renderCard(anim: boolean): void {
+    const K = this.K, c = this.ctx();
+    const out: Record<string, string> = this.size === 'mini' ? { row: K.mini(c) } : this.inlineOnly ? { row: (K.inline as (c: Ctx) => string).call(K, c) } : { ...K.render.call(K, c) };
+    const motionOn = anim && this.isConnected;
+    const h0 = motionOn ? this.getBoundingClientRect().height : 0;
+    let changed = false;
+    const focusIn = this.contains(document.activeElement) ? (document.activeElement as HTMLElement) : null;
+    const focusKey = focusIn && (focusIn.dataset['action'] || (focusIn.hasAttribute('data-hold') ? 'hold' : focusIn.dataset['opt'] != null ? 'opt' + focusIn.dataset['opt'] : focusIn.tagName));
+    for (const name in this.regions) {
+      const el = this.regions[name] as HTMLElement, html = out[name] ?? '';
+      if (this.sig[name] === html) continue;
+      changed = true;
+      if (motionOn && this.sig[name] && el.offsetParent) swapRegion(el, html); else el.innerHTML = html;
+      this.sig[name] = html;
+    }
+    if (this.regions['side']) this.toggleAttribute('data-side', !!out['side']);
+    this.applyState(c, motionOn);
+    this.hydrateCard();
+    if (focusIn && !this.contains(focusIn)) this.restoreFocus(focusKey || '');
+    if (motionOn && changed && this.size !== 'mini' && !(this.inlineOnly && this.kind === 'blank')) this.flipHeight(h0);
+  }
+
+  private restoreFocus(key: string): void {
+    /* never a button inside a fading ghost: those are inert copies of what just left */
+    const live = (sel: string): HTMLElement | null => Array.from(this.querySelectorAll<HTMLElement & { disabled?: boolean }>(sel)).find((x) => !x.closest('.cd-ghost') && !x.disabled) ?? null;
+    let t: HTMLElement | null = null;
+    if (key === 'hold') t = live('[data-hold]');
+    else if (key.indexOf('opt') === 0) t = live('[data-opt="' + key.slice(3) + '"]');
+    else if (key) t = live('[data-action="' + key + '"]');
+    t = t || live('.cd-foot button') || live('.cd-mini, .cd-blank') || live('button');
+    if (t) t.focus({ preventScroll: true });
+    else { this.tabIndex = -1; this.focus({ preventScroll: true }); }
+  }
+
+  private applyState(c: Ctx, motionOn: boolean): void {
+    const K = this.K;
+    this.dataset['state'] = this.state;
+    const tone = c.tone, owe = c.owe;
+    const prevTone = this.dataset['tone'];
+    this.dataset['tone'] = tone;
+    /* the stamp in the card's corner (one-line rows carry the dot and the same words, from the template) */
+    for (const s of this.querySelectorAll<HTMLElement>('[data-stamp]')) {
+      if (s.closest('.cd-ghost')) continue;
+      if (s.textContent !== owe) {
+        s.textContent = owe;
+        if (motionOn && owe && prevTone !== tone) animate(s, [{ opacity: 0, transform: 'scale(.9)' }, { opacity: 1, transform: 'none' }], { preset: 'quick' });
+      }
+    }
+    /* KEYMAP section 3: the focusable element of an item that waits on the user carries data-hx-attention (F8 finds it) */
+    for (const a of this.querySelectorAll('[data-hx-attention]')) a.removeAttribute('data-hx-attention');
+    if (owe || (this.kind === 'blank' && this.state === 'open' && this.size !== 'popover')) {
+      const live = (sel: string): HTMLElement | undefined => Array.from(this.querySelectorAll<HTMLElement & { disabled?: boolean }>(sel)).find((x) => !x.closest('.cd-ghost') && !x.disabled);
+      const t = live('[data-hold]') || live('.cd-blank') || live('.cd-mini') || live('.ui-btn--primary') || live('.cd-foot button, .cd-rule button');
+      if (t) t.setAttribute('data-hx-attention', '');
+    }
+    this.toggleAttribute('data-resolved', !!(K.resolved && K.resolved(c)));
+    this.toggleAttribute('aria-busy', tone === 'pulse');
+    if (K.orb) {
+      const r = K.orb(c);
+      for (const o of this.querySelectorAll('orb-avatar')) if (o.getAttribute('reaction') !== r) o.setAttribute('reaction', r);
+    }
+  }
+
+  private holdBtn(): HTMLButtonElement | null { return Array.from(this.querySelectorAll<HTMLButtonElement>('[data-hold]')).find((x) => !x.closest('.cd-ghost')) ?? null; }
+
+  private hydrateCard(): void {
+    const hold = this.holdBtn();
+    if (hold && !hold.dataset['cdWired']) {
+      hold.dataset['cdWired'] = '1';
+      wireHold(hold, { announce: (t) => this.announce(t) });
+      /* the library's commit is the card's approve; a host that cancels the action leaves the button armed */
+      hold.addEventListener('ui:commit', (e) => { if (!this.act('approve')) e.preventDefault(); });
+      /* holding is a card state too: follow the button's data-state */
+      new MutationObserver(() => {
+        const st = hold.dataset['state'];
+        if (st === 'holding' && this.state === 'pending') this.setState('holding');
+        else if (st === 'idle' && this.state === 'holding') this.setState('pending');
+      }).observe(hold, { attributes: true, attributeFilter: ['data-state'] });
+    }
+    if (hold && this.state === 'holding' && typeof this.data.progress === 'number' && this.isConnected) holdOf(hold)?.show(this.data.progress);
+    if (this.kind === 'blank' && (this.size === 'popover' || this.size === 'compact')) wireBlankOptions(this);
+    this.tick();
+  }
+
+  private flipHeight(h0: number): void {
+    const h1 = this.getBoundingClientRect().height;
+    if (Math.abs(h1 - h0) < 1 || reduced()) return;
+    if (this.hAnim) this.hAnim.cancel();
+    const m = motion('settle');
+    this.style.overflow = 'clip';
+    const a = this.animate([{ height: h0 + 'px' }, { height: h1 + 'px' }], m);
+    this.hAnim = a;
+    const done = (): void => { if (this.hAnim === a) { this.style.overflow = ''; this.hAnim = null; } };
+    a.onfinish = done; a.oncancel = done;
+  }
+
+  private armExpiry(force: boolean): void {
+    if (this.expiresAt && !force) return;
+    const d = this.data;
+    if (d.expiresAt) { this.expiresAt = +d.expiresAt; return; }
+    const m = /expires in (\d+(?:\.\d+)?)\s*(min|s)/i.exec(parts(d.meta).join(' '));
+    if (m) this.expiresAt = Date.now() + (+(m[1] ?? 0)) * (m[2] === 'min' ? 60000 : 1000);
+  }
+  rearmExpiry(): void { this.expiresAt = 0; this.armExpiry(true); }
+
+  private tick(): void {
+    if (this.kind !== 'approval' || !this.expiresAt) return;
+    const live = this.state === 'pending' || this.state === 'holding';
+    if (!live) return;
+    const left = this.expiresAt - Date.now();
+    for (const s of this.querySelectorAll<HTMLElement>('[data-countdown]')) {
+      const t = expiryText(left, s.dataset['countdown'] === 'short');
+      if (s.textContent !== t) s.textContent = t;
+    }
+    if (left <= 0 && this.isConnected) { holdOf(this.holdBtn())?.reset(); this.setState('expired'); }
+  }
+
+  private onClick(e: MouseEvent): void {
+    const b = (e.target as Element).closest<HTMLButtonElement>('[data-action]');
+    if (!b || b.closest('hx-card') !== this || b.disabled) return;
+    let value: string | null | undefined;
+    if (b.dataset['action'] === 'answer') value = blankValue(this);
+    this.act(b.dataset['action'] ?? '', { value, el: b });
+  }
+
+  /* KEYMAP section 6: x denies while focus is in an approval; d opens the diff from a ship card (never while typing) */
+  private onKey(e: KeyboardEvent): void {
+    if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    const t = e.target as HTMLElement | null;
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    const live = this.state === 'pending' || this.state === 'holding';
+    if (e.code === 'KeyX' && this.kind === 'approval' && live && this.size !== 'mini') {
+      e.preventDefault();
+      holdOf(this.holdBtn())?.reset();
+      this.act('deny');
+    } else if (e.code === 'KeyD' && this.kind === 'ship' && this.querySelector('[data-action="view-diff"]')) {
+      e.preventDefault();
+      this.act('view-diff');
+    }
+  }
+
+  act(action: string, x: { value?: string | null | undefined; el?: HTMLElement | undefined } = {}): boolean {
+    const detail: CardActionDetail = { kind: this.kind, action, data: this.data, state: this.state, value: x.value, card: this };
+    const ok = this.dispatchEvent(new CustomEvent<CardActionDetail>('hx:card-action', { bubbles: true, composed: true, cancelable: true, detail }));
+    if (ok && this.K.act) this.K.act(this, action, x);
+    return ok;
+  }
+}
+const clock = (t: number): string => { const d = new Date(t || Date.now()); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+if (!customElements.get('hx-card')) customElements.define('hx-card', HxCard);
+
+export function create(kind: CardKind, data: Data, opts: CardOpts = {}): HxCard {
+  if (!KINDS[kind]) throw new Error('hx cards: unknown kind "' + kind + '"');
+  const el = document.createElement('hx-card') as HxCard;
+  el.init(kind, { ...(data ?? {}) }, opts);
+  return el;
+}
+declare global { interface HTMLElementTagNameMap { 'hx-card': HxCard } interface HTMLElementEventMap { 'hx:card-action': CustomEvent<CardActionDetail>; 'hx:card-state': CustomEvent<CardStateDetail> } }

@@ -53,9 +53,9 @@ class SessionLedger:
     # ------------------------------------------------------------------ writing
 
     def _open(self) -> Any:
-        from contraprova.events import ChainError
-        from contraprova.log import EventLog
-        from contraprova.projections import InvalidTransition
+        from .._vendor.contraprova.events import ChainError
+        from .._vendor.contraprova.log import EventLog
+        from .._vendor.contraprova.projections import InvalidTransition
 
         if self._log is None:
             try:
@@ -76,8 +76,8 @@ class SessionLedger:
     def append(self, type_: str, actor: str, payload: Mapping[str, Any]) -> LedgerEvent:
         """Write one event and announce it. Raises ``InvalidTransitionError`` for an event the task
         projection refuses (nothing is written), ``ChainBrokenError`` for a ledger that fails to verify."""
-        from contraprova.events import ChainError
-        from contraprova.projections import InvalidTransition
+        from .._vendor.contraprova.events import ChainError
+        from .._vendor.contraprova.projections import InvalidTransition
 
         with self._lock:
             log = self._open()
@@ -119,9 +119,9 @@ class SessionLedger:
 
     def verify(self) -> tuple[bool, int | None, int]:
         """``(ok, broken_at_seq, event_count)``: full chain check and replay of every transition."""
-        from contraprova.events import ChainError
-        from contraprova.log import EventLog
-        from contraprova.projections import InvalidTransition
+        from .._vendor.contraprova.events import ChainError
+        from .._vendor.contraprova.log import EventLog
+        from .._vendor.contraprova.projections import InvalidTransition
 
         try:
             count = EventLog(self.path).verify()

@@ -193,6 +193,7 @@ They're not sandboxed, matching Claude Code. This is the only exception to the n
 - `scripts/sync-shared-data.sh` copies them into the plugin package, so the plugin installs standalone.
 - CI fails if a copy differs from its source.
 - Codes the plugin owns (`hx.config.*`, `hx.policy.*`, `hx.mode.*`, `hx.ledger.*`, `hx.budget.*`) are added to `crates/hx-proto/errors.json`, not kept in a second catalogue.
+- **Exception:** the redaction rules are not copied. Hermes's plugin-install security scan rejects a file of secret-matching patterns, so the plugin redacts by calling `hx` (method `redact.apply`). The rules keep a single implementation, in Rust.
 
 ## ADR-0017 Sandbox mechanisms per OS
 **Context.** ARCHITECTURE section 7 named bubblewrap, Landlock and seccomp for Linux, Seatbelt for macOS and AppContainer for Windows. The `hx-sandbox` work settled the details.
@@ -204,6 +205,55 @@ They're not sandboxed, matching Claude Code. This is the only exception to the n
 - **Fail closed everywhere:** a dimension the platform can't enforce returns `hx.sandbox.unavailable` unless the policy explicitly accepts degraded enforcement, and every run reports what was enforced. A host allowlist the OS can't enforce falls back to network off. A real allowlist comes later through a host-side proxy.
 
 **Consequences.** Linux is verified with real processes in CI. macOS and Windows compile in CI and are verified on real machines before release (`crates/hx-sandbox/tests/{macos,windows}.rs`).
+
+## ADR-0018 Homes and vaults: multi-device and user-owned cloud
+**Context.** The owner wants sessions on any device (desktop, a phone app, other machines), stored in infrastructure they choose: Google Drive, OneDrive, S3, R2, B2, WebDAV, SFTP, a hosted server, a local server or a drive.
+
+**Decision.** Two separate concepts.
+- **A home** is where the work runs: Hermes, the plugin, `hx` and the workspace. Only a machine that can run programs can be a home: the desktop (default), a home server, a VPS, a cloud VM.
+  - Every device attaches to the home over `hermes-gateway-v1`, which Hermes's own desktop already does for remote backends (SSH, URL plus token).
+  - Transports: SSH, a tailnet (Tailscale or WireGuard), a Cloudflare Tunnel, or TLS with per-device tokens, which are revocable and kept in the OS keychain.
+  - There is exactly one live home per Hermes home directory (Hermes's rule).
+- **A vault** is where the data rests: any storage the user picks, reached through **Apache OpenDAL** (Rust, Apache-2.0), which covers S3-compatible stores, Google Drive, OneDrive, WebDAV, SFTP and the local filesystem.
+  - Data is encrypted on the device before upload, with the key in the OS keychain.
+  - The vault holds **snapshots, not live files**: Hermes state through `hermes backup`; ledgers, which are append-only and hash-verified so they sync safely; artifacts and settings.
+  - A lease file in the vault names the live home, so a second machine can take over only after the lease is released or expires. That makes a "travelling home" possible.
+- **Clients:**
+  - the desktop app;
+  - a phone app from the same UI through Tauri v2 mobile (Android directly; iOS through the macOS VM path or a rented Mac);
+  - a web client served by the home.
+  Hermes's chat platforms already reach phones meanwhile.
+
+**Seams built now (phase 1):**
+- The host's gateway connection is an endpoint abstraction, `Local` (ensure/attach) or `Remote` (URL plus token, SSH, tailnet), behind one interface.
+- The UI never assumes it runs on the home's machine: paths are home-relative, and file pickers and opening files go through the home.
+- Everything hypotaxis persists (ledgers, artifacts, the price cache, settings) goes through one storage interface, so a vault can mirror it.
+
+**Phases.** Remote homes and vault backup and restore are phase 2. The phone app is phase 3.
+
+## ADR-0019 Cloud sessions run the whole stack in a sandbox you own
+**Context.**
+- The owner wants a "cloud session" option beside local sessions, like Claude Code's: it keeps running with the laptop closed, opens from any device, and can't touch the computer unless allowed.
+- Research (`research/cloud.md`) compared two options:
+  - (a) the whole Hermes gateway, plugin and `hx` in an ephemeral sandbox;
+  - (b) Hermes's terminal environments, which only move tool execution, so the session dies when the laptop does.
+
+**Decision.**
+- Build (a), as specified in `docs/CLOUD.md`:
+  - the cloud image (official Hermes image + plugin + `hx`);
+  - a self-hosted control plane `hx-cloud` (environments, sessions, device sign-in, relay, queue, secrets);
+  - runners behind a sandbox-provider interface, Docker first;
+  - an egress proxy that injects credentials so no key lives in the sandbox;
+  - a git proxy limited to the session's branch prefix;
+  - the session store on the user's vault (ADR-0018).
+- Handoff between local and cloud forks; it never shares a live session.
+- Remote Control lets a cloud session use an approved folder on the user's computer through the desktop host.
+- (b) stays available as a Hermes setting ("remote tools"), not as a cloud session.
+- This refines ADR-0018: a cloud session is an ephemeral home; a persistent remote home is a cloud environment with no idle timeout.
+
+**Consequences.**
+- Phase 1 builds only the seams: the `Cloud` endpoint kind, headless-safe plugin and `hx`, checkpoint pushes, one storage interface.
+- The control plane is the one internet-facing component the user runs, so it gets the strictest review.
 
 ## ADR-0012 Prices
 Prices come from the models.dev catalogue plus a user override table. Hermes's models.dev data is not reachable through its public plugin API, so:

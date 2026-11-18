@@ -1,0 +1,541 @@
+"""``pack`` and ``ship`` against the real ``hx`` binary (set HX_BIN; skipped otherwise)."""
+
+from __future__ import annotations
+
+import json
+import os
+import shlex
+import stat
+import subprocess
+import sys
+from collections.abc import Callable, Iterator
+from pathlib import Path
+from typing import Any
+
+import pytest
+from hypotaxis import hooks, hx
+from hypotaxis.config import ProjectConfig, ProjectSettings
+from hypotaxis.errors import LedgerError
+from hypotaxis.hx.types import RecoverResult
+from hypotaxis.ledger import SessionLedger
+from hypotaxis.session import Runtime, SessionState
+from hypotaxis.ship import run_ship
+from hypotaxis.ship.recover import journal_dir, journals_root, recover_all
+from hypotaxis.tools import hx_ready
+from hypotaxis.tools.pack import run_pack
+from support import FakeCtx
+
+HX_BIN = os.environ.get("HX_BIN", "")
+pytestmark = pytest.mark.skipif(not HX_BIN, reason="set HX_BIN to a built hx (cargo build -p hx)")
+PY = sys.executable
+SID = "local-ship-1"
+PASS = [PY, "-c", "pass"]
+
+
+def sh(root: Path, *args: str) -> str:
+    return subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, check=True).stdout.strip()
+
+
+@pytest.fixture(autouse=True)
+def _clean_hx() -> Iterator[None]:
+    yield
+    hx.shutdown()
+
+
+@pytest.fixture
+def workspace(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    (tmp_path / "home").mkdir()
+    (tmp_path / "home" / ".gitconfig").write_text("[user]\n\tname = Some Owner\n\temail = owner@example.com\n")
+    root = tmp_path / "proj"
+    (root / "src").mkdir(parents=True)
+    (root / "tests").mkdir()
+    (root / "src" / "a.py").write_text(
+        "def hello():\n    return 1\n\n\nclass Box:\n    def open(self):\n        return 'o'\n"
+    )
+    (root / "src" / "util.py").write_text("def helper():\n    return 0\n")
+    (root / "tests" / "test_a.py").write_text("def test_a():\n    assert True\n")
+    (root / ".env").write_text("API_KEY=sk-live-0123456789abcdefghijklmnopqrstuv\n")
+    sh(root, "init", "-q")
+    sh(root, "add", "-A")
+    sh(root, "commit", "-q", "-m", "init")
+    return root
+
+
+Session = tuple[Runtime, SessionState, FakeCtx]
+MakeSession = Callable[..., Session]
+
+
+@pytest.fixture
+def make_session(workspace: Path, home: Path) -> MakeSession:
+    def build(*, mode: str = "ungoverned", command: list[str] | None = PASS, **settings: Any) -> Session:
+        ctx = FakeCtx({"mode": mode, "hx_path": HX_BIN, **settings}, cwd=str(workspace))
+        from hypotaxis.hermes_api import bind
+
+        bind(ctx)
+        rt = Runtime(ctx, home=home)
+        hooks.install(rt)
+        state = rt.lock(SID, cwd=str(workspace))
+        gate_command = shlex.join(command) if command else None
+        state.project = ProjectConfig(
+            ProjectSettings(gate_command=gate_command, gate_timeout_s=20, protected=("docs/locked/**",)), "trusted"
+        )
+        return rt, state, ctx
+
+    return build
+
+
+def live_journals(rt: Runtime) -> list[str]:
+    """Journals under the session's directory (hx keeps a hidden lock file there)."""
+    directory = journal_dir(rt.home, SID)
+    return [p.name for p in directory.glob("*") if not p.name.startswith(".")] if directory.exists() else []
+
+
+def types(rt: Runtime, state: SessionState) -> list[str]:
+    return [e["type"] for e in rt.ledger(state).read()]
+
+
+def tool(rt: Runtime, state: SessionState, *edits: dict[str, Any]) -> dict[str, Any]:
+    return run_ship(rt, state, {"edits": list(edits)})
+
+
+def replace(path: str, old: str, new: str) -> dict[str, Any]:
+    return {"op": "replace", "path": path, "old": old, "new": new}
+
+
+# ---------------------------------------------------------------- pack
+
+
+def test_pack_searches_reads_and_outlines_in_one_call(make_session: MakeSession) -> None:
+    rt, state, _ = make_session()
+    out = run_pack(
+        rt,
+        state,
+        {
+            "items": [
+                {"op": "search", "pattern": "return 1"},
+                {"op": "read", "path": "src/a.py", "ranges": [[1, 2]]},
+                {"op": "symbol", "name": "Box.open"},
+                {"op": "outline", "paths": ["src"]},
+                {"op": "status"},
+            ]
+        },
+    )
+    text = out["text"]
+    assert "[search] 1 match(es)" in text
+    assert "1:def hello():" not in text.split("[read]")[0]  # the match is line 2, line 1 is context
+    assert "2:    return 1" in text
+    assert "[read] src/a.py" in text
+    assert "1|def hello():" in text
+    assert "[symbol] 1 definition(s)" in text
+    assert "function def hello():" in text  # from the outline
+    assert "class Box" in text
+    assert "[status] " in text
+    assert out["truncated"] is False
+
+
+def test_pack_never_returns_secrets(make_session: MakeSession) -> None:
+    rt, state, _ = make_session()
+    out = run_pack(rt, state, {"items": [{"op": "search", "pattern": "API_KEY"}, {"op": "read", "path": ".env"}]})
+    assert "sk-live-0123456789" not in out["text"]
+    assert "withheld" in out["text"]
+
+
+def test_pack_accepts_one_flat_item_and_reports_a_failing_item_without_failing_the_rest(
+    make_session: MakeSession,
+) -> None:
+    rt, state, _ = make_session()
+    assert "[search]" in run_pack(rt, state, {"op": "search", "pattern": "hello"})["text"]
+    out = run_pack(rt, state, {"items": [{"op": "read", "path": "../escape"}, {"op": "search", "pattern": "hello"}]})
+    assert "[read failed] hx.pack." in out["text"]
+    assert "[search] 1 match" in out["text"]
+
+
+def test_pack_is_byte_capped_by_settings_and_by_the_call(make_session: MakeSession) -> None:
+    rt, state, _ = make_session(pack={"max_bytes": 1024})
+    out = run_pack(rt, state, {"items": [{"op": "read", "path": "src/a.py"}], "max_bytes": 100000})
+    assert len(out["text"].encode()) <= 1024
+    big = state.cwd + "/big.txt"
+    Path(big).write_text("\n".join(f"line {i} " + "x" * 80 for i in range(400)))
+    capped = run_pack(rt, state, {"items": [{"op": "read", "path": "big.txt"}]})
+    assert capped["truncated"] is True
+    assert len(capped["text"].encode()) <= 1100
+
+
+@pytest.mark.parametrize(
+    "args",
+    [
+        {},
+        {"items": []},
+        {"items": [{"op": "search"}]},
+        {"items": [{"op": "read"}]},
+        {"items": [{"op": "zip"}]},
+        {"items": ["x"]},
+    ],
+)
+def test_pack_invalid_items_are_an_outcome(make_session: MakeSession, args: dict[str, Any]) -> None:
+    rt, state, _ = make_session()
+    out = run_pack(rt, state, args)
+    assert out["status"] == "invalid"
+    assert out["problems"]
+
+
+def test_pack_without_hx_is_an_error_not_a_made_up_answer(make_session: MakeSession, tmp_path: Path) -> None:
+    rt, state, _ = make_session(hx_path=str(tmp_path / "nope"))
+    out = run_pack(rt, state, {"items": [{"op": "status"}]})
+    assert out["code"] == "hx.process.unavailable"
+
+
+# ---------------------------------------------------------------- ship: a passing gate
+
+
+def test_a_passing_ship_applies_checkpoints_and_records(make_session: MakeSession, workspace: Path) -> None:
+    rt, state, ctx = make_session()
+    result = tool(
+        rt,
+        state,
+        replace("src/a.py", "return 1", "return 2"),
+        {"op": "create", "path": "src/new.py", "content": "x = 1\n"},
+    )
+    assert result["status"] == "shipped"
+    assert [f["path"] for f in result["files"]] == ["src/a.py", "src/new.py"]
+    assert result["gate"] == {
+        "verdict": "pass",
+        "gates": ["T0.scope", "T0.visible_tests"],
+        "enforcement": "degraded:unsandboxed",
+    }
+    assert "return 2" in (workspace / "src" / "a.py").read_text()
+    assert (workspace / "src" / "new.py").exists()
+
+    ref, commit = result["checkpoint"]["ref"], result["checkpoint"]["commit"]
+    assert ref == f"refs/hypotaxis/checkpoints/{SID}"
+    assert sh(workspace, "rev-parse", ref) == commit
+    assert "return 2" in sh(workspace, "show", f"{commit}:src/a.py")
+    assert sh(workspace, "log", "-1", "--format=%an", commit) == "Some Owner"
+    assert "src/a.py" in sh(workspace, "status", "--porcelain")  # the working tree still has the change, unstaged
+    assert sh(workspace, "rev-parse", "HEAD") != commit
+
+    kinds = types(rt, state)
+    assert kinds[1:] == [
+        "task.created", "task.claimed", "ship.applied", "task.submitted", "gate.decided", "checkpoint.committed",
+    ]  # fmt: skip
+    events = rt.ledger(state).read()
+    applied = next(e for e in events if e["type"] == "ship.applied")["payload"]
+    assert applied["ship_id"] == result["ship_id"]
+    assert {f["path"] for f in applied["files"]} == {"src/a.py", "src/new.py"}
+    assert next(f for f in applied["files"] if f["path"] == "src/new.py")["sha256_before"] is None
+    decided = next(e for e in events if e["type"] == "gate.decided")
+    assert decided["actor"] == "gate"
+    assert decided["payload"]["verdict"] == "pass"
+    assert decided["payload"]["enforcement"] == "degraded:unsandboxed"
+    assert next(e for e in events if e["type"] == "checkpoint.committed")["payload"] == {
+        "ship_id": result["ship_id"], "ref": ref, "commit": commit,
+    }  # fmt: skip
+    assert SessionLedger(rt.ledger_path(SID)).verify()[0] is True
+    assert live_journals(rt) == [], "the journal is discarded after a pass"
+    done = [p for _, ev, p in ctx.emitted if ev == "ship.completed"]
+    assert [d["status"] for d in done] == ["shipped"]
+    assert done[0]["ship_id"] == result["ship_id"]
+
+
+def test_two_ships_chain_their_checkpoints(make_session: MakeSession, workspace: Path) -> None:
+    rt, state, _ = make_session()
+    first = tool(rt, state, replace("src/a.py", "return 1", "return 2"))
+    second = tool(rt, state, replace("src/util.py", "return 0", "return 5"))
+    assert sh(workspace, "rev-parse", f"{second['checkpoint']['commit']}^") == first["checkpoint"]["commit"]
+
+
+def test_a_non_git_workspace_still_ships_and_says_there_is_no_checkpoint(
+    make_session: MakeSession, workspace: Path
+) -> None:
+    rt, state, _ = make_session()
+    import shutil
+
+    shutil.rmtree(workspace / ".git")
+    result = tool(rt, state, replace("src/a.py", "return 1", "return 2"))
+    assert result["status"] == "shipped"
+    assert result["checkpoint"] is None
+    assert any("no checkpoint" in w for w in result["warnings"])
+    assert "checkpoint.committed" not in types(rt, state)
+
+
+# ---------------------------------------------------------------- ship: a failing gate
+
+
+def test_a_failing_gate_restores_bytes_and_modes_and_returns_the_failure(
+    make_session: MakeSession, workspace: Path
+) -> None:
+    script = workspace / "run.sh"
+    script.write_text("#!/bin/sh\necho original\n")
+    script.chmod(0o750)
+    before = {
+        p: (p.read_bytes(), stat.S_IMODE(p.stat().st_mode))
+        for p in (script, workspace / "src" / "a.py", workspace / "src" / "util.py")
+    }
+    fail = [PY, "-c", "print('FAILED src/util.py:2 helper broke'); raise SystemExit(1)"]
+    rt, state, ctx = make_session(command=fail)
+
+    result = tool(
+        rt,
+        state,
+        replace("run.sh", "original", "changed"),
+        replace("src/a.py", "return 1", "return 2"),
+        {"op": "create", "path": "src/brand_new.py", "content": "x"},
+        {"op": "delete", "path": "src/util.py"},
+    )
+
+    assert result["status"] == "restored"
+    assert "FAILED src/util.py:2 helper broke" in result["output"]
+    assert result["gate"]["verdict"] == "block"
+    assert result["gate"]["gates"] == ["T0.scope", "T0.visible_tests"]
+    # util.py was deleted by this call, so it is not "a file this call did not change"; the test file is
+    assert "failure_points_at_files_this_call_did_not_change" not in result
+    for path, (data, mode) in before.items():
+        assert path.read_bytes() == data
+        assert stat.S_IMODE(path.stat().st_mode) == mode
+    assert not (workspace / "src" / "brand_new.py").exists()
+    assert live_journals(rt) == []  # the journal is consumed by the restore
+    assert sh(workspace, "for-each-ref", "refs/hypotaxis") == ""  # no checkpoint for a failed ship
+    kinds = types(rt, state)
+    assert "ship.restored" in kinds
+    assert "checkpoint.committed" not in kinds
+    assert next(e for e in rt.ledger(state).read() if e["type"] == "gate.decided")["payload"]["verdict"] == "block"
+    assert [p["status"] for _, ev, p in ctx.emitted if ev == "ship.completed"] == ["restored"]
+    assert SessionLedger(rt.ledger_path(SID)).verify()[0] is True
+
+
+def test_the_failure_names_files_the_call_did_not_change(make_session: MakeSession) -> None:
+    rt, state, _ = make_session(command=[PY, "-c", "print('boom in src/util.py line 2'); raise SystemExit(1)"])
+    result = tool(rt, state, replace("src/a.py", "return 1", "return 2"))
+    assert result["status"] == "restored"
+    assert result["failure_points_at_files_this_call_did_not_change"] == ["src/util.py"]
+
+
+def test_the_gate_runs_on_a_copy_and_sees_the_new_code(make_session: MakeSession, workspace: Path) -> None:
+    probe = "import pathlib, sys; sys.exit(0 if 'return 2' in pathlib.Path('src/a.py').read_text() else 1)"
+    rt, state, _ = make_session(command=[PY, "-c", probe])
+    assert tool(rt, state, replace("src/a.py", "return 1", "return 2"))["status"] == "shipped"
+
+
+# ---------------------------------------------------------------- ship: refusals before any write
+
+
+def test_editing_a_protected_test_file_is_blocked_before_any_write(make_session: MakeSession, workspace: Path) -> None:
+    rt, state, _ = make_session()
+    original = (workspace / "tests" / "test_a.py").read_bytes()
+    result = tool(rt, state, replace("tests/test_a.py", "assert True", "assert False"))
+    assert result["status"] == "blocked"
+    assert result["code"] == "hx.txn.protected_path"
+    assert result["paths"] == ["tests/test_a.py"]
+    assert result["wrote_nothing"] is True
+    assert (workspace / "tests" / "test_a.py").read_bytes() == original
+    assert "ship.applied" not in types(rt, state)
+    assert live_journals(rt) == []  # nothing was journaled: nothing was written
+
+
+@pytest.mark.parametrize(
+    "path", [".env", "keys/server.pem", ".git/config", "docs/locked/x.md", ".hermes/hypotaxis.yaml"]
+)
+def test_defaults_and_the_projects_globs_both_protect(make_session: MakeSession, workspace: Path, path: str) -> None:
+    rt, state, _ = make_session()
+    (workspace / Path(path).parent).mkdir(parents=True, exist_ok=True)
+    (workspace / path).write_text("secret\n")
+    result = tool(rt, state, replace(path, "secret", "leaked"))
+    assert result["status"] == "blocked"
+    assert (workspace / path).read_text() == "secret\n"
+
+
+def test_a_missed_edit_writes_nothing_and_shows_the_closest_match(make_session: MakeSession, workspace: Path) -> None:
+    rt, state, _ = make_session()
+    before = (workspace / "src" / "a.py").read_bytes()
+    result = tool(
+        rt, state, replace("src/util.py", "return 0", "return 9"), replace("src/a.py", "return 11", "return 2")
+    )
+    assert result["status"] == "aborted_before_write"
+    (failure,) = result["failures"]
+    assert failure["edit"] == 1
+    assert failure["kind"] == "no_match"
+    assert failure["closest"]["snippet"]
+    assert (workspace / "src" / "a.py").read_bytes() == before
+    assert (
+        workspace / "src" / "util.py"
+    ).read_text() == "def helper():\n    return 0\n"  # the good edit did not land either
+
+
+def test_malformed_edits_are_an_outcome_before_hx_is_called(make_session: MakeSession) -> None:
+    rt, state, _ = make_session()
+    result = tool(rt, state, {"op": "replace", "path": "src/a.py"})
+    assert result["status"] == "invalid"
+    assert result["wrote_nothing"] is True
+
+
+def test_the_lanes_scope_is_enforced_by_hx(make_session: MakeSession, workspace: Path) -> None:
+    rt, state, _ = make_session()
+    state.allowed = ("docs/**",)
+    result = tool(rt, state, replace("src/a.py", "return 1", "return 2"))
+    assert result["status"] == "blocked"
+    assert result["code"] == "hx.txn.scope_violation"
+    assert "return 1" in (workspace / "src" / "a.py").read_text()
+
+
+def test_governed_mode_refuses_to_ship_without_a_trusted_gate_command(
+    make_session: MakeSession, workspace: Path
+) -> None:
+    rt, state, _ = make_session(mode="governed", command=None)
+    result = tool(rt, state, replace("src/a.py", "return 1", "return 2"))
+    assert result["status"] == "refused"
+    assert "gate command" in result["reason"]
+    assert "return 1" in (workspace / "src" / "a.py").read_text()
+
+
+def test_ungoverned_without_a_command_runs_the_scope_gate_and_says_the_tests_were_not_configured(
+    make_session: MakeSession,
+) -> None:
+    rt, state, _ = make_session(command=None)
+    result = tool(rt, state, replace("src/a.py", "return 1", "return 2"))
+    assert result["status"] == "shipped"
+    decided = next(e for e in rt.ledger(state).read() if e["type"] == "gate.decided")["payload"]
+    assert decided["gates"][-1]["evidence"]["tests"]["status"] == "not_configured"
+
+
+def test_a_switched_off_gate_is_recorded_as_switched_off(make_session: MakeSession) -> None:
+    rt, state, _ = make_session(command=[PY, "-c", "raise SystemExit(1)"])
+    state.gate_enabled = False
+    result = tool(rt, state, replace("src/a.py", "return 1", "return 2"))
+    assert result["status"] == "shipped"
+    assert result["gate"]["note"]
+    decided = next(e for e in rt.ledger(state).read() if e["type"] == "gate.decided")["payload"]
+    assert (decided["gate"], decided["enforcement"]) == ("disabled", "none")
+
+
+# ---------------------------------------------------------------- ship: infrastructure failures
+
+
+def test_a_ledger_that_cannot_be_written_undoes_the_ship(
+    make_session: MakeSession, workspace: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    rt, state, _ = make_session()
+    ledger = rt.ledger(state)
+    real = ledger.append
+
+    def flaky(type_: str, actor: str, payload: Any) -> Any:
+        if type_ == "task.submitted":
+            raise LedgerError("disk full")
+        return real(type_, actor, payload)
+
+    monkeypatch.setattr(ledger, "append", flaky)
+    result = tool(rt, state, replace("src/a.py", "return 1", "return 2"))
+    assert result["status"] == "restored"
+    assert "ledger could not be written" in result["reason"]
+    assert "return 1" in (workspace / "src" / "a.py").read_text()
+
+
+def test_a_gate_that_cannot_run_denies(
+    make_session: MakeSession, workspace: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from hypotaxis.ship import gate
+
+    rt, state, _ = make_session()
+
+    def broken(**_: Any) -> Any:
+        raise OSError("no space left on device")
+
+    monkeypatch.setattr(gate, "run_gate", broken)
+    result = tool(rt, state, replace("src/a.py", "return 1", "return 2"))
+    assert result["status"] == "restored"
+    assert "gate could not run" in result["reason"]
+    assert "return 1" in (workspace / "src" / "a.py").read_text()
+
+
+def test_ship_without_hx_is_an_error(make_session: MakeSession, tmp_path: Path) -> None:
+    rt, state, _ = make_session(hx_path=str(tmp_path / "nope"))
+    assert tool(rt, state, replace("src/a.py", "a", "b"))["code"] == "hx.process.unavailable"
+
+
+# ---------------------------------------------------------------- recovery and the tool surface
+
+
+class FakeRecoverClient:
+    """Answers txn.recover the way hx does after a crash left one interrupted journal."""
+
+    def __init__(self, restored: list[str]) -> None:
+        self.calls: list[str] = []
+        self._restored = restored
+
+    def request(self, method: str, params: dict[str, Any], timeout: float = 0) -> dict[str, Any]:
+        assert method == "txn.recover"
+        self.calls.append(params["journal_dir"])
+        return RecoverResult(restored=self._restored, discarded=[], pending=[], busy=[], failed=[]).to_wire()
+
+
+def test_recovery_rolls_back_and_records_ship_restored_in_the_sessions_ledger(home: Path, tmp_path: Path) -> None:
+    (journal_dir(home, "local-crashed")).mkdir(parents=True)
+    (journal_dir(home, "local-fine")).mkdir(parents=True)
+    ledgers: dict[str, SessionLedger] = {}
+
+    def ledger_for(stem: str) -> SessionLedger:
+        return ledgers.setdefault(stem, SessionLedger(tmp_path / f"{stem}.jsonl"))
+
+    client = FakeRecoverClient(["01-journal-a"])
+    results = recover_all(client, home, ledger_for)  # type: ignore[arg-type]
+    assert sorted(results) == ["local-crashed", "local-fine"]
+    assert sorted(Path(c).name for c in client.calls) == ["local-crashed", "local-fine"]
+    events = ledger_for("local-crashed").read()
+    assert [(e["type"], e["payload"]["ship_id"]) for e in events if e["type"] == "ship.restored"] == [
+        ("ship.restored", "01-journal-a")
+    ]
+
+
+def test_recovery_with_no_journals_does_nothing(home: Path) -> None:
+    assert not journals_root(home).exists()
+    assert recover_all(FakeRecoverClient([]), home, lambda _s: None) == {}  # type: ignore[arg-type,return-value]
+
+
+def test_recovery_runs_against_the_real_hx_and_leaves_a_live_journal_alone(
+    make_session: MakeSession, workspace: Path
+) -> None:
+    rt, state, _ = make_session()
+    client = rt.hx_client()
+    assert client is not None
+    from hypotaxis.hx.types import ApplyParams, ReplaceEdit
+
+    journals = journal_dir(rt.home, SID)
+    applied = client.request(
+        "txn.apply",
+        ApplyParams(
+            root=str(workspace),
+            journal_dir=str(journals),
+            edits=[ReplaceEdit(new="return 7", old="return 1", path="src/a.py")],
+            protected=[],
+        ).to_wire(),
+    )
+    results = recover_all(client, rt.home, lambda _s: rt.ledger(state))
+    assert applied["journal_id"] in results[SID].pending  # completed, waiting for restore or discard: left alone
+    assert "return 7" in (workspace / "src" / "a.py").read_text()
+
+
+def test_the_tools_are_registered_in_toolset_hypotaxis_and_hidden_without_hx(
+    make_session: MakeSession, tmp_path: Path
+) -> None:
+    import hypotaxis
+
+    rt, state, ctx = make_session()
+    hypotaxis.register(ctx)
+    assert set(ctx.tools) == {"pack", "ship"}
+    assert {t["toolset"] for t in ctx.tools.values()} == {"hypotaxis"}
+    assert hx_ready() is True
+    # the handler is the tool: JSON string in, JSON string out, never an exception
+    got = json.loads(ctx.tools["pack"]["handler"]({"items": [{"op": "status"}]}, session_id=SID))
+    assert "[status]" in got["text"]
+    assert (
+        json.loads(ctx.tools["pack"]["handler"]({"items": [{"op": "status"}]}))["code"] == "hx.config.invalid"
+    )  # no session
+    shipped = json.loads(
+        ctx.tools["ship"]["handler"]({"edits": [replace("src/a.py", "return 1", "return 3")]}, session_id=SID)
+    )
+    assert shipped["status"] == "shipped"
+    assert json.loads(ctx.tools["ship"]["handler"]({"edits": "nonsense"}, session_id=SID))["status"] == "invalid"
+    hx.shutdown()
+    ctx.config["hx_path"] = str(tmp_path / "nope")
+    hx._cache = None  # type: ignore[attr-defined]
+    assert hx_ready() is False

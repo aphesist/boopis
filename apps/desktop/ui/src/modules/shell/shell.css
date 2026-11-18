@@ -1,0 +1,372 @@
+/* hypotaxis v6 · shell (owner: wireframe agent). System: DESIGN.md. Geometry per slot: LAYOUT.md.
+   The cabinet (bg-1) is a title bar plus full-height sidebars; the work sits on the reading-room ground (bg-2),
+   which meets the cabinet with 14px concave corners. In the sidebar every icon sits on one axis (x = 28, the
+   rail's centre) and every label on one text line (x = 44), so collapsing to the rail moves nothing that stays.
+   Layout moves run on registered custom properties set by shell.js, so sidebars, views, corners, composer and
+   dock travel on one curve. */
+
+@property --hx-side-w     { syntax: "<length>"; inherits: true; initial-value: 0px; }
+@property --hx-view-left  { syntax: "<length>"; inherits: true; initial-value: 0px; }
+@property --hx-view-right { syntax: "<length>"; inherits: true; initial-value: 0px; }
+@property --hx-center-x   { syntax: "<length>"; inherits: true; initial-value: 0px; }
+@property --hx-col-left   { syntax: "<length>"; inherits: true; initial-value: 0px; }
+@property --hx-col-w      { syntax: "<length>"; inherits: true; initial-value: 0px; }
+@property --hx-right-vw   { syntax: "<length>"; inherits: true; initial-value: 0px; }
+@property --hx-dock-space { syntax: "<length>"; inherits: true; initial-value: 0px; }
+@property --hx-shift      { syntax: "<length>"; inherits: false; initial-value: 0px; }
+
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg-1);
+  color: var(--text);
+  font: 400 var(--fs-s)/var(--lh-ui) var(--sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+}
+[hidden] { display: none !important; }
+
+/* ───────────── frame ───────────── */
+.hx {
+  position: relative; height: 100%; overflow: hidden;
+  background: var(--bg-1);
+  transition:
+    --hx-side-w var(--dur-3) var(--spring), --hx-view-left var(--dur-3) var(--spring),
+    --hx-view-right var(--dur-3) var(--spring), --hx-center-x var(--dur-3) var(--spring),
+    --hx-col-left var(--dur-3) var(--spring), --hx-col-w var(--dur-3) var(--spring),
+    --hx-right-vw var(--dur-3) var(--spring), --hx-dock-space var(--dur-3) var(--spring);
+}
+.hx.is-booting, .hx.is-booting *, .hx.is-resizing, .hx.is-resizing * { transition: none !important; }
+:where(.hx) button { font: inherit; color: inherit; }
+/* base rules at zero specificity, so a module's own styling always wins */
+
+/* icon buttons */
+
+/* ───────────── title bar ───────────── */
+.hx-bar {
+  position: absolute; inset: 0 0 auto 0; z-index: var(--z-chrome);
+  height: var(--chrome-h); box-sizing: border-box;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 6px 0 14px;
+  background: var(--bg-1);
+  user-select: none;
+}
+.hx-bar__lead, .hx-bar__end { display: flex; align-items: center; gap: 2px; }
+.hx-bar__end { gap: 10px; }
+.hx-win { display: flex; gap: 2px; }
+
+/* the command centre: where you are, and the way to anywhere else */
+.hx-cmd {
+  position: absolute; left: 50%; top: 7px; translate: -50% 0;
+  display: flex; align-items: center; gap: 10px;
+  width: clamp(240px, 34vw, 480px); height: 26px; box-sizing: border-box;
+  padding: 0 4px 0 10px;
+  border: 0; border-radius: var(--r-s);
+  background: var(--bg-0); box-shadow: inset 0 0 0 1px var(--hair);
+  color: var(--text-quiet); cursor: pointer; text-align: left;
+  transition: box-shadow var(--dur-1) var(--ease), background-color var(--dur-1) var(--ease);
+}
+.hx-cmd .ui-icon { width: 14px; height: 14px; }
+@media (hover: hover) and (pointer: fine) { .hx-cmd:hover { box-shadow: inset 0 0 0 1px var(--line); } }
+.hx-cmd[aria-expanded="true"] { box-shadow: inset 0 0 0 1px var(--brass); }
+.hx-cmd__where { flex: 1; min-width: 0; display: flex; gap: 6px; overflow: hidden; white-space: nowrap; font-size: var(--fs-xs); }
+.hx-cmd__project { color: var(--text-quiet); flex: none; }
+.hx-cmd__project:not(:empty)::after { content: "/"; margin-left: 6px; color: var(--text-faint); }
+.hx-cmd__title { color: var(--text); overflow: hidden; text-overflow: ellipsis; }
+
+/* ───────────── left sidebar ───────────── */
+.hx-side {
+  position: absolute; z-index: var(--z-sidebar);
+  top: var(--chrome-h); left: 0; bottom: 0;
+  width: var(--hx-side-w);
+  background: var(--bg-1);
+  overflow: hidden;
+}
+.hx-side__inner { position: relative; height: 100%; width: var(--sb-w); display: flex; flex-direction: column; }
+
+/* the mark: title bar, top left, centred on the sidebar's icon axis (x = 28) so it sits above the rail's icons.
+   Two drawings: the closed Φ (the owner's corner seal, default) and the open φ; Appearance > Logo switches them. */
+.hx-mark { display: grid; place-items: center; width: var(--ctl-s); height: var(--ctl-s); margin-right: 6px; color: var(--text-strong); flex: none; }
+.hx-mark > svg { height: 20px; width: auto; aspect-ratio: 724 / 918; fill: currentColor; }
+.hx-mark .hx-mark__open { aspect-ratio: 27 / 36; display: none; }
+:root[data-hx-logo="open"] .hx-mark .hx-mark__open { display: block; }
+:root[data-hx-logo="open"] .hx-mark .hx-mark__closed { display: none; }
+
+/* Session | Bots */
+
+/* New session */
+.hx-new__label { flex: 1; }
+
+/* the tabs pill and the New button are library pieces (HX.ui.segmented, .ui-btn--ghost); the shell only places them */
+.hx-seg { margin: 12px 12px 0; flex: none; width: auto; align-self: stretch; }
+.hx-new { justify-content: flex-start; margin: 8px 8px 0; padding: 0 8px 0 12px; flex: none; color: var(--text); }
+.hx-new .ui-icon { width: 16px; height: 16px; color: var(--icon); }
+.hx-new__label { flex: 1; text-align: left; }
+
+/* list slot: one panel per tab, cross-faded */
+.hx-side__list { position: relative; flex: 1; min-height: 0; margin-top: 12px; transition: opacity var(--dur-2) var(--ease) var(--dur-out), visibility 0s; }
+.hx-list {
+  position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
+  opacity: 0; visibility: hidden; transform: translateX(var(--list-shift, -8px));
+  transition: opacity var(--dur-out) var(--ease), transform var(--dur-2) var(--ease), visibility 0s linear var(--dur-2);
+}
+.hx-list[data-list="bots"] { --list-shift: 8px; }
+.hx-list.is-active { opacity: 1; visibility: visible; transform: none; transition: opacity var(--dur-2) var(--ease) calc(var(--dur-out) / 2), transform var(--dur-3) var(--spring), visibility 0s; }
+
+/* account */
+.hx-foot { display: flex; align-items: center; gap: 4px; height: 52px; padding: 0 8px; flex: none; box-shadow: inset 0 1px 0 var(--hair); }
+.hx-me {
+  display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; height: 36px;
+  padding: 0 8px; border: 0; border-radius: var(--r-s); background: transparent; cursor: pointer;
+  color: var(--text); font-size: var(--fs-s); text-align: left;
+  transition: background-color var(--dur-1) var(--ease);
+}
+@media (hover: hover) and (pointer: fine) { .hx-me:hover { background: var(--hover); } }
+.hx-me__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: opacity var(--dur-1) var(--ease); }
+.hx-avatar {
+  display: inline-grid; place-items: center; flex: none;
+  width: 24px; height: 24px; border-radius: var(--r-pill);
+  background: var(--selected); color: var(--text-on-light);
+  font: 600 11px/1 var(--sans); text-transform: uppercase; corner-shape: round;
+}
+.hx-avatar::after { content: attr(data-initial); }   /* the initial is drawn, not text: the account button's name does not have to repeat it */
+.hx-foot__gear { transition: opacity var(--dur-1) var(--ease), color var(--dur-1) var(--ease), background-color var(--dur-1) var(--ease); }
+
+/* rail: φ, the avatar and every icon stay on the x = 28 axis */
+.hx-rail {
+  position: absolute; top: 12px; left: 0; width: var(--sb-rail-w);
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  opacity: 0; visibility: hidden; transition: opacity var(--dur-out) var(--ease), visibility 0s linear var(--dur-out);
+}
+
+.hx[data-left="rail"] .hx-rail { opacity: 1; visibility: visible; transition: opacity var(--dur-2) var(--ease) var(--dur-out), visibility 0s; }
+.hx[data-left="rail"] :is(.hx-seg, .hx-new, .hx-me__name, .hx-foot__gear) { opacity: 0; visibility: hidden; transition: opacity var(--dur-press) var(--ease), visibility 0s linear var(--dur-press); }
+.hx[data-left="rail"] .hx-side__list { opacity: 0; visibility: hidden; transition: opacity var(--dur-press) var(--ease), visibility 0s linear var(--dur-press); }
+.hx[data-left="rail"] .hx-side__list:has(> .hx-list.is-active[data-rail="ok"]) { opacity: 1; visibility: visible; width: var(--sb-rail-w); }
+.hx[data-left="rail"] .hx-me { flex: none; }
+
+/* concave corners where the ground meets the cabinet */
+.hx-corner {
+  position: absolute; pointer-events: none; z-index: calc(var(--z-sidebar) - 1); --c: var(--bg-1);
+  top: var(--chrome-h); width: var(--r-l); height: var(--r-l);
+  opacity: 0; transition: opacity var(--dur-1) var(--ease);
+}
+.hx-corner--left { left: var(--hx-view-left); }
+.hx-corner--right { right: var(--hx-view-right); z-index: calc(var(--z-right) - 1); }
+.hx[data-lcorner="on"] .hx-corner--left, .hx[data-rcorner="on"] .hx-corner--right { opacity: 1; }
+
+/* ───────────── ground and views ───────────── */
+.hx-ground { position: absolute; top: var(--chrome-h); left: 0; right: 0; bottom: 0; background: var(--bg-2); }
+/* No transform, filter or will-change on views: modules place fixed-position children on the viewport. */
+.hx-view {
+  position: absolute; top: 0; bottom: 0;
+  left: calc(var(--hx-view-left) + var(--hx-shift)); right: calc(var(--hx-view-right) - var(--hx-shift));
+  --hx-shift: -12px; opacity: 0; visibility: hidden;
+  transition: opacity var(--dur-out) var(--ease), --hx-shift var(--dur-2) var(--ease), visibility 0s linear var(--dur-2);
+}
+.hx-view[data-view="bots"] { --hx-shift: 12px; }
+.hx-view.is-active { --hx-shift: 0px; opacity: 1; visibility: visible; transition: opacity var(--dur-2) var(--ease) calc(var(--dur-out) / 2), --hx-shift var(--dur-3) var(--spring) calc(var(--dur-out) / 4), visibility 0s; }
+
+/* ───────────── right panel (session details; not part of the bots tab) ───────────── */
+.hx-right {
+  position: absolute; z-index: var(--z-right);
+  top: var(--chrome-h); right: 0; bottom: 0;
+  width: var(--hx-right-vw); overflow: hidden;
+  background: transparent;
+  transition: background-color var(--dur-2) var(--ease), box-shadow var(--dur-2) var(--ease), opacity var(--dur-2) var(--ease) calc(var(--dur-out) / 2), visibility 0s;
+}
+.hx[data-right="open"] .hx-right { background: var(--bg-1); transition: background-color var(--dur-press) var(--ease), box-shadow var(--dur-2) var(--ease), opacity var(--dur-2) var(--ease), visibility 0s; }
+.hx[data-right="open"][data-right-mode="overlay"] .hx-right { box-shadow: var(--shadow-side-r); }
+/* the slot keeps its open width while it slides, so the panel never reflows; it narrows after closing */
+.hx-right__slot { position: absolute; top: 0; bottom: 0; left: 0; width: var(--right-rail-w); transition: width 0s linear var(--dur-3); }
+.hx[data-right="open"] .hx-right__slot { width: var(--right-w); transition: width 0s; }
+.hx[data-tab="bots"] .hx-right { opacity: 0; visibility: hidden; transition: opacity var(--dur-out) var(--ease), visibility 0s linear var(--dur-out); }
+
+/* ───────────── dock slot: the dock draws itself; nothing depends on it ───────────── */
+.hx-dock-slot { position: absolute; z-index: var(--z-dock); left: 0; right: 0; bottom: 0; height: var(--dock-rest-h); pointer-events: none; }
+.hx-dock-slot > * { pointer-events: auto; }
+
+/* ───────────── scrim (drawers on narrow windows) ───────────── */
+.hx-scrim { position: absolute; inset: var(--chrome-h) 0 0 0; z-index: calc(var(--z-dock) + 1); background: var(--scrim); opacity: 0; transition: opacity var(--dur-2) var(--ease); }
+.hx-scrim.is-on { opacity: 1; }
+.hx[data-left-mode="overlay"] .hx-side { box-shadow: var(--shadow-side); }
+.hx[data-left-mode="overlay"][data-left="open"] .hx-side { z-index: calc(var(--z-dock) + 2); }
+.hx[data-right-mode="overlay"][data-right="open"] .hx-right { z-index: calc(var(--z-dock) + 2); }
+
+/* ───────────── surfaces that float: menu, palette, dialog, tooltip, toast ───────────── */
+@keyframes hx-drop { from { opacity: 0; transform: translateY(-6px); } }
+@keyframes hx-fade { from { opacity: 0; } }
+
+.hx-palette { position: absolute; inset: 0; z-index: var(--z-palette); background: var(--scrim); animation: hx-fade var(--dur-2) var(--ease); }
+.hx-palette__box {
+  position: absolute; top: 48px; left: 50%; translate: -50% 0;
+  --r-outer: var(--r-l); --pad: 6px; --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad)));
+  width: min(600px, calc(100% - 32px)); box-sizing: border-box;
+  display: flex; flex-direction: column; max-height: min(520px, calc(100% - 96px));
+  border-radius: var(--r-outer); background: var(--bg-1);
+  box-shadow: inset 0 0 0 1px var(--line), var(--shadow-pop);
+  overflow: hidden; animation: hx-drop var(--dur-2) var(--ease);
+}
+.hx-palette__field { display: flex; align-items: center; gap: 12px; flex: none; height: 48px; padding: 0 12px 0 16px; border-bottom: 1px solid var(--hair); color: var(--text-quiet); }
+.hx-palette__field .ui-icon { width: 16px; height: 16px; }
+.hx-palette__field input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; background: transparent; outline: none; color: var(--text-strong); font: 400 var(--fs-m)/1 var(--sans); }
+.hx .hx-palette__field input:focus-visible { outline: none; }
+.hx-palette__field input::placeholder { color: var(--text-quiet); }
+.hx-palette__list { overflow-y: auto; overscroll-behavior: contain; padding: 4px 6px 6px; }
+.hx-pal-row { height: auto; min-height: var(--row-h); gap: 10px; padding: 0 10px; border-radius: var(--r-in); }
+.hx-pal-row__icon { width: 18px; height: 18px; display: grid; place-items: center; color: var(--icon); flex: none; }
+.hx-pal-row__icon .ui-icon { width: 16px; height: 16px; }
+.hx-pal-row__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hx-pal-row__label mark { background: none; color: var(--text-strong); text-decoration: underline; text-decoration-color: var(--brass); text-underline-offset: 3px; }
+.hx-pal-row__meta { color: var(--text-quiet); font-size: var(--fs-xs); white-space: nowrap; }
+.hx-pal-row__trail { color: var(--text-quiet); font: 400 var(--fs-2xs)/1 var(--mono); white-space: nowrap; }
+.hx-pal-row__trail.is-attn { color: var(--red-text); }
+.hx-pal-empty { padding: 28px 16px 30px; text-align: center; color: var(--text-dim); font-size: var(--fs-s); line-height: 1.6; }
+.hx-pal-empty b { color: var(--text); font-weight: 500; }
+
+.hx-dialog { padding: 0; border: 0; background: transparent; color: var(--text); width: min(600px, calc(100% - 32px)); height: min(680px, calc(100% - 64px)); max-height: none; font-family: var(--sans); }
+.hx-dialog::backdrop { background: var(--scrim); transition: background-color var(--dur-2) var(--ease); }
+.hx-dialog[open] { animation: hx-drop var(--dur-2) var(--ease); }
+/* Appearance: the dialog steps aside to the right edge and drops its scrim, so changes show on the whole app */
+.hx-dialog.is-side { width: min(420px, calc(100% - 24px)); height: calc(100% - 24px); margin: 12px 12px 12px auto; }
+.hx-dialog.is-side::backdrop { background: transparent; }
+.hx-dialog__card { --r-outer: var(--r-l); --pad: 12px; --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad))); display: flex; flex-direction: column; height: 100%; box-sizing: border-box; border-radius: var(--r-outer); background: var(--bg-1); box-shadow: inset 0 0 0 1px var(--line), var(--shadow-pop); overflow: hidden; }
+.hx-dialog__card:focus { outline: none; }
+.hx-dialog__head { display: flex; align-items: center; gap: 16px; height: 52px; padding: 0 12px 0 20px; border-bottom: 1px solid var(--hair); flex: none; }
+.hx-dialog__head h2 { margin: 0; font-size: var(--fs-l); font-weight: 600; color: var(--text-strong); text-transform: var(--ui-case); }
+.hx-dialog__head .ui-ib { margin-left: auto; border-radius: var(--r-in); }
+.hx-dtabs { display: flex; gap: 2px; }
+.hx-dtab { height: var(--ctl-s); padding: 0 10px; border: 0; border-radius: var(--r-s); background: transparent; color: var(--text-dim); font: 500 var(--fs-s)/1 var(--sans); cursor: pointer; text-transform: var(--ui-case); transition: background-color var(--dur-out) var(--ease), color var(--dur-out) var(--ease), transform var(--dur-press) var(--ease); }
+.hx-dtab:hover { background: var(--hover); color: var(--text); transition-duration: var(--dur-1); }
+.hx-dtab:active { transform: translateY(1px) scale(.985); }
+.hx-dtab[aria-selected="true"] { background: var(--current); color: var(--text-strong); }
+.hx-dialog__body { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 20px 24px; }
+.hx-dialog.is-side .hx-dtabs { margin-right: -6px; }
+
+/* ───────────── theme customizer (theme.js renders it into the Appearance panel) ───────────── */
+.hxt-presets { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.hxt-logos .ui-seg__opt { padding: 0 14px; }
+.hxt-logos svg { height: 15px; width: auto; aspect-ratio: 724 / 918; fill: currentColor; }
+.hxt-logos svg.is-open { aspect-ratio: 27 / 36; }
+.hxt-select { width: 180px; flex: none; }
+.hxt-preset {
+  position: relative; display: grid; gap: 4px; padding: 10px 12px 12px; cursor: pointer;
+  border-radius: var(--r-m); background: var(--bg-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--line);
+  font-family: var(--sans); transition: box-shadow var(--dur-1) var(--ease);
+}
+.hxt-preset input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.hxt-preset:hover { box-shadow: inset 0 0 0 1px var(--line-strong); }
+.hxt-preset:has(input:checked) { box-shadow: inset 0 0 0 2px var(--brass); }
+.hxt-preset:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+.hxt-preset__chips { display: flex; gap: 0; margin-bottom: 4px; }
+.hxt-preset__chips i { width: 22px; height: 22px; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 12%, transparent); }
+.hxt-preset__chips i:first-child { border-radius: var(--r-xs) 0 0 var(--r-xs); }
+.hxt-preset__chips i:last-child { border-radius: 0 var(--r-xs) var(--r-xs) 0; }
+.hxt-preset__name { font-size: var(--fs-s); font-weight: 600; color: var(--text-strong); }
+.hxt-preset[data-hx-case="lower"] .hxt-preset__name { text-transform: lowercase; }
+.hxt-preset__note { font-size: var(--fs-xs); color: var(--text-dim); }
+.hxt-row .ui-input { min-height: 0; height: var(--ctl-s); padding: 0 8px; }
+.hxt-json { min-height: 120px; resize: vertical; overflow: auto; }
+.hxt-file { position: relative; }
+.hxt-file input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.hxt-file:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+.hxt-end { margin-left: auto; }
+.hxt-hint { margin: 4px 0 4px; font-size: var(--fs-xs); line-height: 1.5; color: var(--text-dim); }
+.hxt-group { margin: 16px 0 2px; font: 500 var(--fs-xs)/var(--lh-ui) var(--sans); color: var(--text-quiet); text-transform: var(--ui-case); }
+.hxt-row { display: grid; grid-template-columns: 28px minmax(0, 1fr) 84px 52px; align-items: center; gap: 10px; min-height: 40px; padding: 4px 0; border-bottom: 1px solid var(--hair); }
+.hxt-swatch { width: 28px; height: 28px; padding: 0; border: 0; border-radius: var(--r-s); background: none; cursor: pointer; box-shadow: inset 0 0 0 1px var(--line-strong); }
+.hxt-swatch::-webkit-color-swatch-wrapper { padding: 2px; }
+.hxt-swatch::-webkit-color-swatch { border: 0; border-radius: max(var(--r-floor), calc(var(--r-s) - 2px)); }
+.hxt-swatch::-moz-color-swatch { border: 0; border-radius: max(var(--r-floor), calc(var(--r-s) - 2px)); }
+.hxt-row__label { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: var(--fs-s); color: var(--text); }
+.hxt-row__label > span { display: inline-flex; align-items: center; gap: 6px; }
+.hxt-row__label small { font-size: var(--fs-xs); color: var(--text-quiet); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hxt-flag { width: 6px; height: 6px; border-radius: var(--r-pill); corner-shape: round; background: var(--warn); flex: none; }
+.hxt-undo { visibility: hidden; }
+.hxt-row.is-changed .hxt-undo { visibility: visible; }
+.hxt-row.is-changed .hxt-hex { color: var(--text-strong); }
+.hxt-contrast { list-style: none; margin: 8px 0 0; padding: 0; }
+.hxt-contrast li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--hair); font-size: var(--fs-s); color: var(--text); }
+.hxt-contrast li.is-fail span:first-child::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 8px; vertical-align: 1px; border-radius: var(--r-pill); corner-shape: round; background: var(--warn); }
+.hxt-ratio { font: 400 var(--fs-2xs)/1.6 var(--mono); color: var(--text-quiet); white-space: nowrap; }
+.hxt-json-label { display: block; margin: 8px 0 6px; font-size: var(--fs-xs); color: var(--text-dim); }
+.hxt-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.hxt-msg { min-height: 18px; margin: 8px 0 0; font-size: var(--fs-xs); color: var(--text-dim); }
+.hxt-msg.is-error { color: var(--red-text); }
+
+/* interface case: Typewriter sets lowercase; content (titles, names, messages) is never transformed */
+:is(.hx-new__label, .hx-pal-row[data-kind="command"] .hx-pal-row__label) { text-transform: var(--ui-case); }
+.hx-palette__field input::placeholder { text-transform: var(--ui-case); }
+.hx-keys { display: grid; grid-template-columns: 1fr auto; margin: 4px 0 0; }
+.hx-keys dt, .hx-keys dd { margin: 0; padding: 8px 0; border-bottom: 1px solid var(--hair); font-size: var(--fs-s); }
+.hx-keys dd { display: flex; justify-content: flex-end; }
+
+
+.hx-probe { position: absolute; left: -9999px; top: 0; visibility: hidden; pointer-events: none; }
+.hx-probe i { display: block; height: 1px; }
+
+/* ───────────── placeholders: shown only when a module never registered (drawn with HX.ui) ───────────── */
+.hx-stub { position: absolute; inset: 0; overflow: auto; color: var(--text); }
+.hx-stub-col { width: min(var(--col-w), calc(100% - 48px)); margin: 0 auto; padding: 32px 0 calc(var(--hx-dock-space) + 200px); }
+.hx-stub-composer { position: absolute; left: 50%; translate: -50% 0; bottom: calc(var(--hx-dock-space) + var(--composer-gap)); width: min(var(--composer-w), calc(100% - 48px)); }
+.hx-stub-empty { position: absolute; inset: 0 0 var(--hx-dock-space); display: grid; place-content: center; justify-items: center; }
+.hx-stub-list { padding: 0 8px 16px; }
+.hx-stub-list ul { margin: 0; padding: 0; list-style: none; }
+.hx-stub-rail { position: absolute; inset: 0 0 var(--hx-dock-space); display: grid; place-content: center; gap: 6px; justify-items: center; }
+.hx-stub-rail i { width: 4px; height: 4px; border-radius: var(--r-pill); corner-shape: round; background: var(--text-faint); }
+.hx-stub-rail i.on { background: var(--text-dim); }
+.hx-stub-panel { position: absolute; inset: 0; padding: 8px 20px; }
+.hx-stub-panel dl { margin: 0; }
+.hx-stub-panel dl > div { display: flex; justify-content: space-between; align-items: center; height: 40px; border-top: 1px solid var(--hair); font-size: var(--fs-s); }
+.hx-stub-panel dt { color: var(--text); text-transform: var(--ui-case); }
+.hx-stub-panel dd { margin: 0; color: var(--text-quiet); font: 400 var(--fs-2xs)/1 var(--mono); }
+.hx-stub-dock { position: absolute; bottom: 0; left: var(--hx-center-x); translate: -50% 0; transition: opacity var(--dur-2) var(--ease), translate var(--dur-3) var(--spring); }
+.hx-stub-orb { width: 40px; height: 40px; padding: 0; border: 0; border-radius: var(--r-pill); corner-shape: round; background: transparent; display: grid; place-items: center; cursor: pointer; }
+.hx[data-dock="off"] .hx-stub-dock { opacity: 0; translate: -50% 24px; visibility: hidden; transition: opacity var(--dur-1) var(--ease), translate var(--dur-3) var(--spring), visibility 0s linear var(--dur-3); }
+
+/* ───────────── narrow windows ───────────── */
+@media (max-width: 639px) {
+  .hx-bar { padding: 0 max(6px, env(safe-area-inset-right, 0px)) 0 max(8px, env(safe-area-inset-left, 0px)); }
+  #hx-btn-back, #hx-btn-fwd, .hx-win { display: none; }
+  .hx-cmd { position: static; translate: none; flex: 1; width: auto; min-width: 0; margin: 0 8px; }
+  .hx-cmd .ui-keys, .hx-cmd__project { display: none; }
+  .hx-palette__box { top: 8px; }
+  .hx-dialog__head { gap: 8px; padding-left: 12px; }
+  .hx-dialog__head h2 { display: none; }
+  .hxt-row { grid-template-columns: 28px minmax(0, 1fr) 76px; }
+  .hxt-undo { grid-column: 2 / -1; justify-self: start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hx, .hx * { transition-duration: 1ms !important; animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-delay: 0ms !important; }
+}
+
+
+/* ───────────── keyboard: sheet, go-to hint, region focus ───────────── */
+.hx-keysheet { width: min(1000px, calc(100% - 32px)); height: min(720px, calc(100% - 48px)); }
+.hx-keysheet .hx-dialog__head h2 { margin-right: auto; }
+.hx-keys-filter { width: 200px; min-height: 0; height: var(--ctl-s); }
+.hx-keysheet .hx-dialog__head .ui-ib { margin-left: 0; }
+.hx-keysheet .hx-dialog__body:focus-visible { outline-offset: -2px; border-radius: 0 0 var(--r-l) var(--r-l); }
+.hx-keys-grid { columns: 3 260px; column-gap: 32px; padding-top: 8px; }
+.hx-keygroup { break-inside: avoid; margin: 0 0 20px; }
+.hx-keygroup h3 { margin: 12px 0 4px; font-size: var(--fs-xs); font-weight: 500; color: var(--text-quiet); text-transform: var(--ui-case); }
+.hx-keygroup dl { margin: 0; }
+.hx-keygroup dl > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 30px; border-bottom: 1px solid var(--hair); }
+.hx-keygroup dt { font-size: var(--fs-s); color: var(--text); text-transform: var(--ui-case); }
+.hx-keygroup dd { margin: 0; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 4px; }
+.hx-kword { font-size: var(--fs-2xs); color: var(--text-quiet); margin: 0 2px; }
+.hx-kthen { display: inline-block; width: 4px; }
+.hx-keys-empty, .hx-keys-note { font-size: var(--fs-xs); color: var(--text-dim); }
+.hx-keys-note { margin: 4px 0 0; }
+.hx-keys .hx-keygroup:first-child h3 { margin-top: 16px; }
+.hx-goto {
+  position: absolute; z-index: var(--z-toast); top: calc(var(--chrome-h) + 12px); left: 50%; translate: -50% 0;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; max-width: calc(100% - 32px); box-sizing: border-box;
+  padding: 8px 14px; border-radius: var(--r-m); background: var(--bg-3); box-shadow: inset 0 0 0 1px var(--line), var(--shadow-pop);
+  font-size: var(--fs-xs); color: var(--text-dim); animation: hx-drop var(--dur-2) var(--ease);
+}
+.hx-goto__title { color: var(--text-strong); font-weight: 600; text-transform: var(--ui-case); }
+.hx-goto__opt { display: inline-flex; align-items: center; gap: 6px; text-transform: var(--ui-case); }
+.hx [data-hx-region-focus]:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }

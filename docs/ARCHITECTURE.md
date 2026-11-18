@@ -197,7 +197,19 @@ One hash-chained JSONL per session at `<profile home>/hypotaxis/ledger/<session_
   - the mock data layer is replaced by the gateway and plugin streams.
 - **Hermes desktop plugins** (`desktop-plugins/<id>/plugin.js`) are a separate surface. A later phase hosts a compatible subset of `@hermes/plugin-sdk` in a sandboxed pane.
 
-## 11. Repository layout (mirrors hermes-agent)
+## 11. Homes, vaults and devices (ADR-0018)
+- **A home** runs the work: Hermes, the plugin, `hx` and the workspace. It's local by default, or any machine the user owns that can run programs.
+- **Devices attach** to the home over `hermes-gateway-v1`: the desktop app, a phone app (Tauri v2 mobile, same UI) and a web client. Transports are SSH, a tailnet, a Cloudflare Tunnel, or TLS with device tokens. One session continues live across devices.
+- **A vault** stores encrypted snapshots in any storage the user picks (Google Drive, OneDrive, S3, R2, B2, WebDAV, SFTP, a local drive) through Apache OpenDAL. A lease names the single live home.
+- **Cloud sessions** (`docs/CLOUD.md`, ADR-0019) run the whole stack in a fresh container on infrastructure the user owns. They keep working with the laptop closed and open from any device, like Claude Code's cloud sessions.
+- **Phase 1 builds only the seams:**
+  - an endpoint abstraction for the gateway connection (`Local`, `Remote`, `Cloud`);
+  - a plugin and `hx` that run headless in a container;
+  - checkpoint pushes to a branch;
+  - home-relative paths in the UI;
+  - one storage interface for everything hypotaxis persists.
+
+## 12. Repository layout (mirrors hermes-agent)
 
 ```
 AGENTS.md                  hub: invariants + routing table to per-area AGENTS.md
@@ -215,14 +227,14 @@ scripts/  tests/           tooling, end-to-end tests (fake model server, live ga
 study/                     pre-registration and run scripts (phase 2)
 ```
 
-## 12. Phases
+## 13. Phases
 
 - **Phase 1 (MVP):** the Sessions section good enough to replace Claude Code for a week, covering:
   - plugin tools, the ledger and governance;
   - host plus UI, connected to a real Hermes gateway;
   - Claude Code compatibility;
   - the Claude subscription and API-key providers.
-- **Phase 2:** teammates and the Bots section (profiles, cron, approvals on chat platforms), the dock widgets driven by the ledger, the study's pre-registration.
-- **Phase 3:** local artifacts with the git server, the macOS VM and remote Mac, EAS, Hermes desktop-plugin hosting.
+- **Phase 2:** remote homes, vault backup and restore, and cloud sessions phase C1 (control plane, Docker runner, egress and git proxies, session store); teammates and the Bots section (profiles, cron, approvals on chat platforms), the dock widgets driven by the ledger, the study's pre-registration.
+- **Phase 3:** the phone app; local artifacts with the git server, the macOS VM and remote Mac, EAS, Hermes desktop-plugin hosting.
 
 Each phase ends on a test anyone can run.

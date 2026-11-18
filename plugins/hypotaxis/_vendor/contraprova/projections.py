@@ -1,0 +1,207 @@
+"""Projections: pure functions from the event log to readable state.
+
+Nothing here performs I/O or calls a model. Given the same events, every
+function returns the same result, which is what makes replay meaningful.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, replace
+from typing import Iterable, Mapping
+
+from .events import Event, payload_problems
+
+TERMINAL = frozenset({"done", "failed"})
+DEFAULT_MAX_ATTEMPTS = 3
+
+
+class InvalidTransition(Exception):
+    """An event is not allowed in the current state."""
+
+
+@dataclass(frozen=True)
+class TaskView:
+    task_id: str
+    title: str
+    kind: str
+    scope: tuple[str, ...]
+    status: str = "todo"
+    attempts: int = 0
+    max_attempts: int = DEFAULT_MAX_ATTEMPTS
+    supersedes: str | None = None
+    worker: str | None = None
+
+
+Tasks = Mapping[str, TaskView]
+
+
+def _require(tasks: Tasks, task_id: str) -> TaskView:
+    if task_id not in tasks:
+        raise InvalidTransition(f"unknown task {task_id!r}")
+    return tasks[task_id]
+
+
+def apply_task_event(tasks: Tasks, ev: Event) -> dict[str, TaskView]:
+    """Return the task map after ``ev``. Raises InvalidTransition if ``ev`` is illegal."""
+    out = dict(tasks)
+    apply_task_event_inplace(out, ev)
+    return out
+
+
+def apply_task_event_inplace(out: dict[str, TaskView], ev: Event) -> None:
+    """Apply ``ev`` to ``out`` in place. Raises InvalidTransition if ``ev`` is illegal.
+
+    Every check happens before the first write, so a rejected event leaves ``out`` untouched.
+    This is what makes an incremental projection (``EventLog``'s cached tasks) cost O(1) per event
+    instead of a copy of the whole map; ``apply_task_event`` is the pure form of the same rules.
+    """
+    p = ev.payload
+    problems = payload_problems(ev.type, p)
+    if problems:
+        raise InvalidTransition(f"{ev.type}: {'; '.join(problems)}")
+    if ev.type == "task.created":
+        tid = p["task_id"]
+        if tid in out:
+            raise InvalidTransition(f"task {tid!r} already exists")
+        sup = p.get("supersedes")
+        if sup is not None and _require(out, sup).status not in TERMINAL:
+            raise InvalidTransition(f"task {tid!r} can only supersede a finished task")
+        out[tid] = TaskView(
+            task_id=tid,
+            title=p.get("title", ""),
+            kind=p.get("kind", "code"),
+            scope=tuple(p.get("scope", ())),
+            max_attempts=int(p.get("max_attempts", DEFAULT_MAX_ATTEMPTS)),
+            supersedes=sup,
+        )
+    elif ev.type == "task.claimed":
+        t = _require(out, p["task_id"])
+        if t.status != "todo":
+            raise InvalidTransition(f"task {t.task_id!r} is {t.status}, cannot be claimed")
+        out[t.task_id] = replace(t, status="in_progress", worker=p.get("worker", ev.actor))
+    elif ev.type == "task.submitted":
+        t = _require(out, p["task_id"])
+        if t.status != "in_progress":
+            raise InvalidTransition(f"task {t.task_id!r} is {t.status}, cannot be submitted")
+        out[t.task_id] = replace(t, status="review", attempts=t.attempts + 1)
+    elif ev.type == "gate.decided":
+        t = _require(out, p["task_id"])
+        if t.status != "review":
+            raise InvalidTransition(f"task {t.task_id!r} is {t.status}, nothing to gate")
+        verdict = p["verdict"]
+        if verdict == "pass":
+            out[t.task_id] = replace(t, status="done")
+        elif verdict == "block":
+            nxt = "failed" if t.attempts >= t.max_attempts else "todo"
+            out[t.task_id] = replace(t, status=nxt, worker=None)
+        else:
+            raise InvalidTransition(f"unknown gate verdict {verdict!r}")
+    elif ev.type in ("route.decided", "fork.created"):
+        _require(out, p["task_id"])
+    elif ev.type in ("ship.applied", "ship.restored") and p.get("task_id") is not None:
+        _require(out, p["task_id"])  # a ship that names a task needs that task to exist
+    # Every other type (usage, outcomes, lanes and the harness types) leaves task state alone.
+
+
+def project_tasks(events: Iterable[Event]) -> dict[str, TaskView]:
+    tasks: dict[str, TaskView] = {}
+    for ev in events:
+        tasks = apply_task_event(tasks, ev)
+    return tasks
+
+
+# ---------------------------------------------------------------- measurement
+
+
+def usage_records(events: Iterable[Event]) -> list[Mapping]:
+    return [ev.payload for ev in events if ev.type == "usage.recorded"]
+
+
+def is_arm_outcome(payload: Mapping) -> bool:
+    """True for an arm outcome; False for a fork outcome (``fork_id``) or a gate replay (``gate_seq``)."""
+    return payload.get("fork_id") is None and payload.get("gate_seq") is None
+
+
+def outcomes(events: Iterable[Event]) -> dict[tuple[str, str], bool]:
+    """(arm, task_id) -> solved, over arm outcomes only (see docs/events.md).
+
+    ``task_id`` here is the pairing key (the benchmark exercise id), not the kernel task id.
+    Fork outcomes (with ``fork_id``) and gate replays (with ``gate_seq``) are skipped: they never
+    count toward an arm's solve rate, even when they carry an informational ``arm``. A later score
+    for the same pair replaces an earlier one.
+    """
+    out: dict[tuple[str, str], bool] = {}
+    for ev in events:
+        if ev.type == "outcome.scored" and is_arm_outcome(ev.payload):
+            out[(ev.payload["arm"], ev.payload["task_id"])] = bool(ev.payload["solved"])
+    return out
+
+
+def fork_id_of(ev: Event) -> str:
+    """The id of a ``fork.created`` event: its ``fork_id``, else ``"fork@<seq>"`` (older logs)."""
+    fid = ev.payload.get("fork_id")
+    return str(fid) if fid is not None else f"fork@{ev.seq}"
+
+
+def shipped_forks(events: Iterable[Event]) -> dict[str, tuple[str, str]]:
+    """fork_id -> (arm, pairing key) for every fork branch an arm shipped as its result.
+
+    An arm outcome names the branch it shipped in ``branch_task_id``; the fork whose
+    ``fork.created`` has that ``fork_task_id`` is the shipped branch. Its usage is part of
+    that arm's cost: the arm would have spent it in production. Every other fork's usage
+    (controls, unshipped treatments) is measurement overhead (docs/statistics.md). A later
+    outcome for the same (arm, pairing key) replaces an earlier one, as in ``outcomes``.
+    """
+    child: dict[str, str] = {}  # fork_task_id -> fork_id
+    shipped: dict[tuple[str, str], str | None] = {}
+    for ev in events:
+        p = ev.payload
+        if ev.type == "fork.created" and p.get("fork_task_id") is not None:
+            child[str(p["fork_task_id"])] = fork_id_of(ev)
+        elif (ev.type == "outcome.scored" and is_arm_outcome(p)
+              and p.get("arm") is not None and p.get("task_id") is not None):
+            branch = p.get("branch_task_id")
+            shipped[(str(p["arm"]), str(p["task_id"]))] = child.get(str(branch)) if branch is not None else None
+    return {fid: key for key, fid in shipped.items() if fid is not None}
+
+
+MEASUREMENT = "measurement"
+
+
+def arm_usage_records(events: Iterable[Event]) -> list[Mapping]:
+    """Usage records with ``arm`` set to the arm whose cost they are (docs/statistics.md).
+
+    Usage without a ``fork_id`` keeps its ``arm``. Usage of the fork branch an arm shipped
+    (``projections.shipped_forks``) is that arm's. Every other fork's usage is measurement
+    overhead and is grouped as ``"<arm>:measurement"``, with the fork's ``arm`` (else the
+    usage's own ``arm``) as the parent.
+    """
+    events = list(events)
+    shipped = shipped_forks(events)
+    fork_arm = {fork_id_of(e): e.payload.get("arm") for e in events if e.type == "fork.created"}
+    out = []
+    for u in usage_records(events):
+        fid = u.get("fork_id")
+        if fid is None:
+            out.append(u)
+        elif str(fid) in shipped:
+            out.append({**u, "arm": shipped[str(fid)][0]})
+        else:
+            parent = fork_arm.get(str(fid)) or u.get("arm") or "unknown"
+            out.append({**u, "arm": f"{parent}:{MEASUREMENT}"})
+    return out
+
+
+def pareto_frontier(points: Iterable[tuple[str, float, float]]) -> list[tuple[str, float, float]]:
+    """Non-dominated (name, cost, quality) points: lower cost and higher quality are better.
+
+    Returned sorted by cost. A point is dominated if another is no worse on both
+    axes and strictly better on at least one.
+    """
+    pts = list(points)
+    keep = []
+    for name, c, q in pts:
+        dominated = any((c2 <= c and q2 >= q) and (c2 < c or q2 > q) for _, c2, q2 in pts)
+        if not dominated:
+            keep.append((name, c, q))
+    return sorted(keep, key=lambda x: (x[1], -x[2], x[0]))

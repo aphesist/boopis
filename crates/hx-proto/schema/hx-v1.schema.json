@@ -96,6 +96,286 @@
       ],
       "type": "object"
     },
+    "Block": {
+      "description": "A run of consecutive lines around one or more matches.",
+      "properties": {
+        "end_line": {
+          "description": "Last line, 1-based.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "match_lines": {
+          "description": "The lines in this block that matched.",
+          "items": {
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "path": {
+          "description": "Path relative to the root.",
+          "type": "string"
+        },
+        "start_line": {
+          "description": "First line, 1-based.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "text": {
+          "description": "The lines, one per row: `N:text` for a match, `N-text` for context.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "start_line",
+        "end_line",
+        "match_lines",
+        "text"
+      ],
+      "type": "object"
+    },
+    "BundleEntry": {
+      "description": "One item's outcome.",
+      "properties": {
+        "bytes": {
+          "description": "Bytes this item used.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ErrorBody"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The failure, when not `ok`. The other items are unaffected."
+        },
+        "index": {
+          "description": "Position in `requests`.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "method": {
+          "description": "The method that ran.",
+          "type": "string"
+        },
+        "ok": {
+          "description": "False when the item failed; see `error`.",
+          "type": "boolean"
+        },
+        "result": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ItemOutput"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The result, when `ok`."
+        }
+      },
+      "required": [
+        "index",
+        "method",
+        "ok",
+        "bytes"
+      ],
+      "type": "object"
+    },
+    "BundleItem": {
+      "description": "One request of a bundle. The root is the bundle's.",
+      "oneOf": [
+        {
+          "description": "`pack.search`.",
+          "properties": {
+            "method": {
+              "const": "pack.search",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/$defs/SearchParams"
+            }
+          },
+          "required": [
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "`pack.read`.",
+          "properties": {
+            "method": {
+              "const": "pack.read",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/$defs/ReadParams"
+            }
+          },
+          "required": [
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "`pack.symbol`.",
+          "properties": {
+            "method": {
+              "const": "pack.symbol",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/$defs/SymbolParams"
+            }
+          },
+          "required": [
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "`pack.outline`.",
+          "properties": {
+            "method": {
+              "const": "pack.outline",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/$defs/OutlineParams"
+            }
+          },
+          "required": [
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "`pack.status`.",
+          "properties": {
+            "method": {
+              "const": "pack.status",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/$defs/StatusParams"
+            }
+          },
+          "required": [
+            "method",
+            "params"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "BundleRequest": {
+      "description": "The request of `pack.bundle`.",
+      "properties": {
+        "max_bytes": {
+          "default": 131072,
+          "description": "The budget for all results together (default 131072).",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "requests": {
+          "description": "Up to 32 requests, run in order. Their results come back in the same order.",
+          "items": {
+            "$ref": "#/$defs/BundleItem"
+          },
+          "type": "array"
+        },
+        "root": {
+          "description": "The root directory, shared by every item.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "root",
+        "requests"
+      ],
+      "type": "object"
+    },
+    "BundleResponse": {
+      "description": "The response of `pack.bundle`.",
+      "properties": {
+        "bytes": {
+          "description": "Bytes used by all items together; never more than `max_bytes`.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_bytes": {
+          "description": "The budget the call ran with.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "results": {
+          "description": "One entry per request, in order.",
+          "items": {
+            "$ref": "#/$defs/BundleEntry"
+          },
+          "type": "array"
+        },
+        "truncated": {
+          "description": "Items that are incomplete. Empty when everything fit.",
+          "items": {
+            "$ref": "#/$defs/BundleTruncation"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "results",
+        "truncated",
+        "bytes",
+        "max_bytes"
+      ],
+      "type": "object"
+    },
+    "BundleTruncation": {
+      "description": "An item that did not finish, and why.",
+      "properties": {
+        "index": {
+          "description": "Position in `requests`.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "method": {
+          "description": "The method of that item.",
+          "type": "string"
+        },
+        "reasons": {
+          "description": "Why it is incomplete.",
+          "items": {
+            "$ref": "#/$defs/Truncation"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "index",
+        "method",
+        "reasons"
+      ],
+      "type": "object"
+    },
     "Capabilities": {
       "description": "What [`crate::capabilities`] reports.",
       "properties": {
@@ -195,6 +475,26 @@
         "total_bytes"
       ],
       "type": "object"
+    },
+    "CaseMode": {
+      "description": "How letter case is treated.",
+      "oneOf": [
+        {
+          "const": "smart",
+          "description": "Case-insensitive unless the pattern has an uppercase letter.",
+          "type": "string"
+        },
+        {
+          "const": "sensitive",
+          "description": "Exact case.",
+          "type": "string"
+        },
+        {
+          "const": "insensitive",
+          "description": "Ignore case.",
+          "type": "string"
+        }
+      ]
     },
     "ChannelInfo": {
       "description": "Where the plugin connects to reach the child's channel.",
@@ -345,6 +645,14 @@
       "properties": {
         "capabilities": {
           "description": "Sorted capability strings, such as `txn.edit.diff`. Gate features on these.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "methods": {
+          "default": [],
+          "description": "Sorted names of every method the binary serves, `hx.describe` included.",
           "items": {
             "type": "string"
           },
@@ -633,6 +941,49 @@
       ],
       "type": "object"
     },
+    "EntryKind": {
+      "description": "The kind of a status entry.",
+      "oneOf": [
+        {
+          "const": "changed",
+          "description": "Modified, added, deleted or type-changed.",
+          "type": "string"
+        },
+        {
+          "const": "renamed",
+          "description": "Renamed or copied; `orig_path` says from where.",
+          "type": "string"
+        },
+        {
+          "const": "conflicted",
+          "description": "An unresolved merge conflict.",
+          "type": "string"
+        },
+        {
+          "const": "untracked",
+          "description": "Not tracked.",
+          "type": "string"
+        }
+      ]
+    },
+    "ErrorBody": {
+      "description": "The `{code, message}` pair a bundle item carries when it fails.",
+      "properties": {
+        "code": {
+          "description": "Stable string code, `hx.pack.*`.",
+          "type": "string"
+        },
+        "message": {
+          "description": "Human-readable message.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "type": "object"
+    },
     "ExitOutcome": {
       "description": "How a child ended.",
       "oneOf": [
@@ -809,6 +1160,118 @@
       ],
       "type": "object"
     },
+    "FileOutline": {
+      "description": "The outline of one file.",
+      "properties": {
+        "language": {
+          "description": "Language id, when one is registered.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "path": {
+          "description": "Path relative to the root.",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/OutlineStatus",
+          "description": "What happened to the file."
+        },
+        "symbols": {
+          "description": "The definitions, in source order.",
+          "items": {
+            "$ref": "#/$defs/Symbol"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "path",
+        "status",
+        "symbols"
+      ],
+      "type": "object"
+    },
+    "Found": {
+      "description": "One definition with its source.",
+      "properties": {
+        "end_line": {
+          "description": "Last line.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "kind": {
+          "description": "Definition kind.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Identifier.",
+          "type": "string"
+        },
+        "parent": {
+          "description": "Enclosing definitions, outermost first.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "path": {
+          "description": "Path relative to the root.",
+          "type": "string"
+        },
+        "signature": {
+          "description": "The declaration up to its body.",
+          "type": "string"
+        },
+        "start_line": {
+          "description": "First line of the source, including attributes, decorators and doc comments.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "text": {
+          "description": "The source, one numbered row per line: `N|text`.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "kind",
+        "name",
+        "signature",
+        "start_line",
+        "end_line",
+        "text"
+      ],
+      "type": "object"
+    },
+    "ItemOutput": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SearchResponse",
+          "description": "Result of `pack.search`."
+        },
+        {
+          "$ref": "#/$defs/ReadResponse",
+          "description": "Result of `pack.read`."
+        },
+        {
+          "$ref": "#/$defs/SymbolResponse",
+          "description": "Result of `pack.symbol`."
+        },
+        {
+          "$ref": "#/$defs/OutlineResponse",
+          "description": "Result of `pack.outline`."
+        },
+        {
+          "$ref": "#/$defs/StatusResponse",
+          "description": "Result of `pack.status`."
+        }
+      ],
+      "description": "The result of one item, by method."
+    },
     "JournalData": {
       "description": "`data` of the journal errors (`journal_not_found`, `journal_corrupt`, `journal_busy`,\n`invalid_state`, `restore_failed`).",
       "properties": {
@@ -837,6 +1300,31 @@
       "required": [
         "journal_dir",
         "journal_id"
+      ],
+      "type": "object"
+    },
+    "LineRange": {
+      "description": "An inclusive, 1-based line range.",
+      "properties": {
+        "end": {
+          "default": null,
+          "description": "Last line, inclusive. Omit to read to the end of the file.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "start": {
+          "description": "First line (1-based).",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start"
       ],
       "type": "object"
     },
@@ -880,6 +1368,162 @@
         }
       ]
     },
+    "OutlineParams": {
+      "description": "The parameters of `pack.outline` apart from the root.",
+      "properties": {
+        "max_bytes": {
+          "default": null,
+          "description": "Output budget in bytes (default 65536). In a bundle this is a cap on the item's share.",
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_files": {
+          "default": 200,
+          "description": "At most this many files when a directory is expanded (default 200).",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "paths": {
+          "default": [],
+          "description": "Files or directories relative to the root. Empty means the whole root.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "walk": {
+          "$ref": "#/$defs/WalkOptions",
+          "default": {
+            "max_file_bytes": null,
+            "skip_dirs": null
+          },
+          "description": "Skip list and per-file cap."
+        }
+      },
+      "type": "object"
+    },
+    "OutlineRequest": {
+      "description": "The request of `pack.outline`.",
+      "properties": {
+        "max_bytes": {
+          "default": null,
+          "description": "Output budget in bytes (default 65536). In a bundle this is a cap on the item's share.",
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_files": {
+          "default": 200,
+          "description": "At most this many files when a directory is expanded (default 200).",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "paths": {
+          "default": [],
+          "description": "Files or directories relative to the root. Empty means the whole root.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "root": {
+          "description": "The root directory.",
+          "type": "string"
+        },
+        "walk": {
+          "$ref": "#/$defs/WalkOptions",
+          "default": {
+            "max_file_bytes": null,
+            "skip_dirs": null
+          },
+          "description": "Skip list and per-file cap."
+        }
+      },
+      "required": [
+        "root"
+      ],
+      "type": "object"
+    },
+    "OutlineResponse": {
+      "description": "The response of `pack.outline`.",
+      "properties": {
+        "bytes": {
+          "description": "Bytes charged to the budget.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "files": {
+          "description": "One entry per file, in path order.",
+          "items": {
+            "$ref": "#/$defs/FileOutline"
+          },
+          "type": "array"
+        },
+        "truncated": {
+          "description": "Why the result is incomplete.",
+          "items": {
+            "$ref": "#/$defs/Truncation"
+          },
+          "type": "array"
+        },
+        "withheld": {
+          "$ref": "#/$defs/Withheld",
+          "description": "Files withheld by the never-pack list."
+        }
+      },
+      "required": [
+        "files",
+        "withheld",
+        "truncated",
+        "bytes"
+      ],
+      "type": "object"
+    },
+    "OutlineStatus": {
+      "description": "What happened to one file of an outline.",
+      "oneOf": [
+        {
+          "const": "ok",
+          "description": "Parsed; see `symbols`.",
+          "type": "string"
+        },
+        {
+          "const": "unsupported",
+          "description": "No grammar is registered for the extension.",
+          "type": "string"
+        },
+        {
+          "const": "binary",
+          "description": "A binary file.",
+          "type": "string"
+        },
+        {
+          "const": "too_large",
+          "description": "Over the per-file cap.",
+          "type": "string"
+        },
+        {
+          "const": "parse_failed",
+          "description": "The parser failed on this file.",
+          "type": "string"
+        },
+        {
+          "const": "unreadable",
+          "description": "Could not be read.",
+          "type": "string"
+        }
+      ]
+    },
     "PathsData": {
       "description": "`data` of `hx.txn.scope_violation` and `hx.txn.protected_path`.",
       "properties": {
@@ -895,6 +1539,201 @@
         "paths"
       ],
       "type": "object"
+    },
+    "PatternMode": {
+      "description": "How the pattern is read.",
+      "oneOf": [
+        {
+          "const": "regex",
+          "description": "A regular expression (Rust regex syntax).",
+          "type": "string"
+        },
+        {
+          "const": "literal",
+          "description": "Plain text, no escaping needed.",
+          "type": "string"
+        }
+      ]
+    },
+    "ReadParams": {
+      "description": "The parameters of `pack.read` apart from the root.",
+      "properties": {
+        "max_bytes": {
+          "default": null,
+          "description": "Output budget in bytes (default 65536). In a bundle this is a cap on the item's share.",
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "path": {
+          "description": "File path relative to the root.",
+          "type": "string"
+        },
+        "ranges": {
+          "default": [],
+          "description": "Line ranges to return. Empty means the whole file.",
+          "items": {
+            "$ref": "#/$defs/LineRange"
+          },
+          "type": "array"
+        },
+        "walk": {
+          "$ref": "#/$defs/WalkOptions",
+          "default": {
+            "max_file_bytes": null,
+            "skip_dirs": null
+          },
+          "description": "Per-file cap."
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "type": "object"
+    },
+    "ReadRequest": {
+      "description": "The request of `pack.read`.",
+      "properties": {
+        "max_bytes": {
+          "default": null,
+          "description": "Output budget in bytes (default 65536). In a bundle this is a cap on the item's share.",
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "path": {
+          "description": "File path relative to the root.",
+          "type": "string"
+        },
+        "ranges": {
+          "default": [],
+          "description": "Line ranges to return. Empty means the whole file.",
+          "items": {
+            "$ref": "#/$defs/LineRange"
+          },
+          "type": "array"
+        },
+        "root": {
+          "description": "The root directory.",
+          "type": "string"
+        },
+        "walk": {
+          "$ref": "#/$defs/WalkOptions",
+          "default": {
+            "max_file_bytes": null,
+            "skip_dirs": null
+          },
+          "description": "Per-file cap."
+        }
+      },
+      "required": [
+        "root",
+        "path"
+      ],
+      "type": "object"
+    },
+    "ReadResponse": {
+      "description": "The response of `pack.read`.",
+      "properties": {
+        "bytes": {
+          "description": "Bytes charged to the budget.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "path": {
+          "description": "The path, normalised.",
+          "type": "string"
+        },
+        "redactions": {
+          "$ref": "#/$defs/Redactions",
+          "description": "Redactions inside `segments`."
+        },
+        "segments": {
+          "description": "The returned lines, one segment per merged range.",
+          "items": {
+            "$ref": "#/$defs/Segment"
+          },
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/ReadStatus",
+          "description": "What happened to the file."
+        },
+        "total_lines": {
+          "description": "Lines in the file (after redaction, which keeps line count). 0 unless `status` is `ok`.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "truncated": {
+          "description": "Why the result is incomplete.",
+          "items": {
+            "$ref": "#/$defs/Truncation"
+          },
+          "type": "array"
+        },
+        "unsatisfied": {
+          "description": "Requested ranges that start past the end of the file.",
+          "items": {
+            "$ref": "#/$defs/LineRange"
+          },
+          "type": "array"
+        },
+        "withheld": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WithheldFile"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Set when the file was withheld."
+        }
+      },
+      "required": [
+        "path",
+        "status",
+        "total_lines",
+        "segments",
+        "unsatisfied",
+        "redactions",
+        "truncated",
+        "bytes"
+      ],
+      "type": "object"
+    },
+    "ReadStatus": {
+      "description": "What happened to the file.",
+      "oneOf": [
+        {
+          "const": "ok",
+          "description": "Read; see `segments`.",
+          "type": "string"
+        },
+        {
+          "const": "withheld",
+          "description": "On the never-pack list; see `withheld`.",
+          "type": "string"
+        },
+        {
+          "const": "binary",
+          "description": "A binary file; nothing returned.",
+          "type": "string"
+        },
+        {
+          "const": "too_large",
+          "description": "Over the per-file cap; nothing returned.",
+          "type": "string"
+        }
+      ]
     },
     "RecoverFailure": {
       "description": "A journal `txn.recover` could not finish.",
@@ -977,6 +1816,31 @@
         "pending",
         "busy",
         "failed"
+      ],
+      "type": "object"
+    },
+    "Redactions": {
+      "description": "How many redactions the returned text contains, in total and per rule.",
+      "properties": {
+        "by_rule": {
+          "additionalProperties": {
+            "format": "uint",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "description": "The same, by rule id.",
+          "type": "object"
+        },
+        "total": {
+          "description": "All redactions in the returned text.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "total",
+        "by_rule"
       ],
       "type": "object"
     },
@@ -1459,6 +2323,281 @@
       ],
       "type": "object"
     },
+    "SearchParams": {
+      "description": "The parameters of `pack.search` apart from the root (a bundle shares one root).",
+      "properties": {
+        "case": {
+          "$ref": "#/$defs/CaseMode",
+          "default": "smart",
+          "description": "`smart` (default), `sensitive` or `insensitive`."
+        },
+        "context_after": {
+          "default": 2,
+          "description": "Lines of context after each match (default 2, at most 200).",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "context_before": {
+          "default": 2,
+          "description": "Lines of context before each match (default 2, at most 200).",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "globs": {
+          "default": [],
+          "description": "Gitignore-style globs that narrow the files; `!glob` excludes. Empty means all.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "max_bytes": {
+          "default": null,
+          "description": "Output budget in bytes (default 65536). In a bundle this is a cap on the item's share.",
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_matches": {
+          "default": 200,
+          "description": "Stop after this many matching lines (default 200, at most 10000).",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "mode": {
+          "$ref": "#/$defs/PatternMode",
+          "default": "regex",
+          "description": "`regex` (default) or `literal`."
+        },
+        "pattern": {
+          "description": "The pattern.",
+          "type": "string"
+        },
+        "walk": {
+          "$ref": "#/$defs/WalkOptions",
+          "default": {
+            "max_file_bytes": null,
+            "skip_dirs": null
+          },
+          "description": "Skip list and per-file cap."
+        }
+      },
+      "required": [
+        "pattern"
+      ],
+      "type": "object"
+    },
+    "SearchRequest": {
+      "description": "The request of `pack.search`.",
+      "properties": {
+        "case": {
+          "$ref": "#/$defs/CaseMode",
+          "default": "smart",
+          "description": "`smart` (default), `sensitive` or `insensitive`."
+        },
+        "context_after": {
+          "default": 2,
+          "description": "Lines of context after each match (default 2, at most 200).",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "context_before": {
+          "default": 2,
+          "description": "Lines of context before each match (default 2, at most 200).",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "globs": {
+          "default": [],
+          "description": "Gitignore-style globs that narrow the files; `!glob` excludes. Empty means all.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "max_bytes": {
+          "default": null,
+          "description": "Output budget in bytes (default 65536). In a bundle this is a cap on the item's share.",
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_matches": {
+          "default": 200,
+          "description": "Stop after this many matching lines (default 200, at most 10000).",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "mode": {
+          "$ref": "#/$defs/PatternMode",
+          "default": "regex",
+          "description": "`regex` (default) or `literal`."
+        },
+        "pattern": {
+          "description": "The pattern.",
+          "type": "string"
+        },
+        "root": {
+          "description": "The directory to search; everything stays inside it.",
+          "type": "string"
+        },
+        "walk": {
+          "$ref": "#/$defs/WalkOptions",
+          "default": {
+            "max_file_bytes": null,
+            "skip_dirs": null
+          },
+          "description": "Skip list and per-file cap."
+        }
+      },
+      "required": [
+        "root",
+        "pattern"
+      ],
+      "type": "object"
+    },
+    "SearchResponse": {
+      "description": "The response of `pack.search`.",
+      "properties": {
+        "blocks": {
+          "description": "Blocks in path order, then line order. Overlapping windows are merged.",
+          "items": {
+            "$ref": "#/$defs/Block"
+          },
+          "type": "array"
+        },
+        "bytes": {
+          "description": "Bytes charged to the budget.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "files_matched": {
+          "description": "Scanned files that had at least one match.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "files_scanned": {
+          "description": "Files scanned before the call stopped (the ordered prefix).",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "files_walked": {
+          "description": "Files that passed the walk filters.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "matches": {
+          "description": "Matching lines included in `blocks`.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "redactions": {
+          "$ref": "#/$defs/Redactions",
+          "description": "Redactions inside `blocks`."
+        },
+        "skipped": {
+          "$ref": "#/$defs/Skipped",
+          "description": "Files looked at and left out."
+        },
+        "truncated": {
+          "description": "Why the result is incomplete; empty when it is complete.",
+          "items": {
+            "$ref": "#/$defs/Truncation"
+          },
+          "type": "array"
+        },
+        "withheld": {
+          "$ref": "#/$defs/Withheld",
+          "description": "Files the never-pack list withheld."
+        }
+      },
+      "required": [
+        "blocks",
+        "matches",
+        "files_walked",
+        "files_scanned",
+        "files_matched",
+        "skipped",
+        "withheld",
+        "redactions",
+        "truncated",
+        "bytes"
+      ],
+      "type": "object"
+    },
+    "Segment": {
+      "description": "A run of numbered lines.",
+      "properties": {
+        "end_line": {
+          "description": "Last line, 1-based.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "start_line": {
+          "description": "First line, 1-based.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "text": {
+          "description": "The lines, one per row: `N|text`.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start_line",
+        "end_line",
+        "text"
+      ],
+      "type": "object"
+    },
+    "Skipped": {
+      "description": "Files that were looked at and left out, by reason.",
+      "properties": {
+        "binary": {
+          "description": "Binary files (a NUL byte in the first 8 KiB).",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "too_large": {
+          "description": "Files over the per-file cap.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "unreadable": {
+          "description": "Files that could not be opened or read.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "binary",
+        "too_large",
+        "unreadable"
+      ],
+      "type": "object"
+    },
     "Status": {
       "description": "Whether a dimension was held, loosened with permission, or not restricted by request.",
       "oneOf": [
@@ -1475,6 +2614,451 @@
         {
           "const": "unrestricted",
           "description": "The policy asked for no restriction in this dimension (for example `network: on`).",
+          "type": "string"
+        }
+      ]
+    },
+    "StatusCounts": {
+      "description": "Counts over all entries, not only the listed ones.",
+      "properties": {
+        "conflicted": {
+          "description": "Conflicted paths.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "staged": {
+          "description": "Entries with a staged change.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "unstaged": {
+          "description": "Entries with an unstaged change.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "untracked": {
+          "description": "Untracked paths.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "staged",
+        "unstaged",
+        "untracked",
+        "conflicted"
+      ],
+      "type": "object"
+    },
+    "StatusEntry": {
+      "description": "One changed path.",
+      "properties": {
+        "index": {
+          "description": "Index (staged) state letter: `M A D R C T U`, or `.` for none, `?` for untracked.",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/EntryKind",
+          "description": "What kind of entry this is."
+        },
+        "orig_path": {
+          "description": "The old path of a rename or copy.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "path": {
+          "description": "Path relative to the root.",
+          "type": "string"
+        },
+        "worktree": {
+          "description": "Working-tree state letter, same alphabet.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "kind",
+        "index",
+        "worktree"
+      ],
+      "type": "object"
+    },
+    "StatusParams": {
+      "description": "The parameters of `pack.status` apart from the root.",
+      "properties": {
+        "max_entries": {
+          "default": 500,
+          "description": "List at most this many entries (default 500). Counts are always complete.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "timeout_ms": {
+          "default": 10000,
+          "description": "Give up after this many milliseconds (default 10000).",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "StatusRequest": {
+      "description": "The request of `pack.status`.",
+      "properties": {
+        "max_entries": {
+          "default": 500,
+          "description": "List at most this many entries (default 500). Counts are always complete.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "root": {
+          "description": "The root directory (the repository or a directory inside it).",
+          "type": "string"
+        },
+        "timeout_ms": {
+          "default": 10000,
+          "description": "Give up after this many milliseconds (default 10000).",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "root"
+      ],
+      "type": "object"
+    },
+    "StatusResponse": {
+      "description": "The response of `pack.status`.",
+      "properties": {
+        "ahead": {
+          "description": "Commits ahead of the upstream, when known.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "behind": {
+          "description": "Commits behind the upstream, when known.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "branch": {
+          "description": "The branch name; `None` when detached or unborn without a name.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "bytes": {
+          "description": "Bytes of path text in the listing.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "counts": {
+          "$ref": "#/$defs/StatusCounts",
+          "description": "Counts over every entry."
+        },
+        "detached": {
+          "description": "HEAD is detached.",
+          "type": "boolean"
+        },
+        "entries": {
+          "description": "Changed paths, in path order.",
+          "items": {
+            "$ref": "#/$defs/StatusEntry"
+          },
+          "type": "array"
+        },
+        "head": {
+          "description": "The full commit hash of HEAD; `None` on a repository with no commits.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "is_repo": {
+          "description": "False when the root is not inside a git repository; every other field is then empty.",
+          "type": "boolean"
+        },
+        "truncated": {
+          "description": "Why the listing is incomplete.",
+          "items": {
+            "$ref": "#/$defs/Truncation"
+          },
+          "type": "array"
+        },
+        "upstream": {
+          "description": "The upstream branch, if one is set.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "is_repo",
+        "detached",
+        "entries",
+        "counts",
+        "truncated",
+        "bytes"
+      ],
+      "type": "object"
+    },
+    "Symbol": {
+      "description": "One definition in a file.",
+      "properties": {
+        "end_line": {
+          "description": "Last line.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "kind": {
+          "description": "`function`, `method`, `struct`, `class`, `impl`, `trait`, `interface`, `enum`, `type`, `module`, ...",
+          "type": "string"
+        },
+        "line": {
+          "description": "Line of the declaration itself, 1-based.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "name": {
+          "description": "The identifier (for an `impl`, the implemented type).",
+          "type": "string"
+        },
+        "parent": {
+          "description": "Enclosing definitions, outermost first, joined with `.`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "signature": {
+          "description": "The declaration up to its body, on one line.",
+          "type": "string"
+        },
+        "start_line": {
+          "description": "First line including attributes, decorators, export and doc comments.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "signature",
+        "line",
+        "start_line",
+        "end_line"
+      ],
+      "type": "object"
+    },
+    "SymbolParams": {
+      "description": "The parameters of `pack.symbol` apart from the root.",
+      "properties": {
+        "lang": {
+          "default": null,
+          "description": "Restrict to a language, by id or extension (`rust`, `rs`, `py`).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "max_bytes": {
+          "default": null,
+          "description": "Output budget in bytes (default 65536). In a bundle this is a cap on the item's share.",
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_definitions": {
+          "default": 20,
+          "description": "Return at most this many definitions (default 20).",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "name": {
+          "description": "The name to find. `Type.method` or `Type::method` selects by parent too.",
+          "type": "string"
+        },
+        "path": {
+          "default": null,
+          "description": "Restrict to a file or directory under the root.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "walk": {
+          "$ref": "#/$defs/WalkOptions",
+          "default": {
+            "max_file_bytes": null,
+            "skip_dirs": null
+          },
+          "description": "Skip list and per-file cap."
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "SymbolRequest": {
+      "description": "The request of `pack.symbol`.",
+      "properties": {
+        "lang": {
+          "default": null,
+          "description": "Restrict to a language, by id or extension (`rust`, `rs`, `py`).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "max_bytes": {
+          "default": null,
+          "description": "Output budget in bytes (default 65536). In a bundle this is a cap on the item's share.",
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_definitions": {
+          "default": 20,
+          "description": "Return at most this many definitions (default 20).",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "name": {
+          "description": "The name to find. `Type.method` or `Type::method` selects by parent too.",
+          "type": "string"
+        },
+        "path": {
+          "default": null,
+          "description": "Restrict to a file or directory under the root.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "root": {
+          "description": "The root directory.",
+          "type": "string"
+        },
+        "walk": {
+          "$ref": "#/$defs/WalkOptions",
+          "default": {
+            "max_file_bytes": null,
+            "skip_dirs": null
+          },
+          "description": "Skip list and per-file cap."
+        }
+      },
+      "required": [
+        "root",
+        "name"
+      ],
+      "type": "object"
+    },
+    "SymbolResponse": {
+      "description": "The response of `pack.symbol`.",
+      "properties": {
+        "bytes": {
+          "description": "Bytes charged to the budget.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "definitions": {
+          "description": "Matching definitions, by path then line.",
+          "items": {
+            "$ref": "#/$defs/Found"
+          },
+          "type": "array"
+        },
+        "files_scanned": {
+          "description": "Files parsed or checked before the call stopped.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "redactions": {
+          "$ref": "#/$defs/Redactions",
+          "description": "Redactions inside `definitions`."
+        },
+        "skipped": {
+          "$ref": "#/$defs/Skipped",
+          "description": "Files left out."
+        },
+        "truncated": {
+          "description": "Why the result is incomplete.",
+          "items": {
+            "$ref": "#/$defs/Truncation"
+          },
+          "type": "array"
+        },
+        "withheld": {
+          "$ref": "#/$defs/Withheld",
+          "description": "Files withheld by the never-pack list."
+        }
+      },
+      "required": [
+        "definitions",
+        "files_scanned",
+        "skipped",
+        "withheld",
+        "redactions",
+        "truncated",
+        "bytes"
+      ],
+      "type": "object"
+    },
+    "Truncation": {
+      "description": "Why a result is incomplete.",
+      "oneOf": [
+        {
+          "const": "max_bytes",
+          "description": "The byte budget ran out.",
+          "type": "string"
+        },
+        {
+          "const": "max_matches",
+          "description": "`max_matches` was reached.",
+          "type": "string"
+        },
+        {
+          "const": "max_items",
+          "description": "A file or definition limit was reached.",
+          "type": "string"
+        },
+        {
+          "const": "line_clipped",
+          "description": "At least one line was longer than the line cap and was cut.",
           "type": "string"
         }
       ]
@@ -1553,6 +3137,74 @@
         "files"
       ],
       "type": "object"
+    },
+    "WalkOptions": {
+      "description": "Options for every call that walks a tree.",
+      "properties": {
+        "max_file_bytes": {
+          "default": null,
+          "description": "Files larger than this are skipped. `None` means [`DEFAULT_MAX_FILE_BYTES`].",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "skip_dirs": {
+          "default": null,
+          "description": "Directory names to skip. `None` means [`DEFAULT_SKIP_DIRS`]; `Some([])` skips nothing.",
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "Withheld": {
+      "description": "Files withheld by the never-pack list.",
+      "properties": {
+        "count": {
+          "description": "How many files were withheld.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "files": {
+          "description": "The first few, by path.",
+          "items": {
+            "$ref": "#/$defs/WithheldFile"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "count",
+        "files"
+      ],
+      "type": "object"
+    },
+    "WithheldFile": {
+      "description": "A file pack refused to return, and why.",
+      "properties": {
+        "path": {
+          "description": "Path relative to the root.",
+          "type": "string"
+        },
+        "reason": {
+          "description": "Why it was withheld, from `never_pack.json`.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "reason"
+      ],
+      "type": "object"
     }
   },
   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -1618,6 +3270,54 @@
       "params": null,
       "result": {
         "$ref": "#/$defs/DescribeResult"
+      }
+    },
+    "pack.bundle": {
+      "params": {
+        "$ref": "#/$defs/BundleRequest"
+      },
+      "result": {
+        "$ref": "#/$defs/BundleResponse"
+      }
+    },
+    "pack.outline": {
+      "params": {
+        "$ref": "#/$defs/OutlineRequest"
+      },
+      "result": {
+        "$ref": "#/$defs/OutlineResponse"
+      }
+    },
+    "pack.read": {
+      "params": {
+        "$ref": "#/$defs/ReadRequest"
+      },
+      "result": {
+        "$ref": "#/$defs/ReadResponse"
+      }
+    },
+    "pack.search": {
+      "params": {
+        "$ref": "#/$defs/SearchRequest"
+      },
+      "result": {
+        "$ref": "#/$defs/SearchResponse"
+      }
+    },
+    "pack.status": {
+      "params": {
+        "$ref": "#/$defs/StatusRequest"
+      },
+      "result": {
+        "$ref": "#/$defs/StatusResponse"
+      }
+    },
+    "pack.symbol": {
+      "params": {
+        "$ref": "#/$defs/SymbolRequest"
+      },
+      "result": {
+        "$ref": "#/$defs/SymbolResponse"
       }
     },
     "sandbox.capabilities": {

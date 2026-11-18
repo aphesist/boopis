@@ -43,7 +43,7 @@ def _block(message: str) -> dict[str, Any]:
 
 def _args_digest(args: Any) -> str:
     """sha256 of the arguments' canonical JSON. The arguments themselves are never stored."""
-    from contraprova.events import canonical_json
+    from ._vendor.contraprova.events import canonical_json
 
     try:
         text = canonical_json(args if args is not None else {})
@@ -113,8 +113,8 @@ def _cost_cap(rt: Runtime, state: SessionState) -> dict[str, Any] | None:
 
 
 def _model_priced(state: SessionState) -> bool:
-    entries = state.price_table.entries
-    return any(ref.id == state.model and (not state.provider or ref.provider == state.provider) for ref in entries)
+    assert state.book is not None
+    return state.book.has(state.provider, state.model)
 
 
 def _usd(value: float) -> str:
@@ -127,7 +127,7 @@ def _record_budget(rt: Runtime, state: SessionState, cap: float, reason: str) ->
         rt.ledger(state).append(
             "budget.blocked",
             "plugin",
-            {"cap_usd": cap, "price_table": state.price_table.version, "reason": reason},
+            {"cap_usd": cap, "price_table": state.book.version if state.book else "", "reason": reason},
         )
         rt.ctx.emit_to_session(state.session_id, "budget.blocked", {"cap_usd": cap, "projected_usd": state.spend_usd})
     except Exception:  # noqa: BLE001 - the block itself must still happen
@@ -185,7 +185,8 @@ def _record_usage(kw: Mapping[str, Any], *, auxiliary: bool) -> None:
     if auxiliary and kw.get("aux_task"):
         payload["aux_task"] = str(kw["aux_task"])
     rt.ledger(state).append("usage.recorded", "plugin" if auxiliary else state.actor(), payload)
-    costs = project_costs([payload], state.price_table, state.settings.subscription_providers)
+    assert state.book is not None
+    costs = project_costs([payload], state.book, state.settings.subscription_providers)
     if costs.billed_usd is None:
         state.unpriced.update(costs.billed_unpriced)
     else:
@@ -228,6 +229,14 @@ def on_session_finalize(**kw: Any) -> None:
         )
     except Exception:  # noqa: BLE001
         _log.error("session.closed not recorded", exc_info=True)
+
+
+def recover_on_start() -> None:
+    """Run in a thread when the plugin loads: roll back what a crash left behind. Never raises."""
+    try:
+        runtime().recover_journals()
+    except Exception:  # noqa: BLE001
+        _log.error("journal recovery failed", exc_info=True)
 
 
 def system_prompt_section(info: Mapping[str, Any]) -> str:

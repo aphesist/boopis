@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "description": "The language registry: file extension to grammar, plus the query that finds definitions. A query names each definition node with @definition.<kind> and its identifier with @name. 'wrappers' are parent nodes that belong to a definition (export, decorators); a ':single' suffix applies only when the wrapper holds one definition. 'leading' are sibling nodes (doc comments, attributes) that belong to the definition when they sit directly above it.",
+  "languages": [
+    {
+      "id": "rust",
+      "grammar": "rust",
+      "extensions": ["rs"],
+      "query": "queries/rust.scm",
+      "wrappers": [],
+      "leading": ["attribute_item", "line_comment", "block_comment"]
+    },
+    {
+      "id": "typescript",
+      "grammar": "typescript",
+      "extensions": ["ts", "mts", "cts"],
+      "query": "queries/typescript.scm",
+      "wrappers": ["export_statement"],
+      "leading": ["comment"]
+    },
+    {
+      "id": "tsx",
+      "grammar": "tsx",
+      "extensions": ["tsx"],
+      "query": "queries/typescript.scm",
+      "wrappers": ["export_statement"],
+      "leading": ["comment"]
+    },
+    {
+      "id": "javascript",
+      "grammar": "javascript",
+      "extensions": ["js", "jsx", "mjs", "cjs"],
+      "query": "queries/javascript.scm",
+      "wrappers": ["export_statement"],
+      "leading": ["comment"]
+    },
+    {
+      "id": "python",
+      "grammar": "python",
+      "extensions": ["py", "pyi"],
+      "query": "queries/python.scm",
+      "wrappers": ["decorated_definition"],
+      "leading": ["comment"]
+    },
+    {
+      "id": "go",
+      "grammar": "go",
+      "extensions": ["go"],
+      "query": "queries/go.scm",
+      "wrappers": ["type_declaration:single"],
+      "leading": ["comment"]
+    }
+  ]
+}

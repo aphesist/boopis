@@ -31,6 +31,9 @@ cargo test -p hx-txn --release --test perf -- --ignored --nocapture   # 10-file 
 ```
 Also check the production feature set: `cargo clippy -p hx-txn -p hx-proto -p hx --lib --bins -- -D warnings`. `--all-targets` turns `dev-fixtures` on and hides lints in the no-op `Faults`.
 
+## Pending consolidation
+- `hx-pack/src/proc.rs` (child process with an allowlisted environment, timeout and output cap) is a stand-in for `hx-sandbox::process`. It is the only module that spawns, used only by `pack.status`; replace it when `hx-sandbox::process` lands.
+
 ## Do not
 - Do not write to stdout from a handler or from logging.
 - Do not add a path helper elsewhere; extend `hx-txn::paths`.

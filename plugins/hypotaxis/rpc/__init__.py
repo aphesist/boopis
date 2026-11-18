@@ -10,14 +10,22 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from typing import Any, cast
 
-from ..errors import InvalidParamsError
+from ..errors import InvalidParamsError, PricesDisabledError
 from ..hooks import runtime
-from ..ledger import compute_stats
+from ..ledger import compute_stats, refresh
 from ..session import SessionState
 from ..version import PLUGIN_VERSION, PROTOCOL
 
 Handler = Callable[..., Any]
-CAPABILITIES = ("describe", "mode.set", "ledger.tail", "ledger.verify", "ledger.stats", "cascade.state")
+CAPABILITIES = (
+    "describe",
+    "mode.set",
+    "ledger.tail",
+    "ledger.verify",
+    "ledger.stats",
+    "cascade.state",
+    "prices.refresh",
+)
 DEFAULT_TAIL_LIMIT = 200
 MAX_TAIL_LIMIT = 1000
 
@@ -39,7 +47,13 @@ def _int(params: Mapping[str, Any], key: str, default: int) -> int:
 def describe(params: Mapping[str, Any], *, session_id: str | None = None, **_: Any) -> dict[str, Any]:
     rt = runtime()
     loaded = rt.load_settings()
+    session: dict[str, Any] | None = None
+    sid = params.get("session_id") or session_id
+    if isinstance(sid, str) and sid:
+        state = rt.state(sid)
+        session = {"session_id": sid, "mode": state.mode, "locked": state.locked, "cwd": state.cwd or None}
     return {
+        "session": session,
         "version": PLUGIN_VERSION,
         "protocol": PROTOCOL,
         "capabilities": list(CAPABILITIES),
@@ -52,7 +66,7 @@ def describe(params: Mapping[str, Any], *, session_id: str | None = None, **_: A
 def _tier_ladder(ladder: Any) -> Mapping[str, Any]:
     """A ``Tier[]`` from ``mode.set`` (``model`` as ``{provider, id}`` or ``'provider/id'``) as the
     settings' ladder form, validated by contraprova's own ``TierLadder``."""
-    from contraprova.interfaces import TierLadder
+    from .._vendor.contraprova.interfaces import TierLadder
 
     if not isinstance(ladder, list) or not ladder:
         raise InvalidParamsError("ladder must be a non-empty list of tiers")
@@ -108,19 +122,16 @@ def ledger_verify(params: Mapping[str, Any], *, session_id: str | None = None, *
 
 
 def ledger_stats(params: Mapping[str, Any], *, session_id: str | None = None, **_: Any) -> dict[str, Any]:
-    from ..ledger import build_table
-
     sid = _session_id(params, session_id)
     rt = runtime()
     state = rt.state(sid)
-    table = state.price_table if state.price_table is not None else build_table(state.settings)
-    events = rt.ledger(state).read()
-    return compute_stats(events, table, table.version, state.settings.subscription_providers)
+    book = rt.price_book(state.settings)
+    return compute_stats(rt.ledger(state).read(), book, state.settings.subscription_providers)
 
 
 def _ladder_tiers(state: SessionState) -> list[dict[str, Any]]:
     """The configured ladder as protocol ``Tier`` objects; empty when none is configured."""
-    from contraprova.interfaces import TierLadder
+    from .._vendor.contraprova.interfaces import TierLadder
 
     raw = state.ladder if state.ladder is not None else state.settings.ladder
     if raw is None:
@@ -144,6 +155,15 @@ def cascade_state(params: Mapping[str, Any], *, session_id: str | None = None, *
     return {"ladder": _ladder_tiers(runtime().state(sid)), "status": "idle"}
 
 
+def prices_refresh(params: Mapping[str, Any], *, session_id: str | None = None, **_: Any) -> dict[str, Any]:
+    """One HTTPS GET of the models.dev catalogue into the profile's cache. Takes no URL: the address is
+    fixed, so a caller cannot aim the plugin at another host."""
+    rt = runtime()
+    if not rt.load_settings().value.prices.refresh_enabled:
+        raise PricesDisabledError("prices.refresh_enabled is false in the plugin settings")
+    return refresh(rt.home)
+
+
 def handlers() -> dict[str, Handler]:
     return {
         "describe": describe,
@@ -152,6 +172,7 @@ def handlers() -> dict[str, Handler]:
         "ledger.verify": ledger_verify,
         "ledger.stats": ledger_stats,
         "cascade.state": cascade_state,
+        "prices.refresh": prices_refresh,
     }
 
 
