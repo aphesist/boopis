@@ -6,9 +6,10 @@ author: aphesist
 license: Apache-2.0
 kind: standalone
 requires_hermes: ">=0.23.2"
-# exec and dispatch arrive in later parts; nothing is declared before it is registered.
+# dispatch arrives in a later part; nothing is declared before it is registered.
 provides_tools:
   - pack
+  - exec
   - ship
 provides_hooks:
   - pre_tool_call
@@ -18,6 +19,7 @@ provides_hooks:
   - pre_llm_call
   - on_session_start
   - on_session_finalize
+  - agent_loop_stopped
 # Nothing here needs a granted capability: no tool override, no host-owned LLM calls.
 capabilities: []
 config_schema:
@@ -44,6 +46,9 @@ config_schema:
   pack:
     type: object
     description: "The pack tool: {max_bytes: byte budget of one call, default 131072}."
+  exec:
+    type: object
+    description: "The exec tool's kernel: {timeout_ms, max_timeout_ms, kill_grace_ms, start_timeout_ms, max_calls_per_cell, max_concurrency, output_cap_bytes, result_cap_bytes, spill_cap_bytes, call_result_cap_bytes, sh_output_cap_bytes, max_kernels, idle_timeout_s, max_lifetime_s, memory_mb, max_processes, network: off|loopback|on (default off)}. Defaults are in the settings schema."
   hx_path:
     type: string
     default: ""
