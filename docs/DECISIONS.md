@@ -111,9 +111,17 @@ Hermes's rules are "the core is a narrow waist; capability lives at the edges". 
 - **Pinned models** (Smart off) and ungoverned sessions use `session.mutate` with named providers. The host and plugin never use the bare `custom` provider.
 - Every provider hypotaxis configures is a named entry under `providers:`.
 
+**Amendment (after implementation, 2026-11-18).** Escalation happens in the plugin, not through the orchestrator:
+- On a worker's `subagent_stop`, the plugin reads the gate verdict from the ledger and launches the next tier itself (`delegate_task`, routed by the delegation provider).
+- A blocked attempt's completion is vetoed in `pre_llm_call`, so it costs no model call. The orchestrator is told the final outcome once.
+- The orchestrator re-calling `dispatch` was dropped, because escalation must not depend on a model remembering to do it.
+- This needs `plugins.isolation: in_process` (Hermes's default); host isolation can't bind the orchestrator's agent from the hook.
+- `delegate_task` has no per-task toolsets, so the role policy is the guarantee that workers can't dispatch and orchestrators can't ship.
+- A tier's `max_tokens` is recorded but not applied (Hermes's delegation route has no such key).
+
 **Consequences.**
-- Escalation works in plain Hermes too.
-- Each attempt costs one orchestrator turn, as in the measured system.
+- Escalation works in plain Hermes too, with no model in the loop.
+- Interim attempts cost no orchestrator turn.
 - The tier ladder and the provider entries must stay in sync. The plugin writes both from one ladder definition.
 
 ## ADR-0008 Ledger format is contraprova's
