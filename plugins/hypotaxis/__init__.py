@@ -17,7 +17,6 @@ HOOKS = (
     "post_api_request",
     "post_auxiliary_call",
     "pre_llm_call",
-    "on_session_open",
     "on_session_start",
     "on_session_finalize",
 )
@@ -72,3 +71,19 @@ def register(ctx: Any) -> None:
     for method in RPC_METHODS:
         ctx.register_rpc(method, _rpc(method))
     ctx.register_system_prompt_section("hypotaxis", _lazy("hooks", "system_prompt_section"))
+    _start_recovery()
+    on_unload = getattr(ctx, "on_unload", None)
+    if callable(on_unload):
+        on_unload(_lazy("hx", "shutdown"))
+
+
+def _start_recovery() -> None:
+    """``txn.recover`` at plugin start, off the load path (the plugin's import budget is 150 ms). The
+    thread runs in a copy of this context, so it sees the same Hermes home as the load."""
+    import contextvars
+    import threading
+
+    context = contextvars.copy_context()
+    threading.Thread(
+        target=context.run, args=(_lazy("hooks", "recover_on_start"),), daemon=True, name="hypotaxis-recover"
+    ).start()

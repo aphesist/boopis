@@ -51,7 +51,7 @@ def describe(params: Mapping[str, Any], *, session_id: str | None = None, **_: A
     sid = params.get("session_id") or session_id
     if isinstance(sid, str) and sid:
         state = rt.state(sid)
-        session = {"session_id": sid, "mode": state.mode, "locked": state.locked, "cwd": state.cwd}
+        session = {"session_id": sid, "mode": state.mode, "locked": state.locked, "cwd": state.cwd or None}
     return {
         "session": session,
         "version": PLUGIN_VERSION,

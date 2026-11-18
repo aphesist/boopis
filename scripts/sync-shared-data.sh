@@ -14,8 +14,9 @@ DEST="$ROOT/plugins/hypotaxis/data"
 FILES=(
   "crates/hx-proto/errors.json:required"
   "crates/hx-txn/protected.default.json:required"
-  "crates/hx-pack/redact.rules.json:optional"
-  "crates/hx-pack/never_pack.json:optional"
+  # hx-pack's redact.rules.json and never_pack.json join this list when plugin code reads them. Not yet:
+  # `hermes plugins validate`'s security scan flags redact.rules.json (its examples contain a private-key
+  # header and os.environ text), and hx-pack already redacts everything `pack` returns.
 )
 
 mode="copy"

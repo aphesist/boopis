@@ -16,7 +16,6 @@ provides_hooks:
   - post_api_request
   - post_auxiliary_call
   - pre_llm_call
-  - on_session_open
   - on_session_start
   - on_session_finalize
 # Nothing here needs a granted capability: no tool override, no host-owned LLM calls.

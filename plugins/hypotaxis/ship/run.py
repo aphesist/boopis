@@ -89,7 +89,19 @@ def _file_entries(files: Sequence[FileChange]) -> list[dict[str, Any]]:
 def run_ship(rt: Runtime, state: SessionState, args: Mapping[str, Any]) -> dict[str, Any]:
     """Run one ship. Never raises: every failure is a result."""
     try:
-        return _run(rt, state, args)
+        result = _run(rt, state, args)
+        if result.get("status") in ("aborted_before_write", "blocked"):
+            _emit(
+                rt,
+                state,
+                {
+                    "ship_id": None,
+                    "status": "aborted_before_write",
+                    "files": [],
+                    "reason": result.get("code") or result["status"],
+                },
+            )
+        return result
     except HxTimeoutError as exc:
         return out.error(exc) | {"note": "the outcome is unknown; recovery runs when the plugin next starts"}
     except HypotaxisError as exc:

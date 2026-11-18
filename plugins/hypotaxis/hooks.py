@@ -209,15 +209,6 @@ def post_auxiliary_call(**kw: Any) -> None:
         _log.error("auxiliary usage not recorded", exc_info=True)
 
 
-def on_session_open(**kw: Any) -> None:
-    """A session was created or opened: remember where it works, for code that runs outside its turns."""
-    try:
-        rt = runtime()
-        rt.remember_cwd(str(kw.get("session_id") or ""), rt.ctx.session_cwd())
-    except Exception:  # noqa: BLE001
-        _log.error("session cwd not remembered", exc_info=True)
-
-
 def on_session_start(**kw: Any) -> None:
     """The first-turn hook: make sure the session is locked and ``session.opened`` is written."""
     try:
@@ -238,6 +229,14 @@ def on_session_finalize(**kw: Any) -> None:
         )
     except Exception:  # noqa: BLE001
         _log.error("session.closed not recorded", exc_info=True)
+
+
+def recover_on_start() -> None:
+    """Run in a thread when the plugin loads: roll back what a crash left behind. Never raises."""
+    try:
+        runtime().recover_journals()
+    except Exception:  # noqa: BLE001
+        _log.error("journal recovery failed", exc_info=True)
 
 
 def system_prompt_section(info: Mapping[str, Any]) -> str:

@@ -100,6 +100,23 @@ class Runtime:
         settings = self.load_settings().value
         return hx.get_client(settings.hx_path, self.home / "logs" / "hypotaxis" / "hx.log")
 
+    def recover_journals(self) -> None:
+        """``txn.recover`` for this profile's journal directories, once, at plugin start. Starts hx only when
+        there is a journal to look at. Each rolled-back ship is written to its session's ledger."""
+        from .ship.recover import journals_root, recover_all
+
+        if not journals_root(self.home).is_dir():
+            return
+        client = self.hx_client()
+        if client is None:
+            _log.warning("journals exist but hx was not found; they stay until it is available")
+            return
+
+        def ledger_for(stem: str) -> SessionLedger:
+            return SessionLedger(self.ledger_path(stem))
+
+        recover_all(client, self.home, ledger_for)
+
     def ledger_path(self, session_id: str, settings: Settings | None = None) -> Path:
         configured = (settings or self.load_settings().value).ledger_dir
         base = Path(configured) if configured else self.home / "hypotaxis" / "ledger"
@@ -118,17 +135,13 @@ class Runtime:
                 self._sessions[session_id] = found
             return found
 
-    def remember_cwd(self, session_id: str, cwd: str) -> None:
-        """Keep a session's working directory (``ctx.session_cwd()`` is only right inside a turn or a hook
-        for that session, never inside an RPC, so RPC code reads it from here). The first non-empty
-        value wins until the session locks, and the prompt section's ``cwd`` then settles it."""
-        state = self.state(session_id)
-        with state.lock:
-            if cwd and not state.cwd:
-                state.cwd = cwd
-
     def cwd_of(self, session_id: str) -> str:
-        """The session's working directory, empty when it is not known yet."""
+        """The session's working directory, empty until its first prompt.
+
+        Hermes only tells a plugin where a session works at its first prompt (the prompt section's
+        ``info``) and inside its turns. ``ctx.session_cwd()`` called from an RPC or from
+        ``on_session_open`` answers the profile's terminal directory instead (verified on v0.23.2), so
+        nothing records a cwd from there: unknown stays unknown."""
         return self.state(session_id).cwd
 
     def forget(self, session_id: str) -> SessionState | None:
