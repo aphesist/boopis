@@ -1,0 +1,41 @@
+[[package]]
+name = "left-pad"
+version = "1.3.0"
+files = [
+    {file = "left-pad-1.3.0-py3-none-any.whl", hash = "sha256:0f72ef9657ad7176809cb66850ca8c7a988f1ba91b36291d690c59df11cc3b42"},
+]
+
+[[package]]
+name = "lodash"
+version = "4.17.21"
+files = [
+    {file = "lodash-4.17.21-py3-none-any.whl", hash = "sha256:24b957f4b19fca9f2ee71026e0bc6fdf810d39adfe88e5cfa57530d89c04f2ba"},
+]
+
+[[package]]
+name = "@babel/core"
+version = "7.22.5"
+files = [
+    {file = "@babel/core-7.22.5-py3-none-any.whl", hash = "sha256:1be08ceec942f6323fe5583b9641398536941dbe7bd63d838e0b1d0a102baa0f"},
+]
+
+[[package]]
+name = "react-dom"
+version = "18.2.0"
+files = [
+    {file = "react-dom-18.2.0-py3-none-any.whl", hash = "sha256:f7a8c5b1429dcdad40352d30cf1f06d7892f82df9875e0cd4ba8e288e84fba54"},
+]
+
+[[package]]
+name = "typescript"
+version = "5.4.5"
+files = [
+    {file = "typescript-5.4.5-py3-none-any.whl", hash = "sha256:a65aaeaff44812485b8341b8d0f95bc0bb21acb6c8f62d44c3e0c240ac2de7de"},
+]
+
+[[package]]
+name = "zod"
+version = "3.23.8"
+files = [
+    {file = "zod-3.23.8-py3-none-any.whl", hash = "sha256:c41d761d17489dd4c6a182c49e6e409aef9087ad33d0ce21612e488093360207"},
+]
