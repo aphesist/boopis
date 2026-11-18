@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bots tab in the shell</title>
+</head>
+<body>
+<p id="note">Serve this folder over http (for example <code>python3 -m http.server</code>) and open bots.test.html: it loads the real shell (index.html) with every module, orb-avatar first.</p>
+<script>
+/* Wrapper: the real shell (index.html is a fragment), all module styles after shell.css, and the modules in the
+   integration order with vendor/orb-avatar.min.js before bots.js. Query: ?tab=bots (default) &bot=<id> &new=1
+   &settings=<section|1> &dock=off &left=rail. */
+(async () => {
+  try {
+    const q = new URLSearchParams(location.search);
+    /* split so the HTML parser never sees a comment opener or a script tag inside this inline script */
+    const MARK = '<!' + '-- hx:module-css';
+    let html = await (await fetch('index.html', { cache: 'no-store' })).text();
+    /* index.html may already be integrated: add only the module files it does not reference yet */
+    const has = f => html.includes('"' + f + '"');
+    const css = ['cards.css', 'session.css', 'bots.css', 'dock.css'].filter(f => !has(f)).map(f => '<link rel="stylesheet" href="' + f + '">').join('\n');
+    const js = ['vendor/orb-avatar.min.js', 'cards.js', 'session.js', 'bots.js', 'dock.js'].filter(f => !has(f)).map(f => '<script src="' + f + '"><\/script>').join('\n');
+    const boot = '<script>addEventListener("load", () => setTimeout(() => {' +
+      'const q = new URLSearchParams(location.search), H = window.HX; if (!H) return;' +
+      'if (q.get("dock") === "off") H.setState({ dock: "off" });' +
+      'if (q.get("left")) H.setState({ left: q.get("left") });' +
+      'H.setState({ tab: q.get("tab") || "bots" });' +
+      'if (q.get("bot")) H.emit("hx:bot-select", { id: q.get("bot"), from: "test" });' +
+      'if (q.get("new")) H.emit("hx:new-bot", { from: "test" });' +
+      'if (q.get("settings") && H.bots) H.bots.settings(q.get("bot") || null, q.get("settings") === "1" ? null : q.get("settings"));' +
+      '}, 50));<\/script>';
+    if (css) html = html.includes(MARK) ? html.replace(MARK, css + '\n' + MARK) : html.replace('</head>', css + '\n</head>');
+    html += '\n' + js + '\n' + boot;
+    document.open(); document.write('<!doctype html>\n' + html); document.close();
+  } catch (e) { console.error('[bots.test] ' + e.message); document.getElementById('note').hidden = false; }
+})();
+</script>
+</body>
+</html>

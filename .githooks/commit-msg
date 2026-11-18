@@ -1,10 +1,17 @@
 #!/bin/sh
+# Rejects (never strips) commits that are not the owner's alone.
 MSG_FILE="$1"
-if grep -iE '^(co-authored-by|signed-off-by|generated-by|ai-assisted):' "$MSG_FILE" >/dev/null 2>&1; then
-  echo "ERROR: Co-authoring or attribution trailers are strictly forbidden." >&2
-  exit 1
+fail() { echo "commit-msg: $1" >&2; exit 1; }
+
+if grep -iEq '^[[:space:]]*(co-authored-by|signed-off-by|generated-by|ai-assisted|claude-session|assisted-by)[[:space:]]*:' "$MSG_FILE"; then
+  fail "attribution trailers are not allowed (Co-authored-by, Claude-Session, ...)."
 fi
-if [ "$(git config user.name)" != "aphesist" ]; then
-  echo "ERROR: Commit author must be aphesist." >&2
-  exit 1
+if grep -iEq '(generated|written|created|authored) (with|by) .*(claude|gpt|gemini|copilot|codex|cursor|antigravity|an? (ai|llm|agent|model))' "$MSG_FILE"; then
+  fail "commit messages must not name an agent, a model or a tool."
 fi
+if grep -iEq '(claude\.ai/code|claude\.com/claude-code|noreply@anthropic\.com)' "$MSG_FILE"; then
+  fail "commit messages must not reference agent tooling."
+fi
+[ "$(git config user.name)" = "aphesist" ] || fail "author must be aphesist (run scripts/setup-hooks.sh)."
+[ "$(git config user.email)" = "126630868+aphesist@users.noreply.github.com" ] || fail "author email must be the aphesist noreply address."
+exit 0

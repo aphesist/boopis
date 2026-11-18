@@ -1,0 +1,207 @@
+<title>hypotaxis system</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="The hypotaxis design system: tokens in four presets and every shared component, live.">
+<script>
+/* follow the viewer's light or dark setting until they pick a preset here (theme.js reads hx.v6.theme) */
+(function () {
+  try {
+    if (localStorage.getItem('hx.ds.picked')) return;
+    var r = document.documentElement, t = r.getAttribute('data-theme');
+    var light = t ? t === 'light' : matchMedia('(prefers-color-scheme: light)').matches;
+    localStorage.setItem('hx.v6.theme', JSON.stringify({ preset: light ? 'bone' : 'catalog' }));
+  } catch (e) { /* storage blocked: specimen.js picks the preset after load */ }
+})();
+</script>
+<link rel="stylesheet" href="hx/tokens.css">
+<link rel="stylesheet" href="ui/components.css">
+<link rel="stylesheet" href="hx/cards.css">
+<link rel="stylesheet" href="specimen.css">
+<script src="hx/theme.js"></script>
+
+<div class="sp ui-root" id="sp">
+  <header class="sp-bar">
+    <div class="sp-bar__in">
+      <a class="sp-brand" href="#top" aria-label="hypotaxis system, back to the top"><span data-demo="mark"></span><b>hypotaxis</b><span>system 1.0</span></a>
+      <div class="sp-controls" data-demo="controls"></div>
+    </div>
+  </header>
+
+  <div class="sp-page" id="top">
+    <nav class="sp-toc" aria-label="Contents">
+      <ol>
+        <li><a href="#principles">Principles</a></li>
+        <li><a href="#voice">Voice</a></li>
+        <li><a href="#colour">Colour</a></li>
+        <li><a href="#contrast">Contrast</a></li>
+        <li><a href="#type">Type</a></li>
+        <li><a href="#shape">Space and shape</a></li>
+        <li class="sp-toc__sub"><a href="#corners">Corners</a></li>
+        <li><a href="#motion">Motion</a></li>
+        <li><a href="#icons">Icons and mark</a></li>
+        <li><a href="#orbs">Bots and orbs</a></li>
+        <li><a href="#components">Components</a></li>
+        <li class="sp-toc__sub"><a href="#c-buttons">Buttons</a></li>
+        <li class="sp-toc__sub"><a href="#c-hold">Hold to approve</a></li>
+        <li class="sp-toc__sub"><a href="#c-choices">Switches and choices</a></li>
+        <li class="sp-toc__sub"><a href="#c-marks">Marks</a></li>
+        <li class="sp-toc__sub"><a href="#c-lists">Lists</a></li>
+        <li class="sp-toc__sub"><a href="#c-float">Menus, tips, toasts</a></li>
+        <li class="sp-toc__sub"><a href="#c-fields">Fields and settings</a></li>
+        <li class="sp-toc__sub"><a href="#c-measures">Ladder and measures</a></li>
+        <li class="sp-toc__sub"><a href="#c-conversation">Conversation</a></li>
+        <li class="sp-toc__sub"><a href="#c-composer">Composer</a></li>
+        <li class="sp-toc__sub"><a href="#c-panel">Right panel</a></li>
+        <li class="sp-toc__sub"><a href="#c-cards">Cards</a></li>
+        <li class="sp-toc__sub"><a href="#c-shell">Shell</a></li>
+        <li class="sp-toc__sub"><a href="#c-dock">Dock</a></li>
+        <li><a href="#findings">Findings</a></li>
+      </ol>
+    </nav>
+
+    <main class="sp-main">
+      <div class="sp-intro">
+        <h1>One cabinet, four finishes</h1>
+        <p>hypotaxis is a desktop harness for AI coding agents. This page is its design system drawn by itself: every swatch, number and component below comes from the same tokens and the same library the app loads, so the theme controls above re-theme the whole page.</p>
+        <p>Model, time and cost live in a fixed margin. Brass marks where you are; red marks what you owe. Everything else stays quiet until it is needed.</p>
+        <div class="sp-meta"><span>tokens.css, theme.js</span><span>components/components.css, components.js</span><span>cards.js (the card layer)</span><span>tokens.json</span></div>
+      </div>
+
+      <section class="sp-sec" id="principles" aria-labelledby="h-principles">
+        <h2 id="h-principles">Principles</h2>
+        <p>Each one is a rule with a reason. When two collide, the higher one wins.</p>
+        <ol class="sp-principles">
+          <li><b>The conversation is the work</b><span>The column, the request and the answer take the ground; chrome, panels and the dock recede until called. Nothing in the frame competes with the measure.</span></li>
+          <li><b>Interrupt only for decisions</b><span>Red, motion and sound are spent on the user's attention: a blank waiting, an approval, a failed gate. Everything else is quiet, so those three are never missed.</span></li>
+          <li><b>Cost and model are always knowable, never loud</b><span>They sit in the call-number margin and in running totals against their limit, in mono, in the same place every time.</span></li>
+          <li><b>Every path has a second path</b><span>The dock, the sidebars and the palette reach the same things, and the keyboard reaches all of them. No component is the only way to do something.</span></li>
+          <li><b>The agent is a tool, bots are teammates</b><span>An answer shows only the model that wrote it. Bots have a name, a role and a face, always in that order and always in the same places.</span></li>
+          <li><b>Standard controls, one signature</b><span>Buttons, rows, tabs and menus work the way a developer already expects. The world lends palette, type, density and the call-number margin; it never supplies the controls.</span></li>
+        </ol>
+      </section>
+
+      <section class="sp-sec" id="voice" aria-labelledby="h-voice">
+        <h2 id="h-voice">Voice</h2>
+        <p>Plain words a developer would say out loud, in sentence case. Labels name the thing or the action; state words are short and lowercase.</p>
+        <ul class="sp-rules">
+          <li><b>Sentence case</b> for interface text: New session, Show the dock, Hold to approve. The brand is always lowercase: hypotaxis. Content keeps its own case.</li>
+          <li><b>Buttons are a verb and its object</b>: Open PR, Fix and retry, Raise cap to $1.00, Schedule it. Never OK, Submit or Learn more.</li>
+          <li><b>State words</b> are one or two words in mono: working, thinking, replying, needs you, done, asleep, failed. Idle shows nothing.</li>
+          <li><b>Stamps</b> have three wordings only: waiting for you, needs you, failed.</li>
+          <li><b>Receipts</b> say what happened and when: Approved at 14:09. Expired, nothing ran. Errors name the problem and the way out.</li>
+          <li><b>No</b> all caps, middle-dot meta strings, em dashes, exclamation marks or arrows after links. The arrow in a model escalation (qwen3-coder → sonnet 5.5) is content.</li>
+        </ul>
+      </section>
+
+      <section class="sp-sec" id="colour" aria-labelledby="h-colour">
+        <h2 id="h-colour">Colour</h2>
+        <p>Surfaces separate by tone, not by shadow. Two colours carry meaning and nothing else: brass for where you are, red for what you owe. The values below are read from the page as it renders, so they follow the preset and any override.</p>
+        <div class="sp-sub"><h3>Surfaces, deepest to highest</h3><p>The frame holds the work; the ground is what the work sits on; raised card stock is what you wrote; inset drawer is what is set into the work.</p><div data-demo="layers"></div></div>
+        <div class="sp-sub"><h3>Roles</h3><div data-demo="swatches"></div></div>
+        <div class="sp-sub"><h3>Derived lines and fills</h3><p>Translucent tokens are mixed from the text colour, so a theme only chooses solid colours and every line follows it.</p><div data-demo="derived"></div></div>
+      </section>
+
+      <section class="sp-sec" id="contrast" aria-labelledby="h-contrast">
+        <h2 id="h-contrast">Contrast</h2>
+        <p>The pairs every theme must hold, measured live against the current preset and overrides: 4.5:1 for text, 3:1 for icons, accents, outlines and focus. The customizer runs the same check as the user edits a colour.</p>
+        <div class="sp-stage sp-stage--frame sp-x" data-demo="contrast"></div>
+      </section>
+
+      <section class="sp-sec" id="type" aria-labelledby="h-type">
+        <h2 id="h-type">Type</h2>
+        <p>One family per role at fixed steps: a gothic sans for interface and prose, a mono for code, paths, numbers, times, costs, model names and call numbers. Six sizes, three weights, nothing in between.</p>
+        <div class="sp-type" data-demo="type"></div>
+      </section>
+
+      <section class="sp-sec" id="shape" aria-labelledby="h-shape">
+        <h2 id="h-shape">Space and shape</h2>
+        <p>A 4px base with seven steps; rows and controls change with density; four corner radii change with the corner setting. Corners are continuous, and a corner inside another fits it. The pill shape is only for dots, the switch and what sits inside a pill.</p>
+        <div class="sp-grid sp-grid--2">
+          <div class="sp-stage"><div class="sp-label" style="margin-bottom:14px">Spacing</div><div class="sp-scale" data-demo="spacing"></div></div>
+          <div class="sp-stage"><div class="sp-label" style="margin-bottom:14px">Density: rows and controls</div><div class="sp-scale" data-demo="density"></div></div>
+        </div>
+        <div class="sp-stage"><div class="sp-label" style="margin-bottom:14px">Radii</div><div class="sp-radii" data-demo="radii"></div></div>
+        <div class="sp-sub" id="corners"><h3>Corners</h3>
+          <p><b>Owner decisions.</b> Corners are continuous: the curve eases out of the straight edge, as on Apple's surfaces, instead of a circular arc meeting it. And every rounded surface inside another fits the outer curve: the inner radius is the outer radius less the gap between the edges, never below a small floor, and a round piece inside a pill stays a pill. The rule is a start; the eye decides. Where the gap is as large as the outer radius the two corners no longer read together, and the inner piece keeps its own step, never a larger one.</p>
+          <div class="sp-grid sp-grid--2">
+            <div class="sp-stage"><div class="sp-label" style="margin-bottom:14px">The curve</div><div class="sp-curve" data-demo="corner-curve"></div></div>
+            <div class="sp-stage"><div class="sp-label" style="margin-bottom:14px">Nested corners, drawn four times larger</div><div class="sp-nest" data-demo="nest"></div></div>
+          </div>
+          <div class="sp-stage sp-x" tabindex="0" role="region" aria-label="Where nested corners apply"><div class="sp-label" style="margin-bottom:10px">Where it applies (live values in this theme)</div><div data-demo="nest-table"></div></div>
+          <div class="sp-label" style="margin:20px 0 10px">Before and after, in Card catalog at twice the pixels</div>
+          <div class="sp-ba" data-demo="before-after"></div>
+        </div>
+        <div class="sp-sub"><h3>Elevation and lines</h3><p>Flat. Hairlines divide inside a surface, lines outline controls, field lines bound text fields at 3:1. Shadows only on things that float over other things.</p>
+          <div class="sp-grid sp-grid--2"><div class="sp-stage sp-stage--frame"><div class="sp-lines" data-demo="lines"></div></div><div class="sp-stage"><div class="sp-shadows" data-demo="shadows"></div></div></div>
+        </div>
+      </section>
+
+      <section class="sp-sec" id="motion" aria-labelledby="h-motion">
+        <h2 id="h-motion">Motion</h2>
+        <p>Motion explains a change of state and nothing else. No curve passes its mark. The one loop is a running dot breathing. Cards are the one place height animates, so the conversation never jumps. Under reduced motion everything snaps and the loop stops; the orbs reduce and never freeze (owner decision), and the one you are looking at keeps a small step every 1.8s.</p>
+        <div class="sp-stage"><div class="sp-motion" data-demo="motion"></div><div class="sp-row" style="margin-top:16px" data-demo="motion-play"></div></div>
+      </section>
+
+      <section class="sp-sec" id="icons" aria-labelledby="h-icons">
+        <h2 id="h-icons">Icons and mark</h2>
+        <p>Drawn on a 20 or 16 unit grid and rendered at one stroke, 1.5px, with round caps, in the current colour. 18px in icon buttons, 16px in rows and buttons, 14px in small spots.</p>
+        <div class="sp-icons" data-demo="icons"></div>
+        <div class="sp-sub"><h3>The φ mark</h3><p>The closed φ, filled in the strongest neutral of the surface it sits on. Never red, never brass, never outlined, never under 16px wide.</p><div class="sp-mark" data-demo="mark-usage"></div></div>
+      </section>
+
+      <section class="sp-sec" id="orbs" aria-labelledby="h-orbs">
+        <h2 id="h-orbs">Bots and orbs</h2>
+        <p>Every bot has the same furniture in the same places: orb, name, role, schedule, state word. The orb's face reacts to the bot's state through one map; the words beside it come from the same map, so the list, the dock, the header and the cards never disagree.</p>
+        <div class="sp-orbs" data-demo="orbs"></div>
+        <div class="sp-sub"><h3>States</h3><p>One map from a bot's state to its face and its word. Attention outranks work.</p><div class="sp-stage sp-stage--frame sp-x" data-demo="states"></div></div>
+        <div class="sp-sub"><h3>Sizes</h3><p>16 in minis and schedule rows (still), 20 in lists and call numbers, 24 in cards, 26 in the roster, 40 in the dock and the bot header, 56 in the dock card. Live orbs drift calmly; only the one you are looking at moves livelier.</p><div class="sp-stage sp-stage--frame"><div class="sp-row" data-demo="orb-sizes"></div></div></div>
+      </section>
+
+      <section class="sp-sec" id="components" aria-labelledby="h-components">
+        <h2 id="h-components">Components</h2>
+        <p>One canonical version of each, from the shared library. Every state below is live: hover, focus with the keyboard, press.</p>
+
+        <div class="sp-sub" id="c-buttons"><h3>Buttons</h3><p>Primary is bone on ink, once per group. Secondary is an outline. Ghost is for the quiet way out. Icon buttons are 28px with an 18px glyph and always carry a tooltip.</p><div class="sp-stage sp-stage--frame" data-demo="buttons"></div></div>
+
+        <div class="sp-sub" id="c-hold"><h3>Hold to approve</h3><p>The one control that commits by holding: card stock at rest, a dot field gathers under the press and fuses into bone. One second, everywhere (owner decision). Keyboard: hold Space, or press Enter twice.</p><div class="sp-stage" data-demo="hold"></div></div>
+
+        <div class="sp-sub" id="c-choices"><h3>Switches and choices</h3><p>A switch for on and off; a segmented control for two to four exclusive values or views, with a thumb that slides; chips for modes inside a toolbar; option chips for presets.</p><div class="sp-stage sp-stage--frame" data-demo="choices"></div></div>
+
+        <div class="sp-sub" id="c-marks"><h3>Marks</h3><p>Code chips, keys, the stamp, and the status dots: running breathes, attention is red, here is brass, idle is nothing at all.</p><div class="sp-stage" data-demo="marks"></div></div>
+
+        <div class="sp-sub" id="c-lists"><h3>Lists</h3><p>One row for every sidebar list, menu-like or not. Glyphs centre on x = 28, labels start at x = 44, meta is mono on the right. The current row is filled; actions replace the meta on hover.</p><div class="sp-grid sp-grid--2" data-demo="lists"></div></div>
+
+        <div class="sp-sub" id="c-float"><h3>Menus, tooltips, toasts</h3><p>Floating surfaces sit on the frame colour with a line and the pop shadow. Menus drop 6px over 200ms; tooltips wait 480ms the first time and then follow at once.</p><div class="sp-stage" data-demo="float"></div></div>
+
+        <div class="sp-sub" id="c-fields"><h3>Fields and settings</h3><p>Drawer colour on the frame, card stock on the ground, a field line at 3:1, the focus ring on the field. Settings rows put the label left and the control right.</p><div class="sp-grid sp-grid--2" data-demo="fields"></div></div>
+
+        <div class="sp-sub" id="c-measures"><h3>Ladder and measures</h3><p>The governance ladder is a line with stations, the current one brass. Capacities are a running total against the limit in mono. Context is dots, never a bar.</p><div class="sp-grid sp-grid--2" data-demo="measures"></div></div>
+
+        <div class="sp-sub" id="c-conversation"><h3>Conversation</h3><p>Each entry puts its call number in the 112px margin and its content in the 608px measure. What you wrote is a request card; the answer is prose; a blank waits in its sentence with its stamp.</p><div class="sp-stage" data-demo="conversation"></div></div>
+
+        <div class="sp-sub" id="c-composer"><h3>Composer</h3><p>Card stock with a hairline; its actions sit in its corner and fit it. Every composer can talk: the mic, or alt+V (a tap toggles, a hold talks while held); with a bot as the target its orb listens. The compact one is the dock's. Dashed words are the agent's reading of the request; solid brass is your choice. Enter sends, Shift and Enter break the line.</p><div class="sp-stage" data-demo="composer"></div></div>
+
+        <div class="sp-sub" id="c-panel"><h3>Right panel</h3><p>Closed, it is a 28px strip with one quiet measure. Open, it is the frame colour with sections that disclose.</p><div class="sp-grid sp-grid--2" data-demo="panel"></div></div>
+
+        <div class="sp-sub" id="c-cards"><h3>Cards</h3><p>Set into the conversation in the drawer colour, 520px at most. One card element, eight kinds, three sizes, every state; the decided ones recede. Red is only the stamp of what you owe.</p><div data-demo="cards"></div></div>
+
+        <div class="sp-sub" id="c-shell"><h3>Shell</h3><p>Title bar with the command field, the sidebar open, as a rail and closed, the ground meeting the frame with a concave corner.</p><div data-demo="shell"></div></div>
+
+        <div class="sp-sub" id="c-dock"><h3>Dock</h3><p>Pitch black in every theme, flush to the bottom edge with concave flares, always centred with the composer. Everything it shows is reachable elsewhere. Its contents use the same components on the dock ground. The orbs answer the owner's gestures: a click or Enter opens the bot's session in the dock (again closes it), a double-click or mod+Enter opens its full chat in the Bots tab. Try them on the first dock below.</p><div class="sp-docks" data-demo="dock"></div></div>
+      </section>
+
+      <section class="sp-sec" id="findings" aria-labelledby="h-findings">
+        <h2 id="h-findings">Findings</h2>
+        <p>The main things the extraction found in the mock-up, with the fix. The library already holds every fix. The full list of 30, with every value, is in DESIGN-SYSTEM.md; the module-by-module work is in MIGRATION.md.</p>
+        <ul class="sp-findings" data-demo="findings"></ul>
+      </section>
+
+      <p class="sp-foot">hypotaxis system 1.0, extracted from the v6 mock-up on 18 November 2026. Tokens generated by design-system/build-tokens.mjs.</p>
+    </main>
+  </div>
+</div>
+
+<script src="hx/data.js"></script>
+<script src="ui/components.js"></script>
+<script src="hx/orb-avatar.min.js"></script>
+<script src="hx/cards.js"></script>
+<script src="specimen.js"></script>

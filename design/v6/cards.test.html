@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hypotaxis cards</title>
+<link rel="stylesheet" href="tokens.css">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="components/components.css">
+<link rel="stylesheet" href="cards.css">
+<style>
+  /* gallery chrome only (prefix g-); the cards come from cards.css and every colour from tokens.css */
+  html, body { margin: 0; background: var(--bg-2); color: var(--text); }
+  body { font-family: var(--sans); font-size: var(--fs-s); line-height: var(--lh); -webkit-font-smoothing: antialiased; }
+  ::selection { background: var(--brass-soft); }
+  .g-page { width: min(1120px, calc(100% - 32px)); margin: 0 auto; padding: 48px 0 120px; }
+  .g-head h1 { margin: 0 0 4px; font-size: var(--fs-l); font-weight: 600; color: var(--text-strong); }
+  .g-intro { margin: 0 0 32px; max-width: 76ch; color: var(--text-dim); }
+  .g-kind { padding: 32px 0 40px; border-top: 1px solid var(--hair); }
+  .g-kind__top { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 24px; margin-bottom: 24px; }
+  .g-kind__top h2 { margin: 0; font-size: var(--fs-m); font-weight: 600; color: var(--text-strong); }
+  .g-kind__top p { margin: 0; color: var(--text-dim); flex: 1 1 320px; }
+  .g-grid { display: grid; grid-template-columns: minmax(0, 608px) minmax(0, 360px); justify-content: space-between; gap: 32px 48px; align-items: start; }
+  .g-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .g-size { margin: 0; color: var(--text-quiet); font-size: var(--fs-xs); font-weight: 500; line-height: var(--lh-ui); }
+  .g-size:not(:first-child) { margin-top: 16px; }
+  /* the shell's segmented control: drawer track, hairline, bone thumb */
+  .g-switch { display: inline-flex; gap: 2px; padding: 3px; border-radius: var(--r-s); background: var(--bg-0); box-shadow: inset 0 0 0 1px var(--hair); }
+  .g-switch button {
+    appearance: none; border: 0; height: 24px; padding: 0 10px; border-radius: var(--r-xs);
+    background: none; color: var(--text-dim); font: 500 var(--fs-xs)/1 var(--sans); cursor: pointer;
+    transition: background-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
+  }
+  .g-switch button:hover { color: var(--text); }
+  .g-switch button[aria-pressed="true"] { background: var(--selected); color: var(--text-on-light); }
+  .g-switch button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  /* the entry grid of the conversation: call number in the margin, content in the measure */
+  .g-entry { display: grid; grid-template-columns: var(--margin-w) minmax(0, 1fr); }
+  .g-callno { display: flex; flex-direction: column; gap: 2px; padding-top: 3px; font: 400 var(--fs-2xs)/1.45 var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); }
+  .g-callno b { font-weight: 400; color: var(--text-dim); }
+  .g-measure { min-width: 0; max-width: var(--measure); font-size: var(--fs-m); line-height: var(--lh); }
+  .g-measure p { margin: 0 0 12px; }
+  .g-measure > p code { font: 400 12.5px/1 var(--mono); padding: 2px 5px; border-radius: var(--r-xs); background: var(--chip); }
+  .g-panel { border-radius: var(--r-l); padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+  .g-panel--side { background: var(--bg-1); }
+  /* the dock's slab is black in every theme (dock.css --dock-ink); emulated here, read from the dock if it is loaded */
+  .g-panel--dock { background: var(--dock-bg); }
+  .g-size, .g-switch button, .g-head h1, .g-kind__top h2 { text-transform: var(--ui-case); }
+  .g-presets { display: flex; align-items: center; gap: 12px; margin: 0 0 32px; color: var(--text-quiet); font-size: var(--fs-xs); }
+  .g-log { color: var(--text-quiet); font: 400 var(--fs-2xs)/1.45 var(--mono); min-height: 16px; margin: 16px 0 0; }
+  @media (max-width: 1100px) { .g-grid { grid-template-columns: minmax(0, 1fr); } .g-entry { grid-template-columns: minmax(0, 1fr); } .g-callno { flex-direction: row; gap: 12px; padding: 0 0 8px; } }
+</style>
+</head>
+<body>
+<main class="g-page ui-scope">
+  <header class="g-head"><h1>Cards</h1></header>
+  <p class="g-intro">Every card is live: hold to approve, deny, answer the blank, accept a hand-off. The switch beside each kind sets the state on every size at once.</p>
+  <div class="g-presets"><span>Theme</span><div class="g-switch" id="g-preset" role="group" aria-label="Theme preset"></div></div>
+  <div id="g-kinds"></div>
+</main>
+
+<script src="data.js"></script>
+<script src="components/components.js"></script>
+<script src="cards.js"></script>
+<script src="vendor/orb-avatar.min.js"></script>
+<script>
+(function () {
+  const D = window.HX_DATA;
+  const C = { create: (k, d, o) => HX.ui.card(k, d, o), queue: HX.cards.queue, states: HX.cards.states };
+  const convo = D.conversation[1];
+
+  /* gallery data, built from data.js; the extra items are proposed additions to data.js */
+  const G = {
+    approval: { from: 'nina', title: 'deploy to staging', quote: 'billing/cents → staging, dry run first', item: ['staging · invoices-api', 'read-only on invoices · 1 migration'], meta: 'expires in 9 min · ~$0.02' },
+    queue: [
+      { kind: 'approval', data: { from: 'nina', title: 'deploy to staging', quote: 'billing/cents → staging, dry run first', item: ['staging · invoices-api', 'read-only on invoices · 1 migration'], meta: 'expires in 9 min · ~$0.02' } },
+      { kind: 'approval', data: { model: 'sonnet 5.5', title: 'push and open a draft PR', quote: 'the diff you asked to see first', item: ['github · billing-api', 'cents/proration · 4 files'], meta: 'expires in 30 min' } },
+      { kind: 'approval', data: { from: 'hex', title: 'read STRIPE_WEBHOOK_SECRET', quote: 'to replay 3 failed webhooks on staging', item: ['vault · staging/stripe', 'read once · not stored'], meta: 'expires in 4 min · ~$0.01' } }
+    ],
+    ship: Object.assign({}, convo.ship, {
+      files: D.changes,
+      failures: ['invoice.test.ts › rounds per line item'],
+      rollbackNote: 'Rounding each line item in invoice.ts failed invoice.test.ts, so that edit was undone and the invoice total is rounded once instead.'
+    }),
+    blank: { question: 'should I keep the old export name `prorate` as a deprecated alias?', short: 'keep `prorate` as an alias?', options: convo.blank.options },
+    teammate: { from: 'atlas', title: 'hands you a review', quote: 'invoice.ts:88 still divides before rounding. I fixed it in 9f3c1a2. Can you check it before nina deploys?', item: ['cents/proration · 9f3c1a2', '1 commit · 142 tests pass'], meta: '2 min ago' },
+    escalation: { from: 'qwen3-coder', to: 'sonnet 5.5', reason: 'after 2 failed gate runs on cheaper models', ladder: D.governance.ladder, current: D.governance.current, spent: D.governance.spent, cap: D.governance.cap, raiseTo: '$1.00', next: 'opus 5.5' },
+    error: { gate: 'npm test', retryWith: 'sonnet 5.5', test: 'invoice.test.ts › rounds per line item', output: D.output.slice(0, 4).map((l) => l.trim()), note: 'The edit to invoice.ts was rolled back. Nothing else changed.' },
+    schedule: { from: 'sol', title: 'run the morning digest', quote: 'overnight CI and your inbox, summed up before you start', time: '02:00', when: 'every weekday', days: [1, 1, 1, 1, 1, 0, 0], cron: '0 2 * * 1-5', next: 'tonight at 02:00', meta: 'about $0.08 a run' },
+    connector: { name: 'linear', host: 'linear.app', tools: D.connectors.find((c) => c.name === 'linear').tools, scopes: ['issues', 'projects', 'comments'] }
+  };
+  window.G = G;
+
+  /* the mock-up's stand-ins for real work: a retry passes, a browser sign-in returns */
+  document.addEventListener('hx:card-action', (e) => {
+    const { card, action, kind } = e.detail;
+    const log = card.closest('.g-kind') && card.closest('.g-kind').querySelector('.g-log');
+    if (log) log.textContent = 'hx:card-action  ' + kind + '  ' + action + (e.detail.value ? '  "' + e.detail.value + '"' : '');
+    if (kind === 'error' && action === 'retry') setTimeout(() => card.state === 'retrying' && card.update({ state: 'passed' }), 2600);
+    if (kind === 'connector' && action === 'sign-in') setTimeout(() => card.state === 'waiting' && card.update({ state: 'connected' }), 2800);
+  });
+
+  const KINDS = [
+    ['approval', 'Approval', 'A bot or the agent wants to do something sensitive. Hold to approve: the fill gathers as dots and fuses solid. Space, or Enter twice, works too.'],
+    ['ship', 'Ship result', 'The result of a run that passed its gate, with the files it touched.'],
+    ['blank', 'Blank', 'An open question the agent left in its answer, and the popover it opens.'],
+    ['teammate', 'Teammate', 'A request or hand-off from a named bot.'],
+    ['escalation', 'Escalation', 'The governance ladder moved the session to a stronger model, or stopped at the cap.'],
+    ['error', 'Gate failed', 'A gate failed.'],
+    ['schedule', 'Schedule', 'A bot asks to run on a timer.'],
+    ['connector', 'Connector', 'A connector needs you to sign in.']
+  ];
+  const root = document.getElementById('g-kinds');
+  /* the four presets of tokens.css, through theme.js like Settings > Appearance */
+  const ps = document.getElementById('g-preset');
+  const cur = (window.HX_THEME && HX_THEME.get && (HX_THEME.get().preset || 'catalog')) || 'catalog';
+  for (const [id, name] of [['catalog', 'Card catalog'], ['graphite', 'Graphite'], ['bone', 'Bone'], ['typewriter', 'Typewriter']]) {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = name; b.dataset.preset = id;
+    b.setAttribute('aria-pressed', String(id === cur));
+    b.addEventListener('click', () => { for (const x of ps.children) x.setAttribute('aria-pressed', String(x === b)); if (window.HX_THEME) HX_THEME.preset(id); });
+    ps.appendChild(b);
+  }
+  const entry = (callno, html) => '<div class="g-entry"><div class="g-callno">' + callno + '</div><div class="g-measure">' + (html || '') + '</div></div>';
+
+  for (const [kind, title, note] of KINDS) {
+    const sec = document.createElement('section');
+    sec.className = 'g-kind'; sec.id = 'k-' + kind;
+    sec.innerHTML = '<div class="g-kind__top"><h2>' + title + '</h2><p>' + note + '</p><div class="g-switch" role="group" aria-label="' + title + ' state"></div></div>' +
+      '<div class="g-grid"><div class="g-col" data-col="inline"></div><div class="g-col" data-col="small"></div></div><p class="g-log"></p>';
+    root.appendChild(sec);
+    const colA = sec.querySelector('[data-col="inline"]'), colB = sec.querySelector('[data-col="small"]');
+    const cards = [];
+    const label = (col, t) => { const p = document.createElement('p'); p.className = 'g-size'; p.textContent = t; col.appendChild(p); };
+    const add = (col, el) => { col.appendChild(el); cards.push(el); return el; };
+    const data = G[kind];
+
+    label(colA, kind === 'blank' ? 'In the sentence, and expanded' : kind === 'escalation' ? 'In the answer' : 'In the conversation');
+    const wrap = document.createElement('div');
+    wrap.innerHTML = entry('<b>qwen3-coder</b><span>→ sonnet 5.5</span><span>3m 42s</span><span>$0.37</span>');
+    const measure = wrap.querySelector('.g-measure');
+    colA.appendChild(wrap.firstChild);
+    if (kind === 'blank') {
+      const p = document.createElement('p'); p.textContent = 'One open question: should I keep the old export name prorate as a deprecated alias?';
+      measure.appendChild(p);
+      const inl = C.create('blank', data, { size: 'inline' }); p.appendChild(inl); cards.push(inl);
+      const pop = add(measure, C.create('blank', data, { size: 'popover' }));
+      pop.style.marginTop = '8px';
+    } else if (kind === 'escalation') {
+      measure.innerHTML = '<p>Everything under <code>src/billing</code> now works as integer cents.</p>';
+      add(measure, C.create('escalation', data, { size: 'inline' }));
+      const p2 = document.createElement('p'); p2.style.marginTop = '12px'; p2.textContent = 'A new property test checks that splitting a window never changes the total.'; measure.appendChild(p2);
+    } else {
+      measure.innerHTML = '<p>' + (kind === 'ship' ? 'Everything under <code>src/billing</code> now works as integer cents.' : kind === 'error' ? 'The per-line rounding broke a test, so I rolled that edit back.' : 'Waiting on you before the next step.') + '</p>';
+      add(measure, C.create(kind, data, { size: 'inline' }));
+    }
+
+    label(colB, kind === 'blank' ? 'Compact, in a side panel' : 'Compact');
+    add(colB, C.create(kind, data, { size: 'compact' }));
+    label(colB, 'One row');
+    add(colB, C.create(kind, data, { size: 'mini' }));
+
+    if (kind === 'approval') {
+      /* the dock's needs-you page draws these exact cards (no dock version): rows in the normal view, compact expanded */
+      label(colB, 'In the dock: rows, and the queue expanded');
+      const dock = document.createElement('div'); dock.className = 'g-panel g-panel--dock'; dock.dataset.ground = 'dock';
+      for (const it of G.queue) { const m = C.create('approval', it.data, { size: 'mini', ground: 'dock' }); dock.appendChild(m); if (it === G.queue[0]) cards.push(m); }
+      dock.appendChild(C.queue(G.queue, { size: 'compact', ground: 'dock' }));
+      colB.appendChild(dock);
+    }
+    if (kind === 'teammate' || kind === 'connector') {
+      label(colB, kind === 'teammate' ? 'In the dock (black)' : 'In the side panel');
+      const panel = document.createElement('div'); panel.className = 'g-panel ' + (kind === 'teammate' ? 'g-panel--dock' : 'g-panel--side');
+      if (kind === 'teammate') panel.dataset.ground = 'dock';
+      const el = C.create(kind, data, { size: 'compact', ground: kind === 'teammate' ? 'dock' : 'chrome' });
+      panel.appendChild(el); cards.push(el);
+      const m = C.create(kind, data, { size: 'mini', ground: kind === 'teammate' ? 'dock' : 'chrome' });
+      panel.appendChild(m); cards.push(m);
+      colB.appendChild(panel);
+    }
+
+    const sw = sec.querySelector('.g-switch');
+    for (const st of C.states(kind)) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = st.charAt(0).toUpperCase() + st.slice(1).replace('-', ' '); b.dataset.state = st;
+      b.setAttribute('aria-pressed', String(st === C.states(kind)[0]));
+      b.addEventListener('click', () => {
+        for (const x of sw.children) x.setAttribute('aria-pressed', String(x === b));
+        const patch = { state: st };
+        if (st === 'holding') patch.progress = .58;
+        if (kind === 'blank' && st === 'answered') patch.answer = G.blank.options[1];
+        for (const c of cards) c.update(patch);
+      });
+      sw.appendChild(b);
+    }
+  }
+})();
+</script>
+</body>
+</html>

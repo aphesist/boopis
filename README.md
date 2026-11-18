@@ -1,29 +1,20 @@
 # hypotaxis
 
-Sovereign Rust (`Tauri v2`) Desktop Coding Harness built on an unmodified upstream **Hermes Agent** base, **Contraprova** counterfactual governance (-61% cascade routing & env-pinned gates), 3 compound execution primitives (`pack`, stateful/parallel `exec`, journaled `ship`), Git-backed Local Artifacts, universal cross-harness skill/plugin loading, Apple Bubble VM integration, and a pure Nothing OS monochrome UI with cohesive `LivingOrb` companions.
+A desktop coding harness that runs any model, through any subscription you already pay for, with [contraprova](https://github.com/aphesist/contraprova)'s governance built in and measured.
 
----
+- **Engine:** unmodified upstream [Hermes Agent](https://github.com/NousResearch/hermes-agent). Hermes updates, plugins and skills work as they are.
+- **Governance:** a Hermes plugin. A cheap model tries first, a gate the project defines decides, and only a failure buys a stronger model. Every step goes into contraprova's hash-chained ledger.
+- **Three tools:** `pack` reads, `exec` computes in a sandbox, `ship` is the only way a change reaches your files, and it rolls back byte for byte when the gate fails.
+- **Compatibility:** Claude Code skills, plugins, hooks, commands, subagents and MCP servers load unchanged, as do Codex, Gemini CLI, Cursor, Antigravity and Agent Skills formats.
+- **App:** Tauri, with two sections, Sessions and Bots, and a dock.
 
-## Resume This Session on Another Machine (`X:\` Drive Setup)
+## Status
+Under construction. Phase 1 is the Sessions section, good enough to replace Claude Code for a week. The only measured numbers are contraprova's (on 88 fresh SWE-bench Pro tasks, on par with a single Opus at about 61% less cost per solved task). Everything hypotaxis adds is a hypothesis until its study is published.
 
-1. **Clone & configure strict `aphesist` hooks:**
-   ```powershell
-   git clone https://github.com/aphesist/hypotaxis.git X:\hypotaxis
-   cd X:\hypotaxis
-   .\scripts\setup-hooks.ps1
-   ```
+## Read first
+- `AGENTS.md`: invariants and where everything lives
+- `docs/ARCHITECTURE.md`, `docs/STANDARDS.md`, `docs/DECISIONS.md`
+- `design/v6/`: the approved interface design and its design system
 
-2. **Point Rust & Cargo caches onto `X:\` (keeps `C:\` clean):**
-   ```powershell
-   $env:CARGO_HOME = "X:\.cargo"
-   $env:RUSTUP_HOME = "X:\.rustup"
-   $env:CARGO_TARGET_DIR = "X:\hypotaxis-target"
-   ```
-
-3. **Open `X:\hypotaxis` in Antigravity IDE / Antigravity 2.0 / `agy`:**
-   `AGENTS.md` and `.agents/rules/hypotaxis-handoff.md` auto-load the complete context from our design session, along with:
-   - [Architecture Plan](docs/ARCHITECTURE_PLAN.md)
-   - [Approved v3 Monochrome Mockup](design/mockup_v3.html)
-
-4. **Paste into the new Antigravity session to start Wave-1 production immediately:**
-   > Read `AGENTS.md`, `.agents/rules/hypotaxis-handoff.md`, `docs/ARCHITECTURE_PLAN.md`, and `design/mockup_v3.html`, check `X:\` toolchains (`rustc`, `cargo`, `uv`, `pnpm`, `claude`, `docker`/`qemu`), scaffold `crates/hypotaxis-contracts`, and launch the 5-agent swarm across isolated worktrees on `X:\`.
+## Licence
+To be chosen by the owner.

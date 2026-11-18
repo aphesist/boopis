@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Session tab test</title>
+<link rel="stylesheet" href="tokens.css">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="components/components.css">
+<link rel="stylesheet" href="cards.css">
+<link rel="stylesheet" href="session.css">
+<style>
+  /* stub shell: only enough chrome to place the session slots like the Figma frame */
+  html, body { margin: 0; height: 100%; background: var(--bg-1); color: var(--text); font-family: var(--mono); overflow: hidden; }
+  ::selection { background: rgba(255,255,255,.18); }
+  .stub-top { position: fixed; inset: 0 0 auto 0; height: var(--chrome-h); display: flex; align-items: center; gap: 18px; padding: 0 24px; color: var(--text-strong); }
+  .stub-top i { width: 18px; height: 18px; border: 1.5px solid currentColor; border-radius: 3px; opacity: .9; }
+  .stub-left { position: fixed; left: 0; top: var(--chrome-h); bottom: 0; width: var(--sb-w); display: flex; flex-direction: column; transition: transform var(--dur-3) var(--spring); }
+  body[data-left="closed"] .stub-left { transform: translateX(-100%); }
+  .stub-brand { display: flex; align-items: center; gap: 12px; height: 62px; padding: 0 20px 0 22px; }
+  .stub-phi { font-size: 30px; line-height: 1; width: 30px; text-align: center; }
+  .stub-pill { display: flex; padding: 3px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg-2); flex: 1; max-width: 198px; font-size: 10px; }
+  .stub-pill span { flex: 1; text-align: center; height: 26px; line-height: 26px; border-radius: 999px; color: var(--text); }
+  .stub-pill span:first-child { background: var(--selected); color: var(--text-on-light); }
+  .stub-plus { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); margin-left: auto; display: grid; place-items: center; font-size: 18px; }
+  #hx-sidebar-list { flex: 1; min-height: 0; }
+  .stub-account { height: 60px; margin: 18px 0 14px 18px; border-radius: 30px 0 0 30px; display: flex; align-items: center; gap: 14px; padding-left: 2px; font-size: 11px; }
+  .stub-account b { width: 54px; height: 54px; border-radius: 50%; background: #3a342c; }
+  .stub-main { position: fixed; top: var(--chrome-h); bottom: 0; left: var(--sb-w); right: 0; background: var(--bg-2); border-top-left-radius: var(--r-l); display: flex;
+    transition: left var(--dur-3) var(--spring); }
+  body[data-left="closed"] .stub-main { left: 0; border-top-left-radius: 0; }
+  #hx-view-session { flex: 1; min-width: 0; height: 100%; }
+  #hx-right { flex: none; width: var(--right-rail-w); height: 100%; transition: width var(--dur-3) var(--spring); overflow: hidden; }
+  body[data-right="open"] #hx-right { width: var(--right-w); }
+  .stub-dock { position: fixed; bottom: 0; height: 77px; width: 722px; transform: translateX(-50%); left: var(--dock-x, 50%); background: var(--bg-0);
+    border-radius: 22px 22px 0 0; transition: left var(--dur-3) var(--spring), transform var(--dur-3) var(--spring); display: flex; align-items: center; justify-content: space-evenly; padding: 0 12px; }
+  .stub-dock i { width: 44px; height: 44px; border-radius: 50%; background: #2a2a2a; }
+  body[data-dock="off"] .stub-dock { transform: translate(-50%, 110%); }
+  @media (max-width: 700px) { :root { --sb-w: 0px; } .stub-left { display: none; } .stub-dock { width: 92vw; } #hx-right { width: 0; } }
+</style>
+</head>
+<body data-left="open" data-right="closed" data-dock="on">
+  <div class="stub-top"><i></i><span style="opacity:.6">‹ ›</span></div>
+  <aside class="stub-left">
+    <div class="stub-brand"><span class="stub-phi">φ</span><div class="stub-pill"><span>session</span><span>bots</span></div><span class="stub-plus">+</span></div>
+    <nav id="hx-sidebar-list"></nav>
+    <div class="stub-account"><b></b>xxx</div>
+  </aside>
+  <main class="stub-main">
+    <div id="hx-view-session"></div>
+    <aside id="hx-right"></aside>
+  </main>
+  <div class="stub-dock" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+
+<script src="data.js"></script>
+<script>
+  /* a tiny stub of the shell's HX with the contract's API */
+  (function () {
+    const bus = new EventTarget();
+    const mods = {};
+    const HX = window.HX = {
+      state: { tab: 'session', left: 'open', right: 'closed', dock: 'on', theme: 'dark' },
+      on(t, fn) { const w = (e) => fn(e); fn.__w = w; bus.addEventListener(t, w); },
+      off(t, fn) { bus.removeEventListener(t, fn.__w || fn); },
+      emit(t, d) { bus.dispatchEvent(new CustomEvent(t, { detail: d })); },
+      register(name, m) { mods[name] = m; },
+      setState(patch) {
+        Object.assign(HX.state, patch);
+        document.body.dataset.left = HX.state.left; document.body.dataset.right = HX.state.right; document.body.dataset.dock = HX.state.dock;
+        HX.emit('hx:state', { state: HX.state, changed: patch });
+        layout();
+      },
+      cards: null,
+      provide(name, fn) { (this._prov[name] = this._prov[name] || []).push(fn); }, _prov: {},
+      data: window.HX_DATA,
+      _mods: mods
+    };
+    function layout() {
+      /* compute the target geometry (not the animating one) */
+      const cs = getComputedStyle(document.documentElement);
+      const vw = innerWidth, sb = HX.state.left === 'closed' || vw <= 700 ? 0 : parseFloat(getComputedStyle(document.querySelector('.stub-left')).width);
+      const rw = vw <= 700 ? 0 : (HX.state.right === 'open' ? Math.min(360, Math.max(300, vw * .19)) : 36);
+      const colLeft = sb, colWidth = vw - sb - rw, centerX = colLeft + colWidth / 2;
+      document.querySelector('.stub-dock').style.setProperty('--dock-x', centerX + 'px');
+      HX.layout = { centerX, colLeft, colWidth, viewportW: vw, viewportH: innerHeight };
+      /* the shell's animated custom properties, so modules bind to them as they do in the real frame */
+      const r = document.documentElement.style;
+      r.setProperty('--hx-center-x', centerX + 'px'); r.setProperty('--hx-col-w', Math.min(720, colWidth - 64) + 'px'); r.setProperty('--hx-dock-space', HX.state.dock === 'on' ? '72px' : '0px');
+      HX.emit('hx:layout', HX.layout);
+    }
+    HX._layout = layout;
+    addEventListener('resize', layout);
+    HX.on('hx:attention', (e) => { window.__att = e.detail; });
+    window.addEventListener('DOMContentLoaded', () => {
+      const q = new URLSearchParams(location.search);
+      ['left', 'right', 'dock'].forEach((k) => { if (q.get(k)) HX.state[k] = q.get(k); });
+      document.body.dataset.left = HX.state.left; document.body.dataset.right = HX.state.right; document.body.dataset.dock = HX.state.dock;
+      layout();
+      mods['session-list'].mount(document.getElementById('hx-sidebar-list'), HX);
+      mods['session'].mount(document.getElementById('hx-view-session'), HX);
+      mods['session-right'].mount(document.getElementById('hx-right'), HX);
+      if (HX.state.right === 'open') HX.setState({ right: 'open' });
+    });
+  })();
+</script>
+<script src="components/components.js"></script>
+<script src="cards.js"></script>
+<script src="session.js"></script>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dock test</title>
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components/components.css">
+<link rel="stylesheet" href="cards.css">
+<link rel="stylesheet" href="dock.css">
+<style>
+  /* a stand-in for the shell, sized from the Figma frame, so the dock can be judged in place */
+  html, body { margin: 0; height: 100%; background: var(--bg-1); color: var(--text); font-family: var(--mono); overflow: hidden; }
+  .t-chrome { position: fixed; left: 0; right: 0; top: 0; height: var(--chrome-h); display: flex; align-items: center; gap: 18px; padding: 0 24px; box-sizing: border-box; color: var(--text-strong); }
+  .t-chrome i { display: block; width: 18px; height: 16px; border-radius: var(--r-xs); box-shadow: inset 0 0 0 1.5px currentColor; opacity: .85; }
+  .t-left { position: fixed; left: 0; top: var(--chrome-h); bottom: 0; width: var(--t-left, 336px); background: var(--bg-1); transition: width var(--dur-3) var(--ease); overflow: hidden; }
+  .t-brand { display: flex; align-items: center; gap: 14px; padding: 13px 22px; white-space: nowrap; }
+  .t-phi { font-size: var(--fs-xl); line-height: 1; color: var(--text-strong); }
+  .t-seg { display: flex; padding: 4px; border-radius: var(--r-pill); box-shadow: inset 0 0 0 1px var(--line); font-size: var(--fs-2xs); }
+  .t-seg span { padding: 4px 26px; border-radius: var(--r-pill); color: var(--text); }
+  .t-seg span.on { background: var(--selected); color: var(--text-on-light); }
+  .t-account { position: absolute; left: 18px; right: 0; bottom: 18px; height: 54px; border-radius: var(--r-l) 0 0 var(--r-l); background: var(--bg-2); display: flex; align-items: center; gap: 12px; padding: 0 14px; font-size: var(--fs-2xs); color: var(--text-dim); white-space: nowrap; }
+  .t-account b { width: 38px; height: 38px; border-radius: var(--r-pill); background: var(--bg-3); flex: none; }
+  .t-main { position: fixed; top: var(--chrome-h); bottom: 0; left: var(--t-left, 336px); right: var(--t-right, 0px); background: var(--bg-2); border-radius: var(--r-l) 0 0 0; transition: left var(--dur-3) var(--ease), right var(--dur-3) var(--ease); }
+  .t-right { position: fixed; top: var(--chrome-h); bottom: 0; right: 0; width: var(--t-right, 0px); background: var(--bg-1); transition: width var(--dur-3) var(--ease); overflow: hidden; }
+  .t-right .t-ctx { position: absolute; left: 14px; top: 18px; display: grid; gap: 6px; }
+  .t-right .t-ctx i { width: 8px; height: 8px; border-radius: var(--r-pill); box-shadow: inset 0 0 0 1px var(--text-faint); }
+  .t-right .t-ctx i.f { background: var(--text-dim); box-shadow: none; }
+  .t-col { position: fixed; top: calc(var(--chrome-h) + 30px); width: min(860px, calc(var(--t-colw) - 64px)); left: calc(var(--t-cx) - min(860px, calc(var(--t-colw) - 64px)) / 2); font-size: var(--fs-xs); line-height: 22px; transition: left var(--dur-3) var(--ease), width var(--dur-3) var(--ease); }
+  .t-bubble { margin-left: auto; width: fit-content; max-width: 600px; background: var(--bg-3); border-radius: var(--r-m); padding: 12px 22px; }
+  .t-col p { margin: 50px 0 0; max-width: 800px; }
+  .t-col code { background: var(--chip); border-radius: var(--r-xs); padding: 2px 7px; font-size: var(--fs-2xs); }
+  .t-composer { position: fixed; bottom: 130px; height: 110px; width: min(780px, calc(var(--t-colw) - 48px)); left: calc(var(--t-cx) - min(780px, calc(var(--t-colw) - 48px)) / 2); background: var(--bg-1); border-radius: var(--r-m); box-sizing: border-box; padding: 16px 18px; font-size: var(--fs-xs); line-height: 22px; transition: left var(--dur-3) var(--ease), width var(--dur-3) var(--ease); }
+  .t-composer u { text-decoration-style: dashed; text-decoration-color: var(--text-dim); text-underline-offset: 4px; }
+  .t-assume, .t-gov { position: fixed; font-size: var(--fs-2xs); color: var(--text-quiet, var(--text-dim)); white-space: nowrap; transition: left var(--dur-3) var(--ease); }
+  .t-assume { bottom: 248px; left: calc(var(--t-cx) - 309px); }
+  .t-gov { bottom: 98px; left: calc(var(--t-cx) + 188px); color: var(--text-dim); }
+
+  .t-panel { position: fixed; right: 16px; top: 56px; width: 236px; z-index: 200; background: var(--bg-3); border-radius: var(--r-l); padding: 12px; font-size: var(--fs-2xs); display: grid; gap: 8px; box-shadow: var(--shadow-pop); }
+  .t-panel h1 { margin: 0; font-size: var(--fs-xs); font-weight: 500; }
+  .t-panel .r { display: flex; flex-wrap: wrap; gap: 4px; }
+  .t-panel button { font: inherit; font-size: var(--fs-2xs); color: var(--text); background: var(--bg-2); border: 0; border-radius: var(--r-s); padding: 5px 8px; cursor: pointer; }
+  .t-panel button:hover { background: var(--bg-4); }
+  .t-panel button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+  .t-log { max-height: 140px; overflow: auto; color: var(--text-dim); font-size: var(--fs-2xs); line-height: 15px; }
+  body.clean .t-panel { display: none; }
+</style>
+</head>
+<body>
+<div class="t-chrome" aria-hidden="true"><i></i><span style="opacity:.5">‹ ›</span></div>
+<aside class="t-left" aria-label="sidebar (stand-in)">
+  <div class="t-brand"><span class="t-phi" aria-hidden="true">φ</span><span class="t-seg"><span class="on">session</span><span>bots</span></span></div>
+  <div class="t-account"><b></b>xxx</div>
+</aside>
+<main class="t-main" aria-label="session (stand-in)"></main>
+<aside class="t-right" aria-label="right sidebar (stand-in)"><div class="t-ctx" aria-hidden="true"><i class="f"></i><i class="f"></i><i></i><i></i><i></i></div></aside>
+<div class="t-col" aria-hidden="true">
+  <div class="t-bubble">proration drifts by a cent on long invoices. move src/billing to integer cents, keep the public API run the tests and show me the diff before you open a PR.</div>
+  <p>Everything under <code>src/billing</code> now works as integer cents. <code>prorateCents</code> rounds once, at the end, half away from zero. so a 31-day invoice split over three proration events no longer drifts.</p>
+</div>
+<div class="t-assume" aria-hidden="true">will assume: &gt;refactor, &gt;src/billing, &gt;npm test, &gt;draft a PR, &gt;governed starts on qwen</div>
+<div class="t-composer" aria-hidden="true"><u>refactor</u> the proration helpers in <u>src/billing</u> to use integer cents, <u>run the tests</u>, then <u>open a PR</u>. keep it <u>cheap</u>.</div>
+<div class="t-gov" aria-hidden="true">Governance &nbsp; Smart</div>
+
+<div id="hx-dock"></div>
+
+<section class="t-panel" aria-label="test controls">
+  <h1>dock test</h1>
+  <div class="r"><button data-t="left">left sidebar</button><button data-t="right">right sidebar</button></div>
+  <div class="r"><button data-t="dock">dock on/off</button><button data-m="minimal">minimal</button><button data-m="normal">normal</button><button data-m="expanded">expanded</button><button data-m="edit">arrange</button></div>
+  <div class="r"><button data-p="-1">page ‹</button><button data-p="1">page ›</button><button data-c="nina">nina card</button><button data-c="kai">kai card</button></div>
+  <div class="r"><button data-s="0.12">slow motion</button><button data-s="1">normal speed</button></div>
+  <div class="t-log" aria-live="off"></div>
+</section>
+
+<script src="data.js"></script>
+<script>
+  /* stub of the shell's HX with the contract's API */
+  window.HX = (() => {
+    const bus = new EventTarget();
+    const log = (t, d) => { const el = document.querySelector('.t-log'); if (!el || t === 'hx:layout' || t === 'hx:dock') return; const line = document.createElement('div'); line.textContent = t + ' ' + JSON.stringify(d || {}); el.prepend(line); };
+    const HX = {
+      state: { tab: 'session', left: 'open', right: 'closed', dock: 'on', theme: 'dark' },
+      on(t, fn) { const w = e => fn(e.detail, e); (fn.__hx || (fn.__hx = {}))[t] = w; bus.addEventListener(t, w); },
+      off(t, fn) { if (fn.__hx && fn.__hx[t]) bus.removeEventListener(t, fn.__hx[t]); },
+      emit(t, d) { log(t, d); bus.dispatchEvent(new CustomEvent(t, { detail: d })); },
+      register(name, mod) {
+        const go = () => mod.mount(document.getElementById('hx-' + name), HX);
+        document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', go) : go();
+      },
+      setState(patch) {
+        const changed = Object.keys(patch).filter(k => HX.state[k] !== patch[k]);
+        Object.assign(HX.state, patch);
+        HX.emit('hx:state', { state: { ...HX.state }, changed });
+        if (changed.includes('tab')) HX.emit('hx:tab', { tab: HX.state.tab });
+      },
+      cards: null,
+      data: window.HX_DATA
+    };
+    return HX;
+  })();
+</script>
+<script src="components/components.js"></script>
+<script src="cards.js"></script>
+<script src="vendor/orb-avatar.min.js"></script>
+<script src="dock.js"></script>
+<script>
+  /* simulated shell layout: sidebars move the column; the composer and the dock follow centerX */
+  (() => {
+    const q = new URLSearchParams(location.search);
+    if (q.has('clean')) document.body.classList.add('clean');
+    const L = { open: () => Math.round(Math.min(336, Math.max(272, innerWidth * .175))), rail: () => 64, closed: () => 0 };
+    const R = { closed: () => 36, open: () => Math.round(Math.min(360, Math.max(300, innerWidth * .19))) };
+    if (q.get('left')) HX.state.left = q.get('left');
+    if (q.get('right')) HX.state.right = q.get('right');
+    if (innerWidth < 700) { HX.state.left = 'closed'; HX.state.right = 'none'; R.none = () => 0; }
+    function layout() {
+      const lw = L[HX.state.left](), rw = (R[HX.state.right] || R.closed)();
+      const W = innerWidth, colWidth = W - lw - rw, centerX = lw + colWidth / 2;
+      const st = document.documentElement.style;
+      st.setProperty('--t-left', lw + 'px'); st.setProperty('--t-right', rw + 'px');
+      st.setProperty('--t-cx', centerX + 'px'); st.setProperty('--t-colw', colWidth + 'px');
+      HX.emit('hx:layout', { centerX, colLeft: lw, colWidth, viewportW: W, viewportH: innerHeight });
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+      layout();
+      if (q.get('page')) hxDock.goPage(q.get('page'));
+      if (q.get('mode')) hxDock.setMode(q.get('mode'));
+      if (q.get('card')) hxDock.openCard(q.get('card'));
+    });
+    addEventListener('resize', layout);
+    HX.on('hx:state', d => { if (d.changed.includes('left') || d.changed.includes('right')) layout(); });
+    document.querySelector('.t-panel').addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b) return;
+      if (b.dataset.t === 'left') HX.setState({ left: { open: 'rail', rail: 'closed', closed: 'open' }[HX.state.left] });
+      if (b.dataset.t === 'right') HX.setState({ right: HX.state.right === 'open' ? 'closed' : 'open' });
+      if (b.dataset.t === 'dock') HX.setState({ dock: HX.state.dock === 'off' ? 'on' : 'off' });
+      if (b.dataset.m) hxDock.setMode(b.dataset.m);
+      if (b.dataset.p) { const o = hxDock.state.pages.filter(p => p.on).map(p => p.id); const i = o.indexOf(hxDock.state.page); hxDock.goPage(o[Math.max(0, Math.min(o.length - 1, i + +b.dataset.p))]); }
+      if (b.dataset.c) hxDock.openCard(b.dataset.c);
+      if (b.dataset.s) hxDock.timeScale(+b.dataset.s);
+    });
+  })();
+</script>
+</body>
+</html>

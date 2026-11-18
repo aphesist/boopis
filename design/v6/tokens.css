@@ -1,0 +1,276 @@
+/* hypotaxis v6 · shared tokens (owner: wireframe agent). The system is DESIGN.md; geometry per slot is LAYOUT.md.
+   Every colour, font, radius and density value is a custom property here. Modules use these and no literal colours.
+   Themes: four presets below (data-hx-preset on <html>), plus the user's overrides, which theme.js writes as inline
+   custom properties on <html> (Settings > Appearance). Translucent tokens are derived with color-mix() from the solid
+   ones, so a theme only has to choose solid colours. The dock is pitch black in every theme: --dock-bg is fixed and
+   the customizer never exposes it. */
+
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Libre+Franklin:wght@400;500;600&display=swap");
+
+/* ───────────── preset: Card catalog (default, warm dark) ───────────── */
+:root, [data-hx-preset="catalog"] {
+  color-scheme: dark;
+  /* surfaces, deepest to highest */
+  --bg-0: #0c0b0a;            /* inset: fields, cards set into the conversation */
+  --bg-1: #121110;            /* frame: title bar, sidebars, the open right panel, menus, palette */
+  --bg-2: #181715;            /* ground: under the conversation */
+  --bg-3: #23211e;            /* raised: the user's request, the composer, tooltips */
+  --bg-4: #2e2b27;            /* pressed, scrollbar thumb */
+  --chip: #26231f;            /* inline code chips */
+  /* text and icons */
+  --text: #e9e4da;
+  --text-strong: #f6f2ea;
+  --text-dim: #a59d90;        /* secondary: 7.0:1 on bg-2 */
+  --text-quiet: #958c7f;      /* meta: 5.4:1 on bg-2, 4.8:1 on bg-3 */
+  --text-faint: #5b554c;      /* decoration and disabled only */
+  --icon: #b3ab9e;
+  --icon-quiet: #7f786d;      /* window controls: 4.4:1 on bg-1 */
+  --icon-off: #4a453e;
+  /* selection, accent, attention, semantic */
+  --selected: #ece6da;        /* the selected segment, primary buttons */
+  --text-on-light: #1a1815;
+  --brass: #c8a66a;           /* the accent: you are here (focus, current, active rung, checked) */
+  --red: #e5484d;             /* attention: dots, outlines, fills */
+  --red-text: #f0646a;        /* attention as text */
+  --ok: #7fb68c;
+  --warn: #d9a54a;
+  --add: #7fb68c;
+  --del: #d97b72;
+  /* system colours (follow the scheme) */
+  --scrim: rgba(6, 5, 4, .6);
+  --shadow-pop: 0 16px 40px rgba(0, 0, 0, .5), 0 1px 3px rgba(0, 0, 0, .4);
+  --shadow-side: 20px 0 40px rgba(0, 0, 0, .4);
+  --shadow-side-r: -20px 0 40px rgba(0, 0, 0, .4);
+  --shadow-tip: 0 6px 18px rgba(0, 0, 0, .35);
+  /* type */
+  --sans: "Libre Franklin", "Franklin Gothic", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+/* ───────────── preset: Graphite (neutral grey, R = G = B, close to the owner's Figma) ───────────── */
+[data-hx-preset="graphite"] {
+  color-scheme: dark;
+  --bg-0: #070707;
+  --bg-1: #0b0b0b;
+  --bg-2: #111111;
+  --bg-3: #1f1f1f;
+  --bg-4: #2a2a2a;
+  --chip: #1c1c1c;
+  --text: #e8e8e8;
+  --text-strong: #ffffff;
+  --text-dim: #a3a3a3;
+  --text-quiet: #8f8f8f;
+  --text-faint: #4a4a4a;
+  --icon: #b6b6b6;
+  --icon-quiet: #6e6e6e;
+  --icon-off: #4b4b4b;
+  --selected: #e9e9e9;
+  --text-on-light: #161616;
+  --brass: #9db6cf;           /* steel: you are here, distinct from text (9.4:1 on the frame) */
+  --red: #e5484d;
+  --red-text: #f0646a;
+  --ok: #7cbf8e;
+  --warn: #d9a54a;
+  --add: #7cbf8e;
+  --del: #e07a76;
+  --scrim: rgba(0, 0, 0, .56);
+  --shadow-pop: 0 16px 40px rgba(0, 0, 0, .55), 0 1px 3px rgba(0, 0, 0, .4);
+  --shadow-side: 20px 0 40px rgba(0, 0, 0, .45);
+  --shadow-side-r: -20px 0 40px rgba(0, 0, 0, .45);
+  --shadow-tip: 0 6px 18px rgba(0, 0, 0, .4);
+  --sans: "Geist", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --mono: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+/* ───────────── preset: Bone (light) ───────────── */
+[data-hx-preset="bone"] {
+  color-scheme: light;
+  --bg-0: #fbf9f4;
+  --bg-1: #ebe6dc;
+  --bg-2: #f4f0e8;
+  --bg-3: #fffdf8;
+  --bg-4: #ddd6c9;
+  --chip: #e6e0d4;
+  --text: #23201c;
+  --text-strong: #0f0e0c;
+  --text-dim: #4e483f;
+  --text-quiet: #5c564c;      /* 5.8:1 on the frame, 5.0:1 on a selected row */
+  --text-faint: #b3ab9e;
+  --icon: #4f493f;
+  --icon-quiet: #7a7366;
+  --icon-off: #bdb5a7;
+  --selected: #23201c;
+  --text-on-light: #f6f2ea;
+  --brass: #8a6a2c;
+  --red: #cf3a3f;
+  --red-text: #a82328;        /* 4.9:1 on a selected row, 6.3:1 on the ground */
+  --ok: #3f7d4f;
+  --warn: #9a6a12;
+  --add: #356b43;             /* 5.1:1 on the frame */
+  --del: #a63d35;             /* 5.1:1 on the frame */
+  --scrim: rgba(40, 34, 26, .22);
+  --shadow-pop: 0 16px 40px rgba(40, 34, 26, .16), 0 1px 3px rgba(40, 34, 26, .1);
+  --shadow-side: 20px 0 40px rgba(40, 34, 26, .14);
+  --shadow-side-r: -20px 0 40px rgba(40, 34, 26, .14);
+  --shadow-tip: 0 6px 18px rgba(40, 34, 26, .14);
+  --sans: "Libre Franklin", "Franklin Gothic", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+/* ───────────── preset: Typewriter (mono, lowercase, round corners on graphite) ───────────── */
+[data-hx-preset="typewriter"] {
+  color-scheme: dark;
+  --bg-0: #000000;
+  --bg-1: #0b0b0b;
+  --bg-2: #111111;
+  --bg-3: #1f1f1f;
+  --bg-4: #2a2a2a;
+  --chip: #1c1c1c;
+  --text: #e8e8e8;
+  --text-strong: #ffffff;
+  --text-dim: #a3a3a3;
+  --text-quiet: #8f8f8f;
+  --text-faint: #4a4a4a;
+  --icon: #b6b6b6;
+  --icon-quiet: #6e6e6e;
+  --icon-off: #4b4b4b;
+  --selected: #e9e9e9;
+  --text-on-light: #161616;
+  --brass: #7ea6e0;           /* carbon-paper blue: you are here, distinct from text (7.9:1 on the frame) */
+  --red: #e5484d;
+  --red-text: #f0646a;
+  --ok: #7cbf8e;
+  --warn: #d9a54a;
+  --add: #7cbf8e;
+  --del: #e07a76;
+  --scrim: rgba(0, 0, 0, .56);
+  --shadow-pop: 0 16px 40px rgba(0, 0, 0, .55), 0 1px 3px rgba(0, 0, 0, .4);
+  --shadow-side: 20px 0 40px rgba(0, 0, 0, .45);
+  --shadow-side-r: -20px 0 40px rgba(0, 0, 0, .45);
+  --shadow-tip: 0 6px 18px rgba(0, 0, 0, .4);
+  --sans: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --mono: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+
+/* ───────────── everything else (shared by every theme) ───────────── */
+:root {
+  /* fixed: the dock is pitch black in every theme; not themeable */
+  --dock-bg: #000000;
+
+  /* derived from the solid colours above; recomputed when a theme or an override changes them */
+  --brass-base: var(--brass); /* the accent captured here, so a ground (the dock) can re-derive --brass without a cycle */
+  --accent: var(--brass);
+  --focus: var(--brass);
+  --brass-soft: color-mix(in srgb, var(--brass) 14%, transparent);
+  --red-soft: color-mix(in srgb, var(--red) 14%, transparent);
+  --hair: color-mix(in srgb, var(--text) 7.5%, transparent);    /* dividers inside a surface */
+  --line: color-mix(in srgb, var(--text) 15%, transparent);     /* outlines of controls */
+  --line-strong: color-mix(in srgb, var(--text) 26%, transparent);
+  --hover: color-mix(in srgb, var(--text) 4.5%, transparent);   /* hover fill */
+  --current: color-mix(in srgb, var(--text) 8.5%, transparent); /* the selected row */
+  --line-field: color-mix(in srgb, var(--text) 42%, transparent); /* text-field outline: 3:1 against the field and the frame */
+  --mark-off: color-mix(in srgb, var(--text-quiet) 55%, var(--text-faint)); /* inactive non-text marks: page dots, stations to come, empty rings (3:1 and up) */
+  --ink-on-dock: var(--text);             /* a light ink in every theme: dock text on #000, the eyes of a dark orb */
+  --ink-on-dock-strong: var(--text-strong);
+
+  /* interface case: none (sentence case as written) or lowercase (Typewriter); modules apply it to interface
+     labels with text-transform: var(--ui-case), never to content */
+  --ui-case: none;
+
+  /* type scale */
+  --fs-2xs: 11px;             /* mono meta: times, costs, call numbers, kbd */
+  --fs-xs: 12px;              /* labels, group headings, tooltips, secondary lines */
+  --fs-s: 13px;               /* interface default: rows, buttons, menus, tabs */
+  --fs-m: 14px;               /* reading: conversation prose, the composer */
+  --fs-l: 16px;               /* view and dialog titles */
+  --fs-xl: 20px;              /* the one display size: a bot's name under its orb */
+  --lh: 1.6;
+  --lh-ui: 1.35;
+  --lh-tight: 1.2;
+  --track: 0;
+  --track-mono: -.01em;
+
+  /* geometry */
+  --chrome-h: 40px;
+  --sb-w: clamp(256px, 15vw, 288px);
+  --sb-rail-w: 56px;
+  --right-w: clamp(300px, 18vw, 340px);
+  --right-rail-w: 28px;
+  --col-w: 720px;             /* conversation column, margin included */
+  --margin-w: 112px;          /* the call-number margin inside the column */
+  --measure: 608px;           /* prose width: col-w minus margin-w */
+  --composer-w: 720px;
+  --dock-rest-h: 72px;        /* the dock at rest; the shell follows the height the dock reports */
+  --composer-gap: 16px;
+  --gutter: 16px;
+
+  /* spacing steps */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+
+  /* density (regular) */
+  --row-h: 30px;              /* one-line row */
+  --row-h-2: 44px;            /* two-line row */
+  --ctl: 30px;                /* buttons, segmented control, the new row */
+  --ctl-s: 28px;              /* icon buttons */
+
+  /* corners: continuous where the engine has corner-shape (the @supports block below), a round arc otherwise.
+     Nested corners: inner = max(--r-floor, outer − gap) (DESIGN-SYSTEM.md §8) */
+  --r-xs: 5px;                /* kbd, code chips, stamps */
+  --r-s: 7px;                 /* buttons, rows, fields, chips, the segmented track, tooltips, wells */
+  --r-m: 12px;                /* cards, composer, menus, popovers, toasts */
+  --r-l: 16px;                /* where the ground meets the frame, the dock, dialogs, palette */
+  --r-pill: 999px;            /* dots, the switch, anything inside a pill */
+  --r-floor: 4px;             /* the smallest inner radius of a nested corner */
+  --corner: round;            /* the corner shape; superellipse(1.8) where supported */
+  --composer-pad: 6px;        /* the composer's actions sit this far from its edge */
+
+  /* depth */
+  --z-base: 0;
+  --z-right: 20;
+  --z-sidebar: 30;
+  --z-dock: 40;
+  --z-chrome: 50;
+  --z-menu: 70;
+  --z-palette: 80;
+  --z-toast: 90;
+  --z-tooltip: 100;
+
+  /* motion: no curve passes its mark (no bounce, no overshoot) */
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --spring: cubic-bezier(.22, 1, .36, 1);
+  --ease-io: cubic-bezier(.65, 0, .35, 1);
+  --dur-press: 90ms;
+  --dur-1: 150ms;             /* hover in */
+  --dur-out: 120ms;           /* hover out, exits, tooltips */
+  --dur-2: 200ms;             /* menus, fades */
+  --dur-slide: 240ms;         /* a thumb or indicator travelling */
+  --dur-3: 300ms;             /* layout travel */
+  --dur-breathe: 1.8s;        /* the one loop: a running dot */
+  --dur-hold: 1000ms;         /* hold to approve, everywhere */
+}
+/* light themes: the dock stays black, so its ink comes from the light grounds; fields need a stronger line */
+:root[data-hx-theme="light"] { --ink-on-dock: var(--bg-2); --ink-on-dock-strong: var(--bg-3); --line-field: color-mix(in srgb, var(--text) 54%, transparent); }
+
+/* interface case, corners and density: set by theme.js on <html> (each preset has defaults; the user may change them) */
+:root[data-hx-case="lower"] { --ui-case: lowercase; }
+:root[data-hx-corners="sharp"] { --r-xs: 2px; --r-s: 3px; --r-m: 6px; --r-l: 9px; --r-floor: 2px; }
+:root[data-hx-corners="round"] { --r-xs: 7px; --r-s: 11px; --r-m: 18px; --r-l: 22px; --r-floor: 6px; }
+/* continuous corners where the engine draws them: the curve eases in, so each step is larger to read the same.
+   After the two modifier lines (same specificity: order decides). */
+@supports (corner-shape: superellipse(2)) {
+  :root { --corner: superellipse(1.8); --r-xs: 7px; --r-s: 10px; --r-m: 16px; --r-l: 22px; --r-floor: 5px; }
+  :root[data-hx-corners="sharp"] { --r-xs: 3px; --r-s: 5px; --r-m: 9px; --r-l: 13px; --r-floor: 3px; }
+  :root[data-hx-corners="round"] { --r-xs: 10px; --r-s: 16px; --r-m: 26px; --r-l: 32px; --r-floor: 8px; }
+}
+:root[data-hx-density="compact"] { --row-h: 26px; --row-h-2: 40px; --ctl: 26px; --ctl-s: 24px; }
+:root[data-hx-density="comfortable"] { --row-h: 34px; --row-h-2: 50px; --ctl: 34px; --ctl-s: 32px; }
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-1: 1ms; --dur-out: 1ms; --dur-2: 1ms; --dur-slide: 1ms; --dur-3: 1ms; }
+}
