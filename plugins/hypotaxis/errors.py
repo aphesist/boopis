@@ -45,6 +45,14 @@ class HxCallError(HypotaxisError):
         super().__init__(message, data=data)
 
 
+class PricesError(HypotaxisError):
+    code = "hx.prices.unavailable"
+
+
+class PricesDisabledError(HypotaxisError):
+    code = "hx.prices.disabled"
+
+
 class InvalidParamsError(HypotaxisError):
     code = "hx.invalid_params"
 

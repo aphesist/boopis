@@ -39,7 +39,7 @@ SUBSCRIPTIONS: dict[str, str] = {}  # session id -> the viewer subscription sess
 
 @pytest.fixture(scope="module")
 def stack(hermes_install: HermesInstall, stack_root: Path, fake_model: FakeModelServer) -> Iterator[HermesStack]:
-    settings = {"prices": PRICES, "cost_cap_usd": CAP}
+    settings = {"prices": {"overrides": PRICES}, "cost_cap_usd": CAP}
     yield from run_stack(hermes_install, stack_root, fake_model.url, settings)
 
 

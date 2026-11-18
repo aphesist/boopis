@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 from hypotaxis.config import parse_settings
 from hypotaxis.errors import ChainBrokenError, InvalidTransitionError
-from hypotaxis.ledger import SessionLedger, build_table, compute_stats, ledger_filename, project_costs
+from hypotaxis.ledger import SessionLedger, build_book, compute_stats, ledger_filename, project_costs
 from hypotaxis.ledger.store import LedgerEvent
 
 OPENED = {"session_id": "s", "mode": "governed", "cwd": "/x", "hermes_version": "1", "plugin_version": "0.1.0"}
@@ -144,21 +144,21 @@ def test_a_safe_id_is_the_filename() -> None:
 
 
 def settings(prices: dict[str, Any]) -> Any:
-    loaded = parse_settings({"prices": prices})
+    loaded = parse_settings({"prices": {"overrides": prices}})
     assert loaded.errors == ()
     return loaded.value
 
 
 def test_table_version_is_a_hash_of_the_rates() -> None:
-    a = build_table(settings({"p/m": {"input": 1, "output": 2}}))
-    b = build_table(settings({"p/m": {"input": 1, "output": 2}}))
-    c = build_table(settings({"p/m": {"input": 1, "output": 3}}))
+    a = build_book(settings({"p/m": {"input": 1, "output": 2}}))
+    b = build_book(settings({"p/m": {"input": 1, "output": 2}}))
+    c = build_book(settings({"p/m": {"input": 1, "output": 3}}))
     assert a.version == b.version != c.version
     assert a.version.startswith("settings-")
 
 
 def test_costs_are_computed_from_tokens() -> None:
-    table = build_table(settings({"p/m": {"input": 2, "output": 10, "cache_read": 0.2}}))
+    table = build_book(settings({"p/m": {"input": 2, "output": 10, "cache_read": 0.2}}))
     records = [usage(input_tokens=1_000_000, output_tokens=100_000, cache_read_tokens=500_000)]
     costs = project_costs(records, table, ())
     assert costs.billed_usd == pytest.approx(2 + 1 + 0.1)
@@ -167,7 +167,7 @@ def test_costs_are_computed_from_tokens() -> None:
 
 
 def test_an_unpriced_model_has_no_cost_not_a_partial_one() -> None:
-    table = build_table(settings({"p/m": {"input": 2, "output": 10}}))
+    table = build_book(settings({"p/m": {"input": 2, "output": 10}}))
     costs = project_costs([usage(), usage(model="other")], table, ())
     assert costs.billed_usd is None
     assert costs.api_equivalent_usd is None
@@ -175,7 +175,7 @@ def test_an_unpriced_model_has_no_cost_not_a_partial_one() -> None:
 
 
 def test_a_subscription_without_a_price_bills_zero_and_has_no_api_equivalent() -> None:
-    table = build_table(settings({}))
+    table = build_book(settings({}))
     costs = project_costs([usage(provider="sub")], table, ("sub",))
     assert costs.billed_usd == 0.0
     assert costs.api_equivalent_usd is None
@@ -184,7 +184,7 @@ def test_a_subscription_without_a_price_bills_zero_and_has_no_api_equivalent() -
 
 
 def test_subscription_providers_bill_zero_and_keep_the_api_equivalent() -> None:
-    table = build_table(settings({"sub/m": {"input": 2, "output": 10}}))
+    table = build_book(settings({"sub/m": {"input": 2, "output": 10}}))
     costs = project_costs([usage(provider="sub", input_tokens=1_000_000, output_tokens=0)], table, ("sub",))
     assert costs.billed_usd == 0.0
     assert costs.api_equivalent_usd == pytest.approx(2.0)
@@ -201,8 +201,8 @@ def test_stats_are_read_off_the_events(tmp_path: Path) -> None:
     ledger.append("usage.recorded", "plugin", usage(input_tokens=500, output_tokens=100, cache_write_5m_tokens=7))
     ledger.append("approval.requested", "plugin", {"approval_id": "a", "kind": "k", "summary": "s", "rule": "r"})
     ledger.append("ship.restored", "plugin", {"ship_id": "x", "reason": "gate"})
-    table = build_table(settings({"p/m": {"input": 1, "output": 2}}))
-    stats = compute_stats(ledger.read(), table, table.version, ())
+    table = build_book(settings({"p/m": {"input": 1, "output": 2}}))
+    stats = compute_stats(ledger.read(), table, ())
     assert stats["tokens"] == {
         "input_uncached": 1500,
         "output": 300,
@@ -222,8 +222,8 @@ def test_stats_are_read_off_the_events(tmp_path: Path) -> None:
 def test_stats_with_no_price_say_unknown(tmp_path: Path) -> None:
     ledger = SessionLedger(tmp_path / "s.jsonl")
     ledger.append("usage.recorded", "plugin", usage())
-    table = build_table(settings({}))
-    stats = compute_stats(ledger.read(), table, table.version, ())
+    table = build_book(settings({}))
+    stats = compute_stats(ledger.read(), table, ())
     assert stats["cost_usd"] is None
     assert stats["cost_api_equivalent_usd"] is None
     assert stats["unpriced_models"] == ["p/m"]

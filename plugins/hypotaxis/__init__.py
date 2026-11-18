@@ -17,10 +17,19 @@ HOOKS = (
     "post_api_request",
     "post_auxiliary_call",
     "pre_llm_call",
+    "on_session_open",
     "on_session_start",
     "on_session_finalize",
 )
-RPC_METHODS = ("describe", "mode.set", "ledger.tail", "ledger.verify", "ledger.stats", "cascade.state")
+RPC_METHODS = (
+    "describe",
+    "mode.set",
+    "ledger.tail",
+    "ledger.verify",
+    "ledger.stats",
+    "cascade.state",
+    "prices.refresh",
+)
 
 
 def _lazy(module: str, name: str) -> Callable[..., Any]:

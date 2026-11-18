@@ -113,8 +113,8 @@ def _cost_cap(rt: Runtime, state: SessionState) -> dict[str, Any] | None:
 
 
 def _model_priced(state: SessionState) -> bool:
-    entries = state.price_table.entries
-    return any(ref.id == state.model and (not state.provider or ref.provider == state.provider) for ref in entries)
+    assert state.book is not None
+    return state.book.has(state.provider, state.model)
 
 
 def _usd(value: float) -> str:
@@ -127,7 +127,7 @@ def _record_budget(rt: Runtime, state: SessionState, cap: float, reason: str) ->
         rt.ledger(state).append(
             "budget.blocked",
             "plugin",
-            {"cap_usd": cap, "price_table": state.price_table.version, "reason": reason},
+            {"cap_usd": cap, "price_table": state.book.version if state.book else "", "reason": reason},
         )
         rt.ctx.emit_to_session(state.session_id, "budget.blocked", {"cap_usd": cap, "projected_usd": state.spend_usd})
     except Exception:  # noqa: BLE001 - the block itself must still happen
@@ -185,7 +185,8 @@ def _record_usage(kw: Mapping[str, Any], *, auxiliary: bool) -> None:
     if auxiliary and kw.get("aux_task"):
         payload["aux_task"] = str(kw["aux_task"])
     rt.ledger(state).append("usage.recorded", "plugin" if auxiliary else state.actor(), payload)
-    costs = project_costs([payload], state.price_table, state.settings.subscription_providers)
+    assert state.book is not None
+    costs = project_costs([payload], state.book, state.settings.subscription_providers)
     if costs.billed_usd is None:
         state.unpriced.update(costs.billed_unpriced)
     else:
@@ -206,6 +207,15 @@ def post_auxiliary_call(**kw: Any) -> None:
         _record_usage(kw, auxiliary=True)
     except Exception:  # noqa: BLE001
         _log.error("auxiliary usage not recorded", exc_info=True)
+
+
+def on_session_open(**kw: Any) -> None:
+    """A session was created or opened: remember where it works, for code that runs outside its turns."""
+    try:
+        rt = runtime()
+        rt.remember_cwd(str(kw.get("session_id") or ""), rt.ctx.session_cwd())
+    except Exception:  # noqa: BLE001
+        _log.error("session cwd not remembered", exc_info=True)
 
 
 def on_session_start(**kw: Any) -> None:

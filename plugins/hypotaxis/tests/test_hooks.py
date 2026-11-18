@@ -334,7 +334,7 @@ PRICES = {"p/m": {"input": 1000.0, "output": 2000.0}}  # $1000 and $2000 per Mto
 
 
 def test_no_cap_never_blocks(make_runtime: MakeRuntime) -> None:
-    rt, ctx = make_runtime({"prices": PRICES})
+    rt, ctx = make_runtime({"prices": {"overrides": PRICES}})
     first_prompt(rt, ctx)
     for _ in range(3):
         hooks.post_api_request(session_id=SID, model="m", provider="p", usage=HERMES_USAGE, api_duration=0.1)
@@ -342,7 +342,7 @@ def test_no_cap_never_blocks(make_runtime: MakeRuntime) -> None:
 
 
 def test_the_cap_blocks_the_turn_once_reached(make_runtime: MakeRuntime) -> None:
-    rt, ctx = make_runtime({"prices": PRICES, "cost_cap_usd": 0.2})
+    rt, ctx = make_runtime({"prices": {"overrides": PRICES}, "cost_cap_usd": 0.2})
     first_prompt(rt, ctx)
     hooks.post_api_request(session_id=SID, model="m", provider="p", usage=HERMES_USAGE, api_duration=0.1)  # $0.12
     assert hooks.pre_llm_call(session_id=SID, model="m") is None
@@ -376,7 +376,7 @@ def test_a_subscription_provider_needs_no_price_and_costs_nothing(make_runtime: 
 
 
 def test_a_resumed_session_counts_its_earlier_spend(make_runtime: MakeRuntime, home: Path) -> None:
-    config = {"prices": PRICES, "cost_cap_usd": 0.2}
+    config = {"prices": {"overrides": PRICES}, "cost_cap_usd": 0.2}
     rt, ctx = make_runtime(config)
     first_prompt(rt, ctx)
     for _ in range(2):
@@ -403,7 +403,7 @@ def test_describe(make_runtime: MakeRuntime) -> None:
 
 
 def test_ledger_tail_verify_stats(make_runtime: MakeRuntime) -> None:
-    rt, ctx = make_runtime({"prices": PRICES})
+    rt, ctx = make_runtime({"prices": {"overrides": PRICES}})
     first_prompt(rt, ctx)
     hooks.post_api_request(session_id=SID, model="m", provider="p", usage=HERMES_USAGE, api_duration=0.1)
     tail = rpc.ledger_tail({"session_id": SID, "since_seq": -1, "limit": 100})

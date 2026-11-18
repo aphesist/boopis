@@ -16,6 +16,8 @@
     {"code": "hx.budget.blocked", "rpc_code": -32000, "description": "The session reached its cost cap. New turns are blocked until the cap is raised."},
     {"code": "hx.process.unavailable", "rpc_code": -32000, "description": "The hx binary is missing, could not be started, or kept crashing and the plugin stopped restarting it. A client-side failure: hx itself never sends it."},
     {"code": "hx.process.timeout", "rpc_code": -32000, "description": "An hx call did not answer within the plugin's per-call timeout. The plugin sent $/cancelRequest first; data.cancelled says whether hx answered it."},
+    {"code": "hx.prices.unavailable", "rpc_code": -32000, "description": "The price catalogue could not be fetched, or the cached models-dev.json is not a valid catalogue. The previous file is left as it was."},
+    {"code": "hx.prices.disabled", "rpc_code": -32000, "description": "prices.refresh was called while the plugin's prices.refresh_enabled setting is false."},
     {"code": "hx.cancelled", "rpc_code": -32000, "description": "The request was cancelled with $/cancelRequest before it changed anything."},
     {"code": "hx.overloaded", "rpc_code": -32000, "description": "Too many requests are queued; retry later."},
     {"code": "hx.frame_too_large", "rpc_code": -32000, "description": "A request frame exceeded the maximum size and was dropped."},

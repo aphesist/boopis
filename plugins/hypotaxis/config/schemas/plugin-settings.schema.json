@@ -4,60 +4,194 @@
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "mode": {"type": "string", "enum": ["governed", "ungoverned"], "default": "governed"},
+    "mode": {
+      "type": "string",
+      "enum": [
+        "governed",
+        "ungoverned"
+      ],
+      "default": "governed"
+    },
     "ladder": {
-      "type": ["object", "null"],
+      "type": [
+        "object",
+        "null"
+      ],
       "additionalProperties": false,
-      "required": ["tiers"],
+      "required": [
+        "tiers"
+      ],
       "properties": {
-        "same_tier_scope_retry": {"type": "boolean"},
+        "same_tier_scope_retry": {
+          "type": "boolean"
+        },
         "tiers": {
           "type": "array",
           "minItems": 1,
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["name", "model"],
+            "required": [
+              "name",
+              "model"
+            ],
             "properties": {
-              "name": {"type": "string", "minLength": 1},
-              "model": {"type": "string", "pattern": "^[^/\\s]+/\\S+$"},
-              "effort": {"type": "string", "enum": ["none", "low", "medium", "high", "xhigh", "max"]},
-              "max_tokens": {"type": "integer", "minimum": 1},
-              "retries": {"type": "integer", "minimum": 0}
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "model": {
+                "type": "string",
+                "pattern": "^[^/\\s]+/\\S+$"
+              },
+              "effort": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "low",
+                  "medium",
+                  "high",
+                  "xhigh",
+                  "max"
+                ]
+              },
+              "max_tokens": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "retries": {
+                "type": "integer",
+                "minimum": 0
+              }
             }
           }
         }
       }
     },
-    "cost_cap_usd": {"type": ["number", "null"], "minimum": 0},
+    "cost_cap_usd": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
+    },
     "prices": {
-      "type": ["object", "null"],
-      "additionalProperties": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["input", "output"],
-        "properties": {
-          "input": {"type": "number", "minimum": 0},
-          "output": {"type": "number", "minimum": 0},
-          "cache_read": {"type": "number", "minimum": 0},
-          "cache_write_5m": {"type": "number", "minimum": 0},
-          "cache_write_1h": {"type": "number", "minimum": 0},
-          "reasoning": {"type": "number", "minimum": 0}
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "refresh_enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "overrides": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "input",
+              "output"
+            ],
+            "properties": {
+              "input": {
+                "type": "number",
+                "minimum": 0
+              },
+              "output": {
+                "type": "number",
+                "minimum": 0
+              },
+              "cache_read": {
+                "type": "number",
+                "minimum": 0
+              },
+              "cache_write_5m": {
+                "type": "number",
+                "minimum": 0
+              },
+              "cache_write_1h": {
+                "type": "number",
+                "minimum": 0
+              },
+              "reasoning": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        "aliases": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },
-    "subscription_providers": {"type": "array", "items": {"type": "string", "minLength": 1}, "default": []},
+    "subscription_providers": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "default": []
+    },
     "permissions": {
-      "type": ["object", "null"],
+      "type": [
+        "object",
+        "null"
+      ],
       "additionalProperties": false,
       "properties": {
-        "allow": {"type": "array", "items": {"type": "string", "minLength": 1}},
-        "ask": {"type": "array", "items": {"type": "string", "minLength": 1}},
-        "deny": {"type": "array", "items": {"type": "string", "minLength": 1}},
-        "default": {"type": "string", "enum": ["allow", "ask", "deny"], "default": "allow"}
+        "allow": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "ask": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "deny": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "default": {
+          "type": "string",
+          "enum": [
+            "allow",
+            "ask",
+            "deny"
+          ],
+          "default": "allow"
+        }
       }
     },
-    "hx_path": {"type": "string", "default": ""},
-    "ledger_dir": {"type": "string", "default": ""}
+    "hx_path": {
+      "type": "string",
+      "default": ""
+    },
+    "ledger_dir": {
+      "type": "string",
+      "default": ""
+    }
   }
 }

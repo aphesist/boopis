@@ -43,7 +43,15 @@ def test_register_wires_hooks_rpc_and_the_prompt_section() -> None:
     ctx = FakeCtx()
     hypotaxis.register(ctx)
     assert set(ctx.hooks) == set(hypotaxis.HOOKS)
-    assert set(ctx.rpc) == {"describe", "mode.set", "ledger.tail", "ledger.verify", "ledger.stats", "cascade.state"}
+    assert set(ctx.rpc) == {
+        "describe",
+        "mode.set",
+        "ledger.tail",
+        "ledger.verify",
+        "ledger.stats",
+        "cascade.state",
+        "prices.refresh",
+    }
     assert list(ctx.sections) == ["hypotaxis"]
 
 
