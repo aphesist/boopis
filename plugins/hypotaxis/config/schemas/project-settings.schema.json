@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "hypotaxis project settings (<project>/.hermes/hypotaxis.yaml)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"type": "integer", "enum": [1], "default": 1},
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "command": {"type": "string", "minLength": 1},
+        "timeout_s": {"type": "integer", "minimum": 1, "maximum": 86400, "default": 600}
+      }
+    },
+    "protected": {"type": "array", "items": {"type": "string", "minLength": 1}, "default": []},
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "allow": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "ask": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "deny": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "data_policy": {"type": "object", "default": {}}
+  }
+}
