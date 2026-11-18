@@ -219,8 +219,8 @@ GOVERNED: list[tuple[str, dict[str, Any], str]] = [
     ("web_search", {"query": "x"}, "allow"),
     ("skill_view", {"name": "x"}, "allow"),
     ("pack", {}, "allow"),
-    ("exec", {"code": "1"}, "allow"),
-    ("ship", {"edits": [{"path": "src/a.py"}]}, "allow"),
+    ("exec", {"code": "1"}, "block"),  # a worker's tool, not the orchestrator's
+    ("ship", {"edits": [{"path": "src/a.py"}]}, "block"),  # a worker's tool, not the orchestrator's
     ("dispatch", {"brief": "x"}, "allow"),
     ("write_file", {"path": "a.py", "content": "x"}, "block"),
     ("patch", {"path": "a.py", "old_string": "a", "new_string": "b"}, "block"),
