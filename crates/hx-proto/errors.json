@@ -10,14 +10,14 @@
     {"code": "hx.config.invalid", "rpc_code": -32000, "description": "A settings file or the plugin settings failed schema validation. data.errors lists file, key, expected and found for each problem."},
     {"code": "hx.policy.denied", "rpc_code": -32000, "description": "The permission policy blocked a tool call. A policy decision is surfaced to the model as a tool error, and to RPC callers with this code."},
     {"code": "hx.mode.locked", "rpc_code": -32000, "description": "The session's mode can no longer change: the first prompt has been submitted and the system prompt is frozen for prompt caching."},
-    {"code": "hx.ledger.chain_broken", "rpc_code": -32000, "description": "The session ledger failed verification. It is never repaired silently. data.broken_at_seq names the first bad event when known."},
+    {"code": "hx.ledger.chain_broken", "rpc_code": -32000, "description": "The session ledger failed verification. It is never repaired silently. `data.broken_at_seq` names the first bad event when known."},
     {"code": "hx.ledger.invalid_transition", "rpc_code": -32000, "description": "The ledger refused an event that contraprova's task projection does not allow. The event was not written."},
     {"code": "hx.ledger.unavailable", "rpc_code": -32000, "description": "The ledger could not be opened or written (I/O error, lock timeout)."},
     {"code": "hx.budget.blocked", "rpc_code": -32000, "description": "The session reached its cost cap. New turns are blocked until the cap is raised."},
     {"code": "hx.process.unavailable", "rpc_code": -32000, "description": "The hx binary is missing, could not be started, or kept crashing and the plugin stopped restarting it. A client-side failure: hx itself never sends it."},
     {"code": "hx.process.timeout", "rpc_code": -32000, "description": "An hx call did not answer within the plugin's per-call timeout. The plugin sent $/cancelRequest first; data.cancelled says whether hx answered it."},
     {"code": "hx.prices.unavailable", "rpc_code": -32000, "description": "The price catalogue could not be fetched, or the cached models-dev.json is not a valid catalogue. The previous file is left as it was."},
-    {"code": "hx.prices.disabled", "rpc_code": -32000, "description": "prices.refresh was called while the plugin's prices.refresh_enabled setting is false."},
+    {"code": "hx.prices.disabled", "rpc_code": -32000, "description": "`prices.refresh` was called while the plugin's `prices.refresh_enabled` setting is false."},
     {"code": "hx.cancelled", "rpc_code": -32000, "description": "The request was cancelled with $/cancelRequest before it changed anything."},
     {"code": "hx.overloaded", "rpc_code": -32000, "description": "Too many requests are queued; retry later."},
     {"code": "hx.frame_too_large", "rpc_code": -32000, "description": "A request frame exceeded the maximum size and was dropped."},
@@ -45,6 +45,11 @@
     {"code": "hx.pack.git_failed", "rpc_code": -32000, "description": "The `git` CLI is missing, exited with an error or printed output that could not be parsed."},
     {"code": "hx.pack.timeout", "rpc_code": -32000, "description": "The deadline passed before the call finished."},
     {"code": "hx.pack.config_invalid", "rpc_code": -32000, "description": "An embedded data file (`redact.rules.json`, `never_pack.json`, `languages.json`) or a query does not load. Fails closed."},
-    {"code": "hx.pack.io", "rpc_code": -32000, "description": "An unexpected operating-system error while reading under root."}
+    {"code": "hx.pack.io", "rpc_code": -32000, "description": "An unexpected operating-system error while reading under root."},
+    {"code": "hx.sandbox.unavailable", "rpc_code": -32000, "description": "The platform cannot enforce a requested sandbox dimension and the policy did not allow degrading it. Nothing ran. data.dimension and data.reason say which."},
+    {"code": "hx.sandbox.denied", "rpc_code": -32000, "description": "The OS refused while the sandbox was being built or applied, so the command did not run. data.step names the setup step."},
+    {"code": "hx.sandbox.spawn_failed", "rpc_code": -32000, "description": "A long-lived sandboxed child could not be started (`sandbox.spawn` only; `sandbox.run` reports the same condition as the exit kind `spawn_failed`)."},
+    {"code": "hx.sandbox.unknown_handle", "rpc_code": -32000, "description": "No running sandbox child has that handle: it never existed, or sandbox.wait already returned its exit."},
+    {"code": "hx.sandbox.too_many", "rpc_code": -32000, "description": "Too many sandbox children are running at once; wait for or kill one."}
   ]
 }

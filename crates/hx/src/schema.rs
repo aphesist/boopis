@@ -17,6 +17,7 @@ pub fn schema_document() -> Value {
     let mut b = SchemaBuilder::new();
     add_core(&mut b);
     hx_pack::add_schema(&mut b);
+    hx_sandbox::add_schema(&mut b);
     b.finish()
 }
 

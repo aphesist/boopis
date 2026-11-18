@@ -11,7 +11,7 @@ The Rust side of hypotaxis: the `hx` binary and its libraries. The plugin drives
 | `hx-txn` | the file transaction behind `ship`: safe paths, edits, journal, apply, restore, recover |
 | `hx` | the binary: `serve` over stdio, one-shot subcommands |
 | `hx-pack` | search, read, symbols, outlines, git status, redaction: the `pack.*` handlers, registered in `hx::build_dispatcher` |
-| `hx-sandbox` | owned by another workstream; it registers its handler in `hx::build_dispatcher` |
+| `hx-sandbox` | the OS sandbox and the `sandbox.*` handlers (run, spawn, wait, kill, capabilities), registered in `hx::build_dispatcher` |
 
 ## Invariants
 - Stdout carries protocol frames only.

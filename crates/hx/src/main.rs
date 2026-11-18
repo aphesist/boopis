@@ -6,6 +6,7 @@
 //! hx schema                     print the hx-v1 JSON Schema
 //! hx txn validate|apply|restore|discard|recover --json <file|->
 //! hx pack search|read|symbol|outline|status|bundle --json <file|->
+//! hx sandbox run --json <file|->     |     hx sandbox capabilities
 //! ```
 //!
 //! Stdout carries protocol frames (serve) or one JSON-RPC response (one-shot) and nothing else.
@@ -64,6 +65,11 @@ enum Command {
         #[command(subcommand)]
         action: PackAction,
     },
+    /// Run a command in the OS sandbox, or report what the sandbox can enforce here.
+    Sandbox {
+        #[command(subcommand)]
+        action: SandboxAction,
+    },
 }
 
 #[derive(Subcommand)]
@@ -80,6 +86,14 @@ enum PackAction {
     Status(Input),
     /// Several of the above under one byte budget (`pack.bundle`).
     Bundle(Input),
+}
+
+#[derive(Subcommand)]
+enum SandboxAction {
+    /// Run one command to completion (`sandbox.run`).
+    Run(Input),
+    /// What this host can enforce (`sandbox.capabilities`).
+    Capabilities,
 }
 
 #[derive(Subcommand)]
@@ -227,6 +241,17 @@ async fn run(cli: Cli) -> Result<ExitCode> {
                 PackAction::Bundle(i) => (method::PACK_BUNDLE, i),
             };
             run_oneshot(name, Some(&input.json)).await
+        }
+        Command::Sandbox { action } => {
+            init_logging(&cli, "warn")?;
+            match action {
+                SandboxAction::Run(input) => {
+                    run_oneshot(hx_sandbox::wire::METHOD_RUN, Some(&input.json)).await
+                }
+                SandboxAction::Capabilities => {
+                    run_oneshot(hx_sandbox::wire::METHOD_CAPABILITIES, None).await
+                }
+            }
         }
     }
 }

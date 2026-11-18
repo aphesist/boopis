@@ -376,6 +376,106 @@
       ],
       "type": "object"
     },
+    "Capabilities": {
+      "description": "What [`crate::capabilities`] reports.",
+      "properties": {
+        "fs": {
+          "$ref": "#/$defs/Capability",
+          "description": "Read-only and read-write path confinement, including denying reads elsewhere."
+        },
+        "inherited_handle": {
+          "$ref": "#/$defs/Capability",
+          "description": "Passing one extra socket or pipe handle to the child."
+        },
+        "network_allowlist": {
+          "$ref": "#/$defs/Capability",
+          "description": "`network: allowlist` of non-loopback hosts. Never available without an external proxy."
+        },
+        "network_loopback": {
+          "$ref": "#/$defs/Capability",
+          "description": "`network: loopback`."
+        },
+        "network_off": {
+          "$ref": "#/$defs/Capability",
+          "description": "`network: off`."
+        },
+        "os_version": {
+          "description": "Kernel or OS version string, when known.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "platform": {
+          "description": "`linux`, `macos`, `windows` or `unsupported`.",
+          "type": "string"
+        },
+        "process_tree_kill": {
+          "$ref": "#/$defs/Capability",
+          "description": "Killing the whole process tree on timeout, cancel or drop."
+        }
+      },
+      "required": [
+        "platform",
+        "fs",
+        "network_off",
+        "network_loopback",
+        "network_allowlist",
+        "process_tree_kill",
+        "inherited_handle"
+      ],
+      "type": "object"
+    },
+    "Capability": {
+      "description": "One thing the host can or cannot do.",
+      "properties": {
+        "available": {
+          "description": "Whether the sandbox can enforce this here, without the policy allowing degrading.",
+          "type": "boolean"
+        },
+        "detail": {
+          "description": "Versions, ABIs, and the reason when unavailable.",
+          "type": "string"
+        },
+        "mechanism": {
+          "description": "The mechanism used when available, or the best candidate when not.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "available",
+        "detail"
+      ],
+      "type": "object"
+    },
+    "Captured": {
+      "description": "One captured output stream.",
+      "properties": {
+        "text": {
+          "description": "The first `output_cap_bytes` bytes, decoded as UTF-8 with replacement characters.",
+          "type": "string"
+        },
+        "total_bytes": {
+          "description": "How many bytes the child wrote in total, counting the discarded ones.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "truncated": {
+          "description": "More output was produced than the cap, and the rest was discarded.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "text",
+        "truncated",
+        "total_bytes"
+      ],
+      "type": "object"
+    },
     "CaseMode": {
       "description": "How letter case is treated.",
       "oneOf": [
@@ -395,6 +495,64 @@
           "type": "string"
         }
       ]
+    },
+    "ChannelInfo": {
+      "description": "Where the plugin connects to reach the child's channel.",
+      "properties": {
+        "env": {
+          "description": "The environment variable the child reads its descriptor number from.",
+          "type": "string"
+        },
+        "fd": {
+          "description": "The descriptor number the child sees.",
+          "format": "int32",
+          "type": "integer"
+        },
+        "kind": {
+          "description": "`unix_socket`.",
+          "type": "string"
+        },
+        "path": {
+          "description": "The socket path. Connect once; the first connection is bridged to the child and the\nsocket is removed.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "path",
+        "env",
+        "fd"
+      ],
+      "type": "object"
+    },
+    "ChannelRequest": {
+      "description": "Asks `sandbox.spawn` for a private channel between the plugin and the child.\n\n`hx` creates a connected socket pair, gives the child one end under a descriptor number it\nlearns from the environment variable `env`, binds a Unix socket in a private directory\n(mode 0700, the socket 0600), and bridges the first connection to it onto the other end.\nThe child needs no network and no path access to use it, so it works with `net: false`.",
+      "properties": {
+        "accept_timeout_ms": {
+          "default": null,
+          "description": "How long to wait for the plugin to connect before closing the child's end.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "dir": {
+          "default": null,
+          "description": "A directory for the socket. Created with mode 0700 if missing; default: a fresh one\nunder the system temporary directory.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "env": {
+          "default": "HX_CHANNEL_FD",
+          "description": "Name of the environment variable that receives the descriptor number in the child.",
+          "type": "string"
+        }
+      },
+      "type": "object"
     },
     "ClosestMatch": {
       "description": "The closest place in the file to what an edit looked for.",
@@ -443,6 +601,45 @@
       ],
       "type": "object"
     },
+    "Degraded": {
+      "description": "Which dimensions may run with less enforcement than requested, instead of failing with\n`hx.sandbox.unavailable`. Everything defaults to false: the sandbox fails closed.",
+      "properties": {
+        "fs": {
+          "default": false,
+          "description": "Run without filesystem confinement if the platform has none.",
+          "type": "boolean"
+        },
+        "network": {
+          "default": false,
+          "description": "Fall back to **network off** when the requested mode (a host allowlist, or loopback\nwithout the privilege for it) cannot be enforced. Only if even off is impossible does\nthe run go ahead with an unrestricted network, and the report says so.",
+          "type": "boolean"
+        },
+        "process": {
+          "default": false,
+          "description": "Run without the OS-level process-tree guarantee (the timeout and output cap still apply).",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "DeniedData": {
+      "description": "`error.data` of `hx.sandbox.denied`.",
+      "properties": {
+        "os_error": {
+          "description": "The OS error.",
+          "type": "string"
+        },
+        "step": {
+          "description": "The setup step that failed.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "step",
+        "os_error"
+      ],
+      "type": "object"
+    },
     "DescribeResult": {
       "description": "Result of `hx.describe`.",
       "properties": {
@@ -474,6 +671,59 @@
         "version",
         "protocol",
         "capabilities"
+      ],
+      "type": "object"
+    },
+    "Dimension": {
+      "description": "A policy dimension, for error reporting.",
+      "oneOf": [
+        {
+          "const": "fs",
+          "description": "Filesystem confinement (`ro_paths`, `rw_paths`).",
+          "type": "string"
+        },
+        {
+          "const": "network",
+          "description": "Network access.",
+          "type": "string"
+        },
+        {
+          "const": "env",
+          "description": "Environment filtering.",
+          "type": "string"
+        },
+        {
+          "const": "process",
+          "description": "Process limits: timeout, output cap, process-tree kill.",
+          "type": "string"
+        }
+      ]
+    },
+    "DimensionReport": {
+      "description": "The enforcement of one dimension.",
+      "properties": {
+        "detail": {
+          "description": "What the mechanisms cover, what they miss, versions and ABIs.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mechanisms": {
+          "description": "The OS mechanisms that hold it, such as `landlock` or `appcontainer`.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/Status",
+          "description": "Whether the dimension is held."
+        }
+      },
+      "required": [
+        "status",
+        "mechanisms"
       ],
       "type": "object"
     },
@@ -658,6 +908,39 @@
       ],
       "type": "object"
     },
+    "Enforcement": {
+      "description": "What the sandbox enforced, per dimension, and by which mechanism. Built from what the setup\ncode actually applied, never from the policy alone.",
+      "properties": {
+        "env": {
+          "$ref": "#/$defs/DimensionReport",
+          "description": "Environment filtering: the child sees the allowlist and `env_set` only."
+        },
+        "fs": {
+          "$ref": "#/$defs/DimensionReport",
+          "description": "Filesystem confinement."
+        },
+        "network": {
+          "$ref": "#/$defs/DimensionReport",
+          "description": "Network access."
+        },
+        "platform": {
+          "description": "The platform backend: `linux`, `macos`, `windows` or `unsupported`.",
+          "type": "string"
+        },
+        "process": {
+          "$ref": "#/$defs/DimensionReport",
+          "description": "Process limits: timeout, output cap and killing the whole process tree."
+        }
+      },
+      "required": [
+        "platform",
+        "fs",
+        "network",
+        "env",
+        "process"
+      ],
+      "type": "object"
+    },
     "EntryKind": {
       "description": "The kind of a status entry.",
       "oneOf": [
@@ -700,6 +983,80 @@
         "message"
       ],
       "type": "object"
+    },
+    "ExitOutcome": {
+      "description": "How a child ended.",
+      "oneOf": [
+        {
+          "description": "The process exited by itself with this status code.",
+          "properties": {
+            "code": {
+              "description": "The exit status.",
+              "format": "int32",
+              "type": "integer"
+            },
+            "kind": {
+              "const": "exited",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "code"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "The process was ended by a signal (Unix only).",
+          "properties": {
+            "kind": {
+              "const": "signaled",
+              "type": "string"
+            },
+            "signal": {
+              "description": "The signal number.",
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "kind",
+            "signal"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "The timeout fired and the sandbox killed the process tree.",
+          "properties": {
+            "kind": {
+              "const": "timed_out",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "description": "The process never started: the program was not found or could not be executed. The\nsandbox itself was fine, otherwise the call returns an [`crate::Error`] instead.",
+          "properties": {
+            "kind": {
+              "const": "spawn_failed",
+              "type": "string"
+            },
+            "reason": {
+              "description": "Why, from the OS.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "reason"
+          ],
+          "type": "object"
+        }
+      ]
     },
     "FailureKind": {
       "description": "Why one edit failed validation.",
@@ -970,6 +1327,46 @@
         "start"
       ],
       "type": "object"
+    },
+    "Net": {
+      "anyOf": [
+        {
+          "description": "`false` is off, `true` is unrestricted.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/$defs/NetMode",
+          "description": "A named mode."
+        },
+        {
+          "description": "An allowlist of hosts. Only loopback names can be enforced; see\n[`NetworkPolicy::Allowlist`].",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      ],
+      "description": "The `net` parameter: `false` (off), `true` (unrestricted), `\"loopback\"`, or a list of hosts."
+    },
+    "NetMode": {
+      "description": "Named network modes for [`Net`].",
+      "oneOf": [
+        {
+          "const": "off",
+          "description": "No network.",
+          "type": "string"
+        },
+        {
+          "const": "loopback",
+          "description": "Loopback only.",
+          "type": "string"
+        },
+        {
+          "const": "on",
+          "description": "Unrestricted.",
+          "type": "string"
+        }
+      ]
     },
     "OutlineParams": {
       "description": "The parameters of `pack.outline` apart from the root.",
@@ -1476,6 +1873,456 @@
       ],
       "type": "object"
     },
+    "RunResult": {
+      "description": "The result of [`crate::run`].",
+      "properties": {
+        "duration_ms": {
+          "description": "Wall-clock time from spawn to exit, in milliseconds.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "enforcement": {
+          "$ref": "#/$defs/Enforcement",
+          "description": "What was enforced. When `exit` is `spawn_failed`, this is what was applied up to the\npoint the program failed to start."
+        },
+        "exit": {
+          "$ref": "#/$defs/ExitOutcome",
+          "description": "How the child ended."
+        },
+        "stderr": {
+          "$ref": "#/$defs/Captured",
+          "description": "Captured standard error."
+        },
+        "stdout": {
+          "$ref": "#/$defs/Captured",
+          "description": "Captured standard output."
+        }
+      },
+      "required": [
+        "exit",
+        "stdout",
+        "stderr",
+        "duration_ms",
+        "enforcement"
+      ],
+      "type": "object"
+    },
+    "SandboxKillParams": {
+      "description": "Params of `sandbox.kill`.",
+      "properties": {
+        "handle": {
+          "description": "From `sandbox.spawn`.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "handle"
+      ],
+      "type": "object"
+    },
+    "SandboxKillResult": {
+      "description": "Result of `sandbox.kill`.",
+      "properties": {
+        "killed": {
+          "description": "The kill was sent. Call `sandbox.wait` to collect the exit.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "killed"
+      ],
+      "type": "object"
+    },
+    "SandboxRunParams": {
+      "description": "Params of `sandbox.run`.",
+      "properties": {
+        "argv": {
+          "description": "The program and its arguments. Never a shell string.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "cpu_seconds": {
+          "default": null,
+          "description": "CPU seconds. Default: as many as the timeout; send `0` for no limit.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "cwd": {
+          "description": "Working directory; must lie inside `ro` or `rw`.",
+          "type": "string"
+        },
+        "degraded": {
+          "$ref": "#/$defs/Degraded",
+          "default": {
+            "fs": false,
+            "network": false,
+            "process": false
+          },
+          "description": "Dimensions that may run degraded instead of failing with `hx.sandbox.unavailable`. A\ndegraded network is network **off**."
+        },
+        "env": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "description": "Variables to set in the child, on top of the allowlisted ones.",
+          "type": "object"
+        },
+        "env_allowlist": {
+          "default": null,
+          "description": "Names to copy from the host environment. Default: `PATH`, locale and terminal names only.",
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "kill_grace_ms": {
+          "default": null,
+          "description": "Grace between the polite and the forced kill. Default: two seconds.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_file_bytes": {
+          "default": null,
+          "description": "Largest file a process may write, in bytes. Default 1 GiB; send `0` for no limit.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_processes": {
+          "default": null,
+          "description": "Processes the tree may add. Default 512; send `0` for no limit.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "memory_bytes": {
+          "default": null,
+          "description": "Memory limit in bytes. Default 4 GiB; send `0` for no limit.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "net": {
+          "$ref": "#/$defs/Net",
+          "default": false,
+          "description": "Network mode. Default: off."
+        },
+        "output_cap": {
+          "default": null,
+          "description": "Per-stream output cap in bytes. Default: 1 MiB.",
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "ro": {
+          "default": [],
+          "description": "Readable and executable paths.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "rw": {
+          "default": [],
+          "description": "Readable, writable and executable paths.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "timeout_ms": {
+          "default": null,
+          "description": "Wall-clock limit in milliseconds. Default: two minutes.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "argv",
+        "cwd"
+      ],
+      "type": "object"
+    },
+    "SandboxSpawnParams": {
+      "description": "Params of `sandbox.spawn`: everything `sandbox.run` takes, plus the channel.",
+      "properties": {
+        "argv": {
+          "description": "The program and its arguments. Never a shell string.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "channel": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChannelRequest"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Ask for a private channel to the child. Unix only for now."
+        },
+        "cpu_seconds": {
+          "default": null,
+          "description": "CPU seconds. Default: as many as the timeout; send `0` for no limit.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "cwd": {
+          "description": "Working directory; must lie inside `ro` or `rw`.",
+          "type": "string"
+        },
+        "degraded": {
+          "$ref": "#/$defs/Degraded",
+          "default": {
+            "fs": false,
+            "network": false,
+            "process": false
+          },
+          "description": "Dimensions that may run degraded instead of failing with `hx.sandbox.unavailable`. A\ndegraded network is network **off**."
+        },
+        "env": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "description": "Variables to set in the child, on top of the allowlisted ones.",
+          "type": "object"
+        },
+        "env_allowlist": {
+          "default": null,
+          "description": "Names to copy from the host environment. Default: `PATH`, locale and terminal names only.",
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "kill_grace_ms": {
+          "default": null,
+          "description": "Grace between the polite and the forced kill. Default: two seconds.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_file_bytes": {
+          "default": null,
+          "description": "Largest file a process may write, in bytes. Default 1 GiB; send `0` for no limit.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "max_processes": {
+          "default": null,
+          "description": "Processes the tree may add. Default 512; send `0` for no limit.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "memory_bytes": {
+          "default": null,
+          "description": "Memory limit in bytes. Default 4 GiB; send `0` for no limit.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "net": {
+          "$ref": "#/$defs/Net",
+          "default": false,
+          "description": "Network mode. Default: off."
+        },
+        "output_cap": {
+          "default": null,
+          "description": "Per-stream output cap in bytes. Default: 1 MiB.",
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "ro": {
+          "default": [],
+          "description": "Readable and executable paths.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "rw": {
+          "default": [],
+          "description": "Readable, writable and executable paths.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "timeout_ms": {
+          "default": null,
+          "description": "Wall-clock limit in milliseconds. Default: two minutes.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "argv",
+        "cwd"
+      ],
+      "type": "object"
+    },
+    "SandboxSpawnResult": {
+      "description": "Result of `sandbox.spawn`.",
+      "properties": {
+        "channel": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChannelInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The channel, when one was requested."
+        },
+        "enforcement": {
+          "$ref": "#/$defs/Enforcement",
+          "description": "What was enforced."
+        },
+        "handle": {
+          "description": "Opaque id (`UUIDv7`) for `sandbox.wait` and `sandbox.kill`.",
+          "type": "string"
+        },
+        "pid": {
+          "description": "The child's process id.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "handle",
+        "pid",
+        "enforcement"
+      ],
+      "type": "object"
+    },
+    "SandboxWaitParams": {
+      "description": "Params of `sandbox.wait`.",
+      "properties": {
+        "handle": {
+          "description": "From `sandbox.spawn`.",
+          "type": "string"
+        },
+        "timeout_ms": {
+          "default": 0,
+          "description": "How long to wait for the exit. `0` (the default) polls: it returns at once.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "handle"
+      ],
+      "type": "object"
+    },
+    "SandboxWaitResult": {
+      "description": "Result of `sandbox.wait`. While the child runs, `running` is true and the output is what it\nhas written so far (each stream capped). After the exit the handle is gone.",
+      "properties": {
+        "duration_ms": {
+          "description": "Milliseconds since `sandbox.spawn`.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "exit": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExitOutcome"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "How it ended, once it has."
+        },
+        "running": {
+          "description": "Whether the child is still running.",
+          "type": "boolean"
+        },
+        "stderr": {
+          "$ref": "#/$defs/Captured",
+          "description": "Standard error so far."
+        },
+        "stdout": {
+          "$ref": "#/$defs/Captured",
+          "description": "Standard output so far."
+        }
+      },
+      "required": [
+        "running",
+        "stdout",
+        "stderr",
+        "duration_ms"
+      ],
+      "type": "object"
+    },
     "SearchParams": {
       "description": "The parameters of `pack.search` apart from the root (a bundle shares one root).",
       "properties": {
@@ -1750,6 +2597,26 @@
         "unreadable"
       ],
       "type": "object"
+    },
+    "Status": {
+      "description": "Whether a dimension was held, loosened with permission, or not restricted by request.",
+      "oneOf": [
+        {
+          "const": "enforced",
+          "description": "Everything requested for this dimension is enforced by `mechanisms`.",
+          "type": "string"
+        },
+        {
+          "const": "degraded",
+          "description": "The platform cannot enforce what was requested, the policy allowed degrading, and the\nrun went ahead with less. `detail` says what is missing.",
+          "type": "string"
+        },
+        {
+          "const": "unrestricted",
+          "description": "The policy asked for no restriction in this dimension (for example `network: on`).",
+          "type": "string"
+        }
+      ]
     },
     "StatusCounts": {
       "description": "Counts over all entries, not only the listed ones.",
@@ -2196,6 +3063,24 @@
         }
       ]
     },
+    "UnavailableData": {
+      "description": "`error.data` of `hx.sandbox.unavailable`.",
+      "properties": {
+        "dimension": {
+          "$ref": "#/$defs/Dimension",
+          "description": "The dimension that cannot be enforced."
+        },
+        "reason": {
+          "description": "Why.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "dimension",
+        "reason"
+      ],
+      "type": "object"
+    },
     "ValidateParams": {
       "description": "Parameters of `txn.validate`.",
       "properties": {
@@ -2324,6 +3209,16 @@
   },
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "errors": {
+    "hx.sandbox.denied": {
+      "data": {
+        "$ref": "#/$defs/DeniedData"
+      }
+    },
+    "hx.sandbox.unavailable": {
+      "data": {
+        "$ref": "#/$defs/UnavailableData"
+      }
+    },
     "hx.txn.aborted_before_write": {
       "data": {
         "$ref": "#/$defs/AbortedBeforeWriteData"
@@ -2423,6 +3318,44 @@
       },
       "result": {
         "$ref": "#/$defs/SymbolResponse"
+      }
+    },
+    "sandbox.capabilities": {
+      "params": null,
+      "result": {
+        "$ref": "#/$defs/Capabilities"
+      }
+    },
+    "sandbox.kill": {
+      "params": {
+        "$ref": "#/$defs/SandboxKillParams"
+      },
+      "result": {
+        "$ref": "#/$defs/SandboxKillResult"
+      }
+    },
+    "sandbox.run": {
+      "params": {
+        "$ref": "#/$defs/SandboxRunParams"
+      },
+      "result": {
+        "$ref": "#/$defs/RunResult"
+      }
+    },
+    "sandbox.spawn": {
+      "params": {
+        "$ref": "#/$defs/SandboxSpawnParams"
+      },
+      "result": {
+        "$ref": "#/$defs/SandboxSpawnResult"
+      }
+    },
+    "sandbox.wait": {
+      "params": {
+        "$ref": "#/$defs/SandboxWaitParams"
+      },
+      "result": {
+        "$ref": "#/$defs/SandboxWaitResult"
       }
     },
     "txn.apply": {

@@ -1,7 +1,6 @@
 //! The `hx` binary's library: the dispatcher wiring, the stdio server and the one-shot runner.
 //!
-//! - [`build_dispatcher`] registers every handler crate. `hx-sandbox` adds its handler here
-//!   when it exists.
+//! - [`build_dispatcher`] registers every handler crate: txn, pack and sandbox.
 //! - [`serve`] speaks newline-delimited JSON-RPC 2.0 over any async reader and writer.
 //! - [`oneshot`] runs a single method for debugging and tests, through the same dispatcher.
 
@@ -14,6 +13,7 @@ use std::sync::Arc;
 
 use hx_pack::{PackHandler, WalkCache};
 use hx_proto::Dispatcher;
+use hx_sandbox::SandboxHandler;
 use hx_txn::TxnHandler;
 
 use crate::invalidate::InvalidatingHandler;
@@ -45,6 +45,9 @@ pub fn build_dispatcher() -> Dispatcher {
         dispatcher
             .register(Arc::new(PackHandler::new(cache)))
             .expect("pack methods are unique and in the pack namespace");
+        dispatcher
+            .register(Arc::new(SandboxHandler::new()))
+            .expect("sandbox methods are unique and in the sandbox namespace");
     }
     dispatcher
 }
@@ -70,6 +73,11 @@ mod tests {
             "pack.outline",
             "pack.status",
             "pack.bundle",
+            "sandbox.run",
+            "sandbox.capabilities",
+            "sandbox.spawn",
+            "sandbox.wait",
+            "sandbox.kill",
         ] {
             assert!(methods.contains(&m), "{m}");
         }
@@ -78,6 +86,7 @@ mod tests {
         assert!(caps.contains(&"pack.search".to_owned()));
         assert!(caps.contains(&"pack.lang.rust".to_owned()));
         assert_eq!(d.describe().methods, methods);
+        assert!(caps.contains(&"sandbox.run".to_owned()));
         assert_eq!(d.describe().protocol, "hx-v1");
     }
 }

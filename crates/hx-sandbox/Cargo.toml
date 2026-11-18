@@ -1,0 +1,53 @@
+[package]
+name = "hx-sandbox"
+description = "The OS sandbox for hypotaxis's exec kernel and gate commands: read-only workspace, writable scratch, network off, allowlisted environment, timeout, output cap, process-tree kill."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+hx-proto.workspace = true
+uuid.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+schemars.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tokio = { workspace = true, features = ["rt", "sync", "time", "io-util", "process", "macros", "net"] }
+tokio-util.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+# Compiles the seccomp-bpf program in the parent, so the child only installs it.
+seccompiler = { version = "0.5", default-features = false }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+  "Win32_Foundation",
+  "Win32_Security",
+  "Win32_Security_Authorization",
+  "Win32_Security_Isolation",
+  "Win32_Storage_FileSystem",
+  "Win32_System_JobObjects",
+  "Win32_System_Memory",
+  "Win32_System_Pipes",
+  "Win32_System_SystemServices",
+  "Win32_System_Threading",
+  "Win32_NetworkManagement_WindowsFirewall",
+] }
+
+[dev-dependencies]
+tempfile.workspace = true
+proptest.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time", "process", "io-util", "sync"] }
+
+[target.'cfg(unix)'.dev-dependencies]
+libc = "0.2"

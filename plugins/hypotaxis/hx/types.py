@@ -336,6 +336,148 @@ class BundleTruncation:
 
 
 @dataclass(frozen=True, slots=True)
+class Capabilities:
+    """What [`crate::capabilities`] reports."""
+
+    fs: Capability
+    inherited_handle: Capability
+    network_allowlist: Capability
+    network_loopback: Capability
+    network_off: Capability
+    platform: str
+    process_tree_kill: Capability
+    os_version: str | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['fs'] = self.fs.to_wire()
+        out['inherited_handle'] = self.inherited_handle.to_wire()
+        out['network_allowlist'] = self.network_allowlist.to_wire()
+        out['network_loopback'] = self.network_loopback.to_wire()
+        out['network_off'] = self.network_off.to_wire()
+        out['platform'] = self.platform
+        out['process_tree_kill'] = self.process_tree_kill.to_wire()
+        if self.os_version is not None:
+            out['os_version'] = self.os_version
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "Capabilities":
+        return cls(
+            fs=Capability.from_wire(data['fs']),
+            inherited_handle=Capability.from_wire(data['inherited_handle']),
+            network_allowlist=Capability.from_wire(data['network_allowlist']),
+            network_loopback=Capability.from_wire(data['network_loopback']),
+            network_off=Capability.from_wire(data['network_off']),
+            platform=data['platform'],
+            process_tree_kill=Capability.from_wire(data['process_tree_kill']),
+            os_version=(None if data['os_version'] is None else data['os_version']) if 'os_version' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class Capability:
+    """One thing the host can or cannot do."""
+
+    available: bool
+    detail: str
+    mechanism: str | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['available'] = self.available
+        out['detail'] = self.detail
+        if self.mechanism is not None:
+            out['mechanism'] = self.mechanism
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "Capability":
+        return cls(
+            available=data['available'],
+            detail=data['detail'],
+            mechanism=(None if data['mechanism'] is None else data['mechanism']) if 'mechanism' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class Captured:
+    """One captured output stream."""
+
+    text: str
+    total_bytes: int
+    truncated: bool
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['text'] = self.text
+        out['total_bytes'] = self.total_bytes
+        out['truncated'] = self.truncated
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "Captured":
+        return cls(
+            text=data['text'],
+            total_bytes=data['total_bytes'],
+            truncated=data['truncated'],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class ChannelInfo:
+    """Where the plugin connects to reach the child's channel."""
+
+    env: str
+    fd: int
+    kind: str
+    path: str
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['env'] = self.env
+        out['fd'] = self.fd
+        out['kind'] = self.kind
+        out['path'] = self.path
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "ChannelInfo":
+        return cls(
+            env=data['env'],
+            fd=data['fd'],
+            kind=data['kind'],
+            path=data['path'],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class ChannelRequest:
+    """Asks `sandbox.spawn` for a private channel between the plugin and the child. `hx` creates a connected socket pair, gives the child one end under a descriptor number it learns from the environment variable `env`, binds a Unix socket in a private directory (mode 0700, the socket 0600), and bridges the first connection to it onto the other end. The child needs no network and no path access to use it, so it works with `net: false`."""
+
+    accept_timeout_ms: int | None = None
+    dir: str | None = None
+    env: str = 'HX_CHANNEL_FD'
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        if self.accept_timeout_ms is not None:
+            out['accept_timeout_ms'] = self.accept_timeout_ms
+        if self.dir is not None:
+            out['dir'] = self.dir
+        out['env'] = self.env
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "ChannelRequest":
+        return cls(
+            accept_timeout_ms=(None if data['accept_timeout_ms'] is None else data['accept_timeout_ms']) if 'accept_timeout_ms' in data else None,
+            dir=(None if data['dir'] is None else data['dir']) if 'dir' in data else None,
+            env=data['env'] if 'env' in data else 'HX_CHANNEL_FD',
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class ClosestMatch:
     """The closest place in the file to what an edit looked for."""
 
@@ -370,6 +512,51 @@ class ClosestMatch:
 
 
 @dataclass(frozen=True, slots=True)
+class Degraded:
+    """Which dimensions may run with less enforcement than requested, instead of failing with `hx.sandbox.unavailable`. Everything defaults to false: the sandbox fails closed."""
+
+    fs: bool = False
+    network: bool = False
+    process: bool = False
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['fs'] = self.fs
+        out['network'] = self.network
+        out['process'] = self.process
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "Degraded":
+        return cls(
+            fs=data['fs'] if 'fs' in data else False,
+            network=data['network'] if 'network' in data else False,
+            process=data['process'] if 'process' in data else False,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class DeniedData:
+    """`error.data` of `hx.sandbox.denied`."""
+
+    os_error: str
+    step: str
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['os_error'] = self.os_error
+        out['step'] = self.step
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "DeniedData":
+        return cls(
+            os_error=data['os_error'],
+            step=data['step'],
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class DescribeResult:
     """Result of `hx.describe`."""
 
@@ -394,6 +581,31 @@ class DescribeResult:
             protocol=data['protocol'],
             version=data['version'],
             methods=[x for x in data['methods']] if 'methods' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class DimensionReport:
+    """The enforcement of one dimension."""
+
+    mechanisms: list[str]
+    status: Status
+    detail: str | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['mechanisms'] = [x for x in self.mechanisms]
+        out['status'] = self.status
+        if self.detail is not None:
+            out['detail'] = self.detail
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "DimensionReport":
+        return cls(
+            mechanisms=[x for x in data['mechanisms']],
+            status=data['status'],
+            detail=(None if data['detail'] is None else data['detail']) if 'detail' in data else None,
         )
 
 
@@ -550,6 +762,36 @@ class EditFailure:
 
 
 @dataclass(frozen=True, slots=True)
+class Enforcement:
+    """What the sandbox enforced, per dimension, and by which mechanism. Built from what the setup code actually applied, never from the policy alone."""
+
+    env: DimensionReport
+    fs: DimensionReport
+    network: DimensionReport
+    platform: str
+    process: DimensionReport
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['env'] = self.env.to_wire()
+        out['fs'] = self.fs.to_wire()
+        out['network'] = self.network.to_wire()
+        out['platform'] = self.platform
+        out['process'] = self.process.to_wire()
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "Enforcement":
+        return cls(
+            env=DimensionReport.from_wire(data['env']),
+            fs=DimensionReport.from_wire(data['fs']),
+            network=DimensionReport.from_wire(data['network']),
+            platform=data['platform'],
+            process=DimensionReport.from_wire(data['process']),
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class ErrorBody:
     """The `{code, message}` pair a bundle item carries when it fails."""
 
@@ -567,6 +809,80 @@ class ErrorBody:
         return cls(
             code=data['code'],
             message=data['message'],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class ExitedExitOutcome:
+    """The process exited by itself with this status code."""
+
+    code: int
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['kind'] = 'exited'
+        out['code'] = self.code
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "ExitedExitOutcome":
+        return cls(
+            code=data['code'],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class SignaledExitOutcome:
+    """The process was ended by a signal (Unix only)."""
+
+    signal: int
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['kind'] = 'signaled'
+        out['signal'] = self.signal
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "SignaledExitOutcome":
+        return cls(
+            signal=data['signal'],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class TimedOutExitOutcome:
+    """The timeout fired and the sandbox killed the process tree."""
+
+    pass
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['kind'] = 'timed_out'
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "TimedOutExitOutcome":
+        return cls(
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class SpawnFailedExitOutcome:
+    """The process never started: the program was not found or could not be executed. The sandbox itself was fine, otherwise the call returns an [`crate::Error`] instead."""
+
+    reason: str
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['kind'] = 'spawn_failed'
+        out['reason'] = self.reason
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "SpawnFailedExitOutcome":
+        return cls(
+            reason=data['reason'],
         )
 
 
@@ -1063,6 +1379,300 @@ class RestoreResult:
 
 
 @dataclass(frozen=True, slots=True)
+class RunResult:
+    """The result of [`crate::run`]."""
+
+    duration_ms: int
+    enforcement: Enforcement
+    exit: ExitOutcome
+    stderr: Captured
+    stdout: Captured
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['duration_ms'] = self.duration_ms
+        out['enforcement'] = self.enforcement.to_wire()
+        out['exit'] = self.exit.to_wire()
+        out['stderr'] = self.stderr.to_wire()
+        out['stdout'] = self.stdout.to_wire()
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "RunResult":
+        return cls(
+            duration_ms=data['duration_ms'],
+            enforcement=Enforcement.from_wire(data['enforcement']),
+            exit=_exit_outcome_from_wire(data['exit']),
+            stderr=Captured.from_wire(data['stderr']),
+            stdout=Captured.from_wire(data['stdout']),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class SandboxKillParams:
+    """Params of `sandbox.kill`."""
+
+    handle: str
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['handle'] = self.handle
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "SandboxKillParams":
+        return cls(
+            handle=data['handle'],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class SandboxKillResult:
+    """Result of `sandbox.kill`."""
+
+    killed: bool
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['killed'] = self.killed
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "SandboxKillResult":
+        return cls(
+            killed=data['killed'],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class SandboxRunParams:
+    """Params of `sandbox.run`."""
+
+    argv: list[str]
+    cwd: str
+    cpu_seconds: int | None = None
+    degraded: Degraded | None = None
+    env: dict[str, Any] | None = None
+    env_allowlist: list[str] | None = None
+    kill_grace_ms: int | None = None
+    max_file_bytes: int | None = None
+    max_processes: int | None = None
+    memory_bytes: int | None = None
+    net: Net = False
+    output_cap: int | None = None
+    ro: list[str] | None = None
+    rw: list[str] | None = None
+    timeout_ms: int | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['argv'] = [x for x in self.argv]
+        out['cwd'] = self.cwd
+        if self.cpu_seconds is not None:
+            out['cpu_seconds'] = self.cpu_seconds
+        if self.degraded is not None:
+            out['degraded'] = self.degraded.to_wire()
+        if self.env is not None:
+            out['env'] = self.env
+        if self.env_allowlist is not None:
+            out['env_allowlist'] = [x for x in self.env_allowlist]
+        if self.kill_grace_ms is not None:
+            out['kill_grace_ms'] = self.kill_grace_ms
+        if self.max_file_bytes is not None:
+            out['max_file_bytes'] = self.max_file_bytes
+        if self.max_processes is not None:
+            out['max_processes'] = self.max_processes
+        if self.memory_bytes is not None:
+            out['memory_bytes'] = self.memory_bytes
+        out['net'] = self.net
+        if self.output_cap is not None:
+            out['output_cap'] = self.output_cap
+        if self.ro is not None:
+            out['ro'] = [x for x in self.ro]
+        if self.rw is not None:
+            out['rw'] = [x for x in self.rw]
+        if self.timeout_ms is not None:
+            out['timeout_ms'] = self.timeout_ms
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "SandboxRunParams":
+        return cls(
+            argv=[x for x in data['argv']],
+            cwd=data['cwd'],
+            cpu_seconds=(None if data['cpu_seconds'] is None else data['cpu_seconds']) if 'cpu_seconds' in data else None,
+            degraded=Degraded.from_wire(data['degraded']) if 'degraded' in data else None,
+            env=data['env'] if 'env' in data else None,
+            env_allowlist=(None if data['env_allowlist'] is None else [x for x in data['env_allowlist']]) if 'env_allowlist' in data else None,
+            kill_grace_ms=(None if data['kill_grace_ms'] is None else data['kill_grace_ms']) if 'kill_grace_ms' in data else None,
+            max_file_bytes=(None if data['max_file_bytes'] is None else data['max_file_bytes']) if 'max_file_bytes' in data else None,
+            max_processes=(None if data['max_processes'] is None else data['max_processes']) if 'max_processes' in data else None,
+            memory_bytes=(None if data['memory_bytes'] is None else data['memory_bytes']) if 'memory_bytes' in data else None,
+            net=data['net'] if 'net' in data else False,
+            output_cap=(None if data['output_cap'] is None else data['output_cap']) if 'output_cap' in data else None,
+            ro=[x for x in data['ro']] if 'ro' in data else None,
+            rw=[x for x in data['rw']] if 'rw' in data else None,
+            timeout_ms=(None if data['timeout_ms'] is None else data['timeout_ms']) if 'timeout_ms' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class SandboxSpawnParams:
+    """Params of `sandbox.spawn`: everything `sandbox.run` takes, plus the channel."""
+
+    argv: list[str]
+    cwd: str
+    channel: ChannelRequest | None = None
+    cpu_seconds: int | None = None
+    degraded: Degraded | None = None
+    env: dict[str, Any] | None = None
+    env_allowlist: list[str] | None = None
+    kill_grace_ms: int | None = None
+    max_file_bytes: int | None = None
+    max_processes: int | None = None
+    memory_bytes: int | None = None
+    net: Net = False
+    output_cap: int | None = None
+    ro: list[str] | None = None
+    rw: list[str] | None = None
+    timeout_ms: int | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['argv'] = [x for x in self.argv]
+        out['cwd'] = self.cwd
+        if self.channel is not None:
+            out['channel'] = self.channel.to_wire()
+        if self.cpu_seconds is not None:
+            out['cpu_seconds'] = self.cpu_seconds
+        if self.degraded is not None:
+            out['degraded'] = self.degraded.to_wire()
+        if self.env is not None:
+            out['env'] = self.env
+        if self.env_allowlist is not None:
+            out['env_allowlist'] = [x for x in self.env_allowlist]
+        if self.kill_grace_ms is not None:
+            out['kill_grace_ms'] = self.kill_grace_ms
+        if self.max_file_bytes is not None:
+            out['max_file_bytes'] = self.max_file_bytes
+        if self.max_processes is not None:
+            out['max_processes'] = self.max_processes
+        if self.memory_bytes is not None:
+            out['memory_bytes'] = self.memory_bytes
+        out['net'] = self.net
+        if self.output_cap is not None:
+            out['output_cap'] = self.output_cap
+        if self.ro is not None:
+            out['ro'] = [x for x in self.ro]
+        if self.rw is not None:
+            out['rw'] = [x for x in self.rw]
+        if self.timeout_ms is not None:
+            out['timeout_ms'] = self.timeout_ms
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "SandboxSpawnParams":
+        return cls(
+            argv=[x for x in data['argv']],
+            cwd=data['cwd'],
+            channel=(None if data['channel'] is None else ChannelRequest.from_wire(data['channel'])) if 'channel' in data else None,
+            cpu_seconds=(None if data['cpu_seconds'] is None else data['cpu_seconds']) if 'cpu_seconds' in data else None,
+            degraded=Degraded.from_wire(data['degraded']) if 'degraded' in data else None,
+            env=data['env'] if 'env' in data else None,
+            env_allowlist=(None if data['env_allowlist'] is None else [x for x in data['env_allowlist']]) if 'env_allowlist' in data else None,
+            kill_grace_ms=(None if data['kill_grace_ms'] is None else data['kill_grace_ms']) if 'kill_grace_ms' in data else None,
+            max_file_bytes=(None if data['max_file_bytes'] is None else data['max_file_bytes']) if 'max_file_bytes' in data else None,
+            max_processes=(None if data['max_processes'] is None else data['max_processes']) if 'max_processes' in data else None,
+            memory_bytes=(None if data['memory_bytes'] is None else data['memory_bytes']) if 'memory_bytes' in data else None,
+            net=data['net'] if 'net' in data else False,
+            output_cap=(None if data['output_cap'] is None else data['output_cap']) if 'output_cap' in data else None,
+            ro=[x for x in data['ro']] if 'ro' in data else None,
+            rw=[x for x in data['rw']] if 'rw' in data else None,
+            timeout_ms=(None if data['timeout_ms'] is None else data['timeout_ms']) if 'timeout_ms' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class SandboxSpawnResult:
+    """Result of `sandbox.spawn`."""
+
+    enforcement: Enforcement
+    handle: str
+    pid: int
+    channel: ChannelInfo | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['enforcement'] = self.enforcement.to_wire()
+        out['handle'] = self.handle
+        out['pid'] = self.pid
+        if self.channel is not None:
+            out['channel'] = self.channel.to_wire()
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "SandboxSpawnResult":
+        return cls(
+            enforcement=Enforcement.from_wire(data['enforcement']),
+            handle=data['handle'],
+            pid=data['pid'],
+            channel=(None if data['channel'] is None else ChannelInfo.from_wire(data['channel'])) if 'channel' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class SandboxWaitParams:
+    """Params of `sandbox.wait`."""
+
+    handle: str
+    timeout_ms: int = 0
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['handle'] = self.handle
+        out['timeout_ms'] = self.timeout_ms
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "SandboxWaitParams":
+        return cls(
+            handle=data['handle'],
+            timeout_ms=data['timeout_ms'] if 'timeout_ms' in data else 0,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class SandboxWaitResult:
+    """Result of `sandbox.wait`. While the child runs, `running` is true and the output is what it has written so far (each stream capped). After the exit the handle is gone."""
+
+    duration_ms: int
+    running: bool
+    stderr: Captured
+    stdout: Captured
+    exit: ExitOutcome | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['duration_ms'] = self.duration_ms
+        out['running'] = self.running
+        out['stderr'] = self.stderr.to_wire()
+        out['stdout'] = self.stdout.to_wire()
+        if self.exit is not None:
+            out['exit'] = self.exit.to_wire()
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "SandboxWaitResult":
+        return cls(
+            duration_ms=data['duration_ms'],
+            running=data['running'],
+            stderr=Captured.from_wire(data['stderr']),
+            stdout=Captured.from_wire(data['stdout']),
+            exit=(None if data['exit'] is None else _exit_outcome_from_wire(data['exit'])) if 'exit' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class SearchParams:
     """The parameters of `pack.search` apart from the root (a bundle shares one root)."""
 
@@ -1555,6 +2165,27 @@ class SymbolResponse:
 
 
 @dataclass(frozen=True, slots=True)
+class UnavailableData:
+    """`error.data` of `hx.sandbox.unavailable`."""
+
+    dimension: Dimension
+    reason: str
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['dimension'] = self.dimension
+        out['reason'] = self.reason
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "UnavailableData":
+        return cls(
+            dimension=data['dimension'],
+            reason=data['reason'],
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class ValidateParams:
     """Parameters of `txn.validate`."""
 
@@ -1668,17 +2299,25 @@ class WithheldFile:
 
 CaseMode = Literal['smart', 'sensitive', 'insensitive']
 
+Dimension = Literal['fs', 'network', 'env', 'process']
+
 EntryKind = Literal['changed', 'renamed', 'conflicted', 'untracked']
 
 FailureKind = Literal['no_match', 'ambiguous', 'not_found', 'already_exists', 'not_utf8', 'invalid_diff', 'path_unsafe', 'is_directory', 'not_regular', 'unreadable', 'too_large', 'unsupported']
 
 ItemOutput = Any
 
+Net = Any
+
+NetMode = Literal['off', 'loopback', 'on']
+
 OutlineStatus = Literal['ok', 'unsupported', 'binary', 'too_large', 'parse_failed', 'unreadable']
 
 PatternMode = Literal['regex', 'literal']
 
 ReadStatus = Literal['ok', 'withheld', 'binary', 'too_large']
+
+Status = Literal['enforced', 'degraded', 'unrestricted']
 
 Truncation = Literal['max_bytes', 'max_matches', 'max_items', 'line_clipped']
 
@@ -1711,6 +2350,20 @@ def _edit_from_wire(data: Mapping[str, Any]) -> Edit:
     return cast(Edit, _edit_variants[data['op']].from_wire(data))
 
 
+ExitOutcome = ExitedExitOutcome | SignaledExitOutcome | TimedOutExitOutcome | SpawnFailedExitOutcome
+
+_exit_outcome_variants: dict[str, Any] = {
+    'exited': ExitedExitOutcome,
+    'signaled': SignaledExitOutcome,
+    'timed_out': TimedOutExitOutcome,
+    'spawn_failed': SpawnFailedExitOutcome,
+}
+
+
+def _exit_outcome_from_wire(data: Mapping[str, Any]) -> ExitOutcome:
+    return cast(ExitOutcome, _exit_outcome_variants[data['op']].from_wire(data))
+
+
 METHODS: dict[str, tuple[type | None, type | None]] = {
     'hx.describe': (None, DescribeResult),
     'pack.bundle': (BundleRequest, BundleResponse),
@@ -1719,6 +2372,11 @@ METHODS: dict[str, tuple[type | None, type | None]] = {
     'pack.search': (SearchRequest, SearchResponse),
     'pack.status': (StatusRequest, StatusResponse),
     'pack.symbol': (SymbolRequest, SymbolResponse),
+    'sandbox.capabilities': (None, Capabilities),
+    'sandbox.kill': (SandboxKillParams, SandboxKillResult),
+    'sandbox.run': (SandboxRunParams, RunResult),
+    'sandbox.spawn': (SandboxSpawnParams, SandboxSpawnResult),
+    'sandbox.wait': (SandboxWaitParams, SandboxWaitResult),
     'txn.apply': (ApplyParams, ApplyResult),
     'txn.discard': (JournalRef, DiscardResult),
     'txn.recover': (RecoverParams, RecoverResult),
@@ -1728,6 +2386,8 @@ METHODS: dict[str, tuple[type | None, type | None]] = {
 
 # typed `data` of the error codes that carry any
 ERROR_DATA: dict[str, type] = {
+    'hx.sandbox.denied': DeniedData,
+    'hx.sandbox.unavailable': UnavailableData,
     'hx.txn.aborted_before_write': AbortedBeforeWriteData,
     'hx.txn.apply_failed': ApplyFailedData,
     'hx.txn.invalid_state': JournalData,
