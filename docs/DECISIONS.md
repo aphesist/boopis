@@ -194,6 +194,17 @@ They're not sandboxed, matching Claude Code. This is the only exception to the n
 - CI fails if a copy differs from its source.
 - Codes the plugin owns (`hx.config.*`, `hx.policy.*`, `hx.mode.*`, `hx.ledger.*`, `hx.budget.*`) are added to `crates/hx-proto/errors.json`, not kept in a second catalogue.
 
+## ADR-0017 Sandbox mechanisms per OS
+**Context.** ARCHITECTURE section 7 named bubblewrap, Landlock and seccomp for Linux, Seatbelt for macOS and AppContainer for Windows. The `hx-sandbox` work settled the details.
+
+**Decision.**
+- **Linux:** Landlock (ABI 3 or later, probed at runtime) for the filesystem, seccomp for network syscalls and a syscall deny-list, and a private network namespace for loopback-only. Every child also gets `setsid` plus `killpg`, a PID namespace when user namespaces allow it, `no_new_privs`, dropped capabilities and rlimits. There's no bubblewrap and no setuid helper.
+- **macOS:** a Seatbelt profile run through `sandbox-exec`, with paths passed as parameters, ported from Codex (Apache-2.0, notice kept).
+- **Windows:** a per-run AppContainer with filesystem ACLs and capability SIDs for the network, plus a kill-on-close job object with limits. This beats Codex's dedicated-user design for us: no elevated setup, and reads are actually blocked.
+- **Fail closed everywhere:** a dimension the platform can't enforce returns `hx.sandbox.unavailable` unless the policy explicitly accepts degraded enforcement, and every run reports what was enforced. A host allowlist the OS can't enforce falls back to network off. A real allowlist comes later through a host-side proxy.
+
+**Consequences.** Linux is verified with real processes in CI. macOS and Windows compile in CI and are verified on real machines before release (`crates/hx-sandbox/tests/{macos,windows}.rs`).
+
 ## ADR-0012 Prices
 Prices come from the models.dev catalogue plus a user override table. Hermes's models.dev data is not reachable through its public plugin API, so:
 - the plugin reads a cached catalogue file, `<profile home>/hypotaxis/prices/models-dev.json`;
