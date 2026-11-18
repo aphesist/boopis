@@ -1,0 +1,119 @@
+"""``register(ctx)``: thin, lazy, and honest against the manifest."""
+
+from __future__ import annotations
+
+import importlib.util
+import subprocess
+import sys
+from pathlib import Path
+from typing import Any
+
+import pytest
+from support import FakeCtx
+
+PLUGIN_DIR = Path(__file__).resolve().parent.parent
+IMPORT_BUDGET_MS = 150  # docs/STANDARDS.md section 6
+
+
+@pytest.fixture
+def manifest() -> dict[str, Any]:
+    hermes_yaml = pytest.importorskip("hermes_yaml", reason="needs Hermes's loader (set HX_HERMES_SRC)")
+    return hermes_yaml.safe_load((PLUGIN_DIR / "plugin.yaml").read_text(encoding="utf-8"))  # type: ignore[no-any-return]
+
+
+def test_the_manifest_is_honest(manifest: dict[str, Any]) -> None:
+    import hypotaxis
+    from hypotaxis.version import PLUGIN_VERSION
+
+    ctx = FakeCtx()
+    hypotaxis.register(ctx)
+    assert set(manifest["provides_hooks"]) == set(ctx.hooks)
+    assert manifest["provides_tools"] == []  # no tool is declared before it is registered
+    assert manifest["version"] == PLUGIN_VERSION
+    assert manifest["kind"] == "standalone"
+    assert manifest["manifest_version"] == 2
+    assert manifest["requires_hermes"] == ">=0.23.2"
+    assert manifest["capabilities"] == []
+    assert manifest["name"] == "hypotaxis"
+
+
+def test_register_wires_hooks_rpc_and_the_prompt_section() -> None:
+    import hypotaxis
+
+    ctx = FakeCtx()
+    hypotaxis.register(ctx)
+    assert set(ctx.hooks) == set(hypotaxis.HOOKS)
+    assert set(ctx.rpc) == {"describe", "mode.set", "ledger.tail", "ledger.verify", "ledger.stats", "cascade.state"}
+    assert list(ctx.sections) == ["hypotaxis"]
+
+
+def test_lazy_wrappers_reach_the_real_hooks(make_runtime: Any, project: Path) -> None:
+    import hypotaxis
+
+    _, ctx = make_runtime()
+    hypotaxis.register(ctx)
+    assert ctx.rpc["describe"]({})["protocol"] == "hypotaxis-v1"
+    ctx.rpc["mode.set"]({"session_id": "s", "mode": "governed"})
+    text = ctx.sections["hypotaxis"]({"session_id": "s", "cwd": str(project), "model": "m", "provider": "p"})
+    assert "governed session" in text
+    got = ctx.hooks["pre_tool_call"](tool_name="write_file", args={"path": "a"}, session_id="s", tool_call_id="c")
+    assert got is not None
+    assert got["action"] == "block"
+
+
+def test_the_prompt_section_is_short_and_deterministic() -> None:
+    from hypotaxis.prompt import MAX_CHARS, governed_text
+
+    text = governed_text()
+    assert len(text) < MAX_CHARS
+    assert text == governed_text()
+    assert "{" not in text  # no unfilled placeholder
+    assert "$" not in text  # no prices, no counters: nothing that changes mid-session
+
+
+def test_the_prompt_section_lists_exactly_the_policys_read_only_tools() -> None:
+    from hypotaxis.policy.data import load_defaults
+    from hypotaxis.prompt import governed_text
+
+    text = governed_text()
+    for tool in load_defaults().read_only_tools:
+        assert tool in text
+
+
+def test_importing_and_registering_stays_inside_the_budget() -> None:
+    """Load the package the way Hermes does (by path, as ``hermes_plugins.hypotaxis``) in a fresh
+    interpreter, and time import plus ``register``."""
+    code = f"""
+import importlib.util, sys, time
+sys.path = [p for p in sys.path if 'contraprova' not in p]
+t0 = time.perf_counter()
+spec = importlib.util.spec_from_file_location('hermes_plugins.hypotaxis', {str(PLUGIN_DIR / "__init__.py")!r},
+                                              submodule_search_locations=[{str(PLUGIN_DIR)!r}])
+mod = importlib.util.module_from_spec(spec)
+sys.modules['hermes_plugins.hypotaxis'] = mod
+spec.loader.exec_module(mod)
+class Ctx:
+    plugin_id = 'hypotaxis'
+    def register_hook(self, *a, **k): pass
+    def register_rpc(self, *a, **k): pass
+    def register_system_prompt_section(self, *a, **k): pass
+mod.register(Ctx())
+elapsed = (time.perf_counter() - t0) * 1000
+heavy = [m for m in sys.modules if m.split('.')[0] in ('contraprova', 'hermes_yaml', 'ruamel')]
+print(elapsed, ','.join(heavy))
+"""
+    best = None
+    for _ in range(3):
+        done = subprocess.run([sys.executable, "-I", "-c", code], capture_output=True, text=True, check=True)
+        ms, _, heavy = done.stdout.strip().partition(" ")
+        assert heavy == "", f"register() imported {heavy}"
+        best = float(ms) if best is None else min(best, float(ms))
+    assert best is not None
+    assert best < IMPORT_BUDGET_MS, f"{best:.1f} ms"
+    print(f"plugin import + register: {best:.1f} ms")
+
+
+def test_the_module_layout_loads_as_a_package_without_the_test_path() -> None:
+    spec = importlib.util.find_spec("hypotaxis")
+    assert spec is not None
+    assert spec.submodule_search_locations is not None

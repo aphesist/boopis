@@ -1,0 +1,209 @@
+[
+  {
+    "api_mode": "anthropic_messages",
+    "hook_usage": {
+      "cache_read_tokens": 300,
+      "cache_write_by_ttl": [
+        [
+          "5m",
+          20
+        ],
+        [
+          "1h",
+          40
+        ]
+      ],
+      "cache_write_tokens": 60,
+      "input_tokens": 100,
+      "output_tokens": 40,
+      "prompt_tokens": 460,
+      "reasoning_tokens": 0,
+      "request_count": 1,
+      "total_tokens": 500
+    },
+    "name": "anthropic",
+    "provider": "anthropic",
+    "raw": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 40,
+        "ephemeral_5m_input_tokens": 20
+      },
+      "cache_creation_input_tokens": 60,
+      "cache_read_input_tokens": 300,
+      "input_tokens": 100,
+      "output_tokens": 40
+    },
+    "shape": "anthropic"
+  },
+  {
+    "api_mode": "anthropic_messages",
+    "hook_usage": {
+      "cache_read_tokens": 0,
+      "cache_write_by_ttl": [],
+      "cache_write_tokens": 50,
+      "input_tokens": 10,
+      "output_tokens": 5,
+      "prompt_tokens": 60,
+      "reasoning_tokens": 0,
+      "request_count": 1,
+      "total_tokens": 65
+    },
+    "name": "anthropic_single_write_bucket",
+    "provider": "anthropic",
+    "raw": {
+      "cache_creation_input_tokens": 50,
+      "cache_read_input_tokens": 0,
+      "input_tokens": 10,
+      "output_tokens": 5
+    },
+    "shape": "anthropic"
+  },
+  {
+    "api_mode": "chat_completions",
+    "hook_usage": {
+      "cache_read_tokens": 400,
+      "cache_write_by_ttl": [],
+      "cache_write_tokens": 0,
+      "input_tokens": 600,
+      "output_tokens": 200,
+      "prompt_tokens": 1000,
+      "reasoning_tokens": 120,
+      "request_count": 1,
+      "total_tokens": 1200
+    },
+    "name": "openai_chat",
+    "provider": "openai",
+    "raw": {
+      "completion_tokens": 200,
+      "completion_tokens_details": {
+        "reasoning_tokens": 120
+      },
+      "prompt_tokens": 1000,
+      "prompt_tokens_details": {
+        "cached_tokens": 400
+      },
+      "total_tokens": 1200
+    },
+    "shape": "openai"
+  },
+  {
+    "api_mode": "codex_responses",
+    "hook_usage": {
+      "cache_read_tokens": 600,
+      "cache_write_by_ttl": [],
+      "cache_write_tokens": 0,
+      "input_tokens": 300,
+      "output_tokens": 150,
+      "prompt_tokens": 900,
+      "reasoning_tokens": 100,
+      "request_count": 1,
+      "total_tokens": 1050
+    },
+    "name": "openai_responses",
+    "provider": "openai",
+    "raw": {
+      "input_tokens": 900,
+      "input_tokens_details": {
+        "cached_tokens": 600
+      },
+      "output_tokens": 150,
+      "output_tokens_details": {
+        "reasoning_tokens": 100
+      }
+    },
+    "shape": "openai"
+  },
+  {
+    "api_mode": "chat_completions",
+    "hook_usage": {
+      "cache_read_tokens": 320,
+      "cache_write_by_ttl": [],
+      "cache_write_tokens": 0,
+      "input_tokens": 180,
+      "output_tokens": 80,
+      "prompt_tokens": 500,
+      "reasoning_tokens": 30,
+      "request_count": 1,
+      "total_tokens": 580
+    },
+    "name": "deepseek",
+    "provider": "deepseek",
+    "raw": {
+      "completion_tokens": 80,
+      "completion_tokens_details": {
+        "reasoning_tokens": 30
+      },
+      "prompt_cache_hit_tokens": 320,
+      "prompt_cache_miss_tokens": 180,
+      "prompt_tokens": 500
+    },
+    "shape": "deepseek"
+  },
+  {
+    "api_mode": "chat_completions",
+    "hook_usage": {
+      "cache_read_tokens": 0,
+      "cache_write_by_ttl": [],
+      "cache_write_tokens": 0,
+      "input_tokens": 100,
+      "output_tokens": 10,
+      "prompt_tokens": 100,
+      "reasoning_tokens": 0,
+      "request_count": 1,
+      "total_tokens": 110
+    },
+    "name": "openai_compatible_no_cache",
+    "provider": "custom",
+    "raw": {
+      "completion_tokens": 10,
+      "prompt_tokens": 100,
+      "total_tokens": 110
+    },
+    "shape": "openai"
+  },
+  {
+    "api_mode": "chat_completions",
+    "hook_usage": {
+      "cache_read_tokens": 500,
+      "cache_write_by_ttl": [],
+      "cache_write_tokens": 0,
+      "input_tokens": 300,
+      "output_tokens": 200,
+      "prompt_tokens": 800,
+      "reasoning_tokens": 140,
+      "request_count": 1,
+      "total_tokens": 1000
+    },
+    "name": "gemini",
+    "provider": "gemini",
+    "raw": {
+      "cachedContentTokenCount": 500,
+      "candidatesTokenCount": 60,
+      "promptTokenCount": 800,
+      "thoughtsTokenCount": 140,
+      "totalTokenCount": 1000
+    },
+    "shape": "gemini"
+  },
+  {
+    "api_mode": "chat_completions",
+    "hook_usage": {
+      "cache_read_tokens": 0,
+      "cache_write_by_ttl": [],
+      "cache_write_tokens": 0,
+      "input_tokens": 70,
+      "output_tokens": 25,
+      "prompt_tokens": 70,
+      "reasoning_tokens": 0,
+      "request_count": 1,
+      "total_tokens": 95
+    },
+    "name": "ollama",
+    "provider": "ollama",
+    "raw": {
+      "eval_count": 25,
+      "prompt_eval_count": 70
+    },
+    "shape": "ollama"
+  }
+]

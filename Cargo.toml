@@ -53,6 +53,13 @@ dbg_macro = "deny"
 module_name_repetitions = "allow"
 missing_errors_doc = "allow"
 
+[profile.dev]
+debug = "line-tables-only"
+incremental = false  # the build machine is disk-constrained; re-enable locally if you like
+
+[profile.dev.package."*"]
+debug = false
+
 [profile.release]
 lto = "thin"
 codegen-units = 1

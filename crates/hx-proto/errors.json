@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "protocol": "hx-v1",
+  "errors": [
+    {"code": "hx.parse_error", "rpc_code": -32700, "description": "The frame is not valid JSON."},
+    {"code": "hx.invalid_request", "rpc_code": -32600, "description": "The frame is JSON but not a valid JSON-RPC 2.0 request (batches are not supported)."},
+    {"code": "hx.method_not_found", "rpc_code": -32601, "description": "No handler is registered for the method."},
+    {"code": "hx.invalid_params", "rpc_code": -32602, "description": "The params do not match the method's schema."},
+    {"code": "hx.internal_error", "rpc_code": -32603, "description": "An unexpected failure inside hx. Infrastructure failure, not a tool outcome."},
+    {"code": "hx.cancelled", "rpc_code": -32000, "description": "The request was cancelled with $/cancelRequest before it changed anything."},
+    {"code": "hx.overloaded", "rpc_code": -32000, "description": "Too many requests are queued; retry later."},
+    {"code": "hx.frame_too_large", "rpc_code": -32000, "description": "A request frame exceeded the maximum size and was dropped."},
+    {"code": "hx.txn.aborted_before_write", "rpc_code": -32000, "description": "At least one edit failed validation. Nothing was written. data.failures lists each failed edit with the closest match and its line numbers."},
+    {"code": "hx.txn.scope_violation", "rpc_code": -32000, "description": "An edit targets a path outside the allowed globs. Checked before journaling. data.paths lists the paths."},
+    {"code": "hx.txn.protected_path", "rpc_code": -32000, "description": "An edit targets a protected path. Checked before journaling. data.paths lists the paths."},
+    {"code": "hx.txn.invalid_root", "rpc_code": -32000, "description": "The workspace root cannot be opened as a directory."},
+    {"code": "hx.txn.limit_exceeded", "rpc_code": -32000, "description": "The transaction exceeds a size or count limit."},
+    {"code": "hx.txn.conflict", "rpc_code": -32000, "description": "A touched file changed between validation and write. Nothing was written."},
+    {"code": "hx.txn.workspace_busy", "rpc_code": -32000, "description": "Another transaction holds the workspace lock."},
+    {"code": "hx.txn.apply_failed", "rpc_code": -32000, "description": "A write failed after the transaction started. The workspace was restored from the journal; data.restored is true."},
+    {"code": "hx.txn.journal_not_found", "rpc_code": -32000, "description": "No journal with that id exists in the journal directory."},
+    {"code": "hx.txn.journal_corrupt", "rpc_code": -32000, "description": "The journal's manifest or data failed verification. Nothing was changed."},
+    {"code": "hx.txn.journal_busy", "rpc_code": -32000, "description": "The journal is in use by a live transaction."},
+    {"code": "hx.txn.invalid_state", "rpc_code": -32000, "description": "The journal is not in a state that allows this operation."},
+    {"code": "hx.txn.restore_failed", "rpc_code": -32000, "description": "Restoring from the journal failed. The journal is kept; run txn.recover or retry txn.restore."},
+    {"code": "hx.txn.io_error", "rpc_code": -32000, "description": "An unexpected I/O failure before any workspace write."}
+  ]
+}
