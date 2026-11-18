@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "_comment": "Numbers the hook runner and the readers use (docs/STANDARDS.md rule 6). Seconds unless the name says otherwise.",
+  "hook_timeout_s": {
+    "default": 600,
+    "UserPromptSubmit": 30,
+    "PreModelSwitch": 30,
+    "PostModelSwitch": 30,
+    "MessageDisplay": 10
+  },
+  "hermes_callback_timeout_default_s": 30,
+  "callback_timeout_margin_s": 1,
+  "hook_output_cap_bytes": 1048576,
+  "additional_context_cap_chars": 10000,
+  "stop_continuation_cap": 8,
+  "max_parallel_hooks": 16,
+  "import_depth": 4,
+  "memory_max_bytes": 262144,
+  "scan_max_files_per_dir": 500,
+  "settings_ignored_in_repo_files": {
+    "permissions.defaultMode": [
+      "bypassPermissions",
+      "auto"
+    ]
+  }
+}
