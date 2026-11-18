@@ -126,12 +126,25 @@ It registers:
 - Prices come from Hermes's models.dev data, with a per-user override table. Dollars are always a projection of tokens and never stored (contraprova's rule).
 - **Governed mode** (the default):
   - The session model is the orchestrator. It has `pack` (read-only, outlines) and `dispatch(brief)`.
-  - `dispatch` runs the cascade **deterministically in the plugin**. Each attempt is a Hermes subagent (`delegate_task`) on the tier's model, with toolset `hypotaxis` (pack, exec, ship).
+  - `dispatch` runs the cascade **deterministically in the plugin**. Each attempt is a Hermes `delegate_task` child, routed by the plugin's delegation provider to the tier's model (ADR-0007), with the worker toolset (pack, exec, ship).
+  - Children finish in the background and re-enter the orchestrator as a turn.
   - Every write goes through `ship`, so every attempt ends at the gate. A gate block restores the workspace and escalates one tier, carrying the brief, the failing output and the rejected diff.
   - The same-tier scope retry and the forks (control and treatment) follow contraprova's measured policy.
   - The orchestrator never chooses the next model itself.
 - **Ungoverned mode:** one chosen model with `pack`, `exec` and `ship` directly (or Hermes's default tools, as a profile choice). `ship` still journals. The gate can be switched off, and the same ledger is written.
-- **Per-attempt model selection** uses the subagent's model route. If Hermes cannot route a subagent to another provider, the fallback is a session-scoped model switch between attempts. Whichever the spike verifies is recorded in `docs/DECISIONS.md` (ADR-0007).
+- **Smart** (the composer's Smart switch; the idea comes from Hermes's `smart_model_routing`) is per-message model choice, combined with the mode:
+
+  | | Smart on | Smart off |
+  |---|---|---|
+  | **Governed** | Feedforward picks the starting tier for each message from the ladder, and escalation climbs from there | The user's chosen model is the starting tier; escalation climbs the ladder above it |
+  | **Ungoverned** | A routing choice per message, with no gate and no escalation | Exactly the chosen model |
+
+  Alt+M opens the model picker without turning Smart off. Choosing a model pins it and turns Smart off; choosing "Smart" turns it back on.
+- **Model selection:**
+  - per attempt, through the hypotaxis delegation provider;
+  - pinned models through `session.mutate` (named providers only, revision-fenced).
+  See ADR-0007.
+- **Tool surface:** hypotaxis sessions need `tools.tool_search.enabled: "off"`, set with consent (ADR-0014).
 - **Cost cap:** `pre_llm_call` blocks the call that would exceed the cap and the UI asks. Usage comes from `post_api_request`, normalised to `Usage {input_uncached, output, cache_read, cache_write, reasoning}`.
 - The **capability probe** stores per-model flags (tool use, edit format, prefill, prompt-cache kind) and picks the tool surface for weak models.
 
@@ -140,7 +153,7 @@ It registers:
 | Tool | One call does | Writes the workspace | Runs in |
 |---|---|---|---|
 | `pack` | Search with surrounding lines, whole files, line ranges, single symbols, globs, git status. Output byte-capped; secrets redacted; `.env` and key files never packed | No | `hx` (ripgrep crates, tree-sitter), in process |
-| `exec` | Python in a persistent asyncio kernel. `await harness.parallel([...])`; any Hermes, plugin or MCP tool as a function; `leave_blank`, `diagnostics`, `apple.*` | No (scratch dir only) | Kernel process inside the `hx` OS sandbox; tool calls go back to the plugin over a private socket, never stdout |
+| `exec` | Python in a persistent asyncio kernel. `await harness.parallel([...])`; any Hermes, plugin or MCP tool as a function, each checked by the plugin's policy (`ctx.dispatch_tool` bypasses hooks, so the plugin applies policy itself); `leave_blank`, `diagnostics`, `apple.*` | No (scratch dir only) | Kernel process inside the `hx` OS sandbox; tool calls go back to the plugin over a private socket, never stdout |
 | `ship` | Validate every edit before writing anything (`ABORTED_BEFORE_WRITE` with the closest match on a miss); journal; apply; gate; on pass commit to the session's hidden checkpoint ref, on fail restore byte- and metadata-exact | Yes, the only path | `hx` file transaction (capability-safe: no symlink escapes) plus the contraprova gate in the `hx` sandbox |
 | `dispatch` | Governed mode only: runs a brief through the tier ladder | Through ship | Plugin |
 

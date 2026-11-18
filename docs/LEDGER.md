@@ -35,7 +35,7 @@ The harness adds the types below. They go upstream into contraprova's `EVENT_TYP
 | `checkpoint.committed` | `ship_id`, `ref`, `commit` | |
 | `approval.requested` | `approval_id`, `kind`, `summary`, `rule` | `task_id`, `teammate` |
 | `approval.decided` | `approval_id`, `decision` (`approve`/`deny`/`timeout`), `decided_by`, `surface` | |
-| `blank.opened` | `blank_id`, `question`, `options`, `blocks` | `task_id` |
+| `blank.opened` | `blank_id`, `question`, `options` (list of strings), `blocks` (list of strings: the steps that wait for the answer; empty = nothing blocked) | `task_id` |
 | `blank.filled` | `blank_id`, `answer`, `decided_by` | |
 | `blank.lapsed` | `blank_id` | became an end-of-turn question |
 | `feedforward.set` | `turn_id`, `decision`, `value`, `source` (`config`/`convention`/`model`/`user`) | |
@@ -52,6 +52,8 @@ The harness adds the types below. They go upstream into contraprova's `EVENT_TYP
 - `subscription` (bool: billed to a plan, not the API).
 
 Providers that report a single cache-write bucket put it in `cache_write_5m_tokens`.
+
+`output_tokens` is always the total billable output, **including** reasoning, and `reasoning_tokens` is a subset of it. Gemini reports thoughts separately, so its mapper adds them into `output_tokens`. Pricing charges reasoning at the reasoning rate when one is set and the output rate otherwise, never twice. Abstract effort levels are `none`, `low`, `medium`, `high`, `xhigh` and `max`.
 
 Each adapter maps its provider's usage into these fields. The mapping lives in one place (`hypotaxis.ledger.usage`), with a test per provider shape:
 - **OpenAI:** `prompt_tokens` *includes* `cached_tokens`, so subtract them.
