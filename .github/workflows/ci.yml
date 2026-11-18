@@ -41,3 +41,5 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: cd apps/desktop/ui && pnpm install --frozen-lockfile && pnpm typecheck && pnpm test
+      - run: cd apps/desktop/ui && pnpm exec playwright install --with-deps chromium
+      - run: cd apps/desktop/ui && pnpm test:smoke

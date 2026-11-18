@@ -41,6 +41,16 @@ export async function ownerDecisions(env) {
   const dc = await ev(() => ({ tab: __hx.state.tab, title: document.getElementById('hx-where-title').textContent }));
   check('owner', 'a double-click opens the full chat in Bots', dc.tab === 'bots' && dc.title.toLowerCase() === String(id).toLowerCase(), { id, ...dc });
 
+  /* bots are one stream: a bot made in the Bots tab joins the dock, last, with no reload */
+  page = await s.fresh();
+  const before = await ev(() => [...document.querySelectorAll('#hx-dock .dk-bot')].map((b) => b.dataset.id));
+  await page.keyboard.press('Alt+2'); await page.waitForTimeout(500);
+  await ev(() => __hx.emit('hx:new-bot', { from: 'test' })); await page.waitForTimeout(400);
+  await page.fill('.bt-name', 'rex'); await page.keyboard.press('Enter'); await page.waitForTimeout(1500);
+  const after = await ev(() => [...document.querySelectorAll('#hx-dock .dk-bot')].map((b) => b.dataset.id));
+  const orbIn = await ev(() => !!document.querySelector('#hx-dock .dk-bot[data-id="rex"] orb-avatar'));
+  check('owner', 'a bot created in the Bots tab appears last in the dock, with its orb, no reload', after.length === before.length + 1 && after.at(-1) === 'rex' && orbIn && before.every((id, i) => after[i] === id), { before: before.length, after: after.slice(-2) });
+
   /* a click outside returns the dock to rest; the pill stays a pill */
   page = await s.fresh();
   await page.locator(orb).click(); await page.waitForTimeout(1100);

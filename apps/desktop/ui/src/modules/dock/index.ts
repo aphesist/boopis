@@ -76,7 +76,25 @@ function onSchedules(): void {
 function wireData(): void {
   const d = data();
   d.bots.subscribe((ev) => {
-    if (ev.type === 'bot') {
+    if (ev.type === 'bot-created') {
+      /* bots are one stream: a bot made in the Bots tab joins the dock, last, without a reload */
+      if (botById(ev.bot.id)) return;
+      const b: DockBot = { ...ev.bot, paused: false };
+      S.bots.push(b);
+      S.threads[b.id] ??= [];
+      X.orbs.set(b.id, makeOrb(b));
+      morph(() => renderAll(), { render: [] });
+      fitRow();
+    } else if (ev.type === 'bot-archived') {
+      const i = S.bots.findIndex((x) => x.id === ev.id); if (i < 0) return;
+      if (S.card === ev.id) closeCard(false);
+      S.bots.splice(i, 1);
+      S.sched = S.sched.filter((x) => x.bot !== ev.id);
+      X.orbs.get(ev.id)?.remove(); X.orbs.delete(ev.id);
+      S.rowIdx = Math.min(S.rowIdx, S.bots.length);
+      morph(() => renderAll(), { render: [] });
+      fitRow();
+    } else if (ev.type === 'bot') {
       const b = botById(ev.bot.id); if (!b) return;
       b.state = ev.bot.state; b.attention = ev.bot.attention; b.activity = ev.bot.activity; b.role = ev.bot.role;
       refreshBot(b);
