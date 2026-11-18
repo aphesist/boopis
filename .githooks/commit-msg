@@ -1,0 +1,10 @@
+#!/bin/sh
+MSG_FILE="$1"
+if grep -iE '^(co-authored-by|signed-off-by|generated-by|ai-assisted):' "$MSG_FILE" >/dev/null 2>&1; then
+  echo "ERROR: Co-authoring or attribution trailers are strictly forbidden." >&2
+  exit 1
+fi
+if [ "$(git config user.name)" != "aphesist" ]; then
+  echo "ERROR: Commit author must be aphesist." >&2
+  exit 1
+fi

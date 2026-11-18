@@ -1,0 +1,2345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CONTRAPROVA // HERMES — Monochrome Workspace</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      letter-spacing: -0.15px;
+    }
+    .font-mono-tech {
+      font-family: 'Geist Mono', 'JetBrains Mono', 'Cascadia Mono', 'SFMono-Regular', Consolas, monospace;
+      letter-spacing: -0.02em;
+    }
+
+    /* =====================================================================
+       STRICT ACHROMATIC NOTHING OS MONOCHROME TOKENS (ZERO BLUE TINT)
+       ===================================================================== */
+    #app[data-theme="carbon"] {
+      --bg-app: #000000;
+      --bg-rail: #080808;
+      --bg-surface: #0e0e0e;
+      --bg-elevated: #141414;
+      --bg-selected: #1b1b1b;
+      --bg-hover: #171717;
+      --bg-bubble-agent: #111111;
+      --bg-bubble-user: #ededed;
+      --ink-bubble-user: #0a0a0a;
+      --glass-pill: rgba(14, 14, 14, 0.82);
+      --fade-scrim: linear-gradient(to top, #000000 56%, rgba(0, 0, 0, 0));
+      --border-hairline: rgba(255, 255, 255, 0.08);
+      --border-strong: rgba(255, 255, 255, 0.19);
+      --ink-primary: #f2f2f2;
+      --ink-secondary: #8c8c8c;
+      --ink-tertiary: #525252;
+      --accent-crimson: #d71921;
+      --shadow-card: 0 12px 34px rgba(0, 0, 0, 0.62);
+      --shadow-popover: 0 16px 42px rgba(0, 0, 0, 0.78);
+      --dot-grid-ink: rgba(255, 255, 255, 0.11);
+      --orb-ground-shadow: rgba(255, 255, 255, 0.06);
+    }
+
+    #app[data-theme="paper"] {
+      --bg-app: #f7f7f5;
+      --bg-rail: #efefed;
+      --bg-surface: #ffffff;
+      --bg-elevated: #f2f2f0;
+      --bg-selected: #e8e8e5;
+      --bg-hover: #eaeae7;
+      --bg-bubble-agent: #ededeb;
+      --bg-bubble-user: #111111;
+      --ink-bubble-user: #ffffff;
+      --glass-pill: rgba(247, 247, 245, 0.85);
+      --fade-scrim: linear-gradient(to top, #f7f7f5 56%, rgba(247, 247, 245, 0));
+      --border-hairline: rgba(0, 0, 0, 0.08);
+      --border-strong: rgba(0, 0, 0, 0.19);
+      --ink-primary: #111111;
+      --ink-secondary: #525252;
+      --ink-tertiary: #8c8c8c;
+      --accent-crimson: #d71921;
+      --shadow-card: 0 10px 28px rgba(0, 0, 0, 0.06);
+      --shadow-popover: 0 14px 36px rgba(0, 0, 0, 0.11);
+      --dot-grid-ink: rgba(0, 0, 0, 0.12);
+      --orb-ground-shadow: rgba(0, 0, 0, 0.09);
+    }
+
+    #app {
+      background: var(--bg-app);
+      color: var(--ink-primary);
+      height: 100vh;
+      width: 100%;
+      display: flex;
+      overflow: hidden;
+      transition: background 200ms cubic-bezier(0.22, 1, 0.36, 1), color 200ms ease;
+    }
+
+    .hairline { border-color: var(--border-hairline); }
+    .hairline-strong { border-color: var(--border-strong); }
+
+    /* Nothing OS radial 1px dot-matrix stage backdrop */
+    .dot-matrix-stage {
+      background-image: radial-gradient(var(--dot-grid-ink) 1px, transparent 1px);
+      background-size: 10px 10px;
+      mask-image: radial-gradient(circle at 50% 50%, #000 32%, transparent 76%);
+      -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 32%, transparent 76%);
+    }
+
+    /* Corner-anchored spring landings & CardStack transitions */
+    @keyframes bubbleBotIn {
+      from { opacity: 0; transform: translateY(8px) scale(0.965); }
+      to   { opacity: 1; transform: none; }
+    }
+    @keyframes bubbleUserIn {
+      from { opacity: 0; transform: translateY(8px) scale(0.94); }
+      to   { opacity: 1; transform: none; }
+    }
+    @keyframes panelFadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to   { opacity: 1; transform: none; }
+    }
+    @keyframes cardPromote {
+      from { opacity: 0.65; transform: translateY(-7px) scale(0.96); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes vmCursorPath {
+      0%, 100% { transform: translate(58px, 110px) scale(1); }
+      28%      { transform: translate(122px, 166px) scale(1); }
+      34%      { transform: translate(122px, 166px) scale(0.86); }
+      40%      { transform: translate(122px, 166px) scale(1); }
+      68%      { transform: translate(86px, 204px) scale(1); }
+      74%      { transform: translate(86px, 204px) scale(0.86); }
+      80%      { transform: translate(86px, 204px) scale(1); }
+    }
+
+    .anim-bot-in { transform-origin: 0% 100%; animation: bubbleBotIn 0.34s cubic-bezier(0.2, 0, 0, 1) both; }
+    .anim-user-in { transform-origin: 100% 100%; animation: bubbleUserIn 0.34s cubic-bezier(0.2, 0, 0, 1) both; }
+    .anim-panel { animation: panelFadeIn 0.24s cubic-bezier(0.22, 1, 0.36, 1) both; }
+    .anim-card-promote { animation: cardPromote 0.22s cubic-bezier(0.22, 1, 0.36, 1) both; }
+    .vm-cursor-anim { animation: vmCursorPath 6.5s cubic-bezier(0.22, 1, 0.36, 1) infinite; }
+
+    /* Oversized 2.2x Anti-Clip LivingOrb Mount */
+    .orb-mount {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .orb-mount canvas {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+    .orb-interactive {
+      cursor: grab;
+      user-select: none;
+      touch-action: none;
+    }
+    .orb-interactive:active {
+      cursor: grabbing;
+    }
+
+    /* 1-Bit Pixelated Ordered Bayer8 Canvas inside CardStack */
+    .dither-smoke-canvas {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      display: block;
+      width: 100%;
+      height: 82px;
+    }
+
+    /* Intra-Turn Leaving Blanks (@liu_xingyu) */
+    .blank-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 1px 6px;
+      margin: 0 2px;
+      border-radius: 6px;
+      font-family: 'Geist Mono', monospace;
+      font-size: 12px;
+      color: var(--ink-primary);
+      background: var(--bg-elevated);
+      border-bottom: 1.5px dashed var(--border-strong);
+      cursor: pointer;
+      transition: background 140ms ease, border-color 140ms ease;
+    }
+    .blank-chip[data-unresolved="true"] {
+      border-bottom-color: var(--accent-crimson);
+    }
+    .blank-chip:hover {
+      background: var(--bg-selected);
+    }
+
+    /* Feedforward underline token */
+    .ff-token {
+      border-bottom: 1px dotted var(--border-strong);
+      cursor: pointer;
+    }
+    .ff-token:hover {
+      border-bottom-color: var(--ink-primary);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-hairline); border-radius: 999px; }
+  </style>
+</head>
+<body>
+  <div id="app" data-theme="carbon">
+
+    <!-- =====================================================================
+         LEFT RAIL (256px · Pure Neutral Monochrome · Flat, Not Boxed)
+         ===================================================================== -->
+    <aside class="w-[256px] shrink-0 h-full flex flex-col border-r hairline select-none"
+           style="background: var(--bg-rail);">
+
+      <!-- Top Bar (52px): Nothing 3x3 Dot-Matrix Mark + [ Sessions | Bots ] + (+) -->
+      <div class="h-[52px] px-4 flex items-center justify-between shrink-0">
+        <!-- Nothing OS 3x3 Dot-Matrix Emblem (1 surgical Crimson pixel) -->
+        <div class="grid grid-cols-3 gap-[2.5px]" title="Contraprova // Hermes">
+          <span class="w-[3px] h-[3px]" style="background: var(--ink-primary);"></span>
+          <span class="w-[3px] h-[3px]" style="background: var(--ink-primary);"></span>
+          <span class="w-[3px] h-[3px]" style="background: var(--accent-crimson);"></span>
+          <span class="w-[3px] h-[3px]" style="background: var(--ink-primary);"></span>
+          <span class="w-[3px] h-[3px]" style="background: var(--ink-tertiary);"></span>
+          <span class="w-[3px] h-[3px]" style="background: var(--ink-primary);"></span>
+          <span class="w-[3px] h-[3px]" style="background: var(--ink-tertiary);"></span>
+          <span class="w-[3px] h-[3px]" style="background: var(--ink-primary);"></span>
+          <span class="w-[3px] h-[3px]" style="background: var(--ink-primary);"></span>
+        </div>
+
+        <!-- Primary Section Switcher -->
+        <div class="p-[3px] rounded-full border hairline flex items-center text-[11.5px] font-medium"
+             style="background: var(--bg-surface);">
+          <button id="tabSessionsBtn" onclick="switchSection('sessions')"
+                  class="px-3 py-1 rounded-full transition-all duration-200">
+            Sessions
+          </button>
+          <button id="tabBotsBtn" onclick="switchSection('bots')"
+                  class="px-3 py-1 rounded-full transition-all duration-200">
+            Bots
+          </button>
+        </div>
+
+        <!-- Quick Create (+) -->
+        <button onclick="handleRailCreate()" title="New Session / Sculpt Bot"
+                class="w-[28px] h-[28px] rounded-full border hairline flex items-center justify-center text-[14px] transition-opacity hover:opacity-75"
+                style="background: var(--bg-surface); color: var(--ink-primary);">
+          +
+        </button>
+      </div>
+
+      <!-- RAIL BODY: SECTION A (SESSIONS — Antigravity / Codex Flat List) -->
+      <div id="railSessions" class="hidden flex-1 flex flex-col min-h-0 px-3 pt-3 pb-2 overflow-y-auto">
+        <div class="px-2 pb-2 flex items-center justify-between text-[11px]" style="color: var(--ink-tertiary);">
+          <span class="font-mono-tech">aphesist/core · main</span>
+          <span>3</span>
+        </div>
+
+        <div class="space-y-0.5">
+          <button onclick="selectSession('checkout', this)"
+                  class="sess-row w-full text-left px-3 py-2.5 rounded-[10px] transition-colors"
+                  style="background: var(--bg-selected);">
+            <div class="text-[13px] font-medium truncate" style="color: var(--ink-primary);">
+              Checkout rate-limit &amp; Redis
+            </div>
+            <div class="text-[11.5px] truncate mt-0.5" style="color: var(--ink-tertiary);">
+              CardStack held · 2 files packed
+            </div>
+          </button>
+
+          <button onclick="selectSession('artifacts', this)"
+                  class="sess-row w-full text-left px-3 py-2.5 rounded-[10px] transition-colors"
+                  style="background: transparent;">
+            <div class="text-[13px] font-medium truncate" style="color: var(--ink-secondary);">
+              Local Artifacts git-fs
+            </div>
+            <div class="text-[11.5px] truncate mt-0.5" style="color: var(--ink-tertiary);">
+              127.0.0.1:53954 · v3 forked
+            </div>
+          </button>
+
+          <button onclick="selectSession('swiftui', this)"
+                  class="sess-row w-full text-left px-3 py-2.5 rounded-[10px] transition-colors"
+                  style="background: transparent;">
+            <div class="text-[13px] font-medium truncate" style="color: var(--ink-secondary);">
+              SwiftUI Widget · Apple VM
+            </div>
+            <div class="text-[11.5px] truncate mt-0.5" style="color: var(--ink-tertiary);">
+              xcodebuild · 14 assertions passed
+            </div>
+          </button>
+        </div>
+
+        <div class="mt-auto pt-4 px-2 border-t hairline text-[11px] space-y-1" style="color: var(--ink-tertiary);">
+          <div class="flex justify-between">
+            <span>Compat Loader</span>
+            <span class="font-mono-tech" style="color: var(--ink-secondary);">18 active</span>
+          </div>
+          <div class="leading-relaxed">Hermes v0.23 · .claude · .cursor · AGENTS.md</div>
+        </div>
+      </div>
+
+      <!-- RAIL BODY: SECTION B (BOTS — Bespoke Living Crew Dock + Threads) -->
+      <div id="railBots" class="flex-1 flex flex-col min-h-0 px-3 pt-2 pb-2 overflow-y-auto">
+        <!-- Living Crew Dock (4 Cohesive Orbs) -->
+        <div class="px-1 pb-3">
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-mono-tech text-[10px] uppercase tracking-widest" style="color: var(--ink-tertiary);">
+              Living Crew
+            </span>
+            <button onclick="openBotSculptor()"
+                    class="text-[11px] font-medium transition-opacity hover:opacity-75"
+                    style="color: var(--ink-secondary);">
+              + Sculpt
+            </button>
+          </div>
+
+          <div class="grid grid-cols-4 gap-1" id="crewDockGrid">
+            <!-- Runner (Active + Crimson live dot) -->
+            <button onclick="openBotDesk('runner')" data-crew-id="runner"
+                    class="crew-tile flex flex-col items-center py-2 px-1 rounded-[10px] transition-colors relative"
+                    style="background: var(--bg-selected);">
+              <span id="runnerDockDot" class="w-[5px] h-[5px] rounded-full absolute top-1.5 right-1.5"
+                    style="background: var(--accent-crimson);"></span>
+              <div class="orb-mount w-[40px] h-[40px]"
+                   data-orb-id="dock-runner"
+                   data-color="#F2F2F0"
+                   data-eyes="capsule"
+                   data-state="working"
+                   data-size="34"></div>
+              <span class="mt-1 text-[10.5px] font-medium truncate w-full text-center" style="color: var(--ink-primary);">Runner</span>
+            </button>
+
+            <!-- Gatekeeper -->
+            <button onclick="openBotDesk('gatekeeper')" data-crew-id="gatekeeper"
+                    class="crew-tile flex flex-col items-center py-2 px-1 rounded-[10px] transition-colors">
+              <div class="orb-mount w-[40px] h-[40px]"
+                   data-orb-id="dock-gate"
+                   data-color="#171717"
+                   data-eyes="slit"
+                   data-state="idle"
+                   data-size="34"></div>
+              <span class="mt-1 text-[10.5px] font-medium truncate w-full text-center" style="color: var(--ink-secondary);">Gate</span>
+            </button>
+
+            <!-- Night Shift (Sleeping with drifting z's; wakes with startle hop on hover!) -->
+            <button onclick="openBotDesk('nightshift')"
+                    onmouseenter="wakeSleepingOrb('dock-shift', true)"
+                    onmouseleave="wakeSleepingOrb('dock-shift', false)"
+                    data-crew-id="nightshift"
+                    class="crew-tile flex flex-col items-center py-2 px-1 rounded-[10px] transition-colors">
+              <div class="orb-mount w-[40px] h-[40px]"
+                   data-orb-id="dock-shift"
+                   data-color="#808080"
+                   data-eyes="crescent"
+                   data-state="sleeping"
+                   data-size="34"></div>
+              <span class="mt-1 text-[10.5px] font-medium truncate w-full text-center" style="color: var(--ink-secondary);">Shift</span>
+            </button>
+
+            <!-- Kernel Scout (Nothing Matrix 2x3 pixel eyes) -->
+            <button onclick="openBotDesk('scout')" data-crew-id="scout"
+                    class="crew-tile flex flex-col items-center py-2 px-1 rounded-[10px] transition-colors">
+              <div class="orb-mount w-[40px] h-[40px]"
+                   data-orb-id="dock-scout"
+                   data-color="#CCCCCC"
+                   data-eyes="matrix"
+                   data-state="idle"
+                   data-size="34"></div>
+              <span class="mt-1 text-[10.5px] font-medium truncate w-full text-center" style="color: var(--ink-secondary);">Scout</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="border-t hairline mx-1 my-1.5"></div>
+
+        <!-- Flat Teammate Conversations -->
+        <div class="pt-1.5 space-y-0.5" id="botThreadNav">
+          <button onclick="openBotDesk('runner')" id="nav-runner"
+                  class="bot-nav-item w-full text-left px-3 py-2.5 rounded-[10px] transition-colors"
+                  style="background: var(--bg-selected);">
+            <div class="flex items-center justify-between">
+              <span class="text-[13px] font-medium truncate" style="color: var(--ink-primary);">iOS &amp; Mac Runner</span>
+              <span class="font-mono-tech text-[10px]" style="color: var(--ink-tertiary);">VM</span>
+            </div>
+            <div class="text-[11.5px] truncate mt-0.5" style="color: var(--ink-tertiary);">
+              2 CardStack approvals waiting
+            </div>
+          </button>
+
+          <button onclick="openBotDesk('gatekeeper')" id="nav-gatekeeper"
+                  class="bot-nav-item w-full text-left px-3 py-2.5 rounded-[10px] transition-colors">
+            <div class="flex items-center justify-between">
+              <span class="text-[13px] font-medium truncate" style="color: var(--ink-secondary);">PR Gatekeeper</span>
+              <span class="font-mono-tech text-[10px]" style="color: var(--ink-tertiary);">LANE</span>
+            </div>
+            <div class="text-[11.5px] truncate mt-0.5" style="color: var(--ink-tertiary);">
+              Watching scope &amp; immutable tests
+            </div>
+          </button>
+
+          <button onclick="openBotDesk('nightshift')" id="nav-nightshift"
+                  class="bot-nav-item w-full text-left px-3 py-2.5 rounded-[10px] transition-colors">
+            <div class="flex items-center justify-between">
+              <span class="text-[13px] font-medium truncate" style="color: var(--ink-secondary);">Night Shift</span>
+              <span class="font-mono-tech text-[10px]" style="color: var(--ink-tertiary);">ZZZ</span>
+            </div>
+            <div class="text-[11.5px] truncate mt-0.5" style="color: var(--ink-tertiary);">
+              Asleep · 02:00 cron digest
+            </div>
+          </button>
+
+          <button onclick="openBotDesk('scout')" id="nav-scout"
+                  class="bot-nav-item w-full text-left px-3 py-2.5 rounded-[10px] transition-colors">
+            <div class="flex items-center justify-between">
+              <span class="text-[13px] font-medium truncate" style="color: var(--ink-secondary);">Kernel Scout</span>
+              <span class="font-mono-tech text-[10px]" style="color: var(--ink-tertiary);">LOCAL</span>
+            </div>
+            <div class="text-[11.5px] truncate mt-0.5" style="color: var(--ink-tertiary);">
+              Qwen3-Coder · pack() indexed
+            </div>
+          </button>
+        </div>
+
+        <button onclick="openBotSculptor()"
+                class="mt-3 w-full py-2 px-3 rounded-[10px] border hairline text-[12px] font-medium text-center transition-colors hover:opacity-80"
+                style="color: var(--ink-secondary);">
+          + Sculpt new teammate
+        </button>
+      </div>
+
+      <!-- Rail Footer (48px): aphesist + Brains Popover + Carbon/Paper Toggle -->
+      <div class="h-[48px] px-3.5 border-t hairline flex items-center justify-between shrink-0 relative">
+        <button onclick="toggleBrainsPopover(event)"
+                class="flex items-center gap-2 py-1 px-1 rounded-[8px] transition-opacity hover:opacity-80">
+          <span class="w-[24px] h-[24px] rounded-full border hairline flex items-center justify-center font-mono-tech text-[10px]"
+                style="background: var(--bg-surface); color: var(--ink-primary);">
+            AP
+          </span>
+          <div class="text-left leading-tight">
+            <div class="text-[12px] font-medium" style="color: var(--ink-primary);">aphesist</div>
+            <div class="text-[10px]" style="color: var(--ink-tertiary);">4 brains · 0 co-author</div>
+          </div>
+        </button>
+
+        <button onclick="toggleTheme()" id="themeToggleBtn"
+                class="px-2.5 py-1 rounded-full border hairline font-mono-tech text-[10.5px] transition-opacity hover:opacity-80"
+                style="background: var(--bg-surface); color: var(--ink-secondary);">
+          Paper
+        </button>
+
+        <!-- Connected Brains & Hermes v0.23.2 Popover -->
+        <div id="brainsPopover"
+             class="hidden absolute left-3 bottom-[54px] z-40 w-[264px] rounded-[14px] border hairline p-3.5 text-[12px] space-y-2.5"
+             style="background: var(--bg-surface); box-shadow: var(--shadow-popover);">
+          <div class="flex items-center justify-between">
+            <span class="font-medium" style="color: var(--ink-primary);">Hermes v0.23.2 Broker</span>
+            <span class="font-mono-tech text-[10px]" style="color: var(--ink-tertiary);">DirectSDK</span>
+          </div>
+          <div class="space-y-1.5 text-[11.5px]" style="color: var(--ink-secondary);">
+            <div class="flex justify-between"><span>Claude Pro/Max</span><span class="font-mono-tech" style="color: var(--ink-primary);">DirectSDK</span></div>
+            <div class="flex justify-between"><span>ChatGPT / Codex</span><span class="font-mono-tech" style="color: var(--ink-primary);">OAuth</span></div>
+            <div class="flex justify-between"><span>Gemini + Nano Banana</span><span class="font-mono-tech" style="color: var(--ink-primary);">Active</span></div>
+            <div class="flex justify-between"><span>Qwen3 / DeepSeek</span><span class="font-mono-tech" style="color: var(--ink-tertiary);">Local</span></div>
+          </div>
+          <div class="pt-2 border-t hairline text-[10.5px]" style="color: var(--ink-tertiary);">
+            Loaded: .claude/skills · Hermes plugins · .cursor/rules · AGENTS.md
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- =====================================================================
+         MAIN STAGE
+         ===================================================================== -->
+    <main class="flex-1 flex flex-col min-w-0 h-full relative">
+
+      <!-- ###################################################################
+           SECTION A: CODING SESSIONS (Antigravity / Codex Cleanliness)
+           ################################################################### -->
+      <section id="viewSessions" class="hidden flex-1 flex flex-col min-h-0 relative anim-panel">
+        <!-- Airy 48px Header -->
+        <header class="h-[48px] px-7 border-b hairline flex items-center justify-between shrink-0 relative">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <span id="sessTitle" class="text-[13.5px] font-medium truncate" style="color: var(--ink-primary);">
+              Checkout rate-limit &amp; Redis
+            </span>
+            <span class="font-mono-tech text-[11px]" style="color: var(--ink-tertiary);">Lane A</span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button onclick="toggleLedgerPopover(event)"
+                    class="px-3 py-1 rounded-full border hairline text-[11.5px] font-medium transition-opacity hover:opacity-80"
+                    style="background: var(--bg-surface); color: var(--ink-secondary);">
+              Cascade · -61%
+            </button>
+            <button onclick="toggleArtifactsDrawer()"
+                    class="px-3 py-1 rounded-full border hairline text-[11.5px] font-medium transition-opacity hover:opacity-80"
+                    style="background: var(--bg-elevated); color: var(--ink-primary);">
+              Artifacts · v3
+            </button>
+          </div>
+
+          <div id="ledgerPopover"
+               class="hidden absolute right-7 top-[52px] z-40 w-[284px] rounded-[14px] border hairline p-4 text-[12px] space-y-2.5"
+               style="background: var(--bg-surface); box-shadow: var(--shadow-popover);">
+            <div class="flex items-center justify-between">
+              <span class="font-medium" style="color: var(--ink-primary);">Contraprova Ledger</span>
+              <span class="font-mono-tech text-[10px]" style="color: var(--ink-tertiary);">Hash-chained</span>
+            </div>
+            <div class="space-y-1.5 text-[11.5px]" style="color: var(--ink-secondary);">
+              <div class="flex justify-between"><span>Cascade tier</span><span class="font-mono-tech" style="color: var(--ink-primary);">Haiku 5.5 (1st try)</span></div>
+              <div class="flex justify-between"><span>Tool surface</span><span class="font-mono-tech" style="color: var(--ink-primary);">pack · exec · ship</span></div>
+              <div class="flex justify-between"><span>KV-cache hit</span><span class="font-mono-tech" style="color: var(--ink-primary);">97.9%</span></div>
+              <div class="flex justify-between"><span>Cost delta</span><span class="font-mono-tech" style="color: var(--ink-primary);">$0.038 vs $0.112</span></div>
+            </div>
+          </div>
+        </header>
+
+        <!-- Sessions Content + Local Artifacts Drawer -->
+        <div class="flex-1 flex min-h-0">
+          <div class="flex-1 flex flex-col min-w-0 min-h-0">
+            <div id="sessTranscript" class="flex-1 overflow-y-auto px-7 sm:px-12 py-8">
+              <div id="sessMessages" class="max-w-[660px] mx-auto space-y-7">
+
+                <!-- User Prompt -->
+                <div class="flex justify-end">
+                  <div class="max-w-[80%] px-4 py-2.5 rounded-[16px] text-[14px] leading-relaxed"
+                       style="background: var(--bg-bubble-user); color: var(--ink-bubble-user);">
+                    Wire sliding-window rate limiting into <code class="font-mono-tech text-[12.5px] opacity-85">/api/checkout</code>, verify against staging Redis, and stage a subtle toast artifact.
+                  </div>
+                </div>
+
+                <!-- 1-Line Collapsible pack() + Unboxed Prose with @liu_xingyu Blanks -->
+                <div class="space-y-3.5 relative">
+                  <div>
+                    <button onclick="togglePackTrace()"
+                            class="inline-flex items-center gap-2 font-mono-tech text-[11.5px] transition-opacity hover:opacity-75"
+                            style="color: var(--ink-tertiary);">
+                      <span id="packChevron">▸</span>
+                      <span>Packed 4 symbols &amp; AST outlines in 1 turn · 0.9s</span>
+                    </button>
+                    <div id="packTraceBody"
+                         class="hidden mt-2 ml-3 pl-3 border-l hairline font-mono-tech text-[11px] space-y-1"
+                         style="color: var(--ink-tertiary);">
+                      <div>pack("rateLimit|checkout", outlines=true) → 2.4 KB</div>
+                      <div>src/middleware/rateLimit.ts#applyLimit · src/routes/checkout.ts</div>
+                      <div>Secret shield PASS · Contract Lane A locked</div>
+                    </div>
+                  </div>
+
+                  <div class="text-[14.5px] leading-[1.68]" style="color: var(--ink-primary);">
+                    Mapped the checkout middleware and route handler. Enforcing a
+                    <button onclick="openSessBlank('window', event)" class="blank-chip" data-unresolved="false">
+                      <span id="sessWindowVal">60s · 30 req</span>
+                      <span style="color: var(--ink-tertiary);">▾</span>
+                    </button>
+                    budget per user ID, with Redis outage behavior set to
+                    <button id="sessFailBtn" onclick="openSessBlank('failmode', event)" class="blank-chip" data-unresolved="true">
+                      <span id="sessFailVal">choose Redis fallback</span>
+                      <span style="color: var(--accent-crimson);">▾</span>
+                    </button>
+                    before atomic ship runs the staging verification suite.
+                  </div>
+
+                  <div id="sessBlankPopover"
+                       class="hidden absolute left-4 top-20 z-30 w-[270px] rounded-[12px] border hairline p-3.5 text-[12px]"
+                       style="background: var(--bg-surface); box-shadow: var(--shadow-popover);"></div>
+                </div>
+
+                <!-- CardStack: 1-Bit Bayer Smoke Gate & Ship Card -->
+                <div class="pt-3 relative">
+                  <!-- Queued 96% silhouette card peeking 7px above (Hermes DESIGN.md CardStack) -->
+                  <div class="mx-auto w-[96%] h-[16px] rounded-t-[14px] border border-b-0 -mb-[8px]"
+                       style="background: #0a0a0a; border-color: rgba(255,255,255,0.12);"></div>
+
+                  <div class="relative rounded-[14px] overflow-hidden border"
+                       style="background: #000000; border-color: rgba(255,255,255,0.18); box-shadow: var(--shadow-card); color: #f2f2f2;">
+                    <div class="relative w-full h-[82px] select-none" style="background: #000000;">
+                      <canvas id="sessDitherCanvas" class="dither-smoke-canvas" width="330" height="41"></canvas>
+                      <div class="absolute left-5 bottom-2 px-2 py-0.5 rounded-[4px] font-mono-tech text-[12.5px] font-medium"
+                           style="background: #000000; color: #ffffff;">
+                        <span id="sessGateTitle">ship() wants to use a secret &amp; verify gate</span>
+                      </div>
+                    </div>
+
+                    <div class="px-6 pt-3 pb-5 font-mono-tech space-y-3.5">
+                      <div id="sessGateQuote" class="text-[12px]" style="color: #a3a3a3;">
+                        "final gate check before atomic ship on lane A"
+                      </div>
+
+                      <div class="pl-3 border-l space-y-1 text-[12px]" style="border-color: #333333;">
+                        <div>
+                          <span class="font-medium text-white">staging-redis.internal</span>
+                          <span class="ml-2" style="color: #737373;">REDIS_URL · vault secret</span>
+                        </div>
+                        <div class="text-[11px]" style="color: #737373;">
+                          Scope PASS (2/2 files, +38/-6) · Protected tests untouched
+                        </div>
+                      </div>
+
+                      <div class="text-[11.5px] leading-relaxed" style="color: #a3a3a3;">
+                        Passed to <span class="text-white">ship()</span> → <span class="text-white">$HARNESS_GATE_CMD</span> ('pnpm vitest run checkout.spec.ts') in ~/core
+                      </div>
+
+                      <div class="pt-1 flex flex-wrap items-center justify-between gap-3">
+                        <span id="sessGateFooter" class="text-[11px]" style="color: #737373;">
+                          1 queued · rollback journal armed (#9f2c04)
+                        </span>
+                        <div id="sessGateActions" class="flex items-center gap-2 ml-auto">
+                          <button onclick="decideSessGate('deny')"
+                                  class="px-3.5 py-1.5 rounded-[8px] border text-[11.5px] transition-opacity hover:opacity-80"
+                                  style="background: #000000; border-color: #333333; color: #f2f2f2;">
+                            Deny
+                          </button>
+                          <button onclick="decideSessGate('approve')"
+                                  class="px-4 py-1.5 rounded-[8px] text-[11.5px] font-medium transition-opacity hover:opacity-90"
+                                  style="background: #ffffff; color: #000000;">
+                            Touch to approve
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Flat 1-Line Local Artifact Link -->
+                <button onclick="toggleArtifactsDrawer(true)"
+                        class="w-full flex items-center justify-between px-4 py-3 rounded-[12px] border hairline text-left transition-colors hover:opacity-85"
+                        style="background: var(--bg-surface);">
+                  <div class="min-w-0">
+                    <div class="text-[13px] font-medium truncate" style="color: var(--ink-primary);">
+                      CheckoutToast.tsx · Local Git Artifact
+                    </div>
+                    <div class="font-mono-tech text-[11px] truncate" style="color: var(--ink-tertiary);">
+                      http://127.0.0.1:53954/git/default/toast.git · v3
+                    </div>
+                  </div>
+                  <span class="text-[12px] font-medium ml-3 shrink-0" style="color: var(--ink-secondary);">Open ↗</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Sessions 18px Composer + Quiet Feedforward Strip -->
+            <div class="px-7 sm:px-12 pb-5 pt-2 shrink-0">
+              <div class="max-w-[660px] mx-auto relative">
+                <div id="sessFfPopover"
+                     class="hidden absolute bottom-[106px] left-0 z-30 w-[290px] rounded-[12px] border hairline p-3.5 text-[12px]"
+                     style="background: var(--bg-surface); box-shadow: var(--shadow-popover);">
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="font-medium" style="color: var(--ink-primary);">Route before send</span>
+                    <button onclick="closePopovers()" style="color: var(--ink-tertiary);">✕</button>
+                  </div>
+                  <div class="space-y-1.5" style="color: var(--ink-secondary);">
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="sff" checked onchange="setSessRoute('Haiku → Opus (-61%)')" /><span>Cascade · Haiku → Opus (-61%)</span></label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="sff" onchange="setSessRoute('Qwen3-Coder Local ($0)')" /><span>Local · Qwen3-Coder ($0.00)</span></label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="sff" onchange="setSessRoute('Gemini + Nano Banana')" /><span>Gemini · Nano Banana visual</span></label>
+                  </div>
+                </div>
+
+                <div class="rounded-[18px] border hairline" style="background: var(--bg-surface); box-shadow: var(--shadow-card);">
+                  <div class="px-4 py-2 border-b hairline flex items-center justify-between gap-2 text-[11px]" style="color: var(--ink-tertiary);">
+                    <div class="truncate">
+                      Routes via
+                      <button onclick="toggleSessFfPopover(event)" id="sessFfRouteLabel" class="ff-token font-medium" style="color: var(--ink-secondary);">Haiku → Opus (-61%)</button>
+                      · <span id="sessFfScope" class="font-mono-tech">scope: src/ui/CheckoutToast.tsx</span>
+                    </div>
+                    <div id="sessFfPills" class="flex items-center gap-1.5 shrink-0"></div>
+                  </div>
+                  <div class="px-4 pt-3 pb-2">
+                    <input id="sessInput" type="text"
+                           value="Update the 429 retry toast animation and test it on iPhone 16 Pro simulator"
+                           oninput="parseSessFeedforward(this.value)"
+                           onkeydown="if(event.key==='Enter') sendSessMsg()"
+                           placeholder="Ask anything — scope &amp; capabilities resolve live..."
+                           class="w-full bg-transparent text-[13.5px] focus:outline-none"
+                           style="color: var(--ink-primary);" />
+                  </div>
+                  <div class="px-3.5 pb-2.5 flex items-center justify-between text-[11.5px]" style="color: var(--ink-tertiary);">
+                    <div class="flex items-center gap-2">
+                      <button class="w-[26px] h-[26px] rounded-full border hairline flex items-center justify-center" style="color: var(--ink-secondary);">+</button>
+                      <button onclick="toggleBrainsPopover(event)" class="px-2.5 py-1 rounded-full border hairline" style="color: var(--ink-secondary);">
+                        18 Skills (.claude + Hermes)
+                      </button>
+                    </div>
+                    <button onclick="sendSessMsg()"
+                            class="w-[28px] h-[28px] rounded-full flex items-center justify-center text-[13px] font-medium"
+                            style="background: var(--ink-primary); color: var(--bg-app);">
+                      ↑
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Local Artifacts Drawer (@dinasaur_404) -->
+          <aside id="artifactsDrawer"
+                 class="hidden w-[350px] shrink-0 border-l hairline flex flex-col min-h-0 anim-panel"
+                 style="background: var(--bg-rail);">
+            <div class="h-[48px] px-4 border-b hairline flex items-center justify-between shrink-0">
+              <div class="min-w-0">
+                <div class="text-[12.5px] font-medium truncate" style="color: var(--ink-primary);">Local Artifact</div>
+                <div id="artRepoRef" class="font-mono-tech text-[10px] truncate" style="color: var(--ink-tertiary);">
+                  127.0.0.1:53954/git/default/toast.git
+                </div>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button onclick="forkArtifact()" id="forkBtn"
+                        class="px-2.5 py-1 rounded-full border hairline text-[11px] font-medium"
+                        style="background: var(--bg-surface); color: var(--ink-primary);">
+                  Fork (CoW)
+                </button>
+                <button onclick="toggleArtifactsDrawer(false)"
+                        class="w-[26px] h-[26px] rounded-full flex items-center justify-center text-[12px]"
+                        style="color: var(--ink-tertiary);">✕</button>
+              </div>
+            </div>
+
+            <div class="px-4 py-2.5 border-b hairline flex items-center justify-between text-[11px]">
+              <div class="flex items-center gap-1 font-mono-tech">
+                <button onclick="setArtVer(1)" class="art-ver px-2 py-0.5 rounded-full" style="color: var(--ink-tertiary);">v1</button>
+                <button onclick="setArtVer(2)" class="art-ver px-2 py-0.5 rounded-full" style="color: var(--ink-tertiary);">v2</button>
+                <button onclick="setArtVer(3)" class="art-ver px-2 py-0.5 rounded-full" style="background: var(--ink-primary); color: var(--bg-app);">v3</button>
+              </div>
+              <div class="flex items-center gap-1">
+                <button onclick="setArtTab('preview')" id="artTabPreview" class="px-2 py-0.5 rounded-[6px] font-medium" style="background: var(--bg-selected); color: var(--ink-primary);">Preview</button>
+                <button onclick="setArtTab('diff')" id="artTabDiff" class="px-2 py-0.5 rounded-[6px]" style="color: var(--ink-tertiary);">Diff</button>
+              </div>
+            </div>
+
+            <div id="artifactBody" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ###################################################################
+           SECTION B: BOTS (Bespoke Active Teammate Desk + Nothing×Orb Sculptor)
+           ################################################################### -->
+      <section id="viewBots" class="flex-1 flex flex-col min-h-0 relative anim-panel">
+
+        <!-- ===============================================================
+             VIEW B1: ACTIVE TEAMMATE DESK (Default Landing · Not a Copy-Paste)
+             =============================================================== -->
+        <div id="botDeskView" class="flex-1 flex min-h-0 relative">
+
+          <!-- Main Companion Stage -->
+          <div class="flex-1 flex flex-col min-w-0 min-h-0 relative">
+            <!-- Airy 48px Header (No cluttered telemetry) -->
+            <header class="h-[48px] px-6 border-b hairline flex items-center justify-between shrink-0">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <div class="orb-mount w-[22px] h-[22px]"
+                     data-orb-id="desk-mini"
+                     data-color="#F2F2F0"
+                     data-eyes="capsule"
+                     data-state="working"
+                     data-size="18"></div>
+                <span id="deskTitle" class="text-[13.5px] font-medium truncate" style="color: var(--ink-primary);">
+                  iOS &amp; Mac Runner
+                </span>
+                <span id="deskTag" class="font-mono-tech text-[11px] hidden sm:inline" style="color: var(--ink-tertiary);">
+                  SwiftUI · VirtioFS
+                </span>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button onclick="openBotSculptor()"
+                        class="px-3 py-1 rounded-full border hairline text-[11.5px] font-medium transition-opacity hover:opacity-80"
+                        style="background: var(--bg-surface); color: var(--ink-secondary);">
+                  Sculpt Bot
+                </button>
+                <button onclick="toggleVmStage()"
+                        class="px-3 py-1 rounded-full border hairline flex items-center gap-2 text-[11.5px] font-medium transition-opacity hover:opacity-80"
+                        style="background: var(--bg-elevated); color: var(--ink-primary);">
+                  <span class="w-[5px] h-[5px] rounded-full" style="background: var(--accent-crimson);"></span>
+                  <span>Apple VM</span>
+                </button>
+              </div>
+            </header>
+
+            <!-- Scrollable Companion Stream -->
+            <div id="botDeskScroll" class="flex-1 overflow-y-auto px-6 sm:px-10 pt-6 pb-28">
+              <div class="max-w-[600px] mx-auto space-y-5">
+
+                <!-- Bespoke Companion Presence Header (Interactive LivingOrb Hero) -->
+                <div class="py-3 flex flex-col items-center text-center relative">
+                  <div id="deskHeroMount"
+                       class="orb-mount orb-interactive w-[96px] h-[96px]"
+                       data-orb-id="desk-hero"
+                       data-color="#F2F2F0"
+                       data-eyes="capsule"
+                       data-state="idle"
+                       data-size="76"></div>
+                  <div id="deskHeroHint" class="mt-2 font-mono-tech text-[11px]" style="color: var(--ink-tertiary);">
+                    Drag to turn · Click to poke · Type below to watch gaze
+                  </div>
+                </div>
+
+                <!-- Dynamic Message Thread -->
+                <div id="botDeskMessages" class="space-y-4"></div>
+
+                <!-- Hermes CardStack × @cheatyyyy 1-Bit Bayer Smoke Approval Queue -->
+                <div id="botCardStackWrap" class="pt-2 relative">
+                  <!-- Populated by renderBotCardStack() -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Floating Lucent Capsule Composer -->
+            <div class="absolute bottom-0 left-0 right-0 pt-6 pb-5 px-6 sm:px-10 pointer-events-none"
+                 style="background: var(--fade-scrim);">
+              <div class="max-w-[600px] mx-auto pointer-events-auto">
+                <div class="h-[46px] pl-2.5 pr-2 rounded-full border hairline flex items-center gap-2.5 backdrop-blur-xl"
+                     style="background: var(--glass-pill); box-shadow: var(--shadow-card);">
+                  <button class="w-[30px] h-[30px] rounded-full border hairline flex items-center justify-center text-[15px] shrink-0"
+                          style="color: var(--ink-secondary);">+</button>
+                  <input id="botDeskInput" type="text"
+                         placeholder="Message teammate or @Gatekeeper..."
+                         oninput="onBotTyping()"
+                         onkeydown="if(event.key==='Enter') sendBotDeskMsg()"
+                         class="flex-1 bg-transparent text-[13.5px] focus:outline-none"
+                         style="color: var(--ink-primary);" />
+                  <button onclick="sendBotDeskMsg()"
+                          class="w-[30px] h-[30px] rounded-full flex items-center justify-center text-[13px] font-medium shrink-0 transition-opacity hover:opacity-85"
+                          style="background: var(--ink-primary); color: var(--bg-app);">
+                    ↑
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Collapsible Right 16:10 Apple Bubble VM Stage (410px) -->
+          <aside id="vmStagePane"
+                 class="w-[410px] shrink-0 border-l hairline p-4 flex flex-col justify-between min-h-0 anim-panel"
+                 style="background: var(--bg-rail);">
+            <div class="flex items-center justify-between pb-3">
+              <div class="flex items-center gap-2">
+                <span class="w-[5px] h-[5px] rounded-full" style="background: var(--accent-crimson);"></span>
+                <span class="text-[12.5px] font-medium" style="color: var(--ink-primary);">Apple Bubble VM</span>
+                <span class="font-mono-tech text-[10.5px]" style="color: var(--ink-tertiary);">16:10</span>
+              </div>
+              <button onclick="cycleVmBackend()" id="vmBackendBtn"
+                      class="px-2.5 py-1 rounded-full border hairline font-mono-tech text-[10.5px]"
+                      style="background: var(--bg-surface); color: var(--ink-secondary);">
+                QEMU/KVM · VirtioFS
+              </button>
+            </div>
+
+            <!-- 16:10 Virtual macOS 15 + Xcode 16 + Monochrome iPhone 16 Pro Simulator -->
+            <div class="w-full aspect-[16/10] rounded-[20px] border hairline overflow-hidden flex flex-col relative"
+                 style="background: #050505; color: #f2f2f2; box-shadow: var(--shadow-card);">
+              <div class="h-[22px] px-3 flex items-center justify-between text-[10px] border-b"
+                   style="background: #0e0e0e; border-color: rgba(255,255,255,0.08); color: #d4d4d4;">
+                <div class="flex items-center gap-2.5">
+                  <span class="font-semibold"></span>
+                  <span class="font-medium">Xcode 16</span>
+                  <span style="color: #8c8c8c;">Simulator</span>
+                </div>
+                <span class="font-mono-tech text-[9.5px]" style="color: #8c8c8c;">macOS 15 · Apple Silicon / KVM</span>
+              </div>
+
+              <div class="flex-1 p-3 grid grid-cols-12 gap-2.5 min-h-0 relative">
+                <div class="col-span-7 rounded-[12px] border p-2.5 flex flex-col justify-between font-mono-tech text-[9.5px]"
+                     style="background: #0e0e0e; border-color: rgba(255,255,255,0.09);">
+                  <div class="space-y-1.5">
+                    <div class="flex items-center justify-between text-[10px] pb-1.5 border-b" style="border-color: rgba(255,255,255,0.08);">
+                      <span class="text-white font-medium">CheckoutView.swift</span>
+                      <span style="color: #8c8c8c;">1.4s</span>
+                    </div>
+                    <div class="leading-relaxed" style="color: #a3a3a3;">
+                      <div><span style="color: #525252;">14</span> struct RateLimitBanner: View {</div>
+                      <div><span style="color: #525252;">15</span>   let retryAfter: Int</div>
+                      <div><span style="color: #525252;">16</span>   var body: some View {</div>
+                      <div><span style="color: #525252;">17</span>     Text("Retry \(retryAfter)s")</div>
+                      <div><span style="color: #525252;">18</span>   }</div>
+                      <div><span style="color: #525252;">19</span> }</div>
+                    </div>
+                  </div>
+                  <div class="pt-1.5 border-t flex items-center justify-between text-[9.5px]"
+                       style="border-color: rgba(255,255,255,0.08);">
+                    <span id="vmBuildLabel" class="text-white">xcodebuild · SUCCEEDED</span>
+                    <button onclick="runVmTests()"
+                            class="px-2 py-0.5 rounded-full border hover:opacity-80"
+                            style="border-color: rgba(255,255,255,0.22); color: #f2f2f2;">
+                      Run XCTest
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Monochrome iPhone 16 Pro Simulator -->
+                <div class="col-span-5 flex items-center justify-center">
+                  <div class="w-[104px] h-[188px] rounded-[20px] border p-2 flex flex-col justify-between"
+                       style="background: #000000; border-color: #333333;">
+                    <div class="w-[32px] h-[7px] rounded-full mx-auto" style="background: #171717;"></div>
+                    <div class="space-y-2 my-auto text-center">
+                      <div class="text-[8.5px] font-mono-tech uppercase tracking-wider" style="color: #737373;">CorePay iOS</div>
+                      <div class="p-2 rounded-[10px] border text-left space-y-1"
+                           style="background: #0e0e0e; border-color: rgba(255,255,255,0.12);">
+                        <div class="text-[9.5px] font-medium text-white">Checkout</div>
+                        <div class="text-[8.5px]" style="color: #8c8c8c;">60s · 30 req guard</div>
+                        <div class="mt-1 px-1.5 py-0.5 rounded-[5px] text-[8.5px] font-mono-tech text-center"
+                             style="background: #ffffff; color: #000000;">
+                          Pay $48.00
+                        </div>
+                      </div>
+                    </div>
+                    <div class="w-[34px] h-[3px] rounded-full mx-auto" style="background: #525252;"></div>
+                  </div>
+                </div>
+
+                <!-- Autonomous Agent Cursor -->
+                <div class="vm-cursor-anim absolute top-0 left-0 pointer-events-none flex items-center gap-1">
+                  <span class="w-[9px] h-[9px] rounded-full border-2" style="background: #ffffff; border-color: #000000;"></span>
+                  <span class="px-1.5 py-0.5 rounded-full font-mono-tech text-[8.5px]" style="background: #ffffff; color: #000000;">runner</span>
+                </div>
+              </div>
+
+              <!-- Mini macOS Dock -->
+              <div class="h-[24px] mb-1.5 mx-auto px-2.5 rounded-full border flex items-center gap-2.5 text-[9.5px]"
+                   style="background: #141414; border-color: rgba(255,255,255,0.1);">
+                <span class="text-white">Xcode</span>
+                <span style="color: #8c8c8c;">Sim</span>
+                <span style="color: #8c8c8c;">Term</span>
+                <span style="color: #8c8c8c;">VirtioFS</span>
+              </div>
+            </div>
+
+            <div class="pt-3 space-y-1.5 text-[11.5px]" style="color: var(--ink-secondary);">
+              <div class="flex items-center justify-between">
+                <span>Host mount</span>
+                <span class="font-mono-tech text-[11px]" style="color: var(--ink-primary);">/Volumes/core</span>
+              </div>
+              <div id="vmNoteText" class="text-[11px] leading-relaxed" style="color: var(--ink-tertiary);">
+                Local QEMU/KVM + OpenCore CLI builds, or pair a Remote Apple Silicon Mac over Tailscale for full Metal iOS Simulator speed.
+              </div>
+            </div>
+          </aside>
+        </div>
+
+        <!-- ===============================================================
+             VIEW B2: NOTHING × ORB SCULPTOR STUDIO (Bespoke Editorial Layout)
+             =============================================================== -->
+        <div id="botSculptorView" class="hidden flex-1 flex flex-col min-h-0 anim-panel">
+          <header class="h-[48px] px-7 border-b hairline flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-3">
+              <button onclick="openBotDesk(activeBotId)"
+                      class="px-2.5 py-1 rounded-full border hairline text-[11.5px] font-medium"
+                      style="background: var(--bg-surface); color: var(--ink-secondary);">
+                ← Desk
+              </button>
+              <span class="text-[13.5px] font-medium" style="color: var(--ink-primary);">Sculpt Teammate</span>
+            </div>
+            <span class="font-mono-tech text-[11px]" style="color: var(--ink-tertiary);">LivingOrb · aphesist/orb</span>
+          </header>
+
+          <div class="flex-1 overflow-y-auto px-7 sm:px-12 py-8 flex items-center justify-center">
+            <div class="max-w-[800px] w-full grid grid-cols-1 md:grid-cols-12 gap-10 items-center">
+
+              <!-- Left: 124px Hero LivingOrb over Nothing 1px Dot-Matrix Stage + Live State Tester -->
+              <div class="md:col-span-6 flex flex-col items-center">
+                <div class="relative w-[260px] h-[240px] flex items-center justify-center">
+                  <div class="absolute inset-0 dot-matrix-stage rounded-full"></div>
+                  <div id="sculptHeroMount"
+                       class="orb-mount orb-interactive w-[136px] h-[136px] relative z-10"
+                       data-orb-id="sculpt-hero"
+                       data-color="#F2F2F0"
+                       data-eyes="capsule"
+                       data-state="idle"
+                       data-size="120"></div>
+                </div>
+                <div id="sculptHint" class="text-[11px] font-mono-tech mb-3" style="color: var(--ink-tertiary);">
+                  Drag to rotate · Click rapidly to poke (3 stages)
+                </div>
+
+                <!-- Live Reaction Tester Bar (Shows 340ms vertex-by-vertex smooth morphing) -->
+                <div class="flex flex-wrap items-center justify-center gap-1.5">
+                  <button onclick="setSculptState('idle', this)" class="state-pill px-2.5 py-1 rounded-full border hairline text-[11px] font-medium" style="background: var(--ink-primary); color: var(--bg-app);">Idle</button>
+                  <button onclick="setSculptState('working', this)" class="state-pill px-2.5 py-1 rounded-full border hairline text-[11px] font-medium" style="color: var(--ink-secondary);">Working</button>
+                  <button onclick="setSculptState('thinking', this)" class="state-pill px-2.5 py-1 rounded-full border hairline text-[11px] font-medium" style="color: var(--ink-secondary);">Thinking</button>
+                  <button onclick="setSculptState('sleeping', this)" class="state-pill px-2.5 py-1 rounded-full border hairline text-[11px] font-medium" style="color: var(--ink-secondary);">Sleeping</button>
+                  <button onclick="setSculptState('happy', this)" class="state-pill px-2.5 py-1 rounded-full border hairline text-[11px] font-medium" style="color: var(--ink-secondary);">Happy</button>
+                  <button onclick="pokeSculptOrb()" class="px-2.5 py-1 rounded-full border hairline text-[11px] font-medium" style="color: var(--ink-primary);">Poke</button>
+                </div>
+              </div>
+
+              <!-- Right: Flat Hairline Controls (No Boxed Clutter) -->
+              <div class="md:col-span-6 space-y-6">
+                <!-- 1. Material Finish -->
+                <div class="space-y-2.5 pb-5 border-b hairline">
+                  <div class="flex items-center justify-between text-[11.5px]">
+                    <span class="font-medium" style="color: var(--ink-primary);">Material Finish</span>
+                    <span id="sculptColorName" class="font-mono-tech text-[11px]" style="color: var(--ink-tertiary);">Ceramic</span>
+                  </div>
+                  <div id="sculptSwatchRow" class="flex items-center gap-2.5"></div>
+                </div>
+
+                <!-- 2. Eye Archetype + Jelly Softness -->
+                <div class="space-y-3 pb-5 border-b hairline">
+                  <div class="text-[11.5px] font-medium" style="color: var(--ink-primary);">Eye Archetype</div>
+                  <div id="sculptEyeRow" class="flex flex-wrap gap-1.5"></div>
+
+                  <div class="pt-2 space-y-1.5">
+                    <div class="flex justify-between text-[11px]" style="color: var(--ink-secondary);">
+                      <span>Jelly Softness</span>
+                      <span id="jellyValLabel" class="font-mono-tech">0.65</span>
+                    </div>
+                    <input type="range" min="0.2" max="1.0" step="0.05" value="0.65"
+                           oninput="setSculptJelly(this.value)"
+                           class="w-full accent-current" />
+                  </div>
+                </div>
+
+                <!-- 3. Name, Blueprint Presets & Create CTA -->
+                <div class="space-y-3">
+                  <div class="flex flex-wrap gap-1.5">
+                    <button onclick="applyBlueprint('Night Shift', '#808080', 'crescent')"
+                            class="px-2.5 py-1 rounded-full border hairline text-[11px]" style="color: var(--ink-secondary);">
+                      Night Shift
+                    </button>
+                    <button onclick="applyBlueprint('Contract Gatekeeper', '#D71921', 'slit')"
+                            class="px-2.5 py-1 rounded-full border hairline text-[11px]" style="color: var(--ink-secondary);">
+                      Contract Gatekeeper
+                    </button>
+                    <button onclick="applyBlueprint('Apple Bubble Runner', '#F2F2F0', 'capsule')"
+                            class="px-2.5 py-1 rounded-full border hairline text-[11px]" style="color: var(--ink-secondary);">
+                      Apple Bubble Runner
+                    </button>
+                  </div>
+
+                  <div class="flex items-center gap-2.5 pt-1">
+                    <input id="sculptNameInput" type="text" value="Hermes Companion"
+                           placeholder="Teammate name..."
+                           class="flex-1 h-[38px] px-3.5 rounded-[10px] border hairline text-[13.5px] focus:outline-none"
+                           style="background: var(--bg-surface); color: var(--ink-primary);" />
+                    <button onclick="createSculptedBot()"
+                            class="h-[38px] px-5 rounded-full text-[13px] font-medium shrink-0 transition-opacity hover:opacity-85"
+                            style="background: var(--ink-primary); color: var(--bg-app);">
+                      Create Teammate
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. LIVING ORB ENGINE (aphesist/orb Architecture)
+    //    - Consistent 96-vertex soft-body sphere + floor-plane squash & shadow
+    //    - 32-vertex spherical closed-loop smoothstep expression morphing (340ms)
+    //    - 5 Eye Archetypes: capsule, slit, round, crescent, matrix (2x3)
+    //    - 6-DOF Fourier wobble (k = 2, 3, 4) + Damped spring gaze (K = 95, D = 11)
+    //    - Spherical exponential-map 3D eye foreshortening + horizon culling
+    //    - Autonomous sleeping ('z' particles + hover wake) + 3-stage poke
+    // =========================================================================
+    const N_BODY = 96;
+    const N_EYE = 32;
+    const EYE_ARCHETYPES = [
+      { id: 'capsule',  label: 'Capsule ||' },
+      { id: 'slit',     label: 'Slit —' },
+      { id: 'round',    label: 'Round ●' },
+      { id: 'crescent', label: 'Crescent ◡' },
+      { id: 'matrix',   label: 'Matrix ∷' }
+    ];
+    const MATERIALS = [
+      { name: 'Ceramic',  hex: '#F2F2F0', eye: '#111111' },
+      { name: 'Chalk',    hex: '#FFFFFF', eye: '#0A0A0A' },
+      { name: 'Silver',   hex: '#CCCCCC', eye: '#111111' },
+      { name: 'Titanium', hex: '#808080', eye: '#FFFFFF' },
+      { name: 'Gunmetal', hex: '#333333', eye: '#FFFFFF' },
+      { name: 'Carbon',   hex: '#171717', eye: '#FFFFFF' },
+      { name: 'Void',     hex: '#080808', eye: '#FFFFFF' },
+      { name: 'Crimson',  hex: '#D71921', eye: '#FFFFFF' }
+    ];
+
+    function getOrbEyeInk(hex) {
+      const m = MATERIALS.find(x => x.hex.toLowerCase() === hex.toLowerCase());
+      if (m) return m.eye;
+      const c = hex.replace('#', '');
+      const r = parseInt(c.substr(0, 2), 16);
+      const g = parseInt(c.substr(2, 2), 16);
+      const b = parseInt(c.substr(4, 2), 16);
+      return (0.299 * r + 0.587 * g + 0.114 * b) > 135 ? '#111111' : '#FFFFFF';
+    }
+
+    function smoothstep01(t) {
+      const c = Math.max(0, Math.min(1, t));
+      return c * c * (3 - 2 * c);
+    }
+
+    // Build closed 32-point loop (da, db) around eye center for seamless point-by-point morphing
+    function buildEyeLoop(kind, side) {
+      const pts = new Float32Array(N_EYE * 2);
+      for (let i = 0; i < N_EYE; i++) {
+        const u = i / N_EYE;
+        const ang = u * Math.PI * 2;
+        const ca = Math.cos(ang), sa = Math.sin(ang);
+        let da = 0, db = 0;
+
+        if (kind === 'capsule') {
+          // Rounded vertical pill (rx=0.068, ry=0.175)
+          const p = Math.pow(Math.pow(Math.abs(ca), 3.6) + Math.pow(Math.abs(sa), 3.6), 1 / 3.6);
+          da = (ca / p) * 0.066;
+          db = (sa / p) * 0.168;
+        } else if (kind === 'slit' || kind === 'working') {
+          const ry = kind === 'working' ? 0.044 : 0.036;
+          const rx = kind === 'working' ? 0.145 : 0.135;
+          const p = Math.pow(Math.pow(Math.abs(ca), 4.0) + Math.pow(Math.abs(sa), 4.0), 1 / 4.0);
+          da = (ca / p) * rx;
+          db = (sa / p) * ry;
+        } else if (kind === 'round') {
+          da = ca * 0.105;
+          db = sa * 0.105;
+        } else if (kind === 'surprised') {
+          da = ca * 0.128;
+          db = sa * 0.155;
+        } else if (kind === 'crescent' || kind === 'happy') {
+          // Bottom edge (+1 -> -1) then top edge (-1 -> +1) to match polar CCW orientation without twist
+          const half = N_EYE / 2;
+          const span = kind === 'happy' ? 0.135 : 0.125;
+          const archH = kind === 'happy' ? 0.095 : 0.055;
+          const thick = kind === 'happy' ? 0.036 : 0.030;
+          if (i < half) {
+            const s = 1 - (i / (half - 1)) * 2; // +1 -> -1
+            const taper = 0.45 + 0.55 * (1 - s * s);
+            da = s * span;
+            db = -archH * (1 - s * s) + (thick * 0.5 * taper) + archH * 0.35;
+          } else {
+            const s = ((i - half) / (half - 1)) * 2 - 1; // -1 -> +1
+            const taper = 0.45 + 0.55 * (1 - s * s);
+            da = s * span;
+            db = -archH * (1 - s * s) - (thick * 0.5 * taper) + archH * 0.35;
+          }
+        } else if (kind === 'sleeping') {
+          const half = N_EYE / 2;
+          const span = 0.118;
+          const drop = 0.048;
+          const thick = 0.028;
+          if (i < half) {
+            const s = 1 - (i / (half - 1)) * 2;
+            const taper = 0.45 + 0.55 * (1 - s * s);
+            da = s * span;
+            db = drop * (1 - s * s) + (thick * 0.5 * taper) + 0.02;
+          } else {
+            const s = ((i - half) / (half - 1)) * 2 - 1;
+            const taper = 0.45 + 0.55 * (1 - s * s);
+            da = s * span;
+            db = drop * (1 - s * s) - (thick * 0.5 * taper) + 0.02;
+          }
+        } else if (kind === 'thinking') {
+          // Asymmetric curious squint (right eye narrower & raised slightly)
+          const ry = side > 0 ? 0.052 : 0.125;
+          const p = Math.pow(Math.pow(Math.abs(ca), 3.6) + Math.pow(Math.abs(sa), 3.6), 1 / 3.6);
+          da = (ca / p) * 0.088;
+          db = (sa / p) * ry + (side > 0 ? -0.025 : 0);
+        } else {
+          da = ca * 0.075;
+          db = sa * 0.15;
+        }
+        pts[i * 2] = da;
+        pts[i * 2 + 1] = db;
+      }
+      return pts;
+    }
+
+    const EYE_LOOPS_L = {};
+    const EYE_LOOPS_R = {};
+    ['capsule', 'slit', 'round', 'crescent', 'working', 'thinking', 'happy', 'sleeping', 'surprised'].forEach(k => {
+      EYE_LOOPS_L[k] = buildEyeLoop(k, -1);
+      EYE_LOOPS_R[k] = buildEyeLoop(k, 1);
+    });
+
+    function expMap(a, b, yaw, pitch, roll) {
+      const th = Math.hypot(a, b);
+      let x = 0, y = 0, z = 1;
+      if (th > 1e-5) {
+        const s = Math.sin(th) / th;
+        x = a * s;
+        y = b * s;
+        z = Math.cos(th);
+      }
+      const cr = Math.cos(roll), sr = Math.sin(roll);
+      const xr = x * cr - y * sr, yr = x * sr + y * cr;
+      const cp = Math.cos(pitch), sp = Math.sin(pitch);
+      const yp = yr * cp - z * sp, zp = yr * sp + z * cp;
+      const cy = Math.cos(yaw), sy = Math.sin(yaw);
+      return { x: xr * cy + zp * sy, y: yp, z: -xr * sy + zp * cy };
+    }
+
+    class LivingOrb {
+      constructor(el) {
+        this.el = el;
+        this.id = el.dataset.orbId;
+        this.color = el.dataset.color || '#F2F2F0';
+        this.eyeArchetype = el.dataset.eyes || 'capsule';
+        this.baseState = el.dataset.state || 'idle';
+        this.state = this.baseState;
+        this.size = parseFloat(el.dataset.size || '48');
+        this.jelly = parseFloat(el.dataset.jelly || '0.65');
+        this.interactive = el.classList.contains('orb-interactive');
+
+        // 2.2x oversized canvas so floor squash, hops, z-particles & orbits never clip
+        this.boxSize = Math.round(this.size * 2.2);
+        this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+        this.canvas = document.createElement('canvas');
+        this.canvas.width = this.boxSize * this.dpr;
+        this.canvas.height = this.boxSize * this.dpr;
+        this.canvas.style.width = `${this.boxSize}px`;
+        this.canvas.style.height = `${this.boxSize}px`;
+        this.el.innerHTML = '';
+        this.el.appendChild(this.canvas);
+        this.ctx = this.canvas.getContext('2d');
+
+        this.seed = Array.from(this.id).reduce((a, ch) => a + ch.charCodeAt(0), 0) * 0.63;
+
+        // Damped spring pose (yaw, pitch, roll)
+        this.yaw = -0.1; this.pitch = 0.04; this.roll = 0;
+        this.vyaw = 0; this.vpitch = 0; this.vroll = 0;
+
+        // Hop & floor-contact squash
+        this.hopY = 0; this.vhop = 0;
+        this.floorSquash = 0;
+
+        // 6-DOF Fourier wobble modes (k=2, 3, 4)
+        this.qc = [0, 0, 0]; this.qs = [0, 0, 0];
+        this.vc = [0, 0, 0]; this.vs = [0, 0, 0];
+
+        // Smooth 340ms vertex-by-vertex eye morphing
+        const initKey = this.resolveEyeKey(this.state);
+        this.curEyeL = new Float32Array(EYE_LOOPS_L[initKey]);
+        this.curEyeR = new Float32Array(EYE_LOOPS_R[initKey]);
+        this.fromEyeL = new Float32Array(this.curEyeL);
+        this.fromEyeR = new Float32Array(this.curEyeR);
+        this.targetEyeKey = initKey;
+        this.eyeMorphT = 1.0;
+
+        this.matrixMix = (this.eyeArchetype === 'matrix' && this.state === 'idle') ? 1.0 : 0.0;
+        this.dizzyMix = 0.0;
+
+        // Autonomous life & poke state
+        this.overrideUntil = 0;
+        this.pokeCount = 0;
+        this.lastPokeAt = 0;
+        this.dragging = false;
+        this.dragYaw = 0;
+        this.dragPitch = 0;
+
+        // Floating 'z' sleep particles
+        this.zs = [];
+        this.nextZ = 0;
+
+        if (this.interactive) this.bindInteractive();
+      }
+
+      resolveEyeKey(st) {
+        if (st === 'sleeping') return 'sleeping';
+        if (st === 'happy') return 'happy';
+        if (st === 'surprised') return 'surprised';
+        if (st === 'working') return 'working';
+        if (st === 'thinking') return 'thinking';
+        if (st === 'dizzy') return 'round';
+        if (this.eyeArchetype === 'matrix') return 'round';
+        return this.eyeArchetype; // capsule | slit | round | crescent
+      }
+
+      setConfig({ color, eyes, state, jelly }) {
+        if (color) this.color = color;
+        if (eyes) this.eyeArchetype = eyes;
+        if (typeof jelly === 'number') this.jelly = jelly;
+        if (state) {
+          this.baseState = state;
+          this.setState(state, 0);
+        } else {
+          this.triggerEyeMorph(this.resolveEyeKey(this.state));
+        }
+      }
+
+      setState(nextState, durationMs = 0) {
+        this.state = nextState;
+        this.overrideUntil = durationMs > 0 ? performance.now() + durationMs : 0;
+        this.triggerEyeMorph(this.resolveEyeKey(nextState));
+        if (nextState === 'happy' || nextState === 'surprised') {
+          this.vhop = -2.9;
+          this.kickJelly(0.14);
+        }
+      }
+
+      triggerEyeMorph(key) {
+        if (key === this.targetEyeKey) return;
+        this.fromEyeL.set(this.curEyeL);
+        this.fromEyeR.set(this.curEyeR);
+        this.targetEyeKey = key;
+        this.eyeMorphT = 0.0;
+      }
+
+      kickJelly(strength = 0.14) {
+        const amp = strength * (0.45 + this.jelly * 0.85);
+        this.vc[0] += (Math.random() - 0.5) * amp * 12 + amp * 7;
+        this.vs[0] += (Math.random() - 0.5) * amp * 11;
+        this.vc[1] += (Math.random() - 0.5) * amp * 9;
+        this.vs[2] += (Math.random() - 0.5) * amp * 7;
+      }
+
+      poke(labelEl) {
+        const now = performance.now();
+        this.pokeCount = (now - this.lastPokeAt < 1500) ? this.pokeCount + 1 : 1;
+        this.lastPokeAt = now;
+
+        if (this.pokeCount === 1) {
+          this.setState('surprised', 1700);
+          this.vhop = -3.1;
+          this.kickJelly(0.18);
+          if (labelEl) labelEl.textContent = '1st poke · surprised';
+        } else if (this.pokeCount === 2) {
+          this.setState('happy', 2000);
+          this.vhop = -3.6;
+          this.vroll += 3.4;
+          this.kickJelly(0.22);
+          if (labelEl) labelEl.textContent = '2nd poke · giggle (^ ^)';
+        } else {
+          this.setState('dizzy', 2700);
+          this.vyaw += 5.8;
+          this.kickJelly(0.25);
+          if (labelEl) labelEl.textContent = '3rd poke · dizzy! (settling)';
+        }
+      }
+
+      bindInteractive() {
+        let downX = 0, downY = 0, moved = false;
+        this.el.addEventListener('pointerdown', (e) => {
+          this.dragging = true;
+          downX = e.clientX; downY = e.clientY; moved = false;
+          this.el.setPointerCapture(e.pointerId);
+        });
+        this.el.addEventListener('pointermove', (e) => {
+          if (!this.dragging) return;
+          const dx = e.clientX - downX, dy = e.clientY - downY;
+          if (Math.hypot(dx, dy) > 4) moved = true;
+          this.dragYaw = Math.max(-0.88, Math.min(0.88, dx * 0.012));
+          this.dragPitch = Math.max(-0.76, Math.min(0.76, -dy * 0.01));
+        });
+        const release = () => {
+          if (!this.dragging) return;
+          this.dragging = false;
+          if (!moved) {
+            const labelEl = this.id === 'desk-hero'
+              ? document.getElementById('deskHeroHint')
+              : document.getElementById('sculptHint');
+            this.poke(labelEl);
+          }
+          this.dragYaw = 0; this.dragPitch = 0;
+        };
+        this.el.addEventListener('pointerup', release);
+        this.el.addEventListener('pointercancel', release);
+      }
+
+      step(dt, tSec, pointer) {
+        const now = performance.now();
+        if (this.overrideUntil > 0 && now > this.overrideUntil) {
+          this.overrideUntil = 0;
+          this.pokeCount = 0;
+          this.setState(this.baseState, 0);
+          if (this.id === 'desk-hero') {
+            document.getElementById('deskHeroHint').textContent = 'Drag to turn · Click to poke · Type below to watch gaze';
+          } else if (this.id === 'sculpt-hero') {
+            document.getElementById('sculptHint').textContent = 'Drag to rotate · Click rapidly to poke (3 stages)';
+          }
+        }
+
+        // Smooth 340ms vertex-by-vertex eye morph
+        if (this.eyeMorphT < 1.0) {
+          this.eyeMorphT = Math.min(1.0, this.eyeMorphT + dt / 0.34);
+          const s = smoothstep01(this.eyeMorphT);
+          const tL = EYE_LOOPS_L[this.targetEyeKey];
+          const tR = EYE_LOOPS_R[this.targetEyeKey];
+          for (let i = 0; i < N_EYE * 2; i++) {
+            this.curEyeL[i] = this.fromEyeL[i] + (tL[i] - this.fromEyeL[i]) * s;
+            this.curEyeR[i] = this.fromEyeR[i] + (tR[i] - this.fromEyeR[i]) * s;
+          }
+        }
+
+        const wantMatrix = (this.eyeArchetype === 'matrix' && (this.state === 'idle' || this.state === 'working')) ? 1 : 0;
+        this.matrixMix += (wantMatrix - this.matrixMix) * Math.min(1, dt * 10);
+        const wantDizzy = this.state === 'dizzy' ? 1 : 0;
+        this.dizzyMix += (wantDizzy - this.dizzyMix) * Math.min(1, dt * 10);
+
+        // Pose targets per state
+        let tyaw = 0.06 * Math.sin(tSec * 0.8 + this.seed);
+        let tpitch = 0.04 * Math.cos(tSec * 0.65 + this.seed);
+        let troll = 0.025 * Math.sin(tSec * 0.7 + this.seed);
+
+        if (this.dragging) {
+          tyaw = this.dragYaw;
+          tpitch = this.dragPitch;
+        } else if (this.state === 'sleeping') {
+          tyaw = -0.08 + 0.04 * Math.sin(tSec * 0.7 + this.seed);
+          tpitch = 0.24 + 0.04 * Math.sin(tSec * 1.4);
+          troll = 0.06 * Math.sin(tSec * 0.7);
+        } else if (this.state === 'thinking') {
+          tyaw = 0.14 * Math.sin(tSec * 1.2);
+          tpitch = 0.22; // glances downward toward composer
+          troll = -0.07;
+        } else if (this.state === 'working') {
+          tyaw = 0.26 * Math.sin(tSec * 2.2 + this.seed);
+          tpitch = 0.04;
+        } else if (this.state === 'happy') {
+          troll = 0.15 * Math.sin(tSec * 13);
+          tpitch = -0.08;
+        } else if (this.state === 'dizzy') {
+          tyaw = 0.28 * Math.cos(tSec * 6.5);
+          tpitch = 0.18 * Math.sin(tSec * 6.5);
+          troll = 0.14 * Math.sin(tSec * 4.5);
+        } else if (pointer.active) {
+          const rect = this.el.getBoundingClientRect();
+          if (rect.width > 0) {
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+            tyaw += 0.34 * Math.tanh((pointer.x - cx) / 165);
+            tpitch += 0.22 * Math.tanh((pointer.y - cy) / 165);
+          }
+        }
+
+        // Damped spring head pose (K=95, D=11)
+        const K = 95, D = 11;
+        this.vyaw += ((tyaw - this.yaw) * K - this.vyaw * D) * dt;
+        this.vpitch += ((tpitch - this.pitch) * K - this.vpitch * D) * dt;
+        this.vroll += ((troll - this.roll) * K - this.vroll * D) * dt;
+        this.yaw += this.vyaw * dt;
+        this.pitch += this.vpitch * dt;
+        this.roll += this.vroll * dt;
+
+        // Hop & floor bounce physics
+        const prevHop = this.hopY;
+        this.vhop += (-this.hopY * 135 - this.vhop * 11) * dt;
+        this.hopY += this.vhop * dt;
+        // Landing impact triggers soft jelly squash
+        if (prevHop < 0 && this.hopY >= 0 && this.vhop > 0.6) {
+          this.floorSquash = Math.min(0.28, this.vhop * 0.06);
+          this.kickJelly(0.11);
+        }
+        this.floorSquash *= Math.exp(-dt * 9);
+
+        // 6-DOF Fourier wobble (k=2,3,4)
+        const w = 22 - this.jelly * 7; // 20.6..15
+        const damp = 9.5 - this.jelly * 5.2;
+        for (let m = 0; m < 3; m++) {
+          this.vc[m] += (-(w * w) * this.qc[m] - damp * this.vc[m]) * dt;
+          this.vs[m] += (-(w * w) * this.qs[m] - damp * this.vs[m]) * dt;
+          this.qc[m] += this.vc[m] * dt;
+          this.qs[m] += this.vs[m] * dt;
+        }
+
+        // Sleeping 'z' particles
+        if (this.state === 'sleeping' && tSec > this.nextZ) {
+          this.nextZ = tSec + 1.15;
+          this.zs.push({ x: 0.35, y: -0.55, age: 0 });
+        }
+        this.zs.forEach(z => { z.age += dt; z.y -= dt * 0.55; z.x += Math.sin(z.age * 4) * dt * 0.14; });
+        this.zs = this.zs.filter(z => z.age < 1.9);
+      }
+
+      draw(tSec) {
+        const ctx = this.ctx;
+        const w = this.boxSize;
+        ctx.save();
+        ctx.scale(this.dpr, this.dpr);
+        ctx.clearRect(0, 0, w, w);
+
+        const R = this.size * 0.45;
+        const cx = w / 2;
+        const breath = Math.sin(tSec * 2.1 + this.seed) * 0.012;
+        const idleBob = this.state === 'sleeping'
+          ? Math.sin(tSec * 1.4 + this.seed) * (R * 0.04)
+          : Math.sin(tSec * 2.2 + this.seed) * (R * 0.05);
+        const cyRest = w / 2 + R * 0.05;
+        const cy = cyRest + idleBob + this.hopY * (R * 0.24);
+        const floorY = cyRest + R * 0.98;
+
+        // Subtle elliptical floor shadow shrinking while airborne
+        const heightAboveFloor = Math.max(0, cyRest - cy);
+        const shadowScale = Math.max(0.55, 1.0 - heightAboveFloor / (R * 1.6));
+        const appStyle = getComputedStyle(document.getElementById('app'));
+        ctx.fillStyle = appStyle.getPropertyValue('--orb-ground-shadow').trim() || 'rgba(128,128,128,0.1)';
+        ctx.beginPath();
+        ctx.ellipse(cx, floorY + R * 0.06, R * 0.72 * shadowScale, R * 0.12 * shadowScale, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Volume-conserving floor squash + airborne stretch
+        const airStretch = Math.max(-0.1, Math.min(0.1, -this.vhop * 0.02));
+        const squash = this.floorSquash + airStretch;
+        const sx = 1.0 + squash * 0.48 + breath * 0.6;
+        const sy = 1.0 - squash * 0.38 - breath * 0.4;
+
+        // 96-vertex soft-body contour with floor-plane flattening
+        ctx.beginPath();
+        for (let i = 0; i < N_BODY; i++) {
+          const theta = (i / N_BODY) * Math.PI * 2;
+          let wobble = 0;
+          for (let m = 0; m < 3; m++) {
+            const k = m + 2;
+            wobble += this.qc[m] * Math.cos(k * theta) + this.qs[m] * Math.sin(k * theta);
+          }
+          const r = R * (1.0 + wobble);
+          let px = cx + Math.cos(theta) * r * sx;
+          let py = cy + Math.sin(theta) * r * sy;
+          // Smooth floor contact flattening
+          if (py > floorY) {
+            const excess = py - floorY;
+            py = floorY + excess * 0.08;
+            px += Math.sign(px - cx) * excess * 0.25;
+          }
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fillStyle = this.color;
+        ctx.fill();
+
+        // Crisp subtle rim so Chalk-on-Paper or Carbon-on-Carbon stays legible
+        ctx.lineWidth = 0.85;
+        ctx.strokeStyle = 'rgba(128,128,128,0.22)';
+        ctx.stroke();
+
+        // Spherical Exponential-Map 3D Eyes
+        const eyeInk = getOrbEyeInk(this.color);
+        const blinkCycle = (tSec + this.seed * 1.9) % 4.1;
+        const doubleBlink = (Math.floor((tSec + this.seed * 1.9) / 4.1) % 5) === 0;
+        let blinkScale = 1.0;
+        if (this.state !== 'sleeping' && this.state !== 'dizzy') {
+          if (blinkCycle < 0.16) blinkScale = Math.max(0.08, Math.abs(blinkCycle - 0.08) / 0.08);
+          else if (doubleBlink && blinkCycle > 0.28 && blinkCycle < 0.44) {
+            blinkScale = Math.max(0.08, Math.abs(blinkCycle - 0.36) / 0.08);
+          }
+        }
+
+        const drawEyePoly = (loopPts, centerA, centerB) => {
+          const cProj = expMap(centerA, centerB, this.yaw, this.pitch, this.roll);
+          if (cProj.z < 0.06) return;
+          ctx.beginPath();
+          for (let i = 0; i < N_EYE; i++) {
+            const da = loopPts[i * 2];
+            const db = loopPts[i * 2 + 1] * blinkScale;
+            const p = expMap(centerA + da, centerB + db, this.yaw, this.pitch, this.roll);
+            const px = cx + p.x * R * sx;
+            const py = cy + p.y * R * sy;
+            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+          }
+          ctx.closePath();
+          ctx.fillStyle = eyeInk;
+          ctx.fill();
+        };
+
+        // Crossfade between 32-pt loop eyes and special matrix/dizzy modes
+        const baseAlpha = Math.max(0, 1 - Math.max(this.matrixMix, this.dizzyMix));
+        if (baseAlpha > 0.02) {
+          ctx.save();
+          ctx.globalAlpha = baseAlpha;
+          drawEyePoly(this.curEyeL, -0.21, 0.01);
+          drawEyePoly(this.curEyeR,  0.21, 0.01);
+          ctx.restore();
+        }
+
+        // Nothing OS 2x3 Matrix Pixel Eyes (on curved 3D sphere!)
+        if (this.matrixMix > 0.02) {
+          ctx.save();
+          ctx.globalAlpha = this.matrixMix;
+          ctx.fillStyle = eyeInk;
+          [-0.21, 0.21].forEach(centerA => {
+            for (let row = -1; row <= 1; row++) {
+              for (let col = -0.5; col <= 0.5; col += 1) {
+                const p = expMap(centerA + col * 0.075, 0.01 + row * 0.075 * blinkScale, this.yaw, this.pitch, this.roll);
+                if (p.z < 0.06) continue;
+                const px = cx + p.x * R * sx;
+                const py = cy + p.y * R * sy;
+                const dotR = Math.max(1.1, R * 0.032 * Math.max(0.4, p.z));
+                ctx.beginPath();
+                ctx.arc(px, py, dotR, 0, Math.PI * 2);
+                ctx.fill();
+              }
+            }
+          });
+          ctx.restore();
+        }
+
+        // Dizzy Spiral Eyes + 3 Orbiting Dots
+        if (this.dizzyMix > 0.02) {
+          ctx.save();
+          ctx.globalAlpha = this.dizzyMix;
+          ctx.strokeStyle = eyeInk;
+          ctx.fillStyle = eyeInk;
+          ctx.lineCap = 'round';
+          ctx.lineWidth = Math.max(1.5, R * 0.06);
+          [-0.21, 0.21].forEach((centerA, idx) => {
+            const cp = expMap(centerA, 0.01, this.yaw, this.pitch, this.roll);
+            if (cp.z < 0.06) return;
+            const ex = cx + cp.x * R * sx;
+            const ey = cy + cp.y * R * sy;
+            const dir = idx === 0 ? -1 : 1;
+            ctx.beginPath();
+            for (let k = 0; k <= 18; k++) {
+              const ang = tSec * 12 * dir + k * 0.55;
+              const rad = (k / 18) * (R * 0.16);
+              const sxp = ex + Math.cos(ang) * rad * Math.max(0.4, cp.z);
+              const syp = ey + Math.sin(ang) * rad;
+              if (k === 0) ctx.moveTo(sxp, syp); else ctx.lineTo(sxp, syp);
+            }
+            ctx.stroke();
+          });
+          for (let i = 0; i < 3; i++) {
+            const ang = tSec * 4.6 + (i * Math.PI * 2) / 3;
+            ctx.beginPath();
+            ctx.arc(cx + Math.cos(ang) * (R * 0.86), cy - R * 1.05 + Math.sin(ang) * (R * 0.2), Math.max(1.6, R * 0.06), 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+
+        // Autonomous Sleeping 'z' Glyphs
+        if (this.zs.length > 0) {
+          ctx.fillStyle = eyeInk === '#111111' || eyeInk === '#0A0A0A'
+            ? (appStyle.getPropertyValue('--ink-secondary').trim() || '#8c8c8c')
+            : '#8c8c8c';
+          ctx.font = `600 ${Math.max(8, Math.round(R * 0.34))}px "Geist Mono", monospace`;
+          ctx.textAlign = 'center';
+          this.zs.forEach(z => {
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, 1 - z.age / 1.9) * 0.75;
+            ctx.fillText('z', cx + z.x * R, cy + z.y * R);
+            ctx.restore();
+          });
+        }
+
+        ctx.restore();
+      }
+    }
+
+    const ORBS = new Map();
+    const POINTER = { x: 0, y: 0, active: false };
+    window.addEventListener('pointermove', (e) => { POINTER.x = e.clientX; POINTER.y = e.clientY; POINTER.active = true; });
+    window.addEventListener('blur', () => { POINTER.active = false; });
+
+    function mountOrbs() {
+      document.querySelectorAll('[data-orb-id]').forEach(el => {
+        const id = el.dataset.orbId;
+        if (!ORBS.has(id)) ORBS.set(id, new LivingOrb(el));
+      });
+    }
+
+    let lastOrbFrame = performance.now();
+    function orbLoop(now) {
+      const dt = Math.min(0.05, (now - lastOrbFrame) / 1000);
+      lastOrbFrame = now;
+      const tSec = now / 1000;
+      ORBS.forEach(orb => {
+        if (orb.el.offsetParent !== null) {
+          orb.step(dt, tSec, POINTER);
+          orb.draw(tSec);
+        }
+      });
+      requestAnimationFrame(orbLoop);
+    }
+
+    function wakeSleepingOrb(orbId, hover) {
+      const orb = ORBS.get(orbId);
+      if (!orb) return;
+      if (hover) orb.setState('surprised', 550);
+      else orb.setState('sleeping', 0);
+    }
+
+    // =========================================================================
+    // 2. 1-BIT BAYER 8x8 ANIMATED SMOKE SHADER (@cheatyyyy × dithercn)
+    // =========================================================================
+    const BAYER_8 = [
+       0, 48, 12, 60,  3, 51, 15, 63,
+      32, 16, 44, 28, 35, 19, 47, 31,
+       8, 56,  4, 52, 11, 59,  7, 55,
+      40, 24, 36, 20, 43, 27, 39, 23,
+       2, 50, 14, 62,  1, 49, 13, 61,
+      34, 18, 46, 30, 33, 17, 45, 29,
+      10, 58,  6, 54,  9, 57,  5, 53,
+      42, 26, 38, 22, 41, 25, 37, 21
+    ];
+    let smokeSpeed = 1.0;
+    let smokePower = 1.0;
+
+    function h2(x, y) { const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return n - Math.floor(n); }
+    function vn(x, y) {
+      const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+      const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
+      const a = h2(ix, iy), b = h2(ix + 1, iy), c = h2(ix, iy + 1), d = h2(ix + 1, iy + 1);
+      return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+    }
+    function fbm(x, y) {
+      let v = 0, amp = 0.55;
+      for (let i = 0; i < 4; i++) { v += amp * vn(x, y); x = x * 2.02 + 1.7; y = y * 2.01 - 1.2; amp *= 0.5; }
+      return v;
+    }
+    function paintDither(canvas, t) {
+      if (!canvas || canvas.offsetParent === null) return;
+      const ctx = canvas.getContext('2d', { alpha: false });
+      const w = canvas.width, h = canvas.height;
+      const img = ctx.createImageData(w, h);
+      const d = img.data;
+      for (let y = 0; y < h; y++) {
+        const ny = y / h;
+        const falloff = Math.pow(Math.max(0, 1 - ny * 1.08), 1.48);
+        for (let x = 0; x < w; x++) {
+          const nx = x / w;
+          const warp = fbm(nx * 3.8 + t * 0.7, ny * 2.5 - t * 0.4);
+          const plume = fbm(nx * 5.2 - t * 0.35 + warp * 1.25, ny * 3.2 + warp * 0.85);
+          const wave = 0.15 * Math.sin(nx * 6.2 + t * 1.05) + 0.11 * Math.cos(nx * 10.5 - t * 0.75);
+          const tone = Math.min(1, Math.max(0, (plume * 1.16 + wave + 0.12) * falloff * smokePower));
+          const th = (BAYER_8[(y & 7) * 8 + (x & 7)] + 0.5) / 64.0;
+          const on = tone > th;
+          const idx = (y * w + x) * 4;
+          d[idx] = on ? 255 : 0; d[idx + 1] = on ? 255 : 0; d[idx + 2] = on ? 255 : 0; d[idx + 3] = 255;
+        }
+      }
+      ctx.putImageData(img, 0, 0);
+    }
+    let smokeT0 = performance.now();
+    function smokeLoop(now) {
+      const t = ((now - smokeT0) * 0.00055) * smokeSpeed;
+      paintDither(document.getElementById('sessDitherCanvas'), t);
+      paintDither(document.getElementById('botDitherCanvas'), t);
+      requestAnimationFrame(smokeLoop);
+    }
+
+    // =========================================================================
+    // 3. SECTION SWITCHER & THEME (Carbon / Paper)
+    // =========================================================================
+    let currentSection = 'bots';
+    function switchSection(section) {
+      currentSection = section;
+      const isSess = section === 'sessions';
+      document.getElementById('railSessions').classList.toggle('hidden', !isSess);
+      document.getElementById('railBots').classList.toggle('hidden', isSess);
+      document.getElementById('viewSessions').classList.toggle('hidden', !isSess);
+      document.getElementById('viewBots').classList.toggle('hidden', isSess);
+
+      const sb = document.getElementById('tabSessionsBtn');
+      const bb = document.getElementById('tabBotsBtn');
+      sb.style.background = isSess ? 'var(--ink-primary)' : 'transparent';
+      sb.style.color = isSess ? 'var(--bg-app)' : 'var(--ink-secondary)';
+      bb.style.background = !isSess ? 'var(--ink-primary)' : 'transparent';
+      bb.style.color = !isSess ? 'var(--bg-app)' : 'var(--ink-secondary)';
+      closePopovers();
+    }
+
+    function handleRailCreate() {
+      if (currentSection === 'bots') openBotSculptor();
+      else document.getElementById('sessInput').focus();
+    }
+
+    function toggleTheme() {
+      const app = document.getElementById('app');
+      const next = app.dataset.theme === 'carbon' ? 'paper' : 'carbon';
+      app.dataset.theme = next;
+      document.getElementById('themeToggleBtn').textContent = next === 'carbon' ? 'Paper' : 'Carbon';
+    }
+
+    // =========================================================================
+    // 4. BOTS: ACTIVE TEAMMATE DESK + HERMES CARDSTACK + APPLE VM + SCULPTOR
+    // =========================================================================
+    const TEAMMATES = {
+      runner: {
+        name: 'iOS & Mac Runner',
+        tag: 'SwiftUI · VirtioFS',
+        color: '#F2F2F0',
+        eyes: 'capsule',
+        showVm: true,
+        messages: [
+          { who: 'user', text: 'Run SwiftUI checkout tests in the Mac VM and verify the 429 retry banner on iPhone 16 Pro.' },
+          { who: 'bot', text: 'Synced via VirtioFS and ran <span class="font-mono-tech text-[12.5px]">xcodebuild test</span> (14/14 passed). Coordinating with <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[12px] font-medium" style="background: var(--bg-selected); color: var(--ink-primary);">@Gatekeeper</span> before signing.' }
+        ],
+        cards: [
+          { title: 'iOS Runner wants to sign TestFlight archive', quote: '"Sign CorePay.ipa with dev provisioning profile"', host: 'apple-vm.local · Xcode Keychain', scope: '14/14 XCTests passed · Scope verified', cmd: 'xcodebuild -exportArchive -scheme CorePay' },
+          { title: 'Push CheckoutView artifact to staging TestFlight', quote: '"Upload verified archive #482 to internal test ring"', host: 'appstoreconnect.apple.com', scope: 'Queue #2 · Contract Lane A clear', cmd: 'xcrun altool --upload-app -f CorePay.ipa' }
+        ]
+      },
+      gatekeeper: {
+        name: 'PR Gatekeeper',
+        tag: 'Contract Lanes · Read-Only',
+        color: '#171717',
+        eyes: 'slit',
+        showVm: false,
+        messages: [
+          { who: 'bot', text: 'Enforcing <span class="font-mono-tech text-[12.5px]">scope:</span> boundaries across <span class="font-mono-tech text-[12.5px]">aphesist/core</span>. Zero dirty working-tree escapes allowed.' }
+        ],
+        cards: []
+      },
+      nightshift: {
+        name: 'Night Shift',
+        tag: '02:00 Cron · Cascade',
+        color: '#808080',
+        eyes: 'crescent',
+        showVm: false,
+        messages: [
+          { who: 'bot', text: 'Morning digest ready. Solved 3/3 Contract Lanes overnight on local <span class="font-mono-tech text-[12.5px]">Qwen3-Coder</span> ($0.00) and escalated 1 cache race to Opus (-62.5% cost).' }
+        ],
+        cards: []
+      },
+      scout: {
+        name: 'Kernel Scout',
+        tag: 'pack() · Qwen3 Local',
+        color: '#CCCCCC',
+        eyes: 'matrix',
+        showVm: false,
+        messages: [
+          { who: 'bot', text: 'Indexed 412 Rust & TypeScript symbols in memory. Ready for zero-cost 1-turn <span class="font-mono-tech text-[12.5px]">pack()</span> queries.' }
+        ],
+        cards: []
+      }
+    };
+
+    let activeBotId = 'runner';
+    let cardStackIndex = 0;
+    let typingTimer = null;
+
+    function openBotDesk(id) {
+      activeBotId = id;
+      cardStackIndex = 0;
+      const bot = TEAMMATES[id] || TEAMMATES.runner;
+      switchSection('bots');
+      document.getElementById('botSculptorView').classList.add('hidden');
+      document.getElementById('botDeskView').classList.remove('hidden');
+
+      document.querySelectorAll('.bot-nav-item').forEach(el => {
+        const active = el.id === 'nav-' + id;
+        el.style.background = active ? 'var(--bg-selected)' : 'transparent';
+        const title = el.querySelector('span');
+        if (title) title.style.color = active ? 'var(--ink-primary)' : 'var(--ink-secondary)';
+      });
+      document.querySelectorAll('.crew-tile').forEach(el => {
+        el.style.background = el.dataset.crewId === id ? 'var(--bg-selected)' : 'transparent';
+      });
+
+      document.getElementById('deskTitle').textContent = bot.name;
+      document.getElementById('deskTag').textContent = bot.tag;
+
+      ORBS.get('desk-mini')?.setConfig({ color: bot.color, eyes: bot.eyes, state: 'working' });
+      ORBS.get('desk-hero')?.setConfig({ color: bot.color, eyes: bot.eyes, state: id === 'nightshift' ? 'sleeping' : 'idle' });
+      ORBS.get('desk-hero')?.kickJelly(0.12);
+
+      document.getElementById('vmStagePane').classList.toggle('hidden', !bot.showVm);
+      renderBotDeskMessages(bot);
+      renderBotCardStack(bot);
+    }
+
+    function renderBotDeskMessages(bot) {
+      const wrap = document.getElementById('botDeskMessages');
+      wrap.innerHTML = bot.messages.map(m => {
+        if (m.who === 'user') {
+          return `
+            <div class="flex justify-end anim-user-in">
+              <div class="max-w-[82%] px-4 py-2.5 rounded-[16px] text-[14px] leading-[1.48]"
+                   style="background: var(--bg-bubble-user); color: var(--ink-bubble-user);">
+                ${escapeHtml(m.text)}
+              </div>
+            </div>
+          `;
+        }
+        return `
+          <div class="flex justify-start anim-bot-in">
+            <div class="max-w-[88%] px-4 py-2.5 rounded-[16px] text-[14px] leading-[1.52]"
+                 style="background: var(--bg-bubble-agent); color: var(--ink-primary);">
+              ${m.text}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderBotCardStack(bot) {
+      const container = document.getElementById('botCardStackWrap');
+      const cards = bot.cards || [];
+      if (cards.length === 0) {
+        container.innerHTML = '';
+        return;
+      }
+      if (cardStackIndex >= cards.length) {
+        container.innerHTML = `
+          <div class="rounded-[14px] border hairline px-5 py-3.5 flex items-center justify-between anim-card-promote"
+               style="background: var(--bg-surface);">
+            <span class="font-mono-tech text-[12px]" style="color: var(--ink-secondary);">
+              All CardStack gates cleared (${cards.length}/${cards.length}) · hash-chain verified
+            </span>
+            <button onclick="resetBotCardStack()"
+                    class="px-3 py-1 rounded-full border hairline font-mono-tech text-[11px]"
+                    style="color: var(--ink-primary);">
+              Reset stack
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      const card = cards[cardStackIndex];
+      const hasQueued = cardStackIndex + 1 < cards.length;
+      container.innerHTML = `
+        ${hasQueued ? `<div class="mx-auto w-[96%] h-[16px] rounded-t-[14px] border border-b-0 -mb-[8px]" style="background: #0e0e0e; border-color: rgba(255,255,255,0.12);"></div>` : ''}
+        <div class="relative rounded-[14px] overflow-hidden border anim-card-promote"
+             style="background: #000000; border-color: rgba(255,255,255,0.18); box-shadow: var(--shadow-card); color: #f2f2f2;">
+          <div class="relative w-full h-[82px]" style="background: #000000;">
+            <canvas id="botDitherCanvas" class="dither-smoke-canvas" width="300" height="41"></canvas>
+            <div class="absolute left-5 bottom-2 px-2 py-0.5 rounded-[4px] font-mono-tech text-[12px] font-medium"
+                 style="background: #000000; color: #ffffff;">
+              ${escapeHtml(card.title)}
+            </div>
+          </div>
+          <div class="px-5 pt-2.5 pb-4 font-mono-tech space-y-3">
+            <div class="text-[11.5px]" style="color: #a3a3a3;">${escapeHtml(card.quote)}</div>
+            <div class="pl-3 border-l text-[11.5px] space-y-0.5" style="border-color: #333333;">
+              <div class="text-white">${escapeHtml(card.host)}</div>
+              <div style="color: #737373;">${escapeHtml(card.scope)}</div>
+            </div>
+            <div class="flex items-center justify-between gap-2 pt-1">
+              <span class="text-[10.5px] truncate" style="color: #737373;">${hasQueued ? '2 in CardStack · ' : ''}${escapeHtml(card.cmd)}</span>
+              <div class="flex items-center gap-2 shrink-0">
+                <button onclick="decideBotStack('hold')" class="px-3.5 py-1 rounded-full border text-[11.5px]" style="border-color: #333333; color: #ededed;">Hold</button>
+                <button onclick="decideBotStack('approve')" class="px-4 py-1 rounded-full text-[11.5px] font-medium" style="background: #ffffff; color: #000000;">Approve</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function decideBotStack(decision) {
+      if (decision === 'hold') {
+        toggleVmStage(true);
+        return;
+      }
+      smokeSpeed = 2.3;
+      ORBS.get('desk-hero')?.setState('happy', 1200);
+      cardStackIndex += 1;
+      if (cardStackIndex >= (TEAMMATES[activeBotId]?.cards?.length || 0)) {
+        document.getElementById('runnerDockDot')?.classList.add('hidden');
+      }
+      renderBotCardStack(TEAMMATES[activeBotId]);
+      setTimeout(() => { smokeSpeed = 1.0; }, 750);
+    }
+
+    function resetBotCardStack() {
+      cardStackIndex = 0;
+      document.getElementById('runnerDockDot')?.classList.remove('hidden');
+      renderBotCardStack(TEAMMATES[activeBotId]);
+    }
+
+    function onBotTyping() {
+      const hero = ORBS.get('desk-hero');
+      if (!hero) return;
+      hero.setState('thinking', 1300);
+      clearTimeout(typingTimer);
+      typingTimer = setTimeout(() => {
+        if (hero.overrideUntil === 0) hero.setState(hero.baseState, 0);
+      }, 1350);
+    }
+
+    function sendBotDeskMsg() {
+      const inp = document.getElementById('botDeskInput');
+      const txt = inp.value.trim();
+      if (!txt) return;
+      inp.value = '';
+      const bot = TEAMMATES[activeBotId] || TEAMMATES.runner;
+      bot.messages.push({ who: 'user', text: txt });
+      renderBotDeskMessages(bot);
+      ORBS.get('desk-hero')?.setState('happy', 1100);
+      const sc = document.getElementById('botDeskScroll');
+      sc.scrollTop = sc.scrollHeight;
+
+      setTimeout(() => {
+        bot.messages.push({
+          who: 'bot',
+          text: `Packed symbols in 1 turn and dispatched via <span class="font-mono-tech text-[12.5px]">Cascade</span>. Watching the gate now.`
+        });
+        renderBotDeskMessages(bot);
+        sc.scrollTop = sc.scrollHeight;
+      }, 420);
+    }
+
+    function toggleVmStage(forceOpen) {
+      const p = document.getElementById('vmStagePane');
+      if (typeof forceOpen === 'boolean') p.classList.toggle('hidden', !forceOpen);
+      else p.classList.toggle('hidden');
+    }
+
+    let vmIdx = 0;
+    const VM_MODES = [
+      { btn: 'QEMU/KVM · VirtioFS', note: 'Local QEMU/KVM + OpenCore CLI builds, or pair a Remote Apple Silicon Mac over Tailscale for full Metal iOS Simulator speed.' },
+      { btn: 'Tailscale · Mac M4', note: 'Connected to Mac mini M4 (100.84.12.9) via Tailscale SSH — native Metal-accelerated iOS Simulator & Xcode previews.' }
+    ];
+    function cycleVmBackend() {
+      vmIdx = (vmIdx + 1) % VM_MODES.length;
+      document.getElementById('vmBackendBtn').textContent = VM_MODES[vmIdx].btn;
+      document.getElementById('vmNoteText').textContent = VM_MODES[vmIdx].note;
+    }
+    function runVmTests() {
+      const lbl = document.getElementById('vmBuildLabel');
+      lbl.textContent = 'xcodebuild · RUNNING...';
+      ORBS.get('desk-hero')?.setState('working', 900);
+      setTimeout(() => {
+        lbl.textContent = 'xcodebuild · SUCCEEDED (1.1s)';
+        ORBS.get('desk-hero')?.setState('happy', 1100);
+      }, 750);
+    }
+
+    // Nothing × Orb Sculptor Studio
+    let sculptCfg = { color: '#F2F2F0', eyes: 'capsule', state: 'idle', jelly: 0.65 };
+
+    function openBotSculptor() {
+      switchSection('bots');
+      document.getElementById('botDeskView').classList.add('hidden');
+      document.getElementById('botSculptorView').classList.remove('hidden');
+      renderSculptorControls();
+    }
+
+    function renderSculptorControls() {
+      const sw = document.getElementById('sculptSwatchRow');
+      sw.innerHTML = MATERIALS.map(m => {
+        const active = m.hex === sculptCfg.color;
+        return `
+          <button onclick="setSculptColor('${m.hex}', '${m.name}')" title="${m.name}"
+                  class="w-[24px] h-[24px] rounded-full transition-transform hover:scale-110"
+                  style="background: ${m.hex}; border: ${active ? '2px solid var(--ink-primary)' : '1px solid var(--border-strong)'}; box-shadow: ${active ? '0 0 0 2px var(--bg-app) inset' : 'none'};">
+          </button>
+        `;
+      }).join('');
+
+      const er = document.getElementById('sculptEyeRow');
+      er.innerHTML = EYE_ARCHETYPES.map(e => {
+        const active = e.id === sculptCfg.eyes;
+        return `
+          <button onclick="setSculptEyes('${e.id}')"
+                  class="px-3 py-1 rounded-full border hairline text-[11.5px] font-medium transition-colors"
+                  style="background: ${active ? 'var(--ink-primary)' : 'transparent'}; color: ${active ? 'var(--bg-app)' : 'var(--ink-secondary)'};">
+            ${e.label}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function setSculptColor(hex, name) {
+      sculptCfg.color = hex;
+      document.getElementById('sculptColorName').textContent = name;
+      renderSculptorControls();
+      ORBS.get('sculpt-hero')?.setConfig({ color: hex });
+      ORBS.get('sculpt-hero')?.kickJelly(0.1);
+    }
+    function setSculptEyes(eyes) {
+      sculptCfg.eyes = eyes;
+      renderSculptorControls();
+      ORBS.get('sculpt-hero')?.setConfig({ eyes });
+      ORBS.get('sculpt-hero')?.kickJelly(0.1);
+    }
+    function setSculptJelly(val) {
+      sculptCfg.jelly = parseFloat(val);
+      document.getElementById('jellyValLabel').textContent = parseFloat(val).toFixed(2);
+      ORBS.get('sculpt-hero')?.setConfig({ jelly: sculptCfg.jelly });
+      ORBS.get('sculpt-hero')?.kickJelly(0.16);
+    }
+    function setSculptState(st, btn) {
+      sculptCfg.state = st;
+      document.querySelectorAll('.state-pill').forEach(p => {
+        p.style.background = 'transparent';
+        p.style.color = 'var(--ink-secondary)';
+      });
+      if (btn) {
+        btn.style.background = 'var(--ink-primary)';
+        btn.style.color = 'var(--bg-app)';
+      }
+      ORBS.get('sculpt-hero')?.setConfig({ state: st });
+    }
+    function pokeSculptOrb() {
+      ORBS.get('sculpt-hero')?.poke(document.getElementById('sculptHint'));
+    }
+    function applyBlueprint(name, hex, eyes) {
+      document.getElementById('sculptNameInput').value = name;
+      const mat = MATERIALS.find(m => m.hex === hex) || MATERIALS[0];
+      sculptCfg.color = hex;
+      sculptCfg.eyes = eyes;
+      document.getElementById('sculptColorName').textContent = mat.name;
+      renderSculptorControls();
+      ORBS.get('sculpt-hero')?.setConfig({ color: hex, eyes, state: name === 'Night Shift' ? 'sleeping' : 'idle' });
+      ORBS.get('sculpt-hero')?.kickJelly(0.15);
+    }
+    function createSculptedBot() {
+      const name = (document.getElementById('sculptNameInput').value || '').trim() || 'Companion';
+      const id = 'bot_' + Date.now();
+      TEAMMATES[id] = {
+        name,
+        tag: 'Hermes Custom Role',
+        color: sculptCfg.color,
+        eyes: sculptCfg.eyes,
+        showVm: false,
+        messages: [
+          { who: 'bot', text: `Ready. I'm <strong>${escapeHtml(name)}</strong> — tell me which Contract Lanes, subscriptions, or skills I own.` }
+        ],
+        cards: []
+      };
+      const nav = document.getElementById('botThreadNav');
+      const btn = document.createElement('button');
+      btn.id = 'nav-' + id;
+      btn.onclick = () => openBotDesk(id);
+      btn.className = 'bot-nav-item w-full text-left px-3 py-2.5 rounded-[10px] transition-colors';
+      btn.innerHTML = `
+        <div class="flex items-center justify-between">
+          <span class="text-[13px] font-medium truncate" style="color: var(--ink-primary);">${escapeHtml(name)}</span>
+          <span class="font-mono-tech text-[10px]" style="color: var(--ink-tertiary);">NEW</span>
+        </div>
+        <div class="text-[11.5px] truncate mt-0.5" style="color: var(--ink-tertiary);">Sculpted companion</div>
+      `;
+      nav.prepend(btn);
+      openBotDesk(id);
+    }
+
+    // =========================================================================
+    // 5. SESSIONS: LEAVE BLANKS, GATE CARD, LOCAL ARTIFACTS, FEEDFORWARD
+    // =========================================================================
+    function selectSession(id, btn) {
+      document.querySelectorAll('.sess-row').forEach(r => r.style.background = 'transparent');
+      btn.style.background = 'var(--bg-selected)';
+      const map = { checkout: 'Checkout rate-limit & Redis', artifacts: 'Local Artifacts git-fs', swiftui: 'SwiftUI Widget · Apple VM' };
+      document.getElementById('sessTitle').textContent = map[id] || map.checkout;
+    }
+
+    function togglePackTrace() {
+      const b = document.getElementById('packTraceBody');
+      const hidden = b.classList.toggle('hidden');
+      document.getElementById('packChevron').textContent = hidden ? '▸' : '▾';
+    }
+
+    function openSessBlank(kind, ev) {
+      ev.stopPropagation();
+      closePopovers();
+      const pop = document.getElementById('sessBlankPopover');
+      pop.classList.remove('hidden');
+      if (kind === 'window') {
+        pop.innerHTML = `
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-medium" style="color: var(--ink-primary);">Rate budget per user</span>
+            <button onclick="closePopovers()" style="color: var(--ink-tertiary);">✕</button>
+          </div>
+          <input type="range" min="10" max="100" step="10" value="30"
+                 oninput="document.getElementById('sessWindowVal').textContent='60s · '+this.value+' req'; document.getElementById('sessSlideOut').textContent=this.value+' req / 60s';"
+                 class="w-full accent-current" />
+          <div class="flex justify-between mt-1.5 font-mono-tech text-[11px]" style="color: var(--ink-secondary);">
+            <span>10</span><span id="sessSlideOut" style="color: var(--ink-primary);">30 req / 60s</span><span>100</span>
+          </div>
+        `;
+      } else {
+        pop.innerHTML = `
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-medium" style="color: var(--ink-primary);">Redis outage fallback</span>
+            <button onclick="closePopovers()" style="color: var(--ink-tertiary);">✕</button>
+          </div>
+          <div class="space-y-1.5">
+            <button onclick="pickSessBlank('fail-closed (429)')" class="w-full text-left px-2.5 py-1.5 rounded-[8px] border hairline" style="color: var(--ink-primary);">fail-closed (HTTP 429)</button>
+            <button onclick="pickSessBlank('in-memory LRU fallback')" class="w-full text-left px-2.5 py-1.5 rounded-[8px] border hairline" style="color: var(--ink-primary);">in-memory LRU fallback</button>
+            <button onclick="pickSessBlank('fail-open + metric')" class="w-full text-left px-2.5 py-1.5 rounded-[8px] border hairline" style="color: var(--ink-primary);">fail-open + metric</button>
+          </div>
+        `;
+      }
+    }
+    function pickSessBlank(val) {
+      const btn = document.getElementById('sessFailBtn');
+      btn.dataset.unresolved = 'false';
+      btn.innerHTML = `<span>${val}</span><span style="color: var(--ink-tertiary);">▾</span>`;
+      closePopovers();
+    }
+
+    function decideSessGate(choice) {
+      const t = document.getElementById('sessGateTitle');
+      const q = document.getElementById('sessGateQuote');
+      const f = document.getElementById('sessGateFooter');
+      const a = document.getElementById('sessGateActions');
+      if (choice === 'approve') {
+        smokeSpeed = 2.3;
+        t.textContent = 'running $HARNESS_GATE_CMD...';
+        q.textContent = '"executing vitest checkout.spec.ts inside Contract Lane A"';
+        a.innerHTML = `<span class="text-[11px]" style="color: #a3a3a3;">verifying...</span>`;
+        setTimeout(() => {
+          smokeSpeed = 0.5; smokePower = 0.65;
+          t.textContent = 'SHIPPED_AND_VERIFIED · lane A';
+          q.textContent = '"14/14 assertions passed · Haiku solved on 1st attempt"';
+          f.textContent = 'gate.decided(PASS) · $0.038 vs $0.112 Opus';
+          a.innerHTML = `<button onclick="resetSessGate()" class="px-3 py-1 rounded-[8px] border text-[11px]" style="border-color: #333333; color: #a3a3a3;">Reset</button>`;
+        }, 780);
+      } else {
+        smokeSpeed = 0.35; smokePower = 0.45;
+        t.textContent = 'ABORTED · rolled back cleanly';
+        q.textContent = '"working tree restored byte-for-byte via rollback journal"';
+        f.textContent = 'gate.decided(DENIED) · 0 dirty files';
+        a.innerHTML = `<button onclick="resetSessGate()" class="px-3 py-1 rounded-[8px] border text-[11px]" style="border-color: #333333; color: #a3a3a3;">Reset</button>`;
+      }
+    }
+    function resetSessGate() {
+      smokeSpeed = 1.0; smokePower = 1.0;
+      document.getElementById('sessGateTitle').innerHTML = 'ship() wants to use a secret &amp; verify gate';
+      document.getElementById('sessGateQuote').textContent = '"final gate check before atomic ship on lane A"';
+      document.getElementById('sessGateFooter').textContent = '1 queued · rollback journal armed (#9f2c04)';
+      document.getElementById('sessGateActions').innerHTML = `
+        <button onclick="decideSessGate('deny')" class="px-3.5 py-1.5 rounded-[8px] border text-[11.5px]" style="background: #000000; border-color: #333333; color: #f2f2f2;">Deny</button>
+        <button onclick="decideSessGate('approve')" class="px-4 py-1.5 rounded-[8px] text-[11.5px] font-medium" style="background: #ffffff; color: #000000;">Touch to approve</button>
+      `;
+    }
+
+    // Local Artifacts Drawer
+    let artVer = 3, artTab = 'preview', forkCount = 0;
+    function toggleArtifactsDrawer(force) {
+      const dr = document.getElementById('artifactsDrawer');
+      if (typeof force === 'boolean') dr.classList.toggle('hidden', !force);
+      else dr.classList.toggle('hidden');
+      renderArtBody();
+    }
+    function forkArtifact() {
+      forkCount += 1;
+      document.getElementById('artRepoRef').textContent = `127.0.0.1:53954/git/default/toast-fork-${forkCount}.git`;
+      const btn = document.getElementById('forkBtn');
+      btn.textContent = `Forked #${forkCount}`;
+      setTimeout(() => { btn.textContent = 'Fork (CoW)'; }, 1800);
+    }
+    function setArtVer(v) {
+      artVer = v;
+      document.querySelectorAll('.art-ver').forEach((b, i) => {
+        const active = (i + 1) === v;
+        b.style.background = active ? 'var(--ink-primary)' : 'transparent';
+        b.style.color = active ? 'var(--bg-app)' : 'var(--ink-tertiary)';
+      });
+      renderArtBody();
+    }
+    function setArtTab(t) {
+      artTab = t;
+      document.getElementById('artTabPreview').style.background = t === 'preview' ? 'var(--bg-selected)' : 'transparent';
+      document.getElementById('artTabPreview').style.color = t === 'preview' ? 'var(--ink-primary)' : 'var(--ink-tertiary)';
+      document.getElementById('artTabDiff').style.background = t === 'diff' ? 'var(--bg-selected)' : 'transparent';
+      document.getElementById('artTabDiff').style.color = t === 'diff' ? 'var(--ink-primary)' : 'var(--ink-tertiary)';
+      renderArtBody();
+    }
+    function renderArtBody() {
+      const b = document.getElementById('artifactBody');
+      if (artTab === 'diff') {
+        b.innerHTML = `
+          <div class="rounded-[12px] border hairline p-3 font-mono-tech text-[11px] leading-relaxed" style="background: var(--bg-surface); color: var(--ink-secondary);">
+            <div style="color: var(--ink-tertiary);">commit v${artVer} · local-artifacts</div>
+            <div class="mt-2" style="color: var(--ink-primary);">+ export function CheckoutToast({ retryAfter }) {</div>
+            <div>+   return &lt;div className="rounded-full px-4 py-2"&gt;</div>
+            <div>+     Rate limit active · retry in {retryAfter}s</div>
+            <div>+   &lt;/div&gt;</div>
+            <div>+ }</div>
+          </div>
+        `;
+        return;
+      }
+      const note = artVer === 1 ? 'Draft static pill' : artVer === 2 ? 'Added countdown timer' : 'Final · 429 retry toast';
+      b.innerHTML = `
+        <div class="rounded-[14px] border hairline p-4 space-y-3" style="background: var(--bg-surface);">
+          <div class="flex items-center justify-between text-[11px]" style="color: var(--ink-tertiary);">
+            <span>Preview · v${artVer}</span>
+            <span class="font-mono-tech">${note}</span>
+          </div>
+          <div class="p-3.5 rounded-[12px] border hairline flex items-center justify-between" style="background: var(--bg-app);">
+            <div>
+              <div class="text-[12.5px] font-medium" style="color: var(--ink-primary);">Too many checkout attempts</div>
+              <div class="text-[11px]" style="color: var(--ink-secondary);">${artVer === 3 ? 'Cooling down · auto-retrying in 12s' : 'Please wait before retrying'}</div>
+            </div>
+            <span class="px-3 py-1 rounded-full text-[11px] font-medium" style="background: var(--ink-primary); color: var(--bg-app);">${artVer === 3 ? 'Retry' : 'Wait'}</span>
+          </div>
+        </div>
+        <div class="text-[11px] leading-relaxed" style="color: var(--ink-tertiary);">
+          Backed by loopback Git (<span class="font-mono-tech">ArtifactFS</span> blobless mount). Fork any revision in O(1).
+        </div>
+      `;
+    }
+
+    function parseSessFeedforward(val) {
+      const l = val.toLowerCase();
+      const pills = ['pack + ship'];
+      if (l.includes('simulator') || l.includes('ios') || l.includes('swift')) pills.unshift('macOS VM');
+      if (l.includes('icon') || l.includes('image') || l.includes('nano')) pills.unshift('nano-banana');
+      if (l.includes('repl') || l.includes('script')) pills.unshift('exec REPL');
+      document.getElementById('sessFfScope').textContent =
+        l.includes('simulator') || l.includes('ios') ? 'scope: ios/CheckoutView.swift, src/ui/CheckoutToast.tsx'
+        : l.includes('toast') ? 'scope: src/ui/CheckoutToast.tsx' : 'scope: inferred on pack';
+      document.getElementById('sessFfPills').innerHTML = pills.map(p =>
+        `<span class="px-2 py-0.5 rounded-full border hairline font-mono-tech text-[10px]" style="color: var(--ink-secondary);">${p}</span>`
+      ).join('');
+    }
+    function toggleSessFfPopover(ev) { ev.stopPropagation(); closePopovers(); document.getElementById('sessFfPopover').classList.toggle('hidden'); }
+    function setSessRoute(lbl) { document.getElementById('sessFfRouteLabel').textContent = lbl; closePopovers(); }
+
+    function sendSessMsg() {
+      const inp = document.getElementById('sessInput');
+      const txt = inp.value.trim();
+      if (!txt) return;
+      inp.value = '';
+      parseSessFeedforward('');
+      document.getElementById('sessMessages').insertAdjacentHTML('beforeend', `
+        <div class="flex justify-end anim-user-in">
+          <div class="max-w-[80%] px-4 py-2.5 rounded-[16px] text-[14px]" style="background: var(--bg-bubble-user); color: var(--ink-bubble-user);">${escapeHtml(txt)}</div>
+        </div>
+        <div class="text-[14.5px] leading-[1.68] anim-panel" style="color: var(--ink-primary);">
+          Queued on <span class="font-mono-tech text-[12.5px]">Contract Lane B</span> — routing via <span class="font-mono-tech text-[12.5px]">${escapeHtml(document.getElementById('sessFfRouteLabel').textContent)}</span>.
+        </div>
+      `);
+      const tr = document.getElementById('sessTranscript');
+      tr.scrollTop = tr.scrollHeight;
+    }
+
+    // Global Popovers
+    function toggleBrainsPopover(ev) {
+      ev.stopPropagation();
+      const p = document.getElementById('brainsPopover');
+      const h = p.classList.contains('hidden');
+      closePopovers();
+      if (h) p.classList.remove('hidden');
+    }
+    function toggleLedgerPopover(ev) {
+      ev.stopPropagation();
+      const p = document.getElementById('ledgerPopover');
+      const h = p.classList.contains('hidden');
+      closePopovers();
+      if (h) p.classList.remove('hidden');
+    }
+    function closePopovers() {
+      ['brainsPopover', 'ledgerPopover', 'sessBlankPopover', 'sessFfPopover'].forEach(id => {
+        document.getElementById(id)?.classList.add('hidden');
+      });
+    }
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#brainsPopover, #ledgerPopover, #sessBlankPopover, #sessFfPopover')) closePopovers();
+    });
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+    }
+
+    // Init
+    mountOrbs();
+    openBotDesk('runner');
+    parseSessFeedforward(document.getElementById('sessInput').value);
+    renderArtBody();
+    requestAnimationFrame(orbLoop);
+    requestAnimationFrame(smokeLoop);
+  </script>
+</body>
+</html>
