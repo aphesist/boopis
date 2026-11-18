@@ -539,3 +539,104 @@ def test_the_tools_are_registered_in_toolset_hypotaxis_and_hidden_without_hx(
     ctx.config["hx_path"] = str(tmp_path / "nope")
     hx._cache = None  # type: ignore[attr-defined]
     assert hx_ready() is False
+
+
+# ---------------------------------------------------------------- ship as a cascade worker's attempt
+
+
+def make_worker(rt: Runtime, state: SessionState, scope: tuple[str, ...] = ("src/a.py",)) -> Any:
+    """The state ``dispatch`` and ``subagent_start`` leave behind: a created, routed and claimed task and a link."""
+    from hypotaxis.governance.links import WorkerLink
+
+    ledger = rt.ledger(state)
+    ledger.append(
+        "task.created", "plugin", {"task_id": "task-1", "title": "t", "scope": list(scope), "max_attempts": 4}
+    )
+    ledger.append(
+        "route.decided",
+        "plugin",
+        {"task_id": "task-1", "action": "m", "propensities": {"m": 1.0}, "router_hash": "h", "features": {}},
+    )
+    ledger.append("task.claimed", "worker:p/m", {"task_id": "task-1", "worker": "worker:p/m"})
+    link = WorkerLink("child-1", SID, "task-1", 0, "cheap", 1, "p", "m", scope)
+    rt.links["child-1"] = link
+    return link
+
+
+FAILING = [PY, "-c", "print('AssertionError: 6 != 5 in src/a.py'); raise SystemExit(1)"]
+
+
+def test_a_workers_block_is_the_attempts_verdict_and_keeps_the_rejected_diff(
+    make_session: MakeSession, workspace: Path
+) -> None:
+    rt, state, _ = make_session(mode="governed", command=FAILING)
+    link = make_worker(rt, state)
+    result = run_ship(rt, state, {"edits": [replace("src/a.py", "return 1", "return 'BAD'")]}, link)
+    assert result["status"] == "restored"
+    assert "return 1" in (workspace / "src" / "a.py").read_text()
+    assert (link.verdict, link.gate) == ("block", "T0.visible_tests")
+    assert link.failure is not None
+    assert "-    return 1" in link.failure.diff
+    assert "+    return 'BAD'" in link.failure.diff  # taken before the restore
+    assert "6 != 5" in link.failure.output
+    assert "needs the project's gate" not in json.dumps(result)
+    events = rt.ledger(state).read()
+    assert [e["type"] for e in events if e["type"].startswith(("task.", "gate.", "ship."))] == [
+        "task.created",
+        "task.claimed",
+        "ship.applied",
+        "task.submitted",
+        "gate.decided",
+        "ship.restored",
+    ]  # no second task: a worker ships into the task dispatch made
+    applied = next(e for e in events if e["type"] == "ship.applied")
+    assert (applied["actor"], applied["payload"]["task_id"]) == ("worker:p/m", "task-1")
+    decided = next(e for e in events if e["type"] == "gate.decided")["payload"]
+    assert (decided["task_id"], decided["tier"], decided["attempt"], decided["verdict"]) == (
+        "task-1",
+        "cheap",
+        1,
+        "block",
+    )
+    assert rt.ledger(state).verify()[0] is True
+
+
+def test_a_workers_pass_is_the_verdict_and_commits_a_checkpoint(make_session: MakeSession, workspace: Path) -> None:
+    rt, state, _ = make_session(mode="governed")
+    link = make_worker(rt, state)
+    result = run_ship(rt, state, {"edits": [replace("src/a.py", "return 1", "return 2")]}, link)
+    assert result["status"] == "shipped"
+    assert link.verdict == "pass"
+    assert result["checkpoint"]["ref"] == f"refs/hypotaxis/checkpoints/{SID}"
+    assert link.closed_reason()  # a second ship is refused by the policy from here on
+    assert rt.ledger(state).verify()[0] is True
+
+
+def test_a_workers_scope_violation_is_a_scope_gate_block_and_writes_nothing(
+    make_session: MakeSession, workspace: Path
+) -> None:
+    rt, state, _ = make_session(mode="governed")
+    link = make_worker(rt, state, scope=("src/a.py",))
+    result = run_ship(rt, state, {"edits": [replace("src/util.py", "return 0", "return 9")]}, link)
+    assert result["status"] == "blocked"
+    assert result["code"] == "hx.txn.scope_violation"
+    assert "over" in result["attempt_over"]
+    assert "return 0" in (workspace / "src" / "util.py").read_text()
+    assert (link.verdict, link.gate) == ("block", "T0.scope")
+    assert link.failure is not None
+    assert (link.failure.scope_only, link.failure.paths) == (True, ("src/util.py",))
+    decided = next(e for e in rt.ledger(state).read() if e["type"] == "gate.decided")["payload"]
+    assert decided["gate"] == "T0.scope"
+    assert decided["gates"][0]["evidence"]["violations"] == [{"path": "src/util.py", "reason": "out_of_scope"}]
+    assert rt.ledger(state).verify()[0] is True
+
+
+def test_an_edit_that_does_not_match_is_not_a_verdict_and_the_worker_may_try_again(
+    make_session: MakeSession,
+) -> None:
+    rt, state, _ = make_session(mode="governed")
+    link = make_worker(rt, state)
+    result = run_ship(rt, state, {"edits": [replace("src/a.py", "no such text", "x")]}, link)
+    assert result["status"] == "aborted_before_write"
+    assert link.verdict is None
+    assert link.closed_reason() == ""
