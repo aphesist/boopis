@@ -14,6 +14,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,6 +27,8 @@ AUX_TASKS = (
     "goal_judge", "group_router", "curator", "monitor", "background_review", "moa_reference", "moa_aggregator",
 )  # fmt: skip
 PLUGIN_SRC = Path(__file__).resolve().parents[2] / "plugins" / "hypotaxis"
+sys.path.insert(0, str(PLUGIN_SRC.parent))  # the plugin package is importable as `hypotaxis` (trust-store helpers)
+HX_BIN = os.environ.get("HX_BIN", "")  # a built hx (cargo build -p hx); the pack and ship tests skip without it
 IGNORE = shutil.ignore_patterns("__pycache__", "tests", ".pytest_cache", ".ruff_cache", "*.pyc")
 
 
