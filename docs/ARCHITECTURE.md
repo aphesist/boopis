@@ -131,6 +131,14 @@ It registers:
   - The same-tier scope retry and the forks (control and treatment) follow contraprova's measured policy.
   - The orchestrator never chooses the next model itself.
 - **Ungoverned mode:** one chosen model with `pack`, `exec` and `ship` directly (or Hermes's default tools, as a profile choice). `ship` still journals. The gate can be switched off, and the same ledger is written.
+- **Smart** (the composer's Smart switch; the idea comes from Hermes's `smart_model_routing`) is per-message model choice, combined with the mode:
+
+  | | Smart on | Smart off |
+  |---|---|---|
+  | **Governed** | Feedforward picks the starting tier for each message from the ladder, and escalation climbs from there | The user's chosen model is the starting tier; escalation climbs the ladder above it |
+  | **Ungoverned** | A routing choice per message, with no gate and no escalation | Exactly the chosen model |
+
+  Alt+M opens the model picker without turning Smart off. Choosing a model pins it and turns Smart off; choosing "Smart" turns it back on.
 - **Per-attempt model selection** uses the subagent's model route. If Hermes cannot route a subagent to another provider, the fallback is a session-scoped model switch between attempts. Whichever the spike verifies is recorded in `docs/DECISIONS.md` (ADR-0007).
 - **Cost cap:** `pre_llm_call` blocks the call that would exceed the cap and the UI asks. Usage comes from `post_api_request`, normalised to `Usage {input_uncached, output, cache_read, cache_write, reasoning}`.
 - The **capability probe** stores per-model flags (tool use, edit format, prefill, prompt-cache kind) and picks the tool surface for weak models.
