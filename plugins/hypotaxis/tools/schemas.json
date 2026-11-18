@@ -31,6 +31,26 @@
       "required": ["items"]
     }
   },
+  "exec": {
+    "name": "exec",
+    "description": "Run Python in a persistent sandboxed kernel; returns when the cell ends. Top-level await works, variables persist between calls, the last expression is the result. In code: `await harness.tool(name, **args)` calls any tool; `await harness.parallel([(name, args), ...], limit=N)` runs several at once (a failed call leaves its error in its slot); `await harness.sh([argv], timeout)` runs a command; `await harness.leave_blank(question, options)` asks the owner without stopping. The workspace is read-only (only ship changes files); `harness.scratch` is writable; no network unless allowed. Long output is saved to a file. A cell that never yields is killed and its variables are lost.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "The Python source of one cell."
+        },
+        "timeout_ms": {
+          "type": "integer",
+          "description": "How long the cell may run, in milliseconds. A cell that runs longer is cancelled and the kernel keeps its variables."
+        }
+      },
+      "required": [
+        "code"
+      ]
+    }
+  },
   "ship": {
     "name": "ship",
     "description": "Change files. This is the only way to write the workspace. Send all the edits of one change together. Every edit is checked before anything is written (a miss writes nothing and shows the closest match); then the project's gate runs. If the gate fails, every file is put back exactly and you get the failing output. Paths are relative to the project; protected files (tests, secrets, keys, .git) cannot be changed.",

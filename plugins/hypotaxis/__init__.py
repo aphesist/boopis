@@ -19,6 +19,7 @@ HOOKS = (
     "pre_llm_call",
     "on_session_start",
     "on_session_finalize",
+    "agent_loop_stopped",
 )
 RPC_METHODS = (
     "describe",
@@ -52,17 +53,17 @@ def _rpc(method: str) -> Callable[..., Any]:
 
 def register(ctx: Any) -> None:
     from .hermes_api import bind
-    from .tools import TOOLSET, hx_ready, pack_handler, ship_handler, tool_schemas
+    from .tools import TOOLSET, exec_handler, exec_ready, hx_ready, pack_handler, ship_handler, tool_schemas
 
     bind(ctx)
-    handlers = {"pack": pack_handler, "ship": ship_handler}
+    handlers = {"pack": pack_handler, "exec": exec_handler, "ship": ship_handler}
     for name, schema in tool_schemas().items():
         ctx.register_tool(
             name=name,
             toolset=TOOLSET,
             schema=schema,
             handler=handlers[name],
-            check_fn=hx_ready,
+            check_fn=exec_ready if name == "exec" else hx_ready,
             description=schema["description"],
         )
 
@@ -75,6 +76,7 @@ def register(ctx: Any) -> None:
     on_unload = getattr(ctx, "on_unload", None)
     if callable(on_unload):
         on_unload(_lazy("hx", "shutdown"))
+        on_unload(_lazy("exec", "shutdown"))  # unload runs in reverse: kernels stop before the hx that sandboxes them
 
 
 def _start_recovery() -> None:

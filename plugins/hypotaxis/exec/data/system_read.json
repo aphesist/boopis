@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "_comment": "What a sandboxed interpreter needs to read besides its own prefix: the system's libraries and a few small files under /etc, never /etc itself. Mirrors crates/hx-sandbox/src/defaults.rs (hx never applies these implicitly). Only paths that exist are granted. Windows needs none: AppContainer reads the system through ALL APPLICATION PACKAGES.",
+  "linux": [
+    "/usr", "/bin", "/sbin", "/lib", "/lib32", "/lib64", "/libx32",
+    "/etc/ld.so.cache", "/etc/ld.so.conf", "/etc/ld.so.conf.d", "/etc/alternatives", "/etc/ssl",
+    "/etc/ca-certificates", "/etc/passwd", "/etc/group", "/etc/nsswitch.conf", "/etc/localtime",
+    "/etc/os-release", "/etc/mime.types"
+  ],
+  "darwin": [
+    "/usr", "/bin", "/sbin", "/System", "/Library/Apple", "/private/etc/ssl", "/private/etc/localtime",
+    "/private/etc/passwd", "/private/etc/group"
+  ]
+}

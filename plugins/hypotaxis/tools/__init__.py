@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 TOOLSET = "hypotaxis"
-TOOLS = ("pack", "ship")
+TOOLS = ("pack", "exec", "ship")
 SCHEMAS = Path(__file__).with_name("schemas.json")
 
 
@@ -31,6 +31,14 @@ def hx_ready() -> bool:
         return hx.available(runtime().load_settings().value.hx_path)
     except Exception:  # noqa: BLE001 - a check that errors hides the tool
         return False
+
+
+def exec_ready() -> bool:
+    """``check_fn`` of exec: hx exists and the platform has the kernel's private channel. Windows has none
+    yet, so exec is hidden there rather than offered and then refused."""
+    from ..exec import available
+
+    return available() and hx_ready()
 
 
 def _session(args: Mapping[str, Any], kw: Mapping[str, Any]) -> Any:
@@ -65,3 +73,15 @@ def ship_handler(args: Mapping[str, Any], **kw: Any) -> str:
         return json.dumps(run_ship(rt, state, args), ensure_ascii=False)
     except Exception as exc:  # noqa: BLE001
         return json.dumps({"error": f"ship failed: {type(exc).__name__}: {exc}", "code": "hx.internal_error"})
+
+
+def exec_handler(args: Mapping[str, Any], **kw: Any) -> str:
+    from ..exec import run_exec, to_json
+
+    try:
+        rt, state = _session(args, kw)
+        if state is None:
+            return json.dumps({"error": "exec needs a session", "code": "hx.config.invalid"})
+        return to_json(run_exec(rt, state, args, kw))
+    except Exception as exc:  # noqa: BLE001
+        return json.dumps({"error": f"exec failed: {type(exc).__name__}: {exc}", "code": "hx.internal_error"})

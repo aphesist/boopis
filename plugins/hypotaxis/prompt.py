@@ -16,7 +16,7 @@ _TEMPLATE = """\
 This session is governed. A permission policy outside this conversation decides which tool calls run, and you cannot change it.
 
 What you may use:
-- the hypotaxis tools listed for this session: pack reads the codebase (search, files, symbols, outlines, git status in one call), ship is the only way to change files, and exec and dispatch when they are listed;
+- the hypotaxis tools listed for this session: pack reads the codebase (search, files, symbols, outlines, git status in one call), ship is the only way to change files, exec runs Python in a sandboxed kernel (`await harness.tool(name, **args)`, `harness.parallel([...])` and `harness.sh([...])` read and compute, never write the workspace), and dispatch when it is listed;
 - Hermes tools that only read: {read_only};
 - terminal, only for read-only commands (ls, cat, grep, git status, git diff, and the like), with no redirection to a file.
 
