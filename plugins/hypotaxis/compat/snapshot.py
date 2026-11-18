@@ -55,8 +55,9 @@ class Snapshot:
     history: Sequence[Mapping[str, Any]] = ()
     transcript_written: bool = False
     change_notified: bool = False  # compat.changed was emitted for this snapshot
-    stop_ran: bool = False  # a pre_verify already ran the Stop hooks this turn
-    stop_continuations: int = 0
+    stop_continuations: int = 0  # consecutive continuations a Stop hook asked for
+    stop_active: bool = False  # the running turn was started by a Stop continuation (stop_hook_active)
+    expected_continuation: str = ""  # the exact text a Stop block injected, so only that message is recognised
     modifications: dict[str, Mapping[str, Any]] = field(default_factory=dict)  # tool_call_id -> args patch
     agents: dict[str, tuple[str, str]] = field(default_factory=dict)  # child session -> (agent_id, agent_type)
     lock: threading.RLock = field(default_factory=threading.RLock)
@@ -95,6 +96,7 @@ def build(session_id: str, cwd: str, home: Path, env: ScanEnv | None = None) -> 
             ask=perms.texts("ask"),
             allow=perms.texts("allow"),
             default="allow",
+            hook_allow=False,  # Claude's own ask rules still prompt after a hook allow (docs/COMPAT.md 4.4)
         )
         if has_rules
         else None

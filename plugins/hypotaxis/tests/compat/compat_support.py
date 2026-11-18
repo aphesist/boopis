@@ -26,6 +26,8 @@ class RecordingCtx:
         self.rpc: dict[str, Callable[..., Any]] = {}
         self.emitted: list[tuple[str, str, dict[str, Any]]] = []
         self.posted: list[str] = []
+        self.injected: list[str] = []
+        self.accept_injection = True
 
     def get_config(self, key: str, default: Any = None) -> Any:
         return default
@@ -48,6 +50,12 @@ class RecordingCtx:
 
     def post_message(self, text: str) -> None:
         self.posted.append(text)
+
+    def inject_message(self, content: str, role: str = "user") -> bool:
+        """Hermes queues a user-role message into the session's own FIFO; it returns False when refused."""
+        if self.accept_injection:
+            self.injected.append(content)
+        return self.accept_injection
 
 
 def make_env(project: Path, profile_home: Path, user_home: Path, **kwargs: Any) -> ScanEnv:

@@ -48,3 +48,13 @@ def permission_mode() -> str:
     except Exception:  # noqa: BLE001
         return "default"
     return "bypassPermissions" if str(mode).lower() in ("off", "false") else "default"
+
+
+def injection_allowed() -> bool | None:
+    """``plugins.entries.hypotaxis.allow_gateway_injection``: whether ``ctx.inject_message`` is allowed, which a Stop
+    block needs. None when the config cannot be read."""
+    try:
+        entries = as_dict(as_dict(_config().get("plugins")).get("entries"))
+        return as_dict(entries.get("hypotaxis")).get("allow_gateway_injection") is True
+    except Exception:  # noqa: BLE001 - outside Hermes
+        return None

@@ -1,17 +1,17 @@
-"""Claude Code hooks inside a real, unmodified Hermes gateway, against the fake model.
+"""Claude Code hooks inside a real, unmodified Hermes gateway, against the fake model, with the real ``ship``.
 
 What unit tests cannot show: that Hermes calls the compat callbacks with the kwargs they read, that a project's
 ``.claude/settings.json`` hook really runs on the matching Hermes hook, that an exit-2 hook's stderr is what the
-model reads back, and that an untrusted hook does nothing.
+model reads back, that an untrusted hook does nothing, and how ``ctx.inject_message`` re-enters a Stop block.
 
-``ship`` is built on another branch, so ``ship_stub`` (a test double, ``tests/e2e/ship_stub``) stands in for it:
-a tool of that name and shape whose handler leaves a marker when it runs.
+Needs ``HX_BIN`` (a built ``hx``, ``cargo build -p hx``) for ``ship``; without it these tests skip.
 """
 
 from __future__ import annotations
 
 import json
-import shutil
+import os
+import subprocess
 import time
 from collections.abc import Iterator
 from pathlib import Path
@@ -23,28 +23,26 @@ from hx_ws_client import GatewayClient
 from stack import HermesInstall, HermesStack
 from test_plugin_e2e import create_session, run_prompt
 
-HERE = Path(__file__).parent
-TOOLSETS = ["file", "terminal", "ship_stub"]
+HX_BIN = os.environ.get("HX_BIN", "")
+TOOLSETS = ["file", "terminal", "hypotaxis"]
 
 
 class CompatStack(HermesStack):
-    """The base stack plus the ``ship_stub`` plugin."""
+    """The base stack, with gateway injection allowed for the plugin (``ctx.inject_message`` needs it)."""
 
     def config(self) -> dict[str, Any]:
         config = super().config()
-        config["plugins"]["enabled"] = ["hypotaxis", "ship_stub"]
+        config["plugins"]["entries"]["hypotaxis"]["allow_gateway_injection"] = True
         return config
-
-    def start(self) -> dict[str, Any]:
-        stub = self.home / "plugins" / "ship_stub"
-        stub.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(HERE / "ship_stub", stub, ignore=shutil.ignore_patterns("__pycache__"))
-        return super().start()
 
 
 @pytest.fixture(scope="module")
 def stack(hermes_install: HermesInstall, stack_root: Path, fake_model: FakeModelServer) -> Iterator[CompatStack]:
-    built = CompatStack(hermes_install, stack_root, fake_model.url, {})
+    if not HX_BIN:
+        pytest.skip("set HX_BIN to a built hx (cargo build -p hx)")
+    built = CompatStack(hermes_install, stack_root, fake_model.url, {"hx_path": HX_BIN})
+    (built.root / "home").mkdir(parents=True, exist_ok=True)
+    (built.root / "home" / ".gitconfig").write_text("[user]\n\tname = The Owner\n\temail = owner@example.com\n")
     try:
         built.start()
         yield built
@@ -63,14 +61,24 @@ def gateway(stack: CompatStack, stack_root: Path) -> Iterator[GatewayClient]:
 
 @pytest.fixture
 def project(stack_root: Path, request: pytest.FixtureRequest) -> Path:
+    """A real git repository, which ``ship`` needs for its checkpoints."""
     path = stack_root / "projects" / request.node.name
-    (path / ".git").mkdir(parents=True)
     (path / ".claude" / "hooks").mkdir(parents=True)
+    (path / "README.md").write_text("project\n")
+    subprocess.run(["git", "init", "-q"], cwd=path, check=True)
     return path
+
+
+def commit_all(path: Path) -> None:
+    subprocess.run(["git", "add", "-A"], cwd=path, check=True)
+    subprocess.run(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "init"], cwd=path, check=True
+    )
 
 
 def settings(project: Path, hooks: dict[str, Any]) -> None:
     (project / ".claude" / "settings.json").write_text(json.dumps({"hooks": hooks}), encoding="utf-8")
+    commit_all(project)
 
 
 def command_hook(command: str, matcher: str = "") -> list[dict[str, Any]]:
@@ -124,16 +132,15 @@ def test_a_project_hook_blocks_a_ship_and_the_model_reads_its_stderr(
     hooks = [i for i in inventory["items"] if i["kind"] == "hook"]
     assert [(h["detail"]["event"], h["status"]) for h in hooks] == [("PreToolUse", "untrusted")]
     assert hooks[0]["trust"]["detail"]["command"].startswith("python3 .claude/hooks/guard.py")
-    marker = stack.home / "ship-stub-called"
-    marker.unlink(missing_ok=True)
+    target = project / "prod.secret"
     sid = session(gateway, stack, project)
     edits = json.dumps({"edits": [{"op": "create", "path": "prod.secret", "content": "S=1"}]})
     run_prompt(gateway, sid, f"@@call ship {edits}@@")
-    assert marker.exists(), "an untrusted hook must be inert: the ship ran"
+    assert target.read_text() == "S=1", "an untrusted hook must be inert: the real ship should have written the file"
     assert not dump.exists()
 
     # 2. the user approves it through the RPC, and a new session is blocked
-    marker.unlink()
+    target.unlink()
     approved = gateway.result(
         "plugin.hypotaxis.trust.set",
         {"cwd": str(project), "decision": "trust", "content_hash": hooks[0]["trust"]["content_hash"]},
@@ -145,7 +152,7 @@ def test_a_project_hook_blocks_a_ship_and_the_model_reads_its_stderr(
     before = len(tool_results(fake_model))
     run_prompt(gateway, sid, f"@@call ship {edits}@@")
 
-    assert not marker.exists(), "the hook exits 2, so the ship must not run"
+    assert not target.exists(), "the hook exits 2, so the ship must not write anything"
     new_results = tool_results(fake_model)[before:]
     assert any("guard: .secret files are protected" in r for r in new_results), new_results  # the model got stderr
     payloads = [json.loads(line) for line in dump.read_text().splitlines()]
@@ -166,11 +173,9 @@ def test_a_hook_that_allows_lets_the_tool_run(
     (project / ".claude" / "hooks" / "guard.py").write_text(GUARD, encoding="utf-8")
     settings(project, {"PreToolUse": command_hook(f"python3 .claude/hooks/guard.py {dump}", "Write")})
     trust_everything(gateway, project)
-    marker = stack.home / "ship-stub-called"
-    marker.unlink(missing_ok=True)
     sid = session(gateway, stack, project)
     run_prompt(gateway, sid, '@@call ship {"edits": [{"op": "create", "path": "ok.txt", "content": "fine"}]}@@')
-    assert marker.exists()
+    assert (project / "ok.txt").read_text() == "fine"  # the hook allowed it, so the real ship wrote the file
     assert json.loads(dump.read_text().splitlines()[-1])["tool_input"]["file_path"] == f"{project}/ok.txt"
 
 
@@ -245,3 +250,61 @@ def test_the_gateway_serves_the_inventory_for_a_project_with_no_claude_files(
     assert time.monotonic() - started < 10
     assert set(inventory["hook_events"]["unsupported"]) >= {"PreCompact", "PermissionRequest"}
     assert inventory["items"] == [] or all(i["status"] for i in inventory["items"])
+
+
+STOP_HOOK = """\
+import json, sys
+payload = json.load(sys.stdin)
+keep = ("hook_event_name", "stop_hook_active", "last_assistant_message", "prompt")
+open(sys.argv[1], "a").write(json.dumps({k: payload.get(k) for k in keep}) + "\\n")
+if payload["hook_event_name"] == "Stop" and not payload["stop_hook_active"]:
+    print("run the tests before you finish", file=sys.stderr)
+    sys.exit(2)
+"""
+
+
+def completes(gw: GatewayClient, sid: str, since: int) -> int:
+    return sum(1 for e in gw.events[since:] if e.get("type") == "message.complete" and e.get("session_id") == sid)
+
+
+def test_a_stop_hook_block_re_enters_as_the_next_instruction_through_inject_message(
+    gateway: GatewayClient, stack: CompatStack, fake_model: FakeModelServer, project: Path, stack_root: Path
+) -> None:
+    """Hermes's ``ctx.inject_message`` (verified live): a user-role message committed to the session's own queue by a
+    hook running for that session. It runs as a new turn after the one that fired it, in order, and only because the
+    operator set ``allow_gateway_injection``."""
+    dump = stack_root / "stop-payloads.jsonl"
+    (project / ".claude" / "hooks" / "stop.py").write_text(STOP_HOOK, encoding="utf-8")
+    command = f"python3 .claude/hooks/stop.py {dump}"
+    settings(project, {"Stop": command_hook(command), "UserPromptSubmit": command_hook(command)})
+    trust_everything(gateway, project)
+    sid = session(gateway, stack, project)
+    since = len(gateway.events)
+    seen = len(fake_model.chat_requests())
+
+    run_prompt(gateway, sid, "@@reply first answer@@")
+    deadline = time.time() + 60
+    while completes(gateway, sid, since) < 2 and time.time() < deadline:
+        time.sleep(0.2)
+    assert completes(gateway, sid, since) == 2, "the Stop block was not re-entered as a second turn"
+    time.sleep(1.5)
+    assert completes(gateway, sid, since) == 2, "the continuation passed Stop, so no third turn may follow"
+
+    injected = "[Claude Code Stop hook: continue]\nrun the tests before you finish"
+    requests = [
+        r for r in fake_model.chat_requests()[seen:] if any(injected in str(m.get("content")) for m in r.messages)
+    ]
+    assert requests, "the model never received the injected instruction"
+    roles = [(m["role"], str(m.get("content"))) for m in requests[-1].messages if m["role"] in ("user", "assistant")]
+    assert [r for r, _ in roles[-3:]] == ["user", "assistant", "user"]  # the answer, then the injected user message
+    assert roles[-1][1] == injected
+    assert "first answer" in roles[-2][1]
+
+    log = [json.loads(line) for line in dump.read_text().splitlines()]
+    assert [(e["hook_event_name"], e["stop_hook_active"]) for e in log] == [
+        ("UserPromptSubmit", None),  # UserPromptSubmit ran for the real prompt only
+        ("Stop", False),
+        ("Stop", True),  # the continuation turn is stop_hook_active
+    ]
+    assert log[0]["prompt"] == "@@reply first answer@@"
+    assert log[1]["last_assistant_message"] == "first answer"

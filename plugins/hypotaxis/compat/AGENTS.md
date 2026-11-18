@@ -20,7 +20,7 @@ Gemini, Cursor, Antigravity, skills and commands registration, MCP hosting and m
 | `data/*.json` | the event map, the alias tables, limits. Data, not code (STANDARDS rule 6) |
 
 ## Invariants
-- **Nothing here runs code until the user approved it.** Gated: hook handlers, MCP servers, plugins, `!` injections, repository `allow` rules, `@` imports that leave the project. Not gated: memory, rules, skills, agent prompts, `deny` and `ask` rules.
+- **Nothing here runs code until the user approved it.** Gated: hook handlers, MCP servers, plugins, `!` injections, repository `allow` rules, `@` imports that leave the project (kind `imports`). Not gated: memory, rules, skills, agent prompts, `deny` and `ask` rules.
 - **An approval is a content hash.** A hook's hash covers its handler, matcher, the effective `env` and the bytes of the scripts it *runs* (a program or an interpreter's first argument inside the project or plugin, never a redirection target). `runner` re-derives it before every spawn, so a script edited mid-session is not run.
 - **The only shell string is a trusted hook command** (ADR-0013), through `util.proc.run_shell`. Exec form (`command` plus `args`) never uses a shell.
 - **Prompt caching is sacred.** Hook context is delivered in the user message (`pre_llm_call` context) or appended to a tool result. Never the system prompt, the toolsets or the tool schemas.
@@ -33,9 +33,9 @@ Gemini, Cursor, Antigravity, skills and commands registration, MCP hosting and m
 Mapped (11): PreToolUse, PostToolUse, PostToolUseFailure, UserPromptSubmit, SessionStart, SessionEnd, Stop, SubagentStart, SubagentStop, Notification, PostCompact. Unsupported (22, listed with reasons in `data/hook_events.json`): PreCompact, PermissionRequest, PermissionDenied, UserPromptExpansion, PostToolBatch, StopFailure, Setup, TaskCreated, TaskCompleted, TeammateIdle, ConfigChange, FileChanged, CwdChanged, DirectoryAdded, WorktreeCreate, WorktreeRemove, Elicitation, ElicitationResult, MessageDisplay, InstructionsLoaded, PreModelSwitch, PostModelSwitch.
 
 Known gaps, all reported rather than hidden:
-- **Stop block** works only on a turn that edited files with `write_file` or `patch`. `ship` writes do not count (below).
+- **Stop** runs at the final `post_llm_call` of every completed turn. A block goes back through `ctx.inject_message`, so it is a new queued turn after the answer, not a continuation inside it, and needs `plugins.entries.hypotaxis.allow_gateway_injection` (warned in `compat.inventory`). Hermes's `pre_verify` is not used: it never fires after a `ship`. Upstream proposal: `UPSTREAM.md`.
 - **SessionStart** hooks run at the next `pre_llm_call`, not at `on_session_start`: the open and reset hooks carry no cwd, and the context must reach that turn's user message anyway.
-- **A hook `allow`** is recorded in `hooks/grants.py`. The policy's ask step has to call `consume_allow(session_id, tool_call_id)` to skip hypotaxis-level approval for that call. That call is not wired yet, because it is a change to `policy/` and `hooks.py` outside this area. `register_compat` runs before the policy hooks are registered so the grant is on record in time.
+- **A hook `allow`** is recorded in `hooks/grants.py`, and `policy._ask` consumes it (`SessionPolicy.hook_allow`), so it skips only hypotaxis-level approval prompts for that one call. `register_compat` runs before the policy hooks are registered so the grant is on record in time. Claude's own `ask` rules (`hook_allow=False` in the compat policy), Hermes's approvals and deny, protected-path and governed-mode decisions are unaffected.
 - **`updatedInput`** replaces the whole object in Claude Code. Hermes merges a patch, so an omitted key keeps its original value (logged). A rewrite of a fan-out call (`pack`, a multi-file `ship`, several URLs) cannot be mapped back and blocks the call.
 - **`permission_mode`** is `bypassPermissions` only when `approvals.mode` is off. Hermes's per-session YOLO switch is not on the public plugin API.
 - `effort`, `scratchpad_dir` and transcript timestamps are not supplied: Hermes does not give them to plugins.
@@ -44,15 +44,15 @@ Known gaps, all reported rather than hidden:
 | Question | Result |
 |---|---|
 | Does `ctx.dispatch_tool` fire `pre_tool_call`? | **No.** `hermes_cli/plugins_context.py:485` calls `registry.dispatch` directly. The exec kernel must call `Bridge.run_tool_event` itself. |
-| Does a `ship` write count as an edit for `pre_verify`? | **No.** `FILE_MUTATING_TOOL_NAMES = {write_file, patch}` (`agent/tool_result_classification.py`), and `pre_verify` needs a non-empty `_turn_file_mutation_paths`. Stop-block never fires after a ship-only turn. Needs an upstream change or a hypotaxis-level mechanism. |
+| Does a `ship` write count as an edit for `pre_verify`? | **No.** `FILE_MUTATING_TOOL_NAMES = {write_file, patch}` (`agent/tool_result_classification.py`), and `pre_verify` needs a non-empty `_turn_file_mutation_paths`. Hence Stop does not use `pre_verify`. |
 | Does a blocked `UserPromptSubmit` stay in history? | It is stored as `[Message withheld: a pre_llm_call policy hook blocked it.]`. The prompt never reaches a model, now or on replay. Claude Code erases it instead. |
 | Order of `on_session_start` and `pre_llm_call`? | `on_session_start` fires while the system prompt is built (`agent/turn_context.py:1308`), before `pre_llm_call` collects context (`:1339`) in the same turn. |
 | `pre_tool_call` directives | `block` needs a message; `approve` optional `rule_key`; `modify` shallow-merges `args`, accumulates across callbacks, and loses to `block` and `approve` only in the sense that those are resolved separately. One directive per callback, hence two callbacks. |
 | Callback bounds | `plugins.hook_callback_timeout` default 30 s, max 600, `<= 0` unbounded. `pre_tool_call` fails closed on a timeout; `pre_llm_call`, `transform_tool_result`, observers skip. Compat clamps a hook to `limit - 1`. |
 | `subagent_stop` kwargs | `parent_session_id, child_session_id, child_role, child_summary, child_status, tool_call_history, duration_ms`. No `child_subagent_id`, so the id from `subagent_start` is remembered. |
-| `on_session_end` kwargs | No final response, so `post_llm_call.assistant_response` is kept for the Stop payload. |
 | Claude Code default hook timeout | **600 s** for `command`, `http` and `mcp_tool`; 30 s on UserPromptSubmit and the model-switch events; 10 s on MessageDisplay (`code.claude.com/docs/en/hooks`, fetched 2026-11-18). The 60 s recalled earlier is the `agent` handler default. |
 | `updatedInput` | Exists in `hookSpecificOutput`, replaces the whole input object; `deny > defer > ask > allow`; `allow` does not skip deny or ask rules (same page). |
+| `ctx.inject_message` | A user-role message (other roles are prefixed `[role]`). In a local gateway session it is committed to that session's own FIFO as a producer admission, from the session bound in the calling hook context, and runs once, in order, as a new turn after the current one. Needs `plugins.entries.<id>.allow_gateway_injection: true`; returns False otherwise. Checked live: the e2e Stop test sees the answer, then the injected message as the next user message. |
 | `ctx.session_cwd()` in hooks | Works in the agent's hook threads (the e2e payload carries the project cwd). Not reliable in `on_session_open` or RPC, so those never build a snapshot. |
 | Real `transcript_path` consumers | **Not verified.** No consumer fixture accepts or rejects the best-effort JSONL. |
 
@@ -60,7 +60,7 @@ Known gaps, all reported rather than hidden:
 ```sh
 export HX_HERMES_SRC=<a Hermes source tree>        # frontmatter tests skip without it
 pytest tests/compat                                 # unit, real-subprocess and property tests
-export HX_E2E_HERMES_ENV=<the spike install dir>   # ../../tests/e2e/test_compat_e2e.py skips without it
+export HX_E2E_HERMES_ENV=<the spike install dir> HX_BIN=<cargo build -p hx>   # ../../tests/e2e/test_compat_e2e.py skips without them
 ```
 Fixtures: `tests/fixtures/claude_code/` (synthetic project, golden stdin payloads per event in `hooks/`, and real plugins from anthropics/claude-plugins-official, Apache-2.0, source and commit in `real/.../SOURCE.md`).
 

@@ -513,35 +513,105 @@ def test_system_message_is_shown_to_the_user_not_the_model(write: Write, env: An
 # ---------------------------------------------------------------- Stop
 
 
-def test_stop_block_continues_the_turn_up_to_the_cap(write: Write, env: Any, ctx: RecordingCtx) -> None:
+def end_of_turn(bridge: Any, text: str = "done") -> None:
+    """What Hermes does when the tool loop ends in a final answer."""
+    bridge.post_llm_call(session_id="s1", user_message="q", assistant_response=text, conversation_history=[])
+
+
+def test_a_stop_block_is_injected_back_as_the_models_next_instruction(
+    write: Write, env: Any, ctx: RecordingCtx
+) -> None:
     setup(write, env, {"Stop": [{"command": "echo 'run the tests first' >&2; exit 2"}]})
-    bridge = make_bridge(ctx, env)
-    answers = [bridge.pre_verify(session_id="s1", attempt=i, final_response="done") for i in range(10)]
-    assert answers[:8] == [{"action": "continue", "message": "run the tests first"}] * 8
-    assert answers[8:] == [None, None]  # 8 consecutive continuations, and never above Hermes's own nudge limit
-    bridge.pre_llm_call(session_id="s1", user_message="next", is_first_turn=False)  # a new prompt resets the count
-    assert bridge.pre_verify(session_id="s1", attempt=0, final_response="done") is not None
+    end_of_turn(make_bridge(ctx, env))
+    assert ctx.injected == ["[Claude Code Stop hook: continue]\nrun the tests first"]
 
 
-def test_stop_runs_once_per_turn_pre_verify_or_session_end_not_both(
+def test_a_stop_that_does_not_block_injects_nothing_and_a_json_block_works_too(
+    write: Write, env: Any, ctx: RecordingCtx
+) -> None:
+    setup(write, env, {"Stop": [{"command": "true"}]})
+    end_of_turn(make_bridge(ctx, env))
+    assert ctx.injected == []
+    block = json_out(decision="block", reason="not yet")
+    setup(write, env, {"Stop": [{"command": block}]})
+    end_of_turn(make_bridge(ctx, env))
+    assert ctx.injected == ["[Claude Code Stop hook: continue]\nnot yet"]
+
+
+def test_the_continuation_turn_is_stop_hook_active_and_skips_userpromptsubmit(
     write: Write, env: Any, ctx: RecordingCtx, project: Path
 ) -> None:
-    log = project / "stops.log"
-    setup(write, env, {"Stop": [{"command": f"echo ran >> {log}"}]})
+    log = project / "log.txt"
+    setup(
+        write,
+        env,
+        {
+            "Stop": [
+                {
+                    "command": f"python3 -c \"import json,sys; d=json.load(sys.stdin); open('{log}','a').write('stop active=%s\\n' % d['stop_hook_active'])\"; echo again >&2; exit 2"
+                }
+            ],
+            "UserPromptSubmit": [{"command": f"echo prompt >> {log}"}],
+        },
+    )
     bridge = make_bridge(ctx, env)
-    bridge.pre_verify(session_id="s1", attempt=0, final_response="x")
-    bridge.on_session_end(session_id="s1", completed=True, interrupted=False)
-    assert log.read_text().count("ran") == 1  # an editing turn: pre_verify ran it, on_session_end did not
-    bridge.on_session_end(session_id="s1", completed=True, interrupted=False)
-    assert log.read_text().count("ran") == 2  # a non-editing turn: on_session_end runs it
-    bridge.on_session_end(session_id="s1", completed=True, interrupted=True)
-    bridge.on_session_end(session_id="s1", completed=False, interrupted=False)
-    assert log.read_text().count("ran") == 2  # an interrupted or failed turn is not a Stop
+    bridge.pre_llm_call(session_id="s1", user_message="real prompt", is_first_turn=False)
+    end_of_turn(bridge)
+    continuation = ctx.injected[-1]
+    bridge.pre_llm_call(
+        session_id="s1", user_message=continuation, is_first_turn=False
+    )  # Hermes runs the queued message
+    end_of_turn(bridge)
+    assert log.read_text().split("\n")[:-1] == ["prompt", "stop active=False", "stop active=True"]  # no second "prompt"
 
 
-def test_stop_block_on_a_turn_that_did_not_edit_cannot_continue_it(write: Write, env: Any, ctx: RecordingCtx) -> None:
-    setup(write, env, {"Stop": [{"command": "echo 'not yet' >&2; exit 2"}]})
-    assert make_bridge(ctx, env).on_session_end(session_id="s1", completed=True, interrupted=False) is None
+def test_only_the_exact_injected_text_is_recognised_as_a_continuation(
+    write: Write, env: Any, ctx: RecordingCtx, project: Path
+) -> None:
+    log = project / "log.txt"
+    setup(
+        write,
+        env,
+        {"Stop": [{"command": "echo again >&2; exit 2"}], "UserPromptSubmit": [{"command": f"echo prompt >> {log}"}]},
+    )
+    bridge = make_bridge(ctx, env)
+    end_of_turn(bridge)
+    bridge.pre_llm_call(session_id="s1", user_message="[Claude Code Stop hook: continue]\nagain", is_first_turn=False)
+    assert (
+        bridge.pre_llm_call(
+            session_id="s1", user_message="[Claude Code Stop hook: continue]\nagain!", is_first_turn=False
+        )
+        is None
+    )
+    assert log.read_text().count("prompt") == 1  # the lookalike is a real prompt, so UserPromptSubmit ran for it
+
+
+def test_stop_continuations_are_capped_and_a_real_prompt_resets_the_count(
+    write: Write, env: Any, ctx: RecordingCtx
+) -> None:
+    setup(write, env, {"Stop": [{"command": "echo again >&2; exit 2"}]})
+    bridge = make_bridge(ctx, env)
+    for _ in range(12):
+        before = len(ctx.injected)
+        end_of_turn(bridge)
+        if len(ctx.injected) > before:  # Hermes runs the queued message as the next turn
+            bridge.pre_llm_call(session_id="s1", user_message=ctx.injected[-1], is_first_turn=False)
+    assert len(ctx.injected) == 8  # Claude Code's limit of 8 consecutive continuations
+    bridge.pre_llm_call(session_id="s1", user_message="a real prompt", is_first_turn=False)
+    end_of_turn(bridge)
+    assert len(ctx.injected) == 9
+
+
+def test_a_refused_injection_is_logged_and_nothing_is_counted(
+    write: Write, env: Any, ctx: RecordingCtx, caplog: pytest.LogCaptureFixture
+) -> None:
+    setup(write, env, {"Stop": [{"command": "echo again >&2; exit 2"}]})
+    ctx.accept_injection = False
+    bridge = make_bridge(ctx, env)
+    end_of_turn(bridge)
+    assert ctx.injected == []
+    assert "allow_gateway_injection" in caplog.text
+    assert bridge.snapshot("s1").stop_continuations == 0 and bridge.snapshot("s1").expected_continuation == ""
 
 
 # ---------------------------------------------------------------- the rest of the events
@@ -582,7 +652,6 @@ def test_unsupported_events_are_never_executed(write: Write, env: Any, ctx: Reco
         assert callable(getattr(bridge, method))
     bridge.pre_tool_call(tool_name="terminal", args={"command": "ls"}, **PRE)
     bridge.pre_llm_call(session_id="s1", user_message="x", is_first_turn=True)
-    bridge.on_session_end(session_id="s1", completed=True, interrupted=False)
     assert not marker.exists()
 
 
@@ -645,7 +714,7 @@ def test_a_bridge_that_cannot_build_its_snapshot_blocks_tool_calls_and_lets_prom
         bridge.pre_llm_call(session_id="s1", user_message="x", is_first_turn=True) is None
     )  # Hermes would skip it anyway
     assert bridge.transform_tool_result(tool_name="terminal", args={}, result="r", status="ok", **PRE) is None
-    assert bridge.on_session_end(session_id="s1", completed=True) is None
+    assert bridge.post_llm_call(session_id="s1", assistant_response="x") is None
 
 
 def test_register_wires_every_callback_and_the_lazy_wrappers_reach_the_bridge(

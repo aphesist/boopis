@@ -40,13 +40,19 @@ def inventory(
     params: Mapping[str, Any], *, session_id: str | None = None, home: Path | None = None, **_: Any
 ) -> dict[str, Any]:
     """``compat.inventory {cwd}``: a fresh scan of the project, with what running sessions froze marked ``pending``."""
-    from .hooks.hermes import callback_limit_s
+    from .hooks.hermes import callback_limit_s, injection_allowed
     from .runtime import bridge
 
     cwd = _cwd(params)
     trust, base = _trust(cwd, home)
     result = scan(ScanEnv(cwd=Path(cwd), home=base), trust)
-    return build_inventory(result, trust, bridge().snapshots_for(cwd), callback_limit_s=callback_limit_s())
+    return build_inventory(
+        result,
+        trust,
+        bridge().snapshots_for(cwd),
+        callback_limit_s=callback_limit_s(),
+        injection_allowed=injection_allowed(),
+    )
 
 
 def trust_set(

@@ -40,7 +40,7 @@ def user_home(tmp_path: Path) -> Path:
 @pytest.fixture
 def profile_home(tmp_path: Path) -> Path:
     path = tmp_path / "hermes-home"
-    path.mkdir()
+    path.mkdir(exist_ok=True)
     return path
 
 

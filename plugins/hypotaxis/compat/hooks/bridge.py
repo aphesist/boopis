@@ -11,7 +11,7 @@ own with ``ctx.register_hook`` and never writes ``hooks:`` into ``config.yaml``,
 | UserPromptSubmit        | ``pre_llm_call``                                                                |
 | SessionStart            | ``on_session_start`` / ``on_session_open`` / ``on_session_reset`` / ``post_compaction`` |
 | SessionEnd              | ``on_session_finalize``                                                         |
-| Stop                    | ``pre_verify`` (can continue the turn) and ``on_session_end`` (observer)         |
+| Stop                    | ``post_llm_call`` at turn end; a block is injected back with ``ctx.inject_message`` |
 | SubagentStart / Stop    | ``subagent_start`` / ``subagent_stop``                                          |
 | Notification            | ``on_human_input_request``                                                      |
 | PostCompact             | ``post_compaction``                                                             |

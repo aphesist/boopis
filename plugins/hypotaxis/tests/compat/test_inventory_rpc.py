@@ -142,6 +142,20 @@ def test_a_clamped_timeout_is_a_warning_in_the_inventory(project: Path, env: Any
     assert len(inv["warnings"]) == 1 and "plugins.hook_callback_timeout" in inv["warnings"][0]
 
 
+@pytest.mark.parametrize(("allowed", "warned"), [(True, False), (False, True), (None, True)])
+def test_a_stop_hook_warns_when_gateway_injection_is_not_allowed(
+    project: Path, env: Any, write: Write, allowed: bool | None, warned: bool
+) -> None:
+    write(".claude/settings.json", hook_settings({"Stop": [{"command": "true"}]}))
+    inv = build_inventory(scanned(env), trust_for(env), injection_allowed=allowed)
+    assert any("allow_gateway_injection" in w for w in inv["warnings"]) is warned
+
+
+def test_no_stop_hook_no_injection_warning(project: Path, env: Any, write: Write) -> None:
+    write(".claude/settings.json", hook_settings({"PreToolUse": [{"command": "true"}]}))
+    assert build_inventory(scanned(env), trust_for(env), injection_allowed=False)["warnings"] == []
+
+
 def test_native_claude_md_is_listed_as_native_only_when_it_is_the_context_type_hermes_loads(
     project: Path, env: Any, write: Write
 ) -> None:

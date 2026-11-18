@@ -82,3 +82,4 @@ class SessionPolicy:
     default: Fallback = "allow"
     protected: tuple[str, ...] = ()
     config_error: str = ""
+    hook_allow: bool = True  # a Claude Code hook's allow skips this policy's approval prompts (docs/COMPAT.md 4.4)

@@ -14,8 +14,6 @@ CALLBACKS: tuple[tuple[str, str], ...] = (
     ("on_session_open", "on_session_open"),
     ("on_session_reset", "on_session_reset"),
     ("post_compaction", "post_compaction"),
-    ("pre_verify", "pre_verify"),
-    ("on_session_end", "on_session_end"),
     ("on_session_finalize", "on_session_finalize"),
     ("subagent_start", "subagent_start"),
     ("subagent_stop", "subagent_stop"),

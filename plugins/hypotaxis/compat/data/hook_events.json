@@ -28,8 +28,8 @@
       "note": "Hermes does not say why a session ended, so reason is other."
     },
     "Stop": {
-      "hermes": ["pre_verify", "on_session_end"], "fidelity": "partial", "matcher": "", "can_block": true,
-      "note": "Blocking works through pre_verify, which Hermes fires only after a turn that edited files with write_file or patch (not ship), at most max_verify_nudges times. A Stop block on any other turn is ignored."
+      "hermes": ["post_llm_call"], "fidelity": "partial", "matcher": "", "can_block": true,
+      "note": "Hermes has no turn-end hook that can continue a turn, and its pre_verify fires only after write_file or patch edits (not ship). So Stop runs at the final post_llm_call of every completed turn, and a block re-enters as a queued user message through ctx.inject_message: a new turn that starts after the answer, not a continuation inside it. Needs plugins.entries.hypotaxis.allow_gateway_injection."
     },
     "SubagentStart": {
       "hermes": ["subagent_start"], "fidelity": "observe", "matcher": "agent_type", "can_block": false,

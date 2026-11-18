@@ -21,6 +21,7 @@ from .engine import verdict_of
 from .results import Verdict
 
 _log = get_logger("compat.bridge")
+CONTINUATION_HEADER = "[Claude Code Stop hook: continue]"
 _NOTIFICATION_TYPES = {"approval": "permission_prompt", "clarify": "elicitation_dialog"}
 
 
@@ -107,9 +108,10 @@ class SessionEvents(Core):
             snap.history = _history(kw.get("conversation_history"))
             snap.model = as_str(kw.get("model")) or snap.model
             self.poll_changes(snap, session_id)
-            with snap.lock:
-                snap.stop_ran, snap.stop_continuations = False, 0
+            continuation = self._take_continuation(snap, prompt_text(user_message))
             parts = self._session_starts(snap, session_id, is_first_turn)
+            if continuation:  # a Stop hook's own feedback is not a user prompt: UserPromptSubmit does not run for it
+                return {"context": "\n\n".join(parts)} if parts else None
             ctx = self.context(snap, session_id, as_str(kw.get("turn_id")))
             fields = pl.user_prompt_submit(prompt_text(user_message))
             jobs = self.jobs(snap, "UserPromptSubmit", "", lambda: pl.build_payload("UserPromptSubmit", ctx, fields))
@@ -129,56 +131,63 @@ class SessionEvents(Core):
             _log.error("compat UserPromptSubmit failed", exc_info=True)
             return None
 
+    def _take_continuation(self, snap: Snapshot, prompt: str) -> bool:
+        """Whether this prompt is the message a Stop block injected (matched by its exact text, so nothing a user or
+        a repository types can pass for it). A real prompt ends the chain of continuations."""
+        with snap.lock:
+            if snap.expected_continuation and prompt == snap.expected_continuation:
+                snap.expected_continuation, snap.stop_active = "", True
+                return True
+            snap.expected_continuation, snap.stop_active, snap.stop_continuations = "", False, 0
+            return False
+
     def post_llm_call(self, session_id: str = "", assistant_response: str = "", **kw: Any) -> None:
-        """Observer: remember the last answer (the Stop payload carries it) and refresh the transcript."""
+        """Turn end. Hermes fires this once, after the tool loop ended with a final answer and not when the turn was
+        interrupted, which is Claude Code's Stop. A block is fed back with ``ctx.inject_message`` (see ``_continue``).
+        Also keeps the last answer and refreshes the transcript."""
         try:
             snap = self.snapshot(session_id)
             snap.last_assistant = assistant_response
             snap.history = _history(kw.get("conversation_history"))
             if snap.transcript_written:
                 self.write_transcript(snap)
-        except Exception:  # noqa: BLE001
-            _log.error("compat post_llm_call failed", exc_info=True)
-
-    # ------------------------------------------------------------------ Stop and session end
-
-    def pre_verify(
-        self, session_id: str = "", attempt: int = 0, final_response: str = "", **_: Any
-    ) -> dict[str, Any] | None:
-        """Stop, for a turn that edited files: a block keeps the turn going. Hermes fires this only after
-        ``write_file`` or ``patch`` edits (not ``ship``), at most ``max_verify_nudges`` times."""
-        try:
-            snap = self.snapshot(session_id)
             with snap.lock:
-                snap.stop_ran = True
-                if snap.stop_continuations >= int(limit("stop_continuation_cap")):
-                    return None
-            message = final_response or snap.last_assistant
-            verdict = self._fire(snap, session_id, "Stop", "", pl.stop(attempt > 0, message))
+                active = snap.stop_active
+            verdict = self._fire(snap, session_id, "Stop", "", pl.stop(active, assistant_response))
             if verdict.block and verdict.reason:
-                with snap.lock:
-                    snap.stop_continuations += 1
-                return {"action": "continue", "message": verdict.reason}
-            return None
+                self._continue(snap, verdict.reason)
         except Exception:  # noqa: BLE001
             _log.error("compat Stop failed", exc_info=True)
-            return None
 
-    def on_session_end(
-        self, session_id: str = "", completed: bool = False, interrupted: bool = False, **_: Any
-    ) -> None:
-        """Fires after every turn. Stop runs here for a turn that did not go through ``pre_verify``; it cannot block."""
-        try:
-            snap = self.snapshot(session_id)
-            with snap.lock:
-                already, snap.stop_ran = snap.stop_ran, False
-            if already or not completed or interrupted:
+    def _continue(self, snap: Snapshot, reason: str) -> None:
+        """Continue after a Stop block: queue the reason as the model's next instruction.
+
+        ``ctx.inject_message`` (verified against Hermes v0.23.2) hands a user-role message to the session's own FIFO,
+        so it becomes a new turn after the current one ends. It needs ``allow_gateway_injection`` for this plugin and
+        returns False when refused. At most ``stop_continuation_cap`` in a row (Claude Code's limit)."""
+        with snap.lock:
+            if snap.stop_continuations >= int(limit("stop_continuation_cap")):
+                _log.warning("a Stop hook asked to continue %d times in a row; stopping", snap.stop_continuations)
                 return
-            verdict = self._fire(snap, session_id, "Stop", "", pl.stop(False, snap.last_assistant))
-            if verdict.block:
-                _log.warning("a Stop hook asked to continue, but Hermes can only continue a turn that edited files")
-        except Exception:  # noqa: BLE001
-            _log.error("compat on_session_end failed", exc_info=True)
+            text = f"{CONTINUATION_HEADER}\n{reason}"
+            snap.expected_continuation = text
+        inject = getattr(self.ctx, "inject_message", None)
+        accepted = False
+        if callable(inject):
+            try:
+                accepted = bool(inject(text))
+            except Exception:  # noqa: BLE001
+                _log.warning("inject_message failed for a Stop block", exc_info=True)
+        with snap.lock:
+            if accepted:
+                snap.stop_continuations += 1
+            else:
+                snap.expected_continuation = ""
+        if not accepted:
+            _log.warning(
+                "a Stop hook asked to continue, but ctx.inject_message was refused "
+                "(set plugins.entries.hypotaxis.allow_gateway_injection: true)"
+            )
 
     def on_session_finalize(self, session_id: str | None = None, **_: Any) -> None:
         """SessionEnd. Hermes does not say why a session ended, so the reason is ``other``."""

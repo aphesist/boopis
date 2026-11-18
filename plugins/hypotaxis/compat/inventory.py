@@ -349,11 +349,17 @@ def _frozen(snap: Snapshot) -> set[tuple[str, str, str]]:
 
 
 def build_inventory(
-    result: ScanResult, trust: Trust, snapshots: Sequence[Snapshot] = (), *, callback_limit_s: float = 0.0
+    result: ScanResult,
+    trust: Trust,
+    snapshots: Sequence[Snapshot] = (),
+    *,
+    callback_limit_s: float = 0.0,
+    injection_allowed: bool | None = True,
 ) -> dict[str, Any]:
     """The ``compat.inventory`` result for a fresh scan. ``snapshots`` are the running sessions of the same cwd: a hook
     that differs from what they froze is ``pending``, applied at the next session and never to a running one.
-    ``callback_limit_s`` is Hermes's ``plugins.hook_callback_timeout``, which clamps a hook's own timeout."""
+    ``callback_limit_s`` is Hermes's ``plugins.hook_callback_timeout``, which clamps a hook's own timeout.
+    ``injection_allowed`` is ``allow_gateway_injection``: a Stop hook that blocks needs it to continue the turn."""
     inv = _Inventory(result, trust, Path(result.project_root), callback_limit_s)
     for step in (
         inv.settings,
@@ -366,6 +372,13 @@ def build_inventory(
         inv.skipped_and_diagnostics,
     ):
         step()
+    if injection_allowed is not True and any(
+        i["kind"] == "hook" and i["detail"]["event"] == "Stop" and i["status"] != "unsupported" for i in inv.items
+    ):
+        inv.warnings.append(
+            "a Stop hook can only continue a turn through ctx.inject_message, which needs "
+            "plugins.entries.hypotaxis.allow_gateway_injection: true; until then a Stop block is logged and ignored"
+        )
     frozen = [_frozen(s) for s in snapshots]
     for item in inv.items:
         item["pending"] = item["kind"] == "hook" and bool(frozen) and all(_signature(item) not in f for f in frozen)

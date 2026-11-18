@@ -24,8 +24,6 @@ provides_hooks:
   - on_session_open
   - on_session_reset
   - post_compaction
-  - pre_verify
-  - on_session_end
   - subagent_start
   - subagent_stop
   - on_human_input_request
