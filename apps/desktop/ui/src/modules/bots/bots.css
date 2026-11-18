@@ -1,0 +1,128 @@
+/* hypotaxis v6 · bots tab (owner: bots agent). Controls come from the shared library (components/components.css,
+   HX.ui); this file holds only what is bots' own: the view's layout bound to the shell's --hx-* properties, the
+   presence header, the new-bot form (stage, name, pickers, suggestions), the sheet's placement and the rail rule.
+   No .ui-* class is re-styled here. Every colour, font and radius is a token; --c on a swatch is an orb colour (data). */
+
+.bt-view, .bt-list { font-family: var(--sans); font-size: var(--fs-s); line-height: var(--lh-ui); color: var(--text); }
+.bt-view [hidden], .bt-list[hidden] { display: none !important; }
+:where(.bt-view, .bt-list) :where(button.bt-opt, button.bt-sugg, button.bt-p-sched) { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; }
+
+/* ================================================================ sidebar list: the rail keeps its own row rule */
+.bt-list { padding: 0 0 var(--sp-3); }
+.bt-list.is-rail .ui-row { height: calc(var(--row-h-2) - 4px); padding: 0; justify-content: center; }
+.bt-list.is-rail .ui-row__lead { width: 24px; height: 24px; }
+.bt-list.is-rail .ui-row__lead > .ui-orb { margin: 0; }
+.bt-list.is-rail :is(.ui-row__text, .ui-row__end) { display: none; }
+.bt-row--draft .ui-row__title, .bt-row--draft .ui-row__sub { text-transform: var(--ui-case); }
+
+/* ================================================================ view */
+.bt-view { overflow: hidden; }
+.bt-room, .bt-new { position: absolute; inset: 0; }
+.bt-scroll, .bt-new-scroll { position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; }
+.bt-scroll { padding-bottom: calc(var(--bt-composer-h, 96px) + var(--hx-dock-space, 0px) + var(--composer-gap) + var(--sp-5)); }
+.bt-col, .bt-new-col {
+  width: var(--hx-col-w, var(--col-w)); max-width: 100%;
+  margin-left: calc(var(--hx-col-left, 0px) - var(--hx-view-left, 0px));
+}
+
+/* the presence header: orb 40 in the margin, name 16/600, role 12 quiet, state; settings on the right */
+.bt-presence {
+  position: sticky; top: 0; z-index: 2; display: grid; grid-template-columns: var(--hx-margin-w, var(--margin-w)) minmax(0, 1fr) auto;
+  align-items: center; padding: var(--sp-6) 0 var(--sp-5); background: var(--bg-2);
+}
+[data-margin="off"] .bt-presence { grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--sp-3); }
+.bt-p-orb { width: 40px; height: 40px; display: grid; place-items: center; }
+.bt-p-text { min-width: 0; }
+.bt-p-name { margin: 0; font-size: var(--fs-l); font-weight: 600; line-height: var(--lh-tight); color: var(--text-strong); }
+.bt-p-line { margin: var(--sp-1) 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) var(--sp-3); font-size: var(--fs-xs); color: var(--text-quiet); }
+.bt-p-state { display: inline-flex; align-items: center; gap: 6px; }
+.bt-p-sched { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-2xs); color: var(--text-quiet); border-radius: var(--r-xs); padding: 2px 4px; margin: -2px -4px; transition: background-color var(--dur-out) var(--ease), color var(--dur-out) var(--ease); }
+.bt-p-sched:hover { color: var(--text); background: var(--hover); transition-duration: var(--dur-1); }
+.bt-p-sched .ui-icon { width: 12px; height: 12px; }
+
+/* the thread: library entries; the turn is the focus stop (the ring comes from ui-root) */
+.bt-log { display: flex; flex-direction: column; }
+.bt-log > [data-hx-turn] { border-radius: var(--r-s); }
+.bt-cardslot { width: min(100%, 520px); }
+.bt-resolved { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-xs); color: var(--text-dim); }
+.bt-resolved-ico { display: inline-grid; color: var(--text-quiet); }
+.bt-resolved-ico.is-ok { color: var(--ok); }
+.bt-resolved-ico .ui-icon { width: 14px; height: 14px; }
+.bt-resolved time { font-size: var(--fs-2xs); color: var(--text-quiet); }
+.bt-empty { justify-items: start; text-align: left; padding: 0; margin-left: var(--hx-margin-w, var(--margin-w)); }
+[data-margin="off"] .bt-empty { margin-left: 0; }
+.bt-ideas { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); }
+
+/* the composer (the library's) sits on centerX, above the dock */
+.bt-composer-zone {
+  position: absolute; z-index: 3;
+  left: calc(var(--hx-center-x, 50%) - var(--hx-view-left, 0px)); width: var(--hx-col-w, var(--col-w)); max-width: calc(100% - 2 * var(--gutter));
+  bottom: calc(var(--hx-dock-space, 0px) + var(--composer-gap));
+  transform: translateX(-50%);
+}
+
+/* ================================================================ new bot (bots' own form) */
+.bt-new-scroll { padding-bottom: calc(var(--hx-dock-space, 0px) + var(--sp-6)); }
+.bt-new-col { position: relative; padding: var(--sp-6) 0; }
+.bt-new-close { position: absolute; top: var(--sp-6); right: 0; }
+.bt-new-form { display: flex; flex-direction: column; align-items: center; }
+.bt-stage { width: 168px; height: 160px; display: grid; place-items: center; }
+.bt-name {
+  width: min(360px, 100%); margin: var(--sp-2) 0 var(--sp-5); padding: var(--sp-1) 0 6px; text-align: center;
+  background: none; border: 0; border-bottom: 1px solid var(--line-field); outline: 0;
+  font: inherit; font-size: var(--fs-xl); font-weight: 600; line-height: var(--lh-tight); color: var(--text-strong); caret-color: var(--brass);
+}
+.bt-name::placeholder { color: var(--text-quiet); font-weight: 400; text-transform: var(--ui-case); }
+.bt-name:hover { border-bottom-color: var(--line-strong); }
+.bt-name:focus { border-bottom-color: var(--brass); }
+.bt-name:focus-visible { outline: none; }
+.bt-appearance { display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); width: 100%; margin-bottom: var(--sp-6); }
+.bt-pick { width: 100%; min-height: calc(var(--ctl) + 6px); display: flex; justify-content: center; }
+.bt-opts { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-1); }
+.bt-opt { width: calc(var(--ctl) + 6px); height: calc(var(--ctl) + 6px); border-radius: var(--r-s); display: grid; place-items: center; transition: background-color var(--dur-out) var(--ease); }
+.bt-opt:hover { background: var(--hover); transition-duration: var(--dur-1); }
+.bt-opt[aria-checked="true"] { background: var(--current); box-shadow: inset 0 0 0 1px var(--brass); }
+.bt-swatch { width: 20px; height: 20px; border-radius: var(--r-pill); corner-shape: round; background: var(--c); box-shadow: inset 0 0 0 1px var(--hair); }
+.bt-new-field { width: min(480px, 100%); }
+.bt-go-row { display: flex; justify-content: center; margin-top: var(--sp-5); }
+.bt-go { min-width: 148px; }
+.bt-suggest { margin-top: var(--sp-7); }
+.bt-suggest-h { margin: 0 0 var(--sp-3); }
+.bt-suggest-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-2); }
+.bt-sugg {
+  display: flex; align-items: flex-start; gap: var(--sp-3); padding: 14px 16px; border-radius: var(--r-m); text-align: left;
+  background: var(--bg-0); box-shadow: inset 0 0 0 1px var(--hair); transition: box-shadow var(--dur-out) var(--ease);
+}
+.bt-sugg:hover { box-shadow: inset 0 0 0 1px var(--line); transition-duration: var(--dur-1); }
+.bt-sugg-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.bt-sugg-name { font-size: var(--fs-s); font-weight: 500; color: var(--text-strong); text-transform: var(--ui-case); }
+.bt-sugg-desc { font-size: var(--fs-xs); line-height: 1.5; color: var(--text-dim); }
+[data-margin="off"] .bt-suggest-row { grid-template-columns: minmax(0, 1fr); }
+
+/* ================================================================ settings sheet: a .ui-panel placed in the view */
+.bt-sheet {
+  position: absolute; top: 0; right: 0; bottom: 0; z-index: 5; width: var(--right-w); max-width: 100%; height: auto;
+  transform: translateX(100%); transition: transform var(--dur-3) var(--spring);
+}
+.bt-sheet.is-open { transform: none; }
+.bt-sheet-corner { top: 0; left: calc(-1 * var(--r-l)); }
+.bt-sh-who { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) 20px var(--sp-4); }
+.bt-sh-name { font-size: var(--fs-m); font-weight: 600; color: var(--text-strong); }
+.bt-sh-role { font-size: var(--fs-xs); color: var(--text-quiet); }
+.bt-sheet .ui-sec__body { display: flex; flex-direction: column; gap: var(--sp-3); }
+.bt-model { display: flex; flex-direction: column; gap: var(--sp-2); }
+.bt-cap { width: 80px; text-align: right; }
+
+/* corners (DESIGN-SYSTEM §8): every surface here is loose (nothing sits in another's corner), on the radius tokens;
+   the sheet is flush to the frame and takes the library's concave corner; circles are round */
+
+/* every live orb answers the pointer */
+orb-avatar.is-live { cursor: pointer; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bt-sheet { transition: none; }
+}
+@media (max-width: 760px) {
+  .bt-sheet { width: 100%; }
+  .bt-sheet-corner { display: none; }
+}
