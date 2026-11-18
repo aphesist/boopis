@@ -71,6 +71,8 @@ pub enum FailureKind {
     IsDirectory,
     /// The path is not a regular file or symlink.
     NotRegular,
+    /// The file exists but cannot be read.
+    Unreadable,
     /// The file or the transaction exceeds a size limit.
     TooLarge,
     /// The edit asks for something unsupported, such as a rename in a diff.
