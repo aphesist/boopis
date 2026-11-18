@@ -60,10 +60,19 @@ Every form has a `kind`, which picks its template, defaults and where the result
 - **MCP servers:** elicitation requests render as forms, labelled with the server's name and its trust state.
 - **The host:** sign-in flows, keychain unlock, updates.
 
+## 4a. Origin
+Every form, and every card, carries `origin`:
+- `{kind: teammate, ids: [..]}`: one teammate, or several when a request is joint (for example two teammates need the same approval) or relayed (one asks on behalf of another, with `via`);
+- `{kind: agent, model}`;
+- `{kind: plugin|hermes|host}`;
+- `{kind: mcp, server}`.
+
+The card renders it through one shared origin slot: a teammate's orb, name and colour accent; stacked orbs plus a count for several; the model name for the agent; a glyph for the system sources. Users tell at a glance who is asking, in every place a card can appear, team chat included.
+
 ## 5. Where forms appear
 - Inline in the conversation, at the point that raised them.
 - In the dock's cards page, the queue of everything waiting on the user.
-- In the Bots section for a teammate's forms.
+- In the Bots section for a teammate's forms, and in team chat, interleaved with the conversation.
 - As a desktop notification, and in chat platforms when there's no secret field.
 
 Answering in any one place resolves the form everywhere (one form id). Forms are keyboard-first: Tab and Shift-Tab move between fields, Enter submits, Space-hold confirms a hold, Esc defers (doesn't cancel), and `x` cancels. They're accessible, using the design system's labels, focus and contrast rules.
