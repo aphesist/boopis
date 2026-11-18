@@ -91,7 +91,11 @@ export type ConversationEvent =
   | { type: 'turn-added'; turn: Turn }
   | { type: 'step-added'; turnId: string; step: Step }
   | { type: 'turn-finished'; turnId: string; time: string; cost: string; stepCount: number; paragraphs: readonly string[]; stopped: boolean }
-  | { type: 'blank-answered'; turnId: string; answer: string };
+  | { type: 'blank-answered'; turnId: string; answer: string }
+  /** the running turn's answer so far (the live provider streams it; the mock sends the whole answer with `turn-finished`) */
+  | { type: 'turn-text'; turnId: string; paragraphs: readonly string[] }
+  /** the whole conversation changed under the reader (a transcript loaded, or events were lost): read the snapshot again */
+  | { type: 'reset' };
 
 export interface DiffFile { path: string; add: number; del: number; hunks: ReadonlyArray<readonly [header: string, lines: readonly string[]]> }
 export interface SendMeta { governed: boolean; smart: boolean; model: string; assume: readonly string[] }

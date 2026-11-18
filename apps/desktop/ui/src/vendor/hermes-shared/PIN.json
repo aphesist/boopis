@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "source": "https://github.com/NousResearch/hermes-agent",
+  "tag": "v0.23.2",
+  "commit_prefix": "ae2a81cc",
+  "licence": "MIT",
+  "files": {
+    "gateway-contract.generated.ts": {
+      "from": "apps/shared/src/gateway-contract.generated.ts",
+      "sha256": "8e270a4f28e1636f9a590a5a3afcea55423eef25390002d0d64f6dabb3837f17"
+    }
+  }
+}

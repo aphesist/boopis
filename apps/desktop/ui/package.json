@@ -14,7 +14,10 @@
     "test:smoke": "node tests/smoke/run.mjs",
     "test:parity": "node tests/parity/run.mjs",
     "tokens": "node scripts/build-tokens.mjs",
-    "tokens:check": "node scripts/build-tokens.mjs --check"
+    "tokens:check": "node scripts/build-tokens.mjs --check",
+    "dev:desktop": "vite --mode desktop",
+    "build:desktop": "pnpm tokens:check && tsc --noEmit && vite build --mode desktop",
+    "vendor:hermes-shared": "node scripts/vendor-hermes-shared.mjs"
   },
   "devDependencies": {
     "@fontsource/geist": "^5.3.0",
@@ -36,5 +39,8 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.8",
     "vitest": "^5.1.1"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.12.5"
   }
 }

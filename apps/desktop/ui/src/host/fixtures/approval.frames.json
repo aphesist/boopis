@@ -1,0 +1,208 @@
+[
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 10,
+    "execution_generation": 1,
+    "admission_id": "429c808bc96c4c0780ee4fd393e43c96",
+    "type": "message.start",
+    "session_id": "local-f3fcf99eeae6ab40310e788d34325e74194f1d2128691f9b99d915d5632c441e",
+    "payload": {},
+    "replay_epoch": "2aec2a1ea8b84cc6a9a08eabbb3de922",
+    "seq": 2
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 10,
+    "execution_generation": 1,
+    "admission_id": "429c808bc96c4c0780ee4fd393e43c96",
+    "type": "tool.start",
+    "session_id": "local-f3fcf99eeae6ab40310e788d34325e74194f1d2128691f9b99d915d5632c441e",
+    "payload": {
+     "tool_id": "call_681657c6bb",
+     "name": "terminal",
+     "context": "chmod -R 777 /tmp/hx_spike_nonexistent_dir",
+     "tool_call_id": "call_681657c6bb",
+     "tool_name": "terminal",
+     "args": {
+      "command": "chmod -R 777 /tmp/hx_spike_nonexistent_dir"
+     }
+    },
+    "replay_epoch": "2aec2a1ea8b84cc6a9a08eabbb3de922",
+    "seq": 10
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 10,
+    "execution_generation": 1,
+    "admission_id": "429c808bc96c4c0780ee4fd393e43c96",
+    "type": "approval.request",
+    "session_id": "local-f3fcf99eeae6ab40310e788d34325e74194f1d2128691f9b99d915d5632c441e",
+    "payload": {
+     "kind": "approval",
+     "prompt_id": "83fbbe783c324eaabdb61f66effc3827",
+     "execution_generation": 1,
+     "command": "chmod -R 777 /tmp/hx_spike_nonexistent_dir",
+     "description": "world/other-writable permissions",
+     "choices": [
+      "once",
+      "deny",
+      "session",
+      "always"
+     ],
+     "timeout_s": 300
+    },
+    "replay_epoch": "2aec2a1ea8b84cc6a9a08eabbb3de922",
+    "seq": 11
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 5,
+   "method": "approval.respond",
+   "params": {
+    "session_id": "local-f3fcf99eeae6ab40310e788d34325e74194f1d2128691f9b99d915d5632c441e",
+    "execution_generation": 1,
+    "prompt_id": "83fbbe783c324eaabdb61f66effc3827",
+    "choice": "once"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 5,
+   "result": {
+    "status": "resolved",
+    "prompt_id": "83fbbe783c324eaabdb61f66effc3827"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 10,
+    "execution_generation": 1,
+    "admission_id": "429c808bc96c4c0780ee4fd393e43c96",
+    "type": "approval.settled",
+    "session_id": "local-f3fcf99eeae6ab40310e788d34325e74194f1d2128691f9b99d915d5632c441e",
+    "payload": {
+     "prompt_id": "83fbbe783c324eaabdb61f66effc3827",
+     "execution_generation": 1
+    },
+    "replay_epoch": "2aec2a1ea8b84cc6a9a08eabbb3de922",
+    "seq": 12
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 10,
+    "execution_generation": 1,
+    "admission_id": "429c808bc96c4c0780ee4fd393e43c96",
+    "type": "tool.complete",
+    "session_id": "local-f3fcf99eeae6ab40310e788d34325e74194f1d2128691f9b99d915d5632c441e",
+    "payload": {
+     "tool_id": "call_681657c6bb",
+     "name": "terminal",
+     "context": "chmod -R 777 /tmp/hx_spike_nonexistent_dir",
+     "tool_call_id": "call_681657c6bb",
+     "tool_name": "terminal",
+     "args": {
+      "command": "chmod -R 777 /tmp/hx_spike_nonexistent_dir"
+     },
+     "is_error": true,
+     "result": "{\"output\": \"chmod: cannot access '/tmp/hx_spike_nonexistent_dir': No such file or directory\", \"exit_code\": 1, \"error\": null, \"approval\": \"Command required approval (world/other-writable permissions) and was approved by the user.\"}",
+     "duration_s": 0.1252147270001842,
+     "inline_diff": null,
+     "image_path": null
+    },
+    "replay_epoch": "2aec2a1ea8b84cc6a9a08eabbb3de922",
+    "seq": 13
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 10,
+    "execution_generation": 1,
+    "admission_id": "429c808bc96c4c0780ee4fd393e43c96",
+    "type": "message.complete",
+    "session_id": "local-f3fcf99eeae6ab40310e788d34325e74194f1d2128691f9b99d915d5632c441e",
+    "payload": {
+     "text": "DONE fake-a | last tool result: {\"output\": \"chmod: cannot access '/tmp/hx_spike_nonexistent_dir': No such file or directory\", \"exit_code\": 1, \"error\": null, \"approval\": \"Command required approval (world/other-writable permissions) and was approved by the user.\"}",
+     "content": "DONE fake-a | last tool result: {\"output\": \"chmod: cannot access '/tmp/hx_spike_nonexistent_dir': No such file or directory\", \"exit_code\": 1, \"error\": null, \"approval\": \"Command required approval (world/other-writable permissions) and was approved by the user.\"}",
+     "admission_id": "429c808bc96c4c0780ee4fd393e43c96",
+     "outcome": "completed",
+     "status": "complete",
+     "usage": {
+      "model": "fake-a",
+      "input": 200,
+      "output": 20,
+      "reasoning": 0,
+      "prompt": 200,
+      "completion": 20,
+      "total": 220,
+      "calls": 2,
+      "context_used": 100,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "avg_latency_s": 0.1,
+      "avg_tps": 75.9,
+      "active_subagents": 0
+     },
+     "persisted_turn": {
+      "row_ids": [
+       215,
+       216,
+       217,
+       218
+      ],
+      "complete": true,
+      "user_row_id": 215,
+      "user_row_ids": [
+       215
+      ],
+      "final_assistant_row_id": 218,
+      "submission_id": "sub-1795038732071"
+     }
+    },
+    "replay_epoch": "2aec2a1ea8b84cc6a9a08eabbb3de922",
+    "seq": 44
+   }
+  }
+ }
+]

@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "identifier": "dev.aphesist.hypotaxis",
   "build": {
-    "beforeDevCommand": "pnpm --dir ../ui dev",
+    "beforeDevCommand": "pnpm --dir ../ui dev:desktop",
     "devUrl": "http://localhost:5173",
-    "beforeBuildCommand": "pnpm --dir ../ui build",
+    "beforeBuildCommand": "pnpm --dir ../ui build:desktop",
     "frontendDist": "../ui/dist"
   },
   "app": {
