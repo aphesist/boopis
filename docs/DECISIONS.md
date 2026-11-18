@@ -230,6 +230,30 @@ They're not sandboxed, matching Claude Code. This is the only exception to the n
 
 **Phases.** Remote homes and vault backup and restore are phase 2. The phone app is phase 3.
 
+## ADR-0019 Cloud sessions run the whole stack in a sandbox you own
+**Context.**
+- The owner wants a "cloud session" option beside local sessions, like Claude Code's: it keeps running with the laptop closed, opens from any device, and can't touch the computer unless allowed.
+- Research (`research/cloud.md`) compared two options:
+  - (a) the whole Hermes gateway, plugin and `hx` in an ephemeral sandbox;
+  - (b) Hermes's terminal environments, which only move tool execution, so the session dies when the laptop does.
+
+**Decision.**
+- Build (a), as specified in `docs/CLOUD.md`:
+  - the cloud image (official Hermes image + plugin + `hx`);
+  - a self-hosted control plane `hx-cloud` (environments, sessions, device sign-in, relay, queue, secrets);
+  - runners behind a sandbox-provider interface, Docker first;
+  - an egress proxy that injects credentials so no key lives in the sandbox;
+  - a git proxy limited to the session's branch prefix;
+  - the session store on the user's vault (ADR-0018).
+- Handoff between local and cloud forks; it never shares a live session.
+- Remote Control lets a cloud session use an approved folder on the user's computer through the desktop host.
+- (b) stays available as a Hermes setting ("remote tools"), not as a cloud session.
+- This refines ADR-0018: a cloud session is an ephemeral home; a persistent remote home is a cloud environment with no idle timeout.
+
+**Consequences.**
+- Phase 1 builds only the seams: the `Cloud` endpoint kind, headless-safe plugin and `hx`, checkpoint pushes, one storage interface.
+- The control plane is the one internet-facing component the user runs, so it gets the strictest review.
+
 ## ADR-0012 Prices
 Prices come from the models.dev catalogue plus a user override table. Hermes's models.dev data is not reachable through its public plugin API, so:
 - the plugin reads a cached catalogue file, `<profile home>/hypotaxis/prices/models-dev.json`;
