@@ -16,7 +16,8 @@ The Rust side of hypotaxis: the `hx` binary and its libraries. The plugin drives
 
 ## Invariants
 - Stdout carries protocol frames only.
-- Every workspace access goes through a `cap_std` `Dir`. Paths are parsed and resolved only in `hx-txn::paths`.
+- Every workspace access goes through a `cap_std` `Dir`. Paths are parsed and resolved only in `hx-txn::paths`. A write, delete or restore opens each directory with `O_NOFOLLOW` and holds it (`hx-txn::held`, `fsops`); never open a workspace path for a write with cap-std's own `open`, which follows links that stay inside the root.
+- A journal is trusted only with a valid tag under the profile's key (`hx-txn::mac`), and a restore needs the caller's expected root.
 - Nothing is written until every edit validated. Any failure after the first write restores from the journal. A crash at any step is recoverable.
 - Errors are `{code, message, data}`; application errors use `-32000` and a string code from `crates/hx-proto/errors.json`. Add codes there only.
 - Wire types ignore unknown fields. Changing one means re-blessing the schema in the same commit.

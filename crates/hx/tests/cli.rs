@@ -124,7 +124,7 @@ fn txn_subcommands_mirror_the_methods() {
     let file = tmp.path().join("restore.json");
     std::fs::write(
         &file,
-        json!({"journal_dir": journals, "journal_id": id}).to_string(),
+        json!({"journal_dir": journals, "journal_id": id, "root": root}).to_string(),
     )
     .unwrap();
     let out = hx()

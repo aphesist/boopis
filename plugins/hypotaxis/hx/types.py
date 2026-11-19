@@ -1010,11 +1010,14 @@ class JournalRef:
 
     journal_dir: str
     journal_id: str
+    root: str | None = None
 
     def to_wire(self) -> dict[str, Any]:
         out: dict[str, Any] = {}
         out['journal_dir'] = self.journal_dir
         out['journal_id'] = self.journal_id
+        if self.root is not None:
+            out['root'] = self.root
         return out
 
     @classmethod
@@ -1022,6 +1025,7 @@ class JournalRef:
         return cls(
             journal_dir=data['journal_dir'],
             journal_id=data['journal_id'],
+            root=(None if data['root'] is None else data['root']) if 'root' in data else None,
         )
 
 
@@ -1290,16 +1294,20 @@ class RecoverParams:
     """Parameters of `txn.recover`."""
 
     journal_dir: str
+    root: str | None = None
 
     def to_wire(self) -> dict[str, Any]:
         out: dict[str, Any] = {}
         out['journal_dir'] = self.journal_dir
+        if self.root is not None:
+            out['root'] = self.root
         return out
 
     @classmethod
     def from_wire(cls, data: Mapping[str, Any]) -> "RecoverParams":
         return cls(
             journal_dir=data['journal_dir'],
+            root=(None if data['root'] is None else data['root']) if 'root' in data else None,
         )
 
 

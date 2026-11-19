@@ -33,7 +33,7 @@ use crate::journal::{self, Journal, LockOutcome, Saved, State};
 use crate::limits::Limits;
 use crate::plan::{self, Original, Outcome, Plan, PlanInput};
 use crate::restore::{self, apply_tmp_name};
-use crate::scope::Scope;
+use crate::scope::{self, Scope};
 
 /// The transaction engine. Cheap to clone; holds only limits.
 #[derive(Debug, Clone, Default)]
@@ -211,13 +211,16 @@ impl Engine {
             .changed()
             .map(|f| (f.path.clone(), saved_of(&f.original)))
             .collect();
-        let journal = Journal::create(
-            &journal_dir,
-            &ws.canonical,
-            &saved,
-            plan.created_dirs.clone(),
-            faults,
-        )?;
+        let spec = journal::Spec {
+            root: &ws.canonical,
+            entries: &saved,
+            created_dirs: plan.created_dirs.clone(),
+            protected: match &p.protected {
+                Some(list) => list.clone(),
+                None => scope::default_protected()?,
+            },
+        };
+        let journal = Journal::create(&journal_dir, &spec, faults)?;
 
         // Last cheap checks, still before the first write: the files must be as planned.
         let before_write = verify_unchanged(&ws.dir, &plan).and_then(|()| check_cancel(cancel));
@@ -252,8 +255,13 @@ impl Engine {
 
     /// Restores bytes and metadata exactly, deletes files the transaction created, removes the journal.
     ///
+    /// The caller names the workspace it expects (`r.root`); a journal that recorded another one
+    /// is refused, so a journal moved or edited to point elsewhere never writes there.
+    ///
     /// # Errors
-    /// `JournalNotFound`, `JournalBusy`, `JournalCorrupt`, `WorkspaceBusy`, `RestoreFailed`.
+    /// `InvalidRoot` (no root given), `JournalNotFound`, `JournalBusy`, `JournalCorrupt` (also
+    /// for another workspace's journal, or one whose tag does not verify), `WorkspaceBusy`,
+    /// `RestoreFailed`.
     pub fn restore(&self, r: &JournalRef, cancel: &CancellationToken) -> Result<RestoreResult> {
         self.restore_with(r, cancel, &Faults::none())
     }
@@ -269,10 +277,26 @@ impl Engine {
         faults: &Faults,
     ) -> Result<RestoreResult> {
         check_cancel(cancel)?;
+        let Some(expected) = r.root.as_deref() else {
+            return Err(Error::InvalidRoot {
+                root: String::new(),
+                source: io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "txn.restore needs the workspace root it expects",
+                ),
+            });
+        };
         let journal_dir = PathBuf::from(&r.journal_dir);
         let mut journal = Journal::open(&journal_dir, &r.journal_id)?;
         journal.lock()?;
-        let report = restore_locked(&journal_dir, &journal, &self.limits, cancel, faults)?;
+        let report = restore_locked(
+            &journal_dir,
+            &journal,
+            Some(expected),
+            &self.limits,
+            cancel,
+            faults,
+        )?;
         journal.remove()?;
         Ok(RestoreResult {
             journal_id: r.journal_id.clone(),
@@ -309,7 +333,9 @@ impl Engine {
     /// Restores every interrupted transaction in a journal directory.
     ///
     /// Journals held by a live transaction are skipped, completed ones are reported as pending
-    /// and left alone, and half-written ones are deleted.
+    /// and left alone, and half-written ones are deleted. A journal whose tag does not verify
+    /// under the profile's key (planted, edited, or from before tags) is never replayed: it is
+    /// reported in `failed` and kept. With `p.root`, a journal of another workspace is too.
     ///
     /// # Errors
     /// Only if the directory cannot be listed. A journal that cannot be recovered is reported in
@@ -320,7 +346,7 @@ impl Engine {
         let mut result = RecoverResult::default();
         for listed in journal::list(&journal_dir)? {
             let id = listed.id;
-            match self.recover_one(&journal_dir, &id, cancel) {
+            match self.recover_one(&journal_dir, &id, p.root.as_deref(), cancel) {
                 Ok(Recovered::Restored) => result.restored.push(id),
                 Ok(Recovered::Discarded) => result.discarded.push(id),
                 Ok(Recovered::Pending) => result.pending.push(id),
@@ -342,6 +368,7 @@ impl Engine {
         &self,
         journal_dir: &Path,
         id: &str,
+        expected_root: Option<&str>,
         cancel: &CancellationToken,
     ) -> Result<Recovered> {
         let lock = match journal::try_lock_dir(journal_dir, id)? {
@@ -365,7 +392,14 @@ impl Engine {
             }
             State::Applied => Ok(Recovered::Pending),
             State::Applying | State::Restoring => {
-                restore_locked(journal_dir, &journal, &self.limits, cancel, &Faults::none())?;
+                restore_locked(
+                    journal_dir,
+                    &journal,
+                    expected_root,
+                    &self.limits,
+                    cancel,
+                    &Faults::none(),
+                )?;
                 journal.remove()?;
                 Ok(Recovered::Restored)
             }
@@ -382,9 +416,12 @@ enum Recovered {
 
 /// Restores a locked journal under the workspace lock and marks it `restored`.
 /// The caller removes the journal.
+///
+/// `expected_root`, when given, must be the workspace the journal recorded.
 fn restore_locked(
     journal_dir: &Path,
     journal: &Journal,
+    expected_root: Option<&str>,
     limits: &Limits,
     cancel: &CancellationToken,
     faults: &Faults,
@@ -394,6 +431,14 @@ fn restore_locked(
         return Ok(restore::Report::default());
     }
     let ws = open_workspace(&journal.manifest().root)?;
+    if let Some(expected) = expected_root
+        && open_workspace(expected)?.canonical != ws.canonical
+    {
+        return Err(Error::JournalCorrupt {
+            id: journal.id().to_owned(),
+            reason: "the journal belongs to another workspace than the one expected".to_owned(),
+        });
+    }
     let _lock = lock_workspace(journal_dir, &ws.canonical, limits, cancel)?;
     let report = restore::restore(journal, &ws.dir, faults)?;
     journal
@@ -451,15 +496,14 @@ fn verify_unchanged(root: &Dir, plan: &Plan) -> Result<()> {
         let conflict = || Error::Conflict {
             path: f.path.clone(),
         };
-        let now = root.symlink_metadata(path);
+        let now = fsops::lstat(root, path);
         match (&f.original, now) {
             (Original::Absent, Err(e)) if e.kind() == io::ErrorKind::NotFound => {}
             (Original::File { meta, .. }, Ok(md))
                 if md.is_file() && fsops::meta_of(&md) == *meta => {}
             (Original::Symlink { target }, Ok(md)) if md.file_type().is_symlink() => {
-                let current = root
-                    .read_link_contents(path)
-                    .map_err(|e| Error::io("checking a symlink", e))?;
+                let current =
+                    fsops::read_link(root, path).map_err(|e| Error::io("checking a symlink", e))?;
                 if current.to_string_lossy() != target.as_str() {
                     return Err(conflict());
                 }
@@ -478,7 +522,7 @@ fn execute(root: &Dir, journal: &Journal, plan: &Plan, faults: &Faults) -> Resul
     let mut dirs: BTreeSet<PathBuf> = BTreeSet::new();
     for d in &plan.created_dirs {
         faults.tick()?;
-        match root.create_dir(d) {
+        match fsops::create_dir(root, Path::new(d)) {
             Ok(()) => {}
             Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {}
             Err(e) => return Err(Error::io(format!("creating directory `{d}`"), e)),

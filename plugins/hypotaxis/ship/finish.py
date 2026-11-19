@@ -38,7 +38,7 @@ def after_apply(
 ) -> dict[str, Any]:
     ship_id = applied.journal_id
     task_id = worker.task_id if worker is not None else f"ship:{ship_id}"
-    ref = JournalRef(journal_dir=str(journals), journal_id=ship_id)
+    ref = JournalRef(journal_dir=str(journals), journal_id=ship_id, root=str(root))
     try:
         run = _gate_andrecord(
             rt, state, root, applied, task_id, original, before_hashes, protected, allowed, argv, gate_on, worker

@@ -224,7 +224,7 @@ proptest! {
         let result = engine().apply_with(&p, &never(), &Faults::crash_at(k));
         if matches!(result, Err(Error::InjectedCrash)) {
             let r = engine()
-                .recover(&RecoverParams { journal_dir: w.fx.journals.to_string_lossy().into_owned() }, &never())
+                .recover(&RecoverParams { journal_dir: w.fx.journals.to_string_lossy().into_owned(), root: None }, &never())
                 .unwrap();
             prop_assert!(r.failed.is_empty() && r.busy.is_empty());
             for id in &r.pending {

@@ -22,16 +22,16 @@ Wire types (`ApplyParams`, `Edit`, `EditFailure`, ...) live in `hx-proto`.
 `txn.apply {root, journal_dir, edits, allowed?, protected?}`:
 
 1. Open `root` as a `cap_std::fs::Dir`. Take the per-workspace lock.
-2. **Resolve every path** (`paths::resolve`): no absolute paths, no `..`, symlinks followed one component at a time and rejected if they leave the root. Two spellings of one file become one canonical path.
+2. **Resolve every path** (`paths::resolve`): no absolute paths, no `..`, symlinks followed one component at a time and rejected if they leave the root. Two spellings of one file become one canonical path. A path to write, delete or restore also may not hold a Windows alias, on any platform (`RelPath::parse_for_write`): a trailing dot or space, an 8.3 short name (`~` and a digit) or a device name (`NUL`, `COM1`..., with any extension).
 3. **Scope and protected checks**, on the requested and the real path, *before* any content is read or journaled. A violation returns `hx.txn.scope_violation` or `hx.txn.protected_path` with `data.paths`.
 4. **Validate every edit in memory**, in order, each seeing the result of the earlier ones. Any failure returns `hx.txn.aborted_before_write` with `data.failures`: every failed edit, with the closest region and its line numbers. Nothing is written.
 5. **Journal** the byte-exact original of every file that will change, with its mode bits, mtime, whether it existed, and whether it was a symlink. Everything is fsync'd.
-6. **Apply** each write atomically: a temp file in the same directory, fsync, rename. The mode is preserved exactly. New directories are created and recorded.
+6. **Apply** each write atomically: a temp file in the same directory, fsync, rename. The directory is opened once, component by component with `O_NOFOLLOW` (`held`), and held until the rename, so a symlink swapped in after the check is refused, never followed; a file is opened without blocking and must be regular (a FIFO swapped in cannot hang the read). The mode is preserved, minus setuid, setgid and sticky, which an edited file never carries; the temp file starts 0600 and takes that mode before the first byte goes in. New directories are created and recorded.
 7. Return `{journal_id, files: [{path, sha256_before|null, sha256_after|null, created, deleted}]}`.
 
 Any error after the first write restores from the journal *before* the error is returned (`hx.txn.apply_failed`, `data.restored: true`). If the restore itself fails, the journal is kept and the error is `hx.txn.restore_failed`; `txn.recover` finishes the job.
 
-`txn.restore` puts back bytes and metadata exactly, deletes files the transaction created (and directories it created, if empty), and removes the journal. `txn.discard` keeps the changes and removes the journal. `txn.recover {journal_dir}` restores every interrupted transaction after a crash.
+`txn.restore {journal_dir, journal_id, root}` puts back bytes and metadata exactly, deletes files the transaction created (and directories it created, if empty), and removes the journal. The caller names the `root` it expects and a journal that recorded another is refused; every entry is resolved again and checked against the protected globs the transaction ran under, and a parent that has become a symlink is refused, all before the first write. `txn.discard` keeps the changes and removes the journal. `txn.recover {journal_dir, root?}` restores every interrupted transaction after a crash; with `root`, another workspace's journal is left alone.
 
 ## Edits
 
@@ -69,7 +69,8 @@ The whitespace-normalised fuzzy tier is **report-only**: when the only differenc
 - A live transaction holds an exclusive lock (`flock`) on its journal's `lock` file. Recovery skips locked journals (`busy`), so a second process never rolls back work in progress.
 - Restore reads and verifies (SHA-256) every saved file *before* its first workspace change, so a corrupt journal changes nothing (`hx.txn.journal_corrupt`).
 - A journal being deleted is renamed to `.trash-<id>` first; `recover` finishes half-done deletions.
-- Layout: `<journal_dir>/<uuidv7>/{lock, data.bin, manifest.json, state}`; directories 0700, files 0600.
+- Layout: `<journal_dir>/<uuidv7>/{lock, data.bin, manifest.json, manifest.mac, state}`; directories 0700, files 0600.
+- **A journal is opened only if its tag verifies** (`mac`): `manifest.mac` is an HMAC-SHA256 over the journal's id and manifest, keyed by a 32-byte 0600 file, `.hx-journal-key`, in the *parent* of the journal directory, so it is per profile (the plugin gives each session its own directory under one `journals/`). A planted journal, an edited manifest, a journal from another profile or from before tags is never replayed: it is reported in `failed` and kept. Only `txn.apply` creates the key. This binds the root, every path, every hash and the protected list; a record of ids would only say an id was seen once. Whoever can read the key (a same-user process) can forge a tag, so the plugin's policy denies agent tools reading it. The `state` file is not covered by the tag.
 
 ## Invariants
 
