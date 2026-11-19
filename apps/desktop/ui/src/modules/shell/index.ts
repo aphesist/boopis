@@ -178,7 +178,7 @@ export function boot(): void {
   sh.seg.collapse = ui.segmented({ mode: 'radio', size: 's', labelledby: 'hx-set-collapse-l', value: prefs.collapse, options: [{ value: 'rail', label: 'Rail' }, { value: 'closed', label: 'Hide' }] });
   $('#hx-set-collapse').replaceWith(sh.seg.collapse);
   // Settings' sections: the library's tab bar, concentric with the dialog's corner band
-  $('#hx-dtabs').outerHTML = ui.html.tabs({ label: 'Settings sections', class: 'hx-dtabs', value: 'general',
+  $('#hx-dtabs').outerHTML = ui.html.tabs({ label: 'Settings sections', class: 'hx-dtabs', scroll: true, value: 'general',
     tabs: SETTINGS_SECTIONS.map(([value, label]) => ({ value, label, id: 'hx-dtab-' + value, controls: 'hx-dpanel-' + value })) });
   ui.hydrate($('#hx-settings'));
 
