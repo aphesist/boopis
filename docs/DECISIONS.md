@@ -422,6 +422,21 @@ They're not sandboxed, matching Claude Code. This is the only exception to the n
 - The perf harness measures at the owner's geometry, and its numbers gate motion changes.
 - A machine stuck on the CPU renderer or WebKit's fixed 60 Hz timer gets a smooth 60, said plainly in Diagnostics, never a stutter at an unreachable 120.
 
+## ADR-0026 The terminal art is data, with one renderer per language that cannot link the others
+**Context.**
+- boopis has three terminal faces: the installers (`install.sh` for Linux and macOS, `install.ps1` for Windows), the app's own binary (`boopis --version`, `boopis doctor`) and the Arch package's install script. All three show the logo and the bots.
+- The installers run from a pipe, so they are one file each and cannot read the repository. The host is Rust. A shell, PowerShell and Rust cannot share code.
+
+**Decision.**
+- **The art exists once, as data:** `packaging/brand/boopis.art` (pixel grids, palette, scenes, animation frames), a line-based text format. The wordmark's pixels are the real logo's outlines sampled on the terminal's pixel grid (a cell is 2x2 pixels, drawn with the quadrant blocks); the bots' colours are `design/v6/data.js`'s.
+- **One renderer per language, kept equal by golden files:** the host's (`brand.rs`) is the reference, `render.awk` is what `install.sh` carries, `render.ps1` what `install.ps1` carries. `packaging/brand/golden/` holds what the host draws for every colour level; `scripts/test-brand.sh` checks that awk draws the same bytes. The PowerShell renderer follows the awk one line by line and has no golden test yet (it needs a Windows or PowerShell runner).
+- **The installers embed the art** between `>>> brand` markers, written by `scripts/embed-brand.sh` and checked by `--check`, the same pattern as the repository's other generators.
+- **Capabilities are read, never assumed:** `NO_COLOR`, `TERM=dumb`, a pipe, `COLORTERM`, `TERM`, the locale, `CI` and `BOOPIS_NO_ANIMATION`, in the same order in all three.
+
+**Consequences.**
+- Changing the art is one file and `scripts/embed-brand.sh`. Changing the renderer's rules is three edits and the goldens.
+- Alternatives refused: pre-rendered ANSI in the scripts (four colour levels times every frame: large and unreadable); a second art copy per language (drifts); downloading the art at install time (the installer would depend on the repository being reachable and public).
+
 ## ADR-0012 Prices
 Prices come from the models.dev catalogue plus a user override table. Hermes's models.dev data is not reachable through its public plugin API, so:
 - the plugin reads a cached catalogue file, `<profile home>/hypotaxis/prices/models-dev.json`;

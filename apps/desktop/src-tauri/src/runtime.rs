@@ -571,5 +571,46 @@ impl Source {
     }
 }
 
+/// The Hermes this run uses, from the choice, the build and the app's data folder: the plan to unpack and run the bundled
+/// runtime, or the reason it cannot be used (`runtime_error`, shown by setup). `(None, None)` is the user's own Hermes:
+/// chosen, or because this build carries no runtime.
+#[must_use]
+pub fn plan_for(
+    source: Source,
+    resource_dir: Option<&Path>,
+    data_dir: std::result::Result<PathBuf, String>,
+) -> (Option<Plan>, Option<String>) {
+    match (source, data_dir) {
+        (Source::Existing, _) => (None, None),
+        (Source::Bundled, Err(e)) => (
+            None,
+            Some(format!(
+                "the app has no data folder to unpack Hermes into: {e}"
+            )),
+        ),
+        (Source::Bundled, Ok(data_dir)) => match Runtime::locate(resource_dir) {
+            Ok(Some(runtime)) => (Some(Plan { runtime, data_dir }), None),
+            Ok(None) => {
+                tracing::info!(
+                    "this build carries no Hermes runtime; using the Hermes on this machine"
+                );
+                (None, None)
+            }
+            Err(e) => {
+                tracing::error!(error = %e, "the bundled Hermes runtime is unusable");
+                (None, Some(e.to_string()))
+            }
+        },
+    }
+}
+
+/// The saved choice of Hermes, read from the text of the Tauri store's `settings.json` (`{"hermes_source": "existing"}`).
+/// Lenient like `gpu::stored_policy`: a file that does not read means "no saved choice".
+#[must_use]
+pub fn stored_source(settings_json: &str) -> Option<String> {
+    let v: serde_json::Value = serde_json::from_str(settings_json).ok()?;
+    v.get("hermes_source")?.as_str().map(str::to_owned)
+}
+
 #[cfg(test)]
 pub(crate) mod tests;

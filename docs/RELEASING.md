@@ -7,6 +7,21 @@ Two workflows live in `.github/workflows/`. Neither can be run locally; `actionl
 - **A tag `vX.Y.Z`:** push a tag that equals `version` in `apps/desktop/src-tauri/tauri.conf.json` (the build fails when they differ). The `release` job then publishes a GitHub release with the AppImage, the other bundles that built, and `SHA256SUMS`. Download from the repository's Releases page, or `gh release download vX.Y.Z -R aphesist/hypotaxis`.
 - Verify: `sha256sum -c SHA256SUMS --ignore-missing`.
 
+## Installing from a terminal
+`scripts/install.sh` (Linux and macOS) and `scripts/install.ps1` (Windows) install a release the way a person would: they download the release's file, check its sha256 against the release's `SHA256SUMS`, install it and register it. They are one file each and run from a pipe; `packaging/AGENTS.md` has the art and the rules, ADR-0026 the reason.
+```sh
+bash install.sh                       # the latest release
+bash install.sh --version v0.1.0      # a release
+bash install.sh --file ./Hypotaxis_0.1.0_amd64.AppImage [--sha256 <hex>]   # a file you already have
+bash install.sh --uninstall           # removes exactly what the manifest lists
+```
+- **Linux:** the AppImage goes to `~/.local/share/boopis/`, a `boopis` launcher to `~/.local/bin/`, a menu entry and the hicolor icons (light, with a dark twin, and the symbolic one for panels). Without FUSE 2 the launcher makes the AppImage extract itself.
+- **macOS:** the app from the dmg goes to `~/Applications` (or `/Applications` with `--system`), and a `boopis` launcher to `~/.local/bin/`.
+- **Windows:** the NSIS setup runs silently, per user, with no administrator rights; `-Uninstall` runs the uninstaller it registered.
+- `--prefix DIR`, `--yes`, `--quiet`, `--no-color`, `--system` (the only way sudo is asked for). `NO_COLOR`, `CI` and `BOOPIS_NO_ANIMATION` are honoured.
+- Where releases come from (owner, repository, the artifact names) is one block at the top of each script. They expect the release to carry `Hypotaxis_{v}_amd64.AppImage`, `Hypotaxis_{v}_aarch64.dmg`, `Hypotaxis_{v}_x64-setup.exe` and `SHA256SUMS`, which is what the `release` job publishes today.
+- Checks: `shellcheck scripts/install.sh scripts/embed-brand.sh scripts/test-brand.sh scripts/test-install.sh`, then `scripts/test-brand.sh` and `scripts/test-install.sh`. The PowerShell installer has not been run on Windows.
+
 ## Running it on Arch
 **The native package (recommended, ADR-0025):** `boopis-<version>-1-x86_64.pkg.tar.zst`, built against the system's WebKitGTK, so it gets Arch's current renderer and updates through pacman. Download it from the `release` run (artifact `hypotaxis-arch-x86_64-pkg`) or the Releases page, then:
 ```sh
