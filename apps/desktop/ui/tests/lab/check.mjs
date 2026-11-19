@@ -153,7 +153,8 @@ async function redraw(page, row) {
     await settle(page, 260);
   }
 }
-const probe = (page, checks, overlay) => page.evaluate(([c, t, ov, b]) => window.__labProbe.run({ checks: c, tokenNames: t, overlay: ov, brandAllow: b }), [checks, TOKEN_NAMES, overlay, BRAND_ALLOW]);
+/* The checks read the resting state: a colour still travelling from the previous preset (a CSS transition that the 80 ms settle did not outlast) is not a value the design set, so running transitions are finished first (animations that loop are left alone) */
+const probe = (page, checks, overlay) => page.evaluate(([c, t, ov, b]) => { for (const a of document.getAnimations()) if (typeof CSSTransition !== 'undefined' && a instanceof CSSTransition) { try { a.finish(); } catch { /* already done */ } } return window.__labProbe.run({ checks: c, tokenNames: t, overlay: ov, brandAllow: b }); }, [checks, TOKEN_NAMES, overlay, BRAND_ALLOW]);
 
 async function axeRun(page) {
   if (!(await page.evaluate(() => !!window.axe))) await page.addScriptTag({ content: AXE });
