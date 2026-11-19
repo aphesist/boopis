@@ -49,8 +49,7 @@ hx-card[data-size="inline"],
 hx-card[data-size="compact"],
 hx-card[data-size="popover"] {
   --r-outer: var(--r-card, var(--r-m));
-  --pad: var(--sp-3);   /* 12: with the 20px card, what sits in its corners takes the 8px floor exactly (R − gap = floor) */
-  --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad)));
+  --pad: var(--pad-card);   /* 12: with the 20px card, what sits in its corners takes the 8px floor exactly (R − gap = floor); the corner rule derives --r-in */
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   column-gap: var(--sp-3);

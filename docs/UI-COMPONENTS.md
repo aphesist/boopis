@@ -54,7 +54,7 @@ dark (Card catalog), in the scratchpad's `components/` folder: `before-*`, `afte
 | Case | Before | After |
 |---|---|---|
 | Settings' scrollbar | WebKitGTK ignored `scrollbar-width: thin` and drew GTK's wide bar (the owner's screenshot); each scroller declared its own `overflow` and `scrollbar-*` | One scroll area (`.ui-scroll`) drawn with `::-webkit-scrollbar` from `--scroll-*` in every engine (R-scroll-1 to 3), stable gutters (R-scroll-4), the track kept off the dialog's curved foot (R-scroll-5) |
-| Settings' tab pills | `.hx-dtab` at `--r-s` (12) beside a close button at `--r-in` (18) in the dialog's 30px corner band; a duplicate of `.mod-tab` | `ui.tabs`: a tab takes the surface's `--r-in` (`--r-in-dialog`), a capsule on a 28px tab, like the close button (R-tab-1, R-corner-5) |
+| Settings' tab pills | `.hx-dtab` at `--r-s` (12) beside a close button at `--r-in` (18) in the dialog's 30px corner band; a duplicate of `.mod-tab` | `ui.tabs`: a tab takes the band's `--r-corner` (the dialog card is a `.ui-nest` container at `--pad-dialog`), a capsule on a 28px tab, like the close button, now a `.ui-corner` (R-tab-1, R-corner-5, R-dialog-1, F38). Exact concentricity of a 28px control 12px from a 30px corner needs a 60px head or a 36px close: the owner's call |
 | Search field and key chips | the title bar's field and the palette's field hand-built in `index.html` and `shell.css`; key chips at `--r-xs` in the field's 12px corner; chips drawn by four different pieces of code | `ui.search` (sizes s, m, l; R-search-1 to 5), its glyph in a 26px square (R-search-3); every chip from `ui.html.keys`, concentric with the field (`--r-in-field`, R-kbd-2) |
 
 The visible change in the search field is small (chips from 6px to 8px corners, the glyph 4px further left); what
@@ -70,9 +70,13 @@ changed most is that it is now the kit's component, one markup for both fields a
   buttons (`el('button', {class: 'ui-btn'})`).
 - **Drift found:** hand-built buttons with their own reset and states: `.hx-me` (account), `.hx-stub-orb`, `.bt-opt`,
   `.bt-p-sched`, `.bt-sugg`, `.dk-add`, `.dk-run-open`, `.dk-pillbtn`, `.hxt-swatch`, and row-like ones (below).
-- **Corner overrides:** `.hx-dialog__head .ui-ib`, `.mod-pane__head .ui-ib`, `.ssr-term-wrap > .ui-ib`,
-  `.mod-toast__x`, `.ui-toast > .ui-btn` each set `--r-in` or `--r-s` by hand. **Other branch:** the corner-slot
-  primitive is `w12/corners`'; these move to it when it lands (TODO there, not redone here).
+- **Corner controls** (the corners primitive, `components/corners.ts`, from `w12/corners`): the dialogs' close
+  buttons, the mods band's and inline pane's chevrons and close, and a mod toast's dismiss set their radius by hand;
+  they are `.ui-corner` now, in containers that carry `.ui-nest` (the dialogs, the palette, the mods band and inline
+  pane) or are in the one container rule (the command field, the form cards). Every hand-written `--r-in` formula in
+  the shell, mods and cards is gone. **Left:** the dock's `--r-card` (`dock.css`, the dock branch's) and the palette's
+  last row (a 30px row cannot be concentric 6px from a 30px corner: the owner's call on row height or inset,
+  `docs/UI-LAB-FINDINGS.md`). The toast's action and the terminal's copy were converted on `w12/corners`.
 - **Debt (allowlisted):** the theme panel's "Import file" is a `<label class="ui-btn">` that opens the file chooser;
   the kit has no file button yet.
 
@@ -176,7 +180,7 @@ changed most is that it is now the kit's component, one markup for both fields a
 | R-scroll-4 | `components.css` `.ui-scroll--stable` (one rule); ends give the gutter back through `--scroll-gutter` |
 | R-scroll-5 | `components.css` `.ui-scroll--inset-end`, `--inset-both` |
 | R-scroll-7, R-tab-2 | `.ui-tabs--scroll` (bare strip, 28px fade, open tab kept in view) |
-| R-tab-1, R-corner-5 | `.ui-tab` `border-radius: var(--r-in, var(--r-s))` |
+| R-tab-1, R-corner-5, R-dialog-1 | `.ui-tab` `border-radius: var(--r-corner, var(--r-s))`; the dialog's close is a `.ui-corner` in a `.ui-nest` card (`--pad-dialog`) |
 | R-search-1, 3, 4 | `.ui-search--s/--m/--l` |
 | R-kbd-1 to 3 | `kbd.ts`, `.ui-keys--fit`, `.ui-keys--raised` |
 | R-state-3 | every hover rule of `components.css` and `mod-view.css` under `(hover: hover) and (pointer: fine)` |

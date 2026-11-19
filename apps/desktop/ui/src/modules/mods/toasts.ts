@@ -31,7 +31,7 @@ function showNext(): void {
   const first = node.firstElementChild;
   if (first && first.tagName === 'SPAN') { first.className = 'mod-toast'; first.innerHTML = '<span class="mod-toast__who">' + ui.html.mod(t.plugin) + '</span><span class="mod-toast__t">' + esc(t.text) + '</span>'; }
   const x = ui.iconButton({ icon: 'close', label: 'Dismiss', size: 's', tip: false });
-  x.classList.add('mod-toast__x');
+  x.classList.add('mod-toast__x', 'ui-corner');
   x.addEventListener('click', () => { dismiss(); });
   node.append(x);
   node.onkeydown = (e) => { if (e.key === 'Escape') { e.stopPropagation(); dismiss(); } };

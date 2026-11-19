@@ -1,7 +1,7 @@
 /* The tab bar: a row of plain tabs, the selected one on the --current fill (DESIGN-SYSTEM.md §14.21, the Settings head; the details
    panel's mod panes, §14.29). It is not the tabs pill (§14.3, `segmented({mode: 'tabs'})`), which slides a bone thumb in a track for
    two to four views; this one names sections and may hold more.
-   Corners: a tab takes the surface's concentric inner radius (`--r-in`, DESIGN-SYSTEM.md §8.2), so in a dialog's 30px corner band at a
+   Corners: a tab takes the corner radius of the band it sits on (`--r-corner`, DESIGN-SYSTEM.md §8.2, R-corner-5), so in a dialog's 30px corner band at a
    12px inset it is 18px, which on a 28px tab is a capsule, the same as the close button beside it; on a surface that declares no
    nesting it is --r-s. Wired by `hydrate()` (`data-ui="tabs"`): one tab stop, Left/Right, Home/End, a cancelable `ui:change` {value}. */
 import { attrs, cx, esc } from '../core/dom';

@@ -71,18 +71,18 @@
   <div class="hx-scrim" id="hx-scrim" hidden></div>
 
   <div class="hx-palette" id="hx-palette" role="dialog" aria-modal="true" aria-label="Search and commands" hidden>
-    <div class="hx-palette__box">
+    <div class="hx-palette__box ui-nest">
       <div id="hx-palette-input"></div>
       <div class="hx-palette__list ui-scroll ui-scroll--stable ui-scroll--inset-end" id="hx-palette-list" role="listbox" aria-label="Results"></div>
     </div>
   </div>
 
   <dialog class="hx-dialog" id="hx-settings" aria-labelledby="hx-settings-title">
-    <div class="hx-dialog__card">
+    <div class="hx-dialog__card ui-nest">
       <header class="hx-dialog__head">
         <h2 id="hx-settings-title">Settings</h2>
         <div id="hx-dtabs"></div>
-        <button class="ui-ib" type="button" id="hx-settings-close" aria-label="Close settings" data-tip="Close" data-kbd="esc"><span data-icon="close"></span></button>
+        <button class="ui-ib ui-corner" type="button" id="hx-settings-close" aria-label="Close settings" data-tip="Close" data-kbd="esc"><span data-icon="close"></span></button>
       </header>
       <div class="hx-dialog__body ui-scroll ui-scroll--stable ui-scroll--inset-end">
         <div class="hx-dpanel" id="hx-dpanel-general" role="tabpanel" aria-labelledby="hx-dtab-general">
@@ -112,11 +112,11 @@
   </dialog>
 
   <dialog class="hx-dialog hx-keysheet" id="hx-keys-sheet" aria-labelledby="hx-keys-title">
-    <div class="hx-dialog__card">
+    <div class="hx-dialog__card ui-nest">
       <header class="hx-dialog__head">
         <h2 id="hx-keys-title">Keyboard shortcuts</h2>
         <div id="hx-keys-filter"></div>
-        <button class="ui-ib" type="button" id="hx-keys-close" aria-label="Close keyboard shortcuts" data-tip="Close" data-kbd="esc"><span data-icon="close"></span></button>
+        <button class="ui-ib ui-corner" type="button" id="hx-keys-close" aria-label="Close keyboard shortcuts" data-tip="Close" data-kbd="esc"><span data-icon="close"></span></button>
       </header>
       <div class="hx-dialog__body ui-scroll ui-scroll--stable ui-scroll--inset-end" tabindex="0" role="region" aria-labelledby="hx-keys-title">
         <div class="hx-keys-grid" id="hx-keys-body"></div>

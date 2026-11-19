@@ -48,7 +48,7 @@ Each row: what it is for, its variants (the options `variants.ts` lists for the 
 | `hold` | hold to approve (1 s) | `fill: dots, solid`; `label`, `ms` | §14.15 |
 | `switch` | a setting that applies at once | `checked`, `disabled`, `id`, `label` | R-switch-1 to 3 |
 | `segmented` | two to four exclusive options; the tabs pill | `mode: tabs, radio`; `size: s`; `vertical`; `fill`; `label` or `labelledby`; `controls`; `attrs` | R-seg-1 to 3, R-tab-1, R-tab-3 |
-| `tabs` | text tabs naming sections (a dialog's head, the details panel's panes) | `scroll` (a strip that scrolls with a 28px fade, the open tab kept in view); `tabs: [{value, label, labelHTML, id, controls, ariaLabel, tip}]`, `value`, `label` | R-tab-1 to 3, R-corner-5, R-scroll-7 |
+| `tabs` | text tabs naming sections (a dialog's head, the details panel's panes) | `scroll` (a strip that scrolls with a 28px fade, the open tab kept in view); `tabs: [{value, label, labelHTML, id, controls, ariaLabel, tip}]`, `value`, `label`; radius `--r-corner` of the band | R-tab-1 to 3, R-corner-5, R-scroll-7 |
 | `chip`, `chipGroup` | a toolbar toggle or picker; option chips | `mono`, `option`, `pressed`, `haspopup`, `model` | R-chip-1 to 3 |
 | `keys`, `kbd`, `combo` | key chips | `fit` (concentric with the control the chips sit in: tooltip, search field), `raised` (on a raised surface: `--bg-4`) | R-kbd-1 to 3 |
 | `badge` | a quiet mark (the "made outside boopis" mark) | `tip`, `tipPos`, `focusable`, `describedBy` | §13 owner decision, R-chip-1 |
@@ -73,9 +73,12 @@ Each row: what it is for, its variants (the options `variants.ts` lists for the 
 
 ## Rules the kit keeps in one place
 
-- **Corners.** A component in a container's corner or edge band takes the container's `--r-in` (`--r-in-*` tokens);
-  a tab in a dialog's head is a capsule like the close button beside it (R-corner-5), a key chip at a field's end is
-  `--r-in-field` (R-kbd-2).
+- **Corners.** One rule derives `--r-in`, `--r-corner`, `--corner-inset` and `--corner-ring` from a container's
+  `--r-outer` and `--pad` (`corners.ts`; containers carry `.ui-nest` or are in the rule's list). A control in a corner is
+  `.ui-corner`, a row on an edge `.ui-corners`; a tab on a dialog's head band takes `--r-corner`, a capsule like the
+  close button (R-corner-5, R-dialog-1); a key chip at a field's end takes its `--r-in` (`--r-in-field`, R-kbd-2).
+- **Placement.** Every tooltip, menu, popover and listbox is placed by `place.ts` (the 8px gap and margin,
+  `data-tip-pos`, `data-overlay-avoid`, inside a modal dialog: R-float-1 to 5, R-elev-6).
 - **Scrollbars.** `::-webkit-scrollbar` from the `--scroll-*` tokens, in WebKitGTK and Chromium alike (R-scroll-1 to
   3); `.ui-scroll--stable` (R-scroll-4) and `.ui-scroll--inset-*` (R-scroll-5) are each one rule in `components.css`.
 - **Hover.** Every hover rule sits under `(hover: hover) and (pointer: fine)`; what hover reveals also shows on

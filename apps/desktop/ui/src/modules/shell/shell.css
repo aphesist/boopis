@@ -202,7 +202,7 @@ body {
 .hx-palette { position: absolute; inset: 0; z-index: var(--z-palette); background: var(--scrim); animation: hx-fade var(--dur-2) var(--ease); }
 .hx-palette__box {
   position: absolute; top: 48px; left: 50%; translate: -50% 0;
-  --r-outer: var(--r-l); --pad: 6px; --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad)));
+  --r-outer: var(--r-l); --pad: var(--pad-palette);   /* a container (.ui-nest): the corner rule derives --r-in */
   width: min(600px, calc(100% - 32px)); box-sizing: border-box;
   display: flex; flex-direction: column; max-height: min(520px, calc(100% - 96px));
   border-radius: var(--r-outer); background: var(--bg-1);
@@ -227,11 +227,11 @@ body {
 /* Appearance: the dialog steps aside to the right edge and drops its scrim, so changes show on the whole app */
 .hx-dialog.is-side { width: min(420px, calc(100% - 24px)); height: calc(100% - 24px); margin: 12px 12px 12px auto; }
 .hx-dialog.is-side::backdrop { background: transparent; }
-.hx-dialog__card { --r-outer: var(--r-l); --pad: 12px; --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad))); display: flex; flex-direction: column; height: 100%; box-sizing: border-box; border-radius: var(--r-outer); background: var(--bg-1); box-shadow: inset 0 0 0 1px var(--line), var(--shadow-pop); overflow: hidden; }
+.hx-dialog__card { --r-outer: var(--r-l); --pad: var(--pad-dialog); display: flex; flex-direction: column; height: 100%; box-sizing: border-box; border-radius: var(--r-outer); background: var(--bg-1); box-shadow: inset 0 0 0 1px var(--line), var(--shadow-pop); overflow: hidden; }
 .hx-dialog__card:focus { outline: none; }
 .hx-dialog__head { display: flex; align-items: center; gap: 16px; height: 52px; padding: 0 12px 0 20px; border-bottom: 1px solid var(--hair); flex: none; }
 .hx-dialog__head h2 { margin: 0; font-size: var(--fs-l); font-weight: 600; color: var(--text-strong); text-transform: var(--ui-case); }
-.hx-dialog__head .ui-ib { margin-left: auto; border-radius: var(--r-in); }
+.hx-dialog__head .ui-ib { margin-left: auto; }   /* the close is a .ui-corner: --r-corner, on the head's band (R-dialog-1, R-corner-5) */
 .hx-dialog__body { flex: 1; min-height: 0; padding: 4px calc(20px - var(--scroll-gutter, 0px)) 24px 20px; }   /* a scroll area (.ui-scroll) */
 .hx-dialog.is-side .hx-dtabs { margin-right: -6px; }
 
@@ -360,8 +360,8 @@ body {
 /* ───────────── drawn corners (DESIGN-SYSTEM.md §8; bound in boot() with HX.ui.squircle.auto) ─────────────
    A bound element's inset line is --sq-line and a floating surface paints --sq-bg; the library draws both along the
    continuous path and turns the box-shadow line off. */
-.hx-dialog__card { --r-outer: var(--r-l); --pad: 12px; --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad))); --sq-bg: var(--bg-1); --sq-line: var(--line); }
-.hx-palette__box { --r-outer: var(--r-l); --pad: 6px; --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad))); --sq-bg: var(--bg-1); --sq-line: var(--line); }
+.hx-dialog__card { --r-outer: var(--r-l); --pad: var(--pad-dialog); --sq-bg: var(--bg-1); --sq-line: var(--line); }
+.hx-palette__box { --r-outer: var(--r-l); --pad: var(--pad-palette); --sq-bg: var(--bg-1); --sq-line: var(--line); }
 .hx-dialog__card[data-sq-on], .hx-palette__box[data-sq-on], .hx-goto[data-sq-on] { box-shadow: var(--shadow-pop); }
 .hx-pal-row { border-radius: var(--r-in); }
 .hx-goto { --sq-bg: var(--bg-3); --sq-line: var(--line); }

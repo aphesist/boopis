@@ -9,8 +9,8 @@
 /* ───────────── the drawer: the band and an inline pane share it. Inset (what the system set into the work), the
    corner of a card, concentric with the controls at its edge (DESIGN-SYSTEM §8.2) ───────────── */
 .mod-band, .mod-inline {
-  --r-outer: var(--r-m); --pad: 4px; --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad)));
-  box-sizing: border-box; border-radius: var(--r-outer); padding: var(--pad);
+  --r-outer: var(--r-m); --pad: var(--pad-menu); --corner-size: 24px;   /* a container (.ui-nest) whose corner controls are 24px: inset 8, radius 12 */
+  box-sizing: border-box; border-radius: var(--r-outer); padding: var(--pad) var(--corner-inset) var(--pad) var(--pad);
   --sq-bg: var(--bg-0); background: var(--sq-bg); --sq-line: var(--hair); box-shadow: inset 0 0 0 1px var(--hair);
   font: 400 var(--fs-s)/var(--lh-ui) var(--sans); color: var(--text); text-transform: none;
 }
@@ -27,7 +27,6 @@
 .mod-row[data-open="true"] .mod-row__who { padding-top: 9px; }
 .mod-row[data-open="true"] .mod-row__body { padding-block: 4px 6px; }
 .mod-row[data-open="true"] .mod-chev { margin-top: 4px; }
-.mod-chev { border-radius: var(--r-in); }
 .mod-chev .ui-icon { transition: transform var(--dur-2) var(--ease); }
 .mod-chev[aria-expanded="true"] .ui-icon { transform: rotate(90deg); }
 .mod-row .mv-root .ui-btn--s { height: calc(var(--ctl-s) - 4px); border-radius: var(--r-in); }
@@ -36,7 +35,6 @@
 .mod-inline__head { display: flex; align-items: center; gap: var(--sp-1); height: 32px; padding-left: 10px; }
 .mod-inline__head .mv-by { color: var(--text-dim); font-size: var(--fs-xs); }
 .mod-inline__title { flex: 1; min-width: 0; margin-left: var(--sp-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 var(--fs-s)/1 var(--sans); color: var(--text-strong); }
-.mod-inline__head .ui-ib { border-radius: var(--r-in); }
 .mod-inline__body { padding: var(--sp-1) 10px var(--sp-3); max-height: min(28vh, 260px); }   /* a scroll area (.ui-scroll) */
 
 /* ───────────── a pane: a tab in the details panel ───────────── */
@@ -89,7 +87,9 @@
 
 /* ───────────── the toast queue: a quiet "+N" while others wait, and a way to dismiss ───────────── */
 .mod-toast__more { flex: none; margin-left: calc(var(--sp-2) * -1); font: 400 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); font-variant-numeric: tabular-nums; color: var(--text-quiet); text-transform: none; }
-.ui-toast > .mod-toast__x { border-radius: var(--r-in); flex: none; }
+/* the dismiss is a 24px corner control: while the toast holds one its corner size is 24 (inset 8, radius 12) */
+.ui-toast:has(> .mod-toast__x) { --corner-size: 24px; }
+.ui-toast > .mod-toast__x { flex: none; }
 
 /* ───────────── the theme card while it previews: the colours are on the whole app ───────────── */
 .cd-live { display: none; align-items: center; gap: 6px; margin-left: auto; align-self: flex-start; font: 400 var(--fs-2xs)/16px var(--mono); letter-spacing: var(--track-mono); color: var(--text-dim); text-transform: none; }

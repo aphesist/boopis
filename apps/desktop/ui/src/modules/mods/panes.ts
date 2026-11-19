@@ -25,8 +25,8 @@ function paneBody(p: ModPane, inline: boolean): HTMLElement {
   wrap.append(root);
   return wrap;
 }
-function closeButton(p: ModPane): HTMLButtonElement {
-  const close = ui.iconButton({ icon: 'close', label: 'Close ' + p.title, size: 's' });
+function closeButton(p: ModPane, inline = false): HTMLButtonElement {
+  const close = ui.iconButton({ icon: 'close', label: 'Close ' + p.title, size: 's', class: inline ? 'ui-corner' : undefined });
   close.addEventListener('click', () => { closePane(p.id); });
   return close;
 }
@@ -52,7 +52,7 @@ function paneHead(p: ModPane, inline: boolean): HTMLElement {
     const open = !ctl.folded.get(p.id);
     const title = el('span', { class: 'mod-inline__title', text: p.title });
     const tog = ui.iconButton({ icon: 'chevron', label: (open ? 'Collapse ' : 'Expand ') + p.title, size: 's', expanded: open, tip: false });
-    tog.classList.add('mod-chev');
+    tog.classList.add('mod-chev', 'ui-corner');
     tog.addEventListener('click', () => {
       ctl.folded.set(p.id, open);
       if (!open) for (const o of inlinePanes()) if (o.id !== p.id) ctl.folded.set(o.id, true);   /* one open at a time, so the composer keeps the screen */
@@ -60,7 +60,7 @@ function paneHead(p: ModPane, inline: boolean): HTMLElement {
       onChange?.();
       surface.slots?.band.querySelector<HTMLElement>('[data-pane="' + p.id + '"] .mod-chev')?.focus();
     });
-    head.append(title, tog, closeButton(p));
+    head.append(title, tog, closeButton(p, true));
   } else head.append(closeButton(p));
   return head;
 }
@@ -117,7 +117,7 @@ function rowEl(b: ModBand): HTMLElement {
   ctl.bandRoot = root;
   if (root) body.append(root);
   const tog = ui.iconButton({ icon: 'chevron', label: (ctl.bandOpen ? 'Collapse ' : 'Expand ') + (name ?? 'mods'), size: 's', expanded: ctl.bandOpen, tip: false });
-  tog.classList.add('mod-chev');
+  tog.classList.add('mod-chev', 'ui-corner');
   tog.addEventListener('click', () => {
     ctl.bandOpen = !ctl.bandOpen;
     if (ctl.bandOpen && !docked()) for (const p of inlinePanes()) ctl.folded.set(p.id, true);
@@ -143,13 +143,13 @@ export function drawBand(): void {
   inl.forEach((p, i) => {
     if (!ctl.folded.has(p.id)) ctl.folded.set(p.id, i < inl.length - 1);
     const open = !ctl.folded.get(p.id);
-    const sec = el('section', { class: 'mod-inline', 'data-open': String(open), 'data-pane': p.id, 'aria-label': p.title + ', ' + p.plugin + ' mod' });
+    const sec = el('section', { class: 'mod-inline ui-nest', 'data-open': String(open), 'data-pane': p.id, 'aria-label': p.title + ', ' + p.plugin + ' mod' });
     sec.append(paneHead(p, true));
     if (open) sec.append(paneBody(p, true));
     kids.push(sec);
   });
   if (ctl.s.band) {
-    const band = el('div', { class: 'mod-band', role: 'region', 'aria-label': 'Mods' });
+    const band = el('div', { class: 'mod-band ui-nest', role: 'region', 'aria-label': 'Mods' });
     band.append(rowEl(ctl.s.band));
     kids.push(band);
   }
