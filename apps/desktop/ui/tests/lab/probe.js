@@ -359,7 +359,24 @@
     /* geometry.target */
     if (want.has('geometry.target')) {
       const HIT = px(getComputedStyle(document.documentElement).getPropertyValue('--hit-min')) || 24;
-      const targets = els.filter((e) => e.matches('button, a[href], input:not([type="hidden"]), select, textarea, summary, [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], [role="switch"], [role="radio"], [role="checkbox"]') && !e.closest('[inert], [aria-hidden="true"]') && !e.disabled);
+      /* a target that an ancestor's overflow clips away entirely (scrolled out of its list or panel) cannot be pressed: it is not a target now (R-a11y-2 measures what the user can hit) */
+      const scrolledAway = (e) => {
+        const r = e.getBoundingClientRect();
+        if (r.width === 0 || r.height === 0) return false;
+        let own = getComputedStyle(e).position, wait = own === 'absolute';   /* an absolute box is clipped only by what is, or sits inside, its containing block */
+        if (own === 'fixed') return false;
+        for (let p = e.parentElement; p && p !== document.documentElement; p = p.parentElement) {
+          const cs = getComputedStyle(p);
+          if (wait) { if (cs.position === 'static') continue; wait = false; }
+          if (cs.position === 'fixed') return false;
+          if (cs.position === 'absolute') wait = true;
+          if (cs.overflowX === 'visible' && cs.overflowY === 'visible') continue;
+          const c = p.getBoundingClientRect();
+          if (r.right <= c.left || r.left >= c.right || r.bottom <= c.top || r.top >= c.bottom) return true;
+        }
+        return false;
+      };
+      const targets = els.filter((e) => e.matches('button, a[href], input:not([type="hidden"]), select, textarea, summary, [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], [role="switch"], [role="radio"], [role="checkbox"]') && !e.closest('[inert], [aria-hidden="true"]') && !e.disabled && !scrolledAway(e));
       /* what the user can hit: the element's box united with an absolutely positioned ::before / ::after that takes pointer events (R-a11y-2: a mark smaller than --hit-min gets a hit area of 24 around it) */
       const hitBox = (t) => {
         const r = t.getBoundingClientRect();
