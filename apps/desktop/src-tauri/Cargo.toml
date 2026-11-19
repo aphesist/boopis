@@ -54,6 +54,13 @@ hex.workspace = true
 sha2.workspace = true
 dirs = "6"
 
+# The Linux webview (ADR-0025): GDK's monitor refresh rate and the web view's settings object, through safe wrappers, and
+# `dlsym` for the one preference the `webkit2gtk` crate has no binding for. Versions match what Tauri's wry already uses.
+[target.'cfg(target_os = "linux")'.dependencies]
+gtk = "0.18"
+webkit2gtk = "2.0"
+libc = "0.2"
+
 [dev-dependencies]
 tempfile.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "sync", "time", "process", "io-util", "net", "fs"] }

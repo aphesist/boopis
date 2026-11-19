@@ -338,6 +338,81 @@ They're not sandboxed, matching Claude Code. This is the only exception to the n
 - New surfaces (the band above the composer, mod panes, the mod status line, placed rows, the mod origin) need the owner's design in v6 first.
 - A conformance suite against pinned public mods tracks support per Claude Code version.
 
+## ADR-0023 One self-contained app: Hermes ships inside it
+**Context.**
+- The first build asked the user to install Hermes with a terminal command before running the app.
+- The owner: it must ship as a single app with its own installer. Building on Hermes stays (ADR-0001): its plugins work and its updates flow in.
+- Hermes is MIT-licensed, so bundling it is allowed with its notice.
+
+**Decision.**
+- Each installer carries:
+  - a pinned, unmodified Hermes;
+  - a private, relocatable Python runtime;
+  - `hx`;
+  - the plugin.
+- On first run the host unpacks the runtime, checking its hash, into the app's data folder, with a private `HERMES_HOME`. No terminal, no separate install, and no contact with any other Hermes on the machine.
+- One updater ships the app and the runtime together, and a Hermes release reaches users only after CI passes on it. Hermes's self-update is off inside the bundle.
+- Large optional pieces (Chromium for automation, the desktop-control driver, Node) are downloaded on first use, with consent, into the private home, through Hermes's own package manager.
+- Pointing the app at an existing Hermes stays as an advanced setting.
+
+**Consequences.**
+- The release pipeline builds the runtime per platform, and the end-to-end tests run against that same artifact, so CI tests what ships.
+- Installer size grows by the runtime's size, so its footprint is measured and kept lean.
+- Signed updates need an update-signing key, which the owner creates and stores as a CI secret. It never goes in the repository.
+- ARCHITECTURE §4 is amended: the earlier plan had the host run Hermes's installer on the user's machine.
+
+## ADR-0024 The host picks WebKitGTK's renderer from evidence, never blanket
+**Context.**
+- Tauri draws with WebKitGTK on Linux. Its renderer is chosen by environment switches read when the web view is created: `WEBKIT_DISABLE_DMABUF_RENDERER` (shared-memory buffers instead of DMABUF), `WEBKIT_DISABLE_COMPOSITING_MODE` (no accelerated compositing), `__NV_DISABLE_EXPLICIT_SYNC` (NVIDIA on Wayland).
+- They cure a blank window or a crash on some NVIDIA setups (WebKit bugs 259644, 261874; Tauri's Linux graphics guide). They cost frames wherever the default works, and Tauri's own guide says not to ship them unconditionally.
+- They are not equivalent. Checked on WebKitGTK 2.52.6 with `webkit://gpu`: `WEBKIT_DISABLE_DMABUF_RENDERER=1` makes the acceleration policy `never` (no GL context, the CPU paints every frame), while `WEBKIT_DMABUF_RENDERER_FORCE_SHM=1` keeps policy `always` and GL compositing and copies frames through shared memory. Ubuntu ships a patch that forces that shared-memory transport for NVIDIA (2.52.6-0ubuntu0.24.04.2).
+- The owner's laptop is a hybrid NVIDIA machine on Hyprland (Wayland, scale 1.6) and runs with `WEBKIT_DISABLE_DMABUF_RENDERER=1` from the start: so it paints on the CPU at 3600x2250 buffer pixels. The frame drops measured there (see `apps/desktop/ui/tests/perf`) are largely the page's work in that path.
+
+**Decision.**
+- `renderer.rs` probes the GPUs (`/sys/class/drm`: vendor, bound driver, boot display), the session type and the compositor, and decides before any thread starts. It is a pure table, unit-tested.
+- Automatic rule: only the NVIDIA proprietary driver as the display GPU (or as the GPU the app renders on, ADR-0025) on X11 gets `WEBKIT_DMABUF_RENDERER_FORCE_SHM=1` (the GPU stays). A hybrid machine whose display is the integrated GPU, any other vendor, and any Wayland session are left to WebKitGTK. On Wayland with NVIDIA the rule takes the runtime WebKitGTK version into account: from 2.54.2 (the GTK 3 explicit-sync fix, WebKit bug 324551) the machine gets the default GL renderer and the rule says so (`nvidia_wayland_fixed`); before that, or when the version cannot be read, the rule is the one above (`nvidia_wayland_untouched`). Both set nothing; the version changes the reason in the log and the report, and the report's note names a CPU-painting switch that is set in the environment.
+- The version is read from `libwebkit2gtk` at run time (`webkit_get_major_version` and its siblings, through `dlsym`), not from what the build linked: the AppImage carries its own copy.
+- `HYPOTAXIS_RENDERER=auto|default|shm|cpu|nosync|software` is the owner's explicit choice (`shm` is `FORCE_SHM`, `cpu` is `DISABLE_DMABUF_RENDERER`). A WebKit or NVIDIA switch already in the environment wins over everything.
+- The decision is logged at startup. Settings > General > Diagnostics copies a report (session, GPUs and drivers, rule, environment, the page's size and `devicePixelRatio`) and opens WebKitGTK's `webkit://gpu` page in its own window, with no access to the host's commands.
+- `set_var` is an `unsafe` call (`#[allow(unsafe_code)]` with its SAFETY note): it runs first in `run()`, before the logger, tokio or Tauri start a thread. ADR-0025 adds the same call for the GPU rule and one `dlsym` block.
+
+**Consequences.**
+- No machine pays for a workaround it does not need. A machine that does need one sets a variable and sends the report.
+- Wayland plus NVIDIA is not auto-fixed: the evidence is crashes and blank windows, which the host cannot see in advance. The diagnostics and the variable make the fix one step.
+- Distribution patches differ (Ubuntu forces the shared-memory transport for NVIDIA in 2.52.6; Arch's package is not known to), so the report, not an assumption, says what a machine does.
+
+## ADR-0025 Motion at the display's refresh rate: compositor-driven, WebKit's 60 fps cap lifted, current WebKitGTK
+**Context.**
+- The owner's panel runs at 120 Hz and they want 120 fps with no stutter. The research (`research/120hz.md`, read in WebKitGTK's source) found three limits.
+  - **WebKit's 60 fps preference:** WebKit caps `requestAnimationFrame` and page rendering updates to 60 fps on fast displays by default (`PreferPageRenderingUpdatesNear60FPS`). It can be turned off from the host (`webkit_settings_set_feature_enabled`).
+  - **The renderer:** only the GL renderers (DMA-BUF, or shared memory) run `transform` and `opacity` animations on the compositor thread. The CPU renderer the owner was forced into paints every frame on the main thread.
+  - **The WebKitGTK version:** the GTK3 explicit-sync crash with NVIDIA on Wayland is fixed in WebKitGTK 2.54.2 and later, and CSS `linear()` easing only stops forcing main-thread animation in 2.54.
+- GTK3 on Wayland renders a 1.6 scale at 2x (3600x2250 here). Tauri has no GTK4 port, and Tauri's Chromium runtime is a Tauri 3 alpha that runs under XWayland.
+
+**Decision.**
+- **Lift the cap:** the host turns WebKit's 60 fps preference off on displays faster than 60 Hz, with a setting to force 60.
+- **Renderer rule:** the renderer rule (ADR-0024) takes the WebKitGTK version into account. On 2.54.2 and later, Wayland with NVIDIA gets the default GL renderer, not a workaround.
+- **Motion:**
+  - motion runs on the compositor: `transform` and `opacity` only, springs as `linear()` curves or Web Animations;
+  - the orbs draw in an OffscreenCanvas worker where the engine supports it;
+  - STANDARDS §6 makes the display's full rate the budget, with 60 fps as the floor only where the machine forces it.
+- **Packaging:** ship on a current WebKitGTK.
+  - Arch gets a native package that uses the system's WebKitGTK (2.54.2 or later).
+  - The AppImage's bundled WebKitGTK version is reported in Diagnostics and raised as builds allow.
+- **Frame rate setting:** `HYPOTAXIS_FPS=auto|60|max`. `auto` (the default) turns the preference off when GDK reports a refresh rate above 60 Hz for the window's monitor, `60` keeps WebKit's default, `max` always turns it off. The cap is only ever lifted. The preference is reached through `webkit_settings_set_feature_enabled`, resolved with `dlsym` and called only after the runtime version (2.42 or later), the symbols and the feature's existence are checked; the host reads the value back and Diagnostics reports it.
+- **GPU rule:** `HYPOTAXIS_GPU=auto|integrated|dedicated`, also in Settings > General (saved, applied at the next start; `HYPOTAXIS_GPU` overrides it). `dedicated` is PRIME render offload to the NVIDIA GPU: the environment that switcheroo-control advertises for the discrete GPU (`net.hadess.SwitcherooControl`, read with `busctl` in a child process so no thread starts before the environment is set), else NVIDIA's documented `__NV_PRIME_RENDER_OFFLOAD=1`, `__GLX_VENDOR_LIBRARY_NAME=nvidia`, `__VK_LAYER_NV_optimus=NVIDIA_only`. Only GPU-selection variables are taken from the service. The host sets no EGL vendor file and no `WEBKIT_WEB_RENDER_DEVICE_FILE`: WebKit takes the DRM render node from its EGL display, and NVIDIA documents `__NV_PRIME_RENDER_OFFLOAD=1` as enough for an EGL client. A GPU-selecting variable already in the environment wins, and then the host sets none.
+  - `auto` offloads only on AC power (a `Mains` supply online in `/sys/class/power_supply`), with a separate NVIDIA GPU whose proprietary driver is bound, a runtime WebKitGTK of 2.54.2 or later and a known session type. On battery, with an unknown power source, with an older or unreadable WebKitGTK, or with no such GPU it uses the integrated GPU (it sets nothing).
+  - `dedicated` is allowed on an older WebKitGTK and warns in Diagnostics that it may crash or stay blank on Wayland. It supports the NVIDIA proprietary driver only.
+  - The GPU is fixed when the process starts. If the power source changes, Diagnostics and Settings offer "Restart to switch"; the app never switches silently.
+  - When offload is on, the renderer rules (ADR-0024) judge the NVIDIA GPU, not the display one.
+  - Diagnostics reports the GL renderer the page really gets (WebGL's unmasked renderer string, which goes through the web process' EGL display), the power source, and what was requested.
+  - `docs/research/120hz.md` section 4.3 advises against forcing offload as a fix for blank windows (a cross-GPU copy, the dGPU awake for a light UI, NVIDIA's EGL path). This rule is the owner's choice for a demanding app, and `auto` is gated on the fix for that path.
+- **Not now:** Chromium (Tauri 3 alpha with CEF). Revisit when it reaches beta with native Wayland.
+
+**Consequences.**
+- The perf harness measures at the owner's geometry, and its numbers gate motion changes.
+- A machine stuck on the CPU renderer or WebKit's fixed 60 Hz timer gets a smooth 60, said plainly in Diagnostics, never a stutter at an unreachable 120.
+
 ## ADR-0012 Prices
 Prices come from the models.dev catalogue plus a user override table. Hermes's models.dev data is not reachable through its public plugin API, so:
 - the plugin reads a cached catalogue file, `<profile home>/hypotaxis/prices/models-dev.json`;

@@ -21,7 +21,7 @@ import { E, cxNow, emitDock, focusDock, kick, morph, paint, renderDots, resetMag
 import { lookRow, setOrbLife } from './orbs';
 import { makeOrb, paintSession, refreshBot, relocateLive, renderAll, renderMins, renderView, viewKey, costHTML, fmtDur, meterHTML } from './views';
 import { closeCard, goPage, onCardAction, onCardState, onWaitAdded, onWaitResolved, openCard, setMode, setOn, toggleSetting } from './controller';
-import { cancelOutside, fitRow, onClick, onDocDown, onDocUp, onFocusIn, onFocusOut, onKey, onLayout, onPointerDown, onPointerMove, onResize, onTouchMove, onTouchUp, onWheel, onDoubleGuard } from './input';
+import { cancelOutside, fitRow, onClick, onDocDown, onDocUp, onFocusIn, onFocusOut, onKey, onLayout, onPointerDown, onPointerMove, onTouchMove, onTouchUp, onWheel, onDoubleGuard } from './input';
 import type { RunSnapshot } from '../../data';
 /* drawn corners (DESIGN-SYSTEM.md section 8): the dock's own surfaces; the tiles float, so they are surfaces */
 ui.squircle.auto('.dk-add, .dk-run-open, .dk-sched-row, .dk-sched-what');
@@ -219,7 +219,6 @@ function mount(slotEl: HTMLElement): void {
   document.addEventListener('pointerdown', onDocDown, true);
   document.addEventListener('pointerup', onDocUp, true);
   document.addEventListener('pointercancel', cancelOutside, true);
-  addEventListener('resize', onResize);
   if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', () => { fitRow(); retarget(false); });
   matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', (ev) => {
     if (ev.matches) { for (const a of E.anims.values()) a.el.style.transform = ''; E.anims.clear(); resetMag(); lookRow(null); retarget(true); }

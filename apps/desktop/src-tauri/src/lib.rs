@@ -7,13 +7,17 @@ pub mod commands;
 pub mod config;
 pub mod endpoint;
 pub mod error;
+pub mod frame_rate;
 pub mod gateway;
+pub mod gpu;
 pub mod hermes;
 pub mod os;
+pub mod renderer;
 pub mod secrets;
 pub mod settings;
 pub mod setup;
 pub mod state;
+pub mod webkit;
 
 use std::sync::Arc;
 
@@ -47,6 +51,9 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::notify,
             commands::pick_folder,
             commands::open_external,
+            commands::renderer_report,
+            commands::renderer_open_gpu_page,
+            commands::app_restart,
         ])
         .events(collect_events![ConnectionStateEvent])
 }
@@ -72,8 +79,44 @@ fn init_logging() {
 }
 
 /// Run the app.
+#[allow(clippy::too_many_lines)] // one linear start-up: decide the GPU and renderer, then build the app
 pub fn run() {
+    // First thing, before any thread: WebKitGTK reads its renderer switches when the web view is created (ADR-0024).
+    let mut renderer_inputs = renderer::probe();
+    // The GPU first (HYPOTAXIS_GPU): offload moves the rendering, which the renderer rules then judge.
+    let (gpu_inputs, gpu_source) = gpu::probe(
+        renderer_inputs.gpus.clone(),
+        renderer_inputs.session,
+        renderer_inputs.webkit.clone(),
+    );
+    let (gpu_inputs, gpu_decision) = gpu::plan(gpu_inputs);
+    #[cfg(target_os = "linux")]
+    gpu::apply(&gpu_decision);
+    renderer_inputs.offload = gpu_decision.renders_on_nvidia;
+    let renderer_decision = renderer::decide(&renderer_inputs);
+    #[cfg(target_os = "linux")]
+    renderer::apply(&renderer_decision);
     init_logging();
+    let renderer_report = renderer::report(
+        &renderer_inputs,
+        &renderer_decision,
+        gpu::report(&gpu_inputs, gpu_source, &gpu_decision, gpu_inputs.power),
+    );
+    tracing::info!(
+        session = ?renderer_report.session,
+        hyprland = renderer_report.hyprland,
+        gpus = ?renderer_report.gpus.iter().map(|g| format!("{}:{}:{}{}", g.card, g.vendor, g.driver.as_deref().unwrap_or("-"), if g.boot_display { ":display" } else { "" })).collect::<Vec<_>>(),
+        rule = ?renderer_report.rule,
+        set = ?renderer_report.set,
+        webkit = renderer_report.webkit.version.as_deref().unwrap_or("unknown"),
+        webkit_origin = ?renderer_report.webkit.origin,
+        gpu_policy = ?gpu_inputs.policy,
+        gpu_rule = ?gpu_decision.rule,
+        gpu_set = ?gpu_decision.set,
+        gpu_env_source = ?gpu_decision.source,
+        power = ?gpu_inputs.power,
+        "webview renderer"
+    );
     let builder = specta_builder();
     #[cfg(debug_assertions)]
     if std::path::Path::new(BINDINGS_PATH)
@@ -89,8 +132,31 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(builder.invoke_handler())
+        .on_window_event(|window, event| {
+            // A window dragged to another monitor may have another refresh rate (ADR-0025); a look at a rate that has
+            // not changed is one GDK query.
+            if window.label() == "main"
+                && matches!(
+                    event,
+                    tauri::WindowEvent::Moved(_) | tauri::WindowEvent::ScaleFactorChanged { .. }
+                )
+                && let Some(state) = window.try_state::<frame_rate::State>()
+            {
+                let _ = frame_rate::refresh(window.app_handle(), &state);
+            }
+        })
         .setup(move |app| {
             builder.mount_events(app);
+            app.manage(commands::RendererState(renderer_report));
+            app.manage(commands::GpuState {
+                inputs: gpu_inputs,
+                source: gpu_source,
+                decision: gpu_decision,
+            });
+            // Lift WebKit's 60 fps preference on a display faster than 60 Hz (ADR-0025).
+            let fps = frame_rate::State::new(frame_rate::Policy::from_env());
+            app.manage(fps.clone());
+            let _ = frame_rate::refresh(app.handle(), &fps);
             let limits = config::Limits::default();
             let supervisor = Arc::new(hermes::Supervisor::new(hermes::Environment::from_process(), limits.clone()));
             // Find Hermes while the UI loads, so the first connect does not pay for `hermes --version` (about 0.2 s).

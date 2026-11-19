@@ -2250,8 +2250,10 @@ dependencies = [
  "dirs 6.0.0",
  "futures-util",
  "getrandom 0.3.4",
+ "gtk",
  "hex",
  "keyring",
+ "libc",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -2274,6 +2276,7 @@ dependencies = [
  "tracing-subscriber",
  "url",
  "uuid",
+ "webkit2gtk",
 ]
 
 [[package]]
