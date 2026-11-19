@@ -412,7 +412,7 @@ def test_an_ungoverned_session_uses_pack_and_ship_end_to_end(
     assert kinds.count("ship.applied") == 2  # the blocked ship never reached the journal
     decisions = [e["payload"]["verdict"] for e in ledger if e["type"] == "gate.decided"]
     assert decisions == ["pass", "block"]
-    assert all(e["payload"]["enforcement"] == "degraded:unsandboxed" for e in ledger if e["type"] == "gate.decided")
+    assert all(e["payload"]["enforcement"] == "sandboxed" for e in ledger if e["type"] == "gate.decided")
     called = [(e["payload"]["tool"], e["payload"]["status"]) for e in ledger if e["type"] == "tool.called"]
     assert called == [("pack", "ok"), ("ship", "ok"), ("ship", "ok"), ("ship", "blocked")]  # outcomes are not errors
     blocked_call = [e["payload"] for e in ledger if e["type"] == "tool.called"][-1]

@@ -174,12 +174,88 @@ describe('the live provider: the conversation stream, from recorded frames', () 
     expect(host.last('session.create')).toBeUndefined();
     host.autoReply = (f) => {
       if (f['method'] === 'session.create') host.result(f['id'], { session_id: 'local-new', stored_session_id: 'local-new', messages: [], message_count: 0, info: { model: 'fake-a' } });
+      else if (f['method'] === 'plugin.hypotaxis.mode.set') host.result(f['id'], {});
       else gateway(f);
     };
     provider.sessions.send(created.id, 'start', META);
     await tick();
-    expect(host.last('session.create')?.['params']).toEqual({ source: 'gui' });
+    expect(host.last('session.create')?.['params']).toMatchObject({ source: 'gui' });
     expect(host.last('prompt.submit')?.['params']).toMatchObject({ session_id: 'local-new', text: 'start' });
+  });
+
+  describe('a new session and its toolsets', () => {
+    /* the plugin is loaded in this Hermes: its capability is announced, and its methods answer */
+    beforeEach(async () => {
+      host = new FakeHost();
+      host.describe = { instance_id: 'inst', capabilities: ['event-replay-v1', 'plugin-rpc-v1'] };
+      host.autoReply = (f) => { if (String(f['method']).startsWith('plugin.hypotaxis.')) host.result(f['id'], {}); else gateway(f); };
+      client = new GatewayClient(host);
+      await client.connect();
+      provider = createLiveProvider({ client, now: () => NOW, mock: createMockProvider({ simulate: false }) });
+      await provider.ready;
+    });
+    const created = (governed: boolean | null): string => {
+      const s = provider.sessions.create('');
+      if (governed !== null) { provider.details.follow(s.id); provider.details.setGovernance({ governed }); }
+      return s.id;
+    };
+    const answer = (modeSet: (f: Record<string, unknown>) => void): void => {
+      host.autoReply = (f) => {
+        if (f['method'] === 'session.create') host.result(f['id'], { session_id: 'local-new', stored_session_id: 'local-new', messages: [], message_count: 0, info: { model: 'fake-a' } });
+        else if (f['method'] === 'plugin.hypotaxis.mode.set') modeSet(f);
+        else if (f['method'] === 'session.close') host.result(f['id'], { closed: true });
+        else gateway(f);
+      };
+    };
+    const order = (): string[] => host.sent.map((s) => String(s.frame['method'])).filter((m) => ['session.create', 'plugin.hypotaxis.mode.set', 'prompt.submit', 'session.close'].includes(m));
+
+    it('a governed session is created with only the hypotaxis toolset, and its mode is set before anything is sent', async () => {
+      const id = created(true);
+      answer((f) => { host.result(f['id'], {}); });
+      provider.sessions.send(id, 'start', META);
+      await tick();
+      expect(host.last('session.create')?.['params']).toEqual({ source: 'gui', toolsets: ['hypotaxis'] });
+      expect(host.last('plugin.hypotaxis.mode.set')?.['params']).toEqual({ session_id: 'local-new', mode: 'governed' });
+      expect(order()).toEqual(['session.create', 'plugin.hypotaxis.mode.set', 'prompt.submit']);
+    });
+
+    it('a session whose mode was never chosen is governed too while the plugin default is unknown, so it never loses the toolset', async () => {
+      const id = created(null);
+      answer((f) => { host.result(f['id'], {}); });
+      provider.sessions.send(id, 'start', META);
+      await tick();
+      expect(host.last('session.create')?.['params']).toEqual({ source: 'gui', toolsets: ['hypotaxis'] });
+    });
+
+    it('an ungoverned session gets no toolsets of ours', async () => {
+      const id = created(false);
+      answer((f) => { host.result(f['id'], {}); });
+      provider.sessions.send(id, 'start', META);
+      await tick();
+      expect(host.last('session.create')?.['params']).toEqual({ source: 'gui' });
+      expect(host.last('plugin.hypotaxis.mode.set')?.['params']).toEqual({ session_id: 'local-new', mode: 'ungoverned' });
+    });
+
+    it('a mode that cannot be set is fatal: the session is closed, nothing is sent, the error is shown, a retry starts fresh', async () => {
+      const id = created(true);
+      answer((f) => { host.error(f['id'], -32000, 'hx.mode.locked: the mode is locked'); });
+      const seen: ConversationEvent[] = [];
+      provider.sessions.conversation(id).subscribe((e) => seen.push(e));
+      provider.sessions.send(id, 'start', META);
+      await tick();
+      await tick();
+      expect(order()).toEqual(['session.create', 'plugin.hypotaxis.mode.set', 'session.close']);
+      expect(host.last('session.close')?.['params']).toEqual({ session_id: 'local-new' });
+      expect(host.last('prompt.submit')).toBeUndefined();
+      const finished = seen.find((e) => e.type === 'turn-finished');
+      expect(finished && 'paragraphs' in finished ? finished.paragraphs.join(' ') : '').toMatch(/mode could not be set.*hx\.mode\.locked/);
+
+      answer((f) => { host.result(f['id'], {}); });   // the plugin answers on the retry: the session starts, governed
+      provider.sessions.send(id, 'again', META);
+      await tick();
+      expect(host.sent.filter((s) => s.frame['method'] === 'session.create').length).toBe(2);
+      expect(host.last('prompt.submit')?.['params']).toMatchObject({ session_id: 'local-new', text: 'again' });
+    });
   });
 
   it('a session made here keeps its id in the list after the gateway names it, and the composer starts empty', async () => {
@@ -187,6 +263,7 @@ describe('the live provider: the conversation stream, from recorded frames', () 
     const created = provider.sessions.create('');
     host.autoReply = (f) => {
       if (f['method'] === 'session.create') host.result(f['id'], { session_id: 'local-new', stored_session_id: 'local-new', messages: [], message_count: 0, info: {} });
+      else if (f['method'] === 'plugin.hypotaxis.mode.set') host.result(f['id'], {});
       else if (f['method'] === 'session.list') host.result(f['id'], { sessions: (f['params'] as { include_hidden?: boolean }).include_hidden ? [] : [{ id: 'local-new', title: 'start', started_at: NOW.getTime() / 1000 }] });
       else gateway(f);
     };

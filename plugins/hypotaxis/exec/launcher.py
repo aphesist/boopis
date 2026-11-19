@@ -29,6 +29,7 @@ from ..hx.types import (
     TimedOutExitOutcome,
 )
 from ..util.log import get_logger
+from ..util.roots import vet_runtime_roots
 
 _log = get_logger("exec.launcher")
 EXEC_DIR = Path(__file__).resolve().parent
@@ -126,20 +127,8 @@ def interpreter_roots(workspace: str) -> list[str]:
 
     Resolved to real paths, and filtered to what hx accepts for ``runtime_ro``: directories that are not ``/``, not
     the home directory or a parent of it, and not inside or above the workspace (the workspace is granted already)."""
-    home = os.path.realpath(os.path.expanduser("~"))
-    work = os.path.realpath(workspace)
     candidates = (sys.base_prefix, sys.prefix, sys.exec_prefix, os.path.dirname(os.path.realpath(sys.executable)))
-    found: list[str] = []
-    for raw in candidates:
-        real = os.path.realpath(raw) if raw else ""
-        if not real or not os.path.isdir(real) or real in found or real == os.sep:
-            continue
-        if real == home or home.startswith(real + os.sep):
-            continue
-        if real == work or real.startswith(work + os.sep) or work.startswith(real + os.sep):
-            continue
-        found.append(real)
-    return found
+    return vet_runtime_roots(candidates, cwd=workspace)
 
 
 def _describe_exit(result: SandboxWaitResult) -> ExitInfo:

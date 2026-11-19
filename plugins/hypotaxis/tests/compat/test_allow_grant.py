@@ -24,7 +24,7 @@ def _clean() -> None:
 
 
 def ask_ls(make_runtime: Any, **extra: Any) -> None:
-    make_runtime({"permissions": {"ask": ["Bash(ls*)"], **extra}})
+    make_runtime({"mode": "ungoverned", "permissions": {"ask": ["Bash(ls*)"], **extra}})
 
 
 def test_without_a_grant_the_policy_asks(make_runtime: Any) -> None:
@@ -67,7 +67,7 @@ def test_a_grant_never_overrides_a_deny_a_protected_path_or_governed_mode(make_r
 
 
 def test_a_default_ask_policy_is_skipped_too(make_runtime: Any) -> None:
-    make_runtime({"permissions": {"default": "ask"}})
+    make_runtime({"mode": "ungoverned", "permissions": {"default": "ask"}})
     add_allow("s1", "c1")
     assert hooks.pre_tool_call(tool_name="terminal", args={"command": "ls"}, **CALL) is None
 
@@ -79,7 +79,7 @@ def test_end_to_end_a_hook_allow_then_the_policy_ask(
     allow = """printf '%s' '{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow"}}'"""
     write(".claude/settings.json", hook_settings({"PreToolUse": [{"command": allow}]}))
     approve_all(env)
-    make_runtime({"permissions": {"ask": ["Bash(ls*)"]}})
+    make_runtime({"mode": "ungoverned", "permissions": {"ask": ["Bash(ls*)"]}})
     bridge = make_bridge(ctx, env)
     assert bridge.pre_tool_call(tool_name="terminal", args={"command": "ls"}, **CALL) is None
     assert (

@@ -67,6 +67,16 @@ class ExecSettings:
 
 
 @dataclass(frozen=True, slots=True)
+class GateSettings:
+    """``gate``: how the ship gate runs the project's test command. The command always runs inside the hx sandbox
+    (copy writable, workspace read-only, network off, allowlisted environment). ``allow_unsandboxed`` lets it run
+    without one **only** when the sandbox is unavailable on this machine, as an explicit choice the user made in the
+    plugin settings (never a project file), and every such run is logged and recorded as ``unsandboxed:user_choice``."""
+
+    allow_unsandboxed: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class FormSettings:
     """``forms``: how many forms a session may have open, how long one lives, and how long ``wait=true`` may block
     (the schema's defaults; ``wait_max_s`` stays under Hermes's generic tool deadline of about 420 s)."""
@@ -101,6 +111,7 @@ class Settings:
     pack: PackSettings = PackSettings()
     exec: ExecSettings = ExecSettings()
     forms: FormSettings = FormSettings()
+    gate: GateSettings = GateSettings()
     subscription_providers: tuple[str, ...] = ()
     permissions: PermissionRules = PermissionRules()
     hx_path: str = ""

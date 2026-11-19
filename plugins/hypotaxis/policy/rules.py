@@ -102,7 +102,39 @@ def tool_matches(rule: Rule, call_tool: str, defaults: Defaults, *, widen_reads:
 # ---------------------------------------------------------------- paths
 
 _DIFF_PATH = re.compile(r"^(?:---|\+\+\+) (?:[ab]/)?(?P<path>\S+)", re.MULTILINE)
-_V4A_PATH = re.compile(r"^\*\*\* (?:Update File|Add File|Delete File|Move to):\s*(?P<path>.+?)\s*$", re.MULTILINE)
+# Hermes's V4A patch grammar, copied from ``tools/patch_parser.py`` (v0.23.2) so this check reads a patch exactly as the
+# tool will: a marker is at column 0, spaces after ``***`` are optional, any whitespace may separate the words, and a
+# ``Move File`` names two paths. A line that starts with ``***`` and is none of these is not read leniently (Hermes
+# would take it for a context line): the path list cannot be trusted, so ``paths_of`` answers None and the call is
+# blocked.
+_V4A_BEGIN = re.compile(r"^\*\*\*\s*Begin\s+Patch\s*$")
+_V4A_END = re.compile(r"^\*\*\*\s*End\s+Patch\s*$")
+_V4A_OPS = (
+    re.compile(r"\*\*\*\s*Update\s+File:\s*(.+)"),
+    re.compile(r"\*\*\*\s*Add\s+File:\s*(.+)"),
+    re.compile(r"\*\*\*\s*Delete\s+File:\s*(.+)"),
+    re.compile(r"\*\*\*\s*Move\s+File:\s*(.+?)\s*->\s*(.+)"),
+)
+
+
+def v4a_paths(patch: str) -> list[str] | None:
+    """Every path a V4A patch names (both ends of a move), or None when a ``***`` line is not part of the grammar.
+
+    All lines are read, not only those between the Begin and End markers: Hermes uses the last Begin before the first
+    End, and a check that read less than the tool applies could be walked around by where the markers are put."""
+    found: list[str] = []
+    for line in (ln.removesuffix("\r") for ln in patch.split("\n")):
+        if _V4A_BEGIN.match(line) or _V4A_END.match(line):
+            continue
+        for rx in _V4A_OPS:
+            hit = rx.match(line)
+            if hit is not None:
+                found.extend(group.strip() for group in hit.groups())
+                break
+        else:
+            if line.startswith("***"):
+                return None
+    return found
 
 
 def paths_of(call: ToolCall, defaults: Defaults) -> list[str] | None:
@@ -132,7 +164,10 @@ def paths_of(call: ToolCall, defaults: Defaults) -> list[str] | None:
                         )
     patch_text = call.args.get("patch")
     if call.tool == "patch" and isinstance(patch_text, str):
-        found.extend(m.group("path") for m in _V4A_PATH.finditer(patch_text))
+        named = v4a_paths(patch_text)
+        if named is None:
+            return None
+        found.extend(p for p in named if p)
     if found:
         return found
     if call.tool in defaults.write_tools:

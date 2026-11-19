@@ -83,6 +83,7 @@ Hermes's rules are "the core is a narrow waist; capability lives at the edges". 
 **Consequences.**
 - `harness.parallel`, tools as functions, `leave_blank`, `diagnostics` and `apple.*` are all possible.
 - Every plugin tool is callable from code.
+- The user's `Bash` deny and ask rules judge `harness.sh` by the command string the kernel reports, and the kernel runs its own argv: they do not bind exec (a cell can use `subprocess` or `open()` with no `harness.sh` call). The sandbox is the boundary; the rules are an audit trail (security review, 2026-11-19). Network tools called through `tool.call` are refused unless `exec.network` is `on`.
 
 ## ADR-0006 Attach to the user's active Hermes profile by default
 **Context.**
@@ -170,6 +171,8 @@ Hermes desktop plugins (`plugin.js` against `@hermes/plugin-sdk`) are React and 
 - with the project root as cwd.
 
 They're not sandboxed, matching Claude Code. This is the only exception to the no-shell-string rule.
+
+**Addendum (security review, 2026-11-19).** The tools a hook runs load project files outside the hash (`package.json` scripts, lint and format configs, a `Makefile`, `conftest.py`), and the agent writes the workspace through `ship`. So a ship that touches such a file, or a hook's own script, switches the project's trusted hooks off and asks the user again (`compat/rearm.py`); the list of files is data and a heuristic. Sandboxing hooks like the gate was considered and rejected: formatters must write the workspace and notifiers reach the network, which are the Claude Code behaviours this ADR exists to keep.
 
 ## ADR-0014 Direct tool surface: tool_search off in hypotaxis sessions
 **Context.**

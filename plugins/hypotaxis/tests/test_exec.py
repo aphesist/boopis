@@ -170,7 +170,9 @@ def test_the_spill_has_its_own_ceiling(make_kit: MakeKit) -> None:
 
 
 def test_tool_and_parallel_dispatch_with_the_exec_calls_session_and_task(make_kit: MakeKit) -> None:
-    kit = make_kit()
+    kit = make_kit(
+        exec={"network": "on"}
+    )  # web_search is a network tool: a cell may call it only with exec's network on
     kit.ctx.tools_impl["pack"] = lambda items: {"text": f"packed {len(items)}"}
     kit.ctx.tools_impl["web_search"] = lambda query: {"hits": [query]}
     out = kit.run(
@@ -282,7 +284,7 @@ def test_ungoverned_mode_follows_the_ordinary_policy_and_deny_rules_still_apply(
 
 
 def test_a_tool_that_needs_approval_is_refused_from_a_cell(make_kit: MakeKit) -> None:
-    kit = make_kit("ungoverned", permissions={"ask": ["web_search"]})
+    kit = make_kit("ungoverned", permissions={"ask": ["web_search"]}, exec={"network": "on"})
     kit.ctx.tools_impl["web_search"] = lambda query: {"hits": []}
     out = kit.run(
         "try:\n    await harness.tool('web_search', query='x')\nexcept harness.ToolDenied as e:\n    m = str(e)\nm"

@@ -23,6 +23,9 @@ class Form:
     expires_at: str  # RFC 3339 UTC, milliseconds, Z (docs/STANDARDS.md section 7)
     submit: dict[str, Any] = field(default_factory=dict)
     cancel: dict[str, Any] | None = None
+    effect: dict[str, Any] | None = (
+        None  # the plugin-side effect of a submit (``compat.rearm``); not announced to viewers
+    )
     deliver: bool = False  # the agent did not wait: tell it the answer when it comes
     status: Status = "open"
     result: dict[str, Any] | None = None  # what the agent is told; never a secret

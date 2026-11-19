@@ -151,6 +151,7 @@ def test_hooks_see_the_calls_session_and_id_and_an_allow_skips_only_the_policys_
     kit = claude(
         {"PreToolUse": [{"matcher": "web_search|WebSearch", "command": "printf '%s' '" + json.dumps(allow) + "'"}]},
         permissions={"ask": ["web_search"]},
+        exec={"network": "on"},
     )
     kit.ctx.tools_impl["web_search"] = lambda query: {"hits": [query]}
     # the hook allowed this one call, so the policy's own ask rule does not stop it; without the hook it would

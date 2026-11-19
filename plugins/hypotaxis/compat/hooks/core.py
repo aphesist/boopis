@@ -148,13 +148,17 @@ class Core:
         return HookEnv(project_dir=snap.project_dir, plugin_data=str(data), extra=snap.env)
 
     def recheck(self, snap: Snapshot) -> Callable[[HookEntry], bool]:
-        """Whether a hook still hashes to what the user approved: re-derived at every run."""
+        """Whether a hook still hashes to what the user approved, and the approval still stands: both re-derived at
+        every run. The store is read again, so an approval withdrawn mid-session (a ship changed a file the hooks load,
+        ``compat.rearm``) stops the hook at once. A plugin's hook is covered by its plugin's trust, not by an entry."""
 
         def same(entry: HookEntry) -> bool:
             if entry.item is None:
                 return False
             label = entry.item.item_id.split("#", 1)[0]
-            return hook_item(entry.hook, snap.project_dir, snap.env, label).content_hash == entry.item.content_hash
+            if hook_item(entry.hook, snap.project_dir, snap.env, label).content_hash != entry.item.content_hash:
+                return False
+            return bool(entry.hook.source.plugin) or snap.trust.is_trusted(entry.item)
 
         return same
 

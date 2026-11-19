@@ -74,6 +74,9 @@ config_schema:
   forms:
     type: object
     description: "Forms (docs/FORMS.md): {max_open (default 20 per session), expires_s (default 3600), wait_default_s (default 120), wait_max_s (default 300)}."
+  gate:
+    type: object
+    description: "The ship gate's test command: {allow_unsandboxed: bool (default false)}. The command always runs in the hx sandbox (copy writable, workspace read-only, no network, allowlisted environment); when the sandbox is unavailable the gate blocks, unless this is true, which runs it unsandboxed, logged and recorded as unsandboxed:user_choice. Set it only deliberately."
   hx_path:
     type: string
     default: ""

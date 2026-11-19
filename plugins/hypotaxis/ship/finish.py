@@ -7,7 +7,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any, cast
 
-from ..errors import HypotaxisError
+from ..errors import HypotaxisError, SandboxUnavailableError
 from ..governance.handover import unified_diff
 from ..governance.links import WorkerLink
 from ..hx import HxClient
@@ -41,13 +41,28 @@ def after_apply(
     ref = JournalRef(journal_dir=str(journals), journal_id=ship_id)
     try:
         run = _gate_andrecord(
-            rt, state, root, applied, task_id, original, before_hashes, protected, allowed, argv, gate_on, worker
+            rt,
+            state,
+            client,
+            root,
+            applied,
+            task_id,
+            original,
+            before_hashes,
+            protected,
+            allowed,
+            argv,
+            gate_on,
+            worker,
         )
     except Abort as exc:
         return _restore(rt, state, client, ref, applied, f"the ship was undone: {exc}", None, task_id=None)
     except Exception as exc:  # noqa: BLE001 - a gate that cannot run denies (fail closed)
         log.error("gate failed to run", exc_info=True)
-        reason = f"the gate could not run: {type(exc).__name__}: {exc}"
+        if isinstance(exc, SandboxUnavailableError):
+            reason = f"the gate could not run: {exc.message}"
+        else:
+            reason = f"the gate could not run: {type(exc).__name__}: {exc}"
         if worker is not None:  # no verdict was written, so the attempt is closed as a block by the cascade
             worker.failure = attempt_mod.failure_of(worker, "T0.gate", reason, "", "", {})
         return _restore(rt, state, client, ref, applied, reason, None, task_id)
@@ -82,6 +97,7 @@ def _worker_failure(
 def _gate_andrecord(
     rt: Runtime,
     state: SessionState,
+    client: HxClient,
     root: Path,
     applied: ApplyResult,
     task_id: str,
@@ -134,6 +150,7 @@ def _gate_andrecord(
     run = gate_mod.run_gate(
         task_id=task_id, workspace=root, touched=touched, original=original, before_hashes=before_hashes,
         protected=protected, allowed=allowed, command=argv, timeout=timeout,
+        runner=gate_mod.GateRunner(client, state.settings.gate.allow_unsandboxed),
     )  # fmt: skip
     record(state, rt, "gate.decided", "gate", run.payload | tags)
     return run
@@ -155,7 +172,7 @@ def _gate_view(run: gate_mod.GateRun | None) -> dict[str, Any]:
     return {
         "verdict": run.results[-1].verdict,
         "gates": [r.gate for r in run.results],
-        "enforcement": gate_mod.ENFORCEMENT,
+        "enforcement": run.payload["enforcement"],
     }
 
 
@@ -189,6 +206,7 @@ def _keep(
         warnings.append(f"no checkpoint: {exc}")
     except Abort as exc:
         warnings.append(str(exc))
+    warnings += _switch_off_hooks(rt, state, root, applied)
     result: dict[str, Any] = {
         "status": "shipped",
         "ship_id": ship_id,
@@ -204,6 +222,45 @@ def _keep(
         {"ship_id": ship_id, "status": "shipped", "files": out.files_view(applied.files), "gate": _gate_view(run)},
     )
     return result
+
+
+def _switch_off_hooks(rt: Runtime, state: SessionState, root: Path, applied: ApplyResult) -> list[str]:
+    """A kept ship that touched a file the project's trusted hooks load (or one of their scripts) switches those hooks
+    off and asks the user, in a ``permission`` form, to trust them again (``compat.rearm``). Returns the warnings for
+    the ship's answer. If it cannot tell, it fails closed: every hook approval of the project is withdrawn."""
+    paths = [str(root / f.path) for f in applied.files]
+    try:
+        from ..compat.rearm import effect, form_text, suspend
+        from ..forms.presets import Draft
+        from ..forms.tools import service
+
+        suspension = suspend(rt.home, state.cwd, paths)
+        if suspension is None:
+            return []
+        title, body = form_text(suspension)
+        schema = {
+            "type": "object",
+            "properties": {"decision": {"type": "string", "title": "Your hooks", "enum": ["trust", "leave_off"]}},
+            "required": ["decision"],
+        }
+        service(rt).open(
+            state.session_id, None, Draft("permission", title, body, schema, effect=effect(suspension)), origin="plugin"
+        )
+        return [
+            "this change touches files the project's hooks load ("
+            + ", ".join(suspension.touched[:5])
+            + "): the hooks are switched off until the owner trusts them again"
+        ]
+    except Exception:  # noqa: BLE001 - could not tell, so no hook approval is kept (fail closed)
+        log.error("could not check the hooks against this ship", exc_info=True)
+        try:
+            from ..compat.trust import KIND_HOOKS
+            from ..config.trust import TrustStore
+
+            TrustStore(rt.home).revoke(state.cwd, KIND_HOOKS)
+        except Exception:  # noqa: BLE001
+            log.error("hook approvals could not be withdrawn", exc_info=True)
+        return ["the project's hooks were switched off: this ship could not be checked against what they load"]
 
 
 def _restore(
