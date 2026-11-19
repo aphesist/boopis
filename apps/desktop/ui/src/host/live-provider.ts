@@ -90,6 +90,8 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   const archived = store<readonly SessionSummary[]>([]);
   const convos = new Map<string, Convo>();
   const byGw = new Map<string, string>();
+  /** the sessions being made on the gateway, until each is bound to the id the UI knows it by */
+  const creating = new Set<Promise<string>>();
   const convo = (uiId: string): Convo => {
     let c = convos.get(uiId);
     if (!c) { c = { uiId, gwId: null, generation: 0, turns: [], events: emitter<ConversationEvent>(), hydrated: false, model: '', running: null }; convos.set(uiId, c); }
@@ -105,6 +107,11 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   /* ───────── the session list ───────── */
   async function refreshList(): Promise<void> {
     const [active, hidden] = await Promise.all([client.request('session.list', { limit: 100 }), client.request('session.list', { limit: 100, include_hidden: true })]);
+    /* A session being made here is named by the gateway before the UI has bound that name to its own id. A list that
+       lands in between would show the row under the gateway's id, and the shell would open a second conversation for it
+       (`session.resume`) that takes the gateway's id over: the reply's events would then go to a conversation nobody is
+       looking at. So the refresh waits for the sessions in the making. */
+    if (creating.size > 0) await Promise.allSettled([...creating]);
     const t = now();
     /* a session made here keeps the id the UI knows it by, even after the gateway names it */
     const named = (r: (typeof active.sessions)[number]): SessionSummary => { const id = byGw.get(r.id) ?? r.id; return { ...sessionRowToSummary(r, t), id, running: convos.get(id)?.running != null }; };
@@ -133,29 +140,34 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   async function ensureLive(c: Convo): Promise<string> {
     if (c.gwId) return c.gwId;
     if (c.hydrated) { // a session made here, not yet on the gateway
-      const governed = details.governedAtCreation(c.uiId);
-      /* the toolset is fixed here for good (Hermes's prompt cache): a governed session has only the boopis tools, so no
-         Hermes tool the plugin would have to police ever reaches the model. The generated contract's create params do not
-         list `toolsets` yet (the gateway's canonical ones do), hence the raw call. */
-      const res = await client.requestRaw('session.create', { source: 'gui', ...(governed ? { toolsets: GOVERNED_TOOLSETS } : {}) }) as RpcMethods['session.create']['result'];
-      const want = details.chosen(c.uiId);
-      if (want.governed !== null || governed) {
-        /* the mode must match the toolset, and a failure is fatal for this session: it is closed and never bound, so
-           nothing is sent to it and a retry makes a fresh one. Running a session whose mode is unknown is not an option. */
-        try { await client.requestRaw('plugin.boopis.mode.set', { session_id: res.session_id, mode: governed ? 'governed' : 'ungoverned' }); }
-        catch (e) {
-          log.error('the mode could not be set; the session was closed', e);
-          await client.request('session.close', { session_id: res.session_id }).catch((closeErr: unknown) => { log.warn('the session could not be closed', closeErr); });
-          throw new Error('The session was not started: its ' + (governed ? 'governed' : 'ungoverned') + ' mode could not be set (' + (e instanceof Error ? e.message : String(e)) + ').');
-        }
-      }
-      bind(c, res.session_id);
-      c.model = res.info.model ?? '';
-      details.onBound(c.uiId);
-      return res.session_id;
+      const making = createLive(c);
+      creating.add(making);
+      try { return await making; } finally { creating.delete(making); }
     }
     await resume(c);
     return c.gwId ?? c.uiId;
+  }
+  async function createLive(c: Convo): Promise<string> {
+    const governed = details.governedAtCreation(c.uiId);
+    /* the toolset is fixed here for good (Hermes's prompt cache): a governed session has only the boopis tools, so no
+       Hermes tool the plugin would have to police ever reaches the model. The generated contract's create params do not
+       list `toolsets` yet (the gateway's canonical ones do), hence the raw call. */
+    const res = await client.requestRaw('session.create', { source: 'gui', ...(governed ? { toolsets: GOVERNED_TOOLSETS } : {}) }) as RpcMethods['session.create']['result'];
+    const want = details.chosen(c.uiId);
+    if (want.governed !== null || governed) {
+      /* the mode must match the toolset, and a failure is fatal for this session: it is closed and never bound, so
+         nothing is sent to it and a retry makes a fresh one. Running a session whose mode is unknown is not an option. */
+      try { await client.requestRaw('plugin.boopis.mode.set', { session_id: res.session_id, mode: governed ? 'governed' : 'ungoverned' }); }
+      catch (e) {
+        log.error('the mode could not be set; the session was closed', e);
+        await client.request('session.close', { session_id: res.session_id }).catch((closeErr: unknown) => { log.warn('the session could not be closed', closeErr); });
+        throw new Error('The session was not started: its ' + (governed ? 'governed' : 'ungoverned') + ' mode could not be set (' + (e instanceof Error ? e.message : String(e)) + ').');
+      }
+    }
+    bind(c, res.session_id);
+    c.model = res.info.model ?? '';
+    details.onBound(c.uiId);
+    return res.session_id;
   }
 
   /* ───────── events → the conversation ───────── */

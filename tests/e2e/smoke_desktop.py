@@ -154,6 +154,11 @@ def main() -> int:
             # Say what the stack and the window were doing: a bare timeout is all a runner's log would hold.
             with contextlib.suppress(Exception):
                 print("--- the window's text:", text().strip()[:1500], sep="\n")
+            with contextlib.suppress(Exception):
+                if shot:  # the window as it was, for the job's artifact
+                    import base64
+
+                    Path(shot).write_bytes(base64.b64decode(call("GET", f"{s}/screenshot")["value"]))
             dump_logs(Path(info["home"]))
             raise
         assert "proration" not in text(), "no mock draft or mock data in the live window"

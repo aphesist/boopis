@@ -236,6 +236,43 @@ describe('the live provider: the conversation stream, from recorded frames', () 
       expect(host.last('plugin.boopis.mode.set')?.['params']).toEqual({ session_id: 'local-new', mode: 'ungoverned' });
     });
 
+    /* The race that lost a reply on a runner. The gateway announces a new session (`sessions.changed`) while the UI is still
+       setting its mode, and the plugin takes its time over that (it starts the session's mods worker). The list refresh
+       lands before the UI has bound the session, so the row carries the gateway's id; the shell opens a conversation for
+       every row, and `session.resume` made a second conversation that took over the gateway id: the events of the reply
+       went to it, and the one on screen never saw them. Frames as the real gateway sends them. */
+    it('a list refresh between the creation and the binding of a session does not give its events to a second conversation', async () => {
+      const id = created(true);
+      let finishMode: () => void = () => undefined;
+      host.autoReply = (f) => {
+        const method = f['method'];
+        if (method === 'session.create') host.result(f['id'], { session_id: 'local-new', stored_session_id: 'local-new', messages: [], message_count: 0, info: { model: 'fake-a' } });
+        else if (method === 'plugin.boopis.mode.set') finishMode = () => { host.result(f['id'], {}); };
+        else if (method === 'session.list') host.result(f['id'], { sessions: (f['params'] as { include_hidden?: boolean }).include_hidden === true ? [] : [{ id: 'local-new', title: '', preview: '', started_at: NOW.getTime() / 1000 }] });
+        else if (method === 'session.resume') host.result(f['id'], { session_id: 'local-new', message_count: 1, messages: [{ role: 'user', content: 'start' }], info: { model: 'fake-a' } });
+        else gateway(f);
+      };
+      provider.sessions.list.subscribe((rows) => { for (const r of rows) provider.sessions.conversation(r.id); });   // what the shell does with the rows
+      const seen: ConversationEvent[] = [];
+      provider.sessions.conversation(id).subscribe((e) => seen.push(e));
+      provider.sessions.send(id, 'start', META);
+      await tick();
+      host.event('sessions.changed', '');   // while the mode is being set
+      await tick();
+      await tick();
+      finishMode();
+      await tick();
+      await tick();
+      expect(host.sent.filter((s) => s.frame['method'] === 'session.resume')).toEqual([]);
+      host.event('message.start', 'local-new');
+      host.event('message.delta', 'local-new', { text: 'Hello from the fake model' });
+      host.event('message.complete', 'local-new', { text: 'Hello from the fake model, streamed through the host.', outcome: 'completed' });
+      await tick();
+      const finished = seen.find((e) => e.type === 'turn-finished');
+      expect(finished && 'paragraphs' in finished ? finished.paragraphs.join(' ') : '').toBe('Hello from the fake model, streamed through the host.');
+      expect(provider.sessions.list.get().map((r) => r.id)).toEqual([id]);
+    });
+
     it('a mode that cannot be set is fatal: the session is closed, nothing is sent, the error is shown, a retry starts fresh', async () => {
       const id = created(true);
       answer((f) => { host.error(f['id'], -32000, 'hx.mode.locked: the mode is locked'); });

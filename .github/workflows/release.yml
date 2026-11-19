@@ -219,12 +219,9 @@ jobs:
 
   smoke:
     # The built AppImage, headless (Xvfb + WebKitWebDriver), against real Hermes v0.23.2 and the fake model:
-    # the UI loads, the host connects, a prompt streams a reply. Non-blocking: it passed on a runner with the mods worker
-    # fixed, then failed on the merged develop (the reply is in the window but not where the script looks for it). Make it
-    # required, and let `release` wait for it, once it is stable there.
+    # the UI loads, the host connects, a prompt streams a reply. Required: a failure fails the run and stops a tag's release.
     needs: linux
     runs-on: ubuntu-22.04
-    continue-on-error: true
     timeout-minutes: 30
     env:
       HX_E2E_HERMES_ENV: /home/runner/hermes-e2e
@@ -422,8 +419,8 @@ jobs:
 
   release:
     # Tags only: a GitHub release with the AppImage, whatever extra bundles built (the Arch package among them), the two
-    # installers, and SHA256SUMS over all of them. The AppImage is what the release waits on; the others are attached if they built.
-    if: ${{ !cancelled() && needs.linux.result == 'success' && startsWith(github.ref, 'refs/tags/v') }}
+    # installers, and SHA256SUMS over all of them. The AppImage and its smoke test are what the release waits on; the others are attached if they built.
+    if: ${{ !cancelled() && needs.linux.result == 'success' && needs.smoke.result == 'success' && startsWith(github.ref, 'refs/tags/v') }}
     needs: [linux, smoke, windows, macos, arch, arch-smoke]
     runs-on: ubuntu-22.04
     permissions:
