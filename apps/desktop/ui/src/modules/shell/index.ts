@@ -20,7 +20,7 @@ import { reportAttention, seedAttention, setTitleOverride, updateAttentionDots, 
 import { newThing, syncFullscreenIcon, toast, toggleDockExpand, toggleFullscreen, toggleLightDark, togglePanel } from './actions';
 import { go, pushHistory } from './history';
 import { classifyKey, keysTableHTML } from './keymap';
-import { computeNow, layoutNow, queueLayout, setDockHeight, setInset } from './layout';
+import { computeNow, layoutNow, markResized, queueLayout, setDockHeight, setInset } from './layout';
 import { closePalette, movePal, openPalette, paletteActive, renderPalette, resetActive, runPal, setActive } from './palette';
 import { cycleRegion, focusRegion, leaderActive, leaderKey, nextAttention, regionOf, rememberFocus, startLeader } from './regions';
 import { getLayout } from '../../core/state';
@@ -292,6 +292,7 @@ function wire(): void {
     lastW = W; lastH = app.clientHeight;
     followWindowWidth(W, wasW);
     app.classList.add('is-resizing');
+    markResized();
     queueLayout(false);
     clearTimeout(resizeTimer);
     resizeTimer = window.setTimeout(() => app.classList.remove('is-resizing'), 160);
