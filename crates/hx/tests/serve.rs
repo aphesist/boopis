@@ -158,7 +158,7 @@ async fn describe_round_trips_and_eof_ends_the_server_cleanly() {
             .iter()
             .any(|c| c == "txn.edit.replace")
     );
-    assert!(h.finish().await.is_empty());
+    assert_eq!(h.finish().await, Vec::<Value>::new());
 }
 
 #[tokio::test]

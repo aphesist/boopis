@@ -15,6 +15,8 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: "0"
+  # The toolchain CI builds with (see docs/RELEASING.md). RUSTUP_TOOLCHAIN overrides rust-toolchain.toml's "stable".
+  RUSTUP_TOOLCHAIN: "1.97.0"
   # Updater signing slot (documented in docs/RELEASING.md). Create the repository secrets
   # TAURI_SIGNING_PRIVATE_KEY (and TAURI_SIGNING_PRIVATE_KEY_PASSWORD) when the updater is turned on; the keys
   # never live in the repository. Unset, they are empty strings and Tauri ignores them while
@@ -39,7 +41,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev \
             build-essential pkg-config libfuse2 patchelf file xdg-utils
-      - run: rustup show
+      - uses: dtolnay/rust-toolchain@1.97.0
+        with:
+          components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
         with: { shared-key: release-linux }
       - uses: pnpm/action-setup@v4
@@ -114,10 +118,12 @@ jobs:
             !/home/runner/hermes-e2e/uv-cache
           key: hermes-v0.23.2-ubuntu-22.04-${{ hashFiles('scripts/install-hermes-e2e.sh') }}
       - run: SP="$HX_E2E_HERMES_ENV" scripts/install-hermes-e2e.sh
-      - name: Rust toolchain and WebKitGTK headers (the setup test drives the host's library)
+      - uses: dtolnay/rust-toolchain@1.97.0
+        with:
+          components: clippy, rustfmt
+      - name: WebKitGTK headers (the setup test drives the host's library)
         run: |
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev build-essential pkg-config
-          rustup show
       - uses: Swatinem/rust-cache@v2
         with: { shared-key: release-smoke }
       - uses: actions/download-artifact@v4
@@ -153,7 +159,9 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v4
-      - run: rustup show
+      - uses: dtolnay/rust-toolchain@1.97.0
+        with:
+          components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
         with: { shared-key: release-windows }
       - uses: pnpm/action-setup@v4
@@ -184,7 +192,9 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-      - run: rustup show
+      - uses: dtolnay/rust-toolchain@1.97.0
+        with:
+          components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
         with: { shared-key: release-macos }
       - uses: pnpm/action-setup@v4

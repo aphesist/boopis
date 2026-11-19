@@ -47,6 +47,9 @@ Why 22.04: `hx-sandbox` needs unprivileged user namespaces, which 24.04 restrict
 
 **Updater signing slot.** The workflow passes `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` from repository secrets. They are empty and unused while `bundle.createUpdaterArtifacts` is off. To turn the updater on: `pnpm dlx @tauri-apps/cli@2 signer generate`, store the private key and password as those two secrets, put the public key in `tauri.conf.json` under `plugins.updater.pubkey` and set `createUpdaterArtifacts`. Never commit a key.
 
+## The Rust toolchain pin
+CI builds with Rust **1.97.0** (`dtolnay/rust-toolchain@1.97.0`, and `RUSTUP_TOOLCHAIN: "1.97.0"` in both workflows' `env`, which overrides `rust-toolchain.toml`'s floating `stable`). New stable releases add clippy lints, so an unpinned runner can turn a green tree red overnight. To bump: change the version in every `dtolnay/rust-toolchain@` line and in `RUSTUP_TOOLCHAIN`, run `cargo clippy --workspace --all-targets -- -D warnings` and `cargo test --workspace` on that version, fix what it reports, and commit the lot together. `rust-version` in `Cargo.toml` is the minimum, not the pin.
+
 ## What is verified where
 - **Locally:** `actionlint` on both workflows (clean); `identity`, `checks` (all three `--check`s), `rust` (fmt, clippy `-D warnings`, `cargo test --workspace`: 496 passed), `plugin` (ruff, pyright and pytest, 3.11 and 3.14, with the same deselects), `e2e` (25 passed against the spike's Hermes install), `ui` typecheck, vitest (174 passed) and the Playwright smoke (156/156, with the pre-installed Chromium).
 - **Only in CI:** the Hermes install script and its cache, the apt installs, the `smoke` job, the whole `release` build (disk), the Windows and macOS builds, the release creation, and the `CONTRAPROVA_TOKEN` path.
