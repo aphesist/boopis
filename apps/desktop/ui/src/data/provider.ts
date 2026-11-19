@@ -8,7 +8,7 @@
    did not send: unknown is `null` or empty and the UI shows it as unknown. */
 import type {
   Bot, BotCatalog, BotDraft, BotConfig, Change, ConversationEvent, Conversation, Connector, ContextUsage, DecisionKind, DiffFile, Environment,
-  DetailsCan, DetailsNotes, FileCompletions, GovernanceState, LedgerStats, ProviderInfo, RunSnapshot, Schedule, SendMeta, SessionSummary, ThreadMessage, Todo, User, Wait, WaitOutcome
+  DetailsCan, DetailsNotes, FileCompletions, FormCan, FormOutcome, PickerItem, PickerKind, GovernanceState, LedgerStats, ProviderInfo, RunSnapshot, Schedule, SendMeta, SessionSummary, ThreadMessage, Todo, User, Wait, WaitOutcome
 } from './types';
 
 export type Unsubscribe = () => void;
@@ -90,11 +90,27 @@ export interface BotsSource extends Feed<BotsSnapshot, BotsEvent> {
   archive(id: string): void;
 }
 
-/* ───────── what waits on the user (approvals and open questions), for the dock and the shell ───────── */
+/* ───────── what waits on the user (approvals, open questions and forms), for the dock and the shell ───────── */
 export type WaitsEvent = { type: 'added'; wait: Wait } | { type: 'resolved'; id: string; outcome: WaitOutcome };
 export interface WaitsSource extends Feed<readonly Wait[], WaitsEvent> {
-  /** decide an approval ('approved' | 'denied') or answer an open question (the chosen option or free text) */
+  /** decide an approval ('approved' | 'denied') or answer an open question (the chosen option or free text); a form is answered through `forms` */
   resolve(id: string, outcome: WaitOutcome): void;
+}
+
+/* ───────── forms: the answers (the questions arrive as `Wait`s and as turns' `forms`) ───────── */
+export interface FormsSource {
+  /** secrets go to the host's keychain alone and never reach the agent, the plugin, a log or an event; the rest is sent to whoever asked.
+      Rejects with a message the card shows when the answer was not delivered (the form stays open). */
+  submit(formId: string, outcome: FormOutcome): Promise<void>;
+  /** the user declined; the asker continues without it */
+  cancel(formId: string): Promise<void>;
+  /** runs a sign-in (`x-signin`) in the host; resolves when it succeeded, rejects when it failed or was cancelled */
+  signin(formId: string, field: string): Promise<void>;
+  /** what the fields that reach outside the page can do in this build: a control that cannot work is disabled and says so */
+  can: FormCan;
+  /** the choices of an `x-picker` field; a folder is picked with the host's own dialog */
+  pickerItems(kind: PickerKind): readonly PickerItem[];
+  pickFolder(): Promise<string | null>;
 }
 
 /* ───────── the dock's run and schedules ───────── */
@@ -131,6 +147,7 @@ export interface DataProvider {
   details: DetailsSource;
   bots: BotsSource;
   waits: WaitsSource;
+  forms: FormsSource;
   run: RunSource;
   schedules: SchedulesSource;
   feedforward: FeedforwardSource;

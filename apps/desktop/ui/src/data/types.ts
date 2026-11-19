@@ -69,8 +69,52 @@ export interface BlankData {
 }
 export interface ApprovalWait { id: string; kind: 'approval'; bot: string; who: string; title: string; data: ApprovalData }
 export interface BlankWait { id: string; kind: 'blank'; bot?: undefined; who: string; title: string; data: BlankData }
-export type Wait = ApprovalWait | BlankWait;
+export interface FormWait { id: string; kind: 'form'; bot?: undefined; who: string; title: string; data: FormSpec }
+export type Wait = ApprovalWait | BlankWait | FormWait;
 export type WaitOutcome = 'approved' | 'denied' | string;
+
+/* ───────── forms (docs/FORMS.md): one schema-driven card for everything that needs the user ───────── */
+export type FormKind = 'credential' | 'question' | 'approval' | 'permission' | 'signin' | 'setup' | 'connector' | 'choice' | 'plan' | 'feedback';
+export type PickerKind = 'folder' | 'file' | 'model' | 'repo' | 'host' | 'teammate' | 'branch';
+/** who is asking (FORMS.md section 4a); the same slot draws every card, in every place a card can appear */
+export type Origin =
+  | { kind: 'teammate'; ids?: readonly string[]; id?: string; via?: string | null }
+  | { kind: 'agent'; model: string }
+  | { kind: 'plugin' | 'hermes' | 'host' }
+  | { kind: 'mcp'; server?: string; trust?: string };
+/** a field of MCP elicitation's `requestedSchema` plus the hypotaxis extensions */
+export interface FieldSchema {
+  type?: 'string' | 'number' | 'integer' | 'boolean';
+  title?: string; description?: string; default?: unknown; format?: string; placeholder?: string;
+  enum?: readonly unknown[]; enumNames?: readonly string[];
+  minimum?: number; maximum?: number; minLength?: number; maxLength?: number; pattern?: string;
+  'x-secret'?: boolean; 'x-secret-ref'?: string; 'x-multi'?: boolean; 'x-other'?: boolean; 'x-multiline'?: boolean; 'x-mono'?: boolean; 'x-error'?: string;
+  /** one preview per option, in the order of `enum` (code, text or a note) */
+  'x-preview'?: ReadonlyArray<{ code?: string; text?: string; note?: string } | null>;
+  'x-picker'?: PickerKind; 'x-upload'?: boolean;
+  'x-signin'?: { provider?: string; flow?: 'browser' | 'device'; host?: string };
+}
+export interface FormSchema { type?: 'object'; properties?: Readonly<Record<string, FieldSchema>>; required?: readonly string[] }
+/** a form as the card draws it */
+export interface FormSpec {
+  id: string; kind: FormKind; title: string; schema: FormSchema;
+  /** why it is needed, and what happens on submit */
+  why?: string; effect?: string;
+  origin?: Origin;
+  submit?: { label?: string; hold?: boolean };
+  cancel?: { label?: string } | false;
+  /** the form lapses at this time (ms since the epoch); `expires` is its words ("expires in 9 min") */
+  expiresAt?: number; expires?: string;
+  /** what shows before the fields: a config diff, a plan, a connector's contents */
+  diff?: string; file?: string; plan?: readonly string[]; contents?: ReadonlyArray<readonly [string, string?]>; pinned?: string;
+  provider?: string; name?: string; scope?: string; receipt?: string;
+}
+/** what a submitted form carries: the non-secret values, and the secret fields' values for the host's keychain alone */
+export interface FormOutcome { values: Readonly<Record<string, unknown>>; secrets: Readonly<Record<string, string>> }
+export type FormStatus = 'submitted' | 'cancelled' | 'expired';
+/** what this build can do for the fields that reach outside the page */
+export interface FormCan { signin: boolean; upload: boolean; folder: boolean }
+export interface PickerItem { value: string; label: string; desc?: string }
 
 /* ───────── sessions ───────── */
 export interface SessionSummary { id: string; project: string; title: string; when: string; running?: boolean }
@@ -86,6 +130,8 @@ export interface AgentTurn {
   stepCount: number; steps: readonly Step[];
   paragraphs: readonly string[]; bullets: readonly string[];
   blank?: BlankData | undefined; ship?: Ship | undefined;
+  /** the forms the agent (or the plugin) opened in this turn, open or answered */
+  forms?: readonly FormSpec[] | undefined;
   status: 'done' | 'running' | 'stopped';
 }
 export type Turn = UserTurn | AgentTurn;
@@ -97,6 +143,9 @@ export type ConversationEvent =
   | { type: 'blank-answered'; turnId: string; answer: string }
   /** a blank was opened while the turn runs (the live provider's, additive) */
   | { type: 'blank-opened'; turnId: string; blank: BlankData }
+  /** a form was opened where this turn raised it, and later answered, cancelled or lapsed (here or in another place) */
+  | { type: 'form-opened'; turnId: string; form: FormSpec }
+  | { type: 'form-resolved'; turnId: string; formId: string; status: FormStatus; receipt?: string }
   /** the running turn's answer so far (the live provider streams it; the mock sends the whole answer with `turn-finished`) */
   | { type: 'turn-text'; turnId: string; paragraphs: readonly string[] }
   /** the whole conversation changed under the reader (a transcript loaded, or events were lost): read the snapshot again */

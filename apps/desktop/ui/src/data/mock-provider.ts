@@ -4,7 +4,7 @@
    visual parity tests; the app never falls back to it when the live provider fails (STANDARDS section 1, rule 4). */
 import { hhmm, reduced } from '../core/dom';
 import type {
-  BotsEvent, BotsSource, BotsSnapshot, DataProvider, DetailsSource, DictationSource, FeedforwardSource, FilesSource, RunSource, SchedulesSource, SessionsSource, WaitsEvent, WaitsSource
+  BotsEvent, BotsSource, BotsSnapshot, DataProvider, DetailsSource, DictationSource, FeedforwardSource, FilesSource, FormsSource, RunSource, SchedulesSource, SessionsSource, WaitsEvent, WaitsSource
 } from './provider';
 import { emitter, feed, store } from './store';
 import type {
@@ -336,6 +336,13 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
     }
   };
 
+  /* ───────── forms: the mock answers after a short delay (the live provider asks the plugin and the host); nothing is stored ───────── */
+  const answer = (ms: number): Promise<void> => new Promise((ok) => { later(ok, ms); });
+  const forms: FormsSource = {
+    submit: () => answer(700), cancel: () => answer(50), signin: () => answer(1600),
+    can: { signin: true, upload: true, folder: false }, pickerItems: () => [], pickFolder: () => Promise.resolve(null)
+  };
+
   /* ───────── the dock's run (it ticks once a second while running) ───────── */
   const ladder = M.GOVERNANCE.ladder;
   const run = store<RunSnapshot>({
@@ -375,5 +382,5 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
     complete: (word) => Promise.resolve({ items: M.FILE_PATHS.filter((p) => p.includes(word.replace(/^@(file:)?/, ''))).map((p) => ({ text: '@file:' + p, display: p.slice(p.lastIndexOf('/') + 1), meta: '' })) })
   };
 
-  return { info: { live: false, preview: new Set(), unavailable: {} }, ready: Promise.resolve(), user: store(M.USER), sessions, details, bots: botsSource, waits: waitsSource, run: runSource, schedules, feedforward, dictation, files };
+  return { info: { live: false, preview: new Set(), unavailable: {} }, ready: Promise.resolve(), user: store(M.USER), sessions, details, bots: botsSource, waits: waitsSource, forms, run: runSource, schedules, feedforward, dictation, files };
 }

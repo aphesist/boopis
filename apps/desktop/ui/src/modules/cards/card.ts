@@ -17,6 +17,9 @@ import { holdOf, wireHold } from '../../components/hold';
 import { data as provider } from '../../data';
 import type { CardKind, CardOpts, CardSize } from '../../components/card-registry';
 import { bot, expiryText, KINDS, parts } from './kinds';
+import { accentOf, originOf } from './parts';
+import { LIVE_FORM, dropSecrets, formKey, newFormState, wireForm } from './form';
+import type { FormState } from './form';
 import { animate, easeToken, motion } from './motion';
 import type { Ctx, Data, Kind } from './types';
 import { blankValue, wireBlankOptions } from './options';
@@ -65,10 +68,15 @@ export class HxCard extends HTMLElement {
   /** the inline blank a popover was opened from */
   source: HxCard | null = null;
   blankPop: HxCard | null = null;
+  /** a form's own state: typed values and secrets, never in the DOM's events */
+  formState: FormState | null = null;
+  /** set while another card with the same id is copying its state onto this one */
+  syncing = false;
   private K!: Kind;
   private cardId = '';
   private sig: Record<string, string> = {};
-  private at = 0;
+  /** when the card last changed state (ms) */
+  at = 0;
   private inlineOnly = false;
   private live: HTMLElement | null = null;
   private regions: Record<string, HTMLElement> = {};
@@ -79,7 +87,7 @@ export class HxCard extends HTMLElement {
   connectedCallback(): void {
     if (!this.kind) return;
     LIVE.add(this);
-    if (this.kind === 'approval') { this.tick(); this.timer = this.timer || window.setInterval(() => this.tick(), 1000); }
+    if (this.kind === 'approval' || this.kind === 'form') { this.tick(); this.timer = this.timer || window.setInterval(() => this.tick(), 1000); }
     if (this.state === 'holding' && typeof this.data.progress === 'number') requestAnimationFrame(() => { const h = this.holdBtn(); const c = holdOf(h); if (c) c.show(this.data.progress ?? 0); });
     emitAttention();
   }
@@ -102,6 +110,7 @@ export class HxCard extends HTMLElement {
       d.files = ch.length && (d.files == null || +d.files === ch.length) ? ch.map((x) => [x[0], x[1], x[2]] as const) : [];
     }
     this.kind = kind; this.data = d; this.opts = opts; this.K = KINDS[kind];
+    if (kind === 'form') { this.formState = newFormState(); if (!d.id) d.id = nid('form-'); }
     this.size = opts.size ?? 'inline';
     if (kind !== 'blank' && this.size === 'popover') this.size = 'compact';
     this.cardId = nid('cd'); this.sig = {};
@@ -125,7 +134,7 @@ export class HxCard extends HTMLElement {
     this.append(live); this.live = live;
     this.regions = {};
     for (const r of this.querySelectorAll<HTMLElement>('[data-r]')) this.regions[r.dataset['r'] ?? ''] = r;
-    if (kind === 'approval') this.armExpiry(false);
+    if (kind === 'approval' || kind === 'form') this.armExpiry(false);
     this.addEventListener('click', (e) => this.onClick(e));
     this.addEventListener('keydown', (e) => this.onKey(e));
     this.renderCard(false);
@@ -134,7 +143,8 @@ export class HxCard extends HTMLElement {
 
   private ctx(): Ctx {
     const K = this.K;
-    const c: Ctx = { d: this.data, s: this.state, size: this.size, id: this.cardId, at: clock(this.at), q: this.opts.queue, card: this, plain: '', tone: 'none', owe: '' };
+    const c: Ctx = { d: this.data, s: this.state, size: this.size, id: this.cardId, at: clock(this.at), q: this.opts.queue, card: this, plain: '', tone: 'none', owe: '', origin: null };
+    c.origin = originOf(this.data) ?? (K.origin ? K.origin(c) : null);
     try { c.plain = K.text ? String(K.text(c)).replace(/`/g, '') : ''; } catch { c.plain = ''; }
     c.tone = K.tone(c) || 'none';
     /* what the card owes the user, in the stamp's words; nothing inside the popover (its question sits right above) */
@@ -160,7 +170,7 @@ export class HxCard extends HTMLElement {
     const quiet = this.K.quiet?.[prev + '>' + next];
     if (!quiet) {
       this.at = Date.now();
-      if (this.kind === 'approval' && (next === 'pending' || next === 'holding')) {
+      if ((this.kind === 'approval' && (next === 'pending' || next === 'holding')) || (this.kind === 'form' && next === 'open')) {
         if (this.expiresAt && this.expiresAt <= Date.now() + 1000) this.expiresAt = 0;
         this.armExpiry(false);
       }
@@ -169,6 +179,7 @@ export class HxCard extends HTMLElement {
     } else this.dataset['state'] = next;
     this.dispatchEvent(new CustomEvent<CardStateDetail>('hx:card-state', { bubbles: true, composed: true, detail: { kind: this.kind, state: next, prev, data: this.data, card: this } }));
     emitAttention();
+    if (!this.syncing && this.kind === 'form' && !quiet) syncSiblings(this, next);
     return this;
   }
 
@@ -223,6 +234,9 @@ export class HxCard extends HTMLElement {
   private applyState(c: Ctx, motionOn: boolean): void {
     const K = this.K;
     this.dataset['state'] = this.state;
+    /* the origin's accent: one teammate's colour as a ring and a tint (data, not a literal) */
+    const acc = accentOf(c.origin);
+    if (acc) { this.style.setProperty('--cd-accent', acc); this.dataset['accent'] = ''; } else { this.style.removeProperty('--cd-accent'); delete this.dataset['accent']; }
     const tone = c.tone, owe = c.owe;
     const prevTone = this.dataset['tone'];
     this.dataset['tone'] = tone;
@@ -238,7 +252,7 @@ export class HxCard extends HTMLElement {
     for (const a of this.querySelectorAll('[data-hx-attention]')) a.removeAttribute('data-hx-attention');
     if (owe || (this.kind === 'blank' && this.state === 'open' && this.size !== 'popover')) {
       const live = (sel: string): HTMLElement | undefined => Array.from(this.querySelectorAll<HTMLElement & { disabled?: boolean }>(sel)).find((x) => !x.closest('.cd-ghost') && !x.disabled);
-      const t = live('[data-hold]') || live('.cd-blank') || live('.cd-mini') || live('.ui-btn--primary') || live('.cd-foot button, .cd-rule button');
+      const t = (this.kind === 'form' ? live('.cd-form .ui-input, .cd-form .cd-opt[tabindex="0"], .cd-form .ui-switch, .cd-form [data-action="signin"]') : undefined) || live('[data-hold]') || live('.cd-blank') || live('.cd-mini') || live('.ui-btn--primary') || live('.cd-foot button, .cd-rule button');
       if (t) t.setAttribute('data-hx-attention', '');
     }
     this.toggleAttribute('data-resolved', !!(K.resolved && K.resolved(c)));
@@ -249,6 +263,7 @@ export class HxCard extends HTMLElement {
     }
   }
 
+  holdButton(): HTMLButtonElement | null { return this.holdBtn(); }
   private holdBtn(): HTMLButtonElement | null { return Array.from(this.querySelectorAll<HTMLButtonElement>('[data-hold]')).find((x) => !x.closest('.cd-ghost')) ?? null; }
 
   private hydrateCard(): void {
@@ -257,16 +272,20 @@ export class HxCard extends HTMLElement {
       hold.dataset['cdWired'] = '1';
       wireHold(hold, { announce: (t) => this.announce(t) });
       /* the library's commit is the card's approve; a host that cancels the action leaves the button armed */
-      hold.addEventListener('ui:commit', (e) => { if (!this.act('approve')) e.preventDefault(); });
+      hold.addEventListener('ui:commit', (e) => {
+        if (this.kind === 'form') { if (!this.act('approve')) e.preventDefault(); return; }
+        if (!this.act('approve')) e.preventDefault();
+      });
       /* holding is a card state too: follow the button's data-state */
       new MutationObserver(() => {
         const st = hold.dataset['state'];
-        if (st === 'holding' && this.state === 'pending') this.setState('holding');
-        else if (st === 'idle' && this.state === 'holding') this.setState('pending');
+        if (st === 'holding' && (this.state === 'pending' || this.state === 'open' || this.state === 'invalid')) this.setState('holding');
+        else if (st === 'idle' && this.state === 'holding') this.setState(this.kind === 'form' ? 'open' : 'pending');
       }).observe(hold, { attributes: true, attributeFilter: ['data-state'] });
     }
     if (hold && this.state === 'holding' && typeof this.data.progress === 'number' && this.isConnected) holdOf(hold)?.show(this.data.progress);
     if (this.kind === 'blank' && (this.size === 'popover' || this.size === 'compact')) wireBlankOptions(this);
+    if (this.kind === 'form') wireForm(this);
     this.tick();
   }
 
@@ -286,34 +305,39 @@ export class HxCard extends HTMLElement {
     if (this.expiresAt && !force) return;
     const d = this.data;
     if (d.expiresAt) { this.expiresAt = +d.expiresAt; return; }
-    const m = /expires in (\d+(?:\.\d+)?)\s*(min|s)/i.exec(parts(d.meta).join(' '));
+    const m = /expires in (\d+(?:\.\d+)?)\s*(min|s)/i.exec(parts(d.meta).concat(parts(d.expires)).join(' '));
     if (m) this.expiresAt = Date.now() + (+(m[1] ?? 0)) * (m[2] === 'min' ? 60000 : 1000);
   }
   rearmExpiry(): void { this.expiresAt = 0; this.armExpiry(true); }
 
   private tick(): void {
-    if (this.kind !== 'approval' || !this.expiresAt) return;
-    const live = this.state === 'pending' || this.state === 'holding';
+    if ((this.kind !== 'approval' && this.kind !== 'form') || !this.expiresAt) return;
+    const live = this.kind === 'form' ? LIVE_FORM.includes(this.state) : this.state === 'pending' || this.state === 'holding';
     if (!live) return;
     const left = this.expiresAt - Date.now();
     for (const s of this.querySelectorAll<HTMLElement>('[data-countdown]')) {
       const t = expiryText(left, s.dataset['countdown'] === 'short');
       if (s.textContent !== t) s.textContent = t;
     }
-    if (left <= 0 && this.isConnected) { holdOf(this.holdBtn())?.reset(); this.setState('expired'); }
+    if (left <= 0 && this.isConnected) { holdOf(this.holdBtn())?.reset(); if (this.kind === 'form') dropSecrets(this); this.setState('expired'); }
   }
 
   private onClick(e: MouseEvent): void {
     const b = (e.target as Element).closest<HTMLButtonElement>('[data-action]');
     if (!b || b.closest('hx-card') !== this || b.disabled) return;
     let value: string | null | undefined;
-    if (b.dataset['action'] === 'answer') value = blankValue(this);
+    const action = b.dataset['action'] ?? '';
+    if (action === 'answer') value = blankValue(this);
+    /* a form's own buttons run the form (its submit sends one event with the answer, not two) */
+    if (this.kind === 'form' && ['submit', 'paste', 'choose-file', 'remove-file', 'signin'].includes(action)) { this.K.act?.(this, action, { el: b }); return; }
     this.act(b.dataset['action'] ?? '', { value, el: b });
   }
 
   /* KEYMAP section 6: x denies while focus is in an approval; d opens the diff from a ship card (never while typing) */
   private onKey(e: KeyboardEvent): void {
-    if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    if (e.defaultPrevented) return;
+    if (this.kind === 'form' && this.size !== 'mini' && LIVE_FORM.includes(this.state) && formKey(this, e)) return;
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
     const t = e.target as HTMLElement | null;
     if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
     const live = this.state === 'pending' || this.state === 'holding';
@@ -332,6 +356,21 @@ export class HxCard extends HTMLElement {
     const ok = this.dispatchEvent(new CustomEvent<CardActionDetail>('hx:card-action', { bubbles: true, composed: true, cancelable: true, detail }));
     if (ok && this.K.act) this.K.act(this, action, x);
     return ok;
+  }
+}
+/* one id, one answer: every card with the same id (the conversation, the dock, the first-run view) takes the state the user
+   gave in any one of them, with the same receipt. Typed values of secret fields never travel: only the receipt does. */
+const SHARED = ['receiptText', 'cancelledText', 'answered'] as const;
+function syncSiblings(src: HxCard, state: string): void {
+  for (const c of LIVE) {
+    if (c === src || c.kind !== src.kind || c.data.id !== src.data.id || c.state === state) continue;
+    /* what the user decided travels; typing and holding stay where they happen. A failed send reopens the card that was sending */
+    if (!['submitting', 'done', 'cancelled', 'expired'].includes(state) && !(state === 'open' && c.state === 'submitting')) continue;
+    c.syncing = true;
+    for (const k of SHARED) if (src.data[k] !== undefined) c.data[k] = src.data[k];
+    if (c.formState && src.formState) c.formState.vals = { ...src.formState.vals };
+    c.at = src.at;
+    try { c.setState(state); } finally { c.syncing = false; }
   }
 }
 const clock = (t: number): string => { const d = new Date(t || Date.now()); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
