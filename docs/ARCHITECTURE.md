@@ -70,9 +70,10 @@ Research on Hermes v0.23.2 (`ae2a81cc`) and an audit of the first-pass code prod
 
 ## 4. Hermes integration
 
-**Install and update.** hypotaxis never vendors or patches Hermes at runtime.
-- On first run the host finds Hermes (`hermes --version`, `install-stamp.json`). If it's missing, the host runs Hermes's own installer with the user's consent.
-- Hermes updates through Hermes's own channel (`hermes update`, stable releases `vX.Y.Z`).
+**Install and update (ADR-0023).** The app ships as one self-contained program: its installer carries a pinned, unmodified Hermes and a private Python runtime. hypotaxis never patches Hermes.
+- On first run the host unpacks the bundled runtime (hash-checked) into the app's own data folder and gives it a private `HERMES_HOME`, so it never touches a Hermes the user already has. Nobody installs Hermes by hand.
+- Hermes updates reach users through the app's updater, after CI has passed on that Hermes release. Hermes's own `hermes update` is turned off inside the bundle so the two never fight.
+- Advanced: a setting points the app at an existing Hermes install instead (the earlier "find Hermes" path).
 - The plugin declares `requires_hermes`, and the host refuses an older Hermes.
 - A running gateway can outlive an update, so the host compares `client_code_sha` with `endpoint.code_sha` and restarts the gateway when they differ.
 - `vendor/hermes-agent` is a git submodule pinned to a release tag. It's used only for CI (contract generation, plugin validation, end-to-end tests), never at runtime.

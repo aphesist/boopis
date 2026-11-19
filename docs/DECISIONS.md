@@ -338,6 +338,29 @@ They're not sandboxed, matching Claude Code. This is the only exception to the n
 - New surfaces (the band above the composer, mod panes, the mod status line, placed rows, the mod origin) need the owner's design in v6 first.
 - A conformance suite against pinned public mods tracks support per Claude Code version.
 
+## ADR-0023 One self-contained app: Hermes ships inside it
+**Context.**
+- The first build asked the user to install Hermes with a terminal command before running the app.
+- The owner: it must ship as a single app with its own installer. Building on Hermes stays (ADR-0001): its plugins work and its updates flow in.
+- Hermes is MIT-licensed, so bundling it is allowed with its notice.
+
+**Decision.**
+- Each installer carries:
+  - a pinned, unmodified Hermes;
+  - a private, relocatable Python runtime;
+  - `hx`;
+  - the plugin.
+- On first run the host unpacks the runtime, checking its hash, into the app's data folder, with a private `HERMES_HOME`. No terminal, no separate install, and no contact with any other Hermes on the machine.
+- One updater ships the app and the runtime together, and a Hermes release reaches users only after CI passes on it. Hermes's self-update is off inside the bundle.
+- Large optional pieces (Chromium for automation, the desktop-control driver, Node) are downloaded on first use, with consent, into the private home, through Hermes's own package manager.
+- Pointing the app at an existing Hermes stays as an advanced setting.
+
+**Consequences.**
+- The release pipeline builds the runtime per platform, and the end-to-end tests run against that same artifact, so CI tests what ships.
+- Installer size grows by the runtime's size, so its footprint is measured and kept lean.
+- Signed updates need an update-signing key, which the owner creates and stores as a CI secret. It never goes in the repository.
+- ARCHITECTURE §4 is amended: the earlier plan had the host run Hermes's installer on the user's machine.
+
 ## ADR-0012 Prices
 Prices come from the models.dev catalogue plus a user override table. Hermes's models.dev data is not reachable through its public plugin API, so:
 - the plugin reads a cached catalogue file, `<profile home>/hypotaxis/prices/models-dev.json`;
