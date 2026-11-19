@@ -5,6 +5,7 @@ Two workflows live in `.github/workflows/`. Neither can be run locally; `actionl
 ## Getting the AppImage
 - **Every push to `develop`:** open the `release` run in the Actions tab, then download the artifact `boopis-linux-x86_64-appimage` (the `.AppImage` and `SHA256SUMS`, kept 30 days). Windows (`boopis-windows-x86_64-nsis`) and macOS (`boopis-macos-aarch64-dmg`) bundles are there too when those jobs built.
 - **A tag `vX.Y.Z`:** push a tag that equals `version` in `apps/desktop/src-tauri/tauri.conf.json` (the build fails when they differ). The `release` job then publishes a GitHub release with the AppImage, the other bundles that built, `install.sh` and `install.ps1`, and `SHA256SUMS` over all of them. Before 1.0, and for a tag with a suffix (`v1.2.0-rc.1`), it is marked a pre-release. Download from the repository's Releases page, or `gh release download vX.Y.Z -R aphesist/boopis`.
+- **From the Actions tab, without a clone:** run the `release` workflow on `main` with the input `release` set to `vX.Y.Z` (equal to `version` in `tauri.conf.json`). The same builds and checks run, and the `release` job creates the tag on the commit it built and publishes the release, as a pushed tag would.
 - Verify: `sha256sum -c SHA256SUMS --ignore-missing`.
 
 ## Installing from a terminal
