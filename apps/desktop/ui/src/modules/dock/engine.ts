@@ -147,6 +147,8 @@ export function slideNow(page: string): { x: number; v: number } | null {
   return { x: (f.target ?? 0) + st.x, v: st.vx };
 }
 export const sliding = (page: string): boolean => E.slides.has(page) || E.slideAn.has(page);
+/** the clip the stage has now (what was written, so a frame never reads the style back) */
+let stageClip = '';
 export function paint(): void {
   const w = Math.max(0, E.slabW.x), h = Math.max(0, E.slabH.x);
   if (h < 0.5 || w < 1) { X.pathEl.setAttribute('d', ''); }
@@ -168,8 +170,13 @@ export function paint(): void {
      (CSS, `data-moving`), or a roster row's ring hangs above a slab that has not reached it and a bot's ring circles an
      empty slot while its orb is still on the way */
   if (X.root.hasAttribute('data-moving') !== moving) X.root.toggleAttribute('data-moving', moving);
-  const clip = moving ? `polygon(${(-w / 2).toFixed(1)}px ${(-(h + sink + 16)).toFixed(1)}px, ${(w / 2).toFixed(1)}px ${(-(h + sink + 16)).toFixed(1)}px, ${(w / 2).toFixed(1)}px 4px, ${(-w / 2).toFixed(1)}px 4px)` : '';
-  if (X.stageEl.style.clipPath !== clip) X.stageEl.style.clipPath = clip;
+  /* The stage is a 0x0 anchor, and its clip is the legacy `clip: rect()` (top, right, bottom, left from the stage's origin), not
+     a `clip-path`. With `clip-path: polygon(...)` on this element WebKitGTK (2.52, the engine Tauri uses) drew none of what was
+     inside while it was set: every orb, the "+" and the foot vanished for as long as the slab moved, a hover's lift included,
+     and came back when it settled (Chromium never did; tests/e2e/dock_webkit.py watches pixels for it). `clip` clips the same
+     box in both engines. */
+  const clip = moving ? `rect(${(-(h + sink + 16)).toFixed(1)}px, ${(w / 2).toFixed(1)}px, 4px, ${(-w / 2).toFixed(1)}px)` : '';
+  if (clip !== stageClip) { stageClip = clip; X.stageEl.style.clip = clip; }
   paintMag();
 }
 function settled(): void {
