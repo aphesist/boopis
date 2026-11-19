@@ -1,11 +1,9 @@
 """What a cell can ask of the owner: a blank, or a form.
 
 A blank (``harness.leave_blank``) is the plugin's own flow: ``blank.opened`` in the ledger, the same event to
-viewers, and the cell goes on (docs/PROTOCOL.md section 3). **Forms are a stub** until the forms flow lands
-(docs/FORMS.md): the plugin validates the request, emits ``form.opened`` to viewers and records the call,
-and answers ``{form_id, status: "pending"}``. Nothing yet stores the form, accepts ``form.submit`` or
-delivers an answer, so ``wait`` is refused rather than faked. contraprova has no ``form.*`` ledger types yet
-(they are added upstream, docs/LEDGER.md), so the call is recorded as ``tool.called`` with the ``form_id``.
+viewers, and the cell goes on (docs/PROTOCOL.md section 3). A form (``harness.request_input``, ``ask``,
+``request_credential``) is the forms plumbing's (``forms/``, docs/FORMS.md): the cell gets the same answers the tools
+give, ``wait=True`` blocks the call (never longer than the cell may run), and the secret never reaches the cell.
 """
 
 from __future__ import annotations
@@ -18,9 +16,6 @@ from ..session import Caller, Runtime
 from ..util.ids import uuid7
 from .cell import CallFailure, Cell
 
-FORM_KINDS = frozenset(
-    {"credential", "question", "approval", "permission", "signin", "setup", "connector", "choice", "plan", "feedback"}
-)
 MAX_TEXT = 4000
 MAX_ITEMS = 50
 
@@ -54,39 +49,25 @@ def open_blank(rt: Runtime, caller: Caller, cell: Cell, params: Mapping[str, Any
     return {"blank_id": blank_id, "status": "open"}
 
 
-def _has_secret(schema: Mapping[str, Any]) -> bool:
-    props = schema.get("properties")
-    if not isinstance(props, Mapping):
-        return False
-    return any(isinstance(p, Mapping) and p.get("x-secret") is True for p in props.values())  # type: ignore[union-attr]
-
-
 def open_form(rt: Runtime, caller: Caller, cell: Cell, params: Mapping[str, Any]) -> dict[str, Any]:
-    """The forms stub: validate, announce ``form.opened``, answer pending. Never invents an answer."""
-    kind = params.get("kind")
-    if kind not in FORM_KINDS:
-        raise CallFailure("hx.exec.invalid", f"kind must be one of {sorted(FORM_KINDS)}")
-    if params.get("wait"):
-        raise CallFailure(
-            "hx.exec.unsupported",
-            "wait=true is not available yet: forms are announced but not stored or answered by this plugin. "
-            "Call without wait and keep working on what does not depend on the answer.",
+    """Open a form for a cell and, with ``wait``, block until it is answered. Never invents an answer."""
+    from ..errors import HypotaxisError
+    from ..forms import presets
+    from ..forms.tools import agent_view, service
+
+    svc = service(rt)
+    wait = bool(params.get("wait"))
+    try:
+        draft = presets.draft_for(params)
+        timeout = (
+            min(svc.clamp_wait(params.get("timeout_s")), rt.load_settings().value.exec.max_timeout_ms / 1000)
+            if wait
+            else 0.0
         )
-    title = _text(params.get("title"), "title")
-    schema = params.get("schema")
-    if not isinstance(schema, Mapping):
-        raise CallFailure("hx.exec.invalid", "schema must be an object (MCP elicitation's requestedSchema)")
-    form_id = uuid7()
-    body = _text(params.get("body") or "", "body", required=False)
-    event = {
-        "form_id": form_id,
-        "kind": kind,
-        "title": title,
-        "body": body,
-        "schema": dict(schema),  # type: ignore[arg-type]
-        "sensitive": kind == "credential" or _has_secret(schema),  # type: ignore[arg-type]
-        "origin": "agent",
-    }
-    rt.ctx.emit_to_session(caller.state.session_id, "form.opened", event)
-    cell.forms.append({"form_id": form_id, "kind": kind, "title": title})
-    return {"form_id": form_id, "status": "pending"}
+        form = svc.open(caller.state.session_id, caller, draft, deliver=not wait)
+    except HypotaxisError as exc:
+        raise CallFailure(exc.code, exc.message, exc.data) from exc
+    if wait:
+        svc.wait(form, timeout)
+    cell.forms.append({"form_id": form.form_id, "kind": form.kind, "title": form.title})
+    return agent_view(form, waited=wait)

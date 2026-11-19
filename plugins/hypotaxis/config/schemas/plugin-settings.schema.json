@@ -359,6 +359,39 @@
           "default": "off"
         }
       }
+    },
+    "forms": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "max_open": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200,
+          "default": 20
+        },
+        "expires_s": {
+          "type": "integer",
+          "minimum": 30,
+          "maximum": 604800,
+          "default": 3600
+        },
+        "wait_default_s": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3600,
+          "default": 120
+        },
+        "wait_max_s": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3600,
+          "default": 300
+        }
+      }
     }
   }
 }

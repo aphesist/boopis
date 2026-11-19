@@ -186,5 +186,146 @@
         "brief"
       ]
     }
+  },
+  "request_input": {
+    "name": "request_input",
+    "description": "Ask the user for what cannot be inferred: a choice, a setting, a permission, a plan approval. One form with all the fields beats several. `schema` is MCP elicitation's flat object of string, number, integer, boolean and enum fields (x-multi, x-other for lists). Never ask for a secret here: use request_credential. Returns at once with a form_id; the answer arrives as your next message (or inline with wait).",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "question",
+            "choice",
+            "approval",
+            "permission",
+            "setup",
+            "plan",
+            "feedback",
+            "signin",
+            "connector"
+          ],
+          "description": "What the form is for; it decides how the answer is used."
+        },
+        "title": {
+          "type": "string",
+          "description": "One line: what is being asked."
+        },
+        "body": {
+          "type": "string",
+          "description": "Why it is needed and what happens on submit."
+        },
+        "schema": {
+          "type": "object",
+          "description": "The fields: {type: 'object', properties: {name: {type, title, description, default, enum, enumNames, ...}}, required: [...]}."
+        },
+        "submit": {
+          "type": "object",
+          "description": "The submit button: {label, hold}. hold asks the user to hold for a second (consequential actions)."
+        },
+        "cancel": {
+          "type": "object",
+          "description": "The cancel button: {label}."
+        },
+        "wait": {
+          "type": "boolean",
+          "description": "Block until the user answers (bounded by timeout_s). Default false: the call returns at once and the answer arrives later as your next message."
+        },
+        "timeout_s": {
+          "type": "number",
+          "description": "With wait: how many seconds to wait at most (the plugin caps it)."
+        },
+        "form_id": {
+          "type": "string",
+          "description": "Read an earlier form's state and answer instead of opening one."
+        }
+      }
+    }
+  },
+  "request_credential": {
+    "name": "request_credential",
+    "description": "Ask the user for an API key or token. They type it into the app, which saves it in their OS keychain; you never see it. You get {saved: true, ref}. Name the provider (a Hermes provider such as anthropic, or a named endpoint) or the host the token is for. Never ask for a key in chat.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "description": "The Hermes provider the key is for (for example anthropic, openrouter, or a named endpoint)."
+        },
+        "host": {
+          "type": "string",
+          "description": "A service's host name, when the token is not a model provider's key."
+        },
+        "title": {
+          "type": "string",
+          "description": "Optional heading."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why the key is needed."
+        },
+        "wait": {
+          "type": "boolean",
+          "description": "Block until the user answers (bounded by timeout_s). Default false: the call returns at once and the answer arrives later as your next message."
+        },
+        "timeout_s": {
+          "type": "number",
+          "description": "With wait: how many seconds to wait at most (the plugin caps it)."
+        },
+        "form_id": {
+          "type": "string",
+          "description": "Read an earlier form's state and answer instead of opening one."
+        }
+      }
+    }
+  },
+  "ask": {
+    "name": "ask",
+    "description": "Ask the user one question: with options for a choice (multi for several, other for free text), without for a free-text answer. Returns at once with a form_id and you keep working; the answer arrives as your next message (or inline with wait). Ask only what you cannot infer.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "question": {
+          "type": "string",
+          "description": "The question, one sentence."
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The choices, if it is a choice."
+        },
+        "multi": {
+          "type": "boolean",
+          "description": "Allow several options."
+        },
+        "other": {
+          "type": "boolean",
+          "description": "Add an 'Other' option with free text."
+        },
+        "header": {
+          "type": "string",
+          "description": "A short label for the answer field."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why you are asking and what you will do with the answer."
+        },
+        "wait": {
+          "type": "boolean",
+          "description": "Block until the user answers (bounded by timeout_s). Default false: the call returns at once and the answer arrives later as your next message."
+        },
+        "timeout_s": {
+          "type": "number",
+          "description": "With wait: how many seconds to wait at most (the plugin caps it)."
+        },
+        "form_id": {
+          "type": "string",
+          "description": "Read an earlier form's state and answer instead of opening one."
+        }
+      }
+    }
   }
 }

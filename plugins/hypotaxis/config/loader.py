@@ -21,6 +21,7 @@ from .model import (
     CascadeSettings,
     ExecSettings,
     Fallback,
+    FormSettings,
     Mode,
     PackSettings,
     PermissionRules,
@@ -69,6 +70,13 @@ def _exec_settings(raw: Mapping[str, Any] | None) -> ExecSettings:
     given = raw or {}
     return ExecSettings(
         **{f.name: given.get(f.name, schema_default("plugin-settings", "exec", f.name)) for f in fields(ExecSettings)}
+    )
+
+
+def _form_settings(raw: Mapping[str, Any] | None) -> FormSettings:
+    given = raw or {}
+    return FormSettings(
+        **{f.name: given.get(f.name, schema_default("plugin-settings", "forms", f.name)) for f in fields(FormSettings)}
     )
 
 
@@ -130,6 +138,7 @@ def parse_settings(raw: Mapping[str, Any], *, source: str = "plugins.entries.hyp
             max_bytes=int(pack_raw.get("max_bytes", schema_default("plugin-settings", "pack", "max_bytes")))
         ),
         exec=_exec_settings(raw.get("exec")),
+        forms=_form_settings(raw.get("forms")),
         hx_path=str(raw.get("hx_path", "")),
         ledger_dir=str(raw.get("ledger_dir", "")),
     )

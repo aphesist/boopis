@@ -336,7 +336,9 @@ class CellServices:
         )
 
     def _form(self, cell: Cell, params: Mapping[str, Any]) -> dict[str, Any]:
-        tool = "harness.request_credential" if params.get("kind") == "credential" else "harness.request_input"
+        tool = {"credential": "harness.request_credential", "ask": "harness.ask"}.get(
+            str(params.get("preset")), "harness.request_input"
+        )
         return self._counted(cell, tool, lambda: open_form(self._rt, self._caller, cell, params), params)
 
     def _diagnostics(self, cell: Cell, params: Mapping[str, Any]) -> dict[str, Any]:
