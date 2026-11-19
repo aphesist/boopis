@@ -32,6 +32,21 @@ work below) and the work a frame costs.
 - A `linear()` easing runs on the compositor in WebKitGTK 2.54 and later and in Chromium, not in 2.44 to 2.52 (the harness
   box has 2.52.6): the dock samples springs into keyframes so it composites on both.
 
+## What the motion work changed (ADR-0025; WebKitGTK 2.52.6 and Chromium 153 under Xvfb, 1800x1125 at 2x, median of 2 to 3 runs)
+
+- The dock morph, page switch and sidebar moves restyled the whole page every frame: the shell's eight animated lengths were
+  inherited registered properties on the root (Chromium: style 3.9 to 4.8 ms of a 7.9 to 11 ms frame). They are per-element
+  non-inherited copies now: Chromium main-thread work per frame, morph 7.9 to 3.3 ms, pages 7.3 to 3.0, session 10.6 to 2.9,
+  tab switch 11.1 to 3.3, idle 2.9 to 0.4 (orbs in the worker).
+- Orbs in the worker (`webkit-cpu`): script per frame 3.4 to 0.6 ms in a morph, p95 61 to 45 ms, and the rAF rate rises from 40
+  to 65 fps (133 fps in a pointer sweep: nothing holds it at 60 once the main thread is free).
+- A control (a pure transform animation, a 30 ms task every 200 ms) draws every frame in Chromium (0 compositor gaps over
+  25 ms); the same motion in script has gaps. The dock's morph is not that clean, because the slab's outline is still script:
+  with a 30 ms task 70 ms into each animation, Chromium's compositor gaps over 25 ms went from 21 to 10 for the morph and from
+  13 to 9 for page switches, the longest from 76 and 56 ms to 29 and 31 ms.
+- WebKitGTK's GL renderers under Xvfb run on llvmpipe (software GL at 3600x2250): their frame times (10 to 20 fps) are for
+  comparing builds only, and the worker's commits cost there what they save elsewhere. Real GPUs are not measured here.
+
 ## What it needs
 
 - `/usr/bin/python3.12` with the system PyGObject and `gir1.2-webkit2-4.1` (`gi` is built for the distribution's Python,

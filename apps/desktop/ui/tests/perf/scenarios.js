@@ -182,6 +182,11 @@
   };
   /* the same motion with the main thread loaded: a 30 ms task every 200 ms (P.loadMs, P.loadEvery) */
   for (const n of ['dock-morph', 'dock-pages', 'tab-switch']) S[n + '-load'] = { label: S[n].label + ', under a 30 ms task every 200 ms', load: true, run: S[n].run };
+  /* the same motion with ONE 30 ms task landing 70 ms into each animation (the loaded scenarios' tasks land anywhere, starts included):
+     a compositor-driven animation is already running when the stall hits and keeps drawing; a script-driven one stops */
+  const stall = (ms) => { const t = nowMs(); while (nowMs() - t < ms) { /* a long task */ } };
+  S['dock-pages-stall'] = { label: 'dock: switch pages x8, a 30 ms task 70 ms into each', run: async () => { const d = dock(); for (let k = 0; k < 2; k++) for (const p of ['run', 'wait', 'sched', 'bots']) { d.goPage(p); await sleep(70); stall(30); await sleep(560); } } };
+  S['dock-morph-stall'] = { label: 'dock: expand, collapse, minimise, restore x3, a 30 ms task 70 ms into each', run: async () => { const d = dock(); for (let i = 0; i < 3; i++) for (const m of ['expanded', 'normal', 'minimal', 'normal']) { d.setMode(m); await sleep(70); stall(30); await sleep(630); } } };
   P.run = async (name) => { await P.reset(); const sc = S[name]; if (!sc) throw new Error('no scenario ' + name); P.loadOn = !!sc.load; const r = await P.record(sc.run); P.loadOn = false; r.name = name; return r; };
   P.names = () => Object.keys(S);
   P.info = () => {

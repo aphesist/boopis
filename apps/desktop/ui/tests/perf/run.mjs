@@ -21,7 +21,7 @@ if (opt('help', false)) {
                                 webkit: WebKitGTK's default (GL compositing; llvmpipe under Xvfb); chromium: Playwright's Chromium
                                 (default: webkit-cpu,webkit,chromium; also webkit-shm = WEBKIT_DMABUF_RENDERER_FORCE_SHM=1,
                                 webkit-nocomp = WEBKIT_DISABLE_COMPOSITING_MODE=1)
-  --scenarios a,b               ${'idle,idle-bots,dock-morph,dock-magnify,dock-pages,dock-keys,dock-session,create-bot,tab-switch,resize'} (default: all but idle-bots), and dock-morph-load, dock-pages-load, tab-switch-load: the same with a 30 ms task every 200 ms
+  --scenarios a,b               ${'idle,idle-bots,dock-morph,dock-magnify,dock-pages,dock-keys,dock-session,create-bot,tab-switch,resize'} (default: all but idle-bots), and dock-morph-load, dock-pages-load, tab-switch-load: the same with a 30 ms task every 200 ms; dock-morph-stall, dock-pages-stall: one 30 ms task 70 ms into each animation
   --variants baseline,orbs-static  one candidate cause off at a time (${Object.keys(VARIANTS).join(', ')})
   --repeat N                    runs per cell; the median of each statistic is reported (default 1)
   --scale 2                     device pixel ratio: GDK_SCALE for WebKitGTK, deviceScaleFactor for Chromium (default 2, the owner's laptop)
@@ -121,10 +121,10 @@ async function chromiumOnce(browser, variant, names) {
     const m0 = await metrics();
     /* compositor frames actually drawn (viz's DrawAndSwap), for the loaded scenarios: a main thread stuck in a long task cannot
        stop a compositor-driven animation from drawing, and cannot help a script-driven one */
-    const tracing = /-load$/.test(n);
+    const tracing = /-(load|stall)$/.test(n);
     const events = [];
     if (tracing) { cdp.on('Tracing.dataCollected', (e) => events.push(...e.value)); await cdp.send('Tracing.start', { transferMode: 'ReportEvents', traceConfig: { includedCategories: ['viz', 'cc'] } }); }
-    const r = await page.evaluate((x) => window.__perf.record(window.__perf.scenarios[x].run).then((q) => Object.assign(q, { name: x })), n);
+    const r = await page.evaluate((x) => { const sc = window.__perf.scenarios[x]; window.__perf.loadOn = !!sc.load; return window.__perf.record(sc.run).then((q) => { window.__perf.loadOn = false; return Object.assign(q, { name: x }); }); }, n);
     const m1 = await metrics();
     if (tracing) {
       const done = new Promise((res) => cdp.once('Tracing.tracingComplete', res));
