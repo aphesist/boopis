@@ -205,3 +205,72 @@ export async function liveForms(env) {
   });
   await s.close();
 }
+
+/* ───────── Hermes's string prompts (secret, sudo), over a real gateway's recorded frames ───────── */
+export async function liveRequests(env) {
+  const s = scenario(env);
+  const TYPED = 'smoke-typed-0123456789abcdef';
+  await s.safe('forms-requests', async () => {
+    const page = await s.fresh({ q: 'provider=live-replay&frames=requests', settle: 1500, w: 1440, h: 1000 });
+    const say = async (text) => {
+      const composer = await page.$('.ss-composer textarea, .ss-composer [contenteditable="true"], .ss-composer [role="textbox"]');
+      await composer.click();
+      await page.keyboard.type(text);
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(1500);
+    };
+    const cards = () => page.evaluate(() => ({
+      inline: [...document.querySelectorAll('.ss-forms hx-card[data-kind="form"]')].map((c) => ({ title: c.data.title, kind: c.data.kind, state: c.state, origin: c.querySelector('.cd-by')?.dataset.origin })),
+      dock: __hx.dock().state.waits,
+      waits: __hx.data().waits.snapshot().map((w) => w.kind + ':' + w.data.kind)
+    }));
+
+    /* a skill whose token is missing: Hermes's `secret` request */
+    await say('use the skill');
+    let c = await cards();
+    check('forms-requests', 'a secret request is a credential form, inline in the turn that raised it, from Hermes', c.inline.length === 1 && c.inline[0].kind === 'credential' && c.inline[0].title === 'Hermes needs BOOPIS_TEST_TOKEN' && c.inline[0].origin === 'hermes', c);
+    check('forms-requests', 'and in the dock\'s queue', c.dock === 1 && c.waits.join() === 'form:credential', c);
+    const card = page.locator('.ss-forms hx-card').first();
+    const field = await card.locator('input[data-secret]').evaluate((i) => ({ type: i.type, autocomplete: i.autocomplete }));
+    check('forms-requests', 'the value is typed in a masked field', field.type === 'password' && field.autocomplete === 'off', field);
+    check('forms-requests', 'it says where the value goes: Hermes keeps it, the model never sees it', /never sees it/.test(await card.innerText()) && /Send to Hermes/.test(await card.innerText()));
+    await card.locator('input[data-secret]').fill(TYPED);
+    await card.locator('[data-action="submit"]').click();
+    await page.waitForTimeout(800);
+    const k = await page.evaluate((typed) => ({
+      responses: window.__hxReplay.responses,
+      calls: JSON.stringify(window.__hxReplay.requests).includes(typed),
+      keychain: window.__hxReplaySecrets.stored.size,
+      dom: document.documentElement.outerHTML.includes(typed) || [...document.querySelectorAll('input,textarea')].some((i) => i.value.includes(typed)),
+      states: [...document.querySelectorAll('.ss-forms hx-card')].map((x) => x.state),
+      receipt: document.querySelector('.ss-forms hx-card')?.innerText ?? ''
+    }), TYPED);
+    check('forms-requests', 'the value goes in the response frame of the request\'s own id', k.responses.length === 1 && String(k.responses[0].id).startsWith('srq-') && k.responses[0].result.value === TYPED, k.responses);
+    check('forms-requests', 'and in no call to the gateway, not the keychain, and not the page, before or after the answer', !k.calls && k.keychain === 0 && !k.dom, { calls: k.calls, keychain: k.keychain, dom: k.dom });
+    check('forms-requests', 'the card becomes a receipt, and the dock drops it', k.states.every((x) => x === 'done') && /Sent to Hermes/.test(k.receipt), k);
+    await page.waitForTimeout(1300);
+    check('forms-requests', 'the dock\'s queue is empty', (await cards()).dock === 0);
+
+    /* a sudo request the gateway withdraws when the turn is interrupted */
+    await say('run sudo');
+    c = await cards();
+    const sudo = page.locator('.ss-forms hx-card').filter({ hasText: 'sudo password' }).last();
+    check('forms-requests', 'a sudo request is a credential form with the command it is for, not held (a password is typed on purpose)', c.dock === 1 && /sudo true # never/.test(await sudo.innerText()) && (await sudo.locator('.ui-hold').count()) === 0, c);
+    await page.evaluate(() => { const sid = window.__hxReplay.requests.find((r) => r.method === 'prompt.submit').params.session_id; __hx.data().sessions.stop(sid); });
+    await page.waitForTimeout(1500);
+    c = await cards();
+    const closed = await page.evaluate(() => [...document.querySelectorAll('.ss-forms hx-card')].map((x) => x.state));
+    check('forms-requests', 'the gateway withdrawing it (request.cancel) closes the form everywhere, with nothing sent', c.dock === 0 && closed.at(-1) === 'cancelled' && (await page.evaluate(() => window.__hxReplay.responses.length)) === 1, { dock: c.dock, closed });
+
+    /* the next sudo request is answered */
+    await say('run sudo again');
+    const sudo2 = page.locator('.ss-forms hx-card').filter({ hasText: 'sudo password' }).last();
+    await sudo2.locator('input[data-secret]').fill(TYPED + '-sudo');
+    await sudo2.locator('[data-action="submit"]').click();
+    await page.waitForTimeout(800);
+    const r2 = await page.evaluate((typed) => ({ last: window.__hxReplay.responses.at(-1), calls: JSON.stringify(window.__hxReplay.requests).includes(typed), dom: document.documentElement.outerHTML.includes(typed) }), TYPED + '-sudo');
+    check('forms-requests', 'a sudo password is answered the same way, and kept nowhere', r2.last.result.value === TYPED + '-sudo' && !r2.calls && !r2.dom, { last: r2.last.id, calls: r2.calls, dom: r2.dom });
+    check('forms-requests', 'nothing in the run logged a console error', page.errors.length === 0, page.errors);
+  });
+  await s.close();
+}

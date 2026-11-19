@@ -8,13 +8,18 @@ import type { Connected, HostBridge } from './bridge';
 import type { SecretsBridge } from './secrets';
 
 export interface RecordedFrame { dir: 'in' | 'out'; frame: Record<string, unknown> }
-const WORKS = new Set(['prompt.submit', 'plugin.boopis.blank.fill', 'plugin.boopis.form.submit', 'plugin.boopis.form.cancel', 'plugin.boopis.mod.press', 'plugin.boopis.mod.input', 'plugin.boopis.mod.select', 'plugin.boopis.mod.props']);
+const WORKS = new Set(['prompt.submit', 'session.interrupt', 'plugin.boopis.blank.fill', 'plugin.boopis.form.submit', 'plugin.boopis.form.cancel', 'plugin.boopis.mod.press', 'plugin.boopis.mod.input', 'plugin.boopis.mod.select', 'plugin.boopis.mod.props']);
+
+/** a frame the gateway starts: an event, or a request of its own for the UI to answer (it has a method and an id) */
+const fromGateway = (f: Record<string, unknown>): boolean => f['method'] === 'event' || (typeof f['method'] === 'string' && f['id'] !== undefined);
 
 export class ReplayHost implements HostBridge {
   private onFrame: (f: unknown) => void = () => undefined;
   private readonly used = new Map<string, number>();
   /** every request the UI sent, in order (for assertions) */
   readonly requests: { method: string; params: unknown }[] = [];
+  /** every answer the UI gave to a request of the gateway (a server request: `secret`, `sudo`, ...), in order */
+  readonly responses: { id: string | number; result?: unknown; error?: unknown }[] = [];
 
   constructor(private readonly frames: readonly RecordedFrame[]) {}
 
@@ -26,7 +31,13 @@ export class ReplayHost implements HostBridge {
   disconnect(): Promise<void> { return Promise.resolve(); }
 
   send(_connectionId: number, frame: unknown): Promise<void> {
-    const f = frame as { id?: number; method?: string; params?: unknown };
+    const f = frame as { id?: number | string; method?: string; params?: unknown; result?: unknown; error?: unknown };
+    /* the UI answers a request of the gateway: what the recording shows after that answer (the gateway withdraws the request, the turn goes on) plays now */
+    if (f.method === undefined && f.id !== undefined) {
+      this.responses.push({ id: f.id, ...(f.result !== undefined ? { result: f.result } : {}), ...(f.error !== undefined ? { error: f.error } : {}) });
+      queueMicrotask(() => { this.afterAnswer(f.id as string | number); });
+      return Promise.resolve();
+    }
     if (f.method === undefined || f.id === undefined) return Promise.resolve();
     this.requests.push({ method: f.method, params: f.params });
     queueMicrotask(() => { this.answer(f.id as number, f.method as string, (f.params as { session_id?: unknown } | undefined)?.session_id, f.params as { form_id?: unknown } | undefined); });
@@ -40,6 +51,16 @@ export class ReplayHost implements HostBridge {
     this.onFrame({ jsonrpc: '2.0', method: 'event', params: { type, session_id, payload } });
   }
 
+  /** the frames the gateway sent after the recording's answer to its request of that id, up to the next thing the client did */
+  private afterAnswer(id: string | number): void {
+    const at = this.frames.findIndex((r) => r.dir === 'out' && r.frame['id'] === id && r.frame['method'] === undefined);
+    if (at < 0) return;
+    for (let i = at + 1; i < this.frames.length; i++) {
+      const r = this.frames[i] as RecordedFrame;
+      if (r.dir === 'out') break;
+      if (fromGateway(r.frame)) this.onFrame(r.frame);
+    }
+  }
   private methodOfResponse(i: number): string | undefined {
     const id = this.frames[i]?.frame['id'];
     return this.frames.find((r) => r.dir === 'out' && r.frame['id'] === id)?.frame['method'] as string | undefined;
@@ -64,13 +85,13 @@ export class ReplayHost implements HostBridge {
     const resIdx = this.frames.findIndex((r) => r.dir === 'in' && r.frame['id'] === reqId && ('result' in r.frame || 'error' in r.frame));
     const res = this.frames[resIdx]?.frame;
     /* events the gateway sent while it handled the request come before its answer (the plugin announces `blank.filled` first) */
-    if (WORKS.has(method) && resIdx > pick.i) for (let i = pick.i + 1; i < resIdx; i++) { const r = this.frames[i] as RecordedFrame; if (r.dir === 'in' && r.frame['method'] === 'event') this.onFrame(r.frame); }
+    if (WORKS.has(method) && resIdx > pick.i) for (let i = pick.i + 1; i < resIdx; i++) { const r = this.frames[i] as RecordedFrame; if (r.dir === 'in' && fromGateway(r.frame)) this.onFrame(r.frame); }
     if (res) this.onFrame({ ...res, id });
     if (!WORKS.has(method) || resIdx < 0) return;
     for (let i = resIdx + 1; i < this.frames.length; i++) {
       const r = this.frames[i] as RecordedFrame;
       if (r.dir === 'out') break;
-      if (r.frame['method'] === 'event') this.onFrame(r.frame);
+      if (fromGateway(r.frame)) this.onFrame(r.frame);
     }
   }
 }

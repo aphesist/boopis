@@ -120,6 +120,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     details.model(c.uiId).todos = todosFromResume(res);
     c.events.emit({ type: 'reset' });
     details.onBound(c.uiId);
+    formsHost.restore(res.session_id, (res as { open_requests?: unknown }).open_requests);   /* Hermes's string prompts still waiting */
     void formsHost.reload(res.session_id, c.model);   /* the forms still open when the session was last seen */
   }
   async function ensureLive(c: Convo): Promise<string> {
@@ -310,6 +311,8 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
 
   /* ───────── the link ───────── */
   client.onEvent(onEvent);
+  /* the gateway's own requests: the string prompts (secret, sudo, vault) are forms; anything else is refused, as before */
+  client.onServerRequest((r) => formsHost.serverRequest(r));
   client.onState((s) => {
     if (s.phase === 'ready' && s.reconnected) { for (const c of convos.values()) if (c.gwId) { void formsHost.reload(c.gwId, c.model); void modsHost.attach(c.uiId); } refreshList().catch((e: unknown) => { log.warn('could not refresh after reconnecting', e); }); details.onLinkReady(); }
   });

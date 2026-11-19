@@ -7,7 +7,7 @@ import { check, errorsAll, results, scenario, start } from './harness.mjs';
 import { keyWalk } from './keys.mjs';
 import { ownerDecisions } from './owner.mjs';
 import { liveSessions } from './live.mjs';
-import { formCards, liveForms } from './forms.mjs';
+import { formCards, liveForms, liveRequests } from './forms.mjs';
 import { corners } from './corners.mjs';
 import { mods } from './mods.mjs';
 
@@ -45,7 +45,7 @@ if (want('owner')) await ownerDecisions(env);
 if (want('live')) await liveSessions(env);
 if (want('corners')) await corners(env);
 if (want('mods')) await mods(env, AXE);
-if (want('forms')) { await formCards(env); await liveForms(env); }
+if (want('forms')) { await formCards(env); await liveForms(env); await liveRequests(env); }
 
 if (want('axe')) {
   const s = scenario(env);

@@ -156,6 +156,8 @@ export interface FormSpec {
   swatches?: ReadonlyArray<readonly [label: string, hex: string]>; preview?: boolean;
   /** the words of a card the UI answers itself (a theme card's Reject and Later) */
   cancelledText?: string; deferredText?: string;
+  /** what the card says while the answer is being sent (the kind's own words when absent) */
+  busyText?: string;
 }
 /** what a submitted form carries: the non-secret values, and the secret fields' values for the host's keychain alone */
 export interface FormOutcome { values: Readonly<Record<string, unknown>>; secrets: Readonly<Record<string, string>> }

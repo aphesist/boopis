@@ -1,0 +1,4279 @@
+[
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "gateway.ready",
+    "payload": {
+     "change_events": true,
+     "heartbeat": true,
+     "replay_epoch": "7e115c45325d469295b9ed444e48095e",
+     "session_authority": true
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 1,
+   "method": "client.capabilities",
+   "params": {
+    "server_requests": true
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 1,
+   "result": {
+    "server_requests": [
+     "approval",
+     "clarify",
+     "display.install.sudo",
+     "preview.act",
+     "preview.read",
+     "secret",
+     "setup_beat",
+     "sudo",
+     "terminal.read",
+     "theme.apply",
+     "theme.pick",
+     "tour",
+     "vault.code",
+     "vault.save_login",
+     "vault.unlock_prompt",
+     "window.read"
+    ],
+    "declines_not_shown": true,
+    "canonical_clarify_batch": true
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 2,
+   "method": "runtime.describe",
+   "params": {}
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 2,
+   "result": {
+    "instance_id": "4daf8c9d1012439883befbbb43f6623a",
+    "profile_id": "/work/hermes-home",
+    "authority_epoch": 1,
+    "capabilities": [
+     "durable-admission-v1",
+     "event-replay-v1",
+     "local-cli-create-v1",
+     "acp-editor-policy-v1",
+     "acp-session-mcp-v1",
+     "clarify-batch-v1",
+     "plugin-rpc-v1",
+     "session-client-v1",
+     "session-transcript-v1",
+     "session-list-picker-v1",
+     "session-list-cursor-v1"
+    ],
+    "session_create": {
+     "sources": [
+      "acp",
+      "cli",
+      "gui",
+      "oneshot",
+      "tool",
+      "tui"
+     ],
+     "parameters": [
+      "accept_hooks",
+      "api_key",
+      "base_url",
+      "checkpoints",
+      "client",
+      "client_env",
+      "cwd",
+      "cwd_explicit",
+      "editor",
+      "follow_profile_config",
+      "ignore_rules",
+      "ignore_user_config",
+      "max_turns",
+      "model",
+      "pass_session_id",
+      "provider",
+      "reasoning",
+      "request_id",
+      "row_cwd",
+      "run_budget",
+      "safe_mode",
+      "service_tier",
+      "skills",
+      "source",
+      "title",
+      "toolsets",
+      "verbose",
+      "yolo"
+     ]
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 3,
+   "method": "session.create",
+   "params": {
+    "source": "gui",
+    "cwd": "/work/proj",
+    "request_id": "req-1795085154544812324",
+    "model": "fake-a",
+    "provider": "main",
+    "toolsets": [
+     "skills",
+     "terminal"
+    ],
+    "client": {
+     "name": "boopis",
+     "version": "0"
+    }
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "notification.show",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "text": "\u26a0 Low disk (1.1 GB free) \u00b7 /autoprune on|off|later",
+     "detail": "Low disk space: 1.1 GB free of 252.0 GB. Your session history (state.db) uses 0 MB.\nAuto-prune is off. Turning it on deletes ended sessions inactive for more than 90 days, once a day (pinned and open sessions are kept).\nPruning will not help right now: none of your 1 session is older than 90 days. Something else is filling this disk.\n/autoprune on to enable, /autoprune off to keep everything (never asked again), /autoprune later to be reminded in a week.",
+     "level": "warn",
+     "kind": "sticky",
+     "ttl_ms": null,
+     "key": "sessions.auto_prune",
+     "id": "sessions.auto_prune"
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 1
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 3,
+   "result": {
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "stored_session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "messages": [],
+    "message_count": 0,
+    "todo_state": null,
+    "running": false,
+    "authority_epoch": 1,
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "last_sequence": 0,
+    "subscription_id": "7df138c5df384b20b31bdbdea7a04b8d",
+    "revision": 0,
+    "execution_generation": 0,
+    "pending": [],
+    "prompts": [],
+    "info": {
+     "tools": {
+      "terminal": [
+       "process_manage",
+       "terminal"
+      ],
+      "skills": "(trimmed)"
+     },
+     "skills": "(trimmed)",
+     "mcp_servers": [],
+     "version": "unknown",
+     "release_date": "2026.9.24",
+     "update_behind": null,
+     "update_command": "hermes update",
+     "branch": "master",
+     "project": null,
+     "provider": "custom:main",
+     "enabled_toolsets": [
+      "skills",
+      "terminal"
+     ],
+     "tool_availability": {
+      "unavailable_toolsets": [],
+      "lazy_tools": [],
+      "disabled_tools": []
+     },
+     "source": "gui",
+     "model": "fake-a",
+     "lazy": true,
+     "profile_id": "/work/hermes-home",
+     "desktop_protocol": "hermes-gateway-v1",
+     "profile_name": "default",
+     "cwd": "/work/proj",
+     "reasoning_effort": "",
+     "reasoning_effort_wire": "",
+     "service_tier": "",
+     "fast": false,
+     "launch_request": {
+      "client": {
+       "name": "boopis",
+       "version": "0"
+      },
+      "cwd": "/work/proj",
+      "model": "fake-a",
+      "provider": "main",
+      "source": "gui",
+      "toolsets": [
+       "skills",
+       "terminal"
+      ]
+     },
+     "client": {
+      "name": "boopis",
+      "version": "0"
+     },
+     "title": null,
+     "started_at": 1795085154.558125,
+     "last_active_at": 1795085154.558125,
+     "yolo": false,
+     "archived": false,
+     "api_mode": null,
+     "tool_count": 5,
+     "credential_hint": null,
+     "usage": {
+      "model": "fake-a",
+      "input": 0,
+      "output": 0,
+      "reasoning": 0,
+      "prompt": 0,
+      "completion": 0,
+      "total": 0,
+      "calls": 0
+     }
+    },
+    "pending_connection": null,
+    "open_requests": []
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 4,
+   "method": "plugin.boopis.mode.set",
+   "params": {
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "mode": "ungoverned"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 4,
+   "result": {}
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 5,
+   "method": "prompt.submit",
+   "params": {
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "text": "@@call skill_view {\"name\": \"needs-token\"}@@ @@reply The skill is set up.@@",
+    "submission_id": "sub-1795085154933802785"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 5,
+   "result": {
+    "admission_id": "c85c5037a7224781a6dd6c6f837113b0",
+    "ref": {
+     "profile_id": "/work/hermes-home",
+     "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939"
+    },
+    "sequence": 1,
+    "status": "queued",
+    "outcome": null,
+    "authority_epoch": 1,
+    "execution_generation": null
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "session.info",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "stored_session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+     "pending": [
+      {
+       "admission_id": "c85c5037a7224781a6dd6c6f837113b0",
+       "ref": {
+        "profile_id": "/work/hermes-home",
+        "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939"
+       },
+       "sequence": 1,
+       "status": "queued",
+       "outcome": null,
+       "authority_epoch": 1,
+       "execution_generation": null,
+       "input_id": "sub-1795085154933802785",
+       "text": "@@call skill_view {\"name\": \"needs-token\"}@@ @@reply The skill is set up.@@",
+       "controls": [
+        "steer",
+        "replace"
+       ],
+       "steering": false
+      }
+     ],
+     "authority_epoch": 1,
+     "desktop_protocol": "hermes-gateway-v1",
+     "running": false,
+     "execution_generation": 0,
+     "revision": 0
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 2
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "c85c5037a7224781a6dd6c6f837113b0",
+    "type": "message.start",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {},
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 3
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "c85c5037a7224781a6dd6c6f837113b0",
+    "type": "session.info",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "stored_session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+     "pending": [
+      {
+       "admission_id": "c85c5037a7224781a6dd6c6f837113b0",
+       "ref": {
+        "profile_id": "/work/hermes-home",
+        "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939"
+       },
+       "sequence": 1,
+       "status": "started",
+       "outcome": null,
+       "authority_epoch": 1,
+       "execution_generation": 1,
+       "input_id": "sub-1795085154933802785",
+       "text": "@@call skill_view {\"name\": \"needs-token\"}@@ @@reply The skill is set up.@@",
+       "controls": [],
+       "steering": false
+      }
+     ],
+     "authority_epoch": 1,
+     "desktop_protocol": "hermes-gateway-v1",
+     "running": true,
+     "execution_generation": 1,
+     "revision": 0
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 4
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "c85c5037a7224781a6dd6c6f837113b0",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "actor": "plugin",
+     "hash": "b1591a8d747d1f77221d79c5a92d324d242f9e0fb452b61ca277b57eaeb22ab7",
+     "payload": {
+      "cwd": "/work/proj",
+      "hermes_version": "unknown",
+      "mode": "ungoverned",
+      "plugin_version": "0.1.0",
+      "price_table": "settings-44136fa355b3",
+      "profile": "default",
+      "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939"
+     },
+     "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 0,
+     "ts": "2026-11-19T10:45:55.779Z",
+     "type": "session.opened"
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 5
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "c85c5037a7224781a6dd6c6f837113b0",
+    "type": "session.info",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "source": "gui",
+     "model": "fake-a",
+     "lazy": false,
+     "profile_id": "/work/hermes-home",
+     "desktop_protocol": "hermes-gateway-v1",
+     "profile_name": "default",
+     "cwd": "/work/proj",
+     "reasoning_effort": "",
+     "reasoning_effort_wire": "",
+     "service_tier": "",
+     "fast": false,
+     "launch_request": {
+      "client": {
+       "name": "boopis",
+       "version": "0"
+      },
+      "cwd": "/work/proj",
+      "model": "fake-a",
+      "provider": "main",
+      "source": "gui",
+      "toolsets": [
+       "skills",
+       "terminal"
+      ]
+     },
+     "client": {
+      "name": "boopis",
+      "version": "0"
+     },
+     "title": "@@call skill_view {\"name\": \"needs-token\"}@@\u2026",
+     "started_at": 1795085154.558125,
+     "last_active_at": 1795085155.6947436,
+     "yolo": false,
+     "archived": false,
+     "api_mode": "chat_completions",
+     "tool_count": 5,
+     "credential_hint": "***"
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 6
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "sessions.changed",
+    "session_id": "",
+    "payload": {}
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "c85c5037a7224781a6dd6c6f837113b0",
+    "type": "tool.generating",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "name": "skill_view"
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 10
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "c85c5037a7224781a6dd6c6f837113b0",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "bd79169d0c85b6d17dd6212c342705e066699d393b1d7b5eb09d88363b48c28c",
+     "payload": {
+      "cache_read_tokens": 0,
+      "cache_write_1h_tokens": 0,
+      "cache_write_5m_tokens": 0,
+      "input_tokens": 100,
+      "latency_ms": 595,
+      "model": "fake-a",
+      "output_tokens": 10,
+      "provider": "custom",
+      "request_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:83159e8a:api:1",
+      "role": "orchestrator",
+      "usage_schema": 2
+     },
+     "prev_hash": "b1591a8d747d1f77221d79c5a92d324d242f9e0fb452b61ca277b57eaeb22ab7",
+     "seq": 1,
+     "ts": "2026-11-19T10:45:56.481Z",
+     "type": "usage.recorded"
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 12
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "c85c5037a7224781a6dd6c6f837113b0",
+    "type": "message.delta",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "text": null
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 13
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "c85c5037a7224781a6dd6c6f837113b0",
+    "type": "tool.start",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "tool_id": "call_eda3680292",
+     "name": "skill_view",
+     "context": "needs-token",
+     "tool_call_id": "call_eda3680292",
+     "tool_name": "skill_view",
+     "args": {
+      "name": "needs-token"
+     }
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 14
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": "srq-05f9de7d5f0e",
+   "method": "secret",
+   "params": {
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "env_var": "BOOPIS_TEST_TOKEN",
+    "prompt": "Enter the test token",
+    "metadata": {
+     "skill_name": "needs-token",
+     "help": "Any value will do for the recording",
+     "required_for": "the recording"
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": "srq-05f9de7d5f0e",
+   "result": {
+    "value": "(not recorded)"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "c85c5037a7224781a6dd6c6f837113b0",
+    "type": "request.cancel",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "id": "srq-05f9de7d5f0e",
+     "method": "secret",
+     "reason": "resolved"
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 15
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "c85c5037a7224781a6dd6c6f837113b0",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "b4a6f74fc74385f4b40f8c580c7c6f1d220281a3c8f91155f3c0b8fb59aa7014",
+     "payload": {
+      "args_sha256": "abf840f41fe555643d4ba39f38cfd4f1ef14c8dea32a0a7ad9027ef2e3953f8a",
+      "duration_ms": 42,
+      "status": "ok",
+      "task_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+      "tool": "skill_view",
+      "tool_call_id": "call_eda3680292"
+     },
+     "prev_hash": "bd79169d0c85b6d17dd6212c342705e066699d393b1d7b5eb09d88363b48c28c",
+     "seq": 2,
+     "ts": "2026-11-19T10:45:56.535Z",
+     "type": "tool.called"
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 16
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "c85c5037a7224781a6dd6c6f837113b0",
+    "type": "tool.complete",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "tool_id": "call_eda3680292",
+     "name": "skill_view",
+     "context": "needs-token",
+     "tool_call_id": "call_eda3680292",
+     "tool_name": "skill_view",
+     "args": {
+      "name": "needs-token"
+     },
+     "is_error": false,
+     "result": "{\"success\": true, \"name\": \"needs-token\", \"description\": \"A skill that cannot run without a token\", \"tags\": [], \"related_skills\": [], \"content\": \"---\\nname: needs-token\\ndescription: A skill that cannot run without a token\\nrequired_environment_variables:\\n  - name: BOOPIS_TEST_TOKEN\\n    prompt: Enter the test token\\n    help: Any value will do for the recording\\n    required_for: the recording\\n---\\n# needs-token\\n\\nSay that the token is set.\\n\", \"path\": \"needs-token/SKILL.md\", \"skill_dir\": \"/work/hermes-home/skills/needs-token\", \"linked_files\": null, \"usage_hint\": null, \"required_environment_variables\": [{\"name\": \"BOOPIS_TEST_TOKEN\", \"prompt\": \"Enter the test token\", \"help\": \"Any value will do for the recording\", \"required_for\": \"the recording\"}], \"required_commands\": [], \"missing_required_environment_variables\": [], \"missing_credential_files\": [], \"missing_required_commands\": [], \"setup_needed\": false, \"setup_skipped\": false, \"readiness_status\": \"available\", \"setup_help\": \"Any value will do for the recording\"}",
+     "duration_s": 0.04356935599935241,
+     "inline_diff": null,
+     "image_path": null
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 17
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "c85c5037a7224781a6dd6c6f837113b0",
+    "type": "session.usage",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "usage": {
+      "model": "fake-a",
+      "input": 100,
+      "output": 10,
+      "reasoning": 0,
+      "prompt": 100,
+      "completion": 10,
+      "total": 110,
+      "calls": 1,
+      "context_used": 100,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "avg_latency_s": 0.6,
+      "avg_tps": 16.8,
+      "active_subagents": 0
+     },
+     "input_tokens": 100,
+     "output_tokens": 10,
+     "cache_read_tokens": 0,
+     "cache_write_tokens": 0,
+     "prompt_tokens": 100,
+     "completion_tokens": 10,
+     "total_tokens": 110,
+     "reasoning_tokens": 0,
+     "api_calls": 1,
+     "last_prompt_tokens": 100,
+     "context_tokens": 409,
+     "context_length": 200000,
+     "config_context_length": 200000,
+     "context_source": "provider_usage",
+     "compression_count": 0,
+     "avg_latency_s": 0.6,
+     "tokens_per_s": 16.8,
+     "last_turn_tokens": 10,
+     "rate_limit": null,
+     "active_subagents": 0,
+     "model": "fake-a",
+     "provider": "custom",
+     "fallback_model": null
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 19
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "c85c5037a7224781a6dd6c6f837113b0",
+    "type": "message.delta",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "text": "\n\nThe skill is",
+     "turn_id": "927980bcfe7047a6a246afed3928d500",
+     "segment": 0,
+     "offset": 0
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 22
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "c85c5037a7224781a6dd6c6f837113b0",
+    "type": "message.delta",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "text": " set up.",
+     "turn_id": "927980bcfe7047a6a246afed3928d500",
+     "segment": 0,
+     "offset": 14
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 23
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "c85c5037a7224781a6dd6c6f837113b0",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "17b6b8ff03278ea3d8d8305a3c0552e821485e9452d4e8ea3933cee26c5c8a86",
+     "payload": {
+      "cache_read_tokens": 0,
+      "cache_write_1h_tokens": 0,
+      "cache_write_5m_tokens": 0,
+      "input_tokens": 100,
+      "latency_ms": 13,
+      "model": "fake-a",
+      "output_tokens": 10,
+      "provider": "custom",
+      "request_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:83159e8a:api:2",
+      "role": "orchestrator",
+      "usage_schema": 2
+     },
+     "prev_hash": "b4a6f74fc74385f4b40f8c580c7c6f1d220281a3c8f91155f3c0b8fb59aa7014",
+     "seq": 3,
+     "ts": "2026-11-19T10:45:56.562Z",
+     "type": "usage.recorded"
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 25
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "c85c5037a7224781a6dd6c6f837113b0",
+    "type": "session.usage",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "usage": {
+      "model": "fake-a",
+      "input": 200,
+      "output": 20,
+      "reasoning": 0,
+      "prompt": 200,
+      "completion": 20,
+      "total": 220,
+      "calls": 2,
+      "context_used": 100,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "avg_latency_s": 0.3,
+      "avg_tps": 32.9,
+      "active_subagents": 0
+     },
+     "input_tokens": 200,
+     "output_tokens": 20,
+     "cache_read_tokens": 0,
+     "cache_write_tokens": 0,
+     "prompt_tokens": 200,
+     "completion_tokens": 20,
+     "total_tokens": 220,
+     "reasoning_tokens": 0,
+     "api_calls": 2,
+     "last_prompt_tokens": 100,
+     "context_tokens": 440,
+     "context_length": 200000,
+     "config_context_length": 200000,
+     "context_source": "provider_usage",
+     "compression_count": 0,
+     "avg_latency_s": 0.3,
+     "tokens_per_s": 32.89,
+     "last_turn_tokens": 20,
+     "rate_limit": null,
+     "active_subagents": 0,
+     "model": "fake-a",
+     "provider": "custom",
+     "fallback_model": null
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 26
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "c85c5037a7224781a6dd6c6f837113b0",
+    "type": "session.info",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "provider": "custom:main",
+     "tools": {
+      "terminal": [
+       "process_manage",
+       "terminal"
+      ],
+      "skills": "(trimmed)"
+     },
+     "system_prompt": "(trimmed)",
+     "context_length": 200000,
+     "source": "gui",
+     "model": "fake-a",
+     "lazy": false,
+     "profile_id": "/work/hermes-home",
+     "desktop_protocol": "hermes-gateway-v1",
+     "profile_name": "default",
+     "cwd": "/work/proj",
+     "reasoning_effort": "",
+     "reasoning_effort_wire": "",
+     "service_tier": "",
+     "fast": false,
+     "launch_request": {
+      "client": {
+       "name": "boopis",
+       "version": "0"
+      },
+      "cwd": "/work/proj",
+      "model": "fake-a",
+      "provider": "main",
+      "source": "gui",
+      "toolsets": [
+       "skills",
+       "terminal"
+      ]
+     },
+     "client": {
+      "name": "boopis",
+      "version": "0"
+     },
+     "title": "@@call skill_view {\"name\": \"needs-token\"}@@\u2026",
+     "started_at": 1795085154.558125,
+     "last_active_at": 1795085155.6947436,
+     "yolo": false,
+     "archived": false,
+     "api_mode": "chat_completions",
+     "tool_count": 5,
+     "credential_hint": "***"
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 27
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "c85c5037a7224781a6dd6c6f837113b0",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "actor": "plugin",
+     "hash": "a2c41906337df79309e2a04208b2e2a1327a3dec9643c57a98c25ef305da2e05",
+     "payload": {
+      "aux_task": "title_generation",
+      "cache_read_tokens": 0,
+      "cache_write_1h_tokens": 0,
+      "cache_write_5m_tokens": 0,
+      "input_tokens": 100,
+      "latency_ms": 8,
+      "model": "fake-a",
+      "output_tokens": 10,
+      "provider": "main",
+      "request_id": "aux-dc4887d496f44f52a810075bf3eaba5f",
+      "role": "auxiliary",
+      "usage_schema": 2
+     },
+     "prev_hash": "17b6b8ff03278ea3d8d8305a3c0552e821485e9452d4e8ea3933cee26c5c8a86",
+     "seq": 4,
+     "ts": "2026-11-19T10:45:56.596Z",
+     "type": "usage.recorded"
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 28
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "c85c5037a7224781a6dd6c6f837113b0",
+    "type": "message.complete",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "text": "The skill is set up.",
+     "content": "The skill is set up.",
+     "admission_id": "c85c5037a7224781a6dd6c6f837113b0",
+     "outcome": "completed",
+     "status": "complete",
+     "usage": {
+      "model": "fake-a",
+      "input": 200,
+      "output": 20,
+      "reasoning": 0,
+      "prompt": 200,
+      "completion": 20,
+      "total": 220,
+      "calls": 2,
+      "context_used": 100,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "avg_latency_s": 0.3,
+      "avg_tps": 32.9,
+      "active_subagents": 0
+     },
+     "persisted_turn": {
+      "row_ids": [
+       1,
+       2,
+       3,
+       4
+      ],
+      "complete": true,
+      "user_row_id": 1,
+      "user_row_ids": [
+       1
+      ],
+      "final_assistant_row_id": 4,
+      "submission_id": "sub-1795085154933802785"
+     }
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 29
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 6,
+   "method": "prompt.submit",
+   "params": {
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "text": "@@call terminal {\"command\": \"sudo true # never\"}@@ @@reply Stopped.@@",
+    "submission_id": "sub-1795085156644875210"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "c85c5037a7224781a6dd6c6f837113b0",
+    "type": "session.info",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "stored_session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+     "pending": [],
+     "authority_epoch": 1,
+     "desktop_protocol": "hermes-gateway-v1",
+     "running": false,
+     "execution_generation": 1,
+     "revision": 1
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 30
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 6,
+   "result": {
+    "admission_id": "c334b6fbd165485db2adbb9e59daf6f3",
+    "ref": {
+     "profile_id": "/work/hermes-home",
+     "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939"
+    },
+    "sequence": 2,
+    "status": "queued",
+    "outcome": null,
+    "authority_epoch": 1,
+    "execution_generation": null
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "session.info",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "stored_session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+     "pending": [
+      {
+       "admission_id": "c334b6fbd165485db2adbb9e59daf6f3",
+       "ref": {
+        "profile_id": "/work/hermes-home",
+        "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939"
+       },
+       "sequence": 2,
+       "status": "queued",
+       "outcome": null,
+       "authority_epoch": 1,
+       "execution_generation": null,
+       "input_id": "sub-1795085156644875210",
+       "text": "@@call terminal {\"command\": \"sudo true # never\"}@@ @@reply Stopped.@@",
+       "controls": [
+        "steer",
+        "replace"
+       ],
+       "steering": false
+      }
+     ],
+     "authority_epoch": 1,
+     "desktop_protocol": "hermes-gateway-v1",
+     "running": false,
+     "execution_generation": 1,
+     "revision": 1
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 31
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 2,
+    "admission_id": "c334b6fbd165485db2adbb9e59daf6f3",
+    "type": "message.start",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {},
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 32
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 2,
+    "admission_id": "c334b6fbd165485db2adbb9e59daf6f3",
+    "type": "session.info",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "stored_session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+     "pending": [
+      {
+       "admission_id": "c334b6fbd165485db2adbb9e59daf6f3",
+       "ref": {
+        "profile_id": "/work/hermes-home",
+        "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939"
+       },
+       "sequence": 2,
+       "status": "started",
+       "outcome": null,
+       "authority_epoch": 1,
+       "execution_generation": 2,
+       "input_id": "sub-1795085156644875210",
+       "text": "@@call terminal {\"command\": \"sudo true # never\"}@@ @@reply Stopped.@@",
+       "controls": [],
+       "steering": false
+      }
+     ],
+     "authority_epoch": 1,
+     "desktop_protocol": "hermes-gateway-v1",
+     "running": true,
+     "execution_generation": 2,
+     "revision": 1
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 33
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 2,
+    "admission_id": "c334b6fbd165485db2adbb9e59daf6f3",
+    "type": "tool.generating",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "name": "terminal"
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 37
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 2,
+    "admission_id": "c334b6fbd165485db2adbb9e59daf6f3",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "4825ef062f77c014e1aadc404c62d8e9021201f4db82a942a5eef8aaab73aa21",
+     "payload": {
+      "cache_read_tokens": 0,
+      "cache_write_1h_tokens": 0,
+      "cache_write_5m_tokens": 0,
+      "input_tokens": 100,
+      "latency_ms": 10,
+      "model": "fake-a",
+      "output_tokens": 10,
+      "provider": "custom",
+      "request_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:8713eea9:api:1",
+      "role": "orchestrator",
+      "usage_schema": 2
+     },
+     "prev_hash": "a2c41906337df79309e2a04208b2e2a1327a3dec9643c57a98c25ef305da2e05",
+     "seq": 5,
+     "ts": "2026-11-19T10:45:56.731Z",
+     "type": "usage.recorded"
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 39
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 2,
+    "admission_id": "c334b6fbd165485db2adbb9e59daf6f3",
+    "type": "message.delta",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "text": null
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 40
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 2,
+    "admission_id": "c334b6fbd165485db2adbb9e59daf6f3",
+    "type": "tool.start",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "tool_id": "call_a5bf05f3ac",
+     "name": "terminal",
+     "context": "sudo true # never",
+     "tool_call_id": "call_a5bf05f3ac",
+     "tool_name": "terminal",
+     "args": {
+      "command": "sudo true # never"
+     }
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 41
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": "srq-21a3e2f416db",
+   "method": "sudo",
+   "params": {
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "command": "sudo true # never"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 7,
+   "method": "session.interrupt",
+   "params": {
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "execution_generation": 2
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 7,
+   "result": {
+    "ref": {
+     "profile_id": "/work/hermes-home",
+     "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939"
+    },
+    "instance_id": "4daf8c9d1012439883befbbb43f6623a",
+    "authority_epoch": 1,
+    "revision": 1,
+    "execution_generation": 2,
+    "execution_state": "running"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 2,
+    "admission_id": "c334b6fbd165485db2adbb9e59daf6f3",
+    "type": "request.cancel",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "id": "srq-21a3e2f416db",
+     "method": "sudo",
+     "reason": "interrupted"
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 42
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "platforms.changed",
+    "session_id": "",
+    "payload": {}
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "skills.changed",
+    "session_id": "",
+    "payload": {}
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 2,
+    "admission_id": "c334b6fbd165485db2adbb9e59daf6f3",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "0828ae67cf85b56041838e57bce3a5df2221811b9fb0fe6ed039b514a7abd646",
+     "payload": {
+      "args_sha256": "39c67295f56e4894b1a3d13c25e686072b21094adae048d4324778dfc36ae2bd",
+      "duration_ms": 388,
+      "error_code": "tool_error",
+      "status": "error",
+      "task_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+      "tool": "terminal",
+      "tool_call_id": "call_a5bf05f3ac"
+     },
+     "prev_hash": "4825ef062f77c014e1aadc404c62d8e9021201f4db82a942a5eef8aaab73aa21",
+     "seq": 6,
+     "ts": "2026-11-19T10:45:57.125Z",
+     "type": "tool.called"
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 43
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 2,
+    "admission_id": "c334b6fbd165485db2adbb9e59daf6f3",
+    "type": "tool.complete",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "tool_id": "call_a5bf05f3ac",
+     "name": "terminal",
+     "context": "sudo true # never",
+     "tool_call_id": "call_a5bf05f3ac",
+     "tool_name": "terminal",
+     "args": {
+      "command": "sudo true # never"
+     },
+     "is_error": true,
+     "result": "{\"output\": \"[Command interrupted]\", \"exit_code\": 130, \"error\": null}",
+     "duration_s": 0.39046201100063627,
+     "inline_diff": null,
+     "image_path": null
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 44
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 2,
+    "admission_id": "c334b6fbd165485db2adbb9e59daf6f3",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "actor": "plugin",
+     "hash": "3e0c75dd48adefebbc5f75972648ecef82c7e3489af002d51066fa78ff056f69",
+     "payload": {
+      "aux_task": "title_generation",
+      "cache_read_tokens": 0,
+      "cache_write_1h_tokens": 0,
+      "cache_write_5m_tokens": 0,
+      "input_tokens": 100,
+      "latency_ms": 4,
+      "model": "fake-a",
+      "output_tokens": 10,
+      "provider": "main",
+      "request_id": "aux-9af16ed4a8cb4e3fb314fe20079c85da",
+      "role": "auxiliary",
+      "usage_schema": 2
+     },
+     "prev_hash": "0828ae67cf85b56041838e57bce3a5df2221811b9fb0fe6ed039b514a7abd646",
+     "seq": 7,
+     "ts": "2026-11-19T10:45:57.141Z",
+     "type": "usage.recorded"
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 45
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 2,
+    "admission_id": "c334b6fbd165485db2adbb9e59daf6f3",
+    "type": "session.usage",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "usage": {
+      "model": "fake-a",
+      "input": 300,
+      "output": 30,
+      "reasoning": 0,
+      "prompt": 300,
+      "completion": 30,
+      "total": 330,
+      "calls": 3,
+      "context_used": 100,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "avg_latency_s": 0.2,
+      "avg_tps": 48.6,
+      "active_subagents": 0
+     },
+     "input_tokens": 300,
+     "output_tokens": 30,
+     "cache_read_tokens": 0,
+     "cache_write_tokens": 0,
+     "prompt_tokens": 300,
+     "completion_tokens": 30,
+     "total_tokens": 330,
+     "reasoning_tokens": 0,
+     "api_calls": 3,
+     "last_prompt_tokens": 100,
+     "context_tokens": 188,
+     "context_length": 200000,
+     "config_context_length": 200000,
+     "context_source": "provider_usage",
+     "compression_count": 0,
+     "avg_latency_s": 0.21,
+     "tokens_per_s": 48.56,
+     "last_turn_tokens": 10,
+     "rate_limit": null,
+     "active_subagents": 0,
+     "model": "fake-a",
+     "provider": "custom",
+     "fallback_model": null
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 46
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 2,
+    "admission_id": "c334b6fbd165485db2adbb9e59daf6f3",
+    "type": "session.info",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "provider": "custom:main",
+     "tools": {
+      "terminal": [
+       "process_manage",
+       "terminal"
+      ],
+      "skills": "(trimmed)"
+     },
+     "system_prompt": "(trimmed)",
+     "context_length": 200000,
+     "source": "gui",
+     "model": "fake-a",
+     "lazy": false,
+     "profile_id": "/work/hermes-home",
+     "desktop_protocol": "hermes-gateway-v1",
+     "profile_name": "default",
+     "cwd": "/work/proj",
+     "reasoning_effort": "",
+     "reasoning_effort_wire": "",
+     "service_tier": "",
+     "fast": false,
+     "launch_request": {
+      "client": {
+       "name": "boopis",
+       "version": "0"
+      },
+      "cwd": "/work/proj",
+      "model": "fake-a",
+      "provider": "main",
+      "source": "gui",
+      "toolsets": [
+       "skills",
+       "terminal"
+      ]
+     },
+     "client": {
+      "name": "boopis",
+      "version": "0"
+     },
+     "title": "@@call skill_view {\"name\": \"needs-token\"}@@\u2026",
+     "started_at": 1795085154.558125,
+     "last_active_at": 1795085155.6947436,
+     "yolo": false,
+     "archived": false,
+     "api_mode": "chat_completions",
+     "tool_count": 5,
+     "credential_hint": "***"
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 47
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 2,
+    "admission_id": "c334b6fbd165485db2adbb9e59daf6f3",
+    "type": "message.complete",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "text": "",
+     "content": "",
+     "admission_id": "c334b6fbd165485db2adbb9e59daf6f3",
+     "outcome": "cancelled",
+     "status": "interrupted",
+     "usage": {
+      "model": "fake-a",
+      "input": 300,
+      "output": 30,
+      "reasoning": 0,
+      "prompt": 300,
+      "completion": 30,
+      "total": 330,
+      "calls": 3,
+      "context_used": 100,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "avg_latency_s": 0.2,
+      "avg_tps": 48.6,
+      "active_subagents": 0
+     },
+     "persisted_turn": {
+      "row_ids": [
+       5,
+       6,
+       7,
+       8
+      ],
+      "complete": false,
+      "user_row_id": 5,
+      "user_row_ids": [
+       5
+      ],
+      "submission_id": "sub-1795085156644875210"
+     }
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 48
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 8,
+   "method": "prompt.submit",
+   "params": {
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "text": "@@call terminal {\"command\": \"sudo true\"}@@ @@reply Ran it.@@",
+    "submission_id": "sub-1795085157214123363"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 2,
+    "admission_id": "c334b6fbd165485db2adbb9e59daf6f3",
+    "type": "session.info",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "stored_session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+     "pending": [],
+     "authority_epoch": 1,
+     "desktop_protocol": "hermes-gateway-v1",
+     "running": false,
+     "execution_generation": 2,
+     "revision": 2
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 49
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 8,
+   "result": {
+    "admission_id": "5b283d9775a04f24ae66e5d95dac86cd",
+    "ref": {
+     "profile_id": "/work/hermes-home",
+     "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939"
+    },
+    "sequence": 3,
+    "status": "queued",
+    "outcome": null,
+    "authority_epoch": 1,
+    "execution_generation": null
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "session.info",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "stored_session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+     "pending": [
+      {
+       "admission_id": "5b283d9775a04f24ae66e5d95dac86cd",
+       "ref": {
+        "profile_id": "/work/hermes-home",
+        "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939"
+       },
+       "sequence": 3,
+       "status": "queued",
+       "outcome": null,
+       "authority_epoch": 1,
+       "execution_generation": null,
+       "input_id": "sub-1795085157214123363",
+       "text": "@@call terminal {\"command\": \"sudo true\"}@@ @@reply Ran it.@@",
+       "controls": [
+        "steer",
+        "replace"
+       ],
+       "steering": false
+      }
+     ],
+     "authority_epoch": 1,
+     "desktop_protocol": "hermes-gateway-v1",
+     "running": false,
+     "execution_generation": 2,
+     "revision": 2
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 50
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 3,
+    "admission_id": "5b283d9775a04f24ae66e5d95dac86cd",
+    "type": "message.start",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {},
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 51
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 3,
+    "admission_id": "5b283d9775a04f24ae66e5d95dac86cd",
+    "type": "session.info",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "stored_session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+     "pending": [
+      {
+       "admission_id": "5b283d9775a04f24ae66e5d95dac86cd",
+       "ref": {
+        "profile_id": "/work/hermes-home",
+        "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939"
+       },
+       "sequence": 3,
+       "status": "started",
+       "outcome": null,
+       "authority_epoch": 1,
+       "execution_generation": 3,
+       "input_id": "sub-1795085157214123363",
+       "text": "@@call terminal {\"command\": \"sudo true\"}@@ @@reply Ran it.@@",
+       "controls": [],
+       "steering": false
+      }
+     ],
+     "authority_epoch": 1,
+     "desktop_protocol": "hermes-gateway-v1",
+     "running": true,
+     "execution_generation": 3,
+     "revision": 2
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 52
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 3,
+    "admission_id": "5b283d9775a04f24ae66e5d95dac86cd",
+    "type": "tool.generating",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "name": "terminal"
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 56
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 3,
+    "admission_id": "5b283d9775a04f24ae66e5d95dac86cd",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "9ae9a9ef7bff8351bb69678fe3cff193320555918a9a07557ece8d00bc8a5f95",
+     "payload": {
+      "cache_read_tokens": 0,
+      "cache_write_1h_tokens": 0,
+      "cache_write_5m_tokens": 0,
+      "input_tokens": 100,
+      "latency_ms": 10,
+      "model": "fake-a",
+      "output_tokens": 10,
+      "provider": "custom",
+      "request_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:85f69711:api:1",
+      "role": "orchestrator",
+      "usage_schema": 2
+     },
+     "prev_hash": "3e0c75dd48adefebbc5f75972648ecef82c7e3489af002d51066fa78ff056f69",
+     "seq": 8,
+     "ts": "2026-11-19T10:45:57.290Z",
+     "type": "usage.recorded"
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 58
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 3,
+    "admission_id": "5b283d9775a04f24ae66e5d95dac86cd",
+    "type": "message.delta",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "text": null
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 59
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 3,
+    "admission_id": "5b283d9775a04f24ae66e5d95dac86cd",
+    "type": "tool.start",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "tool_id": "call_f4ecee8a4f",
+     "name": "terminal",
+     "context": "sudo true",
+     "tool_call_id": "call_f4ecee8a4f",
+     "tool_name": "terminal",
+     "args": {
+      "command": "sudo true"
+     }
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 60
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": "srq-afae1ee84454",
+   "method": "sudo",
+   "params": {
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "command": "sudo true"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": "srq-afae1ee84454",
+   "result": {
+    "value": "(not recorded)"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 3,
+    "admission_id": "5b283d9775a04f24ae66e5d95dac86cd",
+    "type": "request.cancel",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "id": "srq-afae1ee84454",
+     "method": "sudo",
+     "reason": "resolved"
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 61
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 3,
+    "admission_id": "5b283d9775a04f24ae66e5d95dac86cd",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "12831e920eb31bccadf1a7f16dc42e259ca0aeb52289c662b8f50a842e7c5bda",
+     "payload": {
+      "args_sha256": "1b852459b804bb1fa3dabde0231885fa3be7cd79060deefdc12f2172fa1a013f",
+      "duration_ms": 67,
+      "error_code": "tool_error",
+      "status": "error",
+      "task_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+      "tool": "terminal",
+      "tool_call_id": "call_f4ecee8a4f"
+     },
+     "prev_hash": "9ae9a9ef7bff8351bb69678fe3cff193320555918a9a07557ece8d00bc8a5f95",
+     "seq": 9,
+     "ts": "2026-11-19T10:45:57.363Z",
+     "type": "tool.called"
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 62
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 3,
+    "admission_id": "5b283d9775a04f24ae66e5d95dac86cd",
+    "type": "tool.complete",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "tool_id": "call_f4ecee8a4f",
+     "name": "terminal",
+     "context": "sudo true",
+     "tool_call_id": "call_f4ecee8a4f",
+     "tool_name": "terminal",
+     "args": {
+      "command": "sudo true"
+     },
+     "is_error": true,
+     "result": "{\"output\": \"sudo: a password is required\", \"exit_code\": 1, \"error\": null}",
+     "duration_s": 0.07008724099796382,
+     "inline_diff": null,
+     "image_path": null
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 63
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 3,
+    "admission_id": "5b283d9775a04f24ae66e5d95dac86cd",
+    "type": "session.usage",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "usage": {
+      "model": "fake-a",
+      "input": 400,
+      "output": 40,
+      "reasoning": 0,
+      "prompt": 400,
+      "completion": 40,
+      "total": 440,
+      "calls": 4,
+      "context_used": 100,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "avg_latency_s": 0.2,
+      "avg_tps": 63.7,
+      "active_subagents": 0
+     },
+     "input_tokens": 400,
+     "output_tokens": 40,
+     "cache_read_tokens": 0,
+     "cache_write_tokens": 0,
+     "prompt_tokens": 400,
+     "completion_tokens": 40,
+     "total_tokens": 440,
+     "reasoning_tokens": 0,
+     "api_calls": 4,
+     "last_prompt_tokens": 100,
+     "context_tokens": 162,
+     "context_length": 200000,
+     "config_context_length": 200000,
+     "context_source": "provider_usage",
+     "compression_count": 0,
+     "avg_latency_s": 0.16,
+     "tokens_per_s": 63.73,
+     "last_turn_tokens": 10,
+     "rate_limit": null,
+     "active_subagents": 0,
+     "model": "fake-a",
+     "provider": "custom",
+     "fallback_model": null
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 65
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 3,
+    "admission_id": "5b283d9775a04f24ae66e5d95dac86cd",
+    "type": "message.delta",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "text": "\n\nRan it.",
+     "turn_id": "6c45794b3f8a476ca5ed1c8c002d200e",
+     "segment": 0,
+     "offset": 0
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 68
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 3,
+    "admission_id": "5b283d9775a04f24ae66e5d95dac86cd",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "5e7c85148f4d6aedaaf4585fd2a154e985c41fa2da837049f3d9865d2b09a410",
+     "payload": {
+      "cache_read_tokens": 0,
+      "cache_write_1h_tokens": 0,
+      "cache_write_5m_tokens": 0,
+      "input_tokens": 100,
+      "latency_ms": 9,
+      "model": "fake-a",
+      "output_tokens": 10,
+      "provider": "custom",
+      "request_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:85f69711:api:2",
+      "role": "orchestrator",
+      "usage_schema": 2
+     },
+     "prev_hash": "12831e920eb31bccadf1a7f16dc42e259ca0aeb52289c662b8f50a842e7c5bda",
+     "seq": 10,
+     "ts": "2026-11-19T10:45:57.387Z",
+     "type": "usage.recorded"
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 70
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 3,
+    "admission_id": "5b283d9775a04f24ae66e5d95dac86cd",
+    "type": "session.usage",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "usage": {
+      "model": "fake-a",
+      "input": 500,
+      "output": 50,
+      "reasoning": 0,
+      "prompt": 500,
+      "completion": 50,
+      "total": 550,
+      "calls": 5,
+      "context_used": 100,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "avg_latency_s": 0.1,
+      "avg_tps": 78.5,
+      "active_subagents": 0
+     },
+     "input_tokens": 500,
+     "output_tokens": 50,
+     "cache_read_tokens": 0,
+     "cache_write_tokens": 0,
+     "prompt_tokens": 500,
+     "completion_tokens": 50,
+     "total_tokens": 550,
+     "reasoning_tokens": 0,
+     "api_calls": 5,
+     "last_prompt_tokens": 100,
+     "context_tokens": 190,
+     "context_length": 200000,
+     "config_context_length": 200000,
+     "context_source": "provider_usage",
+     "compression_count": 0,
+     "avg_latency_s": 0.13,
+     "tokens_per_s": 78.52,
+     "last_turn_tokens": 20,
+     "rate_limit": null,
+     "active_subagents": 0,
+     "model": "fake-a",
+     "provider": "custom",
+     "fallback_model": null
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 71
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 3,
+    "admission_id": "5b283d9775a04f24ae66e5d95dac86cd",
+    "type": "session.info",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "provider": "custom:main",
+     "tools": {
+      "terminal": [
+       "process_manage",
+       "terminal"
+      ],
+      "skills": "(trimmed)"
+     },
+     "system_prompt": "(trimmed)",
+     "context_length": 200000,
+     "source": "gui",
+     "model": "fake-a",
+     "lazy": false,
+     "profile_id": "/work/hermes-home",
+     "desktop_protocol": "hermes-gateway-v1",
+     "profile_name": "default",
+     "cwd": "/work/proj",
+     "reasoning_effort": "",
+     "reasoning_effort_wire": "",
+     "service_tier": "",
+     "fast": false,
+     "launch_request": {
+      "client": {
+       "name": "boopis",
+       "version": "0"
+      },
+      "cwd": "/work/proj",
+      "model": "fake-a",
+      "provider": "main",
+      "source": "gui",
+      "toolsets": [
+       "skills",
+       "terminal"
+      ]
+     },
+     "client": {
+      "name": "boopis",
+      "version": "0"
+     },
+     "title": "@@call skill_view {\"name\": \"needs-token\"}@@\u2026",
+     "started_at": 1795085154.558125,
+     "last_active_at": 1795085155.6947436,
+     "yolo": false,
+     "archived": false,
+     "api_mode": "chat_completions",
+     "tool_count": 5,
+     "credential_hint": "***"
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 72
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 3,
+    "admission_id": "5b283d9775a04f24ae66e5d95dac86cd",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "actor": "plugin",
+     "hash": "5e059f3f80c6bad61c2448618d5dafe76a008fdf6c7309e3e6ef2b501b3dde8d",
+     "payload": {
+      "aux_task": "title_generation",
+      "cache_read_tokens": 0,
+      "cache_write_1h_tokens": 0,
+      "cache_write_5m_tokens": 0,
+      "input_tokens": 100,
+      "latency_ms": 3,
+      "model": "fake-a",
+      "output_tokens": 10,
+      "provider": "main",
+      "request_id": "aux-6754ea29f48448a4a95656c517a29908",
+      "role": "auxiliary",
+      "usage_schema": 2
+     },
+     "prev_hash": "5e7c85148f4d6aedaaf4585fd2a154e985c41fa2da837049f3d9865d2b09a410",
+     "seq": 11,
+     "ts": "2026-11-19T10:45:57.404Z",
+     "type": "usage.recorded"
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 73
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 3,
+    "admission_id": "5b283d9775a04f24ae66e5d95dac86cd",
+    "type": "message.complete",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "text": "Ran it.",
+     "content": "Ran it.",
+     "admission_id": "5b283d9775a04f24ae66e5d95dac86cd",
+     "outcome": "completed",
+     "status": "complete",
+     "usage": {
+      "model": "fake-a",
+      "input": 500,
+      "output": 50,
+      "reasoning": 0,
+      "prompt": 500,
+      "completion": 50,
+      "total": 550,
+      "calls": 5,
+      "context_used": 100,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "avg_latency_s": 0.1,
+      "avg_tps": 78.5,
+      "active_subagents": 0
+     },
+     "persisted_turn": {
+      "row_ids": [
+       9,
+       10,
+       11,
+       12
+      ],
+      "complete": true,
+      "user_row_id": 9,
+      "user_row_ids": [
+       9
+      ],
+      "final_assistant_row_id": 12,
+      "submission_id": "sub-1795085157214123363"
+     }
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 74
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 9,
+   "method": "session.resume",
+   "params": {
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 3,
+    "admission_id": "5b283d9775a04f24ae66e5d95dac86cd",
+    "type": "session.info",
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "payload": {
+     "stored_session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+     "pending": [],
+     "authority_epoch": 1,
+     "desktop_protocol": "hermes-gateway-v1",
+     "running": false,
+     "execution_generation": 3,
+     "revision": 3
+    },
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "seq": 75
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 9,
+   "result": {
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "stored_session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "messages": [
+     {
+      "role": "user",
+      "content": "@@call skill_view {\"name\": \"needs-token\"}@@ @@reply The skill is set up.@@",
+      "_db_persisted": true,
+      "message_uid": "4f9906c17d7747a0ad794f9011dd1ca6",
+      "display_metadata": {
+       "gateway_input_owner": "cb807368-7c07-5161-9d9c-cedf64bb34c8",
+       "submission_id": "sub-1795085154933802785"
+      },
+      "timestamp": 1795085154.959944,
+      "message_id": "c85c5037a7224781a6dd6c6f837113b0",
+      "row_id": 1
+     },
+     {
+      "role": "assistant",
+      "content": "",
+      "_db_persisted": true,
+      "message_uid": "56097306ab4c4d709aaa464fbf837505",
+      "_tool_call_uids": {
+       "call_eda3680292": "850d1ea6ea574950b1047492c4b8c525"
+      },
+      "timestamp": 1795085156.4839334,
+      "tool_calls": [
+       {
+        "id": "call_eda3680292",
+        "call_id": "call_eda3680292",
+        "response_item_id": "fc_eda3680292",
+        "type": "function",
+        "function": {
+         "name": "skill_view",
+         "arguments": "{\"name\": \"needs-token\"}"
+        }
+       }
+      ],
+      "finish_reason": "tool_calls",
+      "row_id": 2
+     },
+     {
+      "role": "tool",
+      "content": "{\"success\": true, \"name\": \"needs-token\", \"description\": \"A skill that cannot run without a token\", \"tags\": [], \"related_skills\": [], \"content\": \"---\\nname: needs-token\\ndescription: A skill that cannot run without a token\\nrequired_environment_variables:\\n  - name: BOOPIS_TEST_TOKEN\\n    prompt: Enter the test token\\n    help: Any value will do for the recording\\n    required_for: the recording\\n---\\n# needs-token\\n\\nSay that the token is set.\\n\", \"path\": \"needs-token/SKILL.md\", \"skill_dir\": \"/work/hermes-home/skills/needs-token\", \"linked_files\": null, \"usage_hint\": null, \"required_environment_variables\": [{\"name\": \"BOOPIS_TEST_TOKEN\", \"prompt\": \"Enter the test token\", \"help\": \"Any value will do for the recording\", \"required_for\": \"the recording\"}], \"required_commands\": [], \"missing_required_environment_variables\": [], \"missing_credential_files\": [], \"missing_required_commands\": [], \"setup_needed\": false, \"setup_skipped\": false, \"readiness_status\": \"available\", \"setup_help\": \"Any value will do for the recording\"}",
+      "_db_persisted": true,
+      "message_uid": "9bc0f089ed324cd29dd31aa96dc5480c",
+      "_tool_call_uid": "850d1ea6ea574950b1047492c4b8c525",
+      "timestamp": 1795085156.5370488,
+      "tool_call_id": "call_eda3680292",
+      "tool_name": "skill_view",
+      "row_id": 3
+     },
+     {
+      "role": "assistant",
+      "content": "The skill is set up.",
+      "_db_persisted": true,
+      "message_uid": "7cbc3ef9e194409da0adb0362d7c1b57",
+      "timestamp": 1795085156.5642824,
+      "finish_reason": "stop",
+      "row_id": 4
+     },
+     {
+      "role": "user",
+      "content": "@@call terminal {\"command\": \"sudo true # never\"}@@ @@reply Stopped.@@",
+      "_db_persisted": true,
+      "message_uid": "7aaf8902c56240ca93f975d3cc454160",
+      "display_metadata": {
+       "gateway_input_owner": "0f7c2eda-9767-5b03-9c1b-1f4c2926475e",
+       "submission_id": "sub-1795085156644875210"
+      },
+      "timestamp": 1795085156.665645,
+      "message_id": "c334b6fbd165485db2adbb9e59daf6f3",
+      "row_id": 5
+     },
+     {
+      "role": "assistant",
+      "content": "",
+      "_db_persisted": true,
+      "message_uid": "68be6e05613a42aeb424faf674626d19",
+      "_tool_call_uids": {
+       "call_a5bf05f3ac": "ce33c4b20efa444d9ac841e2421d5477"
+      },
+      "timestamp": 1795085156.7338269,
+      "tool_calls": [
+       {
+        "id": "call_a5bf05f3ac",
+        "call_id": "call_a5bf05f3ac",
+        "response_item_id": "fc_a5bf05f3ac",
+        "type": "function",
+        "function": {
+         "name": "terminal",
+         "arguments": "{\"command\": \"sudo true # never\"}"
+        }
+       }
+      ],
+      "finish_reason": "tool_calls",
+      "row_id": 6
+     },
+     {
+      "role": "tool",
+      "content": "{\"output\": \"[Command interrupted]\", \"exit_code\": 130, \"error\": null}",
+      "_db_persisted": true,
+      "message_uid": "d8b15f843f7f48018699a1c2902a980b",
+      "_tool_call_uid": "ce33c4b20efa444d9ac841e2421d5477",
+      "timestamp": 1795085157.1273475,
+      "tool_call_id": "call_a5bf05f3ac",
+      "tool_name": "terminal",
+      "row_id": 7
+     },
+     {
+      "role": "assistant",
+      "content": "",
+      "_db_persisted": true,
+      "message_uid": "041e78d01e074f9f9d5e318f2711f59f",
+      "api_content": "[interrupt: no assistant output for this turn]",
+      "display_kind": "hidden",
+      "display_metadata": {
+       "interrupted": true
+      },
+      "timestamp": 1795085157.1334412,
+      "row_id": 8
+     },
+     {
+      "role": "user",
+      "content": "@@call terminal {\"command\": \"sudo true\"}@@ @@reply Ran it.@@",
+      "_db_persisted": true,
+      "message_uid": "086319ec71744c79a4a44583e6d8eb2c",
+      "display_metadata": {
+       "gateway_input_owner": "136739fe-1961-5d9a-9c16-12885c942261",
+       "submission_id": "sub-1795085157214123363"
+      },
+      "timestamp": 1795085157.233121,
+      "message_id": "5b283d9775a04f24ae66e5d95dac86cd",
+      "row_id": 9
+     },
+     {
+      "role": "assistant",
+      "content": "",
+      "_db_persisted": true,
+      "message_uid": "56fc35e0e4004bd9baf5e4128cf98f19",
+      "_tool_call_uids": {
+       "call_f4ecee8a4f": "9d913848dc754b958ba55620145edb23"
+      },
+      "timestamp": 1795085157.2921782,
+      "tool_calls": [
+       {
+        "id": "call_f4ecee8a4f",
+        "call_id": "call_f4ecee8a4f",
+        "response_item_id": "fc_f4ecee8a4f",
+        "type": "function",
+        "function": {
+         "name": "terminal",
+         "arguments": "{\"command\": \"sudo true\"}"
+        }
+       }
+      ],
+      "finish_reason": "tool_calls",
+      "row_id": 10
+     },
+     {
+      "role": "tool",
+      "content": "{\"output\": \"sudo: a password is required\", \"exit_code\": 1, \"error\": null}",
+      "_db_persisted": true,
+      "message_uid": "fd64b2dab9de4c029ba2a13c101eecd3",
+      "_tool_call_uid": "9d913848dc754b958ba55620145edb23",
+      "timestamp": 1795085157.3655074,
+      "tool_call_id": "call_f4ecee8a4f",
+      "tool_name": "terminal",
+      "row_id": 11
+     },
+     {
+      "role": "assistant",
+      "content": "Ran it.",
+      "_db_persisted": true,
+      "message_uid": "780afe6747b848c1bdee6cc8a829a8ad",
+      "timestamp": 1795085157.3896532,
+      "finish_reason": "stop",
+      "row_id": 12
+     }
+    ],
+    "message_count": 12,
+    "todo_state": null,
+    "running": false,
+    "authority_epoch": 1,
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "last_sequence": 75,
+    "subscription_id": "7df138c5df384b20b31bdbdea7a04b8d",
+    "revision": 3,
+    "execution_generation": 3,
+    "pending": [],
+    "prompts": [],
+    "info": {
+     "tools": {
+      "terminal": [
+       "process_manage",
+       "terminal"
+      ],
+      "skills": "(trimmed)"
+     },
+     "skills": "(trimmed)",
+     "mcp_servers": [],
+     "version": "unknown",
+     "release_date": "2026.9.24",
+     "update_behind": null,
+     "update_command": "hermes update",
+     "branch": "master",
+     "project": null,
+     "provider": "custom:main",
+     "system_prompt": "(trimmed)",
+     "context_length": 200000,
+     "enabled_toolsets": [
+      "skills",
+      "terminal"
+     ],
+     "tool_availability": {
+      "unavailable_toolsets": [],
+      "lazy_tools": [],
+      "disabled_tools": []
+     },
+     "source": "gui",
+     "model": "fake-a",
+     "lazy": false,
+     "profile_id": "/work/hermes-home",
+     "desktop_protocol": "hermes-gateway-v1",
+     "profile_name": "default",
+     "cwd": "/work/proj",
+     "reasoning_effort": "",
+     "reasoning_effort_wire": "",
+     "service_tier": "",
+     "fast": false,
+     "launch_request": {
+      "client": {
+       "name": "boopis",
+       "version": "0"
+      },
+      "cwd": "/work/proj",
+      "model": "fake-a",
+      "provider": "main",
+      "source": "gui",
+      "toolsets": [
+       "skills",
+       "terminal"
+      ]
+     },
+     "client": {
+      "name": "boopis",
+      "version": "0"
+     },
+     "title": "@@call skill_view {\"name\": \"needs-token\"}@@\u2026",
+     "started_at": 1795085154.558125,
+     "last_active_at": 1795085155.6947436,
+     "yolo": false,
+     "archived": false,
+     "api_mode": "chat_completions",
+     "tool_count": 5,
+     "credential_hint": "***",
+     "usage": {
+      "model": "fake-a",
+      "input": 500,
+      "output": 50,
+      "reasoning": 0,
+      "prompt": 500,
+      "completion": 50,
+      "total": 550,
+      "calls": 5,
+      "context_used": 100,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "avg_latency_s": 0.1,
+      "avg_tps": 78.5,
+      "active_subagents": 0
+     }
+    },
+    "pending_connection": null,
+    "open_requests": []
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 10,
+   "method": "plugin.boopis.ledger.tail",
+   "params": {
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "since_seq": -1,
+    "limit": 1000
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 10,
+   "result": {
+    "events": [
+     {
+      "actor": "plugin",
+      "hash": "b1591a8d747d1f77221d79c5a92d324d242f9e0fb452b61ca277b57eaeb22ab7",
+      "payload": {
+       "cwd": "/work/proj",
+       "hermes_version": "unknown",
+       "mode": "ungoverned",
+       "plugin_version": "0.1.0",
+       "price_table": "settings-44136fa355b3",
+       "profile": "default",
+       "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939"
+      },
+      "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "seq": 0,
+      "ts": "2026-11-19T10:45:55.779Z",
+      "type": "session.opened"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "bd79169d0c85b6d17dd6212c342705e066699d393b1d7b5eb09d88363b48c28c",
+      "payload": {
+       "cache_read_tokens": 0,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 100,
+       "latency_ms": 595,
+       "model": "fake-a",
+       "output_tokens": 10,
+       "provider": "custom",
+       "request_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:83159e8a:api:1",
+       "role": "orchestrator",
+       "usage_schema": 2
+      },
+      "prev_hash": "b1591a8d747d1f77221d79c5a92d324d242f9e0fb452b61ca277b57eaeb22ab7",
+      "seq": 1,
+      "ts": "2026-11-19T10:45:56.481Z",
+      "type": "usage.recorded"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "b4a6f74fc74385f4b40f8c580c7c6f1d220281a3c8f91155f3c0b8fb59aa7014",
+      "payload": {
+       "args_sha256": "abf840f41fe555643d4ba39f38cfd4f1ef14c8dea32a0a7ad9027ef2e3953f8a",
+       "duration_ms": 42,
+       "status": "ok",
+       "task_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+       "tool": "skill_view",
+       "tool_call_id": "call_eda3680292"
+      },
+      "prev_hash": "bd79169d0c85b6d17dd6212c342705e066699d393b1d7b5eb09d88363b48c28c",
+      "seq": 2,
+      "ts": "2026-11-19T10:45:56.535Z",
+      "type": "tool.called"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "17b6b8ff03278ea3d8d8305a3c0552e821485e9452d4e8ea3933cee26c5c8a86",
+      "payload": {
+       "cache_read_tokens": 0,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 100,
+       "latency_ms": 13,
+       "model": "fake-a",
+       "output_tokens": 10,
+       "provider": "custom",
+       "request_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:83159e8a:api:2",
+       "role": "orchestrator",
+       "usage_schema": 2
+      },
+      "prev_hash": "b4a6f74fc74385f4b40f8c580c7c6f1d220281a3c8f91155f3c0b8fb59aa7014",
+      "seq": 3,
+      "ts": "2026-11-19T10:45:56.562Z",
+      "type": "usage.recorded"
+     },
+     {
+      "actor": "plugin",
+      "hash": "a2c41906337df79309e2a04208b2e2a1327a3dec9643c57a98c25ef305da2e05",
+      "payload": {
+       "aux_task": "title_generation",
+       "cache_read_tokens": 0,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 100,
+       "latency_ms": 8,
+       "model": "fake-a",
+       "output_tokens": 10,
+       "provider": "main",
+       "request_id": "aux-dc4887d496f44f52a810075bf3eaba5f",
+       "role": "auxiliary",
+       "usage_schema": 2
+      },
+      "prev_hash": "17b6b8ff03278ea3d8d8305a3c0552e821485e9452d4e8ea3933cee26c5c8a86",
+      "seq": 4,
+      "ts": "2026-11-19T10:45:56.596Z",
+      "type": "usage.recorded"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "4825ef062f77c014e1aadc404c62d8e9021201f4db82a942a5eef8aaab73aa21",
+      "payload": {
+       "cache_read_tokens": 0,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 100,
+       "latency_ms": 10,
+       "model": "fake-a",
+       "output_tokens": 10,
+       "provider": "custom",
+       "request_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:8713eea9:api:1",
+       "role": "orchestrator",
+       "usage_schema": 2
+      },
+      "prev_hash": "a2c41906337df79309e2a04208b2e2a1327a3dec9643c57a98c25ef305da2e05",
+      "seq": 5,
+      "ts": "2026-11-19T10:45:56.731Z",
+      "type": "usage.recorded"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "0828ae67cf85b56041838e57bce3a5df2221811b9fb0fe6ed039b514a7abd646",
+      "payload": {
+       "args_sha256": "39c67295f56e4894b1a3d13c25e686072b21094adae048d4324778dfc36ae2bd",
+       "duration_ms": 388,
+       "error_code": "tool_error",
+       "status": "error",
+       "task_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+       "tool": "terminal",
+       "tool_call_id": "call_a5bf05f3ac"
+      },
+      "prev_hash": "4825ef062f77c014e1aadc404c62d8e9021201f4db82a942a5eef8aaab73aa21",
+      "seq": 6,
+      "ts": "2026-11-19T10:45:57.125Z",
+      "type": "tool.called"
+     },
+     {
+      "actor": "plugin",
+      "hash": "3e0c75dd48adefebbc5f75972648ecef82c7e3489af002d51066fa78ff056f69",
+      "payload": {
+       "aux_task": "title_generation",
+       "cache_read_tokens": 0,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 100,
+       "latency_ms": 4,
+       "model": "fake-a",
+       "output_tokens": 10,
+       "provider": "main",
+       "request_id": "aux-9af16ed4a8cb4e3fb314fe20079c85da",
+       "role": "auxiliary",
+       "usage_schema": 2
+      },
+      "prev_hash": "0828ae67cf85b56041838e57bce3a5df2221811b9fb0fe6ed039b514a7abd646",
+      "seq": 7,
+      "ts": "2026-11-19T10:45:57.141Z",
+      "type": "usage.recorded"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "9ae9a9ef7bff8351bb69678fe3cff193320555918a9a07557ece8d00bc8a5f95",
+      "payload": {
+       "cache_read_tokens": 0,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 100,
+       "latency_ms": 10,
+       "model": "fake-a",
+       "output_tokens": 10,
+       "provider": "custom",
+       "request_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:85f69711:api:1",
+       "role": "orchestrator",
+       "usage_schema": 2
+      },
+      "prev_hash": "3e0c75dd48adefebbc5f75972648ecef82c7e3489af002d51066fa78ff056f69",
+      "seq": 8,
+      "ts": "2026-11-19T10:45:57.290Z",
+      "type": "usage.recorded"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "12831e920eb31bccadf1a7f16dc42e259ca0aeb52289c662b8f50a842e7c5bda",
+      "payload": {
+       "args_sha256": "1b852459b804bb1fa3dabde0231885fa3be7cd79060deefdc12f2172fa1a013f",
+       "duration_ms": 67,
+       "error_code": "tool_error",
+       "status": "error",
+       "task_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+       "tool": "terminal",
+       "tool_call_id": "call_f4ecee8a4f"
+      },
+      "prev_hash": "9ae9a9ef7bff8351bb69678fe3cff193320555918a9a07557ece8d00bc8a5f95",
+      "seq": 9,
+      "ts": "2026-11-19T10:45:57.363Z",
+      "type": "tool.called"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "5e7c85148f4d6aedaaf4585fd2a154e985c41fa2da837049f3d9865d2b09a410",
+      "payload": {
+       "cache_read_tokens": 0,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 100,
+       "latency_ms": 9,
+       "model": "fake-a",
+       "output_tokens": 10,
+       "provider": "custom",
+       "request_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:85f69711:api:2",
+       "role": "orchestrator",
+       "usage_schema": 2
+      },
+      "prev_hash": "12831e920eb31bccadf1a7f16dc42e259ca0aeb52289c662b8f50a842e7c5bda",
+      "seq": 10,
+      "ts": "2026-11-19T10:45:57.387Z",
+      "type": "usage.recorded"
+     },
+     {
+      "actor": "plugin",
+      "hash": "5e059f3f80c6bad61c2448618d5dafe76a008fdf6c7309e3e6ef2b501b3dde8d",
+      "payload": {
+       "aux_task": "title_generation",
+       "cache_read_tokens": 0,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 100,
+       "latency_ms": 3,
+       "model": "fake-a",
+       "output_tokens": 10,
+       "provider": "main",
+       "request_id": "aux-6754ea29f48448a4a95656c517a29908",
+       "role": "auxiliary",
+       "usage_schema": 2
+      },
+      "prev_hash": "5e7c85148f4d6aedaaf4585fd2a154e985c41fa2da837049f3d9865d2b09a410",
+      "seq": 11,
+      "ts": "2026-11-19T10:45:57.404Z",
+      "type": "usage.recorded"
+     }
+    ],
+    "head_seq": 11
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 11,
+   "method": "session.list",
+   "params": {
+    "limit": 100
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 11,
+   "result": {
+    "sessions": [
+     {
+      "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+      "id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+      "title": "@@call skill_view {\"name\": \"needs-token\"}@@\u2026",
+      "source": "local",
+      "started_at": 1795085154.558125,
+      "message_count": 12,
+      "model": "fake-a",
+      "running": false
+     }
+    ],
+    "scope": "live"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 12,
+   "method": "session.list",
+   "params": {
+    "limit": 100,
+    "include_hidden": true
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 12,
+   "result": {
+    "sessions": [
+     {
+      "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+      "id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+      "title": "@@call skill_view {\"name\": \"needs-token\"}@@\u2026",
+      "source": "local",
+      "started_at": 1795085154.558125,
+      "message_count": 12,
+      "model": "fake-a",
+      "running": false
+     }
+    ],
+    "scope": "live"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 13,
+   "method": "mcp.servers.status",
+   "params": {}
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 13,
+   "result": {
+    "servers": [],
+    "checked_at": 1795085157475
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 14,
+   "method": "session.resume",
+   "params": {
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 14,
+   "result": {
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "stored_session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "messages": [
+     {
+      "role": "user",
+      "content": "@@call skill_view {\"name\": \"needs-token\"}@@ @@reply The skill is set up.@@",
+      "_db_persisted": true,
+      "message_uid": "4f9906c17d7747a0ad794f9011dd1ca6",
+      "display_metadata": {
+       "gateway_input_owner": "cb807368-7c07-5161-9d9c-cedf64bb34c8",
+       "submission_id": "sub-1795085154933802785"
+      },
+      "timestamp": 1795085154.959944,
+      "message_id": "c85c5037a7224781a6dd6c6f837113b0",
+      "row_id": 1
+     },
+     {
+      "role": "assistant",
+      "content": "",
+      "_db_persisted": true,
+      "message_uid": "56097306ab4c4d709aaa464fbf837505",
+      "_tool_call_uids": {
+       "call_eda3680292": "850d1ea6ea574950b1047492c4b8c525"
+      },
+      "timestamp": 1795085156.4839334,
+      "tool_calls": [
+       {
+        "id": "call_eda3680292",
+        "call_id": "call_eda3680292",
+        "response_item_id": "fc_eda3680292",
+        "type": "function",
+        "function": {
+         "name": "skill_view",
+         "arguments": "{\"name\": \"needs-token\"}"
+        }
+       }
+      ],
+      "finish_reason": "tool_calls",
+      "row_id": 2
+     },
+     {
+      "role": "tool",
+      "content": "{\"success\": true, \"name\": \"needs-token\", \"description\": \"A skill that cannot run without a token\", \"tags\": [], \"related_skills\": [], \"content\": \"---\\nname: needs-token\\ndescription: A skill that cannot run without a token\\nrequired_environment_variables:\\n  - name: BOOPIS_TEST_TOKEN\\n    prompt: Enter the test token\\n    help: Any value will do for the recording\\n    required_for: the recording\\n---\\n# needs-token\\n\\nSay that the token is set.\\n\", \"path\": \"needs-token/SKILL.md\", \"skill_dir\": \"/work/hermes-home/skills/needs-token\", \"linked_files\": null, \"usage_hint\": null, \"required_environment_variables\": [{\"name\": \"BOOPIS_TEST_TOKEN\", \"prompt\": \"Enter the test token\", \"help\": \"Any value will do for the recording\", \"required_for\": \"the recording\"}], \"required_commands\": [], \"missing_required_environment_variables\": [], \"missing_credential_files\": [], \"missing_required_commands\": [], \"setup_needed\": false, \"setup_skipped\": false, \"readiness_status\": \"available\", \"setup_help\": \"Any value will do for the recording\"}",
+      "_db_persisted": true,
+      "message_uid": "9bc0f089ed324cd29dd31aa96dc5480c",
+      "_tool_call_uid": "850d1ea6ea574950b1047492c4b8c525",
+      "timestamp": 1795085156.5370488,
+      "tool_call_id": "call_eda3680292",
+      "tool_name": "skill_view",
+      "row_id": 3
+     },
+     {
+      "role": "assistant",
+      "content": "The skill is set up.",
+      "_db_persisted": true,
+      "message_uid": "7cbc3ef9e194409da0adb0362d7c1b57",
+      "timestamp": 1795085156.5642824,
+      "finish_reason": "stop",
+      "row_id": 4
+     },
+     {
+      "role": "user",
+      "content": "@@call terminal {\"command\": \"sudo true # never\"}@@ @@reply Stopped.@@",
+      "_db_persisted": true,
+      "message_uid": "7aaf8902c56240ca93f975d3cc454160",
+      "display_metadata": {
+       "gateway_input_owner": "0f7c2eda-9767-5b03-9c1b-1f4c2926475e",
+       "submission_id": "sub-1795085156644875210"
+      },
+      "timestamp": 1795085156.665645,
+      "message_id": "c334b6fbd165485db2adbb9e59daf6f3",
+      "row_id": 5
+     },
+     {
+      "role": "assistant",
+      "content": "",
+      "_db_persisted": true,
+      "message_uid": "68be6e05613a42aeb424faf674626d19",
+      "_tool_call_uids": {
+       "call_a5bf05f3ac": "ce33c4b20efa444d9ac841e2421d5477"
+      },
+      "timestamp": 1795085156.7338269,
+      "tool_calls": [
+       {
+        "id": "call_a5bf05f3ac",
+        "call_id": "call_a5bf05f3ac",
+        "response_item_id": "fc_a5bf05f3ac",
+        "type": "function",
+        "function": {
+         "name": "terminal",
+         "arguments": "{\"command\": \"sudo true # never\"}"
+        }
+       }
+      ],
+      "finish_reason": "tool_calls",
+      "row_id": 6
+     },
+     {
+      "role": "tool",
+      "content": "{\"output\": \"[Command interrupted]\", \"exit_code\": 130, \"error\": null}",
+      "_db_persisted": true,
+      "message_uid": "d8b15f843f7f48018699a1c2902a980b",
+      "_tool_call_uid": "ce33c4b20efa444d9ac841e2421d5477",
+      "timestamp": 1795085157.1273475,
+      "tool_call_id": "call_a5bf05f3ac",
+      "tool_name": "terminal",
+      "row_id": 7
+     },
+     {
+      "role": "assistant",
+      "content": "",
+      "_db_persisted": true,
+      "message_uid": "041e78d01e074f9f9d5e318f2711f59f",
+      "api_content": "[interrupt: no assistant output for this turn]",
+      "display_kind": "hidden",
+      "display_metadata": {
+       "interrupted": true
+      },
+      "timestamp": 1795085157.1334412,
+      "row_id": 8
+     },
+     {
+      "role": "user",
+      "content": "@@call terminal {\"command\": \"sudo true\"}@@ @@reply Ran it.@@",
+      "_db_persisted": true,
+      "message_uid": "086319ec71744c79a4a44583e6d8eb2c",
+      "display_metadata": {
+       "gateway_input_owner": "136739fe-1961-5d9a-9c16-12885c942261",
+       "submission_id": "sub-1795085157214123363"
+      },
+      "timestamp": 1795085157.233121,
+      "message_id": "5b283d9775a04f24ae66e5d95dac86cd",
+      "row_id": 9
+     },
+     {
+      "role": "assistant",
+      "content": "",
+      "_db_persisted": true,
+      "message_uid": "56fc35e0e4004bd9baf5e4128cf98f19",
+      "_tool_call_uids": {
+       "call_f4ecee8a4f": "9d913848dc754b958ba55620145edb23"
+      },
+      "timestamp": 1795085157.2921782,
+      "tool_calls": [
+       {
+        "id": "call_f4ecee8a4f",
+        "call_id": "call_f4ecee8a4f",
+        "response_item_id": "fc_f4ecee8a4f",
+        "type": "function",
+        "function": {
+         "name": "terminal",
+         "arguments": "{\"command\": \"sudo true\"}"
+        }
+       }
+      ],
+      "finish_reason": "tool_calls",
+      "row_id": 10
+     },
+     {
+      "role": "tool",
+      "content": "{\"output\": \"sudo: a password is required\", \"exit_code\": 1, \"error\": null}",
+      "_db_persisted": true,
+      "message_uid": "fd64b2dab9de4c029ba2a13c101eecd3",
+      "_tool_call_uid": "9d913848dc754b958ba55620145edb23",
+      "timestamp": 1795085157.3655074,
+      "tool_call_id": "call_f4ecee8a4f",
+      "tool_name": "terminal",
+      "row_id": 11
+     },
+     {
+      "role": "assistant",
+      "content": "Ran it.",
+      "_db_persisted": true,
+      "message_uid": "780afe6747b848c1bdee6cc8a829a8ad",
+      "timestamp": 1795085157.3896532,
+      "finish_reason": "stop",
+      "row_id": 12
+     }
+    ],
+    "message_count": 12,
+    "todo_state": null,
+    "running": false,
+    "authority_epoch": 1,
+    "replay_epoch": "92f9bb1ad8d141da8b0e03bb49d9fba8",
+    "last_sequence": 75,
+    "subscription_id": "7df138c5df384b20b31bdbdea7a04b8d",
+    "revision": 3,
+    "execution_generation": 3,
+    "pending": [],
+    "prompts": [],
+    "info": {
+     "tools": {
+      "terminal": [
+       "process_manage",
+       "terminal"
+      ],
+      "skills": "(trimmed)"
+     },
+     "skills": "(trimmed)",
+     "mcp_servers": [],
+     "version": "unknown",
+     "release_date": "2026.9.24",
+     "update_behind": null,
+     "update_command": "hermes update",
+     "branch": "master",
+     "project": null,
+     "provider": "custom:main",
+     "system_prompt": "(trimmed)",
+     "context_length": 200000,
+     "enabled_toolsets": [
+      "skills",
+      "terminal"
+     ],
+     "tool_availability": {
+      "unavailable_toolsets": [],
+      "lazy_tools": [],
+      "disabled_tools": []
+     },
+     "source": "gui",
+     "model": "fake-a",
+     "lazy": false,
+     "profile_id": "/work/hermes-home",
+     "desktop_protocol": "hermes-gateway-v1",
+     "profile_name": "default",
+     "cwd": "/work/proj",
+     "reasoning_effort": "",
+     "reasoning_effort_wire": "",
+     "service_tier": "",
+     "fast": false,
+     "launch_request": {
+      "client": {
+       "name": "boopis",
+       "version": "0"
+      },
+      "cwd": "/work/proj",
+      "model": "fake-a",
+      "provider": "main",
+      "source": "gui",
+      "toolsets": [
+       "skills",
+       "terminal"
+      ]
+     },
+     "client": {
+      "name": "boopis",
+      "version": "0"
+     },
+     "title": "@@call skill_view {\"name\": \"needs-token\"}@@\u2026",
+     "started_at": 1795085154.558125,
+     "last_active_at": 1795085155.6947436,
+     "yolo": false,
+     "archived": false,
+     "api_mode": "chat_completions",
+     "tool_count": 5,
+     "credential_hint": "***",
+     "usage": {
+      "model": "fake-a",
+      "input": 500,
+      "output": 50,
+      "reasoning": 0,
+      "prompt": 500,
+      "completion": 50,
+      "total": 550,
+      "calls": 5,
+      "context_used": 100,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "avg_latency_s": 0.1,
+      "avg_tps": 78.5,
+      "active_subagents": 0
+     }
+    },
+    "pending_connection": null,
+    "open_requests": []
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 15,
+   "method": "session.info",
+   "params": {
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 15,
+   "result": {
+    "tools": {
+     "terminal": [
+      "process_manage",
+      "terminal"
+     ],
+     "skills": "(trimmed)"
+    },
+    "skills": "(trimmed)",
+    "mcp_servers": [],
+    "version": "unknown",
+    "release_date": "2026.9.24",
+    "update_behind": null,
+    "update_command": "hermes update",
+    "branch": "master",
+    "project": null,
+    "provider": "custom:main",
+    "system_prompt": "(trimmed)",
+    "context_length": 200000,
+    "enabled_toolsets": [
+     "skills",
+     "terminal"
+    ],
+    "tool_availability": {
+     "unavailable_toolsets": [],
+     "lazy_tools": [],
+     "disabled_tools": []
+    },
+    "source": "gui",
+    "model": "fake-a",
+    "lazy": false,
+    "profile_id": "/work/hermes-home",
+    "desktop_protocol": "hermes-gateway-v1",
+    "profile_name": "default",
+    "cwd": "/work/proj",
+    "reasoning_effort": "",
+    "reasoning_effort_wire": "",
+    "service_tier": "",
+    "fast": false,
+    "launch_request": {
+     "client": {
+      "name": "boopis",
+      "version": "0"
+     },
+     "cwd": "/work/proj",
+     "model": "fake-a",
+     "provider": "main",
+     "source": "gui",
+     "toolsets": [
+      "skills",
+      "terminal"
+     ]
+    },
+    "client": {
+     "name": "boopis",
+     "version": "0"
+    },
+    "title": "@@call skill_view {\"name\": \"needs-token\"}@@\u2026",
+    "started_at": 1795085154.558125,
+    "last_active_at": 1795085155.6947436,
+    "yolo": false,
+    "archived": false,
+    "api_mode": "chat_completions",
+    "tool_count": 5,
+    "credential_hint": "***",
+    "usage": {
+     "model": "fake-a",
+     "input": 500,
+     "output": 50,
+     "reasoning": 0,
+     "prompt": 500,
+     "completion": 50,
+     "total": 550,
+     "calls": 5,
+     "context_used": 100,
+     "context_max": 200000,
+     "context_percent": 0,
+     "context_source": "provider_usage",
+     "context_estimated": false,
+     "compressions": 0,
+     "avg_latency_s": 0.1,
+     "avg_tps": 78.5,
+     "active_subagents": 0
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 16,
+   "method": "session.context_breakdown",
+   "params": {
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 16,
+   "result": {
+    "categories": [
+     {
+      "color": "var(--context-usage-system)",
+      "id": "system_prompt",
+      "label": "System prompt",
+      "tokens": 2826
+     },
+     {
+      "color": "var(--context-usage-tools)",
+      "id": "tool_definitions",
+      "label": "Tool definitions",
+      "tokens": 2256
+     },
+     {
+      "color": "var(--context-usage-rules)",
+      "id": "rules",
+      "label": "Rules",
+      "tokens": 423
+     },
+     {
+      "color": "var(--context-usage-conversation)",
+      "id": "conversation",
+      "label": "Conversation",
+      "tokens": 816
+     }
+    ],
+    "estimated_total": 6321,
+    "context_max": 200000,
+    "context_percent": 0,
+    "context_used": 100,
+    "context_source": "provider_usage",
+    "context_estimated": false,
+    "model": "fake-a",
+    "prompt_cache": null,
+    "context_files": [
+     {
+      "label": "SOUL.md",
+      "path": "/work/hermes-home/SOUL.md",
+      "chars": 663,
+      "est_tokens": 167,
+      "loaded": true,
+      "status": "loaded"
+     }
+    ]
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 17,
+   "method": "plugin.boopis.describe",
+   "params": {
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 17,
+   "result": {
+    "session": {
+     "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+     "mode": "ungoverned",
+     "locked": true,
+     "cwd": "/work/proj"
+    },
+    "version": "0.1.0",
+    "protocol": "boopis-v1",
+    "capabilities": [
+     "describe",
+     "mode.set",
+     "ledger.tail",
+     "ledger.verify",
+     "ledger.stats",
+     "cascade.state",
+     "prices.refresh",
+     "blank.fill",
+     "checkpoint.list",
+     "checkpoint.diff",
+     "form.submit",
+     "form.cancel",
+     "form.list",
+     "mod.press",
+     "mod.input",
+     "mod.select",
+     "mod.props",
+     "mod.list",
+     "mod.unload",
+     "mod.install.prepare",
+     "mod.install.confirm",
+     "bots.read",
+     "bots.write",
+     "bots.inspect",
+     "bots.archive",
+     "bots.restore",
+     "bots.delete"
+    ],
+    "hx": null,
+    "kernel": {
+     "ok": true,
+     "reason": ""
+    },
+    "config": {
+     "mode": "governed",
+     "cost_cap_usd": null,
+     "errors": [],
+     "ladder_errors": []
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 18,
+   "method": "plugin.boopis.ledger.stats",
+   "params": {
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 18,
+   "result": {
+    "tokens": {
+     "input_uncached": 800,
+     "output": 80,
+     "cache_read": 0,
+     "reasoning": 0,
+     "cache_write": 0
+    },
+    "cost_usd": null,
+    "cost_api_equivalent_usd": null,
+    "unpriced_models": [
+     "custom/fake-a",
+     "main/fake-a"
+    ],
+    "round_trips": 8,
+    "escalations": 0,
+    "rollbacks": 0,
+    "blanks": 0,
+    "approvals": 0,
+    "price_table": "settings-44136fa355b3"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 19,
+   "method": "plugin.boopis.cascade.state",
+   "params": {
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 19,
+   "result": {
+    "ladder": [
+     {
+      "name": "haiku",
+      "model": {
+       "provider": "anthropic",
+       "id": "claude-haiku-5-5"
+      },
+      "effort": "medium",
+      "max_tokens": 8000,
+      "retries": 0
+     },
+     {
+      "name": "sonnet",
+      "model": {
+       "provider": "anthropic",
+       "id": "claude-sonnet-5-5"
+      },
+      "effort": "medium",
+      "max_tokens": 8000,
+      "retries": 0
+     },
+     {
+      "name": "opus",
+      "model": {
+       "provider": "anthropic",
+       "id": "claude-opus-5-5"
+      },
+      "effort": "medium",
+      "max_tokens": 8000,
+      "retries": 0
+     }
+    ],
+    "status": "idle"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 20,
+   "method": "plugin.boopis.checkpoint.list",
+   "params": {
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 20,
+   "result": {
+    "checkpoints": []
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 21,
+   "method": "plugin.boopis.checkpoint.diff",
+   "params": {
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 21,
+   "result": {
+    "files": [],
+    "truncated": false
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 22,
+   "method": "plugin.boopis.ledger.tail",
+   "params": {
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "since_seq": -1,
+    "limit": 1000
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 22,
+   "result": {
+    "events": [
+     {
+      "actor": "plugin",
+      "hash": "b1591a8d747d1f77221d79c5a92d324d242f9e0fb452b61ca277b57eaeb22ab7",
+      "payload": {
+       "cwd": "/work/proj",
+       "hermes_version": "unknown",
+       "mode": "ungoverned",
+       "plugin_version": "0.1.0",
+       "price_table": "settings-44136fa355b3",
+       "profile": "default",
+       "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939"
+      },
+      "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "seq": 0,
+      "ts": "2026-11-19T10:45:55.779Z",
+      "type": "session.opened"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "bd79169d0c85b6d17dd6212c342705e066699d393b1d7b5eb09d88363b48c28c",
+      "payload": {
+       "cache_read_tokens": 0,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 100,
+       "latency_ms": 595,
+       "model": "fake-a",
+       "output_tokens": 10,
+       "provider": "custom",
+       "request_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:83159e8a:api:1",
+       "role": "orchestrator",
+       "usage_schema": 2
+      },
+      "prev_hash": "b1591a8d747d1f77221d79c5a92d324d242f9e0fb452b61ca277b57eaeb22ab7",
+      "seq": 1,
+      "ts": "2026-11-19T10:45:56.481Z",
+      "type": "usage.recorded"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "b4a6f74fc74385f4b40f8c580c7c6f1d220281a3c8f91155f3c0b8fb59aa7014",
+      "payload": {
+       "args_sha256": "abf840f41fe555643d4ba39f38cfd4f1ef14c8dea32a0a7ad9027ef2e3953f8a",
+       "duration_ms": 42,
+       "status": "ok",
+       "task_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+       "tool": "skill_view",
+       "tool_call_id": "call_eda3680292"
+      },
+      "prev_hash": "bd79169d0c85b6d17dd6212c342705e066699d393b1d7b5eb09d88363b48c28c",
+      "seq": 2,
+      "ts": "2026-11-19T10:45:56.535Z",
+      "type": "tool.called"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "17b6b8ff03278ea3d8d8305a3c0552e821485e9452d4e8ea3933cee26c5c8a86",
+      "payload": {
+       "cache_read_tokens": 0,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 100,
+       "latency_ms": 13,
+       "model": "fake-a",
+       "output_tokens": 10,
+       "provider": "custom",
+       "request_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:83159e8a:api:2",
+       "role": "orchestrator",
+       "usage_schema": 2
+      },
+      "prev_hash": "b4a6f74fc74385f4b40f8c580c7c6f1d220281a3c8f91155f3c0b8fb59aa7014",
+      "seq": 3,
+      "ts": "2026-11-19T10:45:56.562Z",
+      "type": "usage.recorded"
+     },
+     {
+      "actor": "plugin",
+      "hash": "a2c41906337df79309e2a04208b2e2a1327a3dec9643c57a98c25ef305da2e05",
+      "payload": {
+       "aux_task": "title_generation",
+       "cache_read_tokens": 0,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 100,
+       "latency_ms": 8,
+       "model": "fake-a",
+       "output_tokens": 10,
+       "provider": "main",
+       "request_id": "aux-dc4887d496f44f52a810075bf3eaba5f",
+       "role": "auxiliary",
+       "usage_schema": 2
+      },
+      "prev_hash": "17b6b8ff03278ea3d8d8305a3c0552e821485e9452d4e8ea3933cee26c5c8a86",
+      "seq": 4,
+      "ts": "2026-11-19T10:45:56.596Z",
+      "type": "usage.recorded"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "4825ef062f77c014e1aadc404c62d8e9021201f4db82a942a5eef8aaab73aa21",
+      "payload": {
+       "cache_read_tokens": 0,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 100,
+       "latency_ms": 10,
+       "model": "fake-a",
+       "output_tokens": 10,
+       "provider": "custom",
+       "request_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:8713eea9:api:1",
+       "role": "orchestrator",
+       "usage_schema": 2
+      },
+      "prev_hash": "a2c41906337df79309e2a04208b2e2a1327a3dec9643c57a98c25ef305da2e05",
+      "seq": 5,
+      "ts": "2026-11-19T10:45:56.731Z",
+      "type": "usage.recorded"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "0828ae67cf85b56041838e57bce3a5df2221811b9fb0fe6ed039b514a7abd646",
+      "payload": {
+       "args_sha256": "39c67295f56e4894b1a3d13c25e686072b21094adae048d4324778dfc36ae2bd",
+       "duration_ms": 388,
+       "error_code": "tool_error",
+       "status": "error",
+       "task_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+       "tool": "terminal",
+       "tool_call_id": "call_a5bf05f3ac"
+      },
+      "prev_hash": "4825ef062f77c014e1aadc404c62d8e9021201f4db82a942a5eef8aaab73aa21",
+      "seq": 6,
+      "ts": "2026-11-19T10:45:57.125Z",
+      "type": "tool.called"
+     },
+     {
+      "actor": "plugin",
+      "hash": "3e0c75dd48adefebbc5f75972648ecef82c7e3489af002d51066fa78ff056f69",
+      "payload": {
+       "aux_task": "title_generation",
+       "cache_read_tokens": 0,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 100,
+       "latency_ms": 4,
+       "model": "fake-a",
+       "output_tokens": 10,
+       "provider": "main",
+       "request_id": "aux-9af16ed4a8cb4e3fb314fe20079c85da",
+       "role": "auxiliary",
+       "usage_schema": 2
+      },
+      "prev_hash": "0828ae67cf85b56041838e57bce3a5df2221811b9fb0fe6ed039b514a7abd646",
+      "seq": 7,
+      "ts": "2026-11-19T10:45:57.141Z",
+      "type": "usage.recorded"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "9ae9a9ef7bff8351bb69678fe3cff193320555918a9a07557ece8d00bc8a5f95",
+      "payload": {
+       "cache_read_tokens": 0,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 100,
+       "latency_ms": 10,
+       "model": "fake-a",
+       "output_tokens": 10,
+       "provider": "custom",
+       "request_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:85f69711:api:1",
+       "role": "orchestrator",
+       "usage_schema": 2
+      },
+      "prev_hash": "3e0c75dd48adefebbc5f75972648ecef82c7e3489af002d51066fa78ff056f69",
+      "seq": 8,
+      "ts": "2026-11-19T10:45:57.290Z",
+      "type": "usage.recorded"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "12831e920eb31bccadf1a7f16dc42e259ca0aeb52289c662b8f50a842e7c5bda",
+      "payload": {
+       "args_sha256": "1b852459b804bb1fa3dabde0231885fa3be7cd79060deefdc12f2172fa1a013f",
+       "duration_ms": 67,
+       "error_code": "tool_error",
+       "status": "error",
+       "task_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+       "tool": "terminal",
+       "tool_call_id": "call_f4ecee8a4f"
+      },
+      "prev_hash": "9ae9a9ef7bff8351bb69678fe3cff193320555918a9a07557ece8d00bc8a5f95",
+      "seq": 9,
+      "ts": "2026-11-19T10:45:57.363Z",
+      "type": "tool.called"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "5e7c85148f4d6aedaaf4585fd2a154e985c41fa2da837049f3d9865d2b09a410",
+      "payload": {
+       "cache_read_tokens": 0,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 100,
+       "latency_ms": 9,
+       "model": "fake-a",
+       "output_tokens": 10,
+       "provider": "custom",
+       "request_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939:85f69711:api:2",
+       "role": "orchestrator",
+       "usage_schema": 2
+      },
+      "prev_hash": "12831e920eb31bccadf1a7f16dc42e259ca0aeb52289c662b8f50a842e7c5bda",
+      "seq": 10,
+      "ts": "2026-11-19T10:45:57.387Z",
+      "type": "usage.recorded"
+     },
+     {
+      "actor": "plugin",
+      "hash": "5e059f3f80c6bad61c2448618d5dafe76a008fdf6c7309e3e6ef2b501b3dde8d",
+      "payload": {
+       "aux_task": "title_generation",
+       "cache_read_tokens": 0,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 100,
+       "latency_ms": 3,
+       "model": "fake-a",
+       "output_tokens": 10,
+       "provider": "main",
+       "request_id": "aux-6754ea29f48448a4a95656c517a29908",
+       "role": "auxiliary",
+       "usage_schema": 2
+      },
+      "prev_hash": "5e7c85148f4d6aedaaf4585fd2a154e985c41fa2da837049f3d9865d2b09a410",
+      "seq": 11,
+      "ts": "2026-11-19T10:45:57.404Z",
+      "type": "usage.recorded"
+     }
+    ],
+    "head_seq": 11
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 23,
+   "method": "plugin.boopis.compat.inventory",
+   "params": {
+    "cwd": "/work/proj"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 23,
+   "result": {
+    "cwd": "/work/proj",
+    "project_root": "/work/proj",
+    "items": [],
+    "trust": {
+     "project_id": "410ebefa2e0427026083b5b80b6711207767d35f63271fed225da7dc24bf7ed1",
+     "cwd": "/work/proj",
+     "kinds": {}
+    },
+    "hook_events": {
+     "mapped": {
+      "PreToolUse": {
+       "hermes": [
+        "pre_tool_call"
+       ],
+       "fidelity": "full",
+       "note": "A hook `allow` skips boopis-level approval prompts only (COMPAT 4.4); Hermes approvals and hardline blocks still apply."
+      },
+      "PostToolUse": {
+       "hermes": [
+        "transform_tool_result"
+       ],
+       "fidelity": "full",
+       "note": "Runs for tools that executed with status ok. Feedback is appended to the tool result."
+      },
+      "PostToolUseFailure": {
+       "hermes": [
+        "transform_tool_result"
+       ],
+       "fidelity": "full",
+       "note": "The same Hermes hook with status other than ok."
+      },
+      "UserPromptSubmit": {
+       "hermes": [
+        "pre_llm_call"
+       ],
+       "fidelity": "full",
+       "note": "A blocked prompt is stored by Hermes as a withheld-message placeholder and never reaches a model; Claude Code erases it."
+      },
+      "SessionStart": {
+       "hermes": [
+        "on_session_start",
+        "on_session_open",
+        "on_session_reset",
+        "post_compaction"
+       ],
+       "fidelity": "partial",
+       "note": "These fire after the system prompt is built, so additionalContext is delivered through the next pre_llm_call and never the system prompt. Sources: startup, resume, clear, compact. fork does not exist on Hermes."
+      },
+      "SessionEnd": {
+       "hermes": [
+        "on_session_finalize"
+       ],
+       "fidelity": "partial",
+       "note": "Hermes does not say why a session ended, so reason is other."
+      },
+      "Stop": {
+       "hermes": [
+        "post_llm_call"
+       ],
+       "fidelity": "partial",
+       "note": "Hermes has no turn-end hook that can continue a turn, and its pre_verify fires only after write_file or patch edits (not ship). So Stop runs at the final post_llm_call of every completed turn, and a block re-enters as a queued user message through ctx.inject_message: a new turn that starts after the answer, not a continuation inside it. Needs plugins.entries.boopis.allow_gateway_injection."
+      },
+      "SubagentStart": {
+       "hermes": [
+        "subagent_start"
+       ],
+       "fidelity": "observe",
+       "note": "Observe only; additionalContext cannot reach the child."
+      },
+      "SubagentStop": {
+       "hermes": [
+        "subagent_stop"
+       ],
+       "fidelity": "observe",
+       "note": "Observe only; a block cannot force the child to continue."
+      },
+      "Notification": {
+       "hermes": [
+        "on_human_input_request"
+       ],
+       "fidelity": "partial",
+       "note": "approval becomes permission_prompt, clarify becomes elicitation_dialog. idle_prompt and auth_success do not exist on Hermes."
+      },
+      "PostCompact": {
+       "hermes": [
+        "post_compaction"
+       ],
+       "fidelity": "full",
+       "note": "trigger is manual for /compress and auto otherwise."
+      }
+     },
+     "unsupported": {
+      "PreCompact": "Hermes has only post_compaction, so a compaction cannot be observed or blocked in advance.",
+      "PermissionRequest": "pre_approval_request is an observer on Hermes, which intentionally has no auto-allow or decision callback.",
+      "PermissionDenied": "Hermes has no permission-denied event; a block is a tool result.",
+      "UserPromptExpansion": "Hermes has no equivalent: slash-command expansion is not an event.",
+      "PostToolBatch": "Hermes has no per-batch event.",
+      "StopFailure": "Hermes has no event for a turn that ended in an API error that reaches plugins as a stop.",
+      "Setup": "Hermes has no init or maintenance event.",
+      "TaskCreated": "Hermes kanban hooks differ in meaning from Claude Code tasks.",
+      "TaskCompleted": "Hermes kanban hooks differ in meaning from Claude Code tasks.",
+      "TeammateIdle": "Hermes kanban hooks differ in meaning from Claude Code teammates.",
+      "ConfigChange": "Hermes has no config-change event.",
+      "FileChanged": "Hermes has no file-watch event.",
+      "CwdChanged": "Hermes has no cwd-change event.",
+      "DirectoryAdded": "Hermes has no additional-directory concept.",
+      "WorktreeCreate": "Worktrees are owned by the boopis host, not by Hermes.",
+      "WorktreeRemove": "Worktrees are owned by the boopis host, not by Hermes.",
+      "Elicitation": "Hermes MCP elicitation consent is an approval, not a hookable event.",
+      "ElicitationResult": "Hermes MCP elicitation consent is an approval, not a hookable event.",
+      "MessageDisplay": "Hermes has no message-display event.",
+      "InstructionsLoaded": "Synthesized by compat when it delivers memory and rules, which part 1 does not do yet.",
+      "PreModelSwitch": "Synthesized by the cascade, which is not built yet.",
+      "PostModelSwitch": "Synthesized by the cascade, which is not built yet."
+     }
+    },
+    "warnings": [],
+    "pending": false
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 24,
+   "method": "complete.path",
+   "params": {
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "cwd": "/work/proj",
+    "word": "@file:src/"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 24,
+   "result": {
+    "items": [
+     {
+      "text": "@file:src/a.py",
+      "display": "a.py",
+      "meta": ""
+     }
+    ]
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 25,
+   "method": "complete.path",
+   "params": {
+    "session_id": "local-94ed68a8ca590eb0d2659cebcb0cd6e89ad57c83d15f7f94b4606b7764750939",
+    "cwd": "/work/proj",
+    "word": "@zzz-nothing"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 25,
+   "result": {
+    "items": []
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 26,
+   "method": "session.branch",
+   "params": {
+    "session_id": ""
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 26,
+   "error": {
+    "code": -32601,
+    "message": "unknown method: session.branch \u2014 not available on this Hermes backend",
+    "data": {
+     "reason": "unknown_method"
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 27,
+   "method": "session.compress",
+   "params": {
+    "session_id": ""
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 27,
+   "error": {
+    "code": -32601,
+    "message": "unknown method: session.compress \u2014 not available on this Hermes backend",
+    "data": {
+     "reason": "unknown_method"
+    }
+   }
+  }
+ }
+]

@@ -1,13 +1,17 @@
 /* Forms on the live provider (docs/FORMS.md section 6): the plugin's `form.opened` and `form.resolved` events, Hermes's
-   `clarify.request`, and the answers. Opened forms are remembered by id so that answering in one place resolves them
+   `clarify.request`, Hermes's one-string server requests (`secret`, `sudo`, `vault.*`) and the answers. Opened forms are remembered by id so that answering in one place resolves them
    everywhere (the provider's hooks put the same form in the conversation and in the dock's queue).
    Secrets: `submit` splits them off (`splitSecrets`), stores each with the host's keychain (`secret_set`), and sends the
-   plugin `provided: [field, ...]` only. A secret's value is in no frame, no event, no log and no error message. */
+   plugin `provided: [field, ...]` only. A secret's value is in no frame, no event, no log and no error message.
+   A secret that Hermes itself asks for (`secret`, `sudo`, `vault.*`) is the one exception to "keychain first": Hermes's own
+   tool needs the value, so it goes in the response frame to the gateway and nowhere else (not the keychain, not the plugin,
+   not the ledger, not a log), and this module keeps no copy of it. */
 import { logger } from '../../core/log';
 import type { FormOutcome, FormSpec, FormsSource, FormStatus, PickerItem, PickerKind } from '../../data';
 import { inTauri } from '../bridge';
-import type { GatewayClient, GatewayEvent } from '../gateway';
-import { fromFreeTierLimit, fromGatewayEvent, fromPluginEvent, replyFor, splitSecrets } from '../forms';
+import { ANSWER_LATER, GatewayError } from '../gateway';
+import type { GatewayClient, GatewayEvent, ServerRequest } from '../gateway';
+import { answerFor, fromFreeTierLimit, fromGatewayEvent, fromPluginEvent, fromServerRequest, isRequestMethod, replyFor, splitSecrets } from '../forms';
 import { limitFromSurface, rememberLimit } from '../free-tier';
 import type { ErrorSurface } from '../../vendor/hermes-shared/gateway-contract.generated';
 import type { FormModel } from '../forms';
@@ -35,9 +39,16 @@ export interface FormsHost {
   reload(gwSession: string, model: string): Promise<void>;
   /** the forms not yet answered */
   openIds(): string[];
+  /** the handler for the gateway's server requests: a string prompt (`secret`, `sudo`, `vault.*`) becomes a form and is answered
+      later with the response frame (`ANSWER_LATER`); any other request is refused, as it was before */
+  serverRequest(req: ServerRequest): unknown;
+  /** the server requests a resumed session still has open (`open_requests`): the ones that ask for a string are drawn again */
+  restore(gwSession: string, openRequests: unknown): void;
 }
 
 const message = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+/** how the gateway withdrew a request (`request.cancel`'s reason): a timeout is expiry, an answer from another window is an answer */
+const withdrawn = (reason: unknown): FormStatus => (reason === 'timeout' ? 'expired' : reason === 'resolved' ? 'submitted' : 'cancelled');
 /** what a failed answer says to the person: the plugin's stable code is for logs, the words are for them */
 function words(e: unknown): string {
   const m = message(e).replace(/^hx\.[a-z_.]+:?\s*/i, '').trim();
@@ -67,6 +78,16 @@ export function createFormsHost(opts: FormsOptions): FormsHost {
     async submit(id: string, outcome: FormOutcome): Promise<void> {
       const entry = open.get(id);
       if (!entry) throw new Error('This form is no longer open.');
+      /* Hermes's own request: the value goes in the response frame and nowhere else (no keychain, no plugin). The words of a
+         failure are fixed: nothing the person typed is ever echoed back to them. */
+      const src = entry.model.source;
+      if (src.kind === 'hermes-request') {
+        const result = answerFor(entry.model, { cancelled: false, values: outcome.values, secrets: outcome.secrets });
+        if (!result || !result.value) throw new Error('There is nothing to send.');
+        try { await client.respond(src.requestId, result); } catch (e) { log.warn('an answer to Hermes was not delivered', e instanceof Error ? e.name : 'error'); throw new Error('The answer was not delivered. Try again.'); }
+        settle(id, 'submitted');
+        return;
+      }
       let plain: Record<string, unknown>, targets: ReturnType<typeof splitSecrets>['secrets'];
       try { ({ plain, secrets: targets } = splitSecrets(entry.model, { ...outcome.values, ...outcome.secrets })); } catch (e) { throw new Error(message(e)); }
       /* the keychain first: the plugin confirms each provided secret with the host before it tells the agent anything */
@@ -85,6 +106,13 @@ export function createFormsHost(opts: FormsOptions): FormsHost {
     async cancel(id: string): Promise<void> {
       const entry = open.get(id);
       if (!entry) return;
+      const src = entry.model.source;
+      if (src.kind === 'hermes-request') {
+        /* skipped: an empty value is how Hermes is told */
+        try { await client.respond(src.requestId, answerFor(entry.model, { cancelled: true })); } catch (e) { log.warn('a skip was not delivered to Hermes', e instanceof Error ? e.name : 'error'); }
+        settle(id, 'cancelled');
+        return;
+      }
       const reply = replyFor(entry.model, { cancelled: true });
       try { if (reply) await client.requestRaw(reply.method, reply.params); } catch (e) { log.warn('a form cancel was not delivered', e instanceof Error ? e.name : 'error'); }
       settle(id, 'cancelled');
@@ -115,6 +143,14 @@ export function createFormsHost(opts: FormsOptions): FormsHost {
           if (limit) { rememberLimit(limit); add(fromFreeTierLimit(limit, `${ctx.gwSession}:${String(ev.seq ?? Date.now())}`), ctx.gwSession); }
           return false;
         }
+        case 'request.cancel': {
+          /* the gateway withdrew a request (it waited out its own deadline, the turn was interrupted, the session closed, or another
+             window answered): the form closes. Only a string prompt this module drew is its to close. */
+          const id = String(p['id'] ?? '');
+          if (open.get(id)?.model.source.kind !== 'hermes-request') return false;
+          settle(id, withdrawn(p['reason']));
+          return true;
+        }
         case 'clarify.settled': case 'clarify.cancelled': settle(String(p['prompt_id'] ?? ''), ev.type === 'clarify.cancelled' ? 'cancelled' : 'submitted'); return true;
         default: return false;
       }
@@ -125,7 +161,23 @@ export function createFormsHost(opts: FormsOptions): FormsHost {
       const forms = (res as { forms?: unknown } | null)?.forms;
       if (Array.isArray(forms)) for (const f of forms) if (f && typeof f === 'object') add(fromPluginEvent(gwSession, f as Record<string, unknown>, model), gwSession);
     },
-    openIds: () => [...open.keys()]
+    openIds: () => [...open.keys()],
+    serverRequest(req) {
+      if (!isRequestMethod(req.method)) throw new GatewayError(-32601, 'this client does not answer ' + req.method, { code: 'hx.host.unsupported' });
+      const model = fromServerRequest(req.method, req.id, req.params && typeof req.params === 'object' ? (req.params as Record<string, unknown>) : {});
+      if (!model || model.source.kind !== 'hermes-request') throw new GatewayError(-32602, req.method + ' named no session to ask in', { code: 'hx.invalid_params' });
+      add(model, model.source.sessionId);
+      return ANSWER_LATER;
+    },
+    restore(gwSession, openRequests) {
+      if (!Array.isArray(openRequests)) return;
+      for (const r of openRequests) {
+        const o = (r && typeof r === 'object' ? r : {}) as { id?: unknown; method?: unknown; params?: unknown };
+        if (typeof o.method !== 'string' || (typeof o.id !== 'string' && typeof o.id !== 'number')) continue;
+        const params = (o.params && typeof o.params === 'object' ? o.params : {}) as Record<string, unknown>;
+        add(fromServerRequest(o.method, o.id, { ...params, session_id: typeof params['session_id'] === 'string' ? params['session_id'] : gwSession }), gwSession);
+      }
+    }
   };
 }
 

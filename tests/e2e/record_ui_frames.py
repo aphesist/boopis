@@ -27,7 +27,7 @@ HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE))
 
 from fake_model_server import FakeModelServer  # noqa: E402
-from hx_ws_client import GatewayClient, RpcError  # noqa: E402
+from hx_ws_client import NO_ANSWER, GatewayClient, NoAnswer, RpcError  # noqa: E402
 from stack import HermesStack, find_install  # noqa: E402
 
 OUT = HERE.parents[1] / "apps" / "desktop" / "ui" / "tests" / "fixtures" / "frames"
@@ -114,6 +114,11 @@ def save(name: str, log: Path, root: Path) -> None:
         rec = json.loads(line)
         if "frame" not in rec or "_reader_error" in rec["frame"]:
             continue
+        frame = rec["frame"]
+        if rec["dir"] == "out" and str(frame.get("id", "")).startswith("srq-") and "result" in frame:
+            # the answer to a string prompt (secret, sudo, vault): what was typed is not recorded, only that it was
+            value = frame["result"].get("value")
+            rec["frame"] = {**frame, "result": {**frame["result"], "value": "(not recorded)" if value else value}}
         if rec["frame"].get("method") == "event" and rec["frame"]["params"].get("type") in (
             "thinking.delta",
             "agent.step",
@@ -277,6 +282,107 @@ def forms_scenario(install: Any, tmp: Path, url: str) -> None:
         stack.stop()
 
 
+PROMPTED = "not-a-real-secret"  # what the recording types into a string prompt; ``save`` never writes it down
+SKILL = """---
+name: needs-token
+description: A skill that cannot run without a token
+required_environment_variables:
+  - name: BOOPIS_TEST_TOKEN
+    prompt: Enter the test token
+    help: Any value will do for the recording
+    required_for: the recording
+---
+# needs-token
+
+Say that the token is set.
+"""
+# The recording runs as root, where ``sudo -n true`` succeeds and Hermes never asks for a password. A ``sudo`` that
+# says it needs one, first on the gateway's PATH, is what a person without passwordless sudo has.
+SUDO_NEEDS_PASSWORD = "#!/bin/sh\necho 'sudo: a password is required' >&2\nexit 1\n"
+
+
+def requests_scenario(install: Any, tmp: Path, url: str) -> None:
+    """Hermes asks the person for a string: the frames each request reaches the UI as.
+
+    A skill whose token is missing makes the gateway send a ``secret`` server request, and a ``sudo`` command a ``sudo``
+    request; an interrupt withdraws an open request with ``request.cancel``. The client answers as a person would, and
+    what it types is not recorded (``save``). Not recorded: the vault prompts (they need a password manager and a
+    browser, which the fake model cannot drive) and MCP elicitation (the e2e install has no ``mcp`` package, and Hermes
+    asks an MCP form through its clarify prompt, so no schema and no server name reach the gateway).
+    """
+    shim = tmp / "shim"
+    shim.mkdir()
+    (shim / "sudo").write_text(SUDO_NEEDS_PASSWORD)
+    (shim / "sudo").chmod(0o755)
+    path = os.environ.get("PATH", "")
+    os.environ["PATH"] = (
+        f"{shim}{os.pathsep}{path}"  # the stack reads the environment each time it starts or attaches a gateway
+    )
+    stack = HermesStack(install, tmp, url, {"hx_path": HX}, {"approvals": {"mode": "off"}})
+    try:
+        stack.start()
+        skill = stack.home / "skills" / "needs-token"
+        skill.mkdir(parents=True)
+        (skill / "SKILL.md").write_text(SKILL)
+        gw = GatewayClient(hermes_bin=str(install.hermes), env=stack.env, frames_log=tmp / "frames.jsonl")
+        gw.connect()
+        gw.handshake()
+        proj = make_project(tmp)
+        sid = create(gw, proj, toolsets=["skills", "terminal"])
+        gw.result("plugin.boopis.mode.set", {"session_id": sid, "mode": "ungoverned"})
+
+        def person(frame: dict[str, Any]) -> dict[str, Any] | NoAnswer | None:
+            if frame["method"] in ("secret", "sudo"):
+                return NO_ANSWER if "never" in json.dumps(frame["params"]) else {"value": PROMPTED}
+            return None
+
+        gw.answerer = person
+        turn(gw, sid, call("skill_view", {"name": "needs-token"}) + " @@reply The skill is set up.@@")
+        # a sudo request nobody answers, then the turn is interrupted: the gateway withdraws it (an answered password
+        # is cached for the session, so this comes before the one that is answered)
+        start = len(gw.events)
+        gw.result(
+            "prompt.submit",
+            {
+                "session_id": sid,
+                "text": call("terminal", {"command": "sudo true # never"}) + " @@reply Stopped.@@",
+                "submission_id": f"sub-{time.time_ns()}",
+            },
+        )
+        deadline = time.time() + 30
+        while time.time() < deadline and not any("never" in json.dumps(r["params"]) for r in gw.server_requests):
+            time.sleep(0.05)
+        generation = next(
+            e["execution_generation"]
+            for e in reversed(gw.events)
+            if e.get("session_id") == sid and "execution_generation" in e
+        )
+        gw.result("session.interrupt", {"session_id": sid, "execution_generation": generation})
+        gw.wait_event(lambda e: e.get("type") == "request.cancel", 30, start)
+        gw.wait_event(lambda e: e.get("type") == "message.complete" and e.get("session_id") == sid, 60, start)
+        turn(gw, sid, call("terminal", {"command": "sudo true"}) + " @@reply Ran it.@@")
+        # what was typed went to Hermes's own tools and nowhere else: not the transcript, the plugin's ledger or a log
+        # (the token is in Hermes's own ``.env``, where its secret prompt saves it)
+        kept = json.dumps(
+            [
+                gw.result("session.resume", {"session_id": sid}),
+                gw.result("plugin.boopis.ledger.tail", {"session_id": sid, "since_seq": -1, "limit": 1000}),
+                [p.read_text(errors="replace") for p in (stack.home / "logs").glob("*.log")],
+                [p.read_text(errors="replace") for p in stack.ledger_dir.rglob("*") if p.is_file()],
+            ]
+        )
+        assert PROMPTED not in kept, "a typed secret reached the transcript, the ledger or a log"
+        assert f"BOOPIS_TEST_TOKEN={PROMPTED}" in (stack.home / ".env").read_text(), (
+            "Hermes did not save the token it asked for"
+        )
+        read_panels(gw, [sid], proj)
+        gw.close()
+        save("requests", tmp / "frames.jsonl", tmp)
+    finally:
+        os.environ["PATH"] = path
+        stack.stop()
+
+
 def main() -> int:
     install = find_install()
     if install is None or not HX:
@@ -295,6 +401,9 @@ def main() -> int:
         if not only or only == "forms":
             with tempfile.TemporaryDirectory(prefix="hx-rec-") as tmp:
                 forms_scenario(install, Path(tmp), fake.url)
+        if not only or only == "requests":
+            with tempfile.TemporaryDirectory(prefix="hx-rec-") as tmp:
+                requests_scenario(install, Path(tmp), fake.url)
     return 0
 
 

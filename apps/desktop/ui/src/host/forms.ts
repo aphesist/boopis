@@ -3,7 +3,9 @@
    - host: first-run setup (the host's `Form`), answered through `setup_advance`;
    - plugin: `plugin.boopis.form.opened`, answered with `plugin.boopis.form.submit` / `.cancel`;
    - hermes: the canonical `approval.request` and `clarify.request` events, answered through Hermes's own
-     `approval.respond` / `clarify.respond` (never through the plugin).
+     `approval.respond` / `clarify.respond` (never through the plugin);
+   - hermes, one-string prompts: the gateway's server requests `secret`, `sudo`, `vault.unlock_prompt`, `vault.save_login`
+     and `vault.code` (`fromServerRequest`), answered with the JSON-RPC response Hermes waits for (`answerFor`).
    A secret field's value is split off by `splitSecrets` and goes to the host's keychain (`secret_set`), never into a frame
    to the gateway. Pure functions: no DOM, no host, no timers.
    Every adapter also builds the `FormSpec` the card draws (`model.spec`): the schema is kept whole (previews, pickers,
@@ -35,7 +37,9 @@ export type FormSource =
   | { kind: 'host' }
   | { kind: 'plugin'; sessionId: string }
   | { kind: 'free-tier' }
-  | { kind: 'hermes'; sessionId: string; method: 'approval.respond' | 'clarify.respond'; promptId: string; generation: number; multi: boolean };
+  | { kind: 'hermes'; sessionId: string; method: 'approval.respond' | 'clarify.respond'; promptId: string; generation: number; multi: boolean }
+  /** a server request of the gateway (`secret`, `sudo`, `vault.*`): answered by the response frame with the request's own id */
+  | { kind: 'hermes-request'; sessionId: string; requestId: string; method: RequestMethod };
 
 export interface FormModel {
   id: string;
@@ -197,10 +201,11 @@ export function fromFreeTierLimit(limit: LimitView, key: string, now = Date.now(
 
 export interface Reply { method: string; params: Obj }
 
-/** the frame that answers (or cancels) a form of the gateway or the plugin; the host's own forms answer through `setup_advance`, so none */
+/** the frame that answers (or cancels) a form of the gateway or the plugin; the host's own forms answer through `setup_advance`, and a
+    server request of the gateway is answered by a response frame (`answerFor`), so none */
 export function replyFor(form: FormModel, outcome: { cancelled: true } | { cancelled: false; values: Obj; provided?: readonly string[] }): Reply | null {
   const src = form.source;
-  if (src.kind === 'host' || src.kind === 'free-tier') return null;
+  if (src.kind === 'host' || src.kind === 'free-tier' || src.kind === 'hermes-request') return null;
   if (src.kind === 'plugin') {
     if (outcome.cancelled) return { method: 'plugin.boopis.form.cancel', params: { session_id: src.sessionId, form_id: form.id } };
     return { method: 'plugin.boopis.form.submit', params: { session_id: src.sessionId, form_id: form.id, values: outcome.values, provided: [...(outcome.provided ?? [])] } };
@@ -232,4 +237,110 @@ export function splitSecrets(form: FormModel, values: Obj): { plain: Obj; secret
     secrets.push({ field: name, service: 'boopis.' + (m[1] ?? ''), account: m[2] ?? '', value });
   }
   return { plain, secrets };
+}
+
+/* ───────── Hermes's one-string prompts: secret, sudo, vault.* (docs/FORMS.md section 6) ───────── */
+
+/** The gateway's server requests that ask the person for one string (`tui_gateway/contracts/server_requests.py`, Hermes
+    v0.23.2). They are JSON-RPC requests from the gateway with a string id (`srq-...`), not events: the answer is the
+    response frame `{id, result: {value}}`, and an empty `value` is "skipped". The gateway withdraws one with the event
+    `request.cancel {id, method, reason}`. Nothing else asks the person for a string, so nothing else is listed. */
+export const REQUEST_METHODS = ['secret', 'sudo', 'vault.unlock_prompt', 'vault.save_login', 'vault.code'] as const;
+export type RequestMethod = (typeof REQUEST_METHODS)[number];
+export const isRequestMethod = (m: string): m is RequestMethod => (REQUEST_METHODS as readonly string[]).includes(m);
+
+/** the form's own copy and fields for one request */
+interface RequestCopy { title: string; why: string; effect: string; schema: FormSchema; submit: string; cancel: string }
+/** inline code, unless the text holds a backtick (then plain: a code chip could not show it whole) */
+const chip = (s: string): string => (s.includes('`') ? s : '`' + s + '`');
+const secretField = (title: string): FieldSchema => ({ type: 'string', title, 'x-secret': true });
+/** sentences joined into one paragraph; a part Hermes wrote without a full stop gets one */
+const sentence = (...parts: string[]): string => parts.map((x) => x.trim()).filter(Boolean).map((x) => (/[.!?]$/.test(x) ? x : x + '.')).join(' ');
+
+function copyFor(method: RequestMethod, p: Obj): RequestCopy {
+  switch (method) {
+    case 'secret': {
+      /* `metadata` is what the skill declared: its name, and the `help` and `required_for` it wrote */
+      const env = str(p['env_var']), meta = obj(p['metadata']), skill = str(meta['skill_name']), needed = str(meta['required_for']);
+      return {
+        title: 'Hermes needs ' + (env || 'a credential'),
+        why: sentence(str(p['prompt']) || 'Hermes needs a value to continue.', skill ? 'It is for the ' + chip(skill) + ' skill.' : '', needed ? 'Needed for ' + needed + '.' : '', str(meta['help'])),
+        effect: 'Hermes saves it in this profile’s `.env`. The model never sees it.',
+        schema: { properties: { value: secretField(env || 'Value') }, required: ['value'] }, submit: 'Send to Hermes', cancel: 'Skip'
+      };
+    }
+    case 'sudo': {
+      const command = str(p['command']).trim();
+      return {
+        title: 'Hermes needs your sudo password',
+        why: command ? 'It wants to run ' + chip(command) + ' as an administrator.' : 'Hermes did not say which command this is for. Skip it if you cannot check the command in the conversation.',
+        effect: 'Hermes uses it to run the command and keeps it for this session. It is not part of the conversation.',
+        schema: { properties: { password: secretField('sudo password') }, required: ['password'] }, submit: 'Send to Hermes', cancel: 'Cancel'
+      };
+    }
+    case 'vault.unlock_prompt': {
+      const name = str(p['display_name']) || str(p['backend']) || 'the password manager';
+      return {
+        title: 'Unlock ' + name,
+        why: 'Hermes wants to sign into a site with a login saved in ' + name + '. Enter your master password to unlock it for this session.',
+        effect: 'It goes straight to ' + name + ' on this machine. The model never sees it.',
+        schema: { properties: { password: secretField('Master password') }, required: ['password'] }, submit: 'Unlock', cancel: 'Keep locked'
+      };
+    }
+    case 'vault.save_login': {
+      const origin = str(p['origin']), site = str(p['site']) || origin;
+      return {
+        title: 'Save your ' + (site || 'site') + ' login?',
+        why: origin ? 'Hermes reached a sign-in page at ' + origin + ' and has no login for it. Enter it once here.' : 'Hermes reached a sign-in page and has no login for it. Enter it once here.',
+        effect: 'It goes to Hermes’s vault and is filled into the page. The model never sees the password.',
+        schema: { properties: { identifier: { type: 'string', title: 'Email or username', placeholder: 'you@example.com' }, password: secretField('Password') }, required: ['identifier', 'password'] },
+        submit: 'Save and sign in', cancel: 'Don’t save'
+      };
+    }
+    case 'vault.code': {
+      const site = str(p['site']);
+      return {
+        title: 'Verification code' + (site ? ' for ' + site : ''),
+        why: sentence(site ? site + ' is asking for a one-time code (text message, email or an authenticator app).' : 'A site is asking for a one-time code (text message, email or an authenticator app).', str(p['hint'])),
+        effect: 'Hermes types it into the page. The model never sees it.',
+        schema: { properties: { code: secretField('Code') }, required: ['code'] }, submit: 'Enter code', cancel: 'Skip'
+      };
+    }
+  }
+}
+
+/** A gateway server request that asks for a string, as a `credential` form. The value is for Hermes's own reply and no one
+    else: it is not stored in the keychain (Hermes saves a secret itself) and boopis keeps no record of it, only that the
+    form was answered. `null` for any other method, and for one with no id or session to answer it by. */
+export function fromServerRequest(method: string, id: string | number, p: Obj): FormModel | null {
+  if (!isRequestMethod(method)) return null;
+  const requestId = String(id), sessionId = str(p['session_id']);
+  if (!requestId || !sessionId) return null;
+  const c = copyFor(method, p);
+  return {
+    id: requestId, kind: 'credential', title: c.title, body: c.why, fields: fieldsOf(c.schema), submitLabel: c.submit, cancelLabel: c.cancel,
+    hold: false, sensitive: true, origin: 'hermes', diff: [], source: { kind: 'hermes-request', sessionId, requestId, method },
+    /* Hermes gives no deadline on the request (it waits its own 120 or 180 seconds and then withdraws it), so none is drawn */
+    spec: { ...buildSpec({ id: requestId, kind: 'credential', title: c.title, body: c.why, schema: c.schema, submit: { label: c.submit }, cancel: { label: c.cancel }, origin: { kind: 'hermes' } }), effect: c.effect, receipt: 'Sent to Hermes', busyText: 'Sending to Hermes' }
+  };
+}
+
+/** what the gateway's response frame carries for a request (`ValueResult`): the string, or '' for "skipped" (Hermes reads that
+    as declined). `values` are the form's plain fields and `secrets` its masked ones; this is the only place a secret is read. */
+export function answerFor(form: FormModel, outcome: { cancelled: true } | { cancelled: false; values: Obj; secrets: Readonly<Record<string, string>> }): { value: string } | null {
+  const src = form.source;
+  if (src.kind !== 'hermes-request') return null;
+  if (outcome.cancelled) return { value: '' };
+  const secret = (name: string): string => outcome.secrets[name] ?? '';
+  switch (src.method) {
+    case 'secret': return { value: secret('value') };
+    case 'sudo': case 'vault.unlock_prompt': return { value: secret('password') };
+    /* the pair as one JSON string, as Hermes's own card sends it */
+    case 'vault.save_login': {
+      const identifier = str(outcome.values['identifier']).trim(), password = secret('password');
+      return { value: identifier && password ? JSON.stringify({ identifier, password }) : '' };
+    }
+    /* a code is typed with spaces or dashes: Hermes types it into a page, so they go */
+    case 'vault.code': return { value: secret('code').replace(/[\s-]/g, '') };
+  }
 }
