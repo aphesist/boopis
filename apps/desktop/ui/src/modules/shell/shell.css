@@ -247,11 +247,6 @@ body {
 .hx-dialog__head { display: flex; align-items: center; gap: 16px; height: 52px; padding: 0 12px 0 20px; border-bottom: 1px solid var(--hair); flex: none; }
 .hx-dialog__head h2 { margin: 0; font-size: var(--fs-l); font-weight: 600; color: var(--text-strong); text-transform: var(--ui-case); }
 .hx-dialog__head .ui-ib { margin-left: auto; border-radius: var(--r-in); }
-.hx-dtabs { display: flex; gap: 2px; }
-.hx-dtab { height: var(--ctl-s); padding: 0 10px; border: 0; border-radius: var(--r-s); --sq-bg: transparent; background: var(--sq-bg); color: var(--text-dim); font: 500 var(--fs-s)/1 var(--sans); cursor: pointer; text-transform: var(--ui-case); transition: background-color var(--dur-out) var(--ease), color var(--dur-out) var(--ease), transform var(--dur-press) var(--ease); }
-.hx-dtab:hover { --sq-bg: var(--hover); background: var(--sq-bg); color: var(--text); transition-duration: var(--dur-1); }
-.hx-dtab:active { transform: translateY(1px) scale(.985); }
-.hx-dtab[aria-selected="true"] { --sq-bg: var(--current); background: var(--sq-bg); color: var(--text-strong); }
 .hx-dialog__body { flex: 1; min-height: 0; padding: 4px 20px 24px; }   /* a scroll area (.ui-scroll) */
 .hx-dialog.is-side .hx-dtabs { margin-right: -6px; }
 

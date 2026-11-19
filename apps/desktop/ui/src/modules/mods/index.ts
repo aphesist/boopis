@@ -26,7 +26,7 @@ import { toast } from './toasts';
 import { surface } from './surfaces';
 
 const log = logger('mods');
-ui.squircle.auto('.mod-band, .mod-inline, .mod-tab, .mv-code, .mod-swatches');
+ui.squircle.auto('.mod-band, .mod-inline, .mv-code, .mod-swatches');
 
 let unsub: (() => void) | null = null, unsubEvents: (() => void) | null = null;
 let ready = false, working = false, wasDocked = docked();

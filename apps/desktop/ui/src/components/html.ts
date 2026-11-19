@@ -14,6 +14,7 @@ import { orbHtml } from './orb';
 import { modelEntries, selectHTML, toEntries } from './select-html';
 import type { SelectEntry } from './select-html';
 import { scroll } from './scroll';
+import { tabs } from './tabs';
 
 type U<T> = T | undefined;
 
@@ -255,5 +256,5 @@ const tip = (label: string, k?: string, state?: { text: string; tone?: string })
 export const html = {
   icon, keys, kbd: keys, code, inline, stamp, dot, capacity, button, iconButton, send, hold, switch: switchHtml, segmented, chip, chipGroup,
   orb: orbHtml, model: modelHTML, modelRoute: routeHTML, modelMark: markHTML, stateWord, row, leadFor, group, ladder, measure, legend, pages, request, entry, disclosure, steps, blank, section, menuItems, field, select: selectHTML, setRow, empty, toast, tip, mod,
-  scroll
+  scroll, tabs
 };

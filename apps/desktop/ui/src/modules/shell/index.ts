@@ -14,7 +14,7 @@ import type { Tab } from '../../core/types';
 import { ui } from '../../components';
 import { data } from '../../data';
 import { themeApi } from '../../styles/theme';
-import { openKeys, openMenu, openSettings, wireDialogs } from './dialogs';
+import { openKeys, openMenu, openSettings, SETTINGS_SECTIONS, wireDialogs } from './dialogs';
 import { collectEls, els, sh } from './ctx';
 import { reportAttention, seedAttention, setTitleOverride, updateAttentionDots, updateTitle } from './attention';
 import { newThing, syncFullscreenIcon, toast, toggleDockExpand, toggleFullscreen, toggleLightDark, togglePanel } from './actions';
@@ -25,7 +25,7 @@ import { closePalette, movePal, openPalette, paletteActive, renderPalette, reset
 import { cycleRegion, focusRegion, leaderActive, leaderKey, nextAttention, regionOf, rememberFocus, startLeader } from './regions';
 import { getLayout } from '../../core/state';
 /* drawn corners (DESIGN-SYSTEM.md section 8): the shell's surfaces; sheets and menus float, so they are surfaces */
-ui.squircle.auto('.hx-cmd, .hx-me, .hx-dtab, .hx-pal-row');
+ui.squircle.auto('.hx-cmd, .hx-me, .hx-pal-row');
 ui.squircle.auto('.hx-dialog__card, .hx-palette__box, .hx-goto, .hxt-preset', { mode: 'surface' });
 
 const log = logger('shell');
@@ -172,6 +172,9 @@ export function boot(): void {
   sh.seg.collapse = ui.segmented({ mode: 'radio', size: 's', label: 'When the sidebar collapses', value: prefs.collapse, options: [{ value: 'rail', label: 'Rail' }, { value: 'closed', label: 'Hide' }] });
   sh.seg.collapse.setAttribute('aria-labelledby', 'hx-set-collapse-l'); sh.seg.collapse.removeAttribute('aria-label');
   $('#hx-set-collapse').replaceWith(sh.seg.collapse);
+  // Settings' sections: the library's tab bar, concentric with the dialog's corner band
+  $('#hx-dtabs').outerHTML = ui.html.tabs({ label: 'Settings sections', class: 'hx-dtabs', value: 'general',
+    tabs: SETTINGS_SECTIONS.map(([value, label]) => ({ value, label, id: 'hx-dtab-' + value, controls: 'hx-dpanel-' + value })) });
   ui.hydrate($('#hx-settings'));
 
   // user

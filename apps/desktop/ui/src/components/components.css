@@ -209,6 +209,25 @@
 /* an icon-only option (the rail) keeps its icon on the axis: the attention dot sits on the corner, out of the flow */
 :is(.ui-seg--vertical .ui-seg__opt, .ui-seg__opt:not(:has(> span:not(.ui-dot)))) > .ui-dot { position: absolute; top: 5px; right: 5px; }
 
+/* ───────────── tab bar: plain tabs naming sections (the Settings head, the details panel's mod panes) ─────────────
+   DESIGN-SYSTEM.md §14.21: 28px tabs, the active one --current. Corners: concentric with the surface the bar sits in (--r-in, §8.2);
+   on a surface that declares no nesting, --r-s. Not the tabs pill (.ui-seg), which slides a thumb in a track. */
+.ui-tabs { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.ui-tab {
+  appearance: none; position: relative; flex: none; display: inline-flex; align-items: center; max-width: 148px; height: var(--ctl-s); padding: 0 10px; margin: 0; border: 0;
+  border-radius: var(--r-in, var(--r-s)); --sq-bg: transparent; background: var(--sq-bg); color: var(--text-dim);
+  font: 500 var(--fs-s)/1 var(--sans); text-transform: var(--ui-case); white-space: nowrap; cursor: pointer;
+  transition: background-color var(--dur-out) var(--ease), color var(--dur-out) var(--ease), transform var(--dur-press) var(--ease);
+}
+.ui-tab > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ui-tab:hover { --sq-bg: var(--hover); background: var(--sq-bg); color: var(--text); transition-duration: var(--dur-1); }
+.ui-tab:active { transform: translateY(1px) scale(.985); }
+.ui-tab[aria-selected="true"] { --sq-bg: var(--current); background: var(--sq-bg); color: var(--text-strong); }
+.ui-tab:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.ui-tab[data-sq-on]:focus-visible { outline: none; }   /* the drawn corner draws the ring */
+.ui-tabs--scroll[data-more] { -webkit-mask-image: linear-gradient(to right, var(--text) calc(100% - 28px), transparent); mask-image: linear-gradient(to right, var(--text) calc(100% - 28px), transparent); }
+@media (prefers-reduced-motion: reduce) { .ui-tab { transition: none; } }
+
 /* ───────────── chips ─────────────
    .ui-chip: a toggle or an action in a toolbar (aria-pressed for a mode, aria-haspopup for a picker).
    .ui-chip--option: one of several values (role="radio", aria-checked). .ui-code: inline code. */

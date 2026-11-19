@@ -41,19 +41,8 @@
 
 /* ───────────── a pane: a tab in the details panel ───────────── */
 .mod-head { padding-right: 12px; }
-.mod-tabs { display: flex; gap: 2px; min-width: 0; margin-left: -6px; }   /* a bare sideways scroll area (.ui-scroll--x --bare) */
-.mod-tabs[data-more] { -webkit-mask-image: linear-gradient(to right, var(--text) calc(100% - 28px), transparent); mask-image: linear-gradient(to right, var(--text) calc(100% - 28px), transparent); }
-.mod-tab {
-  appearance: none; flex: none; display: inline-flex; align-items: center; max-width: 148px; height: var(--ctl-s); padding: 0 10px; margin: 0; border: 0; border-radius: var(--r-s);
-  --sq-bg: transparent; background: var(--sq-bg); color: var(--text-dim); font: 500 var(--fs-s)/1 var(--sans); text-transform: var(--ui-case); white-space: nowrap; cursor: pointer;
-  transition: background-color var(--dur-out) var(--ease), color var(--dur-out) var(--ease), transform var(--dur-press) var(--ease);
-}
-.mod-tab:hover { --sq-bg: var(--hover); background: var(--sq-bg); color: var(--text); transition-duration: var(--dur-1); }
-.mod-tab:active { transform: translateY(1px) scale(.985); }
-.mod-tab[aria-selected="true"] { --sq-bg: var(--current); background: var(--sq-bg); color: var(--text-strong); }
-.mod-tab:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
-.mod-tab[data-sq-on]:focus-visible { outline: none; }
-.mod-tab .mv-by__g { color: currentColor; opacity: .8; }
+.mod-tabs { margin-left: -6px; }   /* the library's scrolling tab bar (.ui-tabs--scroll), placed in the panel head */
+.mod-tabs .mv-by__g { color: currentColor; opacity: .8; }
 .mod-pane { box-shadow: inset 0 1px 0 var(--hair); }
 .mod-pane__head { display: flex; align-items: center; justify-content: space-between; height: 36px; padding: 0 12px 0 20px; }
 .mod-pane__head .mv-by { color: var(--text-quiet); font: 400 var(--fs-xs)/1 var(--sans); }
@@ -91,7 +80,7 @@
   .ss-mods--status:not(:empty) { padding-inline: 10px; gap: var(--sp-3); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .mod-chev .ui-icon, .mod-tab { transition: none; }
+  .mod-chev .ui-icon { transition: none; }
 }
 
 /* ───────────── the composer's rise (riseComposer in mods.js): the ghosts are visual copies of what is leaving ───────────── */

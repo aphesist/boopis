@@ -64,6 +64,7 @@ const factories = {
   blank: make<{ answer?: string } | undefined, HTMLButtonElement>((o) => html.blank(o ?? {})),
   section: make<Parameters<typeof html.section>[0]>(html.section),
   scroll: make<Parameters<typeof html.scroll>[0]>(html.scroll),
+  tabs: make<Parameters<typeof html.tabs>[0], SegElement>(html.tabs),
   field: make<FieldOpts>(html.field),
   select: make<SelectOpts, SelectElement>(html.select),
   empty: make<Parameters<typeof html.empty>[0]>(html.empty),
@@ -92,6 +93,10 @@ export { html, icon, hydrate, hydrateOne, wireSelect, announce, botState, botLab
 export type { SegElement } from './wire';
 export type { SelectElement, ListboxOpts } from './select';
 export type { SelectEntry, SelectGroup, SelectOpts, SelectOption };
+export { scroll, scrollClass, scrollVariants, SCROLL_AXES } from './scroll';
+export { tabs, tabsVariants, fitTabs } from './tabs';
+export type { TabDef, TabsOpts } from './tabs';
+export type { ScrollAxis, ScrollOpts, ScrollHtmlOpts } from './scroll';
 export type { ComposerEl, ComposerOpts, DecisionDetail, AssumptionDetail, DictateDetail, SendDetail } from './composer';
 export type { PageDef, MenuEntry, MenuItem, StepItem, LadderOpts, MeasurePart, Station, CallLine } from './html';
 export type { ModelRef, ModelOpts, MarkOpts, ModelFamily } from './model-mark';

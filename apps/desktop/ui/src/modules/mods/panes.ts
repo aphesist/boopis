@@ -67,24 +67,16 @@ function paneHead(p: ModPane, inline: boolean): HTMLElement {
 
 /* ───────────── the tabs of the details panel ───────────── */
 function tabs(list: readonly ModPane[]): HTMLElement {
-  const bar = el('div', { class: 'mod-tabs ui-scroll ui-scroll--x ui-scroll--bare', role: 'tablist', 'aria-label': 'Session details and mod panes' });
-  const mk = (id: string, label: string, name: string | null, aria: string): HTMLButtonElement => {
-    const b = el('button', { class: 'mod-tab', type: 'button', id: 'mod-tab-' + id, role: 'tab', 'aria-selected': String(ctl.active === id), tabindex: ctl.active === id ? '0' : '-1', 'aria-label': aria, 'data-id': id, ...(name ? { 'data-tip': name } : {}) });
-    b.innerHTML = label;
-    return b;
-  };
-  bar.append(mk('details', '<span>Details</span>', null, 'Session details'));
-  for (const p of list) bar.append(mk(p.id, ui.html.mod(p.title), p.plugin + ' mod', p.title + ', ' + p.plugin + ' mod'));
-  const go = (id: string, focus: boolean): void => {
+  const bar = ui.tabs({ label: 'Session details and mod panes', class: 'mod-tabs', scroll: true, value: ctl.active, tabs: [
+    { value: 'details', label: 'Details', id: 'mod-tab-details', ariaLabel: 'Session details' },
+    ...list.map((p) => ({ value: p.id, label: p.title, labelHTML: ui.html.mod(p.title), id: 'mod-tab-' + p.id, ariaLabel: p.title + ', ' + p.plugin + ' mod', tip: p.plugin + ' mod' }))
+  ] });
+  /* the panel redraws with the chosen pane; keyboard focus follows the tab into the new strip */
+  bar.addEventListener('ui:change', (e) => {
+    const id = (e as CustomEvent<{ value: string }>).detail.value, focus = bar.contains(document.activeElement);
     ctl.active = id; surface.redrawRight?.();
     onChange?.();
     if (focus) requestAnimationFrame(() => { document.getElementById('mod-tab-' + id)?.focus(); });
-  };
-  bar.addEventListener('click', (e) => { const b = (e.target as Element).closest<HTMLElement>('.mod-tab'); if (b) go(b.dataset['id'] ?? 'details', false); });
-  bar.addEventListener('keydown', (e) => {
-    const ids = ['details', ...list.map((p) => p.id)], i = ids.indexOf(ctl.active);
-    const j = e.key === 'ArrowRight' ? (i + 1) % ids.length : e.key === 'ArrowLeft' ? (i - 1 + ids.length) % ids.length : e.key === 'Home' ? 0 : e.key === 'End' ? ids.length - 1 : -1;
-    if (j >= 0) { e.preventDefault(); go(ids[j] ?? 'details', true); }
   });
   return bar;
 }
@@ -97,14 +89,7 @@ export function decoratePanel(pnl: HTMLElement): HTMLElement | null {
   const head = $('.ui-panel__head', pnl), body = $('.ui-panel__body', pnl);
   const bar = tabs(list);
   head.classList.add('mod-head'); head.replaceChildren(bar);
-  /* the strip scrolls when the tabs do not fit: the open tab is kept in view and the cut edge fades */
-  const more = (): void => { bar.toggleAttribute('data-more', bar.scrollLeft + bar.clientWidth < bar.scrollWidth - 2); };
-  bar.addEventListener('scroll', more, { passive: true });
-  requestAnimationFrame(() => {
-    const t = bar.querySelector<HTMLElement>('[aria-selected="true"]');
-    if (t) { const l = t.offsetLeft - bar.offsetLeft; if (l + t.offsetWidth > bar.scrollLeft + bar.clientWidth) bar.scrollLeft = l + t.offsetWidth - bar.clientWidth + 12; }
-    more();
-  });
+  /* the strip scrolls when the tabs do not fit: the library keeps the open tab in view and fades the cut edge */
   body.setAttribute('role', 'tabpanel'); body.setAttribute('aria-labelledby', 'mod-tab-' + ctl.active);
   body.addEventListener('scroll', () => { ctl.scroll[ctl.active] = body.scrollTop; }, { passive: true });
   for (const k of [...ctl.roots.keys()]) if (k.endsWith(':dock')) ctl.roots.delete(k);

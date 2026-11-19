@@ -73,7 +73,7 @@ export async function mods(env, AXE) {
 
     /* the details panel: a tab per pane after Details; the tabs follow the keys */
     await page.keyboard.press('Control+i'); await page.waitForTimeout(900);
-    const tabs = await page.evaluate(() => [...document.querySelectorAll('.mod-tab')].map((n) => n.getAttribute('aria-label')));
+    const tabs = await page.evaluate(() => [...document.querySelectorAll('.mod-tabs .ui-tab')].map((n) => n.getAttribute('aria-label')));
     check('mods', 'at 1440 each pane is a tab of the details panel after Details, and none is inline', tabs.join('|') === 'Session details|Tests, test-runner mod|Token usage, token-meter mod' && (await page.evaluate(() => document.querySelectorAll('.mod-inline').length)) === 0, tabs);
     await page.click('#mod-tab-usage'); await page.waitForTimeout(400);
     const chart = await page.evaluate(() => { const f = [...document.querySelectorAll('.mod-pane svg rect')].map((r) => getComputedStyle(r).fill); return { n: f.length, fills: [...new Set(f)] }; });
@@ -193,7 +193,7 @@ export async function mods(env, AXE) {
     for (const w of [1199, 1000, 390]) {
       const page = await s.fresh({ q: URL, w, h: 800, settle: 1500 });
       await send(page);
-      const r = await page.evaluate(() => ({ tabs: document.querySelectorAll('.mod-tab').length, inline: [...document.querySelectorAll('.ss-mods--band .mod-inline')].map((n) => n.dataset.open), over: document.documentElement.scrollWidth > innerWidth }));
+      const r = await page.evaluate(() => ({ tabs: document.querySelectorAll('.mod-tabs .ui-tab').length, inline: [...document.querySelectorAll('.ss-mods--band .mod-inline')].map((n) => n.dataset.open), over: document.documentElement.scrollWidth > innerWidth }));
       check('mods', `at ${w} the panes are inline above the composer, one open and the other folded`, r.tabs === 0 && r.inline.join() === 'false,true' && !r.over, r);
     }
     const page = await s.fresh({ q: URL, w: 1000, h: 800, settle: 1500 });
