@@ -16,7 +16,7 @@ import type { LedgerTotals } from './map';
 const log = logger('live');
 
 /** the sources served by the mock provider while the live one is a skeleton */
-export const MOCK_SOURCES = ['user', 'details', 'bots', 'run', 'schedules', 'feedforward', 'dictation', 'files', 'sessions.diff', 'sessions.draft', 'sessions.fork', 'sessions.answerBlank', 'sessions.openPullRequest'] as const;
+export const MOCK_SOURCES = ['user', 'details', 'bots', 'run', 'schedules', 'feedforward', 'dictation', 'files', 'sessions.diff', 'sessions.fork', 'sessions.answerBlank', 'sessions.openPullRequest'] as const;
 
 export interface LiveOptions {
   client: GatewayClient;
@@ -65,10 +65,13 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   async function refreshList(): Promise<void> {
     const [active, hidden] = await Promise.all([client.request('session.list', { limit: 100 }), client.request('session.list', { limit: 100, include_hidden: true })]);
     const t = now();
-    const live = new Set(active.sessions.map((r) => r.id));
-    const local = list.get().filter((s) => !live.has(s.id) && convos.get(s.id)?.gwId === null && convos.get(s.id)?.turns.length);
-    list.set([...local, ...active.sessions.map((r) => ({ ...sessionRowToSummary(r, t), running: convos.get(r.id)?.running != null }))]);
-    archived.set(hidden.sessions.filter((r) => !live.has(r.id)).map((r) => sessionRowToSummary(r, t)));
+    /* a session made here keeps the id the UI knows it by, even after the gateway names it */
+    const named = (r: (typeof active.sessions)[number]): SessionSummary => { const id = byGw.get(r.id) ?? r.id; return { ...sessionRowToSummary(r, t), id, running: convos.get(id)?.running != null }; };
+    const rows = active.sessions.map(named);
+    const known = new Set(rows.map((r) => r.id));
+    const placeholders = list.get().filter((s) => s.id.startsWith('new-') && convos.get(s.id)?.gwId === null && !known.has(s.id));
+    list.set([...placeholders, ...rows]);
+    archived.set(hidden.sessions.filter((r) => !known.has(byGw.get(r.id) ?? r.id)).map((r) => sessionRowToSummary(r, t)));
   }
 
   /* ───────── a session becomes live on the gateway (created, or resumed with its transcript) ───────── */
@@ -192,10 +195,14 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   /* ───────── the sources ───────── */
   const sessions: SessionsSource = {
     list, archived,
-    draft: () => mock.sessions.draft(),
+    draft: () => '', /* the composer starts empty: the mock's draft is invented text */
     conversation(id) {
       const c = convo(id);
-      if (!c.hydrated && !c.gwId) { c.hydrated = true; resume(c).catch((e: unknown) => { c.hydrated = false; log.warn('could not load session ' + id, e); }); }
+      if (!c.hydrated && !c.gwId) {
+        c.hydrated = true;
+        if (!list.get().some((s) => s.id === id)) return feed(() => ({ turns: [...c.turns] }), c.events); // not a gateway session (the UI's placeholder): nothing to load
+        resume(c).catch((e: unknown) => { c.hydrated = false; log.warn('could not load session ' + id, e); });
+      }
       return feed(() => ({ turns: [...c.turns] }), c.events);
     },
     diff: (): readonly DiffFile[] => [],

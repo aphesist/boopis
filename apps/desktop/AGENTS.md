@@ -1,6 +1,103 @@
-# AGENTS.md: apps/desktop (the UI half: `ui/`)
+# AGENTS.md: apps/desktop
 
-The desktop app is a Tauri host (`src-tauri/`, Rust; its guide is the other half of this file) and a UI (`ui/`, TypeScript, Vite, no framework). This half covers `ui/`.
+The desktop app is a Tauri host (`src-tauri/`, Rust) and a UI (`ui/`, TypeScript, Vite, no framework). This file has two halves: **the host half** (`src-tauri/`, next), then **the UI half** (`ui/`).
+
+# The host half: `src-tauri/`
+
+## Job
+The host is the **machine authority** of the three-authority model (`docs/ARCHITECTURE.md` section 1). It owns the Hermes lifecycle, the gateway connection, the OS keychain, windows, notifications and folder pickers, and it serves the UI. It does not render, and it does not decide any work (sessions, tools, governance and the ledger are the backend's). Crate `hypotaxis-host`, library `hypotaxis_host`, binary `hypotaxis`, identifier `dev.aphesist.hypotaxis`.
+
+## Authority boundaries (each one is a rule)
+- **The webview never receives a ticket, a token or a secret.** It holds a connection id. Tickets are single-use, minted per connect, and live inside `hermes::attach` types that are not `Serialize` and print `<redacted>`. There is **no command that returns a secret**: `secret_set`, `secret_delete` and `secret_exists` only.
+- **The UI never opens a socket.** A browser WebSocket always sends `Origin`, which the gateway refuses; the host dials with **no `Origin`** and the ticket subprotocols (`hermes-gateway-v1`, `hermes-gateway-ticket.<ticket>`), on loopback only (`require_loopback`).
+- **Frames are validated, never altered.** Shape (JSON-RPC 2.0) and size (`Limits`: 32 MiB in, 8 MiB out) are checked on the envelope only. The one rewrite is the top-level `id` of a UI request, so windows cannot collide; `params` and `result` are forwarded byte for byte (`rewrite_id` copies raw members).
+- **Every command validates its input as untrusted** and fails with `{code, message}` (`error.rs`; `hx.hermes.unavailable`, `hx.hermes.incompatible`, `hx.config.invalid`, `hx.invalid_params`, and the host's own `hx.host.*` and `hx.secrets.*`). Nothing is fabricated: an unknown version stays unknown.
+- **Capabilities list exactly the commands used**: `build.rs` declares them, `capabilities/main.json` allows them, `lib.rs` registers them, and the test `commands_match_the_capability` keeps the three lists equal. Plugins (store, notification, dialog, opener) are called from Rust only; none of their JS permissions are granted.
+- **CSP** (`tauri.conf.json`): `default-src 'none'`, scripts `'self'`, `connect-src ipc: http://ipc.localhost` (Tauri IPC only), fonts bundled (`@fontsource`), no `unsafe-eval`, no remote anything. Styles allow `'unsafe-inline'` because the v6 markup sets `style=` attributes.
+- **Fail closed**: a server request nobody can answer is declined (`hx.host.no_ui`), an approval the UI cannot deliver stays pending, `hermes_install` without `consent: true` is refused and with it still runs nothing (it reports the documented installer command). Never run an installer in tests.
+
+## Layout
+```
+src-tauri/
+  build.rs  tauri.conf.json  capabilities/main.json  permissions/ (generated)  icons/
+  src/
+    lib.rs        the registry (tauri-specta), run(), the two guard tests (capability list, bindings freshness)
+    commands.rs   every UI-facing command and the typed ConnectionStateEvent; Frame (raw JSON out)
+    error.rs      Error, stable codes, HostError
+    config.rs     Limits (every number as data) and REQUIRES_HERMES
+    state.rs      Hubs: one proxy per profile, the connection index
+    endpoint.rs   Endpoint trait: Local (ensure/attach), Remote {url, token} and Cloud {control_plane, session} (typed, unavailable)
+    hermes/       discover (binary, version, install-stamp.json, HERMES_HOME), cli (allowlisted env, timeout, cap),
+                  attach (verdict, Ticket, Dial), control (the gateway control socket), lifecycle (Supervisor), install (stub)
+    gateway/      frame (validate), link (the transport traits), ws (tokio-tungstenite), outbox (bounded queue, coalescing),
+                  reconnect (the pure state machine), hub (the shared link and its API), actor (dial, handshake, serve, replay),
+                  route (response, event and server-request routing), metrics, tests (a scripted gateway)
+    secrets/      store (SecretStore: Keychain, MemoryStore for tests), channel (the plugin socket)
+    settings.rs   versioned AppSettings and its migration; os.rs (URL allowlist, home-relative paths, notification bounds)
+  tests/live_gateway.rs   the proxy against a real Hermes gateway and the fake model (skips without HX_E2E_HERMES_ENV)
+```
+
+## Hermes lifecycle
+1. **Discover** (`hermes::discover`): `hermes` on `PATH`, then `~/.local/bin`, then Hermes's own places; `hermes --version`; `install-stamp.json` near the install. **`HERMES_HOME` wins, else `~/.hermes`** (Windows: `%LOCALAPPDATA%\hermes`; `HERMES_DATA_DIR_SUFFIX` is honoured). A named profile lives in `<root>/profiles/<name>` (ADR-0006: attach to the active profile by default; a setting switches).
+2. **`requires_hermes`** (`>=0.23.2`, from the plugin manifest): an older Hermes is refused (`hx.hermes.incompatible`). A Hermes that names no version (a source checkout with no stamp) passes with a warning; the gateway's `runtime.describe` is the real gate.
+3. **Ensure once per run** (`hermes gateway ensure --json`). The `code_sha` check: `client_code_sha` against `endpoint.code_sha`; when both exist and differ the gateway outlived an update, so the host runs `hermes gateway stop --yes` and ensures once more. When the running gateway names no code identity (or the identity the install stamp names), the CLI is skipped: a control-socket round trip decides instead.
+4. **Attach per connect**: the gateway's control socket (`$HERMES_HOME/gateway.sock`: `identify`, then `session-ticket`, about 2 ms; the home must belong to the socket's peer and not be group- or world-writable), falling back to `hermes gateway attach --json --start` (about 500 ms: a Python start; it also restarts a gateway that idle-exited). Windows uses the CLI route (the control channel is a named pipe).
+5. **Link states** (`gateway::reconnect`): `connecting`, `ready`, `degraded`, `incompatible`, as `connection.state` event frames to every window and as the typed `ConnectionStateEvent`. The first retry after a loss is immediate (an idle-exited gateway is restarted by the attach), then 0.4 s doubling to 15 s. `incompatible` parks until the user retries (`hermes_retry`, or connecting again). After a reconnect the host asks `session.events.since {session_id, last_seen, replay_epoch}` for every session it saw events of (the 64 most recent), delivers the missed events, drops live duplicates, and sends `connection.replay_gap` when the buffer was truncated (the UI reloads that transcript).
+6. **Handshake** is the host's, once per link: `gateway.ready`, `client.capabilities {server_requests: true}`, `runtime.describe`. A window's own `client.capabilities` and `runtime.describe` are answered from that cache and never reach the gateway.
+
+## The proxy
+One link per profile, shared by every window and multiplexed by request id (`gateway::hub`). Events go to every window; a **server request** goes to the window that attached last and is declined when none is attached. A bounded queue per window (`Outbox`): responses and every non-delta frame are never dropped; past 2048 queued frames adjacent `message.delta` frames of one session are merged (text concatenated, order kept) and counted, reported as a `connection.backpressure` frame and in `gateway_stats`; past 16384 the window is closed as too slow and reconnects (the replay path). Requests unanswered for 120 s are answered with a timeout error. Pings every 20 s; 75 s of silence is a lost link.
+
+**Measured budgets** (debug build, real gateway from the spike install, `tests/live_gateway.rs`, three runs): attach (control-socket ticket plus WebSocket handshake) 8 to 16 ms (one outlier of 188 ms); first connect of a run about 1 s, which is discovery (`hermes --version`) plus `ensure`; the app warms discovery while the UI loads; proxy overhead per frame, p95: gateway to queue about 0.09 ms, UI to link about 0.08 to 0.4 ms (budget 1 ms); queue to the UI's sink about 0.02 to 0.07 ms in the test (the Tauri Channel's own cost is outside the test).
+
+## The secret channel (host to plugin)
+Secrets travel UI to host to keychain (ADR-0020, `docs/FORMS.md` section 3). Hermes reads credentials through a **secret source** (`ctx.register_secret_source`, `agent/secret_sources/base.py`: read-only, startup-time, synchronous, env-var-shaped), and a plugin cannot call Tauri, so the host listens on a local socket (`secrets::channel`, protocol `hx-host-secrets-v1`):
+- **Transport**: a Unix socket `host.sock` (mode `0600`) in `$XDG_RUNTIME_DIR/hypotaxis/` (else `<data dir>/hypotaxis/run/`, mode `0700`). A live host is never replaced; a stale socket is. Windows would use a named pipe with a user-only ACL: **not implemented** (`start` says so and the plugin gets no secrets there yet).
+- **Rendezvous**: `<hermes home>/hypotaxis/host-channel.json`, mode `0600`, rewritten atomically on every host launch: `{schema_version: 1, protocol, socket, token, pid}`. The plugin reads it per request, so it needs no restart when the host restarts; a missing file, a dead pid or a refused connection means "no host".
+- **Authentication**: a per-launch 256-bit token (`getrandom`), compared in constant time, and the peer's uid must equal the owner of the socket directory. The token never appears in a log line (`Debug` redacts it).
+- **Protocol**: one JSON line in, one out, then close; reads are capped at 8 KiB and 2 s. Request `{"v":1,"token":"...","op":"get"|"has","service":"hypotaxis.<scope>","account":"<name>"}`; reply `{"v":1,"protocol":"hx-host-secrets-v1","ok":true,"value":"..."}` or `{"ok":false,"code":"hx.secrets.not_found"|"hx.secrets.unavailable"|"hx.host.unauthorized"|"hx.invalid_params"|...}`. `has` returns `{"found": bool}`. **There is no write op and no list op**; only the `hypotaxis.` service namespace is reachable (a ref `secret://<scope>/<name>` is service `hypotaxis.<scope>`, account `<name>`).
+- **What the plugin side needs** (not built here): a `SecretSource` in `plugins/hypotaxis` whose `fetch()` reads `host-channel.json`, and for each configured ref (plugin settings map a ref to an env-var name, for example `secret://provider.openai/api_key` to `OPENAI_API_KEY`) connects to the socket, sends one `get`, and returns the env-shaped values. It must: use a 2 s timeout, map `hx.secrets.not_found` to `NOT_CONFIGURED`, a missing or dead host to `NETWORK`, and never log a value or the token. In the cloud (ADR-0019) the same source reads the control plane instead.
+- **Keychain**: the `keyring` crate (v4): the **Secret Service** on Linux (GNOME Keyring, or KWallet 6 with its Secret Service enabled), Keychain on macOS, Credential Manager on Windows. With no Secret Service running the error is `hx.secrets.unavailable` with a message naming the fix. Calls run in `spawn_blocking` (a D-Bus round trip). Tests use `MemoryStore` behind the `SecretStore` trait; no secret is ever written to a plaintext file.
+
+## Endpoints (ADR-0018 seam)
+`trait Endpoint { connect() -> GatewayConn }`. `Local` is done. `Remote {url, token}` and `Cloud {control_plane, session}` are typed and return `hx.hermes.unavailable` "not yet supported". Neither the proxy nor the UI knows the kind. A remote token belongs in the keychain, never in settings (`EndpointConfig` redacts it in `Debug`).
+
+## Typed commands and bindings
+`tauri-specta` generates `ui/src/host/bindings.ts` from the registry in `lib.rs`. **Never edit it.** The test `bindings_are_fresh` (CI runs it) fails when it is stale; refresh with `HX_UPDATE_BINDINGS=1 cargo test -p hypotaxis-host bindings`. `Frame` and `Json` are typed `unknown` in TypeScript (specta cannot export `serde_json::Value`'s 64-bit numbers); the UI narrows them with Hermes's generated contract.
+
+## How to run
+```sh
+# Linux prerequisites (Debian/Ubuntu names; on Arch: webkit2gtk-4.1 gtk3 librsvg libsoup3 base-devel)
+sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev build-essential pkg-config
+
+export CARGO_TARGET_DIR=...   # keep builds out of the tree on a small disk; CARGO_INCREMENTAL=0
+cargo fmt -p hypotaxis-host --check && cargo clippy -p hypotaxis-host --all-targets -- -D warnings
+cargo test -p hypotaxis-host                          # unit tests, the capability and bindings checks
+HX_E2E_HERMES_ENV=<spike install> cargo test -p hypotaxis-host --test live_gateway -- --nocapture
+                                                      # real gateway + fake model; prints BUDGETS; skips without the variable
+cargo install tauri-cli --locked   # or: pnpm dlx @tauri-apps/cli@2
+cargo tauri dev  (from src-tauri)  # runs the UI with the live provider (`vite --mode desktop`)
+NO_STRIP=true cargo tauri build --bundles appimage            # the Linux bundle; add --debug on a small disk
+HX_E2E_HERMES_ENV=<spike install> python3 tests/e2e/smoke_desktop.py <the .AppImage> shot.png
+                                                      # headless: Xvfb + WebKitWebDriver drive the real app
+```
+- **Wayland and X11**: GTK picks the backend from the session; both work. If the window is blank under Wayland with NVIDIA (a WebKitGTK DMABUF issue), run with `WEBKIT_DISABLE_DMABUF_RENDERER=1`; `GDK_BACKEND=x11` forces X11. The smoke test runs under X11 (Xvfb).
+- **Arch**: running an AppImage needs `fuse2` (`pacman -S fuse2`), or run it with `--appimage-extract-and-run` (or `APPIMAGE_EXTRACT_AND_RUN=1`). For secrets install and unlock `gnome-keyring`, or enable the Secret Service in KWallet 6; without one, `secret_set` fails with `hx.secrets.unavailable`. Hermes itself: `curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash` (the app does not run it).
+- The bundle is AppImage only (the owner runs Arch); `.deb` is not built.
+- Logs go to stderr (`RUST_LOG`). Rotating files in the profile's `logs/hypotaxis/` (STANDARDS section 4) are not done yet.
+
+## What not to do (host)
+- Do not add a command that returns a secret, a ticket or a token. Do not log them, in any level.
+- Do not send an `Origin` header, dial a non-loopback address from `Local`, or let the UI dial anything.
+- Do not alter a frame's `params` or `result`; do not drop a response; do not queue without a bound.
+- Do not hold a `std` mutex across an `.await`, block an async worker (use `spawn_blocking`), or `unwrap` outside tests.
+- Do not inherit the whole environment into a child: the allowlist is in `hermes::cli`.
+- Do not hand-edit `bindings.ts` or `permissions/autogenerated`. Do not put a number in code that belongs in `config::Limits`.
+- Commits are the owner's alone (`scripts/setup-hooks.sh`), no co-author lines, nothing that names an agent, a model or a tool.
+
+---
+
+# The UI half: `ui/`
 
 ## Job
 `apps/desktop/ui` is the **owner's approved v6 design system**, ported to typed ES modules. It draws sessions, bots, the dock and the cards from a data provider and sends the user's actions back to it. It does not design anything: **implement the approved design exactly and never reinterpret it** (root `AGENTS.md` invariant 8, ADR-0009). The source is `design/v6/` (the reference; never edit it) and the system's own docs: `design/v6/design-system/DESIGN-SYSTEM.md`, `KEYMAP.md`, `LAYOUT.md`, `DESIGN.md`, `PRODUCT.md`.
@@ -15,6 +112,8 @@ ui/
   src/modules/          shell, session, bots, dock, cards: each module's TS and CSS
   src/styles/           tokens.css (+ tokens.json, generated), theme.ts (runtime), theme-panel.ts, fonts.ts, index.ts (the cascade order)
   src/data/             THE DATA SEAM: types, provider interfaces, mock provider, README.md
+  src/host/             the bridge to the Rust host: bindings.ts (generated, never edited), bridge, gateway client, live provider, map
+  src/vendor/hermes-shared/  Hermes's generated gateway contract types (MIT), pinned, with NOTICE and PIN.json
   vendor/               orb-avatar.min.js (the owner's <orb-avatar> web component, MIT) and its .d.ts
   tests/                smoke (Playwright), parity (v6 against the port), lib.mjs
   scripts/              build-tokens.mjs
@@ -45,7 +144,7 @@ Every row of "Owner decisions" in `DESIGN-SYSTEM.md`, and one newer rule. A chan
 Also binding: tokens, never literals, for colour, type, radius and space (the CSS is v6's, with no literal colours; do not add any); WCAG 2.2 AA (labels, roles, focus order, contrast, **label in name**: an accessible name must contain the visible text, in order); `<orb-avatar>` stays a vendored web component.
 
 ## The data seam
-Modules read **only** through `DataProvider` (`src/data/provider.ts`): `Watch`/`Feed` streams plus commands. Never import `mock-data.ts` or `mock-provider.ts` from a module, never keep a second copy of data a provider owns, never fabricate a value (an unknown value is `null` and is shown as unknown). The live provider (the Hermes gateway and the hypotaxis plugin) comes from another workstream and implements the same interfaces. Read `src/data/README.md` before touching anything under `src/data` or any module's data flow.
+Modules read **only** through `DataProvider` (`src/data/provider.ts`): `Watch`/`Feed` streams plus commands. Never import `mock-data.ts` or `mock-provider.ts` from a module, never keep a second copy of data a provider owns, never fabricate a value (an unknown value is `null` and is shown as unknown). The live provider (`src/host/live-provider.ts`: the Hermes gateway through the host) implements the same interfaces; it serves sessions, the conversation stream and approvals, and the rest stays the mock's (`MOCK_SOURCES`) until the plugin's streams exist. Read `src/data/README.md` before touching anything under `src/data` or any module's data flow.
 
 ## How to test
 ```sh

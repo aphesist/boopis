@@ -24,11 +24,17 @@ The UI never holds gateway tickets, tokens or keys.
 | `gateway_send` | `{connection_id, frame}` | `{}`. Frames are JSON-RPC objects. The host validates shape and size and never alters `params` |
 | `gateway_disconnect` | `{connection_id}` | `{}` |
 | `secret_set` / `secret_delete` | `{service, account, value?}` | `{}`. Writes go to the OS keychain. **There is no `secret_get` for the UI**; the plugin reads secrets through Hermes's `register_secret_source`, backed by the host |
-| `app_settings_get` / `app_settings_set` | typed settings | |
-| `notify` | `{title, body, action?}` | `{}` |
-| `pick_folder` / `open_external` | | |
+| `secret_exists` | `{service, account}` | `boolean`. For a form's "provided" state; never the value |
+| `app_settings_get` / `app_settings_set` | typed settings (`{version, profile, notifications}`, versioned and migrated) | |
+| `notify` | `{title, body, action?}` | `{}`. Desktop notifications carry no action buttons; `action` is validated and ignored |
+| `pick_folder` | | `{path, home_relative}` or `null`: `~/x/y` under the user's home, absolute outside it |
+| `open_external` | `{url}` | `{}`. `http` and `https` only, no credentials in the URL |
+| `hermes_retry` | `{profile?}` | `{}`. Asks a link that parked as `incompatible` to try again |
+| `gateway_stats` | `{profile?}` | counters and p95 timings of the proxy |
 
-The host reconnects on gateway restarts (after `code_sha` mismatch, idle exit or crash) and replays with `session.events.since` using `seq` and `replay_epoch`. The UI sees a `connection.state` frame: `connecting`, `ready`, `degraded` or `incompatible`.
+The host reconnects on gateway restarts (after `code_sha` mismatch, idle exit or crash) and replays with `session.events.since` using `seq` and `replay_epoch`. The UI sees host-made `event` frames (type namespace `connection.`, never from the gateway): `connection.state` (`payload.state`: `connecting`, `ready`, `degraded` or `incompatible`; `reconnected: true` after a loss), `connection.replay_gap` (`payload.session_id`: the replay buffer was truncated, reload that transcript) and `connection.backpressure` (`payload.coalesced`: `message.delta` frames were merged because the window fell behind). The same state is a typed `ConnectionStateEvent`. A window's `client.capabilities` and `runtime.describe` are answered by the host from the handshake it did once.
+
+The host reads the secrets the plugin needs through its own channel (`apps/desktop/AGENTS.md`, "The secret channel"): protocol `hx-host-secrets-v1`, host-only codes `hx.host.*` and `hx.secrets.*` (to be added to `crates/hx-proto/errors.json`).
 
 ## 2. Host and Hermes: `hermes-gateway-v1`
 

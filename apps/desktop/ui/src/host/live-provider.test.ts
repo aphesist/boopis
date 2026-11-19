@@ -181,6 +181,22 @@ describe('the live provider: the conversation stream, from recorded frames', () 
     expect(host.last('session.create')?.['params']).toEqual({ source: 'gui' });
     expect(host.last('prompt.submit')?.['params']).toMatchObject({ session_id: 'local-new', text: 'start' });
   });
+
+  it('a session made here keeps its id in the list after the gateway names it, and the composer starts empty', async () => {
+    expect(provider.sessions.draft()).toBe('');
+    const created = provider.sessions.create('');
+    host.autoReply = (f) => {
+      if (f['method'] === 'session.create') host.result(f['id'], { session_id: 'local-new', stored_session_id: 'local-new', messages: [], message_count: 0, info: {} });
+      else if (f['method'] === 'session.list') host.result(f['id'], { sessions: (f['params'] as { include_hidden?: boolean }).include_hidden ? [] : [{ id: 'local-new', title: 'start', started_at: NOW.getTime() / 1000 }] });
+      else gateway(f);
+    };
+    provider.sessions.send(created.id, 'start', META);
+    await tick();
+    host.event('sessions.changed', '');
+    await tick();
+    expect(provider.sessions.list.get().map((s) => s.id)).toEqual([created.id]);
+    expect(provider.sessions.list.get()[0]?.title).toBe('start');
+  });
 });
 
 describe('the live provider: approvals', () => {
@@ -191,11 +207,15 @@ describe('the live provider: approvals', () => {
     const seen: WaitsEvent[] = [];
     provider.waits.subscribe((e) => seen.push(e));
     // the recording is of another session: bind it by resuming that id
+    const other = (byType('approval.request')['params'] as { session_id: string }).session_id;
     host.autoReply = (f) => {
       if (f['method'] === 'session.resume') host.result(f['id'], { session_id: (f['params'] as { session_id: string }).session_id, message_count: 0, messages: [], info: {} });
+      else if (f['method'] === 'session.list') host.result(f['id'], { sessions: (f['params'] as { include_hidden?: boolean }).include_hidden ? [] : [{ id: other, title: 'approvals' }] });
       else gateway(f);
     };
-    provider.sessions.conversation((byType('approval.request')['params'] as { session_id: string }).session_id);
+    host.event('sessions.changed', '');
+    await tick();
+    provider.sessions.conversation(other);
     await tick();
     host.emit(byType('approval.request'));
     const added = seen[0];
