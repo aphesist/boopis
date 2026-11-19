@@ -350,19 +350,24 @@ jobs:
           retention-days: 30
 
   release:
-    # Tags only: a GitHub release with the AppImage, whatever extra bundles built (the Arch package among them), and
-    # SHA256SUMS over all of them. The AppImage is what the release waits on; the others are attached if they built.
+    # Tags only: a GitHub release with the AppImage, whatever extra bundles built (the Arch package among them), the two
+    # installers, and SHA256SUMS over all of them. The AppImage is what the release waits on; the others are attached if they built.
     if: ${{ !cancelled() && needs.linux.result == 'success' && startsWith(github.ref, 'refs/tags/v') }}
     needs: [linux, smoke, windows, macos, arch, arch-smoke]
     runs-on: ubuntu-22.04
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
       - uses: actions/download-artifact@v4
         with:
           pattern: hypotaxis-*
           path: release-files
           merge-multiple: true
+      - name: the installers go next to the artifacts (before the checksums, so SHA256SUMS covers them)
+        run: cp scripts/install.sh scripts/install.ps1 release-files/
       - name: the Arch package is published only when its smoke test passed
         if: ${{ needs.arch-smoke.result != 'success' }}
         run: rm -f release-files/*.pkg.tar.zst

@@ -18,6 +18,9 @@ BOOPIS_REPO=hypotaxis
 # The command, the install folder and the menu entry.
 APP=boopis
 APP_COMMENT='A desktop app for AI coding agents'
+# The window class the AppImage's binary reports: GTK takes it from the program name (Cargo's bin, `hypotaxis`), as the
+# app sets no GTK application id (`enableGtkAppId` is off in tauri.conf.json).
+APP_WM_CLASS=hypotaxis
 # The files of a release. {v} is the version without its leading v.
 ARTIFACT_LINUX_X86_64='Hypotaxis_{v}_amd64.AppImage'
 ARTIFACT_MACOS_AARCH64='Hypotaxis_{v}_aarch64.dmg'
@@ -475,7 +478,7 @@ install_linux() { # install_linux <appimage>
   # The menu entry, with the icon by name, so the theme picks the size.
   {
     printf '[Desktop Entry]\nType=Application\nName=%s\nComment=%s\n' "$APP" "$APP_COMMENT"
-    printf 'Exec=%s %%U\nIcon=%s\nTerminal=false\nCategories=Development;\n' "$bin/$APP" "$([ "$OPT_ICON" = dark ] && printf '%s-dark' "$APP" || printf '%s' "$APP")"
+    printf 'Exec=%s %%U\nIcon=%s\nTerminal=false\nCategories=Development;\nStartupWMClass=%s\n' "$bin/$APP" "$([ "$OPT_ICON" = dark ] && printf '%s-dark' "$APP" || printf '%s' "$APP")" "$APP_WM_CLASS"
   } | put_text 644 "$share/applications/$APP.desktop"
   # The icons: the light one is the default, the dark one sits beside it; the symbolic one is for panels and trays.
   local variant size file suffix

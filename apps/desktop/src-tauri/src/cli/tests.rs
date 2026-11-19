@@ -217,3 +217,14 @@ fn a_broken_runtime_is_a_failure_with_the_way_out() {
     );
     assert!(t.contains("Reinstall boopis"), "{t}");
 }
+
+#[test]
+fn only_commands_attach_to_the_parent_console() {
+    // A normal launch of the window never touches the console; every command that prints does.
+    assert!(!needs_console(&parse(&args(&[]))));
+    assert!(!needs_console(&parse(&args(&["/tmp/x.txt"]))));
+    assert!(!needs_console(&parse(&args(&["boopis://open"]))));
+    for a in [&["--version"][..], &["doctor"], &["--help"], &["--nope"]] {
+        assert!(needs_console(&parse(&args(a))), "{a:?}");
+    }
+}
