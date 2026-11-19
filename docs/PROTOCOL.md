@@ -69,17 +69,18 @@ Methods are registered with `ctx.register_rpc(name, handler)` and appear as `plu
 ### Methods
 | Method | Params | Result |
 |---|---|---|
-| `describe` | — | `{version, protocol: "hypotaxis-v1", capabilities[], hx: {version, protocol}\|null, kernel: {ok}\|null}` |
+| `describe` | — | `{version, protocol: "hypotaxis-v1", capabilities[], hx: {version, protocol}\|null, kernel: {ok}\|null, session?, config: {mode, cost_cap_usd, errors, ladder_errors}}` |
 | `mode.set` | `{session_id, mode: "governed"\|"ungoverned", ladder?: Tier[], model?: ModelRef, gate?: {enabled}}` | `{}`. Must be called before the first `prompt.submit` of a session; later calls fail with `hx.mode.locked` (prompt caching). **[verify when system-prompt sections are evaluated]** |
 | `feedforward.preview` | `{session_id, draft, cursor?}` | `{decisions: Decision[], assume: string}`. At most one model call per typing pause, which the UI debounces at 1.5 s |
 | `feedforward.set` | `{session_id, key, value}` | `{}`. Applied to the next turn and written to the ledger |
-| `blank.fill` | `{session_id, blank_id, answer}` | `{delivered: bool}`. Delivered through steering at the next tool boundary |
+| `blank.fill` | `{session_id, blank_id, answer}` | `{delivered: bool}`. Writes `blank.filled` (decided by the user), emits `blank.filled`, and hands the answer to the model with `ctx.inject_message` (Hermes's plugin context has no steering call, so it arrives as the session's next turn, and only with `allow_gateway_injection`). `delivered: false` means the model will not see it unless the client sends it as a message. Refuses (`hx.invalid_params`) a blank that is not open |
 | `ledger.tail` | `{session_id, since_seq, limit}` | `{events: LedgerEvent[], head_seq}` |
 | `ledger.verify` | `{session_id}` | `{ok, broken_at_seq?}` |
 | `ledger.stats` | `{session_id}` | `{tokens: Usage, cost_usd, cost_api_equivalent_usd, round_trips, escalations, rollbacks, blanks, approvals, price_table}`. Costs are computed on read |
 | `cascade.state` | `{session_id}` | `{task_id?, tier?, ladder: Tier[], status}` |
 | `ladder.get` / `ladder.set` | `{profile}` / `{profile, ladder}` | |
-| `checkpoint.list` | `{session_id}` | `{checkpoints: [{ship_id, turn_id, commit, files, ts}]}` |
+| `checkpoint.list` | `{session_id}` | `{checkpoints: [{ship_id, commit, ref, files, ts, task_id?}]}`, kept ships only, oldest first (a restored ship has no checkpoint). Read off the ledger |
+| `checkpoint.diff` | `{session_id, ship_id?}` | `{files: [{path, status, add, del, binary, truncated, hunks: [{header, lines}]}], truncated, base?, head?, unavailable?}`. One ship, or every kept ship together. A hunk line keeps its `' '`, `'+'` or `'-'`. `unavailable` says why there is nothing to show (folder gone, no parent commit) |
 | `checkpoint.rewind` | `{session_id, ship_id}` | `{ok}`. Itself a journaled ship, so it's reversible |
 | `compat.inventory` | `{cwd}` | `{items: CompatItem[], trust: TrustState}` |
 | `trust.set` | `{cwd, decision: "trust"\|"deny", content_hash}` | `{}` |

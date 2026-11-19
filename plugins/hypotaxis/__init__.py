@@ -30,6 +30,9 @@ RPC_METHODS = (
     "ledger.stats",
     "cascade.state",
     "prices.refresh",
+    "blank.fill",
+    "checkpoint.list",
+    "checkpoint.diff",
 )
 
 
