@@ -63,8 +63,20 @@ let ro: ResizeObserver | null = null;
 
 const px = (v: string): number => parseFloat(v) || 0;
 const CONTAINER: ReadonlySet<SquircleMode> = new Set(['frame', 'surface']);
+/** a corner-radius transition still running on el (the computed radius is then a frame on the way, not the declared one) */
+function radiusAnimating(el: Element): Animation[] {
+  if (typeof el.getAnimations !== 'function') return [];
+  return el.getAnimations().filter((a) => 'transitionProperty' in a && /radius/.test((a as CSSTransition).transitionProperty));
+}
 function readRadii(el: Element, s: State): void {
   const cs = getComputedStyle(el);
+  /* the radius mid-transition is not the one declared: do not draw or expose it (it would stick in --r-outer). Read again
+     once the transition has finished, and keep what was read before until then */
+  const running = radiusAnimating(el);
+  if (running.length) {
+    Promise.allSettled(running.map((a) => a.finished)).then(() => { if (el.isConnected && state.get(el) === s) { readRadii(el, s); s.key = ''; apply(el as HTMLElement, s); } });
+    if (s.r) return;
+  }
   s.r = [px(cs.borderTopLeftRadius), px(cs.borderTopRightRadius), px(cs.borderBottomRightRadius), px(cs.borderBottomLeftRadius)];
   s.rk = s.r.join(',');
   if (CONTAINER.has(s.mode)) { const d = cs.getPropertyValue('--r-outer').trim(); s.declared = /^-?[\d.]+px$/.test(d) ? parseFloat(d) : NaN; }
