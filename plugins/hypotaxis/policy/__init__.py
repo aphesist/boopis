@@ -9,11 +9,15 @@ Order, first to last:
 2. a ``deny`` rule blocks (any source; deny beats ask beats allow);
 3. a write to a protected path blocks;
 4. governed mode blocks everything but the hypotaxis tools and read-only Hermes tools, and gives each
-   role (orchestrator, worker) only its own hypotaxis tools. No ``allow`` rule can widen it. Outside
+   role (orchestrator, worker) only its own hypotaxis tools. It has no shell (``terminal``) at all, and its
+   ``read_file`` and ``search_files`` reach only the workspace. No ``allow`` rule can widen it. Outside
    governed mode the cascade tool ``dispatch`` is refused: it has no cascade to run;
 5. an ``ask`` rule asks a human;
 6. an ``allow`` rule allows;
-7. otherwise the configured default (``allow`` unless set) applies.
+7. in governed mode a network tool (``web_search``, ``web_extract``, ``vision_analyze``, ...) that no rule allowed asks a
+   human: it sends data out. From an exec cell a network tool is refused unless ``exec.network`` is ``on``
+   (step 2's neighbour: the sandbox keeps the cell off the network, so the plugin must not lend it one);
+8. otherwise the configured default (``allow`` unless set) applies.
 
 Any exception blocks (fail closed).
 """
@@ -24,7 +28,7 @@ from functools import lru_cache
 
 from ..util.log import get_logger
 from .data import Defaults, load_defaults
-from .governed import governed_decision
+from .governed import governed_decision, outside_workspace
 from .rules import Match, Rule, match_rule, parse_rule, parse_rules, paths_of, protected_match
 from .types import ALLOW, Decision, SessionPolicy, ToolCall, block
 
@@ -66,7 +70,12 @@ def check(call: ToolCall, session: SessionPolicy) -> Decision:
 
 def _check(call: ToolCall, session: SessionPolicy, defaults: Defaults) -> Decision:
     if session.config_error:
-        if call.tool in defaults.read_only_tools:
+        confined = session.mode == "governed" and call.tool in defaults.workspace_confined_tools
+        if call.tool in defaults.read_only_tools and call.tool not in defaults.network_tools:
+            if confined and outside_workspace(call, defaults, session.cwd):
+                return block(
+                    "hypotaxis configuration is invalid, so only read-only tools inside the project run.", "config_invalid"
+                )
             return ALLOW
         return block(
             f"hypotaxis configuration is invalid, so only read-only tools run: {session.config_error}",
@@ -80,11 +89,17 @@ def _check(call: ToolCall, session: SessionPolicy, defaults: Defaults) -> Decisi
         return block(
             f"{call.tool} cannot be called from inside exec: it would wait on its own kernel.", "kernel_denied"
         )
+    if call.source == "kernel" and call.tool in defaults.network_tools and session.exec_network != "on":
+        return block(
+            f"{call.tool} reaches the network, and exec's network is off (exec.network), so a cell cannot call it: "
+            "the sandbox exists to keep code off the network. Call it directly, outside exec.",
+            "network",
+        )
     protected = _protected(call, session, defaults)
     if protected is not None:
         return protected
     if session.mode == "governed":
-        verdict = governed_decision(call, defaults, session.role, session.ship_closed)
+        verdict = governed_decision(call, defaults, session.role, session.ship_closed, root)
         if verdict.kind == "block":
             return verdict
     elif call.tool in defaults.governed_only_tools:
@@ -97,6 +112,8 @@ def _check(call: ToolCall, session: SessionPolicy, defaults: Defaults) -> Decisi
     for rule in _parsed(session.allow):
         if match_rule(rule, call, root, defaults, deny_like=False) is Match.YES:
             return ALLOW
+    if session.mode == "governed" and call.tool in defaults.network_tools:
+        return _ask("network", call, session)  # a read-only tool that sends data out: a human, or an allow rule, decides
     if session.default == "deny":
         return block(f"{call.tool} is not covered by an allow rule.", "default_deny")
     if session.default == "ask":

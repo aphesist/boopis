@@ -37,6 +37,19 @@
     "request_credential",
     "ask"
   ],
+  "network_tools": [
+    "web_search",
+    "web_extract",
+    "vision_analyze",
+    "video_analyze",
+    "x_search",
+    "browser_exec",
+    "browser_cdp"
+  ],
+  "workspace_confined_tools": [
+    "read_file",
+    "search_files"
+  ],
   "kernel_denied_tools": [
     "exec"
   ],
@@ -164,21 +177,37 @@
     "wc": {},
     "pwd": {},
     "stat": {},
-    "file": {},
+    "file": {
+      "deny_flags": [
+        "-C",
+        "--compile",
+        "-m",
+        "--magic-file"
+      ]
+    },
     "grep": {},
     "diff": {},
     "cut": {},
     "du": {},
     "df": {},
     "which": {},
-    "date": {},
+    "date": {
+      "deny_flags": [
+        "-s",
+        "--set"
+      ]
+    },
     "whoami": {},
     "basename": {},
     "dirname": {},
     "realpath": {},
     "readlink": {},
     "echo": {},
-    "printf": {},
+    "printf": {
+      "deny_flags": [
+        "-v"
+      ]
+    },
     "true": {},
     "false": {},
     "tree": {
@@ -189,13 +218,18 @@
     "sort": {
       "deny_flags": [
         "-o",
-        "--output"
+        "--output",
+        "--compress-program",
+        "-T",
+        "--temporary-directory"
       ]
     },
     "rg": {
       "deny_flags": [
         "--pre",
-        "--hostname-bin"
+        "--hostname-bin",
+        "-z",
+        "--search-zip"
       ]
     },
     "find": {

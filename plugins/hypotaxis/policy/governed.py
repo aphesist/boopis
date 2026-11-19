@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from . import shellcmd
 from .data import Defaults
+from .rules import paths_of, resolve_path
 from .types import ALLOW, Decision, Role, ToolCall, block
 
 _HINT = (
@@ -30,16 +31,21 @@ _BY_ROLE = {
 
 
 def command_is_read_only(command: str, defaults: Defaults) -> bool:
-    """True when every simple command in ``command`` is on the read-only table with no forbidden
-    flag and no output redirection to a file. Anything unparseable is not read-only."""
+    """True when every simple command in ``command`` is on the read-only table with no forbidden flag, no output
+    redirection to a file, no expansion syntax and no ``xargs``. Anything unparseable is not read-only.
+
+    Governed mode no longer uses this (it has no ``terminal``: the shell is ``harness.sh`` inside the sandbox). It
+    stays, strict, as the one definition of "read-only command" for anything that wants a cheap, conservative check:
+    a table of names and flags is only as strong as its table, so it refuses what it cannot see through (``$`` and
+    backticks anywhere, ``xargs`` or any wrapper that lets another word choose the flags, ``printf -v``)."""
     parsed = shellcmd.split(command)
     if not parsed:
         return False
     for item in parsed:
-        if item.writes_file:
+        if item.writes_file or shellcmd.has_dynamic_text(item.words):
             return False
         words = shellcmd.strip_wrappers(item.words, defaults.command_wrappers, defaults.safe_env)
-        if not words:
+        if not words or "xargs" in item.words[: len(item.words) - len(words)]:
             return False
         spec = defaults.read_only_commands.get(words[0])
         if spec is None:
@@ -60,8 +66,23 @@ def _own_tool(call: ToolCall, defaults: Defaults, role: Role, ship_closed: str) 
     return ALLOW
 
 
+def outside_workspace(call: ToolCall, defaults: Defaults, root: str) -> str:
+    """The first path of a read-only tool call that leaves the workspace ("" when all stay inside it). Symlinks are
+    resolved, so a link inside the project that points out of it is outside. An unknown workspace confines nothing,
+    so it is refused: the caller treats a non-empty answer as a block."""
+    if not root:
+        return "(the project folder is not known)"
+    paths = paths_of(call, defaults)
+    if paths is None:
+        return "(its target path could not be determined)"
+    for raw in paths:
+        if resolve_path(raw, root).relative is None:
+            return raw
+    return ""
+
+
 def governed_decision(
-    call: ToolCall, defaults: Defaults, role: Role = "orchestrator", ship_closed: str = ""
+    call: ToolCall, defaults: Defaults, role: Role = "orchestrator", ship_closed: str = "", root: str = ""
 ) -> Decision:
     """allow, or a block explaining why governed mode refuses this call."""
     tool = call.tool
@@ -75,10 +96,18 @@ def governed_decision(
     if tool in defaults.own_tools:
         return _own_tool(call, defaults, role, ship_closed)
     if tool in defaults.read_only_tools:
+        if tool in defaults.workspace_confined_tools:
+            outside = outside_workspace(call, defaults, root)
+            if outside:
+                return block(
+                    f"{_HINT} `{tool}` reads only inside this project's folder in this mode; {outside} is outside it.",
+                    "governed_outside_workspace",
+                )
         return ALLOW
     if tool in defaults.shell_tools:
-        command = call.args.get("command")
-        if isinstance(command, str) and command_is_read_only(command, defaults):
-            return ALLOW
-        return block(f"{_HINT} `{tool}` runs only read-only commands in this mode.", "governed")
+        return block(
+            f"{_HINT} `{tool}` is not available in this mode, not even for read-only commands: a command line cannot "
+            "be proved harmless. Read with pack; a worker runs commands with exec's `harness.sh`, inside the sandbox.",
+            "governed",
+        )
     return block(f"{_HINT} `{tool}` is not one of them.", "governed")
