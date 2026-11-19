@@ -78,7 +78,7 @@ def test_the_schemas_name_the_tools_and_every_op() -> None:
     schemas = tool_schemas()
     assert set(schemas) == {"pack", "exec", "ship", "dispatch", "request_input", "request_credential", "ask"}
     pack_ops = schemas["pack"]["parameters"]["properties"]["items"]["items"]["properties"]["op"]["enum"]
-    assert pack_ops == ["search", "read", "symbol", "outline", "status"]
+    assert pack_ops == ["search", "read", "symbol", "outline", "status", "diff", "log"]
     ship_ops = schemas["ship"]["parameters"]["properties"]["edits"]["items"]["properties"]["op"]["enum"]
     assert ship_ops == ["replace", "create", "delete", "diff"]
     for schema in schemas.values():

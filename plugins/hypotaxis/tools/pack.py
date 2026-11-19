@@ -4,12 +4,16 @@ The model writes flat items (``{op: "search", pattern: ...}``); this module maps
 requests, runs one ``pack.bundle`` call under the plugin's byte budget, and renders the structured
 answer as numbered text. Read-only, so it needs no gate; secrets are redacted and ``.env`` and key
 files never packed by hx-pack itself.
+
+``diff`` and ``log`` are the read-only git views governed mode kept when it dropped the shell (``gitview``): fixed
+argument vectors run by the plugin, in the item's place in the answer.
 """
 
 from __future__ import annotations
 
 import json
 from collections.abc import Mapping, Sequence
+from pathlib import Path
 from typing import Any, cast
 
 from ..errors import HypotaxisError
@@ -30,6 +34,8 @@ from ..hx.types import (
 )
 from ..session import Runtime, SessionState
 from ..util.log import get_logger
+from . import gitview
+from .gitview import GitItem
 
 MAX_ITEMS = 32
 TIMEOUT_S = 60.0
@@ -66,7 +72,7 @@ def _int(raw: object, default: int) -> int:
     return raw if isinstance(raw, int) and not isinstance(raw, bool) else default
 
 
-def _item(index: int, raw: object) -> tuple[BundleItem | None, list[str]]:
+def _item(index: int, raw: object) -> tuple[BundleItem | GitItem | None, list[str]]:
     """One model item as a typed bundle request."""
     if not isinstance(raw, Mapping):
         return None, [f"items[{index}]: expected an object"]
@@ -110,12 +116,14 @@ def _item(index: int, raw: object) -> tuple[BundleItem | None, list[str]]:
         return PackOutlineBundleItem(OutlineParams(paths=_strings(item.get("paths")) or [])), []
     if op == "status":
         return PackStatusBundleItem(StatusParams()), []
-    return None, [f"{where}.op: expected one of search, read, symbol, outline, status, found {op!r}"]
+    if op in gitview.OPS:
+        return gitview.parse_item(index, op, item)
+    return None, [f"{where}.op: expected one of search, read, symbol, outline, status, diff, log, found {op!r}"]
 
 
-def build_requests(args: Mapping[str, Any]) -> tuple[list[BundleItem], list[str]]:
-    """The bundle's requests from the tool arguments. A single flat item (``{op: ...}``) is accepted
-    in place of ``items``."""
+def build_requests(args: Mapping[str, Any]) -> tuple[list[BundleItem | GitItem], list[str]]:
+    """The requests from the tool arguments (hx-pack's bundle items, and the git views the plugin runs itself). A
+    single flat item (``{op: ...}``) is accepted in place of ``items``."""
     raw = args.get("items")
     if raw is None and "op" in args:
         raw = [dict(args)]
@@ -124,7 +132,7 @@ def build_requests(args: Mapping[str, Any]) -> tuple[list[BundleItem], list[str]
     items: Sequence[object] = raw
     if len(items) > MAX_ITEMS:
         return [], [f"items: at most {MAX_ITEMS} per call"]
-    requests: list[BundleItem] = []
+    requests: list[BundleItem | GitItem] = []
     problems: list[str] = []
     for i, it in enumerate(items):
         req, found = _item(i, it)
@@ -216,8 +224,7 @@ _RENDER = {
 }
 
 
-def render(bundle: Mapping[str, Any], cap: int) -> dict[str, Any]:
-    """The bundle's answer as one text, cut to ``cap`` bytes at a line boundary if it is longer."""
+def _parts(bundle: Mapping[str, Any]) -> list[str]:
     parts: list[str] = []
     for entry in bundle.get("results") or []:
         if entry.get("ok"):
@@ -227,8 +234,16 @@ def render(bundle: Mapping[str, Any], cap: int) -> dict[str, Any]:
             parts.append(
                 f"[{str(entry['method']).removeprefix('pack.')} failed] {err.get('code')}: {err.get('message')}"
             )
+    return parts
+
+
+def render(bundle: Mapping[str, Any], cap: int) -> dict[str, Any]:
+    """The bundle's answer as one text, cut to ``cap`` bytes at a line boundary if it is longer."""
+    return _cut(_parts(bundle), bool(bundle.get("truncated")), cap)
+
+
+def _cut(parts: Sequence[str], truncated: bool, cap: int) -> dict[str, Any]:
     text = "\n\n".join(parts)
-    truncated = bool(bundle.get("truncated"))
     data = text.encode("utf-8")
     if len(data) > cap:
         text = data[:cap].decode("utf-8", errors="ignore").rsplit("\n", 1)[0] + "\n[output cut to the byte cap]"
@@ -254,14 +269,26 @@ def run_pack(rt: Runtime, state: SessionState, args: Mapping[str, Any]) -> dict[
     if isinstance(asked, int) and not isinstance(asked, bool) and asked > 0:
         cap = min(cap, asked)
     try:
-        request = BundleRequest(root=state.cwd, requests=requests, max_bytes=cap)
-        bundle = client.request("pack.bundle", request.to_wire(), timeout=TIMEOUT_S)
+        bundled = [r for r in requests if not isinstance(r, GitItem)]
+        bundle: Mapping[str, Any] = {"results": [], "truncated": False}
+        if bundled:
+            request = BundleRequest(root=state.cwd, requests=bundled, max_bytes=cap)
+            bundle = client.request("pack.bundle", request.to_wire(), timeout=TIMEOUT_S)
+        if len(bundled) == len(requests):
+            return render(bundle, cap)
+        done = iter(_parts(bundle))
+        parts = [
+            gitview.run_item(Path(state.cwd), r, client)
+            if isinstance(r, GitItem)
+            else next(done, "[pack] this item was not answered (output cap)")
+            for r in requests
+        ]
+        return _cut(parts, bool(bundle.get("truncated")), cap)
     except HypotaxisError as exc:
         return {"error": exc.message, "code": exc.code}
     except Exception as exc:  # noqa: BLE001 - a tool handler never raises into Hermes
         _log.error("pack failed", exc_info=True)
         return {"error": f"pack failed: {type(exc).__name__}: {exc}", "code": "hx.internal_error"}
-    return render(bundle, cap)
 
 
 def to_json(result: Mapping[str, Any]) -> str:

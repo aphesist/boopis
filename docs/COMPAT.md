@@ -265,7 +265,7 @@ The hook sees a Claude name, `tool_input` is translated to Claude's field names,
 
 | Hypotaxis tool (default surface) | Claude name | Rule |
 |---|---|---|
-| `pack` | `Read` for file, range or symbol; `Grep` for search; `Glob` for glob listing | by argument shape. Other `pack` modes (git status) use `Read`. |
+| `pack` | `Read` for file, range or symbol; `Grep` for search; `Glob` for glob listing | by argument shape. Other `pack` modes (git status, diff, log) use `Read`. |
 | `ship` | `Write` (new file), `Edit` (one replacement), `MultiEdit` (several), `NotebookEdit` (`.ipynb`) | **One PreToolUse per target file.** Any block aborts the whole ship (it is transactional, so no partial writes). |
 | `exec` itself | no alias (name `exec`) | a catch-all `*` matcher sees it |
 | shell calls **inside** `exec` (the kernel's `terminal` dispatch) | `Bash` | The kernel must route inner dispatches through the same hook runner. **[verify]** whether `ctx.dispatch_tool` fires `pre_tool_call`. If it does not (`registry.dispatch` direct), the kernel calls `compat.hooks.run_tool_event()` itself. |
