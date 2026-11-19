@@ -135,9 +135,15 @@ describe('first run', () => {
       void runFirstRun(bridge);
       await vi.advanceTimersByTimeAsync(0);
       await click('Set up');
-      const options = [...document.querySelectorAll<HTMLElement>('.cd-opt')];
-      expect(options.map((o) => o.querySelector('.cd-opt__text')?.textContent)).toEqual(names);
-      expect(options.map((o) => o.getAttribute('aria-checked'))).toEqual(['true', 'false', 'false']);
+      /* a model choice is the model picker: the first is already chosen, the rest are in its list */
+      const pick = document.querySelector<HTMLButtonElement>('.ui-select')!;
+      expect(pick.querySelector('.ui-select__v')?.textContent).toBe(names[0]);
+      pick.click();
+      const options = [...document.querySelectorAll<HTMLElement>('.ui-listbox .ui-option')];
+      expect(options.map((o) => o.querySelector('.ui-menu__label')?.textContent)).toEqual(names);
+      expect(options.map((o) => o.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false']);
+      expect(document.querySelector('.ui-listbox')?.closest('.hx-first-run')).toBeTruthy();   /* the list lives inside the view that covers the app */
+      options[0]!.click();
       expect(document.body.textContent).toContain('portal.nousresearch.com/terms');
       await click('Go');
       await vi.advanceTimersByTimeAsync(900);

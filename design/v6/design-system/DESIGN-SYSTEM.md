@@ -1,6 +1,8 @@
 # boopis design system
 
-Version 1.0, extracted from the v6 mock-up on 18 November 2026 by the design-system agent.
+Version 1.1, 19 November 2026: every visual decision has a written rule with an ID (`R-…`), indexed in `RULES.md`, mapped
+in `COVERAGE.md` and shown live in `rules.html`. Version 1.0 was extracted from the v6 mock-up on 18 November 2026 by
+the design-system agent.
 
 This file is the source of truth for how boopis looks, reads, moves and behaves. Everything else follows it:
 
@@ -11,8 +13,11 @@ This file is the source of truth for how boopis looks, reads, moves and behaves.
 | `design-system/build-tokens.mjs` | Regenerates `tokens.json` from `tokens.css`; `--report` prints the contrast table below. |
 | `design-system/index.html` | The specimen: every token and component, live, in every preset. Published as the Artifact "boopis system". |
 | `design-system/MIGRATION.md` | Module by module: which local implementation to delete and which `HX.ui` call replaces it. |
+| `design-system/RULES.md` | One line per rule ID: the rule, its section, whether it was approved in review, and the check that verifies it (machine or by eye). The UI lab turns it into checks. |
+| `design-system/COVERAGE.md` | The topics a complete design system answers, each marked covered, partly or missing before and after version 1.1, with links. |
+| `design-system/rules.html` | The Rules page: every new or tightened rule as a live example, on the same tokens and library as the app. |
 | `components/components.css`, `components/components.js` | The shared component library (`HX.ui`). One canonical version of every piece more than one module draws. |
-| `tokens.css`, `theme.js` | The token source and the theme runtime (unchanged by this pass; proposed changes are listed in Findings). |
+| `tokens.css`, `theme.js` | The token source and the theme runtime. Version 1.1 added the tokens its rules need (nested-corner radii per container, icon sizes and gaps, scrollbars, elevation steps, `--z-scrim` and `--z-overlay`, focus, targets, float gaps, two line heights); the app's `src/styles/tokens.css` is a copy of it. |
 | `cards.js`, `cards.css` | The card layer (`HX.cards`), promoted as the canonical card implementation and reachable as `HX.ui.card`. |
 | `brand/logo/` | The boopis logo: the `<boopis-logo>` element, the static SVGs, the two app icons, the demo, and its own README (usage rules). Section 12 is the rules in short. |
 | `DESIGN.md`, `LAYOUT.md`, `PRODUCT.md` | The wireframe agent's world, geometry and product brief. Where this file and they disagree, this file is newer. |
@@ -53,6 +58,27 @@ mock-up breaks its own rules, the fix is in [Findings](#16-findings).
 | **The puzzle glyph and "name mod" are the mod's origin** (19 November 2026). Wherever a mod speaks (tab, band row, status line, placed row, card byline, toast) it is named as its glyph and its name, and the byline reads "name mod". | 10, 14.29 |
 | **Mod toasts queue, one at a time** (19 November 2026). The next appears as the previous one fades; while others wait the toast carries a quiet "+N" in mono; the queue keeps order, and dismissing a toast shows the next at once. | 14.22, 14.29 |
 | **A mod's colours preview live** (19 November 2026). While "Apply name's colours?" is open the whole app previews them through the one theme mechanism (`theme.js`, never saved). Keep commits; Reject, Esc, closing the card, leaving its screen, or choosing another theme restores the previous theme at once. The card shows "Previewing". | 5.2, 14.29 |
+
+**Two more decisions given to this pass** (19 November 2026):
+
+| Decision | Where it applies |
+|---|---|
+| **Eyes belong to the state, never to a look.** A bot's look is its name, colour and shape; each eye style belongs to a state and orb2 drives it from the state's reaction. The UI never offers eyes, never stores them and never writes `eye-shape`; a stored `look.eyes` is ignored. | 13, R-orb-1 |
+| **No native controls.** Nothing the platform draws appears in the app: no native select popup, picker, file button, range, spin button, scrollbar or tooltip. Native elements may carry the semantics (a `<button>`, an `<input>` with `appearance: none`, a `<dialog>`); the library draws them. | 7.1, 14.32, 14.39, R-native-1 |
+
+**Rules** (version 1.1). Every visual decision has a rule with an ID, `R-<topic>-<n>`, so a fix agent, a review and the UI
+lab can cite it ("this breaks R-scroll-1"). Rules sit in the section they belong to, in a **Rules** list at its end, and
+each says where it comes from:
+
+- **no mark**: what the approved mock-up and its code already do, written down; the source is cited;
+- **Tightened**: a rule that was here as a range, a habit or a passing sentence, now exact (the source and what changed are cited);
+- **Approved (owner-delegated review, 19 November 2026)**: the mock-up is silent or inconsistent. The rule gives the reason, the options and
+  the one chosen, which is always the one most consistent with the rest of the system. Until the owner rules, fix agents
+  follow it as the default and the UI lab reports a breach as a warning, not a failure.
+
+`RULES.md` lists every ID with its link and its check; `COVERAGE.md` maps the topics a complete system must answer onto
+these sections; `rules.html` demonstrates each new or tightened rule live in every preset. A rule never invents a look: it
+extends what the mock-up draws.
 
 ---
 
@@ -138,6 +164,28 @@ Plain words a developer would say out loud, in sentence case.
   ("qwen3-coder → sonnet 5.5") is content, not decoration.
 - **Numbers** carry their unit and sit in mono with tabular figures: "3m 42s", "$0.37", "142 passed", "+96 −71"
   (a true minus sign).
+
+**Rules**
+
+- **R-copy-1** Interface text is in sentence case and the brand is lowercase (boopis); content keeps its own case; the
+  Typewriter preset lowers interface labels only through `--ui-case`. *Source:* this section.
+- **R-copy-2** A button is a verb and its object (a bare verb where the card names the object). Never OK, Submit,
+  Continue, Learn more. *Source:* this section, `cards.js` actions.
+- **R-copy-3** State words come from the one vocabulary of section 13, lowercase mono; stamps have three wordings only.
+- **R-copy-4** Banned in interface copy: all caps, middle-dot meta strings, em dashes, exclamation marks, arrows after
+  links, "please", jokes, filler adjectives. The arrow of a model escalation is content.
+- **R-copy-5** Numbers carry their unit, sit in mono with tabular figures, and use a true minus (U+2212) for negatives
+  and removed counts. A capacity is a running total against its limit ("$0.37 of $0.60").
+- **R-copy-6** An error names the problem and the way out. Unknown is written "unknown", never a placeholder number, a
+  dash or a guess (AGENTS invariant 5, R-unknown-1).
+- **R-copy-7** A tooltip repeats the control's accessible name, then its keys; nothing lives only in a tooltip.
+- **R-copy-8** boopis presents itself as its own product (owner decision, 19 November 2026; its row is added with the
+  branding work): user-facing text never says "Hermes". Name the thing the user sees (a bot, a session, a model, a
+  connector), and "boopis's engine" only where nothing else will do. The only places the name may appear are the
+  repository and items from the Hermes plugin store shown under their own names.
+- **R-copy-9** A raw engine error never reaches the interface: no stack traces, error codes, JSON or messages written for
+  developers. The interface shows the problem and the way out in its own words (R-copy-6, R-error-1); the raw text goes to
+  the diagnostics report.
 
 ## 3. Token architecture
 
@@ -288,6 +336,28 @@ theme's `--text` on dark presets, its `--bg-2` on light ones), so a component ne
 | `--brass` | `#cfb483` | `#aec1d5` | `#baa681` | `#95b5e2` |
 | `--red-text` | `#e66769` | `#e6686c` | `#d65e61` | `#e6686c` |
 
+**Rules**
+
+- **R-colour-1** Tokens only: no literal colour in a stylesheet, an inline style or a canvas outside `tokens.css`. The
+  only colours that are data are a bot's orb colour, a provider mark's brand colour in the model menu (10.1) and a mod
+  theme card's swatches (14.29). *Source:* 5.5.
+- **R-colour-2** The stamp rule: `--red` and `--red-text` appear only on what the user owes (stamp, attention dot and
+  flag, the blank's underline, a red trail in the palette, an attention state word) and on a form field's error line and
+  message. *Source:* 4.3.
+- **R-colour-3** The you-are-here rule: `--brass` marks position and choice (focus ring, current dot, active rung,
+  check, pressed glyph, caret, the selected option chip's line). It is never text, never a fill larger than a dot, a pill
+  indicator or a ring. *Source:* 4.3, F19.
+- **R-colour-4** The layering rule: what the user wrote is raised (`--bg-3`), what the system set into the work is inset
+  (`--bg-0`); the frame holds, the ground carries; never inset on inset, never raised on raised (the full ladder is 9.1).
+- **R-colour-5** Colour is never the only cue: every red mark has a word, every brass mark has a shape.
+- **R-colour-6** Every pair in 5.4 holds in all four presets and on the dock ground; a new pair a component creates is
+  added to the table and to `theme.js PAIRS`.
+- **R-colour-7** A tint is `color-mix()` of a solid role; a theme chooses only solids, so every line and fill follows an
+  override.
+- **R-colour-8** An orb's colour belongs to the orb and never becomes interface colour. The one named exception is a
+  teammate's card ring (`--cd-accent` in `cards.css`, the orb colour at 42%, 22% once resolved, 36% on a mini). *Source:* 13,
+  `components.css` card accent rules.
+
 ## 5. Theming contract
 
 ### 5.1 Presets
@@ -393,6 +463,21 @@ should add the inactive-mark pairs (`--mark-off` on `--bg-1` and `--bg-3`, and o
 6. Inside the dock, set `data-ground="dock"` on the root and read the usual roles. No `--dock-*` palette.
 7. A mod's colours are names that map onto these tokens (14.29). A mod never brings a palette of its own; a theme it offers is previewed, then kept or rejected.
 
+**Rules**
+
+- **R-theme-1** A new colour token is derived from a solid role (preferred), or defined in all four presets; the build
+  (`build-tokens.mjs`) reads each preset's block, so a token missing from one is a bug.
+- **R-theme-2** `--dock-bg` is `#000` in every theme and is offered nowhere (owner decision).
+- **R-theme-3** The only geometry the user moves is corners and density; every size that follows them reads its token
+  (`--r-*`, `--r-in-*`, `--row-h`, `--ctl`), so both settings reach every component.
+- **R-theme-4** `data-hx-theme="light"` is used only for what tokens cannot express; today that is `--ink-on-dock`,
+  `--ink-on-dock-strong`, `--line-field` and the dock's brass mix.
+- **R-theme-5** A colour cached in JavaScript (a canvas, an orb attribute, the hold's fill) is read again on `hx:theme`.
+- **R-theme-6** A token that reads a role the dock ground re-derives is declared again on `[data-ground="dock"]`,
+  because a custom property resolves where it is declared: `--scroll-thumb-color` declared on `:root` alone would keep the
+  frame's `--bg-4` inside the dock. `tokens.css` does this for the scrollbar's colours. *Tightened* from the
+  `--brass-base` note in section 3.
+
 ## 6. Typography
 
 **Families.** One family per role. `--sans` (Libre Franklin in Card catalog and Bone, Geist in Graphite, Geist Mono
@@ -425,6 +510,34 @@ lineage of the catalog card. Mono is never a costume for "technical" prose.
   `font-size` it is given: 20px (`--fs-xl`, the one display size) is the smallest. The 15px brand of the mock-up
   and `--fs-brand` (Finding F10) are retired.
 
+**Rules**
+
+- **R-type-1** Two families: `--sans` for interface and prose, `--mono` for code, paths, numbers, times, costs, model
+  names, call numbers, state words, kbd and stamps. Fonts only through `var(--sans)` and `var(--mono)`; mono is never a
+  costume for prose.
+- **R-type-2** Six sizes, only through `--fs-*` (11, 12, 13, 14, 16, 20). No size in between, no `calc()` on a size.
+- **R-type-3** **Approved (owner-delegated review, 19 November 2026).** Three weights, by role: 600 only for titles (display, title,
+  card title, panel and dialog titles); 500 for buttons, tabs and segmented options, chips, field labels, group
+  headings and stamps; 400 for everything else, including rows and menu items. *Why:* the table above says menu labels
+  are 500, the library draws them at 400 like rows (`components.css .ui-menu__item`). *Options:* (a) 400, as drawn, so
+  a menu reads as a list of rows (chosen); (b) 500, as written, so a menu reads as a list of buttons.
+- **R-type-4** Line heights by role, through tokens: `--lh` 1.6 reading text and multi-line fields; `--lh-ui` 1.35
+  interface; `--lh-tight` 1.2 titles; `--lh-meta` 1.45 mono meta; `--lh-small` 1.5 hints, descriptions and tooltips'
+  second lines. A line height of 1 only in a single-line control whose box sets the height (buttons, chips, tabs,
+  stamps, kbd). *Tightened:* 1.45 and 1.5 were literals.
+- **R-type-5** Case through `text-transform: var(--ui-case)` on interface labels only. `uppercase` and `capitalize`
+  are never used.
+- **R-type-6** Every mono number that can change or line up uses `font-variant-numeric: tabular-nums` (`.ui-mono`).
+- **R-type-7** Code is 12 (`--fs-xs`) in chips and 11 (`--fs-2xs`) at 1.6 in wells, diffs and terminal output; never
+  12.5 or 13 (F10).
+- **R-type-8** Tracking 0 for sans, `--track-mono` (−0.01em) for mono, 0 inside a key chip.
+- **R-type-9** Prose and card titles wrap with `text-wrap: pretty`, headings with `balance`; overflow by kind is 7.1.
+- **R-type-10** Prose stops at `--measure` (608); notes and hints at 42ch (settings), empty states at 46ch.
+- **R-type-11** Text in a fixed-height control is centred by its box (flex centring and a line height of 1), never
+  nudged with padding or a transform.
+- **R-type-12** Hierarchy is weight and colour before size: inside one surface one title, then the text roles step down
+  (`--text-strong`, `--text`, `--text-dim`, `--text-quiet`); a larger size is only ever a title.
+
 ## 7. Space, density and layout
 
 **Spacing**: a 4px base, seven steps. Use the scale for gaps and padding; component internals listed below are the
@@ -432,7 +545,7 @@ only named exceptions.
 
 | Token | Value | Typical use |
 |---|---|---|
-| `--sp-1` | 4 | Icon to label inside a chip; between key chips |
+| `--sp-1` | 4 | Small gaps inside meta lines (icon to label in a chip is 6 and key chips are 3 apart: R-space-2) |
 | `--sp-2` | 8 | Between buttons; row inset; label to field |
 | `--sp-3` | 12 | Inside wells; between card regions; paragraphs |
 | `--sp-4` | 16 | Card padding (16 sides); between a sheet's sections |
@@ -489,6 +602,119 @@ therefore still ends below the composer, and the composer never moves under the 
 **The centre line.** The shell publishes `--hx-center-x`, `--hx-col-left`, `--hx-col-w`, `--hx-margin-w` and
 `--hx-dock-space` as registered, animated custom properties; the composer, the column and the dock ride them so they
 travel together on one curve. Nothing computes its own centre.
+
+**Rules: space and layout**
+
+- **R-space-1** Gaps and padding come from `--sp-*` (4, 8, 12, 16, 24, 32, 48) or the named exceptions of R-space-2. The
+  one smaller step is 2px, only between adjacent controls in a toolbar or a tab strip (the composer's bar, a dialog's
+  tabs, mod pane tabs, icon-button groups). *Source:* `components.css`.
+- **R-space-2** *Tightened.* The named exceptions, all component internals, from the library: card padding 14 16; request
+  card 10 14; the composer's text 12 14 4 and its inset 6 (`--composer-pad`); a button 0 14 (small 0 10, ghost 0 8); a
+  chip 0 10 0 8; a field 6 10; a menu 4 and its items 6 8; a popover 12; a tooltip 4 8 (4 4 4 8 with keys); a toast 0 6
+  0 14; the segmented track 3; a stamp 0 7; a code chip 1 5; a key chip 0 4, key chips 3 apart; a label 6 above its
+  field; a settings row 10 0; a dialog head 0 12 0 20 and body 4 20 24. The table's "between key chips 4" and "icon to
+  label inside a chip 4" were wrong: the library draws 3 and 6 (R-kbd-1, R-icon-5).
+- **R-space-3** Siblings are spaced by `gap` on their parent, never by margins on the children; a margin only separates
+  a group from the next (`.ui-group + .ui-group`, a settings head's 20 above).
+- **R-space-4** Density moves only `--row-h`, `--row-h-2`, `--ctl` and `--ctl-s`; nothing else changes with it.
+- **R-space-5** Every control's height is one of `--ctl`, `--ctl-s`, `--row-h`, `--row-h-2`, or a named fixed height:
+  chip `--ctl-s` − 2, option chip `--ctl` − 4, small segmented `--ctl` − 2, key chip 18, stamp 20, switch 20, the
+  command field 26, the compact composer 40, the palette field 48, a dialog head 52, a toast `--ctl-s` + 12.
+- **R-layout-1** **Approved (owner-delegated review, 19 November 2026).** Window breakpoints are 560 (the call-number margin
+  collapses), 640, 900 and 1200 (both sidebars push; mod panes become tabs). Two component breakpoints exist in the
+  mock-up outside this set: the dock at 520 (`dock.css`) and the bots view at 760 (`bots.css`). *Options:* (a) fold them
+  into 560 and 900; (b) keep them as named component breakpoints, listed here and nowhere else (chosen: it changes no
+  layout the owner approved). No other width appears in a media query.
+- **R-layout-2** Widths that follow the window come only from the layout tokens (`--sb-w`, `--right-w`, `--col-w`,
+  `--measure`, `--composer-w`) and the clamps above; a component never sizes itself in `vw` (the palette's 600 and a
+  dialog's `min(600px, 100% − 32px)` are lengths against the window, not `vw`).
+- **R-layout-3** The column, the composer and the dock ride the shell's centre line (`--hx-center-x` and friends);
+  nothing computes its own centre.
+- **R-layout-4** Distances from the window edge: the work keeps `--gutter` (16); floating surfaces `--float-margin` (8);
+  side dialogs and sheets 12.
+- **R-layout-5** A scroller that runs under the composer or the dock pads its end by their height (`--hx-dock-space`
+  plus the composer) and sets the same `scroll-padding-bottom`, so the last line and a focused control are never under
+  them (R-a11y-5).
+- **R-layout-6** Large windows have no app-wide maximum width; the extra width becomes margin around the work.
+
+### 7.1 Overflow and scrollbars
+
+When content is larger than its box, text truncates or wraps by kind, a few named regions scroll, and every scrollbar
+is the same thin bar in every engine. The mock-up asked for "thin" with `scrollbar-width`, which WebKitGTK (the owner's
+engine) ignores: in the app the Settings dialog showed the platform's wide bar running into the dialog's bottom curve
+(owner's screenshot, 19 November 2026). The rules below draw the bar with `::-webkit-scrollbar`, which all three of
+Tauri's engines honour (WebKitGTK, WebKit on macOS, WebView2's Chromium), so it looks the same everywhere, as the
+corners do (section 8). Checked on the Rules page (`rules.html`) in WebKitGTK 2.52 and Chromium 153: the drawn bar measures
+10px in both; the mock-up's thin bar measures 0 in WebKitGTK, which means the platform's overlay bar, the one that widens
+under the pointer.
+
+**Rules**
+
+- **R-overflow-1** A one-line label (a row's title, a tab, a chip, a button, a menu label, the command field, a mini
+  card) ends with an ellipsis and never wraps: `min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space:
+  nowrap`. The full text is in the accessible name.
+- **R-overflow-2** Descriptions clamp: two lines in lists and sheets (a bot's description), three in a card's quote.
+  Nothing else clamps.
+- **R-overflow-3** Prose, titles and messages wrap; paths, code and output wrap anywhere inside wells
+  (`overflow-wrap: anywhere`); a code chip clones its background on each line. Buttons and labels never wrap.
+- **R-overflow-4** Nothing scrolls sideways except code, diffs, terminal output, tables wider than their box (14.37)
+  and tab strips. The window itself never scrolls, at any width (no horizontal overflow at 390 or 720, section 15).
+- **R-scroll-1** *Tightened* (supersedes `scrollbar-width: thin` and `scrollbar-color` in the mock-up). Scrollbars are
+  drawn with `::-webkit-scrollbar` and its pseudo-elements, from the scrollbar tokens, and nothing in the app sets
+  `scrollbar-width` or `scrollbar-color`, except `scrollbar-width: none` on a hidden bar (R-scroll-7). *Why:* WebKitGTK
+  ignores `scrollbar-width`; Chromium 121 and later ignore every `::-webkit-scrollbar` rule on an element that has
+  either standard property, so mixing them draws two different bars. The library's rule:
+
+```css
+:where(.ui-root) ::-webkit-scrollbar { width: var(--scroll-size); height: var(--scroll-size); background: transparent; }
+:where(.ui-root) ::-webkit-scrollbar-thumb {
+  min-width: var(--scroll-thumb-min); min-height: var(--scroll-thumb-min); border-radius: var(--r-pill);
+  border: calc((var(--scroll-size) - var(--scroll-thumb)) / 2) solid transparent;
+  background: var(--scroll-thumb-color) padding-box;
+}
+:where(.ui-root) ::-webkit-scrollbar-thumb:hover, :where(.ui-root) ::-webkit-scrollbar-thumb:active {
+  border-width: calc((var(--scroll-size) - var(--scroll-thumb-active)) / 2); background-color: var(--scroll-thumb-color-active);
+}
+:where(.ui-root) :is(::-webkit-scrollbar-track, ::-webkit-scrollbar-corner) { background: transparent; }
+:where(.ui-root) ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+```
+
+- **R-scroll-2** **Approved (owner-delegated review, 19 November 2026).** Geometry: the bar's box is `--scroll-size` 10px; the thumb a
+  capsule `--scroll-thumb` 4px wide, centred, 6px (`--scroll-thumb-active`) while hovered or dragged, never shorter than
+  32px (`--scroll-thumb-min`); no arrow buttons; the track and the corner are transparent. *Why:* the mock-up says only
+  "thin" with a `--bg-4` thumb. *Options:* (a) 8 / 4; (b) 10 / 4, 6 on hover (chosen: a 4px capsule is as quiet as an
+  overlay bar, and the 10px box keeps a usable hit area); (c) 12 / 6.
+- **R-scroll-3** **Approved (owner-delegated review, 19 November 2026)** for the hover colour. The thumb is `--scroll-thumb-color`
+  (`--bg-4`, the mock-up's) at rest and `--scroll-thumb-color-active` (`--mark-off`, 3:1 like every non-text mark) while
+  hovered or dragged. *Options:* (a) `--bg-4` always (the mock-up); (b) `--bg-4`, then `--mark-off` (chosen: quiet at
+  rest, findable under the pointer); (c) `--mark-off` always (loud beside the work). On the dock ground both re-derive
+  (R-theme-6).
+- **R-scroll-4** **Approved (owner-delegated review, 19 November 2026).** Bars are inset, never overlay: none of the three engines
+  gives a styled overlay bar, so the bar takes its 10px at the scroller's end. A scroller whose content changes length
+  while it is on screen (a dialog or sheet body, the right panel, the sidebar lists, the palette list) uses
+  `overflow-y: scroll`, so the gutter is always there and nothing reflows when the thumb appears (the track is
+  transparent, so an idle gutter is invisible); a transient one (a menu, the composer's text, the dock's log, a code well)
+  uses `auto`. The end padding is the side padding less the bar (a dialog body: 20 at the start, `calc(20px −
+  var(--scroll-size))` at the end), so the content stays centred in its surface. *Options:* (a) `auto` everywhere (the
+  mock-up: a 10px jump when a list outgrows its box); (b) a constant gutter where content changes (chosen).
+- **R-scroll-5** **Approved (owner-delegated review, 19 November 2026).** Where a scroller's end meets a curved corner of its container
+  (a dialog body's foot, a menu, a popover, the palette list, a sheet), the track is inset by that corner's radius
+  (`::-webkit-scrollbar-track { margin-block-end: var(--r-outer) }`, both ends for a menu), so the thumb never runs into
+  the curve. *Options:* (a) inset the track (chosen); (b) clip the bar to the path (not allowed: a container is never
+  clipped, 8.1); (c) pad the content away from the corner (wastes the body's last 30px).
+- **R-scroll-6** Scrollbars appear only in the named scrollers: the conversation, the sidebar lists, the right panel's
+  body, a dialog's or sheet's body (never the whole dialog: the head stays), the palette list, a menu taller than the
+  window, the composer's text past 220px (120 in the dock), the dock session's log, a mod's inline pane body, and code
+  wells, diffs and terminal output (sideways). Never on the window, a card, a row, a tooltip or a toast. No scroller
+  inside another on the same axis.
+- **R-scroll-7** A horizontal scroller is only code, a diff, terminal output, a wide table or a tab strip. A tab strip
+  hides its bar (`scrollbar-width: none` and `::-webkit-scrollbar { display: none }`) and shows a 28px fade at the edge
+  that has more (`mods.css .mod-tabs[data-more]`).
+- **R-scroll-8** Every inner scroller sets `overscroll-behavior: contain`. A scroller with no focusable child is a tab
+  stop with a label, so the keyboard can scroll it (the dock's log does this). Programmatic scrolling is instant under
+  reduced motion.
+- **R-scroll-9** Two edge cues only: the ground strip that fades in above the composer, and a tab strip's 28px fade. A
+  fixed head is separated from its scroller by its hairline at all times, never by a shadow that appears on scroll.
 
 ## 8. Shape
 
@@ -600,6 +826,48 @@ corner was a small circular arc, and inner radii had collapsed to 5–6px.
 The specimen draws the rule twice as large, lists these with the live values of the current theme, and shows WebKit
 before and after.
 
+The table above is tokens now (version 1.1): each container's inset is `--pad-*` and the radius of what sits in its
+corners is `--r-in-*` (`--r-in-dialog` 18, `--r-in-palette` 24, `--r-in-dock` 18, `--r-in-menu` 16, `--r-in-card` 8,
+`--r-in-composer` 14, `--r-in-toast` 14, `--r-in-field` 8, `--r-in-seg` 9 at default corners), computed from `--r-*` so
+they follow the corners setting. A container's own `--r-in` (8.2) and these are the same number.
+
+**Rules**
+
+- **R-corner-1** Radii come only from `--r-*`, `--r-outer`, `--r-in` or `--r-in-*`; the only literal is 0.
+- **R-corner-2** *Tightened.* The radius by kind of element:
+
+| Radius | Elements |
+|---|---|
+| `--r-xs` (6) | kbd in running text, inline code, stamps, the assumption buttons |
+| `--r-s` (12) | buttons, icon buttons, send (a square), rows, fields, wells, the segmented track, tooltips, the command field, group heads, pane tabs |
+| `--r-m` (20) | cards, the composer, menus, popovers, toasts, request cards, diff blocks, a mod's band |
+| `--r-l` (30) | dialogs, sheets, the palette, the dock slab and its flares, the concave corner where the ground meets the frame |
+| `--r-pill` | chips, dots, the switch and its knob, the page indicator, the minimised dock, avatars; orbs are circles |
+| `--r-in-*` | anything in a container's corner or on its edge band (R-corner-3, R-corner-5) |
+
+- **R-corner-3** Nested corners fit (owner decision): a piece within its container's radius of a corner takes
+  `max(--r-floor, R − gap)`, through the container's `--r-in` or its `--r-in-*` token; where that would go under the
+  floor, the padding gives way.
+- **R-corner-4** A piece in a corner sits inside it: inset by the container's `--pad` from both edges, it never touches
+  or crosses the container's edge or its curve. *Why:* the composer's send met the box's edge in the app (owner's
+  screenshot, 19 November 2026; F39).
+- **R-corner-5** **Approved (owner-delegated review, 19 November 2026).** The edge band shares the corner: every piece on the same
+  band as a corner piece (the same inset from that edge, for example a dialog head's tabs beside its close button) takes
+  the corner piece's radius, so the whole band reads concentric with the container. In a dialog that is
+  `--r-in-dialog` (18), which makes the head's 28px tabs and the close button capsules. *Why:* the Settings tabs were
+  rounded rectangles under a 30px curve beside a round close button (owner's screenshot, 19 November 2026; F38).
+  *Options:* (a) keep the tabs at `--r-s`; (b) the band's radius (chosen: it is how the composer's actions already sit);
+  (c) make the head's tabs a segmented control whose track takes the band radius.
+- **R-corner-6** Every corner is the drawn continuous corner (`HX.ui.squircle`, smoothing 0.6); no `corner-shape`
+  anywhere; only leaf controls are clipped, a container is a frame (owner decisions, 8.1).
+- **R-corner-7** *Tightened.* Nothing paints a rectangle behind a rounded surface: the `<dialog>` element, wrappers and a
+  scroller the same size as a rounded surface have no background, border or shadow of their own, and the surface's
+  shadow sits on the surface, with its radius. *Why:* a square edge showed under the Settings dialog's corners (F52).
+- **R-corner-8** A piece flush with its container's edge (a card's foot, a queue's peek, a body's focus ring at a dialog's
+  foot) takes the container's radius on the corners it shares and 0 on the others.
+- **R-corner-9** A piece whose inner radius would reach half its height is a capsule (`--r-pill`), drawn natively; a
+  round piece in a pill stays a pill.
+
 ## 9. Elevation, hairlines and depth
 
 Flat. Depth is tone: frame, ground, raised, inset. Lines divide; shadows only on things that float over other things.
@@ -614,8 +882,89 @@ Flat. Depth is tone: frame, ground, raised, inset. Lines divide; shadows only on
   raised (`--bg-3`) with `--hair`.
 - No coloured halos, no zero-offset glows, no hard offset shadows. (The brass halo on the current rung is removed,
   Finding F7.)
-- **z-index scale:** base 0, right panel 20, sidebar 30, dock 40, chrome 50, menu 70, palette 80, toast 90,
-  tooltip 100.
+- **z-index scale:** base 0, right panel 20, sidebar 30, dock 40, scrim 41 (`--z-scrim`), an overlaying sidebar or
+  panel 42 (`--z-overlay`), chrome 50, menu 70, palette 80, toast 90, tooltip 100. Modal dialogs sit in the top layer,
+  above all of them.
+
+**Rules: lines**
+
+- **R-line-1** The outline of a rounded thing is drawn inset (an inset 1px `box-shadow`, or `--sq-line` once bound),
+  never a `border`, which does not follow the drawn corner. A straight divider is a 1px border or shadow on one side.
+- **R-line-2** *Tightened.* Which line:
+
+| Line | Where |
+|---|---|
+| `--hair` | dividers inside a surface; outlines of raised things (tooltips, toasts, the composer at rest, key chips, the segmented track, the command field at rest, a mod's band) |
+| `--line` | outlines of controls named by their label (secondary buttons, option chips); floating surfaces (menus, popovers, the palette, dialogs); the command field on hover |
+| `--line-strong` | hovered outlines, empty rings, the switch track, armed buttons, the strike through an unpressed chip |
+| `--line-field` | text fields; the focused or listening composer |
+| `--brass` | the focus ring; the checked option chip; the command field while the palette is open |
+| `--red` | a stamp; a field in error |
+
+- **R-line-3** A line is one device pixel at rest (the squircle snaps, a native border snaps itself); 2px only for focus
+  rings; dotted only under a blank; dashed only under feedforward words and answered blanks.
+- **R-line-4** A head or foot rule spans its surface edge to edge; a divider between items stops at the content inset
+  (settings rows inside the body's 20, menu separators 6 in); the last item has none.
+- **R-line-5** No double lines: a divider never meets an outline or another divider.
+
+**Rules: elevation and stacking**
+
+- **R-elev-1** Depth is tone. Only floating surfaces carry a shadow: menus, popovers, tooltips, toasts, the palette,
+  dialogs, the expanded blank, and a sidebar or panel overlaying the ground.
+- **R-elev-2** *Tightened.* Five levels, each with its shadow token and its layer:
+
+| Level | Token | What | Layer |
+|---|---|---|---|
+| 0 | `--elev-0` (none) | the frame and the ground | `--z-base`, `--z-right`, `--z-sidebar`, `--z-chrome` |
+| 1 | `--elev-1` (none) | in flow: raised and inset surfaces, cards, the composer; tone and a hairline | in flow |
+| 2 | `--elev-2` (`--shadow-tip`) | tooltips | `--z-tooltip` |
+| 3 | `--elev-3` (`--shadow-pop`) | menus, popovers, toasts | `--z-menu`, `--z-toast` |
+| 4 | `--elev-4` (`--shadow-pop` over `--scrim`) | the palette, dialogs | `--z-palette`; modal dialogs the top layer |
+| side | `--shadow-side`, `--shadow-side-r` | a sidebar or the right panel overlaying the ground, over `--scrim` | `--z-overlay` over `--z-scrim` |
+
+- **R-elev-3** One shadow per surface, never coloured, never a glow, never a hard offset; a surface inside a floating
+  one (a menu item, a card in a popover) has none.
+- **R-elev-4** A floating surface is opaque: the frame colour with `--line` (menus, popovers, the palette, dialogs) or
+  raised with `--hair` (tooltips, toasts). Never translucent, never blurred (no `backdrop-filter`, a frame-cost rule too).
+- **R-elev-5** `z-index` comes from `--z-*`. A literal 1 to 3 is allowed only inside a component that sets
+  `isolation: isolate` (a card queue's stage, the hold button's layers).
+- **R-elev-6** **Approved (owner-delegated review, 19 November 2026).** A modal dialog uses the top layer (`showModal`), above every
+  `--z-*`; every layer opened from inside it (a menu, a popover, the tooltip) mounts inside the dialog, so it stays above
+  it; a toast never covers a modal dialog. *Why:* the mock-up's layers mount on the app root (`HX.ui.menu`), which sits
+  under a modal dialog's top layer. *Options:* (a) mount inside the open dialog (chosen); (b) use the popover API's top
+  layer for every floating surface.
+- **R-elev-7** One floating layer is open at a time; a tooltip may show over it; opening another closes the first.
+- **R-elev-8** One scrim at a time, only behind the palette, a modal dialog or an overlaying sidebar or panel. The side
+  dialog (Appearance) has none, so its changes show on the app.
+
+### 9.1 Surfaces on surfaces
+
+How surfaces, cards, sheets, popovers, dialogs and toasts sit on each other. Tone separates in flow; a shadow appears
+only when something floats (R-elev-1).
+
+**Rules**
+
+- **R-stack-1** *Tightened* from the layering rule (4.1). Each surface may hold only these tones:
+
+| On | May hold | Never |
+|---|---|---|
+| the frame (`--bg-1`) | inset `--bg-0` (fields, the command field, the segmented and switch tracks, cards in a panel); `--hover` and `--current` fills | raised `--bg-3` in flow |
+| the ground (`--bg-2`) | raised `--bg-3` (your request, the composer); inset `--bg-0` (cards, diff blocks) | frame-coloured blocks |
+| an inset card (`--bg-0`) | wells in the ground tone (`--bg-2`); code chips (`--chip`); fields, outlined with `--line-field` | another `--bg-0` block, a card |
+| raised (`--bg-3`) | inset pieces (`--bg-0`: files in the composer); pressed pieces (`--bg-4`: keys in a tooltip) | another `--bg-3` block |
+| a floating surface | rows and items with `--hover` and `--current`; a popover's fields | a shadow on anything inside |
+
+- **R-stack-2** A card never holds a card: what a card holds is a well, a mini row, an option row, a field or a quote.
+- **R-stack-3** *Tightened* from `cards.css`. Cards waiting in a queue stack: the front card at full size; at most two
+  peeks behind it, each the card's own surface showing only its foot, with the card's radius on the foot corners, a
+  `--hair` line at the foot and no shadow: the first 7px lower and inset 12 (`--sp-3`) on each side at .9 opacity, the
+  second 7px lower again and inset 24 (`--sp-5`) at .55. The position shows as dots ("Request 2 of 3"); when the front
+  card resolves, the next one rises into place over `--dur-3` on `--spring`.
+- **R-stack-4** A mini card behaves as a row (`--hover`, `--current`, one 30px line); a full card is never clickable as a
+  whole: its actions are its buttons.
+- **R-stack-5** A sheet sits beside the work (flush to the right edge under the title bar, a concave corner where it
+  meets the frame); a dialog floats over a scrim; a popover floats by its anchor; a toast floats over the work at its
+  top. None of them holds another floating surface except its own menus and tooltips (R-elev-6).
 
 ## 10. Iconography
 
@@ -624,8 +973,8 @@ Flat. Depth is tone: frame, ground, raised, inset. Lines divide; shadows only on
 - **One rendered stroke:** 1.5px with round caps and joins, via `vector-effect: non-scaling-stroke`, so a 16-grid
   glyph at 18px and a 20-grid glyph at 14px weigh the same. Fills only for solid glyphs (stop, the dots of "more")
   and the toggles' filled half (`.is-fill-on`, shown while `aria-expanded="true"`).
-- **Sizes:** 18 in icon buttons, 16 in buttons, rows and the send button, 14–15 in chips and menus, 10–12 for
-  chevrons in disclosures.
+- **Sizes:** six, as tokens (R-icon-3, version 1.1): 18 in icon buttons, 16 in buttons, rows and the send button,
+  15 in chips and menus, 14 in the command field and file chips, 12 and 10 for chevrons.
 - **Colour:** `--icon` at rest, `--text-strong` on hover, `--icon-off` disabled, `--brass` when pressed or checked.
 - Every icon is `aria-hidden`; its button carries the name. The one exception is a model mark (10.1), which names
   its provider.
@@ -659,6 +1008,44 @@ Flat. Depth is tone: frame, ground, raised, inset. Lines divide; shadows only on
 - **Source:** `@lobehub/icons-static-svg` 1.104.0 (MIT), only the icons used, optimised with SVGO. The logos are
   trademarks of their owners, used only to identify the model (`vendor/model-icons/NOTICE`). A new provider: its SVG
   through SVGO into `svg/`, a family in `map.json`, then `node vendor/model-icons/build.js`.
+
+### 10.2 Sizes, spacing and alignment
+
+**Rules**
+
+- **R-icon-1** One set, `HX.ui.icon(name)`. No emoji, no unicode glyph as an icon, no inline SVG elsewhere; the only
+  other marks are model marks (10.1), the logo (12) and orbs (13).
+- **R-icon-2** One rendered stroke: 1.5px, round caps and joins, `vector-effect: non-scaling-stroke`, `currentColor`.
+  Fills only for solid glyphs and the toggles' filled half.
+- **R-icon-3** *Tightened.* Six sizes, as tokens, and no other:
+
+| Token | Size | Where |
+|---|---|---|
+| `--ic-xl` | 18 | icon buttons (title bar, toolbars, a dialog's close) |
+| `--ic-l` | 16 | buttons, rows (the palette's too), the send button, small icon buttons, origin slots, model marks in menus |
+| `--ic-m` | 15 | chips, menu glyphs |
+| `--ic-s` | 14 | the command field, file chips, task and resolved marks, model marks in running text |
+| `--ic-xs` | 12 | section chevrons, glyphs in mono chips, schedule marks, a select's chevron |
+| `--ic-2xs` | 10 | the chevrons of disclosures and group heads |
+
+- **R-icon-4** An icon's size follows the text beside it, never the control's height alone: 16 beside 13 or 14, 15
+  beside 12 in chips and 13 in menus, 14 beside 12, 12 beside 11 mono. An icon alone in a control is 18.
+- **R-icon-5** *Tightened.* Icon to label: `--ic-gap` (8) in buttons, menu items and rows; `--ic-gap-tight` (6) in
+  capsules and controls of 26px and under (chips, files, segmented options). Named exceptions, from the mock-up: the
+  command field 10, the palette's field 12 and rows 10 (their larger box sets a wider rhythm).
+- **R-icon-6** Alignment: an icon is centred in a square box of its own size; optical corrections are drawn into the
+  glyph, never added per use (no margins or translates on an icon; a chevron only rotates). In a multi-line item the
+  glyph's box is one line tall and centres on the first line (a menu glyph is 18 tall beside 13/1.35 text).
+- **R-icon-7** Colour: `--icon` at rest, `--text-strong` on hover, `--icon-off` disabled, `--brass` pressed or checked,
+  `--icon-quiet` for window controls. A glyph that labels rather than acts (the search glyph of a field) is
+  `--text-quiet`, like its placeholder. Never red: attention is a dot.
+- **R-icon-8** When to use one: an icon alone only in an icon button, always with its tooltip and accessible name; in a
+  text button only when the glyph is the action's own (send, fork, copy, play, the composer's modes); text rows have no
+  decorative icon (14.4); a menu has a glyph column only when an item has a glyph or a check, and then every item keeps
+  the column so labels align.
+- **R-icon-9** Chevrons: `chevron` (right) rotates 90° to open a disclosure; `chevron-down` marks a picker (a select, the
+  model chip) and never rotates.
+- **R-icon-10** Every icon is `aria-hidden`; its control carries the name. Model marks name their provider (10.1).
 
 ## 11. Motion
 
@@ -703,6 +1090,30 @@ velocity when interrupted; travel along the centre line is never a JS spring.
   `--dur-breathe` and `--ease-io`, alternating, so it neither passes its mark nor bounces. Under reduced motion it stops, at rest in the
   middle of the row, like the breathing dot.
 - Focus rings never animate.
+
+**Rules**
+
+- **R-motion-1** Durations and curves come only from the tokens; the only literal is the reduced-motion 1ms.
+- **R-motion-2** What moves: `transform`, `translate`, `opacity`, colour, `clip-path`. Never width, height, top, left or
+  margin per frame; the one exception is a card's height (owner decision), done once by FLIP in the card layer.
+- **R-motion-3** No curve passes its mark: every cubic-bezier keeps its y values within 0 to 1, every spring is
+  critically damped. The logo's playful letters are the one exception (12).
+- **R-motion-4** *Tightened.* Timing by kind: hover in `--dur-1`, out `--dur-out`; press `--dur-press`; a thumb or page
+  indicator `--dur-slide`; an entrance (menu, popover, toast, dialog) `--dur-2`, a fade with a 6px drop (a rise when it
+  opens above); an exit `--dur-out`, a fade; layout travel and card height `--dur-3` on `--spring`.
+- **R-motion-5** *Tightened* from ADR-0025 and the app's motion rules. Motion runs at the display's rate (120 Hz and up):
+  it is driven by time, never by frame counts; it composites (transform and opacity); a spring with a known end is a Web
+  Animation sampled from its closed form (`core/spring.ts`), with keyframes rather than `linear()` where WebKitGTK before
+  2.54 must composite; per-frame JavaScript is only for what follows live input (the dock's outline, magnification, a
+  touch drag), writes transforms and one path in one frame and reads no layout; an animated custom property never
+  inherits.
+- **R-motion-6** Reduced motion: the durations become 1ms (the tokens do it), loops stop, travel and drops go, thumbs
+  jump, colour and opacity still answer; orbs reduce and never freeze; the dock's size changes are instant; the
+  composer's rise is a crossfade.
+- **R-motion-7** The only loops: the running dot, the travelling dot of indeterminate progress, an orb's idle life, and
+  a live logo on its own screen.
+- **R-motion-8** Focus rings never animate; no page-load choreography, no scroll reveals; an entrance only for something
+  that just appeared because the state changed.
 
 ## 12. Logo
 
@@ -762,15 +1173,17 @@ Bots are drawn with aphesist/orb2 (`vendor/orb-avatar.min.js`, the `<orb-avatar>
 orb on the x = 28 axis, name 13 and role 12 quiet from x = 44, state word mono 11 on the right. In its header: orb
 40 in the margin, name 16/600, role 12 quiet, state. In a call number: orb 20, name, time.
 
-**Shape, eyes and colour are the bot's own data** (`data.js`: `shape`, `eyes`, `color`). The system never recolours
-an orb to match a theme; the orb's colour belongs to the orb only and never appears as UI colour elsewhere.
+**Shape and colour are the bot's own data** (`shape`, `color`); **the eyes belong to the state** (decision of 19
+November 2026, R-orb-1): orb2 draws each state's eyes from its reaction, and nothing lets a user pick or store them. The
+system never recolours an orb to match a theme; the orb's colour belongs to the orb only and never appears as UI colour
+elsewhere (R-colour-8).
 
 **One state map** (`HX.ui.states`, `HX.ui.botState(bot)`). Attention outranks work: a bot that needs you shows the
 needs face and the red word whatever it was doing.
 
 | State | orb2 reaction | Word | Tone |
 |---|---|---|---|
-| idle | `idle` (its own `eye-shape`) | nothing in lists; "idle" where a word is required | none |
+| idle | `idle` (the idle eyes; never a stored `eye-shape`) | nothing in lists; "idle" where a word is required | none |
 | listening | `listening` | listening | busy |
 | thinking | `thinking` | thinking | busy |
 | working | `working` | working | busy |
@@ -847,6 +1260,21 @@ Elsewhere (lists, call numbers, cards) an orb is not a control on its own: its r
 - **Accessibility:** the orb is `aria-hidden`; the button or row that holds it carries the name ("nina, deploys, needs
   you"). A bot's state change is announced by its row, not by the orb.
 
+**Rules**
+
+- **R-orb-1** Eyes follow the state only: a bot's look is its name, colour and shape. The UI never offers eyes, never
+  stores them and never writes `eye-shape`; a stored `look.eyes` is ignored; orb2 draws the eyes from the state's
+  reaction (`HX.ui.states`). *Source:* decision of 19 November 2026 (`apps/desktop/AGENTS.md`).
+- **R-orb-2** Orb sizes come only from the table above (10, 16, 20, 24, 26, 40, 120).
+- **R-orb-3** A bot always shows orb, name, role, schedule and state word, in that order, in the same places; in a list
+  the orb centres on x = 28.
+- **R-orb-4** Motion by size: `static` at 16 and under (or `still` picker tiles to 28), calm above, lively only in the
+  bot's header; reduced motion reduces and never freezes (owner decision).
+- **R-orb-5** An orb is never clipped: its container is a frame (8.1), and its attention flag (8px with a 2px ring of
+  the surface) has room outside the orb's box.
+- **R-orb-6** An orb is not a control except in the dock; it is `aria-hidden` and its row or button carries the name.
+- **R-orb-7** A dark body (luminance under .05) gets light eyes, `--ink-on-dock`.
+
 ## 14. Components
 
 Each component lists anatomy, variants, states, keyboard, accessibility, the library call, and do and don't. Sizes
@@ -897,6 +1325,24 @@ are at regular density and default corners.
 - **Library:** `HX.ui.segmented({options, value, mode: 'tabs'|'radio', size, vertical, fill})`, fires `ui:change`.
 - **Do** use it for two to four exclusive options. **Don't** use it for on/off (that is a switch) or for more than four.
 
+**Rules: segmented controls and tabs**
+
+- **R-seg-1** Two to four options of equal width (the track is a grid of equal columns); more, or labels of very
+  different length, become a select (14.32).
+- **R-seg-2** The track is `--bg-0` with `--hair`, inset 3 (`--pad-seg`), radius `--r-s`; the thumb and the options take
+  `--r-in-seg` (9); the thumb slides by `transform` over `--dur-slide`; the selected label is `--text-on-light`.
+- **R-seg-3** **Approved (owner-delegated review, 19 November 2026)** with R-corner-5. A segmented control on a container's edge band
+  takes the band's radius for its track (`--r-outer: var(--r-in-dialog)` in a dialog head), and its thumb follows
+  (`band − 3`).
+- **R-tab-1** *Tightened.* Three tab looks, one per place, and nothing else is a tab: the segmented pill (view switches
+  such as Session | Bots, and radios of two to four values); text tabs in a dialog head (28px, 13/500 `--text-dim`,
+  hover `--hover`, selected `--current` with `--text-strong`, radius `--r-in-dialog` by R-corner-5); pane tabs in the
+  details panel's head (28px, glyph and title, `--r-s`, current on `--current`).
+- **R-tab-2** Tabs never wrap. A strip that overflows scrolls with a hidden bar and the 28px fade (R-scroll-7); under
+  640 a dialog drops its title before any tab.
+- **R-tab-3** One tab stop; arrows move and select (Up and Down when vertical), Home and End; `aria-selected`; an
+  attention dot beside an unselected label, and ", needs you" in its name.
+
 ### 14.4 List rows
 
 - **Anatomy:** a 30px row (`--row-h`) inset 8px in its list, radius `--r-s`, padding 0 4 0 12; a 16px lead column
@@ -916,6 +1362,16 @@ are at regular density and default corners.
   collapsible, rows})`, `HX.ui.html.leadFor({running, attention, current})`. Rows inside `[data-ui="rows"]` get roving
   focus and fire `ui:select`.
 - **Do** keep meta right-aligned mono. **Don't** add icons to text rows; the lead column is for state.
+
+**Rules**
+
+- **R-row-1** A row is `--row-h`, inset 8 in its list, radius `--r-s`; its lead column is 16 wide and centred on x = 28;
+  its label starts at x = 44; its end slot holds mono meta, a state word or actions.
+- **R-row-2** States: hover `--hover`; current `--current` with `--text-strong` and `aria-current`; archived: quiet and
+  struck through with `--line-strong`; actions replace the meta on hover and focus-within, and the title ellipsises
+  before them.
+- **R-row-3** The lead column is for state (a dot, an orb, the palette's kind glyph), never decoration.
+- **R-row-4** A two-line row is `--row-h-2` with a 12 quiet sub line; a list never has three-line rows.
 
 ### 14.5 Call-number margin entry (the signature)
 
@@ -1067,6 +1523,24 @@ are at regular density and default corners.
   `HX.ui.hold`. `.ui-slab` draws a still slab; the live dock keeps its morphing path.
 - **Do** keep it a second path. **Don't** give it its own approval rows, buttons or palette (Findings F1, F2).
 
+**Rules**
+
+- **R-dock-1** The dock is `--dock-bg` black in every theme, flush to the bottom edge, `--r-l` top corners with
+  `--r-l` concave flares, centred on the centre line with the composer; everything inside sits on
+  `data-ground="dock"` and uses the library's parts (owner decisions).
+- **R-dock-2** The dock shows only what exists (owner decision, 19 November 2026; its row is added with the dock's
+  presence work): its bots part when at least one bot exists, its session part once a session has started; with
+  neither there is no dock at all, so a first install shows none, and nothing else depends on it.
+- **R-dock-3** It rises in, grows and leaves with spring motion (critically damped, no overshoot, R-motion-3); under
+  reduced motion size changes are instant and entrances fade (owner decisions).
+- **R-dock-4** Its options and its minimise control appear only on hover or keyboard focus (`:hover`, `:focus-within`),
+  never at rest (owner decision, 19 November 2026).
+- **R-dock-5** The page indicator (the nub of page dots in the foot) shows only when there is more than one page (owner
+  decision, 19 November 2026); the current page is a 14 × 4 brass pill, the others `--mark-off` dots with a 24px hit
+  area (R-a11y-2).
+- **R-dock-6** One click or Enter on an orb opens the bot's session in the dock; the same orb, Esc or the close button
+  returns; a double-click or mod+Enter opens the full chat (owner decision).
+
 ### 14.13 Cards
 
 One element (`<hx-card>`, `HX.ui.card(kind, data, opts)`), eight kinds, three sizes, every state.
@@ -1098,6 +1572,16 @@ One element (`<hx-card>`, `HX.ui.card(kind, data, opts)`), eight kinds, three si
   running states set `aria-busy`.
 - **Do** keep red to the stamp. **Don't** add dither or texture; **don't** nest a card in a card.
 
+**Rules**
+
+- **R-card-1** A card is the drawer colour (`--bg-0`; the dock's `--surface` in the dock), `--r-m`, padding 14 16, up to
+  520 inline or 360 compact; what sits in its corners takes `--r-in-card` (8).
+- **R-card-2** Its foot puts mono meta or a receipt at the start and the actions at the end, the primary action (or the
+  hold) last. *Source:* `cards.js` feet.
+- **R-card-3** Red is only its stamp; a decided card recedes (title and well to `--text-dim`, the foot a receipt).
+- **R-card-4** Every state change animates its height (owner decision); cards stack as R-stack-3 and never nest
+  (R-stack-2).
+
 ### 14.14 Buttons
 
 | Variant | Look | Use |
@@ -1117,6 +1601,22 @@ One element (`<hx-card>`, `HX.ui.card(kind, data, opts)`), eight kinds, three si
   (New session ctrl shift O).
 - **Library:** `HX.ui.button({label, variant, size, icon, keys, disabled})`, `HX.ui.iconButton({icon, label, keys,
   pressed, expanded})`, `HX.ui.html.send({running, disabled})`.
+
+**Rules**
+
+- **R-btn-1** One primary per group: the action that moves the work forward. Everything else is secondary; the quiet
+  way out is ghost.
+- **R-btn-2** In a foot or a group, actions sit at the end; the primary (or the hold) is last, the way out first.
+- **R-btn-3** A destructive action is secondary, never red and never primary: the first press arms it (`--line-strong`,
+  the label "Click again to archive"), the second commits. No confirmation dialog.
+- **R-btn-4** A text button's icon leads, `--ic-l` (16), `--ic-gap` from the label, and only when the glyph is the
+  action's own (R-icon-8).
+- **R-btn-5** A button hugs its label (padding 0 14, small 0 10, ghost 0 8, `flex: none`); it never stretches to its
+  container, except the hold's 148 minimum.
+- **R-ib-1** An icon button is a `--ctl-s` square with an 18 glyph, `--r-s` (or the corner's `--r-in-*` in a corner or
+  on a band), always with an accessible name and a tooltip that shows its keys; small (24, glyph 16) in rows; window
+  controls are 36 × 28 in `--icon-quiet`, in the title bar only.
+- **R-ib-2** A toggle shows `aria-pressed` with a brass glyph, or `aria-expanded` with its filled half; never both.
 
 ### 14.15 Hold to approve
 
@@ -1141,6 +1641,13 @@ One element (`<hx-card>`, `HX.ui.card(kind, data, opts)`), eight kinds, three si
 - **Keyboard:** Space toggles. **Library:** `HX.ui.switch({id, checked, label})`, `ui:change`.
 - **Do** use for settings that apply at once. **Don't** use for an action or a mode that needs a confirmation.
 
+**Rules**
+
+- **R-switch-1** A switch is for a setting that applies at once; an action or a mode that needs a confirmation is not a
+  switch.
+- **R-switch-2** It sits at the end of its settings row, the label and hint at the start, `<label for>` bound.
+- **R-switch-3** No "on" or "off" text inside or beside it; the knob's place and the bone track say it.
+
 ### 14.17 Chips
 
 - **Shape:** a capsule (`--r-pill`), as on iOS; inside the composer's bar it takes the bar's `--r-in`, which is a
@@ -1151,6 +1658,26 @@ One element (`<hx-card>`, `HX.ui.card(kind, data, opts)`), eight kinds, three si
   tooltip `--bg-4`.
 - **Library:** `HX.ui.chip({label, icon, pressed, mono, haspopup})`, `HX.ui.chipGroup({options, value})`,
   `HX.ui.keys('mod+shift+O')`.
+
+**Rules: chips and keys**
+
+- **R-chip-1** A chip is a capsule; inside a container's band it takes the band's `--r-in-*`, which is a capsule at a
+  chip's height too.
+- **R-chip-2** Heights and type: a toolbar chip is `--ctl-s` − 2 (26), 12/500 `--text-dim`, glyph `--ic-m`; an option
+  chip `--ctl` − 4 with `--line`, checked `--current` with an inset brass line; a mono chip's glyph is `--ic-xs`.
+- **R-chip-3** The strike through an unpressed label is only for the composer's mode toggles (Governed, Smart).
+- **R-kbd-1** *Tightened.* A key chip is 18 tall and at least 18 wide, padding 0 4, mono 11 `--text-dim`, tracking 0;
+  `--bg-3` with `--hair`, or `--bg-4` with no line on a raised surface (a tooltip, a toast); one chip per key, 3px apart.
+  Labels come from `HX.ui.keys`: ctrl, shift, alt, esc, enter, space lowercase, letters uppercase, arrows as arrows, ⌘ ⇧ ⌥
+  on a Mac.
+- **R-kbd-2** *Tightened* from the owner's nesting decision and 8.2's tooltip row. A key chip at the end of a rounded
+  container (a tooltip, a field such as the command field, a menu item, the palette's field, a button) takes that
+  container's `--r-in` (`--r-in-field`, 8, in a tooltip or a 26px field), and never more than a capsule (9 at 18 tall);
+  in running text and the keymap sheet it keeps `--r-xs`. *Why:* the command field's keys were 6px boxes inside an almost
+  round field (owner's screenshot, 19 November 2026; F41).
+- **R-kbd-3** Keys show in tooltips, at the end of menu items, in the palette's field (esc), on a button while hovered
+  or focused, in the command field and in the keymap sheet. They are `aria-hidden`; the control carries
+  `aria-keyshortcuts`.
 
 ### 14.18 Menus
 
@@ -1173,6 +1700,25 @@ One element (`<hx-card>`, `HX.ui.card(kind, data, opts)`), eight kinds, three si
 - The menu's surface with arbitrary content (`role="dialog"`, padding 12, 360px): the expanded blank, a quick edit.
   Focus moves inside; Tab loops; Esc and outside clicks close and return focus. `HX.ui.popover.open(anchor, node,
   {label})`.
+
+**Rules: menus, popovers and placement**
+
+- **R-float-1** **Approved (owner-delegated review, 19 November 2026)** for the rail's tooltips. A menu, a popover and a tooltip sit
+  `--float-gap` (8) from their anchor and at least `--float-margin` (8) from the window edge, below the anchor unless it
+  only fits above. *Why:* the mock-up uses 8 everywhere except a tooltip to the right of the rail, at 10
+  (`HX.ui.tooltip`). *Options:* (a) 8 everywhere (chosen); (b) keep 10 to the right.
+- **R-float-2** No arrows, beaks or tails on any floating surface.
+- **R-float-3** A menu opens below its trigger, its start 8px before the trigger's (so the first item's label lines up
+  with the trigger's), or end-aligned when the trigger ends a bar; only a tooltip is centred on its anchor.
+- **R-float-4** Sizes: menus 220 to 340 wide, popovers 360 (at most the window less 24), tooltips one line. A floating
+  surface is never taller than the window less 16; past that it scrolls inside (R-scroll-5).
+- **R-float-5** Opening moves focus in (a menu to its checked item or the first); Esc, an outside press and Tab close it
+  and focus returns to the trigger; one at a time (R-elev-7).
+- **R-menu-1** A menu item is at least `--row-h`, padding 6 8, radius `--r-in-menu` (16); a 16 glyph column, a 13/400
+  label (R-type-3), an optional 12 quiet description, keys or a stamp at the end.
+- **R-menu-2** Item states: hover `--hover`; keyboard focus `--current` with an inset 2px brass ring; checked a brass
+  check, never a filled square; disabled `--text-quiet`.
+- **R-menu-3** A title is 12/500 quiet; a separator a hairline 6 in from each side; a foot note 12 quiet above a hairline.
 
 ### 14.20 Command palette
 
@@ -1211,6 +1757,14 @@ One element (`<hx-card>`, `HX.ui.card(kind, data, opts)`), eight kinds, three si
 - **Do** confirm what just happened ("Archived audit log export"). **Don't** report errors in a toast; an error stays
   where it happened.
 
+**Rules**
+
+- **R-toast-1** One line at the top of the work (`--chrome-h` + 12), centred on the centre line, raised with `--hair` and
+  `--elev-3`, `--r-m`, `--ctl-s` + 12 tall; its action is a ghost button with `--r-in-toast`, 6 from the edges.
+- **R-toast-2** It stays 3s (6s with an action) and waits while hovered or focused; one at a time (a mod's queue, 14.29).
+- **R-toast-3** A toast confirms what just happened. It never reports an error (R-error-1) and never covers a modal
+  dialog.
+
 ### 14.23 Tooltips
 
 - Raised colour, hairline, `--shadow-tip`, `--r-s`, 12px, padding 4 8 (4 4 4 8 with keys, whose keys are concentric
@@ -1223,6 +1777,21 @@ One element (`<hx-card>`, `HX.ui.card(kind, data, opts)`), eight kinds, three si
   `aria-keyshortcuts`. Never put information only in a tooltip.
 - **Library:** any element with `data-tip`, `data-kbd`, `data-tip-pos`, `data-tip-state`; `HX.ui.tooltip`.
 
+**Rules**
+
+- **R-tip-1** A tooltip is raised with `--hair` and `--elev-2`, `--r-s`, 12px, padding 4 8 (4 4 4 8 with keys); its keys
+  take `--r-in-field` (R-kbd-2).
+- **R-tip-2** **Approved (owner-delegated review, 19 November 2026)** for the second clause. It shows below its anchor, above within
+  160px of the window's bottom, to the right in the rail; and it never covers the text you are typing: a tooltip for a
+  control inside a container that holds a text field (the composer's attach, chips, mic and send) sits outside that
+  container, `--float-gap` above its top edge. *Why:* "Attach alt A" covered the composer's text (owner's screenshot, 19
+  November 2026; F40). *Options:* (a) above the container (chosen: the composer's top edge is the nearest edge that hides
+  no text); (b) beside the control; (c) no tooltip on composer controls (breaks R-ib-1).
+- **R-tip-3** Timing: 480ms the first time, at once while warm (700ms after the last) and on keyboard focus; it hides on
+  pointer down, focus out and Esc.
+- **R-tip-4** Its text is the control's accessible name, then an optional mono state, then the keys; one line, never
+  interactive, never the only place for information; the platform's `title` tooltip is never used (R-native-1).
+
 ### 14.24 Focus rings
 
 - **2px solid `--brass` outline, 2px offset, no transition**, on `:focus-visible` only. Fields put the ring on the
@@ -1234,6 +1803,20 @@ One element (`<hx-card>`, `HX.ui.card(kind, data, opts)`), eight kinds, three si
   same continuous path. Its contrast is the same (brass against the surface around the element, 3:1 and up).
 - On the dock ground the ring is the dock's brass. Orb buttons use a 3px offset.
 
+**Rules**
+
+- **R-focus-1** Focus is a `--focus-w` (2px) `--focus` ring at `--focus-offset` (2px) outside the element, on
+  `:focus-visible` only, with no transition.
+- **R-focus-2** Inside a floating surface or a clipped track (menu items, option rows, segmented options) the ring is
+  inset 2px, with the `--current` fill.
+- **R-focus-3** On a drawn corner the ring follows the same continuous path, inside the edge (8.1).
+- **R-focus-4** A field shows the ring on its box (`:focus-within`), never on the bare input; the composer shows focus as
+  `--line-field` and a brass caret.
+- **R-focus-5** Focus never moves on hover; opening a layer moves it in; closing returns it to the trigger; a resolved
+  card keeps it on its next sensible control.
+- **R-focus-6** A focused control is never hidden (WCAG 2.4.11): scrollers keep `scroll-padding` for the composer, the
+  dock and any fixed head (R-layout-5).
+
 ### 14.25 Fields
 
 - `.ui-input`: `--ctl` min height, `--r-s`, `--bg-0` on the frame (`--bg-3` raised variant on the ground), inset 1px
@@ -1242,6 +1825,16 @@ One element (`<hx-card>`, `HX.ui.card(kind, data, opts)`), eight kinds, three si
 - Label above (12/500 dim) with `for`; hint or error below (`aria-describedby`). Textareas grow, no resize grip.
   Selects draw their own chevron.
 - **Library:** `HX.ui.field({id, label, hint, error, kind, value, placeholder, mono})`.
+
+**Rules**
+
+- **R-field-1** A text field is at least `--ctl`, `--r-s`, `--bg-0` on the frame (`--bg-3` raised on the ground), an
+  inset `--line-field`, 13 sans at `--lh` (mono 11 variant), padding 6 10, placeholder `--text-quiet`.
+- **R-field-2** Its label is above it (12/500 `--text-dim`, 6 above, bound with `for`); a hint or the error is below it
+  (12/1.5, `aria-describedby`); the error replaces the hint, and only the message and the field's line turn red.
+- **R-field-3** States: hover line `--text-quiet`; focus the ring (R-focus-4); `aria-invalid` red line; disabled at
+  `--disabled-alpha` (R-state-6).
+- **R-field-4** A textarea grows with its text and has no resize grip (`resize: none`).
 
 ### 14.26 Stamps and dots
 
@@ -1276,6 +1869,12 @@ One element (`<hx-card>`, `HX.ui.card(kind, data, opts)`), eight kinds, three si
 - Centred in the space above the dock: the logo's mark, 32px wide, in `--text-faint`, a title 16/600, one or two sentences 13/1.6
   dim (46ch), and the one action that fills it ("New session ctrl shift O"). Teach the interface, never "Nothing
   here". `HX.ui.empty({title, text, action, mark})`.
+
+**Rules**
+
+- **R-empty-1** An empty state is centred in the space above the dock: the logo's mark 32 wide in `--text-faint`, a title
+  16/600, one or two sentences 13/1.6 `--text-dim` at 46ch, and the one action that fills it with its keys. It teaches
+  the interface; never "Nothing here".
 
 ### 14.29 Mods
 
@@ -1315,9 +1914,168 @@ reads "name mod". The agent stays nameless and bots keep their orbs; a mod is ne
   `toast`, `ask`, `proposeTheme`). Tree types: Box, Text, Button, Input, Select, Markdown, Code, Link, Svg; a Box with `progress` is dots.
 - **Do** name the mod wherever it speaks. **Don't** give a mod a colour, a bar, a loop or a notice the system does not have.
 
+### 14.30 Dialogs and sheets
+
+- **R-dialog-1** A modal dialog is `min(600px, 100% − 32px)` × `min(680px, 100% − 64px)`, centred, the frame colour,
+  `--r-l`, `--line` and `--elev-4` over `--scrim`. Its head is 52 tall: the title 16/600 at x = 20, its tabs after it
+  (R-tab-1), the close button in the corner at `--pad-dialog` with `--r-in-dialog`, a hairline under it. Its body scrolls
+  under the head (R-scroll-4, R-scroll-5), padding 4 20 24. A foot, when there is one, is fixed, with a hairline above
+  and the actions at the end (R-btn-2). *Source:* `shell.css .hx-dialog`.
+- **R-dialog-2** The wide sheet (the keymap) is `min(1000px, 100% − 32px)` × `min(720px, 100% − 48px)`, with the same head
+  and body.
+- **R-dialog-3** The side dialog (Appearance) is `min(420px, 100% − 24px)` wide and the window's height less 12 on each
+  side, at the right edge, with no scrim, so its changes show on the app.
+- **R-dialog-4** A sheet inside a view (bot settings) is `--right-w`, the frame colour, flush right under the title bar
+  with a concave top-left corner (`--r-l`), and has its own close button and Esc.
+- **R-dialog-5** Focus moves in (the first field, else the close button), Tab loops inside, Esc closes and focus returns
+  to the opener; one modal at a time; a confirmation inside is an armed button (R-btn-3), never a second dialog; it
+  enters with the 6px drop over `--dur-2`.
+- **R-dialog-6** Under 640 a dialog keeps 16 from the window's sides and drops its title, never its tabs.
+
+### 14.31 Search fields
+
+- **R-search-1** Three search fields, one family. The **command field** (the title bar; a button): 26 tall, `--bg-0`,
+  `--hair`, `--r-s`, glyph `--ic-s`, where you are in 12, keys at the end. The **palette's field** (its head): 48 tall, no
+  box, a hairline under it, glyph `--ic-l`, input 14 `--text-strong`, the esc key at the end. A **search in a form**: a
+  `.ui-input` with the glyph at its start. *Source:* `shell.css .hx-cmd`, `.hx-palette__field`.
+- **R-search-2** The search glyph labels, it does not act: `--text-quiet`, like the placeholder, at the start.
+- **R-search-3** **Approved (owner-delegated review, 19 November 2026).** The leading glyph is centred in a square as tall as its field:
+  its centre is half the field's height from the edge. The palette's field already does this (48 tall, a 16 glyph at 16,
+  centre 24); the command field puts its glyph's centre at 17 in a 26 field. *Options:* (a) the square, so the command
+  field's start padding becomes 6 (chosen: it is the palette's rule, and the glyph then sits as far in as the end keys
+  sit from their end); (b) keep 10.
+- **R-search-4** What ends a field (key chips while it is empty) sits `--pad-tip` (4) from the end of a 26 field and takes
+  `--r-in-field` (R-kbd-2); in the palette's 48 field the esc key sits at the field's 12 end padding.
+- **R-search-5** Matches are underlined in brass with the text `--text-strong`, never highlighted with a fill; no matches
+  is a sentence that teaches ("No matches for … Try a session title, a bot's name or a command.").
+
+### 14.32 Selects and listboxes
+
+- **R-select-1** A select is a button drawn as a field (the `.ui-input` box, the value, a `chevron-down` at `--ic-xs` in
+  `--icon` at the end) that opens a menu of `menuitemradio` items under it, start-aligned and at least as wide as the
+  field, the chosen item with the brass check. Never a `<select>`: its popup is the platform's (decision of 19 November
+  2026, R-native-1). The mock-up's `select.ui-input` (the customizer's fonts) is replaced (F42).
+- **R-select-2** Long lists (fonts, models) keep the menu's typeahead (a letter jumps, 14.18) and scroll inside past the
+  window's height (R-float-4).
+- **R-select-3** Enter, Space and Alt+Down open it; Up and Down move; Enter picks; Esc closes with no change. The button
+  has `aria-haspopup` and `aria-expanded`, and its name includes the value ("Interface font, Libre Franklin").
+- **R-select-4** A model picker shows each provider's mark in brand colour (owner decision, 10.1); every other picker is
+  monochrome.
+
+### 14.33 Checkboxes and radios
+
+- **R-check-1** **Approved (owner-delegated review, 19 November 2026).** There is no square checkbox. A setting that applies at once is
+  a switch; one choice of a few is a segmented radio (two to four), option chips (presets) or option rows (the blank's
+  radio rows); several choices in a list are menu items or rows with the brass check (`menuitemcheckbox`,
+  `aria-checked`). *Amended in review:* in a form (not a menu) the rows of a several-choice list show their mark at rest,
+  so the list reads as several-choice before anything is chosen: the check glyph in `--mark-off`, brass when chosen (never
+  a ring, which means one choice, R-check-2), and the field's label says so ("Choose any"). *Why:* the mock-up draws no checkbox; every multiple choice it has is a check in a glyph column.
+  *Options:* (a) no checkbox (chosen); (b) a 16px square at `--r-xs`, `--line-strong`, with a brass check when checked.
+- **R-check-2** A radio is an option row's ring: empty in `--mark-off`, the chosen one filled brass (a shape change as well
+  as a colour), the row `--current` while focused with the inset ring. *Source:* `cards.css .cd-opt__ring`.
+
+### 14.34 Sliders
+
+- **R-slider-1** **Approved (owner-delegated review, 19 November 2026).** No slider track. A range of up to four values is a segmented
+  control; five to twelve stops are a row of dots like the measure (each stop a 24px target, `--mark-off` off, the
+  chosen stop the 14 × 4 brass pill of the page indicator), moved by the arrows (`role="slider"`, `aria-valuenow`,
+  `aria-valuetext`); an open number is a mono field with its unit. *Why:* the system draws no bars (owner decision on
+  progress, F18) and the mock-up has no slider. *Options:* (a) segmented and dots (chosen); (b) a 4px track like the
+  switch's with a 14px knob.
+
+### 14.35 Interactive states
+
+Every control's states, and the token each one changes. A state lives in an ARIA or data attribute, never an ad-hoc
+class (`components.css` header).
+
+| State | Attribute | Buttons | Icon buttons | Rows, menu items | Chips | Tabs, segmented | Fields | Switch |
+|---|---|---|---|---|---|---|---|---|
+| Rest | | `--line` outline, `--text` | `--icon` | transparent | `--text-dim` | `--text-dim` | `--line-field` | `--bg-0`, `--line-strong`, knob `--text-quiet` |
+| Hover | `:hover` | `--hover` fill | `--hover`, `--text-strong` | `--hover` | `--hover`, `--text-strong` | `--text-strong` (dialog tabs `--hover`) | line `--text-quiet` | none |
+| Press | `:active` | 1px down, scale .985 | scale .96 | none | none | dialog tabs .985 | none | none |
+| Focus | `:focus-visible` | ring | ring | inset ring + `--current` | ring | inset ring | ring on the box | ring |
+| Current | `aria-current`, `aria-selected` (tabs) | | | `--current`, `--text-strong` | | `--current` (text tabs); bone thumb (segmented) | | |
+| Checked, pressed | `aria-checked`, `aria-pressed` | | brass glyph | brass check | `--text`, brass glyph; option chip `--current` + brass line | | | bone track, ink knob |
+| Expanded | `aria-expanded` | | filled half | chevron turns | | | | |
+| Disabled | `disabled`, `aria-disabled` | `--text-quiet`; primary on `--bg-4` | `--icon-off` | `--text-quiet` | `--text-quiet` | none | `--disabled-alpha` | `--disabled-alpha` |
+| Armed | `data-armed` | `--line-strong`, `--text-strong`, label says so | | | | | | |
+| Busy | `aria-busy` | send becomes Stop | | running dot | | | | |
+| Invalid | `aria-invalid` | | | | | | `--red` line, red-text message | |
+
+- **R-state-1** Every control draws exactly the states of the table above with those tokens; a state not in the table
+  does not exist.
+- **R-state-2** State lives in ARIA or data attributes, never in classes such as `.is-active`.
+- **R-state-3** **Approved (owner-delegated review, 19 November 2026).** Hover styles apply only where a pointer hovers: every hover
+  rule sits under `@media (hover: hover) and (pointer: fine)`. *Why:* the library does this for icon buttons and the
+  command field but not for buttons, rows, chips and menu items, so a touch screen leaves those lit after a tap.
+  *Options:* (a) all hover rules (chosen); (b) only icon buttons (as found). *Amended in review:* what hover reveals (the
+  dock's options and minimize controls, a row's actions) also shows on `:focus-within`, and on a coarse pointer on a tap;
+  hover is never the only way to a control.
+- **R-state-4** Hover in over `--dur-1`, out over `--dur-out`, press over `--dur-press`; focus never transitions.
+- **R-state-5** Three meanings, never mixed: `--current` is where you are (the current row, the active text tab, a
+  focused menu item, the listening mic); the bone `--selected` fill is the chosen value or the primary action (the
+  segmented thumb, a primary button, send, a switch that is on); brass is the mark of a choice (a check, a ring, a pressed
+  glyph, a checked option chip's line). A control shows one fill at a time.
+- **R-state-6** **Approved (owner-delegated review, 19 November 2026).** Disabled: a control with text or an icon takes the role colours
+  (`--text-quiet`, `--icon-off`); a control drawn in fills (send, switch, field) takes one opacity, `--disabled-alpha`
+  (.45). *Why:* the mock-up has three values (send .35, switch .45, field .55). *Options:* (a) keep three; (b) one value,
+  .45, the middle one (chosen); (c) role colours everywhere, no opacity.
+- **R-state-7** Busy shows `aria-busy` and the running dot or the Stop it became; never a spinner (R-load-1).
+
+### 14.36 Loading, errors and unknown
+
+- **R-load-1** No spinners and no shimmering skeletons. Work of unknown length is the running dot with its state word;
+  a known share is the measure row with its percent (14.27).
+- **R-load-2** **Approved (owner-delegated review, 19 November 2026).** A region waiting for its first data keeps its frame (its head,
+  title and hairlines) and draws nothing in its body; if it is still empty after `--load-delay` (600ms; amended in review
+  from 1.8s: a body blank past a second reads as broken, one under half a second would flash), one quiet line
+  appears there: the running dot and what is loading, 12 `--text-quiet` ("Loading sessions"). *Why:* the mock-up has no
+  loading state, and placeholder shapes sit badly with "nothing is fabricated". *Options:* (a) the frame, then a line
+  (chosen); (b) skeleton rows in `--hover`.
+- **R-error-1** An error stays where it happened: a field shows it below the field, an action in its card (the error
+  card), a view that cannot load in its empty state with the problem and the way out ("Could not start boopis's engine." and
+  Retry). Never a toast, never a dialog.
+- **R-error-2** Only the message and a field's line are `--red-text` and `--red`; a failed gate or sign-in is the
+  "failed" stamp.
+- **R-unknown-1** Unknown is shown as unknown: the word "unknown" where the value would be (mono quiet where the value
+  would be mono), never a placeholder number, a dash or a guess (AGENTS invariant 5).
+
+### 14.37 Tables and data
+
+- **R-table-1** Reference data is a two-column grid, as the keymap is (`shell.css .hx-keys`): the label at the start, the
+  value at the end, 8 0 per line, a `--hair` between lines, none after the last. *Source:* `shell.css`.
+- **R-table-2** **Approved (owner-delegated review, 19 November 2026).** A table with more columns has no vertical rules and no zebra
+  stripes; its header is 12/500 `--text-quiet` in sentence case; rows are `--row-h` with a `--hair` between; numbers
+  are right-aligned mono with tabular figures, text left-aligned; it sits on its surface (never a card of its own) and
+  scrolls sideways inside its own wrapper when wider than its box. *Why:* the mock-up has none yet; this is the keymap's
+  grid extended. *Options:* (a) as written (chosen); (b) cards per row.
+- **R-data-1** Measures, progress and positions are dots, never bars (owner decision; 14.27). Capacities are running
+  totals against the limit, in mono.
+
+### 14.38 Forms
+
+- **R-form-1** A form is one card family (owner decision, `apps/desktop/AGENTS.md`): one renderer from the schema, every
+  field a library field (14.25), one column, label above, hint or error below, the actions in the card's foot with the
+  primary last.
+- **R-form-2** Rhythm: 6 from a label to its field, 12 (`--sp-3`) between fields (`cards.css .cd-form`), 24 between
+  groups, 48 before a new block (7).
+- **R-form-3** A secret field never shows the saved value again; it says where the value is kept.
+
+### 14.39 Native controls
+
+- **R-native-1** Nothing the platform draws ever shows (decision of 19 November 2026): no `<select>` popup, no date,
+  time or colour picker, no file button, no range, no number spin buttons, no search cancel button, no native scrollbar
+  (R-scroll-1), no resize grip, no default focus outline, no autofill tint, no tap highlight, no `title` tooltip. Native
+  elements may carry the semantics (`<button>`, `<dialog>`, a text `<input>`, a checkbox with `role="switch"` and
+  `appearance: none`); the library draws them.
+- **R-native-2** Text inputs stay native elements drawn by `.ui-input`; they keep a native arc for their corner (an
+  `<input>` cannot hold the `::after` that draws the line, 8.1), a brass caret and the `--brass-soft` selection.
+- **R-native-3** The customizer's colour row is its swatch and hex field; the mock-up's `<input type="color">` is
+  replaced by a swatch button that focuses the hex field (F42).
+
 ## 15. Accessibility
 
-WCAG 2.1 AA is the floor (PRODUCT.md). Audit of the specimen and the library on 18 November 2026: axe-core 4 (wcag2a,
+WCAG 2.1 AA was the floor of this audit (PRODUCT.md); the app's floor is 2.2 AA (R-a11y-1). Audit of the specimen and the library on 18 November 2026: axe-core 4 (wcag2a,
 wcag2aa, wcag21aa, best-practice) in Chromium at 1440 in every preset, at 720 (200% zoom equivalent) and at 390;
 a 160-stop keyboard walk; scripted checks of every interactive component; reduced-motion run.
 
@@ -1358,6 +2116,21 @@ after `--mark-off` (18 November 2026, evening): unchanged.
 `aria-current`; ladders and measures are images with a sentence; orbs are hidden and their holder is named; the hold
 button is described by its instructions; cards and toasts announce through polite live regions. Not tested with a
 real screen reader (VoiceOver, NVDA): do that before shipping.
+
+**Rules**
+
+- **R-a11y-1** *Tightened.* WCAG 2.2 AA is the floor (the app's rule in `apps/desktop/AGENTS.md`; this section's audit
+  was 2.1): zero axe violations in every preset at 1440, 720 and 390.
+- **R-a11y-2** A pointer target is at least `--hit-min` (24 × 24), or a mark smaller than that gets a hit area of 24
+  around it (page dots, the context measure).
+- **R-a11y-3** Label in name: an accessible name contains the visible text, in order; icon buttons are named; orbs and
+  icons are hidden and their holder is named.
+- **R-a11y-4** Everything the pointer does, the keyboard does (`KEYMAP.md`); one tab stop per composite (lists,
+  segmented controls, pages).
+- **R-a11y-5** Focus is never hidden behind the composer, the dock, a fixed head or a toast (R-focus-6).
+- **R-a11y-6** Reflow: no horizontal scroll at 390 or 720 (200%).
+- **R-a11y-7** State changes are announced politely (`role="status"`, `aria-live="polite"`); never assertive.
+- **R-a11y-8** Text 4.5:1, non-text marks and the focus ring 3:1 on every surface they sit on (R-colour-6).
 
 ## 16. Findings
 
@@ -1403,6 +2176,29 @@ holds the canonical version of each fix and MIGRATION.md says who changes what.
 | F28 | contrast | **Inactive marks at 2.0–2.4:1.** Page dots, ladder stations to come and empty rings were `--text-faint` (or `--line-strong`), which is decoration-grade; as marks that carry position they need 3:1 (1.4.11). Fixed in the library with `--mark-off`. | `cards.css .cd-opt__ring`, `.cd-week i`; `dock.css .dk-tile-dot` (on the dock ground, already 3.3:1) | `--mark-off`; promote it to `tokens.css` and add its pairs to `theme.js PAIRS`. On/off marks that differ by colour alone (the context measure, the shell's stub rail) keep `--text-faint` off |
 | F25 | taste | **Graphite and Typewriter set brass to a light grey** (`#d6d6d6`, `#e9e9e9`), so "you are here" is the same colour as text. Meaning survives through shape (rings, checks, thumbs), so it is not a failure. | `tokens.css` | **Resolved (Owner decision):** Graphite `#9db6cf` steel (9.4:1 on the frame), Typewriter `#7ea6e0` carbon-paper blue (7.9:1) |
 
+Found by the version 1.1 pass (19 November 2026), from the owner's screenshots and the app's code. Fixes belong to the
+fix agents; each names the rule it breaks.
+
+| # | Kind | Finding | Where | Rule |
+|---|---|---|---|---|
+| F37 | engine | **The scrollbar in WebKitGTK is the platform's wide bar** and runs into the Settings dialog's bottom curve: `scrollbar-width: thin` is ignored there. | `components.css :where(.ui-root) *`, `.ui-scroll`, `.ui-panel__body`, `session.css`, `mods.css`, `dock.css .dk-sess-log`, `mod-view.css` | R-scroll-1 to R-scroll-5 |
+| F38 | owner | **The Settings tabs do not share the dialog's corner**: 28px tabs at `--r-s` under a 30px curve beside a round close button. | `shell.css .hx-dtab` | R-corner-5, R-tab-1 |
+| F39 | owner | **The composer's send meets its box's edge** (no inset in the corner). | the app's session composer | R-corner-4 |
+| F40 | owner | **A composer tooltip covers the text being typed** ("Attach alt A" over the input). | `tooltip.ts` placement | R-tip-2 |
+| F41 | owner | **The command field's key chips are 6px boxes** in an almost round 26px field, and its glyph sits 10 in while its keys sit 4 from the end. | `shell.css .hx-cmd`, `.ui-kbd` | R-kbd-2, R-search-3 |
+| F42 | native | **Native controls**: the customizer's font selects (`select.ui-input`) and colour inputs (`input type="color"`). | `theme.js`, `components.css select.ui-input` | R-native-1, R-select-1, R-native-3 |
+| F43 | scale | **Breakpoints outside the set**: 520 (dock) and 760 (bots). | `dock.css`, `bots.css` | R-layout-1 |
+| F44 | scale | **Three disabled opacities**: send .35, switch .45, field .55. | `components.css` | R-state-6 |
+| F45 | drift | **The rail's tooltip sits 10 from its anchor**, every other floating surface 8. | `tooltip.ts`, `components.js` tooltip | R-float-1 |
+| F46 | drift | **Hover outside the pointer query** for buttons, rows, chips and menu items. | `components.css` | R-state-3 |
+| F47 | scale | **A layer is removed after a literal 160ms** while its CSS exit runs `--dur-2`. | `layer.ts closeLayer` | R-motion-1, R-motion-4 |
+| F48 | scale | **Literal `z-index: 5`** on the bot settings sheet and a session popover, outside an isolated component. | `bots.css`, `session.css` | R-elev-5 |
+| F49 | doc | **The type table said menu labels are 500**; the library draws 400. | 6, `.ui-menu__item` | R-type-3 |
+| F50 | doc | **The spacing table said 4 for icon to label in a chip and between key chips**; the library draws 6 and 3. | 7 | R-space-2 |
+| F51 | drift | **The customizer's JSON field has a resize grip** (`resize: vertical`). | `shell.css .hxt-json` | R-field-4, R-native-1 |
+| F52 | owner | **A square edge shows under the Settings dialog's corners** (a rectangle painted behind the drawn corner). | the app's `.hx-dialog` | R-corner-7 |
+| F53 | rule | **Layers opened from a modal dialog mount on the app root**, under the dialog's top layer. | `layer.ts`, `tooltip.ts` | R-elev-6 |
+
 ## 17. Open questions
 
 Things I could not settle without the owner; each has the default the system uses today.
@@ -1420,6 +2216,9 @@ Things I could not settle without the owner; each has the default the system use
 7. **Not tested:** real screen readers, Linux WebKitGTK (Tauri's renderer), Windows high contrast. The library needs
    `color-mix()`, `:has()` and registered custom properties, so a 2023 or later WebKitGTK; the card layer's
    `light-dark()` (removed by the migration) would need a 2024 one.
+8. **The formerly proposed rules of version 1.1** (each marked in place, listed in `RULES.md`) were approved in the
+   owner-delegated review of 19 November 2026, three of them amended (R-check-1, R-state-3, R-load-2). They are rules like
+   any other: the UI lab reports a breach as a failure.
 
 ## 18. Appendix: Tailwind v4 and React
 

@@ -87,7 +87,7 @@ export async function mods(env, AXE) {
     const bar = await page.evaluate(() => document.querySelectorAll('.ss-mods--band [role="progressbar"] :is(progress, meter), .ss-mods--band progress, .ss-mods--band meter').length);
     check('mods', 'progress is dots: no bar element, one dot that travels', bar === 0, bar);
     await page.click('.mod-pane .mv-select'); await page.waitForTimeout(250);
-    await page.click('.ui-menu__item:has-text("Failing only")'); await page.waitForTimeout(500);
+    await page.click('.ui-listbox .ui-option:has-text("Failing only")'); await page.waitForTimeout(500);
     const sel = await page.evaluate(() => window.__hxReplay.requests.filter((r) => r.method === 'plugin.boopis.mod.select').map((r) => r.params.value));
     check('mods', 'a choice in a Select goes back as ui.select with its value', sel.join() === 'failing', sel);
 

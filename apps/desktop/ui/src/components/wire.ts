@@ -1,9 +1,10 @@
 /* Behaviours: `hydrate(root)` wires every [data-ui] element under root once (string-built markup).
    Events bubble from the element and are cancelable where an action follows:
-     'ui:change' {value} segmented, switch, chip, option group, group, section, disclosure
+     'ui:change' {value} segmented, switch, chip, option group, group, section, disclosure, select ({value, option}, cancelable)
      'ui:commit' hold to approve finished;  'ui:select' {value, item} menu item, row */
 import { fire } from '../core/dom';
 import { wireHold } from './hold';
+import { wireSelect } from './select';
 
 export interface UiChange<V = string> { value: V; index?: number }
 export interface UiSelect { value: string | undefined; item: HTMLElement | unknown }
@@ -85,6 +86,7 @@ const WIRE: Record<string, Wire> = {
   options: wireOptions,
   pages: wireSeg,
   rows: wireRows,
+  select: wireSelect,
   group: toggler,
   section: toggler,
   disclosure: (el) => el.addEventListener('click', () => {

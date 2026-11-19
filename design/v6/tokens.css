@@ -15,7 +15,7 @@
   --bg-1: #121110;            /* frame: title bar, sidebars, the open right panel, menus, palette */
   --bg-2: #181715;            /* ground: under the conversation */
   --bg-3: #23211e;            /* raised: the user's request, the composer, tooltips */
-  --bg-4: #2e2b27;            /* pressed, scrollbar thumb */
+  --bg-4: #2e2b27;            /* pressed, the scrollbar thumb at rest */
   --chip: #26231f;            /* inline code chips */
   /* text and icons */
   --text: #e9e4da;
@@ -187,6 +187,8 @@
   --lh: 1.6;
   --lh-ui: 1.35;
   --lh-tight: 1.2;
+  --lh-meta: 1.45;            /* mono meta in the call-number margin */
+  --lh-small: 1.5;            /* hints, descriptions, notes */
   --track: 0;
   --track-mono: -.01em;
 
@@ -229,12 +231,71 @@
   --r-floor: 8px;             /* the smallest inner radius of a nested corner */
   --corner-smoothing: 0.6;    /* Figma corner smoothing, as iOS */
   --composer-pad: 6px;        /* the composer's actions sit this far from its edge */
+  /* nested corners, per container (DESIGN-SYSTEM.md §8.2, R-corner-3, R-corner-5): each container's inset --pad-* and the
+     radius of what sits in its corners or on its edge band, --r-in-* = max(--r-floor, outer − pad). They follow the
+     corners setting. The tabs and the close button in a dialog's head take --r-in-dialog; the segmented thumb --r-in-seg */
+  --pad-dialog: 12px;         /* dialogs, sheets: the close button, the head's tabs */
+  --pad-palette: 6px;         /* the palette's rows */
+  --pad-dock: 12px;           /* a card or row at the top of the dock slab */
+  --pad-menu: 4px;            /* menu items */
+  --pad-pop: 12px;            /* popovers: their controls keep their own step */
+  --pad-card: 12px;           /* a well, a footer button, a stamp in a card (the padding gives way to the floor) */
+  --pad-toast: 6px;           /* a toast's action */
+  --pad-tip: 4px;             /* a key chip in a tooltip, in a field's end */
+  --pad-seg: 3px;             /* the segmented track: its thumb and options */
+  --r-in-dialog: max(var(--r-floor), calc(var(--r-l) - var(--pad-dialog)));
+  --r-in-palette: max(var(--r-floor), calc(var(--r-l) - var(--pad-palette)));
+  --r-in-dock: max(var(--r-floor), calc(var(--r-l) - var(--pad-dock)));
+  --r-in-menu: max(var(--r-floor), calc(var(--r-m) - var(--pad-menu)));
+  --r-in-card: max(var(--r-floor), calc(var(--r-m) - var(--pad-card)));
+  --r-in-composer: max(var(--r-floor), calc(var(--r-m) - var(--composer-pad)));
+  --r-in-toast: max(var(--r-floor), calc(var(--r-m) - var(--pad-toast)));
+  --r-in-field: max(var(--r-floor), calc(var(--r-s) - var(--pad-tip)));   /* tooltip keys, key chips at a field's end */
+  --r-in-seg: max(var(--r-floor), calc(var(--r-s) - var(--pad-seg)));     /* the segmented thumb and options */
+
+  /* icons (DESIGN-SYSTEM.md §10, R-icon-3, R-icon-5): six sizes, two gaps to a label */
+  --ic-2xs: 10px;             /* chevrons of disclosures and group heads */
+  --ic-xs: 12px;              /* section chevrons, glyphs in mono chips, schedule marks */
+  --ic-s: 14px;               /* the command field, file chips, task and inline marks, model marks in running text */
+  --ic-m: 15px;               /* chips, menu glyphs */
+  --ic-l: 16px;               /* buttons, rows, the send button, origin slots, the palette */
+  --ic-xl: 18px;              /* icon buttons */
+  --ic-gap: 8px;              /* icon to label: buttons, menu items, rows */
+  --ic-gap-tight: 6px;        /* icon to label in capsules and controls of 26px and under: chips, files, segmented options */
+
+  /* focus and targets (R-focus-1, R-a11y-2) */
+  --focus-w: 2px;             /* the ring, everywhere */
+  --focus-offset: 2px;        /* outside the element; inside (−2px) in tracks and floating surfaces */
+  --hit-min: 24px;            /* the smallest pointer target (WCAG 2.5.8); a smaller mark gets a hit area this large */
+  --disabled-alpha: .45;      /* proposed (R-state-6): one opacity for a disabled control drawn in fills (send, switch, field) */
+
+  /* floating surfaces: menus, popovers, tooltips (R-float-1) */
+  --float-gap: 8px;           /* from the anchor */
+  --float-margin: 8px;        /* the least distance from the window edge */
+
+  /* scrollbars (DESIGN-SYSTEM.md §7.1, R-scroll-*): drawn with ::-webkit-scrollbar in every engine (WebKitGTK ignores
+     scrollbar-width; in Chromium any scrollbar-width or scrollbar-color turns the pseudo-elements off) */
+  --scroll-size: 10px;        /* the bar's box, both axes; the track is transparent */
+  --scroll-thumb: 4px;        /* the thumb at rest, a capsule centred in the bar */
+  --scroll-thumb-active: 6px; /* while hovered or dragged */
+  --scroll-thumb-min: 32px;   /* the shortest thumb */
+  --scroll-thumb-color: var(--bg-4);           /* at rest (the v6 thumb) */
+  --scroll-thumb-color-active: var(--mark-off); /* hovered or dragged: 3:1, like every non-text mark */
+
+  /* elevation (DESIGN-SYSTEM.md §9, R-elev-2): depth is tone; only what floats has a shadow */
+  --elev-0: none;             /* the frame and the ground */
+  --elev-1: none;             /* in flow: raised and inset surfaces (tone and a hairline, never a shadow) */
+  --elev-2: var(--shadow-tip); /* tooltips */
+  --elev-3: var(--shadow-pop); /* menus, popovers, toasts */
+  --elev-4: var(--shadow-pop); /* the palette and dialogs, over --scrim */
 
   /* depth */
   --z-base: 0;
   --z-right: 20;
   --z-sidebar: 30;
   --z-dock: 40;
+  --z-scrim: 41;              /* behind an overlaying sidebar or panel (= --z-dock + 1) */
+  --z-overlay: 42;            /* a sidebar or the right panel overlaying the ground (= --z-dock + 2) */
   --z-chrome: 50;
   --z-menu: 70;
   --z-palette: 80;
@@ -252,10 +313,14 @@
   --dur-slide: 240ms;         /* a thumb or indicator travelling */
   --dur-3: 300ms;             /* layout travel */
   --dur-breathe: 1.8s;        /* the one loop: a running dot */
+  --load-delay: 600ms;        /* a waiting region's quiet line appears after this (R-load-2) */
   --dur-hold: 1000ms;         /* hold to approve, everywhere */
 }
 /* light themes: the dock stays black, so its ink comes from the light grounds; fields need a stronger line */
 :root[data-hx-theme="light"] { --ink-on-dock: var(--bg-2); --ink-on-dock-strong: var(--bg-3); --line-field: color-mix(in srgb, var(--text) 54%, transparent); }
+
+/* the dock ground re-derives --bg-4 and --mark-off (components.css), so the scrollbar's colours are read again there */
+[data-ground="dock"] { --scroll-thumb-color: var(--bg-4); --scroll-thumb-color-active: var(--mark-off); }
 
 /* interface case, corners and density: set by theme.js on <html> (each preset has defaults; the user may change them) */
 :root[data-hx-case="lower"] { --ui-case: lowercase; }

@@ -39,8 +39,8 @@ describe('every field type', () => {
     const input = (n: string): HTMLInputElement => c.querySelector(`[data-name="${n}"]`) as HTMLInputElement;
     expect(input('s').type).toBe('text');
     expect(input('s').getAttribute('aria-required')).toBe('true');
-    expect(input('n').type).toBe('number');
-    expect([input('n').min, input('n').max, input('n').step]).toEqual(['1', '60', '1']);
+    expect(input('n').type).toBe('text');   /* never the platform's number field: it grows spin buttons */
+    expect(input('n').getAttribute('inputmode')).toBe('numeric');
     expect(input('e').type).toBe('email');
     expect(input('u').type).toBe('url');
     expect(c.querySelector('textarea[data-name="t"]')).toBeTruthy();
@@ -123,7 +123,7 @@ describe('every field type', () => {
     const s = spec({ p: { 'x-picker': 'model', title: 'Model', default: 'sonnet 5.5' }, f: { 'x-upload': true, title: 'Log' }, l: { 'x-signin': { provider: 'Linear', host: 'linear.app' } } });
     let c = mount(s);
     const pk = c.querySelector<HTMLElement>('.cd-picker');
-    expect(pk?.getAttribute('aria-haspopup')).toBe('menu');
+    expect(pk?.getAttribute('aria-haspopup')).toBe('listbox');
     expect(pk?.querySelector('svg.ui-mm[data-color="brand"]')).toBeTruthy();   /* the picker is the one place brand colour shows */
     expect(c.querySelector('.cd-drop')).toBeTruthy();
     expect(c.querySelector<HTMLButtonElement>('[data-action="signin"]')?.disabled).toBe(false);
@@ -131,6 +131,44 @@ describe('every field type', () => {
     c = mount(s);
     expect(c.querySelector<HTMLButtonElement>('[data-action="signin"]')?.disabled).toBe(true);
     expect(c.textContent).toContain('not available in this build yet');
+  });
+  it('draws an enum titled Model as the model picker, with the answer sent as its id', async () => {
+    const c = mount(spec({ choice: { type: 'string', title: 'Model', enum: ['free', 'anthropic', 'main/sonnet 5.5'], enumNames: ['Free models', 'Claude: haiku, sonnet, opus', 'sonnet 5.5 on main'], default: 'free' } }, ['choice'], { kind: 'choice' }));
+    expect(c.querySelector('.cd-opt')).toBeNull();   /* not a row of radios */
+    const sel = c.querySelector<HTMLButtonElement>('.ui-select[data-select="choice"]')!;
+    expect(sel.getAttribute('role')).toBe('combobox');
+    expect(sel.querySelector('.ui-select__v')?.textContent).toBe('Free models');
+    expect(c.querySelector('select')).toBeNull();
+    sel.click();
+    const opts = [...document.querySelectorAll<HTMLElement>('.ui-listbox .ui-option')];
+    expect(opts.map((o) => o.querySelector('.ui-menu__label')?.textContent)).toEqual(['Free models', 'Claude: haiku, sonnet, opus', 'sonnet 5.5 on main']);
+    expect(opts[2]?.querySelector('svg.ui-mm[data-family="claude"]')).toBeTruthy();   /* a model leads with its provider's mark */
+    opts[2]!.click();
+    c.querySelector<HTMLButtonElement>('[data-action="submit"]')!.click();
+    await tick();
+    expect(host.submitted[0]?.outcome.values).toEqual({ choice: 'main/sonnet 5.5' });
+  });
+  it('a required picker left empty is invalid on the select itself', () => {
+    const c = mount(spec({ choice: { type: 'string', title: 'Model', enum: ['a', 'b'] } }, ['choice']));
+    c.querySelector<HTMLButtonElement>('[data-action="submit"]')!.click();
+    expect(c.querySelector('.ui-select')?.getAttribute('aria-invalid')).toBe('true');
+  });
+  it('a choice that is not about models stays a row of options, and a long one does not turn into a platform select', () => {
+    const c = mount(spec({ r: { type: 'string', title: 'Which tests?', enum: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] } }, ['r']));
+    expect(c.querySelectorAll('.cd-opt')).toHaveLength(8);
+    expect(c.querySelector('select')).toBeNull();
+  });
+  it('the app\'s model picker field opens the model list and puts the choice in the field', () => {
+    const c = mount(spec({ p: { 'x-picker': 'model', title: 'Model', default: 'sonnet 5.5' } }));
+    const pk = c.querySelector<HTMLButtonElement>('.cd-picker')!;
+    expect(pk.classList.contains('ui-select')).toBe(true);
+    pk.click();
+    expect(document.querySelector('.ui-listbox [role="listbox"]')?.getAttribute('aria-label')).toBe('Model');
+    const opts = [...document.querySelectorAll<HTMLElement>('.ui-listbox .ui-option')];
+    expect(opts.length).toBeGreaterThan(1);
+    opts[1]!.click();
+    expect(pk.querySelector('.cd-picker__v')?.textContent).toBe(opts[1]!.dataset['value']);
+    expect(document.querySelector('.ui-listbox.is-in')).toBeNull();
   });
   it('shows a config diff, a plan and a connector\'s contents before the fields', () => {
     const c = mount(spec({}, [], { diff: ' a: 1\n+b: 2\n-c: 3', file: 'x.yaml', plan: ['Do `a`', 'Do b'], contents: [['5 tools', 'issues']], pinned: 'sha256:abc' }));

@@ -1,6 +1,6 @@
 /* Playwright smoke: boot without console errors, the four theme presets (and their contrast), the keyboard walk-through
    (KEYMAP.md), the owner's decisions and the dock's gestures, and an axe scan with zero violations.
-   `node tests/smoke/run.mjs [boot|themes|keys|owner|live|forms|mods|corners|dock-empty|dock-motion|dock-presence|axe]` runs one part. Exit code 1 on any failure. */
+   `node tests/smoke/run.mjs [boot|themes|keys|owner|live|forms|mods|controls|corners|dock-empty|dock-motion|dock-presence|axe]` runs one part. Exit code 1 on any failure. */
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { check, errorsAll, results, scenario, start } from './harness.mjs';
@@ -13,6 +13,7 @@ import { dockEmpty } from './dock-empty.mjs';
 import { dockMotion } from './dock-motion.mjs';
 import { dockPresence } from './dock-presence.mjs';
 import { mods } from './mods.mjs';
+import { controls } from './controls.mjs';
 
 const require = createRequire(import.meta.url);
 const AXE = readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
@@ -51,6 +52,7 @@ if (want('dock-empty')) await dockEmpty(env);
 if (want('dock-motion')) await dockMotion(env);
 if (want('dock-presence')) await dockPresence(env);
 if (want('mods')) await mods(env, AXE);
+if (want('controls')) await controls(env, AXE);
 if (want('forms')) { await formCards(env); await liveForms(env); await liveRequests(env); }
 
 if (want('axe')) {
