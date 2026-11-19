@@ -36,17 +36,9 @@ pub(crate) fn standard(version: &str) -> Vec<u8> {
     ])
 }
 
-/// A directory holding `runtime.json` and the archive `bytes`, whose manifest names `claimed_sha` (the real hash when `None`).
-pub(crate) fn bundle(
-    dir: &Path,
-    version: &str,
-    bytes: &[u8],
-    claimed_sha: Option<&str>,
-) -> Runtime {
-    std::fs::create_dir_all(dir).unwrap();
-    std::fs::write(dir.join("rt.tar.zst"), bytes).unwrap();
-    let sha = claimed_sha.map_or_else(|| hex::encode(Sha256::digest(bytes)), str::to_owned);
-    let manifest = Manifest {
+/// A manifest for an archive of `size` bytes with this hash.
+pub(crate) fn manifest_for(version: &str, sha256: String, size: u64) -> Manifest {
+    Manifest {
         schema: SCHEMA,
         hermes_version: version.into(),
         python_version: "3.14.9".into(),
@@ -55,11 +47,37 @@ pub(crate) fn bundle(
         python: PYTHON.into(),
         archive: Archive {
             name: "rt.tar.zst".into(),
-            sha256: sha,
-            size: bytes.len() as u64,
+            sha256,
+            size,
         },
         unpacked_size: 1_000_000,
-    };
+        entries: 0,
+    }
+}
+
+/// A directory holding `runtime.json` and the archive `bytes`, whose manifest names `claimed_sha` (the real hash when `None`).
+pub(crate) fn bundle(
+    dir: &Path,
+    version: &str,
+    bytes: &[u8],
+    claimed_sha: Option<&str>,
+) -> Runtime {
+    bundle_with(dir, version, bytes, claimed_sha, |_| {})
+}
+
+/// [`bundle`], letting `adjust` change the manifest (its recorded size or entry count).
+fn bundle_with(
+    dir: &Path,
+    version: &str,
+    bytes: &[u8],
+    claimed_sha: Option<&str>,
+    adjust: impl FnOnce(&mut Manifest),
+) -> Runtime {
+    std::fs::create_dir_all(dir).unwrap();
+    std::fs::write(dir.join("rt.tar.zst"), bytes).unwrap();
+    let sha = claimed_sha.map_or_else(|| hex::encode(Sha256::digest(bytes)), str::to_owned);
+    let mut manifest = manifest_for(version, sha, bytes.len() as u64);
+    adjust(&mut manifest);
     std::fs::write(
         dir.join(MANIFEST_FILE),
         serde_json::to_vec(&manifest).unwrap(),
@@ -303,6 +321,7 @@ fn the_manifest_is_validated() {
         mutate(&|m| m.archive.name = "a/b.tar.zst".into()),
         mutate(&|m| m.hermes = "/bin/hermes".into()),
         mutate(&|m| m.python = "tools/../../python3".into()),
+        mutate(&|m| m.unpacked_size = 0),
     ] {
         assert_eq!(e.code(), "hx.setup.runtime_manifest_invalid");
     }
@@ -319,6 +338,163 @@ fn the_manifest_is_validated() {
         Runtime::locate(Some(&located)).is_err(),
         "a broken manifest is an error, not an absent runtime"
     );
+}
+
+/// A runtime's launchers plus whatever `extra` appends to the tar, as a `.tar.zst`.
+fn tar_zst_plus(extra: impl FnOnce(&mut tar::Builder<Vec<u8>>)) -> Vec<u8> {
+    let mut tar = tar::Builder::new(Vec::new());
+    for (path, body) in [(HERMES, &b"#!/bin/sh\n"[..]), (PYTHON, b"py")] {
+        let mut h = tar::Header::new_gnu();
+        h.set_size(body.len() as u64);
+        h.set_mode(0o755);
+        h.set_mtime(0);
+        tar.append_data(&mut h, path, body).unwrap();
+    }
+    extra(&mut tar);
+    zstd::encode_all(tar.into_inner().unwrap().as_slice(), 3).unwrap()
+}
+
+fn append(
+    tar: &mut tar::Builder<Vec<u8>>,
+    path: &str,
+    kind: tar::EntryType,
+    mode: u32,
+    body: &[u8],
+) {
+    let mut h = tar::Header::new_gnu();
+    h.set_entry_type(kind);
+    h.set_size(body.len() as u64);
+    h.set_mode(mode);
+    h.set_mtime(0);
+    tar.append_data(&mut h, path, body).unwrap();
+}
+
+#[test]
+fn the_hash_is_checked_before_anything_is_extracted() {
+    // The archive holds a FIFO, which the extraction step refuses with `runtime_corrupt`. With a wrong hash the error is
+    // the hash's, and no progress was ever reported: the tar was never opened. With the right hash it is the FIFO's.
+    let tmp = tempfile::tempdir().unwrap();
+    let bytes = tar_zst_plus(|t| append(t, "pipe", tar::EntryType::Fifo, 0o644, b""));
+    let runtimes = tmp.path().join("runtime");
+    let wrong = "1".repeat(64);
+    let rt = bundle(&tmp.path().join("bad"), "0.23.2", &bytes, Some(&wrong));
+    let mut reported = 0;
+    let err = rt.install(&runtimes, &mut |_| reported += 1).unwrap_err();
+    assert_eq!(err.code(), "hx.setup.runtime_hash_mismatch", "{err}");
+    assert_eq!(reported, 0, "nothing was read as a tar");
+    assert_eq!(names(&runtimes), vec![".lock".to_owned()]);
+
+    let rt = bundle(&tmp.path().join("good"), "0.23.2", &bytes, None);
+    assert_eq!(
+        install(&rt, &runtimes).unwrap_err().code(),
+        "hx.setup.runtime_corrupt"
+    );
+}
+
+#[test]
+fn an_unpack_past_the_manifests_size_is_refused_before_it_is_written() {
+    let tmp = tempfile::tempdir().unwrap();
+    // 20 MB of zeros compress to almost nothing; the manifest allows 1 MB plus the 16 MB margin.
+    let bytes = tar_zst_plus(|t| {
+        append(
+            t,
+            "big.bin",
+            tar::EntryType::Regular,
+            0o644,
+            &vec![0u8; 20_000_000],
+        );
+    });
+    let rt = bundle(&tmp.path().join("res"), "0.23.2", &bytes, None);
+    let runtimes = tmp.path().join("runtime");
+    let err = install(&rt, &runtimes).unwrap_err();
+    assert_eq!(err.code(), "hx.setup.runtime_corrupt", "{err}");
+    assert!(err.to_string().contains("MB its manifest allows"), "{err}");
+    assert_eq!(
+        names(&runtimes),
+        vec![".lock".to_owned()],
+        "nothing is left"
+    );
+
+    // The same archive inside a manifest that records its size is fine.
+    let rt = bundle_with(&tmp.path().join("ok"), "0.23.2", &bytes, None, |m| {
+        m.unpacked_size = 20_000_000;
+    });
+    install(&rt, &runtimes).unwrap();
+}
+
+#[test]
+fn an_unpack_with_more_entries_than_the_manifest_records_is_refused() {
+    let tmp = tempfile::tempdir().unwrap();
+    let bytes = tar_zst_plus(|t| {
+        for i in 0..200 {
+            append(t, &format!("spam/{i}"), tar::EntryType::Regular, 0o644, b"");
+        }
+    });
+    let rt = bundle_with(&tmp.path().join("res"), "0.23.2", &bytes, None, |m| {
+        m.entries = 10;
+    });
+    let runtimes = tmp.path().join("runtime");
+    let err = install(&rt, &runtimes).unwrap_err();
+    assert_eq!(err.code(), "hx.setup.runtime_corrupt", "{err}");
+    assert!(
+        err.to_string().contains("entries its manifest allows"),
+        "{err}"
+    );
+    assert_eq!(names(&runtimes), vec![".lock".to_owned()]);
+    // With the count recorded (plus the margin) it unpacks.
+    let rt = bundle_with(&tmp.path().join("ok"), "0.23.2", &bytes, None, |m| {
+        m.entries = 202;
+    });
+    install(&rt, &runtimes).unwrap();
+}
+
+#[test]
+fn device_nodes_and_pipes_are_refused_and_never_created() {
+    for kind in [
+        tar::EntryType::Char,
+        tar::EntryType::Block,
+        tar::EntryType::Fifo,
+    ] {
+        let tmp = tempfile::tempdir().unwrap();
+        let bytes = tar_zst_plus(|t| append(t, "dev/node", kind, 0o666, b""));
+        let rt = bundle(&tmp.path().join("res"), "0.23.2", &bytes, None);
+        let runtimes = tmp.path().join("runtime");
+        let err = install(&rt, &runtimes).unwrap_err();
+        assert_eq!(err.code(), "hx.setup.runtime_corrupt", "{kind:?}: {err}");
+        assert!(err.to_string().contains("special file"), "{err}");
+        assert_eq!(names(&runtimes), vec![".lock".to_owned()], "{kind:?}");
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn setuid_setgid_and_sticky_bits_are_dropped_and_the_rest_kept() {
+    use std::os::unix::fs::PermissionsExt;
+    let tmp = tempfile::tempdir().unwrap();
+    let bytes = tar_zst_plus(|t| {
+        append(t, "bin/suid", tar::EntryType::Regular, 0o4755, b"x");
+        append(t, "bin/sgid", tar::EntryType::Regular, 0o2750, b"x");
+        append(t, "bin/both", tar::EntryType::Regular, 0o6711, b"x");
+        append(t, "bin/private", tar::EntryType::Regular, 0o600, b"x");
+        append(t, "tmpdir/", tar::EntryType::Directory, 0o1777, b"");
+        append(t, "shared/", tar::EntryType::Directory, 0o2775, b"");
+    });
+    let rt = bundle(&tmp.path().join("res"), "0.23.2", &bytes, None);
+    let (layout, _) = install(&rt, &tmp.path().join("runtime")).unwrap();
+    let mode = |p: &str| {
+        std::fs::metadata(layout.root.join(p))
+            .unwrap()
+            .permissions()
+            .mode()
+            & 0o7777
+    };
+    assert_eq!(mode("bin/suid"), 0o755);
+    assert_eq!(mode("bin/sgid"), 0o750);
+    assert_eq!(mode("bin/both"), 0o711);
+    assert_eq!(mode("bin/private"), 0o600);
+    assert_eq!(mode("tmpdir"), 0o777);
+    assert_eq!(mode("shared"), 0o775);
+    assert_eq!(mode(HERMES), 0o755, "the launcher stays executable");
 }
 
 #[test]

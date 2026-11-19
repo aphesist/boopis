@@ -117,6 +117,7 @@ fi
 # 5. the archive: deterministic order, owner and times, so the same inputs give the same bytes
 ARCHIVE="hermes-runtime-$OS-$ARCH.tar.zst"
 UNPACKED_BYTES="$(du -sk "$PAYLOAD" | cut -f1)"; UNPACKED_BYTES=$((UNPACKED_BYTES * 1024))
+ENTRIES="$(find "$PAYLOAD" | wc -l | tr -d ' ')"   # what the host caps the unpack by, with a margin
 "$TAR" --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner -C "$PAYLOAD" -cf - . \
   | zstd -19 -T0 -q -f -o "$OUT/$ARCHIVE"
 SHA="$(sha256 "$OUT/$ARCHIVE")"
@@ -140,6 +141,7 @@ json.dump({
     "extras": "$EXTRAS".split(",") if "$EXTRAS" else [],
     "archive": {"name": "$ARCHIVE", "sha256": "$SHA", "size": $SIZE},
     "unpacked_size": $UNPACKED_BYTES,
+    "entries": $ENTRIES,
 }, open(sys.argv[1], "w"), indent=2)
 open(sys.argv[1], "a").write("\n")
 PY
