@@ -49,7 +49,7 @@ describe('the origin slot', () => {
   it('draws the agent as its provider\'s mark, a system source as a glyph and an MCP server as its initial', () => {
     expect(originVisual(originOf({ model: 'qwen3-coder → sonnet 5.5' }), 20)).toContain('data-family="claude"');
     expect(originVisual({ kind: 'plugin' }, 20)).toContain('cd-glyph');
-    expect(originVisual({ kind: 'mcp', server: 'sentry' }, 20)).toContain('>S<');
+    expect(originVisual({ kind: 'mcp', server: 'sentry' }, 20)).toContain('data-initial="S"');
   });
   it('names every card in its byline, with a screen-reader list when names are hidden behind +N', () => {
     const all = ids();
