@@ -1,6 +1,6 @@
 # Mods
 
-Status: plan, 2026-11-19; **M0 (spike) and M1 (backend) done** (sections 8 and 9). Evidence: `docs/research/mods.md` (Claude Code's mod docs). Decision: ADR-0022.
+Status: plan, 2026-11-19; **M0 (spike), M1 (backend) and M1's UI done** (sections 8, 9 and 10). Evidence: `docs/research/mods.md` (Claude Code's mod docs). Decision: ADR-0022.
 
 **Rule: a Claude Code mod installs and runs unchanged, and everything it draws is drawn by our design system, so it looks native.** A mod's behaviour runs wherever the session runs: the desktop app, plain Hermes on the command line, or a cloud session. It draws only where there's a screen, which is Claude Code's own model.
 
@@ -55,7 +55,7 @@ A Claude Code mod is a plugin whose `hooks/hooks.json` names a JavaScript or Typ
 | Pane (`$.ui.open`) | a pane in the details panel, as its own tab (`placement: 'dock'`). In narrow windows, inline above the composer (`'inline'`). Our breakpoints replace the terminal column rules |
 | Band above the prompt | a band above the composer, one collapsible row per mod (`AbovePrompt`, `AbovePromptList`) |
 | Transcript row (`$.ui.place`) | a row in the conversation, gone on clear, rewind or compaction, and not kept on resume, as in Claude Code |
-| Toast | the app's notices, at most three at a time |
+| Toast | the app's notice, led by the mod: one at a time, queued in order, with a quiet "+N" while others wait (owner decision, 19 November 2026) |
 | `$.ui.status` | the session's status line under the composer, prefixed with the mod's name |
 | `$.ui.log` | a quiet line in the conversation that the model doesn't read |
 | `$.ui.notify` | a desktop notification through the host, following the user's notification settings |
@@ -202,3 +202,29 @@ The decision is `policy.check` with `ToolCall.principal = "mod:<plugin>"`, so de
 8. **Conformance (M3)** still has not run a real mod: `console` exists now, the `claude-code` exports are still our guess (section 7), and `$.ui.resolve`, `$.ui.place` and the other `$.ui` members are absent.
 9. **Windows** has no worker until `hx-sandbox` has a channel there; the setting is `hx.mods.unavailable` with a reason, not a silent fallback. `oxc` still moves fast (section 8, risk 5).
 10. **Shared target directories collide between worktrees** (Cargo hashes workspace-relative paths): building two worktrees into one `CARGO_TARGET_DIR` can leave one's `hx` binary in the other's tests. Tests that need the binary should copy it first.
+
+
+## 10. M1's UI (2026-11-19): the renderer and the surfaces
+
+The owner's approved design (`design/v6`: `mod-view`, `mods`, DESIGN-SYSTEM 14.29) is ported to `apps/desktop/ui`. Where it lives: `src/components/mod-view.ts` (the renderer: `mod-tree.ts` the limits and handler ids, `mod-colors.ts` the colour map, `mod-svg.ts` the sanitiser), `src/data/mods-model.ts` (the `mod.*` events folded into one state per session), `src/host/live/mods.ts` (the live source and the answers), `src/modules/mods/` (the surfaces), and the theme module's `preview`, `endPreview` and `previewing`.
+
+**What draws, from which event**
+| Surface | Event | Notes |
+|---|---|---|
+| Pane tab (1200px and wider) or inline pane (below) | `mod.pane`, `mod.render` `Pane` | The UI tells each pane its `placement`, `title` and `isFocused` with `mod.props`. A pane opens in front only with `focus` (inline: the last opened is the open one) |
+| Band above the composer | `mod.render` `AbovePrompt` | The UI asks for it with `mod.props` (`isWorking`, `isCollapsed`). Progress is dots (a Box with `progress`) |
+| Status line, and the composer's 22px rise | `mod.status` | A FLIP on `transform` |
+| Placed rows | `mod.log`, and a `Placed` `mod.render` | A log line is a quiet row. `$.ui.place` is not in boopis, so no `Placed` draw is sent yet |
+| Toasts | `mod.toast` | |
+| Desktop notification | `mod.notify` | Through the host's `notify`; nothing in a browser |
+| `$.ui.ask` | `form.opened` with origin `{kind: mod, plugin}` | The form path every form takes: the conversation, the dock's queue (counted by the dock's own model), answered in one place |
+| Theme card | `mod.theme` | Colours by token (`--brass`) or by Claude Code name (`claude`, `text`, `subtle`, ...). Surface anchors are not turned into a theme: there is no ramp generator, and the card names the colours it did not use |
+
+**Refusals.** `process`, `mcp`, `model`, `agent`, `tool`, `prompt`, `turn`, `settings`, `audio`, `telemetry` never reach the UI as events, so nothing draws them. `mod.command` is not drawn (the commands are Hermes's own slash commands). Draws for Claude Code's own parts (`UserMessage`, `ToolUse`, ...) and the backdrop are ignored, and the debug log says so.
+
+**Known gaps, for whoever owns them**
+- `mod.render` does not say which mod drew a band row. The row is named when exactly one mod is loaded, and says "Mods" otherwise; the UI reads an optional `plugin` on the event if the plugin adds it (hx would need `answered_by` on `RenderResult`).
+- A user closing a pane only hides it in the UI: there is no RPC to tell the mod (`ui.close` is the mod's own).
+- A theme that breaks a contrast pair (DESIGN-SYSTEM 5.4) can still be previewed and kept: the design says nothing about refusing it.
+
+**Tests.** The renderer (`mod-tree.test.ts`, `mod-view.test.ts`), the model and the live source over a recording of real events (`mods-model.test.ts`, `host/live/live-mods.test.ts`), the surfaces (`modules/mods/mods.test.ts`), the theme preview (`styles/theme.test.ts`) and the smoke part `mods`. The recording is `apps/desktop/ui/tests/fixtures/frames/mods.frames.json`, made by `plugins/boopis/tests/test_mods_frames.py` (two mods in `tests/fixtures/mods`, the real worker, the plugin's own handlers); `HX_RECORD_FRAMES=1` rewrites it and the test checks every event against `mods.schema.json`.

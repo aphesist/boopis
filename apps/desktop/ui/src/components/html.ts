@@ -161,7 +161,7 @@ const disclosure = (o: { label: string; controls?: U<string>; expanded?: U<boole
   '<button type="button" class="ui-disclosure" data-ui="disclosure"' + attrs({ 'aria-expanded': String(!!o.expanded), 'aria-controls': o.controls }) + '>' + icon('chevron') + '<span>' + esc(o.label) + '</span></button>';
 /** a call-number line: text, or a model drawn with its mark (`via`: the arrow that leads it) */
 export type CallLine = string | { model: string; via?: U<string>; size?: U<number> };
-export interface EntryOpts { kind?: U<'user' | 'agent' | 'bot'>; who?: U<string>; callno?: U<readonly CallLine[]>; body?: U<string>; steps?: U<{ count: number; id: string; open?: boolean }>; label?: U<string> }
+export interface EntryOpts { kind?: U<'user' | 'agent' | 'bot' | 'mod'>; who?: U<string>; callno?: U<readonly CallLine[]>; body?: U<string>; steps?: U<{ count: number; id: string; open?: boolean }>; label?: U<string> }
 /** an agent's call number starts with its model, then '→ model' for each step up the ladder: those leading string lines are
     read as models when they name a known family (a time or a cost never does) */
 function leadingModels(o: EntryOpts): CallLine[] {
@@ -238,11 +238,14 @@ const setRow = (o: { label: string; hint?: U<string | null>; for?: U<string | nu
 const empty = (o: { title: string; text?: U<string>; mark?: U<boolean>; action?: U<string> }): string =>
   '<div class="ui-empty">' + (o.mark ? '<span class="ui-empty__mark">' + logoHTML({ mark: true, label: false }) + '</span>' : '') + '<h2 class="ui-empty__title">' + esc(o.title) + '</h2>' + (o.text ? '<p class="ui-empty__text">' + esc(o.text) + '</p>' : '') + (o.action ?? '') + '</div>';
 
+/** the mod as a name: its glyph and its name, one unit (origin slots, tabs, band rows, toasts, placed rows) */
+const mod = (name: string, o?: { class?: string }): string => '<span class="mv-by' + (o?.class ? ' ' + o.class : '') + '">' + icon('mod', { class: 'mv-by__g' }) + '<span class="mv-by__n">' + esc(name) + '</span></span>';
+
 const toast = (text: string, action?: string): string => '<div class="ui-toast" role="status" data-static><span>' + esc(text) + '</span>' + (action ? button({ label: action, size: 's', variant: 'ghost' }) : '') + '</div>';
 const tip = (label: string, k?: string, state?: { text: string; tone?: string }): string =>
   '<div class="ui-tip" data-static><span>' + esc(label) + '</span>' + (state ? '<span class="ui-tip__state"' + (state.tone ? ' data-tone="' + state.tone + '"' : '') + '>' + esc(state.text) + '</span>' : '') + keys(k) + '</div>';
 
 export const html = {
   icon, keys, kbd: keys, code, inline, stamp, dot, capacity, button, iconButton, send, hold, switch: switchHtml, segmented, chip, chipGroup,
-  orb: orbHtml, model: modelHTML, modelRoute: routeHTML, modelMark: markHTML, stateWord, row, leadFor, group, ladder, measure, legend, pages, request, entry, disclosure, steps, blank, section, menuItems, field, setRow, empty, toast, tip
+  orb: orbHtml, model: modelHTML, modelRoute: routeHTML, modelMark: markHTML, stateWord, row, leadFor, group, ladder, measure, legend, pages, request, entry, disclosure, steps, blank, section, menuItems, field, setRow, empty, toast, tip, mod
 };

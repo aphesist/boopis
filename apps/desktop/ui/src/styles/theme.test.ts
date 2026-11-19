@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { on } from '../core/bus';
+import { KEYS, readJSON } from '../core/settings';
 import { EDITABLE, PAIRS, PRESETS, blank, composite, lum, parseColor, ratio, sanitize, themeApi, toHex } from './theme';
 
 describe('colour parsing', () => {
@@ -91,5 +93,69 @@ describe('theme presets', () => {
     expect(themeApi.get().corners).toBe('sharp');
     themeApi.reset();
     expect(themeApi.get().corners).toBeNull();
+  });
+});
+
+describe('previewing colours (a mod offers a theme: DESIGN-SYSTEM.md 5.2 and 14.29)', () => {
+  const root = document.documentElement;
+  const saved = (): unknown => readJSON(KEYS.theme);
+  const seen: boolean[] = [];
+  const off = on('hx:theme-preview', (e) => seen.push(e.previewing));
+  beforeEach(() => { themeApi.endPreview(false); themeApi.reset(); themeApi.preset('catalog'); seen.length = 0; });
+  afterAll(() => { off(); themeApi.endPreview(false); themeApi.preset('catalog'); });
+
+  it('shows a patch over the saved theme without saving it, and says so', () => {
+    const before = JSON.stringify(saved());
+    expect(themeApi.previewing()).toBe(false);
+    themeApi.preview({ colors: { '--brass': '#B8A4F0', '--text': '#e7e4f2' } });
+    expect(themeApi.previewing()).toBe(true);
+    expect(root.style.getPropertyValue('--brass')).toBe('#b8a4f0');
+    expect(root.style.getPropertyValue('--text')).toBe('#e7e4f2');
+    expect(themeApi.get().colors).toEqual({});   // get() is the saved theme while a preview shows
+    expect(JSON.stringify(saved())).toBe(before);
+    expect(seen).toEqual([true]);
+  });
+  it('gives the saved theme back at once on endPreview(false), and says so', () => {
+    themeApi.set({ colors: { '--brass': '#112233' } });
+    themeApi.preview({ colors: { '--brass': '#b8a4f0' } });
+    expect(themeApi.endPreview(false)).toBe(true);
+    expect(themeApi.previewing()).toBe(false);
+    expect(root.style.getPropertyValue('--brass')).toBe('#112233');
+    expect(themeApi.get().colors['--brass']).toBe('#112233');
+    expect(seen).toEqual([true, false]);
+  });
+  it('keeps what it showed on endPreview(true): it becomes the theme and is saved', () => {
+    themeApi.preview({ colors: { '--brass': '#b8a4f0' } });
+    expect(themeApi.endPreview(true)).toBe(true);
+    expect(themeApi.previewing()).toBe(false);
+    expect(root.style.getPropertyValue('--brass')).toBe('#b8a4f0');
+    expect((saved() as { colors: Record<string, string> }).colors['--brass']).toBe('#b8a4f0');
+  });
+  it('is one preview at a time: another preview patches the saved theme again, never the first patch', () => {
+    themeApi.preview({ colors: { '--brass': '#b8a4f0' } });
+    themeApi.preview({ colors: { '--text': '#e7e4f2' } });
+    expect(root.style.getPropertyValue('--brass')).toBe('');
+    expect(root.style.getPropertyValue('--text')).toBe('#e7e4f2');
+    themeApi.endPreview(false);
+    expect(root.style.getPropertyValue('--text')).toBe('');
+  });
+  it('takes only what a theme may have: an unknown token or a colour that is not #rrggbb is left out', () => {
+    themeApi.preview({ colors: { '--nope': '#ffffff', '--brass': 'red', '--text': '#e7e4f2' } });
+    expect(root.style.getPropertyValue('--text')).toBe('#e7e4f2');
+    expect([root.style.getPropertyValue('--nope'), root.style.getPropertyValue('--brass')]).toEqual(['', '']);
+  });
+  it('has nothing to end when nothing is previewing', () => {
+    expect(themeApi.endPreview(true)).toBe(false);
+    expect(seen).toEqual([]);
+  });
+  it('every other change restores first: a preset, a setting, a reset, an import', () => {
+    const text = themeApi.exportJSON();
+    for (const change of [() => themeApi.preset('graphite'), () => themeApi.set({ corners: 'round' }), () => themeApi.reset(), () => themeApi.importJSON(text)]) {
+      themeApi.preset('catalog');
+      themeApi.preview({ colors: { '--brass': '#b8a4f0' } });
+      change();
+      expect(themeApi.previewing()).toBe(false);
+      expect(root.style.getPropertyValue('--brass')).not.toBe('#b8a4f0');
+    }
   });
 });

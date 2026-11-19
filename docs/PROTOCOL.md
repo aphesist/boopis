@@ -114,12 +114,12 @@ Methods are registered with `ctx.register_rpc(name, handler)` and appear as `plu
 | `form.opened` | `{form_id, kind, title, body?, schema, submit, cancel?, sensitive, origin, expires_at}` (`docs/FORMS.md` section 6). `origin` is a word or an object; a mod's is `{kind: "mod", plugin}` |
 | `mod.render` | `{component, id?, kind: "tree"\|"default"\|"skipped", tree?, props?, reason?}`. A site was drawn: `tree` is the element tree as JSON (`{type, props, children}`, handlers as `{"$handler": id}`), validated against the limits (100,000 characters, 20,000 elements, depth 32). `default`: no mod drew it, keep the app's drawing (with `props` if a hook changed them). `skipped`: a mod drew something invalid, keep the app's drawing; the reason is in the mod's log |
 | `mod.pane` | `{action: "open"\|"close", plugin, id, title?, focus?, closeOnEscape?, holdToasts?, rows?, columns?}` |
-| `mod.toast` | `{plugin, text, timeout_ms}`. At most three show at once (the UI's rule) |
-| `mod.status` | `{plugin, text}`. The mod's status line, prefixed with the mod's name; stays until changed |
+| `mod.toast` | `{plugin, text, timeout_ms}`. The UI shows one at a time, queued in order, with a quiet "+N" while others wait (owner decision, 19 November 2026) |
+| `mod.status` | `{plugin, text}`. The mod's status line, prefixed with the mod's name; stays until changed. Empty text clears it |
 | `mod.log` | `{plugin, level: "info"\|"debug"\|"warn", text}`. A quiet line the model does not read; `plugin: ""` is boopis speaking about the mods (one failed to start, one was refused) |
 | `mod.command` | `{action: "register", command: "plugin:name", plugin, name, description, argumentHint, immediate}` |
 | `mod.notify` | `{plugin, text, title}`. For a desktop notification, following the user's settings |
-| `mod.theme` | `{action: "set"\|"clear", plugin, theme?}`. Recorded; the UI applies it later |
+| `mod.theme` | `{action: "set"\|"clear", plugin, theme?}`. Recorded. The UI offers a `set` as a card ("Apply name's colours?") that previews the colours live; Keep commits them, Reject, Esc, closing or hiding the card, or choosing another theme restores the previous theme |
 
 The shared schema of these events and the `mod.*` params is `apps/shared/data/mods.schema.json`; the plugin's tests validate what it emits against it.
 | `form.resolved` | `{form_id, status: "submitted"\|"cancelled"\|"expired"}` |

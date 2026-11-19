@@ -1,0 +1,5818 @@
+[
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "gateway.ready",
+    "payload": {
+     "change_events": true,
+     "heartbeat": true,
+     "replay_epoch": "e2101d9e1eca4451a2de464e1ff590ac",
+     "session_authority": true
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 1,
+   "method": "client.capabilities",
+   "params": {
+    "server_requests": true
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 1,
+   "result": {
+    "server_requests": [
+     "approval",
+     "clarify",
+     "display.install.sudo",
+     "preview.act",
+     "preview.read",
+     "secret",
+     "setup_beat",
+     "sudo",
+     "terminal.read",
+     "theme.apply",
+     "theme.pick",
+     "tour",
+     "vault.code",
+     "vault.save_login",
+     "vault.unlock_prompt",
+     "window.read"
+    ],
+    "declines_not_shown": true,
+    "canonical_clarify_batch": true
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 2,
+   "method": "runtime.describe",
+   "params": {}
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 2,
+   "result": {
+    "instance_id": "36772918e0374a59a3ed43e448623175",
+    "profile_id": "/work/hermes-home",
+    "authority_epoch": 1,
+    "capabilities": [
+     "durable-admission-v1",
+     "event-replay-v1",
+     "local-cli-create-v1",
+     "acp-editor-policy-v1",
+     "acp-session-mcp-v1",
+     "clarify-batch-v1",
+     "plugin-rpc-v1",
+     "session-client-v1",
+     "session-transcript-v1",
+     "session-list-picker-v1",
+     "session-list-cursor-v1"
+    ],
+    "session_create": {
+     "sources": [
+      "acp",
+      "cli",
+      "gui",
+      "oneshot",
+      "tool",
+      "tui"
+     ],
+     "parameters": [
+      "accept_hooks",
+      "api_key",
+      "base_url",
+      "checkpoints",
+      "client",
+      "client_env",
+      "cwd",
+      "cwd_explicit",
+      "editor",
+      "follow_profile_config",
+      "ignore_rules",
+      "ignore_user_config",
+      "max_turns",
+      "model",
+      "pass_session_id",
+      "provider",
+      "reasoning",
+      "request_id",
+      "row_cwd",
+      "run_budget",
+      "safe_mode",
+      "service_tier",
+      "skills",
+      "source",
+      "title",
+      "toolsets",
+      "verbose",
+      "yolo"
+     ]
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 3,
+   "method": "session.create",
+   "params": {
+    "source": "gui",
+    "cwd": "/work/proj",
+    "request_id": "req-1795049565686494358",
+    "model": "fake-a",
+    "provider": "main",
+    "toolsets": [
+     "boopis",
+     "todo"
+    ],
+    "client": {
+     "name": "boopis",
+     "version": "0"
+    }
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "notification.show",
+    "session_id": "local-ccb1e4024263ba297445020a0459fa15f675238aac22e9c6409a4faf60479e4c",
+    "payload": {
+     "text": "\u26a0 Low disk (3.1 GB free) \u00b7 /autoprune on|off|later",
+     "detail": "Low disk space: 3.1 GB free of 252.0 GB. Your session history (state.db) uses 0 MB.\nAuto-prune is off. Turning it on deletes ended sessions inactive for more than 90 days, once a day (pinned and open sessions are kept).\nPruning will not help right now: none of your 1 session is older than 90 days. Something else is filling this disk.\n/autoprune on to enable, /autoprune off to keep everything (never asked again), /autoprune later to be reminded in a week.",
+     "level": "warn",
+     "kind": "sticky",
+     "ttl_ms": null,
+     "key": "sessions.auto_prune",
+     "id": "sessions.auto_prune"
+    },
+    "replay_epoch": "d77bcdca30b04064b1765c8663310028",
+    "seq": 1
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 3,
+   "result": {
+    "session_id": "local-ccb1e4024263ba297445020a0459fa15f675238aac22e9c6409a4faf60479e4c",
+    "stored_session_id": "local-ccb1e4024263ba297445020a0459fa15f675238aac22e9c6409a4faf60479e4c",
+    "messages": [],
+    "message_count": 0,
+    "todo_state": null,
+    "running": false,
+    "authority_epoch": 1,
+    "replay_epoch": "d77bcdca30b04064b1765c8663310028",
+    "last_sequence": 0,
+    "subscription_id": "634081b6d6244175a46072f3ebc866d0",
+    "revision": 0,
+    "execution_generation": 0,
+    "pending": [],
+    "prompts": [],
+    "info": {
+     "tools": {
+      "boopis": [
+       "dispatch",
+       "exec",
+       "pack",
+       "ship"
+      ],
+      "todo": [
+       "todo_list"
+      ]
+     },
+     "skills": "(trimmed)",
+     "mcp_servers": [
+      {
+       "name": "fakemcp",
+       "transport": "stdio",
+       "tools": 0,
+       "connected": false,
+       "disabled": false,
+       "status": "configured",
+       "needs_auth": false
+      }
+     ],
+     "version": "unknown",
+     "release_date": "2026.9.24",
+     "update_behind": null,
+     "update_command": "hermes update",
+     "branch": "master",
+     "project": null,
+     "provider": "custom:main",
+     "enabled_toolsets": [
+      "boopis",
+      "todo"
+     ],
+     "tool_availability": {
+      "unavailable_toolsets": [],
+      "lazy_tools": [],
+      "disabled_tools": []
+     },
+     "source": "gui",
+     "model": "fake-a",
+     "lazy": true,
+     "profile_id": "/work/hermes-home",
+     "desktop_protocol": "hermes-gateway-v1",
+     "profile_name": "default",
+     "cwd": "/work/proj",
+     "reasoning_effort": "",
+     "reasoning_effort_wire": "",
+     "service_tier": "",
+     "fast": false,
+     "launch_request": {
+      "client": {
+       "name": "boopis",
+       "version": "0"
+      },
+      "cwd": "/work/proj",
+      "model": "fake-a",
+      "provider": "main",
+      "source": "gui",
+      "toolsets": [
+       "boopis",
+       "todo"
+      ]
+     },
+     "client": {
+      "name": "boopis",
+      "version": "0"
+     },
+     "title": null,
+     "started_at": 1795049565.702986,
+     "last_active_at": 1795049565.702986,
+     "yolo": false,
+     "archived": false,
+     "api_mode": null,
+     "tool_count": 5,
+     "credential_hint": null,
+     "usage": {
+      "model": "fake-a",
+      "input": 0,
+      "output": 0,
+      "reasoning": 0,
+      "prompt": 0,
+      "completion": 0,
+      "total": 0,
+      "calls": 0
+     }
+    },
+    "pending_connection": null,
+    "open_requests": []
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 4,
+   "method": "session.create",
+   "params": {
+    "source": "gui",
+    "cwd": "/work/proj",
+    "request_id": "req-1795049566040747138",
+    "model": "fake-a",
+    "provider": "main",
+    "toolsets": [
+     "boopis",
+     "todo"
+    ],
+    "client": {
+     "name": "boopis",
+     "version": "0"
+    }
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 4,
+   "result": {
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "stored_session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "messages": [],
+    "message_count": 0,
+    "todo_state": null,
+    "running": false,
+    "authority_epoch": 1,
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "last_sequence": 0,
+    "subscription_id": "f47b542694c64450a798ecad61f1321a",
+    "revision": 0,
+    "execution_generation": 0,
+    "pending": [],
+    "prompts": [],
+    "info": {
+     "tools": {
+      "boopis": [
+       "dispatch",
+       "exec",
+       "pack",
+       "ship"
+      ],
+      "todo": [
+       "todo_list"
+      ]
+     },
+     "skills": "(trimmed)",
+     "mcp_servers": [
+      {
+       "name": "fakemcp",
+       "transport": "stdio",
+       "tools": 0,
+       "connected": false,
+       "disabled": false,
+       "status": "configured",
+       "needs_auth": false
+      }
+     ],
+     "version": "unknown",
+     "release_date": "2026.9.24",
+     "update_behind": null,
+     "update_command": "hermes update",
+     "branch": "master",
+     "project": null,
+     "provider": "custom:main",
+     "enabled_toolsets": [
+      "boopis",
+      "todo"
+     ],
+     "tool_availability": {
+      "unavailable_toolsets": [],
+      "lazy_tools": [],
+      "disabled_tools": []
+     },
+     "source": "gui",
+     "model": "fake-a",
+     "lazy": true,
+     "profile_id": "/work/hermes-home",
+     "desktop_protocol": "hermes-gateway-v1",
+     "profile_name": "default",
+     "cwd": "/work/proj",
+     "reasoning_effort": "",
+     "reasoning_effort_wire": "",
+     "service_tier": "",
+     "fast": false,
+     "launch_request": {
+      "client": {
+       "name": "boopis",
+       "version": "0"
+      },
+      "cwd": "/work/proj",
+      "model": "fake-a",
+      "provider": "main",
+      "source": "gui",
+      "toolsets": [
+       "boopis",
+       "todo"
+      ]
+     },
+     "client": {
+      "name": "boopis",
+      "version": "0"
+     },
+     "title": null,
+     "started_at": 1795049566.047298,
+     "last_active_at": 1795049566.047298,
+     "yolo": false,
+     "archived": false,
+     "api_mode": null,
+     "tool_count": 5,
+     "credential_hint": null,
+     "usage": {
+      "model": "fake-a",
+      "input": 0,
+      "output": 0,
+      "reasoning": 0,
+      "prompt": 0,
+      "completion": 0,
+      "total": 0,
+      "calls": 0
+     }
+    },
+    "pending_connection": null,
+    "open_requests": []
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 5,
+   "method": "plugin.boopis.mode.set",
+   "params": {
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "mode": "ungoverned"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 5,
+   "result": {}
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 6,
+   "method": "plugin.boopis.describe",
+   "params": {
+    "session_id": "local-ccb1e4024263ba297445020a0459fa15f675238aac22e9c6409a4faf60479e4c"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 6,
+   "result": {
+    "session": {
+     "session_id": "local-ccb1e4024263ba297445020a0459fa15f675238aac22e9c6409a4faf60479e4c",
+     "mode": "governed",
+     "locked": false,
+     "cwd": null
+    },
+    "version": "0.1.0",
+    "protocol": "boopis-v1",
+    "capabilities": [
+     "describe",
+     "mode.set",
+     "ledger.tail",
+     "ledger.verify",
+     "ledger.stats",
+     "cascade.state",
+     "prices.refresh",
+     "blank.fill",
+     "checkpoint.list",
+     "checkpoint.diff"
+    ],
+    "hx": null,
+    "kernel": null,
+    "config": {
+     "mode": "governed",
+     "cost_cap_usd": 2.0,
+     "errors": [],
+     "ladder_errors": []
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 7,
+   "method": "plugin.boopis.cascade.state",
+   "params": {
+    "session_id": "local-ccb1e4024263ba297445020a0459fa15f675238aac22e9c6409a4faf60479e4c"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 7,
+   "result": {
+    "ladder": [
+     {
+      "name": "haiku",
+      "model": {
+       "provider": "anthropic",
+       "id": "claude-haiku-5-5"
+      },
+      "effort": "medium",
+      "max_tokens": 8000,
+      "retries": 0
+     },
+     {
+      "name": "sonnet",
+      "model": {
+       "provider": "anthropic",
+       "id": "claude-sonnet-5-5"
+      },
+      "effort": "medium",
+      "max_tokens": 8000,
+      "retries": 0
+     },
+     {
+      "name": "opus",
+      "model": {
+       "provider": "anthropic",
+       "id": "claude-opus-5-5"
+      },
+      "effort": "medium",
+      "max_tokens": 8000,
+      "retries": 0
+     }
+    ],
+    "status": "idle"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 8,
+   "method": "prompt.submit",
+   "params": {
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "text": "@@call todo_list {\"todos\": [{\"id\": \"1\", \"content\": \"read the call sites\", \"status\": \"completed\"}, {\"id\": \"2\", \"content\": \"round once per invoice\", \"status\": \"in_progress\"}, {\"id\": \"3\", \"content\": \"add a property test\", \"status\": \"pending\"}]}@@ @@call ship {\"edits\": [{\"op\": \"replace\", \"path\": \"src/a.py\", \"old\": \"return 1\", \"new\": \"return 2\"}]}@@ @@call exec {\"code\": \"blank = await harness.leave_blank(\\\"Keep the old alias?\\\", [\\\"yes\\\", \\\"no\\\"], [\\\"rename\\\"])\\nprint(blank[\\\"status\\\"])\\n\"}@@ @@usage {\"prompt_tokens\": 1000, \"completion_tokens\": 50, \"total_tokens\": 1050, \"prompt_tokens_details\": {\"cached_tokens\": 400}, \"completion_tokens_details\": {\"reasoning_tokens\": 20}}@@ @@reply Done. Rounded once per invoice.@@",
+    "submission_id": "sub-1795049566083478134"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 8,
+   "result": {
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "ref": {
+     "profile_id": "/work/hermes-home",
+     "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32"
+    },
+    "sequence": 1,
+    "status": "queued",
+    "outcome": null,
+    "authority_epoch": 1,
+    "execution_generation": null
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "session.info",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "stored_session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+     "pending": [
+      {
+       "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+       "ref": {
+        "profile_id": "/work/hermes-home",
+        "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32"
+       },
+       "sequence": 1,
+       "status": "queued",
+       "outcome": null,
+       "authority_epoch": 1,
+       "execution_generation": null,
+       "input_id": "sub-1795049566083478134",
+       "text": "@@call todo_list {\"todos\": [{\"id\": \"1\", \"content\": \"read the call sites\", \"status\": \"completed\"}, {\"id\": \"2\", \"content\": \"round once per invoice\", \"status\": \"in_progress\"}, {\"id\": \"3\", \"content\": \"add a property test\", \"status\": \"pending\"}]}@@ @@call ship {\"edits\": [{\"op\": \"replace\", \"path\": \"src/a.py\", \"old\": \"return 1\", \"new\": \"return 2\"}]}@@ @@call exec {\"code\": \"blank = await harness.leave_blank(\\\"Keep the old alias?\\\", [\\\"yes\\\", \\\"no\\\"], [\\\"rename\\\"])\\nprint(blank[\\\"status\\\"])\\n\"}@@ @@usage {\"prompt_tokens\": 1000, \"completion_tokens\": 50, \"total_tokens\": 1050, \"prompt_tokens_details\": {\"cached_tokens\": 400}, \"completion_tokens_details\": {\"reasoning_tokens\": 20}}@@ @@reply Done. Rounded once per invoice.@@",
+       "controls": [
+        "steer",
+        "replace"
+       ],
+       "steering": false
+      }
+     ],
+     "authority_epoch": 1,
+     "desktop_protocol": "hermes-gateway-v1",
+     "running": false,
+     "execution_generation": 0,
+     "revision": 0
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 1
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "message.start",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {},
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 2
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "session.info",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "stored_session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+     "pending": [
+      {
+       "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+       "ref": {
+        "profile_id": "/work/hermes-home",
+        "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32"
+       },
+       "sequence": 1,
+       "status": "started",
+       "outcome": null,
+       "authority_epoch": 1,
+       "execution_generation": 1,
+       "input_id": "sub-1795049566083478134",
+       "text": "@@call todo_list {\"todos\": [{\"id\": \"1\", \"content\": \"read the call sites\", \"status\": \"completed\"}, {\"id\": \"2\", \"content\": \"round once per invoice\", \"status\": \"in_progress\"}, {\"id\": \"3\", \"content\": \"add a property test\", \"status\": \"pending\"}]}@@ @@call ship {\"edits\": [{\"op\": \"replace\", \"path\": \"src/a.py\", \"old\": \"return 1\", \"new\": \"return 2\"}]}@@ @@call exec {\"code\": \"blank = await harness.leave_blank(\\\"Keep the old alias?\\\", [\\\"yes\\\", \\\"no\\\"], [\\\"rename\\\"])\\nprint(blank[\\\"status\\\"])\\n\"}@@ @@usage {\"prompt_tokens\": 1000, \"completion_tokens\": 50, \"total_tokens\": 1050, \"prompt_tokens_details\": {\"cached_tokens\": 400}, \"completion_tokens_details\": {\"reasoning_tokens\": 20}}@@ @@reply Done. Rounded once per invoice.@@",
+       "controls": [],
+       "steering": false
+      }
+     ],
+     "authority_epoch": 1,
+     "desktop_protocol": "hermes-gateway-v1",
+     "running": true,
+     "execution_generation": 1,
+     "revision": 0
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 3
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "sessions.changed",
+    "session_id": "",
+    "payload": {}
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "actor": "plugin",
+     "hash": "d91d2870d6657a54d9a6dab6c3c000aef1b1b3b4f15540c34f0131e8dc2c142f",
+     "payload": {
+      "cwd": "/work/proj",
+      "hermes_version": "unknown",
+      "mode": "ungoverned",
+      "plugin_version": "0.1.0",
+      "price_table": "settings-d98ebfc5788c",
+      "profile": "default",
+      "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32"
+     },
+     "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 0,
+     "ts": "2026-11-19T00:52:46.681Z",
+     "type": "session.opened"
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 4
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.mod.pane",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "action": "open",
+     "plugin": "test-runner",
+     "id": "tests",
+     "title": "Tests"
+    },
+    "seq": 1001
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.mod.status",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "plugin": "test-runner",
+     "text": "1 failing"
+    },
+    "seq": 1002
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.mod.toast",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "plugin": "test-runner",
+     "text": "1 test failing",
+     "timeout_ms": 4000
+    },
+    "seq": 1003
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.mod.toast",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "plugin": "test-runner",
+     "text": "Indexed 296 files",
+     "timeout_ms": 4000
+    },
+    "seq": 1004
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.mod.toast",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "plugin": "test-runner",
+     "text": "Context is at 78%",
+     "timeout_ms": 4000
+    },
+    "seq": 1005
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.mod.log",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "plugin": "test-runner",
+     "level": "info",
+     "text": "the cache for money.test.ts is stale"
+    },
+    "seq": 1006
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.mod.theme",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "action": "set",
+     "plugin": "test-runner",
+     "theme": {
+      "colors": {
+       "--bg-2": "#201e31",
+       "--brass": "#b8a4f0",
+       "--text": "#e7e4f2"
+      },
+      "label": "Dusk"
+     }
+    },
+    "seq": 1007
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.mod.pane",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "action": "open",
+     "plugin": "token-meter",
+     "id": "usage",
+     "title": "Token usage"
+    },
+    "seq": 1008
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.mod.status",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "plugin": "token-meter",
+     "text": "12.4k tokens this turn"
+    },
+    "seq": 1009
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.mod.log",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "plugin": "token-meter",
+     "level": "info",
+     "text": "token-meter is watching this session"
+    },
+    "seq": 1010
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.mod.render",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "component": "Pane",
+     "kind": "tree",
+     "id": "tests",
+     "tree": {
+      "children": [
+       {
+        "children": [
+         {
+          "children": [
+           "3 tests, 1 failing"
+          ],
+          "props": {
+           "bold": true
+          },
+          "type": "Text"
+         },
+         {
+          "children": [],
+          "props": {
+           "disabled": false,
+           "label": "Re-run",
+           "onPress": {
+            "$handler": "0.h1"
+           }
+          },
+          "type": "Button"
+         }
+        ],
+        "props": {
+         "alignItems": "center",
+         "gap": 2,
+         "justifyContent": "space-between"
+        },
+        "type": "Box"
+       },
+       {
+        "children": [
+         {
+          "children": [],
+          "props": {
+           "label": "Show",
+           "onSelect": {
+            "$handler": "0.h2"
+           },
+           "options": [
+            {
+             "label": "All tests",
+             "value": "all"
+            },
+            {
+             "label": "Failing only",
+             "value": "failing"
+            }
+           ],
+           "value": "all"
+          },
+          "type": "Select"
+         },
+         {
+          "children": [
+           "3 shown"
+          ],
+          "props": {
+           "color": "subtle",
+           "size": "xs"
+          },
+          "type": "Text"
+         }
+        ],
+        "props": {
+         "alignItems": "center",
+         "gap": 2
+        },
+        "type": "Box"
+       },
+       {
+        "children": [],
+        "props": {
+         "path": "npm test",
+         "source": " PASS  money.test.ts\n FAIL  invoice.test.ts  \u203a rounds per line item\n PASS  cents.test.ts",
+         "wrap": true
+        },
+        "type": "Code"
+       },
+       {
+        "children": [],
+        "props": {
+         "text": "The failure is in `invoice.test.ts`. [Open the run](https://ci.example.com/runs/4182)"
+        },
+        "type": "Markdown"
+       },
+       {
+        "children": [],
+        "props": {
+         "label": "Ask which to run",
+         "onPress": {
+          "$handler": "0.h3"
+         }
+        },
+        "type": "Button"
+       }
+      ],
+      "props": {
+       "flexDirection": "column",
+       "gap": 3
+      },
+      "type": "Box"
+     }
+    },
+    "seq": 1011
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.mod.render",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "component": "Pane",
+     "kind": "tree",
+     "id": "usage",
+     "tree": {
+      "children": [
+       {
+        "children": [
+         {
+          "children": [
+           "This session"
+          ],
+          "props": {
+           "bold": true
+          },
+          "type": "Text"
+         },
+         {
+          "children": [
+           "48.2k tokens"
+          ],
+          "props": {
+           "color": "subtle",
+           "mono": true,
+           "size": "xs",
+           "tabular": true
+          },
+          "type": "Text"
+         }
+        ],
+        "props": {
+         "alignItems": "baseline",
+         "justifyContent": "space-between"
+        },
+        "type": "Box"
+       },
+       {
+        "children": [],
+        "props": {
+         "label": "Tokens per turn, input and output, turns 1 to 4",
+         "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 300 112\"><line x1=\"0\" y1=\"84.5\" x2=\"300\" y2=\"84.5\" stroke=\"subtle\" stroke-width=\"1\"/><rect x=\"20\" y=\"56\" width=\"12\" height=\"28\" rx=\"2\" fill=\"claude\"/><rect x=\"34\" y=\"78\" width=\"12\" height=\"6\" rx=\"2\" fill=\"#7aa2f7\"/><text x=\"32\" y=\"104\" text-anchor=\"middle\" font-size=\"11\">1</text><rect x=\"54\" y=\"40\" width=\"12\" height=\"44\" rx=\"2\" fill=\"claude\"/><rect x=\"68\" y=\"75\" width=\"12\" height=\"9\" rx=\"2\" fill=\"#7aa2f7\"/><text x=\"66\" y=\"104\" text-anchor=\"middle\" font-size=\"11\">2</text><rect x=\"88\" y=\"64\" width=\"12\" height=\"20\" rx=\"2\" fill=\"claude\"/><rect x=\"102\" y=\"80\" width=\"12\" height=\"4\" rx=\"2\" fill=\"#7aa2f7\"/><text x=\"100\" y=\"104\" text-anchor=\"middle\" font-size=\"11\">3</text><rect x=\"122\" y=\"29\" width=\"12\" height=\"55\" rx=\"2\" fill=\"claude\"/><rect x=\"136\" y=\"70\" width=\"12\" height=\"14\" rx=\"2\" fill=\"#7aa2f7\"/><text x=\"134\" y=\"104\" text-anchor=\"middle\" font-size=\"11\">4</text></svg>"
+        },
+        "type": "Svg"
+       },
+       {
+        "children": [
+         {
+          "children": [
+           {
+            "children": [],
+            "props": {
+             "backgroundColor": "claude",
+             "height": 1,
+             "width": 1
+            },
+            "type": "Box"
+           },
+           {
+            "children": [
+             "input"
+            ],
+            "props": {
+             "color": "subtle",
+             "size": "xs"
+            },
+            "type": "Text"
+           }
+          ],
+          "props": {
+           "alignItems": "center",
+           "gap": 1
+          },
+          "type": "Box"
+         },
+         {
+          "children": [
+           {
+            "children": [],
+            "props": {
+             "backgroundColor": "#7aa2f7",
+             "height": 1,
+             "width": 1
+            },
+            "type": "Box"
+           },
+           {
+            "children": [
+             "output"
+            ],
+            "props": {
+             "color": "subtle",
+             "size": "xs"
+            },
+            "type": "Text"
+           }
+          ],
+          "props": {
+           "alignItems": "center",
+           "gap": 1
+          },
+          "type": "Box"
+         }
+        ],
+        "props": {
+         "gap": 3
+        },
+        "type": "Box"
+       }
+      ],
+      "props": {
+       "flexDirection": "column",
+       "gap": 3
+      },
+      "type": "Box"
+     }
+    },
+    "seq": 1012
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "session.info",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "source": "gui",
+     "model": "fake-a",
+     "lazy": false,
+     "profile_id": "/work/hermes-home",
+     "desktop_protocol": "hermes-gateway-v1",
+     "profile_name": "default",
+     "cwd": "/work/proj",
+     "reasoning_effort": "",
+     "reasoning_effort_wire": "",
+     "service_tier": "",
+     "fast": false,
+     "launch_request": {
+      "client": {
+       "name": "boopis",
+       "version": "0"
+      },
+      "cwd": "/work/proj",
+      "model": "fake-a",
+      "provider": "main",
+      "source": "gui",
+      "toolsets": [
+       "boopis",
+       "todo"
+      ]
+     },
+     "client": {
+      "name": "boopis",
+      "version": "0"
+     },
+     "title": "@@call todo_list {\"todos\": [{\"id\": \"1\"\u2026",
+     "started_at": 1795049566.047298,
+     "last_active_at": 1795049566.6344168,
+     "yolo": false,
+     "archived": false,
+     "api_mode": "chat_completions",
+     "tool_count": 5,
+     "credential_hint": "***"
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 5
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "tool.generating",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "name": "todo_list"
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 9
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "ab1393d420bc5d8e4c78c04f03a327b72ed88947af6c9bc69818fa58b0cd3042",
+     "payload": {
+      "cache_read_tokens": 400,
+      "cache_write_1h_tokens": 0,
+      "cache_write_5m_tokens": 0,
+      "input_tokens": 600,
+      "latency_ms": 559,
+      "model": "fake-a",
+      "output_tokens": 50,
+      "provider": "custom",
+      "reasoning_tokens": 20,
+      "request_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32:local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32:9136c813:api:1",
+      "role": "orchestrator",
+      "usage_schema": 2
+     },
+     "prev_hash": "d91d2870d6657a54d9a6dab6c3c000aef1b1b3b4f15540c34f0131e8dc2c142f",
+     "seq": 1,
+     "ts": "2026-11-19T00:52:47.320Z",
+     "type": "usage.recorded"
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 11
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "message.delta",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "text": null
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 12
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "tool.start",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "tool_id": "call_ab985bf937",
+     "name": "todo_list",
+     "context": "planning 3 task(s)",
+     "tool_call_id": "call_ab985bf937",
+     "tool_name": "todo_list",
+     "args": {
+      "todos": [
+       {
+        "id": "1",
+        "content": "read the call sites",
+        "status": "completed"
+       },
+       {
+        "id": "2",
+        "content": "round once per invoice",
+        "status": "in_progress"
+       },
+       {
+        "id": "3",
+        "content": "add a property test",
+        "status": "pending"
+       }
+      ]
+     }
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 13
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "2f5d3401a42d0848520646904c2a12911fead4e37068a3186c09e33daf1ee858",
+     "payload": {
+      "args_sha256": "eb309dfc924b0b33439cd99b2625727a0d3394564c8871ae9c7a0eef7433f0b1",
+      "duration_ms": 9,
+      "status": "ok",
+      "task_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+      "tool": "todo_list",
+      "tool_call_id": "call_ab985bf937"
+     },
+     "prev_hash": "ab1393d420bc5d8e4c78c04f03a327b72ed88947af6c9bc69818fa58b0cd3042",
+     "seq": 2,
+     "ts": "2026-11-19T00:52:47.345Z",
+     "type": "tool.called"
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 14
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "tool.complete",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "tool_id": "call_ab985bf937",
+     "name": "todo_list",
+     "context": "planning 3 task(s)",
+     "tool_call_id": "call_ab985bf937",
+     "tool_name": "todo_list",
+     "args": {
+      "todos": [
+       {
+        "id": "1",
+        "content": "read the call sites",
+        "status": "completed"
+       },
+       {
+        "id": "2",
+        "content": "round once per invoice",
+        "status": "in_progress"
+       },
+       {
+        "id": "3",
+        "content": "add a property test",
+        "status": "pending"
+       }
+      ]
+     },
+     "is_error": false,
+     "result": "{\"todos\": [{\"id\": \"1\", \"content\": \"read the call sites\", \"status\": \"completed\"}, {\"id\": \"2\", \"content\": \"round once per invoice\", \"status\": \"in_progress\"}, {\"id\": \"3\", \"content\": \"add a property test\", \"status\": \"pending\"}], \"revision\": 1, \"summary\": {\"total\": 3, \"pending\": 1, \"in_progress\": 1, \"completed\": 1, \"cancelled\": 0}}",
+     "duration_s": 0.01110304000008,
+     "inline_diff": null,
+     "image_path": null,
+     "todos": [
+      {
+       "id": "1",
+       "content": "read the call sites",
+       "status": "completed"
+      },
+      {
+       "id": "2",
+       "content": "round once per invoice",
+       "status": "in_progress"
+      },
+      {
+       "id": "3",
+       "content": "add a property test",
+       "status": "pending"
+      }
+     ],
+     "revision": 1
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 15
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "todo.updated",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "todos": [
+      {
+       "id": "1",
+       "content": "read the call sites",
+       "status": "completed"
+      },
+      {
+       "id": "2",
+       "content": "round once per invoice",
+       "status": "in_progress"
+      },
+      {
+       "id": "3",
+       "content": "add a property test",
+       "status": "pending"
+      }
+     ],
+     "revision": 1
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 16
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "session.usage",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "usage": {
+      "model": "fake-a",
+      "input": 600,
+      "output": 50,
+      "reasoning": 20,
+      "prompt": 1000,
+      "completion": 50,
+      "total": 1050,
+      "calls": 1,
+      "context_used": 1000,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "cache_hit_pct": 40,
+      "avg_latency_s": 0.6,
+      "avg_tps": 89.5,
+      "active_subagents": 0
+     },
+     "input_tokens": 600,
+     "output_tokens": 50,
+     "cache_read_tokens": 400,
+     "cache_write_tokens": 0,
+     "prompt_tokens": 1000,
+     "completion_tokens": 50,
+     "total_tokens": 1050,
+     "reasoning_tokens": 20,
+     "api_calls": 1,
+     "last_prompt_tokens": 1000,
+     "context_tokens": 1166,
+     "context_length": 200000,
+     "config_context_length": 200000,
+     "context_source": "provider_usage",
+     "compression_count": 0,
+     "avg_latency_s": 0.56,
+     "tokens_per_s": 89.47,
+     "last_turn_tokens": 50,
+     "rate_limit": null,
+     "active_subagents": 0,
+     "model": "fake-a",
+     "provider": "custom",
+     "fallback_model": null
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 18
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "tool.generating",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "name": "ship"
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 21
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "c8c1f3ac7328650a806cc71212a26bd6b73c9a2aa208914eddad2e8489005d41",
+     "payload": {
+      "cache_read_tokens": 400,
+      "cache_write_1h_tokens": 0,
+      "cache_write_5m_tokens": 0,
+      "input_tokens": 600,
+      "latency_ms": 13,
+      "model": "fake-a",
+      "output_tokens": 50,
+      "provider": "custom",
+      "reasoning_tokens": 20,
+      "request_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32:local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32:9136c813:api:2",
+      "role": "orchestrator",
+      "usage_schema": 2
+     },
+     "prev_hash": "2f5d3401a42d0848520646904c2a12911fead4e37068a3186c09e33daf1ee858",
+     "seq": 3,
+     "ts": "2026-11-19T00:52:47.375Z",
+     "type": "usage.recorded"
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 23
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "message.delta",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "text": null
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 24
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "tool.start",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "tool_id": "call_6a34173d3a",
+     "name": "ship",
+     "context": "",
+     "tool_call_id": "call_6a34173d3a",
+     "tool_name": "ship",
+     "args": {
+      "edits": [
+       {
+        "op": "replace",
+        "path": "src/a.py",
+        "old": "return 1",
+        "new": "return 2"
+       }
+      ]
+     }
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 25
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "actor": "plugin",
+     "hash": "e256c5d001549b56649f60db2b212a90211d24c70ab6ece1f65000059ae08214",
+     "payload": {
+      "kind": "code",
+      "max_attempts": 1,
+      "scope": [
+       "**"
+      ],
+      "task_id": "ship:01a1f14a-b4c1-73ca-adf6-b00b15dedf99",
+      "title": "ship src/a.py"
+     },
+     "prev_hash": "c8c1f3ac7328650a806cc71212a26bd6b73c9a2aa208914eddad2e8489005d41",
+     "seq": 4,
+     "ts": "2026-11-19T00:52:47.428Z",
+     "type": "task.created"
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 26
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "7d22e53a985f45573f1c5d796403a0ce2e1fd251bf40f193928b61f6f8f6a8b1",
+     "payload": {
+      "task_id": "ship:01a1f14a-b4c1-73ca-adf6-b00b15dedf99",
+      "worker": "orchestrator:custom/fake-a"
+     },
+     "prev_hash": "e256c5d001549b56649f60db2b212a90211d24c70ab6ece1f65000059ae08214",
+     "seq": 5,
+     "ts": "2026-11-19T00:52:47.429Z",
+     "type": "task.claimed"
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 27
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "a8789f885ba2ececc67c2003899eaedb89f1dab5bc338781a7c7e55abae8065c",
+     "payload": {
+      "files": [
+       {
+        "path": "src/a.py",
+        "sha256_after": "4436c9b1be34f14675fef593cc90fb944b07785e50cb0fd9fa56c747a3a4e0b9",
+        "sha256_before": "345a09077e88e5b84f401d3d3e82aee36008984b51eab4f049c08e4362539d3c"
+       }
+      ],
+      "journal_id": "01a1f14a-b4c1-73ca-adf6-b00b15dedf99",
+      "ship_id": "01a1f14a-b4c1-73ca-adf6-b00b15dedf99",
+      "task_id": "ship:01a1f14a-b4c1-73ca-adf6-b00b15dedf99"
+     },
+     "prev_hash": "7d22e53a985f45573f1c5d796403a0ce2e1fd251bf40f193928b61f6f8f6a8b1",
+     "seq": 6,
+     "ts": "2026-11-19T00:52:47.431Z",
+     "type": "ship.applied"
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 28
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "97c914726ccc2eb5da57a4a54d47e467168948e077c40a4b982b859a08aad671",
+     "payload": {
+      "attempt": 1,
+      "files": [
+       "src/a.py"
+      ],
+      "files_sha256": "dd58e5e0d9b263bdd0b9ae0a53c1f88df680b56aa97e22c758c54c1af8528e60",
+      "task_id": "ship:01a1f14a-b4c1-73ca-adf6-b00b15dedf99"
+     },
+     "prev_hash": "a8789f885ba2ececc67c2003899eaedb89f1dab5bc338781a7c7e55abae8065c",
+     "seq": 7,
+     "ts": "2026-11-19T00:52:47.431Z",
+     "type": "task.submitted"
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 29
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "actor": "gate",
+     "hash": "96e51f42c15c3f4422ebcf6f0bd8b46867e8beea26725895dc256e565d197431",
+     "payload": {
+      "enforcement": "degraded:unsandboxed",
+      "gate": "T0.visible_tests",
+      "gates": [
+       {
+        "evidence": {
+         "blast_radius": {
+          "changed_lines": 2,
+          "manifests": [],
+          "max_changed_lines": 200
+         },
+         "enforcement": "degraded:unsandboxed",
+         "test_files": 0,
+         "tests_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+         "tiers": [
+          "T0.scope",
+          "T0.visible_tests"
+         ],
+         "touched": [
+          "src/a.py"
+         ],
+         "violations": []
+        },
+        "gate": "T0.scope",
+        "reason": "",
+        "verdict": "pass"
+       },
+       {
+        "evidence": {
+         "blast_radius": {
+          "changed_lines": 2,
+          "manifests": [],
+          "max_changed_lines": 200
+         },
+         "enforcement": "degraded:unsandboxed",
+         "tests": {
+          "command": null,
+          "status": "not_configured"
+         },
+         "tests_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+         "tiers": [
+          "T0.scope",
+          "T0.visible_tests"
+         ]
+        },
+        "gate": "T0.visible_tests",
+        "reason": "",
+        "verdict": "pass"
+       }
+      ],
+      "reason": "",
+      "task_id": "ship:01a1f14a-b4c1-73ca-adf6-b00b15dedf99",
+      "tests_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "verdict": "pass"
+     },
+     "prev_hash": "97c914726ccc2eb5da57a4a54d47e467168948e077c40a4b982b859a08aad671",
+     "seq": 8,
+     "ts": "2026-11-19T00:52:47.437Z",
+     "type": "gate.decided"
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 30
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "actor": "plugin",
+     "hash": "068108c8ef8a1a38e9075a6feda63ff9c1543f848072560b4d923a6220225814",
+     "payload": {
+      "commit": "d964cf31f9389a263d3b5ee5667ae972ab132929",
+      "ref": "refs/boopis/checkpoints/local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+      "ship_id": "01a1f14a-b4c1-73ca-adf6-b00b15dedf99"
+     },
+     "prev_hash": "96e51f42c15c3f4422ebcf6f0bd8b46867e8beea26725895dc256e565d197431",
+     "seq": 9,
+     "ts": "2026-11-19T00:52:47.464Z",
+     "type": "checkpoint.committed"
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 31
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "plugin.boopis.ship.completed",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "ship_id": "01a1f14a-b4c1-73ca-adf6-b00b15dedf99",
+     "status": "shipped",
+     "files": [
+      {
+       "path": "src/a.py",
+       "created": false,
+       "deleted": false
+      }
+     ],
+     "gate": {
+      "verdict": "pass",
+      "gates": [
+       "T0.scope",
+       "T0.visible_tests"
+      ],
+      "enforcement": "degraded:unsandboxed"
+     }
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 32
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "dcdd4ce7c69c2d41fd0229012b68044dfb50f2a0ff499f6c20b7219cf9ecbffe",
+     "payload": {
+      "args_sha256": "9b8ff2a0881b6ad6876c1b960723becd360bee7117432e7572d4db3fb3475b50",
+      "duration_ms": 87,
+      "status": "ok",
+      "task_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+      "tool": "ship",
+      "tool_call_id": "call_6a34173d3a"
+     },
+     "prev_hash": "068108c8ef8a1a38e9075a6feda63ff9c1543f848072560b4d923a6220225814",
+     "seq": 10,
+     "ts": "2026-11-19T00:52:47.468Z",
+     "type": "tool.called"
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 33
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "tool.complete",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "tool_id": "call_6a34173d3a",
+     "name": "ship",
+     "context": "",
+     "tool_call_id": "call_6a34173d3a",
+     "tool_name": "ship",
+     "args": {
+      "edits": [
+       {
+        "op": "replace",
+        "path": "src/a.py",
+        "old": "return 1",
+        "new": "return 2"
+       }
+      ]
+     },
+     "is_error": false,
+     "result": "{\"status\": \"shipped\", \"ship_id\": \"01a1f14a-b4c1-73ca-adf6-b00b15dedf99\", \"files\": [{\"path\": \"src/a.py\", \"created\": false, \"deleted\": false}], \"gate\": {\"verdict\": \"pass\", \"gates\": [\"T0.scope\", \"T0.visible_tests\"], \"enforcement\": \"degraded:unsandboxed\"}, \"checkpoint\": {\"ref\": \"refs/boopis/checkpoints/local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32\", \"commit\": \"d964cf31f9389a263d3b5ee5667ae972ab132929\"}}",
+     "duration_s": 0.08953303099997356,
+     "inline_diff": null,
+     "image_path": null
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 34
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "session.usage",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "usage": {
+      "model": "fake-a",
+      "input": 1200,
+      "output": 100,
+      "reasoning": 40,
+      "prompt": 2000,
+      "completion": 100,
+      "total": 2100,
+      "calls": 2,
+      "context_used": 1000,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "cache_hit_pct": 40,
+      "avg_latency_s": 0.3,
+      "avg_tps": 175.0,
+      "active_subagents": 0
+     },
+     "input_tokens": 1200,
+     "output_tokens": 100,
+     "cache_read_tokens": 800,
+     "cache_write_tokens": 0,
+     "prompt_tokens": 2000,
+     "completion_tokens": 100,
+     "total_tokens": 2100,
+     "reasoning_tokens": 40,
+     "api_calls": 2,
+     "last_prompt_tokens": 1000,
+     "context_tokens": 1399,
+     "context_length": 200000,
+     "config_context_length": 200000,
+     "context_source": "provider_usage",
+     "compression_count": 0,
+     "avg_latency_s": 0.29,
+     "tokens_per_s": 175.02,
+     "last_turn_tokens": 100,
+     "rate_limit": null,
+     "active_subagents": 0,
+     "model": "fake-a",
+     "provider": "custom",
+     "fallback_model": null
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 36
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "tool.generating",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "name": "exec"
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 39
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "46c76cf9113f10c9f817e2aa9b145a39230fc33f5d0176d6758b696a786cb867",
+     "payload": {
+      "cache_read_tokens": 400,
+      "cache_write_1h_tokens": 0,
+      "cache_write_5m_tokens": 0,
+      "input_tokens": 600,
+      "latency_ms": 11,
+      "model": "fake-a",
+      "output_tokens": 50,
+      "provider": "custom",
+      "reasoning_tokens": 20,
+      "request_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32:local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32:9136c813:api:3",
+      "role": "orchestrator",
+      "usage_schema": 2
+     },
+     "prev_hash": "dcdd4ce7c69c2d41fd0229012b68044dfb50f2a0ff499f6c20b7219cf9ecbffe",
+     "seq": 11,
+     "ts": "2026-11-19T00:52:47.496Z",
+     "type": "usage.recorded"
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 41
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "message.delta",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "text": null
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 42
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "tool.start",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "tool_id": "call_9241bc1f75",
+     "name": "exec",
+     "context": "blank = await harness.leave_blank(\"Keep the old alias?\", [\"yes\", \"no\"], [\"ren...",
+     "tool_call_id": "call_9241bc1f75",
+     "tool_name": "exec",
+     "args": {
+      "code": "blank = await harness.leave_blank(\"Keep the old alias?\", [\"yes\", \"no\"], [\"rename\"])\nprint(blank[\"status\"])\n"
+     }
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 43
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "cf386a9018aa304bf514ea19b68aa23404f8734a3f1ef84810d5b98ae38c3b48",
+     "payload": {
+      "blank_id": "01a1f14a-b56b-7261-8c40-f7f4e7e7803b",
+      "blocks": [
+       "rename"
+      ],
+      "options": [
+       "yes",
+       "no"
+      ],
+      "question": "Keep the old alias?",
+      "via": "exec"
+     },
+     "prev_hash": "46c76cf9113f10c9f817e2aa9b145a39230fc33f5d0176d6758b696a786cb867",
+     "seq": 12,
+     "ts": "2026-11-19T00:52:47.603Z",
+     "type": "blank.opened"
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 44
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "plugin.boopis.blank.opened",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "blank_id": "01a1f14a-b56b-7261-8c40-f7f4e7e7803b",
+     "question": "Keep the old alias?",
+     "options": [
+      "yes",
+      "no"
+     ],
+     "blocks": [
+      "rename"
+     ]
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 45
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "9a6c02f34857abbb254ada5b7e755c64bc15092802ae2e1b4f42e5c581881dc9",
+     "payload": {
+      "args_sha256": "8405e2e2a27d4d7cb686f650149f9c7cc6d880ef23b3f70626a5fbd9a32762a7",
+      "blank_id": "01a1f14a-b56b-7261-8c40-f7f4e7e7803b",
+      "cell_id": "01a1f14a-b56a-7040-85e3-c4e4e9bef33e",
+      "duration_ms": 8,
+      "status": "ok",
+      "tool": "harness.leave_blank",
+      "tool_call_id": "01a1f14a-b56a-7040-85e3-c4e4e9bef33e:1",
+      "via": "exec"
+     },
+     "prev_hash": "cf386a9018aa304bf514ea19b68aa23404f8734a3f1ef84810d5b98ae38c3b48",
+     "seq": 13,
+     "ts": "2026-11-19T00:52:47.604Z",
+     "type": "tool.called"
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 46
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "cc203b1e1afb4ad04f01b9a8ca610079f92c30381904958c6fcadeb0e05bb0c1",
+     "payload": {
+      "args_sha256": "1f2c5b48f0442cc122460d67f741fbf8760aa518025fcd9466069910a8b08398",
+      "duration_ms": 105,
+      "status": "ok",
+      "task_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+      "tool": "exec",
+      "tool_call_id": "call_9241bc1f75"
+     },
+     "prev_hash": "9a6c02f34857abbb254ada5b7e755c64bc15092802ae2e1b4f42e5c581881dc9",
+     "seq": 14,
+     "ts": "2026-11-19T00:52:47.609Z",
+     "type": "tool.called"
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 47
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "tool.complete",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "tool_id": "call_9241bc1f75",
+     "name": "exec",
+     "context": "blank = await harness.leave_blank(\"Keep the old alias?\", [\"yes\", \"no\"], [\"ren...",
+     "tool_call_id": "call_9241bc1f75",
+     "tool_name": "exec",
+     "args": {
+      "code": "blank = await harness.leave_blank(\"Keep the old alias?\", [\"yes\", \"no\"], [\"rename\"])\nprint(blank[\"status\"])\n"
+     },
+     "is_error": false,
+     "result": "{\"status\": \"ok\", \"stdout\": \"open\\n\", \"calls\": {\"total\": 1, \"log\": [\"#1 harness.leave_blank ok 8ms\"]}, \"blanks\": [{\"blank_id\": \"01a1f14a-b56b-7261-8c40-f7f4e7e7803b\", \"question\": \"Keep the old alias?\"}], \"duration_ms\": 10, \"cell\": 1}",
+     "duration_s": 0.10550482799999372,
+     "inline_diff": null,
+     "image_path": null
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 48
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "session.usage",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "usage": {
+      "model": "fake-a",
+      "input": 1800,
+      "output": 150,
+      "reasoning": 60,
+      "prompt": 3000,
+      "completion": 150,
+      "total": 3150,
+      "calls": 3,
+      "context_used": 1000,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "cache_hit_pct": 40,
+      "avg_latency_s": 0.2,
+      "avg_tps": 257.4,
+      "active_subagents": 0
+     },
+     "input_tokens": 1800,
+     "output_tokens": 150,
+     "cache_read_tokens": 1200,
+     "cache_write_tokens": 0,
+     "prompt_tokens": 3000,
+     "completion_tokens": 150,
+     "total_tokens": 3150,
+     "reasoning_tokens": 60,
+     "api_calls": 3,
+     "last_prompt_tokens": 1000,
+     "context_tokens": 1597,
+     "context_length": 200000,
+     "config_context_length": 200000,
+     "context_source": "provider_usage",
+     "compression_count": 0,
+     "avg_latency_s": 0.19,
+     "tokens_per_s": 257.41,
+     "last_turn_tokens": 150,
+     "rate_limit": null,
+     "active_subagents": 0,
+     "model": "fake-a",
+     "provider": "custom",
+     "fallback_model": null
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 50
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "message.delta",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "text": "\n\nDone. Rounde",
+     "turn_id": "5e7b7a74ffda43448f802c4434980ddf",
+     "segment": 0,
+     "offset": 0
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 53
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "message.delta",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "text": "d once per i",
+     "turn_id": "5e7b7a74ffda43448f802c4434980ddf",
+     "segment": 0,
+     "offset": 14
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 54
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "message.delta",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "text": "nvoice.",
+     "turn_id": "5e7b7a74ffda43448f802c4434980ddf",
+     "segment": 0,
+     "offset": 26
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 55
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "40e184dea6b02278b13cd6f74b1c696421cbd9d5fcac57e3595086368659abbd",
+     "payload": {
+      "cache_read_tokens": 400,
+      "cache_write_1h_tokens": 0,
+      "cache_write_5m_tokens": 0,
+      "input_tokens": 600,
+      "latency_ms": 11,
+      "model": "fake-a",
+      "output_tokens": 50,
+      "provider": "custom",
+      "reasoning_tokens": 20,
+      "request_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32:local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32:9136c813:api:4",
+      "role": "orchestrator",
+      "usage_schema": 2
+     },
+     "prev_hash": "cc203b1e1afb4ad04f01b9a8ca610079f92c30381904958c6fcadeb0e05bb0c1",
+     "seq": 15,
+     "ts": "2026-11-19T00:52:47.638Z",
+     "type": "usage.recorded"
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 57
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "session.usage",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "usage": {
+      "model": "fake-a",
+      "input": 2400,
+      "output": 200,
+      "reasoning": 80,
+      "prompt": 4000,
+      "completion": 200,
+      "total": 4200,
+      "calls": 4,
+      "context_used": 1000,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "cache_hit_pct": 40,
+      "avg_latency_s": 0.1,
+      "avg_tps": 336.6,
+      "active_subagents": 0
+     },
+     "input_tokens": 2400,
+     "output_tokens": 200,
+     "cache_read_tokens": 1600,
+     "cache_write_tokens": 0,
+     "prompt_tokens": 4000,
+     "completion_tokens": 200,
+     "total_tokens": 4200,
+     "reasoning_tokens": 80,
+     "api_calls": 4,
+     "last_prompt_tokens": 1000,
+     "context_tokens": 1631,
+     "context_length": 200000,
+     "config_context_length": 200000,
+     "context_source": "provider_usage",
+     "compression_count": 0,
+     "avg_latency_s": 0.15,
+     "tokens_per_s": 336.65,
+     "last_turn_tokens": 200,
+     "rate_limit": null,
+     "active_subagents": 0,
+     "model": "fake-a",
+     "provider": "custom",
+     "fallback_model": null
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 58
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "session.info",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "provider": "custom:main",
+     "tools": {
+      "boopis": [
+       "dispatch",
+       "exec",
+       "pack",
+       "ship"
+      ],
+      "todo": [
+       "todo_list"
+      ]
+     },
+     "system_prompt": "(trimmed)",
+     "context_length": 200000,
+     "source": "gui",
+     "model": "fake-a",
+     "lazy": false,
+     "profile_id": "/work/hermes-home",
+     "desktop_protocol": "hermes-gateway-v1",
+     "profile_name": "default",
+     "cwd": "/work/proj",
+     "reasoning_effort": "",
+     "reasoning_effort_wire": "",
+     "service_tier": "",
+     "fast": false,
+     "launch_request": {
+      "client": {
+       "name": "boopis",
+       "version": "0"
+      },
+      "cwd": "/work/proj",
+      "model": "fake-a",
+      "provider": "main",
+      "source": "gui",
+      "toolsets": [
+       "boopis",
+       "todo"
+      ]
+     },
+     "client": {
+      "name": "boopis",
+      "version": "0"
+     },
+     "title": "@@call todo_list {\"todos\": [{\"id\": \"1\"\u2026",
+     "started_at": 1795049566.047298,
+     "last_active_at": 1795049566.6344168,
+     "yolo": false,
+     "archived": false,
+     "api_mode": "chat_completions",
+     "tool_count": 5,
+     "credential_hint": "***"
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 59
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "actor": "plugin",
+     "hash": "ca27be43df5441d775d8b352d5917861a7d1dba4773757d0f8e2dcb561b3662e",
+     "payload": {
+      "aux_task": "title_generation",
+      "cache_read_tokens": 400,
+      "cache_write_1h_tokens": 0,
+      "cache_write_5m_tokens": 0,
+      "input_tokens": 600,
+      "latency_ms": 7,
+      "model": "fake-a",
+      "output_tokens": 50,
+      "provider": "main",
+      "reasoning_tokens": 20,
+      "request_id": "aux-dba0e408aa61485a89a240f6e0301746",
+      "role": "auxiliary",
+      "usage_schema": 2
+     },
+     "prev_hash": "40e184dea6b02278b13cd6f74b1c696421cbd9d5fcac57e3595086368659abbd",
+     "seq": 16,
+     "ts": "2026-11-19T00:52:47.672Z",
+     "type": "usage.recorded"
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 60
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "message.complete",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "text": "Done. Rounded once per invoice.",
+     "content": "Done. Rounded once per invoice.",
+     "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+     "outcome": "completed",
+     "status": "complete",
+     "usage": {
+      "model": "fake-a",
+      "input": 2400,
+      "output": 200,
+      "reasoning": 80,
+      "prompt": 4000,
+      "completion": 200,
+      "total": 4200,
+      "calls": 4,
+      "context_used": 1000,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "cache_hit_pct": 40,
+      "avg_latency_s": 0.1,
+      "avg_tps": 336.6,
+      "active_subagents": 0
+     },
+     "persisted_turn": {
+      "row_ids": [
+       1,
+       2,
+       3,
+       4,
+       5,
+       6,
+       7,
+       8
+      ],
+      "complete": true,
+      "user_row_id": 1,
+      "user_row_ids": [
+       1
+      ],
+      "final_assistant_row_id": 8,
+      "submission_id": "sub-1795049566083478134"
+     }
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 61
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 9,
+   "method": "session.list",
+   "params": {
+    "limit": 100
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+    "type": "session.info",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "stored_session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+     "pending": [],
+     "authority_epoch": 1,
+     "desktop_protocol": "hermes-gateway-v1",
+     "running": false,
+     "execution_generation": 1,
+     "revision": 1
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 62
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 9,
+   "result": {
+    "sessions": [
+     {
+      "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+      "id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+      "title": "@@call todo_list {\"todos\": [{\"id\": \"1\"\u2026",
+      "source": "local",
+      "started_at": 1795049566.047298,
+      "message_count": 8,
+      "model": "fake-a",
+      "running": false
+     },
+     {
+      "session_id": "local-ccb1e4024263ba297445020a0459fa15f675238aac22e9c6409a4faf60479e4c",
+      "id": "local-ccb1e4024263ba297445020a0459fa15f675238aac22e9c6409a4faf60479e4c",
+      "title": "",
+      "source": "gui",
+      "started_at": 1795049565.702986,
+      "message_count": 0,
+      "model": "fake-a",
+      "running": false
+     }
+    ],
+    "scope": "live"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 10,
+   "method": "session.list",
+   "params": {
+    "limit": 100,
+    "include_hidden": true
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 10,
+   "result": {
+    "sessions": [
+     {
+      "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+      "id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+      "title": "@@call todo_list {\"todos\": [{\"id\": \"1\"\u2026",
+      "source": "local",
+      "started_at": 1795049566.047298,
+      "message_count": 8,
+      "model": "fake-a",
+      "running": false
+     },
+     {
+      "session_id": "local-ccb1e4024263ba297445020a0459fa15f675238aac22e9c6409a4faf60479e4c",
+      "id": "local-ccb1e4024263ba297445020a0459fa15f675238aac22e9c6409a4faf60479e4c",
+      "title": "",
+      "source": "gui",
+      "started_at": 1795049565.702986,
+      "message_count": 0,
+      "model": "fake-a",
+      "running": false
+     }
+    ],
+    "scope": "live"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 11,
+   "method": "mcp.servers.status",
+   "params": {}
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 11,
+   "result": {
+    "servers": [
+     {
+      "name": "fakemcp",
+      "transport": "stdio",
+      "tools": 0,
+      "connected": false,
+      "disabled": false,
+      "status": "configured",
+      "needs_auth": false,
+      "source": "config",
+      "plugin": null
+     }
+    ],
+    "checked_at": 1795049567726
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 12,
+   "method": "session.resume",
+   "params": {
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 12,
+   "result": {
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "stored_session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "messages": [
+     {
+      "role": "user",
+      "content": "@@call todo_list {\"todos\": [{\"id\": \"1\", \"content\": \"read the call sites\", \"status\": \"completed\"}, {\"id\": \"2\", \"content\": \"round once per invoice\", \"status\": \"in_progress\"}, {\"id\": \"3\", \"content\": \"add a property test\", \"status\": \"pending\"}]}@@ @@call ship {\"edits\": [{\"op\": \"replace\", \"path\": \"src/a.py\", \"old\": \"return 1\", \"new\": \"return 2\"}]}@@ @@call exec {\"code\": \"blank = await harness.leave_blank(\\\"Keep the old alias?\\\", [\\\"yes\\\", \\\"no\\\"], [\\\"rename\\\"])\\nprint(blank[\\\"status\\\"])\\n\"}@@ @@usage {\"prompt_tokens\": 1000, \"completion_tokens\": 50, \"total_tokens\": 1050, \"prompt_tokens_details\": {\"cached_tokens\": 400}, \"completion_tokens_details\": {\"reasoning_tokens\": 20}}@@ @@reply Done. Rounded once per invoice.@@",
+      "_db_persisted": true,
+      "message_uid": "cb939380b7154353bb0c9e098380503f",
+      "display_metadata": {
+       "gateway_input_owner": "089a640a-e92e-5158-b658-a9067e511da5",
+       "submission_id": "sub-1795049566083478134"
+      },
+      "timestamp": 1795049566.101069,
+      "message_id": "4fc837dd5a06486b8c6f1ffedba4a412",
+      "row_id": 1
+     },
+     {
+      "role": "assistant",
+      "content": "",
+      "_db_persisted": true,
+      "message_uid": "055c2bd7bf394adc93b399c97b51a855",
+      "_tool_call_uids": {
+       "call_ab985bf937": "321e7ddcc22c4375bd76039de23223d0"
+      },
+      "display_metadata": {
+       "reasoning_tokens": 20
+      },
+      "timestamp": 1795049567.3242314,
+      "tool_calls": [
+       {
+        "id": "call_ab985bf937",
+        "call_id": "call_ab985bf937",
+        "response_item_id": "fc_ab985bf937",
+        "type": "function",
+        "function": {
+         "name": "todo_list",
+         "arguments": "{\"todos\": [{\"id\": \"1\", \"content\": \"read the call sites\", \"status\": \"completed\"}, {\"id\": \"2\", \"content\": \"round once per invoice\", \"status\": \"in_progress\"}, {\"id\": \"3\", \"content\": \"add a property test\", \"status\": \"pending\"}]}"
+        }
+       }
+      ],
+      "finish_reason": "tool_calls",
+      "row_id": 2
+     },
+     {
+      "role": "tool",
+      "content": "{\"todos\": [{\"id\": \"1\", \"content\": \"read the call sites\", \"status\": \"completed\"}, {\"id\": \"2\", \"content\": \"round once per invoice\", \"status\": \"in_progress\"}, {\"id\": \"3\", \"content\": \"add a property test\", \"status\": \"pending\"}], \"revision\": 1, \"summary\": {\"total\": 3, \"pending\": 1, \"in_progress\": 1, \"completed\": 1, \"cancelled\": 0}}",
+      "_db_persisted": true,
+      "message_uid": "8e16374f1e434becad0d845e0c0d4da8",
+      "_tool_call_uid": "321e7ddcc22c4375bd76039de23223d0",
+      "timestamp": 1795049567.3483152,
+      "tool_call_id": "call_ab985bf937",
+      "tool_name": "todo_list",
+      "row_id": 3
+     },
+     {
+      "role": "assistant",
+      "content": "",
+      "_db_persisted": true,
+      "message_uid": "2c9289dad30d4f179e18742de30073d1",
+      "_tool_call_uids": {
+       "call_6a34173d3a": "9bbda27da6ed4d6685b23be7bfade826"
+      },
+      "display_metadata": {
+       "reasoning_tokens": 20
+      },
+      "timestamp": 1795049567.3775468,
+      "tool_calls": [
+       {
+        "id": "call_6a34173d3a",
+        "call_id": "call_6a34173d3a",
+        "response_item_id": "fc_6a34173d3a",
+        "type": "function",
+        "function": {
+         "name": "ship",
+         "arguments": "{\"edits\": [{\"op\": \"replace\", \"path\": \"src/a.py\", \"old\": \"return 1\", \"new\": \"return 2\"}]}"
+        }
+       }
+      ],
+      "finish_reason": "tool_calls",
+      "row_id": 4
+     },
+     {
+      "role": "tool",
+      "content": "{\"status\": \"shipped\", \"ship_id\": \"01a1f14a-b4c1-73ca-adf6-b00b15dedf99\", \"files\": [{\"path\": \"src/a.py\", \"created\": false, \"deleted\": false}], \"gate\": {\"verdict\": \"pass\", \"gates\": [\"T0.scope\", \"T0.visible_tests\"], \"enforcement\": \"degraded:unsandboxed\"}, \"checkpoint\": {\"ref\": \"refs/boopis/checkpoints/local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32\", \"commit\": \"d964cf31f9389a263d3b5ee5667ae972ab132929\"}}",
+      "_db_persisted": true,
+      "message_uid": "fa69e5bb6653448cbdac9f93f2e8b839",
+      "_tool_call_uid": "9bbda27da6ed4d6685b23be7bfade826",
+      "timestamp": 1795049567.470362,
+      "tool_call_id": "call_6a34173d3a",
+      "tool_name": "ship",
+      "row_id": 5
+     },
+     {
+      "role": "assistant",
+      "content": "",
+      "_db_persisted": true,
+      "message_uid": "c2f5cfc047504d9c8801fddfeb7699c5",
+      "_tool_call_uids": {
+       "call_9241bc1f75": "0aca4e8caca74fc3a1c80b142dba100d"
+      },
+      "display_metadata": {
+       "reasoning_tokens": 20
+      },
+      "timestamp": 1795049567.4985816,
+      "tool_calls": [
+       {
+        "id": "call_9241bc1f75",
+        "call_id": "call_9241bc1f75",
+        "response_item_id": "fc_9241bc1f75",
+        "type": "function",
+        "function": {
+         "name": "exec",
+         "arguments": "{\"code\": \"blank = await harness.leave_blank(\\\"Keep the old alias?\\\", [\\\"yes\\\", \\\"no\\\"], [\\\"rename\\\"])\\nprint(blank[\\\"status\\\"])\\n\"}"
+        }
+       }
+      ],
+      "finish_reason": "tool_calls",
+      "row_id": 6
+     },
+     {
+      "role": "tool",
+      "content": "{\"status\": \"ok\", \"stdout\": \"open\\n\", \"calls\": {\"total\": 1, \"log\": [\"#1 harness.leave_blank ok 8ms\"]}, \"blanks\": [{\"blank_id\": \"01a1f14a-b56b-7261-8c40-f7f4e7e7803b\", \"question\": \"Keep the old alias?\"}], \"duration_ms\": 10, \"cell\": 1}",
+      "_db_persisted": true,
+      "message_uid": "52dd857d7c25402a8a2eb0222f86aebd",
+      "_tool_call_uid": "0aca4e8caca74fc3a1c80b142dba100d",
+      "timestamp": 1795049567.6117253,
+      "tool_call_id": "call_9241bc1f75",
+      "tool_name": "exec",
+      "row_id": 7
+     },
+     {
+      "role": "assistant",
+      "content": "Done. Rounded once per invoice.",
+      "_db_persisted": true,
+      "message_uid": "39e5f1de620047e5ac8b748acd6b6d47",
+      "display_metadata": {
+       "reasoning_tokens": 20
+      },
+      "timestamp": 1795049567.6404629,
+      "finish_reason": "stop",
+      "row_id": 8
+     }
+    ],
+    "message_count": 8,
+    "todo_state": {
+     "todos": [
+      {
+       "id": "1",
+       "content": "read the call sites",
+       "status": "completed"
+      },
+      {
+       "id": "2",
+       "content": "round once per invoice",
+       "status": "in_progress"
+      },
+      {
+       "id": "3",
+       "content": "add a property test",
+       "status": "pending"
+      }
+     ],
+     "revision": 1
+    },
+    "running": false,
+    "authority_epoch": 1,
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "last_sequence": 62,
+    "subscription_id": "f47b542694c64450a798ecad61f1321a",
+    "revision": 1,
+    "execution_generation": 1,
+    "pending": [],
+    "prompts": [],
+    "info": {
+     "tools": {
+      "boopis": [
+       "dispatch",
+       "exec",
+       "pack",
+       "ship"
+      ],
+      "todo": [
+       "todo_list"
+      ]
+     },
+     "skills": "(trimmed)",
+     "mcp_servers": [
+      {
+       "name": "fakemcp",
+       "transport": "stdio",
+       "tools": 0,
+       "connected": false,
+       "disabled": false,
+       "status": "configured",
+       "needs_auth": false
+      }
+     ],
+     "version": "unknown",
+     "release_date": "2026.9.24",
+     "update_behind": null,
+     "update_command": "hermes update",
+     "branch": "master",
+     "project": null,
+     "provider": "custom:main",
+     "system_prompt": "(trimmed)",
+     "context_length": 200000,
+     "enabled_toolsets": [
+      "boopis",
+      "todo"
+     ],
+     "tool_availability": {
+      "unavailable_toolsets": [],
+      "lazy_tools": [],
+      "disabled_tools": []
+     },
+     "source": "gui",
+     "model": "fake-a",
+     "lazy": false,
+     "profile_id": "/work/hermes-home",
+     "desktop_protocol": "hermes-gateway-v1",
+     "profile_name": "default",
+     "cwd": "/work/proj",
+     "reasoning_effort": "",
+     "reasoning_effort_wire": "",
+     "service_tier": "",
+     "fast": false,
+     "launch_request": {
+      "client": {
+       "name": "boopis",
+       "version": "0"
+      },
+      "cwd": "/work/proj",
+      "model": "fake-a",
+      "provider": "main",
+      "source": "gui",
+      "toolsets": [
+       "boopis",
+       "todo"
+      ]
+     },
+     "client": {
+      "name": "boopis",
+      "version": "0"
+     },
+     "title": "@@call todo_list {\"todos\": [{\"id\": \"1\"\u2026",
+     "started_at": 1795049566.047298,
+     "last_active_at": 1795049566.6344168,
+     "yolo": false,
+     "archived": false,
+     "api_mode": "chat_completions",
+     "tool_count": 5,
+     "credential_hint": "***",
+     "usage": {
+      "model": "fake-a",
+      "input": 2400,
+      "output": 200,
+      "reasoning": 80,
+      "prompt": 4000,
+      "completion": 200,
+      "total": 4200,
+      "calls": 4,
+      "context_used": 1000,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "cache_hit_pct": 40,
+      "avg_latency_s": 0.1,
+      "avg_tps": 336.6,
+      "active_subagents": 0
+     }
+    },
+    "pending_connection": null,
+    "open_requests": []
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 13,
+   "method": "session.info",
+   "params": {
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 13,
+   "result": {
+    "tools": {
+     "boopis": [
+      "dispatch",
+      "exec",
+      "pack",
+      "ship"
+     ],
+     "todo": [
+      "todo_list"
+     ]
+    },
+    "skills": "(trimmed)",
+    "mcp_servers": [
+     {
+      "name": "fakemcp",
+      "transport": "stdio",
+      "tools": 0,
+      "connected": false,
+      "disabled": false,
+      "status": "configured",
+      "needs_auth": false
+     }
+    ],
+    "version": "unknown",
+    "release_date": "2026.9.24",
+    "update_behind": null,
+    "update_command": "hermes update",
+    "branch": "master",
+    "project": null,
+    "provider": "custom:main",
+    "system_prompt": "(trimmed)",
+    "context_length": 200000,
+    "enabled_toolsets": [
+     "boopis",
+     "todo"
+    ],
+    "tool_availability": {
+     "unavailable_toolsets": [],
+     "lazy_tools": [],
+     "disabled_tools": []
+    },
+    "source": "gui",
+    "model": "fake-a",
+    "lazy": false,
+    "profile_id": "/work/hermes-home",
+    "desktop_protocol": "hermes-gateway-v1",
+    "profile_name": "default",
+    "cwd": "/work/proj",
+    "reasoning_effort": "",
+    "reasoning_effort_wire": "",
+    "service_tier": "",
+    "fast": false,
+    "launch_request": {
+     "client": {
+      "name": "boopis",
+      "version": "0"
+     },
+     "cwd": "/work/proj",
+     "model": "fake-a",
+     "provider": "main",
+     "source": "gui",
+     "toolsets": [
+      "boopis",
+      "todo"
+     ]
+    },
+    "client": {
+     "name": "boopis",
+     "version": "0"
+    },
+    "title": "@@call todo_list {\"todos\": [{\"id\": \"1\"\u2026",
+    "started_at": 1795049566.047298,
+    "last_active_at": 1795049566.6344168,
+    "yolo": false,
+    "archived": false,
+    "api_mode": "chat_completions",
+    "tool_count": 5,
+    "credential_hint": "***",
+    "usage": {
+     "model": "fake-a",
+     "input": 2400,
+     "output": 200,
+     "reasoning": 80,
+     "prompt": 4000,
+     "completion": 200,
+     "total": 4200,
+     "calls": 4,
+     "context_used": 1000,
+     "context_max": 200000,
+     "context_percent": 0,
+     "context_source": "provider_usage",
+     "context_estimated": false,
+     "compressions": 0,
+     "cache_hit_pct": 40,
+     "avg_latency_s": 0.1,
+     "avg_tps": 336.6,
+     "active_subagents": 0
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 14,
+   "method": "session.context_breakdown",
+   "params": {
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 14,
+   "result": {
+    "categories": [
+     {
+      "color": "var(--context-usage-system)",
+      "id": "system_prompt",
+      "label": "System prompt",
+      "tokens": 1685
+     },
+     {
+      "color": "var(--context-usage-tools)",
+      "id": "tool_definitions",
+      "label": "Tool definitions",
+      "tokens": 1727
+     },
+     {
+      "color": "var(--context-usage-rules)",
+      "id": "rules",
+      "label": "Rules",
+      "tokens": 423
+     },
+     {
+      "color": "var(--context-usage-conversation)",
+      "id": "conversation",
+      "label": "Conversation",
+      "tokens": 886
+     }
+    ],
+    "estimated_total": 4721,
+    "context_max": 200000,
+    "context_percent": 1,
+    "context_used": 1603,
+    "context_source": "provider_usage_plus_estimate",
+    "context_estimated": true,
+    "model": "fake-a",
+    "prompt_cache": {
+     "guaranteed_until": null,
+     "estimated_until": null,
+     "tier": null,
+     "confidence": "unknown",
+     "reason": "implicit_cache",
+     "refreshed_at": 1795049567.6249475,
+     "coverage": {}
+    },
+    "context_files": [
+     {
+      "label": "SOUL.md",
+      "path": "/work/hermes-home/SOUL.md",
+      "chars": 663,
+      "est_tokens": 167,
+      "loaded": true,
+      "status": "loaded"
+     }
+    ]
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 15,
+   "method": "plugin.boopis.describe",
+   "params": {
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 15,
+   "result": {
+    "session": {
+     "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+     "mode": "ungoverned",
+     "locked": true,
+     "cwd": "/work/proj"
+    },
+    "version": "0.1.0",
+    "protocol": "boopis-v1",
+    "capabilities": [
+     "describe",
+     "mode.set",
+     "ledger.tail",
+     "ledger.verify",
+     "ledger.stats",
+     "cascade.state",
+     "prices.refresh",
+     "blank.fill",
+     "checkpoint.list",
+     "checkpoint.diff"
+    ],
+    "hx": null,
+    "kernel": null,
+    "config": {
+     "mode": "governed",
+     "cost_cap_usd": 2.0,
+     "errors": [],
+     "ladder_errors": []
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 16,
+   "method": "plugin.boopis.ledger.stats",
+   "params": {
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 16,
+   "result": {
+    "tokens": {
+     "input_uncached": 3000,
+     "output": 250,
+     "cache_read": 2000,
+     "reasoning": 100,
+     "cache_write": 0
+    },
+    "cost_usd": 5.5,
+    "cost_api_equivalent_usd": 5.5,
+    "unpriced_models": [],
+    "round_trips": 5,
+    "escalations": 0,
+    "rollbacks": 0,
+    "blanks": 1,
+    "approvals": 0,
+    "price_table": "settings-d98ebfc5788c"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 17,
+   "method": "plugin.boopis.cascade.state",
+   "params": {
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 17,
+   "result": {
+    "ladder": [
+     {
+      "name": "haiku",
+      "model": {
+       "provider": "anthropic",
+       "id": "claude-haiku-5-5"
+      },
+      "effort": "medium",
+      "max_tokens": 8000,
+      "retries": 0
+     },
+     {
+      "name": "sonnet",
+      "model": {
+       "provider": "anthropic",
+       "id": "claude-sonnet-5-5"
+      },
+      "effort": "medium",
+      "max_tokens": 8000,
+      "retries": 0
+     },
+     {
+      "name": "opus",
+      "model": {
+       "provider": "anthropic",
+       "id": "claude-opus-5-5"
+      },
+      "effort": "medium",
+      "max_tokens": 8000,
+      "retries": 0
+     }
+    ],
+    "status": "idle"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 18,
+   "method": "plugin.boopis.checkpoint.list",
+   "params": {
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 18,
+   "result": {
+    "checkpoints": [
+     {
+      "ship_id": "01a1f14a-b4c1-73ca-adf6-b00b15dedf99",
+      "commit": "d964cf31f9389a263d3b5ee5667ae972ab132929",
+      "ref": "refs/boopis/checkpoints/local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+      "files": [
+       "src/a.py"
+      ],
+      "ts": "2026-11-19T00:52:47.464Z",
+      "task_id": "ship:01a1f14a-b4c1-73ca-adf6-b00b15dedf99"
+     }
+    ]
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 19,
+   "method": "plugin.boopis.checkpoint.diff",
+   "params": {
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 19,
+   "result": {
+    "ship_id": null,
+    "base": "7813d0a02fe265846adac68de24f093b2e7211a8",
+    "head": "d964cf31f9389a263d3b5ee5667ae972ab132929",
+    "files": [
+     {
+      "path": "src/a.py",
+      "status": "modified",
+      "add": 1,
+      "del": 1,
+      "binary": false,
+      "truncated": false,
+      "hunks": [
+       {
+        "header": "@@ -1,2 +1,2 @@",
+        "lines": [
+         " def hello():",
+         "-    return 1",
+         "+    return 2"
+        ]
+       }
+      ]
+     }
+    ],
+    "truncated": false
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 20,
+   "method": "plugin.boopis.ledger.tail",
+   "params": {
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "since_seq": -1,
+    "limit": 1000
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 20,
+   "result": {
+    "events": [
+     {
+      "actor": "plugin",
+      "hash": "d91d2870d6657a54d9a6dab6c3c000aef1b1b3b4f15540c34f0131e8dc2c142f",
+      "payload": {
+       "cwd": "/work/proj",
+       "hermes_version": "unknown",
+       "mode": "ungoverned",
+       "plugin_version": "0.1.0",
+       "price_table": "settings-d98ebfc5788c",
+       "profile": "default",
+       "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32"
+      },
+      "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "seq": 0,
+      "ts": "2026-11-19T00:52:46.681Z",
+      "type": "session.opened"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "ab1393d420bc5d8e4c78c04f03a327b72ed88947af6c9bc69818fa58b0cd3042",
+      "payload": {
+       "cache_read_tokens": 400,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 600,
+       "latency_ms": 559,
+       "model": "fake-a",
+       "output_tokens": 50,
+       "provider": "custom",
+       "reasoning_tokens": 20,
+       "request_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32:local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32:9136c813:api:1",
+       "role": "orchestrator",
+       "usage_schema": 2
+      },
+      "prev_hash": "d91d2870d6657a54d9a6dab6c3c000aef1b1b3b4f15540c34f0131e8dc2c142f",
+      "seq": 1,
+      "ts": "2026-11-19T00:52:47.320Z",
+      "type": "usage.recorded"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "2f5d3401a42d0848520646904c2a12911fead4e37068a3186c09e33daf1ee858",
+      "payload": {
+       "args_sha256": "eb309dfc924b0b33439cd99b2625727a0d3394564c8871ae9c7a0eef7433f0b1",
+       "duration_ms": 9,
+       "status": "ok",
+       "task_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+       "tool": "todo_list",
+       "tool_call_id": "call_ab985bf937"
+      },
+      "prev_hash": "ab1393d420bc5d8e4c78c04f03a327b72ed88947af6c9bc69818fa58b0cd3042",
+      "seq": 2,
+      "ts": "2026-11-19T00:52:47.345Z",
+      "type": "tool.called"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "c8c1f3ac7328650a806cc71212a26bd6b73c9a2aa208914eddad2e8489005d41",
+      "payload": {
+       "cache_read_tokens": 400,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 600,
+       "latency_ms": 13,
+       "model": "fake-a",
+       "output_tokens": 50,
+       "provider": "custom",
+       "reasoning_tokens": 20,
+       "request_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32:local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32:9136c813:api:2",
+       "role": "orchestrator",
+       "usage_schema": 2
+      },
+      "prev_hash": "2f5d3401a42d0848520646904c2a12911fead4e37068a3186c09e33daf1ee858",
+      "seq": 3,
+      "ts": "2026-11-19T00:52:47.375Z",
+      "type": "usage.recorded"
+     },
+     {
+      "actor": "plugin",
+      "hash": "e256c5d001549b56649f60db2b212a90211d24c70ab6ece1f65000059ae08214",
+      "payload": {
+       "kind": "code",
+       "max_attempts": 1,
+       "scope": [
+        "**"
+       ],
+       "task_id": "ship:01a1f14a-b4c1-73ca-adf6-b00b15dedf99",
+       "title": "ship src/a.py"
+      },
+      "prev_hash": "c8c1f3ac7328650a806cc71212a26bd6b73c9a2aa208914eddad2e8489005d41",
+      "seq": 4,
+      "ts": "2026-11-19T00:52:47.428Z",
+      "type": "task.created"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "7d22e53a985f45573f1c5d796403a0ce2e1fd251bf40f193928b61f6f8f6a8b1",
+      "payload": {
+       "task_id": "ship:01a1f14a-b4c1-73ca-adf6-b00b15dedf99",
+       "worker": "orchestrator:custom/fake-a"
+      },
+      "prev_hash": "e256c5d001549b56649f60db2b212a90211d24c70ab6ece1f65000059ae08214",
+      "seq": 5,
+      "ts": "2026-11-19T00:52:47.429Z",
+      "type": "task.claimed"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "a8789f885ba2ececc67c2003899eaedb89f1dab5bc338781a7c7e55abae8065c",
+      "payload": {
+       "files": [
+        {
+         "path": "src/a.py",
+         "sha256_after": "4436c9b1be34f14675fef593cc90fb944b07785e50cb0fd9fa56c747a3a4e0b9",
+         "sha256_before": "345a09077e88e5b84f401d3d3e82aee36008984b51eab4f049c08e4362539d3c"
+        }
+       ],
+       "journal_id": "01a1f14a-b4c1-73ca-adf6-b00b15dedf99",
+       "ship_id": "01a1f14a-b4c1-73ca-adf6-b00b15dedf99",
+       "task_id": "ship:01a1f14a-b4c1-73ca-adf6-b00b15dedf99"
+      },
+      "prev_hash": "7d22e53a985f45573f1c5d796403a0ce2e1fd251bf40f193928b61f6f8f6a8b1",
+      "seq": 6,
+      "ts": "2026-11-19T00:52:47.431Z",
+      "type": "ship.applied"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "97c914726ccc2eb5da57a4a54d47e467168948e077c40a4b982b859a08aad671",
+      "payload": {
+       "attempt": 1,
+       "files": [
+        "src/a.py"
+       ],
+       "files_sha256": "dd58e5e0d9b263bdd0b9ae0a53c1f88df680b56aa97e22c758c54c1af8528e60",
+       "task_id": "ship:01a1f14a-b4c1-73ca-adf6-b00b15dedf99"
+      },
+      "prev_hash": "a8789f885ba2ececc67c2003899eaedb89f1dab5bc338781a7c7e55abae8065c",
+      "seq": 7,
+      "ts": "2026-11-19T00:52:47.431Z",
+      "type": "task.submitted"
+     },
+     {
+      "actor": "gate",
+      "hash": "96e51f42c15c3f4422ebcf6f0bd8b46867e8beea26725895dc256e565d197431",
+      "payload": {
+       "enforcement": "degraded:unsandboxed",
+       "gate": "T0.visible_tests",
+       "gates": [
+        {
+         "evidence": {
+          "blast_radius": {
+           "changed_lines": 2,
+           "manifests": [],
+           "max_changed_lines": 200
+          },
+          "enforcement": "degraded:unsandboxed",
+          "test_files": 0,
+          "tests_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "tiers": [
+           "T0.scope",
+           "T0.visible_tests"
+          ],
+          "touched": [
+           "src/a.py"
+          ],
+          "violations": []
+         },
+         "gate": "T0.scope",
+         "reason": "",
+         "verdict": "pass"
+        },
+        {
+         "evidence": {
+          "blast_radius": {
+           "changed_lines": 2,
+           "manifests": [],
+           "max_changed_lines": 200
+          },
+          "enforcement": "degraded:unsandboxed",
+          "tests": {
+           "command": null,
+           "status": "not_configured"
+          },
+          "tests_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "tiers": [
+           "T0.scope",
+           "T0.visible_tests"
+          ]
+         },
+         "gate": "T0.visible_tests",
+         "reason": "",
+         "verdict": "pass"
+        }
+       ],
+       "reason": "",
+       "task_id": "ship:01a1f14a-b4c1-73ca-adf6-b00b15dedf99",
+       "tests_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+       "verdict": "pass"
+      },
+      "prev_hash": "97c914726ccc2eb5da57a4a54d47e467168948e077c40a4b982b859a08aad671",
+      "seq": 8,
+      "ts": "2026-11-19T00:52:47.437Z",
+      "type": "gate.decided"
+     },
+     {
+      "actor": "plugin",
+      "hash": "068108c8ef8a1a38e9075a6feda63ff9c1543f848072560b4d923a6220225814",
+      "payload": {
+       "commit": "d964cf31f9389a263d3b5ee5667ae972ab132929",
+       "ref": "refs/boopis/checkpoints/local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+       "ship_id": "01a1f14a-b4c1-73ca-adf6-b00b15dedf99"
+      },
+      "prev_hash": "96e51f42c15c3f4422ebcf6f0bd8b46867e8beea26725895dc256e565d197431",
+      "seq": 9,
+      "ts": "2026-11-19T00:52:47.464Z",
+      "type": "checkpoint.committed"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "dcdd4ce7c69c2d41fd0229012b68044dfb50f2a0ff499f6c20b7219cf9ecbffe",
+      "payload": {
+       "args_sha256": "9b8ff2a0881b6ad6876c1b960723becd360bee7117432e7572d4db3fb3475b50",
+       "duration_ms": 87,
+       "status": "ok",
+       "task_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+       "tool": "ship",
+       "tool_call_id": "call_6a34173d3a"
+      },
+      "prev_hash": "068108c8ef8a1a38e9075a6feda63ff9c1543f848072560b4d923a6220225814",
+      "seq": 10,
+      "ts": "2026-11-19T00:52:47.468Z",
+      "type": "tool.called"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "46c76cf9113f10c9f817e2aa9b145a39230fc33f5d0176d6758b696a786cb867",
+      "payload": {
+       "cache_read_tokens": 400,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 600,
+       "latency_ms": 11,
+       "model": "fake-a",
+       "output_tokens": 50,
+       "provider": "custom",
+       "reasoning_tokens": 20,
+       "request_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32:local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32:9136c813:api:3",
+       "role": "orchestrator",
+       "usage_schema": 2
+      },
+      "prev_hash": "dcdd4ce7c69c2d41fd0229012b68044dfb50f2a0ff499f6c20b7219cf9ecbffe",
+      "seq": 11,
+      "ts": "2026-11-19T00:52:47.496Z",
+      "type": "usage.recorded"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "cf386a9018aa304bf514ea19b68aa23404f8734a3f1ef84810d5b98ae38c3b48",
+      "payload": {
+       "blank_id": "01a1f14a-b56b-7261-8c40-f7f4e7e7803b",
+       "blocks": [
+        "rename"
+       ],
+       "options": [
+        "yes",
+        "no"
+       ],
+       "question": "Keep the old alias?",
+       "via": "exec"
+      },
+      "prev_hash": "46c76cf9113f10c9f817e2aa9b145a39230fc33f5d0176d6758b696a786cb867",
+      "seq": 12,
+      "ts": "2026-11-19T00:52:47.603Z",
+      "type": "blank.opened"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "9a6c02f34857abbb254ada5b7e755c64bc15092802ae2e1b4f42e5c581881dc9",
+      "payload": {
+       "args_sha256": "8405e2e2a27d4d7cb686f650149f9c7cc6d880ef23b3f70626a5fbd9a32762a7",
+       "blank_id": "01a1f14a-b56b-7261-8c40-f7f4e7e7803b",
+       "cell_id": "01a1f14a-b56a-7040-85e3-c4e4e9bef33e",
+       "duration_ms": 8,
+       "status": "ok",
+       "tool": "harness.leave_blank",
+       "tool_call_id": "01a1f14a-b56a-7040-85e3-c4e4e9bef33e:1",
+       "via": "exec"
+      },
+      "prev_hash": "cf386a9018aa304bf514ea19b68aa23404f8734a3f1ef84810d5b98ae38c3b48",
+      "seq": 13,
+      "ts": "2026-11-19T00:52:47.604Z",
+      "type": "tool.called"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "cc203b1e1afb4ad04f01b9a8ca610079f92c30381904958c6fcadeb0e05bb0c1",
+      "payload": {
+       "args_sha256": "1f2c5b48f0442cc122460d67f741fbf8760aa518025fcd9466069910a8b08398",
+       "duration_ms": 105,
+       "status": "ok",
+       "task_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+       "tool": "exec",
+       "tool_call_id": "call_9241bc1f75"
+      },
+      "prev_hash": "9a6c02f34857abbb254ada5b7e755c64bc15092802ae2e1b4f42e5c581881dc9",
+      "seq": 14,
+      "ts": "2026-11-19T00:52:47.609Z",
+      "type": "tool.called"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "40e184dea6b02278b13cd6f74b1c696421cbd9d5fcac57e3595086368659abbd",
+      "payload": {
+       "cache_read_tokens": 400,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 600,
+       "latency_ms": 11,
+       "model": "fake-a",
+       "output_tokens": 50,
+       "provider": "custom",
+       "reasoning_tokens": 20,
+       "request_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32:local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32:9136c813:api:4",
+       "role": "orchestrator",
+       "usage_schema": 2
+      },
+      "prev_hash": "cc203b1e1afb4ad04f01b9a8ca610079f92c30381904958c6fcadeb0e05bb0c1",
+      "seq": 15,
+      "ts": "2026-11-19T00:52:47.638Z",
+      "type": "usage.recorded"
+     },
+     {
+      "actor": "plugin",
+      "hash": "ca27be43df5441d775d8b352d5917861a7d1dba4773757d0f8e2dcb561b3662e",
+      "payload": {
+       "aux_task": "title_generation",
+       "cache_read_tokens": 400,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 600,
+       "latency_ms": 7,
+       "model": "fake-a",
+       "output_tokens": 50,
+       "provider": "main",
+       "reasoning_tokens": 20,
+       "request_id": "aux-dba0e408aa61485a89a240f6e0301746",
+       "role": "auxiliary",
+       "usage_schema": 2
+      },
+      "prev_hash": "40e184dea6b02278b13cd6f74b1c696421cbd9d5fcac57e3595086368659abbd",
+      "seq": 16,
+      "ts": "2026-11-19T00:52:47.672Z",
+      "type": "usage.recorded"
+     }
+    ],
+    "head_seq": 16
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 21,
+   "method": "plugin.boopis.compat.inventory",
+   "params": {
+    "cwd": "/work/proj"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 21,
+   "result": {
+    "cwd": "/work/proj",
+    "project_root": "/work/proj",
+    "items": [],
+    "trust": {
+     "project_id": "b5cfee807bcbf9ba3a39b1a9512db4a463da02e62c5e9ebd72904301d1c52866",
+     "cwd": "/work/proj",
+     "kinds": {}
+    },
+    "hook_events": {
+     "mapped": {
+      "PreToolUse": {
+       "hermes": [
+        "pre_tool_call"
+       ],
+       "fidelity": "full",
+       "note": "A hook `allow` skips boopis-level approval prompts only (COMPAT 4.4); Hermes approvals and hardline blocks still apply."
+      },
+      "PostToolUse": {
+       "hermes": [
+        "transform_tool_result"
+       ],
+       "fidelity": "full",
+       "note": "Runs for tools that executed with status ok. Feedback is appended to the tool result."
+      },
+      "PostToolUseFailure": {
+       "hermes": [
+        "transform_tool_result"
+       ],
+       "fidelity": "full",
+       "note": "The same Hermes hook with status other than ok."
+      },
+      "UserPromptSubmit": {
+       "hermes": [
+        "pre_llm_call"
+       ],
+       "fidelity": "full",
+       "note": "A blocked prompt is stored by Hermes as a withheld-message placeholder and never reaches a model; Claude Code erases it."
+      },
+      "SessionStart": {
+       "hermes": [
+        "on_session_start",
+        "on_session_open",
+        "on_session_reset",
+        "post_compaction"
+       ],
+       "fidelity": "partial",
+       "note": "These fire after the system prompt is built, so additionalContext is delivered through the next pre_llm_call and never the system prompt. Sources: startup, resume, clear, compact. fork does not exist on Hermes."
+      },
+      "SessionEnd": {
+       "hermes": [
+        "on_session_finalize"
+       ],
+       "fidelity": "partial",
+       "note": "Hermes does not say why a session ended, so reason is other."
+      },
+      "Stop": {
+       "hermes": [
+        "post_llm_call"
+       ],
+       "fidelity": "partial",
+       "note": "Hermes has no turn-end hook that can continue a turn, and its pre_verify fires only after write_file or patch edits (not ship). So Stop runs at the final post_llm_call of every completed turn, and a block re-enters as a queued user message through ctx.inject_message: a new turn that starts after the answer, not a continuation inside it. Needs plugins.entries.boopis.allow_gateway_injection."
+      },
+      "SubagentStart": {
+       "hermes": [
+        "subagent_start"
+       ],
+       "fidelity": "observe",
+       "note": "Observe only; additionalContext cannot reach the child."
+      },
+      "SubagentStop": {
+       "hermes": [
+        "subagent_stop"
+       ],
+       "fidelity": "observe",
+       "note": "Observe only; a block cannot force the child to continue."
+      },
+      "Notification": {
+       "hermes": [
+        "on_human_input_request"
+       ],
+       "fidelity": "partial",
+       "note": "approval becomes permission_prompt, clarify becomes elicitation_dialog. idle_prompt and auth_success do not exist on Hermes."
+      },
+      "PostCompact": {
+       "hermes": [
+        "post_compaction"
+       ],
+       "fidelity": "full",
+       "note": "trigger is manual for /compress and auto otherwise."
+      }
+     },
+     "unsupported": {
+      "PreCompact": "Hermes has only post_compaction, so a compaction cannot be observed or blocked in advance.",
+      "PermissionRequest": "pre_approval_request is an observer on Hermes, which intentionally has no auto-allow or decision callback.",
+      "PermissionDenied": "Hermes has no permission-denied event; a block is a tool result.",
+      "UserPromptExpansion": "Hermes has no equivalent: slash-command expansion is not an event.",
+      "PostToolBatch": "Hermes has no per-batch event.",
+      "StopFailure": "Hermes has no event for a turn that ended in an API error that reaches plugins as a stop.",
+      "Setup": "Hermes has no init or maintenance event.",
+      "TaskCreated": "Hermes kanban hooks differ in meaning from Claude Code tasks.",
+      "TaskCompleted": "Hermes kanban hooks differ in meaning from Claude Code tasks.",
+      "TeammateIdle": "Hermes kanban hooks differ in meaning from Claude Code teammates.",
+      "ConfigChange": "Hermes has no config-change event.",
+      "FileChanged": "Hermes has no file-watch event.",
+      "CwdChanged": "Hermes has no cwd-change event.",
+      "DirectoryAdded": "Hermes has no additional-directory concept.",
+      "WorktreeCreate": "Worktrees are owned by the boopis host, not by Hermes.",
+      "WorktreeRemove": "Worktrees are owned by the boopis host, not by Hermes.",
+      "Elicitation": "Hermes MCP elicitation consent is an approval, not a hookable event.",
+      "ElicitationResult": "Hermes MCP elicitation consent is an approval, not a hookable event.",
+      "MessageDisplay": "Hermes has no message-display event.",
+      "InstructionsLoaded": "Synthesized by compat when it delivers memory and rules, which part 1 does not do yet.",
+      "PreModelSwitch": "Synthesized by the cascade, which is not built yet.",
+      "PostModelSwitch": "Synthesized by the cascade, which is not built yet."
+     }
+    },
+    "warnings": [],
+    "pending": false
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 22,
+   "method": "session.resume",
+   "params": {
+    "session_id": "local-ccb1e4024263ba297445020a0459fa15f675238aac22e9c6409a4faf60479e4c"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 22,
+   "result": {
+    "session_id": "local-ccb1e4024263ba297445020a0459fa15f675238aac22e9c6409a4faf60479e4c",
+    "stored_session_id": "local-ccb1e4024263ba297445020a0459fa15f675238aac22e9c6409a4faf60479e4c",
+    "messages": [],
+    "message_count": 0,
+    "todo_state": null,
+    "running": false,
+    "authority_epoch": 1,
+    "replay_epoch": "d77bcdca30b04064b1765c8663310028",
+    "last_sequence": 1,
+    "subscription_id": "634081b6d6244175a46072f3ebc866d0",
+    "revision": 0,
+    "execution_generation": 0,
+    "pending": [],
+    "prompts": [],
+    "info": {
+     "tools": {
+      "boopis": [
+       "dispatch",
+       "exec",
+       "pack",
+       "ship"
+      ],
+      "todo": [
+       "todo_list"
+      ]
+     },
+     "skills": "(trimmed)",
+     "mcp_servers": [
+      {
+       "name": "fakemcp",
+       "transport": "stdio",
+       "tools": 0,
+       "connected": false,
+       "disabled": false,
+       "status": "configured",
+       "needs_auth": false
+      }
+     ],
+     "version": "unknown",
+     "release_date": "2026.9.24",
+     "update_behind": null,
+     "update_command": "hermes update",
+     "branch": "master",
+     "project": null,
+     "provider": "custom:main",
+     "enabled_toolsets": [
+      "boopis",
+      "todo"
+     ],
+     "tool_availability": {
+      "unavailable_toolsets": [],
+      "lazy_tools": [],
+      "disabled_tools": []
+     },
+     "source": "gui",
+     "model": "fake-a",
+     "lazy": true,
+     "profile_id": "/work/hermes-home",
+     "desktop_protocol": "hermes-gateway-v1",
+     "profile_name": "default",
+     "cwd": "/work/proj",
+     "reasoning_effort": "",
+     "reasoning_effort_wire": "",
+     "service_tier": "",
+     "fast": false,
+     "launch_request": {
+      "client": {
+       "name": "boopis",
+       "version": "0"
+      },
+      "cwd": "/work/proj",
+      "model": "fake-a",
+      "provider": "main",
+      "source": "gui",
+      "toolsets": [
+       "boopis",
+       "todo"
+      ]
+     },
+     "client": {
+      "name": "boopis",
+      "version": "0"
+     },
+     "title": null,
+     "started_at": 1795049565.702986,
+     "last_active_at": 1795049565.702986,
+     "yolo": false,
+     "archived": false,
+     "api_mode": null,
+     "tool_count": 5,
+     "credential_hint": null,
+     "usage": {
+      "model": "fake-a",
+      "input": 0,
+      "output": 0,
+      "reasoning": 0,
+      "prompt": 0,
+      "completion": 0,
+      "total": 0,
+      "calls": 0
+     }
+    },
+    "pending_connection": null,
+    "open_requests": []
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 23,
+   "method": "session.info",
+   "params": {
+    "session_id": "local-ccb1e4024263ba297445020a0459fa15f675238aac22e9c6409a4faf60479e4c"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 23,
+   "result": {
+    "tools": {
+     "boopis": [
+      "dispatch",
+      "exec",
+      "pack",
+      "ship"
+     ],
+     "todo": [
+      "todo_list"
+     ]
+    },
+    "skills": "(trimmed)",
+    "mcp_servers": [
+     {
+      "name": "fakemcp",
+      "transport": "stdio",
+      "tools": 0,
+      "connected": false,
+      "disabled": false,
+      "status": "configured",
+      "needs_auth": false
+     }
+    ],
+    "version": "unknown",
+    "release_date": "2026.9.24",
+    "update_behind": null,
+    "update_command": "hermes update",
+    "branch": "master",
+    "project": null,
+    "provider": "custom:main",
+    "enabled_toolsets": [
+     "boopis",
+     "todo"
+    ],
+    "tool_availability": {
+     "unavailable_toolsets": [],
+     "lazy_tools": [],
+     "disabled_tools": []
+    },
+    "source": "gui",
+    "model": "fake-a",
+    "lazy": true,
+    "profile_id": "/work/hermes-home",
+    "desktop_protocol": "hermes-gateway-v1",
+    "profile_name": "default",
+    "cwd": "/work/proj",
+    "reasoning_effort": "",
+    "reasoning_effort_wire": "",
+    "service_tier": "",
+    "fast": false,
+    "launch_request": {
+     "client": {
+      "name": "boopis",
+      "version": "0"
+     },
+     "cwd": "/work/proj",
+     "model": "fake-a",
+     "provider": "main",
+     "source": "gui",
+     "toolsets": [
+      "boopis",
+      "todo"
+     ]
+    },
+    "client": {
+     "name": "boopis",
+     "version": "0"
+    },
+    "title": null,
+    "started_at": 1795049565.702986,
+    "last_active_at": 1795049565.702986,
+    "yolo": false,
+    "archived": false,
+    "api_mode": null,
+    "tool_count": 5,
+    "credential_hint": null,
+    "usage": {
+     "model": "fake-a",
+     "input": 0,
+     "output": 0,
+     "reasoning": 0,
+     "prompt": 0,
+     "completion": 0,
+     "total": 0,
+     "calls": 0
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 24,
+   "method": "session.context_breakdown",
+   "params": {
+    "session_id": "local-ccb1e4024263ba297445020a0459fa15f675238aac22e9c6409a4faf60479e4c"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 24,
+   "result": {
+    "categories": [],
+    "estimated_total": 0,
+    "context_max": 0,
+    "context_percent": 0,
+    "context_used": 0,
+    "context_estimated": false,
+    "context_source": "provider_usage",
+    "model": "",
+    "prompt_cache": null
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 25,
+   "method": "plugin.boopis.describe",
+   "params": {
+    "session_id": "local-ccb1e4024263ba297445020a0459fa15f675238aac22e9c6409a4faf60479e4c"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 25,
+   "result": {
+    "session": {
+     "session_id": "local-ccb1e4024263ba297445020a0459fa15f675238aac22e9c6409a4faf60479e4c",
+     "mode": "governed",
+     "locked": false,
+     "cwd": null
+    },
+    "version": "0.1.0",
+    "protocol": "boopis-v1",
+    "capabilities": [
+     "describe",
+     "mode.set",
+     "ledger.tail",
+     "ledger.verify",
+     "ledger.stats",
+     "cascade.state",
+     "prices.refresh",
+     "blank.fill",
+     "checkpoint.list",
+     "checkpoint.diff"
+    ],
+    "hx": null,
+    "kernel": null,
+    "config": {
+     "mode": "governed",
+     "cost_cap_usd": 2.0,
+     "errors": [],
+     "ladder_errors": []
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 26,
+   "method": "plugin.boopis.ledger.stats",
+   "params": {
+    "session_id": "local-ccb1e4024263ba297445020a0459fa15f675238aac22e9c6409a4faf60479e4c"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 26,
+   "result": {
+    "tokens": {
+     "input_uncached": 0,
+     "output": 0,
+     "cache_read": 0,
+     "reasoning": 0,
+     "cache_write": 0
+    },
+    "cost_usd": 0.0,
+    "cost_api_equivalent_usd": 0.0,
+    "unpriced_models": [],
+    "round_trips": 0,
+    "escalations": 0,
+    "rollbacks": 0,
+    "blanks": 0,
+    "approvals": 0,
+    "price_table": "settings-d98ebfc5788c"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 27,
+   "method": "plugin.boopis.cascade.state",
+   "params": {
+    "session_id": "local-ccb1e4024263ba297445020a0459fa15f675238aac22e9c6409a4faf60479e4c"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 27,
+   "result": {
+    "ladder": [
+     {
+      "name": "haiku",
+      "model": {
+       "provider": "anthropic",
+       "id": "claude-haiku-5-5"
+      },
+      "effort": "medium",
+      "max_tokens": 8000,
+      "retries": 0
+     },
+     {
+      "name": "sonnet",
+      "model": {
+       "provider": "anthropic",
+       "id": "claude-sonnet-5-5"
+      },
+      "effort": "medium",
+      "max_tokens": 8000,
+      "retries": 0
+     },
+     {
+      "name": "opus",
+      "model": {
+       "provider": "anthropic",
+       "id": "claude-opus-5-5"
+      },
+      "effort": "medium",
+      "max_tokens": 8000,
+      "retries": 0
+     }
+    ],
+    "status": "idle"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 28,
+   "method": "plugin.boopis.checkpoint.list",
+   "params": {
+    "session_id": "local-ccb1e4024263ba297445020a0459fa15f675238aac22e9c6409a4faf60479e4c"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 28,
+   "result": {
+    "checkpoints": []
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 29,
+   "method": "plugin.boopis.checkpoint.diff",
+   "params": {
+    "session_id": "local-ccb1e4024263ba297445020a0459fa15f675238aac22e9c6409a4faf60479e4c"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 29,
+   "result": {
+    "files": [],
+    "truncated": false
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 30,
+   "method": "plugin.boopis.ledger.tail",
+   "params": {
+    "session_id": "local-ccb1e4024263ba297445020a0459fa15f675238aac22e9c6409a4faf60479e4c",
+    "since_seq": -1,
+    "limit": 1000
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 30,
+   "result": {
+    "events": [],
+    "head_seq": -1
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 31,
+   "method": "plugin.boopis.compat.inventory",
+   "params": {
+    "cwd": "/work/proj"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 31,
+   "result": {
+    "cwd": "/work/proj",
+    "project_root": "/work/proj",
+    "items": [],
+    "trust": {
+     "project_id": "b5cfee807bcbf9ba3a39b1a9512db4a463da02e62c5e9ebd72904301d1c52866",
+     "cwd": "/work/proj",
+     "kinds": {}
+    },
+    "hook_events": {
+     "mapped": {
+      "PreToolUse": {
+       "hermes": [
+        "pre_tool_call"
+       ],
+       "fidelity": "full",
+       "note": "A hook `allow` skips boopis-level approval prompts only (COMPAT 4.4); Hermes approvals and hardline blocks still apply."
+      },
+      "PostToolUse": {
+       "hermes": [
+        "transform_tool_result"
+       ],
+       "fidelity": "full",
+       "note": "Runs for tools that executed with status ok. Feedback is appended to the tool result."
+      },
+      "PostToolUseFailure": {
+       "hermes": [
+        "transform_tool_result"
+       ],
+       "fidelity": "full",
+       "note": "The same Hermes hook with status other than ok."
+      },
+      "UserPromptSubmit": {
+       "hermes": [
+        "pre_llm_call"
+       ],
+       "fidelity": "full",
+       "note": "A blocked prompt is stored by Hermes as a withheld-message placeholder and never reaches a model; Claude Code erases it."
+      },
+      "SessionStart": {
+       "hermes": [
+        "on_session_start",
+        "on_session_open",
+        "on_session_reset",
+        "post_compaction"
+       ],
+       "fidelity": "partial",
+       "note": "These fire after the system prompt is built, so additionalContext is delivered through the next pre_llm_call and never the system prompt. Sources: startup, resume, clear, compact. fork does not exist on Hermes."
+      },
+      "SessionEnd": {
+       "hermes": [
+        "on_session_finalize"
+       ],
+       "fidelity": "partial",
+       "note": "Hermes does not say why a session ended, so reason is other."
+      },
+      "Stop": {
+       "hermes": [
+        "post_llm_call"
+       ],
+       "fidelity": "partial",
+       "note": "Hermes has no turn-end hook that can continue a turn, and its pre_verify fires only after write_file or patch edits (not ship). So Stop runs at the final post_llm_call of every completed turn, and a block re-enters as a queued user message through ctx.inject_message: a new turn that starts after the answer, not a continuation inside it. Needs plugins.entries.boopis.allow_gateway_injection."
+      },
+      "SubagentStart": {
+       "hermes": [
+        "subagent_start"
+       ],
+       "fidelity": "observe",
+       "note": "Observe only; additionalContext cannot reach the child."
+      },
+      "SubagentStop": {
+       "hermes": [
+        "subagent_stop"
+       ],
+       "fidelity": "observe",
+       "note": "Observe only; a block cannot force the child to continue."
+      },
+      "Notification": {
+       "hermes": [
+        "on_human_input_request"
+       ],
+       "fidelity": "partial",
+       "note": "approval becomes permission_prompt, clarify becomes elicitation_dialog. idle_prompt and auth_success do not exist on Hermes."
+      },
+      "PostCompact": {
+       "hermes": [
+        "post_compaction"
+       ],
+       "fidelity": "full",
+       "note": "trigger is manual for /compress and auto otherwise."
+      }
+     },
+     "unsupported": {
+      "PreCompact": "Hermes has only post_compaction, so a compaction cannot be observed or blocked in advance.",
+      "PermissionRequest": "pre_approval_request is an observer on Hermes, which intentionally has no auto-allow or decision callback.",
+      "PermissionDenied": "Hermes has no permission-denied event; a block is a tool result.",
+      "UserPromptExpansion": "Hermes has no equivalent: slash-command expansion is not an event.",
+      "PostToolBatch": "Hermes has no per-batch event.",
+      "StopFailure": "Hermes has no event for a turn that ended in an API error that reaches plugins as a stop.",
+      "Setup": "Hermes has no init or maintenance event.",
+      "TaskCreated": "Hermes kanban hooks differ in meaning from Claude Code tasks.",
+      "TaskCompleted": "Hermes kanban hooks differ in meaning from Claude Code tasks.",
+      "TeammateIdle": "Hermes kanban hooks differ in meaning from Claude Code teammates.",
+      "ConfigChange": "Hermes has no config-change event.",
+      "FileChanged": "Hermes has no file-watch event.",
+      "CwdChanged": "Hermes has no cwd-change event.",
+      "DirectoryAdded": "Hermes has no additional-directory concept.",
+      "WorktreeCreate": "Worktrees are owned by the boopis host, not by Hermes.",
+      "WorktreeRemove": "Worktrees are owned by the boopis host, not by Hermes.",
+      "Elicitation": "Hermes MCP elicitation consent is an approval, not a hookable event.",
+      "ElicitationResult": "Hermes MCP elicitation consent is an approval, not a hookable event.",
+      "MessageDisplay": "Hermes has no message-display event.",
+      "InstructionsLoaded": "Synthesized by compat when it delivers memory and rules, which part 1 does not do yet.",
+      "PreModelSwitch": "Synthesized by the cascade, which is not built yet.",
+      "PostModelSwitch": "Synthesized by the cascade, which is not built yet."
+     }
+    },
+    "warnings": [],
+    "pending": false
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 32,
+   "method": "complete.path",
+   "params": {
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "cwd": "/work/proj",
+    "word": "@file:src/"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 32,
+   "result": {
+    "items": [
+     {
+      "text": "@file:src/a.py",
+      "display": "a.py",
+      "meta": ""
+     }
+    ]
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 33,
+   "method": "complete.path",
+   "params": {
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "cwd": "/work/proj",
+    "word": "@zzz-nothing"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 33,
+   "result": {
+    "items": []
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 34,
+   "method": "session.branch",
+   "params": {
+    "session_id": ""
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 34,
+   "error": {
+    "code": -32601,
+    "message": "unknown method: session.branch \u2014 not available on this Hermes backend",
+    "data": {
+     "reason": "unknown_method"
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 35,
+   "method": "session.compress",
+   "params": {
+    "session_id": ""
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 35,
+   "error": {
+    "code": -32601,
+    "message": "unknown method: session.compress \u2014 not available on this Hermes backend",
+    "data": {
+     "reason": "unknown_method"
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 36,
+   "method": "plugin.boopis.blank.fill",
+   "params": {
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "blank_id": "01a1f14a-b56b-7261-8c40-f7f4e7e7803b",
+    "answer": "yes, for one release"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "plugin.boopis.ledger.appended",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "actor": "user",
+     "hash": "1eeca0073084e85ff2370009d5acb54f5c12524cc3d55a8e1078ddc9ec0ce3b6",
+     "payload": {
+      "answer": "yes, for one release",
+      "blank_id": "01a1f14a-b56b-7261-8c40-f7f4e7e7803b",
+      "decided_by": "user"
+     },
+     "prev_hash": "ca27be43df5441d775d8b352d5917861a7d1dba4773757d0f8e2dcb561b3662e",
+     "seq": 17,
+     "ts": "2026-11-19T00:52:47.865Z",
+     "type": "blank.filled"
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 63
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "plugin.boopis.blank.filled",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "blank_id": "01a1f14a-b56b-7261-8c40-f7f4e7e7803b",
+     "answer": "yes, for one release"
+    },
+    "replay_epoch": "492d6ac53692446fa67ece61afb376b2",
+    "seq": 64
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 36,
+   "result": {
+    "delivered": false
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 101,
+   "method": "plugin.boopis.mod.list",
+   "params": {
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 101,
+   "result": {
+    "capabilities": {
+     "available": true,
+     "platform": "linux",
+     "reason": null
+    },
+    "sessions": [
+     {
+      "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+      "running": true,
+      "exited": "",
+      "plugins": [
+       {
+        "hooks": 3,
+        "modules": [
+         "register.jsx"
+        ],
+        "name": "test-runner",
+        "tier": "user"
+       },
+       {
+        "hooks": 2,
+        "modules": [
+         "register.jsx"
+        ],
+        "name": "token-meter",
+        "tier": "user"
+       }
+      ],
+      "panes": [
+       {
+        "plugin": "test-runner",
+        "id": "tests",
+        "title": "Tests"
+       },
+       {
+        "plugin": "token-meter",
+        "id": "usage",
+        "title": "Token usage"
+       }
+      ],
+      "commands": [],
+      "status": {
+       "test-runner": "1 failing",
+       "token-meter": "12.4k tokens this turn"
+      }
+     }
+    ]
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 102,
+   "method": "plugin.boopis.mod.props",
+   "params": {
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "component": "Pane",
+    "id": "tests",
+    "props": {
+     "title": "Tests",
+     "placement": "dock",
+     "isFocused": true
+    }
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 102,
+   "result": {}
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.mod.render",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "component": "Pane",
+     "kind": "tree",
+     "id": "tests",
+     "tree": {
+      "children": [
+       {
+        "children": [
+         {
+          "children": [
+           "3 tests, 1 failing"
+          ],
+          "props": {
+           "bold": true
+          },
+          "type": "Text"
+         },
+         {
+          "children": [],
+          "props": {
+           "disabled": false,
+           "label": "Re-run",
+           "onPress": {
+            "$handler": "0.h4"
+           }
+          },
+          "type": "Button"
+         }
+        ],
+        "props": {
+         "alignItems": "center",
+         "gap": 2,
+         "justifyContent": "space-between"
+        },
+        "type": "Box"
+       },
+       {
+        "children": [
+         {
+          "children": [],
+          "props": {
+           "label": "Show",
+           "onSelect": {
+            "$handler": "0.h5"
+           },
+           "options": [
+            {
+             "label": "All tests",
+             "value": "all"
+            },
+            {
+             "label": "Failing only",
+             "value": "failing"
+            }
+           ],
+           "value": "all"
+          },
+          "type": "Select"
+         },
+         {
+          "children": [
+           "3 shown"
+          ],
+          "props": {
+           "color": "subtle",
+           "size": "xs"
+          },
+          "type": "Text"
+         }
+        ],
+        "props": {
+         "alignItems": "center",
+         "gap": 2
+        },
+        "type": "Box"
+       },
+       {
+        "children": [],
+        "props": {
+         "path": "npm test",
+         "source": " PASS  money.test.ts\n FAIL  invoice.test.ts  \u203a rounds per line item\n PASS  cents.test.ts",
+         "wrap": true
+        },
+        "type": "Code"
+       },
+       {
+        "children": [],
+        "props": {
+         "text": "The failure is in `invoice.test.ts`. [Open the run](https://ci.example.com/runs/4182)"
+        },
+        "type": "Markdown"
+       },
+       {
+        "children": [],
+        "props": {
+         "label": "Ask which to run",
+         "onPress": {
+          "$handler": "0.h6"
+         }
+        },
+        "type": "Button"
+       }
+      ],
+      "props": {
+       "flexDirection": "column",
+       "gap": 3
+      },
+      "type": "Box"
+     }
+    },
+    "seq": 1013
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 103,
+   "method": "plugin.boopis.mod.props",
+   "params": {
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "component": "Pane",
+    "id": "usage",
+    "props": {
+     "title": "Token usage",
+     "placement": "dock",
+     "isFocused": false
+    }
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 103,
+   "result": {}
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.mod.render",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "component": "Pane",
+     "kind": "tree",
+     "id": "usage",
+     "tree": {
+      "children": [
+       {
+        "children": [
+         {
+          "children": [
+           "This session"
+          ],
+          "props": {
+           "bold": true
+          },
+          "type": "Text"
+         },
+         {
+          "children": [
+           "48.2k tokens"
+          ],
+          "props": {
+           "color": "subtle",
+           "mono": true,
+           "size": "xs",
+           "tabular": true
+          },
+          "type": "Text"
+         }
+        ],
+        "props": {
+         "alignItems": "baseline",
+         "justifyContent": "space-between"
+        },
+        "type": "Box"
+       },
+       {
+        "children": [],
+        "props": {
+         "label": "Tokens per turn, input and output, turns 1 to 4",
+         "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 300 112\"><line x1=\"0\" y1=\"84.5\" x2=\"300\" y2=\"84.5\" stroke=\"subtle\" stroke-width=\"1\"/><rect x=\"20\" y=\"56\" width=\"12\" height=\"28\" rx=\"2\" fill=\"claude\"/><rect x=\"34\" y=\"78\" width=\"12\" height=\"6\" rx=\"2\" fill=\"#7aa2f7\"/><text x=\"32\" y=\"104\" text-anchor=\"middle\" font-size=\"11\">1</text><rect x=\"54\" y=\"40\" width=\"12\" height=\"44\" rx=\"2\" fill=\"claude\"/><rect x=\"68\" y=\"75\" width=\"12\" height=\"9\" rx=\"2\" fill=\"#7aa2f7\"/><text x=\"66\" y=\"104\" text-anchor=\"middle\" font-size=\"11\">2</text><rect x=\"88\" y=\"64\" width=\"12\" height=\"20\" rx=\"2\" fill=\"claude\"/><rect x=\"102\" y=\"80\" width=\"12\" height=\"4\" rx=\"2\" fill=\"#7aa2f7\"/><text x=\"100\" y=\"104\" text-anchor=\"middle\" font-size=\"11\">3</text><rect x=\"122\" y=\"29\" width=\"12\" height=\"55\" rx=\"2\" fill=\"claude\"/><rect x=\"136\" y=\"70\" width=\"12\" height=\"14\" rx=\"2\" fill=\"#7aa2f7\"/><text x=\"134\" y=\"104\" text-anchor=\"middle\" font-size=\"11\">4</text></svg>"
+        },
+        "type": "Svg"
+       },
+       {
+        "children": [
+         {
+          "children": [
+           {
+            "children": [],
+            "props": {
+             "backgroundColor": "claude",
+             "height": 1,
+             "width": 1
+            },
+            "type": "Box"
+           },
+           {
+            "children": [
+             "input"
+            ],
+            "props": {
+             "color": "subtle",
+             "size": "xs"
+            },
+            "type": "Text"
+           }
+          ],
+          "props": {
+           "alignItems": "center",
+           "gap": 1
+          },
+          "type": "Box"
+         },
+         {
+          "children": [
+           {
+            "children": [],
+            "props": {
+             "backgroundColor": "#7aa2f7",
+             "height": 1,
+             "width": 1
+            },
+            "type": "Box"
+           },
+           {
+            "children": [
+             "output"
+            ],
+            "props": {
+             "color": "subtle",
+             "size": "xs"
+            },
+            "type": "Text"
+           }
+          ],
+          "props": {
+           "alignItems": "center",
+           "gap": 1
+          },
+          "type": "Box"
+         }
+        ],
+        "props": {
+         "gap": 3
+        },
+        "type": "Box"
+       }
+      ],
+      "props": {
+       "flexDirection": "column",
+       "gap": 3
+      },
+      "type": "Box"
+     }
+    },
+    "seq": 1014
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 104,
+   "method": "plugin.boopis.mod.props",
+   "params": {
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "component": "AbovePrompt",
+    "props": {
+     "isWorking": true,
+     "isCollapsed": true
+    }
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 104,
+   "result": {}
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.mod.render",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "component": "AbovePrompt",
+     "kind": "tree",
+     "tree": {
+      "children": [
+       {
+        "children": [
+         "Waiting for the turn"
+        ],
+        "props": {
+         "color": "success",
+         "wrap": "truncate"
+        },
+        "type": "Text"
+       }
+      ],
+      "props": {
+       "alignItems": "center",
+       "flexGrow": 1,
+       "gap": 2,
+       "justifyContent": "space-between"
+      },
+      "type": "Box"
+     }
+    },
+    "seq": 1015
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 105,
+   "method": "plugin.boopis.mod.props",
+   "params": {
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "component": "AbovePrompt",
+    "props": {
+     "isWorking": false,
+     "isCollapsed": true
+    }
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 105,
+   "result": {}
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.mod.render",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "component": "AbovePrompt",
+     "kind": "tree",
+     "tree": {
+      "children": [
+       {
+        "children": [
+         "Tests idle"
+        ],
+        "props": {
+         "color": "success",
+         "wrap": "truncate"
+        },
+        "type": "Text"
+       }
+      ],
+      "props": {
+       "alignItems": "center",
+       "flexGrow": 1,
+       "gap": 2,
+       "justifyContent": "space-between"
+      },
+      "type": "Box"
+     }
+    },
+    "seq": 1016
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 106,
+   "method": "plugin.boopis.mod.press",
+   "params": {
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "handler": "0.h4"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 106,
+   "result": {
+    "handled": true
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.mod.render",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "component": "Pane",
+     "kind": "tree",
+     "id": "tests",
+     "tree": {
+      "children": [
+       {
+        "children": [
+         {
+          "children": [
+           "Running tests"
+          ],
+          "props": {
+           "bold": true
+          },
+          "type": "Text"
+         },
+         {
+          "children": [],
+          "props": {
+           "disabled": true,
+           "label": "Running",
+           "onPress": {
+            "$handler": "0.h7"
+           }
+          },
+          "type": "Button"
+         }
+        ],
+        "props": {
+         "alignItems": "center",
+         "gap": 2,
+         "justifyContent": "space-between"
+        },
+        "type": "Box"
+       },
+       {
+        "children": [
+         {
+          "children": [],
+          "props": {
+           "label": "Show",
+           "onSelect": {
+            "$handler": "0.h8"
+           },
+           "options": [
+            {
+             "label": "All tests",
+             "value": "all"
+            },
+            {
+             "label": "Failing only",
+             "value": "failing"
+            }
+           ],
+           "value": "all"
+          },
+          "type": "Select"
+         },
+         {
+          "children": [
+           "3 shown"
+          ],
+          "props": {
+           "color": "subtle",
+           "size": "xs"
+          },
+          "type": "Text"
+         }
+        ],
+        "props": {
+         "alignItems": "center",
+         "gap": 2
+        },
+        "type": "Box"
+       },
+       {
+        "children": [],
+        "props": {
+         "path": "npm test",
+         "source": " PASS  money.test.ts\n FAIL  invoice.test.ts  \u203a rounds per line item\n PASS  cents.test.ts",
+         "wrap": true
+        },
+        "type": "Code"
+       },
+       {
+        "children": [],
+        "props": {
+         "text": "The failure is in `invoice.test.ts`. [Open the run](https://ci.example.com/runs/4182)"
+        },
+        "type": "Markdown"
+       },
+       {
+        "children": [],
+        "props": {
+         "label": "Ask which to run",
+         "onPress": {
+          "$handler": "0.h9"
+         }
+        },
+        "type": "Button"
+       }
+      ],
+      "props": {
+       "flexDirection": "column",
+       "gap": 3
+      },
+      "type": "Box"
+     }
+    },
+    "seq": 1017
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.mod.render",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "component": "AbovePrompt",
+     "kind": "tree",
+     "tree": {
+      "children": [
+       {
+        "children": [
+         "Running tests"
+        ],
+        "props": {
+         "color": "warning",
+         "wrap": "truncate"
+        },
+        "type": "Text"
+       },
+       {
+        "children": [],
+        "props": {
+         "dots": 8,
+         "label": "Running tests",
+         "role": "progressbar"
+        },
+        "type": "Box"
+       }
+      ],
+      "props": {
+       "alignItems": "center",
+       "flexGrow": 1,
+       "gap": 2,
+       "justifyContent": "space-between"
+      },
+      "type": "Box"
+     }
+    },
+    "seq": 1018
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 107,
+   "method": "plugin.boopis.mod.select",
+   "params": {
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "handler": "0.h8",
+    "value": "failing"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 107,
+   "result": {
+    "handled": true
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.mod.render",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "component": "Pane",
+     "kind": "tree",
+     "id": "tests",
+     "tree": {
+      "children": [
+       {
+        "children": [
+         {
+          "children": [
+           "Running tests"
+          ],
+          "props": {
+           "bold": true
+          },
+          "type": "Text"
+         },
+         {
+          "children": [],
+          "props": {
+           "disabled": true,
+           "label": "Running",
+           "onPress": {
+            "$handler": "0.h10"
+           }
+          },
+          "type": "Button"
+         }
+        ],
+        "props": {
+         "alignItems": "center",
+         "gap": 2,
+         "justifyContent": "space-between"
+        },
+        "type": "Box"
+       },
+       {
+        "children": [
+         {
+          "children": [],
+          "props": {
+           "label": "Show",
+           "onSelect": {
+            "$handler": "0.h11"
+           },
+           "options": [
+            {
+             "label": "All tests",
+             "value": "all"
+            },
+            {
+             "label": "Failing only",
+             "value": "failing"
+            }
+           ],
+           "value": "failing"
+          },
+          "type": "Select"
+         },
+         {
+          "children": [
+           "1 shown"
+          ],
+          "props": {
+           "color": "subtle",
+           "size": "xs"
+          },
+          "type": "Text"
+         }
+        ],
+        "props": {
+         "alignItems": "center",
+         "gap": 2
+        },
+        "type": "Box"
+       },
+       {
+        "children": [],
+        "props": {
+         "path": "npm test",
+         "source": " FAIL  invoice.test.ts  \u203a rounds per line item",
+         "wrap": true
+        },
+        "type": "Code"
+       },
+       {
+        "children": [],
+        "props": {
+         "text": "The failure is in `invoice.test.ts`. [Open the run](https://ci.example.com/runs/4182)"
+        },
+        "type": "Markdown"
+       },
+       {
+        "children": [],
+        "props": {
+         "label": "Ask which to run",
+         "onPress": {
+          "$handler": "0.h12"
+         }
+        },
+        "type": "Button"
+       }
+      ],
+      "props": {
+       "flexDirection": "column",
+       "gap": 3
+      },
+      "type": "Box"
+     }
+    },
+    "seq": 1019
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 108,
+   "method": "plugin.boopis.mod.press",
+   "params": {
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "handler": "0.h12"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 108,
+   "result": {
+    "handled": true
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.form.opened",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "form_id": "01a1f31f-e542-783c-916e-45b93a53a017",
+     "kind": "choice",
+     "title": "Which tests should I re-run?",
+     "schema": {
+      "type": "object",
+      "properties": {
+       "answer": {
+        "type": "string",
+        "title": "Run",
+        "enum": [
+         "The failing test",
+         "The billing suite",
+         "Everything"
+        ]
+       }
+      },
+      "required": [
+       "answer"
+      ]
+     },
+     "submit": {},
+     "sensitive": false,
+     "origin": {
+      "kind": "mod",
+      "plugin": "test-runner"
+     },
+     "expires_at": "2026-11-19T10:25:16.226Z"
+    },
+    "seq": 1020
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 109,
+   "method": "plugin.boopis.form.submit",
+   "params": {
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "form_id": "01a1f31f-e542-783c-916e-45b93a53a017",
+    "values": {
+     "answer": "The billing suite"
+    },
+    "provided": []
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 109,
+   "result": {
+    "form_id": "01a1f31f-e542-783c-916e-45b93a53a017",
+    "status": "submitted"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.form.resolved",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "form_id": "01a1f31f-e542-783c-916e-45b93a53a017",
+     "status": "submitted"
+    },
+    "seq": 1021
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 110,
+   "method": "plugin.boopis.mod.list",
+   "params": {
+    "session_id": "local-ccb1e4024263ba297445020a0459fa15f675238aac22e9c6409a4faf60479e4c"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 110,
+   "result": {
+    "capabilities": {
+     "available": true,
+     "platform": "linux",
+     "reason": null
+    },
+    "sessions": []
+   }
+  }
+ }
+]

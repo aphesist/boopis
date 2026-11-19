@@ -17,7 +17,7 @@ import type { FieldSchema, FormSpec, PickerKind } from '../../data';
 import type { HxCard } from './card';
 import { animate } from './motion';
 import { actions, bot, breath, btn, cap, check, diffWell, fmt, foot, headrow, meta, mini, originText, originVisual, sentenceHTML, sentenceText } from './parts';
-import { FORM_KINDS, PERMISSION, answerText, formT, hasCancel, holdForm, isReq, optLabel, props, receiptText, validateForm, valuesOf } from './form-model';
+import { FORM_KINDS, PERMISSION, answerText, formT, hasCancel, holdForm, isLocalForm, isReq, optLabel, props, receiptText, validateForm, valuesOf } from './form-model';
 import type { FieldError, Values } from './form-model';
 import type { Ctx, Data, Kind } from './types';
 
@@ -116,6 +116,8 @@ function fieldHTML(c: Ctx, st: FormState, name: string, p: FieldSchema): string 
 function formExtras(d: FormSpec): string {
   let h = '';
   if (d.diff) h += diffWell(String(d.diff), d.file);
+  if (d.swatches) h += '<div class="cd-well cd-swatches" role="group" aria-label="Colours">' + d.swatches.map((x) => '<span class="cd-swatch"><i style="background:' + esc(x[1]) + '" aria-hidden="true"></i><span>' + esc(x[0]) + '</span></span>').join('') +
+    (d.preview ? '<span class="cd-live" role="status"><i aria-hidden="true"></i><span>Previewing</span></span>' : '') + '</div>';
   if (d.plan) h += '<ol class="cd-plan">' + d.plan.map((x) => '<li>' + fmt(x) + '</li>').join('') + '</ol>';
   if (d.contents) h += '<div class="cd-well cd-contents">' + d.contents.map((x) => '<div class="cd-well__line"><span class="cd-well__strong">' + esc(x[0]) + '</span><span>' + fmt(x[1] ?? '') + '</span></div>').join('') +
     (d.pinned ? '<div class="cd-well__line cd-pinned"><span>Pinned</span><span class="cd-mono">' + esc(d.pinned) + '</span></div>' : '') + '</div>';
@@ -179,7 +181,7 @@ export const formKind: Kind = {
 function receiptHTML(c: Ctx): string {
   const d = spec(c.d), t = formT(d), who = c.origin ? originText(c.origin) : 'The agent';
   if (c.s === 'done') return String(c.d['receiptText'] || c.d['receipt'] || receiptText(d, '', ''));
-  if (c.s === 'deferred') return 'Later. It waits in the dock';
+  if (c.s === 'deferred') return String(c.d['deferredText'] || 'Later. It waits in the dock');
   if (c.s === 'expired') return 'Expired, nothing was saved';
   if (c.s === 'cancelled') return String(c.d['cancelledText'] || (t.cancelled ?? 'Cancelled') + '. ' + cap(who) + ' continues without it');
   return '';
@@ -251,7 +253,7 @@ export async function submitForm(card: HxCard, viaHold: boolean): Promise<boolea
   dropSecrets(card);
   card.setState('submitting');
   try {
-    await formsHost().submit(d.id, sent);
+    if (!isLocalForm(d)) await formsHost().submit(d.id, sent);
     if (card.state !== 'submitting') return true;
     card.setState('done');
     return true;
@@ -266,7 +268,7 @@ export function cancelForm(card: HxCard): void {
   const d = spec(card.data);
   if (card.state === 'submitting' && d.kind === 'signin') { card.setState('open'); return; }
   card.setState('cancelled');
-  void formsHost().cancel(d.id).catch(() => undefined);
+  if (!isLocalForm(d)) void formsHost().cancel(d.id).catch(() => undefined);
 }
 
 async function signin(card: HxCard, el: HTMLElement | undefined): Promise<void> {

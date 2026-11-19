@@ -23,8 +23,12 @@ export const FORM_KINDS: Readonly<Record<string, KindTemplate>> = {
   connector: { stamp: 'needs you', submit: 'Install', hold: true, busy: 'Installing', done: (f) => 'Installed ' + (f.name || 'the connector') },
   choice: { stamp: 'waiting for you', submit: 'Use this', busy: 'Saving', done: (_f, v) => 'Chose ' + v },
   plan: { stamp: 'needs you', submit: 'Approve plan', cancel: 'Reject', busy: 'Starting the work', done: () => 'Plan approved', cancelled: 'Plan rejected' },
-  feedback: { stamp: '', submit: 'Send', cancel: false, busy: 'Saving', done: () => 'Thanks. Stored for you only' }
+  feedback: { stamp: '', submit: 'Send', cancel: false, busy: 'Saving', done: () => 'Thanks. Stored for you only' },
+  /** a mod's colours (MODS.md section 3): not owed, so no stamp; Keep applies them, Reject leaves the theme as it is */
+  theme: { stamp: '', submit: 'Keep', cancel: 'Reject', busy: 'Applying', done: (f) => f.receipt || 'Kept', cancelled: 'Rejected' }
 };
+/** a form the UI answers itself: a theme card is Keep or Reject in the app's own theme, and no provider hears of it */
+export const isLocalForm = (d: Pick<FormSpec, 'kind'>): boolean => d.kind === 'theme';
 export const formT = (d: Pick<FormSpec, 'kind'>): KindTemplate => FORM_KINDS[d.kind] ?? (FORM_KINDS['question'] as KindTemplate);
 export const props = (d: Pick<FormSpec, 'schema'>): Array<[string, FieldSchema]> => Object.entries(d.schema?.properties ?? {});
 export const isReq = (d: Pick<FormSpec, 'schema'>, name: string): boolean => (d.schema?.required ?? []).includes(name);

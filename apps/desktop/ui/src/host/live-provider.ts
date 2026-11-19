@@ -14,6 +14,7 @@ import { createDetails } from './live/details';
 import { createLiveBots } from './live/bots';
 import { todosFrom } from './live/map-details';
 import { blankData } from './live/blanks';
+import { createModsHost } from './live/mods';
 import { chooseAnotherModel, createFormsHost, hasHostDialogs, tauriPickFolder } from './live/forms';
 import type { FormEntry } from './live/forms';
 import { tauriSecrets } from './secrets';
@@ -89,6 +90,8 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   };
   const bind = (c: Convo, gwId: string): void => { c.gwId = gwId; byGw.set(gwId, c.uiId); };
   const details = createDetails({ client, now: () => now().getTime(), gwId: (id) => convos.get(id)?.gwId ?? (id.startsWith('new-') ? null : id), onRefreshed: (id) => { const c = convos.get(id); if (c) syncBlanks(c); } });
+  /* Claude Code mods: what a session's mods draw (`mod.*` events) and the answers sent back; one `ModSession` per session */
+  const modsHost = createModsHost({ client, uiOf: (gw) => byGw.get(gw), gwOf: (id) => convos.get(id)?.gwId ?? null });
   const user = store<User>({ name: 'you', initials: 'y' });
   const patchSession = (id: string, patch: Partial<SessionSummary>): void => list.update((l) => l.map((s) => (s.id === id ? { ...s, ...patch } : s)));
 
@@ -109,6 +112,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   async function resume(c: Convo): Promise<void> {
     const res = await client.request('session.resume', { session_id: c.uiId });
     bind(c, res.session_id);
+    void modsHost.attach(c.uiId);   /* the mods already loaded in a resumed session */
     c.model = res.info.model ?? '';
     c.turns = transcriptToTurns(res.messages, c.model, c.uiId + ':');
     c.hydrated = true;
@@ -217,6 +221,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     if (!c) return;
     const p = ev.payload ?? {};
     if (typeof ev.execution_generation === 'number') c.generation = ev.execution_generation;
+    if (modsHost.handle(uiId, ev)) return;
     details.onEvent(uiId, ev);
     if (ev.type.startsWith('plugin.boopis.blank.')) { syncBlanks(c); return; }
     if (formsHost.handle(ev, { gwSession: ev.session_id ?? '', model: c.model })) return;
@@ -236,6 +241,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
         const outcome = typeof p['outcome'] === 'string' ? p['outcome'] : 'completed';
         if (!c.running) startTurn(c);
         finishTurn(c, text, outcome !== 'completed');
+        if (!modsHost.known(uiId)) void modsHost.attach(uiId);   /* mods load at a session's first prompt */
         break;
       }
       case 'approval.request': {
@@ -305,7 +311,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   /* ───────── the link ───────── */
   client.onEvent(onEvent);
   client.onState((s) => {
-    if (s.phase === 'ready' && s.reconnected) { for (const c of convos.values()) if (c.gwId) void formsHost.reload(c.gwId, c.model); refreshList().catch((e: unknown) => { log.warn('could not refresh after reconnecting', e); }); details.onLinkReady(); }
+    if (s.phase === 'ready' && s.reconnected) { for (const c of convos.values()) if (c.gwId) { void formsHost.reload(c.gwId, c.model); void modsHost.attach(c.uiId); } refreshList().catch((e: unknown) => { log.warn('could not refresh after reconnecting', e); }); details.onLinkReady(); }
   });
   client.onEvent((ev) => {
     if (ev.type !== 'connection.replay_gap' || typeof ev.payload?.['session_id'] !== 'string') return;
@@ -421,7 +427,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     ...mock,
     info: { live: true, preview: new Set(['feedforward']), unavailable: details.unavailable },
     ready, sessions, waits, user, forms: formsHost.source, bots: liveBots.source, schedules: liveBots.schedules,
-    details: details.source, run: details.run,
+    details: details.source, run: details.run, mods: modsHost.source,
     files: { pick: () => null, complete: (word, id) => details.files.complete(word, id) },
     dictation: { start: () => () => undefined }, // nothing hears you yet: the mock's transcript is invented text
     feedforward: { catalog: () => (flag ? mock.feedforward.catalog() : []) },
