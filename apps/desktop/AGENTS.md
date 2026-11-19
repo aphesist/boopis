@@ -161,7 +161,7 @@ ui/
   index.html            the app's markup (the shell's chrome), as v6's index.html
   src/main.ts           entry: styles, the web component, the provider, the modules, boot
   src/core/             bus (typed events), state (typed HX.state + setState), registry (slots, provide), settings, log, keys, dom
-  src/components/       the HX.ui library, one module per primitive (hold, composer, orb, logo, layer, squircle, model-mark, select and its listbox, progress dots, mod-view, ...); components.css, model-mark.css, progress.css, mod-view.css
+  src/components/       THE KIT, `@boopis/ui` (README.md there; docs/UI-COMPONENTS.md): every repeated UI pattern, imported only through its entry by that name (kit.guard.test.ts); kit.css (the tokens and the library CSS), `pnpm kit` builds dist-kit/. The HX.ui library, one module per primitive (hold, composer, orb, logo, layer, squircle, model-mark, select and its listbox, progress dots, mod-view, ...); components.css, model-mark.css, progress.css, mod-view.css
   src/modules/          shell, session, bots, dock, cards: each module's TS and CSS
   src/styles/           tokens.css (+ tokens.json, generated), theme.ts (runtime), theme-panel.ts, fonts.ts, index.ts (the cascade order)
   src/data/             THE DATA SEAM: types, provider interfaces, mock provider, README.md
@@ -257,7 +257,7 @@ pnpm test:parity              # LOCAL ONLY (not in CI): needs Chromium (`pnpm ex
 ```
 CI runs `typecheck`, `test` and `test:smoke` (it installs Chromium with `pnpm exec playwright install --with-deps chromium`). `playwright` is pinned in `package.json`; on a machine with a pre-installed Chromium keep that pin equal to the installed version and do not run `playwright install`. The tests run at deviceScaleFactor 1 and serve a `vite build --mode e2e` (it exposes `window.__hx` for the tests; the production build has no global). Parity compares pixels with the orbs hidden (their idle motion is random by design) and again with every orb frozen to a still frame, plus the rects of every orb. **Any visible difference from v6 is a bug** unless you can name an intentional fix and list it below.
 
-Visible differences from v6, each an owner decision: the Bots tab's **Archived** group under the roster (the mock has two archived bots, so the v6 mock-up's bots sidebar differs below the last bot), and the "made outside boopis" mark (only on a bot made outside boopis: none in the default mock, `?fixture=outside` in the e2e build adds one).
+Visible differences from v6, each an owner decision: the Bots tab's **Archived** group under the roster (the mock has two archived bots, so the v6 mock-up's bots sidebar differs below the last bot), and the "made outside boopis" mark (only on a bot made outside boopis: none in the default mock, `?fixture=outside` in the e2e build adds one). The kit's consolidation (docs/UI-COMPONENTS.md) applies approved design-system rules the mock-up predates: the dialog head's tabs are capsules like its close button (R-tab-1, R-corner-5); every scrollbar is the thin `::-webkit-scrollbar` bar in WebKitGTK too, with a stable gutter where content changes and a track that stops short of a curved corner (R-scroll-1 to 5); the command field's glyph sits in a 26px square and its key chips are concentric with it (R-search-3, R-kbd-2); Settings > Keyboard lists its groups in one column; a form's several-choice rows lead with a check at rest and say "Choose any" (R-check-1).
 
 Intentional differences from v6, all invisible:
 - accessible names contain their visible text (WCAG 2.5.3): the session rows say when they ran, the command field and the account button name their words; the avatar's initial is drawn by CSS; a space separates the row's parts and a key's chips in the markup;
@@ -273,6 +273,7 @@ Intentional differences from v6, all invisible:
 - Do not read `localStorage` directly: go through `core/settings` (wrapped, versioned). Do not use `console` directly: use `core/log`.
 - Do not use a control the platform draws (`<select>`, date, colour, number, range, `title=`, a stock checkbox): `ui.select`, `ui.listbox` and `ui.field({ kind: 'model' })` are the choosers; `docs/UI-CONTROLS.md` is the audit and `components/native-controls.test.ts` the guard.
 - Do not duplicate a primitive: look in `src/components` first (STANDARDS section 9); two places that need a helper put it in `core/` or `components/`.
+- Do not import a component's file or re-draw a kit pattern in a module: import `@boopis/ui`, and extend the kit with a typed variant (`kit.guard.test.ts` fails otherwise).
 - Do not hand-edit `src/styles/tokens.json`: `pnpm tokens` generates it from `tokens.css`, and the build checks it.
 - Do not make the UI depend on the dock: everything it shows is reachable elsewhere.
 - Do not add a global key inside a module: the shell owns global keys (`keymap.ts`); modules handle keys on their own elements and call `preventDefault()`.
