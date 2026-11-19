@@ -21,7 +21,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from typing import Any, Protocol
 
 from ..config.model import ExecSettings
-from ..errors import KernelDeadError
+from ..errors import KernelDeadError, SandboxUnavailableError
 from ..util.log import get_logger
 from .cell import CallFailure, Cell
 from .launcher import ExitInfo, Spawned
@@ -80,7 +80,10 @@ class KernelProcess:
             self._kill(f"the kernel did not say ready within {self.settings.start_timeout_ms} ms")
             self._reader.join(REAP_S * 2)
         if self.dead:
-            raise KernelDeadError(self.dead)
+            # never reached ``kernel.ready``: the sandbox could not run the kernel, which is not a kernel that died
+            raise SandboxUnavailableError(
+                f"the kernel did not start inside the sandbox: {self.dead}", data={"reason": self.dead}
+            )
 
     def stop(self, reason: str) -> None:
         """Ask the kernel to leave, then make sure it has. State is lost, on purpose."""

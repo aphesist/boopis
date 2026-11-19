@@ -46,6 +46,23 @@ def _int(params: Mapping[str, Any], key: str, default: int) -> int:
     return value
 
 
+def _kernel(rt: Any) -> dict[str, Any] | None:
+    """Whether the exec kernel can start here: ``{ok, reason}``, or None when there is no hx to sandbox it."""
+    from ..exec import available
+    from ..exec.probe import sandbox_problem
+
+    if not available():
+        return {
+            "ok": False,
+            "reason": "exec needs the sandbox's private channel, which does not exist on this platform",
+        }
+    client = rt.hx_client()
+    if client is None:
+        return None
+    problem = sandbox_problem(client, rt.load_settings().value.exec)
+    return {"ok": not problem, "reason": problem}
+
+
 def describe(params: Mapping[str, Any], *, session_id: str | None = None, **_: Any) -> dict[str, Any]:
     rt = runtime()
     loaded = rt.load_settings()
@@ -62,7 +79,7 @@ def describe(params: Mapping[str, Any], *, session_id: str | None = None, **_: A
         "protocol": PROTOCOL,
         "capabilities": list(CAPABILITIES),
         "hx": None,  # the hx binary is not wired in this part
-        "kernel": None,  # nor is the exec kernel
+        "kernel": _kernel(rt),
         "config": {"mode": loaded.value.mode, "errors": list(loaded.errors), "ladder_errors": ladder_errors},
     }
 
