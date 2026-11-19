@@ -10,6 +10,7 @@ import { getLayout, setState, state } from './core/state';
 import { emit, on } from './core/bus';
 import { setProvider } from './data';
 import { selectProvider } from './data/select';
+import { inTauri } from './host/bridge';
 import { themeApi } from './styles/theme';
 import './modules/cards';
 import './modules/session';
@@ -20,6 +21,11 @@ import { boot } from './modules/shell';
 const log = logger('main');
 
 async function start(): Promise<void> {
+  if (inTauri()) {
+    /* first run: the host sets Hermes up for hypotaxis (plugin, settings, a key) before anything connects; a screen of its own, thin on purpose */
+    const [{ runFirstRun }, { tauriSetupBridge }] = await Promise.all([import('./host/first-run'), import('./host/setup-bridge')]);
+    await runFirstRun(tauriSetupBridge());
+  }
   const provider = await selectProvider();
   setProvider(provider);
   await provider.ready;
