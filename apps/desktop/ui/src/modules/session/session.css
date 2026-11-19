@@ -106,7 +106,7 @@
 .ssr-file .ss-n { margin-left: auto; }
 /* the copy button sits in the well's corner: the well is a .ui-nest that declares its radius, inset and the small icon
    button's size, and the button is a .ui-corner (data-corner="tr") that takes its radius and inset (DESIGN-SYSTEM §8.2) */
-.ssr-term-wrap { position: relative; --r-outer: var(--r-m); --pad: 4px; --corner-size: 24px; }
+.ssr-term-wrap { position: relative; --r-outer: var(--r-m); --pad: var(--pad-menu); --corner-size: 24px; }   /* the menu's 4px step: no token of its own yet */
 .ssr-term {
   margin: 0; padding: 10px var(--sp-3); border-radius: var(--r-outer); --sq-bg: var(--bg-0); background: var(--sq-bg);
   font-size: var(--fs-2xs); line-height: 1.6; color: var(--text-dim); white-space: pre-wrap; overflow-wrap: anywhere;

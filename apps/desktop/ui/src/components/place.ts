@@ -1,12 +1,13 @@
 /* place: where a floating surface goes against its anchor, computed once for every overlay (tooltips, menus,
-   popovers, the card layer's blank). DESIGN-SYSTEM.md §14.18, §14.19, §14.23.
-   - Outside the anchor, with the system's gap (8px above and below, 10px to the side, as the tooltip and menus had).
+   popovers, the card layer's blank, the listbox). DESIGN-SYSTEM.md §14.18, §14.19, §14.23; rules R-float-1, R-tip-2.
+   - Outside the anchor, `--float-gap` (8) from it on every side and at least `--float-margin` (8) from the window's edge
+     (R-float-1; the rail's tooltip used to sit 10 away, F45).
    - A preferred side per control: `data-tip-pos` on the control or on a container of it ("top", "bottom", "left",
      "right", each with an optional "-start" or "-end": aligned to the control's edge instead of centred on it). A
      composer's corner controls ask for "top-start" and "top-end", so a tip never hangs past the composer's corner.
    - Flip to the opposite side when the preferred one does not fit, and shift along the edge to stay in the window
      (8px from its edges).
-   - Never over an input's text: a container names what must stay visible in `data-overlay-avoid` (a selector, matched
+   - Never over an input's text (R-tip-2, F40): a container names what must stay visible in `data-overlay-avoid` (a selector, matched
      inside it); a surface that would cover one moves past it on the same side. A rect that holds the anchor itself is
      not avoided (a menu opened on a word in the text).
    `placeRect` is the pure maths (unit tested); `placeAt` reads every rect, then writes once: left, top and
@@ -31,7 +32,16 @@ export interface PlaceInput {
 }
 export interface Placement { x: number; y: number; side: Side; align: Align }
 
-export const GAP_BLOCK = 8, GAP_INLINE = 10, MARGIN = 8;
+/** R-float-1's tokens as numbers: read once from tokens.css (they follow no theme or density), 8 until then */
+export const FLOAT = { gap: 8, margin: 8 };
+let floatRead = false;
+function readFloat(): void {
+  if (floatRead || typeof getComputedStyle !== 'function') return;
+  const cs = getComputedStyle(document.documentElement), g = parseFloat(cs.getPropertyValue('--float-gap')), m = parseFloat(cs.getPropertyValue('--float-margin'));
+  if (g >= 0) FLOAT.gap = g;
+  if (m >= 0) FLOAT.margin = m;
+  floatRead = g >= 0 && m >= 0;
+}
 const OPP: Record<Side, Side> = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' };
 const vertical = (s: Side): boolean => s === 'top' || s === 'bottom';
 const overlaps = (a: Box, b: Box): boolean => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
@@ -45,7 +55,7 @@ export function parsePos(v: string | null | undefined): { side: Side; align: Ali
 }
 
 export function placeRect(i: PlaceInput): Placement {
-  const a = i.anchor, w = i.w, h = i.h, m = i.margin ?? MARGIN, align = i.align ?? 'center', over = i.overhang ?? 0;
+  const a = i.anchor, w = i.w, h = i.h, m = i.margin ?? FLOAT.margin, align = i.align ?? 'center', over = i.overhang ?? 0;
   const avoid = (i.avoid ?? []).filter((b) => !holds(b, a));
   /* the cross axis: aligned to the anchor, then shifted into the window */
   const cross = (s: Side): number => {
@@ -58,7 +68,7 @@ export function placeRect(i: PlaceInput): Placement {
   };
   /* the main axis: outside the anchor, then past anything to avoid that it would cover */
   const along = (s: Side, c: number): number => {
-    const g = i.gap ?? (vertical(s) ? GAP_BLOCK : GAP_INLINE);
+    const g = i.gap ?? FLOAT.gap;
     let p = s === 'top' ? a.top - g - h : s === 'bottom' ? a.bottom + g : s === 'left' ? a.left - g - w : a.right + g;
     for (let n = 0; n < 8; n++) {
       const r: Box = vertical(s) ? { left: c, right: c + w, top: p, bottom: p + h } : { left: p, right: p + w, top: c, bottom: c + h };
@@ -95,6 +105,7 @@ export function avoidRects(anchor: Element): Box[] {
 export interface PlaceAtOpts { side: Side; align?: Align | undefined; overhang?: number | undefined; gap?: number | undefined }
 /** place `node` (already in the document, positioned fixed or absolute to the window) against `anchor` */
 export function placeAt(node: HTMLElement, anchor: Element, o: PlaceAtOpts): Placement {
+  readFloat();
   const r = anchor.getBoundingClientRect(), w = node.offsetWidth, h = node.offsetHeight, avoid = avoidRects(anchor);
   const p = placeRect({ anchor: r, w, h, view: { w: innerWidth, h: innerHeight }, side: o.side, align: o.align, overhang: o.overhang, gap: o.gap, avoid });
   node.style.left = p.x + 'px'; node.style.top = p.y + 'px';

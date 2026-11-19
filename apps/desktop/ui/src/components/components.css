@@ -16,8 +16,9 @@
 /* ───────────── corners (owner decisions, 18 November 2026): Apple continuous corners in every engine; nested corners fit ─────────────
    The scale (--r-xs to --r-l, --r-floor, --corner-smoothing, --composer-pad) lives in tokens.css (MIGRATION.md §0.8).
    The corner is a path (HX.ui.squircle, below), so WebKit and Chromium draw the same curve.
-   The nesting contract (DESIGN-SYSTEM.md §8.2), declared ONCE, here; corners.ts is the same arithmetic, tested.
-   A container declares --r-outer and --pad (and --corner-size when what sits in its corners is not a --ctl-s square);
+   The nesting contract (DESIGN-SYSTEM.md §8.2: R-corner-3, R-corner-4, R-corner-5, R-corner-9), declared ONCE, here; corners.ts is the same arithmetic, tested.
+   A container declares --r-outer and --pad from the tokens (--pad-menu, --pad-toast, --composer-pad, ...: its --r-in then
+   equals tokens.css's --r-in-* for it), and --corner-size when what sits in its corners is not a --ctl-s square;
    the rule below derives, on the container itself:
      --r-in          = min(outer, max(floor, outer − pad))   what a nested surface takes (.ui-fit)
      --r-corner      = min(--r-in, size / 2)                 what a corner control takes (a 28px square is at most a circle)
@@ -197,7 +198,7 @@
   --n: 2; --i: 0;
   position: relative; display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; flex: none;
   height: var(--ctl); padding: var(--corner-inset); box-sizing: border-box;
-  --r-outer: var(--r-s); --pad: 3px; border-radius: var(--r-outer);
+  --r-outer: var(--r-s); --pad: var(--pad-seg); border-radius: var(--r-outer);
   --sq-bg: var(--bg-0); background: var(--sq-bg); box-shadow: inset 0 0 0 1px var(--hair);
 }
 .ui-seg--fill { display: grid; width: 100%; }
@@ -313,15 +314,15 @@ button.ui-group__head:hover { color: var(--text); }
 
 /* ───────────── floating surfaces: menu, popover, tooltip, toast ───────────── */
 .ui-menu, .ui-pop, .ui-listbox {
-  position: fixed; z-index: var(--z-menu); box-sizing: border-box; min-width: 220px; max-width: 340px; padding: 4px;
-  --r-outer: var(--r-m); --pad: 4px; border-radius: var(--r-outer); background: var(--bg-1); box-shadow: inset 0 0 0 1px var(--line), var(--shadow-pop);
+  position: fixed; z-index: var(--z-menu); box-sizing: border-box; min-width: 220px; max-width: 340px; padding: var(--pad-menu);
+  --r-outer: var(--r-m); --pad: var(--pad-menu); border-radius: var(--r-outer); background: var(--bg-1); box-shadow: inset 0 0 0 1px var(--line), var(--shadow-pop);
   font: 400 var(--fs-s)/var(--lh-ui) var(--sans); color: var(--text);
   opacity: 0; translate: 0 -6px; transition: opacity var(--dur-2) var(--ease), translate var(--dur-2) var(--ease);
 }
 .ui-menu[data-place="above"], .ui-pop[data-place="above"], .ui-listbox[data-place="above"] { translate: 0 6px; }
 .ui-menu.is-in, .ui-pop.is-in, .ui-listbox.is-in { opacity: 1; translate: 0 0; }
 .ui-menu[data-static], .ui-pop[data-static] { position: relative; opacity: 1; translate: none; z-index: auto; }
-.ui-pop { padding: var(--sp-3); --pad: var(--sp-3); width: 360px; max-width: calc(100vw - 24px); }   /* a 12px inset: its controls keep their own step */
+.ui-pop { padding: var(--pad-pop); --pad: var(--pad-pop); width: 360px; max-width: calc(100vw - 24px); }   /* a 12px inset: its controls keep their own step */
 .ui-menu__title, .ui-listbox__head { padding: 6px 8px 4px; font: 500 var(--fs-xs)/var(--lh-ui) var(--sans); color: var(--text-quiet); text-transform: var(--ui-case); }
 .ui-menu__item, .ui-option {
   appearance: none; display: flex; align-items: flex-start; gap: 8px; width: 100%; box-sizing: border-box; min-height: var(--row-h); padding: 6px 8px; margin: 0; border: 0;
@@ -352,7 +353,7 @@ button.ui-group__head:hover { color: var(--text); }
 
 .ui-tip {
   position: fixed; z-index: var(--z-tooltip); pointer-events: none; display: flex; align-items: center; gap: 8px; box-sizing: border-box;
-  padding: 4px 4px 4px 8px; --r-outer: var(--r-s); --pad: 4px; border-radius: var(--r-outer);
+  padding: var(--pad-tip) var(--pad-tip) var(--pad-tip) 8px; --r-outer: var(--r-s); --pad: var(--pad-tip); border-radius: var(--r-outer);
   background: var(--bg-3); box-shadow: inset 0 0 0 1px var(--hair), var(--shadow-tip);
   font: 400 var(--fs-xs)/var(--lh-ui) var(--sans); color: var(--text); white-space: nowrap;
   opacity: 0; transform: translateY(var(--tip-dy, 3px)); transition: opacity var(--dur-out) var(--ease), transform var(--dur-out) var(--ease);
@@ -368,7 +369,7 @@ button.ui-group__head:hover { color: var(--text); }
 .ui-toast {
   position: fixed; z-index: var(--z-toast); top: calc(var(--chrome-h) + 12px); left: var(--hx-center-x, 50vw); translate: -50% -6px;
   display: flex; align-items: center; gap: 12px; max-width: min(480px, calc(100vw - 32px)); box-sizing: border-box;
-  padding: 0 var(--corner-inset) 0 14px; min-height: calc(var(--corner-size) + 2 * var(--corner-inset)); --r-outer: var(--r-m); --pad: 6px; border-radius: var(--r-outer);
+  padding: 0 var(--corner-inset) 0 14px; min-height: calc(var(--corner-size) + 2 * var(--corner-inset)); --r-outer: var(--r-m); --pad: var(--pad-toast); border-radius: var(--r-outer);
   background: var(--bg-3); box-shadow: inset 0 0 0 1px var(--hair), var(--shadow-pop);
   font: 400 var(--fs-s)/var(--lh-ui) var(--sans); color: var(--text); text-transform: var(--ui-case);
   opacity: 0; pointer-events: none; transition: opacity var(--dur-2) var(--ease), translate var(--dur-2) var(--ease), --hx-center-x var(--dur-3) var(--spring);

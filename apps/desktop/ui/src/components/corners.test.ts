@@ -5,7 +5,7 @@ import { concentric, CORNER_CSS } from './corners';
 
 const ICON = 28;
 
-describe('concentric corners (DESIGN-SYSTEM.md §8.2)', () => {
+describe('concentric corners (DESIGN-SYSTEM.md §8.2: R-corner-3, R-corner-4, R-corner-9)', () => {
   it('the composer: 20 outer, 6 gap, a 28px send is a circle 6px from both edges', () => {
     const f = concentric({ outer: 20, pad: 6, floor: 8, size: ICON });
     expect(f).toMatchObject({ rIn: 14, radius: 14, inset: 6, ring: 2, gaveWay: false, loose: false });
@@ -22,7 +22,7 @@ describe('concentric corners (DESIGN-SYSTEM.md §8.2)', () => {
     expect(concentric({ outer: 30, pad: 6, floor: 8 }).rIn).toBe(24);    /* a row at the bottom of the palette */
   });
 
-  it('under the floor the padding gives way, not the radius', () => {
+  it('R-corner-3: under the floor the padding gives way, not the radius', () => {
     /* a well in a card: 20 − 16 would be 4, under the floor of 8, so the gap becomes 12 */
     const well = concentric({ outer: 20, pad: 16, floor: 8 });
     expect(well).toMatchObject({ rIn: 8, radius: 8, inset: 12, gaveWay: true, loose: false });
@@ -51,7 +51,7 @@ describe('concentric corners (DESIGN-SYSTEM.md §8.2)', () => {
     expect(concentric({ outer: 20, pad: 6, floor: 8, size: 32 })).toMatchObject({ radius: 14, inset: 6 });
   });
 
-  it('a round piece inside a pill stays a pill, at the pad on every side', () => {
+  it('R-corner-9: a round piece inside a pill stays a pill, at the pad on every side', () => {
     /* the dock session's composer: a 40px pill, the 28px actions 6px in */
     const f = concentric({ outer: 999, pad: 6, floor: 8, size: ICON, height: 40 });
     expect(f).toMatchObject({ outer: 20, rIn: 14, radius: 14, inset: 6 });
@@ -62,6 +62,24 @@ describe('concentric corners (DESIGN-SYSTEM.md §8.2)', () => {
   it('a gap as large as the outer radius is loose (the inner piece keeps its own step)', () => {
     expect(concentric({ outer: 12, pad: 12, floor: 8 }).loose).toBe(true);
     expect(concentric({ outer: 20, pad: 12, floor: 8 }).loose).toBe(false);
+  });
+
+  it('R-corner-3: every --r-in-* token of tokens.css is this arithmetic at every corners setting', () => {
+    const css = readFileSync(join(__dirname, '..', 'styles', 'tokens.css'), 'utf8');
+    const num = (name: string, block: string): number | null => { const m = new RegExp(name + ':\\s*([\\d.]+)px').exec(block); return m ? parseFloat(m[1] ?? '') : null; };
+    const root = /:root\s*\{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+    const tokens = [...root.matchAll(/--r-in-([a-z]+):\s*max\(var\(--r-floor\), calc\(var\((--r-[a-z]+)\) - var\((--[a-z-]+)\)\)\)/g)];
+    expect(tokens.length).toBeGreaterThanOrEqual(8);
+    for (const corners of ['default', 'sharp', 'round']) {
+      const over = corners === 'default' ? '' : (new RegExp(':root\\[data-hx-corners="' + corners + '"\\]\\s*\\{([^}]*)\\}').exec(css)?.[1] ?? '');
+      const v = (n: string): number => num(n, over) ?? num(n, root) ?? NaN;
+      for (const [, name, outer, pad] of tokens) {
+        const floor = v('--r-floor'), R = v(outer ?? ''), P = v(pad ?? '');
+        const want = Math.max(floor, R - P);   /* the token, evaluated */
+        expect([name, corners, concentric({ outer: R, pad: P, floor }).rIn]).toEqual([name, corners, Math.min(R, want)]);
+        expect(want).toBeLessThanOrEqual(R);   /* the tokens never need the clamp to the outer radius */
+      }
+    }
   });
 
   it('components.css declares exactly these formulas, once', () => {

@@ -12,12 +12,13 @@ const input = box(360, 700, 720, 61);
 const attach = box(366, 767, 28, 28);
 const send = box(1046, 767, 28, 28);
 
-describe('placeRect', () => {
+describe('placeRect (R-float-1, R-tip-2)', () => {
   it('puts a tip outside the anchor with the gap, centred by default', () => {
     const p = placeRect({ anchor: box(500, 400, 28, 28), w: 100, h: 26, view, side: 'bottom' });
     expect(p).toEqual({ x: 464, y: 436, side: 'bottom', align: 'center' });
+    /* R-float-1: the same 8 to the side (the rail's tooltip was 10) */
     const q = placeRect({ anchor: box(500, 400, 28, 28), w: 100, h: 26, view, side: 'right' });
-    expect(q.x).toBe(538); expect(q.y).toBe(401);
+    expect(q.x).toBe(536); expect(q.y).toBe(401);
   });
 
   it('aligns to the control: start lines up the left edges, end the right edges', () => {
@@ -27,7 +28,7 @@ describe('placeRect', () => {
     expect(e.x + 90).toBe(send.right);
   });
 
-  it('a composer corner control: above, aligned to it, and never over the input text', () => {
+  it('R-tip-2: a composer corner control\'s tip sits above, aligned to it, never over the input text', () => {
     for (const [a, align] of [[attach, 'start'], [send, 'end']] as const) {
       const p = placeRect({ anchor: a, w: 106, h: 26, view, side: 'top', align, avoid: [input] });
       const r = box(p.x, p.y, 106, 26);
@@ -42,7 +43,7 @@ describe('placeRect', () => {
     const p = placeRect({ anchor: box(500, 10, 28, 28), w: 100, h: 26, view, side: 'top' });
     expect(p.side).toBe('bottom'); expect(p.y).toBe(46);
     const q = placeRect({ anchor: box(1400, 400, 28, 28), w: 100, h: 26, view, side: 'right' });
-    expect(q.side).toBe('left'); expect(q.x).toBe(1290);
+    expect(q.side).toBe('left'); expect(q.x).toBe(1292);
     /* the avoided text pushes it out of the window above: it goes below the anchor instead */
     const hi = placeRect({ anchor: box(366, 60, 28, 28), w: 100, h: 26, view, side: 'top', avoid: [box(360, 20, 720, 40)] });
     expect(hi.side).toBe('bottom');

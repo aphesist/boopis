@@ -8,7 +8,8 @@ import { parsePos, placeAt } from './place';
 import type { Side } from './place';
 
 let node: HTMLElement | null = null, timer = 0, warm = 0, cur: Element | null = null, enabled = false;
-const host = (): HTMLElement => document.getElementById('hx-app') ?? document.body;
+/* R-elev-6: under a modal dialog (the top layer) the tip mounts inside it, as the menus do (layer.ts) */
+const host = (t: Element): Element => t.closest('dialog, [data-layer-host]') ?? document.getElementById('hx-app') ?? document.body;
 const tipTarget = (e: Event): HTMLElement | null => { const t = e.target; return t instanceof Element ? t.closest<HTMLElement>('[data-tip]') : null; };
 
 function show(t: HTMLElement, now: boolean): void {
@@ -16,7 +17,9 @@ function show(t: HTMLElement, now: boolean): void {
   const label = t.getAttribute('data-tip'); if (!label) return;
   timer = window.setTimeout(() => {
     if (!t.isConnected || t.closest('[inert]')) return;
-    if (!node || !node.isConnected) { node = document.createElement('div'); node.className = 'ui-tip'; node.setAttribute('aria-hidden', 'true'); host().appendChild(node); }
+    if (!node) { node = document.createElement('div'); node.className = 'ui-tip'; node.setAttribute('aria-hidden', 'true'); }
+    const into = host(t);
+    if (node.parentElement !== into) into.appendChild(node);
     const n = node;
     cur = t;
     const state = t.getAttribute('data-tip-state'), tone = t.getAttribute('data-tip-tone'), kbd = t.getAttribute('data-kbd');

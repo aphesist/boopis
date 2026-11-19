@@ -1,4 +1,5 @@
-/* Concentric corners and overlay placement in the real cascade (DESIGN-SYSTEM.md §8.2, §14.10, §14.23): every composer
+/* Concentric corners and overlay placement in the real cascade (DESIGN-SYSTEM.md §8.2, §14.10, §14.23; rules R-corner-3,
+   R-corner-4, R-corner-5, R-float-1, R-tip-2; findings F39, F40): every composer
    (the session's, the Bots tab's, the dock session's) holds its corner controls inside its box, equally inset from both
    edges of their corner (within 1px), with the radius the container's rule derives (inset + radius = the box's radius:
    one centre), at rest, hovered, focused (the ring inside the box too), pressed and disabled; and a corner control's
@@ -95,7 +96,7 @@ export async function concentric(env) {
           faults.push(...cornerFaults(await measure(root), 'pressed'));
           await page.mouse.up(); await page.waitForTimeout(250); await page.keyboard.press('Escape'); await page.waitForTimeout(250);
         }
-        check('corners', `${label} composer (${scheme}, @${dsf}): corner controls concentric and equally inset in every state, tips outside, aligned, off the text`, faults.length === 0, faults.slice(0, 6));
+        check('corners', `${label} composer (${scheme}, @${dsf}): R-corner-3/4 corner controls concentric and equally inset in every state; R-float-1/R-tip-2 tips outside, aligned, off the text`, faults.length === 0, faults.slice(0, 6));
       }
       /* the dock session's composer (compact: the actions in the bottom-right corner, 6px from both edges) */
       await go();
@@ -111,7 +112,7 @@ export async function concentric(env) {
         await keyFocus(dsel + ' .ui-send');
         faults.push(...cornerFaults(await measure(dsel), 'focus'));
       }
-      check('corners', `dock session composer (${scheme}, @${dsf}): the actions concentric in the corner, the tip aligned and off the text`, faults.length === 0, faults.slice(0, 6));
+      check('corners', `dock session composer (${scheme}, @${dsf}): R-corner-3/4 the actions concentric in the corner; R-tip-2 the tip aligned and off the text`, faults.length === 0, faults.slice(0, 6));
     } catch (e) { check('corners', `concentric (${scheme}): script`, false, String(e.message).split('\n')[0]); }
     await ctx.close();
   }
