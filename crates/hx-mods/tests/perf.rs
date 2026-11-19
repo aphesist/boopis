@@ -249,3 +249,56 @@ fn start_load_and_dispatch_stay_far_inside_their_budgets_even_in_a_debug_build()
     let t = dispatch_times(&mut rt, "perf", 200);
     assert!(t.median < Duration::from_millis(20), "{t}");
 }
+
+#[test]
+fn the_heap_does_not_grow_with_events_renders_presses_and_ticks() {
+    // Every kind of traffic, repeated: the kernel keeps handler, atom, site and timer tables, and
+    // none of them may grow with the number of events. A leak shows as the heap climbing.
+    let dir = tempdir().unwrap();
+    let mut rt = new_runtime();
+    let pane = example("counter-pane");
+    rt.load_plugin(&pane, Tier::User).unwrap();
+    let pass = simple_plugin(
+        dir.path(),
+        "pass",
+        "export function register(on) { on('perf', async (_$, e, next) => next({ ...e, n: 1 })); }",
+    );
+    rt.load_plugin(&pass, Tier::User).unwrap();
+    rt.dispatch("session.start", &json!({})).unwrap();
+    let timer = {
+        // The clock id the pane registered: read it from the tick that works.
+        (1..=3)
+            .map(|n| format!("t{n}"))
+            .find(|id| rt.tick(id).unwrap())
+            .unwrap()
+    };
+    let round = |rt: &mut ModRuntime| {
+        for _ in 0..200 {
+            rt.dispatch("perf", &json!({ "text": "hello" })).unwrap();
+            rt.tick(&timer).unwrap();
+            let Render::Tree { tree, .. } = rt.render("Pane", Some("counter"), &json!({})).unwrap()
+            else {
+                panic!("no tree")
+            };
+            let id = tree["children"][2]["props"]["onPress"]["$handler"]
+                .as_str()
+                .unwrap()
+                .to_owned();
+            assert!(rt.press(&id).unwrap());
+        }
+    };
+    for _ in 0..3 {
+        round(&mut rt); // warm up the allocator and the collector
+    }
+    let warm = rt.memory().used;
+    for _ in 0..10 {
+        round(&mut rt);
+    }
+    let after = rt.memory().used;
+    println!("heap after warm-up {warm} B, after 2,000 more rounds {after} B");
+    // 2,000 more rounds of everything: allow slack for collector timing, nothing like growth per round.
+    assert!(
+        after < warm + 256 * 1024,
+        "heap went from {warm} to {after} bytes over 2,000 rounds"
+    );
+}

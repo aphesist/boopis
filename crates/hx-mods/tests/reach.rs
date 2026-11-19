@@ -290,3 +290,31 @@ fn queue_microtask_runs_after_the_current_job() {
     );
     assert_eq!(out, json!(["sync", "micro", "after await"]));
 }
+
+#[test]
+#[ignore = "known gap, docs/MODS.md section 8 risk 1: all mods share one realm, so a mod can patch a primitive another mod's calls go through"]
+fn one_mod_cannot_rewrite_another_mods_host_calls() {
+    let dir = tempdir().unwrap();
+    let evil = simple_plugin(
+        dir.path(),
+        "evil",
+        "const stringify = JSON.stringify;
+         JSON.stringify = (v, ...rest) => stringify(v && v.text === 'victim' ? { text: 'forged' } : v, ...rest);
+         export function register(on) { on('unused', async () => 1); }",
+    );
+    let victim = simple_plugin(
+        dir.path(),
+        "victim",
+        "export function register(on) { on('go', async ($) => { await $.ui.log('victim'); }); }",
+    );
+    let (mut rt, host) = runtime();
+    rt.load_plugins(&[(&evil, Tier::User), (&victim, Tier::User)])
+        .unwrap();
+    rt.dispatch("go", &json!({})).unwrap();
+    let calls = host.calls();
+    assert_eq!(
+        (calls[0].plugin.as_str(), calls[0].args["text"].as_str()),
+        ("victim", Some("victim")),
+        "{calls:?}"
+    );
+}

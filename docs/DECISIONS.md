@@ -338,6 +338,8 @@ They're not sandboxed, matching Claude Code. This is the only exception to the n
 - New surfaces (the band above the composer, mod panes, the mod status line, placed rows, the mod origin) need the owner's design in v6 first.
 - A conformance suite against pinned public mods tracks support per Claude Code version.
 
+**Update 2026-11-19, spike M0.** The engine is QuickJS-NG through `rquickjs`, and the transform is `oxc`. Boa has no wall-clock interrupt or heap limit; V8's prebuilt library alone is about 40 MB against a 4.35 MiB delta here. Isolate start plus three mods took 2.7 ms (budget 50 ms), an event 7 to 48 microseconds (budget 1 ms). Evidence, deviations from the docs and the risks for M1 (a shared realm, an in-process isolate, synchronous host calls): `docs/MODS.md` section 8.
+
 ## ADR-0023 One self-contained app: Hermes ships inside it
 **Context.**
 - The first build asked the user to install Hermes with a terminal command before running the app.
