@@ -199,13 +199,14 @@ pub const NVIDIA_OFFLOAD: &[(&str, &str)] = &[
 ];
 
 /// The only variables the host takes from switcheroo-control: the GPU selection ones. Anything else a service names is
-/// dropped (a D-Bus reply is not allowed to put `LD_PRELOAD` in this process).
+/// dropped (a D-Bus reply is not allowed to put `LD_PRELOAD` in this process). `__EGL_VENDOR_LIBRARY_FILENAMES` is not
+/// on the list: ADR-0025 says the host never sets an EGL vendor file (it would take Mesa away from every other EGL client
+/// in the process), and a service must not be able to do what the host itself does not.
 const SWITCHEROO_ALLOWED: &[&str] = &[
     "__NV_PRIME_RENDER_OFFLOAD",
     "__NV_PRIME_RENDER_OFFLOAD_PROVIDER",
     "__GLX_VENDOR_LIBRARY_NAME",
     "__VK_LAYER_NV_optimus",
-    "__EGL_VENDOR_LIBRARY_FILENAMES",
     "DRI_PRIME",
     "VK_LOADER_DRIVERS_SELECT",
 ];
@@ -294,8 +295,23 @@ pub fn discrete_environment(gpus: &[SwitcherooGpu], nvidia: bool) -> Option<Vec<
         .map(|g| g.environment.clone())
 }
 
-/// Ask switcheroo-control for its GPU list with `busctl` (systemd's own tool, so present wherever the service is), with a
-/// deadline. It is a child process, not a D-Bus connection in this process: a connection starts a thread, and the
+/// Where systemd's `busctl` is looked for, in order. Fixed absolute paths, never `PATH`: the host runs it before anything
+/// else is up, and a `busctl` found through a user-writable `PATH` entry would be run as the user's app.
+#[cfg(target_os = "linux")]
+const BUSCTL_PATHS: &[&str] = &["/usr/bin/busctl", "/bin/busctl"];
+
+/// The first of `candidates` that is a regular, executable file (a symlink to one is fine: `/bin` is one on merged-`/usr`
+/// systems). Pure over the list, so the lookup is tested without a systemd.
+#[cfg(target_os = "linux")]
+fn first_executable(candidates: &[&str]) -> Option<std::path::PathBuf> {
+    use std::os::unix::fs::PermissionsExt;
+    candidates.iter().map(std::path::PathBuf::from).find(|p| {
+        std::fs::metadata(p).is_ok_and(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
+    })
+}
+
+/// Ask switcheroo-control for its GPU list with `busctl` (systemd's own tool, so present wherever the service is; found at
+/// a fixed path), with a deadline. It is a child process, not a D-Bus connection in this process: a connection starts a thread, and the
 /// environment must be set before any thread exists. `None` when the service is not running or anything goes wrong.
 #[cfg(target_os = "linux")]
 #[must_use]
@@ -304,7 +320,9 @@ pub fn query_switcheroo() -> Option<Vec<SwitcherooGpu>> {
     use std::process::{Command, Stdio};
     use std::time::{Duration, Instant};
 
-    let mut child = Command::new("busctl")
+    let busctl = first_executable(BUSCTL_PATHS)?;
+    let mut child = Command::new(busctl)
+        .env_clear()
         .args([
             "--system",
             "--json=short",
@@ -1166,6 +1184,53 @@ mod tests {
             None,
             "NVIDIA wanted, none offered"
         );
+    }
+
+    #[test]
+    fn no_egl_vendor_file_is_taken_from_switcheroo_control() {
+        // ADR-0025: the host never sets `__EGL_VENDOR_LIBRARY_FILENAMES`, so a service cannot make it do so (nor
+        // `__EGL_VENDOR_LIBRARY_DIRS`), whatever else comes with it.
+        let json = r#"{"data":[{"Environment":{"type":"as","data":[
+          "__EGL_VENDOR_LIBRARY_FILENAMES","/usr/share/glvnd/egl_vendor.d/10_nvidia.json",
+          "__EGL_VENDOR_LIBRARY_DIRS","/tmp/evil",
+          "__NV_PRIME_RENDER_OFFLOAD","1"]},"Discrete":{"type":"b","data":true}}]}"#;
+        let gpus = parse_switcheroo(json);
+        assert_eq!(
+            gpus[0].environment,
+            vec![("__NV_PRIME_RENDER_OFFLOAD".to_owned(), "1".to_owned())]
+        );
+        assert!(
+            !SWITCHEROO_ALLOWED
+                .iter()
+                .any(|k| k.starts_with("__EGL_VENDOR"))
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn busctl_is_found_at_a_fixed_path_and_never_through_path() {
+        use std::os::unix::fs::PermissionsExt;
+        let t = tempfile::tempdir().unwrap();
+        let (plain, exec, dir) = (
+            t.path().join("plain"),
+            t.path().join("exec"),
+            t.path().join("dir"),
+        );
+        std::fs::write(&plain, "").unwrap();
+        std::fs::write(&exec, "").unwrap();
+        std::fs::set_permissions(&exec, std::fs::Permissions::from_mode(0o755)).unwrap();
+        std::fs::create_dir(&dir).unwrap();
+        let s = |p: &std::path::Path| p.to_str().unwrap().to_owned();
+        let (plain_s, exec_s, dir_s, missing) =
+            (s(&plain), s(&exec), s(&dir), s(&t.path().join("nope")));
+        // Not found, not executable and not a file are all skipped; the first real one wins.
+        assert_eq!(
+            first_executable(&[&missing, &plain_s, &dir_s, &exec_s]),
+            Some(exec.clone())
+        );
+        assert_eq!(first_executable(&[&missing, &plain_s, &dir_s]), None);
+        // The list the host uses is absolute paths only: a bare `busctl` would be a PATH lookup.
+        assert!(BUSCTL_PATHS.iter().all(|p| p.starts_with('/')));
     }
 
     #[test]
