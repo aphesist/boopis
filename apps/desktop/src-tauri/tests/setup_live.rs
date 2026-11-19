@@ -9,6 +9,7 @@
 //! fake model sees it in the `Authorization` header of a real model call; and a governed session works afterwards.
 
 #![allow(
+    unsafe_code, // one `set_var` in the bundled test, with its SAFETY note
     clippy::expect_used,
     clippy::unwrap_used,
     clippy::panic,
@@ -115,7 +116,13 @@ impl Drop for GatewayGuard {
             .envs(self.env.iter().map(|(k, v)| (k, v)))
             .env(
                 "PATH",
-                self.hermes.parent().unwrap_or(Path::new("/usr/bin")),
+                format!(
+                    "{}:/usr/bin:/bin",
+                    self.hermes
+                        .parent()
+                        .unwrap_or(Path::new("/usr/bin"))
+                        .display()
+                ),
             )
             .stdin(Stdio::null())
             .stdout(Stdio::null())
@@ -229,6 +236,18 @@ async fn turn(
     }
 }
 
+/// The live tests share the process environment (the bundled one sets two variables), so they run one at a time.
+static SERIAL: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
+/// Where the Hermes under test comes from.
+enum Install {
+    /// The spike install (`HX_E2E_HERMES_ENV`), found on `PATH` the way a user's own Hermes is.
+    Spike(PathBuf),
+    /// The runtime archive the app ships (`HX_E2E_RUNTIME`: a directory with `runtime.json` and the archive): the host
+    /// unpacks it itself as the first setup step, into a temporary app data directory.
+    Runtime(PathBuf),
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn first_run_setup_end_to_end_on_a_real_hermes() {
     let Some(spike) = std::env::var_os("HX_E2E_HERMES_ENV").map(PathBuf::from) else {
@@ -237,11 +256,73 @@ async fn first_run_setup_end_to_end_on_a_real_hermes() {
         );
         return;
     };
-    let (Some(bin), Some(hx)) = (hermes_bin_dir(&spike), hx_binary()) else {
+    run_flow(Install::Spike(spike)).await;
+}
+
+/// The same flow, end to end, on the archive the installer carries (ADR-0023): the real `.tar.zst` is unpacked by the
+/// host into a temporary data directory, the private home never sees `~/.hermes`, and the gateway runs on the bundled
+/// interpreter. CI points `HX_E2E_RUNTIME` at the artifact `scripts/build-runtime.sh` made.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn first_run_setup_end_to_end_on_the_bundled_runtime() {
+    let Some(dir) = std::env::var_os("HX_E2E_RUNTIME").map(PathBuf::from) else {
         eprintln!(
-            "skipped: no Hermes install under HX_E2E_HERMES_ENV, or no hx binary (cargo build -p hx)"
+            "skipped: set HX_E2E_RUNTIME to a directory with runtime.json and the runtime archive (scripts/build-runtime.sh)"
         );
         return;
+    };
+    run_flow(Install::Runtime(dir)).await;
+}
+
+/// The running processes whose command line mentions `needle` (Linux: `/proc`).
+fn processes_using(needle: &Path) -> Vec<String> {
+    let needle = needle.display().to_string();
+    let mut found = Vec::new();
+    if let Ok(rd) = std::fs::read_dir("/proc") {
+        for e in rd.flatten() {
+            if let Ok(raw) = std::fs::read(e.path().join("cmdline")) {
+                let line = String::from_utf8_lossy(&raw).replace('\0', " ");
+                if line.contains(&needle) {
+                    found.push(line);
+                }
+            }
+        }
+    }
+    found
+}
+
+/// A snapshot of a directory tree (names, sizes and modification times) to prove nothing in it changed.
+fn snapshot(dir: &Path) -> Vec<(PathBuf, u64, Option<std::time::SystemTime>)> {
+    let mut v: Vec<_> = walk(dir)
+        .into_iter()
+        .map(|p| {
+            let m = std::fs::metadata(&p).ok();
+            (
+                p,
+                m.as_ref().map_or(0, std::fs::Metadata::len),
+                m.and_then(|m| m.modified().ok()),
+            )
+        })
+        .collect();
+    v.sort();
+    v
+}
+
+#[allow(clippy::too_many_lines)]
+async fn run_flow(install: Install) {
+    let _serial = SERIAL.lock().await;
+    let Some(hx) = hx_binary() else {
+        eprintln!("skipped: no hx binary (cargo build -p hx)");
+        return;
+    };
+    let spike_bin = match &install {
+        Install::Spike(spike) => {
+            let Some(bin) = hermes_bin_dir(spike) else {
+                eprintln!("skipped: no Hermes install under HX_E2E_HERMES_ENV");
+                return;
+            };
+            Some(bin)
+        }
+        Install::Runtime(_) => None,
     };
     let root = tempfile::tempdir().unwrap();
     // HX_E2E_KEEP=<dir>: keep the scratch profile there, to read Hermes's logs after a failure.
@@ -260,19 +341,42 @@ async fn first_run_setup_end_to_end_on_a_real_hermes() {
     };
 
     // A fresh profile: a user with Hermes and one provider (no key), a model endpoint, and nothing of ours.
-    let (home, hermes_home, work) = (
+    let (home, work) = (
         root_path.as_path().join("home"),
-        root_path.as_path().join("hermes-home"),
         root_path.as_path().join("work"),
     );
+    let (plan, hermes_home) = match &install {
+        Install::Spike(_) => (None, root_path.as_path().join("hermes-home")),
+        Install::Runtime(dir) => {
+            let plan = hypotaxis_host::runtime::Plan {
+                runtime: hypotaxis_host::runtime::Runtime::read(dir)
+                    .expect("runtime.json is valid"),
+                data_dir: root_path.as_path().join("data"),
+            };
+            let home = plan.home();
+            (Some(plan), home)
+        }
+    };
     for d in [&home, &hermes_home, &work] {
         std::fs::create_dir_all(d).unwrap();
     }
-    std::os::unix::fs::symlink(
-        spike.join("hermes-home/installs"),
-        hermes_home.join("installs"),
+    // The user's own Hermes home, which the bundled runtime must never read or write.
+    let decoy = home.join(".hermes");
+    std::fs::create_dir_all(&decoy).unwrap();
+    std::fs::write(
+        decoy.join("config.yaml"),
+        "model: {provider: decoy, default: never-used}\n",
     )
     .unwrap();
+    std::fs::write(decoy.join(".env"), "OPENAI_API_KEY=sk-the-users-own-key\n").unwrap();
+    let decoy_before = snapshot(&decoy);
+    if let Install::Spike(spike) = &install {
+        std::os::unix::fs::symlink(
+            spike.join("hermes-home/installs"),
+            hermes_home.join("installs"),
+        )
+        .unwrap();
+    }
     let mut aux = serde_json::Map::new();
     for t in AUX {
         aux.insert((*t).into(), json!({"provider": "main", "model": "fake-a"}));
@@ -286,33 +390,56 @@ async fn first_run_setup_end_to_end_on_a_real_hermes() {
         "auxiliary": aux,
     });
     std::fs::write(hermes_home.join("config.yaml"), fixture.to_string()).unwrap(); // JSON is YAML
+    // The user's own environment points somewhere else: the bundled Hermes must not follow it.
+    if plan.is_some() {
+        // SAFETY: the two live tests of this binary run one after the other (`SERIAL`), and nothing else in the process
+        // reads these two names while this runs: Hermes's children get their environment explicitly.
+        unsafe {
+            std::env::set_var("HERMES_HOME", decoy.display().to_string());
+            std::env::set_var(
+                "HERMES_RUNTIME_DIR",
+                decoy.join("tools").display().to_string(),
+            );
+        }
+    }
 
-    let env = Environment {
+    let mut env = Environment {
         hermes_home: Some(hermes_home.display().to_string()),
         home_dir: Some(home.clone()),
-        path: Some(std::ffi::OsString::from(&bin)),
+        path: spike_bin.as_ref().map(std::ffi::OsString::from),
         ..Environment::default()
     };
-    let child_env: Vec<(String, String)> = [
-        ("HOME", home.display().to_string()),
-        (
-            "HERMES_RUNTIME_DIR",
-            spike.join("runtime").display().to_string(),
-        ),
-        (
-            "UV_PYTHON_INSTALL_DIR",
-            spike.join("uv-python").display().to_string(),
-        ),
-        ("UV_CACHE_DIR", spike.join("uv-cache").display().to_string()),
-        ("NO_PROXY", "127.0.0.1,localhost,::1".into()),
-        ("no_proxy", "127.0.0.1,localhost,::1".into()),
-    ]
-    .into_iter()
-    .map(|(k, v)| (k.to_owned(), v))
-    .collect();
+    let mut child_env: Vec<(String, String)> = vec![
+        ("HOME".into(), home.display().to_string()),
+        ("NO_PROXY".into(), "127.0.0.1,localhost,::1".into()),
+        ("no_proxy".into(), "127.0.0.1,localhost,::1".into()),
+    ];
+    if let Install::Spike(spike) = &install {
+        child_env.extend([
+            (
+                "HERMES_RUNTIME_DIR".to_owned(),
+                spike.join("runtime").display().to_string(),
+            ),
+            (
+                "UV_PYTHON_INSTALL_DIR".to_owned(),
+                spike.join("uv-python").display().to_string(),
+            ),
+            (
+                "UV_CACHE_DIR".to_owned(),
+                spike.join("uv-cache").display().to_string(),
+            ),
+        ]);
+    }
+    if let Some(plan) = &plan {
+        env = env.with_bundled(plan.bundled());
+    }
+    let hermes_launcher = spike_bin.as_ref().map_or_else(
+        || plan.as_ref().map(|p| p.bundled().binary).unwrap(),
+        |b| b.join("hermes"),
+    );
     let sup = Arc::new(Supervisor::new(env, Limits::default()).with_child_env(child_env.clone()));
     let guard = GatewayGuard {
-        hermes: bin.join("hermes"),
+        hermes: hermes_launcher,
         home: hermes_home.clone(),
         env: child_env,
     };
@@ -333,6 +460,10 @@ async fn first_run_setup_end_to_end_on_a_real_hermes() {
         hx: Some(hx),
     };
     let setup = Setup::new(ops.clone(), keychain.clone(), bundle);
+    let setup = match plan.clone() {
+        Some(plan) => setup.with_runtime(plan),
+        None => setup,
+    };
 
     assert!(
         setup.check().await.unwrap().needed,
@@ -342,7 +473,8 @@ async fn first_run_setup_end_to_end_on_a_real_hermes() {
     // 1. The plugin and hx, then one consent form with the exact diff. Nothing is changed before the answer.
     let s = setup.advance(None, false).await.unwrap();
     assert_eq!(s.steps[0].state, StepState::Done, "{:?}", s.steps);
-    let form = s.form.expect("the consent form");
+    let steps = format!("{:?}", s.steps);
+    let form = s.form.unwrap_or_else(|| panic!("the consent form; steps: {steps}"));
     assert_eq!(
         (form.form_id.as_str(), form.kind.as_str()),
         ("setup.config", "setup")
@@ -530,10 +662,84 @@ async fn first_run_setup_end_to_end_on_a_real_hermes() {
         "the form is in the ledger"
     );
 
+    // The bundled runtime: unpacked by the host, running the gateway, with Hermes's own updates off.
+    let old_runtime = plan
+        .as_ref()
+        .map(|plan| plan.runtimes_dir().join("0.22.0-00000000"));
+    if let Some(plan) = &plan {
+        let layout = plan.runtime.layout(&plan.runtimes_dir());
+        assert!(
+            layout.hermes.is_file() && layout.python.is_file(),
+            "unpacked by the host"
+        );
+        let users = processes_using(&layout.root);
+        assert!(
+            users.iter().any(|l| l.contains("gateway")),
+            "the gateway runs on the bundled interpreter, found: {users:?}"
+        );
+        assert_eq!(
+            ops.config_get("updates.check").await.unwrap().unwrap(),
+            json!(false),
+            "Hermes's own update check is off"
+        );
+        let update = sup
+            .cli()
+            .run(
+                &layout.hermes,
+                &hermes_home,
+                &["update"],
+                Duration::from_mins(1),
+            )
+            .await
+            .unwrap();
+        assert_ne!(
+            update.code, 0,
+            "`hermes update` refuses inside the bundle: {}",
+            update.stdout
+        );
+        assert!(update.stdout.contains("desktop app") || update.stderr.contains("desktop app"));
+        assert!(
+            std::fs::read_dir(plan.data_dir.join("cache/pycache"))
+                .is_ok_and(|mut d| d.next().is_some()),
+            "Python's bytecode goes to the app's own cache"
+        );
+        // an older runtime (ours: it has the marker) and a stranger's folder, for the cleanup below
+        let old = old_runtime.as_ref().unwrap();
+        std::fs::create_dir_all(old).unwrap();
+        std::fs::write(old.join(".hx-runtime.json"), "{}").unwrap();
+        std::fs::create_dir_all(plan.runtimes_dir().join("not-ours")).unwrap();
+    }
+
     // 6. Running setup again changes nothing and asks nothing.
     let again = setup.advance(None, false).await.unwrap();
     assert!(again.done && again.form.is_none(), "{:?}", again.steps);
     assert!(!setup.check().await.unwrap().needed);
+    if let Some(plan) = &plan {
+        assert_eq!(
+            again.steps[0].detail,
+            format!(
+                "Hermes {} is unpacked",
+                plan.runtime.manifest().hermes_version
+            )
+        );
+        assert!(
+            !old_runtime.unwrap().exists(),
+            "the older runtime is removed once the new one runs"
+        );
+        assert!(
+            plan.runtimes_dir().join("not-ours").is_dir(),
+            "a folder that is not ours is left alone"
+        );
+        assert_eq!(
+            snapshot(&decoy),
+            decoy_before,
+            "the user's own ~/.hermes was never read or written"
+        );
+        assert!(
+            !home.join(".cache/hermes-pycache").exists(),
+            "nothing in the user's cache either"
+        );
+    }
 
     drop(hub);
     let info = sup.info().await.unwrap();
