@@ -231,7 +231,7 @@ def forms_scenario(install: Any, tmp: Path, url: str) -> None:
     ``provided``, never in a value) and cancels a third. Records the ``form.opened`` and ``form.resolved`` events and
     the RPC."""
     host = FakeHostSecrets(tmp / "hermes-home")
-    # As the real host does: the channel exists first and its environment goes to the gateway that `stack.start` launches
+    # As the real host does: the channel exists first, and its environment goes to the gateway `stack.start` launches
     stack = HermesStack(install, tmp, url, {"hx_path": HX}, {}, host_env=host.start())
     try:
         stack.start()
