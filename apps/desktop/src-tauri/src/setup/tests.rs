@@ -11,7 +11,7 @@ use serde_json::{Value, json};
 
 use super::install::Bundle;
 use super::ops::{CatalogEntry, HermesOps, PluginEntry};
-use super::{Answer, Setup, StepState};
+use super::{Answer, Setup, StepState, windows_gaps};
 use crate::claude::{self, ClaudeCli, PROVIDER_ID, Probe};
 use crate::commands::Json;
 use crate::error::{Error, Result};
@@ -1926,4 +1926,19 @@ fn the_catalog_reader_takes_the_pinned_row_and_the_install_refusal_is_in_plain_w
         "fatal: unable to access ... check your internet connection",
     );
     assert_eq!(net.code(), "hx.setup.subscription_unreachable");
+}
+
+/// The Windows build says what it lacks, in the receipt, and says what still works (nothing is hidden).
+#[test]
+fn the_windows_gaps_are_named_with_what_still_works() {
+    let gaps = windows_gaps().join("\n");
+    assert!(
+        gaps.contains("keychain") && gaps.contains("free Nous models"),
+        "{gaps}"
+    );
+    assert!(
+        gaps.contains("sandbox") && gaps.contains("never runs unsandboxed"),
+        "{gaps}"
+    );
+    assert!(gaps.contains("mods are off"), "{gaps}");
 }

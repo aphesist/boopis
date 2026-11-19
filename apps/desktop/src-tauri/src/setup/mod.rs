@@ -875,6 +875,20 @@ impl Setup {
         if state.consent == Consent::Declined {
             lines.push("You declined the Hermes settings, so some features are off (see Hermes settings above).".into());
         }
+        if cfg!(windows) {
+            lines.extend(windows_gaps().iter().map(|l| (*l).to_owned()));
+        }
         Receipt { lines }
     }
+}
+
+/// What does not work in the Windows build yet, one line each, for the receipt. The same list is in `docs/RELEASING.md`
+/// ("Windows") and is shown only on Windows. Nothing here is hidden: each line says what is missing and what still works.
+#[must_use]
+pub fn windows_gaps() -> [&'static str; 3] {
+    [
+        "Windows: API keys saved in the keychain cannot reach Hermes yet (the plugin's secret channel has no Windows transport). The free Nous models and the Claude subscription need no key.",
+        "Windows: the command sandbox has not been run on Windows yet. Where it cannot start, a governed ship is refused with the reason (hx.sandbox.unavailable); a command never runs unsandboxed.",
+        "Windows: mods are off (hx.mods.unavailable): the mods worker has no private channel on Windows yet.",
+    ]
 }

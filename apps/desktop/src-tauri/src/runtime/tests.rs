@@ -672,3 +672,57 @@ fn the_choice_crosses_the_ipc_as_a_lowercase_word() {
     );
     assert!(serde_json::from_str::<Source>("\"Elsewhere\"").is_err());
 }
+
+/// The Windows runtime (`scripts/build-runtime.sh --target windows-x86_64`, cross-built on Linux) passes the host's own
+/// verification and unpack: hash, size and entry caps, the launchers where the manifest says. `HX_WINDOWS_RUNTIME` is the
+/// directory holding its `runtime.json` and archive; without it the test says it skipped. It checks the bytes, not that
+/// Windows runs them (there is no Windows here): the launcher and the interpreter must be PE files.
+#[test]
+fn the_windows_runtime_archive_verifies_with_the_hosts_own_unpack() {
+    let Some(dir) = std::env::var_os("HX_WINDOWS_RUNTIME").map(PathBuf::from) else {
+        eprintln!(
+            "skipped: set HX_WINDOWS_RUNTIME to the directory scripts/build-runtime.sh --target windows-x86_64 made"
+        );
+        return;
+    };
+    let rt = Runtime::read(&dir).unwrap();
+    let m = rt.manifest();
+    assert_eq!(m.target, "win32-x64");
+    assert!(
+        m.hermes.ends_with(".exe") && m.python.ends_with("python.exe"),
+        "{m:?}"
+    );
+    let tmp = tempfile::tempdir().unwrap();
+    let runtimes = tmp.path().join("runtimes");
+    let mut seen = Vec::new();
+    let (layout, outcome) = rt.install(&runtimes, &mut |p| seen.push(p)).unwrap();
+    assert_eq!(outcome, Outcome::Unpacked);
+    // both passes ran, each to the end of the archive
+    assert!(
+        seen.iter()
+            .any(|p| p.phase == Pass::Verify && p.read == p.total)
+    );
+    assert!(
+        seen.iter()
+            .any(|p| p.phase == Pass::Unpack && p.read == p.total)
+    );
+    for exe in [&layout.hermes, &layout.python] {
+        let head = std::fs::read(exe).unwrap();
+        assert_eq!(&head[..2], b"MZ", "{} is not a PE file", exe.display());
+    }
+    for rel in [
+        "manifest.json",
+        "enabled-features.json",
+        "pm-runtime/pm-runtime.json",
+        "venv/pyvenv.cfg",
+    ] {
+        assert!(layout.root.join(rel).is_file(), "{rel}");
+    }
+    assert!(layout.root.join("hermes-agent/hermes_cli").is_dir());
+    assert!(layout.root.join("venv/Lib/site-packages").is_dir());
+    // nothing of the build machine, and nothing left over
+    assert_eq!(names(&runtimes), [".lock".to_owned(), m.id()]);
+    // idempotent
+    let (_, again) = rt.install(&runtimes, &mut |_| {}).unwrap();
+    assert_eq!(again, Outcome::Current);
+}

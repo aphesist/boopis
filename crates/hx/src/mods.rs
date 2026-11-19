@@ -19,15 +19,19 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
+#[cfg(unix)]
+use hx_mods::wire::CallParams;
 use hx_mods::wire::{
-    self, CallParams, DispatchParams, HandlerParams, ListParams, LoadParams, ModsCapabilities,
-    ReachParams, RenderParams, UnloadParams,
+    self, DispatchParams, HandlerParams, ListParams, LoadParams, ModsCapabilities, ReachParams,
+    RenderParams, UnloadParams,
 };
 use hx_proto::method::Namespace;
 use hx_proto::registry::{BoxFuture, CallContext, Handler, HandlerResult, parse_params, to_result};
 use hx_proto::{AppError, codes};
 use serde_json::{Value, json};
-use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
+#[cfg(unix)]
+use tokio::io::{AsyncRead, AsyncReadExt, BufReader};
+use tokio::io::{AsyncWrite, AsyncWriteExt};
 use tokio::sync::{Mutex as AsyncMutex, oneshot};
 
 use crate::outbound::Link;
@@ -40,11 +44,14 @@ pub const CHANNEL_ENV: &str = "HX_MODS_FD";
 /// hold the session's mods for ever.
 const OP_TIMEOUT: Duration = Duration::from_mins(30);
 /// The longest `hx` waits for the plugin to answer one `$` call.
+#[cfg(unix)]
 const CALL_TIMEOUT: Duration = Duration::from_mins(25);
 /// The longest frame read from a worker. A worker is semi-trusted: a memory-safety bug in the
 /// engine would make it hostile, so what it sends is bounded.
+#[cfg(unix)]
 const MAX_WORKER_FRAME: usize = 16 * 1024 * 1024;
 /// How much of the worker's error output is kept.
+#[cfg(unix)]
 const STDERR_KEEP: usize = 8 * 1024;
 
 const METHODS: &[&str] = &[
@@ -103,6 +110,7 @@ impl Session {
         lock(&self.stderr).clone()
     }
 
+    #[cfg(unix)]
     fn fail_all(&self, why: &AppError) {
         let doomed: Vec<_> = lock(&self.waiting).drain().collect();
         for (_, w) in doomed {
@@ -416,6 +424,10 @@ fn availability() -> Result<(), String> {
 }
 
 #[cfg(not(unix))]
+#[allow(
+    clippy::unused_async,
+    reason = "keeps the signature the same as on Unix, where the worker is started asynchronously"
+)]
 async fn start_worker(
     _id: &str,
     _link: &Arc<Link>,
@@ -568,6 +580,7 @@ fn worker_read_paths() -> Vec<std::path::PathBuf> {
 }
 
 /// Keeps the last [`STDERR_KEEP`] bytes of a stream.
+#[cfg(unix)]
 async fn keep_tail<R: AsyncRead + Unpin>(mut r: R, into: Arc<Mutex<String>>) {
     let mut buf = [0u8; 2048];
     loop {
@@ -589,6 +602,7 @@ async fn keep_tail<R: AsyncRead + Unpin>(mut r: R, into: Arc<Mutex<String>>) {
 }
 
 /// Reads one line of at most `max` bytes. `None` at the end of input or past the cap.
+#[cfg(unix)]
 async fn read_line<R: AsyncRead + Unpin>(reader: &mut BufReader<R>, max: usize) -> Option<String> {
     use tokio::io::AsyncBufReadExt;
     let mut buf = Vec::new();
@@ -639,6 +653,7 @@ async fn read_channel(
 }
 
 /// Queues one `$` call for the plugin and, in a task, sends its answer back to the worker.
+#[cfg(unix)]
 async fn forward_call(session: &Arc<Session>, link: &Arc<Link>, cid: u64, frame: &Value) {
     let plugin = frame["plugin"].as_str().unwrap_or_default().to_owned();
     let known = lock(&session.plugins)

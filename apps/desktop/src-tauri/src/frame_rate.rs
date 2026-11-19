@@ -253,6 +253,7 @@ impl State {
             .clone()
     }
 
+    #[cfg(any(target_os = "linux", test))]
     fn remember(&self, a: Applied) {
         *self.0.last.lock().unwrap_or_else(PoisonError::into_inner) = Some(a);
     }
