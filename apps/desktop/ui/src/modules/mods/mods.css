@@ -68,9 +68,9 @@
 /* ───────────── the mod as an origin (cards.js draws it; these are its details) ───────────── */
 .cd-by[data-origin="mod"] .cd-names__first { font-weight: 500; }
 .cd-by[data-origin="mod"] .cd-names__via { color: var(--text-quiet); font-weight: 400; }
-.cd-swatches { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
+.cd-swatches { display: flex; flex-wrap: wrap; gap: var(--sp-3); padding: var(--sp-3); }   /* equal on every side, so a swatch in the well's corner sits at equal insets (R-corner-3) */
 .cd-swatch { display: flex; flex-direction: column; gap: 6px; font: 400 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); text-transform: none; }
-.cd-swatch i { display: block; width: 40px; height: 24px; border-radius: var(--r-xs); box-shadow: inset 0 0 0 1px var(--line); }
+.cd-swatch i { display: block; width: 40px; height: 24px; border-radius: var(--r-floor); box-shadow: inset 0 0 0 1px var(--line); }
 
 /* ───────────── narrow ───────────── */
 @media (max-width: 560px) {

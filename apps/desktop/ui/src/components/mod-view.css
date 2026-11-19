@@ -7,7 +7,7 @@
 .mv-root > .mv-box { flex: 1; }
 
 /* Box: a flex container; a terminal Box is a row until it says otherwise */
-.mv-box { display: flex; flex-direction: row; min-width: 0; --mv-border: var(--hair); }
+.mv-box { display: flex; flex-direction: row; flex-wrap: wrap; min-width: 0; --mv-border: var(--hair); }   /* a row that is wider than its pane wraps instead of pushing the window sideways (R-overflow-4) */
 .mv-box--border { border-radius: var(--r-s); box-shadow: inset 0 0 0 1px var(--mv-border); padding: var(--sp-2) var(--sp-3); }
 .mv-box--filled { border-radius: var(--r-xs); }
 .mv-box--border.mv-box--filled { border-radius: var(--r-s); }

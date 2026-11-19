@@ -177,6 +177,7 @@ hx-card[data-size="compact"] .cd-files .cd-diffdots { display: none; }
 /* ------------------------------------------------------------------ side: orb, tile */
 
 .cd-side .ui-orb { align-self: flex-start; }
+.cd-tile::before { content: attr(data-initial); }
 .cd-tile {
   display: grid; place-items: center; flex: none;
   width: var(--cd-orb); height: var(--cd-orb); border-radius: var(--r-xs);
@@ -249,7 +250,7 @@ hx-card[data-size="compact"] .cd-opts { margin: 0 calc(-1 * var(--sp-2)); }
 .cd-opt {
   appearance: none; border: 0; margin: 0;
   display: flex; align-items: center; gap: var(--sp-3);
-  min-height: var(--row-h); padding: 5px 10px; border-radius: var(--r-s);
+  min-height: var(--row-h); padding: 5px var(--sp-3); border-radius: var(--r-s);   /* 12 at the side = the dot's inset above and below in a 30px row, so the dot sits equally from both edges of the row's corner (R-corner-3) */
   --sq-bg: transparent; background: var(--sq-bg); color: var(--text);
   font-family: var(--sans); font-size: var(--fs-s); line-height: var(--lh-ui); letter-spacing: var(--track); text-align: left;
   cursor: pointer;
@@ -267,7 +268,7 @@ hx-card[data-size="compact"] .cd-opts { margin: 0 calc(-1 * var(--sp-2)); }
 /* the free answer is a field: radius 6, drawer on frame, the field line (3:1), the ring on the field */
 .cd-free {
   display: flex; align-items: center; gap: var(--sp-3);
-  min-height: var(--ctl); padding: 0 10px; margin: var(--sp-1) 0 0;
+  min-height: var(--ctl); padding: 0 var(--sp-3); margin: var(--sp-1) 0 0;
   border-radius: var(--r-s); --sq-bg: var(--cd-well); background: var(--sq-bg);
   box-shadow: inset 0 0 0 1px var(--line-field);
 }
@@ -429,7 +430,7 @@ hx-card[data-kind="form"][data-size="inline"] { width: min(100%, var(--measure))
 /* setup: the config diff it will write */
 .cd-diff { font-family: var(--mono); font-size: var(--fs-2xs); line-height: var(--lh); letter-spacing: var(--track-mono); color: var(--text-dim); padding-block: var(--sp-2); }
 .cd-diff__file { color: var(--text-quiet); margin-bottom: var(--sp-1); }
-.cd-diff__l { display: flex; gap: var(--sp-2); white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 calc(-1 * var(--sp-2)); padding: 0 var(--sp-2); border-radius: var(--r-floor); }
+.cd-diff__l { display: flex; gap: var(--sp-2); white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 calc(-1 * var(--sp-1)); padding: 0 var(--sp-1);   /* the band sits 8px from the well's side, as far as the well's padding is above and below it (R-corner-3) */ border-radius: var(--r-floor); }
 .cd-diff__l > span:first-child { flex: none; width: 1ch; }
 .cd-diff__l[data-d="add"] { color: var(--text); background: color-mix(in srgb, var(--add) 14%, transparent); }
 .cd-diff__l[data-d="add"] > span:first-child { color: var(--add); }

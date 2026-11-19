@@ -78,7 +78,7 @@ export function originVisual(o: KnownOrigin | null, size: number, max?: number, 
   }
   if (o.kind === 'agent') return U.html.modelMark(o.model, { size: 16, class: 'cd-glyph' });
   if (o.kind === 'mod') return U.icon('mod', { class: 'cd-glyph' });
-  if (o.kind === 'mcp') return '<span class="cd-tile" style="--cd-orb:' + size + 'px" aria-hidden="true">' + esc(String(o.server || '?').slice(0, 1).toUpperCase()) + '</span>';
+  if (o.kind === 'mcp') return '<span class="cd-tile" style="--cd-orb:' + size + 'px" aria-hidden="true" data-initial="' + esc(String(o.server || '?').slice(0, 1).toUpperCase()) + '"></span>';   // the initial is drawn by CSS, so it is not text a name must contain (WCAG 2.5.3)
   const g = sys(o.kind)[0];
   return g ? U.icon(g, { class: 'cd-glyph' }) : '';
 }

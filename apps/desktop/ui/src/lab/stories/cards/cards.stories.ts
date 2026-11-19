@@ -42,11 +42,11 @@ function story(kind: CardKind): Story {
   states['long'] = { tags: ['long'], render: draw(kind, long, { state: first }), width: INLINE };
   states['compact'] = { tags: ['size'], render: draw(kind, d, { state: first, size: 'compact' }), width: COMPACT };
   states['compact, long'] = { tags: ['size', 'long'], render: draw(kind, long, { state: first, size: 'compact' }), width: COMPACT };
-
   states['compact, on the dock'] = { tags: ['size', 'variant'], render: draw(kind, d, { state: first, size: 'compact', ground: 'dock' }), width: COMPACT, ground: 'dock' };
   states['mini'] = { tags: ['size'], render: draw(kind, d, { state: first, size: 'mini' }), width: MINI };
   states['mini, long'] = { tags: ['size', 'long'], render: draw(kind, long, { state: first, size: 'mini' }), width: MINI };
   if (kind === 'escalation') for (const x of Object.values(states)) x.allow = { ...x.allow, ...LADDER_MASK };
+  if (kind === 'connector') for (const k of ['mini', 'mini, long']) states[k]!.allow = { concentric: 'the server tile stands where an orb stands in a one-row card: a 16px mark centred in the 30px row (7px above and below, --pad at the side), and an orb is a circle, never nested (R-corner-2); R-corner-4 holds, both insets are at least 7px' };
   states['empty data'] = { tags: ['empty'], render: draw(kind, {}, { state: first }), width: INLINE, note: 'a sender that gave nothing: unknown stays unknown' };
   if (kind === 'approval') {
     states['hold hover'] = { tags: ['hover'], render: draw(kind, d), width: INLINE, force: [{ sel: '.ui-hold', state: 'hover' }] };
