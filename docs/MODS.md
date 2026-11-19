@@ -12,7 +12,7 @@ A Claude Code mod is a plugin whose `hooks/hooks.json` names a JavaScript or Typ
   - It embeds a JavaScript engine and a TypeScript/JSX transform, so `.ts` and `.tsx` modules load with no build step.
   - All of a session's mods share one isolate, as in Claude Code's single hooks worker.
   - The isolate runs inside `hx-sandbox`, with no file or network access. The only way out is `$`.
-  - The engine is chosen by spike M0: QuickJS through `rquickjs` plus `oxc` for the transform is the candidate.
+  - The engine is QuickJS-NG through `rquickjs`, with `oxc` for the transform, as spike M0 proved (section 8).
 - **Each `$` call** is a request from `hx` to the plugin (`mods.call`). The plugin decides it with `hypotaxis.policy.check`, then performs it through Hermes, the host or the store. There is one table of calls and one implementation each.
 - **Events:** the plugin maps Hermes's hooks and the gateway's events onto mod events, through the same bridge as Claude Code's hooks (COMPAT §4). There is one bridge for both.
   - `tool.check` and `tool.call` map to `pre_tool_call` and its result.
@@ -82,7 +82,7 @@ A Claude Code mod is a plugin whose `hooks/hooks.json` names a JavaScript or Typ
 ## 5. Build order
 | Phase | Work |
 |---|---|
-| M0 spike | The runtime choice. Run three mods we write (a pane with state and a clock, a command, a band) through `hx-mods`. Measure isolate start (budget 50 ms), per-event overhead (budget 1 ms) and memory |
+| M0 spike | **Done, 2026-11-19** (section 8). The runtime choice. Run three mods we write (a pane with state and a clock, a command, a band) through `hx-mods`. Measure isolate start (budget 50 ms), per-event overhead (budget 1 ms) and memory |
 | M1 | Runtime and chain. The core of `$`: `plugin`, `ui` (`open`, `close`, `invalidate`, `toast`, `status`, `log`, `notify`, `ask`), `state`, `store`, `clock`, `command`, `config`, `env`, `theme`. The renderer for `Box`, `Text`, `Button`, `Input`, `Select`, `Markdown`, `Code`, `Link` and `Svg`. Surfaces: pane, band, toast, status, log and ask. Theme mapping, the `statusLine` setting, and the install flow |
 | M2 | `tool.check`, `tool.call` and `tool.register` through the bridge. `prompt.*`, `turn.*` and `session.*`. `fs`, `http`, `process`, `mcp` and `model` through the policy. Redraw sites, placed rows, backdrop and `Client` |
 | M3 | Conformance. Public mods from marketplaces as pinned fixtures, a runner compatible with `claude plugin test`, and the feature table per Claude Code version |
@@ -101,3 +101,59 @@ Everything else reuses existing components.
 - **Desktop colour anchors** beyond `surface-0`, `text-primary` and `text-muted`, which are not on a public page. **[verify]**
 - **Strict permissions:** how often real mods expect unrestricted `$.fs` or `$.process`, and how the asks feel. The M3 conformance suite answers this.
 - **Reporting `surface: 'desktop'`:** check against popular mods that this gives the best result.
+
+## 8. Spike M0 result (2026-11-19)
+`crates/hx-mods` runs the three example mods (`tests/mods/`: a pane with state and a clock, a command, a band) from disk, in `.ts`, `.tsx`, `.mts` and `.jsx`, with no build step. It is a library with tests, not wired into `hx`.
+
+**Engine decision: QuickJS-NG through `rquickjs` 0.14, with `oxc` 0.158 for TypeScript and JSX.**
+
+| Option | Evidence | Verdict |
+|---|---|---|
+| QuickJS-NG (`rquickjs`) | ES modules, promises, async; `set_interrupt_handler` gives a wall-clock budget per hook; `set_memory_limit` and `set_max_stack_size` make an overrun throw inside the hook. Its build compiles `quickjs.c`, `libregexp.c`, `libunicode.c` and `dtoa.c` only (no `quickjs-libc.c`), so there is no `std` or `os` module to remove. Isolate start 1.8 ms, about 260 KiB of heap | chosen |
+| Boa 0.22 (pure Rust) | Read in its source: `RuntimeLimits` holds a loop-iteration limit, a stack-size limit and a recursion limit. No wall-clock interrupt and no heap limit, so a hook cannot be held to a time budget (a loop limit counts iterations, not milliseconds) or a memory budget. Not built or measured here | rejected: two of the four requirements are missing |
+| V8 (`v8` crate 152.2) | Termination and heap limits are known V8 features, not exercised here. Its prebuilt static library is a 39.8 MB gzip download (the release asset's `Content-Length`), against a 4.35 MiB delta for this crate. Not built here (disk) | rejected on size and build weight; the right answer if mods ever need JIT speed |
+| `swc`, or a JavaScript transform run inside the isolate | Not evaluated | `oxc` was enough: 7 to 14 microseconds per example file |
+
+Measured in a release build, 4 cores of a 2.1 GHz Xeon, `cargo test -p hx-mods --release --test perf -- --ignored --nocapture`:
+
+| What | Budget | Measured (median, p95) |
+|---|---|---|
+| Isolate start | | 1.81 ms, 1.89 ms |
+| Load the three example mods (read, transform, evaluate, `register`) | | 0.85 ms, 0.96 ms |
+| **Start plus load** | **50 ms** | **2.67 ms, 2.85 ms** |
+| Event with no hook | | 7.5 us, 8.2 us |
+| **Event through 1 / 3 pass-through hooks** | **1 ms** | **22 us, 38 us / 48 us, 131 us** |
+| `ui.render` of 1,000 elements (build, serialise, parse, validate) | | 7.5 ms, 10.1 ms (6.5 ms with 250 buttons) |
+| Engine heap, three mods loaded | | 259 KiB used |
+| Resident memory | | about 213 KiB per isolate (10 isolates, +2.1 MiB) |
+| Size added to a release `hx` | | **+4,349,064 bytes** (11,550,960 to 15,900,024, +37.7%), with the thin-LTO, stripped release profile. 89 of the 103 new crates are `oxc`'s and 4 are QuickJS's; not split further |
+
+A 1,000-element render is the one number worth watching: at 120 Hz a pane redrawn every frame would spend most of a frame on it. Panes redraw on invalidation (10/s, 30/s for the visible pane), so it is fine, and the isolate runs outside the webview, so a render costs no UI frame.
+
+The soak test shows the heap flat over 2,000 rounds of events, renders, presses and ticks.
+
+**The isolate's reach.** No file, network or process access of its own: the engine has no libc module, `tests/reach.rs` pins the exact global list (no `fetch`, `XMLHttpRequest`, `WebSocket`, timers, `console`, `process`, `require`, `Buffer`, `WebAssembly`, `Intl`, `structuredClone`, workers), and `tests/no_ambient_authority.rs` shows a running isolate adds no descriptor, socket, thread or child to the process. Web APIs present: `URL`, `URLSearchParams`, `TextEncoder`, `TextDecoder` (UTF-8), `AbortController`, `AbortSignal`, `queueMicrotask`, `crypto.getRandomValues`, `crypto.randomUUID` and `crypto.subtle.digest` (SHA-256, 384, 512), plus the engine's `atob`, `btoa`, `performance` and `DOMException`.
+
+**Documented behaviour not reproduced**
+- **`crypto.subtle`:** only `digest`, and not SHA-1. The docs name `crypto.subtle` without a method list. Anything else (`sign`, `importKey`, HMAC, AES) is absent; SHA-1 and MD5 answer `NotSupportedError`, never a wrong answer.
+- **`$`:** only `plugin`, `ui` (`open`, `close`, `invalidate`, `toast`, `status`, `log`), `state`, `clock.every` and `command.register`. The rest is M1 and later. `$.ui.resolve`, `$.ui.place` and the other surfaces are not there.
+- **The `claude-code` module** exports the element constructors, `Fragment` and `makeColors`. Its real exports are in `claude-code.d.ts`, which we have not read (section 7, licence). A mod importing another name fails to load.
+- **`.cjs` and `.cts`** load, as ES modules. A file that sets `exports.register` is not supported.
+- **"Three worker crashes unload every user mod"** is not implemented. A runtime that cannot be driven reports `Error::Crashed` and must be rebuilt.
+- **Hot reload and "module variables reset on reload"** are not implemented. `session.start` is fired by the host; the runtime does not fire it.
+- **The 10 s budget** is read as per hook, not charged while the hook waits for `next`. The docs say "per event" without saying which.
+- **`console`** does not exist, as the docs list no such API. A mod that calls `console.log` throws `ReferenceError`; check against real mods in M3.
+- **Settings hooks** (`"hooks"` in `hooks/hooks.json`) are ignored here: that is the COMPAT bridge's job.
+- **Rate limits** on `ui.invalidate` (10/s, 30/s) and the pane sizing rules belong to the host and are not in the runtime.
+- Nothing here ran a real Claude Code mod: the three examples are ours. Conformance against real mods is M3.
+
+**Risks for M1**
+1. **One realm for all mods breaks per-mod grants.** Section 4 grants capabilities per mod, and the attribution is the plugin name the kernel stamps on each call. But the mods share one realm, and a mod can patch a shared primitive: a test mod replaced `JSON.stringify` and rewrote another mod's `ui.log` arguments (the host saw `{"text": "forged"}` from `victim`). Before `$.fs`, `$.http` or `$.process` exist, either freeze the intrinsics before any mod loads (the kernel keeps its own references; SES-style, and watch the "override mistake", where assigning `e.name = ...` on an error subclass throws once `Error.prototype` is frozen), or give each mod its own context in the same runtime and move events and answers between them as JSON, which the chain largely does already. Decide this first.
+2. **The isolate should not run in the `hx` process.** QuickJS is 2 MB of C; a memory-safety bug in it would give a mod `hx`'s authority. ADR-0022 says "inside `hx-sandbox`": the way is `sandbox.spawn` of an `hx` subcommand with the channel (`crates/hx-sandbox/INTEGRATION.md`), network off, reading only its own binary. `HostCalls` is already the boundary: the worker's implementation is a client of the channel speaking `mods.call`. The worker then cannot read plugin files, so loading should take sources from a provider (the parent reads them through `cap_std`, as `files.rs` does now) rather than a path. **The channel is not implemented on Windows** (INTEGRATION.md), so a Windows build has no sandboxed worker yet; say so rather than fall back to in-process silently (invariant 6).
+3. **Host calls are synchronous** (`HostCalls::call` returns a value). The real ones (policy asks, forms, Hermes) take seconds and arrive from other threads. `drive` currently treats "no job runnable and no answer" as a stalled hook and blames it; with real async calls that state is normal, so the driver must wait on the host, and a hook's budget should not run while it awaits one. This changes `drive`, not the chain.
+4. **`ModRuntime` is `!Send`** (`Rc`). It needs its own OS thread and a channel, like Claude Code's worker thread, never the async executor (STANDARDS section 6).
+5. **`oxc` is 89 crates and 0.x, with a breaking release most months.** Pin exact versions and review upgrades. `self_cell` (via `oxc`) is `Apache-2.0 OR GPL-2.0-only`: we take Apache. The repository has no `deny.toml`, though STANDARDS lists `cargo-deny` in the gate.
+6. **One heap limit for the runtime** (64 MiB): a mod that fills it makes other mods' allocations throw. A runtime per mod would separate them, at roughly 0.3 MiB each, but could not share the chain; the worker design above gives a process per session either way.
+7. **Panics are contained but still print.** A transformer or host panic becomes an error, but the default hook writes its message to stderr. That is correct for logs (stdout carries frames only), but the worker should install a hook that goes through `tracing`.
+8. **The `claude-code` module and `console`** (above): the unread type declarations decide whether real mods load at all.
+

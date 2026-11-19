@@ -1,0 +1,9 @@
+{
+  "name": "counter-pane",
+  "version": "0.1.0",
+  "description": "A pane with a counter, a button that increments it, and a clock tick.",
+  "userConfig": {
+    "tickMs": { "type": "number", "description": "How often the tick counter advances, in milliseconds.", "default": 1000 },
+    "title": { "type": "string", "description": "The pane title.", "default": "Counter" }
+  }
+}

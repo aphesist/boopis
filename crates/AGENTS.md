@@ -12,6 +12,7 @@ The Rust side of hypotaxis: the `hx` binary and its libraries. The plugin drives
 | `hx` | the binary: `serve` over stdio, one-shot subcommands |
 | `hx-pack` | search, read, symbols, outlines, git status, redaction: the `pack.*` handlers, registered in `hx::build_dispatcher` |
 | `hx-sandbox` | the OS sandbox and the `sandbox.*` handlers (run, spawn, wait, kill, capabilities), registered in `hx::build_dispatcher` |
+| `hx-mods` | the runtime for Claude Code mods: a QuickJS isolate, the oxc TypeScript/JSX transform, the event chain and `$` as host calls. A library with tests; not wired into `hx` yet (`docs/MODS.md`, M1) |
 
 ## Invariants
 - Stdout carries protocol frames only.
@@ -28,13 +29,16 @@ The Rust side of hypotaxis: the `hx` binary and its libraries. The plugin drives
 cargo fmt --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace
 cargo test -p hx -- --ignored bless_schema     # after changing a wire type
 cargo test -p hx-txn --release --test perf -- --ignored --nocapture   # 10-file budget
+cargo test -p hx-mods --release --test perf -- --ignored --nocapture  # mods: start 50 ms, event 1 ms
 ```
-Also check the production feature set: `cargo clippy -p hx-txn -p hx-proto -p hx --lib --bins -- -D warnings`. `--all-targets` turns `dev-fixtures` on and hides lints in the no-op `Faults`.
+Also check the production feature set: `cargo clippy -p hx-txn -p hx-proto -p hx -p hx-mods --lib --bins -- -D warnings`. `--all-targets` turns `dev-fixtures` on and hides lints in the no-op `Faults`.
 
 ## Pending consolidation
 - `hx-pack/src/proc.rs` (child process with an allowlisted environment, timeout and output cap) is a stand-in for `hx-sandbox::process`. It is the only module that spawns, used only by `pack.status`; replace it when `hx-sandbox::process` lands.
 
 ## Do not
+- Do not let a panic unwind through the `hx-mods` engine callbacks (they are C frames: it aborts the process). New natives use `std::panic::catch_unwind`, like `natives::host_reply`.
+- Do not add a global to the `hx-mods` isolate without deciding it: `tests/reach.rs` pins the list.
 - Do not write to stdout from a handler or from logging.
 - Do not add a path helper elsewhere; extend `hx-txn::paths`.
 - Do not apply the whitespace-fuzzy match. It is report-only.

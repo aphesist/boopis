@@ -1,0 +1,38 @@
+[package]
+name = "hx-mods"
+description = "The runtime for Claude Code mods: an embedded JavaScript isolate, a TypeScript/JSX transform, the event chain and the `$` API as host calls."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[features]
+# The in-memory host that records `$` calls, for tests and the benchmark. Never enabled in the binary.
+dev-fixtures = []
+
+[dependencies]
+cap-std.workspace = true
+hex.workspace = true
+hx-txn.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+getrandom = "0.3"
+url = "2"
+uuid.workspace = true
+# QuickJS. `loader` gives the module resolver and loader traits.
+rquickjs = { version = "0.14", default-features = false, features = ["std", "loader"] }
+# Parser and transformer for .ts, .tsx, .mts and .jsx. No regex parsing, no minifier.
+oxc = { version = "0.158", default-features = false, features = ["transformer", "codegen", "semantic", "ast_visit"] }
+
+[dev-dependencies]
+hx-mods = { path = ".", features = ["dev-fixtures"] }
+tempfile.workspace = true
