@@ -5,6 +5,8 @@
 
 Order, first to last:
 
+0. a call that would read a ``denied_read_paths`` path blocks, in both modes, before anything can allow it (a hard deny,
+   never an ask: ``policy/denied.py``);
 1. an invalid configuration allows read-only tools only;
 2. a ``deny`` rule blocks (any source; deny beats ask beats allow);
 3. a write to a protected path blocks;
@@ -28,6 +30,7 @@ from functools import lru_cache
 
 from ..util.log import get_logger
 from .data import Defaults, load_defaults
+from .denied import denied_read
 from .governed import governed_decision, outside_workspace
 from .rules import Match, Rule, match_rule, parse_rule, parse_rules, paths_of, protected_match
 from .types import ALLOW, Decision, SessionPolicy, ToolCall, block
@@ -69,6 +72,9 @@ def check(call: ToolCall, session: SessionPolicy) -> Decision:
 
 
 def _check(call: ToolCall, session: SessionPolicy, defaults: Defaults) -> Decision:
+    denied = denied_read(call, defaults, session)
+    if denied is not None:
+        return denied
     if session.config_error:
         confined = session.mode == "governed" and call.tool in defaults.workspace_confined_tools
         if call.tool in defaults.read_only_tools and call.tool not in defaults.network_tools:

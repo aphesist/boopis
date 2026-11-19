@@ -285,6 +285,39 @@
     "//**/boopis/host-channel.json",
     "//**/.hx-journal-key"
   ],
+  "denied_read_path_keys": [
+    "path",
+    "paths",
+    "file_path",
+    "file",
+    "files",
+    "dir",
+    "directory",
+    "root",
+    "workdir",
+    "cwd"
+  ],
+  "denied_read_text_keys": [
+    "content",
+    "old_string",
+    "new_string",
+    "patch",
+    "diff",
+    "text",
+    "message",
+    "prompt",
+    "query",
+    "pattern",
+    "goal",
+    "context",
+    "description"
+  ],
+  "denied_read_script_keys": [
+    "command",
+    "cmd",
+    "code",
+    "script"
+  ],
   "mod_capabilities": {
     "_comment": "Each `$` call a mod makes: the capability it needs (docs/AUTOMATION.md section 3) and the decision when no rule says otherwise. `ask` opens a permission form; `refuse` is a call boopis does not provide yet. `subject` names the argument that is the capability's subject (a folder, a host).",
     "calls": {

@@ -28,6 +28,10 @@ class Defaults:
     path_object_lists: Mapping[str, tuple[str, ...]]
     aliases: Mapping[str, tuple[str, ...]]
     protected_defaults: tuple[str, ...]
+    denied_read_defaults: tuple[str, ...]  # paths no tool may read (``denied_read_paths``): hard deny, never an ask
+    denied_read_keys: frozenset[str]  # argument names whose values are paths, folders or globs
+    denied_read_text_keys: frozenset[str]  # argument names that hold prose, contents or a search pattern: never a path
+    denied_read_script_keys: frozenset[str]  # argument names that hold a command line or code, read word by word
     command_wrappers: frozenset[str]
     safe_env: frozenset[str]
     read_only_commands: Mapping[str, Mapping[str, Any]]
@@ -64,6 +68,10 @@ def load_defaults() -> Defaults:
         path_object_lists=_tuples(raw["path_object_lists"]),
         aliases=_tuples(raw["aliases"]),
         protected_defaults=protected_patterns() + tuple(raw["protected_extra"]),
+        denied_read_defaults=tuple(raw["denied_read_paths"]),
+        denied_read_keys=frozenset(raw["denied_read_path_keys"]),
+        denied_read_text_keys=frozenset(raw["denied_read_text_keys"]),
+        denied_read_script_keys=frozenset(raw["denied_read_script_keys"]),
         command_wrappers=frozenset(raw["command_wrappers"]),
         safe_env=frozenset(raw["safe_env_assignments"]),
         read_only_commands=cast(Mapping[str, Mapping[str, Any]], raw["read_only_commands"]),

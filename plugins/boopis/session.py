@@ -65,6 +65,9 @@ class SessionState:
     spend_usd: float = 0.0
     unpriced: set[str] = field(default_factory=set)
     blocked_calls: dict[str, str] = field(default_factory=dict)  # tool_call_id -> error code we set
+    blocked_rules: dict[str, tuple[str, str]] = field(
+        default_factory=dict
+    )  # tool_call_id -> (reason, rule) of the block
     lock: threading.RLock = field(default_factory=threading.RLock)
 
     def actor(self) -> str:
@@ -336,6 +339,15 @@ class Runtime:
         except Exception:  # noqa: BLE001 - outside a session context there is no cwd
             return ""
 
+    def _hermes_root(self) -> str:
+        """The Hermes root (the default profile's home), or this home when Hermes cannot say."""
+        try:
+            from .bots.homes import default_root
+
+            return str(default_root())
+        except Exception:  # noqa: BLE001 - outside Hermes there is only this home
+            return str(self.home)
+
     def _build_policy(self, state: SessionState) -> SessionPolicy:
         settings, project = state.settings, state.project
         rules = settings.permissions
@@ -364,6 +376,8 @@ class Runtime:
             protected=proj.protected if proj else (),
             config_error="; ".join(errors),
             exec_network=settings.exec.network,
+            hermes_home=str(self.home),
+            hermes_root=self._hermes_root(),
         )
 
     def _bootstrap_spend(self, state: SessionState) -> None:

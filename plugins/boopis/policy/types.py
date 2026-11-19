@@ -87,8 +87,11 @@ class SessionPolicy:
     allow: tuple[str, ...] = ()
     default: Fallback = "allow"
     protected: tuple[str, ...] = ()
+    denied_read: tuple[str, ...] = ()  # globs a user adds to the default ``denied_read_paths`` (never removes one)
     config_error: str = ""
     hook_allow: bool = True  # a Claude Code hook's allow skips this policy's approval prompts (docs/COMPAT.md 4.4)
     role: Role = "orchestrator"  # the session model, or a delegated worker attempt (governed mode)
     exec_network: Literal["off", "loopback", "on"] = "off"  # the exec kernel's network (``exec.network``)
+    hermes_home: str = ""  # this profile's home: where hx's journal key and the old rendezvous file live
+    hermes_root: str = ""  # the Hermes root, whose ``profiles/*`` hold the other profiles' keys
     ship_closed: str = ""  # a worker whose attempt is over (or has no task): why ship is refused; empty = open

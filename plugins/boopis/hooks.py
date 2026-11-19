@@ -91,15 +91,25 @@ def pre_tool_call(tool_name: str = "", args: Mapping[str, Any] | None = None, **
         decision = policy.check(call, rt.policy_for(caller))
         if decision.kind == "block" and call.tool_call_id:
             caller.state.blocked_calls[call.tool_call_id] = "hx.policy.denied"
+            caller.state.blocked_rules[call.tool_call_id] = (decision.reason, decision.rule)
         if caller.link is not None:
-            _worker_pre_call(rt, caller, call, args, blocked=decision.kind == "block")
+            _worker_pre_call(
+                rt, caller, call, args, blocked=decision.kind == "block", why=(decision.reason, decision.rule)
+            )
         return decision.directive()
     except Exception:  # noqa: BLE001 - the policy hook fails closed
         _log.error("pre_tool_call failed closed for tool=%s", tool_name, exc_info=True)
         return _block("boopis could not evaluate its policy, so this call was blocked.")
 
 
-def _worker_pre_call(rt: Runtime, caller: Caller, call: ToolCall, args: Any, *, blocked: bool) -> None:
+def _why(reason: str, rule: str) -> dict[str, Any]:
+    """Which policy rule blocked a call, for its ``tool.called``: a stable ``reason`` tag and the ``rule``."""
+    return {k: v for k, v in (("reason", reason), ("rule", rule)) if v}
+
+
+def _worker_pre_call(
+    rt: Runtime, caller: Caller, call: ToolCall, args: Any, *, blocked: bool, why: tuple[str, str] = ("", "")
+) -> None:
     """Hermes fires no ``post_tool_call`` for a delegated child's tools (verified on v0.23.2), so a worker's calls are
     recorded here and in the tool handlers: a blocked call now (nothing ran, so it took no time), an allowed one when
     the boopis tool that serves it finishes (``record_worker_call``)."""
@@ -118,6 +128,7 @@ def _worker_pre_call(rt: Runtime, caller: Caller, call: ToolCall, args: Any, *, 
             "args_sha256": _args_digest(args),
             "error_code": "hx.policy.denied",
         }
+        | _why(*why)
         | _tags(caller),
     )
 
@@ -227,6 +238,8 @@ def post_tool_call(tool_name: str = "", args: Any = None, **kw: Any) -> None:
             error_code=code,
             task_id="" if caller.worker else str(kw.get("task_id") or ""),
         )
+        if code == "hx.policy.denied":
+            payload |= _why(*state.blocked_rules.pop(call_id, ("", "")))
         payload |= _tags(caller)  # a worker's own task id is the cascade's, not Hermes's subagent id
         rt.ledger(state).append("tool.called", _actor(caller), payload)
         if tool_name == "exec" and kw.get("status") not in _STATUSES:
