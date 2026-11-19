@@ -360,7 +360,21 @@
     if (want.has('geometry.target')) {
       const HIT = px(getComputedStyle(document.documentElement).getPropertyValue('--hit-min')) || 24;
       const targets = els.filter((e) => e.matches('button, a[href], input:not([type="hidden"]), select, textarea, summary, [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], [role="switch"], [role="radio"], [role="checkbox"]') && !e.closest('[inert], [aria-hidden="true"]') && !e.disabled);
-      const boxes = targets.map((t) => t.getBoundingClientRect());
+      /* what the user can hit: the element's box united with an absolutely positioned ::before / ::after that takes pointer events (R-a11y-2: a mark smaller than --hit-min gets a hit area of 24 around it) */
+      const hitBox = (t) => {
+        const r = t.getBoundingClientRect();
+        let l = r.left, tp = r.top, rt = r.right, b = r.bottom;
+        for (const ps of ['::before', '::after']) {
+          const cs = getComputedStyle(t, ps);
+          if (cs.content === 'none' || cs.content === 'normal' || cs.position !== 'absolute' || cs.pointerEvents === 'none' || cs.display === 'none') continue;
+          const w = px(cs.width), h = px(cs.height), x = px(cs.left), y = px(cs.top);
+          if (![w, h, x, y].every(Number.isFinite)) continue;
+          const pl = r.left + t.clientLeft + x, pt = r.top + t.clientTop + y;
+          l = Math.min(l, pl); tp = Math.min(tp, pt); rt = Math.max(rt, pl + w); b = Math.max(b, pt + h);
+        }
+        return { left: l, top: tp, right: rt, bottom: b, width: rt - l, height: b - tp };
+      };
+      const boxes = targets.map(hitBox);
       targets.forEach((t, i) => {
         const r = boxes[i];
         if (r.width >= HIT - 0.01 && r.height >= HIT - 0.01) return;
