@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from functools import cache
 from pathlib import Path
 from typing import Any, cast
@@ -19,6 +19,7 @@ from typing import Any, cast
 from ..util.schema import JsonObject, validate
 from .model import (
     CascadeSettings,
+    ExecSettings,
     Fallback,
     Mode,
     PackSettings,
@@ -61,6 +62,14 @@ class Loaded:
 
 def default_settings() -> Settings:
     return Settings(mode=cast(Mode, schema_default("plugin-settings", "mode")))
+
+
+def _exec_settings(raw: Mapping[str, Any] | None) -> ExecSettings:
+    """Every ``exec`` field, from the settings or else the schema's default (already validated)."""
+    given = raw or {}
+    return ExecSettings(
+        **{f.name: given.get(f.name, schema_default("plugin-settings", "exec", f.name)) for f in fields(ExecSettings)}
+    )
 
 
 def _rules(raw: Mapping[str, Any] | None, default: Fallback = "allow") -> PermissionRules:
@@ -120,6 +129,7 @@ def parse_settings(raw: Mapping[str, Any], *, source: str = "plugins.entries.hyp
         pack=PackSettings(
             max_bytes=int(pack_raw.get("max_bytes", schema_default("plugin-settings", "pack", "max_bytes")))
         ),
+        exec=_exec_settings(raw.get("exec")),
         hx_path=str(raw.get("hx_path", "")),
         ledger_dir=str(raw.get("ledger_dir", "")),
     )

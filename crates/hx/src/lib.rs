@@ -11,7 +11,7 @@ pub mod serve;
 
 use std::sync::Arc;
 
-use hx_pack::{PackHandler, WalkCache};
+use hx_pack::{PackHandler, RedactHandler, WalkCache};
 use hx_proto::Dispatcher;
 use hx_sandbox::SandboxHandler;
 use hx_txn::TxnHandler;
@@ -46,6 +46,9 @@ pub fn build_dispatcher() -> Dispatcher {
             .register(Arc::new(PackHandler::new(cache)))
             .expect("pack methods are unique and in the pack namespace");
         dispatcher
+            .register(Arc::new(RedactHandler))
+            .expect("redact methods are unique and in the redact namespace");
+        dispatcher
             .register(Arc::new(SandboxHandler::new()))
             .expect("sandbox methods are unique and in the sandbox namespace");
     }
@@ -73,6 +76,7 @@ mod tests {
             "pack.outline",
             "pack.status",
             "pack.bundle",
+            "redact.apply",
             "sandbox.run",
             "sandbox.capabilities",
             "sandbox.spawn",

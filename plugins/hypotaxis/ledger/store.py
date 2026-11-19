@@ -21,6 +21,16 @@ from ..util.log import get_logger
 
 LedgerEvent = dict[str, Any]
 Emitter = Callable[[LedgerEvent], None]
+Redactor = Callable[[str], str]
+# The free-text fields of the events the plugin writes (docs/LEDGER.md), where a secret could land. Text there goes
+# through the redactor before it is hashed and written; everything else is ids, hashes and counts.
+FREE_TEXT: Mapping[str, tuple[str, ...]] = {
+    "blank.opened": ("question", "options", "blocks"),
+    "blank.filled": ("answer",),
+    "approval.requested": ("summary",),
+    "ship.restored": ("reason",),
+    "gate.decided": ("reason",),
+}
 
 _SAFE = re.compile(r"^[A-Za-z0-9._-]{1,200}$")
 _BROKEN_SEQ = re.compile(r"event (\d+):")
@@ -44,9 +54,10 @@ def _as_dict(event: Any) -> LedgerEvent:
 class SessionLedger:
     """Appends, reads and verifies one ``<session_id>.jsonl``. Thread-safe."""
 
-    def __init__(self, path: Path, emit: Emitter | None = None) -> None:
+    def __init__(self, path: Path, emit: Emitter | None = None, redactor: Redactor | None = None) -> None:
         self.path = path
         self._emit = emit
+        self._redactor = redactor
         self._lock = threading.Lock()
         self._log: Any = None  # contraprova.log.EventLog, opened on first append
 
@@ -79,10 +90,11 @@ class SessionLedger:
         from .._vendor.contraprova.events import ChainError
         from .._vendor.contraprova.projections import InvalidTransition
 
+        body = self._redacted(type_, payload)
         with self._lock:
             log = self._open()
             try:
-                event = _as_dict(log.append(type_, actor, dict(payload)))
+                event = _as_dict(log.append(type_, actor, body))
             except InvalidTransition as exc:
                 raise InvalidTransitionError(str(exc)) from exc
             except ChainError as exc:
@@ -95,6 +107,29 @@ class SessionLedger:
             except Exception:  # noqa: BLE001 - a viewer problem must never fail a write
                 _log.warning("ledger event %s not delivered to viewers", event["seq"], exc_info=True)
         return event
+
+    def _redacted(self, type_: str, payload: Mapping[str, Any]) -> dict[str, Any]:
+        """A copy of ``payload`` with the free-text fields of ``type_`` redacted. Without a redactor, or for a type
+        with no free text, the payload is written as given. A redactor that fails raises: nothing is written."""
+        body = dict(payload)
+        fields = FREE_TEXT.get(type_, ())
+        if self._redactor is None or not fields:
+            return body
+        for key in fields:
+            value = body.get(key)
+            if isinstance(value, str):
+                body[key] = self._redactor(value)
+            elif isinstance(value, list):
+                body[key] = [self._redactor(v) if isinstance(v, str) else v for v in value]  # pyright: ignore[reportUnknownVariableType]
+        if type_ == "gate.decided" and isinstance(body.get("gates"), list):
+            body["gates"] = [self._gate(g) for g in body["gates"]]
+        return body
+
+    def _gate(self, gate: Any) -> Any:
+        assert self._redactor is not None
+        if isinstance(gate, dict) and isinstance(gate.get("reason"), str):
+            return {**gate, "reason": self._redactor(gate["reason"])}
+        return gate
 
     # ------------------------------------------------------------------ reading
 

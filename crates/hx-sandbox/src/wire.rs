@@ -79,6 +79,11 @@ pub struct SandboxRunParams {
     /// Readable, writable and executable paths.
     #[serde(default)]
     pub rw: Vec<PathBuf>,
+    /// Also grant `ro` the platform's own system read paths ([`SandboxPolicy::system_read_paths`]:
+    /// the libraries and the few small files under `/etc` a program needs), so a caller need not
+    /// copy that list. Default: false.
+    #[serde(default)]
+    pub system_read: bool,
     /// Network mode. Default: off.
     #[serde(default)]
     pub net: Net,
@@ -119,8 +124,16 @@ impl SandboxRunParams {
     /// Splits the request into the argv and the policy for [`crate::run`].
     #[must_use]
     pub fn into_policy(self) -> (Vec<String>, SandboxPolicy) {
+        let mut ro = self.ro;
+        if self.system_read {
+            for path in SandboxPolicy::system_read_paths() {
+                if !ro.contains(&path) {
+                    ro.push(path);
+                }
+            }
+        }
         let mut policy = SandboxPolicy::new(self.cwd)
-            .with_ro(self.ro)
+            .with_ro(ro)
             .with_rw(self.rw)
             .with_network(self.net.into());
         policy.env_set = self.env;
@@ -326,6 +339,26 @@ mod tests {
             let net: Net = serde_json::from_str(json).unwrap();
             assert_eq!(NetworkPolicy::from(net), want, "{json}");
         }
+    }
+
+    #[test]
+    fn system_read_adds_the_platform_paths_once() {
+        let params: SandboxRunParams = serde_json::from_str(
+            r#"{"argv": ["true"], "cwd": "/usr", "ro": ["/usr"], "system_read": true}"#,
+        )
+        .unwrap();
+        let (_, policy) = params.into_policy();
+        let system = SandboxPolicy::system_read_paths();
+        for path in &system {
+            assert_eq!(
+                policy.ro_paths.iter().filter(|p| *p == path).count(),
+                1,
+                "{path:?}"
+            );
+        }
+        let plain: SandboxRunParams =
+            serde_json::from_str(r#"{"argv": ["true"], "cwd": "/tmp", "ro": ["/tmp"]}"#).unwrap();
+        assert_eq!(plain.into_policy().1.ro_paths.len(), 1, "off unless asked");
     }
 
     #[test]

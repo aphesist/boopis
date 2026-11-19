@@ -73,6 +73,11 @@ def _tags(caller: Caller) -> dict[str, Any]:
     return {"role": "worker", "task_id": link.task_id, "tier": link.tier, "attempt": link.attempt}
 
 
+def ledger_identity(caller: Caller) -> tuple[str, dict[str, Any]]:
+    """The ledger actor and the worker tags of a caller's events (the exec kernel's calls use the same)."""
+    return _actor(caller), _tags(caller)
+
+
 # ---------------------------------------------------------------- policy hooks
 
 
@@ -123,7 +128,9 @@ def record_worker_call(caller: Caller, tool: str, args: Any, duration_ms: int, f
         link = caller.link
         assert link is not None
         index = next((i for i, (name, _) in enumerate(link.calls) if name == tool), None)
-        call_id = link.calls.pop(index)[1] if index is not None else ""
+        if index is None:
+            return  # no pre_tool_call announced it: a call from an exec kernel, which exec records itself
+        call_id = link.calls.pop(index)[1]
         runtime().ledger(caller.state).append(
             "tool.called",
             _actor(caller),
@@ -184,6 +191,25 @@ def _cost_cap(rt: Runtime, state: SessionState, provider: str, model: str) -> di
 # ---------------------------------------------------------------- observers
 
 
+def tool_called_payload(
+    call_id: str, tool: str, status: str, duration_ms: int, args: Any, *, error_code: str = "", task_id: str = ""
+) -> dict[str, Any]:
+    """The ``tool.called`` payload, shared by the Hermes hook and the exec kernel's calls (one shape).
+    Arguments are hashed, never stored."""
+    payload: dict[str, Any] = {
+        "tool_call_id": call_id,
+        "tool": tool,
+        "status": status if status in _STATUSES else "error",
+        "duration_ms": max(int(duration_ms or 0), 0),
+        "args_sha256": _args_digest(args),
+    }
+    if error_code:
+        payload["error_code"] = error_code
+    if task_id:
+        payload["task_id"] = task_id
+    return payload
+
+
 def post_tool_call(tool_name: str = "", args: Any = None, **kw: Any) -> None:
     """``tool.called``: the call's outcome and duration. Arguments are hashed, never stored."""
     try:
@@ -191,25 +217,32 @@ def post_tool_call(tool_name: str = "", args: Any = None, **kw: Any) -> None:
         caller = _caller(rt, kw)
         state = caller.state
         call_id = str(kw.get("tool_call_id") or "")
-        status = kw.get("status")
-        payload: dict[str, Any] = {
-            "tool_call_id": call_id,
-            "tool": tool_name,
-            "status": status if status in _STATUSES else "error",
-            "duration_ms": max(int(kw.get("duration_ms") or 0), 0),
-            "args_sha256": _args_digest(args),
-        }
-        code = state.blocked_calls.pop(call_id, None)
-        if code:
-            payload["error_code"] = code
-        elif kw.get("error_type"):
-            payload["error_code"] = str(kw["error_type"])
-        if kw.get("task_id") and not caller.worker:
-            payload["task_id"] = str(kw["task_id"])
+        code = state.blocked_calls.pop(call_id, None) or (str(kw["error_type"]) if kw.get("error_type") else "")
+        payload = tool_called_payload(
+            call_id,
+            tool_name,
+            str(kw.get("status")),
+            int(kw.get("duration_ms") or 0),
+            args,
+            error_code=code,
+            task_id="" if caller.worker else str(kw.get("task_id") or ""),
+        )
         payload |= _tags(caller)  # a worker's own task id is the cascade's, not Hermes's subagent id
         rt.ledger(state).append("tool.called", _actor(caller), payload)
+        if tool_name == "exec" and kw.get("status") not in _STATUSES:
+            _abandon_cell(str(kw.get("session_id") or ""))
     except Exception:  # noqa: BLE001
         _log.error("tool.called not recorded", exc_info=True)
+
+
+def _abandon_cell(session_id: str) -> None:
+    """Hermes reports an exec call ``cancelled`` (not ok, error or blocked) when it gave up on it while its
+    handler still runs: the owner stopped the turn, or a deadline passed (verified on v0.23.2: the interrupt
+    arrives as ``post_tool_call`` with status ``cancelled``). Nobody is waiting for that cell, so it is
+    cancelled; the kernel and its variables stay."""
+    from .exec import abandon
+
+    abandon(session_id)
 
 
 def _record_usage(kw: Mapping[str, Any], *, auxiliary: bool) -> None:
@@ -276,6 +309,7 @@ def on_session_finalize(**kw: Any) -> None:
     """``session.closed``. A session that never reached its first prompt has nothing to close."""
     try:
         rt = runtime()
+        _stop_kernel(str(kw.get("session_id") or ""))
         if str(kw.get("session_id") or "") in rt.links:
             return  # a worker ending; ``subagent_stop`` is where its attempt is closed
         state = rt.forget(str(kw.get("session_id") or ""))
@@ -286,6 +320,16 @@ def on_session_finalize(**kw: Any) -> None:
         )
     except Exception:  # noqa: BLE001
         _log.error("session.closed not recorded", exc_info=True)
+
+
+def _stop_kernel(session_id: str) -> None:
+    """A finished session's exec kernel goes with it. Never raises."""
+    try:
+        from .exec import stop_session
+
+        stop_session(session_id, "the session ended")
+    except Exception:  # noqa: BLE001
+        _log.error("exec kernel not stopped", exc_info=True)
 
 
 def recover_on_start() -> None:

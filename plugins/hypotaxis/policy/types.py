@@ -10,13 +10,14 @@ from ..config.model import Fallback, Mode
 
 DecisionKind = Literal["allow", "block", "approve", "modify"]
 Role = Literal["orchestrator", "worker"]
-CallSource = Literal["hook", "kernel"]
+CallSource = Literal["hook", "kernel", "kernel_sh"]
 
 
 @dataclass(frozen=True, slots=True)
 class ToolCall:
     """One tool call to judge. ``source`` says which entry point asked: the ``pre_tool_call`` hook,
-    or the exec kernel (``ctx.dispatch_tool`` bypasses hooks, ADR-0005)."""
+    or the exec kernel (``ctx.dispatch_tool`` bypasses hooks, ADR-0005). ``kernel_sh`` is the kernel's
+    own ``harness.sh``, judged as a ``terminal`` call: user rules apply to it, but it runs in the sandbox."""
 
     tool: str
     args: Mapping[str, Any] = field(default_factory=dict)

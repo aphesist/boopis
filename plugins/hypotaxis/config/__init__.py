@@ -13,6 +13,7 @@ from .loader import (
 )
 from .model import (
     CascadeSettings,
+    ExecSettings,
     Fallback,
     Mode,
     PackSettings,
@@ -28,6 +29,7 @@ from .trust import KIND_SETTINGS, TrustStore, content_hash, project_id
 __all__ = [
     "KIND_SETTINGS",
     "CascadeSettings",
+    "ExecSettings",
     "Fallback",
     "Loaded",
     "Mode",

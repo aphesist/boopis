@@ -65,6 +65,13 @@ def governed_decision(
 ) -> Decision:
     """allow, or a block explaining why governed mode refuses this call."""
     tool = call.tool
+    if call.source == "kernel_sh":
+        return ALLOW  # harness.sh runs in the kernel's own sandbox: read-only workspace, scratch writable
+    if call.source == "kernel" and tool in defaults.shell_tools:
+        return block(
+            f"{_HINT} Run shell commands from exec with `await harness.sh([...])`, which runs in the sandbox.",
+            "governed",
+        )
     if tool in defaults.own_tools:
         return _own_tool(call, defaults, role, ship_closed)
     if tool in defaults.read_only_tools:

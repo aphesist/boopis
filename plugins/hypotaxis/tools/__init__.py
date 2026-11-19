@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 TOOLSET = "hypotaxis"
-TOOLS = ("pack", "ship", "dispatch")
+TOOLS = ("pack", "exec", "ship", "dispatch")
 SCHEMAS = Path(__file__).with_name("schemas.json")
 
 
@@ -32,6 +32,14 @@ def hx_ready() -> bool:
         return hx.available(runtime().load_settings().value.hx_path)
     except Exception:  # noqa: BLE001 - a check that errors hides the tool
         return False
+
+
+def exec_ready() -> bool:
+    """``check_fn`` of exec: hx exists and the platform has the kernel's private channel. Windows has none
+    yet, so exec is hidden there rather than offered and then refused."""
+    from ..exec import available
+
+    return available() and hx_ready()
 
 
 def _session(args: Mapping[str, Any], kw: Mapping[str, Any]) -> Any:
@@ -82,6 +90,27 @@ def ship_handler(args: Mapping[str, Any], **kw: Any) -> str:
         return _worker_call(caller, "ship", args, started, shipped)
     except Exception as exc:  # noqa: BLE001
         return json.dumps({"error": f"ship failed: {type(exc).__name__}: {exc}", "code": "hx.internal_error"})
+
+
+def exec_handler(args: Mapping[str, Any], **kw: Any) -> str:
+    from ..exec import run_exec, to_json
+
+    started = time.monotonic()
+    try:
+        rt, caller = _session(args, kw)
+        if caller is None:
+            return json.dumps({"error": "exec needs a session", "code": "hx.config.invalid"})
+        from .. import policy
+
+        decision = policy.check(policy.ToolCall("exec", {}, str(kw.get("session_id") or "")), rt.policy_for(caller))
+        if (
+            decision.kind == "block"
+        ):  # in governed mode exec is a worker's tool; a handler reached any other way refuses too
+            return json.dumps({"error": decision.message, "code": "hx.policy.denied"})
+        result = to_json(run_exec(rt, caller, args, kw))
+        return _worker_call(caller, "exec", args, started, result)
+    except Exception as exc:  # noqa: BLE001
+        return json.dumps({"error": f"exec failed: {type(exc).__name__}: {exc}", "code": "hx.internal_error"})
 
 
 def dispatch_handler(args: Mapping[str, Any], **kw: Any) -> str:

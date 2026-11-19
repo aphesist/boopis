@@ -50,6 +50,12 @@
     {"code": "hx.sandbox.denied", "rpc_code": -32000, "description": "The OS refused while the sandbox was being built or applied, so the command did not run. data.step names the setup step."},
     {"code": "hx.sandbox.spawn_failed", "rpc_code": -32000, "description": "A long-lived sandboxed child could not be started (`sandbox.spawn` only; `sandbox.run` reports the same condition as the exit kind `spawn_failed`)."},
     {"code": "hx.sandbox.unknown_handle", "rpc_code": -32000, "description": "No running sandbox child has that handle: it never existed, or sandbox.wait already returned its exit."},
-    {"code": "hx.sandbox.too_many", "rpc_code": -32000, "description": "Too many sandbox children are running at once; wait for or kill one."}
+    {"code": "hx.sandbox.too_many", "rpc_code": -32000, "description": "Too many sandbox children are running at once; wait for or kill one."},
+    {"code": "hx.kernel.dead", "rpc_code": -32000, "description": "The exec kernel exited, was killed (hard timeout, an unresponsive cancel, its lifetime limit) or lost its channel. Its variables are gone; the next exec call starts a fresh kernel."},
+    {"code": "hx.exec.call_limit", "rpc_code": -32000, "description": "A cell made more tool calls than the per-cell limit (`exec.max_calls_per_cell`)."},
+    {"code": "hx.exec.busy", "rpc_code": -32000, "description": "The kernel is running a cell, or too many kernels are busy to start another."},
+    {"code": "hx.exec.unsupported", "rpc_code": -32000, "description": "A harness feature is not available yet (diagnostics, waiting on a form). The answer says so instead of inventing one."},
+    {"code": "hx.exec.sh_failed", "rpc_code": -32000, "description": "`harness.sh` could not start the command (the program was not found or could not be executed)."},
+    {"code": "hx.exec.invalid", "rpc_code": -32000, "description": "A harness call had malformed arguments, or exec was called without a session or working directory."}
   ]
 }

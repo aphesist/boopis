@@ -26,7 +26,7 @@ from .config import (
     load_project,
     load_settings,
 )
-from .errors import InvalidParamsError, ModeLockedError, PricesError
+from .errors import InvalidParamsError, LedgerError, ModeLockedError, PricesError
 from .governance import host
 from .governance.ladder import resolve_ladder
 from .governance.links import WorkerLink
@@ -241,8 +241,23 @@ class Runtime:
                 # the full envelope, as plugin.hypotaxis.ledger.appended (docs/PROTOCOL.md section 3)
                 self.ctx.emit_to_session(session_id, "ledger.appended", event)
 
-            state.ledger = SessionLedger(self.ledger_path(session_id, state.settings), emit)
+            state.ledger = SessionLedger(self.ledger_path(session_id, state.settings), emit, self.redact)
         return state.ledger
+
+    def redact(self, text: str) -> str:
+        """``text`` redacted by hx (ADR-0016), for the ledger's free-text fields. Raises ``LedgerError`` when hx is
+        there but cannot do it, so the event is not written with a secret in it. With no hx binary at all, no tool
+        (pack, ship, exec, the gate) can have produced the text, so there is nothing to redact it with or from."""
+        from .errors import HypotaxisError
+        from .util.redact import redact_text
+
+        client = self.hx_client()
+        if client is None:
+            return text
+        try:
+            return redact_text(client, text)
+        except HypotaxisError as exc:
+            raise LedgerError(f"free text could not be redacted for the ledger: {exc.message}") from exc
 
     def ledger(self, state: SessionState) -> SessionLedger:
         return self._ledger_for(state)

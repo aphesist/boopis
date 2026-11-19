@@ -54,20 +54,29 @@ def _rpc(method: str) -> Callable[..., Any]:
 
 def register(ctx: Any) -> None:
     from .hermes_api import bind
-    from .tools import TOOLSET, dispatch_handler, hx_ready, pack_handler, ship_handler, tool_schemas
+    from .tools import (
+        TOOLSET,
+        dispatch_handler,
+        exec_handler,
+        exec_ready,
+        hx_ready,
+        pack_handler,
+        ship_handler,
+        tool_schemas,
+    )
 
     bind(ctx)
     from .compat import register as register_compat
 
     register_compat(ctx)  # before the policy hooks: a Claude hook's `allow` must be on record when the policy asks
-    handlers = {"pack": pack_handler, "ship": ship_handler, "dispatch": dispatch_handler}
+    handlers = {"pack": pack_handler, "exec": exec_handler, "ship": ship_handler, "dispatch": dispatch_handler}
     for name, schema in tool_schemas().items():
         ctx.register_tool(
             name=name,
             toolset=TOOLSET,
             schema=schema,
             handler=handlers[name],
-            check_fn=hx_ready,
+            check_fn=exec_ready if name == "exec" else hx_ready,
             description=schema["description"],
         )
 
@@ -81,6 +90,7 @@ def register(ctx: Any) -> None:
     on_unload = getattr(ctx, "on_unload", None)
     if callable(on_unload):
         on_unload(_lazy("hx", "shutdown"))
+        on_unload(_lazy("exec", "shutdown"))  # unload runs in reverse: kernels stop before the hx that sandboxes them
 
 
 def _register_delegation(ctx: Any) -> None:

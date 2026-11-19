@@ -105,6 +105,12 @@ class HxClient:
         if proc is not None:
             kill_group(proc)
 
+    @property
+    def running(self) -> bool:
+        """Whether the child process is alive now (``available`` is also true before the first start)."""
+        with self._lock:
+            return self._alive()
+
     def stderr_tail(self) -> str:
         return self._stderr.text() if self._stderr is not None else ""
 

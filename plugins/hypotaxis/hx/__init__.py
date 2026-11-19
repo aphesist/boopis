@@ -11,7 +11,7 @@ from pathlib import Path
 from ..util.log import get_logger
 from .client import HxClient
 
-__all__ = ["HxClient", "available", "get_client", "resolve_path", "shutdown"]
+__all__ = ["HxClient", "available", "get_client", "resolve_path", "running_client", "shutdown"]
 
 PLUGIN_DIR = Path(__file__).resolve().parent.parent
 AVAILABILITY_TTL_S = 30.0
@@ -47,6 +47,13 @@ def get_client(configured: str = "", log_file: Path | None = None) -> HxClient |
             _client.close()
         _client = HxClient(path, log_file=log_file)
         return _client
+
+
+def running_client() -> HxClient | None:
+    """The client if its hx process is alive now, else None. Never starts hx (the log redactor uses it)."""
+    with _lock:
+        client = _client
+    return client if client is not None and client.running else None
 
 
 def available(configured: str = "") -> bool:

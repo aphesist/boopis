@@ -245,6 +245,120 @@
           "default": 8000
         }
       }
+    },
+    "exec": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 1000,
+          "default": 120000,
+          "maximum": 3600000
+        },
+        "max_timeout_ms": {
+          "type": "integer",
+          "minimum": 1000,
+          "default": 300000,
+          "maximum": 3600000
+        },
+        "kill_grace_ms": {
+          "type": "integer",
+          "minimum": 100,
+          "default": 5000,
+          "maximum": 60000
+        },
+        "start_timeout_ms": {
+          "type": "integer",
+          "minimum": 1000,
+          "default": 15000,
+          "maximum": 120000
+        },
+        "max_calls_per_cell": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 50,
+          "maximum": 10000
+        },
+        "max_concurrency": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 8,
+          "maximum": 64
+        },
+        "output_cap_bytes": {
+          "type": "integer",
+          "minimum": 1024,
+          "default": 30000,
+          "maximum": 1048576
+        },
+        "result_cap_bytes": {
+          "type": "integer",
+          "minimum": 256,
+          "default": 10000,
+          "maximum": 1048576
+        },
+        "spill_cap_bytes": {
+          "type": "integer",
+          "minimum": 4096,
+          "default": 16777216,
+          "maximum": 268435456
+        },
+        "call_result_cap_bytes": {
+          "type": "integer",
+          "minimum": 1024,
+          "default": 1048576,
+          "maximum": 33554432
+        },
+        "sh_output_cap_bytes": {
+          "type": "integer",
+          "minimum": 1024,
+          "default": 1048576,
+          "maximum": 67108864
+        },
+        "max_kernels": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 4,
+          "maximum": 32
+        },
+        "idle_timeout_s": {
+          "type": "integer",
+          "minimum": 10,
+          "default": 900,
+          "maximum": 86400
+        },
+        "max_lifetime_s": {
+          "type": "integer",
+          "minimum": 60,
+          "default": 3600,
+          "maximum": 3600
+        },
+        "memory_mb": {
+          "type": "integer",
+          "minimum": 64,
+          "default": 2048,
+          "maximum": 65536
+        },
+        "max_processes": {
+          "type": "integer",
+          "minimum": 8,
+          "default": 256,
+          "maximum": 4096
+        },
+        "network": {
+          "type": "string",
+          "enum": [
+            "off",
+            "loopback",
+            "on"
+          ],
+          "default": "off"
+        }
+      }
     }
   }
 }

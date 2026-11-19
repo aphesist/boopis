@@ -43,6 +43,30 @@ class PackSettings:
 
 
 @dataclass(frozen=True, slots=True)
+class ExecSettings:
+    """``exec``: the code kernel's limits. Every default is the JSON Schema's (``exec`` in
+    ``plugin-settings.schema.json``), which also documents the unit of each field."""
+
+    timeout_ms: int = 120000
+    max_timeout_ms: int = 300000
+    kill_grace_ms: int = 5000
+    start_timeout_ms: int = 15000
+    max_calls_per_cell: int = 50
+    max_concurrency: int = 8
+    output_cap_bytes: int = 30000
+    result_cap_bytes: int = 10000
+    spill_cap_bytes: int = 16777216
+    call_result_cap_bytes: int = 1048576
+    sh_output_cap_bytes: int = 1048576
+    max_kernels: int = 4
+    idle_timeout_s: int = 900
+    max_lifetime_s: int = 3600
+    memory_mb: int = 2048
+    max_processes: int = 256
+    network: Literal["off", "loopback", "on"] = "off"
+
+
+@dataclass(frozen=True, slots=True)
 class CascadeSettings:
     """``cascade``: how much of a failed attempt the next tier is told (the brief itself is always whole).
     ``brief_max_chars`` bounds a brief that ``dispatch`` accepts."""
@@ -64,6 +88,7 @@ class Settings:
     cost_cap_usd: float | None = None
     prices: PricesSettings = PricesSettings()
     pack: PackSettings = PackSettings()
+    exec: ExecSettings = ExecSettings()
     subscription_providers: tuple[str, ...] = ()
     permissions: PermissionRules = PermissionRules()
     hx_path: str = ""

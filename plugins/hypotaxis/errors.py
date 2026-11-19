@@ -45,6 +45,18 @@ class HxCallError(HypotaxisError):
         super().__init__(message, data=data)
 
 
+class KernelDeadError(HypotaxisError):
+    """The exec kernel is gone: its variables with it."""
+
+    code = "hx.kernel.dead"
+
+
+class SandboxUnavailableError(HypotaxisError):
+    """exec needs the OS sandbox and its private channel, and this host cannot provide them."""
+
+    code = "hx.sandbox.unavailable"
+
+
 class PricesError(HypotaxisError):
     code = "hx.prices.unavailable"
 
