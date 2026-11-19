@@ -77,7 +77,7 @@ const inApp: Story = {
   mock: { url: '/v6/__index.html' },
   states: {
     session: { tags: ['typical', 'owner'], interact: [{ name: 'hover attach, mic and send', watch: '#hx-view-session [data-hx-composer]', steps: [{ do: 'hover', sel: '#hx-view-session .ui-composer__attach', ms: 600 }, { do: 'hover', sel: '#hx-view-session .ui-composer__mic', ms: 600 }, { do: 'hover', sel: '#hx-view-session .ui-send', ms: 600 }, { do: 'move-away' }], sample: 700 }] },
-    'session, empty': { tags: ['empty'], app: { setup: (c) => { c.$('[data-hx-composer] .ui-composer__input').textContent = ''; c.$('[data-hx-composer] .ui-composer__input').dispatchEvent(new Event('input', { bubbles: true })); } } },
+    'session, empty': { tags: ['empty'], app: { setup: async (c) => { c.$('[data-hx-composer] .ui-composer__input').textContent = ''; c.$('[data-hx-composer] .ui-composer__input').dispatchEvent(new Event('input', { bubbles: true })); await c.wait(300); } } },   // the composer repaints its assumptions 250 ms after the last input
     'session, attach hover': { tags: ['hover', 'owner'], force: [{ sel: '#hx-view-session .ui-composer__attach', state: 'hover' }] },
     'session, send hover': { tags: ['hover', 'owner'], force: [{ sel: '#hx-view-session .ui-send', state: 'hover' }] },
     'session, attach tooltip': { tags: ['tooltip', 'owner'], overlay: { anchor: '#hx-view-session .ui-composer__attach', layer: '.ui-tip' }, app: { setup: async (c) => { const b = c.$('#hx-view-session .ui-composer__attach'); b.focus(); c.hx.ui.tooltip.show(b); await c.wait(250); } } },
