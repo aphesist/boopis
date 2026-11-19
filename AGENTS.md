@@ -23,6 +23,7 @@ hypotaxis is a desktop coding harness on **unmodified Hermes Agent**: Hermes doe
 | `apps/desktop/ui/` | UI (TypeScript), the v6 design system | `apps/desktop/AGENTS.md` |
 | `apps/shared/` | the hypotaxis-v1 OpenRPC contract and generated types | `apps/shared/AGENTS.md` |
 | `skills/` | bundled skills (agentskills.io format) | `skills/AGENTS.md` |
+| `packaging/` | the terminal art (`brand/`), the installers' icons, the Arch install script; `scripts/install.sh` and `install.ps1` read it | `packaging/AGENTS.md` |
 | `docs/` | architecture, standards, decisions, protocol, ledger, compat, research | this file |
 | `vendor/hermes-agent/` | upstream Hermes, pinned tag, CI only. Read it, never edit it | — |
 
@@ -31,6 +32,7 @@ hypotaxis is a desktop coding harness on **unmodified Hermes Agent**: Hermes doe
 cargo fmt --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace
 (cd plugins/hypotaxis && ruff check . && pyright && pytest)
 (cd apps/desktop/ui && pnpm install --frozen-lockfile && pnpm typecheck && pnpm test)
+shellcheck scripts/install.sh scripts/embed-brand.sh scripts/test-brand.sh scripts/test-install.sh && scripts/test-brand.sh && scripts/test-install.sh
 ```
 
 ## Git: every commit is the owner's alone

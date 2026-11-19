@@ -1,0 +1,355 @@
+# boopis terminal art. One file: every renderer reads it (packaging/AGENTS.md).
+# Pixels are half a cell wide and half a cell tall (a cell is 2x2 pixels, drawn with quadrant blocks).
+#   color <name> <#rrggbb | -> [hole]   '-' is the terminal's own foreground; a hole is not drawn without colour
+#   sprite <name> <color> ... end        '#' is the sprite's colour, 'o' the eye colour, '.' nothing
+#   text <name> <string>                 a one-line form
+#   scene <name> ... end                 slot <slot> <x> <y> <sprite>, in pixels
+#   anim <scene> ... end                 frame <ms> <slot>=<sprite>[@dy] ..., dy in pixels (up is negative)
+format 1
+
+color ink -
+color eye #0f0e0c hole
+color kai #4fc9a8
+color nina #f23b5a
+color iris #3b82f6
+color hex #a6a6ab
+color nimbus #9b5cf6
+color moss #2fd26a
+color terra #c4834a
+
+text compact b●●pis
+text compact.ascii boopis
+
+sprite logo ink
+#####............................................................................................#####......................
+#####............................................................................................#####......................
+#####............................................................................................#####......................
+#####.......................................................................................................................
+#####...########.........................................................####...########.........#####........##########....
+##################......................................................##################.......#####.....################.
+######.......######.....................................................######........######.....#####....#####........###..
+#####.........######....................................................######.........#####.....#####....#####.............
+#####..........#####....................................................######.........#####.....#####.....##########.......
+#####..........#####....................................................######.........######....#####......##############..
+#####..........#####....................................................######.........#####.....#####............#########.
+#####.........######....................................................######.........#####.....#####.................#####
+######.......######.....................................................######.......######......#####....####.........#####
+####.#############......................................................##################.......#####.....################.
+####...########.........................................................######..########.........#####........##########....
+........................................................................######..............................................
+........................................................................######..............................................
+........................................................................######..............................................
+end
+
+sprite eyes.idle ink
+........###########.............###########.......
+......################........################....
+....###################.....###################...
+....####################....####################..
+...#####################...#####################..
+...#####################...#####################..
+...#####################...#####################..
+....####################....####################..
+....###################.....###################...
+......################........################....
+.........##########..............##########.......
+..................................................
+end
+
+sprite eyes.blink ink
+..................................................
+..................................................
+..................................................
+..................................................
+........############............############......
+...#####################...#####################..
+..........########................########........
+..................................................
+..................................................
+..................................................
+..................................................
+..................................................
+end
+
+sprite eyes.left ink
+.......###########.............###########........
+.....################........################.....
+...###################.....###################....
+...####################....####################...
+..#####################...#####################...
+..#####################...#####################...
+..#####################...#####################...
+...####################....####################...
+...###################.....###################....
+.....################........################.....
+........##########..............##########........
+..................................................
+end
+
+sprite eyes.right ink
+.........###########.............###########......
+.......################........################...
+.....###################.....###################..
+.....####################....####################.
+....#####################...#####################.
+....#####################...#####################.
+....#####################...#####################.
+.....####################....####################.
+.....###################.....###################..
+.......################........################...
+..........##########..............##########......
+..................................................
+end
+
+sprite bot.kai.idle kai
+...######...
+.##########.
+###oo##oo###
+###oo##oo###
+.##########.
+...######...
+end
+
+sprite bot.kai.blink kai
+...######...
+.##########.
+############
+###oo##oo###
+.##########.
+...######...
+end
+
+sprite bot.kai.left kai
+...######...
+.##########.
+##oo##oo####
+##oo##oo####
+.##########.
+...######...
+end
+
+sprite bot.kai.right kai
+...######...
+.##########.
+####oo##oo##
+####oo##oo##
+.##########.
+...######...
+end
+
+sprite bot.nina.idle nina
+.....##.....
+....####....
+...######...
+..#oo##oo#..
+.##oo##oo##.
+############
+end
+
+sprite bot.nina.blink nina
+.....##.....
+....####....
+...######...
+..########..
+.##oo##oo##.
+############
+end
+
+sprite bot.nina.left nina
+.....##.....
+....####....
+...######...
+..oo##oo##..
+.#oo##oo###.
+############
+end
+
+sprite bot.nina.right nina
+.....##.....
+....####....
+...######...
+..##oo##oo..
+.###oo##oo#.
+############
+end
+
+sprite bot.iris.idle iris
+.....##.....
+....####....
+...######...
+.##oo##oo##.
+###oo##oo###
+..########..
+end
+
+sprite bot.iris.blink iris
+.....##.....
+....####....
+...######...
+.##########.
+###oo##oo###
+..########..
+end
+
+sprite bot.iris.left iris
+.....##.....
+....####....
+...######...
+.#oo##oo###.
+##oo##oo####
+..########..
+end
+
+sprite bot.iris.right iris
+.....##.....
+....####....
+...######...
+.###oo##oo#.
+####oo##oo##
+..########..
+end
+
+sprite bot.hex.idle hex
+....####....
+..########..
+###oo##oo###
+###oo##oo###
+..########..
+....####....
+end
+
+sprite bot.hex.blink hex
+....####....
+..########..
+############
+###oo##oo###
+..########..
+....####....
+end
+
+sprite bot.hex.left hex
+....####....
+..########..
+##oo##oo####
+##oo##oo####
+..########..
+....####....
+end
+
+sprite bot.hex.right hex
+....####....
+..########..
+####oo##oo##
+####oo##oo##
+..########..
+....####....
+end
+
+sprite bot.nimbus.idle nimbus
+..###..###..
+.##########.
+############
+#oooo##oooo#
+############
+.##########.
+end
+
+sprite bot.nimbus.blink nimbus
+..###..###..
+.##########.
+############
+#oooo##oooo#
+############
+.##########.
+end
+
+sprite bot.nimbus.left nimbus
+..###..###..
+.##########.
+############
+oooo##oooo##
+############
+.##########.
+end
+
+sprite bot.nimbus.right nimbus
+..###..###..
+.##########.
+############
+##oooo##oooo
+############
+.##########.
+end
+
+sprite bot.moss.idle moss
+.##########.
+############
+####o##o####
+####o##o####
+############
+.##########.
+end
+
+sprite bot.moss.blink moss
+.##########.
+############
+############
+####o##o####
+############
+.##########.
+end
+
+sprite bot.moss.left moss
+.##########.
+############
+###o##o#####
+###o##o#####
+############
+.##########.
+end
+
+sprite bot.moss.right moss
+.##########.
+############
+#####o##o###
+#####o##o###
+############
+.##########.
+end
+
+scene banner
+slot logo 0 0 logo
+slot eyes 20 4 eyes.idle
+slot kai 0 22 bot.kai.idle
+slot nina 22 22 bot.nina.idle
+slot iris 44 22 bot.iris.idle
+slot hex 66 22 bot.hex.idle
+slot nimbus 88 22 bot.nimbus.idle
+slot moss 110 22 bot.moss.idle
+end
+
+scene bots
+slot kai 0 2 bot.kai.idle
+slot nina 22 2 bot.nina.idle
+slot iris 44 2 bot.iris.idle
+slot hex 66 2 bot.hex.idle
+slot nimbus 88 2 bot.nimbus.idle
+slot moss 110 2 bot.moss.idle
+end
+
+anim banner
+frame 90 eyes=eyes.blink kai=bot.kai.blink nina=bot.nina.blink iris=bot.iris.blink hex=bot.hex.blink nimbus=bot.nimbus.blink moss=bot.moss.blink
+frame 130 eyes=eyes.idle kai=bot.kai.idle nina=bot.nina.idle iris=bot.iris.idle hex=bot.hex.idle nimbus=bot.nimbus.idle moss=bot.moss.idle
+frame 170 eyes=eyes.left kai=bot.kai.left nina=bot.nina.left iris=bot.iris.left hex=bot.hex.left nimbus=bot.nimbus.left moss=bot.moss.left
+frame 170 eyes=eyes.right kai=bot.kai.right nina=bot.nina.right iris=bot.iris.right hex=bot.hex.right nimbus=bot.nimbus.right moss=bot.moss.right
+frame 90 eyes=eyes.idle kai=bot.kai.idle nina=bot.nina.idle iris=bot.iris.idle hex=bot.hex.idle nimbus=bot.nimbus.idle moss=bot.moss.idle
+frame 55 eyes=eyes.idle kai=bot.kai.idle@-1 nina=bot.nina.idle iris=bot.iris.idle hex=bot.hex.idle nimbus=bot.nimbus.idle moss=bot.moss.idle
+frame 55 eyes=eyes.idle kai=bot.kai.idle@-2 nina=bot.nina.idle@-1 iris=bot.iris.idle hex=bot.hex.idle nimbus=bot.nimbus.idle moss=bot.moss.idle
+frame 55 eyes=eyes.idle kai=bot.kai.idle@-1 nina=bot.nina.idle@-2 iris=bot.iris.idle@-1 hex=bot.hex.idle nimbus=bot.nimbus.idle moss=bot.moss.idle
+frame 55 eyes=eyes.idle kai=bot.kai.idle nina=bot.nina.idle@-1 iris=bot.iris.idle@-2 hex=bot.hex.idle@-1 nimbus=bot.nimbus.idle moss=bot.moss.idle
+frame 55 eyes=eyes.idle kai=bot.kai.idle nina=bot.nina.idle iris=bot.iris.idle@-1 hex=bot.hex.idle@-2 nimbus=bot.nimbus.idle@-1 moss=bot.moss.idle
+frame 55 eyes=eyes.idle kai=bot.kai.idle nina=bot.nina.idle iris=bot.iris.idle hex=bot.hex.idle@-1 nimbus=bot.nimbus.idle@-2 moss=bot.moss.idle@-1
+frame 55 eyes=eyes.idle kai=bot.kai.idle nina=bot.nina.idle iris=bot.iris.idle hex=bot.hex.idle nimbus=bot.nimbus.idle@-1 moss=bot.moss.idle@-2
+frame 55 eyes=eyes.idle kai=bot.kai.idle nina=bot.nina.idle iris=bot.iris.idle hex=bot.hex.idle nimbus=bot.nimbus.idle moss=bot.moss.idle@-1
+frame 1 eyes=eyes.idle kai=bot.kai.idle nina=bot.nina.idle iris=bot.iris.idle hex=bot.hex.idle nimbus=bot.nimbus.idle moss=bot.moss.idle
+end

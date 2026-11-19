@@ -1,0 +1,34 @@
+# boopis.install: the pacman install script. The package build (a separate step) names it as `install=boopis.install`.
+# pacman sources it as root and prints what the functions echo, so it stays short, static and free of escape codes.
+# The banner is generated from packaging/brand by scripts/embed-brand.sh; edit the art there, not here.
+
+# >>> banner
+boopis_banner() {
+  cat <<'BANNER'
+
+  ▗▟██▙▖       ▟▙         ▟▙        ▄██▄      ▗█▙▟█▖     ▟████▙
+  █▌▐▌▐█      ▞▜▛▚      ▗▞▜▛▚▖     █▌▐▌▐█     ▛▀▜▛▀▜     ██▐▌██
+  ▝▜██▛▘     ▟▙▟▙▟▙     ▀▙▟▙▟▀      ▀██▀      ▜████▛     ▜████▛
+BANNER
+}
+# <<< banner
+
+post_install() {
+  boopis_banner
+  echo
+  echo "  boopis is installed."
+  echo "  Start it   boopis"
+  echo "  Check it   boopis doctor"
+  echo
+}
+
+post_upgrade() {
+  boopis_banner
+  echo
+  echo "  boopis is updated. Close it and start it again to use the new version."
+  echo
+}
+
+post_remove() {
+  echo "  boopis was removed. Your data in ~/.local/share/dev.aphesist.hypotaxis was kept."
+}

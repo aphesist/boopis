@@ -3,6 +3,8 @@
 //! It owns the Hermes lifecycle, the gateway connection (a validating, multiplexing proxy), the OS keychain, windows
 //! and notifications. The UI owns the experience and the backend (Hermes plus the plugin) owns the work.
 
+pub mod brand;
+pub mod cli;
 pub mod commands;
 pub mod config;
 pub mod endpoint;
@@ -79,10 +81,25 @@ fn init_logging() {
         .try_init();
 }
 
-/// Run the app.
-#[allow(clippy::too_many_lines)] // one linear start-up: decide the GPU and renderer, then build the app
-pub fn run() {
-    // First thing, before any thread: WebKitGTK reads its renderer switches when the web view is created (ADR-0024).
+/// What the host decides about the webview before anything starts: the renderer and the GPU (ADR-0024, ADR-0025).
+pub struct Startup {
+    /// The renderer's inputs.
+    pub renderer_inputs: renderer::Inputs,
+    /// The GPU's inputs.
+    pub gpu_inputs: gpu::Inputs,
+    /// Where the GPU choice came from.
+    pub gpu_source: gpu::PolicySource,
+    /// The GPU decision.
+    pub gpu_decision: gpu::Decision,
+    /// Everything the diagnostics show.
+    pub report: renderer::RendererReport,
+}
+
+/// Probe the machine and decide the GPU, then the renderer. With `apply` the decided variables are set in the process
+/// environment, which must then happen before any thread exists (`run()`); without it nothing is changed (`boopis
+/// doctor` reads the same decisions).
+#[must_use]
+pub fn startup(apply: bool) -> Startup {
     let mut renderer_inputs = renderer::probe();
     // The GPU first (HYPOTAXIS_GPU): offload moves the rendering, which the renderer rules then judge.
     let (gpu_inputs, gpu_source) = gpu::probe(
@@ -92,17 +109,52 @@ pub fn run() {
     );
     let (gpu_inputs, gpu_decision) = gpu::plan(gpu_inputs);
     #[cfg(target_os = "linux")]
-    gpu::apply(&gpu_decision);
+    if apply {
+        gpu::apply(&gpu_decision);
+    }
     renderer_inputs.offload = gpu_decision.renders_on_nvidia;
     let renderer_decision = renderer::decide(&renderer_inputs);
     #[cfg(target_os = "linux")]
-    renderer::apply(&renderer_decision);
-    init_logging();
-    let renderer_report = renderer::report(
+    if apply {
+        renderer::apply(&renderer_decision);
+    }
+    let report = renderer::report(
         &renderer_inputs,
         &renderer_decision,
         gpu::report(&gpu_inputs, gpu_source, &gpu_decision, gpu_inputs.power),
     );
+    #[cfg(not(target_os = "linux"))]
+    let _ = apply;
+    Startup {
+        renderer_inputs,
+        gpu_inputs,
+        gpu_source,
+        gpu_decision,
+        report,
+    }
+}
+
+/// Run the app, or one of the command-line commands (`boopis --version`, `boopis doctor`) when the arguments ask.
+#[allow(clippy::too_many_lines)] // one linear start-up: decide the GPU and renderer, then build the app
+pub fn run() {
+    let context = tauri::generate_context!();
+    // Before anything else: a command-line command prints and exits, and starts no window, thread or logger.
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    if let Some(code) = cli::dispatch(&args, &|| {
+        tauri::utils::platform::resource_dir(context.package_info(), &tauri::Env::default()).ok()
+    }) {
+        std::process::exit(code);
+    }
+    // First thing, before any thread: WebKitGTK reads its renderer switches when the web view is created (ADR-0024).
+    let Startup {
+        gpu_inputs,
+        gpu_source,
+        gpu_decision,
+        report: renderer_report,
+        ..
+    } = startup(true);
+    init_logging();
+    cli::banner_line(&renderer_report, &gpu_decision);
     tracing::info!(
         session = ?renderer_report.session,
         hyprland = renderer_report.hyprland,
@@ -173,25 +225,11 @@ pub fn run() {
                 std::env::var("HYPOTAXIS_HERMES").ok().as_deref(),
                 saved_source.as_deref(),
             );
-            let (plan, runtime_error) = match (source, app.path().app_data_dir()) {
-                (runtime::Source::Existing, _) => (None, None),
-                (runtime::Source::Bundled, Err(e)) => {
-                    (None, Some(format!("the app has no data folder to unpack Hermes into: {e}")))
-                }
-                (runtime::Source::Bundled, Ok(data_dir)) => {
-                    match runtime::Runtime::locate(app.path().resource_dir().ok().as_deref()) {
-                        Ok(Some(runtime)) => (Some(runtime::Plan { runtime, data_dir }), None),
-                        Ok(None) => {
-                            tracing::info!("this build carries no Hermes runtime; using the Hermes on this machine");
-                            (None, None)
-                        }
-                        Err(e) => {
-                            tracing::error!(error = %e, "the bundled Hermes runtime is unusable");
-                            (None, Some(e.to_string()))
-                        }
-                    }
-                }
-            };
+            let (plan, runtime_error) = runtime::plan_for(
+                source,
+                app.path().resource_dir().ok().as_deref(),
+                app.path().app_data_dir().map_err(|e| e.to_string()),
+            );
             let mut environment = hermes::Environment::from_process();
             if let Some(plan) = &plan {
                 environment = environment.with_bundled(plan.bundled());
@@ -249,7 +287,7 @@ pub fn run() {
             });
             Ok(())
         })
-        .build(tauri::generate_context!());
+        .build(context);
     match result {
         Ok(app) => app.run(|handle, event| {
             if let tauri::RunEvent::Exit = event

@@ -21,7 +21,9 @@ The host is the **machine authority** of the three-authority model (`docs/ARCHIT
 src-tauri/
   build.rs  tauri.conf.json  capabilities/main.json  permissions/ (generated)  icons/
   src/
-    lib.rs        the registry (tauri-specta), run(), the two guard tests (capability list, bindings freshness)
+    lib.rs        the registry (tauri-specta), `startup` (probe the machine and decide the GPU and renderer), run(), the two guard tests (capability list, bindings freshness)
+    brand.rs      the terminal art from `packaging/brand/boopis.art` (ADR-0026): parse, draw at truecolor, 256, 16 and no colour, the terminal rules (`NO_COLOR`, `TERM`, `COLORTERM`, locale, `CI`)
+    cli.rs        `boopis --version`, `boopis doctor`, and the branded line printed when started from a terminal
     commands.rs   every UI-facing command and the typed ConnectionStateEvent; Frame (raw JSON out)
     error.rs      Error, stable codes, HostError
     config.rs     Limits (every number as data) and REQUIRES_HERMES
@@ -44,6 +46,14 @@ src-tauri/
   tests/setup_live.rs     first-run setup on a fresh profile against a real Hermes (skips without HX_E2E_HERMES_ENV and an hx binary); its `bundled` twin unpacks the real runtime archive (HX_E2E_RUNTIME_ARCHIVE) and runs the same flow on it
   examples/secret_channel_server.rs   the real secret channel over an in-memory map, for the plugin's Python tests
 ```
+
+## The command line
+`run()` reads the arguments before it does anything else (`cli::dispatch`): no argument starts the app as always; `--version` and `doctor` print and exit, with no window, no thread, no logger and none of the renderer's environment changes. A path or link the system hands the app starts it; an option that does not exist is an error (exit 2), not a silent launch.
+- `boopis --version` prints the compact logo, the version, the Hermes this build carries (from `runtime.json`) and the loaded WebKitGTK with its origin.
+- `boopis doctor` is Settings > General > Diagnostics in a terminal: session type, GPUs, the renderer and GPU decisions with their rules, the frame-rate setting, WebKitGTK, the runtime's status and the data folders. It calls `startup(false)` (the same decisions `run()` applies), `frame_rate::decide`, `webkit::probe`, `runtime::plan_for` and `Source::resolve`; it never applies a variable. The frame rate shows the setting, not the display's rate (that needs the window).
+- Started from a terminal with no argument, the app prints one line (logo, version, the renderer and GPU decisions) to standard output, and nothing to a pipe.
+- Colour and marks follow `brand::Caps` (`NO_COLOR`, `TERM=dumb`, a pipe, `COLORTERM`, the locale); a pipe gets plain text with no logo glyphs.
+- On Windows the release binary is a GUI program and has no console of its own, so these commands print nothing there yet (it needs `AttachConsole`).
 
 ## Hermes lifecycle
 1. **Discover** (`hermes::discover`): the bundled runtime's launcher when the build carries one (the only Hermes then, in the private home), else `hermes` on `PATH`, then `~/.local/bin`, then Hermes's own places; `hermes --version`; `install-stamp.json` near the install. **`HERMES_HOME` wins, else `~/.hermes`** (Windows: `%LOCALAPPDATA%\hermes`; `HERMES_DATA_DIR_SUFFIX` is honoured). A named profile lives in `<root>/profiles/<name>` (ADR-0006: attach to the active profile by default; a setting switches).

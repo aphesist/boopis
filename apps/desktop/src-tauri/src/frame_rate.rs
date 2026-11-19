@@ -293,6 +293,15 @@ pub async fn read_platform_profile() -> Option<String> {
         .filter(|s| !s.is_empty())
 }
 
+/// The same read for a caller that is not async (`boopis doctor`).
+#[must_use]
+pub fn read_platform_profile_blocking() -> Option<String> {
+    std::fs::read_to_string(PLATFORM_PROFILE_PATH)
+        .ok()
+        .map(|s| s.trim().to_owned())
+        .filter(|s| !s.is_empty())
+}
+
 /// Look at the main window's web view and act on it (Linux only; elsewhere there is nothing to lift). Runs on the main
 /// thread through Tauri; the answer arrives on the returned channel. The result is also remembered in `state`.
 ///
