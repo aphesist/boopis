@@ -26,7 +26,8 @@
   /* visually hidden text (the screen reader's) is not drawn: no geometry, no tokens */
   const SR = '.ui-sr, .sr-only, [class$="-sr"]';
   /* owner decisions that reach past an edge on purpose: an orb's attention flag (orbs stay whole) */
-  const OVERHANG_OK = '.ui-dot--flag, .ui-orb .ui-dot';
+  /* a flag dot sits on its orb's corner; a concave flare lies outside the surface it softens (DESIGN-SYSTEM.md section 8: where the ground meets the frame) */
+  const OVERHANG_OK = '.ui-dot--flag, .ui-orb .ui-dot, .ui-concave';
   const MAX = 4000;
   /* R-space-2's named exceptions, by value (card 14 16, request 10 14, composer 12 14 4 and 6, button 0 14 / 10 / 8, chip 10 8,
      field 6 10, menu 4 and 6 8, popover 12, tooltip 4 8, toast 6 14, segmented 3, stamp 7, code chip 1 5, key chip 4 and 3 apart,
@@ -453,6 +454,11 @@
             const n = r1(px(v));
             if (n === 0 || T.space.has(n) || SPACE_NAMED.has(n)) continue;
             if (/gap/.test(prop) && !/flex|grid/.test(s.display)) continue;
+            /* R-layout-5: a scroller that runs under the composer or the dock pads its end by their height, a sum of live heights and not a step */
+            if (prop === 'padding-bottom' && /auto|scroll/.test(s.overflowY)) {
+              const r = e.getBoundingClientRect();
+              if ([...document.querySelectorAll('.ui-composer, .bt-composer-zone, #hx-dock')].some((f) => { const q = f.getBoundingClientRect(); return q.height > 0 && q.left < r.right && q.right > r.left && q.top < r.bottom && q.bottom > r.bottom - n; })) continue;
+            }
             stray('tokens.spacing', e, prop, v);
           }
         }
