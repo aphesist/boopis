@@ -120,20 +120,23 @@ def make_source() -> Any:
             }
 
         def fetch(self, cfg: dict[str, Any], home_path: Path) -> Any:
-            result = FetchResult()
+            # FetchResult is built through its constructor only: `hermes plugins validate` reads a method call or an
+            # attribute write on a value from Hermes core as a rebind of core
             found, warnings = bindings(cfg)
-            result.warnings.extend(warnings)
             if not found:
-                return result.fail(
-                    "secrets.hypotaxis_host has no valid env bindings (ENV_VAR: secret://<scope>/<name>)",
-                    ErrorKind.NOT_CONFIGURED,
+                return FetchResult(
+                    warnings=warnings,
+                    error="secrets.hypotaxis_host has no valid env bindings (ENV_VAR: secret://<scope>/<name>)",
+                    error_kind=ErrorKind.NOT_CONFIGURED,
                 )
             secrets, more, failure = fetch_values(HostChannel(Path(home_path)), found)
-            result.warnings.extend(more)
             if failure is not None:
                 _log.info("host secret source: %s", failure.kind)  # the kind only: never a value, never the token
-                return result.fail(failure.message, getattr(ErrorKind, _kind_name(failure.kind)))
-            result.secrets = secrets
-            return result
+                return FetchResult(
+                    warnings=[*warnings, *more],
+                    error=failure.message,
+                    error_kind=getattr(ErrorKind, _kind_name(failure.kind)),
+                )
+            return FetchResult(secrets=secrets, warnings=[*warnings, *more])
 
     return HostSecretSource()

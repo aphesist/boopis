@@ -65,7 +65,7 @@
     {"code": "hx.host.unknown_connection", "rpc_code": -32000, "description": "The connection id is not (or no longer) open."},
     {"code": "hx.host.no_ui", "rpc_code": -32000, "description": "A request from Hermes needed an answer and no window is attached to give it, so the host declined it."},
     {"code": "hx.host.os", "rpc_code": -32000, "description": "The operating system refused or failed an integration call (dialog, notification, opener)."},
-    {"code": "hx.secrets.unavailable", "rpc_code": -32000, "description": "No secret store is available: on Linux, no Secret Service (GNOME Keyring or KWallet 6) is running or unlocked. The message names the fix. Also sent when a plugin asks the host for a secret and the host's channel is not there."},
+    {"code": "hx.secrets.unavailable", "rpc_code": -32000, "description": "No secret store is available: on Linux, no Secret Service (GNOME Keyring or `KWallet` 6) is running or unlocked. The message names the fix. Also sent when a plugin asks the host for a secret and the host's channel is not there."},
     {"code": "hx.secrets.failed", "rpc_code": -32000, "description": "The secret store refused or failed an operation. No secret value is ever in the message."},
     {"code": "hx.secrets.not_found", "rpc_code": -32000, "description": "No secret is stored under that service and account."},
     {"code": "hx.secrets.invalid_ref", "rpc_code": -32000, "description": "A secret reference is not `secret://<scope>/<name>`, or names a scope or name outside the allowed characters."},

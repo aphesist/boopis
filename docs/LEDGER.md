@@ -42,6 +42,9 @@ The harness adds the types below. They go upstream into contraprova's `EVENT_TYP
 | `mode.changed` | `from`, `to` | |
 | `budget.blocked` | `cap_usd`, `price_table` | dollars beyond the cap value are computed, never stored |
 
+### Pending upstream: form events
+Forms (`docs/FORMS.md` section 6) are recorded today as `tool.called` events whose `tool` is `form.opened` or `form.resolved`, because contraprova's `EVENT_TYPES` has no `form.*` yet. The extra keys are `form_id`, `kind`, `origin`, and then `fields` and `secrets` (names only) on open, or `form_status` (`submitted`, `cancelled`, `expired`), `provided` (the secret fields saved to the host) and `answered` (the non-secret field names) on resolve. Values are never written. Upstream adds `form.opened` (`form_id`, `kind`, `fields`) and `form.resolved` (`form_id`, `form_status`, `provided`) to `HARNESS_EVENT_TYPES` and `REQUIRED_FIELDS`; the plugin then writes them under those names and stops using `tool.called`. The vendored copy is not edited.
+
 ## Usage, made provider-neutral
 `usage.recorded` keeps contraprova's required fields: `model`, `input_tokens`, `output_tokens`, `cache_read_tokens`, `cache_write_5m_tokens`, `cache_write_1h_tokens`. `input_tokens` means **uncached** input, as in contraprova. The harness adds:
 - `provider`;

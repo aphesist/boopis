@@ -14,7 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from fake_model_server import FakeModelServer, RecordedRequest  # noqa: E402
+from fake_model_server import FakeModelServer, RecordedRequest
 
 
 def main() -> int:

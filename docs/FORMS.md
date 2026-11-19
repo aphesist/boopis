@@ -84,6 +84,12 @@ Answering in any one place resolves the form everywhere (one form id). Forms are
 - **Ledger:** `form.opened` and `form.resolved` (field names only; secrets as `provided`). These are added to contraprova's vocabulary as the harness events were.
 - Forms survive reconnects and device switches. A cloud session's open forms reach any attached device.
 
+### Implementation notes (plugin and host)
+- A secret field names where the host stores it with the extension `x-secret-ref: "secret://<scope>/<name>"` (`secret://provider.<name>/api_key` for a model key). The UI splits the field off (`apps/desktop/ui/src/host/forms.ts`, `splitSecrets`), saves it with `secret_set`, and sends `form.submit {form_id, values, provided: [field, ...]}`; the plugin asks the host whether each provided secret exists and answers the agent `{saved: true, ref}`.
+- Forms the host itself sends (first-run setup) have `origin: "host"` and are answered through the host's `setup_advance`, not the plugin.
+- Hermes's `clarify` and `approval.request` are adapted in the UI from the canonical events (`fromGatewayEvent`) and answered through `clarify.respond` / `approval.respond`. `secret`, `sudo`, `vault.*` and MCP elicitation are not adapted yet.
+- Open forms live in the plugin's memory: a plugin restart forgets them. Pickers, uploads, sign-in and previews are in the schema but the first-run view draws only text, number, boolean, choice, multi-choice, other and secret fields.
+
 ## 7. Rules for form authors (agents, teammates, plugin code)
 - Ask only for what can't be inferred, and prefer one form with three fields over three forms.
 - Every form says why it's needed and what happens on submit.
