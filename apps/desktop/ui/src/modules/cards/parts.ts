@@ -19,7 +19,7 @@ const botList = () => data().bots.snapshot().bots;
 export const bot = (id: string | undefined): ReturnType<typeof botList>[number] | undefined => (id ? botList().find((b) => b.id === id || b.name === id) : undefined);
 export const check = (): string => U.icon('check', { class: 'cd-ico' });
 /** a model wherever one appears: its provider's mark beside its name, mono, from the tokens */
-export const model = (m: string, size = 14): string => U.html.model(m, { size, class: 'cd-mono', mono: false });
+export const model = (m: string, size = 14): string => U.html.model(m, { size, class: 'cd-mono', mono: false, label: false });
 /** a route ('qwen3-coder → sonnet 5.5') asks as the model it ended on: one mark, one name, in every slot and row (the
     route itself is the session's call number) */
 const asker = (m: string | undefined): string => U.modelMark.last(m) || String(m || '');
@@ -78,7 +78,7 @@ export function originVisual(o: KnownOrigin | null, size: number, max?: number, 
   }
   if (o.kind === 'agent') return U.html.modelMark(o.model, { size: 16, class: 'cd-glyph' });
   if (o.kind === 'mod') return U.icon('mod', { class: 'cd-glyph' });
-  if (o.kind === 'mcp') return '<span class="cd-tile" style="--cd-orb:' + size + 'px" aria-hidden="true">' + esc(String(o.server || '?').slice(0, 1).toUpperCase()) + '</span>';
+  if (o.kind === 'mcp') return '<span class="cd-tile" style="--cd-orb:' + size + 'px" aria-hidden="true" data-initial="' + esc(String(o.server || '?').slice(0, 1).toUpperCase()) + '"></span>';   // the initial is drawn by CSS, so it is not text a name must contain (WCAG 2.5.3)
   const g = sys(o.kind)[0];
   return g ? U.icon(g, { class: 'cd-glyph' }) : '';
 }
@@ -170,12 +170,12 @@ export function mini(ctx: Ctx, o: { lead?: string; who?: boolean; text: string; 
   const lead = o.lead != null ? o.lead : originVisual(or, 16, 2, true);
   /* the who: at most half the line, more when the request is short (fitCard); an MCP server by its name alone */
   const who = or && o.who !== false ? '<span class="cd-mini__who">' + namesUnit(or, true) + '</span> ' : '';
-  return '<button type="button" class="cd-mini" data-action="open" aria-labelledby="' + ctx.id + '-t' + (owe ? ' ' + ctx.id + '-o' : '') + (o.meta ? ' ' + ctx.id + '-m' : '') + '">' +
+  return '<button type="button" class="cd-mini" data-action="open" aria-labelledby="' + ctx.id + '-t' + (o.meta ? ' ' + ctx.id + '-m' : '') + (owe ? ' ' + ctx.id + '-o' : '') + '">' +
     '<span class="cd-mini__lead" aria-hidden="true">' + lead + '</span>' +
     '<span class="cd-mini__text" id="' + ctx.id + '-t">' + who + '<span class="cd-mini__what">' + o.text + '</span></span>' +
-    '<span class="cd-mini__status"><span class="cd-mini__dot">' + (owe ? U.html.dot('attention') : '') + '</span>' +
+    ' <span class="cd-mini__status"><span class="cd-mini__dot">' + (owe ? U.html.dot('attention') : '') + '</span>' +
     (owe ? '<span class="ui-sr" id="' + ctx.id + '-o">, ' + esc(owe) + '</span>' : '') +
-    '<span class="cd-mini__meta"' + (o.meta ? ' id="' + ctx.id + '-m"' : '') + '>' + (o.meta ?? '') + '</span></span></button>';
+    ' <span class="cd-mini__meta"' + (o.meta ? ' id="' + ctx.id + '-m"' : '') + '>' + (o.meta ?? '') + '</span></span></button>';
 }
 export const tones = (m: Record<string, string>) => (c: { s: string }): string | undefined => m[c.s];
 

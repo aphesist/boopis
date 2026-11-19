@@ -90,7 +90,7 @@ function fieldHTML(c: Ctx, st: FormState, name: string, p: FieldSchema): string 
   }
   if (p['x-upload']) {
     return wrap('<span class="ui-field__label" id="' + id + '-l">' + label + '</span>' +
-      '<div class="ui-input cd-drop" data-drop="' + esc(name) + '" role="group" aria-labelledby="' + id + '-l" ' + desc + '>' +
+      '<div class="ui-input ui-nest cd-drop" data-drop="' + esc(name) + '" role="group" aria-labelledby="' + id + '-l" ' + desc + '>' +
       btn('choose-file', 'Choose a file', null, { size: 's', disabled: !can.upload, attrs: { 'aria-describedby': id + '-l' } }) + '<span class="cd-drop__hint">' + (can.upload ? 'or drop it here' : 'not available in this build yet') + '</span>' +
       '<input type="file" hidden tabindex="-1" aria-hidden="true"></div>' + hint + err);
   }

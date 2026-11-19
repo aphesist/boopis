@@ -61,7 +61,8 @@ hx-card[data-size="popover"] {
    Where a card is not a container (a one-row mini, the blank in its sentence, the escalation rule) --r-in is unset
    and each piece keeps its own step. */
 hx-card[data-kind="blank"][data-size="inline"], hx-card[data-kind="escalation"][data-size="inline"] { --r-in: initial; }
-hx-card .cd-well, hx-card .cd-foot .ui-btn, hx-card .cd-rule .ui-btn, hx-card .cd-opt, hx-card .cd-free { border-radius: var(--r-in, var(--r-s)); }
+hx-card .ui-input, hx-card .ui-switch:not(:checked) { background: var(--cd-well); }   /* a field is inset against the card, never inset on inset (R-colour-4) */
+hx-card .cd-well, hx-card .cd-foot .ui-btn, hx-card .cd-collapsed .ui-btn, hx-card .cd-rule .ui-btn, hx-card .cd-opt, hx-card .cd-free { border-radius: var(--r-in, var(--r-s)); }
 hx-card .ui-code, hx-card .ui-stamp, hx-card .cd-tile { border-radius: var(--r-in, var(--r-xs)); }
 hx-card[data-size="inline"] { width: min(100%, 520px); --cd-orb: 24px; }
 hx-card[data-size="compact"] { width: 100%; max-width: 360px; --cd-orb: 20px; }
@@ -77,6 +78,8 @@ hx-card[data-side] { grid-template-columns: var(--cd-orb) minmax(0, 1fr); }
 /* ------------------------------------------------------------------ text */
 
 .cd-headrow { display: flex; align-items: flex-start; gap: var(--sp-3); }
+/* the stamp is pinned to the top of the row on purpose: it answers the byline's line, not the middle of a two-line head (R-type-11 centres controls in a fixed-height row; this row grows with the title) */
+.cd-headrow > .ui-stamp, .cd-headrow > .cd-headmain { align-self: flex-start; }
 .cd-headmain { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .cd-lead {
   flex: 1 1 auto; min-width: 0;
@@ -137,7 +140,7 @@ hx-card[data-resolved] .cd-well__strong { color: var(--text-dim); }
   font-family: var(--mono); font-size: var(--fs-xs); letter-spacing: var(--track-mono);
 }
 .cd-file { display: contents; }
-.cd-file > span { line-height: 22px; }
+.cd-file > span { line-height: var(--lh); }
 .cd-file__path { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cd-file__dir { color: var(--text-quiet); }
 .cd-file__n { text-align: right; color: var(--text); }
@@ -174,6 +177,7 @@ hx-card[data-size="compact"] .cd-files .cd-diffdots { display: none; }
 /* ------------------------------------------------------------------ side: orb, tile */
 
 .cd-side .ui-orb { align-self: flex-start; }
+.cd-tile::before { content: attr(data-initial); }
 .cd-tile {
   display: grid; place-items: center; flex: none;
   width: var(--cd-orb); height: var(--cd-orb); border-radius: var(--r-xs);
@@ -221,6 +225,9 @@ hx-card[data-kind="blank"][data-size="inline"] {
   font: inherit; line-height: inherit; letter-spacing: inherit;
 }
 
+/* the ring of a focused blank (2px and its 2px offset) stays inside the entry that holds the sentence (R-corner-4) */
+hx-card[data-kind="blank"][data-size="inline"] .ui-blank { margin-bottom: var(--sp-1); }
+
 /* the expanded blank: drawn in place (a side panel, a specimen) or, opened from the gap, in the library's layer */
 hx-card[data-size="popover"] {
   width: 360px; max-width: calc(100vw - 24px);
@@ -243,7 +250,7 @@ hx-card[data-size="compact"] .cd-opts { margin: 0 calc(-1 * var(--sp-2)); }
 .cd-opt {
   appearance: none; border: 0; margin: 0;
   display: flex; align-items: center; gap: var(--sp-3);
-  min-height: var(--row-h); padding: 5px 10px; border-radius: var(--r-s);
+  min-height: var(--row-h); padding: 5px var(--sp-3); border-radius: var(--r-s);   /* 12 at the side = the dot's inset above and below in a 30px row, so the dot sits equally from both edges of the row's corner (R-corner-3) */
   --sq-bg: transparent; background: var(--sq-bg); color: var(--text);
   font-family: var(--sans); font-size: var(--fs-s); line-height: var(--lh-ui); letter-spacing: var(--track); text-align: left;
   cursor: pointer;
@@ -261,7 +268,7 @@ hx-card[data-size="compact"] .cd-opts { margin: 0 calc(-1 * var(--sp-2)); }
 /* the free answer is a field: radius 6, drawer on frame, the field line (3:1), the ring on the field */
 .cd-free {
   display: flex; align-items: center; gap: var(--sp-3);
-  min-height: var(--ctl); padding: 0 10px; margin: var(--sp-1) 0 0;
+  min-height: var(--ctl); padding: 0 var(--sp-3); margin: var(--sp-1) 0 0;
   border-radius: var(--r-s); --sq-bg: var(--cd-well); background: var(--sq-bg);
   box-shadow: inset 0 0 0 1px var(--line-field);
 }
@@ -334,9 +341,9 @@ hx-card[data-kind="escalation"][data-size="inline"] { container-type: inline-siz
 /* ------------------------------------------------------------------ origin: who is asking (FORMS.md §4a)
    One slot for every card: the byline above the title, and the lead of a one-row card. */
 .cd-by { display: flex; align-items: center; gap: var(--sp-2); min-height: 20px; min-width: 0; font-size: var(--fs-xs); line-height: var(--lh-ui); color: var(--text-dim); }
-.cd-by__label { display: flex; min-width: 0; overflow: hidden; white-space: nowrap; color: var(--text); font-weight: 500; }
+.cd-by__label { display: flex; align-items: center; align-self: stretch; border-radius: var(--r-in, var(--r-xs)); min-width: 0; overflow: hidden; white-space: nowrap; color: var(--text); font-weight: 500; }
 .cd-by__label .cd-mono { font-weight: 400; }
-.cd-by__label:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--r-xs); }
+.cd-by__label:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 /* names (cards.js namesUnit, fitCard): one line that never overflows. The asker keeps the most room; the others
    ("and kai", "and 2 others") are measured; a relay or a server's kind gives way first (a high shrink weight; the
    fit pass sets each part's floor from its own width, so a short name never leaves a gap). */
@@ -353,9 +360,10 @@ hx-card[data-size="inline"] .cd-by[data-origin="teammate"] .cd-names__first { wh
 .cd-glyph { width: 16px; height: 16px; flex: none; color: var(--icon); }
 .cd-by .cd-tile, .cd-mini .cd-tile, .cd-collapsed .cd-tile { width: var(--cd-orb); height: var(--cd-orb); font-size: var(--fs-2xs); }
 /* several teammates: stacked orbs, three at most, then +N; each on a disc of the card so the overlap reads */
-.cd-stack { display: inline-flex; align-items: center; flex: none; padding-left: calc(var(--s) * .32); border-radius: var(--r-xs); }
+.cd-stack { display: inline-flex; align-items: center; flex: none; padding: 2px; }   /* the 2px holds the discs' ring inside the stack (R-corner-4); the stack is a row, not a surface: it has no corner of its own */
 .cd-stack__one, .cd-stack__more { margin-left: calc(var(--s) * -.32); border-radius: var(--r-pill); box-shadow: 0 0 0 2px var(--cd-surface); }
 .cd-stack__one { display: inline-flex; background: var(--cd-surface); }
+.cd-stack > :first-child { margin-left: 0; }
 .cd-stack__more {
   display: inline-grid; place-items: center; min-width: var(--s); height: var(--s); padding: 0 4px; box-sizing: border-box;
   background: var(--bg-3); color: var(--text-dim); font-family: var(--mono); font-size: var(--fs-2xs); font-weight: 500; letter-spacing: var(--track-mono);
@@ -397,7 +405,8 @@ hx-card[data-kind="form"][data-size="inline"] { width: min(100%, var(--measure))
 .cd-picker .cd-mono { font-size: var(--fs-xs); }
 .cd-picker[aria-expanded="true"] { box-shadow: inset 0 0 0 1px var(--focus); }
 /* a file drop */
-.cd-drop { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); min-height: calc(var(--ctl) + 12px); box-shadow: none; outline: 1px dashed var(--line-field); outline-offset: -1px; }
+.cd-drop { --r-outer: var(--r-s); --pad: var(--sp-2); padding: var(--pad); display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); min-height: calc(var(--ctl-s) + 2 * var(--pad)); box-shadow: none; outline: 1px dashed var(--line-field); outline-offset: -1px; }
+.cd-drop > .ui-btn { border-radius: var(--r-in, var(--r-s)); }   /* the button in the drop's corner takes the corner's inner radius (R-corner-3) */
 .cd-drop[data-over] { background: var(--hover); outline-color: var(--focus); }
 .cd-drop__hint { color: var(--text-quiet); font-size: var(--fs-xs); text-transform: var(--ui-case); }
 .cd-filechip { display: inline-flex; align-items: center; gap: var(--sp-2); min-width: 0; flex: 1 1 auto; }
@@ -419,20 +428,21 @@ hx-card[data-kind="form"][data-size="inline"] { width: min(100%, var(--measure))
 .cd-preview .cd-out { margin: 0; color: var(--text); }
 @container (max-width: 460px) { .cd-pick { grid-template-columns: minmax(0, 1fr); } }
 /* setup: the config diff it will write */
-.cd-diff { font-family: var(--mono); font-size: var(--fs-2xs); line-height: 1.7; letter-spacing: var(--track-mono); color: var(--text-dim); padding-block: var(--sp-2); }
+.cd-diff { font-family: var(--mono); font-size: var(--fs-2xs); line-height: var(--lh); letter-spacing: var(--track-mono); color: var(--text-dim); padding-block: var(--sp-2); }
 .cd-diff__file { color: var(--text-quiet); margin-bottom: var(--sp-1); }
-.cd-diff__l { display: flex; gap: var(--sp-2); white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 calc(-1 * var(--sp-2)); padding: 0 var(--sp-2); border-radius: var(--r-floor); }
+.cd-diff__l { display: flex; gap: var(--sp-2); white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 calc(-1 * var(--sp-1)); padding: 0 var(--sp-1);   /* the band sits 8px from the well's side, as far as the well's padding is above and below it (R-corner-3) */ border-radius: var(--r-floor); }
 .cd-diff__l > span:first-child { flex: none; width: 1ch; }
 .cd-diff__l[data-d="add"] { color: var(--text); background: color-mix(in srgb, var(--add) 14%, transparent); }
 .cd-diff__l[data-d="add"] > span:first-child { color: var(--add); }
 .cd-diff__l[data-d="del"] { color: var(--text-dim); background: color-mix(in srgb, var(--del) 12%, transparent); }
 .cd-diff__l[data-d="del"] > span:first-child { color: var(--del); }
 /* plan: a numbered list, because it is a sequence */
-.cd-plan { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: var(--sp-1); color: var(--text); }
+.cd-plan { margin: 0; padding-left: var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-1); color: var(--text); }
 .cd-plan li::marker { color: var(--text-quiet); font-family: var(--mono); font-size: var(--fs-2xs); }
 .cd-contents .cd-pinned span:first-child { color: var(--text-quiet); }
 /* a resolved, deferred or expired form collapses to one line that stays readable in the transcript */
 hx-card[data-kind="form"]:is([data-state="done"], [data-state="deferred"], [data-state="expired"], [data-state="cancelled"]) { --pad: var(--sp-3); }
+.cd-collapsed .ui-btn { align-self: stretch; height: auto; min-height: var(--ctl-s); }   /* the action fills the row, so its corner insets are the card's --pad on every side when the line takes two lines (R-corner-3) */
 .cd-collapsed { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--ctl-s); min-width: 0; }
 .cd-collapsed__text { flex: 1 1 auto; min-width: 0; margin: 0; display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--sp-2); color: var(--text-dim); line-height: var(--lh-ui); }
 .cd-collapsed__what { color: var(--text); text-transform: none; }

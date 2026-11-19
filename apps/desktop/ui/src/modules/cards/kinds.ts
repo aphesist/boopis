@@ -212,11 +212,11 @@ KINDS.error = {
   stamp: () => 'failed',
   resolved: (c) => c.s === 'passed',
   say: (c) => c.plain,
-  text: (c) => ({ failed: c.d.gate + ' failed', retrying: 'Retrying ' + c.d.gate + ' on ' + c.d.retryWith, passed: c.d.gate + ' passes' } as Record<string, string>)[c.s] ?? '',
+  text: (c) => ({ failed: (c.d.gate ?? '') + ' failed', retrying: 'Retrying ' + (c.d.gate ?? '') + ' on ' + (c.d.retryWith ?? ''), passed: (c.d.gate ?? '') + ' passes' } as Record<string, string>)[c.s] ?? '',
   render(c) {
     const d = c.d;
     const out = (d.output ?? []).length ? '<div class="cd-well cd-out">' + (d.output ?? []).map((l) => '<div' + (/FAIL/.test(l) ? ' class="cd-out__hit"' : '') + '>' + esc(l) + '</div>').join('') + '</div>' : '';
-    const f = c.s === 'failed' ? foot('', actions(btn('view-output', 'View output') + btn('retry', 'Retry on ' + d.retryWith, 'primary')))
+    const f = c.s === 'failed' ? foot('', actions(btn('view-output', 'View output') + btn('retry', d.retryWith ? 'Retry on ' + d.retryWith : 'Retry', 'primary')))
       : c.s === 'retrying' ? foot('<p class="cd-receipt">' + breath() + '<span>Running on ' + model(d.retryWith ?? '') + '</span></p>', actions(btn('stop', 'Stop')))
         : foot(receipt(at('Passed on retry', c), true), actions(btn('view-output', 'View output')));
     return { head: headrow(c, errLead(c)) + (d.test ? '<p class="cd-quote cd-mono">' + fmt(d.test) + '</p>' : ''), body: out + (d.note ? '<p class="cd-note">' + fmt(d.note) + '</p>' : ''), foot: f };
@@ -268,9 +268,9 @@ KINDS.connector = {
   render(c) {
     const d = c.d, n = cap(d.name);
     const text = ({
-      needed: 'Sign in once to give this session its ' + d.tools + ' ' + n + ' tools.',
+      needed: 'Sign in once to give this session its ' + (d.tools != null ? d.tools + ' ' : '') + n + ' tools.',
       waiting: 'Finish signing in on ' + (d.host || n) + '. This card updates when it’s done.',
-      connected: d.tools + ' tools ready' + (d.scopes ? ': ' + d.scopes.join(', ') : '') + '.',
+      connected: (d.tools != null ? d.tools + ' tools' : 'Tools') + ' ready' + (d.scopes ? ': ' + d.scopes.join(', ') : '') + '.',
       failed: 'The browser closed before ' + n + ' sent a token. Try again, or sign in later from Connectors.'
     } as Record<string, string>)[c.s] ?? '';
     const note = c.s === 'needed' || c.s === 'waiting' ? '<p class="cd-note">Opens ' + esc(d.host || n) + ' in your browser. The token stays on this machine.</p>' : '';

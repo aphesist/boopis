@@ -61,7 +61,7 @@
     const hit = tokenCache.get(ground);
     if (hit && hit.key === key) return hit;
     const p = document.createElement('i');
-    p.style.cssText = 'position:absolute;left:-99px;top:0;width:1px;height:1px;pointer-events:none;visibility:hidden';
+    p.style.cssText = 'position:absolute;left:-99px;top:0;width:1px;height:1px;pointer-events:none;visibility:hidden;transition:none !important;animation:none !important';
     (ground === de ? de : ground).appendChild(p);
     const colors = new Set(['0,0,0,0']), lengths = new Set([0]), fs = new Set(), radii = new Set([0]), space = new Set([0]);
     const cs = getComputedStyle(p);
@@ -268,20 +268,24 @@
           add('geometry.contain', e, msg, { container: rectOf(c) });
         }
         if (want.has('concentric')) {
+          /* the floor is the corners setting's (--r-floor: 4 sharp, 8 default, 12 round), not a constant (R-corner-3: max(--r-floor, R - gap)) */
+          const FLOOR = px(getComputedStyle(document.documentElement).getPropertyValue('--r-floor')) || 8;
           const corners = [['top-left', er.left - cr.left, er.top - cr.top, 0], ['top-right', cr.right - er.right, er.top - cr.top, 1], ['bottom-right', cr.right - er.right, cr.bottom - er.bottom, 2], ['bottom-left', er.left - cr.left, cr.bottom - er.bottom, 3]];
           for (const [name, dx, dy, i] of corners) {
             const R = Math.min(cRad[i], cr.width / 2, cr.height / 2);
-            if (R < 8) continue;
+            if (R < FLOOR) continue;
             if (dx < -0.5 || dy < -0.5 || dx >= R || dy >= R) continue;   /* not in this corner (or already outside: geometry.contain) */
             const inset = Math.min(dx, dy);
             if (selfClip && inset < 1) continue;   /* a full-bleed layer inside a clipped leaf: the clip draws its corner */
             const pillR = Math.min(er.width, er.height) / 2;
             const r = Math.min(eRad[i], pillR);
-            const want8 = Math.max(8, R - inset);
+            const want8 = Math.max(FLOOR, R - inset);
             const isPill = r >= pillR - 0.5;
             const problems = [];
-            if (Math.abs(dx - dy) > 1) problems.push('insets ' + r1(dx) + 'px and ' + r1(dy) + 'px are not equal');
-            if (Math.abs(r - want8) > 1 && !(isPill && want8 >= pillR - 1)) problems.push('radius ' + r1(r) + 'px, the corner wants ' + r1(want8) + 'px (' + r1(R) + ' - ' + r1(inset) + (R - inset < 8 ? ', floor 8' : '') + ')' + (isPill ? ' or a pill of ' + r1(pillR) + 'px' : ''));
+            /* a mark (a status dot, a page dot: under 12px) is carried by its row, not set into the corner as a control: it only has to keep the container's --pad from both edges (R-corner-4) */
+            const mark = Math.min(er.width, er.height) < 12, padC = px(ccs.getPropertyValue('--pad'));
+            if (Math.abs(dx - dy) > 1 && !(mark && Math.min(dx, dy) >= padC - 1)) problems.push('insets ' + r1(dx) + 'px and ' + r1(dy) + 'px are not equal');
+            if (Math.abs(r - want8) > 1 && !(isPill && want8 >= pillR - 1)) problems.push('radius ' + r1(r) + 'px, the corner wants ' + r1(want8) + 'px (' + r1(R) + ' - ' + r1(inset) + (R - inset < FLOOR ? ', floor ' + FLOOR : '') + ')' + (isPill ? ' or a pill of ' + r1(pillR) + 'px' : ''));
             if (problems.length) add('concentric', e, 'in the ' + name + ' corner of ' + describe(c) + ': ' + problems.join('; ') + ' [' + why.join(',') + ']', { container: rectOf(c) });
           }
         }
@@ -297,8 +301,9 @@
         if (r.height > 64 || r.height < 8) continue;
         const kids = [...e.children].filter((k) => shown(k) && !/absolute|fixed/.test(getComputedStyle(k).position) && !k.matches('.ui-sr'));
         if (kids.length < 2) continue;
-        const rows = new Set(kids.map((k) => Math.round(k.getBoundingClientRect().top / 4)));
-        if (s.flexWrap !== 'nowrap' && rows.size > 1 && kids.some((k) => k.getBoundingClientRect().top >= r.top + r.height / 2)) continue;   /* wrapped onto lines */
+        const boxes = kids.map((k) => k.getBoundingClientRect());
+        /* wrapped onto lines: some item sits wholly below another (lines of unequal height put the later line's top above the row's middle) */
+        if (s.flexWrap !== 'nowrap' && boxes.some((a) => boxes.some((b) => a.top >= b.bottom - 0.5))) continue;
         const top = r.top + px(s.paddingTop) + px(s.borderTopWidth), bottom = r.bottom - px(s.paddingBottom) - px(s.borderBottomWidth);
         const mid = (top + bottom) / 2;
         for (const k of kids) {
@@ -355,6 +360,7 @@
         const r = boxes[i];
         if (r.width >= HIT - 0.01 && r.height >= HIT - 0.01) return;
         if (t.matches('a') && t.closest('p, li') && getComputedStyle(t).display === 'inline') return;   /* a link in a sentence: 2.5.8's inline exception */
+        if (t.matches('button') && /^inline/.test(getComputedStyle(t).display) && t.closest('p, li, article')) return;   /* a button set into a sentence (the blank's gap): the same inline exception, its size is set by the line */
         const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
         const clash = boxes.some((b, j) => j !== i && Math.max(b.left - cx, 0, cx - b.right) ** 2 + Math.max(b.top - cy, 0, cy - b.bottom) ** 2 < 12 * 12);
         if (clash) add('geometry.target', t, 'target ' + r1(r.width) + ' x ' + r1(r.height) + 'px, under --hit-min (' + HIT + 'px) and too close to another target');
@@ -503,7 +509,9 @@
         const bg = ckey(s.backgroundColor);
         if (bg === T.roles['--bg-0'] || bg === T.roles['--bg-3']) {
           for (let p = e.parentElement; p && p !== document.documentElement; p = p.parentElement) {
-            const pb = getComputedStyle(p).backgroundColor;
+            let pb = getComputedStyle(p).backgroundColor;
+            /* a drawn shape (the squircle) paints its fill from --sq-bg and leaves background-color clear: that fill is its surface */
+            if (transparent(pb) && shapes.has(p)) { const sq = getComputedStyle(p).getPropertyValue('--sq-bg').trim(); if (sq) { const q = probeEl(); q.style.cssText += ';transition:none !important;color:' + sq; pb = getComputedStyle(q).color; } }
             if (transparent(pb)) continue;
             if (ckey(pb) === bg) add('roles', e, (bg === T.roles['--bg-0'] ? 'inset (--bg-0) on inset' : 'raised (--bg-3) on raised') + ': ' + describe(p) + ' paints the same (R-colour-4)');
             break;
@@ -572,7 +580,8 @@
         for (const sel of r.selectorText.split(/,(?![^(]*\))/)) {
           const m = /^(.*?)::-webkit-scrollbar(-thumb)?(?::[\w-]+)*\s*$/.exec(sel.trim());
           if (!m) continue;
-          const base = m[1].trim() || '*';
+          /* `X ::-webkit-scrollbar` styles the bars of everything inside X (a descendant combinator), `X::-webkit-scrollbar` X's own */
+          const base = m[1].trim() ? (/\s$/.test(m[1]) ? m[1].trim() + ' *' : m[1].trim()) : '*';
           if (m[2]) thumb.push({ base, bg: r.style.backgroundColor || r.style.background });
           else bar.push({ base, width: r.style.width, height: r.style.height, display: r.style.display });
         }

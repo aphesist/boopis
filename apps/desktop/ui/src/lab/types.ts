@@ -127,4 +127,5 @@ export interface Story {
 export type CheckId =
   | 'geometry.contain' | 'geometry.center' | 'geometry.clip' | 'geometry.hscroll' | 'geometry.target'
   | 'concentric' | 'overlay' | 'tokens.computed' | 'native' | 'scrollbar' | 'axe'
+  | 'tokens.spacing' | 'roles' | 'copy' | 'brand'
   | 'stability.render' | 'stability.interact' | 'visual' | 'errors';

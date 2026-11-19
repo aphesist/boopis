@@ -1,6 +1,6 @@
 {
  "compact-long@bone": {
-  "sha": "212bf73c19aad96019528963c6cd14757ac6a3c3",
+  "sha": "753cba28e733aa4b95f7c7e03a6b20be1458783a",
   "w": 424,
   "h": 497
  },
@@ -25,7 +25,7 @@
   "h": 262
  },
  "compact-on-the-dock@catalog": {
-  "sha": "35a7e42d6deded0ad3411b70d7f27a49d2fbe644",
+  "sha": "e8573c2e458385b581b93b91587364e0ced1041e",
   "w": 424,
   "h": 262
  },
@@ -60,22 +60,22 @@
   "h": 281
  },
  "empty-data@bone": {
-  "sha": "e2be1cf2146ddaa6d76fd036fedcc78af89b5d7c",
+  "sha": "1f9b8a21604f5c3660539d30f1207a25f21077f3",
   "w": 632,
   "h": 111
  },
  "empty-data@catalog": {
-  "sha": "4bfebbe59c33a7ff02511ee5cb6d10ec01525a6e",
+  "sha": "63f69bfe5099d5f3c185f71c5a7f5569fd0d290e",
   "w": 632,
   "h": 111
  },
  "empty-data@graphite": {
-  "sha": "ec096b2eafe20e8be06babccef3676cf125bfccb",
+  "sha": "ff778101b7e814a1dbdc857cc6535d3154dbfa5c",
   "w": 632,
   "h": 111
  },
  "empty-data@typewriter": {
-  "sha": "f3e25d073d2a772d37274578f39ecc83a6a1ce74",
+  "sha": "98ce161327e93d7fc2357a6e0ed16da08327f72f",
   "w": 632,
   "h": 111
  },
@@ -100,7 +100,7 @@
   "h": 262
  },
  "long@bone": {
-  "sha": "e2431c34e68dbadedafa34d07dcfb544369f376f",
+  "sha": "35d53131cf46691953e8a2c0d8552dc93e4b6d0c",
   "w": 632,
   "h": 462
  },
@@ -110,7 +110,7 @@
   "h": 462
  },
  "long@graphite": {
-  "sha": "3bd576005cb60493fd00d4720ffc0360838d41a8",
+  "sha": "65045a9ac286258e1077d0e1ca71d62d100b2421",
   "w": 632,
   "h": 462
  },
@@ -160,22 +160,22 @@
   "h": 54
  },
  "passed@bone": {
-  "sha": "9a007f2995b189610fb91d4136588f5affdeafd0",
+  "sha": "11418d648e97a25022dab0c54ce253adf0ee0975",
   "w": 632,
   "h": 262
  },
  "passed@catalog": {
-  "sha": "f0cc2661da8a027d4f05cd007c32925716f97ff8",
+  "sha": "cde47c55c3916d54abdfe8668934669d19dc1371",
   "w": 632,
   "h": 262
  },
  "passed@graphite": {
-  "sha": "af75c0f81d4092cbb6c127136767bedb08dea8de",
+  "sha": "800f25a173f622cd33eb9b10ba6668f1b57c5f5e",
   "w": 632,
   "h": 262
  },
  "passed@typewriter": {
-  "sha": "0ed6a2716f4e5ea8dc565ed7f26efc332efcc12a",
+  "sha": "0696a32cb58d8709573c0d3b3a581ad2a56b1733",
   "w": 632,
   "h": 262
  },

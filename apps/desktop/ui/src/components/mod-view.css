@@ -7,7 +7,7 @@
 .mv-root > .mv-box { flex: 1; }
 
 /* Box: a flex container; a terminal Box is a row until it says otherwise */
-.mv-box { display: flex; flex-direction: row; min-width: 0; --mv-border: var(--hair); }
+.mv-box { display: flex; flex-direction: row; flex-wrap: wrap; min-width: 0; --mv-border: var(--hair); }   /* a row that is wider than its pane wraps instead of pushing the window sideways (R-overflow-4) */
 .mv-box--border { border-radius: var(--r-s); box-shadow: inset 0 0 0 1px var(--mv-border); padding: var(--sp-2) var(--sp-3); }
 .mv-box--filled { border-radius: var(--r-xs); }
 .mv-box--border.mv-box--filled { border-radius: var(--r-s); }
@@ -65,7 +65,7 @@
 .mv-md__h { font-weight: 600; color: var(--text-strong); }
 
 /* the mod, as a name: its glyph and its name (origin slots, tabs, band rows, toasts, placed rows) */
-.mv-by { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.mv-by { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; }   /* a long mod name is cut by its ellipsis, never wider than its line (R-overflow-4) */
 .mv-by__g { width: 14px; height: 14px; flex: none; color: var(--icon); }
 .mv-by__n { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mv-root .ui-btn.mv-iconbtn { width: var(--ctl-s); padding: 0; }
