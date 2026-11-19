@@ -26,7 +26,7 @@ async function boot(): Promise<void> {
   if (!C) throw new Error('orb2 did not define <orb-avatar> in the worker');
   if (!installOrbRuntime()) throw new Error('orb2 has no _fit/_update to patch');
   /* a 2D context on an OffscreenCanvas is the whole point: without one the page keeps the main-thread orbs */
-  if (typeof OffscreenCanvas === 'undefined' || !new OffscreenCanvas(2, 2).getContext('2d')) throw new Error('no 2D OffscreenCanvas in this worker');
+  if (typeof OffscreenCanvas === 'undefined' || !new OffscreenCanvas(2, 2).getContext('2d', { willReadFrequently: true })) throw new Error('no 2D OffscreenCanvas in this worker');
   setInterval(() => {
     const level = (self as unknown as { OrbAvatar?: { qualityLevel?: number } }).OrbAvatar?.qualityLevel;
     if (typeof level === 'number' && level !== lastLevel) { lastLevel = level; send({ t: 'quality', level }); }
@@ -70,7 +70,7 @@ function handle(m: ToWorker): void {
       if (typeof fn === 'function') (fn as (...a: unknown[]) => unknown).apply(el, m.a);
       break;
     }
-    case 'drop': orbs.delete(m.id); break;
+    case 'drop': { const el = orbs.get(m.id); if (el && el.isConnected) { el.isConnected = false; el.disconnectedCallback(); } orbs.delete(m.id); break; }
     case 'hold': holdOutsideDock(); break;
     case 'release': releaseOutsideDock(); break;
     case 'env': env = { dpr: m.dpr, reduced: m.reduced, dark: m.dark }; setDpr(m.dpr); setMedia({ reduced: m.reduced, dark: m.dark }); break;

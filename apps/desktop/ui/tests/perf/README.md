@@ -12,6 +12,26 @@ pnpm perf:webkit -- --engines chromium --scenarios resize --profile resize   # a
 
 Results are printed and written to `test-results/perf/<label>.json`.
 
+## Motion at the display's rate (ADR-0025)
+
+STANDARDS section 6 makes the budget the display's rate: every frame under 8.3 ms on a 120 Hz panel, none over 16.7 ms.
+Xvfb cannot run at 120 Hz (its WebKitGTK is on a 60 Hz timer), so the tables carry two kinds of number: frame intervals
+(p50, p95, p99, max, the counts over 8.3 and over 16.7 ms; at 60 Hz every frame is over 8.3, so read that column against the
+work below) and the work a frame costs.
+- `busy/frm`: main-thread milliseconds per frame. Chromium reports its task time (CDP `TaskDuration`, with layout and style
+  beside it). WebKitGTK reports none, so `--probe` runs a message-channel ping-pong whose gaps are the time a task held the
+  main thread (script, style, layout and what a non-composited renderer paints). The probe perturbs the frame times:
+  run it apart from the fps numbers (`--probe`), never in the same cell.
+- `dock-morph-load`, `dock-pages-load`, `tab-switch-load`: the same scenarios with a synthetic 30 ms task every 200 ms
+  (`__perf.loadMs`, `__perf.loadEvery`). rAF is on the main thread, so these intervals show the stall whatever drives the
+  motion; what separates a compositor-driven animation is whether frames are still drawn. In Chromium the run traces viz's
+  `DrawAndSwap` and reports `comp>25` (gaps over 25 ms inside an animation) and `compMax` (the longest gap). WebKitGTK offers
+  no such trace; there the load scenario is read through the rAF columns only.
+- `--query orbs=main` keeps the orbs on the main thread in a build that can draw them in a worker (`orbs=worker` insists).
+  The `-- baseline (orbs worker|main ...)` line says which ran. `--dist DIR` serves an earlier build for the before column.
+- A `linear()` easing runs on the compositor in WebKitGTK 2.54 and later and in Chromium, not in 2.44 to 2.52 (the harness
+  box has 2.52.6): the dock samples springs into keyframes so it composites on both.
+
 ## What it needs
 
 - `/usr/bin/python3.12` with the system PyGObject and `gir1.2-webkit2-4.1` (`gi` is built for the distribution's Python,

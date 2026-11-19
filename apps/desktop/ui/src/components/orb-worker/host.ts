@@ -82,7 +82,9 @@ function buildElementClass(observed: string[]): CustomElementConstructor {
       for (const n of observed) { const v = this.getAttribute(n); if (v !== null) a[n] = COLOUR_ATTRS.has(n) ? this.resolve(v) : v; }
       return a;
     }
+    private _dropT = 0;
     connectedCallback(): void {
+      clearTimeout(this._dropT);
       const dock = !!this.closest('#hx-dock');
       byEl.set(this, this as unknown as Proxy); proxies.set(this._id, this as unknown as Proxy);
       if (!this.hasAttribute('role')) this.setAttribute('role', 'img');
@@ -97,6 +99,13 @@ function buildElementClass(observed: string[]): CustomElementConstructor {
       if (!this._made) return;
       post({ t: 'conn', id: this._id, on: false, dock: false });
       io?.unobserve(this); ro?.unobserve(this);
+      /* an orb that stays out of the page is let go in the worker (a bot list rebuilds its orbs); one that comes back later gets a fresh canvas */
+      this._dropT = window.setTimeout(() => {
+        if (this.isConnected) return;
+        post({ t: 'drop', id: this._id }); proxies.delete(this._id);
+        const c = document.createElement('canvas'); c.setAttribute('part', 'canvas'); this._canvas.replaceWith(c); this._canvas = c;
+        this._made = false; this._id = nextId++;
+      }, 3000);
     }
     attributeChangedCallback(name: string, _old: string | null, value: string | null): void {
       if (name === 'size') this.style.width = value == null ? '' : /^\d+(\.\d+)?$/.test(value) ? value + 'px' : value;

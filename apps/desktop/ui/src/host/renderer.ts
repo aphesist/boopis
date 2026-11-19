@@ -2,13 +2,14 @@
    the display. The owner copies the text from Settings > General > Diagnostics and sends it when a machine is slow or
    blank; `webkit://gpu` (WebKitGTK's own page) says which buffer path is in use. */
 import { commands } from './bindings';
+import { orbState } from '../components/orb-worker/host';
 import type { RendererReport } from './bindings';
 import { asHostError } from './bridge';
 
 /** what only the page knows */
-export interface DisplayFacts { devicePixelRatio: number; innerWidth: number; innerHeight: number; userAgent: string }
+export interface DisplayFacts { devicePixelRatio: number; innerWidth: number; innerHeight: number; userAgent: string; orbs?: string }
 
-export const displayFacts = (): DisplayFacts => ({ devicePixelRatio: window.devicePixelRatio, innerWidth: window.innerWidth, innerHeight: window.innerHeight, userAgent: navigator.userAgent });
+export const displayFacts = (): DisplayFacts => ({ devicePixelRatio: window.devicePixelRatio, innerWidth: window.innerWidth, innerHeight: window.innerHeight, userAgent: navigator.userAgent, orbs: orbState.mode + (orbState.why ? ` (${orbState.why})` : '') });
 
 /** frame timing over a few seconds, from requestAnimationFrame deltas (what the perf harness measures) */
 export interface FrameStats { seconds: number; frames: number; fps: number; p50: number; p95: number; max: number; over33: number }
@@ -49,6 +50,7 @@ export function reportText(r: RendererReport, d: DisplayFacts, f?: FrameStats | 
     `rule: ${r.rule}`,
     `set by the host: ${set}`,
     'environment now:', ...env,
+    ...(d.orbs ? [`orbs draw in: ${d.orbs}`] : []),
     `user agent: ${d.userAgent}`,
     'choices: ' + r.choices.map(([k, v]) => `${k} = ${v}`).join('; '),
     ...(f ? [`frames over ${f.seconds} s: ${f.fps} fps, p50 ${f.p50} ms, p95 ${f.p95} ms, max ${f.max} ms, ${f.over33} over 33 ms (${f.frames} frames)`] : [])

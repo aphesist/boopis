@@ -24,8 +24,16 @@ export class Probe { style = new Style(); }
 class Slot { addEventListener(): void { /* no light DOM in the worker */ } assignedElements(): unknown[] { return []; } }
 
 let nextCanvas: OffscreenCanvas | null = null;
-/** the canvas the next constructed orb will find in its shadow root */
-export const provideCanvas = (c: OffscreenCanvas): void => { nextCanvas = c; };
+/** the canvas the next constructed orb will find in its shadow root.
+    Its 2D context is asked for with `willReadFrequently`, which keeps the drawing on the CPU in the worker. The GPU-backed
+    2D context of an OffscreenCanvas in a worker crashes WebKitGTK 2.52.6's web process (double free, reproduced with 25
+    canvases on its GL renderer, and not with this option); orbs are small, so raster on a worker thread costs little, and
+    the page never waits for it. orb2 asks `getContext("2d")` with no options, so the option is added here. */
+export const provideCanvas = (c: OffscreenCanvas): void => {
+  const get = c.getContext.bind(c) as (t: string, o?: unknown) => unknown;
+  (c as unknown as { getContext: (t: string, o?: unknown) => unknown }).getContext = (t: string, o?: unknown): unknown => get(t, t === '2d' ? { ...(o as object | undefined), willReadFrequently: true } : o);
+  nextCanvas = c;
+};
 
 class Shadow {
   private _html = '';
