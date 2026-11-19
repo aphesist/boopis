@@ -123,12 +123,13 @@ ui/
   index.html            the app's markup (the shell's chrome), as v6's index.html
   src/main.ts           entry: styles, the web component, the provider, the modules, boot
   src/core/             bus (typed events), state (typed HX.state + setState), registry (slots, provide), settings, log, keys, dom
-  src/components/       the HX.ui library, one module per primitive (hold, composer, orb, layer, ...); components.css
+  src/components/       the HX.ui library, one module per primitive (hold, composer, orb, layer, squircle, model-mark, ...); components.css, model-mark.css
   src/modules/          shell, session, bots, dock, cards: each module's TS and CSS
   src/styles/           tokens.css (+ tokens.json, generated), theme.ts (runtime), theme-panel.ts, fonts.ts, index.ts (the cascade order)
   src/data/             THE DATA SEAM: types, provider interfaces, mock provider, README.md
   src/host/             the bridge to the Rust host: bindings.ts (generated, never edited), bridge, gateway client, live provider, map
   src/vendor/hermes-shared/  Hermes's generated gateway contract types (MIT), pinned, with NOTICE and PIN.json
+  src/vendor/model-icons/  the provider logos (LobeHub, MIT) and which family a model id gets, with NOTICE
   vendor/               orb-avatar.min.js (the owner's <orb-avatar> web component, MIT) and its .d.ts
   tests/                smoke (Playwright), parity (v6 against the port), lib.mjs
   scripts/              build-tokens.mjs
@@ -150,7 +151,9 @@ Every row of "Owner decisions" in `DESIGN-SYSTEM.md`, and one newer rule. A chan
 | Reduced motion **reduces and never freezes** the orbs: blinks, eye morphs, small glances stay; large travel, bounce and spin go; `static` only off-screen or tiny | `components/orb.ts` (`glance`, `liven`), `dock/orbs.ts` | smoke: reduced motion |
 | Inactive marks reach 3:1 in every preset and on the dock (`--mark-off`) | `tokens.css`, `styles/theme.ts` `PAIRS` | smoke: contrast of all pairs in all presets; unit |
 | Nested corners fit their container (concentric radii, `--r-outer`, `--pad`, `--r-in`) | `components.css`, `tokens.css` | parity (pixels) |
-| Continuous corners (`corner-shape: superellipse(1.8)`), larger nominal scale; round arc as the fallback | `components.css`, `components/shape.ts` | parity |
+| **Apple continuous corners in every engine** (WebKitGTK has no `corner-shape`): every corner is a path, figma-squircle at smoothing 0.6, drawn by `components/squircle.ts` (math in `squircle-path.ts`); the scale is 30 (sheets, dock), 20 (cards), 12 (rows, fields, buttons), capsule (chips), floor 8; **only leaf controls are clipped, a container never is** (orbs and popovers stay whole: its corner is a background and outline layer); no `corner-shape` anywhere | `components/squircle*.ts`, `tokens.css` (`--r-*`, `--corner-smoothing`), `components.css` | unit: golden paths from the v6 reference; smoke `corners`: no `corner-shape`, no clipped container, <= 2 ms a frame for 200 bound elements, six viewports; parity |
+| **A provider's logo beside every model name** (mono in the theme everywhere, brand colour only in the model menu; an unknown family gets the neutral mark, never the phi) | `components/model-mark.ts`, `vendor/model-icons/` | unit: `model-mark.test.ts` |
+| **Forms are one card family**: one renderer from the schema, every kind a template, every state, the origin slot on every card, answered in one place and resolved everywhere; a secret never leaves the field except to the keychain | `modules/cards/form*.ts`, `parts.ts`, `host/forms.ts`, `host/live/forms.ts` | unit: `form*.test.ts`, `live-forms.test.ts`; smoke `forms` |
 | **Every composer can talk**: a mic in each one (session, Bots tab, dock session); the bot's orb listens while you talk; alt+V talks | `components/composer.ts` | smoke: alt+V in the session and the dock |
 | Graphite and Typewriter have a real accent (`#9db6cf`, `#7ea6e0`) | `tokens.css` | parity; contrast |
 | **Smart and the model picker** (owner, later): **alt+M opens the model picker while Smart stays ON**; its first entry is "Smart" (automatic; the current choice while Smart is on) and then the models; choosing a model pins it and turns Smart off; choosing Smart keeps or turns it back on; Esc changes nothing; with Smart on the model chip stays hidden and the picker opens against the Smart chip; tooltips: Smart = "Picks the model for each message", off = "You pick the model" | `modules/session/composer.ts` | smoke: alt+M, pick a model, alt+M, pick Smart |
@@ -168,7 +171,7 @@ pnpm install --frozen-lockfile
 pnpm typecheck                # strict, noUncheckedIndexedAccess, exactOptionalPropertyTypes
 pnpm test                     # vitest: bus, state, settings, theme and contrast maths, hold timing, the keymap dispatcher, layout, cron, the mock provider, the feedforward reader
 pnpm build                    # tokens check, typecheck, vite build
-pnpm test:smoke [part]        # Playwright: boot, themes, the KEYMAP walk-through, the owner's decisions, the live provider over recorded frames, axe (zero violations); parts: boot themes keys owner live axe
+pnpm test:smoke [part]        # Playwright: boot, themes, the KEYMAP walk-through, the owner's decisions, the live provider over recorded frames, forms (every kind and state, the keyboard, the secret, plugin forms inline and in the dock), corners (no clipped container, the frame budget, six viewports), axe (zero violations); parts: boot themes keys owner live forms corners axe
 pnpm test:parity              # LOCAL ONLY (not in CI): needs Chromium (`pnpm exec playwright install chromium` once, or the pre-installed one) and the v6 reference in design/v6; the v6 mock-up against the port at 1440x900 and 1920x1080, in every preset, session and bots; diffs in test-results/parity/ (gitignored)
 ```
 CI runs `typecheck`, `test` and `test:smoke` (it installs Chromium with `pnpm exec playwright install --with-deps chromium`). `playwright` is pinned in `package.json`; on a machine with a pre-installed Chromium keep that pin equal to the installed version and do not run `playwright install`. The tests run at deviceScaleFactor 1 and serve a `vite build --mode e2e` (it exposes `window.__hx` for the tests; the production build has no global). Parity compares pixels with the orbs hidden (their idle motion is random by design) and again with every orb frozen to a still frame, plus the rects of every orb. **Any visible difference from v6 is a bug** unless you can name an intentional fix and list it below.
