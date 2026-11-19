@@ -206,7 +206,8 @@ def run_sandboxed(
         env=env,
         env_allowlist=[],
         net=False,
-        ro=list(tree.mounts),  # the dependency directories only; the real workspace is not mounted
+        # the dependency directories and the toolchain's caches; the real workspace is not mounted
+        ro=[*tree.mounts, *tool.caches],
         rw=[str(copy), str(scratch)],
         runtime_ro=runtime,
         system_read=True,

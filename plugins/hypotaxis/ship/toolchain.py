@@ -308,8 +308,9 @@ def _with_caches(base: Toolchain, names: set[str], cwd: str, scratch: str) -> To
         if not mounted:
             continue
         keep = {os.path.realpath(m) for m in mounted}
-        caches += mounted
-        roots += [m for m in mounted if m not in roots]
+        # Caches are data, not a runtime: they go to the sandbox's plain read-only mounts (``ro``), which hx does not
+        # vet as interpreter prefixes. ``runtime_ro`` stays for the program's own installation.
+        caches += [m for m in mounted if m not in caches]
         env.update(found.env)
         links += [(d, t) for d, t in found.links if any(os.path.realpath(t).startswith(k + os.sep) for k in keep)]
     return Toolchain(roots, env, base.program, tuple(caches), tuple(links))
