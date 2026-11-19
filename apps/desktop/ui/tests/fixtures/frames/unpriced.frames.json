@@ -1,0 +1,3031 @@
+[
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "gateway.ready",
+    "payload": {
+     "change_events": true,
+     "heartbeat": true,
+     "replay_epoch": "9acec59c9dea40bd80d68fa7b98e77c9",
+     "session_authority": true
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 1,
+   "method": "client.capabilities",
+   "params": {
+    "server_requests": true
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 1,
+   "result": {
+    "server_requests": [
+     "approval",
+     "clarify",
+     "display.install.sudo",
+     "preview.act",
+     "preview.read",
+     "secret",
+     "setup_beat",
+     "sudo",
+     "terminal.read",
+     "theme.apply",
+     "theme.pick",
+     "tour",
+     "vault.code",
+     "vault.save_login",
+     "vault.unlock_prompt",
+     "window.read"
+    ],
+    "declines_not_shown": true,
+    "canonical_clarify_batch": true
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 2,
+   "method": "runtime.describe",
+   "params": {}
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 2,
+   "result": {
+    "instance_id": "84d1b8c635bb43b0a900f77449413186",
+    "profile_id": "/work/hermes-home",
+    "authority_epoch": 1,
+    "capabilities": [
+     "durable-admission-v1",
+     "event-replay-v1",
+     "local-cli-create-v1",
+     "acp-editor-policy-v1",
+     "acp-session-mcp-v1",
+     "clarify-batch-v1",
+     "plugin-rpc-v1",
+     "session-client-v1",
+     "session-transcript-v1",
+     "session-list-picker-v1",
+     "session-list-cursor-v1"
+    ],
+    "session_create": {
+     "sources": [
+      "acp",
+      "cli",
+      "gui",
+      "oneshot",
+      "tool",
+      "tui"
+     ],
+     "parameters": [
+      "accept_hooks",
+      "api_key",
+      "base_url",
+      "checkpoints",
+      "client",
+      "client_env",
+      "cwd",
+      "cwd_explicit",
+      "editor",
+      "follow_profile_config",
+      "ignore_rules",
+      "ignore_user_config",
+      "max_turns",
+      "model",
+      "pass_session_id",
+      "provider",
+      "reasoning",
+      "request_id",
+      "row_cwd",
+      "run_budget",
+      "safe_mode",
+      "service_tier",
+      "skills",
+      "source",
+      "title",
+      "toolsets",
+      "verbose",
+      "yolo"
+     ]
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 3,
+   "method": "session.create",
+   "params": {
+    "source": "gui",
+    "cwd": "/work/proj",
+    "request_id": "req-1795049573204414012",
+    "model": "fake-a",
+    "provider": "main",
+    "toolsets": [
+     "hypotaxis",
+     "todo"
+    ],
+    "client": {
+     "name": "hypotaxis",
+     "version": "0"
+    }
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "notification.show",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "text": "\u26a0 Low disk (3.1 GB free) \u00b7 /autoprune on|off|later",
+     "detail": "Low disk space: 3.1 GB free of 252.0 GB. Your session history (state.db) uses 0 MB.\nAuto-prune is off. Turning it on deletes ended sessions inactive for more than 90 days, once a day (pinned and open sessions are kept).\nPruning will not help right now: none of your 1 session is older than 90 days. Something else is filling this disk.\n/autoprune on to enable, /autoprune off to keep everything (never asked again), /autoprune later to be reminded in a week.",
+     "level": "warn",
+     "kind": "sticky",
+     "ttl_ms": null,
+     "key": "sessions.auto_prune",
+     "id": "sessions.auto_prune"
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 1
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 3,
+   "result": {
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "stored_session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "messages": [],
+    "message_count": 0,
+    "todo_state": null,
+    "running": false,
+    "authority_epoch": 1,
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "last_sequence": 0,
+    "subscription_id": "d0eded3078704c54ba612f9a0d9bc3ab",
+    "revision": 0,
+    "execution_generation": 0,
+    "pending": [],
+    "prompts": [],
+    "info": {
+     "tools": {
+      "hypotaxis": [
+       "dispatch",
+       "exec",
+       "pack",
+       "ship"
+      ],
+      "todo": [
+       "todo_list"
+      ]
+     },
+     "skills": "(trimmed)",
+     "mcp_servers": [
+      {
+       "name": "fakemcp",
+       "transport": "stdio",
+       "tools": 0,
+       "connected": false,
+       "disabled": false,
+       "status": "configured",
+       "needs_auth": false
+      }
+     ],
+     "version": "unknown",
+     "release_date": "2026.9.24",
+     "update_behind": null,
+     "update_command": "hermes update",
+     "branch": "master",
+     "project": null,
+     "provider": "custom:main",
+     "enabled_toolsets": [
+      "hypotaxis",
+      "todo"
+     ],
+     "tool_availability": {
+      "unavailable_toolsets": [],
+      "lazy_tools": [],
+      "disabled_tools": []
+     },
+     "source": "gui",
+     "model": "fake-a",
+     "lazy": true,
+     "profile_id": "/work/hermes-home",
+     "desktop_protocol": "hermes-gateway-v1",
+     "profile_name": "default",
+     "cwd": "/work/proj",
+     "reasoning_effort": "",
+     "reasoning_effort_wire": "",
+     "service_tier": "",
+     "fast": false,
+     "launch_request": {
+      "client": {
+       "name": "hypotaxis",
+       "version": "0"
+      },
+      "cwd": "/work/proj",
+      "model": "fake-a",
+      "provider": "main",
+      "source": "gui",
+      "toolsets": [
+       "hypotaxis",
+       "todo"
+      ]
+     },
+     "client": {
+      "name": "hypotaxis",
+      "version": "0"
+     },
+     "title": null,
+     "started_at": 1795049573.387535,
+     "last_active_at": 1795049573.387535,
+     "yolo": false,
+     "archived": false,
+     "api_mode": null,
+     "tool_count": 5,
+     "credential_hint": null,
+     "usage": {
+      "model": "fake-a",
+      "input": 0,
+      "output": 0,
+      "reasoning": 0,
+      "prompt": 0,
+      "completion": 0,
+      "total": 0,
+      "calls": 0
+     }
+    },
+    "pending_connection": null,
+    "open_requests": []
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 4,
+   "method": "plugin.hypotaxis.mode.set",
+   "params": {
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "mode": "ungoverned"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 4,
+   "result": {}
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 5,
+   "method": "prompt.submit",
+   "params": {
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "text": "@@call todo_list {\"todos\": [{\"id\": \"1\", \"content\": \"read the call sites\", \"status\": \"completed\"}, {\"id\": \"2\", \"content\": \"round once per invoice\", \"status\": \"in_progress\"}, {\"id\": \"3\", \"content\": \"add a property test\", \"status\": \"pending\"}]}@@ @@call ship {\"edits\": [{\"op\": \"replace\", \"path\": \"src/a.py\", \"old\": \"return 1\", \"new\": \"return 2\"}]}@@  @@usage {\"prompt_tokens\": 1000, \"completion_tokens\": 50, \"total_tokens\": 1050, \"prompt_tokens_details\": {\"cached_tokens\": 400}, \"completion_tokens_details\": {\"reasoning_tokens\": 20}}@@ @@reply Done. Rounded once per invoice.@@",
+    "submission_id": "sub-1795049573705412148"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 5,
+   "result": {
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "ref": {
+     "profile_id": "/work/hermes-home",
+     "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418"
+    },
+    "sequence": 1,
+    "status": "queued",
+    "outcome": null,
+    "authority_epoch": 1,
+    "execution_generation": null
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "session.info",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "stored_session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+     "pending": [
+      {
+       "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+       "ref": {
+        "profile_id": "/work/hermes-home",
+        "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418"
+       },
+       "sequence": 1,
+       "status": "queued",
+       "outcome": null,
+       "authority_epoch": 1,
+       "execution_generation": null,
+       "input_id": "sub-1795049573705412148",
+       "text": "@@call todo_list {\"todos\": [{\"id\": \"1\", \"content\": \"read the call sites\", \"status\": \"completed\"}, {\"id\": \"2\", \"content\": \"round once per invoice\", \"status\": \"in_progress\"}, {\"id\": \"3\", \"content\": \"add a property test\", \"status\": \"pending\"}]}@@ @@call ship {\"edits\": [{\"op\": \"replace\", \"path\": \"src/a.py\", \"old\": \"return 1\", \"new\": \"return 2\"}]}@@  @@usage {\"prompt_tokens\": 1000, \"completion_tokens\": 50, \"total_tokens\": 1050, \"prompt_tokens_details\": {\"cached_tokens\": 400}, \"completion_tokens_details\": {\"reasoning_tokens\": 20}}@@ @@reply Done. Rounded once per invoice.@@",
+       "controls": [
+        "steer",
+        "replace"
+       ],
+       "steering": false
+      }
+     ],
+     "authority_epoch": 1,
+     "desktop_protocol": "hermes-gateway-v1",
+     "running": false,
+     "execution_generation": 0,
+     "revision": 0
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 2
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "message.start",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {},
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 3
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "session.info",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "stored_session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+     "pending": [
+      {
+       "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+       "ref": {
+        "profile_id": "/work/hermes-home",
+        "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418"
+       },
+       "sequence": 1,
+       "status": "started",
+       "outcome": null,
+       "authority_epoch": 1,
+       "execution_generation": 1,
+       "input_id": "sub-1795049573705412148",
+       "text": "@@call todo_list {\"todos\": [{\"id\": \"1\", \"content\": \"read the call sites\", \"status\": \"completed\"}, {\"id\": \"2\", \"content\": \"round once per invoice\", \"status\": \"in_progress\"}, {\"id\": \"3\", \"content\": \"add a property test\", \"status\": \"pending\"}]}@@ @@call ship {\"edits\": [{\"op\": \"replace\", \"path\": \"src/a.py\", \"old\": \"return 1\", \"new\": \"return 2\"}]}@@  @@usage {\"prompt_tokens\": 1000, \"completion_tokens\": 50, \"total_tokens\": 1050, \"prompt_tokens_details\": {\"cached_tokens\": 400}, \"completion_tokens_details\": {\"reasoning_tokens\": 20}}@@ @@reply Done. Rounded once per invoice.@@",
+       "controls": [],
+       "steering": false
+      }
+     ],
+     "authority_epoch": 1,
+     "desktop_protocol": "hermes-gateway-v1",
+     "running": true,
+     "execution_generation": 1,
+     "revision": 0
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 4
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "actor": "plugin",
+     "hash": "19145c813a0d464de7e828924b4fdb4cf4f12a3e57d5c695df8583e44c0e3f33",
+     "payload": {
+      "cwd": "/work/proj",
+      "hermes_version": "unknown",
+      "mode": "ungoverned",
+      "plugin_version": "0.1.0",
+      "price_table": "settings-44136fa355b3",
+      "profile": "default",
+      "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418"
+     },
+     "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 0,
+     "ts": "2026-11-19T00:52:54.433Z",
+     "type": "session.opened"
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 5
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "session.info",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "source": "gui",
+     "model": "fake-a",
+     "lazy": false,
+     "profile_id": "/work/hermes-home",
+     "desktop_protocol": "hermes-gateway-v1",
+     "profile_name": "default",
+     "cwd": "/work/proj",
+     "reasoning_effort": "",
+     "reasoning_effort_wire": "",
+     "service_tier": "",
+     "fast": false,
+     "launch_request": {
+      "client": {
+       "name": "hypotaxis",
+       "version": "0"
+      },
+      "cwd": "/work/proj",
+      "model": "fake-a",
+      "provider": "main",
+      "source": "gui",
+      "toolsets": [
+       "hypotaxis",
+       "todo"
+      ]
+     },
+     "client": {
+      "name": "hypotaxis",
+      "version": "0"
+     },
+     "title": "@@call todo_list {\"todos\": [{\"id\": \"1\"\u2026",
+     "started_at": 1795049573.387535,
+     "last_active_at": 1795049574.3840292,
+     "yolo": false,
+     "archived": false,
+     "api_mode": "chat_completions",
+     "tool_count": 5,
+     "credential_hint": "***"
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 6
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "sessions.changed",
+    "session_id": "",
+    "payload": {}
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "tool.generating",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "name": "todo_list"
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 10
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "fe6b9b402adc956af990926f949df918f870748195c437ac4c9f9f9581ac144a",
+     "payload": {
+      "cache_read_tokens": 400,
+      "cache_write_1h_tokens": 0,
+      "cache_write_5m_tokens": 0,
+      "input_tokens": 600,
+      "latency_ms": 518,
+      "model": "fake-a",
+      "output_tokens": 50,
+      "provider": "custom",
+      "reasoning_tokens": 20,
+      "request_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418:local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418:5c427482:api:1",
+      "role": "orchestrator",
+      "usage_schema": 2
+     },
+     "prev_hash": "19145c813a0d464de7e828924b4fdb4cf4f12a3e57d5c695df8583e44c0e3f33",
+     "seq": 1,
+     "ts": "2026-11-19T00:52:55.032Z",
+     "type": "usage.recorded"
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 12
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "message.delta",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "text": null
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 13
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "tool.start",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "tool_id": "call_936c79e03c",
+     "name": "todo_list",
+     "context": "planning 3 task(s)",
+     "tool_call_id": "call_936c79e03c",
+     "tool_name": "todo_list",
+     "args": {
+      "todos": [
+       {
+        "id": "1",
+        "content": "read the call sites",
+        "status": "completed"
+       },
+       {
+        "id": "2",
+        "content": "round once per invoice",
+        "status": "in_progress"
+       },
+       {
+        "id": "3",
+        "content": "add a property test",
+        "status": "pending"
+       }
+      ]
+     }
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 14
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "3f68a0ab6f2a3e1d23baf759940f95cb675a083ea5b8f8efa8f8ebde071b0299",
+     "payload": {
+      "args_sha256": "eb309dfc924b0b33439cd99b2625727a0d3394564c8871ae9c7a0eef7433f0b1",
+      "duration_ms": 9,
+      "status": "ok",
+      "task_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+      "tool": "todo_list",
+      "tool_call_id": "call_936c79e03c"
+     },
+     "prev_hash": "fe6b9b402adc956af990926f949df918f870748195c437ac4c9f9f9581ac144a",
+     "seq": 2,
+     "ts": "2026-11-19T00:52:55.056Z",
+     "type": "tool.called"
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 15
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "tool.complete",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "tool_id": "call_936c79e03c",
+     "name": "todo_list",
+     "context": "planning 3 task(s)",
+     "tool_call_id": "call_936c79e03c",
+     "tool_name": "todo_list",
+     "args": {
+      "todos": [
+       {
+        "id": "1",
+        "content": "read the call sites",
+        "status": "completed"
+       },
+       {
+        "id": "2",
+        "content": "round once per invoice",
+        "status": "in_progress"
+       },
+       {
+        "id": "3",
+        "content": "add a property test",
+        "status": "pending"
+       }
+      ]
+     },
+     "is_error": false,
+     "result": "{\"todos\": [{\"id\": \"1\", \"content\": \"read the call sites\", \"status\": \"completed\"}, {\"id\": \"2\", \"content\": \"round once per invoice\", \"status\": \"in_progress\"}, {\"id\": \"3\", \"content\": \"add a property test\", \"status\": \"pending\"}], \"revision\": 1, \"summary\": {\"total\": 3, \"pending\": 1, \"in_progress\": 1, \"completed\": 1, \"cancelled\": 0}}",
+     "duration_s": 0.011244142000123247,
+     "inline_diff": null,
+     "image_path": null,
+     "todos": [
+      {
+       "id": "1",
+       "content": "read the call sites",
+       "status": "completed"
+      },
+      {
+       "id": "2",
+       "content": "round once per invoice",
+       "status": "in_progress"
+      },
+      {
+       "id": "3",
+       "content": "add a property test",
+       "status": "pending"
+      }
+     ],
+     "revision": 1
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 16
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "todo.updated",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "todos": [
+      {
+       "id": "1",
+       "content": "read the call sites",
+       "status": "completed"
+      },
+      {
+       "id": "2",
+       "content": "round once per invoice",
+       "status": "in_progress"
+      },
+      {
+       "id": "3",
+       "content": "add a property test",
+       "status": "pending"
+      }
+     ],
+     "revision": 1
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 17
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "session.usage",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "usage": {
+      "model": "fake-a",
+      "input": 600,
+      "output": 50,
+      "reasoning": 20,
+      "prompt": 1000,
+      "completion": 50,
+      "total": 1050,
+      "calls": 1,
+      "context_used": 1000,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "cache_hit_pct": 40,
+      "avg_latency_s": 0.5,
+      "avg_tps": 96.5,
+      "active_subagents": 0
+     },
+     "input_tokens": 600,
+     "output_tokens": 50,
+     "cache_read_tokens": 400,
+     "cache_write_tokens": 0,
+     "prompt_tokens": 1000,
+     "completion_tokens": 50,
+     "total_tokens": 1050,
+     "reasoning_tokens": 20,
+     "api_calls": 1,
+     "last_prompt_tokens": 1000,
+     "context_tokens": 1166,
+     "context_length": 200000,
+     "config_context_length": 200000,
+     "context_source": "provider_usage",
+     "compression_count": 0,
+     "avg_latency_s": 0.52,
+     "tokens_per_s": 96.52,
+     "last_turn_tokens": 50,
+     "rate_limit": null,
+     "active_subagents": 0,
+     "model": "fake-a",
+     "provider": "custom",
+     "fallback_model": null
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 19
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "tool.generating",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "name": "ship"
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 22
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "bdd23884c87df3f7a9e70dce00db87884284b319e04802e7946d4f450556722f",
+     "payload": {
+      "cache_read_tokens": 400,
+      "cache_write_1h_tokens": 0,
+      "cache_write_5m_tokens": 0,
+      "input_tokens": 600,
+      "latency_ms": 11,
+      "model": "fake-a",
+      "output_tokens": 50,
+      "provider": "custom",
+      "reasoning_tokens": 20,
+      "request_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418:local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418:5c427482:api:2",
+      "role": "orchestrator",
+      "usage_schema": 2
+     },
+     "prev_hash": "3f68a0ab6f2a3e1d23baf759940f95cb675a083ea5b8f8efa8f8ebde071b0299",
+     "seq": 3,
+     "ts": "2026-11-19T00:52:55.085Z",
+     "type": "usage.recorded"
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 24
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "message.delta",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "text": null
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 25
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "tool.start",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "tool_id": "call_7f044892a6",
+     "name": "ship",
+     "context": "",
+     "tool_call_id": "call_7f044892a6",
+     "tool_name": "ship",
+     "args": {
+      "edits": [
+       {
+        "op": "replace",
+        "path": "src/a.py",
+        "old": "return 1",
+        "new": "return 2"
+       }
+      ]
+     }
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 26
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "actor": "plugin",
+     "hash": "14c7038f5344a4ccd4b37c66fada36175cd83b2d8692303145fd02c2f556300e",
+     "payload": {
+      "kind": "code",
+      "max_attempts": 1,
+      "scope": [
+       "**"
+      ],
+      "task_id": "ship:01a1f14a-d2e5-7160-bcb0-59de2bd7d264",
+      "title": "ship src/a.py"
+     },
+     "prev_hash": "bdd23884c87df3f7a9e70dce00db87884284b319e04802e7946d4f450556722f",
+     "seq": 4,
+     "ts": "2026-11-19T00:52:55.145Z",
+     "type": "task.created"
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 27
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "760c05578237709ad1aef64e9bac53ecd6846f53bac48fce2dae393773ed1f28",
+     "payload": {
+      "task_id": "ship:01a1f14a-d2e5-7160-bcb0-59de2bd7d264",
+      "worker": "orchestrator:custom/fake-a"
+     },
+     "prev_hash": "14c7038f5344a4ccd4b37c66fada36175cd83b2d8692303145fd02c2f556300e",
+     "seq": 5,
+     "ts": "2026-11-19T00:52:55.147Z",
+     "type": "task.claimed"
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 28
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "f6e5562e92f5554cb7aab2c51046d62ce1a969065bf426599e623f697f2c7146",
+     "payload": {
+      "files": [
+       {
+        "path": "src/a.py",
+        "sha256_after": "4436c9b1be34f14675fef593cc90fb944b07785e50cb0fd9fa56c747a3a4e0b9",
+        "sha256_before": "345a09077e88e5b84f401d3d3e82aee36008984b51eab4f049c08e4362539d3c"
+       }
+      ],
+      "journal_id": "01a1f14a-d2e5-7160-bcb0-59de2bd7d264",
+      "ship_id": "01a1f14a-d2e5-7160-bcb0-59de2bd7d264",
+      "task_id": "ship:01a1f14a-d2e5-7160-bcb0-59de2bd7d264"
+     },
+     "prev_hash": "760c05578237709ad1aef64e9bac53ecd6846f53bac48fce2dae393773ed1f28",
+     "seq": 6,
+     "ts": "2026-11-19T00:52:55.148Z",
+     "type": "ship.applied"
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 29
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "87484d35bc15290d7eecc3b1576ea4bd0c2b46b1172898582ea3a109f1476e24",
+     "payload": {
+      "attempt": 1,
+      "files": [
+       "src/a.py"
+      ],
+      "files_sha256": "dd58e5e0d9b263bdd0b9ae0a53c1f88df680b56aa97e22c758c54c1af8528e60",
+      "task_id": "ship:01a1f14a-d2e5-7160-bcb0-59de2bd7d264"
+     },
+     "prev_hash": "f6e5562e92f5554cb7aab2c51046d62ce1a969065bf426599e623f697f2c7146",
+     "seq": 7,
+     "ts": "2026-11-19T00:52:55.148Z",
+     "type": "task.submitted"
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 30
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "actor": "gate",
+     "hash": "910befad85c7c93a117c811f90039cd59289db2cf3e9ad3c821e54e55c85a53d",
+     "payload": {
+      "enforcement": "degraded:unsandboxed",
+      "gate": "T0.visible_tests",
+      "gates": [
+       {
+        "evidence": {
+         "blast_radius": {
+          "changed_lines": 2,
+          "manifests": [],
+          "max_changed_lines": 200
+         },
+         "enforcement": "degraded:unsandboxed",
+         "test_files": 0,
+         "tests_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+         "tiers": [
+          "T0.scope",
+          "T0.visible_tests"
+         ],
+         "touched": [
+          "src/a.py"
+         ],
+         "violations": []
+        },
+        "gate": "T0.scope",
+        "reason": "",
+        "verdict": "pass"
+       },
+       {
+        "evidence": {
+         "blast_radius": {
+          "changed_lines": 2,
+          "manifests": [],
+          "max_changed_lines": 200
+         },
+         "enforcement": "degraded:unsandboxed",
+         "tests": {
+          "command": null,
+          "status": "not_configured"
+         },
+         "tests_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+         "tiers": [
+          "T0.scope",
+          "T0.visible_tests"
+         ]
+        },
+        "gate": "T0.visible_tests",
+        "reason": "",
+        "verdict": "pass"
+       }
+      ],
+      "reason": "",
+      "task_id": "ship:01a1f14a-d2e5-7160-bcb0-59de2bd7d264",
+      "tests_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "verdict": "pass"
+     },
+     "prev_hash": "87484d35bc15290d7eecc3b1576ea4bd0c2b46b1172898582ea3a109f1476e24",
+     "seq": 8,
+     "ts": "2026-11-19T00:52:55.155Z",
+     "type": "gate.decided"
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 31
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "actor": "plugin",
+     "hash": "d5293bdf5d188ab2624f816bf95a7312a98436fc3703e6352ea12c44bf64e268",
+     "payload": {
+      "commit": "66bde25822059c2707411ce2e7ff49a7822bf5d3",
+      "ref": "refs/hypotaxis/checkpoints/local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+      "ship_id": "01a1f14a-d2e5-7160-bcb0-59de2bd7d264"
+     },
+     "prev_hash": "910befad85c7c93a117c811f90039cd59289db2cf3e9ad3c821e54e55c85a53d",
+     "seq": 9,
+     "ts": "2026-11-19T00:52:55.182Z",
+     "type": "checkpoint.committed"
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 32
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "plugin.hypotaxis.ship.completed",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "ship_id": "01a1f14a-d2e5-7160-bcb0-59de2bd7d264",
+     "status": "shipped",
+     "files": [
+      {
+       "path": "src/a.py",
+       "created": false,
+       "deleted": false
+      }
+     ],
+     "gate": {
+      "verdict": "pass",
+      "gates": [
+       "T0.scope",
+       "T0.visible_tests"
+      ],
+      "enforcement": "degraded:unsandboxed"
+     }
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 33
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "e929a1c00324a5934ef78e591705ce7b823944f520ca6e880f47d8caa0133c7d",
+     "payload": {
+      "args_sha256": "9b8ff2a0881b6ad6876c1b960723becd360bee7117432e7572d4db3fb3475b50",
+      "duration_ms": 93,
+      "status": "ok",
+      "task_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+      "tool": "ship",
+      "tool_call_id": "call_7f044892a6"
+     },
+     "prev_hash": "d5293bdf5d188ab2624f816bf95a7312a98436fc3703e6352ea12c44bf64e268",
+     "seq": 10,
+     "ts": "2026-11-19T00:52:55.186Z",
+     "type": "tool.called"
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 34
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "tool.complete",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "tool_id": "call_7f044892a6",
+     "name": "ship",
+     "context": "",
+     "tool_call_id": "call_7f044892a6",
+     "tool_name": "ship",
+     "args": {
+      "edits": [
+       {
+        "op": "replace",
+        "path": "src/a.py",
+        "old": "return 1",
+        "new": "return 2"
+       }
+      ]
+     },
+     "is_error": false,
+     "result": "{\"status\": \"shipped\", \"ship_id\": \"01a1f14a-d2e5-7160-bcb0-59de2bd7d264\", \"files\": [{\"path\": \"src/a.py\", \"created\": false, \"deleted\": false}], \"gate\": {\"verdict\": \"pass\", \"gates\": [\"T0.scope\", \"T0.visible_tests\"], \"enforcement\": \"degraded:unsandboxed\"}, \"checkpoint\": {\"ref\": \"refs/hypotaxis/checkpoints/local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418\", \"commit\": \"66bde25822059c2707411ce2e7ff49a7822bf5d3\"}}",
+     "duration_s": 0.09325260800005708,
+     "inline_diff": null,
+     "image_path": null
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 35
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "session.usage",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "usage": {
+      "model": "fake-a",
+      "input": 1200,
+      "output": 100,
+      "reasoning": 40,
+      "prompt": 2000,
+      "completion": 100,
+      "total": 2100,
+      "calls": 2,
+      "context_used": 1000,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "cache_hit_pct": 40,
+      "avg_latency_s": 0.3,
+      "avg_tps": 189.2,
+      "active_subagents": 0
+     },
+     "input_tokens": 1200,
+     "output_tokens": 100,
+     "cache_read_tokens": 800,
+     "cache_write_tokens": 0,
+     "prompt_tokens": 2000,
+     "completion_tokens": 100,
+     "total_tokens": 2100,
+     "reasoning_tokens": 40,
+     "api_calls": 2,
+     "last_prompt_tokens": 1000,
+     "context_tokens": 1399,
+     "context_length": 200000,
+     "config_context_length": 200000,
+     "context_source": "provider_usage",
+     "compression_count": 0,
+     "avg_latency_s": 0.26,
+     "tokens_per_s": 189.17,
+     "last_turn_tokens": 100,
+     "rate_limit": null,
+     "active_subagents": 0,
+     "model": "fake-a",
+     "provider": "custom",
+     "fallback_model": null
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 37
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "message.delta",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "text": "\n\nDone. Rounde",
+     "turn_id": "65373f6a574e4689b87448f26afdafd4",
+     "segment": 0,
+     "offset": 0
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 40
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "message.delta",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "text": "d once per i",
+     "turn_id": "65373f6a574e4689b87448f26afdafd4",
+     "segment": 0,
+     "offset": 14
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 41
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "message.delta",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "text": "nvoice.",
+     "turn_id": "65373f6a574e4689b87448f26afdafd4",
+     "segment": 0,
+     "offset": 26
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 42
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "08dcec1119e9176dfc4e01114a8250dbc8d7d1cd8c8660e83ad509f7c98fc4d0",
+     "payload": {
+      "cache_read_tokens": 400,
+      "cache_write_1h_tokens": 0,
+      "cache_write_5m_tokens": 0,
+      "input_tokens": 600,
+      "latency_ms": 11,
+      "model": "fake-a",
+      "output_tokens": 50,
+      "provider": "custom",
+      "reasoning_tokens": 20,
+      "request_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418:local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418:5c427482:api:3",
+      "role": "orchestrator",
+      "usage_schema": 2
+     },
+     "prev_hash": "e929a1c00324a5934ef78e591705ce7b823944f520ca6e880f47d8caa0133c7d",
+     "seq": 11,
+     "ts": "2026-11-19T00:52:55.213Z",
+     "type": "usage.recorded"
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 44
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "actor": "plugin",
+     "hash": "70b002a455b3d87fd80c244894203ca572c8b44ab3bf0ca789d144f5a72042aa",
+     "payload": {
+      "aux_task": "title_generation",
+      "cache_read_tokens": 400,
+      "cache_write_1h_tokens": 0,
+      "cache_write_5m_tokens": 0,
+      "input_tokens": 600,
+      "latency_ms": 7,
+      "model": "fake-a",
+      "output_tokens": 50,
+      "provider": "main",
+      "reasoning_tokens": 20,
+      "request_id": "aux-08a5009eb3b1430aa87f0d6256266fbb",
+      "role": "auxiliary",
+      "usage_schema": 2
+     },
+     "prev_hash": "08dcec1119e9176dfc4e01114a8250dbc8d7d1cd8c8660e83ad509f7c98fc4d0",
+     "seq": 12,
+     "ts": "2026-11-19T00:52:55.244Z",
+     "type": "usage.recorded"
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 45
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "session.usage",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "usage": {
+      "model": "fake-a",
+      "input": 1800,
+      "output": 150,
+      "reasoning": 60,
+      "prompt": 3000,
+      "completion": 150,
+      "total": 3150,
+      "calls": 3,
+      "context_used": 1000,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "cache_hit_pct": 40,
+      "avg_latency_s": 0.2,
+      "avg_tps": 278.0,
+      "active_subagents": 0
+     },
+     "input_tokens": 1800,
+     "output_tokens": 150,
+     "cache_read_tokens": 1200,
+     "cache_write_tokens": 0,
+     "prompt_tokens": 3000,
+     "completion_tokens": 150,
+     "total_tokens": 3150,
+     "reasoning_tokens": 60,
+     "api_calls": 3,
+     "last_prompt_tokens": 1000,
+     "context_tokens": 1433,
+     "context_length": 200000,
+     "config_context_length": 200000,
+     "context_source": "provider_usage",
+     "compression_count": 0,
+     "avg_latency_s": 0.18,
+     "tokens_per_s": 277.97,
+     "last_turn_tokens": 150,
+     "rate_limit": null,
+     "active_subagents": 0,
+     "model": "fake-a",
+     "provider": "custom",
+     "fallback_model": null
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 46
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "session.info",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "provider": "custom:main",
+     "tools": {
+      "hypotaxis": [
+       "dispatch",
+       "exec",
+       "pack",
+       "ship"
+      ],
+      "todo": [
+       "todo_list"
+      ]
+     },
+     "system_prompt": "(trimmed)",
+     "context_length": 200000,
+     "source": "gui",
+     "model": "fake-a",
+     "lazy": false,
+     "profile_id": "/work/hermes-home",
+     "desktop_protocol": "hermes-gateway-v1",
+     "profile_name": "default",
+     "cwd": "/work/proj",
+     "reasoning_effort": "",
+     "reasoning_effort_wire": "",
+     "service_tier": "",
+     "fast": false,
+     "launch_request": {
+      "client": {
+       "name": "hypotaxis",
+       "version": "0"
+      },
+      "cwd": "/work/proj",
+      "model": "fake-a",
+      "provider": "main",
+      "source": "gui",
+      "toolsets": [
+       "hypotaxis",
+       "todo"
+      ]
+     },
+     "client": {
+      "name": "hypotaxis",
+      "version": "0"
+     },
+     "title": "@@call todo_list {\"todos\": [{\"id\": \"1\"\u2026",
+     "started_at": 1795049573.387535,
+     "last_active_at": 1795049574.3840292,
+     "yolo": false,
+     "archived": false,
+     "api_mode": "chat_completions",
+     "tool_count": 5,
+     "credential_hint": "***"
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 47
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "message.complete",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "text": "Done. Rounded once per invoice.",
+     "content": "Done. Rounded once per invoice.",
+     "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+     "outcome": "completed",
+     "status": "complete",
+     "usage": {
+      "model": "fake-a",
+      "input": 1800,
+      "output": 150,
+      "reasoning": 60,
+      "prompt": 3000,
+      "completion": 150,
+      "total": 3150,
+      "calls": 3,
+      "context_used": 1000,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "cache_hit_pct": 40,
+      "avg_latency_s": 0.2,
+      "avg_tps": 278.0,
+      "active_subagents": 0
+     },
+     "persisted_turn": {
+      "row_ids": [
+       1,
+       2,
+       3,
+       4,
+       5,
+       6
+      ],
+      "complete": true,
+      "user_row_id": 1,
+      "user_row_ids": [
+       1
+      ],
+      "final_assistant_row_id": 6,
+      "submission_id": "sub-1795049573705412148"
+     }
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 48
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 6,
+   "method": "session.list",
+   "params": {
+    "limit": 100
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "a4c86e6cec6d43719d058b63a22d8800",
+    "type": "session.info",
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "payload": {
+     "stored_session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+     "pending": [],
+     "authority_epoch": 1,
+     "desktop_protocol": "hermes-gateway-v1",
+     "running": false,
+     "execution_generation": 1,
+     "revision": 1
+    },
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "seq": 49
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 6,
+   "result": {
+    "sessions": [
+     {
+      "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+      "id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+      "title": "@@call todo_list {\"todos\": [{\"id\": \"1\"\u2026",
+      "source": "local",
+      "started_at": 1795049573.387535,
+      "message_count": 6,
+      "model": "fake-a",
+      "running": false
+     }
+    ],
+    "scope": "live"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 7,
+   "method": "session.list",
+   "params": {
+    "limit": 100,
+    "include_hidden": true
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 7,
+   "result": {
+    "sessions": [
+     {
+      "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+      "id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+      "title": "@@call todo_list {\"todos\": [{\"id\": \"1\"\u2026",
+      "source": "local",
+      "started_at": 1795049573.387535,
+      "message_count": 6,
+      "model": "fake-a",
+      "running": false
+     }
+    ],
+    "scope": "live"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 8,
+   "method": "mcp.servers.status",
+   "params": {}
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 8,
+   "result": {
+    "servers": [
+     {
+      "name": "fakemcp",
+      "transport": "stdio",
+      "tools": 0,
+      "connected": false,
+      "disabled": false,
+      "status": "configured",
+      "needs_auth": false,
+      "source": "config",
+      "plugin": null
+     }
+    ],
+    "checked_at": 1795049575343
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 9,
+   "method": "session.resume",
+   "params": {
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 9,
+   "result": {
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "stored_session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "messages": [
+     {
+      "role": "user",
+      "content": "@@call todo_list {\"todos\": [{\"id\": \"1\", \"content\": \"read the call sites\", \"status\": \"completed\"}, {\"id\": \"2\", \"content\": \"round once per invoice\", \"status\": \"in_progress\"}, {\"id\": \"3\", \"content\": \"add a property test\", \"status\": \"pending\"}]}@@ @@call ship {\"edits\": [{\"op\": \"replace\", \"path\": \"src/a.py\", \"old\": \"return 1\", \"new\": \"return 2\"}]}@@  @@usage {\"prompt_tokens\": 1000, \"completion_tokens\": 50, \"total_tokens\": 1050, \"prompt_tokens_details\": {\"cached_tokens\": 400}, \"completion_tokens_details\": {\"reasoning_tokens\": 20}}@@ @@reply Done. Rounded once per invoice.@@",
+      "_db_persisted": true,
+      "message_uid": "8b0675af22b9461b9a5403ebd86b55f4",
+      "display_metadata": {
+       "gateway_input_owner": "9a0a250b-fab9-56e1-a1c1-db6ab11ca6ce",
+       "submission_id": "sub-1795049573705412148"
+      },
+      "timestamp": 1795049573.723116,
+      "message_id": "a4c86e6cec6d43719d058b63a22d8800",
+      "row_id": 1
+     },
+     {
+      "role": "assistant",
+      "content": "",
+      "_db_persisted": true,
+      "message_uid": "cc1a4854f26b4347a613a072a9bdea0f",
+      "_tool_call_uids": {
+       "call_936c79e03c": "7bca6c4a3e324669adbbcd098c333b54"
+      },
+      "display_metadata": {
+       "reasoning_tokens": 20
+      },
+      "timestamp": 1795049575.034734,
+      "tool_calls": [
+       {
+        "id": "call_936c79e03c",
+        "call_id": "call_936c79e03c",
+        "response_item_id": "fc_936c79e03c",
+        "type": "function",
+        "function": {
+         "name": "todo_list",
+         "arguments": "{\"todos\": [{\"id\": \"1\", \"content\": \"read the call sites\", \"status\": \"completed\"}, {\"id\": \"2\", \"content\": \"round once per invoice\", \"status\": \"in_progress\"}, {\"id\": \"3\", \"content\": \"add a property test\", \"status\": \"pending\"}]}"
+        }
+       }
+      ],
+      "finish_reason": "tool_calls",
+      "row_id": 2
+     },
+     {
+      "role": "tool",
+      "content": "{\"todos\": [{\"id\": \"1\", \"content\": \"read the call sites\", \"status\": \"completed\"}, {\"id\": \"2\", \"content\": \"round once per invoice\", \"status\": \"in_progress\"}, {\"id\": \"3\", \"content\": \"add a property test\", \"status\": \"pending\"}], \"revision\": 1, \"summary\": {\"total\": 3, \"pending\": 1, \"in_progress\": 1, \"completed\": 1, \"cancelled\": 0}}",
+      "_db_persisted": true,
+      "message_uid": "e213200146944180a17d98a9443edcf9",
+      "_tool_call_uid": "7bca6c4a3e324669adbbcd098c333b54",
+      "timestamp": 1795049575.0585892,
+      "tool_call_id": "call_936c79e03c",
+      "tool_name": "todo_list",
+      "row_id": 3
+     },
+     {
+      "role": "assistant",
+      "content": "",
+      "_db_persisted": true,
+      "message_uid": "f6126d2cd4c64d8998e17dde4467fd53",
+      "_tool_call_uids": {
+       "call_7f044892a6": "6eb153e7d7024d48aba6f56a6822b5fd"
+      },
+      "display_metadata": {
+       "reasoning_tokens": 20
+      },
+      "timestamp": 1795049575.0878549,
+      "tool_calls": [
+       {
+        "id": "call_7f044892a6",
+        "call_id": "call_7f044892a6",
+        "response_item_id": "fc_7f044892a6",
+        "type": "function",
+        "function": {
+         "name": "ship",
+         "arguments": "{\"edits\": [{\"op\": \"replace\", \"path\": \"src/a.py\", \"old\": \"return 1\", \"new\": \"return 2\"}]}"
+        }
+       }
+      ],
+      "finish_reason": "tool_calls",
+      "row_id": 4
+     },
+     {
+      "role": "tool",
+      "content": "{\"status\": \"shipped\", \"ship_id\": \"01a1f14a-d2e5-7160-bcb0-59de2bd7d264\", \"files\": [{\"path\": \"src/a.py\", \"created\": false, \"deleted\": false}], \"gate\": {\"verdict\": \"pass\", \"gates\": [\"T0.scope\", \"T0.visible_tests\"], \"enforcement\": \"degraded:unsandboxed\"}, \"checkpoint\": {\"ref\": \"refs/hypotaxis/checkpoints/local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418\", \"commit\": \"66bde25822059c2707411ce2e7ff49a7822bf5d3\"}}",
+      "_db_persisted": true,
+      "message_uid": "5d53cf5adea0424b875835f280194bf3",
+      "_tool_call_uid": "6eb153e7d7024d48aba6f56a6822b5fd",
+      "timestamp": 1795049575.1887045,
+      "tool_call_id": "call_7f044892a6",
+      "tool_name": "ship",
+      "row_id": 5
+     },
+     {
+      "role": "assistant",
+      "content": "Done. Rounded once per invoice.",
+      "_db_persisted": true,
+      "message_uid": "ed6a47f5055144f8b38ccb450feb04c4",
+      "display_metadata": {
+       "reasoning_tokens": 20
+      },
+      "timestamp": 1795049575.2153807,
+      "finish_reason": "stop",
+      "row_id": 6
+     }
+    ],
+    "message_count": 6,
+    "todo_state": {
+     "todos": [
+      {
+       "id": "1",
+       "content": "read the call sites",
+       "status": "completed"
+      },
+      {
+       "id": "2",
+       "content": "round once per invoice",
+       "status": "in_progress"
+      },
+      {
+       "id": "3",
+       "content": "add a property test",
+       "status": "pending"
+      }
+     ],
+     "revision": 1
+    },
+    "running": false,
+    "authority_epoch": 1,
+    "replay_epoch": "834ba0950f9c45f19ff3205fbc7613c7",
+    "last_sequence": 49,
+    "subscription_id": "d0eded3078704c54ba612f9a0d9bc3ab",
+    "revision": 1,
+    "execution_generation": 1,
+    "pending": [],
+    "prompts": [],
+    "info": {
+     "tools": {
+      "hypotaxis": [
+       "dispatch",
+       "exec",
+       "pack",
+       "ship"
+      ],
+      "todo": [
+       "todo_list"
+      ]
+     },
+     "skills": "(trimmed)",
+     "mcp_servers": [
+      {
+       "name": "fakemcp",
+       "transport": "stdio",
+       "tools": 0,
+       "connected": false,
+       "disabled": false,
+       "status": "configured",
+       "needs_auth": false
+      }
+     ],
+     "version": "unknown",
+     "release_date": "2026.9.24",
+     "update_behind": null,
+     "update_command": "hermes update",
+     "branch": "master",
+     "project": null,
+     "provider": "custom:main",
+     "system_prompt": "(trimmed)",
+     "context_length": 200000,
+     "enabled_toolsets": [
+      "hypotaxis",
+      "todo"
+     ],
+     "tool_availability": {
+      "unavailable_toolsets": [],
+      "lazy_tools": [],
+      "disabled_tools": []
+     },
+     "source": "gui",
+     "model": "fake-a",
+     "lazy": false,
+     "profile_id": "/work/hermes-home",
+     "desktop_protocol": "hermes-gateway-v1",
+     "profile_name": "default",
+     "cwd": "/work/proj",
+     "reasoning_effort": "",
+     "reasoning_effort_wire": "",
+     "service_tier": "",
+     "fast": false,
+     "launch_request": {
+      "client": {
+       "name": "hypotaxis",
+       "version": "0"
+      },
+      "cwd": "/work/proj",
+      "model": "fake-a",
+      "provider": "main",
+      "source": "gui",
+      "toolsets": [
+       "hypotaxis",
+       "todo"
+      ]
+     },
+     "client": {
+      "name": "hypotaxis",
+      "version": "0"
+     },
+     "title": "@@call todo_list {\"todos\": [{\"id\": \"1\"\u2026",
+     "started_at": 1795049573.387535,
+     "last_active_at": 1795049574.3840292,
+     "yolo": false,
+     "archived": false,
+     "api_mode": "chat_completions",
+     "tool_count": 5,
+     "credential_hint": "***",
+     "usage": {
+      "model": "fake-a",
+      "input": 1800,
+      "output": 150,
+      "reasoning": 60,
+      "prompt": 3000,
+      "completion": 150,
+      "total": 3150,
+      "calls": 3,
+      "context_used": 1000,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "cache_hit_pct": 40,
+      "avg_latency_s": 0.2,
+      "avg_tps": 278.0,
+      "active_subagents": 0
+     }
+    },
+    "pending_connection": null,
+    "open_requests": []
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 10,
+   "method": "session.info",
+   "params": {
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 10,
+   "result": {
+    "tools": {
+     "hypotaxis": [
+      "dispatch",
+      "exec",
+      "pack",
+      "ship"
+     ],
+     "todo": [
+      "todo_list"
+     ]
+    },
+    "skills": "(trimmed)",
+    "mcp_servers": [
+     {
+      "name": "fakemcp",
+      "transport": "stdio",
+      "tools": 0,
+      "connected": false,
+      "disabled": false,
+      "status": "configured",
+      "needs_auth": false
+     }
+    ],
+    "version": "unknown",
+    "release_date": "2026.9.24",
+    "update_behind": null,
+    "update_command": "hermes update",
+    "branch": "master",
+    "project": null,
+    "provider": "custom:main",
+    "system_prompt": "(trimmed)",
+    "context_length": 200000,
+    "enabled_toolsets": [
+     "hypotaxis",
+     "todo"
+    ],
+    "tool_availability": {
+     "unavailable_toolsets": [],
+     "lazy_tools": [],
+     "disabled_tools": []
+    },
+    "source": "gui",
+    "model": "fake-a",
+    "lazy": false,
+    "profile_id": "/work/hermes-home",
+    "desktop_protocol": "hermes-gateway-v1",
+    "profile_name": "default",
+    "cwd": "/work/proj",
+    "reasoning_effort": "",
+    "reasoning_effort_wire": "",
+    "service_tier": "",
+    "fast": false,
+    "launch_request": {
+     "client": {
+      "name": "hypotaxis",
+      "version": "0"
+     },
+     "cwd": "/work/proj",
+     "model": "fake-a",
+     "provider": "main",
+     "source": "gui",
+     "toolsets": [
+      "hypotaxis",
+      "todo"
+     ]
+    },
+    "client": {
+     "name": "hypotaxis",
+     "version": "0"
+    },
+    "title": "@@call todo_list {\"todos\": [{\"id\": \"1\"\u2026",
+    "started_at": 1795049573.387535,
+    "last_active_at": 1795049574.3840292,
+    "yolo": false,
+    "archived": false,
+    "api_mode": "chat_completions",
+    "tool_count": 5,
+    "credential_hint": "***",
+    "usage": {
+     "model": "fake-a",
+     "input": 1800,
+     "output": 150,
+     "reasoning": 60,
+     "prompt": 3000,
+     "completion": 150,
+     "total": 3150,
+     "calls": 3,
+     "context_used": 1000,
+     "context_max": 200000,
+     "context_percent": 0,
+     "context_source": "provider_usage",
+     "context_estimated": false,
+     "compressions": 0,
+     "cache_hit_pct": 40,
+     "avg_latency_s": 0.2,
+     "avg_tps": 278.0,
+     "active_subagents": 0
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 11,
+   "method": "session.context_breakdown",
+   "params": {
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 11,
+   "result": {
+    "categories": [
+     {
+      "color": "var(--context-usage-system)",
+      "id": "system_prompt",
+      "label": "System prompt",
+      "tokens": 1685
+     },
+     {
+      "color": "var(--context-usage-tools)",
+      "id": "tool_definitions",
+      "label": "Tool definitions",
+      "tokens": 1727
+     },
+     {
+      "color": "var(--context-usage-rules)",
+      "id": "rules",
+      "label": "Rules",
+      "tokens": 423
+     },
+     {
+      "color": "var(--context-usage-conversation)",
+      "id": "conversation",
+      "label": "Conversation",
+      "tokens": 658
+     }
+    ],
+    "estimated_total": 4493,
+    "context_max": 200000,
+    "context_percent": 1,
+    "context_used": 1414,
+    "context_source": "provider_usage_plus_estimate",
+    "context_estimated": true,
+    "model": "fake-a",
+    "prompt_cache": {
+     "guaranteed_until": null,
+     "estimated_until": null,
+     "tier": null,
+     "confidence": "unknown",
+     "reason": "implicit_cache",
+     "refreshed_at": 1795049575.1999662,
+     "coverage": {}
+    },
+    "context_files": [
+     {
+      "label": "SOUL.md",
+      "path": "/work/hermes-home/SOUL.md",
+      "chars": 663,
+      "est_tokens": 167,
+      "loaded": true,
+      "status": "loaded"
+     }
+    ]
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 12,
+   "method": "plugin.hypotaxis.describe",
+   "params": {
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 12,
+   "result": {
+    "session": {
+     "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+     "mode": "ungoverned",
+     "locked": true,
+     "cwd": "/work/proj"
+    },
+    "version": "0.1.0",
+    "protocol": "hypotaxis-v1",
+    "capabilities": [
+     "describe",
+     "mode.set",
+     "ledger.tail",
+     "ledger.verify",
+     "ledger.stats",
+     "cascade.state",
+     "prices.refresh",
+     "blank.fill",
+     "checkpoint.list",
+     "checkpoint.diff"
+    ],
+    "hx": null,
+    "kernel": null,
+    "config": {
+     "mode": "governed",
+     "cost_cap_usd": null,
+     "errors": [],
+     "ladder_errors": []
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 13,
+   "method": "plugin.hypotaxis.ledger.stats",
+   "params": {
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 13,
+   "result": {
+    "tokens": {
+     "input_uncached": 2400,
+     "output": 200,
+     "cache_read": 1600,
+     "reasoning": 80,
+     "cache_write": 0
+    },
+    "cost_usd": null,
+    "cost_api_equivalent_usd": null,
+    "unpriced_models": [
+     "custom/fake-a",
+     "main/fake-a"
+    ],
+    "round_trips": 4,
+    "escalations": 0,
+    "rollbacks": 0,
+    "blanks": 0,
+    "approvals": 0,
+    "price_table": "settings-44136fa355b3"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 14,
+   "method": "plugin.hypotaxis.cascade.state",
+   "params": {
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 14,
+   "result": {
+    "ladder": [
+     {
+      "name": "haiku",
+      "model": {
+       "provider": "anthropic",
+       "id": "claude-haiku-5-5"
+      },
+      "effort": "medium",
+      "max_tokens": 8000,
+      "retries": 0
+     },
+     {
+      "name": "sonnet",
+      "model": {
+       "provider": "anthropic",
+       "id": "claude-sonnet-5-5"
+      },
+      "effort": "medium",
+      "max_tokens": 8000,
+      "retries": 0
+     },
+     {
+      "name": "opus",
+      "model": {
+       "provider": "anthropic",
+       "id": "claude-opus-5-5"
+      },
+      "effort": "medium",
+      "max_tokens": 8000,
+      "retries": 0
+     }
+    ],
+    "status": "idle"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 15,
+   "method": "plugin.hypotaxis.checkpoint.list",
+   "params": {
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 15,
+   "result": {
+    "checkpoints": [
+     {
+      "ship_id": "01a1f14a-d2e5-7160-bcb0-59de2bd7d264",
+      "commit": "66bde25822059c2707411ce2e7ff49a7822bf5d3",
+      "ref": "refs/hypotaxis/checkpoints/local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+      "files": [
+       "src/a.py"
+      ],
+      "ts": "2026-11-19T00:52:55.182Z",
+      "task_id": "ship:01a1f14a-d2e5-7160-bcb0-59de2bd7d264"
+     }
+    ]
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 16,
+   "method": "plugin.hypotaxis.checkpoint.diff",
+   "params": {
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 16,
+   "result": {
+    "ship_id": null,
+    "base": "4bf4537543f08b2b1efc67ee4a56301a748cea1e",
+    "head": "66bde25822059c2707411ce2e7ff49a7822bf5d3",
+    "files": [
+     {
+      "path": "src/a.py",
+      "status": "modified",
+      "add": 1,
+      "del": 1,
+      "binary": false,
+      "truncated": false,
+      "hunks": [
+       {
+        "header": "@@ -1,2 +1,2 @@",
+        "lines": [
+         " def hello():",
+         "-    return 1",
+         "+    return 2"
+        ]
+       }
+      ]
+     }
+    ],
+    "truncated": false
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 17,
+   "method": "plugin.hypotaxis.ledger.tail",
+   "params": {
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "since_seq": -1,
+    "limit": 1000
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 17,
+   "result": {
+    "events": [
+     {
+      "actor": "plugin",
+      "hash": "19145c813a0d464de7e828924b4fdb4cf4f12a3e57d5c695df8583e44c0e3f33",
+      "payload": {
+       "cwd": "/work/proj",
+       "hermes_version": "unknown",
+       "mode": "ungoverned",
+       "plugin_version": "0.1.0",
+       "price_table": "settings-44136fa355b3",
+       "profile": "default",
+       "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418"
+      },
+      "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "seq": 0,
+      "ts": "2026-11-19T00:52:54.433Z",
+      "type": "session.opened"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "fe6b9b402adc956af990926f949df918f870748195c437ac4c9f9f9581ac144a",
+      "payload": {
+       "cache_read_tokens": 400,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 600,
+       "latency_ms": 518,
+       "model": "fake-a",
+       "output_tokens": 50,
+       "provider": "custom",
+       "reasoning_tokens": 20,
+       "request_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418:local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418:5c427482:api:1",
+       "role": "orchestrator",
+       "usage_schema": 2
+      },
+      "prev_hash": "19145c813a0d464de7e828924b4fdb4cf4f12a3e57d5c695df8583e44c0e3f33",
+      "seq": 1,
+      "ts": "2026-11-19T00:52:55.032Z",
+      "type": "usage.recorded"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "3f68a0ab6f2a3e1d23baf759940f95cb675a083ea5b8f8efa8f8ebde071b0299",
+      "payload": {
+       "args_sha256": "eb309dfc924b0b33439cd99b2625727a0d3394564c8871ae9c7a0eef7433f0b1",
+       "duration_ms": 9,
+       "status": "ok",
+       "task_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+       "tool": "todo_list",
+       "tool_call_id": "call_936c79e03c"
+      },
+      "prev_hash": "fe6b9b402adc956af990926f949df918f870748195c437ac4c9f9f9581ac144a",
+      "seq": 2,
+      "ts": "2026-11-19T00:52:55.056Z",
+      "type": "tool.called"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "bdd23884c87df3f7a9e70dce00db87884284b319e04802e7946d4f450556722f",
+      "payload": {
+       "cache_read_tokens": 400,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 600,
+       "latency_ms": 11,
+       "model": "fake-a",
+       "output_tokens": 50,
+       "provider": "custom",
+       "reasoning_tokens": 20,
+       "request_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418:local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418:5c427482:api:2",
+       "role": "orchestrator",
+       "usage_schema": 2
+      },
+      "prev_hash": "3f68a0ab6f2a3e1d23baf759940f95cb675a083ea5b8f8efa8f8ebde071b0299",
+      "seq": 3,
+      "ts": "2026-11-19T00:52:55.085Z",
+      "type": "usage.recorded"
+     },
+     {
+      "actor": "plugin",
+      "hash": "14c7038f5344a4ccd4b37c66fada36175cd83b2d8692303145fd02c2f556300e",
+      "payload": {
+       "kind": "code",
+       "max_attempts": 1,
+       "scope": [
+        "**"
+       ],
+       "task_id": "ship:01a1f14a-d2e5-7160-bcb0-59de2bd7d264",
+       "title": "ship src/a.py"
+      },
+      "prev_hash": "bdd23884c87df3f7a9e70dce00db87884284b319e04802e7946d4f450556722f",
+      "seq": 4,
+      "ts": "2026-11-19T00:52:55.145Z",
+      "type": "task.created"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "760c05578237709ad1aef64e9bac53ecd6846f53bac48fce2dae393773ed1f28",
+      "payload": {
+       "task_id": "ship:01a1f14a-d2e5-7160-bcb0-59de2bd7d264",
+       "worker": "orchestrator:custom/fake-a"
+      },
+      "prev_hash": "14c7038f5344a4ccd4b37c66fada36175cd83b2d8692303145fd02c2f556300e",
+      "seq": 5,
+      "ts": "2026-11-19T00:52:55.147Z",
+      "type": "task.claimed"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "f6e5562e92f5554cb7aab2c51046d62ce1a969065bf426599e623f697f2c7146",
+      "payload": {
+       "files": [
+        {
+         "path": "src/a.py",
+         "sha256_after": "4436c9b1be34f14675fef593cc90fb944b07785e50cb0fd9fa56c747a3a4e0b9",
+         "sha256_before": "345a09077e88e5b84f401d3d3e82aee36008984b51eab4f049c08e4362539d3c"
+        }
+       ],
+       "journal_id": "01a1f14a-d2e5-7160-bcb0-59de2bd7d264",
+       "ship_id": "01a1f14a-d2e5-7160-bcb0-59de2bd7d264",
+       "task_id": "ship:01a1f14a-d2e5-7160-bcb0-59de2bd7d264"
+      },
+      "prev_hash": "760c05578237709ad1aef64e9bac53ecd6846f53bac48fce2dae393773ed1f28",
+      "seq": 6,
+      "ts": "2026-11-19T00:52:55.148Z",
+      "type": "ship.applied"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "87484d35bc15290d7eecc3b1576ea4bd0c2b46b1172898582ea3a109f1476e24",
+      "payload": {
+       "attempt": 1,
+       "files": [
+        "src/a.py"
+       ],
+       "files_sha256": "dd58e5e0d9b263bdd0b9ae0a53c1f88df680b56aa97e22c758c54c1af8528e60",
+       "task_id": "ship:01a1f14a-d2e5-7160-bcb0-59de2bd7d264"
+      },
+      "prev_hash": "f6e5562e92f5554cb7aab2c51046d62ce1a969065bf426599e623f697f2c7146",
+      "seq": 7,
+      "ts": "2026-11-19T00:52:55.148Z",
+      "type": "task.submitted"
+     },
+     {
+      "actor": "gate",
+      "hash": "910befad85c7c93a117c811f90039cd59289db2cf3e9ad3c821e54e55c85a53d",
+      "payload": {
+       "enforcement": "degraded:unsandboxed",
+       "gate": "T0.visible_tests",
+       "gates": [
+        {
+         "evidence": {
+          "blast_radius": {
+           "changed_lines": 2,
+           "manifests": [],
+           "max_changed_lines": 200
+          },
+          "enforcement": "degraded:unsandboxed",
+          "test_files": 0,
+          "tests_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "tiers": [
+           "T0.scope",
+           "T0.visible_tests"
+          ],
+          "touched": [
+           "src/a.py"
+          ],
+          "violations": []
+         },
+         "gate": "T0.scope",
+         "reason": "",
+         "verdict": "pass"
+        },
+        {
+         "evidence": {
+          "blast_radius": {
+           "changed_lines": 2,
+           "manifests": [],
+           "max_changed_lines": 200
+          },
+          "enforcement": "degraded:unsandboxed",
+          "tests": {
+           "command": null,
+           "status": "not_configured"
+          },
+          "tests_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+          "tiers": [
+           "T0.scope",
+           "T0.visible_tests"
+          ]
+         },
+         "gate": "T0.visible_tests",
+         "reason": "",
+         "verdict": "pass"
+        }
+       ],
+       "reason": "",
+       "task_id": "ship:01a1f14a-d2e5-7160-bcb0-59de2bd7d264",
+       "tests_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+       "verdict": "pass"
+      },
+      "prev_hash": "87484d35bc15290d7eecc3b1576ea4bd0c2b46b1172898582ea3a109f1476e24",
+      "seq": 8,
+      "ts": "2026-11-19T00:52:55.155Z",
+      "type": "gate.decided"
+     },
+     {
+      "actor": "plugin",
+      "hash": "d5293bdf5d188ab2624f816bf95a7312a98436fc3703e6352ea12c44bf64e268",
+      "payload": {
+       "commit": "66bde25822059c2707411ce2e7ff49a7822bf5d3",
+       "ref": "refs/hypotaxis/checkpoints/local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+       "ship_id": "01a1f14a-d2e5-7160-bcb0-59de2bd7d264"
+      },
+      "prev_hash": "910befad85c7c93a117c811f90039cd59289db2cf3e9ad3c821e54e55c85a53d",
+      "seq": 9,
+      "ts": "2026-11-19T00:52:55.182Z",
+      "type": "checkpoint.committed"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "e929a1c00324a5934ef78e591705ce7b823944f520ca6e880f47d8caa0133c7d",
+      "payload": {
+       "args_sha256": "9b8ff2a0881b6ad6876c1b960723becd360bee7117432e7572d4db3fb3475b50",
+       "duration_ms": 93,
+       "status": "ok",
+       "task_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+       "tool": "ship",
+       "tool_call_id": "call_7f044892a6"
+      },
+      "prev_hash": "d5293bdf5d188ab2624f816bf95a7312a98436fc3703e6352ea12c44bf64e268",
+      "seq": 10,
+      "ts": "2026-11-19T00:52:55.186Z",
+      "type": "tool.called"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "08dcec1119e9176dfc4e01114a8250dbc8d7d1cd8c8660e83ad509f7c98fc4d0",
+      "payload": {
+       "cache_read_tokens": 400,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 600,
+       "latency_ms": 11,
+       "model": "fake-a",
+       "output_tokens": 50,
+       "provider": "custom",
+       "reasoning_tokens": 20,
+       "request_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418:local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418:5c427482:api:3",
+       "role": "orchestrator",
+       "usage_schema": 2
+      },
+      "prev_hash": "e929a1c00324a5934ef78e591705ce7b823944f520ca6e880f47d8caa0133c7d",
+      "seq": 11,
+      "ts": "2026-11-19T00:52:55.213Z",
+      "type": "usage.recorded"
+     },
+     {
+      "actor": "plugin",
+      "hash": "70b002a455b3d87fd80c244894203ca572c8b44ab3bf0ca789d144f5a72042aa",
+      "payload": {
+       "aux_task": "title_generation",
+       "cache_read_tokens": 400,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 600,
+       "latency_ms": 7,
+       "model": "fake-a",
+       "output_tokens": 50,
+       "provider": "main",
+       "reasoning_tokens": 20,
+       "request_id": "aux-08a5009eb3b1430aa87f0d6256266fbb",
+       "role": "auxiliary",
+       "usage_schema": 2
+      },
+      "prev_hash": "08dcec1119e9176dfc4e01114a8250dbc8d7d1cd8c8660e83ad509f7c98fc4d0",
+      "seq": 12,
+      "ts": "2026-11-19T00:52:55.244Z",
+      "type": "usage.recorded"
+     }
+    ],
+    "head_seq": 12
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 18,
+   "method": "plugin.hypotaxis.compat.inventory",
+   "params": {
+    "cwd": "/work/proj"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 18,
+   "result": {
+    "cwd": "/work/proj",
+    "project_root": "/work/proj",
+    "items": [],
+    "trust": {
+     "project_id": "d0d3fabcf209a1eafb8dcdf777238948efa4d6d32bf12dd620273d9e3553c419",
+     "cwd": "/work/proj",
+     "kinds": {}
+    },
+    "hook_events": {
+     "mapped": {
+      "PreToolUse": {
+       "hermes": [
+        "pre_tool_call"
+       ],
+       "fidelity": "full",
+       "note": "A hook `allow` skips hypotaxis-level approval prompts only (COMPAT 4.4); Hermes approvals and hardline blocks still apply."
+      },
+      "PostToolUse": {
+       "hermes": [
+        "transform_tool_result"
+       ],
+       "fidelity": "full",
+       "note": "Runs for tools that executed with status ok. Feedback is appended to the tool result."
+      },
+      "PostToolUseFailure": {
+       "hermes": [
+        "transform_tool_result"
+       ],
+       "fidelity": "full",
+       "note": "The same Hermes hook with status other than ok."
+      },
+      "UserPromptSubmit": {
+       "hermes": [
+        "pre_llm_call"
+       ],
+       "fidelity": "full",
+       "note": "A blocked prompt is stored by Hermes as a withheld-message placeholder and never reaches a model; Claude Code erases it."
+      },
+      "SessionStart": {
+       "hermes": [
+        "on_session_start",
+        "on_session_open",
+        "on_session_reset",
+        "post_compaction"
+       ],
+       "fidelity": "partial",
+       "note": "These fire after the system prompt is built, so additionalContext is delivered through the next pre_llm_call and never the system prompt. Sources: startup, resume, clear, compact. fork does not exist on Hermes."
+      },
+      "SessionEnd": {
+       "hermes": [
+        "on_session_finalize"
+       ],
+       "fidelity": "partial",
+       "note": "Hermes does not say why a session ended, so reason is other."
+      },
+      "Stop": {
+       "hermes": [
+        "post_llm_call"
+       ],
+       "fidelity": "partial",
+       "note": "Hermes has no turn-end hook that can continue a turn, and its pre_verify fires only after write_file or patch edits (not ship). So Stop runs at the final post_llm_call of every completed turn, and a block re-enters as a queued user message through ctx.inject_message: a new turn that starts after the answer, not a continuation inside it. Needs plugins.entries.hypotaxis.allow_gateway_injection."
+      },
+      "SubagentStart": {
+       "hermes": [
+        "subagent_start"
+       ],
+       "fidelity": "observe",
+       "note": "Observe only; additionalContext cannot reach the child."
+      },
+      "SubagentStop": {
+       "hermes": [
+        "subagent_stop"
+       ],
+       "fidelity": "observe",
+       "note": "Observe only; a block cannot force the child to continue."
+      },
+      "Notification": {
+       "hermes": [
+        "on_human_input_request"
+       ],
+       "fidelity": "partial",
+       "note": "approval becomes permission_prompt, clarify becomes elicitation_dialog. idle_prompt and auth_success do not exist on Hermes."
+      },
+      "PostCompact": {
+       "hermes": [
+        "post_compaction"
+       ],
+       "fidelity": "full",
+       "note": "trigger is manual for /compress and auto otherwise."
+      }
+     },
+     "unsupported": {
+      "PreCompact": "Hermes has only post_compaction, so a compaction cannot be observed or blocked in advance.",
+      "PermissionRequest": "pre_approval_request is an observer on Hermes, which intentionally has no auto-allow or decision callback.",
+      "PermissionDenied": "Hermes has no permission-denied event; a block is a tool result.",
+      "UserPromptExpansion": "Hermes has no equivalent: slash-command expansion is not an event.",
+      "PostToolBatch": "Hermes has no per-batch event.",
+      "StopFailure": "Hermes has no event for a turn that ended in an API error that reaches plugins as a stop.",
+      "Setup": "Hermes has no init or maintenance event.",
+      "TaskCreated": "Hermes kanban hooks differ in meaning from Claude Code tasks.",
+      "TaskCompleted": "Hermes kanban hooks differ in meaning from Claude Code tasks.",
+      "TeammateIdle": "Hermes kanban hooks differ in meaning from Claude Code teammates.",
+      "ConfigChange": "Hermes has no config-change event.",
+      "FileChanged": "Hermes has no file-watch event.",
+      "CwdChanged": "Hermes has no cwd-change event.",
+      "DirectoryAdded": "Hermes has no additional-directory concept.",
+      "WorktreeCreate": "Worktrees are owned by the hypotaxis host, not by Hermes.",
+      "WorktreeRemove": "Worktrees are owned by the hypotaxis host, not by Hermes.",
+      "Elicitation": "Hermes MCP elicitation consent is an approval, not a hookable event.",
+      "ElicitationResult": "Hermes MCP elicitation consent is an approval, not a hookable event.",
+      "MessageDisplay": "Hermes has no message-display event.",
+      "InstructionsLoaded": "Synthesized by compat when it delivers memory and rules, which part 1 does not do yet.",
+      "PreModelSwitch": "Synthesized by the cascade, which is not built yet.",
+      "PostModelSwitch": "Synthesized by the cascade, which is not built yet."
+     }
+    },
+    "warnings": [],
+    "pending": false
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 19,
+   "method": "complete.path",
+   "params": {
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "cwd": "/work/proj",
+    "word": "@file:src/"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 19,
+   "result": {
+    "items": [
+     {
+      "text": "@file:src/a.py",
+      "display": "a.py",
+      "meta": ""
+     }
+    ]
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 20,
+   "method": "complete.path",
+   "params": {
+    "session_id": "local-4bbec427ea50bf743cb793249c83ea46c76f3a36b547c4273cb7cbe364b83418",
+    "cwd": "/work/proj",
+    "word": "@zzz-nothing"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 20,
+   "result": {
+    "items": []
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 21,
+   "method": "session.branch",
+   "params": {
+    "session_id": ""
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 21,
+   "error": {
+    "code": -32601,
+    "message": "unknown method: session.branch \u2014 not available on this Hermes backend",
+    "data": {
+     "reason": "unknown_method"
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 22,
+   "method": "session.compress",
+   "params": {
+    "session_id": ""
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 22,
+   "error": {
+    "code": -32601,
+    "message": "unknown method: session.compress \u2014 not available on this Hermes backend",
+    "data": {
+     "reason": "unknown_method"
+    }
+   }
+  }
+ }
+]

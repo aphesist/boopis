@@ -36,7 +36,8 @@ export const stateOf = (b: Bot, transient: string | null) => ui.botState(transie
 export const BUSY_STATES = new Set(['working', 'thinking', 'speaking', 'compute']);
 
 export function announceAttention(): void {
-  const p = pending();
+  /* preview bots are sample data: what they "need" never counts as something that needs you */
+  const p = data().info.preview.has('bots') ? [] : pending();
   emit('hx:attention', { source: 'bots', tab: 'bots', count: p.length, ids: p.map((b) => b.id) });
 }
 

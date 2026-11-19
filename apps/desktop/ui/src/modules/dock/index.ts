@@ -20,7 +20,7 @@ import type { DockBot } from './ctx';
 import { E, cxNow, emitDock, focusDock, kick, morph, paint, renderDots, resetMag, retarget, shellVar, showView } from './engine';
 import { lookRow, setOrbLife } from './orbs';
 import { makeOrb, paintSession, refreshBot, relocateLive, renderAll, renderMins, renderView, viewKey, costHTML, fmtDur, meterHTML } from './views';
-import { closeCard, goPage, onCardAction, onCardState, onWaitResolved, openCard, setMode, setOn, toggleSetting } from './controller';
+import { closeCard, goPage, onCardAction, onCardState, onWaitAdded, onWaitResolved, openCard, setMode, setOn, toggleSetting } from './controller';
 import { cancelOutside, fitRow, onClick, onDocDown, onDocUp, onFocusIn, onFocusOut, onKey, onLayout, onPointerDown, onPointerMove, onResize, onTouchMove, onTouchUp, onWheel, onDoubleGuard } from './input';
 import type { RunSnapshot } from '../../data';
 
@@ -117,7 +117,7 @@ function wireData(): void {
       if (th && cur && cur.kind === 'approval') th[i] = { ...cur, resolved: ev.resolved, resolvedAt: ev.resolvedAt };
     }
   });
-  d.waits.subscribe((ev) => { if (ev.type === 'resolved') onWaitResolved(ev.id, ev.outcome); });
+  d.waits.subscribe((ev) => { if (ev.type === 'resolved') onWaitResolved(ev.id, ev.outcome); else onWaitAdded(ev.wait); });
   d.run.current.subscribe(onRun);
   d.schedules.list.subscribe(onSchedules);
   d.details.context.subscribe((c) => { S.ctx = { used: c.used, total: c.total, parts: c.parts }; renderView('ctx:norm'); renderView('ctx:exp'); renderView('ctx:min'); retarget(false); });

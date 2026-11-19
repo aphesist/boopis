@@ -17,7 +17,7 @@ export function mountList(root: HTMLElement): void {
   function rowHTML(s: SessionSummary, archived: boolean): string {
     const isCur = s.id === VIEW.current && !archived, needs = !archived && sessionNeedsYou(s.id);
     const acts = archived ? ib('unarchive', 'Restore ' + s.title, 'restore')
-      : (isCur ? '' : ib('play', 'Resume ' + s.title, 'resume')) + ib('fork', 'Fork ' + s.title, 'fork') + ib('pen', 'Rename ' + s.title, 'rename') + ib('archive', 'Archive ' + s.title, 'archive');
+      : (isCur ? '' : ib('play', 'Resume ' + s.title, 'resume')) + (data().info.unavailable['sessions.fork'] ? '' : ib('fork', 'Fork ' + s.title, 'fork')) + ib('pen', 'Rename ' + s.title, 'rename') + ib('archive', 'Archive ' + s.title, 'archive');
     return ui.html.row({
       title: s.title, end: ui.esc(s.running ? 'now' : (s.when || '')), current: isCur, archived, value: s.id, acts,
       lead: archived ? '' : ui.html.leadFor({ running: !!s.running, attention: needs, current: isCur }),

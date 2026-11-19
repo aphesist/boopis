@@ -1,11 +1,12 @@
 /* Playwright smoke: boot without console errors, the four theme presets (and their contrast), the keyboard walk-through
    (KEYMAP.md), the owner's decisions and the dock's gestures, and an axe scan with zero violations.
-   `node tests/smoke/run.mjs [boot|themes|keys|owner|axe]` runs one part. Exit code 1 on any failure. */
+   `node tests/smoke/run.mjs [boot|themes|keys|owner|live|axe]` runs one part. Exit code 1 on any failure. */
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { check, errorsAll, results, scenario, start } from './harness.mjs';
 import { keyWalk } from './keys.mjs';
 import { ownerDecisions } from './owner.mjs';
+import { liveSessions } from './live.mjs';
 
 const require = createRequire(import.meta.url);
 const AXE = readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
@@ -38,6 +39,7 @@ if (want('themes')) {
 
 if (want('keys')) await keyWalk(env);
 if (want('owner')) await ownerDecisions(env);
+if (want('live')) await liveSessions(env);
 
 if (want('axe')) {
   const s = scenario(env);

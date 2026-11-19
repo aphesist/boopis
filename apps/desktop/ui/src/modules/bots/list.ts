@@ -5,6 +5,7 @@ import { emit } from '../../core/bus';
 import { $, el, frag, reduced } from '../../core/dom';
 import { state } from '../../core/state';
 import { ui } from '../../components';
+import { data } from '../../data';
 import { oc } from '../../components/orb';
 import { DRAFT_COLOR, paintOrb } from './paint';
 import { livenIn, orbHTML } from './orbs';
@@ -21,6 +22,7 @@ export function mountList(root: HTMLElement): void {
   if (root) root.dataset['rail'] = 'ok';
   const wrap = el('nav', { class: 'bt-list', 'aria-label': 'Bots' });
   const ul = el('ul', { class: 'ui-rows bt-rows', 'data-ui': 'rows' });
+  if (data().info.preview.has('bots')) wrap.append(el('p', { class: 'bt-preview', role: 'note', text: 'Preview: sample bots' }));
   for (const b of S.bots) ul.append(makeRow(b));
   wrap.append(ul);
   (root || document.body).append(wrap);

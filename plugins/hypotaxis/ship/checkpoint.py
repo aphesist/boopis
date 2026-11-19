@@ -52,7 +52,12 @@ def checkpoint_ref(session_id: str) -> str:
 
 
 def _git(
-    root: Path, args: Sequence[str], *, env_extra: Mapping[str, str] | None = None, stdin: bytes | None = None
+    root: Path,
+    args: Sequence[str],
+    *,
+    env_extra: Mapping[str, str] | None = None,
+    stdin: bytes | None = None,
+    strip: bool = True,
 ) -> str:
     env = safe_env(
         {
@@ -72,7 +77,8 @@ def _git(
         raise CheckpointError(f"git {args[0]} could not run: {exc}") from exc
     if done.returncode != 0:
         raise CheckpointError(f"git {args[0]} failed: {done.stderr.decode('utf-8', 'replace').strip()[:300]}")
-    return done.stdout.decode("utf-8", "replace").strip()
+    text = done.stdout.decode("utf-8", "replace")
+    return text.strip() if strip else text
 
 
 def _rev(root: Path, name: str) -> str | None:
@@ -133,3 +139,23 @@ def commit_checkpoint(root: Path, session_id: str, files: Sequence[FileChange], 
     old = _rev(root, ref)
     _git(root, ["update-ref", ref, commit, old or ZERO])
     return Checkpoint(ref, commit)
+
+
+def diff_between(root: Path, base: str, head: str) -> str:
+    """The unified diff of two commits of ``root``'s repository, text only: no colour, no external diff driver, no
+    rename detection, three lines of context. ``base`` and ``head`` are commit ids the ledger recorded; anything
+    else is refused before git sees it (an id that starts with ``-`` would be an option)."""
+    if not (_SHA.match(base) and _SHA.match(head)):
+        raise CheckpointError("a commit id is not a full hex id")
+    return _git(
+        root,
+        ["diff", "--no-color", "--no-ext-diff", "--no-renames", "--no-textconv", "-U3", base, head, "--"],
+        strip=False,  # a trailing blank context line is a line of the diff
+    )
+
+
+def parent_of(root: Path, commit: str) -> str | None:
+    """The first parent of a recorded commit (the previous checkpoint, or the HEAD the first one was made on)."""
+    if not _SHA.match(commit):
+        raise CheckpointError("a commit id is not a full hex id")
+    return _rev(root, f"{commit}^")

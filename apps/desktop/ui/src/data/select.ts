@@ -7,6 +7,8 @@ import { createMockProvider } from './mock-provider';
 
 export async function selectProvider(): Promise<DataProvider> {
   const which = (import.meta.env['VITE_DATA_PROVIDER'] as string | undefined) ?? 'mock';
+  /* e2e builds only: the live provider over recorded frames (`?provider=live-replay&frames=session`) */
+  if (__HX_TEST_API__ && new URLSearchParams(location.search).get('provider') === 'live-replay') return (await import('../host/connect-replay')).connectReplay(new URLSearchParams(location.search).get('frames') ?? 'session');
   if (which === 'mock') return createMockProvider();
   if (which === 'live') return (await import('../host/connect')).connectLive();
   throw new Error('Unknown data provider "' + which + '"; use "mock" or "live"');

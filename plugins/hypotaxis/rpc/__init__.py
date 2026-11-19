@@ -14,6 +14,8 @@ from ..errors import InvalidParamsError, PricesDisabledError
 from ..hooks import runtime
 from ..ledger import compute_stats, refresh
 from ..version import PLUGIN_VERSION, PROTOCOL
+from .blanks import blank_fill
+from .checkpoints import checkpoint_diff, checkpoint_list
 
 Handler = Callable[..., Any]
 CAPABILITIES = (
@@ -24,6 +26,9 @@ CAPABILITIES = (
     "ledger.stats",
     "cascade.state",
     "prices.refresh",
+    "blank.fill",
+    "checkpoint.list",
+    "checkpoint.diff",
     "form.submit",
     "form.cancel",
     "form.list",
@@ -80,7 +85,12 @@ def describe(params: Mapping[str, Any], *, session_id: str | None = None, **_: A
         "capabilities": list(CAPABILITIES),
         "hx": None,  # the hx binary is not wired in this part
         "kernel": _kernel(rt),
-        "config": {"mode": loaded.value.mode, "errors": list(loaded.errors), "ladder_errors": ladder_errors},
+        "config": {
+            "mode": loaded.value.mode,
+            "cost_cap_usd": loaded.value.cost_cap_usd,
+            "errors": list(loaded.errors),
+            "ladder_errors": ladder_errors,
+        },
     }
 
 
@@ -199,6 +209,9 @@ def handlers() -> dict[str, Handler]:
         "ledger.stats": ledger_stats,
         "cascade.state": cascade_state,
         "prices.refresh": prices_refresh,
+        "blank.fill": blank_fill,
+        "checkpoint.list": checkpoint_list,
+        "checkpoint.diff": checkpoint_diff,
     }
 
 

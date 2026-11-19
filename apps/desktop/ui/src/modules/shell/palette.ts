@@ -29,7 +29,7 @@ function paletteItems(): Item[] {
       run: () => { setState({ tab: 'session' }); sh.selection.session = s.id; emit('hx:session-select', { id: s.id, from: 'palette' }); pushHistory({ tab: 'session', sel: s.id }); updateTitle(); } });
   }
   for (const b of data().bots.snapshot().bots) {
-    out.push({ group: 'bots', label: b.name, meta: b.role, icon: botIcon(b), keys: 'bot ' + (b.attention || ''), trail: b.attention ? 'needs you' : '', attn: !!b.attention,
+    out.push({ group: 'bots', label: b.name, meta: b.role, icon: botIcon(b), keys: 'bot ' + (b.attention || ''), trail: data().info.preview.has('bots') ? 'preview' : b.attention ? 'needs you' : '', attn: !!b.attention && !data().info.preview.has('bots'),
       run: () => { setState({ tab: 'bots' }); sh.selection.bots = b.id; emit('hx:bot-select', { id: b.id, from: 'palette' }); pushHistory({ tab: 'bots', sel: b.id }); updateTitle(); } });
   }
   const cmd = (label: string, kbd: string, run: () => void, icon?: string, keys?: string): void => { out.push({ group: 'commands', label, kbd, run, icon: icon || '', keys: keys || '' }); };

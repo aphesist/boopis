@@ -46,7 +46,7 @@ export function serve(mounts) {
 export async function startServers() {
   buildE2E();
   const nm = join(ROOT, 'node_modules', '@fontsource');
-  return serve({ '/': join(ROOT, 'dist-e2e'), '/v6/': V6, '/__fonts/': nm });
+  return serve({ '/': join(ROOT, 'dist-e2e'), '/v6/': V6, '/__fonts/': nm, '/__frames/': join(ROOT, 'tests', 'fixtures', 'frames') });
 }
 
 /** Google Fonts requests of the v6 page, answered from the bundled @fontsource files */

@@ -37,3 +37,27 @@ export class FakeHost implements HostBridge {
   }
   last(method: string): Record<string, unknown> | undefined { return [...this.sent].reverse().find((s) => s.frame['method'] === method)?.frame; }
 }
+
+/* the frames recorded against a real gateway and the plugin (tests/e2e/record_ui_frames.py) */
+import sessionFrames from '../../tests/fixtures/frames/session.frames.json';
+import unpricedFrames from '../../tests/fixtures/frames/unpriced.frames.json';
+import type { RecordedFrame } from './replay';
+
+export const fixtures = { session: sessionFrames as unknown as RecordedFrame[], unpriced: unpricedFrames as unknown as RecordedFrame[] };
+
+/** the result the recording shows for a method (the first one, or the n-th) */
+export function resultOf<T>(frames: readonly RecordedFrame[], method: string, n = 0): T {
+  const outs = frames.filter((r) => r.dir === 'out' && r.frame['method'] === method);
+  const out = outs[n];
+  if (!out) throw new Error('the recording has no ' + method);
+  const res = frames.find((r) => r.dir === 'in' && r.frame['id'] === out.frame['id'] && 'result' in r.frame);
+  if (!res) throw new Error('no result for ' + method);
+  return res.frame['result'] as T;
+}
+/** the payloads of the events of a type the recording shows, in order */
+export function eventsOf(frames: readonly RecordedFrame[], type: string): { session_id?: string; payload: Record<string, unknown> }[] {
+  return frames.filter((r) => r.dir === 'in' && r.frame['method'] === 'event' && (r.frame['params'] as { type: string }).type === type).map((r) => r.frame['params'] as { session_id?: string; payload: Record<string, unknown> });
+}
+/** the events of the recorded turn, as the gateway client hands them out */
+export const turnEvents = (frames: readonly RecordedFrame[]): GatewayEventLike[] => frames.filter((r) => r.dir === 'in' && r.frame['method'] === 'event').map((r) => r.frame['params'] as GatewayEventLike);
+export interface GatewayEventLike { type: string; session_id?: string; payload?: Record<string, unknown>; [k: string]: unknown }

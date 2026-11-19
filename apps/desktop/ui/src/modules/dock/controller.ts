@@ -9,6 +9,7 @@ import { setState } from '../../core/state';
 import { writeJSON, KEYS } from '../../core/settings';
 import { ui } from '../../components';
 import { data } from '../../data';
+import type { Wait } from '../../data';
 import { PAGE_NAME, S, X, botById, flags, motion, shownPages, EASE, K_SLIDE, clamp, spring } from './ctx';
 import { E, cancelOut, flipDots, hideTip, markFocus, morph, renderDots, resetMag, retarget, showView, syncFoot, emitDock, updateDots } from './engine';
 import type { MorphOpts } from './engine';
@@ -156,6 +157,17 @@ export function onCardState(e: CustomEvent<{ state: string; data: { answer?: str
   const out = d.state === 'approved' ? 'approved' : d.state === 'denied' ? 'denied' : d.state === 'answered' ? (d.data.answer || 'answered') : null;
   const id = el.dataset['wait'] ?? '';
   if (out) setTimeout(() => data().waits.resolve(id, out), motion.reduce ? 200 : 900);   /* let the receipt show first */
+}
+/** a wait arrived after the dock was built (a live approval or blank): put it on the Needs you page */
+export function onWaitAdded(w: Wait): void {
+  if (S.waits.some((x) => x.id === w.id)) return;
+  morph(() => {
+    S.waits = [...S.waits, w];
+    for (const k of ['wait:norm', 'wait:exp', 'wait:min', 'edit:edit']) renderView(k);
+    renderMins();
+  });
+  emit('hx:attention', { source: 'dock', count: S.waits.length });
+  ui.announce('Needs you: ' + w.title);
 }
 /** the provider decided a wait (here, in the Bots tab, or in the Session tab): take it off the dock */
 export function onWaitResolved(id: string, outcome: string): void {

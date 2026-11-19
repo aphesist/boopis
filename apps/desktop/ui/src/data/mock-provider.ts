@@ -222,7 +222,8 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
       if (freed) bumpContext('conversation', -freed);
       return Promise.resolve(freed);
     },
-    setGovernance(patch) { governance.update((g) => ({ ...g, ...patch })); },
+    setGovernance(patch) { governance.update((g) => ({ ...g, ...patch })); return null; },
+    models: store(M.CATALOG.models), follow() { /* the mock has one session's details */ }, notes: store({}), can: store({ compact: true, connectors: true, signIn: true }),
     setConnector(name, on) { connectors.update((l) => l.map((c) => (c.name === name ? { ...c, state: on ? 'on' : 'off' } : c))); },
     signIn(name) {
       return new Promise((resolve) => { setTimeout(() => { connectors.update((l) => l.map((c) => (c.name === name ? { ...c, state: 'on' } : c))); resolve(); }, 900); });
@@ -346,7 +347,7 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
     setInterval(() => {
       const r = run.get();
       if (r.stopped || document.hidden) return;
-      run.set({ ...r, elapsed: r.elapsed + 1, cost: Math.min(r.cap, r.cost + 0.0004) });
+      run.set({ ...r, elapsed: r.elapsed + 1, cost: Math.min(r.cap ?? 0, (r.cost ?? 0) + 0.0004) });
     }, 1000);
   }
   governance.subscribe((g) => { const r = run.get(); if (r.governed !== g.governed) run.set({ ...r, governed: g.governed }); });
@@ -369,7 +370,10 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
   const dictation: DictationSource = {
     start(_o, onTranscript) { const t = window.setTimeout(() => onTranscript('and update the changelog'), 2200); return () => clearTimeout(t); }
   };
-  const files: FilesSource = { pick: (kind) => (kind === 'file' ? 'invoices-sample.csv' : 'src/billing/fixtures') };
+  const files: FilesSource = {
+    pick: (kind) => (kind === 'file' ? 'invoices-sample.csv' : 'src/billing/fixtures'),
+    complete: (word) => Promise.resolve({ items: M.FILE_PATHS.filter((p) => p.includes(word.replace(/^@(file:)?/, ''))).map((p) => ({ text: '@file:' + p, display: p.slice(p.lastIndexOf('/') + 1), meta: '' })) })
+  };
 
-  return { ready: Promise.resolve(), user: store(M.USER), sessions, details, bots: botsSource, waits: waitsSource, run: runSource, schedules, feedforward, dictation, files };
+  return { info: { live: false, preview: new Set(), unavailable: {} }, ready: Promise.resolve(), user: store(M.USER), sessions, details, bots: botsSource, waits: waitsSource, run: runSource, schedules, feedforward, dictation, files };
 }

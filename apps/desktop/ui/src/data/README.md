@@ -38,7 +38,7 @@ A command never returns the new state for the UI to apply. The UI calls `bots.se
 | `schedules` | `list: Watch<Schedule[]>` | `runNow`, `setPaused` | dock |
 | `feedforward` | `catalog()`: the decision words the composer marks, with their options and guesses | | session composer |
 | `dictation` | | `start({botId}, onTranscript)` | session composer's mic |
-| `files` | | `pick('file' | 'folder')` | attach menu |
+| `files` | | `pick('file' | 'folder')`, `complete(word, sessionId)` | attach menu (mentions) |
 
 ## Events
 
@@ -65,7 +65,33 @@ The v6 mock-up read `HX.data` (the `data.js` file) and mutated it from three mod
 
 ## The live provider (`src/host/`)
 
-`VITE_DATA_PROVIDER=live` (the desktop build: `vite --mode desktop`, `.env.desktop`) connects through the host (`bridge.ts`, `gateway.ts`) and serves, from the gateway: `sessions.list` and `archived` (`session.list`, refreshed on `sessions.changed` and after a reconnect), `sessions.conversation` (`session.resume` for the transcript, then `message.start`, `tool.start`, `tool.complete`, `message.delta`, `message.complete`), `send` (`prompt.submit` with a `submission_id`), `stop` (`session.interrupt`), `rename`, `archive`, `restore`, and `waits` (`approval.request` as a wait, `approval.respond` with the canonical `prompt_id` and `execution_generation`). `plugin.hypotaxis.ledger.appended` is mapped to token and round-trip totals (`provider.ledger`) but not yet wired into `details.ledger`. Still the **mock's**, named in `MOCK_SOURCES`: `user`, `details`, `bots`, `run`, `schedules`, `feedforward`, `dictation`, `files`, and the sessions' `diff`, `fork`, `answerBlank` and `openPullRequest`. What the gateway does not send is empty (`project`, `cost`, step times) and shown as unknown. If the host cannot reach Hermes the app shows a notice with the error code; it never falls back to the mock.
+`VITE_DATA_PROVIDER=live` (the desktop build: `vite --mode desktop`, `.env.desktop`) connects through the host (`bridge.ts`, `gateway.ts`) and serves the whole Sessions section from the gateway and the hypotaxis plugin:
+
+| Source | From |
+|---|---|
+| `sessions.list`, `archived`, `conversation`, `send`, `stop`, `rename`, `archive`, `restore` | `session.list`, `session.resume`, `message.*`, `tool.*`, `prompt.submit`, `session.interrupt`, `session.title`, `session.archive` |
+| `waits` | `approval.request` / `approval.respond`, and the plugin's blanks |
+| `details.context` | `session.context_breakdown` and the `session.usage` event |
+| `details.todos` | the `todo.updated` event and `session.resume`'s `todo_state` |
+| `details.output` | `tool.complete` and the plugin's `ship.completed` |
+| `details.connectors` | `mcp.servers.status`, plus the MCP servers of `plugin.hypotaxis.compat.inventory` |
+| `details.environment` | `session.info`, `plugin.hypotaxis.describe` |
+| `details.governance`, `ledger`, `models` | `plugin.hypotaxis.cascade.state` (the ladder), `ledger.stats` (spend and tokens, computed by the plugin from tokens), `describe` (mode, cap) |
+| `details.changes`, `sessions.diff` | `plugin.hypotaxis.checkpoint.diff` (the kept ships), refreshed on `ship.completed` and at the end of a turn |
+| `run.current` | the running turn (events), `ledger.stats` and `cascade.state` |
+| blanks (`waits`, `sessions.answerBlank`) | `blank.opened`, `blank.filled`, `blank.lapsed`; the answer goes to `blank.fill` |
+| `files.complete` | `complete.path` |
+| `sessions.fork` | `session.branch`, only when this Hermes has it |
+
+`details` follows one session: `sessions` selection calls `details.follow(id)`. Each live session keeps a record (`host/live/session-model.ts`) that events fill (a pure reducer) and reads complete (`host/live/details.ts`); `map-details.ts` holds the pure mappings, tested against frames recorded from a real gateway and plugin (`tests/e2e/record_ui_frames.py`, saved in `tests/fixtures/frames/`).
+
+**Unknown stays unknown.** `details.notes` says what a panel cannot know or this Hermes cannot do (a context window not reported yet, "cost: unknown \u2014 no price for this model" when `ledger.stats` has `cost_usd: null`, a folder that is gone); `details.can` disables a control that would pretend (compacting without `session.compress`, switching a connector). `RunSnapshot.cost` and `.cap` are `null` when unknown, and the dock shows "cost unknown" and no meter. `provider.info.unavailable` lists what this Hermes lacks with the reason (learned once by probing a method with an id that matches nothing: only "unknown method" counts), and the UI hides what it names (Fork).
+
+**Reconnect and replay.** The host replays missed events itself (`session.events.since`). The provider rereads what events would have carried: after a `connection.state` `ready` with `reconnected` it rereads the session list, the MCP servers and every open session's details; after `connection.replay_gap` it reloads that session's transcript and details. Blanks are rebuilt from `ledger.tail`, so one opened before a restart is still asked.
+
+**Still the mock's, named in `MOCK_SOURCES`:** `bots`, `schedules` (phase 2) and the `feedforward` catalog (the plugin's feedforward RPC is not built). `provider.info.preview` names them and the UI marks them **Preview** (the Bots tab, the dock's bots and scheduled pages, the palette) and keeps them out of attention counts. The feedforward reading is off in a live build unless the preview flag is on (`hx.v6.preview` = `{"feedforward": true}`, or `VITE_PREVIEW_FEEDFORWARD=1`), and its assumption row then ends with "preview: not read by the agent". Dictation hears nothing and the file picker returns nothing: the mock's transcript and file would be invented. `sessions.openPullRequest` is not wired and says so in the log. Not wired yet either, and refused with a reason rather than pretended: Smart (automatic model choice), changing the cap, changing the model of a session that has started, switching a connector, signing in. If the host cannot reach Hermes the app shows a notice with the error code; it never falls back to the mock.
+
+**Tests without a host.** `host/replay.ts` plays recorded frames as the transport (`ReplayHost`); the unit tests and, in the e2e build only, `?provider=live-replay&frames=session` use it (`tests/smoke/live.mjs`).
 
 ## Writing the live provider
 

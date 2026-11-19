@@ -229,3 +229,6 @@ export const DECISIONS: readonly DecisionKind[] = [
       { value: 'thorough', label: 'Thorough', desc: 'Start on sonnet 5.5', start: 'sonnet' }
     ] }
 ];
+
+/** the paths the mock offers when you mention a file */
+export const FILE_PATHS: readonly string[] = ['src/billing/money.ts', 'src/billing/prorate.ts', 'src/billing/invoice.ts', 'src/billing/prorate.test.ts'];

@@ -63,6 +63,9 @@ export interface BlankData {
   question: string; short: string; options: readonly string[]; answer?: string | undefined; model?: string;
   /** what answering rewrites the sentence it sits in into: the words before the answer and after it */
   rewrites?: Readonly<Record<string, { lead: string; tail: string }>>;
+  /** the live provider's: the blank's id on the plugin, and the words around an answer that matches no option */
+  id?: string;
+  free?: readonly [lead: string, tail: string];
 }
 export interface ApprovalWait { id: string; kind: 'approval'; bot: string; who: string; title: string; data: ApprovalData }
 export interface BlankWait { id: string; kind: 'blank'; bot?: undefined; who: string; title: string; data: BlankData }
@@ -92,6 +95,8 @@ export type ConversationEvent =
   | { type: 'step-added'; turnId: string; step: Step }
   | { type: 'turn-finished'; turnId: string; time: string; cost: string; stepCount: number; paragraphs: readonly string[]; stopped: boolean }
   | { type: 'blank-answered'; turnId: string; answer: string }
+  /** a blank was opened while the turn runs (the live provider's, additive) */
+  | { type: 'blank-opened'; turnId: string; blank: BlankData }
   /** the running turn's answer so far (the live provider streams it; the mock sends the whole answer with `turn-finished`) */
   | { type: 'turn-text'; turnId: string; paragraphs: readonly string[] }
   /** the whole conversation changed under the reader (a transcript loaded, or events were lost): read the snapshot again */
@@ -106,7 +111,11 @@ export type TodoState = 'done' | 'doing' | 'todo';
 export type Todo = readonly [text: string, state: TodoState];
 /** [path, added lines, removed lines] */
 export type Change = readonly [path: string, add: number, del: number];
-export interface Connector { name: string; tools: number; state: 'on' | 'off' | 'sign in' }
+export interface Connector {
+  name: string; tools: number; state: 'on' | 'off' | 'sign in';
+  /** what to say instead of "N tools" when the count is unknown (a server only found in a project's Claude settings) */
+  hint?: string;
+}
 export interface Environment { cwd: string; branch: string; sandbox: string; runtime: string; harness: string; gate: string }
 export interface GovernanceState {
   governed: boolean; smart: boolean; model: string; cap: string; spent: string;
@@ -114,6 +123,8 @@ export interface GovernanceState {
   ladder: ReadonlyArray<readonly [model: string, rule: string]>;
   /** the station the session is on */
   current: number;
+  /** the mode can no longer change: the first message was sent (prompt caching) */
+  locked?: boolean;
 }
 export interface LedgerStats { tokens: string; cost: string; trips: number; escalations: number }
 
@@ -123,9 +134,26 @@ export interface RunSnapshot {
   /** seconds */
   elapsed: number;
   /** dollars */
-  cost: number; cap: number;
+  cost: number | null; cap: number | null;
   ladder: ReadonlyArray<readonly [model: string, rule: string]>; current: number;
   tokens: string; trips: number; governed: boolean; network: boolean; stopped: boolean;
+}
+/** the honest "unknown" or "not available" sentence of a details panel, by panel (the live provider's; additive) */
+export type DetailsNotes = Partial<Record<'context' | 'tasks' | 'changes' | 'output' | 'governance' | 'connectors' | 'environment' | 'run', string>>;
+/** what the followed session's panels can do, so a control that would pretend is disabled (the live provider's) */
+export interface DetailsCan { compact: boolean; connectors: boolean; signIn: boolean }
+/** one completion of a `@` mention */
+export interface FileCompletion { text: string; display: string; meta: string }
+export interface FileCompletions { items: readonly FileCompletion[]; /** why there are none, when the gateway cannot say */ unavailable?: string }
+/** what the provider is, so the UI marks what is a preview and hides what this Hermes cannot do */
+export type PreviewSource = 'bots' | 'schedules' | 'feedforward';
+export interface ProviderInfo {
+  /** true for the live provider; a mock provider never claims it */
+  live: boolean;
+  /** sources that are the mock's own data in a live build: the UI marks them as preview and keeps them out of live counts */
+  preview: ReadonlySet<PreviewSource>;
+  /** features this Hermes does not have, with the reason (`sessions.fork`, ...) */
+  unavailable: Readonly<Record<string, string>>;
 }
 export interface Schedule { id: string; bot: string; what: string; when: string; next: string; paused: boolean }
 

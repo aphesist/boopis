@@ -18,7 +18,8 @@ const gov = (): GovernanceState => data().details.governance.get();
 
 /** the one way the session changes governance: the provider owns the state, the UI announces the change */
 export function setGovernance(patch: Partial<Pick<GovernanceState, 'governed' | 'smart' | 'model' | 'cap'>>): void {
-  data().details.setGovernance(patch);
+  const why = data().details.setGovernance(patch);
+  if (why) ui.toast(why);
   const g = gov();
   emit('hx:governance', { governed: g.governed, smart: g.smart, model: g.model, cap: g.cap });
 }
@@ -28,7 +29,7 @@ export interface SessionComposer extends ComposerEl {
   lastAssume(): string[];
 }
 
-export function sessionComposer(opts: { draft: string }): SessionComposer {
+export function sessionComposer(opts: { draft: string; sessionId: () => string }): SessionComposer {
   const reader = makeReader(gov);
   const g0 = gov();
   const govChip = ui.chip({ label: 'Governed', icon: 'ladder', pressed: g0.governed });
@@ -62,7 +63,7 @@ export function sessionComposer(opts: { draft: string }): SessionComposer {
     const items = [
       { title: 'Model' },
       { label: 'Smart', value: SMART_VALUE, desc: 'Picks the model for each message', checked: G.smart },
-      ...data().bots.catalog().models.map((m) => ({ label: m, value: m, mono: true, checked: !G.smart && m === G.model }))
+      ...data().details.models.get().map((m) => ({ label: m, value: m, mono: true, checked: !G.smart && m === G.model }))
     ];
     ui.menu.open(anchor, items, {
       place: 'above', label: 'Model',
@@ -75,6 +76,7 @@ export function sessionComposer(opts: { draft: string }): SessionComposer {
 
   /* a dashed word, or an assumption: what it is read as */
   function openReading(anchor: HTMLElement, kind: string | undefined, text: string): void {
+    if (kind === 'preview') return;
     if (kind === 'governance' || !text || !kind) {
       ui.menu.open(anchor, [{ title: 'Governance' }, { label: 'Governed', value: 'on', checked: gov().governed, desc: 'Start cheap, climb on failure' }, { label: 'Ungoverned', value: 'off', checked: !gov().governed, desc: 'One pinned model, no cap' }], { place: 'above', onSelect: (v) => setGovernance({ governed: v === 'on' }) });
       return;
@@ -96,17 +98,29 @@ export function sessionComposer(opts: { draft: string }): SessionComposer {
   if (c.attach) {
     const attach = c.attach;
     attach.addEventListener('click', () => {
-      const bots = data().bots.snapshot().bots.slice(0, 3);
+      const live = data().info.live;
+      /* a live build offers no bots here (they are a preview) and mentions files through the gateway's completion */
+      const bots = live ? [] : data().bots.snapshot().bots.slice(0, 3);
       ui.menu.open(attach, [
         { label: 'Attach a file', value: 'file', icon: 'file' }, { label: 'Add a folder to context', value: 'folder', icon: 'folder' }, '-',
-        ...bots.map((b) => ({ label: 'Ask ' + b.name, value: '@' + b.name, desc: cap1(b.role), icon: 'at' })), '-',
+        ...(live ? [{ label: 'Mention a file', value: '@file:', icon: 'at' }] : bots.map((b) => ({ label: 'Ask ' + b.name, value: '@' + b.name, desc: cap1(b.role), icon: 'at' }))), '-',
         { label: 'Commands', value: '/', icon: 'slash' }
       ], { place: 'above', label: 'Attach', onSelect: (v) => {
         requestAnimationFrame(() => {
-          if (v === 'file' || v === 'folder') { const name = data().files.pick(v); if (name) c.addFile(name); c.focus(); }
+          if (v === '@file:') { openMention(v); return; }
+          if (v === 'file' || v === 'folder') { const name = data().files.pick(v); if (name) { c.addFile(name); } else if (data().info.live) ui.toast('Picking a file is not wired in the desktop app yet. Mention one instead.'); c.focus(); }
           else c.insert((c.value && !/\s$/.test(c.value) ? ' ' : '') + v + (v === '/' ? '' : ' '));
         });
       } });
+    });
+  }
+  /* mention a file: the gateway completes the word; a folder opens, a file is inserted as @file:path */
+  function openMention(word: string): void {
+    void data().files.complete(word, opts.sessionId()).then((r) => {
+      const items = r.items.length
+        ? [{ title: 'Mention a file' }, ...r.items.map((i) => ({ label: i.display, value: i.text, mono: true, ...(i.meta ? { desc: i.meta } : {}), icon: /[:/]$/.test(i.text) ? 'folder' : 'file' }))]
+        : [{ title: 'Mention a file' }, { foot: r.unavailable ?? 'No files match.' }];
+      ui.menu.open(c.attach as HTMLElement, items, { place: 'above', label: 'Mention a file', onClose: () => { c.focus(); }, onSelect: (v) => { if (/\/$/.test(v)) requestAnimationFrame(() => { openMention(v); }); else c.insert((c.value && !/\s$/.test(c.value) ? ' ' : '') + v + ' '); } });
     });
   }
   /* dictation: the provider hears; what it heard goes into the text */
