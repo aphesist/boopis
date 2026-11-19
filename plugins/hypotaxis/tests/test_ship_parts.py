@@ -5,7 +5,7 @@ from __future__ import annotations
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from hypotaxis.hx.types import CreateEdit, DeleteEdit, DiffEdit, FileChange, ReplaceEdit
@@ -203,9 +203,23 @@ def test_parse_command_is_a_vector_never_a_shell() -> None:
 
 
 PY = sys.executable
+
+
+class _EchoRedactor:
+    """Stands in for hx where the gate's logic is tested: it cannot sandbox, and its redactor changes nothing (the real
+    redaction has its own tests in test_gate_usable)."""
+
+    capabilities: frozenset[str] = frozenset()
+
+    def request(self, method: str, params: object = None, timeout: float = 0) -> object:
+        if method == "redact.apply":
+            return {"text": cast("dict[str, str]", params)["text"], "count": 0}
+        return {}
+
+
 UNSANDBOXED_RUNNER = gate.GateRunner(
-    None, allow_unsandboxed=True
-)  # the gate's logic, with no hx; the sandbox has its own tests
+    cast("Any", _EchoRedactor()), allow_unsandboxed=True
+)  # the gate's logic, with no sandbox; the sandbox has its own tests
 
 
 @pytest.fixture

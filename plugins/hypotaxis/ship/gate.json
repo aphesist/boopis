@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "_comment": "What the ship gate builds its sandbox from (ship/gatecopy.py, ship/toolchain.py, ship/sandboxrun.py). Names only: no secret list lives here (that is data/never_pack.json).",
+  "dependency_dirs": [
+    {"name": "node_modules"},
+    {"name": "vendor"},
+    {"name": "__pypackages__"},
+    {"name": ".venv", "marker": "pyvenv.cfg"},
+    {"name": "venv", "marker": "pyvenv.cfg"}
+  ],
+  "_dependency_dirs": "Directories the copy links to the real ones, mounted read-only, instead of copying. A `marker` is a file that must be inside for the name to count (a `venv/` package of source code is not a virtual environment).",
+  "skip_dirs": [".git", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".hypothesis"],
+  "build_output_dirs": {"target": "Cargo.toml"},
+  "_build_output_dirs": "A directory left out of the copy when the file named is beside it: the tests rebuild it in the (writable) copy.",
+  "max_dependency_mounts": 128,
+  "offline_failures": [
+    "failed to download",
+    "no matching package named",
+    "offline mode (via `--offline`)",
+    "Could not resolve host",
+    "attempting to make an HTTP request, but --offline was specified",
+    "ENOTFOUND",
+    "EAI_AGAIN",
+    "ENETUNREACH",
+    "getaddrinfo",
+    "Temporary failure in name resolution",
+    "Network is unreachable",
+    "Failed to establish a new connection",
+    "No matching distribution found",
+    "Could not find a version that satisfies the requirement",
+    "dial tcp: lookup",
+    "no matching versions for query"
+  ],
+  "missing_dependencies": [
+    "Cannot find module",
+    "Cannot find package",
+    "ModuleNotFoundError",
+    "No module named",
+    "command not found",
+    ": not found"
+  ],
+  "declares_dependencies": {
+    "package.json": ["node_modules"],
+    "pyproject.toml": [".venv", "venv"],
+    "requirements.txt": [".venv", "venv"]
+  },
+  "_declares_dependencies": "A file at the workspace root and the directories that would hold what it declares: when the file is there and none of the directories is, a missing module is most likely a dependency that was never installed."
+}

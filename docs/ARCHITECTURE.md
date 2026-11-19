@@ -135,7 +135,7 @@ It registers:
   - The same-tier scope retry and the forks (control and treatment) follow contraprova's measured policy.
   - The orchestrator never chooses the next model itself.
   - There is no `terminal` in governed mode, for any role (a command line cannot be proved read-only); workers run commands with `harness.sh` inside the sandbox. `read_file` and `search_files` reach only the workspace, and URL-taking tools are network tools (asked about, and refused from a cell while exec's network is off).
-  - The gate's test command runs in the `hx` sandbox too (copy writable, workspace read-only, network off, allowlisted environment); with no sandbox the gate blocks, unless the user explicitly chose otherwise (`gate.allow_unsandboxed`).
+  - The gate's test command runs in the `hx` sandbox too (a writable copy without secret files and with the project's installed dependencies linked read-only, the real workspace not mounted, network off, allowlisted environment, output redacted); with no sandbox the gate blocks, unless the user explicitly chose otherwise (`gate.allow_unsandboxed`).
 - **Ungoverned mode:** one chosen model with `pack`, `exec` and `ship` directly (or Hermes's default tools, as a profile choice). `ship` still journals. The gate can be switched off, and the same ledger is written.
 - **Smart** (the composer's Smart switch; the idea comes from Hermes's `smart_model_routing`) is per-message model choice, combined with the mode:
 
@@ -157,7 +157,7 @@ It registers:
 
 | Tool | One call does | Writes the workspace | Runs in |
 |---|---|---|---|
-| `pack` | Search with surrounding lines, whole files, line ranges, single symbols, globs, git status. Output byte-capped; secrets redacted; `.env` and key files never packed | No | `hx` (ripgrep crates, tree-sitter), in process |
+| `pack` | Search with surrounding lines, whole files, line ranges, single symbols, globs, git status, diff and log. Output byte-capped; secrets redacted; `.env` and key files never packed | No | `hx` (ripgrep crates, tree-sitter), in process |
 | `exec` | Python in a persistent asyncio kernel. `await harness.parallel([...])`; any Hermes, plugin or MCP tool as a function, each checked by the plugin's policy (`ctx.dispatch_tool` bypasses hooks, so the plugin applies policy itself); `leave_blank`, `diagnostics`, `apple.*` | No (scratch dir only) | Kernel process inside the `hx` OS sandbox; tool calls go back to the plugin over a private socket, never stdout |
 | `ship` | Validate every edit before writing anything (`ABORTED_BEFORE_WRITE` with the closest match on a miss); journal; apply; gate; on pass commit to the session's hidden checkpoint ref, on fail restore byte- and metadata-exact | Yes, the only path | `hx` file transaction (capability-safe: no symlink escapes) plus the contraprova gate in the `hx` sandbox |
 | `dispatch` | Governed mode only: runs a brief through the tier ladder | Through ship | Plugin |

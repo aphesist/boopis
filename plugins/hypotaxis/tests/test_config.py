@@ -174,6 +174,7 @@ schema_version: 1
 gate:
   command: pytest -q
   timeout_s: 120
+  git: true
 protected:
   - migrations/**
 permissions:
@@ -190,6 +191,7 @@ def test_no_project_file_is_absent_and_default(project: Path, home: Path) -> Non
     assert cfg.trust == "absent"
     assert cfg.settings.gate_command is None
     assert cfg.settings.gate_timeout_s == schema_default("project-settings", "gate", "timeout_s") == 600
+    assert cfg.settings.gate_git is schema_default("project-settings", "gate", "git") is False
 
 
 def test_untrusted_project_uses_defaults_for_what_executes_or_widens(project: Path, home: Path, yaml_load: Any) -> None:
@@ -199,13 +201,14 @@ def test_untrusted_project_uses_defaults_for_what_executes_or_widens(project: Pa
     s = cfg.settings
     assert s.gate_command is None
     assert s.gate_timeout_s == 600
+    assert s.gate_git is False  # .git in the gate's sandbox widens what it sees: trusted files only
     assert s.permissions.allow == ()
     assert s.data_policy == {}
     # what only restricts still applies (docs/COMPAT.md section 11)
     assert s.protected == ("migrations/**",)
     assert s.permissions.ask == ("Bash(git push *)",)
     assert s.permissions.deny == ("Bash(rm *)",)
-    assert set(cfg.ignored) == {"gate.command", "gate.timeout_s", "permissions.allow", "data_policy"}
+    assert set(cfg.ignored) == {"gate.command", "gate.timeout_s", "gate.git", "permissions.allow", "data_policy"}
     assert cfg.report()["trust"] == "untrusted"
 
 
@@ -215,7 +218,7 @@ def test_trusted_project_applies_everything(project: Path, home: Path, yaml_load
     cfg = load_project(project, home, yaml_load=yaml_load)
     assert cfg.trust == "trusted"
     s = cfg.settings
-    assert (s.gate_command, s.gate_timeout_s) == ("pytest -q", 120)
+    assert (s.gate_command, s.gate_timeout_s, s.gate_git) == ("pytest -q", 120, True)
     assert s.permissions.allow == ("Bash(pytest *)",)
     assert s.data_policy == {"anything": "goes"}
     assert cfg.ignored == ()

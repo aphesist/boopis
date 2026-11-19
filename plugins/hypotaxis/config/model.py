@@ -124,6 +124,7 @@ class ProjectSettings:
 
     gate_command: str | None = None
     gate_timeout_s: int = 600
+    gate_git: bool = False  # ``gate.git``: link .git read-only into the gate's copy
     protected: tuple[str, ...] = ()
     permissions: PermissionRules = PermissionRules()
     data_policy: Mapping[str, Any] = field(default_factory=dict)
