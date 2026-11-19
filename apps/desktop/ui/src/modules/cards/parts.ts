@@ -33,7 +33,9 @@ export type KnownOrigin =
   | { kind: 'teammate'; ids: readonly string[]; via: string | null }
   | { kind: 'agent'; model: string; route?: string | undefined }
   | { kind: 'plugin' | 'hermes' | 'host' }
-  | { kind: 'mcp'; server?: string | undefined; trust?: string | undefined };
+  | { kind: 'mcp'; server?: string | undefined; trust?: string | undefined }
+  /** a Claude Code mod: its puzzle glyph and "name mod" (DESIGN-SYSTEM.md 14.29) */
+  | { kind: 'mod'; plugin: string };
 const SYSTEM: Readonly<Record<string, readonly [icon: string, label: string]>> = { plugin: ['ladder', 'Governance'], hermes: ['spark', 'Hermes'], host: ['gear', 'boopis'] };
 const sys = (kind: string): readonly [string, string] => SYSTEM[kind] ?? ['', kind];
 
@@ -57,6 +59,7 @@ export function originText(o: KnownOrigin | null): string {
   if (o.kind === 'teammate') return namesText(o.ids) + (o.via ? ', via ' + nameOf(o.via) : '');
   if (o.kind === 'agent') return o.model || 'The agent';
   if (o.kind === 'mcp') return (o.server ? o.server + ' ' : '') + 'MCP server' + (o.trust ? ', ' + o.trust : '');
+  if (o.kind === 'mod') return o.plugin + ' mod';
   return sys(o.kind)[1];
 }
 /** the visual alone: an orb, a stack, a glyph, a server's initial, or the agent's model mark (its provider's logo).
@@ -73,6 +76,7 @@ export function originVisual(o: KnownOrigin | null, size: number, max?: number, 
       (more ? '<span class="cd-stack__more" aria-hidden="true">+' + more + '</span>' : '') + '</span>';
   }
   if (o.kind === 'agent') return U.html.modelMark(o.model, { size: 16, class: 'cd-glyph' });
+  if (o.kind === 'mod') return U.icon('mod', { class: 'cd-glyph' });
   if (o.kind === 'mcp') return '<span class="cd-tile" style="--cd-orb:' + size + 'px" aria-hidden="true">' + esc(String(o.server || '?').slice(0, 1).toUpperCase()) + '</span>';
   const g = sys(o.kind)[0];
   return g ? U.icon(g, { class: 'cd-glyph' }) : '';
@@ -92,6 +96,7 @@ export function namesUnit(o: KnownOrigin, bare?: boolean): string {
     if (o.via) via = ', via ' + nameOf(o.via);
   } else if (o.kind === 'agent') { first = o.model || 'The agent'; mono = true; }
   else if (o.kind === 'mcp') { first = o.server || 'MCP server'; via = bare ? '' : (o.server ? ' MCP server' : '') + (o.trust ? ', ' + o.trust : ''); }
+  else if (o.kind === 'mod') { first = o.plugin; via = bare ? '' : ' mod'; }
   else first = sys(o.kind)[1];
   const vis = '<span class="cd-names__first' + (mono ? ' cd-mono' : '') + '">' + esc(first) + '</span>' +
     (many ? '<span class="cd-names__rest">' + esc(rest) + '</span>' : '') + (via ? '<span class="cd-names__via">' + esc(via) + '</span>' : '');

@@ -372,7 +372,7 @@ function syncSiblings(src: HxCard, state: string): void {
     /* what the user decided travels; typing and holding stay where they happen. A failed send reopens the card that was sending */
     if (!['submitting', 'done', 'cancelled', 'expired'].includes(state) && !(state === 'open' && c.state === 'submitting')) continue;
     c.syncing = true;
-    for (const k of SHARED) if (src.data[k] !== undefined) c.data[k] = src.data[k];
+    for (const k of SHARED) if (src.data[k] !== undefined) (c.data as Record<string, unknown>)[k] = src.data[k];
     if (c.formState && src.formState) c.formState.vals = { ...src.formState.vals };
     c.at = src.at;
     try { c.setState(state); } finally { c.syncing = false; }

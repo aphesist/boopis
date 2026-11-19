@@ -17,6 +17,28 @@ describe('form fields', () => {
   });
 });
 
+describe('a mod asks (`$.ui.ask`, a permission): the origin is an object', () => {
+  const ASK = { form_id: 'f1', kind: 'choice', title: 'Which tests?', body: '', schema: { type: 'object', required: ['answer'], properties: { answer: { type: 'string', title: 'Run', enum: ['a', 'b'] } } }, submit: { label: 'Use this' } };
+  it('keeps the mod as who asks, with its name, instead of the agent', () => {
+    const m = fromPluginEvent('s', { ...ASK, origin: { kind: 'mod', plugin: 'test-runner' } }, 'fake-a');
+    expect(m?.spec.origin).toEqual({ kind: 'mod', plugin: 'test-runner' });
+    expect(m?.origin).toBe('mod');
+    expect(m?.source).toEqual({ kind: 'plugin', sessionId: 's' });
+  });
+  it('is still answered through the plugin like any form', () => {
+    const m = fromPluginEvent('s', { ...ASK, origin: { kind: 'mod', plugin: 'test-runner' } }) as NonNullable<ReturnType<typeof fromPluginEvent>>;
+    expect(replyFor(m, { cancelled: false, values: { answer: 'a' }, provided: [] })).toEqual({ method: 'plugin.boopis.form.submit', params: { session_id: 's', form_id: 'f1', values: { answer: 'a' }, provided: [] } });
+  });
+  it('does not take an object origin for a mod when it names no plugin, nor an unknown kind: those are the agent\'s', () => {
+    expect(fromPluginEvent('s', { ...ASK, origin: { kind: 'mod' } }, 'm')?.spec.origin).toEqual({ kind: 'agent', model: 'm' });
+    expect(fromPluginEvent('s', { ...ASK, origin: { kind: 'other', plugin: 'x' } }, 'm')?.spec.origin).toEqual({ kind: 'agent', model: 'm' });
+  });
+  it('words still work: agent, plugin and the rest', () => {
+    expect(fromPluginEvent('s', { ...ASK, origin: 'plugin' })?.spec.origin).toEqual({ kind: 'plugin' });
+    expect(fromPluginEvent('s', ASK, 'm')?.spec.origin).toEqual({ kind: 'agent', model: 'm' });
+  });
+});
+
 describe('the sources', () => {
   it('turns a host form into a model with its diff and buttons', () => {
     const m = fromHostForm({ form_id: 'setup.config', kind: 'setup', title: 't', body: 'b', schema: { type: 'object', properties: {} }, submit: { label: 'Apply' }, cancel: { label: 'No' },

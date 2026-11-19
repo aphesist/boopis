@@ -4,9 +4,10 @@
    visual parity tests; the app never falls back to it when the live provider fails (STANDARDS section 1, rule 4). */
 import { hhmm, reduced } from '../core/dom';
 import type {
-  BotsEvent, BotsSource, BotsSnapshot, DataProvider, DetailsSource, DictationSource, FeedforwardSource, FilesSource, FormsSource, RunSource, SchedulesSource, SessionsSource, WaitsEvent, WaitsSource
+  BotsEvent, BotsSource, BotsSnapshot, DataProvider, DetailsSource, DictationSource, FeedforwardSource, FilesSource, FormsSource, ModsSource, RunSource, SchedulesSource, SessionsSource, WaitsEvent, WaitsSource
 } from './provider';
 import { botIdBase } from './bot-id';
+import { createModsModel } from './mods-model';
 import { emitter, feed, store } from './store';
 import type {
   AgentTurn, ApprovalMessage, Bot, BotConfig, ContextUsage, ConversationEvent, DiffFile, RunSnapshot, SessionSummary, TextMessage, ThreadMessage, Turn, Wait
@@ -390,5 +391,8 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
     complete: (word) => Promise.resolve({ items: M.FILE_PATHS.filter((p) => p.includes(word.replace(/^@(file:)?/, ''))).map((p) => ({ text: '@file:' + p, display: p.slice(p.lastIndexOf('/') + 1), meta: '' })) })
   };
 
-  return { info: { live: false, preview: new Set(), unavailable: {} }, ready: Promise.resolve(), user: store(M.USER), sessions, details, bots: botsSource, waits: waitsSource, forms, run: runSource, schedules, feedforward, dictation, files };
+  /* the mock has no mods: a session's mods are always empty, and a press goes nowhere */
+  const noMods = createModsModel();
+  const mods: ModsSource = { ...noMods.source, press() { /* no mods */ }, input() { /* no mods */ }, select() { /* no mods */ }, props() { /* no mods */ } };
+  return { info: { live: false, preview: new Set(), unavailable: {} }, ready: Promise.resolve(), user: store(M.USER), sessions, details, bots: botsSource, waits: waitsSource, forms, run: runSource, schedules, feedforward, dictation, files, mods };
 }

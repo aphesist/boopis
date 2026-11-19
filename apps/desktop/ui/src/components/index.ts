@@ -21,6 +21,7 @@ import { icon, iconNames } from './icons';
 import { layer, menu, popover } from './layer';
 import { isRoute, lastModel, modelFamily, modelHTML, modelMark as modelMarkEl, parseRoute, routeHTML, swapMark, families as modelFamilies } from './model-mark';
 import type { ModelOpts, ModelRef } from './model-mark';
+import { modView, modViewUpdate, h as modH, sanitizeSvg, validateTree, LIMITS as MOD_LIMITS, modColors } from './mod-view';
 import { glance, liven, orb } from './orb';
 import { shape } from './shape';
 import { squircle } from './squircle';
@@ -75,7 +76,9 @@ export const ui = {
   version, html, esc, icon, icons: iconNames, announce, botState, botLabel, states: STATES,
   ...factories, legend, keys, inline,
   hydrate, orb, liven, glance, shape, squircle, modelMark, model, modelRoute, menu, popover, layer, tooltip, toast, composer, card,
-  hold: Object.assign(holdElement, { wire: wireHold })
+  hold: Object.assign(holdElement, { wire: wireHold }),
+  /** a Claude Code mod's element tree, drawn with the library (MODS.md section 2) */
+  modView: Object.assign(modView, { update: modViewUpdate, validate: validateTree, limits: MOD_LIMITS, sanitizeSvg, h: modH, colors: modColors })
 };
 export type Ui = typeof ui;
 export { html, icon, hydrate, hydrateOne, announce, botState, botLabel, orb, liven, glance, shape, squircle, modelMark, menu, popover, layer, tooltip, toast, composer, card, wireHold, holdElement };

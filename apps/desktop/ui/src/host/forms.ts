@@ -124,12 +124,14 @@ function hostDiff(diff: readonly { key: string; from?: unknown; to: unknown }[])
 export function fromPluginEvent(sessionId: string, p: Obj, model = ''): FormModel | null {
   const id = str(p['form_id']);
   if (!id) return null;
-  const origin = str(p['origin'], 'agent');
+  /* an origin is a word, or an object: a mod's is `{kind: 'mod', plugin}` (a mod's `$.ui.ask` and its permission asks) */
+  const raw = p['origin'], mod = obj(raw)['kind'] === 'mod' && str(obj(raw)['plugin']) ? { kind: 'mod' as const, plugin: str(obj(raw)['plugin']) } : null;
+  const origin = typeof raw === 'string' ? raw : mod ? 'mod' : 'agent';
   return {
     id, kind: str(p['kind'], 'question'), title: str(p['title'], 'boopis needs something'), body: str(p['body']), fields: fieldsOf(p['schema']),
     submitLabel: label(p['submit'], 'Send'), cancelLabel: label(p['cancel'], 'Cancel'), hold: obj(p['submit'])['hold'] === true,
     sensitive: p['sensitive'] === true, origin, diff: [], source: { kind: 'plugin', sessionId },
-    spec: buildSpec({ id, kind: p['kind'], title: str(p['title'], 'boopis needs something'), body: str(p['body']), schema: p['schema'], submit: p['submit'], cancel: p['cancel'], origin: originFor(origin, model), expiresAt: timeOf(p['expires_at']) })
+    spec: buildSpec({ id, kind: p['kind'], title: str(p['title'], 'boopis needs something'), body: str(p['body']), schema: p['schema'], submit: p['submit'], cancel: p['cancel'], origin: mod ?? originFor(origin, model), expiresAt: timeOf(p['expires_at']) })
   };
 }
 

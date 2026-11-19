@@ -15,6 +15,8 @@ export interface EventMap {
   'hx:state': { state: Readonly<AppState>; changed: ReadonlyArray<keyof AppState>; initial?: boolean };
   'hx:tab': { tab: Tab; initial?: boolean };
   'hx:theme': { preset: string; scheme: ThemeScheme };
+  /** a preview of colours started or ended (`theme.preview`, `theme.endPreview`) */
+  'hx:theme-preview': { previewing: boolean };
   'hx:ready': { state: Readonly<AppState> };
   'hx:bot-select': { id: string; from?: string; source?: string };
   'hx:session-select': { id: string; from?: string; title?: string; project?: string };

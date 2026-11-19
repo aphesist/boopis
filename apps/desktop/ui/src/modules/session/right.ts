@@ -11,6 +11,7 @@ import { VIEW } from './conversation';
 import { modKeyOf } from './keys';
 import { copyText, counts, kTokens, partsEl, splitPath } from './shared';
 import { onChanged } from './state';
+import { surface } from '../mods/surfaces';
 
 const SECTIONS = ['context', 'tasks', 'changes', 'output', 'governance', 'connectors', 'environment'];
 const RIGHT = { open: {} as Record<string, boolean>, refresh: null as ((flash?: string) => void) | null, note: null as string | null };
@@ -143,7 +144,9 @@ export function mountRight(root: HTMLElement): void {
       const heads = [...body.querySelectorAll<HTMLElement>('.ui-sec__head')], i = heads.indexOf(t);
       const n = heads[i + (e.key === 'ArrowDown' ? 1 : -1)]; if (n) { e.preventDefault(); n.focus(); }
     });
-    return el('div', { class: 'ui-panel ssr-panel', role: 'region', 'aria-label': 'Session details' }, [el('div', { class: 'ui-panel__head' }, el('h2', { class: 'ui-panel__title', text: 'Session details' })), body]);
+    const pnl = el('div', { class: 'ui-panel ssr-panel', role: 'region', 'aria-label': 'Session details' }, [el('div', { class: 'ui-panel__head' }, el('h2', { class: 'ui-panel__title', text: 'Session details' })), body]);
+    /* a mod's panes become tabs of this panel (MODS.md section 3); without mods the panel is unchanged */
+    return surface.decoratePanel?.(pnl) ?? pnl;
   }
   function draw(flash?: string): void {
     const prevBody = root.querySelector('.ui-panel__body'), keepScroll = prevBody ? prevBody.scrollTop : 0;
@@ -162,6 +165,7 @@ export function mountRight(root: HTMLElement): void {
     last = open;
   }
   RIGHT.refresh = draw;
+  surface.redrawRight = () => { if (isOpen()) draw(); };
   on('hx:state', () => { if (isOpen() !== last) draw(); });
   on('hx:open-panel', (e) => { const p = e.panel || 'context'; RIGHT.open[p] = true; if (isOpen()) draw(p); else openPanel(p); });
   d().context.subscribe(() => draw());

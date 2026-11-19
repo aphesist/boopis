@@ -8,7 +8,7 @@
    did not send: unknown is `null` or empty and the UI shows it as unknown. */
 import type {
   Bot, BotCatalog, BotDraft, BotConfig, Change, ConversationEvent, Conversation, Connector, ContextUsage, DecisionKind, DiffFile, Environment,
-  DetailsCan, DetailsNotes, FileCompletions, FormCan, FormOutcome, PickerItem, PickerKind, GovernanceState, LedgerStats, ProviderInfo, RunSnapshot, Schedule, SendMeta, SessionSummary, ThreadMessage, Todo, User, Wait, WaitOutcome
+  DetailsCan, DetailsNotes, FileCompletions, FormCan, FormOutcome, ModSession, ModsEvent, PickerItem, PickerKind, GovernanceState, LedgerStats, ProviderInfo, RunSnapshot, Schedule, SendMeta, SessionSummary, ThreadMessage, Todo, User, Wait, WaitOutcome
 } from './types';
 
 export type Unsubscribe = () => void;
@@ -113,6 +113,20 @@ export interface FormsSource {
   pickFolder(): Promise<string | null>;
 }
 
+/* ───────── mods: what a session's Claude Code mods draw, and the user's answers to it ───────── */
+export interface ModsSource {
+  /** one session's mods as they are now (`active: false` when it has none); a new value on every change */
+  session(sessionId: string): Watch<ModSession>;
+  /** toasts and notifications: what a mod said that is not state */
+  events: { subscribe(fn: (e: ModsEvent) => void): Unsubscribe };
+  /* commands. The UI never runs mod code: it sends the id of the handler of the element the user used. */
+  press(sessionId: string, handler: string): void;
+  input(sessionId: string, handler: string, value: string): void;
+  select(sessionId: string, handler: string, value: string): void;
+  /** tells a site where it is (a pane's placement and title, the band's `isWorking`) and asks for a redraw; `id` is a pane's id */
+  props(sessionId: string, component: string, id: string | null, props: Readonly<Record<string, unknown>>): void;
+}
+
 /* ───────── the dock's run and schedules ───────── */
 export interface RunSource {
   current: Watch<RunSnapshot>;
@@ -153,4 +167,5 @@ export interface DataProvider {
   feedforward: FeedforwardSource;
   dictation: DictationSource;
   files: FilesSource;
+  mods: ModsSource;
 }

@@ -150,6 +150,8 @@ export function composite(top: RGBA, under: RGBA): string { const a = top[3]; re
 /* ───────── state ───────── */
 let theme: Theme = (() => { const s = sanitize(readJSON(KEYS.theme)); return s ?? blank(); })();
 let applied: string[] = [];
+/** the saved theme, while a preview is showing (null otherwise): a preview is never saved */
+let held: Theme | null = null;
 const effective = <K extends Overridable>(k: K): Theme[K] | Preset[K] => (theme[k] ?? PRESETS[theme.preset][k]) as Theme[K] | Preset[K];
 const effStr = (k: 'sans' | 'mono'): string => String(effective(k));
 
@@ -201,7 +203,7 @@ function apply(quiet?: boolean): void {
   const light = lum(hexOf('--bg-2')) > 0.4;
   root.style.setProperty('color-scheme', light ? 'light' : 'dark');
   if (light) root.setAttribute('data-hx-theme', 'light'); else root.removeAttribute('data-hx-theme');
-  save();
+  if (!held) save();
   if (!quiet) emit('hx:theme', { preset: theme.preset, scheme: light ? 'light' : 'dark' });
   refreshUI?.();
 }
@@ -217,9 +219,29 @@ function exportObject() {
 
 export const themeApi = {
   presets: PRESETS as Record<string, Preset>,
-  get: (): Theme => JSON.parse(JSON.stringify(theme)) as Theme,
+  get: (): Theme => JSON.parse(JSON.stringify(held ?? theme)) as Theme,
+  /** a preview is showing */
+  previewing: (): boolean => held !== null,
+  /** Shows a patch of colours over the saved theme without saving it: a reload, or `endPreview(false)`, gives the saved theme
+      back at once. Called again, it patches the saved theme again (one preview at a time). Every other change restores first. */
+  preview(patch: { colors?: Record<string, string> }): void {
+    held ??= JSON.parse(JSON.stringify(theme)) as Theme;
+    theme = JSON.parse(JSON.stringify(held)) as Theme;
+    if (patch.colors) theme.colors = Object.assign({}, theme.colors, sanitize({ preset: theme.preset, colors: patch.colors })?.colors);
+    apply();
+    emit('hx:theme-preview', { previewing: true });
+  },
+  /** Ends the preview: `true` keeps the colours it showed (they become the theme and are saved), `false` gives the saved theme back. */
+  endPreview(commit: boolean): boolean {
+    if (!held) return false;
+    if (commit) held = null; else { theme = held; held = null; }
+    apply();
+    emit('hx:theme-preview', { previewing: false });
+    return true;
+  },
   scheme: (): 'dark' | 'light' => (root.getAttribute('data-hx-theme') === 'light' ? 'light' : 'dark'),
   set(patch: ThemePatch): void {
+    themeApi.endPreview(false);
     if (patch.colors) theme.colors = Object.assign({}, theme.colors, patch.colors);
     for (const k of OVERRIDABLE) {
       if (k in patch) {
@@ -229,10 +251,11 @@ export const themeApi = {
     }
     apply();
   },
-  preset(id: string): void { if (!isPreset(id)) return; theme = Object.assign(blank(), { preset: id }); apply(); },
-  reset(): void { theme = Object.assign(blank(), { preset: theme.preset }); apply(); },
+  preset(id: string): void { if (!isPreset(id)) return; themeApi.endPreview(false); theme = Object.assign(blank(), { preset: id }); apply(); },
+  reset(): void { themeApi.endPreview(false); theme = Object.assign(blank(), { preset: theme.preset }); apply(); },
   exportJSON: (): string => JSON.stringify(exportObject(), null, 2),
   importJSON(text: string): void {
+    themeApi.endPreview(false);
     let obj: unknown;
     try { obj = JSON.parse(text); } catch { throw new Error('The text is not valid JSON.'); }
     if (!obj || (obj as { format?: unknown }).format !== 'boopis-theme') throw new Error('This JSON is not a boopis theme (it needs "format": "boopis-theme").');

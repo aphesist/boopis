@@ -74,14 +74,16 @@ export type Wait = ApprovalWait | BlankWait | FormWait;
 export type WaitOutcome = 'approved' | 'denied' | string;
 
 /* ───────── forms (docs/FORMS.md): one schema-driven card for everything that needs the user ───────── */
-export type FormKind = 'credential' | 'question' | 'approval' | 'permission' | 'signin' | 'setup' | 'connector' | 'choice' | 'plan' | 'feedback';
+export type FormKind = 'credential' | 'question' | 'approval' | 'permission' | 'signin' | 'setup' | 'connector' | 'choice' | 'plan' | 'feedback' | 'theme';
 export type PickerKind = 'folder' | 'file' | 'model' | 'repo' | 'host' | 'teammate' | 'branch';
 /** who is asking (FORMS.md section 4a); the same slot draws every card, in every place a card can appear */
 export type Origin =
   | { kind: 'teammate'; ids?: readonly string[]; id?: string; via?: string | null }
   | { kind: 'agent'; model: string }
   | { kind: 'plugin' | 'hermes' | 'host' }
-  | { kind: 'mcp'; server?: string; trust?: string };
+  | { kind: 'mcp'; server?: string; trust?: string }
+  /** a Claude Code mod asks (`$.ui.ask`); drawn as its glyph and "name mod" (DESIGN-SYSTEM.md 14.29) */
+  | { kind: 'mod'; plugin: string };
 /** a field of MCP elicitation's `requestedSchema` plus the boopis extensions */
 export interface FieldSchema {
   type?: 'string' | 'number' | 'integer' | 'boolean';
@@ -112,6 +114,10 @@ export interface FormSpec {
   /** what shows before the fields: a config diff, a plan, a connector's contents */
   diff?: string; file?: string; plan?: readonly string[]; contents?: ReadonlyArray<readonly [string, string?]>; pinned?: string;
   provider?: string; name?: string; scope?: string; receipt?: string;
+  /** a theme card (`kind: 'theme'`): the colours on offer as [label, hex] swatches, and whether the app shows them live while the card is open */
+  swatches?: ReadonlyArray<readonly [label: string, hex: string]>; preview?: boolean;
+  /** the words of a card the UI answers itself (a theme card's Reject and Later) */
+  cancelledText?: string; deferredText?: string;
 }
 /** what a submitted form carries: the non-secret values, and the secret fields' values for the host's keychain alone */
 export interface FormOutcome { values: Readonly<Record<string, unknown>>; secrets: Readonly<Record<string, string>> }
@@ -119,6 +125,47 @@ export type FormStatus = 'submitted' | 'cancelled' | 'expired';
 /** what this build can do for the fields that reach outside the page */
 export interface FormCan { signin: boolean; upload: boolean; folder: boolean }
 export interface PickerItem { value: string; label: string; desc?: string }
+
+/* ───────── mods (docs/MODS.md, docs/PROTOCOL.md section 3: `mod.*`) ───────── */
+/** an element tree as the plugin sends it: `{type, props, children}`, handlers as `{"$handler": id}`. The renderer checks it. */
+export interface ModTree { type: string; props: Readonly<Record<string, unknown>>; children: readonly unknown[] }
+/** what a site shows: a mod's tree, the app's own drawing (no mod drew it), or a tree the plugin refused (the reason is the mod's log) */
+export type ModDrawing = { kind: 'tree'; tree: ModTree } | { kind: 'default' } | { kind: 'skipped'; reason: string };
+export interface ModPane {
+  id: string; plugin: string; title: string; focus: boolean; closeOnEscape: boolean;
+  /** how many times the mod opened it (an open of a pane the user closed brings it back) */
+  opens: number;
+  /** null until the first draw */
+  drawing: ModDrawing | null;
+}
+/** the band above the composer: one drawing (the chain answers a site once, so there is one row); `plugin` is the mod that drew it when the plugin said, else null */
+export interface ModBand { plugin: string | null; drawing: ModDrawing }
+export interface ModStatus { plugin: string; text: string }
+/** `$.ui.log`: a quiet line in the conversation that the model does not read; `plugin` is '' when boopis speaks about the mods */
+export interface ModLogLine { id: number; plugin: string; level: 'info' | 'warn'; text: string; at: number }
+/** a row a mod placed in the conversation (`Placed` site) */
+export interface ModPlaced { id: string; plugin: string | null; tree: ModTree; at: number }
+/** a theme a mod offers (`$.theme.set`): colours by token (`--brass`) or Claude Code name (`claude`); the UI maps and previews them */
+export interface ModTheme { plugin: string; colors: Readonly<Record<string, string>>; label: string | null }
+/** everything one session's mods draw, as of now. Replaced, never mutated. */
+export interface ModSession {
+  /** mods are loaded in this session */
+  active: boolean;
+  /** the loaded mods' names (from `mod.list`) */
+  plugins: readonly string[];
+  /** why the session's mods stopped (the worker exited), else '' */
+  stopped: string;
+  panes: readonly ModPane[];
+  band: ModBand | null;
+  status: readonly ModStatus[];
+  log: readonly ModLogLine[];
+  placed: readonly ModPlaced[];
+  theme: ModTheme | null;
+}
+/** what a mod said that is not state */
+export type ModsEvent =
+  | { type: 'toast'; sessionId: string; plugin: string; text: string; timeoutMs: number }
+  | { type: 'notify'; sessionId: string; plugin: string; title: string; text: string };
 
 /* ───────── sessions ───────── */
 export interface SessionSummary { id: string; project: string; title: string; when: string; running?: boolean }

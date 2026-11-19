@@ -17,6 +17,7 @@ import './modules/cards';
 import './modules/session';
 import './modules/bots';
 import './modules/dock';
+import './modules/mods';
 import { boot } from './modules/shell';
 
 const log = logger('main');

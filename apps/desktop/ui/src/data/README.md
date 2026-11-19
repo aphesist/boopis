@@ -40,6 +40,7 @@ A command never returns the new state for the UI to apply. The UI calls `bots.se
 | `feedforward` | `catalog()`: the decision words the composer marks, with their options and guesses | | session composer |
 | `dictation` | | `start({botId}, onTranscript)` | session composer's mic |
 | `files` | | `pick('file' | 'folder')`, `complete(word, sessionId)` | attach menu (mentions) |
+| `mods` | `session(id)`: `Watch<ModSession>` (panes, band, status lines, log, placed rows, the theme on offer), `events` (toasts, notifications) | `press`, `input`, `select` (a handler id), `props` (where a site is) | `modules/mods`: panes, band, status line, placed rows, toasts, the theme card |
 
 ## Events
 
@@ -81,6 +82,7 @@ The v6 mock-up read `HX.data` (the `data.js` file) and mutated it from three mod
 | `details.governance`, `ledger`, `models` | `plugin.boopis.cascade.state` (the ladder), `ledger.stats` (spend and tokens, computed by the plugin from tokens), `describe` (mode, cap) |
 | `details.changes`, `sessions.diff` | `plugin.boopis.checkpoint.diff` (the kept ships), refreshed on `ship.completed` and at the end of a turn |
 | `run.current` | the running turn (events), `ledger.stats` and `cascade.state` |
+| mods (`mods`) | the plugin's `mod.*` events folded by `data/mods-model.ts`; `mod.list` for who is loaded; answered with `mod.press`, `mod.input`, `mod.select`, `mod.props`. A mod's `$.ui.ask` is a form (below) with origin `{kind: mod, plugin}` |
 | forms (`waits`, `forms`, `AgentTurn.forms`) | `form.opened`, `form.resolved`; answered with `form.submit` / `form.cancel` (a secret first with the host's `secret_set`, named in `provided`); `form.list` when a session is resumed or the link returns; Hermes's `clarify.request` answered with `clarify.respond` |
 | blanks (`waits`, `sessions.answerBlank`) | `blank.opened`, `blank.filled`, `blank.lapsed`; the answer goes to `blank.fill` |
 | `files.complete` | `complete.path` |

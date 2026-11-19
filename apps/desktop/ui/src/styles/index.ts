@@ -3,9 +3,11 @@
 import './tokens.css';
 import '../components/components.css';
 import '../components/model-mark.css';
+import '../components/mod-view.css';
 import '../modules/shell/shell.css';
 import '../modules/cards/cards.css';
 import '../modules/session/session.css';
 import '../modules/bots/bots.css';
 import '../modules/dock/dock.css';
+import '../modules/mods/mods.css';
 import './fonts';

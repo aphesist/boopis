@@ -27,6 +27,17 @@ describe('the origin slot', () => {
     expect(originText({ kind: 'hermes' })).toBe('Hermes');
     expect(originText({ kind: 'agent', model: '' })).toBe('The agent');
   });
+  it('draws a mod as its puzzle glyph and "name mod", the name first and "mod" quiet (DESIGN-SYSTEM.md 14.29)', () => {
+    const o = originOf({ origin: { kind: 'mod', plugin: 'test-runner' } });
+    expect(o).toEqual({ kind: 'mod', plugin: 'test-runner' });
+    expect(originText(o)).toBe('test-runner mod');
+    expect(originVisual(o, 20)).toContain('cd-glyph');
+    expect(originVisual(o, 20)).toContain('viewBox="0 0 16 16"');
+    const by = byline({ origin: o, size: 'inline' });
+    expect(by).toContain('data-origin="mod"');
+    expect(by).toContain('<span class="cd-names__first">test-runner</span><span class="cd-names__via"> mod</span>');
+    expect(by).toContain('data-full="test-runner mod"');
+  });
   it('draws one orb for one teammate and a stack with +N and every name for several', () => {
     const all = ids();
     expect(originVisual({ kind: 'teammate', ids: [all[0] as string], via: null }, 20)).toContain('orb-avatar');

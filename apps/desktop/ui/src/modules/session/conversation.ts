@@ -14,6 +14,7 @@ import type { SessionComposer } from './composer';
 import { copyText, mdOf, randomId } from './shared';
 import { openPanel } from './right';
 import { setAttention, changed } from './state';
+import { surface } from '../mods/surfaces';
 
 /** per-turn data the keyboard and the clipboard need */
 interface TurnInfo { md(): string; kind: 'user' | 'agent'; text?: string | undefined }
@@ -182,7 +183,7 @@ function liveTurn(a: AgentTurn): void {
   t.dataset['turnId'] = a.id;
   if (a.forms?.length) $('.ui-entry__body', t).append(formsBlock(a.forms));
   (VIEW.col as HTMLElement).append(t);
-  VIEW.composer?.setRunning(true); VIEW.running = true;
+  VIEW.composer?.setRunning(true); VIEW.running = true; surface.onWorking?.(true);
   if (VIEW.scroll) VIEW.scroll.scrollTop = VIEW.scroll.scrollHeight;
 }
 /* a blank opened while the turn runs: its sentence sits under the steps and stays there when the answer arrives */
@@ -206,7 +207,7 @@ function finishLive(id: string, ev: Extract<ConversationEvent, { type: 'turn-fin
   TURN.set(t, { md: () => mdOf(p), kind: 'agent' });
   $('.ui-callno', t).append(el('span', { class: 'ss-acts' }, ui.iconButton({ icon: 'copy', label: 'Copy answer', size: 's', keys: 'C' })));
   $('.ss-acts button', t).addEventListener('click', () => { void copyText(mdOf(p)); });
-  VIEW.composer?.setRunning(false); VIEW.running = false;
+  VIEW.composer?.setRunning(false); VIEW.running = false; surface.onWorking?.(false);
   rove(t);
   if (VIEW.scroll) VIEW.scroll.scrollTop = VIEW.scroll.scrollHeight;
   ui.announce(ev.stopped ? 'Stopped' : 'Answer ready');
@@ -233,6 +234,7 @@ export function renderConversation(): void {
   rove(lastTurn());
   setAttention(!VIEW.blank && openBlankOf(snap) ? 1 : 0);
   unsubConv = conv.subscribe(onConversationEvent);
+  surface.onConversation?.(VIEW.current);   /* what a mod placed in this session goes back in */
 }
 function onConversationEvent(ev: ConversationEvent): void {
   const col = VIEW.col; if (!col) return;
@@ -321,6 +323,13 @@ function openFind(): boolean {
   return true;
 }
 
+/** a mod's placed row (or a card it raised) goes at the end of the conversation; gone when the session changes or clears */
+function placeRow(node: HTMLElement, o: { quiet: boolean }): void {
+  if (!VIEW.col) return;
+  VIEW.col.append(node);
+  if (!o.quiet && VIEW.scroll) VIEW.scroll.scrollTop = VIEW.scroll.scrollHeight;
+}
+
 export function selectSession(id: string, opts: { quiet?: boolean; focus?: boolean } = {}): void {
   if (VIEW.running) sessions().stop(VIEW.current);
   VIEW.current = id;
@@ -355,7 +364,12 @@ export function mountView(root: HTMLElement): void {
   renderConversation();
   const c = VIEW.composer = sessionComposer({ draft: sessions().draft(), sessionId: () => VIEW.current });
   const host = el('div', { class: 'ss-composer' }, c);
+  /* the slots a mod draws into (MODS.md section 3): the band above the composer and the status line under it; empty slots take no room */
+  const slots = { band: el('div', { class: 'ss-mods ss-mods--band' }), status: el('div', { class: 'ss-mods ss-mods--status' }) };
+  host.prepend(slots.band); host.append(slots.status);
+  surface.slots = slots; surface.place = placeRow;
   root.append(host);
+  surface.onConversation?.(VIEW.current);
   c.addEventListener('ui:send', (e) => {
     const text = (e as CustomEvent<{ text: string }>).detail.text, assume = c.lastAssume();
     setTimeout(() => { const g = data().details.governance.get(); sessions().send(VIEW.current, text, { governed: g.governed, smart: g.smart, model: g.model, assume }); }, 0);

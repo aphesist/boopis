@@ -8,7 +8,7 @@ import type { Connected, HostBridge } from './bridge';
 import type { SecretsBridge } from './secrets';
 
 export interface RecordedFrame { dir: 'in' | 'out'; frame: Record<string, unknown> }
-const WORKS = new Set(['prompt.submit', 'plugin.boopis.blank.fill', 'plugin.boopis.form.submit', 'plugin.boopis.form.cancel']);
+const WORKS = new Set(['prompt.submit', 'plugin.boopis.blank.fill', 'plugin.boopis.form.submit', 'plugin.boopis.form.cancel', 'plugin.boopis.mod.press', 'plugin.boopis.mod.input', 'plugin.boopis.mod.select', 'plugin.boopis.mod.props']);
 
 export class ReplayHost implements HostBridge {
   private onFrame: (f: unknown) => void = () => undefined;

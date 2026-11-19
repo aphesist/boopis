@@ -71,6 +71,7 @@ export function mountThemePanel(container: HTMLElement | null): void {
 let rafPending = 0, msgTimer = 0;
 function setColor(token: string, value: string): void {
   if (!HEX.test(value)) return;
+  themeApi.endPreview(false);   /* editing a colour is choosing another theme: a mod's preview gives way at once */
   themeInternals.theme.colors[token] = value.toLowerCase();
   if (rafPending) return;
   rafPending = requestAnimationFrame(() => { rafPending = 0; themeInternals.apply(); });
@@ -122,7 +123,7 @@ function wireUI(ui0: HTMLElement): void {
   ui0.addEventListener('click', (e) => {
     const target = e.target as Element;
     const u = target.closest<HTMLElement>('[data-undo]');
-    if (u) { delete themeInternals.theme.colors[u.dataset['undo'] ?? '']; themeInternals.apply(); return; }
+    if (u) { themeApi.endPreview(false); delete themeInternals.theme.colors[u.dataset['undo'] ?? '']; themeInternals.apply(); return; }
     const hit = (id: string): boolean => !!target.closest('#' + id);   // the buttons carry their label in a span
     if (hit('hxt-reset')) { themeApi.reset(); say('Back to the ' + PRESETS[themeInternals.theme.preset].name + ' colours.'); return; }
     if (hit('hxt-apply')) { applyJSON(); return; }
