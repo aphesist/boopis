@@ -7,7 +7,7 @@
 
 <p align="center">
   A desktop coding harness on unmodified <a href="https://github.com/NousResearch/hermes-agent">Hermes Agent</a>:<br>
-  any model, through any subscription you already pay for, with <a href="https://github.com/aphesist/contraprova">contraprova</a>'s governance built in.
+  any model (free ones, your own keys, or your Claude subscription), with <a href="https://github.com/aphesist/contraprova">contraprova</a>'s governance built in.
 </p>
 
 <p align="center">
