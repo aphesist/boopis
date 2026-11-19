@@ -438,7 +438,19 @@
         const gap = below ? lr.top - ar.bottom : above ? ar.top - lr.bottom : right ? lr.left - ar.right : NaN;
         const wantGap = isTip && right && !below && !above ? 10 : fgap;
         const clampedY = lr.top <= m + 0.5;
-        if (!Number.isNaN(gap) && Math.abs(gap - wantGap) > 1 && !clampedY) add('overlay', l, 'sits ' + r1(gap) + 'px from its anchor, the system says ' + wantGap + 'px');
+        /* R-tip-2: an anchor inside a container that holds a text field (the composer's attach, chips, mic and send) names what must stay
+           visible in data-overlay-avoid, and its overlay sits outside that container, --float-gap beyond its near edge: the gap is then
+           measured to the nearest avoided rect on the overlay's side of it, not to the anchor (the anchor is inside the container). The
+           overlay still may not cover the text (the field check below) and must clear the container by exactly the gap. */
+        let avoidGap = NaN;
+        const avoidHost = a.closest('[data-overlay-avoid]'), avoidSel = avoidHost && avoidHost.getAttribute('data-overlay-avoid');
+        if (avoidSel && (below || above)) for (const e of avoidHost.querySelectorAll(avoidSel)) {
+          if (!shown(e) || e.contains(a)) continue;
+          const er = e.getBoundingClientRect(), g = below ? lr.top - er.bottom : er.top - lr.bottom;
+          if (g >= -1 && (Number.isNaN(avoidGap) || g < avoidGap)) avoidGap = g;
+        }
+        const clearsContainer = !Number.isNaN(avoidGap) && Math.abs(avoidGap - fgap) <= 1;
+        if (!Number.isNaN(gap) && Math.abs(gap - wantGap) > 1 && !clampedY && !clearsContainer) add('overlay', l, 'sits ' + r1(gap) + 'px from its anchor, the system says ' + wantGap + 'px');
         if (Number.isNaN(gap) && !inter) add('overlay', l, 'is neither above, below nor to the right of its anchor');
         const clampedX = lr.left <= m + 0.5 || lr.right >= W - m - 0.5;
         if (isTip && (below || above) && !clampedX && Math.abs((lr.left + lr.right) / 2 - (ar.left + ar.right) / 2) > 1) add('overlay', l, 'is not centred on its anchor (' + r1((lr.left + lr.right) / 2 - (ar.left + ar.right) / 2) + 'px off)');
