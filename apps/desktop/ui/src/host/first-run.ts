@@ -10,7 +10,7 @@ import { progressDots, setProgress } from '../components/progress';
 import '../modules/cards';
 import { useFormsHost } from '../modules/cards/forms-host';
 import type { FormsSource } from '../data/provider';
-import { fromHostForm } from './forms';
+import { fromConnectorForm } from './forms';
 import type { FormModel } from './forms';
 import type { Answer } from './bindings';
 import type { SetupBridge, SetupProgress, SetupStatus, SourceInfo } from './setup-bridge';
@@ -94,7 +94,7 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
           card.append(button('Check again', 'primary', () => { void run(null, false); }));
         }
         if (status.steps.some((s) => s.state === 'declined')) card.append(button('Review again', 'ghost', () => { void run(null, true); }));
-        if (status.form) card.append(formCard(fromHostForm(status.form)));
+        if (status.form) card.append(formCard(fromConnectorForm(status.form)));
         if (status.done) {
           useFormsHost(null);
           card.append(el('h2', { style: 'margin:0;font:600 var(--fs-l)/var(--lh-tight) var(--sans)' }, 'You are set'));

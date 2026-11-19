@@ -894,3 +894,127 @@ async fn the_free_tier_is_claimable_only_to_a_link_that_declares_the_desktop() {
         "the declaration writes no toolset: {cfg}"
     );
 }
+
+/// The Claude subscription's two Hermes calls on a real Hermes (ADR-0029): the catalog entry the install review shows, and what
+/// `hermes plugins install claude-subscription-directsdk` prints when the download cannot happen. The proxy points at a closed
+/// port, so Hermes's live catalog is unreachable (it falls back to its own tree's catalog) and so is the repository: the refusal
+/// is the real one, and nothing is installed. No gateway is started.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_subscription_plugin_is_read_from_hermes_catalog_and_an_unreachable_download_installs_nothing()
+ {
+    let _serial = SERIAL.lock().await;
+    let Some(spike) = std::env::var_os("HX_E2E_HERMES_ENV").map(PathBuf::from) else {
+        eprintln!("skipped: set HX_E2E_HERMES_ENV to the spike install");
+        return;
+    };
+    let Some(bin) = hermes_bin_dir(&spike) else {
+        eprintln!("skipped: no Hermes install under HX_E2E_HERMES_ENV");
+        return;
+    };
+    let root = tempfile::tempdir().unwrap();
+    let (home, hermes_home) = (root.path().join("home"), root.path().join("hermes-home"));
+    for d in [&home, &hermes_home] {
+        std::fs::create_dir_all(d).unwrap();
+    }
+    std::os::unix::fs::symlink(
+        spike.join("hermes-home/installs"),
+        hermes_home.join("installs"),
+    )
+    .unwrap();
+    std::fs::write(
+        hermes_home.join("config.yaml"),
+        json!({"updates": {"check": false}, "model_catalog": {"enabled": false}}).to_string(),
+    )
+    .unwrap();
+    let dead = "http://127.0.0.1:1".to_owned();
+    let child_env: Vec<(String, String)> = vec![
+        ("HOME".into(), home.display().to_string()),
+        // both spellings: git and curl read the lower-case one first, and the parent's must not win
+        ("HTTPS_PROXY".into(), dead.clone()),
+        ("https_proxy".into(), dead.clone()),
+        ("HTTP_PROXY".into(), dead.clone()),
+        ("http_proxy".into(), dead.clone()),
+        ("ALL_PROXY".into(), dead.clone()),
+        ("all_proxy".into(), dead),
+        ("NO_PROXY".into(), "127.0.0.1,localhost,::1".into()),
+        ("no_proxy".into(), "127.0.0.1,localhost,::1".into()),
+        (
+            "HERMES_RUNTIME_DIR".into(),
+            spike.join("runtime").display().to_string(),
+        ),
+        (
+            "UV_PYTHON_INSTALL_DIR".into(),
+            spike.join("uv-python").display().to_string(),
+        ),
+        (
+            "UV_CACHE_DIR".into(),
+            spike.join("uv-cache").display().to_string(),
+        ),
+    ];
+    let env = Environment {
+        hermes_home: Some(hermes_home.display().to_string()),
+        home_dir: Some(home.clone()),
+        path: Some(std::ffi::OsString::from(&bin)),
+        ..Environment::default()
+    };
+    let sup = Arc::new(Supervisor::new(env, Limits::default()).with_child_env(child_env));
+    let ops = CliOps::new(sup, hermes_home.clone());
+
+    let entry = ops
+        .catalog_entry(boopis_host::claude::CATALOG_NAME)
+        .await
+        .unwrap()
+        .expect("Hermes's catalog lists the plugin");
+    assert_eq!(entry.name, "claude-subscription-directsdk");
+    assert_eq!(entry.tier, "official");
+    assert_eq!(entry.subdir, "claude-subscription-directsdk");
+    assert!(
+        entry.repo.starts_with("https://github.com/"),
+        "{}",
+        entry.repo
+    );
+    assert!(
+        entry.sha.len() == 40 && entry.sha.bytes().all(|b| b.is_ascii_hexdigit()),
+        "a pinned commit: {}",
+        entry.sha
+    );
+    assert!(!entry.version.is_empty());
+    assert!(
+        entry.provides.is_empty(),
+        "it declares no tool, hook or middleware"
+    );
+    assert!(
+        ops.catalog_entry("no-such-plugin-for-boopis-xyz")
+            .await
+            .unwrap()
+            .is_none()
+    );
+
+    let refused = ops
+        .install_catalog_plugin(boopis_host::claude::CATALOG_NAME)
+        .await
+        .expect_err("no repository can be reached");
+    assert_eq!(
+        refused.code(),
+        "hx.setup.subscription_unreachable",
+        "{refused}"
+    );
+    assert!(
+        refused.to_string().contains("Nothing was installed"),
+        "{refused}"
+    );
+    assert!(
+        !hermes_home
+            .join("plugins")
+            .join(boopis_host::claude::PROVIDER_ID)
+            .exists(),
+        "a refused install leaves nothing behind"
+    );
+    let listed = ops.plugins().await.unwrap();
+    assert!(
+        !listed
+            .iter()
+            .any(|p| p.name == boopis_host::claude::PROVIDER_ID),
+        "{listed:?}"
+    );
+}

@@ -10,8 +10,9 @@ use async_trait::async_trait;
 use serde_json::{Value, json};
 
 use super::install::Bundle;
-use super::ops::{HermesOps, PluginEntry};
+use super::ops::{CatalogEntry, HermesOps, PluginEntry};
 use super::{Answer, Setup, StepState};
+use crate::claude::{self, ClaudeCli, PROVIDER_ID, Probe};
 use crate::commands::Json;
 use crate::error::{Error, Result};
 use crate::free_tier::FreeTier;
@@ -31,6 +32,71 @@ struct Fake {
     free: Mutex<FreeScript>,
     /// The free rows of the `OpenRouter` catalogue.
     catalogue: Mutex<Vec<String>>,
+    /// Hermes's plugin catalog: the entry for the Claude subscription plugin, and what an install of it does.
+    plugin_catalog: Mutex<PluginCatalog>,
+}
+
+/// A scripted plugin catalog (no network, no clone).
+struct PluginCatalog {
+    entry: Option<CatalogEntry>,
+    /// The error the next installs answer with (while `Some`), instead of installing.
+    refuse: Option<Error>,
+    installs: u32,
+    /// The `ALIASES` the installed build's `model_catalog.py` carries.
+    aliases: Vec<&'static str>,
+}
+
+impl Default for PluginCatalog {
+    fn default() -> Self {
+        Self {
+            entry: Some(CatalogEntry {
+                name: claude::CATALOG_NAME.into(),
+                version: "0.3.5".into(),
+                sha: "6313fad5ddf2c060e7b16782f4860c0d5cdbfcac".into(),
+                repo: "https://github.com/NousResearch/hermes-official-plugins".into(),
+                subdir: "claude-subscription-directsdk".into(),
+                tier: "official".into(),
+                provides: Vec::new(),
+            }),
+            refuse: None,
+            installs: 0,
+            aliases: vec!["sonnet", "haiku", "opus", "fable"],
+        }
+    }
+}
+
+/// A scripted Claude Code: what the look finds, and how many looks there were.
+struct FakeClaude {
+    probe: Mutex<Probe>,
+    looks: Mutex<u32>,
+}
+
+impl FakeClaude {
+    fn new() -> Arc<Self> {
+        Arc::new(Self {
+            probe: Mutex::new(claude::assess(false, None, None)),
+            looks: Mutex::new(0),
+        })
+    }
+    /// Claude Code in one of the states: `auth` is its `auth status` JSON.
+    fn is(&self, installed: bool, version: &str, auth: Option<&Value>) {
+        *self.probe.lock().unwrap() = claude::assess(installed, Some(version), auth);
+    }
+    fn signed_in(&self, version: &str) {
+        self.is(
+            true,
+            version,
+            Some(&json!({"loggedIn": true, "authMethod": "claude.ai", "subscriptionType": "max"})),
+        );
+    }
+}
+
+#[async_trait]
+impl ClaudeCli for FakeClaude {
+    async fn probe(&self) -> Probe {
+        *self.looks.lock().unwrap() += 1;
+        self.probe.lock().unwrap().clone()
+    }
 }
 
 /// A scripted Hermes for the free tier (no gateway, no Nous).
@@ -55,6 +121,7 @@ impl Fake {
             restart_failures: Mutex::new(0),
             free: Mutex::new(FreeScript::default()),
             catalogue: Mutex::new(Vec::new()),
+            plugin_catalog: Mutex::new(PluginCatalog::default()),
         })
     }
 }
@@ -134,6 +201,42 @@ impl HermesOps for Fake {
         f.claimed = true;
         Ok(f.after.clone())
     }
+    async fn catalog_entry(&self, name: &str) -> Result<Option<CatalogEntry>> {
+        assert_eq!(name, claude::CATALOG_NAME);
+        Ok(self.plugin_catalog.lock().unwrap().entry.clone())
+    }
+    async fn install_catalog_plugin(&self, name: &str) -> Result<()> {
+        assert_eq!(name, claude::CATALOG_NAME);
+        let mut c = self.plugin_catalog.lock().unwrap();
+        if let Some(e) = &c.refuse {
+            return Err(match e {
+                Error::Setup(code, m) => Error::Setup(code, m.clone()),
+                _ => Error::Config("refused".into()),
+            });
+        }
+        c.installs += 1;
+        // what `hermes plugins install` leaves: the plugin's directory, named by its manifest, with its model catalogue
+        let dir = super::ops::plugins_dir(&self.home).join(PROVIDER_ID);
+        std::fs::create_dir_all(&dir).unwrap();
+        let rows = c
+            .aliases
+            .iter()
+            .map(|a| format!("    '{a}': 'claude-{a}-x',\n"))
+            .collect::<Vec<_>>()
+            .concat();
+        std::fs::write(
+            dir.join("model_catalog.py"),
+            format!(
+                "CONTEXT_WINDOWS = {{'claude-x': 1}}\nALIASES = {{\n{rows}}}\nOTHER = {{'k': 1}}\n"
+            ),
+        )
+        .unwrap();
+        self.plugins.lock().unwrap().push(PluginEntry {
+            name: PROVIDER_ID.into(),
+            enabled: true, // a model provider needs no enable entry: Hermes lists it as enabled
+        });
+        Ok(())
+    }
     async fn free_models(&self, provider: &str) -> Result<Vec<String>> {
         assert_eq!(provider, "openrouter");
         Ok(self.catalogue.lock().unwrap().clone())
@@ -143,6 +246,7 @@ impl HermesOps for Fake {
 struct Rig {
     dir: tempfile::TempDir,
     fake: Arc<Fake>,
+    claude: Arc<FakeClaude>,
     store: Arc<MemoryStore>,
     bundle: Bundle,
 }
@@ -159,6 +263,7 @@ fn rig(config: Value) -> Rig {
     std::fs::create_dir_all(&home).unwrap();
     Rig {
         fake: Fake::new(home, config),
+        claude: FakeClaude::new(),
         store: Arc::new(MemoryStore::default()),
         bundle: Bundle {
             plugin_dir: Some(plugin),
@@ -171,6 +276,7 @@ fn rig(config: Value) -> Rig {
 impl Rig {
     fn setup(&self) -> Setup {
         Setup::new(self.fake.clone(), self.store.clone(), self.bundle.clone())
+            .with_claude(self.claude.clone())
     }
 }
 
@@ -927,7 +1033,16 @@ async fn with_no_key_the_free_tier_is_the_first_choice_and_the_default_and_nothi
     let form = s.form.unwrap();
     assert_eq!(form.form_id, "setup.ladder");
     let ids = enum_of(&form, "choice");
-    assert_eq!(&ids[..3], ["free", "openrouter-free", "anthropic"]);
+    assert_eq!(
+        &ids[..4],
+        [
+            "free",
+            "openrouter-free",
+            "anthropic",
+            "claude-subscription"
+        ],
+        "the free choices stay first and the default, the API key choice keeps its place"
+    );
     let field = &form.schema.0["properties"]["choice"];
     assert_eq!(
         field["default"], "free",
@@ -1312,4 +1427,503 @@ fn the_catalogue_reader_takes_zero_priced_and_free_tagged_rows_of_the_asked_prov
     );
     assert!(super::ops::free_models_of(&answer, "nope").is_empty());
     assert!(super::ops::free_models_of(&json!({}), "openrouter").is_empty());
+}
+
+// ── the Claude subscription (ADR-0029) ──────────────────────────────────────────────────────────────────────────────
+
+/// Walk to the question, choose the Claude subscription, and return what the host shows next.
+async fn choose_subscription(r: &Rig) -> super::Status {
+    at_models(r).await;
+    choose(r, "claude-subscription").await
+}
+
+fn rows(form: &super::Form) -> String {
+    form.contents
+        .iter()
+        .map(|(a, b)| format!("{a}: {b}"))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn plugin_names(r: &Rig) -> Vec<String> {
+    r.fake
+        .plugins
+        .lock()
+        .unwrap()
+        .iter()
+        .map(|p| p.name.clone())
+        .collect()
+}
+
+fn nothing_secret_was_touched(r: &Rig) {
+    // boopis never sees a Claude credential: nothing is stored, and no configuration write names a key or a token
+    assert!(
+        r.store
+            .get("boopis.provider.claude-subscription", "api_key")
+            .unwrap()
+            .is_none()
+    );
+    for key in r.fake.sets.lock().unwrap().iter() {
+        let low = key.to_ascii_lowercase();
+        assert!(
+            !low.contains("token") && !low.contains("secret") && !low.contains("key_env"),
+            "{key}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn the_models_question_offers_the_subscription_with_a_note_when_claude_code_is_missing_or_signed_out()
+ {
+    let r = rig(json!({}));
+    let form = at_models(&r).await.form.unwrap();
+    assert_eq!(form.form_id, "setup.ladder");
+    let ids = enum_of(&form, "choice");
+    let at = ids.iter().position(|i| i == "claude-subscription").unwrap();
+    assert_eq!(
+        form.schema.0["properties"]["choice"]["enumNames"][at],
+        "Claude subscription (your Claude Code login)"
+    );
+    assert_eq!(
+        &ids[..3],
+        ["free", "openrouter-free", "anthropic"],
+        "the free choices stay first, the API key choice stays"
+    );
+    assert_eq!(form.schema.0["properties"]["choice"]["default"], "free");
+    assert!(
+        form.body.contains("Claude Code is not installed")
+            && form
+                .body
+                .contains("npm install -g @anthropic-ai/claude-code")
+            && form.body.contains("claude auth login"),
+        "{}",
+        form.body
+    );
+
+    // signed out: the same choice, a different note
+    r.claude.is(
+        true,
+        "2.1.328 (Claude Code)",
+        Some(&json!({"loggedIn": false})),
+    );
+    r.setup().reopen_models().unwrap();
+    let form = r.setup().advance(None, false).await.unwrap().form.unwrap();
+    assert!(
+        form.body.contains("installed but not signed in")
+            && form.body.contains("claude auth login"),
+        "{}",
+        form.body
+    );
+    assert!(
+        !form.body.contains("npm install"),
+        "signed out is not 'not installed'"
+    );
+
+    // signed in: the note says it is ready and that boopis never sees the login
+    r.claude.signed_in("2.1.328 (Claude Code)");
+    r.setup().reopen_models().unwrap();
+    let form = r.setup().advance(None, false).await.unwrap().form.unwrap();
+    assert!(
+        form.body.contains("is signed in (Claude Max)")
+            && form.body.contains("never sees your Claude login"),
+        "{}",
+        form.body
+    );
+    assert_eq!(enum_of(&form, "choice")[0], "free");
+}
+
+#[tokio::test]
+async fn not_installed_shows_the_install_and_sign_in_commands_and_changes_nothing() {
+    let r = rig(json!({}));
+    let s = choose_subscription(&r).await;
+    assert_eq!(state_of(&s, "models"), StepState::NeedsInput);
+    let form = s.form.unwrap();
+    assert_eq!(form.form_id, "setup.claude");
+    assert!(form.title.contains("Install Claude Code"), "{}", form.title);
+    let shown = rows(&form);
+    assert!(
+        shown.contains("`npm install -g @anthropic-ai/claude-code`")
+            && shown.contains("`claude auth login`"),
+        "{shown}"
+    );
+    assert_eq!(form.submit.0["label"], "Check again");
+    assert_eq!(form.cancel.0["label"], "Choose another model");
+    assert!(
+        !form
+            .body
+            .to_ascii_lowercase()
+            .contains("sign in with google"),
+        "no login screen of ours"
+    );
+    // nothing installed, nothing written
+    assert!(!plugin_names(&r).contains(&PROVIDER_ID.to_owned()));
+    assert_eq!(r.fake.plugin_catalog.lock().unwrap().installs, 0);
+    assert!(r.fake.config_get(LADDER).await.unwrap().is_none());
+    // "Check again" with nothing changed asks the same thing again, and is not an error
+    let again = r
+        .setup()
+        .advance(Some(answer("setup.claude", json!({}), json!({}))), false)
+        .await
+        .unwrap();
+    assert_eq!(again.form.unwrap().form_id, "setup.claude");
+    nothing_secret_was_touched(&r);
+}
+
+#[tokio::test]
+async fn signed_out_says_so_and_shows_only_the_sign_in_command() {
+    let r = rig(json!({}));
+    r.claude.is(
+        true,
+        "2.1.328 (Claude Code)",
+        Some(&json!({"loggedIn": false})),
+    );
+    let form = choose_subscription(&r).await.form.unwrap();
+    assert_eq!(form.form_id, "setup.claude");
+    assert!(
+        form.title.contains("Sign in to Claude Code"),
+        "{}",
+        form.title
+    );
+    assert_eq!(rows(&form), "Sign in: `claude auth login`");
+    assert!(
+        form.body.contains("never sees, reads or stores it"),
+        "{}",
+        form.body
+    );
+    // a login that bills the API is not the subscription
+    r.claude.is(
+        true,
+        "2.1.328",
+        Some(&json!({"loggedIn": true, "authMethod": "api_key"})),
+    );
+    let form = r
+        .setup()
+        .advance(Some(answer("setup.claude", json!({}), json!({}))), false)
+        .await
+        .unwrap()
+        .form
+        .unwrap();
+    assert!(
+        form.body.contains("an Anthropic API key") && form.body.contains("bills API usage"),
+        "{}",
+        form.body
+    );
+    assert_eq!(rows(&form), "Sign in: `claude auth login`");
+}
+
+#[tokio::test]
+async fn an_old_claude_code_is_told_the_minimum_and_how_to_update() {
+    let r = rig(json!({}));
+    r.claude.signed_in("2.1.200 (Claude Code)");
+    let form = choose_subscription(&r).await.form.unwrap();
+    assert_eq!(form.form_id, "setup.claude");
+    assert!(form.title.contains("Update Claude Code"));
+    assert!(
+        form.body.contains("2.1.200") && form.body.contains("2.1.280"),
+        "{}",
+        form.body
+    );
+    assert_eq!(rows(&form), "Update it: `claude update`");
+    assert_eq!(r.fake.plugin_catalog.lock().unwrap().installs, 0);
+}
+
+#[tokio::test]
+async fn once_claude_code_is_ready_the_plugin_is_reviewed_then_installed_and_the_ladder_written() {
+    let r = rig(json!({}));
+    let s = choose_subscription(&r).await;
+    assert_eq!(s.form.as_ref().unwrap().form_id, "setup.claude");
+    r.claude.signed_in("2.1.328 (Claude Code)");
+    // Check again: the review of what will be installed comes first, and nothing is changed by it
+    let s = r
+        .setup()
+        .advance(Some(answer("setup.claude", json!({}), json!({}))), false)
+        .await
+        .unwrap();
+    let form = s.form.unwrap();
+    assert_eq!(form.form_id, "setup.claude.install");
+    assert_eq!(form.kind, "connector");
+    assert_eq!(
+        form.pinned.as_deref(),
+        Some("6313fad5ddf2c060e7b16782f4860c0d5cdbfcac")
+    );
+    let shown = rows(&form);
+    for want in [
+        "claude-subscription-directsdk 0.3.5 (official, from Hermes's plugin catalog)",
+        "https://github.com/NousResearch/hermes-official-plugins#claude-subscription-directsdk",
+        "registers no tool, hook or middleware",
+        "the plugin has no credentials of its own",
+        "2.1.328, signed in (Claude Max)",
+    ] {
+        assert!(shown.contains(want), "{want} in\n{shown}");
+    }
+    assert!(shown.contains("plugins"), "it says where it goes: {shown}");
+    assert!(
+        form.effect
+            .as_deref()
+            .unwrap()
+            .contains("hermes plugins install claude-subscription-directsdk --no-enable")
+    );
+    assert_eq!(
+        r.fake.plugin_catalog.lock().unwrap().installs,
+        0,
+        "showing it installs nothing"
+    );
+    assert!(r.fake.config_get(LADDER).await.unwrap().is_none());
+
+    // the user agrees: the catalog's build is installed, once, and the ladder is the plugin's aliases, cheapest first
+    let s = r
+        .setup()
+        .advance(
+            Some(answer("setup.claude.install", json!({}), json!({}))),
+            false,
+        )
+        .await
+        .unwrap();
+    assert!(s.done && s.form.is_none(), "{:?}", s.steps);
+    assert_eq!(r.fake.plugin_catalog.lock().unwrap().installs, 1);
+    assert!(
+        plugin_names(&r).contains(&PROVIDER_ID.to_owned()),
+        "Hermes lists the provider afterwards"
+    );
+    assert_eq!(
+        r.fake.config_get(LADDER).await.unwrap().unwrap(),
+        json!({"tiers": [
+            {"name": "haiku", "model": "claude-subscription-directsdk-experimental/haiku"},
+            {"name": "sonnet", "model": "claude-subscription-directsdk-experimental/sonnet"},
+            {"name": "opus", "model": "claude-subscription-directsdk-experimental/opus"}]})
+    );
+    assert!(
+        *r.fake.restarts.lock().unwrap() >= 1,
+        "Hermes restarts to load the provider"
+    );
+    let receipt = s.receipt.unwrap().lines.join("\n");
+    assert!(
+        receipt.contains(
+            "Claude subscription (Claude Max): haiku, sonnet, opus on your Claude Code login"
+        ),
+        "{receipt}"
+    );
+    assert!(
+        !receipt.contains("plugin settings"),
+        "the old line is gone: {receipt}"
+    );
+    // a model provider needs no enable entry, and none was written
+    assert!(
+        !r.fake
+            .sets
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|k| k.contains("plugins.enabled"))
+    );
+    nothing_secret_was_touched(&r);
+
+    // running it again changes nothing: no second install, the same ladder
+    let sets = r.fake.sets.lock().unwrap().len();
+    let again = r.setup().advance(None, false).await.unwrap();
+    assert!(again.done);
+    assert_eq!(r.fake.plugin_catalog.lock().unwrap().installs, 1);
+    assert_eq!(r.fake.sets.lock().unwrap().len(), sets);
+}
+
+#[tokio::test]
+async fn the_ladder_follows_what_the_installed_claude_code_and_plugin_serve() {
+    // Claude Code 2.1.285 serves sonnet and opus, not haiku (it needs 2.1.293)
+    let r = rig(json!({}));
+    r.claude.signed_in("2.1.285 (Claude Code)");
+    choose_subscription(&r).await;
+    r.setup()
+        .advance(
+            Some(answer("setup.claude.install", json!({}), json!({}))),
+            false,
+        )
+        .await
+        .unwrap();
+    assert_eq!(ladder_names(&r).await, ["sonnet", "opus"]);
+
+    // a pinned plugin that does not know `sonnet` is not asked for it, whatever Claude Code serves
+    let r = rig(json!({}));
+    r.claude.signed_in("2.1.328");
+    r.fake.plugin_catalog.lock().unwrap().aliases = vec!["haiku", "opus"];
+    choose_subscription(&r).await;
+    let s = r
+        .setup()
+        .advance(
+            Some(answer("setup.claude.install", json!({}), json!({}))),
+            false,
+        )
+        .await
+        .unwrap();
+    assert!(s.done, "{:?}", s.steps);
+    assert_eq!(ladder_names(&r).await, ["haiku", "opus"]);
+}
+
+async fn ladder_names(r: &Rig) -> Vec<String> {
+    let v = r.fake.config_get(LADDER).await.unwrap().unwrap();
+    v["tiers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|t| t["name"].as_str().unwrap().to_owned())
+        .collect()
+}
+
+#[tokio::test]
+async fn declining_the_plugin_goes_back_to_the_models_question_and_installs_nothing() {
+    let r = rig(json!({}));
+    r.claude.signed_in("2.1.328");
+    let s = choose_subscription(&r).await;
+    assert_eq!(s.form.unwrap().form_id, "setup.claude.install");
+    let mut no = answer("setup.claude.install", json!({}), json!({}));
+    no.cancelled = true;
+    let s = r.setup().advance(Some(no), false).await.unwrap();
+    let form = s.form.unwrap();
+    assert_eq!(form.form_id, "setup.ladder", "{:?}", s.steps);
+    assert_eq!(enum_of(&form, "choice")[0], "free");
+    assert_eq!(r.fake.plugin_catalog.lock().unwrap().installs, 0);
+    assert!(r.fake.config_get(LADDER).await.unwrap().is_none());
+    // and "choose another model" from the instructions does the same
+    let r = rig(json!({}));
+    choose_subscription(&r).await;
+    let mut other = answer("setup.claude", json!({}), json!({}));
+    other.cancelled = true;
+    let s = r.setup().advance(Some(other), false).await.unwrap();
+    assert_eq!(s.form.unwrap().form_id, "setup.ladder");
+}
+
+#[tokio::test]
+async fn an_unreachable_catalog_is_said_and_a_retry_installs_without_asking_again() {
+    let r = rig(json!({}));
+    r.claude.signed_in("2.1.328");
+    r.fake.plugin_catalog.lock().unwrap().refuse = Some(super::ops::install_refusal(
+        "Error: Could not download the plugin from https://github.com/NousResearch/hermes-official-plugins.",
+        "",
+    ));
+    choose_subscription(&r).await;
+    let s = r
+        .setup()
+        .advance(
+            Some(answer("setup.claude.install", json!({}), json!({}))),
+            false,
+        )
+        .await
+        .unwrap();
+    assert!(!s.done);
+    let step = s.steps.iter().find(|x| x.id == "models").unwrap();
+    assert_eq!(step.state, StepState::Blocked);
+    assert_eq!(
+        step.code.as_deref(),
+        Some("hx.setup.subscription_unreachable")
+    );
+    assert!(
+        step.detail.contains("could not reach the plugin catalog")
+            && step.detail.contains("Nothing was installed"),
+        "{}",
+        step.detail
+    );
+    assert!(
+        r.fake.config_get(LADDER).await.unwrap().is_none(),
+        "no ladder without the plugin"
+    );
+    assert!(!plugin_names(&r).contains(&PROVIDER_ID.to_owned()));
+
+    // the network is back: Retry (the same call, no answer) installs, and the user is not asked again
+    r.fake.plugin_catalog.lock().unwrap().refuse = None;
+    let s = r.setup().advance(None, false).await.unwrap();
+    assert!(s.done && s.form.is_none(), "{:?}", s.steps);
+    assert_eq!(r.fake.plugin_catalog.lock().unwrap().installs, 1);
+}
+
+#[tokio::test]
+async fn any_other_refusal_by_hermes_carries_its_own_reason() {
+    let e = super::ops::install_refusal(
+        "Error: Plugin 'x' was removed from the Hermes plugin catalog and is blocked from installation: unsafe\n",
+        "",
+    );
+    assert_eq!(e.code(), "hx.setup.subscription_install_failed");
+    assert!(
+        e.to_string()
+            .contains("was removed from the Hermes plugin catalog"),
+        "{e}"
+    );
+    let silent = super::ops::install_refusal("", "");
+    assert!(silent.to_string().contains("it gave no reason"));
+    // a catalog with no such plugin cannot be installed from
+    let r = rig(json!({}));
+    r.claude.signed_in("2.1.328");
+    r.fake.plugin_catalog.lock().unwrap().entry = None;
+    let s = choose_subscription(&r).await;
+    let step = s.steps.iter().find(|x| x.id == "models").unwrap();
+    assert_eq!(step.state, StepState::Blocked);
+    assert_eq!(
+        step.code.as_deref(),
+        Some("hx.setup.subscription_install_failed")
+    );
+}
+
+#[tokio::test]
+async fn a_plugin_that_is_already_there_is_not_installed_again_or_asked_about() {
+    let r = rig(json!({}));
+    r.claude.signed_in("2.1.328");
+    r.fake.plugins.lock().unwrap().push(PluginEntry {
+        name: PROVIDER_ID.into(),
+        enabled: true,
+    });
+    let s = choose_subscription(&r).await;
+    assert!(s.done && s.form.is_none(), "{:?}", s.steps);
+    assert_eq!(r.fake.plugin_catalog.lock().unwrap().installs, 0);
+    assert_eq!(
+        r.fake.config_get(LADDER).await.unwrap().unwrap()["tiers"]
+            .as_array()
+            .unwrap()
+            .len(),
+        3
+    );
+}
+
+#[tokio::test]
+async fn the_models_view_reports_claude_codes_state_and_whether_the_plugin_is_there() {
+    let r = rig(json!({}));
+    let v = r.setup().models_view().await.unwrap();
+    assert_eq!(v.claude.state, claude::State::NotInstalled);
+    assert!(!v.claude_plugin);
+    r.claude.signed_in("2.1.328 (Claude Code)");
+    r.fake.plugins.lock().unwrap().push(PluginEntry {
+        name: PROVIDER_ID.into(),
+        enabled: true,
+    });
+    let v = r.setup().models_view().await.unwrap();
+    assert_eq!(v.claude.state, claude::State::SignedIn);
+    assert_eq!(
+        (v.claude.version.as_deref(), v.claude.plan.as_deref()),
+        (Some("2.1.328"), Some("Claude Max"))
+    );
+    assert!(v.claude_plugin);
+    r.claude
+        .is(true, "2.1.328", Some(&json!({"loggedIn": false})));
+    assert_eq!(
+        r.setup().models_view().await.unwrap().claude.state,
+        claude::State::SignedOut
+    );
+}
+
+#[test]
+fn the_catalog_reader_takes_the_pinned_row_and_the_install_refusal_is_in_plain_words() {
+    let answer = json!({"results": [
+        {"name": "other", "sha": "x"},
+        {"name": "claude-subscription-directsdk", "version": "0.3.5", "sha": "abc", "repo": "https://r", "subdir": "d", "tier": "official",
+         "capabilities": {"provides_tools": ["t"], "provides_hooks": [], "provides_middleware": ["m1", "m2"]}}]});
+    let e = super::ops::catalog_entry_of(&answer, "claude-subscription-directsdk").unwrap();
+    assert_eq!(
+        (e.version.as_str(), e.sha.as_str(), e.subdir.as_str()),
+        ("0.3.5", "abc", "d")
+    );
+    assert_eq!(e.provides, ["tools: t", "middleware: m1, m2"]);
+    assert!(super::ops::catalog_entry_of(&answer, "nope").is_none());
+    assert!(super::ops::catalog_entry_of(&json!({}), "x").is_none());
+    let net = super::ops::install_refusal(
+        "",
+        "fatal: unable to access ... check your internet connection",
+    );
+    assert_eq!(net.code(), "hx.setup.subscription_unreachable");
 }

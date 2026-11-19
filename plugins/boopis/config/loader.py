@@ -34,6 +34,12 @@ from .model import (
 from .trust import KIND_SETTINGS, TrustStore, content_hash
 
 PROJECT_FILE = Path(".hermes") / "boopis.yaml"
+
+
+def _plan_providers() -> tuple[str, ...]:
+    return tuple(cast(list[str], schema_default("plugin-settings", "subscription_providers")))
+
+
 _SCHEMA_DIR = Path(__file__).with_name("schemas")
 
 GetConfig = Callable[[str, Any], Any]
@@ -63,7 +69,9 @@ class Loaded:
 
 
 def default_settings() -> Settings:
-    return Settings(mode=cast(Mode, schema_default("plugin-settings", "mode")))
+    return Settings(
+        mode=cast(Mode, schema_default("plugin-settings", "mode")), subscription_providers=_plan_providers()
+    )
 
 
 def _exec_settings(raw: Mapping[str, Any] | None) -> ExecSettings:
@@ -142,7 +150,9 @@ def parse_settings(raw: Mapping[str, Any], *, source: str = "plugins.entries.boo
             },
             aliases=dict(prices_raw.get("aliases") or {}),
         ),
-        subscription_providers=tuple(raw.get("subscription_providers", ())),
+        # the schema's default names the providers that are a plan by construction (the Claude Code login, ADR-0029): a
+        # list the user writes adds to them, it never removes them
+        subscription_providers=tuple(dict.fromkeys((*_plan_providers(), *raw.get("subscription_providers", ())))),
         permissions=_rules(perms, cast(Fallback, schema_default("plugin-settings", "permissions", "default"))),
         pack=PackSettings(
             max_bytes=int(pack_raw.get("max_bytes", schema_default("plugin-settings", "pack", "max_bytes")))

@@ -19,7 +19,7 @@ use tokio::io::AsyncReadExt;
 use tokio::process::Command;
 use tokio_util::sync::CancellationToken;
 
-use super::logins::{HERMES_PROGRAM, LoginTable};
+use super::logins::{CLAUDE_PROGRAM, HERMES_PROGRAM, LoginTable};
 use super::ops::{Installed, McpOps, TestReport};
 use super::plan::{self, Request, Review};
 use super::validate;
@@ -820,6 +820,18 @@ impl Engine {
                 bin.display().to_string(),
                 vec![("HERMES_HOME".to_owned(), home.display().to_string())],
             )
+        } else if entry.program == CLAUDE_PROGRAM {
+            // the `claude` the Claude subscription plugin would run (its own lookup), not whichever one a bare PATH names
+            let found = crate::claude::resolve(&crate::claude::child_env()).ok_or_else(|| {
+                Error::Connector(
+                    "hx.connectors.command_failed",
+                    format!(
+                        "Claude Code is not installed. Install it with `{}`, then try again.",
+                        crate::claude::INSTALL_COMMAND
+                    ),
+                )
+            })?;
+            (found.display().to_string(), Vec::new())
         } else {
             (entry.program.clone(), Vec::new())
         };

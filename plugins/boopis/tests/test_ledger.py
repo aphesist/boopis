@@ -219,6 +219,17 @@ def test_stats_are_read_off_the_events(tmp_path: Path) -> None:
     assert stats["unpriced_models"] == []
 
 
+def test_stats_say_when_every_request_was_a_plans(tmp_path: Path) -> None:
+    ledger = SessionLedger(tmp_path / "s.jsonl")
+    table = build_book(settings({}))
+    assert compute_stats(ledger.read(), table, ("sub",))["subscription"] is False  # nothing recorded yet
+    ledger.append("usage.recorded", "plugin", usage(provider="sub"))
+    plan = compute_stats(ledger.read(), table, ("sub",))
+    assert (plan["subscription"], plan["cost_usd"]) == (True, 0.0)
+    ledger.append("usage.recorded", "plugin", usage(provider="other"))
+    assert compute_stats(ledger.read(), table, ("sub",))["subscription"] is False
+
+
 def test_stats_with_no_price_say_unknown(tmp_path: Path) -> None:
     ledger = SessionLedger(tmp_path / "s.jsonl")
     ledger.append("usage.recorded", "plugin", usage())

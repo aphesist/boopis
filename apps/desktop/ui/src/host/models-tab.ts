@@ -27,6 +27,32 @@ export const realModelsDeps = (closeSettings: () => void): ModelsDeps => ({
 
 const SCOPE = 'A task starts at the first tier and moves to the next only when its gate fails.';
 
+const CLAUDE_STATE: Readonly<Record<ModelsView['claude']['state'], string>> = {
+  signed_in: 'Signed in', signed_out: 'Not signed in', not_installed: 'Not installed', metered: 'Signed in, but not to your subscription', old_version: 'Needs an update'
+};
+const esc = (t: string): string => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] ?? c);
+
+/** The Claude subscription section's rows: whether the user's own Claude Code is signed in, its version, and whether Hermes has
+    the plugin. Everything is what the host read from the CLI's own commands; a plan or version it did not report is not shown. */
+export function claudeRows(view: ModelsView | { error: string }): string[] {
+  if ('error' in view) return [ui.html.setRow({ label: 'Claude Code', hint: `Not read: ${view.error}` })];
+  const c = view.claude;
+  const word = c.state === 'signed_in' && c.plan ? `${CLAUDE_STATE[c.state]} (${c.plan})` : CLAUDE_STATE[c.state];
+  const hint = c.state === 'signed_in' ? 'Runs on your own Claude Code login, through Hermes\'s official plugin. boopis never sees your Claude login.' : c.detail;
+  const rows = [
+    ui.html.setRow({
+      label: 'Claude Code', hint,
+      control: '<span class="ui-set__value">' + esc(word) + '</span>' + (c.state === 'signed_in' ? '' : ui.html.button({ label: 'Check again', size: 's', attrs: { id: 'hx-claude-check' } }))
+    }),
+    ui.html.setRow({ label: 'Version', control: '<span class="ui-set__value">' + esc(c.version ?? 'Not reported') + '</span>' }),
+    ui.html.setRow({
+      label: 'Plugin', hint: view.claude_plugin ? null : 'Hermes\'s Claude subscription plugin. Change models installs it, after showing you what it is, when you choose the Claude subscription.',
+      control: '<span class="ui-set__value">' + (view.claude_plugin ? 'Installed in Hermes' : 'Not installed') + '</span>'
+    })
+  ];
+  return rows;
+}
+
 /** the ladder section's rows for what the host read, or for why it could not */
 export function ladderRows(view: ModelsView | { error: string }): string[] {
   if ('error' in view) return [ui.html.setRow({ label: 'Tiers', hint: `Hermes could not be asked, so the ladder is not shown: ${view.error}` })];
@@ -47,6 +73,10 @@ export async function mountModels(panel: HTMLElement, deps: ModelsDeps): Promise
   ladder.className = 'hx-set';
   ladder.setAttribute('aria-labelledby', 'hx-set-ladder-h');
   panel.append(ladder);
+  const claude = document.createElement('section');
+  claude.className = 'hx-set';
+  claude.setAttribute('aria-labelledby', 'hx-set-claude-h');
+  panel.append(claude);
   const change = document.createElement('section');
   change.className = 'hx-set';
   change.setAttribute('aria-labelledby', 'hx-set-change-h');
@@ -59,11 +89,15 @@ export async function mountModels(panel: HTMLElement, deps: ModelsDeps): Promise
   change.querySelector('#hx-models-change')?.addEventListener('click', () => {
     void deps.change().then(() => { deps.closeSettings(); }).catch((e: unknown) => { deps.toast(e instanceof Error ? e.message : 'That did not work'); });
   });
+  /* one read of the host feeds both sections: the ladder and Claude Code's state */
   const drawLadder = async (): Promise<void> => {
-    let rows: string[];
-    try { rows = ladderRows(await deps.ladder()); } catch (e) { rows = ladderRows({ error: e instanceof Error ? e.message : 'unknown error' }); }
-    ladder.innerHTML = '<h3 class="ui-set__head" id="hx-set-ladder-h">Model ladder</h3>' + rows.join('');
+    let view: ModelsView | { error: string };
+    try { view = await deps.ladder(); } catch (e) { view = { error: e instanceof Error ? e.message : 'unknown error' }; }
+    ladder.innerHTML = '<h3 class="ui-set__head" id="hx-set-ladder-h">Model ladder</h3>' + ladderRows(view).join('');
+    claude.innerHTML = '<h3 class="ui-set__head" id="hx-set-claude-h">Claude subscription</h3>' + claudeRows(view).join('');
     ui.hydrate(ladder);
+    ui.hydrate(claude);
+    claude.querySelector('#hx-claude-check')?.addEventListener('click', () => { void drawLadder(); });
   };
   await drawLadder();
   return { refresh: async () => { await Promise.all([plan.refresh(), drawLadder()]); } };

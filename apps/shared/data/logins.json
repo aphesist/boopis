@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "description": "The sign-in commands boopis may run on a form's behalf, by provider id. A form (an agent's, a teammate's, a mod's) names a provider and never a command: the host looks the provider up here and runs exactly this program and argument vector, as a vector, never through a shell. Every entry is a real login command of a tool Hermes or a collection entry uses, checked on the date in `verified` against the sources listed. `program` \"hermes\" means the Hermes the host runs (its own path and home). Not here yet: `gh auth login` and Hermes's own device-code logins (`hermes auth add nous|openai-codex --type oauth`), because they print a one-time code the user must read while the command runs, and boopis shows a command's output only when it ends. See docs/CONNECTORS.md.",
+  "description": "The sign-in commands boopis may run on a form's behalf, by provider id. A form (an agent's, a teammate's, a mod's) names a provider and never a command: the host looks the provider up here and runs exactly this program and argument vector, as a vector, never through a shell. Every entry is a real login command of a tool Hermes or a collection entry uses, checked on the date in `verified` against the sources listed. `program` \"hermes\" means the Hermes the host runs (its own path and home), and \"claude\" the user's own Claude Code, found the way Hermes's Claude subscription plugin finds it. Not here yet: `gh auth login` and Hermes's own device-code logins (`hermes auth add nous|openai-codex --type oauth`), because they print a one-time code the user must read while the command runs, and boopis shows a command's output only when it ends. See docs/CONNECTORS.md.",
   "logins": [
     {
       "id": "gcloud",
@@ -16,6 +16,25 @@
         "sources": [
           "gcloud auth login --help (Google Cloud SDK 570.0.0): `gcloud auth login [ACCOUNT] [--no-activate] [--brief] ...`; the default is a browser flow that returns to a localhost address, so no code is read from the terminal",
           "https://cloud.google.com/sdk/gcloud/reference/auth/login"
+        ]
+      }
+    },
+    {
+      "id": "claude-code",
+      "name": "Claude Code",
+      "program": "claude",
+      "args": [
+        "auth",
+        "login",
+        "--claudeai"
+      ],
+      "verified": {
+        "date": "2026-11-19",
+        "sources": [
+          "claude auth login --help (Claude Code 2.1.328): `--claudeai` uses the Claude subscription (the default), `--console` the Anthropic Console with API usage billing. The subscription flag is explicit so a sign-in here can never be the metered one",
+          "Run with standard input closed (as the host runs it) and a stand-in browser: it opened https://claude.com/cai/oauth/authorize with redirect_uri=http://localhost:<port>/callback, kept running, and printed the optional line `Paste code here if prompted >`; a callback to that loopback port was accepted without any input at the terminal and the CLI went on to exchange the code (a made-up code was refused with HTTP 400, exit 1). No account was signed in to, so a completed sign-in was not observed",
+          "https://code.claude.com/docs/en/authentication: the browser flow returns to the CLI by itself; a code is pasted only if the browser shows one instead of redirecting back. That shows when the CLI's own browser launch fails and the user opens the printed link, which uses a different redirect: the command then waits for a code the host cannot give it and is stopped by the host's timeout",
+          "https://code.claude.com/docs/en/cli-reference: `claude auth login`, `claude auth status`"
         ]
       }
     }
