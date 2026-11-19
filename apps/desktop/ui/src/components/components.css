@@ -66,26 +66,28 @@
    WebKitGTK, Tauri's Linux engine, ignores scrollbar-width and scrollbar-color and draws GTK's wide default bar; Chromium 121 and
    later ignore every ::-webkit-scrollbar rule on an element that sets either. So the bar is drawn with ::-webkit-scrollbar alone and
    nothing sets the standard pair, except scrollbar-width: none on a hidden bar (R-scroll-1). The sizes and colours are the design
-   system's scrollbar tokens; the fallbacks are their values, for the time before tokens.css carries them (R-scroll-2 and 3 are
-   Proposed: a ruling changes the token, nothing here). */
-:where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll)::-webkit-scrollbar, :where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll) ::-webkit-scrollbar { width: var(--scroll-size, 10px); height: var(--scroll-size, 10px); background: transparent; }
+   system's scrollbar tokens (--scroll-*, tokens.css): R-scroll-2 and R-scroll-3 are Proposed, and a ruling changes a token, nothing
+   here. */
+:where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll)::-webkit-scrollbar, :where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll) ::-webkit-scrollbar { width: var(--scroll-size); height: var(--scroll-size); background: transparent; }
 :where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll)::-webkit-scrollbar-thumb, :where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll) ::-webkit-scrollbar-thumb {
-  min-width: var(--scroll-thumb-min, 32px); min-height: var(--scroll-thumb-min, 32px); border-radius: var(--r-pill);
-  border: calc((var(--scroll-size, 10px) - var(--scroll-thumb, 4px)) / 2) solid transparent;
-  background: var(--scroll-thumb-color, var(--bg-4)) padding-box;
+  min-width: var(--scroll-thumb-min); min-height: var(--scroll-thumb-min); border-radius: var(--r-pill);
+  border: calc((var(--scroll-size) - var(--scroll-thumb)) / 2) solid transparent;
+  background: var(--scroll-thumb-color) padding-box;
 }
-:where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll):is(::-webkit-scrollbar-thumb:hover, ::-webkit-scrollbar-thumb:active), :where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll) :is(::-webkit-scrollbar-thumb:hover, ::-webkit-scrollbar-thumb:active) {
-  border-width: calc((var(--scroll-size, 10px) - var(--scroll-thumb-active, 6px)) / 2); background-color: var(--scroll-thumb-color-active, var(--mark-off));
-}
+@media (hover: hover) and (pointer: fine) { :where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll):is(::-webkit-scrollbar-thumb:hover, ::-webkit-scrollbar-thumb:active), :where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll) :is(::-webkit-scrollbar-thumb:hover, ::-webkit-scrollbar-thumb:active) {
+  border-width: calc((var(--scroll-size) - var(--scroll-thumb-active)) / 2); background-color: var(--scroll-thumb-color-active);
+} }
 :where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll):is(::-webkit-scrollbar-track, ::-webkit-scrollbar-corner), :where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll) :is(::-webkit-scrollbar-track, ::-webkit-scrollbar-corner) { background: transparent; }
 :where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll)::-webkit-scrollbar-button, :where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll) ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
 /* the scroller itself (R-scroll-6 to 8): vertical by default (rows ellipsise, so it never scrolls sideways); --x a strip, code or a
    diff; --both a wide code block; --bare hides the bar (a tab strip, which fades its cut edge instead, R-scroll-7 and 9). It contains
    its scroll, so a wheel at its end never moves what is behind a dialog or a panel (R-scroll-8).
    --inset-end, --inset-both: the scroller ends at a curved corner of its container (a dialog's body, the palette's list, a listbox),
-   so the track stops short of the curve by the container's radius (R-scroll-5, Proposed).
-   Pending rule R-scroll-4 (Proposed: inset gutters, `overflow-y: scroll`) is not applied: it re-spaces every scroller; it would be
-   the one declaration `.ui-scroll { overflow-y: scroll }` here. */
+   so the track stops short of the curve by the container's radius (R-scroll-5, Proposed: this rule and those two lines).
+   --stable: a scroller whose content changes length while it is on screen (a dialog's body, the right panel, the sidebar lists, the
+   palette's list) keeps its gutter, so nothing reflows when the thumb appears; the idle track is clear (R-scroll-4, Proposed: this
+   one rule). It publishes the gutter as --scroll-gutter, and what pads the scroller's end takes it off (the side padding less the
+   bar), so the content stays centred in its surface. */
 .ui-scroll { overflow: hidden auto; overscroll-behavior: contain; }
 .ui-scroll--x { overflow: auto hidden; }
 .ui-scroll--both { overflow: auto; }
@@ -93,6 +95,7 @@
 .ui-scroll--bare::-webkit-scrollbar { display: none; }
 .ui-scroll--inset-end::-webkit-scrollbar-track { margin-block-end: var(--r-outer, 0px); }
 .ui-scroll--inset-both::-webkit-scrollbar-track { margin-block: var(--r-outer, 0px); }
+.ui-scroll--stable { overflow-y: scroll; --scroll-gutter: var(--scroll-size); }
 .ui-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .ui-mono { font-family: var(--mono); letter-spacing: var(--track-mono); font-variant-numeric: tabular-nums; }
 .ui-case { text-transform: var(--ui-case); }
@@ -113,14 +116,14 @@
   cursor: pointer; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
   transition: background-color var(--dur-out) var(--ease), color var(--dur-out) var(--ease), box-shadow var(--dur-out) var(--ease), transform var(--dur-press) var(--ease);
 }
-.ui-btn:hover { background: var(--hover); transition-duration: var(--dur-1), var(--dur-1), var(--dur-1), var(--dur-press); }
+@media (hover: hover) and (pointer: fine) { .ui-btn:hover { background: var(--hover); transition-duration: var(--dur-1), var(--dur-1), var(--dur-1), var(--dur-press); } }
 .ui-btn:active { transform: translateY(1px) scale(.985); }
 .ui-btn:disabled, .ui-btn[aria-disabled="true"] { color: var(--text-quiet); background: transparent; cursor: default; transform: none; }
 .ui-btn--primary { background: var(--selected); color: var(--text-on-light); box-shadow: none; }
-.ui-btn--primary:hover { background: var(--text-strong); }
+@media (hover: hover) and (pointer: fine) { .ui-btn--primary:hover { background: var(--text-strong); } }
 .ui-btn--primary:disabled, .ui-btn--primary[aria-disabled="true"] { background: var(--bg-4); color: var(--text-quiet); }
 .ui-btn--ghost { box-shadow: none; color: var(--text-dim); padding: 0 var(--sp-2); }
-.ui-btn--ghost:hover { color: var(--text-strong); }
+@media (hover: hover) and (pointer: fine) { .ui-btn--ghost:hover { color: var(--text-strong); } }
 .ui-btn--s { height: var(--ctl-s); padding: 0 10px; font-size: var(--fs-xs); }
 .ui-btn--ghost.ui-btn--s { padding: 0 var(--sp-2); }
 .ui-btn[data-armed] { box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--text-strong); }
@@ -154,14 +157,14 @@
   transition: opacity var(--dur-1) var(--ease), background-color var(--dur-1) var(--ease), transform var(--dur-press) var(--ease);
 }
 .ui-send .ui-icon { width: 16px; height: 16px; }
-.ui-send:hover:not(:disabled) { background: var(--text-strong); }
+@media (hover: hover) and (pointer: fine) { .ui-send:hover:not(:disabled) { background: var(--text-strong); } }
 .ui-send:active:not(:disabled) { transform: translateY(1px) scale(.96); }
 .ui-send:disabled { opacity: .35; cursor: default; }
 
 /* ───────────── hold to approve (the one control that commits by holding) ─────────────
    Card stock at rest; as you hold, an ordered dot field gathers under the press and fuses into the bone fill. */
 .ui-hold { min-width: 148px; overflow: hidden; isolation: isolate; background: var(--bg-3); box-shadow: inset 0 0 0 1px var(--hair); touch-action: none; }
-.ui-hold:hover { background: var(--bg-4); }
+@media (hover: hover) and (pointer: fine) { .ui-hold:hover { background: var(--bg-4); } }
 .ui-hold[data-state="holding"]:active { transform: none; }
 .ui-hold__fx, .ui-hold__solid { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .ui-hold__solid { background: var(--selected); clip-path: inset(0 100% 0 0); }
@@ -205,7 +208,7 @@
   font: 500 var(--fs-s)/1 var(--sans); color: var(--text-dim); white-space: nowrap; text-transform: var(--ui-case); cursor: pointer;
   transition: color var(--dur-2) var(--ease);
 }
-.ui-seg__opt:hover { color: var(--text-strong); }
+@media (hover: hover) and (pointer: fine) { .ui-seg__opt:hover { color: var(--text-strong); } }
 .ui-seg__opt[aria-selected="true"], .ui-seg__opt[aria-checked="true"] { color: var(--text-on-light); cursor: default; }
 .ui-seg__opt:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }   /* inside the track, which clips to its path */
 .ui-seg__opt .ui-dot { display: none; }
@@ -229,7 +232,7 @@
   transition: background-color var(--dur-out) var(--ease), color var(--dur-out) var(--ease), transform var(--dur-press) var(--ease);
 }
 .ui-tab > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.ui-tab:hover { --sq-bg: var(--hover); background: var(--sq-bg); color: var(--text); transition-duration: var(--dur-1); }
+@media (hover: hover) and (pointer: fine) { .ui-tab:hover { --sq-bg: var(--hover); background: var(--sq-bg); color: var(--text); transition-duration: var(--dur-1); } }
 .ui-tab:active { transform: translateY(1px) scale(.985); }
 .ui-tab[aria-selected="true"] { --sq-bg: var(--current); background: var(--sq-bg); color: var(--text-strong); }
 .ui-tab:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
@@ -248,7 +251,7 @@
 /* s: the boxed field on the title bar, a button */
 .ui-search--s {
   height: calc(var(--ctl-s) - 2px); padding: 0 var(--pad) 0 6px; margin: 0; border: 0;   /* the glyph centred in a 26px square (R-search-3) */
-  --r-outer: var(--r-s); --pad: 4px; --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad))); border-radius: var(--r-outer);
+  --r-outer: var(--r-s); --pad: var(--pad-tip); --r-in: var(--r-in-field); border-radius: var(--r-outer);   /* keys at its end: R-search-4, R-kbd-2 */
   --sq-bg: var(--bg-0); --sq-line: var(--hair); background: var(--sq-bg); box-shadow: inset 0 0 0 1px var(--hair);
   color: var(--text-quiet); cursor: pointer; text-align: left; font: inherit;
   transition: box-shadow var(--dur-1) var(--ease), background-color var(--dur-1) var(--ease);
@@ -264,7 +267,7 @@
   min-height: var(--ctl); padding: 0 10px 0 calc((var(--ctl) - 14px) / 2); gap: 8px; border-radius: var(--r-s);
   background: var(--bg-0); box-shadow: inset 0 0 0 1px var(--line-field); transition: box-shadow var(--dur-1) var(--ease);
 }
-.ui-search--m:hover { box-shadow: inset 0 0 0 1px var(--text-quiet); }
+@media (hover: hover) and (pointer: fine) { .ui-search--m:hover { box-shadow: inset 0 0 0 1px var(--text-quiet); } }
 .ui-search--m:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
 .ui-search--m .ui-search__input { font-size: var(--fs-s); color: var(--text); }
 
@@ -279,7 +282,7 @@
 }
 .ui-chip > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .ui-chip .ui-icon { width: 15px; height: 15px; }
-.ui-chip:hover { background: var(--hover); color: var(--text-strong); transition-duration: var(--dur-1); }
+@media (hover: hover) and (pointer: fine) { .ui-chip:hover { background: var(--hover); color: var(--text-strong); transition-duration: var(--dur-1); } }
 .ui-chip[aria-pressed="true"] { color: var(--text); }
 .ui-chip[aria-pressed="true"] .ui-icon { color: var(--brass); }
 .ui-chip[aria-pressed="false"] > span { text-decoration: line-through; text-decoration-color: var(--line-strong); }
@@ -308,7 +311,7 @@
   box-shadow: inset 0 0 0 1px var(--red); color: var(--red-text); font: 500 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono);
   white-space: nowrap; text-transform: var(--ui-case); transition: background-color var(--dur-1) var(--ease);
 }
-:is(button, a):hover > .ui-stamp, .ui-stamp:is(button):hover { background: var(--red-soft); }
+@media (hover: hover) and (pointer: fine) { :is(button, a):hover > .ui-stamp, .ui-stamp:is(button):hover { background: var(--red-soft); } }
 .ui-stamp:empty { display: none; }
 /* badge: a quiet mark, a chip's capsule in mono 11, outlined (the "made outside boopis" mark); never filled, never a stamp */
 .ui-badge {
@@ -326,7 +329,7 @@
 
 /* ───────────── list rows (sidebar lists, roster) ─────────────
    Every glyph or orb centres on the x = 28 axis and every label starts at x = 44, given the list's 8px inset. */
-.ui-rows { list-style: none; margin: 0; padding: 0 8px; }
+.ui-rows { list-style: none; margin: 0; padding: 0 max(0px, calc(8px - var(--scroll-gutter, 0px))) 0 8px; }
 .ui-group + .ui-group { margin-top: 12px; }
 .ui-group__head {
   appearance: none; display: flex; align-items: center; gap: 4px; box-sizing: border-box; width: 100%; height: calc(var(--row-h) - 6px); padding: 0 12px; margin: 0; border: 0;
@@ -334,7 +337,7 @@
   font: 500 var(--fs-xs)/1 var(--sans); color: var(--text-quiet); text-transform: var(--ui-case);
 }
 button.ui-group__head { cursor: pointer; }
-button.ui-group__head:hover { color: var(--text); }
+@media (hover: hover) and (pointer: fine) { button.ui-group__head:hover { color: var(--text); } }
 .ui-group__head .ui-icon { width: 10px; height: 10px; opacity: 0; transform: rotate(90deg); transition: transform var(--dur-2) var(--ease), opacity var(--dur-1) var(--ease); }
 .ui-group__head:hover .ui-icon, .ui-group__head:focus-visible .ui-icon, .ui-group__head[aria-expanded="false"] .ui-icon { opacity: 1; }
 .ui-group__head[aria-expanded="false"] .ui-icon { transform: none; }
@@ -345,7 +348,7 @@ button.ui-group__head:hover { color: var(--text); }
   font: 400 var(--fs-s)/var(--lh-ui) var(--sans); color: var(--text); text-align: left; cursor: pointer;
   transition: background-color var(--dur-out) var(--ease);
 }
-.ui-row:hover { --sq-bg: var(--hover); background: var(--sq-bg); transition-duration: var(--dur-1); }
+@media (hover: hover) and (pointer: fine) { .ui-row:hover { --sq-bg: var(--hover); background: var(--sq-bg); transition-duration: var(--dur-1); } }
 .ui-row[aria-current="true"], .ui-row[aria-current="page"], .ui-row[aria-selected="true"] { --sq-bg: var(--current); background: var(--sq-bg); color: var(--text-strong); }
 .ui-row--2 { height: var(--row-h-2); }
 .ui-row__lead { width: 16px; height: 16px; display: grid; place-items: center; flex: none; }
@@ -380,10 +383,10 @@ button.ui-group__head:hover { color: var(--text); }
   appearance: none; display: flex; align-items: flex-start; gap: 8px; width: 100%; box-sizing: border-box; min-height: var(--row-h); padding: 6px 8px; margin: 0; border: 0;
   border-radius: var(--r-in); --sq-bg: transparent; background: var(--sq-bg); font: inherit; color: var(--text); text-align: left; cursor: pointer;   /* concentric with the menu */
 }
-.ui-menu__item:hover, .ui-option:hover { --sq-bg: var(--hover); background: var(--sq-bg); }
+@media (hover: hover) and (pointer: fine) { .ui-menu__item:hover, .ui-option:hover { --sq-bg: var(--hover); background: var(--sq-bg); } }
 .ui-menu__item:focus-visible, .ui-option:focus-visible { --sq-bg: var(--current); background: var(--sq-bg); outline: none; box-shadow: inset 0 0 0 2px var(--focus); }
 .ui-menu__item:disabled, .ui-option[aria-disabled="true"] { color: var(--text-quiet); cursor: default; }
-.ui-option[aria-disabled="true"]:hover { --sq-bg: transparent; }
+@media (hover: hover) and (pointer: fine) { .ui-option[aria-disabled="true"]:hover { --sq-bg: transparent; } }
 .ui-menu__glyph { width: 16px; height: 18px; display: grid; place-items: center; flex: none; color: var(--icon); }
 .ui-menu__glyph .ui-icon { width: 15px; height: 15px; }
 .ui-menu__item[aria-checked="true"] .ui-menu__glyph, .ui-option[aria-selected="true"] .ui-menu__glyph { color: var(--brass); }
@@ -444,7 +447,7 @@ button.ui-group__head:hover { color: var(--text); }
   transition: box-shadow var(--dur-1) var(--ease);
 }
 .ui-input::placeholder { color: var(--text-quiet); opacity: 1; text-transform: var(--ui-case); }
-.ui-input:hover { box-shadow: inset 0 0 0 1px var(--text-quiet); }
+@media (hover: hover) and (pointer: fine) { .ui-input:hover { box-shadow: inset 0 0 0 1px var(--text-quiet); } }
 .ui-input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .ui-input[aria-invalid="true"] { box-shadow: inset 0 0 0 1px var(--red); }
 .ui-input:disabled { opacity: .55; cursor: default; }
@@ -459,7 +462,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-select > .ui-icon { flex: none; color: var(--icon); }
 .ui-select[aria-expanded="true"] { box-shadow: inset 0 0 0 1px var(--focus); }
 /* a browser's autofill paints its own tint and ink over a field: keep the theme's */
-.ui-input:-webkit-autofill, .ui-input:-webkit-autofill:hover, .ui-input:-webkit-autofill:focus { -webkit-text-fill-color: var(--text); box-shadow: inset 0 0 0 1000px var(--bg-0), inset 0 0 0 1px var(--line-field); caret-color: var(--brass); transition: background-color 9999s; }
+@media (hover: hover) and (pointer: fine) { .ui-input:-webkit-autofill, .ui-input:-webkit-autofill:hover, .ui-input:-webkit-autofill:focus { -webkit-text-fill-color: var(--text); box-shadow: inset 0 0 0 1000px var(--bg-0), inset 0 0 0 1px var(--line-field); caret-color: var(--brass); transition: background-color 9999s; } }
 
 /* settings rows: label and hint on the left, the control on the right, a hairline between */
 .ui-set { margin: 0; }
@@ -506,7 +509,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-measure > i[data-p="2"] { background: var(--text-quiet); }
 .ui-measure > i[data-p="3"] { background: var(--text-faint); }
 .ui-measure-btn { appearance: none; display: grid; place-items: center; min-width: 24px; min-height: 24px; box-sizing: border-box; padding: 8px 6px; margin: 0; border: 0; border-radius: var(--r-s); background: transparent; cursor: pointer; transition: background-color var(--dur-1) var(--ease); }
-.ui-measure-btn:hover { background: var(--hover); }
+@media (hover: hover) and (pointer: fine) { .ui-measure-btn:hover { background: var(--hover); } }
 .ui-legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .ui-legend li { display: flex; align-items: center; gap: 10px; min-height: calc(var(--row-h) - 4px); font-size: var(--fs-s); color: var(--text-dim); }
 .ui-legend li > span:first-of-type { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -518,7 +521,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-pages { position: relative; display: inline-flex; align-items: center; height: 10px; }
 .ui-pages__dot { appearance: none; position: relative; display: grid; place-items: center; width: 10px; height: 10px; padding: 0; margin: 0; border: 0; border-radius: var(--r-xs); background: transparent; cursor: pointer; }
 .ui-pages__dot > i { display: block; width: 4px; height: 4px; border-radius: var(--r-pill); background: var(--mark-off); transition: background-color var(--dur-1) var(--ease); }
-.ui-pages__dot:hover > i { background: var(--text-dim); }
+@media (hover: hover) and (pointer: fine) { .ui-pages__dot:hover > i { background: var(--text-dim); } }
 .ui-pages__dot:is([aria-selected="true"], [data-current]) { width: 20px; cursor: default; }
 .ui-pages__dot:is([aria-selected="true"], [data-current]) > i { width: 14px; background: var(--brass); }
 .ui-pages__dot[data-attention] > i { background: var(--red); }
@@ -563,7 +566,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
   background: transparent; font: inherit; color: var(--text-quiet); cursor: pointer; text-transform: var(--ui-case);
   transition: background-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
 }
-.ui-disclosure:hover { background: var(--hover); color: var(--text); }
+@media (hover: hover) and (pointer: fine) { .ui-disclosure:hover { background: var(--hover); color: var(--text); } }
 .ui-disclosure .ui-icon { width: 10px; height: 10px; transition: transform var(--dur-2) var(--ease); }
 .ui-disclosure[aria-expanded="true"] .ui-icon { transform: rotate(90deg); }
 .ui-steps { list-style: none; margin: 0; padding: 0; width: 100%; }
@@ -582,7 +585,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 /* the blank: a dotted red line under the gap, then the stamp, inside the sentence it belongs to */
 .ui-blank { appearance: none; display: inline-flex; align-items: center; gap: 8px; vertical-align: -4px; padding: 0; margin: 0 0 0 4px; border: 0; border-radius: var(--r-xs); background: none; font: inherit; color: var(--text); cursor: pointer; white-space: nowrap; }
 .ui-blank__gap { display: inline-block; min-width: 7ch; min-height: 1.2em; border-bottom: 1px dotted var(--red); }
-.ui-blank:hover .ui-blank__gap { border-bottom-style: solid; }
+@media (hover: hover) and (pointer: fine) { .ui-blank:hover .ui-blank__gap { border-bottom-style: solid; } }
 .ui-blank[data-answered] .ui-blank__gap { min-width: 0; border-bottom: 1px dashed var(--text-quiet); }
 
 /* ───────────── composer: card stock, its actions set into its corner ─────────────
@@ -600,7 +603,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-composer[data-hinting] .ui-composer__hint { opacity: 1; translate: 0 0; }
 .ui-composer__hint-label { margin-right: 4px; text-transform: var(--ui-case); }
 .ui-assume { appearance: none; border: 0; margin: 0; padding: 0 2px; background: none; font: inherit; color: inherit; cursor: pointer; border-radius: var(--r-xs); transition: color var(--dur-1) var(--ease); }
-.ui-assume:hover { color: var(--text); }
+@media (hover: hover) and (pointer: fine) { .ui-assume:hover { color: var(--text); } }
 .ui-assume:focus-visible { color: var(--text); outline: none; background: var(--current); box-shadow: inset 0 0 0 2px var(--focus); }
 .ui-composer:not([data-hinting]) .ui-composer__hint { pointer-events: none; }
 .ui-composer__box {
@@ -637,7 +640,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-composer[data-listening] .ui-composer__mic > .ui-orb { display: inline-grid; }
 /* feedforward: dashed is my reading of what you wrote, solid brass is your choice */
 .ui-ff { border-bottom: 1px dashed var(--text-dim); cursor: pointer; transition: border-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease); }
-.ui-ff:hover { border-bottom-color: var(--text-strong); color: var(--text-strong); }
+@media (hover: hover) and (pointer: fine) { .ui-ff:hover { border-bottom-color: var(--text-strong); color: var(--text-strong); } }
 .ui-ff[data-confirmed] { border-bottom-style: solid; border-bottom-color: var(--brass); }
 @media (max-width: 640px) { .ui-composer__bar .ui-capacity { display: none; } }
 
@@ -645,16 +648,16 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-panel { position: relative; display: flex; flex-direction: column; height: 100%; background: var(--bg-1); font: 400 var(--fs-s)/var(--lh-ui) var(--sans); color: var(--text); }
 .ui-panel__head { display: flex; align-items: center; gap: 8px; flex: none; height: var(--row-h-2); padding: 0 12px 0 20px; }
 .ui-panel__title { flex: 1; margin: 0; font: 600 var(--fs-s)/1 var(--sans); color: var(--text-strong); text-transform: var(--ui-case); }
-.ui-panel__body { flex: 1; min-height: 0; overflow: hidden auto; overscroll-behavior: contain; padding-bottom: 24px; }   /* a scroll area (.ui-scroll) */
+.ui-panel__body { flex: 1; min-height: 0; padding-bottom: 24px; }   /* a scroll area (.ui-scroll --stable) */
 .ui-panel__foot { display: flex; justify-content: space-between; gap: var(--sp-3); flex: none; padding: var(--sp-3) 20px; border-top: 1px solid var(--hair); }
 .ui-sec { box-shadow: inset 0 1px 0 var(--hair); }
-.ui-sec__head { appearance: none; display: flex; align-items: center; gap: 8px; width: 100%; height: calc(var(--row-h) + 10px); padding: 0 16px 0 20px; margin: 0; border: 0; background: transparent; font: inherit; color: var(--text); text-align: left; cursor: pointer; transition: background-color var(--dur-1) var(--ease); }
-.ui-sec__head:hover { background: var(--hover); }
+.ui-sec__head { appearance: none; display: flex; align-items: center; gap: 8px; width: 100%; height: calc(var(--row-h) + 10px); padding: 0 calc(16px - var(--scroll-gutter, 0px)) 0 20px; margin: 0; border: 0; background: transparent; font: inherit; color: var(--text); text-align: left; cursor: pointer; transition: background-color var(--dur-1) var(--ease); }
+@media (hover: hover) and (pointer: fine) { .ui-sec__head:hover { background: var(--hover); } }
 .ui-sec__label { font-size: var(--fs-s); text-transform: var(--ui-case); }
 .ui-sec__meta { margin-left: auto; display: inline-flex; gap: 8px; font: 400 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); font-variant-numeric: tabular-nums; }
 .ui-sec__head .ui-icon { width: 12px; height: 12px; color: var(--text-quiet); transition: transform var(--dur-2) var(--ease); }
 .ui-sec__head[aria-expanded="true"] .ui-icon { transform: rotate(90deg); }
-.ui-sec__body { padding: 0 20px 16px; }
+.ui-sec__body { padding: 0 calc(20px - var(--scroll-gutter, 0px)) 16px 20px; }
 .ui-sec__head[aria-expanded="false"] + .ui-sec__body { display: none; }
 .ui-sec[data-flash] > .ui-sec__head { animation: ui-flash 1.2s var(--ease); }
 @keyframes ui-flash { 0%, 40% { background: var(--brass-soft); } 100% { background: transparent; } }

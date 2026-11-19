@@ -55,7 +55,7 @@ export function openSettings(id: string | null, focusSection?: string | null, op
   const close = ui.iconButton({ icon: 'close', label: 'Close bot settings', keys: 'mod+I' });
   close.addEventListener('click', () => { closeSettings(); focusConversation(); });
   const head = el('header', { class: 'ui-panel__head' }, [el('h2', { class: 'ui-panel__title', text: 'Bot settings' }), close]);
-  const body = el('div', { class: 'ui-panel__body' });
+  const body = el('div', { class: 'ui-panel__body ui-scroll ui-scroll--stable' });
   const sec = sectionOf, hint = hintOf;
 
   /* role and instructions */

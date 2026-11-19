@@ -52,7 +52,7 @@
 
 /* Link: https only, underlined in the hairline weight, never brass (brass is not text) */
 .mv-link { color: var(--text); text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; border-radius: var(--r-xs); transition: color var(--dur-1) var(--ease), text-decoration-color var(--dur-1) var(--ease); }
-.mv-link:hover { color: var(--text-strong); text-decoration-color: var(--text-dim); }
+@media (hover: hover) and (pointer: fine) { .mv-link:hover { color: var(--text-strong); text-decoration-color: var(--text-dim); } }
 .mv-link:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; text-decoration-color: transparent; }
 
 /* Svg: sanitised, fits the width, its text in mono */

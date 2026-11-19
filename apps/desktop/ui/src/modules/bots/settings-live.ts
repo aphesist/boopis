@@ -43,7 +43,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
   const close = ui.iconButton({ icon: 'close', label: 'Close bot settings', keys: 'mod+I' });
   close.addEventListener('click', () => { closeSettings(); focusConversation(); });
   const head = el('header', { class: 'ui-panel__head' }, [el('h2', { class: 'ui-panel__title', text: 'Bot settings' }), close]);
-  const body = el('div', { class: 'ui-panel__body' });
+  const body = el('div', { class: 'ui-panel__body ui-scroll ui-scroll--stable' });
 
   /* the two panes that stand in for the sections while they are needed: the diff to review, and the question before a delete */
   const review = el('section', { class: 'bt-review', 'aria-label': 'Review before saving', hidden: true });

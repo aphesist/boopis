@@ -42,8 +42,8 @@
       </div>
 
       <div id="hx-sidebar-list" class="hx-side__list">
-        <div class="hx-list ui-scroll is-active" data-list="session" id="hx-list-session" role="tabpanel" aria-labelledby="hx-tab-session"></div>
-        <div class="hx-list ui-scroll" data-list="bots" id="hx-list-bots" role="tabpanel" aria-labelledby="hx-tab-bots" inert></div>
+        <div class="hx-list ui-scroll ui-scroll--stable is-active" data-list="session" id="hx-list-session" role="tabpanel" aria-labelledby="hx-tab-session"></div>
+        <div class="hx-list ui-scroll ui-scroll--stable" data-list="bots" id="hx-list-bots" role="tabpanel" aria-labelledby="hx-tab-bots" inert></div>
       </div>
 
       <div class="hx-foot">
@@ -73,7 +73,7 @@
   <div class="hx-palette" id="hx-palette" role="dialog" aria-modal="true" aria-label="Search and commands" hidden>
     <div class="hx-palette__box">
       <div id="hx-palette-input"></div>
-      <div class="hx-palette__list ui-scroll ui-scroll--inset-end" id="hx-palette-list" role="listbox" aria-label="Results"></div>
+      <div class="hx-palette__list ui-scroll ui-scroll--stable ui-scroll--inset-end" id="hx-palette-list" role="listbox" aria-label="Results"></div>
     </div>
   </div>
 
@@ -84,7 +84,7 @@
         <div id="hx-dtabs"></div>
         <button class="ui-ib" type="button" id="hx-settings-close" aria-label="Close settings" data-tip="Close" data-kbd="esc"><span data-icon="close"></span></button>
       </header>
-      <div class="hx-dialog__body ui-scroll ui-scroll--inset-end">
+      <div class="hx-dialog__body ui-scroll ui-scroll--stable ui-scroll--inset-end">
         <div class="hx-dpanel" id="hx-dpanel-general" role="tabpanel" aria-labelledby="hx-dtab-general">
           <section class="ui-set" aria-labelledby="hx-set-layout">
             <h3 class="ui-set__head" id="hx-set-layout">Layout</h3>
@@ -118,7 +118,7 @@
         <div id="hx-keys-filter"></div>
         <button class="ui-ib" type="button" id="hx-keys-close" aria-label="Close keyboard shortcuts" data-tip="Close" data-kbd="esc"><span data-icon="close"></span></button>
       </header>
-      <div class="hx-dialog__body ui-scroll ui-scroll--inset-end" tabindex="0" role="region" aria-labelledby="hx-keys-title">
+      <div class="hx-dialog__body ui-scroll ui-scroll--stable ui-scroll--inset-end" tabindex="0" role="region" aria-labelledby="hx-keys-title">
         <div class="hx-keys-grid" id="hx-keys-body"></div>
         <p class="hx-keys-note">Keys shown for this computer. In a web browser a few belong to the browser (F6, and Alt+1 or Alt+2 on Linux); every action is also in the palette.</p>
       </div>
