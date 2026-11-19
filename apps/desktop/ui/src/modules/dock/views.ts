@@ -6,7 +6,7 @@ import { $$, } from '../../core/dom';
 import { ui } from '../../components';
 import { data } from '../../data';
 import type { Bot, ThreadMessage, Wait } from '../../data';
-import { LOG_N, PAGE_NAME, S, X, attCount, botById, clock, ctxPct, motion, rendered, shownPages } from './ctx';
+import { LOG_N, PAGE_NAME, S, X, attCount, botById, clock, ctxPct, motion, rendered } from './ctx';
 import type { DockBot } from './ctx';
 import { patchHTML } from './reconcile';
 import { setOrbLife } from './orbs';
@@ -123,7 +123,7 @@ export const tipOf = (b: Pick<Bot, 'name' | 'role'>): string => { const n = clip
 /* ───────── view templates ───────── */
 function tileHTML(p: { id: string; on: boolean }, i: number): string {
   const name = PAGE_NAME[p.id] ?? p.id, first = i === 0, last = i === S.pages.length - 1;
-  const onCount = shownPages().length;
+  const onCount = S.pages.filter((x) => x.on).length;   /* the arrangement's own count: a page whose part is absent is still arranged */
   let glyph = '';
   if (p.id === 'bots') glyph = S.bots.slice(0, 6).map((b) => `<i style="background:${esc(b.color)}"></i>`).join('');
   if (p.id === 'run') glyph = ui.html.ladder({ stations: run().ladder, current: run().current, ground: 'var(--dock-bg)' });

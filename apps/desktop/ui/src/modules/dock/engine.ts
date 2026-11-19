@@ -186,7 +186,14 @@ function settled(): void {
     X.root.classList.add('is-gone');
     X.root.inert = true;
     X.root.setAttribute('aria-hidden', 'true');
+    runAfterOut();
   }
+}
+/** what the dock left to clear once it is out of sight (a dock that left because nothing is in it keeps showing what it had until then) */
+export function runAfterOut(): void {
+  const f = flags.afterOut;
+  flags.afterOut = null;
+  if (f) f();
 }
 
 /* ───────── magnification (macOS-style) ───────── */
@@ -473,10 +480,14 @@ function headroom(): number {
     foot is inside it) plus the hover headroom. Sent whenever it changes: after a morph, a resize, a font load, the view's own
     size changing, or the grow setting changing. */
 export function emitDock(): void {
-  const h = S.mode === 'off' ? 0 : Math.ceil(E.baseH + headroom()), key = S.mode + '|' + S.page + '|' + Math.round(E.baseW) + '|' + h;
+  const h = S.mode === 'off' ? 0 : Math.ceil(E.baseH + headroom());
+  /* The shell reads `mode: 'off'` as the user switching the dock off, and stores that. A dock that is only empty (no bot, no
+     session: presence.ts) keeps room for nothing but is not off by choice, so it reports the mode it will come back in. */
+  const mode = S.mode === 'off' && flags.setting ? (S.restore === 'minimal' ? 'minimal' : 'normal') : S.mode;
+  const key = mode + '|' + S.page + '|' + Math.round(E.baseW) + '|' + h;
   if (key === sent) return;
   sent = key;
-  emit('hx:dock', { mode: S.mode, page: S.page, width: Math.round(E.baseW), height: h, rest: Math.round(S.mode === 'off' ? 0 : E.baseH) });
+  emit('hx:dock', { mode, page: S.page, width: Math.round(E.baseW), height: h, rest: Math.round(S.mode === 'off' ? 0 : E.baseH) });
 }
 
 /* ───────── page dots and the foot ───────── */
@@ -523,7 +534,8 @@ export function syncFoot(): void {
   const on = S.mode === 'normal' || S.mode === 'expanded';
   X.footEl.classList.toggle('is-off', !on);
   X.footEl.inert = !on;
-  X.dotsEl.style.visibility = shownPages().length > 1 ? '' : 'hidden';
+  /* the page indicator is navigation: it shows when there is more than one page to go to, and fades with the dock's own motion */
+  X.dotsEl.classList.toggle('is-solo', shownPages().length <= 1);
   const exp = S.mode === 'expanded';
   const label = exp ? 'Collapse the dock' : 'Minimise the dock';
   if (X.downBtn.getAttribute('aria-label') !== label) { X.downBtn.setAttribute('aria-label', label); X.downBtn.dataset['tip'] = exp ? 'Collapse' : 'Minimise'; }
