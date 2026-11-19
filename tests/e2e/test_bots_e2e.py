@@ -7,6 +7,8 @@ parameters.
 
 from __future__ import annotations
 
+import json
+import subprocess
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -140,6 +142,36 @@ def test_the_model_options_name_the_configured_providers(gateway: GatewayClient)
         RpcError
     ):  # a profile argument is refused here (profile_mismatch): a teammate is reached on its own link
         gateway.result("cron.manage", {"action": "list", "profile": "atlas"})
+
+
+def test_the_hosts_attach_for_a_profile_is_a_ticket_on_the_same_gateway(
+    gateway: GatewayClient, stack: HermesStack
+) -> None:
+    """The host attaches to a profile with its home as HERMES_HOME (`hermes/lifecycle.rs`): Hermes must answer with a
+    ticket bound to the profile on the gateway that is already running, not start another."""
+    mine = json.loads(
+        subprocess.run(
+            [str(stack.install.hermes), "gateway", "attach", "--json"],
+            capture_output=True,
+            text=True,
+            env=stack.env,
+            timeout=60,
+            check=True,
+        ).stdout
+    )
+    env = {**stack.env, "HERMES_HOME": str(stack.home / "profiles" / "atlas")}
+    theirs = json.loads(
+        subprocess.run(
+            [str(stack.install.hermes), "gateway", "attach", "--json", "--start"],
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=90,
+            check=True,
+        ).stdout
+    )
+    assert theirs["endpoint"]["api_origin"] == mine["endpoint"]["api_origin"]
+    assert theirs["endpoint"]["profile_id"] == str(stack.home / "profiles" / "atlas")
 
 
 def test_a_routine_is_a_cron_job_of_the_profile_and_only_of_it(gateway: GatewayClient, stack: HermesStack) -> None:
