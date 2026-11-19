@@ -170,7 +170,7 @@ export function mini(ctx: Ctx, o: { lead?: string; who?: boolean; text: string; 
   const lead = o.lead != null ? o.lead : originVisual(or, 16, 2, true);
   /* the who: at most half the line, more when the request is short (fitCard); an MCP server by its name alone */
   const who = or && o.who !== false ? '<span class="cd-mini__who">' + namesUnit(or, true) + '</span> ' : '';
-  return '<button type="button" class="cd-mini" data-action="open" aria-labelledby="' + ctx.id + '-t' + (owe ? ' ' + ctx.id + '-o' : '') + (o.meta ? ' ' + ctx.id + '-m' : '') + '">' +
+  return '<button type="button" class="cd-mini" data-action="open" aria-labelledby="' + ctx.id + '-t' + (o.meta ? ' ' + ctx.id + '-m' : '') + (owe ? ' ' + ctx.id + '-o' : '') + '">' +
     '<span class="cd-mini__lead" aria-hidden="true">' + lead + '</span>' +
     '<span class="cd-mini__text" id="' + ctx.id + '-t">' + who + '<span class="cd-mini__what">' + o.text + '</span></span>' +
     '<span class="cd-mini__status"><span class="cd-mini__dot">' + (owe ? U.html.dot('attention') : '') + '</span>' +
