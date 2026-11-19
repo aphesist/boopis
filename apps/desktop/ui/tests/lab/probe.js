@@ -376,7 +376,17 @@
         }
         return false;
       };
-      const targets = els.filter((e) => e.matches('button, a[href], input:not([type="hidden"]), select, textarea, summary, [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], [role="switch"], [role="radio"], [role="checkbox"]') && !e.closest('[inert], [aria-hidden="true"]') && !e.disabled && !scrolledAway(e));
+      /* a target another layer covers at its centre (a card under an open sheet or dialog) cannot be pressed either; a point outside the window is not tested */
+      const covered = (e) => {
+        const r = e.getBoundingClientRect();
+        const x = r.left + r.width / 2, y = r.top + r.height / 2;
+        if (r.width === 0 || r.height === 0 || x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) return false;
+        const h = document.elementFromPoint(x, y);
+        if (!h || e.contains(h) || h.contains(e)) return false;
+        const lab = h.closest && h.closest('label');
+        return !(lab && lab.control === e);
+      };
+      const targets = els.filter((e) => e.matches('button, a[href], input:not([type="hidden"]), select, textarea, summary, [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], [role="switch"], [role="radio"], [role="checkbox"]') && !e.closest('[inert], [aria-hidden="true"]') && !e.disabled && !scrolledAway(e) && !covered(e));
       /* what the user can hit: the element's box united with an absolutely positioned ::before / ::after that takes pointer events (R-a11y-2: a mark smaller than --hit-min gets a hit area of 24 around it) */
       const hitBox = (t) => {
         const r = t.getBoundingClientRect();
