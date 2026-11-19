@@ -13,6 +13,8 @@ use std::time::Duration;
 use crate::error::{Error, Result};
 use crate::policy::{CpuLimit, Degraded, NetworkPolicy, ResourceLimits, SandboxPolicy, limits};
 
+mod runtime;
+
 /// One policy path after resolution.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ResolvedPath {
@@ -142,8 +144,14 @@ impl SandboxPolicy {
             .iter()
             .map(|p| resolve_path(p))
             .collect::<Result<Vec<_>>>()?;
+        let hermes_home = lookup(OsStr::new("HERMES_HOME"));
         for root in &self.runtime_ro_paths {
-            ro_given.push(resolve_runtime_root(root, &cwd, home.as_deref())?);
+            ro_given.push(runtime::resolve_runtime_root(
+                root,
+                &cwd,
+                home.as_deref(),
+                hermes_home.as_deref(),
+            )?);
         }
         let writable_given = self
             .rw_paths
@@ -237,36 +245,6 @@ fn resolve_path(requested: &Path) -> Result<ResolvedPath> {
         path,
         is_dir,
     })
-}
-
-/// Vets one runtime root and resolves it. Every check is on the **canonical** path, so a symlink cannot
-/// carry `/`, the home directory or the workspace past it; the sandbox grants the canonical path only.
-fn resolve_runtime_root(requested: &Path, cwd: &Path, home: Option<&Path>) -> Result<ResolvedPath> {
-    let resolved = resolve_path(requested)?;
-    let path = &resolved.path;
-    let refuse = |why: &str| {
-        Err(Error::invalid(format!(
-            "runtime root {} (resolves to {}) {why}",
-            requested.display(),
-            path.display()
-        )))
-    };
-    if !resolved.is_dir {
-        return refuse("is not a directory");
-    }
-    if path.parent().is_none() {
-        return refuse("is the file system root");
-    }
-    if home.is_some_and(|h| path == h || h.starts_with(path)) {
-        return refuse("is the home directory or one of its parents");
-    }
-    if path.starts_with(cwd) {
-        return refuse("is inside the working directory, which is granted already");
-    }
-    if cwd.starts_with(path) {
-        return refuse("contains the working directory");
-    }
-    Ok(resolved)
 }
 
 /// Removes redundant grants and rejects the one combination no backend can honour.
