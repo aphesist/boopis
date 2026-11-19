@@ -91,6 +91,7 @@
 .dk-att { display: inline-flex; }
 .dk-v-min .dk-ladder .ui-ladder { --st: 4px; gap: 5px; }
 .dk-v-min .dk-time { min-width: 0; }
+.dk-v-min [data-k^="s:bot:"] { max-width: 14ch; overflow: hidden; text-overflow: ellipsis; }
 
 /* ===== bots · roster (expanded): library rows in a four-column grid ===== */
 .dk-v-bots-exp { padding: var(--sp-4) var(--dock-pad-x) var(--dock-band-x); width: 640px; }
@@ -108,9 +109,12 @@
 .dk-card-head { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: var(--sp-3); align-items: center; }
 .dk-card-head .dk-orb { --o: 40; cursor: pointer; }
 .dk-card-who { min-width: 0; }
-.dk-card-name { font-size: var(--fs-m); font-weight: 600; color: var(--text-strong); }
-.dk-card-state { display: flex; align-items: center; gap: 6px; margin-top: 2px; font-size: var(--fs-xs); color: var(--text-quiet); white-space: nowrap; overflow: hidden; }
+/* orb, name and state on one line; a long name ellipsises first, the state and the head's buttons stay */
+.dk-card-line { display: flex; align-items: baseline; gap: var(--sp-2); min-width: 0; }
+.dk-card-name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-m); font-weight: 600; color: var(--text-strong); }
+.dk-card-state { flex: none; display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); color: var(--text-quiet); white-space: nowrap; }
 .dk-card-state[data-tone="attention"] .dk-card-word { color: var(--red-text); }
+.dk-card-role { margin-top: 2px; font-size: var(--fs-xs); color: var(--text-quiet); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dk-card-acts { display: flex; gap: 2px; align-self: start; margin-right: -6px; }
 .dk-sess-log { max-height: min(220px, 26vh); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; border-radius: var(--r-s); }   /* a tab stop, so the keyboard can scroll it */
 .dk-sess-log .ui-entry + .ui-entry { margin-top: var(--sp-3); }
@@ -163,7 +167,7 @@
 .dk-v-sched-exp { padding: 18px var(--sp-4) var(--dock-band-x); width: 580px; }
 .dk-sched { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .dk-sched-row { display: grid; grid-template-columns: 18px 64px minmax(0, 1fr) auto; column-gap: var(--sp-3); align-items: center; min-height: calc(var(--ctl) + 4px); border-radius: var(--r-s); }
-.dk-sched-bot { color: var(--text); }
+.dk-sched-bot { color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }   /* long names keep the columns */
 .dk-sched-what { color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; min-width: 0; border-radius: var(--r-s); }
 button.dk-sched-what:hover { color: var(--text-strong); }
 .dk-sched-when { font-size: var(--fs-2xs); color: var(--text-quiet); white-space: nowrap; text-align: right; }

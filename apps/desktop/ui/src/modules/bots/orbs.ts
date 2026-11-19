@@ -9,7 +9,7 @@ import { oc } from '../../components/orb';
 import type { BotLike } from '../../components';
 import { S } from './model';
 
-type Live = HTMLElement & { _hover?: boolean; _held?: boolean };
+type Live = HTMLElement & { _hover?: boolean; _held?: boolean; _faceOn?: boolean };
 export function liven(o: Live | null, size: number): Live | null {
   if (!o) return o;
   ui.liven(o, { size });   /* the library's rule: live above 16px, lowered jelly and small glances under reduced motion */
@@ -79,20 +79,62 @@ export function repaintOrbs(): void {
     for (const o of root.querySelectorAll('orb-avatar')) for (const a of ['color', 'eye-color']) { const v = o.getAttribute(a); if (v) o.setAttribute(a, v); }
   }
 }
-/** gentle cursor following for the presence orb: look at a point pulled toward the orb, release when the pointer rests */
-export function gentleFollow(getOrb: () => Live | null, k: number) {
-  let raf = 0, x = 0, y = 0, rest = 0, held = false;
-  const tick = (): void => {
-    raf = 0; const o = getOrb(); if (!o || !o.isConnected || held || o._hover) return;
+/* Gentle looking, for the presence orb and the new-bot preview. Every target (the pointer, a control in use, a new
+   message) is pulled toward the orb by k and clamped to a small turn (about 20 degrees): orb2 aims its face at
+   exactly the point it is given, and a full-angle look at a control 170px below a 128px preview pushed the face past
+   the body's rim, so the eyes clipped and the silhouette tipped on every tile the pointer crossed; how far depends on
+   where the shape puts its face (diamond, star, triangle, drop worst). One pointermove listener serves every
+   follower; a follower whose orb is gone is skipped and can be disposed. */
+export interface Follower {
+  track(): void;
+  hold(px: number, py: number): void;
+  release(): void;
+  glance(px: number, py: number, ms?: number): void;
+  /** face the viewer while the body changes, so the outline blends face-on and the eyes stay inside it */
+  faceOn(ms?: number): void;
+  dispose(): void;
+}
+const FOLLOWERS = new Set<Follower>();
+let followPt: { x: number; y: number } | null = null, followRaf = 0, followOn = false;
+function listenForPointer(): void {
+  if (followOn) return;
+  followOn = true;
+  addEventListener('pointermove', (e) => {
+    followPt = { x: e.clientX, y: e.clientY };
+    if (!followRaf) followRaf = requestAnimationFrame(() => { followRaf = 0; for (const f of FOLLOWERS) f.track(); });
+  }, { passive: true });
+}
+/** the look vector, pulled to at most 0.3 of a 250px reference (or of 1.65 widths for a big orb) */
+export function capLook(vx: number, vy: number, width: number): { x: number; y: number } {
+  const max = 0.3 * Math.max(250, width * 1.65), len = Math.hypot(vx, vy);
+  return len > max ? { x: vx * max / len, y: vy * max / len } : { x: vx, y: vy };
+}
+export function gentleFollow(getOrb: () => Live | null, k: number): Follower {
+  listenForPointer();
+  let rest = 0, held = false, holdT = 0;
+  const aim = (o: Live, px: number, py: number): void => {
     const r = o.getBoundingClientRect(); if (!r.width) return;
     const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-    oc(o, 'lookAt', cx + (x - cx) * k, cy + (y - cy) * k);
-    clearTimeout(rest); rest = window.setTimeout(() => { const q = getOrb(); if (q && !held) oc(q, 'lookAt'); }, 1600);
+    const v = capLook((px - cx) * k, (py - cy) * k, r.width);
+    oc(o, 'lookAt', cx + v.x, cy + v.y);
   };
-  addEventListener('pointermove', (e) => { x = e.clientX; y = e.clientY; if (!raf) raf = requestAnimationFrame(tick); }, { passive: true });
-  return {
-    hold(px: number, py: number): void { const o = getOrb(); if (!o) return; held = true; o._held = true; clearTimeout(rest); oc(o, 'lookAt', px, py); },
-    release(): void { held = false; const o = getOrb(); if (o) o._held = false; oc(o, 'lookAt'); },
-    glance(px: number, py: number, ms?: number): void { const o = getOrb(); if (!o || held) return; o._held = true; oc(o, 'lookAt', px, py); clearTimeout(rest); rest = window.setTimeout(() => { o._held = false; oc(o, 'lookAt'); }, ms || 1100); }
+  const f: Follower = {
+    track(): void {
+      const o = getOrb(); if (!o || !o.isConnected || held || o._hover || o._faceOn || !followPt) return;
+      aim(o, followPt.x, followPt.y);
+      clearTimeout(rest); rest = window.setTimeout(() => { const q = getOrb(); if (q && !held && !q._faceOn) oc(q, 'lookAt'); }, 1600);
+    },
+    hold(px, py): void { const o = getOrb(); if (!o || o._faceOn) return; held = true; o._held = true; clearTimeout(rest); aim(o, px, py); },
+    release(): void { held = false; const o = getOrb(); if (o) o._held = false; if (o && !o._faceOn) oc(o, 'lookAt'); },
+    glance(px, py, ms): void { const o = getOrb(); if (!o || held || o._faceOn) return; o._held = true; aim(o, px, py); clearTimeout(rest); rest = window.setTimeout(() => { o._held = false; oc(o, 'lookAt'); }, ms || 1100); },
+    faceOn(ms): void {
+      const o = getOrb(); if (!o) return;
+      o._faceOn = true; clearTimeout(holdT); clearTimeout(rest);
+      const r = o.getBoundingClientRect(); oc(o, 'lookAt', r.left + r.width / 2, r.top + r.height / 2);
+      holdT = window.setTimeout(() => { o._faceOn = false; oc(o, 'lookAt'); }, ms || 520);
+    },
+    dispose(): void { FOLLOWERS.delete(f); clearTimeout(rest); clearTimeout(holdT); }
   };
+  FOLLOWERS.add(f);
+  return f;
 }

@@ -82,6 +82,11 @@ describe('the key table that feeds the sheet, Settings and the palette', () => {
     expect(all).toContain('alt+V');
     expect(all).toContain('alt+M');
   });
+  it('has the dock\'s regions of KEYMAP.md section 8: the row, the grid, the switcher, the queue and the page nub', () => {
+    const dock = JSON.stringify(KEYGROUPS.find(([g]) => g === 'Dock'));
+    for (const part of ['Bot row', 'Grid', 'Session switcher', 'Queue', 'Page nub', 'mod+enter', 'pageup']) expect(dock).toContain(part);
+    expect(JSON.stringify(KEYGROUPS.find(([g]) => g === 'Cards'))).toContain('cut name');
+  });
   it('filters by group, label or spec, and says so when nothing matches', () => {
     expect(keysTableHTML('dock')).toContain('hx-keygroup');
     expect(keysTableHTML('zzzzzz')).toContain('No shortcut matches');

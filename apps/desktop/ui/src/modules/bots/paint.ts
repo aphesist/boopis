@@ -12,10 +12,19 @@ export const DRAFT_COLOR = '#3b82f6';
 export const SHAPES = ['circle', 'squircle', 'soft', 'wide', 'tall', 'bean', 'drop', 'ghost', 'triangle', 'hexagon', 'diamond', 'cloud', 'clover', 'flower', 'star'];
 export const EYES = ['pill', 'tall', 'circle', 'wide', 'squint', 'square', 'grid', 'matrix', 'bars', 'arc', 'rest', 'plus', 'heart', 'circle wide'];
 
-/** repaint an orb's body from bot data (the library decides dark-body eyes the same way) */
+/* Repaint an orb from bot data; only what changed is written, so orb2 morphs instead of restarting anything. Dark
+   bodies take the library's light eyes (the same rule as ui.orb). */
+const eyeColourCache = new Map<string, string | null>();
+export function paintOrbColour(o: Element | null | undefined, color: string): void {
+  if (!o || !color) return;
+  if (!eyeColourCache.has(color)) eyeColourCache.set(color, ui.orb({ color, shape: 'circle' }, { size: 20 }).querySelector('orb-avatar')?.getAttribute('eye-color') ?? null);
+  const eye = eyeColourCache.get(color) ?? null;
+  if (o.getAttribute('color') !== color) o.setAttribute('color', color);
+  if (eye) { if (o.getAttribute('eye-color') !== eye) o.setAttribute('eye-color', eye); } else if (o.hasAttribute('eye-color')) o.removeAttribute('eye-color');
+}
 export function paintOrb(o: Element | null | undefined, d: BotLike & { color: string; shape: string; eyes: string }): void {
   if (!o) return;
-  o.setAttribute('color', d.color); o.setAttribute('shape', d.shape); o.setAttribute('eye-shape', d.eyes);
-  const ref = ui.orb(d, { size: 20 }).querySelector('orb-avatar');
-  const eye = ref?.getAttribute('eye-color'); if (eye) o.setAttribute('eye-color', eye); else o.removeAttribute('eye-color');
+  paintOrbColour(o, d.color);
+  if (o.getAttribute('shape') !== d.shape) o.setAttribute('shape', d.shape);
+  if (o.getAttribute('eye-shape') !== d.eyes) o.setAttribute('eye-shape', d.eyes);
 }

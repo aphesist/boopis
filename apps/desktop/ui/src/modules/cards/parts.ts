@@ -19,17 +19,19 @@ export const bot = (id: string | undefined): ReturnType<typeof botList>[number] 
 export const check = (): string => U.icon('check', { class: 'cd-ico' });
 /** a model wherever one appears: its provider's mark beside its name, mono, from the tokens */
 export const model = (m: string, size = 14): string => U.html.model(m, { size, class: 'cd-mono', mono: false });
-export const isRoute = (m: string): boolean => U.modelMark.parse(m).length > 1;
+/** a route ('qwen3-coder → sonnet 5.5') asks as the model it ended on: one mark, one name, in every slot and row (the
+    route itself is the session's call number) */
+const asker = (m: string | undefined): string => U.modelMark.last(m) || String(m || '');
 
 /* ───────── origin: who is asking, one slot for every card ─────────
    {kind: 'teammate', ids, via} | {kind: 'agent', model} | {kind: 'plugin' | 'hermes' | 'host'} | {kind: 'mcp', server, trust}.
    Older data ({from}, {bot}, {model}) is read as an origin. The slot draws: one teammate: its live orb, name and colour
    as the card's accent; several: stacked orbs (3, then +N) with every name on hover, focus and for screen readers; relayed:
    "nina, via atlas"; the agent: its model's provider mark and name; system sources: a quiet glyph and a label; an MCP
-   server: its initial, name and trust. */
+   server: its initial, name and trust. The names are one unit that never overflows (`namesUnit`, fitted by fit.ts). */
 export type KnownOrigin =
   | { kind: 'teammate'; ids: readonly string[]; via: string | null }
-  | { kind: 'agent'; model: string }
+  | { kind: 'agent'; model: string; route?: string | undefined }
   | { kind: 'plugin' | 'hermes' | 'host' }
   | { kind: 'mcp'; server?: string | undefined; trust?: string | undefined };
 const SYSTEM: Readonly<Record<string, readonly [icon: string, label: string]>> = { plugin: ['ladder', 'Governance'], hermes: ['spark', 'Hermes'], host: ['gear', 'hypotaxis'] };
@@ -42,10 +44,10 @@ export function originOf(d: Data): KnownOrigin | null {
       const ids = (o.ids ?? (o.id ? [o.id] : [])).filter((x) => bot(x));
       return ids.length ? { kind: 'teammate', ids, via: o.via && bot(o.via) ? o.via : null } : null;
     }
-    return o;
+    return o.kind === 'agent' ? { ...o, model: asker(o.model), route: o.model } : o;
   }
   if (d.from && bot(d.from)) return { kind: 'teammate', ids: [d.from], via: d.via && bot(d.via) ? d.via : null };
-  if (d.model) return { kind: 'agent', model: d.model };
+  if (d.model) return { kind: 'agent', model: asker(d.model), route: d.model };
   return null;
 }
 const nameOf = (id: string): string => bot(id)?.name ?? id;
@@ -57,41 +59,54 @@ export function originText(o: KnownOrigin | null): string {
   if (o.kind === 'mcp') return (o.server ? o.server + ' ' : '') + 'MCP server' + (o.trust ? ', ' + o.trust : '');
   return sys(o.kind)[1];
 }
-/** the visual alone: an orb, a stack, a glyph, a server's initial, or the agent's model mark (its provider's logo;
-    a route draws its marks inline with the names instead) */
-export function originVisual(o: KnownOrigin | null, size: number, max?: number): string {
+/** the visual alone: an orb, a stack, a glyph, a server's initial, or the agent's model mark (its provider's logo).
+    `still`: drawn in an aria-hidden slot (a row's lead), so nothing in it takes focus */
+export function originVisual(o: KnownOrigin | null, size: number, max?: number, still?: boolean): string {
   if (!o) return '';
   if (o.kind === 'teammate') {
     const one = bot(o.ids[0]);
     if (o.ids.length === 1 && one) return U.html.orb(one, { size });
     const lim = max || 3;
     const shown = o.ids.slice(0, Math.max(1, Math.min(lim, o.ids.length > lim ? lim - 1 : o.ids.length))), more = o.ids.length - shown.length;
-    return '<span class="cd-stack" style="--s:' + size + 'px"' + (more ? ' tabindex="0"' : '') + ' data-tip="' + esc(namesText(o.ids)) + '" role="img" aria-label="' + esc(namesText(o.ids)) + '">' +
+    return '<span class="cd-stack" style="--s:' + size + 'px"' + (more && !still ? ' tabindex="0"' : '') + ' data-tip="' + esc(namesText(o.ids)) + '" role="img" aria-label="' + esc(namesText(o.ids)) + '">' +
       shown.map((id) => { const b = bot(id); return '<span class="cd-stack__one">' + (b ? U.html.orb(b, { size }) : '') + '</span>'; }).join('') +
       (more ? '<span class="cd-stack__more" aria-hidden="true">+' + more + '</span>' : '') + '</span>';
   }
-  if (o.kind === 'agent') return U.html.modelMark(U.modelMark.last(o.model), { size: 16, class: 'cd-glyph' });
+  if (o.kind === 'agent') return U.html.modelMark(o.model, { size: 16, class: 'cd-glyph' });
   if (o.kind === 'mcp') return '<span class="cd-tile" style="--cd-orb:' + size + 'px" aria-hidden="true">' + esc(String(o.server || '?').slice(0, 1).toUpperCase()) + '</span>';
   const g = sys(o.kind)[0];
   return g ? U.icon(g, { class: 'cd-glyph' }) : '';
 }
-function originLabel(o: KnownOrigin): string {
+/** ' and kai', ', kai and nina', ' and 4 others': the names after the asker, in the longest form */
+export const restOf = (n: readonly string[]): string => (n.length === 2 ? ' and ' + n[1] : n.length === 3 ? ', ' + n[1] + ' and ' + n[2] : ' and ' + (n.length - 1) + ' others');
+/** The names of an origin as one unit that never overflows (fitted by fit.ts): the asker first, keeping the most room;
+    then the others ("and kai", "and 2 others", chosen by measuring); then the relay or the server's kind (", via
+    atlas"), which gives way first. One line, ellipses where cut, the whole text on hover and focus and always whole for
+    screen readers. `bare`: an MCP server by its name alone. */
+export function namesUnit(o: KnownOrigin, bare?: boolean): string {
+  let first = '', rest = '', via = '', many: string[] | null = null, mono = false;
   if (o.kind === 'teammate') {
-    const names = o.ids.length > 3 ? o.ids.slice(0, 2).map((x) => esc(nameOf(x))).join(', ') + ' and ' + (o.ids.length - 2) + ' more' : esc(namesText(o.ids));
-    return '<span class="cd-by__name">' + names + '</span>' + (o.via ? '<span class="cd-by__via">via ' + esc(nameOf(o.via)) + '</span>' : '');
-  }
-  if (o.kind === 'agent') return '<span class="cd-by__name cd-mono">' + (isRoute(o.model) ? U.html.modelRoute(o.model, { size: 14, mono: false }) : esc(o.model || 'The agent')) + '</span>';
-  if (o.kind === 'mcp') return '<span class="cd-by__name">' + esc(o.server || 'MCP server') + '</span><span class="cd-by__via">' + (o.server ? 'MCP server' : '') + (o.trust ? (o.server ? ', ' : '') + esc(o.trust) : '') + '</span>';
-  return '<span class="cd-by__name">' + esc(sys(o.kind)[1]) + '</span>';
+    const n = o.ids.map(nameOf);
+    first = n[0] ?? '';
+    if (n.length > 1) { many = n; rest = restOf(n); }
+    if (o.via) via = ', via ' + nameOf(o.via);
+  } else if (o.kind === 'agent') { first = o.model || 'The agent'; mono = true; }
+  else if (o.kind === 'mcp') { first = o.server || 'MCP server'; via = bare ? '' : (o.server ? ' MCP server' : '') + (o.trust ? ', ' + o.trust : ''); }
+  else first = sys(o.kind)[1];
+  const vis = '<span class="cd-names__first' + (mono ? ' cd-mono' : '') + '">' + esc(first) + '</span>' +
+    (many ? '<span class="cd-names__rest">' + esc(rest) + '</span>' : '') + (via ? '<span class="cd-names__via">' + esc(via) + '</span>' : '');
+  /* several names or a relay: the drawn form may be shortened and is split into parts, so screen readers get one whole
+     sentence instead ("nina, via atlas") */
+  const whole = many || via;
+  return '<span class="cd-names" data-full="' + esc(originText(o)) + '"' + (many ? ' data-names="' + esc(JSON.stringify(many)) + '"' : '') + '>' +
+    (whole ? '<span class="cd-names__vis" aria-hidden="true">' + vis + '</span><span class="ui-sr">' + esc(originText(o)) + '</span>' : vis) + '</span>';
 }
 const shape = (o: KnownOrigin): string => (o.kind === 'teammate' ? (o.ids.length > 1 ? 'joint' : o.via ? 'relay' : 'teammate') : o.kind);
-/** the byline above a card's title; hidden names (+N) are read out with the label */
+/** the byline above a card's title */
 export const byline = (c: Pick<Ctx, 'origin' | 'size'>): string => {
   const o = c.origin;
   if (!o) return '';
-  return '<div class="cd-by" data-origin="' + shape(o) + '">' +
-    (o.kind === 'agent' && isRoute(o.model) ? '' : originVisual(o, c.size === 'compact' || c.size === 'popover' ? 18 : 20)) + '<span class="cd-by__label">' + originLabel(o) + '</span>' +
-    (o.kind === 'teammate' && o.ids.length > 3 ? '<span class="ui-sr">: ' + esc(namesText(o.ids)) + '</span>' : '') + '</div>';
+  return '<div class="cd-by" data-origin="' + shape(o) + '">' + originVisual(o, c.size === 'compact' || c.size === 'popover' ? 18 : 20) + '<span class="cd-by__label">' + namesUnit(o) + '</span></div>';
 };
 /** one teammate lends its colour to the card as a restrained accent (a ring and a 5% tint); a nearly black orb is mixed
     toward the ink so the ring still shows on dark grounds */
@@ -136,16 +151,16 @@ export function qdots(q: Ctx['q']): string {
   for (let i = 0; i < q.total; i++) pages.push({ id: String(i) });
   return U.html.pages({ pages, current: String(q.index), label: 'Request ' + (q.index + 1) + ' of ' + q.total });
 }
-const shortWho = (x: KnownOrigin): string => (x.kind === 'teammate' ? (x.ids.length > 2 ? nameOf(x.ids[0] ?? '') + ' +' + (x.ids.length - 1) : namesText(x.ids)) : x.kind === 'mcp' ? (x.server || 'MCP server') : originText(x));
 /** one row, in aligned columns: a fixed lead mark (who: the origin's visual), the text (who, then what), a fixed status
     column (the attention dot when it owes something, then a short meta) */
 export function mini(ctx: Ctx, o: { lead?: string; who?: boolean; text: string; meta?: string }): string {
   const owe = ctx.owe, or = ctx.origin;
-  const lead = o.lead != null ? o.lead : originVisual(or, 16, 2);
-  const who = or && o.who !== false ? '<span class="cd-mini__who">' + (or.kind === 'agent' ? mono(or.model || 'The agent') : esc(shortWho(or))) + '</span> ' : '';
+  const lead = o.lead != null ? o.lead : originVisual(or, 16, 2, true);
+  /* the who: at most half the line, more when the request is short (fitCard); an MCP server by its name alone */
+  const who = or && o.who !== false ? '<span class="cd-mini__who">' + namesUnit(or, true) + '</span> ' : '';
   return '<button type="button" class="cd-mini" data-action="open" aria-labelledby="' + ctx.id + '-t' + (owe ? ' ' + ctx.id + '-o' : '') + (o.meta ? ' ' + ctx.id + '-m' : '') + '">' +
     '<span class="cd-mini__lead" aria-hidden="true">' + lead + '</span>' +
-    '<span class="cd-mini__text" id="' + ctx.id + '-t">' + who + o.text + '</span>' +
+    '<span class="cd-mini__text" id="' + ctx.id + '-t">' + who + '<span class="cd-mini__what">' + o.text + '</span></span>' +
     '<span class="cd-mini__status"><span class="cd-mini__dot">' + (owe ? U.html.dot('attention') : '') + '</span>' +
     (owe ? '<span class="ui-sr" id="' + ctx.id + '-o">, ' + esc(owe) + '</span>' : '') +
     '<span class="cd-mini__meta"' + (o.meta ? ' id="' + ctx.id + '-m"' : '') + '>' + (o.meta ?? '') + '</span></span></button>';

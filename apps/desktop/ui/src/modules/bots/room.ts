@@ -14,6 +14,7 @@ import { gentleFollow, orbButton, orbHTML, livenIn, setReact } from './orbs';
 import { markSelected, updateRow } from './list';
 import { openNew } from './new-bot';
 import { openSettings, toggleSettings } from './settings';
+import { checkClips, watchClips } from './clips';
 
 const bots = () => data().bots;
 const NODE = new Map<string, HTMLElement>();
@@ -31,6 +32,7 @@ export function mountView(root: HTMLElement): void {
   const sheet = el('aside', { class: 'ui-panel bt-sheet', 'data-hx-panel': '', 'aria-label': 'Bot settings', hidden: true });
   root.append(room, nb, sheet);
   S.room = room; S.newPane = nb; S.sheet = sheet;
+  watchClips(root);
   buildRoom();
   if (S.view === 'new') openNew(); else openBot(S.sel);
   /* the new-bot view is ours to close: Esc leaves it for the bot you came from */
@@ -85,6 +87,7 @@ function renderPresence(b: Bot): void {
   acts.append(ui.iconButton({ icon: 'gear', label: 'Bot settings', keys: 'mod+I', action: 'settings' }));
   acts.firstElementChild?.addEventListener('click', () => toggleSettings());
   refreshPresence();
+  checkClips();
 }
 export function refreshPresence(): void {
   const b = bot(S.sel); if (!b || !S.pLine) return;
@@ -141,7 +144,7 @@ function renderMsg(b: Bot, m: ThreadMessage, prev: ThreadMessage | null, prevEnt
   const you = m.who === 'you', who = you ? null : (bot(m.who) ?? b);
   const entry = frag(ui.html.entry({
     kind: you ? 'user' : 'bot',
-    who: you ? esc('You') : orbHTML(who as Bot, 20, { state: 'idle' }) + '<span>' + esc((who as Bot).name) + '</span>',
+    who: you ? esc('You') : orbHTML(who as Bot, 20, { state: 'idle' }) + '<span class="bt-who-name">' + esc((who as Bot).name) + '</span>',
     callno: m.t ? [m.t] : [],
     label: (you ? 'You' : (who as Bot).name) + (m.t ? ', ' + m.t : '')
   }));
@@ -150,6 +153,7 @@ function renderMsg(b: Bot, m: ThreadMessage, prev: ThreadMessage | null, prevEnt
   ENTRY.set(entry, { msgs: [m], who: m.who });
   livenIn(entry);
   (S.log as HTMLElement).append(entry);
+  checkClips();
   return entry;
 }
 function appendMsg(id: string, m: ThreadMessage, streaming: boolean): void {

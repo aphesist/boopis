@@ -15,6 +15,7 @@ import { E, cancelOut, flipDots, hideTip, markFocus, morph, renderDots, resetMag
 import type { MorphOpts } from './engine';
 import { lookRow, setOrbLife } from './orbs';
 import { fillCards, refreshBot, renderMins, renderView, viewKey, relocateLive } from './views';
+import { rove, syncRoving } from './roving';
 
 const announce = (m: string): void => { try { ui.announce(m); } catch { /* the library is required at mount */ } };
 
@@ -60,11 +61,11 @@ export function setOn(on: boolean): void {
   }
 }
 /** one click (or Enter) opens the bot's session; the same orb again closes it; another orb switches */
-export function openCard(id: string, kbd: boolean): void {
+export function openCard(id: string, kbd: boolean, focusSel?: string | null): void {
   if (!botById(id) || S.mode === 'off' || S.mode === 'edit') return;
   if (S.mode === 'expanded' && S.card === id && S.page === 'bots') return closeCard(kbd);
   S.rowIdx = Math.max(0, S.bots.findIndex((b) => b.id === id));
-  setMode('expanded', { card: id, focus: 'composer' });
+  setMode('expanded', { card: id, focus: focusSel || 'composer' });
   const b = botById(id); if (b) announce(`Session with ${b.name}`);
 }
 export function closeCard(kbd: boolean): void {
@@ -87,6 +88,7 @@ export function goPage(id: string, opts: { dir?: number; focusDot?: boolean; foc
   cancelOut(inSec);
   const nv = showView(viewKey());
   fillCards(nv);
+  syncRoving();
   X.curView = nv;
   relocateLive();
   setOrbLife();
@@ -319,6 +321,11 @@ export function focusBot(n: number): void {
     btn.focus({ preventScroll: true });
     markFocus();
   };
+  if (S.mode === 'expanded' && S.page === 'bots' && !S.card && X.curView) {     /* in the grid: its bot n */
+    const items = $$('.dk-roster .ui-row', X.curView), j = S.bots.indexOf(b);
+    const to = items[j];
+    if (to) { S.rowIdx = rove(items, j, j); markFocus(); return; }
+  }
   if (S.page !== 'bots') goPage('bots');
   if (S.mode !== 'normal') setMode('normal');
   go();

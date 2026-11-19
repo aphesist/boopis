@@ -5,10 +5,11 @@ import { $$, isMac } from '../../core/dom';
 import { getLayout, setState } from '../../core/state';
 import { emit } from '../../core/bus';
 import { ui } from '../../components';
-import { S, X, clamp, flags, geomR, motion, shownPages, spring, K_SLIDE } from './ctx';
+import { S, X, flags, geomR, motion, rendered, shownPages, spring, K_SLIDE } from './ctx';
 import { E, cxNow, hideTip, kick, resetMag, retarget, shellVar, returnFocus, markFocus } from './engine';
 import { listenOrb, lookRow, pokeBot, setOrbLife } from './orbs';
 import { relocateLive } from './views';
+import { columnsOf, gridTarget, rove, stepIndex } from './roving';
 import {
   closeCard, curFocusTarget, dragTile, down, focusBot, goPage, movePage, openBotInTab, openCard, schedAction, setMode, stepPage, stopRun, togglePage, up
 } from './controller';
@@ -42,7 +43,8 @@ export function onClick(e: MouseEvent): void {
     case 'session':
       /* the poke is the click's feedback; its job is the session (owner, v10) */
       if (!kbd) armDouble(id, e);
-      openCard(id, kbd);
+      /* Enter in a session's switcher switches and keeps you in the switcher, on the newly open bot */
+      openCard(id, kbd, kbd && t.classList.contains('dk-strip-bot') ? '.dk-strip-bot[aria-current="true"]' : null);
       setTimeout(() => pokeBot(id, 0.6), motion.reduce ? 0 : 120);
       break;
     case 'close-card': closeCard(true); break;
@@ -95,33 +97,64 @@ export function onKey(e: KeyboardEvent): void {
   }
   /* 1–9: bot n */
   if (plain && /^Digit[1-9]$/.test(e.code)) { e.preventDefault(); focusBot(+e.code.slice(5)); return; }
-  const inRow = t.closest ? t.closest('.dk-row') : null;
-  const inTabs = t.closest ? t.closest('.dk-dots') : null;
-  if (t.closest && t.closest('hx-card')) return;   /* a card owns its keys (KEYMAP section 6) */
+  const nav = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key) && plain;
+  const near = (sel: string): HTMLElement | null => (t.closest ? t.closest<HTMLElement>(sel) : null);
+  const inRow = near('.dk-row'), inTabs = near('.dk-dots'), inStrip = near('.dk-strip'), inGrid = near('.dk-roster');
+  /* the queue at rest (Needs you): Up / Down between its rows, Enter expands (the card's own action) */
+  const mini = near('.dk-v-wait-norm .cd-mini');
+  if (mini && nav && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') {
+    e.preventDefault();
+    const items = $$('.cd-mini', mini.closest<HTMLElement>('.dk-cards') ?? mini).filter(rendered), i = items.indexOf(mini);
+    rove(items, i, stepIndex(e.key, i, items.length));
+    return;
+  }
+  if (near('hx-card')) { if (nav) e.preventDefault(); return; }   /* a card owns its keys (KEYMAP section 6); arrows never scroll */
   const tile = t.closest ? t.closest<HTMLElement>('.dk-tile') : null;
   if (tile && e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) { e.preventDefault(); movePage(tile.dataset['tile'] ?? '', e.key === 'ArrowLeft' ? -1 : 1); return; }
-  if (inRow && ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {
+  /* the bot row: Left / Right / Home / End between the orbs and "+"; Up goes into the grid on the same bot; Down
+     minimises (the arrows never change pages: that is [ ] and PageUp / PageDown) */
+  if (inRow && nav) {
     e.preventDefault();
-    const items = $$('.dk-bot, .dk-add', inRow as HTMLElement);
-    let i = items.indexOf(t.closest('.dk-bot, .dk-add') as HTMLElement);
-    const step = e.key === 'ArrowLeft' ? -1 : 1;
-    i = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : clamp(i + step, 0, items.length - 1);
-    items.forEach((el, k) => { el.tabIndex = k === i ? 0 : -1; });
-    S.rowIdx = i;
-    items[i]?.focus();
+    if (e.key === 'ArrowUp') { up(true); return; }
+    if (e.key === 'ArrowDown') { down(true); return; }
+    const items = $$('.dk-bot, .dk-add', inRow), i = items.indexOf(near('.dk-bot, .dk-add') as HTMLElement);
+    S.rowIdx = rove(items, i, stepIndex(e.key, i, items.length));
+    markFocus(); kick();
+    return;
+  }
+  /* a session's switcher: Left / Right / Home / End; Enter switches (on the open bot it closes the session) */
+  if (inStrip && nav) {
+    e.preventDefault();
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') return;
+    const items = $$('.dk-strip-bot', inStrip), i = items.indexOf(near('.dk-strip-bot') as HTMLElement);
+    rove(items, i, stepIndex(e.key, i, items.length));
+    return;
+  }
+  /* the grid: all four arrows in 2D; Left / Right wrap by rows; Down from the last row goes back to the bot row */
+  if (inGrid && nav) {
+    e.preventDefault();
+    const items = $$('.ui-row', inGrid), i = items.indexOf(near('.ui-row') as HTMLElement);
+    const j = gridTarget(e.key, i, items.length, columnsOf(items.map((x) => x.offsetTop)));
+    if (j === null) { S.rowIdx = i; setMode('normal', { focus: 'default' }); return; }
+    S.rowIdx = rove(items, i, j);
     markFocus();
     return;
   }
   switch (e.key) {
     case 'ArrowLeft': case 'ArrowRight':
-      /* arrows rove between bots (above); inside the page tablist they move between pages, as tabs do */
-      if (!inTabs) return;
+      /* inside the page tablist the arrows move between pages, as tabs do; elsewhere they move nothing (and never
+         scroll the page) */
+      if (!inTabs) { if (nav && !near('.dk-sess-log')) e.preventDefault(); return; }
       e.preventDefault(); stepPage(e.key === 'ArrowLeft' ? -1 : 1, { focusDot: true }); break;
     case 'Home': case 'End':
-      if (!inTabs) return;
+      if (!inTabs) { if (nav && !near('.dk-sess-log')) e.preventDefault(); return; }
       e.preventDefault(); { const o = shownPages(); const target = e.key === 'Home' ? o[0] : o[o.length - 1]; if (target) goPage(target, { focusDot: true }); } break;
-    case 'ArrowUp': e.preventDefault(); up(true); break;
-    case 'ArrowDown': e.preventDefault(); down(true); break;
+    case 'ArrowUp': case 'ArrowDown':
+      if (near('.dk-sess-log')) return;              /* the log scrolls itself */
+      e.preventDefault();
+      if (!plain || S.card) return;                   /* in a session the arrows move nothing; Esc closes it */
+      if (e.key === 'ArrowUp') up(true); else down(true);
+      break;
     case 'Escape':
       /* close the card, then collapse an expanded dock, then give focus back */
       e.preventDefault(); e.stopPropagation();

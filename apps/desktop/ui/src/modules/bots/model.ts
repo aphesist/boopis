@@ -1,8 +1,10 @@
 /* The bots module's view model: local copies of the provider's bots and threads, kept current by its events.
    The copies are mutated in place (closures in the settings sheet hold them); the provider stays the source of truth. */
 import { emit } from '../../core/bus';
+import { state } from '../../core/state';
 import { ui } from '../../components';
 import type { Bot, BotsEvent, ThreadMessage } from '../../data';
+import type { Follower } from './orbs';
 import { data } from '../../data';
 
 export interface Draft { name: string; role: string; color: string; shape: string; eyes: string; tab: string }
@@ -15,7 +17,9 @@ export const S = {
   room: null as HTMLElement | null, newPane: null as HTMLElement | null, sheet: null as HTMLElement | null, presence: null as (HTMLElement & { _hover?: boolean; _held?: boolean }) | null, presenceEl: null as HTMLElement | null,
   scroll: null as HTMLElement | null, log: null as HTMLElement | null, zone: null as HTMLElement | null, pLine: null as HTMLElement | null, pActs: null as HTMLElement | null,
   composer: null as import('../../components').ComposerEl | null, transient: null as string | null, typing: false,
-  follow: null as ReturnType<typeof import('./orbs').gentleFollow> | null,
+  follow: null as Follower | null,
+  /** the new-bot preview's own follower, disposed when the form is built again */
+  newFollow: null as Follower | null,
   draft: null as Draft | null, draftRow: null as { li: HTMLElement; o: HTMLElement; name: HTMLElement; btn: HTMLElement } | null,
   runs: new Set<string>(),
   sheetOpen: false, sheetFor: null as string | null, sheetReturn: null as Element | null
@@ -28,6 +32,8 @@ export function initModel(): void {
   S.threads = Object.fromEntries(Object.entries(snap.threads).map(([k, v]) => [k, [...v]]));
   S.sel = (S.bots.find((b) => b.attention) ?? S.bots[0])?.id ?? null;
 }
+/** the sidebar is a rail of orbs: names and states move into tooltips */
+export const railOn = (): boolean => state.left === 'rail';
 export const bot = (id: string | null | undefined): Bot | undefined => S.bots.find((b) => b.id === id);
 export const thread = (id: string): ThreadMessage[] => (S.threads[id] ??= []);
 export const pending = (): Bot[] => S.bots.filter((b) => b.attention);

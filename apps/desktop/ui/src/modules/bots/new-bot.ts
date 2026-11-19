@@ -5,13 +5,15 @@ import { setState, state } from '../../core/state';
 import { ui } from '../../components';
 import { oc } from '../../components/orb';
 import { data } from '../../data';
-import { DRAFT_COLOR, EYES, paintOrb, SHAPES, SWATCHES } from './paint';
+import { DRAFT_COLOR, EYES, paintOrb, paintOrbColour, SHAPES, SWATCHES } from './paint';
 import { gentleFollow, orbButton, orbEl, setReact } from './orbs';
 import { S } from './model';
 import type { Draft } from './model';
 import { markSelected, paintDraftRow } from './list';
 import { closeSettings } from './settings';
 import { focusConversation, openBot } from './room';
+import { botNames, isRollKey, nameNote } from './names';
+import { checkClips } from './clips';
 
 const later = (fn: () => void, ms: number): number => window.setTimeout(fn, reduced() ? Math.min(ms, 300) : ms);
 
@@ -28,12 +30,22 @@ export function openNew(seed?: Partial<Draft>): void {
 function buildNew(seed?: Partial<Draft>): void {
   const pane = S.newPane as HTMLElement; pane.textContent = '';
   const d: Draft = S.draft = { name: '', role: '', color: DRAFT_COLOR, shape: 'circle', eyes: 'pill', tab: 'colour', ...(seed ?? {}) };
-  const pv = orbButton({ ...d, name: 'Preview' }, 128, 'Preview of the new bot', { motion: 'lively' });
+  /* calm, not lively: orb2's lively idle swings the head up to about 72 degrees (rim peeks, sky gazes); on a narrow,
+     pointy or low-faced body (triangle, drop, star, diamond, tall) that tips the whole silhouette and takes the face
+     past its edge, so the eyes vanish and pop back: the owner's "flickers and flashes, depending on the shape". Calm
+     glances (about 22 degrees), blinks and eye morphs keep the preview alive; under reduced motion it is the glance lead. */
+  const pv = orbButton({ ...d, name: 'Preview' }, 128, 'Preview of the new bot', { motion: 'calm' });
   const preview = pv.orb;
   preview.setAttribute('shadow', '');
-  const follow = gentleFollow(() => preview, 0.55);
+  S.newFollow?.dispose();
+  const follow = S.newFollow = gentleFollow(() => preview, 0.55);
 
-  const nameIn = el('input', { class: 'bt-name', type: 'text', maxlength: '24', placeholder: 'Name your bot', 'aria-label': 'Name', autocomplete: 'off', spellcheck: 'false', value: d.name, 'data-hx-focus': 'messages' });
+  const noteId = 'bt-name-note-' + Math.random().toString(36).slice(2, 7);
+  const nameIn = el('input', { class: 'bt-name', type: 'text', maxlength: '24', placeholder: 'Name your bot', 'aria-label': 'Name', 'aria-describedby': noteId, 'aria-keyshortcuts': 'Alt+R', autocomplete: 'off', spellcheck: 'false', value: d.name, 'data-hx-focus': 'messages' });
+  /* Surprise me: the library's icon button with its dice glyph */
+  const dice = ui.iconButton({ icon: 'dice', label: 'Surprise me with a name', tip: 'Surprise me', keys: 'alt+R', size: 's' });
+  dice.classList.add('bt-dice');
+  const note = el('p', { class: 'bt-name-note', id: noteId });
   const TABS = [['colour', 'Colour'], ['shape', 'Shape'], ['eyes', 'Eyes']] as const;
   const rowId = 'bt-pick-' + Math.random().toString(36).slice(2, 7);
   const tabs = ui.segmented({ mode: 'tabs', label: 'Appearance', value: d.tab, options: TABS.map(([value, label]) => ({ value, label })), controls: { colour: rowId, shape: rowId, eyes: rowId } });
@@ -47,7 +59,8 @@ function buildNew(seed?: Partial<Draft>): void {
 
   const form = el('div', { class: 'bt-new-form' }, [
     el('div', { class: 'bt-stage' }, pv),
-    nameIn,
+    el('div', { class: 'bt-name-row' }, [nameIn, dice]),
+    note,
     el('div', { class: 'bt-appearance' }, [tabs, row]),
     el('div', { class: 'bt-new-field' }, roleField),
     el('div', { class: 'bt-go-row' }, go)
@@ -58,8 +71,10 @@ function buildNew(seed?: Partial<Draft>): void {
     el('div', { class: 'bt-suggest-row' }, sugg.map((s) => {
       const btn = el('button', { class: 'bt-sugg', type: 'button' }, [orbEl({ shape: s.shape, color: s.color, eyes: 'pill', name: s.name }, 32), el('span', { class: 'bt-sugg-text' }, [el('span', { class: 'bt-sugg-name', text: cap1(s.name) }), el('span', { class: 'bt-sugg-desc', text: s.desc })])]);
       btn.addEventListener('click', () => {
+        const reshape = s.shape !== d.shape;
         Object.assign(d, { name: s.name.replace(/\s+/g, '-'), role: s.desc, shape: s.shape, color: s.color });
-        nameIn.value = d.name; roleIn.value = d.role; roleIn.dispatchEvent(new Event('input')); apply('all'); oc(preview, 'poke', 0.9);
+        if (reshape) follow.faceOn(560);
+        nameIn.value = d.name; roleIn.value = d.role; roleIn.dispatchEvent(new Event('input')); apply('all'); oc(preview, 'poke', reshape ? 0.5 : 0.9, { react: !reshape });
       });
       return btn;
     }))
@@ -67,6 +82,17 @@ function buildNew(seed?: Partial<Draft>): void {
   pane.append(el('div', { class: 'bt-new-scroll' }, [el('div', { class: 'bt-new-col' }, [back, form, suggest])]));
 
   tabs.addEventListener('ui:change', (e) => { d.tab = (e as CustomEvent<{ value: string }>).detail.value; paintRow(); });
+  /* The tiles are built when the tab changes, never on a choice: rebuilding 15 orb canvases (each with its 3D body)
+     on every click cost 45-90ms in WebKitGTK, right as the morph started, so its first frames dropped and the
+     change read as a jump. A choice now moves the selection; a new colour repaints the tiles in place. */
+  function syncRow(): void {
+    const cur = d.tab === 'colour' ? d.color : d.tab === 'shape' ? d.shape : d.eyes;
+    for (const b of row.querySelectorAll<HTMLElement>('.bt-opt')) { const on = b.dataset['val'] === cur; b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1; }
+  }
+  function recolourRow(): void {
+    if (d.tab === 'colour') return;
+    for (const o of row.querySelectorAll('.bt-opt orb-avatar')) paintOrbColour(o, d.color);
+  }
   function paintRow(): void {
     row.textContent = ''; row.dataset['kind'] = d.tab;
     row.setAttribute('aria-label', cap1(d.tab));
@@ -101,23 +127,50 @@ function buildNew(seed?: Partial<Draft>): void {
   }
   function choose(val: string): void {
     if (d.tab === 'colour') { d.color = val; apply('color'); oc(preview, 'blink'); }
-    if (d.tab === 'shape') { d.shape = val; apply('shape'); oc(preview, 'poke', 0.8, { react: false }); }
+    if (d.tab === 'shape' && val !== d.shape) { follow.faceOn(560); d.shape = val; apply('shape'); oc(preview, 'poke', 0.5, { react: false }); }
     if (d.tab === 'eyes') { d.eyes = val; apply('eyes'); }
-    paintRow();
-    row.querySelector<HTMLElement>('[aria-checked="true"]')?.focus({ preventScroll: true });
+    syncRow();
+    const sel = row.querySelector<HTMLElement>('[aria-checked="true"]');
+    if (sel && sel !== document.activeElement) sel.focus({ preventScroll: true });
   }
   function apply(what: 'color' | 'shape' | 'eyes' | 'all'): void {
     if (what === 'color' || what === 'all') paintOrb(preview, d);
     if (what === 'shape' || what === 'all') preview.setAttribute('shape', d.shape);
     if (what === 'eyes' || what === 'all') { if (typeof (preview as unknown as { morphEyes?: unknown }).morphEyes === 'function') oc(preview, 'morphEyes', d.eyes); else preview.setAttribute('eye-shape', d.eyes); }
-    if (what === 'all') paintRow();
+    if (what === 'color' || what === 'all') recolourRow();
+    if (what === 'all') syncRow();
     paintGo(); paintDraftRow();
   }
+  /* the caption under the preview is the button: it names the bot as you type or roll (an empty name gets one from
+     the list on create, so the button is never disabled for want of a name) */
+  const goLabel = el('span', { class: 'bt-go-label' });
+  $('span', go).replaceChildren(goLabel);
   function paintGo(): void {
     const n = d.name.trim();
-    go.disabled = !n;
-    $('span', go).textContent = n ? 'Create ' + n : 'Create bot';
+    go.disabled = false;
+    goLabel.textContent = n ? 'Create ' + n : 'Create bot';
+    if (n) go.setAttribute('data-tip', 'Create ' + n); else go.removeAttribute('data-tip');
+    pv.setAttribute('aria-label', n ? 'Preview of ' + n : 'Preview of the new bot');
+    paintNote();
+    checkClips();
   }
+  /* what the name will turn into: a name in use gets a number on create; a rolled name past the end of the list has
+     one already (say why) */
+  let rolledOut = false;
+  function paintNote(): void {
+    const n = d.name.trim();
+    const t = nameNote(n, botNames.taken(n), botNames.next(n), rolledOut);
+    if (note.textContent !== t) note.textContent = t;
+  }
+  function roll(): void {
+    const name = botNames.pick({ avoid: d.name });
+    rolledOut = botNames.exhausted();
+    d.name = name; nameIn.value = name;
+    paintGo(); paintDraftRow();
+    oc(preview, 'blink');
+    ui.announce('Name: ' + name + (rolledOut ? '. Every name in the list is taken, so it has a number.' : ''));
+  }
+  dice.addEventListener('click', () => roll());
   form.addEventListener('focusin', (e) => {
     const t = e.target as HTMLElement;
     if (pv.contains(t)) { follow.release(); return; }
@@ -125,14 +178,16 @@ function buildNew(seed?: Partial<Draft>): void {
     if (t === nameIn || t === roleIn) setReact(preview, 'listening');
   });
   form.addEventListener('focusout', () => { follow.release(); if (preview.dataset['base'] === 'listening') setReact(preview, 'idle'); });
-  row.addEventListener('pointerover', (e) => { const b = (e.target as Element).closest('.bt-opt'); if (!b) return; const r = b.getBoundingClientRect(); follow.hold(r.left + r.width / 2, r.top + r.height / 2); });
-  row.addEventListener('pointerleave', () => follow.release());
-  nameIn.addEventListener('input', () => { d.name = nameIn.value.replace(/\s+/g, '-').toLowerCase(); if (d.name !== nameIn.value) { const p = nameIn.selectionStart ?? 0; nameIn.value = d.name; nameIn.setSelectionRange(p, p); } paintGo(); paintDraftRow(); });
-  nameIn.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !go.disabled) { e.preventDefault(); create(); } });
+  nameIn.addEventListener('input', () => { rolledOut = false; d.name = nameIn.value.replace(/\s+/g, '-').toLowerCase(); if (d.name !== nameIn.value) { const p = nameIn.selectionStart ?? 0; nameIn.value = d.name; nameIn.setSelectionRange(p, p); } paintGo(); paintDraftRow(); });
+  nameIn.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !go.disabled) { e.preventDefault(); create(); return; }
+    if (isRollKey(e)) { e.preventDefault(); e.stopPropagation(); roll(); }
+  });
   roleIn.addEventListener('input', () => { d.role = roleIn.value; });
   go.addEventListener('click', () => create());
 
   function create(): void {
+    if (!d.name.trim()) { d.name = botNames.pick(); rolledOut = botNames.exhausted(); nameIn.value = d.name; paintDraftRow(); }
     const nb = data().bots.create({ name: d.name, role: d.role, shape: d.shape, color: d.color, eyes: d.eyes, instructions: d.role.trim() });
     const id = nb.id;
     setReact(preview, 'done');

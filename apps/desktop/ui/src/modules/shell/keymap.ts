@@ -59,6 +59,7 @@ export const KEYGROUPS: ReadonlyArray<readonly [string, ReadonlyArray<readonly [
     ['Deny, or cancel a form', 'x'],
     ['Pick a blank or a form option', '1-9'],
     ['Submit a form', 'enter'],
+    ['Show a cut name in full (it takes focus only then)', 'tab'],
     ['Defer a form (Later), or back to the turn', 'esc']
   ]],
   ['Composer', [
@@ -75,12 +76,19 @@ export const KEYGROUPS: ReadonlyArray<readonly [string, ReadonlyArray<readonly [
     ['Stop listening (while listening)', 'esc']
   ]],
   ['Dock', [
-    ['Previous or next bot', 'left | right'],
-    ['Open the bot', 'enter'],
-    ['Open its card', 'space'],
-    ['Previous or next page', '[ | ]'],
+    ['Bot row: previous, next, first, last bot (and "+")', 'left | right | home | end'],
+    ['Bot row: open the grid on the same bot', 'up'],
+    ['Bot row: minimise the dock', 'down'],
+    ['Open the bot\'s session in the dock; again closes it', 'enter | space'],
+    ['Open the bot\'s full chat in the Bots tab', 'mod+enter'],
+    ['Grid: move in two dimensions (down from the last row goes back to the bot row)', 'left | right | up | down | home | end'],
+    ['Session switcher: previous, next bot; Enter switches', 'left | right | home | end'],
+    ['Queue (Needs you): previous, next row; Enter expands it', 'up | down | home | end'],
+    ['Page nub: previous, next, first, last page', 'left | right | home | end'],
+    ['Previous or next dock page, anywhere in the dock', '[ | ] | pageup | pagedown'],
     ['Bot n', '1-9'],
-    ['Close, collapse, leave', 'esc']
+    ['Close the session, collapse, leave', 'esc'],
+    ['Expand or collapse (elsewhere in the dock)', 'up | down']
   ]],
   ['Palette', [
     ['Move', 'up | down'],

@@ -61,12 +61,31 @@ export const seedBots = (): Bot[] => BOT_SEEDS.map((b) => ({
   paused: false, activity: ACTIVITY[b.id] ?? '', spent: SPENT[b.id] ?? '0.00', last: LAST[b.id] ?? null, ideas: ideasFor(b.role), cfg: defaultConfig(b.id)
 }));
 
+/** Test fixtures, never in the default data: a bot with a long name and a long role, for the long-name rules (an
+    ellipsis where space is fixed, two lines in a header). The e2e build adds one with `?fixture=long`, a test adds it
+    with `createMockProvider({ fixtures: ['long'] })`. */
+type ThreadSeed = Array<{ who: string; t: string; text?: string; approval?: ApprovalData }>;
+export const BOT_FIXTURES: Readonly<Record<string, { bot: BotSeed; thread: ThreadSeed }>> = {
+  long: {
+    bot: { id: 'cassiopeia-staging-deploy-guardian', name: 'cassiopeia-staging-deploy-guardian', role: 'watches every staging deploy and rolls back on a failed health check', shape: 'star', color: '#e8b04a', eyes: 'pill', state: 'needs', attention: 'approval' },
+    thread: [
+      { who: 'you', t: '15:02', text: 'keep an eye on the staging deploys tonight' },
+      { who: 'cassiopeia-staging-deploy-guardian', t: '15:03', text: 'On it. I will watch each deploy for ten minutes and roll back if the health check fails twice.' },
+      { who: 'cassiopeia-staging-deploy-guardian', t: '15:40', approval: { title: 'roll back staging', quote: 'invoices-api 2.14.0 → 2.13.4', item: ['staging · invoices-api', 'health check failed 2 of 2'], meta: 'expires in 9 min', actions: ['deny', 'hold to approve'] } }
+    ]
+  }
+};
+export const fixtureBot = (seed: BotSeed): Bot => ({
+  id: seed.id, name: seed.name, role: seed.role, shape: seed.shape, color: seed.color, eyes: seed.eyes, state: seed.state, attention: seed.attention ?? null,
+  paused: false, activity: '', spent: '0.00', last: null, ideas: ideasFor(seed.role), cfg: defaultConfig(seed.id)
+});
+
 export const NINA_APPROVAL: ApprovalData = {
   id: 'approve-deploy', title: 'deploy to staging', quote: 'billing/cents → staging, dry run first',
   item: ['staging · invoices-api', 'read-only on invoices · 1 migration'], meta: 'expires in 9 min · ~$0.02', actions: ['deny', 'hold to approve']
 };
 /** bot threads: the example conversation with nina (a teammate) and atlas */
-export const seedThreads = (): Record<string, Array<{ who: string; t: string; text?: string; approval?: ApprovalData }>> => ({
+export const seedThreads = (): Record<string, ThreadSeed> => ({
   nina: [
     { who: 'nina', t: '14:08', text: 'Tests are green on billing/cents. I can deploy it to staging and compare against 200 real invoices.' },
     { who: 'nina', t: '14:08', approval: NINA_APPROVAL }

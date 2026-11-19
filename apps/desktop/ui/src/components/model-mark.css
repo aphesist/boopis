@@ -5,10 +5,11 @@
 /* brand fills choose their light or dark value by color-scheme; the dock is black in every theme */
 [data-ground="dock"] .ui-mm[data-color="brand"] { color-scheme: dark; }
 
-/* mark + name, one unit */
-.ui-model { white-space: nowrap; text-transform: none; }
-.ui-model > .ui-mm { margin-inline-end: var(--sp-1); }
-.ui-model__name { text-transform: none; }
+/* mark + name, one unit: it moves to the next line whole, and a long id breaks inside the name, never between the
+   mark and the name; the mark sits on the name's first line */
+.ui-model { display: inline-flex; align-items: baseline; max-width: 100%; min-width: 0; text-transform: none; }
+.ui-model > .ui-mm { align-self: flex-start; margin-block-start: calc((1lh - var(--mm-size, 16px)) / 2); margin-inline-end: var(--sp-1); }
+.ui-model__name { min-width: 0; overflow-wrap: anywhere; text-transform: none; }
 .ui-model-route { display: inline-flex; flex-wrap: wrap; align-items: baseline; column-gap: var(--sp-2); row-gap: 0; min-width: 0; }
 .ui-model-route__to { color: var(--text-quiet); }
 

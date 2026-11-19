@@ -12,7 +12,7 @@ describe('the origin slot', () => {
   it('reads older data ({from}, {model}) as an origin, and a named origin as itself', () => {
     expect(originOf({ from: 'nina' })).toEqual({ kind: 'teammate', ids: ['nina'], via: null });
     expect(originOf({ from: 'nina', via: 'atlas' })).toEqual({ kind: 'teammate', ids: ['nina'], via: 'atlas' });
-    expect(originOf({ model: 'sonnet 5.5' })).toEqual({ kind: 'agent', model: 'sonnet 5.5' });
+    expect(originOf({ model: 'sonnet 5.5' })).toEqual({ kind: 'agent', model: 'sonnet 5.5', route: 'sonnet 5.5' });
     expect(originOf({ origin: { kind: 'plugin' } })).toEqual({ kind: 'plugin' });
     expect(originOf({ origin: { kind: 'teammate', ids: ['nobody'] } })).toBeNull();
     expect(originOf({})).toBeNull();
@@ -36,7 +36,7 @@ describe('the origin slot', () => {
     expect(stack).toContain('aria-label="' + namesText(all.slice(0, 5)));
   });
   it('draws the agent as its provider\'s mark, a system source as a glyph and an MCP server as its initial', () => {
-    expect(originVisual({ kind: 'agent', model: 'qwen3-coder → sonnet 5.5' }, 20)).toContain('data-family="claude"');
+    expect(originVisual(originOf({ model: 'qwen3-coder → sonnet 5.5' }), 20)).toContain('data-family="claude"');
     expect(originVisual({ kind: 'plugin' }, 20)).toContain('cd-glyph');
     expect(originVisual({ kind: 'mcp', server: 'sentry' }, 20)).toContain('>S<');
   });
@@ -44,7 +44,7 @@ describe('the origin slot', () => {
     const all = ids();
     const h = byline({ origin: { kind: 'teammate', ids: all.slice(0, 6), via: null }, size: 'inline' });
     expect(h).toContain('data-origin="joint"');
-    expect(h).toContain('and 4 more');
+    expect(h).toContain('and 5 others');
     expect(h).toContain('ui-sr');
     expect(byline({ origin: { kind: 'teammate', ids: [all[0] as string], via: all[1] as string }, size: 'compact' })).toContain('data-origin="relay"');
     expect(byline({ origin: null, size: 'inline' })).toBe('');
