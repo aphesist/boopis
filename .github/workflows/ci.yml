@@ -35,6 +35,43 @@ jobs:
           echo "checking $base..HEAD"
           sh scripts/check-commit-identity.sh "$base..HEAD"
 
+  installer-windows:
+    # scripts/install.ps1 on real Windows, in Windows PowerShell 5.1 and PowerShell 7. Run from a pipe (irm ... | iex), a
+    # failure must print why, leave the caller's session open with its settings as they were, and set LASTEXITCODE 1;
+    # run as a file, it must exit 1. No release is reachable here (the API address is a closed port), so it fails on purpose.
+    runs-on: windows-latest
+    timeout-minutes: 15
+    env:
+      BOOPIS_API_URL: http://127.0.0.1:9
+    steps:
+      - uses: actions/checkout@v4
+      - name: from a pipe, Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $before = $ErrorActionPreference
+          $out = (Get-Content -Raw scripts/install.ps1 | Invoke-Expression) 2>&1 | Out-String
+          if ($LASTEXITCODE -ne 1) { throw "expected LASTEXITCODE 1 after a failure, got $LASTEXITCODE" }
+          if ($ErrorActionPreference -ne $before) { throw "the caller's ErrorActionPreference changed to $ErrorActionPreference" }
+          Write-Output 'the session is still here after the failure'
+          $global:LASTEXITCODE = 0
+      - name: from a pipe, PowerShell 7
+        shell: pwsh
+        run: |
+          $before = $ErrorActionPreference
+          Get-Content -Raw scripts/install.ps1 | Invoke-Expression
+          if ($LASTEXITCODE -ne 1) { throw "expected LASTEXITCODE 1 after a failure, got $LASTEXITCODE" }
+          if ($ErrorActionPreference -ne $before) { throw "the caller's ErrorActionPreference changed to $ErrorActionPreference" }
+          Write-Output 'the session is still here after the failure'
+          $global:LASTEXITCODE = 0
+      - name: as a file, a failure exits 1
+        shell: pwsh
+        run: |
+          $p = Start-Process powershell -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'scripts/install.ps1', '-Yes' -Wait -PassThru -NoNewWindow
+          if ($p.ExitCode -ne 1) { throw "expected exit code 1, got $($p.ExitCode)" }
+          $p = Start-Process pwsh -ArgumentList '-NoProfile', '-File', 'scripts/install.ps1', '-Yes' -Wait -PassThru -NoNewWindow
+          if ($p.ExitCode -ne 1) { throw "expected exit code 1, got $($p.ExitCode)" }
+          Write-Output 'both exit 1'
+
   installer:
     # The installers and the art they carry (ADR-0026): shellcheck, the brand goldens (with the embedded blocks current),
     # and an install and uninstall into a temp prefix. No Rust and no cache: it is shell and awk only.

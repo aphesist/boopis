@@ -23,6 +23,13 @@ param(
     [switch]$Uninstall
 )
 
+# Run from a pipe (irm ... | iex), this script runs inside the caller's own PowerShell session: it must never `exit`,
+# which would close their window before they read why it stopped, and it puts back the settings it changes.
+# It is a file run only when the file running is this installer (a pipe started from another script still counts as a pipe).
+$script:SelfPath = $MyInvocation.MyCommand.Path
+$script:FromPipe = -not ($script:SelfPath -and (Test-Path -LiteralPath $script:SelfPath) -and
+    ((Get-Content -Raw -LiteralPath $script:SelfPath) -match 'boopis-install-stopped'))
+$script:CallerErrorAction = $ErrorActionPreference
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2.0
 
@@ -102,13 +109,15 @@ function Write-Step {
     [Console]::Out.WriteLine(('{0}  {1}{2}{3} {4,-13} {5}' -f $erase, $color, $mark, $script:Off, $Label, $Detail))
 }
 
-# Stop with a sentence that names the problem and one that names the way out. Nothing raw, never a stack.
+# Stop with a sentence that names the problem and one that names the way out. Nothing raw, never a stack. It does not
+# `exit` here: the end of the script decides how to stop (an exit code for a file, a return for a pipe).
+$script:StopMark = 'boopis-install-stopped'
 function Stop-Install {
     param([string]$Problem, [string]$Next = '')
     if ($script:Term.Animate) { [Console]::Error.Write("`r$($script:Esc)[K") }
     [Console]::Error.WriteLine("  $($script:Fail)$($script:MarkFail)$($script:Off) $Problem")
     if ($Next) { [Console]::Error.WriteLine("    $Next") }
-    exit 1
+    throw $script:StopMark
 }
 
 function Format-Size { param([double]$Bytes) return ('{0:N1} MB' -f ($Bytes / 1MB)) }
@@ -940,12 +949,32 @@ function Show-BoopisScene {
 }
 # <<< brand
 
-$script:Art = ConvertFrom-BoopisArt $BoopisArtText
-Initialize-Style
-if ($Uninstall) {
-    Show-Banner
-    Invoke-Uninstall
+$script:Failed = $false
+try {
+    $script:Art = ConvertFrom-BoopisArt $BoopisArtText
+    Initialize-Style
+    if ($Uninstall) {
+        Show-Banner
+        Invoke-Uninstall
+    }
+    else {
+        Install-Boopis
+    }
 }
-else {
-    Install-Boopis
+catch {
+    $script:Failed = $true
+    # Stop-Install already said what went wrong and what to do; anything else is said in one sentence, never a stack
+    if ([string]$_.Exception.Message -ne $script:StopMark) {
+        [Console]::Error.WriteLine("  boopis could not finish: $($_.Exception.Message)")
+        [Console]::Error.WriteLine("    Run it again. If it stops here again, report it at $BaseUrl/$Owner/$Repo/issues")
+    }
+}
+finally {
+    if ($script:FromPipe) {
+        Set-StrictMode -Off
+        $ErrorActionPreference = $script:CallerErrorAction
+    }
+}
+if ($script:Failed) {
+    if ($script:FromPipe) { $global:LASTEXITCODE = 1 } else { exit 1 }
 }
