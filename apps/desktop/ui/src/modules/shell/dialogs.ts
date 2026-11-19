@@ -49,15 +49,22 @@ function mountDiagnostics(): void {
   diagMounted = true;
   const sec = document.createElement('section');
   sec.className = 'hx-set'; sec.setAttribute('aria-labelledby', 'hx-set-diag-h');
-  sec.innerHTML = '<h3 class="ui-set__head" id="hx-set-diag-h">Diagnostics</h3>' + ui.html.setRow({ label: 'Graphics renderer', hint: 'What the window draws with. Copy it when asked why the app is slow or blank.',
-    control: '<div class="ui-set__actions">' + ui.html.button({ label: 'Copy report', size: 's', attrs: { id: 'hx-diag-copy' } }) + ui.html.button({ label: 'Measure frames', size: 's', variant: 'ghost', attrs: { id: 'hx-diag-fps' } }) + ui.html.button({ label: 'WebKit GPU page', size: 's', variant: 'ghost', attrs: { id: 'hx-diag-gpu' } }) + '</div>' });
+  sec.innerHTML = '<h3 class="ui-set__head" id="hx-set-diag-h">Diagnostics</h3>' +
+    ui.html.setRow({ label: 'Graphics card', hint: 'Which GPU draws the window. Automatic uses the dedicated GPU on AC power when it is safe to. Applies the next time the app starts.',
+      control: '<div class="ui-set__actions"><div id="hx-gpu-seg"></div>' + ui.html.button({ label: 'Restart to switch', size: 's', attrs: { id: 'hx-gpu-restart', hidden: true } }) + '</div>' }) +
+    ui.html.setRow({ label: 'Graphics renderer', hint: 'What the window draws with. Copy it when asked why the app is slow or blank.',
+      control: '<div class="ui-set__actions">' + ui.html.button({ label: 'Copy report', size: 's', attrs: { id: 'hx-diag-copy' } }) + ui.html.button({ label: 'Measure frames', size: 's', variant: 'ghost', attrs: { id: 'hx-diag-fps' } }) + ui.html.button({ label: 'WebKit GPU page', size: 's', variant: 'ghost', attrs: { id: 'hx-diag-gpu' } }) + '</div>' });
   panel.appendChild(sec);
   ui.hydrate(sec);
   const fail = (e: unknown): void => { ui.toast(e instanceof Error ? e.message : 'That did not work'); };
   let frames: import('../../host/renderer').FrameStats | null = null;
   $('#hx-diag-fps', sec).addEventListener('click', () => {
     ui.toast('Measuring for 5 seconds: close this and move the pointer along the dock', { ms: 6000 });
-    void import('../../host/renderer').then(async (m) => { frames = await m.measureFrames(5000); ui.toast(`${frames.fps} fps, p95 ${frames.p95} ms: Copy report includes it`, { ms: 6000 }); }).catch(fail);
+    void import('../../host/renderer').then(async (m) => {
+      const rate = m.hz((await m.loadReport().catch(() => null))?.frame_rate.refresh_millihertz);
+      frames = await m.measureFrames(5000);
+      ui.toast(`${m.describeFrames(frames, rate)}: Copy report includes it`, { ms: 6000 });
+    }).catch(fail);
   });
   $('#hx-diag-copy', sec).addEventListener('click', () => {
     void import('../../host/renderer').then(async (m) => {
@@ -65,7 +72,36 @@ function mountDiagnostics(): void {
       try { await navigator.clipboard.writeText(text); ui.toast('Copied'); } catch { ui.toast('Copy is blocked here'); }
     }).catch(fail);
   });
+  mountGpuChoice(sec, fail);
   $('#hx-diag-gpu', sec).addEventListener('click', () => { void import('../../host/renderer').then((m) => m.openGpuPage()).catch(fail); });
+}
+/* The GPU choice: saved at once, applied at the next start (the GPU is fixed when the process starts), so the control says so
+   and offers a restart when the choice differs from what is running or the power source moved since start. */
+function mountGpuChoice(sec: HTMLElement, fail: (e: unknown) => void): void {
+  const host = $('#hx-gpu-seg', sec), restart = $('#hx-gpu-restart', sec), status = $('.ui-set__label small', sec), base = status.textContent ?? '';
+  void import('../../host/renderer').then(async (m) => {
+    const [{ settings, policy }, report] = await Promise.all([m.loadGpuChoice(), m.loadReport()]);
+    const seg = ui.segmented({ mode: 'radio', size: 's', label: 'Graphics card', value: policy, options: [{ value: 'auto', label: 'Auto' }, { value: 'integrated', label: 'Integrated' }, { value: 'dedicated', label: 'Dedicated' }] });
+    host.replaceWith(seg);
+    const g = report.gpu;
+    const show = (chosen: typeof policy): void => {
+      const lines: string[] = [];
+      lines.push(g.policy_source === 'environment' ? `HYPOTAXIS_GPU is set (${m.gpuLabel(g.policy)}) and overrides this choice.` : `Running on: ${g.set.length ? 'the dedicated GPU' : 'the integrated GPU'} (${g.rule.replace(/_/g, ' ')}).`);
+      if (g.warning === 'may_crash_on_wayland') lines.push('The dedicated GPU on Wayland with this WebKitGTK (before 2.54.2) may crash or show a blank window.');
+      const moved = g.restart_advice ? `The power source changed: a restart would switch to the ${g.restart_advice === 'to_dedicated' ? 'dedicated' : 'integrated'} GPU.` : '';
+      if (moved) lines.push(moved);
+      const pending = chosen !== g.policy && g.policy_source !== 'environment';
+      if (pending) lines.push('Saved. It applies after a restart.');
+      status.textContent = [base, ...lines].join(' ');
+      restart.hidden = !(pending || g.restart_advice);
+    };
+    show(policy);
+    seg.addEventListener('ui:change', (e) => {
+      const chosen = (e as CustomEvent<{ value: string }>).detail.value as typeof policy;
+      void m.saveGpuChoice(settings, chosen).then(() => show(chosen)).catch(fail);
+    });
+    restart.addEventListener('click', () => { void m.restartApp().catch(fail); });
+  }).catch(fail);
 }
 function mountOrbGrow(): void {
   const panel = $('#hx-dpanel-appearance'); if (!panel || panel.querySelector('#hx-set-orb-grow')) return;

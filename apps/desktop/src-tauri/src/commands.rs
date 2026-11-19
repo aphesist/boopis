@@ -392,13 +392,43 @@ pub fn open_external(app: AppHandle, url: String) -> std::result::Result<(), Hos
 /// What the host decided about the webview's renderer at startup (managed state, read-only).
 pub struct RendererState(pub RendererReport);
 
-/// The renderer diagnostics: the session, the GPUs and their drivers, the rule that decided, and the environment the
-/// web process was started with. Read-only; the numbers in it are what the owner sends when asked.
+/// What the GPU rule decided at startup (managed state, read-only): the report adds the power source as it is now.
+pub struct GpuState {
+    /// What the rule read.
+    pub inputs: crate::gpu::Inputs,
+    /// Where the policy came from.
+    pub source: crate::gpu::PolicySource,
+    /// What it decided.
+    pub decision: crate::gpu::Decision,
+}
+
+/// The renderer diagnostics: the session, the GPUs and their drivers, the rule that decided, the environment the web
+/// process was started with, the `WebKitGTK` version and origin, the display's refresh rate, whether `WebKit`'s 60 fps
+/// preference is off and the power profile. The frame-rate part is read from the live window. Read-only; the numbers in
+/// it are what the owner sends when asked.
 #[tauri::command]
 #[specta::specta]
-#[must_use]
-pub fn renderer_report(state: State<'_, RendererState>) -> RendererReport {
-    state.0.clone()
+pub async fn renderer_report(
+    app: AppHandle,
+    state: State<'_, RendererState>,
+    frame_rate: State<'_, crate::frame_rate::State>,
+    gpu: State<'_, GpuState>,
+) -> std::result::Result<RendererReport, HostError> {
+    let mut report = state.0.clone();
+    report.frame_rate = crate::frame_rate::current(&app, &frame_rate).await;
+    let power = tokio::task::spawn_blocking(crate::gpu::power_source)
+        .await
+        .unwrap_or(crate::gpu::PowerSource::Unknown);
+    report.gpu = crate::gpu::report(&gpu.inputs, gpu.source, &gpu.decision, power);
+    Ok(report)
+}
+
+/// Restart the app, so the choices read at startup (the GPU, `HYPOTAXIS_FPS`, the renderer) apply. The webview's GPU is
+/// fixed when the process starts; this is the only way to change it.
+#[tauri::command]
+#[specta::specta]
+pub fn app_restart(app: AppHandle) {
+    app.restart();
 }
 
 /// Open `WebKitGTK`'s own `webkit://gpu` page in a window of its own: its version, the buffer path in use (`DMABUF` or

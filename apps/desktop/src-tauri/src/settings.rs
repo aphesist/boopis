@@ -18,6 +18,10 @@ pub struct AppSettings {
     pub profile: Option<String>,
     /// Whether the host may show desktop notifications.
     pub notifications: bool,
+    /// Which GPU the webview renders on (`HYPOTAXIS_GPU` overrides it). Read at startup, so a change needs a restart.
+    /// Added without a version bump: a file from before has none and gets `auto`.
+    #[serde(default)]
+    pub gpu: crate::gpu::Policy,
 }
 
 impl Default for AppSettings {
@@ -26,6 +30,7 @@ impl Default for AppSettings {
             version: SCHEMA_VERSION,
             profile: None,
             notifications: true,
+            gpu: crate::gpu::Policy::Auto,
         }
     }
 }
@@ -83,6 +88,11 @@ impl AppSettings {
                 .get("notifications")
                 .and_then(serde_json::Value::as_bool)
                 .unwrap_or(true),
+            gpu: v
+                .get("gpu")
+                .and_then(|g| g.as_str())
+                .and_then(crate::gpu::Policy::parse)
+                .unwrap_or_default(),
         };
         settings.validate()?;
         Ok(settings)
@@ -108,8 +118,26 @@ mod tests {
             AppSettings {
                 version: 1,
                 profile: Some("work".into()),
-                notifications: false
+                notifications: false,
+                gpu: crate::gpu::Policy::Auto
             }
+        );
+    }
+
+    #[test]
+    fn the_gpu_choice_is_stored_and_an_old_file_gets_auto() {
+        let s = AppSettings::migrate(Some(&json!({"version": 1, "gpu": "dedicated"}))).unwrap();
+        assert_eq!(s.gpu, crate::gpu::Policy::Dedicated);
+        let old = AppSettings::migrate(Some(&json!({"version": 1, "profile": "work"}))).unwrap();
+        assert_eq!(old.gpu, crate::gpu::Policy::Auto);
+        let typo = AppSettings::migrate(Some(&json!({"version": 1, "gpu": "turbo"}))).unwrap();
+        assert_eq!(typo.gpu, crate::gpu::Policy::Auto);
+        // The UI's value round-trips, and the host reads the same file at startup.
+        let text =
+            serde_json::to_string(&json!({"app": serde_json::to_value(&s).unwrap()})).unwrap();
+        assert_eq!(
+            crate::gpu::stored_policy(&text),
+            Some(crate::gpu::Policy::Dedicated)
         );
     }
 

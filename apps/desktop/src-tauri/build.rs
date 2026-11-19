@@ -23,6 +23,7 @@ const COMMANDS: &[&str] = &[
     "open_external",
     "renderer_report",
     "renderer_open_gpu_page",
+    "app_restart",
 ];
 
 fn main() {

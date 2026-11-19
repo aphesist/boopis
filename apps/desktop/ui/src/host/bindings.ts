@@ -45,8 +45,10 @@ export const commands = {
 	/**  Open an `http` or `https` link in the user's browser. */
 	openExternal: (url: string, options?: InvokeOptions) => __TAURI_INVOKE<null>("open_external", { url }, options),
 	/**
-	 *  The renderer diagnostics: the session, the GPUs and their drivers, the rule that decided, and the environment the
-	 *  web process was started with. Read-only; the numbers in it are what the owner sends when asked.
+	 *  The renderer diagnostics: the session, the GPUs and their drivers, the rule that decided, the environment the web
+	 *  process was started with, the `WebKitGTK` version and origin, the display's refresh rate, whether `WebKit`'s 60 fps
+	 *  preference is off and the power profile. The frame-rate part is read from the live window. Read-only; the numbers in
+	 *  it are what the owner sends when asked.
 	 */
 	rendererReport: (options?: InvokeOptions) => __TAURI_INVOKE<RendererReport_Serialize>("renderer_report", undefined, options),
 	/**
@@ -54,6 +56,11 @@ export const commands = {
 	 *  shared memory), the EGL and GL vendor, and the acceleration policy. The window has no access to the host's commands.
 	 */
 	rendererOpenGpuPage: (options?: InvokeOptions) => __TAURI_INVOKE<null>("renderer_open_gpu_page", undefined, options),
+	/**
+	 *  Restart the app, so the choices read at startup (the GPU, `HYPOTAXIS_FPS`, the renderer) apply. The webview's GPU is
+	 *  fixed when the process starts; this is the only way to change it.
+	 */
+	appRestart: (options?: InvokeOptions) => __TAURI_INVOKE<void>("app_restart", undefined, options),
 };
 
 /** Events */
@@ -85,6 +92,11 @@ export type AppSettings_Deserialize = {
 	profile?: string | null,
 	/**  Whether the host may show desktop notifications. */
 	notifications: boolean,
+	/**
+	 *  Which GPU the webview renders on (`HYPOTAXIS_GPU` overrides it). Read at startup, so a change needs a restart.
+	 *  Added without a version bump: a file from before has none and gets `auto`.
+	 */
+	gpu?: GpuPolicy,
 };
 
 /**  What the host remembers. */
@@ -95,6 +107,11 @@ export type AppSettings_Serialize = {
 	profile: string | null,
 	/**  Whether the host may show desktop notifications. */
 	notifications: boolean,
+	/**
+	 *  Which GPU the webview renders on (`HYPOTAXIS_GPU` overrides it). Read at startup, so a change needs a restart.
+	 *  Added without a version bump: a file from before has none and gets `auto`.
+	 */
+	gpu: GpuPolicy,
 };
 
 /**  Whether first-run setup still has to run, without changing anything. */
@@ -225,8 +242,73 @@ export type Form_Serialize = {
 	diff: DiffLine_Serialize[],
 };
 
+/**  What the owner asked for with `HYPOTAXIS_FPS`. */
+export type FpsPolicy = 
+/**  Lift the cap when the display is faster than 60 Hz. */
+"auto" | 
+/**  Keep `WebKit`'s default (its 60 fps preference stays on). */
+"sixty" | 
+/**  Always lift the cap. */
+"max";
+
+/**  Why the decision came out as it did (stable names: they go in the log and in the diagnostics). */
+export type FpsRule = 
+/**  `HYPOTAXIS_FPS=60`. */
+"policy_sixty" | 
+/**  `HYPOTAXIS_FPS=max`. */
+"policy_max" | 
+/**  `auto`, and the display is faster than 60 Hz. */
+"faster_than_sixty" | 
+/**  `auto`, and the display is 60 Hz or slower: the cap changes nothing. */
+"not_faster_than_sixty" | 
+/**  `auto`, and the display's rate could not be read: nothing is assumed. */
+"rate_unknown";
+
 /**  A gateway frame, as JSON, exactly as the gateway sent it. */
 export type Frame = unknown;
+
+/**  What the diagnostics say about the frame rate. Filled from the live window, so it is read at report time. */
+export type FrameRateReport = FrameRateReport_Serialize | FrameRateReport_Deserialize;
+
+/**  What the diagnostics say about the frame rate. Filled from the live window, so it is read at report time. */
+export type FrameRateReport_Deserialize = {
+	/**  What `HYPOTAXIS_FPS` asked for. */
+	policy: FpsPolicy,
+	/**  The rule that decided, once a web view has been looked at. */
+	rule?: FpsRule | null,
+	/**  The refresh rate GDK reports for the window's monitor, in millihertz. */
+	refresh_millihertz?: number | null,
+	/**  The monitor's model, as GDK names it. */
+	monitor?: string | null,
+	/**  Whether `WebKit`'s 60 fps preference is off now (read back from `WebKit`), when it could be read. */
+	preference_off?: boolean | null,
+	/**  Why the feature API was not used or did not take. */
+	refusal?: WebkitRefusal | null,
+	/**  The ACPI platform profile, as `power-profiles-daemon` maps it. */
+	power_profile: PowerProfile,
+	/**  The raw text of `platform_profile`. */
+	platform_profile?: string | null,
+};
+
+/**  What the diagnostics say about the frame rate. Filled from the live window, so it is read at report time. */
+export type FrameRateReport_Serialize = {
+	/**  What `HYPOTAXIS_FPS` asked for. */
+	policy: FpsPolicy,
+	/**  The rule that decided, once a web view has been looked at. */
+	rule: FpsRule | null,
+	/**  The refresh rate GDK reports for the window's monitor, in millihertz. */
+	refresh_millihertz: number | null,
+	/**  The monitor's model, as GDK names it. */
+	monitor: string | null,
+	/**  Whether `WebKit`'s 60 fps preference is off now (read back from `WebKit`), when it could be read. */
+	preference_off: boolean | null,
+	/**  Why the feature API was not used or did not take. */
+	refusal: WebkitRefusal | null,
+	/**  The ACPI platform profile, as `power-profiles-daemon` maps it. */
+	power_profile: PowerProfile,
+	/**  The raw text of `platform_profile`. */
+	platform_profile: string | null,
+};
 
 /**  What the UI is told about the gateway (`hermes_status`). */
 export type GatewayState = 
@@ -239,6 +321,128 @@ export type GatewayState =
 
 /**  One graphics device, as `/sys/class/drm` reports it. */
 export type Gpu = Gpu_Serialize | Gpu_Deserialize;
+
+/**  Where the variables came from. */
+export type GpuEnvSource = 
+/**  What switcheroo-control advertises for the dedicated GPU. */
+"switcheroo" | 
+/**  NVIDIA's documented offload variables. */
+"nvidia_documented";
+
+/**  What the owner chose: from `HYPOTAXIS_GPU` or from Settings > General. */
+export type GpuPolicy = 
+/**
+ *  The dedicated GPU on AC power with a loaded NVIDIA driver and a `WebKitGTK` that has the explicit-sync fix;
+ *  the integrated GPU otherwise.
+ */
+"auto" | 
+/**  The integrated GPU (what the system does by default on a hybrid laptop). */
+"integrated" | 
+/**  The dedicated GPU, whatever the power source. */
+"dedicated";
+
+/**  Where the policy in force came from. */
+export type GpuPolicySource = 
+/**  `HYPOTAXIS_GPU`. */
+"environment" | 
+/**  Settings > General. */
+"setting" | 
+/**  Neither: `auto`. */
+"default";
+
+/**  The GPU part of the diagnostics report. */
+export type GpuReport = GpuReport_Serialize | GpuReport_Deserialize;
+
+/**  The GPU part of the diagnostics report. */
+export type GpuReport_Deserialize = {
+	/**  The choice in force. */
+	policy: GpuPolicy,
+	/**  Where it came from. */
+	policy_source: GpuPolicySource,
+	/**  The rule that decided. */
+	rule: GpuRule,
+	/**  The variables the host set. */
+	set: ([string, string])[],
+	/**  Where they came from. */
+	env_source?: GpuEnvSource | null,
+	/**  A warning for the owner. */
+	warning?: GpuWarning | null,
+	/**  The power source now. */
+	power: PowerSource,
+	/**  A restart would change the GPU. */
+	restart_advice?: GpuSwitch | null,
+	/**  The display GPU's driver and vendor (`card0 0x8086 i915`). */
+	display_gpu?: string | null,
+	/**  The dedicated NVIDIA GPU, when there is one. */
+	dedicated_gpu?: string | null,
+};
+
+/**  The GPU part of the diagnostics report. */
+export type GpuReport_Serialize = {
+	/**  The choice in force. */
+	policy: GpuPolicy,
+	/**  Where it came from. */
+	policy_source: GpuPolicySource,
+	/**  The rule that decided. */
+	rule: GpuRule,
+	/**  The variables the host set. */
+	set: ([string, string])[],
+	/**  Where they came from. */
+	env_source: GpuEnvSource | null,
+	/**  A warning for the owner. */
+	warning: GpuWarning | null,
+	/**  The power source now. */
+	power: PowerSource,
+	/**  A restart would change the GPU. */
+	restart_advice: GpuSwitch | null,
+	/**  The display GPU's driver and vendor (`card0 0x8086 i915`). */
+	display_gpu: string | null,
+	/**  The dedicated NVIDIA GPU, when there is one. */
+	dedicated_gpu: string | null,
+};
+
+/**  Why the decision came out as it did (stable names: they go in the log and in the diagnostics). */
+export type GpuRule = 
+/**  A GPU-selecting variable was already in the environment; nothing is changed. */
+"user_environment" | 
+/**  `integrated`: the system's own choice on a hybrid laptop. */
+"policy_integrated" | 
+/**  `dedicated`: offload to the dedicated GPU. */
+"policy_dedicated" | 
+/**  `dedicated`, and no dedicated GPU with a loaded proprietary driver was found: nothing to offload to. */
+"policy_dedicated_no_gpu" | 
+/**  `auto`: the dedicated GPU (AC power, a loaded NVIDIA driver, a `WebKitGTK` with the explicit-sync fix). */
+"auto_dedicated" | 
+/**  `auto`, on battery: the integrated GPU. */
+"auto_on_battery" | 
+/**  `auto`, and the power source could not be told: the integrated GPU. */
+"auto_power_unknown" | 
+/**  `auto`, and no separate NVIDIA GPU with a loaded proprietary driver exists: nothing to choose between. */
+"auto_no_dedicated_gpu" | 
+/**  `auto`, and the `WebKitGTK` is older than 2.54.2 or its version is unknown: the integrated GPU. */
+"auto_webkit_too_old" | 
+/**  `auto`, and the session type could not be told: nothing is assumed. */
+"auto_session_unknown" | 
+/**  The display GPU already is the NVIDIA GPU (a dGPU-only mode): there is no offload to do. */
+"display_is_dedicated";
+
+/**
+ *  What the machine would do now, against what was applied at start: the app cannot move to another GPU while it
+ *  runs, so a difference is offered as "restart to switch", never done silently.
+ */
+export type GpuSwitch = 
+/**  A restart would move rendering to the dedicated GPU. */
+"to_dedicated" | 
+/**  A restart would move rendering to the integrated GPU. */
+"to_integrated";
+
+/**  What the owner should know about the choice. */
+export type GpuWarning = 
+/**
+ *  `dedicated` on Wayland with a `WebKitGTK` before 2.54.2 (or of unknown version): the GTK 3 explicit-sync crash
+ *  with NVIDIA is not fixed there, so the window may close or stay blank.
+ */
+"may_crash_on_wayland";
 
 /**  One graphics device, as `/sys/class/drm` reports it. */
 export type Gpu_Deserialize = {
@@ -367,6 +571,28 @@ export type Policy =
 /**  `WEBKIT_DISABLE_COMPOSITING_MODE=1`: no accelerated compositing at all (the last resort). */
 "software";
 
+/**  The power profile, as far as the kernel says. `power-saver` is what halves `WebKit`'s rate. */
+export type PowerProfile = 
+/**  `low-power`: what `power-profiles-daemon` sets for its `power-saver` profile. */
+"power_saver" | 
+/**  `balanced`. */
+"balanced" | 
+/**  `performance`. */
+"performance" | 
+/**  A profile the firmware names differently (`quiet`, `cool`, `balanced-performance`). */
+"other" | 
+/**  No `platform_profile` on this machine, or it could not be read. */
+"unknown";
+
+/**  Where the machine gets its power. */
+export type PowerSource = 
+/**  A mains adapter is online. */
+"ac" | 
+/**  There is a mains adapter and none is online. */
+"battery" | 
+/**  No mains adapter is listed, or it could not be read: nothing is assumed. */
+"unknown";
+
 /**  A snapshot for the UI's diagnostics. */
 export type ProxyStats = ProxyStats_Serialize | ProxyStats_Deserialize;
 
@@ -441,6 +667,20 @@ export type RendererReport_Deserialize = {
 	environment: ([string, string])[],
 	/**  `HYPOTAXIS_RENDERER` values and the variables each sets, for the report's reader. */
 	choices: ([string, string])[],
+	/**  The `WebKitGTK` this process runs on: its version and whether it is the `AppImage`'s or the system's. */
+	webkit: WebkitReport_Deserialize,
+	/**
+	 *  The frame rate: the display's rate, whether `WebKit`'s 60 fps preference is off, the power profile. Read from the
+	 *  live window when the report is asked for.
+	 */
+	frame_rate: FrameRateReport_Deserialize,
+	/**  One plain sentence when the renderer in use limits motion, else none. */
+	note?: string | null,
+	/**
+	 *  Which GPU the webview renders on (`HYPOTAXIS_GPU`), and why. The power source and the restart advice are read
+	 *  when the report is asked for.
+	 */
+	gpu: GpuReport_Deserialize,
 };
 
 /**  Everything the diagnostics show: what was found, what was decided and what the web process will see. */
@@ -461,6 +701,20 @@ export type RendererReport_Serialize = {
 	environment: ([string, string])[],
 	/**  `HYPOTAXIS_RENDERER` values and the variables each sets, for the report's reader. */
 	choices: ([string, string])[],
+	/**  The `WebKitGTK` this process runs on: its version and whether it is the `AppImage`'s or the system's. */
+	webkit: WebkitReport_Serialize,
+	/**
+	 *  The frame rate: the display's rate, whether `WebKit`'s 60 fps preference is off, the power profile. Read from the
+	 *  live window when the report is asked for.
+	 */
+	frame_rate: FrameRateReport_Serialize,
+	/**  One plain sentence when the renderer in use limits motion, else none. */
+	note: string | null,
+	/**
+	 *  Which GPU the webview renders on (`HYPOTAXIS_GPU`), and why. The power source and the restart advice are read
+	 *  when the report is asked for.
+	 */
+	gpu: GpuReport_Serialize,
 };
 
 /**  Why the decision came out as it did (stable names: they go in the log and in the diagnostics). */
@@ -485,10 +739,16 @@ export type Rule =
  */
 "nvidia_x11" | 
 /**
- *  NVIDIA proprietary driver on Wayland: left alone (it starts and draws for most; the switches that cure a
- *  crash or a blank window are one variable away and the diagnostics name them).
+ *  NVIDIA proprietary driver on Wayland, `WebKitGTK` before 2.54.2 or of an unknown version: left alone (it starts
+ *  and draws for most; the switches that cure a crash or a blank window are one variable away and the diagnostics
+ *  name them).
  */
 "nvidia_wayland_untouched" | 
+/**
+ *  NVIDIA proprietary driver on Wayland, `WebKitGTK` 2.54.2 or later: the GTK 3 explicit-sync crash is fixed
+ *  upstream (`WebKit` bug 324551), so the default GL renderer is what this machine gets and no workaround is set.
+ */
+"nvidia_wayland_fixed" | 
 /**  The session type could not be told: nothing is assumed. */
 "session_unknown";
 
@@ -576,6 +836,53 @@ export type Step_Serialize = {
 	detail: string,
 	/**  A stable `hx.setup.*` code when blocked. */
 	code: string | null,
+};
+
+/**  Where the loaded `libwebkit2gtk` lives. */
+export type WebkitOrigin = 
+/**  Inside the `AppImage`'s mount: the copy the release carries. */
+"bundled" | 
+/**  The system's: the distribution's package. */
+"system" | 
+/**  No `libwebkit2gtk` in the memory map (not Linux, or the map could not be read). */
+"unknown";
+
+/**  Why the feature API was not used. Every one is a refusal made before anything was called. */
+export type WebkitRefusal = 
+/**  The runtime version could not be read, so the API's presence cannot be known. */
+"version_unknown" | 
+/**  `WebKitGTK` older than 2.42: the functions do not exist. */
+"too_old" | 
+/**  A symbol the API needs is not in the loaded library (a build that left it out). */
+"symbols_missing" | 
+/**  The feature list has no feature with that identifier. */
+"no_such_feature" | 
+/**  The call ran and reading the feature back did not give the asked value. */
+"not_applied" | 
+/**  There is no web view to ask (not Linux, or no window yet). */
+"no_webview";
+
+/**  The `WebKitGTK` part of the diagnostics report. */
+export type WebkitReport = WebkitReport_Serialize | WebkitReport_Deserialize;
+
+/**  The `WebKitGTK` part of the diagnostics report. */
+export type WebkitReport_Deserialize = {
+	/**  `2.54.2`, or none when it could not be read. */
+	version?: string | null,
+	/**  Bundled (`AppImage`) or the system's. */
+	origin: WebkitOrigin,
+	/**  The path of the loaded `libwebkit2gtk`. */
+	library?: string | null,
+};
+
+/**  The `WebKitGTK` part of the diagnostics report. */
+export type WebkitReport_Serialize = {
+	/**  `2.54.2`, or none when it could not be read. */
+	version: string | null,
+	/**  Bundled (`AppImage`) or the system's. */
+	origin: WebkitOrigin,
+	/**  The path of the loaded `libwebkit2gtk`. */
+	library: string | null,
 };
 
 /* Tauri Specta runtime */

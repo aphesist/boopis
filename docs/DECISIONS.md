@@ -370,10 +370,11 @@ They're not sandboxed, matching Claude Code. This is the only exception to the n
 
 **Decision.**
 - `renderer.rs` probes the GPUs (`/sys/class/drm`: vendor, bound driver, boot display), the session type and the compositor, and decides before any thread starts. It is a pure table, unit-tested.
-- Automatic rule: only the NVIDIA proprietary driver as the display GPU on X11 gets `WEBKIT_DMABUF_RENDERER_FORCE_SHM=1` (the GPU stays). A hybrid machine whose display is the integrated GPU, any other vendor, and any Wayland session are left to WebKitGTK.
+- Automatic rule: only the NVIDIA proprietary driver as the display GPU (or as the GPU the app renders on, ADR-0025) on X11 gets `WEBKIT_DMABUF_RENDERER_FORCE_SHM=1` (the GPU stays). A hybrid machine whose display is the integrated GPU, any other vendor, and any Wayland session are left to WebKitGTK. On Wayland with NVIDIA the rule takes the runtime WebKitGTK version into account: from 2.54.2 (the GTK 3 explicit-sync fix, WebKit bug 324551) the machine gets the default GL renderer and the rule says so (`nvidia_wayland_fixed`); before that, or when the version cannot be read, the rule is the one above (`nvidia_wayland_untouched`). Both set nothing; the version changes the reason in the log and the report, and the report's note names a CPU-painting switch that is set in the environment.
+- The version is read from `libwebkit2gtk` at run time (`webkit_get_major_version` and its siblings, through `dlsym`), not from what the build linked: the AppImage carries its own copy.
 - `HYPOTAXIS_RENDERER=auto|default|shm|cpu|nosync|software` is the owner's explicit choice (`shm` is `FORCE_SHM`, `cpu` is `DISABLE_DMABUF_RENDERER`). A WebKit or NVIDIA switch already in the environment wins over everything.
 - The decision is logged at startup. Settings > General > Diagnostics copies a report (session, GPUs and drivers, rule, environment, the page's size and `devicePixelRatio`) and opens WebKitGTK's `webkit://gpu` page in its own window, with no access to the host's commands.
-- `set_var` is the one `unsafe` call in the host (`#[allow(unsafe_code)]` with its SAFETY note): it runs first in `run()`, before the logger, tokio or Tauri start a thread.
+- `set_var` is an `unsafe` call (`#[allow(unsafe_code)]` with its SAFETY note): it runs first in `run()`, before the logger, tokio or Tauri start a thread. ADR-0025 adds the same call for the GPU rule and one `dlsym` block.
 
 **Consequences.**
 - No machine pays for a workaround it does not need. A machine that does need one sets a variable and sends the report.
@@ -398,6 +399,14 @@ They're not sandboxed, matching Claude Code. This is the only exception to the n
 - **Packaging:** ship on a current WebKitGTK.
   - Arch gets a native package that uses the system's WebKitGTK (2.54.2 or later).
   - The AppImage's bundled WebKitGTK version is reported in Diagnostics and raised as builds allow.
+- **Frame rate setting:** `HYPOTAXIS_FPS=auto|60|max`. `auto` (the default) turns the preference off when GDK reports a refresh rate above 60 Hz for the window's monitor, `60` keeps WebKit's default, `max` always turns it off. The cap is only ever lifted. The preference is reached through `webkit_settings_set_feature_enabled`, resolved with `dlsym` and called only after the runtime version (2.42 or later), the symbols and the feature's existence are checked; the host reads the value back and Diagnostics reports it.
+- **GPU rule:** `HYPOTAXIS_GPU=auto|integrated|dedicated`, also in Settings > General (saved, applied at the next start; `HYPOTAXIS_GPU` overrides it). `dedicated` is PRIME render offload to the NVIDIA GPU: the environment that switcheroo-control advertises for the discrete GPU (`net.hadess.SwitcherooControl`, read with `busctl` in a child process so no thread starts before the environment is set), else NVIDIA's documented `__NV_PRIME_RENDER_OFFLOAD=1`, `__GLX_VENDOR_LIBRARY_NAME=nvidia`, `__VK_LAYER_NV_optimus=NVIDIA_only`. Only GPU-selection variables are taken from the service. The host sets no EGL vendor file and no `WEBKIT_WEB_RENDER_DEVICE_FILE`: WebKit takes the DRM render node from its EGL display, and NVIDIA documents `__NV_PRIME_RENDER_OFFLOAD=1` as enough for an EGL client. A GPU-selecting variable already in the environment wins, and then the host sets none.
+  - `auto` offloads only on AC power (a `Mains` supply online in `/sys/class/power_supply`), with a separate NVIDIA GPU whose proprietary driver is bound, a runtime WebKitGTK of 2.54.2 or later and a known session type. On battery, with an unknown power source, with an older or unreadable WebKitGTK, or with no such GPU it uses the integrated GPU (it sets nothing).
+  - `dedicated` is allowed on an older WebKitGTK and warns in Diagnostics that it may crash or stay blank on Wayland. It supports the NVIDIA proprietary driver only.
+  - The GPU is fixed when the process starts. If the power source changes, Diagnostics and Settings offer "Restart to switch"; the app never switches silently.
+  - When offload is on, the renderer rules (ADR-0024) judge the NVIDIA GPU, not the display one.
+  - Diagnostics reports the GL renderer the page really gets (WebGL's unmasked renderer string, which goes through the web process' EGL display), the power source, and what was requested.
+  - `docs/research/120hz.md` section 4.3 advises against forcing offload as a fix for blank windows (a cross-GPU copy, the dGPU awake for a light UI, NVIDIA's EGL path). This rule is the owner's choice for a demanding app, and `auto` is gated on the fix for that path.
 - **Not now:** Chromium (Tauri 3 alpha with CEF). Revisit when it reaches beta with native Wayland.
 
 **Consequences.**
