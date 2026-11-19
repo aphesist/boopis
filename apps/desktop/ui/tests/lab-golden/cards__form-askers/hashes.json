@@ -1,161 +1,161 @@
 {
  "a-long-model@bone": {
-  "sha": "802d5e7c9edadab7ec53faa561bd447c6629008d",
+  "sha": "8513b1a758f4a0bb6e8cb3129bdca875ea9512e2",
   "w": 632,
   "h": 375
  },
  "a-long-model@catalog": {
-  "sha": "6c0e101d5c06f68e44140adfeab1851d3a9dbbe6",
+  "sha": "40a3d3601632c572e6ec2935aa781fd0f6ee0f73",
   "w": 632,
   "h": 375
  },
  "a-long-model@graphite": {
-  "sha": "44bdd1f13b18a8b5e26cc394f0a2aa9791cd6dad",
+  "sha": "3eddce601efbf1d1a49a57c59ff8b7162f1e08e4",
   "w": 632,
   "h": 375
  },
  "a-long-model@typewriter": {
-  "sha": "c23e235118f5106aae73bdf3ac32e75fedd8389f",
+  "sha": "e86776afb3bec6125e973ecad6a2fc90fc581baa",
   "w": 632,
   "h": 394
  },
  "a-relay@bone": {
-  "sha": "23a2e596e0b7f3233493179966303ed0b07d9026",
+  "sha": "c62682f871467eef954becf1b216e4c070920fbb",
   "w": 632,
   "h": 240
  },
  "a-relay@catalog": {
-  "sha": "73577142d541eb677e031cd4bae052261d874ecf",
+  "sha": "222b9c0940c090f4895b4800a32532d4ad2e404d",
   "w": 632,
   "h": 240
  },
  "a-relay@graphite": {
-  "sha": "8cd2d93e0b05df830dc2289997f455e4201676f8",
+  "sha": "49fa77ca93b9745422228b516ee0deab05af6a1e",
   "w": 632,
   "h": 240
  },
  "a-relay@typewriter": {
-  "sha": "39fb1906bf44fd6f9f6ae7166947c6e7a449c52f",
+  "sha": "21b3a7e6316c0387852552384621e93b6d21597d",
   "w": 632,
   "h": 261
  },
  "error@bone": {
-  "sha": "222fba05db59f58fe459e210cdfd777853690a58",
+  "sha": "ed6b82e3d561eff598313b41f7b18eb2a05c23f2",
   "w": 632,
   "h": 323
  },
  "error@catalog": {
-  "sha": "994be3ac3bd4434134c819a750f4bbb2694a7a8a",
+  "sha": "9d7d77c23df4108abe16819e774e62da42168d34",
   "w": 632,
   "h": 323
  },
  "error@graphite": {
-  "sha": "2681e0f4a34b0c5f7ac9c8abd385fcb11593c076",
+  "sha": "8a1a031e383e1e1e94a995754bae4a666f45a8f6",
   "w": 632,
   "h": 323
  },
  "error@typewriter": {
-  "sha": "b67166c9d0148271af59d07a95f6affde581c36f",
+  "sha": "fdba7feb4afe01f9d501df7cbb7d6102a53215db",
   "w": 632,
   "h": 343
  },
  "five-askers-compact-on-the-dock@bone": {
-  "sha": "1e82ff60861b34be6f8aede792ce417abd6b9073",
+  "sha": "e9e1aef5612ff8071839ea725539a7566cc07cce",
   "w": 424,
-  "h": 298
+  "h": 300
  },
  "five-askers-compact-on-the-dock@catalog": {
-  "sha": "4ea08868466990f65fe351d38bc8f48a5972062e",
+  "sha": "a4510fa05ae0ce17cf153f4b60d592cce4850200",
   "w": 424,
-  "h": 298
+  "h": 300
  },
  "five-askers-compact-on-the-dock@graphite": {
-  "sha": "ee4a10eb5ac83202ba9e54230aeacc45b65578f9",
+  "sha": "fcfba05c3209dbd733590b1d6cfd248c20ed35d9",
   "w": 424,
-  "h": 298
+  "h": 300
  },
  "five-askers-compact-on-the-dock@typewriter": {
-  "sha": "7864915be152b3009ea143416b6004db812cffd1",
+  "sha": "cd96c088f58f76c61e41ede740b19811a1edf7b8",
   "w": 424,
-  "h": 298
+  "h": 300
  },
  "five-askers@bone": {
-  "sha": "3e8266cff211728de0284bef41190eae8ac9ea35",
+  "sha": "3e81eddb6870363d202ef2e2721931935b92bf92",
   "w": 632,
-  "h": 298
+  "h": 302
  },
  "five-askers@catalog": {
-  "sha": "58721c1b1df2bde4dc047ed8ee7c6c2490547a61",
+  "sha": "7c5a24eb9a83816491bd905f87113465352e6d1a",
   "w": 632,
-  "h": 298
+  "h": 302
  },
  "five-askers@graphite": {
-  "sha": "2554c1efebab3583c5cc08c913799abeb3afe7e0",
+  "sha": "a592d49d1de27de1c87aae4a398af27b52d2b665",
   "w": 632,
-  "h": 298
+  "h": 302
  },
  "five-askers@typewriter": {
-  "sha": "8d98588efd50a7d83964a2f2b54c881f23e76986",
+  "sha": "fe6e15c9d223b02bce8a1ddb0c900ef05a8e4c66",
   "w": 632,
-  "h": 298
+  "h": 302
  },
  "long-teammate-name@bone": {
-  "sha": "f6b32d08ef1a775aaf96e3cdf897cbe3d1f53a9d",
+  "sha": "1c135213a5e160a81c6007d7cc6d7df20856cfbf",
   "w": 632,
   "h": 396
  },
  "long-teammate-name@catalog": {
-  "sha": "430e56d916958dfc24e0ee83cdbf92b016ab6c7a",
+  "sha": "c692d8f0fb048c7dd96948fd9ba55204d512a86f",
   "w": 632,
   "h": 396
  },
  "long-teammate-name@graphite": {
-  "sha": "62501a4c4a5ba8365d98cb0e0a6ec97bebda14bb",
+  "sha": "8097c6d9b253df0601bfc3c9437fa0b3b82ed33b",
   "w": 632,
   "h": 396
  },
  "long-teammate-name@typewriter": {
-  "sha": "f91f28edc3bfa8caa094bc9d68c196a820414f82",
+  "sha": "c11086ff4c68353b31c0df36936ed783c485ae95",
   "w": 632,
   "h": 415
  },
  "no-origin-given@bone": {
-  "sha": "55f01e1293f9f04613b25ad02b46572b9e9a7718",
+  "sha": "6c1cf80d998fc66af685d2cc8806f66119ca82ce",
   "w": 632,
   "h": 353
  },
  "no-origin-given@catalog": {
-  "sha": "c9ed1b4f0272fbd52035306e7fd0d058278ca2ec",
+  "sha": "44ad55799b128b057cb4f9fdd06e18148ada3649",
   "w": 632,
   "h": 353
  },
  "no-origin-given@graphite": {
-  "sha": "130bb12e470cbdb321877794cc0eb4ac472b08f5",
+  "sha": "908dc600f145054e7cfdc7511f0f36e59887c570",
   "w": 632,
   "h": 353
  },
  "no-origin-given@typewriter": {
-  "sha": "1c0a36c81dc62745ae1a0fdd57797e8f6c147d63",
+  "sha": "eff3e1e322f7733b33ea88a9089968fbeb40cc6e",
   "w": 632,
   "h": 373
  },
  "typical@bone": {
-  "sha": "7c5d2c13d62e739afe176930b23f646fec72bf77",
+  "sha": "5222a65bda401f4ed9c0a43c159c156f66dd0789",
   "w": 632,
   "h": 379
  },
  "typical@catalog": {
-  "sha": "e674adfce93d9ee22be050a8e2ca7b3ce0ffaac4",
+  "sha": "06530bd6048f48622755558b61d258ec442bcfdb",
   "w": 632,
   "h": 379
  },
  "typical@graphite": {
-  "sha": "2d952e7bd122386a1b6d4c929a1fa7773f8791be",
+  "sha": "e0fc18229e38b3074b242b3e372b9edd3e3b45f0",
   "w": 632,
   "h": 379
  },
  "typical@typewriter": {
-  "sha": "6cedeb901ebfcf4cbeb3fe31b278eadc53a93d99",
+  "sha": "f074fb87830882a78c44c742ba9598e0fb6632b3",
   "w": 632,
   "h": 399
  }

@@ -100,24 +100,24 @@
   "h": 256
  },
  "long@bone": {
-  "sha": "1e76c8416eaa5c699faf03deb9d7533f85764a87",
+  "sha": "b1e91982ba215bf1c3b27327088a9bbc054ae74a",
   "w": 364,
-  "h": 194
+  "h": 266
  },
  "long@catalog": {
-  "sha": "16543d33fcd38c61674f30c0777afb145ebc67cb",
+  "sha": "2f2da794fc0c831c757927258499a4d9e7516735",
   "w": 364,
-  "h": 194
+  "h": 266
  },
  "long@graphite": {
-  "sha": "abbe8ba373d01e903b270706a1924e5ea8f99527",
+  "sha": "c5b38b559711fa3cfeff52b0b572cc061a2d92b4",
   "w": 364,
-  "h": 194
+  "h": 266
  },
  "long@typewriter": {
-  "sha": "c9a89d4e297bd2de494d2e12275423235220ef29",
+  "sha": "57031df924a7d11a8f6de74ea4ae80bb58fe2f77",
   "w": 364,
-  "h": 211
+  "h": 319
  },
  "pane-frame@bone": {
   "sha": "32a092c55aecb569bb33ec51f7cbddacdb8b84a6",
