@@ -10,11 +10,16 @@
 //!   the keys come from the references (`secret://scope/name`) that `config.yaml` holds.
 //!
 //! The user's own Hermes home (`HERMES_HOME`, `~/.hermes`) is never touched, and a second run finds nothing to do.
+//!
+//! A second one-time move (ADR-0031): the private engine home was `<data>/hermes-home`, a path the user can see (a
+//! bot's folder lives in it), and boopis never names its engine. [`engine_home`] renames it to `<data>/engine` once,
+//! after stopping a gateway an earlier run left serving from it, and rewrites the absolute paths its `config.yaml`
+//! files hold. Logged, tested, and nothing reads the old name afterwards.
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::runtime::HOME_DIR;
+use crate::runtime::{HOME_DIR, OLD_HOME_DIR};
 use crate::secrets::refs::SecretRef;
 use crate::secrets::store::SecretStore;
 
@@ -104,7 +109,8 @@ pub fn folders(roots: &[PathBuf]) -> Report {
         }
         match fs::rename(&old, &new) {
             Ok(()) => {
-                let home = new.join(HOME_DIR);
+                // A build under the former name kept its private home under the old folder name too.
+                let home = new.join(OLD_HOME_DIR);
                 report.moved.push((old, new));
                 if home.is_dir() {
                     migrate_home(&home, &mut report);
@@ -277,6 +283,114 @@ pub fn keychain(store: &dyn SecretStore, refs: &[SecretRef]) -> KeychainReport {
             Err(e) => report.warnings.push(format!("{}: {e}", r.text())),
         }
     }
+    report
+}
+
+/// What [`engine_home`] did.
+#[derive(Debug, Default)]
+pub struct EngineReport {
+    /// `(from, to)` when the folder moved.
+    pub moved: Option<(PathBuf, PathBuf)>,
+    /// What changed inside it, one line each.
+    pub lines: Vec<String>,
+    /// What could not be done, and why. Nothing here is fatal.
+    pub warnings: Vec<String>,
+    /// The old folder is still in use and was left where it is: this run keeps using it (`runtime::Plan::home`), and the
+    /// move is tried again on the next start.
+    pub kept: bool,
+}
+
+impl EngineReport {
+    /// Write the report to the log.
+    pub fn log(&self) {
+        if let Some((from, to)) = &self.moved {
+            tracing::info!(from = %from.display(), to = %to.display(), "moved the private engine home to its new name");
+        }
+        for line in &self.lines {
+            tracing::info!("migrated the private engine home: {line}");
+        }
+        for line in &self.warnings {
+            tracing::warn!("migration: {line}");
+        }
+    }
+}
+
+/// Move `<data dir>/hermes-home` to `<data dir>/engine` once (ADR-0031).
+///
+/// `live` says whether a gateway answers on the old home's control socket, and `stop` stops it (the bundled launcher's
+/// `gateway stop --yes`); both are the caller's so this stays a filesystem function. A gateway that is still live after
+/// `stop` keeps the old folder for this run ([`EngineReport::kept`]): renaming a home under a running gateway would
+/// split its files between two names. When both names exist nothing is touched and a warning says so.
+pub fn engine_home(
+    data_dir: &Path,
+    live: &dyn Fn(&Path) -> bool,
+    stop: &dyn Fn(&Path) -> std::result::Result<(), String>,
+) -> EngineReport {
+    let mut report = EngineReport::default();
+    let (old, new) = (data_dir.join(OLD_HOME_DIR), data_dir.join(HOME_DIR));
+    if !old.is_dir() {
+        return report;
+    }
+    if new.exists() {
+        report.warnings.push(format!(
+            "{} and {} both exist; the old one is left where it is. Move what you want to keep by hand.",
+            old.display(),
+            new.display()
+        ));
+        return report;
+    }
+    if live(&old) {
+        if let Err(e) = stop(&old) {
+            report.warnings.push(format!(
+                "the gateway serving from {} did not stop: {e}",
+                old.display()
+            ));
+        }
+        if live(&old) {
+            report.kept = true;
+            report.warnings.push(format!(
+                "{} is still in use by a running gateway; it is used as it is this time and moved on the next start",
+                old.display()
+            ));
+            return report;
+        }
+        report
+            .lines
+            .push("stopped the gateway an earlier run left serving from it".to_owned());
+    }
+    if let Err(e) = fs::rename(&old, &new) {
+        report.kept = true;
+        report
+            .warnings
+            .push(format!("could not rename {}: {e}", old.display()));
+        return report;
+    }
+    // Absolute paths into the home (`hx_path`, a profile's own settings) name the old folder: rewrite them in the root's
+    // `config.yaml` and in each profile's.
+    let (from, to) = (old.display().to_string(), new.display().to_string());
+    let mut configs = vec![new.join("config.yaml")];
+    if let Ok(rd) = fs::read_dir(new.join("profiles")) {
+        configs.extend(rd.flatten().map(|e| e.path().join("config.yaml")));
+    }
+    for path in configs {
+        let Ok(text) = fs::read_to_string(&path) else {
+            continue;
+        };
+        if !text.contains(&from) {
+            continue;
+        }
+        match write_atomically(&path, &text.replace(&from, &to)) {
+            Ok(()) => report.lines.push(format!(
+                "{}: paths now point into {}",
+                path.display(),
+                new.display()
+            )),
+            Err(e) => report
+                .warnings
+                .push(format!("could not rewrite {}: {e}", path.display())),
+        }
+    }
+    report.moved = Some((old, new));
     report
 }
 

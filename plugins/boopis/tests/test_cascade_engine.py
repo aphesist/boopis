@@ -129,7 +129,7 @@ def test_dispatch_starts_a_task_on_the_first_tier_and_ignores_the_briefs_test_li
         ("governed", "not governed"),
         ("forks", "not yet supported"),
         ("backend", "delegation.backend"),
-        ("provider", "no configuration for"),
+        ("provider", "is not configured"),
         ("gate", "gate command"),
         ("scope", "no 'scope:' line"),
         ("parent", "inside a session's turn"),

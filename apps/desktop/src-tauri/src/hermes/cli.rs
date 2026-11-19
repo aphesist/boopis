@@ -522,6 +522,6 @@ mod tests {
             .run(&sleeper, dir.path(), &[], Duration::from_millis(200))
             .await
             .unwrap_err();
-        assert_eq!(err.code(), "hx.hermes.unavailable");
+        assert_eq!(err.code(), "hx.engine.unavailable");
     }
 }

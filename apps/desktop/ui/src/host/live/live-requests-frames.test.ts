@@ -55,7 +55,7 @@ describe('a skill whose token is missing (secret)', () => {
     await turn('use the skill');
     const f = forms();
     expect(f).toHaveLength(1);
-    expect(f[0]?.data).toMatchObject({ id: ASKED[0]?.id, kind: 'credential', title: 'Hermes needs BOOPIS_TEST_TOKEN', origin: { kind: 'hermes' } });
+    expect(f[0]?.data).toMatchObject({ id: ASKED[0]?.id, kind: 'credential', title: 'boopis needs BOOPIS_TEST_TOKEN', origin: { kind: 'hermes' } });
     expect(f[0]?.data.why).toContain('Enter the test token');
     expect(f[0]?.data.why).toContain('needs-token');
     expect(conv.some((e) => e.type === 'form-opened' && e.form.id === ASKED[0]?.id)).toBe(true);

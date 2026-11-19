@@ -14,7 +14,7 @@ const PROBE = (models) => {
   const card = document.createElement('div');
   card.id = 'probe';
   card.style.cssText = 'position:fixed;left:48px;top:96px;width:340px;padding:16px;border-radius:var(--r-m);background:var(--bg-1);color:var(--text);z-index:var(--z-menu)';
-  card.append(__hx.ui.field({ kind: 'model', label: 'Model', options: models, value: models[0], hint: 'From the providers Hermes has keys for.' }));
+  card.append(__hx.ui.field({ kind: 'model', label: 'Model', options: models, value: models[0], hint: 'From the providers boopis has keys for.' }));
   host.append(card);
 };
 const AXE_RUN = (page) => page.evaluate(async () => {

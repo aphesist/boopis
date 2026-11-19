@@ -128,7 +128,7 @@ def install(rt: Runtime, source: Path, *, expect_sha256: str, cwd: str = "") -> 
         "path": str(target),
         "trusted_for": cwd if trusted else None,
         "not_done": [
-            "the Hermes plugin generated from this source, and `hermes plugins enable` (COMPAT 9, steps 5 and 6)",
+            "the plugin generated from this source, and enabling it (COMPAT 9, steps 5 and 6)",
         ],
     }
 

@@ -46,6 +46,10 @@ TOOL = "claude"
 CLAUDE_JSON_LIMIT = 64 * 1024 * 1024
 
 
+# what the engine imports from Claude Code itself (COMPAT section 1), so compat leaves it alone
+IMPORTER_OWNED = "owned by the engine's own importer"
+
+
 def find_git_root(start: Path) -> Path | None:
     for directory in (start, *start.parents):
         if (directory / ".git").exists():
@@ -184,7 +188,7 @@ class _Scan:
         owned = [r for r in settings.permissions if r.tool == "Bash" and r.effect != "ask"]
         kept = tuple(r for r in settings.permissions if r not in owned)
         for r in owned:
-            self.skipped.append(Skipped("permission", r.text, r.source, "owned by hermes import-agent"))
+            self.skipped.append(Skipped("permission", r.text, r.source, IMPORTER_OWNED))
         return replace(settings, permissions=kept)
 
     # ------------------------------------------------------------ memory
@@ -222,7 +226,7 @@ class _Scan:
                         "memory",
                         "CLAUDE.md",
                         self.source("user", env.claude_dir / "CLAUDE.md"),
-                        "owned by hermes import-agent",
+                        IMPORTER_OWNED,
                     )
                 )
         else:
@@ -262,7 +266,7 @@ class _Scan:
             self.diags.extend(diags)
             if scope == "user" and self.importer_owns_user:
                 owned, _ = read_skills(base / "skills", src)
-                self.skipped.extend(Skipped("skill", s.name, s.source, "owned by hermes import-agent") for s in owned)
+                self.skipped.extend(Skipped("skill", s.name, s.source, IMPORTER_OWNED) for s in owned)
             else:
                 skills_found, diags = read_skills(base / "skills", src)
                 skills.extend(skills_found)
@@ -300,7 +304,7 @@ class _Scan:
             user, d1 = parse_servers(raw.get("mcpServers"), self.source("user", claude_json), str(claude_json))
             self.diags.extend(d1)
             if self.importer_owns_user:
-                self.skipped.extend(Skipped("mcp", s.name, s.source, "owned by hermes import-agent") for s in user)
+                self.skipped.extend(Skipped("mcp", s.name, s.source, IMPORTER_OWNED) for s in user)
             else:
                 out.extend(user)
             project = as_dict(as_dict(raw.get("projects")).get(str(env.cwd)))

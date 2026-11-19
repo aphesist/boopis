@@ -377,7 +377,7 @@ impl Hub {
                         };
                         let reply = match cached {
                             Some(result) if ready => serde_json::json!({"jsonrpc": "2.0", "id": orig.to_value(), "result": result}).to_string(),
-                            _ => frame::error_response(&orig, "hx.hermes.unavailable", "the gateway is not connected"),
+                            _ => frame::error_response(&orig, "hx.engine.unavailable", "the gateway is not connected"),
                         };
                         shared.deliver(&mut st, id, reply.into());
                         return Ok(());

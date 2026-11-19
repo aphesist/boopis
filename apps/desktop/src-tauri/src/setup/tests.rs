@@ -531,7 +531,7 @@ async fn declining_is_respected_explained_and_can_be_reconsidered() {
     assert_eq!(state_of(&s, "config"), StepState::Declined);
     let step = s.steps.iter().find(|x| x.id == "config").unwrap();
     assert!(
-        step.detail.contains("dedicated Hermes profile")
+        step.detail.contains("Choose Review again")
             && step.code.as_deref() == Some("hx.setup.declined")
     );
     assert!(
@@ -717,7 +717,11 @@ async fn the_bundled_runtime_is_unpacked_first_and_hermes_own_update_check_is_of
     let s = setup.advance(None, false).await.unwrap();
     assert_eq!(s.steps[0].id, "runtime");
     assert_eq!(s.steps[0].state, StepState::Done, "{:?}", s.steps[0]);
-    assert!(s.steps[0].detail.contains("never touches another Hermes"));
+    assert!(
+        s.steps[0]
+            .detail
+            .contains("nothing else on this computer is touched")
+    );
     assert_eq!(
         s.steps[1].id, "hermes",
         "the unpack comes before Hermes is looked for"
@@ -738,7 +742,7 @@ async fn the_bundled_runtime_is_unpacked_first_and_hermes_own_update_check_is_of
         .filter(|k| *k == "updates.check")
         .count();
     let s = setup.advance(None, false).await.unwrap();
-    assert_eq!(s.steps[0].detail, "Hermes 0.23.2 is unpacked");
+    assert_eq!(s.steps[0].detail, "version 0.23.2, unpacked");
     let after = r
         .fake
         .sets
@@ -890,7 +894,7 @@ async fn a_blocked_later_step_is_retried_alone_and_what_is_done_is_not_redone() 
             .unwrap()
             .code
             .as_deref(),
-        Some("hx.hermes.unavailable")
+        Some("hx.engine.unavailable")
     );
     assert!(!s.done);
     let sets = r.fake.sets.lock().unwrap().len();
@@ -1816,8 +1820,9 @@ async fn an_unreachable_catalog_is_said_and_a_retry_installs_without_asking_agai
         Some("hx.setup.subscription_unreachable")
     );
     assert!(
-        step.detail.contains("could not reach the plugin catalog")
-            && step.detail.contains("Nothing was installed"),
+        step.detail.contains("Check your internet connection")
+            && step.detail.contains("Nothing was installed")
+            && !crate::error::names_engine(&step.detail),
         "{}",
         step.detail
     );

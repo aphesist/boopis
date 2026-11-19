@@ -514,6 +514,29 @@ The decision of every `$` call is `policy.check` with the mod as principal; the 
 - First-run setup and Settings → Models offer "Claude subscription (your Claude Code login)" when `claude` is installed, and say what is missing when it is not or is signed out.
 - Anthropic API keys, Bedrock, Vertex and Foundry stay available beside it.
 
+## ADR-0031 boopis is the product; its engine is invisible (owner decision)
+**Context.**
+- boopis runs on unmodified Hermes, bundled (ADR-0023), and the app said so everywhere: setup's "Hermes runtime" step, "This makes a Hermes profile for jabuti", "Hermes did not answer", raw engine errors ("hermes refused updates.check: OSError: ..."), the "Use my own Hermes" setting, `hermes` in `--version` and `doctor`, the private folder `<app data>/hermes-home/` shown when a bot is made.
+- The owner, 19 November 2026: "i do like that we depend on hermes but i wanted something more 'autosuficient' ... i want the only hermes mention to be on the repo and on the plugins/anything else that you could download directly from hermes/hermes store. the program itself should be 100% boopis branded, as if we were our own thing."
+
+**Decision.** boopis is the product. Hermes stays the engine inside, bundled and never patched, and the person using the app never reads its name. **Owner decision, 2026-11-19.**
+- **Allowed places for "Hermes":** the repository (README credits, docs, code identifiers, licences and `NOTICE`), and an item the user downloads from the Hermes plugin store whose own name or publisher is Hermes's. That item is the only in-app exception; a component that draws one marks it `data-store-item` (`ui/src/core/engine-words.ts`).
+- **The app names the thing, not the engine:** "boopis's engine" where the engine itself is the subject, and better what failed in the user's terms; a teammate is a "bot", never a "profile". Meaning stays exact: boopis never claims to do something the engine does differently. The inventory is `docs/BRANDING.md`.
+- **Errors:** one mapper in the host (`error::user_message`) gives every error the UI sees a boopis sentence, a stable `hx.*` code and the next step, from the catalog's new `user` field (`crates/hx-proto/errors.json`, synced to the plugin, read by the UI). The engine's raw words go to the log and to Settings, General, Diagnostics only. The engine's own JSON-RPC answers pass the proxy untouched (frames are never altered), so the UI applies the same catalog's `hx.engine.refused` sentence to an answer without an `hx.*` code (`GatewayError.fromFrame`). Codes that a person reads no longer name the engine: `hx.hermes.*` is `hx.engine.*`, `hx.setup.hermes_missing` is `hx.setup.engine_missing`, `hx.bots.hermes_failed` is `hx.bots.engine_failed`.
+- **The private engine home** is `<app data>/engine/` (was `hermes-home/`). The engine has no profile-root override, so a bot's folder keeps the engine's layout inside it, `engine/profiles/<name>`.
+- **"Use my own Hermes" leaves the app.** The capability stays for developers, as `boopis --engine existing` and `BOOPIS_HERMES=existing`, documented in `docs/ENGINE.md`. Settings no longer offers it, and the saved `hermes_source` setting is no longer read; `engine_source_get` (read-only) tells the first-run screen which engine this run uses.
+- **Guards:** a vitest (`ui/src/engine-words.test.ts`) and a Rust test (`src-tauri/src/engine_words.rs`) fail on the word in any user-facing source literal, with an allowlist for code identifiers, logs, error detail and store items; `cli/tests.rs` checks `--version`, `doctor` and `--help`; `scripts/test-brand.sh` checks the installers and the Arch package. The design system's voice section carries the rule as an owner decision.
+
+**Migration.** `migrate::engine_home`, once, at start, before anything runs from the folder (like ADR-0028's rename):
+- `<app data>/hermes-home` becomes `<app data>/engine` with one rename; the absolute paths that its `config.yaml` and each `profiles/*/config.yaml` hold (`hx_path`) are rewritten;
+- a gateway an earlier run left serving from the old folder is stopped first (`gateway stop --yes` with the bundled launcher, this build's or the one an earlier build unpacked, then a wait until its control socket is quiet); one that will not stop keeps the old folder for that run only (`runtime::Plan::home`), and the move is tried on the next start;
+- when both folders exist nothing is touched and a warning says so; a machine without the old folder is untouched; every step is logged and tested (`migrate/tests.rs`). Nothing reads the old name after the move. The user's own Hermes home is never touched.
+
+**Consequences.**
+- The model sign-in flows (setup's models question, Settings > Models, the Claude subscription) are rewritten on their own branch; until it merges, both guards hold their strings in a `PENDING` list that empties itself.
+- A saved `hermes_source: existing` is ignored after the update: start with `--engine existing` instead.
+- Diagnostics is the one screen where the engine's own words appear.
+
 ## ADR-0012 Prices
 Prices come from the models.dev catalogue plus a user override table. Hermes's models.dev data is not reachable through its public plugin API, so:
 - the plugin reads a cached catalogue file, `<profile home>/hypotaxis/prices/models-dev.json`;

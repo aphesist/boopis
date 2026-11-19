@@ -249,6 +249,6 @@ mod tests {
     async fn a_missing_socket_is_unavailable() {
         let dir = tempfile::tempdir().unwrap();
         let e = identify(dir.path()).await.unwrap_err();
-        assert_eq!(e.code(), "hx.hermes.unavailable");
+        assert_eq!(e.code(), "hx.engine.unavailable");
     }
 }

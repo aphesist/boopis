@@ -190,9 +190,11 @@ pub fn host_session_event(kind: &str, session: &str, payload: &serde_json::Value
     serde_json::json!({"jsonrpc": "2.0", "method": "event", "params": {"type": kind, "session_id": session, "payload": payload}}).to_string()
 }
 
-/// An error response to a UI request that cannot be forwarded.
+/// An error response to a UI request that cannot be forwarded. The message goes through the one mapper
+/// (`error::user_message`), so the engine's own words stay in Diagnostics.
 #[must_use]
 pub fn error_response(id: &Id, code: &str, message: &str) -> String {
+    let message = crate::error::user_message(code, message);
     serde_json::json!({"jsonrpc": "2.0", "id": id.to_value(), "error": {"code": -32000, "message": message, "data": {"code": code}}}).to_string()
 }
 
@@ -336,9 +338,9 @@ mod tests {
         let t = host_event("connection.state", &serde_json::json!({"state":"ready"}));
         let m = classify(&t, CAP).unwrap();
         assert_eq!(m.event_type.as_deref(), Some("connection.state"));
-        let e = error_response(&Id::Num(4), "hx.hermes.unavailable", "gone");
+        let e = error_response(&Id::Num(4), "hx.engine.unavailable", "gone");
         let v: serde_json::Value = serde_json::from_str(&e).unwrap();
         assert_eq!(v["id"], 4);
-        assert_eq!(v["error"]["data"]["code"], "hx.hermes.unavailable");
+        assert_eq!(v["error"]["data"]["code"], "hx.engine.unavailable");
     }
 }

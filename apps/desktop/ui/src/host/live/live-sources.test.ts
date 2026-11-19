@@ -30,8 +30,8 @@ describe('the details panels follow a session and show only what Hermes and the 
 
   it('learns what this Hermes cannot do, and says why', () => {
     expect(provider.info.live).toBe(true);
-    expect(provider.info.unavailable['sessions.fork']).toMatch(/session\.branch/);
-    expect(provider.info.unavailable['sessions.compact']).toMatch(/session\.compress/);
+    expect(provider.info.unavailable['sessions.fork']).toMatch(/cannot fork a session/);
+    expect(provider.info.unavailable['sessions.compact']).toMatch(/cannot compact on request/);
     expect([...provider.info.preview]).toEqual(['feedforward']);
   });
 

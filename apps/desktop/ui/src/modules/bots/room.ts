@@ -45,7 +45,7 @@ function buildRoom(): void {
   const col = el('div', { class: 'bt-col' });
   const presence = el('header', { class: 'bt-presence' });
   const log = el('div', { class: 'bt-log', role: 'log', 'aria-label': 'Messages' });
-  if (data().info.preview.has('bots')) col.append(el('p', { class: 'bt-preview', role: 'note', text: 'Preview. These bots are sample data and are not connected to Hermes yet.' }));
+  if (data().info.preview.has('bots')) col.append(el('p', { class: 'bt-preview', role: 'note', text: 'Preview. These bots are sample data and are not connected to boopis yet.' }));
   col.append(presence, log);
   scroll.append(col);
   const zone = el('div', { class: 'bt-composer-zone' });

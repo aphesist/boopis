@@ -766,7 +766,7 @@ async fn oauth_sign_in_runs_through_hermes_own_flow_and_its_loopback_listener() 
         .signin("oauthfake")
         .await
         .expect("the sign-in completes");
-    assert_eq!(done.stored, "Hermes's own token store");
+    assert_eq!(done.stored, "boopis's own token store");
     assert_eq!(done.tools, vec!["whoami"]);
     assert!(done.test.as_ref().is_some_and(|t| t.ok), "{:?}", done.test);
     let seen = log.lock().unwrap().clone();

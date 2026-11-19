@@ -88,7 +88,7 @@ impl Verdict {
             .or(self.detail.as_deref())
             .map(|d| format!(": {d}"))
             .unwrap_or_default();
-        let text = format!("the Hermes gateway is {} ({why}){detail}", self.state);
+        let text = format!("the engine's gateway is {} ({why}){detail}", self.state);
         if self.state == "incompatible" {
             Error::Incompatible(text)
         } else {
@@ -339,14 +339,14 @@ mod tests {
             Verdict::parse(r#"{"state":"incompatible","reason_code":"runtime_protocol"}"#).unwrap();
         assert_eq!(
             Dial::from_attach(&v).unwrap_err().code(),
-            "hx.hermes.incompatible"
+            "hx.engine.incompatible"
         );
         let v = Verdict::parse(
             r#"{"state":"inaccessible","reason_code":"idle_exit","message":"gone"}"#,
         )
         .unwrap();
         let e = Dial::from_attach(&v).unwrap_err();
-        assert_eq!(e.code(), "hx.hermes.unavailable");
+        assert_eq!(e.code(), "hx.engine.unavailable");
         assert!(e.to_string().contains("idle_exit") && e.to_string().contains("gone"));
         assert!(Verdict::parse("not json").is_err());
     }

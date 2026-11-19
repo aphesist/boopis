@@ -34,7 +34,8 @@ export const props = (d: Pick<FormSpec, 'schema'>): Array<[string, FieldSchema]>
 export const isReq = (d: Pick<FormSpec, 'schema'>, name: string): boolean => (d.schema?.required ?? []).includes(name);
 export const holdForm = (d: Pick<FormSpec, 'kind' | 'submit'>): boolean => (d.submit?.hold != null ? d.submit.hold : !!formT(d).hold);
 export const hasCancel = (d: Pick<FormSpec, 'kind' | 'cancel'>): boolean => d.cancel !== false && formT(d).cancel !== false;
-export const cap = (s: unknown): string => { const t = String(s == null ? '' : s); return t.charAt(0).toUpperCase() + t.slice(1); };
+/* the brand stays lowercase at the start of a sentence too (design system section 2) */
+export const cap = (s: unknown): string => { const t = String(s == null ? '' : s); return /^boopis\b/.test(t) ? t : t.charAt(0).toUpperCase() + t.slice(1); };
 export function optLabel(p: FieldSchema, v: unknown): string {
   const i = (p.enum ?? []).indexOf(v);
   return i >= 0 && p.enumNames?.[i] != null ? String(p.enumNames[i]) : String(v);

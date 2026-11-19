@@ -9,6 +9,7 @@ const base: RendererReport = {
   webkit: { version: '2.54.2', origin: 'system', library: '/usr/lib/libwebkit2gtk-4.1.so.0.18.5' },
   frame_rate: { policy: 'auto', rule: 'faster_than_sixty', refresh_millihertz: 120000, monitor: 'eDP', preference_off: true, refusal: null, power_profile: 'balanced', platform_profile: 'balanced' },
   note: null,
+  errors: [],
   gpu: { policy: 'auto', policy_source: 'default', rule: 'auto_dedicated', set: [['__NV_PRIME_RENDER_OFFLOAD', '1']], env_source: 'nvidia_documented', warning: null, power: 'ac', restart_advice: null, display_gpu: 'card1 0x8086 i915', dedicated_gpu: 'card0 0x10de nvidia' }
 };
 const display = { devicePixelRatio: 2, innerWidth: 1800, innerHeight: 1125, userAgent: 'ua' };

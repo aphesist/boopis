@@ -39,7 +39,7 @@ def _hermes_set(key: str, value: str) -> None:
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
             set_config_value(key, value)
     except SystemExit as exc:
-        raise RuntimeError(f"hermes refused {key}: {out.getvalue().strip()[:200]}") from exc
+        raise RuntimeError(f"the configuration refused {key}: {out.getvalue().strip()[:200]}") from exc
 
 
 def _hermes_config() -> Mapping[str, Any]:
@@ -73,7 +73,7 @@ def plan_wiring(
     else:
         variable = builtin_env(provider) or ""
         if not variable:
-            raise ValueError(f"Hermes has no provider called {provider!r}, so there is nothing to give the key to")
+            raise ValueError(f"boopis has no provider called {provider!r}, so there is nothing to give the key to")
         writes = []
     source = source_name()
     return [*writes, (f"secrets.{source}.env.{variable}", ref.text), (f"secrets.{source}.enabled", "true")], variable
@@ -98,5 +98,5 @@ def wire_credential(
         return {"wired": False, "reason": str(exc)}
     except Exception as exc:  # noqa: BLE001 - outside Hermes, or an API that moved: say so, do not fail the form
         _log.warning("could not wire %s", ref_text, exc_info=True)
-        return {"wired": False, "reason": f"{type(exc).__name__}: could not write Hermes's configuration"}
-    return {"wired": True, "env": variable, "applies": "when the Hermes gateway next starts"}
+        return {"wired": False, "reason": f"{type(exc).__name__}: could not write the configuration"}
+    return {"wired": True, "env": variable, "applies": "after boopis next restarts"}

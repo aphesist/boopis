@@ -9,7 +9,7 @@ const form = (id: string, kind: string, schema: unknown, extra: Partial<NonNulla
   form_id: id, kind, title: 'Title ' + id, body: 'Why', schema, submit: { label: 'Go' }, cancel: { label: 'Skip' }, sensitive: false, origin: 'host', diff: [], ...extra });
 const status = (over: Partial<SetupStatus>): SetupStatus => ({ steps: [], form: null, done: false, install_command: null, receipt: null, ...over });
 
-const BUNDLED: SourceInfo = { saved: null, from_env: null, next: 'bundled', running: 'bundled', carries_runtime: true };
+const BUNDLED: SourceInfo = { running: 'bundled', carries_runtime: true };
 class Fake implements SetupBridge {
   answers: unknown[] = [];
   listeners = new Set<(p: SetupProgress) => void>();
@@ -60,17 +60,16 @@ describe('first run', () => {
     expect(document.querySelector('boopis-logo')).toBe(hero);
   });
 
-  it('asks before it starts, shows the install command when Hermes is missing and checks again on request', async () => {
+  it('asks before it starts, never shows the engine\'s installer when it is missing, and checks again on request', async () => {
     const bridge = new Fake([
       status({ steps: [step('hermes', 'blocked', 'missing')], install_command: 'curl -fsSL https://example.test/install.sh | bash' }),
       status({ steps: [step('hermes', 'blocked', 'missing')], install_command: 'curl -fsSL https://example.test/install.sh | bash' })]);
     void runFirstRun(bridge);
     await tick();
-    expect(document.body.textContent).toContain('It asks before it changes any Hermes setting');
+    expect(document.body.textContent).toContain('It asks before it changes any setting');
     expect(bridge.answers).toHaveLength(0);
     await click('Set up');
-    expect(document.body.textContent).toContain('curl -fsSL https://example.test/install.sh');
-    expect(document.body.textContent).toContain('never runs it for you');
+    expect(document.body.textContent).not.toContain('curl -fsSL https://example.test/install.sh');
     await click('Check again');
     expect(bridge.answers).toEqual([{ answer: null, reconsider: false }, { answer: null, reconsider: false }]);
   });
@@ -204,28 +203,28 @@ describe('first run', () => {
     await click('Review again');
     expect(bridge.answers[1]).toEqual({ answer: null, reconsider: true });
   });
-  it('says what the bundled runtime is about to do, and no longer says it installs its plugin into your Hermes profile', async () => {
+  it('says what the bundled engine is about to do, and never names the engine', async () => {
     const bridge = new Fake([]);
     void runFirstRun(bridge);
     await tick();
     const text = document.querySelector('.hx-first-run')?.textContent ?? '';
-    expect(text).toContain('boopis comes with its own Hermes');
-    expect(text).toContain('unpacks it into boopis\'s own folder, then sets it up with the boopis plugin');
-    expect(text).toContain('never touches another Hermes');
-    expect(text).not.toContain('into your Hermes profile');
+    expect(text).toContain('boopis comes with its own engine');
+    expect(text).toContain('unpacks it into boopis\'s own folder and sets it up');
+    expect(text).toContain('Nothing else on this computer is touched');
+    expect(text).not.toMatch(/hermes/i);
     expect(text).not.toContain('Nothing is installed without you');
     expect(text, 'no em dash, no exclamation mark, and the product is lowercase').not.toMatch(/[\u2014!]|Boopis/);
   });
 
-  it('keeps the profile wording for the user\'s own Hermes, and claims nothing when it cannot tell', () => {
-    const own: SourceInfo = { saved: 'existing', from_env: null, next: 'existing', running: 'existing', carries_runtime: true };
-    expect(introText(own)).toContain('uses the Hermes already on this computer');
-    expect(introText(own)).toContain('installs the boopis plugin into its profile');
+  it('says when it runs on the engine already on this computer, and claims nothing when it cannot tell', () => {
+    const own: SourceInfo = { running: 'existing', carries_runtime: true };
+    expect(introText(own)).toContain('engine already installed on this computer');
+    expect(introText(own)).not.toMatch(/hermes/i);
     expect(introText(own)).not.toContain('unpacks');
-    expect(introText({ ...BUNDLED, carries_runtime: false })).toContain('already on this computer');
+    expect(introText({ ...BUNDLED, carries_runtime: false })).toContain('already installed on this computer');
     const unknown = introText(null);
-    expect(unknown).toContain('asks before it changes any Hermes setting');
-    expect(unknown).not.toMatch(/unpacks|already on this computer/);
+    expect(unknown).toContain('asks before it changes any setting');
+    expect(unknown).not.toMatch(/unpacks|already installed on this computer/);
   });
 
   it('shows the unpack as dots that fill with the archive\'s own bytes, then goes back to the steps', async () => {
@@ -243,15 +242,15 @@ describe('first run', () => {
     bridge.emit({ step: 'runtime', phase: 'verify', read: 50_000_000, total: 200_000_000 });
     bar = document.querySelector<HTMLElement>('[role=progressbar]');
     expect(bar?.getAttribute('aria-valuenow')).toBe('25');
-    expect(bar?.getAttribute('aria-label')).toBe('Checking the Hermes runtime');
+    expect(bar?.getAttribute('aria-label')).toBe('Checking boopis\'s engine');
     expect(bar?.hasAttribute('data-indeterminate')).toBe(false);
     expect(document.querySelector('.ui-progress__pct')?.textContent).toBe('25%');
     expect(document.querySelector('#fr-work-bytes')?.textContent).toBe('50.0 MB of 200 MB');
     // dots in proportion: 25% of 10 rounds to 3
     expect(document.querySelectorAll('.ui-progress__bar > i[data-on]')).toHaveLength(3);
     bridge.emit({ step: 'runtime', phase: 'unpack', read: 100_000_000, total: 200_000_000 });
-    expect(document.querySelector('[role=progressbar]')?.getAttribute('aria-label')).toBe('Unpacking Hermes');
-    expect(document.querySelector('#fr-work-label')?.textContent).toBe('Unpacking Hermes');
+    expect(document.querySelector('[role=progressbar]')?.getAttribute('aria-label')).toBe('Unpacking boopis\'s engine');
+    expect(document.querySelector('#fr-work-label')?.textContent).toBe('Unpacking boopis\'s engine');
     expect(document.querySelector('[role=progressbar]')?.getAttribute('aria-valuenow')).toBe('50');
     expect(document.querySelectorAll('.ui-progress__bar > i[data-on]')).toHaveLength(5);
     expect(document.querySelector('.hx-first-run')?.querySelector('.ui-progress__bar')?.tagName, 'a row of dots, never a bar element').toBe('SPAN');
@@ -265,7 +264,7 @@ describe('first run', () => {
   });
 
   it('never invents a figure: an event with no size keeps the dot travelling', async () => {
-    expect(describeProgress({ step: 'runtime', phase: 'unpack', read: null, total: null })).toEqual({ label: 'Unpacking Hermes', value: null, bytes: '' });
+    expect(describeProgress({ step: 'runtime', phase: 'unpack', read: null, total: null })).toEqual({ label: 'Unpacking boopis\'s engine', value: null, bytes: '' });
     expect(describeProgress({ step: 'runtime', phase: 'unpack', read: 5, total: 0 }).value).toBeNull();
     expect(describeProgress({ step: 'runtime', phase: 'verify', read: 999, total: 1000 }).value, 'a whole percent, rounded down: never 100 before it is').toBe(99);
     expect(describeProgress({ step: 'runtime', phase: 'verify', read: 2000, total: 1000 }).value).toBe(100);
@@ -301,7 +300,7 @@ describe('first run', () => {
     expect(document.querySelector('[data-retry]')).toBeNull();
   });
 
-  it('gives every kind of stopped step its Retry, and Hermes missing keeps its single "Check again"', async () => {
+  it('gives every kind of stopped step its Retry, and a missing engine keeps its single "Check again"', async () => {
     for (const id of ['runtime', 'hermes', 'plugin', 'hx', 'config', 'models', 'restart']) {
       document.body.replaceChildren();
       const bridge = new Fake([status({ steps: [step(id, 'blocked', 'it stopped')] })]);

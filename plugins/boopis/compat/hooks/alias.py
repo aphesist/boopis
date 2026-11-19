@@ -276,7 +276,7 @@ def apply_updated_input(
     # Claude Code's updatedInput replaces the whole object, so a key it omits is removed. Hermes merges a patch over the
     # original arguments and cannot remove one: the original value stays, and the notes say so.
     removed = tuple(
-        f"updatedInput left out {k!r}; Hermes cannot remove an argument, so the original value stays"
+        f"updatedInput left out {k!r}; an argument cannot be removed, so the original value stays"
         for k in original
         if k not in updated
     )

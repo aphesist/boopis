@@ -29,4 +29,22 @@ done
 [ "$(awk -v mode=16 -v color=nina -f "$brand/render.awk" <"$brand/boopis.art")" = "91" ] || { echo "FAIL nina at 16 colours" >&2; fail=1; }
 
 "$root/scripts/embed-brand.sh" --check || fail=1
+
+# ADR-0031: boopis is the product and its engine is invisible. What the installers print or write for a person (their
+# output, the menu entry, the package's description and install messages) never names the engine. Comments, and the
+# engine's licence file in the PKGBUILD (a legal notice), are not text a person reads in the app.
+for f in "$root/scripts/install.sh" "$root/scripts/install.ps1" "$root/packaging/arch/boopis.desktop" "$root/packaging/arch/boopis.install"; do
+  if grep -n -i 'hermes' "$f" | grep -v -E '^[0-9]+:[[:space:]]*#' >/dev/null; then
+    echo "FAIL $(basename "$f") names the engine (ADR-0031):" >&2
+    grep -n -i 'hermes' "$f" | grep -v -E '^[0-9]+:[[:space:]]*#' >&2
+    fail=1
+  else
+    echo "ok   $(basename "$f") never names the engine"
+  fi
+done
+if grep -E '^pkgdesc=' "$root/packaging/arch/PKGBUILD" | grep -q -i 'hermes'; then
+  echo "FAIL the package description names the engine (ADR-0031)" >&2; fail=1
+else
+  echo "ok   the package description never names the engine"
+fi
 exit "$fail"

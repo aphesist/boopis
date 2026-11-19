@@ -1,6 +1,6 @@
 //! The endpoint abstraction (ADR-0018): how the host reaches *a* gateway. The proxy and the UI never know which kind
 //! they talk to. `Local` is implemented; `Remote` and `Cloud` are typed variants that answer
-//! `hx.hermes.unavailable` ("not yet supported") until phase 2.
+//! `hx.engine.unavailable` ("not yet supported") until phase 2.
 
 use std::fmt;
 use std::path::PathBuf;
@@ -207,7 +207,7 @@ mod tests {
         .unwrap();
         assert_eq!(remote.kind(), EndpointKind::Remote);
         let err = remote.connect().await.err().unwrap();
-        assert_eq!(err.code(), "hx.hermes.unavailable");
+        assert_eq!(err.code(), "hx.engine.unavailable");
         assert!(err.to_string().contains("not yet supported"));
         let cloud = EndpointConfig::Cloud {
             control_plane: "https://cp.example".into(),
@@ -217,7 +217,7 @@ mod tests {
         .unwrap();
         assert_eq!(cloud.kind(), EndpointKind::Cloud);
         let err = cloud.connect().await.err().unwrap();
-        assert_eq!(err.code(), "hx.hermes.unavailable");
+        assert_eq!(err.code(), "hx.engine.unavailable");
     }
 
     #[test]
@@ -254,6 +254,6 @@ mod tests {
             .build(&sup, &Limits::default())
             .unwrap();
         let err = local.connect().await.err().unwrap();
-        assert_eq!(err.code(), "hx.hermes.unavailable");
+        assert_eq!(err.code(), "hx.engine.unavailable");
     }
 }

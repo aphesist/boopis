@@ -112,7 +112,7 @@ export function mountRight(root: HTMLElement): void {
       if (sw) { ui.hydrate(row); sw.addEventListener('change', () => d().setConnector(c.name, sw.checked)); }
       if (sb) sb.addEventListener('click', () => { const l = sb.querySelector('span'); if (l) l.textContent = 'Connecting'; sb.disabled = true; void d().signIn(c.name); });
       return row;
-    }).concat(d().connectors.get().length || !data().info.live ? [] : [el('p', { class: 'ssr-note', text: 'No MCP servers are configured in Hermes.' })]);
+    }).concat(d().connectors.get().length || !data().info.live ? [] : [el('p', { class: 'ssr-note', text: 'No connectors are set up yet.' })]);
   }
   function envBody(): HTMLElement[] {
     const e = d().environment.get();

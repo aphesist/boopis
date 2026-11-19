@@ -10,6 +10,7 @@
    to the gateway. Pure functions: no DOM, no host, no timers.
    Every adapter also builds the `FormSpec` the card draws (`model.spec`): the schema is kept whole (previews, pickers,
    uploads, sign-in and limits included), so there is one renderer and one adapter per source. */
+import { unlessEngine } from './errors';
 import type { FieldSchema, FormKind, FormSchema, FormSpec, Origin } from '../data/types';
 import type { LimitView } from './free-tier';
 import { limitTitle, resetText } from './free-tier';
@@ -169,10 +170,10 @@ export function fromGatewayEvent(type: string, sessionId: string, p: Obj, model 
       multi, other: choices.length > 0, secret: false, secretRef: null, default: undefined
     };
     return {
-      id: promptId, kind: 'question', title: str(p['question'], 'Hermes has a question'), body: '', fields: [field], submitLabel: 'Answer', cancelLabel: 'Skip',
+      id: promptId, kind: 'question', title: str(p['question'], 'A question for you'), body: '', fields: [field], submitLabel: 'Answer', cancelLabel: 'Skip',
       hold: false, sensitive: false, origin: 'hermes', diff: [],
       source: { kind: 'hermes', sessionId, method: 'clarify.respond', promptId, generation, multi },
-      spec: buildSpec({ id: promptId, kind: 'question', title: str(p['question'], 'Hermes has a question'), body: '', origin: originFor(model ? 'agent' : 'hermes', model),
+      spec: buildSpec({ id: promptId, kind: 'question', title: str(p['question'], 'A question for you'), body: '', origin: originFor(model ? 'agent' : 'hermes', model),
         schema: { properties: { answer: { type: 'string', title: 'Answer', ...(choices.length ? { enum: choices, 'x-other': true, ...(multi ? { 'x-multi': true } : {}) } : {}) } }, required: [] }, submit: { label: 'Answer' }, cancel: { label: 'Skip' } })
     };
   }
@@ -263,26 +264,26 @@ function copyFor(method: RequestMethod, p: Obj): RequestCopy {
       /* `metadata` is what the skill declared: its name, and the `help` and `required_for` it wrote */
       const env = str(p['env_var']), meta = obj(p['metadata']), skill = str(meta['skill_name']), needed = str(meta['required_for']);
       return {
-        title: 'Hermes needs ' + (env || 'a credential'),
-        why: sentence(str(p['prompt']) || 'Hermes needs a value to continue.', skill ? 'It is for the ' + chip(skill) + ' skill.' : '', needed ? 'Needed for ' + needed + '.' : '', str(meta['help'])),
-        effect: 'Hermes saves it in this profile’s `.env`. The model never sees it.',
-        schema: { properties: { value: secretField(env || 'Value') }, required: ['value'] }, submit: 'Send to Hermes', cancel: 'Skip'
+        title: 'boopis needs ' + (env || 'a credential'),
+        why: sentence(unlessEngine('hx.engine.refused', str(p['prompt'])) || 'boopis needs a value to continue.', skill ? 'It is for the ' + chip(skill) + ' skill.' : '', needed ? 'Needed for ' + needed + '.' : '', str(meta['help'])),
+        effect: 'boopis saves it in this bot’s own `.env` file. The model never sees it.',
+        schema: { properties: { value: secretField(env || 'Value') }, required: ['value'] }, submit: 'Send it', cancel: 'Skip'
       };
     }
     case 'sudo': {
       const command = str(p['command']).trim();
       return {
-        title: 'Hermes needs your sudo password',
-        why: command ? 'It wants to run ' + chip(command) + ' as an administrator.' : 'Hermes did not say which command this is for. Skip it if you cannot check the command in the conversation.',
-        effect: 'Hermes uses it to run the command and keeps it for this session. It is not part of the conversation.',
-        schema: { properties: { password: secretField('sudo password') }, required: ['password'] }, submit: 'Send to Hermes', cancel: 'Cancel'
+        title: 'boopis needs your sudo password',
+        why: command ? 'It wants to run ' + chip(command) + ' as an administrator.' : 'The request did not say which command this is for. Skip it if you cannot check the command in the conversation.',
+        effect: 'boopis uses it to run the command and keeps it for this session. It is not part of the conversation.',
+        schema: { properties: { password: secretField('sudo password') }, required: ['password'] }, submit: 'Send it', cancel: 'Cancel'
       };
     }
     case 'vault.unlock_prompt': {
       const name = str(p['display_name']) || str(p['backend']) || 'the password manager';
       return {
         title: 'Unlock ' + name,
-        why: 'Hermes wants to sign into a site with a login saved in ' + name + '. Enter your master password to unlock it for this session.',
+        why: 'boopis wants to sign into a site with a login saved in ' + name + '. Enter your master password to unlock it for this session.',
         effect: 'It goes straight to ' + name + ' on this machine. The model never sees it.',
         schema: { properties: { password: secretField('Master password') }, required: ['password'] }, submit: 'Unlock', cancel: 'Keep locked'
       };
@@ -291,8 +292,8 @@ function copyFor(method: RequestMethod, p: Obj): RequestCopy {
       const origin = str(p['origin']), site = str(p['site']) || origin;
       return {
         title: 'Save your ' + (site || 'site') + ' login?',
-        why: origin ? 'Hermes reached a sign-in page at ' + origin + ' and has no login for it. Enter it once here.' : 'Hermes reached a sign-in page and has no login for it. Enter it once here.',
-        effect: 'It goes to Hermes’s vault and is filled into the page. The model never sees the password.',
+        why: origin ? 'boopis reached a sign-in page at ' + origin + ' and has no login for it. Enter it once here.' : 'boopis reached a sign-in page and has no login for it. Enter it once here.',
+        effect: 'It goes to boopis’s vault and is filled into the page. The model never sees the password.',
         schema: { properties: { identifier: { type: 'string', title: 'Email or username', placeholder: 'you@example.com' }, password: secretField('Password') }, required: ['identifier', 'password'] },
         submit: 'Save and sign in', cancel: 'Don’t save'
       };
@@ -302,7 +303,7 @@ function copyFor(method: RequestMethod, p: Obj): RequestCopy {
       return {
         title: 'Verification code' + (site ? ' for ' + site : ''),
         why: sentence(site ? site + ' is asking for a one-time code (text message, email or an authenticator app).' : 'A site is asking for a one-time code (text message, email or an authenticator app).', str(p['hint'])),
-        effect: 'Hermes types it into the page. The model never sees it.',
+        effect: 'boopis types it into the page. The model never sees it.',
         schema: { properties: { code: secretField('Code') }, required: ['code'] }, submit: 'Enter code', cancel: 'Skip'
       };
     }
@@ -321,7 +322,7 @@ export function fromServerRequest(method: string, id: string | number, p: Obj): 
     id: requestId, kind: 'credential', title: c.title, body: c.why, fields: fieldsOf(c.schema), submitLabel: c.submit, cancelLabel: c.cancel,
     hold: false, sensitive: true, origin: 'hermes', diff: [], source: { kind: 'hermes-request', sessionId, requestId, method },
     /* Hermes gives no deadline on the request (it waits its own 120 or 180 seconds and then withdraws it), so none is drawn */
-    spec: { ...buildSpec({ id: requestId, kind: 'credential', title: c.title, body: c.why, schema: c.schema, submit: { label: c.submit }, cancel: { label: c.cancel }, origin: { kind: 'hermes' } }), effect: c.effect, receipt: 'Sent to Hermes', busyText: 'Sending to Hermes' }
+    spec: { ...buildSpec({ id: requestId, kind: 'credential', title: c.title, body: c.why, schema: c.schema, submit: { label: c.submit }, cancel: { label: c.cancel }, origin: { kind: 'hermes' } }), effect: c.effect, receipt: 'Sent', busyText: 'Sending' }
   };
 }
 
@@ -369,7 +370,7 @@ export function fromConnectorForm(f: ConnectorFormIn): FormModel {
 export function connectorSigninForm(server: string, provider: string, host: string): FormModel {
   const id = 'connector.signin.' + server;
   const title = 'Sign in to ' + provider;
-  const body = 'Hermes signs in for you: it opens ' + host + ' in your browser and keeps the tokens in its own store. boopis never sees them.';
+  const body = 'boopis signs in for you: it opens ' + host + ' in your browser and keeps the tokens in its own store, where nobody reads them.';
   const schema = { properties: { signin: { 'x-signin': { provider, flow: 'browser', host, server } } }, required: ['signin'] };
   const spec = buildSpec({ id, kind: 'signin', title, body, schema, submit: { label: 'Sign in' }, cancel: { label: 'Not now' }, origin: { kind: 'host' }, defer: false });
   return { id, kind: 'signin', title, body, fields: [], submitLabel: 'Sign in', cancelLabel: 'Not now', hold: false, sensitive: false, origin: 'host', diff: [], source: { kind: 'host' }, spec: { ...spec, provider } };

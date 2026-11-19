@@ -24,7 +24,7 @@ describe('the origin slot', () => {
     expect(originText({ kind: 'teammate', ids: [a as string], via: b as string })).toBe(`${a}, via ${b}`);
     expect(originText({ kind: 'agent', model: 'sonnet 5.5' })).toBe('sonnet 5.5');
     expect(originText({ kind: 'mcp', server: 'sentry', trust: 'trusted' })).toBe('sentry MCP server, trusted');
-    expect(originText({ kind: 'hermes' })).toBe('Hermes');
+    expect(originText({ kind: 'hermes' })).toBe('Session');
     expect(originText({ kind: 'agent', model: '' })).toBe('The agent');
   });
   it('draws a mod as its puzzle glyph and "name mod", the name first and "mod" quiet (DESIGN-SYSTEM.md 14.29)', () => {

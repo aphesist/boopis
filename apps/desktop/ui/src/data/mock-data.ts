@@ -214,7 +214,7 @@ export function diffFor(answer: string | null): DiffFile[] {
 export const CONTEXT: ContextUsage = { total: 200000, parts: [['system + tools', 9000], ['project memory', 4000], ['src/billing files', 41000], ['conversation', 22000]] };
 export const CONNECTORS: readonly Connector[] = [{ name: 'github', tools: 14, state: 'on' }, { name: 'postgres', tools: 6, state: 'on' }, { name: 'linear', tools: 9, state: 'sign in' }, { name: 'sentry', tools: 5, state: 'off' }];
 export const OUTPUT: readonly string[] = ['$ npm test -- billing', ' PASS  prorate.test.ts (5000 runs)', ' PASS  money.test.ts', ' FAIL  invoice.test.ts  › rounds per line item', '↩ rolled back invoice.ts', '$ npm test', ' Tests  142 passed', ' Time   4.18 s'];
-export const ENVIRONMENT: Environment = { cwd: '~/code/billing-api', branch: 'cents/proration', sandbox: 'bubblewrap · network off', runtime: 'node 22.11 · python 3.12', harness: 'hermes-agent v0.23.2 (pinned)', gate: 'npm test' };
+export const ENVIRONMENT: Environment = { cwd: '~/code/billing-api', branch: 'cents/proration', sandbox: 'bubblewrap · network off', runtime: 'node 22.11 · python 3.12', harness: 'boopis engine v0.23.2 (pinned)', gate: 'npm test' };
 export const TODOS: readonly Todo[] = [['read proration call sites', 'done'], ['convert to integer cents', 'done'], ['round once per invoice', 'doing'], ['property test for half-cents', 'todo'], ['draft PR', 'todo']];
 export const CHANGES: readonly Change[] = [['src/billing/money.ts', 41, 0], ['src/billing/prorate.ts', 27, 44], ['src/billing/invoice.ts', 9, 27], ['src/billing/prorate.test.ts', 19, 0]];
 export const GOVERNANCE: GovernanceState = {

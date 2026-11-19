@@ -27,7 +27,7 @@ use crate::hermes::install::{self, InstallReport};
 use crate::hermes::{HermesStatus, Supervisor};
 use crate::os::{self, PickedFolder};
 use crate::renderer::RendererReport;
-use crate::runtime::{Plan, Source, SourceView};
+use crate::runtime::{EngineView, Plan, Source};
 use crate::secrets::SecretStore;
 use crate::secrets::store::{validate_name, validate_value};
 use crate::settings::AppSettings;
@@ -216,57 +216,16 @@ pub async fn setup_models_view(
     Ok(setup_engine(&app, &state, profile)?.models_view().await?)
 }
 
-fn stored_hermes_source(app: &AppHandle) -> Result<Option<String>> {
-    let store = app
-        .store("settings.json")
-        .map_err(|e| Error::Io(e.to_string()))?;
-    Ok(store
-        .get("hermes_source")
-        .and_then(|v| v.as_str().map(str::to_owned)))
-}
-
-fn source_view(app: &AppHandle, state: &AppState) -> Result<SourceView> {
-    Ok(SourceView::new(
-        std::env::var("BOOPIS_HERMES").ok().as_deref(),
-        stored_hermes_source(app)?.as_deref(),
-        state.source,
-        state.carries_runtime,
-    ))
-}
-
-/// The advanced setting "Use my own Hermes": which Hermes the app runs, what is saved, and whether a restart is due.
+/// Which engine this run uses (the bundled one or the machine's), so the first-run screen says what setup is about to
+/// do. Read-only: the choice is `boopis --engine existing` or `BOOPIS_HERMES`, never a setting (ADR-0031).
 #[tauri::command]
 #[specta::specta]
-pub fn hermes_source_get(
-    app: AppHandle,
-    state: State<'_, AppState>,
-) -> std::result::Result<SourceView, HostError> {
-    Ok(source_view(&app, &state)?)
-}
-
-/// Save which Hermes the app runs (`settings.json`, `hermes_source`, which `BOOPIS_HERMES` overrides). It is read when the
-/// app starts, so nothing changes until a restart; the answer says whether one is due. A build with no bundled runtime has
-/// no choice to make, and is refused.
-#[tauri::command]
-#[specta::specta]
-pub fn hermes_source_set(
-    app: AppHandle,
-    state: State<'_, AppState>,
-    source: Source,
-) -> std::result::Result<SourceView, HostError> {
-    if !state.carries_runtime {
-        return Err(Error::InvalidInput(
-            "this build carries no Hermes of its own, so it always uses the one on this computer"
-                .into(),
-        )
-        .into());
+#[must_use]
+pub fn engine_source_get(state: State<'_, AppState>) -> EngineView {
+    EngineView {
+        running: state.source,
+        carries_runtime: state.carries_runtime,
     }
-    let store = app
-        .store("settings.json")
-        .map_err(|e| Error::Io(e.to_string()))?;
-    store.set("hermes_source", crate::runtime::source_value(source));
-    store.save().map_err(|e| Error::Io(e.to_string()))?;
-    Ok(source_view(&app, &state)?)
 }
 
 /// Ask a gateway link that gave up (`incompatible`) to try again, after the user fixed Hermes.
@@ -529,6 +488,7 @@ pub async fn renderer_report(
         .await
         .unwrap_or(crate::gpu::PowerSource::Unknown);
     report.gpu = crate::gpu::report(&gpu.inputs, gpu.source, &gpu.decision, power);
+    report.errors = crate::error::recent();
     Ok(report)
 }
 

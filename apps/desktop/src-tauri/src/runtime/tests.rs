@@ -605,59 +605,13 @@ fn a_build_that_carries_a_runtime_uses_it_unless_the_user_chose_their_own_hermes
     );
 }
 
-// ── the advanced setting "Use my own Hermes" ────────────────────────────────────────────────────────────────────────
+// ── the engine choice: the command line, then BOOPIS_HERMES (ADR-0031) ──────────────────────────────────────────────────
 
 #[test]
-fn the_saved_source_is_read_back_from_the_settings_file_as_it_was_written() {
-    for source in [Source::Bundled, Source::Existing] {
-        // the file the Tauri store writes: the app's settings under "app", the Hermes choice at the top
-        let file =
-            serde_json::json!({"app": {"version": 1}, "hermes_source": source_value(source)})
-                .to_string();
-        let saved = stored_source(&file);
-        assert_eq!(saved.as_deref(), Some(source.word()));
-        assert_eq!(Source::resolve(None, saved.as_deref()), source);
-    }
-    // an absent, unreadable or unknown value is no saved choice, and the bundled runtime stays
-    for file in ["{}", "not json", r#"{"hermes_source": 3}"#] {
-        assert_eq!(stored_source(file), None, "{file}");
-    }
-    assert_eq!(Source::resolve(None, Some("elsewhere")), Source::Bundled);
-}
-
-#[test]
-fn the_view_says_what_is_saved_what_wins_and_what_runs_now() {
-    // nothing saved: the bundled runtime, and no restart for a choice nobody made
-    let v = SourceView::new(None, None, Source::Bundled, true);
-    assert_eq!((v.saved, v.from_env, v.next), (None, None, Source::Bundled));
-    assert!(!v.restart_needed());
-    // saved "existing" while the bundled one runs: it takes effect at the next start, so a restart is due
-    let v = SourceView::new(None, Some("existing"), Source::Bundled, true);
-    assert_eq!(
-        (v.saved, v.next, v.running),
-        (Some(Source::Existing), Source::Existing, Source::Bundled)
-    );
-    assert!(v.restart_needed());
-    // after that restart, the same saved value is what runs: nothing is due
-    assert!(!SourceView::new(None, Some("existing"), Source::Existing, true).restart_needed());
-    // BOOPIS_HERMES wins over the saved choice, so saving the other one changes nothing and asks for no restart
-    let v = SourceView::new(Some("EXISTING"), Some("bundled"), Source::Existing, true);
-    assert_eq!(
-        (v.from_env, v.saved, v.next),
-        (
-            Some(Source::Existing),
-            Some(Source::Bundled),
-            Source::Existing
-        )
-    );
-    assert!(!v.restart_needed());
-    // a value in the variable that means nothing is ignored, as at start-up
-    assert_eq!(
-        SourceView::new(Some("later"), None, Source::Bundled, true).from_env,
-        None
-    );
-    // a build with no runtime of its own has nothing to restart for
-    assert!(!SourceView::new(None, Some("existing"), Source::Bundled, false).restart_needed());
+fn the_variable_wins_and_an_unknown_word_means_the_bundled_engine() {
+    assert_eq!(Source::resolve(Some("EXISTING"), None), Source::Existing);
+    assert_eq!(Source::resolve(None, None), Source::Bundled);
+    assert_eq!(Source::resolve(Some("later"), None), Source::Bundled);
 }
 
 #[test]

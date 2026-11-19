@@ -180,7 +180,7 @@ Stable string codes in `data.code`, listed in `crates/hx-proto/errors.json` (sha
 - `hx.kernel.dead`;
 - `hx.ledger.chain_broken`, `hx.ledger.invalid_transition`;
 - `hx.budget.blocked`;
-- `hx.hermes.incompatible`, `hx.hermes.unavailable`;
+- `hx.engine.incompatible`, `hx.engine.unavailable`;
 - `hx.host.*` (the host's own: `consent_required`, `unauthorized`, `invalid_frame`, `unknown_connection`, `no_ui`, `os`);
 - `hx.secrets.*` (`unavailable`, `failed`, `not_found`, `invalid_ref`);
 - `hx.connectors.*` (`exists`, `not_found`, `rejected`, `plan_changed`, `secret_missing`, `plugin_owned`, `restart_choice`, `busy`, `unknown_login`, `not_oauth`, `signin_failed`, `signin_cancelled`, `signin_timeout`, `command_failed`, `failed`);

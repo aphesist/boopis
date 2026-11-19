@@ -150,7 +150,7 @@ describe('the live provider: the conversation stream, from recorded frames', () 
     provider.sessions.send(SESSION, 'hi', META);
     await tick();
     const done = seen.at(-1);
-    expect(done?.type === 'turn-finished' && done.paragraphs.join(' ')).toContain('The message was not sent: refused');
+    expect(done?.type === 'turn-finished' && done.paragraphs.join(' ')).toContain('The message was not sent: boopis\'s engine could not do that');
   });
 
   it('stops by interrupting the live session', async () => {
