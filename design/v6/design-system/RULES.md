@@ -4,7 +4,7 @@ One line per rule of `DESIGN-SYSTEM.md` (version 1.1). Each names its section, i
 The UI lab turns the **machine** checks into automated tests; **by eye** rules are reviewed per screen. Generated from
 `DESIGN-SYSTEM.md` and the check list of the version 1.1 pass; when a rule changes there, change its line here.
 
-- **Status**: blank is what the mock-up already does; **Tightened** made an existing rule exact; **Proposed** needs the
+- **Status**: blank is what the mock-up already does; **Tightened** made an existing rule exact; **Approved** was proposed, then approved in the owner-delegated review of 19 November 2026; formerly needed the
   owner's approval: fix agents follow it as the default, and a check reports a breach as a warning until the owner rules.
 - **How**: machine (a script can decide it: computed styles, DOM, geometry, pixels, the keyboard), by eye (a person
   decides), or both (a machine check catches most of it, a review the rest).
@@ -56,7 +56,7 @@ The UI lab turns the **machine** checks into automated tests; **by eye** rules a
 |---|---|---|---|---|
 | [R-type-1](DESIGN-SYSTEM.md#6-typography) | Two families: `--sans` for interface and prose, `--mono` for code, paths, numbers, times, costs, model names, call numbers, state words, kbd and stamps |  | machine | M: every computed font-family resolves from --sans or --mono; numbers, paths, times in mono |
 | [R-type-2](DESIGN-SYSTEM.md#6-typography) | Six sizes, only through `--fs-*` (11, 12, 13, 14, 16, 20) |  | machine | M: every computed font-size is 11, 12, 13, 14, 16 or 20px (logo excluded) |
-| [R-type-3](DESIGN-SYSTEM.md#6-typography) | Three weights, by role: 600 only for titles (display, title, card title, panel and dialog titles); 500 for buttons, tabs and segmented options, chips, field labels, group headings and stamps; 400… | Proposed | machine | M: computed font-weight in {400, 500, 600}; 600 only on title elements; menu items 400 (Proposed: warn) |
+| [R-type-3](DESIGN-SYSTEM.md#6-typography) | Three weights, by role: 600 only for titles (display, title, card title, panel and dialog titles); 500 for buttons, tabs and segmented options, chips, field labels, group headings and stamps; 400… | Approved | machine | M: computed font-weight in {400, 500, 600}; 600 only on title elements; menu items 400 |
 | [R-type-4](DESIGN-SYSTEM.md#6-typography) | Line heights by role, through tokens: `--lh` 1.6 reading text and multi-line fields; `--lh-ui` 1.35 interface; `--lh-tight` 1.2 titles; `--lh-meta` 1.45 mono meta; `--lh-small` 1.5 hints,… | Tightened | machine | M: computed line-height ratio in {1, 1.2, 1.35, 1.45, 1.5, 1.6}; 1 only on fixed-height single-line controls |
 | [R-type-5](DESIGN-SYSTEM.md#6-typography) | Case through `text-transform: var(--ui-case)` on interface labels only |  | machine | M: no uppercase/capitalize transform; content elements have `text-transform: none` |
 | [R-type-6](DESIGN-SYSTEM.md#6-typography) | Every mono number that can change or line up uses `font-variant-numeric: tabular-nums` (`.ui-mono`) |  | machine | M: every `.ui-mono` and mono number has `font-variant-numeric: tabular-nums` |
@@ -76,7 +76,7 @@ The UI lab turns the **machine** checks into automated tests; **by eye** rules a
 | [R-space-3](DESIGN-SYSTEM.md#7-space-density-and-layout) | Siblings are spaced by `gap` on their parent, never by margins on the children; a margin only separates a group from the next (`.ui-group + .ui-group`, a settings head's 20 above) |  | machine | M: no margin between flex/grid siblings except the listed group separators |
 | [R-space-4](DESIGN-SYSTEM.md#7-space-density-and-layout) | Density moves only `--row-h`, `--row-h-2`, `--ctl` and `--ctl-s`; nothing else changes with it |  | machine | M: switching density changes only elements sized by the four tokens |
 | [R-space-5](DESIGN-SYSTEM.md#7-space-density-and-layout) | Every control's height is one of `--ctl`, `--ctl-s`, `--row-h`, `--row-h-2`, or a named fixed height: chip `--ctl-s` − 2, option chip `--ctl` − 4, small segmented `--ctl` − 2, key chip 18, stamp… |  | machine | M: every interactive element's height is a control token or a listed fixed height |
-| [R-layout-1](DESIGN-SYSTEM.md#7-space-density-and-layout) | Window breakpoints are 560 (the call-number margin collapses), 640, 900 and 1200 (both sidebars push; mod panes become tabs) | Proposed | machine | M: media-query widths in app CSS are within {520, 560, 639/640, 760, 900, 1200} (Proposed: warn on 520 and 760) |
+| [R-layout-1](DESIGN-SYSTEM.md#7-space-density-and-layout) | Window breakpoints are 560 (the call-number margin collapses), 640, 900 and 1200 (both sidebars push; mod panes become tabs) | Approved | machine | M: media-query widths in app CSS are within {520, 560, 639/640, 760, 900, 1200} |
 | [R-layout-2](DESIGN-SYSTEM.md#7-space-density-and-layout) | Widths that follow the window come only from the layout tokens (`--sb-w`, `--right-w`, `--col-w`, `--measure`, `--composer-w`) and the clamps above; a component never sizes itself in `vw` (the… |  | machine | M: no `vw` in component CSS outside the layout tokens |
 | [R-layout-3](DESIGN-SYSTEM.md#7-space-density-and-layout) | The column, the composer and the dock ride the shell's centre line (`--hx-center-x` and friends); nothing computes its own centre |  | machine | M: column, composer and dock centres equal `--hx-center-x` within 1px at six viewports |
 | [R-layout-4](DESIGN-SYSTEM.md#7-space-density-and-layout) | Distances from the window edge: the work keeps `--gutter` (16); floating surfaces `--float-margin` (8); side dialogs and sheets 12 |  | machine | M: content >= 16px, floating surfaces >= 8px, side dialogs and sheets 12px from the window edge |
@@ -92,10 +92,10 @@ The UI lab turns the **machine** checks into automated tests; **by eye** rules a
 | [R-overflow-3](DESIGN-SYSTEM.md#71-overflow-and-scrollbars) | Prose, titles and messages wrap; paths, code and output wrap anywhere inside wells (`overflow-wrap: anywhere`); a code chip clones its background on each line |  | machine | M: buttons and labels `white-space: nowrap`; wells `overflow-wrap: anywhere` |
 | [R-overflow-4](DESIGN-SYSTEM.md#71-overflow-and-scrollbars) | Nothing scrolls sideways except code, diffs, terminal output, tables wider than their box (14.37) and tab strips |  | machine | M: document scrollWidth == clientWidth at 390, 720, 1440; overflow-x scroll only on the listed kinds |
 | [R-scroll-1](DESIGN-SYSTEM.md#71-overflow-and-scrollbars) | Scrollbars are drawn with `::-webkit-scrollbar` and its pseudo-elements, from the scrollbar tokens, and nothing in the app sets `scrollbar-width` or `scrollbar-color`, except `scrollbar-width:… | Tightened | machine | M: no computed `scrollbar-width` other than auto/none and no `scrollbar-color` other than auto; `::-webkit-scrollbar` width equals --scroll-size; screenshot in WebKitGTK and Chromium matches |
-| [R-scroll-2](DESIGN-SYSTEM.md#71-overflow-and-scrollbars) | Geometry: the bar's box is `--scroll-size` 10px; the thumb a capsule `--scroll-thumb` 4px wide, centred, 6px (`--scroll-thumb-active`) while hovered or dragged, never shorter than 32px… | Proposed | machine | M: thumb 4px at rest, 6px hovered, min 32px, no buttons, transparent track (pixel probe) — Proposed: warn |
-| [R-scroll-3](DESIGN-SYSTEM.md#71-overflow-and-scrollbars) | The thumb is `--scroll-thumb-color` (`--bg-4`, the mock-up's) at rest and `--scroll-thumb-color-active` (`--mark-off`, 3:1 like every non-text mark) while hovered or dragged | Proposed | machine | M: thumb pixel equals --bg-4 at rest and --mark-off hovered — Proposed: warn |
-| [R-scroll-4](DESIGN-SYSTEM.md#71-overflow-and-scrollbars) | Bars are inset, never overlay: none of the three engines gives a styled overlay bar, so the bar takes its 10px at the scroller's end | Proposed | machine | M: listed scrollers have `overflow-y: scroll`; end padding = side padding - 10px — Proposed: warn |
-| [R-scroll-5](DESIGN-SYSTEM.md#71-overflow-and-scrollbars) | Where a scroller's end meets a curved corner of its container (a dialog body's foot, a menu, a popover, the palette list, a sheet), the track is inset by that corner's radius… | Proposed | machine | M: in a scroller ending at a rounded corner, the track's margin at that end >= the container's radius — Proposed: warn |
+| [R-scroll-2](DESIGN-SYSTEM.md#71-overflow-and-scrollbars) | Geometry: the bar's box is `--scroll-size` 10px; the thumb a capsule `--scroll-thumb` 4px wide, centred, 6px (`--scroll-thumb-active`) while hovered or dragged, never shorter than 32px… | Approved | machine | M: thumb 4px at rest, 6px hovered, min 32px, no buttons, transparent track (pixel probe) |
+| [R-scroll-3](DESIGN-SYSTEM.md#71-overflow-and-scrollbars) | The thumb is `--scroll-thumb-color` (`--bg-4`, the mock-up's) at rest and `--scroll-thumb-color-active` (`--mark-off`, 3:1 like every non-text mark) while hovered or dragged | Approved | machine | M: thumb pixel equals --bg-4 at rest and --mark-off hovered |
+| [R-scroll-4](DESIGN-SYSTEM.md#71-overflow-and-scrollbars) | Bars are inset, never overlay: none of the three engines gives a styled overlay bar, so the bar takes its 10px at the scroller's end | Approved | machine | M: listed scrollers have `overflow-y: scroll`; end padding = side padding - 10px |
+| [R-scroll-5](DESIGN-SYSTEM.md#71-overflow-and-scrollbars) | Where a scroller's end meets a curved corner of its container (a dialog body's foot, a menu, a popover, the palette list, a sheet), the track is inset by that corner's radius… | Approved | machine | M: in a scroller ending at a rounded corner, the track's margin at that end >= the container's radius |
 | [R-scroll-6](DESIGN-SYSTEM.md#71-overflow-and-scrollbars) | Scrollbars appear only in the named scrollers: the conversation, the sidebar lists, the right panel's body, a dialog's or sheet's body (never the whole dialog: the head stays), the palette list, a… |  | machine | M: every element with scrollHeight > clientHeight and overflow auto/scroll matches the allowlist; no same-axis nesting |
 | [R-scroll-7](DESIGN-SYSTEM.md#71-overflow-and-scrollbars) | A horizontal scroller is only code, a diff, terminal output, a wide table or a tab strip |  | machine | M: overflow-x scrollers are code/diff/output/table/tab strip; tab strips hide the bar and set `data-more` fade |
 | [R-scroll-8](DESIGN-SYSTEM.md#71-overflow-and-scrollbars) | Every inner scroller sets `overscroll-behavior: contain` |  | machine | M: inner scrollers `overscroll-behavior: contain`; a scroller without focusable children has tabindex 0 and a label |
@@ -109,7 +109,7 @@ The UI lab turns the **machine** checks into automated tests; **by eye** rules a
 | [R-corner-2](DESIGN-SYSTEM.md#8-shape) | The radius by kind of element | Tightened | machine | M: per selector, computed radius equals the table's token (sharp, default, round) |
 | [R-corner-3](DESIGN-SYSTEM.md#8-shape) | Nested corners fit (owner decision): a piece within its container's radius of a corner takes `max(--r-floor, R − gap)`, through the container's `--r-in` or its `--r-in-*` token; where that would… |  | machine | M: for each child within R of a container corner, radius == max(floor, R - gap) +/-1 or a capsule |
 | [R-corner-4](DESIGN-SYSTEM.md#8-shape) | A piece in a corner sits inside it: inset by the container's `--pad` from both edges, it never touches or crosses the container's edge or its curve |  | machine | M: a corner piece's rect is inset >= --pad from both edges of its container |
-| [R-corner-5](DESIGN-SYSTEM.md#8-shape) | The edge band shares the corner: every piece on the same band as a corner piece (the same inset from that edge, for example a dialog head's tabs beside its close button) takes the corner piece's… | Proposed | machine | M: pieces sharing a corner piece's band have its radius (dialog head tabs == close) — Proposed: warn |
+| [R-corner-5](DESIGN-SYSTEM.md#8-shape) | The edge band shares the corner: every piece on the same band as a corner piece (the same inset from that edge, for example a dialog head's tabs beside its close button) takes the corner piece's… | Approved | machine | M: pieces sharing a corner piece's band have its radius (dialog head tabs == close) |
 | [R-corner-6](DESIGN-SYSTEM.md#8-shape) | Every corner is the drawn continuous corner (`HX.ui.squircle`, smoothing 0.6); no `corner-shape` anywhere; only leaf controls are clipped, a container is a frame (owner decisions, 8.1) |  | machine | M: no `corner-shape`; clip-path only on leaf controls; bound containers draw ::before/::after (existing smoke `corners`) |
 | [R-corner-7](DESIGN-SYSTEM.md#8-shape) | Nothing paints a rectangle behind a rounded surface: the `<dialog>` element, wrappers and a scroller the same size as a rounded surface have no background, border or shadow of their own, and the… | Tightened | machine | M: `dialog` elements and same-size wrappers of rounded surfaces have transparent background, no border, no shadow; corner pixels outside the path equal the backdrop |
 | [R-corner-8](DESIGN-SYSTEM.md#8-shape) | A piece flush with its container's edge (a card's foot, a queue's peek, a body's focus ring at a dialog's foot) takes the container's radius on the corners it shares and 0 on the others |  | machine | M: flush pieces have the container radius on shared corners and 0 elsewhere |
@@ -129,7 +129,7 @@ The UI lab turns the **machine** checks into automated tests; **by eye** rules a
 | [R-elev-3](DESIGN-SYSTEM.md#9-elevation-hairlines-and-depth) | One shadow per surface, never coloured, never a glow, never a hard offset; a surface inside a floating one (a menu item, a card in a popover) has none |  | machine | M: no non-inset shadow inside a floating surface; no shadow with a colour other than the preset's shadow ink |
 | [R-elev-4](DESIGN-SYSTEM.md#9-elevation-hairlines-and-depth) | A floating surface is opaque: the frame colour with `--line` (menus, popovers, the palette, dialogs) or raised with `--hair` (tooltips, toasts) |  | machine | M: floating surfaces have alpha 1 backgrounds and no backdrop-filter |
 | [R-elev-5](DESIGN-SYSTEM.md#9-elevation-hairlines-and-depth) | `z-index` comes from `--z-*` |  | machine | M: every z-index is a --z-* value, or 1-3 inside an element with `isolation: isolate` |
-| [R-elev-6](DESIGN-SYSTEM.md#9-elevation-hairlines-and-depth) | A modal dialog uses the top layer (`showModal`), above every `--z-*`; every layer opened from inside it (a menu, a popover, the tooltip) mounts inside the dialog, so it stays above it; a toast… | Proposed | machine | M: with a modal dialog open, an opened menu/tooltip is a descendant of the dialog and hit-testable — Proposed: warn |
+| [R-elev-6](DESIGN-SYSTEM.md#9-elevation-hairlines-and-depth) | A modal dialog uses the top layer (`showModal`), above every `--z-*`; every layer opened from inside it (a menu, a popover, the tooltip) mounts inside the dialog, so it stays above it; a toast… | Approved | machine | M: with a modal dialog open, an opened menu/tooltip is a descendant of the dialog and hit-testable |
 | [R-elev-7](DESIGN-SYSTEM.md#9-elevation-hairlines-and-depth) | One floating layer is open at a time; a tooltip may show over it; opening another closes the first |  | machine | M: opening a second menu closes the first (one `.ui-menu.is-in`) |
 | [R-elev-8](DESIGN-SYSTEM.md#9-elevation-hairlines-and-depth) | One scrim at a time, only behind the palette, a modal dialog or an overlaying sidebar or panel |  | machine | M: at most one visible scrim; none behind the side dialog |
 
@@ -189,7 +189,7 @@ The UI lab turns the **machine** checks into automated tests; **by eye** rules a
 |---|---|---|---|---|
 | [R-seg-1](DESIGN-SYSTEM.md#143-tabs-pill-segmented-control-as-tabs) | Two to four options of equal width (the track is a grid of equal columns); more, or labels of very different length, become a select (14.32) |  | machine | M: 2-4 options; equal widths +/-1px |
 | [R-seg-2](DESIGN-SYSTEM.md#143-tabs-pill-segmented-control-as-tabs) | The track is `--bg-0` with `--hair`, inset 3 (`--pad-seg`), radius `--r-s`; the thumb and the options take `--r-in-seg` (9); the thumb slides by `transform` over `--dur-slide`; the selected label… |  | machine | M: track pad 3, radius --r-s; thumb radius --r-in-seg; thumb moves by transform |
-| [R-seg-3](DESIGN-SYSTEM.md#143-tabs-pill-segmented-control-as-tabs) | A segmented control on a container's edge band takes the band's radius for its track (`--r-outer: var(--r-in-dialog)` in a dialog head), and its thumb follows (`band − 3`) | Proposed | machine | M: a segmented control in a band has track radius == band radius — Proposed: warn |
+| [R-seg-3](DESIGN-SYSTEM.md#143-tabs-pill-segmented-control-as-tabs) | A segmented control on a container's edge band takes the band's radius for its track (`--r-outer: var(--r-in-dialog)` in a dialog head), and its thumb follows (`band − 3`) | Approved | machine | M: a segmented control in a band has track radius == band radius |
 | [R-tab-1](DESIGN-SYSTEM.md#143-tabs-pill-segmented-control-as-tabs) | Three tab looks, one per place, and nothing else is a tab: the segmented pill (view switches such as Session \| Bots, and radios of two to four values); text tabs in a dialog head (28px, 13/500… | Tightened | machine | M: elements with role=tab match one of the three looks |
 | [R-tab-2](DESIGN-SYSTEM.md#143-tabs-pill-segmented-control-as-tabs) | Tabs never wrap |  | machine | M: tab labels nowrap; overflowing strips scroll with hidden bar and fade |
 | [R-tab-3](DESIGN-SYSTEM.md#143-tabs-pill-segmented-control-as-tabs) | One tab stop; arrows move and select (Up and Down when vertical), Home and End; `aria-selected`; an attention dot beside an unselected label, and ", needs you" in its name |  | machine | M: one tab stop per tablist; arrows/Home/End move selection (keyboard script) |
@@ -258,7 +258,7 @@ The UI lab turns the **machine** checks into automated tests; **by eye** rules a
 
 | ID | Rule | Status | How | Check |
 |---|---|---|---|---|
-| [R-float-1](DESIGN-SYSTEM.md#1419-popovers) | A menu, a popover and a tooltip sit `--float-gap` (8) from their anchor and at least `--float-margin` (8) from the window edge, below the anchor unless it only fits above | Proposed | machine | M: menu/popover/tooltip edge 8px from the anchor and >= 8px from the window edge — Proposed (rail tooltip): warn |
+| [R-float-1](DESIGN-SYSTEM.md#1419-popovers) | A menu, a popover and a tooltip sit `--float-gap` (8) from their anchor and at least `--float-margin` (8) from the window edge, below the anchor unless it only fits above | Approved | machine | M: menu/popover/tooltip edge 8px from the anchor and >= 8px from the window edge |
 | [R-float-2](DESIGN-SYSTEM.md#1419-popovers) | No arrows, beaks or tails on any floating surface |  | machine | M: no ::before/::after triangles on floating surfaces |
 | [R-float-3](DESIGN-SYSTEM.md#1419-popovers) | A menu opens below its trigger, its start 8px before the trigger's (so the first item's label lines up with the trigger's), or end-aligned when the trigger ends a bar; only a tooltip is centred on… |  | machine | M: menu left == anchor left - 8 (or right-aligned at the end of a bar) |
 | [R-float-4](DESIGN-SYSTEM.md#1419-popovers) | Sizes: menus 220 to 340 wide, popovers 360 (at most the window less 24), tooltips one line |  | machine | M: menu width 220-340; popover 360; height <= window - 16 |
@@ -280,7 +280,7 @@ The UI lab turns the **machine** checks into automated tests; **by eye** rules a
 | ID | Rule | Status | How | Check |
 |---|---|---|---|---|
 | [R-tip-1](DESIGN-SYSTEM.md#1423-tooltips) | A tooltip is raised with `--hair` and `--elev-2`, `--r-s`, 12px, padding 4 8 (4 4 4 8 with keys); its keys take `--r-in-field` (R-kbd-2) |  | machine | M: tooltip background, line, shadow, radius, padding; keys radius --r-in-field |
-| [R-tip-2](DESIGN-SYSTEM.md#1423-tooltips) | It shows below its anchor, above within 160px of the window's bottom, to the right in the rail; and it never covers the text you are typing: a tooltip for a control inside a container that holds a… | Proposed | machine | M: a tooltip never intersects a focused text field or the container holding it — Proposed: warn |
+| [R-tip-2](DESIGN-SYSTEM.md#1423-tooltips) | It shows below its anchor, above within 160px of the window's bottom, to the right in the rail; and it never covers the text you are typing: a tooltip for a control inside a container that holds a… | Approved | machine | M: a tooltip never intersects a focused text field or the container holding it |
 | [R-tip-3](DESIGN-SYSTEM.md#1423-tooltips) | Timing: 480ms the first time, at once while warm (700ms after the last) and on keyboard focus; it hides on pointer down, focus out and Esc |  | machine | M: delays 480/0/0 by script |
 | [R-tip-4](DESIGN-SYSTEM.md#1423-tooltips) | Its text is the control's accessible name, then an optional mono state, then the keys; one line, never interactive, never the only place for information; the platform's `title` tooltip is never… |  | machine | M: tooltip text == aria-label (+ keys); no `title` attributes |
 
@@ -327,7 +327,7 @@ The UI lab turns the **machine** checks into automated tests; **by eye** rules a
 |---|---|---|---|---|
 | [R-search-1](DESIGN-SYSTEM.md#1431-search-fields) | Three search fields, one family |  | machine | M: command field and palette field geometry as listed |
 | [R-search-2](DESIGN-SYSTEM.md#1431-search-fields) | The search glyph labels, it does not act: `--text-quiet`, like the placeholder, at the start |  | machine | M: the search glyph's colour == --text-quiet |
-| [R-search-3](DESIGN-SYSTEM.md#1431-search-fields) | The leading glyph is centred in a square as tall as its field: its centre is half the field's height from the edge | Proposed | machine | M: the glyph's centre is half the field's height from its start edge — Proposed: warn |
+| [R-search-3](DESIGN-SYSTEM.md#1431-search-fields) | The leading glyph is centred in a square as tall as its field: its centre is half the field's height from the edge | Approved | machine | M: the glyph's centre is half the field's height from its start edge |
 | [R-search-4](DESIGN-SYSTEM.md#1431-search-fields) | What ends a field (key chips while it is empty) sits `--pad-tip` (4) from the end of a 26 field and takes `--r-in-field` (R-kbd-2); in the palette's 48 field the esc key sits at the field's 12 end… |  | machine | M: trailing keys inset 4 in the command field with radius --r-in-field |
 | [R-search-5](DESIGN-SYSTEM.md#1431-search-fields) | Matches are underlined in brass with the text `--text-strong`, never highlighted with a fill; no matches is a sentence that teaches ("No matches for … Try a session title, a bot's name or a command.") |  | machine | M: matches use underline in --brass and no background |
 
@@ -344,14 +344,14 @@ The UI lab turns the **machine** checks into automated tests; **by eye** rules a
 
 | ID | Rule | Status | How | Check |
 |---|---|---|---|---|
-| [R-check-1](DESIGN-SYSTEM.md#1433-checkboxes-and-radios) | There is no square checkbox | Proposed | machine | M: no square checkbox control in the DOM — Proposed: warn |
+| [R-check-1](DESIGN-SYSTEM.md#1433-checkboxes-and-radios) | There is no square checkbox | Approved | machine | M: no square checkbox control in the DOM |
 | [R-check-2](DESIGN-SYSTEM.md#1433-checkboxes-and-radios) | A radio is an option row's ring: empty in `--mark-off`, the chosen one filled brass (a shape change as well as a colour), the row `--current` while focused with the inset ring |  | machine | M: radio rings --mark-off empty, brass when checked |
 
 ## 14.34 Sliders
 
 | ID | Rule | Status | How | Check |
 |---|---|---|---|---|
-| [R-slider-1](DESIGN-SYSTEM.md#1434-sliders) | No slider track | Proposed | machine | M: no `input[type=range]` and no bar-shaped slider — Proposed: warn |
+| [R-slider-1](DESIGN-SYSTEM.md#1434-sliders) | No slider track | Approved | machine | M: no `input[type=range]` and no bar-shaped slider |
 
 ## 14.35 Interactive states
 
@@ -359,10 +359,10 @@ The UI lab turns the **machine** checks into automated tests; **by eye** rules a
 |---|---|---|---|---|
 | [R-state-1](DESIGN-SYSTEM.md#1435-interactive-states) | Every control draws exactly the states of the table above with those tokens; a state not in the table does not exist |  | machine | M: per control family, computed styles in each state equal the table |
 | [R-state-2](DESIGN-SYSTEM.md#1435-interactive-states) | State lives in ARIA or data attributes, never in classes such as `.is-active` |  | machine | M: no state classes (`is-active`, `is-selected`, `active`, `selected`) in library markup |
-| [R-state-3](DESIGN-SYSTEM.md#1435-interactive-states) | Hover styles apply only where a pointer hovers: every hover rule sits under `@media (hover: hover) and (pointer: fine)` | Proposed | machine | M: every :hover rule is inside the pointer media query — Proposed: warn |
+| [R-state-3](DESIGN-SYSTEM.md#1435-interactive-states) | Hover styles apply only where a pointer hovers: every hover rule sits under `@media (hover: hover) and (pointer: fine)` | Approved | machine | M: every :hover rule is inside the pointer media query |
 | [R-state-4](DESIGN-SYSTEM.md#1435-interactive-states) | Hover in over `--dur-1`, out over `--dur-out`, press over `--dur-press`; focus never transitions |  | machine | M: transition durations swap --dur-1 / --dur-out; focus has no transition |
 | [R-state-5](DESIGN-SYSTEM.md#1435-interactive-states) | Three meanings, never mixed: `--current` is where you are (the current row, the active text tab, a focused menu item, the listening mic); the bone `--selected` fill is the chosen value or the… |  | machine | M: no element with both --current and --selected fills |
-| [R-state-6](DESIGN-SYSTEM.md#1435-interactive-states) | Disabled: a control with text or an icon takes the role colours (`--text-quiet`, `--icon-off`); a control drawn in fills (send, switch, field) takes one opacity, `--disabled-alpha` (.45) | Proposed | machine | M: disabled filled controls have opacity == --disabled-alpha — Proposed: warn |
+| [R-state-6](DESIGN-SYSTEM.md#1435-interactive-states) | Disabled: a control with text or an icon takes the role colours (`--text-quiet`, `--icon-off`); a control drawn in fills (send, switch, field) takes one opacity, `--disabled-alpha` (.45) | Approved | machine | M: disabled filled controls have opacity == --disabled-alpha |
 | [R-state-7](DESIGN-SYSTEM.md#1435-interactive-states) | Busy shows `aria-busy` and the running dot or the Stop it became; never a spinner (R-load-1) |  | machine | M: busy regions set aria-busy; no rotating animation anywhere |
 
 ## 14.36 Loading, errors and unknown
@@ -370,7 +370,7 @@ The UI lab turns the **machine** checks into automated tests; **by eye** rules a
 | ID | Rule | Status | How | Check |
 |---|---|---|---|---|
 | [R-load-1](DESIGN-SYSTEM.md#1436-loading-errors-and-unknown) | No spinners and no shimmering skeletons |  | machine | M: no infinite rotate animation and no shimmer gradient |
-| [R-load-2](DESIGN-SYSTEM.md#1436-loading-errors-and-unknown) | A region waiting for its first data keeps its frame (its head, title and hairlines) and draws nothing in its body; if it is still empty after `--dur-breathe` (1.8s), one quiet line appears there:… | Proposed | machine | M: a loading region shows only its frame, then one line after 1.8s — Proposed: warn |
+| [R-load-2](DESIGN-SYSTEM.md#1436-loading-errors-and-unknown) | A region waiting for its first data keeps its frame (its head, title and hairlines) and draws nothing in its body; if it is still empty after `--load-delay` (600ms), one quiet line appears there:… | Approved | machine | M: a loading region shows only its frame, then one line after 1.8s |
 | [R-error-1](DESIGN-SYSTEM.md#1436-loading-errors-and-unknown) | An error stays where it happened: a field shows it below the field, an action in its card (the error card), a view that cannot load in its empty state with the problem and the way out ("Could not… |  | machine | M: no toast or dialog carries an error; errors render in the field, card or view |
 | [R-error-2](DESIGN-SYSTEM.md#1436-loading-errors-and-unknown) | Only the message and a field's line are `--red-text` and `--red`; a failed gate or sign-in is the "failed" stamp |  | machine | M: red only on the error message and field line (R-colour-2) |
 | [R-unknown-1](DESIGN-SYSTEM.md#1436-loading-errors-and-unknown) | Unknown is shown as unknown: the word "unknown" where the value would be (mono quiet where the value would be mono), never a placeholder number, a dash or a guess (AGENTS invariant 5) |  | machine | M: unknown values render as the word 'unknown'; no '-', '--', '0' placeholders for missing data (fixtures with missing fields) |
@@ -380,7 +380,7 @@ The UI lab turns the **machine** checks into automated tests; **by eye** rules a
 | ID | Rule | Status | How | Check |
 |---|---|---|---|---|
 | [R-table-1](DESIGN-SYSTEM.md#1437-tables-and-data) | Reference data is a two-column grid, as the keymap is (`shell.css .hx-keys`): the label at the start, the value at the end, 8 0 per line, a `--hair` between lines, none after the last |  | machine | M: reference grids: 8px vertical padding, hairline between, none after the last |
-| [R-table-2](DESIGN-SYSTEM.md#1437-tables-and-data) | A table with more columns has no vertical rules and no zebra stripes; its header is 12/500 `--text-quiet` in sentence case; rows are `--row-h` with a `--hair` between; numbers are right-aligned… | Proposed | machine | M: tables have no vertical borders or zebra; numbers right-aligned tabular — Proposed: warn |
+| [R-table-2](DESIGN-SYSTEM.md#1437-tables-and-data) | A table with more columns has no vertical rules and no zebra stripes; its header is 12/500 `--text-quiet` in sentence case; rows are `--row-h` with a `--hair` between; numbers are right-aligned… | Approved | machine | M: tables have no vertical borders or zebra; numbers right-aligned tabular |
 | [R-data-1](DESIGN-SYSTEM.md#1437-tables-and-data) | Measures, progress and positions are dots, never bars (owner decision; 14.27) |  | machine | M: no progress/meter/bar elements; measures are dot rows |
 
 ## 14.38 Forms
@@ -414,9 +414,12 @@ The UI lab turns the **machine** checks into automated tests; **by eye** rules a
 
 ## Totals
 
-220 rules: 211 machine, 4 both, 5 by eye; 18 Proposed.
+220 rules: 211 machine, 4 both, 5 by eye. The 18 formerly proposed rules were approved in review on 19 November 2026.
 
-## Proposed, for the owner
+## Approved in review (19 November 2026)
+
+Approved as written, except three amended: R-check-1 (a form's several-choice list shows its marks at rest), R-state-3 (what hover reveals also shows on focus and on a tap), R-load-2 (the quiet line after 600ms, `--load-delay`).
+
 
 - **R-type-3** Three weights, by role: 600 only for titles (display, title, card title, panel and dialog titles); 500 for buttons, tabs and segmented options, chips, field labels, group headings and stamps; 400….
 - **R-layout-1** Window breakpoints are 560 (the call-number margin collapses), 640, 900 and 1200 (both sidebars push; mod panes become tabs).
@@ -434,5 +437,5 @@ The UI lab turns the **machine** checks into automated tests; **by eye** rules a
 - **R-slider-1** No slider track.
 - **R-state-3** Hover styles apply only where a pointer hovers: every hover rule sits under `@media (hover: hover) and (pointer: fine)`.
 - **R-state-6** Disabled: a control with text or an icon takes the role colours (`--text-quiet`, `--icon-off`); a control drawn in fills (send, switch, field) takes one opacity, `--disabled-alpha` (.45).
-- **R-load-2** A region waiting for its first data keeps its frame (its head, title and hairlines) and draws nothing in its body; if it is still empty after `--dur-breathe` (1.8s), one quiet line appears there:….
+- **R-load-2** A region waiting for its first data keeps its frame (its head, title and hairlines) and draws nothing in its body; if it is still empty after `--load-delay` (600ms), one quiet line appears there:….
 - **R-table-2** A table with more columns has no vertical rules and no zebra stripes; its header is 12/500 `--text-quiet` in sentence case; rows are `--row-h` with a `--hair` between; numbers are right-aligned….

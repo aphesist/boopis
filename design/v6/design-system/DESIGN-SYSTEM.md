@@ -13,7 +13,7 @@ This file is the source of truth for how boopis looks, reads, moves and behaves.
 | `design-system/build-tokens.mjs` | Regenerates `tokens.json` from `tokens.css`; `--report` prints the contrast table below. |
 | `design-system/index.html` | The specimen: every token and component, live, in every preset. Published as the Artifact "boopis system". |
 | `design-system/MIGRATION.md` | Module by module: which local implementation to delete and which `HX.ui` call replaces it. |
-| `design-system/RULES.md` | One line per rule ID: the rule, its section, whether it is Proposed, and the check that verifies it (machine or by eye). The UI lab turns it into checks. |
+| `design-system/RULES.md` | One line per rule ID: the rule, its section, whether it was approved in review, and the check that verifies it (machine or by eye). The UI lab turns it into checks. |
 | `design-system/COVERAGE.md` | The topics a complete design system answers, each marked covered, partly or missing before and after version 1.1, with links. |
 | `design-system/rules.html` | The Rules page: every new or tightened rule as a live example, on the same tokens and library as the app. |
 | `components/components.css`, `components/components.js` | The shared component library (`HX.ui`). One canonical version of every piece more than one module draws. |
@@ -72,7 +72,7 @@ each says where it comes from:
 
 - **no mark**: what the approved mock-up and its code already do, written down; the source is cited;
 - **Tightened**: a rule that was here as a range, a habit or a passing sentence, now exact (the source and what changed are cited);
-- **Proposed (needs the owner's approval)**: the mock-up is silent or inconsistent. The rule gives the reason, the options and
+- **Approved (owner-delegated review, 19 November 2026)**: the mock-up is silent or inconsistent. The rule gives the reason, the options and
   the one chosen, which is always the one most consistent with the rest of the system. Until the owner rules, fix agents
   follow it as the default and the UI lab reports a breach as a warning, not a failure.
 
@@ -516,7 +516,7 @@ lineage of the catalog card. Mono is never a costume for "technical" prose.
   names, call numbers, state words, kbd and stamps. Fonts only through `var(--sans)` and `var(--mono)`; mono is never a
   costume for prose.
 - **R-type-2** Six sizes, only through `--fs-*` (11, 12, 13, 14, 16, 20). No size in between, no `calc()` on a size.
-- **R-type-3** **Proposed (needs the owner's approval).** Three weights, by role: 600 only for titles (display, title,
+- **R-type-3** **Approved (owner-delegated review, 19 November 2026).** Three weights, by role: 600 only for titles (display, title,
   card title, panel and dialog titles); 500 for buttons, tabs and segmented options, chips, field labels, group
   headings and stamps; 400 for everything else, including rows and menu items. *Why:* the table above says menu labels
   are 500, the library draws them at 400 like rows (`components.css .ui-menu__item`). *Options:* (a) 400, as drawn, so
@@ -620,7 +620,7 @@ travel together on one curve. Nothing computes its own centre.
 - **R-space-5** Every control's height is one of `--ctl`, `--ctl-s`, `--row-h`, `--row-h-2`, or a named fixed height:
   chip `--ctl-s` − 2, option chip `--ctl` − 4, small segmented `--ctl` − 2, key chip 18, stamp 20, switch 20, the
   command field 26, the compact composer 40, the palette field 48, a dialog head 52, a toast `--ctl-s` + 12.
-- **R-layout-1** **Proposed (needs the owner's approval).** Window breakpoints are 560 (the call-number margin
+- **R-layout-1** **Approved (owner-delegated review, 19 November 2026).** Window breakpoints are 560 (the call-number margin
   collapses), 640, 900 and 1200 (both sidebars push; mod panes become tabs). Two component breakpoints exist in the
   mock-up outside this set: the dock at 520 (`dock.css`) and the bots view at 760 (`bots.css`). *Options:* (a) fold them
   into 560 and 900; (b) keep them as named component breakpoints, listed here and nowhere else (chosen: it changes no
@@ -679,17 +679,17 @@ under the pointer.
 :where(.ui-root) ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
 ```
 
-- **R-scroll-2** **Proposed (needs the owner's approval).** Geometry: the bar's box is `--scroll-size` 10px; the thumb a
+- **R-scroll-2** **Approved (owner-delegated review, 19 November 2026).** Geometry: the bar's box is `--scroll-size` 10px; the thumb a
   capsule `--scroll-thumb` 4px wide, centred, 6px (`--scroll-thumb-active`) while hovered or dragged, never shorter than
   32px (`--scroll-thumb-min`); no arrow buttons; the track and the corner are transparent. *Why:* the mock-up says only
   "thin" with a `--bg-4` thumb. *Options:* (a) 8 / 4; (b) 10 / 4, 6 on hover (chosen: a 4px capsule is as quiet as an
   overlay bar, and the 10px box keeps a usable hit area); (c) 12 / 6.
-- **R-scroll-3** **Proposed (needs the owner's approval)** for the hover colour. The thumb is `--scroll-thumb-color`
+- **R-scroll-3** **Approved (owner-delegated review, 19 November 2026)** for the hover colour. The thumb is `--scroll-thumb-color`
   (`--bg-4`, the mock-up's) at rest and `--scroll-thumb-color-active` (`--mark-off`, 3:1 like every non-text mark) while
   hovered or dragged. *Options:* (a) `--bg-4` always (the mock-up); (b) `--bg-4`, then `--mark-off` (chosen: quiet at
   rest, findable under the pointer); (c) `--mark-off` always (loud beside the work). On the dock ground both re-derive
   (R-theme-6).
-- **R-scroll-4** **Proposed (needs the owner's approval).** Bars are inset, never overlay: none of the three engines
+- **R-scroll-4** **Approved (owner-delegated review, 19 November 2026).** Bars are inset, never overlay: none of the three engines
   gives a styled overlay bar, so the bar takes its 10px at the scroller's end. A scroller whose content changes length
   while it is on screen (a dialog or sheet body, the right panel, the sidebar lists, the palette list) uses
   `overflow-y: scroll`, so the gutter is always there and nothing reflows when the thumb appears (the track is
@@ -697,7 +697,7 @@ under the pointer.
   uses `auto`. The end padding is the side padding less the bar (a dialog body: 20 at the start, `calc(20px −
   var(--scroll-size))` at the end), so the content stays centred in its surface. *Options:* (a) `auto` everywhere (the
   mock-up: a 10px jump when a list outgrows its box); (b) a constant gutter where content changes (chosen).
-- **R-scroll-5** **Proposed (needs the owner's approval).** Where a scroller's end meets a curved corner of its container
+- **R-scroll-5** **Approved (owner-delegated review, 19 November 2026).** Where a scroller's end meets a curved corner of its container
   (a dialog body's foot, a menu, a popover, the palette list, a sheet), the track is inset by that corner's radius
   (`::-webkit-scrollbar-track { margin-block-end: var(--r-outer) }`, both ends for a menu), so the thumb never runs into
   the curve. *Options:* (a) inset the track (chosen); (b) clip the bar to the path (not allowed: a container is never
@@ -851,7 +851,7 @@ they follow the corners setting. A container's own `--r-in` (8.2) and these are 
 - **R-corner-4** A piece in a corner sits inside it: inset by the container's `--pad` from both edges, it never touches
   or crosses the container's edge or its curve. *Why:* the composer's send met the box's edge in the app (owner's
   screenshot, 19 November 2026; F39).
-- **R-corner-5** **Proposed (needs the owner's approval).** The edge band shares the corner: every piece on the same
+- **R-corner-5** **Approved (owner-delegated review, 19 November 2026).** The edge band shares the corner: every piece on the same
   band as a corner piece (the same inset from that edge, for example a dialog head's tabs beside its close button) takes
   the corner piece's radius, so the whole band reads concentric with the container. In a dialog that is
   `--r-in-dialog` (18), which makes the head's 28px tabs and the close button capsules. *Why:* the Settings tabs were
@@ -928,7 +928,7 @@ Flat. Depth is tone: frame, ground, raised, inset. Lines divide; shadows only on
   raised with `--hair` (tooltips, toasts). Never translucent, never blurred (no `backdrop-filter`, a frame-cost rule too).
 - **R-elev-5** `z-index` comes from `--z-*`. A literal 1 to 3 is allowed only inside a component that sets
   `isolation: isolate` (a card queue's stage, the hold button's layers).
-- **R-elev-6** **Proposed (needs the owner's approval).** A modal dialog uses the top layer (`showModal`), above every
+- **R-elev-6** **Approved (owner-delegated review, 19 November 2026).** A modal dialog uses the top layer (`showModal`), above every
   `--z-*`; every layer opened from inside it (a menu, a popover, the tooltip) mounts inside the dialog, so it stays above
   it; a toast never covers a modal dialog. *Why:* the mock-up's layers mount on the app root (`HX.ui.menu`), which sits
   under a modal dialog's top layer. *Options:* (a) mount inside the open dialog (chosen); (b) use the popover API's top
@@ -1331,7 +1331,7 @@ are at regular density and default corners.
   different length, become a select (14.32).
 - **R-seg-2** The track is `--bg-0` with `--hair`, inset 3 (`--pad-seg`), radius `--r-s`; the thumb and the options take
   `--r-in-seg` (9); the thumb slides by `transform` over `--dur-slide`; the selected label is `--text-on-light`.
-- **R-seg-3** **Proposed (needs the owner's approval)** with R-corner-5. A segmented control on a container's edge band
+- **R-seg-3** **Approved (owner-delegated review, 19 November 2026)** with R-corner-5. A segmented control on a container's edge band
   takes the band's radius for its track (`--r-outer: var(--r-in-dialog)` in a dialog head), and its thumb follows
   (`band − 3`).
 - **R-tab-1** *Tightened.* Three tab looks, one per place, and nothing else is a tab: the segmented pill (view switches
@@ -1703,7 +1703,7 @@ One element (`<hx-card>`, `HX.ui.card(kind, data, opts)`), eight kinds, three si
 
 **Rules: menus, popovers and placement**
 
-- **R-float-1** **Proposed (needs the owner's approval)** for the rail's tooltips. A menu, a popover and a tooltip sit
+- **R-float-1** **Approved (owner-delegated review, 19 November 2026)** for the rail's tooltips. A menu, a popover and a tooltip sit
   `--float-gap` (8) from their anchor and at least `--float-margin` (8) from the window edge, below the anchor unless it
   only fits above. *Why:* the mock-up uses 8 everywhere except a tooltip to the right of the rail, at 10
   (`HX.ui.tooltip`). *Options:* (a) 8 everywhere (chosen); (b) keep 10 to the right.
@@ -1781,7 +1781,7 @@ One element (`<hx-card>`, `HX.ui.card(kind, data, opts)`), eight kinds, three si
 
 - **R-tip-1** A tooltip is raised with `--hair` and `--elev-2`, `--r-s`, 12px, padding 4 8 (4 4 4 8 with keys); its keys
   take `--r-in-field` (R-kbd-2).
-- **R-tip-2** **Proposed (needs the owner's approval)** for the second clause. It shows below its anchor, above within
+- **R-tip-2** **Approved (owner-delegated review, 19 November 2026)** for the second clause. It shows below its anchor, above within
   160px of the window's bottom, to the right in the rail; and it never covers the text you are typing: a tooltip for a
   control inside a container that holds a text field (the composer's attach, chips, mic and send) sits outside that
   container, `--float-gap` above its top edge. *Why:* "Attach alt A" covered the composer's text (owner's screenshot, 19
@@ -1939,7 +1939,7 @@ reads "name mod". The agent stays nameless and bots keep their orbs; a mod is ne
   box, a hairline under it, glyph `--ic-l`, input 14 `--text-strong`, the esc key at the end. A **search in a form**: a
   `.ui-input` with the glyph at its start. *Source:* `shell.css .hx-cmd`, `.hx-palette__field`.
 - **R-search-2** The search glyph labels, it does not act: `--text-quiet`, like the placeholder, at the start.
-- **R-search-3** **Proposed (needs the owner's approval).** The leading glyph is centred in a square as tall as its field:
+- **R-search-3** **Approved (owner-delegated review, 19 November 2026).** The leading glyph is centred in a square as tall as its field:
   its centre is half the field's height from the edge. The palette's field already does this (48 tall, a 16 glyph at 16,
   centre 24); the command field puts its glyph's centre at 17 in a 26 field. *Options:* (a) the square, so the command
   field's start padding becomes 6 (chosen: it is the palette's rule, and the glyph then sits as far in as the end keys
@@ -1964,17 +1964,19 @@ reads "name mod". The agent stays nameless and bots keep their orbs; a mod is ne
 
 ### 14.33 Checkboxes and radios
 
-- **R-check-1** **Proposed (needs the owner's approval).** There is no square checkbox. A setting that applies at once is
+- **R-check-1** **Approved (owner-delegated review, 19 November 2026).** There is no square checkbox. A setting that applies at once is
   a switch; one choice of a few is a segmented radio (two to four), option chips (presets) or option rows (the blank's
   radio rows); several choices in a list are menu items or rows with the brass check (`menuitemcheckbox`,
-  `aria-checked`). *Why:* the mock-up draws no checkbox; every multiple choice it has is a check in a glyph column.
+  `aria-checked`). *Amended in review:* in a form (not a menu) the rows of a several-choice list show their mark at rest,
+  so the list reads as several-choice before anything is chosen: the check glyph in `--mark-off`, brass when chosen (never
+  a ring, which means one choice, R-check-2), and the field's label says so ("Choose any"). *Why:* the mock-up draws no checkbox; every multiple choice it has is a check in a glyph column.
   *Options:* (a) no checkbox (chosen); (b) a 16px square at `--r-xs`, `--line-strong`, with a brass check when checked.
 - **R-check-2** A radio is an option row's ring: empty in `--mark-off`, the chosen one filled brass (a shape change as well
   as a colour), the row `--current` while focused with the inset ring. *Source:* `cards.css .cd-opt__ring`.
 
 ### 14.34 Sliders
 
-- **R-slider-1** **Proposed (needs the owner's approval).** No slider track. A range of up to four values is a segmented
+- **R-slider-1** **Approved (owner-delegated review, 19 November 2026).** No slider track. A range of up to four values is a segmented
   control; five to twelve stops are a row of dots like the measure (each stop a 24px target, `--mark-off` off, the
   chosen stop the 14 × 4 brass pill of the page indicator), moved by the arrows (`role="slider"`, `aria-valuenow`,
   `aria-valuetext`); an open number is a mono field with its unit. *Why:* the system draws no bars (owner decision on
@@ -2003,16 +2005,18 @@ class (`components.css` header).
 - **R-state-1** Every control draws exactly the states of the table above with those tokens; a state not in the table
   does not exist.
 - **R-state-2** State lives in ARIA or data attributes, never in classes such as `.is-active`.
-- **R-state-3** **Proposed (needs the owner's approval).** Hover styles apply only where a pointer hovers: every hover
+- **R-state-3** **Approved (owner-delegated review, 19 November 2026).** Hover styles apply only where a pointer hovers: every hover
   rule sits under `@media (hover: hover) and (pointer: fine)`. *Why:* the library does this for icon buttons and the
   command field but not for buttons, rows, chips and menu items, so a touch screen leaves those lit after a tap.
-  *Options:* (a) all hover rules (chosen); (b) only icon buttons (as found).
+  *Options:* (a) all hover rules (chosen); (b) only icon buttons (as found). *Amended in review:* what hover reveals (the
+  dock's options and minimize controls, a row's actions) also shows on `:focus-within`, and on a coarse pointer on a tap;
+  hover is never the only way to a control.
 - **R-state-4** Hover in over `--dur-1`, out over `--dur-out`, press over `--dur-press`; focus never transitions.
 - **R-state-5** Three meanings, never mixed: `--current` is where you are (the current row, the active text tab, a
   focused menu item, the listening mic); the bone `--selected` fill is the chosen value or the primary action (the
   segmented thumb, a primary button, send, a switch that is on); brass is the mark of a choice (a check, a ring, a pressed
   glyph, a checked option chip's line). A control shows one fill at a time.
-- **R-state-6** **Proposed (needs the owner's approval).** Disabled: a control with text or an icon takes the role colours
+- **R-state-6** **Approved (owner-delegated review, 19 November 2026).** Disabled: a control with text or an icon takes the role colours
   (`--text-quiet`, `--icon-off`); a control drawn in fills (send, switch, field) takes one opacity, `--disabled-alpha`
   (.45). *Why:* the mock-up has three values (send .35, switch .45, field .55). *Options:* (a) keep three; (b) one value,
   .45, the middle one (chosen); (c) role colours everywhere, no opacity.
@@ -2022,8 +2026,9 @@ class (`components.css` header).
 
 - **R-load-1** No spinners and no shimmering skeletons. Work of unknown length is the running dot with its state word;
   a known share is the measure row with its percent (14.27).
-- **R-load-2** **Proposed (needs the owner's approval).** A region waiting for its first data keeps its frame (its head,
-  title and hairlines) and draws nothing in its body; if it is still empty after `--dur-breathe` (1.8s), one quiet line
+- **R-load-2** **Approved (owner-delegated review, 19 November 2026).** A region waiting for its first data keeps its frame (its head,
+  title and hairlines) and draws nothing in its body; if it is still empty after `--load-delay` (600ms; amended in review
+  from 1.8s: a body blank past a second reads as broken, one under half a second would flash), one quiet line
   appears there: the running dot and what is loading, 12 `--text-quiet` ("Loading sessions"). *Why:* the mock-up has no
   loading state, and placeholder shapes sit badly with "nothing is fabricated". *Options:* (a) the frame, then a line
   (chosen); (b) skeleton rows in `--hover`.
@@ -2039,7 +2044,7 @@ class (`components.css` header).
 
 - **R-table-1** Reference data is a two-column grid, as the keymap is (`shell.css .hx-keys`): the label at the start, the
   value at the end, 8 0 per line, a `--hair` between lines, none after the last. *Source:* `shell.css`.
-- **R-table-2** **Proposed (needs the owner's approval).** A table with more columns has no vertical rules and no zebra
+- **R-table-2** **Approved (owner-delegated review, 19 November 2026).** A table with more columns has no vertical rules and no zebra
   stripes; its header is 12/500 `--text-quiet` in sentence case; rows are `--row-h` with a `--hair` between; numbers
   are right-aligned mono with tabular figures, text left-aligned; it sits on its surface (never a card of its own) and
   scrolls sideways inside its own wrapper when wider than its box. *Why:* the mock-up has none yet; this is the keymap's
@@ -2211,8 +2216,9 @@ Things I could not settle without the owner; each has the default the system use
 7. **Not tested:** real screen readers, Linux WebKitGTK (Tauri's renderer), Windows high contrast. The library needs
    `color-mix()`, `:has()` and registered custom properties, so a 2023 or later WebKitGTK; the card layer's
    `light-dark()` (removed by the migration) would need a 2024 one.
-8. **The Proposed rules of version 1.1** (each marked in place, listed in `RULES.md`): until the owner rules, fix agents
-   follow the chosen option and the UI lab reports a breach as a warning.
+8. **The formerly proposed rules of version 1.1** (each marked in place, listed in `RULES.md`) were approved in the
+   owner-delegated review of 19 November 2026, three of them amended (R-check-1, R-state-3, R-load-2). They are rules like
+   any other: the UI lab reports a breach as a failure.
 
 ## 18. Appendix: Tailwind v4 and React
 
