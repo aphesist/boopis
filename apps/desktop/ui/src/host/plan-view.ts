@@ -1,7 +1,7 @@
 /* The models plan as a Settings section: the same rows the design system's settings use (`setRow`), filled only with what
    Hermes reported (free-tier.ts). It has no tab of its own here: Settings > Models mounts it (`mountPlan`), and Diagnostics
    carries the same facts as text (`planLines`, in the report). Refreshing asks Hermes again; nothing is cached or guessed. */
-import { ui } from '../components';
+import { ui } from '@boopis/ui';
 import { currentPlan, inWords, resetText } from './free-tier';
 import type { PlanView } from './free-tier';
 

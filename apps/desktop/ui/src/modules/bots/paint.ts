@@ -1,7 +1,7 @@
 /* orb body paint for a bot being made. The palettes of the picker are `data/looks.ts`: orb colours, bot data, not
    interface colour. */
-import { ui } from '../../components';
-import type { BotLike } from '../../components';
+import { ui } from '@boopis/ui';
+import type { BotLike } from '@boopis/ui';
 
 export { DRAFT_COLOR, SHAPES, SWATCHES } from '../../data/looks';
 

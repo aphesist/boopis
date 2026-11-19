@@ -1,6 +1,6 @@
 /* Helpers the session module's files share. */
 import { el } from '../../core/dom';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 
 /** data strings joined with " · " never reach the screen as dots (F22): their parts sit apart */
 export const parts = (s: string): string[] => String(s).split(/\s+·\s+/).map((x) => x.trim()).filter(Boolean);

@@ -3,7 +3,7 @@
    its contrast. A literal colour (a hex, rgb()) is drawn as given only when it has enough contrast on the surface under it
    (4.5 for text, 3 for marks), else the nearest semantic token. A mod that wants its own palette proposes a theme (the card
    with the live preview); it never paints around the theme. */
-import { hexOf, ratio } from '../styles/theme';
+import { hexOf, ratio } from '../styles/colour';
 
 export type Role = 'text' | 'mark';
 export type Surface = 'frame' | 'ground' | 'inset';

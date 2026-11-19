@@ -4,7 +4,7 @@
    a stamp (nothing is owed), never colour. It goes once any boopis setting is saved for the bot (the store exists then).
    The sentence is its tooltip and its accessible description; the visible words stay short and the row's name carries them. */
 import { el, frag } from '../../core/dom';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 
 export const OUTSIDE_LABEL = 'made outside boopis';
 export const OUTSIDE_WORDS = 'Made outside boopis, for example with the hermes command. boopis keeps its look and settings once you change them here.';

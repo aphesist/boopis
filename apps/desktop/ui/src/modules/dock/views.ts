@@ -3,7 +3,7 @@
 import { esc, isMac } from '../../core/dom';
 import { kbdLabel } from '../../core/keys';
 import { $$, } from '../../core/dom';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { Bot, ThreadMessage, Wait } from '../../data';
 import { LOG_N, PAGE_NAME, S, X, attCount, botById, clock, ctxPct, motion, rendered, shownPages } from './ctx';

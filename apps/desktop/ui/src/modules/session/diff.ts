@@ -1,6 +1,6 @@
 /* the inline diff of the change (the ship card's "View diff", the Changes section) */
 import { el, frag } from '../../core/dom';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 import type { DiffFile } from '../../data';
 import { counts, splitPath } from './shared';
 

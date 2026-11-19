@@ -4,8 +4,8 @@
 import { emit, on } from '../../core/bus';
 import { $, el, frag, isMac, reduced } from '../../core/dom';
 import { provide } from '../../core/registry';
-import { ui } from '../../components';
-import type { ComposerEl } from '../../components';
+import { ui } from '@boopis/ui';
+import type { ComposerEl } from '@boopis/ui';
 import { data } from '../../data';
 import type { AgentTurn, ConversationEvent, FormSpec, Ship, Step, Turn } from '../../data';
 import { renderDiff } from './diff';

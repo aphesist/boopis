@@ -6,7 +6,7 @@
    - archive keeps everything and is undone from the toast; delete says what goes, and asks twice.
    Nothing is shown that Hermes did not report: a list it did not answer says so. */
 import { $, cap1, el, frag } from '../../core/dom';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 import { data, NeedsConfirmation } from '../../data';
 import type { Bot, BotConfig, BotsAdmin, BotPatch, RoutineDraft } from '../../data';
 import { diffWell } from '../cards/parts';

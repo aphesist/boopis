@@ -1,8 +1,8 @@
 /* The theme customizer (Settings > Appearance): presets, brand, type, shape, colours, contrast, share. Changes show at
    once on the whole app. Ported from v6 theme.js; the runtime it edits is theme.ts. */
 import { esc } from '../core/dom';
-import { ui } from '../components';
-import type { SegElement, SelectElement } from '../components';
+import { ui } from '@boopis/ui';
+import type { SegElement, SelectElement } from '@boopis/ui';
 import {
   CASES, CORNERS, DENSITIES, DERIVED, DOCK_BLAME, EDITABLE, FONTS, GROUPS, PAIRS, PRESETS, compositeOf, hexOf, ratio, setThemeRefresh, themeApi, themeInternals
 } from './theme';

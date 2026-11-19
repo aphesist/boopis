@@ -3,7 +3,7 @@
    to the conversation (the shell; the sheet stays open), mod+I or the close button closes it. */
 import { emit } from '../../core/bus';
 import { $, cap1, el, esc, frag, reduced } from '../../core/dom';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { Bot, BotConfig } from '../../data';
 import { cronValid, cronWords, CRON_PRESETS } from './cron';

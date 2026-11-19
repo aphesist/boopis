@@ -12,14 +12,14 @@
    nothing from layout. */
 import { emit } from '../../core/bus';
 import { $$ } from '../../core/dom';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 import {
   EASE, GROW, GROW_ADD, K_DOT, K_FLIP, K_SINK, K_SLAB, K_SLIDE, MAG, MAG_ADD, S, SIG, X, atRest, flags, geomR, motion, rendered, shownPages, snapS, spring, stepS
 } from './ctx';
 import type { Spring } from './ctx';
 import { slabCorner, slabWidthFor } from './geometry';
 import { setOrbLife } from './orbs';
-import { holdOutsideDock, releaseOutsideDock } from '../../components/orb-runtime';
+import { holdOutsideDock, releaseOutsideDock } from '@boopis/ui';
 import { springAt, springElapsed, springKeyframes } from '../../core/spring';
 import type { Channel, SpringParams } from '../../core/spring';
 import { fillCards, relocateLive, renderView, viewKey } from './views';

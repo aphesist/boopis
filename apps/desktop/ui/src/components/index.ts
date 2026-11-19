@@ -92,6 +92,26 @@ export const ui = {
 export type Ui = typeof ui;
 export { html, icon, hydrate, hydrateOne, wireSelect, announce, botState, botLabel, orb, liven, glance, shape, squircle, modelMark, menu, popover, layer, listbox, modelEntries, tooltip, toast, composer, card, wireHold, holdElement };
 export type { SegElement } from './wire';
+/* runtime pieces the app's modules and host wire (the orbs' engine, the card layer's factory, the first run's moments) */
+export { oc, startGlance } from './orb';
+export type { OrbOpts } from './orb';
+export { holdOutsideDock, releaseOutsideDock } from './orb-runtime';
+export { orbState, setupOrbs } from './orb-worker/host';
+export { setCardFactory } from './card-registry';
+export type { CardFactory, CardSize } from './card-registry';
+export { holdOf } from './hold';
+export { isKnownModel } from './model-mark';
+export { modViewUpdate } from './mod-view';
+export type { ModEvent, ModRoot } from './mod-view';
+export { MARK, parseLiteral, setTokenReader } from './mod-colors';
+export { welcomeLogo } from './logo';
+export { progressDots, setProgress } from './progress';
+export { kbd, keys as keyChips, combo, comboKbds, keysVariants } from './kbd';
+export type { KeysOpts } from './kbd';
+/* every component's variants, for the UI lab's stories (variants.ts) */
+export { variants } from './variants';
+export type { ComponentName } from './variants';
+export type { InputOpts, BadgeOpts } from './html';
 export type { SelectElement, ListboxOpts } from './select';
 export type { SelectEntry, SelectGroup, SelectOpts, SelectOption };
 export { scroll, scrollClass, scrollVariants, SCROLL_AXES } from './scroll';

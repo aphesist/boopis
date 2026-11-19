@@ -4,7 +4,7 @@ import { emit } from '../../core/bus';
 import { $, esc } from '../../core/dom';
 import { getDockApi } from '../../core/registry';
 import { setState, state } from '../../core/state';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { RegionName } from '../../core/bus';
 import type { Tab } from '../../core/types';

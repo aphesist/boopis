@@ -3,7 +3,7 @@
    Spec syntax: alternatives ' | ', a sequence ' ' (press one after the other), a combination '+', 'hold:X' (press
    and hold). 'mod' is Command on macOS and Ctrl elsewhere; 'alt' is Option on macOS. */
 import { esc } from '../../core/dom';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 
 export const KEYGROUPS: ReadonlyArray<readonly [string, ReadonlyArray<readonly [label: string, spec: string]>]> = [
   ['General', [

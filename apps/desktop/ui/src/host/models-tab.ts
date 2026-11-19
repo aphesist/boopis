@@ -2,7 +2,7 @@
    tier, as Hermes's configuration holds it) and "Change models", which asks setup's models question again through the same
    first-run view and forms. Everything shown is read now, from the host or Hermes; what could not be read is said so, never
    filled in. The rows are the design system's settings rows and ladder list. */
-import { ui } from '../components';
+import { ui } from '@boopis/ui';
 import { changeModels } from './change-models';
 import { currentPlan } from './free-tier';
 import type { PlanView } from './free-tier';

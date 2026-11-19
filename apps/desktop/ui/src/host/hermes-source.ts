@@ -2,7 +2,7 @@
    setting). The app runs the Hermes it carries, in a folder of its own. This switch saves the other choice, the Hermes already
    on the computer, as the host's `hermes_source` (which `BOOPIS_HERMES` overrides). The host reads it when the app starts, so
    the control says that and offers the restart. It knows nothing about Hermes beyond what the host reports. */
-import { ui } from '../components';
+import { ui } from '@boopis/ui';
 import { restartApp } from './renderer';
 import { loadSource, saveSource } from './setup-bridge';
 import type { Source, SourceInfo } from './setup-bridge';

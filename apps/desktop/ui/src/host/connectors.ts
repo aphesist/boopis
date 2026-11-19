@@ -5,7 +5,7 @@
    host, which validates it again and drives Hermes's own mechanisms; this view knows no Hermes file and holds no key (a key
    goes from its field to the host's keychain and no further). It draws the design system's settings rows and cards; the owner
    has not drawn a connectors view, so it is composed from those patterns, for review (DESIGN-SYSTEM.md 14.21). */
-import { ui } from '../components';
+import { ui } from '@boopis/ui';
 import { reduced } from '../core/dom';
 import { logger } from '../core/log';
 import '../modules/cards';

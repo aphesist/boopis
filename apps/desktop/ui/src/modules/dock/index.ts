@@ -11,7 +11,7 @@ import { KEYS, readJSON } from '../../core/settings';
 import { register, setDockApi } from '../../core/registry';
 import { state as appState } from '../../core/state';
 import { $$, clamp, isMac } from '../../core/dom';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 import { data } from '../../data';
 import {
   K_DOT, K_SINK, K_SLAB, PAGE_IDS, S, X, botById, flags, motion, readRadius, rendered, snapS, spring

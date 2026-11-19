@@ -2,8 +2,8 @@
 import { emit } from '../../core/bus';
 import { $, cap1, el, reduced } from '../../core/dom';
 import { setState, state } from '../../core/state';
-import { ui } from '../../components';
-import { oc } from '../../components/orb';
+import { ui } from '@boopis/ui';
+import { oc } from '@boopis/ui';
 import { data } from '../../data';
 import { DRAFT_COLOR, paintOrb, paintOrbColour, SHAPES, SWATCHES } from './paint';
 import { rollLook } from '../../data/looks';

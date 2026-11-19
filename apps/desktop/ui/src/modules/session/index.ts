@@ -7,7 +7,7 @@ import { register } from '../../core/registry';
 import { mountView, newSession, selectSession } from './conversation';
 import { mountList } from './list';
 import { mountRight, openPanel } from './right';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 /* drawn corners (DESIGN-SYSTEM.md section 8): the session's own surfaces take the library's continuous corner */
 ui.squircle.auto('.ss-diff, .ssr-file, .ssr-term');
 

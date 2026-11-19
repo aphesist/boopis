@@ -13,9 +13,9 @@
    it never jumps (the one height animation; under reduced motion it snaps). */
 import { emit } from '../../core/bus';
 import { nid, reduced } from '../../core/dom';
-import { holdOf, wireHold } from '../../components/hold';
+import { holdOf, wireHold } from '@boopis/ui';
 import { data as provider } from '../../data';
-import type { CardKind, CardOpts, CardSize } from '../../components/card-registry';
+import type { CardKind, CardOpts, CardSize } from '@boopis/ui';
 import { bot, expiryText, KINDS, parts } from './kinds';
 import { accentOf, originOf } from './parts';
 import { fitCard, unwatchFit, watchFit } from './fit';

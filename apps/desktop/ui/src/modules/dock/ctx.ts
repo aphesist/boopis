@@ -7,8 +7,8 @@
 import { clamp, onReducedChange, reduced as rm } from '../../core/dom';
 import type { Bot, RunSnapshot, Schedule, ThreadMessage, Wait } from '../../data';
 import type { DockMode } from '../../core/bus';
-import type { ComposerEl } from '../../components';
-import type { CardLike } from '../../components';
+import type { ComposerEl } from '@boopis/ui';
+import type { CardLike } from '@boopis/ui';
 
 /* springs: near-critical damping (no visible overshoot); interrupted springs keep their velocity */
 export interface Spring { x: number; v: number; t: number; k: number; c: number; eps: number }

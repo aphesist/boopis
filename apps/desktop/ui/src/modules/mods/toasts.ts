@@ -3,7 +3,7 @@
    others wait the toast carries a quiet "+N" in mono, and dismissing one (its close button, Esc inside it, or its action) shows
    the next at once. The library's toast is the one notice node; the queue only decides which text it shows. */
 import { esc, tokenMs } from '../../core/dom';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 
 interface Queued { plugin: string; text: string; ms: number; action?: { label: string; onClick?: () => void } | undefined; gone?: boolean }
 const Q = { wait: [] as Queued[], cur: null as Queued | null, node: null as HTMLElement | null, watch: null as MutationObserver | null, timer: 0 };

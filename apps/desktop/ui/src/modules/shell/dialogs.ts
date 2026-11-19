@@ -3,8 +3,8 @@
    as it is made. Tab cycles inside a dialog (KEYMAP section 10). */
 import { $, $$ } from '../../core/dom';
 import { setState, state, toggle } from '../../core/state';
-import { ui } from '../../components';
-import type { SegElement } from '../../components';
+import { ui } from '@boopis/ui';
+import type { SegElement } from '@boopis/ui';
 import { data } from '../../data';
 import { mountThemePanel } from '../../styles/theme-panel';
 import { els, sh } from './ctx';

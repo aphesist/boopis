@@ -1,7 +1,7 @@
 /* session list (KEYMAP section 4): library rows grouped by project, actions as sibling buttons */
 import { emit } from '../../core/bus';
 import { frag } from '../../core/dom';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { SessionSummary } from '../../data';
 import { selectSession, sessionNeedsYou, toConversation, VIEW } from './conversation';

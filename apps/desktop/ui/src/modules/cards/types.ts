@@ -1,4 +1,4 @@
-import type { CardKind, CardSize, CardOpts } from '../../components/card-registry';
+import type { CardKind, CardSize, CardOpts } from '@boopis/ui';
 import type { HxCard } from './card';
 import type { FormSpec } from '../../data';
 import type { KnownOrigin } from './parts';

@@ -4,8 +4,8 @@
 import { emit } from '../../core/bus';
 import { $, el, esc, frag, reduced } from '../../core/dom';
 import { setState, state } from '../../core/state';
-import { ui } from '../../components';
-import type { MenuItem } from '../../components';
+import { ui } from '@boopis/ui';
+import type { MenuItem } from '@boopis/ui';
 import { data } from '../../data';
 import type { ApprovalMessage, Bot, BotsEvent, ThreadMessage } from '../../data';
 import { cronValid, cronWords, scheduleWords } from './cron';

@@ -11,7 +11,7 @@ import type { SlotName } from '../../core/registry';
 import { followScheme, followWindowWidth, prefs, saveState, setMounting, setState, setStateHooks, state, toggle, urlQuery } from '../../core/state';
 import { TABS } from '../../core/settings';
 import type { Tab } from '../../core/types';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 import { data } from '../../data';
 import { themeApi } from '../../styles/theme';
 import { openKeys, openMenu, openSettings, SETTINGS_SECTIONS, wireDialogs } from './dialogs';

@@ -9,10 +9,10 @@
    a log. Accessible errors: every error sits in the field's description, the field is `aria-invalid`, the first one is
    announced and focused. */
 import { esc } from '../../core/dom';
-import { ui } from '../../components';
-import { holdOf } from '../../components/hold';
-import { isKnownModel } from '../../components/model-mark';
-import type { SelectElement, SelectEntry } from '../../components';
+import { ui } from '@boopis/ui';
+import { holdOf } from '@boopis/ui';
+import { isKnownModel } from '@boopis/ui';
+import type { SelectElement, SelectEntry } from '@boopis/ui';
 import { data as provider } from '../../data';
 import { formsHost } from './forms-host';
 import type { FieldSchema, FormSpec, PickerKind } from '../../data';

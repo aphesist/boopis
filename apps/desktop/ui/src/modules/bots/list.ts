@@ -4,9 +4,9 @@
 import { emit } from '../../core/bus';
 import { $, el, frag, reduced } from '../../core/dom';
 import { state } from '../../core/state';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 import { data } from '../../data';
-import { oc } from '../../components/orb';
+import { oc } from '@boopis/ui';
 import { DRAFT_COLOR, paintOrb } from './paint';
 import { livenIn, orbHTML } from './orbs';
 import { bot, initModel, railOn, S } from './model';

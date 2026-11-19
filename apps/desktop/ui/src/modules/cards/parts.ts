@@ -1,7 +1,7 @@
 /* The pieces every card kind draws with: text helpers, the library's buttons, the head, the one-row mini and the origin
    slot (who is asking, FORMS.md section 4a). Pure string templates over the library; nothing here touches the DOM. */
 import { esc } from '../../core/dom';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { Origin } from '../../data';
 import type { Ctx, Data } from './types';

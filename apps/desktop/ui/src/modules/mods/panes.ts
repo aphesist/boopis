@@ -3,9 +3,9 @@
    collapsible row above the composer. A mod's tree is drawn by `ui.modView`; what the user does goes back by handler id. */
 import { $, el } from '../../core/dom';
 import { logger } from '../../core/log';
-import { ui } from '../../components';
-import { modViewUpdate } from '../../components/mod-view';
-import type { ModRoot } from '../../components/mod-view';
+import { ui } from '@boopis/ui';
+import { modViewUpdate } from '@boopis/ui';
+import type { ModRoot } from '@boopis/ui';
 import type { ModBand, ModPane } from '../../data';
 import { surface } from './surfaces';
 import { ctl, dispatcher, docked, sessionOf } from './ctl';

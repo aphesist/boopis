@@ -7,7 +7,7 @@ import { setProvider } from '../../data';
 import type { DataProvider, ModsSource, ModSession } from '../../data';
 import { createMockProvider } from '../../data/mock-provider';
 import { createModsModel } from '../../data/mods-model';
-import { setTokenReader } from '../../components/mod-colors';
+import { setTokenReader } from '@boopis/ui';
 import { fixtures } from '../../host/testing';
 import { themeApi } from '../../styles/theme';
 import { installPreset } from '../../styles/testing';

@@ -3,7 +3,7 @@
 import { on } from '../../core/bus';
 import { cap1, el, esc, frag, isMac } from '../../core/dom';
 import { setState, state } from '../../core/state';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 import { data } from '../../data';
 import { renderDiff } from './diff';
 import { setGovernance } from './composer';
