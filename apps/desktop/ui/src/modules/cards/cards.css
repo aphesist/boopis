@@ -442,6 +442,7 @@ hx-card[data-kind="form"][data-size="inline"] { width: min(100%, var(--measure))
 .cd-contents .cd-pinned span:first-child { color: var(--text-quiet); }
 /* a resolved, deferred or expired form collapses to one line that stays readable in the transcript */
 hx-card[data-kind="form"]:is([data-state="done"], [data-state="deferred"], [data-state="expired"], [data-state="cancelled"]) { --pad: var(--sp-3); }
+.cd-collapsed .ui-btn { align-self: stretch; height: auto; min-height: var(--ctl-s); }   /* the action fills the row, so its corner insets are the card's --pad on every side when the line takes two lines (R-corner-3) */
 .cd-collapsed { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--ctl-s); min-width: 0; }
 .cd-collapsed__text { flex: 1 1 auto; min-width: 0; margin: 0; display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--sp-2); color: var(--text-dim); line-height: var(--lh-ui); }
 .cd-collapsed__what { color: var(--text); text-transform: none; }
