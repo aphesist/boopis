@@ -844,7 +844,7 @@ impl Engine {
 /// Environment variables a login command may see: the allowlist Hermes's CLI runs with, plus what a browser or a terminal
 /// helper needs to open the sign-in page.
 pub(super) fn login_env(name: &str) -> bool {
-    (crate::hermes::cli::passes(name) && !name.starts_with("HERMES_") && !name.starts_with("UV_"))
+    (crate::hermes::cli::passes_isolated(name))
         || matches!(
             name,
             "BROWSER" | "XAUTHORITY" | "DESKTOP_SESSION" | "XDG_CURRENT_DESKTOP"

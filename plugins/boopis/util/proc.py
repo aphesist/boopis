@@ -17,7 +17,26 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import IO
 
-ENV_ALLOWLIST = ("PATH", "HOME", "TMPDIR", "TEMP", "TMP", "LANG", "LC_ALL", "SYSTEMROOT", "USERPROFILE", "SHELL")
+# Windows names are upper case here (os.environ folds them); SYSTEMROOT is what lets Python start Winsock in a child.
+ENV_ALLOWLIST = (
+    "PATH",
+    "HOME",
+    "TMPDIR",
+    "TEMP",
+    "TMP",
+    "LANG",
+    "LC_ALL",
+    "SHELL",
+    "SYSTEMROOT",
+    "SYSTEMDRIVE",
+    "WINDIR",
+    "COMSPEC",
+    "PATHEXT",
+    "USERPROFILE",
+    "APPDATA",
+    "LOCALAPPDATA",
+    "PROGRAMDATA",
+)
 STDERR_TAIL_BYTES = 4096
 
 

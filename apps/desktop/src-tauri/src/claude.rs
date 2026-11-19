@@ -247,8 +247,7 @@ pub fn child_env_from(vars: impl IntoIterator<Item = (String, String)>) -> HashM
     let mut env: HashMap<String, String> = vars
         .into_iter()
         .filter(|(k, _)| {
-            (crate::hermes::cli::passes(k) && !k.starts_with("HERMES_") && !k.starts_with("UV_"))
-                || PASS_VARS.contains(&k.as_str())
+            (crate::hermes::cli::passes_isolated(k)) || PASS_VARS.contains(&k.as_str())
         })
         .collect();
     for (k, v) in [

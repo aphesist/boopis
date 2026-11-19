@@ -27,10 +27,19 @@ const PASS: &[&str] = &[
     "USERPROFILE",
     "LOCALAPPDATA",
     "APPDATA",
+    // Windows: without SystemRoot, Python cannot start Winsock (WinError 10106) and the child has no network at all
     "SYSTEMROOT",
+    "SYSTEMDRIVE",
     "COMSPEC",
     "PATHEXT",
     "WINDIR",
+    "PROGRAMDATA",
+    "HOMEDRIVE",
+    "HOMEPATH",
+    "USERNAME",
+    "NUMBER_OF_PROCESSORS",
+    "PROCESSOR_ARCHITECTURE",
+    "OS",
     "HTTP_PROXY",
     "HTTPS_PROXY",
     "NO_PROXY",
@@ -57,14 +66,44 @@ const PASS_PREFIX: &[&str] = &["HERMES_", "UV_", "XDG_", "LC_"];
 /// Whether a variable of the parent's environment may reach a child. API keys and tokens never do.
 #[must_use]
 pub fn passes(name: &str) -> bool {
-    PASS.contains(&name) || PASS_PREFIX.iter().any(|p| name.starts_with(p))
+    passes_on(name, cfg!(windows))
 }
 
 /// Whether a variable of the parent's environment may reach a bundled (isolated) child: the allowlist without the
 /// variables that choose a Hermes home, runtime or package manager.
 #[must_use]
 pub fn passes_isolated(name: &str) -> bool {
-    passes(name) && !name.starts_with("HERMES_") && !name.starts_with("UV_")
+    passes_isolated_on(name, cfg!(windows))
+}
+
+/// [`passes`] for a platform. Windows keeps a variable's name in whatever case it was made (`Path`, `SystemRoot`,
+/// `windir`, `ComSpec`) and treats names without case, so there the list matches without case; Unix names are exact.
+fn passes_on(name: &str, windows: bool) -> bool {
+    PASS.iter().any(|p| same_name(name, p, windows))
+        || PASS_PREFIX.iter().any(|p| has_prefix(name, p, windows))
+}
+
+fn passes_isolated_on(name: &str, windows: bool) -> bool {
+    passes_on(name, windows)
+        && !has_prefix(name, "HERMES_", windows)
+        && !has_prefix(name, "UV_", windows)
+}
+
+fn same_name(name: &str, want: &str, windows: bool) -> bool {
+    if windows {
+        name.eq_ignore_ascii_case(want)
+    } else {
+        name == want
+    }
+}
+
+fn has_prefix(name: &str, prefix: &str, windows: bool) -> bool {
+    if windows {
+        name.get(..prefix.len())
+            .is_some_and(|head| head.eq_ignore_ascii_case(prefix))
+    } else {
+        name.starts_with(prefix)
+    }
 }
 
 /// What a finished `hermes` call produced. `stdout` and `stderr` are capped.
@@ -248,6 +287,36 @@ impl Cli {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn on_windows_the_list_matches_names_in_any_case_and_on_unix_exactly() {
+        // the names a real Windows environment carries, in the case Windows keeps them
+        for name in [
+            "Path",
+            "SystemRoot",
+            "windir",
+            "ComSpec",
+            "SystemDrive",
+            "TEMP",
+            "LOCALAPPDATA",
+            "PathExt",
+        ] {
+            assert!(super::passes_on(name, true), "{name} on Windows");
+        }
+        assert!(super::passes_on("hermes_home", true));
+        assert!(
+            !super::passes_isolated_on("Hermes_Home", true),
+            "a Hermes home never reaches a bundled child"
+        );
+        assert!(!super::passes_isolated_on("uv_cache_dir", true));
+        for secret in ["OpenAI_Api_Key", "anthropic_api_key", "GitHub_Token"] {
+            assert!(!super::passes_on(secret, true), "{secret}");
+        }
+        // Unix names are exact: `Path` is not `PATH` there
+        assert!(super::passes_on("PATH", false));
+        assert!(!super::passes_on("Path", false));
+        assert!(!super::passes_on("SystemRoot", false));
+    }
+
     use super::*;
 
     #[test]
