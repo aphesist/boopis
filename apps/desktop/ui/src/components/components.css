@@ -652,7 +652,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-step__time { font: 400 var(--fs-2xs)/var(--lh-meta) var(--mono); color: var(--text-quiet); font-variant-numeric: tabular-nums; }
 
 /* the blank: a dotted red line under the gap, then the stamp, inside the sentence it belongs to */
-.ui-blank { appearance: none; display: inline-flex; align-items: center; gap: 8px; vertical-align: -4px; padding: 0; margin: 0 0 0 4px; border: 0; border-radius: var(--r-xs); background: none; font: inherit; color: var(--text); cursor: pointer; white-space: nowrap; }
+.ui-blank { appearance: none; display: inline-flex; align-items: center; gap: 8px; vertical-align: -4px; padding: 0; margin: 0 0 0 4px; border: 0; border-radius: var(--r-xs); background: none; font: inherit; color: var(--text); cursor: pointer; max-width: 100%; min-width: 0; text-align: start; overflow-wrap: anywhere; }   /* a long answer wraps inside the line instead of widening the window (R-overflow-1) */
 .ui-blank__gap { display: inline-block; min-width: 7ch; min-height: 1.2em; border-bottom: 1px dotted var(--red); }
 @media (hover: hover) and (pointer: fine) { .ui-blank:hover .ui-blank__gap { border-bottom-style: solid; } }
 .ui-blank[data-answered] .ui-blank__gap { min-width: 0; border-bottom: 1px dashed var(--text-quiet); }
