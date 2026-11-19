@@ -329,7 +329,7 @@ body {
 /* ───────────── keyboard: sheet, go-to hint, region focus ───────────── */
 .hx-keysheet { width: min(1000px, calc(100% - 32px)); height: min(720px, calc(100% - 48px)); }
 .hx-keysheet .hx-dialog__head h2 { margin-right: auto; }
-.hx-keys-filter { width: 200px; min-height: 0; height: var(--ctl-s); }
+.hx-keys-filter { width: 200px; min-height: 0; height: var(--ctl-s); }   /* the library's search field (.ui-search--m), small in the sheet's head */
 .hx-keysheet .hx-dialog__head .ui-ib { margin-left: 0; }
 .hx-keysheet .hx-dialog__body:focus-visible { outline-offset: -2px; border-radius: 0 0 var(--r-l) var(--r-l); }
 .hx-keys-grid { columns: 3 260px; column-gap: 32px; padding-top: 8px; }

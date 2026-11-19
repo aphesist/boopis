@@ -88,9 +88,9 @@ const sink = (h: Handlers): FormsSource => ({
 export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps): Promise<{ refresh: () => Promise<void> }> {
   const { bridge } = deps;
   const settle = deps.settle ?? (reduced() ? 200 : 700);
-  const installed = el('section', { class: 'hx-set', 'aria-labelledby': 'hx-conn-installed-h' });
-  const add = el('section', { class: 'hx-set', 'aria-labelledby': 'hx-conn-add-h' });
-  const flow = el('section', { class: 'hx-set', 'aria-label': 'Add a connector', hidden: '' });
+  const installed = el('section', { class: 'ui-set', 'aria-labelledby': 'hx-conn-installed-h' });
+  const add = el('section', { class: 'ui-set', 'aria-labelledby': 'hx-conn-add-h' });
+  const flow = el('section', { class: 'ui-set', 'aria-label': 'Add a connector', hidden: '' });
   panel.append(installed, add, flow);
   let catalog: ConnectorCatalogEntry[] = [];
   let busy = false;
@@ -146,7 +146,7 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
     } catch (e) {
       rows = [ui.html.setRow({ label: 'Connectors', hint: `Hermes could not be asked, so the list is not shown: ${message(e)}` })];
     }
-    installed.innerHTML = '<h3 class="ui-set__head" id="hx-conn-installed-h">Installed</h3>' + rows.join('') + '<p class="ui-field__hint" role="status" aria-live="polite" data-conn-status></p>';
+    installed.innerHTML = ui.html.setHead({ id: 'hx-conn-installed-h', label: 'Installed' }) + rows.join('') + '<p class="ui-field__hint" role="status" aria-live="polite" data-conn-status></p>';
     ui.hydrate(installed);
     const byName = new Map(list.map((c) => [c.name, c]));
     for (const sw of installed.querySelectorAll<HTMLInputElement>('input[role=switch]')) sw.addEventListener('change', () => { void toggle(sw.name, sw); });
@@ -271,7 +271,7 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
     }
     rows.push(ui.html.setRow({ label: 'From a URL', hint: 'A remote MCP server. https only; keys go to your keychain.', control: ui.html.button({ label: 'Add', size: 's', attrs: { 'data-add-url': '', 'aria-label': 'Add a connector from a URL' } }) }));
     rows.push(ui.html.setRow({ label: 'From a command', hint: 'A local program that speaks MCP. It runs on this computer as you.', control: ui.html.button({ label: 'Add', size: 's', attrs: { 'data-add-command': '', 'aria-label': 'Add a connector from a command' } }) }));
-    add.innerHTML = '<h3 class="ui-set__head" id="hx-conn-add-h">Add</h3>' + rows.join('');
+    add.innerHTML = ui.html.setHead({ id: 'hx-conn-add-h', label: 'Add' }) + rows.join('');
     ui.hydrate(add);
     for (const b of add.querySelectorAll<HTMLElement>('[data-add-catalog]')) b.addEventListener('click', () => { void addFlow('catalog', { id: b.dataset['addCatalog'] ?? '', variant: b.dataset['addVariant'] ?? '' }); });
     add.querySelector('[data-add-url]')?.addEventListener('click', () => { void addFlow('url'); });

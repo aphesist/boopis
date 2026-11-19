@@ -73,7 +73,7 @@
   <div class="hx-palette" id="hx-palette" role="dialog" aria-modal="true" aria-label="Search and commands" hidden>
     <div class="hx-palette__box">
       <div id="hx-palette-input"></div>
-      <div class="hx-palette__list ui-scroll" id="hx-palette-list" role="listbox" aria-label="Results"></div>
+      <div class="hx-palette__list ui-scroll ui-scroll--inset-end" id="hx-palette-list" role="listbox" aria-label="Results"></div>
     </div>
   </div>
 
@@ -84,9 +84,9 @@
         <div id="hx-dtabs"></div>
         <button class="ui-ib" type="button" id="hx-settings-close" aria-label="Close settings" data-tip="Close" data-kbd="esc"><span data-icon="close"></span></button>
       </header>
-      <div class="hx-dialog__body ui-scroll">
+      <div class="hx-dialog__body ui-scroll ui-scroll--inset-end">
         <div class="hx-dpanel" id="hx-dpanel-general" role="tabpanel" aria-labelledby="hx-dtab-general">
-          <section class="hx-set" aria-labelledby="hx-set-layout">
+          <section class="ui-set" aria-labelledby="hx-set-layout">
             <h3 class="ui-set__head" id="hx-set-layout">Layout</h3>
             <div class="ui-set__row">
               <label class="ui-set__label" for="hx-set-dock"><span>Show the dock</span><small>Bots and widgets at the bottom edge. Everything in it is also in the sidebar.</small></label>
@@ -102,7 +102,7 @@
         <div class="hx-dpanel" id="hx-dpanel-connectors" role="tabpanel" aria-labelledby="hx-dtab-connectors" hidden></div>
         <div class="hx-dpanel" id="hx-dpanel-appearance" role="tabpanel" aria-labelledby="hx-dtab-appearance" hidden></div>
         <div class="hx-dpanel" id="hx-dpanel-keys" role="tabpanel" aria-labelledby="hx-dtab-keys" hidden>
-          <section class="hx-set" id="hx-set-keys" aria-labelledby="hx-set-keys-h">
+          <section class="ui-set" id="hx-set-keys" aria-labelledby="hx-set-keys-h">
             <h3 class="ui-set__head" id="hx-set-keys-h">Keyboard shortcuts</h3>
             <div class="hx-keys" id="hx-keys"></div>
           </section>
@@ -115,10 +115,10 @@
     <div class="hx-dialog__card">
       <header class="hx-dialog__head">
         <h2 id="hx-keys-title">Keyboard shortcuts</h2>
-        <input class="ui-input hx-keys-filter" id="hx-keys-filter" type="text" placeholder="Filter" aria-label="Filter shortcuts" autocomplete="off" spellcheck="false">
+        <div id="hx-keys-filter"></div>
         <button class="ui-ib" type="button" id="hx-keys-close" aria-label="Close keyboard shortcuts" data-tip="Close" data-kbd="esc"><span data-icon="close"></span></button>
       </header>
-      <div class="hx-dialog__body ui-scroll" tabindex="0" role="region" aria-labelledby="hx-keys-title">
+      <div class="hx-dialog__body ui-scroll ui-scroll--inset-end" tabindex="0" role="region" aria-labelledby="hx-keys-title">
         <div class="hx-keys-grid" id="hx-keys-body"></div>
         <p class="hx-keys-note">Keys shown for this computer. In a web browser a few belong to the browser (F6, and Alt+1 or Alt+2 on Linux); every action is also in the palette.</p>
       </div>

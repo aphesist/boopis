@@ -29,9 +29,9 @@ const esc = (t: string): string => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', 
 /** build the section for a view */
 export function planSection(view: PlanView, now = Date.now()): HTMLElement {
   const sec = document.createElement('section');
-  sec.className = 'hx-set';
+  sec.className = 'ui-set';
   sec.setAttribute('aria-labelledby', 'hx-set-plan-h');
-  sec.innerHTML = '<h3 class="ui-set__head" id="hx-set-plan-h">Plan</h3>' + planRows(view, now).join('');
+  sec.innerHTML = ui.html.setHead({ id: 'hx-set-plan-h', label: 'Plan' }) + planRows(view, now).join('');
   return sec;
 }
 

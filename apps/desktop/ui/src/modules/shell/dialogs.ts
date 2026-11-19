@@ -95,8 +95,8 @@ function mountDiagnostics(): void {
   const panel = $('#hx-dpanel-general'); if (!panel) return;
   diagMounted = true;
   const sec = document.createElement('section');
-  sec.className = 'hx-set'; sec.setAttribute('aria-labelledby', 'hx-set-diag-h');
-  sec.innerHTML = '<h3 class="ui-set__head" id="hx-set-diag-h">Diagnostics</h3>' +
+  sec.className = 'ui-set'; sec.setAttribute('aria-labelledby', 'hx-set-diag-h');
+  sec.innerHTML = ui.html.setHead({ id: 'hx-set-diag-h', label: 'Diagnostics' }) +
     ui.html.setRow({ label: 'Graphics card', hint: 'Which GPU draws the window. Automatic uses the dedicated GPU on AC power when it is safe to. Applies the next time the app starts.',
       control: '<div class="ui-set__actions"><div id="hx-gpu-seg"></div>' + ui.html.button({ label: 'Restart to switch', size: 's', attrs: { id: 'hx-gpu-restart', hidden: true } }) + '</div>' }) +
     ui.html.setRow({ label: 'Graphics renderer', hint: 'What the window draws with. Copy it when asked why the app is slow or blank.',
@@ -153,8 +153,8 @@ function mountGpuChoice(sec: HTMLElement, fail: (e: unknown) => void): void {
 function mountOrbGrow(): void {
   const panel = $('#hx-dpanel-appearance'); if (!panel || panel.querySelector('#hx-set-orb-grow')) return;
   const sec = document.createElement('section');
-  sec.className = 'hx-set'; sec.setAttribute('aria-labelledby', 'hx-set-bots-h');
-  sec.innerHTML = '<h3 class="ui-set__head" id="hx-set-bots-h">Bots</h3>' + ui.html.setRow({ for: 'hx-set-orb-grow', label: 'Grow bots on hover', hint: 'Bots in the dock grow under the pointer.',
+  sec.className = 'ui-set'; sec.setAttribute('aria-labelledby', 'hx-set-bots-h');
+  sec.innerHTML = ui.html.setHead({ id: 'hx-set-bots-h', label: 'Bots' }) + ui.html.setRow({ for: 'hx-set-orb-grow', label: 'Grow bots on hover', hint: 'Bots in the dock grow under the pointer.',
     control: ui.html.switch({ id: 'hx-set-orb-grow', checked: state.orbGrow }) });
   const colours = panel.querySelector('[aria-labelledby="hxt-h-colours"]');
   panel.insertBefore(sec, colours);

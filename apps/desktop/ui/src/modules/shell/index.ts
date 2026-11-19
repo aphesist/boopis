@@ -157,6 +157,7 @@ export function boot(): void {
     textHTML: '<span class="hx-cmd__project" id="hx-where-project"></span> <span class="hx-cmd__title" id="hx-where-title"></span>', attrs: { 'aria-haspopup': 'dialog', 'aria-expanded': 'false' } });
   $('#hx-palette-input', app).outerHTML = ui.html.search({ size: 'l', id: 'hx-palette-input', label: 'Search sessions, bots and commands', placeholder: 'Search sessions, bots and commands', keys: 'esc',
     attrs: { role: 'combobox', 'aria-expanded': 'true', 'aria-controls': 'hx-palette-list', 'aria-autocomplete': 'list' } });
+  $('#hx-keys-filter', app).outerHTML = ui.html.search({ size: 'm', id: 'hx-keys-filter', class: 'hx-keys-filter', label: 'Filter shortcuts', placeholder: 'Filter' });
   sh.el = collectEls();
   const el = els();
 
@@ -174,8 +175,7 @@ export function boot(): void {
   for (const b of $$('[role="tab"]', sh.seg.rail)) b.dataset['tipPos'] = 'right';
   $('#hx-seg').replaceWith(sh.seg.tabs);
   $('#hx-rail-seg').replaceWith(sh.seg.rail);
-  sh.seg.collapse = ui.segmented({ mode: 'radio', size: 's', label: 'When the sidebar collapses', value: prefs.collapse, options: [{ value: 'rail', label: 'Rail' }, { value: 'closed', label: 'Hide' }] });
-  sh.seg.collapse.setAttribute('aria-labelledby', 'hx-set-collapse-l'); sh.seg.collapse.removeAttribute('aria-label');
+  sh.seg.collapse = ui.segmented({ mode: 'radio', size: 's', labelledby: 'hx-set-collapse-l', value: prefs.collapse, options: [{ value: 'rail', label: 'Rail' }, { value: 'closed', label: 'Hide' }] });
   $('#hx-set-collapse').replaceWith(sh.seg.collapse);
   // Settings' sections: the library's tab bar, concentric with the dialog's corner band
   $('#hx-dtabs').outerHTML = ui.html.tabs({ label: 'Settings sections', class: 'hx-dtabs', value: 'general',

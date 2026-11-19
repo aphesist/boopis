@@ -1,7 +1,9 @@
 /* The search field: a search glyph, the query (or, on the button, where you are), and the keys that open or close it. One component
    for the title bar's command centre (DESIGN-SYSTEM.md §14.1, a button that opens the palette) and the palette's own field (§14.20).
      size 's'  the boxed 26px field on the title bar: the inset frame colour, a hairline, --r-s; hover a stronger line, open a brass one.
+     size 'm'  a search in a form: a field's box (--ctl, --bg-0, --line-field, --r-s) with the glyph at its start (the shortcut sheet).
      size 'l'  the 48px field flush at the top of a surface (the palette): no box of its own, a hairline below.
+   DESIGN-SYSTEM.md §14.31, R-search-1 to 4.
    Key chips: the keys sit in the field's corner, so they are concentric with it (--r-in, §8.2): 4px inside a 12px corner is 8px, a
    capsule on an 18px chip, as a key in a tooltip (§14.23). In the flush field they take the surface's own --r-in. */
 import { attrs, cx } from '../core/dom';
@@ -12,7 +14,7 @@ import { keys } from './kbd';
 
 type U<T> = T | undefined;
 
-export const SEARCH_SIZES = ['s', 'l'] as const;
+export const SEARCH_SIZES = ['s', 'm', 'l'] as const;
 export type SearchSize = (typeof SEARCH_SIZES)[number];
 export interface SearchOpts {
   size?: U<SearchSize>;

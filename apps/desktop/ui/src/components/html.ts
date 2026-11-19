@@ -66,13 +66,13 @@ const switchHtml = (o: { id?: U<string>; checked?: U<boolean>; disabled?: U<bool
   '<input type="checkbox" role="switch" class="ui-switch" data-ui="switch"' + attrs({ id: o.id, checked: !!o.checked, disabled: o.disabled, 'aria-label': o.label, name: o.name }) + '>';
 
 export interface SegOption { value: string; label?: U<string>; dot?: U<boolean>; icon?: U<string>; ariaLabel?: U<string>; tip?: U<string>; keys?: U<string> }
-export interface SegmentedOpts { options: readonly SegOption[]; value?: U<string | null>; mode?: U<'tabs' | 'radio'>; label?: U<string>; size?: U<'s'>; vertical?: U<boolean>; fill?: U<boolean>; class?: U<string>; controls?: U<Record<string, string>> }
+export interface SegmentedOpts { options: readonly SegOption[]; value?: U<string | null>; mode?: U<'tabs' | 'radio'>; label?: U<string>; /** named by a visible label instead (a settings row's label id); replaces `label` */ labelledby?: U<string>; size?: U<'s'>; vertical?: U<boolean>; fill?: U<boolean>; class?: U<string>; controls?: U<Record<string, string>>; attrs?: U<Attrs> }
 function segmented(o: SegmentedOpts): string {
   const opts = o.options;
   const i = Math.max(0, opts.findIndex((x) => x.value === o.value));
   const tabs = o.mode !== 'radio';
   return '<div class="' + cx('ui-seg', o.size === 's' && 'ui-seg--s', o.vertical && 'ui-seg--vertical', o.fill && 'ui-seg--fill', o.class) + '" data-ui="seg" role="' + (tabs ? 'tablist' : 'radiogroup') + '"' +
-    attrs({ 'aria-label': o.label, 'aria-orientation': o.vertical ? 'vertical' : null, style: '--n:' + opts.length + ';--i:' + i }) + '><span class="ui-seg__thumb" aria-hidden="true"></span>' +
+    attrs({ 'aria-label': o.labelledby ? null : o.label, 'aria-labelledby': o.labelledby, 'aria-orientation': o.vertical ? 'vertical' : null, style: '--n:' + opts.length + ';--i:' + i, ...o.attrs }) + '><span class="ui-seg__thumb" aria-hidden="true"></span>' +
     opts.map((x, j) => '<button type="button" class="ui-seg__opt" role="' + (tabs ? 'tab' : 'radio') + '" data-value="' + esc(x.value) + '"' +
       attrs({ [tabs ? 'aria-selected' : 'aria-checked']: String(j === i), tabindex: j === i ? '0' : '-1', 'aria-controls': o.controls?.[x.value], 'aria-label': x.ariaLabel, 'data-tip': x.tip, 'data-kbd': x.keys }) + '>' +
       (x.icon ? icon(x.icon, { size: 'm' }) : '') + (x.label != null ? '<span>' + esc(x.label) + '</span>' : '') + (x.dot != null ? dot('attention', { show: !!x.dot }) : '') + '</button>').join('') + '</div>';
@@ -244,6 +244,23 @@ function field(o: FieldOpts): string {
 }
 const setRow = (o: { label: string; hint?: U<string | null>; for?: U<string | null>; /** the label's own id, for a control named by aria-labelledby (a select) */ labelId?: U<string>; control?: U<string> }): string =>
   '<div class="ui-set__row"><' + (o.for ? 'label for="' + esc(o.for) + '"' : 'span') + attrs({ id: o.labelId }) + ' class="ui-set__label"><span>' + esc(o.label) + '</span>' + (o.hint ? '<small>' + esc(o.hint) + '</small>' : '') + '</' + (o.for ? 'label' : 'span') + '>' + (o.control ?? '') + '</div>';
+export interface BadgeOpts {
+  label: string;
+  /** the sentence behind the short words: its tooltip (and, with `describedBy`, its accessible description) */
+  tip?: U<string>; tipPos?: U<string>;
+  /** reachable by keyboard, so the tooltip shows on focus (outside a control; inside a row the row carries the sentence) */
+  focusable?: U<boolean>; describedBy?: U<string>;
+  class?: U<string>; attrs?: U<Attrs>;
+}
+/** a quiet mark: a chip's capsule in mono 11, outlined, never filled and never red (a stamp is what the user owes). The "made outside
+    boopis" mark (owner decision, 19 November 2026) is one. Pending rule: the design system describes this mark only for that place. */
+const badge = (o: BadgeOpts): string => '<span class="' + cx('ui-badge', o.class) + '"' +
+  attrs({ role: o.focusable ? 'note' : null, tabindex: o.focusable ? '0' : null, 'data-tip': o.tip, 'data-tip-pos': o.tipPos, 'aria-describedby': o.describedBy, ...o.attrs }) + '>' + esc(o.label) + '</span>';
+/** a settings section's heading (12/500 quiet, 20 above: DESIGN-SYSTEM.md §14.21); the section is a `<section class="ui-set">` named by it */
+const setHead = (o: { label: string; id: string }): string => '<h3 class="ui-set__head" id="' + esc(o.id) + '">' + esc(o.label) + '</h3>';
+/** a settings section: its heading, then its rows (`setRow`) */
+const setSection = (o: { label: string; id: string; body?: U<string>; attrs?: U<Attrs> }): string =>
+  '<section class="ui-set"' + attrs({ 'aria-labelledby': o.id, ...o.attrs }) + '>' + setHead(o) + (o.body ?? '') + '</section>';
 const empty = (o: { title: string; text?: U<string>; mark?: U<boolean>; action?: U<string> }): string =>
   '<div class="ui-empty">' + (o.mark ? '<span class="ui-empty__mark">' + logoHTML({ mark: true, label: false }) + '</span>' : '') + '<h2 class="ui-empty__title">' + esc(o.title) + '</h2>' + (o.text ? '<p class="ui-empty__text">' + esc(o.text) + '</p>' : '') + (o.action ?? '') + '</div>';
 
@@ -258,6 +275,6 @@ const tip = (label: string, k?: string, state?: { text: string; tone?: string })
 
 export const html = {
   icon, keys, kbd, combo, comboKbds, code, inline, stamp, dot, capacity, button, iconButton, send, hold, switch: switchHtml, segmented, chip, chipGroup,
-  orb: orbHtml, model: modelHTML, modelRoute: routeHTML, modelMark: markHTML, stateWord, row, leadFor, group, ladder, measure, legend, pages, request, entry, disclosure, steps, blank, section, menuItems, field, select: selectHTML, setRow, empty, toast, tip, mod,
-  scroll, tabs, search, tipBody
+  orb: orbHtml, model: modelHTML, modelRoute: routeHTML, modelMark: markHTML, stateWord, row, leadFor, group, ladder, measure, legend, pages, request, entry, disclosure, steps, blank, section, menuItems, field, select: selectHTML, setRow, setHead, setSection, empty, toast, tip, mod,
+  scroll, tabs, search, tipBody, badge
 };

@@ -35,9 +35,9 @@ export const BASE_HINT = 'boopis runs the Hermes it carries, in a folder of its 
 /** build the section, load the choice and wire the switch. Resolves with the section once it shows what the host reported. */
 export async function mountHermesSource(panel: HTMLElement, deps: SourceDeps = realSourceDeps()): Promise<HTMLElement> {
   const sec = document.createElement('section');
-  sec.className = 'hx-set';
+  sec.className = 'ui-set';
   sec.setAttribute('aria-labelledby', 'hx-set-adv-h');
-  sec.innerHTML = '<h3 class="ui-set__head" id="hx-set-adv-h">Advanced</h3>' + ui.html.setRow({
+  sec.innerHTML = ui.html.setHead({ id: 'hx-set-adv-h', label: 'Advanced' }) + ui.html.setRow({
     for: 'hx-set-own-hermes', label: 'Use my own Hermes', hint: BASE_HINT,
     control: '<div class="ui-set__actions">' + ui.html.switch({ id: 'hx-set-own-hermes', checked: false, disabled: true }) + ui.html.button({ label: 'Restart to switch', size: 's', attrs: { id: 'hx-set-own-restart', hidden: true } }) + '</div>'
   });

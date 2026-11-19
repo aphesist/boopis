@@ -13,6 +13,8 @@ export interface ScrollOpts {
   axis?: U<ScrollAxis>;
   /** no bar at all: a strip that shows there is more with a faded edge instead (the mod pane tabs) */
   bare?: U<boolean>;
+  /** the scroller ends at a curved corner of its container: the track stops short of the curve by the container's --r-outer */
+  inset?: U<'end' | 'both'>;
 }
 export interface ScrollHtmlOpts extends ScrollOpts {
   body?: U<string>; class?: U<string>; tag?: U<string>;
@@ -20,9 +22,9 @@ export interface ScrollHtmlOpts extends ScrollOpts {
   label?: U<string>; attrs?: U<Attrs>;
 }
 /** the variants the UI lab draws */
-export const scrollVariants = { axis: SCROLL_AXES, bare: [false, true] } as const;
+export const scrollVariants = { axis: SCROLL_AXES, bare: [false, true], inset: [undefined, 'end', 'both'] } as const;
 
-export const scrollClass = (o: ScrollOpts = {}): string => cx('ui-scroll', o.axis && o.axis !== 'y' && 'ui-scroll--' + o.axis, o.bare && 'ui-scroll--bare');
+export const scrollClass = (o: ScrollOpts = {}): string => cx('ui-scroll', o.axis && o.axis !== 'y' && 'ui-scroll--' + o.axis, o.bare && 'ui-scroll--bare', o.inset && 'ui-scroll--inset-' + o.inset);
 
 export function scroll(o: ScrollHtmlOpts = {}): string {
   const tag = o.tag ?? 'div';

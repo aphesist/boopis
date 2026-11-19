@@ -70,17 +70,17 @@ export function ladderRows(view: ModelsView | { error: string }): string[] {
 export async function mountModels(panel: HTMLElement, deps: ModelsDeps): Promise<{ refresh: () => Promise<void> }> {
   const plan = await mountPlan(panel, deps.plan);
   const ladder = document.createElement('section');
-  ladder.className = 'hx-set';
+  ladder.className = 'ui-set';
   ladder.setAttribute('aria-labelledby', 'hx-set-ladder-h');
   panel.append(ladder);
   const claude = document.createElement('section');
-  claude.className = 'hx-set';
+  claude.className = 'ui-set';
   claude.setAttribute('aria-labelledby', 'hx-set-claude-h');
   panel.append(claude);
   const change = document.createElement('section');
-  change.className = 'hx-set';
+  change.className = 'ui-set';
   change.setAttribute('aria-labelledby', 'hx-set-change-h');
-  change.innerHTML = '<h3 class="ui-set__head" id="hx-set-change-h">Change</h3>' + ui.html.setRow({
+  change.innerHTML = ui.html.setHead({ id: 'hx-set-change-h', label: 'Change' }) + ui.html.setRow({
     label: 'Models', hint: 'Ask the models question again: free models, OpenRouter\'s free models, Claude, or a model you set up. Nothing changes until you answer.',
     control: ui.html.button({ label: 'Change models', size: 's', attrs: { id: 'hx-models-change' } })
   });
@@ -93,8 +93,8 @@ export async function mountModels(panel: HTMLElement, deps: ModelsDeps): Promise
   const drawLadder = async (): Promise<void> => {
     let view: ModelsView | { error: string };
     try { view = await deps.ladder(); } catch (e) { view = { error: e instanceof Error ? e.message : 'unknown error' }; }
-    ladder.innerHTML = '<h3 class="ui-set__head" id="hx-set-ladder-h">Model ladder</h3>' + ladderRows(view).join('');
-    claude.innerHTML = '<h3 class="ui-set__head" id="hx-set-claude-h">Claude subscription</h3>' + claudeRows(view).join('');
+    ladder.innerHTML = ui.html.setHead({ id: 'hx-set-ladder-h', label: 'Model ladder' }) + ladderRows(view).join('');
+    claude.innerHTML = ui.html.setHead({ id: 'hx-set-claude-h', label: 'Claude subscription' }) + claudeRows(view).join('');
     ui.hydrate(ladder);
     ui.hydrate(claude);
     claude.querySelector('#hx-claude-check')?.addEventListener('click', () => { void drawLadder(); });

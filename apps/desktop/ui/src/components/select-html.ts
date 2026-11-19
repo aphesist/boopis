@@ -62,7 +62,7 @@ export function listboxHTML(entries: readonly SelectEntry[], o: { id: string; la
     return '<div class="ui-listbox__group" role="group" aria-labelledby="' + gid + '"><div class="ui-listbox__head" role="presentation" id="' + gid + '">' + mark + '<span>' + esc(e.label) + '</span></div>' +
       e.options.map((x) => optionHTML(x, x.value === o.value)).join('') + '</div>';
   }).join('');
-  return '<div class="ui-listbox"><div class="ui-listbox__list" role="listbox" id="' + esc(o.id) + '"' + attrs({ 'aria-label': o.label }) + '>' + body + '</div></div>';
+  return '<div class="ui-listbox"><div class="ui-listbox__list ui-scroll ui-scroll--inset-both" role="listbox" id="' + esc(o.id) + '"' + attrs({ 'aria-label': o.label }) + '>' + body + '</div></div>';
 }
 
 export interface SelectOpts {
