@@ -60,24 +60,24 @@
   "h": 135
  },
  "long@bone": {
-  "sha": "93a0761a8be739cc0934284b17d753119a329bb8",
+  "sha": "a6f94c0324cc15a5f108ea49e6def3e6d2e8bada",
   "w": 632,
-  "h": 43
+  "h": 96
  },
  "long@catalog": {
-  "sha": "3133f3a2f24f4fa47cae58c3b2d70a22e8430ab3",
+  "sha": "595afb6d4ed46237d30ca82e00583986c31c5ca7",
   "w": 632,
-  "h": 43
+  "h": 96
  },
  "long@graphite": {
-  "sha": "34cd9bd704c8cd1c8d3ec3df77f21682726aba60",
+  "sha": "6d26eda787144d4b4870b403303da5bfc445ba17",
   "w": 632,
-  "h": 43
+  "h": 96
  },
  "long@typewriter": {
-  "sha": "a0b673f57de432844ef33cd358ef4b5bdd17ac5b",
+  "sha": "555d5d511735968bb50f6e5ff4fb5764543e4a25",
   "w": 632,
-  "h": 43
+  "h": 96
  },
  "pressed@bone": {
   "sha": "f4abe3249ef3c45eabaae3f1cc72110a88c61f5a",

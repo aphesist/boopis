@@ -243,7 +243,7 @@
   --pad-toast: 6px;           /* a toast's action */
   --pad-tip: 4px;             /* a key chip in a tooltip, in a field's end */
   --pad-seg: 3px;             /* the segmented track: its thumb and options */
-  --pad-row: calc((var(--row-h) - var(--ctl-s)) / 2);   /* a row's action button: a 28px square in the 30px row, so 1px from every edge */
+  --pad-row: 1px;             /* a row's action button: a 28px square (--ctl-s) in the 30px row (--row-h), so 1px from every edge */
   --r-in-dialog: max(var(--r-floor), calc(var(--r-l) - var(--pad-dialog)));
   --r-in-palette: max(var(--r-floor), calc(var(--r-l) - var(--pad-palette)));
   --r-in-dock: max(var(--r-floor), calc(var(--r-l) - var(--pad-dock)));

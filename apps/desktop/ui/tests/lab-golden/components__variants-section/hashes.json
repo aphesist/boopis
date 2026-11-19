@@ -1,22 +1,22 @@
 {
  "open@bone": {
-  "sha": "6998e2481bd83b4986c108736c47ea95f691eb43",
+  "sha": "7002e1a8616e3553653b2dbb4cc61ee1914c1dda",
   "w": 344,
-  "h": 124
+  "h": 176
  },
  "open@catalog": {
-  "sha": "d1cf4edb853f8a3796184ecd912b5aef351b2a20",
+  "sha": "393dbb26caa435157808dca82cb56c5178d6b7e4",
   "w": 344,
-  "h": 124
+  "h": 176
  },
  "open@graphite": {
-  "sha": "e0f7a224128690d6b83733bb05341c820b991610",
+  "sha": "0a46d43741186368f5a6cf9c1cfe56800e8dce75",
   "w": 344,
-  "h": 124
+  "h": 176
  },
  "open@typewriter": {
-  "sha": "7048da72142a44213a2713d5ba4a35f30cf0640b",
+  "sha": "00f86600d19b2d92027e84aeef8edf6101091b3f",
   "w": 344,
-  "h": 124
+  "h": 176
  }
 }
