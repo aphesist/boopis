@@ -313,6 +313,7 @@
   --dur-slide: 240ms;         /* a thumb or indicator travelling */
   --dur-3: 300ms;             /* layout travel */
   --dur-breathe: 1.8s;        /* the one loop: a running dot */
+  --load-delay: 600ms;        /* a waiting region's quiet line appears after this (R-load-2) */
   --dur-hold: 1000ms;         /* hold to approve, everywhere */
 }
 /* light themes: the dock stays black, so its ink comes from the light grounds; fields need a stronger line */
