@@ -56,6 +56,12 @@ export const BRAND_ALLOW = [
   '[data-publisher]'          // a publisher's name as the store gives it
 ];
 
+/** Allowances that hold in every state, for an element whose case the rule itself leaves out. check.mjs's skip() honours each one for any
+    state of any story: `el` is matched against the finding's element description, as a story's `{ el, reason }` allowance is. */
+export const STANDING_ALLOW = [
+  { check: 'geometry.target', el: 'ui-pages__dot', reason: 'the dock\'s page dots: R-a11y-2 names them, each has a 24 px tall hit area around its mark, and a 24 px wide one would cover its neighbour at the 10 px pitch of the nub (14.12)' }
+];
+
 /** RULES.md's rules, and which of them a lab check verifies (the report's rule coverage) */
 export function ruleCoverage(rulesMd) {
   const rows = [...rulesMd.matchAll(/^\|\s*\[(R-[a-z0-9]+-\d+)\]\([^)]*\)\s*\|(.*?)\|(.*?)\|\s*(machine|by eye|both)\s*\|/gm)].map((m) => ({ id: m[1], rule: m[2].trim(), status: m[3].trim(), how: m[4] }));

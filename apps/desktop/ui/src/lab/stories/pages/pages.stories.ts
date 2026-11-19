@@ -3,10 +3,7 @@
 import { runFirstRun } from '../../../host/first-run';
 import type { AppCtx, ProviderSpec, State, Story } from '../../types';
 
-/** the dock's page dots in a whole window: excused one element at a time, exactly as in the dock's own stories (R-a11y-2 names them;
-    a 24 px wide area would cover the neighbour at the nub's 10 px pitch); every other target in the window is still checked */
-const PAGE_DOTS = { 'geometry.target': { el: 'ui-pages__dot', reason: 'the dock\'s page dots: R-a11y-2 names them, each has a 24 px tall hit area around its mark, and a 24 px wide one would cover its neighbour at the 10 px pitch of the nub (14.12)' } } as const;
-const page = (tags: State['tags'], provider: ProviderSpec = {}, setup?: (c: AppCtx) => Promise<void>, extra: Partial<State> = {}): State => ({ tags, app: { provider, ...(setup ? { setup } : {}) }, ...extra, allow: { ...PAGE_DOTS, ...(extra.allow ?? {}) } });
+const page = (tags: State['tags'], provider: ProviderSpec = {}, setup?: (c: AppCtx) => Promise<void>, extra: Partial<State> = {}): State => ({ tags, app: { provider, ...(setup ? { setup } : {}) }, ...extra });
 const LIVE = { 'stability.render': 'the recording replays with live timing' } as const;
 
 const pages: Story = {
