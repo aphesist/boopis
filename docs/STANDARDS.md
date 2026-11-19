@@ -81,13 +81,19 @@ Measured in CI where possible. A regression past a budget fails the build.
 |---|---|
 | App window to interactive (Hermes already running) | < 800 ms |
 | Attach to a running gateway | < 300 ms |
-| UI frame time while streaming | < 16 ms p95; no layout thrash; long lists virtualised |
+| UI motion (dock, orbs, transitions, scrolling) | **the display's full refresh rate, 120 fps on a 120 Hz panel**: every frame under 8.3 ms, no frame over 16.7 ms, measured in the shipping engine (WebKitGTK on Linux) with the perf harness. 60 fps is the floor only where the machine forces it (CPU renderer, or WebKit's fixed 60 Hz timer); ADR-0025 |
+| UI frame time while streaming | the same as motion; no layout thrash; long lists virtualised |
 | Host proxy overhead per frame | < 1 ms p95 |
 | `pack` on a 100k-file repository, warm `hx` | < 300 ms p95 for a search; < 50 ms for a known file range |
 | `ship` validate + journal + apply, 10 files | < 100 ms, excluding the gate |
 | Ledger append (lock, verify tail, fsync) | < 5 ms p95. Verification is incremental: tail hash plus periodic full verify, never a full re-read per append |
 | Idle memory: host + UI | < 250 MB |
 | Plugin import time inside Hermes | < 150 ms (lazy-load heavy modules) |
+
+Motion rules (ADR-0025):
+- Animate only `transform` and `opacity` (and `filter` where needed) on composited layers, so the compositor thread runs the motion and a busy main thread can't drop it. Springs become CSS `linear()` curves or Web Animations, not per-frame JavaScript.
+- Per-frame JavaScript is the exception (the orbs' drawing), and it runs off the main thread where the engine allows it (OffscreenCanvas in a worker).
+- No layout reads inside a frame, and no style recalculation of large subtrees during motion.
 
 General rules:
 - no blocking I/O on an async executor (`spawn_blocking`) or on the UI thread;

@@ -380,6 +380,30 @@ They're not sandboxed, matching Claude Code. This is the only exception to the n
 - Wayland plus NVIDIA is not auto-fixed: the evidence is crashes and blank windows, which the host cannot see in advance. The diagnostics and the variable make the fix one step.
 - Distribution patches differ (Ubuntu forces the shared-memory transport for NVIDIA in 2.52.6; Arch's package is not known to), so the report, not an assumption, says what a machine does.
 
+## ADR-0025 Motion at the display's refresh rate: compositor-driven, WebKit's 60 fps cap lifted, current WebKitGTK
+**Context.**
+- The owner's panel runs at 120 Hz and they want 120 fps with no stutter. The research (`research/120hz.md`, read in WebKitGTK's source) found three limits.
+  - **WebKit's 60 fps preference:** WebKit caps `requestAnimationFrame` and page rendering updates to 60 fps on fast displays by default (`PreferPageRenderingUpdatesNear60FPS`). It can be turned off from the host (`webkit_settings_set_feature_enabled`).
+  - **The renderer:** only the GL renderers (DMA-BUF, or shared memory) run `transform` and `opacity` animations on the compositor thread. The CPU renderer the owner was forced into paints every frame on the main thread.
+  - **The WebKitGTK version:** the GTK3 explicit-sync crash with NVIDIA on Wayland is fixed in WebKitGTK 2.54.2 and later, and CSS `linear()` easing only stops forcing main-thread animation in 2.54.
+- GTK3 on Wayland renders a 1.6 scale at 2x (3600x2250 here). Tauri has no GTK4 port, and Tauri's Chromium runtime is a Tauri 3 alpha that runs under XWayland.
+
+**Decision.**
+- **Lift the cap:** the host turns WebKit's 60 fps preference off on displays faster than 60 Hz, with a setting to force 60.
+- **Renderer rule:** the renderer rule (ADR-0024) takes the WebKitGTK version into account. On 2.54.2 and later, Wayland with NVIDIA gets the default GL renderer, not a workaround.
+- **Motion:**
+  - motion runs on the compositor: `transform` and `opacity` only, springs as `linear()` curves or Web Animations;
+  - the orbs draw in an OffscreenCanvas worker where the engine supports it;
+  - STANDARDS §6 makes the display's full rate the budget, with 60 fps as the floor only where the machine forces it.
+- **Packaging:** ship on a current WebKitGTK.
+  - Arch gets a native package that uses the system's WebKitGTK (2.54.2 or later).
+  - The AppImage's bundled WebKitGTK version is reported in Diagnostics and raised as builds allow.
+- **Not now:** Chromium (Tauri 3 alpha with CEF). Revisit when it reaches beta with native Wayland.
+
+**Consequences.**
+- The perf harness measures at the owner's geometry, and its numbers gate motion changes.
+- A machine stuck on the CPU renderer or WebKit's fixed 60 Hz timer gets a smooth 60, said plainly in Diagnostics, never a stutter at an unreachable 120.
+
 ## ADR-0012 Prices
 Prices come from the models.dev catalogue plus a user override table. Hermes's models.dev data is not reachable through its public plugin API, so:
 - the plugin reads a cached catalogue file, `<profile home>/hypotaxis/prices/models-dev.json`;
