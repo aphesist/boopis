@@ -116,11 +116,13 @@ async fn begin(
 
 /// A failed start inside a confined filesystem is most often a program outside the grants.
 fn with_hint(reason: String, program: &std::path::Path, policy: &ResolvedPolicy) -> String {
+    // Grants are canonical, so compare the program's canonical path: a venv's `python` is a symlink.
+    let real = std::fs::canonicalize(program).unwrap_or_else(|_| program.to_path_buf());
     let covered = policy
         .ro
         .iter()
         .chain(&policy.rw)
-        .any(|g| program.starts_with(&g.path));
+        .any(|g| real.starts_with(&g.path));
     if covered {
         reason
     } else {

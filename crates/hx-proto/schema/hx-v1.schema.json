@@ -2082,6 +2082,14 @@
           },
           "type": "array"
         },
+        "runtime_ro": {
+          "default": [],
+          "description": "Read-only roots of the program's own runtime (the interpreter's prefix and virtual environment),\nfor an interpreter outside the system directories. Vetted unlike `ro`: each must be an existing\ndirectory whose canonical path is not `/`, `$HOME` or a parent of it, the working directory, or\nanything inside or above the working directory. Default: none.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "rw": {
           "default": [],
           "description": "Readable, writable and executable paths.",
@@ -2234,6 +2242,14 @@
         "ro": {
           "default": [],
           "description": "Readable and executable paths.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "runtime_ro": {
+          "default": [],
+          "description": "Read-only roots of the program's own runtime (the interpreter's prefix and virtual environment),\nfor an interpreter outside the system directories. Vetted unlike `ro`: each must be an existing\ndirectory whose canonical path is not `/`, `$HOME` or a parent of it, the working directory, or\nanything inside or above the working directory. Default: none.",
           "items": {
             "type": "string"
           },

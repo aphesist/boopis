@@ -163,6 +163,13 @@ pub struct SandboxPolicy {
     /// (Landlock cannot subtract a grant).
     #[serde(default)]
     pub rw_paths: Vec<PathBuf>,
+    /// Read-only roots of the program's own runtime: the interpreter's prefix and its virtual
+    /// environment, when they live outside the system directories (a managed Python under a
+    /// user's home). Unlike `ro_paths` they are **vetted**: each must be an existing directory, and
+    /// its canonical path (after every symlink) must not be `/`, `$HOME` or a parent of it, the
+    /// working directory, a path inside it, or a parent of it. They only ever add read access.
+    #[serde(default)]
+    pub runtime_ro_paths: Vec<PathBuf>,
     /// Network access.
     #[serde(default)]
     pub network: NetworkPolicy,
@@ -216,6 +223,7 @@ impl SandboxPolicy {
         Self {
             ro_paths: Vec::new(),
             rw_paths: Vec::new(),
+            runtime_ro_paths: Vec::new(),
             network: NetworkPolicy::Off,
             env_allowlist: default_env_allowlist(),
             env_set: BTreeMap::new(),
@@ -232,6 +240,14 @@ impl SandboxPolicy {
     #[must_use]
     pub fn with_ro(mut self, paths: impl IntoIterator<Item = impl Into<PathBuf>>) -> Self {
         self.ro_paths.extend(paths.into_iter().map(Into::into));
+        self
+    }
+
+    /// Adds vetted read-only runtime roots (see [`SandboxPolicy::runtime_ro_paths`]).
+    #[must_use]
+    pub fn with_runtime_ro(mut self, paths: impl IntoIterator<Item = impl Into<PathBuf>>) -> Self {
+        self.runtime_ro_paths
+            .extend(paths.into_iter().map(Into::into));
         self
     }
 
