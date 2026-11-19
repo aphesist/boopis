@@ -4,6 +4,8 @@
 //!
 //! The flow is a list of steps recomputed from reality on every call, so it resumes after an interruption and running it
 //! again changes nothing that is already right:
+//! 0. **The runtime** (when the app carries one, ADR-0023): unpacked, hash-checked, into the app's own folder, with a
+//!    private Hermes home and Hermes's own update check off.
 //! 1. **Hermes** is found (never installed here: the documented command is shown, and `hermes_install` runs nothing).
 //! 2. **The plugin** is copied into the profile and enabled; an upgrade replaces it in place.
 //! 3. **`hx`** is placed where the plugin finds it (`hx_path`).
@@ -29,6 +31,7 @@ use specta::Type;
 
 use crate::commands::Json;
 use crate::error::{Error, Result};
+use crate::runtime::{Outcome, Plan};
 use crate::secrets::SecretStore;
 use crate::secrets::store::validate_value;
 use install::{Bundle, Installed};
@@ -212,6 +215,8 @@ pub struct Setup {
     secrets: Arc<dyn SecretStore>,
     bundle: Bundle,
     install_command: String,
+    /// The bundled Hermes runtime to unpack first (ADR-0023); `None` when the app uses a Hermes the user already has.
+    runtime: Option<Plan>,
 }
 
 struct Run {
@@ -258,7 +263,15 @@ impl Setup {
             secrets,
             bundle,
             install_command: crate::hermes::install::installer_command().to_owned(),
+            runtime: None,
         }
+    }
+
+    /// Unpack the bundled Hermes runtime as the first step, and make it the only Hermes (ADR-0023).
+    #[must_use]
+    pub fn with_runtime(mut self, plan: Plan) -> Self {
+        self.runtime = Some(plan);
+        self
     }
 
     /// Read-only: does setup have to run? It never writes.
@@ -266,6 +279,15 @@ impl Setup {
     /// # Errors
     /// `hx.setup.state_invalid` for a progress file that cannot be used.
     pub async fn check(&self) -> Result<Check> {
+        if let Some(plan) = &self.runtime
+            && !plan.runtime.is_installed(&plan.runtimes_dir())
+        {
+            return Ok(Check {
+                hermes_installed: false,
+                needed: true,
+                reason: "the bundled Hermes has not been unpacked yet".into(),
+            });
+        }
         if self.ops.version().await.is_err() {
             return Ok(Check {
                 hermes_installed: false,
@@ -390,6 +412,13 @@ impl Setup {
     }
 
     async fn steps(&self, run: &mut Run, state: &mut State) {
+        // 0. the bundled runtime, when the app carries one: unpacked, hash-checked, then the private home is configured
+        if let Some(plan) = &self.runtime {
+            self.runtime_step(plan, run, state).await;
+            if run.stop {
+                return;
+            }
+        }
         // 1. Hermes
         match self.ops.version().await {
             Ok(v) => run.done(
@@ -423,6 +452,58 @@ impl Setup {
             return;
         }
         self.restart_step(run, state).await;
+    }
+
+    /// Unpack the runtime this build carries (idempotent), then switch off Hermes's own update check in the private home.
+    /// A failure is a blocked step that says what happened and what to do; nothing is left half installed.
+    async fn runtime_step(&self, plan: &Plan, run: &mut Run, state: &mut State) {
+        let (id, title) = ("runtime", "Hermes runtime");
+        let (runtime, dir) = (plan.runtime.clone(), plan.runtimes_dir());
+        let unpacked = tokio::task::spawn_blocking(move || {
+            let mut last = 0;
+            runtime.install(&dir, &mut |p| {
+                if p.percent() >= last + 10 || p.percent() == 100 {
+                    last = p.percent();
+                    tracing::info!(percent = p.percent(), "unpacking the bundled Hermes");
+                }
+            })
+        })
+        .await;
+        let (layout, outcome) = match unpacked {
+            Ok(Ok(done)) => done,
+            Ok(Err(e)) => return run.blocked(id, title, e.code(), &e),
+            Err(e) => {
+                let e = Error::Setup(
+                    "hx.setup.runtime_unpack_failed",
+                    format!("unpacking Hermes stopped: {e}"),
+                );
+                return run.blocked(id, title, e.code(), &e);
+            }
+        };
+        let manifest = plan.runtime.manifest();
+        // Hermes's own update check and `hermes update` have no place in a bundle: the app's updater ships Hermes.
+        // `hermes update` already refuses (the install stamp says an app owns it); the passive check is switched off here.
+        match self.ops.config_get("updates.check").await {
+            Ok(Some(Value::Bool(false))) => {}
+            Ok(_) => {
+                if let Err(e) = self.ops.config_set("updates.check", "false").await {
+                    return run.blocked(id, title, "hx.setup.config_failed", &e);
+                }
+            }
+            Err(e) => return run.blocked(id, title, "hx.setup.config_failed", &e),
+        }
+        let detail = match outcome {
+            Outcome::Current => format!("Hermes {} is unpacked", manifest.hermes_version),
+            Outcome::Unpacked => {
+                state.restart_pending = true; // a gateway of an older runtime must give way to this one
+                format!(
+                    "unpacked Hermes {} (Python {}) into the app's own folder; it never touches another Hermes",
+                    manifest.hermes_version, manifest.python_version
+                )
+            }
+        };
+        tracing::info!(root = %layout.root.display(), "bundled Hermes ready");
+        run.done(id, title, detail);
     }
 
     async fn plugin_step(&self, run: &mut Run, state: &mut State) {
@@ -586,7 +667,24 @@ impl Setup {
             state.restart_pending = false;
         }
         match self.verify().await {
-            Ok(()) => run.done(id, title, "Hermes runs with the plugin"),
+            Ok(()) => {
+                // Only now, with the gateway on the new runtime, are the older ones removed.
+                if let Some(plan) = &self.runtime {
+                    let (dir, keep) = (
+                        plan.runtimes_dir(),
+                        plan.runtime.layout(&plan.runtimes_dir()).root,
+                    );
+                    let removed = tokio::task::spawn_blocking(move || {
+                        crate::runtime::remove_old(&dir, &keep)
+                    })
+                    .await
+                    .unwrap_or_default();
+                    if !removed.is_empty() {
+                        tracing::info!(count = removed.len(), "removed older Hermes runtimes");
+                    }
+                }
+                run.done(id, title, "Hermes runs with the plugin");
+            }
             Err(e) => run.blocked(id, title, "hx.setup.verify_failed", &e),
         }
     }

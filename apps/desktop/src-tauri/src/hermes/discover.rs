@@ -19,6 +19,20 @@ pub struct Environment {
     pub home_dir: Option<PathBuf>,
     /// `$PATH`.
     pub path: Option<std::ffi::OsString>,
+    /// The runtime the app carries (ADR-0023). When set, it is the only Hermes: nothing is searched for, and the home is
+    /// the app's own, so no `HERMES_HOME`, no `~/.hermes` and no other install on the machine is read.
+    pub bundled: Option<Bundled>,
+}
+
+/// The Hermes the app carries and the private home it runs in.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Bundled {
+    /// Hermes's launcher inside the unpacked runtime (it may not exist yet: first run unpacks it).
+    pub binary: PathBuf,
+    /// The private `HERMES_HOME`.
+    pub home: PathBuf,
+    /// Where Python writes its bytecode, so nothing lands in the user's own cache (`PYTHONPYCACHEPREFIX`).
+    pub pycache: PathBuf,
 }
 
 impl Environment {
@@ -32,12 +46,24 @@ impl Environment {
             local_app_data: get("LOCALAPPDATA"),
             home_dir: dirs::home_dir(),
             path: std::env::var_os("PATH"),
+            bundled: None,
         }
+    }
+
+    /// The process environment with the bundled runtime in charge (`HERMES_HOME`, `HERMES_DATA_DIR_SUFFIX` and
+    /// `~/.hermes` are ignored).
+    #[must_use]
+    pub fn with_bundled(mut self, bundled: Bundled) -> Self {
+        self.bundled = Some(bundled);
+        self
     }
 
     /// Hermes's root home: `$HERMES_HOME`, else `~/.hermes` (Windows: `%LOCALAPPDATA%\hermes`).
     #[must_use]
     pub fn hermes_root(&self) -> PathBuf {
+        if let Some(b) = &self.bundled {
+            return b.home.clone();
+        }
         if let Some(h) = &self.hermes_home {
             return expand_tilde(h, self.home_dir.as_deref());
         }
@@ -148,7 +174,8 @@ pub fn parse_version_output(out: &str) -> Option<String> {
 /// The facts of `install-stamp.json` the host uses. Unknown fields are ignored.
 #[derive(Debug, Clone, Default, Deserialize, PartialEq, Eq)]
 pub struct InstallStamp {
-    /// The release the install is based on.
+    /// The release the install is based on (`baseVersion` in a sealed payload's stamp).
+    #[serde(alias = "baseVersion")]
     pub base_version: Option<String>,
     /// The commit.
     pub commit: Option<String>,
@@ -172,6 +199,9 @@ pub struct HermesInfo {
 /// Find the `hermes` binary: `$PATH`, then the installer's usual places.
 #[must_use]
 pub fn find_binary(env: &Environment) -> Option<PathBuf> {
+    if let Some(b) = &env.bundled {
+        return is_executable(&b.binary).then(|| b.binary.clone());
+    }
     let exe = if cfg!(windows) {
         ["hermes.exe", "hermes.cmd"].as_slice()
     } else {
@@ -219,6 +249,7 @@ pub fn read_stamp(binary: &Path, home: &Path) -> Option<InstallStamp> {
     let candidates = [
         bin_dir.join("../../workspace/install-stamp.json"),
         bin_dir.join("../install-stamp.json"),
+        bin_dir.join("../hermes-agent/install-stamp.json"), // the bundled runtime (a sealed payload)
         bin_dir.join("install-stamp.json"),
         home.join("install-stamp.json"),
     ];
@@ -261,6 +292,68 @@ mod tests {
             home_dir: Some(PathBuf::from(home)),
             ..Environment::default()
         }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn the_bundled_runtime_ignores_every_other_hermes() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        // a user with a Hermes on PATH, in ~/.local/bin, in ~/.hermes, and HERMES_HOME exported
+        let theirs = dir.path().join("bin");
+        std::fs::create_dir_all(&theirs).unwrap();
+        std::fs::write(theirs.join("hermes"), "#!/bin/sh\n").unwrap();
+        std::fs::set_permissions(
+            theirs.join("hermes"),
+            std::fs::Permissions::from_mode(0o755),
+        )
+        .unwrap();
+        let ours = dir.path().join("app/runtime/hermes");
+        let env = Environment {
+            hermes_home: Some("/home/u/their-home".into()),
+            data_dir_suffix: Some("-dev".into()),
+            home_dir: Some(dir.path().to_path_buf()),
+            path: Some(theirs.into_os_string()),
+            ..Environment::default()
+        }
+        .with_bundled(Bundled {
+            binary: ours.clone(),
+            home: dir.path().join("app/hermes-home"),
+            pycache: dir.path().join("app/pycache"),
+        });
+        assert_eq!(env.hermes_root(), dir.path().join("app/hermes-home"));
+        assert_eq!(
+            env.profile_home(None).unwrap(),
+            dir.path().join("app/hermes-home")
+        );
+        assert_eq!(
+            env.profile_home(Some("nina")).unwrap(),
+            dir.path().join("app/hermes-home/profiles/nina")
+        );
+        assert!(
+            find_binary(&env).is_none(),
+            "their hermes is never used, and ours is not unpacked yet"
+        );
+        std::fs::create_dir_all(ours.parent().unwrap()).unwrap();
+        std::fs::write(&ours, "#!/bin/sh\n").unwrap();
+        std::fs::set_permissions(&ours, std::fs::Permissions::from_mode(0o755)).unwrap();
+        assert_eq!(find_binary(&env), Some(ours));
+    }
+
+    #[test]
+    fn a_sealed_payloads_stamp_is_read_beside_its_launcher() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join("bin")).unwrap();
+        std::fs::create_dir_all(dir.path().join("hermes-agent")).unwrap();
+        std::fs::write(dir.path().join("bin/hermes"), "#!/bin/sh\n").unwrap();
+        std::fs::write(
+            dir.path().join("hermes-agent/install-stamp.json"),
+            r#"{"schemaVersion":2,"commit":"ae2a81c","distribution":"desktop-app","baseVersion":"0.23.2"}"#,
+        )
+        .unwrap();
+        let stamp = read_stamp(&dir.path().join("bin/hermes"), dir.path()).unwrap();
+        assert_eq!(stamp.base_version.as_deref(), Some("0.23.2"));
+        assert_eq!(stamp.commit.as_deref(), Some("ae2a81c"));
     }
 
     #[test]

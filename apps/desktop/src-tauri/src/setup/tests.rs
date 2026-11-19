@@ -97,7 +97,7 @@ impl HermesOps for Fake {
 }
 
 struct Rig {
-    _dir: tempfile::TempDir,
+    dir: tempfile::TempDir,
     fake: Arc<Fake>,
     store: Arc<MemoryStore>,
     bundle: Bundle,
@@ -124,7 +124,7 @@ fn rig(config: Value) -> Rig {
             plugin_dir: Some(plugin),
             hx: Some(hx),
         },
-        _dir: dir,
+        dir,
     }
 }
 
@@ -500,5 +500,93 @@ async fn a_build_without_the_plugin_says_so() {
     assert_eq!(
         (step.state, step.code.as_deref()),
         (StepState::Blocked, Some("hx.setup.no_bundle"))
+    );
+}
+
+fn with_runtime(
+    r: &Rig,
+    version: &str,
+    claimed_sha: Option<&str>,
+) -> (Setup, crate::runtime::Plan) {
+    let data = r.dir.path().join("data");
+    let rt = crate::runtime::tests::bundle(
+        &r.dir.path().join("res"),
+        version,
+        &crate::runtime::tests::standard(version),
+        claimed_sha,
+    );
+    let plan = crate::runtime::Plan {
+        runtime: rt,
+        data_dir: data,
+    };
+    (r.setup().with_runtime(plan.clone()), plan)
+}
+
+#[tokio::test]
+async fn the_bundled_runtime_is_unpacked_first_and_hermes_own_update_check_is_off() {
+    let r = rig(main_provider());
+    let (setup, plan) = with_runtime(&r, "0.23.2", None);
+    let check = setup.check().await.unwrap();
+    assert!(check.needed && !check.hermes_installed, "{}", check.reason);
+    assert!(check.reason.contains("unpacked"), "{}", check.reason);
+    let s = setup.advance(None, false).await.unwrap();
+    assert_eq!(s.steps[0].id, "runtime");
+    assert_eq!(s.steps[0].state, StepState::Done, "{:?}", s.steps[0]);
+    assert!(s.steps[0].detail.contains("never touches another Hermes"));
+    assert_eq!(
+        s.steps[1].id, "hermes",
+        "the unpack comes before Hermes is looked for"
+    );
+    assert!(plan.runtime.is_installed(&plan.runtimes_dir()));
+    assert_eq!(
+        r.fake.config.lock().unwrap()["updates"]["check"],
+        json!(false),
+        "Hermes does not check for its own updates inside the bundle"
+    );
+    // again: nothing is unpacked or set twice
+    let before = r
+        .fake
+        .sets
+        .lock()
+        .unwrap()
+        .iter()
+        .filter(|k| *k == "updates.check")
+        .count();
+    let s = setup.advance(None, false).await.unwrap();
+    assert_eq!(s.steps[0].detail, "Hermes 0.23.2 is unpacked");
+    let after = r
+        .fake
+        .sets
+        .lock()
+        .unwrap()
+        .iter()
+        .filter(|k| *k == "updates.check")
+        .count();
+    assert_eq!((before, after), (1, 1));
+}
+
+#[tokio::test]
+async fn a_runtime_that_fails_its_hash_stops_setup_with_the_reason() {
+    let r = rig(main_provider());
+    let (setup, plan) = with_runtime(&r, "0.23.2", Some(&"f".repeat(64)));
+    let s = setup.advance(None, false).await.unwrap();
+    assert_eq!(s.steps[0].state, StepState::Blocked);
+    assert_eq!(
+        s.steps[0].code.as_deref(),
+        Some("hx.setup.runtime_hash_mismatch")
+    );
+    assert!(
+        s.steps[0].detail.contains("nothing was installed"),
+        "{}",
+        s.steps[0].detail
+    );
+    assert!(
+        !s.done && s.steps.len() == 2,
+        "the runtime step and the pending receipt only"
+    );
+    assert!(!plan.runtime.is_installed(&plan.runtimes_dir()));
+    assert!(
+        !r.fake.home.join("plugins").exists(),
+        "nothing after it ran"
     );
 }

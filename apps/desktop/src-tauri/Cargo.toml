@@ -53,6 +53,10 @@ getrandom = "0.3"
 hex.workspace = true
 sha2.workspace = true
 dirs = "6"
+# Unpacking the bundled Hermes runtime (ADR-0023): a .tar.zst, hashed while it is read. MIT or Apache-2.0 both; zstd-sys
+# builds the BSD-licensed C library.
+tar = { version = "0.4", default-features = false }
+zstd = { version = "0.13", default-features = false }
 
 # The Linux webview (ADR-0025): GDK's monitor refresh rate and the web view's settings object, through safe wrappers, and
 # `dlsym` for the one preference the `webkit2gtk` crate has no binding for. Versions match what Tauri's wry already uses.

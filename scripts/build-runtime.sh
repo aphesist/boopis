@@ -23,7 +23,8 @@
 # Left out on purpose (Hermes's package manager fetches them on first use, into the private home): Chromium, Node,
 # ffmpeg, cua-driver, ripgrep, uv, and every extra that is not listed in RUNTIME_EXTRAS.
 #
-# Needs: bash, git, curl, tar, zstd, sha256sum (or shasum), python3 (any, only to read JSON), strip (optional).
+# Needs: bash, git, curl, GNU tar (gtar on macOS), zstd, sha256sum (or shasum), python3 (any, only to read JSON), and
+# llvm-strip (optional: it takes the interpreter's debug symbols out, 46 MB; binutils' strip corrupts that file).
 # The Windows twin (build-runtime.ps1) is not written yet: docs/RELEASING.md says what is left.
 set -euo pipefail
 
@@ -41,6 +42,8 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+if tar --version 2>/dev/null | grep -q 'GNU tar'; then TAR=tar; elif command -v gtar >/dev/null; then TAR=gtar; else
+  echo "GNU tar is needed (on macOS: brew install gnu-tar)" >&2; exit 1; fi
 sha256() { if command -v sha256sum >/dev/null; then sha256sum "$1" | cut -d' ' -f1; else shasum -a 256 "$1" | cut -d' ' -f1; fi; }
 
 # This machine's names: ours for the archive (Rust's std::env::consts), Hermes's for its lock and layout.
@@ -101,12 +104,24 @@ mkdir -p "$WORK/dl/py"; tar -xzf "$WORK/dl/python.tar.gz" -C "$WORK/dl/py"
 mv "$WORK/dl/py/python" "$PAYLOAD/tools/$PY_ENTRY"
 rm -rf "$WORK/dl/py" "$WORK/dl/python.tar.gz"
 PYDIR="$PAYLOAD/tools/$PY_ENTRY"
-# Never needed by Hermes, and 4 MB of the 250: tests, the IDE, Tk, the static-linking config.
+# Never needed by Hermes: tests, the IDE, Tk (its libraries and the _tkinter module), the static-linking config, headers.
 rm -rf "$PYDIR"/lib/python3.*/{test,idlelib,tkinter,turtledemo,config-*} "$PYDIR"/lib/{tcl*,tk*,itcl*,thread*} "$PYDIR"/include "$PYDIR"/share
-if command -v strip >/dev/null && [ "$HOS" = linux ]; then
-  # Debug symbols of the shared libraries only: libpython is 137 MB with them and 34 without. The interpreter
-  # executable itself is left alone: python-build-standalone links it so that binutils' strip corrupts it.
-  find "$PYDIR/lib" -type f \( -name 'libpython3*.so*' -o -path '*/lib-dynload/*.so' \) -exec strip -S {} + 2>/dev/null || true
+rm -f "$PYDIR"/lib/libtcl* "$PYDIR"/lib/libtk* "$PYDIR"/lib/python3.*/lib-dynload/_tkinter*.so
+# The interpreter executable carries libpython inside it (it is not linked to the shared copy: readelf -d shows no
+# NEEDED libpython3), and no extension module or wheel in the payload loads it either (the verify script checks every
+# ELF file). The shared libpython is for programs that embed Python, so it stays out: 33 MB unpacked.
+rm -f "$PYDIR"/lib/libpython3*.so* "$PYDIR"/lib/libpython3*.a
+if [ "$HOS" = linux ]; then
+  # Debug symbols: 46 MB of the interpreter's 78. Only llvm-strip can do it: binutils' strip and objcopy rewrite the
+  # file so that its dynamic string table falls out of its segment, and the interpreter then dies on its first
+  # symbol lookup.
+  LLVM_STRIP="$(command -v llvm-strip || compgen -c llvm-strip- | sort -V | tail -1 || true)"
+  if [ -n "$LLVM_STRIP" ]; then
+    find "$PYDIR/bin" -maxdepth 1 -type f -name 'python3.*' ! -name '*-config' -exec "$LLVM_STRIP" --strip-debug {} +
+    find "$PYDIR/lib" -type f -path '*/lib-dynload/*.so' -exec "$LLVM_STRIP" --strip-debug {} +
+  else
+    echo "warning: no llvm-strip, so the interpreter keeps its debug symbols (46 MB more)" >&2
+  fi
 fi
 PY="$PYDIR/bin/python3"
 "$PY" -c 'import sys, ssl, sqlite3, ctypes, zlib, bz2, lzma, hashlib; print("interpreter", sys.version.split()[0])'
@@ -145,19 +160,21 @@ printf 'implementation = CPython\nversion_info = %s\ninclude-system-site-package
 
 # 7. no bytecode caches (they are rewritten at first run, into the user's cache), no build-machine paths
 find "$PAYLOAD" -name __pycache__ -type d -prune -exec rm -rf {} +
-if grep -rIl --exclude-dir=.git -e "$WORK" "$PAYLOAD" | head -3 | grep .; then
+if grep -rl --binary-files=text --exclude-dir=.git -e "$WORK" "$PAYLOAD" | head -3 | grep .; then
   echo "the payload still names the build directory: it would not be relocatable" >&2; exit 1
 fi
 
 # 8. the archive: deterministic order, owner and times, so the same inputs give the same bytes
 ARCHIVE="hermes-runtime-$OS-$ARCH.tar.zst"
 UNPACKED_BYTES="$(du -sk "$PAYLOAD" | cut -f1)"; UNPACKED_BYTES=$((UNPACKED_BYTES * 1024))
-tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner -C "$PAYLOAD" -cf - . \
+"$TAR" --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner -C "$PAYLOAD" -cf - . \
   | zstd -19 -T0 -q -f -o "$OUT/$ARCHIVE"
 SHA="$(sha256 "$OUT/$ARCHIVE")"
 SIZE="$(wc -c <"$OUT/$ARCHIVE" | tr -d ' ')"
 
-# 9. the manifest the host reads: what this is, and the hash it checks before unpacking
+# 9. the manifest the host reads: what this is, where the launcher and the interpreter are inside the archive (so the
+#    host knows the path before it unpacks), and the hash it checks before unpacking
+HERMES_CMD="bin/hermes"; PY_REL="tools/$PY_ENTRY/bin/python3"
 python3 - "$OUT/runtime.json" <<PY
 import json, sys
 json.dump({
@@ -167,6 +184,8 @@ json.dump({
     "hermes_commit": "$COMMIT",
     "python_version": "$PY_VERSION",
     "target": "$TARGET",
+    "hermes": "$HERMES_CMD",
+    "python": "$PY_REL",
     "os": "$OS",
     "arch": "$ARCH",
     "extras": "$EXTRAS".split(",") if "$EXTRAS" else [],
