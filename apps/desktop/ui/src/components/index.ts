@@ -2,7 +2,7 @@
      html            string templates for modules that build innerHTML
      the factories   button, iconButton, segmented, chip, row, group, ... -> an element, already wired
      hydrate(root)   wires every [data-ui] element under root once
-     menu, popover, layer, tooltip, toast, hold, composer, orb, liven, glance, announce, shape, squircle, modelMark, icon, botState
+     select (the themed select), listbox (its list: a chip's picker), modelEntries, menu, popover, layer, tooltip, toast, hold, composer, orb, liven, glance, announce, shape, squircle, modelMark, icon, botState
    Events bubble from the element and are cancelable where an action follows:
      'ui:change' {value}  segmented, switch, chip, option group
      'ui:commit'          hold to approve finished
@@ -23,6 +23,10 @@ import { isRoute, lastModel, modelFamily, modelHTML, modelMark as modelMarkEl, p
 import type { ModelOpts, ModelRef } from './model-mark';
 import { modView, modViewUpdate, h as modH, sanitizeSvg, validateTree, LIMITS as MOD_LIMITS, modColors } from './mod-view';
 import { glance, liven, orb } from './orb';
+import { listbox, wireSelect } from './select';
+import type { SelectElement } from './select';
+import { modelEntries } from './select-html';
+import type { SelectEntry, SelectGroup, SelectOpts, SelectOption } from './select-html';
 import { shape } from './shape';
 import { squircle } from './squircle';
 import { toast } from './toast';
@@ -59,6 +63,7 @@ const factories = {
   blank: make<{ answer?: string } | undefined, HTMLButtonElement>((o) => html.blank(o ?? {})),
   section: make<Parameters<typeof html.section>[0]>(html.section),
   field: make<FieldOpts>(html.field),
+  select: make<SelectOpts, SelectElement>(html.select),
   empty: make<Parameters<typeof html.empty>[0]>(html.empty),
   row: make<RowOpts, HTMLLIElement>(html.row),
   group: make<Parameters<typeof html.group>[0]>(html.group)
@@ -75,14 +80,16 @@ const modelRoute = (text: string, o?: ModelOpts): HTMLElement => frag(routeHTML(
 export const ui = {
   version, html, esc, icon, icons: iconNames, announce, botState, botLabel, states: STATES,
   ...factories, legend, keys, inline,
-  hydrate, orb, liven, glance, shape, squircle, modelMark, model, modelRoute, menu, popover, layer, tooltip, toast, composer, card,
+  hydrate, orb, liven, glance, shape, squircle, modelMark, model, modelRoute, menu, popover, layer, listbox, modelEntries, wireSelect, tooltip, toast, composer, card,
   hold: Object.assign(holdElement, { wire: wireHold }),
   /** a Claude Code mod's element tree, drawn with the library (MODS.md section 2) */
   modView: Object.assign(modView, { update: modViewUpdate, validate: validateTree, limits: MOD_LIMITS, sanitizeSvg, h: modH, colors: modColors })
 };
 export type Ui = typeof ui;
-export { html, icon, hydrate, hydrateOne, announce, botState, botLabel, orb, liven, glance, shape, squircle, modelMark, menu, popover, layer, tooltip, toast, composer, card, wireHold, holdElement };
+export { html, icon, hydrate, hydrateOne, wireSelect, announce, botState, botLabel, orb, liven, glance, shape, squircle, modelMark, menu, popover, layer, listbox, modelEntries, tooltip, toast, composer, card, wireHold, holdElement };
 export type { SegElement } from './wire';
+export type { SelectElement, ListboxOpts } from './select';
+export type { SelectEntry, SelectGroup, SelectOpts, SelectOption };
 export type { ComposerEl, ComposerOpts, DecisionDetail, AssumptionDetail, DictateDetail, SendDetail } from './composer';
 export type { PageDef, MenuEntry, MenuItem, StepItem, LadderOpts, MeasurePart, Station, CallLine } from './html';
 export type { ModelRef, ModelOpts, MarkOpts, ModelFamily } from './model-mark';

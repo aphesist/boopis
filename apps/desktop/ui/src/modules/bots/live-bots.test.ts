@@ -16,6 +16,11 @@ import './index';
 import { openSettings } from './settings';
 
 const q = <T extends HTMLElement>(sel: string): T => { const n = document.querySelector<T>(sel); if (!n) throw new Error('missing ' + sel); return n; };
+/** the model picker under `scope`: open the select and choose the option the way a person does */
+const pickModel = (scope: string, model: string): void => {
+  q(scope + ' .ui-select').click();
+  [...document.querySelectorAll<HTMLElement>('.ui-listbox .ui-option')].find((o) => o.dataset['value'] === model)!.click();
+};
 const tick = async (): Promise<void> => { for (let i = 0; i < 6; i++) await Promise.resolve(); };
 
 const INFO: BotInfo = {
@@ -149,7 +154,7 @@ describe('making a bot asks first: the folder it makes and the model it starts o
   });
   it('makes it with the model chosen from the configured providers, and the role as instructions', async () => {
     type('kai'); q('.bt-go').click(); await flush();
-    const sel = q<HTMLSelectElement>('.bt-confirm select'); sel.value = 'nous/hermes-4'; sel.dispatchEvent(new Event('change'));
+    pickModel('.bt-confirm', 'nous/hermes-4');
     [...document.querySelectorAll<HTMLButtonElement>('.bt-confirm button')].find((b) => b.textContent?.includes('Make kai'))!.click();
     await flush();
     const call = f.calls.find((c) => c.fn === 'create')!;
@@ -213,7 +218,7 @@ describe('the settings sheet edits the profile and shows each file’s diff firs
   });
   it('a model Hermes wants confirmed is confirmed by the user, then sent once', async () => {
     f.saveError = new NeedsConfirmation('This model sends your code to a third party.');
-    const sel = q<HTMLSelectElement>('.bt-sheet select'); sel.value = 'nous/hermes-4'; sel.dispatchEvent(new Event('change'));
+    pickModel('.bt-sheet', 'nous/hermes-4');
     label('Review changes').click(); label('Save to Hermes').click(); await flush();
     expect(q('.bt-review').textContent).toContain('This model sends your code to a third party.');
     f.saveError = null;

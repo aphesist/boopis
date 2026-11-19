@@ -11,6 +11,8 @@
 import { esc } from '../../core/dom';
 import { ui } from '../../components';
 import { holdOf } from '../../components/hold';
+import { isKnownModel } from '../../components/model-mark';
+import type { SelectElement, SelectEntry } from '../../components';
 import { data as provider } from '../../data';
 import { formsHost } from './forms-host';
 import type { FieldSchema, FormSpec, PickerKind } from '../../data';
@@ -40,14 +42,19 @@ function pickLead(kind: PickerKind, v: unknown, b: ReturnType<typeof bot>): stri
   if (kind === 'model') return U.html.modelMark(String(v ?? ''), { size: 16, color: 'brand', label: false, class: 'cd-glyph' });
   return U.icon(PICK_ICON[kind] ?? 'more', { class: 'cd-glyph' });
 }
-function pickerItems(kind: PickerKind): Array<Record<string, unknown>> {
+/** the picker's list: the library's listbox entries (models are the model picker: grouped by provider, brand marks) */
+function pickerEntries(kind: PickerKind): SelectEntry[] {
   const d = provider();
   if (kind === 'teammate') return d.bots.snapshot().bots.map((b) => ({ value: b.id, label: b.name, desc: b.role, lead: U.html.orb(b, { size: 16 }) }));
-  if (kind === 'model') return [{ title: 'Models' }, ...d.details.models.get().map((m) => ({ value: m, label: m, mono: true, model: m }))];
+  if (kind === 'model') return U.modelEntries(d.details.models.get());
   const items = d.forms.pickerItems(kind);
   const icon = PICK_ICON[kind];
   return items.length ? items.map((x) => ({ value: x.value, label: x.label, desc: x.desc, mono: true, ...(icon ? { icon } : {}) })) : [{ label: 'Nothing to choose from yet', value: '', disabled: true }];
 }
+/** an enum field that asks for a model (setup's "Which model should do the work?", titled Model) is the model picker, not a row of
+    radios: a long list scrolls, and each model carries its provider's mark. The schema may also say so with `x-picker: model`
+    (which lists the provider's own models instead of the enum). A multiple choice and a free answer stay option rows. */
+const isModelChoice = (p: FieldSchema): boolean => !!p.enum && !p['x-multi'] && !p['x-other'] && !p['x-preview'] && /^models?$/i.test((p.title ?? '').trim());
 
 /* ───────── fields ───────── */
 function fieldHTML(c: Ctx, st: FormState, name: string, p: FieldSchema): string {
@@ -78,7 +85,7 @@ function fieldHTML(c: Ctx, st: FormState, name: string, p: FieldSchema): string 
     const v = st.vals[name] ?? p.default;
     const kind = p['x-picker'], b = kind === 'teammate' && v ? bot(String(v)) : undefined;
     return wrap('<span class="ui-field__label" id="' + id + '-l">' + label + '</span>' +
-      '<button type="button" class="ui-input cd-picker" id="' + id + '" data-picker="' + esc(kind) + '" data-name="' + esc(name) + '" aria-haspopup="' + (kind === 'folder' && can.folder ? 'dialog' : 'menu') + '" aria-expanded="false" aria-labelledby="' + id + '-l ' + id + '-v" ' + desc + '>' +
+      '<button type="button" class="ui-input ui-select cd-picker" id="' + id + '" data-picker="' + esc(kind) + '" data-name="' + esc(name) + '" aria-haspopup="' + (kind === 'folder' && can.folder ? 'dialog' : 'listbox') + '" aria-expanded="false" aria-labelledby="' + id + '-l ' + id + '-v" ' + desc + '>' +
       pickLead(kind, v, b) + '<span class="cd-picker__v' + (kind === 'teammate' ? '' : ' cd-mono') + '" id="' + id + '-v">' + esc(v ? (b ? b.name : String(v)) : 'Choose…') + '</span>' + U.icon('chevron-down', { size: 's' }) + '</button>' + hint + err);
   }
   if (p['x-upload']) {
@@ -86,6 +93,12 @@ function fieldHTML(c: Ctx, st: FormState, name: string, p: FieldSchema): string 
       '<div class="ui-input cd-drop" data-drop="' + esc(name) + '" role="group" aria-labelledby="' + id + '-l" ' + desc + '>' +
       btn('choose-file', 'Choose a file', null, { size: 's', disabled: !can.upload, attrs: { 'aria-describedby': id + '-l' } }) + '<span class="cd-drop__hint">' + (can.upload ? 'or drop it here' : 'not available in this build yet') + '</span>' +
       '<input type="file" hidden tabindex="-1" aria-hidden="true"></div>' + hint + err);
+  }
+  if (p.enum && isModelChoice(p)) {
+    const v = st.vals[name] ?? p.default ?? '';
+    const entries = p.enum.map((x) => ({ value: String(x), label: optLabel(p, x), ...(isKnownModel(String(x)) ? { model: String(x) } : {}) }));
+    return wrap('<span class="ui-field__label" id="' + id + '-l">' + label + '</span>' +
+      U.html.select({ id, entries, value: String(v), labelId: id + '-l', describedby: (p.description ? id + '-h ' : '') + id + '-e', attrs: { 'data-select': name } }) + hint + err);
   }
   if (p.enum) {
     const multi = !!p['x-multi'], prev = p['x-preview'];
@@ -108,9 +121,10 @@ function fieldHTML(c: Ctx, st: FormState, name: string, p: FieldSchema): string 
   }
   const num = p.type === 'number' || p.type === 'integer';
   const v = st.vals[name] ?? (p.default != null ? p.default : '');
-  const type = num ? 'number' : p.format === 'email' ? 'email' : p.format === 'uri' ? 'url' : 'text';
+  /* a number is typed in a text field (validated as a number by form-model): the platform's number field grows spin buttons */
+  const type = num ? 'text' : p.format === 'email' ? 'email' : p.format === 'uri' ? 'url' : 'text';
   const common = 'class="ui-input' + (num || p['x-mono'] ? ' ui-input--mono' : '') + '" id="' + id + '" data-name="' + esc(name) + '" autocomplete="off" ' + desc + (req ? ' aria-required="true"' : '') +
-    (p.placeholder ? ' placeholder="' + esc(p.placeholder) + '"' : '') + (num && p.minimum != null ? ' min="' + p.minimum + '"' : '') + (num && p.maximum != null ? ' max="' + p.maximum + '"' : '') + (num && p.type === 'integer' ? ' step="1"' : '');
+    (p.placeholder ? ' placeholder="' + esc(p.placeholder) + '"' : '') + (num ? ' inputmode="' + (p.type === 'integer' && (p.minimum ?? -1) >= 0 ? 'numeric' : 'decimal') + '"' : '');
   const control = p['x-multiline'] ? '<textarea ' + common + ' rows="3">' + esc(v) + '</textarea>' : '<input type="' + type + '" ' + common + ' value="' + esc(v) + '">';
   return wrap('<label class="ui-field__label" for="' + id + '">' + label + '</label>' + control + hint + err);
 }
@@ -372,6 +386,11 @@ export function wireForm(card: HxCard): void {
   }
   for (const g of form.querySelectorAll<HTMLElement>('.cd-opts[data-group]')) wireOptions(card, g, st, props0, clearErr);
   for (const pk of form.querySelectorAll<HTMLButtonElement>('.cd-picker')) wirePicker(pk, st, props0, clearErr);
+  for (const sel of form.querySelectorAll<SelectElement>('.ui-select[data-select]')) {
+    const name = sel.dataset['select'] ?? '';
+    U.wireSelect(sel);
+    sel.addEventListener('ui:change', (e) => { st.vals[name] = (e as CustomEvent<{ value: string }>).detail.value; clearErr(); });
+  }
   for (const drop of form.querySelectorAll<HTMLElement>('.cd-drop')) {
     const name = drop.dataset['drop'] ?? '';
     drop.addEventListener('change', (e) => { const f = (e.target as HTMLInputElement).files?.[0]; if ((e.target as HTMLInputElement).type === 'file' && f) setFile(card, name, f); });
@@ -447,7 +466,6 @@ function wirePicker(pk: HTMLButtonElement, st: FormState, props0: Readonly<Recor
   };
   pk.addEventListener('click', () => {
     if (kind === 'folder' && formsHost().can.folder) { void formsHost().pickFolder().then((v) => { if (v) set(v); }); return; }
-    const items = pickerItems(kind).map((x) => (x['value'] != null && x['value'] !== '' ? { ...x, checked: st.vals[name] === x['value'] } : x));
-    U.menu.open(pk, items as Parameters<typeof U.menu.open>[1], { label: p?.title || cap(name), onSelect: (v) => { set(String(v)); } });
+    U.listbox.open(pk, pickerEntries(kind), { label: p?.title || cap(name), value: String(st.vals[name] ?? ''), onSelect: (v) => { set(v); } });
   });
 }

@@ -198,8 +198,8 @@ function buildNew(seed?: Partial<Draft>): void {
       ...plan.notes.map((n) => el('p', { class: 'bt-confirm-line bt-confirm-note', text: n }))
     ]);
     if (models.length) {
-      const f = ui.field({ kind: 'select', label: 'Model', options: models, value: model ?? models[0] ?? '', hint: 'From the providers Hermes has keys for. You can change it later in its settings.' });
-      $<HTMLSelectElement>('select', f).addEventListener('change', (e) => { model = (e.target as HTMLSelectElement).value; });
+      const f = ui.field({ kind: 'model', label: 'Model', options: models, value: model ?? models[0] ?? '', hint: 'From the providers Hermes has keys for. You can change it later in its settings.' });
+      f.addEventListener('ui:change', (e) => { model = (e as CustomEvent<{ value: string }>).detail.value; });
       model = model ?? models[0] ?? null;
       box.append(f);
     }
