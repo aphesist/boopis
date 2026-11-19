@@ -1,0 +1,109 @@
+<meta charset="utf-8">
+<title>boopis rules</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="The boopis design rules of version 1.1, each drawn live from the tokens and the library: scrollbars, corners, surfaces, type, icons, keys, search fields and every state.">
+<script>
+(function () {
+  try {
+    if (localStorage.getItem('hx.ds.picked')) return;
+    var r = document.documentElement, t = r.getAttribute('data-theme');
+    var light = t ? t === 'light' : matchMedia('(prefers-color-scheme: light)').matches;
+    localStorage.setItem('hx.v6.theme', JSON.stringify({ preset: light ? 'bone' : 'catalog' }));
+  } catch (e) { /* storage blocked: rules.js picks the preset after load */ }
+})();
+</script>
+<link rel="stylesheet" href="hx/tokens.css">
+<link rel="stylesheet" href="ui/components.css">
+<link rel="stylesheet" href="specimen.css">
+<link rel="stylesheet" href="rules.css">
+<script src="hx/theme.js"></script>
+
+<div class="sp ui-root" id="sp">
+  <header class="sp-bar">
+    <div class="sp-bar__in">
+      <a class="sp-brand" href="#top" aria-label="boopis rules, back to the top"><b>boopis</b><span>rules 1.1</span></a>
+      <div class="sp-controls" data-demo="controls"></div>
+    </div>
+  </header>
+
+  <div class="sp-page" id="top">
+    <nav class="sp-toc" aria-label="Contents">
+      <ol>
+        <li><a href="#scroll">Scrollbars</a></li>
+        <li><a href="#corner">Corners and tabs</a></li>
+        <li><a href="#stack">Surfaces on surfaces</a></li>
+        <li><a href="#type">Type in use</a></li>
+        <li><a href="#icons">Icons</a></li>
+        <li><a href="#keys">Keys and search</a></li>
+        <li><a href="#states">Focus and states</a></li>
+      </ol>
+    </nav>
+
+    <main class="sp-main">
+      <div class="sp-intro">
+        <h1>Every decision has a rule</h1>
+        <p>Version 1.1 of the boopis design system gives each visual decision a written rule with an ID, so a fix, a review or an automated check can cite it. This page draws the new and tightened rules live, from the same tokens and library the app loads; the controls above re-theme it. The rules themselves are in DESIGN-SYSTEM.md, one line each with their checks in RULES.md.</p>
+        <p>A rule marked proposed waits for the owner's approval; until then it is the default.</p>
+        <div class="sp-meta"><span>tokens.css</span><span>components/components.css</span><span>DESIGN-SYSTEM.md 1.1</span><span>RULES.md</span></div>
+      </div>
+
+      <section class="sp-sec" id="scroll" aria-labelledby="h-scroll">
+        <h2 id="h-scroll">Scrollbars</h2>
+        <p>One thin bar in every engine, drawn with <code class="ui-code">::-webkit-scrollbar</code>, because WebKitGTK ignores <code class="ui-code">scrollbar-width</code> and Chromium turns the pseudo-elements off while it is set. A 4px capsule in a 10px gutter that is always there, so nothing moves when the bar appears; 6px and 3:1 under the pointer; its track stops short of the dialog's curve.</p>
+        <div class="rl-id"><code>R-scroll-1</code><code data-proposed>R-scroll-2</code><code data-proposed>R-scroll-3</code><code data-proposed>R-scroll-4</code><code data-proposed>R-scroll-5</code><code>R-scroll-6</code></div>
+        <div class="rl-pair" data-demo="scroll"></div>
+      </section>
+
+      <section class="sp-sec" id="corner" aria-labelledby="h-corner">
+        <h2 id="h-corner">Corners and tabs</h2>
+        <p>A piece in a corner sits inside it and fits it; the pieces on the same band as the corner piece share its radius. In a dialog the close button sits 12 from both edges at 30 − 12 = 18, so the head's tabs take 18 too: at 28px tall they are capsules, concentric with the dialog. A segmented control on that band takes the band's radius for its track.</p>
+        <div class="rl-id"><code>R-corner-3</code><code>R-corner-4</code><code data-proposed>R-corner-5</code><code data-proposed>R-seg-3</code><code>R-tab-1</code><code>R-dialog-1</code></div>
+        <div class="rl-pair" data-demo="corner"></div>
+        <div class="sp-sub"><h3>The composer's corner pieces</h3><p>Attach, chips, mic and send sit 6 from the box's edges at 20 − 6 = 14; nothing touches the edge or its curve.</p><div class="sp-stage" data-demo="composer"></div></div>
+      </section>
+
+      <section class="sp-sec" id="stack" aria-labelledby="h-stack">
+        <h2 id="h-stack">Surfaces on surfaces</h2>
+        <p>Depth is tone. In flow, each surface holds only the next tone of the ladder; a shadow appears only when something floats, in five levels. A card never holds a card: it holds a well. Cards waiting in a queue stack as peeks of their foot, inset 12 and 24, at .9 and .55, with no shadow.</p>
+        <div class="rl-id"><code>R-elev-1</code><code>R-elev-2</code><code>R-stack-1</code><code>R-stack-2</code><code>R-stack-3</code><code>R-card-2</code></div>
+        <div class="sp-sub"><h3>Five levels</h3><div class="rl-levels" data-demo="levels"></div></div>
+        <div class="sp-sub"><h3>A card on the ground, a queue behind it</h3><div class="rl-ground" data-demo="stack"></div></div>
+      </section>
+
+      <section class="sp-sec" id="type" aria-labelledby="h-type">
+        <h2 id="h-type">Type in use</h2>
+        <p>Six sizes, three weights by role, line heights from tokens. A one-line label ends with an ellipsis and never wraps.</p>
+        <div class="rl-id"><code>R-type-2</code><code data-proposed>R-type-3</code><code>R-type-4</code><code>R-type-7</code><code>R-overflow-1</code></div>
+        <div class="rl-type" data-demo="type"></div>
+      </section>
+
+      <section class="sp-sec" id="icons" aria-labelledby="h-icons">
+        <h2 id="h-icons">Icons</h2>
+        <p>Six sizes, each a token, one 1.5px stroke at every size. Icon to label is 8 in buttons, rows and menus, 6 in chips and controls of 26px and under. A glyph is centred in its own square; in a two-line menu item it centres on the first line.</p>
+        <div class="rl-id"><code>R-icon-2</code><code>R-icon-3</code><code>R-icon-5</code><code>R-icon-6</code><code>R-icon-9</code></div>
+        <div class="sp-sub"><h3>Sizes</h3><div class="rl-icons" data-demo="icon-sizes"></div></div>
+        <div class="sp-sub"><h3>Gaps and alignment</h3><div class="rl-gaps" data-demo="icon-gaps"></div></div>
+      </section>
+
+      <section class="sp-sec" id="keys" aria-labelledby="h-keys">
+        <h2 id="h-keys">Keys and search fields</h2>
+        <p>A key chip at the end of a rounded container takes that container's inner radius, never more than a capsule: 8 in a tooltip and in the 26px command field. In running text it keeps 6. A search field's glyph is centred in a square as tall as the field, as the palette already does.</p>
+        <div class="rl-id"><code>R-kbd-1</code><code>R-kbd-2</code><code>R-search-1</code><code>R-search-2</code><code data-proposed>R-search-3</code><code>R-search-4</code><code>R-search-5</code></div>
+        <div class="rl-pair" data-demo="keys"></div>
+      </section>
+
+      <section class="sp-sec" id="states" aria-labelledby="h-states">
+        <h2 id="h-states">Focus and states</h2>
+        <p>Every control draws the same states with the same tokens. Hover and press are shown here as they look; focus is the 2px brass ring, inset inside rows and tracks. Disabled controls drawn in fills share one opacity.</p>
+        <div class="rl-id"><code>R-state-1</code><code>R-state-5</code><code data-proposed>R-state-6</code><code>R-focus-1</code><code>R-focus-2</code></div>
+        <div class="rl-scroll rl-scroll-wrap" data-demo="states"></div>
+      </section>
+
+      <p class="sp-foot">boopis rules 1.1, 19 November 2026. Drawn from tokens.css and the library; every rule ID is in DESIGN-SYSTEM.md and RULES.md.</p>
+    </main>
+  </div>
+</div>
+
+<script src="hx/data.js"></script>
+<script src="ui/components.js"></script>
+<script src="rules.js"></script>
