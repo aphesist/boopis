@@ -11,10 +11,10 @@ import type { SlotName } from '../../core/registry';
 import { followScheme, followWindowWidth, prefs, saveState, setMounting, setState, setStateHooks, state, toggle, urlQuery } from '../../core/state';
 import { TABS } from '../../core/settings';
 import type { Tab } from '../../core/types';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 import { data } from '../../data';
 import { themeApi } from '../../styles/theme';
-import { openKeys, openMenu, openSettings, wireDialogs } from './dialogs';
+import { openKeys, openMenu, openSettings, SETTINGS_SECTIONS, wireDialogs } from './dialogs';
 import { collectEls, els, sh } from './ctx';
 import { reportAttention, seedAttention, setTitleOverride, updateAttentionDots, updateTitle } from './attention';
 import { newThing, syncFullscreenIcon, toast, toggleDockExpand, toggleFullscreen, toggleLightDark, togglePanel } from './actions';
@@ -25,7 +25,7 @@ import { closePalette, movePal, openPalette, paletteActive, renderPalette, reset
 import { cycleRegion, focusRegion, leaderActive, leaderKey, nextAttention, regionOf, rememberFocus, startLeader } from './regions';
 import { getLayout } from '../../core/state';
 /* drawn corners (DESIGN-SYSTEM.md section 8): the shell's surfaces; sheets and menus float, so they are surfaces */
-ui.squircle.auto('.hx-cmd, .hx-me, .hx-dtab, .hx-pal-row');
+ui.squircle.auto('.hx-me, .hx-pal-row');
 ui.squircle.auto('.hx-dialog__card, .hx-palette__box, .hx-goto, .hxt-preset', { mode: 'surface' });
 
 const log = logger('shell');
@@ -152,6 +152,12 @@ export function boot(): void {
   if (sh.booted) return;
   const app = $('#hx-app');
   sh.app = app;
+  // the search field, twice from the library: the title bar's button that opens the palette, and the palette's own field
+  $('#hx-btn-search', app).outerHTML = ui.html.search({ as: 'button', size: 's', id: 'hx-btn-search', class: 'hx-cmd', label: 'Search and commands', keys: 'mod+K',
+    textHTML: '<span class="hx-cmd__project" id="hx-where-project"></span> <span class="hx-cmd__title" id="hx-where-title"></span>', attrs: { 'aria-haspopup': 'dialog', 'aria-expanded': 'false' } });
+  $('#hx-palette-input', app).outerHTML = ui.html.search({ size: 'l', id: 'hx-palette-input', label: 'Search sessions, bots and commands', placeholder: 'Search sessions, bots and commands', keys: 'esc',
+    attrs: { role: 'combobox', 'aria-expanded': 'true', 'aria-controls': 'hx-palette-list', 'aria-autocomplete': 'list' } });
+  $('#hx-keys-filter', app).outerHTML = ui.html.search({ size: 'm', id: 'hx-keys-filter', class: 'hx-keys-filter', label: 'Filter shortcuts', placeholder: 'Filter' });
   sh.el = collectEls();
   const el = els();
 
@@ -169,9 +175,11 @@ export function boot(): void {
   for (const b of $$('[role="tab"]', sh.seg.rail)) b.dataset['tipPos'] = 'right';
   $('#hx-seg').replaceWith(sh.seg.tabs);
   $('#hx-rail-seg').replaceWith(sh.seg.rail);
-  sh.seg.collapse = ui.segmented({ mode: 'radio', size: 's', label: 'When the sidebar collapses', value: prefs.collapse, options: [{ value: 'rail', label: 'Rail' }, { value: 'closed', label: 'Hide' }] });
-  sh.seg.collapse.setAttribute('aria-labelledby', 'hx-set-collapse-l'); sh.seg.collapse.removeAttribute('aria-label');
+  sh.seg.collapse = ui.segmented({ mode: 'radio', size: 's', labelledby: 'hx-set-collapse-l', value: prefs.collapse, options: [{ value: 'rail', label: 'Rail' }, { value: 'closed', label: 'Hide' }] });
   $('#hx-set-collapse').replaceWith(sh.seg.collapse);
+  // Settings' sections: the library's tab bar, concentric with the dialog's corner band
+  $('#hx-dtabs').outerHTML = ui.html.tabs({ label: 'Settings sections', class: 'hx-dtabs', value: 'general',
+    tabs: SETTINGS_SECTIONS.map(([value, label]) => ({ value, label, id: 'hx-dtab-' + value, controls: 'hx-dpanel-' + value })) });
   ui.hydrate($('#hx-settings'));
 
   // user

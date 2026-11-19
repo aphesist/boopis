@@ -3,7 +3,7 @@
    to the conversation (the shell; the sheet stays open), mod+I or the close button closes it. */
 import { emit } from '../../core/bus';
 import { $, cap1, el, esc, frag, reduced } from '../../core/dom';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { Bot, BotConfig } from '../../data';
 import { cronValid, cronWords, CRON_PRESETS } from './cron';
@@ -55,7 +55,7 @@ export function openSettings(id: string | null, focusSection?: string | null, op
   const close = ui.iconButton({ icon: 'close', label: 'Close bot settings', keys: 'mod+I' });
   close.addEventListener('click', () => { closeSettings(); focusConversation(); });
   const head = el('header', { class: 'ui-panel__head' }, [el('h2', { class: 'ui-panel__title', text: 'Bot settings' }), close]);
-  const body = el('div', { class: 'ui-panel__body' });
+  const body = el('div', { class: 'ui-panel__body ui-scroll ui-scroll--stable' });
   const sec = sectionOf, hint = hintOf;
 
   /* role and instructions */
@@ -72,7 +72,7 @@ export function openSettings(id: string | null, focusSection?: string | null, op
       const g = data().details.governance.get();
       modelBox.append(ui.ladder({ stations: g.ladder, current: 0, variant: 'list', label: 'Escalation ladder' }));
       const capId = 'bt-cap-' + b.id;
-      const row = frag(ui.html.setRow({ label: 'Cap per run', hint: 'Dollars per run', for: capId, control: '<input class="ui-input ui-input--mono bt-cap" id="' + capId + '" inputmode="decimal" autocomplete="off" value=""' + esc(c.cap) + '">' }));
+      const row = frag(ui.html.setRow({ label: 'Cap per run', hint: 'Dollars per run', for: capId, control: ui.html.input({ id: capId, value: c.cap, mono: true, class: 'bt-cap', attrs: { inputmode: 'decimal', spellcheck: null } }) }));
       $<HTMLInputElement>('input', row).addEventListener('input', (e) => { c.cap = (e.target as HTMLInputElement).value; push({ cap: c.cap }); paintToolbar(b); });
       modelBox.append(row);
     } else {

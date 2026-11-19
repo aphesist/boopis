@@ -1,6 +1,6 @@
 /* The shell's shared handles: its elements, the selection per tab, the history, the attention counts. */
 import { $ } from '../../core/dom';
-import type { SegElement } from '../../components';
+import type { SegElement } from '@boopis/ui';
 import type { Tab } from '../../core/types';
 
 export interface Els {

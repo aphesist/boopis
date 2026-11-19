@@ -2,6 +2,7 @@
    and waits; this card shows OpenAI's page as a button that opens the system browser and the code in large mono with a copy
    button, says that it is waiting, and offers Cancel. How it ended comes from the host as an event. The tokens stay in the
    host and its keychain: nothing here ever holds one. Used by first-run setup and by Settings > Models. */
+import { ui } from '@boopis/ui';
 import { commands, events } from './bindings';
 import type { ChatgptCode, ChatgptSigninEvent, ChatgptStatus_Serialize } from './bindings';
 import { asHostError } from './bridge';
@@ -49,7 +50,7 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, props: Partial<Record
   return node;
 }
 function button(text: string, variant: 'primary' | 'ghost' | '', onClick: () => void, attrs: Partial<Record<string, string>> = {}): HTMLButtonElement {
-  const b = el('button', { type: 'button', class: 'ui-btn' + (variant ? ' ui-btn--' + variant : ''), ...attrs }, el('span', {}, text));
+  const b = ui.button({ label: text, type: 'button', ...(variant ? { variant } : {}), attrs });
   b.addEventListener('click', (e) => { e.preventDefault(); onClick(); });
   return b;
 }

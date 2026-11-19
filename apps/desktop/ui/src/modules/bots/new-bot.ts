@@ -2,8 +2,8 @@
 import { emit } from '../../core/bus';
 import { $, cap1, el, reduced } from '../../core/dom';
 import { setState, state } from '../../core/state';
-import { ui } from '../../components';
-import { oc } from '../../components/orb';
+import { ui } from '@boopis/ui';
+import { oc } from '@boopis/ui';
 import { data } from '../../data';
 import { DRAFT_COLOR, paintOrb, paintOrbColour, SHAPES, SWATCHES } from './paint';
 import { rollLook } from '../../data/looks';
@@ -81,7 +81,7 @@ function buildNew(seed?: Partial<Draft>): void {
       return btn;
     }))
   ]) : null;
-  pane.append(el('div', { class: 'bt-new-scroll' }, [el('div', { class: 'bt-new-col' }, [back, form, suggest])]));
+  pane.append(el('div', { class: 'bt-new-scroll ui-scroll' }, [el('div', { class: 'bt-new-col' }, [back, form, suggest])]));
 
   tabs.addEventListener('ui:change', (e) => { d.tab = (e as CustomEvent<{ value: string }>).detail.value; paintRow(); });
   /* The tiles are built when the tab changes, never on a choice: rebuilding 15 orb canvases (each with its 3D body)

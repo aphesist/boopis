@@ -12,8 +12,8 @@
    stores only what was applied (docs/MODS.md section 10). */
 import { on } from '../../core/bus';
 import { logger } from '../../core/log';
-import { ui } from '../../components';
-import { MARK, parseLiteral } from '../../components/mod-colors';
+import { ui } from '@boopis/ui';
+import { MARK, parseLiteral } from '@boopis/ui';
 import type { HxCard } from '../cards';
 import type { FormSpec, ModTheme } from '../../data';
 import { EDITABLE, GROUPS, skippedSentence, themeApi } from '../../styles/theme';

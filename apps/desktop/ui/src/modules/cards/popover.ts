@@ -1,6 +1,6 @@
 /* The expanded blank is a card that brings its own surface; the library's one layer places it below the gap, closes
    it on Esc or an outside press, loops Tab inside and returns focus to the gap. */
-import { layer } from '../../components';
+import { layer } from '@boopis/ui';
 import { create } from './card';
 import type { HxCard } from './card';
 

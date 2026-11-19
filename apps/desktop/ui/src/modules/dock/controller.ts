@@ -7,7 +7,7 @@ import { emit } from '../../core/bus';
 import { $$ } from '../../core/dom';
 import { setState } from '../../core/state';
 import { writeJSON, KEYS } from '../../core/settings';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { Wait } from '../../data';
 import { PAGE_NAME, S, X, botById, flags, motion, presence, shownPages, EASE, clamp } from './ctx';

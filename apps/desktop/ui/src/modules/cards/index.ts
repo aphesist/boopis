@@ -1,12 +1,12 @@
 /* The card layer: HX.cards of the v6 mock-up. `createCard(kind, data, opts)` -> <hx-card>; `queue(items, opts)`.
    Importing this module registers the factory the component library's `ui.card` calls. */
-import { setCardFactory } from '../../components/card-registry';
-import type { CardFactory } from '../../components/card-registry';
+import { setCardFactory } from '@boopis/ui';
+import type { CardFactory } from '@boopis/ui';
 import { create } from './card';
 import { KINDS } from './kinds';
 import { queue } from './queue';
 import { openBlank, closeBlank } from './popover';
-import { layer } from '../../components';
+import { layer } from '@boopis/ui';
 import type { Data } from './types';
 
 setCardFactory(((kind, data, opts) => create(kind, data as Data, opts)) as CardFactory);

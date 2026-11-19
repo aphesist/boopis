@@ -3,7 +3,7 @@
    others wait the toast carries a quiet "+N" in mono, and dismissing one (its close button, Esc inside it, or its action) shows
    the next at once. The library's toast is the one notice node; the queue only decides which text it shows. */
 import { esc, tokenMs } from '../../core/dom';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 
 interface Queued { plugin: string; text: string; ms: number; action?: { label: string; onClick?: () => void } | undefined; gone?: boolean }
 const Q = { wait: [] as Queued[], cur: null as Queued | null, node: null as HTMLElement | null, watch: null as MutationObserver | null, timer: 0 };
@@ -31,7 +31,7 @@ function showNext(): void {
   const first = node.firstElementChild;
   if (first && first.tagName === 'SPAN') { first.className = 'mod-toast'; first.innerHTML = '<span class="mod-toast__who">' + ui.html.mod(t.plugin) + '</span><span class="mod-toast__t">' + esc(t.text) + '</span>'; }
   const x = ui.iconButton({ icon: 'close', label: 'Dismiss', size: 's', tip: false });
-  x.classList.add('mod-toast__x');
+  x.classList.add('mod-toast__x', 'ui-corner');
   x.addEventListener('click', () => { dismiss(); });
   node.append(x);
   node.onkeydown = (e) => { if (e.key === 'Escape') { e.stopPropagation(); dismiss(); } };

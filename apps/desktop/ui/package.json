@@ -18,6 +18,7 @@
     "perf:webkit": "node tests/perf/run.mjs",
     "tokens": "node scripts/build-tokens.mjs",
     "tokens:check": "node scripts/build-tokens.mjs --check",
+    "kit": "vite build --config vite.kit.config.ts",
     "dev:desktop": "vite --mode desktop",
     "build:desktop": "pnpm tokens:check && tsc --noEmit && vite build --mode desktop",
     "vendor:hermes-shared": "node scripts/vendor-hermes-shared.mjs"

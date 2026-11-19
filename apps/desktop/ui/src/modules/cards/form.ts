@@ -9,10 +9,10 @@
    a log. Accessible errors: every error sits in the field's description, the field is `aria-invalid`, the first one is
    announced and focused. */
 import { esc } from '../../core/dom';
-import { ui } from '../../components';
-import { holdOf } from '../../components/hold';
-import { isKnownModel } from '../../components/model-mark';
-import type { SelectElement, SelectEntry } from '../../components';
+import { ui } from '@boopis/ui';
+import { holdOf } from '@boopis/ui';
+import { isKnownModel } from '@boopis/ui';
+import type { SelectElement, SelectEntry } from '@boopis/ui';
 import { data as provider } from '../../data';
 import { formsHost } from './forms-host';
 import type { FieldSchema, FormSpec, PickerKind } from '../../data';
@@ -107,13 +107,14 @@ function fieldHTML(c: Ctx, st: FormState, name: string, p: FieldSchema): string 
     const free = typeof cur === 'string' && !p.enum.includes(cur) && cur ? cur : '';
     const rows = p.enum.map((v, i) => '<button type="button" class="cd-opt" role="' + (multi ? 'checkbox' : 'radio') + '" data-v="' + esc(v) + '" data-i="' + i + '" aria-checked="' + on(v) + '"' +
       (i < 9 ? ' aria-keyshortcuts="' + (i + 1) + '"' : '') + ' tabindex="' + (multi || on(v) || (cur == null && i === 0) ? '0' : '-1') + '">' +
-      '<span class="cd-opt__ring" aria-hidden="true">' + (multi ? check() : '') + '</span><span class="cd-opt__text">' + fmt(optLabel(p, v)) + '</span>' +
+      (multi ? '<span class="cd-opt__check" aria-hidden="true">' + check() + '</span>' : '<span class="cd-opt__ring" aria-hidden="true"></span>') + '<span class="cd-opt__text">' + fmt(optLabel(p, v)) + '</span>' +
       (i < 9 ? '<span class="cd-opt__key" aria-hidden="true">' + (i + 1) + '</span>' : '') + '</button>').join('') +
       (p['x-other'] ? '<label class="cd-free" data-other' + (free ? ' data-on' : '') + '><span class="cd-opt__ring" aria-hidden="true"></span><span class="ui-sr">Other: your own answer</span>' +
         '<input type="text" autocomplete="off" spellcheck="false" placeholder="Other" value="' + esc(free) + '"></label>' : '');
     const group = '<div class="cd-opts" role="' + (multi ? 'group' : 'radiogroup') + '" id="' + id + '" aria-labelledby="' + id + '-l" ' + desc + ' data-group="' + esc(name) + '">' + rows + '</div>';
     const preview = prev ? '<div class="cd-preview" aria-live="polite" data-preview-for="' + esc(name) + '"></div>' : '';
-    return wrap('<span class="ui-field__label" id="' + id + '-l">' + label + '</span>' + (prev ? '<div class="cd-pick">' + group + preview + '</div>' : group) + hint + err, prev ? 'cd-field--preview' : '');
+    /* a several-choice list says so in its label (R-check-1) */
+    return wrap('<span class="ui-field__label" id="' + id + '-l">' + label + (multi ? ' <span class="cd-any">Choose any</span>' : '') + '</span>' + (prev ? '<div class="cd-pick">' + group + preview + '</div>' : group) + hint + err, prev ? 'cd-field--preview' : '');
   }
   if (p.type === 'boolean') {
     const v = st.vals[name] != null ? !!st.vals[name] : !!p.default;
@@ -428,7 +429,7 @@ function wireOptions(card: HxCard, g: HTMLElement, st: FormState, props0: Readon
       if (multi) { const cur = [...((st.vals[name] as unknown[] | undefined) ?? [])], k = cur.indexOf(v); if (k >= 0) cur.splice(k, 1); else cur.push(v); st.vals[name] = cur; }
       else { st.vals[name] = v; if (other) other.value = ''; }
       sync(); showPreview(multi ? null : v);
-      if (r.getAttribute('aria-checked') === 'true') animate(r.querySelector('.cd-opt__ring'), [{ transform: 'scale(.5)' }, { transform: 'scale(1)' }], { preset: 'quick' });
+      if (r.getAttribute('aria-checked') === 'true') animate(r.querySelector('.cd-opt__ring, .cd-opt__check'), [{ transform: 'scale(.5)' }, { transform: 'scale(1)' }], { preset: 'quick' });
       clearErr();
     });
     r.addEventListener('focus', () => showPreview(multi ? null : opts[i]));

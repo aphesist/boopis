@@ -1,7 +1,7 @@
 /* The models plan as a Settings section: the same rows the design system's settings use (`setRow`), filled only with what
    Hermes reported (free-tier.ts). It has no tab of its own here: Settings > Models mounts it (`mountPlan`), and Diagnostics
    carries the same facts as text (`planLines`, in the report). Refreshing asks Hermes again; nothing is cached or guessed. */
-import { ui } from '../components';
+import { ui } from '@boopis/ui';
 import { currentPlan, inWords, resetText } from './free-tier';
 import type { PlanView } from './free-tier';
 
@@ -29,9 +29,9 @@ const esc = (t: string): string => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', 
 /** build the section for a view */
 export function planSection(view: PlanView, now = Date.now()): HTMLElement {
   const sec = document.createElement('section');
-  sec.className = 'hx-set';
+  sec.className = 'ui-set';
   sec.setAttribute('aria-labelledby', 'hx-set-plan-h');
-  sec.innerHTML = '<h3 class="ui-set__head" id="hx-set-plan-h">Plan</h3>' + planRows(view, now).join('');
+  sec.innerHTML = ui.html.setHead({ id: 'hx-set-plan-h', label: 'Plan' }) + planRows(view, now).join('');
   return sec;
 }
 

@@ -9,8 +9,8 @@
 /* ───────────── the drawer: the band and an inline pane share it. Inset (what the system set into the work), the
    corner of a card, concentric with the controls at its edge (DESIGN-SYSTEM §8.2) ───────────── */
 .mod-band, .mod-inline {
-  --r-outer: var(--r-m); --pad: 4px; --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad)));
-  box-sizing: border-box; border-radius: var(--r-outer); padding: var(--pad);
+  --r-outer: var(--r-m); --pad: var(--pad-menu); --corner-size: 24px;   /* a container (.ui-nest) whose corner controls are 24px: inset 8, radius 12 */
+  box-sizing: border-box; border-radius: var(--r-outer); padding: var(--pad) var(--corner-inset) var(--pad) var(--pad);
   --sq-bg: var(--bg-0); background: var(--sq-bg); --sq-line: var(--hair); box-shadow: inset 0 0 0 1px var(--hair);
   font: 400 var(--fs-s)/var(--lh-ui) var(--sans); color: var(--text); text-transform: none;
 }
@@ -27,7 +27,6 @@
 .mod-row[data-open="true"] .mod-row__who { padding-top: 9px; }
 .mod-row[data-open="true"] .mod-row__body { padding-block: 4px 6px; }
 .mod-row[data-open="true"] .mod-chev { margin-top: 4px; }
-.mod-chev { border-radius: var(--r-in); }
 .mod-chev .ui-icon { transition: transform var(--dur-2) var(--ease); }
 .mod-chev[aria-expanded="true"] .ui-icon { transform: rotate(90deg); }
 .mod-row .mv-root .ui-btn--s { height: calc(var(--ctl-s) - 4px); border-radius: var(--r-in); }
@@ -36,25 +35,12 @@
 .mod-inline__head { display: flex; align-items: center; gap: var(--sp-1); height: 32px; padding-left: 10px; }
 .mod-inline__head .mv-by { color: var(--text-dim); font-size: var(--fs-xs); }
 .mod-inline__title { flex: 1; min-width: 0; margin-left: var(--sp-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 var(--fs-s)/1 var(--sans); color: var(--text-strong); }
-.mod-inline__head .ui-ib { border-radius: var(--r-in); }
-.mod-inline__body { padding: var(--sp-1) 10px var(--sp-3); max-height: min(28vh, 260px); overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--bg-4) transparent; }
+.mod-inline__body { padding: var(--sp-1) 10px var(--sp-3); max-height: min(28vh, 260px); }   /* a scroll area (.ui-scroll) */
 
 /* ───────────── a pane: a tab in the details panel ───────────── */
 .mod-head { padding-right: 12px; }
-.mod-tabs { display: flex; gap: 2px; min-width: 0; margin-left: -6px; overflow-x: auto; scrollbar-width: none; }
-.mod-tabs::-webkit-scrollbar { display: none; }
-.mod-tabs[data-more] { -webkit-mask-image: linear-gradient(to right, var(--text) calc(100% - 28px), transparent); mask-image: linear-gradient(to right, var(--text) calc(100% - 28px), transparent); }
-.mod-tab {
-  appearance: none; flex: none; display: inline-flex; align-items: center; max-width: 148px; height: var(--ctl-s); padding: 0 10px; margin: 0; border: 0; border-radius: var(--r-s);
-  --sq-bg: transparent; background: var(--sq-bg); color: var(--text-dim); font: 500 var(--fs-s)/1 var(--sans); text-transform: var(--ui-case); white-space: nowrap; cursor: pointer;
-  transition: background-color var(--dur-out) var(--ease), color var(--dur-out) var(--ease), transform var(--dur-press) var(--ease);
-}
-.mod-tab:hover { --sq-bg: var(--hover); background: var(--sq-bg); color: var(--text); transition-duration: var(--dur-1); }
-.mod-tab:active { transform: translateY(1px) scale(.985); }
-.mod-tab[aria-selected="true"] { --sq-bg: var(--current); background: var(--sq-bg); color: var(--text-strong); }
-.mod-tab:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
-.mod-tab[data-sq-on]:focus-visible { outline: none; }
-.mod-tab .mv-by__g { color: currentColor; opacity: .8; }
+.mod-tabs { margin-left: -6px; }   /* the library's scrolling tab bar (.ui-tabs--scroll), placed in the panel head */
+.mod-tabs .mv-by__g { color: currentColor; opacity: .8; }
 .mod-pane { box-shadow: inset 0 1px 0 var(--hair); }
 .mod-pane__head { display: flex; align-items: center; justify-content: space-between; height: 36px; padding: 0 12px 0 20px; }
 .mod-pane__head .mv-by { color: var(--text-quiet); font: 400 var(--fs-xs)/1 var(--sans); }
@@ -92,7 +78,7 @@
   .ss-mods--status:not(:empty) { padding-inline: 10px; gap: var(--sp-3); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .mod-chev .ui-icon, .mod-tab { transition: none; }
+  .mod-chev .ui-icon { transition: none; }
 }
 
 /* ───────────── the composer's rise (riseComposer in mods.js): the ghosts are visual copies of what is leaving ───────────── */
@@ -101,7 +87,9 @@
 
 /* ───────────── the toast queue: a quiet "+N" while others wait, and a way to dismiss ───────────── */
 .mod-toast__more { flex: none; margin-left: calc(var(--sp-2) * -1); font: 400 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); font-variant-numeric: tabular-nums; color: var(--text-quiet); text-transform: none; }
-.ui-toast > .mod-toast__x { border-radius: var(--r-in); flex: none; }
+/* the dismiss is a 24px corner control: while the toast holds one its corner size is 24 (inset 8, radius 12) */
+.ui-toast:has(> .mod-toast__x) { --corner-size: 24px; }
+.ui-toast > .mod-toast__x { flex: none; }
 
 /* ───────────── the theme card while it previews: the colours are on the whole app ───────────── */
 .cd-live { display: none; align-items: center; gap: 6px; margin-left: auto; align-self: flex-start; font: 400 var(--fs-2xs)/16px var(--mono); letter-spacing: var(--track-mono); color: var(--text-dim); text-transform: none; }

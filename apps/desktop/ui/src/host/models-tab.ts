@@ -3,7 +3,7 @@
    Gemini: ADR-0030), and "Change models", which asks setup's models question again through the same first-run view and
    forms. Everything shown is read now, from the host; what could not be read is said so, never filled in. The rows are the
    design system's settings rows and ladder list. */
-import { ui } from '../components';
+import { ui } from '@boopis/ui';
 import { changeModels } from './change-models';
 import { currentPlan } from './free-tier';
 import type { PlanView } from './free-tier';
@@ -114,7 +114,7 @@ export function ladderRows(view: ModelsView | { error: string }): string[] {
 
 const section = (panel: HTMLElement, id: string): HTMLElement => {
   const el = document.createElement('section');
-  el.className = 'hx-set';
+  el.className = 'ui-set';
   el.setAttribute('aria-labelledby', id);
   panel.append(el);
   return el;
@@ -128,7 +128,7 @@ export async function mountModels(panel: HTMLElement, deps: ModelsDeps): Promise
   const chatgpt = section(panel, 'hx-set-chatgpt-h');
   const gemini = section(panel, 'hx-set-gemini-h');
   const change = section(panel, 'hx-set-change-h');
-  change.innerHTML = '<h3 class="ui-set__head" id="hx-set-change-h">Change</h3>' + ui.html.setRow({
+  change.innerHTML = ui.html.setHead({ id: 'hx-set-change-h', label: 'Change' }) + ui.html.setRow({
     label: 'Models', hint: 'Ask the models question again: free models, OpenRouter\u2019s free models, Claude, ChatGPT, Gemini, or a model you set up. Nothing changes until you answer.',
     control: ui.html.button({ label: 'Change models', size: 's', attrs: { id: 'hx-models-change' } })
   });
@@ -142,12 +142,12 @@ export async function mountModels(panel: HTMLElement, deps: ModelsDeps): Promise
   const drawAll = async (): Promise<void> => {
     let view: ModelsView | { error: string };
     try { view = await deps.ladder(); } catch (e) { view = { error: e instanceof Error ? e.message : 'unknown error' }; }
-    ladder.innerHTML = '<h3 class="ui-set__head" id="hx-set-ladder-h">Model ladder</h3>' + ladderRows(view).join('');
-    claude.innerHTML = '<h3 class="ui-set__head" id="hx-set-claude-h">Claude subscription</h3>' + claudeRows(view).join('');
+    ladder.innerHTML = ui.html.setHead({ id: 'hx-set-ladder-h', label: 'Model ladder' }) + ladderRows(view).join('');
+    claude.innerHTML = ui.html.setHead({ id: 'hx-set-claude-h', label: 'Claude subscription' }) + claudeRows(view).join('');
     card?.destroy();
     card = null;
-    chatgpt.innerHTML = '<h3 class="ui-set__head" id="hx-set-chatgpt-h">ChatGPT subscription</h3>' + chatgptRows(view, !!deps.chatgpt).join('') + '<div id="hx-chatgpt-card"></div>';
-    gemini.innerHTML = '<h3 class="ui-set__head" id="hx-set-gemini-h">Gemini</h3>' + geminiRows(view).join('');
+    chatgpt.innerHTML = ui.html.setHead({ id: 'hx-set-chatgpt-h', label: 'ChatGPT subscription' }) + chatgptRows(view, !!deps.chatgpt).join('') + '<div id="hx-chatgpt-card"></div>';
+    gemini.innerHTML = ui.html.setHead({ id: 'hx-set-gemini-h', label: 'Gemini' }) + geminiRows(view).join('');
     for (const s of [ladder, claude, chatgpt, gemini]) ui.hydrate(s);
     claude.querySelector('#hx-claude-check')?.addEventListener('click', () => { void drawAll(); });
     const login = deps.login;

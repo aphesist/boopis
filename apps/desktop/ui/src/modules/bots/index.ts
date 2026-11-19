@@ -15,7 +15,7 @@ import { makeRow, mountList, syncListVisibility, syncRail, syncRoving } from './
 import { allTurns, focusTurn, mountView, onBotsEvent, openBot, stopRun } from './room';
 import { openNew } from './new-bot';
 import { closeSettings, openSettings, toggleSettings } from './settings';
-import { ui as uiLib } from '../../components';
+import { ui as uiLib } from '@boopis/ui';
 /* drawn corners (DESIGN-SYSTEM.md section 8): the bots' own surfaces take the library's continuous corner */
 uiLib.squircle.auto('.bt-sugg, .bt-opt');
 

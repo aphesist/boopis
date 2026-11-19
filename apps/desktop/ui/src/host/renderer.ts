@@ -2,7 +2,7 @@
    the display. The owner copies the text from Settings > General > Diagnostics and sends it when a machine is slow or
    blank; `webkit://gpu` (WebKitGTK's own page) says which buffer path is in use. */
 import { commands } from './bindings';
-import { orbState } from '../components/orb-worker/host';
+import { orbState } from '@boopis/ui';
 import type { AppSettings, GpuPolicy, RendererReport } from './bindings';
 import { asHostError } from './bridge';
 import { currentPlan, planLines } from './free-tier';

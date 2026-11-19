@@ -3,10 +3,10 @@
    setup logic. The form is answered through the host's `setup_advance`, so this screen gives the card its own answer sink
    (`useFormsHost`) while it is on screen: no data provider exists yet. A secret goes from the field to the host and no
    further. The rest is the design system's own button and tokens. */
-import { ui } from '../components';
-import { announce } from '../components/announce';
-import { welcomeLogo } from '../components/logo';
-import { progressDots, setProgress } from '../components/progress';
+import { ui } from '@boopis/ui';
+import { announce } from '@boopis/ui';
+import { welcomeLogo } from '@boopis/ui';
+import { progressDots, setProgress } from '@boopis/ui';
 import '../modules/cards';
 import { useFormsHost } from '../modules/cards/forms-host';
 import type { FormsSource } from '../data/provider';
@@ -28,8 +28,8 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, props: Partial<Record
   node.append(...kids);
   return node;
 }
-function button(text: string, variant: 'primary' | 'ghost' | '', onClick: () => void, type: 'button' | 'submit' = 'button'): HTMLButtonElement {
-  const b = el('button', { type, class: 'ui-btn' + (variant ? ' ui-btn--' + variant : '') }, el('span', {}, text));
+const button = (text: string, variant: 'primary' | 'ghost' | '', onClick: () => void, type: 'button' | 'submit' = 'button'): HTMLButtonElement => {
+  const b = ui.button({ label: text, type, ...(variant ? { variant } : {}) });
   b.addEventListener('click', (e) => { if (type === 'button') { e.preventDefault(); onClick(); } });
   return b;
 }

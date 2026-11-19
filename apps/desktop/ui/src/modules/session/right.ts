@@ -3,7 +3,7 @@
 import { on } from '../../core/bus';
 import { cap1, el, esc, frag, isMac } from '../../core/dom';
 import { setState, state } from '../../core/state';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 import { data } from '../../data';
 import { renderDiff } from './diff';
 import { setGovernance } from './composer';
@@ -127,7 +127,7 @@ export function mountRight(root: HTMLElement): void {
     const out = d().output.get().join('\n'), passed = (out.match(/(\d+) passed/) ?? [0, ''])[1];
     const mono = (t: string): string => '<span class="ui-mono">' + esc(t) + '</span>';
     const c = d().context.get(), G = d().governance.get();
-    const body = el('div', { class: 'ui-panel__body' }, [
+    const body = el('div', { class: 'ui-panel__body ui-scroll ui-scroll--stable' }, [
       section('context', 'Context', mono(kTokens(c.used) + ' / ' + kTokens(c.total)), contextBody()),
       section('tasks', 'Tasks', mono(done + ' of ' + todos.length), tasksBody()),
       section('changes', 'Changes', '<span class="ss-n ui-mono"><span class="ss-add">+' + add + '</span><span class="ss-del">−' + del + '</span></span>', changesBody()),

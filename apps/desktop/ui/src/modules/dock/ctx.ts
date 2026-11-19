@@ -7,8 +7,8 @@
 import { clamp, onReducedChange, reduced as rm } from '../../core/dom';
 import type { Bot, RunSnapshot, Schedule, ThreadMessage, Wait } from '../../data';
 import type { DockMode } from '../../core/bus';
-import type { ComposerEl } from '../../components';
-import type { CardLike } from '../../components';
+import type { ComposerEl } from '@boopis/ui';
+import type { CardLike } from '@boopis/ui';
 import { pagesFor, presenceOf } from './presence';
 import type { Presence } from './presence';
 

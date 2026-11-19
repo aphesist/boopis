@@ -3,9 +3,9 @@
    collapsible row above the composer. A mod's tree is drawn by `ui.modView`; what the user does goes back by handler id. */
 import { $, el } from '../../core/dom';
 import { logger } from '../../core/log';
-import { ui } from '../../components';
-import { modViewUpdate } from '../../components/mod-view';
-import type { ModRoot } from '../../components/mod-view';
+import { ui } from '@boopis/ui';
+import { modViewUpdate } from '@boopis/ui';
+import type { ModRoot } from '@boopis/ui';
 import type { ModBand, ModPane } from '../../data';
 import { surface } from './surfaces';
 import { ctl, dispatcher, docked, sessionOf } from './ctl';
@@ -15,7 +15,7 @@ const paneById = (id: string): ModPane | undefined => ctl.s.panes.find((p) => p.
 
 /* ───────────── a pane's body: the tree, or what is true about it ───────────── */
 function paneBody(p: ModPane, inline: boolean): HTMLElement {
-  const wrap = el('div', { class: inline ? 'mod-inline__body' : 'mod-pane__body' });
+  const wrap = el('div', { class: inline ? 'mod-inline__body ui-scroll' : 'mod-pane__body' });
   const d = p.drawing;
   if (!d) { wrap.append(el('p', { class: 'mod-note', text: 'Waiting for ' + p.plugin + ' to draw this pane.' })); return wrap; }
   if (d.kind === 'default') { wrap.append(el('p', { class: 'mod-note', text: p.plugin + ' has not drawn this pane.' })); return wrap; }
@@ -25,8 +25,8 @@ function paneBody(p: ModPane, inline: boolean): HTMLElement {
   wrap.append(root);
   return wrap;
 }
-function closeButton(p: ModPane): HTMLButtonElement {
-  const close = ui.iconButton({ icon: 'close', label: 'Close ' + p.title, size: 's' });
+function closeButton(p: ModPane, inline = false): HTMLButtonElement {
+  const close = ui.iconButton({ icon: 'close', label: 'Close ' + p.title, size: 's', class: inline ? 'ui-corner' : undefined });
   close.addEventListener('click', () => { closePane(p.id); });
   return close;
 }
@@ -52,7 +52,7 @@ function paneHead(p: ModPane, inline: boolean): HTMLElement {
     const open = !ctl.folded.get(p.id);
     const title = el('span', { class: 'mod-inline__title', text: p.title });
     const tog = ui.iconButton({ icon: 'chevron', label: (open ? 'Collapse ' : 'Expand ') + p.title, size: 's', expanded: open, tip: false });
-    tog.classList.add('mod-chev');
+    tog.classList.add('mod-chev', 'ui-corner');
     tog.addEventListener('click', () => {
       ctl.folded.set(p.id, open);
       if (!open) for (const o of inlinePanes()) if (o.id !== p.id) ctl.folded.set(o.id, true);   /* one open at a time, so the composer keeps the screen */
@@ -60,31 +60,23 @@ function paneHead(p: ModPane, inline: boolean): HTMLElement {
       onChange?.();
       surface.slots?.band.querySelector<HTMLElement>('[data-pane="' + p.id + '"] .mod-chev')?.focus();
     });
-    head.append(title, tog, closeButton(p));
+    head.append(title, tog, closeButton(p, true));
   } else head.append(closeButton(p));
   return head;
 }
 
 /* ───────────── the tabs of the details panel ───────────── */
 function tabs(list: readonly ModPane[]): HTMLElement {
-  const bar = el('div', { class: 'mod-tabs', role: 'tablist', 'aria-label': 'Session details and mod panes' });
-  const mk = (id: string, label: string, name: string | null, aria: string): HTMLButtonElement => {
-    const b = el('button', { class: 'mod-tab', type: 'button', id: 'mod-tab-' + id, role: 'tab', 'aria-selected': String(ctl.active === id), tabindex: ctl.active === id ? '0' : '-1', 'aria-label': aria, 'data-id': id, ...(name ? { 'data-tip': name } : {}) });
-    b.innerHTML = label;
-    return b;
-  };
-  bar.append(mk('details', '<span>Details</span>', null, 'Session details'));
-  for (const p of list) bar.append(mk(p.id, ui.html.mod(p.title), p.plugin + ' mod', p.title + ', ' + p.plugin + ' mod'));
-  const go = (id: string, focus: boolean): void => {
+  const bar = ui.tabs({ label: 'Session details and mod panes', class: 'mod-tabs', scroll: true, value: ctl.active, tabs: [
+    { value: 'details', label: 'Details', id: 'mod-tab-details', ariaLabel: 'Session details' },
+    ...list.map((p) => ({ value: p.id, label: p.title, labelHTML: ui.html.mod(p.title), id: 'mod-tab-' + p.id, ariaLabel: p.title + ', ' + p.plugin + ' mod', tip: p.plugin + ' mod' }))
+  ] });
+  /* the panel redraws with the chosen pane; keyboard focus follows the tab into the new strip */
+  bar.addEventListener('ui:change', (e) => {
+    const id = (e as CustomEvent<{ value: string }>).detail.value, focus = bar.contains(document.activeElement);
     ctl.active = id; surface.redrawRight?.();
     onChange?.();
     if (focus) requestAnimationFrame(() => { document.getElementById('mod-tab-' + id)?.focus(); });
-  };
-  bar.addEventListener('click', (e) => { const b = (e.target as Element).closest<HTMLElement>('.mod-tab'); if (b) go(b.dataset['id'] ?? 'details', false); });
-  bar.addEventListener('keydown', (e) => {
-    const ids = ['details', ...list.map((p) => p.id)], i = ids.indexOf(ctl.active);
-    const j = e.key === 'ArrowRight' ? (i + 1) % ids.length : e.key === 'ArrowLeft' ? (i - 1 + ids.length) % ids.length : e.key === 'Home' ? 0 : e.key === 'End' ? ids.length - 1 : -1;
-    if (j >= 0) { e.preventDefault(); go(ids[j] ?? 'details', true); }
   });
   return bar;
 }
@@ -97,14 +89,7 @@ export function decoratePanel(pnl: HTMLElement): HTMLElement | null {
   const head = $('.ui-panel__head', pnl), body = $('.ui-panel__body', pnl);
   const bar = tabs(list);
   head.classList.add('mod-head'); head.replaceChildren(bar);
-  /* the strip scrolls when the tabs do not fit: the open tab is kept in view and the cut edge fades */
-  const more = (): void => { bar.toggleAttribute('data-more', bar.scrollLeft + bar.clientWidth < bar.scrollWidth - 2); };
-  bar.addEventListener('scroll', more, { passive: true });
-  requestAnimationFrame(() => {
-    const t = bar.querySelector<HTMLElement>('[aria-selected="true"]');
-    if (t) { const l = t.offsetLeft - bar.offsetLeft; if (l + t.offsetWidth > bar.scrollLeft + bar.clientWidth) bar.scrollLeft = l + t.offsetWidth - bar.clientWidth + 12; }
-    more();
-  });
+  /* the strip scrolls when the tabs do not fit: the library keeps the open tab in view and fades the cut edge */
   body.setAttribute('role', 'tabpanel'); body.setAttribute('aria-labelledby', 'mod-tab-' + ctl.active);
   body.addEventListener('scroll', () => { ctl.scroll[ctl.active] = body.scrollTop; }, { passive: true });
   for (const k of [...ctl.roots.keys()]) if (k.endsWith(':dock')) ctl.roots.delete(k);
@@ -132,7 +117,7 @@ function rowEl(b: ModBand): HTMLElement {
   ctl.bandRoot = root;
   if (root) body.append(root);
   const tog = ui.iconButton({ icon: 'chevron', label: (ctl.bandOpen ? 'Collapse ' : 'Expand ') + (name ?? 'mods'), size: 's', expanded: ctl.bandOpen, tip: false });
-  tog.classList.add('mod-chev');
+  tog.classList.add('mod-chev', 'ui-corner');
   tog.addEventListener('click', () => {
     ctl.bandOpen = !ctl.bandOpen;
     if (ctl.bandOpen && !docked()) for (const p of inlinePanes()) ctl.folded.set(p.id, true);
@@ -158,13 +143,13 @@ export function drawBand(): void {
   inl.forEach((p, i) => {
     if (!ctl.folded.has(p.id)) ctl.folded.set(p.id, i < inl.length - 1);
     const open = !ctl.folded.get(p.id);
-    const sec = el('section', { class: 'mod-inline', 'data-open': String(open), 'data-pane': p.id, 'aria-label': p.title + ', ' + p.plugin + ' mod' });
+    const sec = el('section', { class: 'mod-inline ui-nest', 'data-open': String(open), 'data-pane': p.id, 'aria-label': p.title + ', ' + p.plugin + ' mod' });
     sec.append(paneHead(p, true));
     if (open) sec.append(paneBody(p, true));
     kids.push(sec);
   });
   if (ctl.s.band) {
-    const band = el('div', { class: 'mod-band', role: 'region', 'aria-label': 'Mods' });
+    const band = el('div', { class: 'mod-band ui-nest', role: 'region', 'aria-label': 'Mods' });
     band.append(rowEl(ctl.s.band));
     kids.push(band);
   }

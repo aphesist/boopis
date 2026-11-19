@@ -4,8 +4,8 @@
 import { emit, on } from '../../core/bus';
 import { $, el, frag, isMac, reduced } from '../../core/dom';
 import { provide } from '../../core/registry';
-import { ui } from '../../components';
-import type { ComposerEl } from '../../components';
+import { ui } from '@boopis/ui';
+import type { ComposerEl } from '@boopis/ui';
 import { data } from '../../data';
 import type { AgentTurn, ConversationEvent, FormSpec, Ship, Step, Turn } from '../../data';
 import { renderDiff } from './diff';
@@ -351,7 +351,7 @@ export function toConversation(): void { const t = turnsEls().find((x) => x.tabI
 export function mountView(root: HTMLElement): void {
   VIEW.root = root;
   root.classList.add('ss-view');
-  VIEW.scroll = el('div', { class: 'ss-scroll' });
+  VIEW.scroll = el('div', { class: 'ss-scroll ui-scroll' });
   VIEW.findAnchor = el('span', { class: 'ss-find-anchor', 'aria-hidden': 'true' });
   VIEW.col = el('div', { class: 'ss-col', role: 'feed', 'aria-label': 'Conversation' });
   VIEW.scroll.append(VIEW.col);

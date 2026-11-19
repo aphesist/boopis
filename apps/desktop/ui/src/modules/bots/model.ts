@@ -2,7 +2,7 @@
    The copies are mutated in place (closures in the settings sheet hold them); the provider stays the source of truth. */
 import { emit } from '../../core/bus';
 import { state } from '../../core/state';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 import type { Bot, BotsEvent, ThreadMessage } from '../../data';
 import type { Follower } from './orbs';
 import { data } from '../../data';

@@ -7,7 +7,7 @@ import { setProvider } from '../../data';
 import type { DataProvider, ModsSource, ModSession } from '../../data';
 import { createMockProvider } from '../../data/mock-provider';
 import { createModsModel } from '../../data/mods-model';
-import { setTokenReader } from '../../components/mod-colors';
+import { setTokenReader } from '@boopis/ui';
 import { fixtures } from '../../host/testing';
 import { themeApi } from '../../styles/theme';
 import { installPreset } from '../../styles/testing';
@@ -217,7 +217,7 @@ describe('the status line and the composer rising 22px (owner decision, 19 Novem
 
 describe('panes: a tab from 1200px, inline below it (owner decision, 19 November 2026)', () => {
   const panel = (): HTMLElement => { const p = document.createElement('div'); p.className = 'ui-panel'; p.innerHTML = '<div class="ui-panel__head"><h2>Session details</h2></div><div class="ui-panel__body">details</div>'; document.body.append(p); return p; };
-  const names = (p: HTMLElement): string[] => [...p.querySelectorAll('.mod-tab')].map((t) => t.getAttribute('aria-label') ?? '');
+  const names = (p: HTMLElement): string[] => [...p.querySelectorAll('.mod-tabs .ui-tab')].map((t) => t.getAttribute('aria-label') ?? '');
 
   it('at 1200 a pane is a tab after Details, and nothing is inline', () => {
     width(1200); follow(); pane('tests', 'test-runner'); pane('usage', 'token-meter');
@@ -259,12 +259,16 @@ describe('panes: a tab from 1200px, inline below it (owner decision, 19 November
     width(1300); follow(); pane('a'); pane('b');
     const p = decoratePanel(panel()) as HTMLElement;
     const bar = p.querySelector('[role="tablist"]') as HTMLElement;
-    bar.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    document.body.append(p);
+    /* the keys act on the focused tab (the library's tab bar, one tab stop) */
+    const key = (k: string): void => { const t = bar.querySelector<HTMLElement>('[aria-selected="true"]') as HTMLElement; t.focus(); t.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true })); };
+    key('ArrowRight');
     expect(ctl.active).toBe('a');
-    bar.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+    key('End');
     expect(ctl.active).toBe('b');
-    bar.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    key('ArrowRight');
     expect(ctl.active).toBe('details');
+    p.remove();
   });
   it('draws a pane the plugin refused, or that no mod drew, as a sentence and not as nothing', () => {
     width(1300); follow();

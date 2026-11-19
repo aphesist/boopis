@@ -45,14 +45,14 @@ export async function controls(env, AXE) {
         const f = document.activeElement, fs = getComputedStyle(f), r = lb.getBoundingClientRect();
         return {
           role: lb.getAttribute('role'), options: lb.querySelectorAll('[role="option"]').length, groups: [...lb.querySelectorAll('.ui-listbox__head')].map((h) => h.textContent), marks: lb.querySelectorAll('.ui-option svg.ui-mm[data-color="brand"]').length,
-          bg: fill, frame, bar: cs.scrollbarWidth, overflow: cs.overflowY, h: Math.round(surface.getBoundingClientRect().height), inView: r.top >= 0 && r.bottom <= innerHeight,
+          bg: fill, frame, bar: cs.scrollbarWidth === 'auto' && lb.classList.contains('ui-scroll') ? 'kit' : cs.scrollbarWidth, overflow: cs.overflowY, h: Math.round(surface.getBoundingClientRect().height), inView: r.top >= 0 && r.bottom <= innerHeight,
           focusOn: f.getAttribute('role'), focusVal: f.dataset.value, focusBg: getComputedStyle(f, '::before').backgroundColor, current, selected: lb.querySelector('[aria-selected="true"]')?.dataset.value,
           expanded: document.querySelector('#probe .ui-select').getAttribute('aria-expanded')
         };
       });
-      const ok = !!open && open.role === 'listbox' && open.options === MODELS.length && open.groups.length >= 8 && open.groups[0] === 'Claude' && open.bg === open.frame && open.bar === 'thin' &&
+      const ok = !!open && open.role === 'listbox' && open.options === MODELS.length && open.groups.length >= 8 && open.groups[0] === 'Claude' && open.bg === open.frame && open.bar === 'kit' &&
         open.marks === MODELS.length && open.focusOn === 'option' && open.focusVal === 'sonnet 5.5' && open.selected === 'sonnet 5.5' && open.expanded === 'true' && open.inView;
-      check('controls', `${name}: it opens a themed listbox (the app's surface and thin bar), grouped by provider, with the chosen model focused`, ok, open);
+      check('controls', `${name}: it opens a themed listbox (the app's surface and the kit's scroll area, R-scroll-1), grouped by provider, with the chosen model focused`, ok, open);
 
       const bad = await AXE_RUN(page);
       check('controls', `${name}: axe finds nothing on the open model picker`, bad.length === 0, bad);

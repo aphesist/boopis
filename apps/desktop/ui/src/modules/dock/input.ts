@@ -4,7 +4,7 @@
 import { $$, isMac } from '../../core/dom';
 import { getLayout, setState } from '../../core/state';
 import { emit } from '../../core/bus';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 import { S, X, flags, geomR, motion, rendered, shownPages, spring, K_SLIDE } from './ctx';
 import type { Spring } from './ctx';
 import { E, cxNow, hideTip, kick, resetMag, retarget, shellVar, returnFocus, markFocus, slideNow, stopSlide } from './engine';

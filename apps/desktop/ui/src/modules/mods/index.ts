@@ -11,7 +11,7 @@
    resize. Every colour, family, radius and size is a token. */
 import { setState, state } from '../../core/state';
 import { logger } from '../../core/log';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { ModSession } from '../../data';
 import { NO_MODS } from '../../data/mods-model';
@@ -26,7 +26,7 @@ import { toast } from './toasts';
 import { surface } from './surfaces';
 
 const log = logger('mods');
-ui.squircle.auto('.mod-band, .mod-inline, .mod-tab, .mv-code, .mod-swatches');
+ui.squircle.auto('.mod-band, .mod-inline, .mv-code, .mod-swatches');
 
 let unsub: (() => void) | null = null, unsubEvents: (() => void) | null = null;
 let ready = false, working = false, wasDocked = docked();

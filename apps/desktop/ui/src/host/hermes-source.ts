@@ -2,7 +2,7 @@
    setting). The app runs the Hermes it carries, in a folder of its own. This switch saves the other choice, the Hermes already
    on the computer, as the host's `hermes_source` (which `BOOPIS_HERMES` overrides). The host reads it when the app starts, so
    the control says that and offers the restart. It knows nothing about Hermes beyond what the host reports. */
-import { ui } from '../components';
+import { ui } from '@boopis/ui';
 import { restartApp } from './renderer';
 import { loadSource, saveSource } from './setup-bridge';
 import type { Source, SourceInfo } from './setup-bridge';
@@ -35,9 +35,9 @@ export const BASE_HINT = 'boopis runs the Hermes it carries, in a folder of its 
 /** build the section, load the choice and wire the switch. Resolves with the section once it shows what the host reported. */
 export async function mountHermesSource(panel: HTMLElement, deps: SourceDeps = realSourceDeps()): Promise<HTMLElement> {
   const sec = document.createElement('section');
-  sec.className = 'hx-set';
+  sec.className = 'ui-set';
   sec.setAttribute('aria-labelledby', 'hx-set-adv-h');
-  sec.innerHTML = '<h3 class="ui-set__head" id="hx-set-adv-h">Advanced</h3>' + ui.html.setRow({
+  sec.innerHTML = ui.html.setHead({ id: 'hx-set-adv-h', label: 'Advanced' }) + ui.html.setRow({
     for: 'hx-set-own-hermes', label: 'Use my own Hermes', hint: BASE_HINT,
     control: '<div class="ui-set__actions">' + ui.html.switch({ id: 'hx-set-own-hermes', checked: false, disabled: true }) + ui.html.button({ label: 'Restart to switch', size: 's', attrs: { id: 'hx-set-own-restart', hidden: true } }) + '</div>'
   });

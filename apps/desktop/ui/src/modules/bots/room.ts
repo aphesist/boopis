@@ -4,8 +4,8 @@
 import { emit } from '../../core/bus';
 import { $, el, esc, frag, reduced } from '../../core/dom';
 import { setState, state } from '../../core/state';
-import { ui } from '../../components';
-import type { MenuItem } from '../../components';
+import { ui } from '@boopis/ui';
+import type { MenuItem } from '@boopis/ui';
 import { data } from '../../data';
 import type { ApprovalMessage, Bot, BotsEvent, ThreadMessage } from '../../data';
 import { cronValid, cronWords, scheduleWords } from './cron';
@@ -41,7 +41,7 @@ export function mountView(root: HTMLElement): void {
   nb.addEventListener('keydown', (e) => { if (e.key === 'Escape' && S.bots.length && !e.defaultPrevented) { e.preventDefault(); e.stopPropagation(); openBot(S.sel); focusConversation(); } });
 }
 function buildRoom(): void {
-  const scroll = el('div', { class: 'bt-scroll' });
+  const scroll = el('div', { class: 'bt-scroll ui-scroll' });
   const col = el('div', { class: 'bt-col' });
   const presence = el('header', { class: 'bt-presence' });
   const log = el('div', { class: 'bt-log', role: 'log', 'aria-label': 'Messages' });

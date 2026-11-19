@@ -5,7 +5,7 @@
    section 9). They are gone when the conversation is redrawn and not kept on resume, as in Claude Code. */
 import { hhmm } from '../../core/dom';
 import { logger } from '../../core/log';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 import type { ModLogLine, ModPlaced, ModTree } from '../../data';
 import { surface } from './surfaces';
 import { dispatcher } from './ctl';

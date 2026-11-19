@@ -2,8 +2,8 @@
    tone: what the card owes the user. red = an approval, a blank or a failure (the stamp); pulse = running;
    ink = done; ring = closed without effect; none = nothing owed. Hosts can read data-tone. */
 import { esc } from '../../core/dom';
-import { ui } from '../../components';
-import type { CardKind } from '../../components/card-registry';
+import { ui } from '@boopis/ui';
+import type { CardKind } from '@boopis/ui';
 import type { Ctx, Data, Kind } from './types';
 import type { HxCard } from './card';
 import { closeBlank, openBlank } from './popover';

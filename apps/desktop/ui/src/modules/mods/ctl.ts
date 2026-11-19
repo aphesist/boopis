@@ -3,7 +3,7 @@
 import { data } from '../../data';
 import type { ModSession } from '../../data';
 import { NO_MODS } from '../../data/mods-model';
-import type { ModEvent, ModRoot } from '../../components/mod-view';
+import type { ModEvent, ModRoot } from '@boopis/ui';
 
 export const ctl = {
   /** the session the surfaces draw for (the UI's id); null before the first conversation is drawn */
