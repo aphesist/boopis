@@ -13,6 +13,7 @@
     "test:unit": "vitest run",
     "test:smoke": "node tests/smoke/run.mjs",
     "test:parity": "node tests/parity/run.mjs",
+    "perf:webkit": "node tests/perf/run.mjs",
     "tokens": "node scripts/build-tokens.mjs",
     "tokens:check": "node scripts/build-tokens.mjs --check",
     "dev:desktop": "vite --mode desktop",
