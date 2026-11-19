@@ -126,7 +126,8 @@ def save(name: str, log: Path, root: Path) -> None:
 
 
 def read_panels(gw: GatewayClient, sids: list[str], proj: Path) -> None:
-    """The reads the sessions list and the details panels make, for each session (and the probes of what this Hermes has)."""
+    """The reads the sessions list and the details panels make, for each session (and the probes of what this
+    Hermes has)."""
     sid = sids[0]
     tolerant(gw, "session.list", {"limit": 100})
     tolerant(gw, "session.list", {"limit": 100, "include_hidden": True})
@@ -189,8 +190,8 @@ def priced(install: Any, tmp: Path, url: str, name: str, with_prices: bool) -> N
 
 
 class FakeHostSecrets:
-    """The desktop host's secret channel (``hx-host-secrets-v1``) for the recording: it answers ``has`` with found for every
-    reference, so the plugin accepts a credential form's ``provided``. It holds nothing and never sees a value."""
+    """The desktop host's secret channel (``hx-host-secrets-v1``) for the recording: it answers ``has`` with found for
+    every reference, so the plugin accepts a credential form's ``provided``. It holds nothing and never sees a value."""
 
     def __init__(self, home: Path) -> None:
         self.dir = Path(tempfile.mkdtemp(prefix="hx-host-"))  # a short path: unix socket paths are limited
@@ -204,7 +205,15 @@ class FakeHostSecrets:
         rendezvous = self.home / "hypotaxis" / "host-channel.json"
         rendezvous.parent.mkdir(parents=True, exist_ok=True)
         rendezvous.write_text(
-            json.dumps({"protocol": "hx-host-secrets-v1", "schema_version": 1, "socket": str(self.path), "token": "t", "pid": os.getpid()})
+            json.dumps(
+                {
+                    "protocol": "hx-host-secrets-v1",
+                    "schema_version": 1,
+                    "socket": str(self.path),
+                    "token": "t",
+                    "pid": os.getpid(),
+                }
+            )
         )
         threading.Thread(target=self._serve, daemon=True).start()
 
@@ -223,8 +232,9 @@ class FakeHostSecrets:
 
 
 def forms_scenario(install: Any, tmp: Path, url: str) -> None:
-    """The agent asks for a key and puts a question; the UI answers both with ``form.submit`` (the key named in ``provided``,
-    never in a value) and cancels a third. Records the ``form.opened`` and ``form.resolved`` events and the RPC."""
+    """The agent asks for a key and puts a question; the UI answers both with ``form.submit`` (the key named in
+    ``provided``, never in a value) and cancels a third. Records the ``form.opened`` and ``form.resolved`` events and
+    the RPC."""
     stack = HermesStack(install, tmp, url, {"hx_path": HX}, {})
     stack.start()
     host = FakeHostSecrets(stack.home)
@@ -236,18 +246,37 @@ def forms_scenario(install: Any, tmp: Path, url: str) -> None:
         proj = make_project(tmp)
         sid = create(gw, proj)
         gw.result("plugin.hypotaxis.mode.set", {"session_id": sid, "mode": "ungoverned"})
-        gw.result("plugin.hypotaxis.form.list", {"session_id": sid})  # nothing open yet: what a client sees when it resumes the session
+        gw.result(
+            "plugin.hypotaxis.form.list", {"session_id": sid}
+        )  # nothing open yet: what a client sees when it resumes the session
+        setup_form = {
+            "kind": "setup",
+            "title": "Set the gate command",
+            "body": "Every ship ends at the gate.",
+            "schema": {
+                "type": "object",
+                "properties": {"gate": {"type": "string", "title": "Gate command", "default": "npm test"}},
+                "required": ["gate"],
+            },
+            "submit": {"label": "Write config"},
+        }
         text = " ".join([
             call("request_credential", {"provider": "openai"}),
             call("ask", {"question": "Keep the old alias?", "options": ["yes", "no"], "other": True}),
-            call("request_input", {"kind": "setup", "title": "Set the gate command", "body": "Every ship ends at the gate.", "schema": {"type": "object", "properties": {"gate": {"type": "string", "title": "Gate command", "default": "npm test"}}, "required": ["gate"]}, "submit": {"label": "Write config"}}),
+            call("request_input", setup_form),
             f"@@usage {json.dumps(USAGE)}@@", "@@reply I asked three things.@@",
         ])  # fmt: skip
         turn(gw, sid, text)
         listed = gw.result("plugin.hypotaxis.form.list", {"session_id": sid})
         by_kind = {f["kind"]: f for f in listed["forms"]}
-        gw.result("plugin.hypotaxis.form.submit", {"session_id": sid, "form_id": by_kind["credential"]["form_id"], "values": {}, "provided": ["value"]})
-        gw.result("plugin.hypotaxis.form.submit", {"session_id": sid, "form_id": by_kind["question"]["form_id"], "values": {"answer": "yes"}})
+        gw.result(
+            "plugin.hypotaxis.form.submit",
+            {"session_id": sid, "form_id": by_kind["credential"]["form_id"], "values": {}, "provided": ["value"]},
+        )
+        gw.result(
+            "plugin.hypotaxis.form.submit",
+            {"session_id": sid, "form_id": by_kind["question"]["form_id"], "values": {"answer": "yes"}},
+        )
         gw.result("plugin.hypotaxis.form.cancel", {"session_id": sid, "form_id": by_kind["setup"]["form_id"]})
         gw.result("plugin.hypotaxis.form.list", {"session_id": sid})
         read_panels(gw, [sid], proj)
