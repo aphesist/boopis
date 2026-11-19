@@ -352,3 +352,30 @@ def test_a_mod_that_calls_too_fast_is_slowed(env: Env) -> None:
         for _ in range(300):
             env.call("clock.now", {})
     assert caught.value.code == "hx.overloaded"
+
+
+# ---------------------------------------------------------------- the contract the UI is built against
+
+
+def test_every_mod_event_the_calls_emit_fits_the_shared_contract(env: Env) -> None:
+    import json
+
+    from hypotaxis.util.schema import validate
+
+    contract = json.loads(
+        (Path(__file__).resolve().parents[3] / "apps" / "shared" / "data" / "mods.schema.json").read_text()
+    )["events"]
+    env.call("ui.toast", {"text": "t"})
+    env.call("ui.status", {"text": "s"})
+    env.call("ui.log", {"text": "l", "to": "debug"})
+    env.call("ui.notify", {"text": "n"})
+    env.call("ui.open", {"id": "p", "title": "P", "rows": 10})
+    env.call("ui.close", {"id": "p"})
+    env.call("command.register", {"name": "c"})
+    env.call("theme.set", {"colors": {}})
+    env.call("theme.clear", {})
+    seen = {name: env.events(name) for name in contract}
+    assert all(seen[name] for name in contract if name != "mod.render"), seen
+    for name, payloads in seen.items():
+        for payload in payloads:
+            assert validate(payload, contract[name]) == [], (name, payload)

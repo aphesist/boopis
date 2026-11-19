@@ -82,7 +82,7 @@ struct Names {
     dollar: BTreeSet<String>,
 }
 
-fn first_param<'a>(f: &Function<'a>) -> Option<String> {
+fn first_param(f: &Function<'_>) -> Option<String> {
     f.params
         .items
         .first()
@@ -103,10 +103,18 @@ impl<'a> Visit<'a> for Collect<'_> {
     }
 
     fn visit_variable_declarator(&mut self, d: &VariableDeclarator<'a>) {
-        if d.id.get_binding_identifier().is_some_and(|i| i.name == "register") {
+        if d.id
+            .get_binding_identifier()
+            .is_some_and(|i| i.name == "register")
+        {
             match &d.init {
                 Some(Expression::ArrowFunctionExpression(a)) => {
-                    if let Some(p) = a.params.items.first().and_then(|p| p.pattern.get_binding_identifier()) {
+                    if let Some(p) = a
+                        .params
+                        .items
+                        .first()
+                        .and_then(|p| p.pattern.get_binding_identifier())
+                    {
                         self.0.on.insert(p.name.as_str().to_owned());
                     }
                 }
@@ -135,7 +143,7 @@ fn hook_event<'b>(call: &'b CallExpression<'_>, names: &Names) -> Option<&'b str
         return None;
     }
     match call.arguments.first() {
-        Some(Argument::StringLiteral(s)) => s.value.as_str().into(),
+        Some(Argument::StringLiteral(s)) => s.value.as_str(),
         _ => None,
     }
 }
@@ -247,7 +255,10 @@ fn analyze_module(path: &str, source: &str) -> Result<ModuleAnalysis> {
     let all: BTreeSet<String> = scan.chains.iter().cloned().collect();
     scan.out.calls = all
         .iter()
-        .filter(|c| !all.iter().any(|o| o.len() > c.len() && o.starts_with(&format!("{c}."))))
+        .filter(|c| {
+            !all.iter()
+                .any(|o| o.len() > c.len() && o.starts_with(&format!("{c}.")))
+        })
         .cloned()
         .collect();
     Ok(scan.out)
@@ -309,10 +320,22 @@ mod tests {
 
     #[test]
     fn a_dollar_that_escapes_or_is_indexed_is_marked_dynamic() {
-        assert!(one("r.js", "export function register(on) { on('x', async ($) => helper($)); }").dynamic);
+        assert!(
+            one(
+                "r.js",
+                "export function register(on) { on('x', async ($) => helper($)); }"
+            )
+            .dynamic
+        );
         assert!(one("r.js", "export function register(on) { on('x', async ($) => { const k = 'fs'; return $[k].read('/x'); }); }").dynamic);
         assert!(one("r.js", "export function register(on) { on('x', async ($) => { const { fs } = $; return fs; }); }").dynamic);
-        assert!(!one("r.js", "export function register(on) { on('x', async ($) => $.ui.toast('hi')); }").dynamic);
+        assert!(
+            !one(
+                "r.js",
+                "export function register(on) { on('x', async ($) => $.ui.toast('hi')); }"
+            )
+            .dynamic
+        );
     }
 
     #[test]

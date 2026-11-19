@@ -26,6 +26,7 @@ The hypotaxis Hermes plugin (Python, stdlib only at runtime). It adds governance
 | `rpc/` | the hypotaxis-v1 methods (`__init__.py`; `blanks.py`: `blank.fill`; `checkpoints.py`: `checkpoint.list` and `checkpoint.diff`, with `ship/diffview.py` parsing the git diff) |
 | `prompt.py` | the cache-stable governed-mode prompt section |
 | `errors.py`, `errors.json` | exception hierarchy and the plugin's wire error codes |
+| `mods/` | Claude Code mods (`docs/MODS.md`): `service.py` (sessions, `handle_call`: classify, `policy.check` with the mod as principal, ask, perform, ledger; the draw thread), `calls.py` (the `$` table), `decide.py` (permission and `$.ui.ask` forms, origin `{kind: mod, plugin}`), `store.py`, `io.py` (`fs`, `http`), `install.py`, `discovery.py`, `rpc.py` (`mod.*`). The events are the `ModEvents` half of the compat bridge (`compat/hooks/mod_events.py`) |
 | `util/` | `schema` (JSON Schema subset), `globs`, `log` |
 
 ## Invariants
@@ -42,6 +43,13 @@ The hypotaxis Hermes plugin (Python, stdlib only at runtime). It adds governance
 - **Only `ship` writes the workspace**, through `txn.validate` then `txn.apply` with the explicit effective `protected` list (shared defaults, the plugin's extras and the project's). A pass discards the journal and commits `refs/hypotaxis/checkpoints/<session>`; a failure restores. The gate runs on a temp copy with **no sandbox yet**: every `gate.decided` says `enforcement: degraded:unsandboxed`. Never describe it as sandboxed until `hx sandbox.run` is wired.
 - **No runtime dependencies.** `pyproject.toml` is tooling only and must not gain a `[project]` table (Hermes would treat the plugin as a package).
 - RPC errors: Hermes turns an exception into `plugin_rpc_failed` with `detail` `"<Class>: hx.<code>: <message>"`. The code is first in `str(exc)` on purpose.
+
+## Mods
+- **Every `$` call is decided by `policy.check`** with `principal="mod:<plugin>"` and a capability (`policy/defaults.json`, `mod_capabilities`; the step is `policy/mods.py`). There is no second decision path, and a call missing from the table is refused. An `ask` is a `permission` form; closing it denies. Every call is a `tool.called` with the tool `mod:<plugin>/<call>` and hashed arguments.
+- **A host call must not call `mods.*`.** The worker waits for the answer, so a handler that calls `mods.render` waits for the worker that waits for it. Redraws go through `ModService.invalidate`, which a draw thread serves.
+- **Mods never loosen a decision.** In the bridge a mod can drop a prompt and deny or ask on a tool call; an `allow` is ignored; a rewrite is refused in governed mode and judged again otherwise; a `turn.step` model is refused in both. `fs.write` inside the workspace is refused in governed mode (only `ship` writes it).
+- The hx client serves `mods.call`, `mods.diagnostic` and `mods.exited` (`HxClient.serve_peer`), each on its own thread. Mods are loaded at `on_session_start` (after the session is locked), unloaded at `on_session_finalize`.
+- Mods run only if the plugin is enabled in Hermes and the content hash is approved (`mods/discovery.py`); `mod.install.*` copies, locks and approves (steps 5 and 6 of COMPAT section 9 are not built).
 
 ## Governed mode: the cascade
 The orchestrator (the session model) has `pack` and `dispatch(brief)`; workers (delegated children) have `pack`, `exec` (when it exists) and `ship`. `policy.check` enforces that by role. Only a worker started by the plugin is a worker (a link made at `subagent_start`); never infer a role from `conversation_id` or `parent_session_id`, which an ordinary session has after its context is compressed.
@@ -103,6 +111,7 @@ ruff check --config pyproject.toml . ../../tests/e2e && ruff format --check --co
 pyright && pyright -p ../../tests/e2e
 export HX_BIN=$CARGO_TARGET_DIR/debug/hx          # cargo build -p hx; the pack/ship tests skip without it
 pytest                       # unit tests, then ../../tests/e2e (skips cleanly without a Hermes install)
+# the mods tests that run the real worker need HX_BIN; copy the binary first (a shared target dir is overwritten by other worktrees)
 hermes plugins validate .
 ```
 End-to-end tests (`../../tests/e2e`) start a real, unmodified Hermes gateway against a fake OpenAI-compatible model (`fake_model_server.py`) with this plugin copied into a temp `HERMES_HOME`. Set `HX_E2E_HERMES_ENV` to the directory the spike's `install.sh` produced (it holds `hermes-home/installs`, `runtime`, `uv-python`); without it they skip. Hermes's venv has no contraprova yet, so the stack puts the test process's contraprova on `PYTHONPATH`. Type-check them with `pyright -p ../../tests/e2e`.

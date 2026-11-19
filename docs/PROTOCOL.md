@@ -87,6 +87,12 @@ Methods are registered with `ctx.register_rpc(name, handler)` and appear as `plu
 | `form.submit` | `{form_id, values, provided?, session_id?}` | `{form_id, status}`. Secret fields are not in `values`: the UI saved them with the host (`secret_set`) and names them in `provided`; the plugin confirms each with the host and tells the agent `{saved, ref}` |
 | `form.cancel` | `{form_id, session_id?}` | `{form_id, status}` |
 | `form.list` | `{session_id}` | `{forms: [form.opened payload]}`: the open forms, for a client that reconnects |
+| `mod.press` / `mod.input` / `mod.select` | `{session_id, handler, value?}` | `{handled}`. The UI never runs mod code: it answers with the handler id of the element used (`{"$handler": id}` in a `mod.render` tree). `handled: false` means the id is gone (the tree was replaced) |
+| `mod.props` | `{session_id, component, id?, props}` | `{}`. The UI tells a site's props (`AbovePrompt` `isWorking`, a pane's width) and asks for a redraw |
+| `mod.list` | `{session_id?}` | `{capabilities: {available, reason?, platform}, sessions: [{session_id, running, exited, plugins[], panes[], commands[], status}]}`. `available: false` says why mods are off (no sandbox, Windows) |
+| `mod.unload` | `{session_id, plugin?}` | `{unloaded}`. Disables one mod, or every mod of the session: the kill switch |
+| `mod.install.prepare` | `{source}` | the install prompt: `{plugin, slug, version, sha, tree_sha256, hooks[], calls[], modules[], dynamic, notes[]}`. Reads and analyses; runs nothing |
+| `mod.install.confirm` | `{source, tree_sha256, cwd?}` | `{installed, slug, path, trusted_for, not_done[]}`. Copies only if the hash is the one shown, writes `lock.json`, approves the content for `cwd` |
 | `compat.inventory` | `{cwd}` | `{items: CompatItem[], trust: TrustState}` |
 | `trust.set` | `{cwd, decision: "trust"\|"deny", content_hash}` | `{}` |
 
@@ -99,7 +105,17 @@ Methods are registered with `ctx.register_rpc(name, handler)` and appear as `plu
 | `blank.opened` / `blank.filled` / `blank.lapsed` | `{blank_id, question, options, blocks}` / `{blank_id, answer}` / `{blank_id}` |
 | `budget.blocked` | `{cap_usd, projected_usd}` |
 | `compat.changed` | `{cwd}` |
-| `form.opened` | `{form_id, kind, title, body?, schema, submit, cancel?, sensitive, origin, expires_at}` (`docs/FORMS.md` section 6) |
+| `form.opened` | `{form_id, kind, title, body?, schema, submit, cancel?, sensitive, origin, expires_at}` (`docs/FORMS.md` section 6). `origin` is a word or an object; a mod's is `{kind: "mod", plugin}` |
+| `mod.render` | `{component, id?, kind: "tree"\|"default"\|"skipped", tree?, props?, reason?}`. A site was drawn: `tree` is the element tree as JSON (`{type, props, children}`, handlers as `{"$handler": id}`), validated against the limits (100,000 characters, 20,000 elements, depth 32). `default`: no mod drew it, keep the app's drawing (with `props` if a hook changed them). `skipped`: a mod drew something invalid, keep the app's drawing; the reason is in the mod's log |
+| `mod.pane` | `{action: "open"\|"close", plugin, id, title?, focus?, closeOnEscape?, holdToasts?, rows?, columns?}` |
+| `mod.toast` | `{plugin, text, timeout_ms}`. At most three show at once (the UI's rule) |
+| `mod.status` | `{plugin, text}`. The mod's status line, prefixed with the mod's name; stays until changed |
+| `mod.log` | `{plugin, level: "info"\|"debug"\|"warn", text}`. A quiet line the model does not read; `plugin: ""` is boopis speaking about the mods (one failed to start, one was refused) |
+| `mod.command` | `{action: "register", command: "plugin:name", plugin, name, description, argumentHint, immediate}` |
+| `mod.notify` | `{plugin, text, title}`. For a desktop notification, following the user's settings |
+| `mod.theme` | `{action: "set"\|"clear", plugin, theme?}`. Recorded; the UI applies it later |
+
+The shared schema of these events and the `mod.*` params is `apps/shared/data/mods.schema.json`; the plugin's tests validate what it emits against it.
 | `form.resolved` | `{form_id, status: "submitted"\|"cancelled"\|"expired"}` |
 
 ### Shared types (abridged; full definitions in the OpenRPC file)
@@ -117,8 +133,13 @@ Defined in `crates/hx-proto`.
 - `pack.search`, `pack.read`, `pack.symbol`, `pack.outline`, `pack.status`, `pack.bundle`.
 - `sandbox.run` (`{argv, cwd, ro[], rw[], system_read, net: false|allowlist, env, timeout_ms, output_cap}`); `system_read: true` adds the platform's own system read paths, so callers never copy that list. `runtime_ro[]` is the program's own runtime (the interpreter's prefix, its virtual environment): read-only like `ro`, but vetted, since each is resolved first and refused unless it is an existing directory that is not `/`, `$HOME` or a parent of it, the working directory, or anything inside or above the working directory. A Python managed under the user's home (Hermes's own is) is outside the system paths; the plugin passes its roots here, and hx grants only their canonical paths. `sandbox.spawn` takes the same plus `channel`.
 - `redact.apply {text} -> {text, count}`: hx-pack's redactor on free text (ADR-0016).
+- `mods.capabilities`, `mods.load {session_id, plugins: [{dir, tier?}]}`, `mods.unload {session_id, plugin?}`, `mods.list`, `mods.dispatch {session_id, event, payload}` (`{answered, value, answered_by?}`), `mods.render {session_id, component, id?, props}`, `mods.press`, `mods.input` and `mods.select` (`{session_id, handler, value?}`), `mods.reach {session_id}` (what the sandboxed worker could do, tried for real) and `mods.analyze {dir}` (the hooks and `$` namespaces of a plugin, without running it). `mods.load` starts `hx mods-worker` in the sandbox; see section 4a.
+- **`hx` sends requests too.** `mods.call {session_id, plugin, call, args}` goes from `hx` to the plugin, once per `$` call a mod makes; the plugin decides it (`hypotaxis.policy.check`, the mod as principal) and answers the result, or an error with `data.code` (`hx.policy.denied`, `hx.mods.unsupported`, `hx.overloaded`, ...), which the mod sees as an `Error` with that `code`. Notifications from `hx`: `mods.diagnostic {session_id, level, plugin, message}` and `mods.exited {session_id, reason, stderr}` (the worker is gone: the session's mods must be loaded again). Request ids from `hx` are strings (`hx-<n>`); the plugin's are numbers. The schema lists these under `peer_methods`.
 
 Cancellation uses `$/cancelRequest`. The plugin keeps one warm `hx serve` child per Hermes process and restarts it on crash, never more than 3 times a minute.
+
+### 4a. `hx` and the mod worker: `hx-mods-v1`
+One JSON object per line over a socket pair that `hx` passes to `hx mods-worker` as its only extra descriptor (`HX_MODS_FD`). Parent to worker: `{id, op: load|unload|dispatch|render|press|input|select|plugins|reach|memory, ...}` (plugin files go in `load` as a bundle: the worker cannot read them) and `{ret, ok|err}` (the answer to a `$` call). Worker to parent: `{re, ok|err}`, `{call, plugin, name, args}` (a `$` call to decide) and `{diag}`. `hx` refuses a `call` that names a mod not loaded in the session and caps a frame at 16 MiB. The worker runs one operation at a time.
 
 ## 5. Plugin and exec kernel: `hx-kernel-v1`
 - **Plugin to kernel:** `cell.run {code, timeout_ms}` streams `cell.output` notifications and ends with `{status: "ok"|"error"|"cancelled"|"timeout", result_repr?, error?}`; `cell.cancel`; `kernel.reset`.
@@ -146,4 +167,5 @@ Stable string codes in `data.code`, listed in `crates/hx-proto/errors.json` (sha
 - `hx.host.*` (the host's own: `consent_required`, `unauthorized`, `invalid_frame`, `unknown_connection`, `no_ui`, `os`);
 - `hx.secrets.*` (`unavailable`, `failed`, `not_found`, `invalid_ref`);
 - `hx.setup.*` (`hermes_missing`, `no_bundle`, `plugin_install_failed`, `config_failed`, `declined`, `invalid_answer`, `state_invalid`, `verify_failed`);
-- `hx.form.*` (`invalid_schema`, `invalid_values`, `not_found`, `resolved`, `timeout`, `secret_missing`, `unsupported`, `limit`).
+- `hx.form.*` (`invalid_schema`, `invalid_values`, `not_found`, `resolved`, `timeout`, `secret_missing`, `unsupported`, `limit`);
+- `hx.mods.*` (`unavailable`, `load_failed`, `not_a_mod`, `already_loaded`, `no_session`, `worker_failed`, `crashed`, `no_host`, `host_timeout`, `host_failed`, `unsupported`).

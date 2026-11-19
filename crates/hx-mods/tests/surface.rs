@@ -86,7 +86,30 @@ fn dollar_is_frozen_and_a_mod_cannot_name_another_plugin_in_a_call() {
     assert_eq!(out["frozen"], true);
     assert_eq!(
         out["keys"],
-        json!(["clock", "command", "plugin", "state", "ui"])
+        json!([
+            "agent",
+            "audio",
+            "clock",
+            "command",
+            "config",
+            "env",
+            "fs",
+            "http",
+            "mcp",
+            "model",
+            "plugin",
+            "process",
+            "prompt",
+            "session",
+            "settings",
+            "state",
+            "store",
+            "telemetry",
+            "theme",
+            "tool",
+            "turn",
+            "ui"
+        ])
     );
     assert_eq!(
         (out["threw"].as_bool(), out["threwAdd"].as_bool()),
@@ -341,7 +364,7 @@ fn box_text_button_markdown_input_and_select_serialize_with_handlers_as_ids() {
         kids[1]["props"]["onPress"]["$handler"]
             .as_str()
             .unwrap()
-            .starts_with('h')
+            .contains(".h")
     );
     assert_eq!(kids[2]["props"], json!({ "text": "**hi**" }));
     assert!(

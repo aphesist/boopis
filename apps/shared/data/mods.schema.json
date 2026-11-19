@@ -1,0 +1,81 @@
+{
+  "$comment": "The UI contract of mods (docs/PROTOCOL.md section 3, docs/MODS.md): the session events the plugin emits and the plugin RPC the UI calls. Plain JSON Schema in the subset the plugin's own validator checks (hypotaxis.util.schema: type, enum, properties, required, items, anyOf), so tests can hold the plugin to it. The elements inside a `tree` are defined by docs/research/mods.md section 2 and validated by hx-mods (tree limits).",
+  "schema_version": 1,
+  "events": {
+    "mod.render": {
+      "type": "object",
+      "required": ["component", "kind"],
+      "properties": {
+        "component": { "type": "string" },
+        "id": { "type": "string" },
+        "kind": { "enum": ["tree", "default", "skipped"] },
+        "tree": { "type": "object", "required": ["type", "props", "children"], "properties": { "type": { "type": "string" }, "props": { "type": "object" }, "children": { "type": "array" } } },
+        "props": { "type": "object" },
+        "reason": { "type": "string" }
+      }
+    },
+    "mod.toast": {
+      "type": "object",
+      "required": ["plugin", "text", "timeout_ms"],
+      "properties": { "plugin": { "type": "string" }, "text": { "type": "string" }, "timeout_ms": { "type": "integer", "minimum": 0 } }
+    },
+    "mod.status": {
+      "type": "object",
+      "required": ["plugin", "text"],
+      "properties": { "plugin": { "type": "string" }, "text": { "type": "string" } }
+    },
+    "mod.log": {
+      "type": "object",
+      "required": ["plugin", "level", "text"],
+      "properties": { "plugin": { "type": "string" }, "level": { "enum": ["info", "debug", "warn"] }, "text": { "type": "string" } }
+    },
+    "mod.pane": {
+      "type": "object",
+      "required": ["action", "plugin", "id"],
+      "properties": {
+        "action": { "enum": ["open", "close"] },
+        "plugin": { "type": "string" },
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "focus": { "type": "boolean" },
+        "closeOnEscape": { "type": "boolean" },
+        "holdToasts": { "type": "boolean" },
+        "rows": { "type": "integer" },
+        "columns": { "type": "integer" }
+      }
+    },
+    "mod.command": {
+      "type": "object",
+      "required": ["action", "command", "plugin", "name"],
+      "properties": {
+        "action": { "enum": ["register"] },
+        "command": { "type": "string" },
+        "plugin": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "argumentHint": { "type": "string" },
+        "immediate": { "type": "boolean" }
+      }
+    },
+    "mod.notify": {
+      "type": "object",
+      "required": ["plugin", "text", "title"],
+      "properties": { "plugin": { "type": "string" }, "text": { "type": "string" }, "title": { "type": "string" } }
+    },
+    "mod.theme": {
+      "type": "object",
+      "required": ["action", "plugin"],
+      "properties": { "action": { "enum": ["set", "clear"] }, "plugin": { "type": "string" }, "theme": { "type": "object" } }
+    }
+  },
+  "rpc": {
+    "mod.press": { "type": "object", "required": ["handler"], "properties": { "session_id": { "type": "string" }, "handler": { "type": "string" } } },
+    "mod.input": { "type": "object", "required": ["handler", "value"], "properties": { "session_id": { "type": "string" }, "handler": { "type": "string" }, "value": { "type": "string" } } },
+    "mod.select": { "type": "object", "required": ["handler", "value"], "properties": { "session_id": { "type": "string" }, "handler": { "type": "string" }, "value": { "type": "string" } } },
+    "mod.props": { "type": "object", "required": ["component"], "properties": { "session_id": { "type": "string" }, "component": { "type": "string" }, "id": { "type": "string" }, "props": { "type": "object" } } },
+    "mod.list": { "type": "object", "properties": { "session_id": { "type": "string" } } },
+    "mod.unload": { "type": "object", "properties": { "session_id": { "type": "string" }, "plugin": { "type": "string" } } },
+    "mod.install.prepare": { "type": "object", "required": ["source"], "properties": { "source": { "type": "string" } } },
+    "mod.install.confirm": { "type": "object", "required": ["source", "tree_sha256"], "properties": { "source": { "type": "string" }, "tree_sha256": { "type": "string" }, "cwd": { "type": "string" } } }
+  }
+}

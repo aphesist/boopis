@@ -264,7 +264,9 @@ impl ModsHandler {
             let bundle = hx_mods::Bundle::read(&dir).map_err(load)?;
             let files = hx_mods::Files::Memory(bundle.clone());
             let manifest = hx_mods::Manifest::read(&files).map_err(|e| match e {
-                hx_mods::Error::NotAMod(_) => AppError::new(codes::HX_MODS_NOT_A_MOD, e.to_string()),
+                hx_mods::Error::NotAMod(_) => {
+                    AppError::new(codes::HX_MODS_NOT_A_MOD, e.to_string())
+                }
                 other => load(other),
             })?;
             let analysis = hx_mods::analyze::analyze(&bundle).map_err(load)?;

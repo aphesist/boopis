@@ -65,7 +65,8 @@ Every form, and every card, carries `origin`:
 - `{kind: teammate, ids: [..]}`: one teammate, or several when a request is joint (for example two teammates need the same approval) or relayed (one asks on behalf of another, with `via`);
 - `{kind: agent, model}`;
 - `{kind: plugin|hermes|host}`;
-- `{kind: mcp, server}`.
+- `{kind: mcp, server}`;
+- `{kind: mod, plugin}`: a Claude Code mod asked (`docs/MODS.md`), for a permission its `$` call needs (`permission` form) or a question of its own (`$.ui.ask`, a `choice` form).
 
 The card renders it through one shared origin slot: a teammate's orb, name and colour accent; stacked orbs plus a count for several; the model name for the agent; a glyph for the system sources. Users tell at a glance who is asking, in every place a card can appear, team chat included.
 

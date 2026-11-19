@@ -409,16 +409,20 @@
   }
 
   function commit(m) {
+    if (!m.ok) {
+      // A tree that was refused keeps the handlers of the last good one; only what was staged goes.
+      for (const token of m.tokens) staged.delete(token);
+      return;
+    }
     for (const id of siteHandlers.get(m.site) || []) handlers.delete(id);
-    siteHandlers.delete(m.site);
     const ids = new Set();
     for (const token of m.tokens) {
       const s = staged.get(token);
       staged.delete(token);
-      if (!s || !m.ok) continue;
+      if (!s) continue;
       for (const [id, fn] of s.recs) { handlers.set(id, { fn }); ids.add(id); }
     }
-    if (m.ok) siteHandlers.set(m.site, ids);
+    siteHandlers.set(m.site, ids);
   }
 
   const api = {

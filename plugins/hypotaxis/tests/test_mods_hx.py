@@ -140,6 +140,15 @@ def test_three_example_mods_load_run_draw_and_answer_through_the_bridge_and_the_
     render = rig.ctx.events("mod.render")[-1]
     assert (render["component"], render["id"], render["kind"]) == ("Pane", "counter", "tree")
     assert render["tree"]["type"] == "Box"
+    import json
+
+    from hypotaxis.util.schema import validate
+
+    contract = json.loads(
+        (Path(__file__).resolve().parents[3] / "apps" / "shared" / "data" / "mods.schema.json").read_text()
+    )["events"]
+    assert all(validate(r, contract["mod.render"]) == [] for r in rig.ctx.events("mod.render"))
+    assert all(validate(p, contract["mod.pane"]) == [] for p in rig.ctx.events("mod.pane"))
     assert sorted(rig.ctx.commands) == ["hello-command:fingerprint", "hello-command:hello"]
     handler = rig.ctx.commands["hello-command:hello"][0]
     assert handler("Ada", session_id=SID) == "Hello, Ada!"

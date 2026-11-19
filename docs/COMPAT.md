@@ -194,6 +194,8 @@ Verified kwargs are from `H:website/docs/user-guide/features/hooks.md` and `herm
 
 `agent_loop_stopped` is **not** Stop. It fires only when a running turn is interrupted (`/stop` or `session.interrupt`). It is the closest match for Codex's `Interrupt`.
 
+**Mod events use the same bridge.** A plugin whose `hooks/hooks.json` has `modules` is a mod (`docs/MODS.md`). The callbacks above also deliver its events, from the same Hermes hooks (`compat/hooks/mod_events.py`, the `ModEvents` half of `Bridge`): `session.start` and `session.end` (`on_session_start`, `on_session_finalize`), `prompt.submit` and `turn.start` (`pre_llm_call`), `turn.complete` (`post_llm_call`), `tool.check` and `tool.call` (`pre_tool_call`; `tool.call` again on `transform_tool_result`), `turn.step` (`pre_api_request`) and `command.run` (a slash command). The rules for what a mod may change are in `docs/MODS.md` section 9: it can drop a prompt and tighten a tool call, it cannot loosen one, it cannot rewrite one in governed mode, and a model change is refused.
+
 ### 4.2 stdin payload
 
 Built per call from Hermes kwargs. Keys are exactly Claude's (`F§1.3`).
@@ -498,6 +500,8 @@ The real fix is upstream (deferred, section 13). Where a project needs the exact
 5. On consent, generate a **portable Agent Plugin v1** at `<home>/plugins/<slug>/` containing only `plugin.json` and `skills/<n>/SKILL.md`, with frontmatter normalized to v1 (`name` equals the directory, strings only). Skills that fail validation are skipped and reported. Hermes then provides native namespacing `<slug>:<skill>` and enable and disable. Run `hermes plugins enable <slug>`.
 6. Hooks, commands, agents, rules and MCP servers are read from `source/`. They are active **iff Hermes reports the generated plugin enabled** and the trust grant matches. **Hermes's enabled flag is the single source of truth for enable and disable as a unit.** Disabled plugins' hosted MCP servers do not start. Uninstall removes `plugins/<slug>`, the `source/` directory and the trust records.
 7. `plugin.update`: re-resolve, show the **component diff**, re-prompt (hash changed), then swap atomically. Claude's `${CLAUDE_PLUGIN_ROOT}` changes on update (as in Claude), and `${CLAUDE_PLUGIN_DATA}` persists.
+
+**Mods (built in M1):** `mod.install.prepare` and `mod.install.confirm` are steps 3 and 4 and the consent part of step 5 for a local source: the tree hash, `lock.json`, the install prompt (the hooks and the `$` namespaces found by static analysis of the transformed module, `hx mods.analyze`), and the trust record for the project. A mod is read from `<home>/hypotaxis/compat/plugins/<slug>/source/` and runs only when Hermes lists its slug as enabled and the content hash is the one approved. Steps 1, 2 (fetching from a marketplace, pinning a ref), 5 (the generated Agent Plugin v1) and 6 (`hermes plugins enable`) are not built yet; a source that is a clean git checkout records its commit.
 
 Other rules:
 - Reserved marketplace names (`claude-plugins-official`, `anthropic-*`, ...) are accepted only from the sources Claude itself accepts, and `blockedMarketplaces` and `strictKnownMarketplaces` from managed settings are honoured.
