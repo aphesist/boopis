@@ -235,16 +235,17 @@
 .ui-seg {
   --n: 2; --i: 0;
   position: relative; display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; flex: none;
-  height: var(--ctl); max-width: 100%; padding: var(--corner-inset); box-sizing: border-box;
-  --r-outer: var(--r-s); --pad: var(--pad-seg); border-radius: var(--r-outer);
+  --seg-h: var(--ctl); height: var(--seg-h); max-width: 100%; padding: var(--corner-inset); box-sizing: border-box;
+  --r-outer: min(var(--r-s), calc(var(--seg-h) / 2));   /* the radius the track really draws: at most a pill, so the thumb's --r-in is concentric with it at every corners setting (R-corner-3) */ --pad: var(--pad-seg); border-radius: var(--r-outer);
   --sq-bg: var(--bg-0); background: var(--sq-bg); box-shadow: inset 0 0 0 1px var(--hair);
 }
 .ui-seg--fill { display: grid; width: 100%; }
 .ui-seg__thumb {
-  position: absolute; top: var(--corner-inset); bottom: var(--corner-inset); left: var(--corner-inset); width: calc((100% - 2 * var(--corner-inset)) / var(--n));
+  position: absolute; top: var(--corner-inset); bottom: var(--corner-inset); inset-inline-start: var(--corner-inset); width: calc((100% - 2 * var(--corner-inset)) / var(--n));
   border-radius: var(--r-corner); background: var(--selected); pointer-events: none;   /* concentric with the track: the container rule's inset and radius */
-  transform: translateX(calc(100% * var(--i))); transition: transform var(--dur-slide) var(--ease);
+  transform: translateX(calc(100% * var(--i) * var(--dir, 1))); transition: transform var(--dur-slide) var(--ease);
 }
+.ui-seg:dir(rtl) { --dir: -1; }   /* the options run right to left, so the thumb starts at the right and slides left */
 .ui-seg__opt {
   appearance: none; position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   min-width: 0; padding: 0 14px; margin: 0; border: 0; border-radius: var(--r-corner); background: transparent;
@@ -257,7 +258,7 @@
 .ui-seg__opt:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }   /* inside the track, which clips to its path */
 .ui-seg__opt .ui-dot { display: none; }
 .ui-seg__opt[aria-selected="false"] .ui-dot[data-show], .ui-seg__opt[aria-checked="false"] .ui-dot[data-show] { display: block; }
-.ui-seg--s { height: calc(var(--ctl) - 2px); }
+.ui-seg--s { --seg-h: calc(var(--ctl) - 2px); }
 .ui-seg--s .ui-seg__opt { padding: 0 12px; font-size: var(--fs-xs); }
 .ui-seg--vertical { grid-auto-flow: row; grid-auto-rows: 1fr; width: 36px; height: auto; }
 .ui-seg--vertical .ui-seg__thumb { left: 3px; right: 3px; width: auto; height: calc((100% - 6px) / var(--n)); transform: translateY(calc(100% * var(--i))); }
