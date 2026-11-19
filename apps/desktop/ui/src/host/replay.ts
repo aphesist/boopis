@@ -79,7 +79,38 @@ export class ReplayHost implements HostBridge {
 export async function loadFrames(name: string): Promise<RecordedFrame[]> {
   const res = await fetch('/__frames/' + name + '.frames.json');
   if (!res.ok) throw new Error('no recorded frames named ' + name);
-  return (await res.json()) as RecordedFrame[];
+  return rebaseClock((await res.json()) as RecordedFrame[], Date.now());
+}
+
+const ISO_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/;
+/** Fields the gateway sends as Unix time (seconds, or milliseconds for `checked_at`); every other time is an ISO string. */
+const EPOCH_SECONDS = new Set(['started_at', 'last_active_at', 'timestamp', 'refreshed_at']);
+const EPOCH_MS = new Set(['checked_at']);
+
+/** Moves a recording's clock to `now`: every time in it shifts by the same amount, so the intervals stay as recorded (a
+    form that expired an hour after it was raised still does) and nothing recorded goes stale as the wall clock moves on.
+    The recording starts at its earliest time. */
+export function rebaseClock(frames: readonly RecordedFrame[], now: number): RecordedFrame[] {
+  let start = Infinity;
+  const scan = (v: unknown, key?: string): void => {
+    if (typeof v === 'string' && ISO_UTC.test(v)) start = Math.min(start, Date.parse(v));
+    else if (typeof v === 'number' && key && EPOCH_SECONDS.has(key)) start = Math.min(start, v * 1000);
+    else if (typeof v === 'number' && key && EPOCH_MS.has(key)) start = Math.min(start, v);
+    else if (Array.isArray(v)) v.forEach((x) => scan(x, key));
+    else if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) scan(x, k);
+  };
+  scan(frames);
+  if (!Number.isFinite(start)) return frames.map((f) => ({ ...f }));
+  const shift = now - start;
+  const move = (v: unknown, key?: string): unknown => {
+    if (typeof v === 'string' && ISO_UTC.test(v)) return new Date(Date.parse(v) + shift).toISOString();
+    if (typeof v === 'number' && key && EPOCH_SECONDS.has(key)) return v + shift / 1000;
+    if (typeof v === 'number' && key && EPOCH_MS.has(key)) return v + shift;
+    if (Array.isArray(v)) return v.map((x) => move(x, key));
+    if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, move(x, k)]));
+    return v;
+  };
+  return frames.map((f) => move(f) as RecordedFrame);
 }
 
 /** A keychain that keeps what it is given in memory, for the tests: they read `stored` to see that a secret reached the host's
