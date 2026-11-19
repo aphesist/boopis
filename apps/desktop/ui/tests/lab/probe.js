@@ -8,7 +8,7 @@
      geometry.clip      text is not clipped unless it ends in an ellipsis
      geometry.hscroll   no horizontal scroll (the page, or a scroller that is not code)
      geometry.target    hit targets are at least 24 px (WCAG 2.5.8, DESIGN-SYSTEM.md section 15), or spaced as 2.5.8 allows
-     concentric         a shape in a container's corner has equal insets, radius = outer - inset (floor 8) or a pill, and
+     concentric         a shape in a container's corner has equal insets, radius = outer - inset (the preset's --r-floor) or a pill, and
                         never crosses the container's edge, focus ring and hover fill included (section 8.2, 14.10)
      overlay            tooltips, menus and popovers sit outside their anchor with the system's gap, inside the window,
                         aligned as the system says, never over the anchor's container's text field (14.18, 14.19, 14.23)
@@ -26,7 +26,8 @@
   /* visually hidden text (the screen reader's) is not drawn: no geometry, no tokens */
   const SR = '.ui-sr, .sr-only, [class$="-sr"]';
   /* owner decisions that reach past an edge on purpose: an orb's attention flag (orbs stay whole) */
-  const OVERHANG_OK = '.ui-dot--flag, .ui-orb .ui-dot';
+  /* a flag dot sits on its orb's corner; a concave flare lies outside the surface it softens (DESIGN-SYSTEM.md section 8: where the ground meets the frame) */
+  const OVERHANG_OK = '.ui-dot--flag, .ui-orb .ui-dot, .ui-concave';
   const MAX = 4000;
   /* R-space-2's named exceptions, by value (card 14 16, request 10 14, composer 12 14 4 and 6, button 0 14 / 10 / 8, chip 10 8,
      field 6 10, menu 4 and 6 8, popover 12, tooltip 4 8, toast 6 14, segmented 3, stamp 7, code chip 1 5, key chip 4 and 3 apart,
@@ -230,6 +231,10 @@
 
   /* ───────── the checks ───────── */
   function run(o) {
+    /* a colour or a radius in flight (a preset swap, or a surface that was not drawn when the preset changed and first paints from the old colour)
+       is taken to its end first, so R-colour-1 reads the colour a surface rests at and never one half-way. Only colours and corners: a box that
+       is travelling (a sidebar, a menu) keeps travelling, and what closes when its anchor leaves is the app's to do in its own time. */
+    for (const a of document.getAnimations()) if (a instanceof CSSTransition && /color|background|shadow|outline|fill|stroke|radius/.test(a.transitionProperty)) { try { a.finish(); } catch { /* an animation that cannot finish is left */ } }
     const scope = o.scope ? document.querySelector(o.scope) : (window.__lab && window.__lab.scope && window.__lab.scope()) || document.body;
     if (!scope) return { error: 'no scope', findings: [] };
     const want = new Set(o.checks || ['geometry.contain', 'geometry.center', 'geometry.clip', 'geometry.hscroll', 'geometry.target', 'concentric', 'overlay', 'tokens.computed', 'tokens.spacing', 'native', 'scrollbar', 'brand', 'copy', 'roles']);
@@ -371,7 +376,9 @@
     if (want.has('overlay')) {
       const layers = [];
       const ov = o.overlay || (window.__lab && window.__lab.overlay);
-      if (ov) { const a = document.querySelector(ov.anchor), l = [...document.querySelectorAll(ov.layer)].find(shown); if (!a || !l) add('overlay', a || scope, 'the overlay did not open (' + ov.layer + ' against ' + ov.anchor + ')'); else layers.push([a, l]); }
+      if (ov) { const a = document.querySelector(ov.anchor), l = [...document.querySelectorAll(ov.layer)].find(shown); const onScreen = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.right > 0 && r.bottom > 0 && r.left < innerWidth && r.top < innerHeight && shown(e) && ((h) => !!h && (h === e || e.contains(h)))(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)); };
+        /* an anchor that is not on screen (a drawer that is closed at this width: off the screen, or clipped by it) cannot hold an overlay open: the app closed it with the drawer, there is nothing to place */
+        if (a && !l && !onScreen(a)) { /* nothing to check */ } else if (!a || !l) add('overlay', a || scope, 'the overlay did not open (' + ov.layer + ' against ' + ov.anchor + ')'); else layers.push([a, l]); }
       else {
         const tip = [...document.querySelectorAll('.ui-tip.is-in')].find(shown);
         const ta = document.activeElement && document.activeElement.closest && document.activeElement.closest('[data-tip]');
@@ -457,6 +464,11 @@
             const n = r1(px(v));
             if (n === 0 || T.space.has(n) || SPACE_NAMED.has(n)) continue;
             if (/gap/.test(prop) && !/flex|grid/.test(s.display)) continue;
+            /* R-layout-5: a scroller that runs under the composer or the dock pads its end by their height, a sum of live heights and not a step */
+            if (prop === 'padding-bottom' && /auto|scroll/.test(s.overflowY)) {
+              const r = e.getBoundingClientRect();
+              if ([...document.querySelectorAll('.ui-composer, .bt-composer-zone, #hx-dock')].some((f) => { const q = f.getBoundingClientRect(); return q.height > 0 && q.left < r.right && q.right > r.left && q.top < r.bottom && q.bottom > r.bottom - n; })) continue;
+            }
             stray('tokens.spacing', e, prop, v);
           }
         }
@@ -651,10 +663,10 @@
   function analyse(tracked, removed, added) {
     const issues = [];
     /* replaced: a node removed and one with the same key added (a redraw instead of an update) */
-    const addedKeys = new Map();
-    for (const a of added) addedKeys.set(a.key, (addedKeys.get(a.key) || 0) + 1);
+    /* a redraw puts the node back right after it takes it away (innerHTML, replaceWith: the same batch, or a moment later);
+       a row that a filter adds on one keystroke and drops on the next is a list that changed, not a node redrawn (R-motion-5) */
     const repl = new Map();
-    for (const r of removed) if (addedKeys.get(r.key) && /[#[]/.test(r.key)) repl.set(r.key, (repl.get(r.key) || 0) + 1);
+    for (const r of removed) if (/[#[]/.test(r.key) && added.some((a) => a.key === r.key && a.t >= r.t - 50 && a.t - r.t <= 500)) repl.set(r.key, (repl.get(r.key) || 0) + 1);
     for (const [k, c] of repl) issues.push({ kind: 'replaced', key: k, msg: k + ' was removed and drawn again ' + c + ' time' + (c > 1 ? 's' : '') + ' (an update should keep the node)' });
     for (const [, rec] of tracked) {
       const f = rec.frames.filter(Boolean);

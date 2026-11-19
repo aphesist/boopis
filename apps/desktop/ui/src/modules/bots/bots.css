@@ -35,11 +35,12 @@
 
 /* the presence header: orb 40 in the margin, name 16/600, role 12 quiet, state; settings on the right */
 .bt-presence {
-  position: sticky; top: 0; z-index: 2; display: grid; grid-template-columns: var(--hx-margin-w, var(--margin-w)) minmax(0, 1fr) auto;
-  align-items: center; padding: var(--sp-6) 0 var(--sp-5); background: var(--bg-2);
+  position: sticky; top: 0; z-index: 2; display: grid; grid-template-columns: calc(var(--hx-margin-w, var(--margin-w)) - var(--sp-1)) minmax(0, 1fr) auto;
+  align-items: center; padding: var(--sp-6) var(--sp-1) var(--sp-5); background: var(--bg-2);   /* --sp-1 at the sides holds the orb's and the settings button's focus ring inside the header (R-corner-4); the name stays on the margin's edge */
 }
 [data-margin="off"] .bt-presence { grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--sp-3); }
 .bt-p-orb { width: 40px; height: 40px; display: grid; place-items: center; }
+.bt-orb-btn:focus-visible { outline-offset: 2px; }   /* a 2px ring 2px off the orb reaches 4px, --sp-1: the header's side padding holds it */
 .bt-p-text { min-width: 0; }
 .bt-p-name {
   margin: 0; font-size: var(--fs-l); font-weight: 600; line-height: var(--lh-tight); color: var(--text-strong);
@@ -86,7 +87,7 @@
 .bt-dice:hover, .bt-dice:focus-visible { color: var(--text); }
 .bt-name-note { min-height: calc(var(--fs-xs) * 1.5); margin: var(--sp-1) 0 var(--sp-4); max-width: min(360px, 100%); text-align: center; font-size: var(--fs-xs); line-height: 1.5; color: var(--text-quiet); overflow-wrap: anywhere; }
 .bt-name {
-  box-sizing: border-box; width: 100%; margin: 0; padding: var(--sp-1) calc(var(--ctl) + var(--sp-1)) 6px; text-align: center; text-overflow: ellipsis;
+  box-sizing: border-box; width: 100%; margin: 0; padding: var(--sp-1) var(--sp-7) var(--sp-2); text-align: center; text-overflow: ellipsis;
   background: none; border: 0; border-bottom: 1px solid var(--line-field); outline: 0;
   font: inherit; font-size: var(--fs-xl); font-weight: 600; line-height: var(--lh-tight); color: var(--text-strong); caret-color: var(--brass);
 }
@@ -97,7 +98,7 @@
 .bt-appearance { display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); width: 100%; margin-bottom: var(--sp-6); }
 .bt-pick { width: 100%; min-height: calc(var(--ctl) + 6px); display: flex; justify-content: center; }
 .bt-opts { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-1); }
-.bt-opt { width: calc(var(--ctl) + 6px); height: calc(var(--ctl) + 6px); border-radius: var(--r-s); display: grid; place-items: center; transition: background-color var(--dur-out) var(--ease); --sq-bg: transparent; background: var(--sq-bg); }
+.bt-opt { width: calc(var(--ctl) + 6px); height: calc(var(--ctl) + 6px); border-radius: var(--r-pill);   /* a pill: the colour circle in it stays a circle at --sp-2 (R-corner-9) */ display: grid; place-items: center; transition: background-color var(--dur-out) var(--ease); --sq-bg: transparent; background: var(--sq-bg); }
 .bt-opt:hover { --sq-bg: var(--hover); background: var(--sq-bg); transition-duration: var(--dur-1); }
 .bt-opt[aria-checked="true"] { --sq-bg: var(--current); background: var(--sq-bg); box-shadow: inset 0 0 0 1px var(--brass); }
 .bt-swatch { width: 20px; height: 20px; border-radius: var(--r-pill); background: var(--c); box-shadow: inset 0 0 0 1px var(--hair); }

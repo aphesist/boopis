@@ -133,7 +133,7 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
   if (!check.needed) return;
   const intro = introText(await bridge.source().catch(() => null));
   const root = el('div', { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'fr-title', class: 'hx-first-run', 'data-layer-host': '',
-    style: 'position:fixed;inset:0;z-index:var(--z-palette);display:grid;place-content:center;gap:var(--sp-4);padding:var(--sp-6);background:var(--bg-0);color:var(--text);font:var(--fs-m)/var(--lh) var(--sans)' });
+    style: 'position:fixed;inset:0;z-index:var(--z-palette);display:grid;place-content:center;gap:var(--sp-4);padding:var(--sp-6);background:var(--bg-2);color:var(--text);font:var(--fs-m)/var(--lh) var(--sans)' });
   /* the welcome is a big moment: the logo's hero, once, above whatever step is drawn (it is not redrawn with the card) */
   root.append(welcomeLogo());
   mount.append(root);
@@ -165,7 +165,7 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
         if (status.done) {
           useFormsHost(null);
           card.append(el('h2', { style: 'margin:0;font:600 var(--fs-l)/var(--lh-tight) var(--sans)' }, 'You are set'));
-          const list = el('ul', { style: 'margin:0;padding-left:1.2em;color:var(--text-dim)' });
+          const list = el('ul', { style: 'margin:0;padding-left:var(--sp-5);color:var(--text-dim)' });
           for (const line of status.receipt?.lines ?? []) list.append(el('li', {}, line));
           card.append(list, button('Open boopis', 'primary', () => { useFormsHost(null); root.remove(); resolve(); }));
         }

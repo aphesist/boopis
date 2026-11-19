@@ -98,7 +98,9 @@ body {
 
 /* the tabs pill and the New button are library pieces (HX.ui.segmented, .ui-btn--ghost); the shell only places them */
 .hx-seg { margin: 12px 12px 0; flex: none; width: auto; align-self: stretch; }
-.hx-new { justify-content: flex-start; margin: 8px 8px 0; padding: 0 8px 0 12px; flex: none; color: var(--text); }
+/* the New button is a container for its key chip (.ui-nest, R-corner-3): the chip sits at the same inset from the end and the
+   edges, half of what the button's height leaves around an 18px chip, and takes --r-in of the button's corner (.ui-keys--fit) */
+.hx-new { --r-outer: var(--r-s); --pad: calc((var(--ctl) - 18px) / 2); justify-content: flex-start; margin: 8px 8px 0; padding: 0 var(--pad) 0 12px; flex: none; color: var(--text); }
 .hx-new .ui-icon { width: 16px; height: 16px; color: var(--icon); }
 .hx-new__label { flex: 1; text-align: left; }
 
@@ -115,8 +117,9 @@ body {
 /* account */
 .hx-foot { display: flex; align-items: center; gap: 4px; height: 52px; padding: 0 8px; flex: none; box-shadow: inset 0 1px 0 var(--hair); }
 .hx-me {
-  display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; height: 36px;
-  padding: 0 8px; border: 0; border-radius: var(--r-s); --sq-bg: transparent; background: var(--sq-bg); cursor: pointer;
+  --r-outer: var(--r-s); --pad: var(--sp-2);   /* a container (.ui-nest): the avatar sits at --pad from the start and both edges, with --r-in */
+  display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; height: calc(24px + 2 * var(--pad));
+  padding: 0 var(--pad); border: 0; border-radius: var(--r-outer); --sq-bg: transparent; background: var(--sq-bg); cursor: pointer;
   color: var(--text); font-size: var(--fs-s); text-align: left;
   transition: background-color var(--dur-1) var(--ease);
 }
@@ -124,9 +127,9 @@ body {
 .hx-me__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: opacity var(--dur-1) var(--ease); }
 .hx-avatar {
   display: inline-grid; place-items: center; flex: none;
-  width: 24px; height: 24px; border-radius: var(--r-pill);
+  width: 24px; height: 24px; border-radius: var(--r-in);
   background: var(--selected); color: var(--text-on-light);
-  font: 600 11px/1 var(--sans); text-transform: uppercase;
+  font: 600 var(--fs-2xs)/1 var(--sans); text-transform: uppercase;
 }
 .hx-avatar::after { content: attr(data-initial); }   /* the initial is drawn, not text: the account button's name does not have to repeat it */
 .hx-foot__gear { transition: opacity var(--dur-1) var(--ease), color var(--dur-1) var(--ease), background-color var(--dur-1) var(--ease); }
@@ -143,7 +146,7 @@ body {
 .hx[data-left="rail"] .hx-side__list { opacity: 0; visibility: hidden; transition: opacity var(--dur-press) var(--ease), visibility 0s linear var(--dur-press); }
 .hx[data-left="rail"] .hx-side__list:has(> .hx-list.is-active[data-rail="ok"]) { opacity: 1; visibility: visible; width: var(--sb-rail-w); }
 /* in the rail every orb stays on the x = 28 axis, so the list scrolls without a bar or a gutter (the bar would push the axis) */
-.hx[data-left="rail"] .hx-list { overflow-y: auto; --scroll-gutter: 0px; scrollbar-width: none; }
+.hx[data-left="rail"] .hx-list { overflow-y: auto; --scroll-gutter: 0px; }
 .hx[data-left="rail"] .hx-list::-webkit-scrollbar { display: none; }
 .hx[data-left="rail"] .hx-me { flex: none; }
 
@@ -210,7 +213,13 @@ body {
   overflow: hidden; animation: hx-drop var(--dur-2) var(--ease);
 }
 .hx-palette__list { padding: 4px max(0px, calc(6px - var(--scroll-gutter, 0px))) 6px 6px; } /* a scroll area (.ui-scroll): rows ellipsise, the list never scrolls sideways */
-.hx-pal-row { height: auto; min-height: var(--row-h); gap: 10px; padding: 0 10px; border-radius: var(--r-in); }
+/* a row is a pill (its radius is half its height) and a container for its key chip (.ui-nest): the chip sits at the end at the
+   same inset as above and below it, and takes --r-in of the row's corner (R-corner-3, R-kbd-2) */
+.hx-pal-row { --r-outer: calc(var(--row-h) / 2); --pad: calc((var(--row-h) - 18px) / 2); height: auto; min-height: var(--row-h); gap: 10px; padding: 0 10px; border-radius: var(--r-outer); }
+.hx-pal-row:has(> .ui-keys) { padding-inline-end: var(--pad); }
+/* the field's key chip (esc): 15px from the top and bottom of the 48px field, so --sp-4 from the end (the hairline under the field is
+   an inset shadow, not a border, so the 48px box is all chip room) */
+.hx-palette .ui-search--l { padding-right: var(--sp-4); border-bottom: 0; box-shadow: inset 0 -1px 0 var(--hair); }
 .hx-pal-row__icon { width: 18px; height: 18px; display: grid; place-items: center; color: var(--icon); flex: none; }
 .hx-pal-row__icon .ui-icon { width: 16px; height: 16px; }
 .hx-pal-row__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -218,7 +227,7 @@ body {
 .hx-pal-row__meta { color: var(--text-quiet); font-size: var(--fs-xs); white-space: nowrap; }
 .hx-pal-row__trail { color: var(--text-quiet); font: 400 var(--fs-2xs)/1 var(--mono); white-space: nowrap; }
 .hx-pal-row__trail.is-attn { color: var(--red-text); }
-.hx-pal-empty { padding: 28px 16px 30px; text-align: center; color: var(--text-dim); font-size: var(--fs-s); line-height: 1.6; }
+.hx-pal-empty { padding: var(--sp-5) var(--sp-4); text-align: center; color: var(--text-dim); font-size: var(--fs-s); line-height: 1.6; }
 .hx-pal-empty b { color: var(--text); font-weight: 500; }
 
 .hx-dialog { padding: 0; border: 0; background: transparent; color: var(--text); width: min(600px, calc(100% - 32px)); height: min(680px, calc(100% - 64px)); max-height: none; font-family: var(--sans); }
@@ -239,18 +248,19 @@ body {
 .hxt-presets { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
 .hxt-select { width: 180px; flex: none; }
 .hxt-preset {
-  position: relative; display: grid; gap: 4px; padding: 10px 12px 12px; cursor: pointer;
-  border-radius: var(--r-m); background: var(--bg-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--line);
+  --r-outer: var(--r-m); --pad: var(--sp-3);   /* a container (.ui-nest): the swatches sit at --pad from the top and the start, with --r-in */
+  position: relative; display: grid; align-content: start; gap: var(--sp-1); padding: var(--pad); cursor: pointer;
+  border-radius: var(--r-outer); background: var(--bg-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--line);
   font-family: var(--sans); transition: box-shadow var(--dur-1) var(--ease);
 }
 .hxt-preset input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
 .hxt-preset:hover { box-shadow: inset 0 0 0 1px var(--line-strong); }
 .hxt-preset:has(input:checked) { box-shadow: inset 0 0 0 2px var(--brass); }
 .hxt-preset:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
-.hxt-preset__chips { display: flex; gap: 0; margin-bottom: 4px; }
+.hxt-preset__chips { display: flex; align-items: center; gap: 0; margin-bottom: var(--sp-1); }
 .hxt-preset__chips i { width: 22px; height: 22px; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 12%, transparent); }
-.hxt-preset__chips i:first-child { border-radius: var(--r-xs) 0 0 var(--r-xs); }
-.hxt-preset__chips i:last-child { border-radius: 0 var(--r-xs) var(--r-xs) 0; }
+.hxt-preset__chips i:first-child { border-radius: var(--r-in) 0 0 var(--r-in); }
+.hxt-preset__chips i:last-child { border-radius: 0 var(--r-in) var(--r-in) 0; }
 .hxt-preset__name { font-size: var(--fs-s); font-weight: 600; color: var(--text-strong); }
 .hxt-preset[data-hx-case="lower"] .hxt-preset__name { text-transform: lowercase; }
 .hxt-preset__note { font-size: var(--fs-xs); color: var(--text-dim); }
@@ -332,9 +342,9 @@ body {
 /* ───────────── keyboard: sheet, go-to hint, region focus ───────────── */
 .hx-keysheet { width: min(1000px, calc(100% - 32px)); height: min(720px, calc(100% - 48px)); }
 .hx-keysheet .hx-dialog__head h2 { margin-right: auto; }
-.hx-keys-filter { width: 200px; min-height: 0; height: var(--ctl-s); }   /* the library's search field (.ui-search--m), small in the sheet's head */
+.hx-keys-filter { width: 200px; min-height: 0; height: var(--ctl-s); border-radius: var(--r-in); }   /* in the dialog head's corner: the dialog's --r-in (a capsule at this height), as the close button beside it (R-corner-3, R-corner-5) */   /* the library's search field (.ui-search--m), small in the sheet's head */
 .hx-keysheet .hx-dialog__head .ui-ib { margin-left: 0; }
-.hx-keysheet .hx-dialog__body:focus-visible { outline-offset: -2px; border-radius: 0 0 var(--r-l) var(--r-l); }
+.hx-dialog__body:focus-visible { outline-offset: -2px; border-radius: 0 0 var(--r-l) var(--r-l); }   /* the body of Settings and of the shortcut sheet scrolls from the keyboard */
 .hx-keys-grid { columns: 3 260px; column-gap: 32px; padding-top: 8px; }
 .hx-keygroup { break-inside: avoid; margin: 0 0 20px; }
 .hx-keygroup h3 { margin: 12px 0 4px; font-size: var(--fs-xs); font-weight: 500; color: var(--text-quiet); text-transform: var(--ui-case); }
@@ -363,7 +373,10 @@ body {
 .hx-dialog__card { --r-outer: var(--r-l); --pad: var(--pad-dialog); --sq-bg: var(--bg-1); --sq-line: var(--line); }
 .hx-palette__box { --r-outer: var(--r-l); --pad: var(--pad-palette); --sq-bg: var(--bg-1); --sq-line: var(--line); }
 .hx-dialog__card[data-sq-on], .hx-palette__box[data-sq-on], .hx-goto[data-sq-on] { box-shadow: var(--shadow-pop); }
-.hx-pal-row { border-radius: var(--r-in); }
+/* A drawn surface does not transition. Reduced motion gives every element a 1 ms transition (all properties), and a corner radius
+   that transitions is read half-way by the squircle after a preset change, which writes it into --r-outer and keeps the old
+   radius for good (a Settings dialog 30px in Typewriter, which wants 36). The surfaces animate with their own keyframes. */
+.hx-dialog__card, .hx-palette__box, .hx-goto { transition-property: none; }
 .hx-goto { --sq-bg: var(--bg-3); --sq-line: var(--line); }
 .hxt-preset { --sq-bg: var(--bg-2); --sq-line: var(--line); }
 .hxt-preset:hover { --sq-line: var(--line-strong); }

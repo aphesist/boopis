@@ -23,7 +23,7 @@ import { tauriSecrets } from './secrets';
 import type { SecretsBridge } from './secrets';
 import type { GatewayClient, GatewayEvent } from './gateway';
 import type { RpcMethods } from '../vendor/hermes-shared/gateway-contract.generated';
-import { approvalToWait, choiceFor, clock, elapsed, failedStep, paragraphs, reduceLedger, sessionRowToSummary, toolStep, transcriptToTurns } from './map';
+import { approvalToWait, choiceFor, clock, elapsed, failedStep, paragraphs, reduceLedger, sessionRowToSummary, sessionTitle, toolStep, transcriptToTurns } from './map';
 import type { LedgerTotals } from './map';
 
 const log = logger('live');
@@ -248,7 +248,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     if (ev.type.startsWith('plugin.boopis.blank.')) { syncBlanks(c); return; }
     if (formsHost.handle(ev, { gwSession: ev.session_id ?? '', model: c.model })) return;
     switch (ev.type) {
-      case 'session.info': { const profile = p['profile_name']; if (typeof profile === 'string' && profile) user.set({ name: profile, initials: profile.slice(0, 1).toLowerCase() }); const m = p['model']; if (typeof m === 'string' && m) c.model = m; const t = p['title']; if (typeof t === 'string' && t) patchSession(uiId, { title: t }); break; }
+      case 'session.info': { const profile = p['profile_name']; if (typeof profile === 'string' && profile) user.set({ name: profile, initials: profile.slice(0, 1).toLowerCase() }); const m = p['model']; if (typeof m === 'string' && m) c.model = m; const t = p['title']; if (typeof t === 'string' && t) patchSession(uiId, { title: sessionTitle({ title: t, preview: '' }) }); break; }
       case 'message.start': startTurn(c); break;
       case 'tool.start': addStep(c, startTurn(c), toolStep(p)); break;
       case 'tool.complete': if (p['is_error'] === true) addStep(c, startTurn(c), failedStep(p)); break;

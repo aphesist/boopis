@@ -1,5 +1,6 @@
 /* The shell: the title bar, the sidebar (open, rail, closed) and its session list, the command palette, the menus
    (account, attach, model picker, the blank's popover), the app's toast, the details panel and the keyboard sheet. */
+import { store } from '../../../data/store';
 import type { AppCtx, ProviderSpec, State, Story } from '../../types';
 
 const MOCK = { url: '/v6/__index.html' };
@@ -20,7 +21,7 @@ const sidebar: Story = {
     'row focus': st(['focus'], undefined, {}, { force: [{ sel: '#hx-list-session li:nth-of-type(2) .ui-row', state: 'focus' }] }),
     'tabs pill hover': st(['hover'], undefined, {}, { force: [{ sel: '#hx-seg .ui-seg__opt:last-of-type', state: 'hover' }] }),
     'tabs pill focus': st(['focus'], undefined, {}, { force: [{ sel: '#hx-seg .ui-seg__opt', state: 'focus' }] }),
-    'long names': st(['long'], async (c) => { for (const r of document.querySelectorAll<HTMLElement>('#hx-list-session .ui-row__title')) r.textContent = 'Reconcile the invoices_v2 backfill against the ledger before the quarterly close ' + r.textContent; await c.wait(200); }, {}, { note: 'titles lengthened in place' })
+    'long names': st(['long'], undefined, { patch: (p) => ({ ...p, sessions: { ...p.sessions, list: store(p.sessions.list.get().map((s) => ({ ...s, title: 'Reconcile the invoices_v2 backfill against the ledger before the quarterly close ' + s.title }))) } }) }, { note: 'the sessions\' titles lengthened in the provider' })
   }
 };
 const titleBar: Story = {
@@ -30,7 +31,7 @@ const titleBar: Story = {
     'command field hover': st(['hover'], undefined, {}, { force: [{ sel: '#hx-btn-search', state: 'hover' }] }),
     'command field focus': st(['focus'], undefined, {}, { force: [{ sel: '#hx-btn-search', state: 'focus' }] }),
     'sidebar button tooltip': st(['tooltip'], async (c) => { const b = c.$('#hx-btn-left'); b.focus(); c.hx.ui.tooltip.show(b); await c.wait(250); }, {}, { overlay: { anchor: '#hx-btn-left', layer: '.ui-tip' } }),
-    'a long session title': st(['long'], async (c) => { c.$('#hx-where-title').textContent = 'Reconcile the invoices_v2 backfill against the ledger before the quarterly close and the auditors'; await c.wait(100); }, {}, { allow: { 'stability.render': 'the title is lengthened in place after boot; the shell may write it again' } })
+    'a long session title': st(['long'], async (c) => { c.hx.emit('hx:title', { title: 'Reconcile the invoices_v2 backfill against the ledger before the quarterly close and the auditors' }); await c.wait(100); })
   }
 };
 const pal: Story = {
