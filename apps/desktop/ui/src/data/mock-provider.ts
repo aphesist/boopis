@@ -192,7 +192,7 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
       while (botById(id)) id = base + '-' + n++;
       const role = shortRole(draft.role);
       const nb: Bot = {
-        id, name: id, role, shape: draft.shape, color: draft.color, eyes: draft.eyes, state: 'happy', attention: null, paused: false, activity: '', spent: '0.00', last: null, ideas: M.ideasFor(role),
+        id, name: id, role, shape: draft.shape, color: draft.color, state: 'happy', attention: null, paused: false, activity: '', spent: '0.00', last: null, ideas: M.ideasFor(role),
         cfg: { instructions: draft.instructions, gov: 'governed', model: 'sonnet 5.5', cap: '0.60', cron: '', channels: { app: true, slack: false, telegram: false, email: false }, approvals: { deploys: true, push: true, network: true, spend: true, people: true, outside: true }, workspace: 'worktree' }
       };
       bots.push(nb);

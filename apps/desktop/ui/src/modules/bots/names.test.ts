@@ -38,7 +38,7 @@ describe('availability is derived from the bots that exist, never stored', () =>
     S.bots = [];                                             // not initialised: the provider's own list is read
     const name = botNames.pick();
     expect(botNames.available()).toContain(name);
-    const made = data().bots.create({ name, role: '', shape: 'circle', color: '#3b82f6', eyes: 'pill', instructions: '' });
+    const made = data().bots.create({ name, role: '', shape: 'circle', color: '#3b82f6', instructions: '' });
     expect(botNames.taken(name)).toBe(true);
     expect(botNames.available()).not.toContain(name);
     data().bots.archive(made.id);

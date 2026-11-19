@@ -3,7 +3,7 @@
 import { ui } from '../../components';
 import type { BotLike } from '../../components';
 
-export { DRAFT_COLOR, EYES, SHAPES, SWATCHES } from '../../data/looks';
+export { DRAFT_COLOR, SHAPES, SWATCHES } from '../../data/looks';
 
 /* Repaint an orb from bot data; only what changed is written, so orb2 morphs instead of restarting anything. Dark
    bodies take the library's light eyes (the same rule as ui.orb). */
@@ -15,9 +15,8 @@ export function paintOrbColour(o: Element | null | undefined, color: string): vo
   if (o.getAttribute('color') !== color) o.setAttribute('color', color);
   if (eye) { if (o.getAttribute('eye-color') !== eye) o.setAttribute('eye-color', eye); } else if (o.hasAttribute('eye-color')) o.removeAttribute('eye-color');
 }
-export function paintOrb(o: Element | null | undefined, d: BotLike & { color: string; shape: string; eyes: string }): void {
+export function paintOrb(o: Element | null | undefined, d: BotLike & { color: string; shape: string }): void {
   if (!o) return;
   paintOrbColour(o, d.color);
   if (o.getAttribute('shape') !== d.shape) o.setAttribute('shape', d.shape);
-  if (o.getAttribute('eye-shape') !== d.eyes) o.setAttribute('eye-shape', d.eyes);
 }

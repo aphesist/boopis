@@ -137,12 +137,12 @@ describe('sessions, bots and governance commands', () => {
   it('a new bot arrives with its greeting; archiving the last bot is refused', () => {
     const events: BotsEvent[] = [];
     p.bots.subscribe((e) => events.push(e));
-    const b = p.bots.create({ name: 'Rex', role: 'Reviews pull requests. Fast.', shape: 'circle', color: '#fff', eyes: 'pill', instructions: 'Reviews pull requests.' });
+    const b = p.bots.create({ name: 'Rex', role: 'Reviews pull requests. Fast.', shape: 'circle', color: '#fff', instructions: 'Reviews pull requests.' });
     expect(b.id).toBe('rex');
     expect(b.role).toBe('reviews pull requests');
     vi.advanceTimersByTime(900 + 3000);
     expect(events.some((e) => e.type === 'message-end' && e.text.includes('I’m rex'))).toBe(true);
-    const dup = p.bots.create({ name: 'rex', role: '', shape: 'circle', color: '#fff', eyes: 'pill', instructions: '' });
+    const dup = p.bots.create({ name: 'rex', role: '', shape: 'circle', color: '#fff', instructions: '' });
     expect(dup.id).toBe('rex-2');
   });
   it('governance changes reach the run the dock shows', () => {

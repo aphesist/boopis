@@ -11,19 +11,19 @@ import type {
 export const USER: User = { name: 'enzo', initials: 'e' };
 
 /* ───────── bots: the 11 in the owner's Figma dock, in order ───────── */
-interface BotSeed { id: string; name: string; role: string; shape: string; color: string; eyes: string; state: string; attention?: string; /** boopis has no store for it: made with the `hermes` command */ outside?: boolean }
+interface BotSeed { id: string; name: string; role: string; shape: string; color: string; state: string; attention?: string; /** boopis has no store for it: made with the `hermes` command */ outside?: boolean }
 const BOT_SEEDS: readonly BotSeed[] = [
-  { id: 'atlas',  name: 'atlas',  role: 'reviewer',          shape: 'circle',   color: '#efece6', eyes: 'pill',   state: 'idle' },
-  { id: 'nina',   name: 'nina',   role: 'deploys',           shape: 'triangle', color: '#f23b5a', eyes: 'pill',   state: 'needs', attention: 'approval' },
-  { id: 'kai',    name: 'kai',    role: 'docs and changelog', shape: 'circle',  color: '#4fc9a8', eyes: 'pill',   state: 'working' },
-  { id: 'iris',   name: 'iris',   role: 'design QA',         shape: 'flower',   color: '#3b82f6', eyes: 'circle wide', state: 'idle' },
-  { id: 'hex',    name: 'hex',    role: 'security review',   shape: 'hexagon',  color: '#a6a6ab', eyes: 'square', state: 'sleeping' },
-  { id: 'sol',    name: 'sol',    role: 'night shift',       shape: 'circle',   color: '#f5a337', eyes: 'circle', state: 'idle' },
-  { id: 'noct',   name: 'noct',   role: 'on-call',           shape: 'circle',   color: '#1c1c24', eyes: 'arc',    state: 'happy' },
-  { id: 'terra',  name: 'terra',  role: 'data migrations',   shape: 'drop',     color: '#c4834a', eyes: 'circle', state: 'thinking' },
-  { id: 'nimbus', name: 'nimbus', role: 'inbox triage',      shape: 'cloud',    color: '#9b5cf6', eyes: 'arc',    state: 'idle' },
-  { id: 'vox',    name: 'vox',    role: 'release notes',     shape: 'circle',   color: '#6d5cf0', eyes: 'matrix', state: 'compute' },
-  { id: 'moss',   name: 'moss',   role: 'flaky test hunter', shape: 'squircle', color: '#2fd26a', eyes: 'bars',   state: 'speaking' }
+  { id: 'atlas',  name: 'atlas',  role: 'reviewer',          shape: 'circle',   color: '#efece6',   state: 'idle' },
+  { id: 'nina',   name: 'nina',   role: 'deploys',           shape: 'triangle', color: '#f23b5a',   state: 'needs', attention: 'approval' },
+  { id: 'kai',    name: 'kai',    role: 'docs and changelog', shape: 'circle',  color: '#4fc9a8',   state: 'working' },
+  { id: 'iris',   name: 'iris',   role: 'design QA',         shape: 'flower',   color: '#3b82f6', state: 'idle' },
+  { id: 'hex',    name: 'hex',    role: 'security review',   shape: 'hexagon',  color: '#a6a6ab', state: 'sleeping' },
+  { id: 'sol',    name: 'sol',    role: 'night shift',       shape: 'circle',   color: '#f5a337', state: 'idle' },
+  { id: 'noct',   name: 'noct',   role: 'on-call',           shape: 'circle',   color: '#1c1c24',    state: 'happy' },
+  { id: 'terra',  name: 'terra',  role: 'data migrations',   shape: 'drop',     color: '#c4834a', state: 'thinking' },
+  { id: 'nimbus', name: 'nimbus', role: 'inbox triage',      shape: 'cloud',    color: '#9b5cf6',    state: 'idle' },
+  { id: 'vox',    name: 'vox',    role: 'release notes',     shape: 'circle',   color: '#6d5cf0', state: 'compute' },
+  { id: 'moss',   name: 'moss',   role: 'flaky test hunter', shape: 'squircle', color: '#2fd26a',   state: 'speaking' }
 ];
 const ACTIVITY: Record<string, string> = { kai: 'drafting the changelog for 2.4', terra: 'planning migration 0042', vox: 'collecting merged PRs since 2.3', moss: 'rerunning invoice.test.ts, 7 of 20' };
 const SPENT: Record<string, string> = { nina: '0.02', kai: '0.11', moss: '0.24', terra: '0.07', vox: '0.05', atlas: '0.09' };
@@ -58,7 +58,7 @@ export const defaultConfig = (id: string): BotConfig => ({
   workspace: ['hex', 'moss', 'terra'].includes(id) ? 'sandbox' : 'worktree'
 });
 export const seedBots = (): Bot[] => BOT_SEEDS.map((b) => ({
-  id: b.id, name: b.name, role: b.role, shape: b.shape, color: b.color, eyes: b.eyes, state: b.state, attention: b.attention ?? null,
+  id: b.id, name: b.name, role: b.role, shape: b.shape, color: b.color, state: b.state, attention: b.attention ?? null,
   paused: false, activity: ACTIVITY[b.id] ?? '', spent: SPENT[b.id] ?? '0.00', last: LAST[b.id] ?? null, ideas: ideasFor(b.role), cfg: defaultConfig(b.id)
 }));
 
@@ -68,7 +68,7 @@ export const seedBots = (): Bot[] => BOT_SEEDS.map((b) => ({
 type ThreadSeed = Array<{ who: string; t: string; text?: string; approval?: ApprovalData }>;
 export const BOT_FIXTURES: Readonly<Record<string, { bot: BotSeed; thread: ThreadSeed }>> = {
   long: {
-    bot: { id: 'cassiopeia-staging-deploy-guardian', name: 'cassiopeia-staging-deploy-guardian', role: 'watches every staging deploy and rolls back on a failed health check', shape: 'star', color: '#e8b04a', eyes: 'pill', state: 'needs', attention: 'approval' },
+    bot: { id: 'cassiopeia-staging-deploy-guardian', name: 'cassiopeia-staging-deploy-guardian', role: 'watches every staging deploy and rolls back on a failed health check', shape: 'star', color: '#e8b04a', state: 'needs', attention: 'approval' },
     thread: [
       { who: 'you', t: '15:02', text: 'keep an eye on the staging deploys tonight' },
       { who: 'cassiopeia-staging-deploy-guardian', t: '15:03', text: 'On it. I will watch each deploy for ten minutes and roll back if the health check fails twice.' },
@@ -77,12 +77,12 @@ export const BOT_FIXTURES: Readonly<Record<string, { bot: BotSeed; thread: Threa
   },
   /* a profile made outside boopis (the "made outside boopis" mark), with a long enough name and role to check the mark's room */
   outside: {
-    bot: { id: 'sage', name: 'sage', role: 'reads release notes', shape: 'drop', color: '#7fb68c', eyes: 'arc', state: 'idle', outside: true },
+    bot: { id: 'sage', name: 'sage', role: 'reads release notes', shape: 'drop', color: '#7fb68c', state: 'idle', outside: true },
     thread: []
   }
 };
 export const fixtureBot = (seed: BotSeed): Bot => ({
-  id: seed.id, name: seed.name, role: seed.role, shape: seed.shape, color: seed.color, eyes: seed.eyes, state: seed.state, attention: seed.attention ?? null,
+  id: seed.id, name: seed.name, role: seed.role, shape: seed.shape, color: seed.color, state: seed.state, attention: seed.attention ?? null,
   paused: false, activity: '', spent: '0.00', last: null, ideas: ideasFor(seed.role), cfg: defaultConfig(seed.id),
   ...(seed.outside ? { madeOutside: true as const } : {})
 });
@@ -91,8 +91,8 @@ export const fixtureBot = (seed: BotSeed): Bot => ({
     (`archived--<name>`), `when` as the lists say it. The second one's name is in use (nina is on the roster), so restoring it is refused. */
 export interface ArchivedSeed { bot: BotSeed; at: string; when: string }
 export const ARCHIVED_SEEDS: readonly ArchivedSeed[] = [
-  { bot: { id: 'ledger', name: 'ledger', role: 'month-end close', shape: 'squircle', color: '#c4834a', eyes: 'bars', state: 'idle' }, at: '2026-11-18T09:30:00+00:00', when: 'yesterday' },
-  { bot: { id: 'nina', name: 'nina', role: 'old deploy runs', shape: 'triangle', color: '#f23b5a', eyes: 'pill', state: 'idle' }, at: '2026-11-16T17:05:00+00:00', when: 'mon' }
+  { bot: { id: 'ledger', name: 'ledger', role: 'month-end close', shape: 'squircle', color: '#c4834a', state: 'idle' }, at: '2026-11-18T09:30:00+00:00', when: 'yesterday' },
+  { bot: { id: 'nina', name: 'nina', role: 'old deploy runs', shape: 'triangle', color: '#f23b5a', state: 'idle' }, at: '2026-11-16T17:05:00+00:00', when: 'mon' }
 ];
 
 export const NINA_APPROVAL: ApprovalData = {

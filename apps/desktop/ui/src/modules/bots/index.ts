@@ -76,6 +76,6 @@ register('bots', { mount(root) { wire(); mountView(root); } });
 
 /** HX.bots of the mock-up: open a bot, make one, its settings */
 export const bots = {
-  list: () => S.bots.map(({ id, name, role, shape, color, eyes, state: st, attention }) => ({ id, name, role, shape, color, eyes, state: st, attention: attention ?? null })),
+  list: () => S.bots.map(({ id, name, role, shape, color, state: st, attention }) => ({ id, name, role, shape, color, state: st, attention: attention ?? null })),
   get: bot, open: openBot, newBot: openNew, settings: openSettings, toggleSettings, close: closeSettings
 };

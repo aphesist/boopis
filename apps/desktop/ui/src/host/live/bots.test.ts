@@ -131,9 +131,10 @@ describe('the roster is the user’s Hermes profiles, minus the default one', ()
   });
   it('draws a stored look as stored and any other as the one its name gives, the same every time', async () => {
     const { bots } = await open();
-    expect(botOf(bots, 'atlas')).toMatchObject({ shape: 'triangle', color: '#f23b5a', eyes: 'pill' });
+    expect(botOf(bots, 'atlas')).toMatchObject({ shape: 'triangle', color: '#f23b5a' });
+    expect(botOf(bots, 'atlas')).not.toHaveProperty('eyes');   // the record keeps its eyes; the UI ignores them
     const nina = botOf(bots, 'nina')!;
-    expect({ shape: nina.shape, color: nina.color, eyes: nina.eyes }).toEqual(lookFor('Nina'));
+    expect({ shape: nina.shape, color: nina.color }).toEqual(lookFor('Nina'));
   });
   it('reports only what Hermes reports: model, skills, toolsets, routines, sessions, whether it runs', async () => {
     const { bots } = await open();
@@ -219,17 +220,17 @@ describe('making a bot is Hermes’s profiles.create, then the look in boopis’
   it('creates the profile with no alias, the model of a configured provider and the role, saves the look, and opens it', async () => {
     const { h, bots, events } = await open();
     events.length = 0;
-    const made = await bots.source.admin!.create({ name: 'kai', role: 'docs and changelog', shape: 'drop', color: '#4fc9a8', eyes: 'arc', instructions: 'You write docs.' }, { model: 'nous/hermes-4' });
+    const made = await bots.source.admin!.create({ name: 'kai', role: 'docs and changelog', shape: 'drop', color: '#4fc9a8', instructions: 'You write docs.' }, { model: 'nous/hermes-4' });
     const call = h.main.calls.find((c) => c.method === 'profiles.create')!;
     expect(call.params).toEqual({ name: 'kai', description: 'docs and changelog', no_alias: true, soul: 'You write docs.\n', provider: 'nous', model: 'hermes-4' });
-    expect(h.own['kai']).toMatchObject({ look: { shape: 'drop', color: '#4fc9a8', eyes: 'arc' }, settings: { gov: 'governed' } });
+    expect(h.own['kai']).toMatchObject({ look: { shape: 'drop', color: '#4fc9a8' }, settings: { gov: 'governed' } });
     expect(made).toMatchObject({ id: 'kai', shape: 'drop' });
     expect(made.info?.model).toBe('nous/hermes-4');
     expect(events.map((e) => e.type)).toContain('bot-created');
   });
   it('a model that no configured provider has is refused before anything is made', async () => {
     const { h, bots } = await open();
-    await expect(bots.source.admin!.create({ name: 'kai', role: '', shape: 'circle', color: '#fff000', eyes: 'pill', instructions: '' }, { model: 'ghost/none' })).rejects.toThrow(/not a model of a configured provider/);
+    await expect(bots.source.admin!.create({ name: 'kai', role: '', shape: 'circle', color: '#fff000', instructions: '' }, { model: 'ghost/none' })).rejects.toThrow(/not a model of a configured provider/);
     expect(h.main.calls.some((c) => c.method === 'profiles.create')).toBe(false);
   });
 });
@@ -272,10 +273,10 @@ describe('the settings sheet edits the real profile, and shows the diff first', 
   });
   it('saves boopis’s own settings in the plugin’s store, never through a Hermes config method', async () => {
     const { h, bots } = await open();
-    await bots.source.admin!.saveOwn('atlas', { cfg: { gov: 'governed', cap: '1.00', approvals: { push: false } }, look: { eyes: 'bars' } });
-    expect(h.main.calls.at(-1)).toMatchObject({ method: 'plugin.boopis.bots.write', params: { name: 'atlas', look: { eyes: 'bars' }, settings: { gov: 'governed', cap: '1.00' }, approvals: { push: false } } });
+    await bots.source.admin!.saveOwn('atlas', { cfg: { gov: 'governed', cap: '1.00', approvals: { push: false } }, look: { shape: 'star' } });
+    expect(h.main.calls.at(-1)).toMatchObject({ method: 'plugin.boopis.bots.write', params: { name: 'atlas', look: { shape: 'star' }, settings: { gov: 'governed', cap: '1.00' }, approvals: { push: false } } });
     expect(h.main.calls.some((c) => c.method === 'profiles.configure')).toBe(false);
-    expect(botOf(bots, 'atlas')).toMatchObject({ eyes: 'bars', cfg: { gov: 'governed', cap: '1.00' } });
+    expect(botOf(bots, 'atlas')).toMatchObject({ shape: 'star', cfg: { gov: 'governed', cap: '1.00' } });
   });
 });
 
@@ -352,7 +353,7 @@ describe('which profiles boopis did not make (the "made outside boopis" mark)', 
   });
   it('a look saved for it does the same', async () => {
     const { bots } = await open();
-    await bots.source.admin!.saveOwn('nina', { look: { eyes: 'bars' } });
+    await bots.source.admin!.saveOwn('nina', { look: { shape: 'star' } });
     expect(botOf(bots, 'nina')!.madeOutside).toBeUndefined();
   });
   it('writing a Hermes setting (the role) creates no store of boopis’s, so the mark stays', async () => {
