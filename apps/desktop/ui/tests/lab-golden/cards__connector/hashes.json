@@ -15,7 +15,7 @@
   "h": 296
  },
  "compact-long@typewriter": {
-  "sha": "80a12c197aa02a93ff83eb84885e987e466139ba",
+  "sha": "6ac9509e6ff76961d560c8fa20552e65b45ba08d",
   "w": 424,
   "h": 296
  },
@@ -35,7 +35,7 @@
   "h": 197
  },
  "compact-on-the-dock@typewriter": {
-  "sha": "34c55196c99db850750efd3c55ae65e9112c3287",
+  "sha": "812ce77a90b1f2d2477a5a7651f43de7a050cd4c",
   "w": 424,
   "h": 237
  },
@@ -45,7 +45,7 @@
   "h": 217
  },
  "compact@catalog": {
-  "sha": "8f38db57d2ec08c735fb0fcfc526032abfc16f76",
+  "sha": "2065b26674578c985378d4d30d7249d0fbd98fb5",
   "w": 424,
   "h": 217
  },
@@ -60,22 +60,22 @@
   "h": 237
  },
  "connected@bone": {
-  "sha": "7a7c9b5c310aba9e260b905a61ba4400ac8fb808",
+  "sha": "27b3db9ee4e75e198784e8020f30e31e3dbcd58b",
   "w": 632,
   "h": 170
  },
  "connected@catalog": {
-  "sha": "4277039a4c0a9730ebd2cf811b44157fd2609870",
+  "sha": "935e309e4d62f3e1f6db43b757c23cdd2b22ca6e",
   "w": 632,
   "h": 170
  },
  "connected@graphite": {
-  "sha": "2d8b4b5c44623023787aa1cd46a1ae5d7f85215c",
+  "sha": "f9918ed0076c5ee8428f99826701e07bcb92356e",
   "w": 632,
   "h": 170
  },
  "connected@typewriter": {
-  "sha": "43ab837cd5ee59ecf33be570d558e03e51a05e7e",
+  "sha": "15521f50e70299cbf3459260ede4ceb654767a8d",
   "w": 632,
   "h": 170
  },
@@ -95,7 +95,7 @@
   "h": 197
  },
  "empty-data@typewriter": {
-  "sha": "63853700cf967d630b8fad3eb648f7e0a96299d9",
+  "sha": "415fd7c7505fb6c2a8b1ae1c3505a2a14f163244",
   "w": 632,
   "h": 197
  },
@@ -105,7 +105,7 @@
   "h": 191
  },
  "failed@catalog": {
-  "sha": "1b77d83881c29ebd2a38599b4dec14afafaa2945",
+  "sha": "2e1200ec7fed92172d5412a8a4da8eeddc21378a",
   "w": 632,
   "h": 191
  },
@@ -115,7 +115,7 @@
   "h": 191
  },
  "failed@typewriter": {
-  "sha": "7f77bd362ebddd6734a6ab0f3610e4fa6873898f",
+  "sha": "499e5ae4fea9e2f8a1ba197c1dcef79775767514",
   "w": 632,
   "h": 191
  },
@@ -190,7 +190,7 @@
   "h": 197
  },
  "needed@graphite": {
-  "sha": "032a487ff41b40a952f56685d0ef043c03f48b4a",
+  "sha": "ecd405bf4b67ee72efb4084d4d6fd24f80e8d92f",
   "w": 632,
   "h": 197
  },
@@ -205,7 +205,7 @@
   "h": 197
  },
  "waiting@catalog": {
-  "sha": "06faf62b606da5e3fc9eba973c60fa938eae7058",
+  "sha": "618be68d6dfa26b9debb287928e0548eebec3f5e",
   "w": 632,
   "h": 197
  },

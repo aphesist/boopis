@@ -1,37 +1,37 @@
 {
  "band-and-status@bone": {
-  "sha": "90c1e97c2ef8fdf4888f0edc507f0571b5102d87",
+  "sha": "dc36585f06587d68ee0b36c9b928d382cbf78e65",
   "w": 744,
   "h": 779
  },
  "band-and-status@catalog": {
-  "sha": "5327475cd89779580028de17e23b9bae12abb4ed",
+  "sha": "ba3a0c811d16200985b5ada26ff88d358f38b5e7",
   "w": 744,
   "h": 779
  },
  "band-and-status@graphite": {
-  "sha": "a173a553e5fc58e0de0a2a1c1b88cbdeb1810dea",
+  "sha": "edc840bb20e62a38152597ab8f2712fa1e89e375",
   "w": 744,
   "h": 779
  },
  "band-and-status@typewriter": {
-  "sha": "8022f981e897a87bf60a9b32cd3e1336564772cb",
+  "sha": "0fb7189bc982a1ed3efc3cb964512ed3bb0cd65f",
   "w": 744,
   "h": 779
  },
  "pane-in-the-details-panel@bone": {
-  "sha": "bfb62da540ed253ac6020893a877560a7de8098d",
-  "w": 312,
+  "sha": "f8d6892f3a3f186b377381dd78c0b99f954f857a",
+  "w": 888,
   "h": 872
  },
  "pane-in-the-details-panel@catalog": {
-  "sha": "36e975e2936e18fc1f09bd37ea78ea87a7f13149",
-  "w": 894,
+  "sha": "af76795a65965d988c04dd75d5282a3b36b2b333",
+  "w": 895,
   "h": 872
  },
  "pane-in-the-details-panel@graphite": {
-  "sha": "026a6133e208462eb2aa8682ac1d0f380d68c062",
-  "w": 885,
+  "sha": "19498d8159b9afc15c5595fcd64a59fb6a10f690",
+  "w": 894,
   "h": 872
  },
  "pane-in-the-details-panel@typewriter": {
@@ -40,82 +40,82 @@
   "h": 872
  },
  "the-conversation-with-placed-rows@bone": {
-  "sha": "3aac3a409b3e15c661de6e69489bc8f43e400247",
+  "sha": "fe673ebdafc0d9673b81680ed21d4cadd99f0310",
   "w": 1180,
   "h": 872
  },
  "the-conversation-with-placed-rows@catalog": {
-  "sha": "590feb4628a03768558ad07924581b0821c65ce3",
+  "sha": "c7e552e08bc621b7e7da88020f621942eb97fbe9",
   "w": 1180,
   "h": 872
  },
  "the-conversation-with-placed-rows@graphite": {
-  "sha": "dd5167e5b4111c0436c4b917f5aa3f585e7a90ba",
+  "sha": "425e16c7b49dc63bb5fb18906b689eb8ef78e7d5",
   "w": 1180,
   "h": 872
  },
  "the-conversation-with-placed-rows@typewriter": {
-  "sha": "4704a46a94ea5f1da72722cc290dece0ccbc9907",
+  "sha": "dc0ad77c597045eedd641a8ac4096da7c13b952c",
   "w": 1180,
   "h": 872
  },
  "theme-card-hover@bone": {
-  "sha": "e400757695f764987595f0a3d7dd02e29f584409",
+  "sha": "1eb8dcd866bb8c1d6f922221cbe2710042695b7d",
   "w": 1180,
   "h": 872
  },
  "theme-card-hover@catalog": {
-  "sha": "211b20895012f2f155b6be5604c47da7120c8105",
+  "sha": "4c7f514e2ceab12c639caecc3f9e61f0799ac457",
   "w": 1180,
   "h": 872
  },
  "theme-card-hover@graphite": {
-  "sha": "531d3cfaa845252e58789e45df7fe9bbc0f6e027",
+  "sha": "d7d42d4466e81957dcb961f0c02d8189ddf15830",
   "w": 1180,
   "h": 872
  },
  "theme-card-hover@typewriter": {
-  "sha": "252023b5d62322cd41bf3a8c2d2b575fa1426ba9",
+  "sha": "9c41a52844c4b94ee6aedddeb696999ab7c12db9",
   "w": 1180,
   "h": 872
  },
  "toast-with-n@bone": {
-  "sha": "e0bdabcbdd434798202f6200163293e6917e6f1b",
+  "sha": "8f6f88d8d344b59b7348121aceec229b5876c163",
   "w": 291,
   "h": 64
  },
  "toast-with-n@catalog": {
-  "sha": "055e0861d09e54fab39052640aab3c119003ef1a",
+  "sha": "472dfb736c966b693cd1085d912c023ed00f60cc",
   "w": 306,
   "h": 64
  },
  "toast-with-n@graphite": {
-  "sha": "39a864196bc9de62f4770df6ef80d16b27aa43f9",
+  "sha": "89f596a6953b976bbd0fd475c42a3812225ab02e",
   "w": 303,
   "h": 64
  },
  "toast-with-n@typewriter": {
-  "sha": "58b96d54b62eb5778b891b8ab3523f0f7dc4279a",
+  "sha": "d3bf2b4ff8afe9de09f416ae48f730873c1f6714",
   "w": 333,
   "h": 64
  },
  "whole-window@bone": {
-  "sha": "aeff02727a32ed4f34db18fbed74271e8207183e",
+  "sha": "65c370bb01550e94e9a0eb83cfb1f3080bc65ee4",
   "w": 1440,
   "h": 900
  },
  "whole-window@catalog": {
-  "sha": "9ea2d32e7ab5df925aee7809ec3b4e53708a3a1d",
+  "sha": "9fcc56e73a214b2aacf46f57ccd2aa664922f9d6",
   "w": 1440,
   "h": 900
  },
  "whole-window@graphite": {
-  "sha": "aefeafa55de54717b810a3e50e9f6f55a1ac4ece",
+  "sha": "add7ec2f087490482485244f5a1bcc9a992281c5",
   "w": 1440,
   "h": 900
  },
  "whole-window@typewriter": {
-  "sha": "e7780d1abb471e37048479466380f44bc68ae47e",
+  "sha": "442f32535f1bef18072f680782cf549c9c453ab6",
   "w": 1440,
   "h": 900
  }
