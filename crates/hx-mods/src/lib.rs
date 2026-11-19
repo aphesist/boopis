@@ -1,7 +1,7 @@
 //! The runtime that runs Claude Code mods unchanged inside hypotaxis.
 //!
 //! A mod is a plugin whose `hooks/hooks.json` names JavaScript or TypeScript modules. This crate
-//! loads them into one QuickJS isolate (TypeScript and JSX are compiled on load, no build step),
+//! loads them into one `QuickJS` isolate (TypeScript and JSX are compiled on load, no build step),
 //! runs Claude Code's event chain over their hooks, and gives them a `$` whose every effect leaves
 //! the isolate as a [`HostRequest`] for the embedder to decide. The isolate itself has no access
 //! to files, the network or processes.
@@ -10,9 +10,9 @@
 //! The crate is a library with tests; it is not wired into `hx` yet.
 
 mod error;
+mod files;
 #[cfg(feature = "dev-fixtures")]
 pub mod fixtures;
-mod files;
 mod host;
 mod manifest;
 mod modules;
@@ -24,4 +24,6 @@ pub mod tree;
 pub use error::{Error, Result};
 pub use host::{HostCalls, HostError, HostRequest};
 pub use manifest::Manifest;
-pub use runtime::{Answer, Budgets, Diagnostic, LoadedPlugin, Memory, ModRuntime, Render, RuntimeConfig, Tier};
+pub use runtime::{
+    Answer, Budgets, Diagnostic, LoadedPlugin, Memory, ModRuntime, Render, RuntimeConfig, Tier,
+};

@@ -1,4 +1,4 @@
-//! The isolate: one QuickJS runtime shared by all of a session's mods, the event chain running
+//! The isolate: one `QuickJS` runtime shared by all of a session's mods, the event chain running
 //! inside it, and the loop that drives it with budgets.
 //!
 //! The isolate is single-threaded and synchronous from the outside: [`ModRuntime::dispatch`]
@@ -61,7 +61,11 @@ pub struct Budgets {
 
 impl Default for Budgets {
     fn default() -> Self {
-        Self { event: Duration::from_secs(10), prompt_edit: Duration::from_millis(50), catch: Duration::from_secs(1) }
+        Self {
+            event: Duration::from_secs(10),
+            prompt_edit: Duration::from_millis(50),
+            catch: Duration::from_secs(1),
+        }
     }
 }
 
@@ -80,7 +84,12 @@ pub struct RuntimeConfig {
 
 impl Default for RuntimeConfig {
     fn default() -> Self {
-        Self { budgets: Budgets::default(), memory_limit: 64 * 1024 * 1024, stack_limit: 512 * 1024, tree: TreeLimits::default() }
+        Self {
+            budgets: Budgets::default(),
+            memory_limit: 64 * 1024 * 1024,
+            stack_limit: 512 * 1024,
+            tree: TreeLimits::default(),
+        }
     }
 }
 
@@ -180,7 +189,9 @@ fn value_text(v: &Value<'_>) -> String {
     if let Some(e) = v.as_exception() {
         return e.message().unwrap_or_else(|| "exception".to_owned());
     }
-    v.as_string().and_then(|s| s.to_string().ok()).unwrap_or_else(|| "unknown exception".to_owned())
+    v.as_string()
+        .and_then(|s| s.to_string().ok())
+        .unwrap_or_else(|| "unknown exception".to_owned())
 }
 
 impl ModRuntime {
@@ -195,11 +206,18 @@ impl ModRuntime {
         rt.set_max_stack_size(config.stack_limit);
         let deadline: Rc<Cell<Option<Instant>>> = Rc::default();
         let interrupt = deadline.clone();
-        rt.set_interrupt_handler(Some(Box::new(move || interrupt.get().is_some_and(|d| Instant::now() >= d))));
+        rt.set_interrupt_handler(Some(Box::new(move || {
+            interrupt.get().is_some_and(|d| Instant::now() >= d)
+        })));
         let shared: SharedRef = Rc::new(RefCell::new(Shared::default()));
         rt.set_loader(ModResolver(shared.clone()), ModLoader(shared.clone()));
         let ctx = Context::full(&rt).map_err(script)?;
-        let state = NativeState { host: Rc::new(RefCell::new(host)), deadline: deadline.clone(), diagnostics: Rc::default(), started: Instant::now() };
+        let state = NativeState {
+            host: Rc::new(RefCell::new(host)),
+            deadline: deadline.clone(),
+            diagnostics: Rc::default(),
+            started: Instant::now(),
+        };
         let diagnostics = state.diagnostics.clone();
         let kernel = ctx
             .with(|ctx| -> rquickjs::Result<_> {
@@ -214,7 +232,17 @@ impl ModRuntime {
                 Ok(Persistent::save(&ctx, kernel))
             })
             .map_err(script)?;
-        Ok(Self { kernel, ctx, rt, shared, deadline, diagnostics, config, next_run: 0, crashed: None })
+        Ok(Self {
+            kernel,
+            ctx,
+            rt,
+            shared,
+            deadline,
+            diagnostics,
+            config,
+            next_run: 0,
+            crashed: None,
+        })
     }
 
     /// Loads one plugin: reads its manifests, evaluates its modules and calls each `register`.
@@ -241,7 +269,10 @@ impl ModRuntime {
             let manifest = manifest::read(&dir)?;
             opened.push((dir, manifest, *tier));
         }
-        let graph: Vec<_> = opened.iter().map(|(_, m, _)| (m.name.clone(), m.dependencies.clone())).collect();
+        let graph: Vec<_> = opened
+            .iter()
+            .map(|(_, m, _)| (m.name.clone(), m.dependencies.clone()))
+            .collect();
         let order = manifest::load_order(&graph)?;
         let mut slots: Vec<_> = opened.into_iter().map(Some).collect();
         let mut loaded = Vec::with_capacity(slots.len());
@@ -253,16 +284,43 @@ impl ModRuntime {
         Ok(loaded)
     }
 
-    fn register_plugin(&mut self, dir: PluginDir, manifest: &Manifest, tier: Tier) -> Result<LoadedPlugin> {
+    fn register_plugin(
+        &mut self,
+        dir: PluginDir,
+        manifest: &Manifest,
+        tier: Tier,
+    ) -> Result<LoadedPlugin> {
         let idx = {
             let mut shared = self.shared.borrow_mut();
-            shared.roots.push(dir);
+            shared.roots.push(Some(dir));
             shared.roots.len() - 1
         };
+        let loaded = self.register_modules(idx, manifest, tier);
+        // Whether or not it loaded, nothing reads the directory again.
+        self.shared.borrow_mut().roots[idx] = None;
+        loaded
+    }
+
+    fn register_modules(
+        &mut self,
+        idx: usize,
+        manifest: &Manifest,
+        tier: Tier,
+    ) -> Result<LoadedPlugin> {
         let options = Json::Object(manifest.options.clone()).to_string();
         let mut modules = Vec::new();
         for rel in &manifest.modules {
-            let path = self.shared.borrow().roots[idx].file(rel)?.ok_or_else(|| Error::Read { path: rel.clone(), message: "no such file".into() })?;
+            let path = self.shared.borrow().roots[idx]
+                .as_ref()
+                .ok_or_else(|| Error::Read {
+                    path: rel.clone(),
+                    message: "the plugin directory is closed".into(),
+                })?
+                .file(rel)?
+                .ok_or_else(|| Error::Read {
+                    path: rel.clone(),
+                    message: "no such file".into(),
+                })?;
             let name = format!("{idx}:{path}");
             let namespace = self.import(&name)?;
             let run = self.new_run();
@@ -284,17 +342,39 @@ impl ModRuntime {
             self.drive(run, self.config.budgets.event)?;
             modules.push(path);
         }
-        let state: Json = serde_json::from_str(&self.call_kernel::<_, String>("pluginState", |_: &Ctx<'_>, f: &Function<'_>| f.call((manifest.name.clone(),)))?)?;
+        let state: Json = serde_json::from_str(
+            &self.call_kernel::<_, String>("pluginState", |_: &Ctx<'_>, f: &Function<'_>| {
+                f.call((manifest.name.clone(),))
+            })?,
+        )?;
         if state["loaded"] != Json::Bool(true) {
-            let reason = self.take_diagnostics_for(&manifest.name).unwrap_or_else(|| "register did not finish".to_owned());
-            return Err(Error::LoadFailed { plugin: manifest.name.clone(), reason });
+            let reason = self
+                .take_diagnostics_for(&manifest.name)
+                .unwrap_or_else(|| "register did not finish".to_owned());
+            return Err(Error::LoadFailed {
+                plugin: manifest.name.clone(),
+                reason,
+            });
         }
-        let hooks = state["hooks"].as_u64().and_then(|n| usize::try_from(n).ok()).unwrap_or(0);
-        Ok(LoadedPlugin { name: manifest.name.clone(), tier, modules, hooks })
+        let hooks = state["hooks"]
+            .as_u64()
+            .and_then(|n| usize::try_from(n).ok())
+            .unwrap_or(0);
+        Ok(LoadedPlugin {
+            name: manifest.name.clone(),
+            tier,
+            modules,
+            hooks,
+        })
     }
 
     fn take_diagnostics_for(&self, plugin: &str) -> Option<String> {
-        self.diagnostics.borrow().iter().rev().find(|d| d.plugin == plugin).map(|d| d.message.clone())
+        self.diagnostics
+            .borrow()
+            .iter()
+            .rev()
+            .find(|d| d.plugin == plugin)
+            .map(|d| d.message.clone())
     }
 
     /// Sends one event through the chain and returns the answer.
@@ -307,7 +387,10 @@ impl ModRuntime {
         if let Some(e) = v.get("error").and_then(Json::as_str) {
             return Err(Error::Script(e.to_owned()));
         }
-        Ok(Answer { answered: v["answered"].as_bool().unwrap_or(false), value: v.get("value").cloned().unwrap_or(Json::Null) })
+        Ok(Answer {
+            answered: v["answered"].as_bool().unwrap_or(false),
+            value: v.get("value").cloned().unwrap_or(Json::Null),
+        })
     }
 
     /// Asks the chain to draw `component` (with `id` for a pane) and validates the tree.
@@ -315,7 +398,11 @@ impl ModRuntime {
     /// # Errors
     /// [`Error::Crashed`] if the isolate cannot be driven.
     pub fn render(&mut self, component: &str, id: Option<&str>, props: &Json) -> Result<Render> {
-        let payload = json!({ "component": component, "id": id, "props": props, "surface": "desktop" });
+        let mut payload = json!({ "component": component, "props": props, "surface": "desktop" });
+        if let Some(id) = id {
+            // A site with no id has no `id` field, so a hook sees `undefined`, not `null`.
+            payload["id"] = json!(id);
+        }
         let raw = self.run_event("ui.render", Some(&payload))?;
         let v: Json = serde_json::from_str(&raw)?;
         if let Some(e) = v.get("error").and_then(Json::as_str) {
@@ -337,19 +424,31 @@ impl ModRuntime {
                     }
                 }
             }
-            Some("invalid") => Ok(self.skipped(component, id, r["reason"].as_str().unwrap_or("invalid tree").to_owned())),
-            _ => Ok(Render::Default { props: r.get("props").filter(|p| !p.is_null()).cloned() }),
+            Some("invalid") => Ok(self.skipped(
+                component,
+                id,
+                r["reason"].as_str().unwrap_or("invalid tree").to_owned(),
+            )),
+            _ => Ok(Render::Default {
+                props: r.get("props").filter(|p| !p.is_null()).cloned(),
+            }),
         }
     }
 
     fn skipped(&self, component: &str, id: Option<&str>, reason: String) -> Render {
         let site = id.map_or_else(|| component.to_owned(), |i| format!("{component} {i}"));
-        self.diagnostics.borrow_mut().push(Diagnostic { level: "warn".into(), plugin: String::new(), message: format!("ui.render {site}: tree skipped: {reason}") });
+        self.diagnostics.borrow_mut().push(Diagnostic {
+            level: "warn".into(),
+            plugin: String::new(),
+            message: format!("ui.render {site}: tree skipped: {reason}"),
+        });
         Render::Skipped { reason }
     }
 
     fn commit(&self, token: &str, ok: bool) -> Result<()> {
-        self.call_kernel::<_, ()>("commit", |_: &Ctx<'_>, f: &Function<'_>| f.call((token.to_owned(), ok)))
+        self.call_kernel::<_, ()>("commit", |_: &Ctx<'_>, f: &Function<'_>| {
+            f.call((token.to_owned(), ok))
+        })
     }
 
     /// Delivers `ui.press` for a handler id from a drawn tree. True when a handler ran.
@@ -405,13 +504,18 @@ impl ModRuntime {
     #[must_use]
     pub fn memory(&self) -> Memory {
         let m = self.rt.memory_usage();
-        Memory { used: m.memory_used_size, allocated: m.malloc_size }
+        Memory {
+            used: m.memory_used_size,
+            allocated: m.malloc_size,
+        }
     }
 
     // ---- driving ---------------------------------------------------------------------------
 
     fn ensure_usable(&self) -> Result<()> {
-        self.crashed.as_ref().map_or(Ok(()), |why| Err(Error::Crashed(why.clone())))
+        self.crashed
+            .as_ref()
+            .map_or(Ok(()), |why| Err(Error::Crashed(why.clone())))
     }
 
     fn new_run(&mut self) -> u64 {
@@ -420,14 +524,20 @@ impl ModRuntime {
     }
 
     fn budget_for(&self, event: &str) -> Duration {
-        if event == "prompt.edit" { self.config.budgets.prompt_edit } else { self.config.budgets.event }
+        if event == "prompt.edit" {
+            self.config.budgets.prompt_edit
+        } else {
+            self.config.budgets.event
+        }
     }
 
     fn run_event(&mut self, event: &str, payload: Option<&Json>) -> Result<String> {
         self.ensure_usable()?;
         let run = self.new_run();
         let body = payload.map(Json::to_string).unwrap_or_default();
-        self.call_kernel::<_, ()>("dispatch", |_: &Ctx<'_>, f: &Function<'_>| f.call((run, event.to_owned(), body)))?;
+        self.call_kernel::<_, ()>("dispatch", |_: &Ctx<'_>, f: &Function<'_>| {
+            f.call((run, event.to_owned(), body))
+        })?;
         self.drive(run, self.budget_for(event))
     }
 
@@ -437,14 +547,20 @@ impl ModRuntime {
         A: for<'js> FnOnce(&Ctx<'js>, &Function<'js>) -> rquickjs::Result<R>,
     {
         self.ctx.with(|ctx| {
-            let kernel = self.kernel.clone().restore(&ctx).map_err(|e| Error::Script(e.to_string()))?;
+            let kernel = self
+                .kernel
+                .clone()
+                .restore(&ctx)
+                .map_err(|e| Error::Script(e.to_string()))?;
             let f: Function = kernel.get(name).map_err(|e| Error::Script(e.to_string()))?;
             call(&ctx, &f).map_err(|e| Error::Script(exception_text(&ctx, &e)))
         })
     }
 
     fn poll(&self, run: u64) -> Result<Option<String>> {
-        self.call_kernel("poll", |_: &Ctx<'_>, f: &Function<'_>| f.call::<_, Option<String>>((run,)))
+        self.call_kernel("poll", |_: &Ctx<'_>, f: &Function<'_>| {
+            f.call::<_, Option<String>>((run,))
+        })
     }
 
     fn run_jobs(&self, hard: Instant) -> JobsEnd {
@@ -478,11 +594,16 @@ impl ModRuntime {
                 return Ok(answer);
             }
             if matches!(end, JobsEnd::TooLong) {
-                return Err(self.crash(run, "jobs kept running past the event's budget with no hook to interrupt"));
+                return Err(self.crash(
+                    run,
+                    "jobs kept running past the event's budget with no hook to interrupt",
+                ));
             }
             // Interrupted, or idle with the run unanswered (a hook awaits something that can never
             // settle). Either way the innermost running hook has used up its budget.
-            let blamed = self.call_kernel("recover", |_: &Ctx<'_>, f: &Function<'_>| f.call::<_, bool>(()))?;
+            let blamed = self.call_kernel("recover", |_: &Ctx<'_>, f: &Function<'_>| {
+                f.call::<_, bool>(())
+            })?;
             if !blamed {
                 return Err(self.crash(run, "the chain stalled and no hook was running"));
             }
@@ -503,7 +624,8 @@ impl ModRuntime {
     /// Imports a module of a plugin and returns its namespace.
     fn import(&mut self, name: &str) -> Result<Persistent<Object<'static>>> {
         self.shared.borrow_mut().last_error = None;
-        self.deadline.set(Some(Instant::now() + self.config.budgets.event));
+        self.deadline
+            .set(Some(Instant::now() + self.config.budgets.event));
         let started = self.ctx.with(|ctx| match Module::import(&ctx, name) {
             Ok(p) => Ok(Persistent::save(&ctx, p)),
             Err(e) => Err(exception_text(&ctx, &e)),
@@ -518,7 +640,10 @@ impl ModRuntime {
             let p = promise.restore(&ctx).map_err(|e| e.to_string())?;
             match p.state() {
                 PromiseState::Resolved => {
-                    let ns: Object = p.result::<Object>().ok_or("no namespace")?.map_err(|e| exception_text(&ctx, &e))?;
+                    let ns: Object = p
+                        .result::<Object>()
+                        .ok_or("no namespace")?
+                        .map_err(|e| exception_text(&ctx, &e))?;
                     Ok(Persistent::save(&ctx, ns))
                 }
                 PromiseState::Rejected => {
@@ -532,19 +657,30 @@ impl ModRuntime {
             }
         });
         outcome.map_err(|text| {
-            let text = if matches!(end, JobsEnd::Interrupted) { "ran past its budget while loading".to_owned() } else { text };
+            let text = if matches!(end, JobsEnd::Interrupted) {
+                "ran past its budget while loading".to_owned()
+            } else {
+                text
+            };
             self.load_error(name, text)
         })
     }
 
     fn load_error(&self, module: &str, text: String) -> Error {
-        self.shared.borrow_mut().last_error.take().unwrap_or_else(|| {
-            if text.contains("interrupted") {
-                Error::LoadFailed { plugin: module.to_owned(), reason: "ran past its budget while loading".to_owned() }
-            } else {
-                Error::Script(text)
-            }
-        })
+        self.shared
+            .borrow_mut()
+            .last_error
+            .take()
+            .unwrap_or_else(|| {
+                if text.contains("interrupted") {
+                    Error::LoadFailed {
+                        plugin: module.to_owned(),
+                        reason: "ran past its budget while loading".to_owned(),
+                    }
+                } else {
+                    Error::Script(text)
+                }
+            })
     }
 }
 

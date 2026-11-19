@@ -17,8 +17,9 @@ use oxc::transformer::{JsxRuntime, TransformOptions, Transformer};
 
 use crate::error::{Error, Result};
 
-/// The extensions a mod module may have.
-pub const MODULE_EXTENSIONS: [&str; 6] = ["js", "mjs", "jsx", "ts", "mts", "tsx"];
+/// The extensions a mod module may have, as the docs list them. All of them are read as ES modules:
+/// `register` is an export, so a `.cjs` or `.cts` file is not `CommonJS` here.
+pub const MODULE_EXTENSIONS: [&str; 8] = ["js", "mjs", "cjs", "jsx", "ts", "mts", "cts", "tsx"];
 
 /// What the module's JSX imports its runtime from.
 pub const JSX_IMPORT_SOURCE: &str = "claude-code";
@@ -32,7 +33,10 @@ impl<'a> Visit<'a> for DynamicImports {
 }
 
 fn compile_error(path: &str, message: impl Into<String>) -> Error {
-    Error::Compile { path: path.to_owned(), message: message.into() }
+    Error::Compile {
+        path: path.to_owned(),
+        message: message.into(),
+    }
 }
 
 /// Turns one module's source into JavaScript the isolate can evaluate.
@@ -43,11 +47,34 @@ fn compile_error(path: &str, message: impl Into<String>) -> Error {
 /// [`Error::Compile`] for a syntax error or an extension that is not a mod module, and
 /// [`Error::DynamicImport`] when the module uses `import()`.
 pub fn prepare(path: &str, source: &str) -> Result<String> {
-    let ext = Path::new(path).extension().and_then(|e| e.to_str()).unwrap_or("");
+    // The loader runs inside the engine's C callbacks, where an unwinding panic aborts the whole
+    // process. A parser or transformer bug on a hostile file must be a compile error, not that.
+    std::panic::catch_unwind(|| prepare_unguarded(path, source)).unwrap_or_else(|panic| {
+        let why = panic
+            .downcast_ref::<String>()
+            .cloned()
+            .or_else(|| panic.downcast_ref::<&str>().map(|s| (*s).to_owned()));
+        Err(compile_error(
+            path,
+            format!("the transform panicked: {}", why.unwrap_or_default()),
+        ))
+    })
+}
+
+fn prepare_unguarded(path: &str, source: &str) -> Result<String> {
+    let ext = Path::new(path)
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("");
     if !MODULE_EXTENSIONS.contains(&ext) {
-        return Err(compile_error(path, format!("`.{ext}` is not a module extension (use one of {MODULE_EXTENSIONS:?})")));
+        return Err(compile_error(
+            path,
+            format!("`.{ext}` is not a module extension (use one of {MODULE_EXTENSIONS:?})"),
+        ));
     }
-    let source_type = SourceType::from_path(path).map_err(|e| compile_error(path, e.to_string()))?.with_module(true);
+    let source_type = SourceType::from_path(path)
+        .map_err(|e| compile_error(path, e.to_string()))?
+        .with_module(true);
     let allocator = Allocator::default();
     let parsed = Parser::new(&allocator, source, source_type).parse();
     if let Some(first) = parsed.diagnostics.errors().next() {
@@ -57,16 +84,20 @@ pub fn prepare(path: &str, source: &str) -> Result<String> {
     let mut dynamic = DynamicImports(false);
     dynamic.visit_program(&program);
     if dynamic.0 {
-        return Err(Error::DynamicImport { path: path.to_owned() });
+        return Err(Error::DynamicImport {
+            path: path.to_owned(),
+        });
     }
     if !(source_type.is_typescript() || source_type.is_jsx()) {
         return Ok(source.to_owned());
     }
-    let built = SemanticBuilder::new().build(&program);
+    // `enum` needs the constant evaluation: without it the transformer panics.
+    let built = SemanticBuilder::new().with_enum_eval(true).build(&program);
     let mut options = TransformOptions::default();
     options.jsx.runtime = JsxRuntime::Automatic;
     options.jsx.import_source = Some(JSX_IMPORT_SOURCE.to_owned());
-    let transformed = Transformer::new(&allocator, Path::new(path), &options).build_with_scoping(built.semantic.into_scoping(), &mut program);
+    let transformed = Transformer::new(&allocator, Path::new(path), &options)
+        .build_with_scoping(built.semantic.into_scoping(), &mut program);
     if let Some(first) = transformed.diagnostics.errors().next() {
         return Err(compile_error(path, first.message.to_string()));
     }
@@ -92,7 +123,11 @@ mod tests {
 
     #[test]
     fn transforms_jsx_to_the_automatic_runtime() {
-        let out = prepare("v.tsx", "export const v = (n: number) => <Box gap={1}><Text>{n}</Text></Box>;").unwrap();
+        let out = prepare(
+            "v.tsx",
+            "export const v = (n: number) => <Box gap={1}><Text>{n}</Text></Box>;",
+        )
+        .unwrap();
         assert!(out.contains("claude-code/jsx-runtime"), "{out}");
         assert!(!out.contains('<'), "{out}");
     }
@@ -105,15 +140,28 @@ mod tests {
 
     #[test]
     fn refuses_dynamic_import_in_js_and_ts() {
-        for (path, src) in [("a.js", "export const f = () => import('./x.js');"), ("a.mts", "export async function f() { return await import('./x'); }")] {
-            assert_eq!(prepare(path, src), Err(Error::DynamicImport { path: path.into() }), "{path}");
+        for (path, src) in [
+            ("a.js", "export const f = () => import('./x.js');"),
+            (
+                "a.mts",
+                "export async function f() { return await import('./x'); }",
+            ),
+        ] {
+            assert_eq!(
+                prepare(path, src),
+                Err(Error::DynamicImport { path: path.into() }),
+                "{path}"
+            );
         }
     }
 
     #[test]
     fn reports_a_syntax_error_with_the_path() {
         let err = prepare("bad.ts", "export const = ;").unwrap_err();
-        assert!(matches!(err, Error::Compile { ref path, .. } if path == "bad.ts"), "{err:?}");
+        assert!(
+            matches!(err, Error::Compile { ref path, .. } if path == "bad.ts"),
+            "{err:?}"
+        );
     }
 
     #[test]

@@ -178,20 +178,17 @@
     async digest(algorithm, data) {
       const name = typeof algorithm === 'string' ? algorithm : algorithm && algorithm.name;
       const hex = native.digest(String(name).toUpperCase(), toHex(bytesOf(data)));
-      if (hex === '') throw new DOMExceptionLike('NotSupportedError', 'unsupported digest algorithm: ' + name);
+      if (hex === '') throw new DOMException('unsupported digest algorithm: ' + name, 'NotSupportedError');
       return fromHex(hex).buffer;
     },
   };
-  class DOMExceptionLike extends Error {
-    constructor(name, message) { super(message); this.name = name; }
-  }
   const crypto = {
     subtle,
     getRandomValues(array) {
       if (!ArrayBuffer.isView(array) || array instanceof Float32Array || array instanceof Float64Array) {
         throw new TypeError('getRandomValues expects an integer typed array');
       }
-      if (array.byteLength > 65536) throw new DOMExceptionLike('QuotaExceededError', 'at most 65536 bytes');
+      if (array.byteLength > 65536) throw new DOMException('at most 65536 bytes', 'QuotaExceededError');
       new Uint8Array(array.buffer, array.byteOffset, array.byteLength).set(randomBytes(array.byteLength));
       return array;
     },

@@ -45,7 +45,10 @@ pub struct Manifest {
 
 fn parse<T: for<'de> Deserialize<'de>>(dir: &PluginDir, file: &str) -> Result<T> {
     let text = dir.read(file)?;
-    serde_json::from_str(&text).map_err(|e| Error::Manifest { file: file.to_owned(), message: e.to_string() })
+    serde_json::from_str(&text).map_err(|e| Error::Manifest {
+        file: file.to_owned(),
+        message: e.to_string(),
+    })
 }
 
 /// Reads both manifests of the plugin in `dir`.
@@ -58,9 +61,19 @@ pub fn read(dir: &PluginDir) -> Result<Manifest> {
     let name = plugin
         .name
         .filter(|n| !n.is_empty())
-        .ok_or_else(|| Error::Manifest { file: PLUGIN_JSON.to_owned(), message: "`name` is required".to_owned() })?;
-    let hooks: HooksJson = if dir.file(HOOKS_JSON)?.is_some() { parse(dir, HOOKS_JSON)? } else { HooksJson::default() };
-    let modules = hooks.modules.filter(|m| !m.is_empty()).ok_or_else(|| Error::NotAMod(name.clone()))?;
+        .ok_or_else(|| Error::Manifest {
+            file: PLUGIN_JSON.to_owned(),
+            message: "`name` is required".to_owned(),
+        })?;
+    let hooks: HooksJson = if dir.file(HOOKS_JSON)?.is_some() {
+        parse(dir, HOOKS_JSON)?
+    } else {
+        HooksJson::default()
+    };
+    let modules = hooks
+        .modules
+        .filter(|m| !m.is_empty())
+        .ok_or_else(|| Error::NotAMod(name.clone()))?;
     let options = plugin
         .user_config
         .into_iter()
@@ -69,9 +82,19 @@ pub fn read(dir: &PluginDir) -> Result<Manifest> {
     let dependencies = plugin
         .dependencies
         .iter()
-        .filter_map(|d| d.as_str().or_else(|| d.get("name").and_then(Value::as_str)).map(str::to_owned))
+        .filter_map(|d| {
+            d.as_str()
+                .or_else(|| d.get("name").and_then(Value::as_str))
+                .map(str::to_owned)
+        })
         .collect();
-    Ok(Manifest { name, version: plugin.version, options, dependencies, modules })
+    Ok(Manifest {
+        name,
+        version: plugin.version,
+        options,
+        dependencies,
+        modules,
+    })
 }
 
 /// Orders `plugins` so every plugin comes after the ones it depends on. Dependencies that are not
@@ -86,7 +109,13 @@ pub fn load_order(plugins: &[(String, Vec<String>)]) -> Result<Vec<usize>> {
         Visiting,
         Done,
     }
-    fn visit(i: usize, plugins: &[(String, Vec<String>)], index: &HashMap<&str, usize>, marks: &mut [Mark], order: &mut Vec<usize>) -> Result<()> {
+    fn visit(
+        i: usize,
+        plugins: &[(String, Vec<String>)],
+        index: &HashMap<&str, usize>,
+        marks: &mut [Mark],
+        order: &mut Vec<usize>,
+    ) -> Result<()> {
         match marks[i] {
             Mark::Done => return Ok(()),
             Mark::Visiting => return Err(Error::DependencyCycle(plugins[i].0.clone())),
@@ -99,7 +128,11 @@ pub fn load_order(plugins: &[(String, Vec<String>)]) -> Result<Vec<usize>> {
         order.push(i);
         Ok(())
     }
-    let index: HashMap<&str, usize> = plugins.iter().enumerate().map(|(i, (n, _))| (n.as_str(), i)).collect();
+    let index: HashMap<&str, usize> = plugins
+        .iter()
+        .enumerate()
+        .map(|(i, (n, _))| (n.as_str(), i))
+        .collect();
     let mut marks = vec![Mark::New; plugins.len()];
     let mut order = Vec::with_capacity(plugins.len());
     for i in 0..plugins.len() {
@@ -113,17 +146,29 @@ mod tests {
     use super::*;
 
     fn p(name: &str, deps: &[&str]) -> (String, Vec<String>) {
-        (name.to_owned(), deps.iter().map(|d| (*d).to_owned()).collect())
+        (
+            name.to_owned(),
+            deps.iter().map(|d| (*d).to_owned()).collect(),
+        )
     }
 
     #[test]
     fn dependencies_come_first_and_the_rest_keeps_its_order() {
-        let order = load_order(&[p("a", &["c"]), p("b", &[]), p("c", &["b"]), p("d", &["missing"])]).unwrap();
+        let order = load_order(&[
+            p("a", &["c"]),
+            p("b", &[]),
+            p("c", &["b"]),
+            p("d", &["missing"]),
+        ])
+        .unwrap();
         assert_eq!(order, vec![1, 2, 0, 3]);
     }
 
     #[test]
     fn a_cycle_is_refused() {
-        assert!(matches!(load_order(&[p("a", &["b"]), p("b", &["a"])]), Err(Error::DependencyCycle(_))));
+        assert!(matches!(
+            load_order(&[p("a", &["b"]), p("b", &["a"])]),
+            Err(Error::DependencyCycle(_))
+        ));
     }
 }

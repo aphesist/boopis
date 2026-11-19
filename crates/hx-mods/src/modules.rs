@@ -30,8 +30,10 @@ const BARE_JSX_RUNTIME: &str = "claude-code/jsx-runtime";
 /// gets `Error::DynamicImport` and not a message to parse.
 #[derive(Default)]
 pub struct Shared {
-    /// One entry per loaded plugin, indexed by the number in a module name.
-    pub roots: Vec<PluginDir>,
+    /// One entry per plugin, indexed by the number in a module name. A plugin's directory handle
+    /// is dropped once it has loaded: every import is static, so nothing reads it afterwards,
+    /// and a late `import()` has nothing to read from.
+    pub roots: Vec<Option<PluginDir>>,
     /// The first typed failure since it was last taken.
     pub last_error: Option<Error>,
 }
@@ -40,7 +42,11 @@ pub struct Shared {
 pub type SharedRef = Rc<RefCell<Shared>>;
 
 fn import_error(from: &str, specifier: &str, reason: impl Into<String>) -> Error {
-    Error::Import { from: from.to_owned(), specifier: specifier.to_owned(), reason: reason.into() }
+    Error::Import {
+        from: from.to_owned(),
+        specifier: specifier.to_owned(),
+        reason: reason.into(),
+    }
 }
 
 /// Splits `3:src/view.tsx` into the plugin index and the path.
@@ -69,12 +75,18 @@ fn join(base_dir: &str, spec: &str) -> Option<String> {
 fn candidates(path: &str) -> Vec<String> {
     let mut out = vec![path.to_owned()];
     out.extend(MODULE_EXTENSIONS.iter().map(|e| format!("{path}.{e}")));
-    out.extend(MODULE_EXTENSIONS.iter().map(|e| format!("{path}/index.{e}")));
+    out.extend(
+        MODULE_EXTENSIONS
+            .iter()
+            .map(|e| format!("{path}/index.{e}")),
+    );
     if let Some(stem) = path.strip_suffix(".js") {
         out.extend(["ts", "tsx", "jsx"].iter().map(|e| format!("{stem}.{e}")));
     }
-    if let Some(stem) = path.strip_suffix(".mjs") {
-        out.push(format!("{stem}.mts"));
+    for (from, to) in [(".mjs", "mts"), (".cjs", "cts")] {
+        if let Some(stem) = path.strip_suffix(from) {
+            out.push(format!("{stem}.{to}"));
+        }
     }
     out
 }
@@ -89,11 +101,21 @@ pub fn resolve_name(shared: &SharedRef, base: &str, specifier: &str) -> Result<S
     }
     // Only the runtime, importing a plugin's entry module with no importer, may use an internal
     // name; a mod naming `1:register.js` would reach another plugin's files.
-    let entry = if base.is_empty() { split(specifier) } else { None };
+    let entry = if base.is_empty() {
+        split(specifier)
+    } else {
+        None
+    };
     let (idx, base_dir, rel) = if let Some((idx, path)) = entry {
         (idx, String::new(), path.to_owned())
     } else if specifier.starts_with("./") || specifier.starts_with("../") {
-        let (idx, base_path) = split(base).ok_or_else(|| import_error(base, specifier, "a relative import needs an importer inside a plugin"))?;
+        let (idx, base_path) = split(base).ok_or_else(|| {
+            import_error(
+                base,
+                specifier,
+                "a relative import needs an importer inside a plugin",
+            )
+        })?;
         let dir = base_path.rsplit_once('/').map_or("", |(d, _)| d).to_owned();
         (idx, dir, specifier.to_owned())
     } else {
@@ -103,11 +125,19 @@ pub fn resolve_name(shared: &SharedRef, base: &str, specifier: &str) -> Result<S
             "a mod may import relative files and `claude-code` only (no Node modules, no URLs, no other packages)",
         ));
     };
-    let joined = join(&base_dir, &rel).ok_or_else(|| import_error(base, specifier, "the path leaves the plugin directory"))?;
+    let joined = join(&base_dir, &rel)
+        .ok_or_else(|| import_error(base, specifier, "the path leaves the plugin directory"))?;
     let guard = shared.borrow();
-    let root = guard.roots.get(idx).ok_or_else(|| import_error(base, specifier, "unknown plugin"))?;
+    let root = guard
+        .roots
+        .get(idx)
+        .and_then(Option::as_ref)
+        .ok_or_else(|| import_error(base, specifier, "unknown plugin, or already loaded"))?;
     for candidate in candidates(&joined) {
-        if let Some(canonical) = root.file(&candidate).map_err(|e| import_error(base, specifier, e.to_string()))? {
+        if let Some(canonical) = root
+            .file(&candidate)
+            .map_err(|e| import_error(base, specifier, e.to_string()))?
+        {
             return Ok(format!("{idx}:{canonical}"));
         }
     }
@@ -124,23 +154,38 @@ pub fn module_source(shared: &SharedRef, name: &str) -> Result<String, Error> {
         BARE_JSX_RUNTIME => return Ok(JSX_RUNTIME.to_owned()),
         _ => {}
     }
-    let (idx, path) = split(name).ok_or_else(|| import_error("", name, "not a module of this runtime"))?;
+    let (idx, path) =
+        split(name).ok_or_else(|| import_error("", name, "not a module of this runtime"))?;
     let text = {
         let guard = shared.borrow();
-        guard.roots.get(idx).ok_or_else(|| import_error("", name, "unknown plugin"))?.read(path)?
+        guard
+            .roots
+            .get(idx)
+            .and_then(Option::as_ref)
+            .ok_or_else(|| import_error("", name, "unknown plugin, or already loaded"))?
+            .read(path)?
     };
     transform::prepare(path, &text)
 }
 
 fn remember(shared: &SharedRef, e: &Error) {
-    shared.borrow_mut().last_error.get_or_insert_with(|| e.clone());
+    shared
+        .borrow_mut()
+        .last_error
+        .get_or_insert_with(|| e.clone());
 }
 
 /// The engine's resolver.
 pub struct ModResolver(pub SharedRef);
 
 impl Resolver for ModResolver {
-    fn resolve<'js>(&mut self, _ctx: &Ctx<'js>, base: &str, name: &str, _attributes: Option<ImportAttributes<'js>>) -> rquickjs::Result<String> {
+    fn resolve<'js>(
+        &mut self,
+        _ctx: &Ctx<'js>,
+        base: &str,
+        name: &str,
+        _attributes: Option<ImportAttributes<'js>>,
+    ) -> rquickjs::Result<String> {
         resolve_name(&self.0, base, name).map_err(|e| {
             remember(&self.0, &e);
             rquickjs::Error::new_resolving_message(base, name, e.to_string())
@@ -152,7 +197,12 @@ impl Resolver for ModResolver {
 pub struct ModLoader(pub SharedRef);
 
 impl Loader for ModLoader {
-    fn load<'js>(&mut self, ctx: &Ctx<'js>, name: &str, _attributes: Option<ImportAttributes<'js>>) -> rquickjs::Result<Module<'js, Declared>> {
+    fn load<'js>(
+        &mut self,
+        ctx: &Ctx<'js>,
+        name: &str,
+        _attributes: Option<ImportAttributes<'js>>,
+    ) -> rquickjs::Result<Module<'js, Declared>> {
         let source = module_source(&self.0, name).map_err(|e| {
             remember(&self.0, &e);
             rquickjs::Error::new_loading_message(name, e.to_string())
@@ -176,9 +226,25 @@ mod tests {
     #[test]
     fn other_bare_specifiers_are_refused() {
         let shared = SharedRef::default();
-        for spec in ["fs", "node:fs", "react", "https://example.com/x.js", "/etc/passwd", "file:///x"] {
-            assert!(matches!(resolve_name(&shared, "0:register.js", spec), Err(Error::Import { .. })), "{spec}");
+        for spec in [
+            "fs",
+            "node:fs",
+            "react",
+            "https://example.com/x.js",
+            "/etc/passwd",
+            "file:///x",
+        ] {
+            assert!(
+                matches!(
+                    resolve_name(&shared, "0:register.js", spec),
+                    Err(Error::Import { .. })
+                ),
+                "{spec}"
+            );
         }
-        assert_eq!(resolve_name(&shared, "0:register.js", "claude-code").unwrap(), "claude-code");
+        assert_eq!(
+            resolve_name(&shared, "0:register.js", "claude-code").unwrap(),
+            "claude-code"
+        );
     }
 }

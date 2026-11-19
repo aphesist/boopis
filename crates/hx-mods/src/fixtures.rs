@@ -34,7 +34,12 @@ impl MemoryHost {
     /// The calls named `call`.
     #[must_use]
     pub fn calls_to(&self, call: &str) -> Vec<HostRequest> {
-        self.calls.borrow().iter().filter(|c| c.call == call).cloned().collect()
+        self.calls
+            .borrow()
+            .iter()
+            .filter(|c| c.call == call)
+            .cloned()
+            .collect()
     }
 
     /// Forgets the recorded calls.
@@ -51,8 +56,11 @@ impl MemoryHost {
 impl HostCalls for MemoryHost {
     fn call(&mut self, request: &HostRequest) -> Result<Value, HostError> {
         self.calls.borrow_mut().push(request.clone());
-        if self.refuse.borrow().iter().any(|c| *c == request.call) {
-            return Err(HostError { code: "hx.policy.denied".into(), message: format!("{} is refused", request.call) });
+        if self.refuse.borrow().contains(&request.call) {
+            return Err(HostError {
+                code: "hx.policy.denied".into(),
+                message: format!("{} is refused", request.call),
+            });
         }
         Ok(match request.call.as_str() {
             "ui.open" => json!({ "isPlaced": true }),
