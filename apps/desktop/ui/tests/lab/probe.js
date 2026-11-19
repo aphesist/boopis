@@ -505,9 +505,12 @@
             const n = r1(px(v));
             if (n === 0 || T.space.has(n) || SPACE_NAMED.has(n)) continue;
             if (/gap/.test(prop) && !/flex|grid/.test(s.display)) continue;
-            /* R-layout-5: a scroller that runs under the composer or the dock pads its end by their height, a sum of live heights and not a step */
-            if (prop === 'padding-bottom' && /auto|scroll/.test(s.overflowY)) {
-              const r = e.getBoundingClientRect();
+            /* R-layout-5: a scroller that runs under the composer or the dock pads its end by their height, a sum of live heights and not a step.
+               The pad may sit on the scroller or on the column that fills it (the thread's .ss-col inside .ss-scroll); either way the band
+               that matters is the scroller's visible end */
+            const scroller = /auto|scroll/.test(s.overflowY) ? e : (e.parentElement && /auto|scroll/.test(getComputedStyle(e.parentElement).overflowY) ? e.parentElement : null);
+            if (prop === 'padding-bottom' && scroller) {
+              const r = scroller.getBoundingClientRect();
               if ([...document.querySelectorAll('.ui-composer, .bt-composer-zone, #hx-dock')].some((f) => { const q = f.getBoundingClientRect(); return q.height > 0 && q.left < r.right && q.right > r.left && q.top < r.bottom && q.bottom > r.bottom - n; })) continue;
             }
             stray('tokens.spacing', e, prop, v);
