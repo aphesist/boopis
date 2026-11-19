@@ -2,11 +2,12 @@
    the display. The owner copies the text from Settings > General > Diagnostics and sends it when a machine is slow or
    blank; `webkit://gpu` (WebKitGTK's own page) says which buffer path is in use. */
 import { commands } from './bindings';
+import { orbState } from '../components/orb-worker/host';
 import type { AppSettings, GpuPolicy, RendererReport } from './bindings';
 import { asHostError } from './bridge';
 
 /** what only the page knows; the GL strings are the GPU the web process really draws on (WebGL goes through the same EGL display as the page) */
-export interface DisplayFacts { devicePixelRatio: number; innerWidth: number; innerHeight: number; userAgent: string; glRenderer?: string | null; glVendor?: string | null }
+export interface DisplayFacts { devicePixelRatio: number; innerWidth: number; innerHeight: number; userAgent: string; glRenderer?: string | null; glVendor?: string | null; orbs?: string }
 
 /** the WebGL renderer and vendor strings, or null when the page has no WebGL (never throws) */
 export function glInfo(): { renderer: string | null; vendor: string | null } {
@@ -23,7 +24,7 @@ export function glInfo(): { renderer: string | null; vendor: string | null } {
 
 export const displayFacts = (): DisplayFacts => {
   const gl = glInfo();
-  return { devicePixelRatio: window.devicePixelRatio, innerWidth: window.innerWidth, innerHeight: window.innerHeight, userAgent: navigator.userAgent, glRenderer: gl.renderer, glVendor: gl.vendor };
+  return { devicePixelRatio: window.devicePixelRatio, innerWidth: window.innerWidth, innerHeight: window.innerHeight, userAgent: navigator.userAgent, glRenderer: gl.renderer, glVendor: gl.vendor, orbs: orbState.mode + (orbState.why ? ` (${orbState.why})` : '') };
 };
 
 /** frame timing over a few seconds, from requestAnimationFrame deltas (what the perf harness measures) */
@@ -91,6 +92,7 @@ export function reportText(r: RendererReport, d: DisplayFacts, f?: FrameStats | 
     `set by the host: ${set}`,
     ...(r.note ? [`note: ${r.note}`] : []),
     'environment now:', ...env,
+    ...(d.orbs ? [`orbs draw in: ${d.orbs}`] : []),
     `user agent: ${d.userAgent}`,
     'choices: ' + r.choices.map(([k, v]) => `${k} = ${v}`).join('; '),
     ...(f ? [`frames over ${f.seconds} s: ${describeFrames(f, rate)} (p50 ${f.p50} ms, p95 ${f.p95} ms, max ${f.max} ms, ${f.over33} over 33 ms, ${f.frames} frames)`] : [])

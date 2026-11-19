@@ -189,6 +189,30 @@ The desktop app draws with WebKitGTK; the owner's machine paints on the CPU at 3
 - **Orbs** (`components/orb-runtime.ts`): a resized canvas repaints in the same task (a cleared canvas painted empty is the flicker), ambient orbs update on alternate frames by group (the dock's, and the rest), and the ones outside the dock wait while the dock moves. When the CPU paints, a frame repaints the bounding box of everything that changed once more than ten rectangles did: scattered animating orbs repaint the window between them. Do not add another always-animating thing in a second corner of the window.
 - A dock handler that needs the new layout takes it from `hx:layout` (`d.resized` says a window resize), not from `window`'s `resize`.
 
+## Motion (ADR-0025, STANDARDS section 6)
+Motion runs at the display's full rate, so what moves must not wait for the main thread. The rules, then where every animation stands.
+- **Compositor first.** Animate `transform`, `translate`, `opacity` (and `filter` only where the design needs it). A spring that has a known end is a Web Animation sampled from its closed form with `core/spring.ts` (`springKeyframes`; `springLinear` for a CSS `linear()` easing). Use keyframes, not `linear()`, for anything that must composite on WebKitGTK before 2.54, where `linear()` with points forces main-thread animation. An interrupted spring hands its velocity on from `springAt` (the exact state), never from a layout read.
+- **Per-frame JavaScript is only for what follows live input**: the dock's slab outline (a path whose corners depend on its size), magnification under the pointer, a page dragged by touch. It writes transforms and one path, in one rAF, and reads nothing from layout or style.
+- **Animated custom properties never inherit.** The shell publishes layout targets as `--hx-*-to`; an element that uses one declares its own `--hx-*: var(--hx-*-to)` and transitions it (`shell.css`). An inherited property animated on a root restyles the whole page every frame.
+- **Orbs draw in a worker where the engine has OffscreenCanvas in workers** (`components/orb-worker/`; `setupOrbs()` in `main.ts` decides once). The page's `<orb-avatar>` is a thin element (attributes, size, visibility, resolved colours); the worker runs the vendored orb2 file as it is against `shim.ts` and applies `orb-runtime`'s frame policy. Anywhere else, or when the worker fails to start, the vendored element draws on the main thread as before; `?orbs=main` forces that. `orb-worker.test.ts` runs the vendored file against the shim and checks the shadow template the page copies.
+- Measure with `tests/perf` (its README): frame times at the owner's geometry, the `-load` scenarios (a 30 ms task every 200 ms), `--probe` for main-thread work per frame.
+
+| Motion | Driven by | Properties | Now |
+|---|---|---|---|
+| Dock morph (lift, expand, collapse, session, minimise): keyed elements | Web Animation from the spring (was per-frame JS) | `transform` | compositor |
+| Dock slab outline, stage clip while moving, foot width, sink | per-frame JS, one rAF | SVG `d`, `clip-path`, `width`, `transform` | main thread (geometry; follows the sprung size) |
+| Dock magnification, key-focus grow (arrow keys along the row) | per-frame JS | `transform` | main thread (follows input); layers only while the pointer is on the row |
+| Dock page switch: sections, dots | Web Animation from the spring (was per-frame JS); the fades were already WAAPI | `translate`, `transform`, `opacity` | compositor |
+| Dock page drag (touch, trackpad) | per-frame JS spring | `translate`, `opacity` | main thread (follows input) |
+| Dock entrances and exits, popovers, menus, tooltips, toast, palette, dialogs | CSS transitions and keyframes | `opacity`, `translate`, `transform` | compositor |
+| Shell layout travel (sidebars, column, composer, centre line, dock space, right panel) | CSS transitions of non-inherited registered lengths (were inherited on the root) | `width`, `left`, `bottom`, padding | main thread (it reflows text); restyles only its users |
+| View cross-fade, tab switch | CSS | `opacity`, `--hx-shift` (`left`, `right`) | opacity on the compositor; the 12 px shift is layout |
+| Card height on a state change (owner decision), queue height | WAAPI | `height` | main thread, by decision |
+| Hold to approve | rAF canvas draw and `clip-path` | canvas, `clip-path` | main thread, while held |
+| Hover, press, focus colours | CSS | colour, background, `box-shadow` | main thread, small areas |
+| Running dot | CSS | `opacity` | compositor |
+| Orbs | orb2's own loop | canvas 2D | worker where supported, else main thread |
+
 ## Names and long names
 - **Autoname** (`modules/bots/names.ts`): the curated list is shared data, `apps/shared/data/bot-names.json`, imported by the UI (bundled by Vite, so there is one copy; `scripts/sync-shared-data.sh` copies files into the plugin package and the plugin does not read this one). Availability is derived on every call from the bots the module holds (which the provider keeps current: the Hermes profiles once `bots` is live), never stored. "Surprise me" is the dice button and alt+R in the name field; an empty name is auto-named on create.
 - **Long names** are cut with an ellipsis and shown whole as the tooltip while cut (`modules/bots/clips.ts`, `modules/cards/fit.ts`, the dock's `tipOf`); the accessible name always carries the whole name. Tests use the `long` fixture (`BOT_FIXTURES` in `mock-data.ts`): `createMockProvider({ fixtures: ['long'] })`, or `?fixture=long` in the e2e build only.
@@ -217,7 +241,7 @@ Intentional differences from v6, all invisible:
 
 ## What not to do
 - Do not redesign, "improve", re-space or re-colour anything. If the design looks wrong, tell the owner; do not change it.
-- Do not edit `design/v6/` (the reference).
+- Do not edit `design/v6/` (the reference). A change that only moves where motion runs (compositor, worker) does not touch it: the look is the same.
 - Do not add a framework (no React). Do not add a dependency without an ADR (licences: STANDARDS section 5).
 - Do not read `localStorage` directly: go through `core/settings` (wrapped, versioned). Do not use `console` directly: use `core/log`.
 - Do not duplicate a primitive: look in `src/components` first (STANDARDS section 9); two places that need a helper put it in `core/` or `components/`.

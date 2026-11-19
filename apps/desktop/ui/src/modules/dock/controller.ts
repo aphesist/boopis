@@ -10,8 +10,8 @@ import { writeJSON, KEYS } from '../../core/settings';
 import { ui } from '../../components';
 import { data } from '../../data';
 import type { Wait } from '../../data';
-import { PAGE_NAME, S, X, botById, flags, motion, shownPages, EASE, K_SLIDE, clamp, spring } from './ctx';
-import { E, cancelOut, flipDots, hideTip, markFocus, morph, renderDots, resetMag, retarget, showView, syncFoot, emitDock, updateDots } from './engine';
+import { PAGE_NAME, S, X, botById, flags, motion, shownPages, EASE, clamp } from './ctx';
+import { cancelOut, flipDots, hideTip, markFocus, morph, renderDots, resetMag, retarget, showView, slideNow, slideTo, stopSlide, syncFoot, emitDock, updateDots } from './engine';
 import type { MorphOpts } from './engine';
 import { lookRow, setOrbLife } from './orbs';
 import { fillCards, refreshBot, renderMins, renderView, viewKey, relocateLive } from './views';
@@ -78,8 +78,7 @@ export function goPage(id: string, opts: { dir?: number; focusDot?: boolean; foc
   const order = shownPages();
   const dir = opts.dir || (order.indexOf(id) > order.indexOf(S.page) ? 1 : -1);
   const from = S.page, outSec = X.pageEls[from] as HTMLElement & { _fade?: Animation | null }, inSec = X.pageEls[id] as HTMLElement;
-  const sl = E.slides.get(id);
-  const back = sl ? { x: sl.x, v: sl.v } : null;
+  const back = slideNow(id);
   hideTip(); resetMag();
   if (S.mode === 'expanded' && S.card) { S.card = null; S.mode = 'normal'; X.root.dataset['mode'] = 'normal'; }
   lookRow(null);
@@ -102,16 +101,18 @@ export function goPage(id: string, opts: { dir?: number; focusDot?: boolean; foc
     inSec.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 140, easing: 'linear' });
   } else {
     const dist = Math.min(40, (wOut + wIn) / 16 + 16);     /* a short travel inside the slab, never a lurch */
-    const so = E.slides.get(from) ?? spring(0, K_SLIDE, 1, 0.1); so.t = -dir * dist; E.slides.set(from, so);
-    const si = spring(back ? back.x : dir * dist, K_SLIDE, 1, 0.1); si.t = 0; si.v = back ? back.v : 0; E.slides.set(id, si);
-    inSec.style.translate = `${si.x}px 0`;
-    const fo = outSec.animate([{ opacity: getComputedStyle(outSec).opacity }, { opacity: 0 }], { duration: 140, easing: 'linear', fill: 'forwards' });
+    /* both pages slide as springs on the compositor (engine.slideTo): the one leaving from where it is, the one arriving from
+       where it was (a swipe still settling hands its position and velocity over) */
+    const so = slideNow(from) ?? { x: 0, v: 0 };
+    slideTo(from, outSec, so.x, so.v, -dir * dist, { hold: true });
+    slideTo(id, inSec, back ? back.x : dir * dist, back ? back.v : 0, 0);
+    const fo = outSec.animate([{ opacity: outSec.style.opacity || '1' }, { opacity: 0 }], { duration: 140, easing: 'linear', fill: 'forwards' });
     fo.playbackRate = motion.timeScale;
     outSec._fade = fo;
     fo.onfinish = () => {
       outSec._fade = null;
       try { fo.cancel(); } catch { /* gone */ }
-      if (S.page !== from) { outSec.hidden = true; outSec.classList.remove('is-out'); outSec.inert = false; E.slides.delete(from); outSec.style.translate = ''; }
+      if (S.page !== from) { outSec.hidden = true; outSec.classList.remove('is-out'); outSec.inert = false; stopSlide(from); outSec.style.translate = ''; }
     };
     const fi = inSec.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, delay: 50, easing: EASE, fill: 'backwards' });
     fi.playbackRate = motion.timeScale;

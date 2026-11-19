@@ -2,7 +2,14 @@
    velocity when interrupted). Content that has no counterpart fades (exits in 120 ms, entrances in 220 ms); nothing is
    clipped at rest. Motion (owner decision, v10): the slab and its content change in the same frame and nothing leaves
    the slab while it travels; under reduced motion every size change is instant (entrances fade in 140ms), nothing
-   slides, nothing overshoots. */
+   slides, nothing overshoots.
+
+   Where the motion runs (ADR-0025): what travels as a spring and has a known end (the keyed elements of a morph, the page
+   dots, a page sliding in and out) is a Web Animation of `transform` / `translate` sampled from the spring's closed form
+   (core/spring.ts), so the compositor thread plays it and a busy main thread cannot drop a frame of it. Only what must
+   follow live input stays in this file's per-frame loop: the slab's outline (a path whose corners depend on its size),
+   the magnification under the pointer, and a page dragged by touch. That loop writes transforms and one path, and reads
+   nothing from layout. */
 import { emit } from '../../core/bus';
 import { $$ } from '../../core/dom';
 import { ui } from '../../components';
@@ -12,22 +19,28 @@ import {
 import type { Spring } from './ctx';
 import { setOrbLife } from './orbs';
 import { holdOutsideDock, releaseOutsideDock } from '../../components/orb-runtime';
+import { springAt, springElapsed, springKeyframes } from '../../core/spring';
+import type { Channel, SpringParams } from '../../core/spring';
 import { fillCards, relocateLive, renderView, viewKey } from './views';
 import { syncRoving } from './roving';
 import { PAGE_NAME } from './ctx';
 
 /* ───────── springs and the dock's moving parts ───────── */
-export interface Anim { el: HTMLElement; x: Spring; y: Spring; s: Spring; at: number }
+/** a spring played as a Web Animation: what it started from (so its state at any time is known without reading the page) */
+export interface Flip { el: HTMLElement; an: Animation; delay: number; p: SpringParams; ch: readonly Channel[]; target?: number }
+export interface FlipState { x: number; y: number; s: number; vx: number; vy: number; vs: number }
 interface MagItem { el: HTMLElement; c: number; w: number; hgt: number; max: number; m: number; g: number; off: number }
 export const E = {
   slabW: spring(0, K_SLAB, 1, 0.05), slabH: spring(0, K_SLAB, 1, 0.05), sinkS: spring(0, K_SINK, 1, 0.05), dotS: spring(0, K_DOT, 1, 0.05),
   baseW: 0, baseH: 0, magE: 0, magLift: 0, magItems: [] as MagItem[], magPX: null as number | null, magOn: false, lastItem: null as HTMLElement | null,
-  anims: new Map<string, Anim>(), slides: new Map<string, Spring>(), raf: 0, lastT: 0,
+  anims: new Map<string, Flip>(), slides: new Map<string, Spring>(), slideAn: new Map<string, Flip>(), raf: 0, lastT: 0,
   pending: [] as Array<{ el: HTMLElement; i: number; t0: number; needH: number; needW: number }>,
   drag: { x: 0, on: false, timer: 0, lock: 0, pid: null as number | null, sx: 0, sy: 0, axis: null as 'x' | 'y' | null, hist: [] as Array<[number, number]> },
   cameFrom: null as Element | null
 };
 type Leaving = HTMLElement & { _leave?: Animation | null };
+/** the views fading out as the slab moves (counted here, so the frame never queries the DOM for them) */
+const leaving = new Set<HTMLElement>();
 type Sec = HTMLElement & { _fade?: Animation | null };
 
 export const hideTip = (): void => { try { ui.tooltip.hide(); } catch { /* none */ } };
@@ -69,24 +82,74 @@ function frame(now: number): void {
   if (motion.reduce) for (const s of springs) snapS(s);      /* reduced motion: a size changes at once; nothing slides */
   else {
     const n = Math.max(1, Math.ceil(dt / 0.008)), h = dt / n;
-    for (let i = 0; i < n; i++) {
-      for (const s of springs) stepS(s, h);
-      for (const a of E.anims.values()) if (now >= a.at) { stepS(a.x, h); stepS(a.y, h); stepS(a.s, h); }
-    }
+    for (let i = 0; i < n; i++) for (const s of springs) stepS(s, h);
   }
   let busy = magBusy;
   for (const s of springs) { if (atRest(s)) snapS(s); else busy = true; }
   if (flushEnter(now)) busy = true;
-  for (const [k, a] of E.anims) {
-    if (now >= a.at && atRest(a.x) && atRest(a.y) && atRest(a.s)) { a.el.style.transform = ''; E.anims.delete(k); }
-    else { busy = true; paintAnim(a); }
-  }
   for (const [p, s] of E.slides) if (atRest(s) && s.t === 0) { const pe = X.pageEls[p]; if (pe) pe.style.translate = ''; E.slides.delete(p); }
   paint();
   if (busy) E.raf = requestAnimationFrame(frame);
   else settled();
 }
-export function paintAnim(a: Anim): void { a.el.style.transform = `translate(${a.x.x.toFixed(2)}px,${a.y.x.toFixed(2)}px) scale(${a.s.x.toFixed(4)})`; }
+
+/* ───────── springs as Web Animations ───────── */
+const FLIP_P: SpringParams = { k: K_FLIP };
+const DOT_P: SpringParams = { k: K_DOT };
+const SLIDE_P: SpringParams = { k: K_SLIDE };
+const px = (n: number): string => n.toFixed(2);
+const tf = ([x = 0, y = 0, s = 0]: number[]): Keyframe => ({ transform: `translate(${px(x)}px,${px(y)}px) scale(${(s + 1).toFixed(4)})` });
+/** play a sampled spring on `el`. `fill: backwards` holds the first pose through a delay (a stagger). */
+function playSpring(el: HTMLElement, p: SpringParams, ch: readonly Channel[], make: (v: number[]) => Keyframe, delay: number): Animation | null {
+  const play = springKeyframes(p, ch, make);
+  if (play.duration <= 0) return null;
+  const an = el.animate(play.keyframes, { duration: play.duration, delay, easing: 'linear', fill: 'backwards' });
+  if (motion.timeScale !== 1) an.playbackRate = motion.timeScale;
+  return an;
+}
+/** the state of a running spring now, from its closed form: no layout read, no style read */
+export function flipState(f: Flip): FlipState {
+  if (f.an.playState === 'finished' || f.an.playState === 'idle') return { x: 0, y: 0, s: 0, vx: 0, vy: 0, vs: 0 };
+  const t = springElapsed(f.an, f.delay) / 1000, at = (c: Channel | undefined): { x: number; v: number } => (c ? springAt(f.p, c.x0, c.v0 ?? 0, t) : { x: 0, v: 0 });
+  const a = at(f.ch[0]), b = at(f.ch[1]), c = at(f.ch[2]);
+  return { x: a.x, y: b.x, s: c.x, vx: a.v, vy: b.v, vs: c.v };
+}
+/** the velocities of every running keyed animation, taken before they are cancelled for the next measurement */
+function carryOf(): Map<string, FlipState> { const m = new Map<string, FlipState>(); for (const [k, f] of E.anims) m.set(k, flipState(f)); return m; }
+function endFlip(k: string, f: Flip): void { if (E.anims.get(k) === f) E.anims.delete(k); try { f.an.cancel(); } catch { /* gone */ } }
+export function cancelFlips(): void { for (const [k, f] of [...E.anims]) endFlip(k, f); }
+function startFlip(k: string, el: HTMLElement, p: SpringParams, ch: readonly Channel[], delay: number): void {
+  const an = playSpring(el, p, ch, tf, delay);
+  if (!an) return;
+  const f: Flip = { el, an, delay, p, ch };
+  E.anims.set(k, f);
+  const done = (): void => { if (E.anims.get(k) === f) { E.anims.delete(k); kick(); } };
+  an.onfinish = done; an.oncancel = done;
+}
+/** a page sliding along the slab: from `x0` (with velocity `v0`) to `target`, as a `translate` animation. The page's own
+    `translate` is the one thing that moves, so it composes with the centring `transform` it already has. */
+export function slideTo(page: string, el: HTMLElement, x0: number, v0: number, target: number, o: { hold?: boolean } = {}): void {
+  stopSlide(page); E.slides.delete(page);
+  const ch = [{ x0: x0 - target, v0, eps: 0.1 }];
+  const play = springKeyframes(SLIDE_P, ch, ([x]) => ({ translate: `${px(target + (x as number))}px 0` }));
+  if (play.duration <= 0) { el.style.translate = target ? `${px(target)}px 0` : ''; return; }
+  const an = el.animate(play.keyframes, { duration: play.duration, easing: 'linear', fill: o.hold ? 'both' : 'backwards' });
+  if (motion.timeScale !== 1) an.playbackRate = motion.timeScale;
+  const f: Flip = { el, an, delay: 0, p: SLIDE_P, ch, target };
+  E.slideAn.set(page, f);
+  /* a page that slid away holds its last position until it is put away (its fade has hidden it long before) */
+  const done = (): void => { if (E.slideAn.get(page) === f) { E.slideAn.delete(page); if (o.hold) { try { an.cancel(); } catch { /* gone */ } } kick(); } };
+  an.onfinish = done; an.oncancel = done;
+}
+export function stopSlide(page: string): void { const f = E.slideAn.get(page); if (f) { E.slideAn.delete(page); try { f.an.cancel(); } catch { /* gone */ } } }
+/** where the page's slide is now (a drag's own spring, or a running animation), and how fast it moves */
+export function slideNow(page: string): { x: number; v: number } | null {
+  const js = E.slides.get(page); if (js) return { x: js.x, v: js.v };
+  const f = E.slideAn.get(page); if (!f) return null;
+  const st = flipState(f);
+  return { x: (f.target ?? 0) + st.x, v: st.vx };
+}
+export const sliding = (page: string): boolean => E.slides.has(page) || E.slideAn.has(page);
 export function paint(): void {
   const w = Math.max(0, E.slabW.x), h = Math.max(0, E.slabH.x);
   if (h < 0.5 || w < 1) { X.pathEl.setAttribute('d', ''); }
@@ -103,7 +166,7 @@ export function paint(): void {
   for (const [p, s] of E.slides) { const pe = X.pageEls[p]; if (pe) pe.style.translate = `${s.x.toFixed(2)}px 0`; }
   /* while anything travels, the content is held inside the slab (16px of headroom for the orbs' paint), so the black
      shape and what it carries never part; at rest nothing is clipped */
-  const moving = !motion.reduce && h > 0.5 && (E.anims.size > 0 || E.slides.size > 0 || E.pending.length > 0 || !atRest(E.slabW) || !atRest(E.slabH) || !!X.stageEl.querySelector('.dk-view.is-leaving'));
+  const moving = !motion.reduce && h > 0.5 && (E.anims.size > 0 || E.slides.size > 0 || E.slideAn.size > 0 || E.pending.length > 0 || !atRest(E.slabW) || !atRest(E.slabH) || leaving.size > 0);
   const clip = moving ? `polygon(${(-w / 2).toFixed(1)}px ${(-(h + sink + 16)).toFixed(1)}px, ${(w / 2).toFixed(1)}px ${(-(h + sink + 16)).toFixed(1)}px, ${(w / 2).toFixed(1)}px 4px, ${(-w / 2).toFixed(1)}px 4px)` : '';
   if (X.stageEl.style.clipPath !== clip) X.stageEl.style.clipPath = clip;
   paintMag();
@@ -165,7 +228,7 @@ function paintMag(): void {
   }
 }
 export function resetMag(): void {
-  E.magOn = false; E.magPX = null;
+  E.magOn = false; E.magPX = null; X.root.removeAttribute('data-mag');
   for (const it of E.magItems) { it.m = 1; it.g = 1; it.off = 0; it.el.style.transform = ''; }
   E.magE = 0; E.magLift = 0;
 }
@@ -175,7 +238,7 @@ interface KeyRect { el: HTMLElement; x: number; y: number; w: number; h: number 
 function snapKeys(a: { x: number; y: number }, clear: boolean): Map<string, KeyRect> {
   const m = new Map<string, KeyRect>();
   const els = $$('[data-k]', X.root).filter((el) => !el.closest('.is-leaving') && rendered(el));
-  if (clear) for (const el of els) el.style.transform = '';
+  if (clear) { cancelFlips(); for (const el of els) el.style.transform = ''; }
   for (const el of els) {
     const r = el.getBoundingClientRect();
     if (!r.width && !r.height) continue;
@@ -198,10 +261,10 @@ export function showView(key: string): HTMLElement | null {
 }
 type Rect = { l: number; b: number; w: number; h: number };
 function leave(view: Leaving, rect: Rect | null, last: Map<string, KeyRect>): void {
-  if (!view || !rect || motion.reduce) { if (view && view.classList.contains('is-ghost')) view.remove(); return; }
+  if (!view || !rect || motion.reduce) { if (view && view.classList.contains('is-ghost')) { leaving.delete(view); view.remove(); } return; }
   const sec = view.parentElement as HTMLElement;
   view.hidden = false;
-  view.classList.add('is-leaving');
+  view.classList.add('is-leaving'); leaving.add(view);
   Object.assign(view.style, { left: `calc(50% + ${rect.l.toFixed(1)}px)`, bottom: `${rect.b.toFixed(1)}px`, width: `${rect.w}px`, height: `${rect.h}px` });
   for (const el of view.querySelectorAll<HTMLElement>('[data-k]')) if (last.has(el.dataset['k'] ?? '')) el.classList.add('is-handed');
   if (sec !== X.pageEls[X.curView ? (X.curView.dataset['view'] ?? '').split(':')[0] ?? '' : S.page]) { sec.hidden = false; sec.classList.add('is-out'); }
@@ -211,6 +274,7 @@ function leave(view: Leaving, rect: Rect | null, last: Map<string, KeyRect>): vo
   an.onfinish = () => finishLeave(view);
 }
 function finishLeave(view: Leaving): void {
+  leaving.delete(view);
   if (view._leave) { try { view._leave.cancel(); } catch { /* gone */ } view._leave = null; }
   if (view.classList.contains('is-ghost')) view.remove();
   else {
@@ -220,7 +284,7 @@ function finishLeave(view: Leaving): void {
     if (view !== X.curView) view.hidden = true;
   }
   const sec = view.parentElement as Sec | null;
-  if (sec && sec.classList.contains('is-out') && !sec.querySelector('.is-leaving') && !E.slides.has(sec.dataset['page'] ?? '') && !sec._fade) {
+  if (sec && sec.classList.contains('is-out') && !sec.querySelector('.is-leaving') && !sliding(sec.dataset['page'] ?? '') && !sec._fade) {
     sec.classList.remove('is-out');
     if (!X.curView || X.curView.parentElement !== sec) sec.hidden = true;
   }
@@ -232,6 +296,7 @@ export function cancelOut(sec: Sec): void {
   sec.inert = false;
   sec.style.opacity = '';
   E.slides.delete(sec.dataset['page'] ?? '');
+  stopSlide(sec.dataset['page'] ?? '');
   sec.style.translate = '';
 }
 /* once motion settles, any section that is neither current nor leaving is put away */
@@ -240,7 +305,7 @@ function tidy(): void {
   for (const [id, sec] of Object.entries(X.pageEls) as Array<[string, Sec]>) {
     if (sec === curSec || sec.querySelector('.is-leaving') || (sec._fade && sec._fade.playState === 'running')) continue;
     if (!sec.hidden || sec.classList.contains('is-out')) {
-      sec.hidden = true; sec.classList.remove('is-out'); sec.inert = false; sec.style.translate = ''; E.slides.delete(id);
+      sec.hidden = true; sec.classList.remove('is-out'); sec.inert = false; sec.style.translate = ''; E.slides.delete(id); stopSlide(id);
     }
   }
 }
@@ -249,7 +314,7 @@ function ghostOf(view: HTMLElement, a: { x: number; y: number }): { g: HTMLEleme
   for (const o of g.querySelectorAll('orb-avatar, hx-card')) o.remove();
   g.removeAttribute('id'); g.removeAttribute('aria-labelledby');
   for (const n of g.querySelectorAll('[id]')) n.removeAttribute('id');
-  g.classList.add('is-ghost', 'is-leaving');
+  g.classList.add('is-ghost', 'is-leaving'); leaving.add(g);
   g.setAttribute('aria-hidden', 'true');
   g.inert = true;
   const rect = relRect(view, a);
@@ -257,23 +322,18 @@ function ghostOf(view: HTMLElement, a: { x: number; y: number }): { g: HTMLEleme
   return { g, rect };
 }
 interface FlipOpts { stagger?: number }
-function playFlip(first: Map<string, KeyRect>, last: Map<string, KeyRect>, opts: FlipOpts): void {
-  const now = performance.now();
+function playFlip(first: Map<string, KeyRect>, last: Map<string, KeyRect>, opts: FlipOpts, carry: Map<string, FlipState>): void {
   let i = 0;
   for (const [k, L] of last) {
     const F = first.get(k);
-    const prev = E.anims.get(k);
-    if (!F || motion.reduce) { if (prev) E.anims.delete(k); continue; }
+    const prev = carry.get(k);
+    if (!F || motion.reduce) continue;
     const dx = F.x - L.x, dy = F.y - L.y, s = L.w > 0 ? F.w / L.w : 1;
-    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5 && Math.abs(s - 1) < 0.01) { if (prev) E.anims.delete(k); continue; }
-    const a: Anim = { el: L.el, x: spring(dx, K_FLIP, 1, 0.08), y: spring(dy, K_FLIP, 1, 0.08), s: spring(s, K_FLIP, 1, 0.0008), at: now + (opts.stagger ? Math.min(i * opts.stagger, 140) : 0) };
-    a.x.t = 0; a.y.t = 0; a.s.t = 1;
-    if (prev) { a.x.v = prev.x.v; a.y.v = prev.y.v; a.s.v = prev.s.v; if (prev.el !== a.el) prev.el.style.transform = ''; }
-    E.anims.set(k, a);
-    paintAnim(a);
+    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5 && Math.abs(s - 1) < 0.01) continue;
+    const delay = opts.stagger ? Math.min(i * opts.stagger, 140) : 0;
+    startFlip(k, L.el, FLIP_P, [{ x0: dx, v0: prev?.vx ?? 0, eps: 0.05 }, { x0: dy, v0: prev?.vy ?? 0, eps: 0.05 }, { x0: s - 1, v0: prev?.vs ?? 0, eps: 0.0008 }], delay);
     i++;
   }
-  for (const k of [...E.anims.keys()]) if (!last.has(k)) { const a = E.anims.get(k) as Anim; if (a.el.isConnected && !a.el.closest('.is-leaving')) a.el.style.transform = ''; E.anims.delete(k); }
 }
 /* entrances wait until the growing slab has reached them, so nothing ever shows outside the slab */
 function enter(list: HTMLElement[], a: { x: number; y: number }): void {
@@ -310,6 +370,7 @@ export function morph(apply: () => void, opts: MorphOpts = {}): void {
   const hadFocus = X.root.contains(document.activeElement);
   const typing = [...X.composerEls.values()].find((c) => c.contains(document.activeElement));
   const first = snapKeys(a, false);
+  const carry = carryOf();
   const oldView = X.curView;
   const oldRect = oldView && rendered(oldView) ? relRect(oldView, a) : null;
   const ghost = opts.ghost && oldView && oldRect && !motion.reduce ? ghostOf(oldView, a) : null;
@@ -328,7 +389,7 @@ export function morph(apply: () => void, opts: MorphOpts = {}): void {
   const last = snapKeys(a, true);
   if (ghost) leave(ghost.g, ghost.rect, last);
   if (oldView && oldView !== nv) leave(oldView, oldRect, last);
-  playFlip(first, last, opts);
+  playFlip(first, last, opts, carry);
   const list: HTMLElement[] = [];
   if (nv && (nv !== oldView || opts.ghost)) list.push(...nv.querySelectorAll<HTMLElement>('[data-e]'));
   for (const [k, L] of last) if (!first.has(k) && !list.includes(L.el) && !L.el.closest('[data-e]')) list.push(L.el);
@@ -419,21 +480,17 @@ export function updateDots(): void {
 export function flipDots(fn: () => void): void {
   const sel = '.dk-dots .ui-pages__dot > i[data-k]';
   const first = new Map($$(sel, X.root).map((el) => [el.dataset['k'] ?? '', el.getBoundingClientRect()] as const));
+  const carry = carryOf();
   fn();
   if (motion.reduce) return;
-  for (const el of $$(sel, X.root)) {
-    const key = el.dataset['k'] ?? '';
-    const F = first.get(key); if (!F) continue;
-    el.style.transform = '';
-    const L = el.getBoundingClientRect(), dx = F.left - L.left;
-    if (Math.abs(dx) < 0.5) continue;
-    const prev = E.anims.get(key);
-    const an: Anim = { el, x: spring(dx, K_DOT, 1, 0.05), y: spring(0, K_DOT, 1, 0.05), s: spring(1, K_DOT, 1, 0.0008), at: 0 };
-    an.x.t = 0;
-    if (prev) an.x.v = prev.x.v;
-    E.anims.set(key, an);
-    paintAnim(an);
-  }
+  const dots = $$(sel, X.root);
+  for (const el of dots) { const key = el.dataset['k'] ?? '', old = E.anims.get(key); if (old) endFlip(key, old); }     /* writes, then reads */
+  const last = dots.map((el) => el.getBoundingClientRect());
+  dots.forEach((el, i) => {
+    const key = el.dataset['k'] ?? '', F = first.get(key), L = last[i] as DOMRect;
+    if (!F || Math.abs(F.left - L.left) < 0.5) return;
+    startFlip(key, el, DOT_P, [{ x0: F.left - L.left, v0: carry.get(key)?.vx ?? 0, eps: 0.05 }], 0);
+  });
   kick();
 }
 /* the foot shows in the normal and expanded dock only; the pill offers restore and nothing else (owner, v10). Its

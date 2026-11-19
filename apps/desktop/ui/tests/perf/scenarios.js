@@ -36,20 +36,40 @@
   /* ---- statistics ---- */
   const pct = (a, p) => { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.floor(p * s.length))]; };
   const TOL = 1.0; /* ms of timer jitter allowed above one 60 Hz frame before a frame counts as missed */
-  function stats(ts, wallMs, script0, script1) {
+  function stats(ts, wallMs, script0, script1, busyMs) {
     const d = [];
     for (let i = 1; i < ts.length; i++) d.push(ts[i] - ts[i - 1]);
     const sum = d.reduce((a, b) => a + b, 0);
     const scr = (script1.raf - script0.raf) + (script1.ro - script0.ro);
     return {
       frames: d.length, p50: +pct(d, 0.5).toFixed(1), p95: +pct(d, 0.95).toFixed(1), p99: +pct(d, 0.99).toFixed(1), max: +Math.max(0, ...d).toFixed(1),
-      over16: d.filter((x) => x > 16.7 + TOL).length, over33: d.filter((x) => x > 33.4 + TOL).length,
+      over8: d.filter((x) => x > 8.3 + TOL).length, over16: d.filter((x) => x > 16.7 + TOL).length, over33: d.filter((x) => x > 33.4 + TOL).length,
+      busyMsPerFrame: +(busyMs / Math.max(1, d.length)).toFixed(2),
       fps: +(d.length / (sum / 1000 || 1)).toFixed(1), scriptMsPerFrame: +(scr / Math.max(1, d.length)).toFixed(2), wallMs: Math.round(wallMs)
     };
   }
+  /* main-thread work per frame, for engines that report no task time (WebKitGTK): a MessageChannel ping-pong keeps the
+     event loop turning, so the gap between two pings is how long one task held the main thread. Script, style, layout
+     and the paint a non-composited renderer does all run inside such tasks; what a compositor thread does does not.
+     The probe is its own cost (a task every ~0.05 ms), so its numbers are for comparing builds, not absolutes. */
+  P.busyProbe = () => {
+    const ch = new MessageChannel(); let on = true, last = nowMs(), busy = 0, n = 0;
+    ch.port1.onmessage = () => { if (!on) return; const t = nowMs(), g = t - last; last = t; n++; if (g > 0.4) busy += g; ch.port2.postMessage(0); };
+    ch.port2.postMessage(0);
+    return { stop: () => { on = false; ch.port1.close(); return { busy, n }; } };
+  };
+  /* a synthetic main-thread load (a 30 ms task every 200 ms) while a scenario runs: what a busy page does to its own motion */
+  P.useProbe = false; P.loadOn = false; P.loadMs = 30; P.loadEvery = 200;
+  const startLoad = () => {
+    let on = true, spent = 0;
+    const tick = () => { if (!on) return; const t = nowMs(); while (nowMs() - t < P.loadMs) { /* a long task */ } spent += nowMs() - t; setTimeout(tick, P.loadEvery - P.loadMs); };
+    setTimeout(tick, 100);
+    return () => { on = false; return spent; };
+  };
   /** run `fn` while recording every frame */
   P.record = async (fn) => {
     const ts = []; let on = true;
+    const probe0 = P.useProbe ? P.busyProbe() : null, stopLoad = P.loadOn ? startLoad() : null;
     const loop = (t) => { if (!on) return; ts.push(t); raf0(loop); };
     const s0 = { ...P.script }, t0 = nowMs();
     P.recording = true; P.clears.length = 0; P.flick = { blank: 0, frames: 0, orbs: new Set() };
@@ -71,8 +91,11 @@
     let err = null;
     try { await fn(); } catch (e) { err = String(e && e.stack || e); }
     on = false; P.recording = false;
+    const spent = stopLoad ? stopLoad() : 0;
+    const busy = probe0 ? probe0.stop() : { busy: 0 };
     await sleep(40);
-    const r = stats(ts, nowMs() - t0, s0, { ...P.script });
+    const r = stats(ts, nowMs() - t0, s0, { ...P.script }, probe0 ? Math.max(0, busy.busy - spent) : 0);   /* the synthetic load is not the page's work */
+    r.load = !!stopLoad;
     r.canvasClears = P.clears.length;
     r.blankOrbFrames = P.flick.blank; r.blankOrbs = [...P.flick.orbs].slice(0, 12).join(',');
     r.qualityChanges = P.flick.q.length; r.qualityLog = P.flick.q.join(' ');
@@ -157,11 +180,18 @@
       await sleep(400);
     }
   };
-  P.run = async (name) => { await P.reset(); const sc = S[name]; if (!sc) throw new Error('no scenario ' + name); const r = await P.record(sc.run); r.name = name; return r; };
+  /* the same motion with the main thread loaded: a 30 ms task every 200 ms (P.loadMs, P.loadEvery) */
+  for (const n of ['dock-morph', 'dock-pages', 'tab-switch']) S[n + '-load'] = { label: S[n].label + ', under a 30 ms task every 200 ms', load: true, run: S[n].run };
+  /* the same motion with ONE 30 ms task landing 70 ms into each animation (the loaded scenarios' tasks land anywhere, starts included):
+     a compositor-driven animation is already running when the stall hits and keeps drawing; a script-driven one stops */
+  const stall = (ms) => { const t = nowMs(); while (nowMs() - t < ms) { /* a long task */ } };
+  S['dock-pages-stall'] = { label: 'dock: switch pages x8, a 30 ms task 70 ms into each', run: async () => { const d = dock(); for (let k = 0; k < 2; k++) for (const p of ['run', 'wait', 'sched', 'bots']) { d.goPage(p); await sleep(70); stall(30); await sleep(560); } } };
+  S['dock-morph-stall'] = { label: 'dock: expand, collapse, minimise, restore x3, a 30 ms task 70 ms into each', run: async () => { const d = dock(); for (let i = 0; i < 3; i++) for (const m of ['expanded', 'normal', 'minimal', 'normal']) { d.setMode(m); await sleep(70); stall(30); await sleep(630); } } };
+  P.run = async (name) => { await P.reset(); const sc = S[name]; if (!sc) throw new Error('no scenario ' + name); P.loadOn = !!sc.load; const r = await P.record(sc.run); P.loadOn = false; r.name = name; return r; };
   P.names = () => Object.keys(S);
   P.info = () => {
     const os = [...document.querySelectorAll('orb-avatar')];
-    return { orbs: os.length, live: os.filter((o) => !o.hasAttribute('static') && o._visible && o._cw).length, canvasPx: os.filter((o) => !o.hasAttribute('static') && o._visible && o._cw).reduce((a, o) => a + o._cw * o._cw, 0), quality: window.OrbAvatar && window.OrbAvatar.qualityLevel, bots: bots().length, dpr: devicePixelRatio, w: innerWidth, h: innerHeight };
+    return { orbMode: window.__hx && window.__hx.orbs ? window.__hx.orbs.mode + (window.__hx.orbs.why ? ' (' + window.__hx.orbs.why + ')' : '') : '?', orbs: os.length, live: os.filter((o) => !o.hasAttribute('static') && o._visible && o._cw).length, canvasPx: os.filter((o) => !o.hasAttribute('static') && o._visible && o._cw).reduce((a, o) => a + o._cw * o._cw, 0), quality: window.OrbAvatar && window.OrbAvatar.qualityLevel, bots: bots().length, dpr: devicePixelRatio, w: innerWidth, h: innerHeight };
   };
   /* resolved by the host when a native step (a window resize) is done */
   const pending = new Map(); let seq = 0;
