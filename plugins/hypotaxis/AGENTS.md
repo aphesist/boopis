@@ -21,7 +21,7 @@ The hypotaxis Hermes plugin (Python, stdlib only at runtime). It adds governance
 | `config/` | settings and trust-gated project settings, validated against `config/schemas/*.json` |
 | `policy/` | `check(call, session) -> Decision`, the one permission function. Data in `policy/defaults.json` |
 | `ledger/` | `SessionLedger` over contraprova's `EventLog`; usage mapping; prices; stats |
-| `rpc/` | the hypotaxis-v1 methods |
+| `rpc/` | the hypotaxis-v1 methods (`__init__.py`; `blanks.py`: `blank.fill`; `checkpoints.py`: `checkpoint.list` and `checkpoint.diff`, with `ship/diffview.py` parsing the git diff) |
 | `prompt.py` | the cache-stable governed-mode prompt section |
 | `errors.py`, `errors.json` | exception hierarchy and the plugin's wire error codes |
 | `util/` | `schema` (JSON Schema subset), `globs`, `log` |

@@ -1,9 +1,9 @@
-/* The live data provider: the Hermes gateway (through the host's proxy) behind the same `DataProvider` interfaces the
-   mock provider implements. Wired end to end today: the session list, the conversation stream (`message.delta` and
-   `message.complete`, `tool.start` and `tool.complete`), sending, stopping, and approvals (`approval.request` and
-   `approval.respond`, as the dock's waits). Everything else (details, bots, run, schedules, feedforward, dictation, files, user)
-   is served by the MOCK provider, on purpose and listed in MOCK_SOURCES, behind `VITE_DATA_PROVIDER=live`: nothing
-   falls back to the mock when the gateway fails (the failure is shown), and a mock source is never mistaken for live. */
+/* The live data provider: the Hermes gateway (through the host's proxy) and the hypotaxis plugin behind the same
+   `DataProvider` interfaces the mock provider implements. This file is the sessions: the list, the conversation stream,
+   sending, stopping, approvals and blanks. The details panels, the run, the diff and file mentions live in `./live/`
+   (`details.ts`). Only `bots`, `schedules` and the feedforward catalog are the MOCK provider's, named in MOCK_SOURCES and
+   announced as previews through `info.preview`; nothing falls back to the mock when the gateway fails (the failure is
+   shown), and a mock source is never mistaken for live. */
 import { logger } from '../core/log';
 import { createMockProvider } from '../data/mock-provider';
 import type { DataProvider, SessionsSource, WaitsEvent, WaitsSource } from '../data/provider';
