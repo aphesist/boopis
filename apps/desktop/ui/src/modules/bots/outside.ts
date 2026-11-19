@@ -3,7 +3,8 @@
    (`Bot.madeOutside`). It sits in the roster row and in the bot's room header. A chip's capsule, mono 11 in the quiet ink, never
    a stamp (nothing is owed), never colour. It goes once any boopis setting is saved for the bot (the store exists then).
    The sentence is its tooltip and its accessible description; the visible words stay short and the row's name carries them. */
-import { el, esc } from '../../core/dom';
+import { el, frag } from '../../core/dom';
+import { ui } from '../../components';
 
 export const OUTSIDE_LABEL = 'made outside boopis';
 export const OUTSIDE_WORDS = 'Made outside boopis, for example with the hermes command. boopis keeps its look and settings once you change them here.';
@@ -14,9 +15,9 @@ export const OUTSIDE_SHORT = 'outside';
 export const outsideDescription = (id: string): HTMLElement => el('span', { class: 'ui-sr', id, text: OUTSIDE_WORDS });
 
 /** in a roster row (markup for the row's end slot; the row is a button, so the mark is not a control: the row's description carries the sentence) */
-export const outsideRowMark = (): string => '<span class="bt-outside" data-outside data-tip="' + esc(OUTSIDE_WORDS) + '" data-tip-pos="right">' + OUTSIDE_SHORT + '</span>';
+export const outsideRowMark = (): string => ui.html.badge({ label: OUTSIDE_SHORT, class: 'bt-outside', tip: OUTSIDE_WORDS, tipPos: 'right', attrs: { 'data-outside': true } });
 
 /** in the room's header: reachable by keyboard, so the tooltip shows on focus and a screen reader reads the sentence after the words */
 export function outsideRoomMark(describedBy: string): HTMLElement {
-  return el('span', { class: 'bt-outside', 'data-outside': '', role: 'note', tabindex: '0', 'data-tip': OUTSIDE_WORDS, 'aria-describedby': describedBy, text: OUTSIDE_LABEL });
+  return frag(ui.html.badge({ label: OUTSIDE_LABEL, class: 'bt-outside', tip: OUTSIDE_WORDS, focusable: true, describedBy, attrs: { 'data-outside': true } }));
 }
