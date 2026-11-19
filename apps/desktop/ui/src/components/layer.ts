@@ -73,7 +73,7 @@ export interface MenuOpts extends LayerOpts { label?: string | undefined; multi?
 export const menu = {
   /** menu.open(anchor, items, {label, place, align, multi, onSelect, layer}): the node, or null when the same anchor closed it */
   open(anchor: HTMLElement, items: readonly MenuEntry[], o: MenuOpts = {}): HTMLElement | null {
-    const node = frag('<div class="ui-menu" role="menu"' + attrs({ 'aria-label': o.label }) + '>' + html.menuItems(items, o) + '</div>');
+    const node = frag('<div class="ui-menu" role="menu"' + attrs({ 'aria-label': o.label }) + '>' + '<div class="ui-menu__list ui-scroll ui-scroll--inset-both">' + html.menuItems(items, o) + '</div></div>');
     if (!openLayerAt(anchor, node, o)) return null;
     node.addEventListener('click', (e) => {
       const it = (e.target as Element).closest<HTMLButtonElement>('.ui-menu__item'); if (!it || it.disabled) return;

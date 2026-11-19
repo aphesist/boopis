@@ -88,7 +88,7 @@ function chip(o: ChipOpts): string {
     (o.model ? markHTML(o.model, { size: 14, color: o.modelColor ?? 'mono' }) : o.icon ? icon(o.icon) : '') + '<span>' + esc(o.label ?? (o.model ? modelName(o.model) : '')) + '</span>' + (o.haspopup ? icon('chevron-down', { size: 's' }) : '') + '</button>';
 }
 const chipGroup = (o: { options: readonly { label: string; value: string }[]; value?: U<string | null>; label?: U<string> }): string =>
-  '<div class="ui-chips" role="radiogroup" data-ui="options"' + attrs({ 'aria-label': o.label }) + ' style="display:flex;flex-wrap:wrap;gap:6px">' +
+  '<div class="ui-chips" role="radiogroup" data-ui="options"' + attrs({ 'aria-label': o.label }) + '>' +
   o.options.map((x) => chip({ label: x.label, value: x.value, option: true, checked: x.value === o.value, tabindex: x.value === o.value ? '0' : '-1' })).join('') + '</div>';
 
 const stateWord = (b: BotLike, o?: { showIdle?: boolean }): string => {
@@ -285,7 +285,7 @@ const empty = (o: { title: string; text?: U<string>; mark?: U<boolean>; action?:
 /** the mod as a name: its glyph and its name, one unit (origin slots, tabs, band rows, toasts, placed rows) */
 const mod = (name: string, o?: { class?: string }): string => '<span class="mv-by' + (o?.class ? ' ' + o.class : '') + '">' + icon('mod', { class: 'mv-by__g' }) + '<span class="mv-by__n">' + esc(name) + '</span></span>';
 
-const toast = (text: string, action?: string): string => '<div class="ui-toast" role="status" data-static><span>' + esc(text) + '</span>' + (action ? button({ label: action, size: 's', variant: 'ghost' }) : '') + '</div>';
+const toast = (text: string, action?: string): string => '<div class="ui-toast" role="status" data-static><span>' + esc(text) + '</span>' + (action ? button({ label: action, size: 's', variant: 'ghost', class: 'ui-corner' }) : '') + '</div>';
 /** a tooltip's content: the label, an optional state, the keys (concentric with the tooltip, on its raised colour); tooltip.ts shows it */
 export const tipBody = (label: string, k?: string | null, state?: { text: string; tone?: string | null } | null): string =>
   '<span>' + esc(label) + '</span>' + (state ? '<span class="ui-tip__state"' + attrs({ 'data-tone': state.tone }) + '>' + esc(state.text) + '</span>' : '') + (k ? keys(k, { fit: true, raised: true }) : '');

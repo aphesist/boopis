@@ -13,7 +13,7 @@ function story(name: ComponentName, d: Drawer): Story {
   const states: Record<string, State> = {};
   for (const [axis, values] of Object.entries(axes)) {
     states[axis] = {
-      tags: ['variant'], note: values.map(String).join(' · '), ...(d.width ? { width: d.width } : {}), ...(d.ground ? { ground: d.ground } : {}),
+      tags: ['variant'], note: values.map(String).join(' · '), ...(name === 'scroll' && axis === 'axis' ? { allow: { 'geometry.hscroll': "a specimen of the primitive's sideways axis: the scroller scrolling sideways is what it draws (R-scroll-7 names code, a diff, terminal output, a wide table and a tab strip as its users)" } } : {}), ...(d.width ? { width: d.width } : {}), ...(d.ground ? { ground: d.ground } : {}),
       render({ root }) {
         line(root, ...values.map((v) => { const p = { ...d.base, ...(d.as ? d.as(axis, v) : { [axis]: v }) }; const out = d.draw(p); return out; }));
         ui.hydrate(root);

@@ -32,7 +32,7 @@
    (radius, size, ring); a row along an edge that holds corner controls at its ends: .ui-corners (the inset). Never set a
    radius or an inset in a corner by hand. A squircle-drawn container also exposes its drawn radius as --r-outer when it
    declared none (squircle.ts), so its children nest the same way. */
-:where(.ui-nest, .ui-composer__box, .ui-file, .ui-menu, .ui-pop, .ui-listbox, .ui-tip, .ui-toast, .ui-seg, .ui-search--s,
+:where(.ui-nest, .ui-composer__box, .ui-file, .ui-menu, .ui-pop, .ui-listbox, .ui-tip, .ui-toast, .ui-seg, .ui-search--s, .ui-search--m,
   hx-card[data-size="inline"], hx-card[data-size="compact"], hx-card[data-size="popover"]) {
   --corner-size: var(--ctl-s);
   --r-in: min(var(--r-outer), max(var(--r-floor), calc(var(--r-outer) - var(--pad))));
@@ -101,17 +101,17 @@
    nothing sets the standard pair, except scrollbar-width: none on a hidden bar (R-scroll-1). The sizes and colours are the design
    system's scrollbar tokens (--scroll-*, tokens.css): R-scroll-2 and R-scroll-3 are Proposed, and a ruling changes a token, nothing
    here. */
-:where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll)::-webkit-scrollbar, :where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll) ::-webkit-scrollbar { width: var(--scroll-size); height: var(--scroll-size); background: transparent; }
-:where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll)::-webkit-scrollbar-thumb, :where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll) ::-webkit-scrollbar-thumb {
+:where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll)::-webkit-scrollbar, :where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll) ::-webkit-scrollbar { width: var(--scroll-size); height: var(--scroll-size); background: transparent; }
+:where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll)::-webkit-scrollbar-thumb, :where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll) ::-webkit-scrollbar-thumb {
   min-width: var(--scroll-thumb-min); min-height: var(--scroll-thumb-min); border-radius: var(--r-pill);
   border: calc((var(--scroll-size) - var(--scroll-thumb)) / 2) solid transparent;
   background: var(--scroll-thumb-color) padding-box;
 }
-@media (hover: hover) and (pointer: fine) { :where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll):is(::-webkit-scrollbar-thumb:hover, ::-webkit-scrollbar-thumb:active), :where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll) :is(::-webkit-scrollbar-thumb:hover, ::-webkit-scrollbar-thumb:active) {
+@media (hover: hover) and (pointer: fine) { :where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll):is(::-webkit-scrollbar-thumb:hover, ::-webkit-scrollbar-thumb:active), :where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll) :is(::-webkit-scrollbar-thumb:hover, ::-webkit-scrollbar-thumb:active) {
   border-width: calc((var(--scroll-size) - var(--scroll-thumb-active)) / 2); background-color: var(--scroll-thumb-color-active);
 } }
-:where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll):is(::-webkit-scrollbar-track, ::-webkit-scrollbar-corner), :where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll) :is(::-webkit-scrollbar-track, ::-webkit-scrollbar-corner) { background: transparent; }
-:where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll)::-webkit-scrollbar-button, :where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll) ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+:where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll):is(::-webkit-scrollbar-track, ::-webkit-scrollbar-corner), :where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll) :is(::-webkit-scrollbar-track, ::-webkit-scrollbar-corner) { background: transparent; }
+:where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll)::-webkit-scrollbar-button, :where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll) ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
 /* the scroller itself (R-scroll-6 to 8): vertical by default (rows ellipsise, so it never scrolls sideways); --x a strip, code or a
    diff; --both a wide code block; --bare hides the bar (a tab strip, which fades its cut edge instead, R-scroll-7 and 9). It contains
    its scroll, so a wheel at its end never moves what is behind a dialog or a panel (R-scroll-8).
@@ -162,6 +162,11 @@
 .ui-btn[data-armed] { box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--text-strong); }
 .ui-btn .ui-icon { width: 16px; height: 16px; }
 .ui-btn__kbd { display: inline-flex; gap: 3px; margin-left: auto; opacity: 0; transition: opacity var(--dur-1) var(--ease); }
+/* key chips in a control's end corner (R-corner-3, R-corner-4, R-kbd-2): the chip is 18px, so it sits (height - 18) / 2 from the top and the
+   bottom, and the control's end padding is that same inset; its radius is the control's less the inset, down to the floor */
+.ui-btn:has(.ui-btn__kbd) { --kbd-inset: calc((var(--ctl) - 18px) / 2); padding-inline-end: var(--kbd-inset); }
+.ui-btn--s:has(.ui-btn__kbd) { --kbd-inset: calc((var(--ctl-s) - 18px) / 2); }
+.ui-btn__kbd > .ui-keys > .ui-kbd { border-radius: max(var(--r-floor), calc(var(--r-s) - var(--kbd-inset))); }
 .ui-btn:hover .ui-btn__kbd, .ui-btn:focus-visible .ui-btn__kbd { opacity: 1; }
 
 /* icon button: 28px, radius 6, 18px glyph */
@@ -283,6 +288,7 @@
 .ui-search { display: flex; align-items: center; gap: 10px; box-sizing: border-box; min-width: 0; color: var(--text-quiet); font-family: var(--sans); }
 .ui-search__icon { width: 14px; height: 14px; }
 .ui-search__text { flex: 1; min-width: 0; display: flex; gap: 6px; overflow: hidden; white-space: nowrap; font-size: var(--fs-xs); }
+.ui-search__text > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .ui-search__input { flex: 1; min-width: 0; height: 100%; padding: 0; margin: 0; border: 0; background: transparent; outline: none; color: var(--text-strong); caret-color: var(--brass); font: 400 var(--fs-m)/1 var(--sans); }
 .ui-search__input:focus-visible { outline: none; }   /* the caret and the surface show focus: the field is the surface's head */
 .ui-search__input::placeholder { color: var(--text-quiet); opacity: 1; text-transform: var(--ui-case); }
@@ -302,7 +308,7 @@
 .ui-search--l .ui-search__icon { width: 16px; height: 16px; }
 /* m: a search in a form, a field's box with the glyph at its start (R-search-1); the ring sits on the box (§14.24) */
 .ui-search--m {
-  min-height: var(--ctl); padding: 0 10px 0 calc((var(--ctl) - 14px) / 2); gap: 8px; border-radius: var(--r-s);
+  --r-outer: var(--r-s); --pad: calc((var(--ctl) - 18px) / 2); min-height: var(--ctl); padding: 0 var(--pad) 0 calc((var(--ctl) - 14px) / 2); gap: 8px; border-radius: var(--r-outer);
   background: var(--bg-0); box-shadow: inset 0 0 0 1px var(--line-field); transition: box-shadow var(--dur-1) var(--ease);
 }
 @media (hover: hover) and (pointer: fine) { .ui-search--m:hover { box-shadow: inset 0 0 0 1px var(--text-quiet); } }
@@ -338,6 +344,7 @@
   font: 400 var(--fs-2xs)/1 var(--mono); letter-spacing: 0; color: var(--text-dim); white-space: nowrap;
 }
 .ui-keys { display: inline-flex; gap: 3px; flex: none; }
+.ui-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
 /* fit: the chips sit in a control's corner and are concentric with it (DESIGN-SYSTEM.md §8.2: a key in a tooltip, in the search field) */
 .ui-keys--fit > .ui-kbd { border-radius: var(--r-in, var(--r-xs)); }
 /* raised: on a raised surface (a tooltip, §14.17): --bg-4, no hairline */
@@ -415,10 +422,12 @@ button.ui-group__head { cursor: pointer; }
 .ui-menu[data-place="above"], .ui-pop[data-place="above"], .ui-listbox[data-place="above"] { translate: 0 6px; }
 .ui-menu.is-in, .ui-pop.is-in, .ui-listbox.is-in { opacity: 1; translate: 0 0; }
 .ui-menu[data-static], .ui-pop[data-static] { position: relative; opacity: 1; translate: none; z-index: auto; }
-.ui-pop { padding: var(--pad-pop); --pad: var(--pad-pop); width: 360px; max-width: calc(100vw - 24px); }   /* a 12px inset: its controls keep their own step */
+.ui-pop { padding: var(--pad-pop); --pad: var(--pad-pop); width: 360px; max-width: calc(100vw - 24px); }
+/* the controls of a popover sit within its corner radius of the corners (R-corner-3): they take the concentric radius, the container's less its inset, down to the floor */
+.ui-pop :is(.ui-btn, .ui-input) { border-radius: var(--r-in); }
 .ui-menu__title, .ui-listbox__head { padding: 6px 8px 4px; font: 500 var(--fs-xs)/var(--lh-ui) var(--sans); color: var(--text-quiet); text-transform: var(--ui-case); }
 .ui-menu__item, .ui-option {
-  appearance: none; display: flex; align-items: flex-start; gap: 8px; width: 100%; box-sizing: border-box; min-height: var(--row-h); padding: 6px 8px; margin: 0; border: 0;
+  appearance: none; display: flex; align-items: center; gap: 8px; width: 100%; box-sizing: border-box; min-height: var(--row-h); padding: 6px 8px; margin: 0; border: 0;
   border-radius: var(--r-in); --sq-bg: transparent; background: var(--sq-bg); font: inherit; color: var(--text); text-align: left; cursor: pointer;   /* concentric with the menu */
 }
 @media (hover: hover) and (pointer: fine) { .ui-menu__item:hover, .ui-option:hover { --sq-bg: var(--hover); background: var(--sq-bg); } }
@@ -434,6 +443,11 @@ button.ui-group__head { cursor: pointer; }
 .ui-menu__label.ui-mono, .ui-menu__label[data-content] { text-transform: none; }
 .ui-menu__desc { font-size: var(--fs-xs); color: var(--text-quiet); text-transform: var(--ui-case); }
 .ui-menu__item .ui-keys, .ui-option .ui-keys { margin-left: auto; align-self: center; }
+/* an item that ends in key chips or a stamp: the end padding is the chip's inset from the top and bottom, (row - chip) / 2, and the chip's radius the item's less that (R-corner-3, R-corner-4) */
+.ui-menu__item:has(.ui-keys, .ui-stamp), .ui-option:has(.ui-keys, .ui-stamp) { --kbd-inset: calc((var(--row-h) - 18px) / 2); padding-inline-end: var(--kbd-inset); }
+:is(.ui-menu__item, .ui-option) :is(.ui-kbd, .ui-stamp) { border-radius: var(--r-pill); }   /* an 18px chip at (row - 18) / 2 inside the item's corner: the item's radius less that inset is half the chip, a capsule (R-corner-9) */
+:is(.ui-menu__item, .ui-option) .ui-stamp { height: 18px; }
+.ui-menu__list { max-height: min(calc(100vh - 2 * var(--float-margin) - 2 * var(--pad-menu)), calc(var(--float-room, 100vh) - 2 * var(--pad-menu))); border-radius: var(--r-in); }   /* a long menu scrolls inside its surface (R-float-4, R-select-2) */
 .ui-menu__item .ui-stamp { margin-left: auto; align-self: center; }
 .ui-menu__sep { height: 1px; margin: 4px 6px; background: var(--hair); }
 /* the select's list: the menu's surface and rows, as a scrolling listbox; provider headers are the menu's titles with a mark */
@@ -442,7 +456,7 @@ button.ui-group__head { cursor: pointer; }
 .ui-listbox__head { display: flex; align-items: center; gap: var(--sp-2); }
 .ui-listbox__group + .ui-listbox__group { margin-top: 4px; }
 .ui-option { overflow-wrap: anywhere; }
-.ui-menu__foot { margin-top: 4px; padding: 8px 8px 4px; box-shadow: inset 0 1px 0 var(--hair); font-size: var(--fs-xs); color: var(--text-quiet); }
+.ui-menu__foot { margin-top: 4px; padding: 8px 8px 4px; border-radius: 0 0 var(--r-in) var(--r-in); box-shadow: inset 0 1px 0 var(--hair); font-size: var(--fs-xs); color: var(--text-quiet); }
 
 .ui-tip {
   position: fixed; z-index: var(--z-tooltip); pointer-events: none; display: flex; align-items: center; gap: 8px; box-sizing: border-box;
@@ -470,7 +484,7 @@ button.ui-group__head { cursor: pointer; }
 .ui-toast:not(:has(button)) { padding-right: 14px; }
 .ui-toast.is-in { opacity: 1; translate: -50% 0; pointer-events: auto; }
 .ui-toast[data-static] { position: relative; left: auto; top: auto; translate: none; opacity: 1; pointer-events: auto; z-index: auto; }
-.ui-toast > span { padding-block: 8px; }
+.ui-toast > span { min-width: 0; padding-block: 8px; overflow-wrap: anywhere; }
 /* the action is a .ui-corner (toast.ts): concentric with the toast, at its inset from the right and both edges */
 
 /* ───────────── fields ───────────── */
@@ -539,6 +553,9 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-measure > i { display: block; width: 4px; height: 4px; border-radius: var(--r-pill); background: var(--text-faint); }
 .ui-measure > i[data-on] { background: var(--text-dim); }
 .ui-measure--strip { flex-direction: column-reverse; }
+/* the strip's dots sit in the button's corners: 4px dots in 8px boxes (a transparent 2px border), so the button's 8px padding and 24px width leave the same inset on every side (R-corner-3, R-corner-4) */
+.ui-measure-btn .ui-measure--strip { gap: 2px; }
+.ui-measure-btn .ui-measure--strip > i { box-sizing: content-box; border: 2px solid transparent; background-clip: padding-box; }
 .ui-measure--row { flex-direction: row; }
 .ui-measure--grid { display: grid; grid-template-columns: repeat(var(--cols, 20), 1fr); gap: 6px 0; justify-items: center; width: 100%; }
 .ui-measure--grid > i { width: 5px; height: 5px; background: var(--line); }
@@ -548,6 +565,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-measure > i[data-p="3"] { background: var(--text-faint); }
 .ui-measure-btn { appearance: none; display: grid; place-items: center; min-width: 24px; min-height: 24px; box-sizing: border-box; padding: 8px 6px; margin: 0; border: 0; border-radius: var(--r-s); background: transparent; cursor: pointer; transition: background-color var(--dur-1) var(--ease); }
 @media (hover: hover) and (pointer: fine) { .ui-measure-btn:hover { background: var(--hover); } }
+.ui-measure-btn:focus-visible { outline: none; background: var(--current); box-shadow: inset 0 0 0 2px var(--focus); }   /* a strip at the panel's edge: its ring sits inside, where nothing cuts it (R-focus-2) */
 .ui-legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .ui-legend li { display: flex; align-items: center; gap: 10px; min-height: calc(var(--row-h) - 4px); font-size: var(--fs-s); color: var(--text-dim); }
 .ui-legend li > span:first-of-type { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -595,16 +613,17 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-request { width: fit-content; max-width: 100%; box-sizing: border-box; padding: 10px 14px; border-radius: var(--r-m); --sq-bg: var(--bg-3); background: var(--sq-bg); color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; font: 400 var(--fs-m)/var(--lh) var(--sans); }
 .ui-prose { max-width: 100%; }
 .ui-prose p, .ui-prose ul, .ui-prose ol { margin: 0 0 var(--sp-3); }
-.ui-prose ul, .ui-prose ol { padding-left: 18px; }
+.ui-prose ul, .ui-prose ol { padding-left: var(--sp-4); }
 .ui-prose li { margin-bottom: 4px; }
 .ui-prose li::marker { color: var(--text-quiet); }
 .ui-prose > :last-child { margin-bottom: 0; }
 .ui-disclosure {
-  appearance: none; display: inline-flex; align-items: center; gap: 4px; margin: 4px 0 0 -4px; padding: 2px 6px 2px 4px; border: 0; border-radius: var(--r-xs);
+  appearance: none; display: inline-flex; align-items: center; gap: 4px; min-height: var(--hit-min); margin: 0; padding: 0 var(--sp-2) 0 var(--sp-1); border: 0; border-radius: var(--r-xs);
   background: transparent; font: inherit; color: var(--text-quiet); cursor: pointer; text-transform: var(--ui-case);
   transition: background-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
 }
 @media (hover: hover) and (pointer: fine) { .ui-disclosure:hover { background: var(--hover); color: var(--text); } }
+.ui-disclosure:focus-visible { outline: none; background: var(--current); box-shadow: inset 0 0 0 2px var(--focus); }   /* flush with its column: the ring sits inside (R-focus-2, R-corner-4) */
 .ui-disclosure .ui-icon { width: 10px; height: 10px; transition: transform var(--dur-2) var(--ease); }
 .ui-disclosure[aria-expanded="true"] .ui-icon { transform: rotate(90deg); }
 .ui-steps { list-style: none; margin: 0; padding: 0; width: 100%; }
@@ -697,6 +716,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-sec { box-shadow: inset 0 1px 0 var(--hair); }
 .ui-sec__head { appearance: none; display: flex; align-items: center; gap: 8px; width: 100%; height: calc(var(--row-h) + 10px); padding: 0 calc(16px - var(--scroll-gutter, 0px)) 0 20px; margin: 0; border: 0; background: transparent; font: inherit; color: var(--text); text-align: left; cursor: pointer; transition: background-color var(--dur-1) var(--ease); }
 @media (hover: hover) and (pointer: fine) { .ui-sec__head:hover { background: var(--hover); } }
+.ui-sec__head:focus-visible { outline: none; background: var(--current); box-shadow: inset 0 0 0 2px var(--focus); }   /* a row flush with its container: the ring sits inside (R-focus-2) */
 .ui-sec__label { font-size: var(--fs-s); text-transform: var(--ui-case); }
 .ui-sec__meta { margin-left: auto; display: inline-flex; gap: 8px; font: 400 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); font-variant-numeric: tabular-nums; }
 .ui-sec__head .ui-icon { width: 12px; height: 12px; color: var(--text-quiet); transition: transform var(--dur-2) var(--ease); }

@@ -107,7 +107,15 @@ export interface PlaceAtOpts { side: Side; align?: Align | undefined; overhang?:
 /** place `node` (already in the document, positioned fixed or absolute to the window) against `anchor` */
 export function placeAt(node: HTMLElement, anchor: Element, o: PlaceAtOpts): Placement {
   readFloat();
-  const r = anchor.getBoundingClientRect(), w = node.offsetWidth, h = node.offsetHeight, avoid = avoidRects(anchor);
+  const r = anchor.getBoundingClientRect(), avoid = avoidRects(anchor);
+  let w = node.offsetWidth, h = node.offsetHeight;
+  /* taller than the room on either side of the anchor: it takes the roomier side and its list scrolls inside that room (R-float-4, R-select-2) */
+  const roomBelow = innerHeight - FLOAT.margin - (r.bottom + FLOAT.gap), roomAbove = r.top - FLOAT.gap - FLOAT.margin;
+  if ((o.side === 'top' || o.side === 'bottom') && h > Math.max(roomBelow, roomAbove)) {
+    const side: Side = roomAbove > roomBelow ? 'top' : 'bottom';
+    node.style.setProperty('--float-room', Math.max(roomAbove, roomBelow) + 'px');
+    w = node.offsetWidth; h = node.offsetHeight; o = { ...o, side };
+  } else node.style.removeProperty('--float-room');
   const p = placeRect({ anchor: r, w, h, view: { w: innerWidth, h: innerHeight }, side: o.side, align: o.align, overhang: o.overhang, gap: o.gap, avoid });
   node.style.left = p.x + 'px'; node.style.top = p.y + 'px';
   node.dataset['place'] = p.side === 'top' ? 'above' : p.side === 'bottom' ? 'below' : p.side;
