@@ -10,6 +10,7 @@ import { LOG_N, PAGE_NAME, S, X, attCount, botById, clock, ctxPct, motion, rende
 import type { DockBot } from './ctx';
 import { setOrbLife } from './orbs';
 import { emitDock, retarget } from './engine';
+import { syncRoving } from './roving';
 
 const MOD = isMac ? 'Meta' : 'Control';
 const IC: Record<string, string> = { plus: 'plus', close: 'close', stop: 'stop', sliders: 'sliders', down: 'chevron-down', left: 'back', right: 'forward' };
@@ -85,7 +86,7 @@ const keyHint = (): string => { const k = kbdLabel('mod+J'); return k ? `${k} br
 const stopBtn = (): string => ui.html.iconButton({ icon: 'stop', label: run().stopped ? 'Run stopped' : 'Stop run', disabled: run().stopped, class: 'dk-stop', tipPos: 'top', attrs: { 'data-act': 'stop', 'data-k': 'run:stop' } });
 
 /* ───────── a session's last messages, drawn as the Bots tab draws them (ui.html.entry; yours as request bubbles) ───────── */
-const sessState = (b: Bot): string => { const s = st(b); return `${dotFor(b)}<span>${esc(b.role)}</span>${s.key === 'idle' ? '' : `<span aria-hidden="true">·</span><span class="dk-card-word">${esc(s.word)}</span>`}`; };
+const sessState = (b: Bot): string => { const s = st(b); return `${dotFor(b)}${s.key === 'idle' ? '' : `<span class="dk-card-word">${esc(s.word)}</span>`}`; };
 const threadOf = (id: string): ThreadMessage[] => (S.threads[id] ??= []);
 function logHTML(b: Bot): string {
   let msgs = threadOf(b.id).filter((m) => m.kind === 'text' && m.text).map((m) => m as Extract<ThreadMessage, { kind: 'text' }>);
@@ -109,6 +110,14 @@ export function paintSession(b: Bot, log: boolean): void {
   const lg = log ? v.querySelector<HTMLElement>('.dk-sess-log') : null;
   if (lg) { const end = lg.scrollHeight - lg.scrollTop - lg.clientHeight < 24; lg.innerHTML = logHTML(b); if (end) lg.scrollTop = lg.scrollHeight; retarget(false); emitDock(); }
 }
+
+/* ───────── long names ─────────
+   A bot can be "chief of staff for the billing migration": a tooltip shows a clipped name, the accessible name keeps it
+   whole; rows and the session head ellipsise in CSS. */
+export const clip = (t: string | null | undefined, n: number): string => { const s = String(t || ''); return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s; };
+/** a tooltip's label stays within about 280px with its state and key */
+const TIP_CH = 26;
+export const tipOf = (b: Pick<Bot, 'name' | 'role'>): string => { const n = clip(b.name, 18), room = TIP_CH - n.length - 2; return room >= 8 ? `${n}, ${clip(b.role, room)}` : n; };
 
 /* ───────── view templates ───────── */
 function tileHTML(p: { id: string; on: boolean }, i: number): string {
@@ -134,18 +143,18 @@ export const V: Record<string, () => string> = {
   },
   'bots:norm': () => `<div class="dk-row" role="toolbar" aria-label="Bots" aria-orientation="horizontal">${preview('bots')}${S.bots.map((b, i) => { const s = st(b); return (
     `<button class="dk-bot" data-act="session" data-id="${b.id}" data-bot-label="${b.id}" aria-label="${esc(botLabel(b))}" aria-describedby="dk-bot-hint" aria-keyshortcuts="Enter ${MOD}+Enter" tabindex="${i === S.rowIdx ? 0 : -1}"` +
-    ` data-tip="${esc(b.name)}, ${esc(b.role)}"${s.key === 'idle' ? '' : ` data-tip-state="${esc(s.word)}"`}${s.attention ? ' data-tip-tone="attention"' : ''} data-kbd="enter" data-tip-pos="top">${slot(b)}</button>`); }).join('')}` +
+    ` data-tip="${esc(tipOf(b))}"${s.key === 'idle' ? '' : ` data-tip-state="${esc(s.word)}"`}${s.attention ? ' data-tip-tone="attention"' : ''} data-kbd="enter" data-tip-pos="top">${slot(b)}</button>`); }).join('')}` +
     `<button class="dk-add" data-act="new-bot" aria-label="New bot" data-tip="New bot" data-tip-pos="top" tabindex="${S.rowIdx === S.bots.length ? 0 : -1}"><span data-k="add">${icon('plus')}</span></button></div>`,
-  'bots:exp': () => `${preview('bots')}<ul class="dk-roster" aria-label="All bots">${S.bots.map((b) => ui.html.row({ title: b.name, sub: phrase(b), lead: slot(b),
+  'bots:exp': () => `${preview('bots')}<ul class="dk-roster" aria-label="All bots">${S.bots.map((b, i) => ui.html.row({ title: b.name, sub: phrase(b), lead: slot(b), tabindex: i === S.rowIdx ? '0' : '-1',
       attrs: { 'data-act': 'session', 'data-id': b.id, 'data-bot-label': b.id, 'aria-label': botLabel(b), 'aria-describedby': 'dk-bot-hint' } })).join('')}` +
-    ui.html.row({ title: 'New bot', sub: 'Set one up', lead: `<span class="dk-add-ring"><span class="dk-add-ring-o" data-e></span><span data-k="add">${icon('plus')}</span></span>`, attrs: { 'data-act': 'new-bot' } }) + '</ul>',
+    ui.html.row({ title: 'New bot', sub: 'Set one up', tabindex: S.rowIdx === S.bots.length ? '0' : '-1', lead: `<span class="dk-add-ring"><span class="dk-add-ring-o" data-e></span><span data-k="add">${icon('plus')}</span></span>`, attrs: { 'data-act': 'new-bot' } }) + '</ul>',
   /* the bot's session: its last messages, its open cards, the library composer, and the other bots to switch to */
   'bots:card': () => {
     const b = botById(S.card); if (!b) return '';
     const s = st(b);
     return `<div class="dk-card-head">${slot(b)}
-      <div class="dk-card-who" data-e><div class="dk-card-name" id="dk-card-name">${esc(b.name)}</div>` +
-      `<div class="dk-card-state"${s.attention ? ' data-tone="attention"' : ''}>${sessState(b)}</div>${preview('bots')}</div>` +
+      <div class="dk-card-who" data-e><div class="dk-card-line"><span class="dk-card-name" id="dk-card-name" title="${esc(b.name)}">${esc(b.name)}</span>` +
+      `<span class="dk-card-state"${s.attention ? ' data-tone="attention"' : ''}>${sessState(b)}</span></div><div class="dk-card-role">${esc(b.role)}</div>${preview('bots')}</div>` +
       `<span class="dk-card-acts" data-e>` +
       ui.html.iconButton({ icon: 'bots', label: `Open the full chat with ${b.name}`, tip: 'Full chat', keys: 'mod+Enter', size: 's', tipPos: 'top', attrs: { 'data-act': 'open-chat', 'data-id': b.id } }) +
       ui.html.iconButton({ icon: 'close', label: `Close the session with ${b.name}`, tip: 'Close', keys: 'Esc', size: 's', tipPos: 'top', attrs: { 'data-act': 'close-card' } }) + `</span></div>
@@ -153,8 +162,8 @@ export const V: Record<string, () => string> = {
       ${S.waits.filter((w) => w.bot === b.id).map((w) => `<div class="dk-ask" data-e data-card="${w.id}" data-size="compact"></div>`).join('')}
       <div class="dk-sess-composer" data-e data-composer="${b.id}"></div>
       <div class="dk-strip" role="group" aria-label="Switch session">${S.bots.map((x) => x.id === b.id
-        ? `<button class="ui-orb-btn dk-strip-bot" data-act="close-card" aria-current="true" aria-label="${esc(x.name)}, open; close the session" data-e>${ui.html.orb(x, { size: 18, render: 36 })}</button>`   /* the live orb sits in the head; the switcher shows a copy inside its selection ring */
-        : `<button class="ui-orb-btn dk-strip-bot" data-act="session" data-id="${x.id}" data-bot-label="${x.id}" aria-label="${esc(botLabel(x))}">${slot(x)}</button>`).join('')}</div>`;
+        ? `<button class="ui-orb-btn dk-strip-bot" data-act="close-card" aria-current="true" tabindex="0" aria-label="${esc(x.name)}, open; close the session" data-tip="${esc(clip(x.name, 18))}" data-tip-pos="top" data-e>${ui.html.orb(x, { size: 18, render: 36 })}</button>`   /* the live orb sits in the head; the switcher shows a copy inside its selection ring */
+        : `<button class="ui-orb-btn dk-strip-bot" data-act="session" data-id="${x.id}" data-bot-label="${x.id}" tabindex="-1" aria-label="${esc(botLabel(x))}" data-tip="${esc(clip(x.name, 18))}" data-tip-pos="top">${slot(x)}</button>`).join('')}</div>`;
   },
 
   'run:min': () => `${pillBtn(`Show the dock, run ${run().stopped ? 'stopped' : 'in progress'}, ${fmtDur(run().elapsed)}`)}${ladderLine()}<span class="dk-time" data-k="run:time" data-run-time>${fmtDur(run().elapsed)}</span><span data-k="run:cost" data-run-cost>${costHTML()}</span>${pillAtt()}`,
@@ -212,6 +221,7 @@ export function finish(el: HTMLElement, key: string): void {
   $$('.ui-ladder .ui-ladder__st', el).forEach((s, i) => { if (!s.closest('.dk-tile')) s.dataset['k'] = 'run:t' + i; });
   if (key === 'bots:exp') for (const r of $$('.ui-row', el)) { r.querySelector('.ui-row__text')?.setAttribute('data-e', ''); const sub = r.querySelector<HTMLElement>('.ui-row__sub'); if (sub && r.dataset['id']) sub.dataset['botPhrase'] = r.dataset['id']; }
   fillCards(el);
+  syncRoving();
 }
 /* a card element is shared by the views that show it (the compact approval sits in nina's card and in the expanded
    needs-you view), so every view that becomes visible takes its cards back */

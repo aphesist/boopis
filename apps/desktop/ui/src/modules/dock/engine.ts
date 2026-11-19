@@ -12,6 +12,7 @@ import {
 import type { Spring } from './ctx';
 import { setOrbLife } from './orbs';
 import { fillCards, relocateLive, renderView, viewKey } from './views';
+import { syncRoving } from './roving';
 import { PAGE_NAME } from './ctx';
 
 /* ───────── springs and the dock's moving parts ───────── */
@@ -313,6 +314,7 @@ export function morph(apply: () => void, opts: MorphOpts = {}): void {
   const nv = showView(viewKey());
   if (opts.render) for (const k of opts.render) renderView(k);
   fillCards(nv);
+  syncRoving();
   X.curView = nv;
   relocateLive();
   setOrbLife();
@@ -445,7 +447,7 @@ export function defaultTarget(): HTMLElement | null {
   const v = X.curView;
   if (!v) return null;
   if (v.dataset['view'] === 'bots:card') { const c = X.composerEls.get(S.card ?? ''); if (c && c.input) return c.input; }
-  return v.querySelector<HTMLElement>('.dk-bot[tabindex="0"], .dk-add[tabindex="0"]') ?? v.querySelector<HTMLElement>('.dk-roster .ui-row, button:not([disabled]):not([tabindex="-1"])');
+  return v.querySelector<HTMLElement>('.dk-bot[tabindex="0"], .dk-add[tabindex="0"]') ?? v.querySelector<HTMLElement>('.dk-roster .ui-row[tabindex="0"]') ?? v.querySelector<HTMLElement>('.dk-roster .ui-row, button:not([disabled]):not([tabindex="-1"])');
 }
 export function markFocus(): void {
   const d = defaultTarget();
