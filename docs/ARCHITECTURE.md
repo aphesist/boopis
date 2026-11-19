@@ -204,7 +204,7 @@ One hash-chained JSONL per session at `<profile home>/hypotaxis/ledger/<session_
 - **Teammates** are Hermes profiles (ADR-0006), each with its own SOUL.md, memory, skills, schedule, policy and orb.
 - **Names:** a teammate may be given any name, of any length; every surface handles long names (ellipsis plus the full name on hover, focus and in the accessible name).
   - "Surprise me" picks from a curated list in `apps/shared/data/bot-names.json`: short, lowercase names in the house style (atlas, nina, kai, iris, …).
-  - Availability is derived from the teammates that exist, so a name returns to the pool only when its teammate is deleted. An empty name is auto-assigned.
+  - Availability is derived from the teammates that exist (never stored), so a name returns to the pool when its teammate is archived or deleted. An empty name is auto-assigned, and with the list used up "Surprise me" adds a number (`nova-2`) and says so.
 - **Team chat** is a shared channel where the user and several teammates talk, @mention each other, and hand off work. A large hand-off carries a contract lane, so its scope and tests travel with it.
 - Team chat builds on Hermes's multi-profile primitives, never on new infrastructure:
   - group sessions (`groups.*`);

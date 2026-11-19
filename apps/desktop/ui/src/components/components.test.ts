@@ -52,6 +52,16 @@ describe('the markup the CSS depends on', () => {
   });
 });
 
+describe('the icon library', () => {
+  it('has the dice, drawn on the 16 grid with its three pips filled', () => {
+    expect(ui.icons).toContain('dice');
+    const svg = frag(ui.icon('dice'));
+    expect(svg.getAttribute('viewBox')).toBe('0 0 16 16');
+    expect(svg.querySelectorAll('rect')).toHaveLength(1);
+    expect(svg.querySelectorAll('circle.is-fill')).toHaveLength(3);
+  });
+});
+
 describe('bot states: one map for the app', () => {
   it('attention outranks work, and a pause outranks everything', () => {
     expect(botState({ state: 'working', attention: 'approval' }).key).toBe('needs');

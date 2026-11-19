@@ -9,11 +9,10 @@ import { data } from '../../data';
 import { oc } from '../../components/orb';
 import { DRAFT_COLOR, paintOrb } from './paint';
 import { livenIn, orbHTML } from './orbs';
-import { bot, initModel, S } from './model';
+import { bot, initModel, railOn, S } from './model';
 import type { Bot } from '../../data';
 import { focusConversation, openBot } from './room';
-
-export const railOn = (): boolean => state.left === 'rail';
+import { checkClips, watchClips } from './clips';
 
 export function mountList(root: HTMLElement): void {
   initModel();
@@ -34,6 +33,7 @@ export function mountList(root: HTMLElement): void {
     if (id && bot(id)) { e.preventDefault(); openBot(id); emit('hx:bot-select', { id, from: 'bots-list' }); }
   });
   S.listWrap = wrap; S.rowsEl = ul;
+  watchClips(wrap); checkClips();
   syncListVisibility();
   syncRail();
   markSelected();
@@ -62,6 +62,7 @@ export function makeRow(b: Bot): HTMLElement {
   const btn = $('.ui-row', li);
   btn.addEventListener('pointerenter', () => { if (!reduced()) oc(btn.querySelector('orb-avatar'), 'blink'); });
   S.rows.set(b.id, { li, btn });
+  checkClips();
   return li;
 }
 /** rows are re-rendered from the library on change; the live orb is carried over so it never restarts */
@@ -86,6 +87,7 @@ export function updateRow(id: string): void {
   btn.addEventListener('pointerenter', () => { if (!reduced()) oc(btn.querySelector('orb-avatar'), 'blink'); });
   r.li.replaceWith(li);
   S.rows.set(id, { li, btn });
+  checkClips();
   if (focused) btn.focus({ preventScroll: true });
 }
 export function showDraftRow(on: boolean): void {
@@ -106,7 +108,7 @@ export function paintDraftRow(): void {
   const n = d.name.trim() || 'New bot';
   r.name.textContent = n;
   r.btn.setAttribute('aria-label', n + ', draft');
-  if (railOn()) r.btn.setAttribute('data-tip', n); else r.btn.removeAttribute('data-tip');
+  if (railOn()) { r.btn.setAttribute('data-tip', n); r.btn.removeAttribute('data-tip-auto'); } else { r.btn.removeAttribute('data-tip'); r.btn.removeAttribute('data-tip-auto'); checkClips(); }
 }
 export function markSelected(): void {
   for (const [id, r] of S.rows) {

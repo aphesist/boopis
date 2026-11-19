@@ -6,6 +6,7 @@ import { hhmm, reduced } from '../core/dom';
 import type {
   BotsEvent, BotsSource, BotsSnapshot, DataProvider, DetailsSource, DictationSource, FeedforwardSource, FilesSource, FormsSource, RunSource, SchedulesSource, SessionsSource, WaitsEvent, WaitsSource
 } from './provider';
+import { botIdBase } from './bot-id';
 import { emitter, feed, store } from './store';
 import type {
   AgentTurn, ApprovalMessage, Bot, BotConfig, ContextUsage, ConversationEvent, DiffFile, RunSnapshot, SessionSummary, TextMessage, ThreadMessage, Turn, Wait
@@ -21,6 +22,8 @@ const BUSY = new Set(['working', 'thinking', 'speaking', 'compute']);
 export interface MockOptions {
   /** run the live simulations (a ticking run, replies). Tests that need a still page turn it off. */
   simulate?: boolean;
+  /** names from `BOT_FIXTURES` to add (a bot with a long name): tests and the e2e build only */
+  fixtures?: readonly string[];
 }
 
 export function createMockProvider(opts: MockOptions = {}): DataProvider {
@@ -29,10 +32,15 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
   /* ───────── bots and their threads ───────── */
   const bots: Bot[] = M.seedBots();
   const threads: Record<string, ThreadMessage[]> = {};
-  for (const [id, list] of Object.entries(M.seedThreads())) {
+  const seedThread = (id: string, list: ReturnType<typeof M.seedThreads>[string]): void => {
     threads[id] = list.map((m): ThreadMessage => m.approval
       ? { kind: 'approval', id: mid('m'), who: m.who, t: m.t, data: m.approval }
       : { kind: 'text', id: mid('m'), who: m.who, t: m.t, text: m.text ?? '' });
+  };
+  for (const [id, list] of Object.entries(M.seedThreads())) seedThread(id, list);
+  for (const name of opts.fixtures ?? []) {
+    const f = M.BOT_FIXTURES[name];
+    if (f) { bots.push(M.fixtureBot(f.bot)); seedThread(f.bot.id, f.thread); }
   }
   const botsEv = emitter<BotsEvent>();
   const botById = (id: string): Bot | undefined => bots.find((b) => b.id === id);
@@ -174,7 +182,7 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
       announceBot(b);
     },
     create(draft) {
-      const base = draft.name.trim().toLowerCase().replace(/[^a-z0-9-]/g, '') || 'bot';
+      const base = botIdBase(draft.name);
       let id = base, n = 2;
       while (botById(id)) id = base + '-' + n++;
       const role = shortRole(draft.role);

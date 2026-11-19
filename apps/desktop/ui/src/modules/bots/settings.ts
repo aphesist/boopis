@@ -11,6 +11,7 @@ import { bot, S } from './model';
 import { orbButton } from './orbs';
 import { updateRow } from './list';
 import { focusConversation, openBot, paintToolbar, refreshPresence } from './room';
+import { checkClips } from './clips';
 
 export function toggleSettings(): boolean { if (S.sheetOpen) { closeSettings(); focusConversation(); } else openSettings(S.sel); return true; }
 
@@ -101,6 +102,7 @@ export function openSettings(id: string | null, focusSection?: string | null, op
   paintWs();
 
   const who = el('div', { class: 'bt-sh-who' }, [orbButton(b, 28, b.name, { state: b.state }), el('span', { class: 'bt-sh-name', text: b.name }), el('span', { class: 'bt-sh-role', text: b.role })]);
+  checkClips();
   body.append(
     who,
     sec('role', 'Role and instructions', null, [roleF, instrF]),
@@ -121,10 +123,12 @@ export function openSettings(id: string | null, focusSection?: string | null, op
   });
 
   const archive = ui.button({ label: 'Archive ' + b.name });
+  const archLabel = el('span', { class: 'bt-arch-label', text: 'Archive ' + b.name });
+  $('span', archive).replaceChildren(archLabel);
   archive.addEventListener('click', () => {
     if (archive.hasAttribute('data-armed')) { archiveBot(b.id); return; }
-    archive.setAttribute('data-armed', ''); $('span', archive).textContent = 'Click again to archive';
-    setTimeout(() => { if (archive.isConnected) { archive.removeAttribute('data-armed'); $('span', archive).textContent = 'Archive ' + b.name; } }, 4000);
+    archive.setAttribute('data-armed', ''); archLabel.textContent = 'Click again to archive'; checkClips();
+    setTimeout(() => { if (archive.isConnected) { archive.removeAttribute('data-armed'); archLabel.textContent = 'Archive ' + b.name; checkClips(); } }, 4000);
   });
   const done = ui.button({ label: 'Done', variant: 'primary' });
   done.addEventListener('click', () => { closeSettings(); focusConversation(); });
