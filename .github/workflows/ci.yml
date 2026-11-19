@@ -227,7 +227,6 @@ jobs:
     needs: [hx, runtime]
     runs-on: ubuntu-22.04
     continue-on-error: true
-    timeout-minutes: 180
     timeout-minutes: 40
     env:
       HX_E2E_RUNTIME: /home/runner/hermes-runtime
@@ -329,6 +328,7 @@ jobs:
     # workflow green while the job shows red. Make it blocking by deleting continue-on-error once a run passes.
     runs-on: ubuntu-22.04
     continue-on-error: true
+    timeout-minutes: 180
     defaults:
       run:
         working-directory: apps/desktop/ui
