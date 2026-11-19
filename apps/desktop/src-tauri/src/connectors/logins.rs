@@ -14,6 +14,9 @@ use crate::error::{Error, Result};
 pub const LOGINS_JSON: &str = include_str!("../../../../shared/data/logins.json");
 /// The `program` value that means the Hermes the host runs.
 pub const HERMES_PROGRAM: &str = "hermes";
+/// The `program` value that means the user's own Claude Code, found the way the Claude subscription plugin finds it
+/// (`claude::resolve`), not by a bare `PATH` name.
+pub const CLAUDE_PROGRAM: &str = "claude";
 
 /// One sign-in command.
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
@@ -22,7 +25,7 @@ pub struct Login {
     pub id: String,
     /// What the card calls it.
     pub name: String,
-    /// The program: a name on the `PATH`, or `hermes`.
+    /// The program: a name on the `PATH`, `hermes`, or `claude`.
     pub program: String,
     /// Its arguments, exactly.
     pub args: Vec<String>,
@@ -125,6 +128,12 @@ mod tests {
             t.find("gcloud").unwrap().line(),
             "gcloud auth login --brief"
         );
+        // the official Claude Code's own sign-in: `--claudeai` is the subscription (the default), never `--console`, which
+        // bills API usage; it has no shell string in it and the id is the one a form names
+        let claude = t.find("claude-code").unwrap();
+        assert_eq!(claude.program, CLAUDE_PROGRAM);
+        assert_eq!(claude.line(), "claude auth login --claudeai");
+        assert!(!claude.args.iter().any(|a| a == "--console"));
         assert!(
             t.find("hermes-nous").is_none(),
             "a device-code login waits for output streamed while it runs"

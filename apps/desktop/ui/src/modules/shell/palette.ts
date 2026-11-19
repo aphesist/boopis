@@ -1,4 +1,5 @@
-/* The command palette: sessions, bots and commands. `>` limits to commands, `@` to bots. */
+/* The command palette: sessions, bots and commands. `>` limits to commands, `@` to bots. "Restore bot…" opens it again on the archived
+   bots alone (the Bots tab's Archived group has the same action) and restores the one chosen. */
 import { emit } from '../../core/bus';
 import { esc } from '../../core/dom';
 import { callProvided, getDockApi, hasProvider } from '../../core/registry';
@@ -6,6 +7,7 @@ import { setState, state, toggle } from '../../core/state';
 import { themeApi } from '../../styles/theme';
 import { ui } from '../../components';
 import { data } from '../../data';
+import { archivedWhen, restoreBot, restoredWords } from '../../data/restore';
 import { updateTitle } from './attention';
 import { els, sh } from './ctx';
 import { newThing, openPanel, toggleDockExpand, toggleLightDark, toggleOrbGrow, togglePanel } from './actions';
@@ -14,10 +16,10 @@ import { REGION_NAME, focusRegion, nextAttention } from './regions';
 import { pushHistory } from './history';
 import type { RegionName } from '../../core/bus';
 
-type Group = 'sessions' | 'bots' | 'commands';
+type Group = 'sessions' | 'bots' | 'commands' | 'archived';
 interface Item { group: Group; label: string; meta?: string; trail?: string; icon: string; keys: string; kbd?: string; attn?: boolean; run: () => void; s?: number }
 const pal: { items: Item[]; active: number; scope: string | null; ret: Element | null } = { items: [], active: 0, scope: null, ret: null };
-const GROUPS: Record<Group, string> = { sessions: 'Sessions', bots: 'Bots', commands: 'Commands' };
+const GROUPS: Record<Group, string> = { sessions: 'Sessions', bots: 'Bots', commands: 'Commands', archived: 'Archived bots' };
 const ICON = (name: string): string => ui.icon(name);
 // the library's orb: 16px is a still thumbnail, its state reaction and dark-body eyes come with it
 const botIcon = (b: Parameters<typeof ui.html.orb>[0]): string => ui.html.orb(b, { size: 16 });
@@ -32,10 +34,19 @@ function paletteItems(): Item[] {
     out.push({ group: 'bots', label: b.name, meta: b.role, icon: botIcon(b), keys: 'bot ' + (b.attention || ''), trail: data().info.preview.has('bots') ? 'preview' : b.attention ? 'needs you' : '', attn: !!b.attention && !data().info.preview.has('bots'),
       run: () => { setState({ tab: 'bots' }); sh.selection.bots = b.id; emit('hx:bot-select', { id: b.id, from: 'palette' }); pushHistory({ tab: 'bots', sel: b.id }); updateTitle(); } });
   }
+  /* the archived bots, only while "Restore bot…" has narrowed the palette to them */
+  const archivedBots = data().bots.archived.get();
+  if (pal.scope === 'archived') {
+    for (const a of archivedBots) {
+      out.push({ group: 'archived', label: a.was || a.name, meta: archivedWhen(a.when), icon: ICON('unarchive'), keys: 'archived restore bot',
+        run: () => { const back = pal.ret as HTMLElement | null; void restoreBot(data().bots, a.id).then((r) => { ui.toast(restoredWords(r)); back?.focus?.(); }); } });
+    }
+  }
   const cmd = (label: string, kbd: string, run: () => void, icon?: string, keys?: string): void => { out.push({ group: 'commands', label, kbd, run, icon: icon || '', keys: keys || '' }); };
   const api = getDockApi();
   cmd('New session', state.tab === 'session' ? 'mod+shift+O' : '', () => newThing('session'), ICON('plus'));
   cmd('New bot', state.tab === 'bots' ? 'mod+shift+O' : '', () => newThing('bots'), ICON('plus'));
+  if (archivedBots.length) cmd('Restore bot…', '', () => { const back = pal.ret; openPalette({ scope: 'archived' }); pal.ret = back; }, ICON('unarchive'), 'archived archive undo bring back bots');
   cmd(state.tab === 'session' ? 'Go to bots' : 'Go to sessions', state.tab === 'session' ? 'alt+2' : 'alt+1', () => toggle('tab'), ICON(state.tab === 'session' ? 'bots' : 'session'), 'tab switch');
   cmd(state.left === 'open' ? 'Hide sidebar' : 'Show sidebar', 'mod+B', () => toggle('left'), ICON('sidebar-left'), 'sidebar left');
   if (state.left !== 'rail') cmd('Collapse the sidebar to a rail', '', () => setState({ left: 'rail' }), ICON('sidebar-left'), 'sidebar left rail');
@@ -88,7 +99,7 @@ export function renderPalette(): void {
   let items = paletteItems().filter((it) => !scope || it.group === scope || (scope === 'items' && it.group !== 'commands'));
   items = items.map((it) => Object.assign(it, { s: score(it, q2) })).filter((it) => (it.s ?? 0) > 0);
   if (q2) {
-    const order: Record<Group, number> = { sessions: 0, bots: 1, commands: 2 };
+    const order: Record<Group, number> = { archived: 0, sessions: 1, bots: 2, commands: 3 };
     items.sort((a, b) => ((b.s ?? 0) - (a.s ?? 0)) || (order[a.group] - order[b.group]));
     // keep groups together, ordered by their best hit
     const best: Partial<Record<Group, number>> = {};
@@ -137,7 +148,7 @@ export function openPalette(opts: { scope?: string; query?: string } = {}): void
   pal.ret = document.activeElement;
   pal.active = 0;
   el.palInput.value = opts.query ?? '';
-  el.palInput.placeholder = pal.scope === 'items' ? 'Go to a session or bot' : pal.scope === 'sessions' ? 'Switch session' : pal.scope === 'bots' ? 'Switch bot' : 'Search, or type > for commands and @ for bots';
+  el.palInput.placeholder = pal.scope === 'items' ? 'Go to a session or bot' : pal.scope === 'sessions' ? 'Switch session' : pal.scope === 'bots' ? 'Switch bot' : pal.scope === 'archived' ? 'Restore which bot' : 'Search, or type > for commands and @ for bots';
   el.palette.hidden = false;
   renderPalette();
   el.palInput.focus();

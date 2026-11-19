@@ -7,7 +7,7 @@
    and the boopis plugin) implements the same interfaces. Nothing in a module may fabricate data a provider
    did not send: unknown is `null` or empty and the UI shows it as unknown. */
 import type {
-  Bot, BotCatalog, BotDraft, BotConfig, BotInfo, Change, ConversationEvent, Conversation, Connector, ContextUsage, DecisionKind, DiffFile, Environment,
+  ArchivedBot, Bot, BotCatalog, BotDraft, BotConfig, BotInfo, Change, ConversationEvent, Conversation, Connector, ContextUsage, DecisionKind, DiffFile, Environment,
   DetailsCan, DetailsNotes, FieldSchema, FileCompletions, FormCan, FormOutcome, ModSession, ModsEvent, PickerItem, PickerKind, GovernanceState, LedgerStats, ProviderInfo, RunSnapshot, Schedule, SendMeta, SessionSummary, ThreadMessage, Todo, User, Wait, WaitOutcome
 } from './types';
 
@@ -131,10 +131,6 @@ export interface BotsAdmin {
   remove(id: string, confirm: string): Promise<void>;
   /** the models a bot can be set to, from the configured providers: [`provider/model`, ...] */
   models(): readonly string[];
-  /** archived teammates (profiles renamed out of the way): `id` is the profile's name now, `was` the name it will return to */
-  archived: Watch<ReadonlyArray<{ id: string; name: string; was: string; at: string }>>;
-  /** brings an archived teammate back under its old name; rejects when that name is taken again */
-  restoreArchived(id: string): Promise<void>;
   /** why the roster could not be read (Hermes said no), null when it could */
   note(): string | null;
 }
@@ -150,6 +146,10 @@ export interface BotsSource extends Feed<BotsSnapshot, BotsEvent> {
   update(id: string, patch: { role?: string; cfg?: Partial<BotConfig> }): void;
   create(draft: BotDraft & { instructions: string }): Bot;
   archive(id: string): void;
+  /** archived teammates (profiles renamed out of the way, newest first): `id` is the profile's name now, `was` the name it returns to */
+  archived: Watch<readonly ArchivedBot[]>;
+  /** brings an archived teammate back under its old name (it arrives as `bot-created`); rejects, with a sentence for the user, when that name is taken again */
+  restore(id: string): Promise<void>;
   /** the live provider's: real profiles (see `BotsAdmin`); absent on the mock */
   admin?: BotsAdmin;
 }

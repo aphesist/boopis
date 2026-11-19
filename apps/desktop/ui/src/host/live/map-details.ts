@@ -82,6 +82,9 @@ export function ledgerFrom(stats: StatsWire | null): LedgerStats {
 }
 /** why a cost is unknown, in the words ADR-0012 asks for; '' when it is known */
 export const costNote = (s: StatsWire | null): string => (s && s.cost_usd == null ? 'cost: unknown — no price for ' + ((s.unpriced_models ?? []).join(', ') || 'this model') : '');
+/** a session that ran only on a plan (the Claude subscription): its cost is zero because the plan covers it, and a list price a
+    tool reports is an estimate, never a charge; '' for any other session */
+export const planNote = (s: StatsWire | null): string => (s?.subscription === true ? 'cost: none, covered by your Claude plan (a list price is an estimate, not a charge)' : '');
 
 export interface RunInput {
   title: string; model: string; steps: number; elapsedSeconds: number; stopped: boolean; governed: boolean;

@@ -328,6 +328,18 @@ def test_subscription_providers_are_flagged(make_runtime: MakeRuntime) -> None:
     assert [e for e in events(rt) if e["type"] == "usage.recorded"][-1]["payload"]["subscription"] is True
 
 
+def test_the_claude_code_login_is_flagged_without_any_setting(make_runtime: MakeRuntime) -> None:
+    """ADR-0029: the usage of Hermes's Claude subscription plugin is a plan's, whatever the user configured."""
+    rt, ctx = make_runtime()
+    first_prompt(rt, ctx)
+    provider = "claude-subscription-directsdk-experimental"
+    hooks.post_api_request(session_id=SID, model="sonnet", provider=provider, usage=HERMES_USAGE, api_duration=0.1)
+    payload = [e for e in events(rt) if e["type"] == "usage.recorded"][-1]["payload"]
+    assert (payload["provider"], payload["subscription"]) == (provider, True)
+    assert rt.state(SID).spend_usd == 0.0
+    assert rt.state(SID).unpriced == set()
+
+
 # ---------------------------------------------------------------- the cost cap
 
 PRICES = {"p/m": {"input": 1000.0, "output": 2000.0}}  # $1000 and $2000 per Mtok: 100 + 10 tokens = $0.12
@@ -373,6 +385,14 @@ def test_a_subscription_provider_needs_no_price_and_costs_nothing(make_runtime: 
     first_prompt(rt, ctx)
     hooks.post_api_request(session_id=SID, model="m", provider="p", usage=HERMES_USAGE, api_duration=0.1)
     assert hooks.pre_llm_call(session_id=SID, model="m") is None
+
+
+def test_the_claude_code_login_passes_a_cap_with_no_price(make_runtime: MakeRuntime) -> None:
+    rt, ctx = make_runtime({"cost_cap_usd": 0.01})
+    first_prompt(rt, ctx)
+    provider = "claude-subscription-directsdk-experimental"
+    hooks.post_api_request(session_id=SID, model="sonnet", provider=provider, usage=HERMES_USAGE, api_duration=0.1)
+    assert hooks.pre_llm_call(session_id=SID, model="sonnet", provider=provider) is None
 
 
 def test_a_resumed_session_counts_its_earlier_spend(make_runtime: MakeRuntime, home: Path) -> None:

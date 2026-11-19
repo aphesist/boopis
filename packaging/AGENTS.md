@@ -11,6 +11,7 @@ packaging/
     render.ps1       the renderer install.ps1 carries (ASCII only)
     golden/          what the host draws, per scene and colour level; every renderer must print these bytes
     icons/           the app icons (light and dark PNGs, 16 to 256) and the symbolic SVG; install.sh embeds them
+    make-installer-images.py   the Windows installer's header and sidebar bitmaps, from the logo's static SVG files (see its docstring)
   arch/boopis.install   pacman's install script: a static banner and two lines on how to start
 scripts/
   install.sh  install.ps1   the installers; their `>>> brand` blocks are generated

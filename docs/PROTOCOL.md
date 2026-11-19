@@ -181,6 +181,6 @@ Stable string codes in `data.code`, listed in `crates/hx-proto/errors.json` (sha
 - `hx.host.*` (the host's own: `consent_required`, `unauthorized`, `invalid_frame`, `unknown_connection`, `no_ui`, `os`);
 - `hx.secrets.*` (`unavailable`, `failed`, `not_found`, `invalid_ref`);
 - `hx.connectors.*` (`exists`, `not_found`, `rejected`, `plan_changed`, `secret_missing`, `plugin_owned`, `restart_choice`, `busy`, `unknown_login`, `not_oauth`, `signin_failed`, `signin_cancelled`, `signin_timeout`, `command_failed`, `failed`);
-- `hx.setup.*` (`hermes_missing`, `no_bundle`, `plugin_install_failed`, `config_failed`, `declined`, `invalid_answer`, `state_invalid`, `verify_failed`);
+- `hx.setup.*` (`hermes_missing`, `no_bundle`, `plugin_install_failed`, `subscription_unreachable`, `subscription_install_failed`, `config_failed`, `declined`, `invalid_answer`, `state_invalid`, `verify_failed`);
 - `hx.form.*` (`invalid_schema`, `invalid_values`, `not_found`, `resolved`, `timeout`, `secret_missing`, `unsupported`, `limit`);
 - `hx.mods.*` (`unavailable`, `load_failed`, `not_a_mod`, `already_loaded`, `no_session`, `worker_failed`, `crashed`, `no_host`, `host_timeout`, `host_failed`, `unsupported`).

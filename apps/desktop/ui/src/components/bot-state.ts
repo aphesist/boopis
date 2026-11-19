@@ -34,7 +34,8 @@ export function botState(bot: BotLike | string | null | undefined): BotStateInfo
   /* attention outranks work: a bot that needs you shows the needs face and the red word, whatever it was doing */
   return { key, reaction: s.reaction, word: s.word, tone: s.tone ?? 'none', attention: s.tone === 'attention', busy: s.tone === 'busy' };
 }
-export const botLabel = (b: BotLike): string => {
+/** the name a row or button gives a bot: name, role, then state. `mark` is a word the row shows between its role and its state ("outside"), so the name holds the visible text in the order it is read (WCAG 2.5.3) */
+export const botLabel = (b: BotLike, mark?: string): string => {
   const s = botState(b);
-  return (b.name ?? '') + (b.role ? ', ' + b.role : '') + (s.key === 'idle' ? '' : ', ' + s.word);
+  return (b.name ?? '') + (b.role ? ', ' + b.role : '') + (mark ? ', ' + mark : '') + (s.key === 'idle' ? '' : ', ' + s.word);
 };

@@ -150,6 +150,45 @@ export async function mods(env, AXE) {
   });
 
   await s.safe('mods', async () => {
+    /* contrast (owner decision, 19 November 2026): a colour that would make text hard to read is not applied, in the real cascade. A second mod offers
+       dark text on the dark frame and quiet text that is dark too, with a light accent; the card says what it skipped and the rest applies. */
+    const page = await s.fresh({ q: URL, settle: 1500 });
+    await send(page);
+    await page.evaluate(() => {
+      const sid = window.__hxReplay.frames.find((r) => r.frame.params && r.frame.params.type === 'plugin.boopis.mod.theme').frame.params.session_id;
+      window.__hxReplay.emitEvent('plugin.boopis.mod.theme', sid, { action: 'set', plugin: 'low-light', theme: { colors: { '--text': '#1a1a1a', '--text-quiet': '#222222', '--brass': '#c8e0ff', '--bg-2': '#201e31' }, label: 'Low light' } });
+    });
+    await page.waitForTimeout(500);
+    const card = 'hx-card[data-mod-theme="low-light"]';
+    await page.evaluate((c) => document.querySelector(c)?.scrollIntoView(), card);
+    await page.waitForTimeout(300);
+    const css = () => page.evaluate(() => { const g = (t) => document.documentElement.style.getPropertyValue(t); return { previewing: __hx.theme.previewing(), text: g('--text'), quiet: g('--text-quiet'), brass: g('--brass'), ground: g('--bg-2'), say: document.querySelector('hx-card[data-mod-theme="low-light"] .cd-text')?.textContent ?? '', live: document.querySelector('hx-card[data-previewing] .cd-live')?.textContent ?? '', failing: __hx.theme.contrast().filter((c) => c.scope === 'app' && c.min >= 4.5 && !c.pass).map((c) => c.label + ' ' + c.ratio) }; });
+    const pv = await css();
+    check('mods', 'a colour that would make text hard to read is not applied: the theme\'s own text stays, and the rest applies', pv.previewing && pv.text === '' && pv.quiet === '' && pv.brass === '#c8e0ff' && pv.ground === '#201e31' && pv.live === 'Previewing', pv);
+    check('mods', 'the card lists what it skipped, in plain words', /Skipped 2 colours that would make text hard to read: text on surface, quiet text\./.test(pv.say), pv.say);
+    check('mods', 'in the real cascade every pair that carries text still holds while it previews', pv.failing.length === 0, pv.failing);
+    await page.click(card + ' [data-action="submit"]'); await page.waitForTimeout(400);
+    const kept = await page.evaluate((c) => ({ saved: JSON.parse(localStorage.getItem('hx.v6.theme') ?? '{}').colors ?? {}, text: document.querySelector(c)?.textContent ?? '', failing: __hx.theme.contrast().filter((x) => x.scope === 'app' && x.min >= 4.5 && !x.pass).length }), card);
+    check('mods', 'Keep stores only what was applied, and says what was left out', JSON.stringify(Object.keys(kept.saved).sort()) === JSON.stringify(['--bg-2', '--brass']) && /Kept low-light.s colours, without 2 that would make text hard to read\. Undo in Settings, Appearance/.test(kept.text) && kept.failing === 0, kept);
+  });
+
+  await s.safe('mods', async () => {
+    /* Reject, Esc and another theme restore a theme that had skipped colours just as they restore any other */
+    const page = await s.fresh({ q: URL, settle: 1500 });
+    await send(page);
+    await page.evaluate(() => {
+      const sid = window.__hxReplay.frames.find((r) => r.frame.params && r.frame.params.type === 'plugin.boopis.mod.theme').frame.params.session_id;
+      window.__hxReplay.emitEvent('plugin.boopis.mod.theme', sid, { action: 'set', plugin: 'low-light', theme: { colors: { '--text': '#1a1a1a', '--brass': '#c8e0ff' } } });
+    });
+    await page.waitForTimeout(500);
+    const card = 'hx-card[data-mod-theme="low-light"]';
+    await page.evaluate((c) => document.querySelector(c)?.scrollIntoView(), card);
+    await page.click(card + ' [data-action="cancel"]'); await page.waitForTimeout(300);
+    const r = await page.evaluate(() => ({ previewing: __hx.theme.previewing(), brass: document.documentElement.style.getPropertyValue('--brass'), saved: localStorage.getItem('hx.v6.theme') ?? '' }));
+    check('mods', 'Reject restores the theme at once after a preview that skipped a colour, and nothing was saved', !r.previewing && r.brass !== '#c8e0ff' && !/c8e0ff|1a1a1a/.test(r.saved), r);
+  });
+
+  await s.safe('mods', async () => {
     /* below 1200px a pane is inline above the composer: one open, the rest folded to a head */
     for (const w of [1199, 1000, 390]) {
       const page = await s.fresh({ q: URL, w, h: 800, settle: 1500 });

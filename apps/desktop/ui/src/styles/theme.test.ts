@@ -1,7 +1,9 @@
+import { readFileSync } from 'node:fs';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { on } from '../core/bus';
 import { KEYS, readJSON } from '../core/settings';
-import { EDITABLE, PAIRS, PRESETS, blank, composite, lum, parseColor, ratio, sanitize, themeApi, toHex } from './theme';
+import { installPreset, presetTokens } from './testing';
+import { CURRENT_ALPHA, EDITABLE, GUARD_LABELS, GUARD_PAIRS, PAIRS, PRESETS, blank, composite, guardColors, lum, parseColor, ratio, sanitize, skippedSentence, themeApi, toHex } from './theme';
 
 describe('colour parsing', () => {
   it('reads the rgb() Chrome reports for a plain colour', () => {
@@ -36,6 +38,84 @@ describe('contrast maths (WCAG 2.x)', () => {
   it('composite lays a translucent colour over a solid one', () => {
     expect(composite([255, 255, 255, 0.5], [0, 0, 0, 1])).toBe('#808080');
     expect(composite([10, 20, 30, 1], [200, 200, 200, 1])).toBe('#0a141e');
+  });
+});
+
+describe('contrast maths against known pairs', () => {
+  it('WCAG 2.x examples: #767676 on white is 4.54, #777777 is 4.48, #949494 is 3.03, pure red on white is 4.00, pure blue 8.59', () => {
+    expect(ratio('#767676', '#ffffff')).toBeCloseTo(4.54, 2);
+    expect(ratio('#777777', '#ffffff')).toBeCloseTo(4.48, 2);
+    expect(ratio('#949494', '#ffffff')).toBeCloseTo(3.03, 2);
+    expect(ratio('#ff0000', '#ffffff')).toBeCloseTo(4.0, 2);
+    expect(ratio('#0000ff', '#ffffff')).toBeCloseTo(8.59, 2);
+  });
+  it('the design system’s own table (5.4): Card catalog text on the frame 14.89, meta on the frame 5.69, Bone text on the frame 13.04', () => {
+    expect(ratio('#e9e4da', '#121110')).toBeCloseTo(14.89, 1);
+    expect(ratio('#958c7f', '#121110')).toBeCloseTo(5.69, 1);
+    expect(ratio('#23201c', '#ebe6dc')).toBeCloseTo(13.04, 1);
+  });
+});
+
+describe('the contrast guard (a mod’s colours that would make text hard to read are not applied)', () => {
+  const catalog = presetTokens('catalog');
+  const base = (t: string): string | null => catalog[t] ?? null;
+  it('checks only pairs that carry text, at the design system’s floors', () => {
+    expect(GUARD_PAIRS.length).toBeGreaterThan(20);
+    for (const [fg, bg, min] of GUARD_PAIRS) { expect(min).toBe(4.5); expect(`${fg} ${bg}`).not.toMatch(/mark-off|line-field|--brass|--icon|--red\b(?!-)/); }
+    expect(GUARD_PAIRS.some(([fg, bg]) => fg === '--text' && bg === '--bg-2')).toBe(true);
+    expect(GUARD_PAIRS.some(([fg, bg]) => fg === '--text-quiet' && bg === '--bg-3')).toBe(true);
+    expect(GUARD_PAIRS.some(([fg, bg]) => fg === '--text-on-light' && bg === '--selected')).toBe(true);
+    for (const t of Object.keys(GUARD_LABELS)) expect(EDITABLE).toContain(t);
+  });
+  it('--current is the text colour at the share the guard assumes (tokens.css is the source)', () => {
+    const css = readFileSync('src/styles/tokens.css', 'utf8');
+    expect(css).toContain('--current: color-mix(in srgb, var(--text) ' + CURRENT_ALPHA * 100 + '%, transparent)');
+  });
+  it('each preset’s own colours pass, so nothing a user already has is ever skipped', () => {
+    for (const id of ['catalog', 'graphite', 'bone', 'typewriter'] as const) {
+      const g = guardColors(presetTokens(id), () => null);
+      expect([id, g.skipped]).toEqual([id, []]);
+      expect(Object.keys(g.applied).length).toBe(Object.keys(presetTokens(id)).length);
+    }
+  });
+  it('a complete light theme over a dark one holds together: nothing is skipped', () => {
+    const g = guardColors(presetTokens('bone'), base);
+    expect(g.skipped).toEqual([]);
+  });
+  it('a partial theme with dark text on a dark frame skips exactly the text, and the rest applies', () => {
+    const g = guardColors({ '--text': '#1a1a1a', '--brass': '#b8a4f0', '--bg-2': '#201e31' }, base);
+    expect(g.skipped).toEqual([{ token: '--text', label: 'text on surface' }]);
+    expect(g.applied).toEqual({ '--brass': '#b8a4f0', '--bg-2': '#201e31' });
+  });
+  it('quiet text, dim text and strong text are each held to the surfaces they sit on', () => {
+    expect(guardColors({ '--text-quiet': '#222222' }, base).skipped.map((x) => x.token)).toEqual(['--text-quiet']);
+    expect(guardColors({ '--text-dim': '#222222' }, base).skipped.map((x) => x.token)).toEqual(['--text-dim']);
+    expect(guardColors({ '--text-strong': '#222222' }, base).skipped.map((x) => x.token)).toEqual(['--text-strong']);
+    expect(guardColors({ '--text-quiet': '#a59d90' }, base).skipped).toEqual([]);   // a lighter quiet text is fine
+  });
+  it('ink on the selected fill: ink too close to the fill is skipped, and so is a fill too close to the theme’s own ink', () => {
+    expect(guardColors({ '--text-on-light': '#e0e0e0' }, base).skipped.map((x) => x.token)).toEqual(['--text-on-light']);
+    expect(guardColors({ '--selected': '#101010' }, base).skipped.map((x) => x.token)).toEqual(['--selected']);   // a dark fill would sink the theme's own dark ink
+  });
+  it('a surface that would bury the theme’s own text is the colour skipped (its text is not the mod’s)', () => {
+    const g = guardColors({ '--bg-2': '#f4f0e8', '--brass': '#b8a4f0' }, base);
+    expect(g.skipped).toEqual([{ token: '--bg-2', label: 'the ground' }]);
+    expect(g.applied).toEqual({ '--brass': '#b8a4f0' });
+  });
+  it('a colour that fails only because of another one the mod gave is checked again once that one is gone', () => {
+    /* dark text and a light ground: the text fails on the theme's dark frames and goes; the ground then fails under the theme's own light text and goes too */
+    const g = guardColors({ '--text': '#1a1a1a', '--bg-2': '#f4f0e8' }, base);
+    expect(g.skipped.map((x) => x.token)).toEqual(['--text', '--bg-2']);
+    expect(g.applied).toEqual({});
+  });
+  it('lists what it left out in plain words, in a fixed order, singular or plural', () => {
+    const two = guardColors({ '--text-quiet': '#222222', '--text': '#111111' }, base);
+    expect(skippedSentence(two.skipped)).toBe('Skipped 2 colours that would make text hard to read: text on surface, quiet text.');
+    expect(skippedSentence(guardColors({ '--text-quiet': '#222222' }, base).skipped)).toBe('Skipped 1 colour that would make text hard to read: quiet text.');
+    expect(skippedSentence([])).toBeNull();
+  });
+  it('a token the theme cannot resolve is unknown, never a failure: its pairs are not checked', () => {
+    expect(guardColors({ '--text': '#1a1a1a' }, () => null)).toEqual({ applied: { '--text': '#1a1a1a' }, skipped: [] });
   });
 });
 
@@ -101,8 +181,9 @@ describe('previewing colours (a mod offers a theme: DESIGN-SYSTEM.md 5.2 and 14.
   const saved = (): unknown => readJSON(KEYS.theme);
   const seen: boolean[] = [];
   const off = on('hx:theme-preview', (e) => seen.push(e.previewing));
+  const unstyle = installPreset('catalog');   // jsdom has no stylesheet: the guard needs the colours a browser would resolve
   beforeEach(() => { themeApi.endPreview(false); themeApi.reset(); themeApi.preset('catalog'); seen.length = 0; });
-  afterAll(() => { off(); themeApi.endPreview(false); themeApi.preset('catalog'); });
+  afterAll(() => { off(); unstyle(); themeApi.endPreview(false); themeApi.preset('catalog'); });
 
   it('shows a patch over the saved theme without saving it, and says so', () => {
     const before = JSON.stringify(saved());
@@ -157,5 +238,39 @@ describe('previewing colours (a mod offers a theme: DESIGN-SYSTEM.md 5.2 and 14.
       expect(themeApi.previewing()).toBe(false);
       expect(root.style.getPropertyValue('--brass')).not.toBe('#b8a4f0');
     }
+  });
+  it('does not show a colour that would make text hard to read, says which it left out, and the theme’s own token stays', () => {
+    const g = themeApi.preview({ colors: { '--text': '#1a1a1a', '--brass': '#b8a4f0' } });
+    expect(g.skipped.map((x) => x.token)).toEqual(['--text']);
+    expect(g.applied).toEqual({ '--brass': '#b8a4f0' });
+    expect(root.style.getPropertyValue('--text')).toBe('');
+    expect(root.style.getPropertyValue('--brass')).toBe('#b8a4f0');
+    expect(themeApi.previewing()).toBe(true);
+  });
+  it('Keep stores only what was applied', () => {
+    themeApi.preview({ colors: { '--text': '#1a1a1a', '--brass': '#b8a4f0' } });
+    themeApi.endPreview(true);
+    const colors = (saved() as { colors: Record<string, string> }).colors;
+    expect(colors).toEqual({ '--brass': '#b8a4f0' });
+    expect(root.style.getPropertyValue('--text')).toBe('');
+  });
+  it('a patch kept with no preview showing is checked the same way before it is stored', () => {
+    const g = themeApi.keep({ '--text-quiet': '#222222', '--brass': '#b8a4f0' });
+    expect(g.skipped.map((x) => x.token)).toEqual(['--text-quiet']);
+    expect((saved() as { colors: Record<string, string> }).colors).toEqual({ '--brass': '#b8a4f0' });
+  });
+  it('a new preview reads the saved theme, not the colours the last one showed', () => {
+    themeApi.preview({ colors: { '--bg-2': '#f4f0e8' } });   // would bury the theme's light text: left out
+    expect(root.style.getPropertyValue('--bg-2')).toBe('');
+    themeApi.preview({ colors: { '--brass': '#b8a4f0' } });
+    expect(root.style.getPropertyValue('--bg-2')).toBe('');
+    expect(root.style.getPropertyValue('--brass')).toBe('#b8a4f0');
+  });
+  it('Reject, Esc and every other way a preview ends restore the saved theme just as with a skipped colour', () => {
+    themeApi.set({ colors: { '--brass': '#112233' } });
+    themeApi.preview({ colors: { '--text': '#1a1a1a', '--brass': '#b8a4f0' } });
+    expect(themeApi.endPreview(false)).toBe(true);
+    expect(root.style.getPropertyValue('--brass')).toBe('#112233');
+    expect(themeApi.get().colors).toEqual({ '--brass': '#112233' });
   });
 });

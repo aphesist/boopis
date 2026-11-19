@@ -144,7 +144,9 @@
         "type": "string",
         "minLength": 1
       },
-      "default": []
+      "default": [
+        "claude-subscription-directsdk-experimental"
+      ]
     },
     "permissions": {
       "type": [

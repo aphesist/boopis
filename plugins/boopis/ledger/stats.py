@@ -36,6 +36,8 @@ def compute_stats(
     return {
         "tokens": tokens,
         "cost_usd": costs.billed_usd,
+        # every request so far was covered by a plan, so ``cost_usd`` is zero by that and not by being free
+        "subscription": bool(records) and all(str(r.get("provider", "")) in subscription for r in records),
         "cost_api_equivalent_usd": costs.api_equivalent_usd,
         "unpriced_models": list(costs.unpriced),
         "round_trips": len(records),

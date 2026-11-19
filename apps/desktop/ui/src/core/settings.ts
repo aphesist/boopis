@@ -10,6 +10,7 @@ export const KEYS = {
   theme: 'hx.v6.theme',
   lastDark: 'hx.v6.lastDark',
   dock: 'hx.dock.v6',
+  bots: 'hx.v6.bots',
   preview: 'hx.v6.preview'
 } as const;
 export type StoreKey = (typeof KEYS)[keyof typeof KEYS];
@@ -54,6 +55,14 @@ export const loadShell = (): SavedShell => {
   const o = readJSON<Record<string, unknown>>(KEYS.shell);
   return o && typeof o === 'object' ? (o as SavedShell) : {};
 };
+
+/* ───────── the Bots tab's own: the Archived group is collapsed until the user opens it, and stays as they left it ───────── */
+export interface SavedBots { archivedOpen?: boolean }
+export const loadBots = (): SavedBots => {
+  const o = readJSON<Record<string, unknown>>(KEYS.bots);
+  return { archivedOpen: o?.['archivedOpen'] === true };
+};
+export const saveBots = (v: SavedBots): boolean => writeJSON(KEYS.bots, { archivedOpen: v.archivedOpen === true });
 
 /* ───────── preview flags: mock content a live build shows only when asked, always marked as a preview ───────── */
 /** `hx.v6.preview` is `{ "feedforward": true }` to turn a preview on; the default is off, and `VITE_PREVIEW_<NAME>=1` does the same in a build */

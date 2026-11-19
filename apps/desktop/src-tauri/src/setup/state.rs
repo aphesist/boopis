@@ -40,6 +40,9 @@ pub struct State {
     pub free_note: Option<String>,
     /// The user asked to choose the models again (from a limit notice): the models step asks even when something is set.
     pub reopen_models: bool,
+    /// The user agreed to install the Claude subscription plugin from Hermes's catalog (asked once the choice is made, and
+    /// forgotten when the models are chosen again). Added without a version bump: a file from before has none.
+    pub claude_consent: bool,
     /// The form the host last showed, so an answer is checked against it.
     pub pending_form: Option<String>,
     /// Hermes has changes (a new plugin, new configuration, a new key) that need a gateway restart to take effect.

@@ -11,7 +11,7 @@ import type {
 export const USER: User = { name: 'enzo', initials: 'e' };
 
 /* ───────── bots: the 11 in the owner's Figma dock, in order ───────── */
-interface BotSeed { id: string; name: string; role: string; shape: string; color: string; eyes: string; state: string; attention?: string }
+interface BotSeed { id: string; name: string; role: string; shape: string; color: string; eyes: string; state: string; attention?: string; /** boopis has no store for it: made with the `hermes` command */ outside?: boolean }
 const BOT_SEEDS: readonly BotSeed[] = [
   { id: 'atlas',  name: 'atlas',  role: 'reviewer',          shape: 'circle',   color: '#efece6', eyes: 'pill',   state: 'idle' },
   { id: 'nina',   name: 'nina',   role: 'deploys',           shape: 'triangle', color: '#f23b5a', eyes: 'pill',   state: 'needs', attention: 'approval' },
@@ -74,12 +74,26 @@ export const BOT_FIXTURES: Readonly<Record<string, { bot: BotSeed; thread: Threa
       { who: 'cassiopeia-staging-deploy-guardian', t: '15:03', text: 'On it. I will watch each deploy for ten minutes and roll back if the health check fails twice.' },
       { who: 'cassiopeia-staging-deploy-guardian', t: '15:40', approval: { title: 'roll back staging', quote: 'invoices-api 2.14.0 → 2.13.4', item: ['staging · invoices-api', 'health check failed 2 of 2'], meta: 'expires in 9 min', actions: ['deny', 'hold to approve'] } }
     ]
+  },
+  /* a profile made outside boopis (the "made outside boopis" mark), with a long enough name and role to check the mark's room */
+  outside: {
+    bot: { id: 'sage', name: 'sage', role: 'reads release notes', shape: 'drop', color: '#7fb68c', eyes: 'arc', state: 'idle', outside: true },
+    thread: []
   }
 };
 export const fixtureBot = (seed: BotSeed): Bot => ({
   id: seed.id, name: seed.name, role: seed.role, shape: seed.shape, color: seed.color, eyes: seed.eyes, state: seed.state, attention: seed.attention ?? null,
-  paused: false, activity: '', spent: '0.00', last: null, ideas: ideasFor(seed.role), cfg: defaultConfig(seed.id)
+  paused: false, activity: '', spent: '0.00', last: null, ideas: ideasFor(seed.role), cfg: defaultConfig(seed.id),
+  ...(seed.outside ? { madeOutside: true as const } : {})
 });
+
+/** Archived bots, so the Bots tab's "Archived" group and "Restore bot…" show without Hermes. `id` is the profile's name now
+    (`archived--<name>`), `when` as the lists say it. The second one's name is in use (nina is on the roster), so restoring it is refused. */
+export interface ArchivedSeed { bot: BotSeed; at: string; when: string }
+export const ARCHIVED_SEEDS: readonly ArchivedSeed[] = [
+  { bot: { id: 'ledger', name: 'ledger', role: 'month-end close', shape: 'squircle', color: '#c4834a', eyes: 'bars', state: 'idle' }, at: '2026-11-18T09:30:00+00:00', when: 'yesterday' },
+  { bot: { id: 'nina', name: 'nina', role: 'old deploy runs', shape: 'triangle', color: '#f23b5a', eyes: 'pill', state: 'idle' }, at: '2026-11-16T17:05:00+00:00', when: 'mon' }
+];
 
 export const NINA_APPROVAL: ApprovalData = {
   id: 'approve-deploy', title: 'deploy to staging', quote: 'billing/cents → staging, dry run first',

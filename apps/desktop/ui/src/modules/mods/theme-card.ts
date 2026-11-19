@@ -6,14 +6,18 @@
    the preview.
    What the plugin sends is the mod's own colours (`mod.theme`): by token (`--brass`) or by Claude Code name (`claude`). The
    app uses the ones it can map onto its tokens (mod-colors.ts); the rest are named on the card as not used. There is no ramp
-   generator yet (docs/MODS.md section 3), so surface anchors are not turned into a theme here. */
+   generator yet (docs/MODS.md section 3), so surface anchors are not turned into a theme here.
+   Contrast (owner decision, 19 November 2026): the theme module checks the pairs that carry text while it previews, and a colour that
+   would make text hard to read is not applied (the theme's own token stays). The card says which it skipped, in words, and Keep
+   stores only what was applied (docs/MODS.md section 10). */
 import { on } from '../../core/bus';
 import { logger } from '../../core/log';
 import { ui } from '../../components';
 import { MARK, parseLiteral } from '../../components/mod-colors';
 import type { HxCard } from '../cards';
 import type { FormSpec, ModTheme } from '../../data';
-import { EDITABLE, GROUPS, themeApi } from '../../styles/theme';
+import { EDITABLE, GROUPS, skippedSentence, themeApi } from '../../styles/theme';
+import type { Guarded } from '../../styles/theme';
 import { surface } from './surfaces';
 
 const log = logger('mods');
@@ -43,7 +47,7 @@ export function swatchesOf(colors: Readonly<Record<string, string>>): Array<read
   return SWATCH_ORDER.filter((t) => t in colors).map((t) => [SWATCH_LABELS[t] ?? names.get(t) ?? t, colors[t] ?? ''] as const);
 }
 
-interface Meta { colors: Record<string, string>; visible: boolean; paused: boolean; ending: boolean }
+interface Meta { colors: Record<string, string>; visible: boolean; paused: boolean; ending: boolean; plugin: string; unused: readonly string[]; guard: Guarded | null }
 const META = new WeakMap<HxCard, Meta>();
 const CARDS = new Set<HxCard>();
 let previewing: HxCard | null = null;
@@ -62,11 +66,23 @@ function owner(): HxCard | null {
   for (const c of CARDS) { const m = META.get(c); if (m && m.visible && !m.paused && LIVE_STATES.includes(c.state)) o = c; }
   return o;
 }
+/** the card says what the guard left out, the moment the preview shows it */
+function tell(card: HxCard, meta: Meta): void {
+  const why = whyOf(meta.unused, meta.guard);
+  if (card.data['why'] !== why) card.update({ why });
+}
 /** the preview follows the card that should hold it: starts it, hands it over, or ends it */
 export function reconcile(): void {
   const o = owner();
   for (const c of CARDS) c.toggleAttribute('data-previewing', c === o);
-  if (o) { if (previewing !== o) { previewing = o; themeApi.preview({ colors: META.get(o)?.colors ?? {} }); } }
+  if (o) {
+    if (previewing !== o) {
+      previewing = o;
+      const m = META.get(o);
+      const guard = themeApi.preview({ colors: m?.colors ?? {} });
+      if (m) { m.guard = guard; tell(o, m); }
+    }
+  }
   else if (previewing) { previewing = null; themeApi.endPreview(false); }
 }
 /** looks again at which cards are on screen (a view was hidden, the conversation was redrawn) */
@@ -87,13 +103,27 @@ for (const ev of ['hx:tab', 'hx:session-select', 'hx:new-session', 'hx:nav'] as 
 window.addEventListener('pagehide', () => { if (previewing) themeApi.endPreview(false); });
 let hideWatch: MutationObserver | null = null;
 
+/** what the card says it is: what the colours change, which of the mod's names the app has no token for, which colours the contrast guard left out */
+export function whyOf(unused: readonly string[], guard: Guarded | null): string {
+  const skipped = guard ? skippedSentence(guard.skipped) : null;
+  return 'It changes the surfaces, the text and the accent. The whole app shows them now. Keep them to use them, or reject them to go back.' +
+    (unused.length ? ' ' + unused.length + (unused.length === 1 ? ' colour is' : ' colours are') + ' not used here: ' + unused.join(', ') + '.' : '') +
+    (skipped ? ' ' + skipped : '');
+}
+/** the receipt after Keep: what was stored when the guard left some out */
+export function keptWords(plugin: string, guard: Guarded | null): string {
+  const left = guard?.skipped.length ?? 0;
+  if (!guard || !left) return 'Kept ' + plugin + '’s colours. Undo in Settings, Appearance';
+  if (!Object.keys(guard.applied).length) return 'Kept nothing: every colour of ' + plugin + ' would make text hard to read';
+  return 'Kept ' + plugin + '’s colours, without ' + left + ' that would make text hard to read. Undo in Settings, Appearance';
+}
+
 /** the card for a mod's theme: `null` when the app can use none of its colours */
 export function themeCard(t: ModTheme): HxCard | null {
   const { colors, unused } = themeColors(t.colors);
   if (!Object.keys(colors).length) { log.warn(t.plugin + ' offered a theme with no colour this app can use' + (unused.length ? ' (' + unused.join(', ') + ')' : '')); return null; }
   const plugin = t.plugin;
-  const why = 'It changes the surfaces, the text and the accent. The whole app shows them now. Keep them to use them, or reject them to go back.' +
-    (unused.length ? ' ' + unused.length + (unused.length === 1 ? ' colour is' : ' colours are') + ' not used here: ' + unused.join(', ') + '.' : '');
+  const why = whyOf(unused, null);
   const data: FormSpec = {
     id: 'mod-theme-' + plugin + '-' + (++seq), kind: 'theme', title: 'Apply ' + plugin + '’s colours?', origin: { kind: 'mod', plugin },
     why, swatches: swatchesOf(colors), preview: true, schema: { properties: {} }, submit: { label: 'Keep' }, cancel: { label: 'Reject' },
@@ -102,7 +132,7 @@ export function themeCard(t: ModTheme): HxCard | null {
   const was = decided.get(t);
   const card = ui.card('form', data as unknown as Record<string, unknown>, { size: 'inline', ...(was ? { state: was } : {}) }) as HxCard;
   card.dataset['modTheme'] = plugin;
-  const meta: Meta = { colors, visible: false, paused: false, ending: false };
+  const meta: Meta = { colors, visible: false, paused: false, ending: false, plugin, unused, guard: null };
   META.set(card, meta);
   if (!was) CARDS.add(card);
   card.addEventListener('hx:card-state', (e) => {
@@ -111,8 +141,9 @@ export function themeCard(t: ModTheme): HxCard | null {
     if (st === 'done' || st === 'cancelled' || st === 'deferred') decided.set(t, st);
     if (st === 'done') {
       meta.ending = true;
-      if (previewing === card) { previewing = null; themeApi.endPreview(true); }   /* Keep: the previewed colours are the theme now */
-      else themeApi.set({ colors });
+      if (previewing === card) { previewing = null; themeApi.endPreview(true); }   /* Keep: the previewed colours, which are the ones that held, are the theme now */
+      else meta.guard = themeApi.keep(colors);                                       /* no preview showed them: the same guard, then stored */
+      card.update({ receiptText: keptWords(plugin, meta.guard) });
       meta.ending = false; CARDS.delete(card); card.removeAttribute('data-previewing');
     }
     reconcile();

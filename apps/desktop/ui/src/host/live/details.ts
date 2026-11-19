@@ -8,7 +8,7 @@ import type { DetailsSource, RunSource, Watch } from '../../data/provider';
 import { store } from '../../data/store';
 import type { DetailsCan, DetailsNotes, DiffFile, Environment, FileCompletions, GovernanceState, ProviderInfo, RunSnapshot } from '../../data/types';
 import type { GatewayClient, GatewayEvent } from '../gateway';
-import { changesFrom, connectorsFrom, contextFrom, contextNote, costNote, diffFilesFrom, diffNote, environmentFrom, governanceFrom, ledgerFrom, runFrom } from './map-details';
+import { changesFrom, connectorsFrom, contextFrom, contextNote, costNote, diffFilesFrom, diffNote, environmentFrom, governanceFrom, ledgerFrom, planNote, runFrom } from './map-details';
 import { blanksFromLedger } from './blanks';
 import { applyEvent, newModel } from './session-model';
 import type { Part, SessionModel } from './session-model';
@@ -110,7 +110,7 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
     notes.set({
       ...(known ? (contextNote(m.breakdown, true) ? { context: contextNote(m.breakdown, true) } : {}) : { context: contextNote(null, false) }),
       ...(m.diff?.unavailable || m.diff?.truncated ? { changes: diffNote(m.diff) } : {}),
-      ...(costNote(m.stats) ? { governance: costNote(m.stats) } : {}),
+      ...((costNote(m.stats) || planNote(m.stats)) ? { governance: costNote(m.stats) || planNote(m.stats) } : {}),
       ...(!pluginOk ? { governance: NO_PLUGIN } : {}),
       ...(Object.keys(unavailable).length ? { environment: 'Not available on this Hermes: ' + Object.keys(unavailable).map((k) => k.replace('sessions.', '')).join(', ') + '.' } : {})
     });

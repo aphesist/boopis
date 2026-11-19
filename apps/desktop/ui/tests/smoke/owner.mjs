@@ -1,6 +1,8 @@
 /* The owner's decisions (design-system/DESIGN-SYSTEM.md, "Owner decisions"), checked in the running app:
    the dock is #000 in every preset and mode, the dock's orb gestures, a click outside returns it to rest, hold to approve
-   takes 1 second, a card animates its height (and snaps under reduced motion), reduced motion reduces and never freezes. */
+   takes 1 second, a card animates its height (and snaps under reduced motion), reduced motion reduces and never freezes,
+   archived bots wait in a collapsed group under the roster and are restored from it and from the palette, and a profile boopis
+   did not make carries a "made outside boopis" mark (19 November 2026). */
 import { check, scenario } from './harness.mjs';
 
 export async function ownerDecisions(env) {
@@ -126,5 +128,55 @@ export async function ownerDecisions(env) {
     check('owner', 'reduced motion ' + (reduced ? 'on: reduces, orbs stay live' : 'off: the shell animates'),
       reduced ? dur <= 2 && settled === 1 && orbs.live > 0 && orbs.jelly12 === orbs.live : dur >= 150 && +mid < 1 && orbs.jelly12 === 0, { viewTransitionMs: dur, midOpacity: +mid, settled, orbs });
   }
+
+  /* archived bots: a collapsed group under the roster, with a count; open, each shows its name, when it was archived and Restore */
+  page = await s.fresh();
+  await page.keyboard.press('Alt+2'); await page.waitForTimeout(500);
+  const ag = () => ev(() => { const h = document.querySelector('.bt-archived .ui-group__head'); const rows = [...document.querySelectorAll('.bt-archived .ui-row')]; return { head: h && h.textContent, open: h && h.getAttribute('aria-expanded'), visible: rows.filter((r) => r.offsetParent !== null).length, names: rows.map((r) => r.querySelector('.ui-row__title').textContent), subs: rows.map((r) => r.querySelector('.ui-row__sub').textContent), bots: document.querySelectorAll('.bt-rows .ui-row').length, rail: getComputedStyle(document.querySelector('.bt-archived')).display }; });
+  const a0 = await ag();
+  check('owner', 'the Archived group sits under the roster with its count, collapsed: no archived bot shows', /^Archived \(2\)$/.test((a0.head ?? '').trim()) && a0.open === 'false' && a0.visible === 0, a0);
+  await page.click('.bt-archived .ui-group__head'); await page.waitForTimeout(300);
+  const a1 = await ag();
+  check('owner', 'opened, each archived bot shows its name and when it was archived, and has Restore', a1.open === 'true' && a1.visible === 2 && a1.names.join() === 'ledger,nina' && a1.subs.join() === 'Archived yesterday,Archived mon' && (await page.locator('.bt-archived .ui-row-wrap').first().evaluate((li) => { li.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); return !!li.querySelector('[data-act="restore"][aria-label="Restore ledger"]'); })), a1);
+  await page.reload(); await page.waitForTimeout(800);
+  await page.keyboard.press('Alt+2'); await page.waitForTimeout(500);
+  const a2 = await ag();
+  check('owner', 'the group stays open after a reload: it is remembered per user', a2.open === 'true' && a2.visible === 2, a2);
+  /* a refusal: nina's name is in use, so the archived nina stays */
+  await page.locator('.bt-archived .ui-row-wrap >> nth=1').hover();
+  await page.click('.bt-archived [data-act="restore"][aria-label="Restore nina"]'); await page.waitForTimeout(500);
+  const refused = await ev(() => ({ toast: document.querySelector('.ui-toast')?.textContent, archived: document.querySelectorAll('.bt-archived .ui-row').length, nina: [...document.querySelectorAll('.bt-rows .ui-row')].filter((r) => r.dataset.value === 'nina').length }));
+  check('owner', 'restoring a bot whose name is in use is refused in words, and nothing moves', /^Could not restore nina: there is a teammate called nina already; archive or delete it, then restore$/.test(refused.toast ?? '') && refused.archived === 2 && refused.nina === 1, refused);
+  await page.locator('.bt-archived .ui-row-wrap >> nth=0').hover();
+  await page.click('.bt-archived [data-act="restore"][aria-label="Restore ledger"]'); await page.waitForTimeout(600);
+  const back = await ev(() => ({ toast: document.querySelector('.ui-toast')?.textContent, head: document.querySelector('.bt-archived .ui-group__head')?.textContent.trim(), ledger: !!document.querySelector('.bt-rows .ui-row[data-value="ledger"]'), dock: !!document.querySelector('#hx-dock .dk-bot[data-id="ledger"]'), focus: document.activeElement?.dataset?.value }));
+  check('owner', 'Restore brings the bot back into the roster and the dock, says so, and the group counts one fewer', back.toast === 'Restored ledger' && back.head === 'Archived (1)' && back.ledger && back.dock && back.focus === 'ledger', back);
+
+  /* the palette's "Restore bot…" lists the archived bots alone and restores the chosen one (or says why not) */
+  page = await s.fresh();
+  await page.keyboard.press('Control+k'); await page.waitForTimeout(200);
+  await page.keyboard.type('restore'); await page.waitForTimeout(150);
+  const pc = await ev(() => [...document.querySelectorAll('#hx-palette-list .hx-pal-row__label')].map((n) => n.textContent));
+  check('owner', 'the palette offers "Restore bot…" while bots are archived', pc.join() === 'Restore bot…', pc);
+  await page.keyboard.press('Enter'); await page.waitForTimeout(250);
+  const pl = await ev(() => ({ open: !document.getElementById('hx-palette').hidden, group: [...document.querySelectorAll('#hx-palette-list .hx-pal-group')].map((n) => n.textContent), rows: [...document.querySelectorAll('#hx-palette-list .hx-pal-row__label')].map((n) => n.textContent), ph: document.getElementById('hx-palette-input').placeholder }));
+  check('owner', 'it lists the archived bots, and only them', pl.open && pl.group.join() === 'Archived bots' && pl.rows.join() === 'ledger,nina' && pl.ph === 'Restore which bot', pl);
+  await page.keyboard.press('Enter'); await page.waitForTimeout(600);
+  const pr = await ev(() => ({ open: !document.getElementById('hx-palette').hidden, toast: document.querySelector('.ui-toast')?.textContent, ledger: __hx.data().bots.snapshot().bots.some((b) => b.id === 'ledger'), left: __hx.data().bots.archived.get().map((a) => a.was) }));
+  check('owner', 'choosing one restores it and says so', !pr.open && pr.toast === 'Restored ledger' && pr.ledger && pr.left.join() === 'nina', pr);
+
+  /* the mark: a profile boopis did not make says so in the roster and the header, with its words as the description, and it goes when boopis keeps a setting for it */
+  page = await s.fresh({ q: 'fixture=outside' });
+  await page.keyboard.press('Alt+2'); await page.waitForTimeout(500);
+  await page.click('.bt-rows .ui-row[data-value="sage"]'); await page.waitForTimeout(400);
+  const mk = await ev(() => { const row = document.querySelector('.bt-rows .ui-row[data-value="sage"]'); const head = document.querySelector('.bt-p-line .bt-outside'); const d = (id) => (id && document.getElementById(id)?.textContent) || null; const css = getComputedStyle(row.querySelector('.bt-outside')); return { rowText: row.querySelector('.bt-outside')?.textContent, label: row.getAttribute('aria-label'), rowDesc: d(row.getAttribute('aria-describedby')), head: head?.textContent, headDesc: d(head?.getAttribute('aria-describedby')), tip: head?.getAttribute('data-tip'), others: document.querySelectorAll('.bt-rows .ui-row:not([data-value="sage"]) .bt-outside').length, pill: css.borderRadius, h: css.height }; });
+  const WORDS = 'Made outside boopis, for example with the hermes command. boopis keeps its look and settings once you change them here.';
+  check('owner', 'a profile boopis did not make carries "made outside boopis", with its words as the tooltip and the accessible description', mk.rowText === 'outside' && mk.head === 'made outside boopis' && mk.rowDesc === WORDS && mk.headDesc === WORDS && mk.tip === WORDS && mk.label === "sage, reads release notes, outside" && mk.others === 0, mk);
+  await page.keyboard.press('Shift'); await page.focus('.bt-p-line .bt-outside'); await page.waitForTimeout(300);   /* a key first, so the focus is a keyboard's (:focus-visible) */
+  const tip = await ev(() => { const t = document.querySelector('.ui-tip'); return { text: t?.textContent, shown: t?.classList.contains('is-in'), w: t ? Math.round(t.getBoundingClientRect().width) : 0, fits: t ? t.getBoundingClientRect().right <= innerWidth : false }; });
+  check('owner', 'the mark is reachable by keyboard and its tooltip shows on focus, within the window', tip.shown && tip.text === WORDS && tip.fits, tip);
+  await ev(() => __hx.data().bots.update('sage', { cfg: { cap: '1.00' } })); await page.waitForTimeout(300);
+  const gone = await ev(() => document.querySelectorAll('.bt-outside').length);
+  check('owner', 'saving a boopis setting for it creates the store and the mark goes, in the roster and in the header', gone === 0, gone);
   await s.close();
 }
