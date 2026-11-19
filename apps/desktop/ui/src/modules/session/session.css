@@ -20,9 +20,9 @@
   height: calc(var(--ss-comp-h, 120px) + var(--hx-dock-space, 0px) + var(--composer-gap) + var(--sp-5) - 12px);
   background: linear-gradient(to bottom, transparent, var(--bg-2) 28px);
 }
-.ss-col { width: var(--hx-col-w, min(var(--col-w), calc(100vw - 64px))); margin: 0 auto; padding: var(--sp-6) 0 0; }
+.ss-col { width: var(--hx-col-w, min(var(--col-w), calc(100vw - 64px))); margin: 0 auto; padding: var(--sp-6) 0 calc(var(--ss-comp-h, 120px) + var(--hx-dock-space, 0px) + var(--composer-gap) + var(--sp-5)); }
 /* the room the composer and the dock take at the foot of the thread: a spacer, not a padding, since it is the composer's measured height (R-layout-5) */
-.ss-col::after { content: ""; display: block; height: calc(var(--ss-comp-h, 120px) + var(--hx-dock-space, 0px) + var(--composer-gap) + var(--sp-5)); }
+
 .ss-find-anchor { position: absolute; top: var(--sp-3); right: var(--sp-5); width: 1px; height: 1px; }
 
 /* a turn takes focus as a whole (KEYMAP §5): the ring sits around the entry, never around the view */
