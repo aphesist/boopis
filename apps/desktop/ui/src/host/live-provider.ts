@@ -11,6 +11,7 @@ import { emitter, feed, store } from '../data/store';
 import type { AgentTurn, BlankData, BlankWait, ConversationEvent, FormStatus, FormWait, SendMeta, SessionSummary, Turn, User, UserTurn, Wait, WaitOutcome } from '../data/types';
 import { readFlag } from '../core/settings';
 import { createDetails } from './live/details';
+import { createLiveBots } from './live/bots';
 import { todosFrom } from './live/map-details';
 import { blankData } from './live/blanks';
 import { chooseAnotherModel, createFormsHost, hasHostDialogs, tauriPickFolder } from './live/forms';
@@ -28,9 +29,9 @@ const log = logger('live');
 const GOVERNED_TOOLSETS = ['boopis'];
 
 /** the sources still served by the mock provider, shown to the user as previews (`info.preview`) or empty:
- *  bots and schedules (phase 2) and the feedforward catalog (the plugin's feedforward RPC is not built). Everything the
- *  Sessions section reads is live. `sessions.openPullRequest` stays unwired and says so. */
-export const MOCK_SOURCES = ['bots', 'schedules', 'feedforward'] as const;
+ *  the feedforward catalog (the plugin's feedforward RPC is not built). Everything the Sessions section reads is live, and
+ *  so are the bots and their schedules: Hermes profiles (`live/bots.ts`). `sessions.openPullRequest` stays unwired and says so. */
+export const MOCK_SOURCES = ['feedforward'] as const;
 
 export interface LiveOptions {
   client: GatewayClient;
@@ -43,6 +44,10 @@ export interface LiveOptions {
   pickFolder?: (() => Promise<string | null>) | null;
   /** what a free-tier limit notice does with "choose another model"; the host's setup in the desktop app */
   onFreeTierChoice?: (choice: string) => Promise<void>;
+  /** a teammate's own link to Hermes (the host's `connect(profile)`); without one its schedule and sessions are shown as unknown */
+  linkTo?: (profile: string) => Promise<GatewayClient>;
+  /** how often the teammates are read again (ms); null never (tests) */
+  botsPollMs?: number | null;
 }
 
 interface Running { turn: AgentTurn; text: string; steps: AgentTurn['steps'][number][]; startedAt: number }
@@ -408,17 +413,19 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     }
   };
 
-  const ready = Promise.all([refreshList(), details.start()]).then(() => undefined);
+  const liveBots = createLiveBots({ client, now, ...(opts.linkTo ? { linkTo: opts.linkTo } : {}), ...(opts.botsPollMs !== undefined ? { pollMs: opts.botsPollMs } : {}) });
+  Object.assign(details.unavailable, liveBots.unavailable);
+  const ready = Promise.all([refreshList(), details.start(), liveBots.ready]).then(() => undefined);
   const flag = readFlag('feedforward');
   return {
     ...mock,
-    info: { live: true, preview: new Set(['bots', 'schedules', 'feedforward']), unavailable: details.unavailable },
-    ready, sessions, waits, user, forms: formsHost.source,
+    info: { live: true, preview: new Set(['feedforward']), unavailable: details.unavailable },
+    ready, sessions, waits, user, forms: formsHost.source, bots: liveBots.source, schedules: liveBots.schedules,
     details: details.source, run: details.run,
     files: { pick: () => null, complete: (word, id) => details.files.complete(word, id) },
     dictation: { start: () => () => undefined }, // nothing hears you yet: the mock's transcript is invented text
     feedforward: { catalog: () => (flag ? mock.feedforward.catalog() : []) },
-    settled: () => details.settled(),
+    settled: async () => { await details.settled(); await liveBots.settled(); },
     ledger: { totals: () => ledgerTotals, subscribe(fn) { ledgerSubs.add(fn); return () => { ledgerSubs.delete(fn); }; } }
   };
 }

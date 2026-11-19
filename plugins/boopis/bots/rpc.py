@@ -3,7 +3,7 @@
 The rest is Hermes's own ``profiles.*`` and ``cron.manage``.
 
 ``bots.read``     every teammate's store: ``{root, bots: [{name, path, record, problem, archived}]}``
-``bots.write``    ``{name, look?, settings?}``: merge into the teammate's store, answer the whole record
+``bots.write``    ``{name, look?, settings?, approvals?}``: merge into the teammate's store, answer the whole record
 ``bots.inspect``  ``{name}``: what deleting it would remove, counted on disk
 ``bots.archive``  ``{name, paused_jobs?}``: Hermes's ``profile rename`` to ``archived--<name>``; notes paused jobs
 ``bots.restore``  ``{name}``: the way back; answers the routines to resume
@@ -40,7 +40,7 @@ def bots_read(params: Mapping[str, Any], **_: Any) -> dict[str, Any]:
 
 
 def bots_write(params: Mapping[str, Any], **_: Any) -> dict[str, Any]:
-    record = service().write(_name(params), params.get("look"), params.get("settings"))
+    record = service().write(_name(params), params.get("look"), params.get("settings"), params.get("approvals"))
     return {"record": record}
 
 

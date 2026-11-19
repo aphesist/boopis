@@ -78,13 +78,14 @@ class BotService:
         }
 
     # ───────── writing the store ─────────
-    def write(self, name: str, look: Any = None, settings: Any = None) -> dict[str, Any]:
+    def write(self, name: str, look: Any = None, settings: Any = None, approvals: Any = None) -> dict[str, Any]:
         path = homes.profile_dir(self.root, name)
         if homes.is_archived_name(name):
             raise BotRefusedError("an archived teammate is read only; restore it first")
         patch_look = store.clean_look(look) if look is not None else None
         patch_settings = store.clean_settings(settings) if settings is not None else None
-        return store.update(path, look=patch_look, settings=patch_settings)
+        patch_approvals = store.clean_approvals(approvals) if approvals is not None else None
+        return store.update(path, look=patch_look, settings=patch_settings, approvals=patch_approvals)
 
     # ───────── archive, restore, delete: Hermes's own CLI ─────────
     def archive(self, name: str, paused_jobs: Sequence[str] = ()) -> dict[str, Any]:

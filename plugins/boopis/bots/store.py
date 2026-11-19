@@ -28,6 +28,8 @@ WORKSPACES = ("worktree", "sandbox")
 _WORD = re.compile(r"^[a-z0-9][a-z0-9 -]{0,31}$")  # an orb2 shape or eye name
 _COLOUR = re.compile(r"^#[0-9a-fA-F]{6}$")
 _CAP = re.compile(r"^\d{1,4}(\.\d{1,4})?$")
+_APPROVAL = re.compile(r"^[a-z0-9][a-z0-9_-]{0,31}$")  # what a teammate asks before: a short id, on or off
+MAX_APPROVALS = 32
 _LOCKS: dict[str, threading.Lock] = {}
 
 
@@ -102,6 +104,19 @@ def clean_settings(raw: Any) -> dict[str, str]:
     return out
 
 
+def clean_approvals(raw: Any) -> dict[str, bool]:
+    """What the teammate asks about first: ``{id: true|false}``, merged over what is stored."""
+    approvals = _mapping(raw, "approvals")
+    if len(approvals) > MAX_APPROVALS:
+        raise InvalidParamsError(f"approvals has at most {MAX_APPROVALS} entries")
+    for key, value in approvals.items():
+        if not _APPROVAL.match(key) or not isinstance(value, bool):
+            raise InvalidParamsError(
+                "approvals maps a short id to true or false", data={"found": f"{key!r}: {value!r}"}
+            )
+    return {str(k): bool(v) for k, v in approvals.items()}
+
+
 def read(profile: Path) -> tuple[dict[str, Any] | None, str | None]:
     """``(record, problem)``: the record, or ``None`` and why it could not be read (no problem: there is none)."""
     path = record_path(profile)
@@ -141,6 +156,7 @@ def update(
     *,
     look: Mapping[str, str] | None = None,
     settings: Mapping[str, str] | None = None,
+    approvals: Mapping[str, bool] | None = None,
     archived: Mapping[str, Any] | _Keep | None = KEEP,
 ) -> dict[str, Any]:
     """Merge a patch into the record and write it. ``archived`` is left alone unless given (``None`` clears it)."""
@@ -156,6 +172,8 @@ def update(
             record["look"] = {**cast("dict[str, str]", record.get("look") or {}), **look}
         if settings:
             record["settings"] = {**cast("dict[str, str]", record.get("settings") or {}), **settings}
+        if approvals:
+            record["approvals"] = {**cast("dict[str, bool]", record.get("approvals") or {}), **approvals}
         if not isinstance(archived, _Keep):
             if archived is None:
                 record.pop("archived", None)

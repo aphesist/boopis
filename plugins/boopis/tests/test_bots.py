@@ -176,6 +176,24 @@ def test_write_refuses_what_is_not_a_look_or_a_setting(root: Path, svc: BotServi
         svc.write("atlas", look=look, settings=settings)
 
 
+def test_approvals_merge_and_are_a_short_id_to_a_boolean(root: Path, svc: BotService) -> None:
+    make_profile(root, "atlas")
+    assert svc.write("atlas", approvals={"deploys": True, "push": False})["approvals"] == {
+        "deploys": True,
+        "push": False,
+    }
+    assert svc.write("atlas", approvals={"push": True})["approvals"] == {"deploys": True, "push": True}
+    for bad in (
+        {"Deploys": True},
+        {"deploys": "yes"},
+        {"x" * 40: True},
+        {f"a{i}": True for i in range(40)},
+        ["deploys"],
+    ):
+        with pytest.raises(InvalidParamsError):
+            svc.write("atlas", approvals=bad)
+
+
 def test_the_store_lives_under_the_profile_s_boopis_folder_and_nowhere_in_hermes_files(
     root: Path, svc: BotService
 ) -> None:

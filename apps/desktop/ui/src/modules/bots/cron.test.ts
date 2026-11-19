@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cronValid, cronWords } from './cron';
+import { cronValid, cronWords, scheduleWords } from './cron';
 
 describe('cron in plain words', () => {
   it.each([
@@ -13,4 +13,11 @@ describe('cron in plain words', () => {
     expect(cronValid('')).toBe(true);
   });
   it('a valid but unusual schedule is shown as custom', () => { expect(cronWords('5 4 1 * *')).toBe('custom: 5 4 1 * *'); });
+});
+
+describe('a schedule as Hermes keeps it', () => {
+  it.each([
+    ['0 9 * * 1-5', 'weekdays at 09:00'], ['every 2h', 'every 2 hours'], ['every 1 hour', 'every hour'], ['every 15m', 'every 15 minutes'], ['every 3 days', 'every 3 days'],
+    ['30m', 'once, in 30 minutes'], ['1h', 'once, in 1 hour'], ['2026-12-01T09:00:00', '2026-12-01T09:00:00'], ['', 'only when asked']
+  ])('%j reads as %s', (s, words) => { expect(scheduleWords(s)).toBe(words); });
 });

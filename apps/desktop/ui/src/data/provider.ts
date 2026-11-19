@@ -7,7 +7,7 @@
    and the boopis plugin) implements the same interfaces. Nothing in a module may fabricate data a provider
    did not send: unknown is `null` or empty and the UI shows it as unknown. */
 import type {
-  Bot, BotCatalog, BotDraft, BotConfig, Change, ConversationEvent, Conversation, Connector, ContextUsage, DecisionKind, DiffFile, Environment,
+  Bot, BotCatalog, BotDraft, BotConfig, BotInfo, Change, ConversationEvent, Conversation, Connector, ContextUsage, DecisionKind, DiffFile, Environment,
   DetailsCan, DetailsNotes, FileCompletions, FormCan, FormOutcome, PickerItem, PickerKind, GovernanceState, LedgerStats, ProviderInfo, RunSnapshot, Schedule, SendMeta, SessionSummary, ThreadMessage, Todo, User, Wait, WaitOutcome
 } from './types';
 
@@ -76,6 +76,67 @@ export type BotsEvent =
   /** a reply is being worked on (true) or finished or was stopped (false) */
   | { type: 'run'; botId: string; running: boolean };
 export interface BotsSnapshot { bots: readonly Bot[]; threads: Readonly<Record<string, readonly ThreadMessage[]>> }
+/** a routine a bot is asked to take on: a job in its profile's cron store */
+export interface RoutineDraft { name: string; prompt: string; schedule: string }
+/** what the settings sheet asks to change in the real profile; a field left out is left alone */
+export interface BotPatch {
+  /** the profile's description (Hermes calls it the role) */
+  role?: string;
+  /** SOUL.md */
+  instructions?: string;
+  /** `provider/model`, one of `catalog().models` */
+  model?: string;
+  addRoutines?: readonly RoutineDraft[];
+  /** ids of jobs to remove */
+  removeRoutines?: readonly string[];
+}
+/** one file Hermes keeps that a change would write, and the change as diff lines ('+ added', '- removed', '  kept') */
+export interface PlannedWrite { file: string; diff: string }
+/** what creating a bot will do, for the user to confirm before anything is made */
+export interface CreatePlan {
+  /** the profile's name: the bot's name, numbered when it is taken */
+  profile: string;
+  /** the folder Hermes will make; null when this provider cannot tell yet */
+  folder: string | null;
+  /** the model the bot starts with, null when no provider is configured */
+  model: string | null;
+  /** what the user should know before confirming: a name turned into another, a missing key */
+  notes: readonly string[];
+}
+/** what deleting a bot removes for good, counted on the disk */
+export interface RemovalNote { folder: string; lines: readonly string[] }
+/** The live provider's: a bot is a Hermes profile, and these are the things only a real profile has. The mock's bots have
+ *  none of it, so a module that finds `admin` on the source runs the real flow and otherwise the mock's. */
+export interface BotsAdmin {
+  /** what Hermes reports about the bot is read (the profile, its routines, its recent sessions); resolves when it is in */
+  open(id: string): Promise<BotInfo>;
+  /** what creating a bot named `name` will do */
+  planCreate(name: string): CreatePlan;
+  /** makes the profile (Hermes's own `profiles.create`), sets its model, saves its look; the bot arrives as `bot-created` */
+  create(draft: BotDraft & { instructions: string }, opts: { model: string | null }): Promise<Bot>;
+  /** the writes a change would make, to show before saving */
+  review(id: string, patch: BotPatch): readonly PlannedWrite[];
+  /** writes the change to the profile; rejects with a sentence the sheet shows when Hermes refused part of it */
+  save(id: string, patch: BotPatch): Promise<void>;
+  /** pauses or resumes one routine at once */
+  setRoutinePaused(id: string, jobId: string, paused: boolean): Promise<void>;
+  /** boopis's own settings and the look: saved in the bot's own store */
+  saveOwn(id: string, patch: { cfg?: Partial<Pick<BotConfig, 'gov' | 'cap' | 'workspace'>> & { approvals?: Readonly<Record<string, boolean>> }; look?: { shape?: string; color?: string; eyes?: string } }): Promise<void>;
+  /** what deleting would remove */
+  removal(id: string): Promise<RemovalNote>;
+  /** the profile is renamed out of the way (nothing is destroyed) and its routines paused; resolves with the way back */
+  archive(id: string): Promise<{ undo(): Promise<void> }>;
+  /** the profile and everything in it is deleted; `confirm` is its name */
+  remove(id: string, confirm: string): Promise<void>;
+  /** the models a bot can be set to, from the configured providers: [`provider/model`, ...] */
+  models(): readonly string[];
+  /** archived teammates (profiles renamed out of the way): `id` is the profile's name now, `was` the name it will return to */
+  archived: Watch<ReadonlyArray<{ id: string; name: string; was: string; at: string }>>;
+  /** brings an archived teammate back under its old name; rejects when that name is taken again */
+  restoreArchived(id: string): Promise<void>;
+  /** why the roster could not be read (Hermes said no), null when it could */
+  note(): string | null;
+}
 export interface BotsSource extends Feed<BotsSnapshot, BotsEvent> {
   catalog(): BotCatalog;
   /* commands */
@@ -88,6 +149,8 @@ export interface BotsSource extends Feed<BotsSnapshot, BotsEvent> {
   update(id: string, patch: { role?: string; cfg?: Partial<BotConfig> }): void;
   create(draft: BotDraft & { instructions: string }): Bot;
   archive(id: string): void;
+  /** the live provider's: real profiles (see `BotsAdmin`); absent on the mock */
+  admin?: BotsAdmin;
 }
 
 /* ───────── what waits on the user (approvals, open questions and forms), for the dock and the shell ───────── */

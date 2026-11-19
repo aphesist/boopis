@@ -32,7 +32,7 @@ describe('the details panels follow a session and show only what Hermes and the 
     expect(provider.info.live).toBe(true);
     expect(provider.info.unavailable['sessions.fork']).toMatch(/session\.branch/);
     expect(provider.info.unavailable['sessions.compact']).toMatch(/session\.compress/);
-    expect([...provider.info.preview].sort()).toEqual(['bots', 'feedforward', 'schedules']);
+    expect([...provider.info.preview]).toEqual(['feedforward']);
   });
 
   it('fills every panel from the gateway and the plugin', async () => {
