@@ -1,6 +1,6 @@
 [package]
 name = "hx-proto"
-description = "The wire contract between the hypotaxis plugin and the hx binary: JSON-RPC 2.0 framing, error catalog, txn types, handler registry, logging."
+description = "The wire contract between the boopis plugin and the hx binary: JSON-RPC 2.0 framing, error catalog, txn types, handler registry, logging."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

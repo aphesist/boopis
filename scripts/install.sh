@@ -14,22 +14,22 @@ set -o pipefail
 # Where releases come from. Everything that names the project lives here and nowhere else.
 # ----------------------------------------------------------------------------------------------------------------------
 BOOPIS_OWNER=aphesist
-BOOPIS_REPO=hypotaxis
+BOOPIS_REPO=boopis
 # The command, the install folder and the menu entry.
 APP=boopis
 APP_COMMENT='A desktop app for AI coding agents'
-# The window class the AppImage's binary reports: GTK takes it from the program name (Cargo's bin, `hypotaxis`), as the
+# The window class the AppImage's binary reports: GTK takes it from the program name (Cargo's bin, `boopis`), as the
 # app sets no GTK application id (`enableGtkAppId` is off in tauri.conf.json).
-APP_WM_CLASS=hypotaxis
+APP_WM_CLASS=boopis
 # The files of a release. {v} is the version without its leading v.
-ARTIFACT_LINUX_X86_64='Hypotaxis_{v}_amd64.AppImage'
-ARTIFACT_MACOS_AARCH64='Hypotaxis_{v}_aarch64.dmg'
+ARTIFACT_LINUX_X86_64='boopis_{v}_amd64.AppImage'
+ARTIFACT_MACOS_AARCH64='boopis_{v}_aarch64.dmg'
 CHECKSUMS_NAME=SHA256SUMS
 # Where to ask. The defaults are GitHub's; BOOPIS_BASE_URL and BOOPIS_API_URL point at a mirror (or a folder, in tests).
 BASE_URL=${BOOPIS_BASE_URL:-https://github.com}
 API_URL=${BOOPIS_API_URL:-https://api.github.com}
 # Where the app keeps its own data (it is never removed by --uninstall).
-APP_DATA_DIR='.local/share/dev.aphesist.hypotaxis'
+APP_DATA_DIR='.local/share/dev.aphesist.boopis'
 # ----------------------------------------------------------------------------------------------------------------------
 
 # Options.

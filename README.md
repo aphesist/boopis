@@ -1,4 +1,4 @@
-# hypotaxis
+# boopis
 
 A desktop coding harness that runs any model, through any subscription you already pay for, with [contraprova](https://github.com/aphesist/contraprova)'s governance built in and measured.
 
@@ -9,7 +9,7 @@ A desktop coding harness that runs any model, through any subscription you alrea
 - **App:** Tauri, with two sections, Sessions and Bots, and a dock.
 
 ## Status
-Under construction. Phase 1 is the Sessions section, good enough to replace Claude Code for a week. The only measured numbers are contraprova's (on 88 fresh SWE-bench Pro tasks, on par with a single Opus at about 61% less cost per solved task). Everything hypotaxis adds is a hypothesis until its study is published.
+Under construction. Phase 1 is the Sessions section, good enough to replace Claude Code for a week. The only measured numbers are contraprova's (on 88 fresh SWE-bench Pro tasks, on par with a single Opus at about 61% less cost per solved task). Everything boopis adds is a hypothesis until its study is published.
 
 ## Read first
 - `AGENTS.md`: invariants and where everything lives

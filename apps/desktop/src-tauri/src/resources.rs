@@ -2,7 +2,7 @@
 //!
 //! Tauri looks in `<exe dir>/../lib/<productName>` and then in `/usr/lib/<productName>`; inside an `AppImage` that is the
 //! mounted image, and the bundler put the files there. A native package (`packaging/arch`) names its directory after the
-//! binary it installs, because the product's name is not a path it can rely on (it changes with the rename). So when
+//! binary it installs, because the product's display name is not a path it can rely on. So when
 //! Tauri's directory carries none of the app's files, the one named after the running executable is tried: a binary at
 //! `/usr/bin/boopis` finds `/usr/lib/boopis`. Nothing else changes: a build that finds neither keeps Tauri's answer.
 

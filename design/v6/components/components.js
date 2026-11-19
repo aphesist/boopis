@@ -1,4 +1,4 @@
-/* hypotaxis v6 · shared component library (owner: design-system agent)
+/* boopis v6 · shared component library (owner: design-system agent)
    window.HX.ui: one canonical version of every piece more than one module draws.
    The system is design-system/DESIGN-SYSTEM.md; what each module deletes and calls instead is MIGRATION.md.
 

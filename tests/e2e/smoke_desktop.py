@@ -1,12 +1,12 @@
 """Headless smoke of the packaged desktop app against a real Hermes gateway and the fake model.
 
-    HX_E2E_HERMES_ENV=<spike install> python3 tests/e2e/smoke_desktop.py <Hypotaxis.AppImage | app binary> [shot.png]
+    HX_E2E_HERMES_ENV=<spike install> python3 tests/e2e/smoke_desktop.py <boopis.AppImage | app binary> [shot.png]
 
 It starts the stack (``serve_stack.py``), then WebKitWebDriver under Xvfb, which launches the app with the stack's
 environment. The app's window loads the UI, the host connects to the gateway, the script clicks "New session", types a
 prompt with a scripted reply, and waits for that reply to stream into the conversation.
 
-Two things make that session possible. The app is told to use this Hermes (``HYPOTAXIS_HERMES=existing``): a packaged
+Two things make that session possible. The app is told to use this Hermes (``BOOPIS_HERMES=existing``): a packaged
 app carries its own runtime and would otherwise unpack it and ignore this one. And the stack's home is marked as set up
 (``setup-done.json``, which the host's own tests read as "set up"), because the UI shows first-run setup instead of a
 session until setup has finished; the first-run flow itself is tested by ``tests/setup_live.rs``.
@@ -81,7 +81,7 @@ def main() -> int:
             print("no Hermes install: set HX_E2E_HERMES_ENV", file=sys.stderr)
             return 3
         info = json.loads(line)
-        marker = Path(info["home"]) / "hypotaxis" / "setup.json"
+        marker = Path(info["home"]) / "boopis" / "setup.json"
         marker.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(SETUP_DONE, marker)
         runtime = tempfile.mkdtemp(prefix="hx-run-")
@@ -89,7 +89,7 @@ def main() -> int:
         env = {
             **os.environ,
             **info["env"],
-            "HYPOTAXIS_HERMES": "existing",
+            "BOOPIS_HERMES": "existing",
             "XDG_RUNTIME_DIR": runtime,
             "GDK_BACKEND": "x11",
             "APPIMAGE_EXTRACT_AND_RUN": "1",

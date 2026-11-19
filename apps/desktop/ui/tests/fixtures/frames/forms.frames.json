@@ -142,11 +142,11 @@
     "model": "fake-a",
     "provider": "main",
     "toolsets": [
-     "hypotaxis",
+     "boopis",
      "todo"
     ],
     "client": {
-     "name": "hypotaxis",
+     "name": "boopis",
      "version": "0"
     }
    }
@@ -196,7 +196,7 @@
     "prompts": [],
     "info": {
      "tools": {
-      "hypotaxis": [
+      "boopis": [
        "ask",
        "dispatch",
        "exec",
@@ -219,7 +219,7 @@
      "project": null,
      "provider": "custom:main",
      "enabled_toolsets": [
-      "hypotaxis",
+      "boopis",
       "todo"
      ],
      "tool_availability": {
@@ -240,7 +240,7 @@
      "fast": false,
      "launch_request": {
       "client": {
-       "name": "hypotaxis",
+       "name": "boopis",
        "version": "0"
       },
       "cwd": "/work/proj",
@@ -248,12 +248,12 @@
       "provider": "main",
       "source": "gui",
       "toolsets": [
-       "hypotaxis",
+       "boopis",
        "todo"
       ]
      },
      "client": {
-      "name": "hypotaxis",
+      "name": "boopis",
       "version": "0"
      },
      "title": null,
@@ -285,7 +285,7 @@
   "frame": {
    "jsonrpc": "2.0",
    "id": 4,
-   "method": "plugin.hypotaxis.mode.set",
+   "method": "plugin.boopis.mode.set",
    "params": {
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
     "mode": "ungoverned"
@@ -305,7 +305,7 @@
   "frame": {
    "jsonrpc": "2.0",
    "id": 5,
-   "method": "plugin.hypotaxis.form.list",
+   "method": "plugin.boopis.form.list",
    "params": {
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff"
    }
@@ -463,7 +463,7 @@
     "authority_epoch": 1,
     "execution_generation": 1,
     "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
-    "type": "plugin.hypotaxis.ledger.appended",
+    "type": "plugin.boopis.ledger.appended",
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
     "payload": {
      "actor": "plugin",
@@ -512,7 +512,7 @@
      "fast": false,
      "launch_request": {
       "client": {
-       "name": "hypotaxis",
+       "name": "boopis",
        "version": "0"
       },
       "cwd": "/work/proj",
@@ -520,12 +520,12 @@
       "provider": "main",
       "source": "gui",
       "toolsets": [
-       "hypotaxis",
+       "boopis",
        "todo"
       ]
      },
      "client": {
-      "name": "hypotaxis",
+      "name": "boopis",
       "version": "0"
      },
      "title": "@@call request_credential {\"provider\"\u2026",
@@ -582,7 +582,7 @@
     "authority_epoch": 1,
     "execution_generation": 1,
     "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
-    "type": "plugin.hypotaxis.ledger.appended",
+    "type": "plugin.boopis.ledger.appended",
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
     "payload": {
      "actor": "orchestrator:custom/fake-a",
@@ -665,7 +665,7 @@
     "authority_epoch": 1,
     "execution_generation": 1,
     "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
-    "type": "plugin.hypotaxis.ledger.appended",
+    "type": "plugin.boopis.ledger.appended",
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
     "payload": {
      "actor": "orchestrator:custom/fake-a",
@@ -705,7 +705,7 @@
     "authority_epoch": 1,
     "execution_generation": 1,
     "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
-    "type": "plugin.hypotaxis.form.opened",
+    "type": "plugin.boopis.form.opened",
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
     "payload": {
      "form_id": "01a1f172-06fe-7b1f-adfa-66f5b708c906",
@@ -747,7 +747,7 @@
     "authority_epoch": 1,
     "execution_generation": 1,
     "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
-    "type": "plugin.hypotaxis.ledger.appended",
+    "type": "plugin.boopis.ledger.appended",
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
     "payload": {
      "actor": "orchestrator:custom/fake-a",
@@ -890,7 +890,7 @@
     "authority_epoch": 1,
     "execution_generation": 1,
     "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
-    "type": "plugin.hypotaxis.ledger.appended",
+    "type": "plugin.boopis.ledger.appended",
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
     "payload": {
      "actor": "orchestrator:custom/fake-a",
@@ -978,7 +978,7 @@
     "authority_epoch": 1,
     "execution_generation": 1,
     "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
-    "type": "plugin.hypotaxis.ledger.appended",
+    "type": "plugin.boopis.ledger.appended",
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
     "payload": {
      "actor": "orchestrator:custom/fake-a",
@@ -1016,7 +1016,7 @@
     "authority_epoch": 1,
     "execution_generation": 1,
     "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
-    "type": "plugin.hypotaxis.form.opened",
+    "type": "plugin.boopis.form.opened",
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
     "payload": {
      "form_id": "01a1f172-0732-7511-bf19-1cdd0fc773ca",
@@ -1058,7 +1058,7 @@
     "authority_epoch": 1,
     "execution_generation": 1,
     "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
-    "type": "plugin.hypotaxis.ledger.appended",
+    "type": "plugin.boopis.ledger.appended",
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
     "payload": {
      "actor": "orchestrator:custom/fake-a",
@@ -1206,7 +1206,7 @@
     "authority_epoch": 1,
     "execution_generation": 1,
     "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
-    "type": "plugin.hypotaxis.ledger.appended",
+    "type": "plugin.boopis.ledger.appended",
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
     "payload": {
      "actor": "orchestrator:custom/fake-a",
@@ -1307,7 +1307,7 @@
     "authority_epoch": 1,
     "execution_generation": 1,
     "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
-    "type": "plugin.hypotaxis.ledger.appended",
+    "type": "plugin.boopis.ledger.appended",
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
     "payload": {
      "actor": "orchestrator:custom/fake-a",
@@ -1345,7 +1345,7 @@
     "authority_epoch": 1,
     "execution_generation": 1,
     "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
-    "type": "plugin.hypotaxis.form.opened",
+    "type": "plugin.boopis.form.opened",
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
     "payload": {
      "form_id": "01a1f172-075b-7b13-8c07-56c2289d4f06",
@@ -1386,7 +1386,7 @@
     "authority_epoch": 1,
     "execution_generation": 1,
     "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
-    "type": "plugin.hypotaxis.ledger.appended",
+    "type": "plugin.boopis.ledger.appended",
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
     "payload": {
      "actor": "orchestrator:custom/fake-a",
@@ -1572,7 +1572,7 @@
     "authority_epoch": 1,
     "execution_generation": 1,
     "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
-    "type": "plugin.hypotaxis.ledger.appended",
+    "type": "plugin.boopis.ledger.appended",
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
     "payload": {
      "actor": "orchestrator:custom/fake-a",
@@ -1610,7 +1610,7 @@
     "authority_epoch": 1,
     "execution_generation": 1,
     "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
-    "type": "plugin.hypotaxis.ledger.appended",
+    "type": "plugin.boopis.ledger.appended",
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
     "payload": {
      "actor": "plugin",
@@ -1715,7 +1715,7 @@
     "payload": {
      "provider": "custom:main",
      "tools": {
-      "hypotaxis": [
+      "boopis": [
        "ask",
        "dispatch",
        "exec",
@@ -1743,7 +1743,7 @@
      "fast": false,
      "launch_request": {
       "client": {
-       "name": "hypotaxis",
+       "name": "boopis",
        "version": "0"
       },
       "cwd": "/work/proj",
@@ -1751,12 +1751,12 @@
       "provider": "main",
       "source": "gui",
       "toolsets": [
-       "hypotaxis",
+       "boopis",
        "todo"
       ]
      },
      "client": {
-      "name": "hypotaxis",
+      "name": "boopis",
       "version": "0"
      },
      "title": "@@call request_credential {\"provider\"\u2026",
@@ -1840,7 +1840,7 @@
   "frame": {
    "jsonrpc": "2.0",
    "id": 7,
-   "method": "plugin.hypotaxis.form.list",
+   "method": "plugin.boopis.form.list",
    "params": {
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff"
    }
@@ -1964,7 +1964,7 @@
   "frame": {
    "jsonrpc": "2.0",
    "id": 8,
-   "method": "plugin.hypotaxis.form.submit",
+   "method": "plugin.boopis.form.submit",
    "params": {
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
     "form_id": "01a1f172-06fe-7b1f-adfa-66f5b708c906",
@@ -1981,7 +1981,7 @@
    "jsonrpc": "2.0",
    "method": "event",
    "params": {
-    "type": "plugin.hypotaxis.ledger.appended",
+    "type": "plugin.boopis.ledger.appended",
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
     "payload": {
      "actor": "user",
@@ -2017,7 +2017,7 @@
    "jsonrpc": "2.0",
    "method": "event",
    "params": {
-    "type": "plugin.hypotaxis.form.resolved",
+    "type": "plugin.boopis.form.resolved",
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
     "payload": {
      "form_id": "01a1f172-06fe-7b1f-adfa-66f5b708c906",
@@ -2044,7 +2044,7 @@
   "frame": {
    "jsonrpc": "2.0",
    "id": 9,
-   "method": "plugin.hypotaxis.form.submit",
+   "method": "plugin.boopis.form.submit",
    "params": {
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
     "form_id": "01a1f172-0732-7511-bf19-1cdd0fc773ca",
@@ -2060,7 +2060,7 @@
    "jsonrpc": "2.0",
    "method": "event",
    "params": {
-    "type": "plugin.hypotaxis.ledger.appended",
+    "type": "plugin.boopis.ledger.appended",
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
     "payload": {
      "actor": "user",
@@ -2096,7 +2096,7 @@
    "jsonrpc": "2.0",
    "method": "event",
    "params": {
-    "type": "plugin.hypotaxis.form.resolved",
+    "type": "plugin.boopis.form.resolved",
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
     "payload": {
      "form_id": "01a1f172-0732-7511-bf19-1cdd0fc773ca",
@@ -2123,7 +2123,7 @@
   "frame": {
    "jsonrpc": "2.0",
    "id": 10,
-   "method": "plugin.hypotaxis.form.cancel",
+   "method": "plugin.boopis.form.cancel",
    "params": {
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
     "form_id": "01a1f172-075b-7b13-8c07-56c2289d4f06"
@@ -2136,7 +2136,7 @@
    "jsonrpc": "2.0",
    "method": "event",
    "params": {
-    "type": "plugin.hypotaxis.ledger.appended",
+    "type": "plugin.boopis.ledger.appended",
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
     "payload": {
      "actor": "user",
@@ -2170,7 +2170,7 @@
    "jsonrpc": "2.0",
    "method": "event",
    "params": {
-    "type": "plugin.hypotaxis.form.resolved",
+    "type": "plugin.boopis.form.resolved",
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
     "payload": {
      "form_id": "01a1f172-075b-7b13-8c07-56c2289d4f06",
@@ -2197,7 +2197,7 @@
   "frame": {
    "jsonrpc": "2.0",
    "id": 11,
-   "method": "plugin.hypotaxis.form.list",
+   "method": "plugin.boopis.form.list",
    "params": {
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff"
    }
@@ -2473,7 +2473,7 @@
     "prompts": [],
     "info": {
      "tools": {
-      "hypotaxis": [
+      "boopis": [
        "ask",
        "dispatch",
        "exec",
@@ -2498,7 +2498,7 @@
      "system_prompt": "(trimmed)",
      "context_length": 200000,
      "enabled_toolsets": [
-      "hypotaxis",
+      "boopis",
       "todo"
      ],
      "tool_availability": {
@@ -2519,7 +2519,7 @@
      "fast": false,
      "launch_request": {
       "client": {
-       "name": "hypotaxis",
+       "name": "boopis",
        "version": "0"
       },
       "cwd": "/work/proj",
@@ -2527,12 +2527,12 @@
       "provider": "main",
       "source": "gui",
       "toolsets": [
-       "hypotaxis",
+       "boopis",
        "todo"
       ]
      },
      "client": {
-      "name": "hypotaxis",
+      "name": "boopis",
       "version": "0"
      },
      "title": "@@call request_credential {\"provider\"\u2026",
@@ -2587,7 +2587,7 @@
    "id": 16,
    "result": {
     "tools": {
-     "hypotaxis": [
+     "boopis": [
       "ask",
       "dispatch",
       "exec",
@@ -2612,7 +2612,7 @@
     "system_prompt": "(trimmed)",
     "context_length": 200000,
     "enabled_toolsets": [
-     "hypotaxis",
+     "boopis",
      "todo"
     ],
     "tool_availability": {
@@ -2633,7 +2633,7 @@
     "fast": false,
     "launch_request": {
      "client": {
-      "name": "hypotaxis",
+      "name": "boopis",
       "version": "0"
      },
      "cwd": "/work/proj",
@@ -2641,12 +2641,12 @@
      "provider": "main",
      "source": "gui",
      "toolsets": [
-      "hypotaxis",
+      "boopis",
       "todo"
      ]
     },
     "client": {
-     "name": "hypotaxis",
+     "name": "boopis",
      "version": "0"
     },
     "title": "@@call request_credential {\"provider\"\u2026",
@@ -2757,7 +2757,7 @@
   "frame": {
    "jsonrpc": "2.0",
    "id": 18,
-   "method": "plugin.hypotaxis.describe",
+   "method": "plugin.boopis.describe",
    "params": {
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff"
    }
@@ -2776,7 +2776,7 @@
      "cwd": "/work/proj"
     },
     "version": "0.1.0",
-    "protocol": "hypotaxis-v1",
+    "protocol": "boopis-v1",
     "capabilities": [
      "describe",
      "mode.set",
@@ -2811,7 +2811,7 @@
   "frame": {
    "jsonrpc": "2.0",
    "id": 19,
-   "method": "plugin.hypotaxis.ledger.stats",
+   "method": "plugin.boopis.ledger.stats",
    "params": {
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff"
    }
@@ -2850,7 +2850,7 @@
   "frame": {
    "jsonrpc": "2.0",
    "id": 20,
-   "method": "plugin.hypotaxis.cascade.state",
+   "method": "plugin.boopis.cascade.state",
    "params": {
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff"
    }
@@ -2903,7 +2903,7 @@
   "frame": {
    "jsonrpc": "2.0",
    "id": 21,
-   "method": "plugin.hypotaxis.checkpoint.list",
+   "method": "plugin.boopis.checkpoint.list",
    "params": {
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff"
    }
@@ -2924,7 +2924,7 @@
   "frame": {
    "jsonrpc": "2.0",
    "id": 22,
-   "method": "plugin.hypotaxis.checkpoint.diff",
+   "method": "plugin.boopis.checkpoint.diff",
    "params": {
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff"
    }
@@ -2946,7 +2946,7 @@
   "frame": {
    "jsonrpc": "2.0",
    "id": 23,
-   "method": "plugin.hypotaxis.ledger.tail",
+   "method": "plugin.boopis.ledger.tail",
    "params": {
     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
     "since_seq": -1,
@@ -3282,7 +3282,7 @@
   "frame": {
    "jsonrpc": "2.0",
    "id": 24,
-   "method": "plugin.hypotaxis.compat.inventory",
+   "method": "plugin.boopis.compat.inventory",
    "params": {
     "cwd": "/work/proj"
    }
@@ -3309,7 +3309,7 @@
         "pre_tool_call"
        ],
        "fidelity": "full",
-       "note": "A hook `allow` skips hypotaxis-level approval prompts only (COMPAT 4.4); Hermes approvals and hardline blocks still apply."
+       "note": "A hook `allow` skips boopis-level approval prompts only (COMPAT 4.4); Hermes approvals and hardline blocks still apply."
       },
       "PostToolUse": {
        "hermes": [
@@ -3354,7 +3354,7 @@
         "post_llm_call"
        ],
        "fidelity": "partial",
-       "note": "Hermes has no turn-end hook that can continue a turn, and its pre_verify fires only after write_file or patch edits (not ship). So Stop runs at the final post_llm_call of every completed turn, and a block re-enters as a queued user message through ctx.inject_message: a new turn that starts after the answer, not a continuation inside it. Needs plugins.entries.hypotaxis.allow_gateway_injection."
+       "note": "Hermes has no turn-end hook that can continue a turn, and its pre_verify fires only after write_file or patch edits (not ship). So Stop runs at the final post_llm_call of every completed turn, and a block re-enters as a queued user message through ctx.inject_message: a new turn that starts after the answer, not a continuation inside it. Needs plugins.entries.boopis.allow_gateway_injection."
       },
       "SubagentStart": {
        "hermes": [
@@ -3400,8 +3400,8 @@
       "FileChanged": "Hermes has no file-watch event.",
       "CwdChanged": "Hermes has no cwd-change event.",
       "DirectoryAdded": "Hermes has no additional-directory concept.",
-      "WorktreeCreate": "Worktrees are owned by the hypotaxis host, not by Hermes.",
-      "WorktreeRemove": "Worktrees are owned by the hypotaxis host, not by Hermes.",
+      "WorktreeCreate": "Worktrees are owned by the boopis host, not by Hermes.",
+      "WorktreeRemove": "Worktrees are owned by the boopis host, not by Hermes.",
       "Elicitation": "Hermes MCP elicitation consent is an approval, not a hookable event.",
       "ElicitationResult": "Hermes MCP elicitation consent is an approval, not a hookable event.",
       "MessageDisplay": "Hermes has no message-display event.",

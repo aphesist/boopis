@@ -1,4 +1,4 @@
-//! The wire contract between the hypotaxis plugin (Python) and `hx` (Rust).
+//! The wire contract between the boopis plugin (Python) and `hx` (Rust).
 //!
 //! - [`jsonrpc`]: JSON-RPC 2.0 framing, newline-delimited over stdio.
 //! - [`error`]: the error catalog (`errors.json`, shared with Python) and [`AppError`].

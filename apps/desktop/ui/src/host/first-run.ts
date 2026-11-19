@@ -4,6 +4,7 @@
    (`useFormsHost`) while it is on screen: no data provider exists yet. A secret goes from the field to the host and no
    further. The rest is the design system's own button and tokens. */
 import { ui } from '../components';
+import { welcomeLogo } from '../components/logo';
 import '../modules/cards';
 import { useFormsHost } from '../modules/cards/forms-host';
 import type { FormsSource } from '../data/provider';
@@ -36,20 +37,22 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
   if (!check.needed) return;
   const root = el('div', { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'fr-title', class: 'hx-first-run',
     style: 'position:fixed;inset:0;z-index:var(--z-palette);display:grid;place-content:center;gap:var(--sp-4);padding:var(--sp-6);background:var(--bg-0);color:var(--text);font:var(--fs-m)/var(--lh) var(--sans)' });
+  /* the welcome is a big moment: the logo's hero, once, above whatever step is drawn (it is not redrawn with the card) */
+  root.append(welcomeLogo());
   mount.append(root);
   return new Promise<void>((resolve) => {
     let busy = false;
     const draw = (status: SetupStatus | null, error: string): void => {
       const card = el('div', { style: 'display:grid;gap:var(--sp-4);max-width:var(--measure);width:min(90vw,var(--measure))' });
-      card.append(el('h1', { id: 'fr-title', style: 'margin:0;font:600 var(--fs-xl)/var(--lh-tight) var(--sans)' }, 'Set up hypotaxis'));
+      card.append(el('h1', { id: 'fr-title', style: 'margin:0;font:600 var(--fs-xl)/var(--lh-tight) var(--sans)' }, 'Set up boopis'));
       if (error) card.append(el('p', { role: 'alert', style: 'margin:0;color:var(--red-text)' }, error));
       if (!status) {
-        card.append(el('p', { style: 'margin:0;color:var(--text-dim)' }, 'hypotaxis installs its plugin into your Hermes profile and asks before it changes any Hermes setting. Nothing is installed without you.'));
+        card.append(el('p', { style: 'margin:0;color:var(--text-dim)' }, 'boopis installs its plugin into your Hermes profile and asks before it changes any Hermes setting. Nothing is installed without you.'));
         card.append(button('Set up', 'primary', () => { void run(null, false); }));
       } else {
         card.append(steps(status));
         if (status.install_command) {
-          card.append(el('p', { style: 'margin:0' }, 'Install Hermes by running this in a terminal. hypotaxis never runs it for you.'), el('code', { class: 'ui-code', style: 'display:block;overflow-x:auto' }, status.install_command));
+          card.append(el('p', { style: 'margin:0' }, 'Install Hermes by running this in a terminal. boopis never runs it for you.'), el('code', { class: 'ui-code', style: 'display:block;overflow-x:auto' }, status.install_command));
           card.append(button('Check again', 'primary', () => { void run(null, false); }));
         }
         if (status.steps.some((s) => s.state === 'declined')) card.append(button('Review again', 'ghost', () => { void run(null, true); }));
@@ -59,10 +62,12 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
           card.append(el('h2', { style: 'margin:0;font:600 var(--fs-l)/var(--lh-tight) var(--sans)' }, 'You are set'));
           const list = el('ul', { style: 'margin:0;padding-left:1.2em;color:var(--text-dim)' });
           for (const line of status.receipt?.lines ?? []) list.append(el('li', {}, line));
-          card.append(list, button('Open hypotaxis', 'primary', () => { useFormsHost(null); root.remove(); resolve(); }));
+          card.append(list, button('Open boopis', 'primary', () => { useFormsHost(null); root.remove(); resolve(); }));
         }
       }
-      root.replaceChildren(card);
+      card.dataset['frCard'] = '';
+      const shown = root.querySelector('[data-fr-card]');
+      if (shown) shown.replaceWith(card); else root.append(card);
     };
     /* the form card's answer sink: `setup_advance` takes the answer, and what it returns is drawn once the receipt has shown */
     const hostForms = (): FormsSource => ({

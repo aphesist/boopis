@@ -1,0 +1,112 @@
+/* boopis v6 · mods (proposal; MODS.md §3). The surfaces a mod draws into: a pane tab, the band above the composer,
+   the status line, a placed row, a toast, the mod as an origin. Only what is its own; every piece it holds is the
+   library's (components.css, mod-view.css, cards.css). Tokens only: no literal colour, family, radius or off-scale size. */
+
+/* ───────────── the slots in the session's composer host: empty ones take no room ───────────── */
+.ss-mods:empty { display: none; }
+.ss-mods--band { display: flex; flex-direction: column; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+
+/* ───────────── the drawer: the band and an inline pane share it. Inset (what the system set into the work), the
+   corner of a card, concentric with the controls at its edge (DESIGN-SYSTEM §8.2) ───────────── */
+.mod-band, .mod-inline {
+  --r-outer: var(--r-m); --pad: 4px; --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad)));
+  box-sizing: border-box; border-radius: var(--r-outer); padding: var(--pad);
+  --sq-bg: var(--bg-0); background: var(--sq-bg); --sq-line: var(--hair); box-shadow: inset 0 0 0 1px var(--hair);
+  font: 400 var(--fs-s)/var(--lh-ui) var(--sans); color: var(--text); text-transform: none;
+}
+.mod-band *, .mod-inline * { box-sizing: border-box; }
+
+/* a row: its mod, what it says, the fold. 32px, so the composer under it stays the loudest thing */
+.mod-row { display: grid; grid-template-columns: var(--mod-who-w, 112px) minmax(0, 1fr) auto; align-items: center; column-gap: var(--sp-3); min-height: 32px; padding-left: 10px; }
+.mod-row + .mod-row { box-shadow: inset 0 1px 0 var(--hair); }
+.mod-row__who .mv-by { max-width: 100%; }
+.mod-row__who { min-width: 0; overflow: hidden; font: 400 var(--fs-xs)/1 var(--sans); color: var(--text-dim); }
+.mod-row__body { min-width: 0; display: flex; }
+.mod-row__body > .mv-root { flex: 1; min-width: 0; }
+.mod-row[data-open="true"] { align-items: start; padding-block: 2px; }
+.mod-row[data-open="true"] .mod-row__who { padding-top: 9px; }
+.mod-row[data-open="true"] .mod-row__body { padding-block: 4px 6px; }
+.mod-row[data-open="true"] .mod-chev { margin-top: 4px; }
+.mod-chev { border-radius: var(--r-in); }
+.mod-chev .ui-icon { transition: transform var(--dur-2) var(--ease); }
+.mod-chev[aria-expanded="true"] .ui-icon { transform: rotate(90deg); }
+.mod-row .mv-root .ui-btn--s { height: calc(var(--ctl-s) - 4px); border-radius: var(--r-in); }
+
+/* an inline pane (narrow windows): a head, then the tree in its own scroll */
+.mod-inline__head { display: flex; align-items: center; gap: var(--sp-1); height: 32px; padding-left: 10px; }
+.mod-inline__head .mv-by { color: var(--text-dim); font-size: var(--fs-xs); }
+.mod-inline__title { flex: 1; min-width: 0; margin-left: var(--sp-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 var(--fs-s)/1 var(--sans); color: var(--text-strong); }
+.mod-inline__head .ui-ib { border-radius: var(--r-in); }
+.mod-inline__body { padding: var(--sp-1) 10px var(--sp-3); max-height: min(28vh, 260px); overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--bg-4) transparent; }
+
+/* ───────────── a pane: a tab in the details panel ───────────── */
+.mod-head { padding-right: 12px; }
+.mod-tabs { display: flex; gap: 2px; min-width: 0; margin-left: -6px; overflow-x: auto; scrollbar-width: none; }
+.mod-tabs::-webkit-scrollbar { display: none; }
+.mod-tabs[data-more] { -webkit-mask-image: linear-gradient(to right, var(--text) calc(100% - 28px), transparent); mask-image: linear-gradient(to right, var(--text) calc(100% - 28px), transparent); }
+.mod-tab {
+  appearance: none; flex: none; display: inline-flex; align-items: center; max-width: 148px; height: var(--ctl-s); padding: 0 10px; margin: 0; border: 0; border-radius: var(--r-s);
+  --sq-bg: transparent; background: var(--sq-bg); color: var(--text-dim); font: 500 var(--fs-s)/1 var(--sans); text-transform: var(--ui-case); white-space: nowrap; cursor: pointer;
+  transition: background-color var(--dur-out) var(--ease), color var(--dur-out) var(--ease), transform var(--dur-press) var(--ease);
+}
+.mod-tab:hover { --sq-bg: var(--hover); background: var(--sq-bg); color: var(--text); transition-duration: var(--dur-1); }
+.mod-tab:active { transform: translateY(1px) scale(.985); }
+.mod-tab[aria-selected="true"] { --sq-bg: var(--current); background: var(--sq-bg); color: var(--text-strong); }
+.mod-tab:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.mod-tab[data-sq-on]:focus-visible { outline: none; }
+.mod-tab .mv-by__g { color: currentColor; opacity: .8; }
+.mod-pane { box-shadow: inset 0 1px 0 var(--hair); }
+.mod-pane__head { display: flex; align-items: center; justify-content: space-between; height: 36px; padding: 0 12px 0 20px; }
+.mod-pane__head .mv-by { color: var(--text-quiet); font: 400 var(--fs-xs)/1 var(--sans); }
+.mod-pane__head .ui-ib { border-radius: var(--r-s); }
+.mod-pane__body { padding: var(--sp-1) 20px var(--sp-4); }
+.mod-note { margin: 0; font-size: var(--fs-xs); line-height: 1.5; color: var(--text-quiet); }
+
+/* ───────────── the status line, under the composer: mono 11, the mod's name first, quiet ───────────── */
+.ss-mods--status:not(:empty) { display: flex; flex-wrap: wrap; column-gap: var(--sp-4); height: 22px; padding: 6px 14px 0; overflow: hidden; }   /* what does not fit on the one line is left out, never cut in half */
+.mod-status__i { flex: 0 1 auto; max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 var(--fs-2xs)/16px var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); text-transform: none; }
+.mod-status__n { color: var(--text-dim); }
+.mod-status__t { font-variant-numeric: tabular-nums; }
+
+/* ───────────── a placed row: the mod's glyph and name in the call-number margin; the tree sits on the ground ───────────── */
+.ui-entry[data-kind="mod"] .ui-callno__who .mv-by__g { color: var(--icon); }
+.ui-entry[data-kind="mod"] .mv-root { width: 100%; font-size: var(--fs-m); line-height: var(--lh); }
+.ui-entry[data-kind="mod"][data-mod-card] hx-card { width: 100%; }
+.ui-entry[data-kind="mod"][data-mod-row] .mv-box { max-width: 100%; }
+
+/* ───────────── a toast from a mod: the notice, led by the mod ───────────── */
+.ui-toast > span.mod-toast { display: flex; align-items: center; gap: var(--sp-3); min-width: 0; padding-block: 8px; }
+.mod-toast__who { flex: none; color: var(--text-dim); font-weight: 500; }
+.mod-toast__t { min-width: 0; overflow-wrap: anywhere; }
+
+/* ───────────── the mod as an origin (cards.js draws it; these are its details) ───────────── */
+.cd-by[data-origin="mod"] .cd-names__first { font-weight: 500; }
+.cd-by[data-origin="mod"] .cd-names__via { color: var(--text-quiet); font-weight: 400; }
+.cd-swatches { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
+.cd-swatch { display: flex; flex-direction: column; gap: 6px; font: 400 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); text-transform: none; }
+.cd-swatch i { display: block; width: 40px; height: 24px; border-radius: var(--r-xs); box-shadow: inset 0 0 0 1px var(--line); }
+
+/* ───────────── narrow ───────────── */
+@media (max-width: 560px) {
+  .mod-row { --mod-who-w: 84px; column-gap: var(--sp-3); padding-left: 8px; }
+  .ss-mods--status:not(:empty) { padding-inline: 10px; gap: var(--sp-3); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mod-chev .ui-icon, .mod-tab { transition: none; }
+}
+
+/* ───────────── the composer's rise (riseComposer in mods.js): the ghosts are visual copies of what is leaving ───────────── */
+.mod-ghost { position: absolute; left: 0; right: 0; display: flex; flex-direction: column; pointer-events: none; }
+.mod-status--ghost { position: absolute; left: 0; right: 0; bottom: 0; pointer-events: none; }
+
+/* ───────────── the toast queue: a quiet "+N" while others wait, and a way to dismiss ───────────── */
+.mod-toast__more { flex: none; margin-left: calc(var(--sp-2) * -1); font: 400 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); font-variant-numeric: tabular-nums; color: var(--text-quiet); text-transform: none; }
+.ui-toast > .mod-toast__x { border-radius: var(--r-in); flex: none; }
+
+/* ───────────── the theme card while it previews: the colours are on the whole app ───────────── */
+.cd-live { display: none; align-items: center; gap: 6px; margin-left: auto; align-self: flex-start; font: 400 var(--fs-2xs)/16px var(--mono); letter-spacing: var(--track-mono); color: var(--text-dim); text-transform: none; }
+.cd-live > i { display: block; width: 4px; height: 4px; border-radius: var(--r-pill); background: var(--text-dim); }
+hx-card[data-previewing] .cd-live { display: inline-flex; }
+
+/* a mod's toast is as wide as its words (a fixed box at the centre line would otherwise shrink to half the window) */
+.ui-toast:has(.mod-toast) { width: max-content; }

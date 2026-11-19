@@ -1,7 +1,7 @@
 //! Secret redaction: named patterns plus Shannon-entropy detection.
 //!
 //! The rules live in `redact.rules.json`, which the Python plugin reads as
-//! well (`hypotaxis.util.redact`), so both sides redact alike. Each redaction
+//! well (`boopis.util.redact`), so both sides redact alike. Each redaction
 //! becomes `[REDACTED:<rule>]` and is counted.
 //!
 //! Properties the tests hold:

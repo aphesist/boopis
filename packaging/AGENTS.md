@@ -40,7 +40,7 @@ One line per record; `#` starts a comment line. A **cell** is 2x2 **pixels**, dr
 
 ## Changing the art
 1. Edit `boopis.art` (the wordmark was sampled from `design/v6/brand/logo` at 9 rows; the bots are hand-made at 12 x 6 pixels).
-2. `UPDATE_GOLDEN=1 cargo test -p hypotaxis-host brand` rewrites the goldens; read the diff.
+2. `UPDATE_GOLDEN=1 cargo test -p boopis-host brand` rewrites the goldens; read the diff.
 3. `scripts/embed-brand.sh`, then `scripts/test-brand.sh` and `scripts/test-install.sh`.
 The wordmark's letter shapes come from Libre Franklin (SIL OFL 1.1), as the logo's own do.
 

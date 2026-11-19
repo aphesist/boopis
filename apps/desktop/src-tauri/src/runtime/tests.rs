@@ -531,7 +531,7 @@ fn a_build_that_carries_a_runtime_uses_it_unless_the_user_chose_their_own_hermes
     let (plan, error) = plan_for(Source::Existing, Some(&res), data());
     assert!(
         plan.is_none() && error.is_none(),
-        "HYPOTAXIS_HERMES=existing leaves the runtime alone"
+        "BOOPIS_HERMES=existing leaves the runtime alone"
     );
 
     let (plan, error) = plan_for(Source::Bundled, Some(&tmp.path().join("none")), data());

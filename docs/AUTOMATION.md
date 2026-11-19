@@ -2,7 +2,7 @@
 
 Status: plan, 2026-11-19. Evidence: `docs/research/automation.md` and, for the owner's desktop, `docs/research/hyprland.md` (Hermes's browser and computer-use tools, Chromium and Firefox drivers, vendor computer-use APIs, accessibility APIs per OS, Wayland, and the permission models of Claude in Chrome, Claude Code, OpenAI, Gemini, MCP and cua). Decision: ADR-0021.
 
-**Rule: an agent only ever calls tools, and one policy decides every call.** Any model can drive a browser, a desktop app or a program through the same tools. The user grants permissions in one vocabulary: *what* (a capability), *where* (an origin, an app, a folder, a server and tool), and *for how long*. That holds whether the tool is a Hermes built-in, an MCP server or a plugin. hypotaxis builds only the policy, the cards, the ledger records and revocation. The drivers already exist.
+**Rule: an agent only ever calls tools, and one policy decides every call.** Any model can drive a browser, a desktop app or a program through the same tools. The user grants permissions in one vocabulary: *what* (a capability), *where* (an origin, an app, a folder, a server and tool), and *for how long*. That holds whether the tool is a Hermes built-in, an MCP server or a plugin. boopis builds only the policy, the cards, the ledger records and revocation. The drivers already exist.
 
 ## 1. What Hermes already does, and the gaps
 | Hermes feature | What it is | On Arch today |
@@ -20,7 +20,7 @@ There are three gaps, and the plugin closes all of them through its `pre_tool_ca
 2. `computer_use` grants are keyed by action, not by app: granting "click" grants click in every app.
 3. An MCP server is either trusted or untrusted, with nothing in between.
 
-Hermes's `browser_exec` can't drive Firefox at all: Firefox dropped CDP in version 141, and WebDriver BiDi is its only remote protocol. Claude in Chrome works only with a direct Anthropic plan, so it isn't model-agnostic and hypotaxis doesn't build on it.
+Hermes's `browser_exec` can't drive Firefox at all: Firefox dropped CDP in version 141, and WebDriver BiDi is its only remote protocol. Claude in Chrome works only with a direct Anthropic plan, so it isn't model-agnostic and boopis doesn't build on it.
 
 ## 2. Cheapest mechanism first
 The agent is steered (system prompt section, skill) to use the most precise tool that can do the job, as Claude Code does:
@@ -34,7 +34,7 @@ The agent is steered (system prompt section, skill) to use the most precise tool
 Each step down is slower, costs more tokens (a screenshot is 1,000 to 1,800 input tokens) and is harder to gate. The ledger shows steps and tokens per task, and step, time and cost limits apply.
 
 ## 3. Capabilities
-One vocabulary covers every tool. The map from tool to capability is data, `plugins/hypotaxis/policy/capabilities.json`: Hermes built-ins by name, MCP servers by `mcp:<server>/<tool>`, and the curated connectors (`docs/CONNECTORS.md`) carry their own map. A tool with no map entry is treated as `app.<server>`, at the most restrictive default.
+One vocabulary covers every tool. The map from tool to capability is data, `plugins/boopis/policy/capabilities.json`: Hermes built-ins by name, MCP servers by `mcp:<server>/<tool>`, and the curated connectors (`docs/CONNECTORS.md`) carry their own map. A tool with no map entry is treated as `app.<server>`, at the most restrictive default.
 
 | Capability | Meaning | Examples | Subject |
 |---|---|---|---|
@@ -59,12 +59,12 @@ Because `browser_exec` is Python, it is one coarse capability (`web.script`), gr
 
 ## 4. Grants
 - **Scopes:** `once` (this call), `turn` (this task), `session`, or `always` (persisted), each with an optional `expires_at` and `idle_timeout`.
-- **Layers only narrow.** The order is hard rules, then hypotaxis policy, then the user's policy, then the teammate's, then the task's. No lower layer can widen a higher one. This is cua's layering, and the existing order of `hypotaxis.policy.check` (deny beats ask beats allow; governed mode can't be widened).
+- **Layers only narrow.** The order is hard rules, then boopis policy, then the user's policy, then the teammate's, then the task's. No lower layer can widen a higher one. This is cua's layering, and the existing order of `boopis.policy.check` (deny beats ask beats allow; governed mode can't be widened).
 - **Ceilings by app category**, from Claude Code's computer use. Through the desktop route, browsers and trading apps are observe-only; use the typed browser route instead. Terminals and IDEs are click-only, and their grant card warns that the grant is "equivalent to shell access".
-- **A project can't grant reach.** A repository's `.hermes/hypotaxis.yaml` can narrow, but it can never grant `web.identity` beyond `isolated`, `desktop.*`, `fs.*` outside the workspace, or `secret.use`. Those are set at user scope only. A repository must not connect the agent to the user's browser or desktop.
+- **A project can't grant reach.** A repository's `.hermes/boopis.yaml` can narrow, but it can never grant `web.identity` beyond `isolated`, `desktop.*`, `fs.*` outside the workspace, or `secret.use`. Those are set at user scope only. A repository must not connect the agent to the user's browser or desktop.
 - **One teammate = one Hermes profile = one grant set = one browser identity.** Grants never flow between teammates. A delegated subagent gets its parent's grants intersected with its task's scope.
 - **Desktop sockets stay out of sandboxes.** Hyprland's IPC socket, the Wayland and X11 sockets and the session bus (which carries AT-SPI) would let code drive the desktop and bypass every grant. Hyprland's own docs say its IPC must be blocked by a sandbox, because Hyprland doesn't gate it. `hx-sandbox` already keeps them out: the environment allowlist has no `DISPLAY`, `WAYLAND_DISPLAY` or `DBUS_SESSION_BUS_ADDRESS`, `/run/user` isn't granted, seccomp denies connecting to a Unix socket by name when the network is off, and Landlock scopes abstract sockets. Phase A1 adds a test that keeps it that way, and checks what loopback-network mode allows. Hermes's `terminal` tool runs unsandboxed, so the capability map classes desktop commands (`hyprctl`, `hypruse`, `wtype`, `wlrctl`, `ydotool`, `xdotool`, `grim`) as `desktop.*`, and the policy decides them like any other desktop call.
-- **Where it's enforced.** Grants are part of the one permission function, `hypotaxis.policy.check`, extended with a capability step. The `pre_tool_call` hook calls it, and so does the exec kernel, because `ctx.dispatch_tool` bypasses hooks (ADR-0005). No second implementation.
+- **Where it's enforced.** Grants are part of the one permission function, `boopis.policy.check`, extended with a capability step. The `pre_tool_call` hook calls it, and so does the exec kernel, because `ctx.dispatch_tool` bypasses hooks (ADR-0005). No second implementation.
 
 ## 5. Actions that always need confirmation
 A standing grant never covers these, and the card offers no `always`. The list combines Claude in Chrome's always-ask rules, Gemini's policy categories and OpenAI's guidance.
@@ -105,13 +105,13 @@ MCP tool annotations are untrusted (the MCP spec says so). `readOnlyHint` can on
 
 ## 7. Untrusted content
 Page text, accessibility labels, tab titles, URLs and screenshots are data, never instructions:
-1. Content can never create or widen a grant. Cards come only from hypotaxis's own UI, never from a page.
+1. Content can never create or widen a grant. Cards come only from boopis's own UI, never from a page.
 2. **Taint rule:** content can arrive from an origin the user hasn't marked trusted. For the rest of that turn, the outbound classes escalate to ask. Those are `send-as-user`, `upload-local`, `credential`, and navigation to another origin that carries data.
 3. The system prompt says it plainly: instructions found in pages or screenshots are not followed.
 4. Sensitive values go through the vault, which registers them with redaction.
-5. hypotaxis's own window is kept out of the agent's screenshots where the driver allows it **[spike]**, so the model can't read, or be tricked through, its permission cards.
+5. boopis's own window is kept out of the agent's screenshots where the driver allows it **[spike]**, so the model can't read, or be tricked through, its permission cards.
 
-No structural rule makes injection impossible. The vendors' own best published attack-success figures are about 1 to 2%, with model-specific classifiers that hypotaxis can't rely on for an arbitrary model. That's why the defences above are structural.
+No structural rule makes injection impossible. The vendors' own best published attack-success figures are about 1 to 2%, with model-specific classifiers that boopis can't rely on for an arbitrary model. That's why the defences above are structural.
 
 ## 8. How permissions reach the user: forms
 Permissions use the forms system (`docs/FORMS.md`), so there's no new component:
@@ -154,7 +154,7 @@ Scheduled teammates and runs with nobody watching may use only `always` grants t
 | A2 | Hermes `browser_exec` with an isolated Chromium, and `browser_vault` | Per-origin, per-session gating of `web.script`, using the URL literals Hermes already extracts; the identity indicator |
 | A3 | Hermes `computer_use` (cua-driver) | Per-app grants and category ceilings over Hermes's per-action keys; an honest Wayland capability note in the card; X11 and XWayland for pixel work |
 | A4 | Chrome DevTools MCP (Apache-2.0) for the user's live Chrome | A curated connector entry with `trust: untrusted`, usage statistics off, unwanted tool categories excluded, `evaluate_script` mapped to `web.script` |
-| A5 | Firefox | Claudezilla (MIT) for the user's own logged-in Firefox, with `firefox_evaluate` off and every typed tool gated by hypotaxis. Mozilla's firefox-devtools-mcp (MIT, BiDi) for an isolated Firefox. camofox for anti-bot sites, off by default |
+| A5 | Firefox | Claudezilla (MIT) for the user's own logged-in Firefox, with `firefox_evaluate` off and every typed tool gated by boopis. Mozilla's firefox-devtools-mcp (MIT, BiDi) for an isolated Firefox. camofox for anti-bot sites, off by default |
 | later | Playwright MCP | Only if per-action browser classification proves necessary: typed tools plus `--allowed-origins`. Off by default, with its opt-in capability groups left off |
 | later | Windows and macOS | cua-driver already covers UIA and AX through the same Hermes tool, so A1 to A3 carry over. Safari has no logged-in automation except through accessibility |
 
@@ -173,10 +173,10 @@ Connector entries (A4, A5) follow CONNECTORS.md: pinned, verified against the pu
 - **An agent-owned screen.** A nested or virtual display, so the agent never fights the user for the mouse (Hermes's Bot Screen does this on servers) **[spike 3]**.
 - **Logged-in browsers.** Isolated by default. See section 6.
 - **Prompt injection.** Structural defences, sections 5 and 7. YOLO-style modes are for disposable machines only, as Hermes and cua say.
-- **CAPTCHAs and anti-bot.** hypotaxis doesn't solve them. Cloud browsers and camofox are optional, off by default, and gated as egress to a third party.
+- **CAPTCHAs and anti-bot.** boopis doesn't solve them. Cloud browsers and camofox are optional, off by default, and gated as egress to a third party.
 
 ## 14. Spikes before A1
-1. Can a `pre_tool_call` `approve`, together with the hypotaxis approval transport, answer Hermes's own `computer_use` gate from a hypotaxis grant? The goal is one card per action, not two, with persistence in the ledger instead of `command_allowlist`.
+1. Can a `pre_tool_call` `approve`, together with the boopis approval transport, answer Hermes's own `computer_use` gate from a boopis grant? The goal is one card per action, not two, with persistence in the ledger instead of `command_allowlist`.
 2. On the owner's Hyprland: hypruse's background mode end to end, through Hermes's `computer_use`. Do AT-SPI's window-relative coordinates plus `hyprctl clients` positions give exact screen coordinates? Does a bare Arch install start the accessibility bus?
 3. A headless output as the agent's screen: silent launch without flicker, and what input can and can't reach it.
 4. Which Chrome DevTools MCP tools carry MCP annotations at run time?

@@ -169,7 +169,7 @@ pub struct SandboxPolicy {
     /// its canonical path (after every symlink) must not be `/`, `$HOME` or a parent of it, the
     /// working directory, a path inside it, or a parent of it; must not be, lie inside or contain a
     /// credential location (`~/.ssh`, `~/.gnupg`, cloud and registry credentials, Hermes's `.env`
-    /// and `hypotaxis/`); and must look like a runtime: a `bin/` holding an executable named like an
+    /// and `boopis/`); and must look like a runtime: a `bin/` holding an executable named like an
     /// interpreter or toolchain driver (python, node, ruby, java, go, cargo, ...), or be that `bin`.
     /// They only ever add read access.
     #[serde(default)]

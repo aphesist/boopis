@@ -6,7 +6,7 @@
 //! variable for it; the host turns it off through `webkit_settings_set_feature_enabled` (`webkit::set_feature`), on
 //! the main window's web view, once the display's rate is known.
 //!
-//! `HYPOTAXIS_FPS` is the owner's choice: `auto` (the default) lifts the cap when the display is faster than 60 Hz,
+//! `BOOPIS_FPS` is the owner's choice: `auto` (the default) lifts the cap when the display is faster than 60 Hz,
 //! `60` leaves `WebKit`'s own default, `max` always lifts it. The decision (`decide`) is a pure function of the policy
 //! and the rate GDK reports for the window's monitor. The cap is only ever lifted, never put back: with the cap off,
 //! a 60 Hz display still gets 60.
@@ -23,13 +23,13 @@ use specta::Type;
 use crate::webkit::{self, PREFER_NEAR_60_FPS, Refusal};
 
 /// The variable that sets the policy: `auto` (the default), `60` or `max`.
-pub const POLICY_VAR: &str = "HYPOTAXIS_FPS";
+pub const POLICY_VAR: &str = "BOOPIS_FPS";
 
 /// A display counts as "faster than 60 Hz" above this, in millihertz. GDK reports modes as integer millihertz
 /// (`59_940` for 59.94, `60_000` for 60); the margin keeps a 60.01 Hz mode from counting as fast.
 pub const FAST_ABOVE_MILLIHERTZ: u32 = 60_500;
 
-/// What the owner asked for with `HYPOTAXIS_FPS`.
+/// What the owner asked for with `BOOPIS_FPS`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "snake_case")]
 #[serde(rename = "FpsPolicy")]
@@ -53,7 +53,7 @@ impl Policy {
         }
     }
 
-    /// Read `HYPOTAXIS_FPS` from the process environment.
+    /// Read `BOOPIS_FPS` from the process environment.
     #[must_use]
     pub fn from_env() -> Self {
         Self::parse(std::env::var(POLICY_VAR).ok().as_deref())
@@ -65,9 +65,9 @@ impl Policy {
 #[serde(rename_all = "snake_case")]
 #[serde(rename = "FpsRule")]
 pub enum Rule {
-    /// `HYPOTAXIS_FPS=60`.
+    /// `BOOPIS_FPS=60`.
     PolicySixty,
-    /// `HYPOTAXIS_FPS=max`.
+    /// `BOOPIS_FPS=max`.
     PolicyMax,
     /// `auto`, and the display is faster than 60 Hz.
     FasterThanSixty,
@@ -141,7 +141,7 @@ pub fn power_profile_of(raw: &str) -> PowerProfile {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
 #[serde(rename = "FrameRateReport")]
 pub struct Report {
-    /// What `HYPOTAXIS_FPS` asked for.
+    /// What `BOOPIS_FPS` asked for.
     pub policy: Policy,
     /// The rule that decided, once a web view has been looked at.
     pub rule: Option<Rule>,

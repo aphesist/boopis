@@ -1,5 +1,5 @@
 /* The entities the UI reads. They are plain data (no functions, no DOM): the mock provider fills them from
-   mock-data.ts today and the live provider (Hermes gateway and the hypotaxis plugin's streams) fills the same
+   mock-data.ts today and the live provider (Hermes gateway and the boopis plugin's streams) fills the same
    shapes later. A field that is `null` is unknown and the UI shows it as unknown (AGENTS.md invariant 5). */
 
 export interface User { name: string; initials: string }
@@ -82,7 +82,7 @@ export type Origin =
   | { kind: 'agent'; model: string }
   | { kind: 'plugin' | 'hermes' | 'host' }
   | { kind: 'mcp'; server?: string; trust?: string };
-/** a field of MCP elicitation's `requestedSchema` plus the hypotaxis extensions */
+/** a field of MCP elicitation's `requestedSchema` plus the boopis extensions */
 export interface FieldSchema {
   type?: 'string' | 'number' | 'integer' | 'boolean';
   title?: string; description?: string; default?: unknown; format?: string; placeholder?: string;

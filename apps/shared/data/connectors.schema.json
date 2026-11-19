@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/aphesist/hypotaxis/apps/shared/data/connectors.schema.json",
-  "title": "hypotaxis connector collection",
+  "$id": "https://github.com/aphesist/boopis/apps/shared/data/connectors.schema.json",
+  "title": "boopis connector collection",
   "type": "object",
   "required": ["schema_version", "connectors"],
   "properties": {

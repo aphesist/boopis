@@ -76,7 +76,7 @@ def create(gw: GatewayClient, cwd: Path, **extra: Any) -> str:
         "session.create",
         {
             "source": "gui", "cwd": str(cwd), "request_id": f"req-{time.time_ns()}", "model": "fake-a",
-            "provider": "main", "toolsets": ["hypotaxis", "todo"], "client": {"name": "hypotaxis", "version": "0"},
+            "provider": "main", "toolsets": ["boopis", "todo"], "client": {"name": "boopis", "version": "0"},
             **extra,
         },
     )  # fmt: skip
@@ -138,9 +138,9 @@ def read_panels(gw: GatewayClient, sids: list[str], proj: Path) -> None:
         for m in ("session.resume", "session.info", "session.context_breakdown"):
             tolerant(gw, m, q)
         for m in ("describe", "ledger.stats", "cascade.state", "checkpoint.list", "checkpoint.diff"):
-            tolerant(gw, "plugin.hypotaxis." + m, q)
-        tolerant(gw, "plugin.hypotaxis.ledger.tail", {**q, "since_seq": -1, "limit": 1000})
-        tolerant(gw, "plugin.hypotaxis.compat.inventory", {"cwd": str(proj)})
+            tolerant(gw, "plugin.boopis." + m, q)
+        tolerant(gw, "plugin.boopis.ledger.tail", {**q, "since_seq": -1, "limit": 1000})
+        tolerant(gw, "plugin.boopis.compat.inventory", {"cwd": str(proj)})
     tolerant(gw, "complete.path", {"session_id": sid, "cwd": str(proj), "word": "@file:src/"})
     tolerant(gw, "complete.path", {"session_id": sid, "cwd": str(proj), "word": "@zzz-nothing"})
     for m in ("session.branch", "session.compress"):  # the probe the UI makes to learn what this Hermes has
@@ -162,10 +162,10 @@ def priced(install: Any, tmp: Path, url: str, name: str, with_prices: bool) -> N
         proj = make_project(tmp)
         governed = create(gw, proj) if with_prices else ""
         sid = create(gw, proj)
-        gw.result("plugin.hypotaxis.mode.set", {"session_id": sid, "mode": "ungoverned"})
+        gw.result("plugin.boopis.mode.set", {"session_id": sid, "mode": "ungoverned"})
         if governed:
-            gw.result("plugin.hypotaxis.describe", {"session_id": governed})
-            gw.result("plugin.hypotaxis.cascade.state", {"session_id": governed})
+            gw.result("plugin.boopis.describe", {"session_id": governed})
+            gw.result("plugin.boopis.cascade.state", {"session_id": governed})
         text = " ".join([
             call("todo_list", {"todos": TODOS}),
             call("ship", {"edits": [{"op": "replace", "path": "src/a.py", "old": "return 1", "new": "return 2"}]}),
@@ -176,11 +176,11 @@ def priced(install: Any, tmp: Path, url: str, name: str, with_prices: bool) -> N
         p = {"session_id": sid}
         read_panels(gw, [s for s in (sid, governed) if s], proj)
         p = {"session_id": sid}
-        opened = gw.events_of("plugin.hypotaxis.blank.opened", sid)
+        opened = gw.events_of("plugin.boopis.blank.opened", sid)
         if opened:
             tolerant(
                 gw,
-                "plugin.hypotaxis.blank.fill",
+                "plugin.boopis.blank.fill",
                 {**p, "blank_id": opened[0]["payload"]["blank_id"], "answer": "yes, for one release"},
             )
         gw.close()
@@ -205,7 +205,7 @@ class FakeHostSecrets:
         self.sock.bind(str(self.path))
         self.sock.listen(4)
         threading.Thread(target=self._serve, daemon=True).start()
-        return {"HYPOTAXIS_HOST_SECRETS_SOCKET": str(self.path), "HYPOTAXIS_HOST_SECRETS_TOKEN": "t"}
+        return {"BOOPIS_HOST_SECRETS_SOCKET": str(self.path), "BOOPIS_HOST_SECRETS_TOKEN": "t"}
 
     def _serve(self) -> None:
         while True:
@@ -235,9 +235,9 @@ def forms_scenario(install: Any, tmp: Path, url: str) -> None:
         gw.handshake()
         proj = make_project(tmp)
         sid = create(gw, proj)
-        gw.result("plugin.hypotaxis.mode.set", {"session_id": sid, "mode": "ungoverned"})
+        gw.result("plugin.boopis.mode.set", {"session_id": sid, "mode": "ungoverned"})
         gw.result(
-            "plugin.hypotaxis.form.list", {"session_id": sid}
+            "plugin.boopis.form.list", {"session_id": sid}
         )  # nothing open yet: what a client sees when it resumes the session
         setup_form = {
             "kind": "setup",
@@ -257,18 +257,18 @@ def forms_scenario(install: Any, tmp: Path, url: str) -> None:
             f"@@usage {json.dumps(USAGE)}@@", "@@reply I asked three things.@@",
         ])  # fmt: skip
         turn(gw, sid, text)
-        listed = gw.result("plugin.hypotaxis.form.list", {"session_id": sid})
+        listed = gw.result("plugin.boopis.form.list", {"session_id": sid})
         by_kind = {f["kind"]: f for f in listed["forms"]}
         gw.result(
-            "plugin.hypotaxis.form.submit",
+            "plugin.boopis.form.submit",
             {"session_id": sid, "form_id": by_kind["credential"]["form_id"], "values": {}, "provided": ["value"]},
         )
         gw.result(
-            "plugin.hypotaxis.form.submit",
+            "plugin.boopis.form.submit",
             {"session_id": sid, "form_id": by_kind["question"]["form_id"], "values": {"answer": "yes"}},
         )
-        gw.result("plugin.hypotaxis.form.cancel", {"session_id": sid, "form_id": by_kind["setup"]["form_id"]})
-        gw.result("plugin.hypotaxis.form.list", {"session_id": sid})
+        gw.result("plugin.boopis.form.cancel", {"session_id": sid, "form_id": by_kind["setup"]["form_id"]})
+        gw.result("plugin.boopis.form.list", {"session_id": sid})
         read_panels(gw, [sid], proj)
         gw.close()
         save("forms", tmp / "frames.jsonl", tmp)

@@ -8,7 +8,7 @@ the gateway refuses it). Frames of both directions go to ``frames_log`` when giv
     gw.connect()
     gw.handshake()
     sid = gw.result("session.create", {...})["session_id"]
-    gw.result("plugin.hypotaxis.describe", {})
+    gw.result("plugin.boopis.describe", {})
 """
 
 from __future__ import annotations

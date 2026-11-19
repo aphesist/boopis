@@ -1,4 +1,4 @@
-# hypotaxis v6: layout spec (redesign)
+# boopis v6: layout spec (redesign)
 
 The shell (`index.html`, `shell.css`, `shell.js`, `tokens.css`) is the design authority; the system and its reasons
 are in `DESIGN.md`. This file says where everything sits and what each module must change. The earlier spec (faithful
@@ -9,7 +9,7 @@ to the Figma frame) is withdrawn: the Figma, Grok Bot, the Gemini mock-up and Pa
 ```
 ┌ title bar 40 (cabinet) [sidebar][‹][›]      [⌕ billing-api / proration drift in src/billing  ctrl K]      [details] [– □ ×] ┐
 ├ sidebar 256–288 (cabinet) ╭ ground (reading room), 14px concave corner                          ┊ 28px strip / panel 300–340 ┤
-│ φ hypotaxis               │       ┌ margin 112 ┬ measure 608 ───────────────┐                    ┊ (cabinet, session tab only)│
+│ φ boopis               │       ┌ margin 112 ┬ measure 608 ───────────────┐                    ┊ (cabinet, session tab only)│
 │ [ Session | Bots ]        │       │ You 14:01  │ request card               │                    ┊                            │
 │ + New session             │       │ qwen3-coder│ answer prose 14/1.6        │                    ┊ · context measure          │
 │ billing-api               │       │ → sonnet   │                            │                    ┊                            │
@@ -77,7 +77,7 @@ Tokens are final in `tokens.css`; DESIGN.md explains them.
   numbers, times, costs, model names, call numbers and kbd.
 - Sizes: 11 mono meta (`--fs-2xs`), 12 labels (`--fs-xs`), 13 interface (`--fs-s`), 14 reading (`--fs-m`), 16 titles
   (`--fs-l`), 20 one display moment (`--fs-xl`). Weights 400, 500 (labels, current), 600 (titles). Nothing else.
-- Case: sentence case for interface text; "hypotaxis" lowercase; data as authored. No all caps, no middle-dot meta
+- Case: sentence case for interface text; "boopis" lowercase; data as authored. No all caps, no middle-dot meta
   strings, no em dashes in interface copy, no "→" after links (the arrow in a model escalation is content).
 - Spacing: 4, 8, 12, 16, 24, 32, 48 (`--sp-1` … `--sp-7`); rows 30 (`--row-h`) and 44 (`--row-h-2`).
 - Radii: 4, 6, 10, 14 (`--r-xs`, `--r-s`, `--r-m`, `--r-l`); pill only for dots and the switch.

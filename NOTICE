@@ -5,11 +5,13 @@ Licensed under the Apache License, Version 2.0 (LICENSE).
 
 boopis includes or distributes the following third-party work, each under its own licence:
 
-- contraprova, vendored at plugins/hypotaxis/_vendor/contraprova: Apache License 2.0.
+- contraprova, vendored at plugins/boopis/_vendor/contraprova: Apache License 2.0.
 - Hermes Agent, unmodified, inside the bundled runtime archive: MIT License, Copyright (c) 2025 Nous Research.
   The runtime also holds a Python interpreter (python-build-standalone), uv and Hermes's locked Python dependencies,
   each with its own licence files inside the archive.
 - orb-avatar (orb2), vendored in the interface: MIT License.
+- boopis-logo (the logo element, vendored in the interface): Apache License 2.0, like the rest of boopis; its letters are
+  Libre Franklin outlines drawn as paths, under the SIL Open Font License 1.1 (apps/desktop/ui/vendor/boopis-logo.NOTICE).
 - LobeHub icons, vendored in the interface for provider logos: MIT License.
 - The fonts the interface embeds (Fontsource packages of Geist, IBM Plex, Instrument Sans, JetBrains Mono and
   Libre Franklin): SIL Open Font License 1.1.

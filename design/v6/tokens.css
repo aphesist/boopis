@@ -1,4 +1,4 @@
-/* hypotaxis v6 · shared tokens (owner: wireframe agent). The system is DESIGN.md; geometry per slot is LAYOUT.md.
+/* boopis v6 · shared tokens (owner: wireframe agent). The system is DESIGN.md; geometry per slot is LAYOUT.md.
    Every colour, font, radius and density value is a custom property here. Modules use these and no literal colours.
    Themes: four presets below (data-hx-preset on <html>), plus the user's overrides, which theme.js writes as inline
    custom properties on <html> (Settings > Appearance). Translucent tokens are derived with color-mix() from the solid

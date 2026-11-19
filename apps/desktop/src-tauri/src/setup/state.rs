@@ -1,4 +1,4 @@
-//! Setup's progress, kept at `<profile home>/hypotaxis/setup.json` so the flow resumes after an interruption. It holds
+//! Setup's progress, kept at `<profile home>/boopis/setup.json` so the flow resumes after an interruption. It holds
 //! only decisions (consent, a choice) and what is still to do, never a secret. Versioned and written atomically.
 
 use std::path::{Path, PathBuf};
@@ -51,7 +51,7 @@ pub struct State {
 /// Where the file lives.
 #[must_use]
 pub fn path(home: &Path) -> PathBuf {
-    home.join("hypotaxis").join("setup.json")
+    home.join("boopis").join("setup.json")
 }
 
 /// Read the state. A missing file is a fresh state; an unreadable or newer file is `hx.setup.state_invalid`, and is
@@ -81,7 +81,7 @@ pub fn load(home: &Path) -> Result<State> {
         return Err(Error::Setup(
             "hx.setup.state_invalid",
             format!(
-                "{} was written by a newer hypotaxis (version {})",
+                "{} was written by a newer boopis (version {})",
                 p.display(),
                 state.schema_version
             ),

@@ -1,8 +1,8 @@
 //! Putting the bundled plugin and `hx` where Hermes and the plugin find them (`docs/ARCHITECTURE.md` section 4).
 //!
-//! The plugin is a *copy* in `<home>/plugins/hypotaxis/` (the app image is read-only and its path changes on every
+//! The plugin is a *copy* in `<home>/plugins/boopis/` (the app image is read-only and its path changes on every
 //! launch), versioned by its `plugin.yaml`. An upgrade replaces the directory in place: the user's settings live in
-//! `config.yaml`, not here, so nothing of theirs is touched. `hx` goes to `<home>/hypotaxis/bin/hx`, a path that stays.
+//! `config.yaml`, not here, so nothing of theirs is touched. `hx` goes to `<home>/boopis/bin/hx`, a path that stays.
 
 use std::path::{Path, PathBuf};
 
@@ -26,10 +26,10 @@ impl Bundle {
     #[must_use]
     pub fn locate(resource_dir: Option<&Path>, exe_dir: Option<&Path>) -> Self {
         let mut plugin_dir = resource_dir
-            .map(|r| r.join("plugin").join("hypotaxis"))
+            .map(|r| r.join("plugin").join("boopis"))
             .filter(|p| p.join("plugin.yaml").is_file());
         if plugin_dir.is_none() && cfg!(debug_assertions) {
-            let dev = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../plugins/hypotaxis");
+            let dev = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../plugins/boopis");
             plugin_dir = dev.join("plugin.yaml").is_file().then_some(dev);
         }
         let name = if cfg!(windows) { "hx.exe" } else { "hx" };
@@ -92,14 +92,14 @@ pub enum Installed {
     },
 }
 
-/// Copy the bundled plugin into `<home>/plugins/hypotaxis/` unless the same version is already there.
+/// Copy the bundled plugin into `<home>/plugins/boopis/` unless the same version is already there.
 ///
 /// # Errors
 /// `Config` (`hx.setup.plugin_install_failed`) when the copy fails; the old directory is then put back.
 pub fn install_plugin(bundle_dir: &Path, home: &Path) -> Result<Installed> {
     let to = plugin_version(bundle_dir)
         .ok_or_else(|| Error::Config("the bundled plugin has no version".into()))?;
-    let target = super::ops::plugins_dir(home).join("hypotaxis");
+    let target = super::ops::plugins_dir(home).join("boopis");
     let from = plugin_version(&target);
     if from.as_deref() == Some(to.as_str()) && target.join("__init__.py").is_file() {
         return Ok(Installed::Current(to));
@@ -108,8 +108,8 @@ pub fn install_plugin(bundle_dir: &Path, home: &Path) -> Result<Installed> {
         .parent()
         .ok_or_else(|| Error::Io("no plugins dir".into()))?;
     std::fs::create_dir_all(parent)?;
-    let fresh = parent.join(".hypotaxis.new");
-    let old = parent.join(".hypotaxis.old");
+    let fresh = parent.join(".boopis.new");
+    let old = parent.join(".boopis.old");
     let _ = std::fs::remove_dir_all(&fresh);
     let _ = std::fs::remove_dir_all(&old);
     copy_tree(bundle_dir, &fresh).map_err(|e| {
@@ -134,7 +134,7 @@ fn digest(p: &Path) -> Option<String> {
 /// Where the plugin finds `hx` (`hx_path`).
 #[must_use]
 pub fn hx_target(home: &Path) -> PathBuf {
-    home.join("hypotaxis")
+    home.join("boopis")
         .join("bin")
         .join(if cfg!(windows) { "hx.exe" } else { "hx" })
 }
@@ -172,7 +172,7 @@ mod tests {
         std::fs::create_dir_all(dir.join("__pycache__")).unwrap();
         std::fs::write(
             dir.join("plugin.yaml"),
-            format!("name: hypotaxis\nversion: {version}\n"),
+            format!("name: boopis\nversion: {version}\n"),
         )
         .unwrap();
         std::fs::write(dir.join("__init__.py"), format!("V = '{version}'\n")).unwrap();
@@ -185,7 +185,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let (b, home) = (tmp.path().join("bundle"), tmp.path().join("home"));
         bundle(&b, "0.1.0");
-        let target = home.join("plugins").join("hypotaxis");
+        let target = home.join("plugins").join("boopis");
         assert_eq!(
             install_plugin(&b, &home).unwrap(),
             Installed::Written {
@@ -213,7 +213,7 @@ mod tests {
             "an upgrade replaces the directory"
         );
         assert_eq!(plugin_version(&target).as_deref(), Some("0.2.0"));
-        assert!(!target.parent().unwrap().join(".hypotaxis.old").exists());
+        assert!(!target.parent().unwrap().join(".boopis.old").exists());
     }
 
     #[test]
@@ -252,13 +252,10 @@ mod tests {
     fn the_bundle_is_found_by_its_manifest() {
         let tmp = tempfile::tempdir().unwrap();
         let res = tmp.path().join("res");
-        bundle(&res.join("plugin").join("hypotaxis"), "1.0.0");
+        bundle(&res.join("plugin").join("boopis"), "1.0.0");
         std::fs::write(tmp.path().join("hx"), "x").unwrap();
         let found = Bundle::locate(Some(&res), Some(tmp.path()));
-        assert_eq!(
-            found.plugin_dir.unwrap(),
-            res.join("plugin").join("hypotaxis")
-        );
+        assert_eq!(found.plugin_dir.unwrap(), res.join("plugin").join("boopis"));
         assert_eq!(found.hx.unwrap(), tmp.path().join("hx"));
     }
 
@@ -267,7 +264,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let (res, bin) = (tmp.path().join("lib"), tmp.path().join("bin"));
         std::fs::create_dir_all(&bin).unwrap();
-        bundle(&res.join("plugin").join("hypotaxis"), "1.0.0");
+        bundle(&res.join("plugin").join("boopis"), "1.0.0");
         std::fs::write(res.join("hx"), "x").unwrap();
         let found = Bundle::locate(Some(&res), Some(&bin));
         assert_eq!(found.hx.unwrap(), res.join("hx"));

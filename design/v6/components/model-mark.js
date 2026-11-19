@@ -1,4 +1,4 @@
-/* hypotaxis v6 · model marks (shared library, beside components.js; owner: design-system agent)
+/* boopis v6 · model marks (shared library, beside components.js; owner: design-system agent)
    Which model answered, at a glance: the provider's logo beside the model's name, never instead of it.
 
      HX.ui.modelMark(ref, {size, color, label}) -> SVGElement   HX.ui.html.modelMark(ref, o) -> string

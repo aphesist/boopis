@@ -1,4 +1,4 @@
-/* hypotaxis bots tab. Built on the shared library (keyboard per KEYMAP sections 3, 4, 5, 7 and 9). Bots keeps only
+/* boopis bots tab. Built on the shared library (keyboard per KEYMAP sections 3, 4, 5, 7 and 9). Bots keeps only
    what is its own: the presence header, the new-bot form (stage, name, pickers, suggestions), the cron preview, its
    layout, and the orbs' liveliness and play (owner, v7).
    Registers: bots-list -> #hx-list-bots, bots -> #hx-view-bots

@@ -3,7 +3,7 @@
 Read the root `AGENTS.md`, `docs/ARCHITECTURE.md` section 3 and 7, and `docs/STANDARDS.md` first.
 
 ## Job
-The Rust side of hypotaxis: the `hx` binary and its libraries. The plugin drives `hx` over JSON-RPC on stdio. Rust holds what must be fast or unsafe to get wrong.
+The Rust side of boopis: the `hx` binary and its libraries. The plugin drives `hx` over JSON-RPC on stdio. Rust holds what must be fast or unsafe to get wrong.
 
 | Crate | What |
 |---|---|
@@ -41,7 +41,7 @@ Also check the production feature set: `cargo clippy -p hx-txn -p hx-proto -p hx
 - The mod worker is `hx mods-worker` in `hx-sandbox`: read-only on its binary and the libraries it links, network off, no exec (`hx_sandbox::forbid_exec`), one inherited socket. Never run the runtime in the `hx` process, and never fall back to it: where the sandbox cannot be built, `mods.*` answers `hx.mods.unavailable`.
 - `hx` reads plugin files (`Bundle::read`, `cap_std`); the worker never does. A `call` frame naming a mod that is not loaded in the session is refused before it reaches the plugin.
 - Every `$` call is a `mods.call` request to the plugin, queued before the reply to the operation that made it. `hx` is the only crate that sends requests (`hx::outbound::Link`).
-- A new `$` call needs a row in `plugins/hypotaxis/policy/defaults.json` (`mod_capabilities`) and a handler in `plugins/hypotaxis/mods/calls.py`; the isolate's `$` is `crates/hx-mods/src/js/agent.js`.
+- A new `$` call needs a row in `plugins/boopis/policy/defaults.json` (`mod_capabilities`) and a handler in `plugins/boopis/mods/calls.py`; the isolate's `$` is `crates/hx-mods/src/js/agent.js`.
 - Cargo hashes workspace-relative paths, so two worktrees built into one `CARGO_TARGET_DIR` overwrite each other's artifacts (touch your sources before a build or test, and copy `hx` before pointing a test at it).
 
 ## Do not

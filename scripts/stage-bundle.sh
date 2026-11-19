@@ -11,7 +11,7 @@
 # The runtime (ADR-0023) is what scripts/build-runtime.sh made: runtime.json and hermes-runtime-<os>-<arch>.tar.zst. It is
 # copied as it is, to resources/runtime/, a Tauri resource the host finds at run time and unpacks on first run; the archive
 # is already compressed, so the installer carries it once. --no-runtime stages a placeholder instead, for a build that uses
-# the Hermes already on the machine (HYPOTAXIS_HERMES=existing); the host then finds no runtime.json and says so in its log.
+# the Hermes already on the machine (BOOPIS_HERMES=existing); the host then finds no runtime.json and says so in its log.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -41,11 +41,11 @@ else
   cp "$RUNTIME/runtime.json" "$RUNTIME/$ARCHIVE" "$RT_DEST/"
 fi
 TRIPLE="$(rustc -vV | sed -n 's/^host: //p')"
-PLUGIN="$DEST/resources/plugin/hypotaxis"
+PLUGIN="$DEST/resources/plugin/boopis"
 
 rm -rf "$PLUGIN"
 mkdir -p "$PLUGIN" "$DEST/binaries"
-tar -C "$ROOT/plugins/hypotaxis" --exclude='__pycache__' --exclude='tests' --exclude='.pytest_cache' \
+tar -C "$ROOT/plugins/boopis" --exclude='__pycache__' --exclude='tests' --exclude='.pytest_cache' \
     --exclude='.ruff_cache' --exclude='*.pyc' -cf - . | tar -C "$PLUGIN" -xf -
 cp "$HX" "$DEST/binaries/hx-$TRIPLE"
 chmod 755 "$DEST/binaries/hx-$TRIPLE"

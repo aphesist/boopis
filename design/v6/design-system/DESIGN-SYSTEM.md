@@ -1,19 +1,20 @@
-# hypotaxis design system
+# boopis design system
 
 Version 1.0, extracted from the v6 mock-up on 18 November 2026 by the design-system agent.
 
-This file is the source of truth for how hypotaxis looks, reads, moves and behaves. Everything else follows it:
+This file is the source of truth for how boopis looks, reads, moves and behaves. Everything else follows it:
 
 | File | What it is |
 |---|---|
 | `design-system/DESIGN-SYSTEM.md` | This document: principles, voice, tokens, theming, foundations, every component, findings. |
 | `design-system/tokens.json` | The tokens in W3C Design Tokens format (2025.10), the four presets as modes. Generated, never edited by hand. |
 | `design-system/build-tokens.mjs` | Regenerates `tokens.json` from `tokens.css`; `--report` prints the contrast table below. |
-| `design-system/index.html` | The specimen: every token and component, live, in every preset. Published as the Artifact "hypotaxis system". |
+| `design-system/index.html` | The specimen: every token and component, live, in every preset. Published as the Artifact "boopis system". |
 | `design-system/MIGRATION.md` | Module by module: which local implementation to delete and which `HX.ui` call replaces it. |
 | `components/components.css`, `components/components.js` | The shared component library (`HX.ui`). One canonical version of every piece more than one module draws. |
 | `tokens.css`, `theme.js` | The token source and the theme runtime (unchanged by this pass; proposed changes are listed in Findings). |
 | `cards.js`, `cards.css` | The card layer (`HX.cards`), promoted as the canonical card implementation and reachable as `HX.ui.card`. |
+| `brand/logo/` | The boopis logo: the `<boopis-logo>` element, the static SVGs, the two app icons, the demo, and its own README (usage rules). Section 12 is the rules in short. |
 | `DESIGN.md`, `LAYOUT.md`, `PRODUCT.md` | The wireframe agent's world, geometry and product brief. Where this file and they disagree, this file is newer. |
 
 **How this was made.** The owner could not be asked. Every rule here is read from the mock-up's code, its screenshots
@@ -39,6 +40,19 @@ mock-up breaks its own rules, the fix is in [Findings](#16-findings).
 | **Every composer can talk:** a mic in each one (the session, the Bots tab, the dock's session); when a bot is the target, its orb listens while you talk. mod+Enter still sends; alt+V talks. The dock session's send no longer floats: the composer's actions sit in its corner, concentric with it. | 14.10 |
 | **Graphite and Typewriter have a real accent:** Graphite steel `#9db6cf`, Typewriter carbon-paper blue `#7ea6e0`, so "you are here" is distinct from text in every preset. | 4.3, 5.4 |
 | **Provider logos beside every model name** (19 November 2026). The model that answered shows its provider's logo next to its name, never instead of it: monochrome in `currentColor` everywhere (origin slots, queue rows, the session's model line and composer chip, the ladder, the dock run), full brand colour only in the model selection menu and its chip preview. The family comes from the model id, never the host (Claude through Bedrock is Claude); an unknown family gets a neutral generic mark, never the φ. One primitive, `HX.ui.modelMark`; icons from LobeHub (MIT) in `vendor/model-icons/`. | 10.1, 12 |
+| **Logo: oval eyes everywhere** (19 November 2026). The symbol is the two oval eyes of a bot; the wordmark is "boopis" with the same two ovals as its o's. Oval at every size and in every use: the wordmark, the standalone mark, the icons and the static exports. The pill and ring eye variants are gone. | 12 |
+| **Logo: live eyes by default when animated** (19 November 2026). An animated logo has live eyes, glancing on the invisible orb and blinking, with pointer follow (`look`) as an option; a static logo (`still`) is the default for anything that labels. Reduced motion reduces and never freezes. | 11, 12 |
+| **Logo: playful letters only for big moments** (19 November 2026). `letters="play"` is opt-in, for a launch, a site hero or the app's first-run welcome. Never in chrome, lists or repeated UI. The default stays still letters. | 12 |
+| **Logo: sizes** (19 November 2026). The wordmark's minimum is a 20px type size (below it, the mark); the protection area is 0.28 of the type size; single colour (`currentColor`), tokens only. | 12 |
+| **Logo: the name and the element** (19 November 2026). The product is **boopis**, final. The element is `<boopis-logo>`, the global `BoopisLogo`, the files `boopis-logo.js` and `.d.ts`; the default word is `boopis`. | 12 |
+| **App icon: two versions that coexist** (19 November 2026). On the continuous-corner tile (smoothing 0.6, corner 22.37%): black oval eyes on a white tile for the light theme, white oval eyes on a black tile for the dark theme. Plain ink, no cut-outs. The black is the darkest ink (Bone `--text-strong`, `#0f0e0c`), the white the lightest (Graphite and Typewriter `--text-strong`, `#ffffff`). | 8, 12 |
+| **Mod colours stay in theme** (19 November 2026). Every colour a mod names, by Claude Code name or theme key, maps onto the active theme's tokens (text names to text roles, `claude` to `--text-strong` as text and `--brass` as a mark, status names to `--ok`, `--warn`, `--add`, `--del`, surfaces by name to `--bg-*`). A literal hex or rgb is drawn as given only when it holds 4.5:1 (text) or 3:1 (marks) on its surface, else the nearest token. A mod that wants its own palette proposes a theme (the preview card below); it never paints around the theme. | 5.5, 14.29 |
+| **Mod panes go inline below 1200px** (19 November 2026). From 1200px a mod pane is a tab in the details panel; below it the pane sits inline above the composer, one open at a time, the rest folded to a head. | 14.29 |
+| **Progress in the band is dots, never a bar** (19 November 2026). Determinate: the library's measure row, dots filled in proportion. Indeterminate: one dot travelling along the row. A mod asks for it with a Box that has `progress`. | 11, 14.27, 14.29, F18 |
+| **The composer rises 22px when a mod sets a status, smoothly** (19 November 2026). A FLIP on `transform` (no layout animation per frame) over `--dur-3` on `--spring`, the same in reverse when the status clears. Under reduced motion, a short crossfade and no travel. | 11, 14.29 |
+| **The puzzle glyph and "name mod" are the mod's origin** (19 November 2026). Wherever a mod speaks (tab, band row, status line, placed row, card byline, toast) it is named as its glyph and its name, and the byline reads "name mod". | 10, 14.29 |
+| **Mod toasts queue, one at a time** (19 November 2026). The next appears as the previous one fades; while others wait the toast carries a quiet "+N" in mono; the queue keeps order, and dismissing a toast shows the next at once. | 14.22, 14.29 |
+| **A mod's colours preview live** (19 November 2026). While "Apply name's colours?" is open the whole app previews them through the one theme mechanism (`theme.js`, never saved). Keep commits; Reject, Esc, closing the card, leaving its screen, or choosing another theme restores the previous theme at once. The card shows "Previewing". | 5.2, 14.29 |
 
 ---
 
@@ -55,7 +69,7 @@ mock-up breaks its own rules, the fix is in [Findings](#16-findings).
 9. [Elevation, hairlines and depth](#9-elevation-hairlines-and-depth)
 10. [Iconography](#10-iconography)
 11. [Motion](#11-motion)
-12. [The φ mark](#12-the-φ-mark)
+12. [Logo](#12-logo)
 13. [Bots and orbs](#13-bots-and-orbs)
 14. [Components](#14-components)
 15. [Accessibility](#15-accessibility)
@@ -101,7 +115,7 @@ Ordered. When two collide, the higher one wins.
 Plain words a developer would say out loud, in sentence case.
 
 - **Sentence case** for interface text: "New session", "Show the dock", "Hold to approve", "Session details".
-  The brand is always lowercase: hypotaxis. Content keeps its own case: session titles, bot names and roles,
+  The brand is always lowercase: boopis. Content keeps its own case: session titles, bot names and roles,
   messages, code, model names. In the Typewriter preset (or with the case setting on lowercase) interface labels go
   lowercase through `text-transform: var(--ui-case)`; content never does.
 - **Buttons are a verb and its object**: Open PR, View diff, Fix and retry, Raise cap to $1.00, Schedule it, Sign in,
@@ -297,7 +311,10 @@ its red text is darker, its shadows are warm and faint, its scrim is a 22% warm 
   System) and **code font** (IBM Plex Mono, Geist Mono, JetBrains Mono, Source Code Pro, System). Google Fonts only.
 - **Interface case** (sentence, lowercase), **corners** (sharp, default, round), **density** (compact, regular,
   comfortable).
-- **Export and import** as JSON: `{"format": "hypotaxis-theme", "version": 1, "preset", "sans", "mono", "case",
+- **Preview** (`HX_THEME.preview({colors})`, `endPreview(commit)`, `previewing()`): shows a patch of colours over the saved theme without saving
+  it, so a reload, or `endPreview(false)`, gives the saved theme back at once. Any other change (a preset, a colour, reset, import) restores first.
+  Emits `hx:theme-preview {previewing}`. Used by a mod's theme card (14.29); never a second theme mechanism.
+- **Export and import** as JSON: `{"format": "boopis-theme", "version": 1, "preset", "sans", "mono", "case",
   "corners", "density", "colors": {"--brass": "#c8a66a", …}}`. Saved in `localStorage` under `hx.v6.theme`.
 
 ### 5.3 What the user may not change
@@ -374,6 +391,7 @@ should add the inactive-mark pairs (`--mark-off` on `--bg-1` and `--bg-3`, and o
 4. Interface labels take `text-transform: var(--ui-case)`; content never does.
 5. Anything that caches a colour in JS (canvas, orb attributes, the hold button's fill) re-reads it on `hx:theme`.
 6. Inside the dock, set `data-ground="dock"` on the root and read the usual roles. No `--dock-*` palette.
+7. A mod's colours are names that map onto these tokens (14.29). A mod never brings a palette of its own; a theme it offers is previewed, then kept or rejected.
 
 ## 6. Typography
 
@@ -403,8 +421,9 @@ lineage of the catalog card. Mono is never a costume for "technical" prose.
 - **Wrapping:** `text-wrap: pretty` on prose and card titles, `balance` on headings.
 - **Measure:** prose stops at `--measure` (608px); notes and hints at 42–46ch.
 - **Weights:** 400, 500, 600 only. 700 is not loaded.
-- **The brand** "hypotaxis" is set 15/600, −0.01em, beside the φ. It is the one off-scale size; name it
-  `--fs-brand` when promoted (Finding F10).
+- **The brand** is the boopis wordmark (section 12), drawn as paths, never set as text. Its type size is the
+  `font-size` it is given: 20px (`--fs-xl`, the one display size) is the smallest. The 15px brand of the mock-up
+  and `--fs-brand` (Finding F10) are retired.
 
 ## 7. Space, density and layout
 
@@ -636,7 +655,7 @@ Flat. Depth is tone: frame, ground, raised, inset. Lines divide; shadows only on
   o4, codex), Gemini (with Nano Banana), DeepSeek, Qwen, Z.ai (GLM, Zhipu; Z.ai is Zhipu's mark since 2025 and its
   dot-field logo does not survive 14px), Kimi (Moonshot), MiniMax, Grok (xAI), Meta (Llama), Mistral (Codestral and
   the rest). A model of unknown family served by local Ollama gets Ollama's mark; anything else the generic mark,
-  a small chip drawn for hypotaxis. Never the φ.
+  a small chip drawn for boopis. Never the φ.
 - **Source:** `@lobehub/icons-static-svg` 1.104.0 (MIT), only the icons used, optimised with SVGO. The logos are
   trademarks of their owners, used only to identify the model (`vendor/model-icons/NOTICE`). A new provider: its SVG
   through SVGO into `svg/`, a family in `map.json`, then `node vendor/model-icons/build.js`.
@@ -667,25 +686,73 @@ velocity when interrupted; travel along the centre line is never a JS spring.
   `--spring`, so the conversation under it never jumps. Implemented once, in the card layer (`_flipHeight`).
 - **Entrances:** a revealed card fades up 6px over `--dur-3`; swapped regions cross-fade (exit 120ms, enter 220ms).
   No page-load choreography, no scroll reveals.
-- **The one loop** is the running dot. Nothing else repeats unless it is a bot's orb idling (calm), which is the
+- **The one loop** is the running dot, and its sibling the travelling dot of indeterminate progress (below): both say "working,
+  length unknown" and share `--dur-breathe` and `--ease-io`. Nothing else repeats unless it is a bot's orb idling (calm), which is the
   bot's face, not decoration.
 - **Reduced motion:** `--dur-1`…`--dur-3`, `--dur-out` and `--dur-slide` become 1ms; the breathing stops; press
   transforms and drops are removed; thumbs and indicators jump; the hold drains instantly when released. Orbs are
   reduced, never frozen (Owner decision, section 13): blinks, eye morphs, small glances and reactions stay; travel,
   bounce and spin go. Colour and opacity changes still answer, so feedback stays legible.
+- **The logo's playful letters** (section 12) are the one place springs overshoot, hop and squash. They are a showpiece
+  for a big moment, opt-in, and never part of the interface.
+- **The composer's rise** (owner decision, 19 November 2026). When a mod's status line appears, the composer and the band lift 22px;
+  when the last one clears they drop back. A FLIP: measure, let the layout change once, animate `transform` from the old place to
+  the new one over `--dur-3` on `--spring`; the line itself fades in over `--dur-2`. Never `top`, `bottom` or `height` per frame.
+  Reduced motion: no travel; a copy of the old place fades out while the real one fades in, 120ms.
+- **The travelling dot** (indeterminate progress, section 14.29) moves on `transform`, on
+  `--dur-breathe` and `--ease-io`, alternating, so it neither passes its mark nor bounces. Under reduced motion it stops, at rest in the
+  middle of the row, like the breathing dot.
 - Focus rings never animate.
 
-## 12. The φ mark
+## 12. Logo
 
-- The owner's closed φ (`brand/phi-closed.svg`, `HX.ui.icon('phi')`), filled, never outlined.
-- Colour: the strongest neutral of its surface (`--text-strong` on the frame; the dock ink on the dock;
-  `--text-faint` as the quiet mark of an empty state). **Never red, never brass**, never a gradient.
-- Sizes: 16 × 21 beside the wordmark in the sidebar and the specimen bar; 24 × 32 in an empty state; at least 16px
-  wide anywhere.
-- Lockup: φ, 10px gap, "hypotaxis" 15/600 −0.01em, lowercase, `--text-strong`. In the rail the φ stands alone on the
-  x = 28 axis.
-- Clear space: half its width on every side. Not inside a filled shape, not animated.
-- The φ is the product's mark, never a model's: an agent's card shows its model's provider mark (10.1).
+The logo is two things drawn from one pair of eyes: the **symbol**, the two oval eyes of a bot, and the **wordmark**,
+"boopis" with the same two ovals as its o's. The full rules, the API and the files are in `brand/logo/README.md`; the
+live demo is `brand/logo/index.html`. It replaces the φ as the product's mark (Owner decisions, 19 November 2026).
+
+- **Component:** `<boopis-logo>` (`brand/logo/boopis-logo.js`, `.d.ts`), the global `BoopisLogo`. One file, no
+  dependencies; the letters are Libre Franklin 600 as paths (SIL OFL 1.1), the eyes are the bots' own, lifted from
+  `vendor/orb-avatar.js`, so the logo has the bots' 16 states. The default word is `boopis`.
+- **Oval everywhere (Owner decision):** the o's own box and shape (a superellipse of exponent 2.4, the orb v1's idle
+  eye), in the wordmark at every size, the standalone mark, the icons and the static files. No other eye variant ships.
+- **Colour:** `currentColor` only, never a second colour, gradient, outline, shadow or translucency. The ink of the
+  surface it sits on: `--text-strong` on the frame, the dock ink on the dock, `--text-faint` as the quiet mark of an
+  empty state. Never red, never brass. In the app the mark always follows the theme.
+- **Sizes (Owner decision):** the wordmark from a 20px type size (`--fs-xl`; below it the element draws the mark by
+  itself); the mark from 16px wide; the playful letters from 32px. Size it with `font-size`.
+- **Protection area (Owner decision):** 0.28 of the type size on every side, about half the height of an eye. The mark
+  has the same measure (its type size is its width over 1.156, so 0.24 of its width). Nothing enters it.
+- **Static or animated.** `still` is the default for anything that labels: the title bar, headers, footers, rows,
+  documents, exports. An animated logo is the subject of its screen; its eyes are **live** (Owner decision): they glance
+  on the hidden orb (a step about every 1.8 to 2.6s, capped at .30 / .20 rad, the glance lead of section 13), drift,
+  and blink (0.155s); `look` also follows the pointer. One logo moves per screen, and none in a fixed header.
+  **Reduced motion** reduces and never freezes: small half-size steps, a 150ms crossfade between states, no blink, no
+  loop, no playful letters. It rests while off-screen.
+- **Playful letters (Owner decision):** `letters="play"` is opt-in and the default is still. Big moments only: a
+  launch, a site hero, the app's first-run welcome. Never in chrome, lists or repeated UI, never below 32px.
+  The one deliberate exception to section 11's "no bounce": the letters are springs with overshoot, a hop and a
+  squash. It is a showpiece, so it stays out of the interface.
+- **Lockup:** the wordmark alone. In the open sidebar it is 20px (`--fs-xl`) in `--text-strong`, 44px row; in the rail
+  and the title bar the mark alone, 16 to 20px wide, on the x = 28 axis. Not inside a filled shape.
+- **The logo is the product's, never a model's:** an agent's card shows its model's provider mark (10.1).
+
+### 12.1 App icon
+
+Two versions that coexist (Owner decision), on the continuous-corner tile (`HX.ui.squircle`, smoothing 0.6, corner
+22.37% of the tile, a proposal): plain ink, no cut-outs, no shadow.
+
+| Version | Tile | Eyes | For |
+|---|---|---|---|
+| Light (`brand/logo/icons/light/`) | the lightest ink: Graphite and Typewriter `--text-strong`, `#ffffff` | the darkest ink: Bone `--text-strong`, `#0f0e0c` | the light theme; the default on every platform |
+| Dark (`brand/logo/icons/dark/`) | the darkest ink, `#0f0e0c` | the lightest ink, `#ffffff` | the dark theme |
+
+- The pair is 64% of the tile wide from 128px up; from 16 to 64px the eyes are snapped to whole pixels and set larger
+  (75% at 16, 24 and 32), so that two clear eyes survive at 16 and 32.
+- **Platforms:** macOS supports light, dark and tinted icons (Icon Composer); the app ships `icon.icns` from the light
+  icon on Apple's grid, and the dark and tinted ones wait for an Icon Composer document. Windows supports light and
+  dark taskbar icons (`altform` assets, packaged apps); the app ships `icon.ico` from the light icon. Linux has one
+  app icon, plus symbolic icons for trays; the app ships the light PNGs and `boopis-symbolic.svg`. Tauri's files
+  are in `icons/tauri-light/` and `icons/tauri-dark/`.
 
 ## 13. Bots and orbs
 
@@ -803,9 +870,9 @@ are at regular density and default corners.
 
 ### 14.2 Sidebar: open, rail, closed
 
-- **Open** (256–288): brand (φ + hypotaxis, 44px), the Session | Bots pill, "New session" or "New bot", the list,
+- **Open** (256–288): brand (the boopis wordmark at 20px, 44px row), the Session | Bots pill, "New session" or "New bot", the list,
   then the account row (avatar 24, name, settings gear) above a hairline.
-- **Rail** (56): φ, the vertical pill (icons), "+" and the avatar on the x = 28 axis. Lists render a rail variant
+- **Rail** (56): the logo's mark, the vertical pill (icons), "+" and the avatar on the x = 28 axis. Lists render a rail variant
   (bots: orbs 24 in 40px rows with the attention flag) or hide.
 - **Closed** (0): the ground starts at the window edge; the title-bar toggle brings it back.
 - **Overlay** below 900px: it floats over the ground with `--shadow-side` and a scrim; Esc or the scrim closes it.
@@ -1140,6 +1207,7 @@ One element (`<hx-card>`, `HX.ui.card(kind, data, opts)`), eight kinds, three si
   pop shadow, `--r-m`, 40px high, 13px; optional ghost action (Undo), 6px from the edges and concentric with the
   toast (`--r-in`). Fades with a 6px drop; stays 3s (6s with an action) and
   waits while hovered or focused. `role="status"`. `HX.ui.toast(text, {action: {label, onClick}})`.
+- A mod's toasts queue one at a time with a quiet "+N" while others wait (owner decision, 19 November 2026; 14.29). The app's own toast still replaces the one showing.
 - **Do** confirm what just happened ("Archived audit log export"). **Don't** report errors in a toast; an error stays
   where it happened.
 
@@ -1194,6 +1262,9 @@ One element (`<hx-card>`, `HX.ui.card(kind, data, opts)`), eight kinds, three si
   Stations to come are `--mark-off` rings here too.
 - **Measure:** strip (8 dots, the closed panel), grid (40 dots shaded by part), row (a small count). `role="img"` with
   "Context 38% used".
+- **Progress** (a task with a share, or without): the measure row again. Determinate, dots filled in proportion with the percent beside it in mono
+  (`role="progressbar"`, `aria-valuenow`); indeterminate, one `--text-dim` dot travelling along the row over `--dur-breathe` (`aria-busy`), at rest in the
+  middle under reduced motion. Never a bar (F18). A mod draws it with a Box that has `progress`.
 - **Capacity:** "$0.37 of $0.60", the spent part `--text`, the rest quiet, mono tabular.
 - **Pages:** 4px dots in `--mark-off`; the current a 14 × 4 brass pill (shape and colour); red when that page owes
   something; a tablist when it pages (dock), an image when it only shows position (a card queue; its current dot
@@ -1202,9 +1273,47 @@ One element (`<hx-card>`, `HX.ui.card(kind, data, opts)`), eight kinds, three si
 
 ### 14.28 Empty states
 
-- Centred in the space above the dock: the φ at 24 × 32 in `--text-faint`, a title 16/600, one or two sentences 13/1.6
+- Centred in the space above the dock: the logo's mark, 32px wide, in `--text-faint`, a title 16/600, one or two sentences 13/1.6
   dim (46ch), and the one action that fills it ("New session ctrl shift O"). Teach the interface, never "Nothing
   here". `HX.ui.empty({title, text, action, mark})`.
+
+### 14.29 Mods
+
+A mod is a Claude Code extension that draws into the app. It never gets a surface of its own: everything it draws goes through
+`HX.ui.modView` (`components/mod-view.js`) onto the library's tokens, type scale and spacing, and lands in one of seven surfaces. A mod
+is always named as its **puzzle glyph and its name** (`HX.ui.html.mod(name)`, glyph 14px in `--icon`, name 12/400 `--text-dim`); its origin
+reads "name mod". The agent stays nameless and bots keep their orbs; a mod is neither.
+
+- **Colour stays in theme.** Names map onto tokens, in code (`modView.colors`): `text` `--text`; `subtle` and `inactive` `--text-quiet`;
+  `success` `--ok`; `warning` `--warn`; `error` `--del`; `claude` is `--text-strong` as text and `--brass` as a mark (brass is never text);
+  `diffAdded` and `diffRemoved` `--add` and `--del`, tinted 12% as a background; a surface by name (`surface-1`, `raised`, `inset`) a `--bg-*`.
+  A literal hex or rgb is kept only when it passes 4.5:1 for text or 3:1 for marks on the surface under it, and is re-read on `hx:theme`.
+  The one place a mod's own hex appears is a theme card's swatches (the colours on offer), until Keep or Reject.
+- **Pane tab.** From 1200px wide, a pane is a tab in the details panel's head, after Details: glyph and title, 28px, `--r-s`, current on
+  `--current`, scrolling with a faded edge when there are many. Below 1200px the pane is **inline above the composer**, one open at a time,
+  the others folded to a 32px head (glyph, title, chevron, close); the body scrolls in 28vh. Tablist, arrows, Home and End.
+- **Band.** One collapsible row per mod above the composer, on `--bg-0` inset with `--hair`, `--r-m` with 4px padding (inner controls `--r-in`).
+  Row 32px: the mod (112px, 84px under 560), what it says, the fold. Quieter than the composer. **Progress here is dots** (14.27): 8 dots, the
+  percent beside in mono, or the travelling dot while the share is not known. A button in a row is the small ghost.
+- **Status line.** Under the composer, 22px, mono 11 in `--text-quiet`, the mod's name first in `--text-dim`, one line, what does not fit left out.
+  **The composer rises 22px** when the first status appears and settles back when the last clears (section 11: a FLIP, `--dur-3`,
+  `--spring`; a crossfade under reduced motion). A second status adds no height, so nothing moves.
+- **Placed row.** A row in the conversation from the mod: its glyph and name in the call-number margin with the time, the tree on the ground at 14px.
+  Never styled as the agent. A card a mod raises is placed without margin text; the card's byline names the mod.
+- **Mod origin.** A card's byline slot draws the glyph and "name mod" (`origin: {kind: 'mod', plugin}`), weight 500 for the name, quiet for "mod".
+  Also in the dock's queue.
+- **Toast.** The app's notice, led by the mod (glyph, name, text), with its action and a Dismiss. **One at a time, queued in order**: the next appears as
+  the previous one has faded (`--dur-2`); while others wait, a quiet `+N` follows the text (mono 11, `--text-quiet`, never a badge or a colour); dismissing
+  (the close, Esc, or the action) shows the next at once. The toast is as wide as its words, never squeezed by the centre line. `role="status"`.
+- **Theme card.** "Apply name's colours?" with Later, Reject and Keep, a card of the card layer (`kind: 'theme'`: no stamp, nothing is owed). **While it is open
+  and on screen the whole app previews the colours**, through `HX_THEME.preview` (never saved, so a reload restores). Keep commits them
+  (`endPreview(true)`); Reject, Esc (Later), closing or removing the card, its view being hidden (another tab or session) or choosing another
+  theme restores the previous one at once, no fade. Scrolling the card out of the window keeps the preview; leaving the screen ends it, and coming back
+  to a card still open starts it again. One preview at a time, the card opened last holds it. The card shows a quiet "Previewing" (4px dot and mono 11 in `--text-dim`,
+  no red, no motion) in the corner of its swatch strip. Keep shows "Kept name's colours. Undo in Settings, Appearance".
+- **Library:** `HX.ui.modView(tree, {surface, dispatch})` and `.update`; `HX.mods` (the stand-in host: `openPane`, `setBand`, `setStatus`, `place`,
+  `toast`, `ask`, `proposeTheme`). Tree types: Box, Text, Button, Input, Select, Markdown, Code, Link, Svg; a Box with `progress` is dots.
+- **Do** name the mod wherever it speaks. **Don't** give a mod a colour, a bar, a loop or a notice the system does not have.
 
 ## 15. Accessibility
 
@@ -1274,7 +1383,7 @@ holds the canonical version of each fix and MIGRATION.md says who changes what.
 | F15 | drift | **Four switches and two segmented looks.** `.hx-switch` (input), `.dk-sw` (button `role="switch"`), `.ssr-switch`, `.bt-switch`; settings choices `.hx-choice` change fill without the sliding thumb every other segmented control has. | shell, dock, session, bots | `.ui-switch` (native checkbox `role="switch"`), `.ui-seg` |
 | F16 | drift | **Three screen-reader-only utilities** (`.ss-sr` with `clip: rect()`, `.cd-sr`, `.dk-sr`). | session, cards, dock | `.ui-sr` |
 | F17 | drift | **Icon grids and weights.** Shell 20-grid at 1.4–1.7, session 16-grid at 1.35, dock 14-grid at 1.5, bots 1.5: rendered strokes from 1.35 to 1.93px. | `index.html` sprite, `session.js ICONS`, `dock.js ICON`, `bots.js` | `HX.ui.icon`: one set, 1.5px non-scaling stroke |
-| F18 | rule | **Bars where the system says dots and text.** The dock's context page draws a 6px segmented bar and its run page a 3px meter, against the brief ("dots, not a big bar") and the capacity rule (a running total in mono). | `dock.css .dk-segs`, `.dk-meter` | `HX.ui.measure` (grid or row) and `HX.ui.capacity` |
+| F18 | rule | **Bars where the system says dots and text.** The dock's context page draws a 6px segmented bar and its run page a 3px meter, against the brief ("dots, not a big bar") and the capacity rule (a running total in mono). | `dock.css .dk-segs`, `.dk-meter` | `HX.ui.measure` (grid or row) and `HX.ui.capacity`; mods draw progress as dots too (a Box with `progress`, 14.29) |
 | F19 | rule | **Brass used as text** (the current rung's "after 2 fails", the dock's tag) is 4.04:1 in Bone. | `session.css .ssr-rung.now .ssr-when`, `dock.css .dk-tag` | Brass marks the station; the text is `--text-dim` |
 | F20 | drift | **The blank's gap** is a fixed 56px in session and `min-width: 7ch` in cards. | `session.css .ss-gap`, `cards.css .cd-blank__gap` | 7ch (it scales with the font) |
 | F21 | drift | **Popover and menu edges** use `--hair` in session and `--line` elsewhere. | `session.css .ssp` | `--line` |
@@ -1344,8 +1453,8 @@ follow every preset and override with no rebuild:
 ```
 
 - `tokens.json` is for tooling (Style Dictionary, a Figma sync, audits); the app does not need to read it at runtime.
-  Each themed token holds its Card catalog value in `$value` and every preset in `$extensions.hypotaxis.modes`; the
-  CSS variable it maps to is `$extensions.hypotaxis.css`.
+  Each themed token holds its Card catalog value in `$value` and every preset in `$extensions.boopis.modes`; the
+  CSS variable it maps to is `$extensions.boopis.css`.
 - React components wrap the library's markup: the class names and ARIA contracts in section 14 are the API; the
   factories in `components.js` are the reference implementation. Keep the event names (`ui:change`, `ui:commit`,
   `ui:select`, `ui:send`) as callback props (`onChange`, `onCommit`, `onSelect`, `onSend`).

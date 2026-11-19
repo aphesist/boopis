@@ -1,6 +1,6 @@
 # hx-sandbox
 
-The OS sandbox that hypotaxis uses to run its exec kernel and the project gate commands (tests, builds). It enforces, per child process:
+The OS sandbox that boopis uses to run its exec kernel and the project gate commands (tests, builds). It enforces, per child process:
 
 | Dimension | What it means |
 |---|---|

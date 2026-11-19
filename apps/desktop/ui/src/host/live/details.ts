@@ -1,4 +1,4 @@
-/* The details panels and the dock's run, from the gateway and the hypotaxis plugin. One `SessionModel` per session
+/* The details panels and the dock's run, from the gateway and the boopis plugin. One `SessionModel` per session
    (events fill it, reads complete it); the panels follow the session the user is looking at. Nothing is computed here
    that the plugin or Hermes can say: dollars are `ledger.stats` (from tokens), the ladder is `cascade.state`.
    Every read is allowed to fail on its own: a panel then says what it does not know, in `notes`, and the rest stands.
@@ -16,9 +16,9 @@ import { isUnknownMethod } from './wire';
 import type { BreakdownWire, CascadeWire, CompletionWire, DescribeWire, DiffWire, InfoWire, InventoryWire, McpStatusWire, StatsWire } from './wire';
 
 const log = logger('live.details');
-const PLUGIN = 'plugin.hypotaxis.';
+const PLUGIN = 'plugin.boopis.';
 const REFRESH_MS = 150;
-const NO_PLUGIN = 'The hypotaxis plugin is not loaded in this Hermes, so there is no ladder, spend or ship history.';
+const NO_PLUGIN = 'The boopis plugin is not loaded in this Hermes, so there is no ladder, spend or ship history.';
 const EMPTY_ENV: Environment = { cwd: '', branch: '', sandbox: '', runtime: '', harness: '', gate: '' };
 const EMPTY_GOV: GovernanceState = { governed: false, smart: false, model: '', cap: '', spent: '', ladder: [], current: 0 };
 

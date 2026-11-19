@@ -291,11 +291,11 @@ mod tests {
     fn channel_env() -> Vec<(String, String)> {
         vec![
             (
-                "HYPOTAXIS_HOST_SECRETS_SOCKET".to_owned(),
+                "BOOPIS_HOST_SECRETS_SOCKET".to_owned(),
                 "/run/x/host.sock".to_owned(),
             ),
             (
-                "HYPOTAXIS_HOST_SECRETS_TOKEN".to_owned(),
+                "BOOPIS_HOST_SECRETS_TOKEN".to_owned(),
                 "tok-launch-only".to_owned(),
             ),
         ]
@@ -315,7 +315,7 @@ mod tests {
         cli.run(&hermes, &home, &["--version"], wait).await.unwrap();
         let plain = std::fs::read_to_string(home.join("env.txt")).unwrap();
         assert!(
-            !plain.contains("HYPOTAXIS_HOST_SECRETS"),
+            !plain.contains("BOOPIS_HOST_SECRETS"),
             "an ordinary call gets neither: {plain}"
         );
 
@@ -324,10 +324,10 @@ mod tests {
             .unwrap();
         let launching = std::fs::read_to_string(home.join("env.txt")).unwrap();
         assert!(
-            launching.contains("HYPOTAXIS_HOST_SECRETS_TOKEN=tok-launch-only"),
+            launching.contains("BOOPIS_HOST_SECRETS_TOKEN=tok-launch-only"),
             "{launching}"
         );
-        assert!(launching.contains("HYPOTAXIS_HOST_SECRETS_SOCKET=/run/x/host.sock"));
+        assert!(launching.contains("BOOPIS_HOST_SECRETS_SOCKET=/run/x/host.sock"));
         assert!(
             !launching.contains("OPENAI_API_KEY"),
             "the allowlist still holds"
@@ -345,7 +345,7 @@ mod tests {
         // Only a process started with the token the launch hands out may be admitted: the fake daemon inherits it from the
         // fake `hermes`, as the real one does from `hermes gateway ensure`.
         let peers = Arc::new(
-            PeerPolicy::new().holding("HYPOTAXIS_HOST_SECRETS_TOKEN=tok-launch-only".to_owned()),
+            PeerPolicy::new().holding("BOOPIS_HOST_SECRETS_TOKEN=tok-launch-only".to_owned()),
         );
         let cli = Cli::new(&crate::config::Limits::default())
             .with_secret_channel(channel_env(), peers.clone());

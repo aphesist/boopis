@@ -107,7 +107,7 @@ export const CATALOG: BotCatalog = {
   models: ['opus 5.5', 'sonnet 5.5', 'haiku 4.5', 'qwen3-coder'],
   channels: [
     { id: 'app', name: 'This app', hint: 'always on' }, { id: 'slack', name: 'Slack', hint: '#billing-alerts' },
-    { id: 'telegram', name: 'Telegram', hint: '@enzo' }, { id: 'email', name: 'Email', hint: 'enzo@hypotaxis.dev' }
+    { id: 'telegram', name: 'Telegram', hint: '@enzo' }, { id: 'email', name: 'Email', hint: 'enzo@boopis.dev' }
   ],
   approvals: [
     { id: 'deploys', name: 'Deploying anywhere' }, { id: 'push', name: 'Pushing to protected branches' }, { id: 'network', name: 'Reaching the network' },

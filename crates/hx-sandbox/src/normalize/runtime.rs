@@ -9,7 +9,7 @@
 //! 2. It does not touch a **sensitive location**: it is not one, not inside one, and does not
 //!    contain one. The list is [`SENSITIVE_IN_HOME`] (`~/.ssh`, `~/.gnupg`, cloud and registry
 //!    credentials, keyrings) plus, in Hermes's home (`HERMES_HOME`, else `~/.hermes`), the
-//!    provider keys (`.env`) and the host channel's token (`hypotaxis/`). Because those two sit
+//!    provider keys (`.env`) and the host channel's token (`boopis/`). Because those two sit
 //!    at the top of Hermes's home, the home itself and anything that holds it (the app's data
 //!    folder) are refused as containing them, while a root *inside* it, such as a Python the app
 //!    manages for Hermes, is not.
@@ -53,15 +53,15 @@ const SENSITIVE_IN_HOME: &[&str] = &[
 ];
 
 /// Secrets inside Hermes's home: the provider keys, and the rendezvous file with the host
-/// channel's token (`<hermes home>/hypotaxis/host-channel.json`).
-const SENSITIVE_IN_HERMES_HOME: &[&str] = &[".env", "hypotaxis"];
+/// channel's token (`<hermes home>/boopis/host-channel.json`).
+const SENSITIVE_IN_HERMES_HOME: &[&str] = &[".env", "boopis"];
 
 /// Where Hermes's home is when `HERMES_HOME` is not set.
 const DEFAULT_HERMES_HOME: &str = ".hermes";
 
 /// Program names (without version digits, dashes or extension) that make a directory a runtime:
 /// interpreters, their package managers, compilers and build tools. One list to extend; it is the
-/// gate's toolchain (`plugins/hypotaxis/ship/toolchain.py`) that decides what to ask for.
+/// gate's toolchain (`plugins/boopis/ship/toolchain.py`) that decides what to ask for.
 const RUNTIME_PROGRAMS: &[&str] = &[
     // interpreters and their tools
     "python", "pypy", "pip", "pipx", "uv", "poetry", "pytest", "tox", "ruff", "node", "nodejs",

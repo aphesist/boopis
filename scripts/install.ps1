@@ -30,13 +30,13 @@ Set-StrictMode -Version 2.0
 # Where releases come from. Everything that names the project lives here and nowhere else.
 # ----------------------------------------------------------------------------------------------------------------------
 $Owner = 'aphesist'
-$Repo = 'hypotaxis'
+$Repo = 'boopis'
 $App = 'boopis'
 # The file of a release. {v} is the version without its leading v.
-$ArtifactWindows = 'Hypotaxis_{v}_x64-setup.exe'
+$ArtifactWindows = 'boopis_{v}_x64-setup.exe'
 $ChecksumsName = 'SHA256SUMS'
 # The name the installer registers in Windows ("Apps and features"), and the Start menu entry it makes.
-$RegisteredName = 'Hypotaxis'
+$RegisteredName = 'boopis'
 $BaseUrl = 'https://github.com'
 $ApiUrl = 'https://api.github.com'
 if ($env:BOOPIS_BASE_URL) { $BaseUrl = $env:BOOPIS_BASE_URL }
@@ -213,7 +213,7 @@ function Invoke-Uninstall {
     if ($p.ExitCode -ne 0) { Stop-Install "The uninstaller stopped with code $($p.ExitCode)." 'Remove boopis from Settings > Apps instead.' }
     Write-Step 'Removed' "$App, for this user"
     Write-Line ''
-    Write-Line '  Your data in %APPDATA%\dev.aphesist.hypotaxis was kept. Delete that folder to remove the runtime and the settings.'
+    Write-Line '  Your data in %APPDATA%\dev.aphesist.boopis was kept. Delete that folder to remove the runtime and the settings.'
     Write-Line ''
 }
 

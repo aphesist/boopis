@@ -4,7 +4,7 @@
      Feed<S, E>     a snapshot plus the events that follow it (a conversation, a bot's thread)
      commands       methods; they return when the provider has accepted them, the result arrives on the streams
    The mock provider (mock-provider.ts) serves today's v6 mock data through these; the live provider (Hermes gateway
-   and the hypotaxis plugin) implements the same interfaces. Nothing in a module may fabricate data a provider
+   and the boopis plugin) implements the same interfaces. Nothing in a module may fabricate data a provider
    did not send: unknown is `null` or empty and the UI shows it as unknown. */
 import type {
   Bot, BotCatalog, BotDraft, BotConfig, Change, ConversationEvent, Conversation, Connector, ContextUsage, DecisionKind, DiffFile, Environment,

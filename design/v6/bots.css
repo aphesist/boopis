@@ -1,4 +1,4 @@
-/* hypotaxis v6 · bots tab (owner: bots agent). Controls come from the shared library (components/components.css,
+/* boopis v6 · bots tab (owner: bots agent). Controls come from the shared library (components/components.css,
    HX.ui); this file holds only what is bots' own: the view's layout bound to the shell's --hx-* properties, the
    presence header, the new-bot form (stage, name, pickers, suggestions), the sheet's placement and the rail rule.
    No .ui-* class is re-styled here. Every colour, font and radius is a token; --c on a swatch is an orb colour (data). */

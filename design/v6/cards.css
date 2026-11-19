@@ -1,4 +1,4 @@
-/* hypotaxis v6 · cards: the card layer of the shared library (owner: cards agent; HX.ui.card points here)
+/* boopis v6 · cards: the card layer of the shared library (owner: cards agent; HX.ui.card points here)
    Load after components/components.css. Shared parts are the library's and are not re-styled here: buttons
    (.ui-btn), the hold to approve (.ui-hold), stamps (.ui-stamp), dots (.ui-dot), code chips (.ui-code), orbs
    (.ui-orb), the ladder (.ui-ladder), page dots (.ui-pages), the blank mark (.ui-blank), screen-reader text (.ui-sr)

@@ -294,7 +294,7 @@ fn the_ink_is_plain_text_without_colour() {
     assert_eq!(on.paint(Tone::Strong, "x"), "\u{1b}[1mx\u{1b}[0m");
 }
 
-/// Every golden file is `<scene>[.f<frame>].<level>.txt`. `UPDATE_GOLDEN=1 cargo test -p hypotaxis-host brand` rewrites
+/// Every golden file is `<scene>[.f<frame>].<level>.txt`. `UPDATE_GOLDEN=1 cargo test -p boopis-host brand` rewrites
 /// them; `scripts/test-brand.sh` checks that the awk renderer in `install.sh` produces the same bytes.
 fn golden_cases() -> Vec<(String, String, Option<usize>, &'static str)> {
     let mut v = Vec::new();
@@ -335,7 +335,7 @@ fn the_goldens_are_what_the_renderer_draws() {
         let want = std::fs::read_to_string(&path).unwrap_or_default();
         assert!(
             want == text,
-            "{file} is stale: run `UPDATE_GOLDEN=1 cargo test -p hypotaxis-host brand`"
+            "{file} is stale: run `UPDATE_GOLDEN=1 cargo test -p boopis-host brand`"
         );
     }
 }

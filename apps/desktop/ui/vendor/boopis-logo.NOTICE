@@ -1,0 +1,3 @@
+Libre Franklin is © The Libre Franklin Project Authors (github.com/impallari/Libre-Franklin), licensed under the SIL Open Font
+License 1.1 (openfontlicense.org). The static TTF files in build/font/ were fetched from Google Fonts (fonts.gstatic.com).
+boopis-logo.js contains outlines of the letters a to z at weights 500 and 600 as SVG path data, produced by build/glyphs.mjs.

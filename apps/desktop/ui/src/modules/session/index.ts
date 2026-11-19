@@ -1,4 +1,4 @@
-/* hypotaxis session tab. Registers `session` (#hx-view-session), `session-list` (#hx-list-session) and
+/* boopis session tab. Registers `session` (#hx-view-session), `session-list` (#hx-list-session) and
    `session-right` (#hx-right).
    Emits: hx:attention {source:'session', count, tab}, hx:session-select {id, from:'list'}, hx:title, hx:governance.
    Provides: stop and find (the shell's mod+. and mod+F). Listens: hx:state, hx:open-panel, hx:new-session,

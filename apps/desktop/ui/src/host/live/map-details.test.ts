@@ -7,11 +7,11 @@ import type { BreakdownWire, CascadeWire, DescribeWire, DiffWire, InfoWire, Inve
 const S = fixtures.session, U = fixtures.unpriced;
 const info = resultOf<InfoWire>(S, 'session.info');
 const breakdown = resultOf<BreakdownWire>(S, 'session.context_breakdown');
-const stats = resultOf<StatsWire>(S, 'plugin.hypotaxis.ledger.stats');
-const unpriced = resultOf<StatsWire>(U, 'plugin.hypotaxis.ledger.stats');
-const cascade = resultOf<CascadeWire>(S, 'plugin.hypotaxis.cascade.state');
-const describe_ = resultOf<DescribeWire>(S, 'plugin.hypotaxis.describe', 1);
-const diff = resultOf<DiffWire>(S, 'plugin.hypotaxis.checkpoint.diff');
+const stats = resultOf<StatsWire>(S, 'plugin.boopis.ledger.stats');
+const unpriced = resultOf<StatsWire>(U, 'plugin.boopis.ledger.stats');
+const cascade = resultOf<CascadeWire>(S, 'plugin.boopis.cascade.state');
+const describe_ = resultOf<DescribeWire>(S, 'plugin.boopis.describe', 1);
+const diff = resultOf<DiffWire>(S, 'plugin.boopis.checkpoint.diff');
 
 describe('context, from the recorded session', () => {
   it('is Hermes’s categories out of the model window, and says when it is estimated', () => {
@@ -36,7 +36,7 @@ describe('tasks', () => {
 
 describe('connectors', () => {
   const status = resultOf<McpStatusWire>(S, 'mcp.servers.status');
-  const inventory = resultOf<InventoryWire>(S, 'plugin.hypotaxis.compat.inventory');
+  const inventory = resultOf<InventoryWire>(S, 'plugin.boopis.compat.inventory');
   it('is the MCP servers Hermes runs (this one connects on first use, so it has no tool count yet)', () => {
     expect(connectorsFrom(status, inventory)).toEqual([{ name: 'fakemcp', tools: 0, state: 'on', hint: 'connects when used' }]);
     expect(connectorsFrom({ servers: [{ name: 'live', tools: 4, connected: true, disabled: false, status: 'connected' }] }, null)).toEqual([{ name: 'live', tools: 4, state: 'on' }]);
@@ -53,7 +53,7 @@ describe('connectors', () => {
 
 describe('environment', () => {
   it('is what the session and the plugin say, and empty where nothing says it', () => {
-    expect(environmentFrom(info, describe_)).toEqual({ cwd: '/work/proj', branch: 'master', sandbox: '', runtime: 'Hermes (release 2026.9.24)', harness: 'hypotaxis 0.1.0', gate: '' });
+    expect(environmentFrom(info, describe_)).toEqual({ cwd: '/work/proj', branch: 'master', sandbox: '', runtime: 'Hermes (release 2026.9.24)', harness: 'boopis 0.1.0', gate: '' });
     expect(environmentFrom(null, null)).toEqual({ cwd: '', branch: '', sandbox: '', runtime: '', harness: '', gate: '' });
   });
 });
@@ -95,7 +95,7 @@ describe('output, from tool steps and ships', () => {
     const lines = complete.flatMap((p) => outputFor(p as Parameters<typeof outputFor>[0]));
     expect(lines[0]).toMatch(/^\$ todo_list/);
     expect(lines.some((l) => l.startsWith('$ ship'))).toBe(true);
-    const ship = eventsOf(S, 'plugin.hypotaxis.ship.completed')[0]?.payload as Parameters<typeof shipLine>[0];
+    const ship = eventsOf(S, 'plugin.boopis.ship.completed')[0]?.payload as Parameters<typeof shipLine>[0];
     expect(shipLine(ship)).toEqual(['$ ship src/a.py', ' PASS  shipped (T0.scope, T0.visible_tests)']);
   });
   it('marks a failed tool and bounds a long result', () => {

@@ -1,4 +1,4 @@
-//! The engine behind hypotaxis's `pack` tool.
+//! The engine behind boopis's `pack` tool.
 //!
 //! One call returns what a model needs to read: search hits with surrounding
 //! code, whole files, line ranges, single symbols, outlines and git status.

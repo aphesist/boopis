@@ -174,7 +174,7 @@ describe('the live provider: the conversation stream, from recorded frames', () 
     expect(host.last('session.create')).toBeUndefined();
     host.autoReply = (f) => {
       if (f['method'] === 'session.create') host.result(f['id'], { session_id: 'local-new', stored_session_id: 'local-new', messages: [], message_count: 0, info: { model: 'fake-a' } });
-      else if (f['method'] === 'plugin.hypotaxis.mode.set') host.result(f['id'], {});
+      else if (f['method'] === 'plugin.boopis.mode.set') host.result(f['id'], {});
       else gateway(f);
     };
     provider.sessions.send(created.id, 'start', META);
@@ -188,7 +188,7 @@ describe('the live provider: the conversation stream, from recorded frames', () 
     beforeEach(async () => {
       host = new FakeHost();
       host.describe = { instance_id: 'inst', capabilities: ['event-replay-v1', 'plugin-rpc-v1'] };
-      host.autoReply = (f) => { if (String(f['method']).startsWith('plugin.hypotaxis.')) host.result(f['id'], {}); else gateway(f); };
+      host.autoReply = (f) => { if (String(f['method']).startsWith('plugin.boopis.')) host.result(f['id'], {}); else gateway(f); };
       client = new GatewayClient(host);
       await client.connect();
       provider = createLiveProvider({ client, now: () => NOW, mock: createMockProvider({ simulate: false }) });
@@ -202,21 +202,21 @@ describe('the live provider: the conversation stream, from recorded frames', () 
     const answer = (modeSet: (f: Record<string, unknown>) => void): void => {
       host.autoReply = (f) => {
         if (f['method'] === 'session.create') host.result(f['id'], { session_id: 'local-new', stored_session_id: 'local-new', messages: [], message_count: 0, info: { model: 'fake-a' } });
-        else if (f['method'] === 'plugin.hypotaxis.mode.set') modeSet(f);
+        else if (f['method'] === 'plugin.boopis.mode.set') modeSet(f);
         else if (f['method'] === 'session.close') host.result(f['id'], { closed: true });
         else gateway(f);
       };
     };
-    const order = (): string[] => host.sent.map((s) => String(s.frame['method'])).filter((m) => ['session.create', 'plugin.hypotaxis.mode.set', 'prompt.submit', 'session.close'].includes(m));
+    const order = (): string[] => host.sent.map((s) => String(s.frame['method'])).filter((m) => ['session.create', 'plugin.boopis.mode.set', 'prompt.submit', 'session.close'].includes(m));
 
-    it('a governed session is created with only the hypotaxis toolset, and its mode is set before anything is sent', async () => {
+    it('a governed session is created with only the boopis toolset, and its mode is set before anything is sent', async () => {
       const id = created(true);
       answer((f) => { host.result(f['id'], {}); });
       provider.sessions.send(id, 'start', META);
       await tick();
-      expect(host.last('session.create')?.['params']).toEqual({ source: 'gui', toolsets: ['hypotaxis'] });
-      expect(host.last('plugin.hypotaxis.mode.set')?.['params']).toEqual({ session_id: 'local-new', mode: 'governed' });
-      expect(order()).toEqual(['session.create', 'plugin.hypotaxis.mode.set', 'prompt.submit']);
+      expect(host.last('session.create')?.['params']).toEqual({ source: 'gui', toolsets: ['boopis'] });
+      expect(host.last('plugin.boopis.mode.set')?.['params']).toEqual({ session_id: 'local-new', mode: 'governed' });
+      expect(order()).toEqual(['session.create', 'plugin.boopis.mode.set', 'prompt.submit']);
     });
 
     it('a session whose mode was never chosen is governed too while the plugin default is unknown, so it never loses the toolset', async () => {
@@ -224,7 +224,7 @@ describe('the live provider: the conversation stream, from recorded frames', () 
       answer((f) => { host.result(f['id'], {}); });
       provider.sessions.send(id, 'start', META);
       await tick();
-      expect(host.last('session.create')?.['params']).toEqual({ source: 'gui', toolsets: ['hypotaxis'] });
+      expect(host.last('session.create')?.['params']).toEqual({ source: 'gui', toolsets: ['boopis'] });
     });
 
     it('an ungoverned session gets no toolsets of ours', async () => {
@@ -233,7 +233,7 @@ describe('the live provider: the conversation stream, from recorded frames', () 
       provider.sessions.send(id, 'start', META);
       await tick();
       expect(host.last('session.create')?.['params']).toEqual({ source: 'gui' });
-      expect(host.last('plugin.hypotaxis.mode.set')?.['params']).toEqual({ session_id: 'local-new', mode: 'ungoverned' });
+      expect(host.last('plugin.boopis.mode.set')?.['params']).toEqual({ session_id: 'local-new', mode: 'ungoverned' });
     });
 
     it('a mode that cannot be set is fatal: the session is closed, nothing is sent, the error is shown, a retry starts fresh', async () => {
@@ -244,7 +244,7 @@ describe('the live provider: the conversation stream, from recorded frames', () 
       provider.sessions.send(id, 'start', META);
       await tick();
       await tick();
-      expect(order()).toEqual(['session.create', 'plugin.hypotaxis.mode.set', 'session.close']);
+      expect(order()).toEqual(['session.create', 'plugin.boopis.mode.set', 'session.close']);
       expect(host.last('session.close')?.['params']).toEqual({ session_id: 'local-new' });
       expect(host.last('prompt.submit')).toBeUndefined();
       const finished = seen.find((e) => e.type === 'turn-finished');
@@ -263,7 +263,7 @@ describe('the live provider: the conversation stream, from recorded frames', () 
     const created = provider.sessions.create('');
     host.autoReply = (f) => {
       if (f['method'] === 'session.create') host.result(f['id'], { session_id: 'local-new', stored_session_id: 'local-new', messages: [], message_count: 0, info: {} });
-      else if (f['method'] === 'plugin.hypotaxis.mode.set') host.result(f['id'], {});
+      else if (f['method'] === 'plugin.boopis.mode.set') host.result(f['id'], {});
       else if (f['method'] === 'session.list') host.result(f['id'], { sessions: (f['params'] as { include_hidden?: boolean }).include_hidden ? [] : [{ id: 'local-new', title: 'start', started_at: NOW.getTime() / 1000 }] });
       else gateway(f);
     };
@@ -321,7 +321,7 @@ describe('the live provider: the ledger', () => {
   it('totals what the plugin appends (a synthetic event: no recording exists yet)', () => {
     const seen: number[] = [];
     provider.ledger.subscribe((t) => seen.push(t.tokens));
-    host.event('plugin.hypotaxis.ledger.appended', SESSION, { type: 'usage.recorded', payload: { input_tokens: 40, output_tokens: 2 } } as never);
+    host.event('plugin.boopis.ledger.appended', SESSION, { type: 'usage.recorded', payload: { input_tokens: 40, output_tokens: 2 } } as never);
     expect(provider.ledger.totals()).toEqual({ tokens: 42, trips: 1 });
     expect(seen).toEqual([42]);
   });

@@ -1,0 +1,441 @@
+{
+  "schema_version": 1,
+  "_comment": "Data for the permission policy (docs/STANDARDS.md rule 6). Tool names are Hermes v0.23.2's. The default protected globs are data/protected.default.json (copied from crates/hx-txn); protected_extra adds the plugin's own.",
+  "own_tools": [
+    "pack",
+    "exec",
+    "ship",
+    "dispatch"
+  ],
+  "roles": {
+    "orchestrator": [
+      "pack",
+      "dispatch"
+    ],
+    "worker": [
+      "pack",
+      "exec",
+      "ship"
+    ]
+  },
+  "governed_only_tools": [
+    "dispatch"
+  ],
+  "read_only_tools": [
+    "read_file",
+    "search_files",
+    "web_search",
+    "web_extract",
+    "session_search",
+    "skills_list",
+    "skill_view",
+    "todo_list",
+    "clarify",
+    "vision_analyze",
+    "video_analyze",
+    "request_input",
+    "request_credential",
+    "ask"
+  ],
+  "network_tools": [
+    "web_search",
+    "web_extract",
+    "vision_analyze",
+    "video_analyze",
+    "x_search",
+    "browser_exec",
+    "browser_cdp"
+  ],
+  "workspace_confined_tools": [
+    "read_file",
+    "search_files"
+  ],
+  "kernel_denied_tools": [
+    "exec"
+  ],
+  "shell_tools": [
+    "terminal"
+  ],
+  "write_tools": [
+    "write_file",
+    "patch",
+    "ship"
+  ],
+  "path_arguments": {
+    "read_file": [
+      "path"
+    ],
+    "search_files": [
+      "path"
+    ],
+    "write_file": [
+      "path"
+    ],
+    "patch": [
+      "path"
+    ],
+    "pack": [
+      "path",
+      "paths"
+    ],
+    "ship": [
+      "path",
+      "paths"
+    ]
+  },
+  "path_object_lists": {
+    "ship": [
+      "edits",
+      "files"
+    ]
+  },
+  "aliases": {
+    "Bash": [
+      "terminal"
+    ],
+    "Read": [
+      "read_file",
+      "pack"
+    ],
+    "Grep": [
+      "search_files",
+      "pack"
+    ],
+    "Glob": [
+      "search_files",
+      "pack"
+    ],
+    "Edit": [
+      "patch",
+      "write_file",
+      "ship"
+    ],
+    "MultiEdit": [
+      "patch",
+      "ship"
+    ],
+    "Write": [
+      "write_file",
+      "ship"
+    ],
+    "WebFetch": [
+      "web_extract"
+    ],
+    "WebSearch": [
+      "web_search"
+    ],
+    "Agent": [
+      "delegate_task",
+      "dispatch"
+    ],
+    "Task": [
+      "delegate_task",
+      "dispatch"
+    ],
+    "TodoWrite": [
+      "todo_list"
+    ],
+    "Skill": [
+      "skill_view"
+    ]
+  },
+  "read_path_tools": [
+    "Read",
+    "Grep",
+    "Glob"
+  ],
+  "edit_path_tools": [
+    "Edit",
+    "MultiEdit",
+    "Write"
+  ],
+  "command_wrappers": [
+    "timeout",
+    "time",
+    "nice",
+    "nohup",
+    "stdbuf",
+    "command",
+    "builtin",
+    "noglob"
+  ],
+  "safe_env_assignments": [
+    "LANG",
+    "LC_ALL",
+    "TZ",
+    "NO_COLOR",
+    "FORCE_COLOR",
+    "CI",
+    "RUST_BACKTRACE",
+    "PYTHONUNBUFFERED"
+  ],
+  "read_only_commands": {
+    "ls": {},
+    "cat": {},
+    "head": {},
+    "tail": {},
+    "wc": {},
+    "pwd": {},
+    "stat": {},
+    "file": {
+      "deny_flags": [
+        "-C",
+        "--compile",
+        "-m",
+        "--magic-file"
+      ]
+    },
+    "grep": {},
+    "diff": {},
+    "cut": {},
+    "du": {},
+    "df": {},
+    "which": {},
+    "date": {
+      "deny_flags": [
+        "-s",
+        "--set"
+      ]
+    },
+    "whoami": {},
+    "basename": {},
+    "dirname": {},
+    "realpath": {},
+    "readlink": {},
+    "echo": {},
+    "printf": {
+      "deny_flags": [
+        "-v"
+      ]
+    },
+    "true": {},
+    "false": {},
+    "tree": {
+      "deny_flags": [
+        "-o"
+      ]
+    },
+    "sort": {
+      "deny_flags": [
+        "-o",
+        "--output",
+        "--compress-program",
+        "-T",
+        "--temporary-directory"
+      ]
+    },
+    "rg": {
+      "deny_flags": [
+        "--pre",
+        "--hostname-bin",
+        "-z",
+        "--search-zip"
+      ]
+    },
+    "find": {
+      "deny_flags": [
+        "-exec",
+        "-execdir",
+        "-ok",
+        "-okdir",
+        "-delete",
+        "-fprint",
+        "-fprint0",
+        "-fprintf",
+        "-fls"
+      ]
+    },
+    "git": {
+      "subcommands": [
+        "status",
+        "diff",
+        "log",
+        "show",
+        "ls-files",
+        "rev-parse",
+        "blame",
+        "grep",
+        "describe"
+      ],
+      "deny_flags": [
+        "--output",
+        "-o",
+        "--ext-diff",
+        "--textconv",
+        "--open-files-in-pager",
+        "-O"
+      ]
+    }
+  },
+  "protected_extra": [
+    "**/*.key",
+    "**/id_ed25519*",
+    "**/id_ecdsa*",
+    ".hermes/boopis.yaml",
+    "//**/boopis/host.sock",
+    "//**/boopis/**/host.sock",
+    "//**/boopis/host-channel.json",
+    "//**/.hx-journal-key",
+    "//**/boopis/journals/**"
+  ],
+  "denied_read_paths_comment": "Paths no tool of the agent may read: the desktop host's secret socket, the rendezvous file older hosts wrote (it held the channel token), and the key that vouches for hx's journals. Absolute globs (`//` prefix), like protected_extra's; the host's own peer check does not depend on this list.",
+  "denied_read_paths": [
+    "//**/boopis/host.sock",
+    "//**/boopis/**/host.sock",
+    "//**/boopis/host-channel.json",
+    "//**/.hx-journal-key"
+  ],
+  "mod_capabilities": {
+    "_comment": "Each `$` call a mod makes: the capability it needs (docs/AUTOMATION.md section 3) and the decision when no rule says otherwise. `ask` opens a permission form; `refuse` is a call boopis does not provide yet. `subject` names the argument that is the capability's subject (a folder, a host).",
+    "calls": {
+      "ui.open": {
+        "capability": "mod.ui",
+        "default": "allow"
+      },
+      "ui.close": {
+        "capability": "mod.ui",
+        "default": "allow"
+      },
+      "ui.invalidate": {
+        "capability": "mod.ui",
+        "default": "allow",
+        "ledger": false
+      },
+      "ui.toast": {
+        "capability": "mod.ui",
+        "default": "allow"
+      },
+      "ui.status": {
+        "capability": "mod.ui",
+        "default": "allow"
+      },
+      "ui.log": {
+        "capability": "mod.ui",
+        "default": "allow"
+      },
+      "ui.notify": {
+        "capability": "mod.ui",
+        "default": "allow"
+      },
+      "ui.ask": {
+        "capability": "mod.ui",
+        "default": "allow"
+      },
+      "store.get": {
+        "capability": "mod.store",
+        "default": "allow"
+      },
+      "store.set": {
+        "capability": "mod.store",
+        "default": "allow"
+      },
+      "store.delete": {
+        "capability": "mod.store",
+        "default": "allow"
+      },
+      "store.keys": {
+        "capability": "mod.store",
+        "default": "allow"
+      },
+      "clock.now": {
+        "capability": "mod.clock",
+        "default": "allow",
+        "ledger": false
+      },
+      "clock.every": {
+        "capability": "mod.clock",
+        "default": "allow"
+      },
+      "clock.cancel": {
+        "capability": "mod.clock",
+        "default": "allow",
+        "ledger": false
+      },
+      "command.register": {
+        "capability": "mod.command",
+        "default": "allow"
+      },
+      "config.get": {
+        "capability": "mod.read",
+        "default": "allow"
+      },
+      "env.get": {
+        "capability": "mod.read",
+        "default": "allow"
+      },
+      "theme.set": {
+        "capability": "mod.theme",
+        "default": "allow"
+      },
+      "theme.clear": {
+        "capability": "mod.theme",
+        "default": "allow"
+      },
+      "session.messages": {
+        "capability": "session.read",
+        "default": "allow"
+      },
+      "fs.read": {
+        "capability": "fs.read",
+        "default": "ask",
+        "subject": "path"
+      },
+      "fs.write": {
+        "capability": "fs.write",
+        "default": "ask",
+        "subject": "path"
+      },
+      "http.fetch": {
+        "capability": "net.egress",
+        "default": "ask",
+        "subject": "url"
+      }
+    },
+    "refused_namespaces": [
+      "process",
+      "mcp",
+      "model",
+      "agent",
+      "tool",
+      "prompt",
+      "turn",
+      "settings",
+      "audio",
+      "telemetry"
+    ],
+    "limits": {
+      "store_bytes": 4194304,
+      "store_key_chars": 200,
+      "fs_bytes": 4194304,
+      "http_timeout_s": 30,
+      "http_bytes": 4194304,
+      "http_redirects": 5,
+      "messages_max": 4096,
+      "text_chars": 4000,
+      "toast_ms_default": 4000,
+      "toast_ms_max": 60000,
+      "ask_timeout_s": 600,
+      "calls_per_second": 200,
+      "command_name_chars": 64,
+      "panes_max": 8,
+      "commands_max": 64
+    },
+    "env_allowlist": [
+      "LANG",
+      "LC_ALL",
+      "TZ",
+      "TERM",
+      "COLORTERM",
+      "SHELL",
+      "EDITOR",
+      "VISUAL"
+    ],
+    "config_keys": [
+      "mode",
+      "cwd",
+      "model",
+      "surface",
+      "version"
+    ]
+  }
+}

@@ -92,7 +92,7 @@ def stack(
     }
     extra: JsonObject = {
         "model": {"provider": "main", "default": "orch"},
-        "delegation": {"backend": "hypotaxis"},  # set by the host or installer, with consent (ADR-0007)
+        "delegation": {"backend": "boopis"},  # set by the host or installer, with consent (ADR-0007)
         "providers": {
             "main": {
                 "models": {
@@ -131,7 +131,7 @@ def git(root: Path, *args: str) -> str:
 
 def make_project(stack: HermesStack, tmp_path: Path) -> Path:
     """A git project with a bug, its test suite, and a pinned gate command the user has approved."""
-    from hypotaxis.config import KIND_SETTINGS, TrustStore, content_hash
+    from boopis.config import KIND_SETTINGS, TrustStore, content_hash
 
     root = tmp_path / "project"
     (root / "tests").mkdir(parents=True)
@@ -139,14 +139,14 @@ def make_project(stack: HermesStack, tmp_path: Path) -> Path:
     (root / "calc.py").write_text(BUGGY)
     (root / "tests" / "__init__.py").write_text("")
     (root / "tests" / "test_calc.py").write_text(SUITE)
-    config = root / ".hermes" / "hypotaxis.yaml"
+    config = root / ".hermes" / "boopis.yaml"
     config.write_text(f"gate:\n  command: {GATE}\n  timeout_s: 60\n")
     (stack.root / "home").mkdir(parents=True, exist_ok=True)
     (stack.root / "home" / ".gitconfig").write_text("[user]\n\tname = The Owner\n\temail = owner@example.com\n")
     git(root, "init", "-q")
     git(root, "add", "-A")
     git(root, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "init")
-    TrustStore(stack.home).approve(root, KIND_SETTINGS, "hypotaxis.yaml", content_hash(config.read_bytes()))
+    TrustStore(stack.home).approve(root, KIND_SETTINGS, "boopis.yaml", content_hash(config.read_bytes()))
     return root
 
 
@@ -164,12 +164,12 @@ def start_session(gw: GatewayClient, project: Path) -> str:
             "request_id": f"req-{time.time_ns()}",
             "model": "orch",
             "provider": "main",
-            "toolsets": ["hypotaxis"],
-            "client": {"name": "hypotaxis-e2e", "version": "0"},
+            "toolsets": ["boopis"],
+            "client": {"name": "boopis-e2e", "version": "0"},
         },
     )
     sid: str = created["session_id"]
-    gw.result("plugin.hypotaxis.mode.set", {"session_id": sid, "mode": "governed"})
+    gw.result("plugin.boopis.mode.set", {"session_id": sid, "mode": "governed"})
     return sid
 
 
@@ -225,7 +225,7 @@ def run_cascade(
     wait_for(
         lambda: any(
             e["payload"].get("status") in ("passed", "failed")
-            for e in gateway.events_of("plugin.hypotaxis.cascade.updated", sid)
+            for e in gateway.events_of("plugin.boopis.cascade.updated", sid)
         ),
         "the cascade to end",
     )
@@ -255,7 +255,7 @@ def test_a_gate_block_climbs_to_the_stronger_model_and_the_orchestrator_hears_th
     shipped = of_type(ledger, "checkpoint.committed")
     assert len(shipped) == 1
     assert git(project, "rev-parse", shipped[0]["ref"]) == shipped[0]["commit"]
-    assert shipped[0]["ref"] == f"refs/hypotaxis/checkpoints/{sid}"
+    assert shipped[0]["ref"] == f"refs/boopis/checkpoints/{sid}"
     assert "return a + b" in git(project, "show", f"{shipped[0]['commit']}:calc.py")
     assert git(project, "status", "--porcelain") == "M calc.py"  # nothing else was left behind
 
@@ -316,7 +316,7 @@ def test_a_gate_block_climbs_to_the_stronger_model_and_the_orchestrator_hears_th
     assert not [r for r in b_requests if r.model != "model-b"]
     # each role read its own cache-stable prompt section: the worker's, not the orchestrator's
     system = next(m["content"] for m in a_requests[0].messages if m.get("role") == "system")
-    assert "hypotaxis: governed worker" in system
+    assert "boopis: governed worker" in system
     assert "You are the orchestrator" not in system
     orch_system = next(m["content"] for m in one.chat_requests()[before[0] :][0].messages if m.get("role") == "system")
     assert "You are the orchestrator" in orch_system
@@ -330,7 +330,7 @@ def test_a_gate_block_climbs_to_the_stronger_model_and_the_orchestrator_hears_th
     assert "first try" not in handed  # the first worker's report is not the handover
 
     # the orchestrator was told the final outcome, in the turn that carried the last child's result
-    told = [r for r in one.chat_requests()[before[0] :] if r.model == "orch" and "[hypotaxis cascade]" in user_text(r)]
+    told = [r for r in one.chat_requests()[before[0] :] if r.model == "orch" and "[boopis cascade]" in user_text(r)]
     assert len(told) == 1
     assert "PASSED at tier 2 of 2 (strong)" in user_text(told[0])
     assert task_id in user_text(told[0])
@@ -342,7 +342,7 @@ def test_a_gate_block_climbs_to_the_stronger_model_and_the_orchestrator_hears_th
     assert len(orch_turns) == 1, "the interim completion must not cost a model call"
 
     # cascade.state and its events
-    state = gateway.result("plugin.hypotaxis.cascade.state", {"session_id": sid})
+    state = gateway.result("plugin.boopis.cascade.state", {"session_id": sid})
     assert (state["status"], state["tier"], state["attempt"], state["task_id"]) == (
         "passed",
         "strong",
@@ -350,7 +350,7 @@ def test_a_gate_block_climbs_to_the_stronger_model_and_the_orchestrator_hears_th
         task_id,
     )
     assert [t["name"] for t in state["ladder"]] == ["cheap", "strong"]
-    updates = [e["payload"] for e in gateway.events_of("plugin.hypotaxis.cascade.updated", sid)]
+    updates = [e["payload"] for e in gateway.events_of("plugin.boopis.cascade.updated", sid)]
     assert [(u["status"], u["tier"], u["attempt"]) for u in updates] == [
         ("working", "cheap", 1),
         ("gate", "cheap", 1),

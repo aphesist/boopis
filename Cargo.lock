@@ -424,6 +424,46 @@ dependencies = [
 ]
 
 [[package]]
+name = "boopis-host"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "dirs 6.0.0",
+ "futures-util",
+ "getrandom 0.3.4",
+ "gtk",
+ "hex",
+ "keyring",
+ "libc",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "specta",
+ "specta-typescript",
+ "subtle",
+ "tar",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-notification",
+ "tauri-plugin-opener",
+ "tauri-plugin-store",
+ "tauri-specta",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-tungstenite",
+ "tokio-util",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+ "uuid",
+ "webkit2gtk",
+ "windows-sys 0.61.2",
+ "zstd",
+]
+
+[[package]]
 name = "borsh"
 version = "1.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2259,46 +2299,6 @@ dependencies = [
  "tokio",
  "tower-service",
  "tracing",
-]
-
-[[package]]
-name = "hypotaxis-host"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "dirs 6.0.0",
- "futures-util",
- "getrandom 0.3.4",
- "gtk",
- "hex",
- "keyring",
- "libc",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "specta",
- "specta-typescript",
- "subtle",
- "tar",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-notification",
- "tauri-plugin-opener",
- "tauri-plugin-store",
- "tauri-specta",
- "tempfile",
- "thiserror 2.0.21",
- "tokio",
- "tokio-tungstenite",
- "tokio-util",
- "tracing",
- "tracing-subscriber",
- "url",
- "uuid",
- "webkit2gtk",
- "windows-sys 0.61.2",
- "zstd",
 ]
 
 [[package]]

@@ -57,7 +57,7 @@ def workspace(stack: HermesStack) -> Path:
 def kernel_can_start(gateway: GatewayClient) -> None:
     """exec is offered only where a sandboxed kernel starts with Hermes's own interpreter (``describe.kernel`` is the
     plugin's probe). Where it cannot, these tests skip and say why; the unavailable path is tested elsewhere."""
-    kernel = gateway.result("plugin.hypotaxis.describe", {}).get("kernel")
+    kernel = gateway.result("plugin.boopis.describe", {}).get("kernel")
     if not kernel or not kernel.get("ok"):
         reason = (kernel or {}).get("reason") or "no hx to sandbox it"
         pytest.skip(f"exec cannot run in this environment (hx.sandbox.unavailable): {reason}")
@@ -72,8 +72,8 @@ def create_session(gw: GatewayClient, cwd: Path, **extra: Any) -> str:
             "request_id": f"req-{time.time_ns()}",
             "model": "fake-a",
             "provider": "main",
-            "toolsets": ["hypotaxis"],
-            "client": {"name": "hypotaxis-e2e", "version": "0"},
+            "toolsets": ["boopis"],
+            "client": {"name": "boopis-e2e", "version": "0"},
             **extra,
         },
     )
@@ -148,7 +148,7 @@ def test_exec_runs_in_the_sandbox_calls_tools_through_the_policy_and_leaves_a_bl
     gateway: GatewayClient, stack: HermesStack, workspace: Path, fake_model: FakeModelServer
 ) -> None:
     sid = create_session(gateway, workspace)
-    gateway.result("plugin.hypotaxis.mode.set", {"session_id": sid, "mode": "ungoverned"})
+    gateway.result("plugin.boopis.mode.set", {"session_id": sid, "mode": "ungoverned"})
     forbidden = workspace / "forbidden.txt"
     start = len(fake_model.chat_requests())
     text = " ".join(
@@ -183,7 +183,7 @@ def test_exec_runs_in_the_sandbox_calls_tools_through_the_policy_and_leaves_a_bl
     assert len(blank["blanks"]) == 1
 
     # blank.opened reached the client, and the ledger holds it
-    opened = gateway.events_of("plugin.hypotaxis.blank.opened", sid)
+    opened = gateway.events_of("plugin.boopis.blank.opened", sid)
     assert [e["payload"]["question"] for e in opened] == ["Keep the old alias?"]
     ledger = read_ledger(stack, sid)
     assert [e["payload"]["blank_id"] for e in ledger if e["type"] == "blank.opened"] == [
@@ -203,15 +203,15 @@ def test_exec_runs_in_the_sandbox_calls_tools_through_the_policy_and_leaves_a_bl
 
     # the kernel ran sandboxed: it could not have written the workspace, whatever the policy said
     assert not (workspace / "forbidden.txt").exists()
-    assert (stack.home / "hypotaxis" / "scratch" / sid).is_dir()
+    assert (stack.home / "boopis" / "scratch" / sid).is_dir()
 
 
 def test_interrupting_the_turn_cancels_the_cell_and_the_kernel_keeps_its_variables(
     gateway: GatewayClient, stack: HermesStack, workspace: Path, fake_model: FakeModelServer
 ) -> None:
     sid = create_session(gateway, workspace)
-    gateway.result("plugin.hypotaxis.mode.set", {"session_id": sid, "mode": "ungoverned"})
-    scratch = stack.home / "hypotaxis" / "scratch" / sid
+    gateway.result("plugin.boopis.mode.set", {"session_id": sid, "mode": "ungoverned"})
+    scratch = stack.home / "boopis" / "scratch" / sid
     running = scratch / "running"
     cell = f"held = 'kept'\nimport asyncio\nopen('{running}', 'w').close()\nawait asyncio.sleep(120)"
     start = len(gateway.events)

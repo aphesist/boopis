@@ -170,13 +170,13 @@ export async function liveForms(env) {
     await inlineKey.locator('[data-action="submit"]').click();
     await page.waitForTimeout(500);
     const k1 = await page.evaluate((sec) => ({
-      stored: [...window.__hxReplaySecrets.stored.entries()], requests: window.__hxReplay.requests.filter((r) => r.method.startsWith('plugin.hypotaxis.form.')),
+      stored: [...window.__hxReplaySecrets.stored.entries()], requests: window.__hxReplay.requests.filter((r) => r.method.startsWith('plugin.boopis.form.')),
       all: JSON.stringify(window.__hxReplay.requests).includes(sec),
       dom: document.documentElement.outerHTML.includes(sec) || [...document.querySelectorAll('input,textarea')].some((i) => i.value.includes(sec)),
       state: [...document.querySelectorAll('hx-card')].filter((c) => c.data.kind === 'credential').map((c) => c.state)
     }), SECRET);
-    check('forms-live', 'the secret reaches the keychain (secret_set) under the plugin\'s reference', k1.stored.length === 1 && k1.stored[0][0] === 'hypotaxis.provider.openai/api_key' && k1.stored[0][1] === SECRET, k1.stored.map((e) => e[0]));
-    const sub = k1.requests.find((r) => r.method === 'plugin.hypotaxis.form.submit');
+    check('forms-live', 'the secret reaches the keychain (secret_set) under the plugin\'s reference', k1.stored.length === 1 && k1.stored[0][0] === 'boopis.provider.openai/api_key' && k1.stored[0][1] === SECRET, k1.stored.map((e) => e[0]));
+    const sub = k1.requests.find((r) => r.method === 'plugin.boopis.form.submit');
     check('forms-live', 'form.submit carries the field name in provided and no value', !!sub && JSON.stringify(sub.params.provided) === '["value"]' && Object.keys(sub.params.values).length === 0, sub);
     check('forms-live', 'the secret is in no RPC payload and not in the DOM, before or after the answer', !k1.all && !k1.dom, { rpc: k1.all, dom: k1.dom });
     check('forms-live', 'answering inline resolves the inline card (a receipt)', k1.state.every((s) => s === 'done'), k1.state);
@@ -190,7 +190,7 @@ export async function liveForms(env) {
     await dockQ.locator('.cd-opt').first().click();
     await dockQ.locator('[data-action="submit"]').click();
     await page.waitForTimeout(600);
-    const q = await page.evaluate(() => ({ req: window.__hxReplay.requests.filter((r) => r.method === 'plugin.hypotaxis.form.submit').map((r) => r.params.values), inline: [...document.querySelectorAll('.ss-forms hx-card')].filter((c) => c.data.kind === 'question').map((c) => c.state) }));
+    const q = await page.evaluate(() => ({ req: window.__hxReplay.requests.filter((r) => r.method === 'plugin.boopis.form.submit').map((r) => r.params.values), inline: [...document.querySelectorAll('.ss-forms hx-card')].filter((c) => c.data.kind === 'question').map((c) => c.state) }));
     check('forms-live', 'answering in the dock sends the answer, and resolves the inline card too', q.req.some((v) => v.answer === 'yes') && q.inline.every((s) => s === 'done'), q);
     await page.waitForTimeout(1300);
     check('forms-live', 'one form is left in the dock', await page.evaluate(() => __hx.dock().state.waits === 1));
@@ -199,7 +199,7 @@ export async function liveForms(env) {
     const inlineSetup = page.locator('.ss-forms hx-card').filter({ hasText: 'gate command' }).first();
     await inlineSetup.locator('[data-action="cancel"]').click();
     await page.waitForTimeout(1600);
-    const c3 = await page.evaluate(() => ({ cancel: window.__hxReplay.requests.some((r) => r.method === 'plugin.hypotaxis.form.cancel'), waits: __hx.dock().state.waits }));
+    const c3 = await page.evaluate(() => ({ cancel: window.__hxReplay.requests.some((r) => r.method === 'plugin.boopis.form.cancel'), waits: __hx.dock().state.waits }));
     check('forms-live', 'cancelling sends form.cancel and clears the queue', c3.cancel && c3.waits === 0, c3);
     check('forms-live', 'nothing in the run logged a console error', page.errors.length === 0, page.errors);
   });

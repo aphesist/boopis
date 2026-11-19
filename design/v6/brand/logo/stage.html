@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en" data-hx-preset="catalog">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>boopis logo stage</title>
+<link rel="stylesheet" href="../../tokens.css">
+<script src="boopis-logo.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg-2); color: var(--text-strong); display: grid; place-items: center; font: 400 var(--fs-s)/var(--lh-ui) var(--sans); }
+  .wrap { display: flex; flex-direction: column; align-items: center; gap: var(--sp-7); }
+  .state { font: 400 var(--fs-xs)/1.45 var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); height: 20px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <boopis-logo id="logo" style="font-size: 168px"></boopis-logo>
+  <div class="state" id="state" aria-live="off"></div>
+</div>
+<script>
+  /* stage.html?mode=hero|idle&theme=light&auto=0
+     hero: the big-moment hero, letters="play" (blink, the hero loop, a rest). idle: the wordmark with live eyes and still letters, nothing else.
+     The capture script records one run and sets window.__done. */
+  const q = new URLSearchParams(location.search), logo = document.getElementById('logo'), label = document.getElementById('state');
+  const mode = q.get('mode') || 'hero';
+  if (mode === 'hero') logo.setAttribute('letters', 'play');
+  if (q.get('look') === '1') logo.setAttribute('look', '');
+  if (q.get('theme') === 'light') { document.documentElement.dataset.hxPreset = 'bone'; document.documentElement.dataset.hxTheme = 'light'; }
+  logo.addEventListener('boopisstep', (e) => { label.textContent = e.detail.state; });
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  window.run = async () => {
+    label.textContent = mode === 'hero' ? 'idle' : 'idle, live eyes';
+    if (mode === 'hero') {
+      await sleep(500); logo.blink(); await sleep(600);
+      await logo.play('hero');
+      await sleep(1500);
+    } else { await sleep(5300); }
+    window.__done = true;
+  };
+  if (q.get('auto') !== '0') document.fonts.ready.then(() => window.run());
+</script>
+</body>
+</html>

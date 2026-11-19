@@ -1,4 +1,4 @@
-/* hypotaxis v6 · session tab (owner: session agent)
+/* boopis v6 · session tab (owner: session agent)
    Built on the shared library (components/components.js, HX.ui): every button, row, chip, menu, popover, toast,
    tooltip, entry, ladder, measure, section and the composer itself come from it. What stays here is the session's
    own: its layout, its data, the feedforward reading, the inline diff, the terminal well and the keyboard of its
@@ -574,6 +574,9 @@
     renderConversation();
     const c = VIEW.composer = sessionComposer({ draft: D().composerDraft || '' });
     const host = el('div', { class: 'ss-composer' }, c);
+    /* slots a mod draws into (MODS.md §3): the band above the composer and the status line under it; empty slots take no room */
+    VIEW.slots = { band: el('div', { class: 'ss-mods ss-mods--band' }), status: el('div', { class: 'ss-mods ss-mods--status' }) };
+    host.prepend(VIEW.slots.band); host.append(VIEW.slots.status);
     root.append(host);
     c.addEventListener('ui:send', (e) => { VIEW.lastAssume = (c.querySelector('.ui-composer__hint') ? [...c.querySelectorAll('.ui-assume')].map((b) => b.textContent) : []); setTimeout(() => runTurn(e.detail.text), 0); });
     c.addEventListener('ui:stop', () => { VIEW.stopRun && VIEW.stopRun(); });
@@ -592,6 +595,13 @@
     on('hx:new-session', (d) => newSession(d && d.project));
     on('hx:session-select', (d) => { if (d && d.id && d.from !== 'list' && d.id !== VIEW.current && sessions().some((x) => x.id === d.id)) selectSession(d.id, { quiet: true }); });
     emit('hx:title', { title: (sessions()[0] || {}).title, project: (sessions()[0] || {}).project, tab: 'session' });
+    emit('hx:session-ready', { slots: VIEW.slots });
+  }
+  /* a mod's placed row goes at the end of the conversation (gone when the session changes or clears) */
+  function placeRow(node, o) {
+    if (!VIEW.col || !node) return;
+    VIEW.col.append(node);
+    if (!(o && o.quiet)) VIEW.scroll.scrollTop = VIEW.scroll.scrollHeight;
   }
   function toConversation() { const t = turns().find((x) => x.tabIndex === 0) || lastTurn(); if (t) { rove(t, true); } }
 
@@ -808,7 +818,9 @@
         const heads = [...body.querySelectorAll('.ui-sec__head')], i = heads.indexOf(e.target);
         const n = heads[i + (e.key === 'ArrowDown' ? 1 : -1)]; if (n) { e.preventDefault(); n.focus(); }
       });
-      return el('div', { class: 'ui-panel ssr-panel', role: 'region', 'aria-label': 'Session details' }, [el('div', { class: 'ui-panel__head' }, el('h2', { class: 'ui-panel__title', text: 'Session details' })), body]);
+      const pnl = el('div', { class: 'ui-panel ssr-panel', role: 'region', 'aria-label': 'Session details' }, [el('div', { class: 'ui-panel__head' }, el('h2', { class: 'ui-panel__title', text: 'Session details' })), body]);
+      /* mod panes become tabs of this panel (MODS.md §3); without mods the panel is unchanged */
+      return (window.HX.mods && window.HX.mods.decoratePanel && window.HX.mods.decoratePanel(pnl)) || pnl;
     }
     function draw(flash) {
       const prevBody = root.querySelector('.ui-panel__body'), keepScroll = prevBody ? prevBody.scrollTop : 0;
@@ -839,7 +851,7 @@
     const H = window.HX;
     if (!H.ui || !H.ui.composer) { console.error('[session] needs components/components.js (HX.ui) loaded before session.js'); return; }
     H.composer = { create: legacyCreate };
-    H.session = { select: selectSession, newSession, openPanel };
+    H.session = { select: selectSession, newSession, openPanel, placeRow, refreshRight: () => RIGHT.refresh && RIGHT.refresh(), get slots() { return VIEW.slots; } };
     H.register('session', { mount: (root) => mountView(root) });
     H.register('session-list', { mount: (root) => mountList(root) });
     H.register('session-right', { mount: (root) => mountRight(root) });

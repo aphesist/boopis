@@ -86,7 +86,7 @@ function mountGpuChoice(sec: HTMLElement, fail: (e: unknown) => void): void {
     const g = report.gpu;
     const show = (chosen: typeof policy): void => {
       const lines: string[] = [];
-      lines.push(g.policy_source === 'environment' ? `HYPOTAXIS_GPU is set (${m.gpuLabel(g.policy)}) and overrides this choice.` : `Running on: ${g.set.length ? 'the dedicated GPU' : 'the integrated GPU'} (${g.rule.replace(/_/g, ' ')}).`);
+      lines.push(g.policy_source === 'environment' ? `BOOPIS_GPU is set (${m.gpuLabel(g.policy)}) and overrides this choice.` : `Running on: ${g.set.length ? 'the dedicated GPU' : 'the integrated GPU'} (${g.rule.replace(/_/g, ' ')}).`);
       if (g.warning === 'may_crash_on_wayland') lines.push('The dedicated GPU on Wayland with this WebKitGTK (before 2.54.2) may crash or show a blank window.');
       const moved = g.restart_advice ? `The power source changed: a restart would switch to the ${g.restart_advice === 'to_dedicated' ? 'dedicated' : 'integrated'} GPU.` : '';
       if (moved) lines.push(moved);

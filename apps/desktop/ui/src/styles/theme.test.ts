@@ -54,17 +54,17 @@ describe('the contrast table', () => {
 
 describe('importing a theme', () => {
   it('sanitize keeps a known preset, #rrggbb colours of editable tokens, known fonts and modes', () => {
-    const t = sanitize({ preset: 'bone', colors: { '--text': '#ABCDEF', bg: '#000', '--brass': 'red', '--bg-1': '#101010' }, sans: 'Geist', mono: 'Nope', case: 'lower', corners: 'weird', density: 'compact', logo: 'open', extra: 1 });
-    expect(t).toEqual({ ...blank(), preset: 'bone', colors: { '--text': '#abcdef', '--bg-1': '#101010' }, sans: 'Geist', case: 'lower', density: 'compact', logo: 'open' });
+    const t = sanitize({ preset: 'bone', colors: { '--text': '#ABCDEF', bg: '#000', '--brass': 'red', '--bg-1': '#101010' }, sans: 'Geist', mono: 'Nope', case: 'lower', corners: 'weird', density: 'compact', extra: 1 });
+    expect(t).toEqual({ ...blank(), preset: 'bone', colors: { '--text': '#abcdef', '--bg-1': '#101010' }, sans: 'Geist', case: 'lower', density: 'compact' });
   });
   it('sanitize rejects what is not an object, and falls back to the default preset', () => {
     expect(sanitize(null)).toBeNull();
     expect(sanitize('x')).toBeNull();
     expect(sanitize({ preset: 'nope' })?.preset).toBe('catalog');
   });
-  it('importJSON refuses text that is not a hypotaxis theme, with a precise message', () => {
+  it('importJSON refuses text that is not a boopis theme, with a precise message', () => {
     expect(() => themeApi.importJSON('{oops')).toThrow('not valid JSON');
-    expect(() => themeApi.importJSON('{"preset":"bone"}')).toThrow('hypotaxis-theme');
+    expect(() => themeApi.importJSON('{"preset":"bone"}')).toThrow('boopis-theme');
   });
   it('the four presets exist and each names its fonts', () => {
     expect(Object.keys(PRESETS)).toEqual(['catalog', 'graphite', 'bone', 'typewriter']);
@@ -80,7 +80,7 @@ describe('theme presets', () => {
     expect(document.documentElement.dataset['hxPreset']).toBe('typewriter');
     expect(document.documentElement.dataset['hxCase']).toBe('lower');
     expect(document.documentElement.dataset['hxCorners']).toBe('round');
-    expect(JSON.parse(themeApi.exportJSON())).toMatchObject({ format: 'hypotaxis-theme', version: 1, preset: 'typewriter', case: 'lower' });
+    expect(JSON.parse(themeApi.exportJSON())).toMatchObject({ format: 'boopis-theme', version: 1, preset: 'typewriter', case: 'lower' });
     themeApi.preset('catalog');
   });
   it('an override equal to the preset is dropped, so the preset stays meaningful', () => {

@@ -1,7 +1,7 @@
 /* Forms (docs/FORMS.md): one model for every request to the user, whoever sends it. The renderer draws a FormModel and
    knows nothing of where it came from; these adapters turn each source into one and build the reply the source expects.
    - host: first-run setup (the host's `Form`), answered through `setup_advance`;
-   - plugin: `plugin.hypotaxis.form.opened`, answered with `plugin.hypotaxis.form.submit` / `.cancel`;
+   - plugin: `plugin.boopis.form.opened`, answered with `plugin.boopis.form.submit` / `.cancel`;
    - hermes: the canonical `approval.request` and `clarify.request` events, answered through Hermes's own
      `approval.respond` / `clarify.respond` (never through the plugin).
    A secret field's value is split off by `splitSecrets` and goes to the host's keychain (`secret_set`), never into a frame
@@ -84,7 +84,7 @@ const obj = (v: unknown): Obj => (v && typeof v === 'object' && !Array.isArray(v
 const str = (v: unknown, d = ''): string => (typeof v === 'string' ? v : d);
 const strings = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
 
-/** the fields of an MCP-elicitation schema with the hypotaxis extensions; a field of an unsupported type is dropped */
+/** the fields of an MCP-elicitation schema with the boopis extensions; a field of an unsupported type is dropped */
 export function fieldsOf(schema: unknown): FormField[] {
   const s = obj(schema);
   const required = new Set(strings(s['required']));
@@ -120,16 +120,16 @@ function hostDiff(diff: readonly { key: string; from?: unknown; to: unknown }[])
   return diff.flatMap((d) => [...(d.from == null ? [] : ['-' + d.key + ': ' + JSON.stringify(d.from)]), '+' + d.key + ': ' + JSON.stringify(d.to)]).join('\n');
 }
 
-/** `plugin.hypotaxis.form.opened`'s payload; `model` is the model the session runs on (the agent's origin) */
+/** `plugin.boopis.form.opened`'s payload; `model` is the model the session runs on (the agent's origin) */
 export function fromPluginEvent(sessionId: string, p: Obj, model = ''): FormModel | null {
   const id = str(p['form_id']);
   if (!id) return null;
   const origin = str(p['origin'], 'agent');
   return {
-    id, kind: str(p['kind'], 'question'), title: str(p['title'], 'hypotaxis needs something'), body: str(p['body']), fields: fieldsOf(p['schema']),
+    id, kind: str(p['kind'], 'question'), title: str(p['title'], 'boopis needs something'), body: str(p['body']), fields: fieldsOf(p['schema']),
     submitLabel: label(p['submit'], 'Send'), cancelLabel: label(p['cancel'], 'Cancel'), hold: obj(p['submit'])['hold'] === true,
     sensitive: p['sensitive'] === true, origin, diff: [], source: { kind: 'plugin', sessionId },
-    spec: buildSpec({ id, kind: p['kind'], title: str(p['title'], 'hypotaxis needs something'), body: str(p['body']), schema: p['schema'], submit: p['submit'], cancel: p['cancel'], origin: originFor(origin, model), expiresAt: timeOf(p['expires_at']) })
+    spec: buildSpec({ id, kind: p['kind'], title: str(p['title'], 'boopis needs something'), body: str(p['body']), schema: p['schema'], submit: p['submit'], cancel: p['cancel'], origin: originFor(origin, model), expiresAt: timeOf(p['expires_at']) })
   };
 }
 
@@ -200,8 +200,8 @@ export function replyFor(form: FormModel, outcome: { cancelled: true } | { cance
   const src = form.source;
   if (src.kind === 'host' || src.kind === 'free-tier') return null;
   if (src.kind === 'plugin') {
-    if (outcome.cancelled) return { method: 'plugin.hypotaxis.form.cancel', params: { session_id: src.sessionId, form_id: form.id } };
-    return { method: 'plugin.hypotaxis.form.submit', params: { session_id: src.sessionId, form_id: form.id, values: outcome.values, provided: [...(outcome.provided ?? [])] } };
+    if (outcome.cancelled) return { method: 'plugin.boopis.form.cancel', params: { session_id: src.sessionId, form_id: form.id } };
+    return { method: 'plugin.boopis.form.submit', params: { session_id: src.sessionId, form_id: form.id, values: outcome.values, provided: [...(outcome.provided ?? [])] } };
   }
   const base = { session_id: src.sessionId, execution_generation: src.generation, prompt_id: src.promptId };
   if (src.method === 'approval.respond') {
@@ -227,7 +227,7 @@ export function splitSecrets(form: FormModel, values: Obj): { plain: Obj; secret
     if (typeof value !== 'string' || value === '') continue;
     const m = /^secret:\/\/([a-z0-9][a-z0-9_.-]*)\/([a-z0-9][a-z0-9_.-]*)$/.exec(field.secretRef ?? '');
     if (!m) throw new Error('The secret field ' + name + ' names no place to store it');
-    secrets.push({ field: name, service: 'hypotaxis.' + (m[1] ?? ''), account: m[2] ?? '', value });
+    secrets.push({ field: name, service: 'boopis.' + (m[1] ?? ''), account: m[2] ?? '', value });
   }
   return { plain, secrets };
 }

@@ -1,4 +1,4 @@
-//! `hx`: the binary the hypotaxis plugin drives over JSON-RPC on stdio.
+//! `hx`: the binary the boopis plugin drives over JSON-RPC on stdio.
 //!
 //! ```text
 //! hx serve                      JSON-RPC 2.0 over stdio, until stdin closes
@@ -30,7 +30,7 @@ use tokio_util::sync::CancellationToken;
 #[command(
     name = "hx",
     version,
-    about = "File transactions and more for the hypotaxis plugin"
+    about = "File transactions and more for the boopis plugin"
 )]
 struct Cli {
     /// Write JSON logs to this file (rotated at 10 MiB, 5 kept) instead of stderr.

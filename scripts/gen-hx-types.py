@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate the plugin's typed hx-v1 wire types from the JSON Schema `hx` publishes.
 
-    scripts/gen-hx-types.py            write plugins/hypotaxis/hx/types.py
+    scripts/gen-hx-types.py            write plugins/boopis/hx/types.py
     scripts/gen-hx-types.py --check    fail if the checked-in file is stale
 
 The schema (crates/hx-proto/schema/hx-v1.schema.json) is generated from the Rust types, so this
@@ -20,7 +20,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 SCHEMA = ROOT / "crates/hx-proto/schema/hx-v1.schema.json"
-OUT = ROOT / "plugins/hypotaxis/hx/types.py"
+OUT = ROOT / "plugins/boopis/hx/types.py"
 
 Schema = dict[str, Any]
 PRIMITIVES = {"string": "str", "integer": "int", "number": "float", "boolean": "bool"}

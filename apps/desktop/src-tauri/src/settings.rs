@@ -18,7 +18,7 @@ pub struct AppSettings {
     pub profile: Option<String>,
     /// Whether the host may show desktop notifications.
     pub notifications: bool,
-    /// Which GPU the webview renders on (`HYPOTAXIS_GPU` overrides it). Read at startup, so a change needs a restart.
+    /// Which GPU the webview renders on (`BOOPIS_GPU` overrides it). Read at startup, so a change needs a restart.
     /// Added without a version bump: a file from before has none and gets `auto`.
     #[serde(default)]
     pub gpu: crate::gpu::Policy,

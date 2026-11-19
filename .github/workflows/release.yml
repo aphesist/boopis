@@ -23,9 +23,9 @@ env:
   # `bundle.createUpdaterArtifacts` is off (it is off today).
   TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-  # The Arch package's artifact (ADR-0025). Named hypotaxis-* because the release job publishes that pattern; the rename
-  # changes this line and the pattern in `release` together.
-  ARCH_ARTIFACT: hypotaxis-arch-x86_64-pkg
+  # The Arch package's artifact (ADR-0025). Named boopis-* because the release job publishes that pattern; a change of
+  # name changes this line and the pattern in `release` together.
+  ARCH_ARTIFACT: boopis-arch-x86_64-pkg
 
 jobs:
   runtime:
@@ -58,7 +58,7 @@ jobs:
           jq -r '"runtime archive: \(.archive.size) bytes, unpacked about \(.unpacked_size) bytes, Hermes \(.hermes_version), Python \(.python_version)"' dist/runtime/runtime.json | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
-          # not named hypotaxis-*: the release job publishes only those
+          # not named boopis-*: the release job publishes only those
           name: hermes-runtime-linux-x86_64
           path: dist/runtime/*
           if-no-files-found: error
@@ -119,13 +119,13 @@ jobs:
           } | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
-          name: hypotaxis-linux-x86_64-appimage
+          name: boopis-linux-x86_64-appimage
           path: dist/*
           if-no-files-found: error
           retention-days: 30
       - uses: actions/upload-artifact@v4
         with:
-          # not named hypotaxis-*: the release job publishes only those
+          # not named boopis-*: the release job publishes only those
           name: hx-release-linux
           path: target/release/hx
           if-no-files-found: error
@@ -231,7 +231,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - uses: actions/download-artifact@v4
         with:
-          name: hypotaxis-linux-x86_64-appimage
+          name: boopis-linux-x86_64-appimage
           path: ${{ runner.temp }}/app
       - name: runtime libraries, Xvfb and WebKitWebDriver (same WebKitGTK as the build image)
         run: |
@@ -241,7 +241,7 @@ jobs:
         run: |
           chmod +x "$RUNNER_TEMP"/app/*.AppImage
           cd "$RUNNER_TEMP" && ./app/*.AppImage --appimage-extract >/dev/null
-          bin=$(find squashfs-root/usr/bin -maxdepth 1 -name 'hypotaxis*' -type f | head -1)
+          bin=$(find squashfs-root/usr/bin -maxdepth 1 -name 'boopis*' -type f | head -1)
           echo "binary: $bin"
           if ldd "$bin" | grep 'not found'; then echo "missing libraries above"; exit 1; fi
       - name: Hermes v0.23.2 install (cache shared with ci's e2e job)
@@ -270,7 +270,7 @@ jobs:
         run: |
           chmod +x "$HX_BIN"
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
-          cargo test -p hypotaxis-host --test setup_live -- --nocapture
+          cargo test -p boopis-host --test setup_live -- --nocapture
       - name: smoke the AppImage against Hermes and the fake model (the session check)
         run: |
           uv run --no-project --python 3.11 --with ruamel.yaml python tests/e2e/smoke_desktop.py \
@@ -315,7 +315,7 @@ jobs:
         run: pnpm dlx @tauri-apps/cli@2 build --bundles nsis
       - uses: actions/upload-artifact@v4
         with:
-          name: hypotaxis-windows-x86_64-nsis
+          name: boopis-windows-x86_64-nsis
           path: target/release/bundle/nsis/*.exe
           if-no-files-found: error
           retention-days: 30
@@ -350,7 +350,7 @@ jobs:
         run: pnpm dlx @tauri-apps/cli@2 build --bundles dmg
       - uses: actions/upload-artifact@v4
         with:
-          name: hypotaxis-macos-aarch64-dmg
+          name: boopis-macos-aarch64-dmg
           path: target/release/bundle/dmg/*.dmg
           if-no-files-found: error
           retention-days: 30
@@ -369,7 +369,7 @@ jobs:
           sparse-checkout: scripts
       - uses: actions/download-artifact@v4
         with:
-          pattern: hypotaxis-*
+          pattern: boopis-*
           path: release-files
           merge-multiple: true
       - name: the installers go next to the artifacts (before the checksums, so SHA256SUMS covers them)

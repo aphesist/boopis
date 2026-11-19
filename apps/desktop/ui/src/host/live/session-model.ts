@@ -54,22 +54,22 @@ export function applyEvent(m: SessionModel, ev: GatewayEvent, nowMs: number): Pa
       if (p['usage'] && typeof p['usage'] === 'object') m.usage = p['usage'] as UsageWire;
       return ['run', 'usage', 'stats', 'cascade', 'diff'];
     }
-    case 'plugin.hypotaxis.ship.completed': m.output = capLines([...m.output, ...shipLine(p as unknown as ShipWire)]); return ['output', 'diff'];
-    case 'plugin.hypotaxis.cascade.updated': return ['cascade', 'stats'];
-    case 'plugin.hypotaxis.ledger.appended': return ['stats'];
-    case 'plugin.hypotaxis.blank.opened': {
+    case 'plugin.boopis.ship.completed': m.output = capLines([...m.output, ...shipLine(p as unknown as ShipWire)]); return ['output', 'diff'];
+    case 'plugin.boopis.cascade.updated': return ['cascade', 'stats'];
+    case 'plugin.boopis.ledger.appended': return ['stats'];
+    case 'plugin.boopis.blank.opened': {
       const b = p as unknown as BlankWire;
       if (!b.blank_id || m.blanks.some((x) => x.id === b.blank_id)) return [];
       m.blanks.push({ id: b.blank_id, question: b.question ?? '', options: b.options ?? [], blocks: b.blocks ?? [], answer: null, lapsed: false });
       return ['blanks'];
     }
-    case 'plugin.hypotaxis.blank.filled': {
+    case 'plugin.boopis.blank.filled': {
       const b = m.blanks.find((x) => x.id === p['blank_id']);
       if (!b || b.answer !== null) return [];
       b.answer = typeof p['answer'] === 'string' ? p['answer'] : '';
       return ['blanks'];
     }
-    case 'plugin.hypotaxis.blank.lapsed': {
+    case 'plugin.boopis.blank.lapsed': {
       const b = m.blanks.find((x) => x.id === p['blank_id']);
       if (!b || b.lapsed) return [];
       b.lapsed = true;

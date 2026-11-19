@@ -1,6 +1,6 @@
 # hx-pack
 
-The engine behind hypotaxis's `pack` tool. One call returns everything a model needs to read: search hits with surrounding code, whole files, line ranges, single symbols, outlines and git status. Output is byte-capped, secrets are redacted, and `.env` and key files are never returned.
+The engine behind boopis's `pack` tool. One call returns everything a model needs to read: search hits with surrounding code, whole files, line ranges, single symbols, outlines and git status. Output is byte-capped, secrets are redacted, and `.env` and key files are never returned.
 
 Request and response types (`serde` + `schemars`), one `Error` enum whose variants map to catalog codes, a `handle_*` function per method, and `PackHandler`, the `hx-proto` `Handler` that `hx` registers under the `pack` namespace (see `INTEGRATION.md`). Nothing here talks to a wire, a model or a terminal; `hx` does the I/O.
 
@@ -31,7 +31,7 @@ Output text uses three numbered-line styles: `12:text` for a match, `12-text` fo
 
 ## Redaction rules (`redact.rules.json`)
 
-Shared with Python (`hypotaxis.util.redact`). Patterns use the subset common to Rust `regex` and Python `re`. A rule with a `(?P<secret>...)` group replaces only that group (`Bearer <token>`, `user:<password>@host`, `key = "<value>"`). `private_key_open` removes everything after a key header that has no footer. The file also carries `examples` (input and output pairs) that both implementations run as conformance tests.
+Shared with Python (`boopis.util.redact`). Patterns use the subset common to Rust `regex` and Python `re`. A rule with a `(?P<secret>...)` group replaces only that group (`Bearer <token>`, `user:<password>@host`, `key = "<value>"`). `private_key_open` removes everything after a key header that has no footer. The file also carries `examples` (input and output pairs) that both implementations run as conformance tests.
 
 The entropy pass looks at runs of `[A-Za-z0-9+/_-]` of 32 or more characters (`=` padding allowed) with at least 4.2 bits per character and all of upper case, lower case and digits. It leaves alone:
 - files named like lockfiles (`Cargo.lock`, `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `go.sum`, ...);

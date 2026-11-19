@@ -12,7 +12,7 @@ import { eventsOf, fixtures, resultOf } from '../testing';
 import type { SecretsBridge } from '../secrets';
 
 const SID = (resultOf<{ sessions: { id: string; message_count: number }[] }>(fixtures.forms, 'session.list').sessions.find((s) => s.message_count > 0) as { id: string }).id;
-const OPENED = eventsOf(fixtures.forms, 'plugin.hypotaxis.form.opened').map((e) => e.payload);
+const OPENED = eventsOf(fixtures.forms, 'plugin.boopis.form.opened').map((e) => e.payload);
 const idOf = (kind: string): string => String(OPENED.find((p) => p['kind'] === kind)?.['form_id']);
 const NOW = new Date(2026, 10, 19, 1, 0, 0);
 const SECRET = 'sk-unit-test-0123456789abcdef';
@@ -65,7 +65,7 @@ describe('what the plugin raises', () => {
   });
   it('does not make a second wait of a form it already knows (a replay, a reconnect)', () => {
     expect(formWaits()).toHaveLength(3);
-    expect(methods()).toContain('plugin.hypotaxis.form.list');
+    expect(methods()).toContain('plugin.boopis.form.list');
   });
 });
 
@@ -74,7 +74,7 @@ describe('answering', () => {
 
   it('a question goes to the plugin as form.submit, and every place hears that it is resolved', async () => {
     await provider.forms.submit(idOf('question'), { values: { answer: 'yes' }, secrets: {} });
-    const req = host.requests.find((r) => r.method === 'plugin.hypotaxis.form.submit') as { params: Record<string, unknown> };
+    const req = host.requests.find((r) => r.method === 'plugin.boopis.form.submit') as { params: Record<string, unknown> };
     expect(req.params).toMatchObject({ form_id: idOf('question'), values: { answer: 'yes' }, provided: [] });
     expect(waits).toContainEqual({ type: 'resolved', id: idOf('question'), outcome: 'submitted' });
     expect(conv).toContainEqual(expect.objectContaining({ type: 'form-resolved', formId: idOf('question'), status: 'submitted' }));
@@ -85,8 +85,8 @@ describe('answering', () => {
 
   it('a secret goes to the keychain under the reference the field names, and to nothing else', async () => {
     await provider.forms.submit(idOf('credential'), { values: {}, secrets: { value: SECRET } });
-    expect([...secrets.stored]).toEqual([['hypotaxis.provider.openai/api_key', SECRET]]);
-    const req = host.requests.find((r) => r.method === 'plugin.hypotaxis.form.submit') as { params: Record<string, unknown> };
+    expect([...secrets.stored]).toEqual([['boopis.provider.openai/api_key', SECRET]]);
+    const req = host.requests.find((r) => r.method === 'plugin.boopis.form.submit') as { params: Record<string, unknown> };
     expect(req.params).toMatchObject({ form_id: idOf('credential'), values: {}, provided: ['value'] });
     expect(JSON.stringify(host.requests)).not.toContain(SECRET);
     expect(JSON.stringify(waits)).not.toContain(SECRET);
@@ -98,7 +98,7 @@ describe('answering', () => {
     const order: string[] = [];
     await open({ secrets: { set: () => { order.push('keychain'); return Promise.resolve(); } } });
     const orig = host.send.bind(host);
-    host.send = (id, frame) => { const m = (frame as { method?: string }).method; if (m === 'plugin.hypotaxis.form.submit') order.push('plugin'); return orig(id, frame); };
+    host.send = (id, frame) => { const m = (frame as { method?: string }).method; if (m === 'plugin.boopis.form.submit') order.push('plugin'); return orig(id, frame); };
     await provider.forms.submit(idOf('credential'), { values: {}, secrets: { value: SECRET } });
     expect(order).toEqual(['keychain', 'plugin']);
   });
@@ -106,12 +106,12 @@ describe('answering', () => {
   it('leaves the form open, tells the person why, and sends the plugin nothing when the keychain refuses', async () => {
     await open({ secrets: { set: () => Promise.reject(new Error('the keychain is locked')) } });
     await expect(provider.forms.submit(idOf('credential'), { values: {}, secrets: { value: SECRET } })).rejects.toThrow(/keychain/);
-    expect(methods()).not.toContain('plugin.hypotaxis.form.submit');
+    expect(methods()).not.toContain('plugin.boopis.form.submit');
     expect(formWaits().map((w) => w.data.kind)).toContain('credential');
   });
 
   it('refuses a secret field that names no place to store it, and says so, before anything is saved', async () => {
-    host.emitEvent('plugin.hypotaxis.form.opened', SID, { form_id: 'bare', kind: 'credential', title: 'Key', schema: { type: 'object', properties: { k: { type: 'string', 'x-secret': true } } }, submit: {}, origin: 'agent' });
+    host.emitEvent('plugin.boopis.form.opened', SID, { form_id: 'bare', kind: 'credential', title: 'Key', schema: { type: 'object', properties: { k: { type: 'string', 'x-secret': true } } }, submit: {}, origin: 'agent' });
     expect(formWaits().some((x) => x.id === 'bare')).toBe(true);
     await expect(provider.forms.submit('bare', { values: {}, secrets: { k: SECRET } })).rejects.toThrow(/no place to store/);
     expect(secrets.stored.size).toBe(0);
@@ -120,13 +120,13 @@ describe('answering', () => {
 
   it('cancelling sends form.cancel and clears the form everywhere', async () => {
     await provider.forms.cancel(idOf('setup'));
-    expect(methods()).toContain('plugin.hypotaxis.form.cancel');
+    expect(methods()).toContain('plugin.boopis.form.cancel');
     expect(waits).toContainEqual({ type: 'resolved', id: idOf('setup'), outcome: 'cancelled' });
     expect(formWaits().map((w) => w.data.kind)).toEqual(['credential', 'question']);
   });
 
   it('a form the plugin resolves on its own (another device answered it, or it lapsed) leaves every place', () => {
-    host.emitEvent('plugin.hypotaxis.form.resolved', SID, { form_id: idOf('question'), status: 'expired' });
+    host.emitEvent('plugin.boopis.form.resolved', SID, { form_id: idOf('question'), status: 'expired' });
     expect(waits).toContainEqual({ type: 'resolved', id: idOf('question'), outcome: 'expired' });
     expect(conv).toContainEqual(expect.objectContaining({ type: 'form-resolved', formId: idOf('question'), status: 'expired' }));
     expect(formWaits().map((w) => w.data.kind)).toEqual(['credential', 'setup']);
@@ -145,7 +145,7 @@ describe('answering', () => {
 
   it('the wait list resolves a form only through forms, never through waits.resolve', () => {
     provider.waits.resolve(idOf('question'), 'approved');
-    expect(methods()).not.toContain('plugin.hypotaxis.form.submit');
+    expect(methods()).not.toContain('plugin.boopis.form.submit');
     expect(formWaits()).toHaveLength(3);
   });
 });

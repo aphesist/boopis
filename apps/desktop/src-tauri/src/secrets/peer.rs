@@ -321,13 +321,13 @@ mod tests {
     }
 
     const PY: &str = "/rt/python";
-    const HOLDS: &str = "HYPOTAXIS_HOST_SECRETS_TOKEN=abc";
+    const HOLDS: &str = "BOOPIS_HOST_SECRETS_TOKEN=abc";
 
     /// init, the app, and a policy that wants the token.
     fn world() -> (Arc<Table>, Arc<PeerPolicy>) {
         let t = Arc::new(Table::default());
         t.put(1, 0, "/sbin/init", 0);
-        t.put(100, 10, "/app/hypotaxis", 1);
+        t.put(100, 10, "/app/boopis", 1);
         let policy = PeerPolicy::with_procs(t.clone()).holding(HOLDS.to_owned());
         (t, Arc::new(policy))
     }
@@ -361,7 +361,7 @@ mod tests {
         let (t, p) = world();
         // One an earlier run left behind: another token in its environment, or none.
         t.put(200, 20, PY, 1);
-        t.started_with_env(200, &["HYPOTAXIS_HOST_SECRETS_TOKEN=old"]);
+        t.started_with_env(200, &["BOOPIS_HOST_SECRETS_TOKEN=old"]);
         assert!(!p.record_gateway(200));
         t.put(201, 21, PY, 1);
         assert!(!p.record_gateway(201));

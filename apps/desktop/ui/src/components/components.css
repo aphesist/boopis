@@ -1,4 +1,4 @@
-/* hypotaxis v6 · shared component library (owner: design-system agent)
+/* boopis v6 · shared component library (owner: design-system agent)
    One canonical version of every piece that more than one module draws. The system is
    design-system/DESIGN-SYSTEM.md; what each module deletes and calls instead is design-system/MIGRATION.md.
    Load after tokens.css and before any module stylesheet. Theme tokens only: no literal colour, family or
@@ -572,6 +572,9 @@ select.ui-input option { background: var(--bg-1); color: var(--text); }
 
 /* empty state: what goes here and the one action that fills it */
 .ui-empty { display: grid; justify-items: center; gap: 8px; padding: var(--sp-6) var(--sp-4); text-align: center; color: var(--text-dim); }
+/* the logo's mark, 32px wide, in the quiet ink (DESIGN-SYSTEM.md 14.28); the element draws in currentColor */
+.ui-empty__mark { display: block; width: var(--sp-6); color: var(--text-faint); }
+.ui-empty__mark > boopis-logo { display: block; width: 100%; }
 .ui-empty__title { margin: 0; font: 600 var(--fs-l)/var(--lh-tight) var(--sans); color: var(--text-strong); text-transform: var(--ui-case); }
 .ui-empty__text { margin: 0; max-width: 46ch; font: 400 var(--fs-s)/var(--lh) var(--sans); text-transform: var(--ui-case); }
 
@@ -647,3 +650,6 @@ hx-card[data-accent]:is([data-size="inline"], [data-size="compact"], [data-size=
 hx-card[data-accent][data-resolved]:is([data-size="inline"], [data-size="compact"]) { --sq-line: color-mix(in srgb, var(--cd-accent) 22%, transparent); }
 hx-card[data-accent] .cd-mini { --sq-line: color-mix(in srgb, var(--cd-accent) 36%, transparent); }
 
+
+/* the first-run welcome's logo: the hero (letters="play" needs a 32px type size); sized from the spacing scale, inked like the frame */
+.ui-logo--welcome { display: block; justify-self: center; font-size: calc(var(--sp-6) * 3); color: var(--text-strong); }

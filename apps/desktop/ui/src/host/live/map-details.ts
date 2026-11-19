@@ -56,7 +56,7 @@ export function environmentFrom(info: InfoWire | null, describe: DescribeWire | 
     branch: info?.branch ?? '',
     sandbox: describe?.hx ? 'hx sandbox' + (describe.kernel?.ok === false ? ' (kernel down)' : '') : '',
     runtime: info ? 'Hermes' + version + release : '',
-    harness: describe?.version ? 'hypotaxis ' + describe.version : '',
+    harness: describe?.version ? 'boopis ' + describe.version : '',
     gate: ''
   };
 }

@@ -1,37 +1,37 @@
-# hypotaxis architecture
+# boopis architecture
 
 Status: v2, 2026-11-18. Replaces `docs/ARCHITECTURE_PLAN.md` (the first-pass plan) wherever they differ.
 Companion documents: `docs/STANDARDS.md` (how everything is written), `docs/DECISIONS.md` (why), `docs/PROTOCOL.md` (the wire), `docs/LEDGER.md` (the event log), `docs/COMPAT.md` (other harnesses' formats).
 
-hypotaxis is a desktop coding harness that runs any model, through any subscription the user already pays for, with contraprova's governance built in and measured. Its engine is **unmodified upstream Hermes Agent**. hypotaxis is Hermes with the configuration already done, a governed execution plane, a tasteful app, and numbers behind the defaults.
+boopis is a desktop coding harness that runs any model, through any subscription the user already pays for, with contraprova's governance built in and measured. Its engine is **unmodified upstream Hermes Agent**. boopis is Hermes with the configuration already done, a governed execution plane, a tasteful app, and numbers behind the defaults.
 
 ## 1. The organising rule: Hermes's own model
 
-hypotaxis is organised the way Hermes organises itself, so that Hermes updates, plugins and skills flow through unchanged.
+boopis is organised the way Hermes organises itself, so that Hermes updates, plugins and skills flow through unchanged.
 
-- **The core is a narrow waist; capability lives at the edges.** Hermes's rule (root `AGENTS.md` of hermes-agent). Hermes is never patched. Everything hypotaxis adds is an edge: a Hermes plugin, a skill, an MCP server, or a separate host process.
+- **The core is a narrow waist; capability lives at the edges.** Hermes's rule (root `AGENTS.md` of hermes-agent). Hermes is never patched. Everything boopis adds is an edge: a Hermes plugin, a skill, an MCP server, or a separate host process.
 - **Three authorities**, as in Hermes Desktop (`apps/desktop/AGENTS.md`):
   - the **host** (Tauri, Rust) owns the machine: processes, OS keychain, sandboxing, windows, updates, the local git server, the macOS VM;
   - the **UI** (webview, TypeScript) owns the experience: rendering, input, keyboard, themes;
-  - the **backend** (the Hermes gateway plus the hypotaxis plugin running inside it) owns the work: sessions, the agent loop, tools, memory, skills, governance, the ledger.
+  - the **backend** (the Hermes gateway plus the boopis plugin running inside it) owns the work: sessions, the agent loop, tools, memory, skills, governance, the ledger.
   A component never decides something another authority owns. It caches server truth and does not own it.
-- **One layer per mechanism.** If Hermes already does something (provider adapters, prompt caching, memory, skills, subagents, cron, chat platforms, MCP), hypotaxis uses it and does not rebuild it.
+- **One layer per mechanism.** If Hermes already does something (provider adapters, prompt caching, memory, skills, subagents, cron, chat platforms, MCP), boopis uses it and does not rebuild it.
 - **Generated contracts.** Wire types are generated from one schema, as Hermes generates `gateway-contract.openrpc.json`. They are never hand-mirrored.
 
 ## 2. What changed from the plan, and why
 
 Research on Hermes v0.23.2 (`ae2a81cc`) and an audit of the first-pass code produced five corrections:
 
-1. **No Rust model gateway.** Hermes already ships about 40 provider plugins, prompt caching and models.dev data. It can use any single endpoint as its only provider, and the Claude subscription relay is an official Hermes plugin (`claude-subscription-directsdk`). A Rust gateway would duplicate all of it. Routing, cost caps and usage accounting move into the hypotaxis plugin, through Hermes hooks (`post_api_request`, `pre_llm_call`) and per-session or per-subagent model selection.
+1. **No Rust model gateway.** Hermes already ships about 40 provider plugins, prompt caching and models.dev data. It can use any single endpoint as its only provider, and the Claude subscription relay is an official Hermes plugin (`claude-subscription-directsdk`). A Rust gateway would duplicate all of it. Routing, cost caps and usage accounting move into the boopis plugin, through Hermes hooks (`post_api_request`, `pre_llm_call`) and per-session or per-subagent model selection.
 2. **Governance is a Hermes plugin, built on contraprova's own Python.** Contraprova is stdlib-only Python and its kernel is tested. The first-pass Rust "port" was wire-incompatible and invented its own semantics. Reusing the original keeps the measured policy exactly and works in plain Hermes (CLI, TUI, chat platforms) as well as in the app.
 3. **The Hermes wire is `hermes-gateway-v1` over a loopback WebSocket**, bootstrapped by `hermes gateway ensure|attach --json`. It isn't stdio. Built-in toolsets are chosen by the host at `session.create {toolsets}`, because a plugin cannot disable them.
-4. **`exec` needs its own kernel.** Hermes's code kernel is synchronous and can call only 7 whitelisted tools. hypotaxis's kernel is asyncio-based and calls *any* tool through the plugin's `ctx.dispatch_tool` (the full Hermes pipeline: approvals, redaction, budgets).
+4. **`exec` needs its own kernel.** Hermes's code kernel is synchronous and can call only 7 whitelisted tools. boopis's kernel is asyncio-based and calls *any* tool through the plugin's `ctx.dispatch_tool` (the full Hermes pipeline: approvals, redaction, budgets).
 5. **Rust is kept where Rust earns its place:** a capability-safe file transaction (ship's journal), fast search and outlines (pack's engine), OS sandboxing, and the host. These live in one binary, `hx`, that the plugin drives over JSON-RPC.
 
 ## 3. Components
 
 ```
-+-------------------- hypotaxis app (Tauri) --------------------+
++-------------------- boopis app (Tauri) --------------------+
 |  UI (webview, TS)  <-- Tauri IPC (typed, generated) -->  host  |
 |  v6 design system         Channel streams            (Rust)   |
 +-------------------------------------------------------|-------+
@@ -40,7 +40,7 @@ Research on Hermes v0.23.2 (`ae2a81cc`) and an audit of the first-pass code prod
 +---------------- Hermes gateway (unmodified, per profile) -----+
 |  agent loop · sessions · providers · memory · skills · cron   |
 |  subagents · MCP · chat platforms · approvals                 |
-|   +--------------- hypotaxis plugin (Python) --------------+  |
+|   +--------------- boopis plugin (Python) --------------+  |
 |   | tools: pack · exec · ship (+ dispatch, governed mode)  |  |
 |   | governance: cascade · gate · lanes · policy · cost cap |  |
 |   | ledger (contraprova) · feedforward · blanks · compat   |  |
@@ -58,11 +58,11 @@ Research on Hermes v0.23.2 (`ae2a81cc`) and an audit of the first-pass code prod
 | Agent loop, sessions, compaction, memory, skills, learning loop | Hermes | Used as they are |
 | Model providers, auth, prompt caching, model catalog | Hermes | Its provider plugins, including `claude-subscription-directsdk` |
 | Subagents, worktrees, background processes, cron, chat platforms, MCP | Hermes | `delegate_task`, `/worktree`, `cron`, gateway platforms, `mcp_servers` |
-| Tools `pack`, `exec`, `ship`, `dispatch`; `leave_blank` in exec | hypotaxis plugin | Registered in toolset `hypotaxis` |
-| Cascade, gate, contract lanes, permission policy, cost cap | hypotaxis plugin | contraprova semantics |
-| Ledger | hypotaxis plugin | contraprova's `EventLog`, extended event set (`docs/LEDGER.md`) |
-| Feedforward, blanks | hypotaxis plugin | Plugin RPC and events on the gateway socket |
-| Compatibility with Claude Code, Codex, Gemini CLI, Cursor, Antigravity | hypotaxis plugin (`compat/`) | Translates into Hermes's own surfaces (`docs/COMPAT.md`) |
+| Tools `pack`, `exec`, `ship`, `dispatch`; `leave_blank` in exec | boopis plugin | Registered in toolset `boopis` |
+| Cascade, gate, contract lanes, permission policy, cost cap | boopis plugin | contraprova semantics |
+| Ledger | boopis plugin | contraprova's `EventLog`, extended event set (`docs/LEDGER.md`) |
+| Feedforward, blanks | boopis plugin | Plugin RPC and events on the gateway socket |
+| Compatibility with Claude Code, Codex, Gemini CLI, Cursor, Antigravity | boopis plugin (`compat/`) | Translates into Hermes's own surfaces (`docs/COMPAT.md`) |
 | Search and outlines, file transaction, OS sandbox | `hx` (Rust) | JSON-RPC over stdio, one warm child per Hermes process |
 | Hermes lifecycle, WS proxy, keychain, windows, notifications, updater | host (Rust) | Machine authority |
 | Local artifacts git server, macOS VM and its screen stream | host (Rust crates) | Later phases |
@@ -70,19 +70,19 @@ Research on Hermes v0.23.2 (`ae2a81cc`) and an audit of the first-pass code prod
 
 ## 4. Hermes integration
 
-**Install and update (ADR-0023).** The app ships as one self-contained program: its installer carries a pinned, unmodified Hermes and a private Python runtime, built by Hermes's own payload code (`scripts/build-runtime.sh`), as one `hermes-runtime-<os>-<arch>.tar.zst` with a `runtime.json` (Hermes and Python versions, sha256, size). hypotaxis never patches Hermes.
+**Install and update (ADR-0023).** The app ships as one self-contained program: its installer carries a pinned, unmodified Hermes and a private Python runtime, built by Hermes's own payload code (`scripts/build-runtime.sh`), as one `hermes-runtime-<os>-<arch>.tar.zst` with a `runtime.json` (Hermes and Python versions, sha256, size). boopis never patches Hermes.
 - On first run the host unpacks that archive into the app's own data folder, `runtime/<hermes version>-<sha8>/`: hashed while it is read, built in a temporary directory and moved into place with one rename, so a crash leaves nothing half installed and a re-run does nothing. It runs Hermes with a private `HERMES_HOME` (`<app data>/hermes-home`) and none of the user's `HERMES_*` or `UV_*` variables, so it never touches a Hermes the user already has. Nobody installs Hermes by hand.
 - Hermes updates reach users through the app's updater, after CI has passed on that Hermes release: a new app carries a new runtime, the next start unpacks it, restarts the gateway on it and then removes the old folder. Hermes's own `hermes update` refuses inside the bundle (its install stamp names the app as steward) and its passive update check is off (`updates.check: false`).
 - Optional heavy pieces (Chromium, Node, ffmpeg, cua-driver) are not in the archive: Hermes's package manager fetches them on first use into the private home's `tools/`.
-- Advanced: `HYPOTAXIS_HERMES=existing` points the app at an existing Hermes install instead (the earlier "find Hermes" path), in the user's own home.
+- Advanced: `BOOPIS_HERMES=existing` points the app at an existing Hermes install instead (the earlier "find Hermes" path), in the user's own home.
 - The plugin declares `requires_hermes`, and the host refuses an older Hermes.
 - A running gateway can outlive an update, so the host compares `client_code_sha` with `endpoint.code_sha` and restarts the gateway when they differ.
 - `vendor/hermes-agent` is a git submodule pinned to a release tag. It's used for CI (contract generation, plugin validation) and as the build input of the runtime; the app itself runs the runtime, never the submodule. The end-to-end tests run on the same runtime archive that ships.
 
 **Profile.**
-- By default hypotaxis attaches to the user's **active Hermes profile**, the way Hermes Desktop does: one gateway multiplexes every client of a home. That way the user's existing plugins, skills, memory and MCP servers work in hypotaxis unchanged, and hypotaxis sessions show up in the Hermes CLI and TUI.
+- By default boopis attaches to the user's **active Hermes profile**, the way Hermes Desktop does: one gateway multiplexes every client of a home. That way the user's existing plugins, skills, memory and MCP servers work in boopis unchanged, and boopis sessions show up in the Hermes CLI and TUI.
 - A setting switches to a dedicated profile.
-- hypotaxis state lives under `<profile home>/hypotaxis/`: ledgers, journals, artifacts, the exec scratch area.
+- boopis state lives under `<profile home>/boopis/`: ledgers, journals, artifacts, the exec scratch area.
 - **Teammates are Hermes profiles** (`profiles/<name>/`), each with its own SOUL.md, memory, skills and schedule.
 
 **Gateway.**
@@ -96,19 +96,19 @@ The host proxies frames between the UI and the gateway. The UI never opens socke
 **Session policy** is set at `session.create`:
 - `cwd`;
 - `model` and `provider` from the session's mode (section 6);
-- `toolsets`: `["hypotaxis"]` in governed mode, a profile-defined set in ungoverned mode;
+- `toolsets`: `["boopis"]` in governed mode, a profile-defined set in ungoverned mode;
 - `skills`;
 - `source: "gui"`;
-- `client: {name: "hypotaxis", version}`.
+- `client: {name: "boopis", version}`.
 
 Prompt caching is sacred in Hermes, so toolsets and the system prompt never change mid-session.
 
-## 5. The hypotaxis plugin
+## 5. The boopis plugin
 
 A normal Hermes plugin (`plugin.yaml` manifest v2, `kind: standalone`, `__init__.py: register(ctx)`), shipped with the app and installable alone through Hermes's plugin catalog (SHA-pinned). It runs in plain Hermes too: the CLI and chat platforms get governance and the ledger, without the app.
 
 It registers:
-- **Tools** in toolset `hypotaxis` (section 7). Handlers return JSON strings. `check_fn` hides tools whose prerequisites are missing, for example `hx` not found.
+- **Tools** in toolset `boopis` (section 7). Handlers return JSON strings. `check_fn` hides tools whose prerequisites are missing, for example `hx` not found.
 - **Hooks:**
   - `pre_tool_call`: permission policy, scope and protected-path vetoes, capability grants for browsers, desktop apps and integrations (`docs/AUTOMATION.md`, ADR-0021), approval escalation; fails closed;
   - `post_tool_call`: ledger;
@@ -117,14 +117,14 @@ It registers:
   - session lifecycle hooks: ledger open and close;
   - `subagent_start` and `subagent_stop`: attempt tracking.
 - **System prompt section** (`register_system_prompt_section`) for the governed-mode contract, so it's cache-stable.
-- **RPC namespace** `plugin.hypotaxis.*` and session events through `ctx.emit_to_session`: feedforward, blanks, ledger stream, cascade state, compat inventory (`docs/PROTOCOL.md`).
-- **Approval transport** `hypotaxis`: approval prompts render as cards in the app. Chat-platform buttons keep working through Hermes's own transports.
+- **RPC namespace** `plugin.boopis.*` and session events through `ctx.emit_to_session`: feedforward, blanks, ledger stream, cascade state, compat inventory (`docs/PROTOCOL.md`).
+- **Approval transport** `boopis`: approval prompts render as cards in the app. Chat-platform buttons keep working through Hermes's own transports.
 - **Forms** (`docs/FORMS.md`): one schema-driven card for every request to the user (credentials, questions, approvals, permissions, sign-in, setup, connectors). Agents and teammates send them with `request_input`, and secrets never reach the agent.
-- **Settings** through `config_schema`, stored by Hermes under `plugins.entries.hypotaxis.settings`. Project-pinned settings (the gate command, protected paths, data policy) live in `<project>/.hermes/hypotaxis.yaml` and are trust-gated.
+- **Settings** through `config_schema`, stored by Hermes under `plugins.entries.boopis.settings`. Project-pinned settings (the gate command, protected paths, data policy) live in `<project>/.hermes/boopis.yaml` and are trust-gated.
 
 ## 6. Models, routing and the cascade
 
-- Every model call goes through a Hermes provider. hypotaxis adds no transport.
+- Every model call goes through a Hermes provider. boopis adds no transport.
 - A **tier ladder** is data: an ordered list of `{name, provider, model, effort, max_tokens, retries}`, per profile. A model is identified by a `ModelRef` `{provider, id}`, never by a vendor-specific constant.
 - Prices come from Hermes's models.dev data, with a per-user override table. Dollars are always a projection of tokens and never stored (contraprova's rule).
 - **Governed mode** (the default):
@@ -146,10 +146,10 @@ It registers:
 
   Alt+M opens the model picker without turning Smart off. Choosing a model pins it and turns Smart off; choosing "Smart" turns it back on.
 - **Model selection:**
-  - per attempt, through the hypotaxis delegation provider;
+  - per attempt, through the boopis delegation provider;
   - pinned models through `session.mutate` (named providers only, revision-fenced).
   See ADR-0007.
-- **Tool surface:** hypotaxis sessions need `tools.tool_search.enabled: "off"`, set with consent (ADR-0014).
+- **Tool surface:** boopis sessions need `tools.tool_search.enabled: "off"`, set with consent (ADR-0014).
 - **Cost cap:** `pre_llm_call` blocks the call that would exceed the cap and the UI asks. Usage comes from `post_api_request`, normalised to `Usage {input_uncached, output, cache_read, cache_write, reasoning}`.
 - The **capability probe** stores per-model flags (tool use, edit format, prefill, prompt-cache kind) and picks the tool surface for weak models.
 
@@ -169,11 +169,11 @@ It registers:
 
   Linux is the owner's main platform and the first one built and verified end to end; Windows and macOS are supported and built by CI.
   Codex's Apache-2.0 sandbox crates are the reference.
-- **Checkpoints:** every passing ship is a commit on `refs/hypotaxis/checkpoints/<session>`, so rewind to any turn comes free.
+- **Checkpoints:** every passing ship is a commit on `refs/boopis/checkpoints/<session>`, so rewind to any turn comes free.
 
 ## 8. Ledger
 
-One hash-chained JSONL per session at `<profile home>/hypotaxis/ledger/<session_id>.jsonl`, in **contraprova's exact wire format**: envelope `{seq, type, actor, ts, payload, prev_hash, hash}`, `seq` from 0, the hash taken over the canonical JSON of the whole envelope, a locked, verifying, validating and fsyncing single writer. The harness's own event types (model calls, tool calls, ship, approvals, blanks, feedforward, sessions) are added to contraprova's vocabulary upstream, so `contraprova verify|cost|report` read hypotaxis ledgers directly. A golden log shared by both repositories proves the format. Details are in `docs/LEDGER.md`.
+One hash-chained JSONL per session at `<profile home>/boopis/ledger/<session_id>.jsonl`, in **contraprova's exact wire format**: envelope `{seq, type, actor, ts, payload, prev_hash, hash}`, `seq` from 0, the hash taken over the canonical JSON of the whole envelope, a locked, verifying, validating and fsyncing single writer. The harness's own event types (model calls, tool calls, ship, approvals, blanks, feedforward, sessions) are added to contraprova's vocabulary upstream, so `contraprova verify|cost|report` read boopis ledgers directly. A golden log shared by both repositories proves the format. Details are in `docs/LEDGER.md`.
 
 ## 9. Compatibility
 
@@ -233,21 +233,21 @@ One hash-chained JSONL per session at `<profile home>/hypotaxis/ledger/<session_
   - a plugin and `hx` that run headless in a container;
   - checkpoint pushes to a branch;
   - home-relative paths in the UI;
-  - one storage interface for everything hypotaxis persists.
+  - one storage interface for everything boopis persists.
 
 ## 12. Repository layout (mirrors hermes-agent)
 
 ```
 AGENTS.md                  hub: invariants + routing table to per-area AGENTS.md
 docs/                      ARCHITECTURE, STANDARDS, DECISIONS, PROTOCOL, LEDGER, COMPAT
-plugins/hypotaxis/         the Hermes plugin (Python): plugin.yaml, __init__.py, tools/, governance/,
+plugins/boopis/         the Hermes plugin (Python): plugin.yaml, __init__.py, tools/, governance/,
                            ledger/, exec/, compat/, rpc/, feedforward/, blanks/, tests/
 crates/                    hx (binary) and its libraries: hx-pack, hx-txn, hx-sandbox, hx-proto;
                            later hx-artifacts, hx-apple
 apps/desktop/src-tauri/    host (Rust)
 apps/desktop/ui/           UI (TypeScript)
-apps/shared/               generated contract: hypotaxis-v1 OpenRPC -> TS, Rust and Python types
-skills/                    bundled hypotaxis skills (agentskills.io format)
+apps/shared/               generated contract: boopis-v1 OpenRPC -> TS, Rust and Python types
+skills/                    bundled boopis skills (agentskills.io format)
 vendor/hermes-agent/       submodule pinned to a release tag (CI only)
 scripts/  tests/           tooling, end-to-end tests (fake model server, live gateway)
 study/                     pre-registration and run scripts (phase 2)

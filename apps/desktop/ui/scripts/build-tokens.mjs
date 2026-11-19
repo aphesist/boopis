@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* hypotaxis design system · token build (owner: design-system agent)
+/* boopis design system · token build (owner: design-system agent)
    Reads src/styles/tokens.css (the four presets, the shared scale, the corner and density modifiers) and writes
    tokens.json in the W3C Design Tokens format (2025.10: colours as sRGB objects, dimensions and durations as
    value/unit objects). Three tiers: primitive (raw values, named by family and OKLCH lightness), semantic (the
@@ -246,7 +246,7 @@ const semantic = { color: {} };
 for (const [path, cssVar, desc] of ROLES) {
   const modes = {};
   for (const p of PRESETS) modes[p] = ref(primitiveFor(R[p][cssVar].rgb));
-  const tok = { $type: 'color', $value: modes.catalog, $description: desc, $extensions: { hypotaxis: { css: cssVar, modes } } };
+  const tok = { $type: 'color', $value: modes.catalog, $description: desc, $extensions: { boopis: { css: cssVar, modes } } };
   setPath(semantic.color, path, tok);
 }
 for (const [path, cssVar, desc, src, pc] of DERIVED_ROLES) {
@@ -254,35 +254,35 @@ for (const [path, cssVar, desc, src, pc] of DERIVED_ROLES) {
   for (const p of PRESETS) modes[p] = colorValue(R[p][src].rgb, pc / 100);
   setPath(semantic.color, path, {
     $type: 'color', $value: modes.catalog, $description: desc,
-    $extensions: { hypotaxis: { css: cssVar, formula: `color-mix(in srgb, var(${src}) ${pc}%, transparent)`, modes } }
+    $extensions: { boopis: { css: cssVar, formula: `color-mix(in srgb, var(${src}) ${pc}%, transparent)`, modes } }
   });
 }
 {
   const modes = {}; for (const p of PRESETS) modes[p] = colorValue(R[p]['--text'].rgb, R[p]['--line-field'].a);
   setPath(semantic.color, 'line.field', { $type: 'color', $value: modes.catalog, $description: 'Text-field outline: 3:1 against the field and the frame.',
-    $extensions: { hypotaxis: { css: '--line-field', formula: 'color-mix(in srgb, var(--text) 42%, transparent); 54% when data-hx-theme="light"', modes } } });
+    $extensions: { boopis: { css: '--line-field', formula: 'color-mix(in srgb, var(--text) 42%, transparent); 54% when data-hx-theme="light"', modes } } });
 }
 {
   const modes = {}; for (const p of PRESETS) modes[p] = ref(primitiveFor(R[p]['--mark-off'].rgb));
   setPath(semantic.color, 'mark.off', { $type: 'color', $value: modes.catalog,
     $description: 'An inactive non-text mark: a page dot, a ladder station still to come. 3:1 on every surface (WCAG 1.4.11) and well under the active marks (--text-dim, --brass). Library token (components.css); promote to tokens.css.',
-    $extensions: { hypotaxis: { css: '--mark-off', formula: 'color-mix(in srgb, var(--text-quiet) 55%, var(--text-faint)); --text-faint (ink 42%) on the dock ground', library: true, modes } } });
+    $extensions: { boopis: { css: '--mark-off', formula: 'color-mix(in srgb, var(--text-quiet) 55%, var(--text-faint)); --text-faint (ink 42%) on the dock ground', library: true, modes } } });
 }
 /* the Bone contrast fixes (DESIGN-SYSTEM.md, Findings F4) are in tokens.css now, so the modes above carry them */
 {
   const modes = {}; for (const p of PRESETS) modes[p] = colorValue(R[p]['--scrim'].rgb, R[p]['--scrim'].a);
-  setPath(semantic.color, 'scrim', { $type: 'color', $value: modes.catalog, $description: 'Behind the palette, dialogs and overlay drawers.', $extensions: { hypotaxis: { css: '--scrim', modes } } });
+  setPath(semantic.color, 'scrim', { $type: 'color', $value: modes.catalog, $description: 'Behind the palette, dialogs and overlay drawers.', $extensions: { boopis: { css: '--scrim', modes } } });
 }
 setPath(semantic.color, 'surface.dock', {
   $type: 'color', $value: ref(primitiveFor([0, 0, 0])),
   $description: 'The dock slab. Pitch black in every theme; not themeable, never offered in the customizer.',
-  $extensions: { hypotaxis: { css: '--dock-bg', fixed: true } }
+  $extensions: { boopis: { css: '--dock-bg', fixed: true } }
 });
 /* the dock ground: a scope, not a preset. Inside [data-ground="dock"] the semantic roles are re-derived from #000. */
 const groundDock = {};
 for (const k of ['--text', '--text-strong', '--text-dim', '--text-quiet', '--text-faint', '--mark-off', '--icon', '--bg-3', '--bg-4', '--chip', '--surface', '--selected', '--text-on-light', '--hair', '--line', '--line-strong', '--hover', '--current', '--red-text', '--brass']) {
   const modes = {}; for (const p of PRESETS) { const c = R[p].dock[k]; modes[p] = colorValue(c.rgb, c.a); }
-  groundDock[k.replace(/^--/, '')] = { $type: 'color', $value: modes.catalog, $extensions: { hypotaxis: { css: k, scope: '[data-ground="dock"]', modes } } };
+  groundDock[k.replace(/^--/, '')] = { $type: 'color', $value: modes.catalog, $extensions: { boopis: { css: k, scope: '[data-ground="dock"]', modes } } };
 }
 
 /* shadows */
@@ -297,13 +297,13 @@ const dim = (v, unit = 'px') => ({ value: v, unit });
 semantic.shadow = {};
 for (const [name, cssVar, desc] of [['pop', '--shadow-pop', 'Things that float over other things: menus, palette, dialogs, popovers, toasts.'], ['side', '--shadow-side', 'A left drawer over the ground (overlay mode).'], ['side-r', '--shadow-side-r', 'The right panel in overlay mode.'], ['tip', '--shadow-tip', 'Tooltips.']]) {
   const modes = {}; for (const p of PRESETS) modes[p] = shadowOf(preset[p][cssVar]);
-  semantic.shadow[name] = { $type: 'shadow', $value: modes.catalog, $description: desc, $extensions: { hypotaxis: { css: cssVar, modes } } };
+  semantic.shadow[name] = { $type: 'shadow', $value: modes.catalog, $description: desc, $extensions: { boopis: { css: cssVar, modes } } };
 }
 /* fonts */
 const fam = (v) => v.split(',').map((s) => s.trim().replace(/^"|"$/g, ''));
 semantic.font = {
-  sans: { $type: 'fontFamily', $value: fam(preset.catalog['--sans']), $description: 'Interface and prose.', $extensions: { hypotaxis: { css: '--sans', modes: Object.fromEntries(PRESETS.map((p) => [p, fam(preset[p]['--sans'])])) } } },
-  mono: { $type: 'fontFamily', $value: fam(preset.catalog['--mono']), $description: 'Code, paths, numbers, times, costs, model names, call numbers, kbd.', $extensions: { hypotaxis: { css: '--mono', modes: Object.fromEntries(PRESETS.map((p) => [p, fam(preset[p]['--mono'])])) } } }
+  sans: { $type: 'fontFamily', $value: fam(preset.catalog['--sans']), $description: 'Interface and prose.', $extensions: { boopis: { css: '--sans', modes: Object.fromEntries(PRESETS.map((p) => [p, fam(preset[p]['--sans'])])) } } },
+  mono: { $type: 'fontFamily', $value: fam(preset.catalog['--mono']), $description: 'Code, paths, numbers, times, costs, model names, call numbers, kbd.', $extensions: { boopis: { css: '--mono', modes: Object.fromEntries(PRESETS.map((p) => [p, fam(preset[p]['--mono'])])) } } }
 };
 
 /* ───────── scale primitives (shared by every preset) ───────── */
@@ -312,8 +312,8 @@ const scale = {
   size: {}, space: {}, radius: {}, control: {}, layout: {}, z: {}, duration: {}, easing: {}, weight: {}, leading: {}, tracking: {}
 };
 const SIZE_DESC = { '--fs-2xs': 'Mono meta: times, costs, call numbers, kbd, stamps.', '--fs-xs': 'Labels, group headings, tooltips, secondary lines, chips.', '--fs-s': 'Interface default: rows, buttons, menus, tabs.', '--fs-m': 'Reading: conversation prose, the composer, card titles.', '--fs-l': 'View and dialog titles, a bot name in its header.', '--fs-xl': 'The one display size: a bot name being made.' };
-for (const k of ['--fs-2xs', '--fs-xs', '--fs-s', '--fs-m', '--fs-l', '--fs-xl']) scale.size[k.slice(5)] = { $type: 'dimension', $value: dim(px(shared[k])), $description: SIZE_DESC[k], $extensions: { hypotaxis: { css: k } } };
-for (let i = 1; i <= 7; i++) scale.space[i] = { $type: 'dimension', $value: dim(px(shared['--sp-' + i])), $extensions: { hypotaxis: { css: '--sp-' + i } } };
+for (const k of ['--fs-2xs', '--fs-xs', '--fs-s', '--fs-m', '--fs-l', '--fs-xl']) scale.size[k.slice(5)] = { $type: 'dimension', $value: dim(px(shared[k])), $description: SIZE_DESC[k], $extensions: { boopis: { css: k } } };
+for (let i = 1; i <= 7; i++) scale.space[i] = { $type: 'dimension', $value: dim(px(shared['--sp-' + i])), $extensions: { boopis: { css: '--sp-' + i } } };
 const R_DESC = { xs: 'kbd, inline code, stamps.', s: 'Buttons, rows, fields, wells, the segmented track, tooltips.', m: 'Cards, the composer, menus, popovers, toasts, request cards.', l: 'Sheets, dialogs, the palette, the dock, where the ground meets the frame.', pill: 'Chips (a capsule), dots, the switch, anything inside a pill.' };
 /* the corner scale (owner decisions of 18 November 2026, revised: Apple continuous corners in every engine). One scale
    for every engine, drawn by HX.ui.squircle. The library's lines (components.css) win while they exist: default,
@@ -328,41 +328,41 @@ const smoothing = parseFloat((lib.match(/--corner-smoothing:\s*([\d.]+)/) || css
 for (const k of ['xs', 's', 'm', 'l']) {
   const modes = { sharp: dim(SC.sharp[k]), default: dim(SC.default[k]), round: dim(SC.round[k]) };
   scale.radius[k] = { $type: 'dimension', $value: modes.default, $description: R_DESC[k],
-    $extensions: { hypotaxis: { css: '--r-' + k, modes, cornerSmoothing: smoothing, source: SC.from, v6: { sharp: dim(px(corners.sharp['--r-' + k] || 0)), default: dim(px(shared['--r-' + k])), round: dim(px(corners.round['--r-' + k] || 0)) } } } };
+    $extensions: { boopis: { css: '--r-' + k, modes, cornerSmoothing: smoothing, source: SC.from, v6: { sharp: dim(px(corners.sharp['--r-' + k] || 0)), default: dim(px(shared['--r-' + k])), round: dim(px(corners.round['--r-' + k] || 0)) } } } };
 }
 scale.radius.floor = { $type: 'dimension', $value: dim(SC.default.floor), $description: 'The smallest inner radius of a nested corner: inner = max(floor, outer − gap); under it the padding gives way.',
-  $extensions: { hypotaxis: { css: '--r-floor', modes: { sharp: dim(SC.sharp.floor), default: dim(SC.default.floor), round: dim(SC.round.floor) } } } };
+  $extensions: { boopis: { css: '--r-floor', modes: { sharp: dim(SC.sharp.floor), default: dim(SC.default.floor), round: dim(SC.round.floor) } } } };
 scale.corner = { smoothing: { $type: 'number', $value: smoothing, $description: "Figma corner smoothing of every corner (0.6, as iOS); drawn as a path by HX.ui.squircle in every engine.",
-  $extensions: { hypotaxis: { css: '--corner-smoothing', algorithm: 'figma-squircle (MIT, Tien Pham), after Daniel Furse, Desperately seeking squircles', nesting: 'A container declares --r-outer and --pad; what sits in its corners takes --r-in = max(--r-floor, --r-outer − --pad).' } } } };
-scale.radius.pill = { $type: 'dimension', $value: dim(999), $description: R_DESC.pill, $extensions: { hypotaxis: { css: '--r-pill' } } };
+  $extensions: { boopis: { css: '--corner-smoothing', algorithm: 'figma-squircle (MIT, Tien Pham), after Daniel Furse, Desperately seeking squircles', nesting: 'A container declares --r-outer and --pad; what sits in its corners takes --r-in = max(--r-floor, --r-outer − --pad).' } } } };
+scale.radius.pill = { $type: 'dimension', $value: dim(999), $description: R_DESC.pill, $extensions: { boopis: { css: '--r-pill' } } };
 const CTL = { '--row-h': ['row', 'One-line row: list rows, menu items, options.'], '--row-h-2': ['row-2', 'Two-line row: bots list, roster.'], '--ctl': ['control', 'Buttons, segmented control, fields.'], '--ctl-s': ['control-s', 'Icon buttons, small buttons, the send button.'] };
 for (const [k, [name, desc]] of Object.entries(CTL)) {
-  scale.control[name] = { $type: 'dimension', $value: dim(px(shared[k])), $description: desc, $extensions: { hypotaxis: { css: k, modes: { compact: dim(px(density.compact[k])), regular: dim(px(shared[k])), comfortable: dim(px(density.comfortable[k])) } } } };
+  scale.control[name] = { $type: 'dimension', $value: dim(px(shared[k])), $description: desc, $extensions: { boopis: { css: k, modes: { compact: dim(px(density.compact[k])), regular: dim(px(shared[k])), comfortable: dim(px(density.comfortable[k])) } } } };
 }
 for (const [k, desc] of [['--chrome-h', 'Title bar height.'], ['--sb-rail-w', 'Left sidebar as a rail.'], ['--right-rail-w', 'Right panel closed: the strip that holds the context measure.'], ['--col-w', 'Conversation column, margin included.'], ['--margin-w', 'The call-number margin.'], ['--measure', 'Prose width (col-w minus margin-w), about 80 characters.'], ['--composer-w', 'Composer width (spans margin and measure).'], ['--dock-rest-h', 'The dock at rest.'], ['--composer-gap', 'Between the composer and the dock (or the window edge).'], ['--gutter', 'Minimum side gutter.']]) {
-  scale.layout[k.slice(2)] = { $type: 'dimension', $value: dim(px(shared[k])), $description: desc, $extensions: { hypotaxis: { css: k } } };
+  scale.layout[k.slice(2)] = { $type: 'dimension', $value: dim(px(shared[k])), $description: desc, $extensions: { boopis: { css: k } } };
 }
-scale.layout['sb-w'] = { $type: 'dimension', $value: dim(256), $description: 'Open left sidebar: clamp(256px, 15vw, 288px).', $extensions: { hypotaxis: { css: '--sb-w', cssValue: shared['--sb-w'] } } };
-scale.layout['right-w'] = { $type: 'dimension', $value: dim(300), $description: 'Open right panel and the bot settings sheet: clamp(300px, 18vw, 340px).', $extensions: { hypotaxis: { css: '--right-w', cssValue: shared['--right-w'] } } };
-for (const k of ['base', 'right', 'sidebar', 'dock', 'chrome', 'menu', 'palette', 'toast', 'tooltip']) scale.z[k] = { $type: 'number', $value: +shared['--z-' + k], $extensions: { hypotaxis: { css: '--z-' + k } } };
+scale.layout['sb-w'] = { $type: 'dimension', $value: dim(256), $description: 'Open left sidebar: clamp(256px, 15vw, 288px).', $extensions: { boopis: { css: '--sb-w', cssValue: shared['--sb-w'] } } };
+scale.layout['right-w'] = { $type: 'dimension', $value: dim(300), $description: 'Open right panel and the bot settings sheet: clamp(300px, 18vw, 340px).', $extensions: { boopis: { css: '--right-w', cssValue: shared['--right-w'] } } };
+for (const k of ['base', 'right', 'sidebar', 'dock', 'chrome', 'menu', 'palette', 'toast', 'tooltip']) scale.z[k] = { $type: 'number', $value: +shared['--z-' + k], $extensions: { boopis: { css: '--z-' + k } } };
 const DUR = { press: ['--dur-press', 'Press feedback.'], 1: ['--dur-1', 'Hover in, colour changes.'], 2: ['--dur-2', 'Menus, fades, popovers (with a 6px drop).'], 3: ['--dur-3', 'Layout travel, sheets, card height changes.'] };
-for (const [k, [v, desc]] of Object.entries(DUR)) scale.duration[k] = { $type: 'duration', $value: dim(px(shared[v]), 'ms'), $description: desc, $extensions: { hypotaxis: { css: v, reducedMotion: k === 'press' ? undefined : dim(1, 'ms') } } };
-scale.duration.indicator = { $type: 'duration', $value: dim(240, 'ms'), $description: 'A segmented thumb or page indicator travelling.', $extensions: { hypotaxis: { css: '--dur-slide', reducedMotion: dim(1, 'ms') } } };
-scale.duration.out = { $type: 'duration', $value: dim(120, 'ms'), $description: 'Hover out, tooltips, exits.', $extensions: { hypotaxis: { css: '--dur-out', reducedMotion: dim(1, 'ms') } } };
-scale.duration.breathe = { $type: 'duration', $value: dim(1800, 'ms'), $description: 'The one loop: a running dot breathes (opacity .35 to 1, alternate). Stopped under reduced motion.', $extensions: { hypotaxis: { css: '--dur-breathe' } } };
-scale.duration.hold = { $type: 'duration', $value: dim(1000, 'ms'), $description: 'Hold to approve. One value everywhere (owner decision; the dock used 650, bots 1100).', $extensions: { hypotaxis: { css: '--dur-hold' } } };
+for (const [k, [v, desc]] of Object.entries(DUR)) scale.duration[k] = { $type: 'duration', $value: dim(px(shared[v]), 'ms'), $description: desc, $extensions: { boopis: { css: v, reducedMotion: k === 'press' ? undefined : dim(1, 'ms') } } };
+scale.duration.indicator = { $type: 'duration', $value: dim(240, 'ms'), $description: 'A segmented thumb or page indicator travelling.', $extensions: { boopis: { css: '--dur-slide', reducedMotion: dim(1, 'ms') } } };
+scale.duration.out = { $type: 'duration', $value: dim(120, 'ms'), $description: 'Hover out, tooltips, exits.', $extensions: { boopis: { css: '--dur-out', reducedMotion: dim(1, 'ms') } } };
+scale.duration.breathe = { $type: 'duration', $value: dim(1800, 'ms'), $description: 'The one loop: a running dot breathes (opacity .35 to 1, alternate). Stopped under reduced motion.', $extensions: { boopis: { css: '--dur-breathe' } } };
+scale.duration.hold = { $type: 'duration', $value: dim(1000, 'ms'), $description: 'Hold to approve. One value everywhere (owner decision; the dock used 650, bots 1100).', $extensions: { boopis: { css: '--dur-hold' } } };
 const bez = (v) => v.match(/[-\d.]+/g).map(Number);
-scale.easing.ease = { $type: 'cubicBezier', $value: bez(shared['--ease']), $description: 'Every UI step: hover, colour, fade, menu.', $extensions: { hypotaxis: { css: '--ease' } } };
-scale.easing.settle = { $type: 'cubicBezier', $value: bez(shared['--spring']), $description: 'Layout travel and anything settling into place. Named --spring in CSS; it never overshoots.', $extensions: { hypotaxis: { css: '--spring' } } };
-scale.easing.travel = { $type: 'cubicBezier', $value: bez(shared['--ease-io']), $description: 'In-out, only for the breathing dot and symmetric travel.', $extensions: { hypotaxis: { css: '--ease-io' } } };
+scale.easing.ease = { $type: 'cubicBezier', $value: bez(shared['--ease']), $description: 'Every UI step: hover, colour, fade, menu.', $extensions: { boopis: { css: '--ease' } } };
+scale.easing.settle = { $type: 'cubicBezier', $value: bez(shared['--spring']), $description: 'Layout travel and anything settling into place. Named --spring in CSS; it never overshoots.', $extensions: { boopis: { css: '--spring' } } };
+scale.easing.travel = { $type: 'cubicBezier', $value: bez(shared['--ease-io']), $description: 'In-out, only for the breathing dot and symmetric travel.', $extensions: { boopis: { css: '--ease-io' } } };
 scale.weight = { regular: { $type: 'fontWeight', $value: 400 }, medium: { $type: 'fontWeight', $value: 500, $description: 'Labels, buttons, current tab.' }, semibold: { $type: 'fontWeight', $value: 600, $description: 'Titles only.' } };
 scale.leading = {
-  reading: { $type: 'number', $value: +shared['--lh'], $extensions: { hypotaxis: { css: '--lh' } } },
-  ui: { $type: 'number', $value: +shared['--lh-ui'], $extensions: { hypotaxis: { css: '--lh-ui' } } },
-  tight: { $type: 'number', $value: +shared['--lh-tight'], $extensions: { hypotaxis: { css: '--lh-tight' } } },
+  reading: { $type: 'number', $value: +shared['--lh'], $extensions: { boopis: { css: '--lh' } } },
+  ui: { $type: 'number', $value: +shared['--lh-ui'], $extensions: { boopis: { css: '--lh-ui' } } },
+  tight: { $type: 'number', $value: +shared['--lh-tight'], $extensions: { boopis: { css: '--lh-tight' } } },
   meta: { $type: 'number', $value: 1.45, $description: 'Mono meta in the call-number margin.' }
 };
-scale.tracking = { sans: { $type: 'dimension', $value: { value: 0, unit: 'rem' }, $extensions: { hypotaxis: { css: '--track' } } }, mono: { $type: 'dimension', $value: { value: -0.01, unit: 'em' }, $description: 'Not a DTCG unit; read it as -0.01em.', $extensions: { hypotaxis: { css: '--track-mono', cssValue: '-.01em' } } } };
+scale.tracking = { sans: { $type: 'dimension', $value: { value: 0, unit: 'rem' }, $extensions: { boopis: { css: '--track' } } }, mono: { $type: 'dimension', $value: { value: -0.01, unit: 'em' }, $description: 'Not a DTCG unit; read it as -0.01em.', $extensions: { boopis: { css: '--track-mono', cssValue: '-.01em' } } } };
 
 /* typography composites */
 const typo = (size, weight, lh, font, extra) => Object.assign({ $type: 'typography', $value: { fontFamily: ref('semantic.font.' + font), fontSize: ref('primitive.size.' + size), fontWeight: weight, lineHeight: lh, letterSpacing: font === 'mono' ? { value: -0.01, unit: 'em' } : { value: 0, unit: 'px' } } }, extra || {});
@@ -394,7 +394,7 @@ const component = {
   row: { height: { $type: 'dimension', $value: ref('primitive.control.row') }, 'height-2': { $type: 'dimension', $value: ref('primitive.control.row-2') }, inset: { $type: 'dimension', $value: dim(8) }, 'icon-axis': { $type: 'dimension', $value: dim(28), $description: 'Every glyph and orb in the sidebar centres on x = 28.' }, 'text-line': { $type: 'dimension', $value: dim(44), $description: 'Every label in the sidebar starts at x = 44.' } },
   card: { width: { $type: 'dimension', $value: dim(520) }, 'width-compact': { $type: 'dimension', $value: dim(360) }, padding: { $type: 'dimension', $value: [dim(14), dim(16)] }, radius: { $type: 'dimension', $value: ref('primitive.radius.m') }, surface: { $type: 'color', $value: ref('semantic.color.surface.inset') }, well: { $type: 'color', $value: ref('semantic.color.surface.ground') } },
   request: { padding: { $type: 'dimension', $value: [dim(10), dim(14)] }, radius: { $type: 'dimension', $value: ref('primitive.radius.m') }, surface: { $type: 'color', $value: ref('semantic.color.surface.raised') } },
-  composer: { width: { $type: 'dimension', $value: ref('primitive.layout.composer-w') }, padding: { $type: 'dimension', $value: [dim(12), dim(14), dim(4)], $description: 'Around the text (full layout).' }, inset: { $type: 'dimension', $value: dim(6), $description: 'The actions group and the bar sit this far from the box edge (--composer-pad).' }, 'action-radius': { $type: 'dimension', $value: dim(10), $description: 'Mic, send, attach and chips: max(--r-floor, --r-m − inset).', $extensions: { hypotaxis: { formula: 'max(var(--r-floor), calc(var(--r-outer) - var(--pad)))' } } }, radius: { $type: 'dimension', $value: ref('primitive.radius.m') }, surface: { $type: 'color', $value: ref('semantic.color.surface.raised') }, outline: { $type: 'color', $value: ref('semantic.color.line.hair') }, 'outline-focus': { $type: 'color', $value: ref('semantic.color.line.default') } },
+  composer: { width: { $type: 'dimension', $value: ref('primitive.layout.composer-w') }, padding: { $type: 'dimension', $value: [dim(12), dim(14), dim(4)], $description: 'Around the text (full layout).' }, inset: { $type: 'dimension', $value: dim(6), $description: 'The actions group and the bar sit this far from the box edge (--composer-pad).' }, 'action-radius': { $type: 'dimension', $value: dim(10), $description: 'Mic, send, attach and chips: max(--r-floor, --r-m − inset).', $extensions: { boopis: { formula: 'max(var(--r-floor), calc(var(--r-outer) - var(--pad)))' } } }, radius: { $type: 'dimension', $value: ref('primitive.radius.m') }, surface: { $type: 'color', $value: ref('semantic.color.surface.raised') }, outline: { $type: 'color', $value: ref('semantic.color.line.hair') }, 'outline-focus': { $type: 'color', $value: ref('semantic.color.line.default') } },
   stamp: { height: { $type: 'dimension', $value: dim(20) }, 'padding-x': { $type: 'dimension', $value: dim(7) }, radius: { $type: 'dimension', $value: ref('primitive.radius.xs') }, outline: { $type: 'color', $value: ref('semantic.color.attention.fill') }, text: { $type: 'color', $value: ref('semantic.color.attention.text') } },
   dot: { size: { $type: 'dimension', $value: dim(6) }, 'size-measure': { $type: 'dimension', $value: dim(4) }, 'size-flag': { $type: 'dimension', $value: dim(8) } },
   switch: { width: { $type: 'dimension', $value: dim(34) }, height: { $type: 'dimension', $value: dim(20) }, knob: { $type: 'dimension', $value: dim(14) }, on: { $type: 'color', $value: ref('semantic.color.selected.fill') }, off: { $type: 'color', $value: ref('semantic.color.surface.inset') } },
@@ -404,9 +404,9 @@ const component = {
 
 /* ───────── assemble ───────── */
 const tokens = {
-  $description: 'hypotaxis design tokens. Generated by design-system/build-tokens.mjs from tokens.css; do not edit by hand. Values follow the W3C Design Tokens format (2025.10). Theme presets are modes: every themed token carries its catalog value in $value and every preset in $extensions.hypotaxis.modes. Corners and density are two further modifiers on radius and control tokens.',
+  $description: 'boopis design tokens. Generated by design-system/build-tokens.mjs from tokens.css; do not edit by hand. Values follow the W3C Design Tokens format (2025.10). Theme presets are modes: every themed token carries its catalog value in $value and every preset in $extensions.boopis.modes. Corners and density are two further modifiers on radius and control tokens.',
   $extensions: {
-    hypotaxis: {
+    boopis: {
       generatedFrom: 'tokens.css',
       modifiers: {
         preset: { default: 'catalog', contexts: PRESETS, apply: 'data-hx-preset="<context>" on <html>', meta: PRESET_META },

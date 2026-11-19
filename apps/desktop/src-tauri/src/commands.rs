@@ -447,7 +447,7 @@ pub async fn renderer_report(
     Ok(report)
 }
 
-/// Restart the app, so the choices read at startup (the GPU, `HYPOTAXIS_FPS`, the renderer) apply. The webview's GPU is
+/// Restart the app, so the choices read at startup (the GPU, `BOOPIS_FPS`, the renderer) apply. The webview's GPU is
 /// fixed when the process starts; this is the only way to change it.
 #[tauri::command]
 #[specta::specta]

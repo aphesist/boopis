@@ -13,7 +13,7 @@
 //! The tag is the one chosen. Its weakness is the same as the record's: whoever can read the key
 //! (a same-user process) can forge a tag, just as whoever can write the record can add an id. So
 //! the key is a 0600 file, and the plugin's policy denies agent tools reading it (the key sits
-//! beside the journals: `<profile home>/hypotaxis/journals/.hx-journal-key`).
+//! beside the journals: `<profile home>/boopis/journals/.hx-journal-key`).
 //!
 //! # Where the key lives
 //! In the **parent** of the journal directory, so it is per profile: the plugin gives every

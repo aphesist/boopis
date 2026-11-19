@@ -1,4 +1,4 @@
-/* hypotaxis v6 · dock (owner: dock agent)
+/* boopis v6 · dock (owner: dock agent)
 
    One black slab flush to the window's bottom edge. Its outline is ONE SVG path rebuilt every frame from
    the sprung width and height, so the concave flares follow every morph.

@@ -207,7 +207,7 @@ impl Runtime {
     }
 
     /// The runtime the app carries, if this build does: `<resource dir>/runtime/runtime.json`. A debug or source build
-    /// carries none and so uses the Hermes it finds (`HYPOTAXIS_HERMES`).
+    /// carries none and so uses the Hermes it finds (`BOOPIS_HERMES`).
     ///
     /// # Errors
     /// A manifest that is there but invalid is an error (a broken build must not look like a build without one).
@@ -536,12 +536,15 @@ pub fn remove_old(runtimes_dir: &Path, keep: &Path) -> Vec<PathBuf> {
     removed
 }
 
+/// The private Hermes home inside the app's data folder.
+pub const HOME_DIR: &str = "hermes-home";
+
 /// The runtime this build carries and where the app keeps its data: everything first-run setup needs to put it in place.
 #[derive(Debug, Clone)]
 pub struct Plan {
     /// The bundled runtime.
     pub runtime: Runtime,
-    /// The app's data directory (`~/.local/share/dev.aphesist.hypotaxis`).
+    /// The app's data directory (`~/.local/share/dev.aphesist.boopis`).
     pub data_dir: PathBuf,
 }
 
@@ -555,7 +558,7 @@ impl Plan {
     /// The private `HERMES_HOME`: `<data dir>/hermes-home`. Never the user's `~/.hermes`.
     #[must_use]
     pub fn home(&self) -> PathBuf {
-        self.data_dir.join("hermes-home")
+        self.data_dir.join(HOME_DIR)
     }
 
     /// The environment that makes this runtime the only Hermes (its launcher path is known before it is unpacked).
@@ -590,7 +593,7 @@ impl Source {
         }
     }
 
-    /// The choice from `HYPOTAXIS_HERMES` (wins), else the saved one, else the bundled runtime.
+    /// The choice from `BOOPIS_HERMES` (wins), else the saved one, else the bundled runtime.
     #[must_use]
     pub fn resolve(from_env: Option<&str>, saved: Option<&str>) -> Self {
         from_env
