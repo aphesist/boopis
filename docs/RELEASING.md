@@ -4,13 +4,13 @@ Two workflows live in `.github/workflows/`. Neither can be run locally; `actionl
 
 ## Getting the AppImage
 - **Every push to `develop`:** open the `release` run in the Actions tab, then download the artifact `boopis-linux-x86_64-appimage` (the `.AppImage` and `SHA256SUMS`, kept 30 days). Windows (`boopis-windows-x86_64-nsis`) and macOS (`boopis-macos-aarch64-dmg`) bundles are there too when those jobs built.
-- **A tag `vX.Y.Z`:** push a tag that equals `version` in `apps/desktop/src-tauri/tauri.conf.json` (the build fails when they differ). The `release` job then publishes a GitHub release with the AppImage, the other bundles that built, `install.sh` and `install.ps1`, and `SHA256SUMS` over all of them. Download from the repository's Releases page, or `gh release download vX.Y.Z -R aphesist/boopis`.
+- **A tag `vX.Y.Z`:** push a tag that equals `version` in `apps/desktop/src-tauri/tauri.conf.json` (the build fails when they differ). The `release` job then publishes a GitHub release with the AppImage, the other bundles that built, `install.sh` and `install.ps1`, and `SHA256SUMS` over all of them. Before 1.0, and for a tag with a suffix (`v1.2.0-rc.1`), it is marked a pre-release. Download from the repository's Releases page, or `gh release download vX.Y.Z -R aphesist/boopis`.
 - Verify: `sha256sum -c SHA256SUMS --ignore-missing`.
 
 ## Installing from a terminal
 `scripts/install.sh` (Linux and macOS) and `scripts/install.ps1` (Windows) install a release the way a person would: they download the release's file, check its sha256 against the release's `SHA256SUMS`, install it and register it. They are one file each and run from a pipe; `packaging/AGENTS.md` has the art and the rules, ADR-0026 the reason.
 ```sh
-bash install.sh                       # the latest release
+bash install.sh                       # the latest release, or the newest pre-release while there is none
 bash install.sh --version v0.1.0      # a release
 bash install.sh --file ./boopis_0.1.0_amd64.AppImage [--sha256 <hex>]   # a file you already have
 bash install.sh --uninstall           # removes exactly what the manifest lists

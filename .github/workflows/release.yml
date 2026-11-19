@@ -449,6 +449,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+        # Before 1.0, and for any tag with a suffix (v1.2.0-rc.1), the release is a pre-release. The installers take the newest
+        # pre-release while there is no other (scripts/install.sh, install.ps1: GitHub's "latest" never answers with one).
         run: |
+          pre=()
+          case "$GITHUB_REF_NAME" in v0.*|*-*) pre=(--prerelease) ;; esac
           gh release create "$GITHUB_REF_NAME" release-files/* \
-            --title "$GITHUB_REF_NAME" --generate-notes --verify-tag
+            --title "$GITHUB_REF_NAME" --generate-notes --verify-tag "${pre[@]}"

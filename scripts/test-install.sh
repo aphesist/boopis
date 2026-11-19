@@ -118,6 +118,21 @@ cp "$T/art/$NAME" "$rel/"
 out=$(BOOPIS_BASE_URL="file://$T/rel" run --version 0.0.0 --prefix "$T/p" --yes) || fail "download install exits 0 ($out)"
 check "download: installs the release's files" test "$(files_of "$T/p")" = "$expected"
 check "download: shows the release and the file" contains "$out" "v0.0.0"
+# no --version: the latest release, or the newest pre-release while there is no other (the API as files: a `releases`
+# file is the list, newest first, and a `releases/latest` file the latest release, which GitHub never answers with a pre-release)
+api=$T/api/repos/aphesist/boopis
+mkdir -p "$api"
+printf '[{"tag_name": "v0.0.0", "prerelease": true}, {"tag_name": "v0.0.0-older", "prerelease": true}]' >"$api/releases"
+fresh
+out=$(BOOPIS_BASE_URL="file://$T/rel" BOOPIS_API_URL="file://$T/api" run --prefix "$T/p" --yes) || fail "pre-release install exits 0 ($out)"
+check "latest: with only pre-releases, the newest one is installed" test "$(files_of "$T/p")" = "$expected"
+check "latest: and named" contains "$out" "v0.0.0"
+rm -f "$api/releases"
+mkdir -p "$api/releases"
+printf '{"tag_name": "v0.0.0", "prerelease": false}' >"$api/releases/latest"
+fresh
+out=$(BOOPIS_BASE_URL="file://$T/rel" BOOPIS_API_URL="file://$T/api" run --prefix "$T/p" --yes) || fail "latest install exits 0 ($out)"
+check "latest: the latest release is installed" test "$(files_of "$T/p")" = "$expected"
 fresh
 rc=0
 out=$(BOOPIS_BASE_URL="file://$T/rel" run --version v9.9.9 --prefix "$T/p" --yes) || rc=$?

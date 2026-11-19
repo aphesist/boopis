@@ -338,13 +338,24 @@ fetch_job() {
   else
     have curl || have wget || fail 'boopis needs curl or wget to download itself, and this machine has neither.' \
       'Install curl, or download a release by hand and run: bash install.sh --file <the file>.'
-    local api="$API_URL/repos/$BOOPIS_OWNER/$BOOPIS_REPO/releases/latest" body
-    if have curl; then
-      body=$(curl -fsSL -H 'Accept: application/vnd.github+json' "$api" 2>/dev/null) || body=''
-    else
-      body=$(wget -qO- "$api" 2>/dev/null) || body=''
+    # The latest release; while there is none yet (only pre-releases, which `releases/latest` leaves out), the newest
+    # pre-release: GitHub lists releases newest first, so the first tag of the list is it.
+    local api="$API_URL/repos/$BOOPIS_OWNER/$BOOPIS_REPO/releases" body
+    get_json() {
+      if have curl; then
+        curl -fsSL -H 'Accept: application/vnd.github+json' "$1" 2>/dev/null || true
+      else
+        wget -qO- "$1" 2>/dev/null || true
+      fi
+    }
+    # one field per line first, so the first tag is found whether the JSON is pretty-printed or on one line
+    first_tag() { tr ',{}' '\n' | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1; }
+    body=$(get_json "$api/latest")
+    tag=$(printf '%s' "$body" | first_tag)
+    if [ -z "$tag" ]; then
+      body=$(get_json "$api")
+      tag=$(printf '%s' "$body" | first_tag)
     fi
-    tag=$(printf '%s' "$body" | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)
     [ -n "$tag" ] || fail "boopis could not find the latest release of $BOOPIS_OWNER/$BOOPIS_REPO." \
       'Check your connection, or name a release with --version vX.Y.Z. If the repository is private, download the file with gh and use --file.'
   fi

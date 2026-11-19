@@ -181,9 +181,18 @@ function Get-ReleaseTag {
         if ($Version.StartsWith('v')) { return $Version }
         return "v$Version"
     }
+    # The latest release; while there is none yet (only pre-releases, which releases/latest leaves out), the newest
+    # pre-release: GitHub lists releases newest first.
+    $headers = @{ Accept = 'application/vnd.github+json' }
     try {
-        $r = Invoke-RestMethod -Uri "$ApiUrl/repos/$Owner/$Repo/releases/latest" -Headers @{ Accept = 'application/vnd.github+json' } -UseBasicParsing
-        return [string]$r.tag_name
+        $r = Invoke-RestMethod -Uri "$ApiUrl/repos/$Owner/$Repo/releases/latest" -Headers $headers -UseBasicParsing
+        if ($r.tag_name) { return [string]$r.tag_name }
+    }
+    catch { }
+    try {
+        $list = @(Invoke-RestMethod -Uri "$ApiUrl/repos/$Owner/$Repo/releases" -Headers $headers -UseBasicParsing)
+        if ($list.Count -gt 0 -and $list[0].tag_name) { return [string]$list[0].tag_name }
+        throw 'no release'
     }
     catch {
         Stop-Install "boopis could not find the latest release of $Owner/$Repo." 'Check your connection, or name a release with -Version vX.Y.Z. If the repository is private, download the file by hand and use -File.'
