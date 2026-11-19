@@ -80,10 +80,8 @@
 .dk-dots { display: flex; align-items: center; transition: opacity var(--dur-2) var(--ease), visibility 0s; }
 /* one page: nothing to go to, so no nub (hidden from the accessibility tree too, once it has faded) */
 .dk-dots.is-solo { opacity: 0; visibility: hidden; transition: opacity var(--dur-out) var(--ease), visibility 0s var(--dur-out); }
-/* the marks stay small to look at; each dot's own box is --hit-min square (R-a11y-2), the foot's full height, so the
-   boxes sit side by side and none overlaps another */
-.dk-dots .ui-pages { height: var(--hit-min); }
-.dk-dots .ui-pages .ui-pages__dot { width: var(--hit-min); height: var(--hit-min); }   /* (also the current dot, whose library rule is less specific) */
+/* the dots stay 10px to look at; each answers a pointer over the foot's full 24px height */
+.dk-dots .ui-pages__dot::after { content: ""; position: absolute; left: 0; right: 0; top: -7px; bottom: -7px; }
 
 /* ---------- orbs: a slot per view; the live library orb (.ui-orb) travels into the visible one ---------- */
 .dk-orb { position: relative; display: block; flex: none; width: calc(var(--o, 40) * 1px); height: calc(var(--o, 40) * 1px); }
@@ -121,6 +119,8 @@
    8px gap sits between orb and label, as in the bots list. orb2 paints up to a quarter of its size past its box
    (6.5px here) and that stays inside the gap. */
 .dk-roster .ui-row__lead { width: calc(var(--o) * 1px); height: calc(var(--o) * 1px); }
+/* the row's top and bottom inset around the lead equal its 12px left padding, so the "new bot" ring sits in the row's corner with equal insets (R-corner-3) */
+.dk-roster .ui-row--2 { height: calc(var(--o) * 1px + 2 * var(--sp-3)); }
 .dk-add-ring { position: relative; width: 26px; height: 26px; display: grid; place-items: center; color: var(--text-strong); flex: none; }
 .dk-add-ring-o { position: absolute; inset: 0; border-radius: var(--r-pill); box-shadow: inset 0 0 0 1px var(--line-strong); }
 

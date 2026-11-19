@@ -22,7 +22,7 @@ export const st = (b: Bot): ReturnType<typeof ui.botState> => ui.botState(b);
 const phrase = (b: Bot): string => st(b).word;
 export const botLabel = (b: Bot): string => ui.botLabel(b);
 /** a roster row shows the name and the state word only (no role), so its name holds exactly the visible text, in order (R-a11y-3) */
-const rowLabel = (b: Bot): string => ui.botLabel({ ...b, role: '' });
+const rowLabel = (b: Bot): string => `${b.name}, ${st(b).word}`;
 /** one library orb per bot; it renders at 80 so magnification stays crisp; the wrapper is what travels */
 export const makeOrb = (b: Bot): HTMLElement => ui.orb(b, { size: 40, render: 80, flag: true });
 export const av = (id: string): (HTMLElement & Record<string, unknown>) | null => { const w = X.orbs.get(id); return w ? (w.querySelector('orb-avatar') as (HTMLElement & Record<string, unknown>) | null) : null; };
