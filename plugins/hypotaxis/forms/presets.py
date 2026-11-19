@@ -22,6 +22,7 @@ class Draft:
     schema: dict[str, Any]
     submit: dict[str, Any] = field(default_factory=dict)
     cancel: dict[str, Any] | None = None
+    effect: dict[str, Any] | None = None  # what a submit does on the plugin's side; kept by the service, never sent out
 
 
 def _text(value: Any, what: str, *, required: bool = False) -> str:

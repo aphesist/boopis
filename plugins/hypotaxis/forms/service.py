@@ -109,6 +109,7 @@ class FormService:
                 expires_at=_stamp(_now() + timedelta(seconds=settings.expires_s)),
                 submit=dict(draft.submit),
                 cancel=dict(draft.cancel) if draft.cancel is not None else None,
+                effect=dict(draft.effect) if draft.effect is not None else None,
                 deliver=deliver,
                 actor=actor,
                 tags=tags,
@@ -153,12 +154,34 @@ class FormService:
             if form.kind == "credential" and len(saved) == 1:
                 result.update(saved=True, ref=next(iter(saved.values()))["ref"])
                 result["wiring"] = self._wire_credential(result["ref"])
+        applied = self._apply_effect(form, clean)
+        if applied is not None:
+            result["applied"] = applied
         with self._lock:
             self._open_form(form_id, session_id)  # answered elsewhere in the meantime?
             form.result = result
             self._resolve(form, "submitted", provided=[*saved], answered=sorted(clean))
         self._after(form)
         return result
+
+    def _apply_effect(self, form: Form, values: Mapping[str, Any]) -> dict[str, Any] | None:
+        """What a submitted form does beyond answering: today, re-approving hooks a ship switched off
+        (``compat.rearm``).
+        Only an explicit ``trust`` answer does anything. Never raises; a failure is reported in the answer."""
+        effect = form.effect
+        if not effect:
+            return None
+        if effect.get("name") == "compat.retrust":
+            if values.get("decision") != "trust":
+                return {"trusted": 0}
+            try:
+                from ..compat.rearm import retrust
+
+                return {"trusted": retrust(self._rt.home, effect)}
+            except Exception as exc:  # noqa: BLE001 - the answer stands; the hooks simply stay off
+                _log.warning("could not re-approve hooks for form %s", form.form_id, exc_info=True)
+                return {"trusted": 0, "error": f"{type(exc).__name__}: the hooks stay off"}
+        return None
 
     def _wire_credential(self, ref: str) -> dict[str, Any]:
         wire = self._wire

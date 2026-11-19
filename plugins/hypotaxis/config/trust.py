@@ -126,6 +126,28 @@ class TrustStore:
                 "decided_by": "user",
             }
         )
+        self._write(kept)
+
+    def revoke(self, cwd: str | Path, kind: str, item_id: str | None = None) -> int:
+        """Withdraw an approval (any hash) of one item, or of the whole ``kind`` when ``item_id`` is None, so it is
+        untrusted again and not declined: the user is asked afresh. Returns how many entries went. Used when something
+        the approval did not cover has changed."""
+        pid = project_id(cwd)
+        entries = self._entries()
+        kept = [
+            e
+            for e in entries
+            if not (
+                e.get("project_id") == pid
+                and e.get("kind") == kind
+                and (item_id is None or e.get("item_id") == item_id)
+            )
+        ]
+        if len(kept) != len(entries):
+            self._write(kept)
+        return len(entries) - len(kept)
+
+    def _write(self, kept: list[dict[str, Any]]) -> None:
         path = trust_file(self.home)
         path.parent.mkdir(parents=True, exist_ok=True)
         fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".trust-")
