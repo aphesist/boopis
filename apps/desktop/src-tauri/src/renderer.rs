@@ -14,6 +14,9 @@
 //!   (`WebKit` bugs 259644 and 261874; Ubuntu still ships a patch that forces the shared-memory transport for NVIDIA in
 //!   2.52.6), and NVIDIA on Wayland can die with `Error 71` (cured by `__NV_DISABLE_EXPLICIT_SYNC=1`, or by the
 //!   `DMABUF` switch). A machine that starts and draws is left alone.
+//! - The `WebKitGTK` version matters on Wayland with NVIDIA: the GTK 3 explicit-sync crash is fixed upstream in 2.54.2
+//!   (`WebKit` bug 324551), so from there the machine gets the default GL renderer and no workaround is set (ADR-0025).
+//!   The version is read from the library at run time (`webkit::probe`), not from what the build linked.
 //! - The host cannot see a blank window from inside. So the automatic rule touches only the case where the evidence
 //!   says the default is broken, and everything else is an explicit choice (`HYPOTAXIS_RENDERER`) that the
 //!   diagnostics report and the owner can try. A machine that already runs with a switch of its own is not touched.
@@ -26,6 +29,10 @@ use std::path::Path;
 
 use serde::Serialize;
 use specta::Type;
+
+use crate::frame_rate;
+use crate::gpu;
+use crate::webkit;
 
 /// The variable that overrides the automatic rule: `auto` (the default), `default`, `shm`, `cpu`, `nosync` or `software`.
 pub const POLICY_VAR: &str = "HYPOTAXIS_RENDERER";
@@ -103,7 +110,7 @@ pub struct Gpu {
 }
 
 impl Gpu {
-    fn is_nvidia_proprietary(&self) -> bool {
+    pub(crate) fn is_nvidia_proprietary(&self) -> bool {
         parse_hex(&self.vendor) == Some(NVIDIA_PCI_VENDOR)
             && self.driver.as_deref() == Some("nvidia")
     }
@@ -122,6 +129,11 @@ pub struct Inputs {
     pub policy: Policy,
     /// Which of `USER_SWITCHES` are already in the environment.
     pub user_switches: Vec<String>,
+    /// The `WebKitGTK` this process runs on (its version decides the Wayland and NVIDIA rule).
+    pub webkit: webkit::Info,
+    /// The GPU rule (`gpu.rs`, `HYPOTAXIS_GPU`) offloads rendering to the NVIDIA GPU: that GPU, not the display one, is
+    /// what the webview draws on, so the rules below judge it.
+    pub offload: bool,
 }
 
 /// Why the decision came out as it did (stable names: they go in the log and in the diagnostics).
@@ -145,9 +157,13 @@ pub enum Rule {
     /// NVIDIA proprietary driver on X11: the `DMABUF` renderer shows a blank window; the shared-memory transport keeps
     /// the GPU.
     NvidiaX11,
-    /// NVIDIA proprietary driver on Wayland: left alone (it starts and draws for most; the switches that cure a
-    /// crash or a blank window are one variable away and the diagnostics name them).
+    /// NVIDIA proprietary driver on Wayland, `WebKitGTK` before 2.54.2 or of an unknown version: left alone (it starts
+    /// and draws for most; the switches that cure a crash or a blank window are one variable away and the diagnostics
+    /// name them).
     NvidiaWaylandUntouched,
+    /// NVIDIA proprietary driver on Wayland, `WebKitGTK` 2.54.2 or later: the GTK 3 explicit-sync crash is fixed
+    /// upstream (`WebKit` bug 324551), so the default GL renderer is what this machine gets and no workaround is set.
+    NvidiaWaylandFixed,
     /// The session type could not be told: nothing is assumed.
     SessionUnknown,
 }
@@ -180,18 +196,21 @@ pub fn decide(i: &Inputs) -> Decision {
         Policy::Software => return one("WEBKIT_DISABLE_COMPOSITING_MODE", Rule::PolicySoftware),
         Policy::Auto => {}
     }
-    // The display device decides; a second GPU that only computes is not what the webview draws on. With no device
-    // flagged, the first one stands.
-    let primary = i
-        .gpus
-        .iter()
-        .find(|g| g.boot_display)
-        .or_else(|| i.gpus.first());
+    // The display device decides; a second GPU that only computes is not what the webview draws on, unless the GPU rule
+    // moved the rendering there. With no device flagged, the first one stands.
+    let primary = if i.offload {
+        i.gpus.iter().find(|g| g.is_nvidia_proprietary())
+    } else {
+        None
+    }
+    .or_else(|| i.gpus.iter().find(|g| g.boot_display))
+    .or_else(|| i.gpus.first());
     if !primary.is_some_and(Gpu::is_nvidia_proprietary) {
         return none(Rule::NoNvidiaProprietary);
     }
     match i.session {
         Session::X11 => one("WEBKIT_DMABUF_RENDERER_FORCE_SHM", Rule::NvidiaX11),
+        Session::Wayland if i.webkit.has_explicit_sync_fix() => none(Rule::NvidiaWaylandFixed),
         Session::Wayland => none(Rule::NvidiaWaylandUntouched),
         Session::Unknown => none(Rule::SessionUnknown),
     }
@@ -297,6 +316,8 @@ pub fn probe() -> Inputs {
             .filter(|k| std::env::var_os(k).is_some())
             .map(|k| (*k).to_owned())
             .collect(),
+        webkit: webkit::probe(),
+        offload: false,
     }
 }
 
@@ -306,7 +327,7 @@ pub fn probe() -> Inputs {
 pub fn apply(d: &Decision) {
     for (k, v) in &d.set {
         // SAFETY: called from `run()` before Tauri, tokio or the logger start a thread, so nothing can read the
-        // environment concurrently. This is the only `set_var` in the host.
+        // environment concurrently. The only other `set_var` is `gpu::apply`, under the same rule.
         unsafe { std::env::set_var(k, v) };
     }
 }
@@ -330,6 +351,41 @@ pub struct RendererReport {
     pub environment: Vec<(String, String)>,
     /// `HYPOTAXIS_RENDERER` values and the variables each sets, for the report's reader.
     pub choices: Vec<(String, String)>,
+    /// The `WebKitGTK` this process runs on: its version and whether it is the `AppImage`'s or the system's.
+    pub webkit: webkit::Report,
+    /// The frame rate: the display's rate, whether `WebKit`'s 60 fps preference is off, the power profile. Read from the
+    /// live window when the report is asked for.
+    pub frame_rate: frame_rate::Report,
+    /// One plain sentence when the renderer in use limits motion, else none.
+    pub note: Option<String>,
+    /// Which GPU the webview renders on (`HYPOTAXIS_GPU`), and why. The power source and the restart advice are read
+    /// when the report is asked for.
+    pub gpu: gpu::Report,
+}
+
+/// The switches that make `WebKitGTK` paint on the CPU (no accelerated compositing, so no compositor-thread animation).
+const CPU_PAINT_SWITCHES: &[&str] = &[
+    "WEBKIT_DISABLE_DMABUF_RENDERER",
+    "WEBKIT_DISABLE_COMPOSITING_MODE",
+];
+
+/// A sentence for the diagnostics when the renderer limits motion (ADR-0025): the CPU path paints every frame on the
+/// main thread, so the display's full rate is not a realistic target, and a smooth 60 is. `None` otherwise.
+#[must_use]
+pub fn note(inputs: &Inputs, decision: &Decision) -> Option<String> {
+    let cpu = inputs
+        .user_switches
+        .iter()
+        .chain(decision.set.iter().map(|(k, _)| k))
+        .find(|k| CPU_PAINT_SWITCHES.contains(&k.as_str()))?;
+    let extra = if inputs.webkit.has_explicit_sync_fix() {
+        " This WebKitGTK has the explicit-sync fix for NVIDIA on Wayland, so the switch is probably not needed: unset it and try again."
+    } else {
+        ""
+    };
+    Some(format!(
+        "{cpu} is set, so WebKitGTK paints every frame on the CPU: motion is steady at 60 fps at best, never the display's full rate.{extra}"
+    ))
 }
 
 /// The variables worth reporting: the renderer switches, the session and the GPU selection.
@@ -359,7 +415,7 @@ const REPORTED: &[&str] = &[
 
 /// The report for `inputs` and `decision`, reading the live environment for the variables that are set.
 #[must_use]
-pub fn report(inputs: &Inputs, decision: &Decision) -> RendererReport {
+pub fn report(inputs: &Inputs, decision: &Decision, gpu: gpu::Report) -> RendererReport {
     RendererReport {
         session: inputs.session,
         hyprland: inputs.hyprland,
@@ -371,6 +427,10 @@ pub fn report(inputs: &Inputs, decision: &Decision) -> RendererReport {
             .iter()
             .filter_map(|k| std::env::var(k).ok().map(|v| ((*k).to_owned(), v)))
             .collect(),
+        webkit: inputs.webkit.report(),
+        frame_rate: frame_rate::Report::pending(frame_rate::Policy::from_env()),
+        note: note(inputs, decision),
+        gpu,
         choices: [
             ("default", "nothing: WebKitGTK's own choice"),
             (
@@ -415,6 +475,15 @@ mod tests {
             hyprland: false,
             policy: Policy::Auto,
             user_switches: vec![],
+            webkit: webkit::Info::unknown(),
+            offload: false,
+        }
+    }
+    fn webkit_at(major: u32, minor: u32, micro: u32) -> webkit::Info {
+        webkit::Info {
+            version: Some(webkit::Version::new(major, minor, micro)),
+            origin: webkit::Origin::System,
+            library: None,
         }
     }
     fn set_of(d: &Decision) -> Vec<&str> {
@@ -685,16 +754,153 @@ mod tests {
             hyprland: true,
             policy: Policy::Auto,
             user_switches: vec![],
+            webkit: webkit::Info::unknown(),
+            offload: false,
         };
         assert_eq!(decide(&hybrid).rule, Rule::NoNvidiaProprietary);
         assert!(read_gpus(&t.path().join("missing")).is_empty());
+    }
+
+    /// The Wayland and NVIDIA rule by `WebKitGTK` version: the fix is in from 2.54.2, and an unknown version is not
+    /// assumed to have it. Either way nothing is set, and a user's switch still wins.
+    #[test]
+    fn the_version_decides_the_wayland_nvidia_rule() {
+        type Ver = Option<(u32, u32, u32)>;
+        let rows: &[(Ver, Rule)] = &[
+            (None, Rule::NvidiaWaylandUntouched),
+            (Some((2, 44, 0)), Rule::NvidiaWaylandUntouched),
+            (Some((2, 52, 6)), Rule::NvidiaWaylandUntouched),
+            (Some((2, 54, 0)), Rule::NvidiaWaylandUntouched),
+            (Some((2, 54, 1)), Rule::NvidiaWaylandUntouched),
+            (Some((2, 54, 2)), Rule::NvidiaWaylandFixed),
+            (Some((2, 54, 3)), Rule::NvidiaWaylandFixed),
+            (Some((2, 56, 0)), Rule::NvidiaWaylandFixed),
+        ];
+        for (version, want) in rows {
+            let mut i = inputs(vec![nvidia(true)], Session::Wayland);
+            if let Some((a, b, c)) = version {
+                i.webkit = webkit_at(*a, *b, *c);
+            }
+            let d = decide(&i);
+            assert_eq!((d.rule, d.set.is_empty()), (*want, true), "{version:?}");
+        }
+    }
+
+    /// The version changes nothing outside Wayland with the NVIDIA proprietary display GPU.
+    #[test]
+    fn the_version_changes_no_other_row() {
+        for session in [Session::X11, Session::Unknown] {
+            let mut old = inputs(vec![nvidia(true)], session);
+            let mut new = old.clone();
+            old.webkit = webkit_at(2, 52, 6);
+            new.webkit = webkit_at(2, 54, 3);
+            assert_eq!(decide(&old), decide(&new), "{session:?}");
+        }
+        let mut hybrid = inputs(vec![intel(true), nvidia(false)], Session::Wayland);
+        hybrid.webkit = webkit_at(2, 54, 3);
+        assert_eq!(decide(&hybrid).rule, Rule::NoNvidiaProprietary);
+        // A user's switch wins over the fixed-version rule, and so does the policy.
+        let mut user = inputs(vec![nvidia(true)], Session::Wayland);
+        user.webkit = webkit_at(2, 54, 3);
+        user.user_switches = vec!["__NV_DISABLE_EXPLICIT_SYNC".to_owned()];
+        assert_eq!(decide(&user).rule, Rule::UserEnvironment);
+        let mut policy = inputs(vec![nvidia(true)], Session::Wayland);
+        policy.webkit = webkit_at(2, 54, 3);
+        policy.policy = Policy::Shm;
+        let d = decide(&policy);
+        assert_eq!(d.rule, Rule::PolicyShm);
+        assert_eq!(set_of(&d), vec!["WEBKIT_DMABUF_RENDERER_FORCE_SHM"]);
+    }
+
+    /// When the GPU rule moves rendering to the NVIDIA GPU, the renderer rules judge that GPU, not the display one.
+    #[test]
+    fn offloaded_rendering_is_judged_on_the_nvidia_gpu() {
+        let hybrid = vec![intel(true), nvidia(false)];
+        // Without offload the display GPU is Intel: nothing to do on either session.
+        for session in [Session::X11, Session::Wayland] {
+            assert_eq!(
+                decide(&inputs(hybrid.clone(), session)).rule,
+                Rule::NoNvidiaProprietary
+            );
+        }
+        // With offload on X11 the NVIDIA blank-window rule applies (ADR-0024); on Wayland the version decides.
+        let mut x11 = inputs(hybrid.clone(), Session::X11);
+        x11.offload = true;
+        let d = decide(&x11);
+        assert_eq!(
+            (d.rule, set_of(&d)),
+            (Rule::NvidiaX11, vec!["WEBKIT_DMABUF_RENDERER_FORCE_SHM"])
+        );
+        let mut wl = inputs(hybrid.clone(), Session::Wayland);
+        wl.offload = true;
+        assert_eq!(decide(&wl).rule, Rule::NvidiaWaylandUntouched);
+        wl.webkit = webkit_at(2, 54, 2);
+        assert_eq!(decide(&wl).rule, Rule::NvidiaWaylandFixed);
+        // Offload with no NVIDIA proprietary GPU falls back to the display GPU.
+        let mut none = inputs(vec![intel(true)], Session::X11);
+        none.offload = true;
+        assert_eq!(decide(&none).rule, Rule::NoNvidiaProprietary);
+    }
+
+    #[test]
+    fn the_note_names_a_renderer_that_limits_motion() {
+        // The owner's launch: the CPU path forced by the environment, on a version with the fix.
+        let mut i = inputs(vec![intel(true), nvidia(false)], Session::Wayland);
+        i.webkit = webkit_at(2, 54, 2);
+        i.user_switches = vec!["WEBKIT_DISABLE_DMABUF_RENDERER".to_owned()];
+        let n = note(&i, &decide(&i)).unwrap_or_default();
+        assert!(n.contains("WEBKIT_DISABLE_DMABUF_RENDERER"), "{n}");
+        assert!(n.contains("CPU"), "{n}");
+        assert!(n.contains("explicit-sync fix"), "{n}");
+        // Before the fix the advice to unset it is not given.
+        i.webkit = webkit_at(2, 52, 6);
+        assert!(
+            !note(&i, &decide(&i))
+                .unwrap_or_default()
+                .contains("explicit-sync")
+        );
+        // The host's own CPU choice is named too.
+        let mut cpu = inputs(vec![intel(true)], Session::Wayland);
+        cpu.policy = Policy::Cpu;
+        assert!(note(&cpu, &decide(&cpu)).is_some());
+        // GL paths and the default have nothing to say.
+        let mut shm = inputs(vec![nvidia(true)], Session::X11);
+        assert!(note(&shm, &decide(&shm)).is_none());
+        shm.user_switches = vec!["WEBKIT_DMABUF_RENDERER_FORCE_SHM".to_owned()];
+        assert!(note(&shm, &decide(&shm)).is_none());
+        assert!(
+            note(
+                &inputs(vec![], Session::Wayland),
+                &decide(&inputs(vec![], Session::Wayland))
+            )
+            .is_none()
+        );
     }
 
     #[test]
     fn the_report_names_the_rule_and_the_choices() {
         let i = inputs(vec![nvidia(true)], Session::X11);
         let d = decide(&i);
-        let r = report(&i, &d);
+        let gpu_inputs = gpu::Inputs {
+            gpus: i.gpus.clone(),
+            session: i.session,
+            webkit: i.webkit.clone(),
+            power: gpu::PowerSource::Ac,
+            policy: gpu::Policy::Auto,
+            user_vars: vec![],
+            switcheroo: None,
+        };
+        let gpu_decision = gpu::decide(&gpu_inputs);
+        let r = report(
+            &i,
+            &d,
+            gpu::report(
+                &gpu_inputs,
+                gpu::PolicySource::Default,
+                &gpu_decision,
+                gpu::PowerSource::Ac,
+            ),
+        );
         assert_eq!(r.rule, Rule::NvidiaX11);
         assert_eq!(
             r.set,
@@ -704,5 +910,8 @@ mod tests {
             )]
         );
         assert!(r.choices.iter().any(|(k, _)| k == "software"));
+        assert_eq!(r.webkit.version, None);
+        assert_eq!(r.webkit.origin, webkit::Origin::Unknown);
+        assert_eq!(r.note, None);
     }
 }

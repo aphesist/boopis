@@ -26,6 +26,7 @@
     "allow-pick-folder",
     "allow-open-external",
     "allow-renderer-report",
-    "allow-renderer-open-gpu-page"
+    "allow-renderer-open-gpu-page",
+    "allow-app-restart"
   ]
 }
