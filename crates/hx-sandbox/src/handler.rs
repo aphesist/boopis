@@ -154,6 +154,10 @@ impl SandboxHandler {
             .await
             .map_err(|e| app_error(&e))?;
 
+        if let Some(open) = &channel {
+            // From here the bridge can tell the plugin from the program it started.
+            open.set_child_pid(child.pid());
+        }
         let cap = policy.output_cap_bytes;
         let (stdout, stderr) = (
             Arc::new(Collector::default()),
