@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import http.client
 import socket
+import ssl
 import threading
 from collections.abc import Callable, Iterator, Sequence
 from typing import Any
@@ -159,6 +160,10 @@ def test_tls_still_verifies_and_sends_the_name_while_the_socket_goes_to_the_addr
     connected: list[tuple[str, int]] = []
 
     class Context:
+        # what http.client reads from a context before it wraps (3.11 checks both in HTTPSConnection.__init__)
+        verify_mode = ssl.CERT_REQUIRED
+        check_hostname = True
+
         def wrap_socket(self, sock: socket.socket, server_hostname: str | None = None) -> socket.socket:
             wrapped.append(str(server_hostname))
             return sock
