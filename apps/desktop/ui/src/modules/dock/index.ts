@@ -19,6 +19,7 @@ import {
 import type { DockBot } from './ctx';
 import { E, cancelFlips, cxNow, emitDock, focusDock, kick, morph, paint, renderDots, resetMag, retarget, shellVar, showView, stopSlide } from './engine';
 import { lookRow, setOrbLife } from './orbs';
+import { patchHTML } from './reconcile';
 import { makeOrb, paintSession, refreshBot, relocateLive, renderAll, renderMins, renderView, viewKey, costHTML, fmtDur, meterHTML } from './views';
 import { closeCard, goPage, onCardAction, onCardState, onWaitAdded, onWaitResolved, openCard, setMode, setOn, toggleSetting } from './controller';
 import { cancelOutside, fitRow, onClick, onDocDown, onDocUp, onFocusIn, onFocusOut, onKey, onLayout, onPointerDown, onPointerMove, onTouchMove, onTouchUp, onWheel, onDoubleGuard } from './input';
@@ -66,9 +67,12 @@ function onRun(next: RunSnapshot): void {
     morph(() => { renderView('run:norm'); renderView('run:exp'); renderView('run:min'); }, { ghost: true });
     return;
   }
-  for (const el of $$('[data-run-time]', X.root)) el.textContent = fmtDur(next.elapsed);
-  for (const el of $$('[data-run-cost]', X.root)) el.innerHTML = costHTML();
-  for (const el of $$('[data-run-meter]', X.root)) el.innerHTML = meterHTML();
+  /* a tick changes the clock and sometimes the cost: only what differs is written, and the meter's dots are patched, not rebuilt */
+  const clock = fmtDur(next.elapsed);
+  for (const el of $$('[data-run-time]', X.root)) if (el.textContent !== clock) el.textContent = clock;
+  const cost = costHTML(), meter = meterHTML();
+  for (const el of $$('[data-run-cost]', X.root)) patchHTML(el, cost);
+  for (const el of $$('[data-run-meter]', X.root)) patchHTML(el, meter);
   if (next.governed !== prev.governed) { const hint = X.root.querySelector('label[for="dk-sw-governed"] small'); if (hint) hint.textContent = next.governed ? 'The ladder picks the model' : `Stays on ${next.model}`; }
 }
 function onSchedules(): void {

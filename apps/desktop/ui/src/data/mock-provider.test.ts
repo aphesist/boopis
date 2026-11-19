@@ -190,3 +190,10 @@ describe('the mock’s archived bots (the design without Hermes)', () => {
     expect(createMockProvider({ simulate: false, fixtures: ['outside'] }).bots.snapshot().bots.filter((b) => b.madeOutside).map((b) => b.id)).toEqual(['sage']);
   });
 });
+
+describe('the empty roster fixture', () => {
+  it('`none` serves no bots at all, and `none` with a fixture serves only that one', () => {
+    expect(createMockProvider({ simulate: false, fixtures: ['none'] }).bots.snapshot().bots).toEqual([]);
+    expect(createMockProvider({ simulate: false, fixtures: ['none', 'long'] }).bots.snapshot().bots.map((b) => b.id)).toEqual(['cassiopeia-staging-deploy-guardian']);
+  });
+});
