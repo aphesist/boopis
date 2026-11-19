@@ -206,10 +206,19 @@ fn main() {
             let mut kids = Vec::new();
             let mut error = String::new();
             for _ in 0..n {
-                match std::process::Command::new(&me)
-                    .args(["sleep", "30"])
-                    .spawn()
+                let mut child = std::process::Command::new(&me);
+                child.args(["sleep", "30"]);
+                #[cfg(unix)]
                 {
+                    use std::os::unix::process::CommandExt;
+                    // A pre_exec hook (even an empty one) makes the standard library fork and exec itself
+                    // instead of calling posix_spawn. glibc 2.35's posix_spawn (Ubuntu 22.04) reports any
+                    // clone failure as EPERM (it negates -1), which hides the EAGAIN the kernel gave when
+                    // RLIMIT_NPROC stopped the bomb; fork returns the kernel's own errno.
+                    // SAFETY: the hook does nothing, so it is trivially async-signal-safe.
+                    unsafe { child.pre_exec(|| Ok(())) };
+                }
+                match child.spawn() {
                     Ok(k) => kids.push(k),
                     Err(e) => {
                         error = e.to_string();
