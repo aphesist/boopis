@@ -243,6 +243,7 @@
   --pad-toast: 6px;           /* a toast's action */
   --pad-tip: 4px;             /* a key chip in a tooltip, in a field's end */
   --pad-seg: 3px;             /* the segmented track: its thumb and options */
+  --pad-row: calc((var(--row-h) - var(--ctl-s)) / 2);   /* a row's action button: a 28px square in the 30px row, so 1px from every edge */
   --r-in-dialog: max(var(--r-floor), calc(var(--r-l) - var(--pad-dialog)));
   --r-in-palette: max(var(--r-floor), calc(var(--r-l) - var(--pad-palette)));
   --r-in-dock: max(var(--r-floor), calc(var(--r-l) - var(--pad-dock)));
@@ -252,6 +253,7 @@
   --r-in-toast: max(var(--r-floor), calc(var(--r-m) - var(--pad-toast)));
   --r-in-field: max(var(--r-floor), calc(var(--r-s) - var(--pad-tip)));   /* tooltip keys, key chips at a field's end */
   --r-in-seg: max(var(--r-floor), calc(var(--r-s) - var(--pad-seg)));     /* the segmented thumb and options */
+  --r-in-row: max(var(--r-floor), calc(var(--r-s) - var(--pad-row)));     /* a row's action button */
 
   /* icons (DESIGN-SYSTEM.md §10, R-icon-3, R-icon-5): six sizes, two gaps to a label */
   --ic-2xs: 10px;             /* chevrons of disclosures and group heads */
