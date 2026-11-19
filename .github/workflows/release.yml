@@ -25,7 +25,44 @@ env:
   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
 jobs:
+  runtime:
+    # The Hermes runtime the installer carries (ADR-0023): python-build-standalone, uv and Hermes v0.23.2 with its locked,
+    # hash-checked dependencies, built by Hermes's own build code. Proven relocatable before anything uses it. The same
+    # script and cache key as ci.yml's runtime job, so the e2e tests run on the bytes that ship.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.13" }
+      - uses: actions/cache@v4
+        id: runtime-cache
+        with:
+          path: dist/runtime
+          key: hermes-runtime-linux-x86_64-ubuntu-22.04-${{ hashFiles('scripts/build-runtime.sh', 'scripts/verify-runtime.sh', 'scripts/runtime/**') }}
+      - name: tools (zstd to compress, llvm-strip for the interpreter's debug symbols)
+        if: steps.runtime-cache.outputs.cache-hit != 'true'
+        run: sudo apt-get update && sudo apt-get install -y zstd llvm
+      - name: build hermes-runtime-linux-x86_64.tar.zst and runtime.json (scripts/build-runtime.sh)
+        if: steps.runtime-cache.outputs.cache-hit != 'true'
+        run: scripts/build-runtime.sh --out dist/runtime
+      - name: relocation proof (unpacked in two paths, one with spaces)
+        run: |
+          scripts/verify-runtime.sh dist/runtime
+      - name: sizes
+        run: |
+          ls -l dist/runtime
+          jq -r '"runtime archive: \(.archive.size) bytes, unpacked about \(.unpacked_size) bytes, Hermes \(.hermes_version), Python \(.python_version)"' dist/runtime/runtime.json | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          # not named hypotaxis-*: the release job publishes only those
+          name: hermes-runtime-linux-x86_64
+          path: dist/runtime/*
+          if-no-files-found: error
+          retention-days: 30
+
   linux:
+    needs: runtime
     # ubuntu-22.04: the oldest glibc and WebKitGTK 4.1 the app needs, so the AppImage runs on every newer distro.
     runs-on: ubuntu-22.04
     timeout-minutes: 60
@@ -57,8 +94,12 @@ jobs:
         working-directory: apps/desktop/ui
       - name: build hx (release), the sidecar
         run: cargo build --release -p hx
-      - name: stage the hx sidecar and the plugin resource (scripts/stage-bundle.sh)
-        run: scripts/stage-bundle.sh --hx target/release/hx
+      - uses: actions/download-artifact@v4
+        with:
+          name: hermes-runtime-linux-x86_64
+          path: ${{ runner.temp }}/runtime
+      - name: stage the hx sidecar, the plugin and the Hermes runtime (scripts/stage-bundle.sh)
+        run: scripts/stage-bundle.sh --hx target/release/hx --runtime "$RUNNER_TEMP/runtime"
       - name: build the AppImage (release, x86_64-unknown-linux-gnu) with the bundle config
         working-directory: apps/desktop/src-tauri
         env:
@@ -69,6 +110,10 @@ jobs:
           mkdir -p dist
           cp target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage dist/
           cd dist && sha256sum -- *.AppImage | tee SHA256SUMS
+          {
+            echo "AppImage: $(stat -c %s -- *.AppImage) bytes"
+            echo "of which the Hermes runtime archive: $(jq .archive.size "$RUNNER_TEMP/runtime/runtime.json") bytes (carried once, already compressed)"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
           name: hypotaxis-linux-x86_64-appimage
