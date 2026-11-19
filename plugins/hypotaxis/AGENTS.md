@@ -63,6 +63,7 @@ Known limits: the delegation provider reads the attempt from a context variable,
 - **Windows:** no channel yet, so `exec_ready()` hides the tool and `run_exec` answers `hx.sandbox.unavailable`. Never run the kernel unsandboxed.
 - **Forms from a cell** go through `forms/` (see "Secrets and forms"). `diagnostics` answers `unsupported`. Kernel start, stop and death go to the log (`exec.kernel`), not the ledger (no such event types exist upstream).
 - The kernel's system read paths are hx's own (`sandbox.spawn` with `system_read: true`); the plugin adds only the interpreter, the kernel files and the workspace.
+- **A kernel the sandbox cannot start is `hx.sandbox.unavailable`, however it fails.** `sandbox.spawn` refuses an interpreter outside the read grants itself (`hx.sandbox.spawn_failed`, as with a uv-managed Python outside `/usr`), and a kernel that dies before `kernel.ready` says the same; `HxLauncher.spawn` and `KernelProcess.start` both answer "the kernel did not start inside the sandbox". Tests of that path must pass with the interpreter anywhere.
 - Hermes's generic tool deadline (about 420 s) ends a call it has not heard from; keep `exec.max_timeout_ms` under it.
 
 ## Hermes facts this code depends on (verified on v0.23.2)

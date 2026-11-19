@@ -612,6 +612,26 @@ def test_a_kernel_the_sandbox_cannot_start_is_sandbox_unavailable_and_says_why(m
     assert kit.run("2")["code"] == "hx.sandbox.unavailable"  # and again, not a stale kernel
 
 
+def test_hx_refusing_to_start_the_kernels_program_is_sandbox_unavailable_not_a_raw_spawn_error() -> None:
+    """An interpreter outside the read grants (a uv-managed one) is refused by ``sandbox.spawn`` itself, before any
+    process exists. The answer is the same as for a kernel that dies before ready, whatever the interpreter's path."""
+    from hypotaxis.errors import HxCallError, SandboxUnavailableError
+    from hypotaxis.exec.launcher import CHANNEL_CAPABILITY, FS_CAPABILITY, HxLauncher, KernelSpec
+
+    class Refusing:
+        capabilities = frozenset({CHANNEL_CAPABILITY, FS_CAPABILITY})
+
+        def request(self, method: str, params: Any = None, **_: Any) -> Any:
+            if method == "sandbox.spawn":
+                raise HxCallError("hx.sandbox.spawn_failed", "Permission denied (os error 13)")
+            return {}
+
+    spec = KernelSpec("/w", "/s", "off", 1 << 28, 64, 60_000)
+    with pytest.raises(SandboxUnavailableError) as raised:
+        HxLauncher(Refusing()).spawn(spec)  # type: ignore[arg-type]
+    assert "did not start inside the sandbox" in raised.value.message and "Permission denied" in raised.value.message
+
+
 def test_the_tool_is_hidden_while_the_probe_says_the_sandbox_cannot_run_a_kernel(
     make_kit: MakeKit, monkeypatch: pytest.MonkeyPatch
 ) -> None:

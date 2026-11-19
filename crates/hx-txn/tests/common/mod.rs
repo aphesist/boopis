@@ -89,11 +89,14 @@ pub fn put(root: &Path, rel: &str, content: &str, mode: u32) {
     let path = root.join(rel);
     fs::create_dir_all(path.parent().unwrap()).unwrap();
     fs::write(&path, content).unwrap();
-    set_mode(&path, mode);
+    // The time first, the mode last: a file made read-only (0o444) cannot be opened for writing by
+    // an ordinary user (root ignores modes, which is how this passed in a root container).
     let seed = rel.bytes().map(u64::from).sum::<u64>();
     let f = fs::File::options().write(true).open(&path).unwrap();
     f.set_modified(UNIX_EPOCH + Duration::new(1_600_000_000 + seed, 123_456_789))
         .unwrap();
+    drop(f);
+    set_mode(&path, mode);
 }
 
 #[cfg(unix)]
