@@ -1,0 +1,7 @@
+# Keep LF everywhere, so generated-file checks (tokens, schemas, shared data) match on Windows checkouts too
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.icns binary
+*.webm binary
+*.woff2 binary
