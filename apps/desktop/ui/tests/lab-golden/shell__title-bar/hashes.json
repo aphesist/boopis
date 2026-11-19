@@ -1,0 +1,102 @@
+{
+ "a-long-session-title@bone": {
+  "sha": "0dfdafce5df8d2c15966dde1d7eb4d1537963b47",
+  "w": 1440,
+  "h": 64
+ },
+ "a-long-session-title@catalog": {
+  "sha": "542f3ae2b495a06ca234317f4bd871dfdf0fa695",
+  "w": 1440,
+  "h": 64
+ },
+ "a-long-session-title@graphite": {
+  "sha": "3c2ec213a7e3e6c3bfe6d8b8c303b420c5c1cd4e",
+  "w": 1440,
+  "h": 64
+ },
+ "a-long-session-title@typewriter": {
+  "sha": "aee935d3f6f0445b8124390688ee7ec2be9f05fb",
+  "w": 1440,
+  "h": 64
+ },
+ "command-field-focus@bone": {
+  "sha": "6e6321cac9ba50f9396435489938cf11b9a4629d",
+  "w": 1440,
+  "h": 64
+ },
+ "command-field-focus@catalog": {
+  "sha": "3955ceb3f704a8cdf87c8b22eb0252adfe83ea91",
+  "w": 1440,
+  "h": 64
+ },
+ "command-field-focus@graphite": {
+  "sha": "d20c897239ce7e3692fecc81ad78bf1b1387b4f2",
+  "w": 1440,
+  "h": 64
+ },
+ "command-field-focus@typewriter": {
+  "sha": "06ad84976ddc73daed085abca67d1386536c9fc5",
+  "w": 1440,
+  "h": 64
+ },
+ "command-field-hover@bone": {
+  "sha": "da6bf821467c6dcdf5b058b0c31051159ce654d3",
+  "w": 1440,
+  "h": 64
+ },
+ "command-field-hover@catalog": {
+  "sha": "4f54df3d405ef29a11f73e77e0c1c6ede59305e6",
+  "w": 1440,
+  "h": 64
+ },
+ "command-field-hover@graphite": {
+  "sha": "2473a95127fa6fcd5f6280b6ea1aeab5088cab91",
+  "w": 1440,
+  "h": 64
+ },
+ "command-field-hover@typewriter": {
+  "sha": "e6a677cfbc6f5d6b8af567f5e5cac4aeff1e6464",
+  "w": 1440,
+  "h": 64
+ },
+ "sidebar-button-tooltip@bone": {
+  "sha": "8afcb4e64ed8d7ef9bfea7e41d036bcb050a1784",
+  "w": 1440,
+  "h": 92
+ },
+ "sidebar-button-tooltip@catalog": {
+  "sha": "668e3413b8bb042fbd02e0906765f404090b0da1",
+  "w": 1440,
+  "h": 92
+ },
+ "sidebar-button-tooltip@graphite": {
+  "sha": "84db449e8c853185e0e32f33c7b3c3a0523589c9",
+  "w": 1440,
+  "h": 92
+ },
+ "sidebar-button-tooltip@typewriter": {
+  "sha": "558632abcfa4ab1df8389e5b8cd870b3901bdce8",
+  "w": 1440,
+  "h": 92
+ },
+ "typical@bone": {
+  "sha": "0dfdafce5df8d2c15966dde1d7eb4d1537963b47",
+  "w": 1440,
+  "h": 64
+ },
+ "typical@catalog": {
+  "sha": "542f3ae2b495a06ca234317f4bd871dfdf0fa695",
+  "w": 1440,
+  "h": 64
+ },
+ "typical@graphite": {
+  "sha": "3c2ec213a7e3e6c3bfe6d8b8c303b420c5c1cd4e",
+  "w": 1440,
+  "h": 64
+ },
+ "typical@typewriter": {
+  "sha": "607bd71d2f4129778b917750225e3e17c95f6300",
+  "w": 1440,
+  "h": 64
+ }
+}

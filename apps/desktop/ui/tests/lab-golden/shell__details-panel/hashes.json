@@ -1,0 +1,102 @@
+{
+ "closed@bone": {
+  "sha": "904c967d1c5ece52f13d5902c9167272cfd52f07",
+  "w": 40,
+  "h": 872
+ },
+ "closed@catalog": {
+  "sha": "496ee5909d564e33362d2c81c16a223056feddad",
+  "w": 40,
+  "h": 872
+ },
+ "closed@graphite": {
+  "sha": "f88cabba669b71c67d6209669f912217540c9d6a",
+  "w": 40,
+  "h": 872
+ },
+ "closed@typewriter": {
+  "sha": "f88cabba669b71c67d6209669f912217540c9d6a",
+  "w": 40,
+  "h": 872
+ },
+ "every-section-open@bone": {
+  "sha": "60a8ca55a01ceddf486b8606bc4cbc8b69bf119e",
+  "w": 312,
+  "h": 872
+ },
+ "every-section-open@catalog": {
+  "sha": "b0b680004167cab9f870cf2ef79e36398b8bbcff",
+  "w": 312,
+  "h": 872
+ },
+ "every-section-open@graphite": {
+  "sha": "4593991ecaaee9484be742a427630116b8ef74f1",
+  "w": 312,
+  "h": 872
+ },
+ "every-section-open@typewriter": {
+  "sha": "28cb02c54de59a4a13e3cbc21d1780c11dc737f2",
+  "w": 312,
+  "h": 872
+ },
+ "from-recorded-frames-live@bone": {
+  "sha": "123518d395f4cd47c0ccbc315c09bbe0f6d20bba",
+  "w": 312,
+  "h": 872
+ },
+ "from-recorded-frames-live@catalog": {
+  "sha": "880cf16d1a54d691367cf65c3918a8cf83fd8860",
+  "w": 312,
+  "h": 872
+ },
+ "from-recorded-frames-live@graphite": {
+  "sha": "628eba4b88dacc8ed2e3ba853b8b245e970cea1b",
+  "w": 312,
+  "h": 872
+ },
+ "from-recorded-frames-live@typewriter": {
+  "sha": "ea5053e0b794ea15094176cbc929c8f52a5ce925",
+  "w": 312,
+  "h": 872
+ },
+ "open@bone": {
+  "sha": "e5749263b392cc15d3331d0d3ac785faadeb3a3e",
+  "w": 312,
+  "h": 872
+ },
+ "open@catalog": {
+  "sha": "896d88b7270f06edd13db09a1610635f776462bc",
+  "w": 312,
+  "h": 872
+ },
+ "open@graphite": {
+  "sha": "4593991ecaaee9484be742a427630116b8ef74f1",
+  "w": 312,
+  "h": 872
+ },
+ "open@typewriter": {
+  "sha": "28cb02c54de59a4a13e3cbc21d1780c11dc737f2",
+  "w": 312,
+  "h": 872
+ },
+ "section-head-hover@bone": {
+  "sha": "47786c9dd244a521a693e95c7b3bf389b7d79ab1",
+  "w": 312,
+  "h": 872
+ },
+ "section-head-hover@catalog": {
+  "sha": "561d80d5b8fe631a9fb98f461538df8bf8f56cbe",
+  "w": 312,
+  "h": 872
+ },
+ "section-head-hover@graphite": {
+  "sha": "710e03a65e3fd6d96469eff8e5242efa5b2bceed",
+  "w": 312,
+  "h": 872
+ },
+ "section-head-hover@typewriter": {
+  "sha": "fba3cc9be2d74122a2068e20c2a35e456fca3050",
+  "w": 312,
+  "h": 872
+ }
+}

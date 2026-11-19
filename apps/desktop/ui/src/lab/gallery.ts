@@ -51,7 +51,8 @@ function pane(title: string, url: string, w: number, h: number, scale: number, f
   f.addEventListener('load', () => {
     const d = f.contentDocument; if (!d) return;
     const done = (): void => {
-      if (crop) d.querySelector(crop)?.scrollIntoView({ block: 'start' });
+      const target = crop ? d.querySelector<HTMLElement>(crop) : null;
+      if (target) d.defaultView?.scrollTo(0, target.getBoundingClientRect().top + (d.defaultView?.scrollY ?? 0));   /* scrollIntoView would scroll the gallery too */
       if (fit) { const hh = Math.min(2400, Math.max(160, d.documentElement.scrollHeight)); f.height = String(hh); vp.style.height = Math.round(hh * scale) + 'px'; }
     };
     let n = 0;

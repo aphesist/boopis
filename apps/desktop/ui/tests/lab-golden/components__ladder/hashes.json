@@ -1,0 +1,102 @@
+{
+ "empty@bone": {
+  "sha": "b2b62e0619d8a049ae12a013f76f2f676495802b",
+  "w": 1416,
+  "h": 24
+ },
+ "empty@catalog": {
+  "sha": "b551b10325ea90863b9382d4f2dc1045c2787400",
+  "w": 1416,
+  "h": 24
+ },
+ "empty@graphite": {
+  "sha": "12828489a66dfd03405f7d13202b882e7ffd842f",
+  "w": 1416,
+  "h": 24
+ },
+ "empty@typewriter": {
+  "sha": "12828489a66dfd03405f7d13202b882e7ffd842f",
+  "w": 1416,
+  "h": 24
+ },
+ "long@bone": {
+  "sha": "15bd50b8d41b9bcc6552d2d903bf4db198b62474",
+  "w": 344,
+  "h": 184
+ },
+ "long@catalog": {
+  "sha": "a3e18bddcf60dcea7fba4abac402a8d1af62a206",
+  "w": 344,
+  "h": 184
+ },
+ "long@graphite": {
+  "sha": "96c8dd5f66de5cd27bc8d1f597a8f1f2d6a8a911",
+  "w": 344,
+  "h": 184
+ },
+ "long@typewriter": {
+  "sha": "181b5fe5e6db7861951662b9513d7c29ab6bd3db",
+  "w": 344,
+  "h": 184
+ },
+ "many@bone": {
+  "sha": "60abb95af76461f6c0216e6d90bcefa9dd19bae7",
+  "w": 1416,
+  "h": 29
+ },
+ "many@catalog": {
+  "sha": "6a95ef822851e6a144a6de86b1bce16bec6a382e",
+  "w": 1416,
+  "h": 29
+ },
+ "many@graphite": {
+  "sha": "c67a082cf89d691254b94a0f099bfc68b6f62fda",
+  "w": 1416,
+  "h": 29
+ },
+ "many@typewriter": {
+  "sha": "1be4889db4d3b4df4d055c54bd46ea2ff19371d9",
+  "w": 1416,
+  "h": 29
+ },
+ "off@bone": {
+  "sha": "ae5e47cace9ba2a3af2dbac3051e93cb5d9aa493",
+  "w": 344,
+  "h": 136
+ },
+ "off@catalog": {
+  "sha": "fc95282d36866151a6b498fe43fbb31f62205d8c",
+  "w": 344,
+  "h": 136
+ },
+ "off@graphite": {
+  "sha": "ca26a31ab2a96f1b3cf6dd1f20127d104c0df940",
+  "w": 344,
+  "h": 136
+ },
+ "off@typewriter": {
+  "sha": "b26e8f12816722ac73cfeec186b3e930804466b0",
+  "w": 344,
+  "h": 136
+ },
+ "typical@bone": {
+  "sha": "143a3f52707d80347851edb386f1c0f25bbb2667",
+  "w": 344,
+  "h": 157
+ },
+ "typical@catalog": {
+  "sha": "eebe19908d5845e5746ebce8d1494cc2d9a81f37",
+  "w": 344,
+  "h": 157
+ },
+ "typical@graphite": {
+  "sha": "24997690396670370eadbc7eb1f78c4e4a3f5efe",
+  "w": 344,
+  "h": 157
+ },
+ "typical@typewriter": {
+  "sha": "bebbffb3efd34d8598f5f1fd5be07336e7dd9fac",
+  "w": 344,
+  "h": 157
+ }
+}

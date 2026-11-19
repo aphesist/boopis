@@ -1,0 +1,62 @@
+{
+ "empty@bone": {
+  "sha": "116ff7657dc0558ca6d0b16e9cc027f979f42a30",
+  "w": 1416,
+  "h": 26
+ },
+ "empty@catalog": {
+  "sha": "2d67f8deb3202360ce5114bbc15e863d37b298c1",
+  "w": 1416,
+  "h": 26
+ },
+ "empty@graphite": {
+  "sha": "736febfae79bb15513e23071430f7c93f4bde17b",
+  "w": 1416,
+  "h": 26
+ },
+ "empty@typewriter": {
+  "sha": "736febfae79bb15513e23071430f7c93f4bde17b",
+  "w": 1416,
+  "h": 26
+ },
+ "long@bone": {
+  "sha": "c11aec7dad4a60ea51e3faf8aeba436374c7c582",
+  "w": 632,
+  "h": 128
+ },
+ "long@catalog": {
+  "sha": "b8cbf4f1eb6a07bbecde1d2aa5d4c8d9e49c3e44",
+  "w": 632,
+  "h": 128
+ },
+ "long@graphite": {
+  "sha": "7a1261956ef55ac49aad983678194922e6ca4de6",
+  "w": 632,
+  "h": 128
+ },
+ "long@typewriter": {
+  "sha": "084fb078080c8f3804fe3520c9fe4c2f8b0f4fda",
+  "w": 632,
+  "h": 128
+ },
+ "typical@bone": {
+  "sha": "d588ddb6ee5a9ae5ba0069489bd2efba576b200e",
+  "w": 632,
+  "h": 76
+ },
+ "typical@catalog": {
+  "sha": "234a3df0b3a304bf7ba37ea566f36b8aaf6d9bce",
+  "w": 632,
+  "h": 76
+ },
+ "typical@graphite": {
+  "sha": "2a4733b06ffaf2b36dde89f66df24bec82c22524",
+  "w": 632,
+  "h": 76
+ },
+ "typical@typewriter": {
+  "sha": "8f92795496cef9f6b4eabbffc08a89c037ac01f1",
+  "w": 632,
+  "h": 94
+ }
+}

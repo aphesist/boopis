@@ -39,12 +39,19 @@ function fail(msg: string): void {
 
 const hx = (): LabHx => ({ state: state as unknown as Record<string, unknown>, setState: setState as unknown as LabHx['setState'], emit: emit as unknown as LabHx['emit'], ui, theme: themeApi, data: () => (window as unknown as { __labProvider: ReturnType<LabHx['data']> }).__labProvider, dock: getDockApi });
 
+/** the physical key a character comes from on a US layout: the shell's keymap reads `code` */
+const CODES: Record<string, string> = { ',': 'Comma', '.': 'Period', '/': 'Slash', ';': 'Semicolon', '[': 'BracketLeft', ']': 'BracketRight', '-': 'Minus', '=': 'Equal', ' ': 'Space', '`': 'Backquote', "'": 'Quote', '\\': 'Backslash' };
+function codeOf(key: string): string {
+  if (/^[a-z]$/i.test(key)) return 'Key' + key.toUpperCase();
+  if (/^\d$/.test(key)) return 'Digit' + key;
+  return CODES[key] ?? key;
+}
 function appCtx(app: HTMLElement): AppCtx {
   const $ = (sel: string): HTMLElement => { const n = document.querySelector<HTMLElement>(sel); if (!n) throw new Error('lab: nothing matches ' + sel); return n; };
   return {
     hx: hx(), app, wait, $,
     async click(sel) { const n = $(sel); n.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); n.dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); n.click(); await wait(60); },
-    async key(key, init = {}) { const t = document.activeElement ?? document.body; t.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init })); t.dispatchEvent(new KeyboardEvent('keyup', { key, bubbles: true, ...init })); await wait(60); }
+    async key(key, init = {}) { const t = document.activeElement ?? document.body; const code = codeOf(key); t.dispatchEvent(new KeyboardEvent('keydown', { key, code, bubbles: true, cancelable: true, ...init })); t.dispatchEvent(new KeyboardEvent('keyup', { key, code, bubbles: true, ...init })); await wait(60); }
   };
 }
 

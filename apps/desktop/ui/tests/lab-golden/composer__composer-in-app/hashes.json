@@ -1,0 +1,142 @@
+{
+ "dock-session-send-hover@bone": {
+  "sha": "e6312c20f749aee2cdcde2dc4320e09d207f3f94",
+  "w": 448,
+  "h": 64
+ },
+ "dock-session-send-hover@catalog": {
+  "sha": "44357ea7259e511d25410956ee7c36a0c133eb20",
+  "w": 448,
+  "h": 64
+ },
+ "dock-session-send-hover@graphite": {
+  "sha": "c5046e685f1694ec4f0c6b295ad4bba6f800f0b9",
+  "w": 448,
+  "h": 64
+ },
+ "dock-session-send-hover@typewriter": {
+  "sha": "89bf70a80f4cf91e2b407aad9ff1e37ef2df866d",
+  "w": 448,
+  "h": 64
+ },
+ "dock-session@bone": {
+  "sha": "e6312c20f749aee2cdcde2dc4320e09d207f3f94",
+  "w": 448,
+  "h": 64
+ },
+ "dock-session@catalog": {
+  "sha": "44357ea7259e511d25410956ee7c36a0c133eb20",
+  "w": 448,
+  "h": 64
+ },
+ "dock-session@graphite": {
+  "sha": "c5046e685f1694ec4f0c6b295ad4bba6f800f0b9",
+  "w": 448,
+  "h": 64
+ },
+ "dock-session@typewriter": {
+  "sha": "89bf70a80f4cf91e2b407aad9ff1e37ef2df866d",
+  "w": 448,
+  "h": 64
+ },
+ "session-attach-hover@bone": {
+  "sha": "c41aaa1785a808a4a69b3b1f76890820f98425f1",
+  "w": 744,
+  "h": 137
+ },
+ "session-attach-hover@catalog": {
+  "sha": "1e0f1228336c87a7240383864985f8cf6f24b16e",
+  "w": 744,
+  "h": 137
+ },
+ "session-attach-hover@graphite": {
+  "sha": "2afcc1314969543cefb31a5b37238f0dabe682a5",
+  "w": 744,
+  "h": 121
+ },
+ "session-attach-hover@typewriter": {
+  "sha": "16d257f0e8e7352e2ddefd54bb36de807185ed38",
+  "w": 744,
+  "h": 137
+ },
+ "session-attach-tooltip@bone": {
+  "sha": "d9f6df4888618337d8c21d60cb7657bc1d827b41",
+  "w": 777,
+  "h": 137
+ },
+ "session-attach-tooltip@catalog": {
+  "sha": "a805213fdee73b0900120eb5e3305d7640b6bc0b",
+  "w": 777,
+  "h": 137
+ },
+ "session-attach-tooltip@graphite": {
+  "sha": "035cb25dcfadce2747dd4d181d4cf11a088935b6",
+  "w": 777,
+  "h": 121
+ },
+ "session-attach-tooltip@typewriter": {
+  "sha": "96ffebf781c79f4792176725be94ed4c592933cc",
+  "w": 777,
+  "h": 137
+ },
+ "session-empty@bone": {
+  "sha": "ac1021f24fbc6dac64bf22afd6f2de3047e3676a",
+  "w": 744,
+  "h": 105
+ },
+ "session-empty@catalog": {
+  "sha": "5140f0d1104f7961b8dd84a9319f93a5389833fa",
+  "w": 744,
+  "h": 105
+ },
+ "session-empty@graphite": {
+  "sha": "adbd6838d8b0c3f2302c3f3d7dc0d0525f58bb5c",
+  "w": 744,
+  "h": 105
+ },
+ "session-empty@typewriter": {
+  "sha": "c48e4d3d69a7b544a9aefc61310f47da3b967241",
+  "w": 744,
+  "h": 105
+ },
+ "session-send-hover@bone": {
+  "sha": "5a5e93e3eaf5eaaf866a000c445d6162a0c87ab3",
+  "w": 744,
+  "h": 137
+ },
+ "session-send-hover@catalog": {
+  "sha": "f509d2c6812ea51db83394d7f102895243467417",
+  "w": 744,
+  "h": 137
+ },
+ "session-send-hover@graphite": {
+  "sha": "47bde68952409dc2ee315c2da0f4ce9a1275e846",
+  "w": 744,
+  "h": 121
+ },
+ "session-send-hover@typewriter": {
+  "sha": "1619459ec4104fc5a44168bf79c21ce932eb9f57",
+  "w": 744,
+  "h": 137
+ },
+ "session@bone": {
+  "sha": "ecb0679875539d13a25331772a30f7e16c722c19",
+  "w": 744,
+  "h": 137
+ },
+ "session@catalog": {
+  "sha": "0e3471233aed8ee341dd7d555999b249719cf119",
+  "w": 744,
+  "h": 137
+ },
+ "session@graphite": {
+  "sha": "3ec0032cd6d22d86d05abb0dbb79b91d4e148ba3",
+  "w": 744,
+  "h": 121
+ },
+ "session@typewriter": {
+  "sha": "6938d56dc6f3c217f38dedce93ac24a8bf9c40e0",
+  "w": 744,
+  "h": 137
+ }
+}

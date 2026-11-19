@@ -6,6 +6,7 @@
                   [--quick] [--presets catalog,bone] [--widths 1440] [--jobs 3]
                   [--update] [--no-visual] [--no-axe] [--no-stability] [--strict]
 
+   --dpr 1.6    run at the owner's fractional scale (device pixel ratio 1.6; goldens are kept at 1, so add --no-visual)
    --quick      two presets (catalog, bone) and one width (1440): a fast loop for a fix agent
    --update     accept the screenshots as the new goldens (tests/lab-golden)
    --draw-only  only check that every state draws without an error (seconds, not minutes)
@@ -48,7 +49,9 @@ const WIDTHS = opt('widths', quick ? '1440' : '390,1200,1440,1920').split(',').m
 const AREA = opt('area', '') ? opt('area', '').split(',').map(areaOf) : null;
 const STORY = opt('story', '');
 const STATE = opt('state', '');
+const ONLY_OVERLAY = flag('only-overlay');
 const JOBS = Number(opt('jobs', '3'));
+const DPR = Number(opt('dpr', '1'));   /* --dpr 1.6: the owner's fractional scale, as the device pixel ratio */
 const UPDATE = flag('update');
 let VISUAL = !flag('no-visual');
 const AXE_ON = !flag('no-axe');
@@ -116,7 +119,7 @@ async function cropFor(page, x, f) {
 
 /* ───────── the in-page work ───────── */
 async function openState(browser, origin, row, o = {}) {
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: o.dpr ?? 1, reducedMotion: o.motion ? 'no-preference' : 'reduce' });
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: o.dpr ?? DPR, reducedMotion: o.motion ? 'no-preference' : 'reduce' });
   const page = await ctx.newPage();
   page.errorsSeen = [];
   page.on('console', (m) => { if (m.type() === 'error') page.errorsSeen.push('console: ' + m.text().slice(0, 300)); });
@@ -130,8 +133,25 @@ async function openState(browser, origin, row, o = {}) {
 }
 const settle = (page, ms) => page.waitForTimeout(ms);
 async function setWidth(page, row, w) {
-  await page.setViewportSize({ width: w, height: w <= 390 ? 844 : 900 });
+  const size = { width: w, height: w <= 390 ? 844 : 900 };
+  const cur = page.viewportSize();
+  if (cur && cur.width === size.width && cur.height === size.height) return;
+  await page.setViewportSize(size);
   await settle(page, row.app ? 260 : 120);
+  /* an open layer closes when the window resizes (layer.ts) and a tooltip keeps its old place: draw the state again at this size */
+  if (row.overlay) await redraw(page, row);
+}
+async function redraw(page, row) {
+  if (row.app) {
+    const preset = await page.evaluate(() => document.documentElement.dataset.hxPreset);
+    await page.reload();
+    await page.waitForFunction(() => document.documentElement.dataset.labReady, null, { timeout: 30000 }).catch(() => {});
+    await page.addScriptTag({ path: PROBE });
+    if (preset && preset !== 'catalog') { await page.evaluate((p) => window.__lab.preset(p), preset); await settle(page, 80); }
+  } else {
+    await page.evaluate(() => window.__lab.rerender());
+    await settle(page, 260);
+  }
 }
 const probe = (page, checks, overlay) => page.evaluate(([c, t, ov, b]) => window.__labProbe.run({ checks: c, tokenNames: t, overlay: ov, brandAllow: b }), [checks, TOKEN_NAMES, overlay, BRAND_ALLOW]);
 
@@ -162,12 +182,12 @@ async function shot(page, row) {
   const buf = await page.screenshot({ ...(clip ? { clip, fullPage: true } : {}), animations: 'disabled' });
   return buf;
 }
-/* Goldens, compactly: per story a folder with a quarter-scale screenshot per state and preset (PNG) and the full
-   screenshot's SHA-1 (hashes.json). The same hash passes at once; otherwise the screenshot is scaled the same way and
-   pixel-diffed against the thumbnail (pixelmatch, threshold 0.1, limit 0.5% of its pixels). A full-resolution golden
-   set would be about 75 MB; this is about a tenth of it, and a one-pixel slip that the thumbnail cannot show is the
-   geometry checks' to catch. */
-const SCALE = 4;
+/* Goldens, compactly: per story a folder with an eighth-scale screenshot per state and preset (PNG, each pixel the
+   mean of an 8 x 8 block) and the full screenshot's SHA-1 (hashes.json). The same hash passes at once; otherwise the
+   screenshot is scaled the same way and pixel-diffed against the thumbnail (pixelmatch, threshold 0.1, limit 0.5% of
+   its pixels). Full-resolution goldens for every state and preset would be about 75 MB, quarter-scale ones about 20;
+   these are about 5. A slip smaller than a block is the geometry checks' to catch. */
+const SCALE = 8;
 function thumb(png) {
   const w = Math.max(1, Math.floor(png.width / SCALE)), h = Math.max(1, Math.floor(png.height / SCALE));
   const out = new PNG({ width: w, height: h, colorType: 2 });
@@ -266,6 +286,7 @@ async function checkRow(browser, origin, row, log) {
         b = await page.evaluate(() => window.__labProbe.signature());
       } else {
         await page.evaluate(() => window.__lab.rerender());
+        await settle(page, 260);
         b = await page.evaluate(() => window.__labProbe.signature());
       }
       if (a.join('\n') !== b.join('\n')) {
@@ -346,7 +367,7 @@ let rows;
   await ctx.close();
 }
 const all = rows.length;
-rows = rows.filter((r) => (!AREA || AREA.includes(r.area)) && (!STORY || r.story === STORY || r.story.includes(STORY)) && (!STATE || r.state === STATE || r.state.includes(STATE)));
+rows = rows.filter((r) => (!AREA || AREA.includes(r.area)) && (!STORY || r.story === STORY || r.story.includes(STORY)) && (!STATE || r.state === STATE || r.state.includes(STATE)) && (!ONLY_OVERLAY || r.overlay));
 for (const r of rows) r.overlayDecl = null;
 console.log(`lab: ${rows.length} of ${all} states · presets ${PRESETS.join(',')} · widths ${WIDTHS.join(',')} · ${JOBS} at a time${UPDATE ? ' · accepting goldens' : ''}`);
 

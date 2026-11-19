@@ -1,0 +1,62 @@
+{
+ "dice-hover@bone": {
+  "sha": "fc814527e1e930763ff514b8433b3b5bc128f9fa",
+  "w": 1196,
+  "h": 872
+ },
+ "dice-hover@catalog": {
+  "sha": "1f28d3c2273b33443632de15b23db20816f0f5df",
+  "w": 1196,
+  "h": 872
+ },
+ "dice-hover@graphite": {
+  "sha": "47a350336339d14154e07b12e8cdfe2b60121dcd",
+  "w": 1196,
+  "h": 872
+ },
+ "dice-hover@typewriter": {
+  "sha": "0a3ae13684b877e3eb25e87604759d851633c928",
+  "w": 1196,
+  "h": 872
+ },
+ "from-no-bots@bone": {
+  "sha": "65d92ff5d2b48d2267e5f7b0206d96fc1740389b",
+  "w": 1196,
+  "h": 872
+ },
+ "from-no-bots@catalog": {
+  "sha": "d70a88517869ce65afdb8335b53b6d932d329c10",
+  "w": 1196,
+  "h": 872
+ },
+ "from-no-bots@graphite": {
+  "sha": "5b34584cb2c0f4fc99f4433fdbff7580a671dd48",
+  "w": 1196,
+  "h": 872
+ },
+ "from-no-bots@typewriter": {
+  "sha": "b06f7ff2145bb772bcf3c164c76d4ec6b02505ce",
+  "w": 1196,
+  "h": 872
+ },
+ "typical@bone": {
+  "sha": "55c86977fe042df86460094b4a65b5ed2c549e35",
+  "w": 1196,
+  "h": 872
+ },
+ "typical@catalog": {
+  "sha": "075893e01883292270f5bfdc50be332b2cd59347",
+  "w": 1196,
+  "h": 872
+ },
+ "typical@graphite": {
+  "sha": "311f67c3999fceb82532b7e0bcfa97ea56771cea",
+  "w": 1196,
+  "h": 872
+ },
+ "typical@typewriter": {
+  "sha": "d9ae15e05c9735f360127a7df29432c7f1111fa6",
+  "w": 1196,
+  "h": 872
+ }
+}

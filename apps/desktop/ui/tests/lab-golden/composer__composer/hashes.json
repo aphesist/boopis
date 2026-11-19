@@ -1,0 +1,762 @@
+{
+ "attach-focus@bone": {
+  "sha": "887099093889a68d6c3f07eb6c7b85e85939ffbe",
+  "w": 744,
+  "h": 125
+ },
+ "attach-focus@catalog": {
+  "sha": "eb2e888da378b469fb20cd750de210c9bf2ac68d",
+  "w": 744,
+  "h": 125
+ },
+ "attach-focus@graphite": {
+  "sha": "5c72c130c2d8bfa88bf7f4940a86175a3a86189b",
+  "w": 744,
+  "h": 125
+ },
+ "attach-focus@typewriter": {
+  "sha": "35de2174af5e5380454060cdb58f176037d0ffe7",
+  "w": 744,
+  "h": 125
+ },
+ "attach-hover@bone": {
+  "sha": "e3187d4e135cb47ffe6840867837f862b1c03ad8",
+  "w": 744,
+  "h": 125
+ },
+ "attach-hover@catalog": {
+  "sha": "d706aa4171369a8a21c165ea03318e4db95b5935",
+  "w": 744,
+  "h": 125
+ },
+ "attach-hover@graphite": {
+  "sha": "c5c7fe937f3231f48d974adcfb061d67c1b670cc",
+  "w": 744,
+  "h": 125
+ },
+ "attach-hover@typewriter": {
+  "sha": "4132feb0d412c7c448947650373fe464d5ecc1a7",
+  "w": 744,
+  "h": 125
+ },
+ "attach-pressed@bone": {
+  "sha": "496d1ecdc0dae19318a2aca9d0b68677716214f6",
+  "w": 744,
+  "h": 125
+ },
+ "attach-pressed@catalog": {
+  "sha": "4caaef58796c63c4439ce994339aac631851a8c7",
+  "w": 744,
+  "h": 125
+ },
+ "attach-pressed@graphite": {
+  "sha": "9a3822b896878f1d893852f421ea220c4f6bf6a8",
+  "w": 744,
+  "h": 125
+ },
+ "attach-pressed@typewriter": {
+  "sha": "462ab6ff1572403e175eac2cde8705fab69d147f",
+  "w": 744,
+  "h": 125
+ },
+ "attach-tooltip@bone": {
+  "sha": "7c921a064b183f9c3618eeabee814badb0ae3e31",
+  "w": 760,
+  "h": 153
+ },
+ "attach-tooltip@catalog": {
+  "sha": "390d25ed3ad3281f06b2d90f64b9dbc7c2f8fe84",
+  "w": 760,
+  "h": 153
+ },
+ "attach-tooltip@graphite": {
+  "sha": "4bf96ca065419e235825a0bcf19e30e91f13f56f",
+  "w": 760,
+  "h": 153
+ },
+ "attach-tooltip@typewriter": {
+  "sha": "9a3c883406db3433f63e215128cecd6607498dd6",
+  "w": 760,
+  "h": 153
+ },
+ "compact-attach-focus@bone": {
+  "sha": "e70463a0ac0ecbb7148f8c8728e0d4530e59a992",
+  "w": 424,
+  "h": 64
+ },
+ "compact-attach-focus@catalog": {
+  "sha": "4ec41b29820ab694e889396d8f6343ac509e575d",
+  "w": 424,
+  "h": 64
+ },
+ "compact-attach-focus@graphite": {
+  "sha": "3bbe9a4902ca123ffda56db9bf34234e51c58fd4",
+  "w": 424,
+  "h": 64
+ },
+ "compact-attach-focus@typewriter": {
+  "sha": "7fd96aa2d34a842d81a6b9ec8ac68a533dca3737",
+  "w": 424,
+  "h": 64
+ },
+ "compact-attach-hover@bone": {
+  "sha": "a46141389de00a3afff64f5e9db7c358042de5ef",
+  "w": 424,
+  "h": 64
+ },
+ "compact-attach-hover@catalog": {
+  "sha": "e8bca544bcf90dcbd0dca36a418dbda072e6e249",
+  "w": 424,
+  "h": 64
+ },
+ "compact-attach-hover@graphite": {
+  "sha": "251866d98d4941628edd911ae252cd5b7705dd6b",
+  "w": 424,
+  "h": 64
+ },
+ "compact-attach-hover@typewriter": {
+  "sha": "c9503ef86fcb5f1fc2e64b11cba85f2f9133060c",
+  "w": 424,
+  "h": 64
+ },
+ "compact-attach-pressed@bone": {
+  "sha": "c976d4876da436bc9378d13a5299cb65763c2fc7",
+  "w": 424,
+  "h": 64
+ },
+ "compact-attach-pressed@catalog": {
+  "sha": "52842d151191d471464692bb9faab1787503c885",
+  "w": 424,
+  "h": 64
+ },
+ "compact-attach-pressed@graphite": {
+  "sha": "25c260898ca1f4aab2d9b59fd96b6736e472906e",
+  "w": 424,
+  "h": 64
+ },
+ "compact-attach-pressed@typewriter": {
+  "sha": "d8ca7d032b6ab18ef3c707d844f16bcdf450faf7",
+  "w": 424,
+  "h": 64
+ },
+ "compact-attach-tooltip@bone": {
+  "sha": "cac877f14b2b279225431e71bd51b0a2467017ae",
+  "w": 424,
+  "h": 92
+ },
+ "compact-attach-tooltip@catalog": {
+  "sha": "dbf55dfdfab2063219918423a450ae8e2b965a12",
+  "w": 424,
+  "h": 92
+ },
+ "compact-attach-tooltip@graphite": {
+  "sha": "217bfdcfef7bf2e2a200996ad9af3fd50ab8c7b1",
+  "w": 424,
+  "h": 92
+ },
+ "compact-attach-tooltip@typewriter": {
+  "sha": "8a160fdcc54e7a89063418978ed9ec72090ab523",
+  "w": 424,
+  "h": 92
+ },
+ "compact-empty@bone": {
+  "sha": "76f704661d90d2b1e572097a7e206cfeb113cdca",
+  "w": 424,
+  "h": 64
+ },
+ "compact-empty@catalog": {
+  "sha": "573c6dbc5476a1cc2973877d0f76ee8fd358167b",
+  "w": 424,
+  "h": 64
+ },
+ "compact-empty@graphite": {
+  "sha": "ddc9e532d4bf381cabc04a07f84b609504e9673a",
+  "w": 424,
+  "h": 64
+ },
+ "compact-empty@typewriter": {
+  "sha": "5f1411866571171a99ad35d09abc60556a3d4324",
+  "w": 424,
+  "h": 64
+ },
+ "compact-long-name@bone": {
+  "sha": "e360f10fa077bb93ddd8bc92757c24963e84fdac",
+  "w": 424,
+  "h": 87
+ },
+ "compact-long-name@catalog": {
+  "sha": "62667e442f0093e08458faffbdec9ea4478a49e7",
+  "w": 424,
+  "h": 87
+ },
+ "compact-long-name@graphite": {
+  "sha": "a92b44263c335325d14586c2f064905151bef50c",
+  "w": 424,
+  "h": 87
+ },
+ "compact-long-name@typewriter": {
+  "sha": "2dad880a5940b02a0a3076018f8f9e036ad18143",
+  "w": 424,
+  "h": 87
+ },
+ "compact-mic-focus@bone": {
+  "sha": "ca4b6d960c8ebf0d8056362cd38947513bc6114b",
+  "w": 424,
+  "h": 64
+ },
+ "compact-mic-focus@catalog": {
+  "sha": "67791c8c457e5ba5ae3b49dc6821d76876f42f8a",
+  "w": 424,
+  "h": 64
+ },
+ "compact-mic-focus@graphite": {
+  "sha": "7ffb2f97dc5a7c0a55969a34009b42c21bd6557f",
+  "w": 424,
+  "h": 64
+ },
+ "compact-mic-focus@typewriter": {
+  "sha": "f36782b2b3eee0880d3d039b4b915a7f2c08210c",
+  "w": 424,
+  "h": 64
+ },
+ "compact-mic-hover@bone": {
+  "sha": "5eb1c7e0c5eeaa4c784d6d9f697abaa4fe756e7a",
+  "w": 424,
+  "h": 64
+ },
+ "compact-mic-hover@catalog": {
+  "sha": "8001bcab4b597ce6ca03b9b0c98077d7e2ba0313",
+  "w": 424,
+  "h": 64
+ },
+ "compact-mic-hover@graphite": {
+  "sha": "b272bab28f9a129cc9186721bdcd1f9ed09066b5",
+  "w": 424,
+  "h": 64
+ },
+ "compact-mic-hover@typewriter": {
+  "sha": "b58ee618d2e1d66164795ca87d1666f987c355f5",
+  "w": 424,
+  "h": 64
+ },
+ "compact-mic-pressed@bone": {
+  "sha": "462560d4652db1a6099831b3ed389f76079acb54",
+  "w": 424,
+  "h": 64
+ },
+ "compact-mic-pressed@catalog": {
+  "sha": "f24ed165907f7869eeccf20e341efa54581b311f",
+  "w": 424,
+  "h": 64
+ },
+ "compact-mic-pressed@graphite": {
+  "sha": "2bda3c174d168c577e9d279437c4dd38bbd32403",
+  "w": 424,
+  "h": 64
+ },
+ "compact-mic-pressed@typewriter": {
+  "sha": "d167dccbab1be43bd61a310d61b00440b43ff9d7",
+  "w": 424,
+  "h": 64
+ },
+ "compact-multi-line@bone": {
+  "sha": "93d0d5e336902d159c56d94264278b496990e863",
+  "w": 424,
+  "h": 176
+ },
+ "compact-multi-line@catalog": {
+  "sha": "0178a4892fa0f16ccbeb8ae4b1aafb1d1a4dcbda",
+  "w": 424,
+  "h": 176
+ },
+ "compact-multi-line@graphite": {
+  "sha": "70dccdf4ae61c7f9bc496bb8937f51a537739684",
+  "w": 424,
+  "h": 176
+ },
+ "compact-multi-line@typewriter": {
+  "sha": "7f4fc65ea68c6b7e1c0297bc5f5afb283bdf2194",
+  "w": 424,
+  "h": 199
+ },
+ "compact-send-focus@bone": {
+  "sha": "bcd2ecf53c53618418ff1fb04d84c22a28f6c8b7",
+  "w": 424,
+  "h": 64
+ },
+ "compact-send-focus@catalog": {
+  "sha": "f2e01e39d4b4df7ca6f8f4ce2db6d5d016adfb13",
+  "w": 424,
+  "h": 64
+ },
+ "compact-send-focus@graphite": {
+  "sha": "53cabd70f95b834ff61328ee3a4601e00960526d",
+  "w": 424,
+  "h": 64
+ },
+ "compact-send-focus@typewriter": {
+  "sha": "18cb67a67b387115fd6d5c2ca23929a69508f851",
+  "w": 424,
+  "h": 64
+ },
+ "compact-send-hover@bone": {
+  "sha": "e60430db8e9d3a2cb4da06dfe0870525af824984",
+  "w": 424,
+  "h": 64
+ },
+ "compact-send-hover@catalog": {
+  "sha": "0e67f3d01801c47823806133d4892702713828ae",
+  "w": 424,
+  "h": 64
+ },
+ "compact-send-hover@graphite": {
+  "sha": "ec96be8aecd69c89e660332f33aec16e11321dce",
+  "w": 424,
+  "h": 64
+ },
+ "compact-send-hover@typewriter": {
+  "sha": "b39e0f7820b0afc258216d85374481a90a09f961",
+  "w": 424,
+  "h": 64
+ },
+ "compact-send-pressed@bone": {
+  "sha": "8cb1ecd869ff8abaa8cef9c1893860f53680148c",
+  "w": 424,
+  "h": 64
+ },
+ "compact-send-pressed@catalog": {
+  "sha": "ff881cd8c00452c881fc7edd6b409e0372ccc48d",
+  "w": 424,
+  "h": 64
+ },
+ "compact-send-pressed@graphite": {
+  "sha": "2bc51a671bc293d8f420a342d9a84d8420d7a1af",
+  "w": 424,
+  "h": 64
+ },
+ "compact-send-pressed@typewriter": {
+  "sha": "f90ecfb42ea418e9e3ff9bc6af9bb265a2a6cee6",
+  "w": 424,
+  "h": 64
+ },
+ "compact-send-tooltip@bone": {
+  "sha": "3ab343877a561d976f2c749d11ee5be3b3b0a950",
+  "w": 449,
+  "h": 92
+ },
+ "compact-send-tooltip@catalog": {
+  "sha": "ecdd15985d72013cd365ff56e4af7342934349cc",
+  "w": 449,
+  "h": 92
+ },
+ "compact-send-tooltip@graphite": {
+  "sha": "bbada8b83b0c5dfff176ec3cb00c011995111e26",
+  "w": 449,
+  "h": 92
+ },
+ "compact-send-tooltip@typewriter": {
+  "sha": "cb1a855781dae6a95955500572815b63e379736c",
+  "w": 449,
+  "h": 92
+ },
+ "compact-with-text@bone": {
+  "sha": "f88457a3f8355f5ea8402650ca1d1d27e4f94fd6",
+  "w": 424,
+  "h": 64
+ },
+ "compact-with-text@catalog": {
+  "sha": "b0ee5b414e305923b9fda2ba9a159e43e16d87c3",
+  "w": 424,
+  "h": 64
+ },
+ "compact-with-text@graphite": {
+  "sha": "b603e3ef2e2bbc44394f03f13e5f87ff5d2b3047",
+  "w": 424,
+  "h": 64
+ },
+ "compact-with-text@typewriter": {
+  "sha": "39919ef275b9f05d272ff92bd996087c54d0b746",
+  "w": 424,
+  "h": 64
+ },
+ "empty-attach-tooltip@bone": {
+  "sha": "6aa766a6121efad370e6d23af6575560269a2f64",
+  "w": 760,
+  "h": 153
+ },
+ "empty-attach-tooltip@catalog": {
+  "sha": "e99fbb932a3fd7893420c87c9af2b8640b19dc0c",
+  "w": 760,
+  "h": 153
+ },
+ "empty-attach-tooltip@graphite": {
+  "sha": "a3c90ba9908ca4be36c18639a29f99f37bc6b702",
+  "w": 760,
+  "h": 153
+ },
+ "empty-attach-tooltip@typewriter": {
+  "sha": "2527b34bdcc306d6087f1445ff620aafee618043",
+  "w": 760,
+  "h": 153
+ },
+ "empty@bone": {
+  "sha": "c6efd577e4bab456b723f5edf1720885f601b0f6",
+  "w": 744,
+  "h": 125
+ },
+ "empty@catalog": {
+  "sha": "1854ce5c94d0f4e2ee4c39534d807723719b91d1",
+  "w": 744,
+  "h": 125
+ },
+ "empty@graphite": {
+  "sha": "3f469e93af8cd09c63adc2d5e5dd535669204e81",
+  "w": 744,
+  "h": 125
+ },
+ "empty@typewriter": {
+  "sha": "21a3c4ab4ebfb4dec8c0e23b7606ca74485fefce",
+  "w": 744,
+  "h": 125
+ },
+ "listening@bone": {
+  "sha": "5f221c9e37084272e1d1396952ef04c1f7c14862",
+  "w": 744,
+  "h": 125
+ },
+ "listening@catalog": {
+  "sha": "52410d9da240290cc886d4f3c8d8ceb9b6bd509a",
+  "w": 744,
+  "h": 125
+ },
+ "listening@graphite": {
+  "sha": "75cd930d4fb617f4380a8480bdd81de21e862902",
+  "w": 744,
+  "h": 125
+ },
+ "listening@typewriter": {
+  "sha": "502329a05f19de49ca3e876bc4e3f461d87f09a3",
+  "w": 744,
+  "h": 125
+ },
+ "long-unbroken@bone": {
+  "sha": "0e17098da53638b41a4328e02fa2626f85c98816",
+  "w": 744,
+  "h": 170
+ },
+ "long-unbroken@catalog": {
+  "sha": "6650a67bf6cc3309ee1ae1b7397a6997d454d3c4",
+  "w": 744,
+  "h": 170
+ },
+ "long-unbroken@graphite": {
+  "sha": "7000d6b61a89f3de367c75b0b9e5a1163f052f0d",
+  "w": 744,
+  "h": 170
+ },
+ "long-unbroken@typewriter": {
+  "sha": "b20cdd26d27668562cc71ad5fa1741953ddf8818",
+  "w": 744,
+  "h": 170
+ },
+ "mic-focus@bone": {
+  "sha": "b80ed0b6cd244ff6f513171b73171fbd22364061",
+  "w": 744,
+  "h": 125
+ },
+ "mic-focus@catalog": {
+  "sha": "18d7c329efc61078f57104bfa62af3c20fe4bbe4",
+  "w": 744,
+  "h": 125
+ },
+ "mic-focus@graphite": {
+  "sha": "53458c2ae41c546a4526f2664ea9cba6b6ea3af7",
+  "w": 744,
+  "h": 125
+ },
+ "mic-focus@typewriter": {
+  "sha": "9e964cfd466f86f153f9f84be62b87ce32cd0fc0",
+  "w": 744,
+  "h": 125
+ },
+ "mic-hover@bone": {
+  "sha": "b2072cdeca5d4bda452c64a82607c9f249d36ba1",
+  "w": 744,
+  "h": 125
+ },
+ "mic-hover@catalog": {
+  "sha": "6b4d06ffca93fa07c0c6dbfa4b940148ba6d6075",
+  "w": 744,
+  "h": 125
+ },
+ "mic-hover@graphite": {
+  "sha": "dc95bf42007939084343600ff14f1b107e111b15",
+  "w": 744,
+  "h": 125
+ },
+ "mic-hover@typewriter": {
+  "sha": "4133aa2202bee5ee5065521c533b3495e4679ae1",
+  "w": 744,
+  "h": 125
+ },
+ "mic-pressed@bone": {
+  "sha": "7fd210f2cf40589ee5c991ac75dbd37d2e68a9ac",
+  "w": 744,
+  "h": 125
+ },
+ "mic-pressed@catalog": {
+  "sha": "c37ca43db7b711eb588a7e3a5d926ee4c671882c",
+  "w": 744,
+  "h": 125
+ },
+ "mic-pressed@graphite": {
+  "sha": "7e77ad602ea384cbbdc4ca7c05af209571b4e559",
+  "w": 744,
+  "h": 125
+ },
+ "mic-pressed@typewriter": {
+  "sha": "8cf46e4ae6eedad91adc50c02285e32f3d6875fb",
+  "w": 744,
+  "h": 125
+ },
+ "mic-tooltip@bone": {
+  "sha": "c8b6a36c5297d97679edd6f92c7b49fc100810da",
+  "w": 749,
+  "h": 153
+ },
+ "mic-tooltip@catalog": {
+  "sha": "c08a068a07bb1adfe5ec0e5f7146f2701bf40fe2",
+  "w": 749,
+  "h": 153
+ },
+ "mic-tooltip@graphite": {
+  "sha": "f1a14d6d68f47e04d3f1b3732ac4c920c86e77ac",
+  "w": 749,
+  "h": 153
+ },
+ "mic-tooltip@typewriter": {
+  "sha": "4bb8b56b94e5d12f5a5c695aff745be985a9a9f9",
+  "w": 754,
+  "h": 153
+ },
+ "multi-line@bone": {
+  "sha": "a19011add2a1e4c789eb49afd65377913a4c84c7",
+  "w": 744,
+  "h": 192
+ },
+ "multi-line@catalog": {
+  "sha": "b6cd2ccf54e3852cf6953f0b5e8907d3c6e04b10",
+  "w": 744,
+  "h": 192
+ },
+ "multi-line@graphite": {
+  "sha": "c40d75f1e6fa2a78d0084c07634f68a7898846f3",
+  "w": 744,
+  "h": 192
+ },
+ "multi-line@typewriter": {
+  "sha": "d37c9b97ecbecf72d5e417272740bb6b580980cc",
+  "w": 744,
+  "h": 192
+ },
+ "narrow-390@bone": {
+  "sha": "55e6dbdef22b7aea8546c5ac4f86fcf526b0d7d6",
+  "w": 382,
+  "h": 148
+ },
+ "narrow-390@catalog": {
+  "sha": "1198a138b640a9b5cb380eef045469c276dffa40",
+  "w": 382,
+  "h": 148
+ },
+ "narrow-390@graphite": {
+  "sha": "46bd376691f61a534543045f05f4cdca686c7b6a",
+  "w": 382,
+  "h": 148
+ },
+ "narrow-390@typewriter": {
+  "sha": "64aeaafab919761c702626d17d2c4bb7673e68d9",
+  "w": 382,
+  "h": 170
+ },
+ "rtl@bone": {
+  "sha": "0e6d4fa09de27d690284b455c4ff72d7bcd768fe",
+  "w": 744,
+  "h": 125
+ },
+ "rtl@catalog": {
+  "sha": "5bba169237c494e31062edd6edc808751d629319",
+  "w": 744,
+  "h": 125
+ },
+ "rtl@graphite": {
+  "sha": "51f6fac7683ec0487917a763095c8c287d08a1bd",
+  "w": 744,
+  "h": 125
+ },
+ "rtl@typewriter": {
+  "sha": "66344d9134e725c9184fb3b58b5c9f3108131a4c",
+  "w": 744,
+  "h": 125
+ },
+ "running@bone": {
+  "sha": "8d51db5c5ed658292b4f2ea42e63f87fa3893560",
+  "w": 744,
+  "h": 125
+ },
+ "running@catalog": {
+  "sha": "450359fd75e74a841b33cb1e5661b4837a1d00be",
+  "w": 744,
+  "h": 125
+ },
+ "running@graphite": {
+  "sha": "155665a50e1a98fbfe02a0aa8e5ccd0202604133",
+  "w": 744,
+  "h": 125
+ },
+ "running@typewriter": {
+  "sha": "3e87ff333116f1bc71a802a22bf8f6bd97dc438f",
+  "w": 744,
+  "h": 125
+ },
+ "send-focus@bone": {
+  "sha": "439e092969e2c803ef771d433f66d0f93bf894a2",
+  "w": 744,
+  "h": 125
+ },
+ "send-focus@catalog": {
+  "sha": "255c851b2c37a7aa1023195575843e6194f95468",
+  "w": 744,
+  "h": 125
+ },
+ "send-focus@graphite": {
+  "sha": "28e1fcded96a69cd2b4d7c10ce79dbc254920cb6",
+  "w": 744,
+  "h": 125
+ },
+ "send-focus@typewriter": {
+  "sha": "d186b731c5c8f821610478292b72e2e399708db4",
+  "w": 744,
+  "h": 125
+ },
+ "send-hover@bone": {
+  "sha": "fea8e16f5ac93704ab9927e0b5bb526166c04a5c",
+  "w": 744,
+  "h": 125
+ },
+ "send-hover@catalog": {
+  "sha": "54c4ecb8d86a8185dbe1d83a194e3fd93f7d0378",
+  "w": 744,
+  "h": 125
+ },
+ "send-hover@graphite": {
+  "sha": "85336ca312983d3a8d6f394981df4c4b675c031f",
+  "w": 744,
+  "h": 125
+ },
+ "send-hover@typewriter": {
+  "sha": "6c01fa017916b7916e8648003d78a032b216df0c",
+  "w": 744,
+  "h": 125
+ },
+ "send-pressed@bone": {
+  "sha": "7f88b315a295b0770be852e5f6498fe9d1021bcf",
+  "w": 744,
+  "h": 125
+ },
+ "send-pressed@catalog": {
+  "sha": "2ab6d90d684e5e65061e3fc3528dd06576374ee2",
+  "w": 744,
+  "h": 125
+ },
+ "send-pressed@graphite": {
+  "sha": "276ba7ab5db367be944a22f2011e86616327d147",
+  "w": 744,
+  "h": 125
+ },
+ "send-pressed@typewriter": {
+  "sha": "60429b8a8c455da8263bd35c336e872368861f1c",
+  "w": 744,
+  "h": 125
+ },
+ "send-tooltip@bone": {
+  "sha": "db3b7be6625bd14ed1daa382e3a6b83df0fe703d",
+  "w": 769,
+  "h": 153
+ },
+ "send-tooltip@catalog": {
+  "sha": "1b7a921cc9c75dae7952db5da2cdc6b818027e25",
+  "w": 769,
+  "h": 153
+ },
+ "send-tooltip@graphite": {
+  "sha": "f3b56ee01292334cd640ccb79b4d35b9ba9eb67e",
+  "w": 769,
+  "h": 153
+ },
+ "send-tooltip@typewriter": {
+  "sha": "94f0cf01557dcbe56a4e4ed3d4b801ff4fc02474",
+  "w": 769,
+  "h": 153
+ },
+ "tall-scrolling@bone": {
+  "sha": "6766c7b9e81c8811cabe0245232418dcc4514d9b",
+  "w": 744,
+  "h": 300
+ },
+ "tall-scrolling@catalog": {
+  "sha": "8b902f17599370679920f146cbdb667254d1d23e",
+  "w": 744,
+  "h": 300
+ },
+ "tall-scrolling@graphite": {
+  "sha": "358cbf110488b4589bfefdee2cfb051fed121818",
+  "w": 744,
+  "h": 300
+ },
+ "tall-scrolling@typewriter": {
+  "sha": "b8b611a56b02704065f4f2b8b3dad0f81309c9a9",
+  "w": 744,
+  "h": 300
+ },
+ "with-files@bone": {
+  "sha": "89cafd3e6af82e979621197052ea789bfbbbf637",
+  "w": 744,
+  "h": 193
+ },
+ "with-files@catalog": {
+  "sha": "752ca2ad50848d8febe0cf2e49a770753d9c8ea8",
+  "w": 744,
+  "h": 193
+ },
+ "with-files@graphite": {
+  "sha": "16edb801c563fc1b42fef06bd2b130cd522e6339",
+  "w": 744,
+  "h": 193
+ },
+ "with-files@typewriter": {
+  "sha": "93a3018e23471dd36a8cec610f86dc313edc3e6c",
+  "w": 744,
+  "h": 193
+ },
+ "with-text@bone": {
+  "sha": "b5913334e5c1b45ac41a9388a2cf5e3e438bcd0f",
+  "w": 744,
+  "h": 125
+ },
+ "with-text@catalog": {
+  "sha": "3026e899fa2002aa6095eadcb0eca8f0ecb82343",
+  "w": 744,
+  "h": 125
+ },
+ "with-text@graphite": {
+  "sha": "d03776203b3d8bef664d4c0fafc465f8e4fbc516",
+  "w": 744,
+  "h": 125
+ },
+ "with-text@typewriter": {
+  "sha": "1bef96574f0ac072f2ab0b5e0c3ed8e70eda94cc",
+  "w": 744,
+  "h": 125
+ }
+}

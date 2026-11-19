@@ -23,6 +23,10 @@
    `sampler(root)` (frames of opacity, visibility and boxes during an interaction, plus nodes replaced). */
 (() => {
   const SKIP_INSIDE = 'orb-avatar, boopis-logo, svg, canvas, .hx-probe, script, style, template';
+  /* visually hidden text (the screen reader's) is not drawn: no geometry, no tokens */
+  const SR = '.ui-sr, .sr-only, [class$="-sr"]';
+  /* owner decisions that reach past an edge on purpose: an orb's attention flag (orbs stay whole) */
+  const OVERHANG_OK = '.ui-dot--flag, .ui-orb .ui-dot';
   const MAX = 4000;
   /* R-space-2's named exceptions, by value (card 14 16, request 10 14, composer 12 14 4 and 6, button 0 14 / 10 / 8, chip 10 8,
      field 6 10, menu 4 and 6 8, popover 12, tooltip 4 8, toast 6 14, segmented 3, stamp 7, code chip 1 5, key chip 4 and 3 apart,
@@ -90,6 +94,30 @@
     return t;
   }
 
+
+  /* A colour derived from the roles is a token too (R-colour-7: a tint is a color-mix() of a solid role): the same RGB as a
+     token at another alpha, or a point on the line between two token colours (a mix of two roles). */
+  const mixCache = new Map();
+  function derived(T, c) {
+    const v = rgba(c); if (!v) return false;
+    const k = T.key + '|' + ckey(c);
+    if (mixCache.has(k)) return mixCache.get(k);
+    const toks = [...T.colors].map((x) => x.split(',').map(Number));
+    let ok = toks.some((t) => Math.abs(t[0] - v[0]) <= 1.5 && Math.abs(t[1] - v[1]) <= 1.5 && Math.abs(t[2] - v[2]) <= 1.5);
+    for (let i = 0; i < toks.length && !ok; i++) for (let j = i + 1; j < toks.length && !ok; j++) {
+      const a = toks[i], b = toks[j], d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+      const len = d[0] * d[0] + d[1] * d[1] + d[2] * d[2]; if (len < 9) continue;
+      const t = ((v[0] - a[0]) * d[0] + (v[1] - a[1]) * d[1] + (v[2] - a[2]) * d[2]) / len;
+      if (t < -0.01 || t > 1.01) continue;
+      ok = [0, 1, 2].every((q) => Math.abs(a[q] + t * d[q] - v[q]) <= 2);
+    }
+    mixCache.set(k, ok);
+    return ok;
+  }
+  /* bot data, not interface colour: an orb's colour where the system allows it (R-colour-8: orbs, hx-card[data-accent]),
+     a swatch of a bot's or a theme's colour drawn from data (an inline colour) */
+  const dataColour = (e, prop) => !!e.closest('hx-card[data-accent], [data-swatch], .bt-swatch, .mod-swatches, .hxt-swatch') || (/background|box-shadow/.test(prop) && /#|rgb/.test(e.getAttribute('style') || ''));
+
   /* ───────── element helpers ───────── */
   const describe = (el) => {
     const part = (e) => {
@@ -113,6 +141,7 @@
     const walk = (n) => {
       for (const c of n.children) {
         if (out.length >= MAX) return;
+        if (c.matches(SR)) continue;
         if (c.matches(SKIP_INSIDE)) { if (!c.matches('svg, canvas, script, style, template, .hx-probe')) out.push(c); continue; }
         out.push(c); walk(c);
       }
@@ -216,10 +245,12 @@
         const eRad = radiiOf(ecs), cRad = radiiOf(ccs);
         const ring = ringOf(ecs);
         if (clipper && scrolls(cs.get(clipper) || getComputedStyle(clipper))) continue;
+        const selfClip = clipper === c || (ccs.clipPath && ccs.clipPath !== 'none');   /* the container clips to its own shape: nothing shows past it */
+        if (e.matches(OVERHANG_OK)) continue;
         const inside = shapeTest(c, cr, cRad);
         const pts = outline(er, eRad, ring);
         const outside = pts.filter(([x, y]) => !inside(x, y));
-        if (want.has('geometry.contain') && outside.length) {
+        if (want.has('geometry.contain') && outside.length && !selfClip) {
           const far = Math.max(...outside.map(([x, y]) => Math.max(cr.left - x, x - cr.right, cr.top - y, y - cr.bottom, 0)));
           const msg = (clipper ? 'cut by ' + describe(clipper) + ': ' : '') + 'reaches outside ' + describe(c) + (far > 0.5 ? ' by ' + r1(far) + 'px' : ' at its rounded corner') + (ring ? ' (with its ' + r1(ring) + 'px ring)' : '') + ' [' + why.join(',') + ']';
           add('geometry.contain', e, msg, { container: rectOf(c) });
@@ -231,6 +262,7 @@
             if (R < 8) continue;
             if (dx < -0.5 || dy < -0.5 || dx >= R || dy >= R) continue;   /* not in this corner (or already outside: geometry.contain) */
             const inset = Math.min(dx, dy);
+            if (selfClip && inset < 1) continue;   /* a full-bleed layer inside a clipped leaf: the clip draws its corner */
             const pillR = Math.min(er.width, er.height) / 2;
             const r = Math.min(eRad[i], pillR);
             const want8 = Math.max(8, R - inset);
@@ -274,7 +306,8 @@
         if (![...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
         if (scrolls(s) || e.isContentEditable || e.matches('input, textarea')) continue;
         const hx = s.overflowX !== 'visible' && e.scrollWidth > e.clientWidth + 1;
-        const vy = s.overflowY !== 'visible' && e.scrollHeight > e.clientHeight + 1 && s.webkitLineClamp === 'none';
+        const oneLine = s.textOverflow === 'ellipsis' && /nowrap|pre/.test(s.whiteSpace);
+        const vy = s.overflowY !== 'visible' && e.scrollHeight > e.clientHeight + (oneLine ? 3 : 1) && s.webkitLineClamp === 'none';
         if (hx && s.textOverflow !== 'ellipsis') add('geometry.clip', e, 'text cut on the right with no ellipsis (' + e.scrollWidth + ' > ' + e.clientWidth + 'px)');
         if (vy) add('geometry.clip', e, 'text cut at the bottom (' + e.scrollHeight + ' > ' + e.clientHeight + 'px)');
         /* an ellipsis on a node that clips nothing horizontally but loses lines is fine; an ancestor that cuts it off is not */
@@ -383,9 +416,9 @@
             if (!applies) continue;
             const v = s.getPropertyValue(prop);
             if (!v || v === 'none' || transparent(v) || /^url/.test(v)) continue;
-            if (!T.colors.has(ckey(v))) stray('tokens.computed', e, prop, v);
+            if (!T.colors.has(ckey(v)) && !derived(T, v) && !dataColour(e, prop)) stray('tokens.computed', e, prop, v);
           }
-          if (s.boxShadow && s.boxShadow !== 'none') for (const m of s.boxShadow.matchAll(/rgba?\([^)]+\)/g)) if (!transparent(m[0]) && !T.colors.has(ckey(m[0]))) { stray('tokens.computed', e, 'box-shadow colour', m[0]); break; }
+          if (s.boxShadow && s.boxShadow !== 'none') for (const m of s.boxShadow.matchAll(/rgba?\([^)]+\)|color\(srgb[^)]+\)/g)) if (!transparent(m[0]) && !T.colors.has(ckey(m[0])) && !derived(T, m[0]) && !dataColour(e, 'box-shadow')) { stray('tokens.computed', e, 'box-shadow colour', m[0]); break; }
           if (hasText && !T.fs.has(r1(px(s.fontSize)))) stray('tokens.computed', e, 'font-size', s.fontSize);
           if (hasText && T.families.size && !T.families.has(s.fontFamily.replace(/\s+/g, ' '))) stray('tokens.computed', e, 'font-family', s.fontFamily.split(',')[0] + ' (not --sans or --mono, R-type-1)');
           if (hasText && s.lineHeight !== 'normal') { const ratio = Math.round(px(s.lineHeight) / px(s.fontSize) * 100) / 100; if (![1, 1.2, 1.35, 1.45, 1.5, 1.6].some((x) => Math.abs(x - ratio) < 0.03)) stray('tokens.computed', e, 'line-height', s.lineHeight + ' (' + ratio + ', not a --lh-* ratio, R-type-4)'); }
@@ -539,13 +572,14 @@
   function matchesBase(e, base) { try { return base === '*' || e.matches(base) || (base.endsWith(' *') && e.matches(base)); } catch { return false; } }
 
   /* ───────── stability ───────── */
-  const VOLATILE = /^(id|style|aria-describedby|aria-controls|aria-labelledby|aria-activedescendant|for|data-sq-on|data-lab-\w+|tabindex|data-glance|width|height|static|d|data-countdown)$/;
+  const VOLATILE = /^(id|style|aria-describedby|aria-controls|aria-labelledby|aria-activedescendant|aria-expanded|for|data-sq-on|data-lab-\w+|tabindex|data-glance|width|height|static|d|data-countdown)$/;
   function signature(root) {
     root = root || (window.__lab && window.__lab.scope && window.__lab.scope()) || document.body;
     const lines = [];
     const walk = (n, depth) => {
       for (const c of n.children) {
         if (c.matches('script, style, #__lab_probe, .ui-tip')) continue;
+        if (c.matches('orb-avatar')) { lines.push(' '.repeat(depth) + 'orb-avatar [label=' + (c.getAttribute('label') || '') + ']'); continue; }
         const attrs = [...c.attributes].filter((a) => !VOLATILE.test(a.name) && a.name !== 'class').map((a) => a.name + '=' + a.value.replace(/\d{2,}/g, '#').slice(0, 40)).sort().join(' ');
         const cls = [...c.classList].filter((x) => !/^is-(in|out|moving|on|hover)/.test(x)).sort().join('.');
         const text = [...c.childNodes].filter((t) => t.nodeType === 3).map((t) => t.textContent.trim()).join(' ').replace(/\d+/g, '#').slice(0, 60);
@@ -604,13 +638,16 @@
       const f = rec.frames.filter(Boolean);
       if (f.length < 4) continue;
       /* flicker: shown, gone, shown again (opacity or visibility) */
-      let dips = 0, state = f[0][4] >= 0.9 && f[0][5] ? 'on' : 'off', wentOff = false;
-      for (const x of f) {
+      /* a flicker is a short dip (at most FLICKER frames, about 130 ms): a view that fades out because the state changed
+         and back because it changed again is a transition, not a flicker */
+      const FLICKER = 8;
+      let dips = 0, state = f[0][4] >= 0.9 && f[0][5] ? 'on' : 'off', offAt = -1;
+      f.forEach((x, i) => {
         const vis = x[5] && x[4] >= 0.9, invis = !x[5] || x[4] <= 0.15;
-        if (state === 'on' && invis) { state = 'off'; wentOff = true; }
-        else if (state === 'off' && vis) { if (wentOff) dips++; state = 'on'; }
-      }
-      if (dips) issues.push({ kind: 'flicker', key: rec.key, msg: rec.key + ' went invisible and came back ' + dips + ' time' + (dips > 1 ? 's' : '') });
+        if (state === 'on' && invis) { state = 'off'; offAt = i; }
+        else if (state === 'off' && vis) { if (offAt >= 0 && i - offAt <= FLICKER) dips++; state = 'on'; }
+      });
+      if (dips) issues.push({ kind: 'flicker', key: rec.key, msg: rec.key + ' blinked out and back within ' + FLICKER + ' frames, ' + dips + ' time' + (dips > 1 ? 's' : '') });
       /* a box that jumps away for a frame or two and comes back, or teleports */
       for (let i = 1; i < f.length - 1; i++) {
         const a = f[i - 1], b = f[i];

@@ -1,0 +1,102 @@
+{
+ "empty@bone": {
+  "sha": "87016b0b304f5caad8da13d01e07d500493e4268",
+  "w": 632,
+  "h": 24
+ },
+ "empty@catalog": {
+  "sha": "7185d044b0ec143262b9ffccd8cfe9ca82972c45",
+  "w": 632,
+  "h": 24
+ },
+ "empty@graphite": {
+  "sha": "ba0b40430b431428b9a19ef05582eb7eea58a8aa",
+  "w": 632,
+  "h": 24
+ },
+ "empty@typewriter": {
+  "sha": "ba0b40430b431428b9a19ef05582eb7eea58a8aa",
+  "w": 632,
+  "h": 24
+ },
+ "error@bone": {
+  "sha": "a63576802d4dc38af70fe6a5b690e7bce43d374b",
+  "w": 632,
+  "h": 94
+ },
+ "error@catalog": {
+  "sha": "818b5ce94c813abbb72ed14dc5c84b8bc6b3ef1b",
+  "w": 632,
+  "h": 94
+ },
+ "error@graphite": {
+  "sha": "03e304cd39daaf5b775281fc371a0449d71756c8",
+  "w": 632,
+  "h": 94
+ },
+ "error@typewriter": {
+  "sha": "803d9164c355165d1625b23251ba7245b4296632",
+  "w": 632,
+  "h": 94
+ },
+ "long@bone": {
+  "sha": "a3101edc2f34770d318f3ce875ef817360ded78a",
+  "w": 632,
+  "h": 100
+ },
+ "long@catalog": {
+  "sha": "706ebd92f298ac6ef24ae76af78e16f0f9461b34",
+  "w": 632,
+  "h": 100
+ },
+ "long@graphite": {
+  "sha": "95e41edd81581880dc3e438880b1608cd064118a",
+  "w": 632,
+  "h": 100
+ },
+ "long@typewriter": {
+  "sha": "95e41edd81581880dc3e438880b1608cd064118a",
+  "w": 632,
+  "h": 100
+ },
+ "many@bone": {
+  "sha": "f75ef2bedf5b329bb85552d509d02a848103c0a8",
+  "w": 632,
+  "h": 1600
+ },
+ "many@catalog": {
+  "sha": "45d03d0ecebdd5f675248cd7340b1cfa5f953d67",
+  "w": 632,
+  "h": 1600
+ },
+ "many@graphite": {
+  "sha": "f472f8fbf805e23a10cffb109c93f8add9b28806",
+  "w": 632,
+  "h": 1600
+ },
+ "many@typewriter": {
+  "sha": "8b724bc4f84b6029f87366b3da7e18bc951ce8b3",
+  "w": 632,
+  "h": 1600
+ },
+ "typical@bone": {
+  "sha": "4231d2599bdf65db782bcbd411ff466385116aa1",
+  "w": 632,
+  "h": 285
+ },
+ "typical@catalog": {
+  "sha": "63b8ef9ec5f87a77abeb9800ea70476a5c006c15",
+  "w": 632,
+  "h": 285
+ },
+ "typical@graphite": {
+  "sha": "b13f51f798737ca8b139559481dbe0218f63935d",
+  "w": 632,
+  "h": 285
+ },
+ "typical@typewriter": {
+  "sha": "a2da14374efcf43487fb9fd49c1445a4443f610f",
+  "w": 632,
+  "h": 285
+ }
+}

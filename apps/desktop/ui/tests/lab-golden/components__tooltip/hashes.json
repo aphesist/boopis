@@ -1,0 +1,102 @@
+{
+ "at-the-right-edge@bone": {
+  "sha": "bd9c8b33163d4cc27657b473f8ee9c04d34a04fd",
+  "w": 1428,
+  "h": 86
+ },
+ "at-the-right-edge@catalog": {
+  "sha": "a7e190adcf97b331a6d81c0cb2a28be257090e79",
+  "w": 1428,
+  "h": 86
+ },
+ "at-the-right-edge@graphite": {
+  "sha": "a8f66a47716abd8de9b59bebe1b8cc3d726e63ce",
+  "w": 1428,
+  "h": 86
+ },
+ "at-the-right-edge@typewriter": {
+  "sha": "4ede3f9763033ca9b9e748d97049b73ba61a7cf4",
+  "w": 1428,
+  "h": 86
+ },
+ "below-the-anchor@bone": {
+  "sha": "cc37a738a53d88708182026d32be6ffb2c6e2f5b",
+  "w": 1432,
+  "h": 86
+ },
+ "below-the-anchor@catalog": {
+  "sha": "de80833c1b899006b34e7093134eff51e8d80044",
+  "w": 1432,
+  "h": 86
+ },
+ "below-the-anchor@graphite": {
+  "sha": "5b546712171e5fd91fd0674e6aa37cc4da1dcda0",
+  "w": 1432,
+  "h": 86
+ },
+ "below-the-anchor@typewriter": {
+  "sha": "16f247de1e63158e3137b272c90368f53527f168",
+  "w": 1432,
+  "h": 86
+ },
+ "long@bone": {
+  "sha": "9e1635360ca1ed8760c88349fd59a91842f7d77b",
+  "w": 444,
+  "h": 91
+ },
+ "long@catalog": {
+  "sha": "d84c94c663947753f1f4ef493730f49b5909320d",
+  "w": 444,
+  "h": 91
+ },
+ "long@graphite": {
+  "sha": "bda9872270712319e89d6918c4398ebfe1b7908f",
+  "w": 444,
+  "h": 91
+ },
+ "long@typewriter": {
+  "sha": "72f2244d98ef1c29013761ef91bb1749c3788cb5",
+  "w": 444,
+  "h": 91
+ },
+ "near-the-bottom-flips-above@bone": {
+  "sha": "83ef98953bd79c78f53812700b1b25625d40b957",
+  "w": 1432,
+  "h": 876
+ },
+ "near-the-bottom-flips-above@catalog": {
+  "sha": "7cf4132a9906ff93a6397139140527ac9d4a2b0d",
+  "w": 1432,
+  "h": 876
+ },
+ "near-the-bottom-flips-above@graphite": {
+  "sha": "5e276118b937141b7e363455b346c2775accf0c1",
+  "w": 1432,
+  "h": 876
+ },
+ "near-the-bottom-flips-above@typewriter": {
+  "sha": "d98687590e9393d75a0385fc44d6d34fc70d70bd",
+  "w": 1432,
+  "h": 876
+ },
+ "typical@bone": {
+  "sha": "68b27c58c45d8798462c9725ef4476e824851b1b",
+  "w": 1416,
+  "h": 50
+ },
+ "typical@catalog": {
+  "sha": "99a6816a591b21e9d4e0ce6ac8cd5335c3ab61df",
+  "w": 1416,
+  "h": 50
+ },
+ "typical@graphite": {
+  "sha": "2bd7ad38b0be9b15884dd8c8076e527f6dea9c45",
+  "w": 1416,
+  "h": 50
+ },
+ "typical@typewriter": {
+  "sha": "789f6ab5945f9c92de78fea2974a899605a1be6c",
+  "w": 1416,
+  "h": 50
+ }
+}

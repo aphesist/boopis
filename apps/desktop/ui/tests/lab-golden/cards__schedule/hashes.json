@@ -1,0 +1,202 @@
+{
+ "compact-long@bone": {
+  "sha": "ad2493c75d92ccba23baf8e167cc737cb1701aa2",
+  "w": 424,
+  "h": 264
+ },
+ "compact-long@catalog": {
+  "sha": "8b919d7483791b8cfe9c67cf31c072885a4be78d",
+  "w": 424,
+  "h": 264
+ },
+ "compact-long@graphite": {
+  "sha": "bcf408274ce911e7ba4ab1f9f7a86a0b66832aa3",
+  "w": 424,
+  "h": 264
+ },
+ "compact-long@typewriter": {
+  "sha": "a1753636c2cd0e685771f62b0a2099152a8d5b3f",
+  "w": 424,
+  "h": 264
+ },
+ "compact-on-the-dock@bone": {
+  "sha": "f3ea3307751dc6dfe9759dc53421f769b8e1d577",
+  "w": 424,
+  "h": 211
+ },
+ "compact-on-the-dock@catalog": {
+  "sha": "e5536a0469e745c01140e33c74ab8f0787f969ec",
+  "w": 424,
+  "h": 211
+ },
+ "compact-on-the-dock@graphite": {
+  "sha": "cc39937893bedddd1db8e5bb53182ebd97b35596",
+  "w": 424,
+  "h": 211
+ },
+ "compact-on-the-dock@typewriter": {
+  "sha": "b4612dd14dbf8303a03ef62e7530e5791df32e1a",
+  "w": 424,
+  "h": 231
+ },
+ "compact@bone": {
+  "sha": "da94950a5463641aae39161ff9943afa37ae5239",
+  "w": 424,
+  "h": 231
+ },
+ "compact@catalog": {
+  "sha": "64380dfa26ba90ca13a3bca31c174c2f63b10abb",
+  "w": 424,
+  "h": 231
+ },
+ "compact@graphite": {
+  "sha": "fbbe9d1aa247212cc567ebe7afda2882c0bccd2a",
+  "w": 424,
+  "h": 231
+ },
+ "compact@typewriter": {
+  "sha": "f905d52122f8f8cd7686545bb43c4b0c962390d6",
+  "w": 424,
+  "h": 231
+ },
+ "dismissed@bone": {
+  "sha": "f825fc8fa6b658147b2c1eb526249a516b2f2d1d",
+  "w": 632,
+  "h": 211
+ },
+ "dismissed@catalog": {
+  "sha": "2996cf6926b1d42605c51c97146b71963ba589bf",
+  "w": 632,
+  "h": 211
+ },
+ "dismissed@graphite": {
+  "sha": "b076609d0c0276db0ad82a1a64b9fe6a4d6fcbac",
+  "w": 632,
+  "h": 211
+ },
+ "dismissed@typewriter": {
+  "sha": "5a3d9cb4d7b671580f44b3da798e6d55f7222423",
+  "w": 632,
+  "h": 211
+ },
+ "empty-data@bone": {
+  "sha": "36db3bc253bf3b70520bd18328a9b94f867a666f",
+  "w": 632,
+  "h": 130
+ },
+ "empty-data@catalog": {
+  "sha": "0c0a200a0fdff2da0d90d19ba8465f1a8b9ed377",
+  "w": 632,
+  "h": 130
+ },
+ "empty-data@graphite": {
+  "sha": "1e28dc44771752a869f6db154d61ffcd9de7c216",
+  "w": 632,
+  "h": 130
+ },
+ "empty-data@typewriter": {
+  "sha": "5a8f04517877478ad689bfbb079fe8599cc51605",
+  "w": 632,
+  "h": 130
+ },
+ "long@bone": {
+  "sha": "eaf108e7953293c5b04cb6b73e5f74dcb1f21922",
+  "w": 632,
+  "h": 245
+ },
+ "long@catalog": {
+  "sha": "b0a605a7a97c99a61398e278c6bef65e98a3f8cd",
+  "w": 632,
+  "h": 245
+ },
+ "long@graphite": {
+  "sha": "12d077e6cf8b7d7aec23a905bdad395d1c34836a",
+  "w": 632,
+  "h": 245
+ },
+ "long@typewriter": {
+  "sha": "2020d2af161397fd0615546e9b10c182d6b633e0",
+  "w": 632,
+  "h": 264
+ },
+ "mini-long@bone": {
+  "sha": "eed975e2274161ddede39ff3d5bf547553e9ba15",
+  "w": 384,
+  "h": 54
+ },
+ "mini-long@catalog": {
+  "sha": "40b7392a9d554fe0e542640691720aecf7368307",
+  "w": 384,
+  "h": 54
+ },
+ "mini-long@graphite": {
+  "sha": "2e86ddbd6764a9389b93ad9401677547f2249c01",
+  "w": 384,
+  "h": 54
+ },
+ "mini-long@typewriter": {
+  "sha": "f4828faf885102d92f28a3042e89a6a1898815e5",
+  "w": 384,
+  "h": 54
+ },
+ "mini@bone": {
+  "sha": "99b9b383a6ca16e520568f88f26ba90f249786ac",
+  "w": 384,
+  "h": 54
+ },
+ "mini@catalog": {
+  "sha": "4a95faaccfe91ff5230cf13794ab17ecab15512e",
+  "w": 384,
+  "h": 54
+ },
+ "mini@graphite": {
+  "sha": "36542eee9026f542ecd9df022dd77c6dee1261a3",
+  "w": 384,
+  "h": 54
+ },
+ "mini@typewriter": {
+  "sha": "23cf0500f5eb9ba025b85808efdcbfb4db93936a",
+  "w": 384,
+  "h": 54
+ },
+ "pending@bone": {
+  "sha": "ec6270a63d5b080d222e15bf50f421fbd42cc758",
+  "w": 632,
+  "h": 211
+ },
+ "pending@catalog": {
+  "sha": "f563f25bdfe54cc8f8f4928adf904ca581cc352b",
+  "w": 632,
+  "h": 211
+ },
+ "pending@graphite": {
+  "sha": "ac312b3137aab0f723e039880f627caa4b6e2213",
+  "w": 632,
+  "h": 211
+ },
+ "pending@typewriter": {
+  "sha": "1c161a47d5458513f8ed7c220fb7be235124a2dc",
+  "w": 632,
+  "h": 211
+ },
+ "scheduled@bone": {
+  "sha": "17ddda6aa580c79a0dfd7a394f51ddebdbc9b1ac",
+  "w": 632,
+  "h": 211
+ },
+ "scheduled@catalog": {
+  "sha": "ff9c90e9ac03b3d871a4e697336c61ad419845b9",
+  "w": 632,
+  "h": 211
+ },
+ "scheduled@graphite": {
+  "sha": "45aba8be11de07f6e9431e5cc7181554e78977c6",
+  "w": 632,
+  "h": 211
+ },
+ "scheduled@typewriter": {
+  "sha": "0452de14a44bfc18a32b2d7b7301b545a6e68bd7",
+  "w": 632,
+  "h": 211
+ }
+}

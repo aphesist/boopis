@@ -1,0 +1,62 @@
+{
+ "above@bone": {
+  "sha": "9feb983cf10571a2255a0878893baf2252a95bf8",
+  "w": 1424,
+  "h": 876
+ },
+ "above@catalog": {
+  "sha": "31631b70ff9250190809c1e5628ac8e5ec160c06",
+  "w": 1424,
+  "h": 876
+ },
+ "above@graphite": {
+  "sha": "69f3b26fcc972eaedc7ebcd6b049faa34c12531e",
+  "w": 1424,
+  "h": 876
+ },
+ "above@typewriter": {
+  "sha": "b84afba0e664b06d0d45b4bccf073b3b300724ae",
+  "w": 1424,
+  "h": 876
+ },
+ "long@bone": {
+  "sha": "8001628decb3051210ad948b68ca4f0d874195ec",
+  "w": 1424,
+  "h": 183
+ },
+ "long@catalog": {
+  "sha": "3b4a5d154119cc715599587adf413169c335e05a",
+  "w": 1424,
+  "h": 183
+ },
+ "long@graphite": {
+  "sha": "8f5c7e365fa3e2a75fdada16c991eb5e13fa0c3d",
+  "w": 1424,
+  "h": 183
+ },
+ "long@typewriter": {
+  "sha": "3e91124cc00f9d58f5bac447ed8aaaa26370d231",
+  "w": 1424,
+  "h": 183
+ },
+ "typical@bone": {
+  "sha": "f2d58adcc9e1ad0ce8dc021e29e50efd7ac7f41d",
+  "w": 1424,
+  "h": 169
+ },
+ "typical@catalog": {
+  "sha": "4295e732ed4a4ae30e4ab35e91b8181ff7937f18",
+  "w": 1424,
+  "h": 169
+ },
+ "typical@graphite": {
+  "sha": "89c7b74681aafebe556ae7ca431db07694505092",
+  "w": 1424,
+  "h": 169
+ },
+ "typical@typewriter": {
+  "sha": "8ac1bc050138b2a076375fecafa9bb7d4c061195",
+  "w": 1424,
+  "h": 169
+ }
+}

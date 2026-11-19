@@ -1,0 +1,122 @@
+{
+ "a-menu-item-hover@bone": {
+  "sha": "c36edbe7e9970a6e1ec097e5570d7e664ec2669b",
+  "w": 1440,
+  "h": 900
+ },
+ "a-menu-item-hover@catalog": {
+  "sha": "01aa7c1abc3b025c1a06b028014c0a71f0b77e90",
+  "w": 1440,
+  "h": 900
+ },
+ "a-menu-item-hover@graphite": {
+  "sha": "99160cb4a808f988ccb90dd7e6aa0b25df24b7b6",
+  "w": 1440,
+  "h": 900
+ },
+ "a-menu-item-hover@typewriter": {
+  "sha": "9f552cdf6bf1923cf6b11e4b58074456b89c977b",
+  "w": 1440,
+  "h": 900
+ },
+ "account-menu-rail@bone": {
+  "sha": "c5b60cd6b06c370fca328cf1cd08bff75755e7dc",
+  "w": 1440,
+  "h": 900
+ },
+ "account-menu-rail@catalog": {
+  "sha": "4e17c3d47842f79f3db16f2b3e5ef6dab9f5080c",
+  "w": 1440,
+  "h": 900
+ },
+ "account-menu-rail@graphite": {
+  "sha": "5b375983065ee21add2d2556db24e205e4a207f1",
+  "w": 1440,
+  "h": 900
+ },
+ "account-menu-rail@typewriter": {
+  "sha": "fdebac42ff89ed6783c39f7a83240a4686fe52b4",
+  "w": 1440,
+  "h": 900
+ },
+ "account-menu@bone": {
+  "sha": "9cb6250e36f5a5382e965db9f23e3ab3b904989b",
+  "w": 1440,
+  "h": 900
+ },
+ "account-menu@catalog": {
+  "sha": "4ad613b9c163cf6c768138932fef0be821d5365c",
+  "w": 1440,
+  "h": 900
+ },
+ "account-menu@graphite": {
+  "sha": "5e06e1aae214231aeb2cffc204f2b512d4a14e18",
+  "w": 1440,
+  "h": 900
+ },
+ "account-menu@typewriter": {
+  "sha": "24ee69ae10fd43d6a271c78215d5e8a0e3cfeb51",
+  "w": 1440,
+  "h": 900
+ },
+ "attach-menu@bone": {
+  "sha": "3e801999b3431f802fde120a3f24a45a53f38fc9",
+  "w": 1440,
+  "h": 900
+ },
+ "attach-menu@catalog": {
+  "sha": "65918d28e1e94e0b4561b9c70f6123439d63f72c",
+  "w": 1440,
+  "h": 900
+ },
+ "attach-menu@graphite": {
+  "sha": "1b7cbea0eaacc19e409d2b77ed9b490f6097525d",
+  "w": 1440,
+  "h": 900
+ },
+ "attach-menu@typewriter": {
+  "sha": "844f0dc46d75459a23b17ac9899616e131793a00",
+  "w": 1440,
+  "h": 900
+ },
+ "model-picker@bone": {
+  "sha": "3fbeb1a565cf4a06f43e01bec7f56f9a9df5d6a6",
+  "w": 1440,
+  "h": 900
+ },
+ "model-picker@catalog": {
+  "sha": "18a7cc4eabbf722d0d39b216c38336d3e57bd68b",
+  "w": 1440,
+  "h": 900
+ },
+ "model-picker@graphite": {
+  "sha": "99637ab2550dabbdf4e9d0767b18a2f2b4d69772",
+  "w": 1440,
+  "h": 900
+ },
+ "model-picker@typewriter": {
+  "sha": "caa2e81f4271ce8921438de7625960c58888fb8d",
+  "w": 1440,
+  "h": 900
+ },
+ "the-blank-popover@bone": {
+  "sha": "c36edbe7e9970a6e1ec097e5570d7e664ec2669b",
+  "w": 1440,
+  "h": 900
+ },
+ "the-blank-popover@catalog": {
+  "sha": "695b2216edebee1eb367ab2f9ca672a3b0e52353",
+  "w": 1440,
+  "h": 900
+ },
+ "the-blank-popover@graphite": {
+  "sha": "99160cb4a808f988ccb90dd7e6aa0b25df24b7b6",
+  "w": 1440,
+  "h": 900
+ },
+ "the-blank-popover@typewriter": {
+  "sha": "9f552cdf6bf1923cf6b11e4b58074456b89c977b",
+  "w": 1440,
+  "h": 900
+ }
+}
