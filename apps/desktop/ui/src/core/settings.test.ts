@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { KEYS, SCHEMA_VERSION, clearAll, loadShell, readJSON, readText, writeJSON, writeText } from './settings';
+import { KEYS, SCHEMA_VERSION, clearAll, loadBots, loadShell, readJSON, readText, saveBots, writeJSON, writeText } from './settings';
 
 afterEach(() => { localStorage.clear(); vi.restoreAllMocks(); });
 
@@ -29,5 +29,25 @@ describe('settings persistence', () => {
     for (const k of Object.values(KEYS)) localStorage.setItem(k, '1');
     clearAll();
     expect(Object.values(KEYS).every((k) => localStorage.getItem(k) === null)).toBe(true);
+  });
+});
+
+describe('the Bots tab’s own setting: whether the Archived group is open', () => {
+  it('is closed until the user opens it, and keeps what they chose', () => {
+    expect(loadBots()).toEqual({ archivedOpen: false });
+    expect(saveBots({ archivedOpen: true })).toBe(true);
+    expect(loadBots()).toEqual({ archivedOpen: true });
+    saveBots({ archivedOpen: false });
+    expect(loadBots()).toEqual({ archivedOpen: false });
+  });
+  it('anything but a true is closed, and a corrupt value or blocked storage never throws', () => {
+    localStorage.setItem(KEYS.bots, JSON.stringify({ archivedOpen: 'yes' }));
+    expect(loadBots().archivedOpen).toBe(false);
+    localStorage.setItem(KEYS.bots, '{not json');
+    expect(loadBots().archivedOpen).toBe(false);
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked'); });
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked'); });
+    expect(loadBots().archivedOpen).toBe(false);
+    expect(saveBots({ archivedOpen: true })).toBe(false);
   });
 });

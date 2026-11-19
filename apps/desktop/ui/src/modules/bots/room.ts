@@ -16,6 +16,7 @@ import { openNew } from './new-bot';
 import { openSettings, toggleSettings } from './settings';
 import { checkClips, watchClips } from './clips';
 import { renderGlance } from './glance';
+import { outsideDescription, outsideRoomMark } from './outside';
 
 const bots = () => data().bots;
 const NODE = new Map<string, HTMLElement>();
@@ -99,6 +100,7 @@ export function refreshPresence(): void {
   if (S.presence) setReact(S.presence, s.reaction);
   const line = S.pLine; line.textContent = '';
   line.append(el('span', { class: 'bt-p-role', text: b.role }));
+  if (b.madeOutside) line.append(outsideRoomMark('bt-outside-room'), outsideDescription('bt-outside-room'));
   if (s.key !== 'idle') {
     const st = el('span', { class: 'bt-p-state' });
     if (s.attention) st.insertAdjacentHTML('beforeend', ui.html.dot('attention'));
@@ -365,6 +367,7 @@ export function onBotsEvent(ev: BotsEvent, handlers: { announce: () => void }): 
     case 'bot': {
       const b = bot(ev.bot.id); if (!b) return;
       const hadAttn = !!b.attention;
+      if (!ev.bot.madeOutside) delete b.madeOutside;   /* a key that is absent from the event is gone, not unchanged: the store exists now */
       Object.assign(b, { ...ev.bot, cfg: b.cfg });
       Object.assign(b.cfg, ev.bot.cfg, { channels: { ...ev.bot.cfg.channels }, approvals: { ...ev.bot.cfg.approvals } });
       updateRow(b.id);

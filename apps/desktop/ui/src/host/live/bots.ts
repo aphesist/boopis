@@ -15,9 +15,10 @@ import { scheduleWords } from '../../data/cron';
 import { lineDiff, valueDiff } from '../../data/diff';
 import type { BotPatch, BotsAdmin, BotsEvent, BotsSource, BotsSnapshot, CreatePlan, PlannedWrite, RemovalNote, SchedulesSource } from '../../data/provider';
 import { emitter, feed, store } from '../../data/store';
-import type { Bot, BotCatalog, BotInfo, BotJob, BotSession, Schedule, ThreadMessage } from '../../data/types';
+import type { ArchivedBot, Bot, BotCatalog, BotInfo, BotJob, BotSession, Schedule, ThreadMessage } from '../../data/types';
 import type { CronManageResult, ModelOptionsResult, ProfileRow, ProfilesDescribeResult, SessionListRow } from '../../vendor/hermes-shared/gateway-contract.generated';
 import type { GatewayClient, GatewayEvent } from '../gateway';
+import { whenLabel } from '../map';
 import { isUnknownMethod } from './wire';
 import { botFrom, botName, capabilitiesFrom, isArchived, jobFrom, modelLabel, sessionFrom, sortJobs, splitModel } from './map-bots';
 import type { Known, PluginBot } from './map-bots';
@@ -115,7 +116,7 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
   }
 
   /* ───────── the roster ───────── */
-  const archivedNow = store<readonly { id: string; name: string; was: string; at: string }[]>([]);
+  const archivedNow = store<readonly ArchivedBot[]>([]);
   async function readOwn(): Promise<Map<string, PluginBot>> {
     try {
       const res = asJson<{ bots?: PluginBot[] }>(await client.requestRaw('plugin.boopis.bots.read', {}));
@@ -169,10 +170,12 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       if (r.loaded) emitFor(before, toBot(r)); else if (!had) { events.emit({ type: 'bot-created', bot: toBot(r) }); void track(loadDetail(row.name)); }
     }
     for (const id of gone) { recs.delete(id); events.emit({ type: 'bot-archived', id }); void closeLink(id); }
-    archivedNow.set(mine.filter((r) => isArchived(r.name, ownRecords.get(r.name))).map((r) => {
+    const t = now();
+    archivedNow.set(mine.filter((r) => isArchived(r.name, ownRecords.get(r.name))).map((r): ArchivedBot => {
       const p = ownRecords.get(r.name);
-      return { id: r.name, name: botName(r), was: p?.archived?.name ?? r.name.replace(/^archived--/, ''), at: p?.archived?.at ?? '' };
-    }));
+      const at = p?.archived?.at ?? '';
+      return { id: r.name, name: botName(r), was: p?.archived?.name ?? r.name.replace(/^archived--/, ''), at, when: at ? whenLabel(Date.parse(at) / 1000, t) : '' };
+    }).sort((a, b) => (b.at > a.at ? 1 : b.at < a.at ? -1 : 0)));   /* the newest first; an archive with no date goes last */
     rebuildSchedules();
   }
   /** a session row of the roster, for a teammate whose own link is not open (or not yet): the newest one Hermes names */
@@ -397,7 +400,7 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
         throw e;
       }
       await refreshRoster();
-      return { undo: () => admin.restoreArchived(done.name) };
+      return { undo: () => restoreArchived(done.name) };
     },
     async remove(id, confirm) {
       need(id);
@@ -405,14 +408,16 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       await plug('bots.delete', { name: id, confirm });
       await refreshRoster();
     },
-    archived: archivedNow,
-    note: () => rosterNote,
-    async restoreArchived(name) {
-      const back = await plug<{ name: string; paused_jobs: string[] }>('bots.restore', { name });
-      await refreshRoster();
-      await resumeJobs(back.name, back.paused_jobs);
-    }
+    note: () => rosterNote
   };
+  /** brings an archived teammate back under its old name. A name that is in use again is refused before anything moves (the plugin refuses it too) */
+  async function restoreArchived(name: string): Promise<void> {
+    const was = archivedNow.get().find((a) => a.id === name)?.was;
+    if (was && (profileNames.has(was) || recs.has(was))) throw new Error('there is a teammate called ' + was + ' already; archive or delete it, then restore');
+    const back = await plug<{ name: string; paused_jobs: string[] }>('bots.restore', { name });
+    await refreshRoster();
+    await resumeJobs(back.name, back.paused_jobs);
+  }
   async function resumeJobs(id: string, jobs: readonly string[]): Promise<void> {
     if (!jobs.length) return;
     try {
@@ -446,6 +451,8 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
     },
     create() { throw new Error('a bot is a Hermes profile and is made with `admin.create`'); },
     archive(id) { admin.archive(id).catch((e: unknown) => { log.error('the bot was not archived', e); }); },
+    archived: archivedNow,
+    restore: restoreArchived,
     admin
   };
   const schedulesSource: SchedulesSource = {

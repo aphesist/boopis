@@ -147,6 +147,70 @@ export function ratio(a: string, b: string): number { const x = lum(a), y = lum(
 /** `top` laid over `under` at top's alpha, as the eye sees it */
 export function composite(top: RGBA, under: RGBA): string { const a = top[3]; return toHex([0, 1, 2].map((i) => (top[i] ?? 0) * a + (under[i] ?? 0) * (1 - a))); }
 
+/* ───────── the contrast guard: a mod's colours that would make text hard to read are not applied ─────────
+   (owner decision, 19 November 2026). A mod's theme is a patch over the user's own: each colour that would take a pair that carries
+   text under its floor is left out, and the theme's own token stays. The floors are the design system's (5.4: 4.5:1 for text on a
+   surface, on a selected row, on a chip, ink on the selected fill, attention text and diff counts), the ratio is WCAG 2.x's, and the
+   pairs are the customizer's own `PAIRS` (text only: marks and outlines hold 3:1 and are not what makes text unreadable), plus strong
+   text on the surfaces, which the design system sets no floor for and which gets the body floor. Pure: the caller says what the theme
+   resolves each token to. */
+/** `--current` is the text colour at this share over the frame (tokens.css); a test keeps the two in step */
+export const CURRENT_ALPHA = 0.085;
+/** the pairs the guard checks: [fg, bg, min]. Specs may be `--current@--bg-1`, the selected row */
+export const GUARD_PAIRS: readonly (readonly [fg: string, bg: string, min: number])[] = [
+  ...PAIRS.filter(([, , min, , scope]) => min >= 4.5 && scope === undefined).map(([fg, bg, min]) => [fg, bg, min] as const),
+  ['--text-strong', '--bg-0', 4.5], ['--text-strong', '--bg-1', 4.5], ['--text-strong', '--bg-2', 4.5], ['--text-strong', '--bg-3', 4.5]
+];
+/** what a skipped colour is called on the card, in the order the card lists them */
+export const GUARD_LABELS: Readonly<Record<string, string>> = {
+  '--text': 'text on surface', '--text-strong': 'strong text', '--text-dim': 'dim text', '--text-quiet': 'quiet text', '--text-on-light': 'text on the selected fill',
+  '--red-text': 'attention text', '--add': 'added lines', '--del': 'removed lines',
+  '--bg-0': 'inset cards', '--bg-1': 'the frame', '--bg-2': 'the ground', '--bg-3': 'raised surfaces', '--bg-4': 'pressed surfaces', '--chip': 'code chips', '--selected': 'the selected fill'
+};
+const GUARD_ORDER = Object.keys(GUARD_LABELS);
+export interface Skipped { token: string; label: string }
+export interface Guarded {
+  /** the colours that hold: what is shown and what Keep stores */
+  applied: Record<string, string>;
+  /** the colours left out, in the card's order, with their words */
+  skipped: Skipped[];
+}
+/** "Skipped 2 colours that would make text hard to read: text on surface, quiet text." (null when nothing was skipped) */
+export const skippedSentence = (skipped: readonly Skipped[]): string | null =>
+  skipped.length ? 'Skipped ' + skipped.length + (skipped.length === 1 ? ' colour' : ' colours') + ' that would make text hard to read: ' + skipped.map((x) => x.label).join(', ') + '.' : null;
+const rgbOf = (hex: string): [number, number, number] => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)) as [number, number, number];
+/** the tokens a pair's side is made of, the one blamed first at the front */
+const partsOf = (spec: string): readonly string[] => (spec === '--current@--bg-1' ? ['--text', '--bg-1'] : [spec]);
+/**
+ * Checks a patch of colours over a theme. `base` is what the theme resolves a token to (#rrggbb) without the patch. While a pair that
+ * carries text is under its floor, one patched colour it is made of is left out (the text side first: dark text on a dark frame
+ * costs the text, not the frame), and the pairs are checked again with it gone, so what is left holds together. Never throws and
+ * never reads the page: a token `base` cannot give counts as unknown and its pairs are not checked.
+ */
+export function guardColors(patch: Readonly<Record<string, string>>, base: (token: string) => string | null): Guarded {
+  const kept: Record<string, string> = { ...patch };
+  const gone: string[] = [];
+  const value = (t: string): string | null => kept[t] ?? base(t);
+  const resolve = (spec: string): string | null => {
+    if (spec !== '--current@--bg-1') return value(spec);
+    const text = value('--text'), frame = value('--bg-1');
+    return text && frame ? composite([...rgbOf(text), CURRENT_ALPHA], [...rgbOf(frame), 1]) : null;
+  };
+  for (;;) {
+    let blame: string | null = null;
+    for (const [fg, bg, min] of GUARD_PAIRS) {
+      const a = resolve(fg), b = resolve(bg);
+      if (!a || !b || ratio(a, b) >= min - 0.005) continue;
+      blame = [...partsOf(fg), ...partsOf(bg)].find((t) => t in kept) ?? null;
+      if (blame) break;
+    }
+    if (!blame) break;
+    delete kept[blame]; gone.push(blame);
+  }
+  const order = (t: string): number => { const i = GUARD_ORDER.indexOf(t); return i < 0 ? GUARD_ORDER.length : i; };
+  return { applied: kept, skipped: gone.sort((a, b) => order(a) - order(b)).map((token) => ({ token, label: GUARD_LABELS[token] ?? token })) };
+}
+
 /* ───────── state ───────── */
 let theme: Theme = (() => { const s = sanitize(readJSON(KEYS.theme)); return s ?? blank(); })();
 let applied: string[] = [];
@@ -223,13 +287,28 @@ export const themeApi = {
   /** a preview is showing */
   previewing: (): boolean => held !== null,
   /** Shows a patch of colours over the saved theme without saving it: a reload, or `endPreview(false)`, gives the saved theme
-      back at once. Called again, it patches the saved theme again (one preview at a time). Every other change restores first. */
-  preview(patch: { colors?: Record<string, string> }): void {
+      back at once. Called again, it patches the saved theme again (one preview at a time). Every other change restores first.
+      A colour that would make text hard to read (the contrast guard above) is not shown: the theme's own token stays, and the
+      answer says which were left out. What is shown is all that Keep stores. */
+  preview(patch: { colors?: Record<string, string> }): Guarded {
+    const showing = held !== null;
     held ??= JSON.parse(JSON.stringify(theme)) as Theme;
     theme = JSON.parse(JSON.stringify(held)) as Theme;
-    if (patch.colors) theme.colors = Object.assign({}, theme.colors, sanitize({ preset: theme.preset, colors: patch.colors })?.colors);
+    if (showing) apply(true);   /* the page shows the last patch: put the saved theme back, so the guard reads what it really resolves to */
+    const wanted = patch.colors ? sanitize({ preset: theme.preset, colors: patch.colors })?.colors ?? {} : {};
+    const guarded = guardColors(wanted, (t) => { try { return hexOf(t); } catch { return null; } });
+    theme.colors = Object.assign({}, theme.colors, guarded.applied);
     apply();
     emit('hx:theme-preview', { previewing: true });
+    return guarded;
+  },
+  /** Keeps a patch of colours as the theme without a preview having shown it (the card was not on screen): the same guard, then saved. */
+  keep(colors: Record<string, string>): Guarded {
+    themeApi.endPreview(false);
+    const wanted = sanitize({ preset: theme.preset, colors })?.colors ?? {};
+    const guarded = guardColors(wanted, (t) => { try { return hexOf(t); } catch { return null; } });
+    if (Object.keys(guarded.applied).length) themeApi.set({ colors: guarded.applied });
+    return guarded;
   },
   /** Ends the preview: `true` keeps the colours it showed (they become the theme and are saved), `false` gives the saved theme back. */
   endPreview(commit: boolean): boolean {
