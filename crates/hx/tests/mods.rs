@@ -543,7 +543,11 @@ fn every_worker_starts_for_an_ordinary_user() {
         "mods.load",
         json!({ "session_id": "u", "plugins": plugins }),
     );
-    assert_eq!(loaded["loaded"].as_array().map(Vec::len), Some(3), "{loaded}");
+    assert_eq!(
+        loaded["loaded"].as_array().map(Vec::len),
+        Some(3),
+        "{loaded}"
+    );
     assert_eq!(loaded["failed"], json!([]), "{loaded}");
     let a = hx.ok(
         "mods.dispatch",

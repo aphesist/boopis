@@ -105,6 +105,10 @@ fn value_text(v: &Value<'_>) -> String {
         .unwrap_or_else(|| "unknown exception".to_owned())
 }
 
+#[allow(
+    clippy::needless_pass_by_value,
+    reason = "used as a `map_err` function"
+)]
 fn script(e: rquickjs::Error) -> Error {
     Error::Script(e.to_string())
 }
@@ -125,7 +129,6 @@ pub fn error_code(e: &Error) -> &'static str {
 }
 
 /// The answer to a `$` call: `ok` or `err` in a frame from the parent.
-#[must_use]
 pub fn ret_result(frame: &Json) -> std::result::Result<Json, HostError> {
     match frame.get("err") {
         Some(e) => Err(HostError {
@@ -459,29 +462,22 @@ impl Engine {
 
     /// Imports the next module and starts its `register`, or finishes the load.
     fn advance_load(&mut self) {
-        loop {
-            let Some(load) = self.loading.as_mut() else {
-                return;
-            };
-            let id = load.reply;
-            let Some(rel) = load.remaining.pop_front() else {
-                self.finish_load();
-                return;
-            };
-            let outcome = self.start_module(&rel);
-            match outcome {
-                Ok((fid, path)) => {
-                    if let Some(l) = self.loading.as_mut() {
-                        l.current = Some((fid.clone(), path));
-                    }
-                    self.slice(Some(&fid));
-                    return;
+        let Some(load) = self.loading.as_mut() else {
+            return;
+        };
+        let id = load.reply;
+        let Some(rel) = load.remaining.pop_front() else {
+            self.finish_load();
+            return;
+        };
+        match self.start_module(&rel) {
+            Ok((fid, path)) => {
+                if let Some(l) = self.loading.as_mut() {
+                    l.current = Some((fid.clone(), path));
                 }
-                Err(e) => {
-                    self.fail_load(id, &e);
-                    return;
-                }
+                self.slice(Some(&fid));
             }
+            Err(e) => self.fail_load(id, &e),
         }
     }
 

@@ -355,7 +355,7 @@ impl ModWorker {
     }
 
     /// Starts a hook in the worker. The receiver gets what the worker says about it.
-    fn invoke(&self, frame: &str, m: Json) -> Option<mpsc::UnboundedReceiver<FrameMsg>> {
+    fn invoke(&self, frame: &str, m: &Json) -> Option<mpsc::UnboundedReceiver<FrameMsg>> {
         if !self.alive() {
             return None;
         }
@@ -372,7 +372,7 @@ impl ModWorker {
         lock(&self.frames).remove(frame);
     }
 
-    fn next_done(&self, frame: &str, call: &str, value: Option<String>) {
+    fn next_done(&self, frame: &str, call: &str, value: Option<&str>) {
         self.write(&json!({ "op": "next_done", "frame": frame, "call": call, "value": value }));
     }
 
@@ -610,7 +610,7 @@ impl Chain {
         out.into_iter().map(|(_, _, _, e)| e).collect()
     }
 
-    fn budget_for(&self, event: &str, budgets: &Budgets) -> Duration {
+    fn budget_for(event: &str, budgets: &Budgets) -> Duration {
         if event == "prompt.edit" {
             budgets.prompt_edit
         } else {
@@ -710,9 +710,7 @@ impl Chain {
                     self.diag("", format!("handler {handler} is gone"));
                     return None;
                 };
-                let Some(worker) = slot.worker.clone() else {
-                    return None;
-                };
+                let worker = slot.worker.clone()?;
                 let arg = if *value {
                     serde_json::from_str::<Json>(e)
                         .ok()
@@ -808,7 +806,7 @@ impl Chain {
         let budget = if catch.is_some() {
             entry.budgets.catch
         } else {
-            self.budget_for(&run.name, &entry.budgets)
+            Self::budget_for(&run.name, &entry.budgets)
         };
         let kind = if catch.is_some() { "catch" } else { entry.kind };
         let mut m = json!({
@@ -819,7 +817,7 @@ impl Chain {
         if let Some(c) = &catch {
             m["failure"] = json!({ "kind": c.kind, "message": c.message, "called": c.called });
         }
-        let Some(mut rx) = entry.worker.invoke(&fid, m) else {
+        let Some(mut rx) = entry.worker.invoke(&fid, &m) else {
             return Outcome::Failed {
                 timeout: false,
                 error: "the mod's worker is not running".into(),
@@ -827,16 +825,13 @@ impl Chain {
         };
         let limit = Instant::now() + self.config.frame_limit;
         loop {
-            let msg = match tokio::time::timeout_at(limit, rx.recv()).await {
-                Ok(m) => m,
-                Err(_) => {
-                    entry.worker.release(&fid);
-                    entry.worker.kill();
-                    return Outcome::Failed {
-                        timeout: true,
-                        error: "the hook did not finish in time and its worker was stopped".into(),
-                    };
-                }
+            let Ok(msg) = tokio::time::timeout_at(limit, rx.recv()).await else {
+                entry.worker.release(&fid);
+                entry.worker.kill();
+                return Outcome::Failed {
+                    timeout: true,
+                    error: "the hook did not finish in time and its worker was stopped".into(),
+                };
             };
             match msg {
                 None => {
@@ -846,7 +841,7 @@ impl Chain {
                     };
                 }
                 Some(FrameMsg::Next { call, e, tier }) => {
-                    self.on_next(hf, &entry, catch.as_ref(), &fid, call, e, tier);
+                    self.on_next(hf, &entry, catch.as_ref(), &fid, call, e, tier.as_deref());
                 }
                 Some(FrameMsg::Settled {
                     status,
@@ -890,7 +885,7 @@ impl Chain {
         fid: &str,
         call: String,
         e: String,
-        tier: Option<String>,
+        tier: Option<&str>,
     ) {
         let worker = entry.worker.clone();
         let fid = fid.to_owned();
@@ -904,12 +899,12 @@ impl Chain {
                     Some(rx) => last_down_value(rx).await,
                     None => None,
                 };
-                worker.next_done(&fid, &call, v);
+                worker.next_done(&fid, &call, v.as_deref());
             });
             return;
         }
         let mut from = hf.i + 1;
-        if let Some(t) = tier.as_deref().and_then(Tier::parse) {
+        if let Some(t) = tier.and_then(Tier::parse) {
             while from < hf.run.entries.len() && tier_rank(hf.run.entries[from].tier) < tier_rank(t)
             {
                 from += 1;
@@ -922,7 +917,7 @@ impl Chain {
         tokio::spawn(async move {
             let v = this.dispatch_from(&run, from, e).await;
             let _ = tx.send(Some(v.clone()));
-            worker.next_done(&fid, &call, v);
+            worker.next_done(&fid, &call, v.as_deref());
         });
     }
 

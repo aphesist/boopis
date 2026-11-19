@@ -83,7 +83,7 @@ export async function mods(env, AXE) {
     await page.click('#mod-tab-tests'); await page.waitForTimeout(400);
     await page.click('.mod-pane .ui-btn:has-text("Re-run")'); await page.waitForTimeout(700);
     const run = await page.evaluate(() => ({ dots: !!document.querySelector('.ss-mods--band .mv-dots[data-indeterminate]'), runner: document.querySelector('.mod-pane')?.textContent.includes('Running tests'), req: window.__hxReplay.requests.filter((r) => r.method === 'plugin.boopis.mod.press').map((r) => r.params) }));
-    check('mods', 'Re-run sends the id of its handler to the mod, and the band and the pane redraw: dots, never a bar', run.req.length === 1 && /^0\.h\d+$/.test(run.req[0].handler) && run.req[0].session_id.startsWith('local-') && run.dots && run.runner, run);
+    check('mods', 'Re-run sends the id of its handler to the mod, and the band and the pane redraw: dots, never a bar', run.req.length === 1 && /^0\.h\d+\.\d+$/.test(run.req[0].handler) && run.req[0].session_id.startsWith('local-') && run.dots && run.runner, run);
     const bar = await page.evaluate(() => document.querySelectorAll('.ss-mods--band [role="progressbar"] :is(progress, meter), .ss-mods--band progress, .ss-mods--band meter').length);
     check('mods', 'progress is dots: no bar element, one dot that travels', bar === 0, bar);
     await page.click('.mod-pane .mv-select'); await page.waitForTimeout(250);

@@ -1641,6 +1641,14 @@
     "LoadedMod": {
       "description": "A mod that is loaded.",
       "properties": {
+        "dir": {
+          "default": null,
+          "description": "The directory it was loaded from.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "expires_in_s": {
           "default": null,
           "description": "Seconds until the sandbox ends the worker, when it is running.",

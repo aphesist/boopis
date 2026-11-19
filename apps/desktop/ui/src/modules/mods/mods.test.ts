@@ -78,16 +78,21 @@ describe('what the recording says, drawn', () => {
     expect([...rig.col.querySelectorAll('[data-mod-log]')].map((n) => n.textContent)).toEqual([expect.stringContaining('the cache for money.test.ts is stale'), expect.stringContaining('token-meter is watching this session')]);
     expect(rig.col.querySelector('hx-card[data-kind="form"] .cd-swatches')).toBeTruthy();
   });
-  it('names each mod as its glyph and its name, and the band with no name as "Mods", never as a mod that was not said', () => {
+  it('names each mod as its glyph and its name, the band after the mod that drew it, and a band with no name as "Mods" when several are loaded', () => {
     follow();
     for (const e of RECORDED) rig.model.handle(SID, e.type, e.payload);
-    expect(rig.band.querySelector('.mod-row')?.getAttribute('aria-label')).toBe('Mods');
+    expect(rig.band.querySelector('.mod-row')?.getAttribute('aria-label')).toBe('test-runner mod');   // two mods are loaded: the event says which drew the row
     expect(rig.band.querySelector('.mod-row__who svg.mv-by__g')).toBeTruthy();
     expect(rig.col.querySelector('[data-mod-log] .mv-by__n')?.textContent).toBe('test-runner');
     expect(rig.col.querySelector('[data-mod-log] .ui-callno')?.textContent).toMatch(/\d\d:\d\d/);
     rig.model.list(SID, { plugins: [{ name: 'only-one' }] });
     play('mod.render', { component: 'AbovePrompt', kind: 'tree', tree: tree('x') });
     expect(rig.band.querySelector('.mod-row')?.getAttribute('aria-label')).toBe('only-one mod');
+    rig.model.list(SID, { plugins: [{ name: 'a' }, { name: 'b' }] });
+    play('mod.render', { component: 'AbovePrompt', kind: 'tree', tree: tree('x') });
+    expect(rig.band.querySelector('.mod-row')?.getAttribute('aria-label')).toBe('Mods');   // no mod named, several loaded: never a guess
+    play('mod.render', { component: 'AbovePrompt', kind: 'tree', tree: tree('x'), plugin: 'b' });
+    expect(rig.band.querySelector('.mod-row')?.getAttribute('aria-label')).toBe('b mod');
   });
 });
 

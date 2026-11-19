@@ -5,7 +5,10 @@
 //! | isolate start plus loading the three example mods | 50 ms |
 //! | one no-op event through the chain | 1 ms |
 //!
-//! plus a `ui.render` of 1,000 elements and the memory an isolate holds. The strict run is
+//! plus a `ui.render` of 1,000 elements and the memory a mod's isolate holds. Each mod runs in a
+//! worker of its own (here a thread of this process, through `ModRuntime`), and the chain runs in
+//! the parent, so an event crosses a channel to each worker whose hook it reaches: the per-event
+//! figures include those hops, and "isolate start" is a worker's start. The strict run is
 //! `#[ignore]` because wall-clock budgets depend on the machine and need an optimised build:
 //!
 //! ```text

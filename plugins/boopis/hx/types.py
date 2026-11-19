@@ -1350,6 +1350,7 @@ class LoadedMod:
     modules: list[str]
     name: str
     tier: str
+    dir: str | None = None
     expires_in_s: int | None = None
     generation: int = 0
     pid: int | None = None
@@ -1361,6 +1362,8 @@ class LoadedMod:
         out['modules'] = [x for x in self.modules]
         out['name'] = self.name
         out['tier'] = self.tier
+        if self.dir is not None:
+            out['dir'] = self.dir
         if self.expires_in_s is not None:
             out['expires_in_s'] = self.expires_in_s
         out['generation'] = self.generation
@@ -1376,6 +1379,7 @@ class LoadedMod:
             modules=[x for x in data['modules']],
             name=data['name'],
             tier=data['tier'],
+            dir=(None if data['dir'] is None else data['dir']) if 'dir' in data else None,
             expires_in_s=(None if data['expires_in_s'] is None else data['expires_in_s']) if 'expires_in_s' in data else None,
             generation=data['generation'] if 'generation' in data else 0,
             pid=(None if data['pid'] is None else data['pid']) if 'pid' in data else None,

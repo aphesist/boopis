@@ -130,6 +130,10 @@ struct SessionSink {
 }
 
 impl HostSink for SessionSink {
+    #[allow(
+        clippy::async_yields_async,
+        reason = "the chain's two-phase call: queued, then answered"
+    )]
     fn begin(&self, request: HostRequest) -> BoxFut<BoxFut<Result<Value, HostError>>> {
         let (link, session_id) = (self.link.clone(), self.id.clone());
         Box::pin(async move {
@@ -729,6 +733,10 @@ fn exit_reason(outcome: &hx_sandbox::Result<hx_sandbox::ExitOutcome>) -> (&'stat
 }
 
 #[cfg(unix)]
+#[allow(
+    clippy::too_many_lines,
+    reason = "one sequence: socket, sandbox policy, spawn, watch, load"
+)]
 async fn spawn_worker(
     session: &Arc<Session>,
     entry: &Arc<ModEntry>,

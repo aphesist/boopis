@@ -46,6 +46,10 @@ struct LocalSink {
 }
 
 impl HostSink for LocalSink {
+    #[allow(
+        clippy::async_yields_async,
+        reason = "the chain's two-phase call: queued, then answered"
+    )]
     fn begin(&self, request: HostRequest) -> BoxFut<BoxFut<std::result::Result<Json, HostError>>> {
         let (reply, answer) = oneshot::channel();
         let sent = lock(&self.calls)
@@ -244,14 +248,14 @@ impl ModRuntime {
                 if self.loaded.iter().any(|l| l.name == manifest.name) {
                     return Err(Error::AlreadyLoaded(manifest.name));
                 }
-                loaded.push(self.load_one(bundle, &manifest.name, tier)?);
+                loaded.push(self.load_one(&bundle, &manifest.name, tier)?);
             }
         }
         Ok(loaded)
     }
 
     #[cfg(unix)]
-    fn load_one(&mut self, bundle: Bundle, name: &str, tier: Tier) -> Result<LoadedPlugin> {
+    fn load_one(&mut self, bundle: &Bundle, name: &str, tier: Tier) -> Result<LoadedPlugin> {
         use std::net::Shutdown;
         use std::os::unix::net::UnixStream;
 
@@ -320,7 +324,7 @@ impl ModRuntime {
     }
 
     #[cfg(not(unix))]
-    fn load_one(&mut self, _bundle: Bundle, _name: &str, _tier: Tier) -> Result<LoadedPlugin> {
+    fn load_one(&mut self, _bundle: &Bundle, _name: &str, _tier: Tier) -> Result<LoadedPlugin> {
         Err(Error::Crashed(
             "the in-process runtime needs Unix sockets".into(),
         ))
@@ -387,11 +391,11 @@ impl ModRuntime {
     /// # Errors
     /// The answer could not be read as JSON.
     pub fn press(&mut self, handler: &str) -> Result<bool> {
-        let handled = self
+        let ran = self
             .rt
             .block_on(self.chain.callback("ui.press", handler, None));
         self.sync_host();
-        handled
+        ran
     }
 
     /// Delivers `ui.input` (`onInput`, `onSubmit`) with the text. True when a handler ran.
@@ -399,11 +403,11 @@ impl ModRuntime {
     /// # Errors
     /// The answer could not be read as JSON.
     pub fn input(&mut self, handler: &str, value: &str) -> Result<bool> {
-        let handled = self
+        let ran = self
             .rt
             .block_on(self.chain.callback("ui.input", handler, Some(value)));
         self.sync_host();
-        handled
+        ran
     }
 
     /// Delivers `ui.select` (`onSelect`) with the chosen value. True when a handler ran.
@@ -411,11 +415,11 @@ impl ModRuntime {
     /// # Errors
     /// The answer could not be read as JSON.
     pub fn select(&mut self, handler: &str, value: &str) -> Result<bool> {
-        let handled = self
+        let ran = self
             .rt
             .block_on(self.chain.callback("ui.select", handler, Some(value)));
         self.sync_host();
-        handled
+        ran
     }
 
     /// Fires a `$.clock.every` timer by id, as its worker would when it came due.

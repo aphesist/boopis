@@ -86,8 +86,7 @@ fn run_example(name: &str) -> Vec<Value> {
             "event": "session.start", "tier": "user", "run": 1,
         }}));
     }
-    let frames = sent.borrow().clone();
-    frames
+    sent.borrow().clone()
 }
 
 #[test]
