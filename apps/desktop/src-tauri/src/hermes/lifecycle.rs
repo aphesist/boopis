@@ -78,6 +78,18 @@ impl Supervisor {
         self
     }
 
+    /// The `hermes` runner (allowlisted environment, timeout, output cap).
+    #[must_use]
+    pub fn cli(&self) -> &Cli {
+        &self.cli
+    }
+
+    /// The limits this supervisor runs under.
+    #[must_use]
+    pub fn limits(&self) -> &Limits {
+        &self.limits
+    }
+
     /// The environment this supervisor reads.
     #[must_use]
     pub fn environment(&self) -> &Environment {

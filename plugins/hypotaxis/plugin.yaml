@@ -12,6 +12,9 @@ provides_tools:
   - exec
   - ship
   - dispatch
+  - request_input
+  - request_credential
+  - ask
 provides_hooks:
   - pre_tool_call
   - post_tool_call
@@ -68,6 +71,9 @@ config_schema:
   exec:
     type: object
     description: "The exec tool's kernel: {timeout_ms, max_timeout_ms, kill_grace_ms, start_timeout_ms, max_calls_per_cell, max_concurrency, output_cap_bytes, result_cap_bytes, spill_cap_bytes, call_result_cap_bytes, sh_output_cap_bytes, max_kernels, idle_timeout_s, max_lifetime_s, memory_mb, max_processes, network: off|loopback|on (default off)}. Defaults are in the settings schema."
+  forms:
+    type: object
+    description: "Forms (docs/FORMS.md): {max_open (default 20 per session), expires_s (default 3600), wait_default_s (default 120), wait_max_s (default 300)}."
   hx_path:
     type: string
     default: ""

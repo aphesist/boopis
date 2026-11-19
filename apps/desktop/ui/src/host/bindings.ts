@@ -12,6 +12,14 @@ export const commands = {
 	hermesInstall: (consent: boolean, options?: InvokeOptions) => __TAURI_INVOKE<InstallReport>("hermes_install", { consent }, options),
 	/**  Ask a gateway link that gave up (`incompatible`) to try again, after the user fixed Hermes. */
 	hermesRetry: (profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<null>("hermes_retry", { profile }, options),
+	/**  Whether first-run setup still has to run. Read-only: it changes nothing. */
+	setupCheck: (profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<Check>("setup_check", { profile }, options),
+	/**
+	 *  Run first-run setup as far as it goes. `answer` replies to the form the last call returned (secret values go to the
+	 *  keychain here and nowhere else); `reconsider` asks again about a declined consent. Calling it with neither is
+	 *  "Check again". It never runs an installer.
+	 */
+	setupAdvance: (profile: string | null, answer: Answer | null, reconsider: boolean, options?: InvokeOptions) => __TAURI_INVOKE<Status_Serialize>("setup_advance", { profile, answer, reconsider }, options),
 	/**  Open a UI connection to the gateway of a profile. Frames arrive on `frames`. */
 	gatewayConnect: (profile: string | null, frames: Channel<Frame>, options?: InvokeOptions) => __TAURI_INVOKE<Connected>("gateway_connect", { profile, frames }, options),
 	/**  Send a JSON-RPC frame to the gateway. The host validates shape and size and never alters `params`. */
@@ -44,6 +52,18 @@ export const events = {
 };
 
 /* Types */
+/**  The user's answer to the open form. The secret values travel UI to host only and are never logged. */
+export type Answer = {
+	/**  The form's id. */
+	form_id: string,
+	/**  The user cancelled. */
+	cancelled: boolean,
+	/**  The non-secret values. */
+	values: Json,
+	/**  The secret fields' values (credential forms), by field name. */
+	secrets: Json,
+};
+
 /**  What the host remembers. */
 export type AppSettings = AppSettings_Serialize | AppSettings_Deserialize;
 
@@ -65,6 +85,16 @@ export type AppSettings_Serialize = {
 	profile: string | null,
 	/**  Whether the host may show desktop notifications. */
 	notifications: boolean,
+};
+
+/**  Whether first-run setup still has to run, without changing anything. */
+export type Check = {
+	/**  Hermes is installed. */
+	hermes_installed: boolean,
+	/**  Setup has not finished, or the plugin is missing, outdated or disabled. */
+	needed: boolean,
+	/**  One line saying why. */
+	reason: string,
 };
 
 /**  The `gateway_connect` answer. */
@@ -109,6 +139,80 @@ export type ConnectionStateEvent_Serialize = {
 	attempts: number,
 	/**  The last failure, when not ready. */
 	error: HostError | null,
+};
+
+/**  One change to Hermes's configuration, as shown in the consent form. */
+export type DiffLine = DiffLine_Serialize | DiffLine_Deserialize;
+
+/**  One change to Hermes's configuration, as shown in the consent form. */
+export type DiffLine_Deserialize = {
+	/**  The dotted key. */
+	key: string,
+	/**  What it is now (`null`: unset). */
+	from?: unknown,
+	/**  What it will be. */
+	to: unknown,
+};
+
+/**  One change to Hermes's configuration, as shown in the consent form. */
+export type DiffLine_Serialize = {
+	/**  The dotted key. */
+	key: string,
+	/**  What it is now (`null`: unset). */
+	from: unknown,
+	/**  What it will be. */
+	to: unknown,
+};
+
+/**  A form for the UI, in the shape of the plugin's `form.opened` (`docs/FORMS.md` section 6). */
+export type Form = Form_Serialize | Form_Deserialize;
+
+/**  A form for the UI, in the shape of the plugin's `form.opened` (`docs/FORMS.md` section 6). */
+export type Form_Deserialize = {
+	/**  A stable id: the same question has the same id after a restart. */
+	form_id: string,
+	/**  `setup`, `credential` or `choice`. */
+	kind: string,
+	/**  One line. */
+	title: string,
+	/**  Why it is asked and what happens on submit. */
+	body: string,
+	/**  MCP elicitation's schema with the `x-` extensions. */
+	schema: Json,
+	/**  The submit button. */
+	submit: Json,
+	/**  The cancel button. */
+	cancel: Json,
+	/**  Whether a field is secret (the UI then never mirrors it anywhere). */
+	sensitive: boolean,
+	/**  Always `host`. */
+	origin: string,
+	/**  The exact configuration changes, for a `setup` form. */
+	diff: DiffLine_Deserialize[],
+};
+
+/**  A form for the UI, in the shape of the plugin's `form.opened` (`docs/FORMS.md` section 6). */
+export type Form_Serialize = {
+	/**  A stable id: the same question has the same id after a restart. */
+	form_id: string,
+	/**  `setup`, `credential` or `choice`. */
+	kind: string,
+	/**  One line. */
+	title: string,
+	/**  Why it is asked and what happens on submit. */
+	body: string,
+	/**  MCP elicitation's schema with the `x-` extensions. */
+	schema: Json,
+	/**  The submit button. */
+	submit: Json,
+	/**  The cancel button. */
+	cancel: Json,
+	/**  Whether a field is secret (the UI then never mirrors it anywhere). */
+	sensitive: boolean,
+	/**  Always `host`. */
+	origin: string,
+	/**  The exact configuration changes, for a `setup` form. */
+	diff: DiffLine_Serialize[],
 };
 
 /**  A gateway frame, as JSON, exactly as the gateway sent it. */
@@ -247,6 +351,89 @@ export type ProxyStats_Serialize = {
 	sink_p95_us: number | null,
 	/**  p95 of writing a frame to the gateway socket, in microseconds. */
 	write_p95_us: number | null,
+};
+
+/**  The short "you're set" note. */
+export type Receipt = {
+	/**  Plain lines: what is installed, what was changed, what to know. */
+	lines: string[],
+};
+
+/**  What `setup_advance` answers. */
+export type Status = Status_Serialize | Status_Deserialize;
+
+/**  What `setup_advance` answers. */
+export type Status_Deserialize = {
+	/**  The checklist. */
+	steps: Step_Deserialize[],
+	/**  The question to show, if one is open. */
+	form?: Form_Deserialize | null,
+	/**  Every step is done, skipped or declined. */
+	done: boolean,
+	/**  When Hermes is missing: the documented install command (nothing was run). */
+	install_command?: string | null,
+	/**  Present once the flow reached its end. */
+	receipt?: Receipt | null,
+};
+
+/**  What `setup_advance` answers. */
+export type Status_Serialize = {
+	/**  The checklist. */
+	steps: Step_Serialize[],
+	/**  The question to show, if one is open. */
+	form: Form_Serialize | null,
+	/**  Every step is done, skipped or declined. */
+	done: boolean,
+	/**  When Hermes is missing: the documented install command (nothing was run). */
+	install_command: string | null,
+	/**  Present once the flow reached its end. */
+	receipt: Receipt | null,
+};
+
+/**  One line of the checklist. */
+export type Step = Step_Serialize | Step_Deserialize;
+
+/**  Where a step stands. */
+export type StepState = 
+/**  Not reached yet. */
+"pending" | 
+/**  Done (or already was). */
+"done" | 
+/**  Waiting for the user's answer to the open form. */
+"needs_input" | 
+/**  Stopped; `code` and `detail` say why and what to do. */
+"blocked" | 
+/**  The user declined; the detail says what will not work. */
+"declined" | 
+/**  Left out on purpose; the detail says what it costs. */
+"skipped";
+
+/**  One line of the checklist. */
+export type Step_Deserialize = {
+	/**  `hermes`, `plugin`, `hx`, `config`, `models`, `restart` or `receipt`. */
+	id: string,
+	/**  The label. */
+	title: string,
+	/**  The state. */
+	state: StepState,
+	/**  What happened, or what is needed. */
+	detail: string,
+	/**  A stable `hx.setup.*` code when blocked. */
+	code?: string | null,
+};
+
+/**  One line of the checklist. */
+export type Step_Serialize = {
+	/**  `hermes`, `plugin`, `hx`, `config`, `models`, `restart` or `receipt`. */
+	id: string,
+	/**  The label. */
+	title: string,
+	/**  The state. */
+	state: StepState,
+	/**  What happened, or what is needed. */
+	detail: string,
+	/**  A stable `hx.setup.*` code when blocked. */
+	code: string | null,
 };
 
 /* Tauri Specta runtime */

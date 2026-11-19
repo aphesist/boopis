@@ -32,7 +32,10 @@
     "todo_list",
     "clarify",
     "vision_analyze",
-    "video_analyze"
+    "video_analyze",
+    "request_input",
+    "request_credential",
+    "ask"
   ],
   "kernel_denied_tools": [
     "exec"

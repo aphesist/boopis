@@ -54,6 +54,9 @@ def test_register_wires_hooks_rpc_and_the_prompt_section() -> None:
         "ledger.stats",
         "cascade.state",
         "prices.refresh",
+        "form.submit",
+        "form.cancel",
+        "form.list",
     }
     assert set(ctx.rpc) == own | set(compat.RPC_METHODS)
     assert list(ctx.sections) == ["hypotaxis"]

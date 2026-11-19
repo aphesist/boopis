@@ -27,6 +27,7 @@ from .config import (
     load_settings,
 )
 from .errors import InvalidParamsError, LedgerError, ModeLockedError, PricesError
+from .forms.service import FormService
 from .governance import host
 from .governance.ladder import resolve_ladder
 from .governance.links import WorkerLink
@@ -106,6 +107,7 @@ class Runtime:
         self._registry_lock = threading.Lock()
         self.links: dict[str, WorkerLink] = {}  # a delegated child's session id -> the attempt it is
         self.cascades = Cascades()
+        self.forms: FormService | None = None  # made on first use by ``forms.tools.service``
         # what the cascade asks of Hermes (``governance.host``); tests replace them
         self.provider_known = provider_known or host.provider_known
         self.delegation_backend = delegation_backend or host.delegation_backend

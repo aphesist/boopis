@@ -11,6 +11,8 @@
     "allow-hermes-status",
     "allow-hermes-install",
     "allow-hermes-retry",
+    "allow-setup-check",
+    "allow-setup-advance",
     "allow-gateway-connect",
     "allow-gateway-send",
     "allow-gateway-disconnect",

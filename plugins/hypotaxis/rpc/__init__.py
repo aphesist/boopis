@@ -24,6 +24,9 @@ CAPABILITIES = (
     "ledger.stats",
     "cascade.state",
     "prices.refresh",
+    "form.submit",
+    "form.cancel",
+    "form.list",
 )
 DEFAULT_TAIL_LIMIT = 200
 MAX_TAIL_LIMIT = 1000
@@ -166,7 +169,12 @@ def prices_refresh(params: Mapping[str, Any], *, session_id: str | None = None, 
 
 
 def handlers() -> dict[str, Handler]:
+    from ..forms.rpc import form_cancel, form_list, form_submit
+
     return {
+        "form.submit": form_submit,
+        "form.cancel": form_cancel,
+        "form.list": form_list,
         "describe": describe,
         "mode.set": mode_set,
         "ledger.tail": ledger_tail,

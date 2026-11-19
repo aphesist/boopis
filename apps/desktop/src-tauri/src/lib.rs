@@ -12,6 +12,7 @@ pub mod hermes;
 pub mod os;
 pub mod secrets;
 pub mod settings;
+pub mod setup;
 pub mod state;
 
 use std::sync::Arc;
@@ -32,6 +33,8 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::hermes_status,
             commands::hermes_install,
             commands::hermes_retry,
+            commands::setup_check,
+            commands::setup_advance,
             commands::gateway_connect,
             commands::gateway_send,
             commands::gateway_disconnect,
@@ -115,6 +118,10 @@ pub fn run() {
                 supervisor: supervisor.clone(),
                 secrets: secrets.clone(),
                 limits,
+                bundle: setup::install::Bundle::locate(
+                    app.path().resource_dir().ok().as_deref(),
+                    std::env::current_exe().ok().as_deref().and_then(std::path::Path::parent),
+                ),
             });
             // The plugin's door to the keychain. A failure (no socket support, another host running) is logged and
             // shown nowhere else: the app works, only the plugin's secret source stays empty.

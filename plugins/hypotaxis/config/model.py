@@ -67,6 +67,17 @@ class ExecSettings:
 
 
 @dataclass(frozen=True, slots=True)
+class FormSettings:
+    """``forms``: how many forms a session may have open, how long one lives, and how long ``wait=true`` may block
+    (the schema's defaults; ``wait_max_s`` stays under Hermes's generic tool deadline of about 420 s)."""
+
+    max_open: int = 20
+    expires_s: int = 3600
+    wait_default_s: int = 120
+    wait_max_s: int = 300
+
+
+@dataclass(frozen=True, slots=True)
 class CascadeSettings:
     """``cascade``: how much of a failed attempt the next tier is told (the brief itself is always whole).
     ``brief_max_chars`` bounds a brief that ``dispatch`` accepts."""
@@ -89,6 +100,7 @@ class Settings:
     prices: PricesSettings = PricesSettings()
     pack: PackSettings = PackSettings()
     exec: ExecSettings = ExecSettings()
+    forms: FormSettings = FormSettings()
     subscription_providers: tuple[str, ...] = ()
     permissions: PermissionRules = PermissionRules()
     hx_path: str = ""
