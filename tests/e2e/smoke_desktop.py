@@ -4,7 +4,14 @@
 
 It starts the stack (``serve_stack.py``), then WebKitWebDriver under Xvfb, which launches the app with the stack's
 environment. The app's window loads the UI, the host connects to the gateway, the script clicks "New session", types a
-prompt with a scripted reply, and waits for that reply to stream into the conversation. Needs ``xvfb-run`` and
+prompt with a scripted reply, and waits for that reply to stream into the conversation.
+
+Two things make that session possible. The app is told to use this Hermes (``HYPOTAXIS_HERMES=existing``): a packaged
+app carries its own runtime and would otherwise unpack it and ignore this one. And the stack's home is marked as set up
+(``setup-done.json``, which the host's own tests read as "set up"), because the UI shows first-run setup instead of a
+session until setup has finished; the first-run flow itself is tested by ``tests/setup_live.rs``.
+
+Needs ``xvfb-run`` and
 ``WebKitWebDriver`` (Debian/Ubuntu: ``webkit2gtk-driver``). Exit 0 on success, 3 when a prerequisite is missing.
 Everything it starts is stopped on the way out.
 """
@@ -25,6 +32,7 @@ from pathlib import Path
 
 HERE = Path(__file__).parent
 PORT = 4455
+SETUP_DONE = HERE / "setup-done.json"  # what the host's setup leaves in a home it has finished with
 REPLY = "Hello from the fake model, streamed through the host."
 
 
@@ -73,11 +81,15 @@ def main() -> int:
             print("no Hermes install: set HX_E2E_HERMES_ENV", file=sys.stderr)
             return 3
         info = json.loads(line)
+        marker = Path(info["home"]) / "hypotaxis" / "setup.json"
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(SETUP_DONE, marker)
         runtime = tempfile.mkdtemp(prefix="hx-run-")
         os.chmod(runtime, 0o700)
         env = {
             **os.environ,
             **info["env"],
+            "HYPOTAXIS_HERMES": "existing",
             "XDG_RUNTIME_DIR": runtime,
             "GDK_BACKEND": "x11",
             "APPIMAGE_EXTRACT_AND_RUN": "1",
@@ -109,7 +121,19 @@ def main() -> int:
         # The sidebar button may sit in a collapsed rail at this window size: click it from the page, as a user's
         # pointer or the keyboard shortcut would.
         call("POST", f"{s}/execute/sync", {"script": "document.querySelector('#hx-btn-new').click()", "args": []})
-        composer = wait_for(lambda: find(".ui-composer__input"), "the composer")
+
+        def setup_showing() -> bool:
+            try:
+                return find(".hx-first-run") is not None
+            except RuntimeError:  # no such element: the UI is not holding the session back
+                return False
+
+        def composer_or_setup() -> str | None:
+            if setup_showing():  # the UI holds back the session until setup has finished
+                raise SystemExit(f"first-run setup is showing instead of a session: {text().strip()[:200]!r}")
+            return find(".ui-composer__input")
+
+        composer = wait_for(composer_or_setup, "the composer")
         call("POST", f"{s}/element/{composer}/value", {"text": f"@@reply {REPLY}@@"})
 
         def agent_text() -> str:  # the agent's prose only: the user's own message also holds the directive

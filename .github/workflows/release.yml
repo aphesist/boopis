@@ -150,7 +150,9 @@ jobs:
       - name: the makedepends and depends of the PKGBUILD, read from the file itself
         run: |
           bash -c 'source packaging/arch/PKGBUILD; pacman -S --noconfirm --needed "${makedepends[@]}" "${depends[@]}" namcap'
-          rustc -V && node -v && pnpm -v
+          # corepack comes from makedepends and runs the pnpm that apps/desktop/ui/package.json pins (packageManager):
+          # Arch has no `pnpm` on PATH here, and the PKGBUILD never calls one. Run from the UI so the pin applies.
+          rustc -V && node -v && corepack -v && (cd apps/desktop/ui && corepack pnpm -v)
       - name: the tag and the PKGBUILD match the app's version
         run: |
           v=$(sed -n 's/^ *"version": *"\(.*\)",/\1/p' apps/desktop/src-tauri/tauri.conf.json | head -1)
@@ -171,7 +173,7 @@ jobs:
             /home/builder/target
           key: arch-pkg-${{ hashFiles('Cargo.lock') }}
           restore-keys: arch-pkg-
-      - name: makepkg (prepare fetches cargo and pnpm, build is offline)
+      - name: makepkg (prepare fetches cargo and, through corepack, the pinned pnpm; build is offline)
         run: |
           mkdir -p /home/builder/target /home/builder/.cargo
           chown -R builder: . /home/builder/target /home/builder/.cargo
