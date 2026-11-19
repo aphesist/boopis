@@ -20,9 +20,12 @@ mod natives;
 mod runtime;
 pub mod transform;
 pub mod tree;
+pub mod wire;
+pub mod worker;
 
 pub use error::{Error, Result};
-pub use host::{HostCalls, HostError, HostRequest};
+pub use files::Bundle;
+pub use host::{CallId, Completion, HostCalls, HostError, HostReply, HostRequest};
 pub use manifest::Manifest;
 pub use runtime::{
     Answer, Budgets, Diagnostic, LoadedPlugin, Memory, ModRuntime, Render, RuntimeConfig, Tier,

@@ -42,6 +42,8 @@ pub enum Namespace {
     Sandbox,
     /// `redact.*`: secret redaction of free text (`hx-pack`'s redactor).
     Redact,
+    /// `mods.*`: Claude Code mods in a sandboxed worker (`hx-mods`).
+    Mods,
 }
 
 impl Namespace {
@@ -54,6 +56,7 @@ impl Namespace {
             Namespace::Pack => "pack",
             Namespace::Sandbox => "sandbox",
             Namespace::Redact => "redact",
+            Namespace::Mods => "mods",
         }
     }
 

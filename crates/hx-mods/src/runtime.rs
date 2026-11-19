@@ -1,10 +1,16 @@
-//! The isolate: one `QuickJS` runtime shared by all of a session's mods, the event chain running
-//! inside it, and the loop that drives it with budgets.
+//! The runtime: one `QuickJS` runtime per session, with one context for the event chain and one
+//! context per mod, and the loop that drives them with budgets.
 //!
-//! The isolate is single-threaded and synchronous from the outside: [`ModRuntime::dispatch`]
-//! starts an event, runs the engine's job queue until the chain answers, and returns. A hook that
-//! runs past its budget is interrupted by the engine and skipped by the chain; see
-//! `js/kernel.js` for why the skip is driven from here.
+//! No object is shared between contexts. The chain (`js/chain.js`) and each mod's agent
+//! (`js/agent.js`) exchange JSON messages that Rust routes, so a mod cannot reach another mod, or
+//! the chain, through a shared primitive. The runtime is single-threaded and blocking from the
+//! outside: [`ModRuntime::dispatch`] starts an event and drives the engine until the chain
+//! answers, waiting for the host when a `$` call is pending. A hook that runs past its budget is
+//! interrupted by the engine and skipped by the chain; see `js/chain.js` for why the skip is
+//! driven from here.
+//!
+//! The heap limit is the runtime's, shared by every context: `QuickJS` accounts memory per
+//! runtime, not per context, so one mod that fills it makes other mods' allocations throw too.
 
 use std::cell::{Cell, RefCell};
 use std::path::Path;
@@ -16,15 +22,16 @@ use rquickjs::{Context, Ctx, Function, Module, Object, Persistent, Runtime, Valu
 use serde_json::{Value as Json, json};
 
 use crate::error::{Error, Result};
-use crate::files::PluginDir;
-use crate::host::HostCalls;
+use crate::files::{Bundle, Files, PluginDir};
+use crate::host::{CallId, HostCalls, HostError};
 use crate::manifest::{self, Manifest};
 use crate::modules::{ModLoader, ModResolver, Shared, SharedRef};
-use crate::natives::{self, NativeState};
+use crate::natives::{self, Msg, NativeState};
 use crate::tree::{TreeLimits, TreeStats, validate};
 
 const WEBAPI_JS: &str = include_str!("js/webapi.js");
-const KERNEL_JS: &str = include_str!("js/kernel.js");
+const CHAIN_JS: &str = include_str!("js/chain.js");
+const AGENT_JS: &str = include_str!("js/agent.js");
 
 /// Where a mod sits in the chain: `prependPlugins` run first, `appendPlugins` last.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -39,7 +46,20 @@ pub enum Tier {
 }
 
 impl Tier {
-    const fn name(self) -> &'static str {
+    /// The tier named `name` (`prepend`, `user` or `append`).
+    #[must_use]
+    pub fn parse(name: &str) -> Option<Self> {
+        match name {
+            "prepend" => Some(Self::Prepend),
+            "user" => Some(Self::User),
+            "append" => Some(Self::Append),
+            _ => None,
+        }
+    }
+
+    /// The tier's name, as the chain and the wire spell it.
+    #[must_use]
+    pub const fn name(self) -> &'static str {
         match self {
             Self::Prepend => "prepend",
             Self::User => "user",
@@ -80,6 +100,10 @@ pub struct RuntimeConfig {
     pub stack_limit: usize,
     /// Element tree limits.
     pub tree: TreeLimits,
+    /// The longest a `$` call may stay pending before the mod's promise rejects.
+    pub host_timeout: Duration,
+    /// The shortest `clock.every` interval; a shorter one is raised to it.
+    pub min_timer: Duration,
 }
 
 impl Default for RuntimeConfig {
@@ -89,6 +113,8 @@ impl Default for RuntimeConfig {
             memory_limit: 64 * 1024 * 1024,
             stack_limit: 512 * 1024,
             tree: TreeLimits::default(),
+            host_timeout: Duration::from_mins(10),
+            min_timer: Duration::from_millis(50),
         }
     }
 }
@@ -164,14 +190,21 @@ enum JobsEnd {
     TooLong,
 }
 
-/// The isolate and the chain.
-pub struct ModRuntime {
-    kernel: Persistent<Object<'static>>,
+/// One mod's context and the handle on its agent.
+struct ModCtx {
     ctx: Context,
+    agent: Persistent<Object<'static>>,
+}
+
+/// The runtime: the chain and the mods' contexts.
+pub struct ModRuntime {
+    chain: Persistent<Object<'static>>,
+    chain_ctx: Context,
+    mods: Vec<Option<ModCtx>>,
+    loaded: Vec<Option<LoadedPlugin>>,
     rt: Runtime,
     shared: SharedRef,
-    deadline: Rc<Cell<Option<Instant>>>,
-    diagnostics: Rc<RefCell<Vec<Diagnostic>>>,
+    state: NativeState,
     config: RuntimeConfig,
     next_run: u64,
     crashed: Option<String>,
@@ -194,8 +227,12 @@ fn value_text(v: &Value<'_>) -> String {
         .unwrap_or_else(|| "unknown exception".to_owned())
 }
 
+fn is_interrupt(e: &Error) -> bool {
+    matches!(e, Error::Script(t) if t.contains("interrupted"))
+}
+
 impl ModRuntime {
-    /// Starts an isolate with the web APIs and the chain installed and no mods loaded.
+    /// Starts a runtime with the chain installed and no mods loaded.
     ///
     /// # Errors
     /// [`Error::Script`] if the engine cannot start.
@@ -211,50 +248,67 @@ impl ModRuntime {
         })));
         let shared: SharedRef = Rc::new(RefCell::new(Shared::default()));
         rt.set_loader(ModResolver(shared.clone()), ModLoader(shared.clone()));
-        let ctx = Context::full(&rt).map_err(script)?;
         let state = NativeState {
             host: Rc::new(RefCell::new(host)),
-            deadline: deadline.clone(),
+            deadline,
             diagnostics: Rc::default(),
             started: Instant::now(),
+            queue: Rc::default(),
+            pending: Rc::default(),
+            timers: Rc::default(),
+            next_call: Rc::default(),
+            host_timeout: config.host_timeout,
+            min_timer: config.min_timer,
         };
-        let diagnostics = state.diagnostics.clone();
-        let kernel = ctx
+        let chain_ctx = Context::full(&rt).map_err(script)?;
+        let chain = chain_ctx
             .with(|ctx| -> rquickjs::Result<_> {
-                let globals = ctx.globals();
-                let web: Function = ctx.eval(WEBAPI_JS)?;
-                web.call::<_, ()>((natives::web_natives(&ctx)?, globals))?;
-                let make: Function = ctx.eval(KERNEL_JS)?;
-                let kernel: Object = make.call((natives::kernel_natives(&ctx, &state)?,))?;
+                let make: Function = ctx.eval(CHAIN_JS)?;
+                let chain: Object = make.call((natives::chain_natives(&ctx, &state)?,))?;
                 let b = &config.budgets;
                 let cfg = json!({ "default": millis(b.event), "promptEdit": millis(b.prompt_edit), "catch": millis(b.catch) });
-                kernel.get::<_, Function>("configure")?.call::<_, ()>((cfg.to_string(),))?;
-                Ok(Persistent::save(&ctx, kernel))
+                chain
+                    .get::<_, Function>("configure")?
+                    .call::<_, ()>((cfg.to_string(),))?;
+                Ok(Persistent::save(&ctx, chain))
             })
             .map_err(script)?;
         Ok(Self {
-            kernel,
-            ctx,
+            chain,
+            chain_ctx,
+            mods: Vec::new(),
+            loaded: Vec::new(),
             rt,
             shared,
-            deadline,
-            diagnostics,
+            state,
             config,
             next_run: 0,
             crashed: None,
         })
     }
 
-    /// Loads one plugin: reads its manifests, evaluates its modules and calls each `register`.
+    /// Loads one plugin from a directory: reads its manifests, evaluates its modules and calls
+    /// each `register`.
     ///
     /// # Errors
-    /// Anything [`Error`] describes. A failed load leaves hooks the plugin registered before the
-    /// failure in place; the caller should discard the runtime or not rely on that plugin.
+    /// Anything [`Error`] describes. A failed load unloads the plugin again.
     pub fn load_plugin(&mut self, dir: &Path, tier: Tier) -> Result<LoadedPlugin> {
         self.ensure_usable()?;
-        let plugin_dir = PluginDir::open(dir)?;
-        let manifest = manifest::read(&plugin_dir)?;
-        self.register_plugin(plugin_dir, &manifest, tier)
+        let files = Files::Disk(PluginDir::open(dir)?);
+        let manifest = manifest::read(&files)?;
+        self.register_plugin(files, &manifest, tier)
+    }
+
+    /// Loads one plugin from sources the parent already read (a sandboxed worker cannot read the
+    /// plugin directory).
+    ///
+    /// # Errors
+    /// As [`Self::load_plugin`].
+    pub fn load_bundle(&mut self, bundle: Bundle, tier: Tier) -> Result<LoadedPlugin> {
+        self.ensure_usable()?;
+        let files = Files::Memory(bundle);
+        let manifest = manifest::read(&files)?;
+        self.register_plugin(files, &manifest, tier)
     }
 
     /// Loads several plugins in dependency order (dependencies first), each into its tier.
@@ -265,9 +319,30 @@ impl ModRuntime {
         self.ensure_usable()?;
         let mut opened = Vec::with_capacity(plugins.len());
         for (path, tier) in plugins {
-            let dir = PluginDir::open(path)?;
-            let manifest = manifest::read(&dir)?;
-            opened.push((dir, manifest, *tier));
+            opened.push((Files::Disk(PluginDir::open(path)?), *tier));
+        }
+        self.load_set(opened)
+    }
+
+    /// Loads several bundles in dependency order, each into its tier.
+    ///
+    /// # Errors
+    /// As [`Self::load_plugins`].
+    pub fn load_bundles(&mut self, bundles: Vec<(Bundle, Tier)>) -> Result<Vec<LoadedPlugin>> {
+        self.ensure_usable()?;
+        self.load_set(
+            bundles
+                .into_iter()
+                .map(|(b, t)| (Files::Memory(b), t))
+                .collect(),
+        )
+    }
+
+    fn load_set(&mut self, plugins: Vec<(Files, Tier)>) -> Result<Vec<LoadedPlugin>> {
+        let mut opened = Vec::with_capacity(plugins.len());
+        for (files, tier) in plugins {
+            let manifest = manifest::read(&files)?;
+            opened.push((files, manifest, tier));
         }
         let graph: Vec<_> = opened
             .iter()
@@ -277,28 +352,112 @@ impl ModRuntime {
         let mut slots: Vec<_> = opened.into_iter().map(Some).collect();
         let mut loaded = Vec::with_capacity(slots.len());
         for i in order {
-            if let Some((dir, manifest, tier)) = slots[i].take() {
-                loaded.push(self.register_plugin(dir, &manifest, tier)?);
+            if let Some((files, manifest, tier)) = slots[i].take() {
+                loaded.push(self.register_plugin(files, &manifest, tier)?);
             }
         }
         Ok(loaded)
     }
 
+    /// The plugins loaded now, in load order.
+    #[must_use]
+    pub fn plugins(&self) -> Vec<LoadedPlugin> {
+        self.loaded.iter().flatten().cloned().collect()
+    }
+
+    /// Unloads a plugin: its hooks leave the chain, its timers stop, and its context is dropped
+    /// with everything in it.
+    ///
+    /// # Errors
+    /// [`Error::Crashed`] if the runtime cannot be driven. Unloading a name that is not loaded is `Ok(false)`.
+    pub fn unload_plugin(&mut self, name: &str) -> Result<bool> {
+        self.ensure_usable()?;
+        let Some(idx) = self
+            .loaded
+            .iter()
+            .position(|l| l.as_ref().is_some_and(|l| l.name == name))
+        else {
+            return Ok(false);
+        };
+        self.call_chain::<_, ()>("removePlugin", |_: &Ctx<'_>, f: &Function<'_>| {
+            f.call((idx,))
+        })?;
+        self.loaded[idx] = None;
+        self.mods[idx] = None;
+        self.shared.borrow_mut().roots[idx] = None;
+        self.state.timers.borrow_mut().retain(|t| t.idx != idx);
+        self.state.pending.borrow_mut().retain(|_, p| p.idx != idx);
+        // Messages addressed to it are dropped on delivery.
+        Ok(true)
+    }
+
     fn register_plugin(
         &mut self,
-        dir: PluginDir,
+        files: Files,
         manifest: &Manifest,
         tier: Tier,
     ) -> Result<LoadedPlugin> {
-        let idx = {
-            let mut shared = self.shared.borrow_mut();
-            shared.roots.push(Some(dir));
-            shared.roots.len() - 1
-        };
-        let loaded = self.register_modules(idx, manifest, tier);
-        // Whether or not it loaded, nothing reads the directory again.
+        if self
+            .loaded
+            .iter()
+            .flatten()
+            .any(|l| l.name == manifest.name)
+        {
+            return Err(Error::AlreadyLoaded(manifest.name.clone()));
+        }
+        let idx = self.mods.len();
+        self.shared.borrow_mut().roots.push(Some(files));
+        self.mods.push(None);
+        self.loaded.push(None);
+        let result = self.register_modules(idx, manifest, tier);
+        // Whether or not it loaded, nothing reads the sources again.
         self.shared.borrow_mut().roots[idx] = None;
-        loaded
+        match result {
+            Ok(loaded) => {
+                self.loaded[idx] = Some(loaded.clone());
+                Ok(loaded)
+            }
+            Err(e) => {
+                if self.mods[idx].is_some() && self.crashed.is_none() {
+                    let _ = self
+                        .call_chain::<_, ()>("removePlugin", |_: &Ctx<'_>, f: &Function<'_>| {
+                            f.call((idx,))
+                        });
+                }
+                self.mods[idx] = None;
+                self.state.timers.borrow_mut().retain(|t| t.idx != idx);
+                self.state.pending.borrow_mut().retain(|_, p| p.idx != idx);
+                Err(e)
+            }
+        }
+    }
+
+    /// A fresh context for one mod: the web APIs, the agent, intrinsics frozen.
+    fn new_mod_context(&self, idx: usize, manifest: &Manifest, tier: Tier) -> Result<ModCtx> {
+        let script = |e: rquickjs::Error| Error::Script(e.to_string());
+        let ctx = Context::full(&self.rt).map_err(script)?;
+        let info = json!({
+            "idx": idx,
+            "name": manifest.name,
+            "tier": tier.name(),
+            "options": Json::Object(manifest.options.clone()),
+        })
+        .to_string();
+        let state = self.state.clone();
+        let name = manifest.name.clone();
+        let agent = ctx
+            .with(|ctx| -> rquickjs::Result<_> {
+                let globals = ctx.globals();
+                let web: Function = ctx.eval(WEBAPI_JS)?;
+                web.call::<_, ()>((natives::web_natives(&ctx)?, globals))?;
+                let make: Function = ctx.eval(AGENT_JS)?;
+                let info = ctx.json_parse(info)?;
+                let agent: Object =
+                    make.call((natives::agent_natives(&ctx, &state, idx, &name)?, info))?;
+                Ok(Persistent::save(&ctx, agent))
+            })
+            .map_err(script)?;
+        Ok(ModCtx { ctx, agent })
     }
 
     fn register_modules(
@@ -307,7 +466,11 @@ impl ModRuntime {
         manifest: &Manifest,
         tier: Tier,
     ) -> Result<LoadedPlugin> {
-        let options = Json::Object(manifest.options.clone()).to_string();
+        let modctx = self.new_mod_context(idx, manifest, tier)?;
+        self.mods[idx] = Some(modctx);
+        self.call_chain::<_, ()>("addPlugin", |_: &Ctx<'_>, f: &Function<'_>| {
+            f.call((idx, manifest.name.clone(), tier.name()))
+        })?;
         let mut modules = Vec::new();
         for rel in &manifest.modules {
             let path = self.shared.borrow().roots[idx]
@@ -322,29 +485,26 @@ impl ModRuntime {
                     message: "no such file".into(),
                 })?;
             let name = format!("{idx}:{path}");
-            let namespace = self.import(&name)?;
+            let namespace = self.import(idx, &name)?;
+            self.give_register(idx, &namespace, &path)?;
             let run = self.new_run();
-            let name_for_js = manifest.name.clone();
-            let options = options.clone();
-            let tier_name = tier.name();
-            self.call_kernel::<_, ()>("loadPlugin", move |ctx: &Ctx<'_>, f: &Function<'_>| {
-                let ns = namespace.restore(ctx)?;
-                let register: Value = ns.get("register")?;
-                if !register.is_function() {
-                    return Err(rquickjs::Error::new_from_js("undefined", "function"));
-                }
-                f.call((run, name_for_js, tier_name, options, register))
-            })
-            .map_err(|e| match e {
-                Error::Script(_) => Error::NoRegister(path.clone()),
-                other => other,
+            let options = Json::Object(manifest.options.clone()).to_string();
+            self.call_chain::<_, ()>("register", |_: &Ctx<'_>, f: &Function<'_>| {
+                f.call((run, idx, options))
             })?;
-            self.drive(run, self.config.budgets.event)?;
+            let raw = self.drive(run, self.config.budgets.event)?;
+            let v: Json = serde_json::from_str(&raw)?;
+            if let Some(e) = v.get("error").and_then(Json::as_str) {
+                return Err(Error::LoadFailed {
+                    plugin: manifest.name.clone(),
+                    reason: e.to_owned(),
+                });
+            }
             modules.push(path);
         }
         let state: Json = serde_json::from_str(
-            &self.call_kernel::<_, String>("pluginState", |_: &Ctx<'_>, f: &Function<'_>| {
-                f.call((manifest.name.clone(),))
+            &self.call_chain::<_, String>("pluginState", |_: &Ctx<'_>, f: &Function<'_>| {
+                f.call((idx,))
             })?,
         )?;
         if state["loaded"] != Json::Bool(true) {
@@ -368,8 +528,43 @@ impl ModRuntime {
         })
     }
 
+    /// Hands the module's `register` export to the mod's agent.
+    fn give_register(
+        &self,
+        idx: usize,
+        namespace: &Persistent<Object<'static>>,
+        path: &str,
+    ) -> Result<()> {
+        let m = self.mods[idx]
+            .as_ref()
+            .ok_or_else(|| Error::Crashed("no context".into()))?;
+        m.ctx.with(|ctx| {
+            let ns = namespace
+                .clone()
+                .restore(&ctx)
+                .map_err(|e| Error::Script(e.to_string()))?;
+            let register: Value = ns
+                .get("register")
+                .map_err(|e| Error::Script(exception_text(&ctx, &e)))?;
+            if !register.is_function() {
+                return Err(Error::NoRegister(path.to_owned()));
+            }
+            let agent = m
+                .agent
+                .clone()
+                .restore(&ctx)
+                .map_err(|e| Error::Script(e.to_string()))?;
+            let load: Function = agent
+                .get("load")
+                .map_err(|e| Error::Script(e.to_string()))?;
+            load.call::<_, ()>((register,))
+                .map_err(|e| Error::Script(exception_text(&ctx, &e)))
+        })
+    }
+
     fn take_diagnostics_for(&self, plugin: &str) -> Option<String> {
-        self.diagnostics
+        self.state
+            .diagnostics
             .borrow()
             .iter()
             .rev()
@@ -380,64 +575,77 @@ impl ModRuntime {
     /// Sends one event through the chain and returns the answer.
     ///
     /// # Errors
-    /// [`Error::Crashed`] if the isolate cannot be driven; hooks that throw or time out are skipped, not errors.
+    /// [`Error::Crashed`] if the runtime cannot be driven; hooks that throw or time out are skipped, not errors.
     pub fn dispatch(&mut self, event: &str, payload: &Json) -> Result<Answer> {
-        let raw = self.run_event(event, Some(payload))?;
-        let v: Json = serde_json::from_str(&raw)?;
-        if let Some(e) = v.get("error").and_then(Json::as_str) {
-            return Err(Error::Script(e.to_owned()));
-        }
+        let v = self.run_event(event, Some(payload))?;
+        let value = match v["value"].as_str() {
+            Some(text) => serde_json::from_str(text)?,
+            None => Json::Null,
+        };
         Ok(Answer {
             answered: v["answered"].as_bool().unwrap_or(false),
-            value: v.get("value").cloned().unwrap_or(Json::Null),
+            value,
         })
     }
 
     /// Asks the chain to draw `component` (with `id` for a pane) and validates the tree.
     ///
     /// # Errors
-    /// [`Error::Crashed`] if the isolate cannot be driven.
+    /// [`Error::Crashed`] if the runtime cannot be driven.
     pub fn render(&mut self, component: &str, id: Option<&str>, props: &Json) -> Result<Render> {
         let mut payload = json!({ "component": component, "props": props, "surface": "desktop" });
         if let Some(id) = id {
             // A site with no id has no `id` field, so a hook sees `undefined`, not `null`.
             payload["id"] = json!(id);
         }
-        let raw = self.run_event("ui.render", Some(&payload))?;
-        let v: Json = serde_json::from_str(&raw)?;
-        if let Some(e) = v.get("error").and_then(Json::as_str) {
-            return Err(Error::Script(e.to_owned()));
+        let v = self.run_event("ui.render", Some(&payload))?;
+        let site = v["site"].as_str().unwrap_or_default().to_owned();
+        let tokens = v["tokens"].clone();
+        let value: Json = match v["value"].as_str() {
+            Some(text) => serde_json::from_str(text)?,
+            None => Json::Null,
+        };
+        if value.is_null() {
+            return Ok(Render::Default { props: None });
         }
-        let r = &v["render"];
-        match r["kind"].as_str() {
-            Some("tree") => {
-                let token = r["token"].as_str().unwrap_or_default().to_owned();
-                let tree: Json = serde_json::from_str(r["json"].as_str().unwrap_or("null"))?;
-                match validate(&tree, &self.config.tree) {
-                    Ok(stats) => {
-                        self.commit(&token, true)?;
-                        Ok(Render::Tree { tree, stats })
-                    }
-                    Err(e) => {
-                        self.commit(&token, false)?;
-                        Ok(self.skipped(component, id, e.to_string()))
-                    }
-                }
-            }
-            Some("invalid") => Ok(self.skipped(
+        if value["$default"] == Json::Bool(true) {
+            return Ok(Render::Default {
+                props: value["event"]
+                    .get("props")
+                    .filter(|p| !p.is_null())
+                    .cloned(),
+            });
+        }
+        if let Some(reason) = value.get("$invalid").and_then(Json::as_str) {
+            self.commit(&site, &tokens, false)?;
+            return Ok(self.skipped(component, id, reason.to_owned()));
+        }
+        let Some(tree) = value.get("$el") else {
+            self.commit(&site, &tokens, false)?;
+            return Ok(self.skipped(
                 component,
                 id,
-                r["reason"].as_str().unwrap_or("invalid tree").to_owned(),
-            )),
-            _ => Ok(Render::Default {
-                props: r.get("props").filter(|p| !p.is_null()).cloned(),
-            }),
+                "a ui.render hook must return an element tree or call next".to_owned(),
+            ));
+        };
+        match validate(tree, &self.config.tree) {
+            Ok(stats) => {
+                self.commit(&site, &tokens, true)?;
+                Ok(Render::Tree {
+                    tree: tree.clone(),
+                    stats,
+                })
+            }
+            Err(e) => {
+                self.commit(&site, &tokens, false)?;
+                Ok(self.skipped(component, id, e.to_string()))
+            }
         }
     }
 
     fn skipped(&self, component: &str, id: Option<&str>, reason: String) -> Render {
         let site = id.map_or_else(|| component.to_owned(), |i| format!("{component} {i}"));
-        self.diagnostics.borrow_mut().push(Diagnostic {
+        self.state.diagnostics.borrow_mut().push(Diagnostic {
             level: "warn".into(),
             plugin: String::new(),
             message: format!("ui.render {site}: tree skipped: {reason}"),
@@ -445,16 +653,30 @@ impl ModRuntime {
         Render::Skipped { reason }
     }
 
-    fn commit(&self, token: &str, ok: bool) -> Result<()> {
-        self.call_kernel::<_, ()>("commit", |_: &Ctx<'_>, f: &Function<'_>| {
-            f.call((token.to_owned(), ok))
-        })
+    /// Tells every mod whether the tree it staged handlers for was accepted. A mod drops the old
+    /// handlers of the site on any commit, so a replaced tree's buttons stop working.
+    fn commit(&mut self, site: &str, tokens: &Json, ok: bool) -> Result<()> {
+        for idx in 0..self.mods.len() {
+            if self.mods[idx].is_none() {
+                continue;
+            }
+            let mine: Vec<&str> = tokens
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter(|t| t[0].as_u64().and_then(|n| usize::try_from(n).ok()) == Some(idx))
+                .filter_map(|t| t[1].as_str())
+                .collect();
+            let msg = json!({ "k": "commit", "site": site, "ok": ok, "tokens": mine }).to_string();
+            self.deliver(Msg::ToMod(idx, msg))?;
+        }
+        Ok(())
     }
 
     /// Delivers `ui.press` for a handler id from a drawn tree. True when a handler ran.
     ///
     /// # Errors
-    /// [`Error::Crashed`] if the isolate cannot be driven.
+    /// [`Error::Crashed`] if the runtime cannot be driven.
     pub fn press(&mut self, handler: &str) -> Result<bool> {
         self.callback("ui.press", &json!({ "handler": handler }))
     }
@@ -462,7 +684,7 @@ impl ModRuntime {
     /// Delivers `ui.input` (`onInput`, `onSubmit`) with the text. True when a handler ran.
     ///
     /// # Errors
-    /// [`Error::Crashed`] if the isolate cannot be driven.
+    /// [`Error::Crashed`] if the runtime cannot be driven.
     pub fn input(&mut self, handler: &str, value: &str) -> Result<bool> {
         self.callback("ui.input", &json!({ "handler": handler, "value": value }))
     }
@@ -470,23 +692,51 @@ impl ModRuntime {
     /// Delivers `ui.select` (`onSelect`) with the chosen value. True when a handler ran.
     ///
     /// # Errors
-    /// [`Error::Crashed`] if the isolate cannot be driven.
+    /// [`Error::Crashed`] if the runtime cannot be driven.
     pub fn select(&mut self, handler: &str, value: &str) -> Result<bool> {
         self.callback("ui.select", &json!({ "handler": handler, "value": value }))
     }
 
-    /// Fires a `$.clock.every` timer. The host owns the clock and calls this on each tick.
+    /// Fires a `$.clock.every` timer.
     ///
     /// # Errors
-    /// [`Error::Crashed`] if the isolate cannot be driven.
+    /// [`Error::Crashed`] if the runtime cannot be driven.
     pub fn tick(&mut self, timer: &str) -> Result<bool> {
         self.callback("clock.tick", &json!({ "id": timer }))
+    }
+
+    /// When the next `clock.every` timer is due, if any is set. The embedder sleeps until then.
+    #[must_use]
+    pub fn next_timer_due(&self) -> Option<Instant> {
+        self.state.timers.borrow().iter().map(|t| t.due).min()
+    }
+
+    /// Fires every timer due at `now` once, and schedules each from `now`.
+    ///
+    /// # Errors
+    /// [`Error::Crashed`] if the runtime cannot be driven.
+    pub fn fire_due_timers(&mut self, now: Instant) -> Result<usize> {
+        let due: Vec<String> = {
+            let mut timers = self.state.timers.borrow_mut();
+            timers
+                .iter_mut()
+                .filter(|t| t.due <= now)
+                .map(|t| {
+                    t.due = now + t.every;
+                    t.id.clone()
+                })
+                .collect()
+        };
+        for id in &due {
+            self.tick(id)?;
+        }
+        Ok(due.len())
     }
 
     /// Delivers `command.run` for a command a mod registered.
     ///
     /// # Errors
-    /// [`Error::Crashed`] if the isolate cannot be driven.
+    /// [`Error::Crashed`] if the runtime cannot be driven.
     pub fn run_command(&mut self, name: &str, args: &str) -> Result<Answer> {
         self.dispatch("command.run", &json!({ "name": name, "args": args }))
     }
@@ -495,12 +745,54 @@ impl ModRuntime {
         Ok(self.dispatch(event, payload)?.value.get("handled") == Some(&Json::Bool(true)))
     }
 
-    /// Takes the diagnostics recorded since the last call.
-    pub fn take_diagnostics(&mut self) -> Vec<Diagnostic> {
-        std::mem::take(&mut *self.diagnostics.borrow_mut())
+    /// Delivers the host's answer to a `$` call nobody was waiting on (a fire-and-forget call, such
+    /// as `clock.every`, whose answer arrives after the event that made it is over), and runs
+    /// whatever that wakes up.
+    ///
+    /// # Errors
+    /// [`Error::Crashed`] if the runtime cannot be driven.
+    pub fn host_completed(
+        &mut self,
+        id: CallId,
+        result: std::result::Result<Json, HostError>,
+    ) -> Result<()> {
+        self.ensure_usable()?;
+        self.complete_call(id, result)?;
+        self.settle()
     }
 
-    /// The engine's memory use.
+    /// Runs the engine until it is idle, interrupting a hook that overruns.
+    fn settle(&mut self) -> Result<()> {
+        let slack = self.config.budgets.event * 2 + Duration::from_millis(250);
+        self.state.deadline.set(None);
+        for _ in 0..1000 {
+            let end = self.pump(Instant::now() + slack)?;
+            if matches!(end, JobsEnd::Idle) {
+                return Ok(());
+            }
+            if matches!(end, JobsEnd::TooLong) {
+                return Err(self.crash(0, "jobs kept running with nothing to interrupt"));
+            }
+            self.state.deadline.set(None);
+            let _ = self.call_chain("recover", |_: &Ctx<'_>, f: &Function<'_>| {
+                f.call::<_, bool>(())
+            })?;
+        }
+        Err(self.crash(0, "too many hooks timed out while settling"))
+    }
+
+    /// Takes the diagnostics recorded since the last call.
+    pub fn take_diagnostics(&mut self) -> Vec<Diagnostic> {
+        std::mem::take(&mut *self.state.diagnostics.borrow_mut())
+    }
+
+    /// Runs the engine's cycle collector now. Measuring memory after it separates a leak from
+    /// garbage the collector has not got to yet.
+    pub fn collect_garbage(&mut self) {
+        self.rt.run_gc();
+    }
+
+    /// The engine's memory use, for the whole runtime (every context shares one heap).
     #[must_use]
     pub fn memory(&self) -> Memory {
         let m = self.rt.memory_usage();
@@ -531,65 +823,195 @@ impl ModRuntime {
         }
     }
 
-    fn run_event(&mut self, event: &str, payload: Option<&Json>) -> Result<String> {
+    fn run_event(&mut self, event: &str, payload: Option<&Json>) -> Result<Json> {
         self.ensure_usable()?;
         let run = self.new_run();
         let body = payload.map(Json::to_string).unwrap_or_default();
-        self.call_kernel::<_, ()>("dispatch", |_: &Ctx<'_>, f: &Function<'_>| {
+        self.call_chain::<_, ()>("dispatch", |_: &Ctx<'_>, f: &Function<'_>| {
             f.call((run, event.to_owned(), body))
         })?;
-        self.drive(run, self.budget_for(event))
+        let raw = self.drive(run, self.budget_for(event))?;
+        let v: Json = serde_json::from_str(&raw)?;
+        if let Some(e) = v.get("error").and_then(Json::as_str) {
+            return Err(Error::Script(e.to_owned()));
+        }
+        Ok(v)
     }
 
     /// Calls a function of the chain object.
-    fn call_kernel<A, R>(&self, name: &str, call: A) -> Result<R>
+    fn call_chain<A, R>(&self, name: &str, call: A) -> Result<R>
     where
         A: for<'js> FnOnce(&Ctx<'js>, &Function<'js>) -> rquickjs::Result<R>,
     {
-        self.ctx.with(|ctx| {
-            let kernel = self
-                .kernel
+        self.chain_ctx.with(|ctx| {
+            let chain = self
+                .chain
                 .clone()
                 .restore(&ctx)
                 .map_err(|e| Error::Script(e.to_string()))?;
-            let f: Function = kernel.get(name).map_err(|e| Error::Script(e.to_string()))?;
+            let f: Function = chain.get(name).map_err(|e| Error::Script(e.to_string()))?;
             call(&ctx, &f).map_err(|e| Error::Script(exception_text(&ctx, &e)))
         })
     }
 
+    /// Calls `receive` on a mod's agent. A mod that was unloaded has nobody to call.
+    fn call_agent(&self, idx: usize, name: &str, arg: String) -> Result<()> {
+        let Some(m) = self.mods.get(idx).and_then(Option::as_ref) else {
+            return Ok(());
+        };
+        m.ctx.with(|ctx| {
+            let agent = m
+                .agent
+                .clone()
+                .restore(&ctx)
+                .map_err(|e| Error::Script(e.to_string()))?;
+            let f: Function = agent.get(name).map_err(|e| Error::Script(e.to_string()))?;
+            f.call::<_, ()>((arg,))
+                .map_err(|e| Error::Script(exception_text(&ctx, &e)))
+        })
+    }
+
+    /// Delivers one message to the context it is addressed to.
+    fn deliver(&self, msg: Msg) -> Result<()> {
+        match msg {
+            Msg::ToChain(idx, json) => self
+                .call_chain::<_, ()>("receive", |_: &Ctx<'_>, f: &Function<'_>| {
+                    f.call((idx, json))
+                }),
+            Msg::ToMod(idx, json) => self.call_agent(idx, "receive", json),
+        }
+    }
+
     fn poll(&self, run: u64) -> Result<Option<String>> {
-        self.call_kernel("poll", |_: &Ctx<'_>, f: &Function<'_>| {
+        self.call_chain("poll", |_: &Ctx<'_>, f: &Function<'_>| {
             f.call::<_, Option<String>>((run,))
         })
     }
 
-    fn run_jobs(&self, hard: Instant) -> JobsEnd {
+    fn pending_calls(&self) -> usize {
+        self.state.pending.borrow().len()
+    }
+
+    /// Routes messages and runs the engine's jobs until both are exhausted.
+    fn pump(&self, hard: Instant) -> Result<JobsEnd> {
         loop {
+            loop {
+                let next = self.state.queue.borrow_mut().pop_front();
+                let Some(msg) = next else { break };
+                match self.deliver(msg) {
+                    Ok(()) => {}
+                    Err(e) if is_interrupt(&e) => return Ok(JobsEnd::Interrupted),
+                    Err(e) => return Err(e),
+                }
+            }
             match self.rt.execute_pending_job() {
                 Ok(true) => {
                     if Instant::now() >= hard {
-                        return JobsEnd::TooLong;
+                        return Ok(JobsEnd::TooLong);
                     }
                 }
-                Ok(false) => return JobsEnd::Idle,
+                Ok(false) => {
+                    if self.state.queue.borrow().is_empty() {
+                        return Ok(JobsEnd::Idle);
+                    }
+                }
                 Err(job) => {
                     // The exception must be taken to clear it. The interrupt handler raises it.
                     job.0.with(|c| drop(c.catch()));
-                    return JobsEnd::Interrupted;
+                    return Ok(JobsEnd::Interrupted);
                 }
             }
         }
     }
 
+    /// Blocks for the host's next answer to a pending call (or for the oldest call's deadline),
+    /// delivers it, and returns how long it waited, in milliseconds.
+    fn wait_host(&self) -> Result<f64> {
+        let started = Instant::now();
+        let nearest = self
+            .state
+            .pending
+            .borrow()
+            .values()
+            .map(|p| p.deadline)
+            .min()
+            .unwrap_or(started);
+        let timeout = nearest.saturating_duration_since(started);
+        let answer = {
+            let mut host = self.state.host.borrow_mut();
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| host.wait(timeout)))
+                .unwrap_or(None)
+        };
+        if let Some((id, result)) = answer {
+            self.complete_call(id, result)?;
+        } else {
+            let now = Instant::now();
+            let overdue: Vec<CallId> = self
+                .state
+                .pending
+                .borrow()
+                .iter()
+                .filter(|(_, p)| p.deadline <= now)
+                .map(|(id, _)| *id)
+                .collect();
+            if overdue.is_empty() && started.elapsed() < Duration::from_millis(1) {
+                // A host that has nothing and does not block: do not spin.
+                std::thread::sleep(Duration::from_millis(1));
+            }
+            for id in overdue {
+                self.complete_call(
+                    id,
+                    Err(HostError {
+                        code: "hx.mods.host_timeout".into(),
+                        message: "the host did not answer this call in time".into(),
+                    }),
+                )?;
+            }
+        }
+        Ok(started.elapsed().as_secs_f64() * 1000.0)
+    }
+
+    fn complete_call(
+        &self,
+        id: CallId,
+        result: std::result::Result<Json, HostError>,
+    ) -> Result<()> {
+        let Some(p) = self.state.pending.borrow_mut().remove(&id) else {
+            return Ok(());
+        };
+        natives::after_reply(&self.state, p.idx, &p.request, result.is_ok());
+        let reply = match result {
+            Ok(v) => json!({ "ok": v }),
+            Err(e) => json!({ "err": { "code": e.code, "message": e.message } }),
+        };
+        let Some(m) = self.mods.get(p.idx).and_then(Option::as_ref) else {
+            return Ok(());
+        };
+        m.ctx.with(|ctx| {
+            let agent = m
+                .agent
+                .clone()
+                .restore(&ctx)
+                .map_err(|e| Error::Script(e.to_string()))?;
+            let f: Function = agent
+                .get("complete")
+                .map_err(|e| Error::Script(e.to_string()))?;
+            f.call::<_, ()>((id, reply.to_string()))
+                .map_err(|e| Error::Script(exception_text(&ctx, &e)))
+        })
+    }
+
     /// Runs the engine until the run has an answer. A hook that overruns its budget is
-    /// interrupted; the chain then skips it. Gives up, and poisons the isolate, only when the
-    /// chain stalls with no hook to blame or a microtask storm outlives every frame.
+    /// interrupted; the chain then skips it. While every hook waits on a pending `$` call the
+    /// driver waits for the host, and the hook's budget does not run. Gives up, and poisons the
+    /// runtime, only when the chain stalls with no hook to blame and no call pending, or a
+    /// microtask storm outlives every frame.
     fn drive(&mut self, run: u64, budget: Duration) -> Result<String> {
         let slack = budget * 2 + Duration::from_millis(250);
         let mut hard = Instant::now() + slack;
+        self.state.deadline.set(None);
         for _ in 0..10_000 {
-            self.deadline.set(None);
-            let end = self.run_jobs(hard);
+            let end = self.pump(hard)?;
             if let Some(answer) = self.poll(run)? {
                 return Ok(answer);
             }
@@ -599,9 +1021,19 @@ impl ModRuntime {
                     "jobs kept running past the event's budget with no hook to interrupt",
                 ));
             }
-            // Interrupted, or idle with the run unanswered (a hook awaits something that can never
-            // settle). Either way the innermost running hook has used up its budget.
-            let blamed = self.call_kernel("recover", |_: &Ctx<'_>, f: &Function<'_>| {
+            if matches!(end, JobsEnd::Idle) && self.pending_calls() > 0 {
+                let waited = self.wait_host()?;
+                self.call_chain::<_, ()>("advance", |_: &Ctx<'_>, f: &Function<'_>| {
+                    f.call((waited,))
+                })?;
+                hard = Instant::now() + slack;
+                continue;
+            }
+            // Interrupted, or idle with the run unanswered and nothing pending (a hook awaits
+            // something that can never settle). Either way the innermost running hook has used up
+            // its budget. The expired deadline must be cleared first or it would interrupt this call.
+            self.state.deadline.set(None);
+            let blamed = self.call_chain("recover", |_: &Ctx<'_>, f: &Function<'_>| {
                 f.call::<_, bool>(())
             })?;
             if !blamed {
@@ -613,30 +1045,40 @@ impl ModRuntime {
     }
 
     fn crash(&mut self, run: u64, why: &str) -> Error {
-        // Best effort: the isolate is abandoned either way.
-        let _ = self.call_kernel::<_, ()>("abort", |_: &Ctx<'_>, f: &Function<'_>| f.call((run,)));
-        self.deadline.set(None);
+        self.state.deadline.set(None);
+        // Best effort: the runtime is abandoned either way.
+        let _ = self.call_chain::<_, ()>("abort", |_: &Ctx<'_>, f: &Function<'_>| f.call((run,)));
+        self.state.deadline.set(None);
         self.crashed = Some(why.to_owned());
-        tracing::error!(reason = why, "mod isolate crashed");
+        tracing::error!(reason = why, "mod runtime crashed");
         Error::Crashed(why.to_owned())
     }
 
-    /// Imports a module of a plugin and returns its namespace.
-    fn import(&mut self, name: &str) -> Result<Persistent<Object<'static>>> {
+    /// Imports a module of a plugin, in that plugin's context, and returns its namespace.
+    fn import(&mut self, idx: usize, name: &str) -> Result<Persistent<Object<'static>>> {
         self.shared.borrow_mut().last_error = None;
-        self.deadline
+        self.state
+            .deadline
             .set(Some(Instant::now() + self.config.budgets.event));
-        let started = self.ctx.with(|ctx| match Module::import(&ctx, name) {
+        let ctx = self.mods[idx]
+            .as_ref()
+            .ok_or_else(|| Error::Crashed("no context".into()))?
+            .ctx
+            .clone();
+        let started = ctx.with(|ctx| match Module::import(&ctx, name) {
             Ok(p) => Ok(Persistent::save(&ctx, p)),
             Err(e) => Err(exception_text(&ctx, &e)),
         });
         let promise = match started {
             Ok(p) => p,
-            Err(text) => return Err(self.load_error(name, text)),
+            Err(text) => {
+                self.state.deadline.set(None);
+                return Err(self.load_error(name, text));
+            }
         };
-        let end = self.run_jobs(Instant::now() + self.config.budgets.event * 2);
-        self.deadline.set(None);
-        let outcome = self.ctx.with(|ctx| {
+        let end = self.run_import_jobs(Instant::now() + self.config.budgets.event * 2);
+        self.state.deadline.set(None);
+        let outcome = ctx.with(|ctx| {
             let p = promise.restore(&ctx).map_err(|e| e.to_string())?;
             match p.state() {
                 PromiseState::Resolved => {
@@ -664,6 +1106,23 @@ impl ModRuntime {
             };
             self.load_error(name, text)
         })
+    }
+
+    fn run_import_jobs(&self, hard: Instant) -> JobsEnd {
+        loop {
+            match self.rt.execute_pending_job() {
+                Ok(true) => {
+                    if Instant::now() >= hard {
+                        return JobsEnd::TooLong;
+                    }
+                }
+                Ok(false) => return JobsEnd::Idle,
+                Err(job) => {
+                    job.0.with(|c| drop(c.catch()));
+                    return JobsEnd::Interrupted;
+                }
+            }
+        }
     }
 
     fn load_error(&self, module: &str, text: String) -> Error {

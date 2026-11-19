@@ -8,7 +8,7 @@ use serde::Deserialize;
 use serde_json::{Map, Value};
 
 use crate::error::{Error, Result};
-use crate::files::PluginDir;
+use crate::files::Files;
 
 const PLUGIN_JSON: &str = ".claude-plugin/plugin.json";
 const HOOKS_JSON: &str = "hooks/hooks.json";
@@ -43,7 +43,7 @@ pub struct Manifest {
     pub modules: Vec<String>,
 }
 
-fn parse<T: for<'de> Deserialize<'de>>(dir: &PluginDir, file: &str) -> Result<T> {
+fn parse<T: for<'de> Deserialize<'de>>(dir: &Files, file: &str) -> Result<T> {
     let text = dir.read(file)?;
     serde_json::from_str(&text).map_err(|e| Error::Manifest {
         file: file.to_owned(),
@@ -56,7 +56,7 @@ fn parse<T: for<'de> Deserialize<'de>>(dir: &PluginDir, file: &str) -> Result<T>
 /// # Errors
 /// [`Error::Manifest`] for bad JSON or a missing name, [`Error::NotAMod`] when `hooks.json` has
 /// no `modules` key (the plugin has settings hooks only).
-pub fn read(dir: &PluginDir) -> Result<Manifest> {
+pub fn read(dir: &Files) -> Result<Manifest> {
     let plugin: PluginJson = parse(dir, PLUGIN_JSON)?;
     let name = plugin
         .name

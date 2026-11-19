@@ -9,7 +9,7 @@ mod common;
 
 use common::{handler, runtime, simple_plugin, text_of, tree, write_plugin};
 use hx_mods::fixtures::MemoryHost;
-use hx_mods::{HostCalls, HostError, HostRequest, ModRuntime, Render, RuntimeConfig, Tier};
+use hx_mods::{HostCalls, HostRequest, ModRuntime, Render, RuntimeConfig, Tier};
 use serde_json::{Value, json};
 use tempfile::tempdir;
 
@@ -98,7 +98,7 @@ fn dollar_is_frozen_and_a_mod_cannot_name_another_plugin_in_a_call() {
 /// A host that panics on every call: the panic must come back as an error, not abort the process.
 struct Panicky;
 impl HostCalls for Panicky {
-    fn call(&mut self, _: &HostRequest) -> Result<Value, HostError> {
+    fn call(&mut self, _: hx_mods::CallId, _: &HostRequest) -> hx_mods::HostReply {
         panic!("the host is broken");
     }
 }

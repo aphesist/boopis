@@ -24,9 +24,12 @@ hx-proto.workspace = true
 hx-txn.workspace = true
 hx-pack.workspace = true
 hx-sandbox.workspace = true
+hx-mods = { path = "../hx-mods" }
+serde.workspace = true
+uuid.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
-tokio = { workspace = true, features = ["rt-multi-thread", "io-util", "io-std", "macros", "signal", "sync", "time"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "io-util", "io-std", "macros", "signal", "sync", "time", "net", "process"] }
 tokio-util.workspace = true
 clap = { version = "4", features = ["derive"] }
 anyhow = "1"

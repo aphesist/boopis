@@ -2,6 +2,7 @@
 //! and `hx_txn::paths`, so a path or a symlink that leaves the plugin is refused by the same code
 //! that guards the workspace.
 
+use std::collections::BTreeMap;
 use std::io::Read;
 use std::path::Path;
 
@@ -71,5 +72,134 @@ impl PluginDir {
             ));
         }
         Ok(text)
+    }
+}
+
+/// The most files and bytes a [`Bundle`] may hold: a plugin's own sources, not a dependency tree.
+pub const MAX_BUNDLE_FILES: usize = 512;
+/// See [`MAX_BUNDLE_FILES`].
+pub const MAX_BUNDLE_BYTES: usize = 16 * 1024 * 1024;
+
+/// A plugin's sources as data: the two manifests and every file with a module extension, read by
+/// the parent through [`PluginDir`] (so `cap_std` and `hx_txn::paths` guard every read) and handed
+/// to a worker that cannot read the plugin directory itself.
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct Bundle {
+    /// Plugin-relative canonical path to its text.
+    pub files: BTreeMap<String, String>,
+}
+
+impl Bundle {
+    /// Reads the plugin at `path`: both manifests, and every module-extension file below it that
+    /// resolves inside the plugin (a symlink out is skipped, never followed). Dot-directories and
+    /// `node_modules` are not read.
+    ///
+    /// # Errors
+    /// [`Error::Read`] for an unreadable manifest, or a plugin over the bundle limits.
+    pub fn read(path: &Path) -> Result<Self> {
+        let dir = PluginDir::open(path)?;
+        let mut files = BTreeMap::new();
+        let mut total = 0usize;
+        let mut add = |rel: &str, files: &mut BTreeMap<String, String>| -> Result<()> {
+            let Some(canonical) = dir.file(rel)? else {
+                return Ok(());
+            };
+            if files.contains_key(&canonical) {
+                return Ok(());
+            }
+            let text = dir.read(&canonical)?;
+            total += text.len();
+            if files.len() >= MAX_BUNDLE_FILES || total > MAX_BUNDLE_BYTES {
+                return Err(read_err(
+                    rel,
+                    &"the plugin has too many or too large sources",
+                ));
+            }
+            files.insert(canonical, text);
+            Ok(())
+        };
+        add(".claude-plugin/plugin.json", &mut files)?;
+        add("hooks/hooks.json", &mut files)?;
+        let mut stack = vec![String::new()];
+        while let Some(prefix) = stack.pop() {
+            let abs = if prefix.is_empty() {
+                path.to_path_buf()
+            } else {
+                path.join(&prefix)
+            };
+            let Ok(entries) = std::fs::read_dir(&abs) else {
+                continue;
+            };
+            for entry in entries.flatten() {
+                let name = entry.file_name().to_string_lossy().into_owned();
+                let rel = if prefix.is_empty() {
+                    name.clone()
+                } else {
+                    format!("{prefix}/{name}")
+                };
+                let Ok(kind) = entry.file_type() else {
+                    continue;
+                };
+                if kind.is_dir() {
+                    if !name.starts_with('.') && name != "node_modules" {
+                        stack.push(rel);
+                    }
+                } else if crate::transform::MODULE_EXTENSIONS
+                    .iter()
+                    .any(|e| name.ends_with(&format!(".{e}")))
+                {
+                    // A symlink or a path that leaves the plugin is refused by `file`: skip it.
+                    if dir.file(&rel).is_ok() {
+                        add(&rel, &mut files)?;
+                    }
+                }
+            }
+        }
+        Ok(Self { files })
+    }
+}
+
+/// Where a plugin's files come from: the disk (library use and tests) or a [`Bundle`] (a sandboxed
+/// worker).
+pub enum Files {
+    /// A plugin directory, read through `cap_std`.
+    Disk(PluginDir),
+    /// Sources already read by the parent.
+    Memory(Bundle),
+}
+
+impl Files {
+    /// See [`PluginDir::file`].
+    ///
+    /// # Errors
+    /// As [`PluginDir::file`]; a bundle only refuses a path that is not relative and plain.
+    pub fn file(&self, rel: &str) -> Result<Option<String>> {
+        match self {
+            Self::Disk(d) => d.file(rel),
+            Self::Memory(b) => {
+                let parsed = RelPath::parse(rel).map_err(|e| read_err(rel, &e))?;
+                let canonical = parsed.to_wire();
+                Ok(b.files.contains_key(&canonical).then_some(canonical))
+            }
+        }
+    }
+
+    /// See [`PluginDir::read`].
+    ///
+    /// # Errors
+    /// As [`PluginDir::read`].
+    pub fn read(&self, rel: &str) -> Result<String> {
+        match self {
+            Self::Disk(d) => d.read(rel),
+            Self::Memory(b) => {
+                let canonical = self
+                    .file(rel)?
+                    .ok_or_else(|| read_err(rel, &"no such file"))?;
+                b.files
+                    .get(&canonical)
+                    .cloned()
+                    .ok_or_else(|| read_err(rel, &"no such file"))
+            }
+        }
     }
 }

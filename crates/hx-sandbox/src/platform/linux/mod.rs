@@ -307,3 +307,12 @@ pub(crate) fn capabilities() -> Capabilities {
         ),
     }
 }
+
+/// Forbids this process, and everything it starts, from executing any file from now on: a
+/// Landlock ruleset that handles `EXECUTE` and grants it nowhere. Used by a worker that has no
+/// reason to start a program, once it is running.
+pub(crate) fn forbid_exec() -> std::io::Result<()> {
+    let ruleset = sys::Ruleset::new(sys::access::EXECUTE, 0)?;
+    sys::child_no_new_privs().map_err(std::io::Error::from_raw_os_error)?;
+    sys::child_landlock_restrict(ruleset.raw_fd()).map_err(std::io::Error::from_raw_os_error)
+}

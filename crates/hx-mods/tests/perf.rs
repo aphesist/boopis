@@ -268,7 +268,7 @@ fn the_heap_does_not_grow_with_events_renders_presses_and_ticks() {
     let timer = {
         // The clock id the pane registered: read it from the tick that works.
         (1..=3)
-            .map(|n| format!("t{n}"))
+            .map(|n| format!("0.t{n}"))
             .find(|id| rt.tick(id).unwrap())
             .unwrap()
     };
@@ -290,10 +290,12 @@ fn the_heap_does_not_grow_with_events_renders_presses_and_ticks() {
     for _ in 0..3 {
         round(&mut rt); // warm up the allocator and the collector
     }
+    rt.collect_garbage();
     let warm = rt.memory().used;
     for _ in 0..10 {
         round(&mut rt);
     }
+    rt.collect_garbage();
     let after = rt.memory().used;
     println!("heap after warm-up {warm} B, after 2,000 more rounds {after} B");
     // 2,000 more rounds of everything: allow slack for collector timing, nothing like growth per round.

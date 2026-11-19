@@ -19,6 +19,7 @@ pub fn schema_document() -> Value {
     hx_pack::add_schema(&mut b);
     hx_pack::add_redact_schema(&mut b);
     hx_sandbox::add_schema(&mut b);
+    hx_mods::wire::add_schema(&mut b);
     b.finish()
 }
 
