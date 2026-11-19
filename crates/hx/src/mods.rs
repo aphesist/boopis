@@ -1,57 +1,68 @@
-//! `mods.*`: Claude Code mods, one sandboxed worker per session.
+//! `mods.*`: Claude Code mods, one sandboxed worker process per mod.
 //!
-//! The runtime (`hx-mods`) does not run in this process. `mods.load` starts `hx mods-worker`
-//! inside `hx-sandbox`, with no files, network or processes of its own, and with one private
-//! channel: a connected socket pair whose child end the sandbox passes as an inherited
-//! descriptor. Everything crosses that channel as `hx-mods-v1` frames (`hx_mods::worker`).
+//! The runtime (`hx-mods`) does not run in this process. Every mod gets its own `hx mods-worker`
+//! inside `hx-sandbox`, with no files, network or processes of its own, its own heap budget, and
+//! one private channel: a connected socket pair whose child end the sandbox passes as an inherited
+//! descriptor. Everything crosses that channel as `hx-mods-v2` frames (`hx_mods::worker`). The
+//! event chain, which crosses mods, runs here (`hx_mods::chain`), so a mod that runs out of memory,
+//! loops, waits for a form or dies takes down only itself.
 //!
 //! `hx` reads each plugin's sources through `cap_std` and sends them over the channel, because the
 //! worker cannot read the plugin directory. A `$` call from a mod reaches `hx` as a `call` frame
-//! and goes to the plugin as a `mods.call` request, answered by the policy there; nothing a mod
-//! does leaves the worker any other way.
+//! and goes to the plugin as a `mods.call` request, answered by the policy there. Each worker is
+//! bound to one mod name, and `hx` stamps that name on its calls itself: a worker that went rogue
+//! could not speak for another mod.
+//!
+//! A worker that exits (a crash, the sandbox's one-hour ceiling, the kernel's memory limit) is
+//! reported to the plugin with `mods.exited`; its place in the chain is kept, and `mods.load` puts a
+//! new worker there (`replace` starts the new one before stopping the old).
 //!
 //! Where the sandbox cannot be built (no private channel on Windows, or a kernel without Landlock
 //! and seccomp), every method but `mods.capabilities` answers `hx.mods.unavailable` with the
 //! reason. There is no unsandboxed fallback.
 
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
-#[cfg(unix)]
-use hx_mods::wire::CallParams;
+use hx_mods::chain::{BoxFut, Chain, HostSink, ModWorker};
 use hx_mods::wire::{
-    self, DispatchParams, HandlerParams, ListParams, LoadParams, ModsCapabilities, ReachParams,
-    RenderParams, UnloadParams,
+    self, CallParams, DispatchParams, ExitedParams, FailedMod, HandlerParams, ListParams,
+    LoadParams, ModLimits, ModsCapabilities, ReachParams, RenderParams, UnloadParams,
 };
+use hx_mods::{Budgets, Bundle, Diagnostic, Files, HostError, HostRequest, Manifest, Tier};
 use hx_proto::method::Namespace;
 use hx_proto::registry::{BoxFuture, CallContext, Handler, HandlerResult, parse_params, to_result};
 use hx_proto::{AppError, codes};
 use serde_json::{Value, json};
 #[cfg(unix)]
-use tokio::io::{AsyncRead, AsyncReadExt, BufReader};
-use tokio::io::{AsyncWrite, AsyncWriteExt};
-use tokio::sync::{Mutex as AsyncMutex, oneshot};
+use tokio::io::{AsyncRead, AsyncReadExt};
+use tokio::sync::{Mutex as AsyncMutex, mpsc};
 
 use crate::outbound::Link;
 
 /// The environment variable that names the worker's channel descriptor.
 pub const CHANNEL_ENV: &str = "HX_MODS_FD";
+/// The environment variable that carries the worker's limits (`wire::ModLimits` as JSON).
+pub const LIMITS_ENV: &str = "HX_MODS_LIMITS";
 
-/// The longest one operation may take, which includes every `$` call it waits on (a form the
-/// user has to answer, for one). Past it the worker is killed: a hook that waits forever must not
-/// hold the session's mods for ever.
-const OP_TIMEOUT: Duration = Duration::from_mins(30);
 /// The longest `hx` waits for the plugin to answer one `$` call.
-#[cfg(unix)]
 const CALL_TIMEOUT: Duration = Duration::from_mins(25);
-/// The longest frame read from a worker. A worker is semi-trusted: a memory-safety bug in the
-/// engine would make it hostile, so what it sends is bounded.
+/// The longest a worker may take to load a mod.
 #[cfg(unix)]
-const MAX_WORKER_FRAME: usize = 16 * 1024 * 1024;
-/// The tasks (threads) the worker's sandbox may hold and no more: the supervisor, the worker's
-/// main thread and its channel reader.
+const LOAD_TIMEOUT: Duration = Duration::from_mins(5);
+/// The longest a probe (`reach`) may take.
+const PROBE_TIMEOUT: Duration = Duration::from_secs(30);
+/// How long a replaced worker keeps running, so hooks already in flight in it can finish.
+const RETIRE_GRACE: Duration = Duration::from_secs(5);
+/// The tasks (threads) a worker's sandbox may hold and no more: the sandbox's supervisor, the
+/// worker's main thread and its channel reader (`hx_mods::worker::serve`). `RLIMIT_NPROC` counts
+/// threads, and in the sandbox's fresh user namespace it counts from zero, so three is exactly
+/// that: any fork, clone or exec past it is refused. It was once 1, which refused the worker's own
+/// threads at startup for every user but root (root is exempt, which hid it);
+/// `every_worker_starts_for_an_ordinary_user` guards it. The worker runs before, and without, the
+/// async runtime (`main.rs`), which would start a thread per core.
 #[cfg(unix)]
 const WORKER_TASKS: u64 = 3;
 /// How much of the worker's error output is kept: the last bytes, which is where a panic message
@@ -62,6 +73,15 @@ const STDERR_KEEP: usize = 2 * 1024;
 /// The pipe closes with the process, so this only bounds a reader that is stuck.
 #[cfg(unix)]
 const STDERR_DRAIN: Duration = Duration::from_millis(750);
+/// A mod's default heap budget, in MiB.
+#[cfg(unix)]
+const DEFAULT_HEAP_MIB: u64 = 64;
+/// The most a hook may run by default, in milliseconds.
+const DEFAULT_EVENT_MS: u64 = 10_000;
+/// Address space the worker may map besides the engine's heap: the binary, thread stacks, the
+/// allocator's arenas.
+#[cfg(unix)]
+const WORKER_OVERHEAD_MIB: u64 = 768;
 
 const METHODS: &[&str] = &[
     wire::METHOD_CAPABILITIES,
@@ -77,23 +97,10 @@ const METHODS: &[&str] = &[
     wire::METHOD_ANALYZE,
 ];
 
-type Waiting = oneshot::Sender<Result<Value, Value>>;
 type Sessions = Arc<Mutex<HashMap<String, Arc<Session>>>>;
 
 fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
     m.lock().unwrap_or_else(PoisonError::into_inner)
-}
-
-/// One session's worker.
-struct Session {
-    id: String,
-    writer: AsyncMutex<Box<dyn AsyncWrite + Send + Unpin>>,
-    waiting: Mutex<HashMap<u64, Waiting>>,
-    next: AtomicU64,
-    alive: AtomicBool,
-    kill: Box<dyn Fn() + Send + Sync>,
-    stderr: Arc<Mutex<String>>,
-    plugins: Mutex<Vec<Value>>,
 }
 
 fn worker_failed(message: impl Into<String>, stderr: &str) -> AppError {
@@ -108,80 +115,181 @@ fn app_error(code: &str, message: String) -> AppError {
         "hx.mods.not_a_mod" => codes::HX_MODS_NOT_A_MOD,
         "hx.mods.already_loaded" => codes::HX_MODS_ALREADY_LOADED,
         "hx.mods.crashed" => codes::HX_MODS_CRASHED,
+        "hx.mods.worker_failed" => codes::HX_MODS_WORKER_FAILED,
         "hx.invalid_params" => codes::HX_INVALID_PARAMS,
         _ => codes::HX_INTERNAL_ERROR,
     };
     AppError::new(known, message)
 }
 
-impl Session {
+/// Where a session's workers send their `$` calls and diagnostics: to the plugin.
+struct SessionSink {
+    id: String,
+    link: Arc<Link>,
+    diagnostics: mpsc::UnboundedSender<Diagnostic>,
+}
+
+impl HostSink for SessionSink {
+    #[allow(
+        clippy::async_yields_async,
+        reason = "the chain's two-phase call: queued, then answered"
+    )]
+    fn begin(&self, request: HostRequest) -> BoxFut<BoxFut<Result<Value, HostError>>> {
+        let (link, session_id) = (self.link.clone(), self.id.clone());
+        Box::pin(async move {
+            let params = serde_json::to_value(CallParams {
+                session_id,
+                plugin: request.plugin,
+                call: request.call,
+                args: request.args,
+            })
+            .unwrap_or(Value::Null);
+            let sent = link.begin(wire::METHOD_CALL, params).await;
+            let inner: BoxFut<Result<Value, HostError>> = Box::pin(async move {
+                let outcome = match sent {
+                    Ok(sent) => sent.wait(CALL_TIMEOUT).await,
+                    Err(e) => Err(e),
+                };
+                outcome.map_err(|e| HostError {
+                    code: e.code,
+                    message: e.message,
+                })
+            });
+            inner
+        })
+    }
+
+    fn diagnostic(&self, diagnostic: Diagnostic) {
+        let _ = self.diagnostics.send(diagnostic);
+    }
+}
+
+/// One worker, from the parent's side.
+#[cfg_attr(not(unix), allow(dead_code))]
+struct Running {
+    worker: Arc<ModWorker>,
+    pid: u32,
+    started: Instant,
+    lifetime: Duration,
+    generation: u32,
+    stderr: Arc<Mutex<String>>,
+    /// What loaded: the module files and how many hooks `register` added.
+    loaded: Mutex<(Vec<String>, u64)>,
+    /// Replaced or unloaded on purpose: its exit is not news.
+    retired: AtomicBool,
+    /// The task that reads the worker's error output.
+    reader: AsyncMutex<Option<tokio::task::JoinHandle<()>>>,
+}
+
+#[cfg_attr(not(unix), allow(dead_code))]
+impl Running {
     fn stderr_text(&self) -> String {
         lock(&self.stderr).clone()
     }
 
+    /// Waits for the worker's error output to be read to its end. The exit can be seen before the
+    /// last of it has been read, and a panic message would be missing from the very report that needs it.
     #[cfg(unix)]
-    fn fail_all(&self, why: &AppError) {
-        let doomed: Vec<_> = lock(&self.waiting).drain().collect();
-        for (_, w) in doomed {
-            let _ = w.send(Err(json!({
-                "code": why.code,
-                "message": why.message,
-                "stderr": why.details.get("stderr").cloned().unwrap_or(Value::Null),
-            })));
+    async fn drain(&self) {
+        let mut reader = self.reader.lock().await;
+        if let Some(handle) = reader.take() {
+            let _ = tokio::time::timeout(STDERR_DRAIN, handle).await;
         }
     }
 
-    async fn write(&self, frame: &Value) -> std::io::Result<()> {
-        let mut line = frame.to_string();
-        line.push('\n');
-        let mut w = self.writer.lock().await;
-        w.write_all(line.as_bytes()).await?;
-        w.flush().await
+    fn retire(&self) {
+        self.retired.store(true, Ordering::SeqCst);
+    }
+}
+
+/// One mod of one session. It outlives its workers: the slot, the tier and the generation count stay.
+struct ModEntry {
+    idx: usize,
+    name: String,
+    tier: Tier,
+    generation: AtomicU32,
+    running: Mutex<Option<Arc<Running>>>,
+    /// The directory it was last loaded from.
+    dir: Mutex<String>,
+}
+
+impl ModEntry {
+    fn current(&self) -> Option<Arc<Running>> {
+        lock(&self.running).clone()
     }
 
-    /// Sends one op and waits for its reply.
-    async fn request(&self, mut frame: Value) -> Result<Value, AppError> {
-        if !self.alive.load(Ordering::SeqCst) {
-            return Err(worker_failed(
-                "the worker is not running",
-                &self.stderr_text(),
-            ));
-        }
-        let id = self.next.fetch_add(1, Ordering::Relaxed) + 1;
-        frame["id"] = json!(id);
-        let (done, answer) = oneshot::channel();
-        lock(&self.waiting).insert(id, done);
-        if self.write(&frame).await.is_err() {
-            lock(&self.waiting).remove(&id);
-            return Err(worker_failed(
-                "the worker's channel is closed",
-                &self.stderr_text(),
-            ));
-        }
-        match tokio::time::timeout(OP_TIMEOUT, answer).await {
-            Ok(Ok(Ok(v))) => Ok(v),
-            // The worker died with this operation outstanding: keep the code and the stderr tail the
-            // exit task attached, so the caller sees why instead of a bare internal error.
-            Ok(Ok(Err(e))) if e["code"] == codes::HX_MODS_WORKER_FAILED => Err(worker_failed(
-                e["message"].as_str().unwrap_or_default(),
-                e["stderr"].as_str().unwrap_or_default(),
-            )),
-            Ok(Ok(Err(e))) => Err(app_error(
-                e["code"].as_str().unwrap_or("hx.internal_error"),
-                e["message"].as_str().unwrap_or_default().to_owned(),
-            )),
-            Ok(Err(_)) => Err(worker_failed(
-                "the worker stopped answering",
-                &self.stderr_text(),
-            )),
-            Err(_) => {
-                lock(&self.waiting).remove(&id);
-                (self.kill)();
-                Err(worker_failed(
-                    "the worker did not answer in time and was stopped",
-                    &self.stderr_text(),
-                ))
+    fn view(&self) -> Value {
+        let r = self.current();
+        let (modules, hooks) = r
+            .as_ref()
+            .map(|r| lock(&r.loaded).clone())
+            .unwrap_or_default();
+        json!({
+            "name": self.name,
+            "dir": lock(&self.dir).clone(),
+            "tier": self.tier.name(),
+            "modules": modules,
+            "hooks": hooks,
+            "generation": r.as_ref().map_or_else(|| self.generation.load(Ordering::SeqCst).saturating_sub(1), |r| r.generation),
+            "pid": r.as_ref().map(|r| r.pid),
+            "expires_in_s": r.as_ref().map(|r| r.lifetime.saturating_sub(r.started.elapsed()).as_secs()),
+            "running": r.as_ref().is_some_and(|r| r.worker.alive()),
+        })
+    }
+}
+
+/// One session: its chain and its mods.
+struct Session {
+    id: String,
+    chain: Arc<Chain>,
+    link: Arc<Link>,
+    sink: Arc<SessionSink>,
+    mods: Mutex<HashMap<String, Arc<ModEntry>>>,
+    /// Loads of one session run one at a time.
+    loading: AsyncMutex<()>,
+}
+
+impl Session {
+    fn new(id: &str, link: &Arc<Link>) -> Arc<Self> {
+        let (tx, mut rx) = mpsc::unbounded_channel::<Diagnostic>();
+        let sink = Arc::new(SessionSink {
+            id: id.to_owned(),
+            link: link.clone(),
+            diagnostics: tx,
+        });
+        let (forward, session_id) = (link.clone(), id.to_owned());
+        tokio::spawn(async move {
+            while let Some(d) = rx.recv().await {
+                forward
+                    .notify(
+                        wire::METHOD_DIAGNOSTIC,
+                        json!({ "session_id": session_id, "level": d.level, "plugin": d.plugin, "message": d.message }),
+                    )
+                    .await;
             }
+        });
+        Arc::new(Self {
+            id: id.to_owned(),
+            chain: Chain::new(sink.clone(), hx_mods::RuntimeConfig::default()),
+            link: link.clone(),
+            sink,
+            mods: Mutex::default(),
+            loading: AsyncMutex::new(()),
+        })
+    }
+
+    fn entry(&self, name: &str) -> Option<Arc<ModEntry>> {
+        lock(&self.mods).get(name).cloned()
+    }
+
+    fn stop(&self) {
+        let entries: Vec<_> = lock(&self.mods).drain().map(|(_, e)| e).collect();
+        for e in entries {
+            if let Some(r) = lock(&e.running).take() {
+                r.retire();
+                r.worker.kill();
+            }
+            self.chain.retire(e.idx);
         }
     }
 }
@@ -190,6 +298,15 @@ impl Session {
 pub struct ModsHandler {
     link: Arc<Link>,
     sessions: Sessions,
+}
+
+/// A plugin read from disk, ready to load.
+struct Item {
+    dir: String,
+    tier: Tier,
+    limits: ModLimits,
+    bundle: Bundle,
+    manifest: Manifest,
 }
 
 impl ModsHandler {
@@ -236,49 +353,99 @@ impl ModsHandler {
         })
     }
 
-    fn drop_session(&self, id: &str) {
-        if let Some(s) = lock(&self.sessions).remove(id) {
-            s.alive.store(false, Ordering::SeqCst);
-            (s.kill)();
+    fn drop_session(&self, id: &str) -> bool {
+        let session = lock(&self.sessions).remove(id);
+        session.is_some_and(|s| {
+            s.stop();
+            true
+        })
+    }
+
+    /// Reads one plugin: its sources and its manifest. Failures are per plugin.
+    async fn read_item(plugin: &wire::PluginRef) -> Result<Item, FailedMod> {
+        let failed = |plugin_name: Option<String>, code: &str, message: String| FailedMod {
+            dir: plugin.dir.clone(),
+            plugin: plugin_name,
+            code: code.to_owned(),
+            message,
+        };
+        let Some(tier) = Tier::parse(plugin.tier.as_deref().unwrap_or("user")) else {
+            return Err(failed(
+                None,
+                "hx.invalid_params",
+                "tier must be prepend, user or append".to_owned(),
+            ));
+        };
+        let dir = std::path::PathBuf::from(&plugin.dir);
+        let read =
+            tokio::task::spawn_blocking(move || -> Result<(Bundle, Manifest), hx_mods::Error> {
+                let bundle = Bundle::read(&dir)?;
+                let manifest = Manifest::read(&Files::Memory(bundle.clone()))?;
+                Ok((bundle, manifest))
+            })
+            .await;
+        match read {
+            Ok(Ok((bundle, manifest))) => Ok(Item {
+                dir: plugin.dir.clone(),
+                tier,
+                limits: plugin.limits.clone().unwrap_or_default(),
+                bundle,
+                manifest,
+            }),
+            Ok(Err(e)) => Err(failed(
+                None,
+                match e {
+                    hx_mods::Error::NotAMod(_) => "hx.mods.not_a_mod",
+                    _ => "hx.mods.load_failed",
+                },
+                e.to_string(),
+            )),
+            Err(e) => Err(failed(None, "hx.internal_error", e.to_string())),
         }
     }
 
     async fn load(&self, params: Value) -> HandlerResult {
         let p: LoadParams = parse_params(params)?;
         availability().map_err(|r| Self::unavailable(&r))?;
-        let mut set = Vec::new();
+        let mut items = Vec::new();
+        let mut failed = Vec::new();
         for plugin in &p.plugins {
-            let dir = std::path::PathBuf::from(&plugin.dir);
-            let bundle = tokio::task::spawn_blocking(move || hx_mods::Bundle::read(&dir))
-                .await
-                .map_err(|e| AppError::internal(e.to_string()))?
-                .map_err(|e| AppError::new(codes::HX_MODS_LOAD_FAILED, e.to_string()))?;
-            set.push(json!({ "bundle": bundle, "tier": plugin.tier.clone().unwrap_or_else(|| "user".into()) }));
+            match Self::read_item(plugin).await {
+                Ok(item) => items.push(item),
+                Err(f) => failed.push(f),
+            }
         }
+        let graph: Vec<_> = items
+            .iter()
+            .map(|i| (i.manifest.name.clone(), i.manifest.dependencies.clone()))
+            .collect();
+        let order = hx_mods::load_order(&graph)
+            .map_err(|e| AppError::new(codes::HX_MODS_LOAD_FAILED, e.to_string()))?;
         let existing = lock(&self.sessions).get(&p.session_id).cloned();
-        let (session, fresh) = match existing {
-            Some(s) if s.alive.load(Ordering::SeqCst) => (s, false),
-            _ => (
-                start_worker(&p.session_id, &self.link, &self.sessions).await?,
-                true,
-            ),
-        };
-        let result = session
-            .request(json!({ "op": "load", "plugins": set }))
-            .await;
-        match result {
-            Ok(v) => {
-                let loaded = v["loaded"].as_array().cloned().unwrap_or_default();
-                lock(&session.plugins).extend(loaded.iter().cloned());
-                Ok(json!({ "loaded": loaded }))
-            }
-            Err(e) => {
-                if fresh {
-                    self.drop_session(&p.session_id);
-                }
-                Err(e)
+        let created = existing.is_none();
+        let session = existing.unwrap_or_else(|| Session::new(&p.session_id, &self.link));
+        lock(&self.sessions).insert(p.session_id.clone(), session.clone());
+        let _one_at_a_time = session.loading.lock().await;
+        let mut slots: Vec<_> = items.into_iter().map(Some).collect();
+        let mut loaded = Vec::new();
+        for i in order {
+            let Some(item) = slots[i].take() else {
+                continue;
+            };
+            match start_mod(&session, &item, p.replace).await {
+                Ok(entry) => loaded.push(entry.view()),
+                Err(e) => failed.push(FailedMod {
+                    dir: item.dir.clone(),
+                    plugin: Some(item.manifest.name.clone()),
+                    code: e.code.to_owned(),
+                    message: e.message,
+                }),
             }
         }
+        if created && lock(&session.mods).is_empty() {
+            lock(&self.sessions).remove(&p.session_id);
+        }
+        Ok(json!({ "loaded": loaded, "failed": failed }))
     }
 
     /// Reads a plugin and says what it registers and calls, without running any of it. This needs
@@ -312,19 +479,22 @@ impl ModsHandler {
         Ok(report)
     }
 
-    async fn unload(&self, params: Value) -> HandlerResult {
+    fn unload(&self, params: Value) -> HandlerResult {
         let p: UnloadParams = parse_params(params)?;
         let Some(plugin) = p.plugin else {
-            let had = lock(&self.sessions).contains_key(&p.session_id);
-            self.drop_session(&p.session_id);
-            return to_result(&json!({ "unloaded": had }));
+            return to_result(&json!({ "unloaded": self.drop_session(&p.session_id) }));
         };
         let session = self.session(&p.session_id)?;
-        let v = session
-            .request(json!({ "op": "unload", "name": plugin }))
-            .await?;
-        lock(&session.plugins).retain(|l| l["name"] != json!(plugin));
-        Ok(v)
+        let entry = lock(&session.mods).remove(&plugin);
+        let Some(entry) = entry else {
+            return Ok(json!({ "unloaded": false }));
+        };
+        if let Some(r) = lock(&entry.running).take() {
+            r.retire();
+            r.worker.kill();
+        }
+        session.chain.retire(entry.idx);
+        Ok(json!({ "unloaded": true }))
     }
 
     fn list(&self, params: Value) -> HandlerResult {
@@ -333,18 +503,36 @@ impl ModsHandler {
             .values()
             .filter(|s| p.session_id.as_deref().is_none_or(|id| id == s.id))
             .map(|s| {
+                let mut entries: Vec<_> = lock(&s.mods).values().cloned().collect();
+                entries.sort_by_key(|e| e.idx);
+                let plugins: Vec<Value> = entries.iter().map(|e| e.view()).collect();
                 json!({
                     "session_id": s.id,
-                    "running": s.alive.load(Ordering::SeqCst),
-                    "plugins": lock(&s.plugins).clone(),
+                    "running": plugins.iter().any(|v| v["running"] == json!(true)),
+                    "plugins": plugins,
                 })
             })
             .collect();
         Ok(json!({ "sessions": sessions }))
     }
 
-    async fn forward(&self, session_id: &str, frame: Value) -> HandlerResult {
-        self.session(session_id)?.request(frame).await
+    async fn reach(&self, params: Value) -> HandlerResult {
+        let p: ReachParams = parse_params(params)?;
+        let session = self.session(&p.session_id)?;
+        let mut entries: Vec<_> = lock(&session.mods).values().cloned().collect();
+        entries.sort_by_key(|e| e.idx);
+        let running = entries
+            .iter()
+            .filter(|e| p.plugin.as_deref().is_none_or(|n| n == e.name))
+            .find_map(|e| e.current());
+        let Some(running) = running else {
+            return Err(worker_failed("no worker is running for that mod", ""));
+        };
+        running
+            .worker
+            .request(json!({ "op": "reach" }), PROBE_TIMEOUT)
+            .await
+            .map_err(|e| app_error(&e.code, e.message))
     }
 }
 
@@ -361,6 +549,7 @@ impl Handler for ModsHandler {
         let mut caps = vec!["mods.runtime".to_owned()];
         if availability().is_ok() {
             caps.push("mods.sandboxed_worker".to_owned());
+            caps.push("mods.worker_per_mod".to_owned());
         }
         caps
     }
@@ -372,40 +561,52 @@ impl Handler for ModsHandler {
         _ctx: CallContext,
     ) -> BoxFuture<'a, HandlerResult> {
         Box::pin(async move {
+            let internal = |e: hx_mods::Error| AppError::internal(e.to_string());
             match method {
                 wire::METHOD_CAPABILITIES => to_result(&Self::capabilities()),
                 wire::METHOD_LOAD => self.load(params).await,
-                wire::METHOD_UNLOAD => self.unload(params).await,
+                wire::METHOD_UNLOAD => self.unload(params),
                 wire::METHOD_ANALYZE => Self::analyze(params).await,
                 wire::METHOD_LIST => self.list(params),
+                wire::METHOD_REACH => self.reach(params).await,
                 wire::METHOD_DISPATCH => {
                     let p: DispatchParams = parse_params(params)?;
-                    self.forward(
-                        &p.session_id,
-                        json!({ "op": "dispatch", "event": p.event, "payload": p.payload }),
+                    let session = self.session(&p.session_id)?;
+                    let a = session
+                        .chain
+                        .dispatch(&p.event, &p.payload, p.plugin.as_deref())
+                        .await
+                        .map_err(internal)?;
+                    Ok(
+                        json!({ "answered": a.answered, "value": a.value, "answered_by": a.answered_by }),
                     )
-                    .await
                 }
                 wire::METHOD_RENDER => {
                     let p: RenderParams = parse_params(params)?;
-                    self.forward(
-                        &p.session_id,
-                        json!({ "op": "render", "component": p.component, "pane": p.id, "props": p.props }),
-                    )
-                    .await
+                    let session = self.session(&p.session_id)?;
+                    let r = session
+                        .chain
+                        .render(&p.component, p.id.as_deref(), &p.props)
+                        .await
+                        .map_err(internal)?;
+                    Ok(render_json(r.render, r.plugin))
                 }
                 wire::METHOD_PRESS | wire::METHOD_INPUT | wire::METHOD_SELECT => {
                     let p: HandlerParams = parse_params(params)?;
-                    let op = method.trim_start_matches("mods.");
-                    let mut frame = json!({ "op": op, "handler": p.handler });
-                    if op != "press" {
-                        frame["value"] = json!(p.value.unwrap_or_default());
-                    }
-                    self.forward(&p.session_id, frame).await
-                }
-                wire::METHOD_REACH => {
-                    let p: ReachParams = parse_params(params)?;
-                    self.forward(&p.session_id, json!({ "op": "reach" })).await
+                    let session = self.session(&p.session_id)?;
+                    let event = match method {
+                        wire::METHOD_PRESS => "ui.press",
+                        wire::METHOD_INPUT => "ui.input",
+                        _ => "ui.select",
+                    };
+                    let value =
+                        (method != wire::METHOD_PRESS).then(|| p.value.clone().unwrap_or_default());
+                    let handled = session
+                        .chain
+                        .callback(event, &p.handler, value.as_deref())
+                        .await
+                        .map_err(internal)?;
+                    Ok(json!({ "handled": handled }))
                 }
                 other => Err(AppError::new(
                     codes::HX_METHOD_NOT_FOUND,
@@ -416,53 +617,132 @@ impl Handler for ModsHandler {
     }
 }
 
+fn render_json(r: hx_mods::Render, plugin: Option<String>) -> Value {
+    let mut v = match r {
+        hx_mods::Render::Tree { tree, stats } => json!({
+            "kind": "tree", "tree": tree,
+            "stats": { "elements": stats.elements, "chars": stats.chars, "depth": stats.depth },
+        }),
+        hx_mods::Render::Default { props } => json!({ "kind": "default", "props": props }),
+        hx_mods::Render::Skipped { reason } => json!({ "kind": "skipped", "reason": reason }),
+    };
+    if let Some(p) = plugin {
+        v["plugin"] = json!(p);
+    }
+    v
+}
+
+/// Starts a worker for one mod, loads it, and puts it in its place in the chain.
+async fn start_mod(
+    session: &Arc<Session>,
+    item: &Item,
+    replace: bool,
+) -> Result<Arc<ModEntry>, AppError> {
+    let name = item.manifest.name.clone();
+    let existing = session.entry(&name);
+    if let Some(e) = &existing
+        && e.current().is_some_and(|r| r.worker.alive())
+        && !replace
+    {
+        return Err(AppError::new(
+            codes::HX_MODS_ALREADY_LOADED,
+            format!("`{name}` is already loaded"),
+        ));
+    }
+    let fresh = existing.is_none();
+    let entry = existing.unwrap_or_else(|| {
+        let budgets = Budgets {
+            event: Duration::from_millis(item.limits.event_budget_ms.unwrap_or(DEFAULT_EVENT_MS)),
+            ..Budgets::default()
+        };
+        let idx = session.chain.add_slot(&name, item.tier, budgets);
+        let entry = Arc::new(ModEntry {
+            idx,
+            name: name.clone(),
+            tier: item.tier,
+            generation: AtomicU32::new(0),
+            running: Mutex::default(),
+            dir: Mutex::default(),
+        });
+        lock(&session.mods).insert(name.clone(), entry.clone());
+        entry
+    });
+    let generation = entry.generation.fetch_add(1, Ordering::SeqCst);
+    let started = spawn_worker(session, &entry, item, generation).await;
+    let running = match started {
+        Ok(r) => r,
+        Err(e) => {
+            if fresh {
+                lock(&session.mods).remove(&name);
+                session.chain.retire(entry.idx);
+            }
+            return Err(e);
+        }
+    };
+    item.dir.clone_into(&mut lock(&entry.dir));
+    let old = lock(&entry.running).replace(running.clone());
+    session
+        .chain
+        .set_worker(entry.idx, Some(running.worker.clone()));
+    if let Some(old) = old {
+        // The new worker already holds the mod's place; the old one finishes what it was doing.
+        old.retire();
+        tokio::spawn(async move {
+            tokio::time::sleep(RETIRE_GRACE).await;
+            old.worker.kill();
+        });
+    }
+    Ok(entry)
+}
+
 // ---------------------------------------------------------------------------------------------
 // The platform part: starting the worker.
 
-#[cfg(unix)]
-fn availability() -> Result<(), String> {
-    let caps = hx_sandbox::capabilities();
-    for (cap, what) in [
-        (&caps.fs, "file confinement"),
-        (&caps.network_off, "network off"),
-        (&caps.inherited_handle, "a private channel"),
-    ] {
-        if !cap.available {
-            return Err(format!(
-                "this machine's sandbox cannot enforce {what} ({}), and mods never run unsandboxed",
-                cap.detail
-            ));
-        }
-    }
-    Ok(())
-}
-
 #[cfg(not(unix))]
-fn availability() -> Result<(), String> {
-    Err("there is no private channel for the sandboxed worker on this platform yet (hx-sandbox has it on Unix only), and mods never run unsandboxed".to_owned())
-}
-
-#[cfg(not(unix))]
-#[allow(
-    clippy::unused_async,
-    reason = "keeps the signature the same as on Unix, where the worker is started asynchronously"
-)]
-async fn start_worker(
-    _id: &str,
-    _link: &Arc<Link>,
-    _sessions: &Sessions,
-) -> Result<Arc<Session>, AppError> {
+async fn spawn_worker(
+    _session: &Arc<Session>,
+    _entry: &Arc<ModEntry>,
+    _item: &Item,
+    _generation: u32,
+) -> Result<Arc<Running>, AppError> {
     Err(ModsHandler::unavailable(
         &availability().err().unwrap_or_default(),
     ))
 }
 
+/// Says how a worker's process ended, in words, and whether that was the sandbox's ceiling.
 #[cfg(unix)]
-async fn start_worker(
-    id: &str,
-    link: &Arc<Link>,
-    sessions: &Sessions,
-) -> Result<Arc<Session>, AppError> {
+fn exit_reason(outcome: &hx_sandbox::Result<hx_sandbox::ExitOutcome>) -> (&'static str, String) {
+    use hx_sandbox::ExitOutcome;
+    match outcome {
+        Ok(ExitOutcome::TimedOut) => (
+            "ceiling",
+            "the worker reached the sandbox's lifetime limit".to_owned(),
+        ),
+        Ok(ExitOutcome::Exited { code }) => {
+            ("crash", format!("the worker exited with status {code}"))
+        }
+        Ok(ExitOutcome::Signaled { signal }) => {
+            ("crash", format!("the worker was killed by signal {signal}"))
+        }
+        Ok(ExitOutcome::SpawnFailed { reason }) => {
+            ("crash", format!("the worker did not start: {reason}"))
+        }
+        Err(e) => ("crash", format!("the worker could not be waited for: {e}")),
+    }
+}
+
+#[cfg(unix)]
+#[allow(
+    clippy::too_many_lines,
+    reason = "one sequence: socket, sandbox policy, spawn, watch, load"
+)]
+async fn spawn_worker(
+    session: &Arc<Session>,
+    entry: &Arc<ModEntry>,
+    item: &Item,
+    generation: u32,
+) -> Result<Arc<Running>, AppError> {
     use std::os::fd::{AsRawFd, OwnedFd};
     use std::os::unix::fs::DirBuilderExt;
 
@@ -490,6 +770,17 @@ async fn start_worker(
         .create(&scratch)
         .map_err(|e| internal("scratch directory", &e))?;
 
+    let heap_mib = item.limits.heap_mib.unwrap_or(DEFAULT_HEAP_MIB).max(1);
+    let lifetime = Duration::from_secs(
+        item.limits
+            .lifetime_s
+            .unwrap_or(hx_sandbox::limits::MAX_TIMEOUT_MS / 1000)
+            .clamp(1, hx_sandbox::limits::MAX_TIMEOUT_MS / 1000),
+    );
+    let limits = json!({
+        "heap_mib": heap_mib,
+        "event_budget_ms": item.limits.event_budget_ms.unwrap_or(DEFAULT_EVENT_MS),
+    });
     let mut policy = SandboxPolicy::new(&scratch)
         .with_ro(
             worker_read_paths()
@@ -497,16 +788,15 @@ async fn start_worker(
                 .chain([exe.clone(), scratch.clone()]),
         )
         .with_network(NetworkPolicy::Off)
-        .with_env(CHANNEL_ENV, fd_number.to_string());
+        .with_env(CHANNEL_ENV, fd_number.to_string())
+        .with_env(LIMITS_ENV, limits.to_string());
     policy.env_allowlist.clear();
-    policy.timeout_ms = hx_sandbox::limits::MAX_TIMEOUT_MS;
-    policy.resources.memory_bytes = Some(2 * 1024 * 1024 * 1024);
-    // `RLIMIT_NPROC` counts threads, and in the sandbox's fresh user namespace it counts from zero:
-    // the sandbox's own supervisor (it stays behind as the PID namespace's parent), the worker's
-    // main thread and its channel reader (`hx_mods::worker::serve`) are three tasks. Three is
-    // exactly that, so any fork, clone or exec past it is refused by the kernel. The limit was
-    // once 1, which refused the worker's own threads at startup for every user but root (root is
-    // exempt from the limit, which hid it). `the_worker_starts_for_an_ordinary_user` guards it.
+    policy.timeout_ms = u64::try_from(lifetime.as_millis()).unwrap_or(u64::MAX);
+    // The mod's heap budget is the engine's own limit; this is the process's, a second wall for a
+    // mod that finds memory the engine does not count.
+    policy.resources.memory_bytes = Some((heap_mib + WORKER_OVERHEAD_MIB) * 1024 * 1024);
+    // The supervisor, the worker's main thread and its channel reader, and nothing else: any fork,
+    // clone or exec past that is refused by the kernel (see `WORKER_TASKS`).
     policy.resources.max_processes = Some(WORKER_TASKS);
     let argv = vec![exe.to_string_lossy().into_owned(), "mods-worker".to_owned()];
     let spawned =
@@ -531,49 +821,131 @@ async fn start_worker(
     if let Some(r) = child.take_stdout() {
         tokio::spawn(keep_tail(r, Arc::default()));
     }
+    let pid = child.pid();
     let killer = child.kill_switch();
     let (read_half, write_half) = host_end.into_split();
-    let session = Arc::new(Session {
-        id: id.to_owned(),
-        writer: AsyncMutex::new(Box::new(write_half)),
-        waiting: Mutex::default(),
-        next: AtomicU64::new(0),
-        alive: AtomicBool::new(true),
-        kill: Box::new(move || killer.kill()),
+    let worker = ModWorker::attach(
+        read_half,
+        write_half,
+        (&entry.name, entry.idx, generation),
+        session.sink.clone(),
+        Box::new(move || killer.kill()),
+        session.chain.tick_handler(),
+    );
+    let running = Arc::new(Running {
+        worker: worker.clone(),
+        pid,
+        started: Instant::now(),
+        lifetime,
+        generation,
         stderr,
-        plugins: Mutex::default(),
+        loaded: Mutex::default(),
+        retired: AtomicBool::new(false),
+        reader: AsyncMutex::new(stderr_reader),
     });
-    lock(sessions).insert(id.to_owned(), session.clone());
 
-    tokio::spawn(read_channel(read_half, session.clone(), link.clone()));
-    let (s, l, map) = (session.clone(), link.clone(), sessions.clone());
+    // Reports the worker's end, once, whatever it was.
+    let watcher = (session.clone(), entry.clone(), running.clone());
     tokio::spawn(async move {
+        let (session, entry, running) = watcher;
         let outcome = child.wait().await;
         let _ = std::fs::remove_dir_all(&scratch);
-        s.alive.store(false, Ordering::SeqCst);
-        // The exit can be seen before the last of the error output has been read: wait for the
-        // reader, or a panic message would be missing from the very report that needs it.
-        if let Some(reader) = stderr_reader {
-            let _ = tokio::time::timeout(STDERR_DRAIN, reader).await;
+        running.drain().await;
+        if running.retired.load(Ordering::SeqCst) {
+            return;
         }
-        let reason = match outcome {
-            Ok(o) => format!("the worker exited: {o:?}"),
-            Err(e) => format!("the worker could not be waited for: {e}"),
-        };
-        s.fail_all(&worker_failed(reason.clone(), &s.stderr_text()));
-        {
-            let mut map = lock(&map);
-            if map.get(&s.id).is_some_and(|m| Arc::ptr_eq(m, &s)) {
-                map.remove(&s.id);
+        let (cause, reason) = exit_reason(&outcome);
+        let current = {
+            let mut slot = lock(&entry.running);
+            if slot.as_ref().is_some_and(|c| Arc::ptr_eq(c, &running)) {
+                *slot = None;
+                true
+            } else {
+                false
             }
+        };
+        if current {
+            session.chain.set_worker(entry.idx, None);
+            session
+                .link
+                .notify(
+                    wire::METHOD_EXITED,
+                    serde_json::to_value(ExitedParams {
+                        session_id: session.id.clone(),
+                        plugin: entry.name.clone(),
+                        generation: running.generation,
+                        cause: cause.to_owned(),
+                        reason,
+                        stderr: running.stderr_text(),
+                    })
+                    .unwrap_or(Value::Null),
+                )
+                .await;
         }
-        l.notify(
-            wire::METHOD_EXITED,
-            json!({ "session_id": s.id, "reason": reason, "stderr": s.stderr_text() }),
+    });
+
+    // Load the mod. A failure stops this worker and nothing else.
+    let bundle = serde_json::to_value(&item.bundle).unwrap_or(Value::Null);
+    let loaded = worker
+        .request(
+            json!({
+                "op": "load", "bundle": bundle, "tier": item.tier.name(),
+                "idx": entry.idx, "gen": generation,
+            }),
+            LOAD_TIMEOUT,
         )
         .await;
-    });
-    Ok(session)
+    match loaded {
+        Ok(v) => {
+            let info = &v["loaded"];
+            *lock(&running.loaded) = (
+                info["modules"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(|m| m.as_str().map(str::to_owned))
+                    .collect(),
+                info["hooks"].as_u64().unwrap_or(0),
+            );
+            Ok(running)
+        }
+        Err(e) => {
+            running.retire();
+            worker.kill();
+            running.drain().await;
+            let stderr = running.stderr_text();
+            Err(match e.code.as_str() {
+                "hx.mods.worker_failed" => worker_failed(e.message, &stderr),
+                code => app_error(code, e.message),
+            })
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The platform part: starting the worker.
+
+#[cfg(unix)]
+fn availability() -> Result<(), String> {
+    let caps = hx_sandbox::capabilities();
+    for (cap, what) in [
+        (&caps.fs, "file confinement"),
+        (&caps.network_off, "network off"),
+        (&caps.inherited_handle, "a private channel"),
+    ] {
+        if !cap.available {
+            return Err(format!(
+                "this machine's sandbox cannot enforce {what} ({}), and mods never run unsandboxed",
+                cap.detail
+            ));
+        }
+    }
+    Ok(())
+}
+
+#[cfg(not(unix))]
+fn availability() -> Result<(), String> {
+    Err("there is no private channel for the sandboxed worker on this platform yet (hx-sandbox has it on Unix only), and mods never run unsandboxed".to_owned())
 }
 
 /// What the worker may read besides its own binary: the dynamic loader and the system libraries
@@ -639,91 +1011,21 @@ async fn keep_tail<R: AsyncRead + Unpin>(mut r: R, into: Arc<Mutex<String>>) {
     }
 }
 
-/// Reads one line of at most `max` bytes. `None` at the end of input or past the cap.
-#[cfg(unix)]
-async fn read_line<R: AsyncRead + Unpin>(reader: &mut BufReader<R>, max: usize) -> Option<String> {
-    use tokio::io::AsyncBufReadExt;
-    let mut buf = Vec::new();
-    let n = AsyncReadExt::take(&mut *reader, max as u64 + 1)
-        .read_until(b'\n', &mut buf)
-        .await
-        .ok()?;
-    if n == 0 || buf.len() > max {
-        return None;
+/// The limits the parent put in the worker's environment, as a runtime configuration.
+fn worker_config() -> hx_mods::RuntimeConfig {
+    let limits: wire::ModLimits = std::env::var(LIMITS_ENV)
+        .ok()
+        .and_then(|v| serde_json::from_str(&v).ok())
+        .unwrap_or_default();
+    let mut config = hx_mods::RuntimeConfig::default();
+    if let Some(mib) = limits.heap_mib {
+        config.memory_limit =
+            usize::try_from(mib.saturating_mul(1024 * 1024)).unwrap_or(config.memory_limit);
     }
-    String::from_utf8(buf).ok()
-}
-
-#[cfg(unix)]
-async fn read_channel(
-    half: tokio::net::unix::OwnedReadHalf,
-    session: Arc<Session>,
-    link: Arc<Link>,
-) {
-    let mut reader = BufReader::new(half);
-    while let Some(line) = read_line(&mut reader, MAX_WORKER_FRAME).await {
-        let Ok(frame) = serde_json::from_str::<Value>(line.trim_end()) else {
-            continue;
-        };
-        if let Some(id) = frame.get("re").and_then(Value::as_u64) {
-            let waiter = lock(&session.waiting).remove(&id);
-            if let Some(w) = waiter {
-                let outcome = match frame.get("err") {
-                    Some(e) => Err(e.clone()),
-                    None => Ok(frame.get("ok").cloned().unwrap_or(Value::Null)),
-                };
-                let _ = w.send(outcome);
-            }
-        } else if let Some(cid) = frame.get("call").and_then(Value::as_u64) {
-            // Queue the request before reading the next frame, so the plugin sees a mod's call
-            // before the reply to the operation that made it.
-            forward_call(&session, &link, cid, &frame).await;
-        } else if let Some(d) = frame.get("diag") {
-            link.notify(
-                wire::METHOD_DIAGNOSTIC,
-                json!({ "session_id": session.id, "level": d["level"], "plugin": d["plugin"], "message": d["message"] }),
-            )
-            .await;
-        }
+    if let Some(ms) = limits.event_budget_ms {
+        config.budgets.event = Duration::from_millis(ms);
     }
-    // The channel closed: the child's exit task says why.
-    session.alive.store(false, Ordering::SeqCst);
-}
-
-/// Queues one `$` call for the plugin and, in a task, sends its answer back to the worker.
-#[cfg(unix)]
-async fn forward_call(session: &Arc<Session>, link: &Arc<Link>, cid: u64, frame: &Value) {
-    let plugin = frame["plugin"].as_str().unwrap_or_default().to_owned();
-    let known = lock(&session.plugins)
-        .iter()
-        .any(|l| l["name"] == json!(plugin));
-    // The name comes from the worker. A call naming a mod that is not loaded in this session is
-    // refused here: it never reaches the plugin's policy.
-    if !known {
-        let reply = json!({ "ret": cid, "err": { "code": "hx.policy.denied", "message": "a call named a mod that is not loaded in this session" } });
-        let _ = session.write(&reply).await;
-        return;
-    }
-    let params = serde_json::to_value(CallParams {
-        session_id: session.id.clone(),
-        plugin,
-        call: frame["name"].as_str().unwrap_or_default().to_owned(),
-        args: frame.get("args").cloned().unwrap_or(Value::Null),
-    })
-    .unwrap_or(Value::Null);
-    let sent = link.begin(wire::METHOD_CALL, params).await;
-    let session = session.clone();
-    tokio::spawn(async move {
-        let outcome = match sent {
-            Ok(sent) => sent.wait(CALL_TIMEOUT).await,
-            Err(e) => Err(e),
-        };
-        let reply = match outcome {
-            Ok(v) => json!({ "ret": cid, "ok": v }),
-            Err(e) => json!({ "ret": cid, "err": { "code": e.code, "message": e.message } }),
-        };
-        let _ = session.write(&reply).await;
-    });
+    config
 }
 
 /// The worker's entry point: serves `hx-mods-v1` on the inherited channel until it closes.
@@ -740,8 +1042,7 @@ pub fn run_worker() -> anyhow::Result<()> {
     if let Err(e) = hx_sandbox::forbid_exec() {
         eprintln!("hx mods-worker: could not forbid exec: {e}");
     }
-    hx_mods::worker::serve(stream, writer, hx_mods::RuntimeConfig::default())
-        .map_err(|e| anyhow::anyhow!("{e}"))
+    hx_mods::worker::serve(stream, writer, worker_config()).map_err(|e| anyhow::anyhow!("{e}"))
 }
 
 /// The worker's entry point. Mods are off on this platform, so there is nothing to run.
@@ -756,19 +1057,6 @@ pub fn run_worker() -> anyhow::Result<()> {
 #[cfg(all(test, unix))]
 mod tests {
     use super::*;
-
-    fn session(stderr: &str) -> Arc<Session> {
-        Arc::new(Session {
-            id: "s".to_owned(),
-            writer: AsyncMutex::new(Box::new(tokio::io::sink())),
-            waiting: Mutex::default(),
-            next: AtomicU64::new(0),
-            alive: AtomicBool::new(true),
-            kill: Box::new(|| {}),
-            stderr: Arc::new(Mutex::new(stderr.to_owned())),
-            plugins: Mutex::default(),
-        })
-    }
 
     #[test]
     fn control_characters_are_stripped_but_lines_and_tabs_stay() {
@@ -788,30 +1076,5 @@ mod tests {
         assert!(kept.len() <= STDERR_KEEP, "{} bytes", kept.len());
         assert!(kept.ends_with("bold[0m é\nthe last line\n"), "{kept:?}");
         assert!(!kept.contains('\x1b'));
-    }
-
-    #[tokio::test]
-    async fn an_operation_cut_short_by_the_workers_exit_carries_its_stderr() {
-        let s = session("thread 'main' panicked at worker.rs:1:1:\nboom\n");
-        let waiter = {
-            let s = s.clone();
-            tokio::spawn(async move { s.request(json!({ "op": "load" })).await })
-        };
-        // Wait until the operation is registered, as the exit task would find it.
-        while lock(&s.waiting).is_empty() {
-            tokio::task::yield_now().await;
-        }
-        s.alive.store(false, Ordering::SeqCst);
-        s.fail_all(&worker_failed(
-            "the worker exited: Exited { code: 101 }",
-            &s.stderr_text(),
-        ));
-        let e = waiter.await.unwrap().unwrap_err();
-        assert_eq!(e.code, codes::HX_MODS_WORKER_FAILED);
-        assert!(e.message.contains("101"), "{}", e.message);
-        assert_eq!(
-            e.details["stderr"],
-            json!("thread 'main' panicked at worker.rs:1:1:\nboom\n")
-        );
     }
 }

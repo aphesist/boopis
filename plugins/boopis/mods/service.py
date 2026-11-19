@@ -10,6 +10,15 @@ be (a ``permission`` form, origin ``{kind: mod, plugin}``), performed (``calls.p
 ``tool.called`` with the tool ``mod:<plugin>/<call>`` and the arguments hashed, never stored. A refusal is an error in
 the mod, with a code.
 
+**Each mod has a worker process of its own** (``mods.load`` starts one per mod), so a mod that runs out of memory,
+loops, waits for a form or dies fails alone. ``hx`` reports a worker's end with ``mods.exited``; ``_on_exited``
+restarts it with a backoff (``restart_backoff_s``: 1 s, 5 s, 30 s) and, when those are used up, marks the mod failed
+in the UI (``mod.log`` and ``mod.status``) and leaves the others running. The sandbox ends a worker after an hour, so
+the service starts its replacement before then (``_replace``): the new worker loads, takes the mod's place in the
+chain, and the old one is stopped after a grace period. What a restart keeps: ``$.store`` (it lives here, on disk, per
+mod), the mod's panes and commands (its ``session.start`` runs again, for that mod only). What it loses: everything in
+the worker, so ``$.state`` atoms, module variables and timers start again, and a hook in flight is skipped.
+
 Rendering is asynchronous on purpose. A host call is made while the worker waits for its answer, so answering one by
 calling ``mods.render`` would wait for the worker that waits for us. ``invalidate`` marks a site dirty and one thread
 per session draws dirty sites later, at most ten times a second per site, and sends ``mod.render`` with the tree.
@@ -31,7 +40,7 @@ from ..policy.data import load_defaults
 from ..util.ids import uuid7
 from ..util.log import get_logger
 from . import calls
-from .limits import limit
+from .limits import backoff, limit
 
 if TYPE_CHECKING:
     from ..session import Runtime
@@ -79,16 +88,42 @@ class ModSession:
     stopped: bool = False
     stamps: dict[str, deque[float]] = field(default_factory=dict)  # per mod: recent call times, for the rate limit
     diagnostics: deque[dict[str, Any]] = field(default_factory=lambda: deque(maxlen=200))
-    exited: str = ""  # why the worker is gone, when it is
+    mods: dict[str, ModState] = field(default_factory=dict)  # per mod: where it came from and how it is doing
+    start_payload: dict[str, Any] = field(default_factory=dict)  # the session.start a restarted mod is given again
+    said: dict[tuple[str, str], float] = field(default_factory=dict)  # (plugin, text) -> when it was last logged
+    closed: bool = False
+
+
+@dataclass(slots=True)
+class ModState:
+    """One mod's life in a session: where to load it from, and how its workers have fared."""
+
+    directory: Path
+    tier: str
+    status: str = "running"  # running | restarting | failed
+    reason: str = ""
+    restarts: int = 0  # consecutive failures since the worker last ran for a while
+    generation: int = 0
+    since: float = 0.0  # monotonic time its current worker started
+    timers: dict[str, threading.Timer] = field(default_factory=dict)  # "restart" | "ceiling"
 
 
 class ModService:
-    def __init__(self, rt: Runtime, *, fetcher: Callable[..., Any] | None = None) -> None:
+    def __init__(
+        self,
+        rt: Runtime,
+        *,
+        fetcher: Callable[..., Any] | None = None,
+        resolver: Callable[..., Any] | None = None,
+        connector: Callable[..., Any] | None = None,
+    ) -> None:
         self.rt = rt
         self._sessions: dict[str, ModSession] = {}
         self._lock = threading.RLock()
         self._registered_commands: set[str] = set()
         self.fetcher = fetcher  # tests inject one: unit tests have no network
+        self.resolver = resolver  # the name lookup and the socket of ``$.http.fetch``: seams for the tests,
+        self.connector = connector  # which resolve and connect to what they say, never to the network
 
     # ------------------------------------------------------------------ hx
 
@@ -127,16 +162,30 @@ class ModService:
         with self._lock:
             return session_id in self._sessions
 
+    @staticmethod
+    def _limits() -> dict[str, int]:
+        """What each worker is held to: its own heap, one hook's time, and its life (``policy/defaults.json``)."""
+        return {
+            "heap_mib": limit("heap_mib"),
+            "event_budget_ms": limit("event_budget_ms"),
+            "lifetime_s": limit("worker_lifetime_s"),
+        }
+
+    def _ref(self, state: ModState) -> dict[str, Any]:
+        return {"dir": str(state.directory), "tier": state.tier, "limits": self._limits()}
+
     def load(self, session_id: str, plugins: list[tuple[Path, str]]) -> list[dict[str, Any]]:
-        """Load mods into a session's worker. ``plugins`` is ``[(directory, tier)]``."""
+        """Load mods into a session, one worker each. ``plugins`` is ``[(directory, tier)]``. A mod that does not load
+        is reported in the UI and does not stop the others; what did load is returned."""
         if not plugins:
             return []
         with self._lock:
             session = self._sessions.setdefault(session_id, ModSession(session_id))
-        refs = [{"dir": str(path), "tier": tier} for path, tier in plugins]
-        roots = {path.name: path for path, _ in plugins}
+        states = {str(path): ModState(path, tier) for path, tier in plugins}
         try:
-            result = self._hx("mods.load", {"session_id": session_id, "plugins": refs})
+            result = self._hx(
+                "mods.load", {"session_id": session_id, "plugins": [self._ref(s) for s in states.values()]}
+            )
         except BoopisError:
             if not session.plugins:
                 with self._lock:
@@ -144,9 +193,50 @@ class ModService:
             raise
         loaded: list[dict[str, Any]] = list(result["loaded"])
         for item in loaded:
-            session.plugins[item["name"]] = {**item, "root": str(next(iter(roots.values()), ""))}
-        session.exited = ""
+            # the plugin's name is its manifest name; the directory it came from is what a restart loads again
+            self._running(session, item, states[str(item.get("dir") or "")])
+        for failed in result.get("failed") or []:
+            directory = str(failed.get("dir") or "")
+            name = str(failed.get("plugin") or Path(directory).name)
+            self._give_up(session, name, states[directory], f"it did not load: {failed.get('message')}")
+        with self._lock:
+            if not session.plugins:
+                self._sessions.pop(session_id, None)
         return loaded
+
+    def _running(self, session: ModSession, item: Mapping[str, Any], state: ModState) -> None:
+        """A mod's worker is up: remember it, and arrange its replacement before the sandbox ends it."""
+        name = str(item["name"])
+        state.status, state.reason, state.since = "running", "", time.monotonic()
+        state.generation = int(item.get("generation") or 0)
+        session.mods[name] = state
+        session.plugins[name] = {**item, "root": str(state.directory), "state": "running"}
+        expires = item.get("expires_in_s")
+        if isinstance(expires, (int, float)) and not isinstance(expires, bool):
+            self._after(
+                session, name, state, "ceiling", max(0.0, float(expires) - limit("restart_lead_s")), self._replace
+            )
+
+    def _after(
+        self, session: ModSession, name: str, state: ModState, kind: str, delay: float, action: Callable[..., None]
+    ) -> None:
+        """Run ``action(session, name, state)`` in ``delay`` seconds on its own thread, unless the mod goes first."""
+        old = state.timers.pop(kind, None)
+        if old is not None:
+            old.cancel()
+        if session.closed:
+            return
+        timer = threading.Timer(delay, action, args=(session, name, state))
+        timer.daemon = True
+        timer.name = f"mods-{kind}-{name}"
+        state.timers[kind] = timer
+        timer.start()
+
+    @staticmethod
+    def _cancel(state: ModState) -> None:
+        for timer in state.timers.values():
+            timer.cancel()
+        state.timers.clear()
 
     def unload(self, session_id: str, plugin: str | None = None) -> bool:
         with self._lock:
@@ -158,6 +248,9 @@ class ModService:
         except BoopisError:
             _log.warning("could not unload mods of %s", session_id, exc_info=True)
         if plugin is not None:
+            state = session.mods.pop(plugin, None)
+            if state is not None:
+                self._cancel(state)
             session.plugins.pop(plugin, None)
             for key in [k for k in session.panes if k[0] == plugin]:
                 self.close_pane(session, plugin, key[1])
@@ -169,6 +262,9 @@ class ModService:
         return True
 
     def _stop(self, session: ModSession) -> None:
+        session.closed = True
+        for state in session.mods.values():
+            self._cancel(state)
         with session.cond:
             session.stopped = True
             session.cond.notify_all()
@@ -176,24 +272,35 @@ class ModService:
     def list(self, session_id: str | None = None) -> list[dict[str, Any]]:
         with self._lock:
             sessions = [s for s in self._sessions.values() if session_id in (None, s.session_id)]
-        return [
-            {
-                "session_id": s.session_id,
-                "running": not s.exited,
-                "exited": s.exited,
-                "plugins": [{k: v for k, v in p.items() if k != "root"} for p in s.plugins.values()],
-                "panes": [{"plugin": k[0], "id": k[1], **spec} for k, spec in s.panes.items()],
-                "commands": sorted(s.commands),
-                "status": dict(s.status),
-            }
-            for s in sessions
-        ]
+        out = []
+        for s in sessions:
+            plugins = [
+                {k: v for k, v in p.items() if k != "root"}
+                | ({"state": s.mods[n].status, "reason": s.mods[n].reason} if n in s.mods else {})
+                for n, p in s.plugins.items()
+            ]
+            states = [s.mods[n] for n in s.plugins if n in s.mods]
+            gone = bool(states) and all(st.status == "failed" for st in states)
+            out.append(
+                {
+                    "session_id": s.session_id,
+                    "running": not gone,
+                    "exited": states[0].reason if gone else "",
+                    "plugins": plugins,
+                    "panes": [{"plugin": k[0], "id": k[1], **spec} for k, spec in s.panes.items()],
+                    "commands": sorted(s.commands),
+                    "status": dict(s.status),
+                }
+            )
+        return out
 
     # ------------------------------------------------------------------ events in
 
     def dispatch(self, session_id: str, event: str, payload: Mapping[str, Any]) -> dict[str, Any]:
         """One event through the chain. ``{answered, value}``."""
-        self.session(session_id)
+        session = self.session(session_id)
+        if event == "session.start":
+            session.start_payload = dict(payload)
         return dict(
             self._hx("mods.dispatch", {"session_id": session_id, "event": event, "payload": dict(payload)}, 660.0)
         )
@@ -322,7 +429,7 @@ class ModService:
         payload: dict[str, Any] = {"component": component, "kind": result["kind"]}
         if site_id is not None:
             payload["id"] = site_id
-        for key in ("tree", "props", "reason"):
+        for key in ("tree", "props", "reason", "plugin"):
             if result.get(key) is not None:
                 payload[key] = result[key]
         self.emit(session.session_id, "mod.render", payload)
@@ -362,29 +469,147 @@ class ModService:
     # ------------------------------------------------------------------ peer: what hx tells us
 
     def _on_diagnostic(self, params: Mapping[str, Any]) -> None:
+        """What a mod did wrong (a hook threw, ran past its budget, ran out of memory): the mod's log line says why."""
         sid = str(params.get("session_id") or "")
         with self._lock:
             session = self._sessions.get(sid)
         entry = {k: params.get(k) for k in ("level", "plugin", "message")}
-        if session is not None:
-            session.diagnostics.append(entry)
         _log.info("mod %s: %s", entry["plugin"] or "-", entry["message"])
-
-    def _on_exited(self, params: Mapping[str, Any]) -> None:
-        sid = str(params.get("session_id") or "")
-        with self._lock:
-            session = self._sessions.get(sid)
         if session is None:
             return
-        session.exited = str(params.get("reason") or "the worker exited")
-        for key in list(session.panes):
-            self.close_pane(session, *key)
-        self._stop(session)
+        session.diagnostics.append(entry)
+        plugin, text = str(entry["plugin"] or ""), str(entry["message"] or "")
+        now = time.monotonic()
+        key = (plugin, text)
+        if now - session.said.get(key, -1e9) < limit("diagnostic_repeat_s"):
+            return  # a mod that fails on every redraw says so once, not ten times a second
+        session.said[key] = now
+        if len(session.said) > 500:
+            session.said = {k: t for k, t in session.said.items() if now - t < limit("diagnostic_repeat_s")}
+        self.emit(sid, "mod.log", {"plugin": plugin, "level": "warn", "text": text})
+
+    def _on_exited(self, params: Mapping[str, Any]) -> None:
+        """One mod's worker is gone (a crash, the memory limit, the sandbox's hour). The others are untouched. It is
+        loaded again after a backoff; when the waits are used up it is marked failed."""
+        sid, plugin = str(params.get("session_id") or ""), str(params.get("plugin") or "")
+        with self._lock:
+            session = self._sessions.get(sid)
+        state = session.mods.get(plugin) if session is not None else None
+        if session is None or state is None or session.closed:
+            return
+        if int(params.get("generation") or 0) < state.generation:
+            return  # an older worker's end, after its replacement took over
+        reason = str(params.get("reason") or "the worker exited")
+        stderr = str(params.get("stderr") or "").strip().splitlines()
+        if stderr:
+            reason = f"{reason} ({stderr[-1][:200]})"
+        for key in [k for k in session.panes if k[0] == plugin]:
+            self.close_pane(session, plugin, key[1])
+        session.status.pop(plugin, None)
+        self.emit(sid, "mod.status", {"plugin": plugin, "text": ""})
+        if time.monotonic() - state.since >= limit("restart_stable_s"):
+            state.restarts = 0  # it ran for a good while: this is a new failure, not the same one again
+        self._cancel(state)
+        waits = backoff()
+        if state.restarts >= len(waits):
+            self._give_up(session, plugin, state, reason)
+            return
+        wait = waits[state.restarts]
+        state.status, state.reason = "restarting", reason
+        if plugin in session.plugins:
+            session.plugins[plugin]["state"] = "restarting"
         self.emit(
             sid,
             "mod.log",
-            {"plugin": "", "level": "warn", "text": f"the mods of this session stopped: {session.exited}"},
+            {
+                "plugin": plugin,
+                "level": "warn",
+                "text": f"{plugin} stopped: {reason}. Starting it again in {wait:g} s.",
+            },
         )
+        self._after(session, plugin, state, "restart", wait, self._restart)
+
+    def _give_up(self, session: ModSession, plugin: str, state: ModState, reason: str) -> None:
+        """The mod is failed: said in its log line and its status line, left alone, and the others keep working."""
+        state.status, state.reason = "failed", reason
+        self._cancel(state)
+        session.mods[plugin] = state
+        session.plugins.setdefault(plugin, {"name": plugin, "root": str(state.directory)})["state"] = "failed"
+        session.status.pop(plugin, None)
+        self.emit(
+            session.session_id, "mod.log", {"plugin": plugin, "level": "warn", "text": f"{plugin} failed: {reason}"}
+        )
+        self.emit(session.session_id, "mod.status", {"plugin": plugin, "text": f"failed: {reason}"[:200]})
+
+    def _restart(self, session: ModSession, plugin: str, state: ModState) -> None:
+        """A failed mod's worker, started again."""
+        if session.closed or session.mods.get(plugin) is not state:
+            return
+        try:
+            result = self._hx("mods.load", {"session_id": session.session_id, "plugins": [self._ref(state)]})
+            failed = result.get("failed") or []
+            if failed or not result.get("loaded"):
+                raise BoopisError(str((failed or [{"message": "nothing loaded"}])[0].get("message")))
+        except BoopisError as exc:
+            state.restarts += 1
+            self._on_exited(
+                {
+                    "session_id": session.session_id,
+                    "plugin": plugin,
+                    "generation": state.generation,
+                    "reason": f"it did not start again: {exc.message}",
+                }
+            )
+            return
+        state.restarts += 1  # counts until the worker has run for a while (``restart_stable_s``)
+        self._running(session, result["loaded"][0], state)
+        self._rearm(session, plugin)
+
+    def _replace(self, session: ModSession, plugin: str, state: ModState) -> None:
+        """The sandbox ends a worker after an hour. Start its replacement first: it loads, takes the mod's place in the
+        chain, and the old worker is stopped after a grace period, so the mod is never without a worker."""
+        if session.closed or session.mods.get(plugin) is not state or state.status != "running":
+            return
+        try:
+            result = self._hx(
+                "mods.load", {"session_id": session.session_id, "plugins": [self._ref(state)], "replace": True}
+            )
+            if result.get("failed") or not result.get("loaded"):
+                raise BoopisError(str((result.get("failed") or [{"message": "nothing loaded"}])[0].get("message")))
+        except BoopisError as exc:
+            _log.warning("could not replace the worker of %s: %s", plugin, exc.message)
+            self.emit(
+                session.session_id,
+                "mod.log",
+                {
+                    "plugin": plugin,
+                    "level": "warn",
+                    "text": f"could not start a fresh worker for {plugin}: {exc.message}",
+                },
+            )
+            return
+        state.restarts = 0
+        self._running(session, result["loaded"][0], state)
+        self._rearm(session, plugin)
+
+    def _rearm(self, session: ModSession, plugin: str) -> None:
+        """A new worker has the mod loaded but none of its state: run its ``session.start`` (for it alone), and redraw
+        what it drew."""
+        try:
+            self._hx(
+                "mods.dispatch",
+                {
+                    "session_id": session.session_id,
+                    "event": "session.start",
+                    "payload": dict(session.start_payload) or {"sessionId": session.session_id, "surface": "desktop"},
+                    "plugin": plugin,
+                },
+                120.0,
+            )
+        except BoopisError as exc:
+            _log.warning("session.start for the restarted %s failed: %s", plugin, exc.message)
+        for site in list(session.props):
+            self.invalidate(session, site[0], site[1] or None)
 
     def _on_call(self, params: Mapping[str, Any]) -> Any:
         return self.handle_call(params)

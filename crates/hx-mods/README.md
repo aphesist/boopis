@@ -1,8 +1,8 @@
 # hx-mods
 
-The runtime that runs Claude Code mods unchanged: a QuickJS runtime with **one context per mod** and one for the event chain, a TypeScript and JSX transform that needs no build step, Claude Code's event chain, a `$` whose every effect leaves as a request for the embedder to decide, and the worker that serves all of it over a channel. Plan and results: `docs/MODS.md` (sections 8 and 9). The mod API it implements: `docs/research/mods.md`.
+The runtime that runs Claude Code mods unchanged: **a QuickJS runtime and a worker per mod** (its own heap, budget and failures), a TypeScript and JSX transform that needs no build step, Claude Code's event chain (run in the parent, across the workers), and a `$` whose every effect leaves as a request for the embedder to decide. Plan and results: `docs/MODS.md` (sections 8, 9 and 11). The mod API it implements: `docs/research/mods.md`.
 
-**Status: M1.** Wired into `hx` as the `mods.*` namespace (`crates/hx/src/mods.rs`): `hx` starts `hx mods-worker` inside `hx-sandbox` and the plugin decides every `$` call. This crate is the library under both.
+**Status: M2a.** Wired into `hx` as the `mods.*` namespace (`crates/hx/src/mods.rs`): `hx` starts one `hx mods-worker` per mod inside `hx-sandbox`, runs the chain (`chain`) over them, and the plugin decides every `$` call. This crate is the library under both.
 
 ## The choice
 
@@ -14,14 +14,14 @@ The runtime that runs Claude Code mods unchanged: a QuickJS runtime with **one c
 
 | Item | What |
 |---|---|
-| `ModRuntime::new(host, RuntimeConfig)` | starts the runtime: the chain context, no mods |
-| `load_plugin(dir, Tier)`, `load_plugins(&[(dir, Tier)])`, `load_bundle`, `load_bundles` | read `.claude-plugin/plugin.json` and `hooks/hooks.json`, evaluate each `modules` entry, call `register(on, options)` with the `userConfig` defaults. `load_plugins` orders dependencies first |
-| `dispatch(event, &json)` | one event through the chain: `Answer { answered, value }` |
-| `render(component, id, &props)` | `ui.render` for a site: `Render::Tree` (validated JSON, handlers as `{"$handler": id}`), `Default` (no mod drew it) or `Skipped` (invalid tree, logged) |
+| `chain::Chain`, `chain::ModWorker`, `chain::HostSink` | what `hx` runs: the event chain of a session over its mods' workers (`dispatch`, `render` with the mod that drew it, `callback`, `tick`), one `ModWorker` per mod attached to a channel, and where a worker's `$` calls and diagnostics go |
+| `engine::Engine`, `worker::serve`, `wire` | one mod's runtime, and its loop over a byte channel (`hx-mods-v2`); the `mods.*` types of `hx-v1` |
+| `ModRuntime::new(host, RuntimeConfig)` | the same chain and workers in one process (a thread per mod), blocking, for tests and the benchmark. `hx` never uses it: a thread shares the process's authority |
+| `load_plugin(dir, Tier)`, `load_plugins(&[(dir, Tier)])`, `load_bundle`, `load_bundles` | (on `ModRuntime`) read `.claude-plugin/plugin.json` and `hooks/hooks.json`, evaluate each `modules` entry in a worker of its own, call `register(on, options)` with the `userConfig` defaults. `load_plugins` orders dependencies first |
+| `dispatch(event, &json)`, `render(component, id, &props)`, `render_attributed` | one event through the chain: `Answer { answered, value, answered_by }`; `ui.render` for a site: `Render::Tree` (validated JSON, handlers as `{"$handler": id}`), `Default` (no mod drew it) or `Skipped` (invalid tree, logged), with the mod that drew it |
 | `press`, `input`, `select`, `tick`, `run_command` | the host's answers: `ui.press`, `ui.input`, `ui.select`, `clock.tick`, `command.run` |
-| `unload_plugin`, `plugins`, `next_timer_due`, `fire_due_timers`, `host_completed`, `collect_garbage` | a mod leaves (its context is dropped); the runtime keeps time for `clock.every`; an answer that arrives after its event |
+| `unload_plugin`, `plugins`, `collect_garbage` | a mod leaves (its worker stops with everything in it) |
 | `Bundle`, `analyze::analyze` | a plugin's sources as data (read by the parent, sent to a worker that cannot read the directory); the hooks and `$` members a mod's code names, for the install prompt |
-| `worker::serve`, `wire` | the `hx-mods-v1` worker loop over a byte channel; the `mods.*` types of `hx-v1` |
 | `take_diagnostics`, `memory` | what the mods did wrong; the engine's heap |
 | `HostCalls`, `HostRequest`, `HostError` | the one door out. A `$` call is `{plugin, call: "ui.open", args}` |
 | `transform::prepare`, `tree::validate` | the transform and the tree limits, usable alone |
@@ -39,7 +39,7 @@ Present from M1: `console` (`log`, `info`, `warn`, `error` write `$.ui.log`; `de
 
 ## Invariants
 
-- **No object is shared between mods.** Each mod has a context; the chain has another; they exchange JSON messages that Rust routes. The plugin name on a host call is set by the Rust native of the mod's own context. The intrinsics are frozen before any mod code runs (`agent.js`, `hardenIntrinsics`), with the "override mistake" repaired for `constructor`, `toString`, `valueOf`, `name`, `message` and a few others. The heap limit is shared by every context (QuickJS accounts per runtime).
+- **No object is shared between mods.** Each mod has a worker (a process in `hx`) with its own runtime and heap limit; the chain runs in the parent; they exchange JSON frames. The parent stamps the mod's name on every host call itself. The intrinsics are frozen before any mod code runs (`agent.js`, `hardenIntrinsics`), with the "override mistake" repaired for `constructor`, `toString`, `valueOf`, `name`, `message` and a few others.
 - The isolate has no ambient authority. Every effect is a `HostRequest`; the request names the plugin from the `$` the isolate handed that plugin. `tests/no_ambient_authority.rs` shows a running isolate adds no descriptor, socket, thread or child to the process.
 - Plugin files are read through `cap_std` and `hx_txn::paths`, up to 2 MiB each (a `Bundle` up to 512 files and 16 MiB, read by the parent), and the handle is closed once the plugin has loaded. A mod can import its own relative files and `claude-code` only: no bare package, `node:`, URL, absolute path, path climbing out, or symlink out. `import()` is refused at load, and through `eval` or `Function` at run time.
 - A hook that throws, or runs past its budget (10 s; 50 ms for `prompt.edit`; 1 s for `.catch`), is skipped, and the mod gets a diagnostic. The budget does not run while the hook waits for `next`. The engine interrupts the hook; the chain carries on.
@@ -57,4 +57,4 @@ cargo test -p hx-mods --release --test perf -- --ignored --nocapture   # the bud
 
 ## Not done
 
-See `docs/MODS.md` sections 8 and 9: per-mod heap budgets, concurrent events in one worker, a worker restart policy, `tool.register`, redraw sites for Claude Code's own components, and conformance against real mods.
+See `docs/MODS.md` sections 9 and 11: `tool.register`, redraw sites for Claude Code's own components, and conformance against real mods.

@@ -12,7 +12,7 @@ The Rust side of boopis: the `hx` binary and its libraries. The plugin drives `h
 | `hx` | the binary: `serve` over stdio, one-shot subcommands |
 | `hx-pack` | search, read, symbols, outlines, git status, redaction: the `pack.*` handlers, registered in `hx::build_dispatcher` |
 | `hx-sandbox` | the OS sandbox and the `sandbox.*` handlers (run, spawn, wait, kill, capabilities), registered in `hx::build_dispatcher` |
-| `hx-mods` | the runtime for Claude Code mods: QuickJS with a context per mod, the oxc TypeScript/JSX transform, the event chain, `$` as asynchronous host calls, and the `hx-mods-v1` worker. Served by `hx` as `mods.*` (`crates/hx/src/mods.rs`), in `hx mods-worker` inside `hx-sandbox` (`docs/MODS.md`) |
+| `hx-mods` | the runtime for Claude Code mods: QuickJS with a runtime and a sandboxed worker per mod, the oxc TypeScript/JSX transform, the event chain, `$` as asynchronous host calls, the event chain across the workers, and the `hx-mods-v2` worker protocol. Served by `hx` as `mods.*` (`crates/hx/src/mods.rs`), in `hx mods-worker` inside `hx-sandbox` (`docs/MODS.md`) |
 
 ## Invariants
 - Stdout carries protocol frames only.
@@ -38,8 +38,9 @@ Also check the production feature set: `cargo clippy -p hx-txn -p hx-proto -p hx
 - `hx-pack/src/proc.rs` (child process with an allowlisted environment, timeout and output cap) is a stand-in for `hx-sandbox::process`. It is the only module that spawns, used only by `pack.status`; replace it when `hx-sandbox::process` lands.
 
 ## Mods
-- The mod worker is `hx mods-worker` in `hx-sandbox`: read-only on its binary and the libraries it links, network off, no exec (`hx_sandbox::forbid_exec`), one inherited socket. Never run the runtime in the `hx` process, and never fall back to it: where the sandbox cannot be built, `mods.*` answers `hx.mods.unavailable`.
-- `hx` reads plugin files (`Bundle::read`, `cap_std`); the worker never does. A `call` frame naming a mod that is not loaded in the session is refused before it reaches the plugin.
+- Each mod runs in its own `hx mods-worker` in `hx-sandbox` (a heap, a budget, a lifetime and a failure of its own; `hx` binds the worker to the mod's name): read-only on its binary and the libraries it links, network off, no exec (`hx_sandbox::forbid_exec`), one inherited socket. Never run the runtime in the `hx` process, and never fall back to it: where the sandbox cannot be built, `mods.*` answers `hx.mods.unavailable`.
+- `hx` reads plugin files (`Bundle::read`, `cap_std`); the worker never does. `hx` stamps the mod's name on each `call` frame itself; the worker's own claim is ignored.
+- The worker runs before, and without, the async runtime (`main.rs`), and its process allowance is exactly 3 tasks (`WORKER_TASKS`: supervisor, main thread, channel reader). `RLIMIT_NPROC` does not bind root, so run the mods tests as an ordinary user too (`every_worker_starts_for_an_ordinary_user` does).
 - Every `$` call is a `mods.call` request to the plugin, queued before the reply to the operation that made it. `hx` is the only crate that sends requests (`hx::outbound::Link`).
 - A new `$` call needs a row in `plugins/boopis/policy/defaults.json` (`mod_capabilities`) and a handler in `plugins/boopis/mods/calls.py`; the isolate's `$` is `crates/hx-mods/src/js/agent.js`.
 - Cargo hashes workspace-relative paths, so two worktrees built into one `CARGO_TARGET_DIR` overwrite each other's artifacts (touch your sources before a build or test, and copy `hx` before pointing a test at it).

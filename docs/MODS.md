@@ -1,6 +1,6 @@
 # Mods
 
-Status: plan, 2026-11-19; **M0 (spike), M1 (backend) and M1's UI done** (sections 8, 9 and 10). Evidence: `docs/research/mods.md` (Claude Code's mod docs). Decision: ADR-0022.
+Status: plan, 2026-11-19; **M0 (spike), M1 (backend), M1's UI and M2a (hardening) done** (sections 8, 9, 10 and 11). Evidence: `docs/research/mods.md` (Claude Code's mod docs). Decision: ADR-0022.
 
 **Rule: a Claude Code mod installs and runs unchanged, and everything it draws is drawn by our design system, so it looks native.** A mod's behaviour runs wherever the session runs: the desktop app, plain Hermes on the command line, or a cloud session. It draws only where there's a screen, which is Claude Code's own model.
 
@@ -10,8 +10,8 @@ A Claude Code mod is a plugin whose `hooks/hooks.json` names a JavaScript or Typ
 - **Install:** a mod is a plugin, so it installs through COMPAT §9: pinned to a commit, hash-locked, with an install prompt. A `modules` key in `hooks/hooks.json` marks it as a mod. Before consent, the install prompt lists the mod's hooks and the `$` namespaces it calls, found by static analysis as `claude plugin validate` does.
 - **Runtime: `hx-mods`**, a library in the `hx` binary.
   - It embeds a JavaScript engine and a TypeScript/JSX transform, so `.ts` and `.tsx` modules load with no build step.
-  - A session's mods share one worker and one QuickJS runtime, as in Claude Code's single hooks worker, but **each mod has its own context**: no object is shared between mods, and the chain runs in a context of its own that no mod code reaches (section 9).
-  - The worker is an `hx mods-worker` process inside `hx-sandbox`, with no file, network or process access. The only way out is `$`, as a request to the plugin.
+  - **Each mod runs in a worker of its own**, with its own QuickJS runtime, heap budget and lifetime (section 11), where Claude Code runs all of them in one hooks worker. No object is shared between mods, and a mod that runs out of memory, loops, waits for a form or dies fails alone. The chain runs in `hx`, across the workers, and no mod code reaches it.
+  - A worker is an `hx mods-worker` process inside `hx-sandbox`, with no file, network or process access. The only way out is `$`, as a request to the plugin. `hx` binds each worker to its mod's name.
   - The engine is QuickJS-NG through `rquickjs`, with `oxc` for the transform, as spike M0 proved (section 8).
 - **Each `$` call** is a request from `hx` to the plugin (`mods.call`). The plugin decides it with `boopis.policy.check`, then performs it through Hermes, the host or the store. There is one table of calls and one implementation each.
 - **Events:** the plugin maps Hermes's hooks and the gateway's events onto mod events, through the same bridge as Claude Code's hooks (COMPAT §4). There is one bridge for both.
@@ -191,12 +191,12 @@ The decision is `policy.check` with `ToolCall.principal = "mod:<plugin>"`, so de
 
 **Tests.** `hx-mods`: the M0 tests (updated for the new ids and `$` keys), the forgery test un-ignored, `tests/hostcalls.rs` (pending calls and budgets, host timeouts, console, bundles, unload, timers, per-mod state), static analysis. `hx`: `tests/mods.rs` runs `hx serve` with a fake plugin and the three example mods through the sandboxed worker, and the reach probe. Plugin: `test_mods_calls.py` (policy per capability, asks, ledger, contract), `test_mods_hx.py` (the service and the bridge against the real hx, governed and ungoverned, install and analysis), and `tests/e2e/test_mods_e2e.py` against an unmodified Hermes gateway and the real worker (skips without `HX_E2E_*`).
 
-**Risks left for M2 and M3**
-1. **Per-mod heap budgets do not exist.** QuickJS accounts memory per runtime, so the 64 MiB limit is shared by every context in the worker: a mod that fills it makes the others' allocations throw. (A runtime per mod would fix it at about 0.3 MiB each; the worker's `RLIMIT_AS` is 2 GiB.)
-2. **One operation at a time.** A worker runs one event and queues the next. A mod that awaits `$.ui.ask` holds every other mod's events and redraws for as long as the form is open (up to 10 minutes, `ask_timeout_s`). Concurrent runs need per-run frame stacks in `chain.js`.
-3. **A memory-safety bug in QuickJS** would give a mod the worker's authority: it can talk to `hx` and impersonate any mod loaded *in the same session* (hx checks the name against the session's list) but nothing else; the sandbox holds. Per-mod grants therefore assume the engine is sound. Separate workers per mod would close it.
-4. **The worker's lifetime is one hour** (`hx-sandbox`'s ceiling on `timeout_ms`). The plugin is told (`mods.exited`) but does not restart workers yet.
-5. **`http.fetch` resolves a name twice** (the address check, then the connection): a DNS rebinding window. Pinning the connection to the checked address needs a lower-level client.
+**Risks left for M2 and M3** (1 to 5 closed in M2a, section 11)
+1. ~~Per-mod heap budgets do not exist.~~ **Closed.** Each mod has a runtime and a worker of its own; the heap limit (64 MiB, `heap_mib`) and the address-space limit are per mod.
+2. ~~One operation at a time.~~ **Closed.** A mod waiting on `$.ui.ask` blocks neither another mod nor its own other hooks: hooks of a worker run concurrently, and each hook's budget is charged for the time it runs.
+3. ~~A memory-safety bug in QuickJS would give a mod the worker's authority over the session's mods.~~ **Closed.** A worker holds one mod, and `hx` stamps that mod's name on its calls: a compromised worker is that mod, with the sandbox around it. What it can still do is what the mod may do (its grants).
+4. ~~The worker's lifetime is one hour and nothing restarts it.~~ **Closed.** The plugin starts a replacement before the ceiling, and restarts a worker that ends (1 s, 5 s, 30 s, then the mod is marked failed). State: `$.store` survives (it lives in the plugin); `$.state` atoms, module variables, timers and a hook in flight do not (section 11).
+5. ~~`http.fetch` resolves a name twice.~~ **Closed.** The name is resolved once per request and per redirect, every address is checked, and the socket is opened to one of those addresses, with the name kept for the Host header and TLS (section 11).
 6. **`session.messages`** reads the last history the compat bridge saw (up to 4,096, redacted); Hermes gives a plugin no transcript call, so before the first turn it is empty.
 7. **`theme.set` is only recorded** (`mod.theme`); `outputStyles`, `statusLine`, redraw sites for Claude Code's own components, placed rows, the backdrop, `Client` and `tool.register` are M2. The `statusLine` setting is not built.
 8. **Conformance (M3)** still has not run a real mod: `console` exists now, the `claude-code` exports are still our guess (section 7), and `$.ui.resolve`, `$.ui.place` and the other `$.ui` members are absent.
@@ -223,7 +223,7 @@ The owner's approved design (`design/v6`: `mod-view`, `mods`, DESIGN-SYSTEM 14.2
 **Refusals.** `process`, `mcp`, `model`, `agent`, `tool`, `prompt`, `turn`, `settings`, `audio`, `telemetry` never reach the UI as events, so nothing draws them. `mod.command` is not drawn (the commands are Hermes's own slash commands). Draws for Claude Code's own parts (`UserMessage`, `ToolUse`, ...) and the backdrop are ignored, and the debug log says so.
 
 **Known gaps, for whoever owns them**
-- `mod.render` does not say which mod drew a band row. The row is named when exactly one mod is loaded, and says "Mods" otherwise; the UI reads an optional `plugin` on the event if the plugin adds it (hx would need `answered_by` on `RenderResult`).
+- ~~`mod.render` does not say which mod drew a band row.~~ Closed in M2a: `mod.render` carries `plugin`, the mod whose hook drew it (section 11).
 - A user closing a pane only hides it in the UI: there is no RPC to tell the mod (`ui.close` is the mod's own).
 
 **Contrast (owner decision, 19 November 2026).** A mod's theme is a patch over the user's own. While it is previewed, and when Keep stores it without a preview having shown it, the pairs that carry text are checked, and a colour that would take one of them under its floor is **not applied**: the theme's own token stays and the rest applies.
@@ -233,3 +233,52 @@ The owner's approved design (`design/v6`: `mod-view`, `mods`, DESIGN-SYSTEM 14.2
 - *What the card says.* Its text gains one sentence, in plain words and the card's order: "Skipped 2 colours that would make text hard to read: text on surface, quiet text." The receipt after Keep says "Kept name's colours, without 2 that would make text hard to read." (or "Kept nothing: every colour of name would make text hard to read" when none held).
 
 **Tests.** The renderer (`mod-tree.test.ts`, `mod-view.test.ts`), the model and the live source over a recording of real events (`mods-model.test.ts`, `host/live/live-mods.test.ts`), the surfaces (`modules/mods/mods.test.ts`), the theme preview and the contrast guard (`styles/theme.test.ts`, `modules/mods/mods.test.ts`) and the smoke part `mods` (which also offers a theme with dark text on the dark frame and checks, in the real cascade, that the text pairs still hold and Keep stores only what was applied). The recording is `apps/desktop/ui/tests/fixtures/frames/mods.frames.json`, made by `plugins/boopis/tests/test_mods_frames.py` (two mods in `tests/fixtures/mods`, the real worker, the plugin's own handlers); `HX_RECORD_FRAMES=1` rewrites it and the test checks every event against `mods.schema.json`.
+
+
+## 11. M2a result (2026-11-19): one worker per mod
+
+Risks 1 to 5 of section 9 are closed, and `mod.render` says which mod drew a site.
+
+**Measured first.** The recommended design (a worker per mod) was measured before it was built, with the M1 binary, as an ordinary user (`nobody`; root is exempt from the process limit), release build, one session per mod:
+
+| Workers | Spawn plus load, median (max) | Resident per worker | Proportional (PSS) per worker |
+|---|---|---|---|
+| 1 | 11.5 to 13.3 ms | 10.4 MiB | 6.3 MiB |
+| 5 | 12.0 to 16.3 ms (22) | 10.3 MiB | 2.9 MiB |
+| 20 | 15.2 to 19.4 ms (27; one run had a 494 ms first spawn) | 10.3 to 10.5 MiB | 1.9 MiB |
+
+That is under the bar (15 MiB, 150 ms), so the alternative (a runtime per mod in one worker, with per-run frame stacks) was not built. Resident size counts the pages of the `hx` binary that every worker shares: twenty mods hold about 38 MiB of private memory in total, not 206 MiB. One worker for twenty mods would hold roughly 7 MiB; that difference is the price of isolation. The same measurement with the M1 binary as `nobody` fails with exit 101: that is the process-limit bug fixed on develop (the worker's tasks are now counted, `max_processes: 3`), which `every_worker_starts_for_an_ordinary_user` guards.
+
+**Architecture as built**
+```
+Hermes -> plugin (compat bridge) --mods.* over hx stdio--> hx (chain, one per session) --socketpair--> hx mods-worker (one per mod, hx-sandbox)
+                 ^                                                 |                                          |
+                 +---- mods.call (hx asks, plugin decides) <-------+<------------ $ call (frame) -------------+
+```
+- **The chain moved to `hx`** (`hx_mods::chain`, Rust; `chain.js` is gone). It keeps Claude Code's semantics: tiers, `next`, `next.to`, `.catch`, frozen events, `answered_by`, handler tokens committed per site. A hook is an `invoke` frame to its mod's worker; a `next` call comes back as a frame and runs the hooks below, which may be in other workers. A worker that dies fails only its own frames (the hook is skipped), and the chain goes on without that mod's hooks until a new worker takes its slot. A slot keeps its place in the chain (and its tier) across restarts.
+- **The worker** (`hx_mods::engine`, `worker`) is one runtime and one mod. It charges time to the hook that caused it: a hook's slice of work (its start, the answer to its `next`, the answer to a `$` call it made) is that hook's, so a hook waiting for the host or for `next` spends no budget, a spinning hook is interrupted at its own budget, and a hook that can never be woken is blamed at once. Hooks of one mod run concurrently.
+- **`hx`** binds each worker to its mod: the name on a `mods.call` is the one `hx` holds, never the one in the frame. `mods.load` reads and loads each plugin separately and returns `{loaded, failed}`; one that does not load does not stop the others. It reports each worker's end with `mods.exited {plugin, generation, cause, reason, stderr}`. Wire: `docs/PROTOCOL.md` section 4a.
+- **Handler ids** carry the worker's generation (`<slot>.h<generation>.<n>`), so a stale id from a drawing made by an earlier worker finds nothing in the new one (`handled: false`), never a different handler.
+- **Limits per mod** (data, `policy/defaults.json`, `mod_capabilities.limits`): `heap_mib` 64, `event_budget_ms` 10,000, `worker_lifetime_s` 3,600 (the sandbox's ceiling), `restart_lead_s` 120, `restart_stable_s` 300, `diagnostic_repeat_s` 5, and `restart_backoff_s` `[1, 5, 30]`. The process's address space is the heap plus 768 MiB.
+
+**Failing alone.** A mod that fills its heap has the hook that did it fail with `out of memory`; one that loops is interrupted at its budget (`timed out`). Either way the plugin turns the diagnostic into the mod's `mod.log` line (the same message at most once in 5 s, so a mod that fails on every redraw does not flood), and every other mod keeps working. Tested: a hog beside a calm mod, a spinner beside a calm mod, and a mod holding a form open beside one that redraws 15 times, in `crates/hx/tests/mods.rs` (real processes, as root and as `nobody`) and `plugins/boopis/tests/test_mods_restart.py`.
+
+**Restart.** `ModService._on_exited` handles a worker that ends (a crash, the kernel's OOM kill, the ceiling when no replacement ran): its panes close, and it is loaded again after 1 s, then 5 s, then 30 s; a restart that fails to load counts as one more exit. After the third wait the mod is marked failed: `mod.log` ("failed: reason") and `mod.status` ("failed: reason"), `mod.list` says `state: failed`, and the others are untouched. A worker that ran for 5 minutes starts the schedule again. A restarted mod gets its own `session.start` (through `mods.dispatch` with `plugin`) and its sites are redrawn.
+
+**The one-hour ceiling is planned.** The plugin books a replacement `restart_lead_s` before the worker's deadline (`expires_in_s` from `mods.load`): `mods.load` with `replace` starts the new worker, loads the mod, puts it in the mod's slot, and stops the old one after 5 s so hooks in flight can finish. The mod is never without a worker, and a planned stop is not reported as an exit.
+
+**What a restart keeps and loses.** MODS.md declares one storage for a mod's data: `$.store`, which lives in the plugin, one file per mod, and is untouched by any worker's end, so it is "moved" by not being in the worker. Lost: `$.state` atoms, module variables, timers (`register` and `session.start` set them up again), and any hook in flight when a crash happens. Atoms are not copied across: a mod may build them in a different order, and their values need not be JSON.
+
+**DNS rebinding** (`plugins/boopis/mods/io.py`). `$.http.fetch` resolves the name once per request and once per redirect, refuses the request if any address is loopback, private, link-local, multicast, reserved or unspecified (or if the name gives none), and opens the socket to one of those addresses (the next if one does not answer), not to the name. The Host header and the TLS server name (SNI and certificate verification) are still the name. A resolver that answers a public address to the check and a private one afterwards therefore gets the public one: `tests/test_mods_net.py`, with a fake resolver and a fake socket, no network. The fetch no longer uses a proxy from the environment, because a proxy would resolve the name where the check cannot see it: a user who can only reach the internet through a proxy cannot use `$.http.fetch` until the proxy is part of the policy.
+
+**Band attribution.** `RenderResult` and `mod.render` carry `plugin`: the mod whose hook first answered with the tree. The UI already names a band row after it; with several mods loaded the row now says which one drew it. `apps/shared/data/mods.schema.json` has the field, and the UI's recording (`mods.frames.json`, rewritten from the real worker by `test_mods_frames.py`) holds it. A hook that wraps another's tree (`return next(e)` with changes) is attributed to the inner mod, which drew the tree.
+
+**What got slower.** Hooks cross a channel to their worker, which is a hop per hook, and each mod has its own runtime (about 0.5 MiB of heap per mod after loading; three example mods hold 1.4 MiB, against 259 KiB in one shared runtime). In-process, release, `cargo test -p hx-mods --release --test perf -- --ignored --nocapture`: start plus load of the three examples 26.9 ms (budget 50 ms; was 2.7 ms), an event through one pass-through hook 320 us and through three 762 us (p95 1.04 ms; budget 1 ms; was 22 and 48 us), a 1,000-element render 11 ms (was 7.5 ms). The per-event budget is met at the median and not by a wide margin for chains of three hooks across mods; a chain that deep is rare.
+
+**Left (and new)**
+- Risks 6 to 10 of section 9 are as they were.
+- A hook in flight when its worker dies is skipped; the mod is not asked again.
+- Hooks of one mod run concurrently, so a mod that expects a hook to finish before the next starts must not rely on it (Claude Code's single worker has the same concurrency for `async` hooks).
+- The `Windows` build has no worker (no channel in `hx-sandbox`); `hx.mods.unavailable` as before. The non-Unix code was edited for the new types but not built here.
+- `mods.reach` probes one worker (the first running, or `plugin`).
+- The first-spawn outlier (494 ms once in nine runs of twenty) was not explained.

@@ -1,7 +1,7 @@
 // One mod's side of the runtime, in the mod's own context: its `$`, its hooks, handlers, timers,
 // state atoms, `console`, and the serialisation of element trees. Nothing here is shared with
-// another mod: the chain (`chain.js`) lives in a different context, and the two talk in JSON
-// messages routed by Rust.
+// another mod: each mod runs in a worker of its own, and the event chain runs in `hx`, so the two
+// talk in JSON messages that cross the worker's channel.
 //
 // The bootstrap captures every primitive it needs in the closure below, then freezes the
 // intrinsics before any mod code is evaluated, so a mod cannot patch `JSON.stringify`, `Promise`,
@@ -9,7 +9,7 @@
 // each host call is set by Rust, in the native function itself, and is not something this file or
 // the mod can change.
 //
-// Natives: `host(call, argsJson)`, `send(json)`, `now()`, `diag(level, message)`.
+// Natives: `host(call, argsJson)`, `send(json)`, `diag(level, message)`.
 (function (native, info) {
   'use strict';
 
@@ -26,6 +26,7 @@
   const SERIALIZE_DEPTH_CAP = 64;
   const SERIALIZE_NODE_CAP = 100000;
   const idx = info.idx;
+  const generation = info.gen;
 
   let hookSeq = 0;
   let handlerSeq = 0;
@@ -46,6 +47,7 @@
   const nexts = new Map(); // call id -> { resolve }
   const pendingCalls = new Map(); // host call id -> { resolve, reject }
   let currentSite = null;
+  let currentFrame = null; // the frame whose slice is running: host calls made now are charged to it
   let registerFn = null;
 
   const message = (x) => (x && typeof x === 'object' && 'message' in x ? S(x.message) : S(x));
@@ -88,7 +90,7 @@
         return;
       }
       if (r.pending !== undefined) {
-        pendingCalls.set(r.pending, { resolve, reject });
+        pendingCalls.set(r.pending, { resolve, reject, frame: currentFrame });
         return;
       }
       settleCall({ resolve, reject }, r);
@@ -284,7 +286,7 @@
       for (const k of keys(el.props)) {
         const v = el.props[k];
         if (typeof v === 'function') {
-          const id = idx + '.h' + ++handlerSeq;
+          const id = idx + '.h' + generation + '.' + ++handlerSeq;
           recs.push([id, v]);
           props[k] = { $handler: id };
         } else if (v !== undefined) {
@@ -319,7 +321,7 @@
     const callDown = (ev, tier) => {
       const call = 'n' + ++callSeq;
       return new Promise((resolve) => {
-        nexts.set(call, resolve);
+        nexts.set(call, { resolve, frame: inv.frame });
         send({ k: 'next', frame: inv.frame, call, e: stringify(ev === undefined ? e : ev), tier });
       });
     };
@@ -431,11 +433,11 @@
     receive(json) {
       const m = parse(json);
       switch (m.k) {
-        case 'invoke': invoke(m); break;
+        case 'invoke': currentFrame = m.frame; invoke(m); break;
         case 'nextDone': {
-          const resolve = nexts.get(m.call);
+          const n = nexts.get(m.call);
           nexts.delete(m.call);
-          if (resolve) resolve(decode(m.value));
+          if (n) { currentFrame = n.frame; n.resolve(decode(m.value)); }
           break;
         }
         case 'abort': {
@@ -447,11 +449,15 @@
         default: native.diag('warn', 'agent: unknown message ' + S(m.k));
       }
     },
-    // The host's answer to a call that was pending.
+    // The host's answer to a call that was pending. Returns the frame that made the call ('' when none), so the
+    // worker charges the time the answer wakes up to that frame's budget.
     complete(callId, replyJson) {
       const p = pendingCalls.get(callId);
       pendingCalls.delete(callId);
-      if (p) settleCall(p, parse(replyJson));
+      if (!p) return '';
+      currentFrame = p.frame === undefined || p.frame === null ? null : p.frame;
+      settleCall(p, parse(replyJson));
+      return currentFrame === null ? '' : currentFrame;
     },
     stats() {
       return stringify({ hooks: hooks.size, handlers: handlers.size, atoms: atoms.size, timers: timers.size, pending: pendingCalls.size });

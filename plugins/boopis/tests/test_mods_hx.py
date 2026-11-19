@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import time
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -166,7 +167,11 @@ def test_three_example_mods_load_run_draw_and_answer_through_the_bridge_and_the_
 
     before = len(rig.ctx.events("mod.render"))
     assert mod_press({"session_id": SID, "handler": button(render["tree"])}) == {"handled": True}
-    assert rig.svc.wait_idle(SID)
+    # the redraw the press asked for is a `$` call of its own (`ui.invalidate`): it arrives, and is drawn, a moment later
+    deadline = time.monotonic() + 10
+    while len(rig.ctx.events("mod.render")) <= before and time.monotonic() < deadline:
+        rig.svc.wait_idle(SID)
+        time.sleep(0.02)
     assert len(rig.ctx.events("mod.render")) > before
     # the band is drawn from props the UI supplies
     rig.svc.set_props(SID, "AbovePrompt", None, {"isWorking": True})

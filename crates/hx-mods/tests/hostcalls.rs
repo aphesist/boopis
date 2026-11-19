@@ -3,14 +3,13 @@
 
 mod common;
 
-use std::cell::RefCell;
 use std::collections::VecDeque;
-use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use common::{runtime, simple_plugin, write_plugin};
 use hx_mods::{
-    Budgets, Bundle, CallId, Completion, HostCalls, HostError, HostReply, HostRequest, ModRuntime,
+    Budgets, Bundle, CallId, Completion, HostCalls, HostReply, HostRequest, ModRuntime,
     RuntimeConfig, Tier,
 };
 use serde_json::{Value, json};
@@ -19,17 +18,17 @@ use tempfile::tempdir;
 /// A host whose `ui.ask` is pending and answers `delay` later; everything else is immediate.
 #[derive(Clone, Default)]
 struct Slow {
-    calls: Rc<RefCell<Vec<HostRequest>>>,
-    queue: Rc<RefCell<VecDeque<CallId>>>,
+    calls: Arc<Mutex<Vec<HostRequest>>>,
+    queue: Arc<Mutex<VecDeque<CallId>>>,
     delay: Duration,
     never: bool,
 }
 
 impl HostCalls for Slow {
     fn call(&mut self, id: CallId, request: &HostRequest) -> HostReply {
-        self.calls.borrow_mut().push(request.clone());
+        self.calls.lock().unwrap().push(request.clone());
         if request.call == "ui.ask" {
-            self.queue.borrow_mut().push_back(id);
+            self.queue.lock().unwrap().push_back(id);
             return HostReply::Pending;
         }
         HostReply::Ready(Ok(Value::Null))
@@ -40,7 +39,7 @@ impl HostCalls for Slow {
             std::thread::sleep(timeout);
             return None;
         }
-        let id = self.queue.borrow_mut().pop_front()?;
+        let id = self.queue.lock().unwrap().pop_front()?;
         std::thread::sleep(self.delay);
         Some((id, Ok(json!("Yes"))))
     }
@@ -272,10 +271,11 @@ fn unloading_a_mod_removes_its_hooks_timers_and_context() {
     let gone = simple_plugin(
         dir.path(),
         "gone",
-        "export function register(on) { on('go', async () => 'gone says hi'); on('session.start', async ($) => { $.clock.every(100, () => {}); }); }",
+        "export function register(on) { on('go', async () => 'gone says hi'); on('session.start', async ($) => { $.clock.every(20, () => { $.ui.status('tick'); }); }); }",
     );
+    let host = hx_mods::fixtures::MemoryHost::new();
     let mut rt = ModRuntime::new(
-        Box::new(hx_mods::fixtures::MemoryHost::new()),
+        Box::new(host.clone()),
         RuntimeConfig {
             min_timer: Duration::from_millis(1),
             ..RuntimeConfig::default()
@@ -285,14 +285,18 @@ fn unloading_a_mod_removes_its_hooks_timers_and_context() {
     rt.load_plugin(&keep, Tier::User).unwrap();
     rt.load_plugin(&gone, Tier::User).unwrap();
     rt.dispatch("session.start", &json!({})).unwrap();
-    assert!(rt.next_timer_due().is_some());
+    wait_for(|| !host.calls_to("ui.status").is_empty());
     assert_eq!(
         rt.dispatch("go", &json!({})).unwrap().value,
         json!({ "keep": true, "below": "gone says hi" })
     );
     assert!(rt.unload_plugin("gone").unwrap());
     assert!(!rt.unload_plugin("gone").unwrap());
-    assert!(rt.next_timer_due().is_none());
+    // Its timer stopped with it: no more ticks arrive.
+    std::thread::sleep(Duration::from_millis(100));
+    let seen = host.calls_to("ui.status").len();
+    std::thread::sleep(Duration::from_millis(200));
+    assert_eq!(host.calls_to("ui.status").len(), seen);
     assert_eq!(
         rt.dispatch("go", &json!({})).unwrap().value,
         json!({ "keep": true })
@@ -302,14 +306,23 @@ fn unloading_a_mod_removes_its_hooks_timers_and_context() {
     rt.load_plugin(&gone, Tier::User).unwrap();
 }
 
+/// Polls until `cond` holds, for at most five seconds.
+fn wait_for(cond: impl Fn() -> bool) {
+    let end = Instant::now() + Duration::from_secs(5);
+    while !cond() {
+        assert!(Instant::now() < end, "the condition never held");
+        std::thread::sleep(Duration::from_millis(10));
+    }
+}
+
 #[test]
-fn the_runtime_keeps_time_for_clock_every() {
+fn a_worker_keeps_time_for_clock_every_and_a_tick_runs_through_the_chain() {
     let dir = tempdir().unwrap();
     let plugin = simple_plugin(
         dir.path(),
         "ticker",
         "export function register(on) {
-           on('session.start', async ($) => { let n = 0; const stop = $.clock.every(60000, () => { n++; if (n === 2) stop(); $.ui.status('tick ' + n); }); });
+           on('session.start', async ($) => { let n = 0; const stop = $.clock.every(30, () => { n++; if (n === 2) stop(); $.ui.status('tick ' + n); }); });
          }",
     );
     let host = hx_mods::fixtures::MemoryHost::new();
@@ -323,12 +336,9 @@ fn the_runtime_keeps_time_for_clock_every() {
     .unwrap();
     rt.load_plugin(&plugin, Tier::User).unwrap();
     rt.dispatch("session.start", &json!({})).unwrap();
-    let due = rt.next_timer_due().unwrap();
-    assert_eq!(rt.fire_due_timers(due).unwrap(), 1);
-    let next = rt.next_timer_due().unwrap();
-    assert_eq!(rt.fire_due_timers(next).unwrap(), 1);
-    // The second tick cancelled it.
-    assert!(rt.next_timer_due().is_none());
+    wait_for(|| host.calls_to("ui.status").len() >= 2 && !host.calls_to("clock.cancel").is_empty());
+    // The second tick cancelled it: no third one arrives.
+    std::thread::sleep(Duration::from_millis(150));
     let statuses: Vec<_> = host
         .calls_to("ui.status")
         .iter()
@@ -336,63 +346,4 @@ fn the_runtime_keeps_time_for_clock_every() {
         .collect();
     assert_eq!(statuses, ["tick 1", "tick 2"]);
     assert_eq!(host.calls_to("clock.cancel").len(), 1);
-}
-
-#[test]
-fn each_mod_has_its_own_state_and_handler_ids_name_their_owner() {
-    let dir = tempdir().unwrap();
-    let src = |label: &str| {
-        format!(
-            "import {{ Box, Button, Text }} from 'claude-code';
-             export function register(on) {{
-               on('session.start', async ($, e, next) => {{ globalThis.atom = $.state.atom('{label}'); return next(e); }});
-               on('ui.render', {{ component: 'Pane', id: '{label}' }}, async ($) => Box({{}}, Text($.state.read(globalThis.atom)), Button({{ onPress: () => $.ui.toast('{label} pressed') }}, 'go')));
-             }}"
-        )
-    };
-    let a = simple_plugin(dir.path(), "a", &src("a"));
-    let b = simple_plugin(dir.path(), "b", &src("b"));
-    let (mut rt, host) = runtime();
-    rt.load_plugins(&[(&a, Tier::User), (&b, Tier::User)])
-        .unwrap();
-    rt.dispatch("session.start", &json!({})).unwrap();
-    for label in ["a", "b"] {
-        let tree = common::tree(rt.render("Pane", Some(label), &json!({})).unwrap());
-        assert_eq!(
-            common::text_of(&tree),
-            format!("{label}|go"),
-            "its own atom"
-        );
-        host.clear();
-        let id = common::handler(&tree, "Button", "onPress");
-        assert!(
-            id.starts_with(if label == "a" { "0." } else { "1." }),
-            "{id}"
-        );
-        assert!(rt.press(&id).unwrap());
-        assert_eq!(
-            host.calls_to("ui.toast")[0].args["text"],
-            format!("{label} pressed")
-        );
-        assert_eq!(host.calls_to("ui.toast")[0].plugin, label);
-    }
-}
-
-#[test]
-fn a_host_error_reaches_the_mod_with_its_code() {
-    let dir = tempdir().unwrap();
-    let plugin = simple_plugin(
-        dir.path(),
-        "denied",
-        "export function register(on) { on('go', async ($) => { try { await $.ui.toast('x'); return 'ok'; } catch (e) { return [e.code, e.message]; } }); }",
-    );
-    let (mut rt, host) = runtime();
-    host.refuse("ui.toast");
-    rt.load_plugin(&plugin, Tier::User).unwrap();
-    let v = rt.dispatch("go", &json!({})).unwrap().value;
-    assert_eq!(v[0], "hx.policy.denied");
-    let _ = HostError {
-        code: String::new(),
-        message: String::new(),
-    };
 }

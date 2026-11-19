@@ -47,7 +47,7 @@ def prepare(svc: ModService, session: ModSession, plugin: str, name: str, args: 
     if name == "http.fetch":
         url = args.get("url")
         parts = modio.check_url(url)
-        if not modio.is_public(parts.hostname or ""):
+        if not modio.is_public(parts.hostname or "", svc.resolver):
             from .service import PolicyDeniedError
 
             raise PolicyDeniedError(f"{parts.hostname} is not a public address; a mod cannot reach the local network")
@@ -266,7 +266,7 @@ def http_fetch(svc: ModService, session: ModSession, plugin: str, p: Prepared) -
 
     def decide_host(url: str) -> None:
         parts = modio.check_url(url)
-        if not modio.is_public(parts.hostname or ""):
+        if not modio.is_public(parts.hostname or "", svc.resolver):
             raise PolicyDeniedError(f"{parts.hostname} is not a public address; a mod cannot reach the local network")
         decision = check(
             ToolCall(
@@ -284,7 +284,7 @@ def http_fetch(svc: ModService, session: ModSession, plugin: str, p: Prepared) -
         svc.enforce(session, plugin, "http.fetch", "net.egress", url, decision)
 
     init = {k: v for k, v in p.args.items() if k != "url"}
-    return modio.fetch(str(p.args["url"]), init, decide_host, svc.fetcher)
+    return modio.fetch(str(p.args["url"]), init, decide_host, svc.fetcher, resolver=svc.resolver, connect=svc.connector)
 
 
 _TABLE: dict[str, Callable[..., Any]] = {

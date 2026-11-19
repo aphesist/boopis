@@ -38,9 +38,9 @@ describe('the recorded mod events, folded into one session', () => {
     expect(label(first)).toContain('Running tests');
     expect(label(first)).toContain('"value":"failing"');
   });
-  it('draws the band from AbovePrompt, with no plugin named (the plugin does not say which mod drew it)', () => {
+  it('draws the band from AbovePrompt, naming the mod the plugin says drew it', () => {
     const band = play().model.state(SID).band;
-    expect(band?.plugin).toBeNull();
+    expect(band?.plugin).toBe('test-runner');
     expect(band?.drawing.kind).toBe('tree');
     expect(JSON.stringify(band?.drawing)).toContain('Running tests');
   });

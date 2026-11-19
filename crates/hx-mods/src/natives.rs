@@ -3,7 +3,6 @@
 
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, VecDeque};
-use std::panic::AssertUnwindSafe;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
@@ -12,33 +11,20 @@ use rquickjs::{Ctx, Function, Object};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256, Sha384, Sha512};
 
-use crate::host::{CallId, HostCalls, HostReply, HostRequest};
-use crate::runtime::Diagnostic;
+use crate::host::{CallId, HostRequest};
+use crate::types::Diagnostic;
 
-/// A message between contexts. Rust routes them; no object ever crosses.
-#[derive(Debug)]
-pub enum Msg {
-    /// From a mod's context (the index) to the chain.
-    ToChain(usize, String),
-    /// From the chain to a mod's context.
-    ToMod(usize, String),
-}
-
-/// A `$` call the host has not answered yet.
+/// A `$` call the parent has not answered yet.
 pub struct Pending {
-    /// The mod that made it.
-    pub idx: usize,
-    /// When the driver gives up on the host.
+    /// When the worker gives up on the parent.
     pub deadline: Instant,
     /// The request, kept so a `clock.every` can be registered when it succeeds.
     pub request: HostRequest,
 }
 
-/// A `clock.every` the runtime keeps time for.
+/// A `clock.every` the worker keeps time for.
 pub struct Timer {
-    /// The mod that set it.
-    pub idx: usize,
-    /// Its id (`<mod>.t<n>`), what `tick` takes.
+    /// Its id (`<mod>.t<n>`), what a tick names.
     pub id: String,
     /// The interval.
     pub every: Duration,
@@ -46,14 +32,17 @@ pub struct Timer {
     pub due: Instant,
 }
 
-/// State the natives of every context share with the runtime.
+/// Sends one `$` call to the parent. False when the channel is closed.
+pub type SendCall = Rc<dyn Fn(CallId, &HostRequest) -> bool>;
+
+/// State the natives of the mod's context share with the engine.
 #[derive(Clone)]
 pub struct NativeState {
-    pub host: Rc<RefCell<Box<dyn HostCalls>>>,
+    pub send_call: SendCall,
     pub deadline: Rc<Cell<Option<Instant>>>,
     pub diagnostics: Rc<RefCell<Vec<Diagnostic>>>,
-    pub started: Instant,
-    pub queue: Rc<RefCell<VecDeque<Msg>>>,
+    /// Messages the mod's agent sent up, as JSON text, oldest first.
+    pub queue: Rc<RefCell<VecDeque<String>>>,
     pub pending: Rc<RefCell<HashMap<CallId, Pending>>>,
     pub timers: Rc<RefCell<Vec<Timer>>>,
     pub next_call: Rc<Cell<CallId>>,
@@ -88,7 +77,7 @@ pub fn web_natives<'js>(ctx: &Ctx<'js>) -> rquickjs::Result<Object<'js>> {
 }
 
 /// Registers or cancels a timer when the call that asked for it succeeded.
-pub fn after_reply(state: &NativeState, idx: usize, request: &HostRequest, ok: bool) {
+pub fn after_reply(state: &NativeState, request: &HostRequest, ok: bool) {
     if !ok {
         return;
     }
@@ -102,7 +91,6 @@ pub fn after_reply(state: &NativeState, idx: usize, request: &HostRequest, ok: b
             };
             let every = Duration::from_secs_f64(ms.max(0.0) / 1000.0).max(state.min_timer);
             state.timers.borrow_mut().push(Timer {
-                idx,
                 id: id.to_owned(),
                 every,
                 due: Instant::now() + every,
@@ -117,91 +105,30 @@ pub fn after_reply(state: &NativeState, idx: usize, request: &HostRequest, ok: b
     }
 }
 
-/// Starts one call and shapes what the mod's agent reads back. A panic in the host must not
-/// unwind through the engine's C frames, which aborts the process: it becomes an error the
-/// calling hook sees.
-fn host_start(state: &NativeState, idx: usize, request: &HostRequest) -> Value {
+/// Starts one call: it goes to the parent as a frame, and the mod's promise stays pending until the
+/// answer arrives. Every call is asynchronous, so the mod's agent only ever sees a pending id or an
+/// error.
+fn host_start(state: &NativeState, request: &HostRequest) -> Value {
     let id = state.next_call.get() + 1;
     state.next_call.set(id);
-    let reply = std::panic::catch_unwind(AssertUnwindSafe(|| {
-        state.host.borrow_mut().call(id, request)
-    }));
-    match reply {
-        Ok(HostReply::Ready(Ok(v))) => {
-            after_reply(state, idx, request, true);
-            json!({ "ok": v })
-        }
-        Ok(HostReply::Ready(Err(e))) => {
-            json!({ "err": { "code": e.code, "message": e.message } })
-        }
-        Ok(HostReply::Pending) => {
-            state.pending.borrow_mut().insert(
-                id,
-                Pending {
-                    idx,
-                    deadline: Instant::now() + state.host_timeout,
-                    request: request.clone(),
-                },
-            );
-            json!({ "pending": id })
-        }
-        Err(_) => {
-            json!({ "err": { "code": "hx.internal", "message": "the host panicked while performing the call" } })
-        }
+    if !(state.send_call)(id, request) {
+        return json!({ "err": { "code": "hx.mods.host_failed", "message": "the channel to the host is closed" } });
     }
+    state.pending.borrow_mut().insert(
+        id,
+        Pending {
+            deadline: Instant::now() + state.host_timeout,
+            request: request.clone(),
+        },
+    );
+    json!({ "pending": id })
 }
 
-/// What the chain needs: the clock, the deadline, diagnostics, and a way to message a mod.
-pub fn chain_natives<'js>(ctx: &Ctx<'js>, state: &NativeState) -> rquickjs::Result<Object<'js>> {
-    let o = Object::new(ctx.clone())?;
-    let started = state.started;
-    o.set(
-        "now",
-        Function::new(ctx.clone(), move || {
-            started.elapsed().as_secs_f64() * 1000.0
-        })?,
-    )?;
-    let deadline = state.deadline.clone();
-    o.set(
-        "setDeadline",
-        Function::new(ctx.clone(), move |ms: f64| {
-            deadline.set(if ms.is_finite() {
-                Some(Instant::now() + Duration::from_secs_f64(ms.max(0.0) / 1000.0))
-            } else {
-                None
-            });
-        })?,
-    )?;
-    let sink = state.diagnostics.clone();
-    o.set(
-        "diag",
-        Function::new(
-            ctx.clone(),
-            move |level: String, plugin: String, message: String| {
-                sink.borrow_mut().push(Diagnostic {
-                    level,
-                    plugin,
-                    message,
-                });
-            },
-        )?,
-    )?;
-    let queue = state.queue.clone();
-    o.set(
-        "send",
-        Function::new(ctx.clone(), move |idx: usize, json: String| {
-            queue.borrow_mut().push_back(Msg::ToMod(idx, json));
-        })?,
-    )?;
-    Ok(o)
-}
-
-/// What a mod's agent needs. The plugin name and index are fixed here, in Rust, so no mod can
-/// speak for another.
+/// What a mod's agent needs. The plugin name is fixed here, in Rust, and the parent does not trust
+/// it either: the worker is bound to one mod, and the parent stamps that name itself.
 pub fn agent_natives<'js>(
     ctx: &Ctx<'js>,
     state: &NativeState,
-    idx: usize,
     plugin: &str,
 ) -> rquickjs::Result<Object<'js>> {
     let o = Object::new(ctx.clone())?;
@@ -213,7 +140,6 @@ pub fn agent_natives<'js>(
             let reply = match serde_json::from_str::<Value>(&args) {
                 Ok(args) => host_start(
                     &st,
-                    idx,
                     &HostRequest {
                         plugin: name.clone(),
                         call,
@@ -231,7 +157,7 @@ pub fn agent_natives<'js>(
     o.set(
         "send",
         Function::new(ctx.clone(), move |json: String| {
-            queue.borrow_mut().push_back(Msg::ToChain(idx, json));
+            queue.borrow_mut().push_back(json);
         })?,
     )?;
     let sink = state.diagnostics.clone();

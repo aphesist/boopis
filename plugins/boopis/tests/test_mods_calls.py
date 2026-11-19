@@ -288,7 +288,7 @@ def test_fs_resolves_symlinks_before_the_decision_and_writes_atomically(env: Env
 def test_http_fetch_asks_per_host_refuses_private_addresses_and_follows_the_documented_limits(
     env: Env, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("boopis.mods.io.is_public", lambda host: host != "intranet.local")
+    monkeypatch.setattr("boopis.mods.io.is_public", lambda host, resolver=None: host != "intranet.local")
     thread = env.answer_next_form(allow=True)
     result = env.call("http.fetch", {"url": "https://example.com/a", "method": "GET"})
     thread.join()
@@ -300,6 +300,16 @@ def test_http_fetch_asks_per_host_refuses_private_addresses_and_follows_the_docu
         env.call("http.fetch", {"url": "file:///etc/passwd"})
     with pytest.raises(BoopisError, match="credentials"):
         env.call("http.fetch", {"url": "https://u:p@example.com/"})
+
+
+def test_http_fetch_through_the_service_never_reaches_a_name_that_resolves_privately(env: Env) -> None:
+    connected: list[tuple[str, int]] = []
+    env.svc.fetcher = None  # the real opener, with the lookup and the socket faked
+    env.svc.resolver = lambda host, port: ["127.0.0.1"]
+    env.svc.connector = lambda address, timeout, source=None: connected.append(address)  # type: ignore[assignment, return-value]
+    with pytest.raises(BoopisError, match="not a public address"):
+        env.call("http.fetch", {"url": "https://rebound.example/"})
+    assert connected == []
 
 
 def test_private_and_unresolvable_addresses_are_never_public() -> None:

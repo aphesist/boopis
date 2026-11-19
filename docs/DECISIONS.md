@@ -350,6 +350,8 @@ They're not sandboxed, matching Claude Code. This is the only exception to the n
 - **Host calls are asynchronous**, and `hx` sends requests to the plugin (`mods.call`): `hx serve` binds a `Link` to its writer. Alternative rejected: a long-poll method the plugin calls for pending `$` calls, which is more machinery and adds a round trip to every call.
 The decision of every `$` call is `policy.check` with the mod as principal; the bridge for Claude Code hooks also delivers mod events.
 
+**Update 2026-11-19, M2a.** The runtime runs **one worker per mod**, and the chain runs in `hx` (`docs/MODS.md` section 11). Measured before building it: about 10.6 MiB resident and 12 ms to spawn and load per worker, at 1, 5 and 20 workers (release), under the 15 MiB and 150 ms bar. The alternative (a runtime per mod in one worker) would have left risk 3, a memory-safety bug reaching other mods' authority, open. The plugin restarts a worker that ends, with a backoff of 1, 5 and 30 s, and starts a replacement before the sandbox's one-hour ceiling.
+
 ## ADR-0023 One self-contained app: Hermes ships inside it
 **Context.**
 - The first build asked the user to install Hermes with a terminal command before running the app.

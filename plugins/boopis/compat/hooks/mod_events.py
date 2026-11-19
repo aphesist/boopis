@@ -59,8 +59,10 @@ class ModEvents(Core):
             mods = discover(self.snapshot(session_id))
             if not mods:
                 return
-            svc.load(session_id, mods)
-            svc.dispatch(session_id, "session.start", {"sessionId": session_id, "model": model, "surface": "desktop"})
+            if svc.load(session_id, mods):  # a mod that failed to load said so in its log line; the rest start
+                svc.dispatch(
+                    session_id, "session.start", {"sessionId": session_id, "model": model, "surface": "desktop"}
+                )
         except Exception as exc:  # noqa: BLE001 - mods failing never stops a session
             _log.warning("mods did not start for %s", session_id, exc_info=True)
             self._say_session(session_id, f"mods did not start: {getattr(exc, 'message', exc)}")
