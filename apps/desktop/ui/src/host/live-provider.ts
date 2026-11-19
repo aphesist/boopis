@@ -48,6 +48,8 @@ interface Convo {
 export interface LiveProvider extends DataProvider {
   /** ledger totals from `plugin.hypotaxis.ledger.appended`; not yet wired into `details.ledger` (mock) */
   ledger: { totals(): LedgerTotals; subscribe(fn: (t: LedgerTotals) => void): () => void };
+  /** tests: every read of the details and every refresh in flight has finished */
+  settled(): Promise<void>;
 }
 
 export function createLiveProvider(opts: LiveOptions): LiveProvider {
@@ -356,6 +358,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     files: { pick: () => null, complete: (word, id) => details.files.complete(word, id) },
     dictation: { start: () => () => undefined }, // nothing hears you yet: the mock's transcript is invented text
     feedforward: { catalog: () => (flag ? mock.feedforward.catalog() : []) },
+    settled: () => details.settled(),
     ledger: { totals: () => ledgerTotals, subscribe(fn) { ledgerSubs.add(fn); return () => { ledgerSubs.delete(fn); }; } }
   };
 }

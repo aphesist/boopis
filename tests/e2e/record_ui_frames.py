@@ -156,6 +156,7 @@ def priced(install: Any, tmp: Path, url: str, name: str, with_prices: bool) -> N
         tolerant(gw, "mcp.servers.status", {})
         for m in ("describe", "ledger.stats", "cascade.state", "checkpoint.list", "checkpoint.diff"):
             tolerant(gw, "plugin.hypotaxis." + m, p)
+        tolerant(gw, "plugin.hypotaxis.ledger.tail", {**p, "since_seq": -1, "limit": 1000})
         tolerant(gw, "plugin.hypotaxis.compat.inventory", {"cwd": str(proj)})
         tolerant(gw, "complete.path", {"session_id": sid, "cwd": str(proj), "word": "@file:src/"})
         tolerant(gw, "complete.path", {"session_id": sid, "cwd": str(proj), "word": "@zzz-nothing"})
