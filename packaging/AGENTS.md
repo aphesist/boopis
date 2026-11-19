@@ -12,6 +12,8 @@ packaging/
     golden/          what the host draws, per scene and colour level; every renderer must print these bytes
     icons/           the app icons (light and dark PNGs, 16 to 256) and the symbolic SVG; install.sh embeds them
     make-installer-images.py   the Windows installer's header and sidebar bitmaps, from the logo's static SVG files (see its docstring)
+    make-readme-hero.py        the README's animated logo (two SVGs, CSS keyframes, no script), from the logo's static SVG files
+    make-readme-terminal.py    the README's installer replay (one animated SVG), from boopis.art through render.awk and from install.sh's own wording
   arch/boopis.install   pacman's install script: a static banner and two lines on how to start
 scripts/
   install.sh  install.ps1   the installers; their `>>> brand` blocks are generated
@@ -38,6 +40,9 @@ One line per record; `#` starts a comment line. A **cell** is 2x2 **pixels**, dr
 - Unicode (the blocks, `✓ ✗`, the rounded box): a UTF-8 locale. Otherwise ASCII marks and `boopis` in plain letters.
 - Animation (at most 1.5 s, at the start only): an interactive UTF-8 terminal, `CI` unset, `BOOPIS_NO_ANIMATION` unset, empty or `0`. The installer starts the download before the banner, so the animation never holds the work up.
 - Marks: ✓ in moss green, ! in terra, ✗ in nina red: the bots' own colours, never a colour of their own.
+
+## The README's images
+`.github/readme/` holds what the README shows: the hero and the terminal (made by the two scripts above, each with `--check`, so they cannot drift from the art, the logo or `install.sh`) and the app screenshots (`apps/desktop/ui/tests/readme-shots.mjs`, on the e2e build's mock data). Change the art or the installer's wording, then run `packaging/brand/make-readme-terminal.py` and read the diff.
 
 ## Changing the art
 1. Edit `boopis.art` (the wordmark was sampled from `design/v6/brand/logo` at 9 rows; the bots are hand-made at 12 x 6 pixels).
