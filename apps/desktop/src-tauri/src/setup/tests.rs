@@ -11,7 +11,7 @@ use serde_json::{Value, json};
 
 use super::install::Bundle;
 use super::ops::{HermesOps, PluginEntry};
-use super::{Answer, Setup, StepState};
+use super::{Answer, Setup, StepState, windows_gaps};
 use crate::commands::Json;
 use crate::error::{Error, Result};
 use crate::free_tier::FreeTier;
@@ -1312,4 +1312,19 @@ fn the_catalogue_reader_takes_zero_priced_and_free_tagged_rows_of_the_asked_prov
     );
     assert!(super::ops::free_models_of(&answer, "nope").is_empty());
     assert!(super::ops::free_models_of(&json!({}), "openrouter").is_empty());
+}
+
+/// The Windows build says what it lacks, in the receipt, and says what still works (nothing is hidden).
+#[test]
+fn the_windows_gaps_are_named_with_what_still_works() {
+    let gaps = windows_gaps().join("\n");
+    assert!(
+        gaps.contains("keychain") && gaps.contains("free Nous models"),
+        "{gaps}"
+    );
+    assert!(
+        gaps.contains("sandbox") && gaps.contains("never runs unsandboxed"),
+        "{gaps}"
+    );
+    assert!(gaps.contains("mods are off"), "{gaps}");
 }
