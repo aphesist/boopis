@@ -107,6 +107,9 @@ export interface PlaceAtOpts { side: Side; align?: Align | undefined; overhang?:
 /** place `node` (already in the document, positioned fixed or absolute to the window) against `anchor` */
 export function placeAt(node: HTMLElement, anchor: Element, o: PlaceAtOpts): Placement {
   readFloat();
+  /* measured from the window's corner: a fixed surface with auto width shrinks to the room right of its `left`, so the width
+     read at the last placement is not the one it keeps at the new one (the clamp below keeps the whole width in the window) */
+  node.style.left = '0px'; node.style.top = '0px';
   const r = anchor.getBoundingClientRect(), avoid = avoidRects(anchor);
   let w = node.offsetWidth, h = node.offsetHeight;
   /* taller than the room on either side of the anchor: it takes the roomier side and its list scrolls inside that room (R-float-4, R-select-2) */
