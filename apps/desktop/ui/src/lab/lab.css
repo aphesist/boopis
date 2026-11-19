@@ -1,0 +1,38 @@
+/* The UI lab's own surfaces: the stage a state draws on, and the gallery around the cells. Tokens only. */
+
+/* ───────── the stage (one state, frame.ts) ───────── */
+html:has(.lab-stage), body:has(.lab-stage) { margin: 0; background: var(--bg-2); }
+.lab-stage { box-sizing: border-box; min-height: 100vh; padding: var(--sp-5); background: var(--bg-2); color: var(--text); font-family: var(--sans); font-size: var(--fs-s); line-height: var(--lh-ui); }
+.lab-stage[data-ground="frame"] { background: var(--bg-1); }
+.lab-stage[data-ground="raised"] { background: var(--bg-3); }
+.lab-stage[data-ground="dock"] { background: var(--dock-bg); }
+.lab-cell { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-4); max-width: 100%; }
+.lab-cell > .lab-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); max-width: 100%; }
+.lab-cell > .lab-fill { align-self: stretch; }
+.lab-fail { margin: var(--sp-5); color: var(--red-text); font: var(--fs-s) / var(--lh) var(--mono); white-space: pre-wrap; }
+
+/* ───────── the gallery (gallery.ts) ───────── */
+.lab { display: grid; grid-template-columns: 280px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); height: 100vh; margin: 0; background: var(--bg-2); color: var(--text); font-family: var(--sans); font-size: var(--fs-s); line-height: var(--lh-ui); }
+.lab-bar { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-4); padding: var(--sp-2) var(--sp-4); background: var(--bg-1); box-shadow: inset 0 -1px 0 var(--hair); }
+.lab-bar h1 { margin: 0 var(--sp-3) 0 0; font-size: var(--fs-s); font-weight: 600; color: var(--text-strong); }
+.lab-bar label { display: inline-flex; align-items: center; gap: var(--sp-2); color: var(--text-dim); font-size: var(--fs-xs); }
+.lab-index { overflow-y: auto; padding: var(--sp-3) var(--sp-2) var(--sp-6); background: var(--bg-1); box-shadow: inset -1px 0 0 var(--hair); }
+.lab-index h2 { margin: var(--sp-4) var(--sp-2) var(--sp-1); color: var(--text-quiet); font-size: var(--fs-xs); font-weight: 500; }
+.lab-index input[type="search"] { box-sizing: border-box; width: 100%; }
+.lab-index ul { list-style: none; margin: 0; padding: 0; }
+.lab-index a { display: flex; justify-content: space-between; gap: var(--sp-2); padding: var(--sp-1) var(--sp-2); border-radius: var(--r-xs); color: var(--text); text-decoration: none; }
+.lab-index a:hover { background: var(--hover); }
+.lab-index a[aria-current="page"] { background: var(--current); color: var(--text-strong); }
+.lab-index a span:last-child { color: var(--text-quiet); font-family: var(--mono); font-size: var(--fs-2xs); }
+.lab-main { overflow: auto; padding: var(--sp-5); }
+.lab-main > header h2 { margin: 0; color: var(--text-strong); font-size: var(--fs-l); font-weight: 600; }
+.lab-main > header p { margin: var(--sp-1) 0 var(--sp-4); color: var(--text-dim); }
+.lab-grid { display: flex; flex-direction: column; gap: var(--sp-6); }
+.lab-state > h3 { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-2); margin: 0 0 var(--sp-2); font-size: var(--fs-s); font-weight: 600; color: var(--text-strong); }
+.lab-state > h3 small { color: var(--text-quiet); font-family: var(--mono); font-size: var(--fs-2xs); font-weight: 400; }
+.lab-pair { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--sp-4); }
+.lab-pane { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
+.lab-pane > span { color: var(--text-quiet); font-size: var(--fs-2xs); font-family: var(--mono); }
+.lab-viewport { overflow: hidden; border-radius: var(--r-s); box-shadow: 0 0 0 1px var(--line); background: var(--bg-0); }
+.lab-viewport iframe { display: block; border: 0; transform-origin: 0 0; }
+.lab-empty { color: var(--text-quiet); }

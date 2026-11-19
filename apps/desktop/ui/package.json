@@ -15,6 +15,8 @@
     "test:unit": "vitest run",
     "test:smoke": "node tests/smoke/run.mjs",
     "test:parity": "node tests/parity/run.mjs",
+    "lab": "vite --open /lab.html",
+    "lab:check": "node tests/lab/check.mjs",
     "perf:webkit": "node tests/perf/run.mjs",
     "tokens": "node scripts/build-tokens.mjs",
     "tokens:check": "node scripts/build-tokens.mjs --check",

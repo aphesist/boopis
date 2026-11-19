@@ -171,7 +171,8 @@ ui/
   src/vendor/hermes-shared/  Hermes's generated gateway contract types (MIT), pinned, with NOTICE and PIN.json
   src/vendor/model-icons/  the provider logos (LobeHub, MIT) and which family a model id gets, with NOTICE
   vendor/               orb-avatar.min.js (the owner's <orb-avatar> web component, MIT) and its .d.ts; boopis-logo.js (the <boopis-logo> element, copied unchanged from design/v6/brand/logo, never edited here) with its .d.ts and NOTICE
-  tests/                smoke (Playwright), parity (v6 against the port), perf (WebKitGTK and Chromium frame times; README.md), lib.mjs
+  src/lab/              the UI lab (docs/UI-LAB.md): gallery, frame, stories (stories/<area>/*.stories.ts), fixtures, the coverage gate; lab.html is its page, never in the desktop build
+  tests/                smoke (Playwright), parity (v6 against the port), perf (WebKitGTK and Chromium frame times; README.md), lab (the lab's checker: check.mjs, probe.js, rules.mjs), lab-golden (its screenshots), lib.mjs
   scripts/              build-tokens.mjs
 ```
 Unit tests sit next to the code (`*.test.ts`).
@@ -252,6 +253,8 @@ pnpm typecheck                # strict, noUncheckedIndexedAccess, exactOptionalP
 pnpm test                     # vitest: bus, state, settings, theme and contrast maths (and the guard that keeps a mod's colours readable), hold timing, the keymap dispatcher, layout, cron, the mock provider, the Archived group and the "made outside" mark, the feedforward reader
 pnpm build                    # tokens check, typecheck, vite build
 pnpm test:smoke [part]        # Playwright: boot, themes, the KEYMAP walk-through, the owner's decisions (the Archived group, "Restore bot…", the mark), the live provider over recorded frames, forms (every kind and state, the keyboard, the secret, plugin forms inline and in the dock), mods (the surfaces, panes at both widths, the composer's rise, toasts, the theme preview and each way it ends (and the colours it skips for contrast), a mod's question, over recorded mod events), corners (no clipped container, the frame budget, six viewports), axe (zero violations); parts: boot themes keys owner live forms mods corners axe
+pnpm lab                      # the UI lab (docs/UI-LAB.md): every component, card, surface and page in its states, beside the v6 mock
+pnpm lab:check [--area dock]  # the lab's checks in every preset and width (geometry, concentric corners, overlays, tokens, native controls, scrollbars, brand, axe, stability, screenshots); lab-report/index.html
 pnpm test:parity              # LOCAL ONLY (not in CI): needs Chromium (`pnpm exec playwright install chromium` once, or the pre-installed one) and the v6 reference in design/v6; the v6 mock-up against the port at 1440x900 and 1920x1080, in every preset, session and bots; diffs in test-results/parity/ (gitignored)
 ```
 CI runs `typecheck`, `test` and `test:smoke` (it installs Chromium with `pnpm exec playwright install --with-deps chromium`). `playwright` is pinned in `package.json`; on a machine with a pre-installed Chromium keep that pin equal to the installed version and do not run `playwright install`. The tests run at deviceScaleFactor 1 and serve a `vite build --mode e2e` (it exposes `window.__hx` for the tests; the production build has no global). Parity compares pixels with the orbs hidden (their idle motion is random by design) and again with every orb frozen to a still frame, plus the rects of every orb. **Any visible difference from v6 is a bug** unless you can name an intentional fix and list it below.
@@ -264,6 +267,11 @@ Intentional differences from v6, all invisible:
 - a module that fails to mount shows a plain notice instead of v6's placeholder content (which was invented);
 - fonts are bundled (`@fontsource`, latin) instead of fetched from Google, because the app runs under a strict CSP;
 - the mock's streams persist what v6 lost (a turn typed in a non-first session survives switching away).
+
+## The UI lab: every component ships with stories
+- **A new component, card kind, form kind, surface or page ships with stories** in `src/lab/stories/<area>/` (docs/UI-LAB.md): at least `typical` and `long`, `empty` and `error` where they apply, and the forced hover, focus and pressed states of anything interactive. The coverage gate (`src/lab/coverage.test.ts`, in `pnpm test`) fails otherwise; an exception goes in `src/lab/coverage.ts` with its reason.
+- Before calling a UI change done, run `pnpm lab:check --area <yours>` and read `lab-report/index.html`; accept goldens (`--update`) only for a change you meant.
+- Stories use the library's public API through `src/lab/kit.ts`, never a module's internals. The lab is never in the desktop build.
 
 ## What not to do
 - Do not redesign, "improve", re-space or re-colour anything. If the design looks wrong, tell the owner; do not change it.

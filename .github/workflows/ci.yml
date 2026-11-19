@@ -312,3 +312,43 @@ jobs:
       - run: pnpm exec playwright install-deps chromium
         if: steps.pw-cache.outputs.cache-hit == 'true'
       - run: pnpm test:smoke
+
+  lab:
+    # The UI lab (docs/UI-LAB.md): every story's every state through the geometry, concentric-corner, overlay, token,
+    # native-control, scrollbar, brand, axe, stability and screenshot checks, in every preset and width. NON-BLOCKING
+    # until the fix agents get it green (docs/UI-LAB-FINDINGS.md lists what fails today): continue-on-error keeps the
+    # workflow green while the job shows red. Make it blocking by deleting continue-on-error once a run passes.
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: apps/desktop/ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/desktop/ui/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Chromium (cached by Playwright's version)
+        id: pw-version
+        run: echo "v=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw-version.outputs.v }}
+      - run: pnpm exec playwright install --with-deps chromium
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+      - run: pnpm exec playwright install-deps chromium
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+      - run: pnpm lab:check --strict
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lab-report
+          path: apps/desktop/ui/lab-report/
+          retention-days: 14
