@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-hermes-status"
+description = "Enables the hermes_status command without any pre-configured scope."
+commands.allow = ["hermes_status"]
+
+[[permission]]
+identifier = "deny-hermes-status"
+description = "Denies the hermes_status command without any pre-configured scope."
+commands.deny = ["hermes_status"]

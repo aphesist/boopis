@@ -141,7 +141,7 @@ function assistantTurn(a: AgentTurn): HTMLElement {
 }
 
 /* a turn that is still running: a live call number and steps, then the answer arrives on the feed */
-interface Live { t: HTMLElement; ol: HTMLElement; disc: HTMLElement; timeEl: HTMLElement; tick: number; secs: number; model: string; count: number; startedAt: number }
+interface Live { t: HTMLElement; ol: HTMLElement; disc: HTMLElement; timeEl: HTMLElement; tick: number; secs: number; model: string; count: number; startedAt: number; prose: HTMLElement | null }
 const live = new Map<string, Live>();
 function liveTurn(a: AgentTurn): void {
   const id = 'ss-steps-' + randomId('');
@@ -150,7 +150,7 @@ function liveTurn(a: AgentTurn): void {
   t.setAttribute('aria-busy', 'true');
   const disc = $('.ui-disclosure', t), timeEl = $('.ui-callno span', t);
   $('span', disc).textContent = 'Working'; disc.prepend(frag(ui.html.dot('run')));
-  const L: Live = { t, ol, disc, timeEl, tick: 0, secs: 0, model: a.model, count: 0, startedAt: Date.now() };
+  const L: Live = { t, ol, disc, timeEl, tick: 0, secs: 0, model: a.model, count: 0, startedAt: Date.now(), prose: null };
   L.tick = window.setInterval(() => { L.secs++; timeEl.textContent = L.secs + 's'; }, 1000);
   live.set(a.id, L);
   (VIEW.col as HTMLElement).append(t);
@@ -166,7 +166,7 @@ function finishLive(id: string, ev: Extract<ConversationEvent, { type: 'turn-fin
   disc.setAttribute('aria-expanded', 'false'); ol.hidden = true;
   t.removeAttribute('aria-busy'); t.setAttribute('aria-label', L.model + ', ' + ev.time + ', ' + ev.cost);
   const p = prose(ev.paragraphs);
-  $('.ui-entry__body', t).append(p);
+  if (L.prose) L.prose.replaceWith(p); else $('.ui-entry__body', t).append(p);
   TURN.set(t, { md: () => mdOf(p), kind: 'agent' });
   $('.ui-callno', t).append(el('span', { class: 'ss-acts' }, ui.iconButton({ icon: 'copy', label: 'Copy answer', size: 's', keys: 'C' })));
   $('.ss-acts button', t).addEventListener('click', () => { void copyText(mdOf(p)); });
@@ -208,7 +208,15 @@ function onConversationEvent(ev: ConversationEvent): void {
     const L = live.get(ev.turnId); if (!L) return;
     L.count++;
     L.ol.insertAdjacentHTML('beforeend', ui.html.steps([ev.step]).replace(/^<ol[^>]*>|<\/ol>$/g, ''));
-  } else if (ev.type === 'turn-finished') finishLive(ev.turnId, ev);
+  } else if (ev.type === 'turn-text') {
+    const L = live.get(ev.turnId); if (!L) return;
+    const stick = !VIEW.scroll || VIEW.scroll.scrollHeight - VIEW.scroll.scrollTop - VIEW.scroll.clientHeight < 80;
+    const p = prose(ev.paragraphs);
+    if (L.prose) L.prose.replaceWith(p); else $('.ui-entry__body', L.t).append(p);
+    L.prose = p;
+    if (stick && VIEW.scroll) VIEW.scroll.scrollTop = VIEW.scroll.scrollHeight;
+  } else if (ev.type === 'reset') renderConversation();
+  else if (ev.type === 'turn-finished') finishLive(ev.turnId, ev);
   else if (ev.type === 'blank-answered') {
     const first = !VIEW.blank;
     VIEW.blank = ev.answer;

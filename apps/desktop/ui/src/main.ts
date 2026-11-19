@@ -20,7 +20,7 @@ import { boot } from './modules/shell';
 const log = logger('main');
 
 async function start(): Promise<void> {
-  const provider = selectProvider();
+  const provider = await selectProvider();
   setProvider(provider);
   await provider.ready;
   startGlance();
@@ -31,4 +31,7 @@ async function start(): Promise<void> {
     (window as unknown as Record<string, unknown>)['__hx'] = { state, setState, on, emit, ui, theme: themeApi, dock: getDockApi, layout: getLayout };
   }
 }
-start().catch((err) => { log.error('the app failed to start', err); });
+start().catch((err: unknown) => {
+  log.error('the app failed to start', err);
+  void import('./host/notice').then((m) => { m.showStartupFailure(err); });
+});

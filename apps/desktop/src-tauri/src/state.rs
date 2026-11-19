@@ -1,0 +1,174 @@
+//! App-wide state: one gateway proxy per profile (created on first use), and which proxy each UI connection belongs to.
+
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::{Arc, Mutex, PoisonError};
+
+use crate::config::Limits;
+use crate::endpoint::EndpointConfig;
+use crate::error::{Error, Result};
+use crate::gateway::{ConnectionId, Hub, LinkStatus};
+use crate::hermes::Supervisor;
+
+/// Called for every change of a profile's link status.
+pub type StatusEmitter = Arc<dyn Fn(&str, &LinkStatus) + Send + Sync>;
+
+/// The proxies and the connection index.
+pub struct Hubs {
+    supervisor: Arc<Supervisor>,
+    limits: Limits,
+    emitter: StatusEmitter,
+    by_profile: Mutex<HashMap<String, Arc<Hub>>>,
+    index: Mutex<HashMap<ConnectionId, String>>,
+    next: AtomicU32,
+}
+
+impl Hubs {
+    /// An empty set over `supervisor`.
+    #[must_use]
+    pub fn new(supervisor: Arc<Supervisor>, limits: Limits, emitter: StatusEmitter) -> Self {
+        Self {
+            supervisor,
+            limits,
+            emitter,
+            by_profile: Mutex::new(HashMap::new()),
+            index: Mutex::new(HashMap::new()),
+            next: AtomicU32::new(1),
+        }
+    }
+
+    /// The proxy for a profile (`None` is the active one), created on first use.
+    ///
+    /// # Errors
+    /// `InvalidInput` for a bad profile name.
+    pub fn hub_for(&self, profile: Option<&str>) -> Result<(String, Arc<Hub>)> {
+        let key = profile
+            .filter(|p| !p.is_empty() && *p != "default")
+            .unwrap_or("default")
+            .to_owned();
+        let mut hubs = self
+            .by_profile
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        if let Some(h) = hubs.get(&key) {
+            return Ok((key, h.clone()));
+        }
+        let endpoint = EndpointConfig::Local {
+            profile: (key != "default").then(|| key.clone()),
+        }
+        .build(&self.supervisor, &self.limits)?;
+        let hub = Arc::new(Hub::new(endpoint, self.limits.clone()));
+        let (emit, name, mut rx) = (self.emitter.clone(), key.clone(), hub.watch());
+        tokio::spawn(async move {
+            loop {
+                let status = rx.borrow_and_update().clone();
+                emit(&name, &status);
+                if rx.changed().await.is_err() {
+                    return;
+                }
+            }
+        });
+        hubs.insert(key.clone(), hub.clone());
+        Ok((key, hub))
+    }
+
+    /// A fresh connection id.
+    #[must_use]
+    pub fn next_id(&self) -> ConnectionId {
+        self.next.fetch_add(1, Ordering::Relaxed)
+    }
+
+    /// Remember which profile a connection belongs to.
+    pub fn register(&self, id: ConnectionId, profile_key: String) {
+        self.index
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .insert(id, profile_key);
+    }
+
+    /// Forget a connection and return its proxy.
+    pub fn forget(&self, id: ConnectionId) -> Option<Arc<Hub>> {
+        let key = self
+            .index
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .remove(&id)?;
+        self.by_profile
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .get(&key)
+            .cloned()
+    }
+
+    /// The proxy a connection belongs to.
+    ///
+    /// # Errors
+    /// `UnknownConnection`.
+    pub fn route(&self, id: ConnectionId) -> Result<Arc<Hub>> {
+        let key = self
+            .index
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .get(&id)
+            .cloned()
+            .ok_or(Error::UnknownConnection(id))?;
+        self.by_profile
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .get(&key)
+            .cloned()
+            .ok_or(Error::UnknownConnection(id))
+    }
+
+    /// Stop every proxy (app exit).
+    pub fn shutdown(&self) {
+        for h in self
+            .by_profile
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .values()
+        {
+            h.shutdown();
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::hermes::Environment;
+
+    fn hubs() -> Hubs {
+        let env = Environment {
+            hermes_home: Some("/nonexistent".into()),
+            ..Environment::default()
+        };
+        Hubs::new(
+            Arc::new(Supervisor::new(env, Limits::default())),
+            Limits::default(),
+            Arc::new(|_, _| {}),
+        )
+    }
+
+    #[tokio::test]
+    async fn one_proxy_per_profile_and_connection_ids_are_unique() {
+        let h = hubs();
+        let (k1, a) = h.hub_for(None).unwrap();
+        let (k2, b) = h.hub_for(Some("default")).unwrap();
+        assert_eq!((k1.as_str(), k2.as_str()), ("default", "default"));
+        assert!(Arc::ptr_eq(&a, &b));
+        let (_, c) = h.hub_for(Some("nina")).unwrap();
+        assert!(!Arc::ptr_eq(&a, &c));
+        assert!(h.hub_for(Some("../x")).is_err());
+        let (i1, i2) = (h.next_id(), h.next_id());
+        assert_ne!(i1, i2);
+        h.register(i1, "default".into());
+        assert!(Arc::ptr_eq(&h.route(i1).unwrap(), &a));
+        assert_eq!(
+            h.route(i2).err().unwrap().code(),
+            "hx.host.unknown_connection"
+        );
+        assert!(h.forget(i1).is_some());
+        assert!(h.route(i1).is_err());
+    }
+}

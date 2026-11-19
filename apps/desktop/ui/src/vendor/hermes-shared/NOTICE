@@ -1,0 +1,9 @@
+gateway-contract.generated.ts is copied, unmodified, from Hermes Agent (apps/shared/src/), which is MIT licensed:
+
+  Copyright (c) 2025 Nous Research
+
+The licence text is in LICENSE next to this file. The pinned tag, commit and checksum are in PIN.json. The file is
+generated upstream (scripts/gen_gateway_contracts.py); never edit it here. To move to another Hermes tag run
+`node scripts/vendor-hermes-shared.mjs <path to a hermes-agent checkout at that tag>`, read the diff (a changed method or
+event is a changed contract), and update the host and the live provider with it. CI runs the same script with
+`--check` against the pinned checkout (vendor/hermes-agent) to prove the copy is exact.

@@ -1,6 +1,6 @@
 # The data seam
 
-Every module reads data **only** through `DataProvider` (`provider.ts`), and every action a module takes is a **command** on it. Nothing under `src/modules` or `src/components` imports `mock-data.ts` or `mock-provider.ts`; `main.ts` picks the provider through `select.ts`. The live provider (the Hermes gateway and the hypotaxis plugin's streams) is another workstream: it implements the same interfaces and the UI does not change.
+Every module reads data **only** through `DataProvider` (`provider.ts`), and every action a module takes is a **command** on it. Nothing under `src/modules` or `src/components` imports `mock-data.ts` or `mock-provider.ts`; `main.ts` picks the provider through `select.ts`. The live provider (`src/host/live-provider.ts`: the Hermes gateway through the Rust host) implements the same interfaces and the UI does not change.
 
 ```
 data/
@@ -42,7 +42,7 @@ A command never returns the new state for the UI to apply. The UI calls `bots.se
 
 ## Events
 
-- `ConversationEvent`: `turn-added`, `step-added`, `turn-finished`, `blank-answered`.
+- `ConversationEvent`: `turn-added`, `step-added`, `turn-finished`, `blank-answered`, and (the live provider's, additive) `turn-text` (the running answer so far, streamed from `message.delta`) and `reset` (read the snapshot again: a transcript loaded, or events were lost).
 - `BotsEvent`: `bot` (state, attention, activity, config), `bot-created`, `bot-archived`, `message` (with `streaming`), `message-text` (the text so far), `message-end`, `message-resolved`, `run` (a reply is being worked on, or stopped).
 - `WaitsEvent`: `added`, `resolved`.
 
@@ -62,6 +62,10 @@ The v6 mock-up read `HX.data` (the `data.js` file) and mutated it from three mod
 | bots.js `ACTIVITY`, `SPENT`, `REPLY`, the model, channel and approval lists | `Bot.activity`, `Bot.spent`, the mock's replies, `bots.catalog()` |
 | dock.js `LAST`, `SCHED`, `S.run`, `S.waits` | `Bot.last`, `schedules`, `run`, `waits` |
 | the timers in the modules that faked a reply, a run, a sign-in or a dictation | the mock provider (`mock-provider.ts`) |
+
+## The live provider (`src/host/`)
+
+`VITE_DATA_PROVIDER=live` (the desktop build: `vite --mode desktop`, `.env.desktop`) connects through the host (`bridge.ts`, `gateway.ts`) and serves, from the gateway: `sessions.list` and `archived` (`session.list`, refreshed on `sessions.changed` and after a reconnect), `sessions.conversation` (`session.resume` for the transcript, then `message.start`, `tool.start`, `tool.complete`, `message.delta`, `message.complete`), `send` (`prompt.submit` with a `submission_id`), `stop` (`session.interrupt`), `rename`, `archive`, `restore`, and `waits` (`approval.request` as a wait, `approval.respond` with the canonical `prompt_id` and `execution_generation`). `plugin.hypotaxis.ledger.appended` is mapped to token and round-trip totals (`provider.ledger`) but not yet wired into `details.ledger`. Still the **mock's**, named in `MOCK_SOURCES`: `user`, `details`, `bots`, `run`, `schedules`, `feedforward`, `dictation`, `files`, and the sessions' `diff`, `fork`, `answerBlank` and `openPullRequest`. What the gateway does not send is empty (`project`, `cost`, step times) and shown as unknown. If the host cannot reach Hermes the app shows a notice with the error code; it never falls back to the mock.
 
 ## Writing the live provider
 
