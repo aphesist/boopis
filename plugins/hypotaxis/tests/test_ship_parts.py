@@ -203,6 +203,7 @@ def test_parse_command_is_a_vector_never_a_shell() -> None:
 
 
 PY = sys.executable
+UNSANDBOXED_RUNNER = gate.GateRunner(None, allow_unsandboxed=True)  # the gate's logic, with no hx; the sandbox has its own tests
 
 
 @pytest.fixture
@@ -236,6 +237,7 @@ def run(
         allowed=allowed,
         command=command,
         timeout=20,
+        runner=UNSANDBOXED_RUNNER,
     )
 
 
@@ -247,8 +249,8 @@ def test_a_passing_gate_runs_scope_then_the_command_on_a_copy(ws: Path) -> None:
     assert [r.gate for r in result.results] == ["T0.scope", "T0.visible_tests"]
     assert not (ws / "copy-only.txt").exists()  # it ran in a throwaway copy
     assert result.payload["verdict"] == "pass"
-    assert result.payload["enforcement"] == "degraded:unsandboxed"
-    assert all(r.evidence["enforcement"] == "degraded:unsandboxed" for r in result.results)
+    assert result.payload["enforcement"] == "unsandboxed:user_choice"  # the logic tests run the command with no hx
+    assert all(r.evidence["enforcement"] == "unsandboxed:user_choice" for r in result.results)
 
 
 def test_a_failing_command_blocks_with_its_output_tail(ws: Path) -> None:
@@ -273,7 +275,7 @@ def test_a_timeout_blocks(ws: Path) -> None:
     result = gate.run_gate(
         task_id="t", workspace=ws, touched={"src/a.py": "x"}, original={}, protected=PROTECTED,
         before_hashes=gate.protected_hashes(ws, PROTECTED, "t"),
-        allowed=None, command=[PY, "-c", "import time; time.sleep(30)"], timeout=0.5,
+        allowed=None, command=[PY, "-c", "import time; time.sleep(30)"], timeout=0.5, runner=UNSANDBOXED_RUNNER,
     )  # fmt: skip
     assert not result.passed
     assert "timed out" in result.blocked_by.reason

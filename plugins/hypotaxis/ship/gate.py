@@ -15,8 +15,11 @@ What the gate checks, in order:
 3. ``T2.review``: only when the blast radius asks for it. No reviewer exists yet, so it is recorded
    as skipped, never as passed silently.
 
-Enforcement is honest about its limits: the command runs as the current user, in a copy, with no
-sandbox (hx-sandbox is not integrated yet). Every result says ``enforcement: degraded:unsandboxed``.
+The test command is code the agent may have written, so it runs through ``hx sandbox.run`` (``sandboxrun``): the copy
+writable, the workspace read-only, the network off, an allowlisted environment. A sandbox that is not there blocks the
+gate (fail closed); ``gate.allow_unsandboxed`` is the user's explicit way past, and the result then says
+``enforcement: unsandboxed:user_choice``. Every result names how the command was confined (``sandboxed`` when hx
+enforced every dimension, ``degraded:<dimensions>``, or ``none`` when no command ran).
 """
 
 from __future__ import annotations
@@ -28,6 +31,8 @@ from pathlib import Path
 from typing import Any
 
 from .. import _vendor
+from ..hx import HxClient
+from .sandboxrun import NOT_RUN, CommandRun, run_gate_command
 
 cp_gates: Any = _vendor.load("gates")
 LaneContract: Any = _vendor.load("contracts").LaneContract
@@ -35,7 +40,7 @@ _interfaces: Any = _vendor.load("interfaces")
 Submission: Any = _vendor.load("interfaces").Submission
 GateResult: Any = _interfaces.GateResult
 
-ENFORCEMENT = "degraded:unsandboxed"  # until hx sandbox.run runs the command
+ENFORCEMENT = NOT_RUN  # a verdict reached before (or without) the test command: nothing ran, nothing was confined
 
 
 def fnmatch_variants(globs: Sequence[str]) -> tuple[str, ...]:
@@ -61,6 +66,15 @@ def parse_command(command: str, *, posix: bool = True) -> list[str]:
     if not argv:
         raise ValueError("the gate command is empty")
     return argv
+
+
+@dataclass(frozen=True, slots=True)
+class GateRunner:
+    """How the project's test command is run: through this hx client's sandbox, or (``allow_unsandboxed``, the user's
+    explicit choice) without it when there is none. No client and no choice means the gate cannot run."""
+
+    client: HxClient | None
+    allow_unsandboxed: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -107,6 +121,7 @@ def run_gate(
     allowed: Sequence[str] | None,
     command: Sequence[str] | None,
     timeout: float,
+    runner: GateRunner,
 ) -> GateRun:
     """Run the tiers this ship's blast radius needs, stopping at the first block.
 
@@ -132,34 +147,58 @@ def run_gate(
         "enforcement": ENFORCEMENT,
     }
     results: list[Any] = []
+    enforcement = NOT_RUN
     for tier in tiers:
         if tier == cp_gates.T0_SCOPE:
             res = cp_gates.scope_gate(submission, contract, test_hashes=before_hashes, current_hashes=current)
         elif tier == cp_gates.T0_VISIBLE:
-            res = _tests(workspace, command, timeout, task_id)
+            res, enforcement = _tests(workspace, command, timeout, runner)
         else:
             res = cp_gates.review_gate(submission, contract, None, missing_reviewer="skip")
-        res = _with_evidence(res, common)
         results.append(res)
         if res.verdict == "block":
             break
+    common["enforcement"] = enforcement
+    results = [_with_evidence(r, common) for r in results]
     payload = cp_gates.decision_payload(task_id, results)
-    payload["enforcement"] = ENFORCEMENT
+    payload["enforcement"] = enforcement
     return GateRun(results, payload)
 
 
-def _tests(workspace: Path, command: Sequence[str] | None, timeout: float, task_id: str) -> Any:
+def _tests(workspace: Path, command: Sequence[str] | None, timeout: float, runner: GateRunner) -> tuple[Any, str]:
+    """The test tier: the command on a copy of the post-apply tree (no files are passed: the copy already holds it,
+    deletions included), sandboxed. Raises ``SandboxUnavailableError`` when it cannot run, so the ship is undone."""
     if command is None:
-        return GateResult(cp_gates.T0_VISIBLE, "pass", "", {"tests": {"status": "not_configured", "command": None}})
-    # No files are passed: the copy already holds the post-apply tree, deletions included.
-    return cp_gates.run_test_gate(cp_gates.T0_VISIBLE, Submission(task_id, {}), workspace, command, timeout=timeout)
+        return GateResult(cp_gates.T0_VISIBLE, "pass", "", {"tests": {"status": "not_configured", "command": None}}), NOT_RUN
+    ran: CommandRun = run_gate_command(
+        runner.client, command, workspace, timeout=timeout, allow_unsandboxed=runner.allow_unsandboxed
+    )
+    return _verdict(ran, timeout), ran.enforcement
+
+
+def _verdict(ran: CommandRun, timeout: float) -> Any:
+    """contraprova's ``run_test_gate`` verdict for a finished command (its wording, so evidence reads the same)."""
+    result = ran.result
+    evidence: dict[str, Any] = {"tests": result.summary()}
+    if ran.detail:
+        evidence["sandbox"] = dict(ran.detail)
+    if result.passed:
+        return GateResult(cp_gates.T0_VISIBLE, "pass", "", evidence)
+    if result.timed_out:
+        reason = f"timed out after {timeout}s"
+    elif result.returncode is None:
+        reason = "test command could not start"
+    else:
+        counts = ", ".join(f"{k}={v}" for k, v in sorted(result.counts.items()))
+        reason = f"exit code {result.returncode}" + (f" ({counts})" if counts else "")
+    return GateResult(cp_gates.T0_VISIBLE, "block", reason, evidence)
 
 
 def blocked_payload(task_id: str, gate: str, reason: str, evidence: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """``gate.decided`` for a block the plugin itself reached without running the project's gate: a scope violation
     hx refused before writing anything, or an attempt that never shipped. The gate name says which check it was."""
     payload = cp_gates.decision_payload(task_id, [GateResult(gate, "block", reason, dict(evidence or {}))])
-    payload["enforcement"] = ENFORCEMENT if gate == cp_gates.T0_SCOPE else "none"
+    payload["enforcement"] = ENFORCEMENT
     return payload  # type: ignore[no-any-return]
 
 

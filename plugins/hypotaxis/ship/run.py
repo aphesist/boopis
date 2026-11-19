@@ -44,6 +44,7 @@ from .common import T_APPLY, T_VALIDATE, effective_protected, emit, log, read_te
 from .edits import parse_edits
 from .finish import after_apply
 from .recover import journal_dir
+from .sandboxrun import UNAVAILABLE_HINT, sandbox_problem
 
 
 def run_ship(
@@ -95,6 +96,10 @@ def _run(rt: Runtime, state: SessionState, args: Mapping[str, Any], worker: Work
         argv = gate_mod.parse_command(command_text) if command_text else None
     except ValueError as exc:
         return out.refused(f"the gate command cannot be used: {exc}. Nothing was written.")
+    if gate_on and argv is not None and not state.settings.gate.allow_unsandboxed:
+        problem = sandbox_problem(client)  # decided before anything is written, so a ship is not undone for it
+        if problem:
+            return out.refused(f"the gate cannot run: {problem}. {UNAVAILABLE_HINT} Nothing was written.")
     protected = effective_protected(state)
     scope = worker.scope if worker is not None else state.allowed
     allowed = list(scope) if scope else None

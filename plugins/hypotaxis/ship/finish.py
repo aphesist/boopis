@@ -7,7 +7,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any, cast
 
-from ..errors import HypotaxisError
+from ..errors import HypotaxisError, SandboxUnavailableError
 from ..governance.handover import unified_diff
 from ..governance.links import WorkerLink
 from ..hx import HxClient
@@ -41,13 +41,16 @@ def after_apply(
     ref = JournalRef(journal_dir=str(journals), journal_id=ship_id)
     try:
         run = _gate_andrecord(
-            rt, state, root, applied, task_id, original, before_hashes, protected, allowed, argv, gate_on, worker
+            rt, state, client, root, applied, task_id, original, before_hashes, protected, allowed, argv, gate_on, worker
         )
     except Abort as exc:
         return _restore(rt, state, client, ref, applied, f"the ship was undone: {exc}", None, task_id=None)
     except Exception as exc:  # noqa: BLE001 - a gate that cannot run denies (fail closed)
         log.error("gate failed to run", exc_info=True)
-        reason = f"the gate could not run: {type(exc).__name__}: {exc}"
+        if isinstance(exc, SandboxUnavailableError):
+            reason = f"the gate could not run: {exc.message}"
+        else:
+            reason = f"the gate could not run: {type(exc).__name__}: {exc}"
         if worker is not None:  # no verdict was written, so the attempt is closed as a block by the cascade
             worker.failure = attempt_mod.failure_of(worker, "T0.gate", reason, "", "", {})
         return _restore(rt, state, client, ref, applied, reason, None, task_id)
@@ -82,6 +85,7 @@ def _worker_failure(
 def _gate_andrecord(
     rt: Runtime,
     state: SessionState,
+    client: HxClient,
     root: Path,
     applied: ApplyResult,
     task_id: str,
@@ -134,6 +138,7 @@ def _gate_andrecord(
     run = gate_mod.run_gate(
         task_id=task_id, workspace=root, touched=touched, original=original, before_hashes=before_hashes,
         protected=protected, allowed=allowed, command=argv, timeout=timeout,
+        runner=gate_mod.GateRunner(client, state.settings.gate.allow_unsandboxed),
     )  # fmt: skip
     record(state, rt, "gate.decided", "gate", run.payload | tags)
     return run
@@ -155,7 +160,7 @@ def _gate_view(run: gate_mod.GateRun | None) -> dict[str, Any]:
     return {
         "verdict": run.results[-1].verdict,
         "gates": [r.gate for r in run.results],
-        "enforcement": gate_mod.ENFORCEMENT,
+        "enforcement": run.payload["enforcement"],
     }
 
 

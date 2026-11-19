@@ -22,6 +22,7 @@ from .model import (
     ExecSettings,
     Fallback,
     FormSettings,
+    GateSettings,
     Mode,
     PackSettings,
     PermissionRules,
@@ -77,6 +78,13 @@ def _form_settings(raw: Mapping[str, Any] | None) -> FormSettings:
     given = raw or {}
     return FormSettings(
         **{f.name: given.get(f.name, schema_default("plugin-settings", "forms", f.name)) for f in fields(FormSettings)}
+    )
+
+
+def _gate_settings(raw: Mapping[str, Any] | None) -> GateSettings:
+    given = raw or {}
+    return GateSettings(
+        allow_unsandboxed=bool(given.get("allow_unsandboxed", schema_default("plugin-settings", "gate", "allow_unsandboxed")))
     )
 
 
@@ -139,6 +147,7 @@ def parse_settings(raw: Mapping[str, Any], *, source: str = "plugins.entries.hyp
         ),
         exec=_exec_settings(raw.get("exec")),
         forms=_form_settings(raw.get("forms")),
+        gate=_gate_settings(raw.get("gate")),
         hx_path=str(raw.get("hx_path", "")),
         ledger_dir=str(raw.get("ledger_dir", "")),
     )

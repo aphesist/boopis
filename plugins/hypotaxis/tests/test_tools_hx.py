@@ -202,7 +202,7 @@ def test_a_passing_ship_applies_checkpoints_and_records(make_session: MakeSessio
     assert result["gate"] == {
         "verdict": "pass",
         "gates": ["T0.scope", "T0.visible_tests"],
-        "enforcement": "degraded:unsandboxed",
+        "enforcement": "sandboxed",
     }
     assert "return 2" in (workspace / "src" / "a.py").read_text()
     assert (workspace / "src" / "new.py").exists()
@@ -227,7 +227,7 @@ def test_a_passing_ship_applies_checkpoints_and_records(make_session: MakeSessio
     decided = next(e for e in events if e["type"] == "gate.decided")
     assert decided["actor"] == "gate"
     assert decided["payload"]["verdict"] == "pass"
-    assert decided["payload"]["enforcement"] == "degraded:unsandboxed"
+    assert decided["payload"]["enforcement"] == "sandboxed"
     assert next(e for e in events if e["type"] == "checkpoint.committed")["payload"] == {
         "ship_id": result["ship_id"], "ref": ref, "commit": commit,
     }  # fmt: skip
