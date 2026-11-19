@@ -48,7 +48,7 @@ optdepends=(
 makedepends=(
   'rust'               # 1.97 or newer: the workspace's rust-version, which cargo enforces
   'nodejs-lts-jod'     # Node 22, the version CI builds the UI with
-  'pnpm'
+  'corepack'           # runs the pnpm version pinned in the UI's package.json (packageManager), as CI does
   'python'             # scripts/stage-bundle.sh
   'zstd'               # the Hermes licence is read out of the runtime archive
   'tar'
@@ -91,7 +91,7 @@ PY
   export CARGO_TARGET_DIR="$(_target)"
   cargo fetch --locked --target "$CARCH-unknown-linux-gnu"
   # The store stays in $srcdir, on the tree's filesystem, so files are hard-linked rather than copied.
-  (cd apps/desktop/ui && pnpm install --frozen-lockfile --store-dir "$srcdir/pnpm-store")
+  (cd apps/desktop/ui && corepack pnpm install --frozen-lockfile --store-dir "$srcdir/pnpm-store")
 }
 
 build() {
@@ -99,7 +99,7 @@ build() {
   export CARGO_TARGET_DIR="$(_target)"
   # What `tauri build --no-bundle` does without the CLI: the UI first (the config's beforeBuildCommand), then a release
   # build with Tauri's `custom-protocol` feature, which embeds the UI instead of loading the dev server.
-  (cd apps/desktop/ui && pnpm run build:desktop)
+  (cd apps/desktop/ui && corepack pnpm run build:desktop)
   cargo build --release --frozen -p "$_hx_crate"
   cargo build --release --frozen -p "$_host_crate" --features tauri/custom-protocol
 }
