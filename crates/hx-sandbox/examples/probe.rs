@@ -468,6 +468,79 @@ fn main() {
             println!("ok");
         }
         #[cfg(target_os = "linux")]
+        "pairsendto" => {
+            // probe pairsendto PATH TYPE: make a socket pair of TYPE and `sendto` PATH on one end.
+            // A seqpacket pair drops the address and delivers to its peer (`peer got ...`); a
+            // datagram pair would deliver to PATH. Prints `peer got N bytes` or `errno N`.
+            let kind = socket_type(arg(2));
+            let mut fds = [-1i32; 2];
+            // SAFETY: a two-element array that socketpair fills.
+            let rc = unsafe { libc::socketpair(libc::AF_UNIX, kind, 0, fds.as_mut_ptr()) };
+            if rc < 0 {
+                fail(format!(
+                    "errno {}",
+                    std::io::Error::last_os_error().raw_os_error().unwrap_or(0)
+                ));
+            }
+            // SAFETY: an all-zero sockaddr_un is valid; the buffers are live for the calls.
+            let got = unsafe {
+                let mut to: libc::sockaddr_un = std::mem::zeroed();
+                to.sun_family = libc::AF_UNIX as libc::sa_family_t;
+                for (slot, byte) in to.sun_path.iter_mut().zip(arg(1).bytes()) {
+                    *slot = byte as libc::c_char;
+                }
+                let msg = b"addressed to a path";
+                let sent = libc::sendto(
+                    fds[0],
+                    msg.as_ptr().cast(),
+                    msg.len(),
+                    libc::MSG_DONTWAIT,
+                    (&raw const to).cast(),
+                    std::mem::size_of::<libc::sockaddr_un>() as libc::socklen_t,
+                );
+                if sent < 0 {
+                    -1
+                } else {
+                    let mut buf = [0u8; 64];
+                    libc::recv(
+                        fds[1],
+                        buf.as_mut_ptr().cast(),
+                        buf.len(),
+                        libc::MSG_DONTWAIT,
+                    )
+                }
+            };
+            if got < 0 {
+                fail(format!(
+                    "errno {}",
+                    std::io::Error::last_os_error().raw_os_error().unwrap_or(0)
+                ));
+            }
+            println!("peer got {got} bytes");
+        }
+        #[cfg(unix)]
+        "spawnchild" => {
+            // probe spawnchild: spawn this program as a child the ways Rust programs do (cargo
+            // does this for every rustc), with and without a `pre_exec` hook, and wait for it.
+            // The standard library reports the child's exec status through a socket pair.
+            use std::os::unix::process::CommandExt;
+            let me = std::env::current_exe().unwrap_or_else(|e| fail(e));
+            for hook in [false, true] {
+                let mut command = std::process::Command::new(&me);
+                command.args(["exit", "0"]);
+                if hook {
+                    // SAFETY: the hook does nothing.
+                    unsafe { command.pre_exec(|| Ok(())) };
+                }
+                match command.spawn().and_then(|mut c| c.wait()) {
+                    Ok(status) if status.success() => {}
+                    Ok(status) => fail(format!("child exited with {status}")),
+                    Err(e) => fail(format!("spawn failed: {e}")),
+                }
+            }
+            println!("ok");
+        }
+        #[cfg(target_os = "linux")]
         "datagram" => {
             // probe datagram PATH TYPE: the way to a host datagram socket (journald, /dev/log):
             // make an AF_UNIX socket of TYPE, bind it to an automatic address so the server can

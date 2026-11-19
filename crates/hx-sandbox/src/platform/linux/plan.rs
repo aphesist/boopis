@@ -149,7 +149,7 @@ pub(super) fn make(probe: &Probe, policy: &ResolvedPolicy) -> Result<Plan> {
                 Ok(()) => (
                     DimensionReport::enforced(
                         &["seccomp"],
-                        "socket() is limited to AF_UNIX stream sockets; connect, bind and listen are denied, so nothing is reachable over the network or by Unix socket path",
+                        "socket() is limited to AF_UNIX stream sockets (socketpair() also allows seqpacket pairs); connect, bind and listen are denied, so nothing is reachable over the network or by Unix socket path",
                     ),
                     Some(SocketMode::Off),
                     None,

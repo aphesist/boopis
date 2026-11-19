@@ -113,19 +113,27 @@ fn off_is_the_largest_filter() {
 }
 
 #[test]
-fn with_the_network_off_only_unix_stream_sockets_exist() {
+fn with_the_network_off_socket_makes_only_unix_streams_and_socketpair_adds_seqpacket() {
     for nr in [libc::SYS_socket, libc::SYS_socketpair] {
-        // What stays open: a stream socket, with or without the two flags libc adds.
-        for flags in [0, NONBLOCK, CLOEXEC, NONBLOCK | CLOEXEC] {
-            assert_eq!(
-                sock(SocketMode::Off, nr, libc::AF_UNIX, 1 | flags),
-                Verdict::Allow,
-                "nr {nr} flags {flags:#x}"
-            );
+        // The types each call keeps: socket only stream, socketpair stream and seqpacket.
+        let kept: &[u64] = if nr == libc::SYS_socket {
+            &[1]
+        } else {
+            &[1, 5]
+        };
+        for kind in (0..=15u64).filter(|k| kept.contains(k)) {
+            // plain, and with the two flags libc and Python add
+            for flags in [0, NONBLOCK, CLOEXEC, NONBLOCK | CLOEXEC] {
+                assert_eq!(
+                    sock(SocketMode::Off, nr, libc::AF_UNIX, kind | flags),
+                    Verdict::Allow,
+                    "nr {nr} type {kind} flags {flags:#x}"
+                );
+            }
         }
         // Every other type of Unix socket: 2 dgram, 3 raw (a datagram socket in the kernel),
-        // 4 rdm, 5 seqpacket, and every other value of the type field.
-        for kind in (0..=15u64).filter(|k| *k != 1) {
+        // 4 rdm, and every other value of the type field (5 seqpacket too, for `socket`).
+        for kind in (0..=15u64).filter(|k| !kept.contains(k)) {
             for flags in [0, NONBLOCK | CLOEXEC] {
                 assert_eq!(
                     sock(SocketMode::Off, nr, libc::AF_UNIX, kind | flags),
@@ -134,7 +142,7 @@ fn with_the_network_off_only_unix_stream_sockets_exist() {
                 );
             }
         }
-        // Other families, stream or not.
+        // Other families, whatever the type.
         for domain in [
             libc::AF_INET,
             libc::AF_INET6,
@@ -143,7 +151,7 @@ fn with_the_network_off_only_unix_stream_sockets_exist() {
             libc::AF_VSOCK,
             libc::AF_UNSPEC,
         ] {
-            for kind in [1u64, 2, 3] {
+            for kind in [1u64, 2, 3, 5] {
                 assert_eq!(
                     sock(SocketMode::Off, nr, domain, kind),
                     EPERM,
@@ -151,6 +159,22 @@ fn with_the_network_off_only_unix_stream_sockets_exist() {
                 );
             }
         }
+    }
+    // The two calls differ in exactly one place: a seqpacket pair, not a seqpacket socket.
+    assert_eq!(
+        sock(SocketMode::Off, libc::SYS_socketpair, libc::AF_UNIX, 5),
+        Verdict::Allow
+    );
+    assert_eq!(
+        sock(SocketMode::Off, libc::SYS_socket, libc::AF_UNIX, 5),
+        EPERM
+    );
+    // A datagram pair is denied: a connected datagram end can still `sendto` a path.
+    for kind in [2u64, 3] {
+        assert_eq!(
+            sock(SocketMode::Off, libc::SYS_socketpair, libc::AF_UNIX, kind),
+            EPERM
+        );
     }
 }
 

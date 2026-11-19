@@ -31,11 +31,12 @@ mod tests;
 /// How much of the socket API the filter leaves open.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum SocketMode {
-    /// Network off: only `AF_UNIX` stream sockets and socket pairs (`SOCK_STREAM`, with
-    /// `SOCK_NONBLOCK` and `SOCK_CLOEXEC` ignored). Creating inet sockets fails, and so does
-    /// every other Unix socket type, because `SOCK_DGRAM`, `SOCK_SEQPACKET` and `SOCK_RAW`
-    /// (which the kernel turns into a datagram socket) can address a host socket by path;
-    /// `connect`, `bind` and `listen` are denied as well.
+    /// Network off: `socket` makes only `AF_UNIX` `SOCK_STREAM` sockets, and `socketpair` makes
+    /// `SOCK_STREAM` or `SOCK_SEQPACKET` pairs (`SOCK_NONBLOCK` and `SOCK_CLOEXEC` ignored).
+    /// Creating inet sockets fails, and so does every other Unix socket type, because
+    /// `SOCK_DGRAM` and `SOCK_RAW` (which the kernel turns into a datagram socket) can address a
+    /// host socket by path, even a connected datagram socketpair end; `connect`, `bind` and
+    /// `listen` are denied as well. See [`socket_rules`] for why a seqpacket pair is safe.
     Off,
     /// Inside a private network namespace with only loopback: inet, inet6, Unix and netlink
     /// sockets are fine, every other family (vsock, packet, bluetooth, ...) is not.
@@ -108,8 +109,11 @@ const CLONE_NEW_FLAGS: &[u64] = &[
     0x0000_0080,
 ];
 
-/// `SOCK_STREAM`, the one `AF_UNIX` type that stays open with the network off.
+/// `SOCK_STREAM`, the `AF_UNIX` type `socket` keeps with the network off.
 const SOCK_STREAM: u64 = 1;
+/// `SOCK_SEQPACKET`, which `socketpair` keeps as well (Rust's `Command::spawn` reports the exec
+/// status of a child through such a pair, so cargo and every Rust program that spawns need it).
+const SOCK_SEQPACKET: u64 = 5;
 /// The `type` argument of `socket(2)` carries the kind in its low four bits and flags above.
 const SOCK_TYPE_MASK: u64 = 0xf;
 
@@ -145,24 +149,29 @@ fn deny(map: &mut Rules, nr: i64) {
     map.insert(nr, Vec::new());
 }
 
-/// The rules of `socket` and `socketpair` for `mode`. A rule that matches means "deny".
+/// Deny rules for the network-off mode: any domain but `AF_UNIX`, and every value of the four
+/// type bits that is not in `allowed`. The filter language has no "masked not equal", so each
+/// refused value is a rule of its own; the flags above the type bits (`SOCK_NONBLOCK`,
+/// `SOCK_CLOEXEC`) never take part, and the kernel rejects any other flag with EINVAL by itself.
+fn off_rules(allowed: &[u64]) -> Result<Vec<SeccompRule>, String> {
+    let mut rules = vec![domain_is_not(libc::AF_UNIX)?];
+    for kind in (0..=SOCK_TYPE_MASK).filter(|k| !allowed.contains(k)) {
+        rules.push(rule(vec![cond(
+            1,
+            SeccompCmpOp::MaskedEq(SOCK_TYPE_MASK),
+            kind,
+        )?])?);
+    }
+    Ok(rules)
+}
+
+/// The rules of `socket` for `mode`. A rule that matches means "deny".
+///
+/// With the network off `socket` makes only `AF_UNIX` `SOCK_STREAM` sockets: an unconnected
+/// seqpacket or datagram socket is a step toward a host socket, and `connect` is denied anyway.
 fn socket_rules(mode: SocketMode) -> Result<Vec<SeccompRule>, String> {
     match mode {
-        SocketMode::Off => {
-            // Deny unless the domain is AF_UNIX and the type is SOCK_STREAM. The filter language
-            // has no "masked not equal", so every other value of the four type bits is a rule of
-            // its own; the flags above them (`SOCK_NONBLOCK`, `SOCK_CLOEXEC`) never take part,
-            // and the kernel rejects any other flag with EINVAL by itself.
-            let mut rules = vec![domain_is_not(libc::AF_UNIX)?];
-            for kind in (0..=SOCK_TYPE_MASK).filter(|k| *k != SOCK_STREAM) {
-                rules.push(rule(vec![cond(
-                    1,
-                    SeccompCmpOp::MaskedEq(SOCK_TYPE_MASK),
-                    kind,
-                )?])?);
-            }
-            Ok(rules)
-        }
+        SocketMode::Off => off_rules(&[SOCK_STREAM]),
         SocketMode::Loopback => {
             let denied = rule(
                 [
@@ -254,10 +263,9 @@ fn main_program(mode: SocketMode, arch: TargetArch) -> Result<BpfProgram, String
         }
     }
     map.insert(libc::SYS_socket, socket_rules(mode)?);
-    // socketpair only ever makes Unix sockets; with the network off the same rules apply, and
-    // elsewhere there is nothing to add to what `socket` already closes.
-    if mode == SocketMode::Off {
-        map.insert(libc::SYS_socketpair, socket_rules(mode)?);
+    let pair = socketpair_rules(mode)?;
+    if !pair.is_empty() {
+        map.insert(libc::SYS_socketpair, pair);
     }
     map.insert(libc::SYS_clone, clone_rules()?);
 
@@ -289,6 +297,30 @@ fn clone3_program(arch: TargetArch) -> Result<BpfProgram, String> {
     .map_err(|e| e.to_string())?
     .try_into()
     .map_err(|e: seccompiler::BackendError| e.to_string())
+}
+
+/// The rules of `socketpair` with the network off: `SOCK_STREAM` and `SOCK_SEQPACKET`.
+///
+/// Why a seqpacket pair cannot reach a host socket (Linux `net/unix/af_unix.c`, v6.12):
+/// - `unix_socketpair` joins the two ends back to back and marks both `TCP_ESTABLISHED`;
+///   neither end is bound, and `connect`, `bind` and `listen` are denied here, so the pair
+///   stays what it is.
+/// - `unix_seqpacket_sendmsg` answers `ENOTCONN` unless the socket is `TCP_ESTABLISHED`, and
+///   then does `if (msg->msg_namelen) msg->msg_namelen = 0;` before handing over to
+///   `unix_dgram_sendmsg`, so a destination address given to `sendto` or `sendmsg` is thrown
+///   away and the message goes to the peer.
+/// - `unix_dgram_sendmsg`, the `SOCK_DGRAM` entry point, does the opposite: with
+///   `msg_namelen` set it validates the address and looks the receiver up by path
+///   (`unix_find_other`), connected or not. That is why `SOCK_DGRAM` (and `SOCK_RAW`, which the
+///   kernel turns into `SOCK_DGRAM`) stays denied for `socketpair`.
+/// - `unix_stream_sendmsg` refuses an address outright (`EISCONN` when established).
+fn socketpair_rules(mode: SocketMode) -> Result<Vec<SeccompRule>, String> {
+    match mode {
+        SocketMode::Off => off_rules(&[SOCK_STREAM, SOCK_SEQPACKET]),
+        // socketpair only ever makes Unix sockets; elsewhere there is nothing to add to what
+        // `socket` already closes.
+        SocketMode::Loopback | SocketMode::Open => Ok(Vec::new()),
+    }
 }
 
 /// Compiles the filters for `mode`, in the order they are installed. Runs in the parent; the
