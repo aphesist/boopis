@@ -1,0 +1,5 @@
+{
+  "name": "hello-command",
+  "version": "0.1.0",
+  "description": "Two slash commands: greet, and fingerprint a text with SHA-256."
+}
