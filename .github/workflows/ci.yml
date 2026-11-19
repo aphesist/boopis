@@ -105,8 +105,8 @@ jobs:
       - name: ruff and pyright (pyproject.toml is tooling only)
         working-directory: plugins/hypotaxis
         run: |
-          uvx ruff check .
-          uvx ruff format --check .
+          uvx ruff check . ../../tests/e2e
+          uvx ruff format --check . ../../tests/e2e
           uvx --python ${{ matrix.python }} --with ruamel.yaml pyright
       - name: contraprova's CLI at the vendored commit (the ledger test verifies a ledger with it)
         env:

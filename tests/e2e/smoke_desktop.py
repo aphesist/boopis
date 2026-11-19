@@ -11,6 +11,7 @@ Everything it starts is stopped on the way out.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import shutil
@@ -29,7 +30,9 @@ REPLY = "Hello from the fake model, streamed through the host."
 
 def call(method: str, path: str, body: object | None = None) -> dict:
     req = urllib.request.Request(
-        f"http://127.0.0.1:{PORT}{path}", method=method, data=None if body is None else json.dumps(body).encode(),
+        f"http://127.0.0.1:{PORT}{path}",
+        method=method,
+        data=None if body is None else json.dumps(body).encode(),
         headers={"Content-Type": "application/json"},
     )
     try:
@@ -59,7 +62,9 @@ def main() -> int:
         return 3
     app = str(Path(sys.argv[1]).resolve())
     shot = sys.argv[2] if len(sys.argv) > 2 else None
-    stack = subprocess.Popen([sys.executable, str(HERE / "serve_stack.py")], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+    stack = subprocess.Popen(
+        [sys.executable, str(HERE / "serve_stack.py")], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True
+    )
     driver = None
     sid = None
     try:
@@ -70,10 +75,23 @@ def main() -> int:
         info = json.loads(line)
         runtime = tempfile.mkdtemp(prefix="hx-run-")
         os.chmod(runtime, 0o700)
-        env = {**os.environ, **info["env"], "XDG_RUNTIME_DIR": runtime, "GDK_BACKEND": "x11", "APPIMAGE_EXTRACT_AND_RUN": "1",
-               "TAURI_WEBVIEW_AUTOMATION": "true", "WEBKIT_DISABLE_COMPOSITING_MODE": "1", "LIBGL_ALWAYS_SOFTWARE": "1", "RUST_LOG": "info"}
-        driver = subprocess.Popen(["xvfb-run", "-a", "-s", "-screen 0 1440x900x24", "WebKitWebDriver", f"--port={PORT}"], env=env,
-                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        env = {
+            **os.environ,
+            **info["env"],
+            "XDG_RUNTIME_DIR": runtime,
+            "GDK_BACKEND": "x11",
+            "APPIMAGE_EXTRACT_AND_RUN": "1",
+            "TAURI_WEBVIEW_AUTOMATION": "true",
+            "WEBKIT_DISABLE_COMPOSITING_MODE": "1",
+            "LIBGL_ALWAYS_SOFTWARE": "1",
+            "RUST_LOG": "info",
+        }
+        driver = subprocess.Popen(
+            ["xvfb-run", "-a", "-s", "-screen 0 1440x900x24", "WebKitWebDriver", f"--port={PORT}"],
+            env=env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
         wait_for(lambda: call("GET", "/status").get("value", {}).get("ready") is not None, "the web driver")
         caps = {"capabilities": {"alwaysMatch": {"webkitgtk:browserOptions": {"binary": app, "args": []}}}}
         sid = call("POST", "/session", caps)["value"]["sessionId"]
@@ -93,6 +111,7 @@ def main() -> int:
         call("POST", f"{s}/execute/sync", {"script": "document.querySelector('#hx-btn-new').click()", "args": []})
         composer = wait_for(lambda: find(".ui-composer__input"), "the composer")
         call("POST", f"{s}/element/{composer}/value", {"text": f"@@reply {REPLY}@@"})
+
         def agent_text() -> str:  # the agent's prose only: the user's own message also holds the directive
             script = "return Array.from(document.querySelectorAll('.ui-prose')).map((p) => p.innerText).join(' | ')"
             return call("POST", f"{s}/execute/sync", {"script": script, "args": []})["value"]
@@ -104,15 +123,14 @@ def main() -> int:
         if shot:
             png = call("GET", f"{s}/screenshot")["value"]
             import base64
+
             Path(shot).write_bytes(base64.b64decode(png))
             print("screenshot:", shot)
         return 0
     finally:
         if sid:
-            try:
+            with contextlib.suppress(Exception):
                 call("DELETE", f"/session/{sid}")
-            except Exception:
-                pass
         if driver:
             driver.terminate()
             try:
