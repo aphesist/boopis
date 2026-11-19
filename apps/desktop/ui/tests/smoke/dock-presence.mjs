@@ -67,7 +67,7 @@ export async function dockPresence(env) {
     await wait(1400);
     m = await st();
     const withDock = await gap();
-    check('presence', 'the shell keeps room for the dock only while it shows: the composer sits higher with it than without', noDock != null && withDock != null && withDock - noDock >= 8, { noDock, withDock });
+    check('presence', 'the shell keeps room for the dock only while it shows: the composer sits higher with it than without', noDock != null && withDock != null && withDock - noDock >= 40, { noDock, withDock });
     check('presence', 'a bot made again brings it back', m.mode === 'normal' && !m.gone && !m.inert && m.hidden === null && m.bots === 1 && m.h > 60, m);
 
     /* ───────── the first session: the run alone, no roster ───────── */

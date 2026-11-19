@@ -26,13 +26,15 @@ const send = async (page) => {
   await page.waitForTimeout(2200);
 };
 const composerTop = (page) => page.evaluate(() => document.querySelector('.ss-composer').children[1].getBoundingClientRect().top);
+/** the room the shell keeps for the dock: none until a session has started (this recording has no bots, and the dock only rises with the first message) */
+const dockSpace = (page) => page.evaluate(() => parseFloat(document.getElementById('hx-app').style.getPropertyValue('--hx-dock-space-to')) || 0);
 
 export async function mods(env, AXE) {
   const s = scenario(env);
 
   await s.safe('mods', async () => {
     const page = await s.fresh({ q: URL, settle: 1500 });
-    const top0 = await composerTop(page);
+    const top0 = await composerTop(page), room0 = await dockSpace(page);
     await send(page);
     const st = await page.evaluate(() => ({
       status: [...document.querySelectorAll('.ss-mods--status .mod-status__i')].map((n) => n.textContent),
@@ -50,7 +52,8 @@ export async function mods(env, AXE) {
     /* the composer rose 22px: the layout moved by the status line's height and the move was a transform, never a layout animation */
     const top1 = await composerTop(page);
     const rise = await page.evaluate(() => window.__anims.filter((a) => a.frames.some((f) => 'transform' in f) && /ui-composer|ss-mods--band/.test(a.cls || '')));
-    check('mods', 'the status line lifts the composer 22px', Math.abs((top0 - top1) - 22) <= 1, { top0, top1 });
+    const room1 = await dockSpace(page);
+    check('mods', 'the status line lifts the composer 22px (the room the dock now keeps is its own)', Math.abs((top0 - top1) - (room1 - room0) - 22) <= 1, { top0, top1, room0, room1 });
     check('mods', 'the rise is a FLIP on transform over --dur-3 (translateY(22px) to 0), with no top, bottom or height', rise.length >= 1 && rise.every((a) => a.frames.every((f) => Object.keys(f).every((k) => k === 'transform' || k === 'offset')) && a.frames[0].transform === 'translateY(22px)' && a.frames[1].transform === 'translateY(0)') && rise[0].duration > 100, rise);
 
     /* toasts: one at a time, in order, with a quiet "+N" */

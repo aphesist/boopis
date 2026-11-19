@@ -63,7 +63,10 @@ const kfmt = (n: number): string => (n >= 1000 ? Math.round(n / 1000) + 'k' : St
 const run = () => S.run as NonNullable<typeof S.run>;
 /** the model with its provider's mark (mono), through the library's one primitive */
 const runModel = (): string => ui.html.model(run().model, { size: 14 });
-const runSub = (): string => run().stopped ? 'Stopped by you' : `${runModel()} ${run().escalated ? `escalated ${run().escalated === 1 ? 'once' : run().escalated + ' times'}` : 'on the first try'}`;
+const runHow = (): string => (run().escalated ? `escalated ${run().escalated === 1 ? 'once' : run().escalated + ' times'}` : 'on the first try');
+const runSub = (): string => run().stopped ? 'Stopped by you' : `${runModel()} ${runHow()}`;
+/** the run button's name: its visible words, in order (WCAG 2.5.3), then what it does */
+const runName = (): string => `${run().title} ${run().stopped ? 'Stopped by you' : `${run().model} ${runHow()}`}, show run details`;
 /** the run's spend: the library's running total and its row of dots (dots, not bars) */
 /* a cost the plugin could not price is shown as unknown, and a run with no cap has no meter (ADR-0012) */
 export const costHTML = (): string => (run().cost == null || run().cap == null
@@ -169,7 +172,7 @@ export const V: Record<string, () => string> = {
 
   'run:min': () => `${pillBtn(`Show the dock, run ${run().stopped ? 'stopped' : 'in progress'}, ${fmtDur(run().elapsed)}`)}${ladderLine()}<span class="dk-time" data-k="run:time" data-run-time>${fmtDur(run().elapsed)}</span><span data-k="run:cost" data-run-cost>${costHTML()}</span>${pillAtt()}`,
   'run:norm': () => `${ladderLine()}
-    <button class="dk-run-open" data-act="expand" aria-label="Show run details" aria-expanded="false"><span class="dk-run-title" data-k="run:title">${esc(run().title)}</span><span class="dk-run-model" data-k="run:model">${runSub()}</span></button>
+    <button class="dk-run-open" data-act="expand" aria-label="${esc(runName())}" aria-expanded="false"><span class="dk-run-title" data-k="run:title">${esc(run().title)}</span> <span class="dk-run-model" data-k="run:model">${runSub()}</span></button>
     <span class="dk-time" data-k="run:time" data-run-time aria-label="Elapsed">${fmtDur(run().elapsed)}</span>
     <span class="dk-cost"><span data-k="run:cost" data-run-cost>${costHTML()}</span><span data-k="run:meter" data-run-meter>${meterHTML()}</span></span>
     ${stopBtn()}`,
