@@ -102,8 +102,9 @@ export interface State {
   interact?: readonly Interaction[];
   /** an overlay that should be open: the overlay check reads it */
   overlay?: { anchor: string; layer: string };
-  /** checks this state is excused from, each with the reason (shown in the report) */
-  allow?: Readonly<Partial<Record<CheckId, string>>>;
+  /** checks this state is excused from, each with the reason (shown in the report): a string excuses the whole check, an
+      `Allowance` with `el` only the findings whose element description contains that text (one element, not the state) */
+  allow?: Readonly<Partial<Record<CheckId, Allowance>>>;
   /** the element the checks look at, overriding the story's */
   scope?: string;
   mock?: MockRef;
@@ -129,3 +130,8 @@ export type CheckId =
   | 'concentric' | 'overlay' | 'tokens.computed' | 'native' | 'scrollbar' | 'axe'
   | 'tokens.spacing' | 'roles' | 'copy' | 'brand'
   | 'stability.render' | 'stability.interact' | 'visual' | 'errors';
+
+/** an excuse for one check: the reason alone (the whole check, for the whole state), or the reason and the text the
+    finding's element description must contain (`el`, matched against the report's selector, e.g. `ui-pages__dot`; for axe,
+    the target and the rule's id, e.g. `label-content-name-mismatch`) */
+export type Allowance = string | { readonly reason: string; readonly el: string };

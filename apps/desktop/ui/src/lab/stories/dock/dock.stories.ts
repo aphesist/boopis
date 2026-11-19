@@ -8,8 +8,8 @@ const SCOPE = '#hx-dock';
 /** The page dots tile the nub at a 10 px pitch (a 4 px mark, a 14 px pill for the current page; 14.12). R-a11y-2 names them: a mark smaller
     than --hit-min gets a hit area of 24 around it, and each dot has one, 24 px tall through ::after (the probe measures it). At this pitch a
     24 px wide area per dot would cover its neighbour's centre, so the dots cannot be 24 wide; the checker's size and spacing test cannot
-    hold for them. The dock's other targets (the orbs, the buttons) are not excused by this, but the check is per state, so it is off here. */
-const PAGE_DOTS = { 'geometry.target': 'the page dots: R-a11y-2 names them, each has a 24 px tall hit area around its mark, and a 24 px wide one would cover its neighbour at the 10 px pitch of the nub (14.12)' };
+    hold for them. Only the dots are excused (`el`): the dock's other targets, the orbs and the buttons, are still checked. */
+const PAGE_DOTS = { 'geometry.target': { el: 'ui-pages__dot', reason: 'the page dots: R-a11y-2 names them, each has a 24 px tall hit area around its mark, and a 24 px wide one would cover its neighbour at the 10 px pitch of the nub (14.12)' } } as const;
 const dockState = (tags: State['tags'], provider: ProviderSpec, setup?: (c: AppCtx) => Promise<void>, extra: Partial<State> = {}): State =>
   ({ tags, app: { provider, ...(setup ? { setup } : {}) }, ...extra, allow: { ...PAGE_DOTS, ...(extra.allow ?? {}) } });
 const mode = (m: string) => async (c: AppCtx): Promise<void> => { c.hx.dock()?.setMode(m); await c.wait(900); };

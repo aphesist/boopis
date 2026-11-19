@@ -130,7 +130,9 @@ export default {
   `variant`, `size`, `rtl`, `owner`, `scroll`, `hover`, `focus`, `active`, `tooltip`, `open`).
 - `force` forces a pseudo-state on part of the state; `overlay: { anchor, layer }` names an overlay that should be open
   (the overlay check reads it); `interact` lists interactions the stability check samples; `allow` excuses a check for
-  that state, with the reason (the report shows it).
+  that state, with the reason (the report shows it). Give it `{ el, reason }` instead of a bare reason to excuse only the
+  findings whose element description contains `el` (for axe, the target and the rule's id), so one element's excuse
+  never silences the rest of the state.
 - Fixtures (`src/lab/fixtures.ts`) are real first: the v6 mock-up's card and form gallery data, the mock roster, the
   recorded frames; then the hard cases (long names, unbroken strings, many lines, right to left).
 
