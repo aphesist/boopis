@@ -108,6 +108,107 @@ fn cwd_must_be_inside_a_grant_and_a_directory() {
     assert!(err.to_string().contains("not a directory"), "{err}");
 }
 
+fn refused(p: &SandboxPolicy, home: Option<&Path>, needle: &str) {
+    let home = home.map(|h| OsString::from(h.as_os_str()));
+    let lookup = move |name: &OsStr| (name == "HOME").then(|| home.clone()).flatten();
+    let err = p.resolve_with_env(&lookup).unwrap_err();
+    assert!(
+        matches!(&err, Error::InvalidPolicy(m) if m.contains(needle)),
+        "{err}"
+    );
+}
+
+#[test]
+fn runtime_roots_accept_an_interpreter_prefix_outside_the_workspace() {
+    let t = tmp();
+    let work = t.path().join("work");
+    let prefix = t.path().join("python").join("cpython-3.14");
+    fs::create_dir_all(&work).unwrap();
+    fs::create_dir_all(prefix.join("bin")).unwrap();
+    let p = base(&work).with_ro([&work]).with_runtime_ro([&prefix]);
+    let r = p.resolve_with_env(&lookup_none).unwrap();
+    let want = fs::canonicalize(&prefix).unwrap();
+    assert!(
+        r.ro.iter().any(|g| g.path == want && g.is_dir),
+        "{:?}",
+        r.ro
+    );
+    // a symlink to the prefix is granted as the prefix itself: only the canonical path is ever granted
+    let link = t.path().join("current");
+    symlink(&prefix, &link).unwrap();
+    let r = base(&work)
+        .with_ro([&work])
+        .with_runtime_ro([&link])
+        .resolve_with_env(&lookup_none)
+        .unwrap();
+    assert!(r.ro.iter().any(|g| g.path == want));
+}
+
+#[test]
+fn runtime_roots_refuse_the_root_a_relative_path_the_workspace_and_the_home_directory() {
+    let t = tmp();
+    let home = t.path().join("home");
+    let work = home.join("project");
+    fs::create_dir_all(&work).unwrap();
+    let ok = |roots: &[&Path]| {
+        base(&work)
+            .with_ro([&work])
+            .with_runtime_ro(roots.iter().copied())
+    };
+    refused(&ok(&[Path::new("/")]), Some(&home), "file system root");
+    refused(&ok(&[Path::new("python/bin")]), Some(&home), "not absolute");
+    refused(&ok(&[&work]), Some(&home), "inside the working directory");
+    refused(&ok(&[&work.join("..")]), Some(&home), "home directory");
+    refused(&ok(&[&home]), Some(&home), "home directory");
+    refused(
+        &ok(&[t.path()]),
+        Some(&home),
+        "home directory or one of its parents",
+    );
+    refused(
+        &ok(&[&t.path().join("missing")]),
+        Some(&home),
+        "cannot be resolved",
+    );
+    let file = t.path().join("file");
+    fs::write(&file, "x").unwrap();
+    refused(&ok(&[&file]), Some(&home), "not a directory");
+}
+
+#[test]
+fn runtime_roots_refuse_what_contains_the_workspace_even_through_a_symlink() {
+    let t = tmp();
+    let work = t.path().join("a").join("work");
+    fs::create_dir_all(&work).unwrap();
+    let parent = t.path().join("a");
+    // the workspace's parent, spelled through a symlink, is still the workspace's parent
+    let link = t.path().join("sneaky");
+    symlink(&parent, &link).unwrap();
+    let p = base(&work).with_ro([&work]).with_runtime_ro([&link]);
+    refused(&p, None, "contains the working directory");
+    // and a symlink to a directory inside the workspace is inside the workspace
+    let inside = work.join("venv");
+    fs::create_dir_all(&inside).unwrap();
+    let to_inside = t.path().join("to-inside");
+    symlink(&inside, &to_inside).unwrap();
+    refused(
+        &base(&work).with_ro([&work]).with_runtime_ro([&to_inside]),
+        None,
+        "inside the working directory",
+    );
+}
+
+#[test]
+fn a_runtime_root_alone_does_not_make_the_working_directory_reachable() {
+    let t = tmp();
+    let work = t.path().join("work");
+    let prefix = t.path().join("python");
+    fs::create_dir_all(&work).unwrap();
+    fs::create_dir_all(&prefix).unwrap();
+    let p = base(&work).with_runtime_ro([&prefix]);
+    refused(&p, None, "not inside any ro_paths or rw_paths");
+}
+
 #[test]
 fn limits_are_validated() {
     let t = tmp();

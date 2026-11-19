@@ -247,3 +247,73 @@ def test_when_the_sandbox_cannot_run_the_interpreter_exec_is_unavailable_with_th
     assert probe.sandbox_problem(client, box.state.settings.exec) != ""
     assert exec_ready() is False  # hidden: the tool is not offered where it cannot work
     probe.forget()
+
+
+# ---------------------------------------------------------------- an interpreter outside the system directories
+
+
+def _interpreter(kind: str, tmp: Path) -> list[str]:
+    """``[executable, prefix, base_prefix, exec_prefix]`` of a Python outside /usr, or a skip with the reason."""
+    import json as _json
+    import shutil
+    import subprocess
+    import venv
+
+    target = tmp / f"venv-{kind}"
+    if kind == "venv":
+        venv.create(target, symlinks=True, with_pip=False)
+    else:
+        uv = shutil.which("uv")
+        if uv is None:
+            pytest.skip("no uv on this machine, so no uv-managed Python can be created")
+        found = subprocess.run([uv, "python", "find", "--managed-python"], capture_output=True, text=True, check=False)
+        if found.returncode != 0 or not found.stdout.strip():
+            pytest.skip(
+                f"no uv-managed Python is installed here and none is downloaded by the tests: {found.stderr.strip()}"
+            )
+        made = subprocess.run(
+            [uv, "venv", "--quiet", "--python", found.stdout.strip(), str(target)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if made.returncode != 0:
+            pytest.skip(f"uv could not create a virtual environment: {made.stderr.strip()}")
+    python = target / "bin" / "python"
+    probe = "import sys, json; print(json.dumps([sys.executable, sys.prefix, sys.base_prefix, sys.exec_prefix]))"
+    out = subprocess.run([str(python), "-c", probe], capture_output=True, text=True, check=True).stdout
+    return list(_json.loads(out))
+
+
+@pytest.mark.parametrize("kind", ["venv", "uv-managed"])
+def test_exec_runs_with_an_interpreter_outside_the_system_directories(
+    make_box: MakeBox, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, kind: str
+) -> None:
+    """The kernel's interpreter is a virtual environment (and, for uv, a managed Python under the user's home): its
+    roots go to ``sandbox.spawn`` as ``runtime_ro``, hx vets and mounts them read-only, and the kernel starts."""
+    from types import SimpleNamespace
+
+    from hypotaxis.exec import launcher, probe
+
+    executable, prefix, base_prefix, exec_prefix = _interpreter(kind, tmp_path)
+    monkeypatch.setattr(
+        launcher,
+        "sys",
+        SimpleNamespace(
+            platform=sys.platform,
+            executable=executable,
+            prefix=prefix,
+            base_prefix=base_prefix,
+            exec_prefix=exec_prefix,
+        ),
+    )
+    box = make_box()
+    probe.forget()
+    roots = launcher.interpreter_roots(str(box.workspace))
+    assert os.path.realpath(prefix) in roots and os.path.realpath(base_prefix) in roots
+    spec = launcher.kernel_spec(str(box.workspace), str(box.scratch), box.state.settings.exec)
+    assert not set(roots) & set(spec.ro)  # the interpreter is no longer one of the plain read grants
+    out = box.run("import sys\n(sys.executable, sys.prefix)")
+    assert out["status"] == "ok", out
+    assert out["result"] == repr((executable, prefix))  # it really is that interpreter, running in the sandbox
+    probe.forget()

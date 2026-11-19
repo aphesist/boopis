@@ -18,6 +18,7 @@ Error codes (in `crates/hx-proto/errors.json`, all `-32000`): `hx.sandbox.unavai
 |---|---|
 | `argv`, `cwd` | `argv` is a vector, never a shell string. `cwd` must lie inside `ro` or `rw` |
 | `ro[]`, `rw[]` | absolute paths; canonicalised; a `ro` path inside an `rw` path is rejected |
+| `runtime_ro[]` | the program's own runtime: an interpreter prefix or virtual environment outside the system directories. Read-only like `ro`, but **vetted**: each path is canonicalised and refused (`hx.invalid_params`) unless it is an existing directory that is not `/`, `$HOME` or a parent of it, the working directory, or anything inside or above the working directory. Only the canonical path is granted, so a symlink cannot widen it |
 | `system_read` | `true` adds the platform's own system read paths (`SandboxPolicy::system_read_paths`: libraries and a few small files under `/etc`) to `ro`, so a caller does not copy that list. Default `false` |
 | `net` | `false` (off, default), `true` (on), `"loopback"`, or a host list. Only loopback names are enforceable; any other list is `hx.sandbox.unavailable` unless `degraded.network`, which means network **off** |
 | `env`, `env_allowlist` | `env` is set in the child. `env_allowlist` names are copied from `hx`'s environment (default `PATH`, locale, `TERM`, `TZ`) |

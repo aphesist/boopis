@@ -1500,6 +1500,7 @@ class SandboxRunParams:
     net: Net = False
     output_cap: int | None = None
     ro: list[str] | None = None
+    runtime_ro: list[str] | None = None
     rw: list[str] | None = None
     system_read: bool = False
     timeout_ms: int | None = None
@@ -1529,6 +1530,8 @@ class SandboxRunParams:
             out['output_cap'] = self.output_cap
         if self.ro is not None:
             out['ro'] = [x for x in self.ro]
+        if self.runtime_ro is not None:
+            out['runtime_ro'] = [x for x in self.runtime_ro]
         if self.rw is not None:
             out['rw'] = [x for x in self.rw]
         out['system_read'] = self.system_read
@@ -1552,6 +1555,7 @@ class SandboxRunParams:
             net=data['net'] if 'net' in data else False,
             output_cap=(None if data['output_cap'] is None else data['output_cap']) if 'output_cap' in data else None,
             ro=[x for x in data['ro']] if 'ro' in data else None,
+            runtime_ro=[x for x in data['runtime_ro']] if 'runtime_ro' in data else None,
             rw=[x for x in data['rw']] if 'rw' in data else None,
             system_read=data['system_read'] if 'system_read' in data else False,
             timeout_ms=(None if data['timeout_ms'] is None else data['timeout_ms']) if 'timeout_ms' in data else None,
@@ -1576,6 +1580,7 @@ class SandboxSpawnParams:
     net: Net = False
     output_cap: int | None = None
     ro: list[str] | None = None
+    runtime_ro: list[str] | None = None
     rw: list[str] | None = None
     system_read: bool = False
     timeout_ms: int | None = None
@@ -1607,6 +1612,8 @@ class SandboxSpawnParams:
             out['output_cap'] = self.output_cap
         if self.ro is not None:
             out['ro'] = [x for x in self.ro]
+        if self.runtime_ro is not None:
+            out['runtime_ro'] = [x for x in self.runtime_ro]
         if self.rw is not None:
             out['rw'] = [x for x in self.rw]
         out['system_read'] = self.system_read
@@ -1631,6 +1638,7 @@ class SandboxSpawnParams:
             net=data['net'] if 'net' in data else False,
             output_cap=(None if data['output_cap'] is None else data['output_cap']) if 'output_cap' in data else None,
             ro=[x for x in data['ro']] if 'ro' in data else None,
+            runtime_ro=[x for x in data['runtime_ro']] if 'runtime_ro' in data else None,
             rw=[x for x in data['rw']] if 'rw' in data else None,
             system_read=data['system_read'] if 'system_read' in data else False,
             timeout_ms=(None if data['timeout_ms'] is None else data['timeout_ms']) if 'timeout_ms' in data else None,

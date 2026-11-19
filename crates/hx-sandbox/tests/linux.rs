@@ -181,6 +181,46 @@ async fn a_program_outside_the_grants_cannot_start_and_says_why() {
     }
 }
 
+#[tokio::test(flavor = "multi_thread")]
+async fn a_program_under_a_runtime_root_starts_even_through_a_venv_style_symlink() {
+    if !fs_available() {
+        return;
+    }
+    let w = World::new();
+    let mut p = w.policy();
+    let real_dir = probe_path().parent().unwrap().to_path_buf();
+    p.ro_paths.retain(|r| r != &real_dir);
+    // a venv-style launcher: `venv/bin/probe` is a symlink into the interpreter's real directory
+    let venv = w.scratch.parent().unwrap().join("venv");
+    std::fs::create_dir_all(venv.join("bin")).unwrap();
+    let launcher = venv.join("bin").join(probe_path().file_name().unwrap());
+    std::os::unix::fs::symlink(probe_path(), &launcher).unwrap();
+    let argv: Vec<String> = std::iter::once(launcher.to_string_lossy().into_owned())
+        .chain(["exit", "0"].map(str::to_owned))
+        .collect();
+
+    // without the roots the program is outside every grant, and the sandbox says so
+    let denied = run(&argv, &p).await.unwrap();
+    assert!(
+        matches!(denied.exit, ExitOutcome::SpawnFailed { .. }),
+        "{:?}",
+        denied.exit
+    );
+
+    // with the venv and the real directory as runtime roots it starts and runs
+    p.runtime_ro_paths = vec![venv.clone(), real_dir];
+    let ok = run(&argv, &p).await.unwrap();
+    assert_eq!(code(&ok), Some(0), "{:?} {}", ok.exit, ok.stderr.text);
+
+    // the roots grant reading and nothing else: the runtime directory cannot be written
+    let target = venv.join("written");
+    let write = run(&probe(&["write", &target.to_string_lossy()]), &p)
+        .await
+        .unwrap();
+    assert_ne!(code(&write), Some(0));
+    assert!(!target.exists());
+}
+
 // ---- network ------------------------------------------------------------------------------
 
 #[tokio::test(flavor = "multi_thread")]

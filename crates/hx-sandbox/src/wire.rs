@@ -79,6 +79,12 @@ pub struct SandboxRunParams {
     /// Readable, writable and executable paths.
     #[serde(default)]
     pub rw: Vec<PathBuf>,
+    /// Read-only roots of the program's own runtime (the interpreter's prefix and virtual environment),
+    /// for an interpreter outside the system directories. Vetted unlike `ro`: each must be an existing
+    /// directory whose canonical path is not `/`, `$HOME` or a parent of it, the working directory, or
+    /// anything inside or above the working directory. Default: none.
+    #[serde(default)]
+    pub runtime_ro: Vec<PathBuf>,
     /// Also grant `ro` the platform's own system read paths ([`SandboxPolicy::system_read_paths`]:
     /// the libraries and the few small files under `/etc` a program needs), so a caller need not
     /// copy that list. Default: false.
@@ -134,6 +140,7 @@ impl SandboxRunParams {
         }
         let mut policy = SandboxPolicy::new(self.cwd)
             .with_ro(ro)
+            .with_runtime_ro(self.runtime_ro)
             .with_rw(self.rw)
             .with_network(self.net.into());
         policy.env_set = self.env;

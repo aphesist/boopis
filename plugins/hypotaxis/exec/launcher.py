@@ -10,7 +10,6 @@ from __future__ import annotations
 import os
 import socket
 import sys
-import sysconfig
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -53,6 +52,7 @@ class KernelSpec:
     lifetime_ms: int
     env: Mapping[str, str] = field(default_factory=dict)
     ro: Sequence[str] = ()
+    runtime_ro: Sequence[str] = ()  # the interpreter's own roots, vetted by hx (see ``interpreter_roots``)
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,29 +104,41 @@ def kernel_spec(workspace: str, scratch: str, settings: ExecSettings) -> KernelS
             "PYTHONIOENCODING": "utf-8",
         },
         ro=read_paths(workspace),
+        runtime_ro=interpreter_roots(workspace),
     )
 
 
 def read_paths(workspace: str, extra: Sequence[str] = ()) -> list[str]:
-    """The read-only grants of a kernel besides the system's (which hx adds, ``system_read``): the interpreter, this
-    package's kernel files and the workspace. Existing paths only, resolved, without duplicates."""
-    interpreter = {
-        sys.prefix,
-        sys.base_prefix,
-        sys.exec_prefix,
-        sysconfig.get_path("stdlib"),
-        sysconfig.get_path("purelib"),
-    }
+    """The plain read-only grants of a kernel besides the system's (which hx adds, ``system_read``) and the
+    interpreter's (``interpreter_roots``): this package's kernel files and the workspace."""
     found: list[str] = []
-    for raw in (*interpreter, str(EXEC_DIR), workspace, *extra):
-        if not raw:
-            continue
-        try:
-            real = os.path.realpath(raw)
-        except OSError:
-            continue
-        if os.path.exists(real) and real not in found:
+    for raw in (str(EXEC_DIR), workspace, *extra):
+        real = os.path.realpath(raw) if raw else ""
+        if real and os.path.exists(real) and real not in found:
             found.append(real)
+    return found
+
+
+def interpreter_roots(workspace: str) -> list[str]:
+    """The directories the kernel's interpreter lives in, to mount read-only: its base prefix, its virtual
+    environment and the real directory of its executable. A Python managed under the user's home (uv, as
+    Hermes's own) is outside the system paths, and without these the sandbox cannot start it.
+
+    Resolved to real paths, and filtered to what hx accepts for ``runtime_ro``: directories that are not ``/``, not
+    the home directory or a parent of it, and not inside or above the workspace (the workspace is granted already)."""
+    home = os.path.realpath(os.path.expanduser("~"))
+    work = os.path.realpath(workspace)
+    candidates = (sys.base_prefix, sys.prefix, sys.exec_prefix, os.path.dirname(os.path.realpath(sys.executable)))
+    found: list[str] = []
+    for raw in candidates:
+        real = os.path.realpath(raw) if raw else ""
+        if not real or not os.path.isdir(real) or real in found or real == os.sep:
+            continue
+        if real == home or home.startswith(real + os.sep):
+            continue
+        if real == work or real.startswith(work + os.sep) or work.startswith(real + os.sep):
+            continue
+        found.append(real)
     return found
 
 
@@ -213,6 +225,7 @@ class HxLauncher:
             env=env,
             net={"off": False, "loopback": "loopback", "on": True}[spec.net],
             ro=list(spec.ro),
+            runtime_ro=list(spec.runtime_ro),
             system_read=True,
             rw=[spec.scratch],
             timeout_ms=spec.lifetime_ms,
