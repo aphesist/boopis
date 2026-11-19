@@ -4,7 +4,8 @@
      (R-float-1; the rail's tooltip used to sit 10 away, F45).
    - A preferred side per control: `data-tip-pos` on the control or on a container of it ("top", "bottom", "left",
      "right", each with an optional "-start" or "-end": aligned to the control's edge instead of centred on it). A
-     composer's corner controls ask for "top-start" and "top-end", so a tip never hangs past the composer's corner.
+     tooltip is centred on its control (R-float-3); a composer's controls ask for "top", so the tip rises above the
+     composer, centred, and the window's margin is the only thing that moves it sideways.
    - Flip to the opposite side when the preferred one does not fit, and shift along the edge to stay in the window
      (8px from its edges).
    - Never over an input's text (R-tip-2, F40): a container names what must stay visible in `data-overlay-avoid` (a selector, matched
