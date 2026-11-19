@@ -118,6 +118,18 @@
      a swatch of a bot's or a theme's colour drawn from data (an inline colour) */
   const dataColour = (e, prop) => !!e.closest('hx-card[data-accent], [data-swatch], .bt-swatch, .mod-swatches, .hxt-swatch') || (/background|box-shadow/.test(prop) && /#|rgb/.test(e.getAttribute('style') || ''));
 
+
+  /* in a whole-app state, which fix agent's area an element belongs to (a card in the conversation is the cards area's) */
+  const REGIONS = [
+    ['cards', 'hx-card, .mod-band, .mod-inline, .mod-status, .mod-tab, .mod-row, .mv-root, [data-mod-log], .ss-mods'],
+    ['dock', '#hx-dock'],
+    ['settings', '#hx-settings, .hx-first-run, .hxt, [class^="hxt-"]'],
+    ['bots', '#hx-view-bots, #hx-list-bots'],
+    ['composer', '[data-hx-composer], #hx-view-session, #hx-right-shell'],
+    ['shell', '.hx-bar, #hx-side, .hx-palette, #hx-keys-sheet, .ui-menu, .ui-pop, .ui-tip, .ui-toast, .ui-listbox']
+  ];
+  const regionOf = (el) => { for (const [area, sel] of REGIONS) if (el.closest && el.closest(sel)) return area; return null; };
+
   /* ───────── element helpers ───────── */
   const describe = (el) => {
     const part = (e) => {
@@ -226,7 +238,7 @@
     const shapes = new Map();
     for (const e of els) { const s = shapeOf(e, cs.get(e)); if (s.length) shapes.set(e, s); }
     const out = [];
-    const add = (check, el, msg, extra) => out.push({ check, el: describe(el), label: label(el), msg, rect: rectOf(el), key: check + '|' + describe(el) + '|' + msg.replace(/[\d.]+px|[\d.]+ px/g, 'N'), ...extra });
+    const add = (check, el, msg, extra) => out.push({ check, el: describe(el), label: label(el), msg, rect: rectOf(el), key: check + '|' + describe(el) + '|' + msg.replace(/[\d.]+px|[\d.]+ px/g, 'N'), ...(window.__lab && window.__lab.app ? { region: regionOf(el) } : {}), ...extra });
     const shapedParent = (e) => { for (let p = e.parentElement; p && p !== document.documentElement; p = p.parentElement) { if (shapes.has(p)) return p; if (p === scope.parentElement) return null; } return null; };
     const fixed = (e) => { for (let p = e; p && p !== document.body; p = p.parentElement) if (getComputedStyle(p).position === 'fixed') return p; return null; };
 

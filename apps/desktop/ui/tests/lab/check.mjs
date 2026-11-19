@@ -92,7 +92,7 @@ function record(row, f, where) {
   const key = row.story + '|' + row.state + '|' + f.key;
   let x = findings.get(key);
   if (!x) {
-    x = { story: row.story, state: row.state, area: row.area, kind: row.kind, check: f.check, rule: CHECKS[f.check]?.rule ?? null, severity: CHECKS[f.check]?.severity ?? 'fail', msg: f.msg, el: f.el ?? '', label: f.label ?? '', where: [], crop: null, mock: row.mock, rect: f.rect ?? null, extra: f.extra ?? null };
+    x = { story: row.story, state: row.state, area: f.region ?? row.area, kind: row.kind, check: f.check, rule: CHECKS[f.check]?.rule ?? null, severity: CHECKS[f.check]?.severity ?? 'fail', msg: f.msg, el: f.el ?? '', label: f.label ?? '', where: [], crop: null, mock: row.mock, rect: f.rect ?? null, extra: f.extra ?? null };
     findings.set(key, x);
     x.isNew = true;
   }
@@ -367,7 +367,8 @@ let rows;
   await ctx.close();
 }
 const all = rows.length;
-rows = rows.filter((r) => (!AREA || AREA.includes(r.area)) && (!STORY || r.story === STORY || r.story.includes(STORY)) && (!STATE || r.state === STATE || r.state.includes(STATE)) && (!ONLY_OVERLAY || r.overlay));
+/* an area's run also takes the whole-window pages: their findings are assigned to the area whose region they are in */
+rows = rows.filter((r) => (!AREA || AREA.includes(r.area) || r.kind === 'page') && (!STORY || r.story === STORY || r.story.includes(STORY)) && (!STATE || r.state === STATE || r.state.includes(STATE)) && (!ONLY_OVERLAY || r.overlay));
 for (const r of rows) r.overlayDecl = null;
 console.log(`lab: ${rows.length} of ${all} states · presets ${PRESETS.join(',')} · widths ${WIDTHS.join(',')} · ${JOBS} at a time${UPDATE ? ' · accepting goldens' : ''}`);
 
@@ -385,7 +386,7 @@ await Promise.all(Array.from({ length: Math.max(1, JOBS) }, async () => {
 /* the static scan belongs to every run that is not narrowed to a story */
 flushHashes();
 const staticFindings = STORY || STATE ? [] : scan().filter((f) => !AREA || AREA.includes(f.area));
-const list = [...findings.values()].map(({ isNew, ...x }) => x);
+const list = [...findings.values()].map(({ isNew, ...x }) => x).filter((x) => !AREA || AREA.includes(x.area));
 const failing = list.filter((x) => x.severity !== 'warn');
 const mocks = [...new Map(failing.filter((x) => x.mock).map((x) => [x.mock.url + '|' + (x.mock.crop ?? ''), x.mock])).values()];
 const mockFiles = await mockShots(browser, srv.origin, mocks);
