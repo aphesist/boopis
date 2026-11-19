@@ -31,7 +31,7 @@
    (radius, size, ring); a row along an edge that holds corner controls at its ends: .ui-corners (the inset). Never set a
    radius or an inset in a corner by hand. A squircle-drawn container also exposes its drawn radius as --r-outer when it
    declared none (squircle.ts), so its children nest the same way. */
-:where(.ui-nest, .ui-composer__box, .ui-menu, .ui-pop, .ui-tip, .ui-toast, .ui-seg) {
+:where(.ui-nest, .ui-composer__box, .ui-menu, .ui-pop, .ui-listbox, .ui-tip, .ui-toast, .ui-seg) {
   --corner-size: var(--ctl-s);
   --r-in: min(var(--r-outer), max(var(--r-floor), calc(var(--r-outer) - var(--pad))));
   --r-corner: min(var(--r-in), calc(var(--corner-size) / 2));

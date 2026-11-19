@@ -73,4 +73,15 @@ describe('concentric corners (DESIGN-SYSTEM.md §8.2)', () => {
     /* nobody re-derives --r-in by hand in the library */
     expect(css.match(/--r-in:/g)?.length).toBe(1);
   });
+
+  it('every library surface that declares --r-outer is in the one container rule', () => {
+    const css = readFileSync(join(__dirname, 'components.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ');
+    const list = /:where\(([^)]*)\) \{ --corner-size/.exec(css)?.[1]?.split(',').map((x) => x.trim()) ?? [];
+    expect(list).toContain('.ui-nest');
+    const missing: string[] = [];
+    for (const m of css.matchAll(/([^{}]+)\{[^}]*--r-outer:[^}]*\}/g)) {
+      for (const sel of (m[1] ?? '').split(',').map((x) => x.trim())) if (!list.includes(sel)) missing.push(sel);
+    }
+    expect(missing).toEqual([]);
+  });
 });
