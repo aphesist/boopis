@@ -20,12 +20,12 @@
   "h": 44
  },
  "compact-long@bone": {
-  "sha": "d64f88b48d2ee03695dd2e50344639d442582427",
+  "sha": "f771de43be661b37151014083625b53888732b14",
   "w": 424,
   "h": 424
  },
  "compact-long@catalog": {
-  "sha": "ab58dd0e9f3e272042b5c9408a513d3d66752f0b",
+  "sha": "2ba4a102eda16edf1d15f3311167107989030bbe",
   "w": 424,
   "h": 424
  },
@@ -40,32 +40,32 @@
   "h": 498
  },
  "compact-on-the-dock@bone": {
-  "sha": "bb9ccb4f53769640069fdacabdd169df0703277e",
+  "sha": "0bfb99d4f5638889b14de29b6b3eef6439a7f2fc",
   "w": 424,
   "h": 278
  },
  "compact-on-the-dock@catalog": {
-  "sha": "437b6fbb8261d24a7f3a2479f67def82915161a6",
+  "sha": "d85d7d05189ff098ed53ddab31f088ec858c09fa",
   "w": 424,
   "h": 278
  },
  "compact-on-the-dock@graphite": {
-  "sha": "448efba34796074877c040e4cbc97312820efbde",
+  "sha": "86e84bd7dd35fba60005e7d89877a9a867fa2cb9",
   "w": 424,
   "h": 278
  },
  "compact-on-the-dock@typewriter": {
-  "sha": "37c846fd7c8634803562d893e279c71e6ec5322e",
+  "sha": "00db5d7d4bbc2bf0f3a75610bf491006591f0743",
   "w": 424,
   "h": 297
  },
  "compact@bone": {
-  "sha": "a9e5fec4a6ed4681803c1ccf56a46dd047af0c74",
+  "sha": "80b60426c03fdd1773cd19c37ddfc41f6e1c6fd5",
   "w": 424,
   "h": 297
  },
  "compact@catalog": {
-  "sha": "666937c52fd43941b5c4673f033059c84865771f",
+  "sha": "95b70a629d44d422fe59478ab212e364633c6638",
   "w": 424,
   "h": 297
  },
@@ -120,12 +120,12 @@
   "h": 44
  },
  "mini-long@bone": {
-  "sha": "0fe775e7ce726753b11d0cbca15d3d3fb1fd33cc",
+  "sha": "c5c63ca0a526a07d9afa7536ae3ad25d0a951172",
   "w": 384,
   "h": 54
  },
  "mini-long@catalog": {
-  "sha": "6f62c4a870bb3ce3fa3c3d0b1061dad4783a99f5",
+  "sha": "8da43a93e0f57b0fc3abfcb9334f118fd538253c",
   "w": 384,
   "h": 54
  },
@@ -140,12 +140,12 @@
   "h": 54
  },
  "mini@bone": {
-  "sha": "4150ec7874b60164998ca4e7fe45364f2d77b627",
+  "sha": "cbaf87c6e9f4b5c1094f87312088dccf233fc721",
   "w": 384,
   "h": 54
  },
  "mini@catalog": {
-  "sha": "263b6c0dc9a9d8a1bbb787d86a8abb0cc97c0c1b",
+  "sha": "e2c365671b9232f9890879f20a59d68243747a3a",
   "w": 384,
   "h": 54
  },
@@ -180,12 +180,12 @@
   "h": 44
  },
  "popover@bone": {
-  "sha": "ae7805f62a95d0e9567daa56dc23df71cb7a8629",
+  "sha": "5b08cf3a967ed160ed8505d9696b47e6073d7941",
   "w": 632,
   "h": 258
  },
  "popover@catalog": {
-  "sha": "7bd713ee4235ac81c3ea8133dc22389353b0074a",
+  "sha": "6bf6474913f56c9bf193265ba8ee4230802c1a98",
   "w": 632,
   "h": 258
  },

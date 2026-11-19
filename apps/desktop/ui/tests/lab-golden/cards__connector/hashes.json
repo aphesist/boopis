@@ -1,11 +1,11 @@
 {
  "compact-long@bone": {
-  "sha": "47a769fb77e669fa8d64921e985e41055067ffe1",
+  "sha": "0c1fca504bf0cbef9ab52823f4a33f1d90ed116a",
   "w": 424,
   "h": 296
  },
  "compact-long@catalog": {
-  "sha": "26fa4ae86308ee31f1dee386edca8e3b0f75f0b5",
+  "sha": "a3abc85f092db90f688db028d241c9ad621b90ab",
   "w": 424,
   "h": 296
  },
@@ -20,32 +20,32 @@
   "h": 296
  },
  "compact-on-the-dock@bone": {
-  "sha": "e88eb0394e01e3a53cf1ed5eac875cde37725528",
+  "sha": "a8f8e0403bc9cf76826ee5845d1254a6125a07db",
   "w": 424,
   "h": 197
  },
  "compact-on-the-dock@catalog": {
-  "sha": "3c03edd2618dd5b15f0530f5eced6eae01659b26",
+  "sha": "092605cd048c4c4bbde70125dcfe0cdd79467326",
   "w": 424,
   "h": 197
  },
  "compact-on-the-dock@graphite": {
-  "sha": "6e355a784dd5adb2bdf077abdbc94c93ee4e8cb9",
+  "sha": "205f7053aa01630fc8129dfb9cc7318dda96f7b9",
   "w": 424,
   "h": 197
  },
  "compact-on-the-dock@typewriter": {
-  "sha": "18a6750a8bd32f16c0ac12fe1f65b925086bd407",
+  "sha": "556a4de3aa9105dbadeda162d3a562738baa0945",
   "w": 424,
   "h": 237
  },
  "compact@bone": {
-  "sha": "a5ee0e782cab012445ae2941f5151255cc763930",
+  "sha": "76dc7f4804c752122fb4da8415da8a90f9303f48",
   "w": 424,
   "h": 217
  },
  "compact@catalog": {
-  "sha": "8ef59d0a62fa9c49cd39f9eee268f118a3409234",
+  "sha": "a43e64b7331790527c6a28db94c36fe88fe27c95",
   "w": 424,
   "h": 217
  },
@@ -60,32 +60,32 @@
   "h": 237
  },
  "connected@bone": {
-  "sha": "c20df8da9fe29be6923209f9789bb9ff6322abb5",
+  "sha": "a3db9c1db2c231ce092e1648a76ec83b849d18e5",
   "w": 632,
   "h": 170
  },
  "connected@catalog": {
-  "sha": "dc6a6a41180ea37bbcd6c913d4ddfed0d8aff166",
+  "sha": "9fb1e9b11da376424fc56447853b67c21ba34ee3",
   "w": 632,
   "h": 170
  },
  "connected@graphite": {
-  "sha": "3744e09a1feeb376f752a1cf933e8c886fc763d7",
+  "sha": "be711683633c246789733e9abddffd3f1c71ee43",
   "w": 632,
   "h": 170
  },
  "connected@typewriter": {
-  "sha": "2f1b41e733dbd8f55db940bdffe8393465b0ec71",
+  "sha": "b1646a9dab4364bbe5aa0c966b2826bf532af429",
   "w": 632,
   "h": 170
  },
  "empty-data@bone": {
-  "sha": "56c0f1cdf318cb4e0a415bd53d771088b0dd4cbf",
+  "sha": "53dc83ca6fb28b10ea2b843189185877ab33ccf5",
   "w": 632,
   "h": 197
  },
  "empty-data@catalog": {
-  "sha": "cc7937339ee9e2bb5dbf010e709490abd95be59b",
+  "sha": "63cff50e66d8832ed611f95d3791ea2af657335d",
   "w": 632,
   "h": 197
  },
@@ -100,17 +100,17 @@
   "h": 197
  },
  "failed@bone": {
-  "sha": "6af26c393ad91a1fe9a9513be8811b9c4ea7fa61",
+  "sha": "0dca43466297014d89e2363f8e8df241af201ab9",
   "w": 632,
   "h": 191
  },
  "failed@catalog": {
-  "sha": "461dc2098dd8780374062d11480028a6620cdaac",
+  "sha": "575bee7b5326a7610420ed97ac8d6aa4d8b2a5c9",
   "w": 632,
   "h": 191
  },
  "failed@graphite": {
-  "sha": "8b8a0ddff4f899779e6c5ee9d39861d68f7d3eb3",
+  "sha": "15100bc2db870bcfc4b06aa390878c1dd10218a1",
   "w": 632,
   "h": 191
  },
@@ -120,12 +120,12 @@
   "h": 191
  },
  "long@bone": {
-  "sha": "a728180d8869f661563ab8e3e6b37e6b8d5b3e22",
+  "sha": "c7a7d65511399d6da5696df2daaa2368989cd27b",
   "w": 632,
   "h": 237
  },
  "long@catalog": {
-  "sha": "677dca35a0758bdd5a94f626e16bb0563e3b7d67",
+  "sha": "1eb6a303aceb58e99fec93e33afd757cf7089468",
   "w": 632,
   "h": 237
  },
@@ -140,12 +140,12 @@
   "h": 256
  },
  "mini-long@bone": {
-  "sha": "9a06024f6114a471fbf3cf28d45f4f101c05d7ff",
+  "sha": "e505d690a13d6be039a9092ca072096a69251313",
   "w": 384,
   "h": 54
  },
  "mini-long@catalog": {
-  "sha": "f22acf30850c4530e6ecb47cd67631c7d8a87150",
+  "sha": "1404899452701d88e3af1940c1c02d4febb67a77",
   "w": 384,
   "h": 54
  },
@@ -160,12 +160,12 @@
   "h": 54
  },
  "mini@bone": {
-  "sha": "97b0c50d3ac097a436c8e773d575c3707dc1b683",
+  "sha": "e0b277ad0e00ad88520ef5ad942f0ef44e1dde57",
   "w": 384,
   "h": 54
  },
  "mini@catalog": {
-  "sha": "67c2a61d467b8abc05d599a187c16343ad8c9103",
+  "sha": "9c74b94393f0c32e97262084e4a8ab6d524566b0",
   "w": 384,
   "h": 54
  },
@@ -180,12 +180,12 @@
   "h": 54
  },
  "needed@bone": {
-  "sha": "a25416675b2ddd9bc83cde085b450964b898e991",
+  "sha": "955d14863ed2b04c602c810f4c7338a58695b604",
   "w": 632,
   "h": 197
  },
  "needed@catalog": {
-  "sha": "5d7c9610bd4ce1937ded02ceeeeb56b9eab83843",
+  "sha": "9361114065d298486d98ff445d77eba41e177faf",
   "w": 632,
   "h": 197
  },
@@ -195,17 +195,17 @@
   "h": 197
  },
  "needed@typewriter": {
-  "sha": "a188340a9234520adc8d2f8a408a3ef19c2499d0",
+  "sha": "e1d671f09f70ecf679bd8741008d88278a15bfe7",
   "w": 632,
   "h": 197
  },
  "waiting@bone": {
-  "sha": "d3a032418034a6020de41a9c9bba4ed5c1ac6d5e",
+  "sha": "1b05af0c22233b03e84716656e53270d9313b2f0",
   "w": 632,
   "h": 197
  },
  "waiting@catalog": {
-  "sha": "76a303d807befbc1f4bbe4d3170b363c4c2779c9",
+  "sha": "a225efb1acc71b6f2292af0cdf8e096b9ab749c5",
   "w": 632,
   "h": 197
  },

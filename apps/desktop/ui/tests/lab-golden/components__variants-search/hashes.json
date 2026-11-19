@@ -1,0 +1,42 @@
+{
+ "as@bone": {
+  "sha": "73bf8f14f31bfe810216bc8732093a81c8533142",
+  "w": 624,
+  "h": 72
+ },
+ "as@catalog": {
+  "sha": "2f677cc67cfd51149e5db7e1f03bf887af780292",
+  "w": 624,
+  "h": 72
+ },
+ "as@graphite": {
+  "sha": "3529a763e9e292d3e357c5fb6f1f50e3e6e9917b",
+  "w": 624,
+  "h": 72
+ },
+ "as@typewriter": {
+  "sha": "a9050714790bc20cbf1d85a8b9c5ec455b80f99b",
+  "w": 624,
+  "h": 72
+ },
+ "size@bone": {
+  "sha": "9c544b10c868f776913325f7e60d19772981a435",
+  "w": 624,
+  "h": 114
+ },
+ "size@catalog": {
+  "sha": "cbe1e77e2025ca928064f87069af9f2117705df3",
+  "w": 624,
+  "h": 114
+ },
+ "size@graphite": {
+  "sha": "fd653cd2b32f84b32ffcffa180a7a969bbe1d8da",
+  "w": 624,
+  "h": 114
+ },
+ "size@typewriter": {
+  "sha": "07c367ac1756c158e38cd6a3b790a5fb7d59f9ba",
+  "w": 624,
+  "h": 114
+ }
+}

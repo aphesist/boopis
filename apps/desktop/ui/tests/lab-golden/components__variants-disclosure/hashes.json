@@ -1,0 +1,22 @@
+{
+ "expanded@bone": {
+  "sha": "41e3ac8755c30dcecac56a8ae9a09bd6a942e6ea",
+  "w": 1416,
+  "h": 50
+ },
+ "expanded@catalog": {
+  "sha": "642b5c71152d2a8b218c8df2b1e56ef9f35568c9",
+  "w": 1416,
+  "h": 50
+ },
+ "expanded@graphite": {
+  "sha": "1c8a5b418abc20990d517b1a1db7a3071865ee6c",
+  "w": 1416,
+  "h": 50
+ },
+ "expanded@typewriter": {
+  "sha": "e4c1aac12cde6b4cd0872cfb9e4d419f6a140e82",
+  "w": 1416,
+  "h": 50
+ }
+}

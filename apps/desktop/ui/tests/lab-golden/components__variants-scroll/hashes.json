@@ -1,0 +1,62 @@
+{
+ "axis@bone": {
+  "sha": "c5711e2e60013bcc620616c93fc1797d17d9e73e",
+  "w": 1416,
+  "h": 144
+ },
+ "axis@catalog": {
+  "sha": "d1def637ec18ee42bdb81e454fb0a0c925669b13",
+  "w": 1416,
+  "h": 144
+ },
+ "axis@graphite": {
+  "sha": "ddc92946ec8fa77fdb3c8e63c43dfa38c04ca840",
+  "w": 1416,
+  "h": 144
+ },
+ "axis@typewriter": {
+  "sha": "82f466b256139893b9c099d790c210eed82c5f6a",
+  "w": 1416,
+  "h": 144
+ },
+ "bare@bone": {
+  "sha": "23d4d06a36178e8b7acfbd57fa31263479a61c1c",
+  "w": 1416,
+  "h": 144
+ },
+ "bare@catalog": {
+  "sha": "6fd90f90db56ae7f3792c729a90f89b4005739bd",
+  "w": 1416,
+  "h": 144
+ },
+ "bare@graphite": {
+  "sha": "31aba7a051303526faa3dcf957acfeaf0f8a87b3",
+  "w": 1416,
+  "h": 144
+ },
+ "bare@typewriter": {
+  "sha": "de8cf5f44a1debdc91332b793e22d93305598e28",
+  "w": 1416,
+  "h": 144
+ },
+ "inset@bone": {
+  "sha": "c5711e2e60013bcc620616c93fc1797d17d9e73e",
+  "w": 1416,
+  "h": 144
+ },
+ "inset@catalog": {
+  "sha": "d1def637ec18ee42bdb81e454fb0a0c925669b13",
+  "w": 1416,
+  "h": 144
+ },
+ "inset@graphite": {
+  "sha": "ddc92946ec8fa77fdb3c8e63c43dfa38c04ca840",
+  "w": 1416,
+  "h": 144
+ },
+ "inset@typewriter": {
+  "sha": "82f466b256139893b9c099d790c210eed82c5f6a",
+  "w": 1416,
+  "h": 144
+ }
+}

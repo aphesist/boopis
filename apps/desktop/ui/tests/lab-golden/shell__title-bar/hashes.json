@@ -1,101 +1,101 @@
 {
  "a-long-session-title@bone": {
-  "sha": "0dfdafce5df8d2c15966dde1d7eb4d1537963b47",
+  "sha": "8e5e7eb77d2f2f3b0de9588fb6ba07501f5fa5df",
   "w": 1440,
   "h": 64
  },
  "a-long-session-title@catalog": {
-  "sha": "542f3ae2b495a06ca234317f4bd871dfdf0fa695",
+  "sha": "7a435a9f1804cadd545bf5fc2df4e44e4941d6d8",
   "w": 1440,
   "h": 64
  },
  "a-long-session-title@graphite": {
-  "sha": "3c2ec213a7e3e6c3bfe6d8b8c303b420c5c1cd4e",
+  "sha": "fb40768e95e6c66f1805ec61eca3773ff6974a30",
   "w": 1440,
   "h": 64
  },
  "a-long-session-title@typewriter": {
-  "sha": "aee935d3f6f0445b8124390688ee7ec2be9f05fb",
+  "sha": "de59fcff97c35cbe069340db3620e6386271ba24",
   "w": 1440,
   "h": 64
  },
  "command-field-focus@bone": {
-  "sha": "6e6321cac9ba50f9396435489938cf11b9a4629d",
+  "sha": "3400c2b9133368e391e07ff0fbcc9bc9c1c22cac",
   "w": 1440,
   "h": 64
  },
  "command-field-focus@catalog": {
-  "sha": "3955ceb3f704a8cdf87c8b22eb0252adfe83ea91",
+  "sha": "a72170efe5f8af3785aa7afee8b6fdc81d5171a1",
   "w": 1440,
   "h": 64
  },
  "command-field-focus@graphite": {
-  "sha": "d20c897239ce7e3692fecc81ad78bf1b1387b4f2",
+  "sha": "cb97ff06cd9e8b54f94a1f8ff787d6390902e39f",
   "w": 1440,
   "h": 64
  },
  "command-field-focus@typewriter": {
-  "sha": "06ad84976ddc73daed085abca67d1386536c9fc5",
+  "sha": "6f246937aad2841195f37042d99bea7115253e33",
   "w": 1440,
   "h": 64
  },
  "command-field-hover@bone": {
-  "sha": "da6bf821467c6dcdf5b058b0c31051159ce654d3",
+  "sha": "d89c47af4fa95e2dbe9dff756f143d1c18f0b5f7",
   "w": 1440,
   "h": 64
  },
  "command-field-hover@catalog": {
-  "sha": "4f54df3d405ef29a11f73e77e0c1c6ede59305e6",
+  "sha": "46c08471960108e6d671013a4727e9760863a532",
   "w": 1440,
   "h": 64
  },
  "command-field-hover@graphite": {
-  "sha": "2473a95127fa6fcd5f6280b6ea1aeab5088cab91",
+  "sha": "229cb03dcd418bcb2a5c2ed98f7df25314b7622c",
   "w": 1440,
   "h": 64
  },
  "command-field-hover@typewriter": {
-  "sha": "e6a677cfbc6f5d6b8af567f5e5cac4aeff1e6464",
+  "sha": "616c6d588d0d5ceda0cb145734a6d0077b190ff6",
   "w": 1440,
   "h": 64
  },
  "sidebar-button-tooltip@bone": {
-  "sha": "8afcb4e64ed8d7ef9bfea7e41d036bcb050a1784",
+  "sha": "0ef112b2529ff96fa73de6e9df23d787c9649bea",
   "w": 1440,
   "h": 92
  },
  "sidebar-button-tooltip@catalog": {
-  "sha": "668e3413b8bb042fbd02e0906765f404090b0da1",
+  "sha": "b63e10d4e1ecf6244b75a8c15aae656742ce50f6",
   "w": 1440,
   "h": 92
  },
  "sidebar-button-tooltip@graphite": {
-  "sha": "84db449e8c853185e0e32f33c7b3c3a0523589c9",
+  "sha": "8376735d370a170e3f2a572588132947a77c3b2f",
   "w": 1440,
   "h": 92
  },
  "sidebar-button-tooltip@typewriter": {
-  "sha": "558632abcfa4ab1df8389e5b8cd870b3901bdce8",
+  "sha": "28efb0dbad01872855e0202baeceb4a9e4dcd35b",
   "w": 1440,
   "h": 92
  },
  "typical@bone": {
-  "sha": "0dfdafce5df8d2c15966dde1d7eb4d1537963b47",
+  "sha": "8e5e7eb77d2f2f3b0de9588fb6ba07501f5fa5df",
   "w": 1440,
   "h": 64
  },
  "typical@catalog": {
-  "sha": "542f3ae2b495a06ca234317f4bd871dfdf0fa695",
+  "sha": "7a435a9f1804cadd545bf5fc2df4e44e4941d6d8",
   "w": 1440,
   "h": 64
  },
  "typical@graphite": {
-  "sha": "3c2ec213a7e3e6c3bfe6d8b8c303b420c5c1cd4e",
+  "sha": "fb40768e95e6c66f1805ec61eca3773ff6974a30",
   "w": 1440,
   "h": 64
  },
  "typical@typewriter": {
-  "sha": "607bd71d2f4129778b917750225e3e17c95f6300",
+  "sha": "de59fcff97c35cbe069340db3620e6386271ba24",
   "w": 1440,
   "h": 64
  }

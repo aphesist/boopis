@@ -553,7 +553,8 @@
           const T = tokens(o.tokenNames || [], groundOf(e));
           const p = probeEl(); p.style.color = 'var(--bg-4)'; const want4 = ckey(getComputedStyle(p).color); p.style.color = '';
           const bg = thumb.map((r) => r.bg).find(Boolean);
-          if (bg) { p.style.color = bg.replace(/^var\((--[\w-]+)\)$/, 'var($1)'); const got = ckey(getComputedStyle(p).color); p.style.color = ''; if (got !== want4 && T) add('scrollbar', e, 'its scrollbar thumb is ' + bg + ', not --bg-4'); }
+          const bgColour = bg && ((/var\(--[\w-]+\)|#[0-9a-f]{3,8}\b|rgba?\([^)]*\)|color-mix\([^)]*\)\)?/i.exec(bg) || [])[0]);
+          if (bgColour) { p.style.color = bgColour; const got = ckey(getComputedStyle(p).color); p.style.color = ''; if (got !== want4 && T) add('scrollbar', e, 'its scrollbar thumb is ' + bgColour + ', not --bg-4 (--scroll-thumb-color, R-scroll-3)'); }
         }
       }
     }

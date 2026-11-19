@@ -1,0 +1,22 @@
+{
+ "open@bone": {
+  "sha": "6998e2481bd83b4986c108736c47ea95f691eb43",
+  "w": 344,
+  "h": 124
+ },
+ "open@catalog": {
+  "sha": "d1cf4edb853f8a3796184ecd912b5aef351b2a20",
+  "w": 344,
+  "h": 124
+ },
+ "open@graphite": {
+  "sha": "e0f7a224128690d6b83733bb05341c820b991610",
+  "w": 344,
+  "h": 124
+ },
+ "open@typewriter": {
+  "sha": "7048da72142a44213a2713d5ba4a35f30cf0640b",
+  "w": 344,
+  "h": 124
+ }
+}

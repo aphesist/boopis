@@ -1,11 +1,11 @@
 {
  "focus@bone": {
-  "sha": "83924f2440da8d14d359633c8335c562346c8cb9",
+  "sha": "99783dc952960fa898c64f4193dce359387f721f",
   "w": 1416,
   "h": 54
  },
  "focus@catalog": {
-  "sha": "d6a7b76514ff3d0694d798fc11422b7d679c3a0a",
+  "sha": "9ab97ebb6e95e144e2e9eee2a885f51647d0ef21",
   "w": 1416,
   "h": 54
  },
@@ -20,12 +20,12 @@
   "h": 54
  },
  "holding@bone": {
-  "sha": "b2f9464475f3bb107cfa3e21662fcb5cf8c61b99",
+  "sha": "e11c5b1c552e10a3536ecc58cf1bc9591436c157",
   "w": 1416,
   "h": 54
  },
  "holding@catalog": {
-  "sha": "fed2c4965e0b9de756f4cbdb5c020804e1cdf0fe",
+  "sha": "39376d3f032940d8053cfe2c8fe2b26b9688807a",
   "w": 1416,
   "h": 54
  },
@@ -40,12 +40,12 @@
   "h": 54
  },
  "hover@bone": {
-  "sha": "d90c06b8adb6f10ea244135bf476153cd4895ef1",
+  "sha": "9e57316503a0a4562e58c9b4e77a4ff572961047",
   "w": 1416,
   "h": 54
  },
  "hover@catalog": {
-  "sha": "2a409079a040c8f6495057c7b9ced5894889c239",
+  "sha": "86bb0f74738a1322d74cd2673f835b9fa61b1c7e",
   "w": 1416,
   "h": 54
  },
@@ -60,12 +60,12 @@
   "h": 54
  },
  "long@bone": {
-  "sha": "81d91656a6c3c3557bd64c710e40e4549f7a0eb3",
+  "sha": "97a981099f2f8de54f028e707bdf6e1bba9bf8a0",
   "w": 384,
   "h": 54
  },
  "long@catalog": {
-  "sha": "dbc00fb3015221ef528f6c1ace21ca8d36dcd18e",
+  "sha": "0e5d9547d4428c37f4907d1b9fbb807fcc70a07c",
   "w": 384,
   "h": 54
  },
@@ -80,12 +80,12 @@
   "h": 54
  },
  "on-the-dock@bone": {
-  "sha": "b1680eaa472332fe18aeabdcabf778a7c942d124",
+  "sha": "309cf7f3848c6f2417f5189ac2db676ce4d824c2",
   "w": 1416,
   "h": 54
  },
  "on-the-dock@catalog": {
-  "sha": "f692ba40e82626ffdc60946017d4d3be1dcdf312",
+  "sha": "e8d3643986e3d5b1bcfe2011dce151eae7d7bc73",
   "w": 1416,
   "h": 54
  },
@@ -100,12 +100,12 @@
   "h": 54
  },
  "pressed@bone": {
-  "sha": "d1aa4f5ef7bef0ec8d199605794328e2d46d9f17",
+  "sha": "8a69cac90645497e4632a65156f222f959522d03",
   "w": 1416,
   "h": 54
  },
  "pressed@catalog": {
-  "sha": "59d8b52170f48480a67e6fba48f2f38d57b595d5",
+  "sha": "794d9ba6e01668725ed3383382b5e9f7a75f3414",
   "w": 1416,
   "h": 54
  },
@@ -120,12 +120,12 @@
   "h": 54
  },
  "typical@bone": {
-  "sha": "d1aa4f5ef7bef0ec8d199605794328e2d46d9f17",
+  "sha": "8a69cac90645497e4632a65156f222f959522d03",
   "w": 1416,
   "h": 54
  },
  "typical@catalog": {
-  "sha": "59d8b52170f48480a67e6fba48f2f38d57b595d5",
+  "sha": "794d9ba6e01668725ed3383382b5e9f7a75f3414",
   "w": 1416,
   "h": 54
  },

@@ -66,7 +66,7 @@ function cause(check, msg, el) {
       if (m.includes('removed and drawn again')) return 'the interaction redraws the node (innerHTML) instead of updating it';
       if (m.includes('blinked')) return 'a node is hidden and shown again within a few frames during the morph: the flicker the owner saw';
       return 'a box jumps away and back during the interaction: a layout read or a style applied a frame late';
-    case 'brand': return 'user-facing text names the engine; say it in boopis's words (ADR-0031, R-copy-8)';
+    case 'brand': return 'user-facing text names the engine; say it in boopis\'s words (ADR-0031, R-copy-8)';
     case 'copy': return 'an engine value reached the interface (R-copy-9)';
     case 'roles': return m.includes('brass') ? 'text drawn in the accent; brass is for marks (R-colour-3)' : 'a surface painted the same as the surface under it (R-colour-4)';
     case 'visual': return 'the screenshot changed from its golden';
@@ -120,5 +120,20 @@ for (const a of areas) {
     if (sorted.length > MAX_LINES) md += `- and ${sorted.length - MAX_LINES} more patterns (${sorted.slice(MAX_LINES).reduce((n, g) => n + g.states.length, 0)} failures): the report lists them all.\n`;
   }
 }
+md += `
+## What the lab does not see yet
+
+- **WebKitGTK.** The checks run in Chromium. What only WebKitGTK gets wrong (its own scrollbar where \`scrollbar-width\` is all a
+  scroller sets, the dock's content vanishing while the slab moves) shows here only through the rules that predict it (the
+  \`scrollbar\` check) and through the WebKitGTK dock test in CI (\`tests/e2e/dock_webkit.py\`).
+- **Timing.** \`stability.interact\` samples a few interactions per story at 1440 in the default preset, at 60 frames a second
+  in headless Chromium; a flicker that needs the owner's 120 Hz panel or CPU painting can hide from it.
+- **Fractional scale.** The matrix runs at a device pixel ratio of 1; \`--dpr 1.6\` runs it at the owner's scale (without
+  goldens, which are kept at 1).
+- **States that differ by design.** Recorded-frame replays, the new-bot dice and a hold in progress are excused from
+  \`stability.render\` (each with its reason in its story); their other checks run.
+- **Rules without a check.** ${s.rules ? s.rules.total - s.rules.covered.length : 'Most'} of RULES.md's rules have no lab check yet; the report lists them. Each
+  is a row in \`tests/lab/rules.mjs\` and a function in \`probe.js\` away.
+`;
 writeFileSync(out, md);
 console.log('wrote ' + out + ' (' + findings.length + ' failures, ' + areas.length + ' areas)');

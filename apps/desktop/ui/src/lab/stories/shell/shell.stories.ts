@@ -30,7 +30,7 @@ const titleBar: Story = {
     'command field hover': st(['hover'], undefined, {}, { force: [{ sel: '#hx-btn-search', state: 'hover' }] }),
     'command field focus': st(['focus'], undefined, {}, { force: [{ sel: '#hx-btn-search', state: 'focus' }] }),
     'sidebar button tooltip': st(['tooltip'], async (c) => { const b = c.$('#hx-btn-left'); b.focus(); c.hx.ui.tooltip.show(b); await c.wait(250); }, {}, { overlay: { anchor: '#hx-btn-left', layer: '.ui-tip' } }),
-    'a long session title': st(['long'], async (c) => { c.$('#hx-where-title').textContent = 'Reconcile the invoices_v2 backfill against the ledger before the quarterly close and the auditors'; await c.wait(100); })
+    'a long session title': st(['long'], async (c) => { c.$('#hx-where-title').textContent = 'Reconcile the invoices_v2 backfill against the ledger before the quarterly close and the auditors'; await c.wait(100); }, {}, { allow: { 'stability.render': 'the title is lengthened in place after boot; the shell may write it again' } })
   }
 };
 const pal: Story = {

@@ -1,0 +1,42 @@
+{
+ "mono@bone": {
+  "sha": "4564d4a5610baba342bcc263e4d3da46b640eb23",
+  "w": 1416,
+  "h": 99
+ },
+ "mono@catalog": {
+  "sha": "a1ea82e6a225174490876d6baf1dfe48ada9421e",
+  "w": 1416,
+  "h": 99
+ },
+ "mono@graphite": {
+  "sha": "524001bfc7dc0a242d9a07d8aa08a888ffaf702f",
+  "w": 1416,
+  "h": 99
+ },
+ "mono@typewriter": {
+  "sha": "2926111b4960bbd72664dfeeb889cc27b50b41d1",
+  "w": 1416,
+  "h": 99
+ },
+ "raised@bone": {
+  "sha": "36ed9c780d81d37857a764da019d71cf07a73af9",
+  "w": 1416,
+  "h": 102
+ },
+ "raised@catalog": {
+  "sha": "b657c71c6cf6de3c2403aa1698a956311bbbd39e",
+  "w": 1416,
+  "h": 102
+ },
+ "raised@graphite": {
+  "sha": "1474557c1697f817eee95eabe213abdb844081f6",
+  "w": 1416,
+  "h": 102
+ },
+ "raised@typewriter": {
+  "sha": "04dfde9f5a2926c46026bebb0e21c38976adb8d8",
+  "w": 1416,
+  "h": 102
+ }
+}

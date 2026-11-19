@@ -1,16 +1,16 @@
 {
  "at-the-right-edge@bone": {
-  "sha": "bd9c8b33163d4cc27657b473f8ee9c04d34a04fd",
+  "sha": "0cee5f6f23869dfb187028f040fb1337105bb4ae",
   "w": 1428,
   "h": 86
  },
  "at-the-right-edge@catalog": {
-  "sha": "a7e190adcf97b331a6d81c0cb2a28be257090e79",
+  "sha": "5b055bec574628d5812426a82e6220843d4ca503",
   "w": 1428,
   "h": 86
  },
  "at-the-right-edge@graphite": {
-  "sha": "a8f66a47716abd8de9b59bebe1b8cc3d726e63ce",
+  "sha": "5432ad14f6e9b169574c992602e6f7d1a83dd49d",
   "w": 1428,
   "h": 86
  },
@@ -20,17 +20,17 @@
   "h": 86
  },
  "below-the-anchor@bone": {
-  "sha": "cc37a738a53d88708182026d32be6ffb2c6e2f5b",
+  "sha": "a95cded1e979ef967f7f43706f1cac51a40b346d",
   "w": 1432,
   "h": 86
  },
  "below-the-anchor@catalog": {
-  "sha": "de80833c1b899006b34e7093134eff51e8d80044",
+  "sha": "27602980efeff7e0c7507044169b3b23adbce1a9",
   "w": 1432,
   "h": 86
  },
  "below-the-anchor@graphite": {
-  "sha": "5b546712171e5fd91fd0674e6aa37cc4da1dcda0",
+  "sha": "0f1ef94f7a769b1bcf86e1a503170391ac154f92",
   "w": 1432,
   "h": 86
  },
@@ -40,12 +40,12 @@
   "h": 86
  },
  "long@bone": {
-  "sha": "9e1635360ca1ed8760c88349fd59a91842f7d77b",
+  "sha": "5fc7075029265e18373cb159ba41af091bccd1b3",
   "w": 444,
   "h": 91
  },
  "long@catalog": {
-  "sha": "d84c94c663947753f1f4ef493730f49b5909320d",
+  "sha": "6f678614bbdef45aad00efb40da2a9b00100f031",
   "w": 444,
   "h": 91
  },
@@ -60,12 +60,12 @@
   "h": 91
  },
  "near-the-bottom-flips-above@bone": {
-  "sha": "83ef98953bd79c78f53812700b1b25625d40b957",
+  "sha": "f140941f1e44d84fbff846c48185514c26130040",
   "w": 1432,
   "h": 876
  },
  "near-the-bottom-flips-above@catalog": {
-  "sha": "7cf4132a9906ff93a6397139140527ac9d4a2b0d",
+  "sha": "27945b4b3c05f126dbaa746fc1fb4e4359967003",
   "w": 1432,
   "h": 876
  },
@@ -80,12 +80,12 @@
   "h": 876
  },
  "typical@bone": {
-  "sha": "68b27c58c45d8798462c9725ef4476e824851b1b",
+  "sha": "125a758c34362a76418a0e1e0471e9facc7016fe",
   "w": 1416,
   "h": 50
  },
  "typical@catalog": {
-  "sha": "99a6816a591b21e9d4e0ce6ac8cd5335c3ab61df",
+  "sha": "a2d8666cb3cae3968e4f18637bba88b457a5ab4c",
   "w": 1416,
   "h": 50
  },
