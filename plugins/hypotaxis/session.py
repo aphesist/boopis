@@ -98,6 +98,7 @@ class Runtime:
         provider_known: Callable[[str], bool] | None = None,
         delegation_backend: Callable[[], str | None] | None = None,
         active_parent: Callable[[], Any] | None = None,
+        redactor: Callable[[str], str] | None = None,
     ) -> None:
         self.ctx = ctx
         self._home = home
@@ -109,6 +110,7 @@ class Runtime:
         self.provider_known = provider_known or host.provider_known
         self.delegation_backend = delegation_backend or host.delegation_backend
         self.active_parent = active_parent or host.active_parent
+        self._redactor = redactor  # tests inject one; the product redacts through hx
 
     # ------------------------------------------------------------------ environment
 
@@ -245,15 +247,18 @@ class Runtime:
         return state.ledger
 
     def redact(self, text: str) -> str:
-        """``text`` redacted by hx (ADR-0016), for the ledger's free-text fields. Raises ``LedgerError`` when hx is
-        there but cannot do it, so the event is not written with a secret in it. With no hx binary at all, no tool
-        (pack, ship, exec, the gate) can have produced the text, so there is nothing to redact it with or from."""
+        """``text`` redacted by hx (ADR-0016), for the ledger's free-text fields. Fail closed: with hx there but
+        failing this raises ``LedgerError`` (the event is not written with a secret in it), and with no hx binary
+        the text is replaced by a marker that says how much was withheld. Nothing unredacted is ever returned."""
         from .errors import HypotaxisError
         from .util.redact import redact_text
 
+        if self._redactor is not None:
+            return self._redactor(text)
         client = self.hx_client()
         if client is None:
-            return text
+            _log.warning("the hx binary was not found, so %d characters of ledger free text were withheld", len(text))
+            return f"[withheld: redactor unavailable, {len(text)} chars]"
         try:
             return redact_text(client, text)
         except HypotaxisError as exc:
