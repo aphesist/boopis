@@ -61,7 +61,7 @@
     const hit = tokenCache.get(ground);
     if (hit && hit.key === key) return hit;
     const p = document.createElement('i');
-    p.style.cssText = 'position:absolute;left:-99px;top:0;width:1px;height:1px;pointer-events:none;visibility:hidden';
+    p.style.cssText = 'position:absolute;left:-99px;top:0;width:1px;height:1px;pointer-events:none;visibility:hidden;transition:none !important;animation:none !important';
     (ground === de ? de : ground).appendChild(p);
     const colors = new Set(['0,0,0,0']), lengths = new Set([0]), fs = new Set(), radii = new Set([0]), space = new Set([0]);
     const cs = getComputedStyle(p);
