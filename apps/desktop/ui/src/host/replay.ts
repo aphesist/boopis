@@ -28,7 +28,7 @@ export class ReplayHost implements HostBridge {
     const f = frame as { id?: number; method?: string; params?: unknown };
     if (f.method === undefined || f.id === undefined) return Promise.resolve();
     this.requests.push({ method: f.method, params: f.params });
-    queueMicrotask(() => { this.answer(f.id as number, f.method as string); });
+    queueMicrotask(() => { this.answer(f.id as number, f.method as string, (f.params as { session_id?: unknown } | undefined)?.session_id); });
     return Promise.resolve();
   }
   /** the host's own frames: a lost link and its return, for the reconnect tests */
@@ -43,12 +43,19 @@ export class ReplayHost implements HostBridge {
     const id = this.frames[i]?.frame['id'];
     return this.frames.find((r) => r.dir === 'out' && r.frame['id'] === id)?.frame['method'] as string | undefined;
   }
-  private answer(id: number, method: string): void {
-    const outs = this.frames.map((r, i) => ({ r, i })).filter((x) => x.r.dir === 'out' && x.r.frame['method'] === method);
-    const n = this.used.get(method) ?? 0;
+  private answer(id: number, method: string, sessionId: unknown): void {
+    let outs = this.frames.map((r, i) => ({ r, i })).filter((x) => x.r.dir === 'out' && x.r.frame['method'] === method);
+    /* a request about a session is answered with what the recording shows for that session; a session it never saw is not found */
+    const about = (x: { r: RecordedFrame }): unknown => (x.r.frame['params'] as { session_id?: unknown } | undefined)?.session_id;
+    if (typeof sessionId === 'string' && sessionId && outs.some((x) => about(x) !== undefined)) {
+      outs = outs.filter((x) => about(x) === sessionId);
+      if (!outs.length) { this.onFrame({ jsonrpc: '2.0', id, error: { code: 4004, message: method + ': session not found' } }); return; }
+    }
+    const key = method + '|' + String(sessionId ?? '');
+    const n = this.used.get(key) ?? 0;
     const pick = outs[Math.min(n, outs.length - 1)];
-    this.used.set(method, n + 1);
-    if (!pick) { this.onFrame({ jsonrpc: '2.0', id, error: { code: -32601, message: 'unknown method: ' + method + ' — not available on this Hermes backend', data: { reason: 'unknown_method' } } }); return; }
+    this.used.set(key, n + 1);
+    if (!pick) { this.onFrame({ jsonrpc: '2.0', id, error: { code: -32601, message: 'unknown method: ' + method + ' \u2014 not available on this Hermes backend', data: { reason: 'unknown_method' } } }); return; }
     const reqId = pick.r.frame['id'];
     const resIdx = this.frames.findIndex((r) => r.dir === 'in' && r.frame['id'] === reqId && ('result' in r.frame || 'error' in r.frame));
     const res = this.frames[resIdx]?.frame;

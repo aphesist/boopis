@@ -150,14 +150,20 @@ def priced(install: Any, tmp: Path, url: str, name: str, with_prices: bool) -> N
         ])  # fmt: skip
         turn(gw, sid, text)
         p = {"session_id": sid}
-        for m in ("session.list", "session.resume", "session.info", "session.context_breakdown"):
-            tolerant(gw, m, p if m != "session.list" else {"limit": 100})
+        tolerant(gw, "session.list", {"limit": 100})
         tolerant(gw, "session.list", {"limit": 100, "include_hidden": True})
         tolerant(gw, "mcp.servers.status", {})
-        for m in ("describe", "ledger.stats", "cascade.state", "checkpoint.list", "checkpoint.diff"):
-            tolerant(gw, "plugin.hypotaxis." + m, p)
-        tolerant(gw, "plugin.hypotaxis.ledger.tail", {**p, "since_seq": -1, "limit": 1000})
-        tolerant(gw, "plugin.hypotaxis.compat.inventory", {"cwd": str(proj)})
+        # the reads the panels make for a session, for the one that worked and (when there is one) the one that did not
+        for each in (sid, governed):
+            if not each:
+                continue
+            q = {"session_id": each}
+            for m in ("session.resume", "session.info", "session.context_breakdown"):
+                tolerant(gw, m, q)
+            for m in ("describe", "ledger.stats", "cascade.state", "checkpoint.list", "checkpoint.diff"):
+                tolerant(gw, "plugin.hypotaxis." + m, q)
+            tolerant(gw, "plugin.hypotaxis.ledger.tail", {**q, "since_seq": -1, "limit": 1000})
+            tolerant(gw, "plugin.hypotaxis.compat.inventory", {"cwd": str(proj)})
         tolerant(gw, "complete.path", {"session_id": sid, "cwd": str(proj), "word": "@file:src/"})
         tolerant(gw, "complete.path", {"session_id": sid, "cwd": str(proj), "word": "@zzz-nothing"})
         for m in ("session.branch", "session.compress"):  # the probe the UI makes to learn what this Hermes has

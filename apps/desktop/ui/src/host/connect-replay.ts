@@ -5,7 +5,9 @@ import { createLiveProvider } from './live-provider';
 import { ReplayHost, loadFrames } from './replay';
 
 export async function connectReplay(name: string): Promise<DataProvider> {
-  const client = new GatewayClient(new ReplayHost(await loadFrames(name)));
+  const host = new ReplayHost(await loadFrames(name));
+  (window as unknown as Record<string, unknown>)['__hxReplay'] = host; // the smoke reads what the UI asked for
+  const client = new GatewayClient(host);
   await client.connect();
   return createLiveProvider({ client });
 }

@@ -53,11 +53,16 @@ export function reportAttention(source: string, count: number, tab: string | und
   else attention.delete(source);
   updateAttentionDots();
 }
+/** what waits on the user is counted on the tab it belongs to: a bot's approval on Bots, the agent's own (an approval or a blank) on Session */
+const waitTab = (w: { kind: string; bot?: string | undefined }): Tab => (w.kind === 'approval' && w.bot ? 'bots' : 'session');
 export function seedAttention(): void {
-  for (const w of data().waits.snapshot()) {
-    if (w.kind === 'approval') attention.set('seed:' + w.bot, { count: 1, tab: 'bots', ids: null });
-    else attention.set('seed:blank', { count: 1, tab: 'session', ids: null });
-  }
+  for (const w of data().waits.snapshot()) attention.set('seed:' + w.id, { count: 1, tab: waitTab(w), ids: null });
+  /* a wait that arrives later (a live approval or blank) and one that is decided */
+  data().waits.subscribe((ev) => {
+    if (ev.type === 'added') attention.set('seed:' + ev.wait.id, { count: 1, tab: waitTab(ev.wait), ids: null });
+    else attention.delete('seed:' + ev.id);
+    updateAttentionDots();
+  });
 }
 export function attentionFor(tab: Tab): number {
   const owner = attention.get(OWNER[tab]);
