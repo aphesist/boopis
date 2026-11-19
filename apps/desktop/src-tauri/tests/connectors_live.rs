@@ -308,7 +308,7 @@ async fn adding_testing_switching_and_removing_a_stdio_server_through_a_real_her
         ("command", "python3"),
         ("args", &format!("{}\n--no-op", r.script)),
     ]);
-    let review = Engine::review(&request).unwrap();
+    let review = r.engine.review(&request).await.unwrap();
     assert!(
         review
             .form
@@ -321,7 +321,7 @@ async fn adding_testing_switching_and_removing_a_stdio_server_through_a_real_her
     // Add, then Hermes's own connection test, with its result.
     let report = r
         .engine
-        .install(&request, &review.plan_hash, &BTreeMap::new())
+        .install(&request, &review.plan_hash, &BTreeMap::new(), None)
         .await
         .expect("installs");
     let test = report.test.expect("a test ran");
@@ -340,6 +340,12 @@ async fn adding_testing_switching_and_removing_a_stdio_server_through_a_real_her
         config_text(&r)
     );
 
+    let ops = GatewayMcp::new(r.sup.clone(), r.hermes_home.clone());
+    assert_eq!(
+        ops.running_turns().await.unwrap(),
+        0,
+        "Hermes's own `session.active_list`: no session has work in flight"
+    );
     let listed = r.engine.list().await.unwrap();
     let me = listed.iter().find(|i| i.name == "fakemcp").expect("listed");
     assert_eq!((me.command.as_deref(), me.enabled), (Some("python3"), true));
@@ -348,7 +354,7 @@ async fn adding_testing_switching_and_removing_a_stdio_server_through_a_real_her
     // The same name again is Hermes's refusal in a stable code, and the first is untouched.
     let again = r
         .engine
-        .install(&request, &review.plan_hash, &BTreeMap::new())
+        .install(&request, &review.plan_hash, &BTreeMap::new(), None)
         .await
         .unwrap_err();
     assert_eq!(again.code(), "hx.connectors.exists", "{again}");
@@ -425,7 +431,16 @@ async fn a_key_reaches_the_server_through_the_keychain_and_hermes_secret_source_
         ),
         ("key_env", "FAKE_API_KEY"),
     ]);
-    let review = Engine::review(&request).unwrap();
+    let review = r.engine.review(&request).await.unwrap();
+    assert!(
+        review
+            .form
+            .contents
+            .iter()
+            .any(|(k, v)| k == "Restart" && v.contains("No session has a turn running")),
+        "the review says it restarts Hermes: {:?}",
+        review.form.contents
+    );
     assert_eq!(
         review.form.schema.0["properties"]["key"]["x-secret-ref"],
         "secret://connector.keyed/key"
@@ -434,7 +449,7 @@ async fn a_key_reaches_the_server_through_the_keychain_and_hermes_secret_source_
     let secrets: BTreeMap<String, String> = [("key".to_owned(), KEY.to_owned())].into();
     let report = r
         .engine
-        .install(&request, &review.plan_hash, &secrets)
+        .install(&request, &review.plan_hash, &secrets, None)
         .await
         .expect("installs");
     assert!(
@@ -511,7 +526,7 @@ async fn a_key_reaches_the_server_through_the_keychain_and_hermes_secret_source_
     );
     let secrets: BTreeMap<String, String> = [("key".to_owned(), KEY.to_owned())].into();
     r.engine
-        .install(&request, &review.plan_hash, &secrets)
+        .install(&request, &review.plan_hash, &secrets, None)
         .await
         .expect("installs again");
     let gone = r.engine.remove("keyed", true).await.unwrap();
@@ -662,7 +677,7 @@ async fn oauth_sign_in_runs_through_hermes_own_flow_and_its_loopback_listener() 
     };
     let server = FakeOauth::start();
     let request = req_url("oauthfake", &format!("{}/mcp", server.url), "oauth");
-    let review = Engine::review(&request).unwrap();
+    let review = r.engine.review(&request).await.unwrap();
     assert!(
         review
             .form
@@ -672,7 +687,7 @@ async fn oauth_sign_in_runs_through_hermes_own_flow_and_its_loopback_listener() 
     );
     let report = r
         .engine
-        .install(&request, &review.plan_hash, &BTreeMap::new())
+        .install(&request, &review.plan_hash, &BTreeMap::new(), None)
         .await
         .expect("installs");
     assert!(

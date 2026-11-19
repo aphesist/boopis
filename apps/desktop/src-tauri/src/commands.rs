@@ -17,7 +17,8 @@ use crate::config::Limits;
 use crate::connectors::catalog::{self, CatalogEntry};
 use crate::connectors::{
     Engine, GatewayMcp, InstallReport as ConnectorInstallReport, Installed, LoginReport, Opener,
-    RemoveReport, Request, Review, SignInReport, SourceKind, TestReport, plan as connector_plan,
+    RemoveReport, Request, RestartWhen, Review, SignInReport, SourceKind, TestReport,
+    plan as connector_plan,
 };
 use crate::error::{Error, HostError, Result};
 use crate::gateway::reconnect::Phase;
@@ -601,14 +602,38 @@ fn connector_engine(
         return Ok(e.clone());
     }
     let ops = GatewayMcp::new(state.supervisor.clone(), home.clone());
-    let engine = Arc::new(Engine::new(
-        Arc::new(ops),
-        state.secrets.clone(),
-        Arc::new(AppOpener(app.clone())),
-        state.limits.clone(),
-    ));
+    let events = app.clone();
+    let engine = Arc::new(
+        Engine::new(
+            Arc::new(ops),
+            state.secrets.clone(),
+            Arc::new(AppOpener(app.clone())),
+            state.limits.clone(),
+        )
+        .with_notifier(Arc::new(move |done| {
+            let event = ConnectorRestartEvent {
+                names: done.names,
+                ok: done.ok,
+                message: done.message,
+            };
+            if let Err(e) = tauri_specta::Event::emit(&event, &events) {
+                tracing::debug!(error = %e, "could not emit the connector restart notice");
+            }
+        })),
+    );
     engines.insert(home, engine.clone());
     Ok(engine)
+}
+
+/// A restart that waited for idle sessions has ended: Hermes read the key (or could not be restarted). The app shows it as a notice.
+#[derive(Debug, Clone, Serialize, Type, tauri_specta::Event)]
+pub struct ConnectorRestartEvent {
+    /// The connectors that were waiting for it.
+    pub names: Vec<String>,
+    /// Hermes restarted and read their keys.
+    pub ok: bool,
+    /// What to tell the user, including each connector's connection test.
+    pub message: String,
 }
 
 /// The curated collection, for the picker. Data compiled into the app; asks Hermes nothing.
@@ -635,8 +660,15 @@ pub fn connector_inputs(
 /// needs, the config diff) and the hash the install must name. Validates the request; changes nothing.
 #[tauri::command]
 #[specta::specta]
-pub fn connector_review(request: Request) -> std::result::Result<Review, HostError> {
-    Ok(Engine::review(&request)?)
+pub async fn connector_review(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    profile: Option<String>,
+    request: Request,
+) -> std::result::Result<Review, HostError> {
+    Ok(connector_engine(&app, &state, profile)?
+        .review(&request)
+        .await?)
 }
 
 /// Install what the review showed. `secrets` carries the key fields' values to the keychain and no further.
@@ -649,9 +681,12 @@ pub async fn connector_install(
     request: Request,
     plan_hash: String,
     secrets: std::collections::BTreeMap<String, String>,
+    restart: Option<RestartWhen>,
 ) -> std::result::Result<ConnectorInstallReport, HostError> {
     let engine = connector_engine(&app, &state, profile)?;
-    Ok(engine.install(&request, &plan_hash, &secrets).await?)
+    Ok(engine
+        .install(&request, &plan_hash, &secrets, restart)
+        .await?)
 }
 
 /// The MCP servers Hermes has, with their state and the keychain references boopis holds for each.
@@ -735,17 +770,18 @@ pub fn connector_signin_cancel(
     Ok(())
 }
 
-/// Run a provider's own sign-in command (`claude auth login`) exactly as the card showed it: a program and an argument
-/// vector, never a shell string. Reports the exit status and the end of its output.
+/// Run a provider's own sign-in command, by **provider id**: the host maps the id to a program and argument vector of its own
+/// (`apps/shared/data/logins.json`, or the named collection entry's reviewed `login`) and never runs what a form's schema says.
+/// An id outside the table is refused. Reports the exit status and the end of the output.
 #[tauri::command]
 #[specta::specta]
 pub async fn connector_login(
     app: AppHandle,
     state: State<'_, AppState>,
-    command: String,
-    args: Vec<String>,
+    provider: String,
+    connector: Option<String>,
 ) -> std::result::Result<LoginReport, HostError> {
     Ok(connector_engine(&app, &state, None)?
-        .login(&command, &args)
+        .login(&provider, connector.as_deref())
         .await?)
 }

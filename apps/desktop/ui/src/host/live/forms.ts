@@ -4,7 +4,7 @@
    Secrets: `submit` splits them off (`splitSecrets`), stores each with the host's keychain (`secret_set`), and sends the
    plugin `provided: [field, ...]` only. A secret's value is in no frame, no event, no log and no error message. */
 import { logger } from '../../core/log';
-import type { FieldSchema, FormOutcome, FormSpec, FormsSource, FormStatus, PickerItem, PickerKind } from '../../data';
+import type { FormOutcome, FormSpec, FormsSource, FormStatus, PickerItem, PickerKind } from '../../data';
 import { inTauri } from '../bridge';
 import type { GatewayClient, GatewayEvent } from '../gateway';
 import { fromFreeTierLimit, fromGatewayEvent, fromPluginEvent, replyFor, splitSecrets } from '../forms';
@@ -13,6 +13,7 @@ import type { ErrorSurface } from '../../vendor/hermes-shared/gateway-contract.g
 import type { FormModel } from '../forms';
 import type { SecretsBridge } from '../secrets';
 import type { ConnectorLogin, ConnectorsBridge } from '../connectors-bridge';
+import { loginFor, signinKnown } from '../logins';
 
 const log = logger('forms');
 
@@ -32,7 +33,8 @@ export interface FormsOptions {
   /** ends a sign-in that is running (the user cancelled it) */
   cancelSignin?: ((s: XSignin) => Promise<void>) | null;
 }
-export type XSignin = NonNullable<FieldSchema['x-signin']>;
+export type { XSignin } from '../logins';
+import type { XSignin } from '../logins';
 export interface FormsHost {
   source: FormsSource;
   /** an event that may be a form's; true when it was */
@@ -107,6 +109,8 @@ export function createFormsHost(opts: FormsOptions): FormsHost {
       const s = open.get(id)?.spec.schema.properties?.[field]?.['x-signin'];
       if (s) await opts.cancelSignin?.(s);
     },
+    /* what the host would run for a provider the form names, from the host's own table: display only, the host decides again */
+    login: (s: XSignin) => { const l = s.server || s.command !== undefined || s.args !== undefined ? null : loginFor(s.provider); return l ? { known: true, line: l.line } : { known: !!s.server }; },
     can: { signin: !!opts.signin, upload: false, folder: !!opts.pickFolder },
     pickerItems: (_kind: PickerKind): readonly PickerItem[] => [],
     pickFolder: () => (opts.pickFolder ? opts.pickFolder() : Promise.resolve(null))
@@ -166,16 +170,15 @@ export function loginFailure(r: ConnectorLogin): string {
   const last = r.output.at(-1);
   return `${r.command_line} ended with ${r.code === null ? 'no exit code' : 'exit code ' + String(r.code)}.` + (last ? ' It said: ' + last : '');
 }
-/** Run a sign-in field in the host: a connector's OAuth through Hermes, or the provider's own login command, as shown. */
+/** Run a sign-in field in the host: a connector's OAuth through Hermes, or the host's own sign-in for a provider id in its table. A form
+    never chooses what runs: a command or arguments in the field are refused here without asking the host, and the host refuses a
+    provider it does not know again. */
 export async function hostSignin(s: XSignin, bridge?: ConnectorsBridge): Promise<void> {
+  if (!signinKnown(s)) throw new Error('This sign-in is not one boopis knows.');
   const b = bridge ?? (await import('../connectors-bridge')).tauriConnectorsBridge();
   if (s.server) { await b.signin(s.server); return; }
-  if (s.command) {
-    const r = await b.login(s.command, s.args ?? []);
-    if (!r.ok) throw new Error(loginFailure(r));
-    return;
-  }
-  throw new Error('This sign-in names neither a connector nor a command, so there is nothing to run.');
+  const r = await b.login(s.provider ?? '');
+  if (!r.ok) throw new Error(loginFailure(r));
 }
 export async function hostCancelSignin(s: XSignin, bridge?: ConnectorsBridge): Promise<void> {
   if (!s.server) return;

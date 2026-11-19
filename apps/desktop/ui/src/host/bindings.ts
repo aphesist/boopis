@@ -86,9 +86,9 @@ export const commands = {
 	 *  What an install would add, exactly: the review form (command and arguments, the hosts it reaches, the pin, the keys it
 	 *  needs, the config diff) and the hash the install must name. Validates the request; changes nothing.
 	 */
-	connectorReview: (request: ConnectorRequest, options?: InvokeOptions) => __TAURI_INVOKE<ConnectorReview_Serialize>("connector_review", { request }, options),
+	connectorReview: (profile: string | null, request: ConnectorRequest, options?: InvokeOptions) => __TAURI_INVOKE<ConnectorReview_Serialize>("connector_review", { profile, request }, options),
 	/**  Install what the review showed. `secrets` carries the key fields' values to the keychain and no further. */
-	connectorInstall: (profile: string | null, request: ConnectorRequest, planHash: string, secrets: { [key in string]: string }, options?: InvokeOptions) => __TAURI_INVOKE<ConnectorInstall_Serialize>("connector_install", { profile, request, planHash, secrets }, options),
+	connectorInstall: (profile: string | null, request: ConnectorRequest, planHash: string, secrets: { [key in string]: string }, restart: ConnectorRestart | null, options?: InvokeOptions) => __TAURI_INVOKE<ConnectorInstall_Serialize>("connector_install", { profile, request, planHash, secrets, restart }, options),
 	/**  The MCP servers Hermes has, with their state and the keychain references boopis holds for each. */
 	connectorList: (profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<ConnectorInfo_Serialize[]>("connector_list", { profile }, options),
 	/**  Ask Hermes to connect to a server and list its tools. */
@@ -105,10 +105,11 @@ export const commands = {
 	/**  Cancel an open sign-in to `name`. */
 	connectorSigninCancel: (profile: string | null, name: string, options?: InvokeOptions) => __TAURI_INVOKE<null>("connector_signin_cancel", { profile, name }, options),
 	/**
-	 *  Run a provider's own sign-in command (`claude auth login`) exactly as the card showed it: a program and an argument
-	 *  vector, never a shell string. Reports the exit status and the end of its output.
+	 *  Run a provider's own sign-in command, by **provider id**: the host maps the id to a program and argument vector of its own
+	 *  (`apps/shared/data/logins.json`, or the named collection entry's reviewed `login`) and never runs what a form's schema says.
+	 *  An id outside the table is refused. Reports the exit status and the end of the output.
 	 */
-	connectorLogin: (command: string, args: string[], options?: InvokeOptions) => __TAURI_INVOKE<ConnectorLogin_Serialize>("connector_login", { command, args }, options),
+	connectorLogin: (provider: string, connector: string | null, options?: InvokeOptions) => __TAURI_INVOKE<ConnectorLogin_Serialize>("connector_login", { provider, connector }, options),
 	/**
 	 *  Restart the app, so the choices read at startup (the GPU, `BOOPIS_FPS`, the renderer) apply. The webview's GPU is
 	 *  fixed when the process starts; this is the only way to change it.
@@ -119,6 +120,7 @@ export const commands = {
 /** Events */
 export const events = {
 	connectionStateEvent: makeEvent<ConnectionStateEvent_Serialize, ConnectionStateEvent_Deserialize>("connection-state-event"),
+	connectorRestartEvent: makeEvent<ConnectorRestartEvent, ConnectorRestartEvent>("connector-restart-event"),
 	setupProgress: makeEvent<SetupProgress, SetupProgress>("setup-progress"),
 };
 
@@ -378,6 +380,8 @@ export type ConnectorInstall_Deserialize = {
 	signin_needed: boolean,
 	/**  Hermes was restarted to read the keys. */
 	restarted: boolean,
+	/**  The restart waits until no session has a turn running; the host does it then and says so. */
+	restart_pending: boolean,
 	/**  Plain lines the user should know. */
 	notes: string[],
 };
@@ -394,6 +398,8 @@ export type ConnectorInstall_Serialize = {
 	signin_needed: boolean,
 	/**  Hermes was restarted to read the keys. */
 	restarted: boolean,
+	/**  The restart waits until no session has a turn running; the host does it then and says so. */
+	restart_pending: boolean,
 	/**  Plain lines the user should know. */
 	notes: string[],
 };
@@ -450,6 +456,23 @@ export type ConnectorRequest = {
 	source: ConnectorSource,
 	/**  The values. */
 	values: { [key in string]: string },
+};
+
+/**  When Hermes restarts to read a key that was just given. */
+export type ConnectorRestart = 
+/**  At once, ending any turn that is running in an open session. */
+"now" | 
+/**  When no session has a turn running; the host waits and then restarts. */
+"when_idle";
+
+/**  A restart that waited for idle sessions has ended: Hermes read the key (or could not be restarted). The app shows it as a notice. */
+export type ConnectorRestartEvent = {
+	/**  The connectors that were waiting for it. */
+	names: string[],
+	/**  Hermes restarted and read their keys. */
+	ok: boolean,
+	/**  What to tell the user, including each connector's connection test. */
+	message: string,
 };
 
 /**  A plan the host shows: the review form and the hash to send back with the install. */

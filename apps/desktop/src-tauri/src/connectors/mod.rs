@@ -12,6 +12,7 @@
 
 pub mod catalog;
 pub mod engine;
+pub mod logins;
 pub mod ops;
 pub mod plan;
 pub mod validate;
@@ -19,6 +20,9 @@ pub mod validate;
 #[cfg(test)]
 mod tests;
 
-pub use engine::{Engine, InstallReport, LoginReport, Opener, RemoveReport, SignInReport};
+pub use engine::{
+    Engine, InstallReport, LoginReport, Opener, RemoveReport, RestartDone, RestartWhen,
+    SignInReport,
+};
 pub use ops::{GatewayMcp, Installed, McpOps, TestReport, ToolInfo};
 pub use plan::{Request, Review, SourceKind};

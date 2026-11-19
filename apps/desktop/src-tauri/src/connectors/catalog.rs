@@ -91,6 +91,9 @@ pub struct Variant {
     pub credentials: Vec<Credential>,
     /// What it reaches.
     pub network: Network,
+    /// A sign-in command of this variant, reviewed with the entry (the provider id a form names is its `id`).
+    #[serde(default)]
+    pub login: Option<super::logins::Login>,
 }
 
 /// `auth` of a variant.
@@ -359,6 +362,9 @@ mod tests {
                         }
                     }
                     other => panic!("{} {}: transport {other}", c.id, v.id),
+                }
+                if let Some(login) = &v.login {
+                    login.check().unwrap();
                 }
                 for s in &v.setup {
                     super::super::validate::env_name(&s.env).unwrap();

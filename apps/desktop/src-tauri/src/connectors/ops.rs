@@ -119,8 +119,15 @@ pub trait McpOps: Send + Sync {
     async fn config_set(&self, key: &str, value: &str) -> Result<()>;
     /// Remove a configuration value; one that is not set is not an error.
     async fn config_unset(&self, key: &str) -> Result<()>;
-    /// Stop the gateway and start it again, so it reads its secret sources.
-    async fn restart_gateway(&self) -> Result<()>;
+    /// Stop the gateway and start it again, so it reads its secret sources. Without `interrupt` a gateway with live work is left
+    /// alone and the answer is `hx.connectors.busy`; with it live work is ended (`gateway stop --yes`).
+    async fn restart_gateway(&self, interrupt: bool) -> Result<()>;
+    /// How many sessions have work in flight (`session.active_list`: any status but `idle`). An error when Hermes cannot say.
+    async fn running_turns(&self) -> Result<u32>;
+    /// The Hermes program and its home, for a login entry that runs Hermes's own command. `None` where the double has none.
+    async fn hermes_program(&self) -> Result<Option<(PathBuf, PathBuf)>> {
+        Ok(None)
+    }
     /// Begin Hermes's own OAuth flow (`mcp.servers.oauth.start`): Hermes listens on loopback itself.
     async fn oauth_start(&self, name: &str) -> Result<OAuthStart>;
     /// Ask how the flow stands.
@@ -255,6 +262,18 @@ pub fn merge_servers(list: &Value, status: &Value) -> Vec<Installed> {
         .collect()
 }
 
+/// The sessions of a `session.active_list` answer that are doing something (`working`, `waiting`, `streaming`, `starting`,
+/// `resuming`): anything but `idle`. A row with no status counts, since the host cannot tell it is idle.
+#[must_use]
+pub fn count_running(answer: &Value) -> u32 {
+    let n = answer["sessions"].as_array().map_or(0, |rows| {
+        rows.iter()
+            .filter(|r| r["status"].as_str() != Some("idle"))
+            .count()
+    });
+    u32::try_from(n).unwrap_or(u32::MAX)
+}
+
 /// A `mcp.servers.test` answer as a report.
 #[must_use]
 pub fn test_report(a: &Value) -> TestReport {
@@ -362,8 +381,18 @@ impl McpOps for GatewayMcp {
         Ok(())
     }
 
-    async fn restart_gateway(&self) -> Result<()> {
-        self.sup.restart(&self.home).await.map(|_| ())
+    async fn restart_gateway(&self, interrupt: bool) -> Result<()> {
+        self.sup.restart(&self.home, interrupt).await.map(|_| ())
+    }
+
+    async fn running_turns(&self) -> Result<u32> {
+        let a = self.ask("session.active_list", &json!({})).await?;
+        Ok(count_running(&a))
+    }
+
+    async fn hermes_program(&self) -> Result<Option<(PathBuf, PathBuf)>> {
+        let info = self.sup.info().await?;
+        Ok(Some((info.binary, self.home.clone())))
     }
 
     async fn oauth_start(&self, name: &str) -> Result<OAuthStart> {
@@ -456,6 +485,14 @@ mod tests {
         );
         assert!(r.ok && !r.signin_needed);
         assert_eq!(r.tools[0].name, "t");
+    }
+
+    #[test]
+    fn only_an_idle_session_is_not_running() {
+        let a = json!({"sessions": [{"id": "a", "status": "idle"}, {"id": "b", "status": "working"}, {"id": "c", "status": "waiting"}, {"id": "d"}]});
+        assert_eq!(count_running(&a), 3);
+        assert_eq!(count_running(&json!({"sessions": []})), 0);
+        assert_eq!(count_running(&json!({})), 0);
     }
 
     #[test]

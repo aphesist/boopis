@@ -25,7 +25,7 @@ const reviewFor = (name: string, secretField?: string): ConnectorReview => ({
 
 const installed = (o: Partial<ConnectorInstall> = {}): ConnectorInstall => ({ name: 'acme', steps: [{ id: 'add', title: 'Added to Hermes', state: 'done', detail: 'through Hermes', code: null }], test: { ok: true, tools: [{ name: 'echo', description: '' }], error: null, prompts: 0, resources: 0, oauth_needed: false, signin_needed: false }, signin_needed: false, restarted: false, notes: ['New sessions use it.'], ...o }) as unknown as ConnectorInstall;
 
-interface Fake extends ConnectorsBridge { calls: string[]; servers: ConnectorInfo[]; installs: { request: ConnectorRequest; hash: string; secrets: Record<string, string> }[]; reviews: ConnectorRequest[]; failReview: string | null; failInstall: string | null; report: ConnectorInstall }
+interface Fake extends ConnectorsBridge { calls: string[]; servers: ConnectorInfo[]; installs: { request: ConnectorRequest; hash: string; secrets: Record<string, string>; restart: string | undefined }[]; reviews: ConnectorRequest[]; failReview: string | null; failInstall: string | null; report: ConnectorInstall }
 function fake(servers: ConnectorInfo[] = []): Fake {
   const f: Fake = {
     calls: [], servers, installs: [], reviews: [], failReview: null, failInstall: null, report: installed(),
@@ -34,7 +34,7 @@ function fake(servers: ConnectorInfo[] = []): Fake {
       { id: 'hosted', label: 'Hosted', summary: 'Firecrawl runs it.', reaches: 'mcp.firecrawl.dev', pinned: null, default: false }] }]),
     inputs: (source, connector, variant) => { f.calls.push(`inputs:${source}:${connector ?? ''}:${variant ?? ''}`); return Promise.resolve({ form_id: 'connector.' + source, kind: 'connector', title: 'Add a connector by ' + source, body: 'Inputs.', sensitive: false, origin: 'host', schema: { type: 'object', properties: { name: { type: 'string', title: 'Name' }, url: { type: 'string', title: 'URL' } }, required: ['name'] }, submit: { label: 'Review', hold: false }, cancel: { label: 'Not now' }, diff: [], contents: [], pinned: null, effect: null } as never); },
     review: (request) => { f.reviews.push(request); return f.failReview ? Promise.reject(new Error(f.failReview)) : Promise.resolve(reviewFor(request.values['name'] ?? 'x', request.values['name'] === 'keyed' ? 'key' : undefined)); },
-    install: (request, hash, secrets) => { f.installs.push({ request, hash, secrets: { ...secrets } }); return f.failInstall ? Promise.reject(new Error(f.failInstall)) : Promise.resolve(f.report); },
+    install: (request, hash, secrets, restart) => { f.installs.push({ request, hash, secrets: { ...secrets }, restart }); return f.failInstall ? Promise.reject(new Error(f.failInstall)) : Promise.resolve(f.report); },
     list: () => { f.calls.push('list'); return Promise.resolve(f.servers); },
     test: (name) => { f.calls.push('test:' + name); return Promise.resolve({ ok: true, tools: [{ name: 'echo', description: '' }, { name: 'ping', description: '' }], error: null, prompts: 0, resources: 0, oauth_needed: false, signin_needed: false } as never); },
     setEnabled: (name, on) => { f.calls.push(`enable:${name}:${String(on)}`); return Promise.resolve(); },
@@ -244,11 +244,32 @@ describe('adding', () => {
     expect(panel.querySelector('[data-secret="key"]'), 'the key is a secret field of the review').toBeTruthy();
     await formsHost().submit('connector.review', { values: {}, secrets: { key: SECRET } });
     await tick(5);
-    expect(f.installs).toEqual([{ request: { source: 'command', values: { name: 'keyed' } }, hash: 'h-keyed', secrets: { key: SECRET } }]);
+    expect(f.installs).toEqual([{ request: { source: 'command', values: { name: 'keyed' } }, hash: 'h-keyed', secrets: { key: SECRET }, restart: undefined }]);
     expect(panel.textContent).toContain('keyed is ready');
     expect(panel.textContent).toContain('Hermes connected and found 1 tool: echo.');
     expect(panel.textContent).not.toContain(SECRET);
     expect(panel.querySelector('[aria-live=polite]')?.textContent).not.toContain(SECRET);
+  });
+
+  it('sends the user\'s choice of when to restart Hermes with the install, and says plainly when it waits for idle sessions', async () => {
+    const f = fake();
+    f.report = installed({ name: 'keyed', restart_pending: true, test: null, steps: [{ id: 'restart', title: 'Hermes restart', state: 'pending', detail: 'waits until no session has a turn running; boopis restarts it then and tells you', code: null }] as never } as never);
+    const panel = await toReview(f, 'keyed');
+    await formsHost().submit('connector.review', { values: { restart: 'when_idle' }, secrets: { key: SECRET } });
+    await tick(5);
+    expect(f.installs[0]?.restart).toBe('when_idle');
+    expect(panel.textContent).toContain('waits until no session has a turn running');
+    await formsHost().submit('connector.review', { values: { restart: 'now' }, secrets: { key: SECRET } }).catch(() => undefined);
+    expect(f.installs[1]?.restart).toBe('now');
+    await formsHost().submit('connector.review', { values: { restart: 'nonsense' }, secrets: { key: SECRET } }).catch(() => undefined);
+    expect(f.installs[2]?.restart, 'only the two choices the host knows are sent').toBeUndefined();
+  });
+
+  it('shows the host\'s "choose when" refusal on the card and sends nothing more', async () => {
+    const f = fake();
+    f.failInstall = '2 sessions have a turn running. Installing the key restarts Hermes, which would end it: choose to restart now, or when no turn is running.';
+    await toReview(f, 'keyed');
+    await expect(formsHost().submit('connector.review', { values: {}, secrets: { key: SECRET } })).rejects.toThrow('choose to restart now, or when no turn is running');
   });
 
   it('shows an install that Hermes refused on the card, and a name that is taken, without the key', async () => {

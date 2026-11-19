@@ -528,9 +528,17 @@ fn catalog_http(
     Ok(())
 }
 
-/// The review form: the contents, the diff, the pin, and a field for each key.
+/// What the review says about the restart a key brings. Present only when the plan has a key.
+#[derive(Debug, Clone, Copy)]
+pub struct RestartInfo {
+    /// How many sessions have a turn running; `None` when Hermes could not say.
+    pub running: Option<u32>,
+}
+
+/// The review form: the contents, the diff, the pin, a field for each key, and, when the install restarts Hermes while a turn
+/// may be running, the choice of when.
 #[must_use]
-pub fn review_form(plan: &Plan) -> Form {
+pub fn review_form(plan: &Plan, restart: Option<RestartInfo>) -> Form {
     let mut props = Map::new();
     let mut required = Vec::new();
     for s in &plan.secrets {
@@ -548,6 +556,38 @@ pub fn review_form(plan: &Plan) -> Form {
             required.push(json!(s.field));
         }
     }
+    let mut contents = plan.contents.clone();
+    if let Some(r) = restart {
+        let optional = plan.secrets.iter().all(|s| s.optional);
+        let lead = if optional {
+            "If you give a key, boopis restarts Hermes to load it."
+        } else {
+            "boopis restarts Hermes to load the key."
+        };
+        let tail = match r.running {
+            Some(0) => " No session has a turn running, so it restarts at once.".to_owned(),
+            Some(n) => format!(
+                " {n} session{} {} a turn running, and a restart would end {}: you choose below.",
+                if n == 1 { "" } else { "s" },
+                if n == 1 { "has" } else { "have" },
+                if n == 1 { "it" } else { "them" }
+            ),
+            None => " boopis could not ask Hermes whether a turn is running, so you choose below."
+                .to_owned(),
+        };
+        contents.push(("Restart".to_owned(), format!("{lead}{tail}")));
+        if r.running != Some(0) {
+            props.insert(
+                "restart".into(),
+                json!({
+                    "type": "string", "title": "Restart Hermes", "enum": ["when_idle", "now"],
+                    "enumNames": ["Install, restart when idle", "Install and restart now"], "default": "when_idle",
+                    "description": "When idle: the key is saved now and boopis restarts Hermes the moment no session has a turn running, then tests it. Now: it ends the turns that are running."
+                }),
+            );
+            required.push(json!("restart"));
+        }
+    }
     let schema = json!({"type": "object", "properties": props, "required": required});
     let mut f = Form::new(
         "connector.review",
@@ -559,7 +599,7 @@ pub fn review_form(plan: &Plan) -> Form {
     f.submit = crate::commands::Json(json!({"label": "Install", "hold": true}));
     f.cancel = crate::commands::Json(json!({"label": "Not now"}));
     f.diff.clone_from(&plan.diff);
-    f.contents.clone_from(&plan.contents);
+    f.contents = contents;
     f.pinned.clone_from(&plan.pinned);
     f.effect = Some(
         "Adds it to Hermes's MCP servers through Hermes, then tests the connection. You can switch it off or remove it in Settings, Connectors."
@@ -575,7 +615,7 @@ pub fn review_form(plan: &Plan) -> Form {
 pub fn review(request: &Request) -> Result<Review> {
     let plan = build(request, None)?;
     Ok(Review {
-        form: review_form(&plan),
+        form: review_form(&plan, None),
         plan_hash: plan.hash.clone(),
         name: plan.name,
     })

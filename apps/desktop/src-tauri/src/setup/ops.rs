@@ -165,7 +165,7 @@ impl HermesOps for CliOps {
         // `gateway stop` refuses while a turn is live without --yes; setup runs before any work, so the supervisor passes it.
         // It waits for the old gateway to go before it starts the new one, so the new one is served its keys
         // (`Supervisor::restart`).
-        self.sup.restart(&self.home).await.map(|_| ())
+        self.sup.restart(&self.home, true).await.map(|_| ())
     }
 
     async fn free_tier_status(&self) -> Result<FreeTier> {

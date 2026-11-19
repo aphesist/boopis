@@ -77,7 +77,11 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::connector_login,
             commands::app_restart,
         ])
-        .events(collect_events![ConnectionStateEvent, setup::SetupProgress])
+        .events(collect_events![
+            ConnectionStateEvent,
+            setup::SetupProgress,
+            commands::ConnectorRestartEvent
+        ])
 }
 
 /// Write the TypeScript bindings to `path`.

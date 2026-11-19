@@ -19,6 +19,7 @@ use tokio::io::AsyncReadExt;
 use tokio::process::Command;
 use tokio_util::sync::CancellationToken;
 
+use super::logins::{HERMES_PROGRAM, LoginTable};
 use super::ops::{Installed, McpOps, TestReport};
 use super::plan::{self, Request, Review};
 use super::validate;
@@ -38,6 +39,30 @@ pub trait Opener: Send + Sync {
     fn open(&self, url: &str) -> Result<()>;
 }
 
+/// When Hermes restarts to read a key that was just given.
+#[derive(Debug, Clone, Copy, serde::Deserialize, Type, PartialEq, Eq)]
+#[serde(rename_all = "snake_case", rename = "ConnectorRestart")]
+pub enum RestartWhen {
+    /// At once, ending any turn that is running in an open session.
+    Now,
+    /// When no session has a turn running; the host waits and then restarts.
+    WhenIdle,
+}
+
+/// A restart that waited for the sessions to be idle, and how it went.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RestartDone {
+    /// The connectors that were waiting for it.
+    pub names: Vec<String>,
+    /// Hermes restarted and read their keys.
+    pub ok: bool,
+    /// What to tell the user.
+    pub message: String,
+}
+
+/// Told when a deferred restart ends (the app shows it as a notice).
+pub type Notifier = Arc<dyn Fn(RestartDone) + Send + Sync>;
+
 /// What an install did.
 #[derive(Debug, Clone, Serialize, Type)]
 #[serde(rename = "ConnectorInstall")]
@@ -52,6 +77,8 @@ pub struct InstallReport {
     pub signin_needed: bool,
     /// Hermes was restarted to read the keys.
     pub restarted: bool,
+    /// The restart waits until no session has a turn running; the host does it then and says so.
+    pub restart_pending: bool,
     /// Plain lines the user should know.
     pub notes: Vec<String>,
 }
@@ -107,6 +134,10 @@ pub struct Engine {
     opener: Arc<dyn Opener>,
     limits: Limits,
     flows: Mutex<HashMap<String, CancellationToken>>,
+    logins: LoginTable,
+    notify: Option<Notifier>,
+    /// Connectors whose keys wait for a restart that waits for idle sessions (one waiter for all of them).
+    waiting: Arc<Mutex<Vec<String>>>,
 }
 
 fn step(id: &str, title: &str, state: StepState, detail: impl Into<String>) -> Step {
@@ -145,7 +176,24 @@ impl Engine {
             opener,
             limits,
             flows: Mutex::new(HashMap::new()),
+            logins: LoginTable::shared(),
+            notify: None,
+            waiting: Arc::new(Mutex::new(Vec::new())),
         }
+    }
+
+    /// Use `logins` as the table of sign-in commands (the shipped one by default).
+    #[must_use]
+    pub fn with_logins(mut self, logins: LoginTable) -> Self {
+        self.logins = logins;
+        self
+    }
+
+    /// Tell `notify` when a restart that waited for idle sessions ends.
+    #[must_use]
+    pub fn with_notifier(mut self, notify: Notifier) -> Self {
+        self.notify = Some(notify);
+        self
     }
 
     /// Every server Hermes has, with the keychain references boopis holds for each.
@@ -182,12 +230,26 @@ impl Engine {
             .unwrap_or_default())
     }
 
-    /// The review of a request: the form with everything that will be added, and the hash the install must name.
+    /// The review of a request: the form with everything that will be added, and the hash the install must name. When the
+    /// install would restart Hermes (a key is given), the form says so and how many sessions have a turn running, and offers
+    /// the choice of when when any do (or when Hermes could not say).
     ///
     /// # Errors
     /// `InvalidInput`, in words, for anything the validators refuse.
-    pub fn review(request: &Request) -> Result<Review> {
-        plan::review(request)
+    pub async fn review(&self, request: &Request) -> Result<Review> {
+        let plan = plan::build(request, None)?;
+        let restart = if plan.wires.is_empty() {
+            None
+        } else {
+            Some(plan::RestartInfo {
+                running: self.ops.running_turns().await.ok(),
+            })
+        };
+        Ok(Review {
+            form: plan::review_form(&plan, restart),
+            plan_hash: plan.hash,
+            name: plan.name,
+        })
     }
 
     async fn store(
@@ -216,6 +278,7 @@ impl Engine {
         request: &Request,
         plan_hash: &str,
         secrets: &BTreeMap<String, String>,
+        restart: Option<RestartWhen>,
     ) -> Result<InstallReport> {
         let shown = plan::build(request, None)?;
         if shown.hash != plan_hash {
@@ -252,6 +315,22 @@ impl Engine {
         }
         let plan = plan::build(request, Some(&given))?;
         let mut steps = Vec::new();
+        // A key means a restart of Hermes, which ends a turn that is running in any open session. Never silently: unless no
+        // turn is running (or the user chose when), nothing is changed at all and the caller is asked to choose.
+        let running = if plan.wires.is_empty() {
+            Some(0)
+        } else {
+            self.ops.running_turns().await.ok()
+        };
+        if !plan.wires.is_empty() && running != Some(0) && restart.is_none() {
+            return Err(Error::Connector(
+                "hx.connectors.restart_choice",
+                match running {
+                    Some(n) => format!("{n} session{} {} a turn running. Installing the key restarts Hermes, which would end it: choose to restart now, or when no turn is running.", if n == 1 { "" } else { "s" }, if n == 1 { "has" } else { "have" }),
+                    None => "Hermes could not say whether a turn is running. Installing the key restarts Hermes: choose to restart now, or when no turn is running.".to_owned(),
+                },
+            ));
+        }
 
         if self.ops.list().await?.iter().any(|i| i.name == plan.name) {
             return Err(Error::Connector(
@@ -308,10 +387,23 @@ impl Engine {
 
         let mut notes = Vec::new();
         let mut restarted = false;
+        let mut restart_pending = false;
         if !plan.wires.is_empty() {
             // Hermes reads its secret sources once per process, so a key saved now is read when it next starts.
-            match self.ops.restart_gateway().await {
-                Ok(()) => {
+            let at_once = match restart {
+                Some(RestartWhen::Now) => Some(true),
+                _ if running == Some(0) => Some(false),
+                _ => None,
+            };
+            let outcome = match at_once {
+                Some(interrupt) => match self.ops.restart_gateway(interrupt).await {
+                    Err(Error::Connector("hx.connectors.busy", _)) => None,
+                    other => Some(other),
+                },
+                None => None,
+            };
+            match outcome {
+                Some(Ok(())) => {
                     restarted = true;
                     steps.push(step(
                         "restart",
@@ -320,7 +412,7 @@ impl Engine {
                         "so it reads the key",
                     ));
                 }
-                Err(e) => {
+                Some(Err(e)) => {
                     steps.push(step(
                         "restart",
                         "Hermes restart",
@@ -329,22 +421,32 @@ impl Engine {
                     ));
                     notes.push("Hermes could not be restarted, so it has not read the key yet. Restart it, then test the connector.".to_owned());
                 }
+                None => {
+                    restart_pending = true;
+                    self.wait_for_idle(&plan.name);
+                    steps.push(step("restart", "Hermes restart", StepState::Pending, "waits until no session has a turn running; boopis restarts it then and tells you"));
+                    notes.push("The key is saved and wired. Hermes reads it at its next start, which boopis does when no turn is running. The connection is tested then.".to_owned());
+                }
             }
         }
 
-        let test = match self.ops.test(&plan.name).await {
-            Ok(mut t) => {
-                t.error = t.error.map(|e| scrub(&e, &values));
-                Some(t)
-            }
-            Err(e) => {
-                steps.push(step(
-                    "test",
-                    "Connection test",
-                    StepState::Blocked,
-                    scrub(&e.to_string(), &values),
-                ));
-                None
+        let test = if restart_pending {
+            None
+        } else {
+            match self.ops.test(&plan.name).await {
+                Ok(mut t) => {
+                    t.error = t.error.map(|e| scrub(&e, &values));
+                    Some(t)
+                }
+                Err(e) => {
+                    steps.push(step(
+                        "test",
+                        "Connection test",
+                        StepState::Blocked,
+                        scrub(&e.to_string(), &values),
+                    ));
+                    None
+                }
             }
         };
         let mut signin_needed = false;
@@ -380,8 +482,74 @@ impl Engine {
             test,
             signin_needed,
             restarted,
+            restart_pending,
             notes,
         })
+    }
+
+    /// Queue `name` for the restart that waits until no session has a turn running; start the one waiter when none runs.
+    fn wait_for_idle(&self, name: &str) {
+        let first = {
+            let mut w = self.waiting.lock().unwrap_or_else(PoisonError::into_inner);
+            w.push(name.to_owned());
+            w.len() == 1
+        };
+        if !first {
+            return;
+        }
+        let (ops, notify, waiting) = (self.ops.clone(), self.notify.clone(), self.waiting.clone());
+        let (every, longest) = (self.limits.restart_poll_every, self.limits.restart_wait_max);
+        tokio::spawn(async move {
+            let give_up = tokio::time::Instant::now() + longest;
+            let outcome: std::result::Result<(), String> = loop {
+                if tokio::time::Instant::now() >= give_up {
+                    break Err("no moment came when no session had a turn running".to_owned());
+                }
+                tokio::time::sleep(every).await;
+                // Only an answer that says nothing is running counts: when Hermes cannot say, the wait goes on.
+                if !matches!(ops.running_turns().await, Ok(0)) {
+                    continue;
+                }
+                // Without `--yes`, Hermes itself refuses if a turn started since the check.
+                match ops.restart_gateway(false).await {
+                    Ok(()) => break Ok(()),
+                    Err(Error::Connector("hx.connectors.busy", _)) => {}
+                    Err(e) => break Err(e.to_string()),
+                }
+            };
+            let names =
+                std::mem::take(&mut *waiting.lock().unwrap_or_else(PoisonError::into_inner));
+            let message = match &outcome {
+                Ok(()) => {
+                    let mut lines = Vec::new();
+                    for n in &names {
+                        lines.push(match ops.test(n).await {
+                            Ok(t) if t.ok => format!(
+                                "{n} connected, {} tool{}",
+                                t.tools.len(),
+                                if t.tools.len() == 1 { "" } else { "s" }
+                            ),
+                            Ok(t) => format!(
+                                "{n}: {}",
+                                t.error.unwrap_or_else(|| "it did not connect".into())
+                            ),
+                            Err(e) => format!("{n}: {e}"),
+                        });
+                    }
+                    format!("Hermes restarted to read the key. {}", lines.join(". "))
+                }
+                Err(why) => format!(
+                    "Hermes was not restarted ({why}). The key is saved; restart Hermes to use it."
+                ),
+            };
+            if let Some(n) = notify {
+                n(RestartDone {
+                    names,
+                    ok: outcome.is_ok(),
+                    message,
+                });
+            }
+        });
     }
 
     /// Undo an install that failed part of the way: the server and the keys this call saved.
@@ -611,15 +779,53 @@ impl Engine {
         }
     }
 
-    /// Run a provider's own sign-in command (`claude auth login`): the program and its arguments exactly as the user saw
-    /// them, as a vector with no shell, in an allowlisted environment, with a timeout and an output cap. The result is the
-    /// exit status and the last lines of output, masked where they read as a credential.
+    /// Run a provider's own sign-in command. The caller names a **provider id**, never a command: the host looks it up in its
+    /// own table (`apps/shared/data/logins.json`, or the named collection entry's reviewed `login`) and runs exactly that
+    /// program and argument vector, as a vector with no shell, in an allowlisted environment, with a timeout and an output cap.
+    /// A form's schema, written by an agent, a teammate or a mod, cannot choose what runs. The result is the exit status and
+    /// the last lines of output, masked where they read as a credential.
     ///
     /// # Errors
-    /// `InvalidInput` for a command the validators refuse (a shell, a wrapper, a string with spaces),
-    /// `hx.connectors.command_failed` when it cannot start.
-    pub async fn login(&self, command: &str, args: &[String]) -> Result<LoginReport> {
-        run_login(command, args, &self.limits).await
+    /// `hx.connectors.unknown_login` for a provider outside the table, `hx.connectors.command_failed` when it cannot start.
+    pub async fn login(&self, provider: &str, connector: Option<&str>) -> Result<LoginReport> {
+        let entry = match connector {
+            Some(c) => super::catalog::load()?
+                .connectors
+                .iter()
+                .find(|x| x.id == c)
+                .and_then(|x| {
+                    x.variants
+                        .iter()
+                        .filter_map(|v| v.login.as_ref())
+                        .find(|l| l.id == provider)
+                })
+                .cloned(),
+            None => self.logins.find(provider).cloned(),
+        }
+        .ok_or_else(|| {
+            Error::Connector(
+                "hx.connectors.unknown_login",
+                "This sign-in is not one boopis knows.".into(),
+            )
+        })?;
+        entry.check()?;
+        let (program, env) = if entry.program == HERMES_PROGRAM {
+            let (bin, home) = self.ops.hermes_program().await?.ok_or_else(|| {
+                Error::Connector(
+                    "hx.connectors.command_failed",
+                    "There is no Hermes to run this sign-in with.".into(),
+                )
+            })?;
+            (
+                bin.display().to_string(),
+                vec![("HERMES_HOME".to_owned(), home.display().to_string())],
+            )
+        } else {
+            (entry.program.clone(), Vec::new())
+        };
+        let mut report = run_login(&program, &entry.args, &env, &self.limits).await?;
+        report.command_line = entry.line();
+        Ok(report)
     }
 }
 
@@ -685,13 +891,18 @@ pub fn clean_line(line: &str) -> String {
     out
 }
 
-async fn run_login(command: &str, args: &[String], limits: &Limits) -> Result<LoginReport> {
-    validate::command(command)?;
-    validate::args(command, args)?;
+/// Run a program the host chose (from the table), never one a form named. `env` is added on top of the allowlist.
+async fn run_login(
+    command: &str,
+    args: &[String],
+    env: &[(String, String)],
+    limits: &Limits,
+) -> Result<LoginReport> {
     let mut cmd = Command::new(command);
     cmd.args(args)
         .env_clear()
         .envs(std::env::vars_os().filter(|(k, _)| k.to_str().is_some_and(login_env)))
+        .envs(env.iter().map(|(k, v)| (k, v)))
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

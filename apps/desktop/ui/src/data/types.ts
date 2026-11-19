@@ -132,8 +132,9 @@ export interface FieldSchema {
   /** one preview per option, in the order of `enum` (code, text or a note) */
   'x-preview'?: ReadonlyArray<{ code?: string; text?: string; note?: string } | null>;
   'x-picker'?: PickerKind; 'x-upload'?: boolean;
-  /** `server`: an installed connector (an MCP server in Hermes) signed in with OAuth through Hermes's own flow; `command` and `args`: a provider's own
-      sign-in command (`claude auth login`), run by the host exactly as the card shows it, as a program and its arguments, never through a shell */
+  /** `server`: an installed connector (an MCP server in Hermes) signed in with OAuth through Hermes's own flow. Otherwise `provider` is an id in
+      the host's own table of sign-in commands (apps/shared/data/logins.json); the host runs that entry and nothing a form says. `command` and `args`
+      are never run: a field that carries them is a sign-in boopis does not know */
   'x-signin'?: { provider?: string; flow?: 'browser' | 'device' | 'cli'; host?: string; server?: string; command?: string; args?: readonly string[] };
 }
 export interface FormSchema { type?: 'object'; properties?: Readonly<Record<string, FieldSchema>>; required?: readonly string[] }

@@ -38,6 +38,10 @@ pub struct Limits {
     /// How long a sign-in start is retried while Hermes still counts the one just cancelled as open (its worker ends a moment
     /// after the cancel).
     pub connector_start_wait: std::time::Duration,
+    /// How often a restart that waits for idle sessions asks whether any has a turn running.
+    pub restart_poll_every: std::time::Duration,
+    /// The longest such a restart waits before it gives up and says so.
+    pub restart_wait_max: std::time::Duration,
     /// How often the host asks Hermes how a sign-in stands.
     pub connector_poll_every: std::time::Duration,
     /// How long a provider's own `login` command may run.
@@ -67,6 +71,8 @@ impl Default for Limits {
             connector_signin_timeout: Duration::from_secs(330),
             gateway_stop_wait: Duration::from_secs(20),
             connector_start_wait: Duration::from_secs(10),
+            restart_poll_every: Duration::from_secs(5),
+            restart_wait_max: Duration::from_hours(8),
             connector_poll_every: Duration::from_secs(1),
             login_timeout: Duration::from_mins(5),
             login_output_cap: 64 * 1024,

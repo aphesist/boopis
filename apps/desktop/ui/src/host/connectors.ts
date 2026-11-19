@@ -234,7 +234,7 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
     showFlow(card({ ...model.spec, name }, {
       async submit(_id, outcome) {
         let report: ConnectorInstall;
-        try { report = await bridge.install(request, hash, outcome.secrets); } catch (e) { throw new Error(message(e)); }
+        const choice = outcome.values['restart']; try { report = await bridge.install(request, hash, outcome.secrets, choice === 'now' || choice === 'when_idle' ? choice : undefined); } catch (e) { throw new Error(message(e)); }
         later(() => { drawResult(result, report, request); });
       },
       cancel() { void showList(); return Promise.resolve(); }
