@@ -7,6 +7,7 @@ import { ariaKeys, keyLabel } from '../core/keys';
 import { botState } from './bot-state';
 import type { BotLike } from './bot-state';
 import { icon } from './icons';
+import { logoHTML } from './logo';
 import { arrowHTML, isKnownModel, markHTML, modelHTML, routeHTML } from './model-mark';
 import type { ModelRef } from './model-mark';
 import { orbHtml } from './orb';
@@ -235,7 +236,7 @@ function field(o: FieldOpts): string {
 const setRow = (o: { label: string; hint?: U<string | null>; for?: U<string | null>; control?: U<string> }): string =>
   '<div class="ui-set__row"><' + (o.for ? 'label for="' + esc(o.for) + '"' : 'span') + ' class="ui-set__label"><span>' + esc(o.label) + '</span>' + (o.hint ? '<small>' + esc(o.hint) + '</small>' : '') + '</' + (o.for ? 'label' : 'span') + '>' + (o.control ?? '') + '</div>';
 const empty = (o: { title: string; text?: U<string>; mark?: U<boolean>; action?: U<string> }): string =>
-  '<div class="ui-empty">' + (o.mark ? '<span style="width:24px;height:32px;color:var(--text-faint)">' + icon('phi') + '</span>' : '') + '<h2 class="ui-empty__title">' + esc(o.title) + '</h2>' + (o.text ? '<p class="ui-empty__text">' + esc(o.text) + '</p>' : '') + (o.action ?? '') + '</div>';
+  '<div class="ui-empty">' + (o.mark ? '<span class="ui-empty__mark">' + logoHTML({ mark: true, label: false }) + '</span>' : '') + '<h2 class="ui-empty__title">' + esc(o.title) + '</h2>' + (o.text ? '<p class="ui-empty__text">' + esc(o.text) + '</p>' : '') + (o.action ?? '') + '</div>';
 
 const toast = (text: string, action?: string): string => '<div class="ui-toast" role="status" data-static><span>' + esc(text) + '</span>' + (action ? button({ label: action, size: 's', variant: 'ghost' }) : '') + '</div>';
 const tip = (label: string, k?: string, state?: { text: string; tone?: string }): string =>

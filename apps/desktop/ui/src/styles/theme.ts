@@ -15,14 +15,13 @@ export type PresetId = 'catalog' | 'graphite' | 'bone' | 'typewriter';
 export type CaseMode = 'sentence' | 'lower';
 export type CornerMode = 'sharp' | 'default' | 'round';
 export type Density = 'compact' | 'regular' | 'comfortable';
-export type LogoMode = 'closed' | 'open';
 
-export interface Preset { name: string; note: string; sans: string; mono: string; case: CaseMode; corners: CornerMode; density: Density; logo: LogoMode }
+export interface Preset { name: string; note: string; sans: string; mono: string; case: CaseMode; corners: CornerMode; density: Density }
 export const PRESETS: Record<PresetId, Preset> = {
-  catalog:    { name: 'Card catalog', note: 'Warm dark, the default', sans: 'Libre Franklin', mono: 'IBM Plex Mono', case: 'sentence', corners: 'default', density: 'regular', logo: 'closed' },
-  graphite:   { name: 'Graphite', note: 'Neutral grey, close to the Figma', sans: 'Geist', mono: 'Geist Mono', case: 'sentence', corners: 'default', density: 'regular', logo: 'closed' },
-  bone:       { name: 'Bone', note: 'Light', sans: 'Libre Franklin', mono: 'IBM Plex Mono', case: 'sentence', corners: 'default', density: 'regular', logo: 'closed' },
-  typewriter: { name: 'Typewriter', note: 'Mono and lowercase', sans: 'Geist Mono', mono: 'Geist Mono', case: 'lower', corners: 'round', density: 'regular', logo: 'closed' }
+  catalog:    { name: 'Card catalog', note: 'Warm dark, the default', sans: 'Libre Franklin', mono: 'IBM Plex Mono', case: 'sentence', corners: 'default', density: 'regular' },
+  graphite:   { name: 'Graphite', note: 'Neutral grey, close to the Figma', sans: 'Geist', mono: 'Geist Mono', case: 'sentence', corners: 'default', density: 'regular' },
+  bone:       { name: 'Bone', note: 'Light', sans: 'Libre Franklin', mono: 'IBM Plex Mono', case: 'sentence', corners: 'default', density: 'regular' },
+  typewriter: { name: 'Typewriter', note: 'Mono and lowercase', sans: 'Geist Mono', mono: 'Geist Mono', case: 'lower', corners: 'round', density: 'regular' }
 };
 const isPreset = (id: string): id is PresetId => Object.prototype.hasOwnProperty.call(PRESETS, id);
 
@@ -95,17 +94,16 @@ export const DERIVED: Record<string, readonly string[]> = { '--current': ['--tex
 export const CASES: readonly CaseMode[] = ['sentence', 'lower'];
 export const CORNERS: readonly CornerMode[] = ['sharp', 'default', 'round'];
 export const DENSITIES: readonly Density[] = ['compact', 'regular', 'comfortable'];
-export const LOGOS: readonly LogoMode[] = ['closed', 'open'];
 
-type Overridable = 'sans' | 'mono' | 'case' | 'corners' | 'density' | 'logo';
-const OVERRIDABLE: readonly Overridable[] = ['sans', 'mono', 'case', 'corners', 'density', 'logo'];
+type Overridable = 'sans' | 'mono' | 'case' | 'corners' | 'density';
+const OVERRIDABLE: readonly Overridable[] = ['sans', 'mono', 'case', 'corners', 'density'];
 
 export interface Theme {
   preset: PresetId;
   colors: Record<string, string>;
-  sans: string | null; mono: string | null; case: CaseMode | null; corners: CornerMode | null; density: Density | null; logo: LogoMode | null;
+  sans: string | null; mono: string | null; case: CaseMode | null; corners: CornerMode | null; density: Density | null;
 }
-export const blank = (): Theme => ({ preset: 'catalog', colors: {}, sans: null, mono: null, case: null, corners: null, density: null, logo: null });
+export const blank = (): Theme => ({ preset: 'catalog', colors: {}, sans: null, mono: null, case: null, corners: null, density: null });
 
 /** keep only what is valid: a known preset, #rrggbb colours of editable tokens, known fonts and modes */
 export function sanitize(t: unknown): Theme | null {
@@ -124,7 +122,6 @@ export function sanitize(t: unknown): Theme | null {
   if (CASES.includes(o.case as CaseMode)) d.case = o.case as CaseMode;
   if (CORNERS.includes(o.corners as CornerMode)) d.corners = o.corners as CornerMode;
   if (DENSITIES.includes(o.density as Density)) d.density = o.density as Density;
-  if (LOGOS.includes(o.logo as LogoMode)) d.logo = o.logo as LogoMode;
   return d;
 }
 
@@ -194,7 +191,6 @@ function apply(quiet?: boolean): void {
   root.setAttribute('data-hx-case', String(effective('case')));
   root.setAttribute('data-hx-corners', String(effective('corners')));
   root.setAttribute('data-hx-density', String(effective('density')));
-  root.setAttribute('data-hx-logo', String(effective('logo')));
   for (const k of applied) root.style.removeProperty(k);
   applied = [];
   for (const [k, v] of Object.entries(theme.colors)) { root.style.setProperty(k, v); applied.push(k); }
@@ -216,7 +212,7 @@ export interface ContrastRow { label: string; fg: string; bg: string; scope: str
 function exportObject() {
   const colors: Record<string, string> = {};
   for (const k of EDITABLE) colors[k] = hexOf(k);
-  return { format: 'boopis-theme', version: 1, preset: theme.preset, sans: effective('sans'), mono: effective('mono'), case: effective('case'), corners: effective('corners'), density: effective('density'), logo: effective('logo'), colors };
+  return { format: 'boopis-theme', version: 1, preset: theme.preset, sans: effective('sans'), mono: effective('mono'), case: effective('case'), corners: effective('corners'), density: effective('density'), colors };
 }
 
 export const themeApi = {

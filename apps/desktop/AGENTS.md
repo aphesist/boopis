@@ -20,6 +20,7 @@ The host is the **machine authority** of the three-authority model (`docs/ARCHIT
 ```
 src-tauri/
   build.rs  tauri.conf.json  capabilities/main.json  permissions/ (generated)  icons/
+  icons/        the app icon (design/v6/brand/logo/icons, copied): the light set is Tauri's default (32x32, 128x128, 128x128@2x, icon.png, icon.ico, icon.icns), the dark set is in dark/, and boopis-symbolic.svg is the Linux tray icon. Inside the app the mark follows the theme; the icon is for the system.
   src/
     lib.rs        the registry (tauri-specta), `startup` (probe the machine and decide the GPU and renderer), run(), the two guard tests (capability list, bindings freshness)
     brand.rs      the terminal art from `packaging/brand/boopis.art` (ADR-0026): parse, draw at truecolor, 256, 16 and no colour, the terminal rules (`NO_COLOR`, `TERM`, `COLORTERM`, locale, `CI`)
@@ -146,14 +147,14 @@ ui/
   index.html            the app's markup (the shell's chrome), as v6's index.html
   src/main.ts           entry: styles, the web component, the provider, the modules, boot
   src/core/             bus (typed events), state (typed HX.state + setState), registry (slots, provide), settings, log, keys, dom
-  src/components/       the HX.ui library, one module per primitive (hold, composer, orb, layer, squircle, model-mark, ...); components.css, model-mark.css
+  src/components/       the HX.ui library, one module per primitive (hold, composer, orb, logo, layer, squircle, model-mark, ...); components.css, model-mark.css
   src/modules/          shell, session, bots, dock, cards: each module's TS and CSS
   src/styles/           tokens.css (+ tokens.json, generated), theme.ts (runtime), theme-panel.ts, fonts.ts, index.ts (the cascade order)
   src/data/             THE DATA SEAM: types, provider interfaces, mock provider, README.md
   src/host/             the bridge to the Rust host: bindings.ts (generated, never edited), bridge, gateway client, live provider, map
   src/vendor/hermes-shared/  Hermes's generated gateway contract types (MIT), pinned, with NOTICE and PIN.json
   src/vendor/model-icons/  the provider logos (LobeHub, MIT) and which family a model id gets, with NOTICE
-  vendor/               orb-avatar.min.js (the owner's <orb-avatar> web component, MIT) and its .d.ts
+  vendor/               orb-avatar.min.js (the owner's <orb-avatar> web component, MIT) and its .d.ts; boopis-logo.js (the <boopis-logo> element, copied unchanged from design/v6/brand/logo, never edited here) with its .d.ts and NOTICE
   tests/                smoke (Playwright), parity (v6 against the port), perf (WebKitGTK and Chromium frame times; README.md), lib.mjs
   scripts/              build-tokens.mjs
 ```
@@ -175,6 +176,7 @@ Every row of "Owner decisions" in `DESIGN-SYSTEM.md`, and one newer rule. A chan
 | Inactive marks reach 3:1 in every preset and on the dock (`--mark-off`) | `tokens.css`, `styles/theme.ts` `PAIRS` | smoke: contrast of all pairs in all presets; unit |
 | Nested corners fit their container (concentric radii, `--r-outer`, `--pad`, `--r-in`) | `components.css`, `tokens.css` | parity (pixels) |
 | **Apple continuous corners in every engine** (WebKitGTK has no `corner-shape`): every corner is a path, figma-squircle at smoothing 0.6, drawn by `components/squircle.ts` (math in `squircle-path.ts`); the scale is 30 (sheets, dock), 20 (cards), 12 (rows, fields, buttons), capsule (chips), floor 8; **only leaf controls are clipped, a container never is** (orbs and popovers stay whole: its corner is a background and outline layer); no `corner-shape` anywhere | `components/squircle*.ts`, `tokens.css` (`--r-*`, `--corner-smoothing`), `components.css` | unit: golden paths from the v6 reference; smoke `corners`: no `corner-shape`, no clipped container, <= 2 ms a frame for 200 bound elements, six viewports; parity |
+| **The logo is boopis's mark and is static wherever it labels**: the title bar (the mark, 18px, `still`), empty states (the mark, 32px, `--text-faint`), `still` always except the first-run welcome, which is the one big moment and plays the hero (`letters="play"`, once, never redrawn with the steps). One colour, `currentColor`. Never a model's mark, never the app icon, never the φ | `components/logo.ts`, `host/first-run.ts` | unit: `logo.test.ts`, `first-run.test.ts` |
 | **A provider's logo beside every model name** (mono in the theme everywhere, brand colour only in the model menu; an unknown family gets the neutral mark, never the phi) | `components/model-mark.ts`, `vendor/model-icons/` | unit: `model-mark.test.ts` |
 | **Forms are one card family**: one renderer from the schema, every kind a template, every state, the origin slot on every card, answered in one place and resolved everywhere; a secret never leaves the field except to the keychain | `modules/cards/form*.ts`, `parts.ts`, `host/forms.ts`, `host/live/forms.ts` | unit: `form*.test.ts`, `live-forms.test.ts`; smoke `forms` |
 | **Every composer can talk**: a mic in each one (session, Bots tab, dock session); the bot's orb listens while you talk; alt+V talks | `components/composer.ts` | smoke: alt+V in the session and the dock |
@@ -182,7 +184,7 @@ Every row of "Owner decisions" in `DESIGN-SYSTEM.md`, and one newer rule. A chan
 | **Smart and the model picker** (owner, later): **alt+M opens the model picker while Smart stays ON**; its first entry is "Smart" (automatic; the current choice while Smart is on) and then the models; choosing a model pins it and turns Smart off; choosing Smart keeps or turns it back on; Esc changes nothing; with Smart on the model chip stays hidden and the picker opens against the Smart chip; tooltips: Smart = "Picks the model for each message", off = "You pick the model" | `modules/session/composer.ts` | smoke: alt+M, pick a model, alt+M, pick Smart |
 | Keyboard first: every action has a key in `KEYMAP.md`; the keymap table feeds the sheet, Settings and the palette | `modules/shell/keymap.ts` | unit: `keymap.test.ts` (the dispatcher); smoke: the whole walk-through |
 
-Also binding: tokens, never literals, for colour, type, radius and space (the CSS is v6's, with no literal colours; do not add any); WCAG 2.2 AA (labels, roles, focus order, contrast, **label in name**: an accessible name must contain the visible text, in order); `<orb-avatar>` stays a vendored web component.
+Also binding: tokens, never literals, for colour, type, radius and space (the CSS is v6's, with no literal colours; do not add any); WCAG 2.2 AA (labels, roles, focus order, contrast, **label in name**: an accessible name must contain the visible text, in order); `<orb-avatar>` and `<boopis-logo>` stay vendored web components.
 
 ## Frame cost (WebKitGTK is the target, not Chromium)
 The desktop app draws with WebKitGTK; the owner's machine paints on the CPU at 3600x2250 buffer pixels (GTK3 renders a 1.6 scale at 2x). `tests/perf/README.md` has the harness (`pnpm perf:webkit`); the findings that became rules:

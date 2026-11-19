@@ -35,6 +35,18 @@ describe('first run', () => {
     expect(document.querySelector('.hx-first-run')).toBeNull();
   });
 
+  it('opens with the logo\'s hero, one logo, and keeps that same element while the steps are redrawn', async () => {
+    const bridge = new Fake([status({ steps: [step('hermes', 'blocked', 'missing')], install_command: 'x' })]);
+    void runFirstRun(bridge);
+    await tick();
+    const hero = document.querySelector('boopis-logo');
+    expect(document.querySelectorAll('boopis-logo')).toHaveLength(1);
+    expect(hero?.getAttribute('letters')).toBe('play');
+    await click('Set up');
+    expect(document.querySelectorAll('boopis-logo')).toHaveLength(1);
+    expect(document.querySelector('boopis-logo')).toBe(hero);
+  });
+
   it('asks before it starts, shows the install command when Hermes is missing and checks again on request', async () => {
     const bridge = new Fake([
       status({ steps: [step('hermes', 'blocked', 'missing')], install_command: 'curl -fsSL https://example.test/install.sh | bash' }),

@@ -1,6 +1,7 @@
 /* boopis desktop UI: the entry. The order is the contract: styles first (one cascade), the web component, the
    data provider, the modules (each registers into its slot as it loads), then the shell boots and mounts them. */
 import './styles';
+import '../vendor/boopis-logo.js';
 import { ui } from './components';
 import { startGlance } from './components/orb';
 import { orbState, setupOrbs } from './components/orb-worker/host';

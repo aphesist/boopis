@@ -10,6 +10,8 @@ boopis includes or distributes the following third-party work, each under its ow
   The runtime also holds a Python interpreter (python-build-standalone), uv and Hermes's locked Python dependencies,
   each with its own licence files inside the archive.
 - orb-avatar (orb2), vendored in the interface: MIT License.
+- boopis-logo (the logo element, vendored in the interface): Apache License 2.0, like the rest of boopis; its letters are
+  Libre Franklin outlines drawn as paths, under the SIL Open Font License 1.1 (apps/desktop/ui/vendor/boopis-logo.NOTICE).
 - LobeHub icons, vendored in the interface for provider logos: MIT License.
 - The fonts the interface embeds (Fontsource packages of Geist, IBM Plex, Instrument Sans, JetBrains Mono and
   Libre Franklin): SIL Open Font License 1.1.

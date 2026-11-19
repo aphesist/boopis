@@ -54,8 +54,8 @@ describe('the contrast table', () => {
 
 describe('importing a theme', () => {
   it('sanitize keeps a known preset, #rrggbb colours of editable tokens, known fonts and modes', () => {
-    const t = sanitize({ preset: 'bone', colors: { '--text': '#ABCDEF', bg: '#000', '--brass': 'red', '--bg-1': '#101010' }, sans: 'Geist', mono: 'Nope', case: 'lower', corners: 'weird', density: 'compact', logo: 'open', extra: 1 });
-    expect(t).toEqual({ ...blank(), preset: 'bone', colors: { '--text': '#abcdef', '--bg-1': '#101010' }, sans: 'Geist', case: 'lower', density: 'compact', logo: 'open' });
+    const t = sanitize({ preset: 'bone', colors: { '--text': '#ABCDEF', bg: '#000', '--brass': 'red', '--bg-1': '#101010' }, sans: 'Geist', mono: 'Nope', case: 'lower', corners: 'weird', density: 'compact', extra: 1 });
+    expect(t).toEqual({ ...blank(), preset: 'bone', colors: { '--text': '#abcdef', '--bg-1': '#101010' }, sans: 'Geist', case: 'lower', density: 'compact' });
   });
   it('sanitize rejects what is not an object, and falls back to the default preset', () => {
     expect(sanitize(null)).toBeNull();

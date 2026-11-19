@@ -30,10 +30,6 @@ export function mountThemePanel(container: HTMLElement | null): void {
         '<span class="hxt-preset__chips" aria-hidden="true"><i style="background:var(--bg-1)"></i><i style="background:var(--bg-2)"></i><i style="background:var(--bg-3)"></i><i style="background:var(--text)"></i><i style="background:var(--brass)"></i><i style="background:var(--red)"></i></span>' +
         '<span class="hxt-preset__name">' + esc(p.name) + '</span><span class="hxt-preset__note">' + esc(p.note) + '</span></label>').join('') + '</div>' +
     '</section>' +
-    '<section class="hx-set" aria-labelledby="hxt-h-brand"><h3 class="ui-set__head" id="hxt-h-brand">Brand</h3>' +
-      '<div class="ui-set__row"><span class="ui-set__label" id="hxt-logo-l"><span>Logo</span><small>The mark in the title bar</small></span>' +
-        segHTML('hxt-logo', [{ value: 'closed', ariaLabel: 'Closed, Φ' }, { value: 'open', ariaLabel: 'Open, φ' }], 'hxt-logos') + '</div>' +
-    '</section>' +
     '<section class="hx-set" aria-labelledby="hxt-h-type"><h3 class="ui-set__head" id="hxt-h-type">Type</h3>' +
       '<div class="ui-set__row"><label class="ui-set__label" for="hxt-sans"><span>Interface font</span><small>Labels, buttons and the conversation</small></label><select id="hxt-sans" class="ui-input hxt-select">' + FONTS.sans.map((f) => '<option>' + esc(f[0]) + '</option>').join('') + '</select></div>' +
       '<div class="ui-set__row"><label class="ui-set__label" for="hxt-mono"><span>Code font</span><small>Code, paths, times and costs</small></label><select id="hxt-mono" class="ui-input hxt-select">' + FONTS.mono.map((f) => '<option>' + esc(f[0]) + '</option>').join('') + '</select></div>' +
@@ -65,9 +61,6 @@ export function mountThemePanel(container: HTMLElement | null): void {
       '</div>' +
       '<p class="hxt-msg" id="hxt-msg" role="status"></p>' +
     '</section>';
-  // the logo choice shows the two marks themselves (the sprite keeps both)
-  const marks: Record<string, string> = { closed: '<svg aria-hidden="true" focusable="false"><use href="#i-phi-closed"/></svg>', open: '<svg aria-hidden="true" focusable="false" class="is-open"><use href="#i-phi"/></svg>' };
-  for (const b of container.querySelectorAll<HTMLElement>('.hxt-logos [data-value]')) b.insertAdjacentHTML('afterbegin', marks[b.dataset['value'] ?? 'closed'] ?? '');
   ui.hydrate(container);
   panel = container;
   wireUI(container);
@@ -114,7 +107,7 @@ function wireUI(ui0: HTMLElement): void {
       else { t.value = hexOf(row.dataset['token'] ?? ''); say('Use a six-digit hex colour, such as #c8a66a.', true); }
     }
   });
-  const SEG: Record<string, 'case' | 'corners' | 'density' | 'logo'> = { 'hxt-case': 'case', 'hxt-corners': 'corners', 'hxt-density': 'density', 'hxt-logo': 'logo' };
+  const SEG: Record<string, 'case' | 'corners' | 'density'> = { 'hxt-case': 'case', 'hxt-corners': 'corners', 'hxt-density': 'density' };
   ui0.addEventListener('ui:change', (e) => {
     const key = SEG[(e.target as HTMLElement).dataset?.['name'] ?? ''];
     if (key) themeApi.set({ [key]: (e as CustomEvent<{ value: string }>).detail.value });
@@ -160,7 +153,7 @@ function refreshUI(): void {
   const sans = ui1.querySelector<HTMLSelectElement>('#hxt-sans'), mono = ui1.querySelector<HTMLSelectElement>('#hxt-mono');
   if (sans) sans.value = String(eff('sans'));
   if (mono) mono.value = String(eff('mono'));
-  for (const [name, val] of [['hxt-case', eff('case')], ['hxt-corners', eff('corners')], ['hxt-density', eff('density')], ['hxt-logo', eff('logo')]] as const) {
+  for (const [name, val] of [['hxt-case', eff('case')], ['hxt-corners', eff('corners')], ['hxt-density', eff('density')]] as const) {
     const sg = ui1.querySelector<SegElement>('[data-name="' + name + '"]'); if (sg && sg.select) sg.select(String(val));
   }
   const values: Record<string, string> = {};

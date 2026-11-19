@@ -98,13 +98,11 @@ body {
 }
 .hx-side__inner { position: relative; height: 100%; width: var(--sb-w); display: flex; flex-direction: column; }
 
-/* the mark: title bar, top left, centred on the sidebar's icon axis (x = 28) so it sits above the rail's icons.
-   Two drawings: the closed Φ (the owner's corner seal, default) and the open φ; Appearance > Logo switches them. */
+/* the mark: title bar, top left, centred on the sidebar's icon axis (x = 28) so it sits above the rail's icons. The logo's
+   mark, static (`still`: it labels, so nothing moves), in the ink of the frame; 18px wide, inside the 16 to 20px the
+   design system sets for the title bar (DESIGN-SYSTEM.md section 12). */
 .hx-mark { display: grid; place-items: center; width: var(--ctl-s); height: var(--ctl-s); margin-right: 6px; color: var(--text-strong); flex: none; }
-.hx-mark > svg { height: 20px; width: auto; aspect-ratio: 724 / 918; fill: currentColor; }
-.hx-mark .hx-mark__open { aspect-ratio: 27 / 36; display: none; }
-:root[data-hx-logo="open"] .hx-mark .hx-mark__open { display: block; }
-:root[data-hx-logo="open"] .hx-mark .hx-mark__closed { display: none; }
+.hx-mark > boopis-logo { width: 18px; }
 
 /* Session | Bots */
 
@@ -146,7 +144,7 @@ body {
 .hx-avatar::after { content: attr(data-initial); }   /* the initial is drawn, not text: the account button's name does not have to repeat it */
 .hx-foot__gear { transition: opacity var(--dur-1) var(--ease), color var(--dur-1) var(--ease), background-color var(--dur-1) var(--ease); }
 
-/* rail: φ, the avatar and every icon stay on the x = 28 axis */
+/* rail: the mark, the avatar and every icon stay on the x = 28 axis */
 .hx-rail {
   position: absolute; top: 12px; left: 0; width: var(--sb-rail-w);
   display: flex; flex-direction: column; align-items: center; gap: 10px;
@@ -259,9 +257,6 @@ body {
 
 /* ───────────── theme customizer (theme.js renders it into the Appearance panel) ───────────── */
 .hxt-presets { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
-.hxt-logos .ui-seg__opt { padding: 0 14px; }
-.hxt-logos svg { height: 15px; width: auto; aspect-ratio: 724 / 918; fill: currentColor; }
-.hxt-logos svg.is-open { aspect-ratio: 27 / 36; }
 .hxt-select { width: 180px; flex: none; }
 .hxt-preset {
   position: relative; display: grid; gap: 4px; padding: 10px 12px 12px; cursor: pointer;

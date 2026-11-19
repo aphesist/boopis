@@ -4,6 +4,7 @@
    (`useFormsHost`) while it is on screen: no data provider exists yet. A secret goes from the field to the host and no
    further. The rest is the design system's own button and tokens. */
 import { ui } from '../components';
+import { welcomeLogo } from '../components/logo';
 import '../modules/cards';
 import { useFormsHost } from '../modules/cards/forms-host';
 import type { FormsSource } from '../data/provider';
@@ -36,6 +37,8 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
   if (!check.needed) return;
   const root = el('div', { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'fr-title', class: 'hx-first-run',
     style: 'position:fixed;inset:0;z-index:var(--z-palette);display:grid;place-content:center;gap:var(--sp-4);padding:var(--sp-6);background:var(--bg-0);color:var(--text);font:var(--fs-m)/var(--lh) var(--sans)' });
+  /* the welcome is a big moment: the logo's hero, once, above whatever step is drawn (it is not redrawn with the card) */
+  root.append(welcomeLogo());
   mount.append(root);
   return new Promise<void>((resolve) => {
     let busy = false;
@@ -62,7 +65,9 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
           card.append(list, button('Open boopis', 'primary', () => { useFormsHost(null); root.remove(); resolve(); }));
         }
       }
-      root.replaceChildren(card);
+      card.dataset['frCard'] = '';
+      const shown = root.querySelector('[data-fr-card]');
+      if (shown) shown.replaceWith(card); else root.append(card);
     };
     /* the form card's answer sink: `setup_advance` takes the answer, and what it returns is drawn once the receipt has shown */
     const hostForms = (): FormsSource => ({
