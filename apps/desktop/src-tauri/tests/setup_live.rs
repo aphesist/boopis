@@ -243,7 +243,7 @@ static SERIAL: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 enum Install {
     /// The spike install (`HX_E2E_HERMES_ENV`), found on `PATH` the way a user's own Hermes is.
     Spike(PathBuf),
-    /// The runtime archive the app ships (`HX_E2E_RUNTIME`: a directory with `runtime.json` and the archive): the host
+    /// The runtime archive the app ships (`HX_E2E_RUNTIME_ARCHIVE`: a directory with `runtime.json` and the archive): the host
     /// unpacks it itself as the first setup step, into a temporary app data directory.
     Runtime(PathBuf),
 }
@@ -261,12 +261,12 @@ async fn first_run_setup_end_to_end_on_a_real_hermes() {
 
 /// The same flow, end to end, on the archive the installer carries (ADR-0023): the real `.tar.zst` is unpacked by the
 /// host into a temporary data directory, the private home never sees `~/.hermes`, and the gateway runs on the bundled
-/// interpreter. CI points `HX_E2E_RUNTIME` at the artifact `scripts/build-runtime.sh` made.
+/// interpreter. CI points `HX_E2E_RUNTIME_ARCHIVE` at the artifact `scripts/build-runtime.sh` made.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn first_run_setup_end_to_end_on_the_bundled_runtime() {
-    let Some(dir) = std::env::var_os("HX_E2E_RUNTIME").map(PathBuf::from) else {
+    let Some(dir) = std::env::var_os("HX_E2E_RUNTIME_ARCHIVE").map(PathBuf::from) else {
         eprintln!(
-            "skipped: set HX_E2E_RUNTIME to a directory with runtime.json and the runtime archive (scripts/build-runtime.sh)"
+            "skipped: set HX_E2E_RUNTIME_ARCHIVE to a directory with runtime.json and the runtime archive (scripts/build-runtime.sh)"
         );
         return;
     };

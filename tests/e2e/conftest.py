@@ -1,7 +1,7 @@
 """End-to-end fixtures: the fake model, and a real Hermes gateway with the plugin installed.
 
-Set ``HX_E2E_HERMES_ENV`` to the spike install directory (see ``stack.py``); without it these tests
-skip. Each module gets one gateway; sessions are cheap, so tests share it.
+Set ``HX_E2E_RUNTIME`` to an unpacked runtime or ``HX_E2E_HERMES_ENV`` to the spike install directory (see
+``stack.py``); without one these tests skip. Each module gets one gateway; sessions are cheap, so tests share it.
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
 def hermes_install() -> HermesInstall:
     install = find_install()
     if install is None:
-        pytest.skip("no Hermes install: set HX_E2E_HERMES_ENV to the spike install directory")
+        pytest.skip("no Hermes: set HX_E2E_RUNTIME (unpacked runtime) or HX_E2E_HERMES_ENV (spike install)")
     return install
 
 
