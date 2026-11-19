@@ -60,13 +60,10 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
   function openModel(viaKeyboard: boolean): void {
     const G = gov();
     const anchor = G.smart ? smart : model;
-    const items = [
-      { title: 'Model' },
-      { label: 'Smart', value: SMART_VALUE, desc: 'Picks the model for each message', checked: G.smart },
-      ...data().details.models.get().map((m) => ({ label: m, value: m, mono: true, model: m, checked: !G.smart && m === G.model }))
-    ];
-    ui.menu.open(anchor, items, {
-      place: 'above', label: 'Model',
+    /* the model picker: the same listbox as every model choice (Smart first, then the models by provider) */
+    const entries = [{ value: SMART_VALUE, label: 'Smart', desc: 'Picks the model for each message' }, ...ui.modelEntries(data().details.models.get())];
+    ui.listbox.open(anchor, entries, {
+      place: 'above', label: 'Model', value: G.smart ? SMART_VALUE : G.model,
       onClose: viaKeyboard ? () => { c.focus(); } : undefined,
       onSelect: (v) => { setGovernance(v === SMART_VALUE ? { smart: true } : { smart: false, model: v }); c.flashHint(); }
     });

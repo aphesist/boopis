@@ -1,6 +1,6 @@
 /* Playwright smoke: boot without console errors, the four theme presets (and their contrast), the keyboard walk-through
    (KEYMAP.md), the owner's decisions and the dock's gestures, and an axe scan with zero violations.
-   `node tests/smoke/run.mjs [boot|themes|keys|owner|live|forms|mods|corners|axe]` runs one part. Exit code 1 on any failure. */
+   `node tests/smoke/run.mjs [boot|themes|keys|owner|live|forms|mods|controls|corners|dock-empty|dock-motion|axe]` runs one part. Exit code 1 on any failure. */
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { check, errorsAll, results, scenario, start } from './harness.mjs';
@@ -9,7 +9,10 @@ import { ownerDecisions } from './owner.mjs';
 import { liveSessions } from './live.mjs';
 import { formCards, liveForms, liveRequests } from './forms.mjs';
 import { corners } from './corners.mjs';
+import { dockEmpty } from './dock-empty.mjs';
+import { dockMotion } from './dock-motion.mjs';
 import { mods } from './mods.mjs';
+import { controls } from './controls.mjs';
 
 const require = createRequire(import.meta.url);
 const AXE = readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
@@ -44,7 +47,10 @@ if (want('keys')) await keyWalk(env);
 if (want('owner')) await ownerDecisions(env);
 if (want('live')) await liveSessions(env);
 if (want('corners')) await corners(env);
+if (want('dock-empty')) await dockEmpty(env);
+if (want('dock-motion')) await dockMotion(env);
 if (want('mods')) await mods(env, AXE);
+if (want('controls')) await controls(env, AXE);
 if (want('forms')) { await formCards(env); await liveForms(env); await liveRequests(env); }
 
 if (want('axe')) {
@@ -59,6 +65,7 @@ if (want('axe')) {
     ['appearance', {}, (p) => p.keyboard.press('Control+Shift+Comma')], ['keys sheet', {}, (p) => p.keyboard.press('Control+Slash')],
     ['account menu', {}, (p) => p.click('#hx-btn-account')], ['model picker', {}, async (p) => { await p.keyboard.press('Control+g'); await p.keyboard.press('i'); await p.waitForTimeout(200); await p.keyboard.press('Alt+m'); }],
     ['blank popover', {}, async (p) => { await p.keyboard.press('Control+g'); await p.keyboard.press('m'); await p.waitForTimeout(200); await p.keyboard.press('b'); }],
+    ['dock with no bots', { q: 'fixture=none' }, null],
     ['dock expanded + session', {}, async (p) => { await p.keyboard.press('Control+g'); await p.keyboard.press('d'); await p.waitForTimeout(300); await p.keyboard.press('Space'); }],
     ['rail', {}, (p) => p.evaluate(() => __hx.setState({ left: 'rail' }))],
     ['bone (light)', { q: 'preset=bone' }, null], ['graphite', { q: 'preset=graphite' }, null], ['typewriter', { q: 'preset=typewriter' }, null],

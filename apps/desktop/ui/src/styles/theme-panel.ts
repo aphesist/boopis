@@ -2,7 +2,7 @@
    once on the whole app. Ported from v6 theme.js; the runtime it edits is theme.ts. */
 import { esc } from '../core/dom';
 import { ui } from '../components';
-import type { SegElement } from '../components';
+import type { SegElement, SelectElement } from '../components';
 import {
   CASES, CORNERS, DENSITIES, DERIVED, DOCK_BLAME, EDITABLE, FONTS, GROUPS, PAIRS, PRESETS, compositeOf, hexOf, ratio, setThemeRefresh, themeApi, themeInternals
 } from './theme';
@@ -21,6 +21,11 @@ function choice(name: string, label: string, options: readonly string[], labels:
     segHTML(name, options.map((o, i) => ({ value: o, label: labels[i] ?? o }))) + '</div>';
 }
 
+/** a font choice: the library's select in a settings row (the list is drawn by boopis, never by the platform) */
+function fontRow(id: string, label: string, hint: string, fonts: ReadonlyArray<readonly [string, ...unknown[]]>): string {
+  return ui.html.setRow({ label, hint, labelId: id + '-l', control: ui.html.select({ id, labelId: id + '-l', entries: fonts.map((f) => ({ value: f[0] })), class: 'hxt-select' }) });
+}
+
 export function mountThemePanel(container: HTMLElement | null): void {
   if (!container) return;
   container.innerHTML =
@@ -31,8 +36,8 @@ export function mountThemePanel(container: HTMLElement | null): void {
         '<span class="hxt-preset__name">' + esc(p.name) + '</span><span class="hxt-preset__note">' + esc(p.note) + '</span></label>').join('') + '</div>' +
     '</section>' +
     '<section class="hx-set" aria-labelledby="hxt-h-type"><h3 class="ui-set__head" id="hxt-h-type">Type</h3>' +
-      '<div class="ui-set__row"><label class="ui-set__label" for="hxt-sans"><span>Interface font</span><small>Labels, buttons and the conversation</small></label><select id="hxt-sans" class="ui-input hxt-select">' + FONTS.sans.map((f) => '<option>' + esc(f[0]) + '</option>').join('') + '</select></div>' +
-      '<div class="ui-set__row"><label class="ui-set__label" for="hxt-mono"><span>Code font</span><small>Code, paths, times and costs</small></label><select id="hxt-mono" class="ui-input hxt-select">' + FONTS.mono.map((f) => '<option>' + esc(f[0]) + '</option>').join('') + '</select></div>' +
+      fontRow('hxt-sans', 'Interface font', 'Labels, buttons and the conversation', FONTS.sans) +
+      fontRow('hxt-mono', 'Code font', 'Code, paths, times and costs', FONTS.mono) +
       choice('hxt-case', 'Interface text', CASES, ['Sentence case', 'lowercase']) +
     '</section>' +
     '<section class="hx-set" aria-labelledby="hxt-h-shape"><h3 class="ui-set__head" id="hxt-h-shape">Shape</h3>' +
@@ -43,8 +48,8 @@ export function mountThemePanel(container: HTMLElement | null): void {
       '<p class="hxt-hint">Changes show at once. Lines and hover fills follow the text colour. The dock stays black in every theme.</p>' +
       GROUPS.map(([g, rows]) => '<h4 class="hxt-group">' + g + '</h4>' + rows.map(([t, label, note]) =>
         '<div class="hxt-row" data-token="' + t + '">' +
-          '<input type="color" class="hxt-swatch" id="' + idOf(t) + '-c" aria-label="' + esc(label) + ' colour">' +
-          '<label class="hxt-row__label" for="' + idOf(t) + '-x"><span>' + esc(label) + '<i class="hxt-flag" title="Fails a contrast check" hidden></i></span>' + (note ? '<small>' + esc(note) + '</small>' : '') + '</label>' +
+          '<button type="button" class="hxt-swatch" id="' + idOf(t) + '-c" aria-label="' + esc(label) + ' colour: edit its hex value"></button>' +
+          '<label class="hxt-row__label" for="' + idOf(t) + '-x"><span>' + esc(label) + '<i class="hxt-flag" role="img" aria-label="Fails a contrast check" data-tip="Fails a contrast check" hidden></i></span>' + (note ? '<small>' + esc(note) + '</small>' : '') + '</label>' +
           '<input type="text" class="ui-input ui-input--mono hxt-hex" id="' + idOf(t) + '-x" spellcheck="false" autocomplete="off" maxlength="7" aria-label="' + esc(label) + ' hex value">' +
           '<button type="button" class="ui-btn ui-btn--ghost ui-btn--s hxt-undo" data-undo="' + t + '" aria-label="Reset ' + esc(label) + ' to the theme colour"><span>Reset</span></button>' +
         '</div>').join('')).join('') +
@@ -93,8 +98,6 @@ function wireUI(ui0: HTMLElement): void {
   ui0.addEventListener('change', (e) => {
     const t = e.target as HTMLInputElement;
     if (t.name === 'hxt-preset') themeApi.preset(t.value);
-    else if (t.id === 'hxt-sans') themeApi.set({ sans: t.value });
-    else if (t.id === 'hxt-mono') themeApi.set({ mono: t.value });
     else if (t.id === 'hxt-file' && t.files && t.files[0]) {
       const r = new FileReader();
       r.onload = () => { const ta = ui0.querySelector<HTMLTextAreaElement>('#hxt-json'); if (ta) ta.value = String(r.result || ''); applyJSON(); };
@@ -110,18 +113,22 @@ function wireUI(ui0: HTMLElement): void {
   });
   const SEG: Record<string, 'case' | 'corners' | 'density'> = { 'hxt-case': 'case', 'hxt-corners': 'corners', 'hxt-density': 'density' };
   ui0.addEventListener('ui:change', (e) => {
+    const id = (e.target as HTMLElement).id, value = (e as CustomEvent<{ value: string }>).detail.value;
+    if (id === 'hxt-sans') { themeApi.set({ sans: value }); return; }
+    if (id === 'hxt-mono') { themeApi.set({ mono: value }); return; }
     const key = SEG[(e.target as HTMLElement).dataset?.['name'] ?? ''];
-    if (key) themeApi.set({ [key]: (e as CustomEvent<{ value: string }>).detail.value });
+    if (key) themeApi.set({ [key]: value });
   });
   ui0.addEventListener('input', (e) => {
     const t = e.target as HTMLInputElement;
     const row = t.closest<HTMLElement>('.hxt-row');
     if (!row) return;
-    if (t.classList.contains('hxt-swatch')) { const hx = row.querySelector<HTMLInputElement>('.hxt-hex'); if (hx) hx.value = t.value; setColor(row.dataset['token'] ?? '', t.value); }
-    else if (t.classList.contains('hxt-hex')) { const v = t.value.trim(); if (HEX.test(v)) setColor(row.dataset['token'] ?? '', v); }
+    if (t.classList.contains('hxt-hex')) { const v = t.value.trim(); if (HEX.test(v)) setColor(row.dataset['token'] ?? '', v); }
   });
   ui0.addEventListener('click', (e) => {
     const target = e.target as Element;
+    const swatch = target.closest<HTMLElement>('.hxt-swatch');
+    if (swatch) { const hx = swatch.closest('.hxt-row')?.querySelector<HTMLInputElement>('.hxt-hex'); hx?.focus(); hx?.select(); return; }
     const u = target.closest<HTMLElement>('[data-undo]');
     if (u) { themeApi.endPreview(false); delete themeInternals.theme.colors[u.dataset['undo'] ?? '']; themeInternals.apply(); return; }
     const hit = (id: string): boolean => !!target.closest('#' + id);   // the buttons carry their label in a span
@@ -151,7 +158,7 @@ function refreshUI(): void {
   if (!ui1 || !ui1.isConnected) return;
   const th = themeInternals.theme, eff = themeInternals.effective;
   const presetIn = ui1.querySelector<HTMLInputElement>('#hxt-preset-' + th.preset); if (presetIn) presetIn.checked = true;
-  const sans = ui1.querySelector<HTMLSelectElement>('#hxt-sans'), mono = ui1.querySelector<HTMLSelectElement>('#hxt-mono');
+  const sans = ui1.querySelector<SelectElement>('#hxt-sans'), mono = ui1.querySelector<SelectElement>('#hxt-mono');
   if (sans) sans.value = String(eff('sans'));
   if (mono) mono.value = String(eff('mono'));
   for (const [name, val] of [['hxt-case', eff('case')], ['hxt-corners', eff('corners')], ['hxt-density', eff('density')]] as const) {
@@ -161,8 +168,8 @@ function refreshUI(): void {
   for (const t of EDITABLE) values[t] = hexOf(t);
   for (const row of ui1.querySelectorAll<HTMLElement>('.hxt-row')) {
     const t = row.dataset['token'] ?? '', v = values[t] ?? '';
-    const sw = row.querySelector<HTMLInputElement>('.hxt-swatch'), hx = row.querySelector<HTMLInputElement>('.hxt-hex');
-    if (sw && document.activeElement !== sw) sw.value = v;
+    const sw = row.querySelector<HTMLElement>('.hxt-swatch'), hx = row.querySelector<HTMLInputElement>('.hxt-hex');
+    if (sw) sw.style.setProperty('--sw', v);
     if (hx && document.activeElement !== hx) hx.value = v;
     row.classList.toggle('is-changed', t in th.colors);
   }

@@ -8,6 +8,7 @@ import { data } from '../../data';
 import type { Bot, ThreadMessage, Wait } from '../../data';
 import { LOG_N, PAGE_NAME, S, X, attCount, botById, clock, ctxPct, motion, rendered, shownPages } from './ctx';
 import type { DockBot } from './ctx';
+import { patchHTML } from './reconcile';
 import { setOrbLife } from './orbs';
 import { emitDock, retarget } from './engine';
 import { syncRoving } from './roving';
@@ -282,7 +283,7 @@ export const timeNow = clock;
 export function viewEl(key: string): HTMLElement | null { return X.root.querySelector<HTMLElement>(`.dk-view[data-view="${key}"]:not(.is-ghost)`); }
 export function renderView(key: string): void {
   const el = viewEl(key); const tpl = V[key]; if (!el || !tpl) return;
-  el.innerHTML = tpl();
+  patchHTML(el, tpl());
   finish(el, key);
 }
 export function renderAll(): void { for (const k of Object.keys(V)) if (k !== 'bots:card' || S.card) renderView(k); }

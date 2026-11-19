@@ -137,12 +137,12 @@ describe('sessions, bots and governance commands', () => {
   it('a new bot arrives with its greeting; archiving the last bot is refused', () => {
     const events: BotsEvent[] = [];
     p.bots.subscribe((e) => events.push(e));
-    const b = p.bots.create({ name: 'Rex', role: 'Reviews pull requests. Fast.', shape: 'circle', color: '#fff', eyes: 'pill', instructions: 'Reviews pull requests.' });
+    const b = p.bots.create({ name: 'Rex', role: 'Reviews pull requests. Fast.', shape: 'circle', color: '#fff', instructions: 'Reviews pull requests.' });
     expect(b.id).toBe('rex');
     expect(b.role).toBe('reviews pull requests');
     vi.advanceTimersByTime(900 + 3000);
     expect(events.some((e) => e.type === 'message-end' && e.text.includes('I’m rex'))).toBe(true);
-    const dup = p.bots.create({ name: 'rex', role: '', shape: 'circle', color: '#fff', eyes: 'pill', instructions: '' });
+    const dup = p.bots.create({ name: 'rex', role: '', shape: 'circle', color: '#fff', instructions: '' });
     expect(dup.id).toBe('rex-2');
   });
   it('governance changes reach the run the dock shows', () => {
@@ -188,5 +188,12 @@ describe('the mock’s archived bots (the design without Hermes)', () => {
   it('a bot made outside boopis exists only as a fixture, so the v6 bots are untouched', () => {
     expect(createMockProvider({ simulate: false }).bots.snapshot().bots.some((b) => b.madeOutside)).toBe(false);
     expect(createMockProvider({ simulate: false, fixtures: ['outside'] }).bots.snapshot().bots.filter((b) => b.madeOutside).map((b) => b.id)).toEqual(['sage']);
+  });
+});
+
+describe('the empty roster fixture', () => {
+  it('`none` serves no bots at all, and `none` with a fixture serves only that one', () => {
+    expect(createMockProvider({ simulate: false, fixtures: ['none'] }).bots.snapshot().bots).toEqual([]);
+    expect(createMockProvider({ simulate: false, fixtures: ['none', 'long'] }).bots.snapshot().bots.map((b) => b.id)).toEqual(['cassiopeia-staging-deploy-guardian']);
   });
 });

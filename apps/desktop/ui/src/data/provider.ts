@@ -122,7 +122,7 @@ export interface BotsAdmin {
   /** pauses or resumes one routine at once */
   setRoutinePaused(id: string, jobId: string, paused: boolean): Promise<void>;
   /** boopis's own settings and the look: saved in the bot's own store */
-  saveOwn(id: string, patch: { cfg?: Partial<Pick<BotConfig, 'gov' | 'cap' | 'workspace'>> & { approvals?: Readonly<Record<string, boolean>> }; look?: { shape?: string; color?: string; eyes?: string } }): Promise<void>;
+  saveOwn(id: string, patch: { cfg?: Partial<Pick<BotConfig, 'gov' | 'cap' | 'workspace'>> & { approvals?: Readonly<Record<string, boolean>> }; look?: { shape?: string; color?: string } }): Promise<void>;
   /** what deleting would remove */
   removal(id: string): Promise<RemovalNote>;
   /** the profile is renamed out of the way (nothing is destroyed) and its routines paused; resolves with the way back */

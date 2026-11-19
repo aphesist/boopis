@@ -38,7 +38,7 @@ export function orbHtml(b: BotLike, o: OrbOpts = {}): string {
   const dark = lumHex(b.color) < 0.05;
   const render = o.render && o.render !== size ? o.render : null;
   return '<span class="ui-orb"' + attrs({ 'data-bot': b.id, 'data-render': render ? '' : null, style: '--o:' + size + (render ? ';--r:' + render : ''), 'data-size': size >= 40 ? 'l' : null }) + '>' +
-    '<orb-avatar' + attrs({ size: render ?? size, shape: b.shape ?? 'circle', color: b.color, 'eye-shape': b.eyes ?? 'pill', 'eye-color': dark ? 'var(--ink-on-dock)' : null,
+    '<orb-avatar' + attrs({ size: render ?? size, shape: b.shape ?? 'circle', color: b.color, 'eye-color': dark ? 'var(--ink-on-dock)' : null,
       reaction: s.reaction, 'idle-motion': o.motion ?? 'calm', mode: o.mode ?? 'drift', static: still, jelly: !still && reduced() ? '.12' : null,
       'data-glance': still ? null : '', label: b.name, 'aria-hidden': 'true' }) + '></orb-avatar>' +
     (o.flag && s.attention ? '<span class="ui-dot ui-dot--flag" aria-hidden="true"></span>' : '') + '</span>';

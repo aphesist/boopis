@@ -22,7 +22,7 @@ export interface BotConfig {
 export interface Bot {
   id: string; name: string; role: string;
   /** the orb2 look: bot data, not interface colour */
-  shape: string; color: string; eyes: string;
+  shape: string; color: string;
   state: BotState | string;
   /** what the bot waits on the user for ('approval'), else null */
   attention: string | null;
@@ -80,7 +80,7 @@ export interface BotInfo {
 /** an archived teammate: a profile renamed out of the way (nothing was deleted). `id` is the profile's name now, `was` the name it
  *  returns to, `at` when it was archived (ISO, '' when unknown) and `when` the same as the list says it ("5m", "yesterday", "mon") */
 export interface ArchivedBot { id: string; name: string; was: string; at: string; when: string }
-export interface BotDraft { name: string; role: string; shape: string; color: string; eyes: string }
+export interface BotDraft { name: string; role: string; shape: string; color: string }
 export interface BotSuggestion { name: string; desc: string; shape: string; color: string }
 export interface Choice { id: string; name: string; hint?: string }
 export interface BotCatalog {

@@ -23,7 +23,7 @@ const BUSY = new Set(['working', 'thinking', 'speaking', 'compute']);
 export interface MockOptions {
   /** run the live simulations (a ticking run, replies). Tests that need a still page turn it off. */
   simulate?: boolean;
-  /** names from `BOT_FIXTURES` to add (a bot with a long name): tests and the e2e build only */
+  /** names from `BOT_FIXTURES` to add (a bot with a long name), or `none` for an empty roster: tests and the e2e build only */
   fixtures?: readonly string[];
 }
 
@@ -39,6 +39,8 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
       : { kind: 'text', id: mid('m'), who: m.who, t: m.t, text: m.text ?? '' });
   };
   for (const [id, list] of Object.entries(M.seedThreads())) seedThread(id, list);
+  /* `none` is the empty roster (a profile with no bots yet): the dock's "+" alone. A fixture that adds a bot still adds it. */
+  if (opts.fixtures?.includes('none')) bots.length = 0;
   for (const name of opts.fixtures ?? []) {
     const f = M.BOT_FIXTURES[name];
     if (f) { bots.push(M.fixtureBot(f.bot)); seedThread(f.bot.id, f.thread); }
@@ -192,7 +194,7 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
       while (botById(id)) id = base + '-' + n++;
       const role = shortRole(draft.role);
       const nb: Bot = {
-        id, name: id, role, shape: draft.shape, color: draft.color, eyes: draft.eyes, state: 'happy', attention: null, paused: false, activity: '', spent: '0.00', last: null, ideas: M.ideasFor(role),
+        id, name: id, role, shape: draft.shape, color: draft.color, state: 'happy', attention: null, paused: false, activity: '', spent: '0.00', last: null, ideas: M.ideasFor(role),
         cfg: { instructions: draft.instructions, gov: 'governed', model: 'sonnet 5.5', cap: '0.60', cron: '', channels: { app: true, slack: false, telegram: false, email: false }, approvals: { deploys: true, push: true, network: true, spend: true, people: true, outside: true }, workspace: 'worktree' }
       };
       bots.push(nb);

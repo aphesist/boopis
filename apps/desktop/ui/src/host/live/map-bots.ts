@@ -14,7 +14,7 @@ export const ACTIVE_SECONDS = 90;
 
 /** a teammate's own record as the plugin reads it (`plugin.boopis.bots.read`) */
 export interface OwnRecord {
-  look?: { shape?: string; color?: string; eyes?: string };
+  look?: { shape?: string; color?: string; eyes?: unknown };
   settings?: { gov?: string; cap?: string; workspace?: string };
   approvals?: Record<string, boolean>;
 }
@@ -113,7 +113,10 @@ export function botFrom(k: Known, nowSeconds: number): Bot {
   const { row, plugin, detail } = k;
   const name = botName(row);
   const own = plugin?.record ?? null;
-  const look = { ...lookFor(name), ...(own?.look ?? {}) };
+  /* the stored `eyes` is left in the record and ignored here: eyes follow the bot's state, never a stored look */
+  const own_ = own?.look ?? {};
+  const base = lookFor(name);
+  const look = { shape: own_.shape ?? base.shape, color: own_.color ?? base.color };
   const model = detail ? modelLabel(detail.provider, detail.model) : modelLabel(row.provider, row.model);
   const running = runningFrom(row, nowSeconds);
   const jobs = k.jobs;

@@ -4,7 +4,7 @@
 /** what the library needs to draw and describe a bot */
 export interface BotLike {
   id?: string | undefined; name?: string | undefined; role?: string | undefined;
-  shape?: string | undefined; color?: string | undefined; eyes?: string | undefined;
+  shape?: string | undefined; color?: string | undefined;
   state?: string | undefined; attention?: string | null | undefined; paused?: boolean | undefined;
 }
 export type Tone = 'busy' | 'attention';

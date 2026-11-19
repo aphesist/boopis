@@ -72,12 +72,12 @@ export function openSettings(id: string | null, focusSection?: string | null, op
       const g = data().details.governance.get();
       modelBox.append(ui.ladder({ stations: g.ladder, current: 0, variant: 'list', label: 'Escalation ladder' }));
       const capId = 'bt-cap-' + b.id;
-      const row = frag(ui.html.setRow({ label: 'Cap per run', hint: 'Dollars per run', for: capId, control: '<input class="ui-input ui-input--mono bt-cap" id="' + capId + '" inputmode="decimal" value="' + esc(c.cap) + '">' }));
+      const row = frag(ui.html.setRow({ label: 'Cap per run', hint: 'Dollars per run', for: capId, control: '<input class="ui-input ui-input--mono bt-cap" id="' + capId + '" inputmode="decimal" autocomplete="off" value=""' + esc(c.cap) + '">' }));
       $<HTMLInputElement>('input', row).addEventListener('input', (e) => { c.cap = (e.target as HTMLInputElement).value; push({ cap: c.cap }); paintToolbar(b); });
       modelBox.append(row);
     } else {
-      const f = ui.field({ kind: 'select', label: 'Model', options: catalog.models, value: c.model, hint: 'Runs every step on this model, with no escalation and no cap.' });
-      $<HTMLSelectElement>('select', f).addEventListener('change', (e) => { c.model = (e.target as HTMLSelectElement).value; push({ model: c.model }); changed(); });
+      const f = ui.field({ kind: 'model', label: 'Model', options: catalog.models, value: c.model, hint: 'Runs every step on this model, with no escalation and no cap.' });
+      f.addEventListener('ui:change', (e) => { c.model = (e as CustomEvent<{ value: string }>).detail.value; push({ model: c.model }); changed(); });
       modelBox.append(f);
     }
   };

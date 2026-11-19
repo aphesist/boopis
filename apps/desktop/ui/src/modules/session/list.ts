@@ -87,7 +87,7 @@ export function mountList(root: HTMLElement): void {
     const r = root.querySelector<HTMLElement>(`.ui-row[data-id="${id}"]`); if (!r) return;
     const s = sessions().list.get().find((x) => x.id === id), li = r.closest('li');
     if (!s || !li) return;
-    const input = el('input', { class: 'ui-input ss-rename', type: 'text', value: s.title, 'aria-label': 'Rename session' });
+    const input = el('input', { class: 'ui-input ss-rename', type: 'text', value: s.title, autocomplete: 'off', spellcheck: 'false', 'aria-label': 'Rename session' });
     li.replaceChildren(input); input.focus(); input.select();
     const done = (save: boolean): void => {
       if (renaming !== id) return; renaming = null;

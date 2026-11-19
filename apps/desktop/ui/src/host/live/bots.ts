@@ -297,7 +297,7 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       if (opts.model) Object.assign(params, resolveModel(opts.model));
       const made = await client.requestRaw('profiles.create', params) as { path?: string; warnings?: string[]; model_set?: boolean };
       try {
-        await plug('bots.write', { name: plan.profile, look: { shape: draft.shape, color: draft.color, eyes: draft.eyes }, settings: { gov: 'governed', cap: '0.60', workspace: 'worktree' }, approvals: Object.fromEntries(APPROVALS.map((a) => [a.id, true])) });
+        await plug('bots.write', { name: plan.profile, look: { shape: draft.shape, color: draft.color }, settings: { gov: 'governed', cap: '0.60', workspace: 'worktree' }, approvals: Object.fromEntries(APPROVALS.map((a) => [a.id, true])) });
       } catch (e) { log.warn('the new teammate’s own record was not saved', e); }
       if (made.warnings?.length) log.warn('Hermes warned while making ' + plan.profile + ': ' + made.warnings.join(' '));
       await refreshRoster();

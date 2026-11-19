@@ -21,6 +21,8 @@ APP_COMMENT='A desktop app for AI coding agents'
 # The window class the AppImage's binary reports: GTK takes it from the program name (Cargo's bin, `boopis`), as the
 # app sets no GTK application id (`enableGtkAppId` is off in tauri.conf.json).
 APP_WM_CLASS=boopis
+APP_GENERIC_NAME='Coding harness'
+APP_KEYWORDS='coding;agent;hermes;ai;'
 # The files of a release. {v} is the version without its leading v.
 ARTIFACT_LINUX_X86_64='boopis_{v}_amd64.AppImage'
 ARTIFACT_MACOS_AARCH64='boopis_{v}_aarch64.dmg'
@@ -269,6 +271,30 @@ put_text() { # put_text <mode> <destination>, the text on standard input
   rm -f "$tmp"
 }
 
+# Refresh the icon and menu caches of the prefix, when the tools exist (silently skipped when they do not: the cache is only
+# an accelerator). A cache the installer creates is recorded, so uninstall removes it; one that was already there is only
+# refreshed, and refreshed again after an uninstall so it stops listing the icons that went.
+refresh_one() { # refresh_one <install|remove> <cache file> <command> <args...>
+  local mode=$1 cache=$2 existed=0
+  shift 2
+  have "$1" || return 0
+  if [ -e "$cache" ]; then existed=1; fi
+  if [ "$mode" = remove ] && [ "$existed" = 0 ]; then return 0; fi
+  priv "$@" >/dev/null 2>&1 || true
+  if [ "$mode" = install ] && [ "$existed" = 0 ] && [ -e "$cache" ]; then record f "$cache"; fi
+}
+
+refresh_caches() { # refresh_caches <install|remove>
+  local share="$PREFIX/share"
+  [ "$OS" = linux ] || return 0
+  if [ -d "$share/icons/hicolor" ]; then
+    refresh_one "$1" "$share/icons/hicolor/icon-theme.cache" gtk-update-icon-cache -f -t "$share/icons/hicolor"
+  fi
+  if [ -d "$share/applications" ]; then
+    refresh_one "$1" "$share/applications/mimeinfo.cache" update-desktop-database "$share/applications"
+  fi
+}
+
 # Remove what a manifest lists, files first and then the folders the installer made (if they are empty by now).
 do_uninstall() {
   local manifest=$1 kind path dirs='' shown
@@ -486,10 +512,16 @@ install_linux() { # install_linux <appimage>
     [ "$FUSE_MISSING" = 0 ] || printf 'APPIMAGE_EXTRACT_AND_RUN=1\nexport APPIMAGE_EXTRACT_AND_RUN\n'
     printf 'exec "%s" "$@"\n' "$exe"
   } | put_text 755 "$bin/$APP"
-  # The menu entry, with the icon by name, so the theme picks the size.
+  # The menu entry. Its file name and StartupWMClass are the window's app id: the AppImage's binary is `boopis`, and GTK
+  # (no application id set) takes the Wayland app id from the program name, so a launcher or a dock finds this entry for
+  # the running window. Icon= is the absolute path of the 256 px PNG, which every launcher resolves, even those that do not
+  # read the hicolor theme of ~/.local/share (the hicolor icons below stay for themes and panels).
+  local icon_name=$APP
+  [ "$OPT_ICON" != dark ] || icon_name=$APP-dark
   {
-    printf '[Desktop Entry]\nType=Application\nName=%s\nComment=%s\n' "$APP" "$APP_COMMENT"
-    printf 'Exec=%s %%U\nIcon=%s\nTerminal=false\nCategories=Development;\nStartupWMClass=%s\n' "$bin/$APP" "$([ "$OPT_ICON" = dark ] && printf '%s-dark' "$APP" || printf '%s' "$APP")" "$APP_WM_CLASS"
+    printf '[Desktop Entry]\nType=Application\nName=%s\nGenericName=%s\nComment=%s\n' "$APP" "$APP_GENERIC_NAME" "$APP_COMMENT"
+    printf 'Exec=%s %%U\nIcon=%s\nTerminal=false\nCategories=Development;\nKeywords=%s\nStartupNotify=true\nStartupWMClass=%s\n' \
+      "$bin/$APP" "$share/icons/hicolor/256x256/apps/$icon_name.png" "$APP_KEYWORDS" "$APP_WM_CLASS"
   } | put_text 644 "$share/applications/$APP.desktop"
   # The icons: the light one is the default, the dark one sits beside it; the symbolic one is for panels and trays.
   local variant size file suffix
@@ -501,6 +533,7 @@ install_linux() { # install_linux <appimage>
     put_file 644 "$WORK/icon.png" "$share/icons/hicolor/${size}x${size}/apps/$APP$suffix.png"
   done
   printf '%s\n' "$BRAND_SYMBOLIC" | put_text 644 "$share/icons/hicolor/symbolic/apps/$APP-symbolic.svg"
+  refresh_caches install
   INSTALLED_AT=$(tilde "$share/$APP")
   START_HINT=$APP
 }
@@ -675,6 +708,7 @@ main() {
   if [ "$OPT_UNINSTALL" = 1 ]; then
     show_banner
     do_uninstall "$MANIFEST"
+    refresh_caches remove
     step_ok Removed "boopis, from $(tilde "$PREFIX")"
     say ''
     say "  Your data in ~/$APP_DATA_DIR was kept. Delete that folder to remove the runtime and the settings."
@@ -736,10 +770,10 @@ write_uninstaller() {
       "$APP" "$APP_DATA_DIR" "$PREFIX" "$SUDO" "$OPT_SYSTEM"
     printf 'OS=%q ARCH=%q APPS_DIR=%q WORK=\n' "$OS" "$ARCH" "$APPS_DIR"
     printf 'C_OK= C_FAIL= C_WARN= C_DIM= C_STRONG= C_OFF= MARK_OK=+ MARK_FAIL=x MARK_WARN=! ANIMATE=0 INTERACTIVE=0 UNICODE=0\n'
-    declare -f say step_ok die tilde priv do_uninstall
+    declare -f say step_ok die tilde have priv record do_uninstall refresh_one refresh_caches
     # shellcheck disable=SC2016 # the text of the uninstaller: its variables expand when it runs
     printf 'if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then C_OK=$(printf "\\033[32m") C_FAIL=$(printf "\\033[31m") C_OFF=$(printf "\\033[0m"); fi\n'
-    printf 'do_uninstall %q\n' "$MANIFEST"
+    printf 'do_uninstall %q\nrefresh_caches remove\n' "$MANIFEST"
     # shellcheck disable=SC2016
     printf 'step_ok Removed "boopis, from $(tilde %q)"\n' "$PREFIX"
     printf 'say "  Your data in ~/%s was kept. Delete that folder to remove the runtime and the settings."\n' "$APP_DATA_DIR"

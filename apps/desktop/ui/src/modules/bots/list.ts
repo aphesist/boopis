@@ -102,7 +102,7 @@ export function updateRow(id: string): void {
 export function showDraftRow(on: boolean): void {
   if (!S.rowsEl) return;
   if (!on) { if (S.draftRow) { S.draftRow.li.remove(); S.draftRow = null; syncRoving(); } return; }
-  const d = S.draft ?? { color: DRAFT_COLOR, shape: 'circle', eyes: 'pill', name: '', role: '', tab: 'colour' };
+  const d = S.draft ?? { color: DRAFT_COLOR, shape: 'circle', name: '', role: '', tab: 'colour' };
   if (!S.draftRow) {
     const li = frag(ui.html.row({ title: 'New bot', sub: 'Draft', value: '__draft', current: true, class: 'bt-row--draft', lead: orbHTML({ ...d, name: 'New bot' }, railOn() ? 24 : 20), attrs: { 'data-tip-pos': 'right' } }));
     livenIn(li);

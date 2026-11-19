@@ -31,7 +31,7 @@ afterEach(() => { vi.useRealTimers(); });
 describe('the new-bot form: names', () => {
   it('has a dice button that says what it does and what its key is', () => {
     const dice = q('.bt-dice');
-    expect(dice.getAttribute('aria-label')).toBe('Surprise me with a name');
+    expect(dice.getAttribute('aria-label')).toBe('Surprise me with a name, colour and shape');
     expect(dice.getAttribute('data-tip')).toBe('Surprise me');
     expect(dice.getAttribute('aria-keyshortcuts')).toBe('Alt+R');
     expect(dice.querySelector('svg.ui-icon')).toBeTruthy();
@@ -93,5 +93,31 @@ describe('the new-bot form: names', () => {
     expect(q('.bt-go-label').textContent).toBe('Create ' + input.value);
     expect(q('.bt-go').getAttribute('data-tip')).toBe('Create ' + input.value);
     expect(q('.bt-stage button').getAttribute('aria-label')).toBe('Preview of ' + input.value);
+  });
+});
+
+describe('the new-bot form: the dice rolls the look', () => {
+  const cur = () => ({ shape: S.draft?.shape, color: S.draft?.color });
+  it('changes name, colour and shape, and the preview follows', () => {
+    const before = cur(); const orb = q('.bt-stage orb-avatar');
+    q('.bt-dice').click();
+    const d = S.draft!;
+    expect(d.shape !== before.shape || d.color !== before.color).toBe(true);
+    expect(orb.getAttribute('shape')).toBe(d.shape);
+    expect(orb.getAttribute('color')).toBe(d.color);
+  });
+  it('a manual pick stays until the next roll', () => {
+    [...document.querySelectorAll<HTMLElement>('[role=tab]')].find((t) => t.textContent === 'Shape')!.click();
+    q<HTMLElement>('.bt-opt[data-val=star]').click();
+    q<HTMLInputElement>('.bt-name').dispatchEvent(new Event('input'));
+    q<HTMLTextAreaElement>('textarea').dispatchEvent(new Event('input'));
+    expect(S.draft?.shape).toBe('star');
+    const colour = S.draft?.color;
+    q('.bt-dice').click();
+    expect(S.draft?.shape !== 'star' || S.draft?.color !== colour).toBe(true);
+  });
+  it('has no way to choose eyes', () => {
+    expect([...document.querySelectorAll('[role=tab]')].map((t) => t.textContent)).toEqual(['Colour', 'Shape']);
+    expect(q('.bt-stage orb-avatar').hasAttribute('eye-shape')).toBe(false);
   });
 });

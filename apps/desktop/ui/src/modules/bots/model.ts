@@ -7,7 +7,7 @@ import type { Bot, BotsEvent, ThreadMessage } from '../../data';
 import type { Follower } from './orbs';
 import { data } from '../../data';
 
-export interface Draft { name: string; role: string; color: string; shape: string; eyes: string; tab: string }
+export interface Draft { name: string; role: string; color: string; shape: string; tab: string }
 type Row = { li: HTMLElement; btn: HTMLElement };
 export interface RunMark { id: string }
 
