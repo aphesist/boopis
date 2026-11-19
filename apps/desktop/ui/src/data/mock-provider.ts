@@ -23,7 +23,8 @@ const BUSY = new Set(['working', 'thinking', 'speaking', 'compute']);
 export interface MockOptions {
   /** run the live simulations (a ticking run, replies). Tests that need a still page turn it off. */
   simulate?: boolean;
-  /** names from `BOT_FIXTURES` to add (a bot with a long name), or `none` for an empty roster: tests and the e2e build only */
+  /** names from `BOT_FIXTURES` to add (a bot with a long name), `none` for an empty roster, or `fresh` for a first install (no bots and
+      no session started: the first message starts one): tests and the e2e build only */
   fixtures?: readonly string[];
 }
 
@@ -40,7 +41,7 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
   };
   for (const [id, list] of Object.entries(M.seedThreads())) seedThread(id, list);
   /* `none` is the empty roster (a profile with no bots yet): the dock's "+" alone. A fixture that adds a bot still adds it. */
-  if (opts.fixtures?.includes('none')) bots.length = 0;
+  if (opts.fixtures?.includes('none') || opts.fixtures?.includes('fresh')) bots.length = 0;
   for (const name of opts.fixtures ?? []) {
     const f = M.BOT_FIXTURES[name];
     if (f) { bots.push(M.fixtureBot(f.bot)); seedThread(f.bot.id, f.thread); }
@@ -205,7 +206,7 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
       return cloneBot(nb);
     },
     archive(id) {
-      const i = bots.findIndex((b) => b.id === id); if (i < 0 || bots.length < 2) return;
+      const i = bots.findIndex((b) => b.id === id); if (i < 0) return;
       bots.splice(i, 1);
       botsEv.emit({ type: 'bot-archived', id });
     },
@@ -305,6 +306,8 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
     },
     send(id, text, meta) {
       sessions.stop(id);
+      /* the first message of a session starts the run the dock shows, named by its first line (the live provider's `onSent`) */
+      if (run.get().title === '') run.set({ ...run.get(), title: text.split('\n')[0]?.trim().slice(0, 80) ?? '', model: meta.model, elapsed: 0, cost: 0, stopped: false });
       const turns = turnsOf(id), ev = evOf(id);
       const user: Turn = { id: mid('t'), role: 'user', at: hhmm(), text };
       turns.push(user); ev.emit({ type: 'turn-added', turn: user });
@@ -377,10 +380,12 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
     cost: M.RUN_SEED.cost, cap: M.RUN_SEED.cap, ladder, current: M.GOVERNANCE.current, tokens: M.LEDGER.tokens, trips: M.LEDGER.trips,
     governed: M.GOVERNANCE.governed, network: M.RUN_SEED.network, stopped: false
   });
+  /* `fresh`: a first install has no run until a session is started (the live provider's run is blank the same way) */
+  if (opts.fixtures?.includes('fresh')) run.set({ ...run.get(), title: '', model: '', step: 0, escalated: 0, elapsed: 0, cost: null, cap: null, tokens: '', trips: 0 });
   if (simulate) {
     setInterval(() => {
       const r = run.get();
-      if (r.stopped || document.hidden) return;
+      if (r.stopped || r.title === '' || document.hidden) return;
       run.set({ ...r, elapsed: r.elapsed + 1, cost: Math.min(r.cap ?? 0, (r.cost ?? 0) + 0.0004) });
     }, 1000);
   }

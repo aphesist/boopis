@@ -10,7 +10,7 @@ import { writeJSON, KEYS } from '../../core/settings';
 import { ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { Wait } from '../../data';
-import { PAGE_NAME, S, X, botById, flags, motion, shownPages, EASE, clamp } from './ctx';
+import { PAGE_NAME, S, X, botById, flags, motion, presence, shownPages, EASE, clamp } from './ctx';
 import { cancelOut, flipDots, hideTip, markFocus, morph, renderDots, resetMag, retarget, showView, slideNow, slideTo, stopSlide, syncFoot, emitDock, updateDots } from './engine';
 import type { MorphOpts } from './engine';
 import { lookRow, setOrbLife } from './orbs';
@@ -40,6 +40,7 @@ export function setMode(mode: string, opts: MorphOpts = {}): void {
   if (mode === 'minimal') announce('Dock minimised');
 }
 export function setOn(on: boolean): void {
+  if (on && !presence().visible) return;      /* nothing is in the dock (or the setting is off): there is nothing to show */
   const my = ++flags.offSeq;
   if (!on) {
     if (S.mode === 'off') return;
@@ -241,7 +242,7 @@ function tileFlip(before: Map<string, number>, skip?: HTMLElement): void {
 }
 export function togglePage(id: string): void {
   const p = S.pages.find((x) => x.id === id); if (!p) return;
-  if (p.on && shownPages().length === 1) return;
+  if (p.on && S.pages.filter((x) => x.on).length === 1) return;
   morph(() => {
     p.on = !p.on;
     if (!p.on && S.page === id) S.page = shownPages()[0] ?? 'bots';

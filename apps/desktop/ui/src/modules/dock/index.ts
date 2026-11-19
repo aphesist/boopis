@@ -14,7 +14,7 @@ import { $$, clamp, isMac } from '../../core/dom';
 import { ui } from '@boopis/ui';
 import { data } from '../../data';
 import {
-  K_DOT, K_SINK, K_SLAB, PAGE_IDS, S, X, botById, flags, motion, readRadius, rendered, snapS, spring
+  K_DOT, K_SINK, K_SLAB, PAGE_IDS, S, X, botById, flags, motion, presence, readRadius, rendered, shownPages, snapS, spring
 } from './ctx';
 import type { DockBot } from './ctx';
 import { E, cancelFlips, cxNow, emitDock, focusDock, kick, morph, paint, renderDots, resetMag, retarget, shellVar, showView, stopSlide } from './engine';
@@ -22,6 +22,8 @@ import { lookRow, setOrbLife } from './orbs';
 import { patchHTML } from './reconcile';
 import { makeOrb, paintSession, refreshBot, relocateLive, renderAll, renderMins, renderView, viewKey, costHTML, fmtDur, meterHTML } from './views';
 import { closeCard, goPage, onCardAction, onCardState, onWaitAdded, onWaitResolved, openCard, setMode, setOn, toggleSetting } from './controller';
+import { appear, followSetting, leaveEmpty, markParts, settleParts } from './arrival';
+import { changeOf, pageOf, presenceOf, sessionStarted } from './presence';
 import { cancelOutside, fitRow, onClick, onDocDown, onDocUp, onFocusIn, onFocusOut, onKey, onLayout, onPointerDown, onPointerMove, onTouchMove, onTouchUp, onWheel, onDoubleGuard } from './input';
 import type { RunSnapshot } from '../../data';
 /* drawn corners (DESIGN-SYSTEM.md section 8): the dock's own surfaces; the tiles float, so they are surfaces */
@@ -41,11 +43,13 @@ const VIEW_CLASS: Record<string, string> = {
 interface SavedDock { pages?: Array<{ id: string; on: boolean }>; minimal?: boolean }
 function initData(): void {
   const d = data();
+  flags.setting = appState.dock !== 'off';
   const snap = d.bots.snapshot();
   S.bots = snap.bots.map((b): DockBot => ({ ...b, paused: false }));
   S.threads = Object.fromEntries(Object.entries(snap.threads).map(([k, v]) => [k, [...v]]));
   S.waits = [...d.waits.snapshot()];
   S.run = d.run.current.get();
+  S.session = sessionStarted(S.run);
   S.sched = d.schedules.list.get().filter((s) => botById(s.bot)).map((s) => ({ ...s }));
   const c = d.details.context.get();
   S.ctx = { used: c.used, total: c.total, parts: c.parts };
@@ -56,15 +60,23 @@ function initData(): void {
     if (known.some((p) => p.on)) S.pages = known;
   }
   if (saved && saved.minimal) S.restore = 'minimal';
-  const shown = S.pages.filter((p) => p.on).map((p) => p.id);
-  if (!shown.includes(S.page)) S.page = shown[0] ?? 'bots';
+  S.page = pageOf(S.page, shownPages());
 }
 
 function onRun(next: RunSnapshot): void {
+  /* a blank run (a new session nobody has written to yet) leaves the latest run where it was: the dock shows the session started last */
+  const started = sessionStarted(next);
+  if (!started && S.session) return;
   const prev = S.run; S.run = next;
+  if (started && !S.session) { firstSession(); return; }
   if (!prev) return;
   if (next.stopped && !prev.stopped) {
     morph(() => { renderView('run:norm'); renderView('run:exp'); renderView('run:min'); }, { ghost: true });
+    return;
+  }
+  /* a session that took another title or model (the one shown changed) is drawn again, in place */
+  if (next.title !== prev.title || next.model !== prev.model || next.current !== prev.current || next.escalated !== prev.escalated) {
+    morph(() => { for (const k of ['run:norm', 'run:exp', 'run:min', 'ctx:norm', 'ctx:exp', 'ctx:min']) renderView(k); });
     return;
   }
   /* a tick changes the clock and sometimes the cost: only what differs is written, and the meter's dots are patched, not rebuilt */
@@ -74,6 +86,15 @@ function onRun(next: RunSnapshot): void {
   for (const el of $$('[data-run-cost]', X.root)) patchHTML(el, cost);
   for (const el of $$('[data-run-meter]', X.root)) patchHTML(el, meter);
   if (next.governed !== prev.governed) { const hint = X.root.querySelector('label[for="dk-sw-governed"] small'); if (hint) hint.textContent = next.governed ? 'The ladder picks the model' : `Stays on ${next.model}`; }
+}
+/** the first session started: the session part exists now. The dock rises in if it was not there, or grows to take the part in. */
+function firstSession(): void {
+  const before = presenceOf({ bots: S.bots.length, session: false, setting: flags.setting });
+  S.session = true;
+  const how = changeOf(before, presence());
+  if (how === 'appear') appear();
+  else if (how === 'parts') morph(() => { settleParts(); renderAll(); }, { render: [] });
+  else { settleParts(); renderAll(); }       /* the setting is off: nothing to show yet, the views are ready for when it is on */
 }
 function onSchedules(): void {
   S.sched = data().schedules.list.get().filter((s) => botById(s.bot)).map((s) => ({ ...s }));
@@ -86,20 +107,31 @@ function wireData(): void {
     if (ev.type === 'bot-created') {
       /* bots are one stream: a bot made in the Bots tab joins the dock, last, without a reload */
       if (botById(ev.bot.id)) return;
+      const before = presence();
       const b: DockBot = { ...ev.bot, paused: false };
       S.bots.push(b);
       S.threads[b.id] ??= [];
       X.orbs.set(b.id, makeOrb(b));
-      morph(() => renderAll(), { render: [] });
+      const after = presence(), how = changeOf(before, after);
+      if (how === 'appear') { appear(); return; }          /* the first bot: the dock rises in with it */
+      morph(() => { if (before.bots !== after.bots) settleParts(); renderAll(); }, { render: [] });
       fitRow();
     } else if (ev.type === 'bot-archived') {
       const i = S.bots.findIndex((x) => x.id === ev.id); if (i < 0) return;
-      if (S.card === ev.id) closeCard(false);
+      const before = presence(), after = presenceOf({ bots: S.bots.length - 1, session: S.session, setting: flags.setting });
+      const how = changeOf(before, after);
+      if (S.card === ev.id && how !== 'leave') closeCard(false);
       S.bots.splice(i, 1);
       S.sched = S.sched.filter((x) => x.bot !== ev.id);
-      X.orbs.get(ev.id)?.remove(); X.orbs.delete(ev.id);
       S.rowIdx = Math.min(S.rowIdx, S.bots.length);
-      morph(() => renderAll(), { render: [] });
+      const drop = (): void => { X.orbs.get(ev.id)?.remove(); X.orbs.delete(ev.id); };
+      if (how === 'leave') {
+        /* the last bot, and no session: the dock leaves with what it shows, and the bot's orb goes once it is out of sight */
+        leaveEmpty(() => { S.card = null; drop(); settleParts(); renderAll(); fitRow(); });
+        return;
+      }
+      drop();
+      morph(() => { if (before.bots !== after.bots) settleParts(); renderAll(); }, { render: [] });
       fitRow();
     } else if (ev.type === 'bot') {
       const b = botById(ev.bot.id); if (!b) return;
@@ -145,9 +177,9 @@ function build(slotEl: HTMLElement): void {
       ${PAGE_IDS.map((p) => `<section class="dk-page" id="dk-p-${p}" data-page="${p}" role="tabpanel" aria-labelledby="dk-tab-${p}" hidden>${views(p)}</section>`).join('')}
       <section class="dk-page" id="dk-p-edit" data-page="edit" role="group" aria-labelledby="dk-edit-h" hidden>${views('edit')}</section>
       <div class="dk-foot">
-        ${ui.html.iconButton({ icon: 'sliders', label: 'Arrange dock pages', tip: 'Arrange pages', size: 's', tipPos: 'top', class: 'dk-foot-btn', attrs: { 'data-act': 'customise' } })}
+        <span class="dk-foot-ctl">${ui.html.iconButton({ icon: 'sliders', label: 'Arrange dock pages', tip: 'Arrange pages', size: 's', tipPos: 'top', class: 'dk-foot-btn', attrs: { 'data-act': 'customise' } })}</span>
         <div class="dk-dots"></div>
-        ${ui.html.iconButton({ icon: 'chevron-down', label: 'Minimise the dock', tip: 'Minimise', size: 's', tipPos: 'top', class: 'dk-foot-btn dk-down', attrs: { 'data-act': 'down' } })}
+        <span class="dk-foot-ctl">${ui.html.iconButton({ icon: 'chevron-down', label: 'Minimise the dock', tip: 'Minimise', size: 's', tipPos: 'top', class: 'dk-foot-btn dk-down', attrs: { 'data-act': 'down' } })}</span>
       </div>
       <span class="ui-sr" id="dk-bot-hint">Click or Enter opens its session here. Click it again, or Esc, to close. Double-click or ${isMac ? 'Command' : 'Control'}+Enter opens the full chat in the Bots tab.</span>
     </div>`;
@@ -187,9 +219,10 @@ function mount(slotEl: HTMLElement): void {
   E.dotS = spring(0, K_DOT, 1, 0.05);
   flags.useVar = shellVar();
   X.root.classList.toggle('is-self-centred', !flags.useVar);
-  const startOff = appState.dock === 'off';
+  const startOff = !presence().visible;       /* the setting is off, or nothing is in the dock yet: a first install shows no dock */
   S.mode = startOff ? 'off' : (S.restore === 'minimal' ? 'minimal' : 'normal');
   X.root.dataset['mode'] = S.mode;
+  markParts();
   readGrow();
   renderAll();
   renderDots();
@@ -230,10 +263,7 @@ function mount(slotEl: HTMLElement): void {
   on('hx:layout', onLayout);
   on('hx:state', (d) => {
     if (d.changed.includes('orbGrow')) readGrow();
-    if (d.changed.includes('dock')) {
-      if (d.state.dock === 'off' && S.mode !== 'off') setOn(false);
-      else if (d.state.dock !== 'off' && S.mode === 'off') setOn(true);
-    }
+    if (d.changed.includes('dock')) { flags.setting = d.state.dock !== 'off'; followSetting(); }
   });
   on('hx:attention', (d) => {
     if (!d.source || d.source === 'dock') return;
