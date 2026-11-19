@@ -361,6 +361,13 @@ They're not sandboxed, matching Claude Code. This is the only exception to the n
 - Signed updates need an update-signing key, which the owner creates and stores as a CI secret. It never goes in the repository.
 - ARCHITECTURE §4 is amended: the earlier plan had the host run Hermes's installer on the user's machine.
 
+**Amendment (what was built).**
+- The runtime is Hermes's own sealed payload (the layout its desktop app and Docker image use), made by calling its build functions (`scripts/bundles/native.py`, `scripts/build/agent.py`), not by a script of ours that copies their results: `tools/` holds python-build-standalone and uv at the pins in `pm/lock.json`, `pm-runtime/` the package manager's own environment, `venv/` the locked dependencies, `manifest.json` the layout. A first version without `pm-runtime` could not enable the plugin.
+- Why Hermes's layout: every path is found relative to the payload, so the directory works unpacked anywhere (proved by `scripts/verify-runtime.sh`), and a sealed payload's package manager puts what it downloads on first use in `<HERMES_HOME>/tools`, not in the replaceable runtime folder.
+- Hermes's self-update is off by two of its own mechanisms: the install stamp (`distribution: desktop-app`, `updateMechanism: external`, written by Hermes's `write_install_stamp.py`) makes `hermes update` refuse, and `updates.check: false` in the private home's config (key read in `hermes_cli/source_check.py` and `update_cmd.py`) stops the passive check.
+- Two crates join the host: `tar` and `zstd` (MIT or Apache-2.0; `zstd-sys` builds the BSD-licensed C library), to unpack the archive in the host without a system `tar` or `zstd` (Windows has neither).
+- The host keeps the choice of Hermes in one pure function: the bundled runtime unless `HYPOTAXIS_HERMES=existing` (or `hermes_source` in `settings.json`) says otherwise; a build without a runtime uses the Hermes on the machine, and a broken `runtime.json` is a setup error.
+
 ## ADR-0024 The host picks WebKitGTK's renderer from evidence, never blanket
 **Context.**
 - Tauri draws with WebKitGTK on Linux. Its renderer is chosen by environment switches read when the web view is created: `WEBKIT_DISABLE_DMABUF_RENDERER` (shared-memory buffers instead of DMABUF), `WEBKIT_DISABLE_COMPOSITING_MODE` (no accelerated compositing), `__NV_DISABLE_EXPLICIT_SYNC` (NVIDIA on Wayland).

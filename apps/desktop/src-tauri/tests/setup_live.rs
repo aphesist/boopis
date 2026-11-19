@@ -474,7 +474,9 @@ async fn run_flow(install: Install) {
     let s = setup.advance(None, false).await.unwrap();
     assert_eq!(s.steps[0].state, StepState::Done, "{:?}", s.steps);
     let steps = format!("{:?}", s.steps);
-    let form = s.form.unwrap_or_else(|| panic!("the consent form; steps: {steps}"));
+    let form = s
+        .form
+        .unwrap_or_else(|| panic!("the consent form; steps: {steps}"));
     assert_eq!(
         (form.form_id.as_str(), form.kind.as_str()),
         ("setup.config", "setup")
