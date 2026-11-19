@@ -1,0 +1,43 @@
+Model marks
+===========
+
+What is here
+  svg/*.svg     the provider icons hypotaxis draws beside a model's name: a mono variant (currentColor) for each,
+                and a colour variant where the source has one. Optimised with SVGO 3.3.2 (multipass, precision 2,
+                viewBox kept, title, size and inline style removed, gradient ids prefixed).
+  svg/generic.svg   hypotaxis's own neutral mark for a model whose family is unknown. Not from the source below.
+  map.json      which family a model id belongs to, and the brand-colour legibility rule.
+  build.js      writes icons.js (node vendor/model-icons/build.js, no dependencies).
+  icons.js      generated from map.json and svg/*.svg so pages opened from file:// can draw them. Do not edit.
+                In the colour variants, a fill under 3:1 against the menu row keeps its hue and moves in OKLab
+                lightness until it reaches 3:1, per scheme, through light-dark(); the shipped value stays as the
+                fill attribute.
+
+Source
+  @lobehub/icons-static-svg 1.104.0, https://github.com/lobehub/lobe-icons
+  Fetched with npm pack into a scratch directory; only the files listed above were copied, never the package.
+  Files: claude, claude-color, openai, gemini, gemini-color, deepseek, deepseek-color, qwen, qwen-color, zai,
+  kimi, kimi-color, minimax, minimax-color, grok, meta, meta-color, mistral, mistral-color, ollama.
+
+Licence of the icon code (MIT)
+  Copyright (c) 2023 LobeHub
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+  documentation files (the "Software"), to deal in the Software without restriction, including without limitation
+  the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and
+  to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all copies or substantial portions
+  of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+  THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+  CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+  IN THE SOFTWARE.
+
+Trademarks
+  The logos are trademarks of their respective owners (Anthropic, OpenAI, Google, DeepSeek, Alibaba Cloud,
+  Zhipu AI / Z.ai, Moonshot AI, MiniMax, xAI, Meta, Mistral AI, Ollama). The MIT licence covers the icon code, not
+  the marks. hypotaxis uses them only to identify the model that answered, always beside the model's name, and
+  implies no endorsement or affiliation.

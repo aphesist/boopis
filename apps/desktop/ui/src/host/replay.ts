@@ -1,13 +1,14 @@
 /* A host that plays recorded frames: the transport of the tests that need no Tauri and no Hermes. It answers each
    request with the recorded response of the same method (in the order they were recorded; the last one again when the
    UI asks more often than the recording did) and, after a request that started work on the gateway (`prompt.submit`,
-   `blank.fill`), replays the events the recording shows following it. The frames come from a real gateway and plugin
+   `blank.fill`, `form.submit`), replays the events the recording shows following it. The frames come from a real gateway and plugin
    (`tests/e2e/record_ui_frames.py`); nothing here invents a value. A method the recording never saw is answered as the
    gateway answers an unknown one. Used by the unit tests and, in the e2e build only, by the Playwright smoke. */
 import type { Connected, HostBridge } from './bridge';
+import type { SecretsBridge } from './secrets';
 
 export interface RecordedFrame { dir: 'in' | 'out'; frame: Record<string, unknown> }
-const WORKS = new Set(['prompt.submit', 'plugin.hypotaxis.blank.fill']);
+const WORKS = new Set(['prompt.submit', 'plugin.hypotaxis.blank.fill', 'plugin.hypotaxis.form.submit', 'plugin.hypotaxis.form.cancel']);
 
 export class ReplayHost implements HostBridge {
   private onFrame: (f: unknown) => void = () => undefined;
@@ -28,7 +29,7 @@ export class ReplayHost implements HostBridge {
     const f = frame as { id?: number; method?: string; params?: unknown };
     if (f.method === undefined || f.id === undefined) return Promise.resolve();
     this.requests.push({ method: f.method, params: f.params });
-    queueMicrotask(() => { this.answer(f.id as number, f.method as string, (f.params as { session_id?: unknown } | undefined)?.session_id); });
+    queueMicrotask(() => { this.answer(f.id as number, f.method as string, (f.params as { session_id?: unknown } | undefined)?.session_id, f.params as { form_id?: unknown } | undefined); });
     return Promise.resolve();
   }
   /** the host's own frames: a lost link and its return, for the reconnect tests */
@@ -43,10 +44,13 @@ export class ReplayHost implements HostBridge {
     const id = this.frames[i]?.frame['id'];
     return this.frames.find((r) => r.dir === 'out' && r.frame['id'] === id)?.frame['method'] as string | undefined;
   }
-  private answer(id: number, method: string, sessionId: unknown): void {
+  private answer(id: number, method: string, sessionId: unknown, params?: { form_id?: unknown }): void {
     let outs = this.frames.map((r, i) => ({ r, i })).filter((x) => x.r.dir === 'out' && x.r.frame['method'] === method);
     /* a request about a session is answered with what the recording shows for that session; a session it never saw is not found */
     const about = (x: { r: RecordedFrame }): unknown => (x.r.frame['params'] as { session_id?: unknown } | undefined)?.session_id;
+    /* a request about a form is answered with what the recording shows for that form, whatever order the UI answers them in */
+    const formOf = (x: { r: RecordedFrame }): unknown => (x.r.frame['params'] as { form_id?: unknown } | undefined)?.form_id;
+    if (typeof params?.form_id === 'string' && outs.some((x) => formOf(x) === params.form_id)) outs = outs.filter((x) => formOf(x) === params.form_id);
     if (typeof sessionId === 'string' && sessionId && outs.some((x) => about(x) !== undefined)) {
       outs = outs.filter((x) => about(x) === sessionId);
       if (!outs.length) { this.onFrame({ jsonrpc: '2.0', id, error: { code: 4004, message: method + ': session not found' } }); return; }
@@ -76,4 +80,11 @@ export async function loadFrames(name: string): Promise<RecordedFrame[]> {
   const res = await fetch('/__frames/' + name + '.frames.json');
   if (!res.ok) throw new Error('no recorded frames named ' + name);
   return (await res.json()) as RecordedFrame[];
+}
+
+/** A keychain that keeps what it is given in memory, for the tests: they read `stored` to see that a secret reached the host's
+    keychain (and nowhere else). Test code only; the app's keychain is the host's. */
+export class ReplaySecrets implements SecretsBridge {
+  readonly stored = new Map<string, string>();
+  set(service: string, account: string, value: string): Promise<void> { this.stored.set(service + '/' + account, value); return Promise.resolve(); }
 }

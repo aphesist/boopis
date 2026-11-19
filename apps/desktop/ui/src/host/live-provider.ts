@@ -8,11 +8,15 @@ import { logger } from '../core/log';
 import { createMockProvider } from '../data/mock-provider';
 import type { DataProvider, SessionsSource, WaitsEvent, WaitsSource } from '../data/provider';
 import { emitter, feed, store } from '../data/store';
-import type { AgentTurn, BlankData, BlankWait, ConversationEvent, SendMeta, SessionSummary, Turn, User, UserTurn, Wait, WaitOutcome } from '../data/types';
+import type { AgentTurn, BlankData, BlankWait, ConversationEvent, FormStatus, FormWait, SendMeta, SessionSummary, Turn, User, UserTurn, Wait, WaitOutcome } from '../data/types';
 import { readFlag } from '../core/settings';
 import { createDetails } from './live/details';
 import { todosFrom } from './live/map-details';
 import { blankData } from './live/blanks';
+import { createFormsHost, hasHostDialogs, tauriPickFolder } from './live/forms';
+import type { FormEntry } from './live/forms';
+import { tauriSecrets } from './secrets';
+import type { SecretsBridge } from './secrets';
 import type { GatewayClient, GatewayEvent } from './gateway';
 import { approvalToWait, choiceFor, clock, elapsed, failedStep, paragraphs, reduceLedger, sessionRowToSummary, toolStep, transcriptToTurns } from './map';
 import type { LedgerTotals } from './map';
@@ -29,6 +33,10 @@ export interface LiveOptions {
   now?: () => Date;
   /** the provider whose sources stay mock; created when omitted */
   mock?: DataProvider;
+  /** the keychain forms save secrets to (the host's, in the desktop app); without one a credential form says it cannot save */
+  secrets?: SecretsBridge;
+  /** the folder dialog forms use; the host's own in the desktop app */
+  pickFolder?: (() => Promise<string | null>) | null;
 }
 
 interface Running { turn: AgentTurn; text: string; steps: AgentTurn['steps'][number][]; startedAt: number }
@@ -97,6 +105,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     details.model(c.uiId).todos = todosFromResume(res);
     c.events.emit({ type: 'reset' });
     details.onBound(c.uiId);
+    void formsHost.reload(res.session_id, c.model);   /* the forms still open when the session was last seen */
   }
   async function ensureLive(c: Convo): Promise<string> {
     if (c.gwId) return c.gwId;
@@ -143,6 +152,35 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
 
   const waitList: Wait[] = [];
   const waitsEv = emitter<WaitsEvent>();
+  /** the turn a form or a blank raised in this session belongs to: the one running, else the last answer */
+  const raisingTurn = (c: Convo): AgentTurn | undefined => {
+    if (c.running) return c.running.turn;
+    for (let i = c.turns.length - 1; i >= 0; i--) { const t = c.turns[i]; if (t && t.role === 'assistant') return t; }
+    return undefined;
+  };
+
+  /* ───────── forms: the plugin's and Hermes's requests, in the conversation and in the dock, answered in either ───────── */
+  const noKeychain: SecretsBridge = { set: () => Promise.reject(new Error('The keychain is only available in the desktop app.')) };
+  const formsHost = createFormsHost({
+    client, secrets: opts.secrets ?? (hasHostDialogs() ? tauriSecrets() : noKeychain),
+    pickFolder: opts.pickFolder !== undefined ? opts.pickFolder : hasHostDialogs() ? tauriPickFolder : null,
+    hooks: {
+      opened(entry: FormEntry) {
+        const uiId = byGw.get(entry.gwSession), c = uiId ? convos.get(uiId) : undefined;
+        if (waitList.some((x) => x.id === entry.spec.id)) return;
+        const w: FormWait = { id: entry.spec.id, kind: 'form', who: 'agent', title: entry.spec.title, data: entry.spec };
+        waitList.push(w); waitsEv.emit({ type: 'added', wait: w });
+        const t = c ? raisingTurn(c) : undefined;
+        if (c && t) { t.forms = [...(t.forms ?? []), entry.spec]; c.events.emit({ type: 'form-opened', turnId: t.id, form: entry.spec }); }
+      },
+      resolved(entry: FormEntry, status: FormStatus) {
+        const uiId = byGw.get(entry.gwSession), c = uiId ? convos.get(uiId) : undefined;
+        const t = c?.turns.find((x): x is AgentTurn => x.role === 'assistant' && !!x.forms?.some((f) => f.id === entry.spec.id));
+        if (c && t) { t.forms = (t.forms ?? []).map((f) => (f.id === entry.spec.id ? { ...f, resolved: status } : f)); c.events.emit({ type: 'form-resolved', turnId: t.id, formId: entry.spec.id, status }); }
+        settle(entry.spec.id, status);
+      }
+    }
+  });
   const approvalRoute = new Map<string, { gwSession: string; generation: number }>();
 
   function onEvent(ev: GatewayEvent): void {
@@ -156,6 +194,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     if (typeof ev.execution_generation === 'number') c.generation = ev.execution_generation;
     details.onEvent(uiId, ev);
     if (ev.type.startsWith('plugin.hypotaxis.blank.')) { syncBlanks(c); return; }
+    if (formsHost.handle(ev, { gwSession: ev.session_id ?? '', model: c.model })) return;
     switch (ev.type) {
       case 'session.info': { const profile = p['profile_name']; if (typeof profile === 'string' && profile) user.set({ name: profile, initials: profile.slice(0, 1).toLowerCase() }); const m = p['model']; if (typeof m === 'string' && m) c.model = m; const t = p['title']; if (typeof t === 'string' && t) patchSession(uiId, { title: t }); break; }
       case 'message.start': startTurn(c); break;
@@ -241,7 +280,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   /* ───────── the link ───────── */
   client.onEvent(onEvent);
   client.onState((s) => {
-    if (s.phase === 'ready' && s.reconnected) { refreshList().catch((e: unknown) => { log.warn('could not refresh after reconnecting', e); }); details.onLinkReady(); }
+    if (s.phase === 'ready' && s.reconnected) { for (const c of convos.values()) if (c.gwId) void formsHost.reload(c.gwId, c.model); refreshList().catch((e: unknown) => { log.warn('could not refresh after reconnecting', e); }); details.onLinkReady(); }
   });
   client.onEvent((ev) => {
     if (ev.type !== 'connection.replay_gap' || typeof ev.payload?.['session_id'] !== 'string') return;
@@ -338,6 +377,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   const waits: WaitsSource = {
     ...feed(() => [...waitList], waitsEv),
     resolve(id, outcome) {
+      if (formsHost.openIds().includes(id)) return;   /* a form is answered with its values, through `forms` */
       const blankSession = blankRoute.get(id);
       if (blankSession) { answerBlank(blankSession, outcome); return; }
       const route = approvalRoute.get(id);
@@ -353,7 +393,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   return {
     ...mock,
     info: { live: true, preview: new Set(['bots', 'schedules', 'feedforward']), unavailable: details.unavailable },
-    ready, sessions, waits, user,
+    ready, sessions, waits, user, forms: formsHost.source,
     details: details.source, run: details.run,
     files: { pick: () => null, complete: (word, id) => details.files.complete(word, id) },
     dictation: { start: () => () => undefined }, // nothing hears you yet: the mock's transcript is invented text

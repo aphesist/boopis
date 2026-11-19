@@ -37,8 +37,8 @@ function geom(w: number, h: number): { R: number; Fw: number } {
   return { R, Fw: F };
 }
 /* the slab as one path: concave flare out of the edge, side, rounded top, side, flare back into the edge. In svg
-   space the slab body spans x ∈ [F, F + w]. The library draws the corner CSS draws (continuous where corner-shape
-   exists, round otherwise); the minimised pill is a pill in a pill: R = h / 2 with round ends. */
+   space the slab body spans x ∈ [F, F + w]. The library draws the same continuous corner every other surface takes
+   (squircle-path.ts); the minimised pill is a pill in a pill: R = h / 2 with round ends. */
 function slabPath(w: number, h: number, g: { R: number; Fw: number }): string {
   const pill = S.mode === 'minimal' || S.mode === 'off';
   return ui.shape.slab(w, h, pill ? Math.min(h / 2, w / 2) : g.R, g.Fw, pill ? { round: true } : undefined);
@@ -344,8 +344,16 @@ function fixFocus(opts: MorphOpts, hadFocus: boolean): void {
     if (el) el.focus({ preventScroll: true });
   }
 }
+/* the view the slab wraps is watched: when its own size changes (a font loads, a card grows, the window grows under a frame
+   that mounted small) the slab and the room the shell keeps for it follow in the same frame */
+let watched: HTMLElement | null = null, sent = '';
+const viewRO = typeof ResizeObserver === 'function' ? new ResizeObserver(() => {
+  const v = X.curView;
+  if (flags.mounted && v && (v.offsetHeight !== E.baseH || v.offsetWidth !== E.baseW)) retarget(false);
+}) : null;
 export function retarget(snap: boolean): void {
   const v = X.curView;
+  if (v !== watched && viewRO) { if (watched) viewRO.unobserve(watched); if (v) viewRO.observe(v); watched = v; }
   E.baseW = v ? v.offsetWidth : 0;
   E.baseH = v ? v.offsetHeight : 0;
   E.sinkS.t = S.mode === 'off' ? E.baseH + 14 : 0;
@@ -357,9 +365,25 @@ export function retarget(snap: boolean): void {
   if (snap || motion.reduce) { snapS(E.slabW); snapS(E.slabH); snapS(E.sinkS); snapS(E.dotS); }
   paint();               /* the slab answers in the same frame as its content (no frame with one and not the other) */
   kick();
+  emitDock();
 }
-/** the height the shell keeps free above the window edge: the slab (the foot is inside it) */
-export function emitDock(): void { emit('hx:dock', { mode: S.mode, page: S.page, width: Math.round(E.baseW), height: Math.round(S.mode === 'off' ? 0 : E.baseH) }); }
+/** how far the row can lift the slab while the bots grow under the pointer: the most any orb grows beyond the row, so the
+    slab at its tallest still ends below the composer and the composer never moves under the pointer */
+function headroom(): number {
+  if (!(S.grow && S.mode === 'normal' && S.page === 'bots') || motion.reduce) return 0;
+  let lift = 0;
+  for (const it of E.magItems) lift = Math.max(lift, (it.max - 1) * it.hgt * 0.5);
+  return lift;
+}
+/** the height the shell keeps free above the window edge (`--hx-dock-space`): the slab measured from the view it wraps (the
+    foot is inside it) plus the hover headroom. Sent whenever it changes: after a morph, a resize, a font load, the view's own
+    size changing, or the grow setting changing. */
+export function emitDock(): void {
+  const h = S.mode === 'off' ? 0 : Math.ceil(E.baseH + headroom()), key = S.mode + '|' + S.page + '|' + Math.round(E.baseW) + '|' + h;
+  if (key === sent) return;
+  sent = key;
+  emit('hx:dock', { mode: S.mode, page: S.page, width: Math.round(E.baseW), height: h, rest: Math.round(S.mode === 'off' ? 0 : E.baseH) });
+}
 
 /* ───────── page dots and the foot ───────── */
 export function renderDots(): void {

@@ -7,6 +7,9 @@ import { register } from '../../core/registry';
 import { mountView, newSession, selectSession } from './conversation';
 import { mountList } from './list';
 import { mountRight, openPanel } from './right';
+import { ui } from '../../components';
+/* drawn corners (DESIGN-SYSTEM.md section 8): the session's own surfaces take the library's continuous corner */
+ui.squircle.auto('.ss-diff, .ssr-file, .ssr-term');
 
 register('session', { mount: (root) => mountView(root) });
 register('session-list', { mount: (root) => mountList(root) });

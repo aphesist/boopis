@@ -58,9 +58,10 @@ export function refreshBot(b: DockBot): void {
 export const fmtDur = (s: number): string => `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s`;
 export const fmtCost = (v: number | null): string => (v == null ? 'unknown' : v < 0.01 && v > 0 ? '$' + v.toFixed(4) : '$' + v.toFixed(2));
 const kfmt = (n: number): string => (n >= 1000 ? Math.round(n / 1000) + 'k' : String(n));
-const mono = (t: string): string => `<span class="dk-mono">${esc(t)}</span>`;
 const run = () => S.run as NonNullable<typeof S.run>;
-const runSub = (): string => run().stopped ? 'Stopped by you' : `${mono(run().model)} ${run().escalated ? `escalated ${run().escalated === 1 ? 'once' : run().escalated + ' times'}` : 'on the first try'}`;
+/** the model with its provider's mark (mono), through the library's one primitive */
+const runModel = (): string => ui.html.model(run().model, { size: 14 });
+const runSub = (): string => run().stopped ? 'Stopped by you' : `${runModel()} ${run().escalated ? `escalated ${run().escalated === 1 ? 'once' : run().escalated + ' times'}` : 'on the first try'}`;
 /** the run's spend: the library's running total and its row of dots (dots, not bars) */
 /* a cost the plugin could not price is shown as unknown, and a run with no cap has no meter (ADR-0012) */
 export const costHTML = (): string => (run().cost == null || run().cap == null

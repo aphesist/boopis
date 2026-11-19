@@ -8,6 +8,7 @@ import { ui } from '../../components';
 import { S, X, clamp, flags, geomR, motion, shownPages, spring, K_SLIDE } from './ctx';
 import { E, cxNow, hideTip, kick, resetMag, retarget, shellVar, returnFocus, markFocus } from './engine';
 import { listenOrb, lookRow, pokeBot, setOrbLife } from './orbs';
+import { relocateLive } from './views';
 import {
   closeCard, curFocusTarget, dragTile, down, focusBot, goPage, movePage, openBotInTab, openCard, schedAction, setMode, stepPage, stopRun, togglePage, up
 } from './controller';
@@ -297,6 +298,9 @@ export function fitRow(): void {
   const left = L ? L.viewLeft : 0, right = L ? L.viewRight : vw;
   const room = Math.floor(2 * (Math.min(cx - left, right - cx) - geomR.FLARE - 2));
   if (room > 0) X.root.style.setProperty('--dock-room', room + 'px');
+  /* the live orbs carry their own --o (set when they move into a slot): re-read it, or an orb sized while the window was small
+     stays small in a full-size slot (a frame that mounts small and then grows) */
+  if (flags.mounted) relocateLive();
 }
 export function onLayout(d: { centerX?: number; colWidth?: number; animate?: boolean }): void {
   flags.useVar = shellVar();

@@ -314,29 +314,26 @@ const scale = {
 const SIZE_DESC = { '--fs-2xs': 'Mono meta: times, costs, call numbers, kbd, stamps.', '--fs-xs': 'Labels, group headings, tooltips, secondary lines, chips.', '--fs-s': 'Interface default: rows, buttons, menus, tabs.', '--fs-m': 'Reading: conversation prose, the composer, card titles.', '--fs-l': 'View and dialog titles, a bot name in its header.', '--fs-xl': 'The one display size: a bot name being made.' };
 for (const k of ['--fs-2xs', '--fs-xs', '--fs-s', '--fs-m', '--fs-l', '--fs-xl']) scale.size[k.slice(5)] = { $type: 'dimension', $value: dim(px(shared[k])), $description: SIZE_DESC[k], $extensions: { hypotaxis: { css: k } } };
 for (let i = 1; i <= 7; i++) scale.space[i] = { $type: 'dimension', $value: dim(px(shared['--sp-' + i])), $extensions: { hypotaxis: { css: '--sp-' + i } } };
-const R_DESC = { xs: 'kbd, code chips, stamps, the page-dot focus box.', s: 'Buttons, rows, fields, chips, the segmented track, tooltips.', m: 'Cards, the composer, menus, popovers, toasts, request cards.', l: 'Where the ground meets the frame, the dock and its flares, dialogs, the palette.', pill: 'Status dots and the switch only.' };
-/* the corner scale (owner rules of 18 November 2026), in tokens.css: the round fallback in :root and the two modifier
-   lines (sharp, round), then inside @supports (corner-shape) the continuous default, sharp and round lines */
-const RL = [...css.matchAll(/--r-xs: (\d+)px; --r-s: (\d+)px; --r-m: (\d+)px; --r-l: (\d+)px; --r-floor: (\d+)px/g)].map((m) => ({ xs: +m[1], s: +m[2], m: +m[3], l: +m[4], floor: +m[5] }));
-const RD = { xs: px(shared['--r-xs']), s: px(shared['--r-s']), m: px(shared['--r-m']), l: px(shared['--r-l']), floor: px(shared['--r-floor']) };
-const LIB = RL.length >= 5 ? { round: { default: RD, sharp: RL[0], round: RL[1] }, continuous: { default: RL[2], sharp: RL[3], round: RL[4] } } : null;
+const R_DESC = { xs: 'kbd, inline code, stamps.', s: 'Buttons, rows, fields, wells, the segmented track, tooltips.', m: 'Cards, the composer, menus, popovers, toasts, request cards.', l: 'Sheets, dialogs, the palette, the dock, where the ground meets the frame.', pill: 'Chips (a capsule), dots, the switch, anything inside a pill.' };
+/* the corner scale (owner decisions of 18 November 2026, revised: Apple continuous corners in every engine). One scale
+   for every engine, drawn by HX.ui.squircle. The library's lines (components.css) win while they exist: default,
+   sharp, round; else tokens.css's. */
+const lib = readFileSync(join(here, '..', 'src', 'components', 'components.css'), 'utf8');
+const SCALE_RE = /--r-xs: (\d+)px; --r-s: (\d+)px; --r-m: (\d+)px; --r-l: (\d+)px; --r-floor: (\d+)px/g;
+const toScale = (m) => ({ xs: +m[1], s: +m[2], m: +m[3], l: +m[4], floor: +m[5] });
+const LL = [...lib.matchAll(SCALE_RE)].map(toScale), TL = [...css.matchAll(SCALE_RE)].map(toScale);
+const SC = LL.length >= 3 ? { default: LL[0], sharp: LL[1], round: LL[2], from: 'components.css (library, until tokens.css takes it)' }
+  : { default: { xs: px(shared['--r-xs']), s: px(shared['--r-s']), m: px(shared['--r-m']), l: px(shared['--r-l']), floor: px(shared['--r-floor']) }, sharp: TL[0], round: TL[1], from: 'tokens.css' };
+const smoothing = parseFloat((lib.match(/--corner-smoothing:\s*([\d.]+)/) || css.match(/--corner-smoothing:\s*([\d.]+)/) || [0, '0.6'])[1]);
 for (const k of ['xs', 's', 'm', 'l']) {
-  const modes = LIB ? { sharp: dim(LIB.continuous.sharp[k]), default: dim(LIB.continuous.default[k]), round: dim(LIB.continuous.round[k]) }
-    : { sharp: dim(px(corners.sharp['--r-' + k])), default: dim(px(shared['--r-' + k])), round: dim(px(corners.round['--r-' + k])) };
-  const ext = { css: '--r-' + k, modes };
-  if (LIB) {
-    ext.cornerShape = 'superellipse(1.8)';
-    ext.fallback = { cornerShape: 'round', modes: { sharp: dim(LIB.round.sharp[k]), default: dim(LIB.round.default[k]), round: dim(LIB.round.round[k]) }, note: 'Where corner-shape is not supported (WebKit): a plain arc, a little larger than v6.' };
-    ext.v6 = { sharp: dim(px(corners.sharp['--r-' + k])), default: dim(px(shared['--r-' + k])), round: dim(px(corners.round['--r-' + k])) };
-      }
-  scale.radius[k] = { $type: 'dimension', $value: modes.default, $description: R_DESC[k], $extensions: { hypotaxis: ext } };
+  const modes = { sharp: dim(SC.sharp[k]), default: dim(SC.default[k]), round: dim(SC.round[k]) };
+  scale.radius[k] = { $type: 'dimension', $value: modes.default, $description: R_DESC[k],
+    $extensions: { hypotaxis: { css: '--r-' + k, modes, cornerSmoothing: smoothing, source: SC.from, v6: { sharp: dim(px(corners.sharp['--r-' + k] || 0)), default: dim(px(shared['--r-' + k])), round: dim(px(corners.round['--r-' + k] || 0)) } } } };
 }
-if (LIB) {
-  scale.radius.floor = { $type: 'dimension', $value: dim(LIB.continuous.default.floor), $description: 'The smallest inner radius of a nested corner: inner = max(floor, outer − gap).',
-    $extensions: { hypotaxis: { css: '--r-floor', modes: { sharp: dim(LIB.continuous.sharp.floor), default: dim(LIB.continuous.default.floor), round: dim(LIB.continuous.round.floor) }, fallback: { modes: { sharp: dim(LIB.round.sharp.floor), default: dim(LIB.round.default.floor), round: dim(LIB.round.round.floor) } } } } };
-  scale.corner = { $description: 'The corner shape. DTCG has no type for it, so it lives in $extensions.',
-    $extensions: { hypotaxis: { css: '--corner', value: 'superellipse(1.8)', fallback: 'round', supports: '@supports (corner-shape: superellipse(2))', nesting: 'A container declares --r-outer and --pad; what sits in its corners takes --r-in = max(--r-floor, --r-outer − --pad). Circles and pills keep corner-shape: round.' } } };
-}
+scale.radius.floor = { $type: 'dimension', $value: dim(SC.default.floor), $description: 'The smallest inner radius of a nested corner: inner = max(floor, outer − gap); under it the padding gives way.',
+  $extensions: { hypotaxis: { css: '--r-floor', modes: { sharp: dim(SC.sharp.floor), default: dim(SC.default.floor), round: dim(SC.round.floor) } } } };
+scale.corner = { smoothing: { $type: 'number', $value: smoothing, $description: "Figma corner smoothing of every corner (0.6, as iOS); drawn as a path by HX.ui.squircle in every engine.",
+  $extensions: { hypotaxis: { css: '--corner-smoothing', algorithm: 'figma-squircle (MIT, Tien Pham), after Daniel Furse, Desperately seeking squircles', nesting: 'A container declares --r-outer and --pad; what sits in its corners takes --r-in = max(--r-floor, --r-outer − --pad).' } } } };
 scale.radius.pill = { $type: 'dimension', $value: dim(999), $description: R_DESC.pill, $extensions: { hypotaxis: { css: '--r-pill' } } };
 const CTL = { '--row-h': ['row', 'One-line row: list rows, menu items, options.'], '--row-h-2': ['row-2', 'Two-line row: bots list, roster.'], '--ctl': ['control', 'Buttons, segmented control, fields.'], '--ctl-s': ['control-s', 'Icon buttons, small buttons, the send button.'] };
 for (const [k, [name, desc]] of Object.entries(CTL)) {

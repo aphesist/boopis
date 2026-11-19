@@ -33,7 +33,8 @@ A command never returns the new state for the UI to apply. The UI calls `bots.se
 | `sessions` | `list`, `archived` (`Watch<SessionSummary[]>`), `conversation(id)` (`Feed<Conversation, ConversationEvent>`), `diff(id, {blank})`, `draft()` | `create`, `rename`, `fork`, `archive`, `restore`, `send(id, text, meta)`, `stop`, `answerBlank`, `openPullRequest` | session tab, list, palette, title |
 | `details` | `context`, `todos`, `changes`, `output`, `connectors`, `environment`, `governance`, `ledger` (all `Watch`) | `compactContext`, `setGovernance`, `setConnector`, `signIn` | details panel, composer chips, dock (context) |
 | `bots` | `Feed<BotsSnapshot, BotsEvent>` (bots and their threads), `catalog()` | `send(id, text, via)`, `stop`, `decide`, `update`, `create`, `archive` | bots tab, dock sessions, palette |
-| `waits` | `Feed<Wait[], WaitsEvent>`: approvals and open questions that wait on the user | `resolve(id, outcome)` | dock, shell attention |
+| `waits` | `Feed<Wait[], WaitsEvent>`: approvals, open questions and forms (`kind: 'form'`, data: a `FormSpec`) that wait on the user | `resolve(id, outcome)` (never for a form) | dock, shell attention |
+| `forms` | `can` (what this build can run: sign-in, upload, folder), `pickerItems(kind)` | `submit(id, {values, secrets})`, `cancel(id)`, `signin(id, field)`, `pickFolder()` | the form card (inline, in the dock, first-run) |
 | `run` | `current: Watch<RunSnapshot>` | `stop`, `setSetting` | dock |
 | `schedules` | `list: Watch<Schedule[]>` | `runNow`, `setPaused` | dock |
 | `feedforward` | `catalog()`: the decision words the composer marks, with their options and guesses | | session composer |
@@ -45,6 +46,7 @@ A command never returns the new state for the UI to apply. The UI calls `bots.se
 - `ConversationEvent`: `turn-added`, `step-added`, `turn-finished`, `blank-answered`, and (the live provider's, additive) `turn-text` (the running answer so far, streamed from `message.delta`) and `reset` (read the snapshot again: a transcript loaded, or events were lost).
 - `BotsEvent`: `bot` (state, attention, activity, config), `bot-created`, `bot-archived`, `message` (with `streaming`), `message-text` (the text so far), `message-end`, `message-resolved`, `run` (a reply is being worked on, or stopped).
 - `WaitsEvent`: `added`, `resolved`.
+- Forms (docs/FORMS.md): a turn carries the `forms` it raised (`AgentTurn.forms`), and the feed adds `form-opened` and `form-resolved` (answered here, in the dock, or by another device). The same `FormSpec` is also a `FormWait`, so the dock's queue shows it. `forms.submit` takes the secret fields' values apart from the rest: they go to the keychain and nowhere else, and the promise rejects with words the card shows when the answer was not delivered.
 
 One decision, one path: an approval is decided with `bots.decide` (in a thread) or `waits.resolve` (in the dock), and the provider tells **both** the thread and the dock. The Session tab's open question works the same way (`sessions.answerBlank` or `waits.resolve`). The v6 mock-up passed `hx:approval`, `hx:bot-state` and `hx:bot-message` between modules to keep them in step; those are gone, and the provider is the one source of truth.
 
@@ -70,7 +72,7 @@ The v6 mock-up read `HX.data` (the `data.js` file) and mutated it from three mod
 | Source | From |
 |---|---|
 | `sessions.list`, `archived`, `conversation`, `send`, `stop`, `rename`, `archive`, `restore` | `session.list`, `session.resume`, `message.*`, `tool.*`, `prompt.submit`, `session.interrupt`, `session.title`, `session.archive` |
-| `waits` | `approval.request` / `approval.respond`, and the plugin's blanks |
+| `waits` | `approval.request` / `approval.respond`, the plugin's blanks, and forms (`plugin.hypotaxis.form.opened` / `.resolved`, Hermes's `clarify.request`) |
 | `details.context` | `session.context_breakdown` and the `session.usage` event |
 | `details.todos` | the `todo.updated` event and `session.resume`'s `todo_state` |
 | `details.output` | `tool.complete` and the plugin's `ship.completed` |
@@ -79,6 +81,7 @@ The v6 mock-up read `HX.data` (the `data.js` file) and mutated it from three mod
 | `details.governance`, `ledger`, `models` | `plugin.hypotaxis.cascade.state` (the ladder), `ledger.stats` (spend and tokens, computed by the plugin from tokens), `describe` (mode, cap) |
 | `details.changes`, `sessions.diff` | `plugin.hypotaxis.checkpoint.diff` (the kept ships), refreshed on `ship.completed` and at the end of a turn |
 | `run.current` | the running turn (events), `ledger.stats` and `cascade.state` |
+| forms (`waits`, `forms`, `AgentTurn.forms`) | `form.opened`, `form.resolved`; answered with `form.submit` / `form.cancel` (a secret first with the host's `secret_set`, named in `provided`); `form.list` when a session is resumed or the link returns; Hermes's `clarify.request` answered with `clarify.respond` |
 | blanks (`waits`, `sessions.answerBlank`) | `blank.opened`, `blank.filled`, `blank.lapsed`; the answer goes to `blank.fill` |
 | `files.complete` | `complete.path` |
 | `sessions.fork` | `session.branch`, only when this Hermes has it |

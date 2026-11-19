@@ -172,6 +172,17 @@ export function onWaitAdded(w: Wait): void {
 /** the provider decided a wait (here, in the Bots tab, or in the Session tab): take it off the dock */
 export function onWaitResolved(id: string, outcome: string): void {
   const w = S.waits.find((x) => x.id === id); if (!w) return;
+  if (w.kind === 'form') {
+    /* answered here or elsewhere: every card of the form takes the receipt, and it stays a moment before it leaves the queue */
+    const state = outcome === 'cancelled' ? 'cancelled' : outcome === 'expired' ? 'expired' : 'done';
+    for (const [k, el] of X.cardEls) if (k.startsWith(id + ':')) (el as HTMLElement & { update(p: Record<string, unknown>): unknown }).update({ state });
+    setTimeout(() => { removeWait(id, outcome); }, motion.reduce ? 200 : 900);
+    return;
+  }
+  removeWait(id, outcome);
+}
+function removeWait(id: string, outcome: string): void {
+  const w = S.waits.find((x) => x.id === id); if (!w) return;
   const b = w.kind === 'approval' ? botById(w.bot) : undefined;
   const renders = ['wait:norm', 'wait:exp', 'wait:min', 'edit:edit'];
   if (S.card) renders.push('bots:card');

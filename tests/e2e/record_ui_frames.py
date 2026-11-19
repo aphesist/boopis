@@ -14,9 +14,11 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import socket
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -123,6 +125,27 @@ def save(name: str, log: Path, root: Path) -> None:
     print(name, len(frames), "frames")
 
 
+def read_panels(gw: GatewayClient, sids: list[str], proj: Path) -> None:
+    """The reads the sessions list and the details panels make, for each session (and the probes of what this Hermes has)."""
+    sid = sids[0]
+    tolerant(gw, "session.list", {"limit": 100})
+    tolerant(gw, "session.list", {"limit": 100, "include_hidden": True})
+    tolerant(gw, "mcp.servers.status", {})
+    # the reads the panels make for a session, for the one that worked and (when there is one) the one that did not
+    for each in sids:
+        q = {"session_id": each}
+        for m in ("session.resume", "session.info", "session.context_breakdown"):
+            tolerant(gw, m, q)
+        for m in ("describe", "ledger.stats", "cascade.state", "checkpoint.list", "checkpoint.diff"):
+            tolerant(gw, "plugin.hypotaxis." + m, q)
+        tolerant(gw, "plugin.hypotaxis.ledger.tail", {**q, "since_seq": -1, "limit": 1000})
+        tolerant(gw, "plugin.hypotaxis.compat.inventory", {"cwd": str(proj)})
+    tolerant(gw, "complete.path", {"session_id": sid, "cwd": str(proj), "word": "@file:src/"})
+    tolerant(gw, "complete.path", {"session_id": sid, "cwd": str(proj), "word": "@zzz-nothing"})
+    for m in ("session.branch", "session.compress"):  # the probe the UI makes to learn what this Hermes has
+        tolerant(gw, m, {"session_id": ""})
+
+
 def priced(install: Any, tmp: Path, url: str, name: str, with_prices: bool) -> None:
     mcp = {"mcp_servers": {"fakemcp": {"command": sys.executable, "args": [str(HERE / "fake_mcp_server.py")]}}}
     settings: dict[str, Any] = {"hx_path": HX}  # no cap on the unpriced stack: a cap blocks on an unknown cost
@@ -150,24 +173,8 @@ def priced(install: Any, tmp: Path, url: str, name: str, with_prices: bool) -> N
         ])  # fmt: skip
         turn(gw, sid, text)
         p = {"session_id": sid}
-        tolerant(gw, "session.list", {"limit": 100})
-        tolerant(gw, "session.list", {"limit": 100, "include_hidden": True})
-        tolerant(gw, "mcp.servers.status", {})
-        # the reads the panels make for a session, for the one that worked and (when there is one) the one that did not
-        for each in (sid, governed):
-            if not each:
-                continue
-            q = {"session_id": each}
-            for m in ("session.resume", "session.info", "session.context_breakdown"):
-                tolerant(gw, m, q)
-            for m in ("describe", "ledger.stats", "cascade.state", "checkpoint.list", "checkpoint.diff"):
-                tolerant(gw, "plugin.hypotaxis." + m, q)
-            tolerant(gw, "plugin.hypotaxis.ledger.tail", {**q, "since_seq": -1, "limit": 1000})
-            tolerant(gw, "plugin.hypotaxis.compat.inventory", {"cwd": str(proj)})
-        tolerant(gw, "complete.path", {"session_id": sid, "cwd": str(proj), "word": "@file:src/"})
-        tolerant(gw, "complete.path", {"session_id": sid, "cwd": str(proj), "word": "@zzz-nothing"})
-        for m in ("session.branch", "session.compress"):  # the probe the UI makes to learn what this Hermes has
-            tolerant(gw, m, {"session_id": ""})
+        read_panels(gw, [s for s in (sid, governed) if s], proj)
+        p = {"session_id": sid}
         opened = gw.events_of("plugin.hypotaxis.blank.opened", sid)
         if opened:
             tolerant(
@@ -181,6 +188,76 @@ def priced(install: Any, tmp: Path, url: str, name: str, with_prices: bool) -> N
         stack.stop()
 
 
+class FakeHostSecrets:
+    """The desktop host's secret channel (``hx-host-secrets-v1``) for the recording: it answers ``has`` with found for every
+    reference, so the plugin accepts a credential form's ``provided``. It holds nothing and never sees a value."""
+
+    def __init__(self, home: Path) -> None:
+        self.dir = Path(tempfile.mkdtemp(prefix="hx-host-"))  # a short path: unix socket paths are limited
+        self.path = self.dir / "s.sock"
+        self.home = home
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+
+    def start(self) -> None:
+        self.sock.bind(str(self.path))
+        self.sock.listen(4)
+        rendezvous = self.home / "hypotaxis" / "host-channel.json"
+        rendezvous.parent.mkdir(parents=True, exist_ok=True)
+        rendezvous.write_text(
+            json.dumps({"protocol": "hx-host-secrets-v1", "schema_version": 1, "socket": str(self.path), "token": "t", "pid": os.getpid()})
+        )
+        threading.Thread(target=self._serve, daemon=True).start()
+
+    def _serve(self) -> None:
+        while True:
+            try:
+                conn, _ = self.sock.accept()
+            except OSError:
+                return
+            with conn:
+                conn.recv(4096)
+                conn.sendall(b'{"protocol":"hx-host-secrets-v1","ok":true,"found":true}\n')
+
+    def stop(self) -> None:
+        self.sock.close()
+
+
+def forms_scenario(install: Any, tmp: Path, url: str) -> None:
+    """The agent asks for a key and puts a question; the UI answers both with ``form.submit`` (the key named in ``provided``,
+    never in a value) and cancels a third. Records the ``form.opened`` and ``form.resolved`` events and the RPC."""
+    stack = HermesStack(install, tmp, url, {"hx_path": HX}, {})
+    stack.start()
+    host = FakeHostSecrets(stack.home)
+    host.start()
+    try:
+        gw = GatewayClient(hermes_bin=str(install.hermes), env=stack.env, frames_log=tmp / "frames.jsonl")
+        gw.connect()
+        gw.handshake()
+        proj = make_project(tmp)
+        sid = create(gw, proj)
+        gw.result("plugin.hypotaxis.mode.set", {"session_id": sid, "mode": "ungoverned"})
+        gw.result("plugin.hypotaxis.form.list", {"session_id": sid})  # nothing open yet: what a client sees when it resumes the session
+        text = " ".join([
+            call("request_credential", {"provider": "openai"}),
+            call("ask", {"question": "Keep the old alias?", "options": ["yes", "no"], "other": True}),
+            call("request_input", {"kind": "setup", "title": "Set the gate command", "body": "Every ship ends at the gate.", "schema": {"type": "object", "properties": {"gate": {"type": "string", "title": "Gate command", "default": "npm test"}}, "required": ["gate"]}, "submit": {"label": "Write config"}}),
+            f"@@usage {json.dumps(USAGE)}@@", "@@reply I asked three things.@@",
+        ])  # fmt: skip
+        turn(gw, sid, text)
+        listed = gw.result("plugin.hypotaxis.form.list", {"session_id": sid})
+        by_kind = {f["kind"]: f for f in listed["forms"]}
+        gw.result("plugin.hypotaxis.form.submit", {"session_id": sid, "form_id": by_kind["credential"]["form_id"], "values": {}, "provided": ["value"]})
+        gw.result("plugin.hypotaxis.form.submit", {"session_id": sid, "form_id": by_kind["question"]["form_id"], "values": {"answer": "yes"}})
+        gw.result("plugin.hypotaxis.form.cancel", {"session_id": sid, "form_id": by_kind["setup"]["form_id"]})
+        gw.result("plugin.hypotaxis.form.list", {"session_id": sid})
+        read_panels(gw, [sid], proj)
+        gw.close()
+        save("forms", tmp / "frames.jsonl", tmp)
+    finally:
+        host.stop()
+        stack.stop()
+
+
 def main() -> int:
     install = find_install()
     if install is None or not HX:
@@ -190,9 +267,15 @@ def main() -> int:
     if len(sys.argv) > 1:
         OUT = Path(sys.argv[1])
     with FakeModelServer() as fake:
+        only = os.environ.get("HX_REC_ONLY", "")  # a name, to record one scenario and leave the others' files alone
         for name, with_prices in (("session", True), ("unpriced", False)):
+            if only and only != name:
+                continue
             with tempfile.TemporaryDirectory(prefix="hx-rec-") as tmp:
                 priced(install, Path(tmp), fake.url, name, with_prices)
+        if not only or only == "forms":
+            with tempfile.TemporaryDirectory(prefix="hx-rec-") as tmp:
+                forms_scenario(install, Path(tmp), fake.url)
     return 0
 
 

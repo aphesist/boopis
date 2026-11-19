@@ -41,9 +41,10 @@ export class FakeHost implements HostBridge {
 /* the frames recorded against a real gateway and the plugin (tests/e2e/record_ui_frames.py) */
 import sessionFrames from '../../tests/fixtures/frames/session.frames.json';
 import unpricedFrames from '../../tests/fixtures/frames/unpriced.frames.json';
+import formsFrames from '../../tests/fixtures/frames/forms.frames.json';
 import type { RecordedFrame } from './replay';
 
-export const fixtures = { session: sessionFrames as unknown as RecordedFrame[], unpriced: unpricedFrames as unknown as RecordedFrame[] };
+export const fixtures = { session: sessionFrames as unknown as RecordedFrame[], unpriced: unpricedFrames as unknown as RecordedFrame[], forms: formsFrames as unknown as RecordedFrame[] };
 
 /** the result the recording shows for a method (the first one, or the n-th) */
 export function resultOf<T>(frames: readonly RecordedFrame[], method: string, n = 0): T {

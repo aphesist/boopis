@@ -1,6 +1,6 @@
 /* `ui.card(kind, data, opts)` creates an <hx-card>. The card layer lives in modules/cards (it needs the library, so the
    library cannot import it): the layer registers its factory here when it loads, and the library calls it. */
-export type CardKind = 'approval' | 'ship' | 'blank' | 'teammate' | 'escalation' | 'error' | 'schedule' | 'connector';
+export type CardKind = 'approval' | 'ship' | 'blank' | 'teammate' | 'escalation' | 'error' | 'schedule' | 'connector' | 'form';
 export type CardSize = 'inline' | 'compact' | 'mini' | 'popover';
 export interface CardOpts {
   size?: CardSize | undefined; state?: string | undefined; ground?: 'chrome' | 'dock' | undefined;
