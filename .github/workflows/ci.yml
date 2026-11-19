@@ -90,6 +90,35 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
+  runtime:
+    # The Hermes runtime the installer ships (ADR-0023), built by the same script and under the same cache key as
+    # release.yml's runtime job, so the e2e tests below run on the artifact that ships. It is proven relocatable here too.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.13" }
+      - uses: actions/cache@v4
+        id: runtime-cache
+        with:
+          path: dist/runtime
+          key: hermes-runtime-linux-x86_64-ubuntu-22.04-${{ hashFiles('scripts/build-runtime.sh', 'scripts/verify-runtime.sh', 'scripts/runtime/**') }}
+      - name: tools (zstd to compress, llvm-strip for the interpreter's debug symbols)
+        if: steps.runtime-cache.outputs.cache-hit != 'true'
+        run: sudo apt-get update && sudo apt-get install -y zstd llvm
+      - name: build hermes-runtime-linux-x86_64.tar.zst and runtime.json (scripts/build-runtime.sh)
+        if: steps.runtime-cache.outputs.cache-hit != 'true'
+        run: scripts/build-runtime.sh --out dist/runtime
+      - name: relocation proof (unpacked in two paths, one with spaces)
+        run: scripts/verify-runtime.sh dist/runtime
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hermes-runtime-linux-x86_64
+          path: dist/runtime/*
+          if-no-files-found: error
+          retention-days: 7
+
   plugin:
     needs: hx
     runs-on: ubuntu-22.04
@@ -134,15 +163,16 @@ jobs:
             pytest -q tests
 
   e2e:
-    # Real Hermes v0.23.2 (its own installer, cached) behind a fake model: one provider, zero egress.
+    # The Hermes runtime the installer ships (the `runtime` job's artifact, unpacked) behind a fake model: one provider,
+    # zero egress. CI tests what ships (ADR-0023); scripts/install-hermes-e2e.sh remains only for release.yml's smoke job.
     # BLOCKING is a decision for after the first green runs; until then a failure here shows red on the run but
     # must not stop a merge: continue-on-error keeps the workflow's overall result green. See docs/RELEASING.md.
-    needs: hx
+    needs: [hx, runtime]
     runs-on: ubuntu-22.04
     continue-on-error: true
     timeout-minutes: 40
     env:
-      HX_E2E_HERMES_ENV: /home/runner/hermes-e2e
+      HX_E2E_RUNTIME: /home/runner/hermes-runtime
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -154,16 +184,14 @@ jobs:
       - run: chmod +x "${{ runner.temp }}/hx/hx"
       - name: allow user namespaces (hx-sandbox)
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
-      - name: Hermes v0.23.2 install (cache)
-        id: hermes-cache
-        uses: actions/cache@v4
+      - uses: actions/download-artifact@v4
         with:
-          path: |
-            /home/runner/hermes-e2e
-            !/home/runner/hermes-e2e/uv-cache
-          key: hermes-v0.23.2-ubuntu-22.04-${{ hashFiles('scripts/install-hermes-e2e.sh') }}
-      - name: install Hermes with its own installer (skipped on a cache hit)
-        run: SP="$HX_E2E_HERMES_ENV" scripts/install-hermes-e2e.sh
+          name: hermes-runtime-linux-x86_64
+          path: ${{ runner.temp }}/runtime
+      - name: unpack the runtime (the archive the installer carries)
+        run: |
+          mkdir -p "$HX_E2E_RUNTIME"
+          zstd -d -q -c "$RUNNER_TEMP"/runtime/hermes-runtime-linux-x86_64.tar.zst | tar -x -C "$HX_E2E_RUNTIME"
       - name: contraprova's CLI at the vendored commit (the ledger test verifies a ledger with it)
         env:
           CONTRAPROVA_TOKEN: ${{ secrets.CONTRAPROVA_TOKEN }}
@@ -179,10 +207,23 @@ jobs:
         working-directory: plugins/hypotaxis
         env:
           HX_BIN: ${{ runner.temp }}/hx/hx
+          HX_E2E_RUNTIME_ROOT: ${{ env.HX_E2E_RUNTIME }}  # the exec test also runs the bundled interpreter under runtime_ro
         run: |
-          PYTHONPATH="$(compgen -G "$HX_E2E_HERMES_ENV/hermes-home/installs/*/environments/*/workspace" | head -1)" \
+          PYTHONPATH="$HX_E2E_RUNTIME/hermes-agent" \
           uv run --no-project --python 3.11 --with pytest --with hypothesis --with ruamel.yaml --with "$CONTRAPROVA_SPEC" \
             pytest -q ../../tests/e2e tests/test_exec_sandbox.py
+      - name: WebKitGTK headers (the host's first-run test is a Rust test of its library)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev build-essential pkg-config
+      - uses: dtolnay/rust-toolchain@1.97.0
+      - uses: Swatinem/rust-cache@v2
+        with: { shared-key: e2e-host }
+      - name: first-run setup on the real archive (the host unpacks it, then the whole flow against the fake model)
+        env:
+          HX_BIN: ${{ runner.temp }}/hx/hx
+          HX_E2E_RUNTIME_ARCHIVE: ${{ runner.temp }}/runtime
+        run: cargo test -p hypotaxis-host --test setup_live bundled -- --nocapture
 
   ui:
     runs-on: ubuntu-22.04

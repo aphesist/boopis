@@ -13,6 +13,7 @@ pub mod gpu;
 pub mod hermes;
 pub mod os;
 pub mod renderer;
+pub mod runtime;
 pub mod secrets;
 pub mod settings;
 pub mod setup;
@@ -158,7 +159,44 @@ pub fn run() {
             app.manage(fps.clone());
             let _ = frame_rate::refresh(app.handle(), &fps);
             let limits = config::Limits::default();
-            let supervisor = Arc::new(hermes::Supervisor::new(hermes::Environment::from_process(), limits.clone()));
+            // Which Hermes: the one this build carries, unpacked into the app's own folder (ADR-0023), unless the
+            // advanced setting (`HYPOTAXIS_HERMES=existing`, or `hermes_source` in settings.json) asks for the user's own.
+            let saved_source = {
+                use tauri_plugin_store::StoreExt;
+                app.handle()
+                    .store("settings.json")
+                    .ok()
+                    .and_then(|s| s.get("hermes_source"))
+                    .and_then(|v| v.as_str().map(str::to_owned))
+            };
+            let source = runtime::Source::resolve(
+                std::env::var("HYPOTAXIS_HERMES").ok().as_deref(),
+                saved_source.as_deref(),
+            );
+            let (plan, runtime_error) = match (source, app.path().app_data_dir()) {
+                (runtime::Source::Existing, _) => (None, None),
+                (runtime::Source::Bundled, Err(e)) => {
+                    (None, Some(format!("the app has no data folder to unpack Hermes into: {e}")))
+                }
+                (runtime::Source::Bundled, Ok(data_dir)) => {
+                    match runtime::Runtime::locate(app.path().resource_dir().ok().as_deref()) {
+                        Ok(Some(runtime)) => (Some(runtime::Plan { runtime, data_dir }), None),
+                        Ok(None) => {
+                            tracing::info!("this build carries no Hermes runtime; using the Hermes on this machine");
+                            (None, None)
+                        }
+                        Err(e) => {
+                            tracing::error!(error = %e, "the bundled Hermes runtime is unusable");
+                            (None, Some(e.to_string()))
+                        }
+                    }
+                }
+            };
+            let mut environment = hermes::Environment::from_process();
+            if let Some(plan) = &plan {
+                environment = environment.with_bundled(plan.bundled());
+            }
+            let supervisor = Arc::new(hermes::Supervisor::new(environment, limits.clone()));
             // Find Hermes while the UI loads, so the first connect does not pay for `hermes --version` (about 0.2 s).
             let warm = supervisor.clone();
             tauri::async_runtime::spawn(async move {
@@ -184,6 +222,8 @@ pub fn run() {
                 supervisor: supervisor.clone(),
                 secrets: secrets.clone(),
                 limits,
+                runtime: plan,
+                runtime_error,
                 bundle: setup::install::Bundle::locate(
                     app.path().resource_dir().ok().as_deref(),
                     std::env::current_exe().ok().as_deref().and_then(std::path::Path::parent),

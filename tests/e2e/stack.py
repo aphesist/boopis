@@ -1,6 +1,8 @@
 """Start a real, unmodified Hermes gateway against the fake model, with the plugin installed.
 
-The Hermes install is reused, never reinstalled. Point ``HX_E2E_HERMES_ENV`` at the directory the
+The Hermes is reused, never reinstalled. Either point ``HX_E2E_RUNTIME`` at an unpacked runtime (the archive the
+installer ships, ADR-0023: ``zstd -d -c hermes-runtime-*.tar.zst | tar -x -C <dir>``: CI does exactly this), or point
+``HX_E2E_HERMES_ENV`` at the directory the
 spike's ``install.sh`` produced (``$SP``): it must hold ``hermes-home/installs/<hash>/...`` (the
 install), and may hold ``runtime/``, ``uv-python/`` and ``uv-cache/``. Each stack gets a fresh
 ``HERMES_HOME`` in a temp dir whose ``installs`` is a symlink to that install, so a test never
@@ -45,20 +47,34 @@ def merge(base: dict[str, Any], extra: Mapping[str, Any]) -> dict[str, Any]:
 
 @dataclass(frozen=True)
 class HermesInstall:
-    root: Path  # $SP of the spike install
+    root: Path  # $SP of the spike install, or the unpacked runtime
     venv: Path
+    bundled: bool = False  # the runtime the installer ships (``root`` is its unpacked directory)
+
+    @property
+    def bin_dir(self) -> Path:
+        """Where ``hermes`` is: the runtime's launchers, or the spike venv's ``bin``."""
+        return self.root / "bin" if self.bundled else self.venv / "bin"
 
     @property
     def hermes(self) -> Path:
-        return self.venv / "bin" / "hermes"
+        return self.bin_dir / "hermes"
 
     @property
     def source(self) -> Path:
         """The Hermes source tree of the install (``hermes_yaml`` and friends live there)."""
+        if self.bundled:
+            return self.root / "hermes-agent"
         return next(self.venv.parent.glob("workspace"))
 
 
 def find_install() -> HermesInstall | None:
+    runtime = os.environ.get("HX_E2E_RUNTIME")
+    if runtime:
+        root = Path(runtime)
+        if not (root / "bin" / "hermes").exists():
+            return None
+        return HermesInstall(root, root / "venv", bundled=True)
     raw = os.environ.get("HX_E2E_HERMES_ENV")
     if not raw:
         return None
@@ -96,18 +112,22 @@ class HermesStack:
 
     @property
     def env(self) -> dict[str, str]:
-        base = {k: v for k, v in os.environ.items() if not k.startswith(("HERMES_", "HX_E2E"))}
+        drop = ("HERMES_", "HX_E2E", "UV_") if self.install.bundled else ("HERMES_", "HX_E2E")
+        base = {k: v for k, v in os.environ.items() if not k.startswith(drop)}
         spike = self.install.root
         extra = {
             "HOME": str(self.root / "home"),
             "HERMES_HOME": str(self.home),
-            "HERMES_RUNTIME_DIR": str(spike / "runtime"),
-            "UV_PYTHON_INSTALL_DIR": str(spike / "uv-python"),
-            "UV_CACHE_DIR": str(spike / "uv-cache"),
-            "PATH": f"{self.install.venv / 'bin'}{os.pathsep}{base.get('PATH', '')}",
+            "PATH": f"{self.install.bin_dir}{os.pathsep}{base.get('PATH', '')}",
             "NO_PROXY": "127.0.0.1,localhost,::1",
             "no_proxy": "127.0.0.1,localhost,::1",
         }
+        if not self.install.bundled:  # the runtime finds its own interpreter, tools and cache relative to itself
+            extra |= {
+                "HERMES_RUNTIME_DIR": str(spike / "runtime"),
+                "UV_PYTHON_INSTALL_DIR": str(spike / "uv-python"),
+                "UV_CACHE_DIR": str(spike / "uv-cache"),
+            }
         return {**base, **extra}
 
     def config(self) -> dict[str, Any]:
@@ -138,7 +158,7 @@ class HermesStack:
         self.workdir.mkdir(parents=True, exist_ok=True)
         self.home.mkdir(parents=True, exist_ok=True)
         installs = self.home / "installs"
-        if not installs.exists():
+        if not self.install.bundled and not installs.exists():
             installs.symlink_to(self.install.root / "hermes-home" / "installs")
         # JSON is YAML: no YAML library is needed to write the config.
         (self.home / "config.yaml").write_text(json.dumps(self.config(), indent=2))

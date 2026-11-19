@@ -53,6 +53,13 @@ pub fn passes(name: &str) -> bool {
     PASS.contains(&name) || PASS_PREFIX.iter().any(|p| name.starts_with(p))
 }
 
+/// Whether a variable of the parent's environment may reach a bundled (isolated) child: the allowlist without the
+/// variables that choose a Hermes home, runtime or package manager.
+#[must_use]
+pub fn passes_isolated(name: &str) -> bool {
+    passes(name) && !name.starts_with("HERMES_") && !name.starts_with("UV_")
+}
+
 /// What a finished `hermes` call produced. `stdout` and `stderr` are capped.
 #[derive(Debug)]
 pub struct Output {
@@ -70,6 +77,7 @@ pub struct Cli {
     short: Duration,
     cap: usize,
     extra: Vec<(String, String)>,
+    isolated: bool,
 }
 
 impl Cli {
@@ -80,13 +88,22 @@ impl Cli {
             short: limits.cli_timeout,
             cap: 1024 * 1024,
             extra: Vec::new(),
+            isolated: false,
         }
+    }
+
+    /// Run the bundled Hermes: no `HERMES_*` or `UV_*` variable of the user's reaches it, so another install's home,
+    /// runtime directory or package settings cannot steer it (ADR-0023). What the caller adds with `with_env` still does.
+    #[must_use]
+    pub fn isolated(mut self) -> Self {
+        self.isolated = true;
+        self
     }
 
     /// Add variables every child gets on top of the allowlist (the integration tests point Hermes at a scratch install).
     #[must_use]
     pub fn with_env(mut self, extra: Vec<(String, String)>) -> Self {
-        self.extra = extra;
+        self.extra.extend(extra);
         self
     }
 
@@ -110,7 +127,15 @@ impl Cli {
         let mut cmd = Command::new(binary);
         cmd.args(args)
             .env_clear()
-            .envs(std::env::vars_os().filter(|(k, _)| k.to_str().is_some_and(passes)))
+            .envs(std::env::vars_os().filter(|(k, _)| {
+                k.to_str().is_some_and(|k| {
+                    if self.isolated {
+                        passes_isolated(k)
+                    } else {
+                        passes(k)
+                    }
+                })
+            }))
             .envs(self.extra.iter().map(|(k, v)| (k, v)))
             .env("HERMES_HOME", home)
             .stdin(Stdio::null())
@@ -182,6 +207,29 @@ mod tests {
         ] {
             assert!(!passes(no), "{no}");
         }
+    }
+
+    #[test]
+    fn the_isolated_environment_drops_the_users_hermes_settings() {
+        for no in [
+            "HERMES_HOME",
+            "HERMES_RUNTIME_DIR",
+            "HERMES_DATA_DIR_SUFFIX",
+            "UV_CACHE_DIR",
+            "UV_PYTHON",
+        ] {
+            assert!(!passes_isolated(no), "{no}");
+        }
+        for ok in [
+            "PATH",
+            "HOME",
+            "HTTPS_PROXY",
+            "XDG_RUNTIME_DIR",
+            "SSL_CERT_FILE",
+        ] {
+            assert!(passes_isolated(ok), "{ok}");
+        }
+        assert!(!passes_isolated("OPENAI_API_KEY"));
     }
 
     #[cfg(unix)]

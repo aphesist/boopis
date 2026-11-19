@@ -60,7 +60,14 @@ impl Supervisor {
     /// A supervisor over `env`.
     #[must_use]
     pub fn new(env: Environment, limits: Limits) -> Self {
-        let cli = Cli::new(&limits);
+        let cli = match &env.bundled {
+            // the bundled Hermes: the user's HERMES_* and UV_* stay out, and Python's bytecode goes to the app's own folder
+            Some(b) => Cli::new(&limits).isolated().with_env(vec![(
+                "PYTHONPYCACHEPREFIX".to_owned(),
+                b.pycache.display().to_string(),
+            )]),
+            None => Cli::new(&limits),
+        };
         Self {
             env,
             limits,

@@ -21,6 +21,7 @@ use crate::hermes::install::{self, InstallReport};
 use crate::hermes::{HermesStatus, Supervisor};
 use crate::os::{self, PickedFolder};
 use crate::renderer::RendererReport;
+use crate::runtime::Plan;
 use crate::secrets::SecretStore;
 use crate::secrets::store::{validate_name, validate_value};
 use crate::settings::AppSettings;
@@ -51,6 +52,11 @@ pub struct AppState {
     pub limits: Limits,
     /// The plugin and `hx` this app carries, for first-run setup.
     pub bundle: Bundle,
+    /// The Hermes runtime this build carries and will unpack on first run (ADR-0023); `None` uses the user's own Hermes.
+    pub runtime: Option<Plan>,
+    /// Why a runtime this build should carry cannot be used (a broken manifest): setup says so instead of quietly
+    /// falling back to another Hermes.
+    pub runtime_error: Option<String>,
 }
 
 struct ChannelSink(Channel<Frame>);
@@ -124,12 +130,18 @@ fn setup_engine(app: &AppHandle, state: &AppState, profile: Option<String>) -> R
         .supervisor
         .environment()
         .profile_home(profile.as_deref())?;
+    if let Some(why) = &state.runtime_error {
+        return Err(Error::Setup(
+            "hx.setup.runtime_manifest_invalid",
+            format!("{why}; reinstall the app"),
+        ));
+    }
     let ops = CliOps::new(state.supervisor.clone(), home);
-    Ok(Setup::new(
-        Arc::new(ops),
-        state.secrets.clone(),
-        state.bundle.clone(),
-    ))
+    let setup = Setup::new(Arc::new(ops), state.secrets.clone(), state.bundle.clone());
+    Ok(match &state.runtime {
+        Some(plan) => setup.with_runtime(plan.clone()),
+        None => setup,
+    })
 }
 
 /// Whether first-run setup still has to run. Read-only: it changes nothing.

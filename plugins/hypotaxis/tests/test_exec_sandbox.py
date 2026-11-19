@@ -260,6 +260,17 @@ def _interpreter(kind: str, tmp: Path) -> list[str]:
     import venv
 
     target = tmp / f"venv-{kind}"
+    if kind == "bundled-runtime":
+        # The interpreter the app ships (ADR-0023), unpacked by the host: `HX_E2E_RUNTIME_ROOT` names the unpacked
+        # runtime directory (its `manifest.json` says where the interpreter is).
+        root = os.environ.get("HX_E2E_RUNTIME_ROOT")
+        if not root:
+            pytest.skip("HX_E2E_RUNTIME_ROOT is not set (an unpacked hermes-runtime archive)")
+        manifest = _json.loads((Path(root) / "manifest.json").read_text())
+        python = Path(root) / manifest["runtime"]["storePython"]
+        probe = "import sys, json; print(json.dumps([sys.executable, sys.prefix, sys.base_prefix, sys.exec_prefix]))"
+        out = subprocess.run([str(python), "-I", "-c", probe], capture_output=True, text=True, check=True).stdout
+        return list(_json.loads(out))
     if kind == "venv":
         venv.create(target, symlinks=True, with_pip=False)
     else:
@@ -285,7 +296,7 @@ def _interpreter(kind: str, tmp: Path) -> list[str]:
     return list(_json.loads(out))
 
 
-@pytest.mark.parametrize("kind", ["venv", "uv-managed"])
+@pytest.mark.parametrize("kind", ["venv", "uv-managed", "bundled-runtime"])
 def test_exec_runs_with_an_interpreter_outside_the_system_directories(
     make_box: MakeBox, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, kind: str
 ) -> None:

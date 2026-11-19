@@ -33,7 +33,7 @@ def main() -> int:
             info = {
                 "home": str(stack.home),
                 "workdir": str(stack.workdir),
-                "venv_bin": str(install.venv / "bin"),
+                "venv_bin": str(install.bin_dir),
                 "model_url": fake.url,
                 "env": {
                     k: v for k, v in stack.env.items() if k.startswith(("HERMES_", "UV_")) or k in {"HOME", "PATH"}

@@ -70,13 +70,14 @@ Research on Hermes v0.23.2 (`ae2a81cc`) and an audit of the first-pass code prod
 
 ## 4. Hermes integration
 
-**Install and update (ADR-0023).** The app ships as one self-contained program: its installer carries a pinned, unmodified Hermes and a private Python runtime. hypotaxis never patches Hermes.
-- On first run the host unpacks the bundled runtime (hash-checked) into the app's own data folder and gives it a private `HERMES_HOME`, so it never touches a Hermes the user already has. Nobody installs Hermes by hand.
-- Hermes updates reach users through the app's updater, after CI has passed on that Hermes release. Hermes's own `hermes update` is turned off inside the bundle so the two never fight.
-- Advanced: a setting points the app at an existing Hermes install instead (the earlier "find Hermes" path).
+**Install and update (ADR-0023).** The app ships as one self-contained program: its installer carries a pinned, unmodified Hermes and a private Python runtime, built by Hermes's own payload code (`scripts/build-runtime.sh`), as one `hermes-runtime-<os>-<arch>.tar.zst` with a `runtime.json` (Hermes and Python versions, sha256, size). hypotaxis never patches Hermes.
+- On first run the host unpacks that archive into the app's own data folder, `runtime/<hermes version>-<sha8>/`: hashed while it is read, built in a temporary directory and moved into place with one rename, so a crash leaves nothing half installed and a re-run does nothing. It runs Hermes with a private `HERMES_HOME` (`<app data>/hermes-home`) and none of the user's `HERMES_*` or `UV_*` variables, so it never touches a Hermes the user already has. Nobody installs Hermes by hand.
+- Hermes updates reach users through the app's updater, after CI has passed on that Hermes release: a new app carries a new runtime, the next start unpacks it, restarts the gateway on it and then removes the old folder. Hermes's own `hermes update` refuses inside the bundle (its install stamp names the app as steward) and its passive update check is off (`updates.check: false`).
+- Optional heavy pieces (Chromium, Node, ffmpeg, cua-driver) are not in the archive: Hermes's package manager fetches them on first use into the private home's `tools/`.
+- Advanced: `HYPOTAXIS_HERMES=existing` points the app at an existing Hermes install instead (the earlier "find Hermes" path), in the user's own home.
 - The plugin declares `requires_hermes`, and the host refuses an older Hermes.
 - A running gateway can outlive an update, so the host compares `client_code_sha` with `endpoint.code_sha` and restarts the gateway when they differ.
-- `vendor/hermes-agent` is a git submodule pinned to a release tag. It's used only for CI (contract generation, plugin validation, end-to-end tests), never at runtime.
+- `vendor/hermes-agent` is a git submodule pinned to a release tag. It's used for CI (contract generation, plugin validation) and as the build input of the runtime; the app itself runs the runtime, never the submodule. The end-to-end tests run on the same runtime archive that ships.
 
 **Profile.**
 - By default hypotaxis attaches to the user's **active Hermes profile**, the way Hermes Desktop does: one gateway multiplexes every client of a home. That way the user's existing plugins, skills, memory and MCP servers work in hypotaxis unchanged, and hypotaxis sessions show up in the Hermes CLI and TUI.
