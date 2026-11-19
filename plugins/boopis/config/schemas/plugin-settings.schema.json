@@ -145,7 +145,8 @@
         "minLength": 1
       },
       "default": [
-        "claude-subscription-directsdk-experimental"
+        "claude-subscription-directsdk-experimental",
+        "openai-codex"
       ]
     },
     "permissions": {

@@ -67,6 +67,8 @@ pub struct AppState {
     pub source: Source,
     /// Whether this build carries a Hermes runtime.
     pub carries_runtime: bool,
+    /// boopis's own ChatGPT sign-in (ADR-0030).
+    pub chatgpt: Arc<crate::chatgpt::ChatGpt>,
     /// The connector engine of each profile home, kept so a sign-in started by one command can be cancelled by another.
     pub connectors: std::sync::Mutex<std::collections::HashMap<std::path::PathBuf, Arc<Engine>>>,
 }
@@ -152,6 +154,7 @@ fn setup_engine(app: &AppHandle, state: &AppState, profile: Option<String>) -> R
     // The unpack runs for a while inside one `setup_advance` call; its progress reaches every window as an event meanwhile.
     let events = app.clone();
     let setup = Setup::new(Arc::new(ops), state.secrets.clone(), state.bundle.clone())
+        .with_chatgpt(state.chatgpt.clone())
         .with_progress(Arc::new(move |p| {
             if let Err(e) = tauri_specta::Event::emit(&p, &events) {
                 tracing::debug!(error = %e, "could not emit the setup progress");
@@ -784,4 +787,39 @@ pub async fn connector_login(
     Ok(connector_engine(&app, &state, None)?
         .login(&provider, connector.as_deref())
         .await?)
+}
+
+// ---------------------------------------------------------------- the ChatGPT sign-in (ADR-0030)
+
+/// Where the ChatGPT sign-in stands: signed in or not, the plan, and the code while a sign-in waits. Read-only.
+#[tauri::command]
+#[specta::specta]
+pub async fn chatgpt_status(
+    state: State<'_, AppState>,
+) -> std::result::Result<crate::chatgpt::Status, HostError> {
+    Ok(state.chatgpt.status().await?)
+}
+
+/// Start a ChatGPT sign-in: returns the page to open and the code to type. The wait runs in the host and ends with a
+/// `ChatgptSigninEvent`; the tokens go to the keychain and never to the webview.
+#[tauri::command]
+#[specta::specta]
+pub async fn chatgpt_signin_start(
+    state: State<'_, AppState>,
+) -> std::result::Result<crate::chatgpt::CodeView, HostError> {
+    Ok(state.chatgpt.start().await?)
+}
+
+/// Cancel the ChatGPT sign-in that is waiting.
+#[tauri::command]
+#[specta::specta]
+pub fn chatgpt_signin_cancel(state: State<'_, AppState>) {
+    state.chatgpt.cancel();
+}
+
+/// Sign out of ChatGPT: both tokens leave the keychain.
+#[tauri::command]
+#[specta::specta]
+pub async fn chatgpt_sign_out(state: State<'_, AppState>) -> std::result::Result<(), HostError> {
+    Ok(state.chatgpt.sign_out().await?)
 }

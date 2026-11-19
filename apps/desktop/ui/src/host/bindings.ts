@@ -115,10 +115,22 @@ export const commands = {
 	 *  fixed when the process starts; this is the only way to change it.
 	 */
 	appRestart: (options?: InvokeOptions) => __TAURI_INVOKE<void>("app_restart", undefined, options),
+	/**  Where the ChatGPT sign-in stands: signed in or not, the plan, and the code while a sign-in waits. Read-only. */
+	chatgptStatus: (options?: InvokeOptions) => __TAURI_INVOKE<ChatgptStatus_Serialize>("chatgpt_status", undefined, options),
+	/**
+	 *  Start a ChatGPT sign-in: returns the page to open and the code to type. The wait runs in the host and ends with a
+	 *  `ChatgptSigninEvent`; the tokens go to the keychain and never to the webview.
+	 */
+	chatgptSigninStart: (options?: InvokeOptions) => __TAURI_INVOKE<ChatgptCode>("chatgpt_signin_start", undefined, options),
+	/**  Cancel the ChatGPT sign-in that is waiting. */
+	chatgptSigninCancel: (options?: InvokeOptions) => __TAURI_INVOKE<void>("chatgpt_signin_cancel", undefined, options),
+	/**  Sign out of ChatGPT: both tokens leave the keychain. */
+	chatgptSignOut: (options?: InvokeOptions) => __TAURI_INVOKE<null>("chatgpt_sign_out", undefined, options),
 };
 
 /** Events */
 export const events = {
+	chatgptSigninEvent: makeEvent<ChatgptSigninEvent, ChatgptSigninEvent>("chatgpt-signin-event"),
 	connectionStateEvent: makeEvent<ConnectionStateEvent_Serialize, ConnectionStateEvent_Deserialize>("connection-state-event"),
 	connectorRestartEvent: makeEvent<ConnectorRestartEvent, ConnectorRestartEvent>("connector-restart-event"),
 	setupProgress: makeEvent<SetupProgress, SetupProgress>("setup-progress"),
@@ -168,6 +180,54 @@ export type AppSettings_Serialize = {
 	 *  Added without a version bump: a file from before has none and gets `auto`.
 	 */
 	gpu: GpuPolicy,
+};
+
+/**  The code the user types, and where. */
+export type ChatgptCode = {
+	/**  The page to open (OpenAI's own). */
+	verification_url: string,
+	/**  The one-time code to type there. */
+	user_code: string,
+};
+
+/**  How a sign-in ended, pushed to every window. */
+export type ChatgptSigninEvent = {
+	/**  `signed_in`, `failed`, `cancelled` or `timed_out`. */
+	outcome: string,
+	/**  What to tell the user, in plain words; empty when signed in. */
+	message: string,
+};
+
+/**  Where the sign-in stands. */
+export type ChatgptState = 
+/**  No ChatGPT account is signed in. */
+"signed_out" | 
+/**  A sign-in is waiting for the user to type the code. */
+"signing_in" | 
+/**  Signed in. */
+"signed_in";
+
+/**  What the Models tab and setup show. */
+export type ChatgptStatus = ChatgptStatus_Serialize | ChatgptStatus_Deserialize;
+
+/**  What the Models tab and setup show. */
+export type ChatgptStatus_Deserialize = {
+	/**  Where it stands. */
+	state: ChatgptState,
+	/**  The ChatGPT plan the account's token names (`plus`, `pro`), when it names one. */
+	plan?: string | null,
+	/**  While signing in: the code and its page. */
+	code?: ChatgptCode | null,
+};
+
+/**  What the Models tab and setup show. */
+export type ChatgptStatus_Serialize = {
+	/**  Where it stands. */
+	state: ChatgptState,
+	/**  The ChatGPT plan the account's token names (`plus`, `pro`), when it names one. */
+	plan: string | null,
+	/**  While signing in: the code and its page. */
+	code: ChatgptCode | null,
 };
 
 /**  Whether first-run setup still has to run, without changing anything. */
@@ -635,6 +695,16 @@ export type Form_Deserialize = {
 	pinned?: string | null,
 	/**  What submitting does, in one sentence (a `connector` form). */
 	effect?: string | null,
+	/**
+	 *  Pages the user may want while answering, as `[label, https URL]` (where to make a key). The UI opens them in the
+	 *  browser through `open_external`.
+	 */
+	links?: ([string, string])[],
+	/**
+	 *  A sign-in the card offers beside the form (ADR-0030): boopis's own ChatGPT sign-in, or a provider's login from the
+	 *  host's own table. Never a command.
+	 */
+	signin?: SignIn | null,
 };
 
 /**  A form for the UI, in the shape of the plugin's `form.opened` (`docs/FORMS.md` section 6). */
@@ -665,6 +735,16 @@ export type Form_Serialize = {
 	pinned: string | null,
 	/**  What submitting does, in one sentence (a `connector` form). */
 	effect: string | null,
+	/**
+	 *  Pages the user may want while answering, as `[label, https URL]` (where to make a key). The UI opens them in the
+	 *  browser through `open_external`.
+	 */
+	links: ([string, string])[],
+	/**
+	 *  A sign-in the card offers beside the form (ADR-0030): boopis's own ChatGPT sign-in, or a provider's login from the
+	 *  host's own table. Never a command.
+	 */
+	signin: SignIn | null,
 };
 
 /**  What the owner asked for with `BOOPIS_FPS`. */
@@ -987,8 +1067,15 @@ export type ModelsView_Deserialize = {
 	tiers: LadderTier[],
 	/**  The user's Claude Code as the Claude subscription plugin would see it: signed in or not, and its version. */
 	claude: Probe_Deserialize,
-	/**  Whether Hermes lists the Claude subscription plugin's provider. */
+	/**  Whether the engine carries the Claude subscription plugin (boopis's own engine does). */
 	claude_plugin: boolean,
+	/**
+	 *  The ChatGPT sign-in: signed in or not, the plan its token names, the code while a sign-in waits. `None` when this
+	 *  engine has no sign-in service (tests).
+	 */
+	chatgpt?: ChatgptStatus_Deserialize | null,
+	/**  Whether a Gemini key is in place (the keychain, or the profile's `.env` by name). */
+	gemini_key: boolean,
 };
 
 /**  What Settings > Models shows of the configuration (read-only). */
@@ -999,8 +1086,15 @@ export type ModelsView_Serialize = {
 	tiers: LadderTier[],
 	/**  The user's Claude Code as the Claude subscription plugin would see it: signed in or not, and its version. */
 	claude: Probe_Serialize,
-	/**  Whether Hermes lists the Claude subscription plugin's provider. */
+	/**  Whether the engine carries the Claude subscription plugin (boopis's own engine does). */
 	claude_plugin: boolean,
+	/**
+	 *  The ChatGPT sign-in: signed in or not, the plan its token names, the code while a sign-in waits. `None` when this
+	 *  engine has no sign-in service (tests).
+	 */
+	chatgpt: ChatgptStatus_Serialize | null,
+	/**  Whether a Gemini key is in place (the keychain, or the profile's `.env` by name). */
+	gemini_key: boolean,
 };
 
 /**
@@ -1286,6 +1380,17 @@ export type SetupProgress = {
 	read: number | null,
 	/**  The archive's size in bytes. */
 	total: number | null,
+};
+
+/**  A sign-in a setup form offers. */
+export type SignIn = {
+	/**
+	 *  [`SIGNIN_CHATGPT`] for boopis's own ChatGPT sign-in (`chatgpt_signin_start`), else an id in the host's login table
+	 *  (`apps/shared/data/logins.json`, run with `connector_login`).
+	 */
+	provider: string,
+	/**  The button's words. */
+	label: string,
 };
 
 /**  Which Hermes the app runs: the one it carries, or one the user already has (the advanced setting). */

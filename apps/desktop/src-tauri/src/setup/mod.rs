@@ -29,6 +29,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use specta::Type;
 
+use crate::chatgpt::{self, ChatGpt};
 use crate::claude::{self, ClaudeCli, SystemClaude};
 use crate::commands::Json;
 use crate::error::{Error, Result};
@@ -82,7 +83,27 @@ pub struct Form {
     pub pinned: Option<String>,
     /// What submitting does, in one sentence (a `connector` form).
     pub effect: Option<String>,
+    /// Pages the user may want while answering, as `[label, https URL]` (where to make a key). The UI opens them in the
+    /// browser through `open_external`.
+    #[serde(default)]
+    pub links: Vec<(String, String)>,
+    /// A sign-in the card offers beside the form (ADR-0030): boopis's own ChatGPT sign-in, or a provider's login from the
+    /// host's own table. Never a command.
+    pub signin: Option<SignIn>,
 }
+
+/// A sign-in a setup form offers.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+pub struct SignIn {
+    /// [`SIGNIN_CHATGPT`] for boopis's own ChatGPT sign-in (`chatgpt_signin_start`), else an id in the host's login table
+    /// (`apps/shared/data/logins.json`, run with `connector_login`).
+    pub provider: String,
+    /// The button's words.
+    pub label: String,
+}
+
+/// The [`SignIn::provider`] of boopis's own ChatGPT sign-in.
+pub const SIGNIN_CHATGPT: &str = "chatgpt";
 
 impl Form {
     pub(crate) fn new(id: &str, kind: &str, title: &str, body: &str, schema: Value) -> Self {
@@ -103,6 +124,8 @@ impl Form {
             contents: Vec::new(),
             pinned: None,
             effect: None,
+            links: Vec::new(),
+            signin: None,
         }
     }
 }
@@ -250,8 +273,13 @@ pub struct ModelsView {
     pub tiers: Vec<providers::LadderTier>,
     /// The user's Claude Code as the Claude subscription plugin would see it: signed in or not, and its version.
     pub claude: claude::Probe,
-    /// Whether Hermes lists the Claude subscription plugin's provider.
+    /// Whether the engine carries the Claude subscription plugin (boopis's own engine does).
     pub claude_plugin: bool,
+    /// The ChatGPT sign-in: signed in or not, the plan its token names, the code while a sign-in waits. `None` when this
+    /// engine has no sign-in service (tests).
+    pub chatgpt: Option<chatgpt::Status>,
+    /// Whether a Gemini key is in place (the keychain, or the profile's `.env` by name).
+    pub gemini_key: bool,
 }
 
 /// The setup engine for one profile.
@@ -260,6 +288,8 @@ pub struct Setup {
     secrets: Arc<dyn SecretStore>,
     /// The user's own Claude Code, looked at for the Claude subscription (ADR-0029).
     claude: Arc<dyn ClaudeCli>,
+    /// boopis's own ChatGPT sign-in (ADR-0030); `None` where none runs (tests that do not need it).
+    chatgpt: Option<Arc<ChatGpt>>,
     bundle: Bundle,
     install_command: String,
     /// The bundled Hermes runtime to unpack first (ADR-0023); `None` when the app uses a Hermes the user already has.
@@ -311,6 +341,7 @@ impl Setup {
             ops,
             secrets,
             claude: Arc::new(SystemClaude::new()),
+            chatgpt: None,
             bundle,
             install_command: crate::hermes::install::installer_command().to_owned(),
             runtime: None,
@@ -322,6 +353,13 @@ impl Setup {
     #[must_use]
     pub fn with_claude(mut self, claude: Arc<dyn ClaudeCli>) -> Self {
         self.claude = claude;
+        self
+    }
+
+    /// Ask `chatgpt` whether a ChatGPT account is signed in.
+    #[must_use]
+    pub fn with_chatgpt(mut self, chatgpt: Arc<ChatGpt>) -> Self {
+        self.chatgpt = Some(chatgpt);
         self
     }
 
@@ -412,15 +450,11 @@ impl Setup {
             });
             state.picks.clear();
             state.reopen_models = false;
-            state.claude_consent = false;
-        } else if id == "setup.claude" || id == "setup.claude.install" {
+        } else if id == "setup.claude" || id == "setup.chatgpt" {
             if answer.cancelled {
                 // back to the models question, with every choice it has
                 state.choice = None;
                 state.reopen_models = true;
-                state.claude_consent = false;
-            } else if id == "setup.claude.install" {
-                state.claude_consent = true;
             }
         } else if id == "setup.openrouter" {
             if answer.cancelled {
@@ -464,18 +498,27 @@ impl Setup {
     /// # Errors
     /// `hx.config.invalid` when Hermes cannot be asked.
     pub async fn models_view(&self) -> Result<ModelsView> {
-        let (saved, probe, plugins) = tokio::join!(
+        let chatgpt = async {
+            match &self.chatgpt {
+                Some(c) => c.status().await.map(Some),
+                None => Ok(None),
+            }
+        };
+        let (saved, probe, plugins, chatgpt) = tokio::join!(
             self.ops.config_get(providers::LADDER_KEY),
             self.claude.probe(),
-            self.ops.plugins()
+            self.ops.plugins(),
+            chatgpt
         );
         let (state, tiers) = providers::ladder_of(saved?.as_ref());
         Ok(ModelsView {
             state,
             tiers,
             claude: probe,
-            // a Hermes that cannot list its plugins says nothing about this one
+            // an engine that cannot list its plugins says nothing about this one
             claude_plugin: plugins.is_ok_and(|l| l.iter().any(|p| p.name == claude::PROVIDER_ID)),
+            chatgpt: chatgpt?,
+            gemini_key: providers::gemini_key(self.secrets.as_ref(), &self.ops.home()),
         })
     }
 
@@ -492,7 +535,6 @@ impl Setup {
         state.picks.clear();
         state.free_note = None;
         state.reopen_models = true;
-        state.claude_consent = false;
         state.pending_form = None;
         state.done_at = None;
         state::save(&home, &state)
@@ -624,6 +666,23 @@ impl Setup {
                 return run.blocked(id, title, e.code(), &e);
             }
         };
+        // The plugins the runtime carries (the Claude subscription, ADR-0030) go where the engine finds a profile's plugins.
+        // A model-provider plugin needs no enable entry; nothing here asks the user, and nothing is downloaded.
+        let (root, home) = (layout.root.clone(), self.ops.home());
+        match tokio::task::spawn_blocking(move || install::install_runtime_plugins(&root, &home))
+            .await
+        {
+            Ok(Ok(changed)) => state.restart_pending |= changed,
+            Ok(Err(e)) => return run.blocked(id, title, "hx.setup.plugin_install_failed", &e),
+            Err(e) => {
+                return run.blocked(
+                    id,
+                    title,
+                    "hx.setup.plugin_install_failed",
+                    &Error::Io(e.to_string()),
+                );
+            }
+        }
         let manifest = plan.runtime.manifest();
         // Hermes's own update check and `hermes update` have no place in a bundle: the app's updater ships Hermes.
         // `hermes update` already refuses (the install stamp says an app owns it); the passive check is switched off here.
@@ -781,13 +840,17 @@ impl Setup {
     async fn models_step(&self, run: &mut Run, state: &mut State) {
         let (id, title) = ("models", "Models and keys");
         let mut restart = false;
+        let chatgpt_signed_in = match &self.chatgpt {
+            Some(c) => c.signed_in().await.unwrap_or(false),
+            None => false,
+        };
         let input = providers::Input {
             choice: state.choice.as_deref(),
             picks: &state.picks,
             free_note: state.free_note.as_deref(),
             reopen: state.reopen_models,
-            claude_consent: state.claude_consent,
             claude: self.claude.as_ref(),
+            chatgpt_signed_in,
         };
         let out = providers::run(
             self.ops.as_ref(),
@@ -815,7 +878,7 @@ impl Setup {
                 run.form = Some(form);
             }
             Err(e) => {
-                // the subscription's own refusals (an unreachable catalog, a refused install) carry their own codes
+                // a choice's own refusals (a subscription this engine does not carry) carry their own codes
                 let code = match &e {
                     Error::Setup(code, _) => *code,
                     _ => "hx.setup.config_failed",

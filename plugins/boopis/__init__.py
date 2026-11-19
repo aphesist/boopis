@@ -121,6 +121,7 @@ def register(ctx: Any) -> None:
     _register_delegation(ctx)
     _register_secret_source(ctx)
     _start_recovery()
+    _start_signins()
     on_unload = getattr(ctx, "on_unload", None)
     if callable(on_unload):
         on_unload(_lazy("hx", "shutdown"))
@@ -149,6 +150,19 @@ def _register_secret_source(ctx: Any) -> None:
     from .hostsecrets.source import make_source
 
     register(make_source())
+
+
+def _start_signins() -> None:
+    """Hand the desktop host's ChatGPT sign-in to the runtime (``signins/chatgpt.py``, ADR-0030), now and every few
+    minutes, on a daemon thread in a copy of this context (the same profile home). Only in a gateway the desktop host
+    started: with no secret channel there is no sign-in to hand over."""
+    from .hostsecrets.channel import capture_environment
+
+    if capture_environment() is None:
+        return
+    from .signins.chatgpt import start
+
+    start()
 
 
 def _start_recovery() -> None:

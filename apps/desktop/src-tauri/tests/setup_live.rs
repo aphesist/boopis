@@ -895,16 +895,20 @@ async fn the_free_tier_is_claimable_only_to_a_link_that_declares_the_desktop() {
     );
 }
 
-/// The Claude subscription's two Hermes calls on a real Hermes (ADR-0029): the catalog entry the install review shows, and what
-/// `hermes plugins install claude-subscription-directsdk` prints when the download cannot happen. The proxy points at a closed
-/// port, so Hermes's live catalog is unreachable (it falls back to its own tree's catalog) and so is the repository: the refusal
-/// is the real one, and nothing is installed. No gateway is started.
+/// The Claude subscription plugin boopis's runtime carries (ADR-0030), placed in a profile the way setup places it
+/// (`install::install_runtime_plugins`), is listed by a real engine as an enabled model provider: nothing is installed through
+/// the engine's own commands and nothing is downloaded. `HX_E2E_CLAUDE_PLUGIN` is the plugin's directory as
+/// `scripts/build-runtime.sh` bundles it (the catalog's pinned commit, with its licence). No gateway is started.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn the_subscription_plugin_is_read_from_hermes_catalog_and_an_unreachable_download_installs_nothing()
+async fn the_bundled_claude_plugin_placed_by_setup_is_an_enabled_model_provider_with_nothing_installed()
  {
     let _serial = SERIAL.lock().await;
     let Some(spike) = std::env::var_os("HX_E2E_HERMES_ENV").map(PathBuf::from) else {
         eprintln!("skipped: set HX_E2E_HERMES_ENV to the spike install");
+        return;
+    };
+    let Some(plugin) = std::env::var_os("HX_E2E_CLAUDE_PLUGIN").map(PathBuf::from) else {
+        eprintln!("skipped: set HX_E2E_CLAUDE_PLUGIN to the bundled plugin's directory");
         return;
     };
     let Some(bin) = hermes_bin_dir(&spike) else {
@@ -959,62 +963,35 @@ async fn the_subscription_plugin_is_read_from_hermes_catalog_and_an_unreachable_
     };
     let sup = Arc::new(Supervisor::new(env, Limits::default()).with_child_env(child_env));
     let ops = CliOps::new(sup, hermes_home.clone());
-
-    let entry = ops
-        .catalog_entry(boopis_host::claude::CATALOG_NAME)
-        .await
-        .unwrap()
-        .expect("Hermes's catalog lists the plugin");
-    assert_eq!(entry.name, "claude-subscription-directsdk");
-    assert_eq!(entry.tier, "official");
-    assert_eq!(entry.subdir, "claude-subscription-directsdk");
+    // what the runtime archive holds, and what setup's runtime step does with it
+    let runtime = root.path().join("runtime");
+    let carried = runtime
+        .join("plugins")
+        .join(boopis_host::claude::PROVIDER_ID);
+    std::fs::create_dir_all(&carried).unwrap();
+    for f in std::fs::read_dir(&plugin).unwrap() {
+        let f = f.unwrap();
+        if f.file_type().unwrap().is_file() {
+            std::fs::copy(f.path(), carried.join(f.file_name())).unwrap();
+        }
+    }
     assert!(
-        entry.repo.starts_with("https://github.com/"),
-        "{}",
-        entry.repo
+        carried.join("LICENSE").is_file(),
+        "the plugin travels with its licence"
     );
+    assert!(boopis_host::setup::install::install_runtime_plugins(&runtime, &hermes_home).unwrap());
+    let listed = ops.plugins().await.unwrap();
     assert!(
-        entry.sha.len() == 40 && entry.sha.bytes().all(|b| b.is_ascii_hexdigit()),
-        "a pinned commit: {}",
-        entry.sha
-    );
-    assert!(!entry.version.is_empty());
-    assert!(
-        entry.provides.is_empty(),
-        "it declares no tool, hook or middleware"
-    );
-    assert!(
-        ops.catalog_entry("no-such-plugin-for-boopis-xyz")
-            .await
-            .unwrap()
-            .is_none()
-    );
-
-    let refused = ops
-        .install_catalog_plugin(boopis_host::claude::CATALOG_NAME)
-        .await
-        .expect_err("no repository can be reached");
-    assert_eq!(
-        refused.code(),
-        "hx.setup.subscription_unreachable",
-        "{refused}"
-    );
-    assert!(
-        refused.to_string().contains("Nothing was installed"),
-        "{refused}"
+        listed
+            .iter()
+            .any(|p| p.name == boopis_host::claude::PROVIDER_ID && p.enabled),
+        "{listed:?}"
     );
     assert!(
         !hermes_home
             .join("plugins")
-            .join(boopis_host::claude::PROVIDER_ID)
+            .join(".install-metadata.json")
             .exists(),
-        "a refused install leaves nothing behind"
-    );
-    let listed = ops.plugins().await.unwrap();
-    assert!(
-        !listed
-            .iter()
-            .any(|p| p.name == boopis_host::claude::PROVIDER_ID),
-        "{listed:?}"
+        "nothing went through the engine's installer"
     );
 }

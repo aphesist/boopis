@@ -12,7 +12,9 @@ import { useFormsHost } from '../modules/cards/forms-host';
 import type { FormsSource } from '../data/provider';
 import { fromConnectorForm } from './forms';
 import type { FormModel } from './forms';
-import type { Answer } from './bindings';
+import type { Answer, ConnectorLogin, Form_Deserialize } from './bindings';
+import { mountChatgptSignin, tauriChatgptBridge } from './chatgpt-signin';
+import type { ChatgptBridge } from './chatgpt-signin';
 import type { SetupBridge, SetupProgress, SetupStatus, SourceInfo } from './setup-bridge';
 import { asHostError } from './bridge';
 import { reduced } from '../core/dom';
@@ -26,11 +28,11 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, props: Partial<Record
   node.append(...kids);
   return node;
 }
-const button = (text: string, variant: 'primary' | 'ghost' | '', onClick: () => void, type: 'button' | 'submit' = 'button'): HTMLButtonElement => {
+function button(text: string, variant: 'primary' | 'ghost' | '', onClick: () => void, type: 'button' | 'submit' = 'button'): HTMLButtonElement {
   const b = el('button', { type, class: 'ui-btn' + (variant ? ' ui-btn--' + variant : '') }, el('span', {}, text));
   b.addEventListener('click', (e) => { if (type === 'button') { e.preventDefault(); onClick(); } });
   return b;
-};
+}
 const STATE_WORD: Readonly<Record<string, string>> = { done: 'done', pending: 'waiting', needs_input: 'needs you', blocked: 'stopped', declined: 'not changed', skipped: 'skipped' };
 
 /** what the first screen says setup is about to do, by which Hermes this run uses. The bundled one is unpacked and set up; the
@@ -61,11 +63,67 @@ export function describeProgress(p: SetupProgress): { label: string; value: numb
   return { label, value: Math.min(100, Math.floor((read / total) * 100)), bytes: `${bytesText(Math.min(read, total))} of ${bytesText(total)}` };
 }
 
+/** What a setup form may offer beside its fields (ADR-0030): boopis's own ChatGPT sign-in, a provider's login from the host's
+    own table (Claude Code's `claude auth login`), and pages to open (where to make a key). */
+export interface SetupSignins {
+  chatgpt: ChatgptBridge;
+  /** the host's sign-in for a provider id in its table; it never runs a command a form names */
+  login: (provider: string) => Promise<ConnectorLogin>;
+  open: (url: string) => Promise<void>;
+}
+
+export function tauriSignins(): SetupSignins {
+  const chatgpt = tauriChatgptBridge();
+  return {
+    chatgpt,
+    login: async (provider) => (await import('./connectors-bridge')).tauriConnectorsBridge().login(provider),
+    open: (url) => chatgpt.open(url)
+  };
+}
+
 export interface FirstRunOptions {
   /** start the steps at once, with no first screen (the user already asked: "Change models") */
   autostart?: boolean;
   /** the heading */
   title?: string;
+  /** the sign-ins and pages a form may offer; the host's own commands when absent */
+  signins?: SetupSignins;
+}
+
+/** The sign-in and the pages a setup form offers, drawn under its card. `next` runs setup again once a sign-in finished
+    (the host then finds it in place). Returns the element and what takes it away. */
+export function formExtras(form: Form_Deserialize, deps: () => SetupSignins, next: () => void): { node: HTMLElement; destroy: () => void } | null {
+  const links = form.links ?? [];
+  if (!form.signin && links.length === 0) return null;
+  const node = el('div', { 'data-form-extras': form.form_id, style: 'display:grid;gap:var(--sp-3);justify-items:start' });
+  let destroy = (): void => undefined;
+  for (const [label, url] of links) node.append(button(label, 'ghost', () => { void deps().open(url); }));
+  const signin = form.signin;
+  if (signin?.provider === 'chatgpt') {
+    destroy = mountChatgptSignin(node, deps().chatgpt, { label: signin.label, onSignedIn: next }).destroy;
+  } else if (signin) {
+    const say = el('p', { role: 'status', style: 'margin:0;color:var(--text-dim)' });
+    const out = el('pre', { class: 'ui-code', style: 'margin:0;white-space:pre-wrap;display:none' });
+    const go = button(signin.label, 'primary', () => {
+      go.disabled = true;
+      say.textContent = 'Finish signing in in your browser. This card updates when it\u2019s done.';
+      out.style.display = 'none';
+      deps().login(signin.provider).then((r) => {
+        if (r.ok) { say.textContent = 'Signed in.'; next(); return; }
+        go.disabled = false;
+        say.setAttribute('role', 'alert');
+        say.textContent = r.timed_out ? 'The sign-in took too long and was stopped. Try again.' : 'The sign-in did not finish. Try again.';
+        if (r.output.length) { out.textContent = r.output.slice(-4).join('\n'); out.style.display = 'block'; }
+      }, (e: unknown) => {
+        go.disabled = false;
+        say.setAttribute('role', 'alert');
+        say.textContent = e instanceof Error ? e.message : 'The sign-in did not start.';
+      });
+    });
+    go.dataset['signin'] = signin.provider;
+    node.append(go, say, out);
+  }
+  return { node, destroy };
 }
 
 /** Show first-run setup if it is needed and resolve when the user is through it (or setup was not needed). */
@@ -80,7 +138,12 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
   mount.append(root);
   return new Promise<void>((resolve) => {
     let busy = false;
+    let signins: SetupSignins | null = opts.signins ?? null;
+    const deps = (): SetupSignins => (signins ??= tauriSignins());
+    let extras = (): void => undefined;
     const draw = (status: SetupStatus | null, error: string): void => {
+      extras();
+      extras = () => undefined;
       const card = el('div', { style: 'display:grid;gap:var(--sp-4);max-width:var(--measure);width:min(90vw,var(--measure))' });
       card.append(el('h1', { id: 'fr-title', style: 'margin:0;font:600 var(--fs-xl)/var(--lh-tight) var(--sans)' }, opts.title ?? 'Set up boopis'));
       if (error) card.append(el('p', { role: 'alert', style: 'margin:0;color:var(--red-text)' }, error));
@@ -94,7 +157,12 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
           card.append(button('Check again', 'primary', () => { void run(null, false); }));
         }
         if (status.steps.some((s) => s.state === 'declined')) card.append(button('Review again', 'ghost', () => { void run(null, true); }));
-        if (status.form) card.append(formCard(fromConnectorForm(status.form)));
+        if (status.form) {
+          const form = status.form;
+          card.append(formCard(fromConnectorForm(form)));
+          const more = formExtras(form, deps, () => { void run({ form_id: form.form_id, cancelled: false, values: {}, secrets: {} }, false); });
+          if (more) { card.append(more.node); extras = more.destroy; }
+        }
         if (status.done) {
           useFormsHost(null);
           card.append(el('h2', { style: 'margin:0;font:600 var(--fs-l)/var(--lh-tight) var(--sans)' }, 'You are set'));

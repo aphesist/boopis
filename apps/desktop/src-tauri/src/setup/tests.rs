@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use serde_json::{Value, json};
 
 use super::install::Bundle;
-use super::ops::{CatalogEntry, HermesOps, PluginEntry};
+use super::ops::{HermesOps, PluginEntry};
 use super::{Answer, Setup, StepState, windows_gaps};
 use crate::claude::{self, ClaudeCli, PROVIDER_ID, Probe};
 use crate::commands::Json;
@@ -32,37 +32,8 @@ struct Fake {
     free: Mutex<FreeScript>,
     /// The free rows of the `OpenRouter` catalogue.
     catalogue: Mutex<Vec<String>>,
-    /// Hermes's plugin catalog: the entry for the Claude subscription plugin, and what an install of it does.
-    plugin_catalog: Mutex<PluginCatalog>,
-}
-
-/// A scripted plugin catalog (no network, no clone).
-struct PluginCatalog {
-    entry: Option<CatalogEntry>,
-    /// The error the next installs answer with (while `Some`), instead of installing.
-    refuse: Option<Error>,
-    installs: u32,
-    /// The `ALIASES` the installed build's `model_catalog.py` carries.
-    aliases: Vec<&'static str>,
-}
-
-impl Default for PluginCatalog {
-    fn default() -> Self {
-        Self {
-            entry: Some(CatalogEntry {
-                name: claude::CATALOG_NAME.into(),
-                version: "0.3.5".into(),
-                sha: "6313fad5ddf2c060e7b16782f4860c0d5cdbfcac".into(),
-                repo: "https://github.com/NousResearch/hermes-official-plugins".into(),
-                subdir: "claude-subscription-directsdk".into(),
-                tier: "official".into(),
-                provides: Vec::new(),
-            }),
-            refuse: None,
-            installs: 0,
-            aliases: vec!["sonnet", "haiku", "opus", "fable"],
-        }
-    }
+    /// The `ALIASES` the bundled Claude subscription plugin's `model_catalog.py` carries.
+    claude_aliases: Mutex<Vec<&'static str>>,
 }
 
 /// A scripted Claude Code: what the look finds, and how many looks there were.
@@ -110,6 +81,32 @@ struct FreeScript {
 }
 
 impl Fake {
+    /// What boopis's runtime leaves in the profile (`install::install_runtime_plugins`): the Claude subscription plugin's
+    /// directory, named by its manifest, with its model catalogue, listed by the engine as an enabled model provider.
+    fn bundled_claude(&self) {
+        let dir = super::ops::plugins_dir(&self.home).join(PROVIDER_ID);
+        std::fs::create_dir_all(&dir).unwrap();
+        let rows = self
+            .claude_aliases
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|a| format!("    '{a}': 'claude-{a}-x',\n"))
+            .collect::<Vec<_>>()
+            .concat();
+        std::fs::write(
+            dir.join("model_catalog.py"),
+            format!(
+                "CONTEXT_WINDOWS = {{'claude-x': 1}}\nALIASES = {{\n{rows}}}\nOTHER = {{'k': 1}}\n"
+            ),
+        )
+        .unwrap();
+        self.plugins.lock().unwrap().push(PluginEntry {
+            name: PROVIDER_ID.into(),
+            enabled: true,
+        });
+    }
+
     fn new(home: PathBuf, config: Value) -> Arc<Self> {
         Arc::new(Self {
             home,
@@ -121,7 +118,7 @@ impl Fake {
             restart_failures: Mutex::new(0),
             free: Mutex::new(FreeScript::default()),
             catalogue: Mutex::new(Vec::new()),
-            plugin_catalog: Mutex::new(PluginCatalog::default()),
+            claude_aliases: Mutex::new(vec!["sonnet", "haiku", "opus", "fable"]),
         })
     }
 }
@@ -201,42 +198,6 @@ impl HermesOps for Fake {
         f.claimed = true;
         Ok(f.after.clone())
     }
-    async fn catalog_entry(&self, name: &str) -> Result<Option<CatalogEntry>> {
-        assert_eq!(name, claude::CATALOG_NAME);
-        Ok(self.plugin_catalog.lock().unwrap().entry.clone())
-    }
-    async fn install_catalog_plugin(&self, name: &str) -> Result<()> {
-        assert_eq!(name, claude::CATALOG_NAME);
-        let mut c = self.plugin_catalog.lock().unwrap();
-        if let Some(e) = &c.refuse {
-            return Err(match e {
-                Error::Setup(code, m) => Error::Setup(code, m.clone()),
-                _ => Error::Config("refused".into()),
-            });
-        }
-        c.installs += 1;
-        // what `hermes plugins install` leaves: the plugin's directory, named by its manifest, with its model catalogue
-        let dir = super::ops::plugins_dir(&self.home).join(PROVIDER_ID);
-        std::fs::create_dir_all(&dir).unwrap();
-        let rows = c
-            .aliases
-            .iter()
-            .map(|a| format!("    '{a}': 'claude-{a}-x',\n"))
-            .collect::<Vec<_>>()
-            .concat();
-        std::fs::write(
-            dir.join("model_catalog.py"),
-            format!(
-                "CONTEXT_WINDOWS = {{'claude-x': 1}}\nALIASES = {{\n{rows}}}\nOTHER = {{'k': 1}}\n"
-            ),
-        )
-        .unwrap();
-        self.plugins.lock().unwrap().push(PluginEntry {
-            name: PROVIDER_ID.into(),
-            enabled: true, // a model provider needs no enable entry: Hermes lists it as enabled
-        });
-        Ok(())
-    }
     async fn free_models(&self, provider: &str) -> Result<Vec<String>> {
         assert_eq!(provider, "openrouter");
         Ok(self.catalogue.lock().unwrap().clone())
@@ -275,8 +236,32 @@ fn rig(config: Value) -> Rig {
 
 impl Rig {
     fn setup(&self) -> Setup {
+        let chatgpt = crate::chatgpt::ChatGpt::new(
+            self.store.clone(),
+            Arc::new(NoNetwork),
+            crate::chatgpt::Timing {
+                signin: std::time::Duration::from_mins(15),
+                refresh_ahead: std::time::Duration::from_mins(30),
+                refresh_every: std::time::Duration::from_mins(5),
+            },
+        );
         Setup::new(self.fake.clone(), self.store.clone(), self.bundle.clone())
             .with_claude(self.claude.clone())
+            .with_chatgpt(Arc::new(chatgpt))
+    }
+}
+
+/// Setup reads the ChatGPT sign-in from the keychain and never reaches OpenAI.
+struct NoNetwork;
+
+impl crate::chatgpt::oauth::Transport for NoNetwork {
+    fn post(
+        &self,
+        url: &str,
+        _: &str,
+        _: &str,
+    ) -> std::result::Result<crate::chatgpt::oauth::Reply, String> {
+        panic!("setup asked {url}: it must not reach the network");
     }
 }
 
@@ -1533,31 +1518,25 @@ async fn the_models_question_offers_the_subscription_with_a_note_when_claude_cod
 }
 
 #[tokio::test]
-async fn not_installed_shows_the_install_and_sign_in_commands_and_changes_nothing() {
+async fn not_installed_shows_the_install_command_and_changes_nothing() {
     let r = rig(json!({}));
     let s = choose_subscription(&r).await;
     assert_eq!(state_of(&s, "models"), StepState::NeedsInput);
     let form = s.form.unwrap();
     assert_eq!(form.form_id, "setup.claude");
     assert!(form.title.contains("Install Claude Code"), "{}", form.title);
-    let shown = rows(&form);
+    assert_eq!(
+        rows(&form),
+        "Install it: `npm install -g @anthropic-ai/claude-code`"
+    );
     assert!(
-        shown.contains("`npm install -g @anthropic-ai/claude-code`")
-            && shown.contains("`claude auth login`"),
-        "{shown}"
+        form.signin.is_none(),
+        "nothing to sign in to before it is installed"
     );
     assert_eq!(form.submit.0["label"], "Check again");
     assert_eq!(form.cancel.0["label"], "Choose another model");
-    assert!(
-        !form
-            .body
-            .to_ascii_lowercase()
-            .contains("sign in with google"),
-        "no login screen of ours"
-    );
+    assert!(!form.body.contains("Hermes"), "{}", form.body);
     // nothing installed, nothing written
-    assert!(!plugin_names(&r).contains(&PROVIDER_ID.to_owned()));
-    assert_eq!(r.fake.plugin_catalog.lock().unwrap().installs, 0);
     assert!(r.fake.config_get(LADDER).await.unwrap().is_none());
     // "Check again" with nothing changed asks the same thing again, and is not an error
     let again = r
@@ -1570,7 +1549,7 @@ async fn not_installed_shows_the_install_and_sign_in_commands_and_changes_nothin
 }
 
 #[tokio::test]
-async fn signed_out_says_so_and_shows_only_the_sign_in_command() {
+async fn signed_out_offers_sign_in_to_claude_through_claude_code_s_own_login() {
     let r = rig(json!({}));
     r.claude.is(
         true,
@@ -1579,18 +1558,33 @@ async fn signed_out_says_so_and_shows_only_the_sign_in_command() {
     );
     let form = choose_subscription(&r).await.form.unwrap();
     assert_eq!(form.form_id, "setup.claude");
-    assert!(
-        form.title.contains("Sign in to Claude Code"),
-        "{}",
-        form.title
+    assert_eq!(form.title, "Sign in to Claude");
+    // the sign-in names the host's own table entry, never a command
+    assert_eq!(
+        form.signin,
+        Some(super::SignIn {
+            provider: "claude-code".into(),
+            label: "Sign in to Claude".into()
+        })
     );
-    assert_eq!(rows(&form), "Sign in: `claude auth login`");
     assert!(
-        form.body.contains("never sees, reads or stores it"),
+        crate::connectors::logins::LoginTable::shared()
+            .find(super::providers::CLAUDE_LOGIN)
+            .is_some(),
+        "the card's sign-in is one the host knows"
+    );
+    assert!(
+        form.contents.is_empty(),
+        "no command to copy into a terminal"
+    );
+    assert!(
+        form.body.contains("Choose Sign in to Claude")
+            && form.body.contains("never sees, reads or stores it"),
         "{}",
         form.body
     );
-    // a login that bills the API is not the subscription
+    assert!(!form.body.contains("Hermes"), "{}", form.body);
+    // a login that bills the API is not the subscription: the same sign-in is offered
     r.claude.is(
         true,
         "2.1.328",
@@ -1608,7 +1602,10 @@ async fn signed_out_says_so_and_shows_only_the_sign_in_command() {
         "{}",
         form.body
     );
-    assert_eq!(rows(&form), "Sign in: `claude auth login`");
+    assert_eq!(
+        form.signin.as_ref().map(|s| s.provider.as_str()),
+        Some("claude-code")
+    );
 }
 
 #[tokio::test]
@@ -1624,67 +1621,23 @@ async fn an_old_claude_code_is_told_the_minimum_and_how_to_update() {
         form.body
     );
     assert_eq!(rows(&form), "Update it: `claude update`");
-    assert_eq!(r.fake.plugin_catalog.lock().unwrap().installs, 0);
 }
 
 #[tokio::test]
-async fn once_claude_code_is_ready_the_plugin_is_reviewed_then_installed_and_the_ladder_written() {
+async fn once_claude_code_is_signed_in_the_bundled_plugin_s_ladder_is_written_with_nothing_to_install()
+ {
     let r = rig(json!({}));
+    r.fake.bundled_claude();
     let s = choose_subscription(&r).await;
     assert_eq!(s.form.as_ref().unwrap().form_id, "setup.claude");
     r.claude.signed_in("2.1.328 (Claude Code)");
-    // Check again: the review of what will be installed comes first, and nothing is changed by it
+    // Check again: no review, no install, straight to the ladder
     let s = r
         .setup()
         .advance(Some(answer("setup.claude", json!({}), json!({}))), false)
         .await
         .unwrap();
-    let form = s.form.unwrap();
-    assert_eq!(form.form_id, "setup.claude.install");
-    assert_eq!(form.kind, "connector");
-    assert_eq!(
-        form.pinned.as_deref(),
-        Some("6313fad5ddf2c060e7b16782f4860c0d5cdbfcac")
-    );
-    let shown = rows(&form);
-    for want in [
-        "claude-subscription-directsdk 0.3.5 (official, from Hermes's plugin catalog)",
-        "https://github.com/NousResearch/hermes-official-plugins#claude-subscription-directsdk",
-        "registers no tool, hook or middleware",
-        "the plugin has no credentials of its own",
-        "2.1.328, signed in (Claude Max)",
-    ] {
-        assert!(shown.contains(want), "{want} in\n{shown}");
-    }
-    assert!(shown.contains("plugins"), "it says where it goes: {shown}");
-    assert!(
-        form.effect
-            .as_deref()
-            .unwrap()
-            .contains("hermes plugins install claude-subscription-directsdk --no-enable")
-    );
-    assert_eq!(
-        r.fake.plugin_catalog.lock().unwrap().installs,
-        0,
-        "showing it installs nothing"
-    );
-    assert!(r.fake.config_get(LADDER).await.unwrap().is_none());
-
-    // the user agrees: the catalog's build is installed, once, and the ladder is the plugin's aliases, cheapest first
-    let s = r
-        .setup()
-        .advance(
-            Some(answer("setup.claude.install", json!({}), json!({}))),
-            false,
-        )
-        .await
-        .unwrap();
     assert!(s.done && s.form.is_none(), "{:?}", s.steps);
-    assert_eq!(r.fake.plugin_catalog.lock().unwrap().installs, 1);
-    assert!(
-        plugin_names(&r).contains(&PROVIDER_ID.to_owned()),
-        "Hermes lists the provider afterwards"
-    );
     assert_eq!(
         r.fake.config_get(LADDER).await.unwrap().unwrap(),
         json!({"tiers": [
@@ -1692,20 +1645,12 @@ async fn once_claude_code_is_ready_the_plugin_is_reviewed_then_installed_and_the
             {"name": "sonnet", "model": "claude-subscription-directsdk-experimental/sonnet"},
             {"name": "opus", "model": "claude-subscription-directsdk-experimental/opus"}]})
     );
-    assert!(
-        *r.fake.restarts.lock().unwrap() >= 1,
-        "Hermes restarts to load the provider"
-    );
     let receipt = s.receipt.unwrap().lines.join("\n");
     assert!(
         receipt.contains(
             "Claude subscription (Claude Max): haiku, sonnet, opus on your Claude Code login"
         ),
         "{receipt}"
-    );
-    assert!(
-        !receipt.contains("plugin settings"),
-        "the old line is gone: {receipt}"
     );
     // a model provider needs no enable entry, and none was written
     assert!(
@@ -1718,11 +1663,10 @@ async fn once_claude_code_is_ready_the_plugin_is_reviewed_then_installed_and_the
     );
     nothing_secret_was_touched(&r);
 
-    // running it again changes nothing: no second install, the same ladder
+    // running it again changes nothing
     let sets = r.fake.sets.lock().unwrap().len();
     let again = r.setup().advance(None, false).await.unwrap();
     assert!(again.done);
-    assert_eq!(r.fake.plugin_catalog.lock().unwrap().installs, 1);
     assert_eq!(r.fake.sets.lock().unwrap().len(), sets);
 }
 
@@ -1730,30 +1674,17 @@ async fn once_claude_code_is_ready_the_plugin_is_reviewed_then_installed_and_the
 async fn the_ladder_follows_what_the_installed_claude_code_and_plugin_serve() {
     // Claude Code 2.1.285 serves sonnet and opus, not haiku (it needs 2.1.293)
     let r = rig(json!({}));
+    r.fake.bundled_claude();
     r.claude.signed_in("2.1.285 (Claude Code)");
-    choose_subscription(&r).await;
-    r.setup()
-        .advance(
-            Some(answer("setup.claude.install", json!({}), json!({}))),
-            false,
-        )
-        .await
-        .unwrap();
+    assert!(choose_subscription(&r).await.done);
     assert_eq!(ladder_names(&r).await, ["sonnet", "opus"]);
 
     // a pinned plugin that does not know `sonnet` is not asked for it, whatever Claude Code serves
     let r = rig(json!({}));
+    *r.fake.claude_aliases.lock().unwrap() = vec!["haiku", "opus"];
+    r.fake.bundled_claude();
     r.claude.signed_in("2.1.328");
-    r.fake.plugin_catalog.lock().unwrap().aliases = vec!["haiku", "opus"];
-    choose_subscription(&r).await;
-    let s = r
-        .setup()
-        .advance(
-            Some(answer("setup.claude.install", json!({}), json!({}))),
-            false,
-        )
-        .await
-        .unwrap();
+    let s = choose_subscription(&r).await;
     assert!(s.done, "{:?}", s.steps);
     assert_eq!(ladder_names(&r).await, ["haiku", "opus"]);
 }
@@ -1769,116 +1700,65 @@ async fn ladder_names(r: &Rig) -> Vec<String> {
 }
 
 #[tokio::test]
-async fn declining_the_plugin_goes_back_to_the_models_question_and_installs_nothing() {
-    let r = rig(json!({}));
-    r.claude.signed_in("2.1.328");
-    let s = choose_subscription(&r).await;
-    assert_eq!(s.form.unwrap().form_id, "setup.claude.install");
-    let mut no = answer("setup.claude.install", json!({}), json!({}));
-    no.cancelled = true;
-    let s = r.setup().advance(Some(no), false).await.unwrap();
-    let form = s.form.unwrap();
-    assert_eq!(form.form_id, "setup.ladder", "{:?}", s.steps);
-    assert_eq!(enum_of(&form, "choice")[0], "free");
-    assert_eq!(r.fake.plugin_catalog.lock().unwrap().installs, 0);
-    assert!(r.fake.config_get(LADDER).await.unwrap().is_none());
-    // and "choose another model" from the instructions does the same
+async fn choose_another_model_goes_back_to_the_models_question() {
     let r = rig(json!({}));
     choose_subscription(&r).await;
     let mut other = answer("setup.claude", json!({}), json!({}));
     other.cancelled = true;
     let s = r.setup().advance(Some(other), false).await.unwrap();
-    assert_eq!(s.form.unwrap().form_id, "setup.ladder");
+    let form = s.form.unwrap();
+    assert_eq!(form.form_id, "setup.ladder");
+    assert_eq!(enum_of(&form, "choice")[0], "free");
+    assert!(r.fake.config_get(LADDER).await.unwrap().is_none());
 }
 
 #[tokio::test]
-async fn an_unreachable_catalog_is_said_and_a_retry_installs_without_asking_again() {
+async fn an_engine_without_the_claude_plugin_says_so_and_installs_nothing() {
     let r = rig(json!({}));
     r.claude.signed_in("2.1.328");
-    r.fake.plugin_catalog.lock().unwrap().refuse = Some(super::ops::install_refusal(
-        "Error: Could not download the plugin from https://github.com/NousResearch/hermes-official-plugins.",
-        "",
-    ));
-    choose_subscription(&r).await;
-    let s = r
-        .setup()
-        .advance(
-            Some(answer("setup.claude.install", json!({}), json!({}))),
-            false,
-        )
-        .await
-        .unwrap();
-    assert!(!s.done);
+    let s = choose_subscription(&r).await;
     let step = s.steps.iter().find(|x| x.id == "models").unwrap();
     assert_eq!(step.state, StepState::Blocked);
     assert_eq!(
         step.code.as_deref(),
-        Some("hx.setup.subscription_unreachable")
+        Some("hx.setup.subscription_unavailable")
     );
     assert!(
-        step.detail.contains("could not reach the plugin catalog")
-            && step.detail.contains("Nothing was installed"),
+        step.detail
+            .contains("does not include the Claude subscription"),
         "{}",
         step.detail
     );
-    assert!(
-        r.fake.config_get(LADDER).await.unwrap().is_none(),
-        "no ladder without the plugin"
-    );
+    assert!(!step.detail.contains("Hermes"), "{}", step.detail);
+    assert!(r.fake.config_get(LADDER).await.unwrap().is_none());
     assert!(!plugin_names(&r).contains(&PROVIDER_ID.to_owned()));
-
-    // the network is back: Retry (the same call, no answer) installs, and the user is not asked again
-    r.fake.plugin_catalog.lock().unwrap().refuse = None;
-    let s = r.setup().advance(None, false).await.unwrap();
-    assert!(s.done && s.form.is_none(), "{:?}", s.steps);
-    assert_eq!(r.fake.plugin_catalog.lock().unwrap().installs, 1);
 }
 
 #[tokio::test]
-async fn any_other_refusal_by_hermes_carries_its_own_reason() {
-    let e = super::ops::install_refusal(
-        "Error: Plugin 'x' was removed from the Hermes plugin catalog and is blocked from installation: unsafe\n",
-        "",
-    );
-    assert_eq!(e.code(), "hx.setup.subscription_install_failed");
-    assert!(
-        e.to_string()
-            .contains("was removed from the Hermes plugin catalog"),
-        "{e}"
-    );
-    let silent = super::ops::install_refusal("", "");
-    assert!(silent.to_string().contains("it gave no reason"));
-    // a catalog with no such plugin cannot be installed from
+async fn a_plugin_switched_off_by_hand_is_switched_back_on_when_chosen() {
     let r = rig(json!({}));
-    r.claude.signed_in("2.1.328");
-    r.fake.plugin_catalog.lock().unwrap().entry = None;
-    let s = choose_subscription(&r).await;
-    let step = s.steps.iter().find(|x| x.id == "models").unwrap();
-    assert_eq!(step.state, StepState::Blocked);
-    assert_eq!(
-        step.code.as_deref(),
-        Some("hx.setup.subscription_install_failed")
-    );
-}
-
-#[tokio::test]
-async fn a_plugin_that_is_already_there_is_not_installed_again_or_asked_about() {
-    let r = rig(json!({}));
-    r.claude.signed_in("2.1.328");
+    r.fake.bundled_claude();
+    r.fake
+        .plugins
+        .lock()
+        .unwrap()
+        .retain(|p| p.name != PROVIDER_ID);
     r.fake.plugins.lock().unwrap().push(PluginEntry {
         name: PROVIDER_ID.into(),
-        enabled: true,
+        enabled: false,
     });
+    r.claude.signed_in("2.1.328");
     let s = choose_subscription(&r).await;
     assert!(s.done && s.form.is_none(), "{:?}", s.steps);
-    assert_eq!(r.fake.plugin_catalog.lock().unwrap().installs, 0);
-    assert_eq!(
-        r.fake.config_get(LADDER).await.unwrap().unwrap()["tiers"]
-            .as_array()
+    assert!(
+        r.fake
+            .plugins
+            .lock()
             .unwrap()
-            .len(),
-        3
+            .iter()
+            .any(|p| p.name == PROVIDER_ID && p.enabled)
     );
+    assert_eq!(ladder_names(&r).await.len(), 3);
 }
 
 #[tokio::test]
@@ -1888,10 +1768,7 @@ async fn the_models_view_reports_claude_codes_state_and_whether_the_plugin_is_th
     assert_eq!(v.claude.state, claude::State::NotInstalled);
     assert!(!v.claude_plugin);
     r.claude.signed_in("2.1.328 (Claude Code)");
-    r.fake.plugins.lock().unwrap().push(PluginEntry {
-        name: PROVIDER_ID.into(),
-        enabled: true,
-    });
+    r.fake.bundled_claude();
     let v = r.setup().models_view().await.unwrap();
     assert_eq!(v.claude.state, claude::State::SignedIn);
     assert_eq!(
@@ -1907,25 +1784,300 @@ async fn the_models_view_reports_claude_codes_state_and_whether_the_plugin_is_th
     );
 }
 
-#[test]
-fn the_catalog_reader_takes_the_pinned_row_and_the_install_refusal_is_in_plain_words() {
-    let answer = json!({"results": [
-        {"name": "other", "sha": "x"},
-        {"name": "claude-subscription-directsdk", "version": "0.3.5", "sha": "abc", "repo": "https://r", "subdir": "d", "tier": "official",
-         "capabilities": {"provides_tools": ["t"], "provides_hooks": [], "provides_middleware": ["m1", "m2"]}}]});
-    let e = super::ops::catalog_entry_of(&answer, "claude-subscription-directsdk").unwrap();
+// ── the ChatGPT subscription and Gemini (ADR-0030) ──────────────────────────────────────────────────────────────────
+
+/// A JWT-shaped ChatGPT access token on the Plus plan that expires in a day.
+fn chatgpt_token() -> String {
+    const T: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    let exp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
+        + 86_400;
+    let claims = json!({"exp": exp, "https://api.openai.com/auth": {"chatgpt_plan_type": "plus"}})
+        .to_string();
+    // base64url without padding, enough for the claims reader
+    let mut out = String::new();
+    for chunk in claims.as_bytes().chunks(3) {
+        let n = chunk.iter().fold(0u32, |a, b| (a << 8) | u32::from(*b)) << (8 * (3 - chunk.len()));
+        for i in 0..=chunk.len() {
+            out.push(char::from(T[((n >> (18 - 6 * i)) & 63) as usize]));
+        }
+    }
+    format!("h.{out}.s")
+}
+
+fn sign_in_to_chatgpt(r: &Rig) {
+    r.store
+        .set("boopis.chatgpt", "access_token", &chatgpt_token())
+        .unwrap();
+    r.store
+        .set("boopis.chatgpt", "refresh_token", "rt-setup")
+        .unwrap();
+}
+
+#[tokio::test]
+async fn the_models_question_offers_chatgpt_and_gemini_after_the_free_choices() {
+    let r = rig(json!({}));
+    let form = at_models(&r).await.form.unwrap();
+    let ids = enum_of(&form, "choice");
     assert_eq!(
-        (e.version.as_str(), e.sha.as_str(), e.subdir.as_str()),
-        ("0.3.5", "abc", "d")
+        &ids[..6],
+        [
+            "free",
+            "openrouter-free",
+            "anthropic",
+            "claude-subscription",
+            "chatgpt-subscription",
+            "gemini"
+        ]
     );
-    assert_eq!(e.provides, ["tools: t", "middleware: m1, m2"]);
-    assert!(super::ops::catalog_entry_of(&answer, "nope").is_none());
-    assert!(super::ops::catalog_entry_of(&json!({}), "x").is_none());
-    let net = super::ops::install_refusal(
-        "",
-        "fatal: unable to access ... check your internet connection",
+    let names = &form.schema.0["properties"]["choice"]["enumNames"];
+    assert_eq!(
+        names[4],
+        "ChatGPT subscription (sign in with your ChatGPT account)"
     );
-    assert_eq!(net.code(), "hx.setup.subscription_unreachable");
+    assert_eq!(names[5], "Gemini (a free API key from Google AI Studio)");
+    assert_eq!(
+        form.schema.0["properties"]["choice"]["default"], "free",
+        "free stays the default"
+    );
+    assert!(!form.body.contains("Hermes"), "{}", form.body);
+    assert!(
+        !form
+            .body
+            .to_ascii_lowercase()
+            .contains("sign in with google"),
+        "Gemini is a key, not a sign-in"
+    );
+}
+
+#[tokio::test]
+async fn chatgpt_asks_for_the_sign_in_then_writes_the_codex_ladder_cheapest_first() {
+    let r = rig(json!({}));
+    at_models(&r).await;
+    let s = choose(&r, "chatgpt-subscription").await;
+    assert_eq!(state_of(&s, "models"), StepState::NeedsInput);
+    let form = s.form.unwrap();
+    assert_eq!(form.form_id, "setup.chatgpt");
+    assert_eq!(form.title, "Sign in with ChatGPT");
+    assert!(
+        form.body.contains("OS keychain") && !form.body.contains("Hermes"),
+        "{}",
+        form.body
+    );
+    assert_eq!(form.cancel.0["label"], "Choose another model");
+    assert_eq!(
+        form.signin,
+        Some(super::SignIn {
+            provider: "chatgpt".into(),
+            label: "Sign in with ChatGPT".into()
+        })
+    );
+    assert!(
+        r.fake.config_get(LADDER).await.unwrap().is_none(),
+        "nothing is written before the sign-in"
+    );
+    // "Check again" while still signed out shows the same card
+    let s = r
+        .setup()
+        .advance(Some(answer("setup.chatgpt", json!({}), json!({}))), false)
+        .await
+        .unwrap();
+    assert_eq!(s.form.unwrap().form_id, "setup.chatgpt");
+
+    // the card's sign-in finished (the tokens are in the keychain): the next call writes the ladder
+    sign_in_to_chatgpt(&r);
+    let s = r
+        .setup()
+        .advance(Some(answer("setup.chatgpt", json!({}), json!({}))), false)
+        .await
+        .unwrap();
+    assert!(s.done && s.form.is_none(), "{:?}", s.steps);
+    assert_eq!(
+        r.fake.config_get(LADDER).await.unwrap().unwrap(),
+        json!({"tiers": [
+            {"name": "luna", "model": "openai-codex/gpt-6-luna"},
+            {"name": "sol", "model": "openai-codex/gpt-6-sol"}]})
+    );
+    let receipt = s.receipt.unwrap().lines.join("\n");
+    assert!(
+        receipt.contains("ChatGPT subscription: gpt-6-luna, gpt-6-sol on your ChatGPT sign-in"),
+        "{receipt}"
+    );
+    // the tokens stay in the keychain: no configuration write names them, and the engine's files are not written
+    for key in r.fake.sets.lock().unwrap().iter() {
+        assert!(
+            !key.contains("token") && !key.contains("secrets.") && !key.contains("key_env"),
+            "{key}"
+        );
+    }
+    assert!(
+        *r.fake.restarts.lock().unwrap() >= 1,
+        "the engine restarts and the plugin hands it the sign-in"
+    );
+
+    // choose another model goes back
+    let r = rig(json!({}));
+    at_models(&r).await;
+    choose(&r, "chatgpt-subscription").await;
+    let mut back = answer("setup.chatgpt", json!({}), json!({}));
+    back.cancelled = true;
+    assert_eq!(
+        r.setup()
+            .advance(Some(back), false)
+            .await
+            .unwrap()
+            .form
+            .unwrap()
+            .form_id,
+        "setup.ladder"
+    );
+}
+
+#[tokio::test]
+async fn gemini_asks_for_a_key_with_the_link_keeps_it_in_the_keychain_and_writes_flash_then_pro() {
+    let r = rig(json!({}));
+    at_models(&r).await;
+    let s = choose(&r, "gemini").await;
+    let form = s.form.unwrap();
+    assert_eq!(form.form_id, "setup.credential.gemini");
+    assert_eq!(form.kind, "credential");
+    assert_eq!(form.title, "Add your Gemini API key");
+    assert!(form.sensitive);
+    assert_eq!(
+        form.schema.0["properties"]["value"]["x-secret-ref"],
+        "secret://provider.gemini/api_key"
+    );
+    assert_eq!(
+        form.links,
+        [(
+            "Get a free key".to_owned(),
+            "https://aistudio.google.com/apikey".to_owned()
+        )]
+    );
+    assert!(
+        form.body.contains("https://aistudio.google.com/apikey") && form.body.contains("free"),
+        "{}",
+        form.body
+    );
+    assert!(!form.body.contains("Hermes"), "{}", form.body);
+
+    let s = r
+        .setup()
+        .advance(
+            Some(answer(
+                "setup.credential.gemini",
+                json!({}),
+                json!({"value": KEY}),
+            )),
+            false,
+        )
+        .await
+        .unwrap();
+    assert!(s.done, "{:?}", s.steps);
+    assert_eq!(
+        r.store
+            .get("boopis.provider.gemini", "api_key")
+            .unwrap()
+            .as_deref(),
+        Some(KEY)
+    );
+    // wired to the variable the engine's Gemini provider reads, through the host's secret source
+    assert_eq!(
+        r.fake
+            .config_get("secrets.boopis_host.env.GOOGLE_API_KEY")
+            .await
+            .unwrap(),
+        Some(json!("secret://provider.gemini/api_key"))
+    );
+    assert_eq!(
+        r.fake
+            .config_get("secrets.boopis_host.enabled")
+            .await
+            .unwrap(),
+        Some(json!(true))
+    );
+    assert_eq!(
+        r.fake.config_get(LADDER).await.unwrap().unwrap(),
+        json!({"tiers": [
+            {"name": "flash", "model": "gemini/gemini-3.8-flash"},
+            {"name": "pro", "model": "gemini/gemini-3.1-pro-preview"}]})
+    );
+    // the key is never in the configuration or the receipt
+    let cfg = r.fake.config.lock().unwrap().to_string();
+    assert!(!cfg.contains(KEY));
+    assert!(!s.receipt.unwrap().lines.join("\n").contains(KEY));
+    assert!(r.setup().models_view().await.unwrap().gemini_key);
+}
+
+#[tokio::test]
+async fn a_gemini_key_already_in_the_profile_is_used_without_asking() {
+    let r = rig(json!({}));
+    std::fs::write(r.fake.home.join(".env"), "GEMINI_API_KEY=abc\n").unwrap();
+    at_models(&r).await;
+    let s = choose(&r, "gemini").await;
+    assert!(s.done && s.form.is_none(), "{:?}", s.steps);
+    assert_eq!(ladder_names(&r).await, ["flash", "pro"]);
+    assert!(
+        r.fake
+            .config_get("secrets.boopis_host.env.GOOGLE_API_KEY")
+            .await
+            .unwrap()
+            .is_none()
+    );
+}
+
+#[tokio::test]
+async fn the_models_view_reports_the_chatgpt_sign_in_and_the_gemini_key() {
+    let r = rig(json!({}));
+    let v = r.setup().models_view().await.unwrap();
+    let c = v.chatgpt.unwrap();
+    assert_eq!((c.state, c.plan), (crate::chatgpt::State::SignedOut, None));
+    assert!(!v.gemini_key);
+    sign_in_to_chatgpt(&r);
+    r.store
+        .set("boopis.provider.gemini", "api_key", KEY)
+        .unwrap();
+    let v = r.setup().models_view().await.unwrap();
+    let c = v.chatgpt.unwrap();
+    assert_eq!(
+        (c.state, c.plan.as_deref()),
+        (crate::chatgpt::State::SignedIn, Some("plus"))
+    );
+    assert!(v.gemini_key);
+    // the view carries no token: only the state and the plan
+    let shown = serde_json::to_string(&r.setup().models_view().await.unwrap()).unwrap();
+    assert!(
+        !shown.contains("rt-setup")
+            && !shown.contains(&chatgpt_token()[..20])
+            && !shown.contains(KEY)
+    );
+}
+
+#[test]
+fn the_runtime_s_plugins_are_placed_in_the_profile_once() {
+    let tmp = tempfile::tempdir().unwrap();
+    let (root, home) = (tmp.path().join("runtime"), tmp.path().join("home"));
+    let plugin = root.join("plugins").join(PROVIDER_ID);
+    std::fs::create_dir_all(plugin.join("tests")).unwrap();
+    std::fs::write(
+        plugin.join("plugin.yaml"),
+        format!("name: {PROVIDER_ID}\nversion: 0.3.5\n"),
+    )
+    .unwrap();
+    std::fs::write(plugin.join("__init__.py"), "").unwrap();
+    std::fs::write(plugin.join("LICENSE"), "MIT License").unwrap();
+    assert!(super::install::install_runtime_plugins(&root, &home).unwrap());
+    let placed = home.join("plugins").join(PROVIDER_ID);
+    assert!(placed.join("__init__.py").is_file() && placed.join("LICENSE").is_file());
+    assert!(!placed.join("tests").exists());
+    assert!(
+        !super::install::install_runtime_plugins(&root, &home).unwrap(),
+        "the same version is not copied again"
+    );
+    // a runtime that carries no plugins (an older build) is not an error
+    assert!(!super::install::install_runtime_plugins(&tmp.path().join("none"), &home).unwrap());
 }
 
 /// The Windows build says what it lacks, in the receipt, and says what still works (nothing is hidden).

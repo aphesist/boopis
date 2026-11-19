@@ -97,9 +97,19 @@ pub enum Installed {
 /// # Errors
 /// `Config` (`hx.setup.plugin_install_failed`) when the copy fails; the old directory is then put back.
 pub fn install_plugin(bundle_dir: &Path, home: &Path) -> Result<Installed> {
+    install_named(bundle_dir, home, "boopis")
+}
+
+/// Copy a plugin the app carries into `<home>/plugins/<name>/` unless the same version is already there: the boopis plugin,
+/// and the Claude subscription plugin boopis's runtime carries (ADR-0030). The same swap for both: copy beside, rename, put
+/// the old one back on failure.
+///
+/// # Errors
+/// `Config` when the copy fails; the old directory is then put back.
+pub fn install_named(bundle_dir: &Path, home: &Path, name: &str) -> Result<Installed> {
     let to = plugin_version(bundle_dir)
-        .ok_or_else(|| Error::Config("the bundled plugin has no version".into()))?;
-    let target = super::ops::plugins_dir(home).join("boopis");
+        .ok_or_else(|| Error::Config(format!("the bundled {name} plugin has no version")))?;
+    let target = super::ops::plugins_dir(home).join(name);
     let from = plugin_version(&target);
     if from.as_deref() == Some(to.as_str()) && target.join("__init__.py").is_file() {
         return Ok(Installed::Current(to));
@@ -108,8 +118,8 @@ pub fn install_plugin(bundle_dir: &Path, home: &Path) -> Result<Installed> {
         .parent()
         .ok_or_else(|| Error::Io("no plugins dir".into()))?;
     std::fs::create_dir_all(parent)?;
-    let fresh = parent.join(".boopis.new");
-    let old = parent.join(".boopis.old");
+    let fresh = parent.join(format!(".{name}.new"));
+    let old = parent.join(format!(".{name}.old"));
     let _ = std::fs::remove_dir_all(&fresh);
     let _ = std::fs::remove_dir_all(&old);
     copy_tree(bundle_dir, &fresh).map_err(|e| {
@@ -125,6 +135,36 @@ pub fn install_plugin(bundle_dir: &Path, home: &Path) -> Result<Installed> {
     }
     let _ = std::fs::remove_dir_all(&old);
     Ok(Installed::Written { from, to })
+}
+
+/// Where the runtime archive keeps the plugins it carries (`scripts/build-runtime.sh`), each under the name the engine lists it
+/// by.
+pub const RUNTIME_PLUGINS: &str = "plugins";
+
+/// Copy every plugin the unpacked runtime at `root` carries into the profile at `home`. True when one was written (the
+/// gateway then restarts to load it). A runtime that carries none (an older build) is not an error.
+///
+/// # Errors
+/// `Config` or `Io` when a copy fails.
+pub fn install_runtime_plugins(root: &Path, home: &Path) -> Result<bool> {
+    let dir = root.join(RUNTIME_PLUGINS);
+    let Ok(entries) = std::fs::read_dir(&dir) else {
+        return Ok(false);
+    };
+    let mut changed = false;
+    for entry in entries {
+        let entry = entry?;
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if !entry.file_type()?.is_dir() || name.starts_with('.') || name == "boopis" {
+            continue;
+        }
+        let written = install_named(&entry.path(), home, &name)?;
+        if let Installed::Written { from, to } = &written {
+            tracing::info!(plugin = %name, ?from, %to, "placed a plugin the runtime carries");
+        }
+        changed |= matches!(written, Installed::Written { .. });
+    }
+    Ok(changed)
 }
 
 fn digest(p: &Path) -> Option<String> {
