@@ -228,12 +228,12 @@ export async function liveRequests(env) {
     /* a skill whose token is missing: Hermes's `secret` request */
     await say('use the skill');
     let c = await cards();
-    check('forms-requests', 'a secret request is a credential form, inline in the turn that raised it, from Hermes', c.inline.length === 1 && c.inline[0].kind === 'credential' && c.inline[0].title === 'Hermes needs BOOPIS_TEST_TOKEN' && c.inline[0].origin === 'hermes', c);
+    check('forms-requests', 'a secret request is a credential form, inline in the turn that raised it, from the session', c.inline.length === 1 && c.inline[0].kind === 'credential' && c.inline[0].title === 'boopis needs BOOPIS_TEST_TOKEN' && c.inline[0].origin === 'hermes', c);
     check('forms-requests', 'and in the dock\'s queue', c.dock === 1 && c.waits.join() === 'form:credential', c);
     const card = page.locator('.ss-forms hx-card').first();
     const field = await card.locator('input[data-secret]').evaluate((i) => ({ type: i.type, autocomplete: i.autocomplete }));
     check('forms-requests', 'the value is typed in a masked field', field.type === 'password' && field.autocomplete === 'off', field);
-    check('forms-requests', 'it says where the value goes: Hermes keeps it, the model never sees it', /never sees it/.test(await card.innerText()) && /Send to Hermes/.test(await card.innerText()));
+    check('forms-requests', 'it says where the value goes: boopis keeps it, the model never sees it', /never sees it/.test(await card.innerText()) && /Send it/.test(await card.innerText()) && !/hermes/i.test(await card.innerText()));
     await card.locator('input[data-secret]').fill(TYPED);
     await card.locator('[data-action="submit"]').click();
     await page.waitForTimeout(800);
@@ -247,7 +247,7 @@ export async function liveRequests(env) {
     }), TYPED);
     check('forms-requests', 'the value goes in the response frame of the request\'s own id', k.responses.length === 1 && String(k.responses[0].id).startsWith('srq-') && k.responses[0].result.value === TYPED, k.responses);
     check('forms-requests', 'and in no call to the gateway, not the keychain, and not the page, before or after the answer', !k.calls && k.keychain === 0 && !k.dom, { calls: k.calls, keychain: k.keychain, dom: k.dom });
-    check('forms-requests', 'the card becomes a receipt, and the dock drops it', k.states.every((x) => x === 'done') && /Sent to Hermes/.test(k.receipt), k);
+    check('forms-requests', 'the card becomes a receipt, and the dock drops it', k.states.every((x) => x === 'done') && /\bSent\b/.test(k.receipt) && /^boopis needs/.test(k.receipt), k);
     await page.waitForTimeout(1300);
     check('forms-requests', 'the dock\'s queue is empty', (await cards()).dock === 0);
 

@@ -544,7 +544,7 @@ async fn a_failed_restart_is_reported_and_the_install_stands() {
         .await
         .unwrap();
     assert!(!report.restarted);
-    assert!(report.notes.iter().any(|n| n.contains("Restart it")));
+    assert!(report.notes.iter().any(|n| n.contains("Restart boopis")));
     assert!(r.hermes.st().servers.contains_key("firecrawl"));
 }
 
@@ -824,7 +824,7 @@ async fn a_sign_in_opens_hermes_page_waits_and_reports_where_the_tokens_are() {
     ];
     let report = r.engine.signin("linear").await.unwrap();
     assert_eq!(report.tools, vec!["issues"]);
-    assert_eq!(report.stored, "Hermes's own token store");
+    assert_eq!(report.stored, "boopis's own token store");
     assert!(report.test.unwrap().ok);
     let opened = r.browser.opened.lock().unwrap().clone();
     assert_eq!(opened.len(), 1);
@@ -1466,7 +1466,7 @@ async fn an_idle_restart_that_never_finds_a_quiet_moment_gives_up_and_says_the_k
     until("the notice", || !told.lock().unwrap().is_empty()).await;
     let done = told.lock().unwrap()[0].clone();
     assert!(
-        !done.ok && done.message.contains("not restarted") && done.message.contains("key is saved"),
+        !done.ok && done.message.contains("Not restarted") && done.message.contains("key is saved"),
         "{done:?}"
     );
     assert!(r.hermes.st().restart_calls.is_empty());
@@ -1497,7 +1497,7 @@ async fn a_gateway_that_turns_busy_between_the_check_and_the_restart_defers_inst
 }
 
 #[tokio::test]
-async fn the_review_says_boopis_restarts_hermes_and_how_many_turns_would_end_and_asks_when() {
+async fn the_review_says_boopis_restarts_and_how_many_turns_would_end_and_asks_when() {
     let request = firecrawl_package();
     let say = |r: &super::plan::Review| {
         r.form
@@ -1511,7 +1511,7 @@ async fn the_review_says_boopis_restarts_hermes_and_how_many_turns_would_end_and
     let quiet = r.engine.review(&request).await.unwrap();
     assert_eq!(
         say(&quiet).unwrap(),
-        "boopis restarts Hermes to load the key. No session has a turn running, so it restarts at once."
+        "boopis restarts to load the key. No session has a turn running, so it restarts at once."
     );
     assert!(
         quiet.form.schema.0["properties"]["restart"].is_null(),
@@ -1522,7 +1522,7 @@ async fn the_review_says_boopis_restarts_hermes_and_how_many_turns_would_end_and
     let busy = r.engine.review(&request).await.unwrap();
     assert_eq!(
         say(&busy).unwrap(),
-        "boopis restarts Hermes to load the key. 2 sessions have a turn running, and a restart would end them: you choose below."
+        "boopis restarts to load the key. 2 sessions have a turn running, and a restart would end them: you choose below."
     );
     let f = &busy.form.schema.0["properties"]["restart"];
     assert_eq!(f["enum"], json!(["when_idle", "now"]));
@@ -1553,7 +1553,7 @@ async fn the_review_says_boopis_restarts_hermes_and_how_many_turns_would_end_and
     assert!(
         say(&unknown)
             .unwrap()
-            .contains("could not ask Hermes whether a turn is running")
+            .contains("could not tell whether a turn is running")
     );
     assert!(unknown.form.schema.0["properties"]["restart"].is_object());
 
@@ -1569,7 +1569,7 @@ async fn the_review_says_boopis_restarts_hermes_and_how_many_turns_would_end_and
     assert!(
         say(&r.engine.review(&hosted).await.unwrap())
             .unwrap()
-            .starts_with("If you give a key, boopis restarts Hermes to load it.")
+            .starts_with("If you give a key, boopis restarts to load it.")
     );
     let plain = req(
         SourceKind::Command,

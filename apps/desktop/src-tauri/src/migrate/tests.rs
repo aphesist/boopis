@@ -4,7 +4,7 @@ use crate::secrets::store::MemoryStore;
 const CONFIG: &str = "plugins:\n  enabled:\n    - hypotaxis\n  entries:\n    hypotaxis:\n      settings:\n        hx_path: /data/dev.aphesist.hypotaxis/hermes-home/hypotaxis/bin/hx\nsecrets:\n  hypotaxis_host:\n    enabled: true\n    env:\n      HYPOTAXIS_PROVIDER_MAIN_API_KEY_C72E2A4F: secret://provider.main/api_key\n";
 
 fn old_tree(root: &Path) -> PathBuf {
-    let home = root.join(OLD_ID).join(HOME_DIR);
+    let home = root.join(OLD_ID).join(OLD_HOME_DIR);
     fs::create_dir_all(home.join(OLD_WORD).join("ledger")).unwrap();
     fs::write(home.join(OLD_WORD).join("ledger").join("s.jsonl"), "{}\n").unwrap();
     fs::create_dir_all(home.join("logs").join(OLD_WORD)).unwrap();
@@ -25,7 +25,7 @@ fn the_app_folder_and_the_private_home_move_once() {
     let new = tmp.path().join(NEW_ID);
     assert!(!tmp.path().join(OLD_ID).exists());
     assert!(new.join("settings.json").is_file());
-    let home = new.join(HOME_DIR);
+    let home = new.join(OLD_HOME_DIR);
     assert!(home.join("boopis/ledger/s.jsonl").is_file());
     assert!(home.join("logs/boopis").is_dir());
     assert!(!home.join("plugins/hypotaxis").exists());
@@ -149,4 +149,104 @@ fn an_unavailable_keychain_stops_the_step_with_one_warning() {
     );
     assert_eq!(report.warnings.len(), 1);
     assert!(report.moved.is_empty());
+}
+
+fn engine_tree(data: &Path) -> PathBuf {
+    let old = data.join(OLD_HOME_DIR);
+    fs::create_dir_all(old.join("boopis/ledger")).unwrap();
+    fs::write(old.join("boopis/ledger/s.jsonl"), "{}\n").unwrap();
+    fs::create_dir_all(old.join("profiles/jabuti")).unwrap();
+    let hx = old.join("boopis/bin/hx");
+    fs::write(
+        old.join("config.yaml"),
+        format!(
+            "plugins:\n  entries:\n    boopis:\n      settings:\n        hx_path: {}\n",
+            hx.display()
+        ),
+    )
+    .unwrap();
+    fs::write(
+        old.join("profiles/jabuti/config.yaml"),
+        format!("hx_path: {}\nmodel: x\n", hx.display()),
+    )
+    .unwrap();
+    old
+}
+
+#[test]
+fn the_engine_home_moves_once_and_its_paths_follow() {
+    let tmp = tempfile::tempdir().unwrap();
+    engine_tree(tmp.path());
+    let report = engine_home(tmp.path(), &|_| false, &|_| panic!("nothing to stop"));
+    assert!(report.warnings.is_empty(), "{:?}", report.warnings);
+    assert!(!report.kept);
+    let new = tmp.path().join(HOME_DIR);
+    assert_eq!(
+        report.moved,
+        Some((tmp.path().join(OLD_HOME_DIR), new.clone()))
+    );
+    assert!(!tmp.path().join(OLD_HOME_DIR).exists());
+    assert!(new.join("boopis/ledger/s.jsonl").is_file());
+    for config in [
+        new.join("config.yaml"),
+        new.join("profiles/jabuti/config.yaml"),
+    ] {
+        let text = fs::read_to_string(&config).unwrap();
+        assert!(!text.contains(OLD_HOME_DIR), "{text}");
+        assert!(
+            text.contains(&new.join("boopis/bin/hx").display().to_string()),
+            "{text}"
+        );
+    }
+    assert_eq!(report.lines.len(), 2, "{:?}", report.lines);
+    let again = engine_home(tmp.path(), &|_| false, &|_| panic!("nothing to stop"));
+    assert!(again.moved.is_none() && again.warnings.is_empty() && again.lines.is_empty());
+}
+
+#[test]
+fn a_live_gateway_is_stopped_first() {
+    let tmp = tempfile::tempdir().unwrap();
+    engine_tree(tmp.path());
+    let running = std::cell::Cell::new(true);
+    let report = engine_home(tmp.path(), &|_| running.get(), &|home| {
+        assert!(home.ends_with(OLD_HOME_DIR));
+        running.set(false);
+        Ok(())
+    });
+    assert!(report.moved.is_some(), "{report:?}");
+    assert!(report.lines[0].contains("stopped"));
+}
+
+#[test]
+fn a_gateway_that_will_not_stop_keeps_the_old_folder_this_run() {
+    let tmp = tempfile::tempdir().unwrap();
+    engine_tree(tmp.path());
+    let report = engine_home(tmp.path(), &|_| true, &|_| Err("no launcher".into()));
+    assert!(report.kept);
+    assert!(report.moved.is_none());
+    assert_eq!(report.warnings.len(), 2, "{:?}", report.warnings);
+    assert!(tmp.path().join(OLD_HOME_DIR).join("config.yaml").is_file());
+}
+
+#[test]
+fn both_engine_folders_are_left_alone() {
+    let tmp = tempfile::tempdir().unwrap();
+    engine_tree(tmp.path());
+    fs::create_dir_all(tmp.path().join(HOME_DIR)).unwrap();
+    let report = engine_home(tmp.path(), &|_| false, &|_| Ok(()));
+    assert!(report.moved.is_none());
+    assert_eq!(report.warnings.len(), 1);
+    assert!(
+        !report.kept,
+        "the new folder exists, so it is the one in use"
+    );
+}
+
+#[test]
+fn a_machine_without_the_old_engine_folder_is_untouched() {
+    let tmp = tempfile::tempdir().unwrap();
+    let report = engine_home(tmp.path(), &|_| panic!("not asked"), &|_| {
+        panic!("not asked")
+    });
+    assert!(report.moved.is_none() && report.warnings.is_empty() && !report.kept);
 }

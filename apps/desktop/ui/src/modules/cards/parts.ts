@@ -11,7 +11,8 @@ const U = ui;
 export const fmt = (s: string): string => U.html.inline(s);
 export const code = (s: string): string => U.html.code(s);
 export const mono = (s: string): string => '<span class="cd-mono">' + esc(s) + '</span>';
-export const cap = (s: unknown): string => { const t = String(s == null ? '' : s); return t.charAt(0).toUpperCase() + t.slice(1); };
+/* the brand stays lowercase at the start of a sentence too (design system section 2) */
+export const cap = (s: unknown): string => { const t = String(s == null ? '' : s); return /^boopis\b/.test(t) ? t : t.charAt(0).toUpperCase() + t.slice(1); };
 /** 'a · b · c' -> ['a', 'b', 'c']: the parts are set apart with space, never joined with dots */
 export const parts = (s: unknown): string[] => (Array.isArray(s) ? s.map(String) : String(s == null ? '' : s).split(/\s+·\s+/)).map((x) => x.trim()).filter(Boolean);
 const botList = () => data().bots.snapshot().bots;
@@ -36,7 +37,7 @@ export type KnownOrigin =
   | { kind: 'mcp'; server?: string | undefined; trust?: string | undefined }
   /** a Claude Code mod: its puzzle glyph and "name mod" (DESIGN-SYSTEM.md 14.29) */
   | { kind: 'mod'; plugin: string };
-const SYSTEM: Readonly<Record<string, readonly [icon: string, label: string]>> = { plugin: ['ladder', 'Governance'], hermes: ['spark', 'Hermes'], host: ['gear', 'boopis'] };
+const SYSTEM: Readonly<Record<string, readonly [icon: string, label: string]>> = { plugin: ['ladder', 'Governance'], hermes: ['spark', 'Session'], host: ['gear', 'boopis'] };
 const sys = (kind: string): readonly [string, string] => SYSTEM[kind] ?? ['', kind];
 
 export function originOf(d: Data): KnownOrigin | null {

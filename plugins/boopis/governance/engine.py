@@ -97,7 +97,7 @@ def _checked(rt: Runtime, state: SessionState, args: dict[str, Any]) -> tuple[Br
     backend = rt.delegation_backend()
     if backend != BACKEND:
         raise Refused(
-            f"Hermes routes delegated children by delegation.backend, which is {backend!r}; tiers only follow the "
+            f"Delegated work is routed by delegation.backend, which is {backend!r}; tiers only follow the "
             f"ladder when it is {BACKEND!r} (the host or installer sets it, with your consent). Nothing was launched."
         )
     _check_gate(state)
@@ -255,7 +255,7 @@ def _check_launched(raw: str) -> None:
     except (TypeError, ValueError) as exc:
         raise LaunchError(f"delegate_task answered something that is not JSON: {raw!r:.200}") from exc
     if reply.get("error"):
-        raise LaunchError(f"Hermes refused to start the worker: {reply['error']}")
+        raise LaunchError(f"the worker did not start: {reply['error']}")
     if reply.get("status") == "dispatched" or "results" in reply:
         return
     raise LaunchError(f"delegate_task did not start a worker: {raw!r:.300}")

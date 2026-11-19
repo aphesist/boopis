@@ -1,6 +1,7 @@
 /* The renderer diagnostics: what the host decided about WebKitGTK's renderer (ADR-0024) and what this page can see of
    the display. The owner copies the text from Settings > General > Diagnostics and sends it when a machine is slow or
    blank; `webkit://gpu` (WebKitGTK's own page) says which buffer path is in use. */
+import { engineDetails } from './errors';
 import { commands } from './bindings';
 import { orbState } from '@boopis/ui';
 import type { AppSettings, GpuPolicy, RendererReport } from './bindings';
@@ -64,8 +65,15 @@ export function measureFrames(ms = 5000): Promise<FrameStats> {
 const GPU_LABELS: Record<GpuPolicy, string> = { auto: 'Automatic', integrated: 'Integrated', dedicated: 'Dedicated' };
 export const gpuLabel = (p: GpuPolicy): string => GPU_LABELS[p];
 
+/** the engine's own words behind the error sentences of this run (ADR-0031): Diagnostics is the one place they are shown */
+export function errorLines(host: readonly { code: string; detail: string; at: number | null }[], ui: readonly { code: string; detail: string; at: number }[]): string[] {
+  const all = [...host.map((e) => ({ ...e, at: (e.at ?? 0) * 1000 })), ...ui].sort((a, b) => a.at - b.at);
+  if (!all.length) return ['errors behind the messages shown: none this run'];
+  return ['errors behind the messages shown (the engine\'s own words):', ...all.map((e) => `  ${new Date(e.at).toISOString()}  ${e.code}  ${e.detail}`)];
+}
+
 /** the report as plain text, one fact a line, for a message */
-/** the renderer report, with what Hermes says about the models plan when the live connection can ask */
+/** the renderer report, with the models plan when the live connection can ask */
 export type Report = RendererReport & { plan?: PlanView | null };
 export function reportText(r: Report, d: DisplayFacts, f?: FrameStats | null): string {
   const gpus = r.gpus.length
@@ -100,7 +108,8 @@ export function reportText(r: Report, d: DisplayFacts, f?: FrameStats | null): s
     `user agent: ${d.userAgent}`,
     'choices: ' + r.choices.map(([k, v]) => `${k} = ${v}`).join('; '),
     ...(r.plan ? planLines(r.plan) : []),
-    ...(f ? [`frames over ${f.seconds} s: ${describeFrames(f, rate)} (p50 ${f.p50} ms, p95 ${f.p95} ms, max ${f.max} ms, ${f.over33} over 33 ms, ${f.frames} frames)`] : [])
+    ...(f ? [`frames over ${f.seconds} s: ${describeFrames(f, rate)} (p50 ${f.p50} ms, p95 ${f.p95} ms, max ${f.max} ms, ${f.over33} over 33 ms, ${f.frames} frames)`] : []),
+    ...errorLines(r.errors ?? [], engineDetails())
   ].join('\n');
 }
 

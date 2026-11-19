@@ -218,6 +218,11 @@ pub struct Check {
     pub reason: String,
 }
 
+/// The checklist's name for the engine step (ADR-0031: the user sees boopis, never the engine's own name).
+const ENGINE_TITLE: &str = "Engine";
+/// The checklist's name for the consent step.
+const SETTINGS_TITLE: &str = "Settings boopis needs";
+
 /// The wanted settings, with why each matters (shown in the consent form).
 fn wanted() -> Vec<(&'static str, Value, &'static str)> {
     vec![
@@ -315,11 +320,17 @@ impl Run {
         code: Option<&str>,
     ) {
         self.stop |= matches!(state, StepState::NeedsInput | StepState::Blocked);
+        let detail: String = detail.into();
+        // A step with a code says it in boopis's words: the engine's own reason goes to Diagnostics (ADR-0031).
+        let detail = match code {
+            Some(c) => crate::error::user_message(c, &detail),
+            None => detail,
+        };
         self.steps.push(Step {
             id: id.to_owned(),
             title: title.to_owned(),
             state,
-            detail: detail.into(),
+            detail,
             code: code.map(str::to_owned),
         });
     }
@@ -388,14 +399,14 @@ impl Setup {
             return Ok(Check {
                 hermes_installed: false,
                 needed: true,
-                reason: "the bundled Hermes has not been unpacked yet".into(),
+                reason: "boopis's engine has not been unpacked yet".into(),
             });
         }
         if self.ops.version().await.is_err() {
             return Ok(Check {
                 hermes_installed: false,
                 needed: true,
-                reason: "Hermes is not installed".into(),
+                reason: "no engine was found on this computer".into(),
             });
         }
         let home = self.ops.home();
@@ -600,17 +611,19 @@ impl Setup {
         match self.ops.version().await {
             Ok(v) => run.done(
                 "hermes",
-                "Hermes",
-                format!("Hermes {}", v.unwrap_or_else(|| "(version unknown)".into())),
+                ENGINE_TITLE,
+                format!("version {}", v.unwrap_or_else(|| "unknown".into())),
             ),
             Err(Error::HermesMissing) => {
+                // Only with `--engine existing` (a build that carries its engine never gets here): the command stays in
+                // the status for the command line and the docs, and the step says what to do in boopis's words.
                 run.install_command = Some(self.install_command.clone());
-                run.push("hermes", "Hermes", StepState::Blocked,
-                    format!("Hermes is not installed. Run this in a terminal, then choose Check again: {}", self.install_command),
-                    Some("hx.setup.hermes_missing"));
+                run.push("hermes", ENGINE_TITLE, StepState::Blocked,
+                    "No engine was found on this computer. Install it as the boopis docs describe, then choose Check again; or start boopis without --engine existing to use the engine it carries.",
+                    Some("hx.setup.engine_missing"));
                 return;
             }
-            Err(e) => return run.blocked("hermes", "Hermes", "hx.setup.hermes_missing", &e),
+            Err(e) => return run.blocked("hermes", ENGINE_TITLE, "hx.setup.engine_missing", &e),
         }
         self.plugin_step(run, state).await;
         if run.stop {
@@ -634,7 +647,7 @@ impl Setup {
     /// Unpack the runtime this build carries (idempotent), then switch off Hermes's own update check in the private home.
     /// A failure is a blocked step that says what happened and what to do; nothing is left half installed.
     async fn runtime_step(&self, plan: &Plan, run: &mut Run, state: &mut State) {
-        let (id, title) = ("runtime", "Hermes runtime");
+        let (id, title) = ("runtime", "boopis engine");
         let (runtime, dir) = (plan.runtime.clone(), plan.runtimes_dir());
         let sink = self.progress.clone();
         let unpacked = tokio::task::spawn_blocking(move || {
@@ -661,7 +674,7 @@ impl Setup {
             Err(e) => {
                 let e = Error::Setup(
                     "hx.setup.runtime_unpack_failed",
-                    format!("unpacking Hermes stopped: {e}"),
+                    format!("unpacking the bundled Hermes stopped: {e}"),
                 );
                 return run.blocked(id, title, e.code(), &e);
             }
@@ -696,12 +709,12 @@ impl Setup {
             Err(e) => return run.blocked(id, title, "hx.setup.config_failed", &e),
         }
         let detail = match outcome {
-            Outcome::Current => format!("Hermes {} is unpacked", manifest.hermes_version),
+            Outcome::Current => format!("version {}, unpacked", manifest.hermes_version),
             Outcome::Unpacked => {
                 state.restart_pending = true; // a gateway of an older runtime must give way to this one
                 format!(
-                    "unpacked Hermes {} (Python {}) into the app's own folder; it never touches another Hermes",
-                    manifest.hermes_version, manifest.python_version
+                    "unpacked version {} into boopis's own folder; nothing else on this computer is touched",
+                    manifest.hermes_version
                 )
             }
         };
@@ -795,7 +808,7 @@ impl Setup {
     }
 
     async fn config_step(&self, run: &mut Run, state: &mut State) {
-        let (id, title) = ("config", "Hermes settings");
+        let (id, title) = ("config", SETTINGS_TITLE);
         let mut diff = Vec::new();
         for (key, to, _) in wanted() {
             match self.ops.config_get(key).await {
@@ -819,20 +832,20 @@ impl Setup {
                     }
                 }
                 state.restart_pending = true;
-                run.done(id, title, format!("{} settings changed through Hermes", diff.len()));
+                run.done(id, title, format!("{} settings changed", diff.len()));
             }
             Consent::Declined => run.push(id, title, StepState::Declined,
-                "Not changed. Without these, other tools may hide pack, ship and dispatch behind Hermes's tool search, governed work cannot be routed to model tiers, and Stop hooks cannot continue a turn. Choose Review again to change your mind, or use a dedicated Hermes profile for boopis.",
+                "Not changed. Without these, pack, ship and dispatch may hide behind tool search, governed work cannot be routed to model tiers, and Stop hooks cannot continue a turn. Choose Review again to change your mind.",
                 Some("hx.setup.declined")),
             Consent::Unasked => {
-                let mut form = Form::new("setup.config", "setup", "Change three Hermes settings?",
+                let mut form = Form::new("setup.config", "setup", "Change three settings boopis needs?",
                     &wanted().iter().map(|(k, v, why)| format!("{k} = {} ({why})", text_of(v))).collect::<Vec<_>>().join("\n"),
                     json!({"type": "object", "properties": {}}));
                 form.submit = Json(json!({"label": "Apply the changes"}));
                 form.cancel = Json(json!({"label": "Not now"}));
                 form.diff = diff;
                 run.form = Some(form);
-                run.push(id, title, StepState::NeedsInput, "These settings are written with `hermes config set`; nothing else is touched.", None);
+                run.push(id, title, StepState::NeedsInput, "Only these three settings are written; nothing else is touched.", None);
             }
         }
     }
@@ -892,7 +905,7 @@ impl Setup {
         let (id, title) = ("restart", "Start with boopis");
         if state.restart_pending {
             if let Err(e) = self.ops.restart_gateway().await {
-                return run.blocked(id, title, "hx.hermes.unavailable", &e);
+                return run.blocked(id, title, "hx.engine.unavailable", &e);
             }
             state.restart_pending = false;
         }
@@ -913,7 +926,7 @@ impl Setup {
                         tracing::info!(count = removed.len(), "removed older Hermes runtimes");
                     }
                 }
-                run.done(id, title, "Hermes runs with the plugin");
+                run.done(id, title, "boopis is ready");
             }
             Err(e) => run.blocked(id, title, "hx.setup.verify_failed", &e),
         }
@@ -936,7 +949,7 @@ impl Setup {
             .map(|s| format!("{}: {}", s.title, s.detail))
             .collect();
         if state.consent == Consent::Declined {
-            lines.push("You declined the Hermes settings, so some features are off (see Hermes settings above).".into());
+            lines.push(format!("You declined the settings boopis needs, so some features are off (see {SETTINGS_TITLE} above)."));
         }
         if cfg!(windows) {
             lines.extend(windows_gaps().iter().map(|l| (*l).to_owned()));
@@ -950,7 +963,7 @@ impl Setup {
 #[must_use]
 pub fn windows_gaps() -> [&'static str; 3] {
     [
-        "Windows: API keys saved in the keychain cannot reach Hermes yet (the plugin's secret channel has no Windows transport). The free Nous models and the Claude subscription need no key.",
+        "Windows: API keys saved in the keychain cannot reach boopis's engine yet (its secret channel has no Windows transport). The free Nous models and the Claude subscription need no key.",
         "Windows: the command sandbox has not been run on Windows yet. Where it cannot start, a governed ship is refused with the reason (hx.sandbox.unavailable); a command never runs unsandboxed.",
         "Windows: mods are off (hx.mods.unavailable): the mods worker has no private channel on Windows yet.",
     ]

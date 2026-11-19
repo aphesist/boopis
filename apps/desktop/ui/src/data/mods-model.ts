@@ -99,7 +99,7 @@ export function reduceMod(s: ModSession, type: string, payload: unknown, clock: 
     }
     case 'mod.toast': return { state: s, event: { type: 'toast', plugin: str(p['plugin']), text: str(p['text']), timeoutMs: typeof p['timeout_ms'] === 'number' ? p['timeout_ms'] : 4000 } };
     case 'mod.notify': return { state: s, event: { type: 'notify', plugin: str(p['plugin']), title: str(p['title']), text: str(p['text']) } };
-    case 'mod.command': return { state: s, ignored: 'a mod command: the slash commands of Hermes list it' };
+    case 'mod.command': return { state: s, ignored: 'a mod command: the slash commands list it' };
     default: return { state: s, ignored: 'an event this app does not know: ' + type };
   }
 }

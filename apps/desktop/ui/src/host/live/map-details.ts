@@ -15,7 +15,7 @@ export function contextFrom(breakdown: BreakdownWire | null, usage: UsageWire | 
   return { total, parts, used };
 }
 export const contextNote = (b: BreakdownWire | null, known: boolean): string =>
-  !known ? 'Hermes has not reported this session’s context window yet.' : b?.context_estimated ? 'The last response’s count plus an estimate of what came after.' : '';
+  !known ? 'This session’s context window is not known yet.' : b?.context_estimated ? 'The last response’s count plus an estimate of what came after.' : '';
 
 /* ───────── tasks ───────── */
 const TODO: Record<string, TodoState | undefined> = { pending: 'todo', in_progress: 'doing', completed: 'done' };
@@ -55,7 +55,7 @@ export function environmentFrom(info: InfoWire | null, describe: DescribeWire | 
     cwd: homeRelative(info?.cwd ?? describe?.session?.cwd ?? ''),
     branch: info?.branch ?? '',
     sandbox: describe?.hx ? 'hx sandbox' + (describe.kernel?.ok === false ? ' (kernel down)' : '') : '',
-    runtime: info ? 'Hermes' + version + release : '',
+    runtime: info ? 'boopis engine' + version + release : '',
     harness: describe?.version ? 'boopis ' + describe.version : '',
     gate: ''
   };

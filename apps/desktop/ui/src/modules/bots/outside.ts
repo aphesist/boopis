@@ -7,7 +7,7 @@ import { el, frag } from '../../core/dom';
 import { ui } from '@boopis/ui';
 
 export const OUTSIDE_LABEL = 'made outside boopis';
-export const OUTSIDE_WORDS = 'Made outside boopis, for example with the hermes command. boopis keeps its look and settings once you change them here.';
+export const OUTSIDE_WORDS = 'Made outside boopis, for example on the command line. boopis keeps its look and settings once you change them here.';
 /** what a roster row shows, and so what its accessible name holds (between the role and the state); the sentence below is its description */
 export const OUTSIDE_SHORT = 'outside';
 

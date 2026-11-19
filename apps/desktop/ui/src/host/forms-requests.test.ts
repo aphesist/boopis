@@ -26,17 +26,17 @@ describe('secret (a skill needs an environment variable)', () => {
   const m = model('secret', { env_var: 'GITHUB_TOKEN', prompt: 'Enter value for GITHUB_TOKEN', metadata: { skill_name: 'github', help: 'Create one at github.com/settings/tokens', required_for: 'opening pull requests' } });
 
   it('is a credential form with one masked field, from Hermes, and the request id is the form id', () => {
-    expect(m).toMatchObject({ id: 'srq-1', kind: 'credential', title: 'Hermes needs GITHUB_TOKEN', sensitive: true, hold: false, origin: 'hermes' });
-    expect(m.spec).toMatchObject({ id: 'srq-1', kind: 'credential', origin: { kind: 'hermes' }, submit: { label: 'Send to Hermes' }, cancel: { label: 'Skip' } });
+    expect(m).toMatchObject({ id: 'srq-1', kind: 'credential', title: 'boopis needs GITHUB_TOKEN', sensitive: true, hold: false, origin: 'hermes' });
+    expect(m.spec).toMatchObject({ id: 'srq-1', kind: 'credential', origin: { kind: 'hermes' }, submit: { label: 'Send it' }, cancel: { label: 'Skip' } });
     expect(props(m)['value']).toMatchObject({ type: 'string', title: 'GITHUB_TOKEN', 'x-secret': true });
     expect(m.spec.schema.required).toEqual(['value']);
     expect(m.source).toEqual({ kind: 'hermes-request', sessionId: 'S1', requestId: 'srq-1', method: 'secret' });
   });
   it('says what Hermes said, what the skill declared, and where the value goes', () => {
     expect(m.spec.why).toBe('Enter value for GITHUB_TOKEN. It is for the `github` skill. Needed for opening pull requests. Create one at github.com/settings/tokens.');
-    expect(m.spec.effect).toMatch(/saves it in this profile.s `\.env`/);
+    expect(m.spec.effect).toMatch(/saves it in this bot.s own `\.env`/);
     expect(m.spec.effect).toMatch(/model never sees it/);
-    expect(m.spec.receipt).toBe('Sent to Hermes');
+    expect(m.spec.receipt).toBe('Sent');
   });
   it('draws no deadline and no hold: Hermes gave none, and a typed secret is not an approval', () => {
     expect(m.spec.expiresAt).toBeUndefined();
@@ -44,8 +44,8 @@ describe('secret (a skill needs an environment variable)', () => {
   });
   it('falls back to words of its own when the event carries almost nothing', () => {
     const bare = model('secret', {});
-    expect(bare.title).toBe('Hermes needs a credential');
-    expect(bare.spec.why).toBe('Hermes needs a value to continue.');
+    expect(bare.title).toBe('boopis needs a credential');
+    expect(bare.spec.why).toBe('boopis needs a value to continue.');
   });
   it('is answered with the value, skipped with an empty one', () => {
     expect(answerFor(m, { cancelled: false, values: {}, secrets: { value: SECRET } })).toEqual({ value: SECRET });
@@ -56,7 +56,7 @@ describe('secret (a skill needs an environment variable)', () => {
 describe('sudo', () => {
   it('is a credential form with the password field and the command it is for', () => {
     const m = model('sudo', { command: 'sudo apt-get install -y graphviz' });
-    expect(m).toMatchObject({ kind: 'credential', title: 'Hermes needs your sudo password', origin: 'hermes' });
+    expect(m).toMatchObject({ kind: 'credential', title: 'boopis needs your sudo password', origin: 'hermes' });
     expect(m.spec.why).toBe('It wants to run `sudo apt-get install -y graphviz` as an administrator.');
     expect(props(m)['password']).toMatchObject({ 'x-secret': true, title: 'sudo password' });
     expect(m.spec.cancel).toEqual({ label: 'Cancel' });
@@ -67,7 +67,7 @@ describe('sudo', () => {
   it('is not held: hold to approve belongs to approvals, and the command is shown so the person can check it', () => {
     const m = model('sudo', { command: 'sudo rm /tmp/x' });
     expect(m.hold).toBe(false);
-    expect(m.spec.submit).toEqual({ label: 'Send to Hermes' });
+    expect(m.spec.submit).toEqual({ label: 'Send it' });
   });
   it('says so when Hermes did not name the command, and shows a command with a backtick whole', () => {
     expect(model('sudo', {}).spec.why).toMatch(/did not say which command/);

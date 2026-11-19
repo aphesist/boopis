@@ -326,8 +326,8 @@ impl Engine {
             return Err(Error::Connector(
                 "hx.connectors.restart_choice",
                 match running {
-                    Some(n) => format!("{n} session{} {} a turn running. Installing the key restarts Hermes, which would end it: choose to restart now, or when no turn is running.", if n == 1 { "" } else { "s" }, if n == 1 { "has" } else { "have" }),
-                    None => "Hermes could not say whether a turn is running. Installing the key restarts Hermes: choose to restart now, or when no turn is running.".to_owned(),
+                    Some(n) => format!("{n} session{} {} a turn running. Installing the key needs a restart, which would end it: choose to restart now, or when no turn is running.", if n == 1 { "" } else { "s" }, if n == 1 { "has" } else { "have" }),
+                    None => "boopis could not tell whether a turn is running. Installing the key needs a restart: choose to restart now, or when no turn is running.".to_owned(),
                 },
             ));
         }
@@ -350,12 +350,9 @@ impl Engine {
             })?;
         steps.push(step(
             "add",
-            "Added to Hermes",
+            "Added",
             StepState::Done,
-            format!(
-                "mcp_servers.{} in Hermes's configuration, through Hermes",
-                plan.name
-            ),
+            format!("as {}, with boopis's connectors", plan.name),
         ));
 
         let mut saved: Vec<SecretRef> = Vec::new();
@@ -375,7 +372,7 @@ impl Engine {
                 "keys",
                 "Keys saved",
                 StepState::Done,
-                "in your keychain; Hermes reads them by reference",
+                "in your keychain; boopis reads them from there when the connector starts",
             ));
         }
         for (k, v) in &plan.wires {
@@ -407,25 +404,25 @@ impl Engine {
                     restarted = true;
                     steps.push(step(
                         "restart",
-                        "Hermes restarted",
+                        "Restarted",
                         StepState::Done,
-                        "so it reads the key",
+                        "so the key is read",
                     ));
                 }
                 Some(Err(e)) => {
                     steps.push(step(
                         "restart",
-                        "Hermes restart",
+                        "Restart",
                         StepState::Blocked,
-                        scrub(&e.to_string(), &values),
+                        crate::error::user_message(e.code(), &scrub(&e.to_string(), &values)),
                     ));
-                    notes.push("Hermes could not be restarted, so it has not read the key yet. Restart it, then test the connector.".to_owned());
+                    notes.push("boopis could not restart, so the key is not read yet. Restart boopis, then test the connector.".to_owned());
                 }
                 None => {
                     restart_pending = true;
                     self.wait_for_idle(&plan.name);
-                    steps.push(step("restart", "Hermes restart", StepState::Pending, "waits until no session has a turn running; boopis restarts it then and tells you"));
-                    notes.push("The key is saved and wired. Hermes reads it at its next start, which boopis does when no turn is running. The connection is tested then.".to_owned());
+                    steps.push(step("restart", "Restart", StepState::Pending, "waits until no session has a turn running; boopis restarts then and tells you"));
+                    notes.push("The key is saved and wired. It is read at the next restart, which boopis does when no turn is running. The connection is tested then.".to_owned());
                 }
             }
         }
@@ -531,16 +528,23 @@ impl Engine {
                             ),
                             Ok(t) => format!(
                                 "{n}: {}",
-                                t.error.unwrap_or_else(|| "it did not connect".into())
+                                crate::error::unless_engine(
+                                    "hx.connectors.failed",
+                                    &t.error.unwrap_or_else(|| "it did not connect".into())
+                                )
                             ),
-                            Err(e) => format!("{n}: {e}"),
+                            Err(e) => format!(
+                                "{n}: {}",
+                                crate::error::user_message(e.code(), &e.to_string())
+                            ),
                         });
                     }
-                    format!("Hermes restarted to read the key. {}", lines.join(". "))
+                    format!("Restarted to read the key. {}", lines.join(". "))
                 }
-                Err(why) => format!(
-                    "Hermes was not restarted ({why}). The key is saved; restart Hermes to use it."
-                ),
+                Err(why) => {
+                    crate::error::keep("hx.engine.unavailable", why);
+                    "Not restarted. The key is saved; restart boopis to use it.".to_owned()
+                }
             };
             if let Some(n) = notify {
                 n(RestartDone {
@@ -653,7 +657,7 @@ impl Engine {
         if !report.kept_credentials.is_empty() {
             report.notes.push("Its keys are still in your keychain. Remove the connector again with the keys, or delete them there.".to_owned());
         }
-        report.notes.push("An open session keeps the tools it started with until Hermes reloads MCP, which resets the prompt cache.".to_owned());
+        report.notes.push("An open session keeps the tools it started with; sessions you start now see the change.".to_owned());
         Ok(report)
     }
 
@@ -713,7 +717,7 @@ impl Engine {
         let test = self.ops.test(name).await.ok();
         Ok(SignInReport {
             name: name.to_owned(),
-            stored: "Hermes's own token store".to_owned(),
+            stored: "boopis's own token store".to_owned(),
             tools,
             test,
         })
@@ -813,7 +817,7 @@ impl Engine {
             let (bin, home) = self.ops.hermes_program().await?.ok_or_else(|| {
                 Error::Connector(
                     "hx.connectors.command_failed",
-                    "There is no Hermes to run this sign-in with.".into(),
+                    "boopis's engine is not available to run this sign-in.".into(),
                 )
             })?;
             (

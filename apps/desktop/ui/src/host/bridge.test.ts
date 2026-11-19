@@ -33,10 +33,10 @@ describe('the typed bridge', () => {
   });
 
   it('turns a host rejection into a HostError with its stable code', async () => {
-    invoke.mockRejectedValue({ code: 'hx.hermes.incompatible', message: 'Hermes 0.22.0 is older than the required >=0.23.2' });
+    invoke.mockRejectedValue({ code: 'hx.engine.incompatible', message: 'Hermes 0.22.0 is older than the required >=0.23.2' });
     const err = await tauriBridge().connect(null, () => undefined).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(HostError);
-    expect((err as HostError).code).toBe('hx.hermes.incompatible');
+    expect((err as HostError).code).toBe('hx.engine.incompatible');
   });
 
   it('normalises other failures', () => {

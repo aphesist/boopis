@@ -38,20 +38,12 @@ function showSettingsSection(section?: string): void {
   const sec = SETTINGS_SECTIONS.some(([v]) => v === section) ? (section as string) : 'general';
   $<SegElement>('.hx-dtabs', d).select(sec);
   for (const p of $$('.hx-dpanel', d)) p.hidden = p.id !== 'hx-dpanel-' + sec;
-  if (sec === 'general') { mountDiagnostics(); mountAdvanced(); }
+  if (sec === 'general') mountDiagnostics();
   if (sec === 'models') showModels();
   if (sec === 'connectors') showConnectors();
   if (sec === 'appearance' && !themeMounted) { mountThemePanel($('#hx-dpanel-appearance')); themeMounted = true; mountOrbGrow(); }
   d.classList.toggle('is-side', sec === 'appearance');
   $('.hx-dialog__body', d).scrollTop = 0;
-}
-/* Settings > General > Advanced > "Use my own Hermes", in the desktop app only (the page has no host to save it with). */
-let advMounted = false;
-function mountAdvanced(): void {
-  if (advMounted || !inTauri()) return;
-  const panel = $('#hx-dpanel-general'); if (!panel) return;
-  advMounted = true;
-  void import('../../host/hermes-source').then((m) => m.mountHermesSource(panel)).catch((e: unknown) => { advMounted = false; log.warn('the Hermes choice did not mount', e); });
 }
 /* Settings > Models: the plan, the ladder and "Change models". Built the first time the tab opens, and asked again every time
    it opens, because Hermes's plan and the saved ladder move while the dialog is closed. Without the desktop host there is no
@@ -79,7 +71,7 @@ function showConnectors(): void {
   if (connectors) { void connectors.refresh().catch((e: unknown) => { log.warn('the connectors tab did not refresh', e); }); return; }
   if (connectorsMounting) return;
   const panel = $('#hx-dpanel-connectors'); if (!panel) return;
-  if (!inTauri()) { panel.innerHTML = '<p class="ui-field__hint">Connectors are added to Hermes by the desktop app. This page has no Hermes to ask.</p>'; return; }
+  if (!inTauri()) { panel.innerHTML = '<p class="ui-field__hint">Connectors are added in the desktop app. This page cannot reach boopis\'s engine.</p>'; return; }
   connectorsMounting = true;
   void Promise.all([import('../../host/connectors'), import('../../host/connectors-bridge')])
     .then(([view, bridge]) => view.mountConnectors(panel, { bridge: bridge.tauriConnectorsBridge(), toast: (t) => { ui.toast(t); } }))

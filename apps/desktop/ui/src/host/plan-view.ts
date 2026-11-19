@@ -38,7 +38,7 @@ export function planSection(view: PlanView, now = Date.now()): HTMLElement {
 /** Put the plan into a Settings panel (Settings > Models) and refresh it: it asks Hermes now, and says so when Hermes cannot
     be asked (no live connection). Returns the section, which `refresh` redraws in place. */
 export async function mountPlan(panel: HTMLElement, ask: () => Promise<PlanView | null> = currentPlan): Promise<{ section: HTMLElement; refresh: () => Promise<void> }> {
-  const unknown: PlanView = { kind: 'unknown', state: 'unknown', label: '', model: null, detail: 'Hermes is not connected, so the plan cannot be read.', gauges: [], gaugesNote: null, limit: null, checking: false };
+  const unknown: PlanView = { kind: 'unknown', state: 'unknown', label: '', model: null, detail: 'boopis\'s engine is not connected, so the plan cannot be read.', gauges: [], gaugesNote: null, limit: null, checking: false };
   let section = planSection(unknown);
   panel.append(section);
   const refresh = async (): Promise<void> => {

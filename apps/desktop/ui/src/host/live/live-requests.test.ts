@@ -65,7 +65,7 @@ describe('a request arrives', () => {
   it('becomes a credential form from Hermes, in the conversation and in the dock', () => {
     request('srq-a1', 'secret', { env_var: 'GITHUB_TOKEN', prompt: 'Enter value for GITHUB_TOKEN', metadata: { skill_name: 'github' } });
     expect(forms()).toHaveLength(1);
-    expect(forms()[0]?.data).toMatchObject({ id: 'srq-a1', kind: 'credential', title: 'Hermes needs GITHUB_TOKEN', origin: { kind: 'hermes' } });
+    expect(forms()[0]?.data).toMatchObject({ id: 'srq-a1', kind: 'credential', title: 'boopis needs GITHUB_TOKEN', origin: { kind: 'hermes' } });
     expect(conv.some((e) => e.type === 'form-opened' && e.form.id === 'srq-a1')).toBe(true);
     const turn = provider.sessions.conversation(SID).snapshot().turns.find((t) => t.role === 'assistant' && t.forms?.length);
     expect(turn && turn.role === 'assistant' ? turn.forms?.map((f) => f.id) : []).toEqual(['srq-a1']);

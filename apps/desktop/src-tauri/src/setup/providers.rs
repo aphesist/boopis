@@ -742,7 +742,7 @@ async fn subscription(
         None => {
             return Err(Error::Setup(
                 "hx.setup.subscription_unavailable",
-                "This engine does not include the Claude subscription. It comes with boopis's own engine; choose another model, or switch back to it in Settings, General, Advanced.".into(),
+                "This engine does not include the Claude subscription. It comes with boopis's own engine; choose another model, or start boopis with its own engine.".into(),
             ));
         }
         Some(p) if !p.enabled => {

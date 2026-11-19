@@ -38,7 +38,7 @@ export function inWords(ms: number): string {
 const clock = (ms: number): string => new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 /** when a limit lifts, as Hermes said it; '' when Hermes did not say */
 export function resetText(resetsAtMs: number | null, now: number): string {
-  return resetsAtMs === null ? '' : resetsAtMs <= now ? 'It should lift shortly.' : `Hermes says it lifts ${inWords(resetsAtMs - now)}, at ${clock(resetsAtMs)}.`;
+  return resetsAtMs === null ? '' : resetsAtMs <= now ? 'It should lift shortly.' : `The provider says it lifts ${inWords(resetsAtMs - now)}, at ${clock(resetsAtMs)}.`;
 }
 
 const FREE_TITLES: Readonly<Record<string, string>> = {
@@ -77,9 +77,9 @@ export interface PlanInput { status: FreeTierStatusResult | null; options: Model
 /** what to say about the plan: Hermes's own words and numbers, and where it said nothing, that it said nothing */
 export function planView({ status, options, limit }: PlanInput, now = Date.now()): PlanView {
   const gauges = gaugesOf(options);
-  const note = gauges.length ? null : 'Hermes reports no usage figures for this plan. Its limits show here when one is reached.';
+  const note = gauges.length ? null : 'No usage figures are reported for this plan. Its limits show here when one is reached.';
   const base = { gauges, gaugesNote: note, limit, checking: !!status?.challenge, label: status?.label ?? '', model: status?.model ?? null };
-  if (!status) return { ...base, kind: 'unknown', state: 'unknown', detail: 'Hermes did not report the plan.', gaugesNote: gauges.length ? null : 'Hermes reported no usage figures.', model: null };
+  if (!status) return { ...base, kind: 'unknown', state: 'unknown', detail: 'boopis\'s engine did not report the plan.', gaugesNote: gauges.length ? null : 'No usage figures were reported.', model: null };
   if (status.error && !status.available) {
     const wait = status.retry_after ? ` It suggests trying again ${inWords(status.retry_after * 1000)}.` : '';
     return { ...base, kind: 'none', state: 'failed', detail: `${status.error}.${wait}`.replace(/\.\./g, '.'), gaugesNote: null };

@@ -275,7 +275,7 @@ impl Supervisor {
         {
             return Err(Error::Connector(
                 "hx.connectors.busy",
-                "Hermes has live work, so it was not restarted".into(),
+                "a turn is still running, so boopis did not restart".into(),
             ));
         }
         let deadline = tokio::time::Instant::now() + self.limits.gateway_stop_wait;
@@ -444,7 +444,7 @@ mod tests {
         let sup = Supervisor::new(env, Limits::default());
         assert_eq!(
             sup.info().await.unwrap_err().code(),
-            "hx.hermes.incompatible"
+            "hx.engine.incompatible"
         );
         let st = sup.status(None).await;
         assert!(st.installed);
@@ -462,7 +462,7 @@ mod tests {
         let err = sup.ensure(&dir.path().join("home")).await.unwrap_err();
         assert_eq!(
             err.code(),
-            "hx.hermes.incompatible",
+            "hx.engine.incompatible",
             "still stale after the restart"
         );
         let stops = std::fs::read_to_string(dir.path().join("home").join("stops")).unwrap();

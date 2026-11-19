@@ -4,9 +4,9 @@ import type { RestartNotice } from './connectors-notice';
 
 describe('the notice of a restart that waited for idle sessions', () => {
   it('says what the host told it, and a plain sentence when it told nothing', () => {
-    expect(noticeText({ names: ['a'], ok: true, message: 'Hermes restarted to read the key. a connected, 2 tools' })).toBe('Hermes restarted to read the key. a connected, 2 tools');
-    expect(noticeText({ names: [], ok: true, message: '' })).toBe('Hermes restarted.');
-    expect(noticeText({ names: [], ok: false, message: '' })).toBe('Hermes was not restarted.');
+    expect(noticeText({ names: ['a'], ok: true, message: 'Restarted to read the key. a connected, 2 tools' })).toBe('Restarted to read the key. a connected, 2 tools');
+    expect(noticeText({ names: [], ok: true, message: '' })).toBe('boopis restarted to read the key.');
+    expect(noticeText({ names: [], ok: false, message: '' })).toBe('boopis did not restart. The key is saved; restart boopis to use it.');
   });
   it('shows each notice as a toast while listening, and stops when told', async () => {
     let send: (n: RestartNotice) => void = () => undefined;

@@ -5,6 +5,8 @@
    host, which validates it again and drives Hermes's own mechanisms; this view knows no Hermes file and holds no key (a key
    goes from its field to the host's keychain and no further). It draws the design system's settings rows and cards; the owner
    has not drawn a connectors view, so it is composed from those patterns, for review (DESIGN-SYSTEM.md 14.21). */
+import { storeItem } from '../core/engine-words';
+import { unlessEngine } from './errors';
 import { ui } from '@boopis/ui';
 import { reduced } from '../core/dom';
 import { logger } from '../core/log';
@@ -58,8 +60,8 @@ export function installLines(r: ConnectorInstall): string[] {
   const lines = r.steps.map((s) => `${s.title}: ${s.detail || s.state}`);
   const t = r.test;
   if (t) {
-    if (t.ok) lines.push(`Hermes connected and found ${String(t.tools.length)} tool${t.tools.length === 1 ? '' : 's'}${t.tools.length ? ': ' + t.tools.slice(0, 8).map((x) => x.name).join(', ') + (t.tools.length > 8 ? ', …' : '') : ''}.`);
-    else lines.push(`Hermes could not connect: ${t.error ?? 'no reason given'}`);
+    if (t.ok) lines.push(`Connected and found ${String(t.tools.length)} tool${t.tools.length === 1 ? '' : 's'}${t.tools.length ? ': ' + t.tools.slice(0, 8).map((x) => x.name).join(', ') + (t.tools.length > 8 ? ', …' : '') : ''}.`);
+    else lines.push(`It did not connect: ${unlessEngine('hx.connectors.failed', t.error ?? 'no reason given')}`);
   }
   return [...lines, ...r.notes];
 }
@@ -140,11 +142,12 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
             ui.html.button({ label: 'Test', size: 's', attrs: { 'data-conn-test': c.name, 'aria-label': 'Test ' + c.name } }),
             ui.html.button({ label: 'Remove', size: 's', variant: 'ghost', attrs: { 'data-conn-remove': c.name, 'aria-label': 'Remove ' + c.name } })
           ].join('');
-          return ui.html.setRow({ label: c.name, hint: v.hint, ...(c.plugin ? {} : { for: id }), control: controls ? '<span style="display:inline-flex;gap:var(--sp-2);align-items:center">' + controls + '</span>' : '' });
+          /* an installed connector is the user's item: its own name is shown as it is (ADR-0031's store exception) */
+          return storeItem(ui.html.setRow({ label: c.name, hint: v.hint, ...(c.plugin ? {} : { for: id }), control: controls ? '<span style="display:inline-flex;gap:var(--sp-2);align-items:center">' + controls + '</span>' : '' }));
         })
-        : [ui.html.setRow({ label: 'No connectors yet', hint: 'Hermes has no MCP servers. Add one below.' })];
+        : [ui.html.setRow({ label: 'No connectors yet', hint: 'boopis has no connectors yet. Add one below.' })];
     } catch (e) {
-      rows = [ui.html.setRow({ label: 'Connectors', hint: `Hermes could not be asked, so the list is not shown: ${message(e)}` })];
+      rows = [ui.html.setRow({ label: 'Connectors', hint: `boopis could not read the list, so it is not shown: ${message(e)}` })];
     }
     installed.innerHTML = ui.html.setHead({ id: 'hx-conn-installed-h', label: 'Installed' }) + rows.join('') + '<p class="ui-field__hint" role="status" aria-live="polite" data-conn-status></p>';
     ui.hydrate(installed);
@@ -197,7 +200,7 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
     const keys = c.secrets.length > 0;
     const spec: FormSpec = {
       id: 'connector.remove.' + c.name, kind: 'choice', title: `Remove ${c.name}?`, origin: { kind: 'host' }, defer: false,
-      why: keys ? 'It has keys in your keychain. Removing the connector does not delete them unless you say so.' : 'Hermes drops it from its configuration (and its sign-in tokens, if it had any).',
+      why: keys ? 'It has keys in your keychain. Removing the connector does not delete them unless you say so.' : 'boopis drops it from its connectors (and its sign-in tokens, if it had any).',
       schema: keys ? { properties: { keys: { type: 'string', title: 'Its keys', enum: ['keep', 'delete'], enumNames: ['Keep them in my keychain', 'Delete them too'], default: 'keep' } }, required: ['keys'] } : { properties: {} },
       submit: { label: 'Remove', hold: true }, cancel: { label: 'Keep it' }, receipt: `Removed ${c.name}`
     };
@@ -263,10 +266,11 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
     const rows: string[] = [];
     for (const c of catalog) {
       for (const v of c.variants) {
-        rows.push(ui.html.setRow({
+        /* a collection item keeps its own name and publisher, whatever they say (ADR-0031's store exception) */
+        rows.push(storeItem(ui.html.setRow({
           label: `${c.name}: ${v.label}`, hint: `${v.summary} Reaches: ${v.reaches}.${v.pinned ? ' Pinned to ' + v.pinned + '.' : ''}`,
           control: ui.html.button({ label: 'Add', size: 's', attrs: { 'data-add-catalog': c.id, 'data-add-variant': v.id, 'aria-label': `Add ${c.name}, ${v.label}` } })
-        }));
+        })));
       }
     }
     rows.push(ui.html.setRow({ label: 'From a URL', hint: 'A remote MCP server. https only; keys go to your keychain.', control: ui.html.button({ label: 'Add', size: 's', attrs: { 'data-add-url': '', 'aria-label': 'Add a connector from a URL' } }) }));

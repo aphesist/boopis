@@ -35,15 +35,16 @@ const button = (text: string, variant: 'primary' | 'ghost' | '', onClick: () => 
 }
 const STATE_WORD: Readonly<Record<string, string>> = { done: 'done', pending: 'waiting', needs_input: 'needs you', blocked: 'stopped', declined: 'not changed', skipped: 'skipped' };
 
-/** what the first screen says setup is about to do, by which Hermes this run uses. The bundled one is unpacked and set up; the
-    user's own is only set up (its profile gets the plugin). When the host cannot say, the sentence claims neither. */
+/** what the first screen says setup is about to do, by which engine this run uses. The one boopis carries is unpacked and set
+    up; the machine's own (`boopis --engine existing`, documented in the repository, never offered here) is only set up. When
+    the host cannot say, the sentence claims neither. The engine is never named (ADR-0031). */
 export function introText(src: SourceInfo | null): string {
-  const asks = 'It asks before it changes any Hermes setting.';
-  if (!src) return `Setup gets Hermes, the agent that does the work, ready for boopis. ${asks}`;
+  const asks = 'It asks before it changes any setting.';
+  if (!src) return `Setup gets boopis's engine, the part that does the work, ready. ${asks}`;
   if (src.carries_runtime && src.running === 'bundled') {
-    return `boopis comes with its own Hermes, the agent that does the work. Setup unpacks it into boopis's own folder, then sets it up with the boopis plugin. It never touches another Hermes on this computer. ${asks}`;
+    return `boopis comes with its own engine, the part that does the work. Setup unpacks it into boopis's own folder and sets it up. Nothing else on this computer is touched. ${asks}`;
   }
-  return `boopis uses the Hermes already on this computer. Setup installs the boopis plugin into its profile. ${asks}`;
+  return `boopis runs on the engine already installed on this computer, as you started it. Setup adds what boopis needs to it. ${asks}`;
 }
 
 /** bytes as the manifest counts them, in decimal units: "123 MB", "1.2 GB" */
@@ -57,7 +58,7 @@ export function bytesText(n: number): string {
 /** what the host's progress event says, in the view's words: the label of the pass, how far (a whole percent, or null when
     the event carries no figure) and the bytes of the archive. Nothing here is estimated: it is `read` of `total`. */
 export function describeProgress(p: SetupProgress): { label: string; value: number | null; bytes: string } {
-  const label = p.phase === 'verify' ? 'Checking the Hermes runtime' : 'Unpacking Hermes';
+  const label = p.phase === 'verify' ? 'Checking boopis\'s engine' : 'Unpacking boopis\'s engine';
   const { read, total } = p;
   if (read === null || total === null || !(total > 0)) return { label, value: null, bytes: '' };
   return { label, value: Math.min(100, Math.floor((read / total) * 100)), bytes: `${bytesText(Math.min(read, total))} of ${bytesText(total)}` };
@@ -152,10 +153,8 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
         card.append(button('Set up', 'primary', () => { void run(null, false); }));
       } else {
         card.append(steps(status, () => { void run(null, false); }));
-        if (status.install_command) {
-          card.append(el('p', { style: 'margin:0' }, 'Install Hermes by running this in a terminal. boopis never runs it for you.'), el('code', { class: 'ui-code', style: 'display:block;overflow-x:auto' }, status.install_command));
-          card.append(button('Check again', 'primary', () => { void run(null, false); }));
-        }
+        /* no engine on this computer (only with `--engine existing`): the step says what to do; boopis installs nothing */
+        if (status.install_command) card.append(button('Check again', 'primary', () => { void run(null, false); }));
         if (status.steps.some((s) => s.state === 'declined')) card.append(button('Review again', 'ghost', () => { void run(null, true); }));
         if (status.form) {
           const form = status.form;
@@ -243,9 +242,10 @@ function steps(status: SetupStatus, retry: () => void): HTMLElement {
   const list = el('ol', { 'aria-label': 'Setup steps', style: 'margin:0;padding:0;list-style:none;display:grid;gap:var(--sp-2)' });
   for (const s of status.steps) {
     const item = el('li', { 'data-state': s.state }, el('strong', {}, s.title), ' ', el('span', { style: 'color:var(--text-quiet)' }, '(' + (STATE_WORD[s.state] ?? s.state) + ')'));
-    if (s.detail) item.append(el('div', { style: 'color:var(--text-dim)' }, s.detail));
+    /* a stopped step says what failed in boopis's words, its stable code, and the way out (the host's one error mapper) */
+    if (s.detail) item.append(el('div', { style: 'color:var(--text-dim)' }, s.detail + (s.state === 'blocked' && s.code ? ' (' + s.code + ')' : '')));
     /* a stopped step can be run again without restarting the app: setup recomputes every step from reality, so what is done
-       stays done and the stopped one runs once more. Missing Hermes has its own "Check again", under the command to run. */
+       stays done and the stopped one runs once more. A missing engine has its own "Check again". */
     if (s.state === 'blocked' && !status.install_command) {
       const b = button('Retry', 'ghost', retry);
       b.setAttribute('aria-label', 'Retry ' + s.title);

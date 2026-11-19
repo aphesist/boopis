@@ -565,8 +565,13 @@ pub fn remove_old(runtimes_dir: &Path, keep: &Path) -> Vec<PathBuf> {
     removed
 }
 
-/// The private Hermes home inside the app's data folder.
-pub const HOME_DIR: &str = "hermes-home";
+/// The private Hermes home inside the app's data folder: `engine`, because the user may see the path (a bot's folder
+/// is `<data dir>/engine/profiles/<name>`) and boopis's engine is never named to them (ADR-0031). Builds before that
+/// called it [`OLD_HOME_DIR`]; `migrate::engine_home` moves it once.
+pub const HOME_DIR: &str = "engine";
+
+/// What the private home was called before ADR-0031. Read only by the one-time move.
+pub const OLD_HOME_DIR: &str = "hermes-home";
 
 /// The runtime this build carries and where the app keeps its data: everything first-run setup needs to put it in place.
 #[derive(Debug, Clone)]
@@ -584,10 +589,20 @@ impl Plan {
         self.data_dir.join("runtime")
     }
 
-    /// The private `HERMES_HOME`: `<data dir>/hermes-home`. Never the user's `~/.hermes`.
+    /// The private `HERMES_HOME`: `<data dir>/engine`. Never the user's `~/.hermes`. The one exception is a start where
+    /// the one-time move could not run yet (`migrate::engine_home` found a gateway that would not stop): the old folder
+    /// is then used as it is, and moved on the next start.
     #[must_use]
     pub fn home(&self) -> PathBuf {
-        self.data_dir.join(HOME_DIR)
+        let (new, old) = (
+            self.data_dir.join(HOME_DIR),
+            self.data_dir.join(OLD_HOME_DIR),
+        );
+        if !new.exists() && old.is_dir() {
+            old
+        } else {
+            new
+        }
     }
 
     /// The environment that makes this runtime the only Hermes (its launcher path is known before it is unpacked).
@@ -601,7 +616,7 @@ impl Plan {
     }
 }
 
-/// Which Hermes the app runs: the one it carries, or one the user already has (the advanced setting).
+/// Which Hermes the app runs: the one it carries, or one the user already has (`boopis --engine existing`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "snake_case")]
 pub enum Source {
@@ -631,10 +646,28 @@ impl Source {
             .or_else(|| saved.and_then(Self::parse))
             .unwrap_or_default()
     }
+
+    /// The choice for this process: `boopis --engine <word>` (wins), else `BOOPIS_HERMES`, else the bundled runtime.
+    /// Neither is named in the app (ADR-0031); `docs/ENGINE.md` documents both.
+    #[must_use]
+    pub fn from_process() -> Self {
+        CLI_CHOICE
+            .get()
+            .copied()
+            .unwrap_or_else(|| Self::resolve(std::env::var("BOOPIS_HERMES").ok().as_deref(), None))
+    }
+}
+
+/// What `boopis --engine <word>` chose for this run.
+static CLI_CHOICE: std::sync::OnceLock<Source> = std::sync::OnceLock::new();
+
+/// Record `boopis --engine <word>` for this process (the first call wins).
+pub fn choose_for_this_run(choice: Source) {
+    let _ = CLI_CHOICE.set(choice);
 }
 
 impl Source {
-    /// The word the setting stores and `BOOPIS_HERMES` reads.
+    /// The word `--engine` and `BOOPIS_HERMES` take.
     #[must_use]
     pub fn word(self) -> &'static str {
         match self {
@@ -644,52 +677,14 @@ impl Source {
     }
 }
 
-/// The advanced setting "Use my own Hermes", as Settings shows it (`hermes_source_get`). Everything is what the host knows:
-/// nothing is guessed about a Hermes it has not looked at.
+/// Which engine this run uses, for the first-run screen's words (`engine_source_get`). The choice itself is made on the
+/// command line or in the environment only (ADR-0031), so there is nothing to save here.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
-pub struct SourceView {
-    /// What is saved (`None`: nothing was ever chosen, so the bundled runtime).
-    pub saved: Option<Source>,
-    /// `BOOPIS_HERMES`, when it is set to a value that means something. It wins over the saved choice.
-    pub from_env: Option<Source>,
-    /// Which Hermes the next start uses: the environment, else the saved choice, else the bundled runtime.
-    pub next: Source,
-    /// Which Hermes this run started with. A change in `saved` takes effect only when it differs and the app restarts.
+pub struct EngineView {
+    /// Which engine this run started with.
     pub running: Source,
-    /// Whether this build carries a Hermes runtime at all (a source build does not, and always uses the machine's Hermes).
+    /// Whether this build carries an engine at all (a source build does not, and always uses the machine's).
     pub carries_runtime: bool,
-}
-
-impl SourceView {
-    /// Settings' view of the choice.
-    #[must_use]
-    pub fn new(
-        from_env: Option<&str>,
-        saved: Option<&str>,
-        running: Source,
-        carries_runtime: bool,
-    ) -> Self {
-        let saved_source = saved.and_then(Source::parse);
-        Self {
-            saved: saved_source,
-            from_env: from_env.and_then(Source::parse),
-            next: Source::resolve(from_env, saved),
-            running,
-            carries_runtime,
-        }
-    }
-
-    /// Whether a restart is needed for what is saved to be what runs.
-    #[must_use]
-    pub fn restart_needed(&self) -> bool {
-        self.carries_runtime && self.next != self.running
-    }
-}
-
-/// The value the settings file holds under `hermes_source` for `source`: what [`stored_source`] reads back.
-#[must_use]
-pub fn source_value(source: Source) -> serde_json::Value {
-    serde_json::Value::String(source.word().to_owned())
 }
 
 /// The Hermes this run uses, from the choice, the build and the app's data folder: the plan to unpack and run the bundled
@@ -723,14 +718,6 @@ pub fn plan_for(
             }
         },
     }
-}
-
-/// The saved choice of Hermes, read from the text of the Tauri store's `settings.json` (`{"hermes_source": "existing"}`).
-/// Lenient like `gpu::stored_policy`: a file that does not read means "no saved choice".
-#[must_use]
-pub fn stored_source(settings_json: &str) -> Option<String> {
-    let v: serde_json::Value = serde_json::from_str(settings_json).ok()?;
-    v.get("hermes_source")?.as_str().map(str::to_owned)
 }
 
 #[cfg(test)]

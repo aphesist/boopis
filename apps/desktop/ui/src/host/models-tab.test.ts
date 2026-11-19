@@ -64,10 +64,10 @@ describe('Settings > Models', () => {
     expect(down.querySelector('#hx-models-change'), 'the button is still there: choosing models does not need the read').toBeTruthy();
   });
 
-  it('says Hermes is not connected when the plan cannot be read, rather than drawing one', async () => {
+  it('says the engine is not connected when the plan cannot be read, rather than drawing one', async () => {
     const panel = document.createElement('div');
     await mountModels(panel, deps({ plan: () => Promise.resolve(null) }));
-    expect(panel.textContent).toContain('Hermes is not connected, so the plan cannot be read.');
+    expect(panel.textContent).toContain('boopis\'s engine is not connected, so the plan cannot be read.');
     expect(panel.textContent).not.toContain('Free (');
   });
 

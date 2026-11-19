@@ -33,7 +33,7 @@ from .cell import CallFailure, CallRecord, Cell
 _log = get_logger("exec.calls")
 TRUNCATION_NOTE = "\n[cut by exec.call_result_cap_bytes; ask the tool for less]"
 UNSUPPORTED_DIAGNOSTICS = (
-    "diagnostics are not available: Hermes's language-server integration reports only the delta of its own "
+    "diagnostics are not available: the language-server integration reports only the delta of its own "
     "writes, and exec never writes the workspace. Run the project's checker with harness.sh instead."
 )
 

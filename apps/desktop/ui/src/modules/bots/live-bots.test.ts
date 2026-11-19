@@ -168,7 +168,7 @@ describe('making a bot asks first: the folder it makes and the model it starts o
     type('kai'); q('.bt-go').click(); await flush();
     [...document.querySelectorAll<HTMLButtonElement>('.bt-confirm button')].find((b) => b.textContent?.includes('Make kai'))!.click();
     await flush();
-    expect(q('.bt-confirm-err').textContent).toBe('Hermes did not make it: profile ‘kai’ already exists');
+    expect(q('.bt-confirm-err').textContent).toBe('It was not made: profile ‘kai’ already exists');
     expect(q('.bt-confirm').isConnected).toBe(true);
   });
   it('Back returns to the form with nothing made', async () => {
@@ -201,7 +201,7 @@ describe('the settings sheet edits the profile and shows each file’s diff firs
     expect(well.textContent).toContain('profile.yaml: role');
     expect(well.querySelector('[data-d="add"]')?.textContent).toContain('security reviewer');
     expect(well.querySelector('[data-d="del"]')?.textContent).toContain('reviews pull requests');
-    label('Save to Hermes').click(); await flush();
+    label('Save changes').click(); await flush();
     expect(f.calls.find((c) => c.fn === 'save')!.args).toEqual(['atlas', { role: 'security reviewer' }, {}]);
   });
   it('Done does not drop an unsaved change: it shows it', () => {
@@ -211,15 +211,15 @@ describe('the settings sheet edits the profile and shows each file’s diff firs
     expect(q('.bt-review').hidden).toBe(false);
   });
   it('a refused save keeps the diff open and says what Hermes said', async () => {
-    f.saveError = new Error('Hermes did not save SOUL.md. The rest was saved.');
-    edit('.ui-field input', 'x'); label('Review changes').click(); label('Save to Hermes').click(); await flush();
-    expect(q('.bt-review [role="alert"]').textContent).toContain('Hermes did not save SOUL.md');
-    expect(label('Save to Hermes').disabled).toBe(false);
+    f.saveError = new Error('SOUL.md could not be saved. The rest was saved.');
+    edit('.ui-field input', 'x'); label('Review changes').click(); label('Save changes').click(); await flush();
+    expect(q('.bt-review [role="alert"]').textContent).toContain('SOUL.md could not be saved');
+    expect(label('Save changes').disabled).toBe(false);
   });
   it('a model Hermes wants confirmed is confirmed by the user, then sent once', async () => {
     f.saveError = new NeedsConfirmation('This model sends your code to a third party.');
     pickModel('.bt-sheet', 'nous/hermes-4');
-    label('Review changes').click(); label('Save to Hermes').click(); await flush();
+    label('Review changes').click(); label('Save changes').click(); await flush();
     expect(q('.bt-review').textContent).toContain('This model sends your code to a third party.');
     f.saveError = null;
     label('Use this model anyway').click(); await flush();

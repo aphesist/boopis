@@ -361,6 +361,9 @@ pub struct RendererReport {
     /// Which GPU the webview renders on (`BOOPIS_GPU`), and why. The power source and the restart advice are read
     /// when the report is asked for.
     pub gpu: gpu::Report,
+    /// The engine's own words behind the errors the UI showed as boopis sentences this run (ADR-0031), oldest first.
+    /// Filled when the report is asked for; Diagnostics is the one place they are shown.
+    pub errors: Vec<crate::error::RecentError>,
 }
 
 /// The switches that make `WebKitGTK` paint on the CPU (no accelerated compositing, so no compositor-thread animation).
@@ -431,6 +434,7 @@ pub fn report(inputs: &Inputs, decision: &Decision, gpu: gpu::Report) -> Rendere
         frame_rate: frame_rate::Report::pending(frame_rate::Policy::from_env()),
         note: note(inputs, decision),
         gpu,
+        errors: Vec::new(),
         choices: [
             ("default", "nothing: WebKitGTK's own choice"),
             (

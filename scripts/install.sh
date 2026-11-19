@@ -22,7 +22,7 @@ APP_COMMENT='A desktop app for AI coding agents'
 # app sets no GTK application id (`enableGtkAppId` is off in tauri.conf.json).
 APP_WM_CLASS=boopis
 APP_GENERIC_NAME='Coding harness'
-APP_KEYWORDS='coding;agent;hermes;ai;'
+APP_KEYWORDS='coding;agent;ai;'
 # The files of a release. {v} is the version without its leading v.
 ARTIFACT_LINUX_X86_64='boopis_{v}_amd64.AppImage'
 ARTIFACT_MACOS_AARCH64='boopis_{v}_aarch64.dmg'

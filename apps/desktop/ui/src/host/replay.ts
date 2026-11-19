@@ -80,7 +80,7 @@ export class ReplayHost implements HostBridge {
     const n = this.used.get(key) ?? 0;
     const pick = outs[Math.min(n, outs.length - 1)];
     this.used.set(key, n + 1);
-    if (!pick) { this.onFrame({ jsonrpc: '2.0', id, error: { code: -32601, message: 'unknown method: ' + method + ' \u2014 not available on this Hermes backend', data: { reason: 'unknown_method' } } }); return; }
+    if (!pick) { this.onFrame({ jsonrpc: '2.0', id, error: { code: -32601, message: 'unknown method: ' + method + ' is not available in this recording', data: { reason: 'unknown_method' } } }); return; }
     const reqId = pick.r.frame['id'];
     const resIdx = this.frames.findIndex((r) => r.dir === 'in' && r.frame['id'] === reqId && ('result' in r.frame || 'error' in r.frame));
     const res = this.frames[resIdx]?.frame;

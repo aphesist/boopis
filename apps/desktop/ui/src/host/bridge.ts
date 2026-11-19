@@ -12,7 +12,7 @@ export interface Connected {
   describe: unknown;
 }
 
-/** an error from the host: a stable code (`hx.hermes.unavailable`, `hx.hermes.incompatible`, ...) and a message */
+/** an error from the host: a stable code (`hx.engine.unavailable`, `hx.engine.incompatible`, ...) and a message */
 export class HostError extends Error {
   readonly code: string;
   constructor(code: string, message: string) {

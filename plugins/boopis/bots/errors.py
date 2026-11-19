@@ -20,4 +20,4 @@ class BotRefusedError(BoopisError):
 class HermesCliError(BoopisError):
     """Hermes's CLI refused or failed. ``data.output`` is what it said (its last lines)."""
 
-    code = "hx.bots.hermes_failed"
+    code = "hx.bots.engine_failed"

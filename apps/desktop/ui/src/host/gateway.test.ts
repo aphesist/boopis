@@ -46,11 +46,11 @@ describe('the gateway client', () => {
     const states: LinkState[] = [];
     client.onEvent((e) => events.push(e));
     client.onState((s) => states.push(s));
-    host.event('connection.state', '', { state: 'degraded', error: { code: 'hx.hermes.unavailable', message: 'gone' } });
+    host.event('connection.state', '', { state: 'degraded', error: { code: 'hx.engine.unavailable', message: 'gone' } });
     host.event('connection.state', '', { state: 'ready', reconnected: true });
     host.event('message.delta', 's1', { text: 'hi' }, 4);
     expect(states.map((s) => [s.phase, s.reconnected])).toEqual([['degraded', false], ['ready', true]]);
-    expect(states[0]?.error?.code).toBe('hx.hermes.unavailable');
+    expect(states[0]?.error?.code).toBe('hx.engine.unavailable');
     expect(events.map((e) => e.type)).toEqual(['connection.state', 'connection.state', 'message.delta']);
     expect(client.state().phase).toBe('ready');
   });
@@ -76,14 +76,30 @@ describe('the gateway client', () => {
     const { host, client } = await connected();
     const p = client.requestRaw('x', {});
     await client.close();
-    await expect(p).rejects.toMatchObject({ code: 'hx.hermes.unavailable' });
+    await expect(p).rejects.toMatchObject({ code: 'hx.engine.unavailable' });
     expect(host.disconnected).toEqual([1]);
-    await expect(client.requestRaw('y', {})).rejects.toMatchObject({ code: 'hx.hermes.unavailable' });
+    await expect(client.requestRaw('y', {})).rejects.toMatchObject({ code: 'hx.engine.unavailable' });
   });
 
   it('shows a connect failure as the host sent it', async () => {
     const host = new FakeHost();
-    host.failConnect = { code: 'hx.hermes.incompatible', message: 'too old' };
-    await expect(new GatewayClient(host).connect()).rejects.toMatchObject({ code: 'hx.hermes.incompatible' });
+    host.failConnect = { code: 'hx.engine.incompatible', message: 'too old' };
+    await expect(new GatewayClient(host).connect()).rejects.toMatchObject({ code: 'hx.engine.incompatible' });
+  });
+});
+
+describe('the engine\'s own refusals (ADR-0031)', () => {
+  it('shows the catalog sentence and keeps the engine\'s words for Diagnostics; ours stay as they are', async () => {
+    const { GatewayError } = await import('./gateway');
+    const { engineDetails } = await import('./errors');
+    const raw = GatewayError.fromFrame(-32000, 'hermes refused updates.check: OSError: [Errno 13]', { reason: 'x' });
+    expect(raw.code).toBe('hx.engine.refused');
+    expect(raw.message).not.toMatch(/hermes|OSError/i);
+    expect(raw.message).toContain('Diagnostics');
+    expect(raw.data).toEqual({ reason: 'x' });
+    expect(engineDetails().at(-1)?.detail).toContain('OSError');
+    const ours = GatewayError.fromFrame(-32000, 'The ledger could not be opened.', { code: 'hx.ledger.unavailable' });
+    expect(ours.message).toBe('The ledger could not be opened.');
+    expect(GatewayError.fromFrame(-32601, 'unknown method', { reason: 'unknown_method' }).rpcCode).toBe(-32601);
   });
 });

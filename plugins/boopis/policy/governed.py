@@ -19,7 +19,7 @@ from .types import ALLOW, Decision, Role, ToolCall, block
 
 _HINT = (
     "Governed mode: this call could change the workspace. Only the boopis tools "
-    "(pack, exec, ship, dispatch) and read-only Hermes tools are available."
+    "(pack, exec, ship, dispatch) and read-only tools are available."
 )
 _BY_ROLE = {
     "orchestrator": (

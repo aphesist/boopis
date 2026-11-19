@@ -263,13 +263,13 @@
   },
   "request_credential": {
     "name": "request_credential",
-    "description": "Ask the user for an API key or token. They type it into the app, which saves it in their OS keychain; you never see it. You get {saved: true, ref}. Name the provider (a Hermes provider such as anthropic, or a named endpoint) or the host the token is for. Never ask for a key in chat.",
+    "description": "Ask the user for an API key or token. They type it into the app, which saves it in their OS keychain; you never see it. You get {saved: true, ref}. Name the provider (a provider such as anthropic, or a named endpoint) or the host the token is for. Never ask for a key in chat.",
     "parameters": {
       "type": "object",
       "properties": {
         "provider": {
           "type": "string",
-          "description": "The Hermes provider the key is for (for example anthropic, openrouter, or a named endpoint)."
+          "description": "The provider the key is for (for example anthropic, openrouter, or a named endpoint)."
         },
         "host": {
           "type": "string",

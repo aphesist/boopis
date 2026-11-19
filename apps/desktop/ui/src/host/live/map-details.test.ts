@@ -53,7 +53,7 @@ describe('connectors', () => {
 
 describe('environment', () => {
   it('is what the session and the plugin say, and empty where nothing says it', () => {
-    expect(environmentFrom(info, describe_)).toEqual({ cwd: '/work/proj', branch: 'master', sandbox: '', runtime: 'Hermes (release 2026.9.24)', harness: 'boopis 0.1.0', gate: '' });
+    expect(environmentFrom(info, describe_)).toEqual({ cwd: '/work/proj', branch: 'master', sandbox: '', runtime: 'boopis engine (release 2026.9.24)', harness: 'boopis 0.1.0', gate: '' });
     expect(environmentFrom(null, null)).toEqual({ cwd: '', branch: '', sandbox: '', runtime: '', harness: '', gate: '' });
   });
 });

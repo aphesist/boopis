@@ -167,7 +167,7 @@ fn a_pipe_gets_text_not_a_logo_or_marks() {
 }
 
 #[test]
-fn the_version_names_hermes_and_webkitgtk() {
+fn the_version_names_the_engine_and_webkitgtk() {
     let facts = Facts {
         hermes: Some("0.23.2".into()),
         webkit: webkit::Report {
@@ -179,7 +179,7 @@ fn the_version_names_hermes_and_webkitgtk() {
     let t = version_lines(&plain(), "0.1.0", &facts).join("\n");
     assert_eq!(
         t,
-        "b●●pis 0.1.0\n  hermes     0.23.2, bundled\n  webkitgtk  2.52.6, bundled"
+        "b●●pis 0.1.0\n  engine     0.23.2, bundled\n  webkitgtk  2.52.6, bundled"
     );
     let none = Facts {
         hermes: None,
@@ -226,5 +226,51 @@ fn only_commands_attach_to_the_parent_console() {
     assert!(!needs_console(&parse(&args(&["boopis://open"]))));
     for a in [&["--version"][..], &["doctor"], &["--help"], &["--nope"]] {
         assert!(needs_console(&parse(&args(a))), "{a:?}");
+    }
+}
+
+#[test]
+fn the_engine_flag_is_read_first_and_only_with_a_known_word() {
+    let (choice, rest) = split_engine(&args(&["--engine", "existing"])).unwrap();
+    assert_eq!(choice, Some(runtime::Source::Existing));
+    assert!(rest.is_empty());
+    assert_eq!(parse(&rest), Command::Launch);
+    let (choice, rest) = split_engine(&args(&["--engine=bundled", "doctor"])).unwrap();
+    assert_eq!(choice, Some(runtime::Source::Bundled));
+    assert_eq!(parse(&rest), Command::Doctor);
+    assert_eq!(
+        split_engine(&args(&["--engine", "mine"])),
+        Err("mine".to_owned())
+    );
+    assert_eq!(split_engine(&args(&["--engine"])), Err(String::new()));
+    let (choice, rest) = split_engine(&args(&["doctor"])).unwrap();
+    assert_eq!((choice, rest), (None, args(&["doctor"])));
+}
+
+/// `--version`, `doctor` and `--help` never name the engine (ADR-0031).
+#[test]
+fn no_command_names_the_engine() {
+    let facts = Facts {
+        hermes: Some("0.23.2".into()),
+        webkit: webkit::Report {
+            version: None,
+            origin: webkit::Origin::Unknown,
+            library: None,
+        },
+    };
+    let mut all = version_lines(&plain(), "0.1.0", &facts);
+    all.extend(doctor_lines(&plain(), "0.1.0", &fixture(true)));
+    all.extend(help_lines(&plain(), "0.1.0"));
+    let mut broken = fixture(true);
+    broken.runtime = RuntimeStatus::Broken("the bundled Hermes runtime cannot be read".into());
+    all.extend(doctor_lines(&plain(), "0.1.0", &broken));
+    let mut existing = fixture(true);
+    existing.runtime = RuntimeStatus::Existing {
+        chosen: true,
+        home: "/nonexistent/home".into(),
+    };
+    all.extend(doctor_lines(&plain(), "0.1.0", &existing));
+    for line in all {
+        assert!(!crate::error::names_engine(&line), "{line}");
     }
 }

@@ -41,7 +41,7 @@ def test_a_tier_must_name_a_provider_not_hermes_pick(provider: str) -> None:
 
 def test_a_provider_hermes_does_not_know_is_refused_with_the_tier_that_names_it() -> None:
     problems = ladder_problems(ladder("main/a", "ghost/b"), lambda p: p == "main")
-    assert problems == ["tier 't1' names the provider 'ghost', which Hermes has no configuration for"]
+    assert problems == ["tier 't1' names the provider 'ghost', which is not configured"]
 
 
 def test_start_tier_must_name_a_tier() -> None:

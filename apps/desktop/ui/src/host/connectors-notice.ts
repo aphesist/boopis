@@ -4,7 +4,7 @@ import { events } from './bindings';
 import { ui } from '@boopis/ui';
 
 export interface RestartNotice { names: readonly string[]; ok: boolean; message: string }
-export function noticeText(n: RestartNotice): string { return n.message || (n.ok ? 'Hermes restarted.' : 'Hermes was not restarted.'); }
+export function noticeText(n: RestartNotice): string { return n.message || (n.ok ? 'boopis restarted to read the key.' : 'boopis did not restart. The key is saved; restart boopis to use it.'); }
 
 /** listen for the host's notices; returns the function that stops listening */
 export async function listenConnectorRestarts(toast: (text: string) => void = (t) => { ui.toast(t); }, listen: (cb: (n: RestartNotice) => void) => Promise<() => void> = (cb) => events.connectorRestartEvent.listen((e) => { cb(e.payload); })): Promise<() => void> {

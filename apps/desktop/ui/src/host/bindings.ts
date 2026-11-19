@@ -31,14 +31,11 @@ export const commands = {
 	 *  the UI asks itself (`free_tier.status`).
 	 */
 	setupModelsView: (profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<ModelsView_Serialize>("setup_models_view", { profile }, options),
-	/**  The advanced setting "Use my own Hermes": which Hermes the app runs, what is saved, and whether a restart is due. */
-	hermesSourceGet: (options?: InvokeOptions) => __TAURI_INVOKE<SourceView_Serialize>("hermes_source_get", undefined, options),
 	/**
-	 *  Save which Hermes the app runs (`settings.json`, `hermes_source`, which `BOOPIS_HERMES` overrides). It is read when the
-	 *  app starts, so nothing changes until a restart; the answer says whether one is due. A build with no bundled runtime has
-	 *  no choice to make, and is refused.
+	 *  Which engine this run uses (the bundled one or the machine's), so the first-run screen says what setup is about to
+	 *  do. Read-only: the choice is `boopis --engine existing` or `BOOPIS_HERMES`, never a setting (ADR-0031).
 	 */
-	hermesSourceSet: (source: Source, options?: InvokeOptions) => __TAURI_INVOKE<SourceView_Serialize>("hermes_source_set", { source }, options),
+	engineSourceGet: (options?: InvokeOptions) => __TAURI_INVOKE<EngineView>("engine_source_get", undefined, options),
 	/**  Open a UI connection to the gateway of a profile. Frames arrive on `frames`. */
 	gatewayConnect: (profile: string | null, frames: Channel<Frame>, options?: InvokeOptions) => __TAURI_INVOKE<Connected>("gateway_connect", { profile, frames }, options),
 	/**  Send a JSON-RPC frame to the gateway. The host validates shape and size and never alters `params`. */
@@ -664,6 +661,17 @@ export type DiffLine_Serialize = {
 	to: unknown,
 };
 
+/**
+ *  Which engine this run uses, for the first-run screen's words (`engine_source_get`). The choice itself is made on the
+ *  command line or in the environment only (ADR-0031), so there is nothing to save here.
+ */
+export type EngineView = {
+	/**  Which engine this run started with. */
+	running: Source,
+	/**  Whether this build carries an engine at all (a source build does not, and always uses the machine's). */
+	carries_runtime: boolean,
+};
+
 /**  A form for the UI, in the shape of the plugin's `form.opened` (`docs/FORMS.md` section 6). */
 export type Form = Form_Serialize | Form_Deserialize;
 
@@ -1020,7 +1028,7 @@ export type HermesStatus_Serialize = {
 
 /**  The error as the UI sees it: a stable code and a message. Never carries a secret, a ticket or a token. */
 export type HostError = {
-	/**  A stable code such as `hx.hermes.unavailable`. */
+	/**  A stable code such as `hx.engine.unavailable`. */
 	code: string,
 	/**  A human-readable message. */
 	message: string,
@@ -1250,6 +1258,16 @@ export type Receipt = {
 	lines: string[],
 };
 
+/**  One raw error kept for Diagnostics: the code, what was actually said, and when (Unix seconds). */
+export type RecentError = {
+	/**  The stable code. */
+	code: string,
+	/**  The raw text the UI was not shown. */
+	detail: string,
+	/**  When it happened, in seconds since the Unix epoch. */
+	at: number | null,
+};
+
 /**  Everything the diagnostics show: what was found, what was decided and what the web process will see. */
 export type RendererReport = RendererReport_Serialize | RendererReport_Deserialize;
 
@@ -1285,6 +1303,11 @@ export type RendererReport_Deserialize = {
 	 *  when the report is asked for.
 	 */
 	gpu: GpuReport_Deserialize,
+	/**
+	 *  The engine's own words behind the errors the UI showed as boopis sentences this run (ADR-0031), oldest first.
+	 *  Filled when the report is asked for; Diagnostics is the one place they are shown.
+	 */
+	errors: RecentError[],
 };
 
 /**  Everything the diagnostics show: what was found, what was decided and what the web process will see. */
@@ -1319,6 +1342,11 @@ export type RendererReport_Serialize = {
 	 *  when the report is asked for.
 	 */
 	gpu: GpuReport_Serialize,
+	/**
+	 *  The engine's own words behind the errors the UI showed as boopis sentences this run (ADR-0031), oldest first.
+	 *  Filled when the report is asked for; Diagnostics is the one place they are shown.
+	 */
+	errors: RecentError[],
 };
 
 /**  Why the decision came out as it did (stable names: they go in the log and in the diagnostics). */
@@ -1393,52 +1421,12 @@ export type SignIn = {
 	label: string,
 };
 
-/**  Which Hermes the app runs: the one it carries, or one the user already has (the advanced setting). */
+/**  Which Hermes the app runs: the one it carries, or one the user already has (`boopis --engine existing`). */
 export type Source = 
 /**  The bundled runtime, in a private home (the default). */
 "bundled" | 
 /**  The `hermes` found on the machine, in the user's own home (`HERMES_HOME`, else `~/.hermes`). */
 "existing";
-
-/**
- *  The advanced setting "Use my own Hermes", as Settings shows it (`hermes_source_get`). Everything is what the host knows:
- *  nothing is guessed about a Hermes it has not looked at.
- */
-export type SourceView = SourceView_Serialize | SourceView_Deserialize;
-
-/**
- *  The advanced setting "Use my own Hermes", as Settings shows it (`hermes_source_get`). Everything is what the host knows:
- *  nothing is guessed about a Hermes it has not looked at.
- */
-export type SourceView_Deserialize = {
-	/**  What is saved (`None`: nothing was ever chosen, so the bundled runtime). */
-	saved?: Source | null,
-	/**  `BOOPIS_HERMES`, when it is set to a value that means something. It wins over the saved choice. */
-	from_env?: Source | null,
-	/**  Which Hermes the next start uses: the environment, else the saved choice, else the bundled runtime. */
-	next: Source,
-	/**  Which Hermes this run started with. A change in `saved` takes effect only when it differs and the app restarts. */
-	running: Source,
-	/**  Whether this build carries a Hermes runtime at all (a source build does not, and always uses the machine's Hermes). */
-	carries_runtime: boolean,
-};
-
-/**
- *  The advanced setting "Use my own Hermes", as Settings shows it (`hermes_source_get`). Everything is what the host knows:
- *  nothing is guessed about a Hermes it has not looked at.
- */
-export type SourceView_Serialize = {
-	/**  What is saved (`None`: nothing was ever chosen, so the bundled runtime). */
-	saved: Source | null,
-	/**  `BOOPIS_HERMES`, when it is set to a value that means something. It wins over the saved choice. */
-	from_env: Source | null,
-	/**  Which Hermes the next start uses: the environment, else the saved choice, else the bundled runtime. */
-	next: Source,
-	/**  Which Hermes this run started with. A change in `saved` takes effect only when it differs and the app restarts. */
-	running: Source,
-	/**  Whether this build carries a Hermes runtime at all (a source build does not, and always uses the machine's Hermes). */
-	carries_runtime: boolean,
-};
 
 /**  Where the CLI stands, in the words a person needs. */
 export type State = 
