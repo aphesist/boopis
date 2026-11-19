@@ -15,11 +15,11 @@ use std::process::{Child, Command, Stdio};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use hypotaxis_host::config::Limits;
-use hypotaxis_host::endpoint::EndpointConfig;
-use hypotaxis_host::error::{Error, Result};
-use hypotaxis_host::gateway::{FrameSink, Hub};
-use hypotaxis_host::hermes::{Environment, Supervisor};
+use boopis_host::config::Limits;
+use boopis_host::endpoint::EndpointConfig;
+use boopis_host::error::{Error, Result};
+use boopis_host::gateway::{FrameSink, Hub};
+use boopis_host::hermes::{Environment, Supervisor};
 use serde_json::{Value, json};
 use tokio::sync::mpsc;
 

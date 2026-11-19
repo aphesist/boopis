@@ -1,4 +1,4 @@
-/* hypotaxis dock. One black slab flush to the window's bottom edge (OWNER DECISION: pitch black #000 in every theme,
+/* boopis dock. One black slab flush to the window's bottom edge (OWNER DECISION: pitch black #000 in every theme,
    not themeable). Built on the shared library: orbs, bot states, icons, buttons, ladder, capacity, measure, page dots,
    switches, empty states, tooltips, announcements, and the canonical cards for approvals and the open question
    (ui.card, dock ground). The dock keeps only what is its own: the slab, the views and their travel, magnification,

@@ -1,4 +1,4 @@
-//! The runtime that runs Claude Code mods unchanged inside hypotaxis.
+//! The runtime that runs Claude Code mods unchanged inside boopis.
 //!
 //! A mod is a plugin whose `hooks/hooks.json` names JavaScript or TypeScript modules. This crate
 //! loads them into one `QuickJS` isolate (TypeScript and JSX are compiled on load, no build step),

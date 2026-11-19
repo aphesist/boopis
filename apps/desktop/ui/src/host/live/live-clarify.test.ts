@@ -52,7 +52,7 @@ describe('clarify', () => {
     host.event('clarify.request', SID, { kind: 'clarify', prompt_id: 'c1', execution_generation: 3, question: 'Which branch?', choices: ['main', 'dev'], multi_select: false }, 2);
     await provider.forms.submit('c1', { values: { answer: 'dev' }, secrets: {} });
     expect(host.last('clarify.respond')?.['params']).toEqual({ session_id: SID, execution_generation: 3, prompt_id: 'c1', answer: 'dev' });
-    expect(host.last('plugin.hypotaxis.form.submit')).toBeUndefined();
+    expect(host.last('plugin.boopis.form.submit')).toBeUndefined();
     expect(forms()).toHaveLength(0);
     expect(conv.some((e) => e.type === 'form-resolved' && e.formId === 'c1' && e.status === 'submitted')).toBe(true);
   });

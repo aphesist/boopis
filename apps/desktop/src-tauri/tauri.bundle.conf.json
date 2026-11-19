@@ -3,7 +3,7 @@
   "bundle": {
     "externalBin": ["binaries/hx"],
     "resources": {
-      "resources/plugin/hypotaxis": "plugin/hypotaxis",
+      "resources/plugin/boopis": "plugin/boopis",
       "resources/runtime": "runtime"
     }
   }

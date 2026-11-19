@@ -62,9 +62,9 @@ describe('importing a theme', () => {
     expect(sanitize('x')).toBeNull();
     expect(sanitize({ preset: 'nope' })?.preset).toBe('catalog');
   });
-  it('importJSON refuses text that is not a hypotaxis theme, with a precise message', () => {
+  it('importJSON refuses text that is not a boopis theme, with a precise message', () => {
     expect(() => themeApi.importJSON('{oops')).toThrow('not valid JSON');
-    expect(() => themeApi.importJSON('{"preset":"bone"}')).toThrow('hypotaxis-theme');
+    expect(() => themeApi.importJSON('{"preset":"bone"}')).toThrow('boopis-theme');
   });
   it('the four presets exist and each names its fonts', () => {
     expect(Object.keys(PRESETS)).toEqual(['catalog', 'graphite', 'bone', 'typewriter']);
@@ -80,7 +80,7 @@ describe('theme presets', () => {
     expect(document.documentElement.dataset['hxPreset']).toBe('typewriter');
     expect(document.documentElement.dataset['hxCase']).toBe('lower');
     expect(document.documentElement.dataset['hxCorners']).toBe('round');
-    expect(JSON.parse(themeApi.exportJSON())).toMatchObject({ format: 'hypotaxis-theme', version: 1, preset: 'typewriter', case: 'lower' });
+    expect(JSON.parse(themeApi.exportJSON())).toMatchObject({ format: 'boopis-theme', version: 1, preset: 'typewriter', case: 'lower' });
     themeApi.preset('catalog');
   });
   it('an override equal to the preset is dropped, so the preset stays meaningful', () => {

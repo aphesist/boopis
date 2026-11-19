@@ -1,4 +1,4 @@
-//! The hypotaxis desktop host: the machine authority of the Tauri app (`docs/ARCHITECTURE.md` sections 1, 3, 4, 10).
+//! The boopis desktop host: the machine authority of the Tauri app (`docs/ARCHITECTURE.md` sections 1, 3, 4, 10).
 //!
 //! It owns the Hermes lifecycle, the gateway connection (a validating, multiplexing proxy), the OS keychain, windows
 //! and notifications. The UI owns the experience and the backend (Hermes plus the plugin) owns the work.
@@ -14,6 +14,7 @@ pub mod free_tier;
 pub mod gateway;
 pub mod gpu;
 pub mod hermes;
+pub mod migrate;
 pub mod os;
 pub mod renderer;
 pub mod resources;
@@ -77,7 +78,7 @@ pub fn export_bindings(path: &std::path::Path) -> Result<(), String> {
 fn init_logging() {
     use tracing_subscriber::EnvFilter;
     let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("info,hypotaxis_host=info"));
+        .unwrap_or_else(|_| EnvFilter::new("info,boopis_host=info"));
     let _ = tracing_subscriber::fmt()
         .with_env_filter(filter)
         .with_writer(std::io::stderr)
@@ -104,7 +105,7 @@ pub struct Startup {
 #[must_use]
 pub fn startup(apply: bool) -> Startup {
     let mut renderer_inputs = renderer::probe();
-    // The GPU first (HYPOTAXIS_GPU): offload moves the rendering, which the renderer rules then judge.
+    // The GPU first (BOOPIS_GPU): offload moves the rendering, which the renderer rules then judge.
     let (gpu_inputs, gpu_source) = gpu::probe(
         renderer_inputs.gpus.clone(),
         renderer_inputs.session,
@@ -155,7 +156,10 @@ pub fn run() {
     }) {
         std::process::exit(code);
     }
-    // First thing, before any thread: WebKitGTK reads its renderer switches when the web view is created (ADR-0024).
+    // What a test build kept under the product's former name moves first: the GPU choice below is read from the app's
+    // settings file (ADR-0028). Only the filesystem here; the keychain waits for the logger and the threads it needs.
+    let migration = migrate::folders(&migrate::app_roots());
+    // Before any thread: WebKitGTK reads its renderer switches when the web view is created (ADR-0024).
     let Startup {
         gpu_inputs,
         gpu_source,
@@ -164,6 +168,10 @@ pub fn run() {
         ..
     } = startup(true);
     init_logging();
+    migration.log();
+    if !migration.refs.is_empty() {
+        migrate::keychain(&secrets::Keychain, &migration.refs).log();
+    }
     cli::banner_line(&renderer_report, &gpu_decision);
     tracing::info!(
         session = ?renderer_report.session,
@@ -222,7 +230,7 @@ pub fn run() {
             let _ = frame_rate::refresh(app.handle(), &fps);
             let limits = config::Limits::default();
             // Which Hermes: the one this build carries, unpacked into the app's own folder (ADR-0023), unless the
-            // advanced setting (`HYPOTAXIS_HERMES=existing`, or `hermes_source` in settings.json) asks for the user's own.
+            // advanced setting (`BOOPIS_HERMES=existing`, or `hermes_source` in settings.json) asks for the user's own.
             let saved_source = {
                 use tauri_plugin_store::StoreExt;
                 app.handle()
@@ -232,7 +240,7 @@ pub fn run() {
                     .and_then(|v| v.as_str().map(str::to_owned))
             };
             let source = runtime::Source::resolve(
-                std::env::var("HYPOTAXIS_HERMES").ok().as_deref(),
+                std::env::var("BOOPIS_HERMES").ok().as_deref(),
                 saved_source.as_deref(),
             );
             // The plugin, the runtime and `hx`: Tauri's resource directory, or the one a native package names after
@@ -395,7 +403,7 @@ mod tests {
     }
 
     /// CI's staleness check: the checked-in bindings are exactly what the registry generates.
-    /// `HX_UPDATE_BINDINGS=1 cargo test -p hypotaxis-host bindings` rewrites the file.
+    /// `HX_UPDATE_BINDINGS=1 cargo test -p boopis-host bindings` rewrites the file.
     #[test]
     fn bindings_are_fresh() {
         let path = std::path::Path::new(BINDINGS_PATH);
@@ -410,7 +418,7 @@ mod tests {
         let checked_in = std::fs::read_to_string(path).unwrap_or_default();
         assert!(
             checked_in == fresh,
-            "apps/desktop/ui/src/host/bindings.ts is stale: run `HX_UPDATE_BINDINGS=1 cargo test -p hypotaxis-host bindings`"
+            "apps/desktop/ui/src/host/bindings.ts is stale: run `HX_UPDATE_BINDINGS=1 cargo test -p boopis-host bindings`"
         );
     }
 }

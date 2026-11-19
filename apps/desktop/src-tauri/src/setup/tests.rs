@@ -143,11 +143,7 @@ fn rig(config: Value) -> Rig {
     let dir = tempfile::tempdir().unwrap();
     let plugin = dir.path().join("bundle");
     std::fs::create_dir_all(&plugin).unwrap();
-    std::fs::write(
-        plugin.join("plugin.yaml"),
-        "name: hypotaxis\nversion: 0.1.0\n",
-    )
-    .unwrap();
+    std::fs::write(plugin.join("plugin.yaml"), "name: boopis\nversion: 0.1.0\n").unwrap();
     std::fs::write(plugin.join("__init__.py"), "").unwrap();
     let hx = dir.path().join("hx-bin");
     std::fs::write(&hx, "hx").unwrap();
@@ -230,7 +226,7 @@ async fn the_whole_flow_with_consent_a_choice_and_a_key() {
         [
             "tools.tool_search.enabled",
             "delegation.backend",
-            "plugins.entries.hypotaxis.allow_gateway_injection"
+            "plugins.entries.boopis.allow_gateway_injection"
         ]
     );
     assert!(
@@ -241,7 +237,7 @@ async fn the_whole_flow_with_consent_a_choice_and_a_key() {
             .is_none(),
         "nothing before consent"
     );
-    assert!(r.fake.home.join("plugins/hypotaxis/__init__.py").is_file());
+    assert!(r.fake.home.join("plugins/boopis/__init__.py").is_file());
 
     let s = r
         .setup()
@@ -262,11 +258,11 @@ async fn the_whole_flow_with_consent_a_choice_and_a_key() {
             .await
             .unwrap()
             .unwrap(),
-        json!("hypotaxis")
+        json!("boopis")
     );
     assert_eq!(
         r.fake
-            .config_get("plugins.entries.hypotaxis.allow_gateway_injection")
+            .config_get("plugins.entries.boopis.allow_gateway_injection")
             .await
             .unwrap()
             .unwrap(),
@@ -295,7 +291,7 @@ async fn the_whole_flow_with_consent_a_choice_and_a_key() {
     );
     assert!(
         r.store
-            .get("hypotaxis.provider.main", "api_key")
+            .get("boopis.provider.main", "api_key")
             .unwrap()
             .is_none()
     );
@@ -316,7 +312,7 @@ async fn the_whole_flow_with_consent_a_choice_and_a_key() {
     assert!(s.done && s.form.is_none(), "{:?}", s.steps);
     assert_eq!(
         r.store
-            .get("hypotaxis.provider.main", "api_key")
+            .get("boopis.provider.main", "api_key")
             .unwrap()
             .as_deref(),
         Some(KEY)
@@ -332,7 +328,7 @@ async fn the_whole_flow_with_consent_a_choice_and_a_key() {
     );
     assert_eq!(
         r.fake
-            .config_get(&format!("secrets.hypotaxis_host.env.{env}"))
+            .config_get(&format!("secrets.boopis_host.env.{env}"))
             .await
             .unwrap()
             .unwrap(),
@@ -340,7 +336,7 @@ async fn the_whole_flow_with_consent_a_choice_and_a_key() {
     );
     assert_eq!(
         r.fake
-            .config_get("plugins.entries.hypotaxis.settings.ladder")
+            .config_get("plugins.entries.boopis.settings.ladder")
             .await
             .unwrap()
             .unwrap(),
@@ -472,7 +468,7 @@ async fn an_answer_to_another_form_is_refused() {
     assert_eq!(e.code(), "hx.setup.invalid_answer");
     assert!(
         r.store
-            .get("hypotaxis.provider.main", "api_key")
+            .get("boopis.provider.main", "api_key")
             .unwrap()
             .is_none(),
         "a refused answer stores nothing"
@@ -482,8 +478,8 @@ async fn an_answer_to_another_form_is_refused() {
 #[tokio::test]
 async fn claude_is_the_default_ladder_when_a_key_is_there() {
     let r = rig(
-        json!({"tools": {"tool_search": {"enabled": "off"}}, "delegation": {"backend": "hypotaxis"},
-        "plugins": {"entries": {"hypotaxis": {"allow_gateway_injection": true}}}}),
+        json!({"tools": {"tool_search": {"enabled": "off"}}, "delegation": {"backend": "boopis"},
+        "plugins": {"entries": {"boopis": {"allow_gateway_injection": true}}}}),
     );
     std::fs::write(
         r.fake.home.join(".env"),
@@ -496,7 +492,7 @@ async fn claude_is_the_default_ladder_when_a_key_is_there() {
     assert!(models.detail.contains("Claude ladder"));
     assert!(
         r.fake
-            .config_get("plugins.entries.hypotaxis.settings.ladder")
+            .config_get("plugins.entries.boopis.settings.ladder")
             .await
             .unwrap()
             .is_none(),
@@ -508,7 +504,7 @@ async fn claude_is_the_default_ladder_when_a_key_is_there() {
 async fn a_key_saved_for_anthropic_is_bound_to_its_own_variable() {
     let r = rig(json!({}));
     r.store
-        .set("hypotaxis.provider.anthropic", "api_key", KEY)
+        .set("boopis.provider.anthropic", "api_key", KEY)
         .unwrap();
     let _ = r.setup().advance(None, false).await.unwrap();
     let s = r
@@ -519,7 +515,7 @@ async fn a_key_saved_for_anthropic_is_bound_to_its_own_variable() {
     assert!(s.done, "{:?}", s.steps);
     assert_eq!(
         r.fake
-            .config_get("secrets.hypotaxis_host.env.ANTHROPIC_API_KEY")
+            .config_get("secrets.boopis_host.env.ANTHROPIC_API_KEY")
             .await
             .unwrap()
             .unwrap(),
@@ -545,7 +541,7 @@ const E2E_SETUP_DONE: &str = include_str!("../../../../../tests/e2e/setup-done.j
 /// A home the e2e stack prepared: the plugin copied in at the bundle's version and enabled, as `tests/e2e/stack.py` does.
 fn a_home_with_the_plugin(r: &Rig) {
     let home = r.fake.home.clone();
-    let plugin = home.join("plugins").join("hypotaxis");
+    let plugin = home.join("plugins").join("boopis");
     std::fs::create_dir_all(&plugin).unwrap();
     std::fs::copy(
         r.bundle.plugin_dir.as_ref().unwrap().join("plugin.yaml"),
@@ -553,7 +549,7 @@ fn a_home_with_the_plugin(r: &Rig) {
     )
     .unwrap();
     r.fake.plugins.lock().unwrap().push(PluginEntry {
-        name: "hypotaxis".into(),
+        name: "boopis".into(),
         enabled: true,
     });
 }
@@ -704,7 +700,7 @@ fn enum_of(form: &super::Form, field: &str) -> Vec<String> {
         .collect()
 }
 
-const LADDER: &str = "plugins.entries.hypotaxis.settings.ladder";
+const LADDER: &str = "plugins.entries.boopis.settings.ladder";
 
 #[tokio::test]
 async fn with_no_key_the_free_tier_is_the_first_choice_and_the_default_and_nothing_is_asked_of_nous_yet()
@@ -751,7 +747,7 @@ async fn with_no_key_the_free_tier_is_the_first_choice_and_the_default_and_nothi
 async fn a_claude_key_keeps_the_claude_ladder_as_the_default() {
     let r = rig(json!({}));
     r.store
-        .set("hypotaxis.provider.anthropic", "api_key", KEY)
+        .set("boopis.provider.anthropic", "api_key", KEY)
         .unwrap();
     let s = at_models(&r).await;
     assert!(s.done && s.form.is_none(), "{:?}", s.steps);
@@ -952,14 +948,14 @@ async fn the_openrouter_choice_asks_for_a_key_then_offers_the_free_models_smalle
     // the key is in the keychain and wired by name, never in a file
     assert_eq!(
         r.store
-            .get("hypotaxis.provider.openrouter", "api_key")
+            .get("boopis.provider.openrouter", "api_key")
             .unwrap()
             .as_deref(),
         Some(KEY)
     );
     assert_eq!(
         r.fake
-            .config_get("secrets.hypotaxis_host.env.OPENROUTER_API_KEY")
+            .config_get("secrets.boopis_host.env.OPENROUTER_API_KEY")
             .await
             .unwrap()
             .unwrap(),
@@ -998,7 +994,7 @@ async fn the_openrouter_choice_asks_for_a_key_then_offers_the_free_models_smalle
 async fn an_empty_openrouter_catalogue_or_a_pick_outside_it_never_writes_a_ladder() {
     let r = rig(json!({}));
     r.store
-        .set("hypotaxis.provider.openrouter", "api_key", KEY)
+        .set("boopis.provider.openrouter", "api_key", KEY)
         .unwrap();
     at_models(&r).await;
     let s = choose(&r, "openrouter-free").await;
@@ -1008,7 +1004,7 @@ async fn an_empty_openrouter_catalogue_or_a_pick_outside_it_never_writes_a_ladde
 
     let r = rig(json!({}));
     r.store
-        .set("hypotaxis.provider.openrouter", "api_key", KEY)
+        .set("boopis.provider.openrouter", "api_key", KEY)
         .unwrap();
     *r.fake.catalogue.lock().unwrap() = vec!["a/b-8b:free".into()];
     at_models(&r).await;

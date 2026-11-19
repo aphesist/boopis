@@ -7,7 +7,7 @@ export function showStartupFailure(err: unknown): void {
   box.setAttribute('role', 'alert');
   box.style.cssText = 'position:fixed;inset:0;display:grid;place-content:center;gap:12px;padding:32px;background:var(--bg-0);color:var(--text);font:inherit;text-align:center';
   const h = document.createElement('p');
-  h.textContent = 'hypotaxis could not reach Hermes';
+  h.textContent = 'boopis could not reach Hermes';
   h.style.cssText = 'margin:0;font-weight:600';
   const m = document.createElement('p');
   m.textContent = message;

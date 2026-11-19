@@ -1,5 +1,5 @@
 /* The form card: one renderer for every form (docs/FORMS.md), drawn from the schema (MCP elicitation's `requestedSchema`
-   plus the hypotaxis extensions: secret, multi, other, previews, pickers, upload, sign-in, hold to approve).
+   plus the boopis extensions: secret, multi, other, previews, pickers, upload, sign-in, hold to approve).
    A kind is a template (form-model.ts), never a new component. States: open, invalid, holding, submitting, done (a
    receipt), deferred, expired, cancelled. Keys (KEYMAP section 6): Tab and Shift+Tab move between fields, Enter submits
    (a hold form asks for the hold), mod+Enter submits from long text, Esc defers (never cancels), x cancels and 1-9 pick an

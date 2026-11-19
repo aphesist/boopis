@@ -1,4 +1,4 @@
-/* hypotaxis shared component library (v6 `HX.ui`), one module per primitive:
+/* boopis shared component library (v6 `HX.ui`), one module per primitive:
      html            string templates for modules that build innerHTML
      the factories   button, iconButton, segmented, chip, row, group, ... -> an element, already wired
      hydrate(root)   wires every [data-ui] element under root once

@@ -2562,7 +2562,7 @@
         },
         "runtime_ro": {
           "default": [],
-          "description": "Read-only roots of the program's own runtime (the interpreter's prefix and virtual environment),\nfor an interpreter outside the system directories. Vetted unlike `ro`: each must be an existing\ndirectory whose canonical path is not `/`, `$HOME` or a parent of it, the working directory, or\nanything inside or above the working directory; must not be, lie inside or contain a credential\nlocation (`~/.ssh`, `~/.gnupg`, cloud and registry credentials, Hermes's `.env` and `hypotaxis/`);\nand must look like a runtime: a `bin/` holding an executable python, node, ruby, java, go, cargo\nor similar (or be that `bin`). Default: none.",
+          "description": "Read-only roots of the program's own runtime (the interpreter's prefix and virtual environment),\nfor an interpreter outside the system directories. Vetted unlike `ro`: each must be an existing\ndirectory whose canonical path is not `/`, `$HOME` or a parent of it, the working directory, or\nanything inside or above the working directory; must not be, lie inside or contain a credential\nlocation (`~/.ssh`, `~/.gnupg`, cloud and registry credentials, Hermes's `.env` and `boopis/`);\nand must look like a runtime: a `bin/` holding an executable python, node, ruby, java, go, cargo\nor similar (or be that `bin`). Default: none.",
           "items": {
             "type": "string"
           },
@@ -2727,7 +2727,7 @@
         },
         "runtime_ro": {
           "default": [],
-          "description": "Read-only roots of the program's own runtime (the interpreter's prefix and virtual environment),\nfor an interpreter outside the system directories. Vetted unlike `ro`: each must be an existing\ndirectory whose canonical path is not `/`, `$HOME` or a parent of it, the working directory, or\nanything inside or above the working directory; must not be, lie inside or contain a credential\nlocation (`~/.ssh`, `~/.gnupg`, cloud and registry credentials, Hermes's `.env` and `hypotaxis/`);\nand must look like a runtime: a `bin/` holding an executable python, node, ruby, java, go, cargo\nor similar (or be that `bin`). Default: none.",
+          "description": "Read-only roots of the program's own runtime (the interpreter's prefix and virtual environment),\nfor an interpreter outside the system directories. Vetted unlike `ro`: each must be an existing\ndirectory whose canonical path is not `/`, `$HOME` or a parent of it, the working directory, or\nanything inside or above the working directory; must not be, lie inside or contain a credential\nlocation (`~/.ssh`, `~/.gnupg`, cloud and registry credentials, Hermes's `.env` and `boopis/`);\nand must look like a runtime: a `bin/` holding an executable python, node, ruby, java, go, cargo\nor similar (or be that `bin`). Default: none.",
           "items": {
             "type": "string"
           },

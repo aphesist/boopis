@@ -1,6 +1,6 @@
 //! Secret references: `secret://<scope>/<name>`, the keychain entry they name and the environment variable that carries
 //! them into Hermes. The rule is data (`crates/hx-proto/secret-refs.json`) written once here and once in the plugin
-//! (`plugins/hypotaxis/hostsecrets/refs.py`); both are tested against that file's examples.
+//! (`plugins/boopis/hostsecrets/refs.py`); both are tested against that file's examples.
 
 use sha2::{Digest, Sha256};
 
@@ -9,10 +9,10 @@ use crate::error::{Error, Result};
 /// The shared rule file, compiled in (the plugin has its own copy under `data/`).
 pub const RULES_JSON: &str = include_str!("../../../../../crates/hx-proto/secret-refs.json");
 /// The key of Hermes's config section for the plugin's secret source.
-pub const SOURCE: &str = "hypotaxis_host";
+pub const SOURCE: &str = "boopis_host";
 const SCHEME: &str = "secret://";
-const SERVICE_PREFIX: &str = "hypotaxis.";
-const ENV_PREFIX: &str = "HYPOTAXIS_";
+const SERVICE_PREFIX: &str = "boopis.";
+const ENV_PREFIX: &str = "BOOPIS_";
 
 /// A parsed reference.
 #[derive(Debug, Clone, PartialEq, Eq)]

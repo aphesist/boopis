@@ -1,4 +1,4 @@
-//! The OS sandbox for hypotaxis: where the exec kernel and the gate commands run.
+//! The OS sandbox for boopis: where the exec kernel and the gate commands run.
 //!
 //! A [`SandboxPolicy`] says what a child may read and write, whether it has a network, which
 //! environment it sees, and how long and how loud it may be. [`run`] executes one command to

@@ -1,0 +1,776 @@
+{
+ "description": "Hermes and boopis tool calls as Claude Code hooks see them (docs/COMPAT.md section 4.5). {cwd} is the session's cwd.",
+ "cases": [
+  {
+   "tool": "pack",
+   "args": {
+    "items": [
+     {
+      "op": "read",
+      "path": "src/a.py",
+      "ranges": [
+       [
+        10,
+        20
+       ]
+      ]
+     }
+    ]
+   },
+   "calls": [
+    [
+     "Read",
+     {
+      "file_path": "{cwd}/src/a.py",
+      "offset": 10,
+      "limit": 11
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "pack",
+   "args": {
+    "items": [
+     {
+      "op": "read",
+      "path": "/abs/b.py"
+     }
+    ]
+   },
+   "calls": [
+    [
+     "Read",
+     {
+      "file_path": "/abs/b.py"
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "pack",
+   "args": {
+    "items": [
+     {
+      "op": "search",
+      "pattern": "TODO",
+      "globs": [
+       "*.py"
+      ],
+      "context": 3,
+      "max_matches": 50
+     }
+    ]
+   },
+   "calls": [
+    [
+     "Grep",
+     {
+      "pattern": "TODO",
+      "glob": "*.py",
+      "-C": 3,
+      "head_limit": 50
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "pack",
+   "args": {
+    "items": [
+     {
+      "op": "search",
+      "pattern": "x",
+      "globs": [
+       "*.py",
+       "*.rs"
+      ]
+     }
+    ]
+   },
+   "calls": [
+    [
+     "Grep",
+     {
+      "pattern": "x",
+      "glob": "{*.py,*.rs}"
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "pack",
+   "args": {
+    "items": [
+     {
+      "op": "search",
+      "globs": [
+       "src/**/*.ts"
+      ]
+     }
+    ]
+   },
+   "calls": [
+    [
+     "Glob",
+     {
+      "pattern": "src/**/*.ts"
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "pack",
+   "args": {
+    "items": [
+     {
+      "op": "symbol",
+      "name": "Foo.bar",
+      "path": "lib.py"
+     }
+    ]
+   },
+   "calls": [
+    [
+     "Read",
+     {
+      "file_path": "{cwd}/lib.py",
+      "symbol": "Foo.bar"
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "pack",
+   "args": {
+    "items": [
+     {
+      "op": "outline",
+      "paths": [
+       "a.py",
+       "pkg"
+      ]
+     }
+    ]
+   },
+   "calls": [
+    [
+     "Read",
+     {
+      "file_path": "{cwd}/a.py"
+     }
+    ],
+    [
+     "Read",
+     {
+      "file_path": "{cwd}/pkg"
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "pack",
+   "args": {
+    "items": [
+     {
+      "op": "status"
+     }
+    ]
+   },
+   "calls": [
+    [
+     "Read",
+     {
+      "file_path": "{cwd}"
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "pack",
+   "args": {
+    "items": [
+     {
+      "op": "read",
+      "path": "a.py"
+     },
+     {
+      "op": "search",
+      "pattern": "x"
+     }
+    ]
+   },
+   "calls": [
+    [
+     "Read",
+     {
+      "file_path": "{cwd}/a.py"
+     }
+    ],
+    [
+     "Grep",
+     {
+      "pattern": "x"
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "ship",
+   "args": {
+    "edits": [
+     {
+      "op": "create",
+      "path": "new.py",
+      "content": "x = 1\n"
+     }
+    ]
+   },
+   "calls": [
+    [
+     "Write",
+     {
+      "file_path": "{cwd}/new.py",
+      "content": "x = 1\n"
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "ship",
+   "args": {
+    "edits": [
+     {
+      "op": "replace",
+      "path": "a.py",
+      "old": "x",
+      "new": "y"
+     }
+    ]
+   },
+   "calls": [
+    [
+     "Edit",
+     {
+      "file_path": "{cwd}/a.py",
+      "old_string": "x",
+      "new_string": "y",
+      "replace_all": false
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "ship",
+   "args": {
+    "edits": [
+     {
+      "op": "replace",
+      "path": "a.py",
+      "old": "x",
+      "new": "y",
+      "replace_all": true
+     }
+    ]
+   },
+   "calls": [
+    [
+     "Edit",
+     {
+      "file_path": "{cwd}/a.py",
+      "old_string": "x",
+      "new_string": "y",
+      "replace_all": true
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "ship",
+   "args": {
+    "edits": [
+     {
+      "op": "replace",
+      "path": "a.py",
+      "old": "x",
+      "new": "y"
+     },
+     {
+      "op": "replace",
+      "path": "a.py",
+      "old": "p",
+      "new": "q"
+     }
+    ]
+   },
+   "calls": [
+    [
+     "MultiEdit",
+     {
+      "file_path": "{cwd}/a.py",
+      "edits": [
+       {
+        "old_string": "x",
+        "new_string": "y",
+        "replace_all": false
+       },
+       {
+        "old_string": "p",
+        "new_string": "q",
+        "replace_all": false
+       }
+      ]
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "ship",
+   "args": {
+    "edits": [
+     {
+      "op": "replace",
+      "path": "nb.ipynb",
+      "old": "x",
+      "new": "y"
+     }
+    ]
+   },
+   "calls": [
+    [
+     "NotebookEdit",
+     {
+      "notebook_path": "{cwd}/nb.ipynb",
+      "old_string": "x",
+      "new_string": "y",
+      "replace_all": false
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "ship",
+   "args": {
+    "edits": [
+     {
+      "op": "replace",
+      "path": "a.py",
+      "old": "x",
+      "new": "y"
+     },
+     {
+      "op": "create",
+      "path": "b.py",
+      "content": ""
+     },
+     {
+      "op": "delete",
+      "path": "c.py"
+     }
+    ]
+   },
+   "calls": [
+    [
+     "Edit",
+     {
+      "file_path": "{cwd}/a.py",
+      "old_string": "x",
+      "new_string": "y",
+      "replace_all": false
+     }
+    ],
+    [
+     "Write",
+     {
+      "file_path": "{cwd}/b.py",
+      "content": ""
+     }
+    ],
+    [
+     "Write",
+     {
+      "file_path": "{cwd}/c.py",
+      "delete": true
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "ship",
+   "args": {
+    "edits": [
+     {
+      "op": "diff",
+      "diff": "--- a/x.py\n+++ b/x.py\n@@\n-a\n+b\n--- a/y.py\n+++ b/y.py\n@@\n-c\n+d\n"
+     }
+    ]
+   },
+   "calls": [
+    [
+     "Edit",
+     {
+      "file_path": "{cwd}/x.py",
+      "diff": "--- a/x.py\n+++ b/x.py\n@@\n-a\n+b\n--- a/y.py\n+++ b/y.py\n@@\n-c\n+d\n"
+     }
+    ],
+    [
+     "Edit",
+     {
+      "file_path": "{cwd}/y.py",
+      "diff": "--- a/x.py\n+++ b/x.py\n@@\n-a\n+b\n--- a/y.py\n+++ b/y.py\n@@\n-c\n+d\n"
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "exec",
+   "args": {
+    "code": "print(1)"
+   },
+   "calls": [
+    [
+     "exec",
+     {
+      "code": "print(1)"
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "dispatch",
+   "args": {
+    "brief": "do the thing"
+   },
+   "calls": [
+    [
+     "Agent",
+     {
+      "prompt": "do the thing"
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "terminal",
+   "args": {
+    "command": "ls",
+    "background": true,
+    "timeout": 5
+   },
+   "calls": [
+    [
+     "Bash",
+     {
+      "command": "ls",
+      "run_in_background": true,
+      "timeout": 5000
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "read_file",
+   "args": {
+    "path": "a.py",
+    "offset": 3,
+    "limit": 10
+   },
+   "calls": [
+    [
+     "Read",
+     {
+      "file_path": "{cwd}/a.py",
+      "offset": 3,
+      "limit": 10
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "search_files",
+   "args": {
+    "pattern": "TODO",
+    "target": "content",
+    "path": "src",
+    "file_glob": "*.py",
+    "limit": 20,
+    "context": 2,
+    "output_mode": "files_only"
+   },
+   "calls": [
+    [
+     "Grep",
+     {
+      "pattern": "TODO",
+      "path": "{cwd}/src",
+      "glob": "*.py",
+      "head_limit": 20,
+      "-C": 2,
+      "output_mode": "files_with_matches"
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "search_files",
+   "args": {
+    "pattern": "*.md",
+    "target": "files"
+   },
+   "calls": [
+    [
+     "Glob",
+     {
+      "pattern": "*.md"
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "write_file",
+   "args": {
+    "path": "a.py",
+    "content": "x"
+   },
+   "calls": [
+    [
+     "Write",
+     {
+      "file_path": "{cwd}/a.py",
+      "content": "x"
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "patch",
+   "args": {
+    "path": "a.py",
+    "old_string": "x",
+    "new_string": "y",
+    "replace_all": true
+   },
+   "calls": [
+    [
+     "Edit",
+     {
+      "file_path": "{cwd}/a.py",
+      "old_string": "x",
+      "new_string": "y",
+      "replace_all": true
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "patch",
+   "args": {
+    "mode": "patch",
+    "patch": "*** Begin Patch\n*** Update File: a.py\n@@\n-x\n+y\n*** Add File: b.py\n+z\n*** End Patch"
+   },
+   "calls": [
+    [
+     "Edit",
+     {
+      "file_path": "{cwd}/a.py",
+      "patch": "*** Begin Patch\n*** Update File: a.py\n@@\n-x\n+y\n*** Add File: b.py\n+z\n*** End Patch"
+     }
+    ],
+    [
+     "Edit",
+     {
+      "file_path": "{cwd}/b.py",
+      "patch": "*** Begin Patch\n*** Update File: a.py\n@@\n-x\n+y\n*** Add File: b.py\n+z\n*** End Patch"
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "web_extract",
+   "args": {
+    "urls": [
+     "https://a.test",
+     "https://b.test"
+    ]
+   },
+   "calls": [
+    [
+     "WebFetch",
+     {
+      "url": "https://a.test"
+     }
+    ],
+    [
+     "WebFetch",
+     {
+      "url": "https://b.test"
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "web_search",
+   "args": {
+    "query": "hermes agent"
+   },
+   "calls": [
+    [
+     "WebSearch",
+     {
+      "query": "hermes agent"
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "delegate_task",
+   "args": {
+    "tasks": [
+     {
+      "goal": "one"
+     },
+     {
+      "goal": "two",
+      "agent": "reviewer"
+     }
+    ]
+   },
+   "calls": [
+    [
+     "Agent",
+     {
+      "prompt": "one"
+     }
+    ],
+    [
+     "Agent",
+     {
+      "prompt": "two",
+      "subagent_type": "reviewer"
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "todo_list",
+   "args": {
+    "todos": [
+     {
+      "id": "1",
+      "content": "x",
+      "status": "pending"
+     }
+    ]
+   },
+   "calls": [
+    [
+     "TodoWrite",
+     {
+      "todos": [
+       {
+        "id": "1",
+        "content": "x",
+        "status": "pending"
+       }
+      ]
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "skill_view",
+   "args": {
+    "name": "deploy"
+   },
+   "calls": [
+    [
+     "Skill",
+     {
+      "skill": "deploy"
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "mcp_my_server_search_docs",
+   "args": {
+    "q": "x"
+   },
+   "mcp": {
+    "my_server": {
+     "name": "my-server"
+    }
+   },
+   "calls": [
+    [
+     "mcp__my-server__search_docs",
+     {
+      "q": "x"
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "mcp_docs_v2_list",
+   "args": {},
+   "mcp": {
+    "docs": {
+     "name": "docs"
+    },
+    "docs_v2": {
+     "name": "docs.v2"
+    }
+   },
+   "calls": [
+    [
+     "mcp__docs.v2__list",
+     {}
+    ]
+   ]
+  },
+  {
+   "tool": "mcp_memory_recall",
+   "args": {},
+   "mcp": {
+    "plugin_demo_memory": {
+     "name": "memory",
+     "plugin": "demo"
+    }
+   },
+   "calls": [
+    [
+     "mcp__plugin_demo_memory__recall",
+     {}
+    ]
+   ]
+  },
+  {
+   "tool": "mcp_unknown_thing",
+   "args": {
+    "a": 1
+   },
+   "calls": [
+    [
+     "mcp_unknown_thing",
+     {
+      "a": 1
+     }
+    ]
+   ]
+  },
+  {
+   "tool": "session_search",
+   "args": {
+    "query": "x"
+   },
+   "calls": [
+    [
+     "session_search",
+     {
+      "query": "x"
+     }
+    ]
+   ]
+  }
+ ]
+}

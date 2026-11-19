@@ -3,8 +3,8 @@
 
 use crate::error::{Error, Result};
 
-/// Every service name must start with this, so the plugin channel can only ever reach what hypotaxis stored.
-pub const SERVICE_PREFIX: &str = "hypotaxis.";
+/// Every service name must start with this, so the plugin channel can only ever reach what boopis stored.
+pub const SERVICE_PREFIX: &str = "boopis.";
 /// The longest secret value accepted.
 pub const MAX_VALUE: usize = 16 * 1024;
 
@@ -29,7 +29,7 @@ pub trait SecretStore: Send + Sync + 'static {
     fn delete(&self, service: &str, account: &str) -> Result<()>;
 }
 
-/// Check a service or account name: a short, plain token. Services must be in the hypotaxis namespace.
+/// Check a service or account name: a short, plain token. Services must be in the boopis namespace.
 ///
 /// # Errors
 /// `InvalidInput` for anything else.
@@ -170,18 +170,18 @@ mod tests {
 
     #[test]
     fn names_are_plain_and_namespaced() {
-        assert!(validate_name("hypotaxis.provider.openai", "api_key").is_ok());
+        assert!(validate_name("boopis.provider.openai", "api_key").is_ok());
         for (s, a) in [
             ("openai", "k"),
-            ("hypotaxis.x", ""),
-            ("hypotaxis.x", "a b"),
-            ("hypotaxis.x\n", "a"),
+            ("boopis.x", ""),
+            ("boopis.x", "a b"),
+            ("boopis.x\n", "a"),
             ("", "a"),
             ("login", "x"),
         ] {
             assert!(validate_name(s, a).is_err(), "{s:?} {a:?}");
         }
-        assert!(validate_name(&format!("hypotaxis.{}", "x".repeat(200)), "a").is_err());
+        assert!(validate_name(&format!("boopis.{}", "x".repeat(200)), "a").is_err());
     }
 
     #[test]
@@ -194,13 +194,13 @@ mod tests {
     #[test]
     fn the_mock_backend_round_trips_and_deletes_idempotently() {
         let s = MemoryStore::default();
-        assert_eq!(s.get("hypotaxis.a", "k").unwrap(), None);
-        s.set("hypotaxis.a", "k", "v1").unwrap();
-        s.set("hypotaxis.a", "k", "v2").unwrap();
-        assert_eq!(s.get("hypotaxis.a", "k").unwrap().as_deref(), Some("v2"));
-        s.delete("hypotaxis.a", "k").unwrap();
-        s.delete("hypotaxis.a", "k").unwrap();
-        assert_eq!(s.get("hypotaxis.a", "k").unwrap(), None);
+        assert_eq!(s.get("boopis.a", "k").unwrap(), None);
+        s.set("boopis.a", "k", "v1").unwrap();
+        s.set("boopis.a", "k", "v2").unwrap();
+        assert_eq!(s.get("boopis.a", "k").unwrap().as_deref(), Some("v2"));
+        s.delete("boopis.a", "k").unwrap();
+        s.delete("boopis.a", "k").unwrap();
+        assert_eq!(s.get("boopis.a", "k").unwrap(), None);
     }
 
     #[test]
@@ -209,7 +209,7 @@ mod tests {
         s.unavailable
             .store(true, std::sync::atomic::Ordering::Relaxed);
         assert_eq!(
-            s.set("hypotaxis.a", "k", "v").unwrap_err().code(),
+            s.set("boopis.a", "k", "v").unwrap_err().code(),
             "hx.secrets.unavailable"
         );
     }

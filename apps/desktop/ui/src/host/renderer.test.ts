@@ -26,10 +26,10 @@ describe('the renderer report', () => {
     const t = reportText(base, { ...display, glRenderer: 'NVIDIA GeForce RTX 4070 Laptop GPU/PCIe/SSE2', glVendor: 'NVIDIA Corporation' });
     expect(t).toContain('WebKitGTK: 2.54.2, the system\'s (/usr/lib/libwebkit2gtk-4.1.so.0.18.5)');
     expect(t).toContain('display refresh (GDK): 120 Hz (eDP)');
-    expect(t).toContain('60 fps preference (HYPOTAXIS_FPS=auto): off');
+    expect(t).toContain('60 fps preference (BOOPIS_FPS=auto): off');
     expect(t).toContain('rule faster_than_sixty');
     expect(t).toContain('power profile: balanced (platform_profile balanced)');
-    expect(t).toContain('GPU choice (HYPOTAXIS_GPU, from default): auto; rule auto_dedicated; set by the host: __NV_PRIME_RENDER_OFFLOAD=1 (nvidia_documented)');
+    expect(t).toContain('GPU choice (BOOPIS_GPU, from default): auto; rule auto_dedicated; set by the host: __NV_PRIME_RENDER_OFFLOAD=1 (nvidia_documented)');
     expect(t).toContain('power source: ac');
     expect(t).toContain('GL renderer in the page: NVIDIA GeForce RTX 4070 Laptop GPU/PCIe/SSE2 (vendor NVIDIA Corporation)');
   });
@@ -39,13 +39,13 @@ describe('the renderer report', () => {
       gpu: { ...base.gpu, set: [], rule: 'policy_dedicated', warning: 'may_crash_on_wayland', restart_advice: 'to_integrated' } }, display);
     expect(t).toContain('2.52.6, bundled (AppImage)');
     expect(t).toContain('display refresh (GDK): unknown');
-    expect(t).toContain('60 fps preference (HYPOTAXIS_FPS=auto): on (WebKit keeps near 60 fps; too_old)');
+    expect(t).toContain('60 fps preference (BOOPIS_FPS=auto): on (WebKit keeps near 60 fps; too_old)');
     expect(t).toContain('WebKit halves its frame rate in power-saver');
     expect(t).toContain('may crash or stay blank');
     expect(t).toContain('restart would switch to the integrated GPU');
     expect(t).toContain('note: WEBKIT_DISABLE_DMABUF_RENDERER is set');
     expect(t).toContain('GL renderer in the page: not available');
-    expect(reportText({ ...base, frame_rate: { ...base.frame_rate, preference_off: null, refusal: 'no_webview' } }, display)).toContain('preference (HYPOTAXIS_FPS=auto): unknown (no_webview)');
+    expect(reportText({ ...base, frame_rate: { ...base.frame_rate, preference_off: null, refusal: 'no_webview' } }, display)).toContain('preference (BOOPIS_FPS=auto): unknown (no_webview)');
   });
   it('names the variables the host set and copes with no GPU', () => {
     const t = reportText({ ...base, gpus: [], set: [['WEBKIT_DISABLE_DMABUF_RENDERER', '1']], rule: 'nvidia_x11' }, display);

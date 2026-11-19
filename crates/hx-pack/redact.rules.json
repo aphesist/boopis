@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "description": "Secret redaction rules shared by every implementation (Rust hx-pack::redact, Python hypotaxis.util.redact). Patterns use the syntax common to the Rust regex crate and Python re: no look-around, no possessive quantifiers. Matching is per rule, in order, on the whole text.",
+  "description": "Secret redaction rules shared by every implementation (Rust hx-pack::redact, Python boopis.util.redact). Patterns use the syntax common to the Rust regex crate and Python re: no look-around, no possessive quantifiers. Matching is per rule, in order, on the whole text.",
   "placeholder": "[REDACTED:{rule}]",
   "placeholder_prefix": "[REDACTED:",
   "rules": [

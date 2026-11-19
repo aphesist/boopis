@@ -28,8 +28,8 @@ AUX_TASKS = (
     "tts_audio_tags", "voice_chat", "triage_specifier", "kanban_decomposer", "profile_describer",
     "goal_judge", "group_router", "curator", "monitor", "background_review", "moa_reference", "moa_aggregator",
 )  # fmt: skip
-PLUGIN_SRC = Path(__file__).resolve().parents[2] / "plugins" / "hypotaxis"
-sys.path.insert(0, str(PLUGIN_SRC.parent))  # the plugin package is importable as `hypotaxis` (trust-store helpers)
+PLUGIN_SRC = Path(__file__).resolve().parents[2] / "plugins" / "boopis"
+sys.path.insert(0, str(PLUGIN_SRC.parent))  # the plugin package is importable as `boopis` (trust-store helpers)
 HX_BIN = os.environ.get("HX_BIN", "")  # a built hx (cargo build -p hx); the pack and ship tests skip without it
 IGNORE = shutil.ignore_patterns("__pycache__", "tests", ".pytest_cache", ".ruff_cache", "*.pyc")
 
@@ -108,7 +108,7 @@ class HermesStack:
 
     @property
     def ledger_dir(self) -> Path:
-        return self.home / "hypotaxis" / "ledger"
+        return self.home / "boopis" / "ledger"
 
     @property
     def env(self) -> dict[str, str]:
@@ -147,8 +147,8 @@ class HermesStack:
             "providers": {"main": provider},
             "auxiliary": {t: {"provider": "main", "model": "fake-a"} for t in AUX_TASKS},
             "plugins": {
-                "enabled": ["hypotaxis"],
-                "entries": {"hypotaxis": {"settings": self.plugin_settings}},
+                "enabled": ["boopis"],
+                "entries": {"boopis": {"settings": self.plugin_settings}},
             },
         }
         return merge(config, self.extra_config)
@@ -162,7 +162,7 @@ class HermesStack:
             installs.symlink_to(self.install.root / "hermes-home" / "installs")
         # JSON is YAML: no YAML library is needed to write the config.
         (self.home / "config.yaml").write_text(json.dumps(self.config(), indent=2))
-        target = self.home / "plugins" / "hypotaxis"
+        target = self.home / "plugins" / "boopis"
         shutil.copytree(PLUGIN_SRC, target, ignore=IGNORE)
         done = self.hermes("gateway", "ensure", "--json", timeout=180)
         self.started = True

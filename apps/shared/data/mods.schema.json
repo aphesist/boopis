@@ -1,5 +1,5 @@
 {
-  "$comment": "The UI contract of mods (docs/PROTOCOL.md section 3, docs/MODS.md): the session events the plugin emits and the plugin RPC the UI calls. Plain JSON Schema in the subset the plugin's own validator checks (hypotaxis.util.schema: type, enum, properties, required, items, anyOf), so tests can hold the plugin to it. The elements inside a `tree` are defined by docs/research/mods.md section 2 and validated by hx-mods (tree limits).",
+  "$comment": "The UI contract of mods (docs/PROTOCOL.md section 3, docs/MODS.md): the session events the plugin emits and the plugin RPC the UI calls. Plain JSON Schema in the subset the plugin's own validator checks (boopis.util.schema: type, enum, properties, required, items, anyOf), so tests can hold the plugin to it. The elements inside a `tree` are defined by docs/research/mods.md section 2 and validated by hx-mods (tree limits).",
   "schema_version": 1,
   "events": {
     "mod.render": {

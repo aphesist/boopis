@@ -1,7 +1,7 @@
 //! Setup's last decision: which models run, and whether their keys are in place. It reads what Hermes already has
 //! (named `providers:`, keys in `.env` by name, the claude-subscription plugin), asks for what is missing through forms,
 //! saves a key to the host's keychain and ties it to its provider with the same two config writes the plugin makes for a
-//! credential form (`plugins/hypotaxis/forms/effects.py`): `providers.<name>.key_env` and `secrets.hypotaxis_host.env`.
+//! credential form (`plugins/boopis/forms/effects.py`): `providers.<name>.key_env` and `secrets.boopis_host.env`.
 
 use std::fmt::Write as _;
 use std::path::Path;
@@ -24,7 +24,7 @@ const ANTHROPIC_VARS: &[&str] = &[
 ];
 /// The Claude subscription plugin, which signs in through the `claude` CLI instead of a key.
 pub const SUBSCRIPTION_PLUGIN: &str = "claude-subscription-directsdk";
-const LADDER_KEY: &str = "plugins.entries.hypotaxis.settings.ladder";
+const LADDER_KEY: &str = "plugins.entries.boopis.settings.ladder";
 /// The choice that uses Nous's free tier (no account, no key): Hermes's own welcome-trial route.
 pub const FREE: &str = "free";
 /// The choice that uses `OpenRouter`'s `:free` models (a free `OpenRouter` key).
@@ -434,7 +434,7 @@ fn ladder_form(named: &[Named], free_note: Option<&str>) -> Form {
         }
     }
     let mut body = String::from(
-        "hypotaxis runs governed work on a ladder of models, cheapest first. Pick where to start; you can change the ladder later.",
+        "boopis runs governed work on a ladder of models, cheapest first. Pick where to start; you can change the ladder later.",
     );
     if offer_free {
         let _ = write!(

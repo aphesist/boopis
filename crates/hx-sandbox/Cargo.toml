@@ -1,6 +1,6 @@
 [package]
 name = "hx-sandbox"
-description = "The OS sandbox for hypotaxis's exec kernel and gate commands: read-only workspace, writable scratch, network off, allowlisted environment, timeout, output cap, process-tree kill."
+description = "The OS sandbox for boopis's exec kernel and gate commands: read-only workspace, writable scratch, network off, allowlisted environment, timeout, output cap, process-tree kill."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

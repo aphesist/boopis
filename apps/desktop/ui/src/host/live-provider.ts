@@ -1,4 +1,4 @@
-/* The live data provider: the Hermes gateway (through the host's proxy) and the hypotaxis plugin behind the same
+/* The live data provider: the Hermes gateway (through the host's proxy) and the boopis plugin behind the same
    `DataProvider` interfaces the mock provider implements. This file is the sessions: the list, the conversation stream,
    sending, stopping, approvals and blanks. The details panels, the run, the diff and file mentions live in `./live/`
    (`details.ts`). Only `bots`, `schedules` and the feedforward catalog are the MOCK provider's, named in MOCK_SOURCES and
@@ -25,7 +25,7 @@ import type { LedgerTotals } from './map';
 const log = logger('live');
 
 /** the toolsets of a governed session: only the plugin's tools (docs/ARCHITECTURE.md section 4); fixed at `session.create` */
-const GOVERNED_TOOLSETS = ['hypotaxis'];
+const GOVERNED_TOOLSETS = ['boopis'];
 
 /** the sources still served by the mock provider, shown to the user as previews (`info.preview`) or empty:
  *  bots and schedules (phase 2) and the feedforward catalog (the plugin's feedforward RPC is not built). Everything the
@@ -60,7 +60,7 @@ interface Convo {
 }
 
 export interface LiveProvider extends DataProvider {
-  /** ledger totals from `plugin.hypotaxis.ledger.appended`; not yet wired into `details.ledger` (mock) */
+  /** ledger totals from `plugin.boopis.ledger.appended`; not yet wired into `details.ledger` (mock) */
   ledger: { totals(): LedgerTotals; subscribe(fn: (t: LedgerTotals) => void): () => void };
   /** tests: every read of the details and every refresh in flight has finished */
   settled(): Promise<void>;
@@ -117,7 +117,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     if (c.gwId) return c.gwId;
     if (c.hydrated) { // a session made here, not yet on the gateway
       const governed = details.governedAtCreation(c.uiId);
-      /* the toolset is fixed here for good (Hermes's prompt cache): a governed session has only the hypotaxis tools, so no
+      /* the toolset is fixed here for good (Hermes's prompt cache): a governed session has only the boopis tools, so no
          Hermes tool the plugin would have to police ever reaches the model. The generated contract's create params do not
          list `toolsets` yet (the gateway's canonical ones do), hence the raw call. */
       const res = await client.requestRaw('session.create', { source: 'gui', ...(governed ? { toolsets: GOVERNED_TOOLSETS } : {}) }) as RpcMethods['session.create']['result'];
@@ -125,7 +125,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
       if (want.governed !== null || governed) {
         /* the mode must match the toolset, and a failure is fatal for this session: it is closed and never bound, so
            nothing is sent to it and a retry makes a fresh one. Running a session whose mode is unknown is not an option. */
-        try { await client.requestRaw('plugin.hypotaxis.mode.set', { session_id: res.session_id, mode: governed ? 'governed' : 'ungoverned' }); }
+        try { await client.requestRaw('plugin.boopis.mode.set', { session_id: res.session_id, mode: governed ? 'governed' : 'ungoverned' }); }
         catch (e) {
           log.error('the mode could not be set; the session was closed', e);
           await client.request('session.close', { session_id: res.session_id }).catch((closeErr: unknown) => { log.warn('the session could not be closed', closeErr); });
@@ -205,7 +205,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
 
   function onEvent(ev: GatewayEvent): void {
     if (ev.type === 'sessions.changed') { refreshList().catch((e: unknown) => { log.warn('could not refresh the session list', e); }); return; }
-    if (ev.type === 'plugin.hypotaxis.ledger.appended') { ledgerTotals = reduceLedger(ledgerTotals, (ev.payload ?? {}) as { type?: unknown; payload?: unknown }); for (const f of [...ledgerSubs]) f(ledgerTotals); }
+    if (ev.type === 'plugin.boopis.ledger.appended') { ledgerTotals = reduceLedger(ledgerTotals, (ev.payload ?? {}) as { type?: unknown; payload?: unknown }); for (const f of [...ledgerSubs]) f(ledgerTotals); }
     const uiId = ev.session_id ? byGw.get(ev.session_id) : undefined;
     if (!uiId) return; // another client's session, or global
     const c = convos.get(uiId);
@@ -213,7 +213,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     const p = ev.payload ?? {};
     if (typeof ev.execution_generation === 'number') c.generation = ev.execution_generation;
     details.onEvent(uiId, ev);
-    if (ev.type.startsWith('plugin.hypotaxis.blank.')) { syncBlanks(c); return; }
+    if (ev.type.startsWith('plugin.boopis.blank.')) { syncBlanks(c); return; }
     if (formsHost.handle(ev, { gwSession: ev.session_id ?? '', model: c.model })) return;
     switch (ev.type) {
       case 'session.info': { const profile = p['profile_name']; if (typeof profile === 'string' && profile) user.set({ name: profile, initials: profile.slice(0, 1).toLowerCase() }); const m = p['model']; if (typeof m === 'string' && m) c.model = m; const t = p['title']; if (typeof t === 'string' && t) patchSession(uiId, { title: t }); break; }
@@ -277,7 +277,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     const c = convo(id), b = details.model(id).blanks.find((x) => x.answer === null);
     if (!b || !c.gwId) return;
     const gw = c.gwId;
-    client.requestRaw('plugin.hypotaxis.blank.fill', { session_id: gw, blank_id: b.id, answer })
+    client.requestRaw('plugin.boopis.blank.fill', { session_id: gw, blank_id: b.id, answer })
       .then((res) => {
         if ((res as { delivered?: boolean } | null)?.delivered !== false) return;
         /* the plugin recorded the answer but could not hand it to the model: send it as the user's own message */

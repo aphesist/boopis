@@ -91,7 +91,7 @@ def stack(hermes_install: HermesInstall, stack_root: Path, endpoint: FakeModelSe
     }
     extra: JsonObject = {
         "model": {"provider": "main", "default": "orch"},
-        "delegation": {"backend": "hypotaxis"},
+        "delegation": {"backend": "boopis"},
         "providers": {"main": {"models": {"orch": {"context_length": 200000}, "model-a": {"context_length": 200000}}}},
     }
     yield from run_stack(hermes_install, stack_root / "exec-worker", endpoint.url, settings, extra)
@@ -110,7 +110,7 @@ def gateway(stack: HermesStack, stack_root: Path) -> Iterator[GatewayClient]:
 def kernel_can_start(gateway: GatewayClient) -> None:
     """exec is offered only where a sandboxed kernel starts with Hermes's own interpreter (``describe.kernel`` is the
     plugin's probe). Where it cannot, this test skips and says why; the unavailable path is tested elsewhere."""
-    kernel = gateway.result("plugin.hypotaxis.describe", {}).get("kernel")
+    kernel = gateway.result("plugin.boopis.describe", {}).get("kernel")
     if not kernel or not kernel.get("ok"):
         reason = (kernel or {}).get("reason") or "no hx to sandbox it"
         pytest.skip(f"exec cannot run in this environment (hx.sandbox.unavailable): {reason}")
@@ -122,7 +122,7 @@ def git(root: Path, *args: str) -> str:
 
 @pytest.fixture(scope="module")
 def project(stack: HermesStack, tmp_path_factory: pytest.TempPathFactory) -> Path:
-    from hypotaxis.config import KIND_SETTINGS, TrustStore, content_hash
+    from boopis.config import KIND_SETTINGS, TrustStore, content_hash
 
     root = tmp_path_factory.mktemp("exec-project")
     (root / "tests").mkdir()
@@ -130,14 +130,14 @@ def project(stack: HermesStack, tmp_path_factory: pytest.TempPathFactory) -> Pat
     (root / "calc.py").write_text(BUGGY)
     (root / "tests" / "__init__.py").write_text("")
     (root / "tests" / "test_calc.py").write_text(SUITE)
-    config = root / ".hermes" / "hypotaxis.yaml"
+    config = root / ".hermes" / "boopis.yaml"
     config.write_text(f"gate:\n  command: {GATE}\n  timeout_s: 60\n")
     (stack.root / "home").mkdir(parents=True, exist_ok=True)
     (stack.root / "home" / ".gitconfig").write_text("[user]\n\tname = The Owner\n\temail = owner@example.com\n")
     git(root, "init", "-q")
     git(root, "add", "-A")
     git(root, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "init")
-    TrustStore(stack.home).approve(root, KIND_SETTINGS, "hypotaxis.yaml", content_hash(config.read_bytes()))
+    TrustStore(stack.home).approve(root, KIND_SETTINGS, "boopis.yaml", content_hash(config.read_bytes()))
     return root
 
 
@@ -166,12 +166,12 @@ def test_a_worker_runs_exec_in_the_sandbox_and_every_kernel_call_is_governed(
             "request_id": f"req-{time.time_ns()}",
             "model": "orch",
             "provider": "main",
-            "toolsets": ["hypotaxis"],
-            "client": {"name": "hypotaxis-e2e", "version": "0"},
+            "toolsets": ["boopis"],
+            "client": {"name": "boopis-e2e", "version": "0"},
         },
     )
     sid = created["session_id"]
-    gateway.result("plugin.hypotaxis.mode.set", {"session_id": sid, "mode": "governed"})
+    gateway.result("plugin.boopis.mode.set", {"session_id": sid, "mode": "governed"})
     gateway.result(
         "prompt.submit",
         {
@@ -183,7 +183,7 @@ def test_a_worker_runs_exec_in_the_sandbox_and_every_kernel_call_is_governed(
     wait_for(
         lambda: any(
             e["payload"].get("status") in ("passed", "failed")
-            for e in gateway.events_of("plugin.hypotaxis.cascade.updated", sid)
+            for e in gateway.events_of("plugin.boopis.cascade.updated", sid)
         ),
         "the cascade to end",
     )
@@ -205,7 +205,7 @@ def test_a_worker_runs_exec_in_the_sandbox_and_every_kernel_call_is_governed(
     assert len(execs) == 3 and all(x["role"] == "worker" for x in execs)
 
     # the blank reached the client and the ledger, as the worker's
-    opened = gateway.events_of("plugin.hypotaxis.blank.opened", sid)
+    opened = gateway.events_of("plugin.boopis.blank.opened", sid)
     assert [e["payload"]["question"] for e in opened] == ["Keep the old alias?"]
     (blank,) = by("blank.opened")
     assert blank["payload"]["blank_id"] == opened[0]["payload"]["blank_id"] and blank["payload"]["role"] == "worker"

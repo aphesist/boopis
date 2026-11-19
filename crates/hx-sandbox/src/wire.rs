@@ -83,7 +83,7 @@ pub struct SandboxRunParams {
     /// for an interpreter outside the system directories. Vetted unlike `ro`: each must be an existing
     /// directory whose canonical path is not `/`, `$HOME` or a parent of it, the working directory, or
     /// anything inside or above the working directory; must not be, lie inside or contain a credential
-    /// location (`~/.ssh`, `~/.gnupg`, cloud and registry credentials, Hermes's `.env` and `hypotaxis/`);
+    /// location (`~/.ssh`, `~/.gnupg`, cloud and registry credentials, Hermes's `.env` and `boopis/`);
     /// and must look like a runtime: a `bin/` holding an executable python, node, ruby, java, go, cargo
     /// or similar (or be that `bin`). Default: none.
     #[serde(default)]

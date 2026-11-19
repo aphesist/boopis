@@ -22,7 +22,7 @@ contains() { grep -qF -- "$2" <<<"$1"; }
 lacks() { ! grep -qF -- "$2" <<<"$1"; }
 empty_dir() { [ -z "$(find "$1" -mindepth 1)" ]; }
 
-NAME=Hypotaxis_0.0.0_amd64.AppImage
+NAME=boopis_0.0.0_amd64.AppImage
 mkdir -p "${T:?}/art"
 printf '#!/bin/sh\necho "dummy appimage $*"\n' >"$T/art/$NAME"
 chmod +x "$T/art/$NAME"
@@ -65,7 +65,7 @@ check "the manifest lists exactly the files that appeared" test "$manifest_files
 check "install: the launcher runs the app" test "$("$T/p/bin/boopis" --flag)" = "dummy appimage --flag"
 check "install: the app is executable" test -x "$T/p/share/boopis/boopis.AppImage"
 check "install: the menu entry points at the launcher" grep -qx "Exec=$T/p/bin/boopis %U" "$T/p/share/applications/boopis.desktop"
-check "install: the menu entry carries the window class of the AppImage's binary" grep -qx 'StartupWMClass=hypotaxis' "$T/p/share/applications/boopis.desktop"
+check "install: the menu entry carries the window class of the AppImage's binary" grep -qx 'StartupWMClass=boopis' "$T/p/share/applications/boopis.desktop"
 check "install: the menu entry names the light icon" grep -qx 'Icon=boopis' "$T/p/share/applications/boopis.desktop"
 check "install: the icons are PNGs" test "$(head -c 8 "$T/p/share/icons/hicolor/64x64/apps/boopis.png" | od -An -tx1 | tr -d ' \n')" = 89504e470d0a1a0a
 check "install: the final box says it is ready" contains "$out" "boopis is ready"
@@ -111,7 +111,7 @@ check "checksum: a wrong --sha256 stops the install" test "$rc" = 1
 
 # ---- 5. the download path, against a folder of release files (file:// addresses)
 fresh
-rel=$T/rel/aphesist/hypotaxis/releases/download/v0.0.0
+rel=$T/rel/aphesist/boopis/releases/download/v0.0.0
 mkdir -p "$rel"
 cp "$T/art/$NAME" "$rel/"
 (cd "$rel" && sha256sum -- "$NAME" >SHA256SUMS)
@@ -122,7 +122,7 @@ fresh
 rc=0
 out=$(BOOPIS_BASE_URL="file://$T/rel" run --version v9.9.9 --prefix "$T/p" --yes) || rc=$?
 check "download: a release that does not exist is a sentence and a way out" test "$rc" = 1
-check "download: the sentence names the file" contains "$out" "could not download Hypotaxis_9.9.9_amd64.AppImage"
+check "download: the sentence names the file" contains "$out" "could not download boopis_9.9.9_amd64.AppImage"
 check "download: no stack, no line numbers" lacks "$out" "line "
 rm -f "$rel/SHA256SUMS"
 fresh
@@ -206,22 +206,22 @@ if [ "$1" = attach ]; then
     [ "$1" = -mountpoint ] && mp=$2
     shift
   done
-  mkdir -p "$mp/Hypotaxis.app/Contents/MacOS"
-  printf '#!/bin/sh\necho "dummy app $*"\n' >"$mp/Hypotaxis.app/Contents/MacOS/hypotaxis"
-  chmod +x "$mp/Hypotaxis.app/Contents/MacOS/hypotaxis"
+  mkdir -p "$mp/boopis.app/Contents/MacOS"
+  printf '#!/bin/sh\necho "dummy app $*"\n' >"$mp/boopis.app/Contents/MacOS/boopis"
+  chmod +x "$mp/boopis.app/Contents/MacOS/boopis"
 fi
 exit 0
 SH
 chmod +x "$T/shim/uname" "$T/shim/hdiutil"
-printf 'not really a disk image\n' >"$T/art/Hypotaxis_0.0.0_aarch64.dmg"
+printf 'not really a disk image\n' >"$T/art/boopis_0.0.0_aarch64.dmg"
 fresh
-out=$(env PATH="$T/shim:$PATH" HOME="$T/home" bash "$installer" --file "$T/art/Hypotaxis_0.0.0_aarch64.dmg" --prefix "$T/p" --yes 2>&1) || fail "macOS install exits 0 ($out)"
-check "macOS: the app lands in ~/Applications" test -x "$T/home/Applications/Hypotaxis.app/Contents/MacOS/hypotaxis"
+out=$(env PATH="$T/shim:$PATH" HOME="$T/home" bash "$installer" --file "$T/art/boopis_0.0.0_aarch64.dmg" --prefix "$T/p" --yes 2>&1) || fail "macOS install exits 0 ($out)"
+check "macOS: the app lands in ~/Applications" test -x "$T/home/Applications/boopis.app/Contents/MacOS/boopis"
 check "macOS: the launcher runs the app's binary with arguments" test "$("$T/p/bin/boopis" doctor)" = "dummy app doctor"
-check "macOS: the manifest records the app bundle" grep -qx "a $T/home/Applications/Hypotaxis.app" "$T/p/share/boopis/manifest"
+check "macOS: the manifest records the app bundle" grep -qx "a $T/home/Applications/boopis.app" "$T/p/share/boopis/manifest"
 check "macOS: the box says Launchpad" contains "$out" "Launchpad"
 env PATH="$T/shim:$PATH" HOME="$T/home" bash "$installer" --uninstall --prefix "$T/p" >/dev/null
-check "macOS uninstall: the app is gone" test ! -e "$T/home/Applications/Hypotaxis.app"
+check "macOS uninstall: the app is gone" test ! -e "$T/home/Applications/boopis.app"
 check "macOS uninstall: the prefix is empty" empty_dir "$T/p"
 check "macOS uninstall: ~/Applications, which the installer made, is gone" test ! -e "$T/home/Applications"
 fresh

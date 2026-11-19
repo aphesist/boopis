@@ -9,7 +9,7 @@
 set -euo pipefail
 
 # The old internal names this script still needs (the rename changes these lines only).
-PLUGIN=hypotaxis   # plugin directory under /usr/lib/boopis/plugin
+PLUGIN=boopis   # plugin directory under /usr/lib/boopis/plugin
 RUNTIME_ARCHIVE=hermes-runtime-linux-x86_64.tar.zst
 
 REPO="${1:-.}"

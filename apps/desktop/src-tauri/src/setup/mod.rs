@@ -1,4 +1,4 @@
-//! First-run setup (`docs/FORMS.md`, ADR-0006, ADR-0014): from "Hermes is installed" to "hypotaxis works", without the
+//! First-run setup (`docs/FORMS.md`, ADR-0006, ADR-0014): from "Hermes is installed" to "boopis works", without the
 //! user editing a file. The host drives it; every question is a form (`kind` `setup`, `credential` or `choice`) shown by
 //! the UI, and every change to Hermes goes through Hermes's own CLI.
 //!
@@ -194,11 +194,11 @@ fn wanted() -> Vec<(&'static str, Value, &'static str)> {
         ),
         (
             "delegation.backend",
-            json!("hypotaxis"),
+            json!("boopis"),
             "so governed work can be routed to each model tier",
         ),
         (
-            "plugins.entries.hypotaxis.allow_gateway_injection",
+            "plugins.entries.boopis.allow_gateway_injection",
             json!(true),
             "so a Claude Code Stop hook that blocks can continue the turn",
         ),
@@ -297,7 +297,7 @@ impl Setup {
         }
         let home = self.ops.home();
         let state = state::load(&home)?;
-        let installed = install::plugin_version(&ops::plugins_dir(&home).join("hypotaxis"));
+        let installed = install::plugin_version(&ops::plugins_dir(&home).join("boopis"));
         let bundled = self
             .bundle
             .plugin_dir
@@ -307,10 +307,10 @@ impl Setup {
             .ops
             .plugins()
             .await
-            .is_ok_and(|l| l.iter().any(|p| p.name == "hypotaxis" && p.enabled));
+            .is_ok_and(|l| l.iter().any(|p| p.name == "boopis" && p.enabled));
         let (needed, reason) = match (state.done_at, installed, enabled) {
-            (_, None, _) => (true, "the hypotaxis plugin is not installed"),
-            (_, _, false) => (true, "the hypotaxis plugin is not enabled"),
+            (_, None, _) => (true, "the boopis plugin is not installed"),
+            (_, _, false) => (true, "the boopis plugin is not enabled"),
             (None, _, _) => (true, "setup has not finished"),
             (Some(_), Some(i), true) if bundled.is_some_and(|b| b != i) => {
                 (true, "the app carries a newer plugin")
@@ -546,7 +546,7 @@ impl Setup {
     }
 
     async fn plugin_step(&self, run: &mut Run, state: &mut State) {
-        let (id, title) = ("plugin", "hypotaxis plugin");
+        let (id, title) = ("plugin", "boopis plugin");
         let Some(dir) = self.bundle.plugin_dir.clone() else {
             let e = Error::Setup(
                 "hx.setup.no_bundle",
@@ -578,10 +578,10 @@ impl Setup {
             }
         };
         match self.ops.plugins().await {
-            Ok(list) if list.iter().any(|p| p.name == "hypotaxis" && p.enabled) => {
+            Ok(list) if list.iter().any(|p| p.name == "boopis" && p.enabled) => {
                 run.done(id, title, format!("{line}, enabled"));
             }
-            Ok(_) => match self.ops.enable_plugin("hypotaxis").await {
+            Ok(_) => match self.ops.enable_plugin("boopis").await {
                 Ok(()) => {
                     state.restart_pending = true;
                     run.done(id, title, format!("{line}, now enabled"));
@@ -614,7 +614,7 @@ impl Setup {
                 );
             }
         };
-        let key = "plugins.entries.hypotaxis.settings.hx_path";
+        let key = "plugins.entries.boopis.settings.hx_path";
         let want = target.display().to_string();
         let set = match self.ops.config_get(key).await {
             Ok(v) if v.as_ref().and_then(Value::as_str) == Some(want.as_str()) => Ok(false),
@@ -658,7 +658,7 @@ impl Setup {
                 run.done(id, title, format!("{} settings changed through Hermes", diff.len()));
             }
             Consent::Declined => run.push(id, title, StepState::Declined,
-                "Not changed. Without these, other tools may hide pack, ship and dispatch behind Hermes's tool search, governed work cannot be routed to model tiers, and Stop hooks cannot continue a turn. Choose Review again to change your mind, or use a dedicated Hermes profile for hypotaxis.",
+                "Not changed. Without these, other tools may hide pack, ship and dispatch behind Hermes's tool search, governed work cannot be routed to model tiers, and Stop hooks cannot continue a turn. Choose Review again to change your mind, or use a dedicated Hermes profile for boopis.",
                 Some("hx.setup.declined")),
             Consent::Unasked => {
                 let mut form = Form::new("setup.config", "setup", "Change three Hermes settings?",
@@ -712,7 +712,7 @@ impl Setup {
     }
 
     async fn restart_step(&self, run: &mut Run, state: &mut State) {
-        let (id, title) = ("restart", "Start with hypotaxis");
+        let (id, title) = ("restart", "Start with boopis");
         if state.restart_pending {
             if let Err(e) = self.ops.restart_gateway().await {
                 return run.blocked(id, title, "hx.hermes.unavailable", &e);
@@ -746,8 +746,8 @@ impl Setup {
     async fn verify(&self) -> Result<()> {
         let bad = |m: String| Error::Setup("hx.setup.verify_failed", m);
         let list = self.ops.plugins().await?;
-        if !list.iter().any(|p| p.name == "hypotaxis" && p.enabled) {
-            return Err(bad("Hermes does not list hypotaxis as enabled".into()));
+        if !list.iter().any(|p| p.name == "boopis" && p.enabled) {
+            return Err(bad("Hermes does not list boopis as enabled".into()));
         }
         Ok(())
     }

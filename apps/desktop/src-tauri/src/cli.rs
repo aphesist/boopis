@@ -320,7 +320,7 @@ pub fn version_lines(out: &Out, version: &str, facts: &Facts) -> Vec<String> {
 pub struct Gathered {
     /// The renderer's diagnostics, with the GPU's, as the Diagnostics screen has them.
     pub report: RendererReport,
-    /// `HYPOTAXIS_FPS`.
+    /// `BOOPIS_FPS`.
     pub fps_policy: frame_rate::Policy,
     /// The ACPI platform profile's text.
     pub platform_profile: Option<String>,
@@ -346,7 +346,7 @@ pub enum RuntimeStatus {
     },
     /// The Hermes on this machine, by choice or because this build carries none.
     Existing {
-        /// Whether the choice is the user's (`HYPOTAXIS_HERMES` or the setting) rather than the build's.
+        /// Whether the choice is the user's (`BOOPIS_HERMES` or the setting) rather than the build's.
         chosen: bool,
         /// Its home.
         home: PathBuf,
@@ -364,7 +364,7 @@ pub fn gather(resource_dir: Option<&Path>) -> Gathered {
         .and_then(|p| std::fs::read_to_string(p).ok())
         .and_then(|t| runtime::stored_source(&t));
     let source = runtime::Source::resolve(
-        std::env::var("HYPOTAXIS_HERMES").ok().as_deref(),
+        std::env::var("BOOPIS_HERMES").ok().as_deref(),
         saved.as_deref(),
     );
     let (plan, error) = runtime::plan_for(
@@ -474,11 +474,11 @@ fn renderer_long(rule: renderer::Rule) -> &'static str {
         R::UserEnvironment => {
             "A WebKit or NVIDIA switch is already in the environment, so nothing is changed."
         }
-        R::PolicyDefault => "HYPOTAXIS_RENDERER=default: WebKitGTK's own choice.",
-        R::PolicyShm => "HYPOTAXIS_RENDERER=shm: GL kept, frames copied through shared memory.",
-        R::PolicyCpu => "HYPOTAXIS_RENDERER=cpu: the CPU paints every frame.",
-        R::PolicyNosync => "HYPOTAXIS_RENDERER=nosync: explicit sync off for NVIDIA.",
-        R::PolicySoftware => "HYPOTAXIS_RENDERER=software: no accelerated compositing.",
+        R::PolicyDefault => "BOOPIS_RENDERER=default: WebKitGTK's own choice.",
+        R::PolicyShm => "BOOPIS_RENDERER=shm: GL kept, frames copied through shared memory.",
+        R::PolicyCpu => "BOOPIS_RENDERER=cpu: the CPU paints every frame.",
+        R::PolicyNosync => "BOOPIS_RENDERER=nosync: explicit sync off for NVIDIA.",
+        R::PolicySoftware => "BOOPIS_RENDERER=software: no accelerated compositing.",
         R::NoNvidiaProprietary => {
             "The display GPU is not on the NVIDIA proprietary driver: WebKitGTK's own choice."
         }
@@ -594,7 +594,7 @@ pub fn doctor_lines(out: &Out, version: &str, gathered: &Gathered) -> Vec<String
     lines.push(out.row(
         None,
         "setting",
-        &format!("HYPOTAXIS_RENDERER={}", name(&report.policy)),
+        &format!("BOOPIS_RENDERER={}", name(&report.policy)),
     ));
     lines.push(out.row(None, "decision", renderer_short(report.rule)));
     lines.push(out.note(renderer_long(report.rule)));
@@ -622,7 +622,7 @@ pub fn doctor_lines(out: &Out, version: &str, gathered: &Gathered) -> Vec<String
         None,
         "setting",
         &format!(
-            "HYPOTAXIS_GPU={} ({})",
+            "BOOPIS_GPU={} ({})",
             name(&gpu_report.policy),
             name(&gpu_report.policy_source)
         ),
@@ -667,7 +667,7 @@ pub fn doctor_lines(out: &Out, version: &str, gathered: &Gathered) -> Vec<String
     lines.push(out.row(
         None,
         "setting",
-        &format!("HYPOTAXIS_FPS={}", name(&gathered.fps_policy)),
+        &format!("BOOPIS_FPS={}", name(&gathered.fps_policy)),
     ));
     lines.push(out.note(fps_long(gathered.fps_policy)));
     let profile = gathered
@@ -725,7 +725,7 @@ pub fn doctor_lines(out: &Out, version: &str, gathered: &Gathered) -> Vec<String
         }
         RuntimeStatus::Existing { chosen, home } => {
             let why = if *chosen {
-                "your choice (HYPOTAXIS_HERMES or the setting)"
+                "your choice (BOOPIS_HERMES or the setting)"
             } else {
                 "this build carries none"
             };

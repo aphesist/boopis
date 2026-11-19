@@ -41,15 +41,15 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
     let busy = false;
     const draw = (status: SetupStatus | null, error: string): void => {
       const card = el('div', { style: 'display:grid;gap:var(--sp-4);max-width:var(--measure);width:min(90vw,var(--measure))' });
-      card.append(el('h1', { id: 'fr-title', style: 'margin:0;font:600 var(--fs-xl)/var(--lh-tight) var(--sans)' }, 'Set up hypotaxis'));
+      card.append(el('h1', { id: 'fr-title', style: 'margin:0;font:600 var(--fs-xl)/var(--lh-tight) var(--sans)' }, 'Set up boopis'));
       if (error) card.append(el('p', { role: 'alert', style: 'margin:0;color:var(--red-text)' }, error));
       if (!status) {
-        card.append(el('p', { style: 'margin:0;color:var(--text-dim)' }, 'hypotaxis installs its plugin into your Hermes profile and asks before it changes any Hermes setting. Nothing is installed without you.'));
+        card.append(el('p', { style: 'margin:0;color:var(--text-dim)' }, 'boopis installs its plugin into your Hermes profile and asks before it changes any Hermes setting. Nothing is installed without you.'));
         card.append(button('Set up', 'primary', () => { void run(null, false); }));
       } else {
         card.append(steps(status));
         if (status.install_command) {
-          card.append(el('p', { style: 'margin:0' }, 'Install Hermes by running this in a terminal. hypotaxis never runs it for you.'), el('code', { class: 'ui-code', style: 'display:block;overflow-x:auto' }, status.install_command));
+          card.append(el('p', { style: 'margin:0' }, 'Install Hermes by running this in a terminal. boopis never runs it for you.'), el('code', { class: 'ui-code', style: 'display:block;overflow-x:auto' }, status.install_command));
           card.append(button('Check again', 'primary', () => { void run(null, false); }));
         }
         if (status.steps.some((s) => s.state === 'declined')) card.append(button('Review again', 'ghost', () => { void run(null, true); }));
@@ -59,7 +59,7 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
           card.append(el('h2', { style: 'margin:0;font:600 var(--fs-l)/var(--lh-tight) var(--sans)' }, 'You are set'));
           const list = el('ul', { style: 'margin:0;padding-left:1.2em;color:var(--text-dim)' });
           for (const line of status.receipt?.lines ?? []) list.append(el('li', {}, line));
-          card.append(list, button('Open hypotaxis', 'primary', () => { useFormsHost(null); root.remove(); resolve(); }));
+          card.append(list, button('Open boopis', 'primary', () => { useFormsHost(null); root.remove(); resolve(); }));
         }
       }
       root.replaceChildren(card);

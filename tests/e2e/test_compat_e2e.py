@@ -24,7 +24,7 @@ from stack import HermesInstall, HermesStack
 from test_plugin_e2e import create_session, run_prompt
 
 HX_BIN = os.environ.get("HX_BIN", "")
-TOOLSETS = ["file", "terminal", "hypotaxis"]
+TOOLSETS = ["file", "terminal", "boopis"]
 
 
 class CompatStack(HermesStack):
@@ -32,7 +32,7 @@ class CompatStack(HermesStack):
 
     def config(self) -> dict[str, Any]:
         config = super().config()
-        config["plugins"]["entries"]["hypotaxis"]["allow_gateway_injection"] = True
+        config["plugins"]["entries"]["boopis"]["allow_gateway_injection"] = True
         return config
 
 
@@ -91,14 +91,14 @@ def command_hook(command: str, matcher: str = "") -> list[dict[str, Any]]:
 def trust_everything(gw: GatewayClient, project: Path) -> None:
     for kind in ("hooks", "permissions", "mcp", "commands"):
         try:
-            gw.result("plugin.hypotaxis.trust.set", {"cwd": str(project), "decision": "trust", "kind": kind})
+            gw.result("plugin.boopis.trust.set", {"cwd": str(project), "decision": "trust", "kind": kind})
         except Exception:
             continue
 
 
 def session(gw: GatewayClient, stack: HermesStack, project: Path) -> str:
     sid = create_session(gw, stack, cwd=str(project), toolsets=TOOLSETS)
-    gw.result("plugin.hypotaxis.mode.set", {"session_id": sid, "mode": "ungoverned"})
+    gw.result("plugin.boopis.mode.set", {"session_id": sid, "mode": "ungoverned"})
     return sid
 
 
@@ -128,7 +128,7 @@ def test_a_project_hook_blocks_a_ship_and_the_model_reads_its_stderr(
     )
 
     # 1. the hook is in the inventory, untrusted, and is not run
-    inventory = gateway.result("plugin.hypotaxis.compat.inventory", {"cwd": str(project)})
+    inventory = gateway.result("plugin.boopis.compat.inventory", {"cwd": str(project)})
     hooks = [i for i in inventory["items"] if i["kind"] == "hook"]
     assert [(h["detail"]["event"], h["status"]) for h in hooks] == [("PreToolUse", "untrusted")]
     assert hooks[0]["trust"]["detail"]["command"].startswith("python3 .claude/hooks/guard.py")
@@ -142,11 +142,11 @@ def test_a_project_hook_blocks_a_ship_and_the_model_reads_its_stderr(
     # 2. the user approves it through the RPC, and a new session is blocked
     target.unlink()
     approved = gateway.result(
-        "plugin.hypotaxis.trust.set",
+        "plugin.boopis.trust.set",
         {"cwd": str(project), "decision": "trust", "content_hash": hooks[0]["trust"]["content_hash"]},
     )
     assert approved["updated"] == 1
-    after = gateway.result("plugin.hypotaxis.compat.inventory", {"cwd": str(project)})
+    after = gateway.result("plugin.boopis.compat.inventory", {"cwd": str(project)})
     assert [i["status"] for i in after["items"] if i["kind"] == "hook"] == ["active"]
     sid = session(gateway, stack, project)
     before = len(tool_results(fake_model))
@@ -246,7 +246,7 @@ def test_the_gateway_serves_the_inventory_for_a_project_with_no_claude_files(
     gateway: GatewayClient, stack: CompatStack, project: Path
 ) -> None:
     started = time.monotonic()
-    inventory = gateway.result("plugin.hypotaxis.compat.inventory", {"cwd": str(project)})
+    inventory = gateway.result("plugin.boopis.compat.inventory", {"cwd": str(project)})
     assert time.monotonic() - started < 10
     assert set(inventory["hook_events"]["unsupported"]) >= {"PreCompact", "PermissionRequest"}
     assert inventory["items"] == [] or all(i["status"] for i in inventory["items"])

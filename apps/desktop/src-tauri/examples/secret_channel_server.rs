@@ -16,8 +16,8 @@ use std::io::Read;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-use hypotaxis_host::error::Result;
-use hypotaxis_host::secrets::{Auth, PeerPolicy, SecretStore, channel};
+use boopis_host::error::Result;
+use boopis_host::secrets::{Auth, PeerPolicy, SecretStore, channel};
 
 #[derive(Default)]
 struct Map(Mutex<HashMap<(String, String), String>>);

@@ -39,7 +39,7 @@ pub fn plan(consent: bool) -> Result<InstallReport> {
     Ok(InstallReport {
         ran: false,
         command: installer_command().to_owned(),
-        note: "The host does not run installers yet; run this command in a terminal, then reopen hypotaxis.".to_owned(),
+        note: "The host does not run installers yet; run this command in a terminal, then reopen boopis.".to_owned(),
     })
 }
 

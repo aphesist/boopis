@@ -1,8 +1,8 @@
 """The plugin inside a real, unmodified Hermes gateway, against the fake model.
 
 Covers what unit tests cannot: that Hermes loads the plugin from its plugin directory, calls the hooks
-with the kwargs the plugin reads, routes ``plugin.hypotaxis.*`` RPC, and delivers
-``plugin.hypotaxis.ledger.appended`` events to a connected client.
+with the kwargs the plugin reads, routes ``plugin.boopis.*`` RPC, and delivers
+``plugin.boopis.ledger.appended`` events to a connected client.
 """
 
 from __future__ import annotations
@@ -62,9 +62,9 @@ def create_session(gw: GatewayClient, stack: HermesStack, **extra: Any) -> str:
         "model": "fake-a",
         "provider": "main",
         # The built-in file and terminal toolsets give the model write tools to attempt, which is what the
-        # policy has to stop; the tools tests below use toolsets: ["hypotaxis"].
+        # policy has to stop; the tools tests below use toolsets: ["boopis"].
         "toolsets": ["file", "terminal"],
-        "client": {"name": "hypotaxis-e2e", "version": "0"},
+        "client": {"name": "boopis-e2e", "version": "0"},
         **extra,
     }
     created = gw.result("session.create", params)
@@ -94,20 +94,20 @@ def contraprova_verify(path: Path) -> subprocess.CompletedProcess[str]:
 
 def test_hermes_loaded_the_plugin_and_serves_its_rpc(gateway: GatewayClient, stack: HermesStack) -> None:
     sid = create_session(gateway, stack)
-    described = gateway.result("plugin.hypotaxis.describe", {"session_id": sid})
-    assert described["protocol"] == "hypotaxis-v1"
+    described = gateway.result("plugin.boopis.describe", {"session_id": sid})
+    assert described["protocol"] == "boopis-v1"
     assert described["version"] == "0.1.0"
     assert "mode.set" in described["capabilities"]
     assert described["config"]["errors"] == []
-    assert gateway.result("plugin.hypotaxis.mode.set", {"session_id": sid, "mode": "governed"}) == {}
-    state = gateway.result("plugin.hypotaxis.cascade.state", {"session_id": sid})
+    assert gateway.result("plugin.boopis.mode.set", {"session_id": sid, "mode": "governed"}) == {}
+    state = gateway.result("plugin.boopis.cascade.state", {"session_id": sid})
     assert state["status"] == "idle"
     assert [t["name"] for t in state["ladder"]] == ["haiku", "sonnet", "opus"]  # contraprova's measured default
 
 
 def test_a_prompt_writes_a_verifiable_ledger_with_the_models_usage(gateway: GatewayClient, stack: HermesStack) -> None:
     sid = create_session(gateway, stack)
-    gateway.result("plugin.hypotaxis.mode.set", {"session_id": sid, "mode": "governed"})
+    gateway.result("plugin.boopis.mode.set", {"session_id": sid, "mode": "governed"})
     events = run_prompt(gateway, sid, f"@@usage {json.dumps(USAGE)}@@ @@reply hello from the fake@@")
 
     path = stack.ledger_dir / f"{sid}.jsonl"
@@ -135,19 +135,19 @@ def test_a_prompt_writes_a_verifiable_ledger_with_the_models_usage(gateway: Gate
     assert "request_id" in u
 
     # every appended event reached the client, as the full envelope, in order
-    appended = [e for e in events if e.get("type") == "plugin.hypotaxis.ledger.appended"]
-    got = [e["payload"] for e in gateway.events_of("plugin.hypotaxis.ledger.appended", sid)]
+    appended = [e for e in events if e.get("type") == "plugin.boopis.ledger.appended"]
+    got = [e["payload"] for e in gateway.events_of("plugin.boopis.ledger.appended", sid)]
     assert appended, "no ledger.appended event arrived during the turn"
     assert [p["seq"] for p in got] == sorted(p["seq"] for p in got)
     assert {p["hash"] for p in got} <= {e["hash"] for e in ledger}
     assert got[0] == ledger[0]
 
     # the RPC surface agrees with the file
-    tail = gateway.result("plugin.hypotaxis.ledger.tail", {"session_id": sid, "since_seq": -1, "limit": 100})
+    tail = gateway.result("plugin.boopis.ledger.tail", {"session_id": sid, "since_seq": -1, "limit": 100})
     assert tail["head_seq"] == len(ledger) - 1 or tail["head_seq"] >= ledger[-1]["seq"]
     assert tail["events"][0]["hash"] == ledger[0]["hash"]
-    assert gateway.result("plugin.hypotaxis.ledger.verify", {"session_id": sid})["ok"] is True
-    stats = gateway.result("plugin.hypotaxis.ledger.stats", {"session_id": sid})
+    assert gateway.result("plugin.boopis.ledger.verify", {"session_id": sid})["ok"] is True
+    stats = gateway.result("plugin.boopis.ledger.stats", {"session_id": sid})
     assert stats["tokens"]["input_uncached"] >= 600
     assert stats["cost_usd"] is not None
     assert stats["round_trips"] >= 1
@@ -157,7 +157,7 @@ def test_the_mode_is_locked_after_the_first_prompt(gateway: GatewayClient, stack
     sid = create_session(gateway, stack)
     run_prompt(gateway, sid, "@@reply hi@@")
     with pytest.raises(RpcError) as exc:
-        gateway.result("plugin.hypotaxis.mode.set", {"session_id": sid, "mode": "ungoverned"})
+        gateway.result("plugin.boopis.mode.set", {"session_id": sid, "mode": "ungoverned"})
     assert "hx.mode.locked" in exc.value.text
 
 
@@ -166,7 +166,7 @@ def test_governed_mode_blocks_a_write_before_it_happens(
 ) -> None:
     target = stack.workdir / "should-not-exist.txt"
     sid = create_session(gateway, stack)
-    gateway.result("plugin.hypotaxis.mode.set", {"session_id": sid, "mode": "governed"})
+    gateway.result("plugin.boopis.mode.set", {"session_id": sid, "mode": "governed"})
     call = json.dumps({"path": str(target), "content": "nope"})
     run_prompt(gateway, sid, f"@@call write_file {call}@@")
 
@@ -186,7 +186,7 @@ def test_governed_mode_blocks_a_write_before_it_happens(
 def test_governed_mode_lets_a_read_only_tool_run(gateway: GatewayClient, stack: HermesStack) -> None:
     (stack.workdir / "notes.txt").write_text("readable")
     sid = create_session(gateway, stack)
-    gateway.result("plugin.hypotaxis.mode.set", {"session_id": sid, "mode": "governed"})
+    gateway.result("plugin.boopis.mode.set", {"session_id": sid, "mode": "governed"})
     call = json.dumps({"path": str(stack.workdir / "notes.txt")})
     run_prompt(gateway, sid, f"@@call read_file {call}@@")
     called = [e["payload"] for e in read_ledger(stack, sid) if e["type"] == "tool.called"]
@@ -196,7 +196,7 @@ def test_governed_mode_lets_a_read_only_tool_run(gateway: GatewayClient, stack: 
 def test_ungoverned_mode_leaves_the_write_to_hermes(gateway: GatewayClient, stack: HermesStack) -> None:
     target = stack.workdir / "written.txt"
     sid = create_session(gateway, stack)
-    gateway.result("plugin.hypotaxis.mode.set", {"session_id": sid, "mode": "ungoverned"})
+    gateway.result("plugin.boopis.mode.set", {"session_id": sid, "mode": "ungoverned"})
     call = json.dumps({"path": str(target), "content": "ok"})
     run_prompt(gateway, sid, f"@@call write_file {call}@@")
     assert target.read_text() == "ok"
@@ -205,7 +205,7 @@ def test_ungoverned_mode_leaves_the_write_to_hermes(gateway: GatewayClient, stac
 
 def test_the_cost_cap_blocks_the_next_turn(gateway: GatewayClient, stack: HermesStack) -> None:
     sid = create_session(gateway, stack)
-    gateway.result("plugin.hypotaxis.mode.set", {"session_id": sid, "mode": "ungoverned"})
+    gateway.result("plugin.boopis.mode.set", {"session_id": sid, "mode": "ungoverned"})
     run_prompt(gateway, sid, f"@@usage {json.dumps(USAGE)}@@ @@reply first@@")  # about $1.1 at these prices
     before = len(read_ledger(stack, sid))
     run_prompt(gateway, sid, "@@reply second@@")
@@ -214,7 +214,7 @@ def test_the_cost_cap_blocks_the_next_turn(gateway: GatewayClient, stack: Hermes
     assert len(blocked) == 1
     assert blocked[0]["payload"]["cap_usd"] == CAP
     assert not any(e["type"] == "usage.recorded" and e["payload"].get("role") == "orchestrator" for e in ledger)
-    assert gateway.events_of("plugin.hypotaxis.budget.blocked", sid)[-1]["payload"]["cap_usd"] == CAP
+    assert gateway.events_of("plugin.boopis.budget.blocked", sid)[-1]["payload"]["cap_usd"] == CAP
 
 
 def test_closing_a_session_writes_session_closed(gateway: GatewayClient, stack: HermesStack) -> None:
@@ -270,8 +270,8 @@ def tools_gateway(tools_stack: HermesStack, stack_root: Path) -> Iterator[Gatewa
 
 @pytest.fixture(scope="module")
 def project(tools_stack: HermesStack, tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """A git project with a pinned gate command in .hermes/hypotaxis.yaml that the user has approved."""
-    from hypotaxis.config import KIND_SETTINGS, TrustStore, content_hash
+    """A git project with a pinned gate command in .hermes/boopis.yaml that the user has approved."""
+    from boopis.config import KIND_SETTINGS, TrustStore, content_hash
 
     root = tmp_path_factory.mktemp("project")
     (root / "src").mkdir()
@@ -283,14 +283,14 @@ def project(tools_stack: HermesStack, tmp_path_factory: pytest.TempPathFactory) 
     (root / "run.sh").write_text("#!/bin/sh\necho original\n")
     (root / "run.sh").chmod(0o750)
     (root / ".hermes").mkdir()
-    (root / ".hermes" / "hypotaxis.yaml").write_text(f"gate:\n  command: {sys.executable} check.py\n  timeout_s: 60\n")
+    (root / ".hermes" / "boopis.yaml").write_text(f"gate:\n  command: {sys.executable} check.py\n  timeout_s: 60\n")
     (tools_stack.root / "home").mkdir(parents=True, exist_ok=True)
     (tools_stack.root / "home" / ".gitconfig").write_text("[user]\n\tname = The Owner\n\temail = owner@example.com\n")
     git(root, "init", "-q")
     git(root, "add", "-A")
     git(root, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "init")
-    approved = content_hash((root / ".hermes" / "hypotaxis.yaml").read_bytes())
-    TrustStore(tools_stack.home).approve(root, KIND_SETTINGS, "hypotaxis.yaml", approved)
+    approved = content_hash((root / ".hermes" / "boopis.yaml").read_bytes())
+    TrustStore(tools_stack.home).approve(root, KIND_SETTINGS, "boopis.yaml", approved)
     return root
 
 
@@ -315,16 +315,16 @@ def test_an_ungoverned_session_uses_pack_and_ship_end_to_end(
         "request_id": f"req-{time.time_ns()}",
         "model": "fake-a",
         "provider": "main",
-        "toolsets": ["hypotaxis"],
-        "client": {"name": "hypotaxis-e2e", "version": "0"},
+        "toolsets": ["boopis"],
+        "client": {"name": "boopis-e2e", "version": "0"},
     }
     created = tools_gateway.result("session.create", sid_params)
     sid = created["session_id"]
     # Hermes does not tell a plugin a session's cwd before its first prompt: unknown is reported as unknown
     # (ctx.session_cwd() inside an RPC answers the profile's directory, which would be a wrong answer)
-    assert tools_gateway.result("plugin.hypotaxis.describe", {"session_id": sid})["session"]["cwd"] is None
+    assert tools_gateway.result("plugin.boopis.describe", {"session_id": sid})["session"]["cwd"] is None
     # ship is a worker's tool in governed mode (see test_cascade_e2e.py); a session that ships itself is ungoverned
-    assert tools_gateway.result("plugin.hypotaxis.mode.set", {"session_id": sid, "mode": "ungoverned"}) == {}
+    assert tools_gateway.result("plugin.boopis.mode.set", {"session_id": sid, "mode": "ungoverned"}) == {}
 
     a_py = project / "src" / "a.py"
     run_sh = project / "run.sh"
@@ -369,9 +369,9 @@ def test_an_ungoverned_session_uses_pack_and_ship_end_to_end(
     run_prompt(tools_gateway, sid, prompt, timeout=120)
 
     # after the first prompt the session's cwd is known to RPC callers, from the prompt section's info
-    assert tools_gateway.result("plugin.hypotaxis.describe", {"session_id": sid})["session"]["cwd"] == str(project)
+    assert tools_gateway.result("plugin.boopis.describe", {"session_id": sid})["session"]["cwd"] == str(project)
 
-    # the model's whole tool surface is the hypotaxis toolset
+    # the model's whole tool surface is the boopis toolset
     first = fake_model.chat_requests()[start]
     assert {"pack", "ship"} <= set(first.tool_names)
     assert not {"write_file", "patch", "terminal"} & set(first.tool_names)
@@ -384,7 +384,7 @@ def test_an_ungoverned_session_uses_pack_and_ship_end_to_end(
     assert passed["status"] == "shipped"
     assert passed["gate"]["gates"] == ["T0.scope", "T0.visible_tests"]
     ref, commit = passed["checkpoint"]["ref"], passed["checkpoint"]["commit"]
-    assert ref == f"refs/hypotaxis/checkpoints/{sid}"
+    assert ref == f"refs/boopis/checkpoints/{sid}"
     assert git(project, "rev-parse", ref) == commit
     assert "return 2" in git(project, "show", f"{commit}:src/a.py")
     assert git(project, "log", "-1", "--format=%an", commit) == "The Owner"
@@ -419,17 +419,17 @@ def test_an_ungoverned_session_uses_pack_and_ship_end_to_end(
     assert blocked_call["error_code"] == "hx.policy.denied"
     assert "return 'BREAK'" not in path.read_text()  # edit text is never stored
 
-    shipped = [e["payload"]["status"] for e in tools_gateway.events_of("plugin.hypotaxis.ship.completed", sid)]
+    shipped = [e["payload"]["status"] for e in tools_gateway.events_of("plugin.boopis.ship.completed", sid)]
     assert shipped == ["shipped", "restored"]
-    streamed = {e["payload"]["type"] for e in tools_gateway.events_of("plugin.hypotaxis.ledger.appended", sid)}
+    streamed = {e["payload"]["type"] for e in tools_gateway.events_of("plugin.boopis.ledger.appended", sid)}
     assert {"ship.applied", "gate.decided", "checkpoint.committed", "ship.restored"} <= streamed
 
 
 def test_governed_mode_still_blocks_the_hermes_write_tools_even_if_the_host_exposes_them(
     tools_gateway: GatewayClient, tools_stack: HermesStack, project: Path
 ) -> None:
-    sid = create_session(tools_gateway, tools_stack, cwd=str(project), toolsets=["hypotaxis", "file"])
-    tools_gateway.result("plugin.hypotaxis.mode.set", {"session_id": sid, "mode": "governed"})
+    sid = create_session(tools_gateway, tools_stack, cwd=str(project), toolsets=["boopis", "file"])
+    tools_gateway.result("plugin.boopis.mode.set", {"session_id": sid, "mode": "governed"})
     target = project / "sneaky.txt"
     run_prompt(tools_gateway, sid, f"@@call write_file {json.dumps({'path': str(target), 'content': 'x'})}@@")
     assert not target.exists()

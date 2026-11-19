@@ -1,4 +1,4 @@
-/* hypotaxis shell: the frame. Chrome, the left sidebar (open | rail | closed), the tabs, the right panel container,
+/* boopis shell: the frame. Chrome, the left sidebar (open | rail | closed), the tabs, the right panel container,
    the dock slot, the command palette, the account menu, Settings, tooltips and the keyboard. It mounts each registered
    module into its slot (a module that throws leaves a plain notice in its slot, never fabricated content).
    Layout contract: see layout.ts. Keymap: keymap.ts. */

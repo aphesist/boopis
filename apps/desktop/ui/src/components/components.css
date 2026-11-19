@@ -1,4 +1,4 @@
-/* hypotaxis v6 · shared component library (owner: design-system agent)
+/* boopis v6 · shared component library (owner: design-system agent)
    One canonical version of every piece that more than one module draws. The system is
    design-system/DESIGN-SYSTEM.md; what each module deletes and calls instead is design-system/MIGRATION.md.
    Load after tokens.css and before any module stylesheet. Theme tokens only: no literal colour, family or

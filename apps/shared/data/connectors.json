@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "description": "The curated connector collection: MCP servers hypotaxis knows how to install, configure and trust. Every entry is pinned to an exact version and was checked against its publisher's own sources on the date in `verified`. See docs/CONNECTORS.md.",
+  "description": "The curated connector collection: MCP servers boopis knows how to install, configure and trust. Every entry is pinned to an exact version and was checked against its publisher's own sources on the date in `verified`. See docs/CONNECTORS.md.",
   "connectors": [
     {
       "id": "firecrawl",

@@ -1,6 +1,6 @@
 [package]
 name = "hx"
-description = "The hx binary: JSON-RPC over stdio for the hypotaxis plugin, plus one-shot subcommands."
+description = "The hx binary: JSON-RPC over stdio for the boopis plugin, plus one-shot subcommands."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

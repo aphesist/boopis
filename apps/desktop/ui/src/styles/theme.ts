@@ -1,4 +1,4 @@
-/* hypotaxis theme runtime (ported from v6 theme.js). A theme = a preset (a block of tokens in tokens.css, chosen
+/* boopis theme runtime (ported from v6 theme.js). A theme = a preset (a block of tokens in tokens.css, chosen
    with data-hx-preset on <html>) + the user's overrides (solid colours, interface and code fonts, interface case,
    corners, density). Overrides are written as inline custom properties on <html>; translucent tokens derive from
    the solid ones in tokens.css. The dock's black (--dock-bg) is fixed and never offered. Saved through
@@ -216,7 +216,7 @@ export interface ContrastRow { label: string; fg: string; bg: string; scope: str
 function exportObject() {
   const colors: Record<string, string> = {};
   for (const k of EDITABLE) colors[k] = hexOf(k);
-  return { format: 'hypotaxis-theme', version: 1, preset: theme.preset, sans: effective('sans'), mono: effective('mono'), case: effective('case'), corners: effective('corners'), density: effective('density'), logo: effective('logo'), colors };
+  return { format: 'boopis-theme', version: 1, preset: theme.preset, sans: effective('sans'), mono: effective('mono'), case: effective('case'), corners: effective('corners'), density: effective('density'), logo: effective('logo'), colors };
 }
 
 export const themeApi = {
@@ -239,9 +239,9 @@ export const themeApi = {
   importJSON(text: string): void {
     let obj: unknown;
     try { obj = JSON.parse(text); } catch { throw new Error('The text is not valid JSON.'); }
-    if (!obj || (obj as { format?: unknown }).format !== 'hypotaxis-theme') throw new Error('This JSON is not a hypotaxis theme (it needs "format": "hypotaxis-theme").');
+    if (!obj || (obj as { format?: unknown }).format !== 'boopis-theme') throw new Error('This JSON is not a boopis theme (it needs "format": "boopis-theme").');
     const t = sanitize(obj);
-    if (!t) throw new Error('This JSON is not a hypotaxis theme (it needs "format": "hypotaxis-theme").');
+    if (!t) throw new Error('This JSON is not a boopis theme (it needs "format": "boopis-theme").');
     // keep only the colours that differ from the preset, so the preset stays meaningful
     theme = Object.assign(blank(), { preset: t.preset }); apply(true);
     const colors: Record<string, string> = {};

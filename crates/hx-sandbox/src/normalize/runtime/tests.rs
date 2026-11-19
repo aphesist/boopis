@@ -109,7 +109,7 @@ fn a_root_that_contains_credentials_is_refused() {
 fn hermes_home_and_what_holds_it_are_refused_but_a_python_inside_it_is_not() {
     let s = setup();
     let hermes = s.home.join(".hermes");
-    fs::create_dir_all(hermes.join("hypotaxis")).unwrap();
+    fs::create_dir_all(hermes.join("boopis")).unwrap();
     fs::write(hermes.join(".env"), "KEY=secret").unwrap();
     // Hermes's home itself, even with an interpreter in its own bin/ ...
     interpreter_prefix(&hermes);
@@ -117,20 +117,20 @@ fn hermes_home_and_what_holds_it_are_refused_but_a_python_inside_it_is_not() {
     // ... what holds it, which is how the app's data folder looks (it contains `hermes-home`) ...
     let data = s.home.join(".local/share/app");
     let private_home = data.join("hermes-home");
-    fs::create_dir_all(private_home.join("hypotaxis")).unwrap();
+    fs::create_dir_all(private_home.join("boopis")).unwrap();
     interpreter_prefix(&data);
     refused(&s, &data, Some(&private_home), "may not expose credentials");
     // ... and the files in it that are secrets
     refused(
         &s,
-        &hermes.join("hypotaxis"),
+        &hermes.join("boopis"),
         None,
         "may not expose credentials",
     );
-    interpreter_prefix(&hermes.join("hypotaxis").join("venv"));
+    interpreter_prefix(&hermes.join("boopis").join("venv"));
     refused(
         &s,
-        &hermes.join("hypotaxis").join("venv"),
+        &hermes.join("boopis").join("venv"),
         None,
         "may not expose credentials",
     );

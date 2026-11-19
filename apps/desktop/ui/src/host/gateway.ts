@@ -3,7 +3,7 @@
    itself without a handler: an unanswered request would hang the agent's turn, so the default is a refusal.
 
    Types come from Hermes's generated contract (vendor/hermes-shared, MIT): `RpcMethods` maps a method to its params
-   and result. Plugin methods (`plugin.hypotaxis.*`) are not in it and go through `requestRaw`. */
+   and result. Plugin methods (`plugin.boopis.*`) are not in it and go through `requestRaw`. */
 import { logger } from '../core/log';
 import type { RpcMethod, RpcMethods } from '../vendor/hermes-shared/gateway-contract.generated';
 import { asHostError } from './bridge';

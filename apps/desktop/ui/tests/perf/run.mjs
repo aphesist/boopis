@@ -28,7 +28,7 @@ if (opt('help', false)) {
   --width 1800 --height 1125   window in CSS pixels (the owner's Hyprland window at scale 1.6: GTK3 renders at 2x)
   --dist DIR                    serve this dist-e2e instead of the working tree's (a build of an earlier commit, for a before-and-after)
   --display real                run WebKitGTK on the session's own display (a window opens), not under Xvfb: for a machine with a GPU
-  --env K=V,K2=V2               extra environment for WebKitGTK (on top of the engine's), e.g. HYPOTAXIS_RENDERER is not read here: use
+  --env K=V,K2=V2               extra environment for WebKitGTK (on top of the engine's), e.g. BOOPIS_RENDERER is not read here: use
                                 the WebKit variables themselves
   --python /usr/bin/python3     the interpreter that has gi and WebKit2 4.1 (default /usr/bin/python3.12; Arch: /usr/bin/python)
   --query orbs=main             query string for the page (orbs=main keeps the orbs on the main thread, orbs=worker insists on the worker)

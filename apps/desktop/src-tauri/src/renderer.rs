@@ -18,7 +18,7 @@
 //!   (`WebKit` bug 324551), so from there the machine gets the default GL renderer and no workaround is set (ADR-0025).
 //!   The version is read from the library at run time (`webkit::probe`), not from what the build linked.
 //! - The host cannot see a blank window from inside. So the automatic rule touches only the case where the evidence
-//!   says the default is broken, and everything else is an explicit choice (`HYPOTAXIS_RENDERER`) that the
+//!   says the default is broken, and everything else is an explicit choice (`BOOPIS_RENDERER`) that the
 //!   diagnostics report and the owner can try. A machine that already runs with a switch of its own is not touched.
 //!
 //! The decision is a pure function of its inputs (`decide`), the inputs are read by `probe`, and `apply` is the one
@@ -35,7 +35,7 @@ use crate::gpu;
 use crate::webkit;
 
 /// The variable that overrides the automatic rule: `auto` (the default), `default`, `shm`, `cpu`, `nosync` or `software`.
-pub const POLICY_VAR: &str = "HYPOTAXIS_RENDERER";
+pub const POLICY_VAR: &str = "BOOPIS_RENDERER";
 
 /// Switches the user may already have set. If any is present the host changes nothing: the user's choice stands.
 pub const USER_SWITCHES: &[&str] = &[
@@ -49,7 +49,7 @@ pub const USER_SWITCHES: &[&str] = &[
 
 const NVIDIA_PCI_VENDOR: u32 = 0x10de;
 
-/// What the user asked for with `HYPOTAXIS_RENDERER`.
+/// What the user asked for with `BOOPIS_RENDERER`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "snake_case")]
 pub enum Policy {
@@ -125,13 +125,13 @@ pub struct Inputs {
     pub session: Session,
     /// The compositor is Hyprland (reported only; no rule depends on it).
     pub hyprland: bool,
-    /// What `HYPOTAXIS_RENDERER` says.
+    /// What `BOOPIS_RENDERER` says.
     pub policy: Policy,
     /// Which of `USER_SWITCHES` are already in the environment.
     pub user_switches: Vec<String>,
     /// The `WebKitGTK` this process runs on (its version decides the Wayland and NVIDIA rule).
     pub webkit: webkit::Info,
-    /// The GPU rule (`gpu.rs`, `HYPOTAXIS_GPU`) offloads rendering to the NVIDIA GPU: that GPU, not the display one, is
+    /// The GPU rule (`gpu.rs`, `BOOPIS_GPU`) offloads rendering to the NVIDIA GPU: that GPU, not the display one, is
     /// what the webview draws on, so the rules below judge it.
     pub offload: bool,
 }
@@ -142,15 +142,15 @@ pub struct Inputs {
 pub enum Rule {
     /// A `WebKit` or NVIDIA switch was already in the environment; nothing is changed.
     UserEnvironment,
-    /// `HYPOTAXIS_RENDERER=default`.
+    /// `BOOPIS_RENDERER=default`.
     PolicyDefault,
-    /// `HYPOTAXIS_RENDERER=shm`.
+    /// `BOOPIS_RENDERER=shm`.
     PolicyShm,
-    /// `HYPOTAXIS_RENDERER=cpu`.
+    /// `BOOPIS_RENDERER=cpu`.
     PolicyCpu,
-    /// `HYPOTAXIS_RENDERER=nosync`.
+    /// `BOOPIS_RENDERER=nosync`.
     PolicyNosync,
-    /// `HYPOTAXIS_RENDERER=software`.
+    /// `BOOPIS_RENDERER=software`.
     PolicySoftware,
     /// The display GPU is not on the NVIDIA proprietary driver: `WebKitGTK`'s own choice is known to work.
     NoNvidiaProprietary,
@@ -341,7 +341,7 @@ pub struct RendererReport {
     pub hyprland: bool,
     /// The GPUs, with the driver bound to each.
     pub gpus: Vec<Gpu>,
-    /// What `HYPOTAXIS_RENDERER` asked for.
+    /// What `BOOPIS_RENDERER` asked for.
     pub policy: Policy,
     /// The rule that decided.
     pub rule: Rule,
@@ -349,7 +349,7 @@ pub struct RendererReport {
     pub set: Vec<(String, String)>,
     /// Every renderer-related variable in the process environment now (set by the host or by the user).
     pub environment: Vec<(String, String)>,
-    /// `HYPOTAXIS_RENDERER` values and the variables each sets, for the report's reader.
+    /// `BOOPIS_RENDERER` values and the variables each sets, for the report's reader.
     pub choices: Vec<(String, String)>,
     /// The `WebKitGTK` this process runs on: its version and whether it is the `AppImage`'s or the system's.
     pub webkit: webkit::Report,
@@ -358,7 +358,7 @@ pub struct RendererReport {
     pub frame_rate: frame_rate::Report,
     /// One plain sentence when the renderer in use limits motion, else none.
     pub note: Option<String>,
-    /// Which GPU the webview renders on (`HYPOTAXIS_GPU`), and why. The power source and the restart advice are read
+    /// Which GPU the webview renders on (`BOOPIS_GPU`), and why. The power source and the restart advice are read
     /// when the report is asked for.
     pub gpu: gpu::Report,
 }

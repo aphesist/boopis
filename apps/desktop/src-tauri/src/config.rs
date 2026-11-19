@@ -1,6 +1,6 @@
 //! The host's tunable numbers, as data with defaults (`docs/STANDARDS.md` section 1, rule 6).
 
-/// The Hermes version the plugin requires (`plugins/hypotaxis/plugin.yaml` `requires_hermes`).
+/// The Hermes version the plugin requires (`plugins/boopis/plugin.yaml` `requires_hermes`).
 pub const REQUIRES_HERMES: &str = ">=0.23.2";
 
 /// Limits and timings of the gateway proxy and the Hermes lifecycle.

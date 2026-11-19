@@ -31,10 +31,10 @@ describe('the gateway client', () => {
 
   it('rejects with the stable code a host or plugin error carries', async () => {
     const { host, client } = await connected();
-    const p = client.requestRaw('plugin.hypotaxis.mode.set', {});
+    const p = client.requestRaw('plugin.boopis.mode.set', {});
     host.error(host.sent[0]?.frame['id'], -32000, 'plugin_rpc_failed', { code: 'hx.mode.locked' });
     await expect(p).rejects.toMatchObject({ name: 'GatewayError', code: 'hx.mode.locked' });
-    const q = client.requestRaw('plugin.hypotaxis.mode.set', {});
+    const q = client.requestRaw('plugin.boopis.mode.set', {});
     host.error(host.sent[1]?.frame['id'], -32000, 'HxError: hx.mode.locked: the first prompt was sent');
     await expect(q).rejects.toMatchObject({ code: 'hx.mode.locked' }); // plugin errors carry the code first in the message
     expect(new GatewayError(1, 'plain').code).toBe('');

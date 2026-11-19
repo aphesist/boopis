@@ -1,4 +1,4 @@
-/* hypotaxis desktop UI: the entry. The order is the contract: styles first (one cascade), the web component, the
+/* boopis desktop UI: the entry. The order is the contract: styles first (one cascade), the web component, the
    data provider, the modules (each registers into its slot as it loads), then the shell boots and mounts them. */
 import './styles';
 import { ui } from './components';
@@ -27,7 +27,7 @@ ui.squircle.start();
 async function start(): Promise<void> {
   await orbs;
   if (inTauri()) {
-    /* first run: the host sets Hermes up for hypotaxis (plugin, settings, a key) before anything connects; a screen of its own, thin on purpose */
+    /* first run: the host sets Hermes up for boopis (plugin, settings, a key) before anything connects; a screen of its own, thin on purpose */
     const [{ runFirstRun }, { tauriSetupBridge }] = await Promise.all([import('./host/first-run'), import('./host/setup-bridge')]);
     await runFirstRun(tauriSetupBridge());
   }

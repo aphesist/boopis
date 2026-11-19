@@ -158,7 +158,7 @@ jobs:
       - name: allow user namespaces (hx-sandbox)
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
       - name: ruff and pyright (pyproject.toml is tooling only)
-        working-directory: plugins/hypotaxis
+        working-directory: plugins/boopis
         run: |
           uvx ruff check . ../../tests/e2e
           uvx ruff format --check . ../../tests/e2e
@@ -167,7 +167,7 @@ jobs:
         env:
           CONTRAPROVA_TOKEN: ${{ secrets.CONTRAPROVA_TOKEN }}
         run: |
-          sha=$(jq -r .sha plugins/hypotaxis/_vendor/contraprova/VENDOR.json)
+          sha=$(jq -r .sha plugins/boopis/_vendor/contraprova/VENDOR.json)
           auth=""
           if [ -n "$CONTRAPROVA_TOKEN" ]; then
             echo "::add-mask::$CONTRAPROVA_TOKEN"
@@ -175,7 +175,7 @@ jobs:
           fi
           echo "CONTRAPROVA_SPEC=contraprova @ git+https://${auth}github.com/aphesist/contraprova@${sha}" >> "$GITHUB_ENV"
       - name: unit tests (plain Python, no Hermes)
-        working-directory: plugins/hypotaxis
+        working-directory: plugins/boopis
         env:
           HX_BIN: ${{ runner.temp }}/hx/hx
         run: |
@@ -216,7 +216,7 @@ jobs:
         env:
           CONTRAPROVA_TOKEN: ${{ secrets.CONTRAPROVA_TOKEN }}
         run: |
-          sha=$(jq -r .sha plugins/hypotaxis/_vendor/contraprova/VENDOR.json)
+          sha=$(jq -r .sha plugins/boopis/_vendor/contraprova/VENDOR.json)
           auth=""
           if [ -n "$CONTRAPROVA_TOKEN" ]; then
             echo "::add-mask::$CONTRAPROVA_TOKEN"
@@ -224,7 +224,7 @@ jobs:
           fi
           echo "CONTRAPROVA_SPEC=contraprova @ git+https://${auth}github.com/aphesist/contraprova@${sha}" >> "$GITHUB_ENV"
       - name: the plugin's end-to-end suite, and the sandbox tests that need Hermes's modules
-        working-directory: plugins/hypotaxis
+        working-directory: plugins/boopis
         env:
           HX_BIN: ${{ runner.temp }}/hx/hx
           HX_E2E_RUNTIME_ROOT: ${{ env.HX_E2E_RUNTIME }}  # the exec test also runs the bundled interpreter under runtime_ro
@@ -243,7 +243,7 @@ jobs:
         env:
           HX_BIN: ${{ runner.temp }}/hx/hx
           HX_E2E_RUNTIME_ARCHIVE: ${{ runner.temp }}/runtime
-        run: cargo test -p hypotaxis-host --test setup_live bundled -- --nocapture
+        run: cargo test -p boopis-host --test setup_live bundled -- --nocapture
 
   ui:
     runs-on: ubuntu-22.04

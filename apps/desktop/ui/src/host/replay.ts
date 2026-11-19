@@ -8,7 +8,7 @@ import type { Connected, HostBridge } from './bridge';
 import type { SecretsBridge } from './secrets';
 
 export interface RecordedFrame { dir: 'in' | 'out'; frame: Record<string, unknown> }
-const WORKS = new Set(['prompt.submit', 'plugin.hypotaxis.blank.fill', 'plugin.hypotaxis.form.submit', 'plugin.hypotaxis.form.cancel']);
+const WORKS = new Set(['prompt.submit', 'plugin.boopis.blank.fill', 'plugin.boopis.form.submit', 'plugin.boopis.form.cancel']);
 
 export class ReplayHost implements HostBridge {
   private onFrame: (f: unknown) => void = () => undefined;

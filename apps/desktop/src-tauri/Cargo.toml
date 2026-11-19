@@ -1,6 +1,6 @@
 [package]
-name = "hypotaxis-host"
-description = "The hypotaxis desktop host: the machine authority (Hermes lifecycle, gateway proxy, keychain, OS integration) of the Tauri app."
+name = "boopis-host"
+description = "The boopis desktop host: the machine authority (Hermes lifecycle, gateway proxy, keychain, OS integration) of the Tauri app."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -12,11 +12,11 @@ authors.workspace = true
 workspace = true
 
 [lib]
-name = "hypotaxis_host"
+name = "boopis_host"
 path = "src/lib.rs"
 
 [[bin]]
-name = "hypotaxis"
+name = "boopis"
 path = "src/main.rs"
 
 [features]

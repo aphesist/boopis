@@ -1,20 +1,20 @@
 //! The host to plugin secret channel (ADR-0020: secrets go UI to host to keychain; this is the last hop to the
 //! plugin's `register_secret_source`). The plugin cannot call Tauri, so the host listens on a local socket.
 //!
-//! * **Transport:** a Unix domain socket in a `0700` directory (`$XDG_RUNTIME_DIR/hypotaxis/`, else the per-user data
+//! * **Transport:** a Unix domain socket in a `0700` directory (`$XDG_RUNTIME_DIR/boopis/`, else the per-user data
 //!   directory), mode `0600`. Windows will use a named pipe with a user-only ACL (not implemented: `start` reports it).
 //! * **Who may connect:** the gateway the host started, and only it ([`super::peer`]). The kernel's `SO_PEERCRED` names the
 //!   connecting process; the host admits that process only if it is the recorded gateway (or the daemon a launch is
 //!   starting), never a child of it, which is what a tool the agent runs is. Anything else gets the same answer as a wrong
 //!   token and the store is never asked.
 //! * **The token and where it goes:** a per-launch 256-bit token the host hands to the gateway *only*, in the environment of
-//!   the `hermes gateway ensure|attach` call that starts it (`HYPOTAXIS_HOST_SECRETS_TOKEN`, with the socket's path in
-//!   `HYPOTAXIS_HOST_SECRETS_SOCKET`). It is written to no file. The plugin reads it once, at load, and removes it from
+//!   the `hermes gateway ensure|attach` call that starts it (`BOOPIS_HOST_SECRETS_TOKEN`, with the socket's path in
+//!   `BOOPIS_HOST_SECRETS_SOCKET`). It is written to no file. The plugin reads it once, at load, and removes it from
 //!   the process environment so no child of the gateway inherits it; Hermes's own secret-source rules strip it from the
-//!   children it builds, too (`plugins/hypotaxis/hostsecrets`). A process that holds the token (it can be read from
+//!   children it builds, too (`plugins/boopis/hostsecrets`). A process that holds the token (it can be read from
 //!   `/proc/<gateway>/environ` by the same user) is still refused by the peer check: the token is the second factor.
 //! * **Protocol** (`hx-host-secrets-v1`): one JSON line in, one out, then close. Requests carry `v`, `token`, `op`
-//!   (`get` or `has`), `service`, `account`. Only the `hypotaxis.` service namespace is reachable, and there is no
+//!   (`get` or `has`), `service`, `account`. Only the `boopis.` service namespace is reachable, and there is no
 //!   write op: secrets arrive from the UI only.
 
 use std::path::{Path, PathBuf};
@@ -32,9 +32,9 @@ use crate::error::{Error, Result};
 pub const PROTOCOL: &str = "hx-host-secrets-v1";
 
 /// The environment variable that carries the token to the gateway (and only there).
-pub const TOKEN_ENV: &str = "HYPOTAXIS_HOST_SECRETS_TOKEN";
+pub const TOKEN_ENV: &str = "BOOPIS_HOST_SECRETS_TOKEN";
 /// The environment variable that names the socket for the plugin.
-pub const SOCKET_ENV: &str = "HYPOTAXIS_HOST_SECRETS_SOCKET";
+pub const SOCKET_ENV: &str = "BOOPIS_HOST_SECRETS_SOCKET";
 
 /// The channel's credentials: its socket and the token. `Debug` never shows the token.
 #[derive(Clone)]
@@ -180,12 +180,12 @@ fn token() -> Result<String> {
     Ok(hex::encode(bytes))
 }
 
-/// The directory for the socket: `$XDG_RUNTIME_DIR/hypotaxis`, else the per-user data directory.
+/// The directory for the socket: `$XDG_RUNTIME_DIR/boopis`, else the per-user data directory.
 #[must_use]
 pub fn default_socket_dir() -> Option<PathBuf> {
     dirs::runtime_dir()
-        .map(|d| d.join("hypotaxis"))
-        .or_else(|| dirs::data_local_dir().map(|d| d.join("hypotaxis").join("run")))
+        .map(|d| d.join("boopis"))
+        .or_else(|| dirs::data_local_dir().map(|d| d.join("boopis").join("run")))
 }
 
 /// Start the channel on `auth`'s socket. `peers` decides which process may use it (see [`super::peer`]).
@@ -213,7 +213,7 @@ pub async fn start(
     // A leftover socket from a crashed run is removed; one a live host still answers is not ours to take.
     if socket.exists() {
         if tokio::net::UnixStream::connect(&socket).await.is_ok() {
-            return Err(Error::Io("another hypotaxis host already runs".into()));
+            return Err(Error::Io("another boopis host already runs".into()));
         }
         std::fs::remove_file(&socket)?;
     }
@@ -304,7 +304,7 @@ mod tests {
 
     fn store() -> MemoryStore {
         let s = MemoryStore::default();
-        s.set("hypotaxis.provider.openai", "api_key", "sk-test-123")
+        s.set("boopis.provider.openai", "api_key", "sk-test-123")
             .unwrap();
         s
     }
@@ -321,7 +321,7 @@ mod tests {
         let r = ask(
             &s,
             "tok",
-            &req("get", "tok", "hypotaxis.provider.openai", "api_key"),
+            &req("get", "tok", "boopis.provider.openai", "api_key"),
         );
         assert_eq!(
             (r["ok"].clone(), r["value"].clone()),
@@ -330,14 +330,14 @@ mod tests {
         let r = ask(
             &s,
             "tok",
-            &req("has", "tok", "hypotaxis.provider.openai", "api_key"),
+            &req("has", "tok", "boopis.provider.openai", "api_key"),
         );
         assert_eq!(r["found"], true);
         assert!(r.get("value").is_none(), "`has` never returns the value");
         let r = ask(
             &s,
             "tok",
-            &req("get", "tok", "hypotaxis.provider.openai", "missing"),
+            &req("get", "tok", "boopis.provider.openai", "missing"),
         );
         assert_eq!(
             (r["ok"].clone(), r["code"].clone()),
@@ -351,14 +351,14 @@ mod tests {
         let r = ask(
             &s,
             "tok",
-            &req("get", "TOK", "hypotaxis.provider.openai", "api_key"),
+            &req("get", "TOK", "boopis.provider.openai", "api_key"),
         );
         assert_eq!(r["code"], "hx.host.unauthorized");
         assert!(r.get("value").is_none());
     }
 
     #[test]
-    fn only_the_hypotaxis_namespace_is_reachable() {
+    fn only_the_boopis_namespace_is_reachable() {
         let s = store();
         s.set("login.github", "token", "ghp_x").unwrap();
         let r = ask(&s, "tok", &req("get", "tok", "login.github", "token"));
@@ -372,12 +372,12 @@ mod tests {
             let r = ask(
                 &s,
                 "tok",
-                &req(op, "tok", "hypotaxis.provider.openai", "api_key"),
+                &req(op, "tok", "boopis.provider.openai", "api_key"),
             );
             assert_eq!(r["ok"], false, "{op}");
         }
         assert_eq!(
-            s.get("hypotaxis.provider.openai", "api_key")
+            s.get("boopis.provider.openai", "api_key")
                 .unwrap()
                 .as_deref(),
             Some("sk-test-123")
@@ -386,7 +386,7 @@ mod tests {
             "",
             "nope",
             "{}",
-            r#"{"v":2,"token":"t","op":"get","service":"hypotaxis.a","account":"b"}"#,
+            r#"{"v":2,"token":"t","op":"get","service":"boopis.a","account":"b"}"#,
         ] {
             let out = handle_line(&s, "tok", bad);
             assert!(out.contains("\"ok\":false"), "{bad}");
@@ -401,7 +401,7 @@ mod tests {
         let r = ask(
             &s,
             "tok",
-            &req("get", "tok", "hypotaxis.provider.openai", "api_key"),
+            &req("get", "tok", "boopis.provider.openai", "api_key"),
         );
         assert_eq!(r["code"], "hx.secrets.unavailable");
     }
@@ -409,7 +409,7 @@ mod tests {
     #[test]
     fn the_request_never_prints_its_token() {
         let r: Request =
-            serde_json::from_str(&req("get", "supersecrettoken", "hypotaxis.a", "b").to_string())
+            serde_json::from_str(&req("get", "supersecrettoken", "boopis.a", "b").to_string())
                 .unwrap();
         assert!(!format!("{r:?}").contains("supersecrettoken"));
     }
@@ -475,13 +475,7 @@ mod tests {
 
         let out = ask_over_socket(
             ch.socket(),
-            &req(
-                "get",
-                &token_of(&auth),
-                "hypotaxis.provider.openai",
-                "api_key",
-            )
-            .to_string(),
+            &req("get", &token_of(&auth), "boopis.provider.openai", "api_key").to_string(),
         )
         .await;
         assert!(out.contains("sk-test-123"), "{out}");
@@ -521,13 +515,7 @@ mod tests {
         let auth = Auth::mint_in(&dir.path().join("run")).unwrap();
         let peers = gateway_is_this_process();
         let ch = start(Arc::new(store()), &auth, peers).await.unwrap();
-        let good = req(
-            "get",
-            &token_of(&auth),
-            "hypotaxis.provider.openai",
-            "api_key",
-        )
-        .to_string();
+        let good = req("get", &token_of(&auth), "boopis.provider.openai", "api_key").to_string();
 
         // A child of the gateway holding the very token (what a tool that read /proc/<gateway>/environ has).
         let socket = ch.socket().to_path_buf();
@@ -559,7 +547,7 @@ mod tests {
         assert!(!stdout.contains("sk-test-123"));
 
         // It is the same answer a wrong token gets from the gateway itself: the peer check cannot be told apart.
-        let wrong = req("get", "0", "hypotaxis.provider.openai", "api_key").to_string();
+        let wrong = req("get", "0", "boopis.provider.openai", "api_key").to_string();
         let from_gateway = ask_over_socket(ch.socket(), &wrong).await;
         assert_eq!(from_gateway.trim(), refused.to_string());
         // And the gateway itself, with the right token, still gets the secret.
@@ -580,13 +568,7 @@ mod tests {
             .unwrap();
         let out = ask_over_socket(
             ch.socket(),
-            &req(
-                "get",
-                &token_of(&auth),
-                "hypotaxis.provider.openai",
-                "api_key",
-            )
-            .to_string(),
+            &req("get", &token_of(&auth), "boopis.provider.openai", "api_key").to_string(),
         )
         .await;
         assert!(

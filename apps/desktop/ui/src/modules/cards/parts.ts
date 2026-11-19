@@ -34,7 +34,7 @@ export type KnownOrigin =
   | { kind: 'agent'; model: string; route?: string | undefined }
   | { kind: 'plugin' | 'hermes' | 'host' }
   | { kind: 'mcp'; server?: string | undefined; trust?: string | undefined };
-const SYSTEM: Readonly<Record<string, readonly [icon: string, label: string]>> = { plugin: ['ladder', 'Governance'], hermes: ['spark', 'Hermes'], host: ['gear', 'hypotaxis'] };
+const SYSTEM: Readonly<Record<string, readonly [icon: string, label: string]>> = { plugin: ['ladder', 'Governance'], hermes: ['spark', 'Hermes'], host: ['gear', 'boopis'] };
 const sys = (kind: string): readonly [string, string] => SYSTEM[kind] ?? ['', kind];
 
 export function originOf(d: Data): KnownOrigin | null {

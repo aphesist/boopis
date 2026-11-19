@@ -10,7 +10,7 @@ import { eventsOf, fixtures, resultOf } from '../testing';
 import type { RecordedFrame } from '../replay';
 
 const SID = (resultOf<{ sessions: { id: string; message_count: number }[] }>(fixtures.session, 'session.list').sessions.find((s) => s.message_count > 0) as { id: string }).id;
-const TRIPS = resultOf<{ round_trips: number }>(fixtures.session, 'plugin.hypotaxis.ledger.stats').round_trips;
+const TRIPS = resultOf<{ round_trips: number }>(fixtures.session, 'plugin.boopis.ledger.stats').round_trips;
 const NOW = new Date(2026, 10, 19, 1, 0, 0);
 const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 
@@ -45,7 +45,7 @@ describe('the details panels follow a session and show only what Hermes and the 
     expect(d.changes.get()).toEqual([['src/a.py', 1, 1]]);
     expect(provider.sessions.diff(SID, { blank: null })[0]?.hunks[0]?.[1]).toContain('+    return 2');
     expect(d.connectors.get()[0]).toMatchObject({ name: 'fakemcp' });
-    expect(d.environment.get()).toMatchObject({ cwd: '/work/proj', branch: 'master', harness: 'hypotaxis 0.1.0' });
+    expect(d.environment.get()).toMatchObject({ cwd: '/work/proj', branch: 'master', harness: 'boopis 0.1.0' });
     expect(d.governance.get()).toMatchObject({ governed: false, locked: true, cap: '$2.00', model: 'fake-a' });
     expect(d.governance.get().ladder.map((l) => l[0])).toEqual(['claude-haiku-5-5', 'claude-sonnet-5-5', 'claude-opus-5-5']);
     expect(d.ledger.get()).toMatchObject({ trips: TRIPS, escalations: 0 });
@@ -68,7 +68,7 @@ describe('the details panels follow a session and show only what Hermes and the 
     provider.sessions.conversation(SID);
     provider.details.follow(SID);
     await tick(); await provider.settled();
-    const diffReads = count('plugin.hypotaxis.checkpoint.diff');
+    const diffReads = count('plugin.boopis.checkpoint.diff');
     provider.sessions.send(SID, 'round once per invoice', { governed: false, smart: false, model: '', assume: [] });
     await tick();
     expect(provider.run.current.get().title).toBe('round once per invoice');
@@ -77,7 +77,7 @@ describe('the details panels follow a session and show only what Hermes and the 
     expect(provider.details.output.get().some((l) => /PASS {2}shipped/.test(l))).toBe(true);
     expect(provider.details.todos.get()).toHaveLength(3);
     expect(provider.run.current.get()).toMatchObject({ step: 3, stopped: false, trips: TRIPS });
-    expect(count('plugin.hypotaxis.checkpoint.diff')).toBeGreaterThan(diffReads);
+    expect(count('plugin.boopis.checkpoint.diff')).toBeGreaterThan(diffReads);
   });
 });
 
@@ -96,7 +96,7 @@ describe('a cost the plugin could not price is unknown', () => {
 
 describe('blanks', () => {
   beforeEach(async () => { await open(fixtures.session); });
-  const blankId = (eventsOf(fixtures.session, 'plugin.hypotaxis.blank.opened')[0]?.payload as { blank_id: string }).blank_id;
+  const blankId = (eventsOf(fixtures.session, 'plugin.boopis.blank.opened')[0]?.payload as { blank_id: string }).blank_id;
 
   it('opens as a wait and in the conversation, and is answered through blank.fill', async () => {
     const conv = provider.sessions.conversation(SID);
@@ -116,7 +116,7 @@ describe('blanks', () => {
 
     provider.waits.resolve(blankId, 'yes, for one release');
     await tick(); await provider.settled();
-    const fill = host.requests.find((r) => r.method === 'plugin.hypotaxis.blank.fill');
+    const fill = host.requests.find((r) => r.method === 'plugin.boopis.blank.fill');
     expect(fill?.params).toEqual({ session_id: SID, blank_id: blankId, answer: 'yes, for one release' });
     expect(seen.some((e) => e.type === 'blank-answered' && e.answer === 'yes, for one release')).toBe(true);
     expect(waits.some((w) => w.type === 'resolved' && w.id === blankId)).toBe(true);
@@ -142,11 +142,11 @@ describe('reconnect and replay', () => {
     provider.sessions.conversation(SID);
     provider.details.follow(SID);
     await tick(); await provider.settled();
-    const before = { stats: count('plugin.hypotaxis.ledger.stats'), mcp: count('mcp.servers.status'), list: count('session.list') };
+    const before = { stats: count('plugin.boopis.ledger.stats'), mcp: count('mcp.servers.status'), list: count('session.list') };
     host.emitState('degraded');
     host.emitState('ready', true);
     await tick(); await provider.settled();
-    expect(count('plugin.hypotaxis.ledger.stats')).toBeGreaterThan(before.stats);
+    expect(count('plugin.boopis.ledger.stats')).toBeGreaterThan(before.stats);
     expect(count('mcp.servers.status')).toBeGreaterThan(before.mcp);
     expect(count('session.list')).toBeGreaterThan(before.list);
   });

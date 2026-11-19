@@ -101,8 +101,8 @@ export function createFormsHost(opts: FormsOptions): FormsHost {
     handle(ev, ctx) {
       const p = (ev.payload ?? {}) as Record<string, unknown>;
       switch (ev.type) {
-        case 'plugin.hypotaxis.form.opened': add(fromPluginEvent(ctx.gwSession, p, ctx.model), ctx.gwSession); return true;
-        case 'plugin.hypotaxis.form.resolved': {
+        case 'plugin.boopis.form.opened': add(fromPluginEvent(ctx.gwSession, p, ctx.model), ctx.gwSession); return true;
+        case 'plugin.boopis.form.resolved': {
           const status = p['status'];
           settle(String(p['form_id'] ?? ''), status === 'cancelled' || status === 'expired' ? status : 'submitted');
           return true;
@@ -121,7 +121,7 @@ export function createFormsHost(opts: FormsOptions): FormsHost {
     },
     async reload(gwSession, model) {
       let res: unknown;
-      try { res = await client.requestRaw('plugin.hypotaxis.form.list', { session_id: gwSession }); } catch { return; }   /* a plugin without forms: nothing to draw */
+      try { res = await client.requestRaw('plugin.boopis.form.list', { session_id: gwSession }); } catch { return; }   /* a plugin without forms: nothing to draw */
       const forms = (res as { forms?: unknown } | null)?.forms;
       if (Array.isArray(forms)) for (const f of forms) if (f && typeof f === 'object') add(fromPluginEvent(gwSession, f as Record<string, unknown>, model), gwSession);
     },

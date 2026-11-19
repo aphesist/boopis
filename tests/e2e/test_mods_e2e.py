@@ -84,7 +84,7 @@ def mod_events(gw: GatewayClient, session_id: str, name: str, start: int = 0) ->
     return [
         e.get("payload", {})
         for e in gw.events[start:]
-        if (e.get("session_id") == session_id and str(e.get("type", "")).endswith(f"plugin.hypotaxis.{name}"))
+        if (e.get("session_id") == session_id and str(e.get("type", "")).endswith(f"plugin.boopis.{name}"))
         or (e.get("session_id") == session_id and e.get("type") == name)
     ]
 
@@ -92,7 +92,7 @@ def mod_events(gw: GatewayClient, session_id: str, name: str, start: int = 0) ->
 def test_a_trusted_mod_loads_at_the_first_turn_draws_and_leaves_a_verifiable_ledger(
     gateway: GatewayClient, stack: ModStack, fake_model: FakeModelServer, stack_root: Path
 ) -> None:
-    caps = gateway.result("plugin.hypotaxis.mod.list", {})["capabilities"]
+    caps = gateway.result("plugin.boopis.mod.list", {})["capabilities"]
     if not caps["available"]:
         pytest.skip(f"mods are unavailable here: {caps['reason']}")
     project = stack_root / "projects" / "mods"
@@ -106,21 +106,21 @@ def test_a_trusted_mod_loads_at_the_first_turn_draws_and_leaves_a_verifiable_led
     (source / "register.js").write_text(MOD)
 
     # the install prompt, then the install, both through the plugin RPC a UI would call
-    prompt = gateway.result("plugin.hypotaxis.mod.install.prepare", {"source": str(source)})
+    prompt = gateway.result("plugin.boopis.mod.install.prepare", {"source": str(source)})
     assert prompt["hooks"] == ["prompt.submit", "session.end", "session.start", "turn.complete"]
     assert prompt["calls"] == ["console", "store", "ui"] or prompt["calls"] == ["store", "ui"]
     done = gateway.result(
-        "plugin.hypotaxis.mod.install.confirm",
+        "plugin.boopis.mod.install.confirm",
         {"source": str(source), "tree_sha256": prompt["tree_sha256"], "cwd": str(project)},
     )
     assert done["installed"] and done["trusted_for"] == str(project)
 
-    sid = create_session(gateway, stack, cwd=str(project), toolsets=["file", "terminal", "hypotaxis"])
-    gateway.result("plugin.hypotaxis.mode.set", {"session_id": sid, "mode": "ungoverned"})
+    sid = create_session(gateway, stack, cwd=str(project), toolsets=["file", "terminal", "boopis"])
+    gateway.result("plugin.boopis.mode.set", {"session_id": sid, "mode": "ungoverned"})
     start = len(gateway.events)
     run_prompt(gateway, sid, "hello there")
 
-    listed = gateway.result("plugin.hypotaxis.mod.list", {"session_id": sid})["sessions"]
+    listed = gateway.result("plugin.boopis.mod.list", {"session_id": sid})["sessions"]
     assert [p["name"] for p in listed[0]["plugins"]] == [SLUG]
     statuses = [p["text"] for p in mod_events(gateway, sid, "mod.status", start)]
     assert "ready" in statuses and any(s.startswith("done:") for s in statuses), statuses

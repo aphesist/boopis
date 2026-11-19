@@ -1,5 +1,5 @@
 hx-sandbox
-Part of hypotaxis.
+Part of boopis.
 
 This crate contains material derived from OpenAI Codex
 (https://github.com/openai/codex, commit fecf5cc672538029b3b1adc00204a78e416a19a3),

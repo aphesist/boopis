@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (LICENSE).
 
 boopis includes or distributes the following third-party work, each under its own licence:
 
-- contraprova, vendored at plugins/hypotaxis/_vendor/contraprova: Apache License 2.0.
+- contraprova, vendored at plugins/boopis/_vendor/contraprova: Apache License 2.0.
 - Hermes Agent, unmodified, inside the bundled runtime archive: MIT License, Copyright (c) 2025 Nous Research.
   The runtime also holds a Python interpreter (python-build-standalone), uv and Hermes's locked Python dependencies,
   each with its own licence files inside the archive.

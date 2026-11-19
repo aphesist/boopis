@@ -29,8 +29,8 @@ describe('the sources', () => {
     const m = fromPluginEvent('s1', { form_id: 'f1', kind: 'credential', title: 'Add a key', schema: CRED, sensitive: true, origin: 'agent', submit: { label: 'Save' } });
     expect(m).toMatchObject({ id: 'f1', sensitive: true, submitLabel: 'Save' });
     expect(fromPluginEvent('s1', {})).toBeNull();
-    expect(replyFor(m!, { cancelled: false, values: {}, provided: ['value'] })).toEqual({ method: 'plugin.hypotaxis.form.submit', params: { session_id: 's1', form_id: 'f1', values: {}, provided: ['value'] } });
-    expect(replyFor(m!, { cancelled: true })).toEqual({ method: 'plugin.hypotaxis.form.cancel', params: { session_id: 's1', form_id: 'f1' } });
+    expect(replyFor(m!, { cancelled: false, values: {}, provided: ['value'] })).toEqual({ method: 'plugin.boopis.form.submit', params: { session_id: 's1', form_id: 'f1', values: {}, provided: ['value'] } });
+    expect(replyFor(m!, { cancelled: true })).toEqual({ method: 'plugin.boopis.form.cancel', params: { session_id: 's1', form_id: 'f1' } });
   });
 
   it('adapts the recorded approval.request and answers through approval.respond', () => {
@@ -61,7 +61,7 @@ describe('secrets', () => {
   it('splits a secret off to the keychain target and keeps it out of what the agent gets', () => {
     const { plain, secrets } = splitSecrets(m, { value: 'sk-secret', note: 'n' });
     expect(plain).toEqual({ note: 'n' });
-    expect(secrets).toEqual([{ field: 'value', service: 'hypotaxis.provider.main', account: 'api_key', value: 'sk-secret' }]);
+    expect(secrets).toEqual([{ field: 'value', service: 'boopis.provider.main', account: 'api_key', value: 'sk-secret' }]);
     expect(JSON.stringify(plain)).not.toContain('sk-secret');
   });
 

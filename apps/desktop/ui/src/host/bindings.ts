@@ -62,7 +62,7 @@ export const commands = {
 	 */
 	rendererOpenGpuPage: (options?: InvokeOptions) => __TAURI_INVOKE<null>("renderer_open_gpu_page", undefined, options),
 	/**
-	 *  Restart the app, so the choices read at startup (the GPU, `HYPOTAXIS_FPS`, the renderer) apply. The webview's GPU is
+	 *  Restart the app, so the choices read at startup (the GPU, `BOOPIS_FPS`, the renderer) apply. The webview's GPU is
 	 *  fixed when the process starts; this is the only way to change it.
 	 */
 	appRestart: (options?: InvokeOptions) => __TAURI_INVOKE<void>("app_restart", undefined, options),
@@ -98,7 +98,7 @@ export type AppSettings_Deserialize = {
 	/**  Whether the host may show desktop notifications. */
 	notifications: boolean,
 	/**
-	 *  Which GPU the webview renders on (`HYPOTAXIS_GPU` overrides it). Read at startup, so a change needs a restart.
+	 *  Which GPU the webview renders on (`BOOPIS_GPU` overrides it). Read at startup, so a change needs a restart.
 	 *  Added without a version bump: a file from before has none and gets `auto`.
 	 */
 	gpu?: GpuPolicy,
@@ -113,7 +113,7 @@ export type AppSettings_Serialize = {
 	/**  Whether the host may show desktop notifications. */
 	notifications: boolean,
 	/**
-	 *  Which GPU the webview renders on (`HYPOTAXIS_GPU` overrides it). Read at startup, so a change needs a restart.
+	 *  Which GPU the webview renders on (`BOOPIS_GPU` overrides it). Read at startup, so a change needs a restart.
 	 *  Added without a version bump: a file from before has none and gets `auto`.
 	 */
 	gpu: GpuPolicy,
@@ -247,7 +247,7 @@ export type Form_Serialize = {
 	diff: DiffLine_Serialize[],
 };
 
-/**  What the owner asked for with `HYPOTAXIS_FPS`. */
+/**  What the owner asked for with `BOOPIS_FPS`. */
 export type FpsPolicy = 
 /**  Lift the cap when the display is faster than 60 Hz. */
 "auto" | 
@@ -258,9 +258,9 @@ export type FpsPolicy =
 
 /**  Why the decision came out as it did (stable names: they go in the log and in the diagnostics). */
 export type FpsRule = 
-/**  `HYPOTAXIS_FPS=60`. */
+/**  `BOOPIS_FPS=60`. */
 "policy_sixty" | 
-/**  `HYPOTAXIS_FPS=max`. */
+/**  `BOOPIS_FPS=max`. */
 "policy_max" | 
 /**  `auto`, and the display is faster than 60 Hz. */
 "faster_than_sixty" | 
@@ -277,7 +277,7 @@ export type FrameRateReport = FrameRateReport_Serialize | FrameRateReport_Deseri
 
 /**  What the diagnostics say about the frame rate. Filled from the live window, so it is read at report time. */
 export type FrameRateReport_Deserialize = {
-	/**  What `HYPOTAXIS_FPS` asked for. */
+	/**  What `BOOPIS_FPS` asked for. */
 	policy: FpsPolicy,
 	/**  The rule that decided, once a web view has been looked at. */
 	rule?: FpsRule | null,
@@ -297,7 +297,7 @@ export type FrameRateReport_Deserialize = {
 
 /**  What the diagnostics say about the frame rate. Filled from the live window, so it is read at report time. */
 export type FrameRateReport_Serialize = {
-	/**  What `HYPOTAXIS_FPS` asked for. */
+	/**  What `BOOPIS_FPS` asked for. */
 	policy: FpsPolicy,
 	/**  The rule that decided, once a web view has been looked at. */
 	rule: FpsRule | null,
@@ -334,7 +334,7 @@ export type GpuEnvSource =
 /**  NVIDIA's documented offload variables. */
 "nvidia_documented";
 
-/**  What the owner chose: from `HYPOTAXIS_GPU` or from Settings > General. */
+/**  What the owner chose: from `BOOPIS_GPU` or from Settings > General. */
 export type GpuPolicy = 
 /**
  *  The dedicated GPU on AC power with a loaded NVIDIA driver and a `WebKitGTK` that has the explicit-sync fix;
@@ -348,7 +348,7 @@ export type GpuPolicy =
 
 /**  Where the policy in force came from. */
 export type GpuPolicySource = 
-/**  `HYPOTAXIS_GPU`. */
+/**  `BOOPIS_GPU`. */
 "environment" | 
 /**  Settings > General. */
 "setting" | 
@@ -558,7 +558,7 @@ export type PickedFolder = {
 	home_relative: boolean,
 };
 
-/**  What the user asked for with `HYPOTAXIS_RENDERER`. */
+/**  What the user asked for with `BOOPIS_RENDERER`. */
 export type Policy = 
 /**  The host's evidence-based rule. */
 "auto" | 
@@ -662,7 +662,7 @@ export type RendererReport_Deserialize = {
 	hyprland: boolean,
 	/**  The GPUs, with the driver bound to each. */
 	gpus: Gpu_Deserialize[],
-	/**  What `HYPOTAXIS_RENDERER` asked for. */
+	/**  What `BOOPIS_RENDERER` asked for. */
 	policy: Policy,
 	/**  The rule that decided. */
 	rule: Rule,
@@ -670,7 +670,7 @@ export type RendererReport_Deserialize = {
 	set: ([string, string])[],
 	/**  Every renderer-related variable in the process environment now (set by the host or by the user). */
 	environment: ([string, string])[],
-	/**  `HYPOTAXIS_RENDERER` values and the variables each sets, for the report's reader. */
+	/**  `BOOPIS_RENDERER` values and the variables each sets, for the report's reader. */
 	choices: ([string, string])[],
 	/**  The `WebKitGTK` this process runs on: its version and whether it is the `AppImage`'s or the system's. */
 	webkit: WebkitReport_Deserialize,
@@ -682,7 +682,7 @@ export type RendererReport_Deserialize = {
 	/**  One plain sentence when the renderer in use limits motion, else none. */
 	note?: string | null,
 	/**
-	 *  Which GPU the webview renders on (`HYPOTAXIS_GPU`), and why. The power source and the restart advice are read
+	 *  Which GPU the webview renders on (`BOOPIS_GPU`), and why. The power source and the restart advice are read
 	 *  when the report is asked for.
 	 */
 	gpu: GpuReport_Deserialize,
@@ -696,7 +696,7 @@ export type RendererReport_Serialize = {
 	hyprland: boolean,
 	/**  The GPUs, with the driver bound to each. */
 	gpus: Gpu_Serialize[],
-	/**  What `HYPOTAXIS_RENDERER` asked for. */
+	/**  What `BOOPIS_RENDERER` asked for. */
 	policy: Policy,
 	/**  The rule that decided. */
 	rule: Rule,
@@ -704,7 +704,7 @@ export type RendererReport_Serialize = {
 	set: ([string, string])[],
 	/**  Every renderer-related variable in the process environment now (set by the host or by the user). */
 	environment: ([string, string])[],
-	/**  `HYPOTAXIS_RENDERER` values and the variables each sets, for the report's reader. */
+	/**  `BOOPIS_RENDERER` values and the variables each sets, for the report's reader. */
 	choices: ([string, string])[],
 	/**  The `WebKitGTK` this process runs on: its version and whether it is the `AppImage`'s or the system's. */
 	webkit: WebkitReport_Serialize,
@@ -716,7 +716,7 @@ export type RendererReport_Serialize = {
 	/**  One plain sentence when the renderer in use limits motion, else none. */
 	note: string | null,
 	/**
-	 *  Which GPU the webview renders on (`HYPOTAXIS_GPU`), and why. The power source and the restart advice are read
+	 *  Which GPU the webview renders on (`BOOPIS_GPU`), and why. The power source and the restart advice are read
 	 *  when the report is asked for.
 	 */
 	gpu: GpuReport_Serialize,
@@ -726,15 +726,15 @@ export type RendererReport_Serialize = {
 export type Rule = 
 /**  A `WebKit` or NVIDIA switch was already in the environment; nothing is changed. */
 "user_environment" | 
-/**  `HYPOTAXIS_RENDERER=default`. */
+/**  `BOOPIS_RENDERER=default`. */
 "policy_default" | 
-/**  `HYPOTAXIS_RENDERER=shm`. */
+/**  `BOOPIS_RENDERER=shm`. */
 "policy_shm" | 
-/**  `HYPOTAXIS_RENDERER=cpu`. */
+/**  `BOOPIS_RENDERER=cpu`. */
 "policy_cpu" | 
-/**  `HYPOTAXIS_RENDERER=nosync`. */
+/**  `BOOPIS_RENDERER=nosync`. */
 "policy_nosync" | 
-/**  `HYPOTAXIS_RENDERER=software`. */
+/**  `BOOPIS_RENDERER=software`. */
 "policy_software" | 
 /**  The display GPU is not on the NVIDIA proprietary driver: `WebKitGTK`'s own choice is known to work. */
 "no_nvidia_proprietary" | 

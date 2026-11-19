@@ -9,7 +9,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-DEST="$ROOT/plugins/hypotaxis/data"
+DEST="$ROOT/plugins/boopis/data"
 # source (repo-relative)                        optional?
 FILES=(
   "crates/hx-proto/errors.json:required"

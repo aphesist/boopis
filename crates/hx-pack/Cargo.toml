@@ -1,6 +1,6 @@
 [package]
 name = "hx-pack"
-description = "The engine behind hypotaxis's pack tool: search, read, symbols, outlines, git status, redaction."
+description = "The engine behind boopis's pack tool: search, read, symbols, outlines, git status, redaction."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

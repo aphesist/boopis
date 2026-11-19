@@ -68,7 +68,7 @@ describe('first run', () => {
       expect(bridge.answers[1]).toEqual({ answer: { form_id: 'setup.config', cancelled: false, values: {}, secrets: {} }, reconsider: false });
       expect(document.body.textContent).toContain('You are set');
       expect(document.body.textContent).toContain('3 settings changed');
-      await click('Open hypotaxis');
+      await click('Open boopis');
       expect(finished).toBe(true);
       expect(document.querySelector('.hx-first-run')).toBeNull();
     } finally { vi.useRealTimers(); }

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The art renderer inside install.sh (awk) must draw exactly what the host's renderer draws. The goldens in
-# packaging/brand/golden/ are written by the host's test (`UPDATE_GOLDEN=1 cargo test -p hypotaxis-host brand`); this
+# packaging/brand/golden/ are written by the host's test (`UPDATE_GOLDEN=1 cargo test -p boopis-host brand`); this
 # script draws the same scenes with packaging/brand/render.awk and compares the bytes. It also checks that the copies of
 # the art in the installers are current.
 set -eu

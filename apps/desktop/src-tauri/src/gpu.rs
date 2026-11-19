@@ -41,12 +41,12 @@ use crate::renderer::{Gpu, Session};
 use crate::webkit;
 
 /// The variable that sets the choice: `auto` (the default), `integrated` or `dedicated`.
-pub const POLICY_VAR: &str = "HYPOTAXIS_GPU";
+pub const POLICY_VAR: &str = "BOOPIS_GPU";
 
 /// The app identifier: the directory name under the data directory where the Tauri store keeps `settings.json`.
-pub const APP_IDENTIFIER: &str = "dev.aphesist.hypotaxis";
+pub const APP_IDENTIFIER: &str = "dev.aphesist.boopis";
 
-/// What the owner chose: from `HYPOTAXIS_GPU` or from Settings > General.
+/// What the owner chose: from `BOOPIS_GPU` or from Settings > General.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, Type)]
 #[serde(rename_all = "snake_case")]
 #[serde(rename = "GpuPolicy")]
@@ -79,7 +79,7 @@ impl Policy {
 #[serde(rename_all = "snake_case")]
 #[serde(rename = "GpuPolicySource")]
 pub enum PolicySource {
-    /// `HYPOTAXIS_GPU`.
+    /// `BOOPIS_GPU`.
     Environment,
     /// Settings > General.
     Setting,

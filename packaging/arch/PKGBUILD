@@ -13,15 +13,15 @@
 # AUR: the source would become the release tarball and the runtime a release asset with a real checksum (docs/RELEASING.md).
 
 # ---------------------------------------------------------------------------------------------------------------------
-# The old internal names, all in this one block. boopis is the product; the repository still says hypotaxis in a few
-# places. When those are renamed, change only the right-hand sides here (and `_root` if the checkout moves).
+# The names the package depends on, all in this one block. They are boopis now (ADR-0028). If one is renamed again,
+# change only the right-hand sides here (and `_root` if the checkout moves).
 # ---------------------------------------------------------------------------------------------------------------------
-_cargo_bin=hypotaxis                           # [[bin]] name in apps/desktop/src-tauri/Cargo.toml
-_host_crate=hypotaxis-host                     # the Cargo package that builds it
+_cargo_bin=boopis                           # [[bin]] name in apps/desktop/src-tauri/Cargo.toml
+_host_crate=boopis-host                     # the Cargo package that builds it
 _hx_crate=hx                                   # the sidecar's Cargo package
-_plugin=hypotaxis                              # plugins/<name>, and resources/plugin/<name> (tauri.bundle.conf.json)
+_plugin=boopis                              # plugins/<name>, and resources/plugin/<name> (tauri.bundle.conf.json)
 _runtime_archive=hermes-runtime-linux-x86_64.tar.zst   # what scripts/build-runtime.sh makes
-_repo_url=https://github.com/aphesist/hypotaxis
+_repo_url=https://github.com/aphesist/boopis
 # ---------------------------------------------------------------------------------------------------------------------
 
 pkgname=boopis
@@ -43,7 +43,7 @@ optdepends=(
   'gnome-keyring: a Secret Service provider, to keep API keys in the keychain'
   'kwallet: a Secret Service provider, to keep API keys in the keychain'
   'keepassxc: a Secret Service provider, to keep API keys in the keychain'
-  'nvidia-prime: render on the NVIDIA GPU of a hybrid laptop (HYPOTAXIS_GPU=dedicated)'
+  'nvidia-prime: render on the NVIDIA GPU of a hybrid laptop (BOOPIS_GPU=dedicated)'
 )
 makedepends=(
   'rust'               # 1.97 or newer: the workspace's rust-version, which cargo enforces

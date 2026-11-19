@@ -1,4 +1,4 @@
-/* hypotaxis v6 · shell (owner: wireframe agent). System: DESIGN.md. Geometry per slot: LAYOUT.md.
+/* boopis v6 · shell (owner: wireframe agent). System: DESIGN.md. Geometry per slot: LAYOUT.md.
    The cabinet (bg-1) is a title bar plus full-height sidebars; the work sits on the reading-room ground (bg-2),
    which meets the cabinet with 14px concave corners. In the sidebar every icon sits on one axis (x = 28, the
    rail's centre) and every label on one text line (x = 44), so collapsing to the rail moves nothing that stays.

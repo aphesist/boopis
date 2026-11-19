@@ -1,5 +1,5 @@
 /* The shapes the live sources read: the canonical gateway's results that Hermes's vendored contract does not type
-   (it lags the backend), and the hypotaxis-v1 plugin RPC (docs/PROTOCOL.md section 3). Every field a source reads is
+   (it lags the backend), and the boopis-v1 plugin RPC (docs/PROTOCOL.md section 3). Every field a source reads is
    optional here, because a field the sender leaves out is unknown, never zero. */
 import type { GatewayError } from '../gateway';
 

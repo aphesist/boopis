@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Copy contraprova's engine modules, byte for byte, into the plugin (ADR-0015).
 #
-#   scripts/vendor-contraprova.sh <40-hex sha>     write plugins/hypotaxis/_vendor/contraprova at that commit
+#   scripts/vendor-contraprova.sh <40-hex sha>     write plugins/boopis/_vendor/contraprova at that commit
 #   scripts/vendor-contraprova.sh --check          re-fetch the pinned commit and compare every byte
 #
 # The source is a branch of aphesist/contraprova (CONTRAPROVA_BRANCH, recorded in VENDOR.json; the commit is what
@@ -12,7 +12,7 @@ set -euo pipefail
 REPO="${CONTRAPROVA_REPO:-https://github.com/aphesist/contraprova.git}"
 BRANCH="${CONTRAPROVA_BRANCH:-hx/cascade-support}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-DEST="$ROOT/plugins/hypotaxis/_vendor/contraprova"
+DEST="$ROOT/plugins/boopis/_vendor/contraprova"
 # The engine and its stdlib-only dependencies. Not the harness, analysis, ope, router, llm or cli.
 MODULES=(__init__ events log locking projections contracts gates forks pricing usage interfaces sandbox)
 EXTRA=(LICENSE)

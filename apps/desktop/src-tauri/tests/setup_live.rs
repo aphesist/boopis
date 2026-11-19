@@ -23,16 +23,16 @@ use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use hypotaxis_host::commands::Json;
-use hypotaxis_host::config::Limits;
-use hypotaxis_host::endpoint::EndpointConfig;
-use hypotaxis_host::error::{Error, Result};
-use hypotaxis_host::gateway::{FrameSink, Hub};
-use hypotaxis_host::hermes::{Environment, Supervisor};
-use hypotaxis_host::secrets::{Auth, PeerPolicy, SecretStore, channel};
-use hypotaxis_host::setup::install::Bundle;
-use hypotaxis_host::setup::ops::{CliOps, HermesOps};
-use hypotaxis_host::setup::{Answer, Setup, StepState};
+use boopis_host::commands::Json;
+use boopis_host::config::Limits;
+use boopis_host::endpoint::EndpointConfig;
+use boopis_host::error::{Error, Result};
+use boopis_host::gateway::{FrameSink, Hub};
+use boopis_host::hermes::{Environment, Supervisor};
+use boopis_host::secrets::{Auth, PeerPolicy, SecretStore, channel};
+use boopis_host::setup::install::Bundle;
+use boopis_host::setup::ops::{CliOps, HermesOps};
+use boopis_host::setup::{Answer, Setup, StepState};
 use serde_json::{Value, json};
 use tokio::sync::mpsc;
 
@@ -348,9 +348,8 @@ async fn run_flow(install: Install) {
     let (plan, hermes_home) = match &install {
         Install::Spike(_) => (None, root_path.as_path().join("hermes-home")),
         Install::Runtime(dir) => {
-            let plan = hypotaxis_host::runtime::Plan {
-                runtime: hypotaxis_host::runtime::Runtime::read(dir)
-                    .expect("runtime.json is valid"),
+            let plan = boopis_host::runtime::Plan {
+                runtime: boopis_host::runtime::Runtime::read(dir).expect("runtime.json is valid"),
                 data_dir: root_path.as_path().join("data"),
             };
             let home = plan.home();
@@ -460,7 +459,7 @@ async fn run_flow(install: Install) {
         .expect("the secret channel starts");
 
     let bundle = Bundle {
-        plugin_dir: Some(repo().join("plugins/hypotaxis")),
+        plugin_dir: Some(repo().join("plugins/boopis")),
         hx: Some(hx),
     };
     let setup = Setup::new(ops.clone(), keychain.clone(), bundle);
@@ -490,11 +489,11 @@ async fn run_flow(install: Install) {
         ops.config_get("delegation.backend")
             .await
             .unwrap()
-            .is_none_or(|v| v != json!("hypotaxis"))
+            .is_none_or(|v| v != json!("boopis"))
     );
-    assert!(hermes_home.join("plugins/hypotaxis/plugin.yaml").is_file());
+    assert!(hermes_home.join("plugins/boopis/plugin.yaml").is_file());
     assert!(
-        !hermes_home.join("plugins/hypotaxis/tests").exists(),
+        !hermes_home.join("plugins/boopis/tests").exists(),
         "tests are not shipped"
     );
     assert!(
@@ -502,7 +501,7 @@ async fn run_flow(install: Install) {
             .await
             .unwrap()
             .iter()
-            .any(|p| p.name == "hypotaxis" && p.enabled),
+            .any(|p| p.name == "boopis" && p.enabled),
         "enabled through Hermes"
     );
 
@@ -520,10 +519,10 @@ async fn run_flow(install: Install) {
     );
     assert_eq!(
         ops.config_get("delegation.backend").await.unwrap().unwrap(),
-        json!("hypotaxis")
+        json!("boopis")
     );
     assert_eq!(
-        ops.config_get("plugins.entries.hypotaxis.allow_gateway_injection")
+        ops.config_get("plugins.entries.boopis.allow_gateway_injection")
             .await
             .unwrap()
             .unwrap(),
@@ -564,7 +563,7 @@ async fn run_flow(install: Install) {
     // 3. The key is in the keychain and in no file.
     assert_eq!(
         keychain
-            .get("hypotaxis.provider.main", "api_key")
+            .get("boopis.provider.main", "api_key")
             .unwrap()
             .as_deref(),
         Some(KEY)
@@ -582,11 +581,11 @@ async fn run_flow(install: Install) {
         }
     }
     assert_eq!(
-        ops.config_get("plugins.entries.hypotaxis.settings.hx_path")
+        ops.config_get("plugins.entries.boopis.settings.hx_path")
             .await
             .unwrap()
             .unwrap(),
-        json!(hermes_home.join("hypotaxis/bin/hx").display().to_string())
+        json!(hermes_home.join("boopis/bin/hx").display().to_string())
     );
 
     // 4. The gateway setup restarted runs the plugin; the model call carries the key the secret source fetched.
@@ -601,20 +600,20 @@ async fn run_flow(install: Install) {
         .expect("the gateway connects");
     hub.send(
         1,
-        json!({"jsonrpc":"2.0","id":1,"method":"plugin.hypotaxis.describe","params":{}}),
+        json!({"jsonrpc":"2.0","id":1,"method":"plugin.boopis.describe","params":{}}),
     )
     .await
     .unwrap();
     let (described, _) = response(&mut rx, 1).await;
     let result = &described["result"];
-    assert_eq!(result["protocol"], "hypotaxis-v1", "{described}");
+    assert_eq!(result["protocol"], "boopis-v1", "{described}");
     assert_eq!(result["config"]["errors"], json!([]), "{described}");
     assert_eq!(result["config"]["ladder_errors"], json!([]), "{described}");
 
     hub.send(
         1,
         json!({"jsonrpc":"2.0","id":2,"method":"session.create","params":{
-        "source":"gui","cwd":work,"model":"fake-a","provider":"main","toolsets":["hypotaxis"]}}),
+        "source":"gui","cwd":work,"model":"fake-a","provider":"main","toolsets":["boopis"]}}),
     )
     .await
     .unwrap();
@@ -652,10 +651,10 @@ async fn run_flow(install: Install) {
     assert!(
         frames
             .iter()
-            .any(|f| f["params"]["type"] == "plugin.hypotaxis.form.opened"),
+            .any(|f| f["params"]["type"] == "plugin.boopis.form.opened"),
         "the form reached the viewer"
     );
-    hub.send(1, json!({"jsonrpc":"2.0","id":5,"method":"plugin.hypotaxis.ledger.tail","params":{"session_id":session,"since_seq":-1,"limit":100}})).await.unwrap();
+    hub.send(1, json!({"jsonrpc":"2.0","id":5,"method":"plugin.boopis.ledger.tail","params":{"session_id":session,"since_seq":-1,"limit":100}})).await.unwrap();
     let (tail, _) = response(&mut rx, 5).await;
     let events = tail["result"]["events"].as_array().expect("events");
     let opened = events
@@ -785,8 +784,8 @@ fn walk(dir: &Path) -> Vec<PathBuf> {
 /// `free_tier.provision`, the one call that reaches the account service, is never made here.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn the_free_tier_is_claimable_only_to_a_link_that_declares_the_desktop() {
-    use hypotaxis_host::endpoint::Local;
-    use hypotaxis_host::gateway::oneshot::Link;
+    use boopis_host::endpoint::Local;
+    use boopis_host::gateway::oneshot::Link;
 
     let _serial = SERIAL.lock().await;
     let Some(spike) = std::env::var_os("HX_E2E_HERMES_ENV").map(PathBuf::from) else {
