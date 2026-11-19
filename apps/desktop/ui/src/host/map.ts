@@ -30,9 +30,16 @@ export function elapsed(ms: number): string {
   return s < 60 ? s + 's' : Math.floor(s / 60) + 'm ' + (s % 60) + 's';
 }
 
+/** an engine value, not words: a tool call marker (`@@call name {...}`) or a JSON object or array (R-copy-9) */
+const isEngineText = (t: string): boolean => /^@@\w/.test(t) || /^[{[]\s*"/.test(t);
+/** the title a session row shows: its title, else its preview, skipping any that is an engine value (the gateway titles a session from its first line) */
+export function sessionTitle(row: Pick<SessionListRow, 'title' | 'preview'>): string {
+  for (const t of [row.title, row.preview]) { const w = (t ?? '').trim(); if (w && !isEngineText(w)) return w; }
+  return 'Untitled session';
+}
+
 export function sessionRowToSummary(row: SessionListRow, now: Date): SessionSummary {
-  const title = (row.title ?? '').trim() || (row.preview ?? '').trim();
-  return { id: row.id, project: '', title, when: whenLabel(row.started_at, now) };
+  return { id: row.id, project: '', title: sessionTitle(row), when: whenLabel(row.started_at, now) };
 }
 
 /** an answer's text as paragraphs: split on blank lines, trimmed, empty ones dropped */

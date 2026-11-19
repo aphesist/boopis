@@ -23,6 +23,9 @@ describe('the session list', () => {
     const s = sessionRowToSummary({ id: 'local-1', title: '', preview: 'refactor the proration helpers', started_at: secs(NOW) - 120 }, NOW);
     expect(s).toEqual({ id: 'local-1', project: '', title: 'refactor the proration helpers', when: '2m' });
     expect(sessionRowToSummary({ id: 'x', title: 'Named' }, NOW).title).toBe('Named');
+    /* R-copy-9: the gateway titles a session from its first line, which can be a tool call; that never reaches the interface */
+    expect(sessionRowToSummary({ id: 'x', title: '@@call todo_list {"todos": [{"id": "1"…', preview: 'round once per invoice' }, NOW).title).toBe('round once per invoice');
+    expect(sessionRowToSummary({ id: 'x', title: '{"todos": []}', preview: '' }, NOW).title).toBe('Untitled session');
   });
 });
 
