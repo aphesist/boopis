@@ -1,8 +1,7 @@
 //! An in-memory host that records every call. For tests and the benchmark only: the
 //! `dev-fixtures` feature is never enabled in the binary.
 
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::{Arc, Mutex, PoisonError};
 
 use serde_json::{Value, json};
 
@@ -14,11 +13,15 @@ use crate::host::{CallId, HostCalls, HostError, HostReply, HostRequest};
 /// the other.
 #[derive(Debug, Clone, Default)]
 pub struct MemoryHost {
-    calls: Rc<RefCell<Vec<HostRequest>>>,
-    refuse: Rc<RefCell<Vec<String>>>,
+    calls: Arc<Mutex<Vec<HostRequest>>>,
+    refuse: Arc<Mutex<Vec<String>>>,
 }
 
 impl MemoryHost {
+    fn lock_calls(&self) -> std::sync::MutexGuard<'_, Vec<HostRequest>> {
+        self.calls.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
     /// An empty host.
     #[must_use]
     pub fn new() -> Self {
@@ -28,14 +31,13 @@ impl MemoryHost {
     /// Every call so far, oldest first.
     #[must_use]
     pub fn calls(&self) -> Vec<HostRequest> {
-        self.calls.borrow().clone()
+        self.lock_calls().clone()
     }
 
     /// The calls named `call`.
     #[must_use]
     pub fn calls_to(&self, call: &str) -> Vec<HostRequest> {
-        self.calls
-            .borrow()
+        self.lock_calls()
             .iter()
             .filter(|c| c.call == call)
             .cloned()
@@ -44,19 +46,27 @@ impl MemoryHost {
 
     /// Forgets the recorded calls.
     pub fn clear(&self) {
-        self.calls.borrow_mut().clear();
+        self.lock_calls().clear();
     }
 
     /// Makes later calls named `call` fail with `hx.policy.denied`.
     pub fn refuse(&self, call: &str) {
-        self.refuse.borrow_mut().push(call.to_owned());
+        self.refuse
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .push(call.to_owned());
     }
 }
 
 impl HostCalls for MemoryHost {
     fn call(&mut self, _id: CallId, request: &HostRequest) -> HostReply {
-        self.calls.borrow_mut().push(request.clone());
-        if self.refuse.borrow().contains(&request.call) {
+        self.lock_calls().push(request.clone());
+        if self
+            .refuse
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .contains(&request.call)
+        {
             return HostReply::Ready(Err(HostError {
                 code: "hx.policy.denied".into(),
                 message: format!("{} is refused", request.call),

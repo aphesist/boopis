@@ -21,6 +21,11 @@ def limit(name: str) -> int:
     return int(_raw()["limits"][name])
 
 
+def backoff() -> tuple[float, ...]:
+    """The waits before each restart of a failed worker, in seconds. After the last, the mod is given up on."""
+    return tuple(float(x) for x in _raw()["restart_backoff_s"])
+
+
 def env_allowlist() -> frozenset[str]:
     return frozenset(_raw()["env_allowlist"])
 

@@ -717,6 +717,7 @@ class DispatchParams:
     event: str
     session_id: str
     payload: Any | None = None
+    plugin: str | None = None
 
     def to_wire(self) -> dict[str, Any]:
         out: dict[str, Any] = {}
@@ -724,6 +725,8 @@ class DispatchParams:
         out['session_id'] = self.session_id
         if self.payload is not None:
             out['payload'] = self.payload
+        if self.plugin is not None:
+            out['plugin'] = self.plugin
         return out
 
     @classmethod
@@ -732,6 +735,7 @@ class DispatchParams:
             event=data['event'],
             session_id=data['session_id'],
             payload=data['payload'] if 'payload' in data else None,
+            plugin=(None if data['plugin'] is None else data['plugin']) if 'plugin' in data else None,
         )
 
 
@@ -1020,6 +1024,34 @@ class SpawnFailedExitOutcome:
 
 
 @dataclass(frozen=True, slots=True)
+class FailedMod:
+    """A plugin that did not load. The others did."""
+
+    code: str
+    dir: str
+    message: str
+    plugin: str | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['code'] = self.code
+        out['dir'] = self.dir
+        out['message'] = self.message
+        if self.plugin is not None:
+            out['plugin'] = self.plugin
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "FailedMod":
+        return cls(
+            code=data['code'],
+            dir=data['dir'],
+            message=data['message'],
+            plugin=(None if data['plugin'] is None else data['plugin']) if 'plugin' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class FileChange:
     """One touched file in a result."""
 
@@ -1270,11 +1302,13 @@ class LoadParams:
 
     plugins: list[PluginRef]
     session_id: str
+    replace: bool = False
 
     def to_wire(self) -> dict[str, Any]:
         out: dict[str, Any] = {}
         out['plugins'] = [x.to_wire() for x in self.plugins]
         out['session_id'] = self.session_id
+        out['replace'] = self.replace
         return out
 
     @classmethod
@@ -1282,6 +1316,7 @@ class LoadParams:
         return cls(
             plugins=[PluginRef.from_wire(x) for x in data['plugins']],
             session_id=data['session_id'],
+            replace=data['replace'] if 'replace' in data else False,
         )
 
 
@@ -1290,16 +1325,20 @@ class LoadResult:
     """Result of `mods.load`."""
 
     loaded: list[LoadedMod]
+    failed: list[FailedMod] | None = None
 
     def to_wire(self) -> dict[str, Any]:
         out: dict[str, Any] = {}
         out['loaded'] = [x.to_wire() for x in self.loaded]
+        if self.failed is not None:
+            out['failed'] = [x.to_wire() for x in self.failed]
         return out
 
     @classmethod
     def from_wire(cls, data: Mapping[str, Any]) -> "LoadResult":
         return cls(
             loaded=[LoadedMod.from_wire(x) for x in data['loaded']],
+            failed=[FailedMod.from_wire(x) for x in data['failed']] if 'failed' in data else None,
         )
 
 
@@ -1311,6 +1350,10 @@ class LoadedMod:
     modules: list[str]
     name: str
     tier: str
+    expires_in_s: int | None = None
+    generation: int = 0
+    pid: int | None = None
+    running: bool = False
 
     def to_wire(self) -> dict[str, Any]:
         out: dict[str, Any] = {}
@@ -1318,6 +1361,12 @@ class LoadedMod:
         out['modules'] = [x for x in self.modules]
         out['name'] = self.name
         out['tier'] = self.tier
+        if self.expires_in_s is not None:
+            out['expires_in_s'] = self.expires_in_s
+        out['generation'] = self.generation
+        if self.pid is not None:
+            out['pid'] = self.pid
+        out['running'] = self.running
         return out
 
     @classmethod
@@ -1327,6 +1376,37 @@ class LoadedMod:
             modules=[x for x in data['modules']],
             name=data['name'],
             tier=data['tier'],
+            expires_in_s=(None if data['expires_in_s'] is None else data['expires_in_s']) if 'expires_in_s' in data else None,
+            generation=data['generation'] if 'generation' in data else 0,
+            pid=(None if data['pid'] is None else data['pid']) if 'pid' in data else None,
+            running=data['running'] if 'running' in data else False,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class ModLimits:
+    """What one mod's worker is held to. Absent fields take the defaults (64 MiB, 10 s, one hour)."""
+
+    event_budget_ms: int | None = None
+    heap_mib: int | None = None
+    lifetime_s: int | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        if self.event_budget_ms is not None:
+            out['event_budget_ms'] = self.event_budget_ms
+        if self.heap_mib is not None:
+            out['heap_mib'] = self.heap_mib
+        if self.lifetime_s is not None:
+            out['lifetime_s'] = self.lifetime_s
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "ModLimits":
+        return cls(
+            event_budget_ms=(None if data['event_budget_ms'] is None else data['event_budget_ms']) if 'event_budget_ms' in data else None,
+            heap_mib=(None if data['heap_mib'] is None else data['heap_mib']) if 'heap_mib' in data else None,
+            lifetime_s=(None if data['lifetime_s'] is None else data['lifetime_s']) if 'lifetime_s' in data else None,
         )
 
 
@@ -1495,11 +1575,14 @@ class PluginRef:
     """One plugin to load."""
 
     dir: str
+    limits: ModLimits | None = None
     tier: str | None = None
 
     def to_wire(self) -> dict[str, Any]:
         out: dict[str, Any] = {}
         out['dir'] = self.dir
+        if self.limits is not None:
+            out['limits'] = self.limits.to_wire()
         if self.tier is not None:
             out['tier'] = self.tier
         return out
@@ -1508,6 +1591,7 @@ class PluginRef:
     def from_wire(cls, data: Mapping[str, Any]) -> "PluginRef":
         return cls(
             dir=data['dir'],
+            limits=(None if data['limits'] is None else ModLimits.from_wire(data['limits'])) if 'limits' in data else None,
             tier=(None if data['tier'] is None else data['tier']) if 'tier' in data else None,
         )
 
@@ -1517,16 +1601,20 @@ class ReachParams:
     """Params of `mods.reach`."""
 
     session_id: str
+    plugin: str | None = None
 
     def to_wire(self) -> dict[str, Any]:
         out: dict[str, Any] = {}
         out['session_id'] = self.session_id
+        if self.plugin is not None:
+            out['plugin'] = self.plugin
         return out
 
     @classmethod
     def from_wire(cls, data: Mapping[str, Any]) -> "ReachParams":
         return cls(
             session_id=data['session_id'],
+            plugin=(None if data['plugin'] is None else data['plugin']) if 'plugin' in data else None,
         )
 
 
@@ -1833,6 +1921,7 @@ class RenderResult:
     """Result of `mods.render`."""
 
     kind: str
+    plugin: str | None = None
     props: Any | None = None
     reason: str | None = None
     tree: Any | None = None
@@ -1840,6 +1929,8 @@ class RenderResult:
     def to_wire(self) -> dict[str, Any]:
         out: dict[str, Any] = {}
         out['kind'] = self.kind
+        if self.plugin is not None:
+            out['plugin'] = self.plugin
         if self.props is not None:
             out['props'] = self.props
         if self.reason is not None:
@@ -1852,6 +1943,7 @@ class RenderResult:
     def from_wire(cls, data: Mapping[str, Any]) -> "RenderResult":
         return cls(
             kind=data['kind'],
+            plugin=(None if data['plugin'] is None else data['plugin']) if 'plugin' in data else None,
             props=data['props'] if 'props' in data else None,
             reason=(None if data['reason'] is None else data['reason']) if 'reason' in data else None,
             tree=data['tree'] if 'tree' in data else None,

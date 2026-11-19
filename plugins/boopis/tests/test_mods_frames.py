@@ -252,6 +252,11 @@ def test_the_recording_is_real_events_that_match_the_contract(rig: Rig) -> None:
         if f["frame"].get("params", {}).get("type") == "plugin.boopis.form.opened"
     ]
     assert forms and forms[0]["origin"] == {"kind": "mod", "plugin": "test-runner"}
+    # two mods are loaded: a drawn band row says which one drew it (the UI names the row after it)
+    bands = [p for n, p in mod_events(frames) if n == "mod.render" and p["component"] == "AbovePrompt"]
+    assert bands and all(p["kind"] != "tree" or p.get("plugin") == "test-runner" for p in bands), bands
+    panes = {p["id"]: p.get("plugin") for n, p in mod_events(frames) if n == "mod.render" and p["component"] == "Pane"}
+    assert panes == {"tests": "test-runner", "usage": "token-meter"}
     if os.environ.get("HX_RECORD_FRAMES"):
         (FRAMES / "mods.frames.json").write_text(json.dumps(frames, indent=1) + "\n")
 

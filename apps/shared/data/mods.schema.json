@@ -11,7 +11,8 @@
         "kind": { "enum": ["tree", "default", "skipped"] },
         "tree": { "type": "object", "required": ["type", "props", "children"], "properties": { "type": { "type": "string" }, "props": { "type": "object" }, "children": { "type": "array" } } },
         "props": { "type": "object" },
-        "reason": { "type": "string" }
+        "reason": { "type": "string" },
+        "plugin": { "type": "string" }
       }
     },
     "mod.toast": {

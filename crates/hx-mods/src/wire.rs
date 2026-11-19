@@ -49,6 +49,21 @@ pub struct ModsCapabilities {
     pub platform: String,
 }
 
+/// What one mod's worker is held to. Absent fields take the defaults (64 MiB, 10 s, one hour).
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
+pub struct ModLimits {
+    /// The mod's own heap budget, in MiB. A mod that fills it fails alone.
+    #[serde(default)]
+    pub heap_mib: Option<u64>,
+    /// How long one hook may run, in milliseconds.
+    #[serde(default)]
+    pub event_budget_ms: Option<u64>,
+    /// How long the worker lives, in seconds, before the sandbox ends it (at most one hour, its
+    /// ceiling). The plugin starts a replacement before then.
+    #[serde(default)]
+    pub lifetime_s: Option<u64>,
+}
+
 /// One plugin to load.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct PluginRef {
@@ -57,15 +72,23 @@ pub struct PluginRef {
     /// `prepend`, `user` (default) or `append`.
     #[serde(default)]
     pub tier: Option<String>,
+    /// The worker's limits.
+    #[serde(default)]
+    pub limits: Option<ModLimits>,
 }
 
 /// Params of `mods.load`.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct LoadParams {
-    /// The session whose worker loads them. The worker starts with the first load.
+    /// The session whose mods load. Each mod gets a worker of its own.
     pub session_id: String,
     /// The plugins, in any order; dependencies load first.
     pub plugins: Vec<PluginRef>,
+    /// A mod that is already running is replaced: the new worker starts and loads first, takes the
+    /// mod's place in the chain, and the old one is stopped after a short grace period. Without
+    /// it, a running mod is `already_loaded`; a mod whose worker has exited is loaded again either way.
+    #[serde(default)]
+    pub replace: bool,
 }
 
 /// A mod that is loaded.
@@ -79,6 +102,35 @@ pub struct LoadedMod {
     pub modules: Vec<String>,
     /// How many hooks `register` added.
     pub hooks: u32,
+    /// How many workers this mod has had in this session (0 for the first). Handler ids carry it.
+    #[serde(default)]
+    pub generation: u32,
+    /// The worker's process id, when it runs as one.
+    #[serde(default)]
+    pub pid: Option<u32>,
+    /// Seconds until the sandbox ends the worker, when it is running.
+    #[serde(default)]
+    pub expires_in_s: Option<u64>,
+    /// Whether the mod's worker is running.
+    #[serde(default)]
+    pub running: bool,
+    /// The directory it was loaded from.
+    #[serde(default)]
+    pub dir: Option<String>,
+}
+
+/// A plugin that did not load. The others did.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct FailedMod {
+    /// The directory it was asked for.
+    pub dir: String,
+    /// Its name, when its manifest could be read.
+    #[serde(default)]
+    pub plugin: Option<String>,
+    /// A stable code (`hx.mods.load_failed`, `hx.mods.not_a_mod`, `hx.mods.already_loaded`, ...).
+    pub code: String,
+    /// Why.
+    pub message: String,
 }
 
 /// Result of `mods.load`.
@@ -86,6 +138,9 @@ pub struct LoadedMod {
 pub struct LoadResult {
     /// What loaded, in load order.
     pub loaded: Vec<LoadedMod>,
+    /// What did not, each with its reason. One mod failing does not stop the others.
+    #[serde(default)]
+    pub failed: Vec<FailedMod>,
 }
 
 /// Params of `mods.unload`.
@@ -93,7 +148,7 @@ pub struct LoadResult {
 pub struct UnloadParams {
     /// The session.
     pub session_id: String,
-    /// One plugin to unload; absent stops the whole session's worker.
+    /// One plugin to unload; absent stops every worker of the session.
     #[serde(default)]
     pub plugin: Option<String>,
 }
@@ -118,7 +173,7 @@ pub struct ListParams {
 pub struct SessionMods {
     /// The session.
     pub session_id: String,
-    /// Whether its worker is alive.
+    /// Whether any of its workers is alive.
     pub running: bool,
     /// What is loaded in it.
     pub plugins: Vec<LoadedMod>,
@@ -141,6 +196,9 @@ pub struct DispatchParams {
     /// The event's fields.
     #[serde(default)]
     pub payload: Value,
+    /// Run the event through this mod's hooks only (a restarted mod gets its own `session.start`).
+    #[serde(default)]
+    pub plugin: Option<String>,
 }
 
 /// Result of `mods.dispatch`: the chain's answer.
@@ -185,6 +243,10 @@ pub struct RenderResult {
     /// Why, for `skipped`.
     #[serde(default)]
     pub reason: Option<String>,
+    /// The mod whose hook drew it (the first hook to answer): which mod a band row belongs to when
+    /// several are loaded. Absent for `default`.
+    #[serde(default)]
+    pub plugin: Option<String>,
 }
 
 /// Params of `mods.press`, `mods.input` and `mods.select`.
@@ -211,6 +273,9 @@ pub struct HandledResult {
 pub struct ReachParams {
     /// The session whose worker is probed.
     pub session_id: String,
+    /// The mod whose worker is probed; absent probes the first running one.
+    #[serde(default)]
+    pub plugin: Option<String>,
 }
 
 /// Result of `mods.reach`: what the sandboxed worker could actually do, tried for real.
@@ -278,6 +343,25 @@ pub struct AnalyzeResult {
     pub namespaces: Vec<String>,
     /// True when any module could not be listed completely.
     pub dynamic: bool,
+}
+
+/// Params of `mods.exited`, the notification `hx` sends when one mod's worker is gone. The mod's
+/// slot stays in the chain, so loading it again (`mods.load`) puts it back in its place.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct ExitedParams {
+    /// The session.
+    pub session_id: String,
+    /// The mod.
+    pub plugin: String,
+    /// Which of its workers it was.
+    pub generation: u32,
+    /// `ceiling` (the sandbox's one-hour limit), or `crash` (anything else, memory included).
+    pub cause: String,
+    /// Why, in words.
+    pub reason: String,
+    /// The last of the worker's error output.
+    #[serde(default)]
+    pub stderr: String,
 }
 
 /// Data of `hx.mods.unavailable`.

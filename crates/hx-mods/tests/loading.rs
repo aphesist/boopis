@@ -205,7 +205,11 @@ fn every_documented_module_extension_loads() {
 fn other_extensions_are_refused() {
     let dir = tempdir().unwrap();
     let plugin = write_plugin(dir.path(), "p", "register.py", &[("register.py", "x = 1")]);
-    assert!(matches!(load_err(&plugin), Error::Compile { .. }));
+    // A bundle holds module files only, so a `.py` entry is not even there to be compiled.
+    assert!(matches!(
+        load_err(&plugin),
+        Error::Compile { .. } | Error::Read { .. }
+    ));
 }
 
 #[test]

@@ -51,7 +51,7 @@ pub type Completion = (CallId, Result<Value, HostError>);
 /// at once or says [`HostReply::Pending`] and delivers the answer later from
 /// [`HostCalls::wait`], which the driver calls only when every hook is idle and a call is
 /// outstanding. A hook's time budget does not run while it waits for the host.
-pub trait HostCalls {
+pub trait HostCalls: Send {
     /// Starts one call. `id` names it in a later [`Completion`].
     fn call(&mut self, id: CallId, request: &HostRequest) -> HostReply;
 

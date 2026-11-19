@@ -4,19 +4,28 @@ Paths are resolved here, before the decision, so the policy judges the real file
 name stand for a protected one. Writes are atomic. ``$.http.fetch`` follows at most five redirects and re-asks the
 policy for every host it is sent to, reads at most 4 MiB, and never connects to a loopback, private or link-local
 address (a mod has no business talking to the user's machine or network).
+
+**The connection goes to the address that was checked.** A name is resolved once per request (and once per redirect),
+every address it resolved to is checked, and the socket is opened to one of those addresses, not to the name: the
+Host header and the TLS server name (SNI, and the certificate check) still say the name. A resolver that answers a
+public address to the check and a private one to the connection (DNS rebinding) therefore gets the public one. The
+fetch does not use a proxy from the environment, which would resolve the name itself, out of our sight.
 """
 
 from __future__ import annotations
 
 import base64
+import functools
+import http.client
 import ipaddress
 import os
 import socket
+import ssl
 import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -85,32 +94,117 @@ def write_file(real: str, content: Any, encoding: str = "utf-8") -> dict[str, An
 
 # ---------------------------------------------------------------- network
 
+Resolver = Callable[[str, int], Sequence[str]]  # (host, port) -> the addresses it names, as text
+Connector = Callable[[tuple[str, int], float | None, tuple[str, int] | None], socket.socket]
 
-def is_public(host: str) -> bool:
-    """Whether every address ``host`` resolves to is a public one. Fails closed: a name that does not resolve is not."""
+
+def system_resolver(host: str, port: int) -> list[str]:
+    """The addresses ``host`` names, from the system's resolver, in its order and without duplicates."""
+    found: list[str] = []
+    for info in socket.getaddrinfo(host, port, type=socket.SOCK_STREAM):
+        address = str(info[4][0]).split("%")[0]
+        if address not in found:
+            found.append(address)
+    return found
+
+
+def _public(address: str) -> bool:
     try:
-        infos = socket.getaddrinfo(host, None)
-    except OSError:
+        ip = ipaddress.ip_address(address.split("%", maxsplit=1)[0])
+    except ValueError:
         return False
-    for info in infos:
-        try:
-            address = ipaddress.ip_address(str(info[4][0]).split("%")[0])
-        except ValueError:
-            return False
-        if (
-            address.is_private
-            or address.is_loopback
-            or address.is_link_local
-            or address.is_multicast
-            or address.is_reserved
-            or address.is_unspecified
-        ):
-            return False
+    return not (
+        ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_multicast or ip.is_reserved or ip.is_unspecified
+    )
+
+
+def public_addresses(host: str, port: int = 0, resolver: Resolver | None = None) -> list[str]:
+    """Resolve ``host`` once and return its addresses if every one is public. Fails closed: a name that does not
+    resolve, answers nothing, or answers any loopback, private or link-local address is refused as a whole."""
+    from .service import PolicyDeniedError
+
+    try:
+        addresses = [str(a) for a in (resolver or system_resolver)(host, port)]
+    except OSError as exc:
+        raise PolicyDeniedError(f"{host} does not resolve: {exc}") from exc
+    if not addresses or not all(_public(a) for a in addresses):
+        raise PolicyDeniedError(f"{host} is not a public address; a mod cannot reach the local network")
+    return addresses
+
+
+def is_public(host: str, resolver: Resolver | None = None) -> bool:
+    """Whether every address ``host`` resolves to is a public one. Fails closed: a name that does not resolve is not."""
+    from .service import PolicyDeniedError
+
+    try:
+        public_addresses(host, 0, resolver)
+    except PolicyDeniedError:
+        return False
     return True
 
 
 Check = Callable[[str], None]
 Opener = Callable[[urllib.request.Request, float], Any]
+
+
+def _connect_to(
+    addresses: Sequence[str],
+    connect: Connector,
+    address: tuple[str, int],
+    timeout: float | None,
+    source_address: tuple[str, int] | None = None,
+) -> socket.socket:
+    """Open the socket to one of the checked ``addresses`` (in order, until one answers), never to the name."""
+    last: OSError | None = None
+    for ip in addresses:
+        try:
+            return connect((ip, address[1]), timeout, source_address)
+        except OSError as exc:
+            last = exc
+    raise last or OSError(f"no address to connect to for {address[0]}")
+
+
+def _pinned(base: type[http.client.HTTPConnection], addresses: Sequence[str], connect: Connector) -> Any:
+    """A connection class that keeps the name for the Host header and the TLS server name, and the checked addresses
+    for the socket."""
+
+    class Pinned(base):  # type: ignore[valid-type, misc]
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            super().__init__(*args, **kwargs)
+            self._create_connection = functools.partial(_connect_to, addresses, connect)
+
+    return Pinned
+
+
+def _split(req: urllib.request.Request, default_port: int) -> tuple[str, int]:
+    parts = urllib.parse.urlsplit(req.full_url)
+    return parts.hostname or "", parts.port or default_port
+
+
+class _PinnedHTTPHandler(urllib.request.HTTPHandler):
+    def __init__(self, resolver: Resolver | None, connect: Connector) -> None:
+        super().__init__()
+        self._resolver, self._connect = resolver, connect
+
+    def http_open(self, req: urllib.request.Request) -> Any:
+        host, port = _split(req, 80)
+        addresses = public_addresses(host, port, self._resolver)  # resolved once: what is checked is what is used
+        return self.do_open(_pinned(http.client.HTTPConnection, addresses, self._connect), req)
+
+
+class _PinnedHTTPSHandler(urllib.request.HTTPSHandler):
+    def __init__(self, resolver: Resolver | None, connect: Connector) -> None:
+        super().__init__(context=ssl.create_default_context())
+        self._resolver, self._connect = resolver, connect
+
+    def https_open(self, req: urllib.request.Request) -> Any:
+        host, port = _split(req, 443)
+        addresses = public_addresses(host, port, self._resolver)
+        return self.do_open(
+            _pinned(http.client.HTTPSConnection, addresses, self._connect),
+            req,
+            context=self._context,  # type: ignore[attr-defined]
+        )
 
 
 class _Redirects(urllib.request.HTTPRedirectHandler):
@@ -124,8 +218,29 @@ class _Redirects(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
-def _default_open(req: urllib.request.Request, timeout: float, check: Check) -> Any:
-    opener = urllib.request.build_opener(_Redirects(check))
+def _create_connection(
+    address: tuple[str, int], timeout: float | None, source: tuple[str, int] | None
+) -> socket.socket:
+    return socket.create_connection(address, timeout if timeout is not None else socket.getdefaulttimeout(), source)
+
+
+def _default_open(
+    req: urllib.request.Request,
+    timeout: float,
+    check: Check,
+    resolver: Resolver | None = None,
+    connect: Connector | None = None,
+) -> Any:
+    # No proxy handler: a proxy would resolve the name itself, where the check cannot see it.
+    opener = urllib.request.OpenerDirector()
+    for handler in (
+        urllib.request.HTTPDefaultErrorHandler(),
+        _Redirects(check),
+        _PinnedHTTPHandler(resolver, connect or _create_connection),
+        _PinnedHTTPSHandler(resolver, connect or _create_connection),
+        urllib.request.HTTPErrorProcessor(),
+    ):
+        opener.add_handler(handler)
     return opener.open(req, timeout=timeout)
 
 
@@ -140,8 +255,18 @@ def check_url(url: Any) -> urllib.parse.SplitResult:
     return parts
 
 
-def fetch(url: str, init: Mapping[str, Any], check: Check, opener: Opener | None = None) -> dict[str, Any]:
-    """One request. ``check(url)`` raises for a host the policy refuses and runs for every redirect it follows."""
+def fetch(
+    url: str,
+    init: Mapping[str, Any],
+    check: Check,
+    opener: Opener | None = None,
+    *,
+    resolver: Resolver | None = None,
+    connect: Connector | None = None,
+) -> dict[str, Any]:
+    """One request. ``check(url)`` raises for a host the policy refuses and runs for every redirect it follows.
+    ``resolver`` and ``connect`` are the seams for the name lookup and the socket (tests; the defaults are the
+    system's)."""
     check_url(url)  # the first URL was decided before this call; ``check`` decides each redirect
     method = str(init.get("method") or "GET").upper()
     if method not in ("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"):
@@ -161,7 +286,7 @@ def fetch(url: str, init: Mapping[str, Any], check: Check, opener: Opener | None
         check(target)
 
     try:
-        response = opener(req, timeout) if opener else _default_open(req, timeout, guarded)
+        response = opener(req, timeout) if opener else _default_open(req, timeout, guarded, resolver, connect)
     except urllib.error.HTTPError as exc:
         response = exc
     except (urllib.error.URLError, OSError, TimeoutError) as exc:

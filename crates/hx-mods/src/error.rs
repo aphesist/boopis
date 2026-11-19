@@ -3,7 +3,7 @@
 /// Why a mod operation failed. A hook that throws or runs over budget is not an error: the chain
 /// skips it and records a [`crate::Diagnostic`]. These are the failures of the runtime itself and
 /// of loading a mod.
-#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub enum Error {
     /// A file in the plugin could not be read, or its path leaves the plugin directory.

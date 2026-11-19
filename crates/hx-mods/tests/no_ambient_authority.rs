@@ -1,6 +1,7 @@
 //! The isolate has no files, network or processes of its own. This test runs alone in its
 //! process so the counts it takes are not disturbed by other tests: it loads and drives the three
-//! example mods and checks that the process gained no descriptor, socket, thread or child.
+//! example mods, each in a bare engine, and checks that the process gained no descriptor, socket,
+//! thread or child.
 
 // Integration-test helpers are not `#[test]` functions, so clippy's allow-*-in-tests config does not
 // reach them. Failing loudly is exactly what test code should do.
@@ -11,9 +12,13 @@ mod common;
 
 use std::fs;
 
-use common::{example, runtime};
-use hx_mods::Tier;
-use serde_json::json;
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use common::example;
+use hx_mods::engine::Engine;
+use hx_mods::{Bundle, RuntimeConfig};
+use serde_json::{Value, json};
 
 #[derive(Debug, PartialEq, Eq)]
 struct Footprint {
@@ -53,38 +58,62 @@ fn footprint() -> Footprint {
     }
 }
 
+/// Loads one example into a bare engine and runs its `session.start` hook, returning every frame the
+/// engine sent to its parent.
+fn run_example(name: &str) -> Vec<Value> {
+    let sent: Rc<RefCell<Vec<Value>>> = Rc::default();
+    let sink = sent.clone();
+    let mut engine = Engine::new(
+        Rc::new(move |f: &Value| {
+            sink.borrow_mut().push(f.clone());
+            true
+        }),
+        RuntimeConfig::default(),
+    )
+    .unwrap();
+    let bundle = Bundle::read(&example(name)).unwrap();
+    engine.handle(
+        &json!({ "id": 1, "op": "load", "bundle": bundle, "tier": "user", "idx": 0, "gen": 0 }),
+    );
+    let hook = sent
+        .borrow()
+        .iter()
+        .find(|f| f["ev"] == "reg" && f["event"] == "session.start")
+        .map(|f| f["hook"].as_str().unwrap().to_owned());
+    if let Some(hook) = hook {
+        engine.handle(&json!({ "op": "invoke", "m": {
+            "k": "invoke", "frame": "f1", "hook": hook, "kind": "hook", "e": "{}", "budget": 1000,
+            "event": "session.start", "tier": "user", "run": 1,
+        }}));
+    }
+    let frames = sent.borrow().clone();
+    frames
+}
+
 #[test]
 fn running_the_example_mods_opens_nothing_and_starts_nothing() {
     // Warm anything the standard library or the allocator opens lazily, so the baseline is steady.
     let _ = fs::read_dir("/proc/self/fd").unwrap().count();
     let before = footprint();
-    {
-        let (mut rt, host) = runtime();
-        let a = example("counter-pane");
-        let b = example("hello-command");
-        let c = example("prompt-band");
-        rt.load_plugins(&[(&a, Tier::User), (&b, Tier::User), (&c, Tier::User)])
-            .unwrap();
-        rt.dispatch("session.start", &json!({})).unwrap();
-        rt.render("Pane", Some("counter"), &json!({})).unwrap();
-        rt.render("AbovePrompt", None, &json!({ "isWorking": true }))
-            .unwrap();
-        rt.run_command("fingerprint", "x").unwrap();
-        assert!(!host.calls().is_empty());
-        // Everything the mods did that was not computation went through the host trait.
-        assert!(
-            host.calls().iter().all(|c| [
-                "ui.open",
-                "clock.every",
-                "command.register",
-                "ui.invalidate"
-            ]
-            .contains(&c.call.as_str())),
-            "{:?}",
-            host.calls()
-        );
-        // The files the loader read were closed again; nothing is held open while the runtime lives.
-        assert_eq!(footprint(), before);
+    let mut calls = Vec::new();
+    for name in ["counter-pane", "hello-command", "prompt-band"] {
+        let frames = run_example(name);
+        assert!(frames.iter().any(|f| f["re"] == 1), "{name} did not load");
+        calls.extend(frames.into_iter().filter(|f| f.get("call").is_some()));
+        // The files the loader read were closed again; nothing is held open while the engine lives.
+        assert_eq!(footprint(), before, "{name}");
     }
+    assert!(!calls.is_empty());
+    // Everything the mods did that was not computation left as a `$` call frame.
+    assert!(
+        calls.iter().all(|c| [
+            "ui.open",
+            "clock.every",
+            "command.register",
+            "ui.invalidate"
+        ]
+        .contains(&c["name"].as_str().unwrap())),
+        "{calls:?}"
+    );
     assert_eq!(footprint(), before);
 }

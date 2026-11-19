@@ -849,6 +849,14 @@
           "default": null,
           "description": "The event's fields."
         },
+        "plugin": {
+          "default": null,
+          "description": "Run the event through this mod's hooks only (a restarted mod gets its own `session.start`).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "session_id": {
           "description": "The session.",
           "type": "string"
@@ -1202,6 +1210,37 @@
           "type": "object"
         }
       ]
+    },
+    "FailedMod": {
+      "description": "A plugin that did not load. The others did.",
+      "properties": {
+        "code": {
+          "description": "A stable code (`hx.mods.load_failed`, `hx.mods.not_a_mod`, `hx.mods.already_loaded`, ...).",
+          "type": "string"
+        },
+        "dir": {
+          "description": "The directory it was asked for.",
+          "type": "string"
+        },
+        "message": {
+          "description": "Why.",
+          "type": "string"
+        },
+        "plugin": {
+          "default": null,
+          "description": "Its name, when its manifest could be read.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "dir",
+        "code",
+        "message"
+      ],
+      "type": "object"
     },
     "FailureKind": {
       "description": "Why one edit failed validation.",
@@ -1559,8 +1598,13 @@
           },
           "type": "array"
         },
+        "replace": {
+          "default": false,
+          "description": "A mod that is already running is replaced: the new worker starts and loads first, takes the\nmod's place in the chain, and the old one is stopped after a short grace period. Without\nit, a running mod is `already_loaded`; a mod whose worker has exited is loaded again either way.",
+          "type": "boolean"
+        },
         "session_id": {
-          "description": "The session whose worker loads them. The worker starts with the first load.",
+          "description": "The session whose mods load. Each mod gets a worker of its own.",
           "type": "string"
         }
       },
@@ -1573,6 +1617,14 @@
     "LoadResult": {
       "description": "Result of `mods.load`.",
       "properties": {
+        "failed": {
+          "default": [],
+          "description": "What did not, each with its reason. One mod failing does not stop the others.",
+          "items": {
+            "$ref": "#/$defs/FailedMod"
+          },
+          "type": "array"
+        },
         "loaded": {
           "description": "What loaded, in load order.",
           "items": {
@@ -1589,6 +1641,23 @@
     "LoadedMod": {
       "description": "A mod that is loaded.",
       "properties": {
+        "expires_in_s": {
+          "default": null,
+          "description": "Seconds until the sandbox ends the worker, when it is running.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "generation": {
+          "default": 0,
+          "description": "How many workers this mod has had in this session (0 for the first). Handler ids carry it.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
         "hooks": {
           "description": "How many hooks `register` added.",
           "format": "uint32",
@@ -1606,6 +1675,21 @@
           "description": "The plugin name.",
           "type": "string"
         },
+        "pid": {
+          "default": null,
+          "description": "The worker's process id, when it runs as one.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "running": {
+          "default": false,
+          "description": "Whether the mod's worker is running.",
+          "type": "boolean"
+        },
         "tier": {
           "description": "The tier it runs in.",
           "type": "string"
@@ -1617,6 +1701,42 @@
         "modules",
         "hooks"
       ],
+      "type": "object"
+    },
+    "ModLimits": {
+      "description": "What one mod's worker is held to. Absent fields take the defaults (64 MiB, 10 s, one hour).",
+      "properties": {
+        "event_budget_ms": {
+          "default": null,
+          "description": "How long one hook may run, in milliseconds.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "heap_mib": {
+          "default": null,
+          "description": "The mod's own heap budget, in MiB. A mod that fills it fails alone.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "lifetime_s": {
+          "default": null,
+          "description": "How long the worker lives, in seconds, before the sandbox ends it (at most one hour, its\nceiling). The plugin starts a replacement before then.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
       "type": "object"
     },
     "ModsCapabilities": {
@@ -1913,6 +2033,18 @@
           "description": "The plugin directory. `hx` reads it (through `cap_std`); the worker never can.",
           "type": "string"
         },
+        "limits": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ModLimits"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The worker's limits."
+        },
         "tier": {
           "default": null,
           "description": "`prepend`, `user` (default) or `append`.",
@@ -1930,6 +2062,14 @@
     "ReachParams": {
       "description": "Params of `mods.reach`.",
       "properties": {
+        "plugin": {
+          "default": null,
+          "description": "The mod whose worker is probed; absent probes the first running one.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "session_id": {
           "description": "The session whose worker is probed.",
           "type": "string"
@@ -2332,6 +2472,14 @@
         "kind": {
           "description": "`tree`, `default` (no mod drew it: keep the app's own drawing) or `skipped` (a mod drew\nsomething invalid, and the reason was logged).",
           "type": "string"
+        },
+        "plugin": {
+          "default": null,
+          "description": "The mod whose hook drew it (the first hook to answer): which mod a band row belongs to when\nseveral are loaded. Absent for `default`.",
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "props": {
           "default": null,
@@ -3117,7 +3265,7 @@
           "type": "array"
         },
         "running": {
-          "description": "Whether its worker is alive.",
+          "description": "Whether any of its workers is alive.",
           "type": "boolean"
         },
         "session_id": {
@@ -3662,7 +3810,7 @@
       "properties": {
         "plugin": {
           "default": null,
-          "description": "One plugin to unload; absent stops the whole session's worker.",
+          "description": "One plugin to unload; absent stops every worker of the session.",
           "type": [
             "string",
             "null"

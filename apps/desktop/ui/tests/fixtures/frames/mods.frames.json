@@ -768,165 +768,6 @@
    "params": {
     "authority_epoch": 1,
     "execution_generation": 1,
-    "type": "plugin.boopis.mod.toast",
-    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
-    "payload": {
-     "plugin": "test-runner",
-     "text": "1 test failing",
-     "timeout_ms": 4000
-    },
-    "seq": 1003
-   }
-  }
- },
- {
-  "dir": "in",
-  "frame": {
-   "jsonrpc": "2.0",
-   "method": "event",
-   "params": {
-    "authority_epoch": 1,
-    "execution_generation": 1,
-    "type": "plugin.boopis.mod.toast",
-    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
-    "payload": {
-     "plugin": "test-runner",
-     "text": "Indexed 296 files",
-     "timeout_ms": 4000
-    },
-    "seq": 1004
-   }
-  }
- },
- {
-  "dir": "in",
-  "frame": {
-   "jsonrpc": "2.0",
-   "method": "event",
-   "params": {
-    "authority_epoch": 1,
-    "execution_generation": 1,
-    "type": "plugin.boopis.mod.toast",
-    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
-    "payload": {
-     "plugin": "test-runner",
-     "text": "Context is at 78%",
-     "timeout_ms": 4000
-    },
-    "seq": 1005
-   }
-  }
- },
- {
-  "dir": "in",
-  "frame": {
-   "jsonrpc": "2.0",
-   "method": "event",
-   "params": {
-    "authority_epoch": 1,
-    "execution_generation": 1,
-    "type": "plugin.boopis.mod.log",
-    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
-    "payload": {
-     "plugin": "test-runner",
-     "level": "info",
-     "text": "the cache for money.test.ts is stale"
-    },
-    "seq": 1006
-   }
-  }
- },
- {
-  "dir": "in",
-  "frame": {
-   "jsonrpc": "2.0",
-   "method": "event",
-   "params": {
-    "authority_epoch": 1,
-    "execution_generation": 1,
-    "type": "plugin.boopis.mod.theme",
-    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
-    "payload": {
-     "action": "set",
-     "plugin": "test-runner",
-     "theme": {
-      "colors": {
-       "--bg-2": "#201e31",
-       "--brass": "#b8a4f0",
-       "--text": "#e7e4f2"
-      },
-      "label": "Dusk"
-     }
-    },
-    "seq": 1007
-   }
-  }
- },
- {
-  "dir": "in",
-  "frame": {
-   "jsonrpc": "2.0",
-   "method": "event",
-   "params": {
-    "authority_epoch": 1,
-    "execution_generation": 1,
-    "type": "plugin.boopis.mod.pane",
-    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
-    "payload": {
-     "action": "open",
-     "plugin": "token-meter",
-     "id": "usage",
-     "title": "Token usage"
-    },
-    "seq": 1008
-   }
-  }
- },
- {
-  "dir": "in",
-  "frame": {
-   "jsonrpc": "2.0",
-   "method": "event",
-   "params": {
-    "authority_epoch": 1,
-    "execution_generation": 1,
-    "type": "plugin.boopis.mod.status",
-    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
-    "payload": {
-     "plugin": "token-meter",
-     "text": "12.4k tokens this turn"
-    },
-    "seq": 1009
-   }
-  }
- },
- {
-  "dir": "in",
-  "frame": {
-   "jsonrpc": "2.0",
-   "method": "event",
-   "params": {
-    "authority_epoch": 1,
-    "execution_generation": 1,
-    "type": "plugin.boopis.mod.log",
-    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
-    "payload": {
-     "plugin": "token-meter",
-     "level": "info",
-     "text": "token-meter is watching this session"
-    },
-    "seq": 1010
-   }
-  }
- },
- {
-  "dir": "in",
-  "frame": {
-   "jsonrpc": "2.0",
-   "method": "event",
-   "params": {
-    "authority_epoch": 1,
-    "execution_generation": 1,
     "type": "plugin.boopis.mod.render",
     "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
     "payload": {
@@ -952,7 +793,7 @@
            "disabled": false,
            "label": "Re-run",
            "onPress": {
-            "$handler": "0.h1"
+            "$handler": "0.h0.1"
            }
           },
           "type": "Button"
@@ -972,7 +813,7 @@
           "props": {
            "label": "Show",
            "onSelect": {
-            "$handler": "0.h2"
+            "$handler": "0.h0.2"
            },
            "options": [
             {
@@ -1026,7 +867,7 @@
         "props": {
          "label": "Ask which to run",
          "onPress": {
-          "$handler": "0.h3"
+          "$handler": "0.h0.3"
          }
         },
         "type": "Button"
@@ -1037,7 +878,167 @@
        "gap": 3
       },
       "type": "Box"
+     },
+     "plugin": "test-runner"
+    },
+    "seq": 1003
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.mod.toast",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "plugin": "test-runner",
+     "text": "1 test failing",
+     "timeout_ms": 4000
+    },
+    "seq": 1004
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.mod.toast",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "plugin": "test-runner",
+     "text": "Indexed 296 files",
+     "timeout_ms": 4000
+    },
+    "seq": 1005
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.mod.toast",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "plugin": "test-runner",
+     "text": "Context is at 78%",
+     "timeout_ms": 4000
+    },
+    "seq": 1006
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.mod.log",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "plugin": "test-runner",
+     "level": "info",
+     "text": "the cache for money.test.ts is stale"
+    },
+    "seq": 1007
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.mod.theme",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "action": "set",
+     "plugin": "test-runner",
+     "theme": {
+      "colors": {
+       "--bg-2": "#201e31",
+       "--brass": "#b8a4f0",
+       "--text": "#e7e4f2"
+      },
+      "label": "Dusk"
      }
+    },
+    "seq": 1008
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.mod.pane",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "action": "open",
+     "plugin": "token-meter",
+     "id": "usage",
+     "title": "Token usage"
+    },
+    "seq": 1009
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.mod.status",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "plugin": "token-meter",
+     "text": "12.4k tokens this turn"
+    },
+    "seq": 1010
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "type": "plugin.boopis.mod.log",
+    "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
+    "payload": {
+     "plugin": "token-meter",
+     "level": "info",
+     "text": "token-meter is watching this session"
     },
     "seq": 1011
    }
@@ -1167,7 +1168,8 @@
        "gap": 3
       },
       "type": "Box"
-     }
+     },
+     "plugin": "token-meter"
     },
     "seq": 1012
    }
@@ -4868,20 +4870,34 @@
       "exited": "",
       "plugins": [
        {
+        "dir": "/tmp/pytest-of-root/pytest-2/test_the_recording_is_real_eve0/hermes-home/boopis/compat/plugins/test-runner/source",
+        "expires_in_s": 3599,
+        "generation": 0,
         "hooks": 3,
         "modules": [
          "register.jsx"
         ],
         "name": "test-runner",
-        "tier": "user"
+        "pid": 25381,
+        "running": true,
+        "tier": "user",
+        "state": "running",
+        "reason": ""
        },
        {
+        "dir": "/tmp/pytest-of-root/pytest-2/test_the_recording_is_real_eve0/hermes-home/boopis/compat/plugins/token-meter/source",
+        "expires_in_s": 3599,
+        "generation": 0,
         "hooks": 2,
         "modules": [
          "register.jsx"
         ],
         "name": "token-meter",
-        "tier": "user"
+        "pid": 25388,
+        "running": true,
+        "tier": "user",
+        "state": "running",
+        "reason": ""
        }
       ],
       "panes": [
@@ -4965,7 +4981,7 @@
            "disabled": false,
            "label": "Re-run",
            "onPress": {
-            "$handler": "0.h4"
+            "$handler": "0.h0.4"
            }
           },
           "type": "Button"
@@ -4985,7 +5001,7 @@
           "props": {
            "label": "Show",
            "onSelect": {
-            "$handler": "0.h5"
+            "$handler": "0.h0.5"
            },
            "options": [
             {
@@ -5039,7 +5055,7 @@
         "props": {
          "label": "Ask which to run",
          "onPress": {
-          "$handler": "0.h6"
+          "$handler": "0.h0.6"
          }
         },
         "type": "Button"
@@ -5050,7 +5066,8 @@
        "gap": 3
       },
       "type": "Box"
-     }
+     },
+     "plugin": "test-runner"
     },
     "seq": 1013
    }
@@ -5206,7 +5223,8 @@
        "gap": 3
       },
       "type": "Box"
-     }
+     },
+     "plugin": "token-meter"
     },
     "seq": 1014
    }
@@ -5269,7 +5287,8 @@
        "justifyContent": "space-between"
       },
       "type": "Box"
-     }
+     },
+     "plugin": "test-runner"
     },
     "seq": 1015
    }
@@ -5332,7 +5351,8 @@
        "justifyContent": "space-between"
       },
       "type": "Box"
-     }
+     },
+     "plugin": "test-runner"
     },
     "seq": 1016
    }
@@ -5346,7 +5366,7 @@
    "method": "plugin.boopis.mod.press",
    "params": {
     "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
-    "handler": "0.h4"
+    "handler": "0.h0.4"
    }
   }
  },
@@ -5393,7 +5413,7 @@
            "disabled": true,
            "label": "Running",
            "onPress": {
-            "$handler": "0.h7"
+            "$handler": "0.h0.7"
            }
           },
           "type": "Button"
@@ -5413,7 +5433,7 @@
           "props": {
            "label": "Show",
            "onSelect": {
-            "$handler": "0.h8"
+            "$handler": "0.h0.8"
            },
            "options": [
             {
@@ -5467,7 +5487,7 @@
         "props": {
          "label": "Ask which to run",
          "onPress": {
-          "$handler": "0.h9"
+          "$handler": "0.h0.9"
          }
         },
         "type": "Button"
@@ -5478,7 +5498,8 @@
        "gap": 3
       },
       "type": "Box"
-     }
+     },
+     "plugin": "test-runner"
     },
     "seq": 1017
    }
@@ -5526,7 +5547,8 @@
        "justifyContent": "space-between"
       },
       "type": "Box"
-     }
+     },
+     "plugin": "test-runner"
     },
     "seq": 1018
    }
@@ -5540,7 +5562,7 @@
    "method": "plugin.boopis.mod.select",
    "params": {
     "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
-    "handler": "0.h8",
+    "handler": "0.h0.8",
     "value": "failing"
    }
   }
@@ -5588,7 +5610,7 @@
            "disabled": true,
            "label": "Running",
            "onPress": {
-            "$handler": "0.h10"
+            "$handler": "0.h0.10"
            }
           },
           "type": "Button"
@@ -5608,7 +5630,7 @@
           "props": {
            "label": "Show",
            "onSelect": {
-            "$handler": "0.h11"
+            "$handler": "0.h0.11"
            },
            "options": [
             {
@@ -5662,7 +5684,7 @@
         "props": {
          "label": "Ask which to run",
          "onPress": {
-          "$handler": "0.h12"
+          "$handler": "0.h0.12"
          }
         },
         "type": "Button"
@@ -5673,7 +5695,8 @@
        "gap": 3
       },
       "type": "Box"
-     }
+     },
+     "plugin": "test-runner"
     },
     "seq": 1019
    }
@@ -5687,7 +5710,7 @@
    "method": "plugin.boopis.mod.press",
    "params": {
     "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
-    "handler": "0.h12"
+    "handler": "0.h0.12"
    }
   }
  },
@@ -5712,7 +5735,7 @@
     "type": "plugin.boopis.form.opened",
     "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
     "payload": {
-     "form_id": "01a1f31f-e542-783c-916e-45b93a53a017",
+     "form_id": "01a1f3ca-6fdc-74e4-9c26-95c0588ce144",
      "kind": "choice",
      "title": "Which tests should I re-run?",
      "schema": {
@@ -5738,7 +5761,7 @@
       "kind": "mod",
       "plugin": "test-runner"
      },
-     "expires_at": "2026-11-19T10:25:16.226Z"
+     "expires_at": "2026-11-19T13:31:32.828Z"
     },
     "seq": 1020
    }
@@ -5752,7 +5775,7 @@
    "method": "plugin.boopis.form.submit",
    "params": {
     "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
-    "form_id": "01a1f31f-e542-783c-916e-45b93a53a017",
+    "form_id": "01a1f3ca-6fdc-74e4-9c26-95c0588ce144",
     "values": {
      "answer": "The billing suite"
     },
@@ -5766,7 +5789,7 @@
    "jsonrpc": "2.0",
    "id": 109,
    "result": {
-    "form_id": "01a1f31f-e542-783c-916e-45b93a53a017",
+    "form_id": "01a1f3ca-6fdc-74e4-9c26-95c0588ce144",
     "status": "submitted"
    }
   }
@@ -5782,7 +5805,7 @@
     "type": "plugin.boopis.form.resolved",
     "session_id": "local-c66f00fa1130c9348ac8ee4423b01f4d5652c19239a6ad9ebed5203183095c32",
     "payload": {
-     "form_id": "01a1f31f-e542-783c-916e-45b93a53a017",
+     "form_id": "01a1f3ca-6fdc-74e4-9c26-95c0588ce144",
      "status": "submitted"
     },
     "seq": 1021
