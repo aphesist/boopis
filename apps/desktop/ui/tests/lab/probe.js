@@ -61,8 +61,7 @@
     const hit = tokenCache.get(ground);
     if (hit && hit.key === key) return hit;
     const p = document.createElement('i');
-    /* transition: none, or a ground inside .hx (reduced motion gives every element a 1 ms transition) reads the width it had a frame ago and every length token comes back as 1 */
-    p.style.cssText = 'position:absolute;left:-99px;top:0;width:1px;height:1px;pointer-events:none;visibility:hidden;transition:none !important';
+    p.style.cssText = 'position:absolute;left:-99px;top:0;width:1px;height:1px;pointer-events:none;visibility:hidden;transition:none !important;animation:none !important';
     (ground === de ? de : ground).appendChild(p);
     const colors = new Set(['0,0,0,0']), lengths = new Set([0]), fs = new Set(), radii = new Set([0]), space = new Set([0]);
     const cs = getComputedStyle(p);
