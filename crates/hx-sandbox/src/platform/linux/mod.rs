@@ -393,7 +393,7 @@ pub(crate) fn capabilities() -> Capabilities {
     let off = if p.seccomp_enforces {
         Capability::yes(
             "seccomp",
-            "inet sockets denied; only AF_UNIX SOCK_STREAM sockets exist (no datagram, seqpacket or raw), and connect, bind and listen are denied",
+            "inet sockets denied; only AF_UNIX SOCK_STREAM sockets (and SOCK_STREAM or SOCK_SEQPACKET socket pairs) exist, no datagram or raw, and connect, bind and listen are denied",
         )
     } else {
         Capability::no(

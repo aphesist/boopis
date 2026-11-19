@@ -717,29 +717,38 @@ async fn out(w: &World, net: NetworkPolicy, args: &[&str]) -> (Option<i32>, Stri
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn with_the_network_off_only_unix_stream_sockets_can_be_created() {
+async fn with_the_network_off_socket_makes_only_unix_streams_and_socketpair_adds_seqpacket() {
     let w = World::new();
     for call in ["socket", "socketpair"] {
-        // The one type that stays: plain, and with the flags libc and Python add.
-        for kind in [
-            "stream",
-            "stream,nonblock",
-            "stream,cloexec",
-            "stream,nonblock,cloexec",
-        ] {
-            let (c, text) = out(&w, NetworkPolicy::Off, &[call, "unix", kind]).await;
-            assert_eq!((c, text.trim()), (Some(0), "ok"), "{call} {kind}");
+        // `socket` keeps stream only; `socketpair` keeps stream and seqpacket.
+        let kept: &[&str] = if call == "socket" {
+            &["stream"]
+        } else {
+            &["stream", "seqpacket"]
+        };
+        // plain, and with the flags libc and Python add
+        for kind in kept {
+            for flags in ["", ",nonblock", ",cloexec", ",nonblock,cloexec"] {
+                let spec = format!("{kind}{flags}");
+                let (c, text) = out(&w, NetworkPolicy::Off, &[call, "unix", &spec]).await;
+                assert_eq!((c, text.trim()), (Some(0), "ok"), "{call} {spec}");
+            }
         }
-        // Every other AF_UNIX type: DGRAM and RDM, SEQPACKET, and RAW (a datagram socket in
-        // the kernel), with and without the flags.
-        for kind in [
+        // Every other AF_UNIX type: DGRAM and RDM, RAW (a datagram socket in the kernel), with
+        // and without the flags, and seqpacket for `socket`.
+        let denied = [
             "dgram",
             "raw",
-            "seqpacket",
             "rdm",
             "dgram,nonblock,cloexec",
             "raw,cloexec",
-        ] {
+        ];
+        let extra: &[&str] = if call == "socket" {
+            &["seqpacket"]
+        } else {
+            &[]
+        };
+        for kind in denied.iter().chain(extra) {
             let (c, text) = out(&w, NetworkPolicy::Off, &[call, "unix", kind]).await;
             assert_eq!(c, Some(3), "{call} {kind} must be denied: {text}");
             assert!(text.contains(EPERM_TEXT), "{call} {kind}: {text}");
@@ -756,6 +765,61 @@ async fn with_the_network_off_only_unix_stream_sockets_can_be_created() {
             assert_eq!((c, text.trim()), (Some(0), "ok"), "control {call} {kind}");
         }
     }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_sandboxed_rust_program_can_spawn_a_child_with_the_network_off() {
+    // What cargo does for every rustc: the standard library reports the child's exec status
+    // through a SOCK_SEQPACKET socket pair, with and without a `pre_exec` hook.
+    let w = World::new();
+    let (c, text) = out(&w, NetworkPolicy::Off, &["spawnchild"]).await;
+    assert_eq!((c, text.trim()), (Some(0), "ok"));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_seqpacket_pair_cannot_send_to_a_path_but_a_datagram_pair_is_refused() {
+    // The kernel drops the destination of a seqpacket `sendto` (`unix_seqpacket_sendmsg` zeroes
+    // `msg_namelen`), so the message goes to the pair's peer and the host socket hears nothing.
+    let w = World::new();
+    let sock = w.outside.join("pair.sock");
+    let server = datagram_server(&sock);
+    let (c, text) = out(
+        &w,
+        NetworkPolicy::Off,
+        &["pairsendto", sock.to_str().unwrap(), "seqpacket"],
+    )
+    .await;
+    assert_eq!((c, text.trim()), (Some(0), "peer got 19 bytes"), "{text}");
+    for kind in ["dgram", "raw"] {
+        let (c, text) = out(
+            &w,
+            NetworkPolicy::Off,
+            &["pairsendto", sock.to_str().unwrap(), kind],
+        )
+        .await;
+        assert_eq!(c, Some(3), "{kind}: {text}");
+        assert!(text.contains(EPERM_TEXT), "{kind}: {text}");
+    }
+    assert!(
+        server.join().unwrap().is_empty(),
+        "the host socket heard something"
+    );
+    // Control: with the network on a datagram pair does reach the host socket by path.
+    let server = datagram_server(&sock_again(&w));
+    let (c, text) = out(
+        &w,
+        NetworkPolicy::On,
+        &["pairsendto", sock_again(&w).to_str().unwrap(), "dgram"],
+    )
+    .await;
+    // The pair's own peer hears nothing (EAGAIN, errno 11): the message went to the path.
+    assert_eq!(c, Some(3), "{text}");
+    assert!(text.contains("errno 11"), "{text}");
+    assert_eq!(server.join().unwrap(), ["addressed to a path"]);
+}
+
+fn sock_again(w: &World) -> std::path::PathBuf {
+    w.outside.join("pair-control.sock")
 }
 
 /// A host datagram socket, the way journald and `/dev/log` are: addressed by a path the sandbox
