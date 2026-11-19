@@ -25,7 +25,7 @@ _repo_url=https://github.com/aphesist/boopis
 # ---------------------------------------------------------------------------------------------------------------------
 
 pkgname=boopis
-pkgver=0.1.0   # = "version" in apps/desktop/src-tauri/tauri.conf.json; CI fails the job when they differ
+pkgver=0.1.1   # = "version" in apps/desktop/src-tauri/tauri.conf.json; CI fails the job when they differ
 pkgrel=1
 pkgdesc='Desktop coding harness on Hermes Agent, built on the system WebKitGTK'
 arch=('x86_64')
