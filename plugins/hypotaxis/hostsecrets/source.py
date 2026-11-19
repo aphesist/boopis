@@ -12,6 +12,13 @@ Each env var is bound to a reference; at startup the source asks the host's chan
 values. It is a *mapped* source, so its claims outrank bulk sources, and it overrides a stale ``.env`` line (the user
 saved the key in the app on purpose). With no host running it reports ``NETWORK`` and Hermes goes on with its own
 ``.env``: there is no plaintext store of ours to fall back to. Nothing here logs a value or the token.
+
+The host's channel token is a *bootstrap credential* in Hermes's terms (the one value that unlocks every other secret),
+so the source names it (``default_token_env``, ``token_env_key``): Hermes then keeps it out of every child it builds
+(terminal, code cells, MCP servers) and lets no source overwrite it. That list is built when Hermes's environment policy
+is imported, which can be before this plugin registers, so the plugin also removes the variable from the process
+environment the moment it loads (``hostsecrets.channel.capture_environment``). The host's own peer check does not depend
+on either.
 """
 
 from __future__ import annotations
@@ -22,7 +29,7 @@ from typing import Any, cast
 
 from ..errors import HypotaxisError
 from ..util.log import get_logger
-from .channel import ChannelError, HostChannel
+from .channel import TOKEN_ENV, ChannelError, HostChannel
 from .refs import InvalidRefError, parse_ref, source_name
 
 _log = get_logger("hostsecrets")
@@ -98,12 +105,16 @@ def make_source() -> Any:
         shape = "mapped"
         scheme = "secret"
         override_existing_default = True
+        token_env_key = "token_env"  # noqa: S105 - the config key that names a variable, not a secret
+        default_token_env = TOKEN_ENV
         remediation_hints = {
             ErrorKind.NETWORK: (
-                "Open the hypotaxis desktop app (it holds the keychain); Hermes uses its own .env until then."
+                "Open the hypotaxis desktop app (it holds the keychain) and let it start the gateway; Hermes uses its "
+                "own .env until then."
             ),
             ErrorKind.AUTH_FAILED: (
-                "The hypotaxis desktop app was restarted after Hermes read its channel file; restart the gateway."
+                "This gateway was not started by the running hypotaxis desktop app (it may have restarted since); "
+                "restart the gateway from the app."
             ),
         }
 

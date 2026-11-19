@@ -1,10 +1,16 @@
 """The client of the host's secret channel (protocol ``hx-host-secrets-v1``, docs in apps/desktop/AGENTS.md).
 
-The desktop host listens on a ``0600`` Unix socket and writes ``<profile home>/hypotaxis/host-channel.json`` (socket
-path, a per-launch token, its pid) on every launch. This client reads that file for each request, so it finds a
-restarted host without a restart of its own, and treats a missing file, a dead pid or a refused connection as "no
-host". It can ask whether a secret exists (``has``) and read it (``get``); the protocol has no write and no list.
-Neither the token nor a value is ever put in an error, a log line or a repr.
+The desktop host listens on a ``0600`` Unix socket and serves one process: the gateway it started. It hands that
+gateway the socket's path and a per-launch token in two environment variables of the ``hermes gateway ensure|attach``
+call that starts it (``HYPOTAXIS_HOST_SECRETS_SOCKET``, ``HYPOTAXIS_HOST_SECRETS_TOKEN``). Nothing is written to a file.
+This plugin runs in that gateway, so it takes the two values at load (``capture_environment``) and **removes the token
+from the process environment**, so no child the gateway starts later (a terminal command, a code cell, an MCP server)
+inherits it, whatever Hermes's own scrub does. The host also checks, from the kernel, that the connecting process is the
+gateway and not a child of it, which holds even for a process that read the token another way.
+
+A missing variable, a refused connection or a missing socket is "no host". The client can ask whether a secret exists
+(``has``) and read it (``get``); the protocol has no write and no list. Neither the token nor a value is ever put in an
+error, a log line or a repr.
 """
 
 from __future__ import annotations
@@ -13,8 +19,8 @@ import json
 import os
 import socket
 import sys
+import threading
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any, Literal
 
 from ..errors import HypotaxisError
@@ -22,7 +28,8 @@ from ..util.log import get_logger
 from .refs import SecretRef, parse_ref
 
 PROTOCOL = "hx-host-secrets-v1"
-RENDEZVOUS_PARTS = ("hypotaxis", "host-channel.json")
+SOCKET_ENV = "HYPOTAXIS_HOST_SECRETS_SOCKET"
+TOKEN_ENV = "HYPOTAXIS_HOST_SECRETS_TOKEN"  # noqa: S105 - the name of the variable, not a secret
 TIMEOUT_S = 2.0  # the host answers within 2 s or not at all (its own limit)
 MAX_REPLY_BYTES = 64 * 1024
 
@@ -49,68 +56,62 @@ class ChannelError(HypotaxisError):
 
 
 @dataclass(frozen=True, slots=True)
-class Rendezvous:
+class Credentials:
+    """What the host handed this gateway: its socket and the token. The token is never in a repr."""
+
     socket: str
     token: str = field(repr=False)
-    pid: int
 
 
-def rendezvous_path(home: Path) -> Path:
-    return home.joinpath(*RENDEZVOUS_PARTS)
+_lock = threading.Lock()
+_captured: Credentials | None = None
 
 
-def _alive(pid: int) -> bool:
-    try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True  # it exists, under another user
-    except OSError:
-        return False
-    return True
+def capture_environment() -> Credentials | None:
+    """Take the host's socket and token from the process environment, once, and remove the token from it.
+
+    Called first thing when the plugin loads, before anything can start a child process, so the token lives only in this
+    process's memory from then on. Until a host has handed one over this looks again each time it is called (nothing is
+    removed, because nothing was there). Returns ``None`` when there is no host to talk to.
+    """
+    global _captured
+    with _lock:
+        if _captured is not None:
+            return _captured
+        token = os.environ.pop(TOKEN_ENV, None)  # removed even when the socket is missing: it must not stay behind
+        path = os.environ.get(SOCKET_ENV)
+        if sys.platform == "win32" or not token or not path:
+            return None
+        _captured = Credentials(path, token)
+        return _captured
 
 
-def read_rendezvous(home: Path) -> Rendezvous:
-    """The live host's socket and token, or ``ChannelError("no_host")``."""
+def read_credentials() -> Credentials:
+    """The socket and token this gateway was started with, or ``ChannelError("no_host")``."""
     if sys.platform == "win32":
         raise ChannelError(
             "no_host", "hx.secrets.unavailable", "the host's secret channel needs a Unix socket, which this OS has not"
         )
-    path = rendezvous_path(home)
-    try:
-        doc: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
+    found = capture_environment()
+    if found is None:
         raise ChannelError(
-            "no_host", "hx.secrets.unavailable", "the hypotaxis desktop app is not running (no host-channel.json)"
-        ) from None
-    except (OSError, ValueError) as exc:
-        raise ChannelError(
-            "no_host", "hx.secrets.unavailable", f"host-channel.json is unreadable: {type(exc).__name__}"
-        ) from None
-    sock, token, pid = doc.get("socket"), doc.get("token"), doc.get("pid")
-    if doc.get("protocol") != PROTOCOL or doc.get("schema_version") != 1:
-        raise ChannelError("protocol", "hx.secrets.unavailable", "host-channel.json speaks another protocol or version")
-    if not isinstance(sock, str) or not isinstance(token, str) or not isinstance(pid, int) or not sock or not token:
-        raise ChannelError(
-            "protocol", "hx.secrets.unavailable", "host-channel.json is missing its socket, token or pid"
+            "no_host",
+            "hx.secrets.unavailable",
+            "this gateway was not started by the hypotaxis desktop app (no secret channel was handed to it)",
         )
-    if not _alive(pid):
-        raise ChannelError(
-            "no_host", "hx.secrets.unavailable", "the hypotaxis desktop app is not running (a stale host-channel.json)"
-        )
-    return Rendezvous(sock, token, pid)
+    return found
 
 
 class HostChannel:
-    """Asks the host for secrets of one Hermes profile home."""
+    """Asks the host for secrets. The channel belongs to the gateway process, not to a Hermes home: ``home`` is accepted
+    so callers need not know that, and unused."""
 
-    def __init__(self, home: Path, timeout: float = TIMEOUT_S) -> None:
-        self._home = home
+    def __init__(self, home: object = None, timeout: float = TIMEOUT_S) -> None:
+        del home
         self._timeout = timeout
 
     def _ask(self, op: str, ref: SecretRef) -> dict[str, Any]:
-        rv = read_rendezvous(self._home)
+        rv = read_credentials()
         line = json.dumps({"v": 1, "token": rv.token, "op": op, "service": ref.service, "account": ref.account}) + "\n"
         try:
             with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as conn:
@@ -121,7 +122,7 @@ class HostChannel:
         except TimeoutError:
             raise ChannelError("timeout", "hx.secrets.unavailable", "the host did not answer in time") from None
         except OSError as exc:
-            # a refused connection or a vanished socket: the file outlived its host
+            # a refused connection or a vanished socket: the host that was told to this gateway is gone
             raise ChannelError(
                 "no_host", "hx.secrets.unavailable", f"the host's socket is not answering ({type(exc).__name__})"
             ) from None

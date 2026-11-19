@@ -388,7 +388,7 @@ async fn transactions_work_end_to_end_over_the_wire() {
     h.send(req(
         3,
         "txn.restore",
-        json!({"journal_dir": journals_s, "journal_id": id}),
+        json!({"journal_dir": journals_s, "journal_id": id, "root": root_s}),
     ))
     .await;
     let restored = h.recv().await;

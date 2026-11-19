@@ -19,6 +19,11 @@ pub struct Identify {
     /// The profiles the gateway serves.
     #[serde(default)]
     pub served_profiles: Vec<ServedProfile>,
+    /// The pid of the process listening on the control socket, as the kernel reports it for the connection (`SO_PEERCRED`):
+    /// the gateway itself. The host records it as the one process the secret channel serves (`secrets::peer`). Never read
+    /// from what the gateway says.
+    #[serde(skip)]
+    pub pid: Option<u32>,
 }
 
 /// One served profile.
@@ -55,13 +60,15 @@ impl Identify {
 /// # Errors
 /// `Unavailable` when no gateway answers, or on a platform with no socket support.
 pub async fn identify(home: &Path) -> Result<Identify> {
-    let result = query(
+    let (result, pid) = query(
         home,
         &serde_json::json!({"protocol": 1, "id": 1, "verb": "identify"}),
     )
     .await?;
-    serde_json::from_value(result)
-        .map_err(|e| Error::Unavailable(format!("bad identify answer: {e}")))
+    let mut identity: Identify = serde_json::from_value(result)
+        .map_err(|e| Error::Unavailable(format!("bad identify answer: {e}")))?;
+    identity.pid = pid;
+    Ok(identity)
 }
 
 /// Mint a single-use ticket for `profile_id` on the gateway `identity`.
@@ -76,7 +83,7 @@ pub async fn session_ticket(home: &Path, identity: &Identify, profile_id: &str) 
         .ok_or_else(|| Error::Unavailable("identify named no instance".into()))?;
     let req = serde_json::json!({"protocol": 1, "id": 1, "verb": "session-ticket",
         "params": {"profile_id": profile_id, "instance_id": instance, "purpose": "interactive"}});
-    let result = query(home, &req).await?;
+    let (result, _) = query(home, &req).await?;
     result
         .get("ticket")
         .and_then(|t| t.as_str())
@@ -84,8 +91,12 @@ pub async fn session_ticket(home: &Path, identity: &Identify, profile_id: &str) 
         .ok_or_else(|| Error::Unavailable("the gateway minted no ticket".into()))
 }
 
+/// One round trip: the answer's `result`, and the pid the kernel reports for the process that answered.
 #[cfg(unix)]
-async fn query(home: &Path, request: &serde_json::Value) -> Result<serde_json::Value> {
+async fn query(
+    home: &Path,
+    request: &serde_json::Value,
+) -> Result<(serde_json::Value, Option<u32>)> {
     use std::os::unix::fs::MetadataExt;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -108,9 +119,9 @@ async fn query(home: &Path, request: &serde_json::Value) -> Result<serde_json::V
         stream.write_all(&line).await?;
         let mut buf = Vec::new();
         (&mut stream).take(LIMIT).read_to_end(&mut buf).await?;
-        Ok(buf)
+        Ok((buf, peer.pid().and_then(|p| u32::try_from(p).ok())))
     };
-    let buf = tokio::time::timeout(std::time::Duration::from_secs(2), work)
+    let (buf, pid) = tokio::time::timeout(std::time::Duration::from_secs(2), work)
         .await
         .map_err(|_| Error::Timeout("the gateway control socket"))?
         .map_err(|e| Error::Unavailable(format!("gateway control socket: {e}")))?;
@@ -119,10 +130,13 @@ async fn query(home: &Path, request: &serde_json::Value) -> Result<serde_json::V
     )
     .map_err(|e| Error::Unavailable(format!("gateway control socket answered badly: {e}")))?;
     if answer.get("ok").and_then(serde_json::Value::as_bool) == Some(true) {
-        Ok(answer
-            .get("result")
-            .cloned()
-            .unwrap_or(serde_json::Value::Null))
+        Ok((
+            answer
+                .get("result")
+                .cloned()
+                .unwrap_or(serde_json::Value::Null),
+            pid,
+        ))
     } else {
         let why = answer
             .get("error")
@@ -145,7 +159,10 @@ async fn socket_path(home: &Path) -> std::path::PathBuf {
 }
 
 #[cfg(not(unix))]
-async fn query(_home: &Path, _request: &serde_json::Value) -> Result<serde_json::Value> {
+async fn query(
+    _home: &Path,
+    _request: &serde_json::Value,
+) -> Result<(serde_json::Value, Option<u32>)> {
     Err(Error::Unavailable(
         "the gateway control socket is a named pipe here; the host uses the CLI".into(),
     ))
@@ -213,6 +230,8 @@ mod tests {
         });
         let id = identify(dir.path()).await.unwrap();
         assert_eq!(id.state, "ready");
+        // The listener here is this very process: the pid is the kernel's, not the gateway's own claim.
+        assert_eq!(id.pid, Some(std::process::id()));
         let t = session_ticket(dir.path(), &id, id.profile_id_for(dir.path()).unwrap())
             .await
             .unwrap();

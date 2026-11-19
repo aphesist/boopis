@@ -11,6 +11,8 @@ use crate::error::{Error, Result};
 use crate::faults::Faults;
 use crate::fsops;
 use crate::journal::{Entry, Journal, Prior, State};
+use crate::paths::{self, RelPath};
+use crate::scope::{Scope, Verdict};
 
 /// What a restore did.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -35,7 +37,10 @@ fn restore_tmp_name(id: &str, idx: usize) -> String {
 /// created (if empty). The journal itself is left for the caller to remove.
 ///
 /// The saved bytes are all read and verified **before** the first workspace change, so a
-/// corrupt journal changes nothing.
+/// corrupt journal changes nothing. So is every path: each entry is parsed and resolved again
+/// against the workspace as it is now, and refused if a parent has become a symlink, if the path
+/// is a Windows alias, or if it matches the protected globs the transaction ran under. The
+/// journal's authenticity (its tag) and its root were checked by the caller, before this.
 ///
 /// # Errors
 /// - [`Error::JournalCorrupt`] before any change;
@@ -46,6 +51,7 @@ pub fn restore(journal: &Journal, root: &Dir, faults: &Faults) -> Result<Report>
     let entries = &journal.manifest().entries;
 
     // Verify first.
+    check_paths(journal, root)?;
     let mut saved: Vec<Option<Vec<u8>>> = Vec::with_capacity(entries.len());
     for e in entries {
         saved.push(if e.prior == Prior::File {
@@ -82,7 +88,7 @@ pub fn restore(journal: &Journal, root: &Dir, faults: &Faults) -> Result<Report>
 
     for dir in journal.manifest().created_dirs.iter().rev() {
         faults.restore_tick().map_err(fail)?;
-        match root.remove_dir(dir) {
+        match fsops::remove_dir(root, Path::new(dir)) {
             Ok(()) => {}
             // Gone already, or holding something that is not ours: leave it.
             Err(e)
@@ -96,9 +102,46 @@ pub fn restore(journal: &Journal, root: &Dir, faults: &Faults) -> Result<Report>
             dirs.insert(parent.to_owned());
         }
     }
-    dirs.retain(|d| d.as_os_str().is_empty() || root.is_dir(d));
+    dirs.retain(|d| d.as_os_str().is_empty() || fsops::lstat(root, d).is_ok_and(|m| m.is_dir()));
     fsops::sync_dirs(root, &dirs).map_err(|e| fail(Error::io("syncing directories", e)))?;
     Ok(report)
+}
+
+/// Re-resolves every path the journal names and re-checks it, before anything is written.
+///
+/// The manifest recorded canonical paths, so a path that resolves to anything else has a symlink
+/// in it now: a swapped parent, or a plant. The entry itself may be a symlink (a deleted link
+/// is restored as one), so the last component is not followed.
+fn check_paths(journal: &Journal, root: &Dir) -> Result<()> {
+    let manifest = journal.manifest();
+    let corrupt = |path: &str, why: String| Error::JournalCorrupt {
+        id: journal.id().to_owned(),
+        reason: format!("`{path}` {why}"),
+    };
+    let scope = Scope::new(None, Some(&manifest.protected))?;
+    let paths = manifest
+        .entries
+        .iter()
+        .map(|e| &e.path)
+        .chain(&manifest.created_dirs);
+    for path in paths {
+        let rel = RelPath::parse_for_write(path).map_err(|e| corrupt(path, e.to_string()))?;
+        let resolved =
+            paths::resolve(root, &rel, false).map_err(|e| corrupt(path, e.to_string()))?;
+        if rel.to_wire() != *path || resolved.to_wire() != *path {
+            return Err(corrupt(
+                path,
+                format!(
+                    "now resolves to `{}`: a parent is a symlink",
+                    resolved.to_wire()
+                ),
+            ));
+        }
+        if scope.verdict(path, path) != Verdict::Ok {
+            return Err(corrupt(path, "is protected".to_owned()));
+        }
+    }
+    Ok(())
 }
 
 fn restore_entry(
@@ -125,7 +168,7 @@ fn restore_entry(
         }
         Prior::File => {
             if !parent.as_os_str().is_empty() {
-                root.create_dir_all(&parent)?;
+                fsops::create_dir_all(root, &parent)?;
             }
             let data = bytes.ok_or_else(|| io::Error::other("journal bytes missing"))?;
             fsops::write_atomic(
@@ -145,7 +188,7 @@ fn restore_entry(
                 .as_deref()
                 .ok_or_else(|| io::Error::other("journal symlink target missing"))?;
             if !parent.as_os_str().is_empty() {
-                root.create_dir_all(&parent)?;
+                fsops::create_dir_all(root, &parent)?;
             }
             fsops::remove_if_exists(root, path)?;
             fsops::make_symlink(root, Path::new(target), path)?;

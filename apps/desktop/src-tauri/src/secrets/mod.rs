@@ -2,8 +2,10 @@
 //! There is no command that returns a secret to the UI (`docs/PROTOCOL.md` section 1).
 
 pub mod channel;
+pub mod peer;
 pub mod refs;
 pub mod store;
 
-pub use channel::SecretChannel;
+pub use channel::{Auth, SecretChannel};
+pub use peer::PeerPolicy;
 pub use store::{Keychain, SecretStore, validate_name};

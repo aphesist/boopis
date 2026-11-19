@@ -3,12 +3,14 @@
 
 use std::path::Path;
 use std::process::Stdio;
+use std::sync::Arc;
 use std::time::Duration;
 
 use tokio::io::AsyncReadExt;
 use tokio::process::Command;
 
 use crate::error::{Error, Result};
+use crate::secrets::PeerPolicy;
 
 /// Environment variable names (or prefixes ending in `_`) that pass to a `hermes` child.
 const PASS: &[&str] = &[
@@ -71,6 +73,14 @@ pub struct Output {
     pub stderr: String,
 }
 
+/// What a call that starts a gateway adds: the secret channel's socket and token, for that call's environment only, and
+/// the policy that learns the process so the daemon it starts may read its secrets (`secrets::peer`).
+#[derive(Debug, Clone)]
+struct SecretChannel {
+    env: Vec<(String, String)>,
+    peers: Arc<PeerPolicy>,
+}
+
 /// A runner of `hermes` commands.
 #[derive(Debug, Clone)]
 pub struct Cli {
@@ -78,6 +88,7 @@ pub struct Cli {
     cap: usize,
     extra: Vec<(String, String)>,
     isolated: bool,
+    secret_channel: Option<SecretChannel>,
 }
 
 impl Cli {
@@ -89,7 +100,21 @@ impl Cli {
             cap: 1024 * 1024,
             extra: Vec::new(),
             isolated: false,
+            secret_channel: None,
         }
+    }
+
+    /// Hand the secret channel to the gateways this runner starts, and to nothing else: `env` (the socket and the token)
+    /// goes only to [`Cli::run_launching`], never to `--version`, `config set`, `gateway stop` or any other call, and
+    /// `peers` learns each launch so the daemon it starts may read its secrets.
+    #[must_use]
+    pub fn with_secret_channel(
+        mut self,
+        env: Vec<(String, String)>,
+        peers: Arc<PeerPolicy>,
+    ) -> Self {
+        self.secret_channel = Some(SecretChannel { env, peers });
+        self
     }
 
     /// Run the bundled Hermes: no `HERMES_*` or `UV_*` variable of the user's reaches it, so another install's home,
@@ -124,6 +149,35 @@ impl Cli {
         args: &[&str],
         timeout: Duration,
     ) -> Result<Output> {
+        self.run_with(binary, home, args, timeout, None).await
+    }
+
+    /// [`Cli::run`] for a call that may start the gateway (`gateway ensure`, `gateway attach --start`): the secret channel's
+    /// socket and token are in this one process's environment, from which the daemon it starts inherits them (Hermes
+    /// builds the daemon's environment from its own), and the process is noted while it runs so the daemon is admitted
+    /// as it reads its secrets at start-up. With no channel configured it is exactly [`Cli::run`].
+    ///
+    /// # Errors
+    /// As [`Cli::run`].
+    pub async fn run_launching(
+        &self,
+        binary: &Path,
+        home: &Path,
+        args: &[&str],
+        timeout: Duration,
+    ) -> Result<Output> {
+        self.run_with(binary, home, args, timeout, self.secret_channel.as_ref())
+            .await
+    }
+
+    async fn run_with(
+        &self,
+        binary: &Path,
+        home: &Path,
+        args: &[&str],
+        timeout: Duration,
+        channel: Option<&SecretChannel>,
+    ) -> Result<Output> {
         let mut cmd = Command::new(binary);
         cmd.args(args)
             .env_clear()
@@ -137,6 +191,11 @@ impl Cli {
                 })
             }))
             .envs(self.extra.iter().map(|(k, v)| (k, v)))
+            .envs(
+                channel
+                    .iter()
+                    .flat_map(|c| c.env.iter().map(|(k, v)| (k, v))),
+            )
             .env("HERMES_HOME", home)
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
@@ -150,6 +209,10 @@ impl Cli {
         let mut child = cmd
             .spawn()
             .map_err(|e| Error::Unavailable(format!("cannot run {}: {e}", binary.display())))?;
+        // Held until this function returns, whichever way: the daemon this call starts reads its secrets before that.
+        let _launch = channel
+            .zip(child.id())
+            .map(|(c, pid)| c.peers.begin_launch(pid));
         let mut out = child
             .stdout
             .take()
@@ -207,6 +270,125 @@ mod tests {
         ] {
             assert!(!passes(no), "{no}");
         }
+    }
+
+    /// A `hermes` that records its environment, starts a "daemon" (a background process), and
+    /// answers after a second.
+    #[cfg(unix)]
+    fn fake_hermes(dir: &Path) -> std::path::PathBuf {
+        use std::os::unix::fs::PermissionsExt;
+        let path = dir.join("hermes");
+        std::fs::write(
+            &path,
+            "#!/bin/sh\nenv > \"$HERMES_HOME/env.txt\"\nsh -c 'sleep 4; true' >/dev/null 2>&1 &\necho $! > \"$HERMES_HOME/daemon.pid\"\nsleep 1\necho '{}'\n",
+        )
+        .unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).unwrap();
+        path
+    }
+
+    #[cfg(unix)]
+    fn channel_env() -> Vec<(String, String)> {
+        vec![
+            (
+                "HYPOTAXIS_HOST_SECRETS_SOCKET".to_owned(),
+                "/run/x/host.sock".to_owned(),
+            ),
+            (
+                "HYPOTAXIS_HOST_SECRETS_TOKEN".to_owned(),
+                "tok-launch-only".to_owned(),
+            ),
+        ]
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn the_channel_token_reaches_only_the_calls_that_start_a_gateway() {
+        let dir = tempfile::tempdir().unwrap();
+        let hermes = fake_hermes(dir.path());
+        let home = dir.path().join("home");
+        std::fs::create_dir_all(&home).unwrap();
+        let limits = crate::config::Limits::default();
+        let cli = Cli::new(&limits).with_secret_channel(channel_env(), Arc::new(PeerPolicy::new()));
+        let wait = Duration::from_secs(10);
+
+        cli.run(&hermes, &home, &["--version"], wait).await.unwrap();
+        let plain = std::fs::read_to_string(home.join("env.txt")).unwrap();
+        assert!(
+            !plain.contains("HYPOTAXIS_HOST_SECRETS"),
+            "an ordinary call gets neither: {plain}"
+        );
+
+        cli.run_launching(&hermes, &home, &["gateway", "ensure"], wait)
+            .await
+            .unwrap();
+        let launching = std::fs::read_to_string(home.join("env.txt")).unwrap();
+        assert!(
+            launching.contains("HYPOTAXIS_HOST_SECRETS_TOKEN=tok-launch-only"),
+            "{launching}"
+        );
+        assert!(launching.contains("HYPOTAXIS_HOST_SECRETS_SOCKET=/run/x/host.sock"));
+        assert!(
+            !launching.contains("OPENAI_API_KEY"),
+            "the allowlist still holds"
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn the_daemon_a_launch_starts_is_admitted_while_it_runs_and_refused_after() {
+        use crate::secrets::peer::Refusal;
+        let dir = tempfile::tempdir().unwrap();
+        let hermes = fake_hermes(dir.path());
+        let home = dir.path().join("home");
+        std::fs::create_dir_all(&home).unwrap();
+        // Only a process started with the token the launch hands out may be admitted: the fake daemon inherits it from the
+        // fake `hermes`, as the real one does from `hermes gateway ensure`.
+        let peers = Arc::new(
+            PeerPolicy::new().holding("HYPOTAXIS_HOST_SECRETS_TOKEN=tok-launch-only".to_owned()),
+        );
+        let cli = Cli::new(&crate::config::Limits::default())
+            .with_secret_channel(channel_env(), peers.clone());
+
+        let (hermes_path, home_path) = (hermes.clone(), home.clone());
+        let launch = tokio::spawn(async move {
+            cli.run_launching(
+                &hermes_path,
+                &home_path,
+                &["gateway", "ensure"],
+                Duration::from_secs(10),
+            )
+            .await
+        });
+        let pid_file = home.join("daemon.pid");
+        let daemon = loop {
+            if let Some(pid) = std::fs::read_to_string(&pid_file)
+                .ok()
+                .and_then(|t| t.trim().parse::<u32>().ok())
+            {
+                break pid;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        };
+        // The daemon is below the process the host spawned and holds the token: it may read its secrets as it starts.
+        // (Between `fork` and `exec` the daemon still shows its parent's environment, which is the same: no wait is needed
+        // for that, but its parent chain and start time are read from a process that may not have settled.)
+        let deadline = std::time::Instant::now() + Duration::from_secs(10);
+        while peers.admit(Some(daemon)).is_err() && std::time::Instant::now() < deadline {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        assert_eq!(peers.admit(Some(daemon)), Ok(()));
+        // This test process is neither: refused.
+        assert_eq!(
+            peers.admit(Some(std::process::id())),
+            Err(Refusal::NotTheGateway)
+        );
+        launch.await.unwrap().unwrap();
+        // The call has returned, the window is closed, and nothing recorded the daemon.
+        assert_eq!(peers.admit(Some(daemon)), Err(Refusal::NotTheGateway));
+        let _ = std::process::Command::new("kill")
+            .arg(daemon.to_string())
+            .status();
     }
 
     #[test]

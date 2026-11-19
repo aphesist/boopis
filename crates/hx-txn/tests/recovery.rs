@@ -42,6 +42,7 @@ fn recover(fx: &Fixture) -> hx_proto::txn::RecoverResult {
         .recover(
             &RecoverParams {
                 journal_dir: fx.journals.to_string_lossy().into_owned(),
+                root: None,
             },
             &never(),
         )

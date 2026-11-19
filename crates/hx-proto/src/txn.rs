@@ -221,6 +221,10 @@ pub struct JournalRef {
     pub journal_dir: String,
     /// The id `txn.apply` returned.
     pub journal_id: String,
+    /// The workspace root the caller expects. `txn.restore` requires it and refuses a journal
+    /// that recorded another root; `txn.discard` ignores it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root: Option<String>,
 }
 
 /// Result of `txn.restore`.
@@ -246,6 +250,11 @@ pub struct DiscardResult {
 pub struct RecoverParams {
     /// The journal directory to scan.
     pub journal_dir: String,
+    /// The workspace root the caller expects. When set, a journal that recorded another root is
+    /// left alone and reported in `failed`. Omitted, the root the journal's authentication tag
+    /// vouches for is the one used (a start-up scan does not know which workspace a session had).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root: Option<String>,
 }
 
 /// A journal `txn.recover` could not finish.

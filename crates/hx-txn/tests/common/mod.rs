@@ -145,6 +145,7 @@ impl Fixture {
         JournalRef {
             journal_dir: self.journals.to_string_lossy().into_owned(),
             journal_id: id.to_owned(),
+            root: Some(self.root.to_string_lossy().into_owned()),
         }
     }
 

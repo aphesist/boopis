@@ -2,8 +2,11 @@
 //! (`hermes-runtime-<os>-<arch>.tar.zst`, built by `scripts/build-runtime.sh`) with a `runtime.json` beside it.
 //!
 //! On first run the host unpacks it into `<app data>/runtime/<hermes version>-<sha8>/`:
-//! - the archive's SHA-256 is computed over the very bytes that are extracted, and checked before anything is put in
-//!   place: a mismatch removes the temporary directory and installs nothing;
+//! - the archive is **hashed before anything is extracted** (`unpack`): only a file whose SHA-256 is the manifest's is opened
+//!   as a tar. The bytes are hashed a second time as they extract, from the same open file, so a file changed in place
+//!   between the passes is a mismatch too. The tree is built in a temporary directory that a mismatch or any other
+//!   failure removes, and nothing in it is run or put in place before both hashes agree. The unpack is bounded by the
+//!   manifest's size and entry count plus a margin, makes no device node or FIFO, and drops setuid, setgid and sticky;
 //! - the tree is built in `.unpack-<id>-<pid>/` and moved into place with one `rename`, so the final directory is either
 //!   complete or absent, and a crash leaves only a temporary directory the next run removes;
 //! - running it again is a no-op (the marker file, written last, names the archive's hash);
@@ -14,7 +17,7 @@
 
 use std::cell::RefCell;
 use std::fs::File;
-use std::io::{self, Read};
+use std::io::{self, Read, Seek};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
@@ -23,6 +26,8 @@ use sha2::{Digest, Sha256};
 
 use crate::error::{Error, Result};
 use crate::hermes::discover::Bundled;
+
+mod unpack;
 
 /// The manifest's file name, beside the archive.
 pub const MANIFEST_FILE: &str = "runtime.json";
@@ -61,9 +66,12 @@ pub struct Manifest {
     pub python: String,
     /// The archive.
     pub archive: Archive,
-    /// Bytes on disk once unpacked (about).
+    /// Bytes on disk once unpacked (about, from `du`). Required: it bounds the unpack.
     #[serde(default)]
     pub unpacked_size: u64,
+    /// How many entries the archive holds. Optional: without it the cap is derived from `unpacked_size`.
+    #[serde(default)]
+    pub entries: u64,
 }
 
 fn bad_manifest(m: impl Into<String>) -> Error {
@@ -109,6 +117,11 @@ impl Manifest {
         }
         if !plain_relative(&self.archive.name) || self.archive.name.contains('/') {
             return Err(bad_manifest("archive.name is not a plain file name"));
+        }
+        if self.unpacked_size == 0 {
+            return Err(bad_manifest(
+                "unpacked_size is missing: the unpack has to be bounded",
+            ));
         }
         if !plain_relative(&self.hermes) || !plain_relative(&self.python) {
             return Err(bad_manifest(
@@ -304,7 +317,13 @@ impl Runtime {
         let io_err = |what: &str, e: &io::Error| {
             unpack_failed(what, e, &self.manifest, tmp.parent().unwrap_or(tmp))
         };
-        let file = File::open(&archive_path).map_err(|e| io_err("open", &e))?;
+        let mut file = File::open(&archive_path).map_err(|e| io_err("open", &e))?;
+        // Verify first: nothing is extracted from a file that does not hash to the manifest's value.
+        let first = unpack::hash_file(&mut file).map_err(|e| io_err("read", &e))?;
+        if first != expected.sha256 {
+            return Err(hash_mismatch(&expected.sha256, &first));
+        }
+        file.rewind().map_err(|e| io_err("read", &e))?;
         let tally = Rc::new(RefCell::new(Tally::default()));
         let decoder = zstd::stream::read::Decoder::new(Hashing {
             inner: file,
@@ -314,11 +333,16 @@ impl Runtime {
         let _ = std::fs::remove_dir_all(tmp);
         std::fs::create_dir_all(tmp).map_err(|e| io_err("create", &e))?;
         let mut tar = tar::Archive::new(decoder);
-        tar.set_preserve_permissions(true);
+        // Not "preserve": the extractor then keeps only the 0o777 bits of an entry's mode, so setuid, setgid and sticky
+        // never reach the disk (the tests pin it). Owners are the user's own.
+        tar.set_preserve_permissions(false);
+        tar.set_preserve_ownerships(false);
         tar.set_unpack_xattrs(false);
+        let mut caps = unpack::Caps::for_manifest(&self.manifest);
         let mut last = u8::MAX;
         for entry in tar.entries().map_err(|e| corrupt_or_io(&e, &io_err))? {
             let mut entry = entry.map_err(|e| corrupt_or_io(&e, &io_err))?;
+            caps.admit(&entry)?;
             let inside = entry
                 .unpack_in(tmp)
                 .map_err(|e| corrupt_or_io(&e, &io_err))?;
@@ -345,19 +369,24 @@ impl Runtime {
             read: expected.size,
             total: expected.size,
         });
+        // The bytes that were extracted are the bytes that were verified (the caller removes the tree on an error).
         let found = hex::encode(tally.borrow().hasher.clone().finalize());
         if found != expected.sha256 {
-            return Err(Error::Setup(
-                "hx.setup.runtime_hash_mismatch",
-                format!(
-                    "the bundled Hermes runtime failed its integrity check (expected {}, found {}); nothing was installed. Reinstall the app",
-                    short(&expected.sha256),
-                    short(&found)
-                ),
-            ));
+            return Err(hash_mismatch(&expected.sha256, &found));
         }
         Ok(())
     }
+}
+
+fn hash_mismatch(expected: &str, found: &str) -> Error {
+    Error::Setup(
+        "hx.setup.runtime_hash_mismatch",
+        format!(
+            "the bundled Hermes runtime failed its integrity check (expected {}, found {}); nothing was installed. Reinstall the app",
+            short(expected),
+            short(found)
+        ),
+    )
 }
 
 fn short(hash: &str) -> &str {

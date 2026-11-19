@@ -271,6 +271,18 @@
     "**/*.key",
     "**/id_ed25519*",
     "**/id_ecdsa*",
-    ".hermes/hypotaxis.yaml"
+    ".hermes/hypotaxis.yaml",
+    "//**/hypotaxis/host.sock",
+    "//**/hypotaxis/**/host.sock",
+    "//**/hypotaxis/host-channel.json",
+    "//**/.hx-journal-key",
+    "//**/hypotaxis/journals/**"
+  ],
+  "denied_read_paths_comment": "Paths no tool of the agent may read: the desktop host's secret socket, the rendezvous file older hosts wrote (it held the channel token), and the key that vouches for hx's journals. Absolute globs (`//` prefix), like protected_extra's; the host's own peer check does not depend on this list.",
+  "denied_read_paths": [
+    "//**/hypotaxis/host.sock",
+    "//**/hypotaxis/**/host.sock",
+    "//**/hypotaxis/host-channel.json",
+    "//**/.hx-journal-key"
   ]
 }

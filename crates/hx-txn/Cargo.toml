@@ -28,6 +28,12 @@ hex.workspace = true
 uuid.workspace = true
 tokio = { workspace = true, features = ["rt"] }
 tokio-util.workspace = true
+getrandom = "0.3"
+
+# `openat` with `O_NOFOLLOW`, through rustix's safe API (the workspace denies `unsafe`). Already in the
+# tree through cap-std; cap-std itself follows symlinks that stay inside the root.
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "1", default-features = false, features = ["fs", "std"] }
 
 [dev-dependencies]
 hx-txn = { path = ".", features = ["dev-fixtures"] }

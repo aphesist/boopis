@@ -37,6 +37,13 @@ pub enum PathError {
     /// A segment holds a character no workspace path may contain.
     #[error("the path contains an invalid character")]
     InvalidChar,
+    /// A segment that Windows resolves to another name: a trailing dot or space, an 8.3 short
+    /// name (`GIT~1`) or a device name (`NUL`, `COM1`). Refused on every platform, so a
+    /// repository cannot carry one anywhere.
+    #[error(
+        "`{0}` can alias another file on Windows (trailing dot or space, 8.3 name or device name)"
+    )]
+    WindowsAlias(String),
     /// A symlink or `..` inside a symlink target leads outside the workspace.
     #[error("the path leaves the workspace through `{0}`")]
     Escape(String),
@@ -87,6 +94,18 @@ impl RelPath {
         Ok(Self { components })
     }
 
+    /// [`RelPath::parse`], and no segment may be a Windows alias ([`check_segment`]). The path of
+    /// anything a transaction writes, deletes or restores goes through this one; reads keep
+    /// [`RelPath::parse`], because a Linux tree may hold an `aux.c` that is fine to read.
+    ///
+    /// # Errors
+    /// As [`RelPath::parse`], plus [`PathError::WindowsAlias`].
+    pub fn parse_for_write(raw: &str) -> Result<Self, PathError> {
+        let rel = Self::parse(raw)?;
+        rel.components.iter().try_for_each(|s| check_segment(s))?;
+        Ok(rel)
+    }
+
     /// The segments.
     #[must_use]
     pub fn components(&self) -> &[String] {
@@ -97,6 +116,50 @@ impl RelPath {
     #[must_use]
     pub fn to_wire(&self) -> String {
         self.components.join("/")
+    }
+}
+
+/// Windows device names that stand alone. `COM` and `LPT` take a digit, see [`is_device_name`].
+const DEVICE_NAMES: &[&str] = &["CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$"];
+
+/// Whether the part of `segment` before its first dot is a Windows device name, ignoring case
+/// (`nul.txt` is `NUL`). `COM1` to `COM9` and `LPT1` to `LPT9` also take the superscript digits
+/// Windows reserves.
+fn is_device_name(segment: &str) -> bool {
+    let stem = segment.split('.').next().unwrap_or(segment).to_uppercase();
+    if DEVICE_NAMES.contains(&stem.as_str()) {
+        return true;
+    }
+    let numbered = |prefix: &str| {
+        stem.strip_prefix(prefix).is_some_and(|rest| {
+            let mut digits = rest.chars();
+            matches!(
+                (digits.next(), digits.next()),
+                (Some('1'..='9' | '\u{b9}' | '\u{b2}' | '\u{b3}'), None)
+            )
+        })
+    };
+    numbered("COM") || numbered("LPT")
+}
+
+/// Rejects a path segment that Windows would resolve to a different name, whatever the platform
+/// the path is checked on: a repository cannot carry one to a Windows machine through here.
+///
+/// - a trailing `.` or space (Windows strips it, so `.git.` is `.git`);
+/// - a `~` followed by a digit (an 8.3 short name such as `GIT~1`);
+/// - a device name (`CON`, `PRN`, `AUX`, `NUL`, `COM1` to `COM9`, `LPT1` to `LPT9`) with any
+///   extension.
+///
+/// # Errors
+/// [`PathError::WindowsAlias`].
+pub fn check_segment(segment: &str) -> Result<(), PathError> {
+    let short_name = segment
+        .match_indices('~')
+        .any(|(i, _)| segment[i + 1..].starts_with(|c: char| c.is_ascii_digit()));
+    if segment.ends_with(['.', ' ']) || short_name || is_device_name(segment) {
+        Err(PathError::WindowsAlias(segment.to_owned()))
+    } else {
+        Ok(())
     }
 }
 
@@ -135,6 +198,15 @@ impl Resolved {
     #[must_use]
     pub fn to_path(&self) -> PathBuf {
         self.components.iter().collect()
+    }
+
+    /// [`check_segment`] on every canonical component: a symlink's target can bring in a name the
+    /// request did not spell.
+    ///
+    /// # Errors
+    /// [`PathError::WindowsAlias`].
+    pub fn check_for_write(&self) -> Result<(), PathError> {
+        self.components.iter().try_for_each(|s| check_segment(s))
     }
 
     /// Whether the final component exists.
@@ -289,6 +361,82 @@ mod tests {
         assert_eq!(RelPath::parse(".."), Err(PathError::ParentDir));
         assert_eq!(RelPath::parse("a\\b"), Err(PathError::InvalidChar));
         assert_eq!(RelPath::parse("a\0b"), Err(PathError::InvalidChar));
+    }
+
+    #[test]
+    fn windows_aliases_are_refused_on_every_platform() {
+        let alias =
+            |p: &str| matches!(RelPath::parse_for_write(p), Err(PathError::WindowsAlias(_)));
+        // Trailing dot or space: Windows strips them, so these name `.git` and `a`.
+        for p in [".git.", ".git ", "a/b. ", "a. /b", "x/.git..", "c "] {
+            assert!(alias(p), "{p:?}");
+        }
+        // 8.3 short names.
+        for p in [
+            "GIT~1",
+            "git~1/hooks/pre-commit",
+            "PROGRA~1/x",
+            "a/B~2.TXT",
+            "~1",
+        ] {
+            assert!(alias(p), "{p:?}");
+        }
+        // Device names, any case, any extension.
+        for p in [
+            "CON",
+            "con",
+            "Prn",
+            "AUX",
+            "nul",
+            "NUL.txt",
+            "a/nul.tar.gz",
+            "COM1",
+            "com9.log",
+            "LPT1",
+            "lpt9.x",
+            "CONIN$",
+            "conout$",
+            "COM\u{b9}",
+            "lpt\u{b2}.txt",
+        ] {
+            assert!(alias(p), "{p:?}");
+        }
+        // Ordinary names that only look close.
+        for p in [
+            "COM",
+            "COM0",
+            "COM10",
+            "LPT0",
+            "console.log",
+            "nullable.rs",
+            "auxiliary",
+            "a~b",
+            "tilde~",
+            "~backup",
+            "x.git",
+            ".gitignore",
+            "...a",
+            "a.b",
+            "NUL_x",
+            "communication.txt",
+        ] {
+            assert!(RelPath::parse_for_write(p).is_ok(), "{p:?}");
+        }
+        // Reading keeps the lenient parser: a Linux tree may hold an `aux.c`.
+        assert!(RelPath::parse("src/aux.c").is_ok());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_symlink_target_with_a_windows_alias_is_refused_for_writes() {
+        let t = tempfile::tempdir().unwrap();
+        std::os::unix::fs::symlink("GIT~1/hooks", t.path().join("l")).unwrap();
+        let root = open(t.path());
+        let resolved = resolve(&root, &RelPath::parse("l").unwrap(), true).unwrap();
+        assert!(matches!(
+            resolved.check_for_write(),
+            Err(PathError::WindowsAlias(_))
+        ));
     }
 
     #[test]

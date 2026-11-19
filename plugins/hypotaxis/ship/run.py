@@ -119,7 +119,7 @@ def _run(rt: Runtime, state: SessionState, args: Mapping[str, Any], worker: Work
     except HxCallError as exc:
         return _before_write(rt, state, worker, exc, protected)
     except HxTimeoutError:
-        _rollback_best_effort(client, journals)
+        _rollback_best_effort(client, journals, root)
         raise
     return after_apply(
         rt, state, client, root, applied, original, before_hashes, protected, allowed, argv, gate_on, journals, worker
@@ -150,8 +150,8 @@ def _before_write(
     return out.error(exc.message, exc.code)
 
 
-def _rollback_best_effort(client: HxClient, journals: Path) -> None:
-    try:
-        client.request("txn.recover", RecoverParams(journal_dir=str(journals)).to_wire(), timeout=60)
+def _rollback_best_effort(client: HxClient, journals: Path, root: Path) -> None:
+    try:  # the root this ship wrote to: a journal of another workspace in the directory is left alone
+        client.request("txn.recover", RecoverParams(journal_dir=str(journals), root=str(root)).to_wire(), timeout=60)
     except HypotaxisError:
         log.error("rollback after an apply timeout failed", exc_info=True)

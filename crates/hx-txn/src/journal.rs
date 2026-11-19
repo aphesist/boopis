@@ -7,8 +7,11 @@
 //!     lock                       held (flock) while a live transaction owns the journal
 //!     data.bin                   the original bytes of every touched file, concatenated
 //!     manifest.json              versioned; what each entry was (existence, kind, mode, mtime)
+//!     manifest.mac               the keyed tag that vouches for manifest.json (see [`crate::mac`])
 //!     state                      append-only log of state names, one per line
 //!   .workspace-<hash>.lock       serialises transactions on one workspace
+//! <journal_dir's parent>/
+//!   .hx-journal-key              the profile's 0600 key for the tags, shared by every journal dir
 //!   .trash-<journal_id>/         a journal being deleted; recover finishes the delete
 //! ```
 //! Files are 0600 and everything is fsync'd before the next step depends on it.
@@ -35,6 +38,10 @@
 //!   journal. Without this state a journal that survived a failed deletion would be restored
 //!   again later, over work done in the meantime.
 //!
+//! A journal is opened only if its tag verifies under the profile's key: a directory somebody
+//! planted, or a manifest edited after hx wrote it, is refused before anything in it is read as
+//! a path to write.
+//!
 //! A journal owned by a live transaction holds an exclusive lock on its `lock` file, so a
 //! second process running recovery skips it instead of rolling it back under its feet.
 //!
@@ -51,6 +58,7 @@ use sha2::{Digest, Sha256};
 use crate::error::{Error, Result};
 use crate::faults::Faults;
 use crate::fsops::Meta;
+use crate::mac;
 
 /// The manifest schema version this build reads and writes.
 pub const SCHEMA_VERSION: u32 = 1;
@@ -144,8 +152,25 @@ pub struct Manifest {
     pub entries: Vec<Entry>,
     /// Directories the transaction creates, shallowest first. Restore removes them if empty.
     pub created_dirs: Vec<String>,
+    /// The protected globs the transaction ran under (the defaults, spelled out, when the caller
+    /// gave none). Restore checks every entry against them again.
+    #[serde(default)]
+    pub protected: Vec<String>,
     /// The size `data.bin` must have.
     pub data_len: u64,
+}
+
+/// What a new journal records.
+#[derive(Debug)]
+pub struct Spec<'a> {
+    /// The canonical absolute workspace root.
+    pub root: &'a str,
+    /// The touched paths with what each was before the transaction.
+    pub entries: &'a [(String, Saved<'a>)],
+    /// Directories the transaction creates, shallowest first.
+    pub created_dirs: Vec<String>,
+    /// The effective protected globs.
+    pub protected: Vec<String>,
 }
 
 /// A path's state before the transaction, as handed to [`Journal::create`].
@@ -269,34 +294,19 @@ fn is_crash(_: &Error) -> bool {
 }
 
 impl Journal {
-    /// Writes a new journal and leaves it `prepared`, locked by the caller.
-    ///
-    /// `entries` are the touched paths with what each was before the transaction.
+    /// Writes a new journal and leaves it `prepared`, locked by the caller. The first journal of
+    /// a profile also creates the profile's key.
     ///
     /// # Errors
     /// Any write fails. A half-written journal is removed (unless a crash was injected).
-    pub fn create(
-        journal_dir: &Path,
-        root: &str,
-        entries: &[(String, Saved<'_>)],
-        created_dirs: Vec<String>,
-        faults: &Faults,
-    ) -> Result<Self> {
+    pub fn create(journal_dir: &Path, spec: &Spec<'_>, faults: &Faults) -> Result<Self> {
         ensure_journal_dir(journal_dir)?;
+        let key = mac::load_or_create(journal_dir)?;
         let id = uuid::Uuid::now_v7().hyphenated().to_string();
         let dir = journal_dir.join(&id);
         let ctx = |what: &str| format!("writing journal {id}: {what}");
         create_private_dir(&dir).map_err(|e| Error::io(ctx("mkdir"), e))?;
-        let outcome = Self::write_all(
-            journal_dir,
-            &dir,
-            &id,
-            root,
-            entries,
-            created_dirs,
-            faults,
-            &ctx,
-        );
+        let outcome = Self::write_all(journal_dir, &dir, &id, spec, &key, faults, &ctx);
         match outcome {
             Ok(j) => Ok(j),
             Err(e) => {
@@ -308,14 +318,12 @@ impl Journal {
         }
     }
 
-    #[allow(clippy::too_many_arguments)] // One private call site; grouping the arguments adds a type, not clarity.
     fn write_all(
         journal_dir: &Path,
         dir: &Path,
         id: &str,
-        root: &str,
-        entries: &[(String, Saved<'_>)],
-        created_dirs: Vec<String>,
+        spec: &Spec<'_>,
+        key: &mac::Key,
         faults: &Faults,
         ctx: &dyn Fn(&str) -> String,
     ) -> Result<Self> {
@@ -330,8 +338,8 @@ impl Journal {
 
         let mut data = create_private(&dir.join("data.bin")).map_err(io("data"))?;
         let mut offset = 0u64;
-        let mut manifest_entries = Vec::with_capacity(entries.len());
-        for (path, saved) in entries {
+        let mut manifest_entries = Vec::with_capacity(spec.entries.len());
+        for (path, saved) in spec.entries {
             let mut entry = Entry {
                 path: path.clone(),
                 prior: Prior::Absent,
@@ -368,13 +376,20 @@ impl Journal {
             schema_version: SCHEMA_VERSION,
             id: id.to_owned(),
             created: hx_proto::time::now_rfc3339(),
-            root: root.to_owned(),
+            root: spec.root.to_owned(),
             entries: manifest_entries,
-            created_dirs,
+            created_dirs: spec.created_dirs.clone(),
+            protected: spec.protected.clone(),
             data_len: offset,
         };
         let text = serde_json::to_vec_pretty(&manifest)
             .map_err(|e| Error::io(ctx("manifest"), io::Error::other(e)))?;
+        // The tag first: a crash between the two leaves no manifest, and recovery deletes the
+        // directory. The other order would leave a manifest nobody can vouch for.
+        let mut tag = create_private(&dir.join(mac::TAG_FILE)).map_err(io("tag"))?;
+        tag.write_all(mac::tag(key, id, &text).as_bytes())
+            .map_err(io("tag"))?;
+        tag.sync_all().map_err(io("tag sync"))?;
         let tmp = dir.join("manifest.json.tmp");
         let mut f = create_private(&tmp).map_err(io("manifest"))?;
         f.write_all(&text).map_err(io("manifest"))?;
@@ -422,6 +437,17 @@ impl Journal {
             }
             Err(e) => return Err(Error::io(format!("reading journal {id}"), e)),
         };
+        // Nothing in the manifest is read as a path before its tag verifies.
+        let key = mac::load(journal_dir)?.ok_or_else(|| {
+            corrupt("this profile has no journal key, so no journal here is its own".to_owned())
+        })?;
+        let claimed = fs::read_to_string(dir.join(mac::TAG_FILE)).unwrap_or_default();
+        if !mac::verify(&key, id, &bytes, &claimed) {
+            return Err(corrupt(
+                "the manifest has no valid tag: it was not written by this profile's hx, or was edited since"
+                    .to_owned(),
+            ));
+        }
         let manifest: Manifest =
             serde_json::from_slice(&bytes).map_err(|e| corrupt(format!("manifest: {e}")))?;
         if manifest.schema_version != SCHEMA_VERSION {
@@ -673,7 +699,13 @@ mod tests {
                 },
             ),
         ];
-        Journal::create(dir, "/ws", &entries, vec!["d".into()], &Faults::none()).unwrap()
+        let spec = Spec {
+            root: "/ws",
+            entries: &entries,
+            created_dirs: vec!["d".into()],
+            protected: vec!["**/.git/**".into()],
+        };
+        Journal::create(dir, &spec, &Faults::none()).unwrap()
     }
 
     #[test]
@@ -704,7 +736,7 @@ mod tests {
         assert_eq!(mode(&jd), 0o700);
         let dir = jd.join(j.id());
         assert_eq!(mode(&dir), 0o700);
-        for f in ["lock", "data.bin", "manifest.json", "state"] {
+        for f in ["lock", "data.bin", "manifest.json", "manifest.mac", "state"] {
             assert_eq!(mode(&dir.join(f)), 0o600, "{f}");
         }
     }

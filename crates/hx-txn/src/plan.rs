@@ -361,8 +361,7 @@ fn load(
             Ok((Original::File { bytes, meta }, Content::Original))
         }
         Some(Kind::Symlink) => {
-            let target = root
-                .read_link_contents(&path)
+            let target = fsops::read_link(root, &path)
                 .map_err(|e| Failure::new(FailureKind::Unreadable, e.to_string()))?;
             Ok((
                 Original::Symlink {
@@ -507,9 +506,11 @@ fn resolve_ops(
                     ..
                 }
         );
-        match RelPath::parse(&op.requested)
-            .and_then(|rel| paths::resolve(root, &rel, follow).map(|r| (rel, r)))
-        {
+        match RelPath::parse_for_write(&op.requested).and_then(|rel| {
+            let resolved = paths::resolve(root, &rel, follow)?;
+            resolved.check_for_write()?;
+            Ok((rel, resolved))
+        }) {
             Ok((rel, r)) => {
                 op.lexical = Some(rel);
                 op.resolved = Some(r);

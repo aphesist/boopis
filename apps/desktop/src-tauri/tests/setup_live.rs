@@ -29,7 +29,7 @@ use hypotaxis_host::endpoint::EndpointConfig;
 use hypotaxis_host::error::{Error, Result};
 use hypotaxis_host::gateway::{FrameSink, Hub};
 use hypotaxis_host::hermes::{Environment, Supervisor};
-use hypotaxis_host::secrets::{SecretStore, channel};
+use hypotaxis_host::secrets::{Auth, PeerPolicy, SecretStore, channel};
 use hypotaxis_host::setup::install::Bundle;
 use hypotaxis_host::setup::ops::{CliOps, HermesOps};
 use hypotaxis_host::setup::{Answer, Setup, StepState};
@@ -437,7 +437,15 @@ async fn run_flow(install: Install) {
         || plan.as_ref().map(|p| p.bundled().binary).unwrap(),
         |b| b.join("hermes"),
     );
-    let sup = Arc::new(Supervisor::new(env, Limits::default()).with_child_env(child_env.clone()));
+    // The host's secret channel: its token goes to the gateway this supervisor starts, and the policy learns which process
+    // that is, exactly as the app wires it.
+    let auth = Auth::mint_in(&root.path().join("run")).expect("a channel token");
+    let peers = Arc::new(PeerPolicy::new());
+    let sup = Arc::new(
+        Supervisor::new(env, Limits::default())
+            .with_child_env(child_env.clone())
+            .with_secret_channel(auth.launch_env(), peers.clone()),
+    );
     let guard = GatewayGuard {
         hermes: hermes_launcher,
         home: hermes_home.clone(),
@@ -447,13 +455,9 @@ async fn run_flow(install: Install) {
 
     // The host's secret channel, over its keychain, exactly as the app starts it.
     let keychain = Arc::new(Map::default());
-    let _channel = channel::start(
-        keychain.clone(),
-        &root.path().join("run"),
-        &hermes_home.join("hypotaxis/host-channel.json"),
-    )
-    .await
-    .expect("the secret channel starts");
+    let _channel = channel::start(keychain.clone(), &auth, peers)
+        .await
+        .expect("the secret channel starts");
 
     let bundle = Bundle {
         plugin_dir: Some(repo().join("plugins/hypotaxis")),

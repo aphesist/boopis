@@ -1295,6 +1295,13 @@
         "journal_id": {
           "description": "The id `txn.apply` returned.",
           "type": "string"
+        },
+        "root": {
+          "description": "The workspace root the caller expects. `txn.restore` requires it and refuses a journal\nthat recorded another root; `txn.discard` ignores it.",
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [
@@ -1764,6 +1771,13 @@
         "journal_dir": {
           "description": "The journal directory to scan.",
           "type": "string"
+        },
+        "root": {
+          "description": "The workspace root the caller expects. When set, a journal that recorded another root is\nleft alone and reported in `failed`. Omitted, the root the journal's authentication tag\nvouches for is the one used (a start-up scan does not know which workspace a session had).",
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [
