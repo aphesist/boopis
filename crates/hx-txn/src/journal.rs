@@ -227,6 +227,13 @@ fn create_private_dir(path: &Path) -> io::Result<()> {
     b.create(path)
 }
 
+#[cfg_attr(
+    not(unix),
+    allow(
+        clippy::unnecessary_wraps,
+        reason = "keeps the signature the same as on Unix, where syncing a directory can fail"
+    )
+)]
 fn sync_dir(path: &Path) -> io::Result<()> {
     #[cfg(unix)]
     {

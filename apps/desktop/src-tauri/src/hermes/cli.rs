@@ -202,10 +202,7 @@ impl Cli {
             .stderr(Stdio::piped())
             .kill_on_drop(true);
         #[cfg(windows)]
-        {
-            use std::os::windows::process::CommandExt;
-            cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
-        }
+        cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
         let mut child = cmd
             .spawn()
             .map_err(|e| Error::Unavailable(format!("cannot run {}: {e}", binary.display())))?;
