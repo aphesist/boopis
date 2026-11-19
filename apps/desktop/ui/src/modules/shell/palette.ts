@@ -5,7 +5,7 @@ import { esc } from '../../core/dom';
 import { callProvided, getDockApi, hasProvider } from '../../core/registry';
 import { setState, state, toggle } from '../../core/state';
 import { themeApi } from '../../styles/theme';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 import { data } from '../../data';
 import { archivedWhen, restoreBot, restoredWords } from '../../data/restore';
 import { updateTitle } from './attention';

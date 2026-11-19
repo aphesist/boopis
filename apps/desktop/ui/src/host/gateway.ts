@@ -4,6 +4,7 @@
 
    Types come from Hermes's generated contract (vendor/hermes-shared, MIT): `RpcMethods` maps a method to its params
    and result. Plugin methods (`plugin.boopis.*`) are not in it and go through `requestRaw`. */
+import { ENGINE_REFUSED, keepDetail, namesEngine, sentenceFor } from './errors';
 import { logger } from '../core/log';
 import type { RpcMethod, RpcMethods } from '../vendor/hermes-shared/gateway-contract.generated';
 import { asHostError } from './bridge';
@@ -50,6 +51,19 @@ export class GatewayError extends Error {
     const fromData = data && typeof data === 'object' && 'code' in data ? String((data as { code: unknown }).code) : '';
     this.code = fromData || /\bhx\.[a-z_.]+/.exec(message)?.[0] || '';
   }
+
+  /** an error answered on the link: ours (the host's or the plugin's, with an `hx.*` code) as it is; the engine's own, with
+      no such code, as the catalog's `hx.engine.refused` sentence, its words kept for Diagnostics (ADR-0031). The rpc code and
+      `data` stay, so callers still tell an unknown method from a refusal. */
+  static fromFrame(rpcCode: number, message: string, data?: unknown): GatewayError {
+    const ours = new GatewayError(rpcCode, message, data);
+    if (ours.code.startsWith('hx.') && !namesEngine(message)) return ours;
+    const code = ours.code.startsWith('hx.') ? ours.code : ENGINE_REFUSED;
+    keepDetail(code, message);
+    const shown = new GatewayError(rpcCode, sentenceFor(code), data);
+    (shown as { code: string }).code = code;
+    return shown;
+  }
 }
 
 interface Pending { resolve(v: unknown): void; reject(e: unknown): void; method: string }
@@ -79,7 +93,7 @@ export class GatewayClient {
   async close(): Promise<void> {
     const id = this.connectionId;
     this.connectionId = null;
-    for (const p of this.pending.values()) p.reject(new GatewayError(-32000, 'the connection closed', { code: 'hx.hermes.unavailable' }));
+    for (const p of this.pending.values()) p.reject(new GatewayError(-32000, 'the connection closed', { code: 'hx.engine.unavailable' }));
     this.pending.clear();
     if (id !== null) await this.bridge.disconnect(id);
   }
@@ -110,7 +124,7 @@ export class GatewayClient {
   }
 
   private async send(frame: unknown): Promise<void> {
-    if (this.connectionId === null) throw new GatewayError(-32000, 'not connected', { code: 'hx.hermes.unavailable' });
+    if (this.connectionId === null) throw new GatewayError(-32000, 'not connected', { code: 'hx.engine.unavailable' });
     await this.bridge.send(this.connectionId, frame);
   }
 
@@ -123,7 +137,7 @@ export class GatewayClient {
       const p = this.pending.get(f.id);
       if (!p) { log.debug('a response nobody waits for'); return; }
       this.pending.delete(f.id);
-      if (f.error) p.reject(new GatewayError(f.error.code ?? -32000, f.error.message ?? p.method + ' failed', f.error.data));
+      if (f.error) p.reject(GatewayError.fromFrame(f.error.code ?? -32000, f.error.message ?? p.method + ' failed', f.error.data));
       else p.resolve(f.result);
     }
   }

@@ -2,9 +2,9 @@
    data provider, the modules (each registers into its slot as it loads), then the shell boots and mounts them. */
 import './styles';
 import '../vendor/boopis-logo.js';
-import { ui } from './components';
-import { startGlance } from './components/orb';
-import { orbState, setupOrbs } from './components/orb-worker/host';
+import { ui } from '@boopis/ui';
+import { startGlance } from '@boopis/ui';
+import { orbState, setupOrbs } from '@boopis/ui';
 import { logger } from './core/log';
 import { getDockApi } from './core/registry';
 import { getLayout, setState, state } from './core/state';

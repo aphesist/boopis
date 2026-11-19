@@ -4,7 +4,7 @@ import { check } from './kinds';
 import { animate, motion } from './motion';
 import { create, emitAttention, QUEUES } from './card';
 import type { HxCard, QueueRoot } from './card';
-import type { CardKind, CardOpts } from '../../components/card-registry';
+import type { CardKind, CardOpts } from '@boopis/ui';
 import type { Data } from './types';
 
 export interface QueueItem { kind?: CardKind; data?: Data; [k: string]: unknown }

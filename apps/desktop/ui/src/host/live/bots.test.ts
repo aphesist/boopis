@@ -269,7 +269,7 @@ describe('the settings sheet edits the real profile, and shows the diff first', 
     h.describes['atlas']!['soul'] = 'x';
     const orig = h.main.requestRaw.bind(h.main);
     h.main.requestRaw = async (m: string, p: Json) => (m === 'profiles.configure' ? { ok: false, applied: { soul: false, description: true } } : orig(m, p));
-    await expect(bots.source.admin!.save('atlas', { role: 'r', instructions: 'y' })).rejects.toThrow(/did not save SOUL\.md/);
+    await expect(bots.source.admin!.save('atlas', { role: 'r', instructions: 'y' })).rejects.toThrow(/SOUL\.md could not be saved/);
   });
   it('saves boopis’s own settings in the plugin’s store, never through a Hermes config method', async () => {
     const { h, bots } = await open();
@@ -299,8 +299,8 @@ describe('archive keeps everything, delete asks first and says what goes', () =>
   it('a failed archive resumes the routines it paused', async () => {
     const { h, bots } = await open();
     const orig = h.main.requestRaw.bind(h.main);
-    h.main.requestRaw = async (m: string, p: Json) => { if (m === 'plugin.boopis.bots.archive') throw new Error('hx.bots.hermes_failed'); return orig(m, p); };
-    await expect(bots.source.admin!.archive('atlas')).rejects.toThrow(/hermes_failed/);
+    h.main.requestRaw = async (m: string, p: Json) => { if (m === 'plugin.boopis.bots.archive') throw new Error('hx.bots.engine_failed'); return orig(m, p); };
+    await expect(bots.source.admin!.archive('atlas')).rejects.toThrow(/engine_failed/);
     expect(h.jobs['atlas']![0]!['enabled']).toBe(true);
     expect(bots.source.snapshot().bots.map((b) => b.id)).toContain('atlas');
   });

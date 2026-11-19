@@ -453,7 +453,7 @@ mod tests {
         assert!(check_requirement(Version(0, 23, 2), ">=0.23.2").is_ok());
         assert!(check_requirement(Version(1, 0, 0), ">=0.23.2").is_ok());
         let err = check_requirement(Version(0, 22, 9), ">=0.23.2").unwrap_err();
-        assert_eq!(err.code(), "hx.hermes.incompatible");
+        assert_eq!(err.code(), "hx.engine.incompatible");
         assert!(check_requirement(Version(1, 0, 0), "~0.23").is_err());
     }
 

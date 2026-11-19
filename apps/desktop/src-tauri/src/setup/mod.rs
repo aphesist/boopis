@@ -29,6 +29,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use specta::Type;
 
+use crate::chatgpt::{self, ChatGpt};
 use crate::claude::{self, ClaudeCli, SystemClaude};
 use crate::commands::Json;
 use crate::error::{Error, Result};
@@ -82,7 +83,27 @@ pub struct Form {
     pub pinned: Option<String>,
     /// What submitting does, in one sentence (a `connector` form).
     pub effect: Option<String>,
+    /// Pages the user may want while answering, as `[label, https URL]` (where to make a key). The UI opens them in the
+    /// browser through `open_external`.
+    #[serde(default)]
+    pub links: Vec<(String, String)>,
+    /// A sign-in the card offers beside the form (ADR-0030): boopis's own ChatGPT sign-in, or a provider's login from the
+    /// host's own table. Never a command.
+    pub signin: Option<SignIn>,
 }
+
+/// A sign-in a setup form offers.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+pub struct SignIn {
+    /// [`SIGNIN_CHATGPT`] for boopis's own ChatGPT sign-in (`chatgpt_signin_start`), else an id in the host's login table
+    /// (`apps/shared/data/logins.json`, run with `connector_login`).
+    pub provider: String,
+    /// The button's words.
+    pub label: String,
+}
+
+/// The [`SignIn::provider`] of boopis's own ChatGPT sign-in.
+pub const SIGNIN_CHATGPT: &str = "chatgpt";
 
 impl Form {
     pub(crate) fn new(id: &str, kind: &str, title: &str, body: &str, schema: Value) -> Self {
@@ -103,6 +124,8 @@ impl Form {
             contents: Vec::new(),
             pinned: None,
             effect: None,
+            links: Vec::new(),
+            signin: None,
         }
     }
 }
@@ -195,6 +218,11 @@ pub struct Check {
     pub reason: String,
 }
 
+/// The checklist's name for the engine step (ADR-0031: the user sees boopis, never the engine's own name).
+const ENGINE_TITLE: &str = "Engine";
+/// The checklist's name for the consent step.
+const SETTINGS_TITLE: &str = "Settings boopis needs";
+
 /// The wanted settings, with why each matters (shown in the consent form).
 fn wanted() -> Vec<(&'static str, Value, &'static str)> {
     vec![
@@ -250,8 +278,13 @@ pub struct ModelsView {
     pub tiers: Vec<providers::LadderTier>,
     /// The user's Claude Code as the Claude subscription plugin would see it: signed in or not, and its version.
     pub claude: claude::Probe,
-    /// Whether Hermes lists the Claude subscription plugin's provider.
+    /// Whether the engine carries the Claude subscription plugin (boopis's own engine does).
     pub claude_plugin: bool,
+    /// The ChatGPT sign-in: signed in or not, the plan its token names, the code while a sign-in waits. `None` when this
+    /// engine has no sign-in service (tests).
+    pub chatgpt: Option<chatgpt::Status>,
+    /// Whether a Gemini key is in place (the keychain, or the profile's `.env` by name).
+    pub gemini_key: bool,
 }
 
 /// The setup engine for one profile.
@@ -260,6 +293,8 @@ pub struct Setup {
     secrets: Arc<dyn SecretStore>,
     /// The user's own Claude Code, looked at for the Claude subscription (ADR-0029).
     claude: Arc<dyn ClaudeCli>,
+    /// boopis's own ChatGPT sign-in (ADR-0030); `None` where none runs (tests that do not need it).
+    chatgpt: Option<Arc<ChatGpt>>,
     bundle: Bundle,
     install_command: String,
     /// The bundled Hermes runtime to unpack first (ADR-0023); `None` when the app uses a Hermes the user already has.
@@ -285,11 +320,17 @@ impl Run {
         code: Option<&str>,
     ) {
         self.stop |= matches!(state, StepState::NeedsInput | StepState::Blocked);
+        let detail: String = detail.into();
+        // A step with a code says it in boopis's words: the engine's own reason goes to Diagnostics (ADR-0031).
+        let detail = match code {
+            Some(c) => crate::error::user_message(c, &detail),
+            None => detail,
+        };
         self.steps.push(Step {
             id: id.to_owned(),
             title: title.to_owned(),
             state,
-            detail: detail.into(),
+            detail,
             code: code.map(str::to_owned),
         });
     }
@@ -311,6 +352,7 @@ impl Setup {
             ops,
             secrets,
             claude: Arc::new(SystemClaude::new()),
+            chatgpt: None,
             bundle,
             install_command: crate::hermes::install::installer_command().to_owned(),
             runtime: None,
@@ -322,6 +364,13 @@ impl Setup {
     #[must_use]
     pub fn with_claude(mut self, claude: Arc<dyn ClaudeCli>) -> Self {
         self.claude = claude;
+        self
+    }
+
+    /// Ask `chatgpt` whether a ChatGPT account is signed in.
+    #[must_use]
+    pub fn with_chatgpt(mut self, chatgpt: Arc<ChatGpt>) -> Self {
+        self.chatgpt = Some(chatgpt);
         self
     }
 
@@ -350,14 +399,14 @@ impl Setup {
             return Ok(Check {
                 hermes_installed: false,
                 needed: true,
-                reason: "the bundled Hermes has not been unpacked yet".into(),
+                reason: "boopis's engine has not been unpacked yet".into(),
             });
         }
         if self.ops.version().await.is_err() {
             return Ok(Check {
                 hermes_installed: false,
                 needed: true,
-                reason: "Hermes is not installed".into(),
+                reason: "no engine was found on this computer".into(),
             });
         }
         let home = self.ops.home();
@@ -412,15 +461,11 @@ impl Setup {
             });
             state.picks.clear();
             state.reopen_models = false;
-            state.claude_consent = false;
-        } else if id == "setup.claude" || id == "setup.claude.install" {
+        } else if id == "setup.claude" || id == "setup.chatgpt" {
             if answer.cancelled {
                 // back to the models question, with every choice it has
                 state.choice = None;
                 state.reopen_models = true;
-                state.claude_consent = false;
-            } else if id == "setup.claude.install" {
-                state.claude_consent = true;
             }
         } else if id == "setup.openrouter" {
             if answer.cancelled {
@@ -464,18 +509,27 @@ impl Setup {
     /// # Errors
     /// `hx.config.invalid` when Hermes cannot be asked.
     pub async fn models_view(&self) -> Result<ModelsView> {
-        let (saved, probe, plugins) = tokio::join!(
+        let chatgpt = async {
+            match &self.chatgpt {
+                Some(c) => c.status().await.map(Some),
+                None => Ok(None),
+            }
+        };
+        let (saved, probe, plugins, chatgpt) = tokio::join!(
             self.ops.config_get(providers::LADDER_KEY),
             self.claude.probe(),
-            self.ops.plugins()
+            self.ops.plugins(),
+            chatgpt
         );
         let (state, tiers) = providers::ladder_of(saved?.as_ref());
         Ok(ModelsView {
             state,
             tiers,
             claude: probe,
-            // a Hermes that cannot list its plugins says nothing about this one
+            // an engine that cannot list its plugins says nothing about this one
             claude_plugin: plugins.is_ok_and(|l| l.iter().any(|p| p.name == claude::PROVIDER_ID)),
+            chatgpt: chatgpt?,
+            gemini_key: providers::gemini_key(self.secrets.as_ref(), &self.ops.home()),
         })
     }
 
@@ -492,7 +546,6 @@ impl Setup {
         state.picks.clear();
         state.free_note = None;
         state.reopen_models = true;
-        state.claude_consent = false;
         state.pending_form = None;
         state.done_at = None;
         state::save(&home, &state)
@@ -558,17 +611,19 @@ impl Setup {
         match self.ops.version().await {
             Ok(v) => run.done(
                 "hermes",
-                "Hermes",
-                format!("Hermes {}", v.unwrap_or_else(|| "(version unknown)".into())),
+                ENGINE_TITLE,
+                format!("version {}", v.unwrap_or_else(|| "unknown".into())),
             ),
             Err(Error::HermesMissing) => {
+                // Only with `--engine existing` (a build that carries its engine never gets here): the command stays in
+                // the status for the command line and the docs, and the step says what to do in boopis's words.
                 run.install_command = Some(self.install_command.clone());
-                run.push("hermes", "Hermes", StepState::Blocked,
-                    format!("Hermes is not installed. Run this in a terminal, then choose Check again: {}", self.install_command),
-                    Some("hx.setup.hermes_missing"));
+                run.push("hermes", ENGINE_TITLE, StepState::Blocked,
+                    "No engine was found on this computer. Install it as the boopis docs describe, then choose Check again; or start boopis without --engine existing to use the engine it carries.",
+                    Some("hx.setup.engine_missing"));
                 return;
             }
-            Err(e) => return run.blocked("hermes", "Hermes", "hx.setup.hermes_missing", &e),
+            Err(e) => return run.blocked("hermes", ENGINE_TITLE, "hx.setup.engine_missing", &e),
         }
         self.plugin_step(run, state).await;
         if run.stop {
@@ -592,7 +647,7 @@ impl Setup {
     /// Unpack the runtime this build carries (idempotent), then switch off Hermes's own update check in the private home.
     /// A failure is a blocked step that says what happened and what to do; nothing is left half installed.
     async fn runtime_step(&self, plan: &Plan, run: &mut Run, state: &mut State) {
-        let (id, title) = ("runtime", "Hermes runtime");
+        let (id, title) = ("runtime", "boopis engine");
         let (runtime, dir) = (plan.runtime.clone(), plan.runtimes_dir());
         let sink = self.progress.clone();
         let unpacked = tokio::task::spawn_blocking(move || {
@@ -619,11 +674,28 @@ impl Setup {
             Err(e) => {
                 let e = Error::Setup(
                     "hx.setup.runtime_unpack_failed",
-                    format!("unpacking Hermes stopped: {e}"),
+                    format!("unpacking the bundled Hermes stopped: {e}"),
                 );
                 return run.blocked(id, title, e.code(), &e);
             }
         };
+        // The plugins the runtime carries (the Claude subscription, ADR-0030) go where the engine finds a profile's plugins.
+        // A model-provider plugin needs no enable entry; nothing here asks the user, and nothing is downloaded.
+        let (root, home) = (layout.root.clone(), self.ops.home());
+        match tokio::task::spawn_blocking(move || install::install_runtime_plugins(&root, &home))
+            .await
+        {
+            Ok(Ok(changed)) => state.restart_pending |= changed,
+            Ok(Err(e)) => return run.blocked(id, title, "hx.setup.plugin_install_failed", &e),
+            Err(e) => {
+                return run.blocked(
+                    id,
+                    title,
+                    "hx.setup.plugin_install_failed",
+                    &Error::Io(e.to_string()),
+                );
+            }
+        }
         let manifest = plan.runtime.manifest();
         // Hermes's own update check and `hermes update` have no place in a bundle: the app's updater ships Hermes.
         // `hermes update` already refuses (the install stamp says an app owns it); the passive check is switched off here.
@@ -637,12 +709,12 @@ impl Setup {
             Err(e) => return run.blocked(id, title, "hx.setup.config_failed", &e),
         }
         let detail = match outcome {
-            Outcome::Current => format!("Hermes {} is unpacked", manifest.hermes_version),
+            Outcome::Current => format!("version {}, unpacked", manifest.hermes_version),
             Outcome::Unpacked => {
                 state.restart_pending = true; // a gateway of an older runtime must give way to this one
                 format!(
-                    "unpacked Hermes {} (Python {}) into the app's own folder; it never touches another Hermes",
-                    manifest.hermes_version, manifest.python_version
+                    "unpacked version {} into boopis's own folder; nothing else on this computer is touched",
+                    manifest.hermes_version
                 )
             }
         };
@@ -736,7 +808,7 @@ impl Setup {
     }
 
     async fn config_step(&self, run: &mut Run, state: &mut State) {
-        let (id, title) = ("config", "Hermes settings");
+        let (id, title) = ("config", SETTINGS_TITLE);
         let mut diff = Vec::new();
         for (key, to, _) in wanted() {
             match self.ops.config_get(key).await {
@@ -760,20 +832,20 @@ impl Setup {
                     }
                 }
                 state.restart_pending = true;
-                run.done(id, title, format!("{} settings changed through Hermes", diff.len()));
+                run.done(id, title, format!("{} settings changed", diff.len()));
             }
             Consent::Declined => run.push(id, title, StepState::Declined,
-                "Not changed. Without these, other tools may hide pack, ship and dispatch behind Hermes's tool search, governed work cannot be routed to model tiers, and Stop hooks cannot continue a turn. Choose Review again to change your mind, or use a dedicated Hermes profile for boopis.",
+                "Not changed. Without these, pack, ship and dispatch may hide behind tool search, governed work cannot be routed to model tiers, and Stop hooks cannot continue a turn. Choose Review again to change your mind.",
                 Some("hx.setup.declined")),
             Consent::Unasked => {
-                let mut form = Form::new("setup.config", "setup", "Change three Hermes settings?",
+                let mut form = Form::new("setup.config", "setup", "Change three settings boopis needs?",
                     &wanted().iter().map(|(k, v, why)| format!("{k} = {} ({why})", text_of(v))).collect::<Vec<_>>().join("\n"),
                     json!({"type": "object", "properties": {}}));
                 form.submit = Json(json!({"label": "Apply the changes"}));
                 form.cancel = Json(json!({"label": "Not now"}));
                 form.diff = diff;
                 run.form = Some(form);
-                run.push(id, title, StepState::NeedsInput, "These settings are written with `hermes config set`; nothing else is touched.", None);
+                run.push(id, title, StepState::NeedsInput, "Only these three settings are written; nothing else is touched.", None);
             }
         }
     }
@@ -781,13 +853,17 @@ impl Setup {
     async fn models_step(&self, run: &mut Run, state: &mut State) {
         let (id, title) = ("models", "Models and keys");
         let mut restart = false;
+        let chatgpt_signed_in = match &self.chatgpt {
+            Some(c) => c.signed_in().await.unwrap_or(false),
+            None => false,
+        };
         let input = providers::Input {
             choice: state.choice.as_deref(),
             picks: &state.picks,
             free_note: state.free_note.as_deref(),
             reopen: state.reopen_models,
-            claude_consent: state.claude_consent,
             claude: self.claude.as_ref(),
+            chatgpt_signed_in,
         };
         let out = providers::run(
             self.ops.as_ref(),
@@ -815,7 +891,7 @@ impl Setup {
                 run.form = Some(form);
             }
             Err(e) => {
-                // the subscription's own refusals (an unreachable catalog, a refused install) carry their own codes
+                // a choice's own refusals (a subscription this engine does not carry) carry their own codes
                 let code = match &e {
                     Error::Setup(code, _) => *code,
                     _ => "hx.setup.config_failed",
@@ -829,7 +905,7 @@ impl Setup {
         let (id, title) = ("restart", "Start with boopis");
         if state.restart_pending {
             if let Err(e) = self.ops.restart_gateway().await {
-                return run.blocked(id, title, "hx.hermes.unavailable", &e);
+                return run.blocked(id, title, "hx.engine.unavailable", &e);
             }
             state.restart_pending = false;
         }
@@ -850,7 +926,7 @@ impl Setup {
                         tracing::info!(count = removed.len(), "removed older Hermes runtimes");
                     }
                 }
-                run.done(id, title, "Hermes runs with the plugin");
+                run.done(id, title, "boopis is ready");
             }
             Err(e) => run.blocked(id, title, "hx.setup.verify_failed", &e),
         }
@@ -873,7 +949,7 @@ impl Setup {
             .map(|s| format!("{}: {}", s.title, s.detail))
             .collect();
         if state.consent == Consent::Declined {
-            lines.push("You declined the Hermes settings, so some features are off (see Hermes settings above).".into());
+            lines.push(format!("You declined the settings boopis needs, so some features are off (see {SETTINGS_TITLE} above)."));
         }
         if cfg!(windows) {
             lines.extend(windows_gaps().iter().map(|l| (*l).to_owned()));
@@ -887,7 +963,7 @@ impl Setup {
 #[must_use]
 pub fn windows_gaps() -> [&'static str; 3] {
     [
-        "Windows: API keys saved in the keychain cannot reach Hermes yet (the plugin's secret channel has no Windows transport). The free Nous models and the Claude subscription need no key.",
+        "Windows: API keys saved in the keychain cannot reach boopis's engine yet (its secret channel has no Windows transport). The free Nous models and the Claude subscription need no key.",
         "Windows: the command sandbox has not been run on Windows yet. Where it cannot start, a governed ship is refused with the reason (hx.sandbox.unavailable); a command never runs unsandboxed.",
         "Windows: mods are off (hx.mods.unavailable): the mods worker has no private channel on Windows yet.",
     ]

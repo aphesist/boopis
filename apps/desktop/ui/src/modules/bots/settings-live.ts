@@ -5,8 +5,8 @@
    - what boopis keeps (its look, governance, cap, workspace, what it asks first) is saved at once, in the bot's own store;
    - archive keeps everything and is undone from the toast; delete says what goes, and asks twice.
    Nothing is shown that Hermes did not report: a list it did not answer says so. */
-import { $, cap1, el, esc, frag } from '../../core/dom';
-import { ui } from '../../components';
+import { $, cap1, el, frag } from '../../core/dom';
+import { ui } from '@boopis/ui';
 import { data, NeedsConfirmation } from '../../data';
 import type { Bot, BotConfig, BotsAdmin, BotPatch, RoutineDraft } from '../../data';
 import { diffWell } from '../cards/parts';
@@ -43,22 +43,22 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
   const close = ui.iconButton({ icon: 'close', label: 'Close bot settings', keys: 'mod+I' });
   close.addEventListener('click', () => { closeSettings(); focusConversation(); });
   const head = el('header', { class: 'ui-panel__head' }, [el('h2', { class: 'ui-panel__title', text: 'Bot settings' }), close]);
-  const body = el('div', { class: 'ui-panel__body' });
+  const body = el('div', { class: 'ui-panel__body ui-scroll ui-scroll--stable' });
 
   /* the two panes that stand in for the sections while they are needed: the diff to review, and the question before a delete */
   const review = el('section', { class: 'bt-review', 'aria-label': 'Review before saving', hidden: true });
   const gone = el('section', { class: 'bt-review', 'aria-label': 'Delete ' + b.name, hidden: true });
 
   /* ───────── role and instructions: profile.yaml and SOUL.md ───────── */
-  const roleF = ui.field({ label: 'Role, shown under its name', value: pend.role, hint: 'Hermes keeps it as the profile’s description; other teammates read it to know what this one is for.' });
+  const roleF = ui.field({ label: 'Role, shown under its name', value: pend.role, hint: 'Kept as the bot’s description; other bots read it to know what this one is for.' });
   $<HTMLInputElement>('input', roleF).addEventListener('input', (e) => { pend.role = (e.target as HTMLInputElement).value; paintDirty(); });
-  const instrF = ui.field({ kind: 'textarea', label: 'Instructions (SOUL.md)', placeholder: loaded ? 'How it should work, what to avoid, who to tell' : 'Reading SOUL.md from Hermes…', value: pend.instructions, disabled: !loaded, hint: loaded ? 'Takes effect in its next session; a session already running keeps the text it started with.' : (info.notes.detail ?? 'Hermes has not sent it yet.') });
+  const instrF = ui.field({ kind: 'textarea', label: 'Instructions (SOUL.md)', placeholder: loaded ? 'How it should work, what to avoid, who to tell' : 'Reading SOUL.md…', value: pend.instructions, disabled: !loaded, hint: loaded ? 'Takes effect in its next session; a session already running keeps the text it started with.' : (info.notes.detail ?? 'It has not been read yet.') });
   $<HTMLTextAreaElement>('textarea', instrF).addEventListener('input', (e) => { pend.instructions = (e.target as HTMLTextAreaElement).value; paintDirty(); });
 
   /* ───────── model: config.yaml ───────── */
   const models = [...admin.models()];
   if (info.model && !models.includes(info.model)) models.unshift(info.model);
-  const modelHint = info.model ? 'The model Hermes runs this profile on.' : (info.notes.detail ?? 'Hermes has no model pinned for this profile.') + (models.length ? ' Pick one to pin it.' : ' No provider is configured yet.');
+  const modelHint = info.model ? 'The model ' + b.name + ' runs on.' : (info.notes.detail ?? 'No model is pinned for this bot.') + (models.length ? ' Pick one to pin it.' : ' No provider is configured yet.');
   const modelF = ui.field({ kind: 'model', label: 'Model', options: models, value: info.model ?? '', hint: modelHint, disabled: !models.length });
   modelF.addEventListener('ui:change', (e) => { pend.model = (e as CustomEvent<{ value: string }>).detail.value; paintDirty(); });
 
@@ -68,7 +68,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
   const jobsKnown = info.jobs !== null;
   function paintRoutines(): void {
     routines.textContent = '';
-    if (!jobsKnown) { routines.append(el('li', { class: 'bt-routine-note', text: 'Unknown. ' + (info.notes.jobs ?? 'Hermes did not answer.') })); return; }
+    if (!jobsKnown) { routines.append(el('li', { class: 'bt-routine-note', text: 'Unknown. ' + (info.notes.jobs ?? 'boopis could not read its schedule.') })); return; }
     if (!(info.jobs ?? []).length && !pend.add.length) routines.append(el('li', { class: 'bt-routine-note', text: b.name + ' has no routines: it only works when asked.' }));
     for (const j of info.jobs ?? []) {
       const going = pend.remove.has(j.id);
@@ -80,7 +80,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
       const sw = $<HTMLInputElement>('input', row);
       sw.addEventListener('change', () => {
         routineErr.hidden = true;
-        admin.setRoutinePaused(b.id, j.id, !sw.checked).catch((e: unknown) => { sw.checked = !sw.checked; routineErr.textContent = 'Hermes did not ' + (sw.checked ? 'resume' : 'pause') + ' it: ' + sentence(e); routineErr.hidden = false; });
+        admin.setRoutinePaused(b.id, j.id, !sw.checked).catch((e: unknown) => { sw.checked = !sw.checked; routineErr.textContent = 'It was not ' + (sw.checked ? 'resumed' : 'paused') + ': ' + sentence(e); routineErr.hidden = false; });
       });
       const del = ui.iconButton({ icon: going ? 'check' : 'close', label: (going ? 'Keep routine ' : 'Remove routine ') + label, size: 's' });
       del.addEventListener('click', () => { if (going) pend.remove.delete(j.id); else pend.remove.add(j.id); paintRoutines(); paintDirty(); del.focus(); });
@@ -121,7 +121,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
   const ownErr = el('p', { class: 'ui-field__hint', role: 'alert', 'data-tone': 'attention', hidden: true });
   const gov = ui.segmented({ mode: 'radio', label: 'Governance', value: c.gov, options: [{ value: 'governed', label: 'Governed' }, { value: 'ungoverned', label: 'Ungoverned' }], fill: true });
   const capId = 'bt-cap-' + b.id;
-  const capRow = frag(ui.html.setRow({ label: 'Cap per run', hint: 'Dollars per run', for: capId, control: '<input class="ui-input ui-input--mono bt-cap" id="' + capId + '" inputmode="decimal" autocomplete="off" value="' + esc(c.cap) + '">' }));
+  const capRow = frag(ui.html.setRow({ label: 'Cap per run', hint: 'Dollars per run', for: capId, control: ui.html.input({ id: capId, value: c.cap, mono: true, class: 'bt-cap', attrs: { inputmode: 'decimal', spellcheck: null } }) }));
   capRow.hidden = c.gov !== 'governed';
   let capTimer = 0;
   $<HTMLInputElement>('input', capRow).addEventListener('input', (e) => { const v = (e.target as HTMLInputElement).value.trim(); window.clearTimeout(capTimer); capTimer = window.setTimeout(() => { if (/^\d{1,4}(\.\d{1,4})?$/.test(v)) own({ cap: v }); }, 500); });
@@ -152,8 +152,8 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
     who, review, gone,
     sec('role', 'Role and instructions', null, [roleF, instrF]),
     sec('model', 'Model', info.model ?? 'not set', [modelF]),
-    sec('schedule', 'Schedule', jobsMeta, [hint('What it does when you have not asked. Each is a job in this profile’s own cron store.'), routines, routineErr, promptF, presets, cronF, el('div', { class: 'bt-add-row' }, addBtn)]),
-    sec('capabilities', 'What it can use', null, [hint('Hermes’s own lists for this profile. Change them with `hermes -p ' + info.profile + ' tools` and `skills`; boopis only reads them.'), caps]),
+    sec('schedule', 'Schedule', jobsMeta, [hint('What it does when you have not asked. Each is a job in this bot’s own schedule.'), routines, routineErr, promptF, presets, cronF, el('div', { class: 'bt-add-row' }, addBtn)]),
+    sec('capabilities', 'What it can use', null, [hint('The tools and skills this bot has. boopis shows them here; changing them is not offered here yet.'), caps]),
     sec('rules', 'Rules', null, [hint('Saved with the teammate, in its boopis folder. They apply when it works in a session of its own, which is not wired yet.'), gov, capRow, ws, appr, ownErr])
   );
   paintRoutines();
@@ -191,10 +191,10 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
     review.hidden = false; gone.hidden = true;
     const err = el('p', { class: 'ui-field__hint', role: 'alert', 'data-tone': 'attention', hidden: true });
     const keep = ui.button({ label: 'Keep editing' });
-    const save = ui.button({ label: ask ? 'Use this model anyway' : 'Save to Hermes', variant: 'primary' });
+    const save = ui.button({ label: ask ? 'Use this model anyway' : 'Save changes', variant: 'primary' });
     review.replaceChildren(
       el('h3', { class: 'bt-review-h', text: 'Review before saving' }),
-      el('p', { class: 'ui-field__hint', text: 'These are the files Hermes keeps for ' + b.name + '. Nothing is written until you save.' }),
+      el('p', { class: 'ui-field__hint', text: 'These are the files boopis keeps for ' + b.name + '. Nothing is written until you save.' }),
       ...planned.map((w) => frag(diffWell(w.diff, w.file))),
       ...(ask ? [el('p', { class: 'ui-field__hint', role: 'alert', 'data-tone': 'attention', text: ask })] : []),
       err, el('div', { class: 'bt-review-acts' }, [keep, save])
@@ -218,7 +218,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
     gone.hidden = false; review.hidden = true;
     gone.replaceChildren(el('h3', { class: 'bt-review-h', text: 'Delete ' + b.name + ' for good?' }), el('p', { class: 'ui-field__hint', text: 'Counting what is in its folder…' }));
     let lines: readonly string[] = [];
-    try { lines = (await admin.removal(b.id)).lines; } catch (e) { lines = ['Everything in its Hermes profile (boopis could not count it: ' + sentence(e) + ').']; }
+    try { lines = (await admin.removal(b.id)).lines; } catch (e) { lines = ['Everything in its folder (boopis could not count it: ' + sentence(e) + ').']; }
     if (!live()) return;
     const err = el('p', { class: 'ui-field__hint', role: 'alert', 'data-tone': 'attention', hidden: true });
     const instead = ui.button({ label: 'Archive instead', variant: 'primary' });
@@ -240,7 +240,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
       sure.disabled = true; cancel.disabled = true; instead.disabled = true; err.hidden = true;
       const name = b.name, id = b.id;
       admin.remove(id, id).then(() => { afterGone(); ui.toast('Deleted ' + name); })
-        .catch((e: unknown) => { sure.disabled = false; cancel.disabled = false; instead.disabled = false; err.textContent = 'Hermes did not delete it: ' + sentence(e); err.hidden = false; });
+        .catch((e: unknown) => { sure.disabled = false; cancel.disabled = false; instead.disabled = false; err.textContent = 'It was not deleted: ' + sentence(e); err.hidden = false; });
     });
     requestAnimationFrame(() => { gone.scrollIntoView({ block: 'nearest' }); instead.focus({ preventScroll: true }); });
   }

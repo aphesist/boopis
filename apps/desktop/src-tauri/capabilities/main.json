@@ -15,8 +15,7 @@
     "allow-setup-advance",
     "allow-setup-reopen-models",
     "allow-setup-models-view",
-    "allow-hermes-source-get",
-    "allow-hermes-source-set",
+    "allow-engine-source-get",
     "allow-gateway-connect",
     "allow-gateway-send",
     "allow-gateway-disconnect",
@@ -42,6 +41,10 @@
     "allow-connector-remove",
     "allow-connector-signin",
     "allow-connector-signin-cancel",
-    "allow-connector-login"
+    "allow-connector-login",
+    "allow-chatgpt-status",
+    "allow-chatgpt-signin-start",
+    "allow-chatgpt-signin-cancel",
+    "allow-chatgpt-sign-out"
   ]
 }

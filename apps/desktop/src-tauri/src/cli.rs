@@ -70,6 +70,24 @@ pub fn parse(args: &[String]) -> Command {
     }
 }
 
+/// Take a leading `--engine <bundled|existing>` (or `--engine=<word>`) off the arguments: the choice, and what is left.
+///
+/// # Errors
+/// The word, when it is neither (a missing word is the empty string).
+pub fn split_engine(args: &[String]) -> Result<(Option<runtime::Source>, Vec<String>), String> {
+    let (word, rest) = match args.first().map(String::as_str) {
+        Some("--engine") => (
+            args.get(1).cloned().unwrap_or_default(),
+            args.get(2..).unwrap_or_default(),
+        ),
+        Some(a) if a.starts_with("--engine=") => (a["--engine=".len()..].to_owned(), &args[1..]),
+        _ => return Ok((None, args.to_vec())),
+    };
+    runtime::Source::parse(&word)
+        .map(|s| (Some(s), rest.to_vec()))
+        .ok_or(word)
+}
+
 /// Whether a command needs the parent's console: every command that prints, and never a launch of the window.
 #[must_use]
 pub fn needs_console(command: &Command) -> bool {
@@ -79,6 +97,24 @@ pub fn needs_console(command: &Command) -> bool {
 /// Run a command if the arguments ask for one. Returns the exit code; `None` means "start the app".
 /// `resource_dir` is asked only by the commands that need it.
 pub fn dispatch(args: &[String], resource_dir: &dyn Fn() -> Option<PathBuf>) -> Option<i32> {
+    // `--engine existing|bundled` (first, before any command) chooses the engine for this run; documented in the
+    // repository (docs/ENGINE.md), never in the app.
+    let args = match split_engine(args) {
+        Ok((choice, rest)) => {
+            if let Some(choice) = choice {
+                runtime::choose_for_this_run(choice);
+            }
+            rest
+        }
+        Err(what) => {
+            console::attach_to_parent();
+            eprintln!(
+                "{PRODUCT}: --engine takes bundled or existing, not {what}. Try {PRODUCT} --help for what it does."
+            );
+            return Some(2);
+        }
+    };
+    let args = args.as_slice();
     let command = parse(args);
     if !needs_console(&command) {
         return None;
@@ -265,7 +301,7 @@ fn help_lines(out: &Out, version: &str) -> Vec<String> {
 /// What `--version` shows beside the version.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Facts {
-    /// The Hermes this build carries, when it carries one.
+    /// The engine version this build carries, when it carries one.
     pub hermes: Option<String>,
     /// The `WebKitGTK` this process runs on.
     pub webkit: webkit::Report,
@@ -295,7 +331,7 @@ fn webkit_origin(origin: webkit::Origin) -> &'static str {
 /// The lines of `--version`.
 #[must_use]
 pub fn version_lines(out: &Out, version: &str, facts: &Facts) -> Vec<String> {
-    let hermes = facts.hermes.as_ref().map_or_else(
+    let engine = facts.hermes.as_ref().map_or_else(
         || "not bundled in this build".to_owned(),
         |v| format!("{v}, bundled"),
     );
@@ -306,8 +342,8 @@ pub fn version_lines(out: &Out, version: &str, facts: &Facts) -> Vec<String> {
     vec![
         format!("{} {version}", out.logo()),
         format!(
-            "  {} {hermes}",
-            out.ink.paint(Tone::Dim, &format!("{:<10}", "hermes"))
+            "  {} {engine}",
+            out.ink.paint(Tone::Dim, &format!("{:<10}", "engine"))
         ),
         format!(
             "  {} {webkit}",
@@ -360,13 +396,7 @@ pub enum RuntimeStatus {
 pub fn gather(resource_dir: Option<&Path>) -> Gathered {
     let startup = startup(false);
     let data = dirs::data_dir().map(|d| d.join(gpu::APP_IDENTIFIER));
-    let saved = gpu::settings_path()
-        .and_then(|p| std::fs::read_to_string(p).ok())
-        .and_then(|t| runtime::stored_source(&t));
-    let source = runtime::Source::resolve(
-        std::env::var("BOOPIS_HERMES").ok().as_deref(),
-        saved.as_deref(),
-    );
+    let source = runtime::Source::from_process();
     let (plan, error) = runtime::plan_for(
         source,
         resource_dir,
@@ -399,14 +429,14 @@ pub fn gather(resource_dir: Option<&Path>) -> Gathered {
         add("data", d.clone());
         if let RuntimeStatus::Bundled { .. } = runtime_status {
             add("runtime", d.join("runtime"));
-            add("hermes home", d.join("hermes-home"));
+            add("engine home", d.join(runtime::HOME_DIR));
         }
         add("settings", d.join("settings.json"));
     }
     if !matches!(runtime_status, RuntimeStatus::Bundled { .. }) {
         let home = environment.hermes_root();
         let exists = home.exists();
-        folders.push(("hermes home", home, exists));
+        folders.push(("engine home", home, exists));
     }
     if let Some(sockets) = crate::secrets::channel::default_socket_dir() {
         let exists = sockets.exists();
@@ -702,15 +732,15 @@ pub fn doctor_lines(out: &Out, version: &str, gathered: &Gathered) -> Vec<String
     lines.extend(out.heading("runtime"));
     match &gathered.runtime {
         RuntimeStatus::Bundled {
-            hermes,
+            hermes: engine,
             python,
             root,
             unpacked,
         } => {
             lines.push(out.row(
                 None,
-                "hermes",
-                &format!("{hermes}, bundled (python {python})"),
+                "engine",
+                &format!("{engine}, bundled (python {python})"),
             ));
             if *unpacked {
                 lines.push(out.row(Some(Mark::Ok), "status", "unpacked and checked"));
@@ -725,19 +755,25 @@ pub fn doctor_lines(out: &Out, version: &str, gathered: &Gathered) -> Vec<String
         }
         RuntimeStatus::Existing { chosen, home } => {
             let why = if *chosen {
-                "your choice (BOOPIS_HERMES or the setting)"
+                "you chose it (--engine existing)"
             } else {
                 "this build carries none"
             };
             lines.push(out.row(
                 None,
-                "hermes",
+                "engine",
                 &format!("the one on this machine, because {why}"),
             ));
             lines.push(out.row(None, "home", &path_for_display(home)));
         }
         RuntimeStatus::Broken(e) => {
-            lines.push(out.row(Some(Mark::Fail), "status", e));
+            // boopis never names its engine: a reason that does is said in the catalog's words (ADR-0031).
+            let shown = if crate::error::names_engine(e) {
+                crate::error::sentence("hx.setup.runtime_corrupt")
+            } else {
+                e.clone()
+            };
+            lines.push(out.row(Some(Mark::Fail), "status", &shown));
             lines.push(out.note("Reinstall boopis to restore the runtime."));
         }
     }

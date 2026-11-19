@@ -57,5 +57,7 @@ describe('the layout (LAYOUT.md): the dock is always centred with the chatbox', 
     expect(solveLayout(base).dockSpace).toBe(72);
     expect(solveLayout({ ...base, dockHeight: 180 }).dockSpace).toBe(180);
     expect(solveLayout({ ...base, dock: 'off', dockHeight: 180 }).dockSpace).toBe(0);
+    expect(solveLayout({ ...base, dockHeight: 0 }).dockSpace).toBe(0);   // an empty dock (nothing in it) keeps no room; unknown keeps the default
+    expect(solveLayout({ ...base, dockHeight: null }).dockSpace).toBe(72);
   });
 });

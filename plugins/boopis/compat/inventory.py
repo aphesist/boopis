@@ -22,7 +22,7 @@ from .scan import ScanResult
 from .snapshot import Snapshot, rule_label
 from .trust import Trust, TrustItem, injection_item, mcp_item, permission_item, plugin_item
 
-PARSED = "read; its Hermes surface is delivered in part 2"
+PARSED = "read; what it maps to is delivered in part 2"
 Gated = tuple[TrustItem, str]
 
 
@@ -183,7 +183,7 @@ class _Inventory:
         for doc in self.result.memory:
             ident = f"memory:{_label(doc, self.project_dir)}"
             if native == "CLAUDE.md" and doc.source.scope == "project" and doc.file_kind == "CLAUDE.md":
-                why = "Hermes loads ./CLAUDE.md itself (cwd only); only its imports remain for compat"
+                why = "the engine loads ./CLAUDE.md itself (cwd only); only its imports remain for compat"
                 self.put("memory", ident, doc.file_kind, "native", why, item=doc, detail=_imports(doc))
             else:
                 self.put("memory", ident, doc.file_kind, "parsed", PARSED, item=doc, detail=_imports(doc))
@@ -274,7 +274,7 @@ class _Inventory:
             enabled = (plugin.slug or plugin.name) in self.result.plugins_enabled
             status, reason = self.verdict(gated[1])
             if status == "active" and not enabled:
-                status, reason = "disabled", "Hermes reports the generated plugin disabled"
+                status, reason = "disabled", "the generated plugin is disabled"
             self.put("plugin", f"plugin:{plugin.name}", plugin.name, status, reason, item=plugin, gated=gated)
             for label in plugin.unsupported_components:
                 self.put(
@@ -282,7 +282,7 @@ class _Inventory:
                     f"component:{plugin.name}:{label}",
                     label,
                     "unsupported",
-                    f"{label} have no Hermes surface",
+                    f"{label} have nothing to map to",
                     item=plugin,
                 )
         for market in self.result.marketplaces:

@@ -307,7 +307,7 @@ fn from_url(v: &BTreeMap<String, String>, provided: Option<&BTreeSet<String>>) -
     if b.oauth {
         b.row(
             "Sign-in",
-            "OAuth in your browser, run by Hermes. Hermes keeps the tokens in its own store",
+            "OAuth in your browser. boopis keeps the tokens in its own store and never shows them",
         );
     }
     b.row(
@@ -488,7 +488,7 @@ fn catalog_http(
             b.config.insert("auth".into(), json!("oauth"));
             b.row(
                 "Sign-in",
-                "OAuth in your browser, run by Hermes. Hermes keeps the tokens in its own store",
+                "OAuth in your browser. boopis keeps the tokens in its own store and never shows them",
             );
         }
         ("key", Some(auth)) => {
@@ -560,9 +560,9 @@ pub fn review_form(plan: &Plan, restart: Option<RestartInfo>) -> Form {
     if let Some(r) = restart {
         let optional = plan.secrets.iter().all(|s| s.optional);
         let lead = if optional {
-            "If you give a key, boopis restarts Hermes to load it."
+            "If you give a key, boopis restarts to load it."
         } else {
-            "boopis restarts Hermes to load the key."
+            "boopis restarts to load the key."
         };
         let tail = match r.running {
             Some(0) => " No session has a turn running, so it restarts at once.".to_owned(),
@@ -572,17 +572,18 @@ pub fn review_form(plan: &Plan, restart: Option<RestartInfo>) -> Form {
                 if n == 1 { "has" } else { "have" },
                 if n == 1 { "it" } else { "them" }
             ),
-            None => " boopis could not ask Hermes whether a turn is running, so you choose below."
-                .to_owned(),
+            None => {
+                " boopis could not tell whether a turn is running, so you choose below.".to_owned()
+            }
         };
         contents.push(("Restart".to_owned(), format!("{lead}{tail}")));
         if r.running != Some(0) {
             props.insert(
                 "restart".into(),
                 json!({
-                    "type": "string", "title": "Restart Hermes", "enum": ["when_idle", "now"],
+                    "type": "string", "title": "Restart", "enum": ["when_idle", "now"],
                     "enumNames": ["Install, restart when idle", "Install and restart now"], "default": "when_idle",
-                    "description": "When idle: the key is saved now and boopis restarts Hermes the moment no session has a turn running, then tests it. Now: it ends the turns that are running."
+                    "description": "When idle: the key is saved now and boopis restarts the moment no session has a turn running, then tests it. Now: it ends the turns that are running."
                 }),
             );
             required.push(json!("restart"));
@@ -602,7 +603,7 @@ pub fn review_form(plan: &Plan, restart: Option<RestartInfo>) -> Form {
     f.contents = contents;
     f.pinned.clone_from(&plan.pinned);
     f.effect = Some(
-        "Adds it to Hermes's MCP servers through Hermes, then tests the connection. You can switch it off or remove it in Settings, Connectors."
+        "Adds it to boopis's connectors, then tests the connection. You can switch it off or remove it in Settings, Connectors."
             .to_owned(),
     );
     f
@@ -638,7 +639,7 @@ pub fn inputs_form(source: SourceKind, entry: Option<(&str, &str)>) -> Result<Fo
     let (id, title, body, required): (String, String, String, Vec<&str>);
     match source {
         SourceKind::Url => {
-            props.insert("name".into(), json!({"type": "string", "title": "Name", "description": "How it appears in Hermes and in tool names.", "pattern": NAME_PATTERN, "x-error": NAME_ERROR, "x-mono": true}));
+            props.insert("name".into(), json!({"type": "string", "title": "Name", "description": "How it appears in Connectors and in tool names.", "pattern": NAME_PATTERN, "x-error": NAME_ERROR, "x-mono": true}));
             props.insert("url".into(), json!({"type": "string", "format": "uri", "title": "URL", "description": "The server's MCP address. https only (plain http only for this computer).", "placeholder": "https://mcp.example.com/mcp", "x-mono": true}));
             props.insert("auth".into(), json!({"type": "string", "title": "Sign-in", "enum": ["none", "key", "oauth"], "enumNames": ["None", "An API key or token", "Sign in with OAuth"], "default": "none"}));
             props.insert("key_header".into(), text_field("Header for the key", "Only for an API key. Authorization sends it as a Bearer token. You paste the key on the next step."));
@@ -656,7 +657,7 @@ pub fn inputs_form(source: SourceKind, entry: Option<(&str, &str)>) -> Result<Fo
             required = vec!["name", "url"];
         }
         SourceKind::Command => {
-            props.insert("name".into(), json!({"type": "string", "title": "Name", "description": "How it appears in Hermes and in tool names.", "pattern": NAME_PATTERN, "x-error": NAME_ERROR, "x-mono": true}));
+            props.insert("name".into(), json!({"type": "string", "title": "Name", "description": "How it appears in Connectors and in tool names.", "pattern": NAME_PATTERN, "x-error": NAME_ERROR, "x-mono": true}));
             props.insert("command".into(), json!({"type": "string", "title": "Command", "description": "One program, such as npx or uvx. Not a shell line: its arguments go below.", "x-mono": true}));
             props.insert("args".into(), json!({"type": "string", "title": "Arguments", "description": "One per line, exactly as the program should receive them. Pin a version, for example -y then package@1.2.3.", "x-multiline": true, "x-mono": true}));
             props.insert("env".into(), json!({"type": "string", "title": "Environment", "description": "One NAME=value per line, for values that are not keys.", "x-multiline": true, "x-mono": true}));
@@ -679,7 +680,7 @@ pub fn inputs_form(source: SourceKind, entry: Option<(&str, &str)>) -> Result<Fo
             let variant = conn
                 .variant(vid)
                 .ok_or_else(|| invalid("that way of running it is not in the collection"))?;
-            props.insert("name".into(), json!({"type": "string", "title": "Name", "description": "How it appears in Hermes and in tool names.", "default": conn.id, "pattern": NAME_PATTERN, "x-error": NAME_ERROR, "x-mono": true}));
+            props.insert("name".into(), json!({"type": "string", "title": "Name", "description": "How it appears in Connectors and in tool names.", "default": conn.id, "pattern": NAME_PATTERN, "x-error": NAME_ERROR, "x-mono": true}));
             if let Some(auth) = &variant.auth {
                 let (mut vals, mut names) = (
                     vec!["oauth"],

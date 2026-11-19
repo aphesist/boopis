@@ -17,7 +17,7 @@ export function markResized(): void { layoutResized = true; }
 let dockHeight: number | null = null;   // the dock's current height from hx:dock (rest or expanded); null until it reports
 
 export function setInset(tab: Tab, left: number, right: number): void { insets[tab] = { left, right }; }
-export function setDockHeight(h: number): boolean { if (Math.abs((dockHeight || 0) - h) > 0.5) { dockHeight = h; return true; } return false; }
+export function setDockHeight(h: number): boolean { if (dockHeight === null || Math.abs(dockHeight - h) > 0.5) { dockHeight = h; return true; } return false; }
 
 function measureProbes(): void {
   probes = {};
@@ -53,7 +53,9 @@ export function solveLayout(i: LayoutIn): Solved {
   const colWidth = Math.max(0, Math.min(i.col, cR - cL - pad * 2));
   const colLeft = centerX - colWidth / 2;
   const marginW = colWidth >= 560 ? 112 : 0;       // the call-number margin folds away on narrow columns
-  const dockSpace = i.dock === 'on' ? (typeof i.dockHeight === 'number' && i.dockHeight > 0 ? i.dockHeight : i.dockRest) : 0;
+  /* the dock's reported height; null until it reports (then the default), and 0 when it reports nothing in it (no bot, no session: it is
+     not drawn, so it keeps no room) */
+  const dockSpace = i.dock === 'on' ? (typeof i.dockHeight === 'number' ? i.dockHeight : i.dockRest) : 0;
   return { sideW, leftPush, leftMode, rightVW, rightPush, rightMode, centerX, colWidth, colLeft, marginW, dockSpace, bp: phone ? 'phone' : narrow ? 'narrow' : wide ? 'wide' : 'mid', viewLeft, viewRight };
 }
 

@@ -1,6 +1,6 @@
 /* Playwright smoke: boot without console errors, the four theme presets (and their contrast), the keyboard walk-through
    (KEYMAP.md), the owner's decisions and the dock's gestures, and an axe scan with zero violations.
-   `node tests/smoke/run.mjs [boot|themes|keys|owner|live|forms|mods|controls|corners|dock-empty|dock-motion|axe]` runs one part. Exit code 1 on any failure. */
+   `node tests/smoke/run.mjs [boot|themes|keys|owner|live|forms|mods|controls|corners|concentric|dock-empty|dock-motion|dock-presence|axe]` runs one part. Exit code 1 on any failure. */
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { check, errorsAll, results, scenario, start } from './harness.mjs';
@@ -11,6 +11,8 @@ import { formCards, liveForms, liveRequests } from './forms.mjs';
 import { corners } from './corners.mjs';
 import { dockEmpty } from './dock-empty.mjs';
 import { dockMotion } from './dock-motion.mjs';
+import { dockPresence } from './dock-presence.mjs';
+import { concentric } from './concentric.mjs';
 import { mods } from './mods.mjs';
 import { controls } from './controls.mjs';
 
@@ -46,9 +48,10 @@ if (want('themes')) {
 if (want('keys')) await keyWalk(env);
 if (want('owner')) await ownerDecisions(env);
 if (want('live')) await liveSessions(env);
-if (want('corners')) await corners(env);
+if (want('corners')) { await corners(env); await concentric(env); }
 if (want('dock-empty')) await dockEmpty(env);
 if (want('dock-motion')) await dockMotion(env);
+if (want('dock-presence')) await dockPresence(env);
 if (want('mods')) await mods(env, AXE);
 if (want('controls')) await controls(env, AXE);
 if (want('forms')) { await formCards(env); await liveForms(env); await liveRequests(env); }

@@ -60,8 +60,8 @@ pub(super) async fn run(shared: Arc<Shared>, mut cmds: mpsc::Receiver<Cmd>) {
                             Phase::Degraded,
                             machine.failures(),
                             Some(HostError {
-                                code: "hx.hermes.unavailable".into(),
-                                message: why,
+                                code: "hx.engine.unavailable".into(),
+                                message: crate::error::user_message("hx.engine.unavailable", &why),
                             }),
                         );
                         step

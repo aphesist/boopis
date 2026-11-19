@@ -3,7 +3,7 @@
 import { on } from '../../core/bus';
 import { cap1, el, esc, frag, isMac } from '../../core/dom';
 import { setState, state } from '../../core/state';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 import { data } from '../../data';
 import { renderDiff } from './diff';
 import { setGovernance } from './composer';
@@ -84,10 +84,10 @@ export function mountRight(root: HTMLElement): void {
       if (/PASS/.test(l)) { const j = l.indexOf('PASS'); span.append(l.slice(0, j), el('span', { class: 'pass', text: 'PASS' }), l.slice(j + 4)); } else span.textContent = l;
       term.append(span, i < lines.length - 1 ? '\n' : '');
     });
-    const copy = ui.iconButton({ icon: 'copy', label: 'Copy output', size: 's' });
+    const copy = ui.iconButton({ icon: 'copy', label: 'Copy output', size: 's', class: 'ui-corner', attrs: { 'data-corner': 'tr' } });
     copy.addEventListener('click', () => { void copyText(lines.join('\n')); });
     if (!lines.length && data().info.live) return [el('p', { class: 'ssr-note', text: 'No tool output yet.' })];
-    return [el('div', { class: 'ssr-term-wrap' }, [term, copy])];
+    return [el('div', { class: 'ssr-term-wrap ui-nest' }, [term, copy])];
   }
   function governanceBody(): Node[] {
     const gv = d().governance.get();
@@ -112,7 +112,7 @@ export function mountRight(root: HTMLElement): void {
       if (sw) { ui.hydrate(row); sw.addEventListener('change', () => d().setConnector(c.name, sw.checked)); }
       if (sb) sb.addEventListener('click', () => { const l = sb.querySelector('span'); if (l) l.textContent = 'Connecting'; sb.disabled = true; void d().signIn(c.name); });
       return row;
-    }).concat(d().connectors.get().length || !data().info.live ? [] : [el('p', { class: 'ssr-note', text: 'No MCP servers are configured in Hermes.' })]);
+    }).concat(d().connectors.get().length || !data().info.live ? [] : [el('p', { class: 'ssr-note', text: 'No connectors are set up yet.' })]);
   }
   function envBody(): HTMLElement[] {
     const e = d().environment.get();
@@ -127,7 +127,7 @@ export function mountRight(root: HTMLElement): void {
     const out = d().output.get().join('\n'), passed = (out.match(/(\d+) passed/) ?? [0, ''])[1];
     const mono = (t: string): string => '<span class="ui-mono">' + esc(t) + '</span>';
     const c = d().context.get(), G = d().governance.get();
-    const body = el('div', { class: 'ui-panel__body' }, [
+    const body = el('div', { class: 'ui-panel__body ui-scroll ui-scroll--stable' }, [
       section('context', 'Context', mono(kTokens(c.used) + ' / ' + kTokens(c.total)), contextBody()),
       section('tasks', 'Tasks', mono(done + ' of ' + todos.length), tasksBody()),
       section('changes', 'Changes', '<span class="ss-n ui-mono"><span class="ss-add">+' + add + '</span><span class="ss-del">−' + del + '</span></span>', changesBody()),

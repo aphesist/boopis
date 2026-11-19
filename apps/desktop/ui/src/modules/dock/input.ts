@@ -4,7 +4,7 @@
 import { $$, isMac } from '../../core/dom';
 import { getLayout, setState } from '../../core/state';
 import { emit } from '../../core/bus';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 import { S, X, flags, geomR, motion, rendered, shownPages, spring, K_SLIDE } from './ctx';
 import type { Spring } from './ctx';
 import { E, cxNow, hideTip, kick, resetMag, retarget, shellVar, returnFocus, markFocus, slideNow, stopSlide } from './engine';
@@ -39,6 +39,8 @@ export function onClick(e: MouseEvent): void {
   const t = tgt.closest<HTMLElement>('[data-act]');
   if (!t || !X.root.contains(t) || t.closest('.is-leaving')) return;
   if (t.getAttribute('aria-disabled') === 'true') return;
+  if (gate && t.closest('.dk-foot-ctl')) { gate = false; return; }
+  gate = false;
   const act = t.dataset['act'], id = t.dataset['id'] ?? '', kbd = e.detail === 0;
   switch (act) {
     case 'session':
@@ -310,14 +312,27 @@ function insideDock(t: EventTarget | null): boolean {
   const layer = ui.popover.current;
   return !!(layer && layer.contains(t) && X.root.querySelector('[aria-expanded="true"]'));
 }
-export function onDocDown(e: Event): void { outsidePress = !!flags.mounted && (S.mode === 'expanded' || S.mode === 'edit') && !insideDock(e.target); }
+export function onDocDown(e: Event): void { if (X.root.hasAttribute('data-reveal') && !insideDock(e.target)) reveal(false); outsidePress = !!flags.mounted && (S.mode === 'expanded' || S.mode === 'edit') && !insideDock(e.target); }
 export function onDocUp(): void {
   if (!outsidePress) return;
   outsidePress = false;
   setTimeout(() => { if (S.mode === 'expanded' || S.mode === 'edit') setMode('normal', { outside: true }); }, 0);
 }
 export function cancelOutside(): void { outsidePress = false; }
+/* The dock's configuration controls (Arrange, Minimise) show on hover and on focus (dock.css); a touch screen has no hover, so a
+   tap on the dock shows them for a few seconds. The tap that reveals them never presses one: a control that was not showing
+   does nothing the first time. */
+let revealT = 0, gate = false;
+function reveal(on: boolean): void {
+  clearTimeout(revealT);
+  X.root.toggleAttribute('data-reveal', on);
+  if (on) revealT = window.setTimeout(() => X.root.removeAttribute('data-reveal'), 6000);
+}
 export function onPointerDown(e: PointerEvent): void {
+  if (e.pointerType !== 'mouse') {
+    gate = !X.root.hasAttribute('data-reveal') && !!(e.target as Element).closest('.dk-foot-ctl');
+    reveal(true);
+  }
   onTouchDown(e);
   const tile = (e.target as Element).closest<HTMLElement>('.dk-tile');
   if (tile && !(e.target as Element).closest('button') && e.button === 0) dragTile(e, tile);

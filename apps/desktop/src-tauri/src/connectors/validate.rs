@@ -139,9 +139,7 @@ pub fn existing_name(raw: &str, dotted: bool) -> Result<()> {
         return Err(bad("that is not a connector's name"));
     }
     if dotted && raw.contains('.') {
-        return Err(bad(
-            "a name with a . in it cannot be changed from here; use Hermes's own `hermes config set`",
-        ));
+        return Err(bad("a name with a . in it cannot be changed from here"));
     }
     Ok(())
 }

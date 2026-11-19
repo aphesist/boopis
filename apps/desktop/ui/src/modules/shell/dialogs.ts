@@ -3,7 +3,8 @@
    as it is made. Tab cycles inside a dialog (KEYMAP section 10). */
 import { $, $$ } from '../../core/dom';
 import { setState, state, toggle } from '../../core/state';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
+import type { SegElement } from '@boopis/ui';
 import { data } from '../../data';
 import { mountThemePanel } from '../../styles/theme-panel';
 import { els, sh } from './ctx';
@@ -29,29 +30,20 @@ export function openKeys(): void {
 }
 
 /* ───────── settings ───────── */
+/** the dialog's sections, in tab order: [value, label]; each has its panel #hx-dpanel-<value> */
+export const SETTINGS_SECTIONS = [['general', 'General'], ['models', 'Models'], ['connectors', 'Connectors'], ['appearance', 'Appearance'], ['keys', 'Keyboard']] as const;
 let themeMounted = false;
 function showSettingsSection(section?: string): void {
   const d = els().settings;
-  const sec = ['general', 'models', 'connectors', 'appearance', 'keys'].includes(section ?? '') ? (section as string) : 'general';
-  for (const t of $$('.hx-dtab', d)) {
-    const on = t.dataset['section'] === sec;
-    t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1;
-  }
+  const sec = SETTINGS_SECTIONS.some(([v]) => v === section) ? (section as string) : 'general';
+  $<SegElement>('.hx-dtabs', d).select(sec);
   for (const p of $$('.hx-dpanel', d)) p.hidden = p.id !== 'hx-dpanel-' + sec;
-  if (sec === 'general') { mountDiagnostics(); mountAdvanced(); }
+  if (sec === 'general') mountDiagnostics();
   if (sec === 'models') showModels();
   if (sec === 'connectors') showConnectors();
   if (sec === 'appearance' && !themeMounted) { mountThemePanel($('#hx-dpanel-appearance')); themeMounted = true; mountOrbGrow(); }
   d.classList.toggle('is-side', sec === 'appearance');
   $('.hx-dialog__body', d).scrollTop = 0;
-}
-/* Settings > General > Advanced > "Use my own Hermes", in the desktop app only (the page has no host to save it with). */
-let advMounted = false;
-function mountAdvanced(): void {
-  if (advMounted || !inTauri()) return;
-  const panel = $('#hx-dpanel-general'); if (!panel) return;
-  advMounted = true;
-  void import('../../host/hermes-source').then((m) => m.mountHermesSource(panel)).catch((e: unknown) => { advMounted = false; log.warn('the Hermes choice did not mount', e); });
 }
 /* Settings > Models: the plan, the ladder and "Change models". Built the first time the tab opens, and asked again every time
    it opens, because Hermes's plan and the saved ladder move while the dialog is closed. Without the desktop host there is no
@@ -79,7 +71,7 @@ function showConnectors(): void {
   if (connectors) { void connectors.refresh().catch((e: unknown) => { log.warn('the connectors tab did not refresh', e); }); return; }
   if (connectorsMounting) return;
   const panel = $('#hx-dpanel-connectors'); if (!panel) return;
-  if (!inTauri()) { panel.innerHTML = '<p class="ui-field__hint">Connectors are added to Hermes by the desktop app. This page has no Hermes to ask.</p>'; return; }
+  if (!inTauri()) { panel.innerHTML = '<p class="ui-field__hint">Connectors are added in the desktop app. This page cannot reach boopis\'s engine.</p>'; return; }
   connectorsMounting = true;
   void Promise.all([import('../../host/connectors'), import('../../host/connectors-bridge')])
     .then(([view, bridge]) => view.mountConnectors(panel, { bridge: bridge.tauriConnectorsBridge(), toast: (t) => { ui.toast(t); } }))
@@ -95,8 +87,8 @@ function mountDiagnostics(): void {
   const panel = $('#hx-dpanel-general'); if (!panel) return;
   diagMounted = true;
   const sec = document.createElement('section');
-  sec.className = 'hx-set'; sec.setAttribute('aria-labelledby', 'hx-set-diag-h');
-  sec.innerHTML = '<h3 class="ui-set__head" id="hx-set-diag-h">Diagnostics</h3>' +
+  sec.className = 'ui-set'; sec.setAttribute('aria-labelledby', 'hx-set-diag-h');
+  sec.innerHTML = ui.html.setHead({ id: 'hx-set-diag-h', label: 'Diagnostics' }) +
     ui.html.setRow({ label: 'Graphics card', hint: 'Which GPU draws the window. Automatic uses the dedicated GPU on AC power when it is safe to. Applies the next time the app starts.',
       control: '<div class="ui-set__actions"><div id="hx-gpu-seg"></div>' + ui.html.button({ label: 'Restart to switch', size: 's', attrs: { id: 'hx-gpu-restart', hidden: true } }) + '</div>' }) +
     ui.html.setRow({ label: 'Graphics renderer', hint: 'What the window draws with. Copy it when asked why the app is slow or blank.',
@@ -153,8 +145,8 @@ function mountGpuChoice(sec: HTMLElement, fail: (e: unknown) => void): void {
 function mountOrbGrow(): void {
   const panel = $('#hx-dpanel-appearance'); if (!panel || panel.querySelector('#hx-set-orb-grow')) return;
   const sec = document.createElement('section');
-  sec.className = 'hx-set'; sec.setAttribute('aria-labelledby', 'hx-set-bots-h');
-  sec.innerHTML = '<h3 class="ui-set__head" id="hx-set-bots-h">Bots</h3>' + ui.html.setRow({ for: 'hx-set-orb-grow', label: 'Grow bots on hover', hint: 'Bots in the dock grow under the pointer.',
+  sec.className = 'ui-set'; sec.setAttribute('aria-labelledby', 'hx-set-bots-h');
+  sec.innerHTML = ui.html.setHead({ id: 'hx-set-bots-h', label: 'Bots' }) + ui.html.setRow({ for: 'hx-set-orb-grow', label: 'Grow bots on hover', hint: 'Bots in the dock grow under the pointer.',
     control: ui.html.switch({ id: 'hx-set-orb-grow', checked: state.orbGrow }) });
   const colours = panel.querySelector('[aria-labelledby="hxt-h-colours"]');
   panel.insertBefore(sec, colours);
@@ -197,14 +189,7 @@ export function wireDialogs(): void {
   const el = els();
   $('#hx-set-dock').addEventListener('change', (e) => setState({ dock: (e.target as HTMLInputElement).checked ? 'on' : 'off' }));
   $('#hx-settings-close').addEventListener('click', () => el.settings.close());
-  for (const t of $$('.hx-dtab', el.settings)) t.addEventListener('click', () => showSettingsSection(t.dataset['section']));
-  $('.hx-dtabs', el.settings).addEventListener('keydown', (e) => {
-    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-    e.preventDefault();
-    const tabs = $$('.hx-dtab', el.settings), i = tabs.findIndex((t) => t.getAttribute('aria-selected') === 'true');
-    const n = tabs[(i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
-    if (n) { showSettingsSection(n.dataset['section']); n.focus(); }
-  });
+  $('.hx-dtabs', el.settings).addEventListener('ui:change', (e) => showSettingsSection((e as CustomEvent<{ value: string }>).detail.value));
   el.settings.addEventListener('click', (e) => { if (e.target === el.settings) el.settings.close(); });
   const ks = $<HTMLDialogElement>('#hx-keys-sheet', sh.app);
   $('#hx-keys-close', ks).addEventListener('click', () => ks.close());

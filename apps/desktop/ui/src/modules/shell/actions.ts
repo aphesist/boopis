@@ -5,7 +5,7 @@ import { callProvided } from '../../core/registry';
 import { getDockApi } from '../../core/registry';
 import { setState, state, toggle } from '../../core/state';
 import { themeApi } from '../../styles/theme';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 import type { Tab } from '../../core/types';
 import { els, sh } from './ctx';
 

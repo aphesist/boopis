@@ -23,13 +23,12 @@ export function kbdLabel(spec: string): string {
   return parts.join(isMac ? '' : ' ');
 }
 
-/** one combination as .ui-kbd chips, for the shortcut sheet (it also knows function keys, tab, home, end) */
-export function comboChips(c: string, escape: (s: string) => string): string {
+/** one combination's chip labels, for the shortcut sheet (it also knows function keys, tab, home, end); the library draws them */
+export function comboLabels(c: string): string[] {
   return c.split('+').map((k) => {
     const low = k.toLowerCase();
-    const label = KEYNAMES[low] ?? KEYLABEL[low] ?? (/^f\d+$/.test(low) ? k.toUpperCase() : k.length === 1 ? k.toUpperCase() : k);
-    return '<kbd class="ui-kbd">' + escape(label) + '</kbd>';
-  }).join('');
+    return KEYNAMES[low] ?? KEYLABEL[low] ?? (/^f\d+$/.test(low) ? k.toUpperCase() : k.length === 1 ? k.toUpperCase() : k);
+  });
 }
 
 /** KeyboardEvent.code for a letter ('KeyK') or digit ('Digit1'): letters and digits are matched by code, never by key */

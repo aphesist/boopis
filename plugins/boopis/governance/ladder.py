@@ -39,12 +39,10 @@ def ladder_problems(
         if provider in UNNAMED_PROVIDERS:
             problems.append(
                 f"tier {tier.name!r} names the provider {provider!r}; a tier needs a named provider "
-                "(a `providers:` entry in Hermes's config, or a built-in provider such as anthropic)"
+                "(a `providers:` entry in the configuration, or a built-in provider such as anthropic)"
             )
         elif not provider_known(provider):
-            problems.append(
-                f"tier {tier.name!r} names the provider {provider!r}, which Hermes has no configuration for"
-            )
+            problems.append(f"tier {tier.name!r} names the provider {provider!r}, which is not configured")
     if start_tier is not None and start_tier not in ladder.names:
         problems.append(f"start_tier {start_tier!r} is not a tier of the ladder (tiers: {', '.join(ladder.names)})")
     return problems

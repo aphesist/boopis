@@ -5,6 +5,7 @@
 import { fire } from '../core/dom';
 import { wireHold } from './hold';
 import { wireSelect } from './select';
+import { fitTabs } from './tabs';
 
 export interface UiChange<V = string> { value: V; index?: number }
 export interface UiSelect { value: string | undefined; item: HTMLElement | unknown }
@@ -85,6 +86,14 @@ const WIRE: Record<string, Wire> = {
   seg: wireSeg,
   options: wireOptions,
   pages: wireSeg,
+  /* a tab bar: the segmented control's keyboard and selection, no thumb; a scrolling strip keeps the open tab in view */
+  tabs: (el) => {
+    wireSeg(el);
+    if (!el.classList.contains('ui-tabs--scroll')) return;
+    el.addEventListener('scroll', () => { el.toggleAttribute('data-more', el.scrollLeft + el.clientWidth < el.scrollWidth - 2); }, { passive: true });
+    el.addEventListener('ui:change', () => { requestAnimationFrame(() => fitTabs(el)); });
+    requestAnimationFrame(() => fitTabs(el));
+  },
   rows: wireRows,
   select: wireSelect,
   group: toggler,

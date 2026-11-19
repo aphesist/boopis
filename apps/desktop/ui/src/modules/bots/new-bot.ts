@@ -2,8 +2,8 @@
 import { emit } from '../../core/bus';
 import { $, cap1, el, reduced } from '../../core/dom';
 import { setState, state } from '../../core/state';
-import { ui } from '../../components';
-import { oc } from '../../components/orb';
+import { ui } from '@boopis/ui';
+import { oc } from '@boopis/ui';
 import { data } from '../../data';
 import { DRAFT_COLOR, paintOrb, paintOrbColour, SHAPES, SWATCHES } from './paint';
 import { rollLook } from '../../data/looks';
@@ -81,7 +81,7 @@ function buildNew(seed?: Partial<Draft>): void {
       return btn;
     }))
   ]) : null;
-  pane.append(el('div', { class: 'bt-new-scroll' }, [el('div', { class: 'bt-new-col' }, [back, form, suggest])]));
+  pane.append(el('div', { class: 'bt-new-scroll ui-scroll' }, [el('div', { class: 'bt-new-col' }, [back, form, suggest])]));
 
   tabs.addEventListener('ui:change', (e) => { d.tab = (e as CustomEvent<{ value: string }>).detail.value; paintRow(); });
   /* The tiles are built when the tab changes, never on a choice: rebuilding 15 orb canvases (each with its 3D body)
@@ -198,12 +198,12 @@ function buildNew(seed?: Partial<Draft>): void {
     const models = admin.models();
     let model = plan.model;
     const box = el('section', { class: 'bt-confirm', role: 'group', 'aria-label': 'Make ' + plan.profile }, [
-      el('p', { class: 'bt-confirm-line', text: 'This makes a Hermes profile for ' + plan.profile + ', a folder of its own. Its instructions, memory, skills and schedule live there.' }),
+      el('p', { class: 'bt-confirm-line', text: 'This makes ' + plan.profile + ' a folder of its own. Its instructions, memory, skills and schedule live there.' }),
       plan.folder ? el('p', { class: 'bt-confirm-path ui-mono', text: plan.folder }) : null,
       ...plan.notes.map((n) => el('p', { class: 'bt-confirm-line bt-confirm-note', text: n }))
     ]);
     if (models.length) {
-      const f = ui.field({ kind: 'model', label: 'Model', options: models, value: model ?? models[0] ?? '', hint: 'From the providers Hermes has keys for. You can change it later in its settings.' });
+      const f = ui.field({ kind: 'model', label: 'Model', options: models, value: model ?? models[0] ?? '', hint: 'From the providers boopis has keys for. You can change it later in its settings.' });
       f.addEventListener('ui:change', (e) => { model = (e as CustomEvent<{ value: string }>).detail.value; });
       model = model ?? models[0] ?? null;
       box.append(f);
@@ -225,7 +225,7 @@ function buildNew(seed?: Partial<Draft>): void {
           setReact(preview, 'done');
           later(() => { openBot(nb.id); emit('hx:bot-select', { id: nb.id, from: 'bots-new' }); }, 900);
         })
-        .catch((e: unknown) => { setReact(preview, 'idle'); make.disabled = false; back.disabled = false; err.textContent = 'Hermes did not make it: ' + (e instanceof Error ? e.message : String(e)); });
+        .catch((e: unknown) => { setReact(preview, 'idle'); make.disabled = false; back.disabled = false; err.textContent = 'It was not made: ' + (e instanceof Error ? e.message : String(e)); });
     });
     requestAnimationFrame(() => make.focus({ preventScroll: true }));
   }

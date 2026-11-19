@@ -17,7 +17,7 @@ export function toast(text: string, o: ToastOpts = {}): HTMLElement {
     node.addEventListener('focusin', hold); node.addEventListener('focusout', arm);
   }
   const n = node;
-  n.innerHTML = '<span>' + esc(text) + '</span>' + (o.action ? html.button({ label: o.action.label, size: 's', variant: 'ghost' }) : '');
+  n.innerHTML = '<span>' + esc(text) + '</span>' + (o.action ? html.button({ label: o.action.label, size: 's', variant: 'ghost', class: 'ui-corner' }) : '');
   const b = n.querySelector('button');
   if (b) b.addEventListener('click', () => { o.action?.onClick?.(); hideToast(); });
   requestAnimationFrame(() => n.classList.add('is-in'));

@@ -3,10 +3,10 @@
    jelly and give small glances under reduced motion. Every live orb answers: click pokes (orb2 escalates on repeats),
    hover looks at the pointer and listens, double-click plays an emote. */
 import { el, reduced } from '../../core/dom';
-import { ui } from '../../components';
-import type { OrbOpts } from '../../components/orb';
-import { oc } from '../../components/orb';
-import type { BotLike } from '../../components';
+import { ui } from '@boopis/ui';
+import type { OrbOpts } from '@boopis/ui';
+import { oc } from '@boopis/ui';
+import type { BotLike } from '@boopis/ui';
 import { S } from './model';
 
 type Live = HTMLElement & { _hover?: boolean; _held?: boolean; _faceOn?: boolean };

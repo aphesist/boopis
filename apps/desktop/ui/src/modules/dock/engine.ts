@@ -12,14 +12,14 @@
    nothing from layout. */
 import { emit } from '../../core/bus';
 import { $$ } from '../../core/dom';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 import {
   EASE, GROW, GROW_ADD, K_DOT, K_FLIP, K_SINK, K_SLAB, K_SLIDE, MAG, MAG_ADD, S, SIG, X, atRest, flags, geomR, motion, rendered, shownPages, snapS, spring, stepS
 } from './ctx';
 import type { Spring } from './ctx';
 import { slabCorner, slabWidthFor } from './geometry';
 import { setOrbLife } from './orbs';
-import { holdOutsideDock, releaseOutsideDock } from '../../components/orb-runtime';
+import { holdOutsideDock, releaseOutsideDock } from '@boopis/ui';
 import { springAt, springElapsed, springKeyframes } from '../../core/spring';
 import type { Channel, SpringParams } from '../../core/spring';
 import { fillCards, relocateLive, renderView, viewKey } from './views';
@@ -147,6 +147,8 @@ export function slideNow(page: string): { x: number; v: number } | null {
   return { x: (f.target ?? 0) + st.x, v: st.vx };
 }
 export const sliding = (page: string): boolean => E.slides.has(page) || E.slideAn.has(page);
+/** the clip the stage has now (what was written, so a frame never reads the style back) */
+let stageClip = '';
 export function paint(): void {
   const w = Math.max(0, E.slabW.x), h = Math.max(0, E.slabH.x);
   if (h < 0.5 || w < 1) { X.pathEl.setAttribute('d', ''); }
@@ -168,8 +170,13 @@ export function paint(): void {
      (CSS, `data-moving`), or a roster row's ring hangs above a slab that has not reached it and a bot's ring circles an
      empty slot while its orb is still on the way */
   if (X.root.hasAttribute('data-moving') !== moving) X.root.toggleAttribute('data-moving', moving);
-  const clip = moving ? `polygon(${(-w / 2).toFixed(1)}px ${(-(h + sink + 16)).toFixed(1)}px, ${(w / 2).toFixed(1)}px ${(-(h + sink + 16)).toFixed(1)}px, ${(w / 2).toFixed(1)}px 4px, ${(-w / 2).toFixed(1)}px 4px)` : '';
-  if (X.stageEl.style.clipPath !== clip) X.stageEl.style.clipPath = clip;
+  /* The stage is a 0x0 anchor, and its clip is the legacy `clip: rect()` (top, right, bottom, left from the stage's origin), not
+     a `clip-path`. With `clip-path: polygon(...)` on this element WebKitGTK (2.52, the engine Tauri uses) drew none of what was
+     inside while it was set: every orb, the "+" and the foot vanished for as long as the slab moved, a hover's lift included,
+     and came back when it settled (Chromium never did; tests/e2e/dock_webkit.py watches pixels for it). `clip` clips the same
+     box in both engines. */
+  const clip = moving ? `rect(${(-(h + sink + 16)).toFixed(1)}px, ${(w / 2).toFixed(1)}px, 4px, ${(-w / 2).toFixed(1)}px)` : '';
+  if (clip !== stageClip) { stageClip = clip; X.stageEl.style.clip = clip; }
   paintMag();
 }
 function settled(): void {
@@ -179,7 +186,14 @@ function settled(): void {
     X.root.classList.add('is-gone');
     X.root.inert = true;
     X.root.setAttribute('aria-hidden', 'true');
+    runAfterOut();
   }
+}
+/** what the dock left to clear once it is out of sight (a dock that left because nothing is in it keeps showing what it had until then) */
+export function runAfterOut(): void {
+  const f = flags.afterOut;
+  flags.afterOut = null;
+  if (f) f();
 }
 
 /* ───────── magnification (macOS-style) ───────── */
@@ -466,10 +480,14 @@ function headroom(): number {
     foot is inside it) plus the hover headroom. Sent whenever it changes: after a morph, a resize, a font load, the view's own
     size changing, or the grow setting changing. */
 export function emitDock(): void {
-  const h = S.mode === 'off' ? 0 : Math.ceil(E.baseH + headroom()), key = S.mode + '|' + S.page + '|' + Math.round(E.baseW) + '|' + h;
+  const h = S.mode === 'off' ? 0 : Math.ceil(E.baseH + headroom());
+  /* The shell reads `mode: 'off'` as the user switching the dock off, and stores that. A dock that is only empty (no bot, no
+     session: presence.ts) keeps room for nothing but is not off by choice, so it reports the mode it will come back in. */
+  const mode = S.mode === 'off' && flags.setting ? (S.restore === 'minimal' ? 'minimal' : 'normal') : S.mode;
+  const key = mode + '|' + S.page + '|' + Math.round(E.baseW) + '|' + h;
   if (key === sent) return;
   sent = key;
-  emit('hx:dock', { mode: S.mode, page: S.page, width: Math.round(E.baseW), height: h, rest: Math.round(S.mode === 'off' ? 0 : E.baseH) });
+  emit('hx:dock', { mode, page: S.page, width: Math.round(E.baseW), height: h, rest: Math.round(S.mode === 'off' ? 0 : E.baseH) });
 }
 
 /* ───────── page dots and the foot ───────── */
@@ -516,7 +534,8 @@ export function syncFoot(): void {
   const on = S.mode === 'normal' || S.mode === 'expanded';
   X.footEl.classList.toggle('is-off', !on);
   X.footEl.inert = !on;
-  X.dotsEl.style.visibility = shownPages().length > 1 ? '' : 'hidden';
+  /* the page indicator is navigation: it shows when there is more than one page to go to, and fades with the dock's own motion */
+  X.dotsEl.classList.toggle('is-solo', shownPages().length <= 1);
   const exp = S.mode === 'expanded';
   const label = exp ? 'Collapse the dock' : 'Minimise the dock';
   if (X.downBtn.getAttribute('aria-label') !== label) { X.downBtn.setAttribute('aria-label', label); X.downBtn.dataset['tip'] = exp ? 'Collapse' : 'Minimise'; }

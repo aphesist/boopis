@@ -18,7 +18,7 @@ import type { BreakdownWire, CascadeWire, CompletionWire, DescribeWire, DiffWire
 const log = logger('live.details');
 const PLUGIN = 'plugin.boopis.';
 const REFRESH_MS = 150;
-const NO_PLUGIN = 'The boopis plugin is not loaded in this Hermes, so there is no ladder, spend or ship history.';
+const NO_PLUGIN = 'boopis\'s own part is not loaded in its engine, so there is no ladder, spend or ship history.';
 const EMPTY_ENV: Environment = { cwd: '', branch: '', sandbox: '', runtime: '', harness: '', gate: '' };
 const EMPTY_GOV: GovernanceState = { governed: false, smart: false, model: '', cap: '', spent: '', ladder: [], current: 0 };
 
@@ -112,7 +112,7 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
       ...(m.diff?.unavailable || m.diff?.truncated ? { changes: diffNote(m.diff) } : {}),
       ...((costNote(m.stats) || planNote(m.stats)) ? { governance: costNote(m.stats) || planNote(m.stats) } : {}),
       ...(!pluginOk ? { governance: NO_PLUGIN } : {}),
-      ...(Object.keys(unavailable).length ? { environment: 'Not available on this Hermes: ' + Object.keys(unavailable).map((k) => k.replace('sessions.', '')).join(', ') + '.' } : {})
+      ...(Object.keys(unavailable).length ? { environment: 'Not available in this version of boopis\'s engine: ' + Object.keys(unavailable).map((k) => k.replace('sessions.', '')).join(', ') + '.' } : {})
     });
     publishRun();
   }
@@ -198,8 +198,8 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
     const probe = async (method: string, key: string, why: string): Promise<void> => {
       try { await client.requestRaw(method, { session_id: '' }); } catch (e) { if (isUnknownMethod(e)) unavailable[key] = why; }
     };
-    jobs.push(probe('session.branch', 'sessions.fork', 'This Hermes has no session.branch, so a session cannot be forked.'));
-    jobs.push(probe('session.compress', 'sessions.compact', 'This Hermes has no session.compress; it compacts on its own when the window fills.'));
+    jobs.push(probe('session.branch', 'sessions.fork', 'This version of boopis\'s engine cannot fork a session.'));
+    jobs.push(probe('session.compress', 'sessions.compact', 'This version of boopis\'s engine cannot compact on request; it compacts on its own when the window fills.'));
     await Promise.all(jobs);
     can.set({ compact: !unavailable['sessions.compact'], connectors: !!deps.connectors, signIn: !!deps.connectors });
     publishFollowed([]);
@@ -272,7 +272,7 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
         try {
           const r = (await client.requestRaw('complete.path', { session_id: gw, cwd: model(uiId ?? '').info?.cwd ?? null, word })) as CompletionWire;
           return { items: (r.items ?? []).map((i) => ({ text: i.text, display: i.display ?? i.text, meta: i.meta ?? '' })) };
-        } catch (e) { return { items: [], unavailable: isUnknownMethod(e) ? 'This Hermes cannot complete file names (no complete.path).' : 'File names could not be listed: ' + (e instanceof Error ? e.message : String(e)) }; }
+        } catch (e) { return { items: [], unavailable: isUnknownMethod(e) ? 'This version of boopis\'s engine cannot complete file names.' : 'File names could not be listed: ' + (e instanceof Error ? e.message : String(e)) }; }
       }
     },
     onEvent(uiId, ev) {

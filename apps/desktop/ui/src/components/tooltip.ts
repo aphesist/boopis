@@ -1,11 +1,14 @@
-/* tooltip: delegated on [data-tip] (+ data-kbd, data-tip-pos), one element for the app. 480ms before the first, none
+/* tooltip: delegated on [data-tip] (+ data-kbd, data-tip-pos on the control or a container), one element for the app, placed by
+   the library's one placement primitive (place.ts). 480ms before the first, none
    while warm (700ms after the last), at once on keyboard focus. It repeats the button's aria-label for sight, so it
    is hidden from assistive tech; shortcuts go in aria-keyshortcuts. */
-import { esc } from '../core/dom';
 import { html } from './html';
+import { parsePos, placeAt } from './place';
+import type { Side } from './place';
 
 let node: HTMLElement | null = null, timer = 0, warm = 0, cur: Element | null = null, enabled = false;
-const host = (): HTMLElement => document.getElementById('hx-app') ?? document.body;
+/* R-elev-6: under a modal dialog (the top layer) the tip mounts inside it, as the menus do (layer.ts) */
+const host = (t: Element): Element => t.closest('dialog, [data-layer-host]') ?? document.getElementById('hx-app') ?? document.body;
 const tipTarget = (e: Event): HTMLElement | null => { const t = e.target; return t instanceof Element ? t.closest<HTMLElement>('[data-tip]') : null; };
 
 function show(t: HTMLElement, now: boolean): void {
@@ -13,18 +16,19 @@ function show(t: HTMLElement, now: boolean): void {
   const label = t.getAttribute('data-tip'); if (!label) return;
   timer = window.setTimeout(() => {
     if (!t.isConnected || t.closest('[inert]')) return;
-    if (!node || !node.isConnected) { node = document.createElement('div'); node.className = 'ui-tip'; node.setAttribute('aria-hidden', 'true'); host().appendChild(node); }
+    if (!node) { node = document.createElement('div'); node.className = 'ui-tip'; node.setAttribute('aria-hidden', 'true'); }
+    const into = host(t);
+    if (node.parentElement !== into) into.appendChild(node);
     const n = node;
     cur = t;
     const state = t.getAttribute('data-tip-state'), tone = t.getAttribute('data-tip-tone'), kbd = t.getAttribute('data-kbd');
-    n.innerHTML = '<span>' + esc(label) + '</span>' + (state ? '<span class="ui-tip__state"' + (tone ? ' data-tone="' + esc(tone) + '"' : '') + '>' + esc(state) + '</span>' : '') + (kbd ? html.keys(kbd) : '');
-    const r = t.getBoundingClientRect(), w = n.offsetWidth, h = n.offsetHeight;
-    const pos = t.getAttribute('data-tip-pos') || (r.top > innerHeight - 160 ? 'top' : 'bottom');
-    let x: number, y: number;
-    if (pos === 'right') { x = r.right + 10; y = r.top + r.height / 2 - h / 2; n.style.setProperty('--tip-dy', '0px'); }
-    else if (pos === 'top') { x = r.left + r.width / 2 - w / 2; y = r.top - h - 8; n.style.setProperty('--tip-dy', '3px'); }
-    else { x = r.left + r.width / 2 - w / 2; y = r.bottom + 8; n.style.setProperty('--tip-dy', '-3px'); }
-    n.style.left = Math.max(8, Math.min(x, innerWidth - w - 8)) + 'px'; n.style.top = Math.max(8, y) + 'px';
+    n.innerHTML = html.tipBody(label, kbd, state ? { text: state, tone } : null);
+    /* the control's preferred side (its own data-tip-pos or a container's), else below, or above near the window's foot;
+       place.ts flips, shifts and keeps clear of a text the container names */
+    const pref = parsePos(t.closest('[data-tip-pos]')?.getAttribute('data-tip-pos'));
+    const side: Side = pref ? pref.side : t.getBoundingClientRect().top > innerHeight - 160 ? 'top' : 'bottom';
+    const p = placeAt(n, t, { side, align: pref?.align ?? 'center' });
+    n.style.setProperty('--tip-dy', p.side === 'top' ? '3px' : p.side === 'bottom' ? '-3px' : '0px');
     requestAnimationFrame(() => n.classList.add('is-in'));
   }, now || performance.now() < warm ? 0 : 480);
 }

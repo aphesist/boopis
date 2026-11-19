@@ -92,7 +92,7 @@ def test_the_bots_error_codes_are_in_the_shared_catalogue() -> None:
         for c in vars(bot_errors).values()
         if isinstance(c, type) and hasattr(c, "code") and c.code.startswith("hx.bots.")
     }
-    assert mine == {"hx.bots.not_found", "hx.bots.exists", "hx.bots.refused", "hx.bots.hermes_failed"}
+    assert mine == {"hx.bots.not_found", "hx.bots.exists", "hx.bots.refused", "hx.bots.engine_failed"}
     assert mine <= codes
 
 

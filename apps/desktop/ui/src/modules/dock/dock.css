@@ -67,8 +67,19 @@
    owes you something a red dot). It is a quiet affordance: clicking a dot pages, and so do swipes, [ ] and 1-9. */
 .dk-foot { position: absolute; left: 0; bottom: 0; height: var(--dock-band); transform: translateX(-50%); box-sizing: border-box; padding: 0 var(--sp-1); display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); pointer-events: none; transition: opacity var(--dur-1) var(--ease), visibility 0s; }
 .dk-foot > * { pointer-events: auto; flex: none; }
+/* The configuration controls (Arrange, Minimise) show only while the pointer is over the dock or focus is inside it (and for a
+   moment after a tap on a touch screen: `data-reveal`, set by input.ts). At rest they are transparent and take no pointer, but
+   stay in the tab order and in the accessibility tree, so the keyboard and a screen reader reach them (focus-within shows them).
+   They fade with the hover tokens; the page nub is navigation, not configuration, and stays while there is more than one page. */
+.dk-foot > .dk-foot-ctl { display: inline-flex; opacity: 0; pointer-events: none; transition: opacity var(--dur-out) var(--ease); }
+.dk:is(:focus-within, [data-reveal]) .dk-foot > .dk-foot-ctl { opacity: 1; pointer-events: auto; transition-duration: var(--dur-1); }
+@media (hover: hover) and (pointer: fine) {   /* hover only where a pointer hovers (R-state-3); a touch screen has focus and the tap */
+  .dk:hover .dk-foot > .dk-foot-ctl { opacity: 1; pointer-events: auto; transition-duration: var(--dur-1); }
+}
 .dk-foot.is-off { opacity: 0; visibility: hidden; transition: opacity var(--dur-out) var(--ease), visibility 0s var(--dur-out); }
-.dk-dots { display: flex; align-items: center; }
+.dk-dots { display: flex; align-items: center; transition: opacity var(--dur-2) var(--ease), visibility 0s; }
+/* one page: nothing to go to, so no nub (hidden from the accessibility tree too, once it has faded) */
+.dk-dots.is-solo { opacity: 0; visibility: hidden; transition: opacity var(--dur-out) var(--ease), visibility 0s var(--dur-out); }
 /* the dots stay 10px to look at; each answers a pointer over the foot's full 24px height */
 .dk-dots .ui-pages__dot::after { content: ""; position: absolute; left: 0; right: 0; top: -7px; bottom: -7px; }
 
@@ -123,7 +134,7 @@
 .dk-card-state[data-tone="attention"] .dk-card-word { color: var(--red-text); }
 .dk-card-role { margin-top: 2px; font-size: var(--fs-xs); color: var(--text-quiet); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dk-card-acts { display: flex; gap: 2px; align-self: start; margin-right: -6px; }
-.dk-sess-log { max-height: min(220px, 26vh); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; border-radius: var(--r-s); }   /* a tab stop, so the keyboard can scroll it */
+.dk-sess-log { max-height: min(220px, 26vh); border-radius: var(--r-s); }   /* a tab stop, so the keyboard can scroll it */
 .dk-sess-log .ui-entry + .ui-entry { margin-top: var(--sp-3); }
 .dk-sess-log .ui-entry__body { font-size: var(--fs-s); gap: var(--sp-2); max-width: 100%; }
 .dk-sess-log .ui-entry__body p { margin: 0; }

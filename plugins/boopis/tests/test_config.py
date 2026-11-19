@@ -22,6 +22,7 @@ from boopis.config import (
 
 # Hermes's provider id for the official Claude Code plugin; the host writes ladders under it (docs/DECISIONS.md ADR-0029).
 CLAUDE_CODE_LOGIN = "claude-subscription-directsdk-experimental"
+CHATGPT_LOGIN = "openai-codex"  # boopis's ChatGPT sign-in (ADR-0030)
 PLUGIN_YAML = Path(__file__).resolve().parent.parent / "plugin.yaml"
 
 
@@ -68,14 +69,17 @@ def test_load_settings_reads_through_get_config() -> None:
     assert s.prices.refresh_enabled is False
     assert s.permissions.deny == ("Bash(rm *)",)
     assert s.permissions.default == "ask"
-    assert s.subscription_providers == (CLAUDE_CODE_LOGIN, "claude-subscription")
+    assert s.subscription_providers == (CLAUDE_CODE_LOGIN, CHATGPT_LOGIN, "claude-subscription")
     assert s.ladder is not None
 
 
-def test_the_claude_code_login_is_a_plan_provider_with_no_setting_and_the_setting_only_adds() -> None:
-    assert load_settings(lambda key, default: default).value.subscription_providers == (CLAUDE_CODE_LOGIN,)
+def test_the_two_subscriptions_are_plan_providers_with_no_setting_and_the_setting_only_adds() -> None:
+    assert load_settings(lambda key, default: default).value.subscription_providers == (
+        CLAUDE_CODE_LOGIN,
+        CHATGPT_LOGIN,
+    )
     named = {"subscription_providers": [CLAUDE_CODE_LOGIN, "other"]}
-    assert load_settings(named.get).value.subscription_providers == (CLAUDE_CODE_LOGIN, "other")
+    assert load_settings(named.get).value.subscription_providers == (CLAUDE_CODE_LOGIN, CHATGPT_LOGIN, "other")
 
 
 def test_get_config_returning_nothing_gives_defaults() -> None:

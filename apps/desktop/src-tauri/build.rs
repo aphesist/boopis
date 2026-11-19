@@ -11,8 +11,7 @@ const COMMANDS: &[&str] = &[
     "setup_advance",
     "setup_reopen_models",
     "setup_models_view",
-    "hermes_source_get",
-    "hermes_source_set",
+    "engine_source_get",
     "gateway_connect",
     "gateway_send",
     "gateway_disconnect",
@@ -39,6 +38,10 @@ const COMMANDS: &[&str] = &[
     "connector_signin",
     "connector_signin_cancel",
     "connector_login",
+    "chatgpt_status",
+    "chatgpt_signin_start",
+    "chatgpt_signin_cancel",
+    "chatgpt_sign_out",
 ];
 
 fn main() {

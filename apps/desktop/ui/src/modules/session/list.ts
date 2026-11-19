@@ -1,7 +1,7 @@
 /* session list (KEYMAP section 4): library rows grouped by project, actions as sibling buttons */
 import { emit } from '../../core/bus';
-import { el } from '../../core/dom';
-import { ui } from '../../components';
+import { frag } from '../../core/dom';
+import { ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { SessionSummary } from '../../data';
 import { selectSession, sessionNeedsYou, toConversation, VIEW } from './conversation';
@@ -87,7 +87,7 @@ export function mountList(root: HTMLElement): void {
     const r = root.querySelector<HTMLElement>(`.ui-row[data-id="${id}"]`); if (!r) return;
     const s = sessions().list.get().find((x) => x.id === id), li = r.closest('li');
     if (!s || !li) return;
-    const input = el('input', { class: 'ui-input ss-rename', type: 'text', value: s.title, autocomplete: 'off', spellcheck: 'false', 'aria-label': 'Rename session' });
+    const input = frag<HTMLInputElement>(ui.html.input({ class: 'ss-rename', value: s.title, label: 'Rename session', attrs: { spellcheck: 'false' } }));
     li.replaceChildren(input); input.focus(); input.select();
     const done = (save: boolean): void => {
       if (renaming !== id) return; renaming = null;

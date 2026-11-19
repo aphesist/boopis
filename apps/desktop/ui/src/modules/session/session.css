@@ -9,9 +9,7 @@
 .ss-view:not(.hx-view) { position: relative; height: 100%; }   /* inside the shell the slot is the absolutely placed .hx-view */
 .ss-view { min-height: 0; overflow: hidden; background: var(--bg-2); font: 400 var(--fs-m)/var(--lh) var(--sans); color: var(--text); }
 .ss-view *, .ss-view *::before, .ss-view *::after, .ssr * { box-sizing: border-box; }
-.ss-scroll {
-  position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: var(--bg-4) transparent;
-}
+.ss-scroll { position: absolute; inset: 0; }   /* a scroll area (.ui-scroll) */
 /* The conversation fades out above the composer. It used to be a `mask-image` on the scroller: a mask over the whole
    reading area, whose edge moves with every frame of the dock's lift (`--hx-dock-space`), made the browser rebuild the
    masked layer each time, the single most expensive thing in a dock morph on WebKitGTK (it measured at twice the frame
@@ -61,7 +59,7 @@
 .ss-diff-file[data-open="true"] .ss-chev { transform: rotate(90deg); }
 .ss-diff-head .ss-n { margin-left: auto; }
 .ss-diff--bare .ss-diff-head { display: none; }
-.ss-diff-body { display: none; padding: 4px 0 var(--sp-2); overflow-x: auto; font-size: var(--fs-2xs); line-height: 18px; }
+.ss-diff-body { display: none; padding: 4px 0 var(--sp-2); font-size: var(--fs-2xs); line-height: 18px; }
 .ss-diff-file[data-open="true"] .ss-diff-body, .ss-diff--bare .ss-diff-body { display: block; }
 .ss-dl { display: grid; grid-template-columns: 34px 14px 1fr; white-space: pre; padding-right: var(--sp-3); min-width: max-content; color: var(--text); }
 .ss-dl .ln { color: var(--text-quiet); text-align: right; padding-right: var(--sp-2); user-select: none; }
@@ -104,8 +102,9 @@
 }
 .ssr-file:hover { --sq-bg: var(--hover); background: var(--sq-bg); }
 .ssr-file .ss-n { margin-left: auto; }
-/* the copy button sits in the well's corner: the well declares its radius and inset, the button fits (DESIGN-SYSTEM §8.2) */
-.ssr-term-wrap { position: relative; --r-outer: var(--r-m); --pad: 4px; --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad))); }
+/* the copy button sits in the well's corner: the well is a .ui-nest that declares its radius, inset and the small icon
+   button's size, and the button is a .ui-corner (data-corner="tr") that takes its radius and inset (DESIGN-SYSTEM §8.2) */
+.ssr-term-wrap { position: relative; --r-outer: var(--r-m); --pad: var(--pad-menu); --corner-size: 24px; }   /* the menu's 4px step: no token of its own yet */
 .ssr-term {
   margin: 0; padding: 10px var(--sp-3); border-radius: var(--r-outer); --sq-bg: var(--bg-0); background: var(--sq-bg);
   font-size: var(--fs-2xs); line-height: 1.6; color: var(--text-dim); white-space: pre-wrap; overflow-wrap: anywhere;
@@ -113,7 +112,7 @@
 .ssr-term .cmd { color: var(--text); }
 .ssr-term .pass { color: var(--ok); }
 .ssr-term .fail { color: var(--red-text); }
-.ssr-term-wrap > .ui-ib { position: absolute; top: var(--pad); right: var(--pad); border-radius: var(--r-in); opacity: 0; transition: opacity var(--dur-1) var(--ease); }
+.ssr-term-wrap > .ui-ib { opacity: 0; transition: opacity var(--dur-1) var(--ease); }
 .ssr-term-wrap:is(:hover, :focus-within) > .ui-ib { opacity: 1; }
 .ssr-cap { display: flex; align-items: center; gap: var(--sp-3); margin-top: var(--sp-2); font-size: var(--fs-s); color: var(--text-dim); }
 .ssr-cap .ssr-key { flex: 1; }

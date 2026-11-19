@@ -346,7 +346,7 @@ async fn a_lost_link_fails_pending_requests_and_the_host_reconnects_and_replays(
     gw.drop_link();
     let failed = ui.next_data().await;
     assert_eq!(failed["id"], 5);
-    assert_eq!(failed["error"]["data"]["code"], "hx.hermes.unavailable");
+    assert_eq!(failed["error"]["data"]["code"], "hx.engine.unavailable");
     ui.state("degraded").await;
     // While the link is down a request is answered with an error at once, never queued to hang.
     // (The reconnect is immediate, so race it by checking only that an answer arrives either way.)
@@ -461,7 +461,7 @@ async fn an_incompatible_gateway_parks_until_retry() {
         .open(1, Arc::new(Collect(tx)), WAIT)
         .await
         .unwrap_err();
-    assert_eq!(err.code(), "hx.hermes.incompatible");
+    assert_eq!(err.code(), "hx.engine.incompatible");
     assert_eq!(r.hub.status().phase, super::reconnect::Phase::Incompatible);
     assert!(
         r.gateways.try_recv().is_err(),
@@ -650,7 +650,7 @@ async fn a_host_request_while_the_link_is_down_fails_at_once() {
         .request("free_tier.status", json!({}), Duration::from_millis(50))
         .await
         .unwrap_err();
-    assert_eq!(err.code(), "hx.hermes.unavailable");
+    assert_eq!(err.code(), "hx.engine.unavailable");
 }
 
 #[tokio::test]

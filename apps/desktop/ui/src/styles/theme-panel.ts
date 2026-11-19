@@ -1,8 +1,8 @@
 /* The theme customizer (Settings > Appearance): presets, brand, type, shape, colours, contrast, share. Changes show at
    once on the whole app. Ported from v6 theme.js; the runtime it edits is theme.ts. */
 import { esc } from '../core/dom';
-import { ui } from '../components';
-import type { SegElement, SelectElement } from '../components';
+import { ui } from '@boopis/ui';
+import type { SegElement, SelectElement } from '@boopis/ui';
 import {
   CASES, CORNERS, DENSITIES, DERIVED, DOCK_BLAME, EDITABLE, FONTS, GROUPS, PAIRS, PRESETS, compositeOf, hexOf, ratio, setThemeRefresh, themeApi, themeInternals
 } from './theme';
@@ -12,13 +12,10 @@ const HEX = /^#[0-9a-f]{6}$/i;
 const idOf = (token: string): string => 'hxt-' + token.slice(2);
 let panel: HTMLElement | null = null;   // the customizer's container once Settings mounts it
 
-/* a radio segmented control named for the change handler and labelled by its row */
-function segHTML(name: string, options: Array<{ value: string; label?: string; ariaLabel?: string }>, cls?: string): string {
-  return ui.html.segmented({ mode: 'radio', size: 's', options, class: cls }).replace(' data-ui="seg"', ' data-ui="seg" data-name="' + name + '" aria-labelledby="' + name + '-l"');
-}
+/* a choice: a settings row whose control is a small radio segmented control, named for the change handler and labelled by its row */
 function choice(name: string, label: string, options: readonly string[], labels: readonly string[]): string {
-  return '<div class="ui-set__row"><span class="ui-set__label" id="' + name + '-l"><span>' + esc(label) + '</span></span>' +
-    segHTML(name, options.map((o, i) => ({ value: o, label: labels[i] ?? o }))) + '</div>';
+  return ui.html.setRow({ label, labelId: name + '-l', control: ui.html.segmented({ mode: 'radio', size: 's', labelledby: name + '-l', attrs: { 'data-name': name },
+    options: options.map((o, i) => ({ value: o, label: labels[i] ?? o })) }) });
 }
 
 /** a font choice: the library's select in a settings row (the list is drawn by boopis, never by the platform) */
@@ -29,40 +26,40 @@ function fontRow(id: string, label: string, hint: string, fonts: ReadonlyArray<r
 export function mountThemePanel(container: HTMLElement | null): void {
   if (!container) return;
   container.innerHTML =
-    '<section class="hx-set" aria-labelledby="hxt-h-preset"><h3 class="ui-set__head" id="hxt-h-preset">Theme</h3>' +
+    '<section class="ui-set" aria-labelledby="hxt-h-preset">' + ui.html.setHead({ id: 'hxt-h-preset', label: 'Theme' }) +
       '<div class="hxt-presets" role="radiogroup" aria-labelledby="hxt-h-preset">' + Object.entries(PRESETS).map(([id, p]) =>
         '<label class="hxt-preset" data-hx-preset="' + id + '" data-hx-case="' + p.case + '"><input type="radio" name="hxt-preset" id="hxt-preset-' + id + '" value="' + id + '">' +
         '<span class="hxt-preset__chips" aria-hidden="true"><i style="background:var(--bg-1)"></i><i style="background:var(--bg-2)"></i><i style="background:var(--bg-3)"></i><i style="background:var(--text)"></i><i style="background:var(--brass)"></i><i style="background:var(--red)"></i></span>' +
         '<span class="hxt-preset__name">' + esc(p.name) + '</span><span class="hxt-preset__note">' + esc(p.note) + '</span></label>').join('') + '</div>' +
     '</section>' +
-    '<section class="hx-set" aria-labelledby="hxt-h-type"><h3 class="ui-set__head" id="hxt-h-type">Type</h3>' +
+    '<section class="ui-set" aria-labelledby="hxt-h-type">' + ui.html.setHead({ id: 'hxt-h-type', label: 'Type' }) +
       fontRow('hxt-sans', 'Interface font', 'Labels, buttons and the conversation', FONTS.sans) +
       fontRow('hxt-mono', 'Code font', 'Code, paths, times and costs', FONTS.mono) +
       choice('hxt-case', 'Interface text', CASES, ['Sentence case', 'lowercase']) +
     '</section>' +
-    '<section class="hx-set" aria-labelledby="hxt-h-shape"><h3 class="ui-set__head" id="hxt-h-shape">Shape</h3>' +
+    '<section class="ui-set" aria-labelledby="hxt-h-shape">' + ui.html.setHead({ id: 'hxt-h-shape', label: 'Shape' }) +
       choice('hxt-corners', 'Corners', CORNERS, ['Sharp', 'Default', 'Round']) +
       choice('hxt-density', 'Density', DENSITIES, ['Compact', 'Regular', 'Comfortable']) +
     '</section>' +
-    '<section class="hx-set" aria-labelledby="hxt-h-colours"><h3 class="ui-set__head" id="hxt-h-colours">Colours</h3>' +
+    '<section class="ui-set" aria-labelledby="hxt-h-colours">' + ui.html.setHead({ id: 'hxt-h-colours', label: 'Colours' }) +
       '<p class="hxt-hint">Changes show at once. Lines and hover fills follow the text colour. The dock stays black in every theme.</p>' +
       GROUPS.map(([g, rows]) => '<h4 class="hxt-group">' + g + '</h4>' + rows.map(([t, label, note]) =>
         '<div class="hxt-row" data-token="' + t + '">' +
           '<button type="button" class="hxt-swatch" id="' + idOf(t) + '-c" aria-label="' + esc(label) + ' colour: edit its hex value"></button>' +
           '<label class="hxt-row__label" for="' + idOf(t) + '-x"><span>' + esc(label) + '<i class="hxt-flag" role="img" aria-label="Fails a contrast check" data-tip="Fails a contrast check" hidden></i></span>' + (note ? '<small>' + esc(note) + '</small>' : '') + '</label>' +
-          '<input type="text" class="ui-input ui-input--mono hxt-hex" id="' + idOf(t) + '-x" spellcheck="false" autocomplete="off" maxlength="7" aria-label="' + esc(label) + ' hex value">' +
-          '<button type="button" class="ui-btn ui-btn--ghost ui-btn--s hxt-undo" data-undo="' + t + '" aria-label="Reset ' + esc(label) + ' to the theme colour"><span>Reset</span></button>' +
+          ui.html.input({ id: idOf(t) + '-x', mono: true, class: 'hxt-hex', label: label + ' hex value', attrs: { maxlength: 7 } }) +
+          ui.html.button({ label: 'Reset', variant: 'ghost', size: 's', class: 'hxt-undo', attrs: { 'data-undo': t, 'aria-label': 'Reset ' + label + ' to the theme colour' } }) +
         '</div>').join('')).join('') +
     '</section>' +
-    '<section class="hx-set" aria-labelledby="hxt-h-contrast"><h3 class="ui-set__head" id="hxt-h-contrast">Contrast</h3><ul class="hxt-contrast" id="hxt-contrast" aria-live="polite"></ul></section>' +
-    '<section class="hx-set" aria-labelledby="hxt-h-share"><h3 class="ui-set__head" id="hxt-h-share">Share</h3>' +
+    '<section class="ui-set" aria-labelledby="hxt-h-contrast">' + ui.html.setHead({ id: 'hxt-h-contrast', label: 'Contrast' }) + '<ul class="hxt-contrast" id="hxt-contrast" aria-live="polite"></ul></section>' +
+    '<section class="ui-set" aria-labelledby="hxt-h-share">' + ui.html.setHead({ id: 'hxt-h-share', label: 'Share' }) +
       '<label class="hxt-json-label" for="hxt-json">Theme as JSON. Copy it to share, or paste one and apply it.</label>' +
-      '<textarea id="hxt-json" class="ui-input ui-input--mono hxt-json" rows="7" spellcheck="false"></textarea>' +
+      ui.html.input({ id: 'hxt-json', mono: true, rows: 7, class: 'hxt-json', attrs: { autocomplete: null } }) +
       '<div class="hxt-actions">' +
-        '<button type="button" class="ui-btn ui-btn--s" id="hxt-copy"><span>Copy JSON</span></button>' +
-        '<button type="button" class="ui-btn ui-btn--s" id="hxt-apply"><span>Apply JSON</span></button>' +
+        ui.html.button({ label: 'Copy JSON', size: 's', attrs: { id: 'hxt-copy' } }) +
+        ui.html.button({ label: 'Apply JSON', size: 's', attrs: { id: 'hxt-apply' } }) +
         '<label class="ui-btn ui-btn--s hxt-file" for="hxt-file"><span>Import file</span><input type="file" id="hxt-file" accept="application/json,.json"></label>' +
-        '<button type="button" class="ui-btn ui-btn--ghost ui-btn--s hxt-end" id="hxt-reset"><span>Reset to theme</span></button>' +
+        ui.html.button({ label: 'Reset to theme', variant: 'ghost', size: 's', class: 'hxt-end', attrs: { id: 'hxt-reset' } }) +
       '</div>' +
       '<p class="hxt-msg" id="hxt-msg" role="status"></p>' +
     '</section>';

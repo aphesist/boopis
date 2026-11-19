@@ -19,7 +19,7 @@ export async function liveSessions(env) {
     await page.keyboard.press('Control+i');
     await page.waitForTimeout(900);
     const panel = await text(page, '.ssr-panel');
-    const want = { tasks: /round once per invoice/i, changes: /a\.py/, connectors: /fakemcp/i, environment: /\/work\/proj/, governance: /Ungoverned/, runtime: /Hermes/ };
+    const want = { tasks: /round once per invoice/i, changes: /a\.py/, connectors: /fakemcp/i, environment: /\/work\/proj/, governance: /Ungoverned/, runtime: /boopis engine/ };
     const missing = Object.entries(want).filter(([, re]) => !re.test(panel)).map(([k]) => k);
     check('live', 'the details panel shows the recorded session (tasks, changes, connectors, environment, governance)', missing.length === 0, { missing, panel: panel.slice(-700) });
     check('live', 'the details panel says what it cannot do instead of pretending', /compact|fork/i.test(panel) && /unknown|Not available/i.test(panel), panel.slice(0, 600));

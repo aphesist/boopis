@@ -102,7 +102,7 @@ export function createFormsHost(opts: FormsOptions): FormsHost {
       if (src.kind === 'hermes-request') {
         const result = answerFor(entry.model, { cancelled: false, values: outcome.values, secrets: outcome.secrets });
         if (!result || !result.value) throw new Error('There is nothing to send.');
-        try { await client.respond(src.requestId, result); } catch (e) { log.warn('an answer to Hermes was not delivered', e instanceof Error ? e.name : 'error'); throw new Error('The answer was not delivered. Try again.'); }
+        try { await client.respond(src.requestId, result); } catch (e) { log.warn('an answer to the engine was not delivered', e instanceof Error ? e.name : 'error'); throw new Error('The answer was not delivered. Try again.'); }
         settle(id, 'submitted');
         return;
       }
@@ -127,7 +127,7 @@ export function createFormsHost(opts: FormsOptions): FormsHost {
       const src = entry.model.source;
       if (src.kind === 'hermes-request') {
         /* skipped: an empty value is how Hermes is told */
-        try { await client.respond(src.requestId, answerFor(entry.model, { cancelled: true })); } catch (e) { log.warn('a skip was not delivered to Hermes', e instanceof Error ? e.name : 'error'); }
+        try { await client.respond(src.requestId, answerFor(entry.model, { cancelled: true })); } catch (e) { log.warn('a skip was not delivered to the engine', e instanceof Error ? e.name : 'error'); }
         settle(id, 'cancelled');
         return;
       }

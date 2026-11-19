@@ -36,7 +36,7 @@
 .mv-code { display: flex; flex-direction: column; min-width: 0; width: 100%; border-radius: var(--r-m); --sq-bg: var(--bg-0); background: var(--sq-bg); }
 .mv-root[data-surface="inset"] .mv-code { --sq-bg: var(--bg-1); }
 .mv-code__path { padding: 8px var(--sp-3) 0; font-size: var(--fs-2xs); color: var(--text-quiet); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mv-code__pre { margin: 0; padding: 10px var(--sp-3); overflow-x: auto; font-size: var(--fs-2xs); line-height: 1.6; color: var(--text-dim); white-space: pre; scrollbar-width: thin; scrollbar-color: var(--bg-4) transparent; border-radius: var(--r-m); }
+.mv-code__pre { margin: 0; padding: 10px var(--sp-3); overflow-x: auto; font-size: var(--fs-2xs); line-height: 1.6; color: var(--text-dim); white-space: pre; border-radius: var(--r-m); }
 .mv-code--wrap .mv-code__pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 .mv-code__pre:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .mv-code__l { display: block; min-height: 1.6em; }
@@ -52,7 +52,7 @@
 
 /* Link: https only, underlined in the hairline weight, never brass (brass is not text) */
 .mv-link { color: var(--text); text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; border-radius: var(--r-xs); transition: color var(--dur-1) var(--ease), text-decoration-color var(--dur-1) var(--ease); }
-.mv-link:hover { color: var(--text-strong); text-decoration-color: var(--text-dim); }
+@media (hover: hover) and (pointer: fine) { .mv-link:hover { color: var(--text-strong); text-decoration-color: var(--text-dim); } }
 .mv-link:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; text-decoration-color: transparent; }
 
 /* Svg: sanitised, fits the width, its text in mono */

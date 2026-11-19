@@ -32,6 +32,7 @@ import { squircle } from './squircle';
 import { toast } from './toast';
 import { tooltip } from './tooltip';
 import { hydrate, hydrateOne } from './wire';
+import { scrollClass } from './scroll';
 import type { SegElement } from './wire';
 
 export const version = '1.0.0';
@@ -62,6 +63,9 @@ const factories = {
   steps: make<{ items: readonly StepItem[]; id?: string; hidden?: boolean }, HTMLOListElement>((o) => html.steps(o.items, o)),
   blank: make<{ answer?: string } | undefined, HTMLButtonElement>((o) => html.blank(o ?? {})),
   section: make<Parameters<typeof html.section>[0]>(html.section),
+  scroll: make<Parameters<typeof html.scroll>[0]>(html.scroll),
+  tabs: make<Parameters<typeof html.tabs>[0], SegElement>(html.tabs),
+  search: make<Parameters<typeof html.search>[0]>(html.search),
   field: make<FieldOpts>(html.field),
   select: make<SelectOpts, SelectElement>(html.select),
   empty: make<Parameters<typeof html.empty>[0]>(html.empty),
@@ -79,7 +83,7 @@ const modelRoute = (text: string, o?: ModelOpts): HTMLElement => frag(routeHTML(
 
 export const ui = {
   version, html, esc, icon, icons: iconNames, announce, botState, botLabel, states: STATES,
-  ...factories, legend, keys, inline,
+  ...factories, legend, keys, inline, scrollClass,
   hydrate, orb, liven, glance, shape, squircle, modelMark, model, modelRoute, menu, popover, layer, listbox, modelEntries, wireSelect, tooltip, toast, composer, card,
   hold: Object.assign(holdElement, { wire: wireHold }),
   /** a Claude Code mod's element tree, drawn with the library (MODS.md section 2) */
@@ -88,8 +92,34 @@ export const ui = {
 export type Ui = typeof ui;
 export { html, icon, hydrate, hydrateOne, wireSelect, announce, botState, botLabel, orb, liven, glance, shape, squircle, modelMark, menu, popover, layer, listbox, modelEntries, tooltip, toast, composer, card, wireHold, holdElement };
 export type { SegElement } from './wire';
+/* runtime pieces the app's modules and host wire (the orbs' engine, the card layer's factory, the first run's moments) */
+export { oc, startGlance } from './orb';
+export type { OrbOpts } from './orb';
+export { holdOutsideDock, releaseOutsideDock } from './orb-runtime';
+export { orbState, setupOrbs } from './orb-worker/host';
+export { setCardFactory } from './card-registry';
+export type { CardFactory, CardSize } from './card-registry';
+export { holdOf } from './hold';
+export { isKnownModel } from './model-mark';
+export { modViewUpdate } from './mod-view';
+export type { ModEvent, ModRoot } from './mod-view';
+export { MARK, parseLiteral, setTokenReader } from './mod-colors';
+export { welcomeLogo } from './logo';
+export { progressDots, setProgress } from './progress';
+export { kbd, keys as keyChips, combo, comboKbds, keysVariants } from './kbd';
+export type { KeysOpts } from './kbd';
+/* every component's variants, for the UI lab's stories (variants.ts) */
+export { variants } from './variants';
+export type { ComponentName } from './variants';
+export type { InputOpts, BadgeOpts } from './html';
 export type { SelectElement, ListboxOpts } from './select';
 export type { SelectEntry, SelectGroup, SelectOpts, SelectOption };
+export { scroll, scrollClass, scrollVariants, SCROLL_AXES } from './scroll';
+export { tabs, tabsVariants, fitTabs } from './tabs';
+export { search, searchVariants, SEARCH_SIZES } from './search';
+export type { SearchOpts, SearchSize } from './search';
+export type { TabDef, TabsOpts } from './tabs';
+export type { ScrollAxis, ScrollOpts, ScrollHtmlOpts } from './scroll';
 export type { ComposerEl, ComposerOpts, DecisionDetail, AssumptionDetail, DictateDetail, SendDetail } from './composer';
 export type { PageDef, MenuEntry, MenuItem, StepItem, LadderOpts, MeasurePart, Station, CallLine } from './html';
 export type { ModelRef, ModelOpts, MarkOpts, ModelFamily } from './model-mark';

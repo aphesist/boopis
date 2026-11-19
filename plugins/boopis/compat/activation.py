@@ -65,7 +65,7 @@ def classify(
     label = _label_path(hook, project_dir)
     ident = f"{label}#{hook.event}[{hook.matcher}]{hook.index}"
     if hook.event not in events["supported"]:
-        reason = events["unsupported"].get(hook.event, "no Hermes hook carries this event")
+        reason = events["unsupported"].get(hook.event, "the engine has no hook for this event")
         return HookEntry(hook, ident, "unsupported", str(reason), None)
     if hook.handler.type not in SUPPORTED_TYPES:
         reason = f"{hook.handler.type} handlers are not supported"

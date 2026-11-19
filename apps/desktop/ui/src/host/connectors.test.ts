@@ -23,7 +23,7 @@ const reviewFor = (name: string, secretField?: string): ConnectorReview => ({
   }
 } as unknown as ConnectorReview);
 
-const installed = (o: Partial<ConnectorInstall> = {}): ConnectorInstall => ({ name: 'acme', steps: [{ id: 'add', title: 'Added to Hermes', state: 'done', detail: 'through Hermes', code: null }], test: { ok: true, tools: [{ name: 'echo', description: '' }], error: null, prompts: 0, resources: 0, oauth_needed: false, signin_needed: false }, signin_needed: false, restarted: false, notes: ['New sessions use it.'], ...o }) as unknown as ConnectorInstall;
+const installed = (o: Partial<ConnectorInstall> = {}): ConnectorInstall => ({ name: 'acme', steps: [{ id: 'add', title: 'Added', state: 'done', detail: 'as acme, with boopis\'s connectors', code: null }], test: { ok: true, tools: [{ name: 'echo', description: '' }], error: null, prompts: 0, resources: 0, oauth_needed: false, signin_needed: false }, signin_needed: false, restarted: false, notes: ['New sessions use it.'], ...o }) as unknown as ConnectorInstall;
 
 interface Fake extends ConnectorsBridge { calls: string[]; servers: ConnectorInfo[]; installs: { request: ConnectorRequest; hash: string; secrets: Record<string, string>; restart: string | undefined }[]; reviews: ConnectorRequest[]; failReview: string | null; failInstall: string | null; report: ConnectorInstall }
 function fake(servers: ConnectorInfo[] = []): Fake {
@@ -80,10 +80,12 @@ describe('how a connector reads in the list', () => {
   it('sends every form value as text, lists joined by lines', () => {
     expect(textValues({ a: 'x', n: 3, b: true, l: ['p', 'q'], u: undefined, z: null })).toEqual({ a: 'x', n: '3', b: 'true', l: 'p\nq' });
   });
-  it('turns an install into lines a person reads, with Hermes\'s own reason when it did not connect', () => {
-    expect(installLines(installed())).toEqual(['Added to Hermes: through Hermes', 'Hermes connected and found 1 tool: echo.', 'New sessions use it.']);
+  it('turns an install into lines a person reads, with the server\'s reason when it did not connect and never the engine\'s words', () => {
+    expect(installLines(installed())).toEqual(['Added: as acme, with boopis\'s connectors', 'Connected and found 1 tool: echo.', 'New sessions use it.']);
     const bad = installed({ test: { ok: false, tools: [], error: 'FAKE_API_KEY is not set', prompts: null, resources: null, oauth_needed: false, signin_needed: false } as never });
-    expect(installLines(bad)).toContain('Hermes could not connect: FAKE_API_KEY is not set');
+    expect(installLines(bad)).toContain('It did not connect: FAKE_API_KEY is not set');
+    const engine = installed({ test: { ok: false, tools: [], error: 'hermes mcp: OSError', prompts: null, resources: null, oauth_needed: false, signin_needed: false } as never });
+    expect(installLines(engine).join(' ')).not.toMatch(/hermes|OSError/i);
   });
 });
 
@@ -112,11 +114,11 @@ describe('the Connectors tab', () => {
     expect(text).toContain('From a command');
   });
 
-  it('says Hermes could not be asked, and draws no list, when the host cannot read it', async () => {
+  it('says the list could not be read, and draws no list, when the host cannot read it', async () => {
     const f = fake();
     f.list = () => Promise.reject(new Error('hermes is not installed'));
     const { panel } = await mount(f);
-    expect(panel.textContent).toContain('Hermes could not be asked, so the list is not shown: hermes is not installed');
+    expect(panel.textContent).toContain('boopis could not read the list, so it is not shown: ');
   });
 
   it('switches a server through the host, and puts the switch back when the host refuses', async () => {
@@ -246,7 +248,7 @@ describe('adding', () => {
     await tick(5);
     expect(f.installs).toEqual([{ request: { source: 'command', values: { name: 'keyed' } }, hash: 'h-keyed', secrets: { key: SECRET }, restart: undefined }]);
     expect(panel.textContent).toContain('keyed is ready');
-    expect(panel.textContent).toContain('Hermes connected and found 1 tool: echo.');
+    expect(panel.textContent).toContain('Connected and found 1 tool: echo.');
     expect(panel.textContent).not.toContain(SECRET);
     expect(panel.querySelector('[aria-live=polite]')?.textContent).not.toContain(SECRET);
   });
@@ -286,7 +288,7 @@ describe('adding', () => {
     await formsHost().submit('connector.review', { values: {}, secrets: {} });
     await tick(5);
     expect(panel.textContent).toContain('linear is added');
-    expect(panel.textContent).toContain('Hermes could not connect: OAuth authentication required');
+    expect(panel.textContent).toContain('It did not connect: OAuth authentication required');
     const button = panel.querySelector<HTMLButtonElement>('[data-action="signin"]');
     expect(button?.disabled, 'the sign-in control is enabled now').toBe(false);
     expect(panel.textContent).toContain('Opens linear in your browser');

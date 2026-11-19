@@ -4,12 +4,15 @@
 //! and notifications. The UI owns the experience and the backend (Hermes plus the plugin) owns the work.
 
 pub mod brand;
+pub mod chatgpt;
 pub mod claude;
 pub mod cli;
 pub mod commands;
 pub mod config;
 pub mod connectors;
 pub mod endpoint;
+#[cfg(test)]
+mod engine_words;
 pub mod error;
 pub mod frame_rate;
 pub mod free_tier;
@@ -49,8 +52,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::setup_advance,
             commands::setup_reopen_models,
             commands::setup_models_view,
-            commands::hermes_source_get,
-            commands::hermes_source_set,
+            commands::engine_source_get,
             commands::gateway_connect,
             commands::gateway_send,
             commands::gateway_disconnect,
@@ -77,10 +79,15 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::connector_signin_cancel,
             commands::connector_login,
             commands::app_restart,
+            commands::chatgpt_status,
+            commands::chatgpt_signin_start,
+            commands::chatgpt_signin_cancel,
+            commands::chatgpt_sign_out,
         ])
         .events(collect_events![
             ConnectionStateEvent,
             setup::SetupProgress,
+            chatgpt::ChatgptSigninEvent,
             commands::ConnectorRestartEvent
         ])
 }
@@ -249,20 +256,10 @@ pub fn run() {
             app.manage(fps.clone());
             let _ = frame_rate::refresh(app.handle(), &fps);
             let limits = config::Limits::default();
-            // Which Hermes: the one this build carries, unpacked into the app's own folder (ADR-0023), unless the
-            // advanced setting (`BOOPIS_HERMES=existing`, or `hermes_source` in settings.json) asks for the user's own.
-            let saved_source = {
-                use tauri_plugin_store::StoreExt;
-                app.handle()
-                    .store("settings.json")
-                    .ok()
-                    .and_then(|s| s.get("hermes_source"))
-                    .and_then(|v| v.as_str().map(str::to_owned))
-            };
-            let source = runtime::Source::resolve(
-                std::env::var("BOOPIS_HERMES").ok().as_deref(),
-                saved_source.as_deref(),
-            );
+            // Which engine: the one this build carries, unpacked into the app's own folder (ADR-0023), unless
+            // `boopis --engine existing` or `BOOPIS_HERMES=existing` asks for the one on this machine. The app itself
+            // offers no such choice (ADR-0031); the repository's docs describe it.
+            let source = runtime::Source::from_process();
             // The plugin, the runtime and `hx`: Tauri's resource directory, or the one a native package names after
             // its binary (resources.rs).
             let exe = std::env::current_exe().ok();
@@ -272,6 +269,15 @@ pub fn run() {
                 resource_dir.as_deref(),
                 app.path().app_data_dir().map_err(|e| e.to_string()),
             );
+            // The private engine home was `hermes-home` before ADR-0031: move it once, before anything runs from it.
+            if let Some(plan) = &plan {
+                migrate::engine_home(
+                    &plan.data_dir,
+                    &|old| engine_answers(old),
+                    &|old| stop_engine(plan, old, &limits),
+                )
+                .log();
+            }
             // A build with a manifest, valid or not, is one that carries a runtime (a broken one is reported by setup).
             let carries_runtime = !matches!(runtime::Runtime::locate(resource_dir.as_deref()), Ok(None));
             let mut environment = hermes::Environment::from_process();
@@ -334,7 +340,28 @@ pub fn run() {
                     Arc::new(|_, _| {})
                 }
             };
+            // boopis's own ChatGPT sign-in (ADR-0030): its outcome reaches every window, and its refresher keeps the access
+            // token fresh in the keychain for as long as the app runs.
+            let signin_events = app.handle().clone();
+            let chatgpt = Arc::new(
+                chatgpt::ChatGpt::new(
+                    secrets.clone(),
+                    Arc::new(chatgpt::oauth::Https::new(limits.chatgpt_http_timeout)),
+                    chatgpt::Timing {
+                        signin: limits.chatgpt_signin_timeout,
+                        refresh_ahead: limits.chatgpt_refresh_ahead,
+                        refresh_every: limits.chatgpt_refresh_every,
+                    },
+                )
+                .with_sink(Arc::new(move |e| {
+                    if let Err(err) = e.emit(&signin_events) {
+                        tracing::debug!(error = %err, "could not emit the ChatGPT sign-in outcome");
+                    }
+                })),
+            );
+            tauri::async_runtime::spawn(chatgpt.clone().run_refresher());
             app.manage(AppState {
+                chatgpt,
                 hubs: state::Hubs::new(supervisor.clone(), limits.clone(), emitter).with_observer(observer),
                 supervisor: supervisor.clone(),
                 secrets: secrets.clone(),
@@ -379,6 +406,54 @@ pub fn run() {
             std::process::exit(1);
         }
     }
+}
+
+/// Whether a gateway answers on the control socket of `home` (the one-time engine move asks before it renames).
+fn engine_answers(home: &std::path::Path) -> bool {
+    tauri::async_runtime::block_on(hermes::control::identify(home)).is_ok()
+}
+
+/// Stop the gateway an earlier run left serving from `home`, with the bundled launcher: this build's, or one an earlier
+/// build unpacked (they are removed only after setup succeeds). Waits until its control socket is quiet.
+fn stop_engine(
+    plan: &runtime::Plan,
+    home: &std::path::Path,
+    limits: &config::Limits,
+) -> std::result::Result<(), String> {
+    let runtimes = plan.runtimes_dir();
+    let current = plan.runtime.layout(&runtimes).hermes;
+    let relative = current
+        .strip_prefix(plan.runtime.layout(&runtimes).root)
+        .ok()
+        .map(std::path::Path::to_path_buf);
+    let mut launchers = vec![current];
+    if let (Some(rel), Ok(rd)) = (relative, std::fs::read_dir(&runtimes)) {
+        launchers.extend(rd.flatten().map(|e| e.path().join(&rel)));
+    }
+    let Some(launcher) = launchers.into_iter().find(|p| p.is_file()) else {
+        return Err("no unpacked engine to stop it with".to_owned());
+    };
+    let cli = hermes::cli::Cli::new(limits).isolated().with_env(vec![(
+        "PYTHONPYCACHEPREFIX".to_owned(),
+        plan.bundled().pycache.display().to_string(),
+    )]);
+    tauri::async_runtime::block_on(async {
+        cli.run(
+            &launcher,
+            home,
+            &["gateway", "stop", "--yes"],
+            limits.cli_timeout,
+        )
+        .await
+        .map_err(|e| e.to_string())?;
+        let deadline = tokio::time::Instant::now() + limits.gateway_stop_wait;
+        while hermes::control::identify(home).await.is_ok()
+            && tokio::time::Instant::now() < deadline
+        {
+            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        }
+        Ok(())
+    })
 }
 
 #[cfg(test)]

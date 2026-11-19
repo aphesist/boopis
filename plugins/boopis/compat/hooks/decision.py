@@ -109,7 +109,7 @@ def _exit2(event: str, outcome: Outcome) -> Verdict:
         return Verdict(context=message, hook_ids=ids)  # the tool ran: stderr is appended to its result
     if can_block(event):
         return Verdict(block=True, reason=message, hook_ids=ids)
-    return Verdict(errors=(f"{outcome.hook_id}: exit 2 cannot block {event} on Hermes",), hook_ids=ids)
+    return Verdict(errors=(f"{outcome.hook_id}: exit 2 cannot block {event} here",), hook_ids=ids)
 
 
 def _failure(event: str, handler: HookHandler, outcome: Outcome, line: str) -> Verdict:

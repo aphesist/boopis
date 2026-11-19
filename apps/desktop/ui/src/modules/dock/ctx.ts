@@ -7,8 +7,10 @@
 import { clamp, onReducedChange, reduced as rm } from '../../core/dom';
 import type { Bot, RunSnapshot, Schedule, ThreadMessage, Wait } from '../../data';
 import type { DockMode } from '../../core/bus';
-import type { ComposerEl } from '../../components';
-import type { CardLike } from '../../components';
+import type { ComposerEl } from '@boopis/ui';
+import type { CardLike } from '@boopis/ui';
+import { pagesFor, presenceOf } from './presence';
+import type { Presence } from './presence';
 
 /* springs: near-critical damping (no visible overshoot); interrupted springs keep their velocity */
 export interface Spring { x: number; v: number; t: number; k: number; c: number; eps: number }
@@ -44,13 +46,15 @@ export interface DockState {
   page: string;
   card: string | null; cardFrom: 'normal' | 'expanded';
   pages: Array<{ id: string; on: boolean }>;
+  /** a session has been started in this window (the run had a title once); it stays, so the latest run is what the session part shows */
+  session: boolean;
   bots: DockBot[]; waits: Wait[]; sched: Schedule[]; run: RunSnapshot | null; ctx: { used: number; total: number; parts: ReadonlyArray<readonly [string, number]> };
   ext: Record<string, number>; colWidth: number | null; rowIdx: number; restore: 'normal' | 'minimal'; hover: boolean; hoverT: number; grow: boolean; focusIn?: boolean;
   threads: Record<string, ThreadMessage[]>;
 }
 export const S: DockState = {
   mode: 'normal', page: 'bots', card: null, cardFrom: 'normal', pages: DEFAULT_PAGES.map((p) => ({ ...p })),
-  bots: [], waits: [], sched: [], run: null, ctx: { used: 0, total: 1, parts: [] },
+  session: false, bots: [], waits: [], sched: [], run: null, ctx: { used: 0, total: 1, parts: [] },
   ext: {}, colWidth: null, rowIdx: 0, restore: 'normal', hover: false, hoverT: 0, grow: true, threads: {}
 };
 
@@ -72,9 +76,13 @@ export const X: Els = {
   root: ph(), shapeEl: document.createElementNS('http://www.w3.org/2000/svg', 'svg'), pathEl: document.createElementNS('http://www.w3.org/2000/svg', 'path'),
   stageEl: ph(), footEl: ph(), dotsEl: ph(), downBtn: ph(), pageEls: {}, orbs: new Map(), curView: null, composerEls: new Map(), cardEls: new Map()
 };
-export const flags = { mounted: false, layoutSeen: false, offSeq: 0, useVar: false };
+/** `setting`: the user's "Show the dock". `afterOut`: what to clear once the dock has sunk out of sight (what it was showing stays until then) */
+export const flags = { mounted: false, layoutSeen: false, offSeq: 0, useVar: false, setting: true, afterOut: null as (() => void) | null };
+/** which parts of the dock exist now (presence.ts) */
+export const presence = (): Presence => presenceOf({ bots: S.bots.length, session: S.session, setting: flags.setting });
 export const botById = (id: string | null | undefined): DockBot | undefined => S.bots.find((b) => b.id === id);
-export const shownPages = (): string[] => S.pages.filter((p) => p.on).map((p) => p.id);
+/** the pages the dock shows: the arranged ones whose part exists (presence.ts) */
+export const shownPages = (): string[] => pagesFor(S.pages, presence());
 export const rendered = (el: Element): boolean => el.getClientRects().length > 0;
 export const attCount = (): number => {
   let ext = 0;

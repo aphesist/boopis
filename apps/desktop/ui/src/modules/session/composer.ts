@@ -6,8 +6,8 @@
    hidden and the picker opens against the Smart chip. */
 import { emit } from '../../core/bus';
 import { cap1, isMac } from '../../core/dom';
-import { ui } from '../../components';
-import type { ComposerEl, DecisionDetail, AssumptionDetail, DictateDetail } from '../../components';
+import { ui } from '@boopis/ui';
+import type { ComposerEl, DecisionDetail, AssumptionDetail, DictateDetail } from '@boopis/ui';
 
 import { data } from '../../data';
 import type { GovernanceState } from '../../data';

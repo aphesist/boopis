@@ -17,12 +17,12 @@ const surface = (over: Record<string, unknown> = {}): ErrorSurface => ({ layer: 
 beforeEach(() => { resetLimitMemory(); registerPlanSource(null); });
 
 describe('the plan view', () => {
-  it('names the plan, the one model and says Hermes sends no usage figures for it', () => {
+  it('names the plan, the one model and says no usage figures are sent for it', () => {
     const v = planView({ status: status(), options: null, limit: null }, NOW);
     expect(v).toMatchObject({ kind: 'free', state: 'ready', label: 'Nous · free tier', model: 'nous/welcome' });
     expect(v.detail).toContain('one model, nous/welcome, no account');
     expect(v.gauges).toEqual([]);
-    expect(v.gaugesNote).toMatch(/reports no usage figures/);
+    expect(v.gaugesNote).toMatch(/No usage figures are reported/);
   });
   it('shows gauges only where Hermes sent them, from the fraction it sent, in its order', () => {
     const options: ModelOptionsResult = { providers: [{ slug: 'nous', name: 'Nous', plan_usage: { kind: 'window', gauges: [{ label: 'day', left_fraction: 0.75, style: 'ok', resets_at_ms: NOW + 3_600_000, title: 'Today' }, { label: 'week', left_fraction: 0.2, style: 'warn' }] } }, { slug: 'x', name: 'X' }] };
@@ -126,7 +126,7 @@ describe('where it is shown', () => {
     const plan = planView({ status: status(), options: null, limit: limitFromSurface(surface()) }, NOW);
     const text = reportText({ ...base, plan }, display);
     expect(text).toContain('models plan: free (ready), Nous · free tier, model nous/welcome');
-    expect(text).toContain('Hermes reports no usage figures for this plan');
+    expect(text).toContain('No usage figures are reported for this plan');
     expect(text).toContain('last limit: free_tier_rate_limited');
     expect(reportText(base, display), 'without a live connection the report is as it was').not.toContain('models plan');
     expect(planLines(plan, NOW).every((l) => !l.includes('undefined'))).toBe(true);
@@ -142,7 +142,7 @@ describe('where it is shown', () => {
     const panel = document.createElement('div');
     let answer: ReturnType<typeof planView> | null = null;
     const mounted = await mountPlan(panel, () => Promise.resolve(answer));
-    expect(panel.textContent).toContain('Hermes is not connected');
+    expect(panel.textContent).toContain('boopis\'s engine is not connected');
     answer = planView({ status: status(), options: null, limit: null }, NOW);
     await mounted.refresh();
     expect(panel.querySelectorAll('section')).toHaveLength(1);

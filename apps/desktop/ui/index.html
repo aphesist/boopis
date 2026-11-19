@@ -17,11 +17,7 @@
       <button class="ui-ib" id="hx-btn-fwd" type="button" aria-label="Forward" data-tip="Forward" data-kbd="mod+]" disabled><span data-icon="forward"></span></button>
     </div>
 
-    <button class="hx-cmd" id="hx-btn-search" type="button" aria-haspopup="dialog" aria-expanded="false" aria-label="Search and commands">
-      <span data-icon="search"></span>
-      <span class="hx-cmd__where"><span class="hx-cmd__project" id="hx-where-project"></span> <span class="hx-cmd__title" id="hx-where-title"></span></span>
-      <kbd data-kbd="mod+K"></kbd>
-    </button>
+    <div id="hx-btn-search"></div>
 
     <div class="hx-bar__end">
       <button class="ui-ib" id="hx-btn-right" type="button" aria-controls="hx-right-shell" aria-expanded="false" data-tip="Show session details" data-kbd="mod+I"><span data-icon="sidebar-right"></span></button>
@@ -46,8 +42,8 @@
       </div>
 
       <div id="hx-sidebar-list" class="hx-side__list">
-        <div class="hx-list is-active" data-list="session" id="hx-list-session" role="tabpanel" aria-labelledby="hx-tab-session"></div>
-        <div class="hx-list" data-list="bots" id="hx-list-bots" role="tabpanel" aria-labelledby="hx-tab-bots" inert></div>
+        <div class="hx-list ui-scroll ui-scroll--stable is-active" data-list="session" id="hx-list-session" role="tabpanel" aria-labelledby="hx-tab-session"></div>
+        <div class="hx-list ui-scroll ui-scroll--stable" data-list="bots" id="hx-list-bots" role="tabpanel" aria-labelledby="hx-tab-bots" inert></div>
       </div>
 
       <div class="hx-foot">
@@ -75,32 +71,22 @@
   <div class="hx-scrim" id="hx-scrim" hidden></div>
 
   <div class="hx-palette" id="hx-palette" role="dialog" aria-modal="true" aria-label="Search and commands" hidden>
-    <div class="hx-palette__box">
-      <div class="hx-palette__field">
-        <span data-icon="search"></span>
-        <input id="hx-palette-input" type="text" role="combobox" aria-label="Search sessions, bots and commands" aria-expanded="true" aria-controls="hx-palette-list" aria-autocomplete="list" autocomplete="off" spellcheck="false" placeholder="Search sessions, bots and commands">
-        <span class="ui-keys hx-palette__esc" aria-hidden="true"><kbd class="ui-kbd">esc</kbd></span>
-      </div>
-      <div class="hx-palette__list" id="hx-palette-list" role="listbox" aria-label="Results"></div>
+    <div class="hx-palette__box ui-nest">
+      <div id="hx-palette-input"></div>
+      <div class="hx-palette__list ui-scroll ui-scroll--stable ui-scroll--inset-end" id="hx-palette-list" role="listbox" aria-label="Results"></div>
     </div>
   </div>
 
   <dialog class="hx-dialog" id="hx-settings" aria-labelledby="hx-settings-title">
-    <div class="hx-dialog__card">
+    <div class="hx-dialog__card ui-nest">
       <header class="hx-dialog__head">
         <h2 id="hx-settings-title">Settings</h2>
-        <div class="hx-dtabs" role="tablist" aria-label="Settings sections">
-          <button type="button" class="hx-dtab" role="tab" id="hx-dtab-general" aria-controls="hx-dpanel-general" aria-selected="true" data-section="general">General</button>
-          <button type="button" class="hx-dtab" role="tab" id="hx-dtab-models" aria-controls="hx-dpanel-models" aria-selected="false" data-section="models" tabindex="-1">Models</button>
-          <button type="button" class="hx-dtab" role="tab" id="hx-dtab-connectors" aria-controls="hx-dpanel-connectors" aria-selected="false" data-section="connectors" tabindex="-1">Connectors</button>
-          <button type="button" class="hx-dtab" role="tab" id="hx-dtab-appearance" aria-controls="hx-dpanel-appearance" aria-selected="false" data-section="appearance" tabindex="-1">Appearance</button>
-          <button type="button" class="hx-dtab" role="tab" id="hx-dtab-keys" aria-controls="hx-dpanel-keys" aria-selected="false" data-section="keys" tabindex="-1">Keyboard</button>
-        </div>
-        <button class="ui-ib" type="button" id="hx-settings-close" aria-label="Close settings" data-tip="Close" data-kbd="esc"><span data-icon="close"></span></button>
+        <div id="hx-dtabs"></div>
+        <button class="ui-ib ui-corner" type="button" id="hx-settings-close" aria-label="Close settings" data-tip="Close" data-kbd="esc"><span data-icon="close"></span></button>
       </header>
-      <div class="hx-dialog__body">
+      <div class="hx-dialog__body ui-scroll ui-scroll--stable ui-scroll--inset-end">
         <div class="hx-dpanel" id="hx-dpanel-general" role="tabpanel" aria-labelledby="hx-dtab-general">
-          <section class="hx-set" aria-labelledby="hx-set-layout">
+          <section class="ui-set" aria-labelledby="hx-set-layout">
             <h3 class="ui-set__head" id="hx-set-layout">Layout</h3>
             <div class="ui-set__row">
               <label class="ui-set__label" for="hx-set-dock"><span>Show the dock</span><small>Bots and widgets at the bottom edge. Everything in it is also in the sidebar.</small></label>
@@ -116,7 +102,7 @@
         <div class="hx-dpanel" id="hx-dpanel-connectors" role="tabpanel" aria-labelledby="hx-dtab-connectors" hidden></div>
         <div class="hx-dpanel" id="hx-dpanel-appearance" role="tabpanel" aria-labelledby="hx-dtab-appearance" hidden></div>
         <div class="hx-dpanel" id="hx-dpanel-keys" role="tabpanel" aria-labelledby="hx-dtab-keys" hidden>
-          <section class="hx-set" id="hx-set-keys" aria-labelledby="hx-set-keys-h">
+          <section class="ui-set" id="hx-set-keys" aria-labelledby="hx-set-keys-h">
             <h3 class="ui-set__head" id="hx-set-keys-h">Keyboard shortcuts</h3>
             <div class="hx-keys" id="hx-keys"></div>
           </section>
@@ -126,13 +112,13 @@
   </dialog>
 
   <dialog class="hx-dialog hx-keysheet" id="hx-keys-sheet" aria-labelledby="hx-keys-title">
-    <div class="hx-dialog__card">
+    <div class="hx-dialog__card ui-nest">
       <header class="hx-dialog__head">
         <h2 id="hx-keys-title">Keyboard shortcuts</h2>
-        <input class="ui-input hx-keys-filter" id="hx-keys-filter" type="text" placeholder="Filter" aria-label="Filter shortcuts" autocomplete="off" spellcheck="false">
-        <button class="ui-ib" type="button" id="hx-keys-close" aria-label="Close keyboard shortcuts" data-tip="Close" data-kbd="esc"><span data-icon="close"></span></button>
+        <div id="hx-keys-filter"></div>
+        <button class="ui-ib ui-corner" type="button" id="hx-keys-close" aria-label="Close keyboard shortcuts" data-tip="Close" data-kbd="esc"><span data-icon="close"></span></button>
       </header>
-      <div class="hx-dialog__body" tabindex="0" role="region" aria-labelledby="hx-keys-title">
+      <div class="hx-dialog__body ui-scroll ui-scroll--stable ui-scroll--inset-end" tabindex="0" role="region" aria-labelledby="hx-keys-title">
         <div class="hx-keys-grid" id="hx-keys-body"></div>
         <p class="hx-keys-note">Keys shown for this computer. In a web browser a few belong to the browser (F6, and Alt+1 or Alt+2 on Linux); every action is also in the palette.</p>
       </div>

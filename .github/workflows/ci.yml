@@ -313,6 +313,14 @@ jobs:
       - run: pnpm exec playwright install-deps chromium
         if: steps.pw-cache.outputs.cache-hit == 'true'
       - run: pnpm test:smoke
+      # The engine Tauri uses on Linux is WebKitGTK, and Chromium does not show what it gets wrong: the dock's content vanished
+      # in it while the slab moved. This drives the e2e build the smoke just made in a real WebKitGTK (WebKitWebDriver under
+      # Xvfb) and fails when a snapshot of the moving dock has no content in it. Required, like every step of this job.
+      - uses: astral-sh/setup-uv@v5
+      - name: WebKitGTK, WebKitWebDriver and Xvfb
+        run: sudo apt-get update && sudo apt-get install -y xvfb webkit2gtk-driver libwebkit2gtk-4.1-0
+      - name: the dock keeps its content in WebKitGTK (hover, leave, a session, a bot, the first bot and the first session)
+        run: uv run --no-project --python 3.11 --with pillow python ../../../tests/e2e/dock_webkit.py --dist dist-e2e
 
   lab:
     # The UI lab (docs/UI-LAB.md): every story's every state through the geometry, concentric-corner, overlay, token,

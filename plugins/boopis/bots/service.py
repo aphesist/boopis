@@ -127,13 +127,13 @@ class BotService:
             raise BotRefusedError("deleting needs the teammate's name as the confirmation", data={"name": name})
         done = self.cli.run(["profile", "delete", name, "--yes"])
         if done.returncode != 0 or path.exists():
-            raise HermesCliError(f"hermes could not delete {name}", data={"output": done.output})
+            raise HermesCliError(f"could not delete {name}", data={"output": done.output})
         return {"deleted": name, "path": str(path)}
 
     def _rename(self, old: str, new: str) -> None:
         done = self.cli.run(["profile", "rename", old, new])
         if done.returncode != 0 or homes.exists(self.root, old) or not homes.exists(self.root, new):
-            raise HermesCliError(f"hermes could not rename {old} to {new}", data={"output": done.output})
+            raise HermesCliError(f"could not rename {old} to {new}", data={"output": done.output})
 
     def _drop_alias(self, name: str) -> None:
         """Hermes makes an alias for the profile it renames; a teammate has none (it is made with ``no_alias``)."""

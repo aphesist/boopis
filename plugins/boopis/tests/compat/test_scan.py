@@ -170,7 +170,7 @@ def test_when_the_importer_owns_the_user_scope_compat_skips_what_it_owns(
         ("permission", "Bash(git status)"),
         ("permission", "Bash(rm *)"),
     }
-    assert all(s.reason == "owned by hermes import-agent" for s in result.skipped)
+    assert all(s.reason == "owned by the engine's own importer" for s in result.skipped)
 
 
 def test_a_broken_file_is_a_diagnostic_and_the_rest_still_loads(

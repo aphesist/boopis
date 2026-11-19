@@ -3,10 +3,10 @@
 import { esc, isMac } from '../../core/dom';
 import { kbdLabel } from '../../core/keys';
 import { $$, } from '../../core/dom';
-import { ui } from '../../components';
+import { ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { Bot, ThreadMessage, Wait } from '../../data';
-import { LOG_N, PAGE_NAME, S, X, attCount, botById, clock, ctxPct, motion, rendered, shownPages } from './ctx';
+import { LOG_N, PAGE_NAME, S, X, attCount, botById, clock, ctxPct, motion, rendered } from './ctx';
 import type { DockBot } from './ctx';
 import { patchHTML } from './reconcile';
 import { setOrbLife } from './orbs';
@@ -63,7 +63,10 @@ const kfmt = (n: number): string => (n >= 1000 ? Math.round(n / 1000) + 'k' : St
 const run = () => S.run as NonNullable<typeof S.run>;
 /** the model with its provider's mark (mono), through the library's one primitive */
 const runModel = (): string => ui.html.model(run().model, { size: 14 });
-const runSub = (): string => run().stopped ? 'Stopped by you' : `${runModel()} ${run().escalated ? `escalated ${run().escalated === 1 ? 'once' : run().escalated + ' times'}` : 'on the first try'}`;
+const runHow = (): string => (run().escalated ? `escalated ${run().escalated === 1 ? 'once' : run().escalated + ' times'}` : 'on the first try');
+const runSub = (): string => run().stopped ? 'Stopped by you' : `${runModel()} ${runHow()}`;
+/** the run button's name: its visible words, in order (WCAG 2.5.3), then what it does */
+const runName = (): string => `${run().title} ${run().stopped ? 'Stopped by you' : `${run().model} ${runHow()}`}, show run details`;
 /** the run's spend: the library's running total and its row of dots (dots, not bars) */
 /* a cost the plugin could not price is shown as unknown, and a run with no cap has no meter (ADR-0012) */
 export const costHTML = (): string => (run().cost == null || run().cap == null
@@ -123,7 +126,7 @@ export const tipOf = (b: Pick<Bot, 'name' | 'role'>): string => { const n = clip
 /* ───────── view templates ───────── */
 function tileHTML(p: { id: string; on: boolean }, i: number): string {
   const name = PAGE_NAME[p.id] ?? p.id, first = i === 0, last = i === S.pages.length - 1;
-  const onCount = shownPages().length;
+  const onCount = S.pages.filter((x) => x.on).length;   /* the arrangement's own count: a page whose part is absent is still arranged */
   let glyph = '';
   if (p.id === 'bots') glyph = S.bots.slice(0, 6).map((b) => `<i style="background:${esc(b.color)}"></i>`).join('');
   if (p.id === 'run') glyph = ui.html.ladder({ stations: run().ladder, current: run().current, ground: 'var(--dock-bg)' });
@@ -159,7 +162,7 @@ export const V: Record<string, () => string> = {
       `<span class="dk-card-acts" data-e>` +
       ui.html.iconButton({ icon: 'bots', label: `Open the full chat with ${b.name}`, tip: 'Full chat', keys: 'mod+Enter', size: 's', tipPos: 'top', attrs: { 'data-act': 'open-chat', 'data-id': b.id } }) +
       ui.html.iconButton({ icon: 'close', label: `Close the session with ${b.name}`, tip: 'Close', keys: 'Esc', size: 's', tipPos: 'top', attrs: { 'data-act': 'close-card' } }) + `</span></div>
-      <div class="dk-sess-log" data-e data-margin="off" role="log" tabindex="0" aria-label="Recent messages with ${esc(b.name)}">${logHTML(b)}</div>
+      <div class="dk-sess-log ui-scroll" data-e data-margin="off" role="log" tabindex="0" aria-label="Recent messages with ${esc(b.name)}">${logHTML(b)}</div>
       ${S.waits.filter((w) => w.bot === b.id).map((w) => `<div class="dk-ask" data-e data-card="${w.id}" data-size="compact"></div>`).join('')}
       <div class="dk-sess-composer" data-e data-composer="${b.id}"></div>
       <div class="dk-strip" role="group" aria-label="Switch session">${S.bots.map((x) => x.id === b.id
@@ -169,7 +172,7 @@ export const V: Record<string, () => string> = {
 
   'run:min': () => `${pillBtn(`Show the dock, run ${run().stopped ? 'stopped' : 'in progress'}, ${fmtDur(run().elapsed)}`)}${ladderLine()}<span class="dk-time" data-k="run:time" data-run-time>${fmtDur(run().elapsed)}</span><span data-k="run:cost" data-run-cost>${costHTML()}</span>${pillAtt()}`,
   'run:norm': () => `${ladderLine()}
-    <button class="dk-run-open" data-act="expand" aria-label="Show run details" aria-expanded="false"><span class="dk-run-title" data-k="run:title">${esc(run().title)}</span><span class="dk-run-model" data-k="run:model">${runSub()}</span></button>
+    <button class="dk-run-open" data-act="expand" aria-label="${esc(runName())}" aria-expanded="false"><span class="dk-run-title" data-k="run:title">${esc(run().title)}</span> <span class="dk-run-model" data-k="run:model">${runSub()}</span></button>
     <span class="dk-time" data-k="run:time" data-run-time aria-label="Elapsed">${fmtDur(run().elapsed)}</span>
     <span class="dk-cost"><span data-k="run:cost" data-run-cost>${costHTML()}</span><span data-k="run:meter" data-run-meter>${meterHTML()}</span></span>
     ${stopBtn()}`,

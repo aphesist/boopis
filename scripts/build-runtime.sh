@@ -26,6 +26,9 @@
 #   tools/                   python-build-standalone and uv at the builds Hermes pins in pm/lock.json, hash-checked
 #   enabled-features.json    the extras the venv carries
 #   bin/hermes               Hermes's own launcher, location-independent
+#   plugins/<name>/          the plugins the app carries (ADR-0030), each unmodified at the commit Hermes's own plugin
+#                            catalog pins, with its licence: claude-subscription-directsdk (MIT), the Claude subscription.
+#                            First-run setup places them in the profile; nothing is downloaded on the user's machine.
 #
 # Left out on purpose (Hermes's package manager fetches them on first use, into the private home): Chromium, Node and npm,
 # ffmpeg, cua-driver, ripgrep, and every extra that is not listed in RUNTIME_EXTRAS. Left out against Hermes's own build too:
@@ -117,6 +120,34 @@ rm -rf "$PAYLOAD" "$WORK/home"; mkdir -p "$PAYLOAD" "$WORK/home"
 )
 rm -rf "$WORK/uv-cache" "$WORK/home"
 
+# 2b. the plugins the app carries (ADR-0030), each at the commit the tag's own plugin catalog pins, with its licence. The
+#     catalog file is read from the checkout, so the pin moves only with the Hermes tag; nothing is edited.
+PLUGINS_JSON="[]"
+bundle_plugin() {  # <catalog name>
+  local entry="$SRC/plugin-catalog/$1.yaml" repo sha subdir version dest manifest_name
+  [ -f "$entry" ] || { echo "the plugin catalog at $HERMES_TAG has no $1" >&2; exit 1; }
+  repo="$(sed -n 's/^repo: *//p' "$entry")"; sha="$(sed -n 's/^sha: *//p' "$entry")"; subdir="$(sed -n 's/^subdir: *//p' "$entry")"
+  case "$sha" in *[!0-9a-f]*|"") echo "the catalog's pin for $1 is not a commit: $sha" >&2; exit 1 ;; esac
+  [ "${#sha}" = 40 ] || { echo "the catalog's pin for $1 is not a full commit: $sha" >&2; exit 1; }
+  rm -rf "$WORK/plugin-$1"; git init --quiet "$WORK/plugin-$1"
+  git -C "$WORK/plugin-$1" fetch --quiet --depth 1 "$repo" "$sha"
+  git -C "$WORK/plugin-$1" checkout --quiet FETCH_HEAD
+  [ "$(git -C "$WORK/plugin-$1" rev-parse HEAD)" = "$sha" ] || { echo "$1 is not at $sha" >&2; exit 1; }
+  local from="$WORK/plugin-$1/${subdir:-.}"
+  [ -f "$from/LICENSE" ] || { echo "$1 carries no LICENSE" >&2; exit 1; }
+  manifest_name="$(sed -n 's/^name: *//p' "$from/plugin.yaml" | head -1)"
+  version="$(sed -n 's/^version: *//p' "$from/plugin.yaml" | head -1 | tr -d '"')"
+  dest="$PAYLOAD/plugins/$manifest_name"   # the directory the engine lists it by
+  mkdir -p "$dest"
+  # the plugin's code, manifest, licence and docs; not its tests, evals, images or development files
+  (cd "$from" && find . -maxdepth 1 -type f \( -name '*.py' -o -name 'plugin.yaml' -o -name 'LICENSE' -o -name 'README.md' \
+      -o -name 'CHANGELOG.md' \) ! -name 'conftest.py' -exec cp {} "$dest/" \;)
+  PLUGINS_JSON="$("$BOOT_PYTHON" -c 'import json,sys; l=json.loads(sys.argv[1]); l.append(dict(zip(["name","catalog","version","repo","sha","licence"],sys.argv[2:]))); print(json.dumps(l))' \
+    "$PLUGINS_JSON" "$manifest_name" "$1" "$version" "$repo" "$sha" "MIT")"
+  rm -rf "$WORK/plugin-$1"
+}
+bundle_plugin claude-subscription-directsdk
+
 # 3. what the manifest says: the launcher and interpreter paths inside the archive, the interpreter's build
 read -r HERMES_CMD PY_REL PY_VERSION TARGET < <("$BOOT_PYTHON" - "$PAYLOAD/manifest.json" <<'PY'
 import json, re, sys
@@ -158,6 +189,7 @@ json.dump({
     "os": "$OS",
     "arch": "$ARCH",
     "extras": "$EXTRAS".split(",") if "$EXTRAS" else [],
+    "plugins": json.loads(r"""$PLUGINS_JSON"""),
     "archive": {"name": "$ARCHIVE", "sha256": "$SHA", "size": $SIZE},
     "unpacked_size": $UNPACKED_BYTES,
     "entries": $ENTRIES,

@@ -7,6 +7,7 @@
      archive, restore, delete                                    the plugin, through Hermes's `profile rename` and `profile delete`
    Nothing is written to a Hermes file here, and nothing is invented: what Hermes did not answer is null and says why in
    `info.notes`. A teammate cannot be messaged yet (team chat is phase 2), so the thread is empty and `send` says so. */
+import { unlessEngine } from '../errors';
 import { logger } from '../../core/log';
 import { NeedsConfirmation } from '../../data/confirm';
 import { botIdBase, numbered } from '../../data/bot-id';
@@ -46,7 +47,7 @@ export interface LiveBots {
 }
 
 export const NOT_MESSAGEABLE = 'Talking to a teammate arrives with team chat; for now its schedule and its sessions are what you see here.';
-export const NO_RUN_NOW = 'Hermes has no way to run a routine on demand from here yet.';
+export const NO_RUN_NOW = 'A routine cannot be run on demand from here yet.';
 const FEATURED_LIMIT = 40;
 const LOAD_AT_ONCE = 3;
 const POLL_MS = 15_000;
@@ -147,7 +148,7 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       rows = listed.profiles ?? [];
       rosterNote = null;
     } catch (e) {
-      rosterNote = isUnknownMethod(e) ? 'This Hermes has no profile methods, so teammates cannot be listed.' : 'The teammates could not be read from Hermes: ' + why(e);
+      rosterNote = isUnknownMethod(e) ? 'This version of boopis\'s engine cannot list bots.' : 'The bots could not be read: ' + why(e);
       (isUnknownMethod(e) ? log.info : log.warn)('profiles.list failed', e);
       return;
     }
@@ -205,7 +206,7 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
           const d = await client.request('profiles.describe', { name: id }) as ProfilesDescribeResult;
           r.detail = { ...capabilitiesFrom(d), soul: d.soul ?? '', model: d.model?.default ?? null, provider: d.model?.provider ?? null, role: d.description ?? null };
           delete r.notes['detail'];
-        } catch (e) { r.notes['detail'] = 'Hermes did not describe this profile: ' + why(e); log.warn('profiles.describe failed', e); }
+        } catch (e) { r.notes['detail'] = 'boopis could not read this bot\'s details: ' + why(e); log.warn('profiles.describe failed', e); }
         await loadLinked(id, r);
         r.loaded = true;
         emitFor(before, toBot(r));
@@ -224,7 +225,7 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
         c.request('session.list', { limit: 8, include_hidden: false }) as Promise<{ sessions: SessionListRow[] }>
       ]);
       const t = now();
-      if (cron.error) { r.jobs = null; r.notes['jobs'] = 'Hermes said: ' + cron.error; } else { r.jobs = sortJobs((cron.jobs ?? []).map((j) => jobFrom(j, t))); delete r.notes['jobs']; }
+      if (cron.error) { r.jobs = null; r.notes['jobs'] = 'The schedule could not be read: ' + unlessEngine('hx.engine.refused', cron.error); } else { r.jobs = sortJobs((cron.jobs ?? []).map((j) => jobFrom(j, t))); delete r.notes['jobs']; }
       r.sessions = (sess.sessions ?? []).map((s) => sessionFrom(s, t)); delete r.notes['sessions'];
     } catch (e) {
       const t = 'Its schedule and sessions could not be read: ' + why(e);
@@ -276,9 +277,9 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
     const taken = (n: string): boolean => profileNames.has(n) || recs.has(n);
     const profile = taken(wanted) || wanted === 'default' ? numbered(wanted, taken) : wanted;
     const notes: string[] = [];
-    if (profile !== (name || '').trim().toLowerCase()) notes.push(name.trim() ? 'It will be called ' + profile + ': Hermes names a profile with lower case letters, digits and hyphens, and each name is used once.' : '');
+    if (profile !== (name || '').trim().toLowerCase()) notes.push(name.trim() ? 'It will be called ' + profile + ': a bot\'s folder is named with lower case letters, digits and hyphens, and each name is used once.' : '');
     const model = currentModel && modelList().includes(currentModel) ? currentModel : modelList()[0] ?? null;
-    if (!model) notes.push('No model provider is configured in Hermes yet, so this bot is made without a model and cannot run until you add one.');
+    if (!model) notes.push('No model provider is set up yet, so this bot is made without a model and cannot run until you add one.');
     return { profile, folder: defaultHome ? defaultHome.replace(/[\\/]+$/, '') + '/profiles/' + profile : null, model, notes: notes.filter(Boolean) };
   }
 
@@ -326,7 +327,7 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       if (patch.model !== undefined) Object.assign(params, resolveModel(patch.model), opts?.confirmModel ? { confirm_expensive_model: true } : {});
       if (Object.keys(params).length > 1) {
         const res = await client.request('profiles.configure', params) as { ok?: boolean; applied?: Record<string, boolean | null>; confirm_required?: boolean | null; confirm_message?: string | null };
-        if (res.confirm_required) { r.loaded = false; await loadDetail(id); throw new NeedsConfirmation(res.confirm_message || 'Hermes asks you to confirm this model.'); }
+        if (res.confirm_required) { r.loaded = false; await loadDetail(id); throw new NeedsConfirmation(unlessEngine('hx.engine.refused', res.confirm_message || 'Confirm this model before it is saved.')); }
         for (const [key, ok] of Object.entries(res.applied ?? {})) if (ok === false) failures.push(({ soul: 'SOUL.md', description: 'the role', model: 'the model' } as Record<string, string>)[key] ?? key);
       }
       if (patch.addRoutines?.length || patch.removeRoutines?.length) {
@@ -345,7 +346,7 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       r.loaded = false;
       await loadDetail(id);
       await refreshRoster();
-      if (failures.length) throw new Error('Hermes did not save ' + failures.join(', ') + '. The rest was saved.');
+      if (failures.length) throw new Error(failures.join(', ') + ' could not be saved. The rest was saved.');
     },
     async setRoutinePaused(id, jobId, paused) {
       const r = need(id);
@@ -449,7 +450,7 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       const own = { ...(gov ? { gov } : {}), ...(cap !== undefined ? { cap } : {}), ...(workspace ? { workspace } : {}) };
       if (Object.keys(own).length || approvals) admin.saveOwn(id, { cfg: { ...own, ...(approvals ? { approvals } : {}) } }).catch((e: unknown) => { log.error('the setting was not saved', e); });
     },
-    create() { throw new Error('a bot is a Hermes profile and is made with `admin.create`'); },
+    create() { throw new Error('a bot is a folder of its own and is made with `admin.create`'); },
     archive(id) { admin.archive(id).catch((e: unknown) => { log.error('the bot was not archived', e); }); },
     archived: archivedNow,
     restore: restoreArchived,

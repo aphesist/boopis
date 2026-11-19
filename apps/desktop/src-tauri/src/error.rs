@@ -1,5 +1,8 @@
 //! The host's error type. Every error that reaches the UI is `{code, message}` with a stable namespaced code
-//! (`docs/STANDARDS.md` section 3); the codes `hx.hermes.*` are listed in `docs/PROTOCOL.md`.
+//! (`docs/STANDARDS.md` section 3); the codes `hx.engine.*` are listed in `docs/PROTOCOL.md`.
+
+use std::collections::{HashMap, VecDeque};
+use std::sync::{Mutex, OnceLock};
 
 use serde::Serialize;
 use specta::Type;
@@ -89,8 +92,8 @@ impl Error {
             | Self::Unavailable(_)
             | Self::Ws(_)
             | Self::Timeout(_)
-            | Self::Io(_) => "hx.hermes.unavailable",
-            Self::HermesTooOld { .. } | Self::Incompatible(_) => "hx.hermes.incompatible",
+            | Self::Io(_) => "hx.engine.unavailable",
+            Self::HermesTooOld { .. } | Self::Incompatible(_) => "hx.engine.incompatible",
             Self::InvalidFrame(_) | Self::FrameTooLarge { .. } => "hx.host.invalid_frame",
             Self::UnknownConnection(_) => "hx.host.unknown_connection",
             Self::InvalidInput(_) => "hx.invalid_params",
@@ -114,7 +117,7 @@ impl From<std::io::Error> for Error {
 /// The error as the UI sees it: a stable code and a message. Never carries a secret, a ticket or a token.
 #[derive(Debug, Clone, Serialize, Type)]
 pub struct HostError {
-    /// A stable code such as `hx.hermes.unavailable`.
+    /// A stable code such as `hx.engine.unavailable`.
     pub code: String,
     /// A human-readable message.
     pub message: String,
@@ -122,11 +125,156 @@ pub struct HostError {
 
 impl From<Error> for HostError {
     fn from(e: Error) -> Self {
+        let code = e.code();
         Self {
-            code: e.code().to_owned(),
-            message: e.to_string(),
+            code: code.to_owned(),
+            message: user_message(code, &e.to_string()),
         }
     }
+}
+
+/// The error catalog shared with the plugin and the UI (`crates/hx-proto/errors.json`).
+const CATALOG_JSON: &str = include_str!("../../../../crates/hx-proto/errors.json");
+
+/// The codes whose message is the engine's (or built from what the engine printed): the UI always gets the catalog's
+/// sentence for these, never the text.
+const ENGINE_CODES: &[&str] = &[
+    "hx.engine.unavailable",
+    "hx.engine.incompatible",
+    "hx.engine.refused",
+    "hx.config.invalid",
+    "hx.host.invalid_frame",
+    "hx.setup.plugin_install_failed",
+    "hx.setup.config_failed",
+    "hx.setup.verify_failed",
+    "hx.setup.runtime_missing",
+    "hx.setup.runtime_manifest_invalid",
+    "hx.setup.runtime_hash_mismatch",
+    "hx.setup.runtime_corrupt",
+    "hx.setup.runtime_unpack_failed",
+    "hx.connectors.rejected",
+    "hx.connectors.signin_failed",
+    "hx.connectors.failed",
+    "hx.bots.engine_failed",
+];
+
+/// The fallback for a code the catalog gives no sentence.
+const FALLBACK: &str = "hx.engine.refused";
+
+/// How many raw errors Diagnostics keeps.
+const RECENT_CAP: usize = 32;
+
+/// `code -> user sentence`, read once from the catalog.
+fn sentences() -> &'static HashMap<String, String> {
+    static ONCE: OnceLock<HashMap<String, String>> = OnceLock::new();
+    ONCE.get_or_init(|| {
+        let doc: serde_json::Value = serde_json::from_str(CATALOG_JSON).unwrap_or_default();
+        doc["errors"]
+            .as_array()
+            .map(|all| {
+                all.iter()
+                    .filter_map(|e| {
+                        Some((
+                            e["code"].as_str()?.to_owned(),
+                            e["user"].as_str()?.to_owned(),
+                        ))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    })
+}
+
+/// The catalog's sentence for `code`, else the engine fallback's.
+#[must_use]
+pub fn sentence(code: &str) -> String {
+    let all = sentences();
+    all.get(code)
+        .or_else(|| all.get(FALLBACK))
+        .cloned()
+        .unwrap_or_else(|| "boopis could not do that. Try again.".to_owned())
+}
+
+/// Whether `text` names the engine (any case), which the UI never shows.
+#[must_use]
+pub fn names_engine(text: &str) -> bool {
+    text.to_ascii_lowercase().contains("hermes")
+}
+
+/// What the UI shows for an error with this code and raw text: the catalog's sentence when the text is the engine's
+/// (an engine code, or any text that names it), else the host's own sentence. Whatever is replaced is recorded for
+/// Diagnostics and logged; nothing else is.
+#[must_use]
+pub fn user_message(code: &str, raw: &str) -> String {
+    if !ENGINE_CODES.contains(&code) && !names_engine(raw) && !raw.trim().is_empty() {
+        return raw.to_owned();
+    }
+    record(code, raw);
+    sentence(code)
+}
+
+/// A text that is not an error of the engine's own but may quote it (a connector's test result, a step's note): kept
+/// as it is unless it names the engine, then the sentence of `code`.
+#[must_use]
+pub fn unless_engine(code: &str, raw: &str) -> String {
+    if names_engine(raw) {
+        record(code, raw);
+        sentence(code)
+    } else {
+        raw.to_owned()
+    }
+}
+
+/// One raw error kept for Diagnostics: the code, what was actually said, and when (Unix seconds).
+#[derive(Debug, Clone, Serialize, Type)]
+pub struct RecentError {
+    /// The stable code.
+    pub code: String,
+    /// The raw text the UI was not shown.
+    pub detail: String,
+    /// When it happened, in seconds since the Unix epoch.
+    #[specta(type = f64)]
+    pub at: u64,
+}
+
+fn ring() -> &'static Mutex<VecDeque<RecentError>> {
+    static RING: OnceLock<Mutex<VecDeque<RecentError>>> = OnceLock::new();
+    RING.get_or_init(|| Mutex::new(VecDeque::with_capacity(RECENT_CAP)))
+}
+
+/// Keep `raw` for Diagnostics and the log without showing it: for engine words a host sentence replaces.
+pub fn keep(code: &str, raw: &str) {
+    record(code, raw);
+}
+
+fn record(code: &str, raw: &str) {
+    tracing::warn!(
+        code,
+        detail = raw,
+        "an engine error was shown as its catalog sentence"
+    );
+    let at = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs());
+    if let Ok(mut r) = ring().lock() {
+        if r.len() == RECENT_CAP {
+            r.pop_front();
+        }
+        r.push_back(RecentError {
+            code: code.to_owned(),
+            detail: raw.to_owned(),
+            at,
+        });
+    }
+}
+
+/// The raw errors of this run that the UI showed as sentences, oldest first (Settings, General, Diagnostics).
+#[must_use]
+pub fn recent() -> Vec<RecentError> {
+    ring()
+        .lock()
+        .map(|r| r.iter().cloned().collect())
+        .unwrap_or_default()
 }
 
 #[cfg(test)]
@@ -135,14 +283,97 @@ mod tests {
 
     #[test]
     fn codes_are_namespaced_and_stable() {
-        assert_eq!(Error::HermesMissing.code(), "hx.hermes.unavailable");
+        assert_eq!(Error::HermesMissing.code(), "hx.engine.unavailable");
         assert_eq!(
             Error::Incompatible("x".into()).code(),
-            "hx.hermes.incompatible"
+            "hx.engine.incompatible"
         );
         assert_eq!(Error::SecretNotFound.code(), "hx.secrets.not_found");
         let e: HostError = Error::ConsentRequired("install").into();
         assert_eq!(e.code, "hx.host.consent_required");
         assert!(e.message.contains("consent"));
+    }
+
+    /// Every variant, with engine words in it, reaches the UI as a boopis sentence; the raw words go to Diagnostics.
+    #[test]
+    fn no_error_shows_the_engine_and_the_raw_text_is_kept() {
+        let raw = "hermes refused updates.check: OSError: [Errno 13] Permission denied";
+        let all = [
+            Error::HermesMissing,
+            Error::HermesTooOld {
+                found: "0.1.0".into(),
+                required: ">=0.23.2".into(),
+            },
+            Error::Unavailable(raw.into()),
+            Error::Incompatible(raw.into()),
+            Error::InvalidFrame(raw.into()),
+            Error::FrameTooLarge { size: 9, limit: 1 },
+            Error::UnknownConnection(3),
+            Error::InvalidInput(raw.into()),
+            Error::ConsentRequired("installing Hermes"),
+            Error::SecretsUnavailable(raw.into()),
+            Error::Secrets(raw.into()),
+            Error::SecretNotFound,
+            Error::Config(raw.into()),
+            Error::Io(raw.into()),
+            Error::Ws(raw.into()),
+            Error::Timeout("hermes gateway ensure"),
+            Error::Os(raw.into()),
+            Error::Setup("hx.setup.config_failed", raw.into()),
+            Error::Setup("hx.setup.runtime_corrupt", "anything".into()),
+            Error::Connector("hx.connectors.failed", raw.into()),
+            Error::Connector(
+                "hx.connectors.exists",
+                "A connector named x exists already.".into(),
+            ),
+        ];
+        for e in all {
+            let shown: HostError = e.into();
+            assert!(
+                !names_engine(&shown.message),
+                "{}: {}",
+                shown.code,
+                shown.message
+            );
+            assert!(!shown.message.contains("OSError"), "{}", shown.message);
+            assert!(shown.code.starts_with("hx."), "{}", shown.code);
+        }
+        assert!(
+            recent()
+                .iter()
+                .any(|r| r.detail == raw && r.code == "hx.engine.unavailable")
+        );
+        let own: HostError = Error::Connector(
+            "hx.connectors.exists",
+            "A connector named x exists already.".into(),
+        )
+        .into();
+        assert_eq!(
+            own.message, "A connector named x exists already.",
+            "the host's own sentence stays"
+        );
+    }
+
+    /// Every code the host can raise has a sentence of its own in the catalog, and no sentence names the engine.
+    #[test]
+    fn the_catalog_has_a_sentence_for_every_host_code() {
+        for code in ENGINE_CODES {
+            assert!(
+                sentences().contains_key(*code),
+                "{code} has no user sentence"
+            );
+        }
+        for (code, s) in sentences() {
+            assert!(!names_engine(s), "{code}: {s}");
+            assert!(!s.contains('\u{2014}') && !s.contains('!'), "{code}: {s}");
+        }
+        for code in [
+            "hx.engine.unavailable",
+            "hx.secrets.unavailable",
+            "hx.setup.engine_missing",
+            "hx.host.consent_required",
+        ] {
+            assert!(sentences().contains_key(code), "{code}");
+        }
     }
 }

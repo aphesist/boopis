@@ -6,21 +6,18 @@ import type { Attrs } from '../core/dom';
 import { html, itemValue } from './html';
 import type { MenuEntry, MenuItem } from './html';
 import { icon } from './icons';
+import { placeAt } from './place';
 
 export interface PlaceOpts { place?: 'above' | 'below' | undefined; align?: 'start' | 'end' | 'center' | undefined; inset?: number | undefined }
 export interface LayerOpts extends PlaceOpts { layer?: Element | undefined; onClose?: (() => void) | undefined }
 interface OpenLayer { node: HTMLElement; anchor: HTMLElement | null; onClose: (() => void) | undefined; off(): void }
 let openLayer: OpenLayer | null = null;
 
+/* placement is the library's one primitive (place.ts): outside the anchor, flipped and shifted into the window, never
+   over a text the anchor's container asks to keep visible */
 function place(node: HTMLElement, anchor: HTMLElement, o: PlaceOpts): void {
-  const r = anchor.getBoundingClientRect(), w = node.offsetWidth, h = node.offsetHeight, gap = 8;
-  const fitsBelow = r.bottom + h + gap <= innerHeight - 8, fitsAbove = r.top - h - gap >= 8;
-  const above = o.place === 'above' ? fitsAbove || !fitsBelow : !fitsBelow && fitsAbove;
-  let x = o.align === 'end' ? r.right - w : o.align === 'center' ? r.left + r.width / 2 - w / 2 : r.left - (o.inset == null ? 8 : o.inset);
-  x = Math.max(8, Math.min(innerWidth - w - 8, x));
-  node.style.left = x + 'px';
-  node.style.top = Math.max(8, above ? r.top - h - gap : r.bottom + gap) + 'px';
-  node.dataset['place'] = above ? 'above' : 'below';
+  const align = o.align ?? 'start';
+  placeAt(node, anchor, { side: o.place === 'above' ? 'top' : 'bottom', align, overhang: align === 'start' ? (o.inset ?? 8) : 0 });
 }
 export function closeLayer(returnFocus?: boolean): void {
   if (!openLayer) return;
