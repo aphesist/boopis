@@ -64,12 +64,20 @@ pub fn load(home: &Path) -> Result<State> {
         }
         Err(e) => return Err(Error::Io(e.to_string())),
     };
-    let state: State = serde_json::from_str(&raw)
-        .map_err(|e| Error::Setup("hx.setup.state_invalid", format!("{} is not valid: {e}", p.display())))?;
+    let state: State = serde_json::from_str(&raw).map_err(|e| {
+        Error::Setup(
+            "hx.setup.state_invalid",
+            format!("{} is not valid: {e}", p.display()),
+        )
+    })?;
     if state.schema_version > VERSION {
         return Err(Error::Setup(
             "hx.setup.state_invalid",
-            format!("{} was written by a newer hypotaxis (version {})", p.display(), state.schema_version),
+            format!(
+                "{} was written by a newer hypotaxis (version {})",
+                p.display(),
+                state.schema_version
+            ),
         ));
     }
     Ok(State {

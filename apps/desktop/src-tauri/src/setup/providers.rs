@@ -14,12 +14,17 @@ use crate::secrets::SecretStore;
 use crate::secrets::refs::{SOURCE, SecretRef, builtin_provider_env};
 
 /// The variables Hermes accepts as an Anthropic credential.
-const ANTHROPIC_VARS: &[&str] = &["ANTHROPIC_API_KEY", "ANTHROPIC_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN"];
+const ANTHROPIC_VARS: &[&str] = &[
+    "ANTHROPIC_API_KEY",
+    "ANTHROPIC_TOKEN",
+    "CLAUDE_CODE_OAUTH_TOKEN",
+];
 /// The Claude subscription plugin, which signs in through the `claude` CLI instead of a key.
 pub const SUBSCRIPTION_PLUGIN: &str = "claude-subscription-directsdk";
 const LADDER_KEY: &str = "plugins.entries.hypotaxis.settings.ladder";
 
 /// What the providers step found out.
+#[allow(clippy::large_enum_variant)] // one short-lived value per setup call
 pub enum Outcome {
     /// Nothing more to ask: a line for the receipt.
     Done(String),
@@ -37,8 +42,13 @@ pub fn dotenv_names(home: &Path) -> Vec<String> {
     };
     text.lines()
         .filter_map(|l| {
-            let (k, v) = l.trim().strip_prefix("export ").unwrap_or(l.trim()).split_once('=')?;
-            (!k.starts_with('#') && !v.trim().trim_matches(['"', '\'']).is_empty()).then(|| k.trim().to_owned())
+            let (k, v) = l
+                .trim()
+                .strip_prefix("export ")
+                .unwrap_or(l.trim())
+                .split_once('=')?;
+            (!k.starts_with('#') && !v.trim().trim_matches(['"', '\'']).is_empty())
+                .then(|| k.trim().to_owned())
         })
         .collect()
 }
@@ -58,9 +68,15 @@ fn named_providers(cfg: Option<&Value>) -> Vec<Named> {
     map.iter()
         .map(|(name, v)| Named {
             name: name.clone(),
-            models: v["models"].as_object().map(|m| m.keys().cloned().collect()).unwrap_or_default(),
+            models: v["models"]
+                .as_object()
+                .map(|m| m.keys().cloned().collect())
+                .unwrap_or_default(),
             inline_key: v["api_key"].as_str().is_some_and(|k| !k.trim().is_empty()),
-            key_env: v["key_env"].as_str().or_else(|| v["api_key_env"].as_str()).map(str::to_owned),
+            key_env: v["key_env"]
+                .as_str()
+                .or_else(|| v["api_key_env"].as_str())
+                .map(str::to_owned),
         })
         .collect()
 }
@@ -89,20 +105,37 @@ fn credential_form(provider: &str) -> Form {
 /// Whatever `config set` refuses.
 pub async fn wire(ops: &dyn HermesOps, provider: &str, named: bool) -> Result<Vec<DiffLine>> {
     let r = SecretRef::provider_key(provider);
-    let var = if named { Some(r.env_name()) } else { builtin_provider_env(provider) };
+    let var = if named {
+        Some(r.env_name())
+    } else {
+        builtin_provider_env(provider)
+    };
     let Some(var) = var else {
         return Ok(Vec::new());
     };
-    let mut writes = vec![(format!("secrets.{SOURCE}.env.{var}"), r.text())];
+    // Hermes runs a secret source only when its section says `enabled: true`
+    let mut writes = vec![
+        (format!("secrets.{SOURCE}.env.{var}"), r.text()),
+        (format!("secrets.{SOURCE}.enabled"), "true".to_owned()),
+    ];
     if named {
         writes.insert(0, (format!("providers.{provider}.key_env"), var));
     }
     let mut made = Vec::new();
     for (key, value) in writes {
         let current = ops.config_get(&key).await?;
-        if current.as_ref().and_then(Value::as_str) != Some(value.as_str()) {
+        let want = if value == "true" {
+            json!(true)
+        } else {
+            json!(value)
+        };
+        if current.as_ref() != Some(&want) {
             ops.config_set(&key, &value).await?;
-            made.push(DiffLine { key, from: current, to: json!(value) });
+            made.push(DiffLine {
+                key,
+                from: current,
+                to: want,
+            });
         }
     }
     Ok(made)
@@ -122,7 +155,8 @@ pub async fn run(
     let env = dotenv_names(&home);
     let named = named_providers(ops.config_get("providers").await?.as_ref());
     let anthropic_ref = SecretRef::provider_key("anthropic");
-    let claude_key = ANTHROPIC_VARS.iter().any(|v| env.iter().any(|e| e == v)) || saved(store, &anthropic_ref);
+    let claude_key =
+        ANTHROPIC_VARS.iter().any(|v| env.iter().any(|e| e == v)) || saved(store, &anthropic_ref);
     let claude = if claude_key {
         if saved(store, &anthropic_ref) && !wire(ops, "anthropic", false).await?.is_empty() {
             *restart = true;
@@ -132,10 +166,14 @@ pub async fn run(
         false
     };
     if claude && choice.is_none_or(|c| c == "anthropic") {
-        return Ok(Outcome::Done("Claude ladder: haiku, sonnet, opus on your Anthropic key".into()));
+        return Ok(Outcome::Done(
+            "Claude ladder: haiku, sonnet, opus on your Anthropic key".into(),
+        ));
     }
     if choice == Some("") {
-        return Ok(Outcome::Skipped("no model chosen; governed sessions need one (Settings, Models)".into()));
+        return Ok(Outcome::Skipped(
+            "no model chosen; governed sessions need one (Settings, Models)".into(),
+        ));
     }
     if choice.is_none() && ops.config_get(LADDER_KEY).await?.is_some() {
         return Ok(Outcome::Done("keeps the tier ladder you set".into()));
@@ -148,12 +186,12 @@ pub async fn run(
 }
 
 fn ladder_form(named: &[Named]) -> Form {
-    let mut values = vec!["anthropic".to_owned()];
-    let mut names = vec!["Claude: haiku, sonnet, opus (needs an Anthropic API key)".to_owned()];
+    let mut ids = vec!["anthropic".to_owned()];
+    let mut labels = vec!["Claude: haiku, sonnet, opus (needs an Anthropic API key)".to_owned()];
     for p in named {
         for m in &p.models {
-            values.push(format!("{}/{m}", p.name));
-            names.push(format!("{m} on {}", p.name));
+            ids.push(format!("{}/{m}", p.name));
+            labels.push(format!("{m} on {}", p.name));
         }
     }
     Form::new(
@@ -162,7 +200,7 @@ fn ladder_form(named: &[Named]) -> Form {
         "Which model should do the work?",
         "hypotaxis runs governed work on a ladder of models, cheapest first. Pick where to start; you can change the ladder later.",
         json!({"type": "object", "required": ["choice"], "properties": {
-            "choice": {"type": "string", "title": "Model", "enum": values, "enumNames": names}}}),
+            "choice": {"type": "string", "title": "Model", "enum": ids, "enumNames": labels}}}),
     )
 }
 
@@ -175,12 +213,20 @@ async fn single_tier(
     restart: &mut bool,
 ) -> Result<Outcome> {
     let (provider, model) = pick.split_once('/').unwrap_or((pick, ""));
-    let Some(p) = named.iter().find(|p| p.name == provider && p.models.iter().any(|m| m == model)) else {
-        return Err(crate::error::Error::Setup("hx.setup.invalid_answer", format!("{pick:?} is not a model Hermes has configured")));
+    let Some(p) = named
+        .iter()
+        .find(|p| p.name == provider && p.models.iter().any(|m| m == model))
+    else {
+        return Err(crate::error::Error::Setup(
+            "hx.setup.invalid_answer",
+            format!("{pick:?} is not a model Hermes has configured"),
+        ));
     };
     let r = SecretRef::provider_key(provider);
     let has_key = p.inline_key
-        || p.key_env.as_deref().is_some_and(|k| env.iter().any(|e| e == k))
+        || p.key_env
+            .as_deref()
+            .is_some_and(|k| env.iter().any(|e| e == k))
         || saved(store, &r);
     if !has_key {
         return Ok(Outcome::Form(credential_form(provider)));
@@ -199,5 +245,7 @@ async fn single_tier(
 /// Whether the Claude subscription plugin is enabled (it needs no key).
 #[must_use]
 pub fn subscription_enabled(plugins: &[super::ops::PluginEntry]) -> bool {
-    plugins.iter().any(|p| p.name == SUBSCRIPTION_PLUGIN && p.enabled)
+    plugins
+        .iter()
+        .any(|p| p.name == SUBSCRIPTION_PLUGIN && p.enabled)
 }

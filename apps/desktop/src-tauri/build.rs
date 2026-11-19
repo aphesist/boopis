@@ -7,6 +7,8 @@ const COMMANDS: &[&str] = &[
     "hermes_status",
     "hermes_install",
     "hermes_retry",
+    "setup_check",
+    "setup_advance",
     "gateway_connect",
     "gateway_send",
     "gateway_disconnect",

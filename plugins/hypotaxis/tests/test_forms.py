@@ -288,17 +288,21 @@ def test_governed_sessions_may_ask(make: Make) -> None:
 def test_wiring_a_provider_key() -> None:
     ref = parse_ref("secret://provider.main/api_key")
     writes, env = plan_wiring(ref, {"providers": {"main": {}}})
-    assert writes == [("providers.main.key_env", env), (f"secrets.hypotaxis_host.env.{env}", ref.text)]
+    assert writes == [
+        ("providers.main.key_env", env),
+        (f"secrets.hypotaxis_host.env.{env}", ref.text),
+        ("secrets.hypotaxis_host.enabled", "true"),
+    ]
     writes, env = plan_wiring(parse_ref("secret://provider.anthropic/api_key"), {}, lambda p: "ANTHROPIC_API_KEY")
-    assert (writes, env) == (
-        [("secrets.hypotaxis_host.env.ANTHROPIC_API_KEY", "secret://provider.anthropic/api_key")],
-        "ANTHROPIC_API_KEY",
+    assert env == "ANTHROPIC_API_KEY" and writes[0] == (
+        "secrets.hypotaxis_host.env.ANTHROPIC_API_KEY",
+        "secret://provider.anthropic/api_key",
     )
     with pytest.raises(ValueError):
         plan_wiring(parse_ref("secret://provider.zzz/api_key"), {}, lambda p: None)
     done: list[tuple[str, str]] = []
     got = wire_credential(ref.text, config=lambda: {"providers": {"main": {}}}, setter=lambda k, v: done.append((k, v)))
-    assert got["wired"] is True and len(done) == 2
+    assert got["wired"] is True and len(done) == 3
     assert wire_credential("secret://host.x/token")["wired"] is False
     failing = wire_credential(
         ref.text,

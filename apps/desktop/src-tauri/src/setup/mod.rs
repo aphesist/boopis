@@ -170,12 +170,35 @@ impl std::fmt::Debug for Answer {
     }
 }
 
+/// Whether first-run setup still has to run, without changing anything.
+#[derive(Debug, Clone, Serialize, Type)]
+pub struct Check {
+    /// Hermes is installed.
+    pub hermes_installed: bool,
+    /// Setup has not finished, or the plugin is missing, outdated or disabled.
+    pub needed: bool,
+    /// One line saying why.
+    pub reason: String,
+}
+
 /// The wanted settings, with why each matters (shown in the consent form).
 fn wanted() -> Vec<(&'static str, Value, &'static str)> {
     vec![
-        ("tools.tool_search.enabled", json!("off"), "so pack, ship and dispatch show directly; other clients of this profile see plugin and MCP tools eagerly too"),
-        ("delegation.backend", json!("hypotaxis"), "so governed work can be routed to each model tier"),
-        ("plugins.entries.hypotaxis.allow_gateway_injection", json!(true), "so a Claude Code Stop hook that blocks can continue the turn"),
+        (
+            "tools.tool_search.enabled",
+            json!("off"),
+            "so pack, ship and dispatch show directly; other clients of this profile see plugin and MCP tools eagerly too",
+        ),
+        (
+            "delegation.backend",
+            json!("hypotaxis"),
+            "so governed work can be routed to each model tier",
+        ),
+        (
+            "plugins.entries.hypotaxis.allow_gateway_injection",
+            json!(true),
+            "so a Claude Code Stop hook that blocks can continue the turn",
+        ),
     ]
 }
 
@@ -199,7 +222,14 @@ struct Run {
 }
 
 impl Run {
-    fn push(&mut self, id: &str, title: &str, state: StepState, detail: impl Into<String>, code: Option<&str>) {
+    fn push(
+        &mut self,
+        id: &str,
+        title: &str,
+        state: StepState,
+        detail: impl Into<String>,
+        code: Option<&str>,
+    ) {
         self.stop |= matches!(state, StepState::NeedsInput | StepState::Blocked);
         self.steps.push(Step {
             id: id.to_owned(),
@@ -223,7 +253,53 @@ impl Setup {
     /// An engine over `ops` and the keychain, installing from `bundle`.
     #[must_use]
     pub fn new(ops: Arc<dyn HermesOps>, secrets: Arc<dyn SecretStore>, bundle: Bundle) -> Self {
-        Self { ops, secrets, bundle, install_command: crate::hermes::install::installer_command().to_owned() }
+        Self {
+            ops,
+            secrets,
+            bundle,
+            install_command: crate::hermes::install::installer_command().to_owned(),
+        }
+    }
+
+    /// Read-only: does setup have to run? It never writes.
+    ///
+    /// # Errors
+    /// `hx.setup.state_invalid` for a progress file that cannot be used.
+    pub async fn check(&self) -> Result<Check> {
+        if self.ops.version().await.is_err() {
+            return Ok(Check {
+                hermes_installed: false,
+                needed: true,
+                reason: "Hermes is not installed".into(),
+            });
+        }
+        let home = self.ops.home();
+        let state = state::load(&home)?;
+        let installed = install::plugin_version(&ops::plugins_dir(&home).join("hypotaxis"));
+        let bundled = self
+            .bundle
+            .plugin_dir
+            .as_deref()
+            .and_then(install::plugin_version);
+        let enabled = self
+            .ops
+            .plugins()
+            .await
+            .is_ok_and(|l| l.iter().any(|p| p.name == "hypotaxis" && p.enabled));
+        let (needed, reason) = match (state.done_at, installed, enabled) {
+            (_, None, _) => (true, "the hypotaxis plugin is not installed"),
+            (_, _, false) => (true, "the hypotaxis plugin is not enabled"),
+            (None, _, _) => (true, "setup has not finished"),
+            (Some(_), Some(i), true) if bundled.is_some_and(|b| b != i) => {
+                (true, "the app carries a newer plugin")
+            }
+            _ => (false, "set up"),
+        };
+        Ok(Check {
+            hermes_installed: true,
+            needed,
+            reason: reason.into(),
+        })
     }
 
     fn apply_answer(&self, state: &mut State, answer: &Answer) -> Result<()> {
@@ -233,18 +309,27 @@ impl Setup {
         }
         let id = answer.form_id.as_str();
         if id == "setup.config" {
-            state.consent = if answer.cancelled { Consent::Declined } else { Consent::Granted };
+            state.consent = if answer.cancelled {
+                Consent::Declined
+            } else {
+                Consent::Granted
+            };
         } else if id == "setup.ladder" {
             state.choice = Some(if answer.cancelled {
                 String::new()
             } else {
-                answer.values.0["choice"].as_str().ok_or_else(|| invalid("a model must be chosen"))?.to_owned()
+                answer.values.0["choice"]
+                    .as_str()
+                    .ok_or_else(|| invalid("a model must be chosen"))?
+                    .to_owned()
             });
         } else if let Some(provider) = id.strip_prefix("setup.credential.") {
             if answer.cancelled {
                 state.choice = Some(String::new());
             } else {
-                let value = answer.secrets.0["value"].as_str().ok_or_else(|| invalid("the key is missing"))?;
+                let value = answer.secrets.0["value"]
+                    .as_str()
+                    .ok_or_else(|| invalid("the key is missing"))?;
                 validate_value(value)?;
                 let r = crate::secrets::refs::SecretRef::provider_key(provider);
                 self.secrets.set(&r.service(), &r.name, value)?;
@@ -271,11 +356,20 @@ impl Setup {
         if reconsider && state.consent == Consent::Declined {
             state.consent = Consent::Unasked;
         }
-        let mut run = Run { steps: Vec::new(), form: None, install_command: None, stop: false };
+        let mut run = Run {
+            steps: Vec::new(),
+            form: None,
+            install_command: None,
+            stop: false,
+        };
         self.steps(&mut run, &mut state).await;
         state.pending_form = run.form.as_ref().map(|f| f.form_id.clone());
         let finished = !run.stop;
-        let receipt = if finished { Some(self.receipt(&run.steps, &state).await) } else { None };
+        let receipt = if finished {
+            Some(self.receipt(&run.steps, &state).await)
+        } else {
+            None
+        };
         if finished && state.done_at.is_none() {
             state.done_at = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -286,13 +380,23 @@ impl Setup {
         if !finished {
             run.push("receipt", "Ready", StepState::Pending, "", None);
         }
-        Ok(Status { steps: run.steps, form: run.form, done: finished, install_command: run.install_command, receipt })
+        Ok(Status {
+            steps: run.steps,
+            form: run.form,
+            done: finished,
+            install_command: run.install_command,
+            receipt,
+        })
     }
 
     async fn steps(&self, run: &mut Run, state: &mut State) {
         // 1. Hermes
         match self.ops.version().await {
-            Ok(v) => run.done("hermes", "Hermes", format!("Hermes {}", v.unwrap_or_else(|| "(version unknown)".into()))),
+            Ok(v) => run.done(
+                "hermes",
+                "Hermes",
+                format!("Hermes {}", v.unwrap_or_else(|| "(version unknown)".into())),
+            ),
             Err(Error::HermesMissing) => {
                 run.install_command = Some(self.install_command.clone());
                 run.push("hermes", "Hermes", StepState::Blocked,
@@ -303,35 +407,65 @@ impl Setup {
             Err(e) => return run.blocked("hermes", "Hermes", "hx.setup.hermes_missing", &e),
         }
         self.plugin_step(run, state).await;
-        if run.stop { return; }
+        if run.stop {
+            return;
+        }
         self.hx_step(run, state).await;
-        if run.stop { return; }
+        if run.stop {
+            return;
+        }
         self.config_step(run, state).await;
-        if run.stop { return; }
+        if run.stop {
+            return;
+        }
         self.models_step(run, state).await;
-        if run.stop { return; }
+        if run.stop {
+            return;
+        }
         self.restart_step(run, state).await;
     }
 
     async fn plugin_step(&self, run: &mut Run, state: &mut State) {
         let (id, title) = ("plugin", "hypotaxis plugin");
         let Some(dir) = self.bundle.plugin_dir.clone() else {
-            let e = Error::Setup("hx.setup.no_bundle", "this build does not carry the plugin".into());
+            let e = Error::Setup(
+                "hx.setup.no_bundle",
+                "this build does not carry the plugin".into(),
+            );
             return run.blocked(id, title, "hx.setup.no_bundle", &e);
         };
         let home = self.ops.home();
-        let copied = tokio::task::spawn_blocking(move || install::install_plugin(&dir, &home)).await;
+        let copied =
+            tokio::task::spawn_blocking(move || install::install_plugin(&dir, &home)).await;
         let line = match copied {
             Ok(Ok(Installed::Current(v))) => format!("version {v}, up to date"),
-            Ok(Ok(Installed::Written { from: None, to })) => { state.restart_pending = true; format!("installed version {to}") }
-            Ok(Ok(Installed::Written { from: Some(f), to })) => { state.restart_pending = true; format!("upgraded {f} to {to}; your settings are kept") }
+            Ok(Ok(Installed::Written { from: None, to })) => {
+                state.restart_pending = true;
+                format!("installed version {to}")
+            }
+            Ok(Ok(Installed::Written { from: Some(f), to })) => {
+                state.restart_pending = true;
+                format!("upgraded {f} to {to}; your settings are kept")
+            }
             Ok(Err(e)) => return run.blocked(id, title, "hx.setup.plugin_install_failed", &e),
-            Err(e) => return run.blocked(id, title, "hx.setup.plugin_install_failed", &Error::Io(e.to_string())),
+            Err(e) => {
+                return run.blocked(
+                    id,
+                    title,
+                    "hx.setup.plugin_install_failed",
+                    &Error::Io(e.to_string()),
+                );
+            }
         };
         match self.ops.plugins().await {
-            Ok(list) if list.iter().any(|p| p.name == "hypotaxis" && p.enabled) => run.done(id, title, format!("{line}, enabled")),
+            Ok(list) if list.iter().any(|p| p.name == "hypotaxis" && p.enabled) => {
+                run.done(id, title, format!("{line}, enabled"));
+            }
             Ok(_) => match self.ops.enable_plugin("hypotaxis").await {
-                Ok(()) => { state.restart_pending = true; run.done(id, title, format!("{line}, now enabled")); }
+                Ok(()) => {
+                    state.restart_pending = true;
+                    run.done(id, title, format!("{line}, now enabled"));
+                }
                 Err(e) => run.blocked(id, title, "hx.setup.plugin_install_failed", &e),
             },
             Err(e) => run.blocked(id, title, "hx.setup.plugin_install_failed", &e),
@@ -347,10 +481,18 @@ impl Setup {
         let home = self.ops.home();
         let target = install::hx_target(&home);
         let h = home.clone();
-        let wrote = match tokio::task::spawn_blocking(move || install::place_hx(&bundled, &h)).await {
+        let wrote = match tokio::task::spawn_blocking(move || install::place_hx(&bundled, &h)).await
+        {
             Ok(Ok(w)) => w,
             Ok(Err(e)) => return run.blocked(id, title, "hx.setup.plugin_install_failed", &e),
-            Err(e) => return run.blocked(id, title, "hx.setup.plugin_install_failed", &Error::Io(e.to_string())),
+            Err(e) => {
+                return run.blocked(
+                    id,
+                    title,
+                    "hx.setup.plugin_install_failed",
+                    &Error::Io(e.to_string()),
+                );
+            }
         };
         let key = "plugins.entries.hypotaxis.settings.hx_path";
         let want = target.display().to_string();
@@ -374,7 +516,11 @@ impl Setup {
         for (key, to, _) in wanted() {
             match self.ops.config_get(key).await {
                 Ok(from) if from.as_ref() == Some(&to) => {}
-                Ok(from) => diff.push(DiffLine { key: key.to_owned(), from, to }),
+                Ok(from) => diff.push(DiffLine {
+                    key: key.to_owned(),
+                    from,
+                    to,
+                }),
                 Err(e) => return run.blocked(id, title, "hx.setup.config_failed", &e),
             }
         }
@@ -410,11 +556,19 @@ impl Setup {
     async fn models_step(&self, run: &mut Run, state: &mut State) {
         let (id, title) = ("models", "Models and keys");
         let mut restart = false;
-        let out = providers::run(self.ops.as_ref(), self.secrets.as_ref(), state.choice.as_deref(), &mut restart).await;
+        let out = providers::run(
+            self.ops.as_ref(),
+            self.secrets.as_ref(),
+            state.choice.as_deref(),
+            &mut restart,
+        )
+        .await;
         state.restart_pending |= restart;
         match out {
             Ok(providers::Outcome::Done(line)) => run.done(id, title, line),
-            Ok(providers::Outcome::Skipped(line)) => run.push(id, title, StepState::Skipped, line, None),
+            Ok(providers::Outcome::Skipped(line)) => {
+                run.push(id, title, StepState::Skipped, line, None);
+            }
             Ok(providers::Outcome::Form(form)) => {
                 run.push(id, title, StepState::NeedsInput, form.title.clone(), None);
                 run.form = Some(form);
@@ -448,7 +602,11 @@ impl Setup {
     }
 
     async fn receipt(&self, steps: &[Step], state: &State) -> Receipt {
-        let mut lines: Vec<String> = steps.iter().filter(|s| !s.detail.is_empty()).map(|s| format!("{}: {}", s.title, s.detail)).collect();
+        let mut lines: Vec<String> = steps
+            .iter()
+            .filter(|s| !s.detail.is_empty())
+            .map(|s| format!("{}: {}", s.title, s.detail))
+            .collect();
         if let Ok(list) = self.ops.plugins().await
             && providers::subscription_enabled(&list)
         {

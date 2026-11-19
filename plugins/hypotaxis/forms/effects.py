@@ -1,11 +1,12 @@
 """What submitting a ``credential`` form does beyond saving the secret: tie the saved key to the provider that reads it.
 
 Hermes reads a provider's key from the environment, and the plugin's secret source (``hostsecrets``) fills named
-environment variables from the host's keychain. So wiring a provider key is two Hermes config writes, made with
+environment variables from the host's keychain. So wiring a provider key is a few Hermes config writes, made with
 Hermes's own ``set_config_value`` (``hermes_cli.config`` is on the public plugin API list), never by editing YAML:
 
 - a named ``providers:`` entry gets ``key_env`` pointing at the derived variable, and
-- ``secrets.hypotaxis_host.env.<VARIABLE>`` binds that variable to the secret's reference.
+- ``secrets.hypotaxis_host.env.<VARIABLE>`` binds that variable to the secret's reference, and
+  ``secrets.hypotaxis_host.enabled: true`` turns the source on (Hermes only runs a source whose section says so).
 
 A built-in provider (anthropic, openrouter, ...) has no ``providers:`` entry and a variable of its own, so only the
 binding is written. The setup flow in the desktop host makes the same writes (``src-tauri/src/setup/providers.rs``).
@@ -68,14 +69,14 @@ def plan_wiring(
     named = config.get("providers")
     if isinstance(named, Mapping) and provider in cast("Mapping[str, Any]", named):
         variable = env_name(ref)
-        return [
-            (f"providers.{provider}.key_env", variable),
-            (f"secrets.{source_name()}.env.{variable}", ref.text),
-        ], variable
-    variable = builtin_env(provider) or ""
-    if not variable:
-        raise ValueError(f"Hermes has no provider called {provider!r}, so there is nothing to give the key to")
-    return [(f"secrets.{source_name()}.env.{variable}", ref.text)], variable
+        writes = [(f"providers.{provider}.key_env", variable)]
+    else:
+        variable = builtin_env(provider) or ""
+        if not variable:
+            raise ValueError(f"Hermes has no provider called {provider!r}, so there is nothing to give the key to")
+        writes = []
+    source = source_name()
+    return [*writes, (f"secrets.{source}.env.{variable}", ref.text), (f"secrets.{source}.enabled", "true")], variable
 
 
 def wire_credential(

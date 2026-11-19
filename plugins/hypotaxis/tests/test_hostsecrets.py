@@ -122,9 +122,7 @@ def test_hermes_secret_source_fetches_from_the_real_host(host: Path) -> None:
         "HYPOTAXIS_BAD": "nope",
     }
     cfg = {"env": env}
-    assert (
-        source.is_enabled(cfg) and not source.is_enabled({}) and not source.is_enabled({"env": env, "enabled": False})
-    )
+    assert source.is_enabled({**cfg, "enabled": True}) and not source.is_enabled(cfg), "Hermes needs enabled: true"
     result = source.fetch(cfg, host)
     assert result.ok and result.secrets == {"HYPOTAXIS_X": KEY}
     assert any("holds no secret" in w for w in result.warnings) and any("skipping" in w for w in result.warnings)

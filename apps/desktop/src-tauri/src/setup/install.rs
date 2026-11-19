@@ -47,7 +47,13 @@ pub fn plugin_version(dir: &Path) -> Option<String> {
         .filter(|v| !v.is_empty())
 }
 
-const SKIP_DIRS: &[&str] = &["__pycache__", "tests", ".pytest_cache", ".ruff_cache", ".mypy_cache"];
+const SKIP_DIRS: &[&str] = &[
+    "__pycache__",
+    "tests",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".mypy_cache",
+];
 
 fn copy_tree(from: &Path, to: &Path) -> std::io::Result<()> {
     std::fs::create_dir_all(to)?;
@@ -93,7 +99,9 @@ pub fn install_plugin(bundle_dir: &Path, home: &Path) -> Result<Installed> {
     if from.as_deref() == Some(to.as_str()) && target.join("__init__.py").is_file() {
         return Ok(Installed::Current(to));
     }
-    let parent = target.parent().ok_or_else(|| Error::Io("no plugins dir".into()))?;
+    let parent = target
+        .parent()
+        .ok_or_else(|| Error::Io("no plugins dir".into()))?;
     std::fs::create_dir_all(parent)?;
     let fresh = parent.join(".hypotaxis.new");
     let old = parent.join(".hypotaxis.old");
@@ -135,7 +143,9 @@ pub fn place_hx(bundled: &Path, home: &Path) -> Result<bool> {
     if digest(bundled).is_some() && digest(bundled) == digest(&target) {
         return Ok(false);
     }
-    let dir = target.parent().ok_or_else(|| Error::Io("no bin dir".into()))?;
+    let dir = target
+        .parent()
+        .ok_or_else(|| Error::Io("no bin dir".into()))?;
     std::fs::create_dir_all(dir)?;
     let tmp = target.with_extension("new");
     std::fs::copy(bundled, &tmp)?;
@@ -155,7 +165,11 @@ mod tests {
     fn bundle(dir: &Path, version: &str) {
         std::fs::create_dir_all(dir.join("tests")).unwrap();
         std::fs::create_dir_all(dir.join("__pycache__")).unwrap();
-        std::fs::write(dir.join("plugin.yaml"), format!("name: hypotaxis\nversion: {version}\n")).unwrap();
+        std::fs::write(
+            dir.join("plugin.yaml"),
+            format!("name: hypotaxis\nversion: {version}\n"),
+        )
+        .unwrap();
         std::fs::write(dir.join("__init__.py"), format!("V = '{version}'\n")).unwrap();
         std::fs::write(dir.join("tests").join("t.py"), "x").unwrap();
         std::fs::write(dir.join("__pycache__").join("a.pyc"), "x").unwrap();
@@ -169,18 +183,30 @@ mod tests {
         let target = home.join("plugins").join("hypotaxis");
         assert_eq!(
             install_plugin(&b, &home).unwrap(),
-            Installed::Written { from: None, to: "0.1.0".into() }
+            Installed::Written {
+                from: None,
+                to: "0.1.0".into()
+            }
         );
         assert!(target.join("__init__.py").is_file());
         assert!(!target.join("tests").exists() && !target.join("__pycache__").exists());
-        assert_eq!(install_plugin(&b, &home).unwrap(), Installed::Current("0.1.0".into()));
+        assert_eq!(
+            install_plugin(&b, &home).unwrap(),
+            Installed::Current("0.1.0".into())
+        );
         std::fs::write(target.join("stale.py"), "old").unwrap();
         bundle(&b, "0.2.0");
         assert_eq!(
             install_plugin(&b, &home).unwrap(),
-            Installed::Written { from: Some("0.1.0".into()), to: "0.2.0".into() }
+            Installed::Written {
+                from: Some("0.1.0".into()),
+                to: "0.2.0".into()
+            }
         );
-        assert!(!target.join("stale.py").exists(), "an upgrade replaces the directory");
+        assert!(
+            !target.join("stale.py").exists(),
+            "an upgrade replaces the directory"
+        );
         assert_eq!(plugin_version(&target).as_deref(), Some("0.2.0"));
         assert!(!target.parent().unwrap().join(".hypotaxis.old").exists());
     }
@@ -201,8 +227,18 @@ mod tests {
         let (src, home) = (tmp.path().join("hx"), tmp.path().join("home"));
         std::fs::write(&src, "binary").unwrap();
         assert!(place_hx(&src, &home).unwrap());
-        assert!(!place_hx(&src, &home).unwrap(), "an identical file is left alone");
-        assert_eq!(std::fs::metadata(hx_target(&home)).unwrap().permissions().mode() & 0o777, 0o755);
+        assert!(
+            !place_hx(&src, &home).unwrap(),
+            "an identical file is left alone"
+        );
+        assert_eq!(
+            std::fs::metadata(hx_target(&home))
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777,
+            0o755
+        );
         std::fs::write(&src, "binary v2").unwrap();
         assert!(place_hx(&src, &home).unwrap());
     }
@@ -214,7 +250,10 @@ mod tests {
         bundle(&res.join("plugin").join("hypotaxis"), "1.0.0");
         std::fs::write(tmp.path().join("hx"), "x").unwrap();
         let found = Bundle::locate(Some(&res), Some(tmp.path()));
-        assert_eq!(found.plugin_dir.unwrap(), res.join("plugin").join("hypotaxis"));
+        assert_eq!(
+            found.plugin_dir.unwrap(),
+            res.join("plugin").join("hypotaxis")
+        );
         assert_eq!(found.hx.unwrap(), tmp.path().join("hx"));
     }
 }

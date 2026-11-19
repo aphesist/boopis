@@ -4,6 +4,7 @@ Configuration, in Hermes's ``config.yaml``::
 
     secrets:
       hypotaxis_host:
+        enabled: true          # Hermes runs a source only when its section says so
         env:
           HYPOTAXIS_PROVIDER_MAIN_API_KEY_C72E2A4F: secret://provider.main/api_key
 
@@ -106,10 +107,6 @@ def make_source() -> Any:
             ),
         }
 
-        def is_enabled(self, cfg: dict[str, Any]) -> bool:
-            # the bindings are the intent: a section with an env map is on unless it says `enabled: false`
-            return bool(cfg.get("env")) and cfg.get("enabled") is not False if isinstance(cfg, dict) else False  # pyright: ignore[reportUnnecessaryIsInstance]
-
         def config_schema(self) -> dict[str, Any]:
             return {
                 "env": {
@@ -117,8 +114,8 @@ def make_source() -> Any:
                     "default": {},
                 },
                 "enabled": {
-                    "description": "Set false to switch the source off without removing the map",
-                    "default": True,
+                    "description": "Master switch: Hermes runs a source only when its section says enabled: true",
+                    "default": False,
                 },
             }
 

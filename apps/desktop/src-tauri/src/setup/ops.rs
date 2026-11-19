@@ -59,7 +59,12 @@ impl CliOps {
         let info = self.sup.info().await?;
         self.sup
             .cli()
-            .run(&info.binary, &self.home, args, self.sup.limits().ensure_timeout)
+            .run(
+                &info.binary,
+                &self.home,
+                args,
+                self.sup.limits().ensure_timeout,
+            )
             .await
     }
 }

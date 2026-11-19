@@ -27,8 +27,9 @@ fn part_ok(p: &str) -> bool {
     let b = p.as_bytes();
     (1..=63).contains(&b.len())
         && (b[0].is_ascii_lowercase() || b[0].is_ascii_digit())
-        && b.iter()
-            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || matches!(c, b'_' | b'.' | b'-'))
+        && b.iter().all(|c| {
+            c.is_ascii_lowercase() || c.is_ascii_digit() || matches!(c, b'_' | b'.' | b'-')
+        })
 }
 
 impl SecretRef {
@@ -132,7 +133,10 @@ mod tests {
         ] {
             assert!(SecretRef::parse(bad).is_err(), "{bad}");
         }
-        assert_eq!(builtin_provider_env("anthropic").unwrap(), "ANTHROPIC_API_KEY");
+        assert_eq!(
+            builtin_provider_env("anthropic").unwrap(),
+            "ANTHROPIC_API_KEY"
+        );
         assert_eq!(builtin_provider_env("nope"), None);
     }
 }

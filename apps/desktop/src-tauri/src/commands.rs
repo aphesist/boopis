@@ -23,6 +23,9 @@ use crate::os::{self, PickedFolder};
 use crate::secrets::SecretStore;
 use crate::secrets::store::{validate_name, validate_value};
 use crate::settings::AppSettings;
+use crate::setup::install::Bundle;
+use crate::setup::ops::CliOps;
+use crate::setup::{Answer, Check, Setup, Status};
 use crate::state::Hubs;
 
 /// A gateway frame, as JSON, exactly as the gateway sent it.
@@ -45,6 +48,8 @@ pub struct AppState {
     pub secrets: Arc<dyn SecretStore>,
     /// Tunable numbers.
     pub limits: Limits,
+    /// The plugin and `hx` this app carries, for first-run setup.
+    pub bundle: Bundle,
 }
 
 struct ChannelSink(Channel<Frame>);
@@ -110,6 +115,48 @@ pub async fn hermes_status(
 #[specta::specta]
 pub fn hermes_install(consent: bool) -> std::result::Result<InstallReport, HostError> {
     Ok(install::plan(consent)?)
+}
+
+fn setup_engine(app: &AppHandle, state: &AppState, profile: Option<String>) -> Result<Setup> {
+    let profile = profile_of(app, profile)?;
+    let home = state
+        .supervisor
+        .environment()
+        .profile_home(profile.as_deref())?;
+    let ops = CliOps::new(state.supervisor.clone(), home);
+    Ok(Setup::new(
+        Arc::new(ops),
+        state.secrets.clone(),
+        state.bundle.clone(),
+    ))
+}
+
+/// Whether first-run setup still has to run. Read-only: it changes nothing.
+#[tauri::command]
+#[specta::specta]
+pub async fn setup_check(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    profile: Option<String>,
+) -> std::result::Result<Check, HostError> {
+    Ok(setup_engine(&app, &state, profile)?.check().await?)
+}
+
+/// Run first-run setup as far as it goes. `answer` replies to the form the last call returned (secret values go to the
+/// keychain here and nowhere else); `reconsider` asks again about a declined consent. Calling it with neither is
+/// "Check again". It never runs an installer.
+#[tauri::command]
+#[specta::specta]
+pub async fn setup_advance(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    profile: Option<String>,
+    answer: Option<Answer>,
+    reconsider: bool,
+) -> std::result::Result<Status, HostError> {
+    Ok(setup_engine(&app, &state, profile)?
+        .advance(answer, reconsider)
+        .await?)
 }
 
 /// Ask a gateway link that gave up (`incompatible`) to try again, after the user fixed Hermes.
