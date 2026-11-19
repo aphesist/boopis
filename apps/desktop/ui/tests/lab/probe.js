@@ -231,6 +231,9 @@
 
   /* ───────── the checks ───────── */
   function run(o) {
+    /* every check reads where things rest: a transition in flight (a preset swap, or a surface that was not drawn when the preset changed
+       and first paints from the old colour) is taken to its end first, so a colour or a box is never read half-way (R-colour-1) */
+    for (const a of document.getAnimations()) if (a instanceof CSSTransition) { try { a.finish(); } catch { /* an animation that cannot finish is left */ } }
     const scope = o.scope ? document.querySelector(o.scope) : (window.__lab && window.__lab.scope && window.__lab.scope()) || document.body;
     if (!scope) return { error: 'no scope', findings: [] };
     const want = new Set(o.checks || ['geometry.contain', 'geometry.center', 'geometry.clip', 'geometry.hscroll', 'geometry.target', 'concentric', 'overlay', 'tokens.computed', 'tokens.spacing', 'native', 'scrollbar', 'brand', 'copy', 'roles']);
