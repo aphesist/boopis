@@ -48,6 +48,10 @@ export interface LiveDetails {
   onReplayGap(uiId: string): void;
   /** the mode and model the user chose before the first message, to apply at creation */
   chosen(uiId: string): { governed: boolean | null; model: string | null };
+  /** whether a session about to be created is governed: the user's choice, else the plugin's default mode. An unknown
+   *  default counts as governed (the plugin's own default), so a failure to read it never creates a session without the
+   *  governed toolset. False when the plugin is not loaded (there is nothing to govern with). */
+  governedAtCreation(uiId: string): boolean;
   /** the read of the global things (default mode, MCP servers, what this Hermes can do); part of `ready` */
   start(): Promise<void>;
   /** tests: every read in flight and every scheduled refresh done */
@@ -270,6 +274,7 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
     onLinkReady() { void track(read<McpStatusWire>('mcp.servers.status', {}).then((r) => { mcp = r; })); for (const [id] of models) if (deps.gwId(id)) void track(refresh(id, ALL)); },
     onReplayGap(uiId) { models.set(uiId, Object.assign(newModel(), { title: model(uiId).title, started: true })); void track(refresh(uiId, ALL)); },
     chosen(uiId) { const m = model(uiId); return { governed: m.wantGoverned, model: m.wantModel }; },
+    governedAtCreation(uiId) { return pluginOk && (model(uiId).wantGoverned ?? (defaultMode ?? 'governed') === 'governed'); },
     async settled() { flush(); while (inflight.size) await Promise.allSettled([...inflight]); }
   };
 }

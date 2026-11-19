@@ -19,6 +19,8 @@ class Defaults:
     roles: Mapping[str, frozenset[str]]  # the hypotaxis tools each role of a governed session may use
     governed_only_tools: frozenset[str]  # hypotaxis tools that mean nothing outside governed mode
     read_only_tools: frozenset[str]
+    network_tools: frozenset[str]  # tools that send data to, or fetch from, the network (a URL, a query, a page)
+    workspace_confined_tools: frozenset[str]  # read-only tools that, in governed mode, may only reach the workspace
     kernel_denied_tools: frozenset[str]
     shell_tools: frozenset[str]
     write_tools: frozenset[str]
@@ -51,6 +53,8 @@ def load_defaults() -> Defaults:
         roles={role: frozenset(tools) for role, tools in raw["roles"].items()},
         governed_only_tools=frozenset(raw["governed_only_tools"]),
         read_only_tools=frozenset(raw["read_only_tools"]),
+        network_tools=frozenset(raw["network_tools"]),
+        workspace_confined_tools=frozenset(raw["workspace_confined_tools"]),
         kernel_denied_tools=frozenset(raw["kernel_denied_tools"]),
         shell_tools=frozenset(raw["shell_tools"]),
         write_tools=frozenset(raw["write_tools"]),

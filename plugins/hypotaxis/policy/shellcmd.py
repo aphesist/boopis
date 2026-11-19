@@ -202,12 +202,25 @@ def expand_shell_c(words: tuple[str, ...]) -> list[SimpleCommand] | None:
 
 
 def violates_flags(words: tuple[str, ...], spec: Mapping[str, Any]) -> bool:
-    """Whether any word is a flag the read-only table forbids for this command."""
+    """Whether any word is a flag the read-only table forbids for this command.
+
+    A long flag is matched the way getopt does: ``--compress-program``, ``--compress-p=x`` and ``--comp x`` are the
+    same option, so a word that is a prefix (of at least one letter) of a forbidden long flag counts. A short flag is
+    matched inside a cluster (``-uT`` holds ``-T``), with or without an attached argument."""
     for flag in spec.get("deny_flags", ()):
         short = len(flag) == 2 and flag[0] == "-" and flag[1] != "-"
         for word in words[1:]:
+            name = word.split("=", 1)[0]
             if word == flag or word.startswith(flag + "="):
                 return True
-            if short and word.startswith("-") and not word.startswith("--") and flag[1] in word.split("=", 1)[0][1:]:
+            if flag.startswith("--") and name.startswith("--") and len(name) >= 3 and flag.startswith(name):
+                return True
+            if short and word.startswith("-") and not word.startswith("--") and flag[1] in name[1:]:
                 return True
     return False
+
+
+def has_dynamic_text(words: tuple[str, ...]) -> bool:
+    """Whether a word still holds shell expansion syntax (``$``, a backtick) after quoting was removed: it is a
+    parameter, arithmetic or command expansion the analysis cannot see through, whatever quotes held it."""
+    return any("$" in word or "`" in word for word in words)

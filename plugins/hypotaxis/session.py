@@ -363,6 +363,7 @@ class Runtime:
             default=rules.default,
             protected=proj.protected if proj else (),
             config_error="; ".join(errors),
+            exec_network=settings.exec.network,
         )
 
     def _bootstrap_spend(self, state: SessionState) -> None:

@@ -18,10 +18,14 @@ import type { FormEntry } from './live/forms';
 import { tauriSecrets } from './secrets';
 import type { SecretsBridge } from './secrets';
 import type { GatewayClient, GatewayEvent } from './gateway';
+import type { RpcMethods } from '../vendor/hermes-shared/gateway-contract.generated';
 import { approvalToWait, choiceFor, clock, elapsed, failedStep, paragraphs, reduceLedger, sessionRowToSummary, toolStep, transcriptToTurns } from './map';
 import type { LedgerTotals } from './map';
 
 const log = logger('live');
+
+/** the toolsets of a governed session: only the plugin's tools (docs/ARCHITECTURE.md section 4); fixed at `session.create` */
+const GOVERNED_TOOLSETS = ['hypotaxis'];
 
 /** the sources still served by the mock provider, shown to the user as previews (`info.preview`) or empty:
  *  bots and schedules (phase 2) and the feedforward catalog (the plugin's feedforward RPC is not built). Everything the
@@ -112,11 +116,24 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   async function ensureLive(c: Convo): Promise<string> {
     if (c.gwId) return c.gwId;
     if (c.hydrated) { // a session made here, not yet on the gateway
-      const res = await client.request('session.create', { source: 'gui' });
+      const governed = details.governedAtCreation(c.uiId);
+      /* the toolset is fixed here for good (Hermes's prompt cache): a governed session has only the hypotaxis tools, so no
+         Hermes tool the plugin would have to police ever reaches the model. The generated contract's create params do not
+         list `toolsets` yet (the gateway's canonical ones do), hence the raw call. */
+      const res = await client.requestRaw('session.create', { source: 'gui', ...(governed ? { toolsets: GOVERNED_TOOLSETS } : {}) }) as RpcMethods['session.create']['result'];
+      const want = details.chosen(c.uiId);
+      if (want.governed !== null || governed) {
+        /* the mode must match the toolset, and a failure is fatal for this session: it is closed and never bound, so
+           nothing is sent to it and a retry makes a fresh one. Running a session whose mode is unknown is not an option. */
+        try { await client.requestRaw('plugin.hypotaxis.mode.set', { session_id: res.session_id, mode: governed ? 'governed' : 'ungoverned' }); }
+        catch (e) {
+          log.error('the mode could not be set; the session was closed', e);
+          await client.request('session.close', { session_id: res.session_id }).catch((closeErr: unknown) => { log.warn('the session could not be closed', closeErr); });
+          throw new Error('The session was not started: its ' + (governed ? 'governed' : 'ungoverned') + ' mode could not be set (' + (e instanceof Error ? e.message : String(e)) + ').');
+        }
+      }
       bind(c, res.session_id);
       c.model = res.info.model ?? '';
-      const want = details.chosen(c.uiId);
-      if (want.governed !== null) await client.requestRaw('plugin.hypotaxis.mode.set', { session_id: res.session_id, mode: want.governed ? 'governed' : 'ungoverned' }).catch((e: unknown) => { log.warn('the mode could not be set', e); });
       details.onBound(c.uiId);
       return res.session_id;
     }

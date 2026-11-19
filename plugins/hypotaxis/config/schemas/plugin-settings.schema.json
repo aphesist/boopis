@@ -392,6 +392,20 @@
           "default": 300
         }
       }
+    },
+    "gate": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "allow_unsandboxed": {
+          "type": "boolean",
+          "default": false,
+          "description": "Run the ship gate's test command without the OS sandbox when this machine cannot provide one. Off by default: an unavailable sandbox blocks the gate. A user choice only; every unsandboxed run is logged and recorded."
+        }
+      }
     }
   }
 }

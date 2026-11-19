@@ -284,6 +284,8 @@ jobs:
           retention-days: 7
 
   windows:
+    # macOS minutes count ten times and Windows twice: build them for tags and on demand, not every develop push
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
     # Non-blocking: the host's secret channel has no Windows transport yet (apps/desktop/AGENTS.md).
     runs-on: windows-latest
     continue-on-error: true
@@ -319,6 +321,8 @@ jobs:
           retention-days: 30
 
   macos:
+    # macOS minutes count ten times and Windows twice: build them for tags and on demand, not every develop push
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
     # Non-blocking. macos-latest is Apple silicon: the bundle is aarch64-apple-darwin. Unsigned and not notarised, so
     # Gatekeeper asks the user to allow it.
     runs-on: macos-latest
