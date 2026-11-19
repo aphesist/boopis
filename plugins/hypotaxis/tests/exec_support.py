@@ -73,6 +73,22 @@ class PlainLauncher:
         return PlainSpawned(proc, ours)
 
 
+class DyingLauncher(PlainLauncher):
+    """A launcher whose kernel exits at once with code 7, before it can say ready: a sandbox that cannot run it."""
+
+    def spawn(self, spec: KernelSpec) -> PlainSpawned:
+        self.specs.append(spec)
+        ours, theirs = socket.socketpair()
+        proc = subprocess.Popen(
+            [sys.executable, "-c", "import sys; sys.stderr.write('Landlock denied the interpreter'); sys.exit(7)"],
+            pass_fds=[theirs.fileno()],
+            start_new_session=True,
+            stderr=subprocess.DEVNULL,
+        )
+        theirs.close()
+        return PlainSpawned(proc, ours)
+
+
 class ExecCtx(FakeCtx):
     """A recording context that can also dispatch tools and call MCP servers."""
 

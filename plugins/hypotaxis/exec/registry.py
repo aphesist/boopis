@@ -23,7 +23,7 @@ from ..util.log import get_logger
 from .calls import CellServices
 from .cell import CallFailure
 from .kernel import KernelProcess
-from .launcher import HxLauncher, KernelSpec, Launcher, read_paths
+from .launcher import HxLauncher, Launcher, kernel_spec
 
 _log = get_logger("exec.registry")
 REAP_INTERVAL_S = 30.0
@@ -86,21 +86,7 @@ class KernelRegistry:
         scratch = scratch_dir(rt, session_id)
         scratch.mkdir(parents=True, exist_ok=True)
         os.chmod(scratch, 0o700)
-        spec = KernelSpec(
-            workspace=state.cwd,
-            scratch=str(scratch),
-            net=settings.network,
-            memory_bytes=settings.memory_mb << 20,
-            max_processes=settings.max_processes,
-            lifetime_ms=settings.max_lifetime_s * 1000,
-            env={
-                "HX_CONCURRENCY": str(settings.max_concurrency),
-                "HX_SH_OUTPUT_CAP": str(settings.sh_output_cap_bytes),
-                "PYTHONDONTWRITEBYTECODE": "1",
-                "PYTHONIOENCODING": "utf-8",
-            },
-            ro=read_paths(state.cwd),
-        )
+        spec = kernel_spec(state.cwd, str(scratch), settings)
         spawned = launcher.spawn(spec)
         kernel = KernelProcess(session_id, spawned, settings, CellServices(rt, caller, session_id))
         kernel.on_gone = self._gone

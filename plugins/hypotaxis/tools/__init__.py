@@ -35,11 +35,22 @@ def hx_ready() -> bool:
 
 
 def exec_ready() -> bool:
-    """``check_fn`` of exec: hx exists and the platform has the kernel's private channel. Windows has none
-    yet, so exec is hidden there rather than offered and then refused."""
+    """``check_fn`` of exec: hx exists, the platform has the kernel's private channel (Windows has none yet) and a
+    sandboxed kernel really starts here (``exec.probe``, cached). A tool that cannot work is hidden, not offered and
+    then failed. The first call starts hx and one throwaway kernel."""
     from ..exec import available
 
-    return available() and hx_ready()
+    if not (available() and hx_ready()):
+        return False
+    try:
+        from ..exec.probe import sandbox_problem
+        from ..hooks import runtime
+
+        rt = runtime()
+        client = rt.hx_client()
+        return client is not None and not sandbox_problem(client, rt.load_settings().value.exec)
+    except Exception:  # noqa: BLE001 - a check that errors hides the tool
+        return False
 
 
 def _session(args: Mapping[str, Any], kw: Mapping[str, Any]) -> Any:

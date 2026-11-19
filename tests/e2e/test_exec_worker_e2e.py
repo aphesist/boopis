@@ -106,6 +106,16 @@ def gateway(stack: HermesStack, stack_root: Path) -> Iterator[GatewayClient]:
     gw.close()
 
 
+@pytest.fixture(scope="module", autouse=True)
+def kernel_can_start(gateway: GatewayClient) -> None:
+    """exec is offered only where a sandboxed kernel starts with Hermes's own interpreter (``describe.kernel`` is the
+    plugin's probe). Where it cannot, this test skips and says why; the unavailable path is tested elsewhere."""
+    kernel = gateway.result("plugin.hypotaxis.describe", {}).get("kernel")
+    if not kernel or not kernel.get("ok"):
+        reason = (kernel or {}).get("reason") or "no hx to sandbox it"
+        pytest.skip(f"exec cannot run in this environment (hx.sandbox.unavailable): {reason}")
+
+
 def git(root: Path, *args: str) -> str:
     return subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, check=True).stdout.strip()
 

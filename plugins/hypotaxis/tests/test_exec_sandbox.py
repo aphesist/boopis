@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from exec_kit import compat_runtime, make_bridge, make_env
 from exec_support import ExecCtx, scratch_of
 from hypotaxis import hooks, hx
 from hypotaxis.exec.registry import KernelRegistry, install
@@ -65,6 +66,8 @@ def make_box(tmp_path: Path, home: Path, monkeypatch: pytest.MonkeyPatch) -> Ite
         hooks.install(rt)
         registry = KernelRegistry()
         install(registry)
+        # an inert compat bridge: the default one resolves the Hermes home through Hermes itself
+        compat_runtime.install(make_bridge(ctx, make_env(workspace, home, home / "user")))  # type: ignore[arg-type]
         made.append(registry)
         state = rt.lock(SID, cwd=str(workspace), provider="p", model="m")
         return Box(rt, state, registry, workspace, home)
@@ -73,6 +76,7 @@ def make_box(tmp_path: Path, home: Path, monkeypatch: pytest.MonkeyPatch) -> Ite
     for registry in made:
         registry.shutdown()
     install(None)
+    compat_runtime.install(None)
     hx.shutdown()
 
 
@@ -207,3 +211,39 @@ def test_cell_output_is_redacted_by_the_real_hx_and_the_system_paths_are_hxs_own
     assert key not in repr(out) and "[REDACTED:" in out["stdout"]
     # /etc/os-release is readable although this plugin never lists it: hx's `system_read` granted it
     assert out["result"] == repr(Path("/etc/os-release").read_text()[:4])
+
+
+def test_the_probe_starts_a_real_kernel_and_says_ready(make_box: MakeBox) -> None:
+    from hypotaxis.config import ExecSettings
+    from hypotaxis.exec import probe
+
+    box = make_box()
+    probe.forget()
+    client = box.rt.hx_client()
+    assert client is not None
+    assert probe.sandbox_problem(client, ExecSettings()) == ""
+    assert box.rt.ctx.__class__  # the runtime is the one exec uses
+    from hypotaxis.rpc import describe
+
+    assert describe({}, session_id=SID)["kernel"] == {"ok": True, "reason": ""}
+
+
+def test_when_the_sandbox_cannot_run_the_interpreter_exec_is_unavailable_with_the_reason(
+    make_box: MakeBox, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A real sandbox that cannot read the interpreter: the kernel dies before ready, and exec says so plainly."""
+    from hypotaxis.exec import launcher, probe
+    from hypotaxis.tools import exec_ready
+
+    box = make_box()
+    monkeypatch.setattr(launcher, "read_paths", lambda workspace, extra=(): [workspace])
+    probe.forget()
+    out = box.run("1 + 1")
+    assert out["code"] == "hx.sandbox.unavailable", out
+    assert "did not start inside the sandbox" in out["error"]
+    assert "status" not in out
+    client = box.rt.hx_client()
+    assert client is not None
+    assert probe.sandbox_problem(client, box.state.settings.exec) != ""
+    assert exec_ready() is False  # hidden: the tool is not offered where it cannot work
+    probe.forget()

@@ -123,12 +123,9 @@ jobs:
         working-directory: plugins/hypotaxis
         env:
           HX_BIN: ${{ runner.temp }}/hx/hx
-        # Two sandbox tests need Hermes's own modules (hermes_constants); the e2e job runs them against the install.
         run: |
           uv run --no-project --python ${{ matrix.python }} --with pytest --with hypothesis --with ruamel.yaml --with "$CONTRAPROVA_SPEC" \
-            pytest -q tests \
-            --deselect tests/test_exec_sandbox.py::test_sh_runs_inside_the_same_sandbox \
-            --deselect tests/test_exec_sandbox.py::test_a_grandchild_of_sh_dies_when_the_cell_is_cancelled
+            pytest -q tests
 
   e2e:
     # Real Hermes v0.23.2 (its own installer, cached) behind a fake model: one provider, zero egress.

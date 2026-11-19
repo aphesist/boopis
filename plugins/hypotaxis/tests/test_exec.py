@@ -11,7 +11,7 @@ from typing import Any
 
 import pytest
 from exec_kit import SID, Kit, MakeKit, make_kit  # noqa: F401
-from exec_support import scratch_of
+from exec_support import DyingLauncher, scratch_of
 from hypotaxis import hooks
 from hypotaxis.config import parse_settings
 from hypotaxis.exec.run import run_exec
@@ -595,3 +595,46 @@ def test_exec_settings_have_schema_defaults_and_are_validated() -> None:
     bad = parse_settings({"exec": {"network": "everywhere"}})
     assert bad.errors and "exec.network" in bad.errors[0]
     assert parse_settings({"exec": {"surprise": 1}}).errors
+
+
+# ---------------------------------------------------------------- a sandbox that cannot start the kernel
+
+
+def test_a_kernel_the_sandbox_cannot_start_is_sandbox_unavailable_and_says_why(make_kit: MakeKit) -> None:
+    kit = make_kit()
+    dying = DyingLauncher()
+    kit.registry._launcher_for = lambda _rt: dying  # pyright: ignore[reportPrivateUsage]
+    out = kit.run("1 + 1")
+    assert out["code"] == "hx.sandbox.unavailable"
+    assert "did not start inside the sandbox" in out["error"] and "code 7" in out["error"]
+    assert "status" not in out  # an infrastructure failure is an error object, not a cell outcome
+    assert not kit.registry._kernels  # pyright: ignore[reportPrivateUsage]
+    assert kit.run("2")["code"] == "hx.sandbox.unavailable"  # and again, not a stale kernel
+
+
+def test_the_tool_is_hidden_while_the_probe_says_the_sandbox_cannot_run_a_kernel(
+    make_kit: MakeKit, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from hypotaxis import tools
+    from hypotaxis.exec import probe
+
+    kit = make_kit()
+    monkeypatch.setattr(tools, "hx_ready", lambda: True)
+    kit.rt.hx_client = lambda: kit.redactor  # type: ignore[method-assign,assignment,return-value]
+    monkeypatch.setattr(probe, "sandbox_problem", lambda _c, _s: "denied by the test")
+    assert tools.exec_ready() is False
+    monkeypatch.setattr(probe, "sandbox_problem", lambda _c, _s: "")
+    assert tools.exec_ready() is True
+
+
+def test_describe_reports_whether_the_kernel_can_start(make_kit: MakeKit, monkeypatch: pytest.MonkeyPatch) -> None:
+    from hypotaxis.exec import probe
+    from hypotaxis.rpc import describe
+
+    kit = make_kit()
+    kit.redactor.path = "fake-hx"  # type: ignore[attr-defined]
+    kit.rt.hx_client = lambda: kit.redactor  # type: ignore[method-assign,assignment,return-value]
+    monkeypatch.setattr(probe, "sandbox_problem", lambda _c, _s: "no landlock here")
+    assert describe({}, session_id=SID)["kernel"] == {"ok": False, "reason": "no landlock here"}
+    monkeypatch.setattr(probe, "sandbox_problem", lambda _c, _s: "")
+    assert describe({}, session_id=SID)["kernel"] == {"ok": True, "reason": ""}

@@ -53,6 +53,16 @@ def workspace(stack: HermesStack) -> Path:
     return root
 
 
+@pytest.fixture(scope="module", autouse=True)
+def kernel_can_start(gateway: GatewayClient) -> None:
+    """exec is offered only where a sandboxed kernel starts with Hermes's own interpreter (``describe.kernel`` is the
+    plugin's probe). Where it cannot, these tests skip and say why; the unavailable path is tested elsewhere."""
+    kernel = gateway.result("plugin.hypotaxis.describe", {}).get("kernel")
+    if not kernel or not kernel.get("ok"):
+        reason = (kernel or {}).get("reason") or "no hx to sandbox it"
+        pytest.skip(f"exec cannot run in this environment (hx.sandbox.unavailable): {reason}")
+
+
 def create_session(gw: GatewayClient, cwd: Path, **extra: Any) -> str:
     created = gw.result(
         "session.create",
@@ -155,7 +165,7 @@ def test_exec_runs_in_the_sandbox_calls_tools_through_the_policy_and_leaves_a_bl
     assert "exec" in first.tool_names and "pack" in first.tool_names  # the tool is offered (Linux, hx found)
 
     parallel, denied, blank = tool_results(fake_model, start)[:3]
-    assert parallel["status"] == "ok", parallel
+    assert parallel.get("status") == "ok", parallel  # an error object has no status: show it
     assert parallel["calls"]["total"] == 4
     assert [line.split()[1:3] for line in parallel["calls"]["log"]].count(["pack", "ok"]) == 2
     assert (
@@ -164,11 +174,11 @@ def test_exec_runs_in_the_sandbox_calls_tools_through_the_policy_and_leaves_a_bl
         or "ship" in parallel["calls"]["log"][2]
     )
 
-    assert denied["status"] == "ok", denied
+    assert denied.get("status") == "ok", denied
     assert "('denied', 'hx.policy.denied') 4" in denied["stdout"]  # the variable from the first cell survived
     assert not forbidden.exists()
 
-    assert blank["status"] == "ok", blank
+    assert blank.get("status") == "ok", blank
     assert "went on after the blank open" in blank["stdout"]
     assert len(blank["blanks"]) == 1
 

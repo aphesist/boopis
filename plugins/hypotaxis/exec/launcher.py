@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
 
+from ..config.model import ExecSettings
 from ..errors import HxCallError, HypotaxisError, SandboxUnavailableError
 from ..hx import HxClient
 from ..hx.types import (
@@ -84,6 +85,25 @@ class Spawned(Protocol):
 
 class Launcher(Protocol):
     def spawn(self, spec: KernelSpec) -> Spawned: ...
+
+
+def kernel_spec(workspace: str, scratch: str, settings: ExecSettings) -> KernelSpec:
+    """The sandbox a kernel runs in, from the settings. One function, so the probe tests what a real kernel gets."""
+    return KernelSpec(
+        workspace=workspace,
+        scratch=scratch,
+        net=settings.network,
+        memory_bytes=settings.memory_mb << 20,
+        max_processes=settings.max_processes,
+        lifetime_ms=settings.max_lifetime_s * 1000,
+        env={
+            "HX_CONCURRENCY": str(settings.max_concurrency),
+            "HX_SH_OUTPUT_CAP": str(settings.sh_output_cap_bytes),
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONIOENCODING": "utf-8",
+        },
+        ro=read_paths(workspace),
+    )
 
 
 def read_paths(workspace: str, extra: Sequence[str] = ()) -> list[str]:
