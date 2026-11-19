@@ -99,7 +99,13 @@ build() {
   export CARGO_TARGET_DIR="$(_target)"
   # What `tauri build --no-bundle` does without the CLI: the UI first (the config's beforeBuildCommand), then a release
   # build with Tauri's `custom-protocol` feature, which embeds the UI instead of loading the dev server.
-  (cd apps/desktop/ui && corepack pnpm run build:desktop)
+  # The UI's scripts call `pnpm` by name (build:desktop runs `pnpm tokens:check`), and corepack does not put one on PATH:
+  # without a shim the build stops with "pnpm: command not found". The shims go in a directory of ours, and the pnpm they
+  # run is the one prepare() already downloaded (package.json's packageManager), so build() still needs no network.
+  mkdir -p "$srcdir/bin"
+  corepack enable --install-directory "$srcdir/bin"
+  export PATH="$srcdir/bin:$PATH"
+  (cd apps/desktop/ui && pnpm run build:desktop)
   cargo build --release --frozen -p "$_hx_crate"
   cargo build --release --frozen -p "$_host_crate" --features tauri/custom-protocol
 }

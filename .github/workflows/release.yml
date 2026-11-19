@@ -151,7 +151,7 @@ jobs:
         run: |
           bash -c 'source packaging/arch/PKGBUILD; pacman -S --noconfirm --needed "${makedepends[@]}" "${depends[@]}" namcap'
           # corepack comes from makedepends and runs the pnpm that apps/desktop/ui/package.json pins (packageManager):
-          # Arch has no `pnpm` on PATH here, and the PKGBUILD never calls one. Run from the UI so the pin applies.
+          # Arch has no `pnpm` on PATH here; the PKGBUILD's build() makes a corepack shim for it. Run from the UI so the pin applies.
           rustc -V && node -v && corepack -v && (cd apps/desktop/ui && corepack pnpm -v)
       - name: the tag and the PKGBUILD match the app's version
         run: |
