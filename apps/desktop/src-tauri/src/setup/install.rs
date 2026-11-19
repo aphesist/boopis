@@ -21,7 +21,8 @@ pub struct Bundle {
 
 impl Bundle {
     /// Find the bundle: the app's resource directory and the directory of the running executable (where Tauri puts
-    /// sidecars). A debug build falls back to the repository's own plugin.
+    /// sidecars). A native package keeps `hx` in the resource directory instead (`/usr/bin/hx` is Helix's name on
+    /// Arch). A debug build falls back to the repository's own plugin.
     #[must_use]
     pub fn locate(resource_dir: Option<&Path>, exe_dir: Option<&Path>) -> Self {
         let mut plugin_dir = resource_dir
@@ -32,7 +33,11 @@ impl Bundle {
             plugin_dir = dev.join("plugin.yaml").is_file().then_some(dev);
         }
         let name = if cfg!(windows) { "hx.exe" } else { "hx" };
-        let hx = exe_dir.map(|d| d.join(name)).filter(|p| p.is_file());
+        let hx = exe_dir
+            .into_iter()
+            .chain(resource_dir)
+            .map(|d| d.join(name))
+            .find(|p| p.is_file());
         Self { plugin_dir, hx }
     }
 }
@@ -255,5 +260,20 @@ mod tests {
             res.join("plugin").join("hypotaxis")
         );
         assert_eq!(found.hx.unwrap(), tmp.path().join("hx"));
+    }
+
+    #[test]
+    fn hx_is_found_in_the_resource_directory_of_a_native_package() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (res, bin) = (tmp.path().join("lib"), tmp.path().join("bin"));
+        std::fs::create_dir_all(&bin).unwrap();
+        bundle(&res.join("plugin").join("hypotaxis"), "1.0.0");
+        std::fs::write(res.join("hx"), "x").unwrap();
+        let found = Bundle::locate(Some(&res), Some(&bin));
+        assert_eq!(found.hx.unwrap(), res.join("hx"));
+        // beside the executable still wins, as in an app bundle
+        std::fs::write(bin.join("hx"), "x").unwrap();
+        let found = Bundle::locate(Some(&res), Some(&bin));
+        assert_eq!(found.hx.unwrap(), bin.join("hx"));
     }
 }

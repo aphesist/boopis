@@ -1,7 +1,7 @@
 name: release
 # Builds the desktop app in release mode on every push to develop and on tags v*. The Linux AppImage is the
 # deliverable (the owner runs Arch); Windows and macOS bundles are non-blocking extras. Builds are unsigned.
-# On a tag, the AppImage and SHA256SUMS become a GitHub release. How to use it: docs/RELEASING.md.
+# On a tag, the AppImage, the Arch package and SHA256SUMS become a GitHub release. How to use it: docs/RELEASING.md.
 on:
   push:
     branches: [develop]
@@ -23,6 +23,9 @@ env:
   # `bundle.createUpdaterArtifacts` is off (it is off today).
   TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+  # The Arch package's artifact (ADR-0025). Named hypotaxis-* because the release job publishes that pattern; the rename
+  # changes this line and the pattern in `release` together.
+  ARCH_ARTIFACT: hypotaxis-arch-x86_64-pkg
 
 jobs:
   runtime:
@@ -127,6 +130,90 @@ jobs:
           path: target/release/hx
           if-no-files-found: error
           retention-days: 1
+
+  arch:
+    # The native Arch package (ADR-0025): built with makepkg in an Arch container, so it links the system's WebKitGTK
+    # (2.54.x, not the AppImage's Ubuntu 22.04 one). It needs only the runtime archive, which the AppImage needs too, and
+    # nothing needs it: a failure here does not stop the AppImage or the release. docs/RELEASING.md, "The Arch package".
+    needs: runtime
+    runs-on: ubuntu-22.04
+    container: archlinux:latest
+    timeout-minutes: 75
+    env:
+      BOOPIS_TARGET_DIR: /home/builder/target   # cargo's output, cached between runs
+    steps:
+      - name: build tools (makepkg needs git, a compiler and the package's own makedepends and depends)
+        run: |
+          pacman -Syu --noconfirm --needed base-devel git zstd
+          useradd -m builder
+      - uses: actions/checkout@v4
+      - name: the makedepends and depends of the PKGBUILD, read from the file itself
+        run: |
+          bash -c 'source packaging/arch/PKGBUILD; pacman -S --noconfirm --needed "${makedepends[@]}" "${depends[@]}" namcap'
+          rustc -V && node -v && pnpm -v
+      - name: the tag and the PKGBUILD match the app's version
+        run: |
+          v=$(sed -n 's/^ *"version": *"\(.*\)",/\1/p' apps/desktop/src-tauri/tauri.conf.json | head -1)
+          p=$(bash -c 'source packaging/arch/PKGBUILD; echo "$pkgver"')
+          echo "tauri.conf.json $v, PKGBUILD $p"
+          [ "$v" = "$p" ] || { echo "PKGBUILD pkgver $p but tauri.conf.json says $v"; exit 1; }
+          if [ "${GITHUB_REF_TYPE}" = tag ]; then [ "$GITHUB_REF_NAME" = "v$v" ] || { echo "tag $GITHUB_REF_NAME but the app is $v"; exit 1; }; fi
+      - uses: actions/download-artifact@v4
+        with:
+          name: hermes-runtime-linux-x86_64
+          path: packaging/arch
+      - name: the cargo registry and the build output
+        uses: actions/cache@v4
+        with:
+          path: |
+            /home/builder/.cargo/registry
+            /home/builder/.cargo/git
+            /home/builder/target
+          key: arch-pkg-${{ hashFiles('Cargo.lock') }}
+          restore-keys: arch-pkg-
+      - name: makepkg (prepare fetches cargo and pnpm, build is offline)
+        run: |
+          mkdir -p /home/builder/target /home/builder/.cargo
+          chown -R builder: . /home/builder/target /home/builder/.cargo
+          su builder -c 'cd packaging/arch && makepkg --noconfirm'
+      - name: namcap, informational, its findings go to the summary
+        run: |
+          {
+            echo '### namcap'
+            echo '```'
+            namcap packaging/arch/PKGBUILD || true
+            for p in packaging/arch/*.pkg.tar.zst; do namcap "$p" || true; done
+            echo '```'
+            echo "package: $(stat -c '%n %s bytes' packaging/arch/*.pkg.tar.zst)"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARCH_ARTIFACT }}
+          path: packaging/arch/*.pkg.tar.zst
+          if-no-files-found: error
+          retention-days: 30
+
+  arch-smoke:
+    # The built package in a clean Arch container: pacman -U pulls the dependencies from the repositories, then
+    # packaging/arch/smoke.sh checks the links (the system's libwebkit2gtk-4.1 from /usr/lib), the runtime archive and --version.
+    needs: arch
+    runs-on: ubuntu-22.04
+    container: archlinux:latest
+    timeout-minutes: 20
+    steps:
+      - name: a current system (no partial upgrades), git for the checkout
+        run: pacman -Syu --noconfirm --needed git desktop-file-utils
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.ARCH_ARTIFACT }}
+          path: pkg
+      - name: pacman -U
+        run: pacman -U --noconfirm pkg/*.pkg.tar.zst
+      - name: smoke
+        run: packaging/arch/smoke.sh "$GITHUB_WORKSPACE"
+      - name: the desktop entry is valid
+        run: desktop-file-validate /usr/share/applications/boopis.desktop
 
   smoke:
     # The built AppImage, headless (Xvfb + WebKitWebDriver), against real Hermes v0.23.2 and the fake model:
@@ -263,9 +350,10 @@ jobs:
           retention-days: 30
 
   release:
-    # Tags only: a GitHub release with the AppImage, whatever extra bundles built, and SHA256SUMS over all of them.
+    # Tags only: a GitHub release with the AppImage, whatever extra bundles built (the Arch package among them), and
+    # SHA256SUMS over all of them. The AppImage is what the release waits on; the others are attached if they built.
     if: ${{ !cancelled() && needs.linux.result == 'success' && startsWith(github.ref, 'refs/tags/v') }}
-    needs: [linux, smoke, windows, macos]
+    needs: [linux, smoke, windows, macos, arch, arch-smoke]
     runs-on: ubuntu-22.04
     permissions:
       contents: write
@@ -275,6 +363,9 @@ jobs:
           pattern: hypotaxis-*
           path: release-files
           merge-multiple: true
+      - name: the Arch package is published only when its smoke test passed
+        if: ${{ needs.arch-smoke.result != 'success' }}
+        run: rm -f release-files/*.pkg.tar.zst
       - name: checksums over every file
         working-directory: release-files
         run: |

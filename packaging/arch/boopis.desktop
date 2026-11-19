@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=boopis
+GenericName=Coding harness
+Comment=A desktop coding harness on Hermes Agent
+Exec=boopis
+Icon=boopis
+Terminal=false
+Categories=Development;
+Keywords=coding;agent;hermes;ai;
+StartupNotify=true
+StartupWMClass=boopis

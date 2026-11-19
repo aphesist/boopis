@@ -1,0 +1,145 @@
+# Maintainer: aphesist <126630868+aphesist@users.noreply.github.com>
+#
+# boopis for Arch Linux (ADR-0025): the app built against the system's WebKitGTK, so it gets the current renderer (the
+# NVIDIA explicit-sync fix, compositor-driven animation) and is updated by pacman. WebKitGTK is a dependency, never bundled.
+#
+# This PKGBUILD lives in the repository and builds the checkout it sits in (packaging/arch/ inside it): nothing is
+# downloaded for the source. The Hermes runtime (ADR-0023) is the one input that is not built here: it is the archive
+# CI's `runtime` job builds and proves relocatable (scripts/build-runtime.sh), the same bytes the AppImage carries.
+# Put runtime.json and hermes-runtime-linux-x86_64.tar.zst next to this file before running makepkg (docs/RELEASING.md).
+#
+#   makepkg -s            # as a normal user; needs network in prepare() for cargo and pnpm, none in build()
+#
+# AUR: the source would become the release tarball and the runtime a release asset with a real checksum (docs/RELEASING.md).
+
+# ---------------------------------------------------------------------------------------------------------------------
+# The old internal names, all in this one block. boopis is the product; the repository still says hypotaxis in a few
+# places. When those are renamed, change only the right-hand sides here (and `_root` if the checkout moves).
+# ---------------------------------------------------------------------------------------------------------------------
+_cargo_bin=hypotaxis                           # [[bin]] name in apps/desktop/src-tauri/Cargo.toml
+_host_crate=hypotaxis-host                     # the Cargo package that builds it
+_hx_crate=hx                                   # the sidecar's Cargo package
+_plugin=hypotaxis                              # plugins/<name>, and resources/plugin/<name> (tauri.bundle.conf.json)
+_runtime_archive=hermes-runtime-linux-x86_64.tar.zst   # what scripts/build-runtime.sh makes
+_repo_url=https://github.com/aphesist/hypotaxis
+# ---------------------------------------------------------------------------------------------------------------------
+
+pkgname=boopis
+pkgver=0.1.0   # = "version" in apps/desktop/src-tauri/tauri.conf.json; CI fails the job when they differ
+pkgrel=1
+pkgdesc='Desktop coding harness on Hermes Agent, built on the system WebKitGTK'
+arch=('x86_64')
+url="$_repo_url"
+license=('LicenseRef-proprietary')   # the repository says UNLICENSED; see packaging/arch/NOTICE
+depends=(
+  'webkit2gtk-4.1'   # the point of this package: the system's WebKitGTK, never a bundled one
+  'gtk3'
+  'hicolor-icon-theme'   # the icons are installed into it
+  'libsoup3'
+  'dbus'             # the keychain (secret_set) talks to the Secret Service over D-Bus
+  'xdg-utils'        # opening links and folders
+)
+optdepends=(
+  'gnome-keyring: a Secret Service provider, to keep API keys in the keychain'
+  'kwallet: a Secret Service provider, to keep API keys in the keychain'
+  'keepassxc: a Secret Service provider, to keep API keys in the keychain'
+  'nvidia-prime: render on the NVIDIA GPU of a hybrid laptop (HYPOTAXIS_GPU=dedicated)'
+)
+makedepends=(
+  'rust'               # 1.97 or newer: the workspace's rust-version, which cargo enforces
+  'nodejs-lts-jod'     # Node 22, the version CI builds the UI with
+  'corepack'           # runs the pnpm version pinned in the UI's package.json (packageManager), as CI does
+  'python'             # scripts/stage-bundle.sh
+  'zstd'               # the Hermes licence is read out of the runtime archive
+  'tar'
+  'pkgconf'
+  'base-devel'
+)
+options=('!lto' '!debug')
+install=boopis.install
+source=("$_runtime_archive" 'runtime.json')
+noextract=("$_runtime_archive")   # makepkg would unpack 400 MB of it into $srcdir; the host unpacks it on first run
+sha256sums=('SKIP' 'SKIP')   # CI's own artifacts, placed here by the workflow; prepare() checks the archive against runtime.json
+
+# The checkout this PKGBUILD sits in, and a copy of it to build in (the build writes target/, node_modules/ and dist/).
+_root() { (cd "$startdir/../.." && pwd); }
+_src() { echo "$srcdir/tree"; }
+# Cargo's output; BOOPIS_TARGET_DIR lets CI keep it between runs (a cache) and a small disk keep it elsewhere.
+_target() { echo "${BOOPIS_TARGET_DIR:-$srcdir/target}"; }
+
+prepare() {
+  local src root
+  src="$(_src)"; root="$(_root)"
+  rm -rf "$src"; mkdir -p "$src"
+  tar -C "$root" -cf - \
+    --exclude=./.git --exclude=./target --exclude=./dist --exclude=./packaging/arch/src --exclude=./packaging/arch/pkg \
+    --exclude='./packaging/arch/*.pkg.tar.*' --exclude=node_modules --exclude=__pycache__ --exclude=.venv . \
+    | tar -C "$src" -xf -
+
+  # The runtime is only as good as its hash: the host checks it again on first run, but a stale or truncated file should
+  # fail here, not on a user's machine.
+  python3 - "$srcdir/runtime.json" "$srcdir/$_runtime_archive" <<'PY'
+import hashlib, json, sys
+manifest = json.load(open(sys.argv[1]))["archive"]
+digest = hashlib.sha256(open(sys.argv[2], "rb").read()).hexdigest()
+if digest != manifest["sha256"]:
+    sys.exit(f"{sys.argv[2]} has sha256 {digest}, runtime.json says {manifest['sha256']}")
+PY
+
+  # All downloads happen here; build() runs with --frozen.
+  cd "$src"
+  export CARGO_TARGET_DIR="$(_target)"
+  cargo fetch --locked --target "$CARCH-unknown-linux-gnu"
+  # The store stays in $srcdir, on the tree's filesystem, so files are hard-linked rather than copied.
+  (cd apps/desktop/ui && corepack pnpm install --frozen-lockfile --store-dir "$srcdir/pnpm-store")
+}
+
+build() {
+  cd "$(_src)"
+  export CARGO_TARGET_DIR="$(_target)"
+  # What `tauri build --no-bundle` does without the CLI: the UI first (the config's beforeBuildCommand), then a release
+  # build with Tauri's `custom-protocol` feature, which embeds the UI instead of loading the dev server.
+  (cd apps/desktop/ui && corepack pnpm run build:desktop)
+  cargo build --release --frozen -p "$_hx_crate"
+  cargo build --release --frozen -p "$_host_crate" --features tauri/custom-protocol
+}
+
+package() {
+  local src lib brand target
+  src="$(_src)"; target="$(_target)/release"
+  lib="$pkgdir/usr/lib/$pkgname"
+  brand="$src/packaging/brand"
+
+  # The binary, installed as boopis whatever Cargo calls it.
+  install -Dm755 "$target/$_cargo_bin" "$pkgdir/usr/bin/$pkgname"
+
+  # The plugin, hx and the runtime go where the host looks (<exe dir>/../lib/<binary name>, apps/desktop/.../resources.rs),
+  # laid out as tauri.bundle.conf.json lays them out. scripts/stage-bundle.sh is what the AppImage build uses too, so the
+  # plugin excludes and the runtime's checks are one implementation. hx stays out of /usr/bin: that is Helix's name.
+  cd "$src"
+  scripts/stage-bundle.sh --hx "$target/$_hx_crate" --runtime "$srcdir" --dest "$srcdir/stage"
+  install -dm755 "$lib"
+  cp -a "$srcdir/stage/resources/plugin" "$srcdir/stage/resources/runtime" "$lib/"
+  install -Dm755 "$srcdir"/stage/binaries/hx-* "$lib/hx"
+  test -f "$lib/plugin/$_plugin/plugin.yaml"
+  test -f "$lib/runtime/runtime.json"
+  test -f "$lib/runtime/$_runtime_archive"
+
+  # Desktop entry and icons: the light icon is the default name, the dark one is boopis-dark.
+  install -Dm644 "$src/packaging/arch/boopis.desktop" "$pkgdir/usr/share/applications/$pkgname.desktop"
+  local s
+  for s in 16 24 32 48 64 128 256 512; do
+    install -Dm644 "$brand/icons/light/boopis-icon-light-$s.png" "$pkgdir/usr/share/icons/hicolor/${s}x${s}/apps/$pkgname.png"
+    install -Dm644 "$brand/icons/dark/boopis-icon-dark-$s.png" "$pkgdir/usr/share/icons/hicolor/${s}x${s}/apps/$pkgname-dark.png"
+  done
+  install -Dm644 "$brand/icons/boopis-symbolic.svg" "$pkgdir/usr/share/icons/hicolor/symbolic/apps/$pkgname-symbolic.svg"
+
+  # Licences: the notice, Hermes's MIT licence (it is inside the runtime archive it ships in), and the fonts the UI embeds.
+  install -Dm644 "$src/packaging/arch/NOTICE" "$pkgdir/usr/share/licenses/$pkgname/NOTICE"
+  zstd -dc < "$srcdir/$_runtime_archive" | tar -xO ./hermes-agent/LICENSE > "$srcdir/hermes-agent-LICENSE"
+  install -Dm644 "$srcdir/hermes-agent-LICENSE" "$pkgdir/usr/share/licenses/$pkgname/hermes-agent-LICENSE"
+  local f
+  for f in "$src"/apps/desktop/ui/node_modules/@fontsource/*/LICENSE; do
+    install -Dm644 "$f" "$pkgdir/usr/share/licenses/$pkgname/fonts/$(basename "$(dirname "$f")")-LICENSE"
+  done
+}
