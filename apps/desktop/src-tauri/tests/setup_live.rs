@@ -774,3 +774,120 @@ fn walk(dir: &Path) -> Vec<PathBuf> {
     }
     out
 }
+
+/// The free tier's mechanism on a real Hermes, with no call to Nous: `free_tier.status` is a pure read ("zero network, zero
+/// side effects"), so it can be asked on a link that does not declare itself the Desktop and on one that does. Hermes answers
+/// "claimable" only to the second, which is the whole reason the host declares it (`docs/research/free-tier.md` section 2).
+/// `free_tier.provision`, the one call that reaches the account service, is never made here.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_free_tier_is_claimable_only_to_a_link_that_declares_the_desktop() {
+    use hypotaxis_host::endpoint::Local;
+    use hypotaxis_host::gateway::oneshot::Link;
+
+    let _serial = SERIAL.lock().await;
+    let Some(spike) = std::env::var_os("HX_E2E_HERMES_ENV").map(PathBuf::from) else {
+        eprintln!("skipped: set HX_E2E_HERMES_ENV to the spike install");
+        return;
+    };
+    let Some(bin) = hermes_bin_dir(&spike) else {
+        eprintln!("skipped: no Hermes install under HX_E2E_HERMES_ENV");
+        return;
+    };
+    let root = tempfile::tempdir().unwrap();
+    let (home, hermes_home) = (root.path().join("home"), root.path().join("hermes-home"));
+    for d in [&home, &hermes_home] {
+        std::fs::create_dir_all(d).unwrap();
+    }
+    std::os::unix::fs::symlink(
+        spike.join("hermes-home/installs"),
+        hermes_home.join("installs"),
+    )
+    .unwrap();
+    // nothing configured, nothing used: a first install, and no network wanted
+    std::fs::write(
+        hermes_home.join("config.yaml"),
+        json!({"updates": {"check": false}, "model_catalog": {"enabled": false}}).to_string(),
+    )
+    .unwrap();
+    let child_env: Vec<(String, String)> = vec![
+        ("HOME".into(), home.display().to_string()),
+        ("NO_PROXY".into(), "127.0.0.1,localhost,::1".into()),
+        ("no_proxy".into(), "127.0.0.1,localhost,::1".into()),
+        (
+            "HERMES_RUNTIME_DIR".into(),
+            spike.join("runtime").display().to_string(),
+        ),
+        (
+            "UV_PYTHON_INSTALL_DIR".into(),
+            spike.join("uv-python").display().to_string(),
+        ),
+        (
+            "UV_CACHE_DIR".into(),
+            spike.join("uv-cache").display().to_string(),
+        ),
+    ];
+    let env = Environment {
+        hermes_home: Some(hermes_home.display().to_string()),
+        home_dir: Some(home.clone()),
+        path: Some(std::ffi::OsString::from(&bin)),
+        ..Environment::default()
+    };
+    let limits = Limits::default();
+    let sup = Arc::new(Supervisor::new(env, limits.clone()).with_child_env(child_env.clone()));
+    let _guard = GatewayGuard {
+        hermes: bin.join("hermes"),
+        home: hermes_home.clone(),
+        env: child_env,
+    };
+    let endpoint = Local::new(sup.clone(), hermes_home.clone(), limits.clone());
+    let ask = |declare: bool| {
+        let endpoint = &endpoint;
+        let limits = limits.clone();
+        async move {
+            Link::open(
+                endpoint,
+                declare,
+                limits.max_inbound_frame,
+                limits.ensure_timeout + limits.cli_timeout,
+            )
+            .await
+            .expect("the gateway answers")
+            .call("free_tier.status", &json!({}))
+            .await
+            .expect("free_tier.status answers")
+        }
+    };
+
+    let plain = ask(false).await;
+    assert_eq!(plain["model"], "nous/welcome", "{plain}");
+    assert_eq!(plain["label"], "Nous \u{b7} free tier", "{plain}");
+    assert_eq!(plain["available"], false);
+    assert_eq!(
+        plain["enabled"], false,
+        "a link that does not say it is the Desktop is not offered the claim: {plain}"
+    );
+
+    let declared = ask(true).await;
+    assert_eq!(
+        declared["available"], false,
+        "nothing was claimed: {declared}"
+    );
+    assert_eq!(
+        declared["enabled"], true,
+        "Hermes counts the declaring link as the Desktop on this machine and the machine as a first install: {declared}"
+    );
+    assert_eq!(declared["model"], "nous/welcome");
+
+    tokio::time::sleep(Duration::from_secs(4)).await; // the boot Hermes starts on a declaration runs in the background
+    // no identity was made, and nothing was sent to Nous: there is no auth store with a guest in it
+    let auth = std::fs::read_to_string(hermes_home.join("auth.json")).unwrap_or_default();
+    assert!(!auth.contains("anon_"), "no identity was claimed");
+    // the declaration did not touch the session platform: that is what HERMES_DESKTOP would have changed
+    let cfg = std::fs::read_to_string(hermes_home.join("config.yaml")).unwrap_or_default();
+    eprintln!("config.yaml after the declaration:\n{cfg}");
+    eprintln!("state under HOME: {:?}", walk(&home.join(".local")));
+    assert!(
+        !cfg.contains("desktop_ui"),
+        "the declaration writes no toolset: {cfg}"
+    );
+}

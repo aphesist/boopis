@@ -437,7 +437,10 @@ fn ladder_form(named: &[Named], free_note: Option<&str>) -> Form {
         "hypotaxis runs governed work on a ladder of models, cheapest first. Pick where to start; you can change the ladder later.",
     );
     if offer_free {
-        let _ = write!(body, "\n\nFree models need no account and no key: Hermes uses Nous Research's free tier, which offers one model, so every step of the ladder uses it. That is Nous's service under their Terms of Service ({NOUS_TERMS}) and Privacy Policy ({NOUS_PRIVACY}); Hermes decides who may use it, and says so if it is not available to you.");
+        let _ = write!(
+            body,
+            "\n\nFree models need no account and no key: Hermes uses Nous Research's free tier, which offers one model, so every step of the ladder uses it. That is Nous's service under their Terms of Service ({NOUS_TERMS}) and Privacy Policy ({NOUS_PRIVACY}); Hermes decides who may use it (once per user on a computer, so this also uses it up for Hermes's own app) and says so if it is not available to you."
+        );
     }
     if let Some(note) = free_note {
         let _ = write!(body, "\n\nThe free tier is not available: {note}");
