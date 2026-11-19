@@ -1,5 +1,6 @@
-"""The ``exec`` tool through a real, unmodified Hermes gateway and the fake model: the kernel runs in the real
-OS sandbox, calls tools through the plugin's own policy and ledger, leaves a blank, and the ledger verifies.
+"""The ``exec`` tool through a real, unmodified Hermes gateway and the fake model, in an ungoverned session (in governed
+mode exec belongs to workers: ``test_exec_worker_e2e.py``). The kernel runs in the real OS sandbox, calls tools through
+the plugin's own policy (a user deny rule here) and ledger, leaves a blank, and the ledger verifies.
 
 Needs a Hermes install (``HX_E2E_HERMES_ENV``), a built hx (``HX_BIN``) and Linux (the sandbox channel).
 """
@@ -30,7 +31,8 @@ pytestmark = [
 
 @pytest.fixture(scope="module")
 def stack(hermes_install: HermesInstall, stack_root: Path, fake_model: FakeModelServer) -> Iterator[HermesStack]:
-    yield from run_stack(hermes_install, stack_root / "exec", fake_model.url, {"hx_path": HX_BIN})
+    settings = {"hx_path": HX_BIN, "permissions": {"deny": ["write_file(forbidden.txt)"]}}
+    yield from run_stack(hermes_install, stack_root / "exec", fake_model.url, settings)
 
 
 @pytest.fixture(scope="module")
@@ -136,7 +138,7 @@ def test_exec_runs_in_the_sandbox_calls_tools_through_the_policy_and_leaves_a_bl
     gateway: GatewayClient, stack: HermesStack, workspace: Path, fake_model: FakeModelServer
 ) -> None:
     sid = create_session(gateway, workspace)
-    gateway.result("plugin.hypotaxis.mode.set", {"session_id": sid, "mode": "governed"})
+    gateway.result("plugin.hypotaxis.mode.set", {"session_id": sid, "mode": "ungoverned"})
     forbidden = workspace / "forbidden.txt"
     start = len(fake_model.chat_requests())
     text = " ".join(
@@ -198,7 +200,7 @@ def test_interrupting_the_turn_cancels_the_cell_and_the_kernel_keeps_its_variabl
     gateway: GatewayClient, stack: HermesStack, workspace: Path, fake_model: FakeModelServer
 ) -> None:
     sid = create_session(gateway, workspace)
-    gateway.result("plugin.hypotaxis.mode.set", {"session_id": sid, "mode": "governed"})
+    gateway.result("plugin.hypotaxis.mode.set", {"session_id": sid, "mode": "ungoverned"})
     scratch = stack.home / "hypotaxis" / "scratch" / sid
     running = scratch / "running"
     cell = f"held = 'kept'\nimport asyncio\nopen('{running}', 'w').close()\nawait asyncio.sleep(120)"

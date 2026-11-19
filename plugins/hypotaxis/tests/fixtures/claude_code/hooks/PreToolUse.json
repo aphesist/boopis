@@ -1,0 +1,35 @@
+{
+  "description": "A Hermes terminal call, seen as Claude's Bash: timeout in milliseconds.",
+  "event": "PreToolUse",
+  "setup": [],
+  "call": {
+    "hook": "pre_tool_call",
+    "kwargs": {
+      "tool_name": "terminal",
+      "args": {
+        "command": "git status",
+        "timeout": 30,
+        "workdir": "/x"
+      },
+      "session_id": "sess-1",
+      "tool_call_id": "call-1",
+      "turn_id": "turn-1",
+      "task_id": "t"
+    }
+  },
+  "payload": {
+    "session_id": "sess-1",
+    "prompt_id": "turn-1",
+    "transcript_path": "{transcript}",
+    "cwd": "{cwd}",
+    "permission_mode": "default",
+    "hook_event_name": "PreToolUse",
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "git status",
+      "timeout": 30000,
+      "workdir": "/x"
+    },
+    "tool_use_id": "call-1"
+  }
+}

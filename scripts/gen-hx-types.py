@@ -60,6 +60,7 @@ class Gen:
         self.defs: dict[str, Schema] = schema["$defs"]
         self.schema = schema
         self.unions: dict[str, list[tuple[str, str]]] = {}  # union name -> [(discriminator value, class name)]
+        self.discriminators: dict[str, str] = {}  # union name -> the property that tells its variants apart
 
     # ------------------------------------------------------------------ types
 
@@ -175,11 +176,13 @@ class Gen:
             body = {**v, "properties": {k: p for k, p in v["properties"].items() if k != disc}}
             out += self.cls(cname, body, (disc, value))
             table.append((value, cname))
+            self.discriminators[name] = disc
         self.unions[name] = table
         return out
 
-    def union_tail(self, name: str, disc: str = "op") -> list[str]:
+    def union_tail(self, name: str) -> list[str]:
         table = self.unions[name]
+        disc = self.discriminators[name]  # `op` for edits, `kind` for exit outcomes: never assume one
         out = [f"{name} = " + " | ".join(c for _, c in table), "", f"_{snake(name)}_variants: dict[str, Any] = {{"]
         out += [f"    {v!r}: {c}," for v, c in table]
         out += ["}", "", "", f"def _{snake(name)}_from_wire(data: Mapping[str, Any]) -> {name}:"]

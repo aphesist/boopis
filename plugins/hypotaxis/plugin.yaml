@@ -6,11 +6,12 @@ author: aphesist
 license: Apache-2.0
 kind: standalone
 requires_hermes: ">=0.23.2"
-# dispatch arrives in a later part; nothing is declared before it is registered.
+# nothing is declared before it is registered.
 provides_tools:
   - pack
   - exec
   - ship
+  - dispatch
 provides_hooks:
   - pre_tool_call
   - post_tool_call
@@ -19,6 +20,15 @@ provides_hooks:
   - pre_llm_call
   - on_session_start
   - on_session_finalize
+  # compat/: the Claude Code hooks bridge (docs/COMPAT.md section 4)
+  - transform_tool_result
+  - post_llm_call
+  - on_session_open
+  - on_session_reset
+  - post_compaction
+  - subagent_start
+  - subagent_stop
+  - on_human_input_request
 # Nothing here needs a granted capability: no tool override, no host-owned LLM calls.
 capabilities: []
 config_schema:
@@ -28,7 +38,17 @@ config_schema:
     description: "Mode of new sessions: governed (only hypotaxis tools plus read-only Hermes tools) or ungoverned. Locked at the first prompt of a session."
   ladder:
     type: object
-    description: "Tier ladder, cheapest first: {same_tier_scope_retry, tiers: [{name, model: 'provider/id', effort, max_tokens, retries}]}. Unset means no ladder is configured."
+    description: "Tier ladder, cheapest first: {same_tier_scope_retry, tiers: [{name, model: 'provider/id', effort, max_tokens, retries}]}. Each tier names a Hermes provider by its configured name (never `custom`). Unset means contraprova's measured Claude ladder (haiku, sonnet, opus on `anthropic`). Governed mode needs delegation.backend: hypotaxis in Hermes's config."
+  start_tier:
+    type: string
+    description: "The tier a governed task starts at (a name from the ladder). Unset means the first. Escalation climbs from there."
+  forks:
+    type: boolean
+    default: false
+    description: "contraprova's control replicates (a study feature). Not yet supported: dispatch refuses while this is true."
+  cascade:
+    type: object
+    description: "What the next tier is told after a block: {output_tail_chars (default 3000), diff_chars (default 6000)}, and brief_max_chars (default 8000), the longest brief dispatch accepts."
   cost_cap_usd:
     type: number
     description: "Block new turns once a session's spend reaches this many US dollars. Unset means no cap. Dollars are computed from tokens and the price table, never stored."

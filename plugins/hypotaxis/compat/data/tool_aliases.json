@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "_comment": "Hermes tool names and arguments as Claude Code names them (docs/COMPAT.md section 4.5). `fields` renames Hermes arguments to Claude's; a hook's updatedInput is renamed back with the inverse. Shapes that need logic (pack, ship, search_files, web_extract, delegate_task) are code in compat/hooks/alias.py and only their names live here.",
+  "hermes_default": {
+    "terminal": {
+      "claude": "Bash",
+      "fields": {
+        "background": "run_in_background"
+      },
+      "scale": {
+        "timeout": 1000
+      }
+    },
+    "read_file": {
+      "claude": "Read",
+      "fields": {
+        "path": "file_path"
+      }
+    },
+    "write_file": {
+      "claude": "Write",
+      "fields": {
+        "path": "file_path"
+      }
+    },
+    "patch": {
+      "claude": "Edit",
+      "fields": {
+        "path": "file_path"
+      }
+    },
+    "web_search": {
+      "claude": "WebSearch",
+      "fields": {}
+    },
+    "todo_list": {
+      "claude": "TodoWrite",
+      "fields": {}
+    },
+    "skill_view": {
+      "claude": "Skill",
+      "fields": {
+        "name": "skill"
+      }
+    }
+  },
+  "search_files": {
+    "content": {
+      "claude": "Grep",
+      "fields": {
+        "file_glob": "glob",
+        "limit": "head_limit",
+        "context": "-C"
+      },
+      "output_modes": {
+        "files_only": "files_with_matches"
+      }
+    },
+    "files": {
+      "claude": "Glob",
+      "fields": {}
+    }
+  },
+  "web_extract": {
+    "claude": "WebFetch",
+    "url_field": "urls"
+  },
+  "delegate_task": {
+    "claude": "Agent",
+    "agent_field": "agent"
+  },
+  "hypotaxis": {
+    "ship_ipynb_suffix": ".ipynb"
+  },
+  "mcp_prefix": {
+    "hermes": "mcp_",
+    "claude": "mcp__",
+    "plugin_infix": "plugin_"
+  }
+}

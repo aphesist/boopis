@@ -101,7 +101,8 @@ Defined in `crates/hx-proto`.
 - `hx.describe`.
 - `txn.validate`, `txn.apply`, `txn.restore`, `txn.discard`, `txn.recover`.
 - `pack.search`, `pack.read`, `pack.symbol`, `pack.outline`, `pack.status`, `pack.bundle`.
-- `sandbox.run` (`{argv, cwd, ro[], rw[], net: false|allowlist, env, timeout_ms, output_cap}`).
+- `sandbox.run` (`{argv, cwd, ro[], rw[], system_read, net: false|allowlist, env, timeout_ms, output_cap}`); `system_read: true` adds the platform's own system read paths, so callers never copy that list. `sandbox.spawn` takes the same plus `channel`.
+- `redact.apply {text} -> {text, count}`: hx-pack's redactor on free text (ADR-0016).
 
 Cancellation uses `$/cancelRequest`. The plugin keeps one warm `hx serve` child per Hermes process and restarts it on crash, never more than 3 times a minute.
 

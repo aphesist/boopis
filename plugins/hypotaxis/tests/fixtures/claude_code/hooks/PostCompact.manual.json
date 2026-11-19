@@ -1,0 +1,22 @@
+{
+  "description": "A /compress.",
+  "event": "PostCompact",
+  "setup": [],
+  "call": {
+    "hook": "post_compaction",
+    "kwargs": {
+      "session_id": "sess-1",
+      "old_session_id": "",
+      "kind": "summarize",
+      "reason": "manual"
+    }
+  },
+  "payload": {
+    "session_id": "sess-1",
+    "transcript_path": "{transcript}",
+    "cwd": "{cwd}",
+    "permission_mode": "default",
+    "hook_event_name": "PostCompact",
+    "trigger": "manual"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "description": "A finished turn: Hermes's post_llm_call is the turn end. stop_hook_active is false unless the turn was started by a Stop continuation.",
+  "event": "Stop",
+  "setup": [],
+  "call": {
+    "hook": "post_llm_call",
+    "kwargs": {
+      "session_id": "sess-1",
+      "user_message": "q",
+      "assistant_response": "All done.",
+      "conversation_history": [],
+      "model": "fake-a",
+      "platform": "cli"
+    }
+  },
+  "payload": {
+    "session_id": "sess-1",
+    "transcript_path": "{transcript}",
+    "cwd": "{cwd}",
+    "permission_mode": "default",
+    "hook_event_name": "Stop",
+    "stop_hook_active": false,
+    "last_assistant_message": "All done."
+  }
+}

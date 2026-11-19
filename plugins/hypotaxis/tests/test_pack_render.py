@@ -76,7 +76,7 @@ def test_bad_items_are_reported(args: dict[str, Any], fragment: str) -> None:
 
 def test_the_schemas_name_the_tools_and_every_op() -> None:
     schemas = tool_schemas()
-    assert set(schemas) == {"pack", "exec", "ship"}
+    assert set(schemas) == {"pack", "exec", "ship", "dispatch"}
     pack_ops = schemas["pack"]["parameters"]["properties"]["items"]["items"]["properties"]["op"]["enum"]
     assert pack_ops == ["search", "read", "symbol", "outline", "status"]
     ship_ops = schemas["ship"]["parameters"]["properties"]["edits"]["items"]["properties"]["op"]["enum"]

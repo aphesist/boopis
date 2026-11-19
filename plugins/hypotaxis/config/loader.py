@@ -18,6 +18,7 @@ from typing import Any, cast
 
 from ..util.schema import JsonObject, validate
 from .model import (
+    CascadeSettings,
     ExecSettings,
     Fallback,
     Mode,
@@ -90,8 +91,10 @@ def parse_settings(raw: Mapping[str, Any], *, source: str = "plugins.entries.hyp
     ]
     prices_raw: Mapping[str, Any] = raw.get("prices") or {}
     pack_raw: Mapping[str, Any] = raw.get("pack") or {}
+    cascade_raw: Mapping[str, Any] = raw.get("cascade") or {}
     issues += _price_key_problems(prices_raw.get("overrides"), f"{source}.prices")
     issues += _ladder_problems(raw.get("ladder"), source)
+    issues += _start_tier_problems(raw.get("start_tier"), raw.get("ladder"), source)
     if issues:
         return Loaded(default_settings(), tuple(issues))
     ladder = raw.get("ladder")
@@ -100,6 +103,17 @@ def parse_settings(raw: Mapping[str, Any], *, source: str = "plugins.entries.hyp
     settings = Settings(
         mode=cast(Mode, raw.get("mode", schema_default("plugin-settings", "mode"))),
         ladder=dict(ladder) if ladder else None,
+        start_tier=raw.get("start_tier") or None,
+        forks=bool(raw.get("forks", schema_default("plugin-settings", "forks"))),
+        cascade=CascadeSettings(
+            output_tail_chars=int(
+                cascade_raw.get("output_tail_chars", schema_default("plugin-settings", "cascade", "output_tail_chars"))
+            ),
+            diff_chars=int(cascade_raw.get("diff_chars", schema_default("plugin-settings", "cascade", "diff_chars"))),
+            brief_max_chars=int(
+                cascade_raw.get("brief_max_chars", schema_default("plugin-settings", "cascade", "brief_max_chars"))
+            ),
+        ),
         cost_cap_usd=None if cap is None else float(cap),
         prices=PricesSettings(
             refresh_enabled=bool(
@@ -144,6 +158,17 @@ def _ladder_problems(ladder: Any, source: str) -> list[str]:
             out.append(f"{source}.ladder.tiers: expected unique tier names, found {name!r} twice")
         seen.add(name)
     return out
+
+
+def _start_tier_problems(start: Any, ladder: Any, source: str) -> list[str]:
+    """``start_tier`` must name a tier of the configured ladder. With no ladder configured the default
+    ladder applies, whose names are checked where the ladder is resolved (``governance.ladder``)."""
+    if not isinstance(start, str) or not isinstance(ladder, Mapping):
+        return []
+    names = [t.get("name") for t in cast(Mapping[str, Any], ladder).get("tiers", ()) if isinstance(t, Mapping)]
+    if start in names:
+        return []
+    return [f"{source}.start_tier: expected one of {names}, found {start!r}"]
 
 
 def load_settings(get_config: GetConfig) -> Loaded:

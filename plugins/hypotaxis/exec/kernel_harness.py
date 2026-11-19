@@ -24,6 +24,7 @@ import contextvars
 import os
 import shlex
 import signal
+import sys
 import time
 from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
 from typing import Any
@@ -102,13 +103,21 @@ async def _call(method: str, params: dict[str, Any]) -> Any:
 async def tool(name: str, /, **args: Any) -> Any:
     """Call a Hermes, plugin or MCP tool by name and return what it returned (parsed when it is JSON)."""
     reply = await _call("tool.call", {"name": name, "args": args})
+    _feedback(reply)
     return reply["result"]
 
 
 async def mcp(server: str, name: str, /, **args: Any) -> Any:
     """Call ``name`` on the MCP server ``server``. The plugin must be allowed that server."""
     reply = await _call("mcp.call", {"server": server, "tool": name, "args": args})
+    _feedback(reply)
     return reply["result"]
+
+
+def _feedback(reply: Mapping[str, Any]) -> None:
+    """A Claude Code PostToolUse hook may answer a call with feedback; it reaches the model on the cell's stderr."""
+    if reply.get("hook_feedback"):
+        print("[Claude Code hook feedback]", reply["hook_feedback"], file=sys.stderr)
 
 
 def _coroutine(item: Any) -> Awaitable[Any]:

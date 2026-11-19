@@ -18,7 +18,7 @@ from ..config.model import ExecSettings
 from ..errors import HypotaxisError
 from ..hx import HxClient
 from ..ledger import ledger_filename
-from ..session import Runtime, SessionState
+from ..session import Caller, Runtime
 from ..util.log import get_logger
 from .calls import CellServices
 from .cell import CallFailure
@@ -48,37 +48,42 @@ class KernelRegistry:
         self._lock = threading.RLock()
         self._kernels: OrderedDict[str, KernelProcess] = OrderedDict()
         self._lost: dict[str, str] = {}
+        self._owner: dict[str, str] = {}  # kernel's session id -> the root session it works for
         self._reaper: threading.Thread | None = None
         self._stop = threading.Event()
 
     # ------------------------------------------------------------------ acquiring
 
-    def acquire(self, rt: Runtime, state: SessionState) -> tuple[KernelProcess, str]:
-        """The session's live kernel (started if needed), and a note when its predecessor was lost."""
+    def acquire(self, rt: Runtime, caller: Caller, session_id: str) -> tuple[KernelProcess, str]:
+        """The live kernel of the Hermes session ``session_id`` (a worker has its own, working for its root's
+        ledger and policy), started if needed, and a note when its predecessor was lost."""
+        state = caller.state
         settings = state.settings.exec
         with self._lock:
-            found = self._kernels.get(state.session_id)
+            found = self._kernels.get(session_id)
             if found is not None and found.alive:
-                self._kernels.move_to_end(state.session_id)
+                self._kernels.move_to_end(session_id)
                 return found, ""
-            self._kernels.pop(state.session_id, None)
+            self._kernels.pop(session_id, None)
             victims = self._make_room(settings)
             try:
-                kernel = self._start(rt, state, settings)
+                kernel = self._start(rt, caller, session_id, settings)
             except HypotaxisError:
                 self._stop_all(victims)  # they were already given up; do not leave them running
                 raise
-            self._kernels[state.session_id] = kernel
+            self._kernels[session_id] = kernel
+            self._owner[session_id] = state.session_id
             self._ensure_reaper(settings)
-            note = self._lost.pop(state.session_id, "")
+            note = self._lost.pop(session_id, "")
         self._stop_all(victims)  # outside the lock: a stopping kernel's reader thread takes it
         return kernel, note
 
-    def _start(self, rt: Runtime, state: SessionState, settings: ExecSettings) -> KernelProcess:
+    def _start(self, rt: Runtime, caller: Caller, session_id: str, settings: ExecSettings) -> KernelProcess:
+        state = caller.state
         launcher = self._launcher_for(rt)
         if launcher is None:
             raise HypotaxisError("the hx binary was not found, so exec has no sandbox to run in")
-        scratch = scratch_dir(rt, state.session_id)
+        scratch = scratch_dir(rt, session_id)
         scratch.mkdir(parents=True, exist_ok=True)
         os.chmod(scratch, 0o700)
         spec = KernelSpec(
@@ -97,14 +102,14 @@ class KernelRegistry:
             ro=read_paths(state.cwd),
         )
         spawned = launcher.spawn(spec)
-        kernel = KernelProcess(state.session_id, spawned, settings, CellServices(rt, state))
+        kernel = KernelProcess(session_id, spawned, settings, CellServices(rt, caller, session_id))
         kernel.on_gone = self._gone
         try:
             kernel.start()
         except HypotaxisError:
-            self._lost.pop(state.session_id, None)
+            self._lost.pop(session_id, None)
             raise
-        _log.info("exec kernel started for session %s (pid %s)", state.session_id, spawned.pid)
+        _log.info("exec kernel started for session %s (pid %s)", session_id, spawned.pid)
         return kernel
 
     def _make_room(self, settings: ExecSettings) -> list[tuple[KernelProcess, str]]:
@@ -142,10 +147,14 @@ class KernelRegistry:
                 self._lost[kernel.session_id] = f"the previous kernel was lost: {kernel.dead}"
 
     def stop_session(self, session_id: str, why: str) -> None:
+        """Stop the kernel of ``session_id`` and those of the workers that worked for it."""
         with self._lock:
-            kernel = self._kernels.pop(session_id, None)
-            self._lost.pop(session_id, None)
-        if kernel is not None:
+            keys = [k for k in self._kernels if k == session_id or self._owner.get(k) == session_id]
+            kernels = [self._kernels.pop(k) for k in keys]
+            for key in keys:
+                self._lost.pop(key, None)
+                self._owner.pop(key, None)
+        for kernel in kernels:
             kernel.stop(why)
 
     def interrupt(self, key: str) -> bool:

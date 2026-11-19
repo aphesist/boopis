@@ -1334,6 +1334,45 @@ class RecoverResult:
 
 
 @dataclass(frozen=True, slots=True)
+class RedactRequest:
+    """The request of `redact.apply`."""
+
+    text: str
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['text'] = self.text
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "RedactRequest":
+        return cls(
+            text=data['text'],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class RedactResponse:
+    """The answer of `redact.apply`."""
+
+    count: int
+    text: str
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['count'] = self.count
+        out['text'] = self.text
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "RedactResponse":
+        return cls(
+            count=data['count'],
+            text=data['text'],
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class Redactions:
     """How many redactions the returned text contains, in total and per rule."""
 
@@ -1462,6 +1501,7 @@ class SandboxRunParams:
     output_cap: int | None = None
     ro: list[str] | None = None
     rw: list[str] | None = None
+    system_read: bool = False
     timeout_ms: int | None = None
 
     def to_wire(self) -> dict[str, Any]:
@@ -1491,6 +1531,7 @@ class SandboxRunParams:
             out['ro'] = [x for x in self.ro]
         if self.rw is not None:
             out['rw'] = [x for x in self.rw]
+        out['system_read'] = self.system_read
         if self.timeout_ms is not None:
             out['timeout_ms'] = self.timeout_ms
         return out
@@ -1512,6 +1553,7 @@ class SandboxRunParams:
             output_cap=(None if data['output_cap'] is None else data['output_cap']) if 'output_cap' in data else None,
             ro=[x for x in data['ro']] if 'ro' in data else None,
             rw=[x for x in data['rw']] if 'rw' in data else None,
+            system_read=data['system_read'] if 'system_read' in data else False,
             timeout_ms=(None if data['timeout_ms'] is None else data['timeout_ms']) if 'timeout_ms' in data else None,
         )
 
@@ -1535,6 +1577,7 @@ class SandboxSpawnParams:
     output_cap: int | None = None
     ro: list[str] | None = None
     rw: list[str] | None = None
+    system_read: bool = False
     timeout_ms: int | None = None
 
     def to_wire(self) -> dict[str, Any]:
@@ -1566,6 +1609,7 @@ class SandboxSpawnParams:
             out['ro'] = [x for x in self.ro]
         if self.rw is not None:
             out['rw'] = [x for x in self.rw]
+        out['system_read'] = self.system_read
         if self.timeout_ms is not None:
             out['timeout_ms'] = self.timeout_ms
         return out
@@ -1588,6 +1632,7 @@ class SandboxSpawnParams:
             output_cap=(None if data['output_cap'] is None else data['output_cap']) if 'output_cap' in data else None,
             ro=[x for x in data['ro']] if 'ro' in data else None,
             rw=[x for x in data['rw']] if 'rw' in data else None,
+            system_read=data['system_read'] if 'system_read' in data else False,
             timeout_ms=(None if data['timeout_ms'] is None else data['timeout_ms']) if 'timeout_ms' in data else None,
         )
 
@@ -2333,7 +2378,7 @@ _bundle_item_variants: dict[str, Any] = {
 
 
 def _bundle_item_from_wire(data: Mapping[str, Any]) -> BundleItem:
-    return cast(BundleItem, _bundle_item_variants[data['op']].from_wire(data))
+    return cast(BundleItem, _bundle_item_variants[data['method']].from_wire(data))
 
 
 Edit = ReplaceEdit | CreateEdit | DeleteEdit | DiffEdit
@@ -2361,7 +2406,7 @@ _exit_outcome_variants: dict[str, Any] = {
 
 
 def _exit_outcome_from_wire(data: Mapping[str, Any]) -> ExitOutcome:
-    return cast(ExitOutcome, _exit_outcome_variants[data['op']].from_wire(data))
+    return cast(ExitOutcome, _exit_outcome_variants[data['kind']].from_wire(data))
 
 
 METHODS: dict[str, tuple[type | None, type | None]] = {
@@ -2372,6 +2417,7 @@ METHODS: dict[str, tuple[type | None, type | None]] = {
     'pack.search': (SearchRequest, SearchResponse),
     'pack.status': (StatusRequest, StatusResponse),
     'pack.symbol': (SymbolRequest, SymbolResponse),
+    'redact.apply': (RedactRequest, RedactResponse),
     'sandbox.capabilities': (None, Capabilities),
     'sandbox.kill': (SandboxKillParams, SandboxKillResult),
     'sandbox.run': (SandboxRunParams, RunResult),

@@ -1,0 +1,39 @@
+{
+  "description": "A delegated child ends: agent_id is the id the child started with.",
+  "event": "SubagentStop",
+  "setup": [
+    {
+      "hook": "subagent_start",
+      "kwargs": {
+        "parent_session_id": "sess-1",
+        "child_session_id": "child-1",
+        "child_subagent_id": "sa_1",
+        "child_role": "leaf",
+        "child_goal": "look"
+      }
+    }
+  ],
+  "call": {
+    "hook": "subagent_stop",
+    "kwargs": {
+      "parent_session_id": "sess-1",
+      "child_session_id": "child-1",
+      "child_role": "leaf",
+      "child_summary": "found it",
+      "child_status": "completed",
+      "tool_call_history": [],
+      "duration_ms": 900
+    }
+  },
+  "payload": {
+    "session_id": "sess-1",
+    "transcript_path": "{transcript}",
+    "cwd": "{cwd}",
+    "permission_mode": "default",
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_id": "sa_1",
+    "agent_type": "leaf",
+    "last_assistant_message": "found it"
+  }
+}

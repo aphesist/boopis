@@ -75,4 +75,16 @@ mod tests {
             Some("hx.invalid_params")
         );
     }
+
+    #[tokio::test]
+    async fn redact_apply_answers_through_the_dispatcher() {
+        let d = crate::build_dispatcher();
+        let params = r#"{"text": "key sk-live-0123456789abcdefghijklmnopqrstuv\nok"}"#;
+        let got = run(&d, "redact.apply", Some(params), CancellationToken::new()).await;
+        assert_eq!(exit_code(&got), 0, "{:?}", got.error);
+        let result = got.result.unwrap();
+        assert_eq!(result["count"], 1);
+        assert!(result["text"].as_str().unwrap().contains("[REDACTED:"));
+        assert_eq!(result["text"].as_str().unwrap().lines().count(), 2);
+    }
 }

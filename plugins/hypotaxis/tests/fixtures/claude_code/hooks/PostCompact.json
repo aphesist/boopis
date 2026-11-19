@@ -1,0 +1,24 @@
+{
+  "description": "A compaction that Hermes ran on its own.",
+  "event": "PostCompact",
+  "setup": [],
+  "call": {
+    "hook": "post_compaction",
+    "kwargs": {
+      "session_id": "sess-1",
+      "old_session_id": "",
+      "kind": "summarize",
+      "reason": "pre_api",
+      "before_tokens": 90000,
+      "after_tokens": 20000
+    }
+  },
+  "payload": {
+    "session_id": "sess-1",
+    "transcript_path": "{transcript}",
+    "cwd": "{cwd}",
+    "permission_mode": "default",
+    "hook_event_name": "PostCompact",
+    "trigger": "auto"
+  }
+}

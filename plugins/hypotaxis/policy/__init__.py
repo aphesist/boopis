@@ -8,8 +8,9 @@ Order, first to last:
 1. an invalid configuration allows read-only tools only;
 2. a ``deny`` rule blocks (any source; deny beats ask beats allow);
 3. a write to a protected path blocks;
-4. governed mode blocks everything but the hypotaxis tools and read-only Hermes tools. No ``allow``
-   rule can widen it;
+4. governed mode blocks everything but the hypotaxis tools and read-only Hermes tools, and gives each
+   role (orchestrator, worker) only its own hypotaxis tools. No ``allow`` rule can widen it. Outside
+   governed mode the cascade tool ``dispatch`` is refused: it has no cascade to run;
 5. an ``ask`` rule asks a human;
 6. an ``allow`` rule allows;
 7. otherwise the configured default (``allow`` unless set) applies.
@@ -83,23 +84,35 @@ def _check(call: ToolCall, session: SessionPolicy, defaults: Defaults) -> Decisi
     if protected is not None:
         return protected
     if session.mode == "governed":
-        verdict = governed_decision(call, defaults)
+        verdict = governed_decision(call, defaults, session.role, session.ship_closed)
         if verdict.kind == "block":
             return verdict
+    elif call.tool in defaults.governed_only_tools:
+        return block(
+            f"`{call.tool}` runs the governed model cascade and is available in governed mode only.", "ungoverned"
+        )
     for rule in _parsed(session.ask):
         if match_rule(rule, call, root, defaults, deny_like=True) is not Match.NO:
-            return _ask(rule.text, call)
+            return _ask(rule.text, call, session)
     for rule in _parsed(session.allow):
         if match_rule(rule, call, root, defaults, deny_like=False) is Match.YES:
             return ALLOW
     if session.default == "deny":
         return block(f"{call.tool} is not covered by an allow rule.", "default_deny")
     if session.default == "ask":
-        return _ask("default", call)
+        return _ask("default", call, session)
     return ALLOW
 
 
-def _ask(rule_text: str, call: ToolCall) -> Decision:
+def _ask(rule_text: str, call: ToolCall, session: SessionPolicy) -> Decision:
+    """Ask a human, unless a Claude Code hook already allowed this call. That skips only this policy's own prompts:
+    a deny, a protected path and governed mode were decided before this step, and Hermes's own approvals and hardline
+    blocks still apply, because ``allow`` is not a Hermes directive."""
+    if session.hook_allow and call.tool_call_id:
+        from ..compat.hooks.grants import consume_allow
+
+        if consume_allow(call.session_id, call.tool_call_id):
+            return ALLOW
     return Decision(
         "approve",
         message=f"The permission rule {rule_text} asks for confirmation before {call.tool} runs.",

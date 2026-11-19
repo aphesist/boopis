@@ -7,7 +7,6 @@ rule 5; ADR-0017: a dimension the host cannot enforce is ``hx.sandbox.unavailabl
 
 from __future__ import annotations
 
-import json
 import os
 import socket
 import sys
@@ -19,13 +18,21 @@ from typing import Any, Protocol
 
 from ..errors import HxCallError, HypotaxisError, SandboxUnavailableError
 from ..hx import HxClient
-from ..hx.types import ChannelRequest, SandboxSpawnParams, SandboxSpawnResult
+from ..hx.types import (
+    ChannelRequest,
+    ExitedExitOutcome,
+    SandboxSpawnParams,
+    SandboxSpawnResult,
+    SandboxWaitResult,
+    SignaledExitOutcome,
+    SpawnFailedExitOutcome,
+    TimedOutExitOutcome,
+)
 from ..util.log import get_logger
 
 _log = get_logger("exec.launcher")
 EXEC_DIR = Path(__file__).resolve().parent
 KERNEL_MAIN = EXEC_DIR / "kernel_main.py"
-_DATA = EXEC_DIR / "data" / "system_read.json"
 CONNECT_TIMEOUT_S = 10.0
 SPAWN_TIMEOUT_S = 30.0
 CHANNEL_CAPABILITY = "sandbox.channel.unix_socket"
@@ -80,10 +87,8 @@ class Launcher(Protocol):
 
 
 def read_paths(workspace: str, extra: Sequence[str] = ()) -> list[str]:
-    """The read-only grants of a kernel: the system, the interpreter, this package's kernel files and the
-    workspace. Existing paths only, resolved, without duplicates."""
-    data: Mapping[str, Sequence[str]] = json.loads(_DATA.read_text(encoding="utf-8"))
-    system = data.get("darwin" if sys.platform == "darwin" else "linux", ())
+    """The read-only grants of a kernel besides the system's (which hx adds, ``system_read``): the interpreter, this
+    package's kernel files and the workspace. Existing paths only, resolved, without duplicates."""
     interpreter = {
         sys.prefix,
         sys.base_prefix,
@@ -92,7 +97,7 @@ def read_paths(workspace: str, extra: Sequence[str] = ()) -> list[str]:
         sysconfig.get_path("purelib"),
     }
     found: list[str] = []
-    for raw in (*system, *interpreter, str(EXEC_DIR), workspace, *extra):
+    for raw in (*interpreter, str(EXEC_DIR), workspace, *extra):
         if not raw:
             continue
         try:
@@ -104,20 +109,20 @@ def read_paths(workspace: str, extra: Sequence[str] = ()) -> list[str]:
     return found
 
 
-def _describe_exit(wire: Mapping[str, Any]) -> ExitInfo:
-    """From the raw ``sandbox.wait`` answer. (The generated ``SandboxWaitResult.from_wire`` reads the exit's
-    tag as ``op``, while hx sends ``kind``, so it cannot parse a finished child.)"""
-    exit_: Mapping[str, Any] = wire.get("exit") or {}
-    kind = str(exit_.get("kind", "exited"))
-    if kind == "exited":
-        detail = f"the kernel exited with code {exit_.get('code', '?')}"
-    elif kind == "signaled":
-        detail = f"the kernel was killed by signal {exit_.get('signal', '?')}"
-    elif kind == "timed_out":
+def _describe_exit(result: SandboxWaitResult) -> ExitInfo:
+    exit_ = result.exit
+    if isinstance(exit_, ExitedExitOutcome):
+        detail = f"the kernel exited with code {exit_.code}"
+    elif isinstance(exit_, SignaledExitOutcome):
+        detail = f"the kernel was killed by signal {exit_.signal}"
+    elif isinstance(exit_, TimedOutExitOutcome):
         detail = "the kernel reached its maximum lifetime and was killed"
+    elif isinstance(exit_, SpawnFailedExitOutcome):
+        detail = f"the kernel did not start: {exit_.reason}"
     else:
-        detail = f"the kernel did not start: {exit_.get('reason', '')}"
-    return ExitInfo(kind, detail, str((wire.get("stderr") or {}).get("text", "")))
+        detail = "the kernel ended"
+    kind = type(exit_).__name__.removesuffix("ExitOutcome").lower() or "exited"
+    return ExitInfo(kind, detail, result.stderr.text)
 
 
 class _HxSpawned:
@@ -139,8 +144,9 @@ class _HxSpawned:
             if exc.code != "hx.sandbox.unknown_handle":
                 raise
             return self._exit or ExitInfo("exited", "the kernel is gone")  # already collected
-        if not wire.get("running"):
-            self._exit = _describe_exit(wire)
+        result = SandboxWaitResult.from_wire(wire)
+        if not result.running:
+            self._exit = _describe_exit(result)
         return self._exit
 
     def poll(self) -> ExitInfo | None:
@@ -186,6 +192,7 @@ class HxLauncher:
             env=env,
             net={"off": False, "loopback": "loopback", "on": True}[spec.net],
             ro=list(spec.ro),
+            system_read=True,
             rw=[spec.scratch],
             timeout_ms=spec.lifetime_ms,
             memory_bytes=spec.memory_bytes,

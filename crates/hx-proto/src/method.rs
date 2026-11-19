@@ -24,6 +24,8 @@ pub const PACK_OUTLINE: &str = "pack.outline";
 pub const PACK_STATUS: &str = "pack.status";
 /// `pack.bundle`: several of the above under one byte budget.
 pub const PACK_BUNDLE: &str = "pack.bundle";
+/// `redact.apply`: the text with every secret replaced, and how many were.
+pub const REDACT_APPLY: &str = "redact.apply";
 /// `$/cancelRequest`: notification `{id}` that cancels an in-flight request.
 pub const CANCEL_REQUEST: &str = "$/cancelRequest";
 
@@ -38,6 +40,8 @@ pub enum Namespace {
     Pack,
     /// `sandbox.*`: OS sandboxing (`hx-sandbox`).
     Sandbox,
+    /// `redact.*`: secret redaction of free text (`hx-pack`'s redactor).
+    Redact,
 }
 
 impl Namespace {
@@ -49,6 +53,7 @@ impl Namespace {
             Namespace::Txn => "txn",
             Namespace::Pack => "pack",
             Namespace::Sandbox => "sandbox",
+            Namespace::Redact => "redact",
         }
     }
 
@@ -73,5 +78,7 @@ mod tests {
         assert!(!Namespace::Txn.owns("txnapply"));
         assert!(!Namespace::Pack.owns("txn.apply"));
         assert!(Namespace::Sandbox.owns("sandbox.run"));
+        assert!(Namespace::Redact.owns("redact.apply"));
+        assert!(!Namespace::Pack.owns("redact.apply"));
     }
 }

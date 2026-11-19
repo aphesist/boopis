@@ -37,6 +37,7 @@ pub mod never_pack;
 pub mod outline;
 pub mod read;
 pub mod redact;
+pub mod redact_handler;
 pub mod root;
 pub mod search;
 pub mod status;
@@ -59,6 +60,7 @@ pub use read::{
     LineRange, ReadParams, ReadRequest, ReadResponse, ReadStatus, Segment, handle_read,
 };
 pub use redact::{LogRedactor, Redactor, redact};
+pub use redact_handler::{RedactHandler, RedactRequest, RedactResponse, add_redact_schema};
 pub use root::Root;
 pub use search::{
     Block, CaseMode, PatternMode, SearchParams, SearchRequest, SearchResponse, handle_search,

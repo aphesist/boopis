@@ -6,6 +6,7 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import re
 import signal
 import socket
 import subprocess
@@ -106,3 +107,22 @@ class ExecCtx(FakeCtx):
 
 def scratch_of(home: Path, session_id: str) -> Path:
     return home / "hypotaxis" / "scratch" / session_id
+
+
+class FakeRedactingHx:
+    """A stand-in for the hx client that answers only ``redact.apply``, with one key pattern. The real redactor is
+    hx's (tested in Rust and in the sandbox tests); this lets the unit tests run without a binary."""
+
+    running = True
+    capabilities = frozenset({"redact.apply"})
+    KEY = re.compile(r"sk-[A-Za-z0-9-]{20,}")
+
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+
+    def request(self, method: str, params: dict[str, Any] | None = None, timeout: float = 0) -> dict[str, Any]:
+        assert method == "redact.apply" and params is not None
+        text: str = params["text"]
+        self.calls.append(text)
+        out, count = self.KEY.subn("[REDACTED:api_key]", text)
+        return {"text": out, "count": count}

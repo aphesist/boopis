@@ -9,6 +9,7 @@ from typing import Any, Literal
 from ..config.model import Fallback, Mode
 
 DecisionKind = Literal["allow", "block", "approve", "modify"]
+Role = Literal["orchestrator", "worker"]
 CallSource = Literal["hook", "kernel", "kernel_sh"]
 
 
@@ -72,7 +73,8 @@ class SessionPolicy:
 
     ``deny``, ``ask`` and ``allow`` hold rule texts from every source (settings and the project
     file). ``config_error`` set means the configuration could not be trusted: only read-only tools
-    run until it is fixed.
+    run until it is fixed. ``role`` and ``ship_closed`` matter in governed mode: the orchestrator reads
+    (``pack``) and ``dispatch``es; a worker reads (``pack``), runs ``exec`` and ``ship``s, once per attempt.
     """
 
     mode: Mode
@@ -83,3 +85,6 @@ class SessionPolicy:
     default: Fallback = "allow"
     protected: tuple[str, ...] = ()
     config_error: str = ""
+    hook_allow: bool = True  # a Claude Code hook's allow skips this policy's approval prompts (docs/COMPAT.md 4.4)
+    role: Role = "orchestrator"  # the session model, or a delegated worker attempt (governed mode)
+    ship_closed: str = ""  # a worker whose attempt is over (or has no task): why ship is refused; empty = open

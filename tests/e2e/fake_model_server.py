@@ -15,6 +15,13 @@ message. When the directives run out the server answers ``DONE <model> | last to
 A prompt with no directive gets ``FAKE-REPLY from <model>``. Requests Hermes makes on its own
 (titles, probes) carry no directive and get a plain reply.
 
+A server built with ``scripts={model_id: ["call <tool> <json>", "reply <text>", ...]}`` answers a request to
+that model by its script when the last user message carries no directive of its own. That is how a
+delegated child (whose first message is written by the plugin, not by the test) is made to behave: each
+model id has a fixed behaviour, whichever endpoint serves it. A model's script may instead be a mapping
+``{substring: [lines]}``: the first non-empty substring found in the last user message picks its lines, and
+the key ``""`` is the default.
+
 Every request is recorded in ``FakeModelServer.requests``. Nothing here is a product code path: it
 is a test double and lives only under ``tests/``.
 """
@@ -28,12 +35,17 @@ import re
 import threading
 import time
 import uuid
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, ClassVar
 
 DIRECTIVE = re.compile(r"@@(call|reply|usage)\s+(.*?)@@", re.DOTALL)
-DEFAULT_USAGE: dict[str, Any] = {"prompt_tokens": 100, "completion_tokens": 10, "total_tokens": 110}
+DEFAULT_USAGE: dict[str, Any] = {
+    "prompt_tokens": 100,
+    "completion_tokens": 10,
+    "total_tokens": 110,
+}
 
 JsonObject = dict[str, Any]
 
@@ -80,19 +92,37 @@ class Plan:
     usage: JsonObject
 
 
-def plan_reply(body: JsonObject) -> Plan:
+Script = Sequence[str] | Mapping[str, Sequence[str]]
+
+
+def script_lines(script: Script, user_text: str) -> Sequence[str]:
+    """The directive lines a model's script gives for a request whose last user message is ``user_text``."""
+    if isinstance(script, Mapping):
+        return next(
+            (lines for key, lines in script.items() if key and key in user_text),
+            script.get("", ()),
+        )
+    return script
+
+
+def plan_reply(body: JsonObject, scripts: Mapping[str, Script] | None = None) -> Plan:
     msgs: list[JsonObject] = list(body.get("messages") or [])
     model = str(body.get("model", "?"))
     idx = next((i for i in range(len(msgs) - 1, -1, -1) if msgs[i].get("role") == "user"), -1)
     if idx < 0:
         return Plan(f"FAKE-REPLY from {model}", None, DEFAULT_USAGE)
-    found = DIRECTIVE.findall(text_of(msgs[idx].get("content")))
+    user_text = text_of(msgs[idx].get("content"))
+    found = DIRECTIVE.findall(user_text)
     usage = dict(DEFAULT_USAGE)
     steps: list[tuple[str, str]] = []
     for kind, rest in found:
         if kind == "usage":
             usage = json.loads(rest)
         else:
+            steps.append((kind, rest.strip()))
+    if not steps and scripts and model in scripts:
+        for line in script_lines(scripts[model], user_text):
+            kind, _, rest = line.partition(" ")
             steps.append((kind, rest.strip()))
     results = [m for m in msgs[idx + 1 :] if m.get("role") == "tool"]
     if not steps:
@@ -126,7 +156,13 @@ class _Handler(BaseHTTPRequestHandler):
         self.server.record(RecordedRequest("GET", self.path, {}))
         if self.path.rstrip("/") in ("/v1/models", "/models"):
             data = [
-                {"id": m, "object": "model", "created": 0, "owned_by": "fake", "context_length": 200000}
+                {
+                    "id": m,
+                    "object": "model",
+                    "created": 0,
+                    "owned_by": "fake",
+                    "context_length": 200000,
+                }
                 for m in self.server.models
             ]
             self._send_json(200, {"object": "list", "data": data})
@@ -143,7 +179,7 @@ class _Handler(BaseHTTPRequestHandler):
         if not self.path.rstrip("/").endswith("/chat/completions"):
             self._send_json(404, {"error": "unsupported path " + self.path})
             return
-        plan = plan_reply(body)
+        plan = plan_reply(body, self.server.scripts)
         model = str(body.get("model", "fake"))
         cid, created = "chatcmpl-" + uuid.uuid4().hex[:12], int(time.time())
         if body.get("stream"):
@@ -161,7 +197,11 @@ class _Handler(BaseHTTPRequestHandler):
             "type": "function",
             "function": {"name": name, "arguments": json.dumps(args)},
         }
-        return {"role": "assistant", "content": None, "tool_calls": [call]}, "tool_calls"
+        return {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [call],
+        }, "tool_calls"
 
     def _complete(self, plan: Plan, model: str, cid: str, created: int) -> JsonObject:
         msg, finish = self._message(plan)
@@ -180,7 +220,11 @@ class _Handler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-cache")
         self.end_headers()
 
-        def send(delta: JsonObject | None, finish: str | None = None, usage: JsonObject | None = None) -> None:
+        def send(
+            delta: JsonObject | None,
+            finish: str | None = None,
+            usage: JsonObject | None = None,
+        ) -> None:
             chunk: JsonObject = {
                 "id": cid,
                 "object": "chat.completion.chunk",
@@ -208,7 +252,10 @@ class _Handler(BaseHTTPRequestHandler):
                             "index": 0,
                             "id": call["id"],
                             "type": "function",
-                            "function": {"name": call["function"]["name"], "arguments": ""},
+                            "function": {
+                                "name": call["function"]["name"],
+                                "arguments": "",
+                            },
                         }
                     ]
                 }
@@ -228,9 +275,15 @@ class FakeModelServer(ThreadingHTTPServer):
     daemon_threads = True
     default_models: ClassVar[tuple[str, ...]] = ("fake-a", "fake-b")
 
-    def __init__(self, port: int = 0, models: tuple[str, ...] | None = None) -> None:
+    def __init__(
+        self,
+        port: int = 0,
+        models: tuple[str, ...] | None = None,
+        scripts: Mapping[str, Script] | None = None,
+    ) -> None:
         super().__init__(("127.0.0.1", port), _Handler)
         self.models = models or self.default_models
+        self.scripts: Mapping[str, Script] = scripts or {}
         self.requests: list[RecordedRequest] = []
         self._lock = threading.Lock()
         self._thread = threading.Thread(target=self.serve_forever, daemon=True)

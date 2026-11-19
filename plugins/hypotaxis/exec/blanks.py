@@ -13,7 +13,8 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from ..session import Runtime, SessionState
+from ..hooks import ledger_identity
+from ..session import Caller, Runtime
 from ..util.ids import uuid7
 from .cell import CallFailure, Cell
 
@@ -39,15 +40,16 @@ def _strings(value: Any, what: str) -> list[str]:
     return items
 
 
-def open_blank(rt: Runtime, state: SessionState, cell: Cell, params: Mapping[str, Any]) -> dict[str, Any]:
+def open_blank(rt: Runtime, caller: Caller, cell: Cell, params: Mapping[str, Any]) -> dict[str, Any]:
     """``blank.opened``: written to the ledger first, then announced. Returns at once with the id."""
     question = _text(params.get("question"), "question")
     options = _strings(params.get("options") or [], "options")
     blocks = _strings(params.get("blocks") or [], "blocks")
     blank_id = uuid7()
     payload = {"blank_id": blank_id, "question": question, "options": options, "blocks": blocks}
-    rt.ledger(state).append("blank.opened", state.actor(), {**payload, "via": "exec"})
-    rt.ctx.emit_to_session(state.session_id, "blank.opened", payload)
+    actor, tags = ledger_identity(caller)
+    rt.ledger(caller.state).append("blank.opened", actor, {**payload, **tags, "via": "exec"})
+    rt.ctx.emit_to_session(caller.state.session_id, "blank.opened", payload)
     cell.blanks.append({"blank_id": blank_id, "question": question})
     return {"blank_id": blank_id, "status": "open"}
 
@@ -59,7 +61,7 @@ def _has_secret(schema: Mapping[str, Any]) -> bool:
     return any(isinstance(p, Mapping) and p.get("x-secret") is True for p in props.values())  # type: ignore[union-attr]
 
 
-def open_form(rt: Runtime, state: SessionState, cell: Cell, params: Mapping[str, Any]) -> dict[str, Any]:
+def open_form(rt: Runtime, caller: Caller, cell: Cell, params: Mapping[str, Any]) -> dict[str, Any]:
     """The forms stub: validate, announce ``form.opened``, answer pending. Never invents an answer."""
     kind = params.get("kind")
     if kind not in FORM_KINDS:
@@ -85,6 +87,6 @@ def open_form(rt: Runtime, state: SessionState, cell: Cell, params: Mapping[str,
         "sensitive": kind == "credential" or _has_secret(schema),  # type: ignore[arg-type]
         "origin": "agent",
     }
-    rt.ctx.emit_to_session(state.session_id, "form.opened", event)
+    rt.ctx.emit_to_session(caller.state.session_id, "form.opened", event)
     cell.forms.append({"form_id": form_id, "kind": kind, "title": title})
     return {"form_id": form_id, "status": "pending"}

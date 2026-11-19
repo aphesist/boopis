@@ -14,8 +14,9 @@ from typing import Any
 
 from ..config.model import ExecSettings
 from ..errors import HypotaxisError, KernelDeadError, SandboxUnavailableError
-from ..session import Runtime, SessionState
+from ..session import Caller, Runtime, SessionState
 from ..util.log import get_logger
+from ..util.redact import redact_or_withhold
 from .calls import CellServices
 from .cell import CallFailure, Cell
 from .registry import registry
@@ -104,6 +105,24 @@ def render_dead(cell: Cell, reason: str, notes: list[str]) -> dict[str, Any]:
     return result
 
 
+def redacted(rt: Runtime, result: dict[str, Any]) -> dict[str, Any]:
+    """What a cell printed, returned or raised goes to the model, so every text in the answer passes hx's
+    redactor first (ADR-0016); text it could not redact is replaced by a marker, never passed raw. The spill files
+    in scratch keep the raw output; the model reads them only through another cell, which comes back here."""
+    client = rt.hx_client()
+    for key in ("stdout", "stderr", "result"):
+        if isinstance(result.get(key), str):
+            result[key] = redact_or_withhold(client, result[key])
+    error = result.get("error")
+    if isinstance(error, str):
+        result["error"] = redact_or_withhold(client, error)
+    elif isinstance(error, dict):
+        for key in ("message", "traceback"):
+            if isinstance(error.get(key), str):
+                error[key] = redact_or_withhold(client, error[key])
+    return result
+
+
 def _preconditions(state: SessionState, args: Mapping[str, Any]) -> dict[str, Any] | None:
     if sys.platform == "win32":
         return {
@@ -122,16 +141,18 @@ def _preconditions(state: SessionState, args: Mapping[str, Any]) -> dict[str, An
     return None
 
 
-def run_exec(rt: Runtime, state: SessionState, args: Mapping[str, Any], kw: Mapping[str, Any]) -> dict[str, Any]:
+def run_exec(rt: Runtime, caller: Caller, args: Mapping[str, Any], kw: Mapping[str, Any]) -> dict[str, Any]:
     """One ``exec`` call. ``kw`` is what Hermes handed the handler (task and session ids, forwarded to the
     tools the cell calls)."""
+    state = caller.state
     if (problem := _preconditions(state, args)) is not None:
         return problem
     settings = state.settings.exec
+    session_id = str(kw.get("session_id") or state.session_id)  # a worker's own id; its state is its root's
     timeout_ms, note = _timeout(args, settings)
     notes = [note] if note else []
     try:
-        kernel, restarted = registry().acquire(rt, state)
+        kernel, restarted = registry().acquire(rt, caller, session_id)
     except SandboxUnavailableError as exc:
         return {"error": exc.message, "code": exc.code}
     except CallFailure as failure:
@@ -142,17 +163,17 @@ def run_exec(rt: Runtime, state: SessionState, args: Mapping[str, Any], kw: Mapp
         notes.append(f"a new kernel was started; its variables are empty. {restarted}.")
     dispatch = {k: kw[k] for k in ("task_id", "session_id", "conversation_id") if kw.get(k)}
     cell = Cell.create(
-        state.session_id,
+        session_id,
         str(kw.get("tool_call_id") or ""),
         max_calls=settings.max_calls_per_cell,
         output_cap=settings.output_cap_bytes,
         context=contextvars.copy_context(),
-        dispatch_kwargs={"session_id": state.session_id, **dispatch},
+        dispatch_kwargs={"session_id": session_id, **dispatch},
     )
     try:
         outcome = kernel.run(cell, str(args["code"]), timeout_ms)
     except KernelDeadError as exc:
-        return render_dead(cell, exc.message, notes)
+        return redacted(rt, render_dead(cell, exc.message, notes))
     except CallFailure as failure:
         return {"error": failure.message, "code": failure.code}
     except Exception as exc:  # noqa: BLE001 - a tool handler never raises into Hermes
@@ -160,7 +181,7 @@ def run_exec(rt: Runtime, state: SessionState, args: Mapping[str, Any], kw: Mapp
         return {"error": f"exec failed: {type(exc).__name__}: {exc}", "code": "hx.internal_error"}
     finally:
         _close(kernel, cell)
-    return render(cell, outcome, notes)
+    return redacted(rt, render(cell, outcome, notes))
 
 
 def _close(kernel: Any, cell: Cell) -> None:

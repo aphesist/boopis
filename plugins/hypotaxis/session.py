@@ -10,12 +10,13 @@ from __future__ import annotations
 
 import hashlib
 import threading
-from collections.abc import Mapping
-from dataclasses import dataclass, field
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
 from . import hx, policy
+from ._vendor.contraprova.interfaces import TierLadder
 from .config import (
     Loaded,
     Mode,
@@ -25,7 +26,11 @@ from .config import (
     load_project,
     load_settings,
 )
-from .errors import ModeLockedError, PricesError
+from .errors import InvalidParamsError, LedgerError, ModeLockedError, PricesError
+from .governance import host
+from .governance.ladder import resolve_ladder
+from .governance.links import WorkerLink
+from .governance.runs import Cascades
 from .hermes_api import PluginCtx, hermes_home, hermes_version
 from .hx import HxClient
 from .ledger import PriceBook, SessionLedger, build_book, ledger_filename, load_catalogue, project_costs, usage_records
@@ -47,6 +52,7 @@ class SessionState:
     provider: str = ""
     profile: str = ""
     ladder: Mapping[str, Any] | None = None  # from mode.set; overrides the settings' ladder
+    start_tier: str | None = None  # from mode.set; overrides the settings' start_tier
     gate_enabled: bool | None = None  # from mode.set
     allowed: tuple[str, ...] | None = None  # the lane or brief scope, set by dispatch; None means unrestricted
     settings: Settings = field(default_factory=default_settings)
@@ -67,14 +73,42 @@ class SessionState:
         return "plugin"
 
 
+@dataclass(frozen=True, slots=True)
+class Caller:
+    """Who a hook call or tool call belongs to. A delegated child is its own Hermes session, but it works for
+    its parent: ``state`` is always the *root* session's (its ledger, policy, settings and spend), and ``link`` is
+    the worker attempt, set for a child the plugin started (``subagent_start``)."""
+
+    state: SessionState
+    link: WorkerLink | None = None
+
+    @property
+    def worker(self) -> bool:
+        return self.link is not None
+
+
 class Runtime:
     """What every hook and RPC handler shares."""
 
-    def __init__(self, ctx: PluginCtx, *, home: Path | None = None) -> None:
+    def __init__(
+        self,
+        ctx: PluginCtx,
+        *,
+        home: Path | None = None,
+        provider_known: Callable[[str], bool] | None = None,
+        delegation_backend: Callable[[], str | None] | None = None,
+        active_parent: Callable[[], Any] | None = None,
+    ) -> None:
         self.ctx = ctx
         self._home = home
         self._sessions: dict[str, SessionState] = {}
         self._registry_lock = threading.Lock()
+        self.links: dict[str, WorkerLink] = {}  # a delegated child's session id -> the attempt it is
+        self.cascades = Cascades()
+        # what the cascade asks of Hermes (``governance.host``); tests replace them
+        self.provider_known = provider_known or host.provider_known
+        self.delegation_backend = delegation_backend or host.delegation_backend
+        self.active_parent = active_parent or host.active_parent
 
     # ------------------------------------------------------------------ environment
 
@@ -145,8 +179,44 @@ class Runtime:
         return self.state(session_id).cwd
 
     def forget(self, session_id: str) -> SessionState | None:
+        self.cascades.forget(session_id)
         with self._registry_lock:
             return self._sessions.pop(session_id, None)
+
+    # ------------------------------------------------------------------ who is calling
+
+    def caller(self, session_id: str) -> Caller:
+        """Resolve a Hermes session id: a worker the plugin started (found by its link), else a session of its own.
+
+        Only a link makes a worker. Hermes's ``conversation_id`` and ``parent_session_id`` look tempting but name a
+        conversation's *root* and *previous* session, which an ordinary session has after its context is compressed
+        (verified on v0.23.2: they differ from ``session_id`` then), so they would mistake an orchestrator for a worker.
+        A child the plugin did not start is an ordinary governed session here: it cannot ship (only a worker can) and
+        cannot dispatch (Hermes's depth limit)."""
+        link = self.links.get(session_id)
+        if link is not None:
+            return Caller(self.lock(link.parent_session_id), link)
+        return Caller(self.lock(session_id))
+
+    def is_worker(self, session_id: str) -> bool:
+        """Whether ``session_id`` is a worker the plugin started. Locks nothing."""
+        return session_id in self.links
+
+    def policy_for(self, caller: Caller) -> SessionPolicy:
+        """The session policy as this caller sees it: the root's, with the caller's role and, for a worker, whether
+        its ``ship`` is still open."""
+        base = caller.state.policy
+        assert base is not None
+        if caller.link is None:
+            return base
+        return replace(base, role="worker", ship_closed=caller.link.closed_reason())
+
+    def ladder_of(self, state: SessionState) -> TierLadder:
+        """The ladder this session cascades through: ``mode.set``'s, else the settings', else the default."""
+        return resolve_ladder(state.ladder if state.ladder is not None else state.settings.ladder)
+
+    def start_tier_of(self, state: SessionState) -> str | None:
+        return state.start_tier or state.settings.start_tier
 
     def _recover(self, state: SessionState) -> None:
         """A session with an earlier ``session.opened`` keeps that mode, and is locked."""
@@ -171,8 +241,23 @@ class Runtime:
                 # the full envelope, as plugin.hypotaxis.ledger.appended (docs/PROTOCOL.md section 3)
                 self.ctx.emit_to_session(session_id, "ledger.appended", event)
 
-            state.ledger = SessionLedger(self.ledger_path(session_id, state.settings), emit)
+            state.ledger = SessionLedger(self.ledger_path(session_id, state.settings), emit, self.redact)
         return state.ledger
+
+    def redact(self, text: str) -> str:
+        """``text`` redacted by hx (ADR-0016), for the ledger's free-text fields. Raises ``LedgerError`` when hx is
+        there but cannot do it, so the event is not written with a secret in it. With no hx binary at all, no tool
+        (pack, ship, exec, the gate) can have produced the text, so there is nothing to redact it with or from."""
+        from .errors import HypotaxisError
+        from .util.redact import redact_text
+
+        client = self.hx_client()
+        if client is None:
+            return text
+        try:
+            return redact_text(client, text)
+        except HypotaxisError as exc:
+            raise LedgerError(f"free text could not be redacted for the ledger: {exc.message}") from exc
 
     def ledger(self, state: SessionState) -> SessionLedger:
         return self._ledger_for(state)
@@ -186,6 +271,7 @@ class Runtime:
         *,
         ladder: Mapping[str, Any] | None = None,
         gate_enabled: bool | None = None,
+        start_tier: str | None = None,
     ) -> SessionState:
         state = self.state(session_id)
         with state.lock:
@@ -199,6 +285,13 @@ class Runtime:
                 state.ladder = ladder
             if gate_enabled is not None:
                 state.gate_enabled = gate_enabled
+            if start_tier is not None:
+                names = self.ladder_of(state).names
+                if start_tier not in names:
+                    raise InvalidParamsError(
+                        f"start_tier {start_tier!r} is not a tier of the ladder", data={"tiers": list(names)}
+                    )
+                state.start_tier = start_tier
         return state
 
     def lock(
@@ -277,7 +370,6 @@ class Runtime:
             state.unpriced.update(costs.billed_unpriced)
 
     def _write_opened(self, state: SessionState) -> None:
-        settings = state.settings
         gate = state.project.settings.gate_command if state.project else None
         payload: dict[str, Any] = {
             "session_id": state.session_id,
@@ -288,9 +380,8 @@ class Runtime:
             "profile": state.profile,
             "price_table": self.price_book(state.settings).version,
         }
-        ladder = state.ladder if state.ladder is not None else settings.ladder
-        if ladder is not None:
-            payload["ladder"] = dict(ladder)
+        if state.mode == "governed":  # the effective ladder, always: the delegation provider reads it back from here
+            payload["ladder"] = self.ladder_of(state).to_dict()
         if gate:
             payload["gate_command_sha256"] = hashlib.sha256(gate.encode("utf-8")).hexdigest()
         if state.project is not None and state.project.trust != "absent":

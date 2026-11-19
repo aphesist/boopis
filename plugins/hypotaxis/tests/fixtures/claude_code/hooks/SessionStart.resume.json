@@ -1,0 +1,32 @@
+{
+  "description": "A reopened session.",
+  "event": "SessionStart",
+  "setup": [
+    {
+      "hook": "on_session_open",
+      "kwargs": {
+        "session_id": "sess-1",
+        "platform": "desktop",
+        "reason": "resume"
+      }
+    }
+  ],
+  "call": {
+    "hook": "pre_llm_call",
+    "kwargs": {
+      "session_id": "sess-1",
+      "user_message": "continue",
+      "is_first_turn": false,
+      "model": "fake-a"
+    }
+  },
+  "payload": {
+    "session_id": "sess-1",
+    "transcript_path": "{transcript}",
+    "cwd": "{cwd}",
+    "permission_mode": "default",
+    "hook_event_name": "SessionStart",
+    "source": "resume",
+    "model": "fake-a"
+  }
+}

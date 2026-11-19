@@ -208,6 +208,44 @@
         }
       }
     },
+    "start_tier": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "forks": {
+      "type": "boolean",
+      "default": false
+    },
+    "cascade": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "output_tail_chars": {
+          "type": "integer",
+          "minimum": 200,
+          "maximum": 20000,
+          "default": 3000
+        },
+        "diff_chars": {
+          "type": "integer",
+          "minimum": 200,
+          "maximum": 100000,
+          "default": 6000
+        },
+        "brief_max_chars": {
+          "type": "integer",
+          "minimum": 500,
+          "maximum": 100000,
+          "default": 8000
+        }
+      }
+    },
     "exec": {
       "type": [
         "object",

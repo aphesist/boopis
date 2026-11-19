@@ -17,7 +17,7 @@ from hypotaxis import hooks, hx
 from hypotaxis.exec.registry import KernelRegistry, install
 from hypotaxis.exec.run import run_exec
 from hypotaxis.hermes_api import bind
-from hypotaxis.session import Runtime, SessionState
+from hypotaxis.session import Caller, Runtime, SessionState
 
 HX_BIN = os.environ.get("HX_BIN", "")
 pytestmark = [
@@ -30,11 +30,17 @@ SID = "sandboxed-1"
 class Box:
     def __init__(self, rt: Runtime, state: SessionState, registry: KernelRegistry, workspace: Path, home: Path) -> None:
         self.rt, self.state, self.registry, self.workspace, self.home = rt, state, registry, workspace, home
+        self.caller: Caller = rt.caller(state.session_id)
         self.n = 0
 
     def run(self, code: str, **args: Any) -> dict[str, Any]:
         self.n += 1
-        return run_exec(self.rt, self.state, {"code": code, **args}, {"tool_call_id": f"t{self.n}", "task_id": "k"})
+        return run_exec(
+            self.rt,
+            self.caller,
+            {"code": code, **args},
+            {"tool_call_id": f"t{self.n}", "task_id": "k", "session_id": SID},
+        )
 
     @property
     def scratch(self) -> Path:
@@ -74,7 +80,7 @@ def test_the_kernel_runs_in_the_sandbox_and_reports_what_was_enforced(make_box: 
     box = make_box()
     out = box.run("import os\n(os.getpid(), os.getcwd())")
     assert out["status"] == "ok", out
-    kernel, _ = box.registry.acquire(box.rt, box.state)
+    kernel, _ = box.registry.acquire(box.rt, box.caller, SID)
     enforcement = kernel._spawned.enforcement  # pyright: ignore[reportPrivateUsage]
     assert enforcement["fs"]["status"] == "enforced"
     assert enforcement["network"]["status"] == "enforced"
@@ -191,3 +197,13 @@ def test_a_kernel_that_dies_reports_how_it_ended(make_box: MakeBox) -> None:
     out = box.run("import os\nos._exit(7)")
     assert out["status"] == "dead"
     assert "code 7" in out["error"]
+
+
+def test_cell_output_is_redacted_by_the_real_hx_and_the_system_paths_are_hxs_own(make_box: MakeBox) -> None:
+    box = make_box()
+    key = "sk-live-0123456789abcdefghijklmnopqrstuv"
+    out = box.run(f"print('AWS_SECRET={key}')\nopen('/etc/os-release').read()[:4]")
+    assert out["status"] == "ok", out
+    assert key not in repr(out) and "[REDACTED:" in out["stdout"]
+    # /etc/os-release is readable although this plugin never lists it: hx's `system_read` granted it
+    assert out["result"] == repr(Path("/etc/os-release").read_text()[:4])

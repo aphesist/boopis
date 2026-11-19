@@ -1819,6 +1819,39 @@
       ],
       "type": "object"
     },
+    "RedactRequest": {
+      "description": "The request of `redact.apply`.",
+      "properties": {
+        "text": {
+          "description": "The text to redact.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "type": "object"
+    },
+    "RedactResponse": {
+      "description": "The answer of `redact.apply`.",
+      "properties": {
+        "count": {
+          "description": "How many redactions the returned text contains.",
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "text": {
+          "description": "The text with each secret replaced by `[REDACTED:<rule>]`. Line count is preserved.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "count"
+      ],
+      "type": "object"
+    },
     "Redactions": {
       "description": "How many redactions the returned text contains, in total and per rule.",
       "properties": {
@@ -2057,6 +2090,11 @@
           },
           "type": "array"
         },
+        "system_read": {
+          "default": false,
+          "description": "Also grant `ro` the platform's own system read paths ([`SandboxPolicy::system_read_paths`]:\nthe libraries and the few small files under `/etc` a program needs), so a caller need not\ncopy that list. Default: false.",
+          "type": "boolean"
+        },
         "timeout_ms": {
           "default": null,
           "description": "Wall-clock limit in milliseconds. Default: two minutes.",
@@ -2208,6 +2246,11 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "system_read": {
+          "default": false,
+          "description": "Also grant `ro` the platform's own system read paths ([`SandboxPolicy::system_read_paths`]:\nthe libraries and the few small files under `/etc` a program needs), so a caller need not\ncopy that list. Default: false.",
+          "type": "boolean"
         },
         "timeout_ms": {
           "default": null,
@@ -3318,6 +3361,14 @@
       },
       "result": {
         "$ref": "#/$defs/SymbolResponse"
+      }
+    },
+    "redact.apply": {
+      "params": {
+        "$ref": "#/$defs/RedactRequest"
+      },
+      "result": {
+        "$ref": "#/$defs/RedactResponse"
       }
     },
     "sandbox.capabilities": {

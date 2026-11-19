@@ -23,9 +23,9 @@ from collections.abc import Callable, Mapping
 from typing import Any
 
 from .. import policy
-from ..hooks import tool_called_payload
+from ..hooks import ledger_identity, tool_called_payload
 from ..policy import Decision, ToolCall
-from ..session import Runtime, SessionState
+from ..session import Caller, Runtime
 from ..util.log import get_logger
 from .blanks import open_blank, open_form
 from .cell import CallFailure, CallRecord, Cell
@@ -64,9 +64,11 @@ def _mcp_tool_name(server: str, tool: str) -> str:
 class CellServices:
     """The ``RequestServer`` of one session's kernel."""
 
-    def __init__(self, rt: Runtime, state: SessionState) -> None:
+    def __init__(self, rt: Runtime, caller: Caller, hermes_session_id: str) -> None:
         self._rt = rt
-        self._state = state
+        self._caller = caller
+        self._state = caller.state
+        self._hermes_session_id = hermes_session_id  # a worker's own Hermes id, which is not its root's
         self._handlers: dict[str, Callable[[Cell, Mapping[str, Any]], dict[str, Any]]] = {
             "tool.call": self._tool,
             "mcp.call": self._mcp,
@@ -85,13 +87,69 @@ class CellServices:
 
     # ------------------------------------------------------------------ the shared step
 
+    def _hooks_pre(self, tool: str, args: Mapping[str, Any], call_id: str) -> tuple[Mapping[str, Any], Decision | None]:
+        """Claude Code PreToolUse hooks, through compat's bridge. ``dispatch_tool`` bypasses Hermes's hooks, so the
+        kernel runs them itself, first, as the hook order is in Hermes (compat registers before the policy). A
+        directive is applied as Hermes would; an ``approve`` is a refusal (a cell cannot ask); a bridge that
+        fails refuses (fail closed)."""
+        try:
+            from ..compat.runtime import bridge
+
+            directive = bridge().run_tool_event("pre", self._hermes_session_id, tool, args, tool_call_id=call_id)
+        except Exception:  # noqa: BLE001 - a policy that cannot decide refuses
+            _log.error("compat PreToolUse failed closed for %s", tool, exc_info=True)
+            return args, policy.Decision(
+                "block",
+                message="The Claude Code hooks could not be evaluated, so the call was refused.",
+                reason="fail_closed",
+            )
+        if not isinstance(directive, dict):
+            return args, None
+        action = directive.get("action")
+        if action == "modify":
+            return {**args, **dict(directive.get("args") or {})}, None
+        if action in ("block", "approve"):
+            note = (
+                ""
+                if action == "block"
+                else " A cell cannot ask for confirmation: make this call directly, outside exec."
+            )
+            return args, policy.Decision(
+                "block", message=f"{directive.get('message', '')}{note}".strip(), reason="hook_" + action
+            )
+        return args, None
+
+    def _hooks_post(self, tool: str, args: Mapping[str, Any], call_id: str, text: str, status: str, ms: int) -> str:
+        """PostToolUse feedback from the same hooks, or "". An observer: a failure is logged, never raised."""
+        try:
+            from ..compat.runtime import bridge
+
+            fed = bridge().run_tool_event(
+                "post",
+                self._hermes_session_id,
+                tool,
+                args,
+                result=text,
+                tool_call_id=call_id,
+                status=status,
+                duration_ms=ms,
+            )
+        except Exception:  # noqa: BLE001
+            _log.error("compat PostToolUse failed for %s", tool, exc_info=True)
+            return ""
+        return fed[len(text) :].strip() if isinstance(fed, str) and fed.startswith(text) else ""
+
     def _judge(self, tool: str, args: Mapping[str, Any], call_id: str, source: str = "kernel") -> Decision:
-        session_policy = self._state.policy
+        """``policy.check``, the function the hook uses, as this caller (its role) sees it."""
+        try:
+            session_policy = self._rt.policy_for(self._caller)
+        except Exception:  # noqa: BLE001
+            session_policy = None
         if session_policy is None:
             return policy.Decision(
                 "block", message="the session's policy is not loaded, so the call was refused.", reason="fail_closed"
             )
-        call = ToolCall(tool, args, self._state.session_id, call_id, source=source)  # type: ignore[arg-type]
+        call = ToolCall(tool, args, self._hermes_session_id, call_id, source=source)  # type: ignore[arg-type]
         decision = policy.check(call, session_policy)
         if decision.kind == "approve":
             return policy.Decision(
@@ -118,9 +176,10 @@ class CellServices:
         record.status, record.code = status, code
         record.ms = int((time.monotonic() - started) * 1000)
         try:
+            actor, tags = ledger_identity(self._caller)
             payload = tool_called_payload(cell.call_id(record), tool, status, record.ms, args, error_code=code)
-            payload.update(via="exec", cell_id=cell.id, **extra)
-            self._rt.ledger(self._state).append("tool.called", self._state.actor(), payload)
+            payload |= tags | {"via": "exec", "cell_id": cell.id} | extra
+            self._rt.ledger(self._state).append("tool.called", actor, payload)
         except Exception:  # noqa: BLE001 - the call already happened; a ledger fault is logged, never hidden by lying
             _log.error("tool.called for exec call %s not recorded", record.n, exc_info=True)
 
@@ -129,7 +188,7 @@ class CellServices:
         cell: Cell,
         tool: str,
         args: Mapping[str, Any],
-        run: Callable[[Mapping[str, Any]], tuple[Any, bool]],
+        run: Callable[[Mapping[str, Any]], tuple[Any, bool, str]],
         source: str = "kernel",
     ) -> dict[str, Any]:
         record = cell.begin_call(tool)
@@ -139,8 +198,10 @@ class CellServices:
                 f"this cell already made {cell.max_calls} calls (exec.max_calls_per_cell); do the rest next cell",
             )
         started = time.monotonic()
+        call_id = cell.call_id(record)
         try:
-            decision = self._judge(tool, args, cell.call_id(record), source)
+            args_in, refused = self._hooks_pre(tool, args, call_id)
+            decision = refused or self._judge(tool, args_in, call_id, source)
             if not decision.allowed:
                 self._record(cell, record, tool, args, started, "blocked", "hx.policy.denied", reason=decision.reason)
                 raise CallFailure(
@@ -148,9 +209,9 @@ class CellServices:
                     decision.message or f"{tool} is not allowed from exec",
                     {"reason": decision.reason},
                 )
-            use = dict(decision.args) if decision.kind == "modify" and decision.args is not None else dict(args)
+            use = dict(decision.args) if decision.kind == "modify" and decision.args is not None else dict(args_in)
             try:
-                value, truncated = run(use)
+                value, truncated, text = run(use)
             except CallFailure as failure:
                 self._record(
                     cell,
@@ -166,8 +227,12 @@ class CellServices:
                 self._record(cell, record, tool, args, started, "error", "hx.internal_error")
                 raise CallFailure("hx.internal_error", f"{tool} failed: {type(exc).__name__}: {exc}") from exc
             status = "error" if _reports_error(value) else "ok"
+            feedback = self._hooks_post(tool, use, call_id, text, status, int((time.monotonic() - started) * 1000))
             self._record(cell, record, tool, args, started, status, "hx.tool.error" if status == "error" else "")
-            return {"result": value, "status": status, "truncated": truncated}
+            reply: dict[str, Any] = {"result": value, "status": status, "truncated": truncated}
+            if feedback:
+                reply["hook_feedback"] = feedback
+            return reply
         finally:
             cell.end_call()
 
@@ -179,9 +244,10 @@ class CellServices:
             raise CallFailure("hx.exec.invalid", "tool.call needs a tool name and an object of arguments")
         cap = self._state.settings.exec.call_result_cap_bytes
 
-        def run(use: Mapping[str, Any]) -> tuple[Any, bool]:
-            raw = self._rt.ctx.dispatch_tool(name, dict(use), **cell.dispatch_kwargs)
-            return _decode(raw, cap)
+        def run(use: Mapping[str, Any]) -> tuple[Any, bool, str]:
+            raw: Any = self._rt.ctx.dispatch_tool(name, dict(use), **cell.dispatch_kwargs)  # a dict, in Hermes's hint
+            value, truncated = _decode(raw, cap)
+            return value, truncated, raw if isinstance(raw, str) else json.dumps(raw, ensure_ascii=False)
 
         return self._governed(cell, name, args, run)
 
@@ -191,13 +257,13 @@ class CellServices:
             raise CallFailure("hx.exec.invalid", "mcp.call needs a server, a tool and an object of arguments")
         cap = self._state.settings.exec.call_result_cap_bytes
 
-        def run(use: Mapping[str, Any]) -> tuple[Any, bool]:
+        def run(use: Mapping[str, Any]) -> tuple[Any, bool, str]:
             try:
                 envelope = self._rt.ctx.call_mcp(server, tool, dict(use))
             except PermissionError as exc:  # Hermes: the server is not in this plugin's mcp_allowlist
                 raise CallFailure("hx.policy.denied", str(exc)) from exc
             text = json.dumps(envelope, ensure_ascii=False)
-            return (envelope, False) if len(text) <= cap else (text[:cap] + TRUNCATION_NOTE, True)
+            return (envelope, False, text) if len(text) <= cap else (text[:cap] + TRUNCATION_NOTE, True, text)
 
         return self._governed(cell, _mcp_tool_name(server, tool), args, run)
 
@@ -214,7 +280,15 @@ class CellServices:
             )
         started = time.monotonic()
         args = {"command": command}
-        decision = self._judge("terminal", args, cell.call_id(record), "kernel_sh")
+        call_id = cell.call_id(record)
+        hooked, refused = self._hooks_pre("terminal", args, call_id)  # the command is a Claude Bash call to the hooks
+        if refused is None and dict(hooked) != args:
+            refused = policy.Decision(
+                "block",
+                message="A Claude Code hook rewrote this command; harness.sh runs an argv and cannot apply a rewrite.",
+                reason="hook_modify",
+            )
+        decision = refused or self._judge("terminal", args, call_id, "kernel_sh")
         if not decision.allowed:
             self._record(
                 cell,
@@ -258,12 +332,12 @@ class CellServices:
 
     def _blank(self, cell: Cell, params: Mapping[str, Any]) -> dict[str, Any]:
         return self._counted(
-            cell, "harness.leave_blank", lambda: open_blank(self._rt, self._state, cell, params), params
+            cell, "harness.leave_blank", lambda: open_blank(self._rt, self._caller, cell, params), params
         )
 
     def _form(self, cell: Cell, params: Mapping[str, Any]) -> dict[str, Any]:
         tool = "harness.request_credential" if params.get("kind") == "credential" else "harness.request_input"
-        return self._counted(cell, tool, lambda: open_form(self._rt, self._state, cell, params), params)
+        return self._counted(cell, tool, lambda: open_form(self._rt, self._caller, cell, params), params)
 
     def _diagnostics(self, cell: Cell, params: Mapping[str, Any]) -> dict[str, Any]:
         def unsupported() -> dict[str, Any]:

@@ -155,6 +155,29 @@ def _tests(workspace: Path, command: Sequence[str] | None, timeout: float, task_
     return cp_gates.run_test_gate(cp_gates.T0_VISIBLE, Submission(task_id, {}), workspace, command, timeout=timeout)
 
 
+def blocked_payload(task_id: str, gate: str, reason: str, evidence: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """``gate.decided`` for a block the plugin itself reached without running the project's gate: a scope violation
+    hx refused before writing anything, or an attempt that never shipped. The gate name says which check it was."""
+    payload = cp_gates.decision_payload(task_id, [GateResult(gate, "block", reason, dict(evidence or {}))])
+    payload["enforcement"] = ENFORCEMENT if gate == cp_gates.T0_SCOPE else "none"
+    return payload  # type: ignore[no-any-return]
+
+
+def scope_block_payload(task_id: str, paths: Sequence[str], protected: bool) -> dict[str, Any]:
+    """The scope gate's block for paths hx refused before writing (``hx.txn.scope_violation`` or ``protected_path``),
+    shaped like contraprova's own ``scope_gate`` evidence: the touched paths and one violation per path."""
+    why = "protected" if protected else "out_of_scope"
+    violations = [{"path": p, "reason": why} for p in paths]
+    evidence = {
+        "tests_sha256": cp_gates.protected_digest({}),
+        "test_files": 0,
+        "touched": sorted(paths),
+        "violations": violations,
+        "source": "hx txn.validate (nothing was written)",
+    }
+    return blocked_payload(task_id, cp_gates.T0_SCOPE, "; ".join(f"{p}: {why}" for p in paths), evidence)
+
+
 def disabled_payload(task_id: str) -> dict[str, Any]:
     """``gate.decided`` for a session whose gate is switched off: a record that nothing was checked,
     not a pass that never happened."""

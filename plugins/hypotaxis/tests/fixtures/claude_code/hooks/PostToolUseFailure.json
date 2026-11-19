@@ -1,0 +1,42 @@
+{
+  "description": "A patch that failed: status other than ok, with the error text.",
+  "event": "PostToolUseFailure",
+  "setup": [],
+  "call": {
+    "hook": "transform_tool_result",
+    "kwargs": {
+      "tool_name": "patch",
+      "args": {
+        "path": "a.py",
+        "old_string": "x",
+        "new_string": "y",
+        "replace_all": false
+      },
+      "result": "{\"error\": \"no match\"}",
+      "status": "error",
+      "error_type": "PatchError",
+      "error_message": "old_string not found",
+      "duration_ms": 3,
+      "session_id": "sess-1",
+      "tool_call_id": "call-5"
+    }
+  },
+  "payload": {
+    "session_id": "sess-1",
+    "transcript_path": "{transcript}",
+    "cwd": "{cwd}",
+    "permission_mode": "default",
+    "hook_event_name": "PostToolUseFailure",
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "{cwd}/a.py",
+      "old_string": "x",
+      "new_string": "y",
+      "replace_all": false
+    },
+    "tool_use_id": "call-5",
+    "error": "old_string not found",
+    "is_interrupt": false,
+    "duration_ms": 3
+  }
+}

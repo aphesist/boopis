@@ -1,3 +1,4 @@
+# ruff: noqa: F811  (the kit fixture is imported from exec_kit and used by parameter name)
 """exec: the plugin side and the kernel, against a plain (unsandboxed) launcher. The sandbox itself is
 tested in test_exec_sandbox.py. Test doubles live in exec_support.py; nothing here is production code."""
 
@@ -5,83 +6,15 @@ from __future__ import annotations
 
 import json
 import threading
-from collections.abc import Callable, Iterator
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import pytest
-from exec_support import ExecCtx, PlainLauncher, scratch_of
+from exec_kit import SID, Kit, MakeKit, make_kit  # noqa: F401
+from exec_support import scratch_of
 from hypotaxis import hooks
 from hypotaxis.config import parse_settings
-from hypotaxis.exec.registry import KernelRegistry, install
 from hypotaxis.exec.run import run_exec
-from hypotaxis.hermes_api import bind
-from hypotaxis.session import Runtime, SessionState
-
-SID = "exec-s1"
-
-
-@dataclass
-class Kit:
-    rt: Runtime
-    ctx: ExecCtx
-    state: SessionState
-    registry: KernelRegistry
-    launcher: PlainLauncher
-    home: Path
-    project: Path
-    n: int = 0
-    signals: dict[str, threading.Event] = field(default_factory=dict)
-
-    def run(self, code: str, **args: Any) -> dict[str, Any]:
-        self.n += 1
-        kw = {"tool_call_id": f"tc{self.n}", "task_id": "task-1", "session_id": self.state.session_id}
-        return run_exec(self.rt, self.state, {"code": code, **args}, kw)
-
-    def ledger(self, type_: str | None = None) -> list[dict[str, Any]]:
-        events = self.rt.ledger(self.state).read()
-        return [e for e in events if type_ is None or e["type"] == type_]
-
-    def calls(self) -> list[dict[str, Any]]:
-        return [e["payload"] for e in self.ledger("tool.called") if e["payload"].get("via") == "exec"]
-
-    def signal(self, name: str) -> threading.Event:
-        return self.signals.setdefault(name, threading.Event())
-
-    def background(self, code: str, **args: Any) -> tuple[threading.Thread, list[dict[str, Any]]]:
-        out: list[dict[str, Any]] = []
-        thread = threading.Thread(target=lambda: out.append(self.run(code, **args)), daemon=True)
-        thread.start()
-        return thread, out
-
-
-MakeKit = Callable[..., Kit]
-
-
-@pytest.fixture
-def make_kit(home: Path, project: Path) -> Iterator[MakeKit]:
-    made: list[KernelRegistry] = []
-
-    def build(mode: str = "ungoverned", session: str = SID, **settings: Any) -> Kit:
-        ctx = ExecCtx({"mode": mode, **settings}, cwd=str(project))
-        bind(ctx)
-        rt = Runtime(ctx, home=home)
-        hooks.install(rt)
-        launcher = PlainLauncher()
-        registry = KernelRegistry(lambda _rt: launcher)
-        install(registry)
-        made.append(registry)
-        state = rt.lock(session, cwd=str(project), provider="p", model="m")
-        kit = Kit(rt, ctx, state, registry, launcher, home, project)
-        kit.ctx.tools_impl["signal"] = lambda name: kit.signal(name).set() or {"ok": True}
-        return kit
-
-    yield build
-    for registry in made:
-        registry.shutdown()
-    install(None)
-
 
 # ---------------------------------------------------------------- cells
 
@@ -134,12 +67,12 @@ def test_stderr_is_captured_apart_from_stdout(make_kit: MakeKit) -> None:
 def test_reset_forgets_variables_and_keeps_the_process(make_kit: MakeKit) -> None:
     kit = make_kit()
     kit.run("z = 1")
-    kernel, _ = kit.registry.acquire(kit.rt, kit.state)
+    kernel, _ = kit.registry.acquire(kit.rt, kit.caller, SID)
     pid = kernel.info["pid"]
     kernel.reset()
     out = kit.run("z")
     assert out["error"]["type"] == "NameError"
-    assert kit.registry.acquire(kit.rt, kit.state)[0].info["pid"] == pid
+    assert kit.registry.acquire(kit.rt, kit.caller, SID)[0].info["pid"] == pid
 
 
 # ---------------------------------------------------------------- cancel, timeouts, death
@@ -545,8 +478,8 @@ def test_the_least_recently_used_kernel_is_stopped_for_a_new_session(
 ) -> None:
     kit = make_kit(exec={"max_kernels": 1})
     kit.run("mine = 1")
-    other_state = kit.rt.lock("exec-s2", cwd=str(project), provider="p", model="m")
-    out = run_exec(kit.rt, other_state, {"code": "2"}, {"tool_call_id": "x"})
+    kit.rt.lock("exec-s2", cwd=str(project), provider="p", model="m")
+    out = run_exec(kit.rt, kit.rt.caller("exec-s2"), {"code": "2"}, {"tool_call_id": "x", "session_id": "exec-s2"})
     assert out["result"] == "2"
     again = kit.run("mine")
     assert again["error"]["type"] == "NameError"
@@ -564,7 +497,7 @@ def test_an_idle_kernel_is_reaped_and_the_next_call_says_so(make_kit: MakeKit) -
 def test_a_session_end_stops_its_kernel(make_kit: MakeKit) -> None:
     kit = make_kit()
     kit.run("1")
-    kernel, _ = kit.registry.acquire(kit.rt, kit.state)
+    kernel, _ = kit.registry.acquire(kit.rt, kit.caller, SID)
     hooks.on_session_finalize(session_id=SID)
     assert kernel.dead  # stopped
     assert not kit.registry._kernels  # pyright: ignore[reportPrivateUsage]

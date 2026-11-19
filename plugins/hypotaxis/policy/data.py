@@ -16,6 +16,8 @@ _PROTECTED = Path(__file__).resolve().parent.parent / "data" / "protected.defaul
 @dataclass(frozen=True, slots=True)
 class Defaults:
     own_tools: frozenset[str]
+    roles: Mapping[str, frozenset[str]]  # the hypotaxis tools each role of a governed session may use
+    governed_only_tools: frozenset[str]  # hypotaxis tools that mean nothing outside governed mode
     read_only_tools: frozenset[str]
     kernel_denied_tools: frozenset[str]
     shell_tools: frozenset[str]
@@ -46,6 +48,8 @@ def load_defaults() -> Defaults:
     raw = cast(Mapping[str, Any], json.loads(_FILE.read_text(encoding="utf-8")))
     return Defaults(
         own_tools=frozenset(raw["own_tools"]),
+        roles={role: frozenset(tools) for role, tools in raw["roles"].items()},
+        governed_only_tools=frozenset(raw["governed_only_tools"]),
         read_only_tools=frozenset(raw["read_only_tools"]),
         kernel_denied_tools=frozenset(raw["kernel_denied_tools"]),
         shell_tools=frozenset(raw["shell_tools"]),
