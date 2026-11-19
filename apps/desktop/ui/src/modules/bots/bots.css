@@ -57,7 +57,7 @@
 .bt-who-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bt-log { display: flex; flex-direction: column; }
 .bt-log > [data-hx-turn] { border-radius: var(--r-s); }
-.bt-cardslot { width: min(100%, 520px); }
+.bt-cardslot { width: min(100%, 520px); min-width: 0; --r-card: var(--r-s); }   /* the card sits flush in the entry's bottom corners, so it takes the entry's radius (--r-s, set on .bt-log > [data-hx-turn] below, no padding between: its --r-in is that radius; the stamp follows) and not its own 20 (R-corner-3, R-corner-8); min-width 0 lets a card narrower than its content shrink inside a narrow column */
 .bt-resolved { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-xs); color: var(--text-dim); }
 .bt-resolved-ico { display: inline-grid; color: var(--text-quiet); }
 .bt-resolved-ico.is-ok { color: var(--ok); }
