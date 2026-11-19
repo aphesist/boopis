@@ -35,7 +35,7 @@ Every form has a `kind`, which picks its template, defaults and where the result
 | `permission` | "Allow `npm publish` in this project?" with once / session / always / deny | a permission rule written at the chosen scope (project, local, user) |
 | `signin` | connect Linear; sign in to ChatGPT; `claude auth login` | an OAuth or CLI flow run by the host; tokens stored as credentials |
 | `setup` | the gate command for this project; trust this repository; turn tool search off (ADR-0014); allow `api.example.com` | the config written at the right scope, with a diff shown before saving |
-| `connector` | install an MCP server or plugin found in a marketplace | the install flow (COMPAT §8), with its contents and pinned hash shown |
+| `connector` | install an MCP server from the curated collection (`docs/CONNECTORS.md`) or a plugin found in a marketplace | the install flow (COMPAT §8), with its contents and pinned hash shown |
 | `choice` | the model picker; pick a teammate; pick a folder for Remote Control | the selection |
 | `plan` | approve the plan before work starts (plan mode) | the plan accepted, edited or rejected |
 | `feedback` | "Was this result right?" | stored for the user only; feeds nothing automatically |

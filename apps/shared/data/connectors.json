@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "description": "The curated connector collection: MCP servers hypotaxis knows how to install, configure and trust. Every entry is pinned to an exact version and was checked against its publisher's own sources on the date in `verified`. See docs/CONNECTORS.md.",
+  "connectors": [
+    {
+      "id": "firecrawl",
+      "name": "Firecrawl",
+      "publisher": "Firecrawl",
+      "description": "Scrape, crawl, map and search the web into clean Markdown or structured data.",
+      "homepage": "https://www.firecrawl.dev",
+      "source": "https://github.com/firecrawl/firecrawl-mcp-server",
+      "license": "MIT",
+      "categories": ["web", "research"],
+      "verified": {
+        "date": "2026-11-19",
+        "package": "firecrawl-mcp",
+        "version": "3.40.0",
+        "sources": [
+          "https://github.com/firecrawl/firecrawl-mcp-server",
+          "https://www.firecrawl.dev/changelog/firecrawl-local.md",
+          "https://docs.firecrawl.dev"
+        ]
+      },
+      "variants": [
+        {
+          "id": "local",
+          "label": "Local (Firecrawl Local)",
+          "default": true,
+          "summary": "Runs on your machine: Firecrawl Local's Rust scrape, crawl and map primitives, with no account and nothing sent to Firecrawl's servers.",
+          "transport": "stdio",
+          "command": "npx",
+          "args": ["-y", "firecrawl-mcp@3.40.0"],
+          "setup": [
+            {
+              "env": "FIRECRAWL_API_URL",
+              "title": "Firecrawl Local address",
+              "description": "The URL your Firecrawl Local instance listens on.",
+              "format": "uri",
+              "required": true
+            }
+          ],
+          "requires": [
+            {
+              "kind": "service",
+              "name": "Firecrawl Local",
+              "source": "https://github.com/firecrawl/firecrawl/tree/main/apps/local",
+              "note": "Install and start it first; the connector only talks to it."
+            }
+          ],
+          "credentials": [],
+          "network": { "egress": "loopback" }
+        },
+        {
+          "id": "hosted",
+          "label": "Hosted",
+          "summary": "Firecrawl's hosted MCP server. Scrape, search and parse work without an account; sign in for the full toolset.",
+          "transport": "streamable-http",
+          "url": "https://mcp.firecrawl.dev/v2/mcp",
+          "auth": {
+            "kind": "oauth",
+            "url": "https://mcp.firecrawl.dev/v2/mcp-oauth",
+            "alternative": { "kind": "bearer", "header": "Authorization", "credential": "firecrawl_api_key" }
+          },
+          "credentials": [
+            { "id": "firecrawl_api_key", "title": "Firecrawl API key", "host": "mcp.firecrawl.dev", "optional": true }
+          ],
+          "network": { "egress": ["mcp.firecrawl.dev"] }
+        },
+        {
+          "id": "package",
+          "label": "Package with an API key",
+          "summary": "The npm package on your machine, calling Firecrawl's cloud API with your key.",
+          "transport": "stdio",
+          "command": "npx",
+          "args": ["-y", "firecrawl-mcp@3.40.0"],
+          "credentials": [
+            { "id": "firecrawl_api_key", "title": "Firecrawl API key", "env": "FIRECRAWL_API_KEY", "host": "api.firecrawl.dev", "optional": false }
+          ],
+          "network": { "egress": ["api.firecrawl.dev"] }
+        }
+      ]
+    }
+  ]
+}

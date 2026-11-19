@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/aphesist/hypotaxis/apps/shared/data/connectors.schema.json",
+  "title": "hypotaxis connector collection",
+  "type": "object",
+  "required": ["schema_version", "connectors"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "description": { "type": "string" },
+    "connectors": { "type": "array", "items": { "$ref": "#/$defs/connector" } }
+  },
+  "$defs": {
+    "connector": {
+      "type": "object",
+      "required": ["id", "name", "publisher", "description", "source", "license", "verified", "variants"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "name": { "type": "string" },
+        "publisher": { "type": "string" },
+        "description": { "type": "string", "maxLength": 140 },
+        "homepage": { "type": "string", "format": "uri" },
+        "source": { "type": "string", "format": "uri" },
+        "license": { "type": "string" },
+        "categories": { "type": "array", "items": { "type": "string" } },
+        "verified": {
+          "type": "object",
+          "required": ["date", "sources"],
+          "properties": {
+            "date": { "type": "string", "format": "date" },
+            "package": { "type": "string" },
+            "version": { "type": "string" },
+            "sources": { "type": "array", "items": { "type": "string", "format": "uri" }, "minItems": 1 }
+          }
+        },
+        "variants": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/variant" } }
+      }
+    },
+    "variant": {
+      "type": "object",
+      "required": ["id", "label", "transport", "network"],
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "default": { "type": "boolean" },
+        "summary": { "type": "string" },
+        "transport": { "enum": ["stdio", "streamable-http", "sse"] },
+        "command": { "type": "string" },
+        "args": { "type": "array", "items": { "type": "string" } },
+        "url": { "type": "string", "format": "uri" },
+        "auth": { "type": "object" },
+        "setup": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["env", "title"],
+            "properties": {
+              "env": { "type": "string" }, "title": { "type": "string" }, "description": { "type": "string" },
+              "format": { "type": "string" }, "required": { "type": "boolean" }
+            }
+          }
+        },
+        "requires": { "type": "array", "items": { "type": "object" } },
+        "credentials": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "title"],
+            "properties": {
+              "id": { "type": "string" }, "title": { "type": "string" }, "env": { "type": "string" },
+              "host": { "type": "string" }, "optional": { "type": "boolean" }
+            }
+          }
+        },
+        "network": {
+          "type": "object",
+          "required": ["egress"],
+          "properties": {
+            "egress": { "oneOf": [ { "enum": ["none", "loopback", "any"] }, { "type": "array", "items": { "type": "string" } } ] }
+          }
+        }
+      },
+      "allOf": [
+        { "if": { "properties": { "transport": { "const": "stdio" } } }, "then": { "required": ["command"] } },
+        { "if": { "properties": { "transport": { "enum": ["streamable-http", "sse"] } } }, "then": { "required": ["url"] } }
+      ]
+    }
+  }
+}
