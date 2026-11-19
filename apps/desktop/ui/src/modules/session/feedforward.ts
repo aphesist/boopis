@@ -69,7 +69,9 @@ export function makeReader(gov: () => GovernanceView) {
         if (o && o.assume && !out.some((x) => x.label === o.assume)) out.push({ label: o.assume, kind: h.kind, text: h.text });
       });
       const g = gov();
-      if (hs.length || !g.governed || !g.smart) out.push({ label: costAssume(g, cost), kind: costHit ? 'cost' : 'governance', text: costHit ? (costHit as Hit).text : '' });
+      if (catalog().length && (hs.length || !g.governed || !g.smart)) out.push({ label: costAssume(g, cost), kind: costHit ? 'cost' : 'governance', text: costHit ? (costHit as Hit).text : '' });
+      /* a live build reads decisions with the mock's catalog only as a preview, and says so on the row */
+      if (out.length && data().info.live) out.push({ label: '>preview: not read by the agent', kind: 'preview', text: '' });
       return out;
     }
   };

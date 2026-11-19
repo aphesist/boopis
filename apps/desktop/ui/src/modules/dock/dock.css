@@ -73,6 +73,7 @@
 .dk-mini-orb { display: block; flex: none; line-height: 0; cursor: pointer; }
 .dk-sub { color: var(--text-quiet); font-size: var(--fs-xs); }
 .dk-dim { color: var(--text-dim); }
+.dk-preview { font-size: var(--fs-2xs); color: var(--text-quiet); text-transform: var(--ui-case); white-space: nowrap; }
 
 /* ===== bots · normal ===== */
 .dk-v-bots-norm { padding: var(--dock-top) var(--dock-pad-x) var(--dock-band); }

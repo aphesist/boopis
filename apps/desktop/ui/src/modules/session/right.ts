@@ -27,11 +27,16 @@ export function mountRight(root: HTMLElement): void {
   SECTIONS.forEach((s) => (RIGHT.open[s] = s !== 'environment' && s !== 'connectors'));
   const isOpen = (): boolean => state.right === 'open';
   let last: boolean | null = null;
-  const pct = (): number => { const c = d().context.get(); return Math.round(c.used / c.total * 100); };
+  const known = (): boolean => d().context.get().total > 0;
+  const pct = (): number => { const c = d().context.get(); return c.total > 0 ? Math.round(c.used / c.total * 100) : 0; };
+  /* what a panel cannot know or cannot do on this Hermes, in words, under its content */
+  const noteOf = (name: string): HTMLElement[] => { const t = (d().notes.get() as Record<string, string | undefined>)[name]; return t ? [el('p', { class: 'ssr-note', role: 'status', text: t })] : []; };
 
   function strip(): HTMLElement {
     const c = d().context.get();
-    const b = el('button', { class: 'ui-measure-btn', type: 'button', 'aria-label': 'Context ' + pct() + '% used, ' + kTokens(c.used) + ' of ' + kTokens(c.total) + ' tokens. Show session details', 'data-tip': 'Context ' + pct() + '% used', 'data-kbd': 'mod+I', 'aria-keyshortcuts': isMac ? 'Meta+I' : 'Control+I', html: ui.html.measure({ used: c.used, total: c.total, dots: 8 }) });
+    const b = known()
+      ? el('button', { class: 'ui-measure-btn', type: 'button', 'aria-label': 'Context ' + pct() + '% used, ' + kTokens(c.used) + ' of ' + kTokens(c.total) + ' tokens. Show session details', 'data-tip': 'Context ' + pct() + '% used', 'data-kbd': 'mod+I', 'aria-keyshortcuts': isMac ? 'Meta+I' : 'Control+I', html: ui.html.measure({ used: c.used, total: c.total, dots: 8 }) })
+      : el('button', { class: 'ui-measure-btn', type: 'button', 'aria-label': 'Context size unknown. Show session details', 'data-tip': 'Context size unknown', 'data-kbd': 'mod+I', 'aria-keyshortcuts': isMac ? 'Meta+I' : 'Control+I', html: ui.html.measure({ used: 0, total: 1, dots: 8 }) });
     b.addEventListener('click', () => openPanel('context'));
     return el('div', { class: 'ssr-strip' }, b);
   }
@@ -43,28 +48,32 @@ export function mountRight(root: HTMLElement): void {
   }
   function contextBody(): Node[] {
     const c = d().context.get();
-    const compact = ui.button({ label: 'Compact conversation' });
+    const compact = ui.button({ label: 'Compact conversation', ...(d().can.get().compact ? {} : { disabled: true }) });
     const note = el('p', { class: 'ssr-note', text: RIGHT.note ?? 'Compacting summarises older turns. Files and project memory stay. It runs on its own at 90%.' });
     if (RIGHT.note) { note.setAttribute('role', 'status'); RIGHT.note = null; }
     compact.addEventListener('click', () => {
       void d().compactContext().then((freed) => { RIGHT.note = freed ? 'Compacted. Freed ' + kTokens(freed) + ' tokens.' : 'Nothing left to compact.'; draw(); });
     });
     const legendParts = c.parts.map((p) => [cap1(p[0]), p[1]] as const);
-    return [ui.measure({ variant: 'grid', total: c.total, parts: c.parts, label: 'Context' }), ui.legend(legendParts, kTokens), el('div', { class: 'ssr-actions' }, compact), note];
+    if (!known()) return [el('p', { class: 'ssr-note', role: 'status', text: 'Context size: unknown' }), ...noteOf('context'), el('div', { class: 'ssr-actions' }, compact)];
+    return [ui.measure({ variant: 'grid', total: c.total, parts: c.parts, label: 'Context' }), ui.legend(legendParts, kTokens), el('div', { class: 'ssr-actions' }, compact), note, ...noteOf('context')];
   }
   function tasksBody(): HTMLElement {
+    if (!d().todos.get().length && data().info.live) return el('p', { class: 'ssr-note', text: 'No task list yet. The agent writes one when the work has steps.' });
     return el('ul', { class: 'ssr-tasks' }, d().todos.get().map(([t, s]) => el('li', { class: 'ssr-task', 'data-s': s }, [
       el('span', { class: 'ssr-task-mark', 'aria-hidden': 'true', html: s === 'done' ? ui.icon('check') : s === 'doing' ? ui.html.dot('run') : '<i></i>' }),
       el('span', { text: cap1(t) }), el('span', { class: 'ui-sr', text: s === 'done' ? ', done' : s === 'doing' ? ', in progress' : ', to do' })
     ])));
   }
   function changesBody(): HTMLElement[] {
-    return data().sessions.diff(VIEW.current, { blank: VIEW.blank }).map((f) => {
+    const files = data().sessions.diff(VIEW.current, { blank: VIEW.blank });
+    if (!files.length && data().info.live) return [el('p', { class: 'ssr-note', text: 'Nothing has shipped in this session.' }), ...noteOf('changes')];
+    return [...files.map((f) => {
       const [dir, base] = splitPath(f.path), slot = el('div');
       const b = el('button', { class: 'ssr-file', type: 'button', 'aria-expanded': 'false' }, [el('span', { class: 'ss-path ui-mono' }, [el('span', { class: 'ss-dir', text: dir }), base]), counts(f.add, f.del)]);
       b.addEventListener('click', () => { const o = b.getAttribute('aria-expanded') !== 'true'; b.setAttribute('aria-expanded', String(o)); slot.replaceChildren(o ? renderDiff([f], true, true) : ''); });
       return el('div', {}, [b, slot]);
-    });
+    }), ...noteOf('changes')];
   }
   function outputBody(): HTMLElement[] {
     const lines = d().output.get();
@@ -76,6 +85,7 @@ export function mountRight(root: HTMLElement): void {
     });
     const copy = ui.iconButton({ icon: 'copy', label: 'Copy output', size: 's' });
     copy.addEventListener('click', () => { void copyText(lines.join('\n')); });
+    if (!lines.length && data().info.live) return [el('p', { class: 'ssr-note', text: 'No tool output yet.' })];
     return [el('div', { class: 'ssr-term-wrap' }, [term, copy])];
   }
   function governanceBody(): Node[] {
@@ -86,26 +96,28 @@ export function mountRight(root: HTMLElement): void {
     const capBtn = ui.button({ label: 'Change cap', size: 's', variant: 'ghost', attrs: { 'aria-haspopup': 'menu', 'aria-expanded': 'false' } });
     capBtn.addEventListener('click', () => ui.menu.open(capBtn, [{ title: 'Stop the session at' }, ...['$0.30', '$0.60', '$1.00', '$2.00'].map((v) => ({ label: v, value: v, mono: true, checked: v === gv.cap }))], { align: 'end', onSelect: (v) => setGovernance({ cap: v }) }));
     const capRow = gv.governed
-      ? el('div', { class: 'ssr-cap' }, [el('span', { class: 'ssr-key', text: 'Spend' }), ui.capacity({ spent: gv.spent || '$0', cap: gv.cap }), capBtn])
+      ? (gv.cap && gv.spent ? el('div', { class: 'ssr-cap' }, [el('span', { class: 'ssr-key', text: 'Spend' }), ui.capacity({ spent: gv.spent, cap: gv.cap }), capBtn]) : el('p', { class: 'ssr-note', text: gv.spent ? 'Spent ' + gv.spent + ', no cap set.' : 'Spend: unknown' + (gv.cap ? ', cap ' + gv.cap : '') }))
       : el('p', { class: 'ssr-note', text: 'Ungoverned: every turn runs on ' + gv.model + ' with no cost cap. The sandbox still applies.' });
-    return [seg, ladder, capRow];
+    const ladderEl = gv.ladder.length ? [ladder] : [];
+    return [seg, ...ladderEl, capRow, ...(gv.locked ? [el('p', { class: 'ssr-note', text: 'The mode is fixed once the first message is sent.' })] : []), ...noteOf('governance')];
   }
   function connectorsBody(): HTMLElement[] {
     return d().connectors.get().map((c) => {
       const id = 'ssr-conn-' + c.name;
-      const control = c.state === 'sign in' ? ui.html.button({ label: 'Sign in', size: 's', attrs: { id, 'data-conn': c.name } }) : ui.html.switch({ id, checked: c.state === 'on' });
-      const row = frag(ui.html.setRow({ label: cap1(c.name), hint: c.tools + ' tools', for: c.state === 'sign in' ? null : id, control }));
+      const can = d().can.get();
+      const control = c.state === 'sign in' ? ui.html.button({ label: 'Sign in', size: 's', disabled: !can.signIn, attrs: { id, 'data-conn': c.name } }) : ui.html.switch({ id, checked: c.state === 'on', disabled: !can.connectors });
+      const row = frag(ui.html.setRow({ label: cap1(c.name), hint: c.hint ?? c.tools + ' tools', for: c.state === 'sign in' ? null : id, control }));
       const sw = row.querySelector<HTMLInputElement>('.ui-switch'), sb = row.querySelector<HTMLButtonElement>('[data-conn]');
       if (sw) { ui.hydrate(row); sw.addEventListener('change', () => d().setConnector(c.name, sw.checked)); }
       if (sb) sb.addEventListener('click', () => { const l = sb.querySelector('span'); if (l) l.textContent = 'Connecting'; sb.disabled = true; void d().signIn(c.name); });
       return row;
-    });
+    }).concat(d().connectors.get().length || !data().info.live ? [] : [el('p', { class: 'ssr-note', text: 'No MCP servers are configured in Hermes.' })]);
   }
   function envBody(): HTMLElement[] {
     const e = d().environment.get();
     const dl = el('dl', { class: 'ssr-env' });
     ([['Folder', e.cwd], ['Branch', e.branch], ['Sandbox', e.sandbox], ['Runtime', e.runtime], ['Harness', e.harness], ['Gate', e.gate]] as const).forEach(([a, b]) => b && dl.append(el('dt', { text: a }), el('dd', {}, partsEl(b, 'ui-mono'))));
-    return [dl];
+    return [dl, ...noteOf('environment')];
   }
   function panel(): HTMLElement {
     const todos = d().todos.get(), done = todos.filter((t) => t[1] === 'done').length;
@@ -118,10 +130,10 @@ export function mountRight(root: HTMLElement): void {
       section('context', 'Context', mono(kTokens(c.used) + ' / ' + kTokens(c.total)), contextBody()),
       section('tasks', 'Tasks', mono(done + ' of ' + todos.length), tasksBody()),
       section('changes', 'Changes', '<span class="ss-n ui-mono"><span class="ss-add">+' + add + '</span><span class="ss-del">−' + del + '</span></span>', changesBody()),
-      section('output', 'Output', mono(passed ? passed + ' passed' : 'running'), outputBody()),
+      section('output', 'Output', mono(passed ? passed + ' passed' : VIEW.running || !data().info.live ? 'running' : out ? 'done' : 'empty'), outputBody()),
       section('governance', 'Governance', mono(G.governed ? 'governed' : 'ungoverned'), governanceBody()),
       section('connectors', 'Connectors', mono(onN + ' on'), connectorsBody()),
-      section('environment', 'Environment', mono('sandboxed'), envBody())
+      section('environment', 'Environment', mono(data().info.live && !d().environment.get().sandbox ? 'sandbox unknown' : 'sandboxed'), envBody())
     ]);
     body.querySelector('.ui-sec__head')?.setAttribute('data-hx-focus', 'panel');
     /* ↑ ↓ between section headers */
@@ -155,6 +167,8 @@ export function mountRight(root: HTMLElement): void {
   d().context.subscribe(() => draw());
   const whenOpen = (): void => { if (isOpen()) draw(); };
   d().governance.subscribe(whenOpen);
+  d().notes.subscribe(whenOpen);
+  d().can.subscribe(whenOpen);
   for (const w of [d().todos, d().changes, d().output, d().connectors, d().environment]) (w as { subscribe(fn: () => void): unknown }).subscribe(whenOpen);
   data().sessions.list.subscribe(whenOpen);
   onChanged(whenOpen);

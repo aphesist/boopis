@@ -4,6 +4,7 @@
    No .ui-* class is re-styled here. Every colour, font and radius is a token; --c on a swatch is an orb colour (data). */
 
 .bt-view, .bt-list { font-family: var(--sans); font-size: var(--fs-s); line-height: var(--lh-ui); color: var(--text); }
+.bt-preview { margin: 0 0 var(--sp-2); font-size: var(--fs-xs); line-height: 1.5; color: var(--text-quiet); }
 .bt-view [hidden], .bt-list[hidden] { display: none !important; }
 :where(.bt-view, .bt-list) :where(button.bt-opt, button.bt-sugg, button.bt-p-sched) { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; }
 

@@ -71,6 +71,8 @@ export const meterHTML = (): string => (run().cost == null || run().cap == null 
 const ladderLine = (): string => `<span class="dk-ladder" data-tip="Model ladder: ${esc(run().model)}" data-tip-pos="top">${ui.html.ladder({ stations: run().ladder, current: run().current, ground: 'var(--dock-bg)' })}</span>`;
 const ladderList = (): string => ui.html.ladder({ variant: 'list', ground: 'var(--dock-bg)', current: run().current,
   stations: run().ladder.map(([m, rule], i) => [m, i === run().current && !run().stopped ? `${rule}, running` : rule] as const) });
+/** a page that shows sample data in a live build says so (the mock's bots and schedules are previews) */
+const preview = (src: 'bots' | 'schedules'): string => (data().info.preview.has(src) ? `<span class="dk-preview" data-e>Preview</span>` : '');
 const pillBtn = (label: string): string => `<button class="dk-pillbtn" data-act="restore" aria-label="${esc(label)}"></button>`;
 const pillAtt = (): string => (attCount() ? `<span class="dk-att" data-k="att:pill">${ui.html.dot('attention')}</span>` : '');
 const needLabel = (n: number): string => `${n} ${n === 1 ? 'needs' : 'need'} you`;
@@ -127,13 +129,13 @@ function tileHTML(p: { id: string; on: boolean }, i: number): string {
 export const V: Record<string, () => string> = {
   'bots:min': () => {
     const n = attCount();
-    return `${pillBtn('Show the dock' + (n ? ', ' + needLabel(n) : ''))}<span class="dk-mini" aria-hidden="true">${S.bots.map((b) => slot(b)).join('')}</span>${pillAtt()}`;
+    return `${pillBtn('Show the dock' + (n ? ', ' + needLabel(n) : ''))}<span class="dk-mini" aria-hidden="true">${S.bots.map((b) => slot(b)).join('')}</span>${preview('bots')}${pillAtt()}`;
   },
-  'bots:norm': () => `<div class="dk-row" role="toolbar" aria-label="Bots" aria-orientation="horizontal">${S.bots.map((b, i) => { const s = st(b); return (
+  'bots:norm': () => `<div class="dk-row" role="toolbar" aria-label="Bots" aria-orientation="horizontal">${preview('bots')}${S.bots.map((b, i) => { const s = st(b); return (
     `<button class="dk-bot" data-act="session" data-id="${b.id}" data-bot-label="${b.id}" aria-label="${esc(botLabel(b))}" aria-describedby="dk-bot-hint" aria-keyshortcuts="Enter ${MOD}+Enter" tabindex="${i === S.rowIdx ? 0 : -1}"` +
     ` data-tip="${esc(b.name)}, ${esc(b.role)}"${s.key === 'idle' ? '' : ` data-tip-state="${esc(s.word)}"`}${s.attention ? ' data-tip-tone="attention"' : ''} data-kbd="enter" data-tip-pos="top">${slot(b)}</button>`); }).join('')}` +
     `<button class="dk-add" data-act="new-bot" aria-label="New bot" data-tip="New bot" data-tip-pos="top" tabindex="${S.rowIdx === S.bots.length ? 0 : -1}"><span data-k="add">${icon('plus')}</span></button></div>`,
-  'bots:exp': () => `<ul class="dk-roster" aria-label="All bots">${S.bots.map((b) => ui.html.row({ title: b.name, sub: phrase(b), lead: slot(b),
+  'bots:exp': () => `${preview('bots')}<ul class="dk-roster" aria-label="All bots">${S.bots.map((b) => ui.html.row({ title: b.name, sub: phrase(b), lead: slot(b),
       attrs: { 'data-act': 'session', 'data-id': b.id, 'data-bot-label': b.id, 'aria-label': botLabel(b), 'aria-describedby': 'dk-bot-hint' } })).join('')}` +
     ui.html.row({ title: 'New bot', sub: 'Set one up', lead: `<span class="dk-add-ring"><span class="dk-add-ring-o" data-e></span><span data-k="add">${icon('plus')}</span></span>`, attrs: { 'data-act': 'new-bot' } }) + '</ul>',
   /* the bot's session: its last messages, its open cards, the library composer, and the other bots to switch to */
@@ -142,7 +144,7 @@ export const V: Record<string, () => string> = {
     const s = st(b);
     return `<div class="dk-card-head">${slot(b)}
       <div class="dk-card-who" data-e><div class="dk-card-name" id="dk-card-name">${esc(b.name)}</div>` +
-      `<div class="dk-card-state"${s.attention ? ' data-tone="attention"' : ''}>${sessState(b)}</div></div>` +
+      `<div class="dk-card-state"${s.attention ? ' data-tone="attention"' : ''}>${sessState(b)}</div>${preview('bots')}</div>` +
       `<span class="dk-card-acts" data-e>` +
       ui.html.iconButton({ icon: 'bots', label: `Open the full chat with ${b.name}`, tip: 'Full chat', keys: 'mod+Enter', size: 's', tipPos: 'top', attrs: { 'data-act': 'open-chat', 'data-id': b.id } }) +
       ui.html.iconButton({ icon: 'close', label: `Close the session with ${b.name}`, tip: 'Close', keys: 'Esc', size: 's', tipPos: 'top', attrs: { 'data-act': 'close-card' } }) + `</span></div>
@@ -163,10 +165,10 @@ export const V: Record<string, () => string> = {
   'run:exp': () => `<div class="dk-runx-head"><div><div class="dk-run-title" data-k="run:title">${esc(run().title)}</div><div class="dk-run-model" data-k="run:model">${runSub()}</div></div>${stopBtn()}</div>
     <div class="dk-ladderx">${ladderList()}</div>
     <hr class="dk-rule" data-e><div class="dk-runx-spend"><span class="dk-time" data-k="run:time" data-run-time>${fmtDur(run().elapsed)}</span><span data-k="run:cost" data-run-cost>${costHTML()}</span><span data-k="run:meter" data-run-meter>${meterHTML()}</span>
-      <span class="dk-runx-more" data-e>${esc(run().tokens)} tokens, ${run().trips} round trips, step ${run().step}</span></div>
+      <span class="dk-runx-more" data-e>${esc(run().tokens || 'unknown')} tokens, ${run().trips} round trips, step ${run().step}</span></div>
     <div class="dk-settings" data-e>` +
       ui.html.setRow({ label: 'Governed', hint: run().governed ? 'The ladder picks the model' : `Stays on ${run().model}`, for: 'dk-sw-governed', control: ui.html.switch({ id: 'dk-sw-governed', checked: run().governed }) }) +
-      ui.html.setRow({ label: 'Sandbox network', for: 'dk-sw-network', control: ui.html.switch({ id: 'dk-sw-network', checked: run().network }) }) + '</div>',
+      (data().info.live ? '' : ui.html.setRow({ label: 'Sandbox network', for: 'dk-sw-network', control: ui.html.switch({ id: 'dk-sw-network', checked: run().network }) })) + '</div>',
 
   'wait:min': () => {
     const n = S.waits.length;
@@ -178,14 +180,14 @@ export const V: Record<string, () => string> = {
 
   'sched:min': () => {
     const s = S.sched.find((x) => !x.paused); const b = s && botById(s.bot);
-    return s && b ? `${pillBtn(`Show the dock, next scheduled run: ${b.name}, ${s.next}`)}<span class="dk-mini-orb" data-k="s:orb:${s.id}">${miniOrb(b, 16)}</span><span data-k="s:bot:${s.id}">${esc(b.name)}</span><span class="dk-sched-when" data-k="s:next:${s.id}"><b>${esc(s.next)}</b></span>${pillAtt()}`
-      : `${pillBtn('Show the dock, no scheduled runs')}<span class="dk-dim dk-ui" data-e>Nothing scheduled</span>`;
+    return s && b ? `${pillBtn(`Show the dock, next scheduled run: ${b.name}, ${s.next}`)}${preview('schedules')}<span class="dk-mini-orb" data-k="s:orb:${s.id}">${miniOrb(b, 16)}</span><span data-k="s:bot:${s.id}">${esc(b.name)}</span><span class="dk-sched-when" data-k="s:next:${s.id}"><b>${esc(s.next)}</b></span>${pillAtt()}`
+      : `${pillBtn('Show the dock, no scheduled runs')}${preview('schedules')}<span class="dk-dim dk-ui" data-e>Nothing scheduled</span>`;
   },
-  'sched:norm': () => `<ul class="dk-sched">${S.sched.filter((s) => !s.paused).slice(0, 2).map((s) => { const b = botById(s.bot) as DockBot; return `<li class="dk-sched-row">
+  'sched:norm': () => `${preview('schedules')}<ul class="dk-sched">${S.sched.filter((s) => !s.paused).slice(0, 2).map((s) => { const b = botById(s.bot) as DockBot; return `<li class="dk-sched-row">
       <span class="dk-mini-orb" data-k="s:orb:${s.id}">${miniOrb(b, 18)}</span><span class="dk-sched-bot" data-k="s:bot:${s.id}">${esc(b.name)}</span>
       <button class="dk-sched-what" data-act="expand" data-k="s:what:${s.id}" aria-label="${esc(s.what)}, ${esc(s.when)}; show all scheduled runs">${esc(s.what)}</button>
       <span class="dk-sched-when" data-k="s:next:${s.id}"><b>${esc(s.next)}</b></span></li>`; }).join('') || `<li>${ui.html.empty({ title: 'Nothing scheduled', text: 'Bots you schedule show their next run here.' })}</li>`}</ul>`,
-  'sched:exp': () => `<div class="dk-sched-head" data-e>Scheduled runs<span>${S.sched.length} in total</span></div><ul class="dk-sched">${S.sched.map((s) => { const b = botById(s.bot) as DockBot; return `<li class="dk-sched-row"${s.paused ? ' data-paused' : ''}>
+  'sched:exp': () => `${preview('schedules')}<div class="dk-sched-head" data-e>Scheduled runs<span>${S.sched.length} in total</span></div><ul class="dk-sched">${S.sched.map((s) => { const b = botById(s.bot) as DockBot; return `<li class="dk-sched-row"${s.paused ? ' data-paused' : ''}>
       <span class="dk-mini-orb" data-k="s:orb:${s.id}">${miniOrb(b, 18)}</span><span class="dk-sched-bot" data-k="s:bot:${s.id}">${esc(b.name)}</span>
       <span class="dk-sched-what" data-k="s:what:${s.id}">${esc(s.what)}<span class="dk-sub dk-mono"> ${esc(s.when)}</span></span>
       <span class="dk-sched-end"><span class="dk-sched-when" data-k="s:next:${s.id}">${s.paused ? 'Paused' : `<b>${esc(s.next)}</b>`}</span>

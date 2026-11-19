@@ -70,7 +70,7 @@ function blankSentence(t: AgentTurn): HTMLElement {
   VIEW.blankCard = card;
   function fill(): void {
     const a = VIEW.blank, rw = a ? q.rewrites?.[a] : null;
-    const s: readonly [string, string] | null = a ? (rw ? [rw.lead, rw.tail] : FREE_ANSWER) : null;
+    const s: readonly [string, string] | null = a ? (rw ? [rw.lead, rw.tail] : (q.free ?? FREE_ANSWER)) : null;
     lead.innerHTML = s ? ui.html.inline(s[0]) + ' ' : ui.esc(q.question) + ' ';
     tail.innerHTML = s ? (/^[.,;]/.test(s[1]) ? '' : ' ') + ui.html.inline(s[1]) : '';
     requestAnimationFrame(() => { const b = card.querySelector('button'); if (b) b.toggleAttribute('data-hx-attention', !a); });
@@ -141,7 +141,7 @@ function assistantTurn(a: AgentTurn): HTMLElement {
 }
 
 /* a turn that is still running: a live call number and steps, then the answer arrives on the feed */
-interface Live { t: HTMLElement; ol: HTMLElement; disc: HTMLElement; timeEl: HTMLElement; tick: number; secs: number; model: string; count: number; startedAt: number; prose: HTMLElement | null }
+interface Live { t: HTMLElement; ol: HTMLElement; disc: HTMLElement; timeEl: HTMLElement; tick: number; secs: number; model: string; count: number; startedAt: number; prose: HTMLElement | null; blankEl: HTMLElement | null }
 const live = new Map<string, Live>();
 function liveTurn(a: AgentTurn): void {
   const id = 'ss-steps-' + randomId('');
@@ -150,12 +150,21 @@ function liveTurn(a: AgentTurn): void {
   t.setAttribute('aria-busy', 'true');
   const disc = $('.ui-disclosure', t), timeEl = $('.ui-callno span', t);
   $('span', disc).textContent = 'Working'; disc.prepend(frag(ui.html.dot('run')));
-  const L: Live = { t, ol, disc, timeEl, tick: 0, secs: 0, model: a.model, count: 0, startedAt: Date.now(), prose: null };
+  const L: Live = { t, ol, disc, timeEl, tick: 0, secs: 0, model: a.model, count: 0, startedAt: Date.now(), prose: null, blankEl: null };
   L.tick = window.setInterval(() => { L.secs++; timeEl.textContent = L.secs + 's'; }, 1000);
   live.set(a.id, L);
+  if (a.blank) addLiveBlank(L, a);
   (VIEW.col as HTMLElement).append(t);
   VIEW.composer?.setRunning(true); VIEW.running = true;
   if (VIEW.scroll) VIEW.scroll.scrollTop = VIEW.scroll.scrollHeight;
+}
+/* a blank opened while the turn runs: its sentence sits under the steps and stays there when the answer arrives */
+function addLiveBlank(L: Live, a: AgentTurn): void {
+  if (!a.blank || L.blankEl) return;
+  VIEW.blank = a.blank.answer ?? null;
+  L.blankEl = el('div', { class: 'ui-prose' }, blankSentence(a));
+  $('.ui-entry__body', L.t).append(L.blankEl);
+  setAttention(VIEW.blank ? 0 : 1);
 }
 function finishLive(id: string, ev: Extract<ConversationEvent, { type: 'turn-finished' }>): void {
   const L = live.get(id); if (!L) return;
@@ -166,7 +175,7 @@ function finishLive(id: string, ev: Extract<ConversationEvent, { type: 'turn-fin
   disc.setAttribute('aria-expanded', 'false'); ol.hidden = true;
   t.removeAttribute('aria-busy'); t.setAttribute('aria-label', L.model + ', ' + ev.time + ', ' + ev.cost);
   const p = prose(ev.paragraphs);
-  if (L.prose) L.prose.replaceWith(p); else $('.ui-entry__body', t).append(p);
+  if (L.prose) L.prose.replaceWith(p); else if (L.blankEl) L.blankEl.before(p); else $('.ui-entry__body', t).append(p);
   TURN.set(t, { md: () => mdOf(p), kind: 'agent' });
   $('.ui-callno', t).append(el('span', { class: 'ss-acts' }, ui.iconButton({ icon: 'copy', label: 'Copy answer', size: 's', keys: 'C' })));
   $('.ss-acts button', t).addEventListener('click', () => { void copyText(mdOf(p)); });
@@ -192,7 +201,7 @@ export function renderConversation(): void {
   VIEW.blank = withBlank?.blank?.answer ?? null;
   if (!snap.length) {
     const s = sessions().list.get().find((x) => x.id === VIEW.current);
-    col.append(ui.empty({ title: 'What should change in ' + (s ? s.project : 'billing-api') + '?', text: 'Words I will act on get a dashed underline as you type. Click one, or press alt and down arrow on it, to change how I read it.' }));
+    col.append(ui.empty({ title: s?.project ? 'What should change in ' + s.project + '?' : data().info.live ? 'What should change?' : 'What should change in ' + (s ? s.project : 'billing-api') + '?', text: 'Words I will act on get a dashed underline as you type. Click one, or press alt and down arrow on it, to change how I read it.' }));
   } else for (const t of snap) { if (t.role === 'user') col.append(userTurn(t.text, t.at)); else if (t.status === 'running') liveTurn(t); else col.append(assistantTurn(t)); }
   rove(lastTurn());
   setAttention(!VIEW.blank && openBlankOf(snap) ? 1 : 0);
@@ -212,10 +221,14 @@ function onConversationEvent(ev: ConversationEvent): void {
     const L = live.get(ev.turnId); if (!L) return;
     const stick = !VIEW.scroll || VIEW.scroll.scrollHeight - VIEW.scroll.scrollTop - VIEW.scroll.clientHeight < 80;
     const p = prose(ev.paragraphs);
-    if (L.prose) L.prose.replaceWith(p); else $('.ui-entry__body', L.t).append(p);
+    if (L.prose) L.prose.replaceWith(p); else if (L.blankEl) L.blankEl.before(p); else $('.ui-entry__body', L.t).append(p);
     L.prose = p;
     if (stick && VIEW.scroll) VIEW.scroll.scrollTop = VIEW.scroll.scrollHeight;
   } else if (ev.type === 'reset') renderConversation();
+  else if (ev.type === 'blank-opened') {
+    const L = live.get(ev.turnId), turn = sessions().conversation(VIEW.current).snapshot().turns.find((t) => t.id === ev.turnId);
+    if (L && turn && turn.role === 'assistant') addLiveBlank(L, turn); else renderConversation();
+  }
   else if (ev.type === 'turn-finished') finishLive(ev.turnId, ev);
   else if (ev.type === 'blank-answered') {
     const first = !VIEW.blank;
@@ -282,6 +295,7 @@ function openFind(): boolean {
 export function selectSession(id: string, opts: { quiet?: boolean; focus?: boolean } = {}): void {
   if (VIEW.running) sessions().stop(VIEW.current);
   VIEW.current = id;
+  data().details.follow(id);
   if (VIEW.col) { renderConversation(); if (VIEW.scroll) VIEW.scroll.scrollTop = 0; }
   const s = sessions().list.get().find((x) => x.id === id);
   if (!opts.quiet) emit('hx:session-select', { id, from: 'list', title: s ? s.title : '', project: s ? s.project : '' });
@@ -291,7 +305,7 @@ export function selectSession(id: string, opts: { quiet?: boolean; focus?: boole
 }
 export function newSession(project?: string): void {
   const cur = sessions().list.get().find((s) => s.id === VIEW.current);
-  const s = sessions().create(project || (cur ? cur.project : '') || 'billing-api');
+  const s = sessions().create(project || (cur ? cur.project : '') || (data().info.live ? '' : 'billing-api'));
   selectSession(s.id, { focus: true });
 }
 export function toConversation(): void { const t = turnsEls().find((x) => x.tabIndex === 0) ?? lastTurn(); if (t) rove(t, true); }
@@ -308,8 +322,9 @@ export function mountView(root: HTMLElement): void {
   VIEW.col.addEventListener('focusin', (e) => { const t = (e.target as Element).closest<HTMLElement>('[data-hx-turn]'); if (t && e.target === t) rove(t); });
   const first = sessions().list.get()[0];
   if (first) VIEW.current = first.id;
+  data().details.follow(VIEW.current);
   renderConversation();
-  const c = VIEW.composer = sessionComposer({ draft: sessions().draft() });
+  const c = VIEW.composer = sessionComposer({ draft: sessions().draft(), sessionId: () => VIEW.current });
   const host = el('div', { class: 'ss-composer' }, c);
   root.append(host);
   c.addEventListener('ui:send', (e) => {
