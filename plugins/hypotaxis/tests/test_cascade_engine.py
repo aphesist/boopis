@@ -86,6 +86,7 @@ def setup(home: Path, project: Path) -> Setup:
         provider_known=lambda p: p in ("main", "second"),
         delegation_backend=lambda: "hypotaxis",
         active_parent=object,
+        redactor=lambda text: text,  # a fake redactor: no hx here, and unredacted text is never written otherwise
     )
     hooks.install(rt)
     hooks.system_prompt_section({"session_id": SID, "cwd": str(project), "model": "orch", "provider": "main"})
@@ -265,7 +266,7 @@ def test_the_cost_cap_stops_a_tier_that_would_be_bought_over_it(home: Path, proj
     }}}, cwd=str(project))  # fmt: skip
     bind(ctx)
     rt = Runtime(ctx, home=home, provider_known=lambda _p: True, delegation_backend=lambda: "hypotaxis",
-                 active_parent=object)  # fmt: skip
+                 active_parent=object, redactor=lambda text: text)  # fmt: skip
     hooks.install(rt)
     hooks.system_prompt_section({"session_id": SID, "cwd": str(project), "model": "orch", "provider": "main"})
     state = rt.lock(SID, cwd=str(project))
