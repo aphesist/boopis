@@ -450,6 +450,23 @@ code chip 1 5; segmented track 3; menu 4.
 640–899 an open sidebar overlays the rail with a scrim; <640 the sidebar is a drawer, back, forward and window
 controls hide, the command field fills the bar.
 
+**Large windows** (decided for the owner's 2880×1800 panel at 1x, and 2560 wide): no app-wide maximum width. The
+conversation column keeps its measure (720, of which 608 is text), the sidebar and the details panel keep their
+clamps, the composer keeps the column's width and the dock its own; the column, the composer and the dock stay centred
+on the ground between the sidebars. Only the title bar spans the window, with the command field centred on it. The
+extra width becomes margin on both sides of the work, the way a document sits on a desk, rather than longer lines.
+
+**The sidebar follows the window until the person sets it**: closed under 640, a rail under 900, open from 900. The
+shell re-reads the width on every resize while the sidebar is automatic, because a frame can boot small and grow (the
+claude.ai artifact viewer does). It stores the sidebar only once the person sets it; a stored choice from an older
+build, or a stored open sidebar or details panel at a width where it would overlay the work, is ignored at boot. A
+chosen open sidebar that a narrowing window would turn into an overlay goes back to following the window.
+
+**The dock's reservation.** `--hx-dock-space` is measured, never a constant: the dock observes its current view
+(ResizeObserver) and sends `hx:dock` with the slab's height plus the most the row can lift it while bots grow under the
+pointer (8px at 40px orbs), in every mode (rest, a session, the grid, the minimised pill). The slab at its tallest
+therefore still ends below the composer, and the composer never moves under the pointer.
+
 **The centre line.** The shell publishes `--hx-center-x`, `--hx-col-left`, `--hx-col-w`, `--hx-margin-w` and
 `--hx-dock-space` as registered, animated custom properties; the composer, the column and the dock ride them so they
 travel together on one curve. Nothing computes its own centre.
@@ -470,24 +487,45 @@ corner was a small circular arc, and inner radii had collapsed to 5–6px.
   edge; the corner runs (1 + ξ)·R = 1.6R along each edge. The radius means what it means on iOS: a continuous corner of
   R reads as round as an arc of R, only softer. Where an edge is too short for the full run, ξ shrinks first, so the
   corner never passes the middle of an edge. `--corner-smoothing` (0.6) is the one knob.
-- **How it is applied.** `clip-path: path()` on the element: Chromium and WebKit draw it alike. A clip-path also clips
-  the inset hairline and the focus ring, so `::after` draws both, clipped to a band of the same path: 1px in the
-  component's `--sq-line` colour, and on `:focus-visible` 2px of `--focus`, inside the edge. Floating surfaces (menus,
-  popovers, tooltips, toasts, the expanded blank) are not clipped, so their elevation shadow survives: a clipped
-  `::before` paints their `--sq-bg` instead. The dock's still slab and the concave corners are clipped too, flares
-  included. The live dock draws its outline with `HX.ui.shape.slab()`, which now uses the same smoothing.
+- **How it is applied: never by clipping a container.** Owner rule: never `clip-path` a container whose content may
+  overflow (orbs draw past their box, flags sit on corners, popovers and shadows reach out). So there are three modes:
+  - **frame** (the default for every bound element): nothing is clipped. `::before` paints the fill (`--sq-bg`) clipped
+    to the path, `::after` draws the line (`--sq-line`) on a band of it and, on `:focus-visible`, the focus ring. A
+    frame component writes its fill once, `--sq-bg: X; background: var(--sq-bg)`, so the same colour paints the element
+    itself whenever it is not bound (before the library runs, or a capsule the browser draws). Rows, menu items, cards,
+    wells, minis, options, the composer box, the segmented track, palette rows, the orb sculptor's options, the dock's
+    tiles and schedule rows are frames.
+  - **clip**, for leaf controls only (buttons, icon buttons, send, the segmented thumb, file chips): the element is
+    clipped to the path and its own background shows through; `::after` draws the line and the ring. Asking for clip on
+    anything else gets a frame.
+  - **surface**: a frame that keeps its elevation shadow (menus, popovers, tooltips, toasts, the expanded blank, dialogs).
+  The dock's still slab and the concave corners are plain shapes, clipped. The live dock draws its outline with
+  `HX.ui.shape.slab()`, which uses the same smoothing.
+- **Crisp lines at any pixel ratio.** A native border is snapped to whole device pixels; a path is drawn where it falls,
+  so a 1px band at 1.25x straddles two device pixels and looks soft. The path is snapped: its straight edges land on
+  device pixels (from the element's place on screen) and the line is a whole number of device pixels, rounded down as
+  the browser rounds a border (one below 2x, two at 2x, three at 3x); the focus ring the same way from 2px. Edges round
+  inward, to the innermost of the three places a browser may put a box's edge (snapped to device pixels, snapped to
+  whole CSS pixels and then scaled, or not snapped at all under a transform), because a pseudo-element paints nothing
+  outside its own box; the shape sits at most about a device pixel inside the box. Positions change without a resize, so
+  the snap is re-read after transitions, animations, scrolling, font loads and layout. Measured on 24 boxes at
+  scattered fractional positions: every straight edge one clean device pixel (two at 2x) at 1, 1.25, 1.5, 1.6, 1.75, 2
+  and 3x, against 0 of 48 unsnapped at 1.5 and 1.75. In the app every visible line is one device pixel at rest at
+  1.25, 1.5, 1.6, 1.75 and 2x; the one soft case left is headless Chromium compositing a focused composer while the dock
+  grid animates (the line is promoted with the text field's layer at a fractional offset), which no path can fix.
 - **When it recomputes.** One shared `ResizeObserver` (border box). The browser runs its callback once per frame after
   layout, so the path is written in the same frame as the size: a card animating its height or the dock morphing never
   shows a stale clip, and every read happens before every write. A corner's commands are relative, so they are cached
   by radius and smoothing and a resize rebuilds only the four straight edges; whole paths are cached by size and radii.
   The radii come from the element's computed `border-radius` (the tokens, so nesting holds), read when it binds and
-  again on `hx:theme` or a change of preset, corners or density. The `--sq-*` properties are registered as not
-  inheriting, so a resize re-styles one element, not its subtree. A corner as round as half the element (a capsule, a
+  again on `hx:theme` or a change of preset, corners or density. The `--sq-*` properties are plain (inheriting)
+  custom properties: registered as not inheriting, WebKitGTK hands a pseudo-element its grandparent's value; a bound
+  element that declares none gets transparent from a zero-specificity reset, never its container's. A corner as round as half the element (a capsule, a
   circle) needs no path and stays native. Nothing animates, so reduced motion has nothing to stop.
 - **Cost, measured.** 200 bound elements changing height every frame (Chromium 153, headless, this specimen): the
   squircle's work per frame averages 0.9ms, 1.4ms at the 95th percentile (budget 2ms). Binding the whole specimen
   (about 240 surfaces) takes one 20–40ms frame at load, once.
-- **What is bound.** The library's surfaces (buttons, icon buttons, send, segmented track and thumb, rows, menu items,
+- **What is bound.** The library's (buttons, icon buttons, send, segmented track and thumb, rows, menu items,
   menus, popovers, tooltips, toasts, the composer box, files, request cards, the still slab, concave corners) and the
   card layer's (cards, wells, minis, option rows, the free answer, previews). Modules bind theirs with
   `HX.ui.squircle.auto(selector)` or `data-sq` (MIGRATION.md §9). Text inputs keep a native arc: an `<input>` cannot
@@ -1248,6 +1286,10 @@ holds the canonical version of each fix and MIGRATION.md says who changes what.
 | F29 | owner | **Nested corners are hand-picked.** Only the customizer swatch (`--r-s − 2px`) is concentric; a card at the top of the dock's wait views sits 14–16px under a 14px corner with its own 10px radius; the toast's button, the tooltip's key and the menu items each pick a step by hand; the slab path draws circular arcs. | `cards.css` (`hx-card` radius, `.cd-queue__peek`, `.cd-opt`), `dock.css` (wait views, `.dk-v-min`), `dock.js slabPath()`, `shell.css .hxt-swatch` | The nesting contract (section 8.2) and `HX.ui.shape.slab`; per module in MIGRATION.md §8 |
 | F31 | owner | **The continuous corner never reached the owner.** `corner-shape` is Chromium-only; Tauri is WebKitGTK on Linux (the owner's platform) and WebKit on macOS, so every corner there was a circular arc, at the small fallback radii (cards 12, buttons 7). Measured in WebKitGTK 2.52: `CSS.supports('corner-shape', …)` is false. | `components.css` (the `:where(*)` corner-shape rule), `tokens.css` (the `@supports` scale) | **Resolved in the library:** `HX.ui.squircle` draws every corner as a path in every engine; the `@supports` scale goes (MIGRATION.md §0.8) |
 | F32 | owner | **Inner radii collapsed to 5–6px**, e.g. a card at the top of the dock under a 22px corner with 16px of padding. Apple keeps inner radii generous and gives up padding. | `--r-floor` 5, cards' `--pad` 16, the dock's wait views | Floor 8; padding = R − floor where the arithmetic would go under it (MIGRATION.md §9) |
+| F33 | owner | **In the claude.ai viewer the sidebar was gone, the orbs were small and the dock covered the composer** (1600×860 at 1.25x). One cause: the viewer mounts its iframe small and then grows it. The shell chose the sidebar once from the width at boot (closed under 640) and kept it; the dock fitted its orbs to the small row, and the live orbs kept the old size because only a move between slots re-read it; and the dock never re-sent its height on a resize, so `--hx-dock-space` stayed at the small value (54–60 for a 76px slab). | `shell.js` (`narrowAtBoot`), `dock.js` (`fitRow`, `onResize`, `emitDock`) | **Resolved:** the sidebar follows the width until the person sets it and is stored only then; `fitRow()` re-seats the live orbs; the reservation is measured (a ResizeObserver on the view) and sent whenever it changes, hover headroom included |
+| F34 | owner | **Containers were clip-path'd**, so anything reaching past them (orbs, flags, popovers) would be cut: rows with orbs, bot rows, the orb sculptor's options, cards, minis. | `HX.ui.squircle` default mode | **Resolved:** clip is for leaf controls only; every other bound element is a frame (fill and line drawn by `::before` and `::after`, content unclipped) |
+| F35 | owner | **Soft hairlines at fractional pixel ratios**: the drawn line was 1 CSS px wherever it fell, so at 1.25–1.75x it covered two device pixels at partial strength. | `HX.ui.squircle` path | **Resolved:** paths snap to device pixels and lines are whole device pixels (§8.1) |
+| F36 | engine | **In WebKitGTK the session composer and column lost their place** (left at the sidebar's edge, the column full width) at every size: a registered `<length>` custom property used with a percentage fallback (`var(--hx-center-x, 50%)`, `var(--hx-col-w, min(…, calc(100% − 64px)))`) is invalid at computed-value time there, as the spec says, so `left` and `width` fell back to `auto`. Chromium ignores the mismatch, so it never showed in the artifact. | `session.css .ss-col, .ss-composer`, `bots.css`, `components.css .ui-toast` | **Resolved:** length fallbacks (`50vw`, `100vw`). Rule: a registered property's fallback matches its syntax |
 | F30 | owner | **The dock session's send floats** in the box's bottom-right corner under a one-line field, and the dock and Bots composers have no way to talk to the bot. | `dock.js composerFor()` (`attach: false, mic: false`), `bots.js` composer | The library composer's compact layout and mic (done); the modules pass `bot` (MIGRATION.md §8) |
 | F28 | contrast | **Inactive marks at 2.0–2.4:1.** Page dots, ladder stations to come and empty rings were `--text-faint` (or `--line-strong`), which is decoration-grade; as marks that carry position they need 3:1 (1.4.11). Fixed in the library with `--mark-off`. | `cards.css .cd-opt__ring`, `.cd-week i`; `dock.css .dk-tile-dot` (on the dock ground, already 3.3:1) | `--mark-off`; promote it to `tokens.css` and add its pairs to `theme.js PAIRS`. On/off marks that differ by colour alone (the context measure, the shell's stub rail) keep `--text-faint` off |
 | F25 | taste | **Graphite and Typewriter set brass to a light grey** (`#d6d6d6`, `#e9e9e9`), so "you are here" is the same colour as text. Meaning survives through shape (rings, checks, thumbs), so it is not a failure. | `tokens.css` | **Resolved (Owner decision):** Graphite `#9db6cf` steel (9.4:1 on the frame), Typewriter `#7ea6e0` carbon-paper blue (7.9:1) |

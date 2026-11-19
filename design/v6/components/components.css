@@ -160,7 +160,7 @@
   position: relative; display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; flex: none;
   height: var(--ctl); padding: 3px; box-sizing: border-box;
   --r-outer: var(--r-s); --pad: 3px; --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad))); border-radius: var(--r-outer);
-  background: var(--bg-0); box-shadow: inset 0 0 0 1px var(--hair);
+  --sq-bg: var(--bg-0); background: var(--sq-bg); box-shadow: inset 0 0 0 1px var(--hair);
 }
 .ui-seg--fill { display: grid; width: 100%; }
 .ui-seg__thumb {
@@ -250,12 +250,12 @@ button.ui-group__head:hover { color: var(--text); }
 .ui-group__head[aria-expanded="false"] + .ui-rows { display: none; }
 .ui-row {
   appearance: none; position: relative; display: flex; align-items: center; gap: 8px; width: 100%; box-sizing: border-box;
-  height: var(--row-h); padding: 0 4px 0 12px; margin: 0; border: 0; border-radius: var(--r-s); background: transparent;
+  height: var(--row-h); padding: 0 4px 0 12px; margin: 0; border: 0; border-radius: var(--r-s); --sq-bg: transparent; background: var(--sq-bg);
   font: 400 var(--fs-s)/var(--lh-ui) var(--sans); color: var(--text); text-align: left; cursor: pointer;
   transition: background-color var(--dur-out) var(--ease);
 }
-.ui-row:hover { background: var(--hover); transition-duration: var(--dur-1); }
-.ui-row[aria-current="true"], .ui-row[aria-current="page"], .ui-row[aria-selected="true"] { background: var(--current); color: var(--text-strong); }
+.ui-row:hover { --sq-bg: var(--hover); background: var(--sq-bg); transition-duration: var(--dur-1); }
+.ui-row[aria-current="true"], .ui-row[aria-current="page"], .ui-row[aria-selected="true"] { --sq-bg: var(--current); background: var(--sq-bg); color: var(--text-strong); }
 .ui-row--2 { height: var(--row-h-2); }
 .ui-row__lead { width: 16px; height: 16px; display: grid; place-items: center; flex: none; }
 .ui-row__lead > .ui-orb { margin: 0 -2px; }
@@ -287,10 +287,10 @@ button.ui-group__head:hover { color: var(--text); }
 .ui-menu__title { padding: 6px 8px 4px; font: 500 var(--fs-xs)/var(--lh-ui) var(--sans); color: var(--text-quiet); text-transform: var(--ui-case); }
 .ui-menu__item {
   appearance: none; display: flex; align-items: flex-start; gap: 8px; width: 100%; box-sizing: border-box; min-height: var(--row-h); padding: 6px 8px; margin: 0; border: 0;
-  border-radius: var(--r-in); background: transparent; font: inherit; color: var(--text); text-align: left; cursor: pointer;   /* concentric with the menu */
+  border-radius: var(--r-in); --sq-bg: transparent; background: var(--sq-bg); font: inherit; color: var(--text); text-align: left; cursor: pointer;   /* concentric with the menu */
 }
-.ui-menu__item:hover { background: var(--hover); }
-.ui-menu__item:focus-visible { background: var(--current); outline: none; box-shadow: inset 0 0 0 2px var(--focus); }
+.ui-menu__item:hover { --sq-bg: var(--hover); background: var(--sq-bg); }
+.ui-menu__item:focus-visible { --sq-bg: var(--current); background: var(--sq-bg); outline: none; box-shadow: inset 0 0 0 2px var(--focus); }
 .ui-menu__item:disabled { color: var(--text-quiet); cursor: default; }
 .ui-menu__glyph { width: 16px; height: 18px; display: grid; place-items: center; flex: none; color: var(--icon); }
 .ui-menu__glyph .ui-icon { width: 15px; height: 15px; }
@@ -320,7 +320,7 @@ button.ui-group__head:hover { color: var(--text); }
 .ui-tip__state[data-tone="attention"] { color: var(--red-text); }
 
 .ui-toast {
-  position: fixed; z-index: var(--z-toast); top: calc(var(--chrome-h) + 12px); left: var(--hx-center-x, 50%); translate: -50% -6px;
+  position: fixed; z-index: var(--z-toast); top: calc(var(--chrome-h) + 12px); left: var(--hx-center-x, 50vw); translate: -50% -6px;
   display: flex; align-items: center; gap: 12px; max-width: min(480px, calc(100vw - 32px)); box-sizing: border-box;
   padding: 0 6px 0 14px; min-height: calc(var(--ctl-s) + 12px); --r-outer: var(--r-m); --pad: 6px; --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad))); border-radius: var(--r-outer);
   background: var(--bg-3); box-shadow: inset 0 0 0 1px var(--hair), var(--shadow-pop);
@@ -446,7 +446,7 @@ select.ui-input option { background: var(--bg-1); color: var(--text); }
 .ui-entry__body { min-width: 0; max-width: var(--measure); display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-3); font: 400 var(--fs-m)/var(--lh) var(--sans); color: var(--text); }
 [data-margin="off"] .ui-entry { grid-template-columns: minmax(0, 1fr); }
 [data-margin="off"] .ui-callno { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 0 0 6px; }
-.ui-request { width: fit-content; max-width: 100%; box-sizing: border-box; padding: 10px 14px; border-radius: var(--r-m); background: var(--bg-3); color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; font: 400 var(--fs-m)/var(--lh) var(--sans); }
+.ui-request { width: fit-content; max-width: 100%; box-sizing: border-box; padding: 10px 14px; border-radius: var(--r-m); --sq-bg: var(--bg-3); background: var(--sq-bg); color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; font: 400 var(--fs-m)/var(--lh) var(--sans); }
 .ui-prose { max-width: 100%; }
 .ui-prose p, .ui-prose ul, .ui-prose ol { margin: 0 0 var(--sp-3); }
 .ui-prose ul, .ui-prose ol { padding-left: 18px; }
@@ -501,7 +501,7 @@ select.ui-input option { background: var(--bg-1); color: var(--text); }
 .ui-composer__box {
   --r-outer: var(--r-composer, var(--r-m)); --pad: var(--composer-pad, 6px); --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad)));
   position: relative; display: flex; flex-direction: column; min-width: 0; padding: 0; border-radius: var(--r-outer);
-  background: var(--bg-3); box-shadow: inset 0 0 0 1px var(--hair); cursor: text; transition: box-shadow var(--dur-1) var(--ease);
+  --sq-bg: var(--bg-3); background: var(--sq-bg); box-shadow: inset 0 0 0 1px var(--hair); cursor: text; transition: box-shadow var(--dur-1) var(--ease);
 }
 .ui-composer__box:focus-within, .ui-composer[data-listening] .ui-composer__box { box-shadow: inset 0 0 0 1px var(--line-field); }   /* the frame answers focus at 3:1; the caret is brass */
 .ui-composer__files { display: flex; flex-wrap: wrap; gap: 6px; padding: var(--pad) var(--pad) 0; }
@@ -586,20 +586,31 @@ select.ui-input option { background: var(--bg-1); color: var(--text); }
    (inheriting) custom properties: the pseudo-elements that draw the line, the ring and a surface's background read
    them from their element. (Registered as non-inheriting with `inherit` on the pseudo-element, WebKitGTK 2.52 hands
    the pseudo-element the grandparent's value.) Every bound element starts with no line and no surface of its own, so
-   it never shows its container's. */
-[data-sq-mode] { --sq-line: transparent; --sq-bg: transparent; }
-:where([data-sq-mode]) { position: relative; }   /* set when it binds, before its first size: writing the path never moves layout */
-/* clip: the element is clipped to the path; its inset line and its focus ring are drawn by ::after on a band of it */
-[data-sq-on]:not([data-sq-mode="surface"]):not([data-sq-mode="slab"]):not([data-sq-mode="concave"]):not(#sq) { clip-path: var(--sq-clip); box-shadow: none; }
+   it never shows its container's. The reset has no specificity, so a component's own --sq-bg or --sq-line (declared
+   anywhere) wins; a bound element inside it that declares nothing gets transparent, never its container's.
+
+   Owner rule: never clip-path a container whose content may overflow. Only leaf controls clip (buttons, icon
+   buttons, send, the segmented thumb, file chips: nothing inside reaches past their edge). Every other bound element
+   is a frame: its content is left alone and the corner is drawn by two layers, ::before (the fill, --sq-bg) and
+   ::after (the line, --sq-line, and the focus ring). A frame's component therefore writes its fill once, as
+   `--sq-bg: X; background: var(--sq-bg)`, so the same colour paints the element itself whenever it is not bound
+   (before the library runs, or when its corner is a capsule the browser draws). Floating surfaces (menus, popovers,
+   tips, toasts) are frames that keep their elevation shadow. */
+:where([data-sq-mode]) { --sq-line: transparent; --sq-bg: transparent; position: relative; }   /* position: set when it binds, before its first size, so writing the path never moves layout */
+/* clip (leaf controls): the element is clipped to the path; its inset line and its focus ring are drawn by ::after on a band of it */
+[data-sq-on][data-sq-mode="clip"]:not(#sq) { clip-path: var(--sq-clip); box-shadow: none; }
 [data-sq-on]:not([data-sq-mode="slab"]):not([data-sq-mode="concave"])::after {
   content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; border-radius: 0;
   background: var(--sq-line, transparent); clip-path: var(--sq-edge);
 }
 [data-sq-on]:not(#sq):focus-visible { outline: none; }
-[data-sq-on][data-sq-mode="clip"]:focus-visible::after { background: var(--focus); clip-path: var(--sq-ring, var(--sq-edge)); }
-/* surface: not clipped, so the elevation shadow stays; the background is a clipped ::before */
-[data-sq-on][data-sq-mode="surface"]:not(#sq) { background: none; isolation: isolate; }
-[data-sq-on][data-sq-mode="surface"]::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: var(--sq-bg); clip-path: var(--sq-clip); }
+[data-sq-on]:is([data-sq-mode="clip"], [data-sq-mode="frame"]):focus-visible::after { background: var(--focus); clip-path: var(--sq-ring, var(--sq-edge)); }
+/* frame and surface: nothing is clipped (orbs, flags, popovers and shadows reach past the edge); the fill is a clipped
+   ::before that keeps the element's own transition. A frame drops box-shadow (its line is the ::after); a surface keeps
+   its elevation shadow. */
+[data-sq-on]:is([data-sq-mode="frame"], [data-sq-mode="surface"]):not(#sq) { background: none; isolation: isolate; }
+[data-sq-on][data-sq-mode="frame"]:not(#sq) { box-shadow: none; }
+[data-sq-on]:is([data-sq-mode="frame"], [data-sq-mode="surface"])::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: var(--sq-bg); clip-path: var(--sq-clip); transition: inherit; }
 /* slab and concave: the path carves the flares and the concave corner out of plain squares */
 [data-sq-on][data-sq-mode="slab"]:not(#sq) { clip-path: var(--sq-clip); }
 .ui-slab[data-sq-on]::before, .ui-slab[data-sq-on]::after { box-shadow: none; clip-path: none; border-radius: 0; background: var(--dock-bg); }
@@ -626,6 +637,7 @@ hx-card[data-size="popover"] { --sq-line: var(--line); --sq-bg: var(--cd-surface
 hx-card[data-size="popover"][data-sq-on] { box-shadow: var(--shadow-pop); }
 .cd-free { --sq-line: var(--line-field); }
 .cd-free:focus-within { --sq-line: var(--focus); }
+.cd-free[data-sq-on]:focus-within { outline: none; }   /* a frame is not clipped: the drawn line is the ring, not a second native one */
 /* one teammate's accent ring (cards.js sets --cd-accent): the inset ring becomes the drawn line */
 hx-card[data-accent]:is([data-size="inline"], [data-size="compact"], [data-size="popover"]) { --sq-line: color-mix(in srgb, var(--cd-accent) 42%, transparent); }
 hx-card[data-accent][data-resolved]:is([data-size="inline"], [data-size="compact"]) { --sq-line: color-mix(in srgb, var(--cd-accent) 22%, transparent); }

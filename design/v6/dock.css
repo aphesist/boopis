@@ -79,8 +79,8 @@
 .dk-row { display: flex; align-items: flex-end; gap: var(--dock-gap); --o: var(--dock-orb); }
 .dk-bot { position: relative; flex: none; width: calc(var(--dock-orb) * 1px); height: calc(var(--dock-orb) * 1px); border-radius: var(--r-pill); transform-origin: 50% 100%; }
 .dk-bot:focus-visible { outline-offset: 3px; }
-.dk-add { flex: none; width: var(--ctl-s); height: calc(var(--dock-orb) * 1px); display: grid; place-items: center; color: var(--text-strong); border-radius: var(--r-s); transform-origin: 50% 100%; transition: background-color var(--dur-1) var(--ease); }
-.dk-add:hover { background: var(--hover); }
+.dk-add { flex: none; width: var(--ctl-s); height: calc(var(--dock-orb) * 1px); display: grid; place-items: center; color: var(--text-strong); border-radius: var(--r-s); transform-origin: 50% 100%; transition: background-color var(--dur-1) var(--ease); --sq-bg: transparent; background: var(--sq-bg); }
+.dk-add:hover { --sq-bg: var(--hover); background: var(--sq-bg); }
 
 /* ===== minimal pill (all pages) ===== */
 .dk-v-min { height: 28px; padding: 0 9px; display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-xs); line-height: 1; white-space: nowrap; }

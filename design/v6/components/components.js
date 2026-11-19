@@ -410,6 +410,9 @@
     const stats = { frames: 0, lastMs: 0, maxMs: 0 };
     const FOCUSABLE = 'button, a[href], input, select, textarea, [tabindex]';
     const SURFACE = '.ui-menu, .ui-pop, .ui-tip, .ui-toast, hx-card[data-size="popover"]';
+    /* Owner rule: never clip-path a container whose content may overflow. Only these leaf controls clip; every other
+       bound element is a frame (content unclipped, the corner drawn by ::before and ::after), floating ones a surface. */
+    const LEAF = '.ui-btn, .ui-ib, .ui-send, .ui-seg__thumb, .ui-file';
     /* the library's surfaces and the card layer's (HX.ui.card); modules add theirs with auto() or [data-sq] */
     const selector = '[data-sq], .ui-btn, .ui-ib, .ui-send, .ui-seg, .ui-seg__thumb, .ui-row, .ui-menu__item, .ui-request, .ui-file, ' +
       '.ui-composer__box, .ui-slab, .ui-concave, ' + SURFACE + ', hx-card[data-size="inline"]:not([data-kind="blank"]):not([data-kind="escalation"]), ' +
@@ -419,8 +422,29 @@
       const cs = getComputedStyle(el);
       return [px(cs.borderTopLeftRadius), px(cs.borderTopRightRadius), px(cs.borderBottomRightRadius), px(cs.borderBottomLeftRadius)];
     }
-    function build(s, w, h) {
-      const R = s.r, key = s.mode + '|' + w + '|' + h + '|' + R.join(',') + '|' + (s.focusable ? 1 : 0) + '|' + SMOOTH;
+    /* Crisp lines at any device pixel ratio: the browser snaps a native border to whole device pixels; a clip path is
+       drawn where it falls, so a 1px band at 1.25x straddles two device pixels and looks soft. The path is therefore
+       snapped: its straight edges land on device pixels (from the element's position on screen, rounded inward) and the line is a whole
+       number of device pixels thick, the way the browser rounds a border (at least one, rounded down: one device pixel
+       below 2x, two at 2x). Positions change without a resize (a sidebar opening, a font loading), so resnap() re-reads
+       them after transitions, animations, scrolling and layout. */
+    const DPR = () => window.devicePixelRatio || 1;
+    function snapOf(s) {
+      if (s.mode === 'slab' || s.mode === 'concave') return { ox: 0, oy: 0, w: Math.round(s.w * 2) / 2, h: Math.round(s.h * 2) / 2, t: 1, t2: 2, D: 1 };
+      /* inward: a box paints its background only inside its own rect, so a path edge outside that rect loses part
+         of its line. Browsers snap that rect to device pixels (layout in device pixels), or to whole CSS pixels and
+         then scale (some builds, headless Chromium among them), or not at all (a transformed box, such as the
+         composer centred with translate); each edge goes to the innermost of the three, then inward to the next
+         device pixel. The shape is at most about a device pixel inside the box. */
+      const D = DPR(), e = 0.02;
+      const lo = (a) => Math.ceil(Math.max(Math.round(a) * D, Math.round(a * D), a * D) - e);
+      const hi = (b) => Math.floor(Math.min(Math.round(b) * D, Math.round(b * D), b * D) + e);
+      const L = lo(s.x), T = lo(s.y), w = (hi(s.x + s.w) - L) / D, h = (hi(s.y + s.h) - T) / D;
+      return { ox: L / D - s.x, oy: T / D - s.y, w, h, D, t: Math.max(1, Math.floor(D + 1e-6)) / D, t2: Math.max(1, Math.floor(2 * D + 1e-6)) / D };
+    }
+    function build(s, g) {
+      const w = g.w, h = g.h;
+      const R = s.r, key = s.mode + '|' + w.toFixed(3) + '|' + h.toFixed(3) + '|' + R.join(',') + '|' + (s.focusable ? 1 : 0) + '|' + SMOOTH + '|' + g.ox.toFixed(3) + '|' + g.oy.toFixed(3) + '|' + g.D;
       let v = cache.get(key);
       if (v) return v;
       if (cache.size > 800) cache.clear();
@@ -432,15 +456,16 @@
         const d = at === 'tr' ? 'M' + n(sz) + ' 0L0 0' + cornerTo(0, 0, sz, 0, sz, sz) + 'Z' : 'M0 0L' + n(sz) + ' 0' + cornerTo(sz, 0, 0, 0, 0, sz) + 'Z';
         v = { key, clip: 'path("' + d + '")' };
       } else {
-        const outer = path(w, h, R);
-        const inner = (t) => path(Math.max(0, w - 2 * t), Math.max(0, h - 2 * t), R.map((r) => Math.max(0, r - t)), { x: t, y: t });
-        v = { key, clip: 'path("' + outer + '")', edge: 'path(evenodd, "' + outer + inner(1) + '")', ring: '', outer, inner };
+        const ox = g.ox, oy = g.oy;
+        const outer = path(w, h, R, { x: ox, y: oy });
+        const inner = (t) => path(Math.max(0, w - 2 * t), Math.max(0, h - 2 * t), R.map((r) => Math.max(0, r - t)), { x: ox + t, y: oy + t });
+        v = { key, clip: 'path("' + outer + '")', edge: 'path(evenodd, "' + outer + inner(g.t) + '")', ring: '', outer, inner, t2: g.t2 };
       }
       cache.set(key, v);
       return v;
     }
     function apply(el, s) {
-      const w = Math.round(s.w * 2) / 2, h = Math.round(s.h * 2) / 2;
+      const g = snapOf(s), w = g.w, h = g.h;
       if (!(w >= 1 && h >= 1) || !s.r) return;
       const half = Math.min(w, h) / 2;
       const native = s.mode !== 'slab' && s.mode !== 'concave' && s.r.every((r) => r >= half - 0.5 || r === 0) && s.r.some((r) => r > 0);
@@ -448,7 +473,7 @@
         if (s.on) { el.removeAttribute('data-sq-on'); s.on = false; s.key = ''; }
         return;
       }
-      const v = build(s, w, h);
+      const v = build(s, g);
       if (v.key === s.key) { if (s.focusable && el === document.activeElement) ring(el, s, v); return; }
       const st = el.style;
       st.setProperty('--sq-clip', v.clip);
@@ -460,12 +485,12 @@
     /* the focus ring's band is built when the element takes focus (or resizes while focused), not for every button */
     function ring(el, s, v) {
       if (s.ringKey === v.key || !v.outer) return;
-      if (!v.ring) v.ring = 'path(evenodd, "' + v.outer + v.inner(2) + '")';
+      if (!v.ring) v.ring = 'path(evenodd, "' + v.outer + v.inner(v.t2 || 2) + '")';
       el.style.setProperty('--sq-ring', v.ring); s.ringKey = v.key;
     }
     document.addEventListener('focusin', (e) => {
       const el = e.target, s = el && state.get(el);
-      if (s && s.on && s.focusable) ring(el, s, cache.get(s.key) || build(s, Math.round(s.w * 2) / 2, Math.round(s.h * 2) / 2));
+      if (s && s.on && s.focusable) ring(el, s, cache.get(s.key) || build(s, snapOf(s)));
     }, true);
     const ro = typeof ResizeObserver === 'function' ? new ResizeObserver((entries) => {
       const t0 = performance.now();
@@ -476,6 +501,7 @@
         if (!s) continue;
         const b = e.borderBoxSize && e.borderBoxSize[0];
         s.w = b ? b.inlineSize : el.offsetWidth; s.h = b ? b.blockSize : el.offsetHeight;
+        const rc = el.getBoundingClientRect(); s.x = rc.left; s.y = rc.top;
         if (!s.r) s.r = radii(el);
         todo.push(el, s);
       }
@@ -485,8 +511,9 @@
     }) : null;
     function bind(el, o) {
       if (!ro || !el || state.has(el)) return el;
-      const mode = (o && o.mode) || el.getAttribute('data-sq-mode') || (el.matches(SURFACE) ? 'surface' : el.matches('.ui-slab') ? 'slab' : el.matches('.ui-concave') ? 'concave' : 'clip');
-      const s = { mode, w: 0, h: 0, r: null, key: '', on: false, focusable: mode === 'clip' && el.matches(FOCUSABLE), at: el.getAttribute('data-at') };
+      let mode = (o && o.mode) || el.getAttribute('data-sq-mode') || (el.matches(SURFACE) ? 'surface' : el.matches('.ui-slab') ? 'slab' : el.matches('.ui-concave') ? 'concave' : el.matches(LEAF) ? 'clip' : 'frame');
+      if (mode === 'clip' && !el.matches(LEAF)) mode = 'frame';   /* clip is for leaf controls only, whoever asks */
+      const s = { mode, w: 0, h: 0, x: 0, y: 0, r: null, key: '', on: false, focusable: (mode === 'clip' || mode === 'frame') && el.matches(FOCUSABLE), at: el.getAttribute('data-at') };
       state.set(el, s); bound.add(el);
       el.setAttribute('data-sq-mode', mode);
       ro.observe(el, { box: 'border-box' });
@@ -504,6 +531,25 @@
       for (const [sel, mode] of extra) { if (root.matches(sel)) bind(root, { mode }); for (const el of root.querySelectorAll(sel)) bind(el, { mode }); }
       if (root.matches(selector)) bind(root);
       for (const el of root.querySelectorAll(selector)) bind(el);
+    }
+    /* positions only: every bound element's place on screen, read first, then the paths whose snap changed */
+    let snapRaf = 0, snapTimer = 0;
+    function resnap() {
+      snapRaf = 0;
+      const t0 = performance.now(), todo = [];
+      for (const el of bound) {
+        const s = state.get(el); if (!s || !s.on || s.mode === 'slab' || s.mode === 'concave') continue;
+        if (!el.isConnected) continue;
+        const rc = el.getBoundingClientRect();
+        if (Math.abs(rc.left - s.x) > 0.004 || Math.abs(rc.top - s.y) > 0.004) { s.x = rc.left; s.y = rc.top; todo.push(el, s); }
+      }
+      for (let i = 0; i < todo.length; i += 2) apply(todo[i], todo[i + 1]);
+      stats.snaps = (stats.snaps || 0) + 1; stats.snapMs = performance.now() - t0;
+    }
+    /* now (next frame) and again once motion has settled */
+    function queueSnap() {
+      if (!snapRaf) snapRaf = requestAnimationFrame(resnap);
+      clearTimeout(snapTimer); snapTimer = setTimeout(() => { if (!snapRaf) snapRaf = requestAnimationFrame(resnap); }, 420);
     }
     let raf = 0;
     function refresh() {
@@ -528,12 +574,18 @@
       const start = () => { SMOOTH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--corner-smoothing')) || 0.6; scan(document.documentElement); mo.observe(document.documentElement, { childList: true, subtree: true }); };
       if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
       window.addEventListener('hx:theme', refresh);
+      for (const ty of ['transitionend', 'animationend', 'scrollend']) document.addEventListener(ty, queueSnap, true);
+      window.addEventListener('resize', queueSnap);
+      let scrollT = 0;
+      document.addEventListener('scroll', () => { clearTimeout(scrollT); scrollT = setTimeout(queueSnap, 120); }, { capture: true, passive: true });
+      if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', queueSnap);
+      if (window.HX && typeof window.HX.on === 'function') for (const ty of ['hx:layout', 'hx:dock', 'hx:state', 'hx:tab']) window.HX.on(ty, queueSnap);
       if (window.HX && typeof window.HX.on === 'function') window.HX.on('hx:theme', refresh);
       /* the corner setting and the preset change the radii: theme.js sets these on <html> */
       new MutationObserver(refresh).observe(document.documentElement, { attributes: true, attributeFilter: ['data-hx-corners', 'data-hx-preset', 'data-hx-density', 'style'] });
     }
     return {
-      path, cornerTo, slab, bind, unbind, refresh,
+      path, cornerTo, slab, bind, unbind, refresh, resnap: queueSnap,
       auto(sel, o) { if (!sel) return; extra.push([sel, o && o.mode]); if (document.readyState !== 'loading') scan(document.documentElement); },
       stats: () => Object.assign({ bound: bound.size, cached: cache.size, smoothing: SMOOTH }, stats),
       get smoothing() { return SMOOTH; }

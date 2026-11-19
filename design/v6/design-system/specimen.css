@@ -128,7 +128,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .sp-scale span { font: 400 var(--fs-2xs)/1 var(--mono); color: var(--text-quiet); }
 .sp-radii { display: flex; flex-wrap: wrap; gap: 16px; }
 .sp-radii > div { display: grid; justify-items: center; gap: 8px; }
-.sp-radii i { width: 72px; height: 56px; background: var(--bg-3); box-shadow: inset 0 0 0 1px var(--line); }
+.sp-radii i { width: 72px; height: 56px; --sq-bg: var(--bg-3); background: var(--sq-bg); box-shadow: inset 0 0 0 1px var(--line); }
 .sp-shadows { display: flex; flex-wrap: wrap; gap: 24px; padding: 8px 0 16px; }
 .sp-shadows > div { width: 160px; height: 88px; border-radius: var(--r-m); background: var(--bg-1); box-shadow: inset 0 0 0 1px var(--line), var(--s); display: grid; place-items: end start; padding: 10px; font: 400 var(--fs-2xs)/1.3 var(--mono); color: var(--text-quiet); }
 .sp-lines { display: grid; gap: 14px; max-width: 520px; }
@@ -262,12 +262,12 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .sp-curve__key i[data-k="arc"] { border-top-style: dashed; border-top-color: var(--text-quiet); }
 .sp-curve__tiles { display: flex; flex-wrap: wrap; gap: 16px; }
 .sp-curve__tiles > div { display: grid; justify-items: center; gap: 8px; }
-.sp-curve__tiles i { display: block; width: 104px; height: 104px; background: var(--bg-3); box-shadow: inset 0 0 0 1px var(--line); border-radius: 30px; --sq-line: var(--line); }
+.sp-curve__tiles i { display: block; width: 104px; height: 104px; --sq-bg: var(--bg-3); background: var(--sq-bg); box-shadow: inset 0 0 0 1px var(--line); border-radius: 30px; --sq-line: var(--line); }
 .sp-nest { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); }
 .sp-nest__p { margin: 0; display: grid; gap: 8px; }
-.sp-nest__o { position: relative; height: 148px; box-sizing: border-box; background: var(--bg-3); box-shadow: inset 0 0 0 1px var(--line); --sq-line: var(--line); }
-.sp-nest__o > i { display: block; height: 100%; background: var(--selected); opacity: .9; }
-.sp-nest__p:not([data-ok]) .sp-nest__o > i { background: var(--text-quiet); }
+.sp-nest__o { position: relative; height: 148px; box-sizing: border-box; --sq-bg: var(--bg-3); background: var(--sq-bg); box-shadow: inset 0 0 0 1px var(--line); --sq-line: var(--line); }
+.sp-nest__o > i { display: block; height: 100%; --sq-bg: var(--selected); background: var(--sq-bg); opacity: .9; }
+.sp-nest__p:not([data-ok]) .sp-nest__o > i { --sq-bg: var(--text-quiet); background: var(--sq-bg); }
 .sp-nest__p figcaption { display: grid; gap: 2px; font: 500 var(--fs-s)/var(--lh-ui) var(--sans); color: var(--text); }
 .sp-ba { display: grid; gap: 16px; }
 .sp-ba__row { margin: 0; display: grid; gap: 8px; min-width: 0; }
@@ -275,7 +275,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .sp-ba__pair > div { display: grid; gap: 6px; align-content: start; min-width: 0; }
 .sp-ba__pair img { display: block; width: 100%; height: auto; border-radius: var(--r-s); background: var(--bg-1); box-shadow: inset 0 0 0 1px var(--hair); }
 /* the dock's composer, as the dock sets it */
-.sp-dockcomp { margin-top: 16px; display: grid; gap: 12px; max-width: 456px; padding: 16px; box-sizing: border-box; border-radius: var(--r-l) var(--r-l) 0 0; background: var(--dock-bg); color: var(--text); }
+.sp-dockcomp { margin-top: 16px; display: grid; gap: 12px; max-width: 456px; padding: 16px; box-sizing: border-box; border-radius: var(--r-l) var(--r-l) 0 0; --sq-bg: var(--dock-bg); background: var(--sq-bg); color: var(--text); }
 .sp-dockcomp__head { display: flex; align-items: center; gap: 12px; }
 .sp-dockcomp__head > span { display: grid; gap: 2px; font: 600 var(--fs-m)/var(--lh-tight) var(--sans); }
 .sp-table--nest { min-width: 560px; }

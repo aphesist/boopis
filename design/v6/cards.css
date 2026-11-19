@@ -54,7 +54,7 @@ hx-card[data-size="popover"] {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   column-gap: var(--sp-3);
-  background: var(--cd-surface);
+  --sq-bg: var(--cd-surface); background: var(--sq-bg);
   border-radius: var(--r-outer);
   padding: var(--pad);
 }
@@ -115,7 +115,7 @@ hx-card[data-resolved] .cd-well__strong { color: var(--text-dim); }
 /* ------------------------------------------------------------------ wells */
 
 .cd-well {
-  background: var(--cd-well);
+  --sq-bg: var(--cd-well); background: var(--sq-bg);
   border-radius: var(--r-s);
   padding: var(--sp-2) var(--sp-3);
   line-height: var(--lh);
@@ -190,12 +190,12 @@ hx-card[data-ground="dock"]:is([data-size="compact"], [data-size="mini"]), .cd-q
   display: grid; grid-template-columns: var(--cd-lead-w) minmax(0, 1fr) auto; align-items: center; column-gap: var(--sp-2);
   width: 100%; height: var(--row-h); padding: 0 var(--sp-3);
   border-radius: var(--r-card, var(--r-s));
-  background: var(--cd-surface); color: var(--text);
+  --sq-bg: var(--cd-surface); background: var(--sq-bg); color: var(--text);
   font-family: var(--sans); font-size: var(--fs-s); line-height: var(--lh-ui); letter-spacing: var(--track);
   text-align: left; cursor: pointer;
   transition: background-color var(--dur-out) var(--ease);
 }
-.cd-mini:hover { background: var(--bg-3); transition-duration: var(--dur-1); }
+.cd-mini:hover { --sq-bg: var(--bg-3); background: var(--sq-bg); transition-duration: var(--dur-1); }
 .cd-mini__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* the lead column: one fixed width, marks share its left edge, so names and titles start at one x */
 hx-card, .cd-queue { --cd-lead-w: 28px; }
@@ -242,13 +242,13 @@ hx-card[data-size="compact"] .cd-opts { margin: 0 calc(-1 * var(--sp-2)); }
   appearance: none; border: 0; margin: 0;
   display: flex; align-items: center; gap: var(--sp-3);
   min-height: var(--row-h); padding: 5px 10px; border-radius: var(--r-s);
-  background: transparent; color: var(--text);
+  --sq-bg: transparent; background: var(--sq-bg); color: var(--text);
   font-family: var(--sans); font-size: var(--fs-s); line-height: var(--lh-ui); letter-spacing: var(--track); text-align: left;
   cursor: pointer;
   transition: background-color var(--dur-out) var(--ease);
 }
-.cd-opt:hover { background: var(--hover); transition-duration: var(--dur-1); }
-.cd-opt:focus-visible { background: var(--current); outline: none; box-shadow: inset 0 0 0 2px var(--focus); }
+.cd-opt:hover { --sq-bg: var(--hover); background: var(--sq-bg); transition-duration: var(--dur-1); }
+.cd-opt:focus-visible { --sq-bg: var(--current); background: var(--sq-bg); outline: none; box-shadow: inset 0 0 0 2px var(--focus); }
 .cd-opt__ring {
   width: 6px; height: 6px; border-radius: var(--r-pill); flex: none;
   box-shadow: inset 0 0 0 1px var(--mark-off);
@@ -260,7 +260,7 @@ hx-card[data-size="compact"] .cd-opts { margin: 0 calc(-1 * var(--sp-2)); }
 .cd-free {
   display: flex; align-items: center; gap: var(--sp-3);
   min-height: var(--ctl); padding: 0 10px; margin: var(--sp-1) 0 0;
-  border-radius: var(--r-s); background: var(--cd-well);
+  border-radius: var(--r-s); --sq-bg: var(--cd-well); background: var(--sq-bg);
   box-shadow: inset 0 0 0 1px var(--line-field);
 }
 .cd-free:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
@@ -345,13 +345,13 @@ hx-card[data-kind="escalation"][data-size="inline"] { display: block; background
 }
 /* one teammate lends the card its colour: a 1px ring and a 5% tint (text contrast is unchanged in every preset) */
 hx-card[data-accent]:is([data-size="inline"], [data-size="compact"]) {
-  background: color-mix(in srgb, var(--cd-accent) 5%, var(--cd-surface));
+  --sq-bg: color-mix(in srgb, var(--cd-accent) 5%, var(--cd-surface)); background: var(--sq-bg);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cd-accent) 42%, transparent);
 }
 hx-card[data-accent][data-size="popover"] { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cd-accent) 42%, transparent), var(--shadow-pop); }
 hx-card[data-accent][data-resolved]:is([data-size="inline"], [data-size="compact"]) { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cd-accent) 22%, transparent); }
 hx-card[data-accent] .cd-mini {
-  background: color-mix(in srgb, var(--cd-accent) 6%, var(--cd-surface));
+  --sq-bg: color-mix(in srgb, var(--cd-accent) 6%, var(--cd-surface)); background: var(--sq-bg);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cd-accent) 36%, transparent);
 }
 hx-card[data-accent] .cd-stack__one, hx-card[data-accent] .cd-stack__more { box-shadow: 0 0 0 2px color-mix(in srgb, var(--cd-accent) 5%, var(--cd-surface)); }
@@ -396,7 +396,7 @@ hx-card[data-kind="form"][data-size="inline"] { width: min(100%, var(--measure))
 .cd-opts[aria-invalid="true"] { box-shadow: inset 0 0 0 1px var(--red); border-radius: var(--r-in, var(--r-s)); }
 /* previews per option, side by side; stacked when the card is narrow */
 .cd-pick { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: var(--sp-3); align-items: stretch; }
-.cd-preview { background: var(--cd-well); border-radius: var(--r-in, var(--r-s)); padding: var(--sp-2) var(--sp-3); min-height: calc(var(--row-h) * 3); display: flex; flex-direction: column; gap: var(--sp-2); }
+.cd-preview { --sq-bg: var(--cd-well); background: var(--sq-bg); border-radius: var(--r-in, var(--r-s)); padding: var(--sp-2) var(--sp-3); min-height: calc(var(--row-h) * 3); display: flex; flex-direction: column; gap: var(--sp-2); }
 .cd-preview .cd-out { margin: 0; color: var(--text); }
 @container (max-width: 460px) { .cd-pick { grid-template-columns: minmax(0, 1fr); } }
 /* setup: the config diff it will write */
