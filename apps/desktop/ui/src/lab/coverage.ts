@@ -8,7 +8,8 @@ export const NOT_COMPONENTS: Readonly<Record<string, string>> = {
   version: 'a string', html: 'the string templates: each is covered through its factory or as html.<name>', esc: 'escaping', icons: 'the icon names (drawn by the icon button story, "every icon")',
   announce: 'a live-region message, nothing visible', botState: 'a bot\'s state word as data', botLabel: 'an accessible name as data', states: 'the state table (drawn by the orb story, "states")',
   hydrate: 'wires markup that the stories already draw', liven: 'an orb\'s motion policy (orbs are drawn still in the lab)', glance: 'eye steps under reduced motion (behaviour)',
-  shape: 'a cached token reader', squircle: 'the corner engine every story runs through (the concentric check reads its paths)'
+  shape: 'a cached token reader', scrollClass: 'the scroll area\'s class, drawn by components/scroll', listbox: 'drawn by components/listbox',
+  squircle: 'the corner engine every story runs through (the concentric check reads its paths)'
 };
 /** html templates that are only strings (no factory), and why some need no story of their own */
 export const HTML_ONLY_EXCUSED: Readonly<Record<string, string>> = {

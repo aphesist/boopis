@@ -62,7 +62,7 @@ rules have a check and which do not.
 | `tokens.static` | R-colour-1 | a literal colour, font size, radius or inline-style length in the UI's CSS and TS outside the token files (`tests/lab/static-scan.mjs`) |
 | `native` | R-native-1, R-native-3, R-field-4, R-select-1 | an unthemed native control: `select`, date, colour, range, file or number inputs, an engine-drawn checkbox or radio, `progress`, `meter` |
 | `scrollbar` | R-scroll-1, -2, -3, -6, -8 | a scroller with no `::-webkit-scrollbar` rule (WebKitGTK ignores `scrollbar-width`), a bar wider than `--scroll-size`, a thumb that is not `--bg-4`, an inner scroller without `overscroll-behavior: contain`; and, in the source, any `scrollbar-width` or `scrollbar-color` |
-| `brand` | R-copy-8 | rendered text, `aria-label`, `aria-description`, `title`, placeholder or tooltip says "Hermes" (any case). The exception, a Hermes plugin store item under its own name or publisher, is `BRAND_ALLOW` in `rules.mjs` |
+| `brand` | R-copy-8 | rendered text, `aria-label`, `aria-description`, `title`, placeholder or tooltip names the engine (ADR-0031; any case). The exception, a plugin store item under its own name or publisher (`data-store-item`, `core/engine-words.ts`), is `BRAND_ALLOW` in `rules.mjs` |
 | `copy` | R-copy-9, R-copy-6 | rendered text with `undefined`, `NaN`, `[object Object]`, a stack trace, an `hx.*` code or JSON (code and output wells excepted) |
 | `roles` | R-colour-3, R-colour-4 | text in `--brass`; `--bg-0` on `--bg-0`, `--bg-3` on `--bg-3` |
 | `axe` | R-a11y-1, R-a11y-3, R-a11y-8 | an axe-core violation (every rule but page landmarks) |
@@ -103,7 +103,7 @@ Stories are data: `src/lab/stories/<area>/<thing>.stories.ts` exports a `Story` 
 (`src/lab/types.ts`).
 
 ```ts
-import { ui } from '../../kit';
+import { ui } from '@boopis/ui';
 import { line, stage, forced } from '../../story';
 import type { Story } from '../../types';
 
@@ -119,8 +119,9 @@ export default {
 } satisfies Story;
 ```
 
-- A **stage** state (`render`) draws library components on the stage: use the library's public API through
-  `src/lab/kit.ts` (`ui`, `html`), never a module's internals, so the stories move with the library.
+- A **stage** state (`render`) draws kit components on the stage: import the kit, `@boopis/ui` (`ui`, `html`), and use
+  its public API (props and the variants it exports, `variants`), never a module's internals or hand-built kit markup
+  (the kit's guard, `src/components/kit.guard.test.ts`, reads the lab too).
 - An **app** state (`app: { provider, setup }`) boots the whole app on a provider (`src/lab/provider.ts`: the mock with
   fixtures, no bots, one, `120`, no sessions, or `replay: 'session'` for the live provider over recorded gateway
   frames) and drives it in `setup` (`c.hx.setState`, `c.hx.dock()`, `c.click`, `c.key`). `scope` says what the checks

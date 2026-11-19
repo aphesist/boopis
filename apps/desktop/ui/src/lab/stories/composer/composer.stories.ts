@@ -2,8 +2,7 @@
    it; the attach button's hover and focus must not cross the corner; its tooltip must not cover the text. Every
    action (attach, mic, send) at rest, hovered, focused and pressed, with text, empty and multi-line, with the
    tooltip open, compact (the Bots tab and the dock's session) and in the app (the session and the dock). */
-import { ui } from '../../kit';
-import type { ComposerOpts } from '../../../components';
+import { ui, type ComposerOpts } from '@boopis/ui';
 import { fill, frames } from '../../story';
 import type { Force, Render, State, Story } from '../../types';
 import { BOT_LIKE, BOT_LONG, LONG_TITLE, MULTILINE, RTL, UNBROKEN } from '../../fixtures';

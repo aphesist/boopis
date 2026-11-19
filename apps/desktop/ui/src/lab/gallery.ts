@@ -2,7 +2,7 @@
    (frame.ts) beside the v6 mock-up's counterpart. The toolbar's choices live in the URL's hash, so a link opens the
    same view: #story=<id>&preset=<id>&w=<px>&zoom=<1|1.6>&force=<hover|focus|active>&reduced=1&mock=0 */
 import '../styles';
-import { ui } from './kit';
+import { ui } from '@boopis/ui';
 import { STORIES, storyById } from './registry';
 import { AREAS } from './types';
 import type { Story, StoryKind } from './types';

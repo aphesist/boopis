@@ -2,7 +2,7 @@
    :focus, :focus-within or :active into a stylesheet of its own, with the pseudo-class replaced by an attribute
    (`data-lab-hover`, `data-lab-focus`, `data-lab-active`). Setting the attribute on an element then shows that state,
    in the gallery and under Playwright alike, several at once if need be. Rules inside @media, @supports and @layer
-   keep their condition. Shadow roots (orbs, the logo) are out of reach and stay at rest. */
+   keep their condition, except a pointer condition ((hover: hover), (pointer: fine)): a forced state needs no pointer. Shadow roots (orbs, the logo) are out of reach and stay at rest. */
 import type { Forced } from './types';
 
 const ATTR: Record<Forced, string> = { hover: 'data-lab-hover', focus: 'data-lab-focus', active: 'data-lab-active' };
@@ -17,6 +17,13 @@ function rewrite(sel: string): string {
     .replace(/:focus(?![\w-])/g, '[data-lab-focus]');
 }
 
+/** a media condition without its pointer features ('' when nothing else is left); a list keeps each query */
+export function pointerFree(cond: string): string {
+  const POINTER = /\(\s*(any-)?(hover|pointer)\s*:\s*[a-z]+\s*\)/gi;
+  const queries = cond.split(',').map((q) => q.replace(POINTER, '').replace(/^\s*(and\s+)+|(\s+and)+\s*$/gi, '').replace(/\s+and\s+(and\s+)+/gi, ' and ').trim());
+  return queries.some((q) => !q || /^(all|screen)$/i.test(q)) ? '' : queries.join(', ');
+}
+
 function collect(rules: CSSRuleList, out: string[]): void {
   for (const r of Array.from(rules)) {
     if (r instanceof CSSStyleRule) {
@@ -29,7 +36,13 @@ function collect(rules: CSSRuleList, out: string[]): void {
       const inner: string[] = [];
       collect(r.cssRules, inner);
       if (!inner.length) continue;
-      const head = r instanceof CSSMediaRule ? '@media ' + r.conditionText : r instanceof CSSSupportsRule ? '@supports ' + r.conditionText : '@layer ' + (r as CSSLayerBlockRule).name;
+      if (r instanceof CSSMediaRule) {
+        /* a forced state needs no pointer: hover rules behind (hover: hover) or (pointer: fine) are forced everywhere */
+        const cond = pointerFree(r.conditionText || r.media.mediaText);
+        out.push(cond ? '@media ' + cond + ' { ' + inner.join('\n') + ' }' : inner.join('\n'));
+        continue;
+      }
+      const head = r instanceof CSSSupportsRule ? '@supports ' + r.conditionText : '@layer ' + (r as CSSLayerBlockRule).name;
       out.push(head + ' { ' + inner.join('\n') + ' }');
     }
   }

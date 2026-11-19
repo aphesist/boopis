@@ -5,9 +5,7 @@
    exposes `window.__lab` for the checker. */
 import '../styles';
 import '../../vendor/boopis-logo.js';
-import { ui } from '../components';
-import { startGlance } from '../components/orb';
-import { setupOrbs } from '../components/orb-worker/host';
+import { setupOrbs, startGlance, ui } from '@boopis/ui';
 import { emit, on } from '../core/bus';
 import { getDockApi } from '../core/registry';
 import { getLayout, setState, state } from '../core/state';

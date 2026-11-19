@@ -2,7 +2,7 @@
    components by their public name, card kinds, surfaces, pages) and its named states. A state either renders on the
    lab's stage (components and cards: `render`) or boots the whole app on a provider and drives it (`app`: surfaces
    and pages). Nothing here imports the app: stories reach it through `kit.ts` and the contexts below. */
-import type { Ui } from '../components';
+import type { Ui } from '@boopis/ui';
 import type { DataProvider } from '../data/provider';
 import type { DockApi } from '../core/registry';
 

@@ -1,6 +1,6 @@
 /* The themed select and the listbox it opens (design system 14.32, R-select-*), which replace every native select:
    closed and open, grouped models with their marks, a long list that scrolls, long labels, invalid and disabled. */
-import { ui } from '../../kit';
+import { ui } from '@boopis/ui';
 import { forced, line, stage } from '../../story';
 import type { Story } from '../../types';
 import { LONG_TITLE, UNBROKEN } from '../../fixtures';

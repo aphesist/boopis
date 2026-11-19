@@ -3,13 +3,14 @@
    story, and every story has its minimum states. A new component ships with stories; an exception goes in
    coverage.ts with its reason. */
 import { describe, expect, it } from 'vitest';
-import { ui } from './kit';
+import { ui, variants } from '@boopis/ui';
 import { STORIES } from './registry';
 import { AREAS } from './types';
 import { EMPTY_APPLIES, ERROR_APPLIES, HTML_ONLY_EXCUSED, MIN_COMPONENT, MIN_SURFACE_STATES, MOD_SURFACES, NOT_COMPONENTS, PAGES, STATE_EXCUSED, SURFACES } from './coverage';
 import { KINDS } from '../modules/cards/kinds';
 import { FORM_KINDS } from '../modules/cards/form-model';
 import { CARD_STATES } from './stories/cards/cards.stories';
+import { DRAWERS, VARIANTS_ELSEWHERE } from './variant-drawers';
 
 const covered = new Set(STORIES.flatMap((s) => s.covers));
 const missing = (want: readonly string[]): string[] => want.filter((w) => !covered.has(w));
@@ -29,6 +30,11 @@ describe('the lab covers', () => {
     expect(missing(kinds.map((k) => 'card:' + k))).toEqual([]);
     for (const k of kinds) expect(CARD_STATES[k], 'the card story\'s states for ' + k).toEqual(KINDS[k as keyof typeof KINDS].states);
     expect(covered.has('card:form')).toBe(true);
+  });
+  it('every component that exports variants: a variants story draws each axis, or its own story does', () => {
+    const open = Object.keys(variants).filter((k) => !(k in DRAWERS) && !(k in VARIANTS_ELSEWHERE));
+    expect(open, 'add base props to DRAWERS in stories/components/variants.stories.ts').toEqual([]);
+    for (const k of Object.keys(DRAWERS)) expect(STORIES.some((s) => s.id === 'components/variants-' + k), k).toBe(true);
   });
   it('every form kind', () => {
     expect(missing(Object.keys(FORM_KINDS).map((k) => 'form:' + k))).toEqual([]);

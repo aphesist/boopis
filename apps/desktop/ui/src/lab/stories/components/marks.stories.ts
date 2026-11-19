@@ -1,6 +1,6 @@
 /* Marks and small pieces: code chips, keys, inline prose, the stamp, dots, capacity, ladder, measures, legend, pages,
    model marks, orbs, the empty state (14.7, 14.26 to 14.28, 10.1, 13). */
-import { html, ui } from '../../kit';
+import { html, ui } from '@boopis/ui';
 import { line, put, stage } from '../../story';
 import type { Story } from '../../types';
 import { BOT_LIKE, BOT_LONG, LONG_TITLE, RTL, UNBROKEN } from '../../fixtures';

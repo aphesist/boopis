@@ -457,13 +457,13 @@
       }
     }
 
-    /* brand: the app never says "Hermes" to the user (owner rule), except a Hermes plugin store item under its own name or publisher */
+    /* brand: the app never names its engine to the user (owner rule, ADR-0031, R-copy-8), except a plugin store item under its own name or publisher */
     if (want.has('brand')) {
       const allow = (o.brandAllow || []).join(', ');
       const ok = (e) => !!(allow && e.closest && e.closest(allow));
       const ATTRS = ['aria-label', 'aria-description', 'title', 'placeholder', 'data-placeholder', 'data-tip', 'alt', 'aria-roledescription', 'aria-valuetext'];
       const seen = new Set();
-      const hit = (e, where, text) => { const k = where + describe(e); if (seen.has(k)) return; seen.add(k); add('brand', e, where + ' says "' + text.trim().replace(/\s+/g, ' ').slice(0, 90) + '"; the app never names Hermes to the user'); };
+      const hit = (e, where, text) => { const k = where + describe(e); if (seen.has(k)) return; seen.add(k); add('brand', e, where + ' says "' + text.trim().replace(/\s+/g, ' ').slice(0, 90) + '"; the app never names its engine (ADR-0031, R-copy-8)'); };
       const roots = [scope, ...document.querySelectorAll('.ui-tip.is-in, .ui-menu, .ui-pop, .ui-toast')].filter((r, i, a) => r && a.indexOf(r) === i && (i === 0 || !scope.contains(r)));
       for (const r of roots) {
         const tw = document.createTreeWalker(r, NodeFilter.SHOW_TEXT);

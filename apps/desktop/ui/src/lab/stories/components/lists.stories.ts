@@ -1,5 +1,5 @@
 /* Rows, groups, sections, disclosures and settings rows (14.4, 14.8, 14.11, 14.21). */
-import { html, ui } from '../../kit';
+import { html, ui } from '@boopis/ui';
 import { line, list, put, stage, forced } from '../../story';
 import type { Story } from '../../types';
 import { LONG_NAME, LONG_TITLE, RTL, UNBROKEN } from '../../fixtures';

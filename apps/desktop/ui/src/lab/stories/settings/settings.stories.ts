@@ -63,7 +63,7 @@ const first: Story = {
     welcome: FR(['typical'], null),
     'steps running': FR(['loading'], [status({ steps: STEPS({ hermes: 'done', plugin: 'done', hx: 'pending' }) })]),
     'a question (a key)': FR(['variant'], [status({ steps: STEPS({ hermes: 'done', plugin: 'done', hx: 'done', config: 'done', models: 'needs_input' }), form: ASK as never })]),
-    blocked: FR(['error'], [status({ steps: STEPS({ hermes: 'blocked' }, { hermes: 'Hermes is not installed on this computer.' }), install_command: 'curl -fsSL https://example.invalid/install.sh | sh' })]),
+    blocked: FR(['error'], [status({ steps: STEPS({ hermes: 'blocked' }, { hermes: 'The engine is not on this computer yet.' }), install_command: 'curl -fsSL https://example.invalid/install.sh | sh' })]),
     'declined and skipped': FR(['disabled'], [status({ steps: STEPS({ hermes: 'done', plugin: 'declined', hx: 'skipped', config: 'done', models: 'done', restart: 'done' }), done: true, receipt: { lines: ['The plugin was declined: boopis runs without its tools.'] } })]),
     done: FR(['success'], [status({ steps: STEPS({ hermes: 'done', plugin: 'done', hx: 'done', config: 'done', models: 'done', restart: 'done' }), done: true, receipt: { lines: ['Installed the boopis plugin 0.1.1', 'Saved one key to your keychain', 'Models: sonnet 5.5, then opus 5.5 on a failed gate'] } })]),
     'long details': FR(['long'], [status({ steps: STEPS({ hermes: 'done', plugin: 'blocked' }, { plugin: 'src/billing/integrations/stripe/webhooks/handlers/invoice_payment_succeeded_idempotency_guard_v2_final.ts could not be written: permission denied (EACCES) while unpacking' }) })])

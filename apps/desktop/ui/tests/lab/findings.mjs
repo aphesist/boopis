@@ -66,7 +66,7 @@ function cause(check, msg, el) {
       if (m.includes('removed and drawn again')) return 'the interaction redraws the node (innerHTML) instead of updating it';
       if (m.includes('blinked')) return 'a node is hidden and shown again within a few frames during the morph: the flicker the owner saw';
       return 'a box jumps away and back during the interaction: a layout read or a style applied a frame late';
-    case 'brand': return 'user-facing text names Hermes; the branding work replaces the string (R-copy-8)';
+    case 'brand': return 'user-facing text names the engine; say it in boopis's words (ADR-0031, R-copy-8)';
     case 'copy': return 'an engine value reached the interface (R-copy-9)';
     case 'roles': return m.includes('brass') ? 'text drawn in the accent; brass is for marks (R-colour-3)' : 'a surface painted the same as the surface under it (R-colour-4)';
     case 'visual': return 'the screenshot changed from its golden';

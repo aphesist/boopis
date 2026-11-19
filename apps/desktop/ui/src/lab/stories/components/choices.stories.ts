@@ -1,6 +1,6 @@
 /* Segmented controls (tabs and radio, the Rail/Hide and Auto/Integrated/Dedicated choices), chips and chip groups,
    and the field (14.3, 14.17, 14.25). */
-import { ui } from '../../kit';
+import { ui } from '@boopis/ui';
 import { forced, line, stage } from '../../story';
 import type { Story } from '../../types';
 import { LONG_TITLE, RTL, UNBROKEN } from '../../fixtures';

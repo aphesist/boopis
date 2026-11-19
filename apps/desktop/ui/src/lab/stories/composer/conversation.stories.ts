@@ -1,5 +1,5 @@
 /* The conversation's pieces: the call-number entry, the request, steps, the blank (14.5 to 14.9). */
-import { html, ui } from '../../kit';
+import { html, ui } from '@boopis/ui';
 import { put, stage, forced, line } from '../../story';
 import type { Story } from '../../types';
 import { LONG_NAME, LONG_TITLE, MULTILINE, PARAGRAPH, RTL, STEPS_SEED, UNBROKEN } from '../../fixtures';
@@ -7,7 +7,7 @@ import { LONG_NAME, LONG_TITLE, MULTILINE, PARAGRAPH, RTL, STEPS_SEED, UNBROKEN 
 const CONV = { url: '/v6/design-system/index.html#c-conversation', crop: '#c-conversation' };
 const W = 720;
 
-const blankTypical = stage(['typical', 'variant'], ({ root }) => { put(root, '<p>Keeping <code class="ui-code">prorate</code> ' + html.blank({}) + ' that forwards to <code class="ui-code">prorateCents</code>.</p>', '<p>Keeping it ' + html.blank({ answer: 'as a deprecated alias' }) + '.</p>'); }, { width: 608 });
+const blankTypical = stage(['typical', 'variant'], ({ root }) => { put(root, '<p>Keeping ' + html.code('prorate') + ' ' + html.blank({}) + ' that forwards to ' + html.code('prorateCents') + '.</p>', '<p>Keeping it ' + html.blank({ answer: 'as a deprecated alias' }) + '.</p>'); }, { width: 608 });
 
 export default [
   {

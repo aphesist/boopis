@@ -1,5 +1,5 @@
 /* Buttons, icon buttons, send, hold to approve and the switch (DESIGN-SYSTEM.md 14.14 to 14.16). */
-import { ui } from '../../kit';
+import { ui } from '@boopis/ui';
 import { forced, line, stage } from '../../story';
 import type { Story } from '../../types';
 import { LONG_TITLE, RTL, UNBROKEN } from '../../fixtures';

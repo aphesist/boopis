@@ -1,8 +1,7 @@
 /* The card family (14.13), through the library's `ui.card(kind, data, {state, size, ground})`: every kind in every
    state, inline at the conversation's measure, compact at the dock's width, mini, on the chrome and on the dock, with
    the mock-up's own gallery data and with every string long. Forms have their own story (forms.stories.ts). */
-import { ui } from '../../kit';
-import type { CardKind } from '../../../components';
+import { ui, type CardKind } from '@boopis/ui';
 import { fill, frames } from '../../story';
 import type { Render, State, Story } from '../../types';
 import { CARD_DATA, CARD_LONG } from '../../fixtures';

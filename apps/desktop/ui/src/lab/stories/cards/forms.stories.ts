@@ -1,7 +1,7 @@
 /* Forms are one card family (owner decision): one renderer from the schema, every kind a template, every state, the
    origin slot on every card (docs/FORMS.md). Every kind in every state, compact and mini, on the dock, with long names
    and many askers, its submit hovered and focused. The data are the v6 mock-up's own forms (cards.test.html). */
-import { ui } from '../../kit';
+import { ui } from '@boopis/ui';
 import { fill, frames } from '../../story';
 import type { Render, State, Story } from '../../types';
 import { FORM_LONG, FORM_SPECS, FORM_STATES } from '../../fixtures';

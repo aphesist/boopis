@@ -1,8 +1,7 @@
 /* Floating surfaces: menus (still and open against an anchor, with overflow), popovers, the layer, tooltips, toasts
    (14.18, 14.19, 14.22, 14.23). */
-import { html, ui } from '../../kit';
+import { html, ui, type MenuEntry } from '@boopis/ui';
 import { line, put, stage } from '../../story';
-import type { MenuEntry } from '../../../components';
 import type { Story } from '../../types';
 import { LONG_TITLE, UNBROKEN } from '../../fixtures';
 

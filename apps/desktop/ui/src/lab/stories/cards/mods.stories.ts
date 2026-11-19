@@ -1,7 +1,7 @@
 /* Mods (14.29): the mod view (`ui.modView`) on its three surfaces, and the places a mod draws in the app, over the
    recording of real mod events (tests/fixtures/frames/mods.frames.json, the frames the smoke test plays): the band and
    the status line, panes in the details panel (from 1200px) or inline (below it), toasts, the theme card, a placed row. */
-import { html, ui } from '../../kit';
+import { html, ui } from '@boopis/ui';
 import { fill, frames } from '../../story';
 import type { AppCtx, Render, State, Story } from '../../types';
 import { LONG_TITLE, UNBROKEN } from '../../fixtures';

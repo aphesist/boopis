@@ -15,7 +15,7 @@ export const CHECKS = {
   'tokens.static':     { title: 'No hard-coded values in the source', ds: '3 ("tokens, never literals")', rule: 'R-colour-1', severity: 'fail', how: 'literal colours, font sizes and radii in CSS and TS outside the token files' },
   'native':            { title: 'No unthemed native controls', ds: '14.25, 14.21', rule: 'R-native-1', severity: 'fail', how: 'select, date, colour, range, file and number inputs, engine-drawn checkboxes and radios, progress, meter' },
   'scrollbar':         { title: 'Scrollers use the system\'s scrollbar', ds: '4.1 (--bg-4 is the thumb), components.css', rule: 'R-scroll-1', severity: 'fail', how: 'a ::-webkit-scrollbar rule no wider than 8px and a --bg-4 thumb on every scroller (WebKitGTK ignores scrollbar-width)' },
-  'brand':             { title: 'The app never says "Hermes"', ds: 'owner rule (19 November 2026)', rule: 'R-copy-8', severity: 'fail', how: 'rendered text, aria-label, aria-description, title, placeholder and tooltips (any case), except a Hermes plugin store item under its own name or publisher (BRAND_ALLOW)' },
+  'brand':             { title: 'The app never names its engine', ds: 'owner rule (19 November 2026), ADR-0031', rule: 'R-copy-8', severity: 'fail', how: 'rendered text, aria-label, aria-description, title, placeholder and tooltips name the engine (any case), outside a plugin store item (BRAND_ALLOW)' },
   'copy':              { title: 'No engine values in the interface', ds: '2', rule: 'R-copy-9', severity: 'fail', how: 'rendered text with undefined, NaN, [object Object], a stack trace, an hx.* code or JSON (code and output wells excluded)' },
   'roles':             { title: 'Colour roles', ds: '4.3, 9.1', rule: 'R-colour-3', severity: 'fail', how: 'no text in --brass; no --bg-0 on --bg-0 and no --bg-3 on --bg-3' },
   'axe':               { title: 'Accessibility (axe)', ds: '15', rule: 'R-a11y-1', severity: 'fail', how: 'axe-core, every rule but page landmarks' },
@@ -49,10 +49,10 @@ export function areaOfPath(p) {
   return 'components';
 }
 
-/** where "Hermes" may be said: a Hermes plugin store item, under its own name or publisher. Add the selector of the
+/** where the engine's name may show: a plugin store item, under its own name or publisher (core/engine-words.ts). Add the selector of the
     component that draws one, with the reason, when it exists. */
 export const BRAND_ALLOW = [
-  '[data-store-item]',        // a Hermes plugin store item (its name or publisher)
+  '[data-store-item]',        // a plugin store item (its name or publisher), as core/engine-words.ts marks it
   '[data-publisher]'          // a publisher's name as the store gives it
 ];
 

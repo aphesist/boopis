@@ -286,7 +286,7 @@ Intentional differences from v6, all invisible:
 ## The UI lab: every component ships with stories
 - **A new component, card kind, form kind, surface or page ships with stories** in `src/lab/stories/<area>/` (docs/UI-LAB.md): at least `typical` and `long`, `empty` and `error` where they apply, and the forced hover, focus and pressed states of anything interactive. The coverage gate (`src/lab/coverage.test.ts`, in `pnpm test`) fails otherwise; an exception goes in `src/lab/coverage.ts` with its reason.
 - Before calling a UI change done, run `pnpm lab:check --area <yours>` and read `lab-report/index.html`; accept goldens (`--update`) only for a change you meant.
-- Stories use the library's public API through `src/lab/kit.ts`, never a module's internals. The lab is never in the desktop build.
+- Stories import the kit, `@boopis/ui`, and use its public API (props and variants), never a module's internals or hand-built kit markup. The lab is never in the desktop build.
 
 ## What not to do
 - Do not name the engine in anything a person reads (ADR-0031, `docs/BRANDING.md`): say "boopis's engine" or, better, what failed in the user's terms; a teammate is a bot. Show an error with `sentence(e)` (already mapped by the host, or by `GatewayError.fromFrame`), and pass a text that may quote the engine through `unlessEngine` (`host/errors.ts`). A store item's own name is the one exception: wrap it with `storeItem` (`core/engine-words.ts`). `engine-words.test.ts` is the guard.
