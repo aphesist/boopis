@@ -12,7 +12,7 @@ The Rust side of hypotaxis: the `hx` binary and its libraries. The plugin drives
 | `hx` | the binary: `serve` over stdio, one-shot subcommands |
 | `hx-pack` | search, read, symbols, outlines, git status, redaction: the `pack.*` handlers, registered in `hx::build_dispatcher` |
 | `hx-sandbox` | the OS sandbox and the `sandbox.*` handlers (run, spawn, wait, kill, capabilities), registered in `hx::build_dispatcher` |
-| `hx-mods` | the runtime for Claude Code mods: a QuickJS isolate, the oxc TypeScript/JSX transform, the event chain and `$` as host calls. A library with tests; not wired into `hx` yet (`docs/MODS.md`, M1) |
+| `hx-mods` | the runtime for Claude Code mods: QuickJS with a context per mod, the oxc TypeScript/JSX transform, the event chain, `$` as asynchronous host calls, and the `hx-mods-v1` worker. Served by `hx` as `mods.*` (`crates/hx/src/mods.rs`), in `hx mods-worker` inside `hx-sandbox` (`docs/MODS.md`) |
 
 ## Invariants
 - Stdout carries protocol frames only.
@@ -37,9 +37,16 @@ Also check the production feature set: `cargo clippy -p hx-txn -p hx-proto -p hx
 ## Pending consolidation
 - `hx-pack/src/proc.rs` (child process with an allowlisted environment, timeout and output cap) is a stand-in for `hx-sandbox::process`. It is the only module that spawns, used only by `pack.status`; replace it when `hx-sandbox::process` lands.
 
+## Mods
+- The mod worker is `hx mods-worker` in `hx-sandbox`: read-only on its binary and the libraries it links, network off, no exec (`hx_sandbox::forbid_exec`), one inherited socket. Never run the runtime in the `hx` process, and never fall back to it: where the sandbox cannot be built, `mods.*` answers `hx.mods.unavailable`.
+- `hx` reads plugin files (`Bundle::read`, `cap_std`); the worker never does. A `call` frame naming a mod that is not loaded in the session is refused before it reaches the plugin.
+- Every `$` call is a `mods.call` request to the plugin, queued before the reply to the operation that made it. `hx` is the only crate that sends requests (`hx::outbound::Link`).
+- A new `$` call needs a row in `plugins/hypotaxis/policy/defaults.json` (`mod_capabilities`) and a handler in `plugins/hypotaxis/mods/calls.py`; the isolate's `$` is `crates/hx-mods/src/js/agent.js`.
+- Cargo hashes workspace-relative paths, so two worktrees built into one `CARGO_TARGET_DIR` overwrite each other's artifacts (touch your sources before a build or test, and copy `hx` before pointing a test at it).
+
 ## Do not
 - Do not let a panic unwind through the `hx-mods` engine callbacks (they are C frames: it aborts the process). New natives use `std::panic::catch_unwind`, like `natives::host_reply`.
-- Do not add a global to the `hx-mods` isolate without deciding it: `tests/reach.rs` pins the list.
+- Do not add a global to a mod's context without deciding it: `tests/reach.rs` pins the list. Do not let an object cross between contexts: messages are JSON strings.
 - Do not write to stdout from a handler or from logging.
 - Do not add a path helper elsewhere; extend `hx-txn::paths`.
 - Do not apply the whitespace-fuzzy match. It is report-only.

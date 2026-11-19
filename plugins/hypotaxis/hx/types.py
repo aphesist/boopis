@@ -30,6 +30,61 @@ class AbortedBeforeWriteData:
 
 
 @dataclass(frozen=True, slots=True)
+class AnalyzeParams:
+    """Params of `mods.analyze`."""
+
+    dir: str
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['dir'] = self.dir
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "AnalyzeParams":
+        return cls(
+            dir=data['dir'],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class AnalyzeResult:
+    """Result of `mods.analyze`: what the install prompt shows before consent."""
+
+    dynamic: bool
+    entry_modules: list[str]
+    events: list[str]
+    modules: list[ModuleReport]
+    namespaces: list[str]
+    plugin: str
+    version: str | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['dynamic'] = self.dynamic
+        out['entry_modules'] = [x for x in self.entry_modules]
+        out['events'] = [x for x in self.events]
+        out['modules'] = [x.to_wire() for x in self.modules]
+        out['namespaces'] = [x for x in self.namespaces]
+        out['plugin'] = self.plugin
+        if self.version is not None:
+            out['version'] = self.version
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "AnalyzeResult":
+        return cls(
+            dynamic=data['dynamic'],
+            entry_modules=[x for x in data['entry_modules']],
+            events=[x for x in data['events']],
+            modules=[ModuleReport.from_wire(x) for x in data['modules']],
+            namespaces=[x for x in data['namespaces']],
+            plugin=data['plugin'],
+            version=(None if data['version'] is None else data['version']) if 'version' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class ApplyFailedData:
     """`data` of `hx.txn.apply_failed`."""
 
@@ -336,6 +391,34 @@ class BundleTruncation:
 
 
 @dataclass(frozen=True, slots=True)
+class CallParams:
+    """Params of `mods.call`: one `$` call from a mod, for the plugin to decide and perform."""
+
+    call: str
+    plugin: str
+    session_id: str
+    args: Any | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['call'] = self.call
+        out['plugin'] = self.plugin
+        out['session_id'] = self.session_id
+        if self.args is not None:
+            out['args'] = self.args
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "CallParams":
+        return cls(
+            call=data['call'],
+            plugin=data['plugin'],
+            session_id=data['session_id'],
+            args=data['args'] if 'args' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class Capabilities:
     """What [`crate::capabilities`] reports."""
 
@@ -624,6 +707,56 @@ class DiscardResult:
     def from_wire(cls, data: Mapping[str, Any]) -> "DiscardResult":
         return cls(
             journal_id=data['journal_id'],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class DispatchParams:
+    """Params of `mods.dispatch`."""
+
+    event: str
+    session_id: str
+    payload: Any | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['event'] = self.event
+        out['session_id'] = self.session_id
+        if self.payload is not None:
+            out['payload'] = self.payload
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "DispatchParams":
+        return cls(
+            event=data['event'],
+            session_id=data['session_id'],
+            payload=data['payload'] if 'payload' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class DispatchResult:
+    """Result of `mods.dispatch`: the chain's answer."""
+
+    answered: bool
+    value: Any
+    answered_by: str | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['answered'] = self.answered
+        out['value'] = self.value
+        if self.answered_by is not None:
+            out['answered_by'] = self.answered_by
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "DispatchResult":
+        return cls(
+            answered=data['answered'],
+            value=data['value'],
+            answered_by=(None if data['answered_by'] is None else data['answered_by']) if 'answered_by' in data else None,
         )
 
 
@@ -987,6 +1120,49 @@ class Found:
 
 
 @dataclass(frozen=True, slots=True)
+class HandledResult:
+    """Result of `mods.press`, `mods.input` and `mods.select`."""
+
+    handled: bool
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['handled'] = self.handled
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "HandledResult":
+        return cls(
+            handled=data['handled'],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class HandlerParams:
+    """Params of `mods.press`, `mods.input` and `mods.select`."""
+
+    handler: str
+    session_id: str
+    value: str | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['handler'] = self.handler
+        out['session_id'] = self.session_id
+        if self.value is not None:
+            out['value'] = self.value
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "HandlerParams":
+        return cls(
+            handler=data['handler'],
+            session_id=data['session_id'],
+            value=(None if data['value'] is None else data['value']) if 'value' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class JournalData:
     """`data` of the journal errors (`journal_not_found`, `journal_corrupt`, `journal_busy`, `invalid_state`, `restore_failed`)."""
 
@@ -1048,6 +1224,161 @@ class LineRange:
         return cls(
             start=data['start'],
             end=(None if data['end'] is None else data['end']) if 'end' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class ListParams:
+    """Params of `mods.list`."""
+
+    session_id: str | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        if self.session_id is not None:
+            out['session_id'] = self.session_id
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "ListParams":
+        return cls(
+            session_id=(None if data['session_id'] is None else data['session_id']) if 'session_id' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class ListResult:
+    """Result of `mods.list`."""
+
+    sessions: list[SessionMods]
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['sessions'] = [x.to_wire() for x in self.sessions]
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "ListResult":
+        return cls(
+            sessions=[SessionMods.from_wire(x) for x in data['sessions']],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class LoadParams:
+    """Params of `mods.load`."""
+
+    plugins: list[PluginRef]
+    session_id: str
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['plugins'] = [x.to_wire() for x in self.plugins]
+        out['session_id'] = self.session_id
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "LoadParams":
+        return cls(
+            plugins=[PluginRef.from_wire(x) for x in data['plugins']],
+            session_id=data['session_id'],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class LoadResult:
+    """Result of `mods.load`."""
+
+    loaded: list[LoadedMod]
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['loaded'] = [x.to_wire() for x in self.loaded]
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "LoadResult":
+        return cls(
+            loaded=[LoadedMod.from_wire(x) for x in data['loaded']],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class LoadedMod:
+    """A mod that is loaded."""
+
+    hooks: int
+    modules: list[str]
+    name: str
+    tier: str
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['hooks'] = self.hooks
+        out['modules'] = [x for x in self.modules]
+        out['name'] = self.name
+        out['tier'] = self.tier
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "LoadedMod":
+        return cls(
+            hooks=data['hooks'],
+            modules=[x for x in data['modules']],
+            name=data['name'],
+            tier=data['tier'],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class ModsCapabilities:
+    """Result of `mods.capabilities`: whether mods can run here at all, and why not."""
+
+    available: bool
+    platform: str
+    reason: str | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['available'] = self.available
+        out['platform'] = self.platform
+        if self.reason is not None:
+            out['reason'] = self.reason
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "ModsCapabilities":
+        return cls(
+            available=data['available'],
+            platform=data['platform'],
+            reason=(None if data['reason'] is None else data['reason']) if 'reason' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class ModuleReport:
+    """What one module registers and calls."""
+
+    calls: list[str]
+    dynamic: bool
+    hooks: list[str]
+    path: str
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['calls'] = [x for x in self.calls]
+        out['dynamic'] = self.dynamic
+        out['hooks'] = [x for x in self.hooks]
+        out['path'] = self.path
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "ModuleReport":
+        return cls(
+            calls=[x for x in data['calls']],
+            dynamic=data['dynamic'],
+            hooks=[x for x in data['hooks']],
+            path=data['path'],
         )
 
 
@@ -1156,6 +1487,73 @@ class PathsData:
     def from_wire(cls, data: Mapping[str, Any]) -> "PathsData":
         return cls(
             paths=[x for x in data['paths']],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class PluginRef:
+    """One plugin to load."""
+
+    dir: str
+    tier: str | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['dir'] = self.dir
+        if self.tier is not None:
+            out['tier'] = self.tier
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "PluginRef":
+        return cls(
+            dir=data['dir'],
+            tier=(None if data['tier'] is None else data['tier']) if 'tier' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class ReachParams:
+    """Params of `mods.reach`."""
+
+    session_id: str
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['session_id'] = self.session_id
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "ReachParams":
+        return cls(
+            session_id=data['session_id'],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class ReachResult:
+    """Result of `mods.reach`: what the sandboxed worker could actually do, tried for real."""
+
+    files: Any
+    network: Any
+    pid: int
+    processes: Any
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['files'] = self.files
+        out['network'] = self.network
+        out['pid'] = self.pid
+        out['processes'] = self.processes
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "ReachResult":
+        return cls(
+            files=data['files'],
+            network=data['network'],
+            pid=data['pid'],
+            processes=data['processes'],
         )
 
 
@@ -1398,6 +1796,65 @@ class Redactions:
         return cls(
             by_rule=data['by_rule'],
             total=data['total'],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class RenderParams:
+    """Params of `mods.render`."""
+
+    component: str
+    session_id: str
+    id: str | None = None
+    props: Any | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['component'] = self.component
+        out['session_id'] = self.session_id
+        if self.id is not None:
+            out['id'] = self.id
+        if self.props is not None:
+            out['props'] = self.props
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "RenderParams":
+        return cls(
+            component=data['component'],
+            session_id=data['session_id'],
+            id=(None if data['id'] is None else data['id']) if 'id' in data else None,
+            props=data['props'] if 'props' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class RenderResult:
+    """Result of `mods.render`."""
+
+    kind: str
+    props: Any | None = None
+    reason: str | None = None
+    tree: Any | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['kind'] = self.kind
+        if self.props is not None:
+            out['props'] = self.props
+        if self.reason is not None:
+            out['reason'] = self.reason
+        if self.tree is not None:
+            out['tree'] = self.tree
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "RenderResult":
+        return cls(
+            kind=data['kind'],
+            props=data['props'] if 'props' in data else None,
+            reason=(None if data['reason'] is None else data['reason']) if 'reason' in data else None,
+            tree=data['tree'] if 'tree' in data else None,
         )
 
 
@@ -1896,6 +2353,30 @@ class Segment:
 
 
 @dataclass(frozen=True, slots=True)
+class SessionMods:
+    """One session's mods."""
+
+    plugins: list[LoadedMod]
+    running: bool
+    session_id: str
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['plugins'] = [x.to_wire() for x in self.plugins]
+        out['running'] = self.running
+        out['session_id'] = self.session_id
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "SessionMods":
+        return cls(
+            plugins=[LoadedMod.from_wire(x) for x in data['plugins']],
+            running=data['running'],
+            session_id=data['session_id'],
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class Skipped:
     """Files that were looked at and left out, by reason."""
 
@@ -2247,6 +2728,64 @@ class UnavailableData:
 
 
 @dataclass(frozen=True, slots=True)
+class UnavailableData2:
+    """Data of `hx.mods.unavailable`."""
+
+    reason: str
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['reason'] = self.reason
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "UnavailableData2":
+        return cls(
+            reason=data['reason'],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class UnloadParams:
+    """Params of `mods.unload`."""
+
+    session_id: str
+    plugin: str | None = None
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['session_id'] = self.session_id
+        if self.plugin is not None:
+            out['plugin'] = self.plugin
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "UnloadParams":
+        return cls(
+            session_id=data['session_id'],
+            plugin=(None if data['plugin'] is None else data['plugin']) if 'plugin' in data else None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class UnloadResult:
+    """Result of `mods.unload`."""
+
+    unloaded: bool
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['unloaded'] = self.unloaded
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "UnloadResult":
+        return cls(
+            unloaded=data['unloaded'],
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class ValidateParams:
     """Parameters of `txn.validate`."""
 
@@ -2358,6 +2897,24 @@ class WithheldFile:
         )
 
 
+@dataclass(frozen=True, slots=True)
+class WorkerFailedData:
+    """Data of `hx.mods.worker_failed`."""
+
+    stderr: str = ''
+
+    def to_wire(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        out['stderr'] = self.stderr
+        return out
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, Any]) -> "WorkerFailedData":
+        return cls(
+            stderr=data['stderr'] if 'stderr' in data else '',
+        )
+
+
 CaseMode = Literal['smart', 'sensitive', 'insensitive']
 
 Dimension = Literal['fs', 'network', 'env', 'process']
@@ -2427,6 +2984,17 @@ def _exit_outcome_from_wire(data: Mapping[str, Any]) -> ExitOutcome:
 
 METHODS: dict[str, tuple[type | None, type | None]] = {
     'hx.describe': (None, DescribeResult),
+    'mods.analyze': (AnalyzeParams, AnalyzeResult),
+    'mods.capabilities': (None, ModsCapabilities),
+    'mods.dispatch': (DispatchParams, DispatchResult),
+    'mods.input': (HandlerParams, HandledResult),
+    'mods.list': (ListParams, ListResult),
+    'mods.load': (LoadParams, LoadResult),
+    'mods.press': (HandlerParams, HandledResult),
+    'mods.reach': (ReachParams, ReachResult),
+    'mods.render': (RenderParams, RenderResult),
+    'mods.select': (HandlerParams, HandledResult),
+    'mods.unload': (UnloadParams, UnloadResult),
     'pack.bundle': (BundleRequest, BundleResponse),
     'pack.outline': (OutlineRequest, OutlineResponse),
     'pack.read': (ReadRequest, ReadResponse),
@@ -2448,6 +3016,8 @@ METHODS: dict[str, tuple[type | None, type | None]] = {
 
 # typed `data` of the error codes that carry any
 ERROR_DATA: dict[str, type] = {
+    'hx.mods.unavailable': UnavailableData2,
+    'hx.mods.worker_failed': WorkerFailedData,
     'hx.sandbox.denied': DeniedData,
     'hx.sandbox.unavailable': UnavailableData,
     'hx.txn.aborted_before_write': AbortedBeforeWriteData,

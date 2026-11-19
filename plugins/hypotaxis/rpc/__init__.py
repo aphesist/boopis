@@ -32,6 +32,14 @@ CAPABILITIES = (
     "form.submit",
     "form.cancel",
     "form.list",
+    "mod.press",
+    "mod.input",
+    "mod.select",
+    "mod.props",
+    "mod.list",
+    "mod.unload",
+    "mod.install.prepare",
+    "mod.install.confirm",
 )
 DEFAULT_TAIL_LIMIT = 200
 MAX_TAIL_LIMIT = 1000
@@ -197,8 +205,10 @@ def prices_refresh(params: Mapping[str, Any], *, session_id: str | None = None, 
 
 def handlers() -> dict[str, Handler]:
     from ..forms.rpc import form_cancel, form_list, form_submit
+    from ..mods.rpc import HANDLERS as MOD_HANDLERS
 
     return {
+        **MOD_HANDLERS,
         "form.submit": form_submit,
         "form.cancel": form_cancel,
         "form.list": form_list,

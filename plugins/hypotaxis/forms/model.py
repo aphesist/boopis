@@ -7,7 +7,8 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 Status = Literal["open", "submitted", "cancelled", "expired"]
-Origin = Literal["agent", "teammate", "plugin", "hermes", "mcp", "host"]
+Origin = Literal["agent", "teammate", "plugin", "hermes", "mcp", "host"] | dict[str, Any]
+# a word, or an object like ``{"kind": "mod", "plugin": name}`` (docs/FORMS.md section 4a)
 
 
 @dataclass(slots=True)

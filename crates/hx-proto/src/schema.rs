@@ -28,6 +28,7 @@ use crate::txn::{
 pub struct SchemaBuilder {
     generator: SchemaGenerator,
     methods: Map<String, Value>,
+    peer_methods: Map<String, Value>,
     errors: Map<String, Value>,
 }
 
@@ -52,6 +53,7 @@ impl SchemaBuilder {
         Self {
             generator: SchemaSettings::draft2020_12().into_generator(),
             methods: Map::new(),
+            peer_methods: Map::new(),
             errors: Map::new(),
         }
     }
@@ -61,6 +63,18 @@ impl SchemaBuilder {
         let params = self.generator.subschema_for::<P>().to_value();
         let result = self.generator.subschema_for::<R>().to_value();
         self.methods.insert(
+            name.to_owned(),
+            json!({ "params": params, "result": result }),
+        );
+        self
+    }
+
+    /// Adds a method the **peer** (the plugin) serves to `hx`: a request `hx` sends. It is not in
+    /// the dispatcher, so it is listed under `peer_methods`, not `methods`.
+    pub fn peer_method<P: JsonSchema, R: JsonSchema>(&mut self, name: &str) -> &mut Self {
+        let params = self.generator.subschema_for::<P>().to_value();
+        let result = self.generator.subschema_for::<R>().to_value();
+        self.peer_methods.insert(
             name.to_owned(),
             json!({ "params": params, "result": result }),
         );
@@ -94,6 +108,7 @@ impl SchemaBuilder {
             "title": "hx-v1",
             "protocol": PROTOCOL,
             "methods": self.methods,
+            "peer_methods": self.peer_methods,
             "errors": self.errors,
             "$defs": defs,
         })

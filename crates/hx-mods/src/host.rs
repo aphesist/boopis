@@ -1,4 +1,4 @@
-//! The boundary between the isolate and the rest of the system.
+//! The boundary between the isolates and the rest of the system.
 //!
 //! Every `$` call that has an effect or reads the outside world leaves the isolate as one
 //! [`HostRequest`]. The plugin implements [`HostCalls`] later, deciding each request with the
@@ -29,15 +29,36 @@ pub struct HostError {
     pub message: String,
 }
 
+/// Identifies a call that has not been answered yet.
+pub type CallId = u64;
+
+/// What the host does with a call the moment it arrives.
+#[derive(Debug, Clone, PartialEq)]
+pub enum HostReply {
+    /// Answered at once (an in-memory host, a call that needs no one).
+    Ready(Result<Value, HostError>),
+    /// Accepted; the answer comes later through [`HostCalls::wait`]. The mod's promise stays
+    /// pending, and the chain waits instead of blaming the hook.
+    Pending,
+}
+
+/// One answer to a call that was [`HostReply::Pending`].
+pub type Completion = (CallId, Result<Value, HostError>);
+
 /// Performs `$` calls.
 ///
-/// The spike's calls are synchronous, which is all an in-memory host needs. The real host answers
-/// from another thread; the answer then arrives as a promise resolved by the driver loop, which
-/// already runs until the pending jobs drain.
+/// A `$` call returns a promise in the mod. [`HostCalls::call`] must not block: it either answers
+/// at once or says [`HostReply::Pending`] and delivers the answer later from
+/// [`HostCalls::wait`], which the driver calls only when every hook is idle and a call is
+/// outstanding. A hook's time budget does not run while it waits for the host.
 pub trait HostCalls {
-    /// Performs one call.
-    ///
-    /// # Errors
-    /// A [`HostError`] is thrown into the calling hook.
-    fn call(&mut self, request: &HostRequest) -> Result<Value, HostError>;
+    /// Starts one call. `id` names it in a later [`Completion`].
+    fn call(&mut self, id: CallId, request: &HostRequest) -> HostReply;
+
+    /// Blocks for up to `timeout` for the answer to a pending call. `None` means nothing arrived.
+    /// The default never answers, which suits a host that is never pending.
+    fn wait(&mut self, timeout: std::time::Duration) -> Option<Completion> {
+        let _ = timeout;
+        None
+    }
 }

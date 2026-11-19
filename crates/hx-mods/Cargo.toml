@@ -19,7 +19,9 @@ dev-fixtures = []
 [dependencies]
 cap-std.workspace = true
 hex.workspace = true
+hx-proto.workspace = true
 hx-txn.workspace = true
+schemars.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

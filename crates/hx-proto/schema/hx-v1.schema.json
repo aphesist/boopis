@@ -16,6 +16,77 @@
       ],
       "type": "object"
     },
+    "AnalyzeParams": {
+      "description": "Params of `mods.analyze`.",
+      "properties": {
+        "dir": {
+          "description": "The plugin directory. `hx` reads it, compiles each module and reads the result; nothing runs.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "dir"
+      ],
+      "type": "object"
+    },
+    "AnalyzeResult": {
+      "description": "Result of `mods.analyze`: what the install prompt shows before consent.",
+      "properties": {
+        "dynamic": {
+          "description": "True when any module could not be listed completely.",
+          "type": "boolean"
+        },
+        "entry_modules": {
+          "description": "The module files named in `hooks/hooks.json`.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "events": {
+          "description": "Every distinct event, sorted.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "modules": {
+          "description": "Per module.",
+          "items": {
+            "$ref": "#/$defs/ModuleReport"
+          },
+          "type": "array"
+        },
+        "namespaces": {
+          "description": "Every distinct `$` namespace, sorted.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "plugin": {
+          "description": "The plugin name from its manifest.",
+          "type": "string"
+        },
+        "version": {
+          "default": null,
+          "description": "The version, when the manifest has one.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "plugin",
+        "entry_modules",
+        "modules",
+        "events",
+        "namespaces",
+        "dynamic"
+      ],
+      "type": "object"
+    },
     "ApplyFailedData": {
       "description": "`data` of `hx.txn.apply_failed`.",
       "properties": {
@@ -373,6 +444,33 @@
         "index",
         "method",
         "reasons"
+      ],
+      "type": "object"
+    },
+    "CallParams": {
+      "description": "Params of `mods.call`: one `$` call from a mod, for the plugin to decide and perform.",
+      "properties": {
+        "args": {
+          "default": null,
+          "description": "Its single argument (`null` when none)."
+        },
+        "call": {
+          "description": "The call: `ui.open`, `fs.read`, `http.fetch`, ...",
+          "type": "string"
+        },
+        "plugin": {
+          "description": "The mod. Set by `hx` from the worker's own context, so a mod cannot name another.",
+          "type": "string"
+        },
+        "session_id": {
+          "description": "The session.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "plugin",
+        "call"
       ],
       "type": "object"
     },
@@ -737,6 +835,53 @@
       },
       "required": [
         "journal_id"
+      ],
+      "type": "object"
+    },
+    "DispatchParams": {
+      "description": "Params of `mods.dispatch`.",
+      "properties": {
+        "event": {
+          "description": "The event name (`session.start`, `prompt.submit`, `tool.check`, `command.run`, ...).",
+          "type": "string"
+        },
+        "payload": {
+          "default": null,
+          "description": "The event's fields."
+        },
+        "session_id": {
+          "description": "The session.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "event"
+      ],
+      "type": "object"
+    },
+    "DispatchResult": {
+      "description": "Result of `mods.dispatch`: the chain's answer.",
+      "properties": {
+        "answered": {
+          "description": "A hook answered (false when every hook passed or was skipped).",
+          "type": "boolean"
+        },
+        "answered_by": {
+          "default": null,
+          "description": "The mod whose hook answered, when one did.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "value": {
+          "description": "What it returned; `null` when not answered."
+        }
+      },
+      "required": [
+        "answered",
+        "value"
       ],
       "type": "object"
     },
@@ -1247,6 +1392,45 @@
       ],
       "type": "object"
     },
+    "HandledResult": {
+      "description": "Result of `mods.press`, `mods.input` and `mods.select`.",
+      "properties": {
+        "handled": {
+          "description": "True when a handler ran (false for a handler id that is gone).",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "handled"
+      ],
+      "type": "object"
+    },
+    "HandlerParams": {
+      "description": "Params of `mods.press`, `mods.input` and `mods.select`.",
+      "properties": {
+        "handler": {
+          "description": "The handler id from a drawn tree.",
+          "type": "string"
+        },
+        "session_id": {
+          "description": "The session.",
+          "type": "string"
+        },
+        "value": {
+          "default": null,
+          "description": "The text (`input`) or the chosen value (`select`).",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "session_id",
+        "handler"
+      ],
+      "type": "object"
+    },
     "ItemOutput": {
       "anyOf": [
         {
@@ -1332,6 +1516,166 @@
       },
       "required": [
         "start"
+      ],
+      "type": "object"
+    },
+    "ListParams": {
+      "description": "Params of `mods.list`.",
+      "properties": {
+        "session_id": {
+          "default": null,
+          "description": "One session, or every session with a worker.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "ListResult": {
+      "description": "Result of `mods.list`.",
+      "properties": {
+        "sessions": {
+          "description": "The sessions.",
+          "items": {
+            "$ref": "#/$defs/SessionMods"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "sessions"
+      ],
+      "type": "object"
+    },
+    "LoadParams": {
+      "description": "Params of `mods.load`.",
+      "properties": {
+        "plugins": {
+          "description": "The plugins, in any order; dependencies load first.",
+          "items": {
+            "$ref": "#/$defs/PluginRef"
+          },
+          "type": "array"
+        },
+        "session_id": {
+          "description": "The session whose worker loads them. The worker starts with the first load.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "plugins"
+      ],
+      "type": "object"
+    },
+    "LoadResult": {
+      "description": "Result of `mods.load`.",
+      "properties": {
+        "loaded": {
+          "description": "What loaded, in load order.",
+          "items": {
+            "$ref": "#/$defs/LoadedMod"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "loaded"
+      ],
+      "type": "object"
+    },
+    "LoadedMod": {
+      "description": "A mod that is loaded.",
+      "properties": {
+        "hooks": {
+          "description": "How many hooks `register` added.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "modules": {
+          "description": "The module files evaluated.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "name": {
+          "description": "The plugin name.",
+          "type": "string"
+        },
+        "tier": {
+          "description": "The tier it runs in.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "tier",
+        "modules",
+        "hooks"
+      ],
+      "type": "object"
+    },
+    "ModsCapabilities": {
+      "description": "Result of `mods.capabilities`: whether mods can run here at all, and why not.",
+      "properties": {
+        "available": {
+          "description": "True when a sandboxed worker can start on this machine.",
+          "type": "boolean"
+        },
+        "platform": {
+          "description": "The platform.",
+          "type": "string"
+        },
+        "reason": {
+          "default": null,
+          "description": "Why it cannot, when `available` is false.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "available",
+        "platform"
+      ],
+      "type": "object"
+    },
+    "ModuleReport": {
+      "description": "What one module registers and calls.",
+      "properties": {
+        "calls": {
+          "description": "The `$` members it uses (`ui.open`, `fs.read`).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "dynamic": {
+          "description": "True when `$` escapes or is indexed by a variable, so `calls` may be incomplete.",
+          "type": "boolean"
+        },
+        "hooks": {
+          "description": "The events it registers hooks for.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "path": {
+          "description": "The plugin-relative path.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "hooks",
+        "calls",
+        "dynamic"
       ],
       "type": "object"
     },
@@ -1561,6 +1905,67 @@
           "type": "string"
         }
       ]
+    },
+    "PluginRef": {
+      "description": "One plugin to load.",
+      "properties": {
+        "dir": {
+          "description": "The plugin directory. `hx` reads it (through `cap_std`); the worker never can.",
+          "type": "string"
+        },
+        "tier": {
+          "default": null,
+          "description": "`prepend`, `user` (default) or `append`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "dir"
+      ],
+      "type": "object"
+    },
+    "ReachParams": {
+      "description": "Params of `mods.reach`.",
+      "properties": {
+        "session_id": {
+          "description": "The session whose worker is probed.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "type": "object"
+    },
+    "ReachResult": {
+      "description": "Result of `mods.reach`: what the sandboxed worker could actually do, tried for real.",
+      "properties": {
+        "files": {
+          "description": "File access attempts, each `allowed` or `denied: <why>`."
+        },
+        "network": {
+          "description": "Network attempts."
+        },
+        "pid": {
+          "description": "The worker's process id.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "processes": {
+          "description": "Process attempts."
+        }
+      },
+      "required": [
+        "pid",
+        "files",
+        "network",
+        "processes"
+      ],
+      "type": "object"
     },
     "ReadParams": {
       "description": "The parameters of `pack.read` apart from the root.",
@@ -1888,6 +2293,65 @@
       "required": [
         "total",
         "by_rule"
+      ],
+      "type": "object"
+    },
+    "RenderParams": {
+      "description": "Params of `mods.render`.",
+      "properties": {
+        "component": {
+          "description": "The site: `Pane`, `AbovePrompt`, ...",
+          "type": "string"
+        },
+        "id": {
+          "default": null,
+          "description": "The pane id, for a pane.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "props": {
+          "default": null,
+          "description": "The site's props."
+        },
+        "session_id": {
+          "description": "The session.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "component"
+      ],
+      "type": "object"
+    },
+    "RenderResult": {
+      "description": "Result of `mods.render`.",
+      "properties": {
+        "kind": {
+          "description": "`tree`, `default` (no mod drew it: keep the app's own drawing) or `skipped` (a mod drew\nsomething invalid, and the reason was logged).",
+          "type": "string"
+        },
+        "props": {
+          "default": null,
+          "description": "The props the last hook passed on. Present for `default` when a hook changed them."
+        },
+        "reason": {
+          "default": null,
+          "description": "Why, for `skipped`.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tree": {
+          "default": null,
+          "description": "The element tree, handlers as `{\"$handler\": id}`. Present for `tree`."
+        }
+      },
+      "required": [
+        "kind"
       ],
       "type": "object"
     },
@@ -2642,6 +3106,32 @@
       ],
       "type": "object"
     },
+    "SessionMods": {
+      "description": "One session's mods.",
+      "properties": {
+        "plugins": {
+          "description": "What is loaded in it.",
+          "items": {
+            "$ref": "#/$defs/LoadedMod"
+          },
+          "type": "array"
+        },
+        "running": {
+          "description": "Whether its worker is alive.",
+          "type": "boolean"
+        },
+        "session_id": {
+          "description": "The session.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "running",
+        "plugins"
+      ],
+      "type": "object"
+    },
     "Skipped": {
       "description": "Files that were looked at and left out, by reason.",
       "properties": {
@@ -3154,6 +3644,53 @@
       ],
       "type": "object"
     },
+    "UnavailableData2": {
+      "description": "Data of `hx.mods.unavailable`.",
+      "properties": {
+        "reason": {
+          "description": "Why mods cannot run.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason"
+      ],
+      "type": "object"
+    },
+    "UnloadParams": {
+      "description": "Params of `mods.unload`.",
+      "properties": {
+        "plugin": {
+          "default": null,
+          "description": "One plugin to unload; absent stops the whole session's worker.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "session_id": {
+          "description": "The session.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "type": "object"
+    },
+    "UnloadResult": {
+      "description": "Result of `mods.unload`.",
+      "properties": {
+        "unloaded": {
+          "description": "False when there was nothing to unload.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "unloaded"
+      ],
+      "type": "object"
+    },
     "ValidateParams": {
       "description": "Parameters of `txn.validate`.",
       "properties": {
@@ -3278,10 +3815,31 @@
         "reason"
       ],
       "type": "object"
+    },
+    "WorkerFailedData": {
+      "description": "Data of `hx.mods.worker_failed`.",
+      "properties": {
+        "stderr": {
+          "default": "",
+          "description": "The last of the worker's error output.",
+          "type": "string"
+        }
+      },
+      "type": "object"
     }
   },
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "errors": {
+    "hx.mods.unavailable": {
+      "data": {
+        "$ref": "#/$defs/UnavailableData2"
+      }
+    },
+    "hx.mods.worker_failed": {
+      "data": {
+        "$ref": "#/$defs/WorkerFailedData"
+      }
+    },
     "hx.sandbox.denied": {
       "data": {
         "$ref": "#/$defs/DeniedData"
@@ -3343,6 +3901,92 @@
       "params": null,
       "result": {
         "$ref": "#/$defs/DescribeResult"
+      }
+    },
+    "mods.analyze": {
+      "params": {
+        "$ref": "#/$defs/AnalyzeParams"
+      },
+      "result": {
+        "$ref": "#/$defs/AnalyzeResult"
+      }
+    },
+    "mods.capabilities": {
+      "params": null,
+      "result": {
+        "$ref": "#/$defs/ModsCapabilities"
+      }
+    },
+    "mods.dispatch": {
+      "params": {
+        "$ref": "#/$defs/DispatchParams"
+      },
+      "result": {
+        "$ref": "#/$defs/DispatchResult"
+      }
+    },
+    "mods.input": {
+      "params": {
+        "$ref": "#/$defs/HandlerParams"
+      },
+      "result": {
+        "$ref": "#/$defs/HandledResult"
+      }
+    },
+    "mods.list": {
+      "params": {
+        "$ref": "#/$defs/ListParams"
+      },
+      "result": {
+        "$ref": "#/$defs/ListResult"
+      }
+    },
+    "mods.load": {
+      "params": {
+        "$ref": "#/$defs/LoadParams"
+      },
+      "result": {
+        "$ref": "#/$defs/LoadResult"
+      }
+    },
+    "mods.press": {
+      "params": {
+        "$ref": "#/$defs/HandlerParams"
+      },
+      "result": {
+        "$ref": "#/$defs/HandledResult"
+      }
+    },
+    "mods.reach": {
+      "params": {
+        "$ref": "#/$defs/ReachParams"
+      },
+      "result": {
+        "$ref": "#/$defs/ReachResult"
+      }
+    },
+    "mods.render": {
+      "params": {
+        "$ref": "#/$defs/RenderParams"
+      },
+      "result": {
+        "$ref": "#/$defs/RenderResult"
+      }
+    },
+    "mods.select": {
+      "params": {
+        "$ref": "#/$defs/HandlerParams"
+      },
+      "result": {
+        "$ref": "#/$defs/HandledResult"
+      }
+    },
+    "mods.unload": {
+      "params": {
+        "$ref": "#/$defs/UnloadParams"
+      },
+      "result": {
+        "$ref": "#/$defs/UnloadResult"
       }
     },
     "pack.bundle": {
@@ -3478,6 +4122,14 @@
       "result": {
         "$ref": "#/$defs/ValidateResult"
       }
+    }
+  },
+  "peer_methods": {
+    "mods.call": {
+      "params": {
+        "$ref": "#/$defs/CallParams"
+      },
+      "result": true
     }
   },
   "protocol": "hx-v1",

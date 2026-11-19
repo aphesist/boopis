@@ -1,11 +1,13 @@
 //! The `hx` binary's library: the dispatcher wiring, the stdio server and the one-shot runner.
 //!
-//! - [`build_dispatcher`] registers every handler crate: txn, pack and sandbox.
+//! - [`build_dispatcher`] registers every handler crate: txn, pack, sandbox and mods.
 //! - [`serve`] speaks newline-delimited JSON-RPC 2.0 over any async reader and writer.
 //! - [`oneshot`] runs a single method for debugging and tests, through the same dispatcher.
 
 pub mod invalidate;
+pub mod mods;
 pub mod oneshot;
+pub mod outbound;
 pub mod schema;
 pub mod serve;
 
@@ -30,6 +32,17 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Never: registering the built-in handlers cannot conflict. See the test that proves it.
 #[must_use]
 pub fn build_dispatcher() -> Dispatcher {
+    build_dispatcher_with(outbound::Link::new())
+}
+
+/// As [`build_dispatcher`], with the [`outbound::Link`] the mod workers' `$` calls travel on.
+/// `serve_with_link` binds it to the stdio writer; a link that is never bound makes `mods.*`
+/// calls fail with `hx.mods.no_host`.
+///
+/// # Panics
+/// Never: registering the built-in handlers cannot conflict. See the test that proves it.
+#[must_use]
+pub fn build_dispatcher_with(link: Arc<outbound::Link>) -> Dispatcher {
     let mut dispatcher = Dispatcher::new(VERSION);
     let cache = Arc::new(WalkCache::default());
     // The built-in handlers claim disjoint namespaces, which `registers_every_builtin_handler`
@@ -51,6 +64,9 @@ pub fn build_dispatcher() -> Dispatcher {
         dispatcher
             .register(Arc::new(SandboxHandler::new()))
             .expect("sandbox methods are unique and in the sandbox namespace");
+        dispatcher
+            .register(Arc::new(mods::ModsHandler::new(link)))
+            .expect("mods methods are unique and in the mods namespace");
     }
     dispatcher
 }
@@ -82,6 +98,17 @@ mod tests {
             "sandbox.spawn",
             "sandbox.wait",
             "sandbox.kill",
+            "mods.capabilities",
+            "mods.load",
+            "mods.unload",
+            "mods.list",
+            "mods.dispatch",
+            "mods.render",
+            "mods.press",
+            "mods.input",
+            "mods.select",
+            "mods.reach",
+            "mods.analyze",
         ] {
             assert!(methods.contains(&m), "{m}");
         }

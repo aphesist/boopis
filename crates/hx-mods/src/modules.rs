@@ -13,7 +13,7 @@ use rquickjs::module::Declared;
 use rquickjs::{Ctx, Module};
 
 use crate::error::Error;
-use crate::files::PluginDir;
+use crate::files::Files;
 use crate::transform::{self, MODULE_EXTENSIONS};
 
 /// The module a mod gets for `import … from 'claude-code'`.
@@ -33,7 +33,7 @@ pub struct Shared {
     /// One entry per plugin, indexed by the number in a module name. A plugin's directory handle
     /// is dropped once it has loaded: every import is static, so nothing reads it afterwards,
     /// and a late `import()` has nothing to read from.
-    pub roots: Vec<Option<PluginDir>>,
+    pub roots: Vec<Option<Files>>,
     /// The first typed failure since it was last taken.
     pub last_error: Option<Error>,
 }

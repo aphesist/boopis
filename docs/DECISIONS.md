@@ -343,6 +343,12 @@ They're not sandboxed, matching Claude Code. This is the only exception to the n
 
 **Update 2026-11-19, spike M0.** The engine is QuickJS-NG through `rquickjs`, and the transform is `oxc`. Boa has no wall-clock interrupt or heap limit; V8's prebuilt library alone is about 40 MB against a 4.35 MiB delta here. Isolate start plus three mods took 2.7 ms (budget 50 ms), an event 7 to 48 microseconds (budget 1 ms). Evidence, deviations from the docs and the risks for M1 (a shared realm, an in-process isolate, synchronous host calls): `docs/MODS.md` section 8.
 
+**Update 2026-11-19, M1.** Three of the spike's open risks were decided and built (`docs/MODS.md` section 9):
+- **One QuickJS context per mod** in the session's runtime, the chain in a context of its own, JSON messages between them, intrinsics frozen. The heap limit is still the runtime's, shared; QuickJS cannot account per context.
+- **The runtime runs in an `hx mods-worker` process inside `hx-sandbox`**, reached through an inherited socket pair, with no unsandboxed fallback (Windows has none yet: mods are off there, with a reason). Alternatives rejected: in-process (a memory-safety bug in the engine would hold `hx`'s authority), and a runtime per mod (separate heaps but a process or runtime each; kept as the answer if the shared heap or a shared worker proves too weak).
+- **Host calls are asynchronous**, and `hx` sends requests to the plugin (`mods.call`): `hx serve` binds a `Link` to its writer. Alternative rejected: a long-poll method the plugin calls for pending `$` calls, which is more machinery and adds a round trip to every call.
+The decision of every `$` call is `policy.check` with the mod as principal; the bridge for Claude Code hooks also delivers mod events.
+
 ## ADR-0023 One self-contained app: Hermes ships inside it
 **Context.**
 - The first build asked the user to install Hermes with a terminal command before running the app.

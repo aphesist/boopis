@@ -25,6 +25,9 @@ pub enum Error {
     /// The plugin has no `modules` key in `hooks/hooks.json`, so it is not a mod.
     #[error("`{0}` is not a mod: hooks/hooks.json has no `modules`")]
     NotAMod(String),
+    /// A plugin with this name is already loaded in the runtime; unload it first.
+    #[error("`{0}` is already loaded")]
+    AlreadyLoaded(String),
     /// The dependency graph of the plugins to load has a cycle.
     #[error("the dependencies of `{0}` form a cycle")]
     DependencyCycle(String),

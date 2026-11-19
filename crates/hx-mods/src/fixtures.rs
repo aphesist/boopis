@@ -6,7 +6,7 @@ use std::rc::Rc;
 
 use serde_json::{Value, json};
 
-use crate::host::{HostCalls, HostError, HostRequest};
+use crate::host::{CallId, HostCalls, HostError, HostReply, HostRequest};
 
 /// A host that answers every call with a plausible value and remembers it.
 ///
@@ -54,17 +54,17 @@ impl MemoryHost {
 }
 
 impl HostCalls for MemoryHost {
-    fn call(&mut self, request: &HostRequest) -> Result<Value, HostError> {
+    fn call(&mut self, _id: CallId, request: &HostRequest) -> HostReply {
         self.calls.borrow_mut().push(request.clone());
         if self.refuse.borrow().contains(&request.call) {
-            return Err(HostError {
+            return HostReply::Ready(Err(HostError {
                 code: "hx.policy.denied".into(),
                 message: format!("{} is refused", request.call),
-            });
+            }));
         }
-        Ok(match request.call.as_str() {
+        HostReply::Ready(Ok(match request.call.as_str() {
             "ui.open" => json!({ "isPlaced": true }),
             _ => Value::Null,
-        })
+        }))
     }
 }

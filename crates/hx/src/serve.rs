@@ -17,6 +17,7 @@ use std::io;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 
+use crate::outbound::Link;
 use hx_proto::jsonrpc::parse_request;
 use hx_proto::method::CANCEL_REQUEST;
 use hx_proto::{AppError, Dispatcher, Id, Request, Response, codes};
@@ -94,6 +95,7 @@ async fn read_frame<R: AsyncBufRead + Unpin>(
 type InFlight = Arc<Mutex<HashMap<Id, CancellationToken>>>;
 
 struct Shared {
+    link: Option<Arc<Link>>,
     dispatcher: Arc<Dispatcher>,
     permits: Arc<Semaphore>,
     inflight: InFlight,
@@ -116,6 +118,14 @@ impl Shared {
 
     async fn handle_line(&self, bytes: Vec<u8>, tasks: &mut JoinSet<()>) {
         if bytes.iter().all(u8::is_ascii_whitespace) {
+            return;
+        }
+        // An answer to a request hx sent the plugin (`mods.call`) is not a request.
+        if self
+            .link
+            .as_ref()
+            .is_some_and(|l| l.handle_response(&bytes))
+        {
             return;
         }
         let parsed = match String::from_utf8(bytes) {
@@ -269,7 +279,30 @@ where
     R: AsyncRead + Unpin + Send + 'static,
     W: AsyncWrite + Unpin + Send + 'static,
 {
+    serve_with_link(reader, writer, dispatcher, opts, shutdown, None).await
+}
+
+/// As [`serve`], and binds `link` to the writer so handlers can send requests to the peer and
+/// read its answers on the same stream.
+///
+/// # Errors
+/// Reading the input or writing the output fails.
+pub async fn serve_with_link<R, W>(
+    reader: R,
+    writer: W,
+    dispatcher: Arc<Dispatcher>,
+    opts: ServeOptions,
+    shutdown: CancellationToken,
+    link: Option<Arc<Link>>,
+) -> io::Result<()>
+where
+    R: AsyncRead + Unpin + Send + 'static,
+    W: AsyncWrite + Unpin + Send + 'static,
+{
     let (out, rx) = mpsc::channel::<String>(256);
+    if let Some(link) = &link {
+        link.bind(out.clone());
+    }
     let writer_task = tokio::spawn(write_loop(writer, rx, shutdown.clone()));
 
     // Frames are read on their own task so that shutdown never interrupts a half-read frame.
@@ -294,6 +327,7 @@ where
     });
 
     let shared = Shared {
+        link: link.clone(),
         dispatcher,
         permits: Arc::new(Semaphore::new(opts.max_concurrency.max(1))),
         inflight: Arc::default(),
@@ -324,6 +358,11 @@ where
     }
     reader_task.abort();
 
+    // The peer is gone or going: nothing can answer a request of ours any more, so fail them now
+    // rather than let an accepted request wait on them.
+    if let Some(link) = &link {
+        link.unbind();
+    }
     // Graceful: every accepted request still gets its answer.
     while tasks.join_next().await.is_some() {}
     drop(shared);

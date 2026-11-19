@@ -19,17 +19,20 @@ import subprocess
 import threading
 import time
 from collections import deque
+from collections.abc import Callable, Mapping
 from concurrent.futures import Future
 from concurrent.futures import TimeoutError as FutureTimeout
 from pathlib import Path
 from typing import Any
 
-from ..errors import HxCallError, HxTimeoutError, HxUnavailableError
+from ..errors import HxCallError, HxTimeoutError, HxUnavailableError, HypotaxisError
 from ..util.log import get_logger
 from ..util.proc import StderrTail, kill_group, spawn_piped
 from .types import PROTOCOL
 
 JsonObject = dict[str, Any]
+PeerHandler = Callable[[JsonObject], Any]
+MAX_PEER_THREADS = 64
 RESTART_LIMIT = 3
 RESTART_WINDOW_S = 60.0
 CANCEL_GRACE_S = 5.0
@@ -53,6 +56,8 @@ class HxClient:
         self._pending: dict[int, Future[JsonObject]] = {}
         self._starts: deque[float] = deque()
         self._closed = False
+        self._peer: dict[str, PeerHandler] = {}  # methods hx itself may call (``mods.call``)
+        self._peer_slots = threading.BoundedSemaphore(MAX_PEER_THREADS)
         self.capabilities: frozenset[str] = frozenset()
         self.version: str = ""
 
@@ -138,6 +143,59 @@ class HxClient:
                 return True
             return not self._starts or self._recent_restarts() <= RESTART_LIMIT
 
+    # ------------------------------------------------------------------ requests from hx
+
+    def serve_peer(self, method: str, handler: PeerHandler) -> None:
+        """Answer ``method`` when hx sends it as a request (``handler(params)``, run on its own thread) or as a
+        notification (the return value is dropped). A handler that raises answers with an error: a
+        ``HypotaxisError`` keeps its stable code, anything else is ``hx.internal_error``. Thread-safe."""
+        self._peer[method] = handler
+
+    def _peer_frame(self, proc: subprocess.Popen[bytes], frame: JsonObject) -> None:
+        method = str(frame.get("method"))
+        handler = self._peer.get(method)
+        rid = frame.get("id")
+        if handler is None:
+            if rid is not None:
+                self._reply_error(proc, rid, "hx.method_not_found", f"the plugin serves no `{method}`")
+            return
+        if not self._peer_slots.acquire(blocking=False):
+            if rid is not None:
+                self._reply_error(proc, rid, "hx.overloaded", "too many requests from hx are being served")
+            return
+        threading.Thread(target=self._serve_one, args=(proc, handler, frame), daemon=True, name="hx-peer").start()
+
+    def _serve_one(self, proc: subprocess.Popen[bytes], handler: PeerHandler, frame: JsonObject) -> None:
+        rid = frame.get("id")
+        try:
+            try:
+                result = handler(frame.get("params") or {})
+            except HypotaxisError as exc:
+                if rid is not None:
+                    self._reply_error(proc, rid, exc.code, exc.message, exc.data)
+                return
+            except Exception as exc:  # noqa: BLE001 - a handler must never take the reader down
+                _log.error("peer handler for %s failed", frame.get("method"), exc_info=True)
+                if rid is not None:
+                    self._reply_error(proc, rid, "hx.internal_error", f"{type(exc).__name__}: {exc}")
+                return
+            if rid is not None:
+                self._send_quiet(proc, {"jsonrpc": "2.0", "id": rid, "result": result})
+        finally:
+            self._peer_slots.release()
+
+    def _reply_error(
+        self, proc: subprocess.Popen[bytes], rid: Any, code: str, message: str, data: Mapping[str, Any] | None = None
+    ) -> None:
+        error: JsonObject = {"code": -32000, "message": message, "data": {**(data or {}), "code": code}}
+        self._send_quiet(proc, {"jsonrpc": "2.0", "id": rid, "error": error})
+
+    def _send_quiet(self, proc: subprocess.Popen[bytes], frame: JsonObject) -> None:
+        try:
+            self._send(proc, frame)
+        except HxUnavailableError:
+            _log.warning("could not answer hx: it is gone")
+
     # ------------------------------------------------------------------ frames
 
     def _reader(self, proc: subprocess.Popen[bytes]) -> None:
@@ -150,6 +208,9 @@ class HxClient:
                     frame: JsonObject = json.loads(line)
                 except ValueError:
                     _log.error("hx sent a line that is not JSON")
+                    continue
+                if "method" in frame:
+                    self._peer_frame(proc, frame)
                     continue
                 fid = frame.get("id")
                 with self._lock:

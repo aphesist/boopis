@@ -19,8 +19,8 @@ use std::time::Duration;
 
 use anyhow::{Context, Result};
 use clap::{Args, Parser, Subcommand};
-use hx::serve::{ServeOptions, serve};
-use hx::{build_dispatcher, oneshot};
+use hx::serve::{ServeOptions, serve_with_link};
+use hx::{build_dispatcher, build_dispatcher_with, oneshot};
 use hx_pack::LogRedactor;
 use hx_proto::log::{LogConfig, LogSink};
 use hx_proto::method;
@@ -70,6 +70,10 @@ enum Command {
         #[command(subcommand)]
         action: SandboxAction,
     },
+    /// The mod runtime's worker. Started by `hx serve` inside the sandbox, never by hand: it
+    /// serves one private channel it inherits from its parent.
+    #[command(hide = true)]
+    ModsWorker,
 }
 
 #[derive(Subcommand)]
@@ -148,12 +152,14 @@ async fn run_serve(max_concurrency: Option<usize>) -> Result<()> {
         max_concurrency = opts.max_concurrency,
         "hx serving on stdio"
     );
-    serve(
+    let link = hx::outbound::Link::new();
+    serve_with_link(
         tokio::io::stdin(),
         tokio::io::stdout(),
-        Arc::new(build_dispatcher()),
+        Arc::new(build_dispatcher_with(Arc::clone(&link))),
         opts,
         shutdown,
+        Some(link),
     )
     .await
     .context("serving stdio")?;
@@ -241,6 +247,10 @@ async fn run(cli: Cli) -> Result<ExitCode> {
                 PackAction::Bundle(i) => (method::PACK_BUNDLE, i),
             };
             run_oneshot(name, Some(&input.json)).await
+        }
+        Command::ModsWorker => {
+            // The worker serves a channel, not the log: no logging, and no stdout frames.
+            hx::mods::run_worker().map(|()| ExitCode::SUCCESS)
         }
         Command::Sandbox { action } => {
             init_logging(&cli, "warn")?;

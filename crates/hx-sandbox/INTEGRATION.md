@@ -71,3 +71,7 @@ Call `policy.resolve()?.ensure_rw_within(&[scratch_root, workspace])` first when
 - **Real allowlist**: the host-side CONNECT proxy in the README's design note.
 - **`rw` inside `ro` only**: a read-only subtree inside a writable tree (for example `.git` inside a writable checkout) cannot be expressed; grant the writable subdirectories instead.
 - **Windows elevation**: `loopback` needs an elevated `hx`; the kernel channel does not.
+
+## Used by the mod worker
+
+`hx` itself spawns `hx mods-worker` (`crates/hx/src/mods.rs`) through the library, not through `sandbox.spawn`: it makes the socket pair, passes the child end with `SpawnOptions::with_inherit`, and keeps the host end. The policy is the smallest this crate can express: read-only on the binary, the dynamic loader and the system libraries it links (not `system_read_paths()`: that list includes `/bin` and `/etc/passwd`), a private empty working directory, network off, `max_processes: 1` (its channel reader thread), a 2 GiB address-space limit and the ceiling lifetime. Once running, the worker calls `hx_sandbox::forbid_exec()` (Linux: a Landlock ruleset that handles `EXECUTE` and grants it nowhere), and reads its descriptor with `hx_sandbox::inherited_stream(env)`. In the root container this was developed in, the process limit alone did not stop a spawn of the worker's own binary (`mods.reach` showed it `allowed` until the exec ban), so the exec ban, not the limit, is what makes "no processes" true there.

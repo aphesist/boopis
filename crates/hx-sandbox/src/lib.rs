@@ -23,6 +23,8 @@
 mod capabilities;
 mod capture;
 mod channel;
+#[cfg(unix)]
+mod child;
 mod defaults;
 mod error;
 mod handler;
@@ -52,6 +54,8 @@ pub mod wire;
 
 pub use capabilities::{Capabilities, Capability};
 pub use capture::StreamStats;
+#[cfg(unix)]
+pub use child::inherited_stream;
 pub use error::{
     CODE_DENIED, CODE_INVALID_POLICY, CODE_SPAWN_FAILED, CODE_UNAVAILABLE, Dimension, Error, Result,
 };
@@ -73,4 +77,21 @@ pub use wire::add_schema;
 #[must_use]
 pub fn capabilities() -> Capabilities {
     platform::capabilities()
+}
+
+/// Forbids this process and its descendants from executing any file, for good. Linux only (a
+/// Landlock ruleset that handles `EXECUTE` and grants it nowhere); elsewhere the answer is
+/// `Unsupported`, and the caller says so rather than claim it.
+///
+/// # Errors
+/// The kernel refused, or the platform has no such mechanism here.
+pub fn forbid_exec() -> std::io::Result<()> {
+    #[cfg(target_os = "linux")]
+    {
+        platform::linux::forbid_exec()
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        Err(std::io::Error::from(std::io::ErrorKind::Unsupported))
+    }
 }

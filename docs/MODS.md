@@ -1,6 +1,6 @@
 # Mods
 
-Status: plan, 2026-11-19. Evidence: `docs/research/mods.md` (Claude Code's mod docs). Decision: ADR-0022.
+Status: plan, 2026-11-19; **M0 (spike) and M1 (backend) done** (sections 8 and 9). Evidence: `docs/research/mods.md` (Claude Code's mod docs). Decision: ADR-0022.
 
 **Rule: a Claude Code mod installs and runs unchanged, and everything it draws is drawn by our design system, so it looks native.** A mod's behaviour runs wherever the session runs: the desktop app, plain Hermes on the command line, or a cloud session. It draws only where there's a screen, which is Claude Code's own model.
 
@@ -10,8 +10,8 @@ A Claude Code mod is a plugin whose `hooks/hooks.json` names a JavaScript or Typ
 - **Install:** a mod is a plugin, so it installs through COMPAT §9: pinned to a commit, hash-locked, with an install prompt. A `modules` key in `hooks/hooks.json` marks it as a mod. Before consent, the install prompt lists the mod's hooks and the `$` namespaces it calls, found by static analysis as `claude plugin validate` does.
 - **Runtime: `hx-mods`**, a library in the `hx` binary.
   - It embeds a JavaScript engine and a TypeScript/JSX transform, so `.ts` and `.tsx` modules load with no build step.
-  - All of a session's mods share one isolate, as in Claude Code's single hooks worker.
-  - The isolate runs inside `hx-sandbox`, with no file or network access. The only way out is `$`.
+  - A session's mods share one worker and one QuickJS runtime, as in Claude Code's single hooks worker, but **each mod has its own context**: no object is shared between mods, and the chain runs in a context of its own that no mod code reaches (section 9).
+  - The worker is an `hx mods-worker` process inside `hx-sandbox`, with no file, network or process access. The only way out is `$`, as a request to the plugin.
   - The engine is QuickJS-NG through `rquickjs`, with `oxc` for the transform, as spike M0 proved (section 8).
 - **Each `$` call** is a request from `hx` to the plugin (`mods.call`). The plugin decides it with `hypotaxis.policy.check`, then performs it through Hermes, the host or the store. There is one table of calls and one implementation each.
 - **Events:** the plugin maps Hermes's hooks and the gateway's events onto mod events, through the same bridge as Claude Code's hooks (COMPAT §4). There is one bridge for both.
@@ -83,8 +83,8 @@ A Claude Code mod is a plugin whose `hooks/hooks.json` names a JavaScript or Typ
 | Phase | Work |
 |---|---|
 | M0 spike | **Done, 2026-11-19** (section 8). The runtime choice. Run three mods we write (a pane with state and a clock, a command, a band) through `hx-mods`. Measure isolate start (budget 50 ms), per-event overhead (budget 1 ms) and memory |
-| M1 | Runtime and chain. The core of `$`: `plugin`, `ui` (`open`, `close`, `invalidate`, `toast`, `status`, `log`, `notify`, `ask`), `state`, `store`, `clock`, `command`, `config`, `env`, `theme`. The renderer for `Box`, `Text`, `Button`, `Input`, `Select`, `Markdown`, `Code`, `Link` and `Svg`. Surfaces: pane, band, toast, status, log and ask. Theme mapping, the `statusLine` setting, and the install flow |
-| M2 | `tool.check`, `tool.call` and `tool.register` through the bridge. `prompt.*`, `turn.*` and `session.*`. `fs`, `http`, `process`, `mcp` and `model` through the policy. Redraw sites, placed rows, backdrop and `Client` |
+| M1 | **Done, 2026-11-19 (section 9).** Runtime and chain. The core of `$`: `plugin`, `ui` (`open`, `close`, `invalidate`, `toast`, `status`, `log`, `notify`, `ask`), `state`, `store`, `clock`, `command`, `config`, `env`, `theme`. The renderer for `Box`, `Text`, `Button`, `Input`, `Select`, `Markdown`, `Code`, `Link` and `Svg`. Surfaces: pane, band, toast, status, log and ask. Theme mapping, the `statusLine` setting, and the install flow |
+| M2 | (`tool.check`, `tool.call` and the events were pulled forward into M1; `tool.register` is not done.) `tool.register`. `prompt.*`, `turn.*` and `session.*`. `fs`, `http`, `process`, `mcp` and `model` through the policy. Redraw sites, placed rows, backdrop and `Client` |
 | M3 | Conformance. Public mods from marketplaces as pinned fixtures, a runner compatible with `claude plugin test`, and the feature table per Claude Code version |
 
 ## 6. Design work for the owner
@@ -157,3 +157,48 @@ The soak test shows the heap flat over 2,000 rounds of events, renders, presses 
 7. **Panics are contained but still print.** A transformer or host panic becomes an error, but the default hook writes its message to stderr. That is correct for logs (stdout carries frames only), but the worker should install a hook that goes through `tracing`.
 8. **The `claude-code` module and `console`** (above): the unread type declarations decide whether real mods load at all.
 
+
+## 9. M1 result (2026-11-19): the backend, end to end
+
+The four decisions from the spike's risks (section 8) are implemented. What exists: `hx mods.*`, the sandboxed worker, the `$` table with its policy, the events bridge, the install prompt with static analysis, and the `mod.*` events. The UI renderer is the next step; the events are documented (`docs/PROTOCOL.md` section 3) and fixed by `apps/shared/data/mods.schema.json`.
+
+**Architecture as built**
+```
+Hermes -> plugin (compat bridge: mod_events.py) --mods.* over hx stdio--> hx --socketpair--> hx mods-worker (hx-sandbox)
+                  ^                                                      |                       |
+                  +------- mods.call (hx asks, plugin decides) <--------+<---- $ call (frame) ---+
+```
+- **One context per mod** (risk 1). `chain.js` holds the chain; each mod's `agent.js` holds its `$`, hooks, handlers, atoms and timers. They exchange JSON strings that Rust routes (`natives::Msg`). The plugin name on a host call is set by the Rust native of that mod's context. The intrinsics are frozen before any mod code runs, with SES's "override mistake" repaired for the few properties that need it, so `this.name = ...` still works. `tests/reach.rs::one_mod_cannot_rewrite_another_mods_host_calls` is no longer ignored and passes, and shows both layers: patching `JSON.stringify` is refused, and replacing the global `JSON` changes only the evil mod's own world.
+- **A worker process** (risk 2). `hx mods.load` reads each plugin through `cap_std` into a `Bundle` and starts `hx mods-worker` with `sandbox.spawn`'s machinery: Landlock (it may read only its binary and the system libraries it links, not `/bin` or `/etc/passwd`), seccomp (network off), `RLIMIT_NPROC`, and `Landlock EXECUTE` handled and granted nowhere once it runs (`hx_sandbox::forbid_exec`). Its only descriptor besides stdio is the socket pair's child end. Where the sandbox cannot be built, `mods.*` answers `hx.mods.unavailable` with the reason (Windows: no channel yet). There is no unsandboxed path. `mods.reach` runs a real probe inside the worker; on this machine every file, network and process attempt is `denied`.
+- **Asynchronous host calls** (risk 3). A `$` call is a promise. `HostCalls::call` answers `Ready` or `Pending`; the driver waits for the host only when every hook is idle, extends the running hook's budget by the time waited, and rejects a call the host never answers after `host_timeout` (10 min). "Idle with nothing pending" is still a stalled hook, and is blamed as before. Answers that arrive after the event that made the call is over (`clock.every`) are delivered by the worker's own loop.
+- **hx sends requests.** `hx serve` could only answer; a mod calls `$` whenever it likes (a clock tick, a handler). `serve_with_link` now routes responses to requests `hx` sent (`hx::outbound::Link`), and the plugin's hx client serves `mods.call`, `mods.diagnostic` and `mods.exited`. A `mods.call` is queued before the reply to the operation that made it.
+- **Rendering is asynchronous.** The plugin answers `ui.open` and `ui.invalidate` by marking a site dirty; one thread per session draws dirty sites (10/s per site, coalesced). Calling `mods.render` inside the answer would wait for the worker that is waiting for the answer.
+- **The clock** belongs to the worker (`clock.every` is decided by the plugin, then kept by the runtime; ticks run in the worker's loop). `console.log/info/warn/error` write `$.ui.log`; `console.debug` writes it with `{ to: 'debug' }`.
+
+**The `$` table.** `ui` (`open`, `close`, `invalidate`, `toast`, `status`, `log`, `notify`, `ask`), `state` (in the mod), `store`, `clock`, `command`, `config`, `env`, `theme` (recorded and announced, not applied), `fs.read`, `fs.write`, `http.fetch`, `session.messages`. Refused by name with `hx.mods.unsupported` ("not yet in boopis"), never silently: `process`, `mcp`, `model`, `agent`, and the namespaces not built (`tool`, `prompt`, `turn`, `settings`, `audio`, `telemetry`). Each call is classified in `policy/defaults.json` (`mod_capabilities`):
+
+| Call | Capability | Default | Notes |
+|---|---|---|---|
+| `ui.*`, `store.*`, `clock.*`, `command.register`, `config.get`, `env.get`, `theme.*`, `session.messages` | `mod.ui`, `mod.store`, `mod.clock`, `mod.command`, `mod.read`, `mod.theme`, `session.read` | allow | `env` is an allowlist, `config` is five keys, messages are redacted |
+| `fs.read`, `fs.write` | `fs.read`, `fs.write` | ask | the path is resolved (symlinks) before the decision; protected paths are refused; **in governed mode a write inside the workspace is refused** (only `ship` writes it, AGENTS invariant 2); writes are atomic; 4 MiB |
+| `http.fetch` | `net.egress` | ask | per host, and again for each of at most 5 redirects; 30 s; 4 MiB; never a loopback, private or link-local address |
+
+The decision is `policy.check` with `ToolCall.principal = "mod:<plugin>"`, so deny rules run first with the same syntax (`mod:evil/*`, `mod:demo/http.fetch(url:https://x/*)`) and grants are per mod (an allow rule names the mod). An `ask` is a `permission` form with origin `{kind: mod, plugin}`, once or for the session; closing it or letting it expire denies. The ledger gets `tool.called` with the tool `mod:<plugin>/<call>`, actor `mod:<plugin>`, the arguments hashed and never stored, for every call but the redraw requests. A mod is limited to 200 calls a second (`hx.overloaded`).
+
+**Events.** The one compat bridge delivers `session.start` (the mods load here), `session.end`, `prompt.submit` (`{ drop }` blocks the turn), `turn.start`, `turn.complete`, `tool.check`, `tool.call` (at the start, and again with the result) and `command.run` (slash commands `plugin:name`, through `ctx.register_command`), and `turn.step`. In governed mode a mod observes tool calls and can only tighten (`deny`, `ask`); it cannot rewrite one, and an `allow` answer is ignored. Outside governed mode a rewrite is judged again by `policy.check`. A `turn.step` that answers `{ model }` is refused in both modes, written to the ledger as `mod:<plugin>/turn.step.model` (blocked), and shown in the mod's log line.
+
+**Install.** `mod.install.prepare` returns the prompt: the hooks and `$` namespaces found by `hx mods.analyze` (static analysis of the transformed module, with a `dynamic` flag when `$` escapes), the content hash and the commit when the source is a clean git checkout. `mod.install.confirm` copies only if the hash is the one shown, writes `lock.json`, and approves the content for the project in the trust store, so a changed mod asks again. **Not done:** the Hermes plugin generated from the source and `hermes plugins enable` (COMPAT section 9, steps 5 and 6): until then a mod runs when its slug is in Hermes's `plugins.enabled`.
+
+**Tests.** `hx-mods`: the M0 tests (updated for the new ids and `$` keys), the forgery test un-ignored, `tests/hostcalls.rs` (pending calls and budgets, host timeouts, console, bundles, unload, timers, per-mod state), static analysis. `hx`: `tests/mods.rs` runs `hx serve` with a fake plugin and the three example mods through the sandboxed worker, and the reach probe. Plugin: `test_mods_calls.py` (policy per capability, asks, ledger, contract), `test_mods_hx.py` (the service and the bridge against the real hx, governed and ungoverned, install and analysis), and `tests/e2e/test_mods_e2e.py` against an unmodified Hermes gateway and the real worker (skips without `HX_E2E_*`).
+
+**Risks left for M2 and M3**
+1. **Per-mod heap budgets do not exist.** QuickJS accounts memory per runtime, so the 64 MiB limit is shared by every context in the worker: a mod that fills it makes the others' allocations throw. (A runtime per mod would fix it at about 0.3 MiB each; the worker's `RLIMIT_AS` is 2 GiB.)
+2. **One operation at a time.** A worker runs one event and queues the next. A mod that awaits `$.ui.ask` holds every other mod's events and redraws for as long as the form is open (up to 10 minutes, `ask_timeout_s`). Concurrent runs need per-run frame stacks in `chain.js`.
+3. **A memory-safety bug in QuickJS** would give a mod the worker's authority: it can talk to `hx` and impersonate any mod loaded *in the same session* (hx checks the name against the session's list) but nothing else; the sandbox holds. Per-mod grants therefore assume the engine is sound. Separate workers per mod would close it.
+4. **The worker's lifetime is one hour** (`hx-sandbox`'s ceiling on `timeout_ms`). The plugin is told (`mods.exited`) but does not restart workers yet.
+5. **`http.fetch` resolves a name twice** (the address check, then the connection): a DNS rebinding window. Pinning the connection to the checked address needs a lower-level client.
+6. **`session.messages`** reads the last history the compat bridge saw (up to 4,096, redacted); Hermes gives a plugin no transcript call, so before the first turn it is empty.
+7. **`theme.set` is only recorded** (`mod.theme`); `outputStyles`, `statusLine`, redraw sites for Claude Code's own components, placed rows, the backdrop, `Client` and `tool.register` are M2. The `statusLine` setting is not built.
+8. **Conformance (M3)** still has not run a real mod: `console` exists now, the `claude-code` exports are still our guess (section 7), and `$.ui.resolve`, `$.ui.place` and the other `$.ui` members are absent.
+9. **Windows** has no worker until `hx-sandbox` has a channel there; the setting is `hx.mods.unavailable` with a reason, not a silent fallback. `oxc` still moves fast (section 8, risk 5).
+10. **Shared target directories collide between worktrees** (Cargo hashes workspace-relative paths): building two worktrees into one `CARGO_TARGET_DIR` can leave one's `hx` binary in the other's tests. Tests that need the binary should copy it first.

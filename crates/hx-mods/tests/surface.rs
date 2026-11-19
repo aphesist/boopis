@@ -9,7 +9,7 @@ mod common;
 
 use common::{handler, runtime, simple_plugin, text_of, tree, write_plugin};
 use hx_mods::fixtures::MemoryHost;
-use hx_mods::{HostCalls, HostError, HostRequest, ModRuntime, Render, RuntimeConfig, Tier};
+use hx_mods::{HostCalls, HostRequest, ModRuntime, Render, RuntimeConfig, Tier};
 use serde_json::{Value, json};
 use tempfile::tempdir;
 
@@ -86,7 +86,30 @@ fn dollar_is_frozen_and_a_mod_cannot_name_another_plugin_in_a_call() {
     assert_eq!(out["frozen"], true);
     assert_eq!(
         out["keys"],
-        json!(["clock", "command", "plugin", "state", "ui"])
+        json!([
+            "agent",
+            "audio",
+            "clock",
+            "command",
+            "config",
+            "env",
+            "fs",
+            "http",
+            "mcp",
+            "model",
+            "plugin",
+            "process",
+            "prompt",
+            "session",
+            "settings",
+            "state",
+            "store",
+            "telemetry",
+            "theme",
+            "tool",
+            "turn",
+            "ui"
+        ])
     );
     assert_eq!(
         (out["threw"].as_bool(), out["threwAdd"].as_bool()),
@@ -98,7 +121,7 @@ fn dollar_is_frozen_and_a_mod_cannot_name_another_plugin_in_a_call() {
 /// A host that panics on every call: the panic must come back as an error, not abort the process.
 struct Panicky;
 impl HostCalls for Panicky {
-    fn call(&mut self, _: &HostRequest) -> Result<Value, HostError> {
+    fn call(&mut self, _: hx_mods::CallId, _: &HostRequest) -> hx_mods::HostReply {
         panic!("the host is broken");
     }
 }
@@ -341,7 +364,7 @@ fn box_text_button_markdown_input_and_select_serialize_with_handlers_as_ids() {
         kids[1]["props"]["onPress"]["$handler"]
             .as_str()
             .unwrap()
-            .starts_with('h')
+            .contains(".h")
     );
     assert_eq!(kids[2]["props"], json!({ "text": "**hi**" }));
     assert!(

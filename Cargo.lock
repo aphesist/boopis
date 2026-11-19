@@ -2082,15 +2082,18 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
+ "hx-mods",
  "hx-pack",
  "hx-proto",
  "hx-sandbox",
  "hx-txn",
+ "serde",
  "serde_json",
  "tempfile",
  "tokio",
  "tokio-util",
  "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -2101,9 +2104,11 @@ dependencies = [
  "getrandom 0.3.4",
  "hex",
  "hx-mods",
+ "hx-proto",
  "hx-txn",
  "oxc",
  "rquickjs",
+ "schemars 1.2.3",
  "serde",
  "serde_json",
  "sha2 0.10.9",

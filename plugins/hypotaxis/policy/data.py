@@ -31,6 +31,8 @@ class Defaults:
     command_wrappers: frozenset[str]
     safe_env: frozenset[str]
     read_only_commands: Mapping[str, Mapping[str, Any]]
+    mod_calls: Mapping[str, Mapping[str, Any]]  # the `$` calls of mods: capability, default, subject
+    mod_refused: frozenset[str]  # `$` namespaces boopis does not provide yet
 
 
 def _tuples(raw: Mapping[str, Any]) -> dict[str, tuple[str, ...]]:
@@ -65,4 +67,6 @@ def load_defaults() -> Defaults:
         command_wrappers=frozenset(raw["command_wrappers"]),
         safe_env=frozenset(raw["safe_env_assignments"]),
         read_only_commands=cast(Mapping[str, Mapping[str, Any]], raw["read_only_commands"]),
+        mod_calls=cast(Mapping[str, Mapping[str, Any]], raw["mod_capabilities"]["calls"]),
+        mod_refused=frozenset(raw["mod_capabilities"]["refused_namespaces"]),
     )

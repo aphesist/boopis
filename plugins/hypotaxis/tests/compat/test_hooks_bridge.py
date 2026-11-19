@@ -725,13 +725,15 @@ def test_register_wires_every_callback_and_the_lazy_wrappers_reach_the_bridge(
     setup(write, env, {"PreToolUse": [{"command": "echo wired >&2; exit 2"}]})
     register(ctx)
     assert set(ctx.hooks) == set(HOOKS)
-    assert [len(ctx.hooks[h]) for h in ("pre_tool_call", "transform_tool_result")] == [2, 1]
+    # Claude hooks and the mod bridge share these Hermes hooks (pre_tool_call also has the updatedInput callback)
+    assert [len(ctx.hooks[h]) for h in ("pre_tool_call", "transform_tool_result")] == [3, 2]
     assert set(ctx.rpc) == {"compat.inventory", "trust.set"}
     runtime.install(make_bridge(ctx, env))
     try:
-        first, second = ctx.hooks["pre_tool_call"]
+        first, second, mods_callback = ctx.hooks["pre_tool_call"]
         assert first(tool_name="terminal", args={"command": "ls"}, **PRE) == {"action": "block", "message": "wired"}
         assert second(tool_name="terminal", args={"command": "ls"}, **PRE) is None
+        assert mods_callback(tool_name="terminal", args={"command": "ls"}, **PRE) is None  # no mods in this session
     finally:
         runtime.install(None)
 
