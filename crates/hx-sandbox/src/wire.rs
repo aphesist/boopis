@@ -82,7 +82,10 @@ pub struct SandboxRunParams {
     /// Read-only roots of the program's own runtime (the interpreter's prefix and virtual environment),
     /// for an interpreter outside the system directories. Vetted unlike `ro`: each must be an existing
     /// directory whose canonical path is not `/`, `$HOME` or a parent of it, the working directory, or
-    /// anything inside or above the working directory. Default: none.
+    /// anything inside or above the working directory; must not be, lie inside or contain a credential
+    /// location (`~/.ssh`, `~/.gnupg`, cloud and registry credentials, Hermes's `.env` and `hypotaxis/`);
+    /// and must look like a runtime: a `bin/` holding an executable python, node, ruby, java, go, cargo
+    /// or similar (or be that `bin`). Default: none.
     #[serde(default)]
     pub runtime_ro: Vec<PathBuf>,
     /// Also grant `ro` the platform's own system read paths ([`SandboxPolicy::system_read_paths`]:
@@ -181,14 +184,16 @@ pub const DEFAULT_CHANNEL_ACCEPT_MS: u64 = 60_000;
 ///
 /// `hx` creates a connected socket pair, gives the child one end under a descriptor number it
 /// learns from the environment variable `env`, binds a Unix socket in a private directory
-/// (mode 0700, the socket 0600), and bridges the first connection to it onto the other end.
+/// (mode 0700, the socket 0600), and bridges the first acceptable connection to it onto the other
+/// end: the same user, and not the sandboxed program or anything it started.
 /// The child needs no network and no path access to use it, so it works with `net: false`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct ChannelRequest {
     /// Name of the environment variable that receives the descriptor number in the child.
     #[serde(default = "default_channel_env")]
     pub env: String,
-    /// A directory for the socket. Created with mode 0700 if missing; default: a fresh one
+    /// A directory for the socket. Created with mode 0700 if missing; one that exists must be a
+    /// real directory (not a symlink) owned by the current user with mode 0700. Default: a fresh one
     /// under the system temporary directory.
     #[serde(default)]
     pub dir: Option<PathBuf>,
