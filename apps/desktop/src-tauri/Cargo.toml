@@ -57,6 +57,11 @@ dirs = "6"
 # builds the BSD-licensed C library.
 tar = { version = "0.4", default-features = false }
 zstd = { version = "0.13", default-features = false }
+# The ChatGPT sign-in (ADR-0030): HTTPS to OpenAI's sign-in service, blocking (run on `spawn_blocking`). rustls with ring and
+# the operating system's trust store (no bundled root list), so a company's own certificate authority works. MIT or
+# Apache-2.0; ring is Apache-2.0 and ISC.
+ureq = { version = "3.4", default-features = false, features = ["rustls-no-provider", "platform-verifier"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 
 # The Linux webview (ADR-0025): GDK's monitor refresh rate and the web view's settings object, through safe wrappers, and
 # `dlsym` for the one preference the `webkit2gtk` crate has no binding for. Versions match what Tauri's wry already uses.

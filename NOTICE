@@ -9,6 +9,9 @@ boopis includes or distributes the following third-party work, each under its ow
 - Hermes Agent, unmodified, inside the bundled runtime archive: MIT License, Copyright (c) 2025 Nous Research.
   The runtime also holds a Python interpreter (python-build-standalone), uv and Hermes's locked Python dependencies,
   each with its own licence files inside the archive.
+- claude-subscription-directsdk (Nous Research's official Claude subscription plugin), unmodified, inside the bundled
+  runtime archive at the commit Hermes's plugin catalog pins (plugins/claude-subscription-directsdk-experimental/, with
+  its LICENSE): MIT License, Copyright (c) 2026 Nous Research.
 - orb-avatar (orb2), vendored in the interface: MIT License.
 - boopis-logo (the logo element, vendored in the interface): Apache License 2.0, like the rest of boopis; its letters are
   Libre Franklin outlines drawn as paths, under the SIL Open Font License 1.1 (apps/desktop/ui/vendor/boopis-logo.NOTICE).

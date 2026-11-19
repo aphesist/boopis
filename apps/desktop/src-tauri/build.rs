@@ -39,6 +39,10 @@ const COMMANDS: &[&str] = &[
     "connector_signin",
     "connector_signin_cancel",
     "connector_login",
+    "chatgpt_status",
+    "chatgpt_signin_start",
+    "chatgpt_signin_cancel",
+    "chatgpt_sign_out",
 ];
 
 fn main() {

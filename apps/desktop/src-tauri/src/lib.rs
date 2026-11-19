@@ -4,6 +4,7 @@
 //! and notifications. The UI owns the experience and the backend (Hermes plus the plugin) owns the work.
 
 pub mod brand;
+pub mod chatgpt;
 pub mod claude;
 pub mod cli;
 pub mod commands;
@@ -77,10 +78,15 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::connector_signin_cancel,
             commands::connector_login,
             commands::app_restart,
+            commands::chatgpt_status,
+            commands::chatgpt_signin_start,
+            commands::chatgpt_signin_cancel,
+            commands::chatgpt_sign_out,
         ])
         .events(collect_events![
             ConnectionStateEvent,
             setup::SetupProgress,
+            chatgpt::ChatgptSigninEvent,
             commands::ConnectorRestartEvent
         ])
 }
@@ -334,7 +340,28 @@ pub fn run() {
                     Arc::new(|_, _| {})
                 }
             };
+            // boopis's own ChatGPT sign-in (ADR-0030): its outcome reaches every window, and its refresher keeps the access
+            // token fresh in the keychain for as long as the app runs.
+            let signin_events = app.handle().clone();
+            let chatgpt = Arc::new(
+                chatgpt::ChatGpt::new(
+                    secrets.clone(),
+                    Arc::new(chatgpt::oauth::Https::new(limits.chatgpt_http_timeout)),
+                    chatgpt::Timing {
+                        signin: limits.chatgpt_signin_timeout,
+                        refresh_ahead: limits.chatgpt_refresh_ahead,
+                        refresh_every: limits.chatgpt_refresh_every,
+                    },
+                )
+                .with_sink(Arc::new(move |e| {
+                    if let Err(err) = e.emit(&signin_events) {
+                        tracing::debug!(error = %err, "could not emit the ChatGPT sign-in outcome");
+                    }
+                })),
+            );
+            tauri::async_runtime::spawn(chatgpt.clone().run_refresher());
             app.manage(AppState {
+                chatgpt,
                 hubs: state::Hubs::new(supervisor.clone(), limits.clone(), emitter).with_observer(observer),
                 supervisor: supervisor.clone(),
                 secrets: secrets.clone(),

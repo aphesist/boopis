@@ -50,6 +50,14 @@ pub struct Limits {
     pub login_output_cap: usize,
     /// The last lines of its output shown to the user.
     pub login_output_lines: usize,
+    /// The longest one request to OpenAI's sign-in service may take (the ChatGPT sign-in, ADR-0030).
+    pub chatgpt_http_timeout: std::time::Duration,
+    /// How long the ChatGPT sign-in waits for the user to type the code (OpenAI's code lives 15 minutes).
+    pub chatgpt_signin_timeout: std::time::Duration,
+    /// Renew the ChatGPT access token when it has less than this left (or half its life, if that is shorter).
+    pub chatgpt_refresh_ahead: std::time::Duration,
+    /// How often the host looks whether the ChatGPT access token is due.
+    pub chatgpt_refresh_every: std::time::Duration,
 }
 
 impl Default for Limits {
@@ -77,6 +85,10 @@ impl Default for Limits {
             login_timeout: Duration::from_mins(5),
             login_output_cap: 64 * 1024,
             login_output_lines: 30,
+            chatgpt_http_timeout: Duration::from_secs(20),
+            chatgpt_signin_timeout: Duration::from_mins(15),
+            chatgpt_refresh_ahead: Duration::from_mins(30),
+            chatgpt_refresh_every: Duration::from_mins(5),
         }
     }
 }

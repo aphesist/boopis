@@ -62,8 +62,8 @@ config_schema:
     description: "Where rates come from: {refresh_enabled: bool (default true; lets prices.refresh fetch models.dev), overrides: {'provider/model': {input, output, cache_read, cache_write_5m, cache_write_1h, reasoning}} in USD per million tokens, aliases: {hermes_provider: models.dev provider id}}. The catalogue is <profile home>/boopis/prices/models-dev.json."
   subscription_providers:
     type: list
-    default: [claude-subscription-directsdk-experimental]
-    description: "Providers billed to a plan. Their usage costs zero against the cap and is recorded with subscription: true. The Claude Code login (Hermes's claude-subscription-directsdk plugin) is always one, whatever this list says; add others here."
+    default: [claude-subscription-directsdk-experimental, openai-codex]
+    description: "Providers billed to a plan. Their usage costs zero against the cap and is recorded with subscription: true. The Claude subscription (your Claude Code login) and the ChatGPT subscription (boopis's ChatGPT sign-in, provider openai-codex) are always two, whatever this list says; add others here."
   permissions:
     type: object
     description: "Permission rules: {allow: [], ask: [], deny: [], default: allow|ask|deny}, in Claude Code's Tool(specifier) syntax. deny beats ask beats allow."

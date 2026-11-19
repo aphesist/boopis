@@ -1,7 +1,8 @@
-/* Settings > Models: the plan Hermes reports (`mountPlan`), the ladder the plugin runs governed work on (which model at which
-   tier, as Hermes's configuration holds it) and "Change models", which asks setup's models question again through the same
-   first-run view and forms. Everything shown is read now, from the host or Hermes; what could not be read is said so, never
-   filled in. The rows are the design system's settings rows and ladder list. */
+/* Settings > Models: the plan (`mountPlan`), the ladder the plugin runs governed work on (which model at which tier), each
+   provider's state with the same sign-in or key it offers in setup (the Claude subscription, the ChatGPT subscription,
+   Gemini: ADR-0030), and "Change models", which asks setup's models question again through the same first-run view and
+   forms. Everything shown is read now, from the host; what could not be read is said so, never filled in. The rows are the
+   design system's settings rows and ladder list. */
 import { ui } from '../components';
 import { changeModels } from './change-models';
 import { currentPlan } from './free-tier';
@@ -9,6 +10,9 @@ import type { PlanView } from './free-tier';
 import { mountPlan } from './plan-view';
 import { loadModelsView } from './setup-bridge';
 import type { ModelsView } from './setup-bridge';
+import { mountChatgptSignin, tauriChatgptBridge } from './chatgpt-signin';
+import type { ChatgptBridge } from './chatgpt-signin';
+import type { ConnectorLogin } from './bindings';
 
 export interface ModelsDeps {
   /** Hermes's report of the plan; null when Hermes is not connected */
@@ -20,9 +24,15 @@ export interface ModelsDeps {
   /** the settings dialog is modal and would cover the question, so it steps aside first */
   closeSettings: () => void;
   toast: (text: string) => void;
+  /** boopis's own ChatGPT sign-in; without it the section shows the state and offers nothing */
+  chatgpt?: ChatgptBridge;
+  /** the host's sign-in for a provider id in its table (Claude Code's own login); without it, only "Check again" */
+  login?: (provider: string) => Promise<ConnectorLogin>;
 }
 export const realModelsDeps = (closeSettings: () => void): ModelsDeps => ({
-  plan: currentPlan, ladder: loadModelsView, change: () => changeModels(), closeSettings, toast: (t) => { ui.toast(t); }
+  plan: currentPlan, ladder: loadModelsView, change: () => changeModels(), closeSettings, toast: (t) => { ui.toast(t); },
+  chatgpt: tauriChatgptBridge(),
+  login: async (provider) => (await import('./connectors-bridge')).tauriConnectorsBridge().login(provider)
 });
 
 const SCOPE = 'A task starts at the first tier and moves to the next only when its gate fails.';
@@ -32,30 +42,66 @@ const CLAUDE_STATE: Readonly<Record<ModelsView['claude']['state'], string>> = {
 };
 const esc = (t: string): string => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] ?? c);
 
-/** The Claude subscription section's rows: whether the user's own Claude Code is signed in, its version, and whether Hermes has
-    the plugin. Everything is what the host read from the CLI's own commands; a plan or version it did not report is not shown. */
+/** The Claude subscription section's rows: whether the user's own Claude Code is signed in and its version, with "Sign in to
+    Claude" (Claude Code's own `claude auth login`) while it is not, and whether this engine includes the subscription.
+    Everything is what the host read from the CLI's own commands; a plan or version it did not report is not shown. */
 export function claudeRows(view: ModelsView | { error: string }): string[] {
   if ('error' in view) return [ui.html.setRow({ label: 'Claude Code', hint: `Not read: ${view.error}` })];
   const c = view.claude;
   const word = c.state === 'signed_in' && c.plan ? `${CLAUDE_STATE[c.state]} (${c.plan})` : CLAUDE_STATE[c.state];
-  const hint = c.state === 'signed_in' ? 'Runs on your own Claude Code login, through Hermes\'s official plugin. boopis never sees your Claude login.' : c.detail;
+  const hint = c.state === 'signed_in' ? 'Runs on your own Claude Code login. boopis never sees your Claude login.' : c.detail;
+  const signIn = c.state === 'signed_out' || c.state === 'metered';
   const rows = [
     ui.html.setRow({
       label: 'Claude Code', hint,
-      control: '<span class="ui-set__value">' + esc(word) + '</span>' + (c.state === 'signed_in' ? '' : ui.html.button({ label: 'Check again', size: 's', attrs: { id: 'hx-claude-check' } }))
+      control: '<span class="ui-set__value">' + esc(word) + '</span>' +
+        (signIn ? ui.html.button({ label: 'Sign in to Claude', size: 's', attrs: { id: 'hx-claude-signin' } }) : '') +
+        (c.state === 'signed_in' ? '' : ui.html.button({ label: 'Check again', size: 's', attrs: { id: 'hx-claude-check' } }))
     }),
-    ui.html.setRow({ label: 'Version', control: '<span class="ui-set__value">' + esc(c.version ?? 'Not reported') + '</span>' }),
-    ui.html.setRow({
-      label: 'Plugin', hint: view.claude_plugin ? null : 'Hermes\'s Claude subscription plugin. Change models installs it, after showing you what it is, when you choose the Claude subscription.',
-      control: '<span class="ui-set__value">' + (view.claude_plugin ? 'Installed in Hermes' : 'Not installed') + '</span>'
-    })
+    ui.html.setRow({ label: 'Version', control: '<span class="ui-set__value">' + esc(c.version ?? 'Not reported') + '</span>' })
   ];
+  if (!view.claude_plugin) {
+    rows.push(ui.html.setRow({ label: 'Availability', hint: 'The Claude subscription comes with boopis\u2019s own engine. With your own engine (Settings, General, Advanced) it is not available.', control: '<span class="ui-set__value">Not in this engine</span>' }));
+  }
   return rows;
+}
+
+const CHATGPT_STATE: Readonly<Record<NonNullable<ModelsView['chatgpt']>['state'], string>> = { signed_in: 'Signed in', signed_out: 'Not signed in', signing_in: 'Signing in' };
+const planWord = (p: string): string => p.charAt(0).toUpperCase() + p.slice(1);
+
+/** The ChatGPT subscription section's rows (ADR-0030): signed in or not with the plan the account names, and Sign in or Sign
+    out. The sign-in card itself is drawn under the rows, in `#hx-chatgpt-card`. */
+export function chatgptRows(view: ModelsView | { error: string }, canSignIn: boolean): string[] {
+  if ('error' in view) return [ui.html.setRow({ label: 'ChatGPT', hint: `Not read: ${view.error}` })];
+  const c = view.chatgpt;
+  if (!c) return [ui.html.setRow({ label: 'ChatGPT', hint: 'Signing in with ChatGPT is not available here.' })];
+  const word = c.state === 'signed_in' && c.plan ? `${CHATGPT_STATE[c.state]} (${planWord(c.plan)})` : CHATGPT_STATE[c.state];
+  const hint = c.state === 'signed_in'
+    ? 'boopis keeps the sign-in in your OS keychain and renews it by itself. Change models to run governed work on it.'
+    : 'Sign in with your ChatGPT account on OpenAI\u2019s own page. Governed work can then run on the models your ChatGPT plan includes.';
+  const control = '<span class="ui-set__value">' + esc(word) + '</span>' + (!canSignIn ? '' : c.state === 'signed_in'
+    ? ui.html.button({ label: 'Sign out', size: 's', attrs: { id: 'hx-chatgpt-signout' } })
+    : c.state === 'signed_out' ? ui.html.button({ label: 'Sign in', size: 's', attrs: { id: 'hx-chatgpt-signin' } }) : '');
+  return [ui.html.setRow({ label: 'ChatGPT', hint, control })];
+}
+
+/** The Gemini section's rows: whether a key is in place, and "Add key", which asks the models question (where the key is
+    asked for and kept in the keychain). */
+export function geminiRows(view: ModelsView | { error: string }): string[] {
+  if ('error' in view) return [ui.html.setRow({ label: 'Gemini key', hint: `Not read: ${view.error}` })];
+  return [ui.html.setRow({
+    label: 'Gemini key',
+    hint: view.gemini_key
+      ? 'Kept in your OS keychain. Change models to run governed work on Gemini.'
+      : 'A free key from Google AI Studio (aistudio.google.com/apikey). Add key asks for it and keeps it in your OS keychain.',
+    control: '<span class="ui-set__value">' + (view.gemini_key ? 'Saved' : 'No key') + '</span>' +
+      (view.gemini_key ? '' : ui.html.button({ label: 'Add key', size: 's', attrs: { id: 'hx-gemini-add' } }))
+  })];
 }
 
 /** the ladder section's rows for what the host read, or for why it could not */
 export function ladderRows(view: ModelsView | { error: string }): string[] {
-  if ('error' in view) return [ui.html.setRow({ label: 'Tiers', hint: `Hermes could not be asked, so the ladder is not shown: ${view.error}` })];
+  if ('error' in view) return [ui.html.setRow({ label: 'Tiers', hint: `The ladder could not be read, so it is not shown: ${view.error}` })];
   if (view.state === 'set') {
     return [
       ui.html.setRow({ label: 'Tiers', hint: `Cheapest first. ${SCOPE}` }),
@@ -66,39 +112,74 @@ export function ladderRows(view: ModelsView | { error: string }): string[] {
   return [ui.html.setRow({ label: 'Tiers', hint: 'A ladder is saved, but it does not read as a list of named tiers, so none is shown. Change models saves a new one.' })];
 }
 
-/** Put the tab into `panel`. `refresh` asks Hermes and the host again; call it each time the tab is shown. */
+const section = (panel: HTMLElement, id: string): HTMLElement => {
+  const el = document.createElement('section');
+  el.className = 'hx-set';
+  el.setAttribute('aria-labelledby', id);
+  panel.append(el);
+  return el;
+};
+
+/** Put the tab into `panel`. `refresh` asks the host again; call it each time the tab is shown. */
 export async function mountModels(panel: HTMLElement, deps: ModelsDeps): Promise<{ refresh: () => Promise<void> }> {
   const plan = await mountPlan(panel, deps.plan);
-  const ladder = document.createElement('section');
-  ladder.className = 'hx-set';
-  ladder.setAttribute('aria-labelledby', 'hx-set-ladder-h');
-  panel.append(ladder);
-  const claude = document.createElement('section');
-  claude.className = 'hx-set';
-  claude.setAttribute('aria-labelledby', 'hx-set-claude-h');
-  panel.append(claude);
-  const change = document.createElement('section');
-  change.className = 'hx-set';
-  change.setAttribute('aria-labelledby', 'hx-set-change-h');
+  const ladder = section(panel, 'hx-set-ladder-h');
+  const claude = section(panel, 'hx-set-claude-h');
+  const chatgpt = section(panel, 'hx-set-chatgpt-h');
+  const gemini = section(panel, 'hx-set-gemini-h');
+  const change = section(panel, 'hx-set-change-h');
   change.innerHTML = '<h3 class="ui-set__head" id="hx-set-change-h">Change</h3>' + ui.html.setRow({
-    label: 'Models', hint: 'Ask the models question again: free models, OpenRouter\'s free models, Claude, or a model you set up. Nothing changes until you answer.',
+    label: 'Models', hint: 'Ask the models question again: free models, OpenRouter\u2019s free models, Claude, ChatGPT, Gemini, or a model you set up. Nothing changes until you answer.',
     control: ui.html.button({ label: 'Change models', size: 's', attrs: { id: 'hx-models-change' } })
   });
-  panel.append(change);
   ui.hydrate(change);
-  change.querySelector('#hx-models-change')?.addEventListener('click', () => {
+  const askAgain = (): void => {
     void deps.change().then(() => { deps.closeSettings(); }).catch((e: unknown) => { deps.toast(e instanceof Error ? e.message : 'That did not work'); });
-  });
-  /* one read of the host feeds both sections: the ladder and Claude Code's state */
-  const drawLadder = async (): Promise<void> => {
+  };
+  change.querySelector('#hx-models-change')?.addEventListener('click', askAgain);
+  let card: { destroy: () => void } | null = null;
+  /* one read of the host feeds every section: the ladder, Claude Code's state, the ChatGPT sign-in and the Gemini key */
+  const drawAll = async (): Promise<void> => {
     let view: ModelsView | { error: string };
     try { view = await deps.ladder(); } catch (e) { view = { error: e instanceof Error ? e.message : 'unknown error' }; }
     ladder.innerHTML = '<h3 class="ui-set__head" id="hx-set-ladder-h">Model ladder</h3>' + ladderRows(view).join('');
     claude.innerHTML = '<h3 class="ui-set__head" id="hx-set-claude-h">Claude subscription</h3>' + claudeRows(view).join('');
-    ui.hydrate(ladder);
-    ui.hydrate(claude);
-    claude.querySelector('#hx-claude-check')?.addEventListener('click', () => { void drawLadder(); });
+    card?.destroy();
+    card = null;
+    chatgpt.innerHTML = '<h3 class="ui-set__head" id="hx-set-chatgpt-h">ChatGPT subscription</h3>' + chatgptRows(view, !!deps.chatgpt).join('') + '<div id="hx-chatgpt-card"></div>';
+    gemini.innerHTML = '<h3 class="ui-set__head" id="hx-set-gemini-h">Gemini</h3>' + geminiRows(view).join('');
+    for (const s of [ladder, claude, chatgpt, gemini]) ui.hydrate(s);
+    claude.querySelector('#hx-claude-check')?.addEventListener('click', () => { void drawAll(); });
+    const login = deps.login;
+    const signin = claude.querySelector<HTMLButtonElement>('#hx-claude-signin');
+    if (signin && login) {
+      signin.addEventListener('click', () => {
+        signin.disabled = true;
+        deps.toast('Finish signing in to Claude in your browser.');
+        login('claude-code').then((r) => {
+          if (!r.ok) deps.toast(r.timed_out ? 'The Claude sign-in took too long and was stopped.' : 'The Claude sign-in did not finish.');
+          return drawAll();
+        }, (e: unknown) => { deps.toast(e instanceof Error ? e.message : 'The Claude sign-in did not start.'); signin.disabled = false; });
+      });
+    } else signin?.remove();
+    const bridge = deps.chatgpt;
+    if (bridge) {
+      chatgpt.querySelector('#hx-chatgpt-signin')?.addEventListener('click', () => {
+        chatgpt.querySelector('#hx-chatgpt-signin')?.remove();
+        const host = chatgpt.querySelector<HTMLElement>('#hx-chatgpt-card');
+        if (host) card = mountChatgptSignin(host, bridge, { onSignedIn: () => { void drawAll(); } });
+      });
+      chatgpt.querySelector('#hx-chatgpt-signout')?.addEventListener('click', () => {
+        bridge.signOut().then(() => drawAll(), (e: unknown) => { deps.toast(e instanceof Error ? e.message : 'Could not sign out'); });
+      });
+      /* a sign-in already waiting (begun in setup, or before the tab was redrawn) shows its code in place */
+      if (!('error' in view) && view.chatgpt?.state === 'signing_in') {
+        const host = chatgpt.querySelector<HTMLElement>('#hx-chatgpt-card');
+        if (host) card = mountChatgptSignin(host, bridge, { onSignedIn: () => { void drawAll(); } });
+      }
+    }
+    gemini.querySelector('#hx-gemini-add')?.addEventListener('click', askAgain);
   };
-  await drawLadder();
-  return { refresh: async () => { await Promise.all([plan.refresh(), drawLadder()]); } };
+  await drawAll();
+  return { refresh: async () => { await Promise.all([plan.refresh(), drawAll()]); } };
 }

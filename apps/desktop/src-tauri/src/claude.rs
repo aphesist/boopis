@@ -38,7 +38,8 @@ pub const PASS_VARS: &[&str] = &[
 ];
 /// How the official CLI is installed, as the plugin's manifest says (`external_dependencies`).
 pub const INSTALL_COMMAND: &str = "npm install -g @anthropic-ai/claude-code";
-/// How the official CLI signs in. The user runs it in a terminal; boopis offers no login screen of its own.
+/// How the official CLI signs in. "Sign in to Claude" runs it (the `claude-code` entry of the host's login table, with
+/// `--claudeai`); it is Claude Code's own login, and boopis offers no login screen of its own.
 pub const LOGIN_COMMAND: &str = "claude auth login";
 /// How the official CLI updates itself.
 pub const UPDATE_COMMAND: &str = "claude update";
@@ -309,7 +310,7 @@ pub fn assess(installed: bool, version_text: Option<&str>, auth: Option<&Value>)
         return no(
             State::NotInstalled,
             format!(
-                "Claude Code is not installed. Install it with `{INSTALL_COMMAND}`, then sign in by running `{LOGIN_COMMAND}` in a terminal."
+                "Claude Code is not installed. Install it with `{INSTALL_COMMAND}`, then sign in to Claude (boopis runs Claude Code's own `{LOGIN_COMMAND}`)."
             ),
         );
     }
@@ -332,7 +333,7 @@ pub fn assess(installed: bool, version_text: Option<&str>, auth: Option<&Value>)
         return no(
             State::SignedOut,
             format!(
-                "{with_version} is installed but not signed in. Sign in by running `{LOGIN_COMMAND}` in a terminal, then choose Check again."
+                "{with_version} is installed but not signed in. Choose Sign in to Claude (boopis runs Claude Code's own `{LOGIN_COMMAND}`), then Check again."
             ),
         );
     }
@@ -341,7 +342,7 @@ pub fn assess(installed: bool, version_text: Option<&str>, auth: Option<&Value>)
         return no(
             State::Metered,
             format!(
-                "{with_version} is signed in with {how}, which bills API usage instead of your Claude subscription. Sign in with your Claude account by running `{LOGIN_COMMAND}` in a terminal, then choose Check again."
+                "{with_version} is signed in with {how}, which bills API usage instead of your Claude subscription. Choose Sign in to Claude to sign in with your Claude account (boopis runs Claude Code's own `{LOGIN_COMMAND}`), then Check again."
             ),
         );
     }

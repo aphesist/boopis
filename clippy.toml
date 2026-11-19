@@ -1,3 +1,5 @@
 allow-unwrap-in-tests = true
 allow-expect-in-tests = true
 allow-panic-in-tests = true
+# Product names that are spelled this way, not code: `..` keeps clippy's own list.
+doc-valid-idents = ["ChatGPT", "OpenAI", ".."]

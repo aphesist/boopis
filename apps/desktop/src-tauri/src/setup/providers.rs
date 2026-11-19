@@ -1,18 +1,18 @@
-//! Setup's last decision: which models run, and whether their keys are in place. It reads what Hermes already has
-//! (named `providers:`, keys in `.env` by name, the claude-subscription plugin), asks for what is missing through forms,
-//! saves a key to the host's keychain and ties it to its provider with the same two config writes the plugin makes for a
-//! credential form (`plugins/boopis/forms/effects.py`): `providers.<name>.key_env` and `secrets.boopis_host.env`.
+//! Setup's last decision: which models run, and whether their keys or sign-ins are in place. It reads what the engine
+//! already has (named `providers:`, keys in `.env` by name, the bundled Claude subscription plugin), asks for what is
+//! missing through forms, saves a key to the host's keychain and ties it to its provider with the same two config writes
+//! the plugin makes for a credential form (`plugins/boopis/forms/effects.py`): `providers.<name>.key_env` and
+//! `secrets.boopis_host.env`. The subscriptions sign in through boopis's own flows (ADR-0030): Claude Code's own
+//! `claude auth login` for Claude, the host's ChatGPT sign-in (`crate::chatgpt`) for ChatGPT.
 
 use std::fmt::Write as _;
 use std::path::Path;
 
 use serde_json::{Value, json};
 
-use super::ops::{CatalogEntry, HermesOps};
+use super::ops::HermesOps;
 use super::{DiffLine, Form};
-use crate::claude::{
-    self, CATALOG_NAME, ClaudeCli, INSTALL_COMMAND, LOGIN_COMMAND, PROVIDER_ID, Probe, State,
-};
+use crate::claude::{self, ClaudeCli, INSTALL_COMMAND, PROVIDER_ID, Probe, State};
 use crate::commands::Json;
 use crate::config::FREE_TIER_ENABLED;
 use crate::error::{Error, Result};
@@ -30,6 +30,29 @@ const ANTHROPIC_VARS: &[&str] = &[
 pub const CLAUDE_SUBSCRIPTION: &str = "claude-subscription";
 /// What the choice is called.
 const CLAUDE_SUBSCRIPTION_LABEL: &str = "Claude subscription (your Claude Code login)";
+/// The choice that runs on the user's ChatGPT subscription, signed in through boopis's own ChatGPT sign-in (ADR-0030).
+pub const CHATGPT_SUBSCRIPTION: &str = "chatgpt-subscription";
+const CHATGPT_SUBSCRIPTION_LABEL: &str = "ChatGPT subscription (sign in with your ChatGPT account)";
+/// The engine's provider for a ChatGPT sign-in (OpenAI's Codex models on chatgpt.com).
+pub const CHATGPT_PROVIDER: &str = "openai-codex";
+/// The ChatGPT ladder, cheapest first: the first two models of the engine's curated Codex list
+/// (`hermes_cli/codex_models.py` `DEFAULT_CODEX_MODELS`), which its price table orders `gpt-6-luna` ($0.10 / $0.50 a
+/// million tokens) before `gpt-6-sol` ($2 / $10) (`agent/usage_pricing.py`). On a subscription neither is charged per token;
+/// the order is how heavily each draws on the plan's limits.
+pub const CHATGPT_LADDER: &[(&str, &str)] = &[("luna", "gpt-6-luna"), ("sol", "gpt-6-sol")];
+/// The choice that uses Gemini with a free Google AI Studio key.
+pub const GEMINI: &str = "gemini";
+const GEMINI_LABEL: &str = "Gemini (a free API key from Google AI Studio)";
+/// Where a Gemini key is made.
+pub const GEMINI_KEY_URL: &str = "https://aistudio.google.com/apikey";
+/// The variables the engine's Gemini provider reads a key from (`plugins/model-providers/gemini`), in its order.
+const GEMINI_VARS: &[&str] = &["GOOGLE_API_KEY", "GEMINI_API_KEY"];
+/// The Gemini ladder, flash then pro, from the engine's Gemini catalogue (`models_catalog_static.py`): `gemini-3.8-flash`
+/// is its default, `gemini-3.1-pro-preview` its pro model.
+pub const GEMINI_LADDER: &[(&str, &str)] = &[
+    ("flash", "gemini-3.8-flash"),
+    ("pro", "gemini-3.1-pro-preview"),
+];
 pub(crate) const LADDER_KEY: &str = "plugins.entries.boopis.settings.ladder";
 /// One tier of the governed ladder, as Hermes's configuration holds it (`{name, model: "provider/id"}`).
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, specta::Type)]
@@ -112,10 +135,10 @@ pub struct Input<'a> {
     pub free_note: Option<&'a str>,
     /// The user asked to choose again.
     pub reopen: bool,
-    /// The user agreed to install the Claude subscription plugin from Hermes's catalog.
-    pub claude_consent: bool,
     /// The user's Claude Code, looked at when the Claude subscription is offered or chosen.
     pub claude: &'a dyn ClaudeCli,
+    /// A ChatGPT account is signed in through boopis's own sign-in (both tokens are in the keychain).
+    pub chatgpt_signed_in: bool,
 }
 
 /// Names of the variables in `<home>/.env` that have a value. Values are never read into the result.
@@ -165,6 +188,14 @@ fn named_providers(cfg: Option<&Value>) -> Vec<Named> {
         .collect()
 }
 
+/// Whether a Gemini key is in place: in the keychain, or by name in the profile's `.env`.
+#[must_use]
+pub fn gemini_key(store: &dyn SecretStore, home: &Path) -> bool {
+    let env = dotenv_names(home);
+    GEMINI_VARS.iter().any(|v| env.iter().any(|e| e == v))
+        || saved(store, &SecretRef::provider_key(GEMINI))
+}
+
 /// Whether the keychain holds the secret. A direct call: the Secret Service answers in milliseconds, and setup runs once.
 fn saved(store: &dyn SecretStore, r: &SecretRef) -> bool {
     matches!(store.get(&r.service(), &r.name), Ok(Some(_)))
@@ -172,19 +203,35 @@ fn saved(store: &dyn SecretStore, r: &SecretRef) -> bool {
 
 fn credential_form(provider: &str) -> Form {
     let r = SecretRef::provider_key(provider);
-    let body = if provider == "openrouter" {
-        "A free OpenRouter key is enough: it only unlocks the models OpenRouter lists as free. It is saved in your OS keychain, not in a file, and Hermes reads it from there."
-    } else {
-        "Models need it to answer. It is saved in your OS keychain, not in a file, and Hermes reads it from there."
+    let kept = "It is saved in your OS keychain, not in a file, and boopis hands it to the models from there.";
+    let (name, body) = match provider {
+        "openrouter" => (
+            "OpenRouter",
+            format!(
+                "A free OpenRouter key is enough: it only unlocks the models OpenRouter lists as free. {kept}"
+            ),
+        ),
+        "anthropic" => ("Anthropic", format!("Models need it to answer. {kept}")),
+        GEMINI => (
+            "Gemini",
+            format!(
+                "A Gemini key is free. Open {GEMINI_KEY_URL}, sign in with your Google account and choose Create API key, then paste it here. Google sets the free key's daily limits. {kept}"
+            ),
+        ),
+        other => (other, format!("Models need it to answer. {kept}")),
     };
-    Form::new(
+    let mut form = Form::new(
         &format!("setup.credential.{provider}"),
         "credential",
-        &format!("Add your {provider} API key"),
-        body,
+        &format!("Add your {name} API key"),
+        &body,
         json!({"type": "object", "required": ["value"], "properties": {
             "value": {"type": "string", "title": "API key", "x-secret": true, "x-secret-ref": r.text()}}}),
-    )
+    );
+    if provider == GEMINI {
+        form.links = vec![("Get a free key".into(), GEMINI_KEY_URL.into())];
+    }
+    form
 }
 
 /// Make Hermes read `r` as the key of `provider`: a named entry gets `key_env`, a built-in provider keeps its own
@@ -278,6 +325,8 @@ pub async fn run(
         Some(FREE) if FREE_TIER_ENABLED => free_tier(ops, &named, input.claude, restart).await,
         Some(OPENROUTER_FREE) => openrouter(ops, store, &env, &named, input, restart).await,
         Some(CLAUDE_SUBSCRIPTION) => subscription(ops, input, restart).await,
+        Some(CHATGPT_SUBSCRIPTION) => chatgpt(ops, input, restart).await,
+        Some(GEMINI) => gemini(ops, store, &env, restart).await,
         Some(pick) => single_tier(ops, store, &env, &named, pick, restart).await,
     }
 }
@@ -306,7 +355,7 @@ async fn free_tier(
     if status.model.trim().is_empty() {
         return Ok(unavailable(
             named,
-            "Hermes reported the free tier as ready but named no model, so no ladder can be set.",
+            "The free tier reported itself ready but named no model, so no ladder can be set.",
             claude,
         )
         .await);
@@ -331,7 +380,7 @@ async fn unavailable(named: &[Named], note: &str, claude: &dyn ClaudeCli) -> Out
 /// Why the free tier could not be used, in Hermes's terms.
 fn unclaimed_note(status: &FreeTier) -> String {
     if !status.enabled {
-        return "Hermes offers the free tier only to a first install on this computer, once per user, and only with no model provider or Nous sign-in set up. It found one of those missing here (it does not say which), or guests are switched off.".to_owned();
+        return "The free tier is offered only to a first install on this computer, once per user, and only with no model provider or Nous sign-in set up. One of those is not the case here (the engine does not say which), or guests are switched off.".to_owned();
     }
     let wait = status
         .retry_after
@@ -344,7 +393,7 @@ fn unclaimed_note(status: &FreeTier) -> String {
         })
         .unwrap_or_default();
     format!(
-        "Hermes could not set up the free tier: {}.{wait}",
+        "boopis could not set up the free tier: {}.{wait}",
         status.error.as_deref().unwrap_or("it gave no reason")
     )
 }
@@ -496,6 +545,10 @@ fn ladder_form(named: &[Named], free_note: Option<&str>, claude: &Probe) -> Form
     // beside the other Claude choice and after the free ones, which stay first and the default (ADR-0027)
     ids.push(CLAUDE_SUBSCRIPTION.to_owned());
     labels.push(CLAUDE_SUBSCRIPTION_LABEL.to_owned());
+    ids.push(CHATGPT_SUBSCRIPTION.to_owned());
+    labels.push(CHATGPT_SUBSCRIPTION_LABEL.to_owned());
+    ids.push(GEMINI.to_owned());
+    labels.push(GEMINI_LABEL.to_owned());
     for p in named {
         for m in &p.models {
             ids.push(format!("{}/{m}", p.name));
@@ -508,7 +561,7 @@ fn ladder_form(named: &[Named], free_note: Option<&str>, claude: &Probe) -> Form
     if offer_free {
         let _ = write!(
             body,
-            "\n\nFree models need no account and no key: Hermes uses Nous Research's free tier, which offers one model, so every step of the ladder uses it. That is Nous's service under their Terms of Service ({NOUS_TERMS}) and Privacy Policy ({NOUS_PRIVACY}); Hermes decides who may use it (once per user on a computer, so this also uses it up for Hermes's own app) and says so if it is not available to you."
+            "\n\nFree models need no account and no key: boopis uses Nous Research's free tier, which offers one model, so every step of the ladder uses it. That is Nous's service under their Terms of Service ({NOUS_TERMS}) and Privacy Policy ({NOUS_PRIVACY}); Nous decides who may use it (once per user on a computer, so this also uses it up for Nous Research's own desktop app) and boopis says so if it is not available to you."
         );
     }
     if let Some(note) = free_note {
@@ -517,12 +570,16 @@ fn ladder_form(named: &[Named], free_note: Option<&str>, claude: &Probe) -> Form
     if claude.usable() {
         let _ = write!(
             body,
-            "\n\nClaude subscription: {} It runs on your own Claude Code login, through Hermes's official plugin; boopis never sees your Claude login.",
+            "\n\nClaude subscription: {} It runs on your own Claude Code login; boopis never sees your Claude login.",
             claude.detail
         );
     } else {
         let _ = write!(body, "\n\nClaude subscription: {}", claude.detail);
     }
+    let _ = write!(
+        body,
+        "\n\nChatGPT subscription: you sign in with your ChatGPT account on OpenAI's own page, and boopis keeps the sign-in in your OS keychain. Gemini: a free key from Google AI Studio."
+    );
     let default = ids[0].clone();
     Form::new(
         "setup.ladder",
@@ -549,7 +606,7 @@ async fn single_tier(
     else {
         return Err(crate::error::Error::Setup(
             "hx.setup.invalid_answer",
-            format!("{pick:?} is not a model Hermes has configured"),
+            format!("{pick:?} is not a configured model"),
         ));
     };
     let r = SecretRef::provider_key(provider);
@@ -572,114 +629,58 @@ async fn single_tier(
     Ok(Outcome::Done(format!("one tier: {model} on {provider}")))
 }
 
-/// Why the subscription needs the user before it can go on: what is missing, and the official commands that fix it. boopis runs
-/// neither: it has no login screen of its own, and checks the result through the CLI (ADR-0029).
+/// Why the subscription needs the user before it can go on, and what fixes it. Signing in is Claude Code's own
+/// `claude auth login` (Anthropic's program: it opens the browser and keeps the login), offered as a sign-in on the card; the
+/// install and the update are commands the user runs. boopis checks the result through the CLI (ADR-0029, ADR-0030).
 fn claude_form(probe: &Probe) -> Form {
     let title = match probe.state {
         State::NotInstalled => "Install Claude Code to use your Claude subscription",
-        State::SignedOut => "Sign in to Claude Code",
+        State::SignedOut => "Sign in to Claude",
         State::Metered => "Claude Code is not signed in with your Claude account",
         State::OldVersion => "Update Claude Code",
         State::SignedIn => "Claude Code is ready",
     };
     let mut steps: Vec<(String, String)> = Vec::new();
-    match probe.state {
+    let sign_in = matches!(probe.state, State::SignedOut | State::Metered);
+    let tail = match probe.state {
         State::NotInstalled => {
-            steps.push(("1. Install it".into(), format!("`{INSTALL_COMMAND}`")));
-            steps.push(("2. Sign in".into(), format!("`{LOGIN_COMMAND}`")));
-        }
-        State::SignedOut | State::Metered => {
-            steps.push(("Sign in".into(), format!("`{LOGIN_COMMAND}`")));
+            steps.push(("Install it".into(), format!("`{INSTALL_COMMAND}`")));
+            "Run it in a terminal, then choose Check again."
         }
         State::OldVersion => {
             steps.push(("Update it".into(), format!("`{}`", claude::UPDATE_COMMAND)));
+            "Run it in a terminal, then choose Check again."
         }
-        State::SignedIn => {}
-    }
+        State::SignedOut | State::Metered => {
+            "Choose Sign in to Claude: Claude Code opens your browser to sign in with your Claude account."
+        }
+        State::SignedIn => "",
+    };
     let mut form = Form::new(
         "setup.claude",
         "setup",
         title,
         &format!(
-            "{}\n\nRun the command{} in a terminal, then choose Check again. Claude Code is Anthropic's own program: it does the signing in and keeps your login. boopis never sees, reads or stores it; it only asks Claude Code whether it is signed in.",
-            probe.detail,
-            if steps.len() == 1 { "" } else { "s" }
+            "{}\n\n{tail} Claude Code is Anthropic's own program: it does the signing in and keeps your login. boopis never sees, reads or stores it; it only asks Claude Code whether it is signed in.",
+            probe.detail
         ),
         json!({"type": "object", "properties": {}}),
     );
+    if sign_in {
+        // a provider id in the host's own table (`claude-code`), never a command: the host runs `claude auth login --claudeai`
+        form.signin = Some(super::SignIn {
+            provider: CLAUDE_LOGIN.into(),
+            label: "Sign in to Claude".into(),
+        });
+    }
     form.contents = steps;
     form.submit = Json(json!({"label": "Check again"}));
     form.cancel = Json(json!({"label": "Choose another model"}));
     form
 }
 
-/// What installing the plugin does, shown before anything is changed (the same review the connectors use).
-fn install_form(entry: &CatalogEntry, probe: &Probe, home: &Path) -> Form {
-    let mut form = Form::new(
-        "setup.claude.install",
-        "connector",
-        "Install the Claude subscription plugin?",
-        "Hermes runs your Claude subscription through its official plugin, which drives the Claude Code you signed in to yourself. Hermes installs the catalog's pinned, reviewed build; boopis does not copy or change it.",
-        json!({"type": "object", "properties": {}}),
-    );
-    let place = |sub: &str| {
-        if sub.is_empty() {
-            String::new()
-        } else {
-            format!("#{sub}")
-        }
-    };
-    form.contents = vec![
-        (
-            "Plugin".into(),
-            format!(
-                "{} {} ({}, from Hermes's plugin catalog)",
-                entry.name, entry.version, entry.tier
-            ),
-        ),
-        (
-            "From".into(),
-            format!("{}{}", entry.repo, place(&entry.subdir)),
-        ),
-        (
-            "Into".into(),
-            format!("{}", super::ops::plugins_dir(home).display()),
-        ),
-        (
-            "What it does".into(),
-            if entry.provides.is_empty() {
-                "adds one model provider, and registers no tool, hook or middleware".into()
-            } else {
-                format!(
-                    "adds one model provider, and registers {}",
-                    entry.provides.join("; ")
-                )
-            },
-        ),
-        (
-            "Your login".into(),
-            "stays with Claude Code: the plugin has no credentials of its own".into(),
-        ),
-        (
-            "Claude Code".into(),
-            format!(
-                "{}{}",
-                probe.version.as_deref().unwrap_or("version unknown"),
-                probe
-                    .plan
-                    .as_deref()
-                    .map_or_else(String::new, |p| format!(", signed in ({p})"))
-            ),
-        ),
-    ];
-    form.pinned = Some(entry.sha.clone());
-    form.effect = Some(format!(
-        "Runs `hermes plugins install {CATALOG_NAME} --no-enable` in this profile, then restarts Hermes once to load it. A model provider needs no enable entry."
-    ));
-    form.submit = Json(json!({"label": "Install the plugin"}));
-    form.cancel = Json(json!({"label": "Choose another model"}));
-    form
-}
+/// The sign-in the Claude form offers: the `claude-code` entry of `apps/shared/data/logins.json`.
+pub const CLAUDE_LOGIN: &str = "claude-code";
 
 /// The aliases the installed plugin's own model catalogue knows (`ALIASES = {'haiku': ..., }` in its `model_catalog.py`), so a
 /// ladder never names a model the pinned build does not serve. `None` when the file cannot be read: the caller then trusts the
@@ -724,8 +725,9 @@ fn listed(plugins: &[super::ops::PluginEntry]) -> Option<&super::ops::PluginEntr
     plugins.iter().find(|p| p.name == PROVIDER_ID)
 }
 
-/// The Claude subscription (ADR-0029): look at the user's Claude Code, install Hermes's pinned plugin once the user has seen
-/// what it is, and write a ladder of its model aliases. Each missing piece is a form that says what to do; none is guessed.
+/// The Claude subscription (ADR-0029, ADR-0030): look at the user's Claude Code, check that the engine carries the Claude
+/// subscription plugin (it comes inside boopis's runtime, so there is nothing to install), and write a ladder of its model
+/// aliases. Each missing piece is a form that says what to do; none is guessed.
 async fn subscription(
     ops: &dyn HermesOps,
     input: &Input<'_>,
@@ -736,40 +738,26 @@ async fn subscription(
         return Ok(Outcome::Form(claude_form(&probe)));
     }
     let home = ops.home();
-    let present = listed(&ops.plugins().await?).cloned();
-    if present.is_none() {
-        if !input.claude_consent {
-            let Some(entry) = ops.catalog_entry(CATALOG_NAME).await? else {
-                return Err(Error::Setup(
-                    "hx.setup.subscription_install_failed",
-                    format!(
-                        "Hermes's plugin catalog has no plugin named {CATALOG_NAME}, so the Claude subscription cannot be set up here."
-                    ),
-                ));
-            };
-            return Ok(Outcome::Form(install_form(&entry, &probe, &home)));
-        }
-        ops.install_catalog_plugin(CATALOG_NAME).await?;
-        if listed(&ops.plugins().await?).is_none() {
+    match listed(&ops.plugins().await?) {
+        None => {
             return Err(Error::Setup(
-                "hx.setup.subscription_install_failed",
-                format!(
-                    "Hermes installed the plugin but does not list the {PROVIDER_ID} provider, so it cannot be used."
-                ),
+                "hx.setup.subscription_unavailable",
+                "This engine does not include the Claude subscription. It comes with boopis's own engine; choose another model, or switch back to it in Settings, General, Advanced.".into(),
             ));
         }
-        *restart = true;
-    } else if present.is_some_and(|p| !p.enabled) {
-        // someone switched the provider off by hand; the user chose it just now
-        ops.enable_plugin(PROVIDER_ID).await?;
-        *restart = true;
+        Some(p) if !p.enabled => {
+            // someone switched the provider off by hand; the user chose it just now
+            ops.enable_plugin(PROVIDER_ID).await?;
+            *restart = true;
+        }
+        Some(_) => {}
     }
     let tiers = subscription_tiers(&probe, plugin_aliases(&home).as_deref());
     if tiers.is_empty() {
         return Err(Error::Setup(
-            "hx.setup.subscription_install_failed",
+            "hx.setup.subscription_unavailable",
             format!(
-                "The installed plugin offers none of the models your Claude Code {} serves, so no ladder can be set.",
+                "The Claude subscription offers none of the models your Claude Code {} serves, so no ladder can be set. Updating Claude Code (claude update) may fix it.",
                 probe.version.as_deref().unwrap_or("(version unknown)")
             ),
         ));
@@ -781,6 +769,76 @@ async fn subscription(
         tiers
             .iter()
             .map(|(n, _)| n.as_str())
+            .collect::<Vec<_>>()
+            .join(", ")
+    )))
+}
+
+/// The sign-in card's form while no ChatGPT account is signed in. The sign-in itself (the code, the page, the wait) is the
+/// first-run view's card over the host's ChatGPT commands, offered through `signin`; this form carries the words and the way
+/// back.
+fn chatgpt_form() -> Form {
+    let mut form = Form::new(
+        "setup.chatgpt",
+        "setup",
+        "Sign in with ChatGPT",
+        "Choose Sign in with ChatGPT: boopis shows a one-time code, you open OpenAI's sign-in page, sign in with your ChatGPT account and type the code. boopis keeps the sign-in in your OS keychain and renews it by itself. Governed work then runs on the models your ChatGPT plan includes.",
+        json!({"type": "object", "properties": {}}),
+    );
+    form.signin = Some(super::SignIn {
+        provider: super::SIGNIN_CHATGPT.into(),
+        label: "Sign in with ChatGPT".into(),
+    });
+    form.submit = Json(json!({"label": "Check again"}));
+    form.cancel = Json(json!({"label": "Choose another model"}));
+    form
+}
+
+/// The ChatGPT subscription (ADR-0030): signed in through boopis's own sign-in, then a ladder of the engine's Codex models.
+async fn chatgpt(ops: &dyn HermesOps, input: &Input<'_>, restart: &mut bool) -> Result<Outcome> {
+    if !input.chatgpt_signed_in {
+        return Ok(Outcome::Form(chatgpt_form()));
+    }
+    let tiers: Vec<(String, String)> = CHATGPT_LADDER
+        .iter()
+        .map(|(name, id)| ((*name).to_owned(), format!("{CHATGPT_PROVIDER}/{id}")))
+        .collect();
+    *restart |= write_ladder(ops, &tiers).await?;
+    Ok(Outcome::Done(format!(
+        "ChatGPT subscription: {} on your ChatGPT sign-in",
+        CHATGPT_LADDER
+            .iter()
+            .map(|(_, id)| *id)
+            .collect::<Vec<_>>()
+            .join(", ")
+    )))
+}
+
+/// Gemini with a Google AI Studio key: the key (a form, with the link to make one), then flash and pro.
+async fn gemini(
+    ops: &dyn HermesOps,
+    store: &dyn SecretStore,
+    env: &[String],
+    restart: &mut bool,
+) -> Result<Outcome> {
+    let r = SecretRef::provider_key(GEMINI);
+    let in_env = GEMINI_VARS.iter().any(|v| env.iter().any(|e| e == v));
+    if !in_env && !saved(store, &r) {
+        return Ok(Outcome::Form(credential_form(GEMINI)));
+    }
+    if saved(store, &r) && !wire(ops, GEMINI, false).await?.is_empty() {
+        *restart = true;
+    }
+    let tiers: Vec<(String, String)> = GEMINI_LADDER
+        .iter()
+        .map(|(name, id)| ((*name).to_owned(), format!("{GEMINI}/{id}")))
+        .collect();
+    *restart |= write_ladder(ops, &tiers).await?;
+    Ok(Outcome::Done(format!(
+        "Gemini on your Google AI Studio key: {}",
+        GEMINI_LADDER
+            .iter()
+            .map(|(_, id)| *id)
             .collect::<Vec<_>>()
             .join(", ")
     )))
