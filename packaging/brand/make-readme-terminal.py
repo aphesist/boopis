@@ -234,7 +234,6 @@ class Scene:
             name = f"v{len(self.kf)}"
             self.kf[key] = name
             a = pct(t_on)
-            hold = pct(HOLD_UNTIL)
             if transient:
                 off = pct(t_off if t_off is not None else HOLD_UNTIL)
                 css = f"@keyframes {name}{{0%,{a}{{opacity:0}}{pct(t_on + 0.001)},{off}{{opacity:1}}{pct((t_off or HOLD_UNTIL) + 0.001)},100%{{opacity:0}}}}"
