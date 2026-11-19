@@ -18,6 +18,8 @@ function story(name: string): Story {
   const kind = String(spec['kind']);
   const states: Record<string, State> = {};
   for (const s of FORM_STATES) states[s] = { tags: [TAG[s] ?? 'variant'], render: draw(spec, { state: s }), width: 608 };
+  /* a collapsed card of two lines (the question, expired) centres its action in a row taller than the action: both insets are at least --pad (R-corner-4) but not equal */
+  if (name === 'question') states['expired']!.allow = { concentric: 'the collapsed row is two lines tall, so the centred action sits 15.5px from the top and the bottom and --pad from the side; every inset is at least --pad (R-corner-4)' };
   states['submit hover'] = { tags: ['hover'], render: draw(spec), width: 608, force: [{ sel: SUBMIT, state: 'hover' }] };
   states['submit focus'] = { tags: ['focus'], render: draw(spec), width: 608, force: [{ sel: SUBMIT, state: 'focus' }] };
   states['first field focus'] = { tags: ['focus'], render: draw(spec), width: 608, force: [{ sel: 'hx-card .ui-input, hx-card .cd-opt, hx-card .ui-chip', state: 'focus' }] };
@@ -40,7 +42,7 @@ const askers: Story = {
     } },
     'a relay': { tags: ['variant'], width: 608, render: draw(FORM_LONG['relay'] as Record<string, unknown>) },
     'a long model': { tags: ['long'], width: 608, render: draw(FORM_LONG['model'] as Record<string, unknown>) },
-    'five askers, compact on the dock': { tags: ['many', 'size'], width: 400, ground: 'dock', render: draw(FORM_LONG['five'] as Record<string, unknown>, { size: 'compact', ground: 'dock' }) },
+    'five askers, compact on the dock': { tags: ['many', 'size'], width: 400, ground: 'dock', render: draw(FORM_LONG['five'] as Record<string, unknown>, { size: 'compact', ground: 'dock' }), allow: { concentric: 'the first asker is an orb and orbs are circles (R-corner-2, the pill row: "orbs are circles")' } },
     error: { tags: ['error'], width: 608, render: draw(FORM_SPECS['credential'] as Record<string, unknown>, { state: 'invalid' }) },
     'no origin given': { tags: ['empty'], width: 608, render: draw({ ...(FORM_SPECS['question'] as Record<string, unknown>), origin: undefined }), note: 'unknown is shown as unknown' }
   }

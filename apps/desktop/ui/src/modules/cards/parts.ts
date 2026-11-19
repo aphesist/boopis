@@ -19,7 +19,7 @@ const botList = () => data().bots.snapshot().bots;
 export const bot = (id: string | undefined): ReturnType<typeof botList>[number] | undefined => (id ? botList().find((b) => b.id === id || b.name === id) : undefined);
 export const check = (): string => U.icon('check', { class: 'cd-ico' });
 /** a model wherever one appears: its provider's mark beside its name, mono, from the tokens */
-export const model = (m: string, size = 14): string => U.html.model(m, { size, class: 'cd-mono', mono: false });
+export const model = (m: string, size = 14): string => U.html.model(m, { size, class: 'cd-mono', mono: false, label: false });
 /** a route ('qwen3-coder → sonnet 5.5') asks as the model it ended on: one mark, one name, in every slot and row (the
     route itself is the session's call number) */
 const asker = (m: string | undefined): string => U.modelMark.last(m) || String(m || '');
