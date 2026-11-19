@@ -642,10 +642,10 @@
   function analyse(tracked, removed, added) {
     const issues = [];
     /* replaced: a node removed and one with the same key added (a redraw instead of an update) */
-    const addedKeys = new Map();
-    for (const a of added) addedKeys.set(a.key, (addedKeys.get(a.key) || 0) + 1);
+    /* a redraw puts the node back right after it takes it away (innerHTML, replaceWith: the same batch, or a moment later);
+       a row that a filter adds on one keystroke and drops on the next is a list that changed, not a node redrawn (R-motion-5) */
     const repl = new Map();
-    for (const r of removed) if (addedKeys.get(r.key) && /[#[]/.test(r.key)) repl.set(r.key, (repl.get(r.key) || 0) + 1);
+    for (const r of removed) if (/[#[]/.test(r.key) && added.some((a) => a.key === r.key && a.t >= r.t - 50 && a.t - r.t <= 500)) repl.set(r.key, (repl.get(r.key) || 0) + 1);
     for (const [k, c] of repl) issues.push({ kind: 'replaced', key: k, msg: k + ' was removed and drawn again ' + c + ' time' + (c > 1 ? 's' : '') + ' (an update should keep the node)' });
     for (const [, rec] of tracked) {
       const f = rec.frames.filter(Boolean);
