@@ -1,6 +1,6 @@
 # Automation: browsers, desktop apps and other programs
 
-Status: plan, 2026-11-19. Evidence: `docs/research/automation.md` (Hermes's browser and computer-use tools, Chromium and Firefox drivers, vendor computer-use APIs, accessibility APIs per OS, Wayland, and the permission models of Claude in Chrome, Claude Code, OpenAI, Gemini, MCP and cua). Decision: ADR-0021.
+Status: plan, 2026-11-19. Evidence: `docs/research/automation.md` and, for the owner's desktop, `docs/research/hyprland.md` (Hermes's browser and computer-use tools, Chromium and Firefox drivers, vendor computer-use APIs, accessibility APIs per OS, Wayland, and the permission models of Claude in Chrome, Claude Code, OpenAI, Gemini, MCP and cua). Decision: ADR-0021.
 
 **Rule: an agent only ever calls tools, and one policy decides every call.** Any model can drive a browser, a desktop app or a program through the same tools. The user grants permissions in one vocabulary: *what* (a capability), *where* (an origin, an app, a folder, a server and tool), and *for how long*. That holds whether the tool is a Hermes built-in, an MCP server or a plugin. hypotaxis builds only the policy, the cards, the ledger records and revocation. The drivers already exist.
 
@@ -11,6 +11,7 @@ Status: plan, 2026-11-19. Evidence: `docs/research/automation.md` (Hermes's brow
 | `browser_vault` | Fills saved logins, cards and TOTP into an exact origin; the value never enters the conversation | Works |
 | Real profile | A **copy** of the user's Chromium profile, run headless, deleted when turned off | Chrome, Chromium, Brave and Edge. Not Firefox |
 | `computer_use` (cua-driver, MIT, pinned by Hermes) | Accessibility tree plus screenshot, numbered overlays, element tokens; any tool-calling model, `ax` mode for text-only models | X11 and XWayland apps fully. Native Wayland: tree and element actions yes, raw background keys refused |
+| hypruse (Hermes plugin catalog, community, pinned SHA) | A `computer_use` backend for Hyprland, selected with `computer_use.backend: hypruse`: accessibility-tree controls clicked by number, keys sent to one window, and a background mode on the agent's own workspaces (99 down to 90) that leaves the user's cursor, focus and workspace alone | Needs the `hypruse` command (PyPI, AUR); see section 12a |
 | camofox (official plugin) | An isolated, anti-fingerprint Firefox fork behind a local server | Works once the user runs the server |
 | Approvals | `command_allowlist` keys such as `cua:click:background` and `mcp:<server>/<tool>`; MCP `trust: untrusted`; cron and unattended modes deny | Works |
 
@@ -62,6 +63,7 @@ Because `browser_exec` is Python, it is one coarse capability (`web.script`), gr
 - **Ceilings by app category**, from Claude Code's computer use. Through the desktop route, browsers and trading apps are observe-only; use the typed browser route instead. Terminals and IDEs are click-only, and their grant card warns that the grant is "equivalent to shell access".
 - **A project can't grant reach.** A repository's `.hermes/hypotaxis.yaml` can narrow, but it can never grant `web.identity` beyond `isolated`, `desktop.*`, `fs.*` outside the workspace, or `secret.use`. Those are set at user scope only. A repository must not connect the agent to the user's browser or desktop.
 - **One teammate = one Hermes profile = one grant set = one browser identity.** Grants never flow between teammates. A delegated subagent gets its parent's grants intersected with its task's scope.
+- **Desktop sockets stay out of sandboxes.** Hyprland's IPC socket, the Wayland and X11 sockets and the session bus (which carries AT-SPI) would let code drive the desktop and bypass every grant. Hyprland's own docs say its IPC must be blocked by a sandbox, because Hyprland doesn't gate it. `hx-sandbox` already keeps them out: the environment allowlist has no `DISPLAY`, `WAYLAND_DISPLAY` or `DBUS_SESSION_BUS_ADDRESS`, `/run/user` isn't granted, seccomp denies connecting to a Unix socket by name when the network is off, and Landlock scopes abstract sockets. Phase A1 adds a test that keeps it that way, and checks what loopback-network mode allows. Hermes's `terminal` tool runs unsandboxed, so the capability map classes desktop commands (`hyprctl`, `hypruse`, `wtype`, `wlrctl`, `ydotool`, `xdotool`, `grim`) as `desktop.*`, and the policy decides them like any other desktop call.
 - **Where it's enforced.** Grants are part of the one permission function, `hypotaxis.policy.check`, extended with a capability step. The `pre_tool_call` hook calls it, and so does the exec kernel, because `ctx.dispatch_tool` bypasses hooks (ADR-0005). No second implementation.
 
 ## 5. Actions that always need confirmation
@@ -156,10 +158,18 @@ Scheduled teammates and runs with nobody watching may use only `always` grants t
 | later | Playwright MCP | Only if per-action browser classification proves necessary: typed tools plus `--allowed-origins`. Off by default, with its opt-in capability groups left off |
 | later | Windows and macOS | cua-driver already covers UIA and AX through the same Hermes tool, so A1 to A3 carry over. Safari has no logged-in automation except through accessibility |
 
+## 12a. Hyprland (the owner's desktop)
+Hyprland is not GNOME or KDE, and some routes differ:
+- **Desktop control: Hermes's `computer_use` with the hypruse backend.** It's the same tool and the same per-app grants, and it's in the plugin catalog of the Hermes version we pin. It reads AT-SPI and Hyprland's IPC. Its background mode runs apps on the agent's own workspaces (99 down to 90), so the agent doesn't take the user's focus. Element actions and keys to one window work in the background. Pointer actions need the foreground, so they count as `desktop.display` and ask each time. hypruse is community-maintained, so it's installed at the catalog's pinned SHA and reviewed before it ships on by default.
+- **cua-driver on Hyprland** is listed as experimental by Cua, and Hermes pins an older driver than the one Cua qualifies for Hyprland. It isn't the default here.
+- **Capture:** `grim`, per window or per output. Hyprland's own permission system can gate screen capture per binary (`ecosystem:enforce_permissions`, off by default), and a `setup` form can offer to turn it on with an allow rule for the harness only. That changes the whole desktop, so it's the user's choice, never automatic.
+- **Pixel input:** Hyprland supports the virtual pointer and virtual keyboard protocols, and its permission system doesn't gate them. xdg-desktop-portal-hyprland has no RemoteDesktop portal in any release yet; pull requests are open. Until it ships, pixel input on Hyprland goes through XWayland, or a virtual pointer under an explicit `desktop.display` grant.
+- **The agent's own screen:** a headless output (`hyprctl output create headless`) with a pinned workspace, where apps launch silently and are captured with `grim -o`. It's good for watching and for element actions. It doesn't isolate input: one seat means one cursor and one keyboard focus.
+
 Connector entries (A4, A5) follow CONNECTORS.md: pinned, verified against the publisher's sources, and with their egress stated. They're added when each phase starts, never with guessed versions.
 
 ## 13. Positions on the hard problems
-- **Wayland input and capture.** Prefer element actions through AT-SPI. Use X11 or XWayland for pixel work. On native Wayland, the xdg-desktop-portal RemoteDesktop session, with `persist_mode=2`, is the only sanctioned pixel-input route: the compositor's consent dialog is real and revocable. ydotool is never shipped by default (it needs root-level access to `/dev/uinput`, bypasses the compositor's consent, and is AGPL).
+- **Wayland input and capture.** Prefer element actions through AT-SPI. Use X11 or XWayland for pixel work. Where the compositor's portal offers RemoteDesktop (GNOME, KDE), that session, with `persist_mode=2`, is the sanctioned pixel-input route, because the compositor's consent dialog is real and revocable. Hyprland's portal doesn't offer it yet (section 12a). ydotool is never shipped by default (it needs root-level access to `/dev/uinput`, bypasses the compositor's consent, and is AGPL).
 - **An agent-owned screen.** A nested or virtual display, so the agent never fights the user for the mouse (Hermes's Bot Screen does this on servers) **[spike 3]**.
 - **Logged-in browsers.** Isolated by default. See section 6.
 - **Prompt injection.** Structural defences, sections 5 and 7. YOLO-style modes are for disposable machines only, as Hermes and cua say.
@@ -167,7 +177,7 @@ Connector entries (A4, A5) follow CONNECTORS.md: pinned, verified against the pu
 
 ## 14. Spikes before A1
 1. Can a `pre_tool_call` `approve`, together with the hypotaxis approval transport, answer Hermes's own `computer_use` gate from a hypotaxis grant? The goal is one card per action, not two, with persistence in the ledger instead of `command_allowlist`.
-2. On Arch, does `computer_use` capture on native Wayland under GNOME and KDE through `computer_use.native_wayland`, or only through XWayland?
-3. Can Hermes's Bot Screen, or a nested display (Xvnc, Xephyr, a headless compositor session), run on the user's own desktop as the agent's screen?
+2. On the owner's Hyprland: hypruse's background mode end to end, through Hermes's `computer_use`. Do AT-SPI's window-relative coordinates plus `hyprctl clients` positions give exact screen coordinates? Does a bare Arch install start the accessibility bus?
+3. A headless output as the agent's screen: silent launch without flicker, and what input can and can't reach it.
 4. Which Chrome DevTools MCP tools carry MCP annotations at run time?
 5. The licences and tool lists of camofox, firefox-devtools-mcp, and libei support per compositor.
