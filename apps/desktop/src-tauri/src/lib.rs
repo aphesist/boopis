@@ -246,7 +246,20 @@ pub fn run() {
             if let Some(plan) = &plan {
                 environment = environment.with_bundled(plan.bundled());
             }
-            let supervisor = Arc::new(hermes::Supervisor::new(environment, limits.clone()));
+            // The plugin's door to the keychain (secrets::channel): its token goes to the gateways this supervisor starts and
+            // to nothing else, and the policy learns which process the gateway is so the socket serves that one only.
+            let channel_auth = secrets::Auth::mint()
+                .inspect_err(|e| tracing::warn!(error = %e, "no plugin secret channel"))
+                .ok();
+            let peers = Arc::new(match &channel_auth {
+                Some(auth) => secrets::PeerPolicy::new().holding(auth.token_entry()),
+                None => secrets::PeerPolicy::new(),
+            });
+            let mut supervisor = hermes::Supervisor::new(environment, limits.clone());
+            if let Some(auth) = &channel_auth {
+                supervisor = supervisor.with_secret_channel(auth.launch_env(), peers.clone());
+            }
+            let supervisor = Arc::new(supervisor);
             // Find Hermes while the UI loads, so the first connect does not pay for `hermes --version` (about 0.2 s).
             let warm = supervisor.clone();
             tauri::async_runtime::spawn(async move {
@@ -281,22 +294,18 @@ pub fn run() {
             });
             // The plugin's door to the keychain. A failure (no socket support, another host running) is logged and
             // shown nowhere else: the app works, only the plugin's secret source stays empty.
-            let env = supervisor.environment().clone();
-            tauri::async_runtime::spawn(async move {
-                let Some(dir) = secrets::channel::default_socket_dir() else {
-                    tracing::warn!("no directory for the plugin secret channel");
-                    return;
-                };
-                let rendezvous = env.hermes_root().join("hypotaxis").join("host-channel.json");
-                match secrets::channel::start(secrets, &dir, &rendezvous).await {
-                    Ok(channel) => {
-                        tracing::info!(socket = %channel.socket().display(), "plugin secret channel is up");
-                        std::future::pending::<()>().await; // lives as long as the app: Drop removes the socket
-                        drop(channel);
+            if let Some(auth) = channel_auth {
+                tauri::async_runtime::spawn(async move {
+                    match secrets::channel::start(secrets, &auth, peers).await {
+                        Ok(channel) => {
+                            tracing::info!(socket = %channel.socket().display(), "plugin secret channel is up");
+                            std::future::pending::<()>().await; // lives as long as the app: Drop removes the socket
+                            drop(channel);
+                        }
+                        Err(e) => tracing::warn!(error = %e, "the plugin secret channel did not start"),
                     }
-                    Err(e) => tracing::warn!(error = %e, "the plugin secret channel did not start"),
-                }
-            });
+                });
+            }
             Ok(())
         })
         .build(context);

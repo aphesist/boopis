@@ -199,23 +199,13 @@ class FakeHostSecrets:
         self.home = home
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 
-    def start(self) -> None:
+    def start(self) -> dict[str, str]:
+        """Listens, and returns what the real host puts in the gateway's environment (the socket and the token: nothing is
+        written to a file), for the caller to give the gateway it starts."""
         self.sock.bind(str(self.path))
         self.sock.listen(4)
-        rendezvous = self.home / "hypotaxis" / "host-channel.json"
-        rendezvous.parent.mkdir(parents=True, exist_ok=True)
-        rendezvous.write_text(
-            json.dumps(
-                {
-                    "protocol": "hx-host-secrets-v1",
-                    "schema_version": 1,
-                    "socket": str(self.path),
-                    "token": "t",
-                    "pid": os.getpid(),
-                }
-            )
-        )
         threading.Thread(target=self._serve, daemon=True).start()
+        return {"HYPOTAXIS_HOST_SECRETS_SOCKET": str(self.path), "HYPOTAXIS_HOST_SECRETS_TOKEN": "t"}
 
     def _serve(self) -> None:
         while True:
@@ -238,9 +228,9 @@ def forms_scenario(install: Any, tmp: Path, url: str) -> None:
     stack = HermesStack(install, tmp, url, {"hx_path": HX}, {})
     stack.start()
     host = FakeHostSecrets(stack.home)
-    host.start()
+    gateway_env = {**stack.env, **host.start()}  # the gateway the client starts below is the one handed the channel
     try:
-        gw = GatewayClient(hermes_bin=str(install.hermes), env=stack.env, frames_log=tmp / "frames.jsonl")
+        gw = GatewayClient(hermes_bin=str(install.hermes), env=gateway_env, frames_log=tmp / "frames.jsonl")
         gw.connect()
         gw.handshake()
         proj = make_project(tmp)

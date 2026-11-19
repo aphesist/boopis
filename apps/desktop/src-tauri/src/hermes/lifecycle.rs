@@ -3,7 +3,7 @@
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use serde::Serialize;
 use specta::Type;
@@ -14,6 +14,7 @@ use super::control;
 use super::discover::{self, Environment, HermesInfo, Version};
 use crate::config::{Limits, REQUIRES_HERMES};
 use crate::error::{Error, Result};
+use crate::secrets::PeerPolicy;
 
 /// What the UI is told about the gateway (`hermes_status`).
 #[derive(Debug, Clone, Copy, Serialize, Type, PartialEq, Eq)]
@@ -54,6 +55,8 @@ pub struct Supervisor {
     requires: String,
     info: tokio::sync::Mutex<Option<HermesInfo>>,
     ensured: Mutex<HashSet<PathBuf>>,
+    /// The secret channel's gateway policy.
+    channel: Option<Arc<PeerPolicy>>,
 }
 
 impl Supervisor {
@@ -75,6 +78,34 @@ impl Supervisor {
             requires: REQUIRES_HERMES.to_owned(),
             info: tokio::sync::Mutex::new(None),
             ensured: Mutex::new(HashSet::new()),
+            channel: None,
+        }
+    }
+
+    /// Hand the plugin secret channel to the gateways this supervisor starts: `env` (the socket and the token) reaches
+    /// only the `gateway ensure|attach` calls, and `peers` is told which process the gateway is so the channel serves it
+    /// and nothing else (`secrets::peer`).
+    #[must_use]
+    pub fn with_secret_channel(
+        mut self,
+        env: Vec<(String, String)>,
+        peers: Arc<PeerPolicy>,
+    ) -> Self {
+        self.cli = self.cli.with_secret_channel(env, peers.clone());
+        self.channel = Some(peers);
+        self
+    }
+
+    /// Tell the channel's policy which process the gateway is: the pid the kernel reported on its control socket.
+    fn note_gateway(&self, identity: &control::Identify) {
+        let (Some(peers), Some(pid)) = (&self.channel, identity.pid) else {
+            return;
+        };
+        if identity.state == "ready" && !peers.record_gateway(pid) {
+            tracing::debug!(
+                pid,
+                "the gateway was not started by this run: the secret channel will not serve it"
+            );
         }
     }
 
@@ -151,6 +182,9 @@ impl Supervisor {
             .await
             .ok()
             .filter(|i| i.state == "ready");
+        if let Some(i) = &identity {
+            self.note_gateway(i);
+        }
         let gateway = match (&identity, requirement_met) {
             (_, Some(false)) => GatewayState::Incompatible,
             (Some(_), _) => GatewayState::Running,
@@ -207,6 +241,7 @@ impl Supervisor {
         if verdict.state != "ready" {
             return Err(verdict.refusal());
         }
+        self.note_started_gateway(home).await;
         if let Ok(mut done) = self.ensured.lock() {
             done.insert(home.to_path_buf());
         }
@@ -226,6 +261,7 @@ impl Supervisor {
         }
         let info = self.info().await?;
         if let Ok(identity) = control::identify(home).await {
+            self.note_gateway(&identity);
             let settled = identity.state == "ready"
                 && match (
                     identity.endpoint.code_sha.as_deref(),
@@ -267,11 +303,14 @@ impl Supervisor {
         let verdict = self
             .run_verdict(&info, home, &["gateway", "attach", "--json", "--start"])
             .await?;
-        Dial::from_attach(&verdict)
+        let dial = Dial::from_attach(&verdict)?;
+        self.note_started_gateway(home).await;
+        Ok(dial)
     }
 
     async fn attach_fast(&self, home: &Path) -> Result<Dial> {
         let identity = control::identify(home).await?;
+        self.note_gateway(&identity);
         if identity.state != "ready" {
             return Err(Error::Unavailable(format!(
                 "the gateway is {}",
@@ -286,10 +325,20 @@ impl Supervisor {
         Dial::from_control(identity.endpoint, &ticket)
     }
 
+    /// A gateway a launch just made ready: ask its control socket who it is and record that.
+    async fn note_started_gateway(&self, home: &Path) {
+        if self.channel.is_some()
+            && let Ok(identity) = control::identify(home).await
+        {
+            self.note_gateway(&identity);
+        }
+    }
+
     async fn run_verdict(&self, info: &HermesInfo, home: &Path, args: &[&str]) -> Result<Verdict> {
+        // Only `ensure` and `attach --start` come here, the two calls that may start a gateway.
         let out = self
             .cli
-            .run(&info.binary, home, args, self.limits.ensure_timeout)
+            .run_launching(&info.binary, home, args, self.limits.ensure_timeout)
             .await?;
         Verdict::parse(&out.stdout).map_err(|e| {
             let tail: String = out

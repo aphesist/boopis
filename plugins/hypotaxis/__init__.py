@@ -59,6 +59,9 @@ def _rpc(method: str) -> Callable[..., Any]:
 
 
 def register(ctx: Any) -> None:
+    from .hostsecrets.channel import capture_environment
+
+    capture_environment()  # first: the host's token leaves the process environment before anything can start a child
     from .forms.tools import ask_handler, request_credential_handler, request_input_handler
     from .hermes_api import bind
     from .tools import (
