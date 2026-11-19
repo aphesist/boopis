@@ -256,8 +256,9 @@ body {
 .hxt-preset:hover { box-shadow: inset 0 0 0 1px var(--line-strong); }
 .hxt-preset:has(input:checked) { box-shadow: inset 0 0 0 2px var(--brass); }
 .hxt-preset:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
-.hxt-preset__chips { display: flex; align-items: center; gap: 0; margin-bottom: var(--sp-1); }
-.hxt-preset__chips i { width: 22px; height: 22px; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 12%, transparent); }
+/* the strip spans the card's content box, so its last chip sits at --pad from the card's end as the first sits at --pad from its start and the top (R-corner-3); 22px chips left 16px at 390 */
+.hxt-preset__chips { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; align-items: center; gap: 0; margin-bottom: var(--sp-1); }
+.hxt-preset__chips i { height: 22px; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 12%, transparent); }
 .hxt-preset__chips i:first-child { border-radius: var(--r-in) 0 0 var(--r-in); }
 .hxt-preset__chips i:last-child { border-radius: 0 var(--r-in) var(--r-in) 0; }
 .hxt-preset__name { font-size: var(--fs-s); font-weight: 600; color: var(--text-strong); }
