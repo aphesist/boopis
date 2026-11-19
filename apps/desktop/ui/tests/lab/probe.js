@@ -297,8 +297,9 @@
         if (r.height > 64 || r.height < 8) continue;
         const kids = [...e.children].filter((k) => shown(k) && !/absolute|fixed/.test(getComputedStyle(k).position) && !k.matches('.ui-sr'));
         if (kids.length < 2) continue;
-        const rows = new Set(kids.map((k) => Math.round(k.getBoundingClientRect().top / 4)));
-        if (s.flexWrap !== 'nowrap' && rows.size > 1 && kids.some((k) => k.getBoundingClientRect().top >= r.top + r.height / 2)) continue;   /* wrapped onto lines */
+        const boxes = kids.map((k) => k.getBoundingClientRect());
+        /* wrapped onto lines: some item sits wholly below another (lines of unequal height put the later line's top above the row's middle) */
+        if (s.flexWrap !== 'nowrap' && boxes.some((a) => boxes.some((b) => a.top >= b.bottom - 0.5))) continue;
         const top = r.top + px(s.paddingTop) + px(s.borderTopWidth), bottom = r.bottom - px(s.paddingBottom) - px(s.borderBottomWidth);
         const mid = (top + bottom) / 2;
         for (const k of kids) {
@@ -355,6 +356,7 @@
         const r = boxes[i];
         if (r.width >= HIT - 0.01 && r.height >= HIT - 0.01) return;
         if (t.matches('a') && t.closest('p, li') && getComputedStyle(t).display === 'inline') return;   /* a link in a sentence: 2.5.8's inline exception */
+        if (t.matches('button') && /^inline/.test(getComputedStyle(t).display) && t.closest('p, li, article')) return;   /* a button set into a sentence (the blank's gap): the same inline exception, its size is set by the line */
         const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
         const clash = boxes.some((b, j) => j !== i && Math.max(b.left - cx, 0, cx - b.right) ** 2 + Math.max(b.top - cy, 0, cy - b.bottom) ** 2 < 12 * 12);
         if (clash) add('geometry.target', t, 'target ' + r1(r.width) + ' x ' + r1(r.height) + 'px, under --hit-min (' + HIT + 'px) and too close to another target');
