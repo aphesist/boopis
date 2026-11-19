@@ -106,8 +106,7 @@ function row(o: RowOpts): string {
     '<span class="ui-row__lead">' + (o.lead ?? '') + '</span>' +
     '<span class="ui-row__text"><span class="ui-row__title">' + (o.titleHTML ?? esc(o.title)) + '</span>' + (two ? ' <span class="ui-row__sub">' + esc(o.sub) + '</span>' : '') + '</span>' +
     (o.end ? ' <span class="ui-row__end"' + attrs({ 'data-tone': o.endTone, 'data-swap': o.acts ? '' : null }) + '>' + o.end + '</span>' : '') + '</' + tag + '>';
-  /* --acts: how many action buttons show on hover or focus, so the title can make room for them */
-  return o.acts ? '<li class="ui-row-wrap" style="--acts:' + (o.acts.match(/<button/g) ?? []).length + '">' + r + '<span class="ui-row__acts">' + o.acts + '</span></li>' : '<li>' + r + '</li>';
+  return o.acts ? '<li class="ui-row-wrap">' + r + '<span class="ui-row__acts">' + o.acts + '</span></li>' : '<li>' + r + '</li>';
 }
 /** the glyph column: running breathes, attention is red, current and idle is brass, else nothing */
 const leadFor = (o: { attention?: U<boolean>; running?: U<boolean>; current?: U<boolean> }): string => (o.attention ? dot('attention') : o.running ? dot('run') : o.current ? dot('here') : '');

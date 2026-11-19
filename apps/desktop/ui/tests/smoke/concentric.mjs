@@ -3,7 +3,7 @@
    (the session's, the Bots tab's, the dock session's) holds its corner controls inside its box, equally inset from both
    edges of their corner (within 1px), with the radius the container's rule derives (inset + radius = the box's radius:
    one centre), at rest, hovered, focused (the ring inside the box too), pressed and disabled; and a corner control's
-   tooltip sits outside it, aligned to it, inside the window, and never over the text or the assumptions. */
+   tooltip sits outside it, centred on it, inside the window, and never over the text or the assumptions. */
 import { check } from './harness.mjs';
 
 const CASES = [['dark', '', 1], ['light', 'preset=bone', 2], ['dark 1.6', '', 1.6]];
@@ -54,8 +54,8 @@ function tipFaults(m, anchor, align) {
   for (const k of m.keep) if (hit(t, k)) out.push('covers the text ' + JSON.stringify({ t, k }));
   if (hit(t, anchor)) out.push('covers its control');
   if (t.l < 7.5 || t.t < 7.5 || t.r > m.W - 7.5 || t.b > m.H - 7.5) out.push('leaves the window');
-  if (align === 'start' && Math.abs(t.l - anchor.l) > 1 && t.l > 8.5) out.push('not aligned to the control\'s left ' + t.l + ' vs ' + anchor.l);
-  if (align === 'end' && Math.abs(t.r - anchor.r) > 1 && t.r < m.W - 8.5) out.push('not aligned to the control\'s right ' + t.r + ' vs ' + anchor.r);
+  /* R-float-3: a tooltip is centred on its anchor, unless the window's margin moves it */
+  if (Math.abs((t.l + t.r) / 2 - (anchor.l + anchor.r) / 2) > 1 && t.l > 8.5 && t.r < m.W - 8.5) out.push('not centred on the control: tip ' + (t.l + t.r) / 2 + ' vs control ' + (anchor.l + anchor.r) / 2);
   return out;
 }
 
@@ -96,7 +96,7 @@ export async function concentric(env) {
           faults.push(...cornerFaults(await measure(root), 'pressed'));
           await page.mouse.up(); await page.waitForTimeout(250); await page.keyboard.press('Escape'); await page.waitForTimeout(250);
         }
-        check('corners', `${label} composer (${scheme}, @${dsf}): R-corner-3/4 corner controls concentric and equally inset in every state; R-float-1/R-tip-2 tips outside, aligned, off the text`, faults.length === 0, faults.slice(0, 6));
+        check('corners', `${label} composer (${scheme}, @${dsf}): R-corner-3/4 corner controls concentric and equally inset in every state; R-float-1/R-tip-2 tips outside, centred, off the text`, faults.length === 0, faults.slice(0, 6));
       }
       /* the dock session's composer (compact: the actions in the bottom-right corner, 6px from both edges) */
       await go();
@@ -112,7 +112,7 @@ export async function concentric(env) {
         await keyFocus(dsel + ' .ui-send');
         faults.push(...cornerFaults(await measure(dsel), 'focus'));
       }
-      check('corners', `dock session composer (${scheme}, @${dsf}): R-corner-3/4 the actions concentric in the corner; R-tip-2 the tip aligned and off the text`, faults.length === 0, faults.slice(0, 6));
+      check('corners', `dock session composer (${scheme}, @${dsf}): R-corner-3/4 the actions concentric in the corner; R-tip-2 the tip centred and off the text`, faults.length === 0, faults.slice(0, 6));
     } catch (e) { check('corners', `concentric (${scheme}): script`, false, String(e.message).split('\n')[0]); }
     await ctx.close();
   }

@@ -10,6 +10,8 @@ type Props = Record<string, unknown>;
 export interface Drawer { draw(p: Props): string; base: Props; as?(axis: string, v: unknown): Props; width?: number; ground?: State['ground'] }
 const H = html as unknown as Record<string, (p: Props) => string>;
 const t = (name: string, base: Props, as?: Drawer['as'], extra: Partial<Drawer> = {}): Drawer => ({ draw: (p) => (H[name] as (p: Props) => string)(p), base, ...(as ? { as } : {}), ...extra });
+/** a drawing that needs its list: a row is an `<li>`, so it is drawn inside a `<ul>` (axe: listitem) */
+const wrapped = (cls: string, d: Drawer): Drawer => ({ ...d, draw: (p) => '<ul class="' + cls + '">' + d.draw(p) + '</ul>' });
 const SEG = [{ value: 'rail', label: 'Rail' }, { value: 'closed', label: 'Hide' }];
 const LONG_BODY = Array.from({ length: 30 }, (_, i) => '<p>Line ' + (i + 1) + '</p>').join('');
 
@@ -27,7 +29,7 @@ export const DRAWERS: Partial<Record<ComponentName, Drawer>> = {
   input: t('input', { label: 'Name', value: 'nina' }),
   select: t('select', { label: 'Interface font', entries: [{ value: 'Geist' }, { value: 'Libre Franklin' }], value: 'Geist' }),
   setRow: t('setRow', { label: 'Show the dock', control: '' }, (a, v) => (a === 'hint' ? (v ? { hint: 'Bots and widgets at the bottom edge' } : {}) : {}), { ground: 'frame', width: 560 }),
-  row: t('row', { title: 'proration drift in src/billing', end: 'now' }, (a, v) => (a === 'sub' ? (v ? { sub: 'billing-api' } : {}) : a === 'acts' ? (v ? { acts: html.iconButton({ icon: 'archive', label: 'Archive' }) } : {}) : { [a]: v }), { width: 280 }),
+  row: wrapped('ui-rows', t('row', { title: 'proration drift in src/billing', end: 'now' }, (a, v) => (a === 'sub' ? (v ? { sub: 'billing-api' } : {}) : a === 'acts' ? (v ? { acts: html.iconButton({ icon: 'archive', label: 'Archive' }) } : {}) : { [a]: v }), { width: 280 })),
   group: t('group', { label: 'Today', rows: html.row({ title: 'audit log export', end: 'yesterday' }) }, undefined, { width: 280 }),
   section: t('section', { label: 'Context', meta: '38%', body: '<p>the body</p>' }, undefined, { ground: 'frame', width: 320 }),
   scroll: t('scroll', { label: 'A long body', body: LONG_BODY, attrs: { style: 'height:120px;width:240px' } }, (a, v) => (a === 'axis' && v !== 'y' ? { axis: v, body: '<div style="width:800px">' + LONG_BODY + '</div>' } : { [a]: v }), { ground: 'frame' }),

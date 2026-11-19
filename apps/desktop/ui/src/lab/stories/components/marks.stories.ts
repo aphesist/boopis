@@ -6,6 +6,7 @@ import type { Story } from '../../types';
 import { BOT_LIKE, BOT_LONG, LONG_TITLE, RTL, UNBROKEN } from '../../fixtures';
 import { GOVERNANCE, CONTEXT } from '../../../data/mock-data';
 
+const PAGES_HIT = "the page dots are the parts of one tab strip, each with a 24px hit area around it (::after in components.css); R-a11y-2: a mark smaller than --hit-min gets a hit area of 24 around it (page dots). The check measures each dot's own box, not its hit area";
 const MARKS = { url: '/v6/design-system/index.html#c-marks', crop: '#c-marks' };
 const MEASURES = { url: '/v6/design-system/index.html#c-measures', crop: '#c-measures' };
 const cmp = (id: string, title: string, covers: string[], mock: Story['mock'], states: Story['states']): Story => ({ id: 'components/' + id, title, area: 'components', kind: 'component', covers, ...(mock ? { mock } : {}), states });
@@ -52,9 +53,9 @@ export default [
     long: stage(['long'], ({ root }) => { put(root, ui.legend([[LONG_TITLE, 120000], [UNBROKEN, 9000]])); }, { width: 320 })
   }),
   cmp('pages', 'Page dots', ['ui.pages'], { url: '/v6/design-system/index.html#c-dock', crop: '#c-dock' }, {
-    typical: stage(['typical', 'variant'], ({ root }) => { line(root, ui.pages({ pages: [{ id: 'a', label: 'Bots' }, { id: 'b', label: 'Runs', attention: true }, { id: 'c', label: 'Schedules' }], current: 'a', interactive: true })); line(root, ui.pages({ pages: [{ id: 'a' }, { id: 'b' }], current: 'b' })); }, { ground: 'dock' }),
+    typical: stage(['typical', 'variant'], ({ root }) => { line(root, ui.pages({ pages: [{ id: 'a', label: 'Bots' }, { id: 'b', label: 'Runs', attention: true }, { id: 'c', label: 'Schedules' }], current: 'a', interactive: true })); line(root, ui.pages({ pages: [{ id: 'a' }, { id: 'b' }], current: 'b' })); }, { ground: 'dock', allow: { 'geometry.target': PAGES_HIT } }),
     single: stage(['single'], ({ root }) => { line(root, ui.pages({ pages: [{ id: 'a', label: 'Bots' }], current: 'a', interactive: true })); }, { ground: 'dock' }),
-    many: stage(['many'], ({ root }) => { line(root, ui.pages({ pages: Array.from({ length: 12 }, (_, i) => ({ id: 'p' + i, label: 'Page ' + i })), current: 'p5', interactive: true })); }, { ground: 'dock' }),
+    many: stage(['many'], ({ root }) => { line(root, ui.pages({ pages: Array.from({ length: 12 }, (_, i) => ({ id: 'p' + i, label: 'Page ' + i })), current: 'p5', interactive: true })); }, { ground: 'dock', allow: { 'geometry.target': PAGES_HIT } }),
     long: stage(['long'], ({ root }) => { line(root, ui.pages({ pages: [{ id: 'a', label: LONG_TITLE }], current: 'a', interactive: true })); }, { ground: 'dock' })
   }),
   cmp('model-mark', 'Model marks', ['ui.modelMark', 'ui.model', 'ui.modelRoute'], { url: '/v6/design-system/index.html#icons', crop: '#icons' }, {

@@ -408,10 +408,12 @@ button.ui-group__head { cursor: pointer; }
 .ui-row:is(:hover, :focus-within) .ui-row__acts, .ui-row-wrap:is(:hover, :focus-within) .ui-row__acts { display: flex; }
 .ui-row-wrap:is(:hover, :focus-within) .ui-row__end[data-swap] { display: none; }
 .ui-row[data-archived] .ui-row__title { color: var(--text-quiet); text-decoration: line-through; text-decoration-color: var(--line-strong); }
-.ui-row-wrap { position: relative; display: flex; align-items: center; }
-.ui-row-wrap > .ui-row { flex: 1; }
-.ui-row-wrap > .ui-row__acts { position: absolute; right: 4px; }
-.ui-row-wrap:is(:hover, :focus-within) > .ui-row { padding-right: calc(var(--acts, 0) * (var(--ctl-s) + 2px) + 8px); }   /* the title ellipsises before the actions */
+.ui-row-wrap { display: flex; align-items: center; border-radius: var(--r-s); }   /* the actions join the flow when the row is hovered or has focus, so the title ellipsises before them with no computed padding (R-space-1) */
+.ui-row-wrap > .ui-row { flex: 1; width: auto; min-width: 0; }
+.ui-row-wrap > .ui-row__acts { padding-right: var(--sp-1); }
+.ui-row-wrap:is(:focus-within) { background: var(--hover); }
+@media (hover: hover) and (pointer: fine) { .ui-row-wrap:hover { background: var(--hover); } .ui-row-wrap > .ui-row:hover { --sq-bg: transparent; } }   /* one fill under the row and its actions */
+.ui-row-wrap:focus-within > .ui-row:not([aria-current], [aria-selected="true"]) { --sq-bg: transparent; }
 
 /* ───────────── floating surfaces: menu, popover, tooltip, toast ───────────── */
 .ui-menu, .ui-pop, .ui-listbox {
@@ -452,7 +454,7 @@ button.ui-group__head { cursor: pointer; }
 .ui-menu__item .ui-stamp { margin-left: auto; align-self: center; }
 .ui-menu__sep { height: 1px; margin: 4px 6px; background: var(--hair); }
 /* the select's list: the menu's surface and rows, as a scrolling listbox; provider headers are the menu's titles with a mark */
-.ui-listbox { display: flex; flex-direction: column; max-width: min(520px, calc(100vw - 16px)); }
+.ui-listbox { display: flex; flex-direction: column; max-width: min(520px, calc(100vw - 2 * var(--float-margin))); }
 .ui-listbox__list { flex: 1; min-height: 0; border-radius: var(--r-in); }   /* the surface does not scroll: its drawn corner would go with the content */
 .ui-listbox__head { display: flex; align-items: center; gap: var(--sp-2); }
 .ui-listbox__group + .ui-listbox__group { margin-top: 4px; }
@@ -532,7 +534,9 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-ladder__st { position: relative; display: block; width: var(--st); height: var(--st); border-radius: var(--r-pill); background: var(--ui-ladder-ground, var(--bg-2)); box-shadow: inset 0 0 0 1px var(--mark-off); }
 .ui-ladder__st[data-s="past"] { background: var(--text-dim); box-shadow: none; }
 .ui-ladder__st[data-s="now"] { background: var(--brass); box-shadow: none; }
-.ui-ladder[data-off] { opacity: .45; }
+/* off: the role colours of a disabled thing, not an opacity (R-state-6): text in --text-quiet, which holds AA, marks in --mark-off */
+.ui-ladder[data-off] :is(.ui-ladder__name, .ui-ladder__rule), .ui-ladder--list[data-off] > li[aria-current="step"] :is(.ui-ladder__name, .ui-ladder__rule) { color: var(--text-quiet); }
+.ui-ladder[data-off] .ui-ladder__st:is([data-s="past"], [data-s="now"]) { background: var(--mark-off); box-shadow: none; }
 /* list: one station per row, with the model and the rule that reaches it */
 .ui-ladder--list { --st: 8px; display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; column-gap: 8px; row-gap: 0; align-items: center; }
 .ui-ladder--list::before { display: none; }
@@ -577,6 +581,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 /* pages: the dock's page dots (a tablist) and a queue's position (an image); the current one is brass */
 .ui-pages { position: relative; display: inline-flex; align-items: center; height: 10px; }
 .ui-pages__dot { appearance: none; position: relative; display: grid; place-items: center; width: 10px; height: 10px; padding: 0; margin: 0; border: 0; border-radius: var(--r-xs); background: transparent; cursor: pointer; }
+.ui-pages__dot::after { content: ""; position: absolute; left: 0; right: 0; top: calc((10px - var(--hit-min)) / 2); bottom: calc((10px - var(--hit-min)) / 2); }   /* the 24px hit area around a 10px mark (R-a11y-2); the dots tile the strip, so a press beside the current dot lands on its neighbour */
 .ui-pages__dot > i { display: block; width: 4px; height: 4px; border-radius: var(--r-pill); background: var(--mark-off); transition: background-color var(--dur-1) var(--ease); }
 @media (hover: hover) and (pointer: fine) { .ui-pages__dot:hover > i { background: var(--text-dim); } }
 .ui-pages__dot:is([aria-selected="true"], [data-current]) { width: 20px; cursor: default; }
