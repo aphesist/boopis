@@ -503,6 +503,45 @@ async fn a_build_without_the_plugin_says_so() {
     );
 }
 
+/// What a finished setup leaves in the profile's home, as the e2e fixtures write it (`tests/e2e/setup-done.json`).
+const E2E_SETUP_DONE: &str = include_str!("../../../../../tests/e2e/setup-done.json");
+
+/// A home the e2e stack prepared: the plugin copied in at the bundle's version and enabled, as `tests/e2e/stack.py` does.
+fn a_home_with_the_plugin(r: &Rig) {
+    let home = r.fake.home.clone();
+    let plugin = home.join("plugins").join("hypotaxis");
+    std::fs::create_dir_all(&plugin).unwrap();
+    std::fs::copy(
+        r.bundle.plugin_dir.as_ref().unwrap().join("plugin.yaml"),
+        plugin.join("plugin.yaml"),
+    )
+    .unwrap();
+    r.fake.plugins.lock().unwrap().push(PluginEntry {
+        name: "hypotaxis".into(),
+        enabled: true,
+    });
+}
+
+#[tokio::test]
+async fn the_e2e_setup_marker_is_what_makes_the_ui_show_a_session() {
+    // The UI shows first-run setup instead of a session while `check` says `needed`, so the release smoke, which drives a
+    // session, has to start from a home setup has finished with. It copies tests/e2e/setup-done.json into the stack's home.
+    let r = rig(main_provider());
+    a_home_with_the_plugin(&r);
+    let unfinished = r.setup().check().await.unwrap();
+    assert!(
+        unfinished.needed && unfinished.reason == "setup has not finished",
+        "{}",
+        unfinished.reason
+    );
+
+    let marker = super::state::path(&r.fake.home);
+    std::fs::create_dir_all(marker.parent().unwrap()).unwrap();
+    std::fs::write(&marker, E2E_SETUP_DONE).unwrap();
+    let done = r.setup().check().await.unwrap();
+    assert!(!done.needed, "{}", done.reason);
+}
+
 fn with_runtime(
     r: &Rig,
     version: &str,

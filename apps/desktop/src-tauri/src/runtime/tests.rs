@@ -336,3 +336,31 @@ fn the_source_is_the_bundle_unless_asked_otherwise() {
     );
     assert_eq!(Source::resolve(Some(""), Some("nonsense")), Source::Bundled);
 }
+
+#[test]
+fn a_build_that_carries_a_runtime_uses_it_unless_the_user_chose_their_own_hermes() {
+    // This is what a packaged app (an AppImage) is: the runtime is in the resource directory. The release smoke runs
+    // such an app against an e2e Hermes, so it must say `existing`, or the host unpacks the bundle and ignores it.
+    let tmp = tempfile::tempdir().unwrap();
+    let res = tmp.path().join("res");
+    bundle(&res.join("runtime"), "0.23.2", &standard("0.23.2"), None);
+    let data = || Ok(tmp.path().join("data"));
+
+    let (plan, error) = plan_for(Source::Bundled, Some(&res), data());
+    assert!(
+        plan.is_some() && error.is_none(),
+        "the carried runtime is the default"
+    );
+
+    let (plan, error) = plan_for(Source::Existing, Some(&res), data());
+    assert!(
+        plan.is_none() && error.is_none(),
+        "HYPOTAXIS_HERMES=existing leaves the runtime alone"
+    );
+
+    let (plan, error) = plan_for(Source::Bundled, Some(&tmp.path().join("none")), data());
+    assert!(
+        plan.is_none() && error.is_none(),
+        "a build without one uses the Hermes on the machine"
+    );
+}
