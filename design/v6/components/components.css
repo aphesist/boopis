@@ -58,6 +58,8 @@
 
 /* ───────────── root behaviour: put .ui-root on the app root (the shell's .hx) ───────────── */
 :where(.ui-root) { caret-color: var(--brass); scrollbar-width: thin; scrollbar-color: var(--bg-4) transparent; }
+/* scrollbar-width is not inherited: every scroller in the app gets the thin bar, not only the root */
+:where(.ui-root) * { scrollbar-width: thin; }
 :where(.ui-root) ::selection { background: var(--brass-soft); color: var(--text-strong); }
 :where(.ui-root, .ui-scope) :focus { outline: none; }
 :where(.ui-root, .ui-scope) :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
@@ -238,7 +240,7 @@
 .ui-rows { list-style: none; margin: 0; padding: 0 8px; }
 .ui-group + .ui-group { margin-top: 12px; }
 .ui-group__head {
-  appearance: none; display: flex; align-items: center; gap: 4px; width: 100%; height: calc(var(--row-h) - 6px); padding: 0 12px; margin: 0; border: 0;
+  appearance: none; display: flex; align-items: center; gap: 4px; box-sizing: border-box; width: 100%; height: calc(var(--row-h) - 6px); padding: 0 12px; margin: 0; border: 0;
   border-radius: var(--r-s); background: transparent; text-align: left;
   font: 500 var(--fs-xs)/1 var(--sans); color: var(--text-quiet); text-transform: var(--ui-case);
 }

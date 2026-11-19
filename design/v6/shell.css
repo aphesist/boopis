@@ -212,7 +212,7 @@ body {
 .hx-palette__field input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; background: transparent; outline: none; color: var(--text-strong); font: 400 var(--fs-m)/1 var(--sans); }
 .hx .hx-palette__field input:focus-visible { outline: none; }
 .hx-palette__field input::placeholder { color: var(--text-quiet); }
-.hx-palette__list { overflow-y: auto; overscroll-behavior: contain; padding: 4px 6px 6px; }
+.hx-palette__list { overflow: hidden auto; overscroll-behavior: contain; padding: 4px 6px 6px; } /* rows ellipsise: the list never scrolls sideways */
 .hx-pal-row { height: auto; min-height: var(--row-h); gap: 10px; padding: 0 10px; border-radius: var(--r-in); }
 .hx-pal-row__icon { width: 18px; height: 18px; display: grid; place-items: center; color: var(--icon); flex: none; }
 .hx-pal-row__icon .ui-icon { width: 16px; height: 16px; }
