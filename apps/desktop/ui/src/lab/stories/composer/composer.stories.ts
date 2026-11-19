@@ -81,6 +81,7 @@ const inApp: Story = {
     'session, attach hover': { tags: ['hover', 'owner'], force: [{ sel: '#hx-view-session .ui-composer__attach', state: 'hover' }] },
     'session, send hover': { tags: ['hover', 'owner'], force: [{ sel: '#hx-view-session .ui-send', state: 'hover' }] },
     'session, attach tooltip': { tags: ['tooltip', 'owner'], overlay: { anchor: '#hx-view-session .ui-composer__attach', layer: '.ui-tip' }, app: { setup: async (c) => { const b = c.$('#hx-view-session .ui-composer__attach'); b.focus(); c.hx.ui.tooltip.show(b); await c.wait(250); } } },
+    'session, attach menu': { tags: ['menu', 'owner'], overlay: { anchor: '#hx-view-session .ui-composer__attach', layer: '.ui-menu' }, app: { setup: async (c) => { const b = c.$('#hx-view-session .ui-composer__attach'); b.click(); await c.wait(300); } } },
     'dock session': { tags: ['typical', 'owner'], scope: '#hx-dock [data-hx-composer]', app: { setup: async (c) => { c.hx.dock()?.openSession('nina'); await c.wait(900); } } },
     'dock session, send hover': { tags: ['hover', 'owner'], scope: '#hx-dock [data-hx-composer]', force: [{ sel: '#hx-dock .ui-send', state: 'hover' }], app: { setup: async (c) => { c.hx.dock()?.openSession('nina'); await c.wait(900); } } }
   }

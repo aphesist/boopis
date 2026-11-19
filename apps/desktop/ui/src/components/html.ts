@@ -27,7 +27,7 @@ const stamp = (text: string, o?: { attrs?: Attrs }): string => '<span class="ui-
 const dot = (kind?: string, o: { size?: string; label?: string; show?: boolean } = {}): string =>
   '<span class="' + cx('ui-dot', kind && 'ui-dot--' + kind, o.size === 's' && 'ui-dot--s') + '"' + (o.label ? ' role="img" aria-label="' + esc(o.label) + '"' : ' aria-hidden="true"') + (o.show ? ' data-show' : '') + '></span>';
 const capacity = (spent: string, cap: string, o?: { label?: string }): string =>
-  '<span class="ui-capacity"' + attrs({ 'aria-label': o?.label ?? (spent + ' of ' + cap + ' spent') }) + '><b>' + esc(spent) + '</b> of ' + esc(cap) + '</span>';
+  '<span class="ui-capacity"' + attrs({ role: 'img', 'aria-label': o?.label ?? (spent + ' of ' + cap + ' spent') }) + '><b>' + esc(spent) + '</b> of ' + esc(cap) + '</span>';
 
 export interface ButtonOpts {
   label: string; variant?: U<'secondary' | 'primary' | 'ghost'>; size?: U<'m' | 's'>; icon?: U<string>; keys?: U<string>; showKeys?: U<boolean>;
