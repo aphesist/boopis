@@ -98,12 +98,8 @@ class Page:
             stderr=subprocess.DEVNULL,
         )
         self.wait_ready()
-        self.sid = self.call("POST", "/session", {"capabilities": {"alwaysMatch": {}}})[
-            "value"
-        ]["sessionId"]
-        self.call(
-            "POST", f"/session/{self.sid}/window/rect", {"width": 1280, "height": 800}
-        )
+        self.sid = self.call("POST", "/session", {"capabilities": {"alwaysMatch": {}}})["value"]["sessionId"]
+        self.call("POST", f"/session/{self.sid}/window/rect", {"width": 1280, "height": 800})
 
     def call(self, method: str, path: str, body: object | None = None) -> dict:
         req = urllib.request.Request(
@@ -118,10 +114,7 @@ class Page:
     def wait_ready(self) -> None:
         for _ in range(60):
             with contextlib.suppress(Exception):
-                if (
-                    self.call("GET", "/status").get("value", {}).get("ready")
-                    is not None
-                ):
+                if self.call("GET", "/status").get("value", {}).get("ready") is not None:
                     return
             time.sleep(0.5)
         raise SystemExit("WebKitWebDriver did not start")
@@ -183,9 +176,7 @@ class Page:
 
     def shot(self) -> Any:
         image = importlib.import_module("PIL.Image")
-        png = base64.b64decode(
-            self.call("GET", f"/session/{self.sid}/screenshot")["value"]
-        )
+        png = base64.b64decode(self.call("GET", f"/session/{self.sid}/screenshot")["value"])
         return image.open(io.BytesIO(png)).convert("RGB")
 
     def close(self) -> None:
