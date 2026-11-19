@@ -1,7 +1,7 @@
 {
   "pack": {
     "name": "pack",
-    "description": "Read the codebase. One call can search with surrounding lines, read whole files or line ranges, get a symbol's full source, list a file's outline, or show git status. Put several items in one call to get everything in one round trip. Output is size-capped and secrets are redacted. Read-only.",
+    "description": "Read the codebase. One call can search with surrounding lines, read whole files or line ranges, get a symbol's full source, list a file's outline, show git status, a git diff or the git log. Put several items in one call to get everything in one round trip. Output is size-capped and secrets are redacted. Read-only.",
     "parameters": {
       "type": "object",
       "properties": {
@@ -18,7 +18,9 @@
                   "read",
                   "symbol",
                   "outline",
-                  "status"
+                  "status",
+                  "diff",
+                  "log"
                 ]
               },
               "pattern": {
@@ -38,7 +40,7 @@
               },
               "context": {
                 "type": "integer",
-                "description": "search: lines of context around each match (default 2)."
+                "description": "search, diff: lines of context around each match or change (search default 2, diff 3)."
               },
               "max_matches": {
                 "type": "integer",
@@ -71,7 +73,23 @@
                 "items": {
                   "type": "string"
                 },
-                "description": "outline: files or directories. Omit for the whole project."
+                "description": "outline, diff, log: files or directories (outline: omit for the whole project; diff, log: omit for all)."
+              },
+              "rev": {
+                "type": "string",
+                "description": "diff: a branch, tag, commit or range (a..b) to compare the working tree with (default HEAD). log: where to start (default HEAD)."
+              },
+              "staged": {
+                "type": "boolean",
+                "description": "diff: show what is staged (the index against HEAD or rev), not the working tree. Untracked files are not in a diff; status lists them."
+              },
+              "stat": {
+                "type": "boolean",
+                "description": "diff: only the per-file summary of changed lines."
+              },
+              "max_count": {
+                "type": "integer",
+                "description": "log: at most this many commits (default 20, at most 200)."
               }
             },
             "required": [

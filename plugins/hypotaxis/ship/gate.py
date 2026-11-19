@@ -15,11 +15,12 @@ What the gate checks, in order:
 3. ``T2.review``: only when the blast radius asks for it. No reviewer exists yet, so it is recorded
    as skipped, never as passed silently.
 
-The test command is code the agent may have written, so it runs through ``hx sandbox.run`` (``sandboxrun``): the copy
-writable, the workspace read-only, the network off, an allowlisted environment. A sandbox that is not there blocks the
-gate (fail closed); ``gate.allow_unsandboxed`` is the user's explicit way past, and the result then says
-``enforcement: unsandboxed:user_choice``. Every result names how the command was confined (``sandboxed`` when hx
-enforced every dimension, ``degraded:<dimensions>``, or ``none`` when no command ran).
+The test command is code the agent may have written, so it runs through ``hx sandbox.run`` (``sandboxrun``): on a copy
+of the workspace that holds no secret file (``gatecopy``), writable, with the project's installed dependencies linked
+read-only; the real workspace not mounted; the network off; an allowlisted environment; the output redacted. A
+sandbox that is not there blocks the gate (fail closed); ``gate.allow_unsandboxed`` is the user's explicit way past,
+and the result then says ``enforcement: unsandboxed:user_choice``. Every result names how the command was confined
+(``sandboxed`` when hx enforced every dimension, ``degraded:<dimensions>``, or ``none`` when no command ran).
 """
 
 from __future__ import annotations
@@ -75,6 +76,7 @@ class GateRunner:
 
     client: HxClient | None
     allow_unsandboxed: bool = False
+    git_metadata: bool = False  # link ``.git`` read-only into the copy (the project's ``gate.git`` setting)
 
 
 @dataclass(frozen=True, slots=True)
@@ -173,7 +175,12 @@ def _tests(workspace: Path, command: Sequence[str] | None, timeout: float, runne
             cp_gates.T0_VISIBLE, "pass", "", {"tests": {"status": "not_configured", "command": None}}
         ), NOT_RUN
     ran: CommandRun = run_gate_command(
-        runner.client, command, workspace, timeout=timeout, allow_unsandboxed=runner.allow_unsandboxed
+        runner.client,
+        command,
+        workspace,
+        timeout=timeout,
+        allow_unsandboxed=runner.allow_unsandboxed,
+        git_metadata=runner.git_metadata,
     )
     return _verdict(ran, timeout), ran.enforcement
 
@@ -184,6 +191,8 @@ def _verdict(ran: CommandRun, timeout: float) -> Any:
     evidence: dict[str, Any] = {"tests": result.summary()}
     if ran.detail:
         evidence["sandbox"] = dict(ran.detail)
+    if ran.withheld:
+        evidence["secret_files_left_out"] = ran.withheld
     if result.passed:
         return GateResult(cp_gates.T0_VISIBLE, "pass", "", evidence)
     if result.timed_out:
@@ -193,6 +202,8 @@ def _verdict(ran: CommandRun, timeout: float) -> Any:
     else:
         counts = ", ".join(f"{k}={v}" for k, v in sorted(result.counts.items()))
         reason = f"exit code {result.returncode}" + (f" ({counts})" if counts else "")
+    if ran.hint:
+        reason += f"; {ran.hint}"
     return GateResult(cp_gates.T0_VISIBLE, "block", reason, evidence)
 
 

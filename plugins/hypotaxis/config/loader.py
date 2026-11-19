@@ -252,6 +252,7 @@ def _project_settings(raw: Mapping[str, Any]) -> ProjectSettings:
     return ProjectSettings(
         gate_command=gate.get("command"),
         gate_timeout_s=int(gate.get("timeout_s", timeout_default)),
+        gate_git=bool(gate.get("git", schema_default("project-settings", "gate", "git"))),
         protected=tuple(raw.get("protected", ())),
         permissions=_rules(raw.get("permissions")),
         data_policy=dict(raw.get("data_policy", {})),
@@ -261,7 +262,7 @@ def _project_settings(raw: Mapping[str, Any]) -> ProjectSettings:
 def _ignored_keys(raw: Mapping[str, Any]) -> tuple[str, ...]:
     gate = raw.get("gate") or {}
     perms = raw.get("permissions") or {}
-    out = [f"gate.{k}" for k in ("command", "timeout_s") if k in gate]
+    out = [f"gate.{k}" for k in ("command", "timeout_s", "git") if k in gate]
     if perms.get("allow"):
         out.append("permissions.allow")
     if "data_policy" in raw:

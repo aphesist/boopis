@@ -180,6 +180,58 @@ def test_pack_invalid_items_are_an_outcome(make_session: MakeSession, args: dict
     assert out["problems"]
 
 
+def test_pack_shows_git_diff_and_log_in_place_and_never_a_secret_file(
+    make_session: MakeSession, workspace: Path
+) -> None:
+    (workspace / "src" / "a.py").write_text((workspace / "src" / "a.py").read_text().replace("return 1", "return 22"))
+    (workspace / ".env").write_text("API_KEY=sk-live-changed0123456789abcdefghijklmnop\n")
+    rt, state, _ = make_session()
+    out = run_pack(rt, state, {"items": [{"op": "diff"}, {"op": "status"}, {"op": "log", "max_count": 5}]})
+    text = out["text"]
+    assert "+    return 22" in text and "-    return 1" in text
+    assert "1 secret file(s) left out" in text
+    assert "sk-live" not in text and "API_KEY" not in text
+    assert text.index("[diff]") < text.index("[status]") < text.index("[log]")  # each in its own place
+    assert " init" in text.split("[log]")[1]
+    stat = run_pack(rt, state, {"items": [{"op": "diff", "stat": True, "paths": ["src"]}]})["text"]
+    assert "src/a.py" in stat and "file changed" in stat
+    staged = run_pack(rt, state, {"op": "diff", "staged": True})["text"]
+    assert "no changes" in staged
+
+
+def test_pack_git_views_cannot_run_a_program_the_repository_configures(
+    make_session: MakeSession, workspace: Path, tmp_path: Path
+) -> None:
+    ran = tmp_path / "ran"
+    for key in ("filter.evil.clean", "diff.evil.textconv", "diff.external", "core.fsmonitor"):
+        sh(workspace, "config", key, f"touch {ran}; cat")
+    (workspace / ".gitattributes").write_text("*.py filter=evil diff=evil\n")
+    (workspace / "src" / "a.py").write_text("changed = 1\n")
+    rt, state, _ = make_session()
+    out = run_pack(rt, state, {"items": [{"op": "diff"}, {"op": "log"}]})
+    assert "+changed = 1" in out["text"]
+    assert not ran.exists()
+
+
+@pytest.mark.parametrize(
+    "item",
+    [
+        {"op": "diff", "rev": "--output=/tmp/x"},
+        {"op": "diff", "rev": "HEAD; rm -rf"},
+        {"op": "log", "rev": "-p"},
+        {"op": "diff", "paths": ["../escape"]},
+        {"op": "diff", "paths": ["/etc/passwd"]},
+        {"op": "diff", "paths": ["--cached"]},
+    ],
+)
+def test_pack_git_views_refuse_anything_git_could_read_as_an_option(
+    make_session: MakeSession, item: dict[str, Any]
+) -> None:
+    rt, state, _ = make_session()
+    out = run_pack(rt, state, {"items": [item]})
+    assert out["status"] == "invalid" and out["problems"]
+
+
 def test_pack_without_hx_is_an_error_not_a_made_up_answer(make_session: MakeSession, tmp_path: Path) -> None:
     rt, state, _ = make_session(hx_path=str(tmp_path / "nope"))
     out = run_pack(rt, state, {"items": [{"op": "status"}]})

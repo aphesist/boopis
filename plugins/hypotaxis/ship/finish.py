@@ -150,7 +150,9 @@ def _gate_andrecord(
     run = gate_mod.run_gate(
         task_id=task_id, workspace=root, touched=touched, original=original, before_hashes=before_hashes,
         protected=protected, allowed=allowed, command=argv, timeout=timeout,
-        runner=gate_mod.GateRunner(client, state.settings.gate.allow_unsandboxed),
+        runner=gate_mod.GateRunner(
+            client, state.settings.gate.allow_unsandboxed, bool(state.project and state.project.settings.gate_git)
+        ),
     )  # fmt: skip
     record(state, rt, "gate.decided", "gate", run.payload | tags)
     return run
