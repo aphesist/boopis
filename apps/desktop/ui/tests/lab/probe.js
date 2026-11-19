@@ -268,20 +268,24 @@
           add('geometry.contain', e, msg, { container: rectOf(c) });
         }
         if (want.has('concentric')) {
+          /* the floor is the corners setting's (--r-floor: 4 sharp, 8 default, 12 round), not a constant (R-corner-3: max(--r-floor, R - gap)) */
+          const FLOOR = px(getComputedStyle(document.documentElement).getPropertyValue('--r-floor')) || 8;
           const corners = [['top-left', er.left - cr.left, er.top - cr.top, 0], ['top-right', cr.right - er.right, er.top - cr.top, 1], ['bottom-right', cr.right - er.right, cr.bottom - er.bottom, 2], ['bottom-left', er.left - cr.left, cr.bottom - er.bottom, 3]];
           for (const [name, dx, dy, i] of corners) {
             const R = Math.min(cRad[i], cr.width / 2, cr.height / 2);
-            if (R < 8) continue;
+            if (R < FLOOR) continue;
             if (dx < -0.5 || dy < -0.5 || dx >= R || dy >= R) continue;   /* not in this corner (or already outside: geometry.contain) */
             const inset = Math.min(dx, dy);
             if (selfClip && inset < 1) continue;   /* a full-bleed layer inside a clipped leaf: the clip draws its corner */
             const pillR = Math.min(er.width, er.height) / 2;
             const r = Math.min(eRad[i], pillR);
-            const want8 = Math.max(8, R - inset);
+            const want8 = Math.max(FLOOR, R - inset);
             const isPill = r >= pillR - 0.5;
             const problems = [];
-            if (Math.abs(dx - dy) > 1) problems.push('insets ' + r1(dx) + 'px and ' + r1(dy) + 'px are not equal');
-            if (Math.abs(r - want8) > 1 && !(isPill && want8 >= pillR - 1)) problems.push('radius ' + r1(r) + 'px, the corner wants ' + r1(want8) + 'px (' + r1(R) + ' - ' + r1(inset) + (R - inset < 8 ? ', floor 8' : '') + ')' + (isPill ? ' or a pill of ' + r1(pillR) + 'px' : ''));
+            /* a mark (a status dot, a page dot: under 12px) is carried by its row, not set into the corner as a control: it only has to keep the container's --pad from both edges (R-corner-4) */
+            const mark = Math.min(er.width, er.height) < 12, padC = px(ccs.getPropertyValue('--pad'));
+            if (Math.abs(dx - dy) > 1 && !(mark && Math.min(dx, dy) >= padC - 1)) problems.push('insets ' + r1(dx) + 'px and ' + r1(dy) + 'px are not equal');
+            if (Math.abs(r - want8) > 1 && !(isPill && want8 >= pillR - 1)) problems.push('radius ' + r1(r) + 'px, the corner wants ' + r1(want8) + 'px (' + r1(R) + ' - ' + r1(inset) + (R - inset < FLOOR ? ', floor ' + FLOOR : '') + ')' + (isPill ? ' or a pill of ' + r1(pillR) + 'px' : ''));
             if (problems.length) add('concentric', e, 'in the ' + name + ' corner of ' + describe(c) + ': ' + problems.join('; ') + ' [' + why.join(',') + ']', { container: rectOf(c) });
           }
         }
