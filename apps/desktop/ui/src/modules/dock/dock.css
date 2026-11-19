@@ -54,7 +54,7 @@
 .dk-view { position: relative; box-sizing: border-box; max-width: var(--dock-room, none); }
 .dk-view[hidden] { display: none; }
 .dk-view.is-leaving { position: absolute; pointer-events: none; }
-.dk-view.is-leaving [data-k].is-handed { visibility: hidden; }
+.dk-view [data-k].is-handed { visibility: hidden; }   /* the key lives on in the view that took it; stays until this view is shown again (engine.ts unhand) */
 :where(.dk) button:not([class*="ui-"]) { font: inherit; color: inherit; background: none; border: 0; margin: 0; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .dk :focus { outline: none; }
 .dk :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
