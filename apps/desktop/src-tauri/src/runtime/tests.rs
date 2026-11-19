@@ -689,7 +689,10 @@ fn the_windows_runtime_archive_verifies_with_the_hosts_own_unpack() {
     let m = rt.manifest();
     assert_eq!(m.target, "win32-x64");
     assert!(
-        m.hermes.ends_with(".exe") && m.python.ends_with("python.exe"),
+        std::path::Path::new(&m.hermes)
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("exe"))
+            && m.python.ends_with("python.exe"),
         "{m:?}"
     );
     let tmp = tempfile::tempdir().unwrap();
