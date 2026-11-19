@@ -21,6 +21,8 @@ export const icon = (n: string, o?: { size?: string; class?: string }): string =
 export const st = (b: Bot): ReturnType<typeof ui.botState> => ui.botState(b);
 const phrase = (b: Bot): string => st(b).word;
 export const botLabel = (b: Bot): string => ui.botLabel(b);
+/** a roster row shows the name and the state word only (no role), so its name holds exactly the visible text, in order (R-a11y-3) */
+const rowLabel = (b: Bot): string => ui.botLabel({ ...b, role: '' });
 /** one library orb per bot; it renders at 80 so magnification stays crisp; the wrapper is what travels */
 export const makeOrb = (b: Bot): HTMLElement => ui.orb(b, { size: 40, render: 80, flag: true });
 export const av = (id: string): (HTMLElement & Record<string, unknown>) | null => { const w = X.orbs.get(id); return w ? (w.querySelector('orb-avatar') as (HTMLElement & Record<string, unknown>) | null) : null; };
@@ -46,6 +48,7 @@ export function refreshBot(b: DockBot): void {
     if (s.attention && !f) w.insertAdjacentHTML('beforeend', ui.html.dot('flag'));
     if (!s.attention && f) f.remove();
   }
+  for (const el of $$(`[data-bot-row="${b.id}"]`, X.root)) el.setAttribute('aria-label', rowLabel(b));
   for (const el of $$(`[data-bot-label="${b.id}"]`, X.root)) {
     el.setAttribute('aria-label', botLabel(b));
     if (el.hasAttribute('data-tip')) {
@@ -80,7 +83,7 @@ const ladderList = (): string => ui.html.ladder({ variant: 'list', ground: 'var(
 /** a page that shows sample data in a live build says so (the mock's bots and schedules are previews) */
 const preview = (src: 'bots' | 'schedules'): string => (data().info.preview.has(src) ? `<span class="dk-preview" data-e>Preview</span>` : '');
 const pillBtn = (label: string): string => `<button class="dk-pillbtn" data-act="restore" aria-label="${esc(label)}"></button>`;
-const pillAtt = (): string => (attCount() ? `<span class="dk-att" data-k="att:pill">${ui.html.dot('attention')}</span>` : '');
+const pillAtt = (): string => (attCount() ? `<span class="dk-att">${ui.html.dot('attention')}</span>` : '');
 const needLabel = (n: number): string => `${n} ${n === 1 ? 'needs' : 'need'} you`;
 const dotFor = (b: Bot): string => { const s = st(b); return s.attention ? ui.html.dot('attention') : s.busy ? ui.html.dot('run') : ''; };
 const emptyWait = (): string => `<div class="dk-empty" data-e>${ui.html.empty({ title: 'Nothing needs you', text: 'Approvals and open questions from bots and runs land here.' })}</div>`;
@@ -150,7 +153,7 @@ export const V: Record<string, () => string> = {
     ` data-tip="${esc(tipOf(b))}"${s.key === 'idle' ? '' : ` data-tip-state="${esc(s.word)}"`}${s.attention ? ' data-tip-tone="attention"' : ''} data-kbd="enter" data-tip-pos="top">${slot(b)}</button>`); }).join('')}` +
     `<button class="dk-add" data-act="new-bot" aria-label="New bot" data-tip="New bot" data-tip-pos="top" tabindex="${S.rowIdx === S.bots.length ? 0 : -1}"><span data-k="add">${icon('plus')}</span></button></div>`,
   'bots:exp': () => `${preview('bots')}<ul class="dk-roster" aria-label="All bots">${S.bots.map((b, i) => ui.html.row({ title: b.name, sub: phrase(b), lead: slot(b), tabindex: i === S.rowIdx ? '0' : '-1',
-      attrs: { 'data-act': 'session', 'data-id': b.id, 'data-bot-label': b.id, 'aria-label': botLabel(b), 'aria-describedby': 'dk-bot-hint' } })).join('')}` +
+      attrs: { 'data-act': 'session', 'data-id': b.id, 'data-bot-row': b.id, 'aria-label': rowLabel(b), 'aria-describedby': 'dk-bot-hint' } })).join('')}` +
     ui.html.row({ title: 'New bot', sub: 'Set one up', tabindex: S.rowIdx === S.bots.length ? '0' : '-1', lead: `<span class="dk-add-ring"><span class="dk-add-ring-o" data-e></span><span data-k="add">${icon('plus')}</span></span>`, attrs: { 'data-act': 'new-bot' } }) + '</ul>',
   /* the bot's session: its last messages, its open cards, the library composer, and the other bots to switch to */
   'bots:card': () => {
@@ -186,7 +189,7 @@ export const V: Record<string, () => string> = {
 
   'wait:min': () => {
     const n = S.waits.length;
-    return n ? `${pillBtn('Show the dock, ' + needLabel(n))}<span class="dk-ui" data-e>${needLabel(n)}</span><span class="dk-att" data-k="att:pill">${ui.html.dot('attention')}</span>`
+    return n ? `${pillBtn('Show the dock, ' + needLabel(n))}<span class="dk-ui" data-e>${needLabel(n)}</span><span class="dk-att">${ui.html.dot('attention')}</span>`
       : `${pillBtn('Show the dock, nothing needs you')}<span class="dk-dim dk-ui" data-e>All clear</span>`;
   },
   'wait:norm': () => (S.waits.length ? '<div class="dk-cards" data-cards="mini"></div>' : emptyWait()),

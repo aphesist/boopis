@@ -347,7 +347,9 @@ export function fitRow(): void {
   const n = S.bots.length, pad = vw <= 520 ? 10 : 16;
   const gapOf = (o: number): number => Math.max(6, Math.round(o * 14 / 40));
   let o = 40;
-  while (o > 18 && 2 * pad + n * o + n * gapOf(o) + 28 > avail) o--;
+  /* never below --hit-min: an orb is a pointer target (R-a11y-2); a crowd past the column overflows, it does not shrink the targets */
+  const floor = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hit-min')) || 24;
+  while (o > floor && 2 * pad + n * o + n * gapOf(o) + 28 > avail) o--;
   const orbChanged = o !== lastOrb; lastOrb = o;
   X.root.style.setProperty('--dock-orb', String(o));
   X.root.style.setProperty('--dock-gap', gapOf(o) + 'px');

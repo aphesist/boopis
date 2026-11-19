@@ -14,7 +14,7 @@
   --dock-pad-x: 16px;
   --dock-top: 12px;
   --dock-band: 24px;              /* the foot's height: every normal and expanded view keeps it free */
-  --dock-band-x: 28px;
+  --dock-band-x: var(--sp-6);
   --dock-maxw: 860px;
   --ui-ring: var(--dock-bg);      /* the attention flag's ring is the slab behind it */
 
@@ -80,8 +80,10 @@
 .dk-dots { display: flex; align-items: center; transition: opacity var(--dur-2) var(--ease), visibility 0s; }
 /* one page: nothing to go to, so no nub (hidden from the accessibility tree too, once it has faded) */
 .dk-dots.is-solo { opacity: 0; visibility: hidden; transition: opacity var(--dur-out) var(--ease), visibility 0s var(--dur-out); }
-/* the dots stay 10px to look at; each answers a pointer over the foot's full 24px height */
-.dk-dots .ui-pages__dot::after { content: ""; position: absolute; left: 0; right: 0; top: -7px; bottom: -7px; }
+/* the marks stay small to look at; each dot's own box is --hit-min square (R-a11y-2), the foot's full height, so the
+   boxes sit side by side and none overlaps another */
+.dk-dots .ui-pages { height: var(--hit-min); }
+.dk-dots .ui-pages .ui-pages__dot { width: var(--hit-min); height: var(--hit-min); }   /* (also the current dot, whose library rule is less specific) */
 
 /* ---------- orbs: a slot per view; the live library orb (.ui-orb) travels into the visible one ---------- */
 .dk-orb { position: relative; display: block; flex: none; width: calc(var(--o, 40) * 1px); height: calc(var(--o, 40) * 1px); }
@@ -94,16 +96,16 @@
 /* ===== bots · normal ===== */
 .dk-v-bots-norm { padding: var(--dock-top) var(--dock-pad-x) var(--dock-band); }
 .dk-row { display: flex; align-items: flex-end; gap: var(--dock-gap); --o: var(--dock-orb); }
-.dk-bot { position: relative; flex: none; width: calc(var(--dock-orb) * 1px); height: calc(var(--dock-orb) * 1px); border-radius: var(--r-pill); transform-origin: 50% 100%; }
+.dk-bot { position: relative; align-self: flex-end; flex: none; width: calc(var(--dock-orb) * 1px); height: calc(var(--dock-orb) * 1px); border-radius: var(--r-pill); transform-origin: 50% 100%; }
 .dk-bot:focus-visible { outline-offset: 3px; }
 /* while the pointer is over the row the orbs are scaled every frame from script (magnification): each gets its own layer for exactly that long */
 .dk[data-mag] :is(.dk-bot, .dk-add) { will-change: transform; }
-.dk-add { flex: none; width: var(--ctl-s); height: calc(var(--dock-orb) * 1px); display: grid; place-items: center; color: var(--text-strong); border-radius: var(--r-s); transform-origin: 50% 100%; transition: background-color var(--dur-1) var(--ease); --sq-bg: transparent; background: var(--sq-bg); }
+.dk-add { align-self: flex-end; flex: none; width: var(--ctl-s); height: calc(var(--dock-orb) * 1px); display: grid; place-items: center; color: var(--text-strong); border-radius: var(--r-s); transform-origin: 50% 100%; transition: background-color var(--dur-1) var(--ease); --sq-bg: transparent; background: var(--sq-bg); }
 .dk-add:hover { --sq-bg: var(--hover); background: var(--sq-bg); }
 
 /* ===== minimal pill (all pages) ===== */
-.dk-v-min { height: 28px; padding: 0 9px; display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-xs); line-height: 1; white-space: nowrap; }
-.dk-v-min .dk-pillbtn { position: absolute; inset: 0; border-radius: 14px 14px 0 0; z-index: 1; }   /* the pill restores, and only that; R = h / 2 */
+.dk-v-min { height: var(--ctl-s); padding: 0 var(--sp-2); display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-xs); line-height: 1; white-space: nowrap; }
+.dk-v-min .dk-pillbtn { position: absolute; inset: 0; border-radius: calc(var(--ctl-s) / 2) calc(var(--ctl-s) / 2) 0 0; z-index: 1; }   /* the pill restores, and only that; R = h / 2 */
 .dk-mini { display: flex; align-items: center; gap: 5px; --o: 10; }
 .dk-mini .ui-dot--flag { display: none; }   /* one attention dot for the pill, not one per 10px orb */
 .dk-att { display: inline-flex; }
@@ -128,7 +130,7 @@
 .dk-card-head .dk-orb { --o: 40; cursor: pointer; }
 .dk-card-who { min-width: 0; }
 /* orb, name and state on one line; a long name ellipsises first, the state and the head's buttons stay */
-.dk-card-line { display: flex; align-items: baseline; gap: var(--sp-2); min-width: 0; }
+.dk-card-line { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
 .dk-card-name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-m); font-weight: 600; color: var(--text-strong); }
 .dk-card-state { flex: none; display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); color: var(--text-quiet); white-space: nowrap; }
 .dk-card-state[data-tone="attention"] .dk-card-word { color: var(--red-text); }
@@ -143,7 +145,9 @@
 .dk-composer .ui-composer__input { max-height: 120px; }
 .dk .dk-composer .ui-composer__input:focus-visible { outline: none; }   /* the composer's frame answers focus (library) */
 .dk-rule { display: block; height: 1px; margin: 0; border: 0; background: var(--hair); }
-.dk-strip { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); padding-top: var(--sp-3); box-shadow: inset 0 1px 0 var(--hair); --o: 18; }
+.dk-strip { position: relative; display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); padding-top: var(--sp-3); --o: 18; }
+/* the divider is a line, not a container: drawn apart from the strip's box so a focus ring on an end orb is not "outside" a shape (R-corner-4) */
+.dk-strip::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 1px; background: var(--hair); }
 .dk-strip-bot { position: relative; width: 24px; height: 24px; }
 .dk-strip-bot .ui-dot--flag { width: 6px; height: 6px; }
 /* grow on (HX.state.orbGrow): in the switcher a hovered or focused orb grows, and the open session's orb stays grown
@@ -163,7 +167,7 @@
 .dk-run-open:hover .dk-run-title { color: var(--text-strong); }
 .dk-time { font-size: var(--fs-2xs); color: var(--text); min-width: 7ch; text-align: right; white-space: nowrap; }
 .dk-cost { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
-.dk-v-run-exp { padding: 18px 18px var(--dock-band-x); width: 520px; }
+.dk-v-run-exp { padding: var(--sp-4) var(--sp-4) var(--dock-band-x); width: 520px; }
 .dk-runx-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--sp-4); align-items: start; }
 .dk-runx-head .dk-run-title { font-size: var(--fs-m); font-weight: 600; color: var(--text-strong); }
 .dk-ladderx { margin-top: var(--sp-4); }
@@ -182,7 +186,7 @@
 
 /* ===== scheduled ===== */
 .dk-v-sched-norm { padding: 14px var(--sp-4) var(--dock-band); width: 560px; max-width: var(--dock-maxw); }
-.dk-v-sched-exp { padding: 18px var(--sp-4) var(--dock-band-x); width: 580px; }
+.dk-v-sched-exp { padding: var(--sp-4) var(--sp-4) var(--dock-band-x); width: 580px; }
 .dk-sched { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .dk-sched-row { display: grid; grid-template-columns: 18px 64px minmax(0, 1fr) auto; column-gap: var(--sp-3); align-items: center; min-height: calc(var(--ctl) + 4px); border-radius: var(--r-s); }
 .dk-sched-bot { color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }   /* long names keep the columns */
@@ -206,7 +210,7 @@ button.dk-sched-what:hover { color: var(--text-strong); }
 .dk-ctx-num { font-size: var(--fs-2xs); color: var(--text); white-space: nowrap; }
 .dk-ctx-of { font-size: var(--fs-2xs); color: var(--text-quiet); white-space: nowrap; }
 .dk-ctx-dots, .dk-ctx-grid { display: flex; }
-.dk-v-ctx-exp { padding: 18px 18px var(--dock-band-x); width: 480px; }
+.dk-v-ctx-exp { padding: var(--sp-4) var(--sp-4) var(--dock-band-x); width: 480px; }
 .dk-ctxx-head { display: flex; align-items: baseline; gap: var(--sp-3); margin-bottom: var(--sp-3); }
 .dk-ctxx-head .dk-ctx-num { font-size: var(--fs-m); color: var(--text-strong); }
 .dk-ctx-legend { margin-top: var(--sp-4); }
