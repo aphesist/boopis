@@ -37,6 +37,13 @@ export function wireSectionKeys(body: HTMLElement): HTMLElement[] {
 
 export function toggleSettings(): boolean { if (S.sheetOpen) { closeSettings(); focusConversation(); } else openSettings(S.sel); return true; }
 
+/** the sheet pushes the room aside only when it sits beside it; at phone width it is the whole view and covers the room, so the room keeps its column (a column of 0 left the presence header's orb and button outside a header of 8 px, R-corner-4). Said again when the window resizes: the sheet's width follows the window */
+let watchingResize = false;
+function emitInset(): void {
+  const sh = S.sheet; if (!sh) return;
+  emit('hx:view-inset', { source: 'bots', tab: 'bots', right: sh.offsetWidth >= (sh.parentElement?.clientWidth ?? 0) ? 0 : sh.offsetWidth });
+}
+
 export function openSettings(id: string | null, focusSection?: string | null, opts?: { keepFocus?: boolean }): void {
   const b = bot(id || S.sel); if (!b || !S.sheet) return;
   if (S.view !== 'bot' || S.sel !== b.id) openBot(b.id);
@@ -44,7 +51,8 @@ export function openSettings(id: string | null, focusSection?: string | null, op
   S.sheetOpen = true; S.sheetFor = b.id;
   const sh = S.sheet; sh.textContent = ''; sh.hidden = false;
   sh.setAttribute('aria-label', 'Settings for ' + b.name);
-  emit('hx:view-inset', { source: 'bots', tab: 'bots', right: sh.offsetWidth });
+  emitInset();
+  if (!watchingResize) { watchingResize = true; window.addEventListener('resize', () => { if (S.sheetOpen) emitInset(); }); }
   /* a bot that is a real Hermes profile has its own sheet: it edits the profile, and shows each write before it is made */
   if (b.info && data().bots.admin) { openLiveSheet(b, sh, focusSection ?? null, !!opts?.keepFocus); return; }
   const c = b.cfg;

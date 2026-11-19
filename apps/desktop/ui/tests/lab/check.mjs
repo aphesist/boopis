@@ -153,7 +153,8 @@ async function redraw(page, row) {
     await settle(page, 260);
   }
 }
-const probe = (page, checks, overlay) => page.evaluate(([c, t, ov, b]) => window.__labProbe.run({ checks: c, tokenNames: t, overlay: ov, brandAllow: b }), [checks, TOKEN_NAMES, overlay, BRAND_ALLOW]);
+/* The checks read the resting state: a colour still travelling from the previous preset (a CSS transition that the 80 ms settle did not outlast) is not a value the design set, so running transitions are finished first (animations that loop are left alone) */
+const probe = (page, checks, overlay) => page.evaluate(([c, t, ov, b]) => { for (const a of document.getAnimations()) if (typeof CSSTransition !== 'undefined' && a instanceof CSSTransition) { try { a.finish(); } catch { /* already done */ } } return window.__labProbe.run({ checks: c, tokenNames: t, overlay: ov, brandAllow: b }); }, [checks, TOKEN_NAMES, overlay, BRAND_ALLOW]);
 
 async function axeRun(page) {
   if (!(await page.evaluate(() => !!window.axe))) await page.addScriptTag({ content: AXE });
@@ -236,7 +237,9 @@ async function checkRow(browser, origin, row, log) {
   try {
     if (!first.ready) { const x = record(row, { check: 'errors', msg: first.error.split('\n')[0].slice(0, 400), key: 'errors|draw' }, 'catalog/1440'); x.extra = { stack: first.error.slice(0, 2000) }; return; }
     const allow = row.allow || {};
-    const skip = (c) => !!allow[c];
+    /* an allowance is a reason (the whole check) or { reason, el } (only findings whose element description contains el) */
+    const whole = (c) => typeof allow[c] === 'string';
+    const skip = (c, f) => { const a = allow[c]; if (!a) return false; if (typeof a === 'string') return true; return !!f && String(f.el ?? '').includes(a.el); };
     if (DRAW_ONLY) { for (const e of page.errorsSeen) record(row, { check: 'errors', msg: e, key: 'errors|' + e.slice(0, 120) }, 'load'); return; }
     for (const preset of PRESETS) {
       await page.evaluate((p) => window.__lab.preset(p), preset);
@@ -246,24 +249,25 @@ async function checkRow(browser, origin, row, log) {
         await setWidth(page, row, w);
         const where = preset + '/' + w;
         const rest = await probe(page, null, row.overlayDecl);
-        for (const f of rest.findings || []) { if (skip(f.check)) continue; const x = record(row, f, where); await cropFor(page, x, f); }
+        for (const f of rest.findings || []) { if (skip(f.check, f)) continue; const x = record(row, f, where); await cropFor(page, x, f); }
         if (w === 1440 || (w === 390 && preset === 'catalog')) {
           for (const fs of FORCES) {
             await page.evaluate((s) => window.__lab.force(null, s, true), fs);
             await settle(page, 40);
             const r = await probe(page, FORCED_CHECKS, row.overlayDecl);
-            for (const f of r.findings || []) { if (skip(f.check)) continue; const x = record(row, f, where + '/' + fs); await cropFor(page, x, f); }
+            for (const f of r.findings || []) { if (skip(f.check, f)) continue; const x = record(row, f, where + '/' + fs); await cropFor(page, x, f); }
             await page.evaluate(() => window.__lab.clearForced());
           }
         }
-        if (w === 1440 && AXE_ON && !skip('axe')) {
+        if (w === 1440 && AXE_ON && !whole('axe')) {
           for (const v of await axeRun(page)) for (const n of v.nodes) {
+            if (skip('axe', { el: n.target + ' ' + v.id })) continue;   /* an axe finding's description: its target and the rule's id */
             const rect = await axeRect(page, n.target);
             const x = record(row, { check: 'axe', msg: v.id + ' (' + v.impact + '): ' + v.help + (n.msg ? '. ' + n.msg : ''), el: n.target, key: 'axe|' + v.id + '|' + n.target, rect }, where);
             await cropFor(page, x, { rect });
           }
         }
-        if (w === 1440 && VISUAL && !skip('visual')) {
+        if (w === 1440 && VISUAL && !whole('visual')) {
           const buf = await shot(page, row);
           const bad = compareGolden(row, preset, buf);
           if (bad) { const x = record(row, { check: 'visual', msg: bad.msg, key: 'visual|' + preset }, where); x.diff = bad.diff ?? null; if (!x.crop) { const name = 'crops/' + (++crops) + '.png'; writeFileSync(join(REPORT, name), buf); x.crop = name; } }
@@ -299,7 +303,7 @@ async function checkRow(browser, origin, row, log) {
     log(row, Date.now() - t0);
   }
   /* interactions, with full motion, on a fresh load */
-  if (STABLE && !DRAW_ONLY && row.interact && !(row.allow || {})['stability.interact']) {
+  if (STABLE && !DRAW_ONLY && row.interact && typeof (row.allow || {})['stability.interact'] !== 'string') {
     const second = await openState(browser, origin, row, { motion: true });
     try {
       if (second.ready) {

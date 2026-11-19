@@ -111,7 +111,8 @@ function apply(next: ModSession): void {
 /** the session whose conversation is on screen changed (or was redrawn) */
 function follow(id: string): void {
   init();
-  if (id === ctl.id) { placeConversationParts(); return; }
+  /* the same session drawn again (a re-render of the conversation): its slots are new and empty, so the band and the status line go back into them, with the status line's role and name, as well as the rows and log lines */
+  if (id === ctl.id) { drawBand(); setStatus(ctl.s.status, { animate: false }); placeConversationParts(); return; }
   unsub?.();
   ctl.id = id;
   const w = data().mods.session(id);

@@ -359,8 +359,49 @@
     /* geometry.target */
     if (want.has('geometry.target')) {
       const HIT = px(getComputedStyle(document.documentElement).getPropertyValue('--hit-min')) || 24;
-      const targets = els.filter((e) => e.matches('button, a[href], input:not([type="hidden"]), select, textarea, summary, [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], [role="switch"], [role="radio"], [role="checkbox"]') && !e.closest('[inert], [aria-hidden="true"]') && !e.disabled);
-      const boxes = targets.map((t) => t.getBoundingClientRect());
+      /* a target that an ancestor's overflow clips away entirely (scrolled out of its list or panel) cannot be pressed: it is not a target now (R-a11y-2 measures what the user can hit) */
+      const scrolledAway = (e) => {
+        const r = e.getBoundingClientRect();
+        if (r.width === 0 || r.height === 0) return false;
+        let own = getComputedStyle(e).position, wait = own === 'absolute';   /* an absolute box is clipped only by what is, or sits inside, its containing block */
+        if (own === 'fixed') return false;
+        for (let p = e.parentElement; p && p !== document.documentElement; p = p.parentElement) {
+          const cs = getComputedStyle(p);
+          if (wait) { if (cs.position === 'static') continue; wait = false; }
+          if (cs.position === 'fixed') return false;
+          if (cs.position === 'absolute') wait = true;
+          if (cs.overflowX === 'visible' && cs.overflowY === 'visible') continue;
+          const c = p.getBoundingClientRect();
+          if (r.right <= c.left || r.left >= c.right || r.bottom <= c.top || r.top >= c.bottom) return true;
+        }
+        return false;
+      };
+      /* a target another layer covers at its centre (a card under an open sheet or dialog) cannot be pressed either; a point outside the window is not tested */
+      const covered = (e) => {
+        const r = e.getBoundingClientRect();
+        const x = r.left + r.width / 2, y = r.top + r.height / 2;
+        if (r.width === 0 || r.height === 0 || x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) return false;
+        const h = document.elementFromPoint(x, y);
+        if (!h || e.contains(h) || h.contains(e)) return false;
+        const lab = h.closest && h.closest('label');
+        return !(lab && lab.control === e);
+      };
+      const targets = els.filter((e) => e.matches('button, a[href], input:not([type="hidden"]), select, textarea, summary, [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], [role="switch"], [role="radio"], [role="checkbox"]') && !e.closest('[inert], [aria-hidden="true"]') && !e.disabled && !scrolledAway(e) && !covered(e));
+      /* what the user can hit: the element's box united with an absolutely positioned ::before / ::after that takes pointer events (R-a11y-2: a mark smaller than --hit-min gets a hit area of 24 around it) */
+      const hitBox = (t) => {
+        const r = t.getBoundingClientRect();
+        let l = r.left, tp = r.top, rt = r.right, b = r.bottom;
+        for (const ps of ['::before', '::after']) {
+          const cs = getComputedStyle(t, ps);
+          if (cs.content === 'none' || cs.content === 'normal' || cs.position !== 'absolute' || cs.pointerEvents === 'none' || cs.display === 'none') continue;
+          const w = px(cs.width), h = px(cs.height), x = px(cs.left), y = px(cs.top);
+          if (![w, h, x, y].every(Number.isFinite)) continue;
+          const pl = r.left + t.clientLeft + x, pt = r.top + t.clientTop + y;
+          l = Math.min(l, pl); tp = Math.min(tp, pt); rt = Math.max(rt, pl + w); b = Math.max(b, pt + h);
+        }
+        return { left: l, top: tp, right: rt, bottom: b, width: rt - l, height: b - tp };
+      };
+      const boxes = targets.map(hitBox);
       targets.forEach((t, i) => {
         const r = boxes[i];
         if (r.width >= HIT - 0.01 && r.height >= HIT - 0.01) return;

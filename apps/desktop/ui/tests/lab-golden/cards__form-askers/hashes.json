@@ -5,7 +5,7 @@
   "h": 375
  },
  "a-long-model@catalog": {
-  "sha": "40a3d3601632c572e6ec2935aa781fd0f6ee0f73",
+  "sha": "fc8013b67043d53c134d0b05d1014e02253cf944",
   "w": 632,
   "h": 375
  },
@@ -50,12 +50,12 @@
   "h": 323
  },
  "error@graphite": {
-  "sha": "8a1a031e383e1e1e94a995754bae4a666f45a8f6",
+  "sha": "4c72bfbb75a4399a15539fd54907deb35500587d",
   "w": 632,
   "h": 323
  },
  "error@typewriter": {
-  "sha": "fdba7feb4afe01f9d501df7cbb7d6102a53215db",
+  "sha": "89889df5051757a99df9337ad60cf77a86d15266",
   "w": 632,
   "h": 343
  },
@@ -65,7 +65,7 @@
   "h": 300
  },
  "five-askers-compact-on-the-dock@catalog": {
-  "sha": "a4510fa05ae0ce17cf153f4b60d592cce4850200",
+  "sha": "3a5d6f52eac10514b9385380406f6ea75295c727",
   "w": 424,
   "h": 300
  },
@@ -80,7 +80,7 @@
   "h": 300
  },
  "five-askers@bone": {
-  "sha": "3e81eddb6870363d202ef2e2721931935b92bf92",
+  "sha": "54fb6079d4f7aa561a9354e06ecc4434d0e506a6",
   "w": 632,
   "h": 302
  },
@@ -100,7 +100,7 @@
   "h": 302
  },
  "long-teammate-name@bone": {
-  "sha": "1c135213a5e160a81c6007d7cc6d7df20856cfbf",
+  "sha": "93f8114fe0da775a49fe8728d95cadfdb73f26ff",
   "w": 632,
   "h": 396
  },
@@ -125,7 +125,7 @@
   "h": 353
  },
  "no-origin-given@catalog": {
-  "sha": "44ad55799b128b057cb4f9fdd06e18148ada3649",
+  "sha": "b90ab8e04ed77b37b378b33ef69d8cf2a3923b25",
   "w": 632,
   "h": 353
  },
@@ -135,7 +135,7 @@
   "h": 353
  },
  "no-origin-given@typewriter": {
-  "sha": "eff3e1e322f7733b33ea88a9089968fbeb40cc6e",
+  "sha": "f615ec56ce9ede76fdfc1826bc95a464c3a89130",
   "w": 632,
   "h": 373
  },
@@ -155,7 +155,7 @@
   "h": 379
  },
  "typical@typewriter": {
-  "sha": "f074fb87830882a78c44c742ba9598e0fb6632b3",
+  "sha": "5b112ba7e699f68ebd8f0d09102ae514721cba76",
   "w": 632,
   "h": 399
  }
