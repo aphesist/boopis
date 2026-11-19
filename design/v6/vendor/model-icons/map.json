@@ -1,0 +1,25 @@
+{
+  "about": "Which logo a model gets. Matched on the model id (the last path segment of a ref), never on the host: Claude through Bedrock is still Claude. First family that matches wins. A model whose family is unknown gets the served-by mark when the host is listed under 'served', else the neutral generic mark. Never the φ.",
+  "families": [
+    { "id": "claude",   "name": "Claude",   "icon": "claude",   "match": "\\b(claude|haiku|sonnet|opus|fable)" },
+    { "id": "openai",   "name": "OpenAI",   "icon": "openai",   "match": "\\b(gpt|chatgpt|codex|o[134](?![a-z])|davinci|text-embedding|dall-e|whisper)" },
+    { "id": "gemini",   "name": "Gemini",   "icon": "gemini",   "match": "\\b(gemini|nano[ ._-]?banana)" },
+    { "id": "deepseek", "name": "DeepSeek", "icon": "deepseek", "match": "\\bdeepseek" },
+    { "id": "qwen",     "name": "Qwen",     "icon": "qwen",     "match": "\\b(qwen|qwq|qvq)" },
+    { "id": "zai",      "name": "Z.ai",     "icon": "zai",      "match": "\\b(glm|chatglm|zhipu|codegeex)", "note": "GLM is Zhipu's; Z.ai is Zhipu's mark since 2025, and its dot-field logo does not survive 14px" },
+    { "id": "kimi",     "name": "Kimi",     "icon": "kimi",     "match": "\\b(kimi|moonshot)" },
+    { "id": "minimax",  "name": "MiniMax",  "icon": "minimax",  "match": "\\b(minimax|abab)" },
+    { "id": "grok",     "name": "Grok",     "icon": "grok",     "match": "\\b(grok|xai)" },
+    { "id": "meta",     "name": "Meta",     "icon": "meta",     "match": "\\b(llama|codellama|meta-llama)" },
+    { "id": "mistral",  "name": "Mistral",  "icon": "mistral",  "match": "\\b(mistral|mixtral|codestral|ministral|magistral|devstral|pixtral|voxtral)" }
+  ],
+  "served": [
+    { "id": "ollama", "name": "Ollama", "icon": "ollama", "hosts": ["ollama"] }
+  ],
+  "fallback": { "id": "generic", "name": "Unknown provider", "icon": "generic" },
+  "brand": {
+    "about": "Brand colour is drawn only in the model selection menu and its chip preview. A colour fill under 3:1 against the menu row it sits on keeps its hue and moves in OKLab lightness until it reaches 3:1, per scheme, through light-dark(); the shipped value stays as the fill attribute.",
+    "floor": 3,
+    "grounds": { "dark": "#23211f", "light": "#d9d4cb" }
+  }
+}

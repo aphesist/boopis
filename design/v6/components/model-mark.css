@@ -1,0 +1,19 @@
+/* hypotaxis v6 · model marks (components/model-mark.js). Load after components.css.
+   A mark is the provider's logo, drawn in currentColor (mono) or in the brand's colours (the model menu only).
+   No colour, family or size lives in the markup except the mark's own px size (--mm-size). */
+.ui-mm { display: inline-block; flex: none; width: var(--mm-size, 16px); height: var(--mm-size, 16px); vertical-align: -0.22em; overflow: visible; }
+/* brand fills choose their light or dark value by color-scheme; the dock is black in every theme */
+[data-ground="dock"] .ui-mm[data-color="brand"] { color-scheme: dark; }
+
+/* mark + name, one unit */
+.ui-model { white-space: nowrap; text-transform: none; }
+.ui-model > .ui-mm { margin-inline-end: var(--sp-1); }
+.ui-model__name { text-transform: none; }
+.ui-model-route { display: inline-flex; flex-wrap: wrap; align-items: baseline; column-gap: var(--sp-2); row-gap: 0; min-width: 0; }
+.ui-model-route__to { color: var(--text-quiet); }
+
+/* inside the library's pieces */
+.ui-menu__label[data-content]:has(> .ui-mm) { display: flex; align-items: center; gap: var(--sp-2); }
+.ui-ladder__name > .ui-mm { margin-inline-end: var(--sp-2); }
+:not(.ui-model-route) > .ui-model-route__to { margin-inline-end: var(--sp-1); }
+.ui-menu__text:has(> .ui-menu__label[data-content] > .ui-mm) .ui-menu__desc { padding-inline-start: calc(var(--mm-size, 16px) + var(--sp-2)); }

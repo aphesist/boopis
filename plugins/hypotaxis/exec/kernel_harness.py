@@ -8,7 +8,9 @@ private channel (docs/PROTOCOL.md section 5); the plugin decides, runs it and wr
     await harness.parallel([("pack", {...}), ("web_search", {...})], limit=4)
     await harness.sh(["git", "log", "-3"], timeout=20)           # a command in this same sandbox
     await harness.leave_blank("Keep the alias?", ["yes", "no"])  # returns at once with a blank id
+    await harness.ask("Which branch?", ["main", "dev"])          # a form; wait=True returns the answer
     await harness.request_input("question", "Which branch?", schema)
+    await harness.request_credential(provider="anthropic")       # the key never reaches the cell: {saved, ref}
     await harness.diagnostics(["src/a.py"])                      # not available yet: says so
 
 A call that is denied raises ``ToolDenied``; every other failure of the call machinery raises
@@ -33,6 +35,7 @@ __all__ = [
     "CallLimitExceeded",
     "ToolDenied",
     "ToolError",
+    "ask",
     "diagnostics",
     "leave_blank",
     "mcp",
@@ -157,25 +160,86 @@ async def leave_blank(question: str, options: Sequence[str] = (), blocks: Sequen
     return reply
 
 
+def _wait_args(wait: bool, timeout_s: float | None) -> dict[str, Any]:
+    return {"wait": wait, **({"timeout_s": timeout_s} if timeout_s is not None else {})}
+
+
 async def request_input(
-    kind: str, title: str, schema: Mapping[str, Any], *, body: str = "", wait: bool = False
+    kind: str,
+    title: str,
+    schema: Mapping[str, Any],
+    *,
+    body: str = "",
+    wait: bool = False,
+    timeout_s: float | None = None,
+    submit: Mapping[str, Any] | None = None,
+    cancel: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Open a form (docs/FORMS.md): returns at once with ``{form_id, status: "pending"}``."""
-    reply: dict[str, Any] = await _call(
-        "form.open", {"kind": kind, "title": title, "body": body, "schema": dict(schema), "wait": wait}
-    )
+    """Open a form (docs/FORMS.md). Returns at once with ``{form_id, status: "pending"}``; the answer arrives as the
+    agent's next message. With ``wait=True`` it blocks (bounded) and returns the answer: ``{status, values, ...}``."""
+    params: dict[str, Any] = {
+        "kind": kind,
+        "title": title,
+        "body": body,
+        "schema": dict(schema),
+        **_wait_args(wait, timeout_s),
+    }
+    if submit is not None:
+        params["submit"] = dict(submit)
+    if cancel is not None:
+        params["cancel"] = dict(cancel)
+    reply: dict[str, Any] = await _call("form.open", params)
     return reply
 
 
 async def request_credential(
-    host: str = "", provider: str = "", *, title: str = "", reason: str = "", wait: bool = False
+    host: str = "",
+    provider: str = "",
+    *,
+    title: str = "",
+    reason: str = "",
+    wait: bool = False,
+    timeout_s: float | None = None,
 ) -> dict[str, Any]:
-    """Ask the owner for a key. The secret never reaches this process: the answer is a reference."""
-    what = host or provider or "a service"
-    schema = {"type": "object", "properties": {"value": {"type": "string", "title": "Key", "x-secret": True}}}
-    return await request_input(
-        "credential", title or f"Add a key for {what}", schema, body=reason or f"Needed to call {what}.", wait=wait
+    """Ask the owner for a key. The secret never reaches this process: the answer is ``{saved, ref}``."""
+    reply: dict[str, Any] = await _call(
+        "form.open",
+        {
+            "preset": "credential",
+            "host": host,
+            "provider": provider,
+            "title": title,
+            "reason": reason,
+            **_wait_args(wait, timeout_s),
+        },
     )
+    return reply
+
+
+async def ask(
+    question: str,
+    options: Sequence[str] = (),
+    *,
+    multi: bool = False,
+    other: bool = False,
+    reason: str = "",
+    wait: bool = False,
+    timeout_s: float | None = None,
+) -> dict[str, Any]:
+    """Ask the owner one question (a choice when ``options`` is given). Same answer rules as ``request_input``."""
+    reply: dict[str, Any] = await _call(
+        "form.open",
+        {
+            "preset": "ask",
+            "question": question,
+            "options": list(options),
+            "multi": multi,
+            "other": other,
+            "reason": reason,
+            **_wait_args(wait, timeout_s),
+        },
+    )
+    return reply
 
 
 async def diagnostics(paths: Sequence[str]) -> dict[str, Any]:

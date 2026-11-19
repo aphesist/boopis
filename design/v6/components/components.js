@@ -306,35 +306,246 @@
     return orbEl;
   };
 
-  /* ───────────── shape: the corner CSS draws, for surfaces drawn as a path (the dock's slab) ─────────────
-     Where the engine has corner-shape, CSS draws superellipse(1.8) corners (--corner); a path drawn with circular
-     arcs would then be rounder than every other surface. HX.ui.shape draws the same corner as a cubic: the handle
-     length h is set so the curve passes through the superellipse's point on the diagonal (h = (4 − 8c) / 3,
-     c = 1 − 2^(−1/n), n = 2^1.8); without corner-shape h is the circle's 0.5523, so the path matches the round CSS.
-       HX.ui.shape.corner(ax, ay, cx, cy, bx, by) -> 'C …' from the current point (ax, ay) to (bx, by), whose sharp
-         corner would be (cx, cy). Convex and concave alike: a concave flare is a corner whose sharp point lies
-         outside the surface. {round: true} as a seventh argument draws the circle (a pill's ends stay round).
-       HX.ui.shape.slab(w, h, R, F) -> the dock's slab path: a concave flare of F out of the floor, the side, the
-         top corners of R, the side and the flare back; the body spans x ∈ [F, F + w], the floor is y = h.
-       HX.ui.shape.radius('--r-l') -> the token in px, as the engine resolved it (re-read on hx:theme). */
-  ui.shape = (function () {
-    let cont = null;
-    const continuous = () => (cont == null ? (cont = !!(window.CSS && CSS.supports && CSS.supports('corner-shape', 'superellipse(2)'))) : cont);
-    const N = Math.pow(2, 1.8), C = 1 - Math.pow(2, -1 / N), H_CONT = (4 - 8 * C) / 3, H_ROUND = 0.5523;
-    const handle = (round) => (round || !continuous() ? H_ROUND : H_CONT);
-    const f = (n) => (+n).toFixed(2);
-    function corner(ax, ay, cx, cy, bx, by, opt) {
-      const h = handle(opt && opt.round);
-      return 'C' + f(ax + h * (cx - ax)) + ' ' + f(ay + h * (cy - ay)) + ' ' + f(bx + h * (cx - bx)) + ' ' + f(by + h * (cy - by)) + ' ' + f(bx) + ' ' + f(by);
+  /* ───────────── squircle: Apple's continuous corners, the same in every engine (owner decision) ─────────────
+     WebKit (Tauri's webview on Linux and macOS) has no corner-shape, so the corner is a path: Figma's corner smoothing,
+     ported from figma-squircle (MIT licence, Copyright (c) 2021 Tien Pham, github.com/phamfoo/figma-squircle), which
+     follows Daniel Furse, "Desperately seeking squircles" (Figma, 2018). A corner of radius R with smoothing ξ (0.6,
+     as iOS) keeps a circular arc of 90(1 − ξ)° in its middle and replaces each end with a cubic, so curvature eases in
+     from zero at the straight edge; the corner runs (1 + ξ)·R along each edge. Where an edge is too short for that
+     run, ξ shrinks first (the corner never pokes past the middle of an edge).
+
+     Applied as clip-path: path() on the element (Chromium and WebKit draw it alike). A clip-path also clips the inset
+     hairline and the focus ring, so both are drawn by ::after, clipped to a band of the same path: 1px for the line
+     (colour --sq-line, set by the component), 2px brass for the focus ring, inside the edge. Floating surfaces (menus,
+     popovers, tooltips, toasts) are not clipped, so their elevation shadow survives: their background (--sq-bg) is
+     painted by a clipped ::before instead (data-sq-mode="surface").
+
+     Sizes come from one shared ResizeObserver (border box), whose callback the browser runs once per frame after
+     layout: the paths are written there, in the same frame as the size, so a card animating its height or the dock
+     morphing never shows a stale clip, and no style is read after a write. Paths are cached by size and radii. The
+     radii come from the element's computed border-radius (the tokens, so --r-outer and --pad nesting holds), read once
+     and again on hx:theme. A corner as round as half the element (a capsule, a circle) needs no path: it stays native.
+       HX.ui.squircle.auto(selector, {mode})  binds every match, now and as they appear (a MutationObserver); [data-sq]
+                                      and the library's own surfaces are bound already
+       HX.ui.squircle.bind(el, {mode: 'clip'|'surface'|'slab'|'concave'}), .unbind(el), .refresh()
+       HX.ui.squircle.path(w, h, r | [tl, tr, br, bl], {smoothing, x, y}) -> an SVG path string
+       HX.ui.squircle.stats() -> {bound, cached, frames, lastMs, maxMs} */
+  ui.squircle = (function () {
+    const n = (x) => Math.round(x * 100) / 100;
+    const rad = Math.PI / 180;
+    let SMOOTH = 0.6;
+    /* figma-squircle's getPathParamsForCorner, preserveSmoothing off */
+    function params(r, sm, budget) {
+      if (!(r > 0)) return null;
+      let p = (1 + sm) * r;
+      sm = Math.min(sm, budget / r - 1);
+      p = Math.min(p, budget);
+      const arcMeasure = 90 * (1 - sm);
+      const arc = Math.sin(arcMeasure / 2 * rad) * r * Math.SQRT2;
+      const alpha = (90 - arcMeasure) / 2;
+      const p3p4 = r * Math.tan(alpha / 2 * rad);
+      const beta = 45 * sm;
+      const c = p3p4 * Math.cos(beta * rad);
+      const d = c * Math.tan(beta * rad);
+      const b = (p - arc - c - d) / 3;
+      return { a: 2 * b, b, c, d, p, arc, r };
     }
-    function slab(w, h, R, F, opt) {
-      const x0 = F, x1 = F + w, yb = h;
-      return 'M0 ' + f(yb) + corner(0, yb, x0, yb, x0, yb - F, opt) + 'V' + f(R) + corner(x0, R, x0, 0, x0 + R, 0, opt) +
-        'H' + f(x1 - R) + corner(x1 - R, 0, x1, 0, x1, R, opt) + 'V' + f(yb - F) + corner(x1, yb - F, x1, yb, x1 + F, yb, opt) + 'Z';
+    /* one corner from the current point: u is the direction in, v the direction out (unit vectors) */
+    function seg(q, ux, uy, vx, vy) {
+      if (!q) return '';
+      const pt = (pu, pv) => n(pu * ux + pv * vx) + ' ' + n(pu * uy + pv * vy);
+      const { a, b, c, d, arc, r } = q;
+      return 'c' + pt(a, 0) + ' ' + pt(a + b, 0) + ' ' + pt(a + b + c, d) +
+        'a' + n(r) + ' ' + n(r) + ' 0 0 ' + (ux * vy - uy * vx > 0 ? 1 : 0) + ' ' + pt(arc, arc) +
+        'c' + pt(d, c) + ' ' + pt(d, b + c) + ' ' + pt(d, a + b + c);
     }
-    const radius = (name) => parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name || '--r-l')) || 0;
-    return { continuous, handle: () => handle(false), corner, slab, radius };
+    /* a corner's commands are relative, so they depend only on its radius, the smoothing, the turn and (when the edge
+       is too short for the full run) the budget: cached, so a resize only rebuilds the four straight edges */
+    const DIRS = [[0, -1, 1, 0], [1, 0, 0, 1], [0, 1, -1, 0], [-1, 0, 0, -1]];   /* tl, tr, br, bl */
+    const segCache = new Map(), NONE = ['', 0];
+    function corner(r, sm, budget, dir) {
+      const rr = Math.min(Math.max(0, r), budget);
+      if (!(rr > 0)) return NONE;
+      const key = rr + '|' + sm + '|' + ((1 + sm) * rr <= budget ? '' : budget) + '|' + dir;
+      let v = segCache.get(key);
+      if (!v) {
+        const q = params(rr, sm, budget), D = DIRS[dir];
+        v = [seg(q, D[0], D[1], D[2], D[3]), q.p];
+        if (segCache.size > 4000) segCache.clear();
+        segCache.set(key, v);
+      }
+      return v;
+    }
+    function path(w, h, r, o) {
+      const sm = o && o.smoothing != null ? o.smoothing : SMOOTH, x = (o && o.x) || 0, y = (o && o.y) || 0;
+      const R = typeof r === 'number' ? [r, r, r, r] : r;
+      const budget = Math.min(w, h) / 2;
+      const tl = corner(R[0], sm, budget, 0), tr = corner(R[1], sm, budget, 1), br = corner(R[2], sm, budget, 2), bl = corner(R[3], sm, budget, 3);
+      return 'M' + n(x + w - tr[1]) + ' ' + n(y) + tr[0] + 'L' + n(x + w) + ' ' + n(y + h - br[1]) + br[0] +
+        'L' + n(x + bl[1]) + ' ' + n(y + h) + bl[0] + 'L' + n(x) + ' ' + n(y + tl[1]) + tl[0] + 'Z';
+    }
+    /* a corner between two straight edges meeting at (cx, cy), from the current point (ax, ay) to (bx, by): its run
+       is |a − c|, so its radius is run / (1 + ξ). Convex or concave: the turn's direction picks the arc's sweep. */
+    function cornerTo(ax, ay, cx, cy, bx, by, o) {
+      const sm = o && o.round ? 0 : (o && o.smoothing != null ? o.smoothing : SMOOTH);
+      const run = Math.hypot(cx - ax, cy - ay); if (!run) return 'L' + n(bx) + ' ' + n(by);
+      const ux = (cx - ax) / run, uy = (cy - ay) / run, vl = Math.hypot(bx - cx, by - cy) || 1, vx = (bx - cx) / vl, vy = (by - cy) / vl;
+      return seg(params(run / (1 + sm), sm, run), ux, uy, vx, vy);
+    }
+    /* the dock's slab in the coordinates dock.js uses: the body spans x ∈ [x, x + w] (x defaults to F), the floor is
+       y = h; flares of run F (concave), top corners of radius R; {round: true} for a pill's round ends */
+    function slab(w, h, R, F, o) {
+      o = o || {};
+      const sm = o.round ? 0 : (o.smoothing != null ? o.smoothing : SMOOTH);
+      const x0 = o.x != null ? o.x : F, x1 = x0 + w;
+      const top = params(Math.min(R, w / 2), sm, Math.max(0, Math.min(w / 2, h - F)));
+      const pt = top ? top.p : 0;
+      return 'M' + n(x0 - F) + ' ' + n(h) + (F > 0 ? cornerTo(x0 - F, h, x0, h, x0, h - F, o) : '') +
+        'L' + n(x0) + ' ' + n(pt) + seg(top, 0, -1, 1, 0) + 'L' + n(x1 - pt) + ' 0' + seg(top, 1, 0, 0, 1) +
+        'L' + n(x1) + ' ' + n(h - F) + (F > 0 ? cornerTo(x1, h - F, x1, h, x1 + F, h, o) : '') + 'Z';
+    }
+
+    /* ── binding ── */
+    const state = new WeakMap(), bound = new Set(), cache = new Map();
+    const stats = { frames: 0, lastMs: 0, maxMs: 0 };
+    const FOCUSABLE = 'button, a[href], input, select, textarea, [tabindex]';
+    const SURFACE = '.ui-menu, .ui-pop, .ui-tip, .ui-toast, hx-card[data-size="popover"]';
+    /* the library's surfaces and the card layer's (HX.ui.card); modules add theirs with auto() or [data-sq] */
+    const selector = '[data-sq], .ui-btn, .ui-ib, .ui-send, .ui-seg, .ui-seg__thumb, .ui-row, .ui-menu__item, .ui-request, .ui-file, ' +
+      '.ui-composer__box, .ui-slab, .ui-concave, ' + SURFACE + ', hx-card[data-size="inline"]:not([data-kind="blank"]):not([data-kind="escalation"]), ' +
+      'hx-card[data-size="compact"], .cd-well, .cd-mini, .cd-opt, .cd-free, .cd-preview';
+    const px = (v) => parseFloat(v) || 0;
+    function radii(el) {
+      const cs = getComputedStyle(el);
+      return [px(cs.borderTopLeftRadius), px(cs.borderTopRightRadius), px(cs.borderBottomRightRadius), px(cs.borderBottomLeftRadius)];
+    }
+    function build(s, w, h) {
+      const R = s.r, key = s.mode + '|' + w + '|' + h + '|' + R.join(',') + '|' + (s.focusable ? 1 : 0) + '|' + SMOOTH;
+      let v = cache.get(key);
+      if (v) return v;
+      if (cache.size > 800) cache.clear();
+      if (s.mode === 'slab') {
+        const r = R[0], F = r;
+        v = { key, clip: 'path("' + slab(w, h, r, F, { x: 0 }) + '")' };
+      } else if (s.mode === 'concave') {
+        const at = s.at, sz = Math.min(w, h);
+        const d = at === 'tr' ? 'M' + n(sz) + ' 0L0 0' + cornerTo(0, 0, sz, 0, sz, sz) + 'Z' : 'M0 0L' + n(sz) + ' 0' + cornerTo(sz, 0, 0, 0, 0, sz) + 'Z';
+        v = { key, clip: 'path("' + d + '")' };
+      } else {
+        const outer = path(w, h, R);
+        const inner = (t) => path(Math.max(0, w - 2 * t), Math.max(0, h - 2 * t), R.map((r) => Math.max(0, r - t)), { x: t, y: t });
+        v = { key, clip: 'path("' + outer + '")', edge: 'path(evenodd, "' + outer + inner(1) + '")', ring: '', outer, inner };
+      }
+      cache.set(key, v);
+      return v;
+    }
+    function apply(el, s) {
+      const w = Math.round(s.w * 2) / 2, h = Math.round(s.h * 2) / 2;
+      if (!(w >= 1 && h >= 1) || !s.r) return;
+      const half = Math.min(w, h) / 2;
+      const native = s.mode !== 'slab' && s.mode !== 'concave' && s.r.every((r) => r >= half - 0.5 || r === 0) && s.r.some((r) => r > 0);
+      if (native || s.r.every((r) => r === 0) && s.mode !== 'concave') {
+        if (s.on) { el.removeAttribute('data-sq-on'); s.on = false; s.key = ''; }
+        return;
+      }
+      const v = build(s, w, h);
+      if (v.key === s.key) { if (s.focusable && el === document.activeElement) ring(el, s, v); return; }
+      const st = el.style;
+      st.setProperty('--sq-clip', v.clip);
+      if (v.edge) st.setProperty('--sq-edge', v.edge);
+      s.key = v.key; s.ringKey = '';
+      if (s.focusable && el === document.activeElement) ring(el, s, v);
+      if (!s.on) { el.setAttribute('data-sq-on', ''); s.on = true; }
+    }
+    /* the focus ring's band is built when the element takes focus (or resizes while focused), not for every button */
+    function ring(el, s, v) {
+      if (s.ringKey === v.key || !v.outer) return;
+      if (!v.ring) v.ring = 'path(evenodd, "' + v.outer + v.inner(2) + '")';
+      el.style.setProperty('--sq-ring', v.ring); s.ringKey = v.key;
+    }
+    document.addEventListener('focusin', (e) => {
+      const el = e.target, s = el && state.get(el);
+      if (s && s.on && s.focusable) ring(el, s, cache.get(s.key) || build(s, Math.round(s.w * 2) / 2, Math.round(s.h * 2) / 2));
+    }, true);
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver((entries) => {
+      const t0 = performance.now();
+      /* every read first (sizes from the entries, radii of new elements), then every write: no style thrash */
+      const todo = [];
+      for (const e of entries) {
+        const el = e.target, s = state.get(el);
+        if (!s) continue;
+        const b = e.borderBoxSize && e.borderBoxSize[0];
+        s.w = b ? b.inlineSize : el.offsetWidth; s.h = b ? b.blockSize : el.offsetHeight;
+        if (!s.r) s.r = radii(el);
+        todo.push(el, s);
+      }
+      for (let i = 0; i < todo.length; i += 2) apply(todo[i], todo[i + 1]);
+      const ms = performance.now() - t0;
+      stats.frames++; stats.lastMs = ms; if (ms > stats.maxMs) stats.maxMs = ms;
+    }) : null;
+    function bind(el, o) {
+      if (!ro || !el || state.has(el)) return el;
+      const mode = (o && o.mode) || el.getAttribute('data-sq-mode') || (el.matches(SURFACE) ? 'surface' : el.matches('.ui-slab') ? 'slab' : el.matches('.ui-concave') ? 'concave' : 'clip');
+      const s = { mode, w: 0, h: 0, r: null, key: '', on: false, focusable: mode === 'clip' && el.matches(FOCUSABLE), at: el.getAttribute('data-at') };
+      state.set(el, s); bound.add(el);
+      el.setAttribute('data-sq-mode', mode);
+      ro.observe(el, { box: 'border-box' });
+      return el;
+    }
+    function unbind(el) {
+      const s = state.get(el); if (!s) return;
+      ro.unobserve(el); state.delete(el); bound.delete(el);
+      el.removeAttribute('data-sq-on'); el.removeAttribute('data-sq-mode');
+      for (const k of ['--sq-clip', '--sq-edge', '--sq-ring']) el.style.removeProperty(k);
+    }
+    const extra = [];   /* [selector, mode] from auto() */
+    function scan(root) {
+      if (root.nodeType !== 1) return;
+      for (const [sel, mode] of extra) { if (root.matches(sel)) bind(root, { mode }); for (const el of root.querySelectorAll(sel)) bind(el, { mode }); }
+      if (root.matches(selector)) bind(root);
+      for (const el of root.querySelectorAll(selector)) bind(el);
+    }
+    let raf = 0;
+    function refresh() {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        SMOOTH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--corner-smoothing'));
+        if (!(SMOOTH >= 0 && SMOOTH <= 1)) SMOOTH = 0.6;
+        const t0 = performance.now();
+        for (const el of bound) { const s = state.get(el); if (!s) continue; if (!el.isConnected) { unbind(el); continue; } s.r = radii(el); s.key = ''; }
+        for (const el of bound) { const s = state.get(el); if (s) apply(el, s); }
+        stats.lastMs = performance.now() - t0;
+      });
+    }
+    if (ro) {
+      const mo = new MutationObserver((muts) => {
+        for (const m of muts) {
+          for (const nd of m.addedNodes) if (nd.nodeType === 1) scan(nd);
+          for (const nd of m.removedNodes) if (nd.nodeType === 1 && !nd.isConnected) { if (state.has(nd)) unbind(nd); if (nd.querySelectorAll) for (const el of nd.querySelectorAll('[data-sq-mode]')) unbind(el); }
+        }
+      });
+      const start = () => { SMOOTH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--corner-smoothing')) || 0.6; scan(document.documentElement); mo.observe(document.documentElement, { childList: true, subtree: true }); };
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+      window.addEventListener('hx:theme', refresh);
+      if (window.HX && typeof window.HX.on === 'function') window.HX.on('hx:theme', refresh);
+      /* the corner setting and the preset change the radii: theme.js sets these on <html> */
+      new MutationObserver(refresh).observe(document.documentElement, { attributes: true, attributeFilter: ['data-hx-corners', 'data-hx-preset', 'data-hx-density', 'style'] });
+    }
+    return {
+      path, cornerTo, slab, bind, unbind, refresh,
+      auto(sel, o) { if (!sel) return; extra.push([sel, o && o.mode]); if (document.readyState !== 'loading') scan(document.documentElement); },
+      stats: () => Object.assign({ bound: bound.size, cached: cache.size, smoothing: SMOOTH }, stats),
+      get smoothing() { return SMOOTH; }
+    };
   })();
+  /* the old name: HX.ui.shape draws the same corner for paths (the dock's slab) */
+  ui.shape = {
+    corner: (ax, ay, cx, cy, bx, by, o) => ui.squircle.cornerTo(ax, ay, cx, cy, bx, by, o),
+    slab: (w, h, R, F, o) => ui.squircle.slab(w, h, R, F, o),
+    radius: (name) => parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name || '--r-l')) || 0,
+    continuous: () => true
+  };
 
   /* row: {title, sub, end, endTone, lead: html, current, archived, acts: html, attrs, tag} */
   html.row = function (o) {

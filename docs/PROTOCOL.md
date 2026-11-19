@@ -29,12 +29,14 @@ The UI never holds gateway tickets, tokens or keys.
 | `notify` | `{title, body, action?}` | `{}`. Desktop notifications carry no action buttons; `action` is validated and ignored |
 | `pick_folder` | | `{path, home_relative}` or `null`: `~/x/y` under the user's home, absolute outside it |
 | `open_external` | `{url}` | `{}`. `http` and `https` only, no credentials in the URL |
+| `setup_check` | `{profile?}` | `{hermes_installed, needed, reason}`. Read-only: does first-run setup still have to run |
+| `setup_advance` | `{profile?, answer?, reconsider}` | `{steps[], form?, done, install_command?, receipt?}`. Runs setup as far as it goes (below); `answer` is `{form_id, cancelled, values, secrets}` for the form the last call returned. Secret values travel here only to reach the keychain; the host never logs them. It never runs an installer |
 | `hermes_retry` | `{profile?}` | `{}`. Asks a link that parked as `incompatible` to try again |
 | `gateway_stats` | `{profile?}` | counters and p95 timings of the proxy |
 
 The host reconnects on gateway restarts (after `code_sha` mismatch, idle exit or crash) and replays with `session.events.since` using `seq` and `replay_epoch`. The UI sees host-made `event` frames (type namespace `connection.`, never from the gateway): `connection.state` (`payload.state`: `connecting`, `ready`, `degraded` or `incompatible`; `reconnected: true` after a loss), `connection.replay_gap` (`payload.session_id`: the replay buffer was truncated, reload that transcript) and `connection.backpressure` (`payload.coalesced`: `message.delta` frames were merged because the window fell behind). The same state is a typed `ConnectionStateEvent`. A window's `client.capabilities` and `runtime.describe` are answered by the host from the handshake it did once.
 
-The host reads the secrets the plugin needs through its own channel (`apps/desktop/AGENTS.md`, "The secret channel"): protocol `hx-host-secrets-v1`, host-only codes `hx.host.*` and `hx.secrets.*` (to be added to `crates/hx-proto/errors.json`).
+The host reads the secrets the plugin needs through its own channel (`apps/desktop/AGENTS.md`, "The secret channel"): protocol `hx-host-secrets-v1`, host-only codes `hx.host.*` and `hx.secrets.*` (listed in `crates/hx-proto/errors.json`).
 
 ## 2. Host and Hermes: `hermes-gateway-v1`
 
@@ -82,6 +84,9 @@ Methods are registered with `ctx.register_rpc(name, handler)` and appear as `plu
 | `checkpoint.list` | `{session_id}` | `{checkpoints: [{ship_id, commit, ref, files, ts, task_id?}]}`, kept ships only, oldest first (a restored ship has no checkpoint). Read off the ledger |
 | `checkpoint.diff` | `{session_id, ship_id?}` | `{files: [{path, status, add, del, binary, truncated, hunks: [{header, lines}]}], truncated, base?, head?, unavailable?}`. One ship, or every kept ship together. A hunk line keeps its `' '`, `'+'` or `'-'`. `unavailable` says why there is nothing to show (folder gone, no parent commit) |
 | `checkpoint.rewind` | `{session_id, ship_id}` | `{ok}`. Itself a journaled ship, so it's reversible |
+| `form.submit` | `{form_id, values, provided?, session_id?}` | `{form_id, status}`. Secret fields are not in `values`: the UI saved them with the host (`secret_set`) and names them in `provided`; the plugin confirms each with the host and tells the agent `{saved, ref}` |
+| `form.cancel` | `{form_id, session_id?}` | `{form_id, status}` |
+| `form.list` | `{session_id}` | `{forms: [form.opened payload]}`: the open forms, for a client that reconnects |
 | `compat.inventory` | `{cwd}` | `{items: CompatItem[], trust: TrustState}` |
 | `trust.set` | `{cwd, decision: "trust"\|"deny", content_hash}` | `{}` |
 
@@ -94,6 +99,8 @@ Methods are registered with `ctx.register_rpc(name, handler)` and appear as `plu
 | `blank.opened` / `blank.filled` / `blank.lapsed` | `{blank_id, question, options, blocks}` / `{blank_id, answer}` / `{blank_id}` |
 | `budget.blocked` | `{cap_usd, projected_usd}` |
 | `compat.changed` | `{cwd}` |
+| `form.opened` | `{form_id, kind, title, body?, schema, submit, cancel?, sensitive, origin, expires_at}` (`docs/FORMS.md` section 6) |
+| `form.resolved` | `{form_id, status: "submitted"\|"cancelled"\|"expired"}` |
 
 ### Shared types (abridged; full definitions in the OpenRPC file)
 - `ModelRef {provider, id}`.
@@ -135,4 +142,8 @@ Stable string codes in `data.code`, listed in `crates/hx-proto/errors.json` (sha
 - `hx.kernel.dead`;
 - `hx.ledger.chain_broken`, `hx.ledger.invalid_transition`;
 - `hx.budget.blocked`;
-- `hx.hermes.incompatible`, `hx.hermes.unavailable`.
+- `hx.hermes.incompatible`, `hx.hermes.unavailable`;
+- `hx.host.*` (the host's own: `consent_required`, `unauthorized`, `invalid_frame`, `unknown_connection`, `no_ui`, `os`);
+- `hx.secrets.*` (`unavailable`, `failed`, `not_found`, `invalid_ref`);
+- `hx.setup.*` (`hermes_missing`, `no_bundle`, `plugin_install_failed`, `config_failed`, `declined`, `invalid_answer`, `state_invalid`, `verify_failed`);
+- `hx.form.*` (`invalid_schema`, `invalid_values`, `not_found`, `resolved`, `timeout`, `secret_missing`, `unsupported`, `limit`).

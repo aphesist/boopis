@@ -118,7 +118,7 @@
   function renderScales() {
     put('spacing', [1, 2, 3, 4, 5, 6, 7].map((i) => '<div><span>--sp-' + i + '</span><i style="width:var(--sp-' + i + ')"></i><span>' + px('--sp-' + i) + '</span></div>').join(''));
     put('density', [['--row-h', 'row'], ['--row-h-2', 'two-line row'], ['--ctl', 'control'], ['--ctl-s', 'icon button']].map(([v, n]) => '<div><span>' + n + '</span><i style="width:calc(var(' + v + ') * 4);height:var(' + v + ');background:var(--bg-3);box-shadow:inset 0 0 0 1px var(--line)"></i><span>' + v + ' ' + px(v) + '</span></div>').join(''));
-    put('radii', [['--r-xs', 'kbd, chips, stamps' + (CONT ? ', continuous' : ', round')], ['--r-s', 'buttons, rows, fields'], ['--r-m', 'cards, composer, menus'], ['--r-l', 'ground corner, dock, dialogs'], ['--r-pill', 'dots, switch']].map(([v, n]) => '<div><i style="border-radius:var(' + v + ')"></i><span class="sp-cap"><b>' + v + '</b> ' + (v === '--r-pill' ? '' : px(v)) + '</span><span class="sp-cap">' + n + '</span></div>').join(''));
+    put('radii', [['--r-xs', 'kbd, code, stamps'], ['--r-s', 'buttons, rows, fields, wells'], ['--r-m', 'cards, composer, menus, toasts'], ['--r-l', 'sheets, dialogs, the dock, palette'], ['--r-floor', 'the smallest inner corner'], ['--r-pill', 'chips, dots, the switch']].map(([v, n]) => '<div><i data-sq style="border-radius:var(' + v + ')"></i><span class="sp-cap"><b>' + v + '</b> ' + (v === '--r-pill' ? '' : px(v)) + '</span><span class="sp-cap">' + n + '</span></div>').join(''));
     put('lines', [['--hair', 'Hairline, inside a surface'], ['--line', 'Line, control outline'], ['--line-strong', 'Strong line, hover, rings'], ['--line-field', 'Field line, 3:1']].map(([v, n]) => '<div><i style="background:var(' + v + ')"></i><span class="sp-cap"><b>' + v + '</b><br>' + n + '</span></div>').join(''));
     put('shadows', [['--shadow-pop', 'pop: menus, palette, dialogs, toasts'], ['--shadow-tip', 'tip: tooltips'], ['--shadow-side', 'side: a drawer over the ground']].map(([v, n]) => '<div style="--s:var(' + v + ')">' + n + '</div>').join(''));
   }
@@ -258,7 +258,9 @@
     if (HX.cards) { const blank = HX.cards.create('blank', { question: a.blank ? a.blank.question : 'keep prorate?', short: 'keep `prorate` as an alias?', options: a.blank ? a.blank.options : [] }, { size: 'inline' }); q.appendChild(blank); }
     else q.insertAdjacentHTML('beforeend', h.blank({}));
     const conv2 = el.querySelector('.js-conv');
-    new ResizeObserver(() => { const v = conv2.clientWidth < 560 ? 'off' : 'on'; if (conv2.getAttribute('data-margin') !== v) conv2.setAttribute('data-margin', v); }).observe(conv2);
+    /* the layout change waits for the next frame: changing layout inside the observer's own callback is a loop
+       (WebKit reports it as "ResizeObserver loop completed with undelivered notifications") */
+    new ResizeObserver(() => requestAnimationFrame(() => { const v = conv2.clientWidth < 560 ? 'off' : 'on'; if (conv2.getAttribute('data-margin') !== v) conv2.setAttribute('data-margin', v); })).observe(conv2);
   }
   const DECIDE = {
     path: [{ title: 'Scope' }, { label: 'src/billing', value: 'src/billing', mono: true, checked: true, desc: 'The folder you named' }, { label: 'src/billing and its tests', value: 'src/billing and its tests', checked: false }, { label: 'The whole repository', value: 'all', checked: false }],
@@ -282,7 +284,7 @@
     /* the dock's composer: compact, its actions on the text's line; the mic talks to the bot, whose orb listens */
     const noct = bot('noct') || (D.bots || [])[0];
     const dock = document.createElement('div');
-    dock.className = 'sp-dockcomp'; dock.setAttribute('data-ground', 'dock');
+    dock.className = 'sp-dockcomp'; dock.setAttribute('data-ground', 'dock'); dock.setAttribute('data-sq', '');
     dock.innerHTML = '<div class="sp-dockcomp__head">' + h.orb(noct, { size: 40, render: 80 }) + '<span><b>' + esc(noct.name) + '</b><span class="sp-cap">' + esc(noct.role) + '</span></span></div>';
     const cc = ui.composer({ placeholder: 'Message ' + noct.name, label: 'Message ' + noct.name, attach: false, bot: noct });
     cc.addEventListener('ui:send', (e) => { e.preventDefault(); cc.setValue(''); ui.toast('Sent to ' + noct.name); });
@@ -435,6 +437,8 @@
     ['F10 scale', 'Ad-hoc sizes', 'Code chips at 12.5px in three modules; the brand at 15px; a 34px palette row; corner 14 duplicated as --r-xl. Fix: 12px code, a named --fs-brand, --row-h rows, drop --r-xl.'],
     ['F18 rule', 'Bars where the system says dots', 'The dock draws context as a segmented bar and spend as a meter. Fix: HX.ui.measure dots and the mono running total, HX.ui.capacity.'],
     ['F19 contrast', 'Brass used as text', 'The current rung\'s rule and the dock\'s tag are brass text: 4.0:1 in Bone. Fix: brass marks the station; the words are --text-dim.'],
+    ['F31 owner', 'The continuous corner never reached the owner', 'corner-shape is Chromium-only; Tauri is WebKit on Linux and macOS, so every corner there was a small circular arc. Fix: HX.ui.squircle draws every corner as a path (Figma smoothing 0.6), the same in every engine.'],
+    ['F32 owner', 'Inner radii collapsed to 5 or 6px', 'The concentric rule shrank inner corners under the slab and in cards. Fix: a floor of 8; where the arithmetic goes under it, the padding gives way.'],
     ['F29 owner', 'Nested corners picked by hand', 'Only the customizer swatch was concentric; a card at the top of the dock sat under a corner it did not follow, and the slab drew circular arcs. Fix: --r-outer, --pad and --r-in on every container; HX.ui.shape.slab for the path.'],
     ['F30 owner', 'The dock composer\'s floating send, and no way to talk', 'The send sat alone in the corner under a one-line field. Fix: the compact composer, its mic and send in the corner, concentric; a mic in every composer, the target bot\'s orb listening.'],
     ['F28 contrast', 'Inactive marks at 2.0–2.4:1', 'Page dots and ladder stations to come were --text-faint, decoration-grade. Fix: --mark-off (3.3–4.2:1 on every surface, 3.3–3.6:1 on the dock), still well under the active marks.'],
@@ -451,53 +455,49 @@
 
   /* ───────── render, and re-read live values on every theme change ───────── */
   /* ───────── corners: the curve, nested corners, where it applies, before and after ───────── */
-  const CONT = !!(window.CSS && CSS.supports && CSS.supports('corner-shape', 'superellipse(2)'));
   const num = (v) => parseFloat(px(v)) || 0;
-  function cornerPath(R, n, steps) {   /* one superellipse corner (exponent n) of radius R, corner at (0, 0) */
-    let d = '';
-    for (let i = 0; i <= steps; i++) {
-      const t = (i / steps) * Math.PI / 2, x = R - R * Math.pow(Math.cos(t), 2 / n), y = R - R * Math.pow(Math.sin(t), 2 / n);
-      d += (i ? 'L' : 'M') + x.toFixed(2) + ' ' + y.toFixed(2);
-    }
-    return d;
-  }
+  const SQ = ui.squircle;
   function renderCorners() {
-    /* the curve: the old arc and the continuous corner that reads as deep, overlaid, then as two tiles */
-    const S = 150, r = 56, R = Math.round(r * 1.6), n = Math.pow(2, 1.8);
-    const edge = (rr, path) => '<path d="M' + (S + 8) + ' 0H' + rr + '"/><path d="' + path + '"/><path d="M0 ' + rr + 'V' + (S + 8) + '"/>';
+    /* the curve: a circular arc and the continuous corner of the same radius, overlaid (the top-left of a big box) */
+    const S = 170, R = 96, run = R * (1 + SQ.smoothing);
+    const arc = 'M0 ' + S + 'L0 ' + R + SQ.cornerTo(0, R, 0, 0, R, 0, { round: true }) + 'L' + S + ' 0';
+    const cont = 'M0 ' + S + 'L0 ' + run + SQ.cornerTo(0, run, 0, 0, run, 0) + 'L' + S + ' 0';
     put('corner-curve',
-      '<svg viewBox="-6 -6 ' + (S + 20) + ' ' + (S + 20) + '" width="' + (S + 20) + '" height="' + (S + 20) + '" role="img" aria-label="Two corners overlaid: the old circular arc, dashed, and the continuous corner, solid, which leaves the straight edge earlier and turns more gently">' +
-        '<g fill="none" stroke-width="1.5" stroke-linecap="round"><g stroke="var(--text-quiet)" stroke-dasharray="3 4">' + edge(r, cornerPath(r, 2, 48)) + '</g>' +
-        '<g stroke="var(--text)">' + edge(R, cornerPath(R, n, 64)) + '</g></g>' +
-        '<circle cx="' + r + '" cy="0" r="2.5" fill="var(--text-quiet)"/><circle cx="' + R + '" cy="0" r="2.5" fill="var(--text)"/></svg>' +
-      '<div class="sp-curve__key"><span><i data-k="arc"></i>v6: a circular arc of ' + r + ' meets the edge at once</span><span><i data-k="cont"></i>now: superellipse(1.8) at ' + R + ' (1.6 times) eases out of the edge; at the diagonal it is as deep as the arc</span></div>' +
-      '<div class="sp-curve__tiles"><div><i style="border-radius:24px;corner-shape:round"></i><span class="sp-cap">round, 24</span></div><div><i style="border-radius:38px;corner-shape:superellipse(1.8)"></i><span class="sp-cap">continuous, 38</span></div></div>' +
-      '<p class="sp-cap">' + (CONT ? 'This engine draws continuous corners (corner-shape), so every surface on this page has them.' : 'This engine has no corner-shape (WebKit today, so the macOS webview): every surface falls back to the slightly larger round scale, and the right tile shows a round corner too.') + '</p>');
-    /* nested corners at four times: fits, too round, too sharp */
-    const Rm = num('--r-m'), gap = 6, floor = num('--r-floor'), fit = Math.max(floor, Rm - gap);
-    const panel = (title, inner, note, ok) => '<figure class="sp-nest__p"' + (ok ? ' data-ok' : '') + '><div class="sp-nest__o" style="border-radius:' + Rm * 4 + 'px"><i style="border-radius:' + inner * 4 + 'px"></i></div><figcaption><b>' + title + '</b><span class="sp-cap">' + note + '</span></figcaption></figure>';
-    put('nest', panel('Fits', fit, 'r = R − gap = ' + Rm + ' − ' + gap + ' = ' + fit, true) + panel('Too round', Rm, 'r = R: the curves crowd the corner, the gap pinches') + panel('Too sharp', 0, 'r = 0: a hard corner against a soft one'));
+      '<svg viewBox="-6 -6 ' + (S + 12) + ' ' + (S + 12) + '" width="' + (S + 12) + '" height="' + (S + 12) + '" role="img" aria-label="Two corners of the same radius overlaid: the circular arc, dashed, and the continuous corner, solid, which leaves the straight edge earlier and turns more gently">' +
+        '<g fill="none" stroke-width="1.5"><path d="' + arc + '" stroke="var(--text-quiet)" stroke-dasharray="3 4"/><path d="' + cont + '" stroke="var(--text)"/></g>' +
+        '<circle cx="' + R + '" cy="0" r="2.5" fill="var(--text-quiet)"/><circle cx="' + (R * (1 + SQ.smoothing)).toFixed(1) + '" cy="0" r="2.5" fill="var(--text)"/></svg>' +
+      '<div class="sp-curve__key"><span><i data-k="arc"></i>a circular arc of radius ' + R + ' meets the edge at once (v6, and corner-shape-less WebKit)</span>' +
+        '<span><i data-k="cont"></i>the continuous corner of the same radius, smoothing ' + SQ.smoothing + ': it runs ' + Math.round(R * (1 + SQ.smoothing)) + ' along each edge and eases in, as iOS does</span></div>' +
+      '<div class="sp-curve__tiles"><div><i class="sp-tile-arc"></i><span class="sp-cap">arc, 30</span></div><div><i class="sp-tile-sq" data-sq></i><span class="sp-cap">continuous, 30</span></div></div>' +
+      '<p class="sp-cap">Drawn as a path (clip-path), so WebKit (Tauri on Linux and macOS) and Chromium draw the same curve.</p>');
+    /* nested corners at four times: fits (padding given up, radius kept), too round, too square */
+    const Rm = num('--r-m'), floor = num('--r-floor'), pad = Math.max(0, Rm - floor);
+    const panel = (title, inner, gap, note, ok) => '<figure class="sp-nest__p"' + (ok ? ' data-ok' : '') + '><div class="sp-nest__o" data-sq style="border-radius:' + Rm * 2 + 'px;padding:' + gap * 2 + 'px"><i data-sq style="border-radius:' + inner * 2 + 'px"></i></div><figcaption><b>' + title + '</b><span class="sp-cap">' + note + '</span></figcaption></figure>';
+    put('nest', panel('Fits', floor, pad, 'r = ' + floor + ' (the floor), gap = R − r = ' + Rm + ' − ' + floor + ' = ' + pad + ': padding gives way, not radius', true) +
+      panel('Too round', Rm, pad, 'r = R: the curves crowd the corner') + panel('Too square', 2, pad, 'r under the floor: a hard corner against a soft one'));
     /* where it applies, with this theme's numbers */
     const v = (t) => num(t), fitOf = (R, p) => Math.max(floor, R - p);
     const rows = [
       ['Mic, send, attach and chips in the composer', '--r-m', 6, fitOf(v('--r-m'), 6)],
       ['A menu item in a menu', '--r-m', 4, fitOf(v('--r-m'), 4)],
       ['A button in a toast', '--r-m', 6, fitOf(v('--r-m'), 6)],
+      ['A well, a footer button, a stamp in a card', '--r-m', v('--r-m') - floor, floor],
       ['The segmented thumb in its track', '--r-s', 3, fitOf(v('--r-s'), 3)],
       ['A key in a tooltip', '--r-s', 4, fitOf(v('--r-s'), 4)],
       ['A colour swatch in its customizer well', '--r-s', 2, fitOf(v('--r-s'), 2)],
-      ['A card set into the dock slab, at its top', '--r-l', 16, fitOf(v('--r-l'), 16)],
-      ['The switch thumb in its track; orbs in the dock\'s minimised pill', 'pill', 3, 'pill'],
-      ['Wells and buttons in a card, fields in a popover, a card on the ground', 'loose', '≥ R', 'own step, never above R']
+      ['A card or a row at the top of the dock slab', '--r-l', 12, fitOf(v('--r-l'), 12)],
+      ['The switch thumb; chips; orbs in the dock\'s minimised pill', 'pill', 3, 'pill']
     ];
     put('nest-table', '<table class="sp-table sp-table--nest"><thead><tr><th>Nesting</th><th>Outer</th><th class="n">Gap</th><th class="n">Inner</th></tr></thead><tbody>' +
       rows.map(([w, t, g, r]) => '<tr><td>' + esc(w) + '</td><td><code>' + esc(t) + '</code>' + (t.startsWith('--') ? ' ' + v(t) : '') + '</td><td class="n">' + esc(g) + '</td><td class="n">' + esc(typeof r === 'number' ? r + 'px' : r) + '</td></tr>').join('') +
-      '</tbody></table><p class="sp-cap">Floor ' + floor + 'px. Inner = max(--r-floor, --r-outer − --pad). Corners: ' + (T ? (T.get().corners || T.presets[T.get().preset].corners) : 'default') + (CONT ? ', continuous.' : ', round fallback.') + '</p>');
+      '</tbody></table><p class="sp-cap">Inner = max(--r-floor, --r-outer − --pad), floor ' + floor + 'px; where the arithmetic would go under the floor, the padding shrinks to R − floor. Corner setting: ' + (T ? (T.get().corners || T.presets[T.get().preset].corners) : 'default') + '.</p>');
   }
   function renderBeforeAfter() {
-    const items = [['card', 'An approval card'], ['dock', 'The dock slab and its flares'], ['composer', 'The composer, full and in the dock'], ['buttons', 'Buttons and the segmented control'], ['menu', 'A menu and a tooltip']];
-    put('before-after', items.map(([k, t]) => '<figure class="sp-ba__row"><figcaption class="sp-cap"><b>' + esc(t) + '</b></figcaption><div class="sp-ba__pair">' +
-      ['before', 'after'].map((w) => '<div><span class="sp-cap">' + (w === 'before' ? 'v6, round' : 'now, continuous') + '</span><img src="shots/corners/' + w + '-' + k + '.png" alt="' + esc(t + ', ' + (w === 'before' ? 'before: round corners' : 'after: continuous, nested corners')) + '" loading="lazy" decoding="async"></div>').join('') + '</div></figure>').join(''));
+    const items = [['card', 'An approval card'], ['composer', 'The composer, full and in the dock'], ['buttons', 'Buttons, icon buttons, send'], ['menu', 'Menus, a tooltip, toasts'], ['dock', 'The dock slab']];
+    put('before-after', '<p class="sp-cap">Rendered by WebKitGTK 2.52, the engine Tauri uses on Linux (and, as WebKit, on macOS), in Card catalog. Before: v6 as published, where corner-shape does nothing in WebKit, so every corner was a small circular arc. After: the drawn continuous corner and the retuned scale.</p>' +
+      items.map(([k, t]) => '<figure class="sp-ba__row"><figcaption class="sp-cap"><b>' + esc(t) + '</b></figcaption><div class="sp-ba__pair">' +
+      ['before', 'after'].map((w) => '<div><span class="sp-cap">' + (w === 'before' ? 'before, WebKit' : 'after, WebKit') + '</span><img src="shots/corners/wk-' + w + '-' + k + '.png" alt="' + esc(t + ', ' + (w === 'before' ? 'before: small circular corners' : 'after: continuous corners, generous radii')) + '" loading="lazy" decoding="async"></div>').join('') + '</div></figure>').join('') +
+      '<figure class="sp-ba__row"><figcaption class="sp-cap"><b>The same corners in WebKit and in Chromium</b></figcaption><img class="sp-ba__wide" src="shots/corners-webkit-vs-chromium.png" alt="Side by side, WebKitGTK and Chromium draw the same continuous corners on the card, the composer, the buttons and the menu" loading="lazy" decoding="async"></figure>');
   }
   function live() { renderColour(); renderContrast(); renderScales(); renderCorners(); }
   renderControls(); live(); renderType(); renderMotion(); renderIcons(); renderOrbs();

@@ -97,6 +97,17 @@ def test_gate_reasons_are_redacted_too(tmp_path: Path) -> None:
     assert body == {"reason": "saw [R]", "gates": [{"name": "g", "reason": "and [R]"}, "odd"], "evidence": {"n": 1}}
 
 
+def test_with_no_hx_binary_free_text_is_withheld_and_a_warning_is_logged(
+    make_kit: MakeKit, caplog: pytest.LogCaptureFixture
+) -> None:
+    kit = make_kit()
+    kit.rt.hx_client = lambda: None  # type: ignore[method-assign,assignment,return-value]
+    with caplog.at_level(logging.WARNING, logger="hypotaxis.session"):
+        text = kit.rt.redact(f"secret {KEY}")
+    assert text == f"[withheld: redactor unavailable, {len(f'secret {KEY}')} chars]"
+    assert KEY not in text and "withheld" in caplog.text
+
+
 # ---------------------------------------------------------------- the plugin's log
 
 

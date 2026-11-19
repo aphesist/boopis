@@ -373,30 +373,30 @@ def test_a_malformed_blank_is_refused(make_kit: MakeKit) -> None:
     assert not kit.ledger("blank.opened")
 
 
-def test_request_input_is_a_stub_that_announces_and_says_pending(make_kit: MakeKit) -> None:
+def test_forms_from_a_cell_open_and_answer_pending(make_kit: MakeKit) -> None:
     kit = make_kit()
     out = kit.run(
         "f = await harness.request_input('question', 'Which branch?', {'type': 'object', 'properties': {}})\n"
         "c = await harness.request_credential(host='api.example.com')\n"
-        "(f['status'], c['status'])"
+        "a = await harness.ask('Keep it?', ['yes', 'no'])\n"
+        "(f['status'], c['status'], a['status'])"
     )
-    assert out["result"] == "('pending', 'pending')"
+    assert out["result"] == "('pending', 'pending', 'pending')"
     opened = kit.ctx.events("form.opened")
-    assert [e["kind"] for e in opened] == ["question", "credential"]
-    assert [e["sensitive"] for e in opened] == [False, True]
+    assert [e["kind"] for e in opened] == ["question", "credential", "question"]
+    assert [e["sensitive"] for e in opened] == [False, True, False]
     assert opened[1]["schema"]["properties"]["value"]["x-secret"] is True
-    assert [f["kind"] for f in out["forms"]] == ["question", "credential"]
-    # contraprova has no form.* events yet, so the stub records the call and never a value
-    assert [c["tool"] for c in kit.calls()] == ["harness.request_input", "harness.request_credential"]
+    assert [f["kind"] for f in out["forms"]] == ["question", "credential", "question"]
+    assert [c["tool"] for c in kit.calls()] == ["harness.request_input", "harness.request_credential", "harness.ask"]
 
 
-def test_waiting_on_a_form_is_refused_not_faked(make_kit: MakeKit) -> None:
+def test_a_malformed_form_is_refused_with_its_code(make_kit: MakeKit) -> None:
     kit = make_kit()
     out = kit.run(
-        "try:\n    await harness.request_input('question', 'q', {}, wait=True)\n"
+        "try:\n    await harness.request_input('question', 'q', {'type': 'array'})\n"
         "except harness.ToolError as e:\n    r = e.code\nr"
     )
-    assert out["result"] == "'hx.exec.unsupported'"
+    assert out["result"] == "'hx.form.invalid_schema'"
 
 
 def test_diagnostics_says_it_is_not_available(make_kit: MakeKit) -> None:

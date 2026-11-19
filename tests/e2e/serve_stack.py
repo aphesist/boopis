@@ -35,7 +35,9 @@ def main() -> int:
                 "workdir": str(stack.workdir),
                 "venv_bin": str(install.venv / "bin"),
                 "model_url": fake.url,
-                "env": {k: v for k, v in stack.env.items() if k.startswith(("HERMES_", "UV_")) or k in {"HOME", "PATH"}},
+                "env": {
+                    k: v for k, v in stack.env.items() if k.startswith(("HERMES_", "UV_")) or k in {"HOME", "PATH"}
+                },
             }
             print(json.dumps(info), flush=True)
             sys.stdin.read()  # the caller closing our stdin is the stop signal

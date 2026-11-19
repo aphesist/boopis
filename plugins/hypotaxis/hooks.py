@@ -312,6 +312,10 @@ def on_session_finalize(**kw: Any) -> None:
         _stop_kernel(str(kw.get("session_id") or ""))
         if str(kw.get("session_id") or "") in rt.links:
             return  # a worker ending; ``subagent_stop`` is where its attempt is closed
+        if rt.forms is not None:
+            rt.forms.close_session(
+                str(kw.get("session_id") or "")
+            )  # before the ledger is forgotten: it records the expiry
         state = rt.forget(str(kw.get("session_id") or ""))
         if state is None or state.policy is None:
             return

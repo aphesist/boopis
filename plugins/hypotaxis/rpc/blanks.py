@@ -55,7 +55,8 @@ def blank_fill(params: Mapping[str, Any], *, session_id: str | None = None, **_:
         event = ledger.append("blank.filled", "user", {"blank_id": blank_id, "answer": answer, "decided_by": "user"})
     stored = str(event["payload"]["answer"])  # as written (redacted), so the ledger and the viewers agree
     rt.ctx.emit_to_session(sid, "blank.filled", {"blank_id": blank_id, "answer": stored})
-    return {"delivered": _hand_over(rt.ctx, str(blank.get("question", "")), stored)}
+    # the model gets the owner's own words; only the ledger and the viewers carry the redacted form
+    return {"delivered": _hand_over(rt.ctx, str(blank.get("question", "")), answer)}
 
 
 def _hand_over(ctx: Any, question: str, answer: str) -> bool:

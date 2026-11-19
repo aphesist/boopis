@@ -69,6 +69,9 @@ pub enum Error {
     /// The OS integration (dialog, notification, opener) failed.
     #[error("{0}")]
     Os(String),
+    /// A first-run setup failure with its own stable code (`hx.setup.*`).
+    #[error("{1}")]
+    Setup(&'static str, String),
 }
 
 /// A specialised `Result`.
@@ -94,6 +97,7 @@ impl Error {
             Self::Secrets(_) => "hx.secrets.failed",
             Self::SecretNotFound => "hx.secrets.not_found",
             Self::Os(_) => "hx.host.os",
+            Self::Setup(code, _) => code,
         }
     }
 }

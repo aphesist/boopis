@@ -61,10 +61,11 @@ def test_filling_a_blank_writes_the_ledger_announces_it_and_hands_it_to_the_mode
     out = handler("blank.fill")({"session_id": SID, "blank_id": "b1", "answer": "yes, for one release"})
     assert out == {"delivered": True}
     filled = [e for e in rt.ledger(rt.state(SID)).read() if e["type"] == "blank.filled"]
-    assert filled[0]["payload"] == {"blank_id": "b1", "answer": "yes, for one release", "decided_by": "user"}
+    stored = filled[0]["payload"]["answer"]  # redacted by hx for the ledger (withheld when there is no hx)
+    assert filled[0]["payload"] == {"blank_id": "b1", "answer": stored, "decided_by": "user"}
     assert filled[0]["actor"] == "user"
-    assert (SID, "blank.filled", {"blank_id": "b1", "answer": "yes, for one release"}) in ctx.emitted
-    assert "Keep the alias?" in injected[0] and "yes, for one release" in injected[0]
+    assert (SID, "blank.filled", {"blank_id": "b1", "answer": stored}) in ctx.emitted
+    assert "The user answered: yes, for one release" in injected[0]
 
 
 def test_an_answer_the_model_cannot_receive_is_recorded_and_says_so(make_runtime: Any) -> None:

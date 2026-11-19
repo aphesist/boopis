@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 import threading
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
@@ -15,6 +16,10 @@ from hypotaxis.exec.registry import KernelRegistry, install
 from hypotaxis.exec.run import run_exec
 from hypotaxis.hermes_api import bind
 from hypotaxis.session import Caller, Runtime, SessionState
+
+sys.path.insert(0, str(Path(__file__).parent / "compat"))
+from compat_support import make_bridge, make_env
+from hypotaxis.compat import runtime as compat_runtime
 
 SID = "exec-s1"
 
@@ -72,6 +77,9 @@ def make_kit(home: Path, project: Path) -> Iterator[MakeKit]:
         install(registry)
         made.append(registry)
         state = rt.lock(session, cwd=str(project), provider="p", model="m")
+        # an inert bridge (no hooks, temp homes): the default one resolves the Hermes home through Hermes itself
+        env = make_env(project, home, home / "user")
+        compat_runtime.install(make_bridge(ctx, env))  # type: ignore[arg-type]
         kit = Kit(rt, ctx, state, rt.caller(session), registry, launcher, home, project)
         rt.hx_client = lambda: kit.redactor  # type: ignore[method-assign,assignment,return-value]
         kit.ctx.tools_impl["signal"] = lambda name: kit.signal(name).set() or {"ok": True}
@@ -81,3 +89,4 @@ def make_kit(home: Path, project: Path) -> Iterator[MakeKit]:
     for registry in made:
         registry.shutdown()
     install(None)
+    compat_runtime.install(None)

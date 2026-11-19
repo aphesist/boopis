@@ -77,14 +77,14 @@
 /* ===== bots · normal ===== */
 .dk-v-bots-norm { padding: var(--dock-top) var(--dock-pad-x) var(--dock-band); }
 .dk-row { display: flex; align-items: flex-end; gap: var(--dock-gap); --o: var(--dock-orb); }
-.dk-bot { position: relative; flex: none; width: calc(var(--dock-orb) * 1px); height: calc(var(--dock-orb) * 1px); border-radius: var(--r-pill); corner-shape: round; transform-origin: 50% 100%; }
+.dk-bot { position: relative; flex: none; width: calc(var(--dock-orb) * 1px); height: calc(var(--dock-orb) * 1px); border-radius: var(--r-pill); transform-origin: 50% 100%; }
 .dk-bot:focus-visible { outline-offset: 3px; }
 .dk-add { flex: none; width: var(--ctl-s); height: calc(var(--dock-orb) * 1px); display: grid; place-items: center; color: var(--text-strong); border-radius: var(--r-s); transform-origin: 50% 100%; transition: background-color var(--dur-1) var(--ease); }
 .dk-add:hover { background: var(--hover); }
 
 /* ===== minimal pill (all pages) ===== */
 .dk-v-min { height: 28px; padding: 0 9px; display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-xs); line-height: 1; white-space: nowrap; }
-.dk-v-min .dk-pillbtn { position: absolute; inset: 0; border-radius: 14px 14px 0 0; corner-shape: round; z-index: 1; }   /* the pill restores, and only that; R = h / 2 */
+.dk-v-min .dk-pillbtn { position: absolute; inset: 0; border-radius: 14px 14px 0 0; z-index: 1; }   /* the pill restores, and only that; R = h / 2 */
 .dk-mini { display: flex; align-items: center; gap: 5px; --o: 10; }
 .dk-mini .ui-dot--flag { display: none; }   /* one attention dot for the pill, not one per 10px orb */
 .dk-att { display: inline-flex; }
@@ -100,7 +100,7 @@
    (6.5px here) and that stays inside the gap. */
 .dk-roster .ui-row__lead { width: calc(var(--o) * 1px); height: calc(var(--o) * 1px); }
 .dk-add-ring { position: relative; width: 26px; height: 26px; display: grid; place-items: center; color: var(--text-strong); flex: none; }
-.dk-add-ring-o { position: absolute; inset: 0; border-radius: var(--r-pill); corner-shape: round; box-shadow: inset 0 0 0 1px var(--line-strong); }
+.dk-add-ring-o { position: absolute; inset: 0; border-radius: var(--r-pill); box-shadow: inset 0 0 0 1px var(--line-strong); }
 
 /* ===== bots · session: head, last messages (library entries), open cards, the library composer, switcher ===== */
 .dk-v-bots-card { width: 456px; padding: var(--sp-4) var(--sp-4) var(--dock-band-x); display: flex; flex-direction: column; gap: var(--sp-3); }
@@ -150,10 +150,10 @@
 .dk-settings { margin-top: var(--sp-2); }
 
 /* ===== needs you: the canonical cards, mini in the normal view, compact expanded ===== */
-.dk-v-wait-norm { padding: var(--sp-4) var(--sp-4) var(--dock-band); width: 392px; max-width: var(--dock-maxw); }
-.dk-v-wait-exp { padding: var(--sp-4) var(--sp-4) var(--dock-band-x); width: 392px; }
+.dk-v-wait-norm { padding: var(--sp-3) var(--sp-3) var(--dock-band); width: 392px; max-width: var(--dock-maxw); }
+.dk-v-wait-exp { padding: var(--sp-3) var(--sp-3) var(--dock-band-x); width: 392px; }
 /* a card at the top of the slab sits in its corner: inner = max(floor, outer − gap) (6px under the 22px corner) */
-.dk-v-wait-norm, .dk-v-wait-exp { --r-outer: var(--r-l); --pad: var(--sp-4); --r-card: max(var(--r-floor), calc(var(--r-outer) - var(--pad))); }
+.dk-v-wait-norm, .dk-v-wait-exp { --r-outer: var(--r-l); --pad: var(--sp-3); --r-card: max(var(--r-floor), calc(var(--r-outer) - var(--pad))); }
 .dk-cards { display: flex; flex-direction: column; gap: 6px; }
 .dk-empty { padding: var(--sp-1) 0; }
 
@@ -205,10 +205,10 @@ button.dk-sched-what:hover { color: var(--text-strong); }
 .dk-tile[data-off] .dk-tile-name, .dk-tile[data-off] .dk-tile-sub { color: var(--text-quiet); }
 .dk-tile[data-off] .dk-tile-glyph > :not(.dk-tile-sub) { opacity: .5; }
 .dk-tile-glyph { display: flex; align-items: center; gap: 3px; height: 16px; }
-.dk-tile-glyph > i { display: block; width: 6px; height: 6px; border-radius: var(--r-pill); corner-shape: round; }
+.dk-tile-glyph > i { display: block; width: 6px; height: 6px; border-radius: var(--r-pill); }
 .dk-tile-sub { font-size: var(--fs-2xs); color: var(--text-dim); margin-left: 2px; }
 .dk-tile-foot { display: flex; align-items: center; justify-content: space-between; height: 24px; }
-.dk-tile-dot { width: 4px; height: 4px; border-radius: var(--r-pill); corner-shape: round; background: var(--mark-off); }
+.dk-tile-dot { width: 4px; height: 4px; border-radius: var(--r-pill); background: var(--mark-off); }
 .dk-tile-dot[aria-current="true"] { width: 14px; background: var(--brass); }
 .dk-tile-dot[data-off] { background: transparent; box-shadow: inset 0 0 0 1px var(--mark-off); }
 .dk-tile-show { margin-right: -6px; }
@@ -239,3 +239,11 @@ button.dk-sched-what:hover { color: var(--text-strong); }
 @media (prefers-reduced-motion: reduce) {
   .dk, .dk *, .dk *::before, .dk *::after { transition: none !important; }
 }
+
+/* drawn corners (DESIGN-SYSTEM.md §8; bound at start-up with HX.ui.squircle.auto). A tile is a surface (not clipped),
+   so its drag shadow stays; its outline becomes the drawn line. The run model carries its provider's mark. */
+.dk-tile { --sq-bg: transparent; --sq-line: var(--line); }
+.dk-tile:hover { --sq-line: var(--line-strong); }
+.dk-tile.is-drag { --sq-bg: var(--dock-bg); }
+.dk-tile[data-sq-on] .dk-tile-o { box-shadow: none; }
+.dk-run-model .ui-model { font-size: inherit; }

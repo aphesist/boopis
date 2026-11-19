@@ -1,0 +1,235 @@
+name: release
+# Builds the desktop app in release mode on every push to develop and on tags v*. The Linux AppImage is the
+# deliverable (the owner runs Arch); Windows and macOS bundles are non-blocking extras. Builds are unsigned.
+# On a tag, the AppImage and SHA256SUMS become a GitHub release. How to use it: docs/RELEASING.md.
+on:
+  push:
+    branches: [develop]
+    tags: ["v*"]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  # Updater signing slot (documented in docs/RELEASING.md). Create the repository secrets
+  # TAURI_SIGNING_PRIVATE_KEY (and TAURI_SIGNING_PRIVATE_KEY_PASSWORD) when the updater is turned on; the keys
+  # never live in the repository. Unset, they are empty strings and Tauri ignores them while
+  # `bundle.createUpdaterArtifacts` is off (it is off today).
+  TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+jobs:
+  linux:
+    # ubuntu-22.04: the oldest glibc and WebKitGTK 4.1 the app needs, so the AppImage runs on every newer distro.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: the tag matches the app's version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          v=$(jq -r .version apps/desktop/src-tauri/tauri.conf.json)
+          [ "$GITHUB_REF_NAME" = "v$v" ] || { echo "tag $GITHUB_REF_NAME but tauri.conf.json says $v"; exit 1; }
+      - name: Tauri's Linux prerequisites and the AppImage tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev \
+            build-essential pkg-config libfuse2 patchelf file xdg-utils
+      - run: rustup show
+      - uses: Swatinem/rust-cache@v2
+        with: { shared-key: release-linux }
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/desktop/ui/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        working-directory: apps/desktop/ui
+      - name: build hx (release), the sidecar
+        run: cargo build --release -p hx
+      - name: stage the hx sidecar and the plugin resource (scripts/stage-bundle.sh)
+        run: scripts/stage-bundle.sh --hx target/release/hx
+      - name: build the AppImage (release, x86_64-unknown-linux-gnu) with the bundle config
+        working-directory: apps/desktop/src-tauri
+        env:
+          NO_STRIP: "true"  # linuxdeploy's bundled strip chokes on newer ELF sections
+        run: pnpm dlx @tauri-apps/cli@2 build --bundles appimage --target x86_64-unknown-linux-gnu --config tauri.bundle.conf.json
+      - name: collect the AppImage and its checksum
+        run: |
+          mkdir -p dist
+          cp target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage dist/
+          cd dist && sha256sum -- *.AppImage | tee SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hypotaxis-linux-x86_64-appimage
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          # not named hypotaxis-*: the release job publishes only those
+          name: hx-release-linux
+          path: target/release/hx
+          if-no-files-found: error
+          retention-days: 1
+
+  smoke:
+    # The built AppImage, headless (Xvfb + WebKitWebDriver), against real Hermes v0.23.2 and the fake model:
+    # the UI loads, the host connects, a prompt streams a reply. Non-blocking until it has proved stable on a runner.
+    needs: linux
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    timeout-minutes: 30
+    env:
+      HX_E2E_HERMES_ENV: /home/runner/hermes-e2e
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: hypotaxis-linux-x86_64-appimage
+          path: ${{ runner.temp }}/app
+      - name: runtime libraries, Xvfb and WebKitWebDriver (same WebKitGTK as the build image)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb webkit2gtk-driver libfuse2 libwebkit2gtk-4.1-0 libgtk-3-0
+      - name: the AppImage starts (it extracts and every shared library resolves)
+        run: |
+          chmod +x "$RUNNER_TEMP"/app/*.AppImage
+          cd "$RUNNER_TEMP" && ./app/*.AppImage --appimage-extract >/dev/null
+          bin=$(find squashfs-root/usr/bin -maxdepth 1 -name 'hypotaxis*' -type f | head -1)
+          echo "binary: $bin"
+          if ldd "$bin" | grep 'not found'; then echo "missing libraries above"; exit 1; fi
+      - name: Hermes v0.23.2 install (cache shared with ci's e2e job)
+        uses: actions/cache@v4
+        with:
+          path: |
+            /home/runner/hermes-e2e
+            !/home/runner/hermes-e2e/uv-cache
+          key: hermes-v0.23.2-ubuntu-22.04-${{ hashFiles('scripts/install-hermes-e2e.sh') }}
+      - run: SP="$HX_E2E_HERMES_ENV" scripts/install-hermes-e2e.sh
+      - name: Rust toolchain and WebKitGTK headers (the setup test drives the host's library)
+        run: |
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev build-essential pkg-config
+          rustup show
+      - uses: Swatinem/rust-cache@v2
+        with: { shared-key: release-smoke }
+      - uses: actions/download-artifact@v4
+        with:
+          name: hx-release-linux
+          path: ${{ runner.temp }}/hx
+      - name: first-run setup, non-interactively, against the e2e Hermes (tests/setup_live.rs)
+        env:
+          HX_BIN: ${{ runner.temp }}/hx/hx
+        run: |
+          chmod +x "$HX_BIN"
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          cargo test -p hypotaxis-host --test setup_live -- --nocapture
+      - name: smoke the AppImage against Hermes and the fake model (the session check)
+        run: |
+          uv run --no-project --python 3.11 --with ruamel.yaml python tests/e2e/smoke_desktop.py \
+            "$(ls "$RUNNER_TEMP"/app/*.AppImage)" "$RUNNER_TEMP/smoke.png"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-screenshot
+          path: ${{ runner.temp }}/smoke.png
+          if-no-files-found: ignore
+          retention-days: 7
+
+  windows:
+    # Non-blocking: the host's secret channel has no Windows transport yet (apps/desktop/AGENTS.md).
+    runs-on: windows-latest
+    continue-on-error: true
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show
+      - uses: Swatinem/rust-cache@v2
+        with: { shared-key: release-windows }
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/desktop/ui/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        working-directory: apps/desktop/ui
+      # TODO: stage the sidecar and plugin resource as the Linux job does (needs hx.exe and a Windows-aware stage-bundle.sh).
+      - name: build the installer (NSIS, unsigned)
+        working-directory: apps/desktop/src-tauri
+        run: pnpm dlx @tauri-apps/cli@2 build --bundles nsis
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hypotaxis-windows-x86_64-nsis
+          path: target/release/bundle/nsis/*.exe
+          if-no-files-found: error
+          retention-days: 30
+
+  macos:
+    # Non-blocking. macos-latest is Apple silicon: the bundle is aarch64-apple-darwin. Unsigned and not notarised, so
+    # Gatekeeper asks the user to allow it.
+    runs-on: macos-latest
+    continue-on-error: true
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show
+      - uses: Swatinem/rust-cache@v2
+        with: { shared-key: release-macos }
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/desktop/ui/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        working-directory: apps/desktop/ui
+      # TODO: stage the sidecar and plugin resource as the Linux job does (aarch64-apple-darwin).
+      - name: build the app and dmg (unsigned)
+        working-directory: apps/desktop/src-tauri
+        run: pnpm dlx @tauri-apps/cli@2 build --bundles dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hypotaxis-macos-aarch64-dmg
+          path: target/release/bundle/dmg/*.dmg
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    # Tags only: a GitHub release with the AppImage, whatever extra bundles built, and SHA256SUMS over all of them.
+    if: ${{ !cancelled() && needs.linux.result == 'success' && startsWith(github.ref, 'refs/tags/v') }}
+    needs: [linux, smoke, windows, macos]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: hypotaxis-*
+          path: release-files
+          merge-multiple: true
+      - name: checksums over every file
+        working-directory: release-files
+        run: |
+          rm -f SHA256SUMS
+          sha256sum -- * | tee ../SHA256SUMS
+          mv ../SHA256SUMS .
+      - name: create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" release-files/* \
+            --title "$GITHUB_REF_NAME" --generate-notes --verify-tag

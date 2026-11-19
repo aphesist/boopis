@@ -15,6 +15,8 @@ The hypotaxis Hermes plugin (Python, stdlib only at runtime). It adds governance
 | `governance/` | governed mode, contraprova's cascade run by the plugin (see below): `ladder`, `brief`, `state`, `handover` (pure), `links`, `runs`, `host`, `engine` (`dispatch`, `launch`), `lifecycle` (`subagent_start`/`stop`, outcomes), `delegation` (the provider) |
 | `budget.py` | the cost cap, one implementation for the `pre_llm_call` hook and the cascade's launches |
 | `ship/` | the `ship` engine: `run.py` (validate, apply), `finish.py` (gate, keep or restore), `attempt.py` (a worker's ship is its attempt), `common.py`, `gate.py` (contraprova's gates on a temp copy), `checkpoint.py` (git plumbing), `recover.py`, `edits.py`, `evidence.py` |
+| `hostsecrets/` | the host's keychain for Hermes: `refs.py` (the `secret://scope/name` rule, data in `data/secret-refs.json`), `channel.py` (the client of the host's socket, protocol `hx-host-secrets-v1`), `source.py` (Hermes's secret source `hypotaxis_host`) |
+| `forms/` | forms (`docs/FORMS.md`): `schema.py` (checks a schema and an answer), `presets.py` (`ask`, `request_credential` builders), `service.py` (open forms, `form.opened`/`form.resolved`, ledger, wait, deliver), `tools.py` (the three tools), `rpc.py` (`form.submit/cancel/list`), `effects.py` (ties a saved key to its provider) |
 | `hx/` | the hx client (`client.py`) and the **generated** wire types (`types.py`) |
 | `_vendor/contraprova/` | exact copy of contraprova's engine at a pinned commit (see below). Never edit |
 | `data/` | copies of shared data files (`errors.json`, `protected.default.json`, hx-pack's rules). Never edit |
@@ -59,7 +61,7 @@ Known limits: the delegation provider reads the attempt from a context variable,
 - **Cancel vs kill.** A cancel or the soft timeout cancels the cell's asyncio task (and the tasks it started) and keeps the kernel. A cell that never yields (`while True: pass`, `time.sleep`) cannot be cancelled: after timeout plus `kill_grace_ms` the plugin kills the kernel and the answer says `hx.kernel.dead`, variables lost. The next call starts a fresh kernel and says so in `notes`.
 - **Interrupt.** (A worker's tools fire no `post_tool_call`, so only the root session's cells are cancelled this way.) Hermes reports an interrupted exec call as `post_tool_call` with status `cancelled` while the handler still runs (verified on v0.23.2); `hooks.post_tool_call` then cancels that session's cell. `agent_loop_stopped` is not fired by the desktop gateway's `session.interrupt`, so it is not used. The handler's kwargs carry no `tool_call_id`, so kernel calls are numbered `<cell id>:<n>`.
 - **Windows:** no channel yet, so `exec_ready()` hides the tool and `run_exec` answers `hx.sandbox.unavailable`. Never run the kernel unsandboxed.
-- **Stubs, said plainly:** forms (`request_input`, `request_credential`) emit `form.opened` and answer `pending`; nothing stores or answers them, and `wait=true` is refused. contraprova has no `form.*` ledger types yet, so the call is a `tool.called`. `diagnostics` answers `unsupported`. Kernel start, stop and death go to the log (`exec.kernel`), not the ledger (no such event types exist upstream).
+- **Forms from a cell** go through `forms/` (see "Secrets and forms"). `diagnostics` answers `unsupported`. Kernel start, stop and death go to the log (`exec.kernel`), not the ledger (no such event types exist upstream).
 - The kernel's system read paths are hx's own (`sandbox.spawn` with `system_read: true`); the plugin adds only the interpreter, the kernel files and the workspace.
 - Hermes's generic tool deadline (about 420 s) ends a call it has not heard from; keep `exec.max_timeout_ms` under it.
 
@@ -78,10 +80,18 @@ Known limits: the delegation provider reads the attempt from a context variable,
 - `on_session_end` fires every turn; `on_session_finalize` ends a session.
 - `ctx.session_cwd()` is right only inside a turn (hooks, tool handlers) and in the prompt section `info`.
 
+## Secrets and forms
+- **Secret source.** `register` adds `hypotaxis_host` (`ctx.register_secret_source`). Hermes runs a source only when its section says `enabled: true`, so a bound key needs three config writes (`providers.<name>.key_env`, `secrets.hypotaxis_host.env.<VAR>: secret://...`, `secrets.hypotaxis_host.enabled: true`); the setup flow and `forms/effects.py` make them through Hermes's own config API. At startup (and after plugin discovery) Hermes asks the source, which reads `<home>/hypotaxis/host-channel.json` and fetches each ref over the host's socket (2 s timeout, 8 KiB reply cap on the host side). No host running means `ErrorKind.NETWORK` and Hermes keeps its own `.env`; there is no store of ours. A key saved after the gateway started applies when the gateway next starts (Hermes reads sources once per process).
+- **Forms.** The tools `request_input`, `request_credential` and `ask` return at once with `{form_id, status: "pending"}`; the answer arrives as the agent's next message through `ctx.inject_message` (needs `allow_gateway_injection`) or inline with `wait=true` (bounded by `forms.wait_max_s`). Passing `form_id` reads an earlier form. exec's `harness.request_input/ask/request_credential` use the same service. Forms are kept in memory: a plugin restart forgets them and `form.list` then omits them.
+- **Secrets never pass through the plugin.** `form.submit` refuses a secret field's value (`hx.form.invalid_values`, without echoing it); the UI saves it with the host and lists it in `provided`; the plugin asks the host `has` (never `get`) and answers the agent `{saved, ref}`. The ledger gets field names only.
+- **Ledger.** `form.opened` and `form.resolved` are `tool.called` events until contraprova has the types (`docs/LEDGER.md`, "Pending upstream").
+- **Hermes's own requests** (`clarify`, `approval.request`) are adapted by the UI from the canonical gateway events and answered through Hermes's `clarify.respond` / `approval.respond` (`apps/desktop/ui/src/host/forms.ts`); the plugin only sees them through the observer hook `on_human_input_request`, which carries no `prompt_id` or generation, so it does not mirror them.
+
 ## Setup the plugin depends on (set by the host's setup, with the user's consent)
 - `tools.tool_search.enabled: "off"` in the profile in use, so `pack`, `ship` and `dispatch` show directly (ADR-0014).
 - `delegation.backend: hypotaxis`, so governed `dispatch` can route attempts to their tier.
-- `plugins.entries.hypotaxis.allow_gateway_injection: true`, so a Claude Code Stop hook that blocks can re-enter through `ctx.inject_message`. Without it a Stop block is logged and ignored, and `compat.inventory` warns.
+- `plugins.entries.hypotaxis.allow_gateway_injection: true`, so a Claude Code Stop hook that blocks can re-enter through `ctx.inject_message`. Without it a Stop block is logged and ignored, and `compat.inventory` warns. It also delivers a non-waiting form's answer.
+- All of this is done by the host's first-run setup (`apps/desktop/AGENTS.md`, "First-run setup"), with the user's consent, through `hermes config set`.
 
 ## Test and check
 ```sh

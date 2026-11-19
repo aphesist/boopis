@@ -55,6 +55,7 @@ class RecordedRequest:
     method: str
     path: str
     body: JsonObject
+    authorization: str = ""  # the Authorization header, so a test can prove which key reached the model
 
     @property
     def model(self) -> str:
@@ -153,7 +154,7 @@ class _Handler(BaseHTTPRequestHandler):
         self.wfile.write(raw)
 
     def do_GET(self) -> None:
-        self.server.record(RecordedRequest("GET", self.path, {}))
+        self.server.record(RecordedRequest("GET", self.path, {}, self.headers.get("Authorization", "")))
         if self.path.rstrip("/") in ("/v1/models", "/models"):
             data = [
                 {
@@ -175,7 +176,7 @@ class _Handler(BaseHTTPRequestHandler):
             body: JsonObject = json.loads(raw or b"{}")
         except ValueError:
             body = {"_raw": raw.decode("utf-8", "replace")}
-        self.server.record(RecordedRequest("POST", self.path, body))
+        self.server.record(RecordedRequest("POST", self.path, body, self.headers.get("Authorization", "")))
         if not self.path.rstrip("/").endswith("/chat/completions"):
             self._send_json(404, {"error": "unsupported path " + self.path})
             return

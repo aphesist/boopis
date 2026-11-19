@@ -66,6 +66,33 @@ class; if the library is missing a variant you need, ask for it instead of forki
    design-system agent, who deletes the token lines at the top of `components.css` (the `:where(*)` corner-shape rule,
    the round list and `.ui-nest`/`.ui-fit` stay in the library). Run `node design-system/build-tokens.mjs`. **Done**
    (the library's copies are deleted; resolved values unchanged in the specimen and the shell, every preset).
+8. **Corners, revised (owner decision: Apple continuous corners in every engine; wireframe agent).** In `tokens.css`,
+   replace the corner block in `:root` (from `/* corners: continuous where the engine has corner-shape` to
+   `--composer-pad`) with:
+
+   ```css
+     /* corners: Apple's continuous corners in every engine, drawn as a path by HX.ui.squircle (DESIGN-SYSTEM.md §8).
+        Nested corners: inner = max(--r-floor, outer − gap); under the floor the padding gives way */
+     --r-xs: 6px;                /* kbd, inline code, stamps */
+     --r-s: 12px;                /* buttons, rows, fields, wells, the segmented track, tooltips */
+     --r-m: 20px;                /* cards, composer, menus, popovers, toasts */
+     --r-l: 30px;                /* sheets, dialogs, the palette, the dock */
+     --r-pill: 999px;            /* chips, dots, the switch, anything inside a pill */
+     --r-floor: 8px;             /* the smallest inner radius of a nested corner */
+     --corner-smoothing: 0.6;    /* Figma corner smoothing, as iOS */
+     --composer-pad: 6px;        /* the composer's actions sit this far from its edge */
+   ```
+
+   (`--corner` goes), replace the two corner modifier lines with:
+
+   ```css
+   :root[data-hx-corners="sharp"] { --r-xs: 3px; --r-s: 6px; --r-m: 10px; --r-l: 14px; --r-floor: 4px; }
+   :root[data-hx-corners="round"] { --r-xs: 8px; --r-s: 16px; --r-m: 26px; --r-l: 36px; --r-floor: 12px; }
+   ```
+
+   and delete the whole `@supports (corner-shape: superellipse(2)) { … }` block and its comment. Then tell the
+   design-system agent, who deletes the scale lines at the top of `components.css`. Run
+   `node design-system/build-tokens.mjs`. **Done** (19 November 2026, by the design-system agent with the coordinator's leave).
 
 ## 1. Inventory: every duplicated piece and its one canonical design
 
@@ -359,4 +386,74 @@ circle or a pill adds `corner-shape: round` (or the class `ui-round`). No other 
 | `.cd-queue__peek` | `border-radius: 0 0 var(--r-card, var(--r-m)) var(--r-card, var(--r-m));` (it is the card under, flush: the same radius) |
 | `.cd-opt__ring`, `.cd-diffdots i`, `.cd-week i` | Add `corner-shape: round;` |
 | `.cd-well` (the staging box), the foot's buttons, `.cd-opt`, `.cd-free`, `.cd-token`, `.cd-tile`, `.cd-mini` | Nothing: loose (14–16px from the card's edge), their own step, below the card's |
+
+## 9. Apple continuous corners in every engine (owner decision, 18 November 2026, revised)
+
+**Done in every module** (19 November 2026, by the design-system agent with the coordinator's leave): the bindings,
+lines, paddings and deletions below are in `shell.*`, `session.*`, `bots.*`, `dock.*` and `cards.css`. The model marks
+(`HX.ui.modelMark`) went in at the same time: the session composer's model chip (mono), the session's and the Bots
+tab's model menus (brand colour) and the dock's run line (mono). Verified on the app in every preset at 1920, 1440 and
+390 with reduced motion on and off, axe clean, the KEYMAP walk-through 17 of 17, and in WebKitGTK
+(`shots/final3/webkit-vs-chromium-*.png`).
+
+Why: Tauri runs WebKitGTK on Linux (the owner's platform) and WebKit on macOS; neither has `corner-shape`, so every
+corner was a plain arc there, and the concentric rule had shrunk inner radii to 5–6px. Now the library draws every
+corner as a path (`HX.ui.squircle`, Figma smoothing 0.6) with `clip-path`, the same in every engine, and the scale is
+retuned (section 0.8). What the library already does for every module: binds its own surfaces and the card layer's,
+redraws the hairline and the focus ring along the path, keeps floating shadows, smooths the dock's
+`HX.ui.shape.slab()` path (no dock code change needed for the curve).
+
+**The rules for a module surface.** Bind it once at start-up with `HX.ui.squircle.auto('<selectors>')` (or put `data-sq`
+on it). If it has an inset hairline, express it as `--sq-line: <colour>` instead of `box-shadow: inset 0 0 0 1px
+<colour>` (the library turns the box-shadow off on bound elements and draws `--sq-line` along the path). If it floats
+with a shadow, bind it with `{ mode: 'surface' }`, give its background as `--sq-bg` and keep the shadow as its own
+`box-shadow` (not inset). Keep focus styles as they are: on a bound element the library draws a 2px brass ring inside
+the edge. Delete every `corner-shape` declaration: nothing reads `--corner` any more. Text inputs stay native.
+
+### Shell (`shell.js`, `shell.css`)
+
+| Where | Edit |
+|---|---|
+| `shell.js`, once after `HX.ui` exists | `HX.ui.squircle.auto('.hx-cmd, .hx-me, .hxt-preset, .hx-dtab, .hx-pal-row');` and `HX.ui.squircle.auto('.hx-dialog__card, .hx-palette__box, .hx-goto', { mode: 'surface' });` |
+| `.hx-dialog__card`, `.hx-palette__box` | Add `--sq-bg: var(--bg-1); --sq-line: var(--line);` and, for the bound state, `[data-sq-on] { box-shadow: var(--shadow-pop); }` (the inset line moves to `--sq-line`) |
+| `.hx-goto` | Add `--sq-bg: var(--bg-3); --sq-line: var(--line);` and bound `box-shadow: var(--shadow-pop)` |
+| `.hx-cmd`, `.hxt-preset` | Add `--sq-line: var(--hair)` (`.hx-cmd`) and `--sq-line: var(--line)` (`.hxt-preset`; `:hover` `var(--line-strong)`, checked `var(--brass)` as a 2px line stays its `box-shadow` when unbound, `--sq-line: var(--brass)` when bound) |
+| `.hx-dialog__head` | Keep `padding: 0 12px 0 20px`: the close button sits 12px in, so it takes `--r-in` 18 under the 30px corner |
+| `.hx-palette__list` | Keep `padding: 4px 6px 6px`: the last row takes `--r-in` 24 |
+| `.hxt-swatch` pseudo-elements | Nothing: `max(var(--r-floor), calc(var(--r-s) - 2px))` is now 10 |
+| `.hx-avatar`, `.hxt-flag`, `.hxt-contrast … ::before`, `.hx-stub-rail i`, `.hx-stub-orb` | Delete `corner-shape: round` (pills stay native) |
+
+### Session (`session.js`, `session.css`)
+
+| Where | Edit |
+|---|---|
+| `session.js`, at start-up | `HX.ui.squircle.auto('.ss-diff, .ssr-file, .ssr-term');` |
+| `.ss-diff` | Its inset line becomes `--sq-line: var(--hair)` |
+| `.ssr-task-mark > i` | Delete `corner-shape: round` |
+
+### Bots (`bots.js`, `bots.css`)
+
+| Where | Edit |
+|---|---|
+| `bots.js`, at start-up | `HX.ui.squircle.auto('.bt-sugg, .bt-opt');` |
+| `.bt-sugg` | Its inset line becomes `--sq-line: var(--hair)`; `.bt-opt[aria-checked="true"]`'s brass line becomes `--sq-line: var(--brass)` |
+| `.bt-swatch` | Delete `corner-shape: round` |
+
+### Dock (`dock.js`, `dock.css`)
+
+| Where | Edit |
+|---|---|
+| `slabPath()` | Nothing: `HX.ui.shape.slab()` now draws the smoothed corners and flares (the pill keeps `{round: true}`). `readRadius()` reads `--r-l`, now 30 |
+| `dock.js`, at start-up | `HX.ui.squircle.auto('.dk-tile, .dk-add, .dk-run-open, .dk-sched-row, .dk-sched-what');` |
+| `.dk-tile`, `.dk-tile-o` | `.dk-tile { --sq-line: var(--line); }` and hide the overlay's line when bound: `.dk-tile[data-sq-on] .dk-tile-o { box-shadow: none; }` (hover: `--sq-line: var(--line-strong)`) |
+| `.dk-v-wait-norm`, `.dk-v-wait-exp` | `.dk-v-wait-norm { padding: var(--sp-3) var(--sp-3) var(--dock-band); }`, `.dk-v-wait-exp { padding: var(--sp-3) var(--sp-3) var(--dock-band-x); }` and, in the line that sets `--r-card`, `--pad: var(--sp-3)` (was `--sp-4`): a card or queue row at the top fits the 30px slab corner at 18 (it was 22 − 16 = 6) |
+| `.dk-bot`, `.dk-add-ring-o`, `.dk-tile-glyph > i`, `.dk-tile-dot` | Delete `corner-shape: round` |
+
+### Cards (`cards.css`)
+
+| Where | Edit |
+|---|---|
+| `hx-card[data-size="inline"], hx-card[data-size="compact"]` | `--pad: var(--sp-3);` (was `--sp-4`): with the 20px card, the well, the footer buttons, the stamp and the tile take the 8px floor exactly and stay concentric (`--r-in` = 20 − 12) |
+| `.cd-diffdots i, .cd-week i, .cd-opt__ring, .cd-stack__one, .cd-stack__more`, the checkbox ring | Delete `corner-shape` (the checkbox ring's `corner-shape: var(--corner)` too) |
+| Binding | Nothing: the library binds cards, wells, minis, option rows, the free answer and previews, and draws the expanded blank as a surface |
 

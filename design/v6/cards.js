@@ -62,6 +62,9 @@
   const nid = () => 'cd' + (++uid).toString(36);
   const bot = (id) => (DATA().bots || []).find((b) => b.id === id || b.name === id);
   const check = () => U().icon('check', { class: 'cd-ico' });
+  /* a model wherever one appears: its provider's mark beside its name (components/model-mark.js), mono, from the tokens */
+  const model = (m, size) => U().html.model(m, { size: size || 14, class: 'cd-mono', mono: false });
+  const isRoute = (m) => U().modelMark.parse(m).length > 1;
 
   /* ---------------------------------------------------------------- motion from the tokens */
   const tok = (name, fallback) => {
@@ -94,16 +97,80 @@
     const b = bot(id);
     return b ? U().html.orb(b, { size }) : '';
   }
-  /* who asks: a bot by name (sans, as authored), or the nameless agent by its model (mono) */
-  const whoHTML = (d) => { const b = d.from && bot(d.from); return b ? esc(b.name) : (d.model ? mono(d.model) : ''); };
-  const whoText = (d) => { const b = d.from && bot(d.from); return b ? b.name : (d.model || ''); };
-  function sentenceHTML(d, verb) {
-    const w = whoHTML(d);
-    return w ? w + ' ' + (verb ? esc(verb) + ' ' : '') + fmt(d.title) : fmt(cap(d.title));
+  /* ---------------------------------------------------------------- origin: who is asking, one slot for every card
+     (FORMS.md §4a). {kind: 'teammate', ids, via} | {kind: 'agent', model} | {kind: 'plugin'|'hermes'|'host'} |
+     {kind: 'mcp', server, trust}. Older data ({from}, {bot}, {model}) is read as an origin. The slot draws:
+     one teammate: its live orb, name and colour as the card's accent; several: stacked orbs (3, then +N) with every
+     name on hover, focus and for screen readers; relayed: "nina, via atlas"; the agent: its model's provider mark and name;
+     system sources: a quiet glyph and a label; an MCP server: its initial, name and trust. */
+  const SYSTEM = { plugin: ['ladder', 'Governance'], hermes: ['spark', 'Hermes'], host: ['gear', 'hypotaxis'] };
+  function originOf(d) {
+    const o = d.origin;
+    if (o && o.kind) {
+      if (o.kind === 'teammate') {
+        const ids = (o.ids || (o.id ? [o.id] : [])).filter((x) => bot(x));
+        return ids.length ? { kind: 'teammate', ids, via: o.via && bot(o.via) ? o.via : null } : null;
+      }
+      return o;
+    }
+    if (d.from && bot(d.from)) return { kind: 'teammate', ids: [d.from], via: d.via && bot(d.via) ? d.via : null };
+    if (d.model) return { kind: 'agent', model: d.model };
+    return null;
   }
-  const sentenceText = (d, verb) => { const w = whoText(d); return w ? w + ' ' + (verb ? verb + ' ' : '') + d.title : cap(d.title); };
-  /* the head: title, and in its corner the stamp of what you owe (filled in by _applyState) */
-  const headrow = (c, html) => '<div class="cd-headrow"><p class="cd-lead" id="' + c.id + '-t">' + html + '</p><span class="ui-stamp" data-stamp></span></div>';
+  const namesText = (ids) => { const n = ids.map((x) => bot(x).name); return n.length < 3 ? n.join(' and ') : n.slice(0, -1).join(', ') + ' and ' + n[n.length - 1]; };
+  function originText(o) {
+    if (!o) return '';
+    if (o.kind === 'teammate') return namesText(o.ids) + (o.via ? ', via ' + bot(o.via).name : '');
+    if (o.kind === 'agent') return o.model;
+    if (o.kind === 'mcp') return o.server + ' MCP server' + (o.trust ? ', ' + o.trust : '');
+    return (SYSTEM[o.kind] || ['', o.kind])[1];
+  }
+  /* the visual alone: an orb, a stack, a glyph, a server's initial, or the agent's model mark (its provider's logo;
+     a route draws its marks inline with the names instead) */
+  function originVisual(o, size, max) {
+    if (!o) return '';
+    if (o.kind === 'teammate') {
+      if (o.ids.length === 1) return U().html.orb(bot(o.ids[0]), { size });
+      const cap = Math.max(1, Math.min(max || 3, o.ids.length > (max || 3) ? (max || 3) - 1 : o.ids.length));
+      const shown = o.ids.slice(0, cap), more = o.ids.length - shown.length;
+      return '<span class="cd-stack" style="--s:' + size + 'px"' + (more ? ' tabindex="0"' : '') + ' data-tip="' + esc(namesText(o.ids)) + '" role="img" aria-label="' + esc(namesText(o.ids)) + '">' +
+        shown.map((id) => '<span class="cd-stack__one">' + U().html.orb(bot(id), { size }) + '</span>').join('') +
+        (more ? '<span class="cd-stack__more" aria-hidden="true">+' + more + '</span>' : '') + '</span>';
+    }
+    if (o.kind === 'agent') return U().html.modelMark(U().modelMark.last(o.model), { size: 16, class: 'cd-glyph' });
+    if (o.kind === 'mcp') return '<span class="cd-tile" style="--cd-orb:' + size + 'px" aria-hidden="true">' + esc(String(o.server || '?').slice(0, 1).toUpperCase()) + '</span>';
+    const g = SYSTEM[o.kind];
+    return g ? U().icon(g[0], { class: 'cd-glyph' }) : '';
+  }
+  function originLabel(o) {
+    if (o.kind === 'teammate') {
+      const names = o.ids.length > 3 ? o.ids.slice(0, 2).map((x) => esc(bot(x).name)).join(', ') + ' and ' + (o.ids.length - 2) + ' more' : esc(namesText(o.ids));
+      return '<span class="cd-by__name">' + names + '</span>' + (o.via ? '<span class="cd-by__via">via ' + esc(bot(o.via).name) + '</span>' : '');
+    }
+    if (o.kind === 'agent') return '<span class="cd-by__name cd-mono">' + (isRoute(o.model) ? U().html.modelRoute(o.model, { size: 14, mono: false }) : esc(o.model)) + '</span>';
+    if (o.kind === 'mcp') return '<span class="cd-by__name">' + esc(o.server) + '</span><span class="cd-by__via">MCP server' + (o.trust ? ', ' + esc(o.trust) : '') + '</span>';
+    return '<span class="cd-by__name">' + esc((SYSTEM[o.kind] || ['', o.kind])[1]) + '</span>';
+  }
+  /* the byline above a card's title; hidden names (+N) are read out with the label */
+  const byline = (c) => (c.origin ? '<div class="cd-by" data-origin="' + (c.origin.kind === 'teammate' ? (c.origin.ids.length > 1 ? 'joint' : c.origin.via ? 'relay' : 'teammate') : c.origin.kind) + '">' +
+    (c.origin.kind === 'agent' && isRoute(c.origin.model) ? '' : originVisual(c.origin, c.size === 'compact' || c.size === 'popover' ? 18 : 20)) + '<span class="cd-by__label">' + originLabel(c.origin) + '</span>' +
+    (c.origin.kind === 'teammate' && c.origin.ids.length > 3 ? '<span class="ui-sr">: ' + esc(namesText(c.origin.ids)) + '</span>' : '') + '</div>' : '');
+  /* one teammate lends its colour to the card as a restrained accent (a ring and a 5% tint); a nearly black orb
+     is mixed toward the ink so the ring still shows on dark grounds */
+  function accentOf(o) {
+    if (!o || o.kind !== 'teammate' || o.ids.length !== 1) return '';
+    const col = String(bot(o.ids[0]).color || '');
+    const m = /^#?([0-9a-f]{6})$/i.exec(col);
+    if (!m) return col;
+    const n = parseInt(m[1], 16), lin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    const L = 0.2126 * lin(n >> 16) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+    return L < 0.06 ? 'color-mix(in srgb, ' + col + ' 45%, var(--text))' : col;
+  }
+  /* titles are the request itself; who asks is the byline (screen readers hear both: "nina, Deploy to staging") */
+  const sentenceHTML = (d) => fmt(cap(d.title));
+  const sentenceText = (d) => { const w = originText(originOf(d)); return (w ? w + ': ' : '') + cap(d.title); };
+  /* the head: the byline, the title, and in its corner the stamp of what you owe (filled in by _applyState) */
+  const headrow = (c, html) => '<div class="cd-headrow"><div class="cd-headmain">' + byline(c) + '<p class="cd-lead" id="' + c.id + '-t">' + html + '</p></div><span class="ui-stamp" data-stamp></span></div>';
   const quote = (q) => (q ? '<p class="cd-quote">“' + fmt(q) + '”</p>' : '');
   const breath = () => U().html.dot('run');
   function well(lines) {
@@ -128,15 +195,20 @@
     for (let i = 0; i < q.total; i++) pages.push({ id: String(i) });
     return U().html.pages({ pages, current: String(q.index), label: 'Request ' + (q.index + 1) + ' of ' + q.total });
   }
-  /* one row: what it is, the attention dot when it owes something (named for screen readers), a short meta */
+  /* one row: who (the origin's visual and name), what, the attention dot when it owes something, a short meta */
   function mini(ctx, o) {
-    const owe = ctx.owe;
-    return '<button type="button" class="cd-mini" data-action="open" aria-labelledby="' + ctx.id + '-t' + (owe ? ' ' + ctx.id + '-o' : '') + (o.meta ? ' ' + ctx.id + '-m' : '') + '">' + (o.lead || '') +
-      '<span class="cd-mini__text" id="' + ctx.id + '-t">' + o.text + '</span>' +
-      (owe ? U().html.dot('attention') + '<span class="ui-sr" id="' + ctx.id + '-o">, ' + esc(owe) + '</span>' : '') +
-      (o.meta ? '<span class="cd-mini__meta" id="' + ctx.id + '-m">' + o.meta + '</span>' : '') + '</button>';
+    const owe = ctx.owe, or = ctx.origin;
+    const lead = o.lead != null ? o.lead : originVisual(or, 16, 2);
+    const short = (x) => x.kind === 'teammate' ? (x.ids.length > 2 ? bot(x.ids[0]).name + ' +' + (x.ids.length - 1) : namesText(x.ids)) : x.kind === 'mcp' ? x.server : originText(x);
+    const who = or && o.who !== false ? '<span class="cd-mini__who">' + (or.kind === 'agent' ? mono(or.model) : esc(short(or))) + '</span> ' : '';
+    return '<button type="button" class="cd-mini" data-action="open" aria-labelledby="' + ctx.id + '-t' + (owe ? ' ' + ctx.id + '-o' : '') + (o.meta ? ' ' + ctx.id + '-m' : '') + '">' +
+      '<span class="cd-mini__lead" aria-hidden="true">' + lead + '</span>' +
+      '<span class="cd-mini__text" id="' + ctx.id + '-t">' + who + o.text + '</span>' +
+      '<span class="cd-mini__status"><span class="cd-mini__dot">' + (owe ? U().html.dot('attention') : '') + '</span>' +
+      (owe ? '<span class="ui-sr" id="' + ctx.id + '-o">, ' + esc(owe) + '</span>' : '') +
+      '<span class="cd-mini__meta"' + (o.meta ? ' id="' + ctx.id + '-m"' : '') + '>' + (o.meta || '') + '</span></span></button>';
   }
-  const miniOrb = (d) => (d.from ? orb(d.from, 16) : '');
+
 
   /* ---------------------------------------------------------------- expiry: 'expires in 9 min' stays live */
   function expiryText(left, short) {
@@ -160,7 +232,7 @@
     stamp: () => 'needs you',
     resolved: (c) => c.s === 'approved' || c.s === 'denied' || c.s === 'expired',
     say: (c) => ({ approved: 'Approved: ', denied: 'Denied: ', expired: 'Expired, nothing ran: ' })[c.s] + c.plain,
-    text: (c) => sentenceText(c.d, 'wants to'),
+    text: (c) => sentenceText(c.d),
     render(c) {
       const d = c.d, live = c.s === 'pending' || c.s === 'holding';
       const metaParts = parts(d.meta).map((p) => /^expires in /i.test(p) ? '<span data-countdown>' + esc(cap(p)) + '</span>' : '<span>' + fmt(p) + '</span>');
@@ -170,13 +242,12 @@
       else if (c.s === 'denied') f = foot(receipt(at('Denied', c)));
       else f = foot(receipt(at('Expired', c) + ', nothing ran'), actions(btn('ask-again', 'Ask again')));
       return {
-        side: d.from ? orb(d.from, c.size === 'compact' ? 20 : 24) : '',
-        head: headrow(c, sentenceHTML(d, 'wants to')) + quote(d.quote),
+        head: headrow(c, sentenceHTML(d)) + quote(d.quote),
         body: well(d.item),
         foot: f
       };
     },
-    mini: (c) => mini(c, { lead: miniOrb(c.d), text: sentenceHTML(c.d, 'wants to'), meta: (c.s === 'pending' || c.s === 'holding') ? '<span data-countdown="short"></span>' : esc(cap(c.s)) }),
+    mini: (c) => mini(c, { text: sentenceHTML(c.d), meta: (c.s === 'pending' || c.s === 'holding') ? '<span data-countdown="short"></span>' : esc(cap(c.s)) }),
     act(card, a) {
       if (a === 'deny') card._setState('denied');
       else if (a === 'approve') card._setState('approved');
@@ -302,9 +373,9 @@
       const d = c.d;
       const f = c.s === 'pending' ? foot(meta(parts(d.meta).map((p) => '<span>' + fmt(p) + '</span>')), actions(btn('decline', 'Decline') + btn('accept', 'Accept', 'primary')))
         : foot(receipt(at(cap(c.s), c), c.s === 'accepted'));
-      return { side: orb(d.from, c.size === 'compact' ? 20 : 24), head: headrow(c, sentenceHTML(d)) + quote(d.quote), body: well(d.item), foot: f };
+      return { head: headrow(c, sentenceHTML(d)) + quote(d.quote), body: well(d.item), foot: f };
     },
-    mini: (c) => mini(c, { lead: miniOrb(c.d), text: sentenceHTML(c.d), meta: esc(c.s === 'pending' ? parts(c.d.meta)[0] || '' : cap(c.s)) }),
+    mini: (c) => mini(c, { text: sentenceHTML(c.d), meta: esc(c.s === 'pending' ? parts(c.d.meta)[0] || '' : cap(c.s)) }),
     act(card, a) {
       if (a === 'accept') card._setState('accepted');
       if (a === 'decline') card._setState('declined');
@@ -328,16 +399,16 @@
       const { L, cur } = this.ladder(c);
       return U().html.ladder({ stations: L, current: cur, ground: ground || 'var(--cd-surface)' });
     },
-    whatHTML: (c) => (c.s === 'capped' ? 'Stopped at the ' + mono(c.d.cap) + ' cap' : 'Moved up to ' + mono(c.d.to)),
-    why: (c) => (c.s === 'capped' ? 'The next step needs ' + (c.d.next || 'opus 5.5') : cap(c.d.reason)),
+    whatHTML: (c, size) => (c.s === 'capped' ? 'Stopped at the ' + mono(c.d.cap) + ' cap' : 'Moved up to ' + model(c.d.to, size)),
+    whyHTML: (c) => (c.s === 'capped' ? 'The next step needs ' + model(c.d.next || 'opus 5.5') : fmt(cap(c.d.reason))),
     inline(c) {
       const d = c.d;
       const end = c.s === 'capped'
         ? actions(btn('stop', 'Stop here', null, { size: 's' }) + btn('raise', 'Raise cap to ' + (d.raiseTo || '$1.00'), 'primary', { size: 's' }))
         : '<span class="cd-rule__meta">' + esc(d.spent) + ' of ' + esc(d.cap) + '</span>';
       return '<div class="cd-rule" role="note" aria-labelledby="' + c.id + '-t">' + this.stations(c, 'var(--bg-2)') +
-        '<span class="cd-rule__what"><span id="' + c.id + '-t">' + this.whatHTML(c) + '</span><span class="ui-stamp" data-stamp></span></span>' +
-        '<span class="cd-rule__why">' + fmt(this.why(c)) + '</span>' +
+        '<span class="cd-rule__what"><span id="' + c.id + '-t">' + this.whatHTML(c, 14) + '</span><span class="ui-stamp" data-stamp></span></span>' +
+        '<span class="cd-rule__why">' + this.whyHTML(c) + '</span>' +
         '<span class="cd-rule__line" aria-hidden="true"></span>' + end + '</div>';
     },
     render(c) {
@@ -345,10 +416,10 @@
       const steps = U().html.ladder({ stations: L.map((x) => [x[0], cap(x[1])]), current: cur, variant: 'list', ground: 'var(--cd-surface)' });
       const f = c.s === 'capped' ? foot(meta(['<span>' + esc(d.spent) + ' of ' + esc(d.cap) + '</span>']), actions(btn('stop', 'Stop here') + btn('raise', 'Raise to ' + (d.raiseTo || '$1.00'), 'primary')))
         : foot(meta(['<span>' + esc(d.spent) + ' of ' + esc(d.cap) + ' spent</span>']));
-      return { head: headrow(c, this.whatHTML(c)) + '<p class="cd-quote">' + fmt(this.why(c)) + '</p>', body: steps, foot: f };
+      return { head: headrow(c, this.whatHTML(c, 16)) + '<p class="cd-quote">' + this.whyHTML(c) + '</p>', body: steps, foot: f };
     },
     mini(c) {
-      return mini(c, { lead: this.stations(c), text: c.s === 'capped' ? 'Stopped at ' + mono(c.d.cap) : 'On ' + mono(c.d.to), meta: c.s === 'capped' ? 'Raise cap' : 'from ' + esc(c.d.from) });
+      return mini(c, { who: false, lead: U().icon('ladder', { class: 'cd-glyph' }), text: c.s === 'capped' ? 'Stopped at ' + mono(c.d.cap) : 'On ' + model(c.d.to), meta: c.s === 'capped' ? 'Raise cap' : 'from ' + esc(c.d.from) });
     },
     act(card, a) {
       if (a === 'raise') card.update({ state: 'escalated', cap: card._d.raiseTo || '$1.00' });
@@ -365,12 +436,12 @@
     resolved: (c) => c.s === 'passed',
     say: (c) => c.plain,
     text: (c) => ({ failed: c.d.gate + ' failed', retrying: 'Retrying ' + c.d.gate + ' on ' + c.d.retryWith, passed: c.d.gate + ' passes' })[c.s],
-    leadHTML: (c) => ({ failed: mono(c.d.gate) + ' failed', retrying: 'Retrying ' + mono(c.d.gate) + ' on ' + mono(c.d.retryWith), passed: mono(c.d.gate) + ' passes' })[c.s],
+    leadHTML: (c) => ({ failed: mono(c.d.gate) + ' failed', retrying: 'Retrying ' + mono(c.d.gate) + ' on ' + model(c.d.retryWith, 16), passed: mono(c.d.gate) + ' passes' })[c.s],
     render(c) {
       const d = c.d;
       const out = (d.output || []).length ? '<div class="cd-well cd-out">' + d.output.map((l) => '<div' + (/FAIL/.test(l) ? ' class="cd-out__hit"' : '') + '>' + esc(l) + '</div>').join('') + '</div>' : '';
       const f = c.s === 'failed' ? foot('', actions(btn('view-output', 'View output') + btn('retry', 'Retry on ' + d.retryWith, 'primary')))
-        : c.s === 'retrying' ? foot('<p class="cd-receipt">' + breath() + '<span>Running on ' + mono(d.retryWith) + '</span></p>', actions(btn('stop', 'Stop')))
+        : c.s === 'retrying' ? foot('<p class="cd-receipt">' + breath() + '<span>Running on ' + model(d.retryWith) + '</span></p>', actions(btn('stop', 'Stop')))
           : foot(receipt(at('Passed on retry', c), true), actions(btn('view-output', 'View output')));
       return { head: headrow(c, this.leadHTML(c)) + (d.test ? '<p class="cd-quote cd-mono">' + fmt(d.test) + '</p>' : ''), body: out + (d.note ? '<p class="cd-note">' + fmt(d.note) + '</p>' : ''), foot: f };
     },
@@ -389,7 +460,7 @@
     resolved: (c) => c.s !== 'pending',
     orb: (c) => ({ pending: 'idle', scheduled: 'happy', dismissed: 'idle' })[c.s],
     say: (c) => (c.s === 'scheduled' ? 'Scheduled: ' : c.s === 'dismissed' ? 'Not scheduled: ' : '') + c.plain,
-    text: (c) => sentenceText(c.d, 'wants to'),
+    text: (c) => sentenceText(c.d),
     render(c) {
       const d = c.d, days = d.days || [1, 1, 1, 1, 1, 0, 0], L = ['M', 'T', 'W', 'T', 'F', 'S', 'S'], N = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
       const on = N.filter((_, i) => days[i]);
@@ -398,9 +469,9 @@
       const f = c.s === 'pending' ? foot(meta(parts(d.meta).map((p) => '<span>' + fmt(p) + '</span>')), actions(btn('dismiss', 'Not now', 'ghost') + btn('schedule', 'Schedule it', 'primary')))
         : c.s === 'scheduled' ? foot(receipt('Scheduled, first run ' + esc(d.next || ''), true), actions(btn('edit', 'Edit')))
           : foot(receipt('Not scheduled'), actions(btn('undo-dismiss', 'Schedule it')));
-      return { side: orb(d.from, c.size === 'compact' ? 20 : 24), head: headrow(c, sentenceHTML(d, 'wants to')) + quote(d.quote), body, foot: f };
+      return { head: headrow(c, sentenceHTML(d)) + quote(d.quote), body, foot: f };
     },
-    mini: (c) => mini(c, { lead: miniOrb(c.d), text: sentenceHTML(c.d, 'wants to'), meta: esc(c.d.time) }),
+    mini: (c) => mini(c, { text: sentenceHTML(c.d), meta: esc(c.d.time) }),
     act(card, a) {
       if (a === 'schedule' || a === 'undo-dismiss') card._setState('scheduled');
       if (a === 'dismiss') card._setState('dismissed');
@@ -409,6 +480,7 @@
 
   /* ---------------- connector sign-in (owes nothing until it fails: no stamp while it simply needs a sign-in) */
   KINDS.connector = {
+    origin: (c) => ({ kind: 'mcp', server: c.d.name, trust: c.d.trust }),
     states: ['needed', 'waiting', 'connected', 'failed'],
     initial: 'needed',
     tone: (c) => ({ needed: 'none', waiting: 'pulse', connected: 'ink', failed: 'red' })[c.s],
@@ -432,13 +504,228 @@
         : c.s === 'waiting' ? foot('<p class="cd-receipt">' + breath() + '<span>Waiting for the browser</span></p>', actions(btn('cancel', 'Cancel')))
           : c.s === 'connected' ? foot(receipt(at('Connected', c), true))
             : foot('', actions(btn('later', 'Not now', 'ghost') + btn('sign-in', 'Try again', 'primary')));
-      return { side: '<span class="cd-tile" aria-hidden="true">' + esc(n.slice(0, 1)) + '</span>', head: headrow(c, esc(this.text(c))), body: '<p class="cd-text">' + esc(text) + '</p>' + note, foot: f };
+      return { head: headrow(c, esc(this.text(c))), body: '<p class="cd-text">' + esc(text) + '</p>' + note, foot: f };
     },
-    mini(c) { return mini(c, { lead: '<span class="cd-tile" aria-hidden="true">' + esc(cap(c.d.name).slice(0, 1)) + '</span>', text: esc(this.text(c)), meta: c.s === 'needed' || c.s === 'failed' ? 'Sign in' : c.s === 'waiting' ? breath() : esc(c.at) }); },
+    mini(c) { return mini(c, { who: false, text: esc(this.text(c)), meta: c.s === 'needed' || c.s === 'failed' ? 'Sign in' : c.s === 'waiting' ? breath() : esc(c.at) }); },
     act(card, a) {
       if (a === 'sign-in') card._setState('waiting');
       if (a === 'cancel') card._setState('needed');
     }
+  };
+
+  /* ---------------- form: one schema-driven card for everything that needs the user (FORMS.md)
+     data: {id, kind, title, why, effect, origin, schema: {properties, required}, submit: {label, hold}, cancel:
+     {label} | false, expires, diff, plan, contents, pinned, env}. The schema is MCP elicitation's (string, number,
+     integer, boolean, enum with enumNames, title, description, default, format, minimum/maximum, minLength/maxLength,
+     pattern) plus x-secret, x-multi, x-other, x-preview, x-picker, x-upload, x-signin, x-multiline and x-error.
+     A kind is a template (stamp, submit label, receipts), never a new component. */
+  const FORM_KINDS = {
+    credential: { stamp: 'needs you', submit: 'Save key', busy: 'Saving to your keychain', done: (f) => f.receipt || 'Saved to your keychain' + (f.provider ? '. The ' + f.provider + ' provider is connected' : '') },
+    question: { stamp: 'waiting for you', submit: 'Answer', busy: 'Sending your answer', done: (f, v) => 'Answered: ' + v },
+    approval: { stamp: 'needs you', submit: 'Hold to approve', hold: true, cancel: 'Deny', busy: 'Approving', done: () => 'Approved', cancelled: 'Denied' },
+    permission: { stamp: 'needs you', submit: 'Allow once', busy: 'Writing the rule', done: (f, v, raw) => (PERMISSION[raw] || [])[1] || 'Answered' },
+    signin: { stamp: 'needs you', submit: null, busy: 'Waiting for your browser', done: (f) => 'Signed in' + (f.provider ? ' to ' + f.provider : '') },
+    setup: { stamp: 'needs you', submit: 'Write config', busy: 'Writing the config', done: (f) => 'Wrote ' + (f.file || 'the config') },
+    connector: { stamp: 'needs you', submit: 'Install', hold: true, busy: 'Installing', done: (f) => 'Installed ' + (f.name || 'the connector') },
+    choice: { stamp: 'waiting for you', submit: 'Use this', busy: 'Saving', done: (f, v) => 'Chose ' + v },
+    plan: { stamp: 'needs you', submit: 'Approve plan', cancel: 'Reject', busy: 'Starting the work', done: () => 'Plan approved', cancelled: 'Plan rejected' },
+    feedback: { stamp: '', submit: 'Send', cancel: false, busy: 'Saving', done: () => 'Thanks. Stored for you only' }
+  };
+  /* permission scopes, Claude Code's order: once, this session, always (written to the project), deny */
+  const PERMISSION = {
+    once: ['Allow once', 'Allowed once'],
+    session: ['Allow for this session', 'Allowed for this session'],
+    always: ['Always allow in this project', 'Always allowed in this project'],
+    deny: ['Deny', 'Denied']
+  };
+  const formT = (d) => FORM_KINDS[d.kind] || FORM_KINDS.question;
+  const props = (d) => Object.entries((d.schema && d.schema.properties) || {});
+  const isReq = (d, name) => ((d.schema && d.schema.required) || []).indexOf(name) >= 0;
+  const holdForm = (d) => !!((d.submit && d.submit.hold) != null ? d.submit.hold : formT(d).hold);
+  const optLabel = (p, v) => { const i = (p.enum || []).indexOf(v); return i >= 0 && p.enumNames ? p.enumNames[i] : String(v); };
+
+  /* the mock pickers (the app's own pickers in the product): home-relative paths, models, repos, hosts, teammates, branches */
+  function pickerItems(kind) {
+    const D = DATA();
+    if (kind === 'teammate') return (D.bots || []).map((b) => ({ value: b.id, label: b.name, desc: b.role, lead: U().html.orb(b, { size: 16 }) }));
+    if (kind === 'model') {
+      /* the ladder, then the other providers you have connected: each model leads with its brand mark (the model menu) */
+      const ladder = ((D.governance && D.governance.ladder) || []).map((x) => ({ value: x[0], label: x[0], desc: x[1], mono: true, model: x[0] }));
+      const more = [['gpt-5-codex', 'your OpenAI key'], ['gemini-2.5-pro', 'your Google account'], ['deepseek-v3.2', 'OpenRouter'], ['ollama/billing-tuned:7b', 'on this Mac']]
+        .map((x) => ({ value: x[0], label: x[0].replace(/^ollama\//, ''), desc: x[1], mono: true, model: x[0] }));
+      return [{ title: 'Ladder' }].concat(ladder, ['-', { title: 'Other models' }], more);
+    }
+    if (kind === 'folder') return ['~/code/billing-api', '~/code/marketing-site', '~/code/bethunter', '~/notes'].map((x) => ({ value: x, label: x, mono: true, icon: 'folder' }));
+    if (kind === 'file') return ['~/code/billing-api/.env.example', '~/code/billing-api/package.json', '~/Downloads/invoices-sample.csv'].map((x) => ({ value: x, label: x, mono: true, icon: 'file' }));
+    if (kind === 'repo') return ['acme/billing-api', 'acme/marketing-site', 'acme/bethunter'].map((x) => ({ value: x, label: x, mono: true }));
+    if (kind === 'host') return ['api.openai.com', 'api.example.com', 'registry.npmjs.org'].map((x) => ({ value: x, label: x, mono: true }));
+    if (kind === 'branch') return ['cents/proration', 'main', 'develop'].map((x) => ({ value: x, label: x, mono: true, icon: 'fork' }));
+    return [];
+  }
+  const PICK_ICON = { folder: 'folder', file: 'file', branch: 'fork', repo: 'fork', host: 'at', teammate: 'bots' };
+  /* the picker's lead: a teammate's orb, a model's brand mark (the picker is the one place brand colour shows), else a glyph */
+  const pickLead = (kind, v, b) => b ? U().html.orb(b, { size: 16 })
+    : kind === 'model' ? U().html.modelMark(v || '', { size: 16, color: 'brand', label: false, class: 'cd-glyph' })
+      : U().icon(PICK_ICON[kind] || 'more', { class: 'cd-glyph' });
+
+  function fieldHTML(c, name, p) {
+    const d = c.d, id = c.id + '-f-' + name, req = isReq(d, name);
+    const label = esc(p.title || cap(name)) + (req ? '' : ' <span class="cd-opt-label">(optional)</span>');
+    const hint = p.description ? '<p class="ui-field__hint" id="' + id + '-h">' + fmt(p.description) + '</p>' : '';
+    const err = '<p class="ui-field__hint cd-err" data-tone="attention" id="' + id + '-e" hidden></p>';
+    const desc = 'aria-describedby="' + (p.description ? id + '-h ' : '') + id + '-e"';
+    const wrap = (inner, cls) => '<div class="ui-field cd-field' + (cls ? ' ' + cls : '') + '" data-field="' + esc(name) + '">' + inner + '</div>';
+    if (p['x-secret']) {
+      return wrap('<label class="ui-field__label" for="' + id + '">' + label + '</label>' +
+        '<div class="cd-secret"><input type="password" class="ui-input ui-input--mono" id="' + id + '" data-secret="' + esc(name) + '" autocomplete="off" spellcheck="false" autocapitalize="off"' +
+        (p.placeholder ? ' placeholder="' + esc(p.placeholder) + '"' : '') + ' ' + desc + (req ? ' aria-required="true"' : '') + '>' +
+        btn('paste', 'Paste', null, { attrs: { 'aria-label': 'Paste ' + (p.title || name) + ' from the clipboard' } }) + '</div>' + hint + err +
+        '<p class="cd-saved" hidden>' + check() + '<span></span></p>', 'cd-field--secret');
+    }
+    if (p['x-signin']) {
+      const s = p['x-signin'];
+      return wrap('<div class="cd-signin">' + U().html.button({ label: 'Sign in with ' + (s.provider || 'the provider'), variant: 'primary', action: 'signin', attrs: { 'data-field': name } }) +
+        '<span class="cd-note">' + esc(s.flow === 'device' ? 'Shows a code to enter on ' + (s.host || 'the provider’s site') + '.' : 'Opens ' + (s.host || s.provider) + ' in your browser.') + '</span></div>' + err, 'cd-field--signin');
+    }
+    if (p['x-picker']) {
+      const v = c.card._vals[name] != null ? c.card._vals[name] : p.default;
+      const kind = p['x-picker'], b = kind === 'teammate' && v ? bot(v) : null;
+      return wrap('<span class="ui-field__label" id="' + id + '-l">' + label + '</span>' +
+        '<button type="button" class="ui-input cd-picker" id="' + id + '" data-picker="' + esc(kind) + '" data-name="' + esc(name) + '" aria-haspopup="menu" aria-expanded="false" aria-labelledby="' + id + '-l ' + id + '-v" ' + desc + '>' +
+        pickLead(kind, v, b) +
+        '<span class="cd-picker__v' + (kind === 'teammate' ? '' : ' cd-mono') + '" id="' + id + '-v">' + esc(v ? (b ? b.name : v) : 'Choose…') + '</span>' + U().icon('chevron-down', { size: 's' }) + '</button>' + hint + err);
+    }
+    if (p['x-upload']) {
+      return wrap('<span class="ui-field__label" id="' + id + '-l">' + label + '</span>' +
+        '<div class="ui-input cd-drop" data-drop="' + esc(name) + '" role="group" aria-labelledby="' + id + '-l" ' + desc + '>' +
+        btn('choose-file', 'Choose a file', null, { size: 's', attrs: { 'aria-describedby': id + '-l' } }) + '<span class="cd-drop__hint">or drop it here</span>' +
+        '<input type="file" hidden tabindex="-1" aria-hidden="true"></div>' + hint + err);
+    }
+    if (p.enum) {
+      const multi = !!p['x-multi'], prev = p['x-preview'];
+      const cur = c.card._vals[name] != null ? c.card._vals[name] : (p.default != null ? p.default : (multi ? [] : null));
+      const on = (v) => multi ? (cur || []).indexOf(v) >= 0 : cur === v;
+      const rows = p.enum.map((v, i) => '<button type="button" class="cd-opt" role="' + (multi ? 'checkbox' : 'radio') + '" data-v="' + esc(v) + '" data-i="' + i + '" aria-checked="' + on(v) + '"' +
+        (i < 9 ? ' aria-keyshortcuts="' + (i + 1) + '"' : '') + ' tabindex="' + (multi || on(v) || (cur == null && i === 0) ? '0' : '-1') + '">' +
+        '<span class="cd-opt__ring" aria-hidden="true">' + (multi ? check() : '') + '</span><span class="cd-opt__text">' + fmt(optLabel(p, v)) + '</span>' +
+        (i < 9 ? '<span class="cd-opt__key" aria-hidden="true">' + (i + 1) + '</span>' : '') + '</button>').join('') +
+        (p['x-other'] ? '<label class="cd-free" data-other' + (typeof cur === 'string' && p.enum.indexOf(cur) < 0 && cur ? ' data-on' : '') + '><span class="cd-opt__ring" aria-hidden="true"></span><span class="ui-sr">Other: your own answer</span>' +
+          '<input type="text" autocomplete="off" spellcheck="false" placeholder="Other" value="' + esc(typeof cur === 'string' && p.enum.indexOf(cur) < 0 ? cur : '') + '"></label>' : '');
+      const group = '<div class="cd-opts" role="' + (multi ? 'group' : 'radiogroup') + '" id="' + id + '" aria-labelledby="' + id + '-l" ' + desc + ' data-group="' + esc(name) + '">' + rows + '</div>';
+      const preview = prev ? '<div class="cd-preview" aria-live="polite" data-preview-for="' + esc(name) + '"></div>' : '';
+      return wrap('<span class="ui-field__label" id="' + id + '-l">' + label + '</span>' + (prev ? '<div class="cd-pick">' + group + preview + '</div>' : group) + hint + err, prev ? 'cd-field--preview' : '');
+    }
+    if (p.type === 'boolean') {
+      const v = c.card._vals[name] != null ? c.card._vals[name] : !!p.default;
+      return wrap(U().html.setRow({ label: p.title || cap(name), hint: p.description, for: id, control: U().html.switch({ id, checked: v }) }), 'cd-field--switch');
+    }
+    const num = p.type === 'number' || p.type === 'integer';
+    const v = c.card._vals[name] != null ? c.card._vals[name] : (p.default != null ? p.default : '');
+    const type = num ? 'number' : p.format === 'email' ? 'email' : p.format === 'uri' ? 'url' : 'text';
+    const common = 'class="ui-input' + (num || p['x-mono'] ? ' ui-input--mono' : '') + '" id="' + id + '" data-name="' + esc(name) + '" autocomplete="off" ' + desc + (req ? ' aria-required="true"' : '') +
+      (p.placeholder ? ' placeholder="' + esc(p.placeholder) + '"' : '') + (num && p.minimum != null ? ' min="' + p.minimum + '"' : '') + (num && p.maximum != null ? ' max="' + p.maximum + '"' : '') + (num && p.type === 'integer' ? ' step="1"' : '');
+    const control = p['x-multiline'] ? '<textarea ' + common + ' rows="3">' + esc(v) + '</textarea>' : '<input type="' + type + '" ' + common + ' value="' + esc(v) + '">';
+    return wrap('<label class="ui-field__label" for="' + id + '">' + label + '</label>' + control + hint + err);
+  }
+
+  /* what the form shows before its fields: a config diff (setup), a plan (plan), a connector's contents and hash */
+  function formExtras(d) {
+    let h = '';
+    if (d.diff) {
+      const lines = String(d.diff).split('\n');
+      h += '<div class="cd-well cd-diff" role="region" aria-label="' + esc('Changes to ' + (d.file || 'the config')) + '">' + (d.file ? '<div class="cd-diff__file">' + esc(d.file) + '</div>' : '') +
+        lines.map((l) => '<div class="cd-diff__l"' + (/^\+/.test(l) ? ' data-d="add"' : /^-/.test(l) ? ' data-d="del"' : '') + '><span aria-hidden="true">' + esc(l.charAt(0) === '+' || l.charAt(0) === '-' ? l.charAt(0) : ' ') + '</span>' +
+          '<span class="ui-sr">' + (/^\+/.test(l) ? 'added: ' : /^-/.test(l) ? 'removed: ' : '') + '</span>' + esc(l.replace(/^[+\- ]/, '')) + '</div>').join('') + '</div>';
+    }
+    if (d.plan) h += '<ol class="cd-plan">' + d.plan.map((x) => '<li>' + fmt(x) + '</li>').join('') + '</ol>';
+    if (d.contents) h += '<div class="cd-well cd-contents">' + d.contents.map((x) => '<div class="cd-well__line"><span class="cd-well__strong">' + esc(x[0]) + '</span><span>' + fmt(x[1] || '') + '</span></div>').join('') +
+      (d.pinned ? '<div class="cd-well__line cd-pinned"><span>Pinned</span><span class="cd-mono">' + esc(d.pinned) + '</span></div>' : '') + '</div>';
+    return h;
+  }
+  /* the answer, said back in the receipt (secrets never: they are "provided") */
+  function answerText(card) {
+    const d = card._d;
+    for (const [name, p] of props(d)) {
+      if (p['x-secret'] || p['x-signin']) continue;
+      const v = card._vals[name];
+      if (v == null || v === '' || (Array.isArray(v) && !v.length)) continue;
+      if (Array.isArray(v)) return v.map((x) => optLabel(p, x)).join(', ');
+      if (p['x-picker'] === 'teammate' && bot(v)) return bot(v).name;
+      if (p.type === 'boolean') return (p.title || name) + (v ? ' on' : ' off');
+      if (p['x-upload']) return v.name;
+      return p.enum ? optLabel(p, v) : String(v);
+    }
+    return '';
+  }
+  const LIVE_FORM = ['open', 'invalid', 'holding'];
+
+  KINDS.form = {
+    states: ['open', 'invalid', 'holding', 'submitting', 'done', 'deferred', 'expired', 'cancelled'],
+    initial: 'open',
+    quiet: { 'open>holding': 1, 'holding>open': 1, 'open>invalid': 1, 'invalid>open': 1, 'invalid>holding': 1, 'holding>invalid': 1 },
+    tone: (c) => (LIVE_FORM.indexOf(c.s) >= 0 ? (formT(c.d).stamp ? 'red' : 'none') : c.s === 'submitting' ? 'pulse' : c.s === 'done' ? 'ink' : 'ring'),
+    stamp: (c) => formT(c.d).stamp || 'needs you',
+    resolved: (c) => ['done', 'expired', 'cancelled'].indexOf(c.s) >= 0,
+    say: (c) => ({ done: 'Done: ', deferred: 'Later: ', expired: 'Expired: ', cancelled: 'Cancelled: ', submitting: '', open: 'Open: ' })[c.s] + c.plain + (c.s === 'done' && c.d.receiptText ? (/[.?!]$/.test(c.plain) ? ' ' : '. ') + c.d.receiptText : ''),
+    text: (c) => sentenceText(c.d),
+    receiptHTML(c) {
+      const d = c.d, t = formT(d), who = c.origin ? originText(c.origin) : 'The agent';
+      if (c.s === 'done') return d.receiptText || (typeof t.done === 'function' ? t.done(d, '', '') : t.done);
+      if (c.s === 'deferred') return 'Later. It waits in the dock';
+      if (c.s === 'expired') return 'Expired, nothing was saved';
+      if (c.s === 'cancelled') return d.cancelledText || ((t.cancelled || 'Cancelled') + '. ' + cap(who) + ' continues without it');
+      return '';
+    },
+    render(c) {
+      const d = c.d, t = formT(d);
+      if (['done', 'deferred', 'expired', 'cancelled'].indexOf(c.s) >= 0) {
+        const act = c.s === 'deferred' ? btn('reopen', 'Open', 'ghost', { size: 's' }) : c.s === 'expired' ? btn('reopen', 'Ask again', 'ghost', { size: 's' }) : '';
+        return { head: '<div class="cd-collapsed"><span class="cd-mini__lead" aria-hidden="true">' + originVisual(c.origin, 16, 2) + '</span><p class="cd-collapsed__text" id="' + c.id + '-t">' + (c.s === 'done' ? check() : '') +
+          '<span class="cd-collapsed__what">' + fmt(cap(d.title)) + '</span><span class="cd-collapsed__how">' + esc(this.receiptHTML(c)) + '</span></p>' +
+          '<span class="cd-mono cd-collapsed__at">' + esc(c.at) + '</span>' + act + '</div>' };
+      }
+      const fields = props(d).map(([name, p]) => fieldHTML(c, name, p)).join('');
+      const body = '<form class="cd-form" novalidate aria-labelledby="' + c.id + '-t">' + (d.why ? '<p class="cd-text">' + fmt(d.why) + '</p>' : '') + formExtras(d) + fields +
+        (d.effect ? '<p class="cd-effect">' + fmt(d.effect) + '</p>' : '') + '</form>';
+      let f;
+      if (c.s === 'submitting') f = foot('<p class="cd-receipt">' + breath() + '<span>' + esc(d.busyText || t.busy || 'Saving') + '</span></p>', d.kind === 'signin' ? actions(btn('cancel', 'Cancel')) : '');
+      else {
+        const submitLabel = (d.submit && d.submit.label) || (d.kind === 'permission' ? (PERMISSION[c.card._vals.scope || 'once'] || PERMISSION.once)[0] : t.submit);
+        const cancel = d.cancel === false || t.cancel === false ? '' : btn('cancel', (d.cancel && d.cancel.label) || t.cancel || 'Cancel', null, { keys: 'x' });
+        const submit = d.kind === 'signin' ? '' : holdForm(d) ? holdHTML(c) : btn('submit', submitLabel, 'primary', { keys: 'enter' });
+        f = foot(meta([d.expires ? '<span data-countdown>' + esc(cap(d.expires)) + '</span>' : '']), actions(btn('defer', 'Later', 'ghost', { keys: 'escape' }) + cancel + submit));
+      }
+      return { head: headrow(c, sentenceHTML(d)), body, foot: f };
+    },
+    mini(c) {
+      const live = LIVE_FORM.indexOf(c.s) >= 0;
+      return mini(c, { text: sentenceHTML(c.d), meta: live ? (c.d.expires ? '<span data-countdown="short"></span>' : esc(cap(formT(c.d).submit || 'Open'))) : esc(this.receiptHTML(c)) });
+    },
+    act(card, a, x) {
+      if (a === 'submit') card._submitForm();
+      else if (a === 'approve') card._submitForm(true);
+      else if (a === 'cancel') { card._dropSecrets(); if (card._state === 'submitting' && card._d.kind === 'signin') card._setState('open'); else card._setState('cancelled'); }
+      else if (a === 'defer') { card._dropSecrets(); card._setState('deferred'); }
+      else if (a === 'reopen') { if (card._state === 'expired') { card._expiresAt = 0; card._armExpiry(true); } card._setState('open'); }
+      else if (a === 'signin') card._signin(x && x.el);
+      else if (a === 'paste') card._paste(x && x.el);
+      else if (a === 'choose-file') { const f = x.el.closest('.cd-drop').querySelector('input[type=file]'); if (f) f.click(); }
+      else if (a === 'remove-file') card._setFile(x.el.closest('.cd-drop').dataset.drop, null);
+    }
+  };
+
+  /* the mock host behind forms: HX.forms. In the product, the plugin and the host answer these calls
+     (form.opened, form.submit, secret_set, the OAuth flow); here they resolve after a short delay. */
+  const FORMS_OPEN = new Map();
+  const forms = {
+    open(form) { if (!form.id) form.id = 'form-' + (++uid).toString(36); FORMS_OPEN.set(form.id, form); const H = hx(); if (H && H.emit) H.emit('hx:form', { type: 'opened', form }); return form.id; },
+    get: (id) => FORMS_OPEN.get(id),
+    list: () => Array.from(FORMS_OPEN.values()),
+    resolve(id, status) { FORMS_OPEN.delete(id); const H = hx(); if (H && H.emit) H.emit('hx:form', { type: 'resolved', form_id: id, status }); },
+    /* secrets go from the field to the host's store and never into events, the transcript or the ledger */
+    secretSet(ref, value) { value = null; return Promise.resolve({ saved: true, ref }); },
+    submit(form, payload) { return new Promise((res) => setTimeout(() => res({ ok: true }), reduced() ? 50 : 700)); },
+    signin(provider) { return new Promise((res) => setTimeout(() => res({ ok: true }), reduced() ? 50 : 1600)); }
   };
 
   /* ================================================================ the element */
@@ -461,8 +748,9 @@
     connectedCallback() {
       if (!this._kind) return;
       LIVE.add(this);
-      if (this._kind === 'approval') { this._tick(); this._timer = this._timer || setInterval(() => this._tick(), 1000); }
+      if (this._kind === 'approval' || this._kind === 'form') { this._tick(); this._timer = this._timer || setInterval(() => this._tick(), 1000); }
       if (this._state === 'holding' && typeof this._d.progress === 'number') requestAnimationFrame(() => { const h = this._holdBtn(); if (h && h._hold) h._hold.show(this._d.progress); });
+      primeOrbs(this);
       emitAttention();
     }
     disconnectedCallback() {
@@ -487,6 +775,8 @@
         d.files = Array.isArray(ch) && ch.length && (d.files == null || +d.files === ch.length) ? ch.map((x) => x.slice()) : [];
       }
       this._kind = kind; this._d = d; this._opts = opts; this._K = KINDS[kind];
+      this._vals = {}; this._sec = {};
+      if (kind === 'form') { if (!d.id) d.id = 'form-' + nid(); if (!FORMS_OPEN.has(d.id)) forms.open(d); }
       this._size = opts.size || 'inline';
       if (kind !== 'blank' && this._size === 'popover') this._size = 'compact';
       this._id = nid(); this._sig = {};
@@ -512,7 +802,7 @@
       this.append(live); this._live = live;
       this._regions = {};
       for (const r of this.querySelectorAll('[data-r]')) this._regions[r.dataset.r] = r;
-      if (kind === 'approval') this._armExpiry(false);
+      if (kind === 'approval' || kind === 'form') this._armExpiry(false);
       this.addEventListener('click', (e) => this._onClick(e));
       this.addEventListener('keydown', (e) => this._onKey(e));
       this._render(false);
@@ -522,6 +812,7 @@
     _ctx() {
       const K = this._K;
       const c = { d: this._d, s: this._state, size: this._size, id: this._id, at: clock(this._at), q: this._opts.queue, card: this };
+      c.origin = originOf(this._d) || (K.origin ? K.origin(c) : null);
       try { c.plain = K.text ? String(K.text(c)).replace(/`/g, '') : ''; } catch (e) { c.plain = ''; }
       c.tone = K.tone(c) || 'none';
       /* what the card owes the user, in the stamp's words; nothing inside the popover (its question sits right above) */
@@ -546,7 +837,7 @@
       const quiet = this._K.quiet && this._K.quiet[prev + '>' + next];
       if (!quiet) {
         this._at = Date.now();
-        if (this._kind === 'approval' && (next === 'pending' || next === 'holding')) {
+        if ((this._kind === 'approval' && (next === 'pending' || next === 'holding')) || (this._kind === 'form' && next === 'open')) {
           if (this._expiresAt && this._expiresAt <= Date.now() + 1000) this._expiresAt = 0;
           this._armExpiry(false);
         }
@@ -557,6 +848,7 @@
       }
       this.dispatchEvent(new CustomEvent('hx:card-state', { bubbles: true, composed: true, detail: { kind: this._kind, state: next, prev, data: this._d, card: this } }));
       emitAttention();
+      if (!this._syncing && this._d.id && !quiet) syncSiblings(this, next);
       return this;
     }
 
@@ -593,6 +885,7 @@
       this._hydrate(c);
       if (focusIn && !this.contains(focusIn)) this._restoreFocus(focusKey);
       if (motionOn && changed && this._size !== 'mini' && !(this._inlineOnly && this._kind === 'blank')) this._flipHeight(h0);
+      if (changed && this.isConnected) primeOrbs(this);
     }
 
     _restoreFocus(key) {
@@ -610,6 +903,10 @@
     _applyState(c, motionOn) {
       const K = this._K;
       this.dataset.state = this._state;
+      /* the origin's accent: one teammate's colour as a ring and a tint (data, not a literal) */
+      const acc = accentOf(c.origin);
+      if (acc) { this.style.setProperty('--cd-accent', acc); this.dataset.accent = ''; }
+      else { this.style.removeProperty('--cd-accent'); delete this.dataset.accent; }
       const tone = c.tone, owe = c.owe;
       const prevTone = this.dataset.tone;
       this.dataset.tone = tone;
@@ -625,7 +922,8 @@
       for (const a of this.querySelectorAll('[data-hx-attention]')) a.removeAttribute('data-hx-attention');
       if (owe || (this._kind === 'blank' && this._state === 'open' && this._size !== 'popover')) {
         const live = (sel) => Array.from(this.querySelectorAll(sel)).find((x) => !x.closest('.cd-ghost') && !x.disabled);
-        const t = live('[data-hold]') || live('.cd-blank') || live('.cd-mini') || live('.ui-btn--primary') || live('.cd-foot button, .cd-rule button');
+        const t = (this._kind === 'form' ? live('.cd-form .ui-input, .cd-form .cd-opt[tabindex="0"], .cd-form .ui-switch, .cd-form [data-action="signin"]') : null) ||
+          live('[data-hold]') || live('.cd-blank') || live('.cd-mini') || live('.ui-btn--primary') || live('.cd-foot button, .cd-rule button');
         if (t) t.setAttribute('data-hx-attention', '');
       }
       this.toggleAttribute('data-resolved', !!(K.resolved && K.resolved(c)));
@@ -644,16 +942,20 @@
         hold._cdWired = true;
         U().hold.wire(hold, { announce: (t) => this._announce(t) });
         /* the library's commit is the card's approve; a host that cancels the action leaves the button armed */
-        hold.addEventListener('ui:commit', (e) => { if (!this._act('approve')) e.preventDefault(); });
+        hold.addEventListener('ui:commit', (e) => {
+          if (this._kind === 'form') { if (!this._submitForm(true)) e.preventDefault(); return; }
+          if (!this._act('approve')) e.preventDefault();
+        });
         /* holding is a card state too: follow the button's data-state */
         new MutationObserver(() => {
           const st = hold.dataset.state;
-          if (st === 'holding' && this._state === 'pending') this._setState('holding');
-          else if (st === 'idle' && this._state === 'holding') this._setState('pending');
+          if (st === 'holding' && (this._state === 'pending' || this._state === 'open' || this._state === 'invalid')) this._setState('holding');
+          else if (st === 'idle' && this._state === 'holding') this._setState(this._kind === 'form' ? 'open' : 'pending');
         }).observe(hold, { attributes: true, attributeFilter: ['data-state'] });
       }
       if (hold && this._state === 'holding' && typeof this._d.progress === 'number' && this.isConnected) hold._hold.show(this._d.progress);
       if (this._kind === 'blank' && (this._size === 'popover' || this._size === 'compact')) wireOptions(this);
+      if (this._kind === 'form') wireForm(this);
       this._tick();
     }
 
@@ -675,20 +977,20 @@
       if (this._expiresAt && !force) return;
       const d = this._d;
       if (d.expiresAt) { this._expiresAt = +d.expiresAt; return; }
-      const m = /expires in (\d+(?:\.\d+)?)\s*(min|s)/i.exec(parts(d.meta).join(' '));
+      const m = /expires in (\d+(?:\.\d+)?)\s*(min|s)/i.exec(parts(d.meta).concat(parts(d.expires)).join(' '));
       if (m) this._expiresAt = Date.now() + (+m[1]) * (m[2] === 'min' ? 60000 : 1000);
     }
 
     _tick() {
-      if (this._kind !== 'approval' || !this._expiresAt) return;
-      const live = this._state === 'pending' || this._state === 'holding';
+      if ((this._kind !== 'approval' && this._kind !== 'form') || !this._expiresAt) return;
+      const live = this._kind === 'form' ? LIVE_FORM.indexOf(this._state) >= 0 : this._state === 'pending' || this._state === 'holding';
       if (!live) return;
       const left = this._expiresAt - Date.now();
       for (const s of this.querySelectorAll('[data-countdown]')) {
         const t = expiryText(left, s.dataset.countdown === 'short');
         if (s.textContent !== t) s.textContent = t;
       }
-      if (left <= 0 && this.isConnected) { const h = this._holdBtn(); if (h && h._hold) h._hold.reset(); this._setState('expired'); }
+      if (left <= 0 && this.isConnected) { const h = this._holdBtn(); if (h && h._hold) h._hold.reset(); if (this._kind === 'form') this._dropSecrets(); this._setState('expired'); }
     }
 
     _onClick(e) {
@@ -696,12 +998,16 @@
       if (!b || b.closest('hx-card') !== this || b.disabled) return;
       let value;
       if (b.dataset.action === 'answer') value = blankValue(this);
+      if (this._kind === 'form' && b.dataset.action === 'submit') { this._submitForm(false); return; }
+      if (this._kind === 'form' && ['paste', 'choose-file', 'remove-file', 'signin'].indexOf(b.dataset.action) >= 0) { this._K.act(this, b.dataset.action, { el: b }); return; }
       this._act(b.dataset.action, { value, el: b });
     }
 
     /* KEYMAP §6: x denies while focus is in an approval; d opens the diff from a ship card (never while typing) */
     _onKey(e) {
-      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      if (e.defaultPrevented) return;
+      if (this._kind === 'form' && this._size !== 'mini' && LIVE_FORM.indexOf(this._state) >= 0 && this._formKey(e)) return;
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
       const t = e.target;
       if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
       const live = this._state === 'pending' || this._state === 'holding';
@@ -715,6 +1021,165 @@
       }
     }
 
+    /* KEYMAP §6, forms: Esc defers; Enter submits (from a field or an option; a hold form asks for the hold);
+       mod+Enter submits from long text; x cancels and 1-9 pick an option when focus is not in a text field */
+    _formKey(e) {
+      const t = e.target, d = this._d;
+      const typing = t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) && t.type !== 'checkbox';
+      if (e.key === 'Escape' && !e.altKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); e.stopPropagation(); this._act('defer'); return true; }
+      if (e.key === 'Enter' && !e.shiftKey && !e.altKey) {
+        const mod = e.ctrlKey || e.metaKey;
+        if (t.tagName === 'TEXTAREA' && !mod) return false;
+        if (!mod && t.tagName === 'BUTTON' && !t.classList.contains('cd-opt')) return false;
+        if (t.closest && t.closest('.cd-foot, .ui-hold')) return false;
+        e.preventDefault(); this._submitForm(false); return true;
+      }
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || typing) return false;
+      if (e.code === 'KeyX' && d.cancel !== false && formT(d).cancel !== false) { e.preventDefault(); this._dropSecrets(); this._act('cancel'); return true; }
+      const n = /^Digit([1-9])$/.exec(e.code);
+      if (n) {
+        const group = (t.closest && t.closest('.cd-opts')) || this.querySelector('.cd-form .cd-opts');
+        const row = group && group.querySelectorAll('.cd-opt')[+n[1] - 1];
+        if (row) { e.preventDefault(); row.click(); row.focus(); return true; }
+      }
+      return false;
+    }
+
+    _field(name) { return Array.from(this.querySelectorAll('.cd-field')).find((f) => f.dataset.field === name && !f.closest('.cd-ghost')); }
+
+    _validate() {
+      const d = this._d, errs = [];
+      for (const [name, p] of props(d)) {
+        const req = isReq(d, name), title = p.title || cap(name);
+        let v = p['x-secret'] ? this._sec[name] : this._vals[name], msg = '';
+        const empty = v == null || v === '' || (Array.isArray(v) && !v.length);
+        if (p['x-signin']) { if (req && !(v && v.signedIn)) msg = 'Sign in to ' + (p['x-signin'].provider || 'continue') + ' first'; }
+        else if (empty) { if (req) msg = p.enum || p['x-picker'] ? 'Choose ' + title.toLowerCase() : p['x-upload'] ? 'Add a file' : 'Enter ' + title.toLowerCase(); }
+        else if (p.type === 'number' || p.type === 'integer') {
+          const num = Number(v);
+          if (!isFinite(num) || String(v).trim() === '') msg = 'Enter a number';
+          else if (p.type === 'integer' && !Number.isInteger(num)) msg = 'Use a whole number';
+          else if ((p.minimum != null && num < p.minimum) || (p.maximum != null && num > p.maximum)) msg = 'Use a number from ' + (p.minimum != null ? p.minimum : '−∞') + ' to ' + (p.maximum != null ? p.maximum : '∞');
+        } else if (typeof v === 'string') {
+          const sv = v.trim();
+          if (p.minLength && sv.length < p.minLength) msg = p['x-error'] || title + ' is too short: it needs at least ' + p.minLength + ' characters';
+          else if (p.maxLength && sv.length > p.maxLength) msg = title + ' is too long: keep it under ' + p.maxLength + ' characters';
+          else if (p.pattern && !new RegExp(p.pattern).test(sv)) msg = p['x-error'] || 'That doesn’t look like ' + title.toLowerCase();
+          else if (p.format === 'email' && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(sv)) msg = 'Enter an email address, like name@example.com';
+          else if (p.format === 'uri' && !/^https?:\/\/\S+$/.test(sv)) msg = 'Enter a full address, starting with https://';
+        }
+        if (msg) errs.push({ name, title, msg });
+      }
+      return errs;
+    }
+
+    /* paint errors in place (no focus move): used while the user fixes fields */
+    _paintErrors(errs) {
+      for (const f of this.querySelectorAll('.cd-field')) {
+        if (f.closest('.cd-ghost')) continue;
+        const e = errs.find((x) => x.name === f.dataset.field), out = f.querySelector('.cd-err');
+        const ctl = f.querySelector('.ui-input, .cd-opts, .ui-switch, [data-action="signin"]');
+        if (out) { out.textContent = e ? e.msg : ''; out.hidden = !e; }
+        if (ctl) { if (e) ctl.setAttribute('aria-invalid', 'true'); else ctl.removeAttribute('aria-invalid'); }
+      }
+      if (errs.length && this._state !== 'invalid' && LIVE_FORM.indexOf(this._state) >= 0) this._setState('invalid');
+      else if (!errs.length && this._state === 'invalid') this._setState('open');
+    }
+
+    /* show errors on submit: paint them, say the first one, and move focus to it */
+    _showErrors(errs) {
+      this._paintErrors(errs);
+      if (errs.length) {
+        this._announce((errs.length === 1 ? 'Check ' + errs[0].title + ': ' : 'Check ' + errs.length + ' fields. ' + errs[0].title + ': ') + errs[0].msg);
+        const f = this._field(errs[0].name), ctl = f && f.querySelector('.ui-input, .cd-opt[tabindex="0"], .cd-opt, .ui-switch, [data-action="signin"], .cd-drop .ui-btn');
+        if (ctl) ctl.focus({ preventScroll: false });
+      }
+    }
+
+    _dropSecrets() {
+      for (const k in this._sec) this._sec[k] = null;
+      this._sec = {};
+      for (const i of this.querySelectorAll('input[data-secret]')) i.value = '';
+    }
+
+    /* submit: validate, hand secrets to the host (never to the agent), send the rest, then collapse to a receipt */
+    _submitForm(viaHold) {
+      const d = this._d;
+      if (LIVE_FORM.indexOf(this._state) < 0) return false;
+      const errs = this._validate();
+      this._showErrors(errs);
+      if (errs.length) { const h = this._holdBtn(); if (h && h._hold) h._hold.reset(); return false; }
+      if (holdForm(d) && !viaHold) {
+        const h = this._holdBtn(); if (h) h.focus();
+        this._announce('Hold the space bar, or press enter twice, to ' + String((d.submit && d.submit.label) || formT(d).submit).toLowerCase());
+        return false;
+      }
+      const values = {}, secrets = {}, pending = [];
+      for (const [name, p] of props(d)) {
+        if (p['x-secret']) {
+          /* the key is stored in the keychain and read through Hermes's secret source: no environment variable */
+          const ref = 'secret://' + (d.scope || 'local') + '/' + (p['x-ref'] || name);
+          pending.push(forms.secretSet(ref, this._sec[name]));
+          secrets[name] = { saved: true, ref };
+        } else if (this._vals[name] !== undefined) values[name] = this._vals[name];
+      }
+      this._dropSecrets();
+      const payload = { form_id: d.id, kind: d.kind, values, secrets };
+      const ok = this.dispatchEvent(new CustomEvent('hx:card-action', { bubbles: true, composed: true, cancelable: true, detail: { kind: 'form', action: 'submit', value: payload, data: d, state: this._state, card: this } }));
+      if (!ok) return false;
+      const raw = d.kind === 'permission' ? (this._vals.scope || 'once') : '';
+      const t = formT(d), ans = answerText(this);
+      d.receiptText = typeof t.done === 'function' ? t.done(d, ans, raw) : t.done;
+      this._setState('submitting');
+      Promise.all(pending).then(() => forms.submit(d, payload)).then(() => {
+        if (this._state !== 'submitting') return;
+        this._setState('done');
+        forms.resolve(d.id, 'submitted');
+      });
+      return true;
+    }
+
+    _signin(el) {
+      const d = this._d, name = el && el.dataset.field;
+      const p = name && d.schema.properties[name], provider = p && p['x-signin'] && p['x-signin'].provider;
+      d.busyText = 'Waiting for ' + ((p && p['x-signin'].host) || provider || 'the provider') + ' in your browser';
+      this._setState('submitting');
+      forms.signin(provider).then(() => {
+        if (this._state !== 'submitting') return;
+        if (name) this._vals[name] = { signedIn: true };
+        const t = formT(d);
+        d.receiptText = typeof t.done === 'function' ? t.done(d, '', '') : t.done;
+        this._setState('done');
+        forms.resolve(d.id, 'submitted');
+      });
+    }
+
+    _paste(el) {
+      const input = el && el.closest('.cd-secret') && el.closest('.cd-secret').querySelector('input[data-secret]');
+      if (!input) return;
+      const done = (t) => { input.value = String(t || '').trim(); this._sec[input.dataset.secret] = input.value; input.dispatchEvent(new Event('input')); input.focus(); };
+      const ask = () => { input.focus(); this._announce('Press ' + (/Mac/.test(navigator.platform) ? 'command V' : 'control V') + ' to paste'); };
+      try { if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(done, ask); else ask(); } catch (_) { ask(); }
+    }
+
+    _setFile(name, file) {
+      this._vals[name] = file ? { name: file.name, size: file.size } : undefined;
+      const f = this._field(name), drop = f && f.querySelector('.cd-drop');
+      if (!drop) return;
+      const input = drop.querySelector('input[type=file]');
+      drop.innerHTML = '';
+      if (file) {
+        const kb = file.size < 1024 * 1024 ? Math.max(1, Math.round(file.size / 1024)) + ' KB' : (file.size / 1048576).toFixed(1) + ' MB';
+        drop.insertAdjacentHTML('beforeend', '<span class="cd-filechip">' + U().icon('file', { class: 'cd-glyph' }) + '<span class="cd-filechip__name">' + esc(file.name) + '</span><span class="cd-mono">' + kb + '</span></span>' +
+          U().html.button({ label: 'Remove', variant: 'ghost', size: 's', action: 'remove-file', attrs: { 'aria-label': 'Remove ' + file.name } }));
+        this._announce('Added ' + file.name);
+      } else {
+        drop.insertAdjacentHTML('beforeend', U().html.button({ label: 'Choose a file', size: 's', action: 'choose-file' }) + '<span class="cd-drop__hint">or drop it here</span>');
+      }
+      if (input) drop.appendChild(input);
+      if (this._state === 'invalid') this._paintErrors(this._validate());
+    }
+
     _act(action, x) {
       x = x || {};
       const detail = { kind: this._kind, action, data: this._d, state: this._state, value: x.value, card: this };
@@ -724,6 +1189,40 @@
     }
   }
   if (!customElements.get('hx-card')) customElements.define('hx-card', HxCard);
+
+  /* orb2 draws only the orbs on screen, so an orb sized while off screen (low in a long thread, or in a full-page
+     capture) stays blank until it scrolls in. Prime each live orb with one still frame, through orb2's public
+     static attribute set and cleared at once: it draws now, and animates as usual when it becomes visible.
+     Orbs already static (16px and under) draw themselves. */
+  function primeOrbs(root) {
+    const go = () => {
+      for (const o of (root || document).querySelectorAll('orb-avatar')) {
+        if (o._cdPrimed || o.hasAttribute('static') || !o.isConnected || !o.clientWidth) continue;
+        o._cdPrimed = true;
+        o.setAttribute('static', '');
+        o.removeAttribute('static');
+      }
+    };
+    requestAnimationFrame(() => requestAnimationFrame(go));
+    setTimeout(go, 400);
+  }
+
+  /* one id, one answer: every card with the same kind and id (the conversation, the dock, the Bots section, team
+     chat) takes the state the user gave in any one of them, with the same receipt. Values of secret fields are never
+     copied: only the receipt and the non-secret answer travel. */
+  const SHARED = ['answer', 'answered', 'decidedAt', 'receipt', 'progressNote'];
+  function syncSiblings(src, state) {
+    for (const c of LIVE) {
+      if (c === src || c._kind !== src._kind || !c._d || c._d.id !== src._d.id || c._state === state) continue;
+      if ((state === 'holding' || state === 'pending') && (src._K.quiet || {})[(c._state) + '>' + state]) continue;
+      if (state === 'holding') continue;
+      c._syncing = true;
+      for (const k of SHARED) if (src._d[k] !== undefined) c._d[k] = src._d[k];
+      if (src._vals) c._vals = Object.assign({}, src._vals);
+      c._at = src._at;
+      try { c._setState(state); } finally { c._syncing = false; }
+    }
+  }
 
 
   /* swap one region's content in place: the old content fades out first, then the new one settles in */
@@ -785,6 +1284,100 @@
       });
     }
   }
+  /* a form's fields: values live in card._vals (secrets in card._sec until they are handed to the host) */
+  function wireForm(card) {
+    const form = Array.from(card.querySelectorAll('.cd-form')).find((f) => !f.closest('.cd-ghost'));
+    if (!form || form._wired) return;
+    form._wired = true;
+    const d = card._d;
+    form.addEventListener('submit', (e) => { e.preventDefault(); card._submitForm(false); });
+    const clearErr = () => { if (card._state === 'invalid') card._paintErrors(card._validate()); };
+    for (const i of form.querySelectorAll('input[data-name], textarea[data-name]')) {
+      i.addEventListener('input', () => { card._vals[i.dataset.name] = i.value; if (i.getAttribute('aria-invalid')) clearErr(i.dataset.name); });
+    }
+    for (const i of form.querySelectorAll('input[data-secret]')) {
+      i.addEventListener('input', () => { card._sec[i.dataset.secret] = i.value; if (i.getAttribute('aria-invalid')) clearErr(i.dataset.secret); });
+      /* paste-friendly: trim what was pasted and check it at once */
+      i.addEventListener('paste', () => setTimeout(() => { i.value = i.value.trim(); card._sec[i.dataset.secret] = i.value; const e = card._validate().filter((x) => x.name === i.dataset.secret); if (e.length) card._showErrors(e); else clearErr(); }, 0));
+    }
+    for (const sw of form.querySelectorAll('.cd-field--switch input[role="switch"]')) {
+      const name = sw.closest('.cd-field').dataset.field;
+      card._vals[name] = sw.checked;
+      sw.addEventListener('change', () => { card._vals[name] = sw.checked; });
+    }
+    for (const g of form.querySelectorAll('.cd-opts[data-group]')) {
+      const name = g.dataset.group, p = d.schema.properties[name], multi = !!p['x-multi'];
+      const rows = Array.from(g.querySelectorAll('.cd-opt'));
+      const other = g.querySelector('[data-other] input'), otherRow = g.querySelector('[data-other]');
+      const pv = form.querySelector('.cd-preview[data-preview-for="' + name + '"]');
+      const showPreview = (v) => {
+        if (!pv) return;
+        const i = p.enum.indexOf(v), x = i >= 0 && p['x-preview'] ? p['x-preview'][i] : null;
+        pv.innerHTML = x ? (x.code != null ? '<pre class="cd-out">' + esc(x.code) + '</pre>' : '<p class="cd-text">' + fmt(x.text || '') + '</p>') + (x.note ? '<p class="cd-note">' + fmt(x.note) + '</p>' : '') : '<p class="cd-note">' + (v ? 'No preview for this answer.' : 'Pick an answer to preview it.') + '</p>';
+      };
+      const sync = () => {
+        const v = card._vals[name];
+        rows.forEach((r) => { const on = multi ? (v || []).indexOf(r.dataset.v) >= 0 : v === r.dataset.v; r.setAttribute('aria-checked', String(on)); if (!multi) r.tabIndex = on ? 0 : -1; });
+        if (!multi && !rows.some((r) => r.tabIndex === 0)) rows[0].tabIndex = 0;
+        if (otherRow) otherRow.toggleAttribute('data-on', !multi && typeof v === 'string' && v !== '' && p.enum.indexOf(v) < 0);
+        if (d.kind === 'permission' && name === 'scope') {
+          const lbl = card.querySelector('.cd-foot [data-action="submit"] span');
+          if (lbl) lbl.textContent = (PERMISSION[v] || PERMISSION.once)[0];
+        }
+      };
+      rows.forEach((r) => {
+        r.addEventListener('click', () => {
+          const v = r.dataset.v;
+          if (multi) { const cur = (card._vals[name] || []).slice(), k = cur.indexOf(v); if (k >= 0) cur.splice(k, 1); else cur.push(v); card._vals[name] = cur; }
+          else { card._vals[name] = v; if (other) other.value = ''; }
+          sync(); showPreview(multi ? null : v);
+          if (r.getAttribute('aria-checked') === 'true') animate(r.querySelector('.cd-opt__ring'), [{ transform: 'scale(.5)' }, { transform: 'scale(1)' }], { preset: 'quick' });
+          clearErr(name);
+        });
+        r.addEventListener('focus', () => showPreview(multi ? null : r.dataset.v));
+      });
+      g.addEventListener('keydown', (e) => {
+        const i = rows.indexOf(document.activeElement);
+        if (i < 0) return;
+        const dlt = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key];
+        if (!dlt) return;
+        e.preventDefault();
+        if (dlt > 0 && i === rows.length - 1 && other) { other.focus(); return; }
+        const nx = rows[(i + dlt + rows.length) % rows.length];
+        if (!multi) nx.click();
+        nx.focus();
+      });
+      if (other) {
+        other.addEventListener('input', () => { card._vals[name] = other.value.trim() ? other.value : (p.enum.indexOf(card._vals[name]) >= 0 ? card._vals[name] : null); sync(); clearErr(name); });
+        other.addEventListener('keydown', (e) => { if (e.key === 'ArrowUp') { e.preventDefault(); rows[rows.length - 1].focus(); } });
+      }
+      if (card._vals[name] === undefined && p.default != null) card._vals[name] = p.default;
+      sync(); showPreview(multi ? null : card._vals[name]);
+    }
+    for (const pk of form.querySelectorAll('.cd-picker')) {
+      const name = pk.dataset.name, kind = pk.dataset.picker, p = d.schema.properties[name];
+      if (card._vals[name] === undefined && p.default != null) card._vals[name] = p.default;
+      pk.addEventListener('click', () => {
+        const items = pickerItems(kind).map((x) => (x && x.value != null ? Object.assign({}, x, { checked: card._vals[name] === x.value }) : x));
+        U().menu.open(pk, items, { label: p.title || cap(name), onSelect: (v) => {
+          card._vals[name] = v;
+          const b = kind === 'teammate' ? bot(v) : null;
+          pk.querySelector('.cd-picker__v').textContent = b ? b.name : v;
+          const lead = pk.firstElementChild;
+          if (lead && (b || kind === 'model')) lead.outerHTML = pickLead(kind, v, b);
+          clearErr(name);
+        } });
+      });
+    }
+    for (const drop of form.querySelectorAll('.cd-drop')) {
+      const name = drop.dataset.drop;
+      drop.addEventListener('change', (e) => { if (e.target.type === 'file' && e.target.files[0]) card._setFile(name, e.target.files[0]); });
+      drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.dataset.over = ''; });
+      drop.addEventListener('dragleave', () => { delete drop.dataset.over; });
+      drop.addEventListener('drop', (e) => { e.preventDefault(); delete drop.dataset.over; const f = e.dataTransfer && e.dataTransfer.files[0]; if (f) card._setFile(name, f); });
+    }
+  }
+
   function blankValue(card) {
     const input = card.querySelector('.cd-free input');
     if (input && input.value.trim()) return input.value.trim();
@@ -904,9 +1497,12 @@
     sizes: ['inline', 'compact', 'mini'],
     openBlank: (card) => openBlank(card),
     closeBlank: () => U().layer.close(),
-    version: '6.1.0'
+    forms,
+    primeOrbs,
+    version: '6.2.0'
   };
   window.HX.cards = api;
+  window.HX.forms = forms;
   /* if the shell replaces window.HX after this file ran, hand the API over */
   document.addEventListener('DOMContentLoaded', () => { if (window.HX && !window.HX.cards) window.HX.cards = api; });
 })();

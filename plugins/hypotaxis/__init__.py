@@ -33,6 +33,9 @@ RPC_METHODS = (
     "blank.fill",
     "checkpoint.list",
     "checkpoint.diff",
+    "form.submit",
+    "form.cancel",
+    "form.list",
 )
 
 
@@ -56,6 +59,7 @@ def _rpc(method: str) -> Callable[..., Any]:
 
 
 def register(ctx: Any) -> None:
+    from .forms.tools import ask_handler, request_credential_handler, request_input_handler
     from .hermes_api import bind
     from .tools import (
         TOOLSET,
@@ -72,14 +76,23 @@ def register(ctx: Any) -> None:
     from .compat import register as register_compat
 
     register_compat(ctx)  # before the policy hooks: a Claude hook's `allow` must be on record when the policy asks
-    handlers = {"pack": pack_handler, "exec": exec_handler, "ship": ship_handler, "dispatch": dispatch_handler}
+    handlers = {
+        "pack": pack_handler,
+        "exec": exec_handler,
+        "ship": ship_handler,
+        "dispatch": dispatch_handler,
+        "request_input": request_input_handler,
+        "request_credential": request_credential_handler,
+        "ask": ask_handler,
+    }
+    needs_hx = {"pack", "ship", "dispatch"}  # forms need no hx; a tool that cannot work is hidden, one that can is not
     for name, schema in tool_schemas().items():
         ctx.register_tool(
             name=name,
             toolset=TOOLSET,
             schema=schema,
             handler=handlers[name],
-            check_fn=exec_ready if name == "exec" else hx_ready,
+            check_fn=exec_ready if name == "exec" else hx_ready if name in needs_hx else None,
             description=schema["description"],
         )
 
@@ -89,6 +102,7 @@ def register(ctx: Any) -> None:
         ctx.register_rpc(method, _rpc(method))
     ctx.register_system_prompt_section("hypotaxis", _lazy("hooks", "system_prompt_section"))
     _register_delegation(ctx)
+    _register_secret_source(ctx)
     _start_recovery()
     on_unload = getattr(ctx, "on_unload", None)
     if callable(on_unload):
@@ -106,6 +120,18 @@ def _register_delegation(ctx: Any) -> None:
     from .governance.delegation import make_provider
 
     register(make_provider())
+
+
+def _register_secret_source(ctx: Any) -> None:
+    """The secret source that reads provider keys from the desktop host's keychain (``hostsecrets``). Registered only
+    where Hermes has the API; it fetches nothing until ``secrets.hypotaxis_host.env`` binds a variable to a
+    reference."""
+    register = getattr(ctx, "register_secret_source", None)
+    if not callable(register):
+        return
+    from .hostsecrets.source import make_source
+
+    register(make_source())
 
 
 def _start_recovery() -> None:

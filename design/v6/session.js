@@ -32,6 +32,8 @@
   }
   const frag = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
   const U = () => window.HX.ui;
+  /* drawn corners (DESIGN-SYSTEM.md §8): the session's own surfaces take the library's continuous corner */
+  if (window.HX && window.HX.ui && window.HX.ui.squircle) window.HX.ui.squircle.auto('.ss-diff, .ssr-file, .ssr-term');
   const now = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
   const cap1 = (s) => s.charAt(0).toUpperCase() + s.slice(1);
   /* data strings joined with " · " never reach the screen as dots (F22): their parts sit apart */
@@ -164,7 +166,8 @@
     const reader = makeReader();
     const gov = U().chip({ label: 'Governed', icon: 'ladder', pressed: G.governed });
     const smart = U().chip({ label: 'Smart', icon: 'spark', pressed: G.smart });
-    const model = U().chip({ label: G.model, mono: true, haspopup: 'menu', expanded: false });
+    /* the model chip carries the provider's mark (mono), through the library's one primitive */
+    const model = U().chip({ model: G.model, haspopup: 'menu', expanded: false });
     const c = U().composer({
       placeholder: 'Describe the change', label: 'Message the coding agent', value: opts.draft || '',
       chips: [gov, smart, model], spend: { spent: spent(), cap: G.cap },
@@ -177,14 +180,14 @@
       gov.setAttribute('aria-label', G.governed ? 'Governed: starts cheap, climbs the model ladder on failure, stops at the cost cap' : 'Ungoverned: one pinned model, no cost cap');
       smart.setAttribute('aria-pressed', String(G.smart)); smart.setAttribute('data-tip', G.smart ? 'Picks the model for each message' : 'You pick the model'); smart.setAttribute('data-kbd', 'alt+S');
       if (G.smart && model.contains(document.activeElement)) c.focus();   /* never drop focus with the chip */
-      model.hidden = G.smart; model.querySelector('span').textContent = G.model; model.setAttribute('aria-label', 'Model: ' + G.model); model.setAttribute('data-tip', 'Model'); model.setAttribute('data-kbd', 'alt+M');
+      model.hidden = G.smart; model.querySelector('span').textContent = G.model; if (U().modelMark) U().modelMark.swap(model, G.model); model.setAttribute('aria-label', 'Model: ' + G.model); model.setAttribute('data-tip', 'Model'); model.setAttribute('data-kbd', 'alt+M');
       c.setSpend(spent(), G.governed ? G.cap : null);
       c.refresh();
     }
     gov.addEventListener('ui:change', (e) => { e.preventDefault(); setG({ governed: !G.governed }); c.flashHint(); });
     smart.addEventListener('ui:change', (e) => { e.preventDefault(); setG({ smart: !G.smart }); c.flashHint(); });
     function openModel() {
-      U().menu.open(model, [{ title: 'Model' }].concat(LADDER_MODELS.map((m) => ({ label: m, value: m, mono: true, checked: m === G.model }))), { place: 'above', label: 'Model', onSelect: (v) => { setG({ model: v }); c.flashHint(); } });
+      U().menu.open(model, [{ title: 'Model' }].concat(LADDER_MODELS.map((m) => ({ label: m, value: m, mono: true, model: m, checked: m === G.model }))), { place: 'above', label: 'Model', onSelect: (v) => { setG({ model: v }); c.flashHint(); } });
     }
     model.addEventListener('click', openModel);
     G.subs.add(sync);

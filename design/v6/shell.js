@@ -1104,6 +1104,11 @@
     if (booted) return;
     app = $('#hx-app');
     if (!app) { console.error('[hx] #hx-app not found'); return; }
+    /* drawn corners (DESIGN-SYSTEM.md §8): the shell's surfaces take the library's continuous corner */
+    if (HX.ui && HX.ui.squircle) {
+      HX.ui.squircle.auto('.hx-cmd, .hx-me, .hx-dtab, .hx-pal-row');
+      HX.ui.squircle.auto('.hx-dialog__card, .hx-palette__box, .hx-goto, .hxt-preset', { mode: 'surface' });
+    }
     el = {
       btnLeft: $('#hx-btn-left'), btnBack: $('#hx-btn-back'), btnFwd: $('#hx-btn-fwd'), btnSearch: $('#hx-btn-search'),
       whereProject: $('#hx-where-project'), whereTitle: $('#hx-where-title'), btnRight: $('#hx-btn-right'),

@@ -1,79 +1,213 @@
 name: ci
+# The gate (docs/STANDARDS.md section 10): every push and every pull request. Jobs run in parallel and are cached.
 on:
   push:
-    branches: [main, develop]
   pull_request:
 permissions:
   contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  # ubuntu-22.04 on purpose: hx-sandbox needs unprivileged user namespaces, which 24.04 restricts with AppArmor.
+  # The sysctl step below keeps these jobs working if the image moves to 24.04.
+
 jobs:
   identity:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - name: every commit is the owner's alone
+      - name: every commit is the owner's alone, with no attribution lines
         run: |
           base="${{ github.event.pull_request.base.sha || github.event.before }}"
-          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then base=$(git rev-list --max-parents=0 HEAD | tail -1); fi
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            # a new branch or a rewritten one: check what it adds on top of develop (or main)
+            base=$(git merge-base HEAD origin/develop 2>/dev/null || git merge-base HEAD origin/main 2>/dev/null || git rev-list --max-parents=0 HEAD | tail -1)
+          fi
+          echo "checking $base..HEAD"
           sh scripts/check-commit-identity.sh "$base..HEAD"
-  shared:
-    runs-on: ubuntu-latest
+
+  checks:
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - name: shared data files are copies of their sources (ADR-0016)
         run: scripts/sync-shared-data.sh --check
-      - name: vendored contraprova is a byte-exact copy of its pinned commit (ADR-0015)
-        run: scripts/vendor-contraprova.sh --check
       - name: generated hx types match the schema
         run: python3 scripts/gen-hx-types.py --check
+      - name: vendored contraprova is a byte-exact copy of its pinned commit (ADR-0015)
+        # The source repository may be private: add the repository secret CONTRAPROVA_TOKEN (a fine-grained,
+        # read-only token for aphesist/contraprova). Without it the default public URL is tried.
+        env:
+          CONTRAPROVA_TOKEN: ${{ secrets.CONTRAPROVA_TOKEN }}
+        run: |
+          if [ -n "$CONTRAPROVA_TOKEN" ]; then
+            echo "::add-mask::$CONTRAPROVA_TOKEN"
+            export CONTRAPROVA_REPO="https://x-access-token:${CONTRAPROVA_TOKEN}@github.com/aphesist/contraprova.git"
+          fi
+          scripts/vendor-contraprova.sh --check
+
   rust:
-    runs-on: ubuntu-latest
-    if: ${{ hashFiles('crates/*/Cargo.toml') != '' }}
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      - run: rustup show
-      - run: cargo fmt --all --check
-      # The desktop host needs the WebKitGTK system libraries: it has its own job below.
-      - run: cargo clippy --workspace --exclude hypotaxis-host --all-targets -- -D warnings
-      - run: cargo test --workspace --exclude hypotaxis-host
-  host:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with: { submodules: true }
-      - name: Tauri's Linux prerequisites
+      - name: Tauri's Linux prerequisites (the host is part of the workspace)
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev build-essential pkg-config
+      - name: allow user namespaces (hx-sandbox tests)
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
       - run: rustup show
-      - name: clippy (pedantic, -D warnings) and the host's tests; the bindings test is the staleness check for ui/src/host/bindings.ts
-        run: |
-          cargo clippy -p hypotaxis-host --all-targets -- -D warnings
-          cargo test -p hypotaxis-host
-      - name: the vendored Hermes contract is an exact copy of the pinned checkout
-        if: ${{ hashFiles('vendor/hermes-agent/apps/shared/src/gateway-contract.generated.ts') != '' }}
-        run: node apps/desktop/ui/scripts/vendor-hermes-shared.mjs vendor/hermes-agent --check
+      - uses: Swatinem/rust-cache@v2
+        with: { shared-key: workspace }
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: tests (the host's bindings test is the staleness check for ui/src/host/bindings.ts)
+        run: cargo test --workspace
+
+  hx:
+    # The hx binary the plugin's unit and end-to-end tests need, built once.
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show
+      - uses: Swatinem/rust-cache@v2
+        with: { shared-key: hx }
+      - run: cargo build -p hx
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hx-debug
+          path: target/debug/hx
+          retention-days: 1
+          if-no-files-found: error
+
   plugin:
-    runs-on: ubuntu-latest
-    if: ${{ hashFiles('plugins/hypotaxis/pyproject.toml') != '' }}
+    needs: hx
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.14"]
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - run: cargo build -p hx
-      - name: ruff, pyright and the unit tests (pyproject.toml is tooling only)
+        with: { enable-cache: true }
+      - uses: actions/download-artifact@v4
+        with:
+          name: hx-debug
+          path: ${{ runner.temp }}/hx
+      - run: chmod +x "${{ runner.temp }}/hx/hx"
+      - name: allow user namespaces (hx-sandbox)
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+      - name: ruff and pyright (pyproject.toml is tooling only)
+        working-directory: plugins/hypotaxis
         run: |
-          cd plugins/hypotaxis
-          uvx ruff check . && uvx ruff format --check .
-          uvx --with ruamel.yaml pyright
-          HX_BIN="$GITHUB_WORKSPACE/target/debug/hx" uv run --no-project --with pytest --with ruamel.yaml pytest -q tests
+          uvx ruff check . ../../tests/e2e
+          uvx ruff format --check . ../../tests/e2e
+          uvx --python ${{ matrix.python }} --with ruamel.yaml pyright
+      - name: contraprova's CLI at the vendored commit (the ledger test verifies a ledger with it)
+        env:
+          CONTRAPROVA_TOKEN: ${{ secrets.CONTRAPROVA_TOKEN }}
+        run: |
+          sha=$(jq -r .sha plugins/hypotaxis/_vendor/contraprova/VENDOR.json)
+          auth=""
+          if [ -n "$CONTRAPROVA_TOKEN" ]; then
+            echo "::add-mask::$CONTRAPROVA_TOKEN"
+            auth="x-access-token:${CONTRAPROVA_TOKEN}@"
+          fi
+          echo "CONTRAPROVA_SPEC=contraprova @ git+https://${auth}github.com/aphesist/contraprova@${sha}" >> "$GITHUB_ENV"
+      - name: unit tests (plain Python, no Hermes)
+        working-directory: plugins/hypotaxis
+        env:
+          HX_BIN: ${{ runner.temp }}/hx/hx
+        # Two sandbox tests need Hermes's own modules (hermes_constants); the e2e job runs them against the install.
+        run: |
+          uv run --no-project --python ${{ matrix.python }} --with pytest --with hypothesis --with ruamel.yaml --with "$CONTRAPROVA_SPEC" \
+            pytest -q tests \
+            --deselect tests/test_exec_sandbox.py::test_sh_runs_inside_the_same_sandbox \
+            --deselect tests/test_exec_sandbox.py::test_a_grandchild_of_sh_dies_when_the_cell_is_cancelled
+
+  e2e:
+    # Real Hermes v0.23.2 (its own installer, cached) behind a fake model: one provider, zero egress.
+    # BLOCKING is a decision for after the first green runs; until then a failure here shows red on the run but
+    # must not stop a merge: continue-on-error keeps the workflow's overall result green. See docs/RELEASING.md.
+    needs: hx
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    timeout-minutes: 40
+    env:
+      HX_E2E_HERMES_ENV: /home/runner/hermes-e2e
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with: { enable-cache: true }
+      - uses: actions/download-artifact@v4
+        with:
+          name: hx-debug
+          path: ${{ runner.temp }}/hx
+      - run: chmod +x "${{ runner.temp }}/hx/hx"
+      - name: allow user namespaces (hx-sandbox)
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+      - name: Hermes v0.23.2 install (cache)
+        id: hermes-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            /home/runner/hermes-e2e
+            !/home/runner/hermes-e2e/uv-cache
+          key: hermes-v0.23.2-ubuntu-22.04-${{ hashFiles('scripts/install-hermes-e2e.sh') }}
+      - name: install Hermes with its own installer (skipped on a cache hit)
+        run: SP="$HX_E2E_HERMES_ENV" scripts/install-hermes-e2e.sh
+      - name: contraprova's CLI at the vendored commit (the ledger test verifies a ledger with it)
+        env:
+          CONTRAPROVA_TOKEN: ${{ secrets.CONTRAPROVA_TOKEN }}
+        run: |
+          sha=$(jq -r .sha plugins/hypotaxis/_vendor/contraprova/VENDOR.json)
+          auth=""
+          if [ -n "$CONTRAPROVA_TOKEN" ]; then
+            echo "::add-mask::$CONTRAPROVA_TOKEN"
+            auth="x-access-token:${CONTRAPROVA_TOKEN}@"
+          fi
+          echo "CONTRAPROVA_SPEC=contraprova @ git+https://${auth}github.com/aphesist/contraprova@${sha}" >> "$GITHUB_ENV"
+      - name: the plugin's end-to-end suite, and the sandbox tests that need Hermes's modules
+        working-directory: plugins/hypotaxis
+        env:
+          HX_BIN: ${{ runner.temp }}/hx/hx
+        run: |
+          PYTHONPATH="$(compgen -G "$HX_E2E_HERMES_ENV/hermes-home/installs/*/environments/*/workspace" | head -1)" \
+          uv run --no-project --python 3.11 --with pytest --with hypothesis --with ruamel.yaml --with "$CONTRAPROVA_SPEC" \
+            pytest -q ../../tests/e2e tests/test_exec_sandbox.py
+
   ui:
-    runs-on: ubuntu-latest
-    if: ${{ hashFiles('apps/desktop/ui/package.json') != '' }}
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: apps/desktop/ui
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
+        with: { version: 10 }
       - uses: actions/setup-node@v4
-        with: { node-version: 22 }
-      - run: cd apps/desktop/ui && pnpm install --frozen-lockfile && pnpm typecheck && pnpm test
-      - run: cd apps/desktop/ui && pnpm exec playwright install --with-deps chromium
-      - run: cd apps/desktop/ui && pnpm test:smoke
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/desktop/ui/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: Chromium (cached by Playwright's version)
+        id: pw-version
+        run: echo "v=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw-version.outputs.v }}
+      - run: pnpm exec playwright install --with-deps chromium
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+      - run: pnpm exec playwright install-deps chromium
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+      - run: pnpm test:smoke
