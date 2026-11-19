@@ -65,6 +65,7 @@ check "the manifest lists exactly the files that appeared" test "$manifest_files
 check "install: the launcher runs the app" test "$("$T/p/bin/boopis" --flag)" = "dummy appimage --flag"
 check "install: the app is executable" test -x "$T/p/share/boopis/boopis.AppImage"
 check "install: the menu entry points at the launcher" grep -qx "Exec=$T/p/bin/boopis %U" "$T/p/share/applications/boopis.desktop"
+check "install: the menu entry carries the window class of the AppImage's binary" grep -qx 'StartupWMClass=hypotaxis' "$T/p/share/applications/boopis.desktop"
 check "install: the menu entry names the light icon" grep -qx 'Icon=boopis' "$T/p/share/applications/boopis.desktop"
 check "install: the icons are PNGs" test "$(head -c 8 "$T/p/share/icons/hicolor/64x64/apps/boopis.png" | od -An -tx1 | tr -d ' \n')" = 89504e470d0a1a0a
 check "install: the final box says it is ready" contains "$out" "boopis is ready"

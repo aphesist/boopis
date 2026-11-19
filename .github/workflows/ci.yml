@@ -32,6 +32,23 @@ jobs:
           echo "checking $base..HEAD"
           sh scripts/check-commit-identity.sh "$base..HEAD"
 
+  installer:
+    # The installers and the art they carry (ADR-0026): shellcheck, the brand goldens (with the embedded blocks current),
+    # and an install and uninstall into a temp prefix. No Rust and no cache: it is shell and awk only.
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: shellcheck and util-linux's script
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends shellcheck util-linux
+      - name: shellcheck
+        run: shellcheck scripts/install.sh scripts/embed-brand.sh scripts/test-brand.sh scripts/test-install.sh
+      - name: the art renders the same bytes as the goldens, and the embedded blocks are current
+        run: scripts/test-brand.sh
+      - name: install and uninstall
+        run: scripts/test-install.sh
+
   checks:
     runs-on: ubuntu-22.04
     steps:

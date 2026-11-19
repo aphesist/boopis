@@ -70,13 +70,21 @@ pub fn parse(args: &[String]) -> Command {
     }
 }
 
+/// Whether a command needs the parent's console: every command that prints, and never a launch of the window.
+#[must_use]
+pub fn needs_console(command: &Command) -> bool {
+    !matches!(command, Command::Launch)
+}
+
 /// Run a command if the arguments ask for one. Returns the exit code; `None` means "start the app".
 /// `resource_dir` is asked only by the commands that need it.
 pub fn dispatch(args: &[String], resource_dir: &dyn Fn() -> Option<PathBuf>) -> Option<i32> {
     let command = parse(args);
-    if command == Command::Launch {
+    if !needs_console(&command) {
         return None;
     }
+    // The release binary is a GUI-subsystem one on Windows: without this a command's output goes nowhere.
+    console::attach_to_parent();
     let caps = Caps::from_process();
     let out = Out::new(caps);
     let version = env!("CARGO_PKG_VERSION");
@@ -94,6 +102,45 @@ pub fn dispatch(args: &[String], resource_dir: &dyn Fn() -> Option<PathBuf>) -> 
     };
     println!("{}", text.join("\n"));
     Some(0)
+}
+
+/// Windows' GUI-subsystem binary starts with no console, so `--version` and `doctor` print nothing from a terminal.
+/// A command attaches to its parent's console (when there is one, and when the output is not already redirected).
+mod console {
+    /// Attach the process's output to the parent console. Nothing to do off Windows.
+    #[cfg(not(windows))]
+    pub fn attach_to_parent() {}
+
+    /// Attach to the parent console and point the standard output and error at it, unless they already go to a
+    /// pipe or a file. Does nothing when there is no parent console (started from Explorer): nobody reads it.
+    #[cfg(windows)]
+    #[allow(unsafe_code)] // Win32 console calls; no safe wrapper exists
+    pub fn attach_to_parent() {
+        use std::fs::OpenOptions;
+        use std::os::windows::io::AsRawHandle;
+        use windows_sys::Win32::System::Console::{
+            ATTACH_PARENT_PROCESS, AttachConsole, GetStdHandle, STD_ERROR_HANDLE,
+            STD_OUTPUT_HANDLE, SetStdHandle,
+        };
+        // SAFETY: plain Win32 calls with valid constants; the handle passed to `SetStdHandle` is leaked on purpose
+        // (the process keeps it until it exits).
+        unsafe {
+            if AttachConsole(ATTACH_PARENT_PROCESS) == 0 {
+                return;
+            }
+            let Ok(console) = OpenOptions::new().write(true).open("CONOUT$") else {
+                return;
+            };
+            for which in [STD_OUTPUT_HANDLE, STD_ERROR_HANDLE] {
+                let current = GetStdHandle(which);
+                // A GUI process starts with no handle; one that exists is a redirect and stays.
+                if current.is_null() || current as isize == -1 {
+                    SetStdHandle(which, console.as_raw_handle().cast());
+                }
+            }
+            std::mem::forget(console);
+        }
+    }
 }
 
 /// One branded line when the app is started from a terminal: the version and what the host decided for the renderer.

@@ -4,7 +4,7 @@ Two workflows live in `.github/workflows/`. Neither can be run locally; `actionl
 
 ## Getting the AppImage
 - **Every push to `develop`:** open the `release` run in the Actions tab, then download the artifact `hypotaxis-linux-x86_64-appimage` (the `.AppImage` and `SHA256SUMS`, kept 30 days). Windows (`hypotaxis-windows-x86_64-nsis`) and macOS (`hypotaxis-macos-aarch64-dmg`) bundles are there too when those jobs built.
-- **A tag `vX.Y.Z`:** push a tag that equals `version` in `apps/desktop/src-tauri/tauri.conf.json` (the build fails when they differ). The `release` job then publishes a GitHub release with the AppImage, the other bundles that built, and `SHA256SUMS`. Download from the repository's Releases page, or `gh release download vX.Y.Z -R aphesist/hypotaxis`.
+- **A tag `vX.Y.Z`:** push a tag that equals `version` in `apps/desktop/src-tauri/tauri.conf.json` (the build fails when they differ). The `release` job then publishes a GitHub release with the AppImage, the other bundles that built, `install.sh` and `install.ps1`, and `SHA256SUMS` over all of them. Download from the repository's Releases page, or `gh release download vX.Y.Z -R aphesist/hypotaxis`.
 - Verify: `sha256sum -c SHA256SUMS --ignore-missing`.
 
 ## Installing from a terminal
