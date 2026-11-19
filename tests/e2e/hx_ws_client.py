@@ -147,8 +147,10 @@ class GatewayClient:
         hermes_bin: str = "hermes",
         env: Mapping[str, str] | None = None,
         frames_log: Path | None = None,
+        profile: str | None = None,
     ) -> None:
         self.hermes_bin = hermes_bin
+        self.profile = profile  # a named profile: the ticket is bound to it, so every method acts on that profile
         self.env = dict(env) if env is not None else None
         self.frames_log = frames_log
         self.events: list[JsonObject] = []  # every ``event`` notification's params, in order
@@ -167,7 +169,14 @@ class GatewayClient:
 
     def attach(self) -> JsonObject:
         done = subprocess.run(
-            [self.hermes_bin, "gateway", "attach", "--json", "--start"],
+            [
+                self.hermes_bin,
+                *(["-p", self.profile] if self.profile else []),
+                "gateway",
+                "attach",
+                "--json",
+                "--start",
+            ],
             capture_output=True,
             text=True,
             timeout=120,

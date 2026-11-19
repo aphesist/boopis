@@ -12,6 +12,28 @@ import { orbButton } from './orbs';
 import { updateRow } from './list';
 import { focusConversation, openBot, paintToolbar, refreshPresence } from './room';
 import { checkClips } from './clips';
+import { openLiveSheet } from './settings-live';
+
+/** a section of the sheet: the library's, open, with its kids in its body */
+export function sectionOf(name: string, label: string, meta: string | null, kids: Array<Node | null>): HTMLElement {
+  const s = ui.section({ label, meta: meta ? esc(meta) : '', open: true, name });
+  s.querySelector('.ui-sec__body')?.append(...kids.filter((k): k is Node => !!k));
+  return s;
+}
+export const hintOf = (text: string): HTMLElement => el('p', { class: 'ui-field__hint', text });
+/** the headers are the sheet's tab stops: up and down move between them, home and end jump (KEYMAP section 9) */
+export function wireSectionKeys(body: HTMLElement): HTMLElement[] {
+  const heads = [...body.querySelectorAll<HTMLElement>('.ui-sec__head')];
+  heads[0]?.setAttribute('data-hx-focus', 'panel');
+  body.addEventListener('keydown', (e) => {
+    const h = (e.target as Element).closest<HTMLElement>('.ui-sec__head'); if (!h || e.target !== h || e.altKey || e.ctrlKey || e.metaKey) return;
+    const i = heads.indexOf(h);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); const n = heads[(i + (e.key === 'ArrowDown' ? 1 : heads.length - 1)) % heads.length]; n?.focus(); n?.scrollIntoView({ block: 'nearest' }); }
+    if (e.key === 'Home') { e.preventDefault(); heads[0]?.focus(); }
+    if (e.key === 'End') { e.preventDefault(); heads[heads.length - 1]?.focus(); }
+  });
+  return heads;
+}
 
 export function toggleSettings(): boolean { if (S.sheetOpen) { closeSettings(); focusConversation(); } else openSettings(S.sel); return true; }
 
@@ -23,6 +45,8 @@ export function openSettings(id: string | null, focusSection?: string | null, op
   const sh = S.sheet; sh.textContent = ''; sh.hidden = false;
   sh.setAttribute('aria-label', 'Settings for ' + b.name);
   emit('hx:view-inset', { source: 'bots', tab: 'bots', right: sh.offsetWidth });
+  /* a bot that is a real Hermes profile has its own sheet: it edits the profile, and shows each write before it is made */
+  if (b.info && data().bots.admin) { openLiveSheet(b, sh, focusSection ?? null, !!opts?.keepFocus); return; }
   const c = b.cfg;
   const catalog = data().bots.catalog();
   const push = (patch: Partial<BotConfig>): void => { data().bots.update(b.id, { cfg: patch }); };
@@ -32,12 +56,7 @@ export function openSettings(id: string | null, focusSection?: string | null, op
   close.addEventListener('click', () => { closeSettings(); focusConversation(); });
   const head = el('header', { class: 'ui-panel__head' }, [el('h2', { class: 'ui-panel__title', text: 'Bot settings' }), close]);
   const body = el('div', { class: 'ui-panel__body' });
-  const sec = (name: string, label: string, meta: string | null, kids: Array<Node | null>): HTMLElement => {
-    const s = ui.section({ label, meta: meta ? esc(meta) : '', open: true, name });
-    s.querySelector('.ui-sec__body')?.append(...kids.filter((k): k is Node => !!k));
-    return s;
-  };
-  const hint = (text: string): HTMLElement => el('p', { class: 'ui-field__hint', text });
+  const sec = sectionOf, hint = hintOf;
 
   /* role and instructions */
   const roleF = ui.field({ label: 'Role, shown under its name', value: b.role });
@@ -112,15 +131,7 @@ export function openSettings(id: string | null, focusSection?: string | null, op
     sec('approvals', 'Ask me before', null, [hint('It pauses and sends you an approval card.'), appr]),
     sec('workspace', 'Workspace', c.workspace, [ws, wsHint])
   );
-  const heads = [...body.querySelectorAll<HTMLElement>('.ui-sec__head')];
-  heads[0]?.setAttribute('data-hx-focus', 'panel');
-  body.addEventListener('keydown', (e) => {
-    const h = (e.target as Element).closest<HTMLElement>('.ui-sec__head'); if (!h || e.target !== h || e.altKey || e.ctrlKey || e.metaKey) return;
-    const i = heads.indexOf(h);
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); const n = heads[(i + (e.key === 'ArrowDown' ? 1 : heads.length - 1)) % heads.length]; n?.focus(); n?.scrollIntoView({ block: 'nearest' }); }
-    if (e.key === 'Home') { e.preventDefault(); heads[0]?.focus(); }
-    if (e.key === 'End') { e.preventDefault(); heads[heads.length - 1]?.focus(); }
-  });
+  const heads = wireSectionKeys(body);
 
   const archive = ui.button({ label: 'Archive ' + b.name });
   const archLabel = el('span', { class: 'bt-arch-label', text: 'Archive ' + b.name });

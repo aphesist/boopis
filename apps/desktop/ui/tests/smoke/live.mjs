@@ -1,7 +1,7 @@
 /* The Sessions section on the live provider over recorded frames (a real gateway's and plugin's answers, replayed;
    `?provider=live-replay`): it must boot without errors, show what the recording says, and show no mock content, in the
-   list, the conversation, the details panels, the composer and the dock. Bots and schedules (phase 2) stay mock, so
-   they must say Preview. */
+   list, the conversation, the details panels, the composer and the dock. The bots are Hermes profiles, and the recording
+   has no roster: the Bots tab must show none of the mock's, not say Preview, and open on the form that makes the first. */
 import { check, scenario } from './harness.mjs';
 
 /* words only the mock's data contains (data/mock-data.ts) */
@@ -42,14 +42,17 @@ export async function liveSessions(env) {
     check('live', 'a turn plays back: its blank is asked in the conversation and waits in the dock, and its tool output reaches the Output panel', after.asked === 1 && after.blank && after.question && after.waits >= 1 && /\$ ship src\/a\.py/.test(after.output) && /PASS/.test(after.output), after);
 
     const dock = await text(page, '#hx-dock');
-    check('live', 'the dock shows no mock content outside the bots and schedules pages, and says Preview on them', leaks(dock.replace(/Preview/g, '')).length === 0 || /Preview/.test(dock), { leaks: leaks(dock), preview: /Preview/.test(dock) });
+    check('live', 'the dock shows no mock content, and nothing in it is marked a preview', leaks(dock).length === 0 && !/Preview/.test(dock), { leaks: leaks(dock), preview: /Preview/.test(dock) });
     const previews = await page.evaluate(() => document.querySelectorAll('#hx-dock .dk-preview').length);
-    check('live', 'the dock marks its bots page as a preview', previews >= 1, previews);
+    check('live', 'the dock marks no page as a preview: its bots and schedules are Hermes\u2019s', previews === 0, previews);
 
     await page.keyboard.press('Alt+2');
     await page.waitForTimeout(700);
-    const bots = await page.evaluate(() => ({ note: document.querySelector('.bt-preview')?.textContent ?? '', attention: [...document.querySelectorAll('[role="tab"][data-value="bots"] .ui-dot[data-show]')].length }));
-    check('live', 'the Bots tab says Preview and its sample bots raise no attention', /Preview/.test(bots.note) && bots.attention === 0, bots);
+    const bots = await page.evaluate(() => ({
+      note: document.querySelector('.bt-preview')?.textContent ?? '', rows: document.querySelectorAll('.bt-rows .ui-row:not(.bt-row--draft)').length,
+      form: !!document.querySelector('.bt-new:not([hidden]) .bt-name'), attention: [...document.querySelectorAll('[role="tab"][data-value="bots"] .ui-dot[data-show]')].length
+    }));
+    check('live', 'the Bots tab is not a preview, lists no sample bot, and opens on the form that makes the first', bots.note === '' && bots.rows === 0 && bots.form && bots.attention === 0, bots);
   });
   await s.close();
 }

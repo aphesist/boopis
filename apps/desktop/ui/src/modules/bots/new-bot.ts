@@ -57,13 +57,14 @@ function buildNew(seed?: Partial<Draft>): void {
   const back = S.bots.length ? ui.iconButton({ icon: 'close', label: 'Close new bot', keys: 'esc' }) : null;
   if (back) { back.classList.add('bt-new-close'); back.addEventListener('click', () => { openBot(S.sel); focusConversation(); }); }
 
+  const goRow = el('div', { class: 'bt-go-row' }, go);
   const form = el('div', { class: 'bt-new-form' }, [
     el('div', { class: 'bt-stage' }, pv),
     el('div', { class: 'bt-name-row' }, [nameIn, dice]),
     note,
     el('div', { class: 'bt-appearance' }, [tabs, row]),
     el('div', { class: 'bt-new-field' }, roleField),
-    el('div', { class: 'bt-go-row' }, go)
+    goRow
   ]);
   const sugg = data().bots.catalog().suggestions;
   const suggest = sugg.length ? el('section', { class: 'bt-suggest', 'aria-label': 'Suggestions' }, [
@@ -186,8 +187,47 @@ function buildNew(seed?: Partial<Draft>): void {
   roleIn.addEventListener('input', () => { d.role = roleIn.value; });
   go.addEventListener('click', () => create());
 
+  /* A live bot is a Hermes profile, a folder of its own: say which one, and which model it starts on, before making it */
+  function confirmLive(admin: NonNullable<ReturnType<typeof data>['bots']['admin']>): void {
+    const plan = admin.planCreate(d.name);
+    const models = admin.models();
+    let model = plan.model;
+    const box = el('section', { class: 'bt-confirm', role: 'group', 'aria-label': 'Make ' + plan.profile }, [
+      el('p', { class: 'bt-confirm-line', text: 'This makes a Hermes profile for ' + plan.profile + ', a folder of its own. Its instructions, memory, skills and schedule live there.' }),
+      plan.folder ? el('p', { class: 'bt-confirm-path ui-mono', text: plan.folder }) : null,
+      ...plan.notes.map((n) => el('p', { class: 'bt-confirm-line bt-confirm-note', text: n }))
+    ]);
+    if (models.length) {
+      const f = ui.field({ kind: 'select', label: 'Model', options: models, value: model ?? models[0] ?? '', hint: 'From the providers Hermes has keys for. You can change it later in its settings.' });
+      $<HTMLSelectElement>('select', f).addEventListener('change', (e) => { model = (e.target as HTMLSelectElement).value; });
+      model = model ?? models[0] ?? null;
+      box.append(f);
+    }
+    const err = el('p', { class: 'bt-confirm-err', role: 'alert' });
+    const back = ui.button({ label: 'Back' });
+    const make = ui.button({ label: 'Make ' + plan.profile, variant: 'primary' });
+    const acts = el('div', { class: 'bt-confirm-acts' }, [back, make]);
+    box.append(err, acts);
+    go.hidden = true; goRow.append(box);
+    const leave = (): void => { box.remove(); go.hidden = false; go.disabled = false; go.focus({ preventScroll: true }); };
+    back.addEventListener('click', leave);
+    box.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); leave(); } });
+    make.addEventListener('click', () => {
+      make.disabled = true; back.disabled = true; err.textContent = '';
+      setReact(preview, 'thinking');
+      admin.create({ name: d.name, role: d.role, shape: d.shape, color: d.color, eyes: d.eyes, instructions: d.role.trim() }, { model })
+        .then((nb) => {
+          setReact(preview, 'done');
+          later(() => { openBot(nb.id); emit('hx:bot-select', { id: nb.id, from: 'bots-new' }); }, 900);
+        })
+        .catch((e: unknown) => { setReact(preview, 'idle'); make.disabled = false; back.disabled = false; err.textContent = 'Hermes did not make it: ' + (e instanceof Error ? e.message : String(e)); });
+    });
+    requestAnimationFrame(() => make.focus({ preventScroll: true }));
+  }
   function create(): void {
     if (!d.name.trim()) { d.name = botNames.pick(); rolledOut = botNames.exhausted(); nameIn.value = d.name; paintDraftRow(); }
+    const admin = data().bots.admin;
+    if (admin) { confirmLive(admin); return; }
     const nb = data().bots.create({ name: d.name, role: d.role, shape: d.shape, color: d.color, eyes: d.eyes, instructions: d.role.trim() });
     const id = nb.id;
     setReact(preview, 'done');

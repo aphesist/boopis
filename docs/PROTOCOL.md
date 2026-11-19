@@ -93,6 +93,12 @@ Methods are registered with `ctx.register_rpc(name, handler)` and appear as `plu
 | `mod.unload` | `{session_id, plugin?}` | `{unloaded}`. Disables one mod, or every mod of the session: the kill switch |
 | `mod.install.prepare` | `{source}` | the install prompt: `{plugin, slug, version, sha, tree_sha256, hooks[], calls[], modules[], dynamic, notes[]}`. Reads and analyses; runs nothing |
 | `mod.install.confirm` | `{source, tree_sha256, cwd?}` | `{installed, slug, path, trusted_for, not_done[]}`. Copies only if the hash is the one shown, writes `lock.json`, approves the content for `cwd` |
+| `bots.read` | `{}` | `{root, bots: [{name, path, record, problem, archived}]}`: every teammate's own store (`<profile>/boopis/bot.json`: look, settings, approvals) and whether it is archived. Teammates are Hermes profiles (ADR-0006); everything else about one is Hermes's `profiles.*` and `cron.manage` |
+| `bots.write` | `{name, look?, settings?, approvals?}` | `{record}`. Merges into the teammate's store. Never a Hermes key; the default profile and archived teammates are refused (`hx.bots.refused`) |
+| `bots.inspect` | `{name}` | `{path, bytes, files, truncated, has_sessions, memory_files, skills, boopis_bytes}`: what deleting it would remove, counted on disk |
+| `bots.archive` | `{name, paused_jobs?}` | `{name, path, was}`. Hermes's `profile rename` to `archived--<name>` (nothing destroyed, the name is free); `paused_jobs` are the routines the caller paused, kept for the way back |
+| `bots.restore` | `{name}` | `{name, path, paused_jobs}`. The way back; `hx.bots.exists` when the name was taken meanwhile |
+| `bots.delete` | `{name, confirm}` | `{deleted, path}`. Hermes's `profile delete`; `confirm` must be the name (`hx.bots.refused` otherwise) |
 | `compat.inventory` | `{cwd}` | `{items: CompatItem[], trust: TrustState}` |
 | `trust.set` | `{cwd, decision: "trust"\|"deny", content_hash}` | `{}` |
 

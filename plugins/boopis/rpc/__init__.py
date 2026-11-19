@@ -40,6 +40,12 @@ CAPABILITIES = (
     "mod.unload",
     "mod.install.prepare",
     "mod.install.confirm",
+    "bots.read",
+    "bots.write",
+    "bots.inspect",
+    "bots.archive",
+    "bots.restore",
+    "bots.delete",
 )
 DEFAULT_TAIL_LIMIT = 200
 MAX_TAIL_LIMIT = 1000
@@ -204,11 +210,13 @@ def prices_refresh(params: Mapping[str, Any], *, session_id: str | None = None, 
 
 
 def handlers() -> dict[str, Handler]:
+    from ..bots.rpc import HANDLERS as BOT_HANDLERS
     from ..forms.rpc import form_cancel, form_list, form_submit
     from ..mods.rpc import HANDLERS as MOD_HANDLERS
 
     return {
         **MOD_HANDLERS,
+        **BOT_HANDLERS,
         "form.submit": form_submit,
         "form.cancel": form_cancel,
         "form.list": form_list,

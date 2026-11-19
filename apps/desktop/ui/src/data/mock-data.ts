@@ -2,8 +2,9 @@
    other sessions' histories, the diff, the bots' own data, the dock's last messages and schedules). Only
    mock-provider.ts reads this file. It is test and development data (STANDARDS section 1 rule 4): the live provider
    never falls back to it. */
+import { APPROVALS, SUGGESTIONS } from './bot-catalog';
 import type {
-  ApprovalData, Bot, BotCatalog, BotConfig, BotSuggestion, Change, Connector, ContextUsage, DecisionKind, DiffFile, Environment, GovernanceState,
+  ApprovalData, Bot, BotCatalog, BotConfig, Change, Connector, ContextUsage, DecisionKind, DiffFile, Environment, GovernanceState,
   LedgerStats, Schedule, SessionSummary, Step, Todo, Turn, User
 } from './types';
 
@@ -109,16 +110,8 @@ export const CATALOG: BotCatalog = {
     { id: 'app', name: 'This app', hint: 'always on' }, { id: 'slack', name: 'Slack', hint: '#billing-alerts' },
     { id: 'telegram', name: 'Telegram', hint: '@enzo' }, { id: 'email', name: 'Email', hint: 'enzo@boopis.dev' }
   ],
-  approvals: [
-    { id: 'deploys', name: 'Deploying anywhere' }, { id: 'push', name: 'Pushing to protected branches' }, { id: 'network', name: 'Reaching the network' },
-    { id: 'spend', name: 'Spending past the run cap' }, { id: 'people', name: 'Messaging people' }, { id: 'outside', name: 'Writing outside its workspace' }
-  ],
-  suggestions: [
-    { name: 'night shift', desc: 'Works overnight and preps your morning digest', shape: 'hexagon', color: '#f5a337' },
-    { name: 'inbox triage', desc: 'Sorts your email and drafts replies in your voice', shape: 'cloud', color: '#f472b6' },
-    { name: 'chief of staff', desc: 'Manages your calendar and pulls your notes together', shape: 'squircle', color: '#ef4444' },
-    { name: 'flaky test hunter', desc: 'Reruns failing tests and opens a fix when it finds one', shape: 'squircle', color: '#2fd26a' }
-  ] satisfies BotSuggestion[]
+  approvals: APPROVALS,
+  suggestions: SUGGESTIONS
 };
 
 export const SCHEDULES: readonly Schedule[] = [

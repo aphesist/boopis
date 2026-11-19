@@ -145,3 +145,38 @@ orb-avatar.is-live { cursor: pointer; }
 .bt-sugg { --sq-line: var(--hair); }
 .bt-sugg:hover { --sq-line: var(--line); }
 .bt-opt[aria-checked="true"] { --sq-line: var(--brass); }
+
+/* a live bot's room: what Hermes reports about its profile, where a thread would be */
+.bt-glance { margin-left: var(--hx-margin-w, var(--margin-w)); display: grid; gap: var(--sp-2); justify-items: start; }
+[data-margin="off"] .bt-glance { margin-left: 0; }
+.bt-glance-h { padding-inline: 0; margin: var(--sp-3) 0 0; }
+.bt-glance-line { margin: 0; font-size: var(--fs-s); line-height: 1.5; color: var(--text-dim); max-width: 60ch; }
+.bt-glance-note { font-size: var(--fs-xs); color: var(--text-quiet); }
+.bt-glance-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-1); width: 100%; max-width: 60ch; }
+.bt-glance-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-3); padding-block: var(--sp-1); border-bottom: 1px solid var(--line); min-width: 0; }
+.bt-glance-title { font-size: var(--fs-s); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.bt-glance-meta { font-size: var(--fs-2xs); color: var(--text-quiet); flex: none; }
+
+/* making a live bot: the folder it creates, confirmed first */
+.bt-confirm { display: grid; gap: var(--sp-2); padding: var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); width: 100%; }
+.bt-confirm-line { margin: 0; font-size: var(--fs-s); line-height: 1.5; color: var(--text-dim); }
+.bt-confirm-note { color: var(--text-quiet); font-size: var(--fs-xs); }
+.bt-confirm-path { margin: 0; font-size: var(--fs-xs); color: var(--text); overflow-wrap: anywhere; user-select: all; }
+.bt-confirm-err { margin: 0; font-size: var(--fs-xs); color: var(--red-text); }
+.bt-confirm-err:empty { display: none; }
+.bt-confirm-acts { display: flex; gap: var(--sp-2); justify-content: flex-end; }
+
+/* the live sheet: the diff to review, the question before a delete, the routines */
+.bt-review { display: grid; gap: var(--sp-2); padding: var(--sp-3); margin-bottom: var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); }
+.bt-review[hidden] { display: none; }
+.bt-review-h { margin: 0; font-size: var(--fs-s); font-weight: 600; color: var(--text); }
+.bt-review-acts { display: flex; gap: var(--sp-2); justify-content: flex-end; flex-wrap: wrap; }
+.bt-gone-list { margin: 0; padding-left: var(--sp-4); display: grid; gap: var(--sp-1); font-size: var(--fs-xs); color: var(--text-dim); }
+.bt-routines { list-style: none; margin: 0 0 var(--sp-2); padding: 0; display: grid; gap: var(--sp-1); }
+.bt-routine { display: flex; align-items: center; gap: var(--sp-2); }
+.bt-routine > :first-child { flex: 1; min-width: 0; }
+.bt-routine.is-going { opacity: .6; }
+.bt-routine-text { display: grid; gap: 2px; font-size: var(--fs-s); }
+.bt-routine-note { font-size: var(--fs-xs); color: var(--text-quiet); }
+.bt-add-row { display: flex; justify-content: flex-end; margin-top: var(--sp-2); }
+.bt-caps { display: grid; gap: var(--sp-1); }

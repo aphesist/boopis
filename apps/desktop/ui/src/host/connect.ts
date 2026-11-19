@@ -13,6 +13,6 @@ export async function connectLive(profile: string | null = null): Promise<DataPr
   const client = new GatewayClient(tauriBridge());
   await client.connect(profile);
   registerPlanSource(() => loadPlan(client));   /* Settings and Diagnostics ask Hermes about the plan through this connection */
-  const provider: LiveProvider = createLiveProvider({ client });
+  const provider: LiveProvider = createLiveProvider({ client, linkTo: async (name) => { const c = new GatewayClient(tauriBridge()); await c.connect(name); return c; } });
   return provider;
 }

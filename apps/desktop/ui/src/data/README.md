@@ -92,9 +92,23 @@ The v6 mock-up read `HX.data` (the `data.js` file) and mutated it from three mod
 
 **Reconnect and replay.** The host replays missed events itself (`session.events.since`). The provider rereads what events would have carried: after a `connection.state` `ready` with `reconnected` it rereads the session list, the MCP servers and every open session's details; after `connection.replay_gap` it reloads that session's transcript and details. Blanks are rebuilt from `ledger.tail`, so one opened before a restart is still asked.
 
-**Still the mock's, named in `MOCK_SOURCES`:** `bots`, `schedules` (phase 2) and the `feedforward` catalog (the plugin's feedforward RPC is not built). `provider.info.preview` names them and the UI marks them **Preview** (the Bots tab, the dock's bots and scheduled pages, the palette) and keeps them out of attention counts. The feedforward reading is off in a live build unless the preview flag is on (`hx.v6.preview` = `{"feedforward": true}`, or `VITE_PREVIEW_FEEDFORWARD=1`), and its assumption row then ends with "preview: not read by the agent". Dictation hears nothing and the file picker returns nothing: the mock's transcript and file would be invented. `sessions.openPullRequest` is not wired and says so in the log. Not wired yet either, and refused with a reason rather than pretended: Smart (automatic model choice), changing the cap, changing the model of a session that has started, switching a connector, signing in. If the host cannot reach Hermes the app shows a notice with the error code; it never falls back to the mock.
+**Bots and schedules are live** (`live/bots.ts`, `live/map-bots.ts`): a bot is a Hermes profile (ADR-0006), never the mock's.
 
-**Tests without a host.** `host/replay.ts` plays recorded frames as the transport (`ReplayHost`); the unit tests and, in the e2e build only, `?provider=live-replay&frames=session` use it (`tests/smoke/live.mjs`).
+| Source | From |
+|---|---|
+| `bots` (the roster, role, model, skills, toolsets, SOUL.md) | `profiles.list`, `profiles.describe`; the name is the profile's display name, else its profile name; the default profile is not a teammate |
+| `bots` model choices | `model.options` of the attached profile (a profile argument is refused with `profile_mismatch`); a new profile mirrors those keys |
+| a bot's schedule and recent sessions | `cron.manage` and `session.list` on the teammate's own link: `connect(profile)` is Hermes's `gateway attach` bound to that profile (the `profile` param of those methods is refused on the user's link) |
+| running | Hermes's own "active now" rule: it or a worker of it wrote within 90 s (`info.running`; null when Hermes sends neither) |
+| `bots.admin` create, save, archive, restore, delete | `profiles.create` (`no_alias`), `profiles.configure`, `plugin.boopis.bots.*` (Hermes's `profile rename` and `profile delete` through its CLI: the gateway has no method for either) |
+| a bot's look and boopis's own settings | the plugin's store, `<profile>/boopis/bot.json`; a bot with no look has the one its name gives it (`data/looks.ts`), never stored until it is changed |
+| `schedules` | the teammates' jobs: pause and resume through `cron.manage`; Hermes has no run-now method, so `runNow` is `unavailable` |
+
+What a teammate cannot do yet is not pretended: it cannot be messaged (`unavailable['bots.send']`: no composer in the room or the dock, an empty thread), and channels are Hermes's own, so only "This app" is listed. The modules use `bots.admin` when it is there (a live bot: confirm the folder before creating, the diff of each file before saving, archive by default) and the mock's flow otherwise.
+
+**Still the mock's, named in `MOCK_SOURCES`:** the `feedforward` catalog (the plugin's feedforward RPC is not built). `provider.info.preview` names it and the UI marks it **Preview** and keeps it out of attention counts. The feedforward reading is off in a live build unless the preview flag is on (`hx.v6.preview` = `{"feedforward": true}`, or `VITE_PREVIEW_FEEDFORWARD=1`), and its assumption row then ends with "preview: not read by the agent". Dictation hears nothing and the file picker returns nothing: the mock's transcript and file would be invented. `sessions.openPullRequest` is not wired and says so in the log. Not wired yet either, and refused with a reason rather than pretended: Smart (automatic model choice), changing the cap, changing the model of a session that has started, switching a connector, signing in. If the host cannot reach Hermes the app shows a notice with the error code; it never falls back to the mock.
+
+**Tests without a host.** `host/replay.ts` plays recorded frames as the transport (`ReplayHost`); the unit tests and, in the e2e build only, `?provider=live-replay&frames=session` use it (`tests/smoke/live.mjs`). The bots are tested against a fake Hermes (`live/bots.test.ts`), the Bots tab against the provider interface (`modules/bots/live-bots.test.ts`), and end to end against a real Hermes (`tests/e2e/test_bots_e2e.py`).
 
 ## Writing the live provider
 

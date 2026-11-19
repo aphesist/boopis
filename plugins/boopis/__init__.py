@@ -44,6 +44,12 @@ RPC_METHODS = (
     "mod.unload",
     "mod.install.prepare",
     "mod.install.confirm",
+    "bots.read",
+    "bots.write",
+    "bots.inspect",
+    "bots.archive",
+    "bots.restore",
+    "bots.delete",
 )
 
 

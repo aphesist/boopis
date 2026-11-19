@@ -6,9 +6,11 @@
    number ("nova-2") and `exhausted` says so. The functions take the names in use as an argument so they are pure;
    `botNames` binds them to the bots the module holds (which the provider keeps current). */
 import list from '../../../../../shared/data/bot-names.json';
-import { botIdBase } from '../../data/bot-id';
+import { botIdBase, numbered } from '../../data/bot-id';
 import { data } from '../../data';
 import { S } from './model';
+
+export { numbered };
 
 /** names as the list means them: trimmed, lower case, once each, in the order given */
 export function normaliseNames(raw: readonly unknown[]): string[] {
@@ -25,12 +27,6 @@ export function namesInUse(bots: ReadonlyArray<{ id?: string; name?: string }>):
 export const isTaken = (name: string, used: ReadonlySet<string>): boolean => used.has(String(name || '').trim().toLowerCase());
 export const availableNames = (pool: readonly string[], used: ReadonlySet<string>): string[] => pool.filter((n) => !used.has(n));
 export const isExhausted = (pool: readonly string[], used: ReadonlySet<string>): boolean => !availableNames(pool, used).length;
-/** `base` with the lowest number from 2 that `inUse` does not know */
-export function numbered(base: string, inUse: (name: string) => boolean): string {
-  let n = 2;
-  while (inUse(base + '-' + n)) n++;
-  return base + '-' + n;
-}
 export interface PickOpts {
   /** names to keep out of the answer while another is free: a reroll never lands on what is already in the field */
   avoid?: string | readonly string[];
@@ -59,7 +55,11 @@ export const isRollKey = (e: Pick<KeyboardEvent, 'altKey' | 'ctrlKey' | 'metaKey
   e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.code === 'KeyR';
 
 /** the bots whose names are in use: the module's copy, kept current by the provider's events, else the provider's own list */
-const existing = (): ReadonlyArray<{ id: string; name: string }> => (S.bots.length ? S.bots : data().bots.snapshot().bots);
+const existing = (): ReadonlyArray<{ id: string; name: string }> => [
+  ...(S.bots.length ? S.bots : data().bots.snapshot().bots),
+  /* names the provider keeps for itself (Hermes's own `default`) are in use however many bots exist */
+  ...(data().bots.catalog().reserved ?? []).map((n) => ({ id: n, name: n }))
+];
 export const botNames = {
   available: (): string[] => availableNames(NAME_POOL, namesInUse(existing())),
   taken: (name: string): boolean => isTaken(name, namesInUse(existing())),

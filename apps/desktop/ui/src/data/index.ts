@@ -9,3 +9,4 @@ export function data(): DataProvider {
 }
 export type * from './types';
 export type * from './provider';
+export { NeedsConfirmation } from './confirm';

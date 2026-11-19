@@ -68,6 +68,12 @@ def test_register_wires_hooks_rpc_and_the_prompt_section() -> None:
         "mod.unload",
         "mod.install.prepare",
         "mod.install.confirm",
+        "bots.read",
+        "bots.write",
+        "bots.inspect",
+        "bots.archive",
+        "bots.restore",
+        "bots.delete",
     }
     assert set(ctx.rpc) == own | set(compat.RPC_METHODS)
     assert list(ctx.sections) == ["boopis"]

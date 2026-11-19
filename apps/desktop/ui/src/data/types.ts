@@ -36,6 +36,42 @@ export interface Bot {
   /** a few things to ask it, shown on an empty thread */
   ideas: readonly string[];
   cfg: BotConfig;
+  /** what Hermes reports about the profile this bot is (the live provider's; the mock's bots have none) */
+  info?: BotInfo;
+}
+/** one scheduled job of a bot's profile, as Hermes's cron store reports it */
+export interface BotJob {
+  id: string; name: string;
+  /** Hermes's own schedule string: a cron expression, "every 2h", "30m", a timestamp */
+  schedule: string;
+  /** the start of the job's prompt, as Hermes shows it */
+  prompt: string;
+  enabled: boolean;
+  /** "in 3 h", "monday 09:00": when it runs next, '' when Hermes gives no time */
+  next: string;
+  /** how the last run ended, as Hermes says ('ok', 'error'), null when it has not run */
+  last: string | null;
+}
+/** a session of a bot's profile (a thread: a chat, a routine's run, a delegated job) */
+export interface BotSession { id: string; title: string; when: string; messages: number | null; source: string }
+export interface BotCapability { name: string; label: string; enabled: boolean }
+/** What Hermes reports about a teammate. A field Hermes has not answered (yet) is `null` and the UI shows it as unknown;
+ *  `notes` says why, in words. Never filled with a guess. */
+export interface BotInfo {
+  /** the Hermes profile's name and folder */
+  profile: string; path: string;
+  /** `provider/model` as Hermes has it pinned, null when the profile has none or Hermes has not said */
+  model: string | null; provider: string | null;
+  skills: readonly BotCapability[] | null;
+  toolsets: readonly BotCapability[] | null;
+  mcpServers: readonly BotCapability[] | null;
+  jobs: readonly BotJob[] | null;
+  sessions: readonly BotSession[] | null;
+  /** SOUL.md as saved; null until read */
+  soul: string | null;
+  /** Hermes's own "active now" rule: it wrote within the last 90 seconds, or a worker of it did. null: unknown */
+  running: boolean | null;
+  notes: Readonly<Partial<Record<'detail' | 'jobs' | 'sessions' | 'store', string>>>;
 }
 export interface BotDraft { name: string; role: string; shape: string; color: string; eyes: string }
 export interface BotSuggestion { name: string; desc: string; shape: string; color: string }
@@ -47,6 +83,8 @@ export interface BotCatalog {
   /** what it asks before doing */
   approvals: readonly Choice[];
   suggestions: readonly BotSuggestion[];
+  /** names a bot cannot take (Hermes's own `default`, and the prefix an archived profile carries); the live provider's */
+  reserved?: readonly string[];
 }
 
 /** an approval request: the data of an `approval` card */

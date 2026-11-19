@@ -95,6 +95,10 @@
     {"code": "hx.form.timeout", "rpc_code": -32000, "description": "`wait=true` ran out of time before the form was answered. The form stays open and can still be answered."},
     {"code": "hx.form.secret_missing", "rpc_code": -32000, "description": "A secret field was reported as provided but the host holds no secret at its reference."},
     {"code": "hx.form.unsupported", "rpc_code": -32000, "description": "The form asks for something not available yet (for example a picker the host does not serve, or wait=true inside a cell past its timeout)."},
-    {"code": "hx.form.limit", "rpc_code": -32000, "description": "Too many forms are open in this session; answer or cancel one first."}
+    {"code": "hx.form.limit", "rpc_code": -32000, "description": "Too many forms are open in this session; answer or cancel one first."},
+    {"code": "hx.bots.not_found", "rpc_code": -32000, "description": "There is no teammate (Hermes profile) with that name."},
+    {"code": "hx.bots.exists", "rpc_code": -32000, "description": "A teammate with that name exists already (restoring an archived teammate whose name was taken again)."},
+    {"code": "hx.bots.refused", "rpc_code": -32000, "description": "The teammates' RPC refused: the default profile is not a teammate, an archived teammate is read only, or a delete was not confirmed with the teammate's name."},
+    {"code": "hx.bots.hermes_failed", "rpc_code": -32000, "description": "Hermes's own `profile rename` or `profile delete` failed. data.output is what it said."}
   ]
 }
