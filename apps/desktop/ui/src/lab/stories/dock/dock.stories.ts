@@ -41,8 +41,8 @@ const dock: Story = {
     'the schedules page': dockState(['variant'], {}, page('sched')),
     'no waits, no schedules (one bot)': dockState(['empty'], { bots: 'one' }, page('wait')),
     'orb hover': dockState(['hover'], {}, undefined, { force: [{ sel: '#hx-dock .dk-bot:nth-of-type(2)', state: 'hover' }] }),
-    'orb focus': dockState(['focus'], {}, async (c) => { c.$('#hx-dock .dk-bot').focus(); await c.wait(200); }, { force: [{ sel: '#hx-dock .dk-bot:first-of-type', state: 'focus' }] }),
-    'orb tooltip': dockState(['tooltip'], {}, async (c) => { const b = c.$('#hx-dock .dk-bot'); b.focus(); const t = b.closest<HTMLElement>('[data-tip]') ?? b; c.hx.ui.tooltip.show(t); await c.wait(250); })
+    'orb focus': dockState(['focus'], {}, async (c) => { c.$('#hx-dock .dk-bot').focus(); await c.wait(200); }, { force: [{ sel: '#hx-dock .dk-bot:first-of-type', state: 'focus' }], overlay: { anchor: '#hx-dock .dk-bot', layer: '.ui-tip' } }),
+    'orb tooltip': dockState(['tooltip'], {}, async (c) => { const b = c.$('#hx-dock .dk-bot'); b.focus(); const t = b.closest<HTMLElement>('[data-tip]') ?? b; c.hx.ui.tooltip.show(t); await c.wait(250); }, { overlay: { anchor: '#hx-dock .dk-bot', layer: '.ui-tip' } })
   }
 };
 

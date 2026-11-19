@@ -42,5 +42,7 @@ function enable(): void {
   document.addEventListener('focusout', hide);
   document.addEventListener('pointerdown', hide, true);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hide(); });
+  /* a window that resizes moves its controls (the dock slides to the new centre) and the tip does not follow: it hides, as an open menu closes (layer.ts), instead of standing where its control was */
+  window.addEventListener('resize', hide);
 }
 export const tooltip = { enable, show: (t: HTMLElement): void => show(t, true), hide, refresh: (t: HTMLElement): void => { if (cur === t) show(t, true); } };
