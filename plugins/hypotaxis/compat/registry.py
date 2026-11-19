@@ -18,6 +18,14 @@ CALLBACKS: tuple[tuple[str, str], ...] = (
     ("subagent_start", "subagent_start"),
     ("subagent_stop", "subagent_stop"),
     ("on_human_input_request", "on_human_input_request"),
+    # Claude Code mods (docs/MODS.md): the same bridge, the same Hermes hooks
+    ("pre_tool_call", "mod_pre_tool_call"),
+    ("transform_tool_result", "mod_transform_tool_result"),
+    ("pre_llm_call", "mod_pre_llm_call"),
+    ("post_llm_call", "mod_post_llm_call"),
+    ("pre_api_request", "mod_pre_api_request"),
+    ("on_session_start", "mod_on_session_start"),
+    ("on_session_finalize", "mod_on_session_finalize"),
 )
 HOOKS: tuple[str, ...] = tuple(dict.fromkeys(hook for hook, _ in CALLBACKS))
 RPC_METHODS: tuple[str, ...] = ("compat.inventory", "trust.set")

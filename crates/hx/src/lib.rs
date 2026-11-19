@@ -108,6 +108,7 @@ mod tests {
             "mods.input",
             "mods.select",
             "mods.reach",
+            "mods.analyze",
         ] {
             assert!(methods.contains(&m), "{m}");
         }

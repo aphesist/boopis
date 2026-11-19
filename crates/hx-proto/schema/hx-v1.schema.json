@@ -16,6 +16,77 @@
       ],
       "type": "object"
     },
+    "AnalyzeParams": {
+      "description": "Params of `mods.analyze`.",
+      "properties": {
+        "dir": {
+          "description": "The plugin directory. `hx` reads it, compiles each module and reads the result; nothing runs.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "dir"
+      ],
+      "type": "object"
+    },
+    "AnalyzeResult": {
+      "description": "Result of `mods.analyze`: what the install prompt shows before consent.",
+      "properties": {
+        "dynamic": {
+          "description": "True when any module could not be listed completely.",
+          "type": "boolean"
+        },
+        "entry_modules": {
+          "description": "The module files named in `hooks/hooks.json`.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "events": {
+          "description": "Every distinct event, sorted.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "modules": {
+          "description": "Per module.",
+          "items": {
+            "$ref": "#/$defs/ModuleReport"
+          },
+          "type": "array"
+        },
+        "namespaces": {
+          "description": "Every distinct `$` namespace, sorted.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "plugin": {
+          "description": "The plugin name from its manifest.",
+          "type": "string"
+        },
+        "version": {
+          "default": null,
+          "description": "The version, when the manifest has one.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "plugin",
+        "entry_modules",
+        "modules",
+        "events",
+        "namespaces",
+        "dynamic"
+      ],
+      "type": "object"
+    },
     "ApplyFailedData": {
       "description": "`data` of `hx.txn.apply_failed`.",
       "properties": {
@@ -796,6 +867,14 @@
           "description": "A hook answered (false when every hook passed or was skipped).",
           "type": "boolean"
         },
+        "answered_by": {
+          "default": null,
+          "description": "The mod whose hook answered, when one did.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "value": {
           "description": "What it returned; `null` when not answered."
         }
@@ -1556,6 +1635,40 @@
       "required": [
         "available",
         "platform"
+      ],
+      "type": "object"
+    },
+    "ModuleReport": {
+      "description": "What one module registers and calls.",
+      "properties": {
+        "calls": {
+          "description": "The `$` members it uses (`ui.open`, `fs.read`).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "dynamic": {
+          "description": "True when `$` escapes or is indexed by a variable, so `calls` may be incomplete.",
+          "type": "boolean"
+        },
+        "hooks": {
+          "description": "The events it registers hooks for.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "path": {
+          "description": "The plugin-relative path.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "hooks",
+        "calls",
+        "dynamic"
       ],
       "type": "object"
     },
@@ -3774,6 +3887,14 @@
       "params": null,
       "result": {
         "$ref": "#/$defs/DescribeResult"
+      }
+    },
+    "mods.analyze": {
+      "params": {
+        "$ref": "#/$defs/AnalyzeParams"
+      },
+      "result": {
+        "$ref": "#/$defs/AnalyzeResult"
       }
     },
     "mods.capabilities": {

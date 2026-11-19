@@ -28,6 +28,8 @@ pub const METHOD_INPUT: &str = "mods.input";
 pub const METHOD_SELECT: &str = "mods.select";
 /// `mods.reach`.
 pub const METHOD_REACH: &str = "mods.reach";
+/// `mods.analyze`.
+pub const METHOD_ANALYZE: &str = "mods.analyze";
 /// `mods.call`: sent by `hx` to the plugin, once per `$` call.
 pub const METHOD_CALL: &str = "mods.call";
 /// `mods.diagnostic`: a notification from `hx` to the plugin.
@@ -148,6 +150,9 @@ pub struct DispatchResult {
     pub answered: bool,
     /// What it returned; `null` when not answered.
     pub value: Value,
+    /// The mod whose hook answered, when one did.
+    #[serde(default)]
+    pub answered_by: Option<String>,
 }
 
 /// Params of `mods.render`.
@@ -235,6 +240,46 @@ pub struct CallParams {
     pub args: Value,
 }
 
+/// Params of `mods.analyze`.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct AnalyzeParams {
+    /// The plugin directory. `hx` reads it, compiles each module and reads the result; nothing runs.
+    pub dir: String,
+}
+
+/// What one module registers and calls.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct ModuleReport {
+    /// The plugin-relative path.
+    pub path: String,
+    /// The events it registers hooks for.
+    pub hooks: Vec<String>,
+    /// The `$` members it uses (`ui.open`, `fs.read`).
+    pub calls: Vec<String>,
+    /// True when `$` escapes or is indexed by a variable, so `calls` may be incomplete.
+    pub dynamic: bool,
+}
+
+/// Result of `mods.analyze`: what the install prompt shows before consent.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct AnalyzeResult {
+    /// The plugin name from its manifest.
+    pub plugin: String,
+    /// The version, when the manifest has one.
+    #[serde(default)]
+    pub version: Option<String>,
+    /// The module files named in `hooks/hooks.json`.
+    pub entry_modules: Vec<String>,
+    /// Per module.
+    pub modules: Vec<ModuleReport>,
+    /// Every distinct event, sorted.
+    pub events: Vec<String>,
+    /// Every distinct `$` namespace, sorted.
+    pub namespaces: Vec<String>,
+    /// True when any module could not be listed completely.
+    pub dynamic: bool,
+}
+
 /// Data of `hx.mods.unavailable`.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct UnavailableData {
@@ -262,6 +307,7 @@ pub fn add_schema(b: &mut hx_proto::schema::SchemaBuilder) {
     b.method::<HandlerParams, HandledResult>(METHOD_INPUT);
     b.method::<HandlerParams, HandledResult>(METHOD_SELECT);
     b.method::<ReachParams, ReachResult>(METHOD_REACH);
+    b.method::<AnalyzeParams, AnalyzeResult>(METHOD_ANALYZE);
     b.peer_method::<CallParams, Value>(METHOD_CALL);
     b.error_data::<UnavailableData>("hx.mods.unavailable");
     b.error_data::<WorkerFailedData>("hx.mods.worker_failed");

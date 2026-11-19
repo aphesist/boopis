@@ -238,5 +238,158 @@
     "**/id_ed25519*",
     "**/id_ecdsa*",
     ".hermes/hypotaxis.yaml"
-  ]
+  ],
+  "mod_capabilities": {
+    "_comment": "Each `$` call a mod makes: the capability it needs (docs/AUTOMATION.md section 3) and the decision when no rule says otherwise. `ask` opens a permission form; `refuse` is a call boopis does not provide yet. `subject` names the argument that is the capability's subject (a folder, a host).",
+    "calls": {
+      "ui.open": {
+        "capability": "mod.ui",
+        "default": "allow"
+      },
+      "ui.close": {
+        "capability": "mod.ui",
+        "default": "allow"
+      },
+      "ui.invalidate": {
+        "capability": "mod.ui",
+        "default": "allow",
+        "ledger": false
+      },
+      "ui.toast": {
+        "capability": "mod.ui",
+        "default": "allow"
+      },
+      "ui.status": {
+        "capability": "mod.ui",
+        "default": "allow"
+      },
+      "ui.log": {
+        "capability": "mod.ui",
+        "default": "allow"
+      },
+      "ui.notify": {
+        "capability": "mod.ui",
+        "default": "allow"
+      },
+      "ui.ask": {
+        "capability": "mod.ui",
+        "default": "allow"
+      },
+      "store.get": {
+        "capability": "mod.store",
+        "default": "allow"
+      },
+      "store.set": {
+        "capability": "mod.store",
+        "default": "allow"
+      },
+      "store.delete": {
+        "capability": "mod.store",
+        "default": "allow"
+      },
+      "store.keys": {
+        "capability": "mod.store",
+        "default": "allow"
+      },
+      "clock.now": {
+        "capability": "mod.clock",
+        "default": "allow",
+        "ledger": false
+      },
+      "clock.every": {
+        "capability": "mod.clock",
+        "default": "allow"
+      },
+      "clock.cancel": {
+        "capability": "mod.clock",
+        "default": "allow",
+        "ledger": false
+      },
+      "command.register": {
+        "capability": "mod.command",
+        "default": "allow"
+      },
+      "config.get": {
+        "capability": "mod.read",
+        "default": "allow"
+      },
+      "env.get": {
+        "capability": "mod.read",
+        "default": "allow"
+      },
+      "theme.set": {
+        "capability": "mod.theme",
+        "default": "allow"
+      },
+      "theme.clear": {
+        "capability": "mod.theme",
+        "default": "allow"
+      },
+      "session.messages": {
+        "capability": "session.read",
+        "default": "allow"
+      },
+      "fs.read": {
+        "capability": "fs.read",
+        "default": "ask",
+        "subject": "path"
+      },
+      "fs.write": {
+        "capability": "fs.write",
+        "default": "ask",
+        "subject": "path"
+      },
+      "http.fetch": {
+        "capability": "net.egress",
+        "default": "ask",
+        "subject": "url"
+      }
+    },
+    "refused_namespaces": [
+      "process",
+      "mcp",
+      "model",
+      "agent",
+      "tool",
+      "prompt",
+      "turn",
+      "settings",
+      "audio",
+      "telemetry"
+    ],
+    "limits": {
+      "store_bytes": 4194304,
+      "store_key_chars": 200,
+      "fs_bytes": 4194304,
+      "http_timeout_s": 30,
+      "http_bytes": 4194304,
+      "http_redirects": 5,
+      "messages_max": 4096,
+      "text_chars": 4000,
+      "toast_ms_default": 4000,
+      "toast_ms_max": 60000,
+      "ask_timeout_s": 600,
+      "calls_per_second": 200,
+      "command_name_chars": 64,
+      "panes_max": 8,
+      "commands_max": 64
+    },
+    "env_allowlist": [
+      "LANG",
+      "LC_ALL",
+      "TZ",
+      "TERM",
+      "COLORTERM",
+      "SHELL",
+      "EDITOR",
+      "VISUAL"
+    ],
+    "config_keys": [
+      "mode",
+      "cwd",
+      "model",
+      "surface",
+      "version"
+    ]
+  }
 }

@@ -9,6 +9,7 @@
 //! See `docs/MODS.md` for the plan and `docs/research/mods.md` for the mod API this implements.
 //! The crate is a library with tests; it is not wired into `hx` yet.
 
+pub mod analyze;
 mod error;
 mod files;
 #[cfg(feature = "dev-fixtures")]
@@ -24,7 +25,7 @@ pub mod wire;
 pub mod worker;
 
 pub use error::{Error, Result};
-pub use files::Bundle;
+pub use files::{Bundle, Files};
 pub use host::{CallId, Completion, HostCalls, HostError, HostReply, HostRequest};
 pub use manifest::Manifest;
 pub use runtime::{

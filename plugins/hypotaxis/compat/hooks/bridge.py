@@ -25,11 +25,12 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from .mod_events import ModEvents
 from .session_events import SessionEvents
 from .tool_events import ToolEvents
 
 
-class Bridge(ToolEvents, SessionEvents):
+class Bridge(ToolEvents, SessionEvents, ModEvents):
     def run_tool_event(
         self, phase: str, session_id: str, tool_name: str, args: Mapping[str, Any], **kw: Any
     ) -> dict[str, Any] | str | None:

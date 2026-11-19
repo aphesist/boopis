@@ -97,6 +97,16 @@ pub fn read(dir: &Files) -> Result<Manifest> {
     })
 }
 
+impl Manifest {
+    /// Reads both manifests of the plugin whose files are `files`.
+    ///
+    /// # Errors
+    /// As the module-level `read`: [`Error::Manifest`], [`Error::NotAMod`] or a read error.
+    pub fn read(files: &Files) -> Result<Self> {
+        read(files)
+    }
+}
+
 /// Orders `plugins` so every plugin comes after the ones it depends on. Dependencies that are not
 /// in the list are installed elsewhere and ignored. Otherwise the given order is kept.
 ///

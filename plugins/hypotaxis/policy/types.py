@@ -10,7 +10,7 @@ from ..config.model import Fallback, Mode
 
 DecisionKind = Literal["allow", "block", "approve", "modify"]
 Role = Literal["orchestrator", "worker"]
-CallSource = Literal["hook", "kernel", "kernel_sh"]
+CallSource = Literal["hook", "kernel", "kernel_sh", "mod"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,6 +24,9 @@ class ToolCall:
     session_id: str = ""
     tool_call_id: str = ""
     source: CallSource = "hook"
+    principal: str = ""  # who asks, when it is not the agent: ``mod:<plugin>`` (docs/MODS.md section 4)
+    capability: str = ""  # the capability the call needs (docs/AUTOMATION.md section 3), for a principal
+    subject: str = ""  # what the capability applies to: a path, a URL
 
 
 @dataclass(frozen=True, slots=True)

@@ -58,6 +58,7 @@ const METHODS: &[&str] = &[
     wire::METHOD_INPUT,
     wire::METHOD_SELECT,
     wire::METHOD_REACH,
+    wire::METHOD_ANALYZE,
 ];
 
 type Waiting = oneshot::Sender<Result<Value, Value>>;
@@ -253,6 +254,35 @@ impl ModsHandler {
         }
     }
 
+    /// Reads a plugin and says what it registers and calls, without running any of it. This needs
+    /// no worker: the files are read through `cap_std` and parsed by the (memory-safe) transform.
+    async fn analyze(params: Value) -> HandlerResult {
+        let p: wire::AnalyzeParams = parse_params(params)?;
+        let dir = std::path::PathBuf::from(p.dir);
+        let report = tokio::task::spawn_blocking(move || -> Result<Value, AppError> {
+            let load = |e: hx_mods::Error| AppError::new(codes::HX_MODS_LOAD_FAILED, e.to_string());
+            let bundle = hx_mods::Bundle::read(&dir).map_err(load)?;
+            let files = hx_mods::Files::Memory(bundle.clone());
+            let manifest = hx_mods::Manifest::read(&files).map_err(|e| match e {
+                hx_mods::Error::NotAMod(_) => AppError::new(codes::HX_MODS_NOT_A_MOD, e.to_string()),
+                other => load(other),
+            })?;
+            let analysis = hx_mods::analyze::analyze(&bundle).map_err(load)?;
+            Ok(json!({
+                "plugin": manifest.name,
+                "version": manifest.version,
+                "entry_modules": manifest.modules,
+                "modules": analysis.modules,
+                "events": analysis.events(),
+                "namespaces": analysis.namespaces(),
+                "dynamic": analysis.dynamic(),
+            }))
+        })
+        .await
+        .map_err(|e| AppError::internal(e.to_string()))??;
+        Ok(report)
+    }
+
     async fn unload(&self, params: Value) -> HandlerResult {
         let p: UnloadParams = parse_params(params)?;
         let Some(plugin) = p.plugin else {
@@ -317,6 +347,7 @@ impl Handler for ModsHandler {
                 wire::METHOD_CAPABILITIES => to_result(&Self::capabilities()),
                 wire::METHOD_LOAD => self.load(params).await,
                 wire::METHOD_UNLOAD => self.unload(params).await,
+                wire::METHOD_ANALYZE => Self::analyze(params).await,
                 wire::METHOD_LIST => self.list(params),
                 wire::METHOD_DISPATCH => {
                     let p: DispatchParams = parse_params(params)?;

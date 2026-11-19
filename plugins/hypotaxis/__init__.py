@@ -36,6 +36,14 @@ RPC_METHODS = (
     "form.submit",
     "form.cancel",
     "form.list",
+    "mod.press",
+    "mod.input",
+    "mod.select",
+    "mod.props",
+    "mod.list",
+    "mod.unload",
+    "mod.install.prepare",
+    "mod.install.confirm",
 )
 
 

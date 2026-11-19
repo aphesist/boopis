@@ -151,6 +151,8 @@ pub struct Answer {
     pub answered: bool,
     /// What it returned; `null` when not answered.
     pub value: Json,
+    /// The mod whose hook answered, when one did.
+    pub answered_by: Option<String>,
 }
 
 /// What a `ui.render` produced.
@@ -582,9 +584,16 @@ impl ModRuntime {
             Some(text) => serde_json::from_str(text)?,
             None => Json::Null,
         };
+        let answered_by = v["answeredBy"]
+            .as_u64()
+            .and_then(|i| usize::try_from(i).ok())
+            .and_then(|i| self.loaded.get(i))
+            .and_then(Option::as_ref)
+            .map(|l| l.name.clone());
         Ok(Answer {
             answered: v["answered"].as_bool().unwrap_or(false),
             value,
+            answered_by,
         })
     }
 

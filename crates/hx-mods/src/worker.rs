@@ -191,7 +191,7 @@ fn op(rt: &mut ModRuntime, frame: &Value) -> Result<Value, Value> {
             let a = rt
                 .dispatch(str_of(frame, "event")?, &frame["payload"])
                 .map_err(rt_err)?;
-            Ok(json!({ "answered": a.answered, "value": a.value }))
+            Ok(json!({ "answered": a.answered, "value": a.value, "answered_by": a.answered_by }))
         }
         "render" => {
             let r = rt

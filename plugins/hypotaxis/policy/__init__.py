@@ -80,6 +80,10 @@ def _check(call: ToolCall, session: SessionPolicy, defaults: Defaults) -> Decisi
         return block(
             f"{call.tool} cannot be called from inside exec: it would wait on its own kernel.", "kernel_denied"
         )
+    if call.principal.startswith("mod:"):
+        from .mods import decide as decide_mod
+
+        return decide_mod(call, session, defaults)
     protected = _protected(call, session, defaults)
     if protected is not None:
         return protected
