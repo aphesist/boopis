@@ -284,9 +284,9 @@ body {
 
 /* interface case: Typewriter sets lowercase; content (titles, names, messages) is never transformed */
 :is(.hx-new__label, .hx-pal-row[data-kind="command"] .hx-pal-row__label) { text-transform: var(--ui-case); }
-.hx-keys { display: grid; grid-template-columns: 1fr auto; margin: 4px 0 0; }
-.hx-keys dt, .hx-keys dd { margin: 0; padding: 8px 0; border-bottom: 1px solid var(--hair); font-size: var(--fs-s); }
-.hx-keys dd { display: flex; justify-content: flex-end; }
+/* Settings > Keyboard: the same groups as the shortcut sheet, in one column (the rows are .hx-keygroup's; a second grid here split the
+   groups into two columns and drew every row's line twice) */
+.hx-keys { margin: 4px 0 0; }
 
 
 .hx-probe { position: absolute; left: -9999px; top: 0; visibility: hidden; pointer-events: none; }
