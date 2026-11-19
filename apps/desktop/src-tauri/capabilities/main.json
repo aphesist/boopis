@@ -13,6 +13,7 @@
     "allow-hermes-retry",
     "allow-setup-check",
     "allow-setup-advance",
+    "allow-setup-reopen-models",
     "allow-gateway-connect",
     "allow-gateway-send",
     "allow-gateway-disconnect",

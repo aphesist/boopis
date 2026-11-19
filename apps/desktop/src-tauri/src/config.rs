@@ -51,3 +51,52 @@ impl Default for Limits {
         }
     }
 }
+
+/// Whether this build offers Nous's free tier ("Free models (Nous free tier, no account)") at all. Nous's Terms do not
+/// say whether a third-party distribution of Hermes may use the anonymous tier (`docs/research/free-tier.md` section 5), so
+/// the owner decides; `false` removes the choice from setup and stops the host declaring itself as the Desktop.
+pub const FREE_TIER_ENABLED: bool = true;
+
+/// The free tier's browser challenge, as data (`docs/research/free-tier.md` section 1.5): which origin may be loaded, and
+/// the timings Hermes Desktop uses, so a challenge behaves the same here.
+#[derive(Debug, Clone)]
+pub struct Challenge {
+    /// The Nous Portal's origin: the only origin a challenge page may be loaded from or navigate to.
+    pub portal_origin: String,
+    /// The path prefix of a challenge page on the portal.
+    pub path: String,
+    /// The longest a request's URL may be.
+    pub max_url_len: usize,
+    /// How long a challenge may run while its window is hidden (nobody can see it hang).
+    pub hidden_deadline: std::time::Duration,
+    /// The ticket's life when the service named none.
+    pub default_ticket_life: std::time::Duration,
+    /// The bounds of a ticket's life as the service reported it (network input that becomes a timer).
+    pub ticket_life: (std::time::Duration, std::time::Duration),
+    /// How long a window that was revealed lingers after the page says it passed ("You're all set").
+    pub revealed_done_linger: std::time::Duration,
+    /// How long a revealed window lingers after the page says it failed (long enough to read why).
+    pub revealed_failed_linger: std::time::Duration,
+    /// How long a settled challenge URL is remembered, so a closed window does not come back for the same ticket.
+    pub settled_memory: std::time::Duration,
+    /// How often the window's address is read (the page signals through its fragment).
+    pub poll_every: std::time::Duration,
+}
+
+impl Default for Challenge {
+    fn default() -> Self {
+        use std::time::Duration;
+        Self {
+            portal_origin: "https://portal.nousresearch.com".to_owned(),
+            path: "/challenge".to_owned(),
+            max_url_len: 2048,
+            hidden_deadline: Duration::from_secs(90),
+            default_ticket_life: Duration::from_mins(10),
+            ticket_life: (Duration::from_secs(30), Duration::from_mins(15)),
+            revealed_done_linger: Duration::from_millis(1500),
+            revealed_failed_linger: Duration::from_secs(20),
+            settled_memory: Duration::from_mins(10),
+            poll_every: Duration::from_millis(250),
+        }
+    }
+}

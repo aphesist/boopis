@@ -7,14 +7,18 @@ use std::sync::{Arc, Mutex, PoisonError};
 use crate::config::Limits;
 use crate::endpoint::EndpointConfig;
 use crate::error::{Error, Result};
-use crate::gateway::{ConnectionId, Hub, LinkStatus};
+use crate::gateway::{ConnectionId, Declare, Hub, LinkStatus};
 use crate::hermes::Supervisor;
 
 /// Called for every change of a profile's link status.
 pub type StatusEmitter = Arc<dyn Fn(&str, &LinkStatus) + Send + Sync>;
 
+/// Called once for each proxy when it is created, with the proxy and the question "does this profile use the free tier?".
+pub type HubObserver = Arc<dyn Fn(&Arc<Hub>, Declare) + Send + Sync>;
+
 /// The proxies and the connection index.
 pub struct Hubs {
+    observer: Option<HubObserver>,
     supervisor: Arc<Supervisor>,
     limits: Limits,
     emitter: StatusEmitter,
@@ -28,6 +32,7 @@ impl Hubs {
     #[must_use]
     pub fn new(supervisor: Arc<Supervisor>, limits: Limits, emitter: StatusEmitter) -> Self {
         Self {
+            observer: None,
             supervisor,
             limits,
             emitter,
@@ -35,6 +40,13 @@ impl Hubs {
             index: Mutex::new(HashMap::new()),
             next: AtomicU32::new(1),
         }
+    }
+
+    /// Tell `observer` about every proxy created from now on.
+    #[must_use]
+    pub fn with_observer(mut self, observer: HubObserver) -> Self {
+        self.observer = Some(observer);
+        self
     }
 
     /// The proxy for a profile (`None` is the active one), created on first use.
@@ -57,7 +69,21 @@ impl Hubs {
             profile: (key != "default").then(|| key.clone()),
         }
         .build(&self.supervisor, &self.limits)?;
-        let hub = Arc::new(Hub::new(endpoint, self.limits.clone()));
+        // The free tier works only for a client Hermes counts as its Desktop (a declaration on this link), so the link
+        // makes it when, and only when, the user chose the free tier: asked again on every dial.
+        let home = self
+            .supervisor
+            .environment()
+            .profile_home((key != "default").then_some(key.as_str()))?;
+        let declare: Declare = Arc::new(move || crate::setup::state::free_tier_chosen(&home));
+        let hub = Arc::new(Hub::with_declaration(
+            endpoint,
+            self.limits.clone(),
+            declare.clone(),
+        ));
+        if let Some(observe) = &self.observer {
+            observe(&hub, declare);
+        }
         let (emit, name, mut rx) = (self.emitter.clone(), key.clone(), hub.watch());
         tokio::spawn(async move {
             loop {

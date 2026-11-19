@@ -108,6 +108,18 @@ pub struct Local {
     limits: Limits,
 }
 
+impl Local {
+    /// The Hermes of `home` on this machine.
+    #[must_use]
+    pub fn new(supervisor: Arc<Supervisor>, home: PathBuf, limits: Limits) -> Self {
+        Self {
+            supervisor,
+            home,
+            limits,
+        }
+    }
+}
+
 #[async_trait]
 impl Endpoint for Local {
     fn kind(&self) -> EndpointKind {

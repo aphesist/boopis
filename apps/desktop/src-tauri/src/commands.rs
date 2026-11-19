@@ -172,6 +172,18 @@ pub async fn setup_advance(
         .await?)
 }
 
+/// Choose the models again, from a notice that the free tier's limit was hit or at any time: forgets the earlier choice so
+/// the next `setup_advance` asks it with every choice Hermes can still offer. It changes nothing in Hermes by itself.
+#[tauri::command]
+#[specta::specta]
+pub fn setup_reopen_models(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    profile: Option<String>,
+) -> std::result::Result<(), HostError> {
+    Ok(setup_engine(&app, &state, profile)?.reopen_models()?)
+}
+
 /// Ask a gateway link that gave up (`incompatible`) to try again, after the user fixed Hermes.
 #[tauri::command]
 #[specta::specta]

@@ -14,6 +14,7 @@ use super::ops::{HermesOps, PluginEntry};
 use super::{Answer, Setup, StepState};
 use crate::commands::Json;
 use crate::error::{Error, Result};
+use crate::free_tier::FreeTier;
 use crate::secrets::SecretStore;
 use crate::secrets::store::MemoryStore;
 
@@ -24,6 +25,20 @@ struct Fake {
     plugins: Mutex<Vec<PluginEntry>>,
     sets: Mutex<Vec<String>>,
     restarts: Mutex<u32>,
+    /// What Hermes says about the free tier: the status before a claim, and after it.
+    free: Mutex<FreeScript>,
+    /// The free rows of the `OpenRouter` catalogue.
+    catalogue: Mutex<Vec<String>>,
+}
+
+/// A scripted Hermes for the free tier (no gateway, no Nous).
+#[derive(Default)]
+struct FreeScript {
+    before: FreeTier,
+    after: FreeTier,
+    claimed: bool,
+    statuses: u32,
+    provisions: u32,
 }
 
 impl Fake {
@@ -35,6 +50,8 @@ impl Fake {
             plugins: Mutex::new(Vec::new()),
             sets: Mutex::new(Vec::new()),
             restarts: Mutex::new(0),
+            free: Mutex::new(FreeScript::default()),
+            catalogue: Mutex::new(Vec::new()),
         })
     }
 }
@@ -93,6 +110,25 @@ impl HermesOps for Fake {
     async fn restart_gateway(&self) -> Result<()> {
         *self.restarts.lock().unwrap() += 1;
         Ok(())
+    }
+    async fn free_tier_status(&self) -> Result<FreeTier> {
+        let mut f = self.free.lock().unwrap();
+        f.statuses += 1;
+        Ok(if f.claimed {
+            f.after.clone()
+        } else {
+            f.before.clone()
+        })
+    }
+    async fn free_tier_provision(&self) -> Result<FreeTier> {
+        let mut f = self.free.lock().unwrap();
+        f.provisions += 1;
+        f.claimed = true;
+        Ok(f.after.clone())
+    }
+    async fn free_models(&self, provider: &str) -> Result<Vec<String>> {
+        assert_eq!(provider, "openrouter");
+        Ok(self.catalogue.lock().unwrap().clone())
     }
 }
 
@@ -589,4 +625,439 @@ async fn a_runtime_that_fails_its_hash_stops_setup_with_the_reason() {
         !r.fake.home.join("plugins").exists(),
         "nothing after it ran"
     );
+}
+
+// ── the free models ─────────────────────────────────────────────────────────────────────────────────────────────────
+
+/// Run setup up to the models question (the plugin, hx and the consent are done).
+async fn at_models(r: &Rig) -> super::Status {
+    let s = r.setup().advance(None, false).await.unwrap();
+    assert_eq!(s.form.as_ref().unwrap().form_id, "setup.config");
+    r.setup()
+        .advance(Some(answer("setup.config", json!({}), json!({}))), false)
+        .await
+        .unwrap()
+}
+
+fn welcome(available: bool, enabled: bool) -> FreeTier {
+    FreeTier {
+        has_guest: available,
+        enabled,
+        available,
+        model: "nous/welcome".into(),
+        label: "Nous · free tier".into(),
+        ..FreeTier::default()
+    }
+}
+
+fn choose(r: &Rig, choice: &str) -> impl std::future::Future<Output = super::Status> {
+    let setup = r.setup();
+    let a = answer("setup.ladder", json!({"choice": choice}), json!({}));
+    async move { setup.advance(Some(a), false).await.unwrap() }
+}
+
+fn enum_of(form: &super::Form, field: &str) -> Vec<String> {
+    form.schema.0["properties"][field]["enum"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_str().unwrap().to_owned())
+        .collect()
+}
+
+const LADDER: &str = "plugins.entries.hypotaxis.settings.ladder";
+
+#[tokio::test]
+async fn with_no_key_the_free_tier_is_the_first_choice_and_the_default_and_nothing_is_asked_of_nous_yet()
+ {
+    let r = rig(json!({}));
+    let s = at_models(&r).await;
+    let form = s.form.unwrap();
+    assert_eq!(form.form_id, "setup.ladder");
+    let ids = enum_of(&form, "choice");
+    assert_eq!(&ids[..3], ["free", "openrouter-free", "anthropic"]);
+    let field = &form.schema.0["properties"]["choice"];
+    assert_eq!(
+        field["default"], "free",
+        "the default when no key is present"
+    );
+    assert_eq!(
+        field["enumNames"][0],
+        "Free models (Nous free tier, no account)"
+    );
+    assert_eq!(
+        field["enumNames"][1],
+        "OpenRouter free models (needs a free OpenRouter key)"
+    );
+    assert!(
+        form.body.contains("https://portal.nousresearch.com/terms")
+            && form.body.contains("one model"),
+        "the form names whose service it is, links the terms and says it is one model: {}",
+        form.body
+    );
+    let f = r.fake.free.lock().unwrap();
+    assert_eq!(
+        (f.statuses, f.provisions),
+        (0, 0),
+        "showing the choice calls no one"
+    );
+    drop(f);
+    assert!(
+        !super::state::free_tier_chosen(&r.fake.home),
+        "the host declares nothing until the user chooses"
+    );
+}
+
+#[tokio::test]
+async fn a_claude_key_keeps_the_claude_ladder_as_the_default() {
+    let r = rig(json!({}));
+    r.store
+        .set("hypotaxis.provider.anthropic", "api_key", KEY)
+        .unwrap();
+    let s = at_models(&r).await;
+    assert!(s.done && s.form.is_none(), "{:?}", s.steps);
+    assert!(
+        s.receipt
+            .unwrap()
+            .lines
+            .join("\n")
+            .contains("Claude ladder"),
+        "with a key present the free tier is not the default"
+    );
+}
+
+#[tokio::test]
+async fn choosing_the_free_tier_lets_hermes_claim_it_and_writes_only_the_ladder() {
+    let r = rig(json!({}));
+    {
+        let mut f = r.fake.free.lock().unwrap();
+        f.before = welcome(false, true);
+        f.after = welcome(true, true);
+    }
+    at_models(&r).await;
+    let s = choose(&r, "free").await;
+    assert!(s.done && s.form.is_none(), "{:?}", s.steps);
+    {
+        let f = r.fake.free.lock().unwrap();
+        assert_eq!(f.provisions, 1, "Hermes was asked to claim, once");
+    }
+    // one model, so one tier; its name is what Hermes reported, with the provider in front
+    assert_eq!(
+        r.fake.config_get(LADDER).await.unwrap().unwrap(),
+        json!({"tiers": [{"name": "free", "model": "nous/nous/welcome"}]})
+    );
+    // Hermes writes the identity itself: the host writes no model, no key, no secret for it
+    for key in ["model", "providers", "secrets", "model.provider"] {
+        assert!(
+            r.fake.config_get(key).await.unwrap().is_none(),
+            "the host wrote {key}"
+        );
+    }
+    let receipt = s.receipt.unwrap().lines.join("\n");
+    assert!(
+        receipt.contains("one model at every tier") && receipt.contains("nous/welcome"),
+        "setup says so: {receipt}"
+    );
+    assert!(receipt.contains("https://portal.nousresearch.com/terms"));
+    assert_eq!(*r.fake.restarts.lock().unwrap(), 1);
+    assert!(
+        super::state::free_tier_chosen(&r.fake.home),
+        "now the host declares itself the Desktop on its gateway link"
+    );
+}
+
+#[tokio::test]
+async fn the_ladder_names_the_model_hermes_reports_not_one_in_the_code() {
+    let r = rig(json!({}));
+    {
+        let mut f = r.fake.free.lock().unwrap();
+        f.before = FreeTier {
+            model: "nous/another-free-one".into(),
+            ..welcome(true, true)
+        };
+    }
+    at_models(&r).await;
+    choose(&r, "free").await;
+    assert_eq!(
+        r.fake.config_get(LADDER).await.unwrap().unwrap(),
+        json!({"tiers": [{"name": "free", "model": "nous/nous/another-free-one"}]})
+    );
+}
+
+#[tokio::test]
+async fn an_identity_that_already_carries_inference_is_not_claimed_again() {
+    let r = rig(json!({}));
+    r.fake.free.lock().unwrap().before = welcome(true, true);
+    at_models(&r).await;
+    let s = choose(&r, "free").await;
+    assert!(s.done);
+    assert_eq!(r.fake.free.lock().unwrap().provisions, 0);
+}
+
+#[tokio::test]
+async fn when_hermes_says_it_is_not_claimable_the_form_says_so_and_offers_the_other_choices() {
+    let r = rig(json!({}));
+    r.fake.free.lock().unwrap().before = welcome(false, false);
+    at_models(&r).await;
+    let s = choose(&r, "free").await;
+    assert!(!s.done);
+    let form = s.form.unwrap();
+    assert_eq!(form.form_id, "setup.ladder");
+    let ids = enum_of(&form, "choice");
+    assert!(!ids.contains(&"free".to_owned()), "{ids:?}");
+    assert_eq!(&ids[..2], ["openrouter-free", "anthropic"]);
+    assert!(
+        form.body.contains("first install") && form.body.contains("does not say which"),
+        "{}",
+        form.body
+    );
+    assert_eq!(
+        r.fake.free.lock().unwrap().provisions,
+        0,
+        "nothing to claim"
+    );
+    assert!(r.fake.config_get(LADDER).await.unwrap().is_none());
+    assert!(
+        !super::state::free_tier_chosen(&r.fake.home),
+        "no longer the choice: the host stops declaring itself the Desktop"
+    );
+    // asked again, it does not ask Hermes again and still leaves the free tier out
+    let calls = r.fake.free.lock().unwrap().statuses;
+    let again = r.setup().advance(None, false).await.unwrap();
+    assert!(!enum_of(&again.form.unwrap(), "choice").contains(&"free".to_owned()));
+    assert_eq!(r.fake.free.lock().unwrap().statuses, calls);
+}
+
+#[tokio::test]
+async fn a_failed_claim_is_shown_in_hermes_words_with_when_to_try_again() {
+    let r = rig(json!({}));
+    {
+        let mut f = r.fake.free.lock().unwrap();
+        f.before = welcome(false, true);
+        f.after = FreeTier {
+            error: Some("Lots of people are getting started right now".into()),
+            error_code: Some("anon_rate_limited".into()),
+            retryable: Some(true),
+            retry_after: Some(300),
+            ..welcome(false, true)
+        };
+    }
+    at_models(&r).await;
+    let s = choose(&r, "free").await;
+    let form = s.form.unwrap();
+    assert!(
+        form.body
+            .contains("Lots of people are getting started right now")
+            && form.body.contains("about 5 minutes"),
+        "{}",
+        form.body
+    );
+    assert!(
+        r.fake.config_get(LADDER).await.unwrap().is_none(),
+        "no ladder for a tier that is not there"
+    );
+}
+
+#[tokio::test]
+async fn the_openrouter_choice_asks_for_a_key_then_offers_the_free_models_smallest_to_largest() {
+    let r = rig(json!({}));
+    *r.fake.catalogue.lock().unwrap() = vec![
+        "meta-llama/llama-3.3-70b-instruct:free".into(),
+        "google/gemma-3-27b-it:free".into(),
+        "openrouter/some-router:free".into(),
+        "meta-llama/llama-3.2-3b-instruct:free".into(),
+        "openai/gpt-oss-120b:free".into(),
+    ];
+    at_models(&r).await;
+    let s = choose(&r, "openrouter-free").await;
+    let cred = s.form.unwrap();
+    assert_eq!(
+        (cred.form_id.as_str(), cred.kind.as_str(), cred.sensitive),
+        ("setup.credential.openrouter", "credential", true)
+    );
+    assert!(cred.body.contains("free OpenRouter key"));
+    let s = r
+        .setup()
+        .advance(
+            Some(answer(
+                "setup.credential.openrouter",
+                json!({}),
+                json!({"value": KEY}),
+            )),
+            false,
+        )
+        .await
+        .unwrap();
+    let form = s.form.unwrap();
+    assert_eq!(form.form_id, "setup.openrouter");
+    assert_eq!(
+        enum_of(&form, "picks"),
+        [
+            "meta-llama/llama-3.2-3b-instruct:free",
+            "google/gemma-3-27b-it:free",
+            "meta-llama/llama-3.3-70b-instruct:free",
+            "openai/gpt-oss-120b:free",
+            "openrouter/some-router:free"
+        ],
+        "smallest to largest by the size each name states; the one that states none last"
+    );
+    assert_eq!(
+        form.schema.0["properties"]["picks"]["default"],
+        json!([
+            "meta-llama/llama-3.2-3b-instruct:free",
+            "meta-llama/llama-3.3-70b-instruct:free",
+            "openai/gpt-oss-120b:free"
+        ]),
+        "the proposal: small, middle, large"
+    );
+    // the key is in the keychain and wired by name, never in a file
+    assert_eq!(
+        r.store
+            .get("hypotaxis.provider.openrouter", "api_key")
+            .unwrap()
+            .as_deref(),
+        Some(KEY)
+    );
+    assert_eq!(
+        r.fake
+            .config_get("secrets.hypotaxis_host.env.OPENROUTER_API_KEY")
+            .await
+            .unwrap()
+            .unwrap(),
+        json!("secret://provider.openrouter/api_key")
+    );
+    let s = r
+        .setup()
+        .advance(
+            Some(answer(
+                "setup.openrouter",
+                json!({"picks": ["meta-llama/llama-3.3-70b-instruct:free", "meta-llama/llama-3.2-3b-instruct:free"]}),
+                json!({}),
+            )),
+            false,
+        )
+        .await
+        .unwrap();
+    assert!(s.done, "{:?}", s.steps);
+    assert_eq!(
+        r.fake.config_get(LADDER).await.unwrap().unwrap(),
+        json!({"tiers": [
+            {"name": "llama-3.2-3b-instruct", "model": "openrouter/meta-llama/llama-3.2-3b-instruct:free"},
+            {"name": "llama-3.3-70b-instruct", "model": "openrouter/meta-llama/llama-3.3-70b-instruct:free"}
+        ]}),
+        "ordered small to large whatever order the user picked in"
+    );
+    let on_disk = std::fs::read_to_string(super::state::path(&r.fake.home)).unwrap();
+    assert!(!on_disk.contains(KEY));
+    assert!(
+        !super::state::free_tier_chosen(&r.fake.home),
+        "OpenRouter is not the Nous free tier"
+    );
+}
+
+#[tokio::test]
+async fn an_empty_openrouter_catalogue_or_a_pick_outside_it_never_writes_a_ladder() {
+    let r = rig(json!({}));
+    r.store
+        .set("hypotaxis.provider.openrouter", "api_key", KEY)
+        .unwrap();
+    at_models(&r).await;
+    let s = choose(&r, "openrouter-free").await;
+    let form = s.form.unwrap();
+    assert!(form.body.contains("lists no free models"), "{}", form.body);
+    assert!(r.fake.config_get(LADDER).await.unwrap().is_none());
+
+    let r = rig(json!({}));
+    r.store
+        .set("hypotaxis.provider.openrouter", "api_key", KEY)
+        .unwrap();
+    *r.fake.catalogue.lock().unwrap() = vec!["a/b-8b:free".into()];
+    at_models(&r).await;
+    choose(&r, "openrouter-free").await;
+    let s = r
+        .setup()
+        .advance(
+            Some(answer(
+                "setup.openrouter",
+                json!({"picks": ["not/in-the-catalogue:free"]}),
+                json!({}),
+            )),
+            false,
+        )
+        .await
+        .unwrap();
+    assert_eq!(state_of(&s, "models"), StepState::Blocked);
+    assert!(r.fake.config_get(LADDER).await.unwrap().is_none());
+}
+
+#[tokio::test]
+async fn choosing_the_models_again_asks_the_question_again_even_when_a_ladder_is_set() {
+    let r = rig(json!({}));
+    r.fake.free.lock().unwrap().before = welcome(true, true);
+    at_models(&r).await;
+    choose(&r, "free").await;
+    assert!(super::state::free_tier_chosen(&r.fake.home));
+    r.setup().reopen_models().unwrap();
+    assert!(!super::state::free_tier_chosen(&r.fake.home));
+    let s = r.setup().advance(None, false).await.unwrap();
+    let form = s.form.expect("asked again");
+    assert_eq!(form.form_id, "setup.ladder");
+    assert_eq!(
+        enum_of(&form, "choice")[0],
+        "free",
+        "still offered: Hermes decides, not a stored refusal"
+    );
+    // answering ends the reopening
+    let s = r
+        .setup()
+        .advance(
+            Some(answer("setup.ladder", json!({"choice": "free"}), json!({}))),
+            false,
+        )
+        .await
+        .unwrap();
+    assert!(s.done);
+}
+
+#[test]
+fn a_models_size_is_what_its_name_states_and_nothing_else() {
+    use super::providers::{order_by_size, propose_ladder, size_hint};
+    assert_eq!(
+        size_hint("meta-llama/llama-3.3-70b-instruct:free"),
+        Some(70.0)
+    );
+    assert_eq!(size_hint("openai/gpt-oss-120b:free"), Some(120.0));
+    assert_eq!(
+        size_hint("qwen/qwen3-235b-a22b:free"),
+        Some(235.0),
+        "the total, not the active part"
+    );
+    assert_eq!(size_hint("some/tiny-1.5b"), Some(1.5));
+    assert_eq!(size_hint("google/gemini-2.0-flash-exp:free"), None);
+    assert_eq!(
+        size_hint("x/abc3b"),
+        None,
+        "3b glued to letters is not a size"
+    );
+    assert_eq!(size_hint("x/model-7bit"), None);
+    let ids: Vec<String> = ["a/z", "b/m-70b", "c/m-8b"].map(str::to_owned).into();
+    assert_eq!(order_by_size(&ids), ["c/m-8b", "b/m-70b", "a/z"]);
+    assert!(propose_ladder(&["a/z".to_owned(), "b/y".to_owned()]).is_empty());
+    let many: Vec<String> = (1..=9).map(|n| format!("v/m-{n}b")).collect();
+    assert_eq!(propose_ladder(&many), ["v/m-1b", "v/m-5b", "v/m-9b"]);
+}
+
+#[test]
+fn the_catalogue_reader_takes_zero_priced_and_free_tagged_rows_of_the_asked_provider() {
+    let answer = json!({"providers": [
+        {"slug": "nous", "models": ["x"], "pricing": {"x": {"free": true}}},
+        {"slug": "openrouter",
+         "models": ["a/b:free", "c/d", "e/f", "g/h:free"],
+         "pricing": {"c/d": {"free": true}, "e/f": {"free": false}}}]});
+    assert_eq!(
+        super::ops::free_models_of(&answer, "openrouter"),
+        ["a/b:free", "c/d", "g/h:free"]
+    );
+    assert!(super::ops::free_models_of(&answer, "nope").is_empty());
+    assert!(super::ops::free_models_of(&json!({}), "openrouter").is_empty());
 }

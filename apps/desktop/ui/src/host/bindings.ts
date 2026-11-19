@@ -20,6 +20,11 @@ export const commands = {
 	 *  "Check again". It never runs an installer.
 	 */
 	setupAdvance: (profile: string | null, answer: Answer | null, reconsider: boolean, options?: InvokeOptions) => __TAURI_INVOKE<Status_Serialize>("setup_advance", { profile, answer, reconsider }, options),
+	/**
+	 *  Choose the models again, from a notice that the free tier's limit was hit or at any time: forgets the earlier choice so
+	 *  the next `setup_advance` asks it with every choice Hermes can still offer. It changes nothing in Hermes by itself.
+	 */
+	setupReopenModels: (profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<null>("setup_reopen_models", { profile }, options),
 	/**  Open a UI connection to the gateway of a profile. Frames arrive on `frames`. */
 	gatewayConnect: (profile: string | null, frames: Channel<Frame>, options?: InvokeOptions) => __TAURI_INVOKE<Connected>("gateway_connect", { profile, frames }, options),
 	/**  Send a JSON-RPC frame to the gateway. The host validates shape and size and never alters `params`. */

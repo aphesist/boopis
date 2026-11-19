@@ -474,3 +474,275 @@ async fn a_closed_window_stops_receiving_and_its_late_answer_is_dropped() {
     let stats = r.hub.stats();
     assert!(stats.frames_in >= 2 && stats.route_in_p95_us.is_some());
 }
+
+fn rig_declaring(answer_ok: bool) -> (Rig, Arc<std::sync::atomic::AtomicBool>) {
+    let (handles, gateways) = mpsc::unbounded_channel();
+    let endpoint = Arc::new(FakeEndpoint {
+        handles,
+        failures: Mutex::new(Vec::new()),
+    });
+    let _ = answer_ok;
+    let flag = Arc::new(std::sync::atomic::AtomicBool::new(true));
+    let f = flag.clone();
+    let hub = Hub::with_declaration(
+        endpoint.clone(),
+        limits(),
+        Arc::new(move || f.load(std::sync::atomic::Ordering::SeqCst)),
+    );
+    (
+        Rig {
+            hub,
+            gateways,
+            endpoint,
+        },
+        flag,
+    )
+}
+
+impl FakeGateway {
+    /// gateway.ready, client.capabilities, then (declared) the second client.capabilities with `desktop_local`, then
+    /// runtime.describe. `accept` is whether the gateway takes the declaration.
+    async fn handshake_declared(&mut self, accept: bool) -> Value {
+        self.send(&json!({"jsonrpc":"2.0","method":"event","params":{"type":"gateway.ready","payload":{},"replay_epoch":"e1","seq":1}}));
+        let caps = self.recv().await;
+        assert_eq!(caps["params"], json!({"server_requests": true}));
+        self.send(&json!({"jsonrpc":"2.0","id":caps["id"],"result":{"server_requests":[]}}));
+        let declared = self.recv().await;
+        assert_eq!(declared["method"], "client.capabilities");
+        if accept {
+            self.send(&json!({"jsonrpc":"2.0","id":declared["id"],"result":{}}));
+        } else {
+            self.send(&json!({"jsonrpc":"2.0","id":declared["id"],"error":{"code":-32602,"message":"unknown parameter desktop_local"}}));
+        }
+        let describe = self.recv().await;
+        assert_eq!(describe["method"], "runtime.describe");
+        self.send(&json!({"jsonrpc":"2.0","id":describe["id"],"result":{"instance_id":"i","capabilities":["event-replay-v1"]}}));
+        declared
+    }
+}
+
+#[tokio::test]
+async fn a_declaring_hub_says_it_is_the_desktop_in_a_call_of_its_own() {
+    let (mut r, _) = rig_declaring(true);
+    let (tx, _rx) = mpsc::unbounded_channel();
+    let open = r.hub.open(1, Arc::new(Collect(tx)), WAIT);
+    let (res, declared) = tokio::join!(open, async {
+        let mut gw = r.gateways.recv().await.unwrap();
+        gw.handshake_declared(true).await
+    });
+    res.unwrap();
+    assert_eq!(declared["params"], json!({"desktop_local": true}));
+}
+
+#[tokio::test]
+async fn a_gateway_that_refuses_the_declaration_still_serves() {
+    let (mut r, _) = rig_declaring(false);
+    let (tx, _rx) = mpsc::unbounded_channel();
+    let open = r.hub.open(1, Arc::new(Collect(tx)), WAIT);
+    let (res, ()) = tokio::join!(open, async {
+        let mut gw = r.gateways.recv().await.unwrap();
+        gw.handshake_declared(false).await;
+    });
+    res.unwrap();
+    assert_eq!(r.hub.status().phase, super::reconnect::Phase::Ready);
+}
+
+#[tokio::test]
+async fn a_hub_that_does_not_declare_sends_no_second_capabilities_call() {
+    // `rig()` uses `Hub::new`, whose handshake the plain `handshake` helper checks call by call:
+    // client.capabilities is followed directly by runtime.describe.
+    let mut r = rig();
+    let (_ui, gw) = r.open(1).await;
+    assert!(gw.is_some());
+}
+
+#[tokio::test]
+async fn the_host_can_ask_the_gateway_itself_and_get_the_answer() {
+    let mut r = rig();
+    let (_ui, gw) = r.open(1).await;
+    let mut gw = gw.unwrap();
+    let asked = r.hub.request("free_tier.status", json!({}), WAIT);
+    let (answer, ()) = tokio::join!(asked, async {
+        let req = gw.recv().await;
+        assert_eq!(req["method"], "free_tier.status");
+        gw.send(&json!({"jsonrpc":"2.0","id":req["id"],"result":{"model":"m"}}));
+    });
+    assert_eq!(answer.unwrap()["model"], "m");
+    // an error answer is an error
+    let asked = r.hub.request("free_tier.provision", json!({}), WAIT);
+    let (answer, ()) = tokio::join!(asked, async {
+        let req = gw.recv().await;
+        gw.send(&json!({"jsonrpc":"2.0","id":req["id"],"error":{"code":5092,"message":"no"}}));
+    });
+    assert!(
+        answer
+            .unwrap_err()
+            .to_string()
+            .contains("free_tier.provision")
+    );
+}
+
+#[tokio::test]
+async fn a_host_request_while_the_link_is_down_fails_at_once() {
+    let r = rig();
+    let err = r
+        .hub
+        .request("free_tier.status", json!({}), Duration::from_millis(50))
+        .await
+        .unwrap_err();
+    assert_eq!(err.code(), "hx.hermes.unavailable");
+}
+
+#[tokio::test]
+async fn free_tier_events_are_copied_to_the_host_and_still_reach_the_window() {
+    let mut r = rig();
+    let mut events = r.hub.events();
+    let (mut ui, gw) = r.open(1).await;
+    let gw = gw.unwrap();
+    let _ = ui.next_data().await; // gateway.ready
+    gw.send(&json!({"jsonrpc":"2.0","method":"event","params":{"type":"free_tier.challenge","session_id":"","payload":{"type":"browser","url":"https://portal.nousresearch.com/challenge/x","required":true,"expires_in":600,"message":"m","attempt":1}}}));
+    gw.send(&json!({"jsonrpc":"2.0","method":"event","params":{"type":"message.delta","session_id":"s","payload":{"text":"x"},"seq":1,"replay_epoch":"e1"}}));
+    let tapped = tokio::time::timeout(WAIT, events.recv())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(tapped.event_type, "free_tier.challenge");
+    assert_eq!(tapped.payload["attempt"], 1);
+    assert_eq!(
+        ui.next_data().await["params"]["type"],
+        "free_tier.challenge"
+    );
+    assert!(
+        events.try_recv().is_err(),
+        "only free_tier.* events are copied"
+    );
+}
+
+#[tokio::test]
+async fn a_one_shot_link_declares_asks_and_closes() {
+    let (handles, mut gateways) = mpsc::unbounded_channel();
+    let endpoint = Arc::new(FakeEndpoint {
+        handles,
+        failures: Mutex::new(Vec::new()),
+    });
+    let server = tokio::spawn(async move {
+        let mut gw = gateways.recv().await.unwrap();
+        gw.send(&json!({"jsonrpc":"2.0","method":"event","params":{"type":"gateway.ready","payload":{}}}));
+        let declared = gw.recv().await;
+        assert_eq!(declared["params"], json!({"desktop_local": true}));
+        gw.send(&json!({"jsonrpc":"2.0","id":declared["id"],"result":{}}));
+        let q = gw.recv().await;
+        assert_eq!(q["method"], "free_tier.status");
+        gw.send(
+            &json!({"jsonrpc":"2.0","method":"event","params":{"type":"setup.ready","payload":{}}}),
+        );
+        gw.send(&json!({"jsonrpc":"2.0","id":q["id"],"result":{"available":false}}));
+    });
+    let mut link = super::oneshot::Link::open(endpoint.as_ref(), true, 1 << 20, WAIT)
+        .await
+        .unwrap();
+    let got = link.call("free_tier.status", &json!({})).await.unwrap();
+    assert_eq!(got["available"], false, "events in between are skipped");
+    server.await.unwrap();
+}
+
+#[tokio::test]
+async fn a_challenge_event_opens_a_hidden_window_reveals_and_closes_it_and_reports_back() {
+    use crate::free_tier::challenge::Windows;
+    use crate::free_tier::tests::{FakeHost, PAGE};
+
+    let (handles, mut gateways) = mpsc::unbounded_channel();
+    let endpoint = Arc::new(FakeEndpoint {
+        handles,
+        failures: Mutex::new(Vec::new()),
+    });
+    let hub = Arc::new(Hub::new(endpoint, limits()));
+    let host = Arc::new(FakeHost::default());
+    let cfg = crate::config::Challenge {
+        poll_every: Duration::from_millis(5),
+        revealed_done_linger: Duration::from_millis(5),
+        ..crate::config::Challenge::default()
+    };
+    let windows = Arc::new(Windows::new(host.clone(), cfg));
+    tokio::spawn(crate::free_tier::serve::run(
+        hub.clone(),
+        windows,
+        Arc::new(|| false),
+    ));
+    let (tx, _rx) = mpsc::unbounded_channel();
+    let open = hub.open(1, Arc::new(Collect(tx)), WAIT);
+    let (res, mut gw) = tokio::join!(open, async {
+        let mut gw = gateways.recv().await.unwrap();
+        gw.handshake().await;
+        gw
+    });
+    res.unwrap();
+    // the gateway announces a challenge
+    gw.send(&json!({"jsonrpc":"2.0","method":"event","params":{"type":"free_tier.challenge","session_id":"","payload":{"type":"browser","url":PAGE,"required":true,"expires_in":600,"message":"m","attempt":3}}}));
+    // a hidden window is requested ...
+    let script = loop {
+        if host.count() > 0 {
+            break host.window(0);
+        }
+        tokio::time::sleep(Duration::from_millis(2)).await;
+    };
+    assert_eq!(script.lock().unwrap().revealed, 0);
+    // ... the page asks for the person, then passes
+    script.lock().unwrap().url = url::Url::parse(&format!("{PAGE}#interactive")).unwrap();
+    loop {
+        if script.lock().unwrap().revealed == 1 {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(2)).await;
+    }
+    script.lock().unwrap().url = url::Url::parse(&format!("{PAGE}#done")).unwrap();
+    // ... and Hermes is told how the window ended
+    let report = gw.recv().await;
+    assert_eq!(report["method"], "free_tier.challenge_result");
+    assert_eq!(
+        report["params"],
+        json!({"url": PAGE, "attempt": 3, "outcome": "done"})
+    );
+    assert!(script.lock().unwrap().closed);
+    gw.send(&json!({"jsonrpc":"2.0","id":report["id"],"result":{"accepted":true}}));
+}
+
+#[tokio::test]
+async fn a_window_opened_after_the_event_still_runs_the_challenge_the_status_names() {
+    use crate::free_tier::challenge::Windows;
+    use crate::free_tier::tests::{FakeHost, PAGE};
+
+    let (handles, mut gateways) = mpsc::unbounded_channel();
+    let endpoint = Arc::new(FakeEndpoint {
+        handles,
+        failures: Mutex::new(Vec::new()),
+    });
+    let hub = Arc::new(Hub::new(endpoint, limits()));
+    let host = Arc::new(FakeHost::default());
+    let windows = Arc::new(Windows::new(
+        host.clone(),
+        crate::config::Challenge::default(),
+    ));
+    tokio::spawn(crate::free_tier::serve::run(
+        hub.clone(),
+        windows,
+        Arc::new(|| true),
+    ));
+    let (tx, _rx) = mpsc::unbounded_channel();
+    let open = hub.open(1, Arc::new(Collect(tx)), WAIT);
+    let (res, mut gw) = tokio::join!(open, async {
+        let mut gw = gateways.recv().await.unwrap();
+        gw.handshake().await;
+        gw
+    });
+    res.unwrap();
+    let ask = gw.recv().await;
+    assert_eq!(ask["method"], "free_tier.status");
+    gw.send(&json!({"jsonrpc":"2.0","id":ask["id"],"result":{"has_guest":true,"enabled":true,"available":true,"model":"m","label":"l","challenge":{"type":"browser","url":PAGE,"required":true,"expires_in":300,"message":"m","attempt":0}}}));
+    loop {
+        if host.count() == 1 {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(5)).await;
+    }
+}

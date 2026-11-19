@@ -9,7 +9,8 @@ use futures_util::{SinkExt, StreamExt};
 use serde_json::{Value, json};
 use tokio::sync::mpsc;
 
-use super::frame::{self, Id, Kind};
+use super::call::{exchange, wait_ready};
+use super::frame;
 use super::hub::{Cmd, Owner, Pending, Shared};
 use super::link::{GatewayConn, Inbound, Outbound};
 use super::reconnect::{Event, Machine, Phase, Step};
@@ -107,9 +108,17 @@ fn fail_all_pending(shared: &Shared) {
     let pending: Vec<Pending> = st.pending.drain().map(|(_, p)| p).collect();
     st.phase = Phase::Degraded;
     for p in pending {
-        if let Owner::Ui { conn, orig } = p.owner {
-            let err = Error::Unavailable("the gateway connection was lost".into());
-            shared.fail_ui(&mut st, conn, &orig, &err);
+        match p.owner {
+            Owner::Ui { conn, orig } => {
+                let err = Error::Unavailable("the gateway connection was lost".into());
+                shared.fail_ui(&mut st, conn, &orig, &err);
+            }
+            Owner::Host(tx) => {
+                let _ = tx.send(Err(Error::Unavailable(
+                    "the gateway connection was lost".into(),
+                )));
+            }
+            Owner::Replay(_) => {}
         }
     }
 }
@@ -120,25 +129,7 @@ async fn dial_and_handshake(shared: &Shared) -> Result<(GatewayConn, Vec<String>
     let deadline = shared.limits.cli_timeout;
     let handshake = async {
         // 1. gateway.ready, which the gateway sends first.
-        let ready = loop {
-            match conn.rx.next().await {
-                Some(Ok(Inbound::Text(t))) => {
-                    let is_ready = frame::classify(&t, shared.limits.max_inbound_frame)
-                        .is_ok_and(|m| m.event_type.as_deref() == Some("gateway.ready"));
-                    if is_ready {
-                        break t;
-                    }
-                    buffered.push(t);
-                }
-                Some(Ok(Inbound::Alive)) => {}
-                Some(Ok(Inbound::Closed)) | None => {
-                    return Err(Error::Unavailable(
-                        "the gateway closed before gateway.ready".into(),
-                    ));
-                }
-                Some(Err(e)) => return Err(e),
-            }
-        };
+        let ready = wait_ready(&mut conn, shared.limits.max_inbound_frame, &mut buffered).await?;
         // 2. client.capabilities, then runtime.describe: their results are cached and answered to the UI locally.
         let caps = call(
             shared,
@@ -148,6 +139,22 @@ async fn dial_and_handshake(shared: &Shared) -> Result<(GatewayConn, Vec<String>
             &mut buffered,
         )
         .await?;
+        // The Desktop's own declaration, only when the host asked for it (the user chose the free tier). It is a call of
+        // its own because a Hermes older than the field refuses just that call and keeps `server_requests`.
+        if (shared.declare)() {
+            match call(
+                shared,
+                &mut conn,
+                "client.capabilities",
+                &json!({"desktop_local": true}),
+                &mut buffered,
+            )
+            .await
+            {
+                Ok(_) => tracing::info!("declared this link as the Desktop on this machine"),
+                Err(e) => tracing::warn!(error = %e, "this Hermes did not accept desktop_local"),
+            }
+        }
         let describe = call(
             shared,
             &mut conn,
@@ -190,33 +197,15 @@ async fn call(
     buffered: &mut Vec<String>,
 ) -> Result<Value> {
     let id = shared.next_req.fetch_add(1, Ordering::Relaxed);
-    let text = json!({"jsonrpc": "2.0", "id": id, "method": method, "params": params}).to_string();
-    conn.tx.send(Outbound::Text(text)).await?;
-    loop {
-        match conn.rx.next().await {
-            Some(Ok(Inbound::Text(t))) => {
-                match frame::classify(&t, shared.limits.max_inbound_frame) {
-                    Ok(m) if matches!(&m.kind, Kind::Response { id: Some(Id::Num(n)) } if u64::try_from(*n) == Ok(id)) =>
-                    {
-                        let v: Value = serde_json::from_str(&t)
-                            .map_err(|e| Error::InvalidFrame(e.to_string()))?;
-                        if let Some(err) = v.get("error") {
-                            return Err(Error::Unavailable(format!("{method}: {err}")));
-                        }
-                        return Ok(v.get("result").cloned().unwrap_or(Value::Null));
-                    }
-                    _ => buffered.push(t),
-                }
-            }
-            Some(Ok(Inbound::Alive)) => {}
-            Some(Ok(Inbound::Closed)) | None => {
-                return Err(Error::Unavailable(format!(
-                    "the gateway closed during {method}"
-                )));
-            }
-            Some(Err(e)) => return Err(e),
-        }
-    }
+    exchange(
+        conn,
+        shared.limits.max_inbound_frame,
+        id,
+        method,
+        params,
+        buffered,
+    )
+    .await
 }
 
 async fn serve(
@@ -331,12 +320,22 @@ fn sweep_timeouts(shared: &Shared) {
         .map(|(k, _)| *k)
         .collect();
     for k in stale {
-        if let Some(p) = st.pending.remove(&k)
-            && let Owner::Ui { conn, orig } = p.owner
-        {
-            let err = Error::Timeout("the gateway's answer");
+        if let Some(p) = st.pending.remove(&k) {
             tracing::warn!(method = %p.method, "a gateway request timed out");
-            shared.fail_ui(&mut st, conn, &orig, &err);
+            match p.owner {
+                Owner::Ui { conn, orig } => {
+                    shared.fail_ui(
+                        &mut st,
+                        conn,
+                        &orig,
+                        &Error::Timeout("the gateway's answer"),
+                    );
+                }
+                Owner::Host(tx) => {
+                    let _ = tx.send(Err(Error::Timeout("the gateway's answer")));
+                }
+                Owner::Replay(_) => {}
+            }
         }
     }
 }
