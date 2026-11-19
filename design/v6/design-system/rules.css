@@ -1,0 +1,158 @@
+/* boopis system · Rules page (owner: design-system agent)
+   Each demonstration draws a rule of DESIGN-SYSTEM.md version 1.1 from the tokens and the library, beside what it
+   replaces where that helps. Loads after specimen.css; tokens only. */
+
+.rl-id { display: inline-flex; gap: 6px; flex-wrap: wrap; margin: 0 0 10px; }
+.rl-id code { font: 400 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); color: var(--text-dim); padding: 4px 7px; border-radius: var(--r-pill); box-shadow: inset 0 0 0 1px var(--hair); }
+.rl-id code[data-proposed] { color: var(--text); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.rl-id code[data-proposed]::after { content: " proposed"; color: var(--text-quiet); }
+.rl-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--sp-4); }
+.rl-was { font: 400 var(--fs-2xs)/var(--lh-meta) var(--mono); color: var(--text-quiet); margin: 8px 0 0; }
+
+/* ───────── R-scroll-1 … R-scroll-5: the bar drawn with ::-webkit-scrollbar ───────── */
+/* reset the mock's standard properties (Chromium ignores the pseudo-elements while either is set) */
+.rl-scroll, .rl-scroll * { scrollbar-width: auto; scrollbar-color: auto; }
+.rl-scroll::-webkit-scrollbar { width: var(--scroll-size); height: var(--scroll-size); background: transparent; }
+.rl-scroll::-webkit-scrollbar-thumb {
+  min-width: var(--scroll-thumb-min); min-height: var(--scroll-thumb-min); border-radius: var(--r-pill);
+  border: calc((var(--scroll-size) - var(--scroll-thumb)) / 2) solid transparent;
+  background: var(--scroll-thumb-color) padding-box;
+}
+.rl-scroll::-webkit-scrollbar-thumb:hover, .rl-scroll::-webkit-scrollbar-thumb:active,
+.rl-scroll[data-demo-hover]::-webkit-scrollbar-thumb {
+  border-width: calc((var(--scroll-size) - var(--scroll-thumb-active)) / 2); background-color: var(--scroll-thumb-color-active);
+}
+.rl-scroll::-webkit-scrollbar-track, .rl-scroll::-webkit-scrollbar-corner { background: transparent; }
+.rl-scroll::-webkit-scrollbar-track { margin-block-end: var(--r-outer, 0px); }   /* R-scroll-5: clear of the corner */
+.rl-scroll::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+.rl-thin { scrollbar-width: thin; scrollbar-color: var(--bg-4) transparent; }   /* the mock's rule, for comparison */
+
+/* a dialog in miniature: frame colour, r-l, line, the body scrolls under the head */
+.rl-dlg {
+  --r-outer: var(--r-l); --pad: var(--pad-dialog);
+  position: relative; display: flex; flex-direction: column; height: 340px; max-width: 460px; box-sizing: border-box;
+  border-radius: var(--r-outer); --sq-bg: var(--bg-1); --sq-line: var(--line); background: var(--sq-bg);
+  box-shadow: inset 0 0 0 1px var(--line), var(--elev-4);
+}
+.rl-dlg[data-sq-on] { box-shadow: var(--elev-4); }
+.rl-dlg__head { display: flex; align-items: center; gap: var(--sp-2); flex: none; height: 52px; padding: 0 var(--pad-dialog) 0 20px; border-bottom: 1px solid var(--hair); min-width: 0; }
+.rl-dlg__head h4 { margin: 0 8px 0 0; font: 600 var(--fs-l)/1 var(--sans); color: var(--text-strong); text-transform: var(--ui-case); }
+.rl-dlg__head .ui-ib { margin-left: auto; }
+.rl-dlg__body { flex: 1; min-height: 0; overflow-y: scroll; overscroll-behavior: contain; padding: 4px calc(20px - var(--scroll-size)) 24px 20px; }   /* R-scroll-4 */
+.rl-dlg__body.rl-thin { overflow-y: auto; padding-right: 20px; }
+.rl-dlg__body p { margin: 12px 0 0; font-size: var(--fs-s); line-height: var(--lh); color: var(--text-dim); }
+
+/* R-corner-5, R-tab-1: the head's band shares the dialog's corner */
+.rl-dtabs { display: flex; gap: 2px; min-width: 0; overflow: hidden; }
+.rl-dtab {
+  appearance: none; flex: none; height: var(--ctl-s); padding: 0 10px; margin: 0; border: 0; border-radius: var(--r-in-dialog);
+  background: transparent; color: var(--text-dim); font: 500 var(--fs-s)/1 var(--sans); cursor: pointer; text-transform: var(--ui-case);
+  transition: background-color var(--dur-out) var(--ease), color var(--dur-out) var(--ease);
+}
+.rl-dtab:hover { --sq-bg: var(--hover); background: var(--hover); color: var(--text); transition-duration: var(--dur-1); }
+.rl-dtab[aria-selected="true"] { --sq-bg: var(--current); background: var(--current); color: var(--text-strong); }
+.rl-dlg--was .rl-dtab { border-radius: var(--r-s); }
+.rl-dlg__head .ui-ib { border-radius: var(--r-in-dialog); }
+.rl-dlg__head .ui-seg { --r-outer: var(--r-in-dialog); }   /* R-seg-3 */
+.rl-dlg--short { height: auto; }
+
+/* ───────── R-stack-*: surfaces on surfaces, cards stacked ───────── */
+.rl-ground { padding: var(--sp-5); border-radius: var(--r-m); background: var(--bg-2); box-shadow: inset 0 0 0 1px var(--hair); }
+.rl-card {
+  position: relative; z-index: 3; box-sizing: border-box; max-width: 360px; padding: 14px 16px;
+  --r-outer: var(--r-m); --pad: var(--pad-card); border-radius: var(--r-outer); --sq-bg: var(--bg-0); background: var(--sq-bg);
+  font-size: var(--fs-s); color: var(--text);
+}
+.rl-card h5 { margin: 0 0 6px; font: 600 var(--fs-m)/var(--lh-ui) var(--sans); color: var(--text-strong); text-wrap: pretty; }
+.rl-card .rl-quote { margin: 0 0 var(--sp-3); color: var(--text-dim); }
+.rl-well { padding: 10px var(--sp-3); border-radius: var(--r-in-card); --sq-bg: var(--bg-2); background: var(--sq-bg); font: 400 var(--fs-2xs)/1.6 var(--mono); color: var(--text-dim); }
+.rl-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2) var(--sp-3); margin-top: var(--sp-3); min-height: var(--ctl); }
+.rl-foot .ui-btn { border-radius: var(--r-in-card); }
+.rl-foot__meta { font: 400 var(--fs-2xs)/1 var(--mono); color: var(--text-quiet); }
+.rl-queue { position: relative; max-width: 360px; padding-bottom: 14px; isolation: isolate; }
+.rl-peek {
+  position: absolute; left: var(--sp-3); right: var(--sp-3); bottom: 7px; height: 40px; z-index: 2;
+  background: var(--bg-0); border-radius: 0 0 var(--r-m) var(--r-m); box-shadow: inset 0 -1px 0 var(--hair); opacity: .9;
+}
+.rl-peek + .rl-peek { left: var(--sp-5); right: var(--sp-5); bottom: 0; z-index: 1; opacity: .55; }
+.rl-levels { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--sp-4); }
+.rl-level { min-height: 84px; padding: var(--sp-3); border-radius: var(--r-m); font-size: var(--fs-xs); color: var(--text-dim); display: flex; flex-direction: column; justify-content: space-between; }
+.rl-level b { font: 400 var(--fs-2xs)/1 var(--mono); color: var(--text-quiet); }
+.rl-level[data-l="0"] { background: var(--bg-1); }
+.rl-level[data-l="1"] { background: var(--bg-3); box-shadow: inset 0 0 0 1px var(--hair); }
+.rl-level[data-l="2"] { background: var(--bg-3); box-shadow: inset 0 0 0 1px var(--hair), var(--elev-2); }
+.rl-level[data-l="3"] { background: var(--bg-1); box-shadow: inset 0 0 0 1px var(--line), var(--elev-3); }
+.rl-level[data-l="4"] { background: var(--bg-1); box-shadow: inset 0 0 0 1px var(--line), var(--elev-4), 0 0 0 100vmax var(--scrim); clip-path: inset(-16px round calc(var(--r-m) + 16px)); }
+
+/* ───────── R-type-*: the scale in use ───────── */
+.rl-type { display: grid; gap: var(--sp-3); }
+.rl-type > div { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: var(--sp-4); align-items: baseline; padding-bottom: var(--sp-3); border-bottom: 1px solid var(--hair); }
+.rl-type > div:last-child { border-bottom: 0; }
+.rl-type .sp-cap { font: 400 var(--fs-2xs)/var(--lh-meta) var(--mono); color: var(--text-quiet); }
+.rl-truncate { max-width: 220px; display: flex; flex-direction: column; gap: var(--sp-2); }
+.rl-truncate span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-s); padding: 6px 12px; border-radius: var(--r-s); background: var(--hover); }
+
+/* ───────── R-icon-*: sizes, gaps, alignment ───────── */
+.rl-icons { display: flex; flex-wrap: wrap; gap: var(--sp-5); align-items: flex-end; }
+.rl-icons figure { margin: 0; display: grid; justify-items: center; gap: var(--sp-2); color: var(--icon); }
+.rl-icons figure > span { display: grid; place-items: center; outline: 1px dashed var(--line); outline-offset: 0; }
+.rl-icons figcaption { font: 400 var(--fs-2xs)/1.3 var(--mono); color: var(--text-quiet); text-align: center; }
+.rl-icons [data-ic="2xs"] .ui-icon { width: var(--ic-2xs); height: var(--ic-2xs); }
+.rl-icons [data-ic="xs"] .ui-icon { width: var(--ic-xs); height: var(--ic-xs); }
+.rl-icons [data-ic="s"] .ui-icon { width: var(--ic-s); height: var(--ic-s); }
+.rl-icons [data-ic="m"] .ui-icon { width: var(--ic-m); height: var(--ic-m); }
+.rl-icons [data-ic="l"] .ui-icon { width: var(--ic-l); height: var(--ic-l); }
+.rl-icons [data-ic="xl"] .ui-icon { width: var(--ic-xl); height: var(--ic-xl); }
+.rl-gaps { display: flex; flex-wrap: wrap; gap: var(--sp-4); align-items: center; }
+.rl-guide { position: relative; }
+.rl-guide::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--brass-soft); pointer-events: none; }
+
+/* ───────── R-kbd-*, R-search-*: keys and search fields ───────── */
+.rl-cmd {
+  --r-outer: var(--r-s); --pad: var(--pad-tip);
+  display: flex; align-items: center; gap: 10px; width: min(380px, 100%); height: 26px; box-sizing: border-box;
+  padding: 0 var(--pad-tip) 0 calc((26px - var(--ic-s)) / 2); border: 0; border-radius: var(--r-outer);
+  --sq-bg: var(--bg-0); background: var(--sq-bg); box-shadow: inset 0 0 0 1px var(--hair); color: var(--text-quiet); font: 400 var(--fs-xs)/1 var(--sans); text-align: left; cursor: pointer;
+}
+.rl-cmd .ui-icon { width: var(--ic-s); height: var(--ic-s); }
+.rl-cmd > span:not(.ui-keys) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.rl-cmd .ui-kbd { border-radius: min(var(--r-in-field), 9px); }
+.rl-cmd--was { padding-left: 10px; }
+.rl-cmd--was .ui-kbd { border-radius: var(--r-xs); }
+.rl-palfield {
+  display: flex; align-items: center; gap: 12px; height: 48px; padding: 0 12px 0 calc((48px - var(--ic-l)) / 2); max-width: 460px;
+  border-radius: var(--r-l) var(--r-l) 0 0; background: var(--bg-1); box-shadow: inset 0 0 0 1px var(--line); color: var(--text-quiet);
+}
+.rl-palfield .ui-icon { width: var(--ic-l); height: var(--ic-l); }
+.rl-palfield > span:not(.ui-keys) { flex: 1; font: 400 var(--fs-m)/1 var(--sans); color: var(--text-strong); }
+.rl-palfield > span u { text-decoration-color: var(--brass); text-underline-offset: 3px; }
+.rl-palfield .ui-kbd { border-radius: 9px; }
+.rl-prose { font-size: var(--fs-s); line-height: var(--lh); color: var(--text-dim); max-width: 46ch; }
+
+/* ───────── R-state-*: every state, drawn statically with the library's tokens ───────── */
+.rl-states { width: 100%; border-collapse: collapse; font-size: var(--fs-xs); }
+.rl-states th { font: 500 var(--fs-xs)/var(--lh-ui) var(--sans); color: var(--text-quiet); text-align: left; padding: 8px 12px 8px 0; border-bottom: 1px solid var(--hair); }
+.rl-states td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--hair); vertical-align: middle; }
+.rl-states tr:last-child td { border-bottom: 0; }
+.rl-states td:first-child { font: 400 var(--fs-2xs)/1 var(--mono); color: var(--text-quiet); white-space: nowrap; }
+.ui-btn.rl-hover { background: var(--hover); }
+.ui-btn--primary.rl-hover { background: var(--text-strong); }
+.ui-ib.rl-hover { background: var(--hover); color: var(--text-strong); }
+.ui-chip.rl-hover { background: var(--hover); color: var(--text-strong); }
+.rl-row.rl-hover { --sq-bg: var(--hover); background: var(--hover); }
+.ui-btn.rl-press { transform: translateY(1px) scale(.985); }
+.ui-ib.rl-press { transform: translateY(1px) scale(.96); }
+.rl-focus { outline: var(--focus-w) solid var(--focus) !important; outline-offset: var(--focus-offset) !important; }
+.rl-row.rl-focus { outline: none !important; box-shadow: inset 0 0 0 var(--focus-w) var(--focus); background: var(--current); }
+.rl-row { display: flex; align-items: center; gap: var(--ic-gap); width: 180px; height: var(--row-h); box-sizing: border-box; padding: 0 4px 0 12px; border-radius: var(--r-s); font-size: var(--fs-s); color: var(--text); }
+.rl-row[aria-current="true"] { background: var(--current); color: var(--text-strong); }
+.rl-row[aria-disabled="true"] { color: var(--text-quiet); }
+.rl-field-dis { opacity: var(--disabled-alpha); }
+/* the focus ring of a clipped control, drawn around it for the demonstration: 2px offset, 2px ring, the corner + 4 */
+.rl-ring { display: inline-flex; padding: calc(var(--focus-offset) + var(--focus-w)); margin: calc(-1 * (var(--focus-offset) + var(--focus-w))); border-radius: calc(var(--r-s) + var(--focus-offset) + var(--focus-w)); box-shadow: inset 0 0 0 var(--focus-w) var(--focus); }
+.rl-scroll-wrap { overflow-x: auto; }
+
+@media (max-width: 640px) {
+  .rl-type > div { grid-template-columns: 1fr; gap: 4px; }
+  .rl-dlg__head h4 { display: none; }
+}

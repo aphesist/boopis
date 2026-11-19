@@ -344,7 +344,31 @@ for (const [k, desc] of [['--chrome-h', 'Title bar height.'], ['--sb-rail-w', 'L
 }
 scale.layout['sb-w'] = { $type: 'dimension', $value: dim(256), $description: 'Open left sidebar: clamp(256px, 15vw, 288px).', $extensions: { boopis: { css: '--sb-w', cssValue: shared['--sb-w'] } } };
 scale.layout['right-w'] = { $type: 'dimension', $value: dim(300), $description: 'Open right panel and the bot settings sheet: clamp(300px, 18vw, 340px).', $extensions: { boopis: { css: '--right-w', cssValue: shared['--right-w'] } } };
-for (const k of ['base', 'right', 'sidebar', 'dock', 'chrome', 'menu', 'palette', 'toast', 'tooltip']) scale.z[k] = { $type: 'number', $value: +shared['--z-' + k], $extensions: { boopis: { css: '--z-' + k } } };
+for (const k of ['base', 'right', 'sidebar', 'dock', 'scrim', 'overlay', 'chrome', 'menu', 'palette', 'toast', 'tooltip']) scale.z[k] = { $type: 'number', $value: +shared['--z-' + k], $extensions: { boopis: { css: '--z-' + k } } };
+scale.z.local = { $type: 'number', $value: 3, $description: 'The highest literal z-index allowed inside a component, and only under isolation: isolate (R-elev-5). Modal dialogs use the top layer (showModal), above every value here.' };
+/* icons: six sizes and two gaps (DESIGN-SYSTEM.md §10, R-icon-3, R-icon-5) */
+scale.icon = {};
+for (const [k, desc] of [['2xs', 'Chevrons of disclosures and group heads.'], ['xs', 'Section chevrons, glyphs in mono chips, schedule marks.'], ['s', 'The command field, file chips, task and inline marks, model marks in running text.'], ['m', 'Chips and menu glyphs.'], ['l', 'Buttons, rows, the send button, origin slots, the palette.'], ['xl', 'Icon buttons.']]) {
+  scale.icon[k] = { $type: 'dimension', $value: dim(px(shared['--ic-' + k])), $description: desc, $extensions: { boopis: { css: '--ic-' + k } } };
+}
+scale.icon.gap = { $type: 'dimension', $value: dim(px(shared['--ic-gap'])), $description: 'Icon to label: buttons, menu items, rows.', $extensions: { boopis: { css: '--ic-gap' } } };
+scale.icon['gap-tight'] = { $type: 'dimension', $value: dim(px(shared['--ic-gap-tight'])), $description: 'Icon to label in capsules and controls of 26px and under.', $extensions: { boopis: { css: '--ic-gap-tight' } } };
+/* nested corners per container (R-corner-3, R-corner-5): the container's inset and the radius of what sits in its corners */
+scale.nest = {};
+for (const [k, outer, padVar, desc] of [['dialog', 'l', '--pad-dialog', 'Dialogs and sheets: the close button and the head\'s tabs.'], ['palette', 'l', '--pad-palette', 'The palette\'s rows.'], ['dock', 'l', '--pad-dock', 'A card or row at the top of the dock slab.'], ['menu', 'm', '--pad-menu', 'Menu items.'], ['card', 'm', '--pad-card', 'A well, a footer button, a stamp in a card.'], ['composer', 'm', '--composer-pad', 'Attach, chips, mic and send in the composer.'], ['toast', 'm', '--pad-toast', 'A toast\'s action.'], ['field', 's', '--pad-tip', 'Key chips in a tooltip or at a field\'s end.'], ['seg', 's', '--pad-seg', 'The segmented thumb and options.']]) {
+  const pad = px(shared[padVar]);
+  const modes = Object.fromEntries(['sharp', 'default', 'round'].map((m) => [m, dim(Math.max(SC[m].floor, SC[m][outer] - pad))]));
+  scale.nest[k] = { $type: 'dimension', $value: modes.default, $description: desc,
+    $extensions: { boopis: { css: '--r-in-' + k, pad: { css: padVar, value: dim(pad) }, outer: '--r-' + outer, formula: 'max(var(--r-floor), calc(var(--r-' + outer + ') - var(' + padVar + ')))', modes } } };
+}
+/* floating surfaces, focus, targets, scrollbars */
+scale.float = { gap: { $type: 'dimension', $value: dim(px(shared['--float-gap'])), $description: 'A menu, popover or tooltip from its anchor.', $extensions: { boopis: { css: '--float-gap' } } },
+  margin: { $type: 'dimension', $value: dim(px(shared['--float-margin'])), $description: 'The least distance from a floating surface to the window edge.', $extensions: { boopis: { css: '--float-margin' } } } };
+scale.focus = { width: { $type: 'dimension', $value: dim(px(shared['--focus-w'])), $extensions: { boopis: { css: '--focus-w' } } }, offset: { $type: 'dimension', $value: dim(px(shared['--focus-offset'])), $description: 'Outside the element; -2px (inside) in tracks and floating surfaces.', $extensions: { boopis: { css: '--focus-offset' } } } };
+scale.target = { min: { $type: 'dimension', $value: dim(px(shared['--hit-min'])), $description: 'The smallest pointer target (WCAG 2.5.8).', $extensions: { boopis: { css: '--hit-min' } } } };
+scale.opacity = { disabled: { $type: 'number', $value: +shared['--disabled-alpha'], $description: 'Proposed (R-state-6): a disabled control drawn in fills (send, switch, field).', $extensions: { boopis: { css: '--disabled-alpha', proposed: true } } } };
+scale.scroll = {};
+for (const [k, v, desc] of [['size', '--scroll-size', 'The bar\'s box, both axes; the track is transparent.'], ['thumb', '--scroll-thumb', 'The thumb at rest, a capsule centred in the bar.'], ['thumb-active', '--scroll-thumb-active', 'The thumb while hovered or dragged.'], ['thumb-min', '--scroll-thumb-min', 'The shortest thumb.']]) scale.scroll[k] = { $type: 'dimension', $value: dim(px(shared[v])), $description: desc, $extensions: { boopis: { css: v } } };
 const DUR = { press: ['--dur-press', 'Press feedback.'], 1: ['--dur-1', 'Hover in, colour changes.'], 2: ['--dur-2', 'Menus, fades, popovers (with a 6px drop).'], 3: ['--dur-3', 'Layout travel, sheets, card height changes.'] };
 for (const [k, [v, desc]] of Object.entries(DUR)) scale.duration[k] = { $type: 'duration', $value: dim(px(shared[v]), 'ms'), $description: desc, $extensions: { boopis: { css: v, reducedMotion: k === 'press' ? undefined : dim(1, 'ms') } } };
 scale.duration.indicator = { $type: 'duration', $value: dim(240, 'ms'), $description: 'A segmented thumb or page indicator travelling.', $extensions: { boopis: { css: '--dur-slide', reducedMotion: dim(1, 'ms') } } };
@@ -360,7 +384,8 @@ scale.leading = {
   reading: { $type: 'number', $value: +shared['--lh'], $extensions: { boopis: { css: '--lh' } } },
   ui: { $type: 'number', $value: +shared['--lh-ui'], $extensions: { boopis: { css: '--lh-ui' } } },
   tight: { $type: 'number', $value: +shared['--lh-tight'], $extensions: { boopis: { css: '--lh-tight' } } },
-  meta: { $type: 'number', $value: 1.45, $description: 'Mono meta in the call-number margin.' }
+  meta: { $type: 'number', $value: +shared['--lh-meta'], $description: 'Mono meta in the call-number margin.', $extensions: { boopis: { css: '--lh-meta' } } },
+  small: { $type: 'number', $value: +shared['--lh-small'], $description: 'Hints, descriptions, notes.', $extensions: { boopis: { css: '--lh-small' } } }
 };
 scale.tracking = { sans: { $type: 'dimension', $value: { value: 0, unit: 'rem' }, $extensions: { boopis: { css: '--track' } } }, mono: { $type: 'dimension', $value: { value: -0.01, unit: 'em' }, $description: 'Not a DTCG unit; read it as -0.01em.', $extensions: { boopis: { css: '--track-mono', cssValue: '-.01em' } } } };
 
@@ -398,7 +423,17 @@ const component = {
   stamp: { height: { $type: 'dimension', $value: dim(20) }, 'padding-x': { $type: 'dimension', $value: dim(7) }, radius: { $type: 'dimension', $value: ref('primitive.radius.xs') }, outline: { $type: 'color', $value: ref('semantic.color.attention.fill') }, text: { $type: 'color', $value: ref('semantic.color.attention.text') } },
   dot: { size: { $type: 'dimension', $value: dim(6) }, 'size-measure': { $type: 'dimension', $value: dim(4) }, 'size-flag': { $type: 'dimension', $value: dim(8) } },
   switch: { width: { $type: 'dimension', $value: dim(34) }, height: { $type: 'dimension', $value: dim(20) }, knob: { $type: 'dimension', $value: dim(14) }, on: { $type: 'color', $value: ref('semantic.color.selected.fill') }, off: { $type: 'color', $value: ref('semantic.color.surface.inset') } },
-  focus: { width: { $type: 'dimension', $value: dim(2) }, offset: { $type: 'dimension', $value: dim(2) }, color: { $type: 'color', $value: ref('semantic.color.accent.default') } },
+  focus: { width: { $type: 'dimension', $value: ref('primitive.focus.width') }, offset: { $type: 'dimension', $value: ref('primitive.focus.offset') }, color: { $type: 'color', $value: ref('semantic.color.accent.default') } },
+  scrollbar: { size: { $type: 'dimension', $value: ref('primitive.scroll.size') }, thumb: { $type: 'dimension', $value: ref('primitive.scroll.thumb') }, 'thumb-active': { $type: 'dimension', $value: ref('primitive.scroll.thumb-active') }, 'thumb-min': { $type: 'dimension', $value: ref('primitive.scroll.thumb-min') },
+    color: { $type: 'color', $value: ref('semantic.color.surface.pressed'), $extensions: { boopis: { css: '--scroll-thumb-color' } } }, 'color-active': { $type: 'color', $value: ref('semantic.color.mark.off'), $description: 'Hovered or dragged: 3:1 like every non-text mark (proposed, R-scroll-3).', $extensions: { boopis: { css: '--scroll-thumb-color-active' } } },
+    track: { $type: 'color', $value: { colorSpace: 'srgb', components: [0, 0, 0], alpha: 0 }, $description: 'Transparent: no track, no buttons.' } },
+  elevation: {
+    0: { $type: 'shadow', $value: [], $description: 'The frame and the ground.', $extensions: { boopis: { css: '--elev-0', z: '--z-base' } } },
+    1: { $type: 'shadow', $value: [], $description: 'In flow: raised and inset surfaces. Tone and a hairline, never a shadow.', $extensions: { boopis: { css: '--elev-1' } } },
+    2: { $type: 'shadow', $value: ref('semantic.shadow.tip'), $description: 'Tooltips.', $extensions: { boopis: { css: '--elev-2', z: '--z-tooltip' } } },
+    3: { $type: 'shadow', $value: ref('semantic.shadow.pop'), $description: 'Menus, popovers, toasts.', $extensions: { boopis: { css: '--elev-3', z: '--z-menu, --z-toast' } } },
+    4: { $type: 'shadow', $value: ref('semantic.shadow.pop'), $description: 'The palette and dialogs, over --scrim.', $extensions: { boopis: { css: '--elev-4', z: '--z-palette; modal dialogs use the top layer' } } }
+  },
   dock: { surface: { $type: 'color', $value: ref('semantic.color.surface.dock') }, 'rest-height': { $type: 'dimension', $value: ref('primitive.layout.dock-rest-h') }, radius: { $type: 'dimension', $value: ref('primitive.radius.l') }, flare: { $type: 'dimension', $value: ref('primitive.radius.l') }, orb: { $type: 'dimension', $value: dim(40) }, pitch: { $type: 'dimension', $value: dim(54) } }
 };
 
