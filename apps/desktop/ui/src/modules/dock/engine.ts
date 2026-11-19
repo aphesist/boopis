@@ -269,7 +269,7 @@ export function showView(key: string): HTMLElement | null {
   }
   let target: HTMLElement | null = null;
   for (const v of X.pageEls[p]?.querySelectorAll<HTMLElement>(':scope > .dk-view') ?? []) {
-    if (v.dataset['view'] === key && !v.classList.contains('is-ghost')) { cancelLeave(v); v.hidden = false; target = v; }
+    if (v.dataset['view'] === key && !v.classList.contains('is-ghost')) { cancelLeave(v); unhand(v); v.hidden = false; target = v; }
     else if (!v.classList.contains('is-leaving')) v.hidden = true;
   }
   return target;
@@ -295,7 +295,10 @@ function finishLeave(view: Leaving): void {
   else {
     view.classList.remove('is-leaving');
     view.style.left = view.style.bottom = view.style.width = view.style.height = '';
-    for (const el of view.querySelectorAll('.is-handed')) el.classList.remove('is-handed');
+    /* the handed marks stay on while the view is put away: taking them off here made every handed node visible again
+       inside a view that is about to be display:none, a hide-and-show of the same node within a few frames. They come
+       off when the view is shown again (showView) */
+    if (view === X.curView) unhand(view);
     if (view !== X.curView) view.hidden = true;
   }
   const sec = view.parentElement as Sec | null;
@@ -304,6 +307,7 @@ function finishLeave(view: Leaving): void {
     if (!X.curView || X.curView.parentElement !== sec) sec.hidden = true;
   }
 }
+function unhand(view: HTMLElement): void { for (const el of view.querySelectorAll('.is-handed')) el.classList.remove('is-handed'); }
 function cancelLeave(view: HTMLElement): void { if (view.classList.contains('is-leaving')) finishLeave(view); }
 export function cancelOut(sec: Sec): void {
   if (sec._fade) { try { sec._fade.cancel(); } catch { /* gone */ } sec._fade = null; }
