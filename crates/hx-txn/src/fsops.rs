@@ -302,6 +302,10 @@ mod tests {
             write_atomic(&root, Path::new("f"), ".tmp", b"x", Some(given), None).unwrap();
             let md = std::fs::metadata(t.path().join("f")).unwrap();
             assert_eq!(md.permissions().mode() & 0o7777, kept, "{given:o}");
+            // A kept mode of 0 leaves a file nobody may read, root excepted (so it passed as root and
+            // failed for everyone else): open it up before reading it back.
+            std::fs::set_permissions(t.path().join("f"), std::fs::Permissions::from_mode(0o600))
+                .unwrap();
             assert_eq!(std::fs::read(t.path().join("f")).unwrap(), b"x");
         }
     }
