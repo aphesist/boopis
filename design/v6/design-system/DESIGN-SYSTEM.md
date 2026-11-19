@@ -34,10 +34,11 @@ mock-up breaks its own rules, the fix is in [Findings](#16-findings).
 | **Dock motion:** the dock stays centred on the centre line and its content travels inside the slab; under reduced motion a size change is instant (entrances fade), with no sliding or overshoot (v10). | 12, 14.12 |
 | **Reduced motion reduces and never freezes the orbs:** blinks, eye morphs, small glances and reactions stay; large travel, bounce and spin go. `static` only for orbs off-screen or tiny thumbnails (16px, or picker tiles up to 28px). The one orb you are looking at (presence, new-bot preview) always has a step every 1.8s (the glance lead). | 11, 13 |
 | **Inactive marks reach 3:1** (page dots, ladder stations to come; non-text, WCAG 1.4.11) in every preset and on the dock, and stay visibly quieter than the active marks (`--mark-off`). | 4.5, 4.6, 14.27 |
-| **Nested corners fit their container (concentric radii).** Every rounded surface inside another follows the outer curve: inner radius = outer radius − the gap between the edges, never below a small floor; a round piece inside a pill stays a pill. Then the eye: equal-looking gaps matter more than the arithmetic, and where the gap is large the inner corner is never larger than the outer. Systemic: containers declare `--r-outer` and `--pad`, what sits in their corners takes `--r-in` (no module hand-picks a radius). | 1, 8, 14 |
-| **Continuous corners** (Apple's smooth curvature) instead of a circular arc meeting a straight edge: `corner-shape: superellipse(1.8)` where the engine has it, with a re-tuned, larger nominal scale; elsewhere a slightly larger plain radius. | 8 |
+| **Nested corners fit their container (concentric radii).** Every rounded surface inside another follows the outer curve: inner radius = outer radius − the gap, never under a floor of 8; where the arithmetic would go under the floor, the padding gives way, not the radius (Apple keeps inner radii generous). A round piece inside a pill stays a pill. Systemic: containers declare `--r-outer` and `--pad`, what sits in their corners takes `--r-in`. | 1, 8, 14 |
+| **Apple continuous corners in every engine** (revised 18 November 2026: the owner's main platform is Linux, Tauri on WebKitGTK, where `corner-shape` does nothing). The corner is drawn as a path, Figma's corner smoothing at 0.6 as on iOS, by `HX.ui.squircle`, so WebKit and Chromium show the same curve. Radii are generous: sheets and the dock 30, cards 20, buttons, rows and fields 12, chips a capsule. | 8 |
 | **Every composer can talk:** a mic in each one (the session, the Bots tab, the dock's session); when a bot is the target, its orb listens while you talk. mod+Enter still sends; alt+V talks. The dock session's send no longer floats: the composer's actions sit in its corner, concentric with it. | 14.10 |
 | **Graphite and Typewriter have a real accent:** Graphite steel `#9db6cf`, Typewriter carbon-paper blue `#7ea6e0`, so "you are here" is distinct from text in every preset. | 4.3, 5.4 |
+| **Provider logos beside every model name** (19 November 2026). The model that answered shows its provider's logo next to its name, never instead of it: monochrome in `currentColor` everywhere (origin slots, queue rows, the session's model line and composer chip, the ladder, the dock run), full brand colour only in the model selection menu and its chip preview. The family comes from the model id, never the host (Claude through Bedrock is Claude); an unknown family gets a neutral generic mark, never the φ. One primitive, `HX.ui.modelMark`; icons from LobeHub (MIT) in `vendor/model-icons/`. | 10.1, 12 |
 
 ---
 
@@ -91,8 +92,8 @@ Ordered. When two collide, the higher one wins.
 7. **One canonical component per job.** A piece drawn by two modules is drawn by the library. *Why:* the owner asked
    for no redundancy and no re-design; three hold-to-approve buttons is three products.
 8. **Corners fit, and they are continuous** (Owner decision). A corner inside another follows it: the inner radius is
-   the outer less the gap, judged by eye, never chosen per module; and every corner eases out of its edge instead of
-   meeting it as an arc. *Why:* nested shapes that do not share a centre read as stacked parts rather than one
+   the outer less the gap, never under the floor, judged by eye, never chosen per module; and every corner eases out
+   of its edge instead of meeting it as an arc, in every engine the app runs in. *Why:* nested shapes that do not share a centre read as stacked parts rather than one
    object, and a plain arc against a straight edge reads as "square roundness".
 
 ## 2. Voice and copy
@@ -169,8 +170,9 @@ Use it only for what tokens cannot express.
   `--brass-base` (the accent captured on `:root`, so a ground can re-derive `--brass` without referring to itself; a
   self-referencing custom property is a cycle that silently voids the accent and the focus ring), `--mark-off`, and
   the corner scale (`--r-xs` to `--r-l` in both shapes and all three corner settings), `--r-floor`, `--corner` and
-  `--composer-pad` (section 8). The library keeps only behaviour: the `:where(*)` corner-shape rule, the round list
-  and the nesting contract.
+  `--composer-pad` (section 8). The retuned corner scale of the drawn corners (section 8) and `--corner-smoothing` are
+  library tokens again until `tokens.css` takes them (MIGRATION.md §0.8); the library also holds the squircle's
+  behaviour (`HX.ui.squircle`) and the nesting contract.
 
 ## 4. Colour
 
@@ -454,84 +456,92 @@ travel together on one curve. Nothing computes its own centre.
 
 ## 8. Shape
 
-Corners are **continuous** and a corner inside another **fits** it (Owner decisions, 18 November 2026). The scale is in
-`tokens.css`; the corner-shape rule, the round list and the nesting contract are in `components.css`.
+Corners are **Apple's continuous corners, drawn the same in every engine**, and a corner inside another **fits** it
+(Owner decisions, 18 November 2026, revised the same day). Why the revision: the app runs in Tauri, which is WebKitGTK
+on Linux (the owner's main platform), WebKit on macOS and WebView2 (Chromium) only on Windows. WebKit has no
+`corner-shape`, so the first version (`superellipse(1.8)`) showed only in Chromium; on the owner's machine every
+corner was a small circular arc, and inner radii had collapsed to 5–6px.
 
-### 8.1 Continuous corners
+### 8.1 The drawn corner (`HX.ui.squircle`)
 
-Where the engine has `corner-shape` (Chromium 139 and later; the test browser is Chromium 153), every rounded corner
-in the app is drawn as `superellipse(1.8)`, set once on everything (`:where(*)`, zero specificity) inside
-`@supports (corner-shape: superellipse(2))`; no component opts in. The curve leaves the straight edge with almost no
-curvature and turns gradually, as Apple's continuous corners do, instead of a circular arc that meets the edge at
-once. The exponent is 2^1.8 ≈ 3.5: rounder than the squircle (`superellipse(2)`), which reads boxy on small
-controls; squarer than a circle.
+- **The curve.** Figma's corner smoothing, ported from figma-squircle (MIT, Tien Pham) after Daniel Furse's
+  "Desperately seeking squircles". A corner of radius R with smoothing ξ = 0.6 (iOS) keeps a circular arc of
+  90(1 − ξ)° = 36° in its middle and replaces each end with a cubic whose curvature starts at zero on the straight
+  edge; the corner runs (1 + ξ)·R = 1.6R along each edge. The radius means what it means on iOS: a continuous corner of
+  R reads as round as an arc of R, only softer. Where an edge is too short for the full run, ξ shrinks first, so the
+  corner never passes the middle of an edge. `--corner-smoothing` (0.6) is the one knob.
+- **How it is applied.** `clip-path: path()` on the element: Chromium and WebKit draw it alike. A clip-path also clips
+  the inset hairline and the focus ring, so `::after` draws both, clipped to a band of the same path: 1px in the
+  component's `--sq-line` colour, and on `:focus-visible` 2px of `--focus`, inside the edge. Floating surfaces (menus,
+  popovers, tooltips, toasts, the expanded blank) are not clipped, so their elevation shadow survives: a clipped
+  `::before` paints their `--sq-bg` instead. The dock's still slab and the concave corners are clipped too, flares
+  included. The live dock draws its outline with `HX.ui.shape.slab()`, which now uses the same smoothing.
+- **When it recomputes.** One shared `ResizeObserver` (border box). The browser runs its callback once per frame after
+  layout, so the path is written in the same frame as the size: a card animating its height or the dock morphing never
+  shows a stale clip, and every read happens before every write. A corner's commands are relative, so they are cached
+  by radius and smoothing and a resize rebuilds only the four straight edges; whole paths are cached by size and radii.
+  The radii come from the element's computed `border-radius` (the tokens, so nesting holds), read when it binds and
+  again on `hx:theme` or a change of preset, corners or density. The `--sq-*` properties are registered as not
+  inheriting, so a resize re-styles one element, not its subtree. A corner as round as half the element (a capsule, a
+  circle) needs no path and stays native. Nothing animates, so reduced motion has nothing to stop.
+- **Cost, measured.** 200 bound elements changing height every frame (Chromium 153, headless, this specimen): the
+  squircle's work per frame averages 0.9ms, 1.4ms at the 95th percentile (budget 2ms). Binding the whole specimen
+  (about 240 surfaces) takes one 20–40ms frame at load, once.
+- **What is bound.** The library's surfaces (buttons, icon buttons, send, segmented track and thumb, rows, menu items,
+  menus, popovers, tooltips, toasts, the composer box, files, request cards, the still slab, concave corners) and the
+  card layer's (cards, wells, minis, option rows, the free answer, previews). Modules bind theirs with
+  `HX.ui.squircle.auto(selector)` or `data-sq` (MIGRATION.md §9). Text inputs keep a native arc: an `<input>` cannot
+  hold the `::after` that draws the line.
+- **Verified in WebKitGTK 2.52** (Tauri's Linux engine) through its own WebView: `corner-shape` is unsupported there,
+  `clip-path: path()` and `@property` are supported, the bound surfaces draw the same curve as Chromium
+  (`shots/corners-webkit-vs-chromium.png`), and the specimen has no console errors. The app itself (every module
+  migrated, 19 November 2026) renders the same in WebKitGTK and Chromium: `../shots/final3/webkit-vs-chromium-*.png`.
+  On the app, the squircle's work stays under 0.5ms a frame during the dock's morphs and a card's height animation.
 
-A continuous corner of the same nominal radius is shallower at the diagonal, so the scale is **re-tuned to about 1.6
-times**: at 1.6 times, its depth at the diagonal equals the old arc's and its run along each edge is longer, so a
-corner reads as round as before, only softer.
-
-| Token | Continuous: sharp / default / round | Fallback round arc: sharp / default / round | v6 (round) | Use |
-|---|---|---|---|---|
-| `--r-xs` | 3 / **7** / 10 | 2 / 5 / 7 | 2 / 4 / 6 | kbd, code chips, stamps, the page-dot focus box |
-| `--r-s` | 5 / **10** / 16 | 3 / 7 / 11 | 3 / 6 / 10 | Buttons, rows, fields, chips, the segmented track, tooltips, wells |
-| `--r-m` | 9 / **16** / 26 | 6 / 12 / 18 | 5 / 10 / 16 | Cards, the composer, menus, popovers, toasts, request cards |
-| `--r-l` | 13 / **22** / 32 | 9 / 16 / 22 | 8 / 14 / 20 | Where the ground meets the frame, the dock and its flares, dialogs, the palette |
-| `--r-floor` | 3 / **5** / 8 | 2 / 4 / 6 | none | The smallest inner radius of a nested corner |
-| `--r-pill` | 999 | 999 | 999 | Dots, the switch, an orb's button; anything inside a pill |
-
-- **Fallback.** Engines without `corner-shape` (WebKit today, which is the macOS webview a Tauri build runs in) draw
-  a plain arc from the fallback column: a little larger than v6 so it no longer reads as "square roundness". Check
-  WebKit's support before shipping the Mac build; until it lands, Mac users see the fallback.
-- **Circles and pills stay round.** `corner-shape: round` on dots, the switch and its thumb, ladder stations, measure
-  and legend dots, page dots, orb buttons and `.ui-round`. A superellipse at 50% is a rounded square, not a circle.
-- **Why CSS and not a mask.** A mask or `clip-path` drawn from a path would give continuous corners in WebKit too,
-  but it clips the inset hairline, the focus ring and the shadow, and needs a `ResizeObserver` per surface; for
-  cards and the composer that costs more than it gives. The **dock slab** is the exception, because it already *is*
-  a path (it morphs on springs and grows concave flares no CSS shape has): `HX.ui.shape.slab(w, h, R, F)` draws it
-  with the same corner CSS draws in that engine, a cubic whose handle (0.853 R) puts the curve through the
-  superellipse's diagonal point, or the circle's 0.552 R where the engine is round. `HX.ui.shape.corner()` gives any
-  other path the same corner.
-- **Concave corners** (the ground under the frame, a sheet, the dock's still slab in CSS) are drawn as the outside
-  of a rounded corner (a rounded square whose shadow fills the rest of its box), so they take the continuous shape
-  too: `.ui-concave[data-at="tl"|"tr"]`, `.ui-slab`.
-- The corner setting (sharp, default, round) still changes all of it; Typewriter defaults to round.
+| Token | Sharp | Default | Round | v6 default | Use |
+|---|---|---|---|---|---|
+| `--r-xs` | 3 | **6** | 8 | 4 | kbd, inline code, stamps |
+| `--r-s` | 6 | **12** | 16 | 6 | Buttons, rows, fields, wells, the segmented track, tooltips |
+| `--r-m` | 10 | **20** | 26 | 10 | Cards, the composer, menus, popovers, toasts, request cards |
+| `--r-l` | 14 | **30** | 36 | 14 | Sheets, dialogs, the palette, the dock, where the ground meets the frame |
+| `--r-floor` | 4 | **8** | 12 | none | The smallest inner radius of a nested corner |
+| `--r-pill` | 999 | 999 | 999 | 999 | Chips (a capsule), dots, the switch, anything inside a pill |
+| `--corner-smoothing` | 0.6 | 0.6 | 0.6 | none | The corner's smoothing (0 is a plain arc) |
 
 ### 8.2 Nested corners fit their container
 
 ```
---r-in = max(--r-floor, --r-outer − --pad)
+--r-in = max(--r-floor, --r-outer − --pad)        and, where that would go under the floor: --pad = --r-outer − --r-floor
 ```
 
 - **The contract.** A surface that holds others declares, on itself, its radius `--r-outer` and the inset of what
-  sits in its corners `--pad`; it computes `--r-in` and uses `border-radius: var(--r-outer)`. What sits in its
-  corners takes `border-radius: var(--r-in)`. For module surfaces the library offers the same as two classes:
-  `.ui-nest` (on an element that declares `--r-outer` and `--pad`) and `.ui-fit` (on its corner child). The value is
-  computed where it is declared and inherited as a length, so a nested surface's own radius comes from its context
-  (for example `--r-composer` or `--r-card`, set by the context) and never from its own `--r-in`: no cycles.
-- **Tight or loose.** When the gap is smaller than the outer radius the two corners read together (tight): use the
-  formula. When the gap is as large as the outer radius or larger they no longer do (loose): the inner piece keeps
-  its own step, one smaller than its container's, and **never a larger radius than the container**.
-- **By eye.** The formula is where it starts. At the floor the inner corner is a little rounder than the arithmetic,
-  which tightens the gap at the corner slightly: that reads as fitting, a hard corner against a soft one does not.
-  With continuous corners `R − gap` leaves the gap at the diagonal about 15% wider than at the edges, which the eye
-  accepts; the equal-gap value (`R − 1.6 gap`) looks pinched on small controls, so the system keeps `R − gap`.
-- **Pills.** A round piece inside a pill stays a pill, and is concentric only when the gap is equal on every side
-  (the switch: 20 high, thumb 14, gap 3).
+  sits in its corners `--pad`; it computes `--r-in` and uses `border-radius: var(--r-outer)`. What sits in its corners
+  takes `border-radius: var(--r-in)`. The same as two classes for module surfaces: `.ui-nest` and `.ui-fit`. The
+  squircle reads the resulting radii, so the drawn corners are concentric too.
+- **Generous, as Apple does.** The inner radius never goes under the floor (8): a hard corner against a soft one is
+  the mistake the owner sees as "too square". When `R − gap` would go under it, the padding gives way: the gap
+  becomes `R − floor` (12 in a 20px card), so the corners stay concentric and the inner piece stays soft.
+- **Tight or loose.** When the gap is smaller than the outer radius the corners read together: use the formula. When
+  the gap is as large as the outer radius or larger, the inner piece keeps its own step, never larger than the outer.
+- **Pills.** A round piece inside a pill stays a pill, concentric when the gap is equal on every side.
 
-| Nesting | Outer | Gap | Inner (default, continuous) |
+| Nesting | Outer | Gap | Inner (default) |
 |---|---|---|---|
-| Mic, send, attach, chips and files in the composer | `--r-m` 16 | 6 | `--r-in` 10 |
-| A menu item in a menu | `--r-m` 16 | 4 | 12 |
-| A button in a toast | `--r-m` 16 | 6 | 10 |
-| The segmented thumb and options in the track | `--r-s` 10 | 3 | 7 |
-| A key in a tooltip | `--r-s` 10 | 4 | 6 |
-| A colour swatch in its customizer well | `--r-s` 10 | 2 | 8 |
-| A card set at the top of the dock slab (the wait views) | `--r-l` 22 | 16 | 6 |
-| The switch thumb; orbs in the dock's minimised pill | pill | 3; 9 | pill, centred on the end caps |
-| Wells, the staging box and footer buttons in a card; fields in a popover; a card or the composer on the ground or mid-slab | loose | 14 to 16 | own step (`--r-s`, `--r-m`), never above the outer |
+| Mic, send, attach, chips and files in the composer | `--r-m` 20 | 6 | 14 (the send, 28px, is a circle) |
+| A menu item in a menu | `--r-m` 20 | 4 | 16 |
+| A button in a toast | `--r-m` 20 | 6 | 14 |
+| A well, a footer button, a stamp in a card | `--r-m` 20 | 12 (was 16) | 8 |
+| The segmented thumb and options in the track | `--r-s` 12 | 3 | 9 |
+| A key in a tooltip | `--r-s` 12 | 4 | 8 |
+| A colour swatch in its customizer well | `--r-s` 12 | 2 | 10 |
+| A card or a row at the top of the dock slab (wait, queue) | `--r-l` 30 | 12 | 18 |
+| The close button in a dialog's corner | `--r-l` 30 | 12 | 18 |
+| A row at the bottom of the palette | `--r-l` 30 | 6 | 24 |
+| The switch thumb; orbs in the dock's minimised pill; chips | pill | 3; 9 | pill |
 | A surface flush with its container's edge (a card's foot, a queue's peek) | the container's | 0 | the container's radius |
 
-The specimen draws the rule four times larger and lists these with the live values of the current theme.
+The specimen draws the rule twice as large, lists these with the live values of the current theme, and shows WebKit
+before and after.
 
 ## 9. Elevation, hairlines and depth
 
@@ -560,10 +570,38 @@ Flat. Depth is tone: frame, ground, raised, inset. Lines divide; shadows only on
 - **Sizes:** 18 in icon buttons, 16 in buttons, rows and the send button, 14–15 in chips and menus, 10–12 for
   chevrons in disclosures.
 - **Colour:** `--icon` at rest, `--text-strong` on hover, `--icon-off` disabled, `--brass` when pressed or checked.
-- Every icon is `aria-hidden`; its button carries the name.
+- Every icon is `aria-hidden`; its button carries the name. The one exception is a model mark (10.1), which names
+  its provider.
 - The set: sidebar-left, sidebar-right, back, forward, search, minimize, maximize, restore, close, plus, gear,
   session, bots, dock, send, mic, stop, ladder (Governed), spark (Smart), chevron, chevron-down, copy, check, play,
   pen, archive, unarchive, fork, file, folder, at, slash, clock, sliders, more.
+
+### 10.1 Model marks (`HX.ui.modelMark`, Owner decision)
+
+- **What it is:** the provider's logo beside a model's name, so you see at a glance which model answered or is
+  asking. Never alone: the name stays next to it everywhere, and the mark carries the family's accessible name
+  ("Claude", "OpenAI"), so a screen reader hears "Claude, sonnet 5.5".
+- **One primitive** (`components/model-mark.js`, `model-mark.css`): `HX.ui.modelMark(ref, {size, color})`,
+  `html.model(ref)` (mark and name, one unit that never wraps apart) and `html.modelRoute('qwen3-coder → sonnet 5.5')`
+  (both marks, the arrow kept). The library's pieces take a model and draw it through the primitive: menu items
+  `{model}`, chips `{model}`, every station of a list ladder, and an entry's call number `[{model}, {model, via: '→'}]`.
+  No inline SVG anywhere else.
+- **Monochrome everywhere:** `currentColor`, so the theme's tokens drive it (the name's colour beside text, `--icon`
+  in an origin slot). 14px in chips, call numbers, the ladder and running text; 16px in origin slots, bylines,
+  menus and the picker.
+- **Brand colour only in the model selection menu and its chip preview** (a form's model picker). A brand fill under
+  3:1 on the menu row keeps its hue and moves in OKLab lightness until it reaches 3:1, per scheme, through
+  `light-dark()`; the shipped value stays as the fill. OpenAI, Grok, Z.ai and Ollama are monochrome brands and stay
+  `currentColor` in both modes. On the dock a brand mark is drawn for the dark scheme in every theme.
+- **The family comes from the model id** (its last path segment), never the host. The mapping is data,
+  `vendor/model-icons/map.json`, first match wins: Claude (claude, haiku, sonnet, opus, fable), OpenAI (gpt, o1, o3,
+  o4, codex), Gemini (with Nano Banana), DeepSeek, Qwen, Z.ai (GLM, Zhipu; Z.ai is Zhipu's mark since 2025 and its
+  dot-field logo does not survive 14px), Kimi (Moonshot), MiniMax, Grok (xAI), Meta (Llama), Mistral (Codestral and
+  the rest). A model of unknown family served by local Ollama gets Ollama's mark; anything else the generic mark,
+  a small chip drawn for hypotaxis. Never the φ.
+- **Source:** `@lobehub/icons-static-svg` 1.104.0 (MIT), only the icons used, optimised with SVGO. The logos are
+  trademarks of their owners, used only to identify the model (`vendor/model-icons/NOTICE`). A new provider: its SVG
+  through SVGO into `svg/`, a family in `map.json`, then `node vendor/model-icons/build.js`.
 
 ## 11. Motion
 
@@ -609,6 +647,7 @@ velocity when interrupted; travel along the centre line is never a JS spring.
 - Lockup: φ, 10px gap, "hypotaxis" 15/600 −0.01em, lowercase, `--text-strong`. In the rail the φ stands alone on the
   x = 28 axis.
 - Clear space: half its width on every side. Not inside a filled shape, not animated.
+- The φ is the product's mark, never a model's: an agent's card shows its model's provider mark (10.1).
 
 ## 13. Bots and orbs
 
@@ -740,7 +779,7 @@ are at regular density and default corners.
 ### 14.3 Tabs pill (segmented control as tabs)
 
 - **Anatomy:** inset-colour track (`--bg-0`) with a hairline, 3px padding, `--r-s`; a bone thumb concentric with the
-  track (`--r-in`, 7 by default) that slides
+  track (`--r-in`, 9 by default) that slides
   by transform over `--dur-slide`; labels 13/500.
 - **States:** selected (ink on bone), unselected (`--text-dim`, hover `--text-strong`), with an attention dot beside
   an unselected label when that tab owes something. On an icon-only option (the rail) the dot sits on the option's
@@ -999,6 +1038,8 @@ One element (`<hx-card>`, `HX.ui.card(kind, data, opts)`), eight kinds, three si
 
 ### 14.17 Chips
 
+- **Shape:** a capsule (`--r-pill`), as on iOS; inside the composer's bar it takes the bar's `--r-in`, which is a
+  capsule at that height too.
 - **Toolbar chip:** see 14.10. **Option chip:** a radio in a group of presets (Only when asked, Hourly, Every night,
   Weekday mornings): 26px, outline `--line`; checked: `--current` fill and an inset brass line. Arrows move and
   select. **Code chip:** 14.7. **Key chip:** `.ui-kbd`, 18px, `--bg-3`, hairline, mono 11 `--text-dim`; on a
@@ -1009,7 +1050,7 @@ One element (`<hx-card>`, `HX.ui.card(kind, data, opts)`), eight kinds, three si
 ### 14.18 Menus
 
 - **Anatomy:** frame colour, `--r-m`, padding 4, inset `--line` and `--shadow-pop`, 220–340px. Items 30px min,
-  padding 6 8, concentric with the menu (`--r-in` = `--r-m` − 4, 12 by default): a 16px glyph column (icon, or a brass check for checked items), label (13) with an optional
+  padding 6 8, concentric with the menu (`--r-in` = `--r-m` − 4, 16 by default): a 16px glyph column (icon, or a brass check for checked items), label (13) with an optional
   12px quiet description, keys or a stamp on the right. Titles 12/500 quiet; separators a hairline; a foot note 12
   quiet above a hairline.
 - **Motion:** fade with a 6px drop over `--dur-2` (rise when it opens above); closes in 160ms.
@@ -1082,6 +1123,9 @@ One element (`<hx-card>`, `HX.ui.card(kind, data, opts)`), eight kinds, three si
   field box (`:focus-within`), not the bare input. Menu items and option rows inside a floating surface use an inset
   2px ring with the `--current` fill (an offset ring would be clipped). The composer's frame shows focus as
   `--line-field` (it holds focus most of the day; a brass ring around it would be loud) and its caret is brass.
+- **On a surface with a drawn corner** (section 8.1: buttons, rows, menu items, cards) the element is clipped to its
+  path, which would clip an outline, so the ring is drawn by the library inside the edge: 2px of `--focus` along the
+  same continuous path. Its contrast is the same (brass against the surface around the element, 3:1 and up).
 - On the dock ground the ring is the dock's brass. Orb buttons use a 3px offset.
 
 ### 14.25 Fields
@@ -1202,6 +1246,8 @@ holds the canonical version of each fix and MIGRATION.md says who changes what.
 | F26 | a11y | **Session rows are listbox options that contain buttons** (rename, archive): an option may not hold interactive children, so a screen reader hears neither properly. Bots rows are buttons with a class for current. | `session.js` ~869 (`role="option"`), `.ssl-acts` | Button rows with `aria-current`, actions as sibling buttons (`HX.ui.row({acts})`) |
 | F27 | owner | **A double-click on a dock orb opens its dock card**, against the owner's decision (double-click opens the bot's chat, as Enter does). Single click (poke), Enter (chat), Space and the 420ms press (card) already match. | `dock.js` click handler, `case 'card'`: `e.detail === 2` falls through to `openCard()` | On `e.detail === 2` call `openBotInTab(id)`. Done in v8; superseded in v10 (a click opens the dock session, a double-click the full chat) |
 | F29 | owner | **Nested corners are hand-picked.** Only the customizer swatch (`--r-s − 2px`) is concentric; a card at the top of the dock's wait views sits 14–16px under a 14px corner with its own 10px radius; the toast's button, the tooltip's key and the menu items each pick a step by hand; the slab path draws circular arcs. | `cards.css` (`hx-card` radius, `.cd-queue__peek`, `.cd-opt`), `dock.css` (wait views, `.dk-v-min`), `dock.js slabPath()`, `shell.css .hxt-swatch` | The nesting contract (section 8.2) and `HX.ui.shape.slab`; per module in MIGRATION.md §8 |
+| F31 | owner | **The continuous corner never reached the owner.** `corner-shape` is Chromium-only; Tauri is WebKitGTK on Linux (the owner's platform) and WebKit on macOS, so every corner there was a circular arc, at the small fallback radii (cards 12, buttons 7). Measured in WebKitGTK 2.52: `CSS.supports('corner-shape', …)` is false. | `components.css` (the `:where(*)` corner-shape rule), `tokens.css` (the `@supports` scale) | **Resolved in the library:** `HX.ui.squircle` draws every corner as a path in every engine; the `@supports` scale goes (MIGRATION.md §0.8) |
+| F32 | owner | **Inner radii collapsed to 5–6px**, e.g. a card at the top of the dock under a 22px corner with 16px of padding. Apple keeps inner radii generous and gives up padding. | `--r-floor` 5, cards' `--pad` 16, the dock's wait views | Floor 8; padding = R − floor where the arithmetic would go under it (MIGRATION.md §9) |
 | F30 | owner | **The dock session's send floats** in the box's bottom-right corner under a one-line field, and the dock and Bots composers have no way to talk to the bot. | `dock.js composerFor()` (`attach: false, mic: false`), `bots.js` composer | The library composer's compact layout and mic (done); the modules pass `bot` (MIGRATION.md §8) |
 | F28 | contrast | **Inactive marks at 2.0–2.4:1.** Page dots, ladder stations to come and empty rings were `--text-faint` (or `--line-strong`), which is decoration-grade; as marks that carry position they need 3:1 (1.4.11). Fixed in the library with `--mark-off`. | `cards.css .cd-opt__ring`, `.cd-week i`; `dock.css .dk-tile-dot` (on the dock ground, already 3.3:1) | `--mark-off`; promote it to `tokens.css` and add its pairs to `theme.js PAIRS`. On/off marks that differ by colour alone (the context measure, the shell's stub rail) keep `--text-faint` off |
 | F25 | taste | **Graphite and Typewriter set brass to a light grey** (`#d6d6d6`, `#e9e9e9`), so "you are here" is the same colour as text. Meaning survives through shape (rings, checks, thumbs), so it is not a failure. | `tokens.css` | **Resolved (Owner decision):** Graphite `#9db6cf` steel (9.4:1 on the frame), Typewriter `#7ea6e0` carbon-paper blue (7.9:1) |
@@ -1261,9 +1307,9 @@ follow every preset and override with no rebuild:
 - React components wrap the library's markup: the class names and ARIA contracts in section 14 are the API; the
   factories in `components.js` are the reference implementation. Keep the event names (`ui:change`, `ui:commit`,
   `ui:select`, `ui:send`) as callback props (`onChange`, `onCommit`, `onSelect`, `onSend`).
-- Corners come with the import: `components.css` sets `corner-shape` on everything inside `@supports`, so
-  `rounded-*` utilities are continuous without a plugin; `rounded-full` pieces add `corner-shape-round` (an
-  arbitrary property, `[corner-shape:round]`). A nested surface is a component, not a utility chain: it sets
+- Corners come from the library: `rounded-*` utilities set the radius, and a `useSquircle(ref)` hook (or the
+  `data-sq` attribute, which `HX.ui.squircle` binds on its own) draws the continuous corner; `rounded-full` pieces need
+  nothing. A nested surface is a component, not a utility chain: it sets
   `--r-outer` and `--pad` (a `<Nest radius pad>` wrapper or the `.ui-nest` class) and its corner children use
   `rounded-in`.
 - Regenerate tokens after any change to `tokens.css`: `node design-system/build-tokens.mjs --report`.

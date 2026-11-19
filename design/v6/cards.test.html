@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="tokens.css">
 <script src="theme.js"></script>
 <link rel="stylesheet" href="components/components.css">
+<link rel="stylesheet" href="components/model-mark.css">
 <link rel="stylesheet" href="cards.css">
 <style>
   /* gallery chrome only (prefix g-); the cards come from cards.css and every colour from tokens.css */
@@ -25,7 +26,7 @@
   .g-size { margin: 0; color: var(--text-quiet); font-size: var(--fs-xs); font-weight: 500; line-height: var(--lh-ui); }
   .g-size:not(:first-child) { margin-top: 16px; }
   /* the shell's segmented control: drawer track, hairline, bone thumb */
-  .g-switch { display: inline-flex; gap: 2px; padding: 3px; border-radius: var(--r-s); background: var(--bg-0); box-shadow: inset 0 0 0 1px var(--hair); }
+  .g-switch { display: inline-flex; flex-wrap: wrap; max-width: 100%; gap: 2px; padding: 3px; border-radius: var(--r-s); background: var(--bg-0); box-shadow: inset 0 0 0 1px var(--hair); }
   .g-switch button {
     appearance: none; border: 0; height: 24px; padding: 0 10px; border-radius: var(--r-xs);
     background: none; color: var(--text-dim); font: 500 var(--fs-xs)/1 var(--sans); cursor: pointer;
@@ -46,13 +47,32 @@
   /* the dock's slab is black in every theme (dock.css --dock-ink); emulated here, read from the dock if it is loaded */
   .g-panel--dock { background: var(--dock-bg); }
   .g-size, .g-switch button, .g-head h1, .g-kind__top h2 { text-transform: var(--ui-case); }
+  .g-nav { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0 0 16px; font-size: var(--fs-s); }
+  .g-nav a { color: var(--text-dim); text-decoration: none; padding: 2px 0; border-bottom: 1px solid transparent; text-transform: var(--ui-case); }
+  .g-nav a:hover { color: var(--text); }
+  .g-nav a[aria-current="page"] { color: var(--text-strong); border-bottom-color: var(--brass); }
+  .g-nav a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--r-xs); }
+  .g-place { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 400px); gap: 32px; align-items: start; }
+  .g-place__side { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+  .g-surface { border-radius: var(--r-l); padding: 24px 24px 32px; min-width: 0; }
+  .g-surface--ground { background: var(--bg-2); box-shadow: inset 0 0 0 1px var(--hair); }
+  .g-dockslab { background: var(--dock-bg); padding: 16px; display: flex; flex-direction: column; gap: 8px; --r-card: max(var(--r-floor), calc(var(--r-l) - 16px)); }
+  .g-dock-title { margin: 0 0 4px; font: 500 var(--fs-xs)/var(--lh-ui) var(--sans); color: var(--text-quiet); text-transform: var(--ui-case); }
+  .g-thread-head { display: flex; align-items: center; gap: 12px; margin: 0 0 24px; }
+  .g-thread-head b { display: block; font-size: var(--fs-l); font-weight: 600; color: var(--text-strong); }
+  .g-thread-head span { font-size: var(--fs-xs); color: var(--text-quiet); }
+  .g-chanmark { width: 28px; height: 28px; display: grid; place-items: center; border-radius: var(--r-s); background: var(--bg-3); color: var(--text-dim); font: 500 var(--fs-m)/1 var(--mono); }
+  .g-prose { margin: 0; }
+  .g-mention { color: var(--text-strong); font-weight: 500; background: var(--brass-soft); border-radius: var(--r-xs); padding: 0 3px; }
+  .g-who { max-width: 420px; }
+  @media (max-width: 1100px) { .g-place { grid-template-columns: minmax(0, 1fr); } .g-surface { padding: 16px; } }
   .g-presets { display: flex; align-items: center; gap: 12px; margin: 0 0 32px; color: var(--text-quiet); font-size: var(--fs-xs); }
   .g-log { color: var(--text-quiet); font: 400 var(--fs-2xs)/1.45 var(--mono); min-height: 16px; margin: 16px 0 0; }
   @media (max-width: 1100px) { .g-grid { grid-template-columns: minmax(0, 1fr); } .g-entry { grid-template-columns: minmax(0, 1fr); } .g-callno { flex-direction: row; gap: 12px; padding: 0 0 8px; } }
 </style>
 </head>
 <body>
-<main class="g-page ui-scope">
+<main class="g-page ui-scope" id="g-page">
   <header class="g-head"><h1>Cards</h1></header>
   <p class="g-intro">Every card is live: hold to approve, deny, answer the blank, accept a hand-off. The switch beside each kind sets the state on every size at once.</p>
   <div class="g-presets"><span>Theme</span><div class="g-switch" id="g-preset" role="group" aria-label="Theme preset"></div></div>
@@ -61,7 +81,187 @@
 
 <script src="data.js"></script>
 <script src="components/components.js"></script>
+<script src="vendor/model-icons/icons.js"></script>
+<script src="components/model-mark.js"></script>
 <script src="cards.js"></script>
+<script>
+/* gallery views: forms (every kind and state), in place (conversation, a teammate's thread, the dock queue),
+   team chat, and "who is asking?" (a dense dock queue). One card per id: answering anywhere resolves everywhere. */
+window.__cardViews = function (view, G) {
+  const D = window.HX_DATA, ui = HX.ui, card = (k, d, o) => HX.ui.card(k, d, o);
+  const page = document.getElementById('g-page'), kinds = document.getElementById('g-kinds');
+  kinds.innerHTML = '';
+  const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+  const ver = (o) => o.kind === 'agent' ? o.model : '';
+
+  /* ---------------- the forms, as their senders would send them (FORMS.md §2) */
+  const F = {
+    credential: { id: 'f-openai', kind: 'credential', origin: { kind: 'agent', model: 'sonnet 5.5' }, title: 'Add your OpenAI key',
+      why: 'The embeddings step calls text-embedding-3-small, and your OpenAI provider has no key yet. I’ll keep working on the parts that don’t need it.',
+      effect: 'Saves to your keychain and connects the OpenAI provider. sonnet 5.5 never sees the key.', provider: 'OpenAI', expires: 'expires in 30 min',
+      schema: { properties: { key: { type: 'string', title: 'OpenAI API key', 'x-secret': true, 'x-ref': 'openai/api-key', placeholder: 'sk-…', pattern: '^sk-[A-Za-z0-9_-]{20,}$', 'x-error': 'That doesn’t look like an OpenAI key: it starts with sk- and is at least 23 characters', description: 'From platform.openai.com, API keys. Paste it once; hypotaxis keeps it.' } }, required: ['key'] } },
+    question: { id: 'f-rounding', kind: 'question', origin: { kind: 'teammate', ids: ['atlas'] }, title: 'How should line items round before the total?',
+      why: 'invoice.ts:88 divides before rounding. Pick a rule and I’ll apply it to every line item.', effect: 'Your answer goes back to atlas mid-review.',
+      schema: { properties: { rule: { type: 'string', title: 'Rounding rule', enum: ['half-away', 'half-even', 'none'], enumNames: ['Half away from zero', 'Half to even (banker’s)', 'Don’t round line items'], 'x-other': true,
+        'x-preview': [{ code: 'roundCents(100.5) → 101\nroundCents(101.5) → 102\n31 days, 3 splits: drift 0' }, { code: 'roundCents(100.5) → 100\nroundCents(101.5) → 102\n31 days, 3 splits: drift 0' }, { code: 'line items keep sub-cents\ntotal rounds once\n31 days, 3 splits: drift 0', note: 'Matches what money.ts does today.' }] } }, required: ['rule'] } },
+    permission: { id: 'f-publish', kind: 'permission', origin: { kind: 'agent', model: 'sonnet 5.5' }, title: 'Allow npm publish in billing-api?',
+      why: 'To publish @acme/billing 2.4.0 to the npm registry, as you asked.', effect: 'Always writes the rule to .hermes/hypotaxis.yaml for this project. Deny stops the publish; nothing else changes.',
+      schema: { properties: { scope: { type: 'string', title: 'Allow', enum: ['once', 'session', 'always', 'deny'], enumNames: ['Once', 'For this session', 'Always, in this project', 'Deny'], default: 'once' } }, required: ['scope'] }, cancel: false },
+    setup: { id: 'f-gate', kind: 'setup', origin: { kind: 'plugin' }, title: 'Set the gate command for billing-api', file: '.hermes/hypotaxis.yaml',
+      why: 'Every ship ends at the gate, and this project has none yet. I found npm test in package.json.',
+      diff: ' project: billing-api\n+gate:\n+  command: npm test\n+  timeout: 5m\n+  network: false\n governance:\n-  cap: $0.60\n+  cap: $1.00',
+      effect: 'Writes .hermes/hypotaxis.yaml for this project only. Nothing outside the project changes.',
+      schema: { properties: { gate: { type: 'string', title: 'Gate command', default: 'npm test', 'x-mono': true, minLength: 2 }, timeout: { type: 'integer', title: 'Timeout in minutes', default: 5, minimum: 1, maximum: 60 }, network: { type: 'boolean', title: 'Allow network during the gate', description: 'Off keeps the gate hermetic.', default: false } }, required: ['gate', 'timeout'] } },
+    signin: { id: 'f-linear', kind: 'signin', origin: { kind: 'teammate', ids: ['kai'] }, title: 'Sign in to Linear', provider: 'Linear',
+      why: 'I file the changelog as Linear issues. I only learn that sign-in worked.', effect: 'Saves the Linear token to your keychain. kai never sees it.',
+      schema: { properties: { linear: { 'x-signin': { provider: 'Linear', host: 'linear.app', flow: 'browser' } } }, required: ['linear'] } },
+    approval: { id: 'f-deploy', kind: 'approval', origin: { kind: 'teammate', ids: ['nina'] }, title: 'Deploy billing/cents to staging',
+      why: 'Tests are green. A dry run first, then 200 real invoices compared to the cent.', effect: 'Deploys to staging (invoices-api). Production is untouched. Costs about $0.02.', expires: 'expires in 9 min',
+      schema: { properties: { note: { type: 'string', title: 'Note for nina', 'x-multiline': true } } } },
+    connector: { id: 'f-sentry', kind: 'connector', origin: { kind: 'teammate', ids: ['kai'] }, title: 'Install the Sentry MCP server', name: 'sentry-mcp 0.9.2',
+      why: 'kai asked for Sentry errors in the morning digest.', contents: [['5 tools', 'issues, events, releases, projects, alerts'], ['Network', 'sentry.io only'], ['Runs', 'in the sandbox, no file access']], pinned: 'sha256:9f2c04e1…b17a',
+      effect: 'Installs into this profile and pins the hash. You can remove it from Connectors.', schema: { properties: {} } },
+    choice: { id: 'f-remote', kind: 'choice', origin: { kind: 'host' }, title: 'Pick a folder for Remote Control', why: 'A cloud session asked to use a folder on this computer.',
+      effect: 'Shares only this folder with the session, until you stop it.', schema: { properties: { folder: { 'x-picker': 'folder', title: 'Folder', default: '~/code/billing-api' }, model: { 'x-picker': 'model', title: 'Model for the session', default: 'sonnet 5.5' } }, required: ['folder'] } },
+    plan: { id: 'f-plan', kind: 'plan', origin: { kind: 'agent', model: 'sonnet 5.5' }, title: 'Approve the plan before I start',
+      plan: ['Move `src/billing` to integer cents behind a `Cents` type', 'Round once per invoice, half away from zero', 'Add a property test across 5,000 random splits', 'Open a draft PR with the diff'],
+      effect: 'Starts the work in plan order. Nothing is written until you approve.', schema: { properties: { changes: { type: 'string', title: 'Anything to change?', 'x-multiline': true } } } },
+    feedback: { id: 'f-feedback', kind: 'feedback', origin: { kind: 'host' }, title: 'Was this result right?', effect: 'Stored for you only. It feeds nothing automatically.',
+      schema: { properties: { verdict: { type: 'string', title: 'The result was', enum: ['right', 'partly', 'wrong'], enumNames: ['Right', 'Partly right', 'Wrong'] }, note: { type: 'string', title: 'What was off?', 'x-multiline': true } }, required: ['verdict'] } },
+    multi: { id: 'f-rerun', kind: 'question', origin: { kind: 'teammate', ids: ['moss'] }, title: 'Which suites should I rerun?', why: 'Three suites flaked overnight.',
+      effect: 'moss reruns them on the next free runner.', schema: { properties: { suites: { type: 'string', title: 'Suites', 'x-multi': true, enum: ['invoice.test.ts', 'prorate.test.ts', 'webhook.test.ts'] }, log: { 'x-upload': true, title: 'Failing log' } }, required: ['suites'] } }
+  };
+  window.F = F;
+  const STATES = ['open', 'invalid', 'submitting', 'done', 'deferred', 'expired', 'cancelled'];
+  const nav = el('nav', 'g-nav', '');
+  const q = new URLSearchParams(location.search), preset = q.get('preset');
+  for (const [v, t] of [['', 'Cards'], ['forms', 'Forms'], ['place', 'In place'], ['team', 'Team chat'], ['who', 'Who is asking']]) {
+    const a = el('a', null, t); a.href = '?' + (v ? 'view=' + v : '') + (preset ? (v ? '&' : '') + 'preset=' + preset : ''); if (v === view) a.setAttribute('aria-current', 'page'); nav.appendChild(a);
+  }
+  page.querySelector('.g-head').after(nav);
+  /* the theme row: the four presets, through theme.js; the view keeps its place */
+  const ps = document.getElementById('g-preset');
+  for (const [id, name] of [['catalog', 'Card catalog'], ['graphite', 'Graphite'], ['bone', 'Bone'], ['typewriter', 'Typewriter']]) {
+    const b = el('button', null, name); b.type = 'button'; b.dataset.preset = id; b.setAttribute('aria-pressed', String(id === (preset || 'catalog')));
+    b.addEventListener('click', () => { for (const x of ps.children) x.setAttribute('aria-pressed', String(x === b)); HX_THEME.preset(id); });
+    ps.appendChild(b);
+  }
+  /* narrow surfaces drop the call-number margin, as the shell does under 560px */
+  const narrow = () => { for (const s of document.querySelectorAll('.g-surface, .g-entry-host, .g-col[data-col="inline"]')) s.dataset.margin = s.clientWidth < 560 ? 'off' : 'on'; };
+  requestAnimationFrame(narrow); addEventListener('resize', narrow);
+  /* the gallery's own entries draw orbs too (call numbers, thread heads): give them their first frame as well */
+  setTimeout(() => HX.cards.primeOrbs(document), 0);
+  const intro = page.querySelector('.g-intro');
+  const entry = (who, callno, kind) => { const w = el('div'); w.innerHTML = ui.html.entry({ kind: kind || 'agent', who: who || '', callno }); return w.firstChild; };
+  const body = (e) => e.querySelector('.ui-entry__body');
+  const prose = (t) => el('p', 'g-prose', t);
+  const setState = (c, st) => {
+    if (st === 'invalid') { c.update({ state: 'open' }); setTimeout(() => c._showErrors(c._validate()), 0); return; }
+    if (st === 'submitting') { c.update({ state: 'open' }); c._d.receiptText = null; c._setState('submitting'); return; }
+    if (st === 'done') { const t = c._d; t.receiptText = null; c.update({ state: 'done' }); return; }
+    c.update({ state: st });
+  };
+
+  if (view === 'forms') {
+    intro.textContent = 'One renderer draws every form from its schema; a kind is a template. Each switch sets the state on every size at once. Tab between fields, Enter submits, Space-hold confirms a hold, Esc defers, x cancels, 1–9 pick.';
+    for (const k of ['credential', 'question', 'permission', 'setup', 'signin', 'approval', 'connector', 'choice', 'plan', 'feedback', 'multi']) {
+      const f = F[k], sec = el('section', 'g-kind');
+      sec.id = 'f-' + k;
+      sec.innerHTML = '<div class="g-kind__top"><h2>' + (k === 'multi' ? 'Several answers, a file' : k.charAt(0).toUpperCase() + k.slice(1)) + '</h2><p>' + ui.esc(f.title) + '</p><div class="g-switch" role="group" aria-label="' + k + ' state"></div></div>' +
+        '<div class="g-grid"><div class="g-col" data-col="inline"></div><div class="g-col" data-col="small"></div></div>';
+      kinds.appendChild(sec);
+      const cards = [];
+      const A = sec.querySelector('[data-col="inline"]'), B = sec.querySelector('[data-col="small"]');
+      const e = entry(f.origin.kind === 'teammate' ? ui.html.orb(D.bots.find((b) => b.id === f.origin.ids[0]), { size: 20 }) + D.bots.find((b) => b.id === f.origin.ids[0]).name : '', f.origin.kind === 'agent' ? [{ model: f.origin.model }, '14:12'] : ['14:12'], f.origin.kind === 'teammate' ? 'bot' : 'agent');
+      const c1 = card('form', Object.assign({}, f), { size: 'inline' }); body(e).appendChild(c1); cards.push(c1); A.appendChild(e);
+      const lb = (t) => B.appendChild(el('p', 'g-size', t));
+      lb('Compact'); const c2 = card('form', Object.assign({}, f), { size: 'compact' }); B.appendChild(c2); cards.push(c2);
+      lb('One row'); const c3 = card('form', Object.assign({}, f), { size: 'mini' }); B.appendChild(c3); cards.push(c3);
+      if (k === 'credential' || k === 'approval') { lb('In the dock (black)'); const p = el('div', 'g-panel g-panel--dock'); p.dataset.ground = 'dock'; const c4 = card('form', Object.assign({}, f), { size: 'compact', ground: 'dock' }); p.appendChild(c4); cards.push(c4); B.appendChild(p); }
+      const sw = sec.querySelector('.g-switch');
+      for (const st of STATES) {
+        const b = el('button', null, st.charAt(0).toUpperCase() + st.slice(1)); b.type = 'button'; b.dataset.state = st; b.setAttribute('aria-pressed', String(st === 'open'));
+        b.addEventListener('click', () => { for (const x of sw.children) x.setAttribute('aria-pressed', String(x === b)); for (const c of cards) setState(c, st); });
+        sw.appendChild(b);
+      }
+    }
+    return;
+  }
+
+  if (view === 'place') {
+    intro.textContent = 'Forms where they are raised: inline in the session, in a teammate’s thread, and in the dock’s queue of everything waiting on you. Answer one anywhere and the others follow.';
+    const wrap = el('div', 'g-place');
+    const conv = el('section', 'g-surface g-surface--ground'); conv.setAttribute('aria-label', 'Session conversation');
+    const you = entry('You', ['14:01'], 'user'); body(you).innerHTML = ui.html.request('add embeddings to the invoice search, and publish the billing package when the tests pass'); conv.appendChild(you);
+    const ag = entry('', [{ model: 'qwen3-coder' }, { model: 'sonnet 5.5', via: '→' }, '3m 42s', '$0.37']);
+    const b1 = body(ag); b1.appendChild(prose('The search index is wired up. The embeddings call needs a key, so I asked for it below and moved on to the publish step.'));
+    for (const k of ['credential', 'question', 'permission', 'setup']) b1.appendChild(card('form', Object.assign({}, F[k]), { size: 'inline' }));
+    conv.appendChild(ag);
+    const bots = el('section', 'g-surface g-surface--ground'); bots.setAttribute('aria-label', 'Bots: kai');
+    const kai = D.bots.find((b) => b.id === 'kai');
+    bots.appendChild(el('header', 'g-thread-head', ui.html.orb(kai, { size: 28 }) + '<div><b>kai</b><span>' + ui.esc(kai.role) + '</span></div>'));
+    const ke = entry(ui.html.orb(kai, { size: 20 }) + 'kai', ['14:05'], 'bot'); body(ke).appendChild(prose('The changelog for 2.4.0 is drafted. I can file it in Linear once I’m signed in.'));
+    body(ke).appendChild(card('form', Object.assign({}, F.signin), { size: 'inline' })); bots.appendChild(ke);
+    const dock = el('section', 'g-surface g-dockslab'); dock.dataset.ground = 'dock'; dock.setAttribute('aria-label', 'Dock: waiting on you');
+    dock.appendChild(el('p', 'g-dock-title', 'Waiting on you'));
+    const ids = ['credential', 'question', 'permission', 'setup', 'signin'];
+    for (const k of ids) dock.appendChild(card('form', Object.assign({}, F[k]), { size: 'mini', ground: 'dock' }));
+    dock.appendChild(card('form', Object.assign({}, F.credential), { size: 'compact', ground: 'dock' }));
+    wrap.append(conv, el('div', 'g-place__side'));
+    wrap.lastChild.append(bots, dock);
+    kinds.appendChild(wrap);
+    return;
+  }
+
+  if (view === 'team' || view === 'who') {
+    const B = (id) => D.bots.find((b) => b.id === id);
+    const TEAM = {
+      deploy: { id: 'team-deploy', kind: 'approval', origin: { kind: 'teammate', ids: ['nina'] }, title: 'Deploy billing/cents to staging', why: 'Tests are green. Dry run first, then 200 real invoices.', effect: 'Deploys to staging only. About $0.02.', expires: 'expires in 9 min', schema: { properties: {} } },
+      rounding: Object.assign({}, F.question, { id: 'team-rounding' }),
+      joint: { id: 'team-joint', kind: 'question', origin: { kind: 'teammate', ids: ['kai', 'iris'] }, title: 'Ship the changelog with the new invoice screenshots?', why: 'kai wrote the notes, iris checked the screens. We need one call.',
+        effect: 'The answer goes to kai and iris.', schema: { properties: { ship: { type: 'string', title: 'Release notes', enum: ['now', 'after-qa', 'hold'], enumNames: ['Ship them now', 'After iris’s last pass', 'Hold for 2.5'] } }, required: ['ship'] } },
+      relay: { id: 'team-relay', kind: 'question', origin: { kind: 'teammate', ids: ['nina'], via: 'atlas' }, title: 'Keep staging up overnight?', why: 'nina is deploying; atlas is asking for her.', effect: 'The answer goes to nina.',
+        schema: { properties: { keep: { type: 'string', title: 'Staging', enum: ['keep', 'down'], enumNames: ['Keep it up', 'Take it down at 20:00'] } }, required: ['keep'] } },
+      key: Object.assign({}, F.credential, { id: 'team-key' }),
+      publish: Object.assign({}, F.permission, { id: 'team-publish' })
+    };
+    const queue = (size) => {
+      const dock = el('section', 'g-surface g-dockslab'); dock.dataset.ground = 'dock'; dock.setAttribute('aria-label', 'Dock: waiting on you');
+      dock.appendChild(el('p', 'g-dock-title', 'Waiting on you'));
+      for (const k of ['deploy', 'rounding', 'joint', 'key', 'relay', 'publish']) dock.appendChild(card('form', Object.assign({}, TEAM[k]), { size: 'mini', ground: 'dock' }));
+      if (size !== 'rows') dock.appendChild(card('form', Object.assign({}, TEAM.joint), { size: 'compact', ground: 'dock' }));
+      return dock;
+    };
+    if (view === 'who') {
+      intro.textContent = 'Six things waiting, from four senders: nina, atlas, kai with iris, and sonnet 5.5. The orb, its colour on the row and the stack say who before you read.';
+      const w = el('div', 'g-who'); w.appendChild(queue()); kinds.appendChild(w);
+      return;
+    }
+    intro.textContent = 'Team chat in the Bots section: you and several teammates in one channel, with @mentions, a hand-off and cards from different senders. The dock shows the same cards; answer one anywhere.';
+    const wrap = el('div', 'g-place');
+    const chat = el('section', 'g-surface g-surface--ground'); chat.setAttribute('aria-label', 'Team chat');
+    const members = ['nina', 'atlas', 'kai', 'iris'];
+    chat.appendChild(el('header', 'g-thread-head', '<span class="g-chanmark" aria-hidden="true">#</span><div><b>Team</b><span>you, ' + members.join(', ') + '</span></div>'));
+    const say = (id, time, html, cards) => {
+      const b = id === 'you' ? null : B(id);
+      const e = entry(b ? ui.html.orb(b, { size: 20 }) + b.name : 'You', [time], b ? 'bot' : 'user');
+      if (html) body(e).appendChild(b ? prose(html) : el('div', 'ui-request', html));
+      for (const c of cards || []) body(e).appendChild(c);
+      chat.appendChild(e);
+    };
+    const at = (n) => '<span class="g-mention">@' + n + '</span>';
+    say('you', '14:02', at('atlas') + ' can you take the review of cents/proration? ' + at('nina') + ' wants to deploy after.');
+    say('atlas', '14:03', 'Taking it. One question on rounding first.', [card('form', Object.assign({}, TEAM.rounding), { size: 'inline' })]);
+    say('nina', '14:06', 'Ready when atlas is done. I’ll need your go for staging.', [card('form', Object.assign({}, TEAM.deploy), { size: 'inline' })]);
+    say('kai', '14:08', 'Handing the screenshots to ' + at('iris') + ' for a last pass. We need one call from you on the notes.', [card('form', Object.assign({}, TEAM.joint), { size: 'inline' })]);
+    say('atlas', '14:09', 'Asking for nina while she deploys:', [card('form', Object.assign({}, TEAM.relay), { size: 'inline' })]);
+    wrap.append(chat, el('div', 'g-place__side'));
+    wrap.lastChild.append(queue());
+    kinds.appendChild(wrap);
+  }
+};
+</script>
+
 <script src="vendor/orb-avatar.min.js"></script>
 <script>
 (function () {
@@ -90,6 +290,13 @@
     connector: { name: 'linear', host: 'linear.app', tools: D.connectors.find((c) => c.name === 'linear').tools, scopes: ['issues', 'projects', 'comments'] }
   };
   window.G = G;
+  const QS = new URLSearchParams(location.search);
+  if (QS.get('preset') && window.HX_THEME) HX_THEME.preset(QS.get('preset'));
+  if (QS.get('view') && window.__cardViews) {
+    window.__cardViews(QS.get('view'), G);
+    for (const g of document.querySelectorAll('#g-preset button')) g.setAttribute('aria-pressed', String(g.dataset.preset === (QS.get('preset') || 'catalog')));
+    return;
+  }
 
   /* the mock-up's stand-ins for real work: a retry passes, a browser sign-in returns */
   document.addEventListener('hx:card-action', (e) => {
@@ -136,7 +343,7 @@
 
     label(colA, kind === 'blank' ? 'In the sentence, and expanded' : kind === 'escalation' ? 'In the answer' : 'In the conversation');
     const wrap = document.createElement('div');
-    wrap.innerHTML = entry('<b>qwen3-coder</b><span>→ sonnet 5.5</span><span>3m 42s</span><span>$0.37</span>');
+    wrap.innerHTML = entry('<b>' + HX.ui.html.model('qwen3-coder', { size: 14 }) + '</b><span><span aria-hidden="true">→ </span>' + HX.ui.html.model('sonnet 5.5', { size: 14 }) + '</span><span>3m 42s</span><span>$0.37</span>');
     const measure = wrap.querySelector('.g-measure');
     colA.appendChild(wrap.firstChild);
     if (kind === 'blank') {

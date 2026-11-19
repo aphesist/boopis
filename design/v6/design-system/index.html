@@ -14,6 +14,7 @@
 </script>
 <link rel="stylesheet" href="hx/tokens.css">
 <link rel="stylesheet" href="ui/components.css">
+<link rel="stylesheet" href="ui/model-mark.css">
 <link rel="stylesheet" href="hx/cards.css">
 <link rel="stylesheet" href="specimen.css">
 <script src="hx/theme.js"></script>
@@ -114,20 +115,20 @@
 
       <section class="sp-sec" id="shape" aria-labelledby="h-shape">
         <h2 id="h-shape">Space and shape</h2>
-        <p>A 4px base with seven steps; rows and controls change with density; four corner radii change with the corner setting. Corners are continuous, and a corner inside another fits it. The pill shape is only for dots, the switch and what sits inside a pill.</p>
+        <p>A 4px base with seven steps; rows and controls change with density; four corner radii change with the corner setting. Corners are Apple's continuous corners, drawn the same in every engine, and a corner inside another fits it. The capsule is for chips, dots, the switch and what sits inside a pill.</p>
         <div class="sp-grid sp-grid--2">
           <div class="sp-stage"><div class="sp-label" style="margin-bottom:14px">Spacing</div><div class="sp-scale" data-demo="spacing"></div></div>
           <div class="sp-stage"><div class="sp-label" style="margin-bottom:14px">Density: rows and controls</div><div class="sp-scale" data-demo="density"></div></div>
         </div>
         <div class="sp-stage"><div class="sp-label" style="margin-bottom:14px">Radii</div><div class="sp-radii" data-demo="radii"></div></div>
         <div class="sp-sub" id="corners"><h3>Corners</h3>
-          <p><b>Owner decisions.</b> Corners are continuous: the curve eases out of the straight edge, as on Apple's surfaces, instead of a circular arc meeting it. And every rounded surface inside another fits the outer curve: the inner radius is the outer radius less the gap between the edges, never below a small floor, and a round piece inside a pill stays a pill. The rule is a start; the eye decides. Where the gap is as large as the outer radius the two corners no longer read together, and the inner piece keeps its own step, never a larger one.</p>
+          <p><b>Owner decisions.</b> Apple's continuous corners, in every engine: the corner is drawn as a path (Figma's corner smoothing at 0.6, as iOS), because WebKit, which Tauri uses on Linux and macOS, has no corner-shape. Radii are generous: sheets and the dock 30, cards 20, buttons, rows and fields 12, chips a capsule. A rounded surface inside another fits it: the inner radius is the outer less the gap, never under a floor of 8; where the arithmetic would go under it, the padding gives way, not the radius.</p>
           <div class="sp-grid sp-grid--2">
             <div class="sp-stage"><div class="sp-label" style="margin-bottom:14px">The curve</div><div class="sp-curve" data-demo="corner-curve"></div></div>
-            <div class="sp-stage"><div class="sp-label" style="margin-bottom:14px">Nested corners, drawn four times larger</div><div class="sp-nest" data-demo="nest"></div></div>
+            <div class="sp-stage"><div class="sp-label" style="margin-bottom:14px">Nested corners, drawn twice as large</div><div class="sp-nest" data-demo="nest"></div></div>
           </div>
           <div class="sp-stage sp-x" tabindex="0" role="region" aria-label="Where nested corners apply"><div class="sp-label" style="margin-bottom:10px">Where it applies (live values in this theme)</div><div data-demo="nest-table"></div></div>
-          <div class="sp-label" style="margin:20px 0 10px">Before and after, in Card catalog at twice the pixels</div>
+          <div class="sp-label" style="margin:20px 0 10px">Before and after, in WebKit</div>
           <div class="sp-ba" data-demo="before-after"></div>
         </div>
         <div class="sp-sub"><h3>Elevation and lines</h3><p>Flat. Hairlines divide inside a surface, lines outline controls, field lines bound text fields at 3:1. Shadows only on things that float over other things.</p>
@@ -191,7 +192,7 @@
 
       <section class="sp-sec" id="findings" aria-labelledby="h-findings">
         <h2 id="h-findings">Findings</h2>
-        <p>The main things the extraction found in the mock-up, with the fix. The library already holds every fix. The full list of 30, with every value, is in DESIGN-SYSTEM.md; the module-by-module work is in MIGRATION.md.</p>
+        <p>The main things the extraction found in the mock-up, with the fix. The library already holds every fix. The full list of 32, with every value, is in DESIGN-SYSTEM.md; the module-by-module work is in MIGRATION.md.</p>
         <ul class="sp-findings" data-demo="findings"></ul>
       </section>
 
@@ -202,6 +203,8 @@
 
 <script src="hx/data.js"></script>
 <script src="ui/components.js"></script>
+<script src="ui/model-icons.js"></script>
+<script src="ui/model-mark.js"></script>
 <script src="hx/orb-avatar.min.js"></script>
 <script src="hx/cards.js"></script>
 <script src="specimen.js"></script>

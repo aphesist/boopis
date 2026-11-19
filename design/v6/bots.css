@@ -82,7 +82,7 @@
 .bt-opt { width: calc(var(--ctl) + 6px); height: calc(var(--ctl) + 6px); border-radius: var(--r-s); display: grid; place-items: center; transition: background-color var(--dur-out) var(--ease); }
 .bt-opt:hover { background: var(--hover); transition-duration: var(--dur-1); }
 .bt-opt[aria-checked="true"] { background: var(--current); box-shadow: inset 0 0 0 1px var(--brass); }
-.bt-swatch { width: 20px; height: 20px; border-radius: var(--r-pill); corner-shape: round; background: var(--c); box-shadow: inset 0 0 0 1px var(--hair); }
+.bt-swatch { width: 20px; height: 20px; border-radius: var(--r-pill); background: var(--c); box-shadow: inset 0 0 0 1px var(--hair); }
 .bt-new-field { width: min(480px, 100%); }
 .bt-go-row { display: flex; justify-content: center; margin-top: var(--sp-5); }
 .bt-go { min-width: 148px; }
@@ -126,3 +126,8 @@ orb-avatar.is-live { cursor: pointer; }
   .bt-sheet { width: 100%; }
   .bt-sheet-corner { display: none; }
 }
+
+/* drawn corners (DESIGN-SYSTEM.md §8; bound at start-up with HX.ui.squircle.auto): the line is --sq-line */
+.bt-sugg { --sq-line: var(--hair); }
+.bt-sugg:hover { --sq-line: var(--line); }
+.bt-opt[aria-checked="true"] { --sq-line: var(--brass); }

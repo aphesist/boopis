@@ -15,6 +15,8 @@
   /* ------------------------------------------------------------------ helpers */
   const hx = () => window.HX || null;
   const UI = () => (window.HX && window.HX.ui) || null;
+  /* drawn corners (DESIGN-SYSTEM.md §8): the bots' own surfaces take the library's continuous corner */
+  if (UI() && UI().squircle) UI().squircle.auto('.bt-sugg, .bt-opt');
   const data = () => (hx() && hx().data) || window.HX_DATA || {};
   const det = a => (a instanceof Event ? a.detail : a) || {};
   const reduced = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
@@ -628,7 +630,7 @@
     const b = bot(S.sel), c = S.composer; if (!b || !c) return;
     const anchor = c.chips.querySelector('[data-value="model"]') || c.input;
     const items = [{ label: 'Governed', desc: 'Starts cheap, climbs the ladder', value: 'governed', checked: b.cfg.gov === 'governed' }]
-      .concat(MODELS.map(m => ({ label: m, mono: true, value: m, checked: b.cfg.gov !== 'governed' && b.cfg.model === m })));
+      .concat(MODELS.map(m => ({ label: m, mono: true, value: m, model: m, checked: b.cfg.gov !== 'governed' && b.cfg.model === m })));   /* brand marks in the selection menu (owner) */
     UI().menu.open(anchor, items, {
       label: 'Model', place: 'above',
       onClose: () => setTimeout(() => { const f = document.activeElement; if (!f || f === document.body || !f.isConnected || f.closest('.ui-menu')) c.focus(); }, 0),
@@ -662,7 +664,7 @@
     const gchip = U.chip({ label: 'Governed', icon: 'ladder', pressed: gov, value: gov ? 'model' : 'governed', tip: 'Governance', attrs: { 'data-kbd': 'alt+G' } });
     gchip.addEventListener('ui:change', e => { e.preventDefault(); b.cfg.gov = gov ? 'ungoverned' : 'governed'; refreshPresence(); if (S.sheetOpen) openSettings(b.id, null, { keepFocus: true }); });
     const kids = [gchip];
-    if (!gov) { const mc = U.chip({ label: b.cfg.model, mono: true, haspopup: 'menu', value: 'model', tip: 'Model', attrs: { 'data-kbd': 'alt+M' } }); mc.addEventListener('click', openModelMenu); kids.push(mc); }
+    if (!gov) { const mc = U.chip({ model: b.cfg.model, haspopup: 'menu', value: 'model', tip: 'Model', attrs: { 'data-kbd': 'alt+M' } }); mc.addEventListener('click', openModelMenu); kids.push(mc); }
     if (chans.length) { const ch = U.chip({ label: 'Also on ' + chans.join(', '), tip: 'Channels' }); ch.addEventListener('click', () => openSettings(b.id, 'channels')); kids.push(ch); }
     c.chips.replaceChildren(...kids);
   }

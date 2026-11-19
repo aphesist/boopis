@@ -76,6 +76,12 @@
 
   /* ------------------------------------------------------------------ the library */
   const ui = () => window.HX.ui;
+  /* drawn corners (DESIGN-SYSTEM.md §8): the dock's own surfaces take the library's continuous corner (cards and
+     their rows are the library's already) */
+  if (window.HX && window.HX.ui && window.HX.ui.squircle) {
+    window.HX.ui.squircle.auto('.dk-add, .dk-run-open, .dk-sched-row, .dk-sched-what');
+    window.HX.ui.squircle.auto('.dk-tile', { mode: 'surface' });
+  }
   const IC = { plus: 'plus', close: 'close', stop: 'stop', sliders: 'sliders', down: 'chevron-down', left: 'back', right: 'forward' };
   const icon = (n, o) => ui().icon(IC[n] || n, o);
 
@@ -247,7 +253,9 @@
   const fmtCost = v => '$' + v.toFixed(2);
   const kfmt = n => n >= 1000 ? Math.round(n / 1000) + 'k' : String(n);
   const mono = t => `<span class="dk-mono">${esc(t)}</span>`;
-  const runSub = () => S.run.stopped ? 'Stopped by you' : `${mono(S.run.model)} ${S.run.escalated ? `escalated ${S.run.escalated === 1 ? 'once' : S.run.escalated + ' times'}` : 'on the first try'}`;
+  /* the model with its provider's mark (mono), through the library's one primitive */
+  const runModel = () => (ui().html.model ? ui().html.model(S.run.model, { size: 14 }) : mono(S.run.model));
+  const runSub = () => S.run.stopped ? 'Stopped by you' : `${runModel()} ${S.run.escalated ? `escalated ${S.run.escalated === 1 ? 'once' : S.run.escalated + ' times'}` : 'on the first try'}`;
   /* the run's spend: the library's running total and its row of dots (dots, not bars) */
   const costHTML = () => ui().html.capacity(fmtCost(S.run.cost), fmtCost(S.run.cap), { label: `${fmtCost(S.run.cost)} of the ${fmtCost(S.run.cap)} cap spent` });
   const meterHTML = () => ui().html.measure({ used: S.run.cost, total: S.run.cap || 1, dots: 10, variant: 'row', label: 'Cost cap' });
@@ -568,8 +576,8 @@
   }
   /* the slab as one path: concave flare out of the edge, side, rounded top, side, flare back into the edge.
      In svg space the slab body spans x ∈ [F, F + w]. */
-  /* the library draws the corner CSS draws (continuous where corner-shape exists, round otherwise); the minimised
-     pill is a pill in a pill: R = h / 2 with round ends, its first and last orb on the centres of the end caps */
+  /* the library draws the same continuous corner as every other surface (HX.ui.squircle, Figma smoothing); the
+     minimised pill is a pill in a pill: R = h / 2 with round ends, its first and last orb on the centres of the end caps */
   function slabPath(w, h, g) {
     const pill = S.mode === 'minimal' || S.mode === 'off';
     return ui().shape.slab(w, h, pill ? Math.min(h / 2, w / 2) : g.R, g.Fw, pill ? { round: true } : undefined);

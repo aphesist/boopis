@@ -36,9 +36,11 @@ hx-card *, hx-card *::before, hx-card *::after { box-sizing: border-box; }
 hx-card ::selection { background: var(--brass-soft); color: var(--text-strong); }
 hx-card p, hx-card ol { margin: 0; padding: 0; }
 /* interface labels follow the interface case; content (quotes, the agent's words, data, code) never does */
-.cd-lead, .cd-text, .cd-note, .cd-meta, .cd-receipt, .cd-week b, .cd-mini__meta, .cd-queue__done, .cd-file--more,
+/* interface labels follow the interface case; what a sender wrote (titles, the why, quotes, options, data, code)
+   keeps its own case, so a lowercase theme never turns "OpenAI" into "openai" */
+.cd-note, .cd-meta, .cd-receipt, .cd-week b, .cd-mini__meta, .cd-queue__done, .cd-file--more,
 .cd-free input::placeholder { text-transform: var(--ui-case); }
-.cd-mono, .cd-quote, .cd-well, .cd-opt, .cd-free input, .cd-files, .cd-out, .cd-raw, hx-card .ui-code { text-transform: none; }
+.cd-lead, .cd-text, .cd-mono, .cd-quote, .cd-well, .cd-opt, .cd-free input, .cd-files, .cd-out, .cd-raw, hx-card .ui-code { text-transform: none; }
 
 /* a card is a nesting container (DESIGN-SYSTEM.md §8): its radius is --r-card where a context sets one (the dock's
    wait view, under the slab's corner), else --r-m; what sits in its corners takes --r-in. The padding is one value
@@ -47,7 +49,7 @@ hx-card[data-size="inline"],
 hx-card[data-size="compact"],
 hx-card[data-size="popover"] {
   --r-outer: var(--r-card, var(--r-m));
-  --pad: var(--sp-4);
+  --pad: var(--sp-3);   /* 12: with the 20px card, what sits in its corners takes the 8px floor exactly (R − gap = floor) */
   --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad)));
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -76,6 +78,7 @@ hx-card[data-side] { grid-template-columns: var(--cd-orb) minmax(0, 1fr); }
 /* ------------------------------------------------------------------ text */
 
 .cd-headrow { display: flex; align-items: flex-start; gap: var(--sp-3); }
+.cd-headmain { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .cd-lead {
   flex: 1 1 auto; min-width: 0;
   font-size: var(--fs-m); font-weight: 600; line-height: var(--lh-ui);
@@ -142,7 +145,7 @@ hx-card[data-resolved] .cd-file__path,
 hx-card[data-resolved] .cd-file__n { color: var(--text-dim); }
 /* diffstat: five dots per file, added filled, removed hollow */
 .cd-diffdots { display: inline-flex; gap: var(--sp-1); align-items: center; flex: none; }
-.cd-diffdots i, .cd-week i { display: block; width: 5px; height: 5px; border-radius: var(--r-pill); corner-shape: round; flex: none; }
+.cd-diffdots i, .cd-week i { display: block; width: 5px; height: 5px; border-radius: var(--r-pill); flex: none; }
 .cd-diffdots i { background: var(--bg-3); }
 .cd-diffdots i[data-d="add"] { background: var(--text); }
 .cd-diffdots i[data-d="del"] { background: transparent; box-shadow: inset 0 0 0 1px var(--text-dim); }
@@ -161,7 +164,7 @@ hx-card[data-size="compact"] .cd-files .cd-diffdots { display: none; }
   color: var(--text-quiet); min-width: 0;
   font-family: var(--mono); font-size: var(--fs-2xs); line-height: 1.45; letter-spacing: var(--track-mono);
 }
-.cd-actions { display: flex; align-items: center; gap: var(--sp-2); margin-left: auto; }
+.cd-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: var(--sp-2); margin-left: auto; min-width: 0; max-width: 100%; }
 .cd-receipt { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--ctl); color: var(--text-dim); }
 .cd-receipt .cd-mono { font-size: var(--fs-xs); }
 .cd-ico { width: 12px; height: 12px; flex: none; color: var(--text); }
@@ -179,9 +182,12 @@ hx-card[data-size="compact"] .cd-files .cd-diffdots { display: none; }
 /* ------------------------------------------------------------------ mini: one row */
 
 hx-card[data-size="mini"] { width: 100%; max-width: 360px; }
+/* in the dock the slab sets the width: cards and rows fill its column, so their right edges match */
+hx-card[data-ground="dock"]:is([data-size="compact"], [data-size="mini"]), .cd-queue[data-ground="dock"] { max-width: none; }
 .cd-mini {
   appearance: none; border: 0; margin: 0;
-  display: flex; align-items: center; gap: var(--sp-2);
+  /* three fixed columns: the origin mark, the text, the status (dot slot, then the label), so every row aligns */
+  display: grid; grid-template-columns: var(--cd-lead-w) minmax(0, 1fr) auto; align-items: center; column-gap: var(--sp-2);
   width: 100%; height: var(--row-h); padding: 0 var(--sp-3);
   border-radius: var(--r-card, var(--r-s));
   background: var(--cd-surface); color: var(--text);
@@ -190,8 +196,18 @@ hx-card[data-size="mini"] { width: 100%; max-width: 360px; }
   transition: background-color var(--dur-out) var(--ease);
 }
 .cd-mini:hover { background: var(--bg-3); transition-duration: var(--dur-1); }
-.cd-mini__text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cd-mini__meta { flex: none; color: var(--text-quiet); font-family: var(--mono); font-size: var(--fs-2xs); letter-spacing: var(--track-mono); display: inline-flex; align-items: center; gap: var(--sp-2); }
+.cd-mini__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* the lead column: one fixed width, marks share its left edge, so names and titles start at one x */
+hx-card, .cd-queue { --cd-lead-w: 28px; }
+.cd-mini__lead { display: flex; align-items: center; justify-content: flex-start; width: var(--cd-lead-w); min-width: 0; overflow: visible; }
+/* the status column: a fixed width; the dot has its own slot (kept when empty) and the label starts after it */
+.cd-mini__status {
+  display: grid; grid-template-columns: 6px minmax(0, 1fr); align-items: center; column-gap: var(--sp-2);
+  width: calc(6px + var(--sp-2) + 12ch);
+  font-family: var(--mono); font-size: var(--fs-2xs); letter-spacing: var(--track-mono);
+}
+.cd-mini__dot { display: flex; align-items: center; width: 6px; height: 6px; }
+.cd-mini__meta { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-quiet); display: flex; align-items: center; gap: var(--sp-2); text-align: left; }
 .cd-mini .cd-tile { --cd-orb: 16px; font-size: var(--fs-2xs); }
 .cd-mini .cd-mono { font-size: var(--fs-xs); }
 hx-card[data-size="mini"][data-resolved] .cd-mini__text { color: var(--text-dim); }
@@ -234,7 +250,7 @@ hx-card[data-size="compact"] .cd-opts { margin: 0 calc(-1 * var(--sp-2)); }
 .cd-opt:hover { background: var(--hover); transition-duration: var(--dur-1); }
 .cd-opt:focus-visible { background: var(--current); outline: none; box-shadow: inset 0 0 0 2px var(--focus); }
 .cd-opt__ring {
-  width: 6px; height: 6px; border-radius: var(--r-pill); corner-shape: round; flex: none;
+  width: 6px; height: 6px; border-radius: var(--r-pill); flex: none;
   box-shadow: inset 0 0 0 1px var(--mark-off);
 }
 .cd-opt[aria-checked="true"] { color: var(--text-strong); }
@@ -260,7 +276,7 @@ hx-card[data-size="compact"] .cd-opts { margin: 0 calc(-1 * var(--sp-2)); }
 
 hx-card[data-kind="escalation"][data-size="inline"] { display: block; background: none; padding: 0; border-radius: 0; }
 .cd-rule {
-  display: flex; align-items: center; gap: var(--sp-3);
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) var(--sp-3);
   min-height: var(--ctl);
   font-size: var(--fs-xs); line-height: var(--lh-ui); color: var(--text-quiet);
 }
@@ -309,3 +325,98 @@ hx-card[data-kind="escalation"][data-size="inline"] { display: block; background
 @media (prefers-reduced-motion: reduce) {
   hx-card *, .cd-queue * { transition-duration: 1ms !important; }
 }
+
+/* ------------------------------------------------------------------ origin: who is asking (FORMS.md §4a)
+   One slot for every card: the byline above the title, and the lead of a one-row card. */
+.cd-by { display: flex; align-items: center; gap: var(--sp-2); min-height: 20px; min-width: 0; font-size: var(--fs-xs); line-height: var(--lh-ui); color: var(--text-dim); }
+.cd-by__label { display: flex; align-items: baseline; gap: 6px; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.cd-by__name { color: var(--text); font-weight: 500; text-transform: none; }
+.cd-by__name.cd-mono { font-weight: 400; }
+.cd-by__via { color: var(--text-quiet); text-transform: var(--ui-case); }
+.cd-glyph { width: 16px; height: 16px; flex: none; color: var(--icon); }
+.cd-by .cd-tile, .cd-mini .cd-tile, .cd-collapsed .cd-tile { width: var(--cd-orb); height: var(--cd-orb); font-size: var(--fs-2xs); }
+/* several teammates: stacked orbs, three at most, then +N; each on a disc of the card so the overlap reads */
+.cd-stack { display: inline-flex; align-items: center; flex: none; padding-left: calc(var(--s) * .32); border-radius: var(--r-xs); }
+.cd-stack__one, .cd-stack__more { margin-left: calc(var(--s) * -.32); border-radius: var(--r-pill); box-shadow: 0 0 0 2px var(--cd-surface); }
+.cd-stack__one { display: inline-flex; background: var(--cd-surface); }
+.cd-stack__more {
+  display: inline-grid; place-items: center; min-width: var(--s); height: var(--s); padding: 0 4px; box-sizing: border-box;
+  background: var(--bg-3); color: var(--text-dim); font-family: var(--mono); font-size: var(--fs-2xs); font-weight: 500; letter-spacing: var(--track-mono);
+}
+/* one teammate lends the card its colour: a 1px ring and a 5% tint (text contrast is unchanged in every preset) */
+hx-card[data-accent]:is([data-size="inline"], [data-size="compact"]) {
+  background: color-mix(in srgb, var(--cd-accent) 5%, var(--cd-surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cd-accent) 42%, transparent);
+}
+hx-card[data-accent][data-size="popover"] { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cd-accent) 42%, transparent), var(--shadow-pop); }
+hx-card[data-accent][data-resolved]:is([data-size="inline"], [data-size="compact"]) { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cd-accent) 22%, transparent); }
+hx-card[data-accent] .cd-mini {
+  background: color-mix(in srgb, var(--cd-accent) 6%, var(--cd-surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cd-accent) 36%, transparent);
+}
+hx-card[data-accent] .cd-stack__one, hx-card[data-accent] .cd-stack__more { box-shadow: 0 0 0 2px color-mix(in srgb, var(--cd-accent) 5%, var(--cd-surface)); }
+.cd-mini__who { color: var(--text-strong); font-weight: 500; text-transform: none; }
+.cd-mini__who.cd-mono, .cd-mini__who .cd-mono { font-weight: 400; }
+
+/* ------------------------------------------------------------------ forms (FORMS.md): one renderer, kinds are templates */
+hx-card[data-kind="form"] { container-type: inline-size; }
+hx-card[data-kind="form"][data-size="inline"] { width: min(100%, var(--measure)); }
+.cd-form { display: flex; flex-direction: column; gap: var(--sp-3); margin: 0; }
+.cd-field { min-width: 0; }
+.cd-opt-label { color: var(--text-quiet); font-weight: 400; }
+.cd-err:empty { display: none; }
+.cd-effect { margin: 0; padding-top: var(--sp-3); border-top: 1px solid var(--hair); color: var(--text-dim); font-size: var(--fs-xs); line-height: var(--lh); text-wrap: pretty; text-transform: none; }
+/* the secret field: masked, paste-friendly, never echoed */
+.cd-secret { display: flex; align-items: center; gap: var(--sp-2); }
+.cd-secret .ui-input { flex: 1; min-width: 0; letter-spacing: .08em; }
+.cd-secret .ui-btn { align-self: stretch; height: auto; min-height: var(--ctl); }
+.cd-saved { display: flex; align-items: center; gap: var(--sp-2); margin: 0; color: var(--text-dim); font-size: var(--fs-xs); }
+.cd-saved[hidden] { display: none; }
+.cd-signin { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); }
+.cd-signin .cd-note { text-transform: none; }
+/* the app's pickers (mock): a field that opens a menu */
+.cd-picker { display: flex; align-items: center; gap: var(--sp-2); text-align: left; cursor: pointer; }
+.cd-picker__v { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-transform: none; }
+.cd-picker .cd-mono { font-size: var(--fs-xs); }
+.cd-picker[aria-expanded="true"] { box-shadow: inset 0 0 0 1px var(--focus); }
+/* a file drop */
+.cd-drop { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); min-height: calc(var(--ctl) + 12px); box-shadow: none; outline: 1px dashed var(--line-field); outline-offset: -1px; }
+.cd-drop[data-over] { background: var(--hover); outline-color: var(--focus); }
+.cd-drop__hint { color: var(--text-quiet); font-size: var(--fs-xs); text-transform: var(--ui-case); }
+.cd-filechip { display: inline-flex; align-items: center; gap: var(--sp-2); min-width: 0; flex: 1 1 auto; }
+.cd-filechip__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cd-filechip .cd-mono { color: var(--text-quiet); font-size: var(--fs-2xs); }
+/* options inside a form: radio rows (a dot) and checkbox rows (a box with a check) */
+.cd-form .cd-opts { margin: 0 calc(-1 * var(--sp-2)); }
+.cd-opt__text { flex: 1 1 auto; min-width: 0; text-transform: none; }
+.cd-opt[role="checkbox"] .cd-opt__ring { display: grid; place-items: center; width: 14px; height: 14px; border-radius: var(--r-floor); }
+.cd-opt[role="checkbox"] .cd-opt__ring .cd-ico { display: none; width: 11px; height: 11px; color: var(--text-on-light); }
+.cd-opt[role="checkbox"][aria-checked="true"] .cd-opt__ring { background: var(--brass); box-shadow: none; }
+.cd-opt[role="checkbox"][aria-checked="true"] .cd-opt__ring .cd-ico { display: block; }
+.cd-opts[aria-invalid="true"] { box-shadow: inset 0 0 0 1px var(--red); border-radius: var(--r-in, var(--r-s)); }
+/* previews per option, side by side; stacked when the card is narrow */
+.cd-pick { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: var(--sp-3); align-items: stretch; }
+.cd-preview { background: var(--cd-well); border-radius: var(--r-in, var(--r-s)); padding: var(--sp-2) var(--sp-3); min-height: calc(var(--row-h) * 3); display: flex; flex-direction: column; gap: var(--sp-2); }
+.cd-preview .cd-out { margin: 0; color: var(--text); }
+@container (max-width: 460px) { .cd-pick { grid-template-columns: minmax(0, 1fr); } }
+/* setup: the config diff it will write */
+.cd-diff { font-family: var(--mono); font-size: var(--fs-2xs); line-height: 1.7; letter-spacing: var(--track-mono); color: var(--text-dim); padding-block: var(--sp-2); }
+.cd-diff__file { color: var(--text-quiet); margin-bottom: var(--sp-1); }
+.cd-diff__l { display: flex; gap: var(--sp-2); white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 calc(-1 * var(--sp-2)); padding: 0 var(--sp-2); border-radius: var(--r-floor); }
+.cd-diff__l > span:first-child { flex: none; width: 1ch; }
+.cd-diff__l[data-d="add"] { color: var(--text); background: color-mix(in srgb, var(--add) 14%, transparent); }
+.cd-diff__l[data-d="add"] > span:first-child { color: var(--add); }
+.cd-diff__l[data-d="del"] { color: var(--text-dim); background: color-mix(in srgb, var(--del) 12%, transparent); }
+.cd-diff__l[data-d="del"] > span:first-child { color: var(--del); }
+/* plan: a numbered list, because it is a sequence */
+.cd-plan { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: var(--sp-1); color: var(--text); }
+.cd-plan li::marker { color: var(--text-quiet); font-family: var(--mono); font-size: var(--fs-2xs); }
+.cd-contents .cd-pinned span:first-child { color: var(--text-quiet); }
+/* a resolved, deferred or expired form collapses to one line that stays readable in the transcript */
+hx-card[data-kind="form"]:is([data-state="done"], [data-state="deferred"], [data-state="expired"], [data-state="cancelled"]) { --pad: var(--sp-3); }
+.cd-collapsed { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--ctl-s); min-width: 0; }
+.cd-collapsed__text { flex: 1 1 auto; min-width: 0; margin: 0; display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--sp-2); color: var(--text-dim); line-height: var(--lh-ui); }
+.cd-collapsed__what { color: var(--text); text-transform: none; }
+.cd-collapsed__how { text-transform: var(--ui-case); }
+.cd-collapsed__at { flex: none; color: var(--text-quiet); font-size: var(--fs-2xs); }
+.cd-collapsed .cd-ico { color: var(--text); }

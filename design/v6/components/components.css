@@ -13,22 +13,11 @@
 /* --mark-off (an inactive non-text mark: a page dot, a ladder station still to come) was promoted to tokens.css by
    the shell owner, per MIGRATION.md §0.6; it is re-derived on the dock ground below. */
 
-/* ───────────── corners (owner rules, 18 November 2026): continuous corners; nested corners fit their container ─────────────
-   The scale (--r-xs to --r-l in both shapes and all three corner settings), --r-floor, --corner and --composer-pad
-   were promoted to tokens.css by the wireframe agent, per MIGRATION.md §0.7. What stays here is behaviour
-   (DESIGN-SYSTEM.md §8): every rounded corner takes the engine's continuous shape, circles and pills stay round, and
-   the nesting contract: a surface that holds others declares --r-outer and --pad, and what sits in its corners takes
-   --r-in = max(--r-floor, --r-outer − --pad). */
-@supports (corner-shape: superellipse(2)) {
-  /* every rounded corner in the app is continuous, with no opt-in; zero specificity, so any rule can say otherwise */
-  :where(*), :where(*)::before, :where(*)::after { corner-shape: var(--corner); }
-}
-/* circles and pills keep the round shape (a dot, a switch, a station, an orb's button) */
-.ui-round, .ui-dot, .ui-switch, .ui-switch::before, .ui-ladder__st, .ui-measure > i, .ui-legend i, .ui-pages__dot > i,
-.ui-orb-btn, .ui-orb, .ui-step__mark > i { corner-shape: round; }
-/* the nesting contract, for module surfaces: an element with .ui-nest declares --r-outer and --pad on itself; a child
-   in its corner takes .ui-fit. Library surfaces write the same three lines inline (composer, menu, segmented, tooltip,
-   toast). */
+/* ───────────── corners (owner decisions, 18 November 2026): Apple continuous corners in every engine; nested corners fit ─────────────
+   The scale (--r-xs to --r-l, --r-floor, --corner-smoothing, --composer-pad) lives in tokens.css (MIGRATION.md §0.8).
+   The corner is a path (HX.ui.squircle, below), so WebKit and Chromium draw the same curve. The nesting contract: a
+   surface that holds others declares --r-outer and --pad; what sits in its corners takes
+   --r-in = max(--r-floor, --r-outer − --pad). DESIGN-SYSTEM.md §8. */
 .ui-nest { --r-in: max(var(--r-floor), calc(var(--r-outer, var(--r-m)) - var(--pad, 0px))); border-radius: var(--r-outer, var(--r-m)); }
 .ui-fit { border-radius: var(--r-in, var(--r-s)); }
 
@@ -187,7 +176,7 @@
 }
 .ui-seg__opt:hover { color: var(--text-strong); }
 .ui-seg__opt[aria-selected="true"], .ui-seg__opt[aria-checked="true"] { color: var(--text-on-light); cursor: default; }
-.ui-seg__opt:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.ui-seg__opt:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }   /* inside the track, which clips to its path */
 .ui-seg__opt .ui-dot { display: none; }
 .ui-seg__opt[aria-selected="false"] .ui-dot[data-show], .ui-seg__opt[aria-checked="false"] .ui-dot[data-show] { display: block; }
 .ui-seg--s { height: calc(var(--ctl) - 2px); }
@@ -203,7 +192,7 @@
    .ui-chip--option: one of several values (role="radio", aria-checked). .ui-code: inline code. */
 .ui-chip {
   appearance: none; display: inline-flex; align-items: center; gap: 6px; flex: none; min-width: 0;
-  height: calc(var(--ctl-s) - 2px); padding: 0 8px 0 6px; margin: 0; border: 0; border-radius: var(--r-s); background: transparent;
+  height: calc(var(--ctl-s) - 2px); padding: 0 10px 0 8px; margin: 0; border: 0; border-radius: var(--r-pill); background: transparent;   /* a capsule */
   font: 500 var(--fs-xs)/1 var(--sans); color: var(--text-dim); white-space: nowrap; text-transform: var(--ui-case); cursor: pointer;
   transition: background-color var(--dur-out) var(--ease), color var(--dur-out) var(--ease);
 }
@@ -591,3 +580,54 @@ select.ui-input option { background: var(--bg-1); color: var(--text); }
   .ui-toast { translate: -50% 0; }
   .ui-toast[data-static] { translate: none; }
 }
+
+/* ───────────── squircle: the drawn corner (HX.ui.squircle binds these; DESIGN-SYSTEM.md §8.1) ─────────────
+   Bound elements carry data-sq-mode and, once their path is written, data-sq-on. The --sq-* properties are plain
+   (inheriting) custom properties: the pseudo-elements that draw the line, the ring and a surface's background read
+   them from their element. (Registered as non-inheriting with `inherit` on the pseudo-element, WebKitGTK 2.52 hands
+   the pseudo-element the grandparent's value.) Every bound element starts with no line and no surface of its own, so
+   it never shows its container's. */
+[data-sq-mode] { --sq-line: transparent; --sq-bg: transparent; }
+:where([data-sq-mode]) { position: relative; }   /* set when it binds, before its first size: writing the path never moves layout */
+/* clip: the element is clipped to the path; its inset line and its focus ring are drawn by ::after on a band of it */
+[data-sq-on]:not([data-sq-mode="surface"]):not([data-sq-mode="slab"]):not([data-sq-mode="concave"]):not(#sq) { clip-path: var(--sq-clip); box-shadow: none; }
+[data-sq-on]:not([data-sq-mode="slab"]):not([data-sq-mode="concave"])::after {
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; border-radius: 0;
+  background: var(--sq-line, transparent); clip-path: var(--sq-edge);
+}
+[data-sq-on]:not(#sq):focus-visible { outline: none; }
+[data-sq-on][data-sq-mode="clip"]:focus-visible::after { background: var(--focus); clip-path: var(--sq-ring, var(--sq-edge)); }
+/* surface: not clipped, so the elevation shadow stays; the background is a clipped ::before */
+[data-sq-on][data-sq-mode="surface"]:not(#sq) { background: none; isolation: isolate; }
+[data-sq-on][data-sq-mode="surface"]::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: var(--sq-bg); clip-path: var(--sq-clip); }
+/* slab and concave: the path carves the flares and the concave corner out of plain squares */
+[data-sq-on][data-sq-mode="slab"]:not(#sq) { clip-path: var(--sq-clip); }
+.ui-slab[data-sq-on]::before, .ui-slab[data-sq-on]::after { box-shadow: none; clip-path: none; border-radius: 0; background: var(--dock-bg); }
+.ui-concave[data-sq-on]:not(#sq) { box-shadow: none; border-radius: 0; background: var(--c); clip-path: var(--sq-clip); }
+
+/* what each bound component draws as its line (--sq-line) or paints as its surface (--sq-bg) */
+.ui-btn { --sq-line: var(--line); }
+.ui-btn--primary, .ui-btn--ghost, .ui-hold[data-state="done"] { --sq-line: transparent; }
+.ui-btn[data-armed], .ui-hold[data-armed] { --sq-line: var(--line-strong); }
+.ui-hold { --sq-line: var(--hair); }
+.ui-seg { --sq-line: var(--hair); }
+.ui-composer__box { --sq-line: var(--hair); }
+.ui-composer__box:focus-within, .ui-composer[data-listening] .ui-composer__box { --sq-line: var(--line-field); }
+.ui-menu, .ui-pop { --sq-line: var(--line); --sq-bg: var(--bg-1); }
+.ui-menu[data-sq-on], .ui-pop[data-sq-on] { box-shadow: var(--shadow-pop); }
+.ui-tip { --sq-line: var(--hair); --sq-bg: var(--bg-3); }
+.ui-tip[data-sq-on] { box-shadow: var(--shadow-tip); }
+.ui-tip[data-sq-on] .ui-kbd { position: relative; }
+.ui-toast { --sq-line: var(--hair); --sq-bg: var(--bg-3); }
+.ui-toast[data-sq-on] { box-shadow: var(--shadow-pop); }
+.ui-menu__item:focus-visible { --sq-line: transparent; }
+/* the card layer (HX.ui.card): the expanded blank floats, so it is a surface; the free answer is a field */
+hx-card[data-size="popover"] { --sq-line: var(--line); --sq-bg: var(--cd-surface); }
+hx-card[data-size="popover"][data-sq-on] { box-shadow: var(--shadow-pop); }
+.cd-free { --sq-line: var(--line-field); }
+.cd-free:focus-within { --sq-line: var(--focus); }
+/* one teammate's accent ring (cards.js sets --cd-accent): the inset ring becomes the drawn line */
+hx-card[data-accent]:is([data-size="inline"], [data-size="compact"], [data-size="popover"]) { --sq-line: color-mix(in srgb, var(--cd-accent) 42%, transparent); }
+hx-card[data-accent][data-resolved]:is([data-size="inline"], [data-size="compact"]) { --sq-line: color-mix(in srgb, var(--cd-accent) 22%, transparent); }
+hx-card[data-accent] .cd-mini { --sq-line: color-mix(in srgb, var(--cd-accent) 36%, transparent); }
+

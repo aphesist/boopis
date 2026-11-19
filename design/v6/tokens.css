@@ -219,15 +219,15 @@
   --ctl: 30px;                /* buttons, segmented control, the new row */
   --ctl-s: 28px;              /* icon buttons */
 
-  /* corners: continuous where the engine has corner-shape (the @supports block below), a round arc otherwise.
-     Nested corners: inner = max(--r-floor, outer − gap) (DESIGN-SYSTEM.md §8) */
-  --r-xs: 5px;                /* kbd, code chips, stamps */
-  --r-s: 7px;                 /* buttons, rows, fields, chips, the segmented track, tooltips, wells */
-  --r-m: 12px;                /* cards, composer, menus, popovers, toasts */
-  --r-l: 16px;                /* where the ground meets the frame, the dock, dialogs, palette */
-  --r-pill: 999px;            /* dots, the switch, anything inside a pill */
-  --r-floor: 4px;             /* the smallest inner radius of a nested corner */
-  --corner: round;            /* the corner shape; superellipse(1.8) where supported */
+  /* corners: Apple's continuous corners in every engine, drawn as a path by HX.ui.squircle (DESIGN-SYSTEM.md §8).
+     Nested corners: inner = max(--r-floor, outer − gap); under the floor the padding gives way */
+  --r-xs: 6px;                /* kbd, inline code, stamps */
+  --r-s: 12px;                /* buttons, rows, fields, wells, the segmented track, tooltips */
+  --r-m: 20px;                /* cards, composer, menus, popovers, toasts */
+  --r-l: 30px;                /* sheets, dialogs, the palette, the dock */
+  --r-pill: 999px;            /* chips, dots, the switch, anything inside a pill */
+  --r-floor: 8px;             /* the smallest inner radius of a nested corner */
+  --corner-smoothing: 0.6;    /* Figma corner smoothing, as iOS */
   --composer-pad: 6px;        /* the composer's actions sit this far from its edge */
 
   /* depth */
@@ -259,15 +259,8 @@
 
 /* interface case, corners and density: set by theme.js on <html> (each preset has defaults; the user may change them) */
 :root[data-hx-case="lower"] { --ui-case: lowercase; }
-:root[data-hx-corners="sharp"] { --r-xs: 2px; --r-s: 3px; --r-m: 6px; --r-l: 9px; --r-floor: 2px; }
-:root[data-hx-corners="round"] { --r-xs: 7px; --r-s: 11px; --r-m: 18px; --r-l: 22px; --r-floor: 6px; }
-/* continuous corners where the engine draws them: the curve eases in, so each step is larger to read the same.
-   After the two modifier lines (same specificity: order decides). */
-@supports (corner-shape: superellipse(2)) {
-  :root { --corner: superellipse(1.8); --r-xs: 7px; --r-s: 10px; --r-m: 16px; --r-l: 22px; --r-floor: 5px; }
-  :root[data-hx-corners="sharp"] { --r-xs: 3px; --r-s: 5px; --r-m: 9px; --r-l: 13px; --r-floor: 3px; }
-  :root[data-hx-corners="round"] { --r-xs: 10px; --r-s: 16px; --r-m: 26px; --r-l: 32px; --r-floor: 8px; }
-}
+:root[data-hx-corners="sharp"] { --r-xs: 3px; --r-s: 6px; --r-m: 10px; --r-l: 14px; --r-floor: 4px; }
+:root[data-hx-corners="round"] { --r-xs: 8px; --r-s: 16px; --r-m: 26px; --r-l: 36px; --r-floor: 12px; }
 :root[data-hx-density="compact"] { --row-h: 26px; --row-h-2: 40px; --ctl: 26px; --ctl-s: 24px; }
 :root[data-hx-density="comfortable"] { --row-h: 34px; --row-h-2: 50px; --ctl: 34px; --ctl-s: 32px; }
 

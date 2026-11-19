@@ -106,14 +106,24 @@ Modules must:
 | b | Answer the blank in the turn (opens its popover) |
 | Tab, shift+Tab | Move through the controls inside the turn, then on |
 
-## 6. Cards (cards)
+## 6. Cards and forms (cards)
+
+Keys work on the card that has focus, in every place a card appears (the conversation, the dock, the Bots section,
+team chat). Single keys never act while focus is in a text field.
 
 | Key | Action |
 |---|---|
-| hold Space (1 s), or Enter twice | Approve, on the focused "Hold to approve" button (the dot fills while held; releasing early cancels) |
-| x | Deny, while focus is in an approval card |
-| 1–9 | Pick a blank option (in the blank popover); typing writes your own answer; Enter confirms |
-| Esc | Close the popover; focus returns to the blank that opened it |
+| hold Space (1 s), or Enter twice | Approve, on the focused "Hold to approve" button (the dot fills while held; releasing early cancels). A form whose submit is a hold submits the same way |
+| x | Deny, while focus is in an approval card; cancel, while focus is in a form (the sender continues without it) |
+| d | Open the diff, while focus is in a ship card |
+| 1–9 | Pick an option: in the blank popover, and in a form's option list (the focused list, else the first). In a multi-select list they toggle |
+| ↑ ↓ | Move through a form's options (single choice selects as it moves); from the last option, ↓ goes to "Other" |
+| Tab, Shift+Tab | Move between a form's fields, then its buttons |
+| Enter | Submit the form from a field or an option (Ctrl or ⌘ + Enter from long text). A hold form moves focus to its hold button instead of submitting |
+| Esc | Defer the form ("Later": it collapses and waits in the dock; Open brings it back). In the blank popover, close it and return focus to the blank |
+
+Every card waiting on the user marks its focusable element with `data-hx-attention` (the hold button, the blank,
+a form's first field, a failed gate's primary action), so F8 and Shift+F8 reach it.
 
 ## 7. Composer (session, bots, the dock's session)
 
@@ -206,6 +216,6 @@ dock composers, the dock session (Enter, Space, mod+Enter, Esc, 1–9, ↑ ↓) 
 | §1, §2, §3 shell side, §10, the sheet, tooltips, palette | shell | done |
 | §3 markers and providers, §5, §7 | session | done |
 | §3 markers and providers, §4 bots list, §5 thread, §7, §9 sheet | bots | done |
-| §6 (hold Space 1 s, Enter twice, x, 1–9 then Enter, Esc) | cards | done |
+| §6 (hold Space 1 s, Enter twice, x, d, 1–9, arrows, Tab, Enter, Esc defers; `data-hx-attention`) | cards | done, forms included |
 | §8, the pointer gestures, `hxDock.botAt(n)` | dock | done |
 | §7 alt+V and Esc while listening (in `HX.ui.composer`) | design system | done in the library; shell adds the row to `KEYGROUPS`, dock and bots pass `bot` (MIGRATION.md §8) |
