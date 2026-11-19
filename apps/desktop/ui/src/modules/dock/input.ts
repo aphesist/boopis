@@ -315,6 +315,7 @@ export function onPointerDown(e: PointerEvent): void {
 
 /* ───────── fitting the column ───────── */
 /** the bot row keeps 40px orbs at a 54px pitch (LAYOUT.md section 6) while the column allows it, then shrinks */
+let lastOrb = 0;
 export function fitRow(): void {
   const vw = innerWidth;
   const avail = Math.min(S.colWidth || vw, vw) - 24;
@@ -322,6 +323,7 @@ export function fitRow(): void {
   const gapOf = (o: number): number => Math.max(6, Math.round(o * 14 / 40));
   let o = 40;
   while (o > 18 && 2 * pad + n * o + n * gapOf(o) + 28 > avail) o--;
+  const orbChanged = o !== lastOrb; lastOrb = o;
   X.root.style.setProperty('--dock-orb', String(o));
   X.root.style.setProperty('--dock-gap', gapOf(o) + 'px');
   X.root.style.setProperty('--dock-maxw', Math.max(300, avail) + 'px');
@@ -333,9 +335,9 @@ export function fitRow(): void {
   if (room > 0) X.root.style.setProperty('--dock-room', room + 'px');
   /* the live orbs carry their own --o (set when they move into a slot): re-read it, or an orb sized while the window was small
      stays small in a full-size slot (a frame that mounts small and then grows) */
-  if (flags.mounted) relocateLive();
+  if (flags.mounted && orbChanged) relocateLive();   /* (it reads layout for every bot: only when the row's orb size moved) */
 }
-export function onLayout(d: { centerX?: number; colWidth?: number; animate?: boolean }): void {
+export function onLayout(d: { centerX?: number; colWidth?: number; animate?: boolean; resized?: boolean }): void {
   flags.useVar = shellVar();
   X.root.classList.toggle('is-self-centred', !flags.useVar);
   if (!flags.useVar && typeof d.centerX === 'number') {
@@ -347,6 +349,5 @@ export function onLayout(d: { centerX?: number; colWidth?: number; animate?: boo
   flags.layoutSeen = true;
   if (d.colWidth) S.colWidth = d.colWidth;
   fitRow();
-  retarget(false);
+  retarget(!!d.resized);   /* a window being resized snaps the slab to its view: it never springs behind it */
 }
-export function onResize(): void { fitRow(); retarget(true); }

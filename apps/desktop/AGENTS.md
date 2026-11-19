@@ -35,6 +35,10 @@ src-tauri/
     secrets/      store (SecretStore: Keychain, MemoryStore for tests), channel (the plugin socket)
     setup/        first-run setup: mod (the engine, forms, steps), ops (HermesOps: Hermes's CLI behind a trait), install (copy the plugin, place hx, find the bundle), providers (detect, ask for keys, wire, ladder), state (setup.json)
     settings.rs   versioned AppSettings and its migration; os.rs (URL allowlist, home-relative paths, notification bounds)
+    renderer.rs   which WebKitGTK renderer the webview gets (ADR-0024): probe GPUs and session, a pure decision table (by runtime WebKitGTK version too), the one set_var, the diagnostics report
+    gpu.rs        which GPU the webview renders on (ADR-0025, HYPOTAXIS_GPU): power source, switcheroo-control's environment (parsed, filtered), a pure decision table, the second set_var
+    webkit.rs     the runtime WebKitGTK: version, bundled or system, and the feature API (dlsym, behind a trait; the one unsafe block)
+    frame_rate.rs WebKit's 60 fps preference (ADR-0025, HYPOTAXIS_FPS): the decision, GDK's refresh rate for the window's monitor, the power profile
   tests/live_gateway.rs   the proxy against a real Hermes gateway and the fake model (skips without HX_E2E_HERMES_ENV)
   tests/setup_live.rs     first-run setup on a fresh profile against a real Hermes (skips without HX_E2E_HERMES_ENV and an hx binary)
   examples/secret_channel_server.rs   the real secret channel over an in-memory map, for the plugin's Python tests
@@ -73,6 +77,11 @@ Secrets travel UI to host to keychain (ADR-0020, `docs/FORMS.md` section 3). Her
 Answers are checked against the form the host last showed (`pending_form`), so a stale or foreign answer is `hx.setup.invalid_answer` and stores nothing. The webview's `Answer.secrets` is the only place a secret enters the host from the UI during setup.
 
 **Bundling.** `tauri.conf.json` lists nothing to bundle, so `cargo build` and `cargo test` need no staging. For the AppImage run `scripts/stage-bundle.sh` (the plugin without tests and caches, and `hx` as `binaries/hx-<triple>`), then `cargo tauri build --bundles appimage --config src-tauri/tauri.bundle.conf.json`. At run time `Bundle::locate` finds the plugin in the resource directory and `hx` beside the executable; a debug build falls back to the repository's plugin. The AppImage is not built in CI here (disk); the staging script and the locate logic are tested, the bundle itself is not.
+
+## The renderer (ADR-0024)
+WebKitGTK reads its renderer switches when the web view is created, so `run()` decides first, before any thread (`renderer::probe`, `decide`, `apply`). In WebKitGTK 2.44 to 2.52, `WEBKIT_DISABLE_DMABUF_RENDERER=1` means acceleration policy `never` (no GL, the CPU paints every frame; `webkit://gpu` shows it), `WEBKIT_DMABUF_RENDERER_FORCE_SHM=1` keeps GL and copies frames through shared memory. The automatic rule touches only NVIDIA proprietary as the display GPU on X11 (`FORCE_SHM`); everything else is `HYPOTAXIS_RENDERER=auto|default|shm|cpu|nosync|software`, and a switch already in the environment wins. The decision table is unit-tested; the choice is logged at startup. Settings > General > Diagnostics (desktop only) copies `renderer_report` and opens `webkit://gpu` (`renderer_open_gpu_page`, a window with no IPC). The report also carries the runtime WebKitGTK version and origin (bundled or system), the display's refresh rate, whether WebKit's 60 fps preference is off, the power profile, the GPU choice and its rule, and the page's WebGL renderer; Measure frames reports the measured rate against the display's (`118 of 120 fps, p99 9.1 ms`). `app_restart` applies a GPU choice (it is read at start).
+
+**Frame rate and GPU (ADR-0025).** Both are decided from the environment before any thread: `gpu::probe/plan/apply` runs first in `run()`, then `renderer`. The host's `unsafe` is three small blocks, each with a SAFETY note: `renderer::apply` and `gpu::apply` (`set_var`, before any thread) and the `dlsym` call in `webkit::native`. `HYPOTAXIS_FPS=auto|60|max` lifts `PreferPageRenderingUpdatesNear60FPS` through `webkit::native::Live` (the single `unsafe` block resolves the symbols with `dlsym` and calls them; `webkit::set_feature` checks version >= 2.42, the symbols and the feature's existence first, and reads the value back). `HYPOTAXIS_GPU=auto|integrated|dedicated` (and the saved setting) offloads to the NVIDIA GPU with PRIME render offload; `auto` needs AC power, a bound NVIDIA proprietary driver and WebKitGTK >= 2.54.2. Only variables on the allowlists are taken from switcheroo-control. Test the logic through the traits and pure tables, never with a display. Do not add a blanket workaround: Tauri's own guide says it slows every machine that did not need it.
 
 ## Endpoints (ADR-0018 seam)
 `trait Endpoint { connect() -> GatewayConn }`. `Local` is done. `Remote {url, token}` and `Cloud {control_plane, session}` are typed and return `hx.hermes.unavailable` "not yet supported". Neither the proxy nor the UI knows the kind. A remote token belongs in the keychain, never in settings (`EndpointConfig` redacts it in `Debug`).
@@ -131,7 +140,7 @@ ui/
   src/vendor/hermes-shared/  Hermes's generated gateway contract types (MIT), pinned, with NOTICE and PIN.json
   src/vendor/model-icons/  the provider logos (LobeHub, MIT) and which family a model id gets, with NOTICE
   vendor/               orb-avatar.min.js (the owner's <orb-avatar> web component, MIT) and its .d.ts
-  tests/                smoke (Playwright), parity (v6 against the port), lib.mjs
+  tests/                smoke (Playwright), parity (v6 against the port), perf (WebKitGTK and Chromium frame times; README.md), lib.mjs
   scripts/              build-tokens.mjs
 ```
 Unit tests sit next to the code (`*.test.ts`).
@@ -160,6 +169,13 @@ Every row of "Owner decisions" in `DESIGN-SYSTEM.md`, and one newer rule. A chan
 | Keyboard first: every action has a key in `KEYMAP.md`; the keymap table feeds the sheet, Settings and the palette | `modules/shell/keymap.ts` | unit: `keymap.test.ts` (the dispatcher); smoke: the whole walk-through |
 
 Also binding: tokens, never literals, for colour, type, radius and space (the CSS is v6's, with no literal colours; do not add any); WCAG 2.2 AA (labels, roles, focus order, contrast, **label in name**: an accessible name must contain the visible text, in order); `<orb-avatar>` stays a vendored web component.
+
+## Frame cost (WebKitGTK is the target, not Chromium)
+The desktop app draws with WebKitGTK; the owner's machine paints on the CPU at 3600x2250 buffer pixels (GTK3 renders a 1.6 scale at 2x). `tests/perf/README.md` has the harness (`pnpm perf:webkit`); the findings that became rules:
+- **No `getComputedStyle`, `getBoundingClientRect`, `offset*`, `getClientRects` or `scrollWidth` inside a frame or a layout handler unless the value is needed in that frame, and never between writes.** Read everything, then write. A read after a write forces a style and layout pass over the whole page; the dock's slab path, the clips check and the dock's layout handlers each did it and cost a quarter of a morph. Cache a token you read per frame (`components/shape.ts`), and re-read it on `hx:theme`.
+- **No `mask-image`, `filter` or `backdrop-filter` over a large moving or scrolling area.** The conversation's fade above the composer is a strip of the ground fading in (`.ss-view::after`), not a mask on the scroller.
+- **Orbs** (`components/orb-runtime.ts`): a resized canvas repaints in the same task (a cleared canvas painted empty is the flicker), ambient orbs update on alternate frames by group (the dock's, and the rest), and the ones outside the dock wait while the dock moves. When the CPU paints, a frame repaints the bounding box of everything that changed once more than ten rectangles did: scattered animating orbs repaint the window between them. Do not add another always-animating thing in a second corner of the window.
+- A dock handler that needs the new layout takes it from `hx:layout` (`d.resized` says a window resize), not from `window`'s `resize`.
 
 ## Names and long names
 - **Autoname** (`modules/bots/names.ts`): the curated list is shared data, `apps/shared/data/bot-names.json`, imported by the UI (bundled by Vite, so there is one copy; `scripts/sync-shared-data.sh` copies files into the plugin package and the plugin does not read this one). Availability is derived on every call from the bots the module holds (which the provider keeps current: the Hermes profiles once `bots` is live), never stored. "Surprise me" is the dice button and alt+R in the name field; an empty name is auto-named on create.

@@ -364,6 +364,7 @@ select.ui-input option { background: var(--bg-1); color: var(--text); }
 .ui-set__head { margin: 20px 0 4px; font: 500 var(--fs-xs)/var(--lh-ui) var(--sans); color: var(--text-quiet); text-transform: var(--ui-case); }
 .ui-set__row { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 40px; padding: 10px 0; border-bottom: 1px solid var(--hair); }
 .ui-set__row:last-child { border-bottom: 0; }
+.ui-set__actions { display: flex; gap: var(--sp-2); flex: none; }
 .ui-set__label { display: flex; flex-direction: column; gap: 3px; min-width: 0; font-size: var(--fs-s); color: var(--text); text-transform: var(--ui-case); }
 .ui-set__label small { font-size: var(--fs-xs); line-height: 1.5; color: var(--text-dim); max-width: 42ch; }
 

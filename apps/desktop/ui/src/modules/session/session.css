@@ -9,11 +9,19 @@
 .ss-view:not(.hx-view) { position: relative; height: 100%; }   /* inside the shell the slot is the absolutely placed .hx-view */
 .ss-view { min-height: 0; overflow: hidden; background: var(--bg-2); font: 400 var(--fs-m)/var(--lh) var(--sans); color: var(--text); }
 .ss-view *, .ss-view *::before, .ss-view *::after, .ssr * { box-sizing: border-box; }
+.ss-view { --ss-pad-b: calc(var(--ss-comp-h, 120px) + var(--hx-dock-space, 0px) + var(--composer-gap) + var(--sp-5)); }
 .ss-scroll {
-  --ss-pad-b: calc(var(--ss-comp-h, 120px) + var(--hx-dock-space, 0px) + var(--composer-gap) + var(--sp-5));
   position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: var(--bg-4) transparent;
-  -webkit-mask-image: linear-gradient(to bottom, var(--text) calc(100% - var(--ss-pad-b) + 12px), transparent calc(100% - var(--ss-pad-b) + 40px));
-          mask-image: linear-gradient(to bottom, var(--text) calc(100% - var(--ss-pad-b) + 12px), transparent calc(100% - var(--ss-pad-b) + 40px));
+}
+/* The conversation fades out above the composer. It used to be a `mask-image` on the scroller: a mask over the whole
+   reading area, whose edge moves with every frame of the dock's lift (`--hx-dock-space`), made the browser rebuild the
+   masked layer each time, the single most expensive thing in a dock morph on WebKitGTK (it measured at twice the frame
+   time). The scroller sits on the solid reading-room ground, so the same fade is a strip of that ground fading in over it,
+   which repaints only the strip. Same edge, same 28px ramp, the strip at 12px below the composer's top edge. */
+.ss-view::after {
+  content: ""; position: absolute; z-index: 1; left: 0; right: 0; bottom: 0; pointer-events: none;
+  height: calc(var(--ss-pad-b) - 12px);
+  background: linear-gradient(to bottom, transparent, var(--bg-2) 28px);
 }
 .ss-col { width: var(--hx-col-w, min(var(--col-w), calc(100vw - 64px))); margin: 0 auto; padding: var(--sp-6) 0 var(--ss-pad-b); }
 .ss-find-anchor { position: absolute; top: var(--sp-3); right: var(--sp-5); width: 1px; height: 1px; }
