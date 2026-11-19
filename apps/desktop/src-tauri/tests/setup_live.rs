@@ -723,7 +723,7 @@ async fn run_flow(install: Install) {
         assert_eq!(
             again.steps[0].detail,
             format!(
-                "Hermes {} is unpacked",
+                "version {}, unpacked",
                 plan.runtime.manifest().hermes_version
             )
         );
