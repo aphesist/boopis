@@ -1,7 +1,8 @@
 /* Layout: on every change the shell emits `hx:layout` with VIEWPORT coordinates { centerX, colLeft, colWidth, ... }
-   and mirrors them as animated CSS custom properties on #hx-app (--hx-center-x, --hx-col-left, --hx-col-w,
-   --hx-view-left, --hx-view-right, --hx-side-w, --hx-right-vw, --hx-dock-space), so anything that reads the CSS
-   properties travels on the shell's own curve for free. OWNER RULE: the dock is always centred with the chatbox. */
+   and publishes the targets as plain custom properties on #hx-app (--hx-center-x-to, --hx-col-left-to, --hx-col-w-to,
+   --hx-view-left-to, --hx-view-right-to, --hx-side-w-to, --hx-right-vw-to, --hx-dock-space-to). Each element that uses
+   one (shell.css) animates its own non-inherited copy, --hx-<name>, on the shell's one curve, so a frame of the travel
+   restyles those elements and not the page. OWNER RULE: the dock is always centred with the chatbox. */
 import { emit } from '../../core/bus';
 import { $$ } from '../../core/dom';
 import { setLayout, state } from '../../core/state';
@@ -63,14 +64,14 @@ function computeLayout(): Layout {
   const r = app.getBoundingClientRect();
   const s = solveLayout({ W, left: state.left, right: state.right, tab: state.tab, dock: state.dock, sb: probes['sb'] || 288, rail: probes['rail'] || 56, rw: probes['right'] || 340, rr: probes['rrail'] || 28, col: probes['col'] || 720, dockRest: probes['dock'] || 72, dockHeight, inset: insets[state.tab] ?? { left: 0, right: 0 } });
   const set = (k: string, v: number): void => { app.style.setProperty(k, Math.round(v * 100) / 100 + 'px'); };
-  set('--hx-side-w', s.sideW);
-  set('--hx-view-left', s.viewLeft);
-  set('--hx-view-right', s.rightPush);
-  set('--hx-center-x', s.centerX);
-  set('--hx-col-left', s.colLeft);
-  set('--hx-col-w', s.colWidth);
-  set('--hx-right-vw', s.rightVW);
-  set('--hx-dock-space', s.dockSpace);
+  set('--hx-side-w-to', s.sideW);
+  set('--hx-view-left-to', s.viewLeft);
+  set('--hx-view-right-to', s.rightPush);
+  set('--hx-center-x-to', s.centerX);
+  set('--hx-col-left-to', s.colLeft);
+  set('--hx-col-w-to', s.colWidth);
+  set('--hx-right-vw-to', s.rightVW);
+  set('--hx-dock-space-to', s.dockSpace);
   set('--hx-margin-w', s.marginW);
   app.dataset['margin'] = s.marginW ? 'on' : 'off';
   app.dataset['leftMode'] = s.leftMode;

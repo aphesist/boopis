@@ -6,7 +6,8 @@ import { getLayout, setState } from '../../core/state';
 import { emit } from '../../core/bus';
 import { ui } from '../../components';
 import { S, X, flags, geomR, motion, rendered, shownPages, spring, K_SLIDE } from './ctx';
-import { E, cxNow, hideTip, kick, resetMag, retarget, shellVar, returnFocus, markFocus } from './engine';
+import type { Spring } from './ctx';
+import { E, cxNow, hideTip, kick, resetMag, retarget, shellVar, returnFocus, markFocus, slideNow, stopSlide } from './engine';
 import { listenOrb, lookRow, pokeBot, setOrbLife } from './orbs';
 import { relocateLive } from './views';
 import { columnsOf, gridTarget, rove, stepIndex } from './roving';
@@ -171,14 +172,23 @@ const canDrag = (): boolean => S.mode === 'normal' || S.mode === 'minimal' || (S
 /* the page follows the finger inside the slab's open lanes: ~34px toward a neighbour, ~18px (stiffer) past the first or
    last page, so content never leaves the slab; it fades a little as the swipe nears its commit point */
 const follow = (x: number, lim: number): number => Math.sign(x) * lim * (1 - 1 / (Math.abs(x) * 0.6 / lim + 1));
+/** the page's live spring for a drag or a nudge: a slide that is still settling on the compositor hands over its position and velocity */
+function pageSpring(page: string): Spring {
+  let s = E.slides.get(page);
+  if (s) return s;
+  const now = slideNow(page);
+  s = spring(now ? now.x : 0, K_SLIDE, 1, 0.1); s.v = now ? now.v : 0;
+  stopSlide(page);
+  E.slides.set(page, s);
+  return s;
+}
 function dragTo(x: number): void {
   const o = shownPages(), i = o.indexOf(S.page);
   const free = (x > 0 && i > 0) || (x < 0 && i < o.length - 1);
   const eff = follow(x, free ? 34 : 18);
   const pe = X.pageEls[S.page] as HTMLElement;
   pe.style.opacity = free ? String(1 - Math.min(0.35, Math.abs(x) / 200)) : '';
-  let s = E.slides.get(S.page);
-  if (!s) { s = spring(0, K_SLIDE, 1, 0.1); E.slides.set(S.page, s); }
+  const s = pageSpring(S.page);
   s.x = eff; s.t = eff; s.v = 0;
   if (!E.drag.on) { E.drag.on = true; hideTip(); resetMag(); }
   kick();
@@ -202,8 +212,7 @@ function dragRelease(vel: number): void {
 /** an arrow at the first or last page answers with a short rubber-band nudge */
 function nudge(dir: number): void {
   if (motion.reduce) return;
-  let s = E.slides.get(S.page);
-  if (!s) { s = spring(0, K_SLIDE, 1, 0.1); E.slides.set(S.page, s); }
+  const s = pageSpring(S.page);
   s.v = -dir * 520; s.t = 0; kick();
 }
 function onTouchDown(e: PointerEvent): void {
@@ -260,6 +269,7 @@ export function onPointerMove(e: PointerEvent): void {
   const inDock = !!(t && X.root.contains(t) && !X.root.classList.contains('is-gone'));
   if (inDock !== S.hover) { S.hover = inDock; if (inDock) S.hoverT = performance.now(); setOrbLife(); }
   const inRow = inDock && !!(t as Element).closest('.dk-v-bots-norm') && S.mode === 'normal';
+  if (inRow !== E.magOn) X.root.toggleAttribute('data-mag', inRow);
   E.magOn = inRow;
   E.magPX = inRow ? e.clientX - cxNow() : null;
   if (inRow) lookRow(e.clientX, e.clientY); else lookRow(null);

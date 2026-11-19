@@ -17,7 +17,7 @@ import {
   K_DOT, K_SINK, K_SLAB, PAGE_IDS, S, X, botById, flags, motion, readRadius, rendered, snapS, spring
 } from './ctx';
 import type { DockBot } from './ctx';
-import { E, cxNow, emitDock, focusDock, kick, morph, paint, renderDots, resetMag, retarget, shellVar, showView } from './engine';
+import { E, cancelFlips, cxNow, emitDock, focusDock, kick, morph, paint, renderDots, resetMag, retarget, shellVar, showView, stopSlide } from './engine';
 import { lookRow, setOrbLife } from './orbs';
 import { makeOrb, paintSession, refreshBot, relocateLive, renderAll, renderMins, renderView, viewKey, costHTML, fmtDur, meterHTML } from './views';
 import { closeCard, goPage, onCardAction, onCardState, onWaitAdded, onWaitResolved, openCard, setMode, setOn, toggleSetting } from './controller';
@@ -221,7 +221,7 @@ function mount(slotEl: HTMLElement): void {
   document.addEventListener('pointercancel', cancelOutside, true);
   if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', () => { fitRow(); retarget(false); });
   matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', (ev) => {
-    if (ev.matches) { for (const a of E.anims.values()) a.el.style.transform = ''; E.anims.clear(); resetMag(); lookRow(null); retarget(true); }
+    if (ev.matches) { cancelFlips(); for (const p of [...E.slideAn.keys()]) { stopSlide(p); const pe = X.pageEls[p]; if (pe) pe.style.translate = ''; } resetMag(); lookRow(null); retarget(true); }
   });
   on('hx:layout', onLayout);
   on('hx:state', (d) => {

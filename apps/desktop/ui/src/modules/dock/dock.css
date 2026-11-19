@@ -20,7 +20,9 @@
 
   position: fixed;
   bottom: 0;
+  --hx-center-x: var(--hx-center-x-to);
   left: var(--hx-center-x, var(--dk-cx, 50vw));   /* rides the shell's animated centre line */
+  transition: --hx-center-x var(--dur-3) var(--spring);
   width: 0;
   height: 0;
   z-index: var(--z-dock);
@@ -80,6 +82,8 @@
 .dk-row { display: flex; align-items: flex-end; gap: var(--dock-gap); --o: var(--dock-orb); }
 .dk-bot { position: relative; flex: none; width: calc(var(--dock-orb) * 1px); height: calc(var(--dock-orb) * 1px); border-radius: var(--r-pill); transform-origin: 50% 100%; }
 .dk-bot:focus-visible { outline-offset: 3px; }
+/* while the pointer is over the row the orbs are scaled every frame from script (magnification): each gets its own layer for exactly that long */
+.dk[data-mag] :is(.dk-bot, .dk-add) { will-change: transform; }
 .dk-add { flex: none; width: var(--ctl-s); height: calc(var(--dock-orb) * 1px); display: grid; place-items: center; color: var(--text-strong); border-radius: var(--r-s); transform-origin: 50% 100%; transition: background-color var(--dur-1) var(--ease); --sq-bg: transparent; background: var(--sq-bg); }
 .dk-add:hover { --sq-bg: var(--hover); background: var(--sq-bg); }
 
