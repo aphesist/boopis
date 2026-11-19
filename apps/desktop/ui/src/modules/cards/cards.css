@@ -195,7 +195,7 @@ hx-card[data-ground="dock"]:is([data-size="compact"], [data-size="mini"]), .cd-q
   text-align: left; cursor: pointer;
   transition: background-color var(--dur-out) var(--ease);
 }
-.cd-mini:hover { --sq-bg: var(--bg-3); transition-duration: var(--dur-1); }
+.cd-mini:hover { --sq-bg: var(--bg-3); background: var(--sq-bg); transition-duration: var(--dur-1); }
 .cd-mini__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* the lead column: one fixed width, marks share its left edge, so names and titles start at one x */
 hx-card, .cd-queue { --cd-lead-w: 28px; }
@@ -247,8 +247,8 @@ hx-card[data-size="compact"] .cd-opts { margin: 0 calc(-1 * var(--sp-2)); }
   cursor: pointer;
   transition: background-color var(--dur-out) var(--ease);
 }
-.cd-opt:hover { --sq-bg: var(--hover); transition-duration: var(--dur-1); }
-.cd-opt:focus-visible { --sq-bg: var(--current); outline: none; box-shadow: inset 0 0 0 2px var(--focus); }
+.cd-opt:hover { --sq-bg: var(--hover); background: var(--sq-bg); transition-duration: var(--dur-1); }
+.cd-opt:focus-visible { --sq-bg: var(--current); background: var(--sq-bg); outline: none; box-shadow: inset 0 0 0 2px var(--focus); }
 .cd-opt__ring {
   width: 6px; height: 6px; border-radius: var(--r-pill); flex: none;
   box-shadow: inset 0 0 0 1px var(--mark-off);
@@ -345,13 +345,13 @@ hx-card[data-kind="escalation"][data-size="inline"] { display: block; background
 }
 /* one teammate lends the card its colour: a 1px ring and a 5% tint (text contrast is unchanged in every preset) */
 hx-card[data-accent]:is([data-size="inline"], [data-size="compact"]) {
-  --sq-bg: color-mix(in srgb, var(--cd-accent) 5%, var(--cd-surface));
+  --sq-bg: color-mix(in srgb, var(--cd-accent) 5%, var(--cd-surface)); background: var(--sq-bg);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cd-accent) 42%, transparent);
 }
 hx-card[data-accent][data-size="popover"] { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cd-accent) 42%, transparent), var(--shadow-pop); }
 hx-card[data-accent][data-resolved]:is([data-size="inline"], [data-size="compact"]) { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cd-accent) 22%, transparent); }
 hx-card[data-accent] .cd-mini {
-  --sq-bg: color-mix(in srgb, var(--cd-accent) 6%, var(--cd-surface));
+  --sq-bg: color-mix(in srgb, var(--cd-accent) 6%, var(--cd-surface)); background: var(--sq-bg);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cd-accent) 36%, transparent);
 }
 hx-card[data-accent] .cd-stack__one, hx-card[data-accent] .cd-stack__more { box-shadow: 0 0 0 2px color-mix(in srgb, var(--cd-accent) 5%, var(--cd-surface)); }

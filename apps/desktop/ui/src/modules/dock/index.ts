@@ -164,6 +164,7 @@ function readGrow(): void {
   S.grow = on;
   X.root.toggleAttribute('data-grow', on);
   kick();
+  if (flags.mounted) emitDock();   /* the hover headroom comes and goes with the setting */
 }
 function onTheme(): void {
   /* a theme change: re-read the radius, let every orb re-resolve its colours, re-measure (fonts may change) */

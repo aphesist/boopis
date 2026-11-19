@@ -31,7 +31,7 @@ export interface EventMap {
   'hx:view-inset': { tab?: Tab; left?: number; right?: number; source?: string };
   'hx:toast': { text?: string; message?: string };
   /** the dock reports its size: the room the composer keeps above it */
-  'hx:dock': { mode: DockMode; page: string; width: number; height: number };
+  'hx:dock': { mode: DockMode; page: string; width: number; height: number; /** the slab at rest, without the hover headroom */ rest?: number };
   'hx:dock-expand': { toggle: boolean; from: string };
   'hx:governance': { governed: boolean; smart: boolean; model: string; cap: string };
 }

@@ -254,8 +254,8 @@ button.ui-group__head:hover { color: var(--text); }
   font: 400 var(--fs-s)/var(--lh-ui) var(--sans); color: var(--text); text-align: left; cursor: pointer;
   transition: background-color var(--dur-out) var(--ease);
 }
-.ui-row:hover { --sq-bg: var(--hover); transition-duration: var(--dur-1); }
-.ui-row[aria-current="true"], .ui-row[aria-current="page"], .ui-row[aria-selected="true"] { --sq-bg: var(--current); color: var(--text-strong); }
+.ui-row:hover { --sq-bg: var(--hover); background: var(--sq-bg); transition-duration: var(--dur-1); }
+.ui-row[aria-current="true"], .ui-row[aria-current="page"], .ui-row[aria-selected="true"] { --sq-bg: var(--current); background: var(--sq-bg); color: var(--text-strong); }
 .ui-row--2 { height: var(--row-h-2); }
 .ui-row__lead { width: 16px; height: 16px; display: grid; place-items: center; flex: none; }
 .ui-row__lead > .ui-orb { margin: 0 -2px; }
@@ -289,8 +289,8 @@ button.ui-group__head:hover { color: var(--text); }
   appearance: none; display: flex; align-items: flex-start; gap: 8px; width: 100%; box-sizing: border-box; min-height: var(--row-h); padding: 6px 8px; margin: 0; border: 0;
   border-radius: var(--r-in); --sq-bg: transparent; background: var(--sq-bg); font: inherit; color: var(--text); text-align: left; cursor: pointer;   /* concentric with the menu */
 }
-.ui-menu__item:hover { --sq-bg: var(--hover); }
-.ui-menu__item:focus-visible { --sq-bg: var(--current); outline: none; box-shadow: inset 0 0 0 2px var(--focus); }
+.ui-menu__item:hover { --sq-bg: var(--hover); background: var(--sq-bg); }
+.ui-menu__item:focus-visible { --sq-bg: var(--current); background: var(--sq-bg); outline: none; box-shadow: inset 0 0 0 2px var(--focus); }
 .ui-menu__item:disabled { color: var(--text-quiet); cursor: default; }
 .ui-menu__glyph { width: 16px; height: 18px; display: grid; place-items: center; flex: none; color: var(--icon); }
 .ui-menu__glyph .ui-icon { width: 15px; height: 15px; }
@@ -320,7 +320,7 @@ button.ui-group__head:hover { color: var(--text); }
 .ui-tip__state[data-tone="attention"] { color: var(--red-text); }
 
 .ui-toast {
-  position: fixed; z-index: var(--z-toast); top: calc(var(--chrome-h) + 12px); left: var(--hx-center-x, 50%); translate: -50% -6px;
+  position: fixed; z-index: var(--z-toast); top: calc(var(--chrome-h) + 12px); left: var(--hx-center-x, 50vw); translate: -50% -6px;
   display: flex; align-items: center; gap: 12px; max-width: min(480px, calc(100vw - 32px)); box-sizing: border-box;
   padding: 0 6px 0 14px; min-height: calc(var(--ctl-s) + 12px); --r-outer: var(--r-m); --pad: 6px; --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad))); border-radius: var(--r-outer);
   background: var(--bg-3); box-shadow: inset 0 0 0 1px var(--hair), var(--shadow-pop);
@@ -637,6 +637,7 @@ hx-card[data-size="popover"] { --sq-line: var(--line); --sq-bg: var(--cd-surface
 hx-card[data-size="popover"][data-sq-on] { box-shadow: var(--shadow-pop); }
 .cd-free { --sq-line: var(--line-field); }
 .cd-free:focus-within { --sq-line: var(--focus); }
+.cd-free[data-sq-on]:focus-within { outline: none; }   /* a frame is not clipped: the drawn line is the ring, not a second native one */
 /* one teammate's accent ring (cards.js sets --cd-accent): the inset ring becomes the drawn line */
 hx-card[data-accent]:is([data-size="inline"], [data-size="compact"], [data-size="popover"]) { --sq-line: color-mix(in srgb, var(--cd-accent) 42%, transparent); }
 hx-card[data-accent][data-resolved]:is([data-size="inline"], [data-size="compact"]) { --sq-line: color-mix(in srgb, var(--cd-accent) 22%, transparent); }

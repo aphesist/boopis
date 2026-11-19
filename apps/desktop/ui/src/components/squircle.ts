@@ -28,11 +28,11 @@ export interface BindOpts { mode?: SquircleMode | undefined }
 
 interface State {
   mode: SquircleMode; w: number; h: number; x: number; y: number;
-  r: readonly [number, number, number, number] | null; key: string; ringKey: string; on: boolean; focusable: boolean; at: string | null;
+  r: readonly [number, number, number, number] | null; /** the radii as a cache key, read with them */ rk: string; key: string; ringKey: string; on: boolean; focusable: boolean; at: string | null;
 }
 interface Built { key: string; clip: string; edge?: string; outer?: string; inner?: (t: number) => string; ring?: string; t2?: number }
 interface Snap { ox: number; oy: number; w: number; h: number; t: number; t2: number; D: number }
-export interface SquircleStats { bound: number; cached: number; smoothing: number; frames: number; lastMs: number; maxMs: number; snaps: number; snapMs: number }
+export interface SquircleStats { bound: number; cached: number; smoothing: number; frames: number; lastMs: number; maxMs: number; totalMs: number; snaps: number; snapMs: number }
 
 const FOCUSABLE = 'button, a[href], input, select, textarea, [tabindex]';
 const SURFACE = '.ui-menu, .ui-pop, .ui-tip, .ui-toast, hx-card[data-size="popover"]';
@@ -49,7 +49,7 @@ const state = new WeakMap<Element, State>();
 const bound = new Set<Element>();
 const cache = new Map<string, Built>();
 const extra: Array<[string, SquircleMode | undefined]> = [];
-const stats = { frames: 0, lastMs: 0, maxMs: 0, snaps: 0, snapMs: 0 };
+const stats = { frames: 0, lastMs: 0, maxMs: 0, totalMs: 0, snaps: 0, snapMs: 0 };
 let smoothing = DEFAULT_SMOOTHING;
 let started = false;
 let ro: ResizeObserver | null = null;
@@ -64,18 +64,19 @@ const dpr = (): number => window.devicePixelRatio || 1;
 function snapOf(s: State): Snap {
   if (s.mode === 'slab' || s.mode === 'concave') return { ox: 0, oy: 0, w: Math.round(s.w * 2) / 2, h: Math.round(s.h * 2) / 2, t: 1, t2: 2, D: 1 };
   /* inward: a box paints its background only inside its own snapped rect, so a path edge outside that rect loses part
-     of its line. Browsers snap that rect either to device pixels or to whole CSS pixels and then scale; each edge goes to
-     the innermost of the two, then inward to the next device pixel. The shape is at most about a device pixel inside. */
+     of its line. Browsers snap that rect to device pixels, to whole CSS pixels and then scale, or not at all (a transformed box,
+     such as the composer centred with translate); each edge goes to the innermost of the three, then inward to the next device pixel. The shape is at most about a device pixel inside. */
   const D = dpr(), e = 0.02;
-  const lo = (a: number): number => Math.ceil(Math.max(Math.round(a) * D, Math.round(a * D)) - e);
-  const hi = (b: number): number => Math.floor(Math.min(Math.round(b) * D, Math.round(b * D)) + e);
+  const lo = (a: number): number => Math.ceil(Math.max(Math.round(a) * D, Math.round(a * D), a * D) - e);
+  const hi = (b: number): number => Math.floor(Math.min(Math.round(b) * D, Math.round(b * D), b * D) + e);
   const L = lo(s.x), T = lo(s.y), w = (hi(s.x + s.w) - L) / D, h = (hi(s.y + s.h) - T) / D;
-  return { ox: L / D - s.x, oy: T / D - s.y, w, h, D, t: Math.max(1, Math.floor(D + 1e-6)) / D, t2: Math.max(1, Math.floor(2 * D + 1e-6)) / D };
+  return { ox: Math.round((L / D - s.x) * 1000) / 1000, oy: Math.round((T / D - s.y) * 1000) / 1000, w: Math.round(w * 1000) / 1000, h: Math.round(h * 1000) / 1000, D, t: Math.max(1, Math.floor(D + 1e-6)) / D, t2: Math.max(1, Math.floor(2 * D + 1e-6)) / D };
 }
 
 function build(s: State, g: Snap): Built {
   const w = g.w, h = g.h, R = s.r ?? [0, 0, 0, 0] as const;
-  const key = s.mode + '|' + w.toFixed(3) + '|' + h.toFixed(3) + '|' + R.join(',') + '|' + (s.focusable ? 1 : 0) + '|' + smoothing + '|' + g.ox.toFixed(3) + '|' + g.oy.toFixed(3) + '|' + g.D;
+  /* the key is built every frame for every element whose size changed: plain numbers, no formatting */
+  const key = s.mode + '|' + w + '|' + h + '|' + s.rk + (s.focusable ? '|1|' : '|0|') + smoothing + '|' + g.ox + '|' + g.oy + '|' + g.D;
   const hit = cache.get(key);
   if (hit) return hit;
   if (cache.size > PATH_CACHE_MAX) cache.clear();
@@ -129,12 +130,12 @@ function onEntries(entries: ResizeObserverEntry[]): void {
     const b = e.borderBoxSize?.[0];
     s.w = b ? b.inlineSize : el.offsetWidth; s.h = b ? b.blockSize : el.offsetHeight;
     const rc = el.getBoundingClientRect(); s.x = rc.left; s.y = rc.top;
-    s.r ??= radii(el);
+    if (!s.r) { s.r = radii(el); s.rk = s.r.join(','); }
     todo.push([el, s]);
   }
   for (const [el, s] of todo) apply(el, s);
   const ms = performance.now() - t0;
-  stats.frames++; stats.lastMs = ms; if (ms > stats.maxMs) stats.maxMs = ms;
+  stats.frames++; stats.totalMs += ms; stats.lastMs = ms; if (ms > stats.maxMs) stats.maxMs = ms;
 }
 
 function readSmoothing(): void {
@@ -148,7 +149,7 @@ export function bind(el: Element, o?: BindOpts): Element {
   let mode: SquircleMode = o?.mode ?? (el.getAttribute('data-sq-mode') as SquircleMode | null) ??
     (el.matches(SURFACE) ? 'surface' : el.matches('.ui-slab') ? 'slab' : el.matches('.ui-concave') ? 'concave' : el.matches(LEAF) ? 'clip' : 'frame');
   if (mode === 'clip' && !el.matches(LEAF)) mode = 'frame';   /* clip is for leaf controls only, whoever asks */
-  const s: State = { mode, w: 0, h: 0, x: 0, y: 0, r: null, key: '', ringKey: '', on: false, focusable: (mode === 'clip' || mode === 'frame') && el.matches(FOCUSABLE), at: el.getAttribute('data-at') };
+  const s: State = { mode, w: 0, h: 0, x: 0, y: 0, r: null, rk: '', key: '', ringKey: '', on: false, focusable: (mode === 'clip' || mode === 'frame') && el.matches(FOCUSABLE), at: el.getAttribute('data-at') };
   state.set(el, s); bound.add(el);
   el.setAttribute('data-sq-mode', mode);
   ro.observe(el, { box: 'border-box' });
@@ -202,7 +203,7 @@ export function refresh(force = true): void {
     tokenSig = sig;
     readSmoothing();
     const t0 = performance.now();
-    for (const el of bound) { const s = state.get(el); if (!s) continue; if (!el.isConnected) { unbind(el); continue; } s.r = radii(el); s.key = ''; }
+    for (const el of bound) { const s = state.get(el); if (!s) continue; if (!el.isConnected) { unbind(el); continue; } s.r = radii(el); s.rk = s.r.join(','); s.key = ''; }
     for (const el of bound) { const s = state.get(el); if (s) apply(el as HTMLElement, s); }
     stats.lastMs = performance.now() - t0;
   });

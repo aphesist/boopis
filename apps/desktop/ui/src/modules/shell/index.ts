@@ -8,7 +8,7 @@ import { ariaKeys } from '../../core/keys';
 import { logger } from '../../core/log';
 import { callProvided, registered, SLOTS } from '../../core/registry';
 import type { SlotName } from '../../core/registry';
-import { followScheme, prefs, saveState, setMounting, setState, setStateHooks, state, toggle, urlQuery } from '../../core/state';
+import { followScheme, followWindowWidth, prefs, saveState, setMounting, setState, setStateHooks, state, toggle, urlQuery } from '../../core/state';
 import { TABS } from '../../core/settings';
 import type { Tab } from '../../core/types';
 import { ui } from '../../components';
@@ -288,7 +288,9 @@ function wire(): void {
   let lastW = 0, lastH = 0, resizeTimer = 0;
   new ResizeObserver(() => {
     if (app.clientWidth === lastW && app.clientHeight === lastH) return;
-    lastW = app.clientWidth; lastH = app.clientHeight;
+    const W = app.clientWidth, wasW = lastW;
+    lastW = W; lastH = app.clientHeight;
+    followWindowWidth(W, wasW);
     app.classList.add('is-resizing');
     queueLayout(false);
     clearTimeout(resizeTimer);
