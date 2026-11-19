@@ -109,22 +109,46 @@ export function renderPalette(): void {
   pal.items = items;
   pal.active = Math.min(pal.active, Math.max(0, items.length - 1));
   if (!items.length) {
-    el.palList.innerHTML = '<div class="hx-pal-empty">Nothing matches <b>' + esc(el.palInput.value.trim()) + '</b>.<br>Try a session title, a bot’s name or a command.</div>';
+    /* no options: the list stops being a listbox (it has no option to hold, and an unnamed generic takes no label) */
+    el.palList.removeAttribute('role'); el.palList.removeAttribute('aria-label');
+    patchList(el.palList, '<div class="hx-pal-empty" role="status" data-key="empty">Nothing matches <b>' + esc(el.palInput.value.trim()) + '</b>.<br>Try a session title, a bot’s name or a command.</div>');
     el.palInput.removeAttribute('aria-activedescendant');
     return;
   }
+  el.palList.setAttribute('role', 'listbox'); el.palList.setAttribute('aria-label', 'Results');
   let html = '', g: Group | null = null;
   items.forEach((it, i) => {
-    if (it.group !== g) { g = it.group; html += '<div class="ui-group__head hx-pal-group" role="presentation">' + GROUPS[g] + '</div>'; }
-    html += '<div class="ui-row hx-pal-row" role="option" id="hx-pal-' + i + '" data-i="' + i + '" data-kind="' + (it.group === 'commands' ? 'command' : 'item') + '" aria-selected="' + (i === pal.active) + '">' +
+    if (it.group !== g) { g = it.group; html += '<div class="ui-group__head hx-pal-group" role="presentation" data-key="g-' + g + '">' + GROUPS[g] + '</div>'; }
+    html += '<div class="ui-row hx-pal-row ui-nest" role="option" id="hx-pal-' + i + '" data-key="hx-pal-' + i + '" data-i="' + i + '" data-kind="' + (it.group === 'commands' ? 'command' : 'item') + '" aria-selected="' + (i === pal.active) + '">' +
       '<span class="hx-pal-row__icon">' + (it.icon || '') + '</span>' +
       '<span class="hx-pal-row__label">' + highlight(it.label, q2) + '</span>' +
       (it.meta ? '<span class="hx-pal-row__meta">' + esc(it.meta) + '</span>' : '') +
       (it.trail ? '<span class="hx-pal-row__trail' + (it.attn ? ' is-attn' : '') + '">' + esc(it.trail) + '</span>' : '') +
-      (it.kbd ? ui.html.keys(it.kbd) : '') + '</div>';
+      (it.kbd ? ui.html.keys(it.kbd, { fit: true }) : '') + '</div>';
   });
-  el.palList.innerHTML = html;
+  patchList(el.palList, html);
   el.palInput.setAttribute('aria-activedescendant', 'hx-pal-' + pal.active);
+}
+/* Update the list in place (R-motion-5): a row keeps its node while its text, its state or its place changes; only rows
+   that are gone leave and only new ones arrive. Typing never redraws a row that stays in the results. Nodes are matched by
+   data-key; the attributes the markup sets are the only ones touched (the drawn corner keeps its own). */
+const OWN = ['id', 'role', 'data-i', 'data-kind', 'aria-selected', 'aria-label'];
+function patchList(host: HTMLElement, html: string): void {
+  const t = document.createElement('template'); t.innerHTML = html;
+  const have = new Map<string, HTMLElement>();
+  for (const c of Array.from(host.children) as HTMLElement[]) { const k = c.dataset['key']; if (k) have.set(k, c); else c.remove(); }
+  let at: ChildNode | null = host.firstChild;
+  for (const n of Array.from(t.content.children) as HTMLElement[]) {
+    const k = n.dataset['key'] ?? '';
+    const c = have.get(k);
+    if (c) {
+      have.delete(k);
+      for (const a of OWN) { const v = n.getAttribute(a); if (v == null) c.removeAttribute(a); else if (c.getAttribute(a) !== v) c.setAttribute(a, v); }
+      if (c.innerHTML !== n.innerHTML) c.innerHTML = n.innerHTML;
+      if (c === at) at = c.nextSibling; else host.insertBefore(c, at);
+    } else host.insertBefore(n, at);
+  }
+  for (const c of have.values()) c.remove();
 }
 export function movePal(d: number): void {
   if (!pal.items.length) return;

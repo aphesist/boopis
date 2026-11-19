@@ -191,7 +191,7 @@ export function boot(): void {
   el.btnAccount.dataset['tip'] = U.name;
 
   // keyboard chips in static markup
-  $$('kbd[data-kbd]', app).forEach((k) => { k.outerHTML = ui.html.keys(k.dataset['kbd']); });
+  $$('kbd[data-kbd]', app).forEach((k) => { k.outerHTML = ui.html.keys(k.dataset['kbd'], k.hasAttribute('data-fit') ? { fit: true } : undefined); });
   el.btnNew.setAttribute('aria-keyshortcuts', ariaKeys('mod+shift+O'));
   el.btnSearch.setAttribute('aria-keyshortcuts', ariaKeys('mod+K'));
   $('#hx-keys').innerHTML = keysTableHTML('');
