@@ -125,9 +125,9 @@ mod tests {
             t.find("gcloud").unwrap().line(),
             "gcloud auth login --brief"
         );
-        assert_eq!(
-            t.find("hermes-nous").unwrap().line(),
-            "hermes auth add nous --type oauth"
+        assert!(
+            t.find("hermes-nous").is_none(),
+            "a device-code login waits for output streamed while it runs"
         );
     }
 

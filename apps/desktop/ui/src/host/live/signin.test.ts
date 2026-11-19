@@ -83,7 +83,7 @@ describe('a sign-in field of an agent form', () => {
   it('tells the card what a known provider would run, and that anything else is not a sign-in boopis knows', () => {
     const h = host({ signin: () => Promise.resolve() });
     expect(h.source.login?.({ provider: 'gcloud' })).toEqual({ known: true, line: 'gcloud auth login --brief' });
-    expect(h.source.login?.({ provider: 'hermes-nous' })).toEqual({ known: true, line: 'hermes auth add nous --type oauth' });
+    expect(h.source.login?.({ provider: 'hermes-nous' }), 'a device-code login is not in the table yet').toEqual({ known: false });
     expect(h.source.login?.({ server: 'linear' })).toEqual({ known: true });
     for (const s of [{ provider: 'curl' }, { provider: 'claude' }, { provider: 'gcloud', command: 'sh' }, {}]) expect(h.source.login?.(s)).toEqual({ known: false });
   });

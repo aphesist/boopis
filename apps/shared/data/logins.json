@@ -1,43 +1,21 @@
 {
   "schema_version": 1,
-  "description": "The sign-in commands boopis may run on a form's behalf, by provider id. A form (an agent's, a teammate's, a mod's) names a provider and never a command: the host looks the provider up here and runs exactly this program and argument vector, as a vector, never through a shell. Every entry is a real login command of a tool Hermes or a collection entry uses, checked on the date in `verified` against the sources listed. `program` \"hermes\" means the Hermes the host runs (its own path and home). Not here on purpose: any Claude subscription sign-in (Anthropic's terms do not allow third-party apps to route through plan credentials). `gh auth login` is left out too: its browser flow prints a one-time code the user must read while it runs, and boopis shows a command's output only when it ends. See docs/CONNECTORS.md.",
+  "description": "The sign-in commands boopis may run on a form's behalf, by provider id. A form (an agent's, a teammate's, a mod's) names a provider and never a command: the host looks the provider up here and runs exactly this program and argument vector, as a vector, never through a shell. Every entry is a real login command of a tool Hermes or a collection entry uses, checked on the date in `verified` against the sources listed. `program` \"hermes\" means the Hermes the host runs (its own path and home). Not here on purpose: any Claude subscription sign-in (Anthropic's terms do not allow third-party apps to route through plan credentials). `gh auth login` and Hermes's own device-code logins (`hermes auth add nous|openai-codex --type oauth`) are left out too: they print a one-time code the user must read while the command runs, and boopis shows a command's output only when it ends. See docs/CONNECTORS.md.",
   "logins": [
     {
       "id": "gcloud",
       "name": "Google Cloud",
       "program": "gcloud",
-      "args": ["auth", "login", "--brief"],
+      "args": [
+        "auth",
+        "login",
+        "--brief"
+      ],
       "verified": {
         "date": "2026-11-19",
         "sources": [
           "gcloud auth login --help (Google Cloud SDK 570.0.0): `gcloud auth login [ACCOUNT] [--no-activate] [--brief] ...`; the default is a browser flow that returns to a localhost address, so no code is read from the terminal",
           "https://cloud.google.com/sdk/gcloud/reference/auth/login"
-        ]
-      }
-    },
-    {
-      "id": "hermes-nous",
-      "name": "Nous Portal, through Hermes",
-      "program": "hermes",
-      "args": ["auth", "add", "nous", "--type", "oauth"],
-      "verified": {
-        "date": "2026-11-19",
-        "sources": [
-          "hermes auth add --help (Hermes v0.23.2): `hermes auth add [--type {oauth,api-key}] provider`",
-          "hermes_cli/auth_commands.py v0.23.2, `_add_nous_oauth_credential`: the device-code login Hermes keeps in its own credential pool"
-        ]
-      }
-    },
-    {
-      "id": "hermes-openai-codex",
-      "name": "OpenAI Codex, through Hermes",
-      "program": "hermes",
-      "args": ["auth", "add", "openai-codex", "--type", "oauth"],
-      "verified": {
-        "date": "2026-11-19",
-        "sources": [
-          "hermes auth add --help (Hermes v0.23.2): names openai-codex as a provider id",
-          "hermes_cli/auth_commands.py v0.23.2: `openai-codex` is in `_OAUTH_CAPABLE_PROVIDERS` and has its own branch in `_add_credential`"
         ]
       }
     }
