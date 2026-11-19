@@ -128,7 +128,8 @@ function apply(el: HTMLElement, s: State): void {
   /* a corner as round as half the element (a capsule, a circle) needs no path: the browser draws it */
   const native = s.mode !== 'slab' && s.mode !== 'concave' && s.r.every((r) => r >= half - 0.5 || r === 0) && !allZero;
   if (native || (allZero && s.mode !== 'concave')) {
-    if (s.on) { el.removeAttribute('data-sq-on'); s.on = false; s.key = ''; }
+    /* the path goes with the attribute: a stale --sq-clip would still be read as the element's outline (the lab's contain check, a preset change to a capsule) */
+    if (s.on) { el.removeAttribute('data-sq-on'); for (const k of ['--sq-clip', '--sq-edge', '--sq-ring']) el.style.removeProperty(k); s.on = false; s.key = ''; }
     return;
   }
   const v = build(s, g);
