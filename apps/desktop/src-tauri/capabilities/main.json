@@ -24,6 +24,8 @@
     "allow-app-settings-set",
     "allow-notify",
     "allow-pick-folder",
-    "allow-open-external"
+    "allow-open-external",
+    "allow-renderer-report",
+    "allow-renderer-open-gpu-page"
   ]
 }

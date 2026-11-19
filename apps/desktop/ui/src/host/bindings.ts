@@ -44,6 +44,16 @@ export const commands = {
 	pickFolder: (options?: InvokeOptions) => __TAURI_INVOKE<PickedFolder | null>("pick_folder", undefined, options),
 	/**  Open an `http` or `https` link in the user's browser. */
 	openExternal: (url: string, options?: InvokeOptions) => __TAURI_INVOKE<null>("open_external", { url }, options),
+	/**
+	 *  The renderer diagnostics: the session, the GPUs and their drivers, the rule that decided, and the environment the
+	 *  web process was started with. Read-only; the numbers in it are what the owner sends when asked.
+	 */
+	rendererReport: (options?: InvokeOptions) => __TAURI_INVOKE<RendererReport_Serialize>("renderer_report", undefined, options),
+	/**
+	 *  Open `WebKitGTK`'s own `webkit://gpu` page in a window of its own: its version, the buffer path in use (`DMABUF` or
+	 *  shared memory), the EGL and GL vendor, and the acceleration policy. The window has no access to the host's commands.
+	 */
+	rendererOpenGpuPage: (options?: InvokeOptions) => __TAURI_INVOKE<null>("renderer_open_gpu_page", undefined, options),
 };
 
 /** Events */
@@ -227,6 +237,39 @@ export type GatewayState =
 /**  Hermes is installed but too old or otherwise not usable. */
 "incompatible";
 
+/**  One graphics device, as `/sys/class/drm` reports it. */
+export type Gpu = Gpu_Serialize | Gpu_Deserialize;
+
+/**  One graphics device, as `/sys/class/drm` reports it. */
+export type Gpu_Deserialize = {
+	/**  The sysfs card name (`card0`). */
+	card: string,
+	/**  PCI vendor id (`0x10de` is NVIDIA, `0x8086` Intel, `0x1002` AMD). */
+	vendor: string,
+	/**  The kernel driver bound to it (`nvidia`, `nouveau`, `i915`, `xe`, `amdgpu`), when there is one. */
+	driver?: string | null,
+	/**
+	 *  Whether the firmware booted with this one as the display device (`boot_vga`). On a hybrid laptop this is
+	 *  usually the integrated GPU, with the NVIDIA one a secondary.
+	 */
+	boot_display: boolean,
+};
+
+/**  One graphics device, as `/sys/class/drm` reports it. */
+export type Gpu_Serialize = {
+	/**  The sysfs card name (`card0`). */
+	card: string,
+	/**  PCI vendor id (`0x10de` is NVIDIA, `0x8086` Intel, `0x1002` AMD). */
+	vendor: string,
+	/**  The kernel driver bound to it (`nvidia`, `nouveau`, `i915`, `xe`, `amdgpu`), when there is one. */
+	driver: string | null,
+	/**
+	 *  Whether the firmware booted with this one as the display device (`boot_vga`). On a hybrid laptop this is
+	 *  usually the integrated GPU, with the NVIDIA one a secondary.
+	 */
+	boot_display: boolean,
+};
+
 /**  The `hermes_status` answer (`docs/PROTOCOL.md` section 1). */
 export type HermesStatus = HermesStatus_Serialize | HermesStatus_Deserialize;
 
@@ -306,6 +349,24 @@ export type PickedFolder = {
 	home_relative: boolean,
 };
 
+/**  What the user asked for with `HYPOTAXIS_RENDERER`. */
+export type Policy = 
+/**  The host's evidence-based rule. */
+"auto" | 
+/**  Touch nothing: `WebKitGTK`'s own choice. */
+"default" | 
+/**
+ *  `WEBKIT_DMABUF_RENDERER_FORCE_SHM=1`: no `DMABUF`, frames copied through shared memory; GL compositing and GPU
+ *  rasterisation stay.
+ */
+"shm" | 
+/**  `WEBKIT_DISABLE_DMABUF_RENDERER=1`: no `DMABUF` and, in `WebKitGTK` 2.44 to 2.52, no GL either: CPU painting. */
+"cpu" | 
+/**  `__NV_DISABLE_EXPLICIT_SYNC=1`: the Wayland `Error 71` cure, keeps the `DMABUF` path. */
+"nosync" | 
+/**  `WEBKIT_DISABLE_COMPOSITING_MODE=1`: no accelerated compositing at all (the last resort). */
+"software";
+
 /**  A snapshot for the UI's diagnostics. */
 export type ProxyStats = ProxyStats_Serialize | ProxyStats_Deserialize;
 
@@ -358,6 +419,87 @@ export type Receipt = {
 	/**  Plain lines: what is installed, what was changed, what to know. */
 	lines: string[],
 };
+
+/**  Everything the diagnostics show: what was found, what was decided and what the web process will see. */
+export type RendererReport = RendererReport_Serialize | RendererReport_Deserialize;
+
+/**  Everything the diagnostics show: what was found, what was decided and what the web process will see. */
+export type RendererReport_Deserialize = {
+	/**  The session type. */
+	session: Session,
+	/**  The compositor is Hyprland. */
+	hyprland: boolean,
+	/**  The GPUs, with the driver bound to each. */
+	gpus: Gpu_Deserialize[],
+	/**  What `HYPOTAXIS_RENDERER` asked for. */
+	policy: Policy,
+	/**  The rule that decided. */
+	rule: Rule,
+	/**  The variables the host set. */
+	set: ([string, string])[],
+	/**  Every renderer-related variable in the process environment now (set by the host or by the user). */
+	environment: ([string, string])[],
+	/**  `HYPOTAXIS_RENDERER` values and the variables each sets, for the report's reader. */
+	choices: ([string, string])[],
+};
+
+/**  Everything the diagnostics show: what was found, what was decided and what the web process will see. */
+export type RendererReport_Serialize = {
+	/**  The session type. */
+	session: Session,
+	/**  The compositor is Hyprland. */
+	hyprland: boolean,
+	/**  The GPUs, with the driver bound to each. */
+	gpus: Gpu_Serialize[],
+	/**  What `HYPOTAXIS_RENDERER` asked for. */
+	policy: Policy,
+	/**  The rule that decided. */
+	rule: Rule,
+	/**  The variables the host set. */
+	set: ([string, string])[],
+	/**  Every renderer-related variable in the process environment now (set by the host or by the user). */
+	environment: ([string, string])[],
+	/**  `HYPOTAXIS_RENDERER` values and the variables each sets, for the report's reader. */
+	choices: ([string, string])[],
+};
+
+/**  Why the decision came out as it did (stable names: they go in the log and in the diagnostics). */
+export type Rule = 
+/**  A `WebKit` or NVIDIA switch was already in the environment; nothing is changed. */
+"user_environment" | 
+/**  `HYPOTAXIS_RENDERER=default`. */
+"policy_default" | 
+/**  `HYPOTAXIS_RENDERER=shm`. */
+"policy_shm" | 
+/**  `HYPOTAXIS_RENDERER=cpu`. */
+"policy_cpu" | 
+/**  `HYPOTAXIS_RENDERER=nosync`. */
+"policy_nosync" | 
+/**  `HYPOTAXIS_RENDERER=software`. */
+"policy_software" | 
+/**  The display GPU is not on the NVIDIA proprietary driver: `WebKitGTK`'s own choice is known to work. */
+"no_nvidia_proprietary" | 
+/**
+ *  NVIDIA proprietary driver on X11: the `DMABUF` renderer shows a blank window; the shared-memory transport keeps
+ *  the GPU.
+ */
+"nvidia_x11" | 
+/**
+ *  NVIDIA proprietary driver on Wayland: left alone (it starts and draws for most; the switches that cure a
+ *  crash or a blank window are one variable away and the diagnostics name them).
+ */
+"nvidia_wayland_untouched" | 
+/**  The session type could not be told: nothing is assumed. */
+"session_unknown";
+
+/**  The session the webview will draw into. */
+export type Session = 
+/**  A Wayland compositor. */
+"wayland" | 
+/**  An X11 server. */
+"x11" | 
+/**  Neither could be told. */
+"unknown";
 
 /**  What `setup_advance` answers. */
 export type Status = Status_Serialize | Status_Deserialize;

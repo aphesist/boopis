@@ -10,6 +10,7 @@ pub mod error;
 pub mod gateway;
 pub mod hermes;
 pub mod os;
+pub mod renderer;
 pub mod secrets;
 pub mod settings;
 pub mod setup;
@@ -47,6 +48,8 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::notify,
             commands::pick_folder,
             commands::open_external,
+            commands::renderer_report,
+            commands::renderer_open_gpu_page,
         ])
         .events(collect_events![ConnectionStateEvent])
 }
@@ -73,7 +76,21 @@ fn init_logging() {
 
 /// Run the app.
 pub fn run() {
+    // First thing, before any thread: WebKitGTK reads its renderer switches when the web view is created (ADR-0024).
+    let renderer_inputs = renderer::probe();
+    let renderer_decision = renderer::decide(&renderer_inputs);
+    #[cfg(target_os = "linux")]
+    renderer::apply(&renderer_decision);
     init_logging();
+    let renderer_report = renderer::report(&renderer_inputs, &renderer_decision);
+    tracing::info!(
+        session = ?renderer_report.session,
+        hyprland = renderer_report.hyprland,
+        gpus = ?renderer_report.gpus.iter().map(|g| format!("{}:{}:{}{}", g.card, g.vendor, g.driver.as_deref().unwrap_or("-"), if g.boot_display { ":display" } else { "" })).collect::<Vec<_>>(),
+        rule = ?renderer_report.rule,
+        set = ?renderer_report.set,
+        "webview renderer"
+    );
     let builder = specta_builder();
     #[cfg(debug_assertions)]
     if std::path::Path::new(BINDINGS_PATH)
@@ -91,6 +108,7 @@ pub fn run() {
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             builder.mount_events(app);
+            app.manage(commands::RendererState(renderer_report));
             let limits = config::Limits::default();
             let supervisor = Arc::new(hermes::Supervisor::new(hermes::Environment::from_process(), limits.clone()));
             // Find Hermes while the UI loads, so the first connect does not pay for `hermes --version` (about 0.2 s).

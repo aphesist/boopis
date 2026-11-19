@@ -21,6 +21,8 @@ const COMMANDS: &[&str] = &[
     "notify",
     "pick_folder",
     "open_external",
+    "renderer_report",
+    "renderer_open_gpu_page",
 ];
 
 fn main() {
