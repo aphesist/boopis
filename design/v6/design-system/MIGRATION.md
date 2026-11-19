@@ -457,3 +457,20 @@ the edge. Delete every `corner-shape` declaration: nothing reads `--corner` any 
 | `.cd-diffdots i, .cd-week i, .cd-opt__ring, .cd-stack__one, .cd-stack__more`, the checkbox ring | Delete `corner-shape` (the checkbox ring's `corner-shape: var(--corner)` too) |
 | Binding | Nothing: the library binds cards, wells, minis, option rows, the free answer and previews, and draws the expanded blank as a surface |
 
+## 10. Frames, measured dock space, a sidebar that follows the window (owner, 19 November 2026)
+
+**Done in every module** (19 November 2026, by the design-system agent with the coordinator's leave), after the owner's
+screenshot from the claude.ai viewer (DESIGN-SYSTEM.md F33 to F35). Verified at 20 window sizes and pixel ratios (the
+laptop sizes at 1x and 1.25x, the 2880×1800, 2560×1600 and 3840×2160 panels at their usual ratios) in every preset with
+reduced motion on and off, each booted small and grown as the viewer does: `shots/final4/`.
+
+| Where | Edit |
+|---|---|
+| `HX.ui.squircle` | Clip only leaf controls (`.ui-btn, .ui-ib, .ui-send, .ui-seg__thumb, .ui-file`); every other bound element is a **frame** (fill `::before`, line and ring `::after`, content unclipped). `auto(sel)` with no mode gives a frame; `{mode: 'clip'}` on a container gives a frame too |
+| Every frame component | Its fill is written once: `--sq-bg: X; background: var(--sq-bg)` (states set `--sq-bg` only). Done for rows, menu items, the request card, the composer box, the segmented track, cards, wells, minis, options, the free answer, previews, `.hx-cmd`, `.hx-me`, `.hx-dtab`, `.ss-diff`, `.ssr-file`, `.ssr-term`, `.bt-opt`, `.bt-sugg`, `.dk-add` |
+| `HX.ui.squircle` paths | Snapped to device pixels, lines a whole number of device pixels; re-read after transitions, animations, scrolling, font loads and layout (`HX.ui.squircle.resnap()` asks for it) |
+| `shell.js` | The sidebar follows the width (`closed` < 640, `rail` < 900, `open`) until the person sets it; only then is it stored (`leftBy: 'user'`). Stored sidebars without `leftBy` are ignored; a stored open sidebar under 900, or an open details panel under 1200, does not boot as an overlay |
+| `dock.js` | `fitRow()` re-seats the live orbs (`relocateLive()`), so their size follows the row. `retarget()` sends `hx:dock` whenever the reservation changes: the view's measured height (a ResizeObserver on the current view) plus the hover headroom while bots can grow. `height` is the reservation, `rest` the slab at rest |
+| `session.css`, `bots.css`, `components.css` | A registered `<length>` property's fallback must be a length (`var(--hx-center-x, 50vw)`, not `50%`): WebKitGTK treats a mismatched fallback as invalid and drops the declaration (F36) |
+| `shell.js` | Sets `lang="en"` on `<html>` when a host skeleton brings none (the artifact viewer's does) |
+

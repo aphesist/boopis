@@ -883,6 +883,7 @@
   }
   function retarget(snap) {
     const v = curView;
+    if (v !== watched && viewRO) { if (watched) viewRO.unobserve(watched); if (v) viewRO.observe(v); watched = v; }
     baseW = v ? v.offsetWidth : 0;
     baseH = v ? v.offsetHeight : 0;
     sinkS.t = S.mode === 'off' ? baseH + 14 : 0;
@@ -894,9 +895,29 @@
     if (snap || reduce) { snapS(slabW); snapS(slabH); snapS(sinkS); snapS(dotS); }
     paint();               /* the slab answers in the same frame as its content (no frame with one and not the other) */
     kick();
+    emitDock();
   }
-  /* the height the shell keeps free above the window edge: the slab (the foot is inside it) */
-  function emitDock() { emit('hx:dock', { mode: S.mode, page: S.page, width: Math.round(baseW), height: Math.round(S.mode === 'off' ? 0 : baseH) }); }
+  /* The height the shell keeps free above the window edge (--hx-dock-space): the slab measured from the view it wraps
+     (the foot is inside it), plus the most the row can lift it while the bots grow under the pointer, so the slab at
+     its tallest still ends below the composer and the composer never moves under the pointer. Sent whenever it
+     changes: after a morph, a resize, a font load, or the view's own size changing (a ResizeObserver on the view). */
+  let watched = null, sent = '';
+  const viewRO = typeof ResizeObserver === 'function' ? new ResizeObserver(() => {
+    if (mounted && curView && (curView.offsetHeight !== baseH || curView.offsetWidth !== baseW)) retarget(false);
+  }) : null;
+  function headroom() {
+    if (!(S.grow && S.mode === 'normal' && S.page === 'bots') || reduce) return 0;
+    let lift = 0;
+    for (const it of magItems) lift = Math.max(lift, (it.max - 1) * it.hgt * .5);
+    return lift;
+  }
+  function reserveH() { return S.mode === 'off' ? 0 : Math.ceil(baseH + headroom()); }
+  function emitDock() {
+    const h = reserveH(), key = S.mode + '|' + S.page + '|' + Math.round(baseW) + '|' + h;
+    if (key === sent) return;
+    sent = key;
+    emit('hx:dock', { mode: S.mode, page: S.page, width: Math.round(baseW), height: h, rest: Math.round(S.mode === 'off' ? 0 : baseH) });
+  }
 
   /* ------------------------------------------------------------------ modes */
   function setMode(mode, opts = {}) {
@@ -1463,6 +1484,9 @@
     const left = typeof L.viewLeft === 'number' ? L.viewLeft : 0, right = typeof L.viewRight === 'number' ? L.viewRight : vw;
     const room = Math.floor(2 * (Math.min(cx - left, right - cx) - FLARE - 2));
     if (room > 0) root.style.setProperty('--dock-room', room + 'px');
+    /* the live orbs carry their own --o (set when they move into a slot): re-read it, or an orb sized while the window
+       was small stays small in a full-size slot (the artifact viewer mounts its frame small and then grows it) */
+    if (mounted) relocateLive();
   }
   function onLayout(arg) {
     const d = detailOf(arg);
@@ -1498,6 +1522,7 @@
     S.grow = on;
     root.toggleAttribute('data-grow', on);
     kick();
+    if (mounted) emitDock();   /* the hover headroom comes and goes with the setting */
   }
   function onState(arg) {
     const d = detailOf(arg);

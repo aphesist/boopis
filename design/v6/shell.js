@@ -14,6 +14,8 @@
   'use strict';
 
   /* ───────────── runtime ───────────── */
+  /* a host skeleton (the artifact viewer's) may bring an <html> without a language: screen readers need one */
+  if (!document.documentElement.lang) document.documentElement.lang = 'en';
   const STORE = 'hx.v6.shell';
   const TABS = ['session', 'bots'];
   const LEFT = ['open', 'rail', 'closed'];
@@ -34,7 +36,8 @@
   }
   function save() {
     try {
-      localStorage.setItem(STORE, JSON.stringify({ tab: state.tab, left: state.left, right: state.right, dock: state.dock, theme: state.theme, collapse: prefs.collapse, orbGrow: state.orbGrow }));
+      /* the sidebar is stored only once the person has set it (leftBy: 'user'); while it follows the window it is not */
+      localStorage.setItem(STORE, JSON.stringify({ tab: state.tab, left: leftAuto ? undefined : state.left, leftBy: leftAuto ? undefined : 'user', right: state.right, dock: state.dock, theme: state.theme, collapse: prefs.collapse, orbGrow: state.orbGrow }));
     } catch (e) { /* storage blocked: the shell still works */ }
   }
   const saved = load();
@@ -46,11 +49,20 @@
     return fallback;
   };
   const hashTab = TABS.includes((location.hash || '').slice(1)) ? location.hash.slice(1) : null;
-  const narrowAtBoot = (window.innerWidth || 1920) < 900;
+  /* The sidebar follows the window until the person sets it: closed on a phone, a rail when narrow, open from 900px.
+     A frame can boot small and grow (the claude.ai artifact viewer mounts its iframe small), so the width at boot
+     decides nothing for good: the shell re-reads the width on every resize while the sidebar is automatic (leftAuto).
+     What is stored never breaks the layout: a stored choice is only honoured when the person made it (older stores
+     without leftBy are ignored), and a stored open sidebar or details panel never boots as an overlay over the work. */
+  const autoLeft = (w) => (w < 640 ? 'closed' : w < 900 ? 'rail' : 'open');
+  const bootW = window.innerWidth || 1920;
+  const qLeft = LEFT.includes(query.get('left')) ? query.get('left') : null;
+  const userLeft = saved.leftBy === 'user' && LEFT.includes(saved.left) && !(saved.left === 'open' && bootW < 900) ? saved.left : null;
+  let leftAuto = !qLeft && !userLeft;
   const state = {
     tab: hashTab || pick('tab', TABS, 'session'),
-    left: pick('left', LEFT, narrowAtBoot ? ((window.innerWidth || 0) < 640 ? 'closed' : 'rail') : 'open'),
-    right: pick('right', RIGHT, 'closed'),
+    left: qLeft || userLeft || autoLeft(bootW),
+    right: bootW < 1200 && !query.get('right') ? 'closed' : pick('right', RIGHT, 'closed'),
     dock: pick('dock', DOCK, 'on'),
     theme: (window.HX_THEME && window.HX_THEME.scheme()) || 'dark',   // follows the theme (theme.js); 'dark' or 'light'
     orbGrow: saved.orbGrow !== false   // owner's setting: dock bots grow under the pointer (Settings > Appearance); default on
@@ -127,6 +139,8 @@
   /* ───────────── state ───────────── */
   function setState(patch) {
     if (mounting && patch && patch.tab) { patch = Object.assign({}, patch); delete patch.tab; }
+    const auto = !!(patch && patch._auto);
+    if (auto) { patch = Object.assign({}, patch); delete patch._auto; }
     const next = {};
     if (patch.tab && TABS.includes(patch.tab)) next.tab = patch.tab;
     if (patch.left && LEFT.includes(patch.left)) next.left = patch.left;
@@ -141,8 +155,9 @@
     }
     // modules may keep extra keys on the shared state
     for (const k of Object.keys(patch)) if (!(k in defaults())) next[k] = patch[k];
+    if ('left' in next && !auto) leftAuto = false;   /* the person set it: it stays, and it is stored */
     const changed = Object.keys(next).filter(k => state[k] !== next[k]);
-    if (!changed.length) return state;
+    if (!changed.length) { if ('left' in next && !auto) save(); return state; }
     Object.assign(state, next);
     applyState(changed);
     save();
@@ -1279,7 +1294,12 @@
     let lastW = 0, lastH = 0;
     const ro = new ResizeObserver(() => {
       if (app.clientWidth === lastW && app.clientHeight === lastH) return;
-      lastW = app.clientWidth; lastH = app.clientHeight;
+      const W = app.clientWidth, wasW = lastW;
+      lastW = W; lastH = app.clientHeight;
+      /* an open sidebar the person chose does not turn into an overlay by itself when the window narrows past 900px:
+         it goes back to following the window */
+      if (!leftAuto && state.left === 'open' && W > 0 && W < 900 && wasW >= 900) leftAuto = true;
+      if (leftAuto && W > 0 && state.left !== autoLeft(W)) setState({ left: autoLeft(W), _auto: true });
       app.classList.add('is-resizing');
       queueLayout(false);
       clearTimeout(resizeTimer);
