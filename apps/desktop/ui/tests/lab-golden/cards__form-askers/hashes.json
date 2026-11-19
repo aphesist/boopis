@@ -75,7 +75,7 @@
   "h": 300
  },
  "five-askers-compact-on-the-dock@typewriter": {
-  "sha": "cd96c088f58f76c61e41ede740b19811a1edf7b8",
+  "sha": "db52f67729cbc676ae663c0719d2255924628b5c",
   "w": 424,
   "h": 300
  },
@@ -85,7 +85,7 @@
   "h": 302
  },
  "five-askers@catalog": {
-  "sha": "7c5a24eb9a83816491bd905f87113465352e6d1a",
+  "sha": "b9cd00385fb616e3d877f9d3070b55a613b66b7b",
   "w": 632,
   "h": 302
  },
@@ -125,7 +125,7 @@
   "h": 353
  },
  "no-origin-given@catalog": {
-  "sha": "b90ab8e04ed77b37b378b33ef69d8cf2a3923b25",
+  "sha": "44ad55799b128b057cb4f9fdd06e18148ada3649",
   "w": 632,
   "h": 353
  },
@@ -135,27 +135,27 @@
   "h": 353
  },
  "no-origin-given@typewriter": {
-  "sha": "f615ec56ce9ede76fdfc1826bc95a464c3a89130",
+  "sha": "500b890d59c09a986979d302b6d7c41d401a5508",
   "w": 632,
   "h": 373
  },
  "typical@bone": {
-  "sha": "5222a65bda401f4ed9c0a43c159c156f66dd0789",
+  "sha": "8025c5aa46c9503b1fa2eab8a75e43cfad9400c1",
   "w": 632,
   "h": 379
  },
  "typical@catalog": {
-  "sha": "06530bd6048f48622755558b61d258ec442bcfdb",
+  "sha": "c427a49908a20e1ee695f9b3dd4811d5de030513",
   "w": 632,
   "h": 379
  },
  "typical@graphite": {
-  "sha": "e0fc18229e38b3074b242b3e372b9edd3e3b45f0",
+  "sha": "ddc01304966ca678d0a1274fd414907193ecf3e2",
   "w": 632,
   "h": 379
  },
  "typical@typewriter": {
-  "sha": "5b112ba7e699f68ebd8f0d09102ae514721cba76",
+  "sha": "561615c4a07435fa75fd09a4674046a28d430efa",
   "w": 632,
   "h": 399
  }

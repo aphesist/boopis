@@ -1,21 +1,21 @@
 {
  "cancelled@bone": {
-  "sha": "cd78ff99835c4318ab62182db209ec26b73905fd",
+  "sha": "cd54ea68c67053264f0a0922c684eb3364ace914",
   "w": 632,
   "h": 76
  },
  "cancelled@catalog": {
-  "sha": "23811e4a8cc0c6abd84c11e533b79fc500f53ffe",
+  "sha": "f563ec1ec5ba450b2076771ccaa23b56d69c8b72",
   "w": 632,
   "h": 76
  },
  "cancelled@graphite": {
-  "sha": "a1116f7923d59166151a54c069829fe399ddd300",
+  "sha": "5c189c1be574617bbf4e20e2abf53eb206ad925f",
   "w": 632,
   "h": 76
  },
  "cancelled@typewriter": {
-  "sha": "52cd1ce8f142f0d58fa118acd1343fa18771a2fa",
+  "sha": "b73fc3a4dbbcd8164729fa2b07abf50f11c41828",
   "w": 632,
   "h": 84
  },
@@ -25,7 +25,7 @@
   "h": 418
  },
  "compact-on-the-dock@catalog": {
-  "sha": "191e1740fe203c9d97d3f31a8db52450fd9e990d",
+  "sha": "2f80a78d19de6429f0b9278e852f8793d03db043",
   "w": 424,
   "h": 418
  },
@@ -45,7 +45,7 @@
   "h": 437
  },
  "compact@catalog": {
-  "sha": "c460a69177b3c8a81302a8ef65e0e349114770fa",
+  "sha": "54cebd357bb397faaab6e4310b6659e9f5a425cf",
   "w": 424,
   "h": 437
  },
@@ -60,47 +60,47 @@
   "h": 498
  },
  "deferred@bone": {
-  "sha": "53c97da0c62f86f440d9427d734a2a8e8ca8b276",
+  "sha": "742d58ae63876340e1b69195b7476c653fb02b9a",
   "w": 632,
   "h": 76
  },
  "deferred@catalog": {
-  "sha": "954c9d996b5c613e22da0ed2af924e8bb8e0a586",
+  "sha": "6ac188757262b1c483f49464517a3c2e17896dca",
   "w": 632,
   "h": 76
  },
  "deferred@graphite": {
-  "sha": "097d095a93ad9d75df168354ae4c512b3bc4e90e",
+  "sha": "3e95bc036509e85b6db73632ed7a79a66c422ece",
   "w": 632,
   "h": 76
  },
  "deferred@typewriter": {
-  "sha": "db9c6e9ae83608b7858264dc9868210d7d36816e",
+  "sha": "bf8ca825a0b3a27ac107972f439644f0d8b0a460",
   "w": 632,
   "h": 84
  },
  "done@bone": {
-  "sha": "d349ef9221481269e85156c3ebd469af69bfd37b",
+  "sha": "d99f3e277077be419b9e8d792669e02b3898a4e0",
   "w": 632,
   "h": 76
  },
  "done@catalog": {
-  "sha": "89abed5f55247e96022a3f268204f21650bfff3b",
+  "sha": "d6d23b7b6934fbe767afae8c4a64c61d23d7abe7",
   "w": 632,
   "h": 76
  },
  "done@graphite": {
-  "sha": "935963218cf98fc49ceae63a62b3476d3d61a233",
+  "sha": "64a57f8b3cdccf505eadd3b49515abfd26606f4f",
   "w": 632,
   "h": 76
  },
  "done@typewriter": {
-  "sha": "f2485086539d7c705742bd7433ccfa1a22361343",
+  "sha": "d597f4c903a39106fc3bc659df75eb42c5503121",
   "w": 632,
   "h": 76
  },
  "empty-schema@bone": {
-  "sha": "034a5fcc581f769fbfcca52252fde8f8cf42ce3b",
+  "sha": "193473351beec27414d803352c8d3c8fb2372cd9",
   "w": 632,
   "h": 245
  },
@@ -115,27 +115,27 @@
   "h": 245
  },
  "empty-schema@typewriter": {
-  "sha": "85e4b11a2ddd69567f846461af5cbf0a7895d2cf",
+  "sha": "29504f129e42a0ad79dea12f694a1a887810286a",
   "w": 632,
   "h": 245
  },
  "expired@bone": {
-  "sha": "63bf2c06e3552174b1af132e547917e273b87ae7",
+  "sha": "e9c532cc2d22bb1f3380c64c7a32728498f03fea",
   "w": 632,
   "h": 76
  },
  "expired@catalog": {
-  "sha": "f993084d526cd5e9f9b7e7ae6f6e95e7a40ee196",
+  "sha": "328d7e71e7614b4f9beedc0c9c6b0cccee22c2d1",
   "w": 632,
   "h": 76
  },
  "expired@graphite": {
-  "sha": "783fff68fe70ff437cd99b84628d1523c954d103",
+  "sha": "a4cf770b8773ac43a6d7a3aaf82e6b065f98bc14",
   "w": 632,
   "h": 76
  },
  "expired@typewriter": {
-  "sha": "bf0df3dc9092bfdc150e0ea27f0c818c8270b0f9",
+  "sha": "b39bdacfee09e94ba54f1cfa7e8a7537ad3ea007",
   "w": 632,
   "h": 84
  },
@@ -160,7 +160,7 @@
   "h": 397
  },
  "invalid@bone": {
-  "sha": "636cf9f0e1942fdd30f86b464be42c8e49358723",
+  "sha": "261038b27cb32526920e794a1d5d612543441416",
   "w": 632,
   "h": 397
  },
@@ -185,7 +185,7 @@
   "h": 470
  },
  "long@catalog": {
-  "sha": "5b38e3be1fc8a4aee15fc754eb54ba50cb07cc68",
+  "sha": "e24ad6987c2631253b55537433f54ad0e8e37e07",
   "w": 632,
   "h": 470
  },
@@ -235,12 +235,12 @@
   "h": 397
  },
  "open@typewriter": {
-  "sha": "ba8a03dc4e205d7b166c85fbd9cb271bae65d71f",
+  "sha": "6535e2ed70fbdb285a3238dbf4722228e3a4e550",
   "w": 632,
   "h": 397
  },
  "submit-focus@bone": {
-  "sha": "c49f500c77afd0b8df3b06f97d6937b818168673",
+  "sha": "14934623c35f3220d384dcfcfb04dbbf3d648f08",
   "w": 632,
   "h": 397
  },
@@ -260,7 +260,7 @@
   "h": 397
  },
  "submit-hover@bone": {
-  "sha": "80dabbf58d0c4dd7aeaa6522959a48189f41c19f",
+  "sha": "cddb2a0f0ba65a9487b9658da5fd2ed754418e64",
   "w": 632,
   "h": 397
  },
@@ -275,7 +275,7 @@
   "h": 397
  },
  "submit-hover@typewriter": {
-  "sha": "c434b87c467cf20317528c24d3bda2fa1cd04eac",
+  "sha": "b3a6d269dc7639f44304165af9a7bb42ab9a742a",
   "w": 632,
   "h": 397
  },

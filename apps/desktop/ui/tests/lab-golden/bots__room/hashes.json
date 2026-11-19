@@ -1,6 +1,6 @@
 {
  "a-long-name@bone": {
-  "sha": "80068802e542e6987d7505e032a905b66fc3ac6c",
+  "sha": "fd29fee3a386672776c0d079ce026cf88f804c03",
   "w": 1196,
   "h": 872
  },
@@ -15,17 +15,17 @@
   "h": 872
  },
  "a-long-name@typewriter": {
-  "sha": "4a92c55c475dedff3ca2115a2258fa3bdb6af38f",
+  "sha": "7c7e784beb2a9d801ef232ebbfda61b0715d2681",
   "w": 1196,
   "h": 872
  },
  "atlas-a-thread@bone": {
-  "sha": "404651db036ce65221a650daff0683df4f7b470b",
+  "sha": "b713bb8b9dbc74105e2d9aec740883305a492c98",
   "w": 1196,
   "h": 872
  },
  "atlas-a-thread@catalog": {
-  "sha": "9fdf642eb7b1b20bb3f545c5a02350961965a8d6",
+  "sha": "d41d6e1a875a01a0fb93247fee4d2fd80bfacb70",
   "w": 1196,
   "h": 872
  },
@@ -35,57 +35,57 @@
   "h": 872
  },
  "atlas-a-thread@typewriter": {
-  "sha": "0fec13df15f9d6090fdae4abef05ce473449fdc1",
+  "sha": "10e1cda94d950b90f1fac5df6f5a3d3741603135",
   "w": 1196,
   "h": 872
  },
  "composer-attach-tooltip@bone": {
-  "sha": "3dfa56d681053fac77ef9bbcef5c038dd9d58c17",
+  "sha": "61a51d0ab7d8c07551636abc5737bfc45b26acb7",
   "w": 1196,
   "h": 872
  },
  "composer-attach-tooltip@catalog": {
-  "sha": "0d1853c5a57367d2016fd825c73e4925f907cda6",
+  "sha": "140f49f7ceb34218e84fca0cbe7c7b5fcb871663",
   "w": 1196,
   "h": 872
  },
  "composer-attach-tooltip@graphite": {
-  "sha": "3dd07fc96e988c77a9d4f4e5ca82bdabdc8bf2c7",
+  "sha": "a6430809b1b86f866109323e52566c52de87e481",
   "w": 1196,
   "h": 872
  },
  "composer-attach-tooltip@typewriter": {
-  "sha": "99ee445840c8d24680a52fffbeedb77f8054a70d",
+  "sha": "c9bd969fd89dd618ad08d86230163842a64af5d2",
   "w": 1196,
   "h": 872
  },
  "composer-send-hover@bone": {
-  "sha": "b713bb8b9dbc74105e2d9aec740883305a492c98",
+  "sha": "404651db036ce65221a650daff0683df4f7b470b",
   "w": 1196,
   "h": 872
  },
  "composer-send-hover@catalog": {
-  "sha": "a195ca3a76c516b0935475badfcb8b92d4a4f5e8",
+  "sha": "d41d6e1a875a01a0fb93247fee4d2fd80bfacb70",
   "w": 1196,
   "h": 872
  },
  "composer-send-hover@graphite": {
-  "sha": "7c2fe232ba9e4df714db1828cc3a85886f6a44b1",
+  "sha": "667f47da3db50069315e851882c2a4a4f9bbd3f2",
   "w": 1196,
   "h": 872
  },
  "composer-send-hover@typewriter": {
-  "sha": "0fec13df15f9d6090fdae4abef05ce473449fdc1",
+  "sha": "a44d2f25b76e386b9c74d4dfe01979a6c00cef0d",
   "w": 1196,
   "h": 872
  },
  "kai-no-thread-yet@bone": {
-  "sha": "653863ae8b7696e40859115e95381b0149f868c9",
+  "sha": "160adb4d09b37b76a6d64f4b2f09b69f062f2222",
   "w": 1196,
   "h": 872
  },
  "kai-no-thread-yet@catalog": {
-  "sha": "df5e56ec2f01380d99fd1e05451b8257858c3d56",
+  "sha": "81f617516169f5717521255fd2bf0d917d413fdd",
   "w": 1196,
   "h": 872
  },
@@ -100,7 +100,7 @@
   "h": 872
  },
  "made-outside-boopis@bone": {
-  "sha": "9a08d68d843ae85de8a6d4d10c8fd7bd53ae5c7c",
+  "sha": "520b021a76918163bc5266f01fba1289d02929d2",
   "w": 1196,
   "h": 872
  },
@@ -135,7 +135,7 @@
   "h": 872
  },
  "nina-an-approval@typewriter": {
-  "sha": "e60b0829c1400eec90a3288828e23cf7f3db9701",
+  "sha": "d012e137b968737cfb9931707a04dacb835c5405",
   "w": 1196,
   "h": 872
  },
@@ -150,12 +150,12 @@
   "h": 872
  },
  "no-bots-at-all@graphite": {
-  "sha": "f3add86b1da313b7d983cdd5150dfcc688bfe80a",
+  "sha": "46e7b555e91fd90100bf12d5461673175230f7db",
   "w": 1196,
   "h": 872
  },
  "no-bots-at-all@typewriter": {
-  "sha": "226bdf6b1bc105f98c742e8b2c5048f820250a7c",
+  "sha": "1b4b1bdb857dc8143406f89f36e719106db47434",
   "w": 1196,
   "h": 872
  }

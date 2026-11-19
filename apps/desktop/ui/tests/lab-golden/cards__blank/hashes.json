@@ -20,7 +20,7 @@
   "h": 48
  },
  "compact-long@bone": {
-  "sha": "1556d68d6867cc3760404e9c801cd057c66132f0",
+  "sha": "aa55b90bcc6cfc47a2fc5e56a94d6d714d406f55",
   "w": 424,
   "h": 424
  },
@@ -35,12 +35,12 @@
   "h": 424
  },
  "compact-long@typewriter": {
-  "sha": "3e8b0431502ba0e82b322b7aa7d0bc446927fcf0",
+  "sha": "2449808680d1aaa58fe63609305e702f3b172168",
   "w": 424,
   "h": 498
  },
  "compact-on-the-dock@bone": {
-  "sha": "7532c86d3331a1e19d04dc345995ba3756057072",
+  "sha": "4092fa865027a56cb8dac4b899e95991264b097a",
   "w": 424,
   "h": 278
  },
@@ -55,17 +55,17 @@
   "h": 278
  },
  "compact-on-the-dock@typewriter": {
-  "sha": "55217885b7b523242f2bf8ac0f6d8ca22dfa2eaa",
+  "sha": "89a079f95bcd3c3d93f47498ef05efeff25b79ec",
   "w": 424,
   "h": 297
  },
  "compact@bone": {
-  "sha": "5bc396346bda7c0d4c8ff2921cfe0c9a4a1379da",
+  "sha": "2a688e2b05baffc5041f53bd1e43ab269acd5f79",
   "w": 424,
   "h": 297
  },
  "compact@catalog": {
-  "sha": "f5f180450c9357843bd75576501f93483baa2f78",
+  "sha": "75ffe3092f0e9ee0803ca755a7a4777efecdc23c",
   "w": 424,
   "h": 297
  },
@@ -75,7 +75,7 @@
   "h": 297
  },
  "compact@typewriter": {
-  "sha": "e773e67735e9ca7bfc566d1a4c00a09201a438b0",
+  "sha": "78b934a1c115c72be484d6614b83736dc5f1a266",
   "w": 424,
   "h": 297
  },
@@ -195,7 +195,7 @@
   "h": 258
  },
  "popover@typewriter": {
-  "sha": "f03559573b14877e667b538b97c7cca0648ef8e2",
+  "sha": "78427963ae6e097b66ceb11596761a7be85f4ed0",
   "w": 632,
   "h": 258
  }

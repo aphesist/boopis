@@ -45,7 +45,7 @@
   "h": 149
  },
  "session-attach-hover@catalog": {
-  "sha": "526eb7381ab66028a3dd9aec71d62e2612dbe5ed",
+  "sha": "3cfb59e1da7a933a2a9cd497f62029828afef621",
   "w": 744,
   "h": 149
  },
@@ -65,22 +65,22 @@
   "h": 389
  },
  "session-attach-menu@catalog": {
-  "sha": "97c0ace4c97a8a2233fb9d9f57900e643b43dba1",
+  "sha": "15fe4d6a633a6b51109ff07f01f2b9a47cd0a3bc",
   "w": 746,
   "h": 389
  },
  "session-attach-menu@graphite": {
-  "sha": "ed43067f673755a45356e4ae9a22ab8da7dda269",
+  "sha": "b1d883c3c3c60be311d67d54e9903a2165e5aabd",
   "w": 746,
   "h": 389
  },
  "session-attach-menu@typewriter": {
-  "sha": "c6f9f6a72efbdf30bb7e8dc3dcb6a9209b2e753e",
+  "sha": "455da29e98fb86298f0a1ec603b6c3772cb19ab9",
   "w": 746,
   "h": 389
  },
  "session-attach-tooltip@bone": {
-  "sha": "18d329bad441aba33ec0af509408d3744aaf9257",
+  "sha": "23bd6c024357cedc76727b6868ba85d95ad51d4d",
   "w": 777,
   "h": 159
  },
@@ -90,7 +90,7 @@
   "h": 159
  },
  "session-attach-tooltip@graphite": {
-  "sha": "b0b00d71f06a22a6ef29b081f786246edaf378a8",
+  "sha": "87de04db6d97cd2858dfacb6aa7ecf311e24146c",
   "w": 777,
   "h": 159
  },
@@ -145,7 +145,7 @@
   "h": 149
  },
  "session@catalog": {
-  "sha": "71f09e3b6abb9c2ad001137c5fb035c662e05571",
+  "sha": "6c42b42ca496ad413cd9fa07062ee4b6f1b63c8a",
   "w": 744,
   "h": 149
  },

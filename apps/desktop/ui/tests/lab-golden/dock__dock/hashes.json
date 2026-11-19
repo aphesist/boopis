@@ -1,6 +1,6 @@
 {
  "120-bots-expanded@bone": {
-  "sha": "13c5ac40f29aacba443264db71ae587bba917560",
+  "sha": "02caaef3697d1565ef3aa90557efdb4bcd5a23a7",
   "w": 1440,
   "h": 84
  },
@@ -85,7 +85,7 @@
   "h": 84
  },
  "at-rest-11-bots@catalog": {
-  "sha": "33c351f45f66ba2916dd2805b7ab3fb3d3b64588",
+  "sha": "d54363134ab640d2e50cbd172179e631629acd31",
   "w": 1440,
   "h": 84
  },
@@ -100,7 +100,7 @@
   "h": 84
  },
  "atlas-s-session-a-thread@bone": {
-  "sha": "a89a03f3ebbacb25554d274fe96f4e245283dbcd",
+  "sha": "2a28767311bc0ab30a27df69d4f6ed1f32fd66cb",
   "w": 1440,
   "h": 84
  },
@@ -120,17 +120,17 @@
   "h": 84
  },
  "expanded@bone": {
-  "sha": "368553f68d7ce2167aac58456b25d06169edb906",
+  "sha": "5ac63ec679904111ec80b23f6f0e8dab55d33a3b",
   "w": 1440,
   "h": 84
  },
  "expanded@catalog": {
-  "sha": "f3a81df8bcd9fac4147350232a71d9b9203c1c67",
+  "sha": "2d5c7826269fcb458c7c303e8ad6e0008ef25b4e",
   "w": 1440,
   "h": 84
  },
  "expanded@graphite": {
-  "sha": "9eb3c630ea67bde6cfe9008dd23446099f929d36",
+  "sha": "8d16dc118d0d478b8b2e705cbdeda68ba154dbb7",
   "w": 1440,
   "h": 84
  },
@@ -150,7 +150,7 @@
   "h": 84
  },
  "minimised@graphite": {
-  "sha": "d81a73f2987986685d560a2ce897f9ce8a3c1ae2",
+  "sha": "b05f60e89c51fd0c32a16844b9c654318a41f515",
   "w": 1440,
   "h": 84
  },
@@ -205,12 +205,12 @@
   "h": 84
  },
  "no-bots-the-empty-shape@catalog": {
-  "sha": "9d6bcb700fae5c043c0a09dd448d350069bbc57d",
+  "sha": "ea193764ba4d393641e345fe13e04bfb225c400f",
   "w": 1440,
   "h": 84
  },
  "no-bots-the-empty-shape@graphite": {
-  "sha": "c4e43cf74a14491441cb634edaa742cccc188be0",
+  "sha": "bf36306368759861f88768ef0fce6d26b08b432f",
   "w": 1440,
   "h": 84
  },
@@ -225,7 +225,7 @@
   "h": 84
  },
  "no-waits-no-schedules-one-bot@catalog": {
-  "sha": "b9aa82c38f1a98b78e9552453cf59ea4ab0622ce",
+  "sha": "7a7cce48ee0af32ccf4aa3e079ee1c4d6fef3f51",
   "w": 1440,
   "h": 84
  },
@@ -245,7 +245,7 @@
   "h": 84
  },
  "off@catalog": {
-  "sha": "931a7775e060206760a87484052bcff6cd01985c",
+  "sha": "8715d9d280cebd140fbfab954f032a2d89b9cb08",
   "w": 1440,
   "h": 84
  },
@@ -315,12 +315,12 @@
   "h": 119
  },
  "orb-focus@typewriter": {
-  "sha": "fe9208a8433497a280ccd59b9e9dbe0e88a71e85",
+  "sha": "f3974430fcd24d7038ce1a59535e5b131dc1fd47",
   "w": 1440,
   "h": 119
  },
  "orb-hover@bone": {
-  "sha": "7fd69fefa7150ae729c0473033270ec230237162",
+  "sha": "73e7412d9a3ef546013086ca441ce1ebcbef72fa",
   "w": 1440,
   "h": 84
  },

@@ -15,7 +15,7 @@
   "h": 64
  },
  "a-long-session-title@typewriter": {
-  "sha": "8d87c635911950f350577916f423eb4de4dbe0b6",
+  "sha": "35a762008a81c952f2d91df8f4f1635af3da6e74",
   "w": 1440,
   "h": 64
  },
@@ -35,7 +35,7 @@
   "h": 64
  },
  "command-field-focus@typewriter": {
-  "sha": "6f246937aad2841195f37042d99bea7115253e33",
+  "sha": "d3310abaff8a4febb49cec22c597113d696f740c",
   "w": 1440,
   "h": 64
  },
@@ -55,12 +55,12 @@
   "h": 64
  },
  "command-field-hover@typewriter": {
-  "sha": "616c6d588d0d5ceda0cb145734a6d0077b190ff6",
+  "sha": "420cdf656ff3a75293d19d58c06c1f6aa8fd49b1",
   "w": 1440,
   "h": 64
  },
  "sidebar-button-tooltip@bone": {
-  "sha": "0ef112b2529ff96fa73de6e9df23d787c9649bea",
+  "sha": "65da3fff7a72becc9114991098f8fc003d13eab8",
   "w": 1440,
   "h": 92
  },
@@ -75,7 +75,7 @@
   "h": 92
  },
  "sidebar-button-tooltip@typewriter": {
-  "sha": "e61dd8446f505b40ab11ac96d6687c2f8052610d",
+  "sha": "4386dade46d62f07d172471f753ba923a9ef5fe8",
   "w": 1440,
   "h": 92
  },
@@ -85,7 +85,7 @@
   "h": 64
  },
  "typical@catalog": {
-  "sha": "7a435a9f1804cadd545bf5fc2df4e44e4941d6d8",
+  "sha": "bfe2877f3be0d3640b99749b7f6bd68ef7c5060e",
   "w": 1440,
   "h": 64
  },
@@ -95,7 +95,7 @@
   "h": 64
  },
  "typical@typewriter": {
-  "sha": "de59fcff97c35cbe069340db3620e6386271ba24",
+  "sha": "fa17ba95d5d980f81fd33118bbbb3b269a36809c",
   "w": 1440,
   "h": 64
  }

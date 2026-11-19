@@ -1,21 +1,21 @@
 {
  "cancelled@bone": {
-  "sha": "4b5edd3508d8e5a80b4ffb55385c77ab9bd7a617",
+  "sha": "81be01981723e784e453986e8d271ea6f879c041",
   "w": 632,
   "h": 76
  },
  "cancelled@catalog": {
-  "sha": "f59c41f9119ddeba9463a8beff86bc1bfe3fa5cc",
+  "sha": "beaf7a46203ff11ee3617a52d6a616bdab04a545",
   "w": 632,
   "h": 76
  },
  "cancelled@graphite": {
-  "sha": "44f54c6796659d2c5c163a25d5fe241f9ac9b1da",
+  "sha": "da4ea23dc127d12045d17df0589f2ef95db8d734",
   "w": 632,
   "h": 76
  },
  "cancelled@typewriter": {
-  "sha": "4c94f695b838aa304606b21bcbeb71da7d0cf25b",
+  "sha": "ba81c2f16cacd8fef0c87a0598fcd1689c0caa39",
   "w": 632,
   "h": 76
  },
@@ -25,12 +25,12 @@
   "h": 387
  },
  "compact-on-the-dock@catalog": {
-  "sha": "8c0d2ee28677398119789e34ed8d644b42485b2f",
+  "sha": "ca4afcfe8eef846b8758cd057ae29c07735fe188",
   "w": 424,
   "h": 387
  },
  "compact-on-the-dock@graphite": {
-  "sha": "4a850e945c2ed390e60eaa3396afe72ef47e9ff0",
+  "sha": "4f7df269d833c56abefd01068428ef22aeb4882f",
   "w": 424,
   "h": 387
  },
@@ -60,42 +60,42 @@
   "h": 406
  },
  "deferred@bone": {
-  "sha": "6fd4a3321735af776ccdf42af6703cedbf5b596d",
+  "sha": "61d06da901a60c6aa0ff61b4fd7de96fb0f51968",
   "w": 632,
   "h": 76
  },
  "deferred@catalog": {
-  "sha": "63edee71ef82377d56cbfdf9e48175f7b9e66353",
+  "sha": "b1b3276ea48a7741e2121a7ab62fbe9b050deb2c",
   "w": 632,
   "h": 76
  },
  "deferred@graphite": {
-  "sha": "bd4a5c035fe995bed83082da53e05195fb0a4b35",
+  "sha": "d4d45f08d7526e2c42aba13921bfaaefb1b7229a",
   "w": 632,
   "h": 76
  },
  "deferred@typewriter": {
-  "sha": "52ca5917f44b079240070270eb9fb5c72b0e830a",
+  "sha": "d0d857a0b258041694241e1f318b8926bf5e37d2",
   "w": 632,
   "h": 84
  },
  "done@bone": {
-  "sha": "adc0665872c0c639556b8ad9faf8c2c013e64966",
+  "sha": "7e6041a8e326de5037be2379fb051863c892fbf1",
   "w": 632,
   "h": 76
  },
  "done@catalog": {
-  "sha": "9c535bf265a245f63e93eda2af37d92dfd2d6ec7",
+  "sha": "739b1d294ec4c640bbb73f5930de676b48c63bb4",
   "w": 632,
   "h": 76
  },
  "done@graphite": {
-  "sha": "491ec675c4f56e0714be9ba273adc776abd76961",
+  "sha": "76d1db42c65bf61d8afed55c4bfdbcefb9dd1692",
   "w": 632,
   "h": 76
  },
  "done@typewriter": {
-  "sha": "e5db4bea2f6f32bdb873dbe0e868054320b98d10",
+  "sha": "8bb87b050b16433dff0098bf812ceacee074ccb4",
   "w": 632,
   "h": 76
  },
@@ -105,7 +105,7 @@
   "h": 149
  },
  "empty-schema@catalog": {
-  "sha": "dfc7697fc22b3031d749d8c90d77fb5fac6e8b00",
+  "sha": "3308a66768d60ad211c24d6fc91391c4e28683a0",
   "w": 632,
   "h": 149
  },
@@ -120,22 +120,22 @@
   "h": 149
  },
  "expired@bone": {
-  "sha": "37667cc5ce2dfd94beeb26245cc0e2081b728b1d",
+  "sha": "c079ed4bd1981745811ad9141476063aecf11745",
   "w": 632,
   "h": 76
  },
  "expired@catalog": {
-  "sha": "c6e9a86e032f30d91e461773359fda2fcf0caa73",
+  "sha": "e5ebe87972de38bd692a0f84fb03a04398949094",
   "w": 632,
   "h": 76
  },
  "expired@graphite": {
-  "sha": "87e83a771790245bfd135c04b2d39ab11400306c",
+  "sha": "7387c0138b5b499a402e7c051c93995b2dfb08c4",
   "w": 632,
   "h": 76
  },
  "expired@typewriter": {
-  "sha": "2656019deedb6f36b910a9e3acdd31f744d14b48",
+  "sha": "b638f6b11c26752fb00394e4b0c767affa100ac0",
   "w": 632,
   "h": 84
  },
@@ -160,12 +160,12 @@
   "h": 344
  },
  "invalid@bone": {
-  "sha": "5dd1dfd27a4d3d2dd42d9539efc57529823779b4",
+  "sha": "90965c4fe38055346a2a87692650117f3748f3c9",
   "w": 632,
   "h": 323
  },
  "invalid@catalog": {
-  "sha": "9e7cb2db38c29ba8301385ce2384289d9d59d4c1",
+  "sha": "ea8126f5cc2133c04233dad5c67d843ca1a97ab4",
   "w": 632,
   "h": 323
  },
@@ -225,7 +225,7 @@
   "h": 323
  },
  "open@catalog": {
-  "sha": "ea8126f5cc2133c04233dad5c67d843ca1a97ab4",
+  "sha": "9e7cb2db38c29ba8301385ce2384289d9d59d4c1",
   "w": 632,
   "h": 323
  },
@@ -240,12 +240,12 @@
   "h": 344
  },
  "submit-focus@bone": {
-  "sha": "7edfcbd4d987e4bb615eb375618727db41b244ee",
+  "sha": "2050e06b129d50d5d71433bc8c798bb031b846a5",
   "w": 632,
   "h": 323
  },
  "submit-focus@catalog": {
-  "sha": "1b80aca255e5759a0bcb6e4451dfa870d6fa7f01",
+  "sha": "eb66756b074e510757c1f7cafd6d4e3c2fa72126",
   "w": 632,
   "h": 323
  },
