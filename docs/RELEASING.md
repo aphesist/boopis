@@ -43,7 +43,7 @@ Why 22.04: `hx-sandbox` needs unprivileged user namespaces, which 24.04 restrict
 - `windows` (NSIS) and `macos` (dmg, Apple silicon): non-blocking, unsigned.
 - `release` (tags only): GitHub release from the artifacts plus `SHA256SUMS`.
 
-**TODO, marked in the workflow:** the `hx` sidecar (`externalBin`) and the plugin resource come from the setup branch, which is not on `develop`. Today's bundle holds the host and the UI only.
+**Bundle.** The Linux job builds `hx` in release mode, runs `scripts/stage-bundle.sh` and builds with `tauri.bundle.conf.json`, so the AppImage carries the `hx` sidecar and the plugin. Windows and macOS builds still lack both (marked TODO in the workflow). The smoke job first runs first-run setup against the e2e Hermes (`cargo test -p hypotaxis-host --test setup_live`), then the session check.
 
 **Updater signing slot.** The workflow passes `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` from repository secrets. They are empty and unused while `bundle.createUpdaterArtifacts` is off. To turn the updater on: `pnpm dlx @tauri-apps/cli@2 signer generate`, store the private key and password as those two secrets, put the public key in `tauri.conf.json` under `plugins.updater.pubkey` and set `createUpdaterArtifacts`. Never commit a key.
 

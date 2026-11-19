@@ -51,16 +51,15 @@ jobs:
           cache-dependency-path: apps/desktop/ui/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
         working-directory: apps/desktop/ui
-      # TODO(setup branch, not on develop yet): bundle the `hx` sidecar and the plugin resource. When it lands:
-      #   - cargo build --release -p hx --target x86_64-unknown-linux-gnu, then copy the binary to
-      #     apps/desktop/src-tauri/binaries/hx-x86_64-unknown-linux-gnu (Tauri's externalBin naming);
-      #   - tauri.conf.json gets bundle.externalBin and bundle.resources as the setup branch defines them.
-      # Until then this builds exactly what develop has: the host and the UI, no sidecar, no plugin resource.
-      - name: build the AppImage (release, x86_64-unknown-linux-gnu)
+      - name: build hx (release), the sidecar
+        run: cargo build --release -p hx
+      - name: stage the hx sidecar and the plugin resource (scripts/stage-bundle.sh)
+        run: scripts/stage-bundle.sh --hx target/release/hx
+      - name: build the AppImage (release, x86_64-unknown-linux-gnu) with the bundle config
         working-directory: apps/desktop/src-tauri
         env:
           NO_STRIP: "true"  # linuxdeploy's bundled strip chokes on newer ELF sections
-        run: pnpm dlx @tauri-apps/cli@2 build --bundles appimage --target x86_64-unknown-linux-gnu
+        run: pnpm dlx @tauri-apps/cli@2 build --bundles appimage --target x86_64-unknown-linux-gnu --config tauri.bundle.conf.json
       - name: collect the AppImage and its checksum
         run: |
           mkdir -p dist
@@ -72,6 +71,13 @@ jobs:
           path: dist/*
           if-no-files-found: error
           retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          # not named hypotaxis-*: the release job publishes only those
+          name: hx-release-linux
+          path: target/release/hx
+          if-no-files-found: error
+          retention-days: 1
 
   smoke:
     # The built AppImage, headless (Xvfb + WebKitWebDriver), against real Hermes v0.23.2 and the fake model:
@@ -108,7 +114,24 @@ jobs:
             !/home/runner/hermes-e2e/uv-cache
           key: hermes-v0.23.2-ubuntu-22.04-${{ hashFiles('scripts/install-hermes-e2e.sh') }}
       - run: SP="$HX_E2E_HERMES_ENV" scripts/install-hermes-e2e.sh
-      - name: smoke the AppImage against Hermes and the fake model
+      - name: Rust toolchain and WebKitGTK headers (the setup test drives the host's library)
+        run: |
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev build-essential pkg-config
+          rustup show
+      - uses: Swatinem/rust-cache@v2
+        with: { shared-key: release-smoke }
+      - uses: actions/download-artifact@v4
+        with:
+          name: hx-release-linux
+          path: ${{ runner.temp }}/hx
+      - name: first-run setup, non-interactively, against the e2e Hermes (tests/setup_live.rs)
+        env:
+          HX_BIN: ${{ runner.temp }}/hx/hx
+        run: |
+          chmod +x "$HX_BIN"
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          cargo test -p hypotaxis-host --test setup_live -- --nocapture
+      - name: smoke the AppImage against Hermes and the fake model (the session check)
         run: |
           uv run --no-project --python 3.11 --with ruamel.yaml python tests/e2e/smoke_desktop.py \
             "$(ls "$RUNNER_TEMP"/app/*.AppImage)" "$RUNNER_TEMP/smoke.png"
@@ -142,7 +165,7 @@ jobs:
           cache-dependency-path: apps/desktop/ui/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
         working-directory: apps/desktop/ui
-      # TODO(setup branch): the same sidecar and resource as the Linux job, with the windows-msvc triple.
+      # TODO: stage the sidecar and plugin resource as the Linux job does (needs hx.exe and a Windows-aware stage-bundle.sh).
       - name: build the installer (NSIS, unsigned)
         working-directory: apps/desktop/src-tauri
         run: pnpm dlx @tauri-apps/cli@2 build --bundles nsis
@@ -173,7 +196,7 @@ jobs:
           cache-dependency-path: apps/desktop/ui/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
         working-directory: apps/desktop/ui
-      # TODO(setup branch): the same sidecar and resource as the Linux job, with the aarch64-apple-darwin triple.
+      # TODO: stage the sidecar and plugin resource as the Linux job does (aarch64-apple-darwin).
       - name: build the app and dmg (unsigned)
         working-directory: apps/desktop/src-tauri
         run: pnpm dlx @tauri-apps/cli@2 build --bundles dmg
