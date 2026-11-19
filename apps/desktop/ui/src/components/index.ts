@@ -65,6 +65,7 @@ const factories = {
   section: make<Parameters<typeof html.section>[0]>(html.section),
   scroll: make<Parameters<typeof html.scroll>[0]>(html.scroll),
   tabs: make<Parameters<typeof html.tabs>[0], SegElement>(html.tabs),
+  search: make<Parameters<typeof html.search>[0]>(html.search),
   field: make<FieldOpts>(html.field),
   select: make<SelectOpts, SelectElement>(html.select),
   empty: make<Parameters<typeof html.empty>[0]>(html.empty),
@@ -95,6 +96,8 @@ export type { SelectElement, ListboxOpts } from './select';
 export type { SelectEntry, SelectGroup, SelectOpts, SelectOption };
 export { scroll, scrollClass, scrollVariants, SCROLL_AXES } from './scroll';
 export { tabs, tabsVariants, fitTabs } from './tabs';
+export { search, searchVariants, SEARCH_SIZES } from './search';
+export type { SearchOpts, SearchSize } from './search';
 export type { TabDef, TabsOpts } from './tabs';
 export type { ScrollAxis, ScrollOpts, ScrollHtmlOpts } from './scroll';
 export type { ComposerEl, ComposerOpts, DecisionDetail, AssumptionDetail, DictateDetail, SendDetail } from './composer';

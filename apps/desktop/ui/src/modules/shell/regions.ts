@@ -130,7 +130,7 @@ export function startLeader(withMod: boolean): void {
   const hint = $('#hx-goto', sh.app);
   hint.hidden = false;
   hint.innerHTML = '<span class="hx-goto__title">Go to</span>' + ([['L', 'list'], ['M', 'conversation'], ['I', 'composer'], ['P', 'panel'], ['D', 'dock'], ['S', 'Session'], ['B', 'Bots'], ['1-9', 'bot in the dock']] as Array<[string, string]>).concat(withMod ? [] : [['G', 'first turn']])
-    .map(([k, l]) => '<span class="hx-goto__opt"><kbd class="ui-kbd">' + k + '</kbd>' + esc(l) + '</span>').join('');
+    .map(([k, l]) => '<span class="hx-goto__opt">' + ui.html.kbd(k) + esc(l) + '</span>').join('');
   leader = { t: window.setTimeout(endLeader, 1600), withMod };
 }
 export function endLeader(): void { if (!leader) return; clearTimeout(leader.t); leader = null; const h = document.getElementById('hx-goto'); if (h) h.hidden = true; }

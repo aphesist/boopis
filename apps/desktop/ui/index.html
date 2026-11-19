@@ -17,11 +17,7 @@
       <button class="ui-ib" id="hx-btn-fwd" type="button" aria-label="Forward" data-tip="Forward" data-kbd="mod+]" disabled><span data-icon="forward"></span></button>
     </div>
 
-    <button class="hx-cmd" id="hx-btn-search" type="button" aria-haspopup="dialog" aria-expanded="false" aria-label="Search and commands">
-      <span data-icon="search"></span>
-      <span class="hx-cmd__where"><span class="hx-cmd__project" id="hx-where-project"></span> <span class="hx-cmd__title" id="hx-where-title"></span></span>
-      <kbd data-kbd="mod+K"></kbd>
-    </button>
+    <div id="hx-btn-search"></div>
 
     <div class="hx-bar__end">
       <button class="ui-ib" id="hx-btn-right" type="button" aria-controls="hx-right-shell" aria-expanded="false" data-tip="Show session details" data-kbd="mod+I"><span data-icon="sidebar-right"></span></button>
@@ -76,11 +72,7 @@
 
   <div class="hx-palette" id="hx-palette" role="dialog" aria-modal="true" aria-label="Search and commands" hidden>
     <div class="hx-palette__box">
-      <div class="hx-palette__field">
-        <span data-icon="search"></span>
-        <input id="hx-palette-input" type="text" role="combobox" aria-label="Search sessions, bots and commands" aria-expanded="true" aria-controls="hx-palette-list" aria-autocomplete="list" autocomplete="off" spellcheck="false" placeholder="Search sessions, bots and commands">
-        <span class="ui-keys hx-palette__esc" aria-hidden="true"><kbd class="ui-kbd">esc</kbd></span>
-      </div>
+      <div id="hx-palette-input"></div>
       <div class="hx-palette__list ui-scroll" id="hx-palette-list" role="listbox" aria-label="Results"></div>
     </div>
   </div>

@@ -3,7 +3,8 @@
    are the v6 library's, so components.css ports 1:1. No colour, family or size lives here. */
 import { attrs, cx, esc, nid } from '../core/dom';
 import type { Attrs } from '../core/dom';
-import { ariaKeys, keyLabel } from '../core/keys';
+import { ariaKeys } from '../core/keys';
+import { combo, comboKbds, kbd, keys } from './kbd';
 import { botState } from './bot-state';
 import type { BotLike } from './bot-state';
 import { icon } from './icons';
@@ -15,10 +16,10 @@ import { modelEntries, selectHTML, toEntries } from './select-html';
 import type { SelectEntry } from './select-html';
 import { scroll } from './scroll';
 import { tabs } from './tabs';
+import { search } from './search';
 
 type U<T> = T | undefined;
 
-const keys = (k: U<string>): string => (k ? '<span class="ui-keys" aria-hidden="true">' + String(k).split('+').map((x) => '<kbd class="ui-kbd">' + esc(keyLabel(x)) + '</kbd>').join(' ') + '</span>' : '');
 const code = (text: string): string => '<code class="ui-code">' + esc(text) + '</code>';
 /** inline `code` in a data string -> chips; everything else escaped */
 const inline = (text: string): string => esc(text).replace(/`([^`]+)`/g, '<code class="ui-code">$1</code>');
@@ -250,11 +251,13 @@ const empty = (o: { title: string; text?: U<string>; mark?: U<boolean>; action?:
 const mod = (name: string, o?: { class?: string }): string => '<span class="mv-by' + (o?.class ? ' ' + o.class : '') + '">' + icon('mod', { class: 'mv-by__g' }) + '<span class="mv-by__n">' + esc(name) + '</span></span>';
 
 const toast = (text: string, action?: string): string => '<div class="ui-toast" role="status" data-static><span>' + esc(text) + '</span>' + (action ? button({ label: action, size: 's', variant: 'ghost' }) : '') + '</div>';
-const tip = (label: string, k?: string, state?: { text: string; tone?: string }): string =>
-  '<div class="ui-tip" data-static><span>' + esc(label) + '</span>' + (state ? '<span class="ui-tip__state"' + (state.tone ? ' data-tone="' + state.tone + '"' : '') + '>' + esc(state.text) + '</span>' : '') + keys(k) + '</div>';
+/** a tooltip's content: the label, an optional state, the keys (concentric with the tooltip, on its raised colour); tooltip.ts shows it */
+export const tipBody = (label: string, k?: string | null, state?: { text: string; tone?: string | null } | null): string =>
+  '<span>' + esc(label) + '</span>' + (state ? '<span class="ui-tip__state"' + attrs({ 'data-tone': state.tone }) + '>' + esc(state.text) + '</span>' : '') + (k ? keys(k, { fit: true, raised: true }) : '');
+const tip = (label: string, k?: string, state?: { text: string; tone?: string }): string => '<div class="ui-tip" data-static>' + tipBody(label, k, state) + '</div>';
 
 export const html = {
-  icon, keys, kbd: keys, code, inline, stamp, dot, capacity, button, iconButton, send, hold, switch: switchHtml, segmented, chip, chipGroup,
+  icon, keys, kbd, combo, comboKbds, code, inline, stamp, dot, capacity, button, iconButton, send, hold, switch: switchHtml, segmented, chip, chipGroup,
   orb: orbHtml, model: modelHTML, modelRoute: routeHTML, modelMark: markHTML, stateWord, row, leadFor, group, ladder, measure, legend, pages, request, entry, disclosure, steps, blank, section, menuItems, field, select: selectHTML, setRow, empty, toast, tip, mod,
-  scroll, tabs
+  scroll, tabs, search, tipBody
 };

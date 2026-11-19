@@ -70,20 +70,7 @@ body {
 .hx-win { display: flex; gap: 2px; }
 
 /* the command centre: where you are, and the way to anywhere else */
-.hx-cmd {
-  position: absolute; left: 50%; top: 7px; translate: -50% 0;
-  display: flex; align-items: center; gap: 10px;
-  width: clamp(240px, 34vw, 480px); height: 26px; box-sizing: border-box;
-  padding: 0 4px 0 10px;
-  border: 0; border-radius: var(--r-s);
-  --sq-bg: var(--bg-0); background: var(--sq-bg); box-shadow: inset 0 0 0 1px var(--hair);
-  color: var(--text-quiet); cursor: pointer; text-align: left;
-  transition: box-shadow var(--dur-1) var(--ease), background-color var(--dur-1) var(--ease);
-}
-.hx-cmd .ui-icon { width: 14px; height: 14px; }
-@media (hover: hover) and (pointer: fine) { .hx-cmd:hover { box-shadow: inset 0 0 0 1px var(--line); } }
-.hx-cmd[aria-expanded="true"] { box-shadow: inset 0 0 0 1px var(--brass); }
-.hx-cmd__where { flex: 1; min-width: 0; display: flex; gap: 6px; overflow: hidden; white-space: nowrap; font-size: var(--fs-xs); }
+.hx-cmd { position: absolute; left: 50%; top: 7px; translate: -50% 0; width: clamp(240px, 34vw, 480px); }   /* the library's search field (.ui-search--s), placed */
 .hx-cmd__project { color: var(--text-quiet); flex: none; }
 .hx-cmd__project:not(:empty)::after { content: "/"; margin-left: 6px; color: var(--text-faint); }
 .hx-cmd__title { color: var(--text); overflow: hidden; text-overflow: ellipsis; }
@@ -219,11 +206,6 @@ body {
   box-shadow: inset 0 0 0 1px var(--line), var(--shadow-pop);
   overflow: hidden; animation: hx-drop var(--dur-2) var(--ease);
 }
-.hx-palette__field { display: flex; align-items: center; gap: 12px; flex: none; height: 48px; padding: 0 12px 0 16px; border-bottom: 1px solid var(--hair); color: var(--text-quiet); }
-.hx-palette__field .ui-icon { width: 16px; height: 16px; }
-.hx-palette__field input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; background: transparent; outline: none; color: var(--text-strong); font: 400 var(--fs-m)/1 var(--sans); }
-.hx .hx-palette__field input:focus-visible { outline: none; }
-.hx-palette__field input::placeholder { color: var(--text-quiet); }
 .hx-palette__list { padding: 4px 6px 6px; } /* a scroll area (.ui-scroll): rows ellipsise, the list never scrolls sideways */
 .hx-pal-row { height: auto; min-height: var(--row-h); gap: 10px; padding: 0 10px; border-radius: var(--r-in); }
 .hx-pal-row__icon { width: 18px; height: 18px; display: grid; place-items: center; color: var(--icon); flex: none; }
@@ -299,7 +281,6 @@ body {
 
 /* interface case: Typewriter sets lowercase; content (titles, names, messages) is never transformed */
 :is(.hx-new__label, .hx-pal-row[data-kind="command"] .hx-pal-row__label) { text-transform: var(--ui-case); }
-.hx-palette__field input::placeholder { text-transform: var(--ui-case); }
 .hx-keys { display: grid; grid-template-columns: 1fr auto; margin: 4px 0 0; }
 .hx-keys dt, .hx-keys dd { margin: 0; padding: 8px 0; border-bottom: 1px solid var(--hair); font-size: var(--fs-s); }
 .hx-keys dd { display: flex; justify-content: flex-end; }
@@ -332,7 +313,7 @@ body {
   .hx-bar { padding: 0 max(6px, env(safe-area-inset-right, 0px)) 0 max(8px, env(safe-area-inset-left, 0px)); }
   #hx-btn-back, #hx-btn-fwd, .hx-win { display: none; }
   .hx-cmd { position: static; translate: none; flex: 1; width: auto; min-width: 0; margin: 0 8px; }
-  .hx-cmd .ui-keys, .hx-cmd__project { display: none; }
+  .hx-cmd .ui-search__keys, .hx-cmd__project { display: none; }
   .hx-palette__box { top: 8px; }
   .hx-dialog__head { gap: 8px; padding-left: 12px; }
   .hx-dialog__head h2 { display: none; }
@@ -376,9 +357,6 @@ body {
 /* ───────────── drawn corners (DESIGN-SYSTEM.md §8; bound in boot() with HX.ui.squircle.auto) ─────────────
    A bound element's inset line is --sq-line and a floating surface paints --sq-bg; the library draws both along the
    continuous path and turns the box-shadow line off. */
-.hx-cmd { --sq-line: var(--hair); }
-@media (hover: hover) and (pointer: fine) { .hx-cmd:hover { --sq-line: var(--line); } }
-.hx-cmd[aria-expanded="true"] { --sq-line: var(--brass); }
 .hx-dialog__card { --r-outer: var(--r-l); --pad: 12px; --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad))); --sq-bg: var(--bg-1); --sq-line: var(--line); }
 .hx-palette__box { --r-outer: var(--r-l); --pad: 6px; --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad))); --sq-bg: var(--bg-1); --sq-line: var(--line); }
 .hx-dialog__card[data-sq-on], .hx-palette__box[data-sq-on], .hx-goto[data-sq-on] { box-shadow: var(--shadow-pop); }

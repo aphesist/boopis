@@ -1,7 +1,6 @@
 /* tooltip: delegated on [data-tip] (+ data-kbd, data-tip-pos), one element for the app. 480ms before the first, none
    while warm (700ms after the last), at once on keyboard focus. It repeats the button's aria-label for sight, so it
    is hidden from assistive tech; shortcuts go in aria-keyshortcuts. */
-import { esc } from '../core/dom';
 import { html } from './html';
 
 let node: HTMLElement | null = null, timer = 0, warm = 0, cur: Element | null = null, enabled = false;
@@ -17,7 +16,7 @@ function show(t: HTMLElement, now: boolean): void {
     const n = node;
     cur = t;
     const state = t.getAttribute('data-tip-state'), tone = t.getAttribute('data-tip-tone'), kbd = t.getAttribute('data-kbd');
-    n.innerHTML = '<span>' + esc(label) + '</span>' + (state ? '<span class="ui-tip__state"' + (tone ? ' data-tone="' + esc(tone) + '"' : '') + '>' + esc(state) + '</span>' : '') + (kbd ? html.keys(kbd) : '');
+    n.innerHTML = html.tipBody(label, kbd, state ? { text: state, tone } : null);
     const r = t.getBoundingClientRect(), w = n.offsetWidth, h = n.offsetHeight;
     const pos = t.getAttribute('data-tip-pos') || (r.top > innerHeight - 160 ? 'top' : 'bottom');
     let x: number, y: number;

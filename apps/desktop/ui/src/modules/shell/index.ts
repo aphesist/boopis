@@ -25,7 +25,7 @@ import { closePalette, movePal, openPalette, paletteActive, renderPalette, reset
 import { cycleRegion, focusRegion, leaderActive, leaderKey, nextAttention, regionOf, rememberFocus, startLeader } from './regions';
 import { getLayout } from '../../core/state';
 /* drawn corners (DESIGN-SYSTEM.md section 8): the shell's surfaces; sheets and menus float, so they are surfaces */
-ui.squircle.auto('.hx-cmd, .hx-me, .hx-pal-row');
+ui.squircle.auto('.hx-me, .hx-pal-row');
 ui.squircle.auto('.hx-dialog__card, .hx-palette__box, .hx-goto, .hxt-preset', { mode: 'surface' });
 
 const log = logger('shell');
@@ -152,6 +152,11 @@ export function boot(): void {
   if (sh.booted) return;
   const app = $('#hx-app');
   sh.app = app;
+  // the search field, twice from the library: the title bar's button that opens the palette, and the palette's own field
+  $('#hx-btn-search', app).outerHTML = ui.html.search({ as: 'button', size: 's', id: 'hx-btn-search', class: 'hx-cmd', label: 'Search and commands', keys: 'mod+K',
+    textHTML: '<span class="hx-cmd__project" id="hx-where-project"></span> <span class="hx-cmd__title" id="hx-where-title"></span>', attrs: { 'aria-haspopup': 'dialog', 'aria-expanded': 'false' } });
+  $('#hx-palette-input', app).outerHTML = ui.html.search({ size: 'l', id: 'hx-palette-input', label: 'Search sessions, bots and commands', placeholder: 'Search sessions, bots and commands', keys: 'esc',
+    attrs: { role: 'combobox', 'aria-expanded': 'true', 'aria-controls': 'hx-palette-list', 'aria-autocomplete': 'list' } });
   sh.el = collectEls();
   const el = els();
 

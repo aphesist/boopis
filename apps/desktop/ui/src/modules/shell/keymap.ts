@@ -3,7 +3,7 @@
    Spec syntax: alternatives ' | ', a sequence ' ' (press one after the other), a combination '+', 'hold:X' (press
    and hold). 'mod' is Command on macOS and Ctrl elsewhere; 'alt' is Option on macOS. */
 import { esc } from '../../core/dom';
-import { comboChips } from '../../core/keys';
+import { ui } from '../../components';
 
 export const KEYGROUPS: ReadonlyArray<readonly [string, ReadonlyArray<readonly [label: string, spec: string]>]> = [
   ['General', [
@@ -101,7 +101,7 @@ export const KEYGROUPS: ReadonlyArray<readonly [string, ReadonlyArray<readonly [
 
 function specHTML(spec: string): string {
   return spec.split(' | ').map((alt) => '<span class="ui-keys">' + alt.split(' ').map((step) =>
-    step.startsWith('hold:') ? '<span class="hx-kword">hold</span>' + comboChips(step.slice(5), esc) : comboChips(step, esc)).join('<span class="hx-kthen" aria-hidden="true"></span>') + '</span>').join('<span class="hx-kword">or</span>');
+    step.startsWith('hold:') ? '<span class="hx-kword">hold</span>' + ui.html.comboKbds(step.slice(5)) : ui.html.comboKbds(step)).join('<span class="hx-kthen" aria-hidden="true"></span>') + '</span>').join('<span class="hx-kword">or</span>');
 }
 /** the shortcut table as HTML, filtered by a search (a group, a label or a spec matches) */
 export function keysTableHTML(filter?: string): string {
