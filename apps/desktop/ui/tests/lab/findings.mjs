@@ -1,7 +1,7 @@
 /* Writes docs/UI-LAB-FINDINGS.md from lab-report/summary.json: every failure grouped by area, then by check, the same
    failure in several states collapsed to one line (the states listed), each with a one-line guess at its cause.
    `node tests/lab/findings.mjs [summary.json] [out.md]` */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { UI_ROOT } from './serve.mjs';
 import { AREA_TITLES, CHECKS } from './rules.mjs';
@@ -79,7 +79,7 @@ const findings = s.findings.filter((f) => f.check !== 'visual');
 const areas = Object.keys(AREA_TITLES).filter((a) => findings.some((f) => f.area === a));
 let md = `# UI lab findings
 
-The first full run of the lab (\`pnpm lab:check\`, docs/UI-LAB.md) on ${s.generated.slice(0, 10)}: ${s.states} states in ${s.stories} stories, in the presets ${s.presets.join(', ')} at ${s.widths.join(', ')} px, each at rest and with hover, focus and pressed forced. **${findings.length} failures** (the same failure in several states counts once per state). Screenshots were accepted as the first goldens in this run, so there are no visual failures yet.
+The first full run of the lab on the kit, \`@boopis/ui\` (\`pnpm lab:check\`, docs/UI-LAB.md), on ${s.generated.slice(0, 10)}: ${s.states} states in ${s.stories} stories, in the presets ${s.presets.join(', ')} at ${s.widths.join(', ')} px, each at rest and with hover, focus and pressed forced. **${findings.length} failures** (the same failure in several states counts once per state). Screenshots were accepted as the first goldens in this run, so there are no visual failures yet.
 
 Each area is one fix agent's. Run one area with \`pnpm lab:check --area <id>\` (add \`--quick\` while fixing), and one story with \`--story <id>\`. The report (\`lab-report/index.html\`) has a crop of every failure and the mock's counterpart. Lines below collapse the same failure across states: the element, the states (with their count), where it shows (presets, widths, forced state), and a one-line guess at the cause. The guesses are guesses: read the crop first.
 
@@ -91,6 +91,34 @@ ${areas.map((a) => `| ${AREA_TITLES[a]} | \`${a}\` | ${findings.filter((f) => f.
 |---|---|---|
 ${Object.keys(CHECKS).filter((c) => findings.some((f) => f.check === c)).map((c) => `| \`${c}\` | ${CHECKS[c].rule ?? ''} | ${findings.filter((f) => f.check === c).length} |`).join('\n')}
 `;
+/* the owner's cases, first: what each one shows today */
+{
+  const q = (fn) => findings.filter(fn);
+  const states = (l) => new Set(l.map((f) => f.story + ' · ' + f.state)).size;
+  const send = q((f) => /ui-send/.test(f.el ?? '') && /contain|concentric/.test(f.check));
+  const tipText = q((f) => f.check === 'overlay' && /text field/.test(f.msg));
+  const tipPlace = q((f) => f.check === 'overlay' && /centred|sits /.test(f.msg));
+  const flicker = q((f) => f.check === 'stability.interact' && f.area === 'dock');
+  const emptyDock = q((f) => f.story === 'dock/dock' && /no bots/.test(f.state ?? ''));
+  const bars = q((f) => f.check === 'scrollbar');
+  const tabs = q((f) => /hx-dtab|ui-tabs|ui-seg/.test(f.el ?? '') && /concentric|contain/.test(f.check));
+  const native = q((f) => f.check === 'native');
+  const brand = q((f) => f.check === 'brand');
+  md += `
+## The owner's cases
+
+| Case | What the lab shows | Failures (states) |
+|---|---|---|
+| The send button outside the composer | \`concentric\` and \`geometry.contain\` on \`.ui-send\`: in the session it sits off its corner's equal inset; with the bot settings sheet open (Bots tab) and in a long-named bot's dock session it reaches past the box | ${send.length} (${states(send)}) |
+| The attach tooltip over the text | \`overlay\`: the tooltip (and the attach menu) covers the composer's text field in the session; tooltips sit off centre or off \`--float-gap\` | ${tipText.length + tipPlace.length} (${states([...tipText, ...tipPlace])}) |
+| The flickering dock | \`stability.interact\`: orbs and the add button blink out and back within 8 frames while a bot opens and closes, the dock expands, minimises and changes page | ${flicker.length} (${states(flicker)}) |
+| The empty dock's shape | the zero-bot states draw; what fails there is the page dots' and the add button's hit targets and spacing (no geometry failure of the slab in Chromium; the WebKitGTK dock test in CI guards the rest) | ${emptyDock.length} (${states(emptyDock)}) |
+| WebKitGTK's huge scrollbar | \`scrollbar\`: scrollers with no \`::-webkit-scrollbar\` rule, without \`overscroll-behavior: contain\`, or a source that still sets \`scrollbar-width\` | ${bars.length} (${states(bars)}) |
+| Tab bars and segmented controls | \`concentric\` and \`geometry.contain\` on the Settings tab bar, the segmented options and their focus rings (most in the round-cornered Typewriter preset) | ${tabs.length} (${states(tabs)}) |
+| Unthemed native controls | \`native\` | ${native.length} |
+| The engine's name in the interface | \`brand\` | ${brand.length} |
+`;
+}
 if (s.rules) md += `\nRule coverage: ${s.rules.covered.length} of ${s.rules.total} rules in RULES.md have a lab check (${s.rules.machine} are machine-checkable); the report lists both sets.\n`;
 
 for (const a of areas) {
@@ -135,5 +163,12 @@ md += `
 - **Rules without a check.** ${s.rules ? s.rules.total - s.rules.covered.length : 'Most'} of RULES.md's rules have no lab check yet; the report lists them. Each
   is a row in \`tests/lab/rules.mjs\` and a function in \`probe.js\` away.
 `;
+/* the notes the agents working beside the lab wrote by hand (the corners work's table, say) are kept, below a marker */
+const MARK = '<!-- notes kept by tests/lab/findings.mjs: write by hand below this line -->';
+const before = existsSync(out) ? readFileSync(out, 'utf8') : '';
+let notes = before.includes(MARK) ? before.slice(before.indexOf(MARK) + MARK.length).trim()
+  : before && !before.includes('pnpm lab:check`, docs/UI-LAB.md) on ') ? before.replace(/^# [^\n]*\n+/, '').replace(/^(#{2,5}) /gm, '#$1 ').trim() : '';
+if (notes && !before.includes(MARK)) notes = '## Notes from the agents working beside the lab\n\n' + notes;
+if (notes) md += '\n' + MARK + '\n\n' + notes + '\n';
 writeFileSync(out, md);
 console.log('wrote ' + out + ' (' + findings.length + ' failures, ' + areas.length + ' areas)');
