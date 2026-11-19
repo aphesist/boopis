@@ -231,9 +231,10 @@
 
   /* ───────── the checks ───────── */
   function run(o) {
-    /* every check reads where things rest: a transition in flight (a preset swap, or a surface that was not drawn when the preset changed
-       and first paints from the old colour) is taken to its end first, so a colour or a box is never read half-way (R-colour-1) */
-    for (const a of document.getAnimations()) if (a instanceof CSSTransition) { try { a.finish(); } catch { /* an animation that cannot finish is left */ } }
+    /* a colour or a radius in flight (a preset swap, or a surface that was not drawn when the preset changed and first paints from the old colour)
+       is taken to its end first, so R-colour-1 reads the colour a surface rests at and never one half-way. Only colours and corners: a box that
+       is travelling (a sidebar, a menu) keeps travelling, and what closes when its anchor leaves is the app's to do in its own time. */
+    for (const a of document.getAnimations()) if (a instanceof CSSTransition && /color|background|shadow|outline|fill|stroke|radius/.test(a.transitionProperty)) { try { a.finish(); } catch { /* an animation that cannot finish is left */ } }
     const scope = o.scope ? document.querySelector(o.scope) : (window.__lab && window.__lab.scope && window.__lab.scope()) || document.body;
     if (!scope) return { error: 'no scope', findings: [] };
     const want = new Set(o.checks || ['geometry.contain', 'geometry.center', 'geometry.clip', 'geometry.hscroll', 'geometry.target', 'concentric', 'overlay', 'tokens.computed', 'tokens.spacing', 'native', 'scrollbar', 'brand', 'copy', 'roles']);
@@ -371,7 +372,9 @@
     if (want.has('overlay')) {
       const layers = [];
       const ov = o.overlay || (window.__lab && window.__lab.overlay);
-      if (ov) { const a = document.querySelector(ov.anchor), l = [...document.querySelectorAll(ov.layer)].find(shown); if (!a || !l) add('overlay', a || scope, 'the overlay did not open (' + ov.layer + ' against ' + ov.anchor + ')'); else layers.push([a, l]); }
+      if (ov) { const a = document.querySelector(ov.anchor), l = [...document.querySelectorAll(ov.layer)].find(shown); const onScreen = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.right > 0 && r.bottom > 0 && r.left < innerWidth && r.top < innerHeight && shown(e) && ((h) => !!h && (h === e || e.contains(h)))(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)); };
+        /* an anchor that is not on screen (a drawer that is closed at this width: off the screen, or clipped by it) cannot hold an overlay open: the app closed it with the drawer, there is nothing to place */
+        if (a && !l && !onScreen(a)) { /* nothing to check */ } else if (!a || !l) add('overlay', a || scope, 'the overlay did not open (' + ov.layer + ' against ' + ov.anchor + ')'); else layers.push([a, l]); }
       else {
         const tip = [...document.querySelectorAll('.ui-tip.is-in')].find(shown);
         const ta = document.activeElement && document.activeElement.closest && document.activeElement.closest('[data-tip]');
