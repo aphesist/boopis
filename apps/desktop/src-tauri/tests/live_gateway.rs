@@ -2,7 +2,12 @@
 //! Skips cleanly (passes with a note) unless `HX_E2E_HERMES_ENV` names the spike install and `python3` runs.
 //! Never runs an installer; every process it starts is stopped when the test ends.
 
-#![allow(clippy::expect_used, clippy::unwrap_used, clippy::panic, clippy::too_many_lines)] // a test: failing loudly is the point
+#![allow(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    clippy::panic,
+    clippy::too_many_lines
+)] // a test: failing loudly is the point
 
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
