@@ -407,10 +407,12 @@ hx-card[data-kind="form"][data-size="inline"] { width: min(100%, var(--measure))
 /* options inside a form: radio rows (a dot) and checkbox rows (a box with a check) */
 .cd-form .cd-opts { margin: 0 calc(-1 * var(--sp-2)); }
 .cd-opt__text { flex: 1 1 auto; min-width: 0; text-transform: none; }
-.cd-opt[role="checkbox"] .cd-opt__ring { display: grid; place-items: center; width: 14px; height: 14px; border-radius: var(--r-floor); }
-.cd-opt[role="checkbox"] .cd-opt__ring .cd-ico { display: none; width: 11px; height: 11px; color: var(--text-on-light); }
-.cd-opt[role="checkbox"][aria-checked="true"] .cd-opt__ring { background: var(--brass); box-shadow: none; }
-.cd-opt[role="checkbox"][aria-checked="true"] .cd-opt__ring .cd-ico { display: block; }
+/* a several-choice row (R-check-1): the check glyph shows at rest in --mark-off and turns brass when chosen; never a ring (one choice,
+   R-check-2) and never a square box */
+.cd-opt__check { display: grid; place-items: center; width: 16px; flex: none; color: var(--mark-off); }
+.cd-opt__check .cd-ico { width: 14px; height: 14px; }
+.cd-opt[aria-checked="true"] .cd-opt__check { color: var(--brass); }
+.cd-any { margin-left: var(--sp-1); font-weight: 400; color: var(--text-quiet); }
 .cd-opts[aria-invalid="true"] { box-shadow: inset 0 0 0 1px var(--red); border-radius: var(--r-in, var(--r-s)); }
 /* previews per option, side by side; stacked when the card is narrow */
 .cd-pick { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: var(--sp-3); align-items: stretch; }
