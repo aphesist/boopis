@@ -4,7 +4,7 @@
    (that is `host/live/bots.test.ts` and the end-to-end test). */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { data, NeedsConfirmation, setProvider } from '../../data';
-import type { Bot, BotInfo, BotPatch, BotsAdmin, BotsEvent, BotsSource, DataProvider } from '../../data';
+import type { ArchivedBot, Bot, BotInfo, BotPatch, BotsAdmin, BotsEvent, BotsSource, DataProvider } from '../../data';
 import { createMockProvider } from '../../data/mock-provider';
 import { emitter, store } from '../../data/store';
 import '../cards';
@@ -62,14 +62,14 @@ function fake(bots: Bot[]): Fake {
     removal: () => Promise.resolve({ folder: '/h/profiles/atlas', lines: ['The folder /h/profiles/atlas (3.0 MB in 240 files).', 'All its sessions and what they said.'] }),
     archive: (id) => { calls.push({ fn: 'archive', args: [id] }); const i = bots.findIndex((b) => b.id === id); bots.splice(i, 1); events.emit({ type: 'bot-archived', id }); return Promise.resolve({ undo: () => Promise.resolve() }); },
     remove: (id, confirm) => { calls.push({ fn: 'remove', args: [id, confirm] }); const i = bots.findIndex((b) => b.id === id); bots.splice(i, 1); events.emit({ type: 'bot-archived', id }); return Promise.resolve(); },
-    archived: store([]), restoreArchived: rec('restore', Promise.resolve()), note: () => null
+    note: () => null
   };
   const source: BotsSource = {
     snapshot: () => ({ bots: [...bots], threads: Object.fromEntries(bots.map((b) => [b.id, []])) }),
     subscribe: (fn) => events.subscribe(fn),
     catalog: () => ({ models: admin.models(), channels: [{ id: 'app', name: 'This app' }], approvals: [{ id: 'deploys', name: 'Deploying anywhere' }], suggestions: [], reserved: ['default'] }),
     send: rec('send', undefined), stop: () => false, decide: () => undefined, update: () => undefined,
-    create: () => { throw new Error('use admin'); }, archive: () => undefined, admin
+    create: () => { throw new Error('use admin'); }, archive: () => undefined, archived: store<readonly ArchivedBot[]>([]), restore: (id) => { calls.push({ fn: 'restore', args: [id] }); return Promise.resolve(); }, admin
   };
   f.admin = admin;
   f.provider = { ...mock, info: { live: true, preview: new Set(['feedforward']), unavailable: { 'bots.send': 'Talking to a teammate arrives with team chat.' } }, bots: source };

@@ -22,6 +22,8 @@ export const S = {
   newFollow: null as Follower | null,
   draft: null as Draft | null, draftRow: null as { li: HTMLElement; o: HTMLElement; name: HTMLElement; btn: HTMLElement } | null,
   runs: new Set<string>(),
+  /** the Archived group under the roster, and the way to stop listening to the provider's archived bots */
+  archivedEl: null as HTMLElement | null, offArchived: null as (() => void) | null,
   sheetOpen: false, sheetFor: null as string | null, sheetReturn: null as Element | null
 };
 

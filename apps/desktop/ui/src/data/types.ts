@@ -38,6 +38,10 @@ export interface Bot {
   cfg: BotConfig;
   /** what Hermes reports about the profile this bot is (the live provider's; the mock's bots have none) */
   info?: BotInfo;
+  /** true when Hermes has this profile and boopis has never kept anything for it (no `boopis/bot.json`): made with the
+   *  `hermes` command, say. Absent when boopis made it, and when the plugin did not say (unknown is never marked). The
+   *  mark goes away once any boopis setting is saved for it. */
+  madeOutside?: true;
 }
 /** one scheduled job of a bot's profile, as Hermes's cron store reports it */
 export interface BotJob {
@@ -73,6 +77,9 @@ export interface BotInfo {
   running: boolean | null;
   notes: Readonly<Partial<Record<'detail' | 'jobs' | 'sessions' | 'store', string>>>;
 }
+/** an archived teammate: a profile renamed out of the way (nothing was deleted). `id` is the profile's name now, `was` the name it
+ *  returns to, `at` when it was archived (ISO, '' when unknown) and `when` the same as the list says it ("5m", "yesterday", "mon") */
+export interface ArchivedBot { id: string; name: string; was: string; at: string; when: string }
 export interface BotDraft { name: string; role: string; shape: string; color: string; eyes: string }
 export interface BotSuggestion { name: string; desc: string; shape: string; color: string }
 export interface Choice { id: string; name: string; hint?: string }

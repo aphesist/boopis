@@ -16,6 +16,18 @@
 .bt-list.is-rail :is(.ui-row__text, .ui-row__end) { display: none; }
 .bt-row--draft .ui-row__title, .bt-row--draft .ui-row__sub { text-transform: var(--ui-case); }
 
+/* the Archived group under the roster: a library group (14.4), set off from the rows above it as groups are; in the rail there is no room for its words, and the palette's "Restore bot…" reaches the same bots */
+.bt-archived { margin-top: 12px; }
+.bt-archived[hidden], .bt-list.is-rail .bt-archived { display: none; }
+
+/* "made outside boopis" (a chip's capsule in mono 11, quiet, outlined; never a stamp: nothing is owed) in a row's end slot and in the header's line */
+.bt-outside {
+  display: inline-flex; align-items: center; flex: none; height: 18px; padding: 0 7px; box-sizing: border-box; vertical-align: middle;
+  border-radius: var(--r-pill); box-shadow: inset 0 0 0 1px var(--line); color: var(--text-quiet);
+  font: 400 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); text-transform: none; white-space: nowrap;
+}
+.bt-outside + .ui-state { margin-left: 4px; }
+
 /* ================================================================ view */
 .bt-view { overflow: hidden; }
 .bt-room, .bt-new { position: absolute; inset: 0; }

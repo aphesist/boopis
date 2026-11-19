@@ -41,6 +41,9 @@ class FakeHermes {
   own: Record<string, Json> = { atlas: { look: { shape: 'triangle', color: '#f23b5a', eyes: 'pill' }, settings: { gov: 'ungoverned' } } };
   archived: Record<string, Json> = {};
   failProfilesList = false;
+  /** the plugin's read answers nothing, or reports a store it could not read */
+  failOwn = false;
+  problems: Record<string, string> = {};
   failLink = false;
   main = new FakeLink((m, p) => this.mainCall(m, p));
   links = new Map<string, FakeLink>();
@@ -72,7 +75,7 @@ class FakeHermes {
         if ('model' in p) { d['model'] = { provider: p['provider'], default: p['model'] }; applied['model'] = true; }
         return { ok: true, applied };
       }
-      case 'plugin.boopis.bots.read': return { root: HOME, bots: this.profiles.filter((x) => !x['is_default']).map((x) => ({ name: x['name'], path: x['path'], record: this.own[x['name']] ?? null, problem: null, archived: this.archived[x['name']] ?? null })) };
+      case 'plugin.boopis.bots.read': if (this.failOwn) throw new Error('the plugin is not there'); return { root: HOME, bots: this.profiles.filter((x) => !x['is_default']).map((x) => ({ name: x['name'], path: x['path'], record: this.own[x['name']] ?? null, problem: this.problems[x['name']] ?? null, archived: this.archived[x['name']] ?? null })) };
       case 'plugin.boopis.bots.write': { this.own[p['name']] = { ...(this.own[p['name']] ?? {}), ...(p['look'] ? { look: p['look'] } : {}), ...(p['settings'] ? { settings: { ...(this.own[p['name']]?.['settings'] ?? {}), ...p['settings'] } } : {}), ...(p['approvals'] ? { approvals: p['approvals'] } : {}) }; return { record: this.own[p['name']] }; }
       case 'plugin.boopis.bots.inspect': return { path: HOME + '/profiles/' + p['name'], bytes: 3 * 1024 * 1024, files: 240, truncated: false, has_sessions: true, memory_files: 2, skills: 9, boopis_bytes: 300 };
       case 'plugin.boopis.bots.archive': {
@@ -151,7 +154,7 @@ describe('the roster is the user’s Hermes profiles, minus the default one', ()
     h.archived['archived--hex'] = { name: 'hex', at: 't' };
     const { bots } = await open(h);
     expect(bots.source.snapshot().bots.map((b) => b.id)).toEqual(['atlas', 'nina']);
-    expect(bots.source.admin!.archived.get()).toEqual([{ id: 'archived--hex', name: 'archived--hex', was: 'hex', at: 't' }]);
+    expect(bots.source.archived.get()).toEqual([{ id: 'archived--hex', name: 'archived--hex', was: 'hex', at: 't', when: '' }]);
     expect(bots.source.admin!.planCreate('hex').profile).toBe('hex');
   });
   it('says why when Hermes cannot be read, and shows no bots instead of sample ones', async () => {
@@ -314,6 +317,86 @@ describe('archive keeps everything, delete asks first and says what goes', () =>
     await bots.source.admin!.remove('atlas', 'atlas');
     expect(h.links.get('atlas')!.closed).toBe(true);
     expect(bots.source.snapshot().bots.map((b) => b.id)).toEqual(['nina']);
+  });
+});
+
+describe('which profiles boopis did not make (the "made outside boopis" mark)', () => {
+  it('a profile with no store of boopis’s own is marked, and one with a store is not', async () => {
+    const { bots } = await open();
+    expect(botOf(bots, 'nina')!.madeOutside).toBe(true);        // no boopis/bot.json: the plugin reads `record: null`
+    expect(botOf(bots, 'atlas')!.madeOutside).toBeUndefined();   // atlas has its record
+  });
+  it('is marked only on what the plugin said: a plugin that did not answer, or a store it could not read, marks nothing', async () => {
+    const none = new FakeHermes(); none.failOwn = true;
+    expect(botOf((await open(none)).bots, 'nina')!.madeOutside).toBeUndefined();
+    const broken = new FakeHermes(); broken.problems['nina'] = 'bot.json could not be read: bad json';
+    expect(botOf((await open(broken)).bots, 'nina')!.madeOutside).toBeUndefined();
+  });
+  it('saving any boopis setting creates the store, and the next event says the mark is gone', async () => {
+    const { bots, events } = await open();
+    events.length = 0;
+    await bots.source.admin!.saveOwn('nina', { cfg: { cap: '1.00' } });
+    const bot = events.find((e) => e.type === 'bot') as { bot: { id: string; madeOutside?: true } };
+    expect(bot.bot.id).toBe('nina');
+    expect('madeOutside' in bot.bot).toBe(false);
+    expect(botOf(bots, 'nina')!.madeOutside).toBeUndefined();
+  });
+  it('a look saved for it does the same', async () => {
+    const { bots } = await open();
+    await bots.source.admin!.saveOwn('nina', { look: { eyes: 'bars' } });
+    expect(botOf(bots, 'nina')!.madeOutside).toBeUndefined();
+  });
+  it('writing a Hermes setting (the role) creates no store of boopis’s, so the mark stays', async () => {
+    const { bots } = await open();
+    await bots.source.admin!.save('nina', { role: 'ships things' });
+    expect(botOf(bots, 'nina')!.madeOutside).toBe(true);
+  });
+});
+
+describe('archived bots, restored from the Archived group and the palette', () => {
+  const archive = (h: FakeHermes, name: string, was: string, at: string): void => {
+    h.profiles.push({ name, path: HOME + '/profiles/' + name, description: 'x' });
+    h.archived[name] = { name: was, at, paused_jobs: [] };
+  };
+  it('lists them newest first, by the name they return to, with when as the lists say it', async () => {
+    const h = new FakeHermes();
+    archive(h, 'archived--old', 'old', '2026-11-12T10:00:00+00:00');
+    archive(h, 'archived--hex', 'hex', '2026-11-18T09:30:00+00:00');
+    archive(h, 'archived--now', 'now', '2026-11-19T09:58:00+00:00');
+    archive(h, 'archived--lost', 'lost', '');
+    const { bots } = await open(h);
+    expect(bots.source.archived.get().map((a) => [a.was, a.when])).toEqual([['now', '2m'], ['hex', 'yesterday'], ['old', '12/11'], ['lost', '']]);
+  });
+  it('restores one under its old name: the plugin renames it, the roster reads again, the routines it paused run again', async () => {
+    const h = new FakeHermes();
+    archive(h, 'archived--hex', 'hex', '2026-11-18T09:30:00+00:00');
+    h.archived['archived--hex']!['paused_jobs'] = ['j9'];
+    h.jobs['archived--hex'] = [{ job_id: 'j9', name: 'scan', schedule: '0 9 * * 1', prompt_preview: 'scan', enabled: false }];
+    h.describes['hex'] = { name: 'hex', soul: '', model: { provider: '', default: '' } };
+    const { bots, events } = await open(h);
+    events.length = 0;
+    await bots.source.restore('archived--hex');
+    await bots.settled();
+    expect(h.main.calls.find((c) => c.method === 'plugin.boopis.bots.restore')!.params).toEqual({ name: 'archived--hex' });
+    expect(events.some((e) => e.type === 'bot-created' && e.bot.id === 'hex')).toBe(true);
+    expect(bots.source.archived.get()).toEqual([]);
+    expect(h.jobs['hex']![0]!['enabled']).toBe(true);
+  });
+  it('refuses a name that is in use again before anything moves, with the plugin’s own words, and the archived bot stays', async () => {
+    const h = new FakeHermes();
+    archive(h, 'archived--nina', 'nina', '2026-11-16T17:05:00+00:00');
+    const { bots } = await open(h);
+    await expect(bots.source.restore('archived--nina')).rejects.toThrow('there is a teammate called nina already; archive or delete it, then restore');
+    expect(h.main.calls.some((c) => c.method === 'plugin.boopis.bots.restore')).toBe(false);
+    expect(bots.source.archived.get().map((a) => a.was)).toEqual(['nina']);
+  });
+  it('a restore the plugin refuses reaches the user as the plugin said it', async () => {
+    const h = new FakeHermes();
+    archive(h, 'archived--hex', 'hex', '2026-11-18T09:30:00+00:00');
+    const { bots } = await open(h);
+    const orig = h.main.requestRaw.bind(h.main);
+    h.main.requestRaw = async (m: string, p: Json) => { if (m === 'plugin.boopis.bots.restore') throw new Error('there is a teammate called hex already; archive or delete it, then restore'); return orig(m, p); };
+    await expect(bots.source.restore('archived--hex')).rejects.toThrow(/already/);
   });
 });
 

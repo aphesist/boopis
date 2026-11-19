@@ -163,3 +163,30 @@ describe('sessions, bots and governance commands', () => {
     expect(seen).toEqual([true]);
   });
 });
+
+describe('the mock’s archived bots (the design without Hermes)', () => {
+  it('has two, newest first: one that can come back and one whose name is in use', () => {
+    const p = createMockProvider({ simulate: false });
+    expect(p.bots.archived.get().map((a) => [a.id, a.was, a.when])).toEqual([['archived--ledger', 'ledger', 'yesterday'], ['archived--nina', 'nina', 'mon']]);
+    expect(p.bots.snapshot().bots.some((b) => b.id === 'ledger')).toBe(false);
+  });
+  it('restoring one makes it a bot again, announced as created, and takes it out of the archive', async () => {
+    const p = createMockProvider({ simulate: false });
+    const seen: string[] = [];
+    p.bots.subscribe((e) => { if (e.type === 'bot-created') seen.push(e.bot.id); });
+    await p.bots.restore('archived--ledger');
+    expect(seen).toEqual(['ledger']);
+    expect(p.bots.snapshot().bots.some((b) => b.id === 'ledger')).toBe(true);
+    expect(p.bots.archived.get().map((a) => a.was)).toEqual(['nina']);
+  });
+  it('refuses a name that is in use, and an id that is not archived', async () => {
+    const p = createMockProvider({ simulate: false });
+    await expect(p.bots.restore('archived--nina')).rejects.toThrow('there is a teammate called nina already; archive or delete it, then restore');
+    await expect(p.bots.restore('nobody')).rejects.toThrow(/not archived/);
+    expect(p.bots.archived.get()).toHaveLength(2);
+  });
+  it('a bot made outside boopis exists only as a fixture, so the v6 bots are untouched', () => {
+    expect(createMockProvider({ simulate: false }).bots.snapshot().bots.some((b) => b.madeOutside)).toBe(false);
+    expect(createMockProvider({ simulate: false, fixtures: ['outside'] }).bots.snapshot().bots.filter((b) => b.madeOutside).map((b) => b.id)).toEqual(['sage']);
+  });
+});
