@@ -1,14 +1,21 @@
-/* The first-run view: a plain, thin screen that shows setup's checklist and draws whatever form is open. It is driven by
-   the host's Status (steps, the open form, the receipt); it knows no setup logic. It uses the design system's own button
-   and field classes and its tokens, and invents nothing else: the owner may design the full form card later (ADR-0020). */
-import { fromHostForm, splitSecrets } from './forms';
-import type { FormField, FormModel } from './forms';
+/* The first-run view: setup's checklist, and whatever form is open drawn by the same form card every other request to the
+   user uses (docs/FORMS.md, ADR-0020). It is driven by the host's Status (steps, the open form, the receipt); it knows no
+   setup logic. The form is answered through the host's `setup_advance`, so this screen gives the card its own answer sink
+   (`useFormsHost`) while it is on screen: no data provider exists yet. A secret goes from the field to the host and no
+   further. The rest is the design system's own button and tokens. */
+import { ui } from '../components';
+import '../modules/cards';
+import { useFormsHost } from '../modules/cards/forms-host';
+import type { FormsSource } from '../data/provider';
+import { fromHostForm } from './forms';
+import type { FormModel } from './forms';
+import type { Answer } from './bindings';
 import type { SetupBridge, SetupStatus } from './setup-bridge';
 import { asHostError } from './bridge';
+import { reduced } from '../core/dom';
 import { logger } from '../core/log';
 
 const log = logger('first-run');
-type Values = Record<string, unknown>;
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, props: Partial<Record<string, string>> = {}, ...kids: (Node | string)[]): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag);
@@ -22,74 +29,6 @@ const button = (text: string, variant: 'primary' | 'ghost' | '', onClick: () => 
   return b;
 };
 const STATE_WORD: Readonly<Record<string, string>> = { done: 'done', pending: 'waiting', needs_input: 'needs you', blocked: 'stopped', declined: 'not changed', skipped: 'skipped' };
-
-function fieldControl(f: FormField, id: string): { node: HTMLElement; read: () => unknown; first: HTMLElement | null } {
-  const wrap = el('div', { class: 'ui-field' });
-  const label = (text: string, forId?: string) => el('label', { class: 'ui-field__label', ...(forId ? { for: forId } : {}) }, text);
-  if (f.options && !f.secret) {
-    const group = el('fieldset', { class: 'ui-field', style: 'border:0;padding:0;margin:0' }, el('legend', { class: 'ui-field__label' }, f.title));
-    const inputs: { input: HTMLInputElement; value: string }[] = [];
-    f.options.forEach((value, i) => {
-      const input = el('input', { type: f.multi ? 'checkbox' : 'radio', name: id, id: id + '-' + String(i), value });
-      if (!f.multi && (f.default === value || (f.default === undefined && i === 0 && f.required))) input.checked = true;
-      inputs.push({ input, value });
-      group.append(el('label', { for: id + '-' + String(i), style: 'display:flex;gap:var(--sp-2);align-items:center' }, input, f.optionNames[i] ?? value));
-    });
-    const other = f.other ? el('input', { type: 'text', class: 'ui-input', id: id + '-other', 'aria-label': f.title + ', other', placeholder: 'Other' }) : null;
-    if (other) group.append(other);
-    return {
-      node: group, first: inputs[0]?.input ?? other,
-      read: () => {
-        const picked = inputs.filter((i) => i.input.checked).map((i) => i.value);
-        const extra = other?.value.trim() ?? '';
-        if (extra) picked.push(extra);
-        return f.multi ? picked : (picked[0] ?? '');
-      }
-    };
-  }
-  if (f.type === 'boolean') {
-    const input = el('input', { type: 'checkbox', role: 'switch', class: 'ui-switch', id });
-    input.checked = f.default === true;
-    wrap.append(label(f.title, id), input);
-    return { node: wrap, first: input, read: () => input.checked };
-  }
-  const input = el('input', { type: f.secret ? 'password' : f.type === 'string' ? 'text' : 'number', class: 'ui-input', id, autocomplete: 'off', spellcheck: 'false' });
-  if (f.secret) input.setAttribute('data-secret', '');
-  if (typeof f.default === 'string') input.value = f.default;
-  wrap.append(label(f.title, id), input);
-  if (f.description) wrap.append(el('p', { class: 'ui-field__hint' }, f.description));
-  return { node: wrap, first: input, read: () => (f.type === 'string' ? input.value : input.value === '' ? '' : Number(input.value)) };
-}
-
-function renderForm(model: FormModel, send: (values: Values, secrets: Values) => void, cancel: () => void): HTMLFormElement {
-  const form = el('form', { 'aria-labelledby': 'fr-form-title', style: 'display:grid;gap:var(--sp-3)' });
-  form.append(el('h2', { id: 'fr-form-title', style: 'margin:0;font:600 var(--fs-l)/var(--lh-tight) var(--sans)' }, model.title));
-  if (model.body) form.append(el('p', { style: 'margin:0;color:var(--text-dim);white-space:pre-wrap' }, model.body));
-  if (model.diff.length) {
-    const table = el('table', { 'aria-label': 'The exact changes', style: 'border-collapse:collapse;font-family:var(--mono)' });
-    table.append(el('tr', {}, el('th', { scope: 'col', style: 'text-align:left' }, 'Setting'), el('th', { scope: 'col', style: 'text-align:left' }, 'Now'), el('th', { scope: 'col', style: 'text-align:left' }, 'Becomes')));
-    for (const d of model.diff) table.append(el('tr', {}, el('td', {}, d.key), el('td', {}, d.from === null ? 'not set' : JSON.stringify(d.from)), el('td', {}, JSON.stringify(d.to))));
-    form.append(table);
-  }
-  const reads = model.fields.map((f, i) => ({ f, c: fieldControl(f, 'fr-' + String(i)) }));
-  for (const { c } of reads) form.append(c.node);
-  const row = el('div', { style: 'display:flex;gap:var(--sp-2)' });
-  row.append(button(model.submitLabel, 'primary', () => undefined, 'submit'), button(model.cancelLabel, 'ghost', cancel));
-  form.append(row);
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const all: Values = {};
-    for (const { f, c } of reads) all[f.name] = c.read();
-    try {
-      const { plain, secrets } = splitSecrets(model, all);
-      send(plain, Object.fromEntries(secrets.map((s) => [s.field, s.value])));
-    } finally {
-      form.querySelectorAll<HTMLInputElement>('input[data-secret]').forEach((i) => { i.value = ''; });
-    }
-  });
-  queueMicrotask(() => { reads.find((r) => r.c.first)?.c.first?.focus(); });
-  return form;
-}
 
 /** Show first-run setup if it is needed and resolve when the user is through it (or setup was not needed). */
 export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = document.body): Promise<void> {
@@ -114,20 +53,35 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
           card.append(button('Check again', 'primary', () => { void run(null, false); }));
         }
         if (status.steps.some((s) => s.state === 'declined')) card.append(button('Review again', 'ghost', () => { void run(null, true); }));
-        if (status.form) {
-          const model = fromHostForm(status.form);
-          card.append(renderForm(model,
-            (values, secrets) => { void run({ form_id: model.id, cancelled: false, values, secrets }, false); },
-            () => { void run({ form_id: model.id, cancelled: true, values: {}, secrets: {} }, false); }));
-        }
+        if (status.form) card.append(formCard(fromHostForm(status.form)));
         if (status.done) {
+          useFormsHost(null);
           card.append(el('h2', { style: 'margin:0;font:600 var(--fs-l)/var(--lh-tight) var(--sans)' }, 'You are set'));
           const list = el('ul', { style: 'margin:0;padding-left:1.2em;color:var(--text-dim)' });
           for (const line of status.receipt?.lines ?? []) list.append(el('li', {}, line));
-          card.append(list, button('Open hypotaxis', 'primary', () => { root.remove(); resolve(); }));
+          card.append(list, button('Open hypotaxis', 'primary', () => { useFormsHost(null); root.remove(); resolve(); }));
         }
       }
       root.replaceChildren(card);
+    };
+    /* the form card's answer sink: `setup_advance` takes the answer, and what it returns is drawn once the receipt has shown */
+    const hostForms = (): FormsSource => ({
+      async submit(id, outcome) {
+        let next: SetupStatus;
+        try { next = await bridge.advance({ form_id: id, cancelled: false, values: outcome.values as Answer['values'], secrets: outcome.secrets as Answer['secrets'] }, false); } catch (e) { const err = asHostError(e); log.warn('setup step failed', err.code); throw new Error(err.message); }
+        window.setTimeout(() => { draw(next, ''); }, reduced() ? 200 : 700);
+      },
+      async cancel(id) {
+        try { draw(await bridge.advance({ form_id: id, cancelled: true, values: {}, secrets: {} }, false), ''); } catch (e) { const err = asHostError(e); draw(null, err.code + ': ' + err.message); }
+      },
+      signin: () => Promise.reject(new Error('Signing in is not part of setup.')),
+      can: { signin: false, upload: false, folder: false }, pickerItems: () => [], pickFolder: () => Promise.resolve(null)
+    });
+    const formCard = (model: FormModel): HTMLElement => {
+      useFormsHost(hostForms());
+      const c = ui.card('form', model.spec as unknown as Record<string, unknown>, { size: 'inline' });
+      queueMicrotask(() => { c.querySelector<HTMLElement>('.cd-form .ui-input, .cd-form .cd-opt[tabindex="0"], .cd-form .ui-switch')?.focus(); });
+      return c;
     };
     const run = async (answer: Parameters<SetupBridge['advance']>[0], reconsider: boolean): Promise<void> => {
       if (busy) return;

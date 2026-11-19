@@ -56,9 +56,10 @@ export const KEYGROUPS: ReadonlyArray<readonly [string, ReadonlyArray<readonly [
   ]],
   ['Cards', [
     ['Approve', 'hold:space | enter enter'],
-    ['Deny', 'x'],
-    ['Pick a blank option', '1-9'],
-    ['Back to the turn', 'esc']
+    ['Deny, or cancel a form', 'x'],
+    ['Pick a blank or a form option', '1-9'],
+    ['Submit a form', 'enter'],
+    ['Defer a form (Later), or back to the turn', 'esc']
   ]],
   ['Composer', [
     ['Send', 'enter'],

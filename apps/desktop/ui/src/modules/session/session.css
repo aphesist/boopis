@@ -29,6 +29,7 @@
 /* the blank in its sentence, and what answering it reveals */
 .ss-q { margin: 0; }
 .ss-q hx-card { vertical-align: baseline; }
+.ss-forms { display: flex; flex-direction: column; gap: var(--sp-3); width: 100%; }
 .ss-reveal { width: 100%; opacity: 0; translate: 0 6px; transition: opacity var(--dur-3) var(--spring), translate var(--dur-3) var(--spring); }
 .ss-reveal.is-in { opacity: 1; translate: 0 0; }
 .ss-reveal[hidden] { display: none; }

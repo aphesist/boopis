@@ -7,7 +7,7 @@ import { provide } from '../../core/registry';
 import { ui } from '../../components';
 import type { ComposerEl } from '../../components';
 import { data } from '../../data';
-import type { AgentTurn, ConversationEvent, Ship, Step, Turn } from '../../data';
+import type { AgentTurn, ConversationEvent, FormSpec, Ship, Step, Turn } from '../../data';
 import { renderDiff } from './diff';
 import { sessionComposer } from './composer';
 import type { SessionComposer } from './composer';
@@ -123,6 +123,29 @@ function showShip(animate: boolean): void {
   else requestAnimationFrame(() => requestAnimationFrame(() => r.classList.add('is-in')));
 }
 
+/* forms the agent opened in a turn, drawn where it raised them: one card per form, answered here or in the dock */
+const FORM_STATE = { submitted: 'done', cancelled: 'cancelled', expired: 'expired' } as const;
+function formCard(f: FormSpec): HTMLElement { const c = ui.card('form', f as unknown as Record<string, unknown>, { size: 'inline' }); c.dataset['formId'] = f.id; return c; }
+/** the answer's prose goes above the forms the turn raised */
+function placeProse(t: HTMLElement, p: HTMLElement): void { const box = t.querySelector('.ui-entry__body > .ss-forms'); if (box) box.before(p); else $('.ui-entry__body', t).append(p); }
+function formsBlock(forms: readonly FormSpec[]): HTMLElement { return el('div', { class: 'ss-forms' }, forms.map(formCard)); }
+/** a form opened (or lapsed) while the conversation is on screen */
+function addForm(turnId: string, f: FormSpec): void {
+  const t = VIEW.col?.querySelector<HTMLElement>('[data-turn-id="' + turnId + '"]');
+  if (!t || t.querySelector('hx-card[data-form-id="' + f.id + '"]')) return;
+  const body = $('.ui-entry__body', t);
+  let box = body.querySelector<HTMLElement>('.ss-forms');
+  if (!box) { box = el('div', { class: 'ss-forms' }); body.append(box); }
+  const c = formCard(f);
+  box.append(c);
+  if (VIEW.scroll) VIEW.scroll.scrollTop = VIEW.scroll.scrollHeight;
+}
+function resolveForm(formId: string, status: keyof typeof FORM_STATE): void {
+  for (const c of VIEW.col?.querySelectorAll<HTMLElement & { update(p: Record<string, unknown>): unknown; state: string }>('hx-card[data-kind="form"]') ?? []) {
+    if ((c as unknown as { data: { id?: string } }).data.id === formId && c.state !== FORM_STATE[status]) c.update({ state: FORM_STATE[status] });
+  }
+}
+
 function assistantTurn(a: AgentTurn): HTMLElement {
   const id = 'ss-steps-' + randomId('');
   const p = prose(a.paragraphs, a.bullets);
@@ -135,6 +158,8 @@ function assistantTurn(a: AgentTurn): HTMLElement {
     label: modelSay(a.model) + ', ' + a.time + ', ' + a.cost, body: [hasSteps ? ui.steps({ items: a.steps as Step[], id, hidden: true }) : null, p, a.ship ? VIEW.reveal : null].filter((n): n is HTMLElement => !!n),
     copy: true, md: () => mdOf(p)
   });
+  t.dataset['turnId'] = a.id;
+  if (a.forms?.length) $('.ui-entry__body', t).append(formsBlock(a.forms));
   if (VIEW.blank) showShip(false);
   if (VIEW.diffOpen) refreshDiff();
   return t;
@@ -154,6 +179,8 @@ function liveTurn(a: AgentTurn): void {
   L.tick = window.setInterval(() => { L.secs++; timeEl.textContent = L.secs + 's'; }, 1000);
   live.set(a.id, L);
   if (a.blank) addLiveBlank(L, a);
+  t.dataset['turnId'] = a.id;
+  if (a.forms?.length) $('.ui-entry__body', t).append(formsBlock(a.forms));
   (VIEW.col as HTMLElement).append(t);
   VIEW.composer?.setRunning(true); VIEW.running = true;
   if (VIEW.scroll) VIEW.scroll.scrollTop = VIEW.scroll.scrollHeight;
@@ -175,7 +202,7 @@ function finishLive(id: string, ev: Extract<ConversationEvent, { type: 'turn-fin
   disc.setAttribute('aria-expanded', 'false'); ol.hidden = true;
   t.removeAttribute('aria-busy'); t.setAttribute('aria-label', L.model + ', ' + ev.time + ', ' + ev.cost);
   const p = prose(ev.paragraphs);
-  if (L.prose) L.prose.replaceWith(p); else if (L.blankEl) L.blankEl.before(p); else $('.ui-entry__body', t).append(p);
+  if (L.prose) L.prose.replaceWith(p); else if (L.blankEl) L.blankEl.before(p); else placeProse(t, p);
   TURN.set(t, { md: () => mdOf(p), kind: 'agent' });
   $('.ui-callno', t).append(el('span', { class: 'ss-acts' }, ui.iconButton({ icon: 'copy', label: 'Copy answer', size: 's', keys: 'C' })));
   $('.ss-acts button', t).addEventListener('click', () => { void copyText(mdOf(p)); });
@@ -221,7 +248,7 @@ function onConversationEvent(ev: ConversationEvent): void {
     const L = live.get(ev.turnId); if (!L) return;
     const stick = !VIEW.scroll || VIEW.scroll.scrollHeight - VIEW.scroll.scrollTop - VIEW.scroll.clientHeight < 80;
     const p = prose(ev.paragraphs);
-    if (L.prose) L.prose.replaceWith(p); else if (L.blankEl) L.blankEl.before(p); else $('.ui-entry__body', L.t).append(p);
+    if (L.prose) L.prose.replaceWith(p); else if (L.blankEl) L.blankEl.before(p); else placeProse(L.t, p);
     L.prose = p;
     if (stick && VIEW.scroll) VIEW.scroll.scrollTop = VIEW.scroll.scrollHeight;
   } else if (ev.type === 'reset') renderConversation();
@@ -229,6 +256,8 @@ function onConversationEvent(ev: ConversationEvent): void {
     const L = live.get(ev.turnId), turn = sessions().conversation(VIEW.current).snapshot().turns.find((t) => t.id === ev.turnId);
     if (L && turn && turn.role === 'assistant') addLiveBlank(L, turn); else renderConversation();
   }
+  else if (ev.type === 'form-opened') addForm(ev.turnId, ev.form);
+  else if (ev.type === 'form-resolved') resolveForm(ev.formId, ev.status);
   else if (ev.type === 'turn-finished') finishLive(ev.turnId, ev);
   else if (ev.type === 'blank-answered') {
     const first = !VIEW.blank;

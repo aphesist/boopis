@@ -12,6 +12,7 @@ import { esc } from '../../core/dom';
 import { ui } from '../../components';
 import { holdOf } from '../../components/hold';
 import { data as provider } from '../../data';
+import { formsHost } from './forms-host';
 import type { FieldSchema, FormSpec, PickerKind } from '../../data';
 import type { HxCard } from './card';
 import { animate } from './motion';
@@ -56,7 +57,7 @@ function fieldHTML(c: Ctx, st: FormState, name: string, p: FieldSchema): string 
   const err = '<p class="ui-field__hint cd-err" data-tone="attention" id="' + id + '-e" hidden></p>';
   const desc = 'aria-describedby="' + (p.description ? id + '-h ' : '') + id + '-e"';
   const wrap = (inner: string, cls?: string): string => '<div class="ui-field cd-field' + (cls ? ' ' + cls : '') + '" data-field="' + esc(name) + '">' + inner + '</div>';
-  const can = provider().forms.can;
+  const can = formsHost().can;
   if (p['x-secret']) {
     return wrap('<label class="ui-field__label" for="' + id + '">' + label + '</label>' +
       '<div class="cd-secret"><input type="password" class="ui-input ui-input--mono" id="' + id + '" data-secret="' + esc(name) + '" autocomplete="off" spellcheck="false" autocapitalize="off"' +
@@ -116,7 +117,7 @@ function formExtras(d: FormSpec): string {
   let h = '';
   if (d.diff) {
     const lines = String(d.diff).split('\n');
-    h += '<div class="cd-well cd-diff" role="region" aria-label="' + esc('Changes to ' + (d.file || 'the config')) + '">' + (d.file ? '<div class="cd-diff__file">' + esc(d.file) + '</div>' : '') +
+    h += '<div class="cd-well cd-diff" role="group" aria-label="' + esc('Changes to ' + (d.file || 'the config')) + '">' + (d.file ? '<div class="cd-diff__file">' + esc(d.file) + '</div>' : '') +
       lines.map((l) => '<div class="cd-diff__l"' + (/^\+/.test(l) ? ' data-d="add"' : /^-/.test(l) ? ' data-d="del"' : '') + '><span aria-hidden="true">' + esc(l.charAt(0) === '+' || l.charAt(0) === '-' ? l.charAt(0) : ' ') + '</span>' +
         '<span class="ui-sr">' + (/^\+/.test(l) ? 'added: ' : /^-/.test(l) ? 'removed: ' : '') + '</span>' + esc(l.replace(/^[+\- ]/, '')) + '</div>').join('') + '</div>';
   }
@@ -149,7 +150,7 @@ export const formKind: Kind = {
     const fields = props(d).map(([name, p]) => fieldHTML(c, st, name, p)).join('');
     /* an answer that was not delivered: said where the fields are, as the field errors are (role alert), until the next try */
     const problem = st.error ? '<p class="ui-field__hint cd-err cd-err--form" role="alert" data-tone="attention">' + esc(st.error) + '</p>' : '';
-    const body = '<form class="cd-form" novalidate aria-labelledby="' + c.id + '-t">' + (d.why ? '<p class="cd-text">' + fmt(d.why) + '</p>' : '') + formExtras(d) + fields +
+    const body = '<form class="cd-form" novalidate>' + (d.why ? '<p class="cd-text">' + fmt(d.why) + '</p>' : '') + formExtras(d) + fields +
       (d.effect ? '<p class="cd-effect">' + fmt(d.effect) + '</p>' : '') + problem + '</form>';
     let f: string;
     if (c.s === 'submitting') f = foot('<p class="cd-receipt">' + breath() + '<span>' + esc(String(c.d['busyText'] || t.busy || 'Saving')) + '</span></p>', d.kind === 'signin' ? actions(btn('cancel', 'Cancel')) : '');
@@ -159,7 +160,7 @@ export const formKind: Kind = {
       const cancelLabel = (typeof d.cancel === 'object' && d.cancel?.label) || t.cancel || 'Cancel';
       const cancel = hasCancel(d) ? btn('cancel', String(cancelLabel), null, { keys: 'x' }) : '';
       const submit = d.kind === 'signin' ? '' : holdForm(d) ? holdHTML(c) : btn('submit', submitLabel, 'primary', { keys: 'enter' });
-      f = foot(meta([d.expires || d.expiresAt ? '<span data-countdown>' + esc(cap(d.expires ?? '')) + '</span>' : '']), actions(btn('defer', 'Later', 'ghost', { keys: 'escape' }) + cancel + submit));
+      f = foot(meta([d.expires || d.expiresAt ? '<span data-countdown>' + esc(cap(d.expires ?? '')) + '</span>' : '']), actions((d.defer === false ? '' : btn('defer', 'Later', 'ghost', { keys: 'escape' })) + cancel + submit));
     }
     return { head: headrow(c, sentenceHTML(c.d)), body, foot: f };
   },
@@ -182,7 +183,7 @@ export const formKind: Kind = {
 
 function receiptHTML(c: Ctx): string {
   const d = spec(c.d), t = formT(d), who = c.origin ? originText(c.origin) : 'The agent';
-  if (c.s === 'done') return String(c.d['receiptText'] || receiptText(d, '', ''));
+  if (c.s === 'done') return String(c.d['receiptText'] || c.d['receipt'] || receiptText(d, '', ''));
   if (c.s === 'deferred') return 'Later. It waits in the dock';
   if (c.s === 'expired') return 'Expired, nothing was saved';
   if (c.s === 'cancelled') return String(c.d['cancelledText'] || (t.cancelled ?? 'Cancelled') + '. ' + cap(who) + ' continues without it');
@@ -255,7 +256,7 @@ export async function submitForm(card: HxCard, viaHold: boolean): Promise<boolea
   dropSecrets(card);
   card.setState('submitting');
   try {
-    await provider().forms.submit(d.id, sent);
+    await formsHost().submit(d.id, sent);
     if (card.state !== 'submitting') return true;
     card.setState('done');
     return true;
@@ -263,8 +264,6 @@ export async function submitForm(card: HxCard, viaHold: boolean): Promise<boolea
     /* nothing was delivered: the form is open again with what went wrong, and the secret has to be typed again (it was dropped) */
     if (card.state === 'submitting') { st.error = (e instanceof Error ? e.message : String(e)) || 'The answer was not delivered. Try again.'; card.setState('open'); card.announce(st.error); }
     return false;
-  } finally {
-    for (const k of Object.keys(secrets)) secrets[k] = '';
   }
 }
 export function cancelForm(card: HxCard): void {
@@ -272,7 +271,7 @@ export function cancelForm(card: HxCard): void {
   const d = spec(card.data);
   if (card.state === 'submitting' && d.kind === 'signin') { card.setState('open'); return; }
   card.setState('cancelled');
-  void provider().forms.cancel(d.id).catch(() => undefined);
+  void formsHost().cancel(d.id).catch(() => undefined);
 }
 
 async function signin(card: HxCard, el: HTMLElement | undefined): Promise<void> {
@@ -282,7 +281,7 @@ async function signin(card: HxCard, el: HTMLElement | undefined): Promise<void> 
   card.data['busyText'] = 'Waiting for ' + (s.host || s.provider || 'the provider') + ' in your browser';
   card.setState('submitting');
   try {
-    await provider().forms.signin(d.id, name);
+    await formsHost().signin(d.id, name);
     if (card.state !== 'submitting') return;
     st.signedIn.add(name);
     card.data['receiptText'] = receiptText(d, '', '');
@@ -322,7 +321,7 @@ function setFile(card: HxCard, name: string, file: { name: string; size: number 
 export function formKey(card: HxCard, e: KeyboardEvent): boolean {
   const t = e.target as HTMLElement, d = spec(card.data);
   const typing = (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) && (t as HTMLInputElement).type !== 'checkbox';
-  if (e.key === 'Escape' && !e.altKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); e.stopPropagation(); card.act('defer'); return true; }
+  if (e.key === 'Escape' && spec(card.data).defer !== false && !e.altKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); e.stopPropagation(); card.act('defer'); return true; }
   if (e.key === 'Enter' && !e.shiftKey && !e.altKey) {
     const mod = e.ctrlKey || e.metaKey;
     if (t.tagName === 'TEXTAREA' && !mod) return false;
@@ -373,7 +372,7 @@ export function wireForm(card: HxCard): void {
     drop.addEventListener('change', (e) => { const f = (e.target as HTMLInputElement).files?.[0]; if ((e.target as HTMLInputElement).type === 'file' && f) setFile(card, name, f); });
     drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.dataset['over'] = ''; });
     drop.addEventListener('dragleave', () => { delete drop.dataset['over']; });
-    drop.addEventListener('drop', (e) => { e.preventDefault(); delete drop.dataset['over']; const f = e.dataTransfer?.files[0]; if (f && provider().forms.can.upload) setFile(card, name, f); });
+    drop.addEventListener('drop', (e) => { e.preventDefault(); delete drop.dataset['over']; const f = e.dataTransfer?.files[0]; if (f && formsHost().can.upload) setFile(card, name, f); });
   }
 }
 
@@ -442,7 +441,7 @@ function wirePicker(pk: HTMLButtonElement, st: FormState, props0: Readonly<Recor
     clearErr();
   };
   pk.addEventListener('click', () => {
-    if (kind === 'folder' && provider().forms.can.folder) { void provider().forms.pickFolder().then((v) => { if (v) set(v); }); return; }
+    if (kind === 'folder' && formsHost().can.folder) { void formsHost().pickFolder().then((v) => { if (v) set(v); }); return; }
     const items = pickerItems(kind).map((x) => (x['value'] != null && x['value'] !== '' ? { ...x, checked: st.vals[name] === x['value'] } : x));
     U.menu.open(pk, items as Parameters<typeof U.menu.open>[1], { label: p?.title || cap(name), onSelect: (v) => { set(String(v)); } });
   });

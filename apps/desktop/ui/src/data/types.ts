@@ -103,6 +103,10 @@ export interface FormSpec {
   origin?: Origin;
   submit?: { label?: string; hold?: boolean };
   cancel?: { label?: string } | false;
+  /** false: no "Later" (a form with nowhere to wait: first-run setup) */
+  defer?: boolean;
+  /** set when the form was answered elsewhere or lapsed: the card shows its receipt */
+  resolved?: FormStatus;
   /** the form lapses at this time (ms since the epoch); `expires` is its words ("expires in 9 min") */
   expiresAt?: number; expires?: string;
   /** what shows before the fields: a config diff, a plan, a connector's contents */

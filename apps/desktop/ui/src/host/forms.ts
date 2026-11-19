@@ -5,7 +5,10 @@
    - hermes: the canonical `approval.request` and `clarify.request` events, answered through Hermes's own
      `approval.respond` / `clarify.respond` (never through the plugin).
    A secret field's value is split off by `splitSecrets` and goes to the host's keychain (`secret_set`), never into a frame
-   to the gateway. Pure functions: no DOM, no host, no timers. */
+   to the gateway. Pure functions: no DOM, no host, no timers.
+   Every adapter also builds the `FormSpec` the card draws (`model.spec`): the schema is kept whole (previews, pickers,
+   uploads, sign-in and limits included), so there is one renderer and one adapter per source. */
+import type { FieldSchema, FormKind, FormSchema, FormSpec, Origin } from '../data/types';
 
 export interface FormField {
   name: string;
@@ -44,6 +47,33 @@ export interface FormModel {
   origin: string;
   diff: readonly DiffLine[];
   source: FormSource;
+  /** the form as the card draws it */
+  spec: FormSpec;
+}
+
+const KINDS: ReadonlySet<string> = new Set<FormKind>(['credential', 'question', 'approval', 'permission', 'signin', 'setup', 'connector', 'choice', 'plan', 'feedback']);
+const kindOf = (k: unknown): FormKind => (typeof k === 'string' && KINDS.has(k) ? (k as FormKind) : 'question');
+/** who asks, from the sender's word for it (docs/FORMS.md section 4a); the agent is known by the model the session runs on.
+    A teammate or an MCP server carries no name in the event, so none is shown: nothing is invented. */
+export function originFor(origin: string, model: string): Origin {
+  if (origin === 'agent') return { kind: 'agent', model };
+  if (origin === 'plugin' || origin === 'hermes' || origin === 'host') return { kind: origin };
+  if (origin === 'mcp') return { kind: 'mcp' };
+  return { kind: 'teammate', ids: [] };
+}
+const timeOf = (v: unknown): number | undefined => { const n = typeof v === 'string' ? Date.parse(v) : NaN; return Number.isFinite(n) ? n : undefined; };
+const schemaOf = (v: unknown): FormSchema => { const o = (v && typeof v === 'object' && !Array.isArray(v) ? v : {}) as Record<string, unknown>; return { properties: (o['properties'] && typeof o['properties'] === 'object' ? o['properties'] : {}) as Record<string, FieldSchema>, required: Array.isArray(o['required']) ? o['required'].filter((x): x is string => typeof x === 'string') : [] }; };
+interface SpecIn { id: string; kind: unknown; title: string; body: string; schema: unknown; submit: unknown; cancel: unknown; origin: Origin; expiresAt?: number | undefined; defer?: boolean }
+function buildSpec(i: SpecIn): FormSpec {
+  const submit = obj(i.submit), cancel = i.cancel === false ? false : obj(i.cancel);
+  return {
+    id: i.id, kind: kindOf(i.kind), title: i.title, schema: schemaOf(i.schema), origin: i.origin,
+    ...(i.body ? { why: i.body } : {}),
+    submit: { ...(typeof submit['label'] === 'string' ? { label: submit['label'] } : {}), ...(submit['hold'] === true ? { hold: true } : {}) },
+    ...(cancel === false ? { cancel: false as const } : typeof cancel['label'] === 'string' ? { cancel: { label: cancel['label'] } } : {}),
+    ...(i.expiresAt !== undefined ? { expiresAt: i.expiresAt } : {}),
+    ...(i.defer === false ? { defer: false } : {})
+  };
 }
 
 type Obj = Record<string, unknown>;
@@ -77,25 +107,33 @@ export function fromHostForm(f: { form_id: string; kind: string; title: string; 
   return {
     id: f.form_id, kind: f.kind, title: f.title, body: f.body, fields: fieldsOf(f.schema), submitLabel: label(f.submit, 'Continue'),
     cancelLabel: label(f.cancel, 'Not now'), hold: obj(f.submit)['hold'] === true, sensitive: f.sensitive, origin: f.origin,
-    diff: f.diff.map((d) => ({ key: d.key, from: d.from ?? null, to: d.to })), source: { kind: 'host' }
+    diff: f.diff.map((d) => ({ key: d.key, from: d.from ?? null, to: d.to })), source: { kind: 'host' },
+    spec: { ...buildSpec({ id: f.form_id, kind: f.kind, title: f.title, body: f.body, schema: f.schema, submit: f.submit, cancel: f.cancel, origin: { kind: 'host' }, defer: false }), ...(f.diff.length ? { diff: hostDiff(f.diff) } : {}) }
   };
 }
 
-/** `plugin.hypotaxis.form.opened`'s payload */
-export function fromPluginEvent(sessionId: string, p: Obj): FormModel | null {
+/** the host's changes as the card's diff well: one line per setting, what it is now and what it becomes */
+function hostDiff(diff: readonly { key: string; from?: unknown; to: unknown }[]): string {
+  return diff.flatMap((d) => [...(d.from == null ? [] : ['-' + d.key + ': ' + JSON.stringify(d.from)]), '+' + d.key + ': ' + JSON.stringify(d.to)]).join('\n');
+}
+
+/** `plugin.hypotaxis.form.opened`'s payload; `model` is the model the session runs on (the agent's origin) */
+export function fromPluginEvent(sessionId: string, p: Obj, model = ''): FormModel | null {
   const id = str(p['form_id']);
   if (!id) return null;
+  const origin = str(p['origin'], 'agent');
   return {
     id, kind: str(p['kind'], 'question'), title: str(p['title'], 'hypotaxis needs something'), body: str(p['body']), fields: fieldsOf(p['schema']),
     submitLabel: label(p['submit'], 'Send'), cancelLabel: label(p['cancel'], 'Cancel'), hold: obj(p['submit'])['hold'] === true,
-    sensitive: p['sensitive'] === true, origin: str(p['origin'], 'agent'), diff: [], source: { kind: 'plugin', sessionId }
+    sensitive: p['sensitive'] === true, origin, diff: [], source: { kind: 'plugin', sessionId },
+    spec: buildSpec({ id, kind: p['kind'], title: str(p['title'], 'hypotaxis needs something'), body: str(p['body']), schema: p['schema'], submit: p['submit'], cancel: p['cancel'], origin: originFor(origin, model), expiresAt: timeOf(p['expires_at']) })
   };
 }
 
 const CHOICE_NAMES: Readonly<Record<string, string>> = { once: 'Allow once', session: 'Allow for this session', always: 'Always allow', deny: 'Deny' };
 
 /** Hermes's canonical `approval.request` and `clarify.request` events as forms; anything else is not a form */
-export function fromGatewayEvent(type: string, sessionId: string, p: Obj): FormModel | null {
+export function fromGatewayEvent(type: string, sessionId: string, p: Obj, model = ''): FormModel | null {
   const promptId = str(p['prompt_id']);
   const generation = typeof p['execution_generation'] === 'number' ? p['execution_generation'] : null;
   if (!promptId || generation === null) return null;
@@ -109,7 +147,9 @@ export function fromGatewayEvent(type: string, sessionId: string, p: Obj): FormM
     return {
       id: promptId, kind: 'approval', title: 'Allow this command?', body: [str(p['description']), command].filter(Boolean).join('\n'), fields: [field],
       submitLabel: 'Decide', cancelLabel: 'Deny', hold: false, sensitive: false, origin: 'hermes', diff: [],
-      source: { kind: 'hermes', sessionId, method: 'approval.respond', promptId, generation, multi: false }
+      source: { kind: 'hermes', sessionId, method: 'approval.respond', promptId, generation, multi: false },
+      spec: buildSpec({ id: promptId, kind: 'permission', title: 'Allow this command?', body: [str(p['description']), command].filter(Boolean).join('\n'), origin: { kind: 'hermes' },
+        schema: { properties: { choice: { type: 'string', title: 'Decision', enum: choices, enumNames: choices.map((c) => CHOICE_NAMES[c] ?? c), default: choices.includes('once') ? 'once' : choices[0] } }, required: ['choice'] }, submit: { label: 'Decide' }, cancel: { label: 'Deny' } })
     };
   }
   if (type === 'clarify.request') {
@@ -122,7 +162,9 @@ export function fromGatewayEvent(type: string, sessionId: string, p: Obj): FormM
     return {
       id: promptId, kind: 'question', title: str(p['question'], 'Hermes has a question'), body: '', fields: [field], submitLabel: 'Answer', cancelLabel: 'Skip',
       hold: false, sensitive: false, origin: 'hermes', diff: [],
-      source: { kind: 'hermes', sessionId, method: 'clarify.respond', promptId, generation, multi }
+      source: { kind: 'hermes', sessionId, method: 'clarify.respond', promptId, generation, multi },
+      spec: buildSpec({ id: promptId, kind: 'question', title: str(p['question'], 'Hermes has a question'), body: '', origin: originFor(model ? 'agent' : 'hermes', model),
+        schema: { properties: { answer: { type: 'string', title: 'Answer', ...(choices.length ? { enum: choices, 'x-other': true, ...(multi ? { 'x-multi': true } : {}) } : {}) } }, required: [] }, submit: { label: 'Answer' }, cancel: { label: 'Skip' } })
     };
   }
   return null;

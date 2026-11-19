@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { runFirstRun } from './first-run';
 import type { SetupBridge, SetupStatus } from './setup-bridge';
 import { HostError } from './bridge';
@@ -19,7 +19,7 @@ class Fake implements SetupBridge {
     return next instanceof Error ? Promise.reject(next) : Promise.resolve(next ?? status({}));
   }
 }
-const tick = () => new Promise((r) => setTimeout(r, 0));
+const tick = (): Promise<void> => (vi.isFakeTimers() ? vi.advanceTimersByTimeAsync(0) : new Promise((r) => setTimeout(r, 0))).then(() => undefined);
 const click = async (text: string) => {
   const b = [...document.querySelectorAll('button')].find((x) => x.textContent === text);
   expect(b, 'button ' + text).toBeTruthy();
@@ -51,45 +51,70 @@ describe('first run', () => {
   });
 
   it('draws the consent form with the exact diff and sends the answer, then the receipt', async () => {
-    const consent = form('setup.config', 'setup', { type: 'object', properties: {} }, { diff: [{ key: 'tools.tool_search.enabled', from: null, to: 'off' }] });
-    const bridge = new Fake([status({ steps: [step('config', 'needs_input')], form: consent }), status({ steps: [step('config', 'done')], done: true, receipt: { lines: ['Hermes settings: 3 settings changed'] } })]);
-    let finished = false;
-    void runFirstRun(bridge).then(() => { finished = true; });
-    await tick();
-    await click('Set up');
-    expect(document.querySelector('table[aria-label="The exact changes"]')?.textContent).toContain('tools.tool_search.enabled');
-    expect(document.body.textContent).toContain('not set');
-    await click('Go'); // a submit button: the form's own submit handler runs
-    document.querySelector('form')?.dispatchEvent(new Event('submit', { cancelable: true }));
-    await tick();
-    expect(bridge.answers[1]).toEqual({ answer: { form_id: 'setup.config', cancelled: false, values: {}, secrets: {} }, reconsider: false });
-    expect(document.body.textContent).toContain('You are set');
-    expect(document.body.textContent).toContain('3 settings changed');
-    await click('Open hypotaxis');
-    expect(finished).toBe(true);
-    expect(document.querySelector('.hx-first-run')).toBeNull();
+    vi.useFakeTimers();
+    try {
+      const consent = form('setup.config', 'setup', { type: 'object', properties: {} }, { diff: [{ key: 'tools.tool_search.enabled', from: null, to: 'off' }] });
+      const bridge = new Fake([status({ steps: [step('config', 'needs_input')], form: consent }), status({ steps: [step('config', 'done')], done: true, receipt: { lines: ['Hermes settings: 3 settings changed'] } })]);
+      let finished = false;
+      void runFirstRun(bridge).then(() => { finished = true; });
+      await vi.advanceTimersByTimeAsync(0);
+      await click('Set up');
+      const card = document.querySelector('hx-card[data-kind="form"]');
+      expect(card, 'the form is drawn by the form card').toBeTruthy();
+      expect(card?.querySelector('.cd-diff')?.textContent).toContain('tools.tool_search.enabled');
+      expect(card?.querySelector('[data-action="defer"]'), 'setup has nowhere to wait: no "Later"').toBeNull();
+      await click('Go');
+      await vi.advanceTimersByTimeAsync(900);
+      expect(bridge.answers[1]).toEqual({ answer: { form_id: 'setup.config', cancelled: false, values: {}, secrets: {} }, reconsider: false });
+      expect(document.body.textContent).toContain('You are set');
+      expect(document.body.textContent).toContain('3 settings changed');
+      await click('Open hypotaxis');
+      expect(finished).toBe(true);
+      expect(document.querySelector('.hx-first-run')).toBeNull();
+    } finally { vi.useRealTimers(); }
   });
 
   it('sends a choice, and a secret only in the secrets part, then clears the field', async () => {
-    const ladder = form('setup.ladder', 'choice', { type: 'object', required: ['choice'], properties: { choice: { type: 'string', enum: ['anthropic', 'main/fake-a'], enumNames: ['Claude', 'fake-a on main'] } } });
-    const cred = form('setup.credential.main', 'credential', { type: 'object', required: ['value'], properties: { value: { type: 'string', title: 'API key', 'x-secret': true, 'x-secret-ref': 'secret://provider.main/api_key' } } }, { sensitive: true });
-    const bridge = new Fake([status({ form: ladder }), status({ form: cred }), status({ done: true })]);
-    void runFirstRun(bridge);
-    await tick();
-    await click('Set up');
-    const radios = document.querySelectorAll<HTMLInputElement>('input[type=radio]');
-    expect(radios).toHaveLength(2);
-    radios[1]!.checked = true;
-    document.querySelector('form')?.dispatchEvent(new Event('submit', { cancelable: true }));
-    await tick();
-    expect(bridge.answers[1]).toMatchObject({ answer: { form_id: 'setup.ladder', values: { choice: 'main/fake-a' }, secrets: {} } });
-    const key = document.querySelector<HTMLInputElement>('input[type=password]');
-    expect(key).toBeTruthy();
-    key!.value = 'sk-typed-secret';
-    document.querySelector('form')?.dispatchEvent(new Event('submit', { cancelable: true }));
-    await tick();
-    expect(bridge.answers[2]).toMatchObject({ answer: { form_id: 'setup.credential.main', values: {}, secrets: { value: 'sk-typed-secret' } } });
-    expect(key!.value).toBe('');
+    vi.useFakeTimers();
+    try {
+      const ladder = form('setup.ladder', 'choice', { type: 'object', required: ['choice'], properties: { choice: { type: 'string', enum: ['anthropic', 'main/fake-a'], enumNames: ['Claude', 'fake-a on main'] } } });
+      const cred = form('setup.credential.main', 'credential', { type: 'object', required: ['value'], properties: { value: { type: 'string', title: 'API key', 'x-secret': true, 'x-secret-ref': 'secret://provider.main/api_key' } } }, { sensitive: true });
+      const bridge = new Fake([status({ form: ladder }), status({ form: cred }), status({ done: true })]);
+      void runFirstRun(bridge);
+      await vi.advanceTimersByTimeAsync(0);
+      await click('Set up');
+      const options = document.querySelectorAll<HTMLElement>('.cd-opt');
+      expect(options).toHaveLength(2);
+      options[1]?.click();
+      await click('Go');
+      await vi.advanceTimersByTimeAsync(900);
+      expect(bridge.answers[1]).toMatchObject({ answer: { form_id: 'setup.ladder', values: { choice: 'main/fake-a' }, secrets: {} } });
+      const key = document.querySelector<HTMLInputElement>('input[type=password]');
+      expect(key).toBeTruthy();
+      key!.value = 'sk-typed-secret';
+      key!.dispatchEvent(new Event('input'));
+      await click('Go');
+      await vi.advanceTimersByTimeAsync(900);
+      expect(bridge.answers[2]).toMatchObject({ answer: { form_id: 'setup.credential.main', values: {}, secrets: { value: 'sk-typed-secret' } } });
+      expect(key!.value).toBe('');
+      expect(document.body.innerHTML).not.toContain('sk-typed-secret');
+    } finally { vi.useRealTimers(); }
+  });
+
+  it('says what went wrong inside the card when the host refuses the answer, and the form stays open', async () => {
+    vi.useFakeTimers();
+    try {
+      const ladder = form('setup.ladder', 'choice', { type: 'object', required: ['choice'], properties: { choice: { type: 'string', enum: ['a', 'b'] } } });
+      const bridge = new Fake([status({ form: ladder }), new HostError('hx.setup.state_invalid', 'setup.json is not valid')]);
+      void runFirstRun(bridge);
+      await vi.advanceTimersByTimeAsync(0);
+      await click('Set up');
+      document.querySelectorAll<HTMLElement>('.cd-opt')[0]?.click();
+      await click('Go');
+      await vi.advanceTimersByTimeAsync(200);
+      expect(document.querySelector('hx-card [role=alert]')?.textContent).toContain('setup.json is not valid');
+      expect(document.querySelector('hx-card')?.getAttribute('data-state')).toBe('open');
+    } finally { vi.useRealTimers(); }
   });
 
   it('shows a host error with its code and offers to try again', async () => {

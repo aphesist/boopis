@@ -1,0 +1,3520 @@
+[
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "gateway.ready",
+    "payload": {
+     "change_events": true,
+     "heartbeat": true,
+     "replay_epoch": "ccb5777120cd4457927b92dd3ca80004",
+     "session_authority": true
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 1,
+   "method": "client.capabilities",
+   "params": {
+    "server_requests": true
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 1,
+   "result": {
+    "server_requests": [
+     "approval",
+     "clarify",
+     "display.install.sudo",
+     "preview.act",
+     "preview.read",
+     "secret",
+     "setup_beat",
+     "sudo",
+     "terminal.read",
+     "theme.apply",
+     "theme.pick",
+     "tour",
+     "vault.code",
+     "vault.save_login",
+     "vault.unlock_prompt",
+     "window.read"
+    ],
+    "declines_not_shown": true,
+    "canonical_clarify_batch": true
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 2,
+   "method": "runtime.describe",
+   "params": {}
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 2,
+   "result": {
+    "instance_id": "01c03d22824c46038b82ddac6d6d8039",
+    "profile_id": "/work/hermes-home",
+    "authority_epoch": 1,
+    "capabilities": [
+     "durable-admission-v1",
+     "event-replay-v1",
+     "local-cli-create-v1",
+     "acp-editor-policy-v1",
+     "acp-session-mcp-v1",
+     "clarify-batch-v1",
+     "plugin-rpc-v1",
+     "session-client-v1",
+     "session-transcript-v1",
+     "session-list-picker-v1",
+     "session-list-cursor-v1"
+    ],
+    "session_create": {
+     "sources": [
+      "acp",
+      "cli",
+      "gui",
+      "oneshot",
+      "tool",
+      "tui"
+     ],
+     "parameters": [
+      "accept_hooks",
+      "api_key",
+      "base_url",
+      "checkpoints",
+      "client",
+      "client_env",
+      "cwd",
+      "cwd_explicit",
+      "editor",
+      "follow_profile_config",
+      "ignore_rules",
+      "ignore_user_config",
+      "max_turns",
+      "model",
+      "pass_session_id",
+      "provider",
+      "reasoning",
+      "request_id",
+      "row_cwd",
+      "run_budget",
+      "safe_mode",
+      "service_tier",
+      "skills",
+      "source",
+      "title",
+      "toolsets",
+      "verbose",
+      "yolo"
+     ]
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 3,
+   "method": "session.create",
+   "params": {
+    "source": "gui",
+    "cwd": "/work/proj",
+    "request_id": "req-1795052142606271514",
+    "model": "fake-a",
+    "provider": "main",
+    "toolsets": [
+     "hypotaxis",
+     "todo"
+    ],
+    "client": {
+     "name": "hypotaxis",
+     "version": "0"
+    }
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "notification.show",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "text": "\u26a0 Low disk (4.7 GB free) \u00b7 /autoprune on|off|later",
+     "detail": "Low disk space: 4.7 GB free of 252.0 GB. Your session history (state.db) uses 0 MB.\nAuto-prune is off. Turning it on deletes ended sessions inactive for more than 90 days, once a day (pinned and open sessions are kept).\nPruning will not help right now: none of your 1 session is older than 90 days. Something else is filling this disk.\n/autoprune on to enable, /autoprune off to keep everything (never asked again), /autoprune later to be reminded in a week.",
+     "level": "warn",
+     "kind": "sticky",
+     "ttl_ms": null,
+     "key": "sessions.auto_prune",
+     "id": "sessions.auto_prune"
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 1
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 3,
+   "result": {
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "stored_session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "messages": [],
+    "message_count": 0,
+    "todo_state": null,
+    "running": false,
+    "authority_epoch": 1,
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "last_sequence": 0,
+    "subscription_id": "b9e0c15fc5654d97a16c20941c4f2886",
+    "revision": 0,
+    "execution_generation": 0,
+    "pending": [],
+    "prompts": [],
+    "info": {
+     "tools": {
+      "hypotaxis": [
+       "ask",
+       "dispatch",
+       "exec",
+       "pack",
+       "request_credential",
+       "request_input",
+       "ship"
+      ],
+      "todo": [
+       "todo_list"
+      ]
+     },
+     "skills": "(trimmed)",
+     "mcp_servers": [],
+     "version": "unknown",
+     "release_date": "2026.9.24",
+     "update_behind": null,
+     "update_command": "hermes update",
+     "branch": "master",
+     "project": null,
+     "provider": "custom:main",
+     "enabled_toolsets": [
+      "hypotaxis",
+      "todo"
+     ],
+     "tool_availability": {
+      "unavailable_toolsets": [],
+      "lazy_tools": [],
+      "disabled_tools": []
+     },
+     "source": "gui",
+     "model": "fake-a",
+     "lazy": true,
+     "profile_id": "/work/hermes-home",
+     "desktop_protocol": "hermes-gateway-v1",
+     "profile_name": "default",
+     "cwd": "/work/proj",
+     "reasoning_effort": "",
+     "reasoning_effort_wire": "",
+     "service_tier": "",
+     "fast": false,
+     "launch_request": {
+      "client": {
+       "name": "hypotaxis",
+       "version": "0"
+      },
+      "cwd": "/work/proj",
+      "model": "fake-a",
+      "provider": "main",
+      "source": "gui",
+      "toolsets": [
+       "hypotaxis",
+       "todo"
+      ]
+     },
+     "client": {
+      "name": "hypotaxis",
+      "version": "0"
+     },
+     "title": null,
+     "started_at": 1795052142.626296,
+     "last_active_at": 1795052142.626296,
+     "yolo": false,
+     "archived": false,
+     "api_mode": null,
+     "tool_count": 8,
+     "credential_hint": null,
+     "usage": {
+      "model": "fake-a",
+      "input": 0,
+      "output": 0,
+      "reasoning": 0,
+      "prompt": 0,
+      "completion": 0,
+      "total": 0,
+      "calls": 0
+     }
+    },
+    "pending_connection": null,
+    "open_requests": []
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 4,
+   "method": "plugin.hypotaxis.mode.set",
+   "params": {
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "mode": "ungoverned"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 4,
+   "result": {}
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 5,
+   "method": "plugin.hypotaxis.form.list",
+   "params": {
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 5,
+   "result": {
+    "forms": []
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 6,
+   "method": "prompt.submit",
+   "params": {
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "text": "@@call request_credential {\"provider\": \"openai\"}@@ @@call ask {\"question\": \"Keep the old alias?\", \"options\": [\"yes\", \"no\"], \"other\": true}@@ @@call request_input {\"kind\": \"setup\", \"title\": \"Set the gate command\", \"body\": \"Every ship ends at the gate.\", \"schema\": {\"type\": \"object\", \"properties\": {\"gate\": {\"type\": \"string\", \"title\": \"Gate command\", \"default\": \"npm test\"}}, \"required\": [\"gate\"]}, \"submit\": {\"label\": \"Write config\"}}@@ @@usage {\"prompt_tokens\": 1000, \"completion_tokens\": 50, \"total_tokens\": 1050, \"prompt_tokens_details\": {\"cached_tokens\": 400}, \"completion_tokens_details\": {\"reasoning_tokens\": 20}}@@ @@reply I asked three things.@@",
+    "submission_id": "sub-1795052143032876944"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 6,
+   "result": {
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "ref": {
+     "profile_id": "/work/hermes-home",
+     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff"
+    },
+    "sequence": 1,
+    "status": "queued",
+    "outcome": null,
+    "authority_epoch": 1,
+    "execution_generation": null
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "session.info",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "stored_session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+     "pending": [
+      {
+       "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+       "ref": {
+        "profile_id": "/work/hermes-home",
+        "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff"
+       },
+       "sequence": 1,
+       "status": "queued",
+       "outcome": null,
+       "authority_epoch": 1,
+       "execution_generation": null,
+       "input_id": "sub-1795052143032876944",
+       "text": "@@call request_credential {\"provider\": \"openai\"}@@ @@call ask {\"question\": \"Keep the old alias?\", \"options\": [\"yes\", \"no\"], \"other\": true}@@ @@call request_input {\"kind\": \"setup\", \"title\": \"Set the gate command\", \"body\": \"Every ship ends at the gate.\", \"schema\": {\"type\": \"object\", \"properties\": {\"gate\": {\"type\": \"string\", \"title\": \"Gate command\", \"default\": \"npm test\"}}, \"required\": [\"gate\"]}, \"submit\": {\"label\": \"Write config\"}}@@ @@usage {\"prompt_tokens\": 1000, \"completion_tokens\": 50, \"total_tokens\": 1050, \"prompt_tokens_details\": {\"cached_tokens\": 400}, \"completion_tokens_details\": {\"reasoning_tokens\": 20}}@@ @@reply I asked three things.@@",
+       "controls": [
+        "steer",
+        "replace"
+       ],
+       "steering": false
+      }
+     ],
+     "authority_epoch": 1,
+     "desktop_protocol": "hermes-gateway-v1",
+     "running": false,
+     "execution_generation": 0,
+     "revision": 0
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 2
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "message.start",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {},
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 3
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "session.info",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "stored_session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+     "pending": [
+      {
+       "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+       "ref": {
+        "profile_id": "/work/hermes-home",
+        "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff"
+       },
+       "sequence": 1,
+       "status": "started",
+       "outcome": null,
+       "authority_epoch": 1,
+       "execution_generation": 1,
+       "input_id": "sub-1795052143032876944",
+       "text": "@@call request_credential {\"provider\": \"openai\"}@@ @@call ask {\"question\": \"Keep the old alias?\", \"options\": [\"yes\", \"no\"], \"other\": true}@@ @@call request_input {\"kind\": \"setup\", \"title\": \"Set the gate command\", \"body\": \"Every ship ends at the gate.\", \"schema\": {\"type\": \"object\", \"properties\": {\"gate\": {\"type\": \"string\", \"title\": \"Gate command\", \"default\": \"npm test\"}}, \"required\": [\"gate\"]}, \"submit\": {\"label\": \"Write config\"}}@@ @@usage {\"prompt_tokens\": 1000, \"completion_tokens\": 50, \"total_tokens\": 1050, \"prompt_tokens_details\": {\"cached_tokens\": 400}, \"completion_tokens_details\": {\"reasoning_tokens\": 20}}@@ @@reply I asked three things.@@",
+       "controls": [],
+       "steering": false
+      }
+     ],
+     "authority_epoch": 1,
+     "desktop_protocol": "hermes-gateway-v1",
+     "running": true,
+     "execution_generation": 1,
+     "revision": 0
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 4
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "actor": "plugin",
+     "hash": "378a20a2c0216cb7a19e8f209f7792cd78af2c314bb12e0c0ebae740dd69815c",
+     "payload": {
+      "cwd": "/work/proj",
+      "hermes_version": "unknown",
+      "mode": "ungoverned",
+      "plugin_version": "0.1.0",
+      "price_table": "settings-44136fa355b3",
+      "profile": "default",
+      "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff"
+     },
+     "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 0,
+     "ts": "2026-11-19T01:35:43.751Z",
+     "type": "session.opened"
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 5
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "session.info",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "source": "gui",
+     "model": "fake-a",
+     "lazy": false,
+     "profile_id": "/work/hermes-home",
+     "desktop_protocol": "hermes-gateway-v1",
+     "profile_name": "default",
+     "cwd": "/work/proj",
+     "reasoning_effort": "",
+     "reasoning_effort_wire": "",
+     "service_tier": "",
+     "fast": false,
+     "launch_request": {
+      "client": {
+       "name": "hypotaxis",
+       "version": "0"
+      },
+      "cwd": "/work/proj",
+      "model": "fake-a",
+      "provider": "main",
+      "source": "gui",
+      "toolsets": [
+       "hypotaxis",
+       "todo"
+      ]
+     },
+     "client": {
+      "name": "hypotaxis",
+      "version": "0"
+     },
+     "title": "@@call request_credential {\"provider\"\u2026",
+     "started_at": 1795052142.626296,
+     "last_active_at": 1795052143.7021556,
+     "yolo": false,
+     "archived": false,
+     "api_mode": "chat_completions",
+     "tool_count": 8,
+     "credential_hint": "***"
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 6
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "sessions.changed",
+    "session_id": "",
+    "payload": {}
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "tool.generating",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "name": "request_credential"
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 10
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "278d04e0b822195d48c180a363ef33f3efffa68642574ef1fcc6ca432e668254",
+     "payload": {
+      "cache_read_tokens": 400,
+      "cache_write_1h_tokens": 0,
+      "cache_write_5m_tokens": 0,
+      "input_tokens": 600,
+      "latency_ms": 527,
+      "model": "fake-a",
+      "output_tokens": 50,
+      "provider": "custom",
+      "reasoning_tokens": 20,
+      "request_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff:local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff:907e4015:api:1",
+      "role": "orchestrator",
+      "usage_schema": 2
+     },
+     "prev_hash": "378a20a2c0216cb7a19e8f209f7792cd78af2c314bb12e0c0ebae740dd69815c",
+     "seq": 1,
+     "ts": "2026-11-19T01:35:44.358Z",
+     "type": "usage.recorded"
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 12
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "message.delta",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "text": null
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 13
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "tool.start",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "tool_id": "call_94fbf7e056",
+     "name": "request_credential",
+     "context": "",
+     "tool_call_id": "call_94fbf7e056",
+     "tool_name": "request_credential",
+     "args": {
+      "provider": "openai"
+     }
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 14
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "060aa4b6eaf17215486f4d8c65a87dd65b6827cd3bc5a2d57d75e1b9193eb171",
+     "payload": {
+      "args_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "duration_ms": 0,
+      "fields": [
+       "value"
+      ],
+      "form_id": "01a1f172-06fe-7b1f-adfa-66f5b708c906",
+      "kind": "credential",
+      "origin": "agent",
+      "secrets": [
+       "value"
+      ],
+      "status": "ok",
+      "tool": "form.opened",
+      "tool_call_id": "01a1f172-06fe-7b1f-adfa-66f5b708c906"
+     },
+     "prev_hash": "278d04e0b822195d48c180a363ef33f3efffa68642574ef1fcc6ca432e668254",
+     "seq": 2,
+     "ts": "2026-11-19T01:35:44.383Z",
+     "type": "tool.called"
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 15
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "plugin.hypotaxis.form.opened",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "form_id": "01a1f172-06fe-7b1f-adfa-66f5b708c906",
+     "kind": "credential",
+     "title": "Add your openai api key",
+     "schema": {
+      "type": "object",
+      "properties": {
+       "value": {
+        "type": "string",
+        "title": "API key",
+        "x-secret": true,
+        "x-secret-ref": "secret://provider.openai/api_key"
+       }
+      },
+      "required": [
+       "value"
+      ]
+     },
+     "submit": {
+      "label": "Save"
+     },
+     "sensitive": true,
+     "origin": "agent",
+     "expires_at": "2026-11-19T02:35:44.382Z",
+     "body": "Needed to call openai. It is saved in your OS keychain, not in a file."
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 16
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "f6caab6d721fce3d79637853d6ca1e51029a087a3ebdd9a3fa31fb2c9da37918",
+     "payload": {
+      "args_sha256": "d76d41ab9f98ad7d0f1ca5695f8e0250bb8683eef53dce5c107431d816e37983",
+      "duration_ms": 13,
+      "status": "ok",
+      "task_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+      "tool": "request_credential",
+      "tool_call_id": "call_94fbf7e056"
+     },
+     "prev_hash": "060aa4b6eaf17215486f4d8c65a87dd65b6827cd3bc5a2d57d75e1b9193eb171",
+     "seq": 3,
+     "ts": "2026-11-19T01:35:44.387Z",
+     "type": "tool.called"
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 17
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "tool.complete",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "tool_id": "call_94fbf7e056",
+     "name": "request_credential",
+     "context": "",
+     "tool_call_id": "call_94fbf7e056",
+     "tool_name": "request_credential",
+     "args": {
+      "provider": "openai"
+     },
+     "is_error": false,
+     "result": "{\"form_id\": \"01a1f172-06fe-7b1f-adfa-66f5b708c906\", \"status\": \"pending\", \"kind\": \"credential\", \"note\": \"The form is open in the user's app. Keep working on whatever does not depend on the answer: when they answer, it arrives as your next message. Never ask for a secret in chat; credential forms are the way.\"}",
+     "duration_s": 0.0144059650001509,
+     "inline_diff": null,
+     "image_path": null
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 18
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "session.usage",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "usage": {
+      "model": "fake-a",
+      "input": 600,
+      "output": 50,
+      "reasoning": 20,
+      "prompt": 1000,
+      "completion": 50,
+      "total": 1050,
+      "calls": 1,
+      "context_used": 1000,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "cache_hit_pct": 40,
+      "avg_latency_s": 0.5,
+      "avg_tps": 94.8,
+      "active_subagents": 0
+     },
+     "input_tokens": 600,
+     "output_tokens": 50,
+     "cache_read_tokens": 400,
+     "cache_write_tokens": 0,
+     "prompt_tokens": 1000,
+     "completion_tokens": 50,
+     "total_tokens": 1050,
+     "reasoning_tokens": 20,
+     "api_calls": 1,
+     "last_prompt_tokens": 1000,
+     "context_tokens": 1167,
+     "context_length": 200000,
+     "config_context_length": 200000,
+     "context_source": "provider_usage",
+     "compression_count": 0,
+     "avg_latency_s": 0.53,
+     "tokens_per_s": 94.79,
+     "last_turn_tokens": 50,
+     "rate_limit": null,
+     "active_subagents": 0,
+     "model": "fake-a",
+     "provider": "custom",
+     "fallback_model": null
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 20
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "tool.generating",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "name": "ask"
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 23
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "8df890925f704d6d4ded8ddcee4396533bd019e583bd8e2b628b69eaa8aee993",
+     "payload": {
+      "cache_read_tokens": 400,
+      "cache_write_1h_tokens": 0,
+      "cache_write_5m_tokens": 0,
+      "input_tokens": 600,
+      "latency_ms": 12,
+      "model": "fake-a",
+      "output_tokens": 50,
+      "provider": "custom",
+      "reasoning_tokens": 20,
+      "request_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff:local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff:907e4015:api:2",
+      "role": "orchestrator",
+      "usage_schema": 2
+     },
+     "prev_hash": "f6caab6d721fce3d79637853d6ca1e51029a087a3ebdd9a3fa31fb2c9da37918",
+     "seq": 4,
+     "ts": "2026-11-19T01:35:44.418Z",
+     "type": "usage.recorded"
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 25
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "message.delta",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "text": null
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 26
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "tool.start",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "tool_id": "call_eab61a3ac4",
+     "name": "ask",
+     "context": "",
+     "tool_call_id": "call_eab61a3ac4",
+     "tool_name": "ask",
+     "args": {
+      "question": "Keep the old alias?",
+      "options": [
+       "yes",
+       "no"
+      ],
+      "other": true
+     }
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 27
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "d07953f1d14e37a7e9db788d0a0ecbbc1710f5db69f9f8adbd15e193a0c7fa69",
+     "payload": {
+      "args_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "duration_ms": 0,
+      "fields": [
+       "answer"
+      ],
+      "form_id": "01a1f172-0732-7511-bf19-1cdd0fc773ca",
+      "kind": "question",
+      "origin": "agent",
+      "secrets": [],
+      "status": "ok",
+      "tool": "form.opened",
+      "tool_call_id": "01a1f172-0732-7511-bf19-1cdd0fc773ca"
+     },
+     "prev_hash": "8df890925f704d6d4ded8ddcee4396533bd019e583bd8e2b628b69eaa8aee993",
+     "seq": 5,
+     "ts": "2026-11-19T01:35:44.435Z",
+     "type": "tool.called"
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 28
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "plugin.hypotaxis.form.opened",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "form_id": "01a1f172-0732-7511-bf19-1cdd0fc773ca",
+     "kind": "question",
+     "title": "Keep the old alias?",
+     "schema": {
+      "type": "object",
+      "properties": {
+       "answer": {
+        "type": "string",
+        "title": "Answer",
+        "enum": [
+         "yes",
+         "no"
+        ],
+        "x-other": true
+       }
+      },
+      "required": [
+       "answer"
+      ]
+     },
+     "submit": {},
+     "sensitive": false,
+     "origin": "agent",
+     "expires_at": "2026-11-19T02:35:44.434Z"
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 29
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "089f75b9acbd5a4144ff8ff911c87603e627e28d56d6118f9bb8499a79d7b32c",
+     "payload": {
+      "args_sha256": "8d9745cf7ff7750708e41f47c69a63f4fc534fcfd792bbc98ebe499b7decbb72",
+      "duration_ms": 13,
+      "status": "ok",
+      "task_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+      "tool": "ask",
+      "tool_call_id": "call_eab61a3ac4"
+     },
+     "prev_hash": "d07953f1d14e37a7e9db788d0a0ecbbc1710f5db69f9f8adbd15e193a0c7fa69",
+     "seq": 6,
+     "ts": "2026-11-19T01:35:44.438Z",
+     "type": "tool.called"
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 30
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "tool.complete",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "tool_id": "call_eab61a3ac4",
+     "name": "ask",
+     "context": "",
+     "tool_call_id": "call_eab61a3ac4",
+     "tool_name": "ask",
+     "args": {
+      "question": "Keep the old alias?",
+      "options": [
+       "yes",
+       "no"
+      ],
+      "other": true
+     },
+     "is_error": false,
+     "result": "{\"form_id\": \"01a1f172-0732-7511-bf19-1cdd0fc773ca\", \"status\": \"pending\", \"kind\": \"question\", \"note\": \"The form is open in the user's app. Keep working on whatever does not depend on the answer: when they answer, it arrives as your next message. Never ask for a secret in chat; credential forms are the way.\"}",
+     "duration_s": 0.014198335999935807,
+     "inline_diff": null,
+     "image_path": null
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 31
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "session.usage",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "usage": {
+      "model": "fake-a",
+      "input": 1200,
+      "output": 100,
+      "reasoning": 40,
+      "prompt": 2000,
+      "completion": 100,
+      "total": 2100,
+      "calls": 2,
+      "context_used": 1000,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "cache_hit_pct": 40,
+      "avg_latency_s": 0.3,
+      "avg_tps": 185.5,
+      "active_subagents": 0
+     },
+     "input_tokens": 1200,
+     "output_tokens": 100,
+     "cache_read_tokens": 800,
+     "cache_write_tokens": 0,
+     "prompt_tokens": 2000,
+     "completion_tokens": 100,
+     "total_tokens": 2100,
+     "reasoning_tokens": 40,
+     "api_calls": 2,
+     "last_prompt_tokens": 1000,
+     "context_tokens": 1367,
+     "context_length": 200000,
+     "config_context_length": 200000,
+     "context_source": "provider_usage",
+     "compression_count": 0,
+     "avg_latency_s": 0.27,
+     "tokens_per_s": 185.48,
+     "last_turn_tokens": 100,
+     "rate_limit": null,
+     "active_subagents": 0,
+     "model": "fake-a",
+     "provider": "custom",
+     "fallback_model": null
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 33
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "tool.generating",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "name": "request_input"
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 36
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "18efa3f769ceb52c2f6f70d6cd8a73429ce439fd623a633c1680e8477ff33773",
+     "payload": {
+      "cache_read_tokens": 400,
+      "cache_write_1h_tokens": 0,
+      "cache_write_5m_tokens": 0,
+      "input_tokens": 600,
+      "latency_ms": 13,
+      "model": "fake-a",
+      "output_tokens": 50,
+      "provider": "custom",
+      "reasoning_tokens": 20,
+      "request_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff:local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff:907e4015:api:3",
+      "role": "orchestrator",
+      "usage_schema": 2
+     },
+     "prev_hash": "089f75b9acbd5a4144ff8ff911c87603e627e28d56d6118f9bb8499a79d7b32c",
+     "seq": 7,
+     "ts": "2026-11-19T01:35:44.465Z",
+     "type": "usage.recorded"
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 38
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "message.delta",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "text": null
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 39
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "tool.start",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "tool_id": "call_fb862ed014",
+     "name": "request_input",
+     "context": "",
+     "tool_call_id": "call_fb862ed014",
+     "tool_name": "request_input",
+     "args": {
+      "kind": "setup",
+      "title": "Set the gate command",
+      "body": "Every ship ends at the gate.",
+      "schema": {
+       "type": "object",
+       "properties": {
+        "gate": {
+         "type": "string",
+         "title": "Gate command",
+         "default": "npm test"
+        }
+       },
+       "required": [
+        "gate"
+       ]
+      },
+      "submit": {
+       "label": "Write config"
+      }
+     }
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 40
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "ed84e5345ae4c75d3516b2f7102b56792f099815eb53d95cac420cbe0dd89c22",
+     "payload": {
+      "args_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "duration_ms": 0,
+      "fields": [
+       "gate"
+      ],
+      "form_id": "01a1f172-075b-7b13-8c07-56c2289d4f06",
+      "kind": "setup",
+      "origin": "agent",
+      "secrets": [],
+      "status": "ok",
+      "tool": "form.opened",
+      "tool_call_id": "01a1f172-075b-7b13-8c07-56c2289d4f06"
+     },
+     "prev_hash": "18efa3f769ceb52c2f6f70d6cd8a73429ce439fd623a633c1680e8477ff33773",
+     "seq": 8,
+     "ts": "2026-11-19T01:35:44.475Z",
+     "type": "tool.called"
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 41
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "plugin.hypotaxis.form.opened",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "form_id": "01a1f172-075b-7b13-8c07-56c2289d4f06",
+     "kind": "setup",
+     "title": "Set the gate command",
+     "schema": {
+      "type": "object",
+      "properties": {
+       "gate": {
+        "type": "string",
+        "title": "Gate command",
+        "default": "npm test"
+       }
+      },
+      "required": [
+       "gate"
+      ]
+     },
+     "submit": {
+      "label": "Write config"
+     },
+     "sensitive": false,
+     "origin": "agent",
+     "expires_at": "2026-11-19T02:35:44.475Z",
+     "body": "Every ship ends at the gate."
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 42
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "2d25b563925a715c9b25e848e06c37f1c3ad1af0db93f2f94534a62bbee88489",
+     "payload": {
+      "args_sha256": "9f55be86a15fd8801327ef823a7e6b64d8608211cf3156fd06d25f37cf5d5027",
+      "duration_ms": 7,
+      "status": "ok",
+      "task_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+      "tool": "request_input",
+      "tool_call_id": "call_fb862ed014"
+     },
+     "prev_hash": "ed84e5345ae4c75d3516b2f7102b56792f099815eb53d95cac420cbe0dd89c22",
+     "seq": 9,
+     "ts": "2026-11-19T01:35:44.478Z",
+     "type": "tool.called"
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 43
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "tool.complete",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "tool_id": "call_fb862ed014",
+     "name": "request_input",
+     "context": "",
+     "tool_call_id": "call_fb862ed014",
+     "tool_name": "request_input",
+     "args": {
+      "kind": "setup",
+      "title": "Set the gate command",
+      "body": "Every ship ends at the gate.",
+      "schema": {
+       "type": "object",
+       "properties": {
+        "gate": {
+         "type": "string",
+         "title": "Gate command",
+         "default": "npm test"
+        }
+       },
+       "required": [
+        "gate"
+       ]
+      },
+      "submit": {
+       "label": "Write config"
+      }
+     },
+     "is_error": false,
+     "result": "{\"form_id\": \"01a1f172-075b-7b13-8c07-56c2289d4f06\", \"status\": \"pending\", \"kind\": \"setup\", \"note\": \"The form is open in the user's app. Keep working on whatever does not depend on the answer: when they answer, it arrives as your next message. Never ask for a secret in chat; credential forms are the way.\"}",
+     "duration_s": 0.009594568000466097,
+     "inline_diff": null,
+     "image_path": null
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 44
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "session.usage",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "usage": {
+      "model": "fake-a",
+      "input": 1800,
+      "output": 150,
+      "reasoning": 60,
+      "prompt": 3000,
+      "completion": 150,
+      "total": 3150,
+      "calls": 3,
+      "context_used": 1000,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "cache_hit_pct": 40,
+      "avg_latency_s": 0.2,
+      "avg_tps": 271.6,
+      "active_subagents": 0
+     },
+     "input_tokens": 1800,
+     "output_tokens": 150,
+     "cache_read_tokens": 1200,
+     "cache_write_tokens": 0,
+     "prompt_tokens": 3000,
+     "completion_tokens": 150,
+     "total_tokens": 3150,
+     "reasoning_tokens": 60,
+     "api_calls": 3,
+     "last_prompt_tokens": 1000,
+     "context_tokens": 1622,
+     "context_length": 200000,
+     "config_context_length": 200000,
+     "context_source": "provider_usage",
+     "compression_count": 0,
+     "avg_latency_s": 0.18,
+     "tokens_per_s": 271.63,
+     "last_turn_tokens": 150,
+     "rate_limit": null,
+     "active_subagents": 0,
+     "model": "fake-a",
+     "provider": "custom",
+     "fallback_model": null
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 46
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "message.delta",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "text": "\n\nI asked thre",
+     "turn_id": "3dab1ea814ce4eb19a45e12af1576e5e",
+     "segment": 0,
+     "offset": 0
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 49
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "message.delta",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "text": "e things.",
+     "turn_id": "3dab1ea814ce4eb19a45e12af1576e5e",
+     "segment": 0,
+     "offset": 14
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 50
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "105261af05eb548f402010ff65e8f3aaf67bd972c069e91eb82f2d055b819871",
+     "payload": {
+      "cache_read_tokens": 400,
+      "cache_write_1h_tokens": 0,
+      "cache_write_5m_tokens": 0,
+      "input_tokens": 600,
+      "latency_ms": 10,
+      "model": "fake-a",
+      "output_tokens": 50,
+      "provider": "custom",
+      "reasoning_tokens": 20,
+      "request_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff:local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff:907e4015:api:4",
+      "role": "orchestrator",
+      "usage_schema": 2
+     },
+     "prev_hash": "2d25b563925a715c9b25e848e06c37f1c3ad1af0db93f2f94534a62bbee88489",
+     "seq": 10,
+     "ts": "2026-11-19T01:35:44.502Z",
+     "type": "usage.recorded"
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 52
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "actor": "plugin",
+     "hash": "02424d3d2afd09779c7b8e14deda07985e6b4855ba672318cdb137637fe6ccab",
+     "payload": {
+      "aux_task": "title_generation",
+      "cache_read_tokens": 400,
+      "cache_write_1h_tokens": 0,
+      "cache_write_5m_tokens": 0,
+      "input_tokens": 600,
+      "latency_ms": 8,
+      "model": "fake-a",
+      "output_tokens": 50,
+      "provider": "main",
+      "reasoning_tokens": 20,
+      "request_id": "aux-cda3cd51dfd340e3829d736c3a388dd3",
+      "role": "auxiliary",
+      "usage_schema": 2
+     },
+     "prev_hash": "105261af05eb548f402010ff65e8f3aaf67bd972c069e91eb82f2d055b819871",
+     "seq": 11,
+     "ts": "2026-11-19T01:35:44.534Z",
+     "type": "usage.recorded"
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 53
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "session.usage",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "usage": {
+      "model": "fake-a",
+      "input": 2400,
+      "output": 200,
+      "reasoning": 80,
+      "prompt": 4000,
+      "completion": 200,
+      "total": 4200,
+      "calls": 4,
+      "context_used": 1000,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "cache_hit_pct": 40,
+      "avg_latency_s": 0.1,
+      "avg_tps": 355.4,
+      "active_subagents": 0
+     },
+     "input_tokens": 2400,
+     "output_tokens": 200,
+     "cache_read_tokens": 1600,
+     "cache_write_tokens": 0,
+     "prompt_tokens": 4000,
+     "completion_tokens": 200,
+     "total_tokens": 4200,
+     "reasoning_tokens": 80,
+     "api_calls": 4,
+     "last_prompt_tokens": 1000,
+     "context_tokens": 1653,
+     "context_length": 200000,
+     "config_context_length": 200000,
+     "context_source": "provider_usage",
+     "compression_count": 0,
+     "avg_latency_s": 0.14,
+     "tokens_per_s": 355.45,
+     "last_turn_tokens": 200,
+     "rate_limit": null,
+     "active_subagents": 0,
+     "model": "fake-a",
+     "provider": "custom",
+     "fallback_model": null
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 54
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "session.info",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "provider": "custom:main",
+     "tools": {
+      "hypotaxis": [
+       "ask",
+       "dispatch",
+       "exec",
+       "pack",
+       "request_credential",
+       "request_input",
+       "ship"
+      ],
+      "todo": [
+       "todo_list"
+      ]
+     },
+     "system_prompt": "(trimmed)",
+     "context_length": 200000,
+     "source": "gui",
+     "model": "fake-a",
+     "lazy": false,
+     "profile_id": "/work/hermes-home",
+     "desktop_protocol": "hermes-gateway-v1",
+     "profile_name": "default",
+     "cwd": "/work/proj",
+     "reasoning_effort": "",
+     "reasoning_effort_wire": "",
+     "service_tier": "",
+     "fast": false,
+     "launch_request": {
+      "client": {
+       "name": "hypotaxis",
+       "version": "0"
+      },
+      "cwd": "/work/proj",
+      "model": "fake-a",
+      "provider": "main",
+      "source": "gui",
+      "toolsets": [
+       "hypotaxis",
+       "todo"
+      ]
+     },
+     "client": {
+      "name": "hypotaxis",
+      "version": "0"
+     },
+     "title": "@@call request_credential {\"provider\"\u2026",
+     "started_at": 1795052142.626296,
+     "last_active_at": 1795052143.7021556,
+     "yolo": false,
+     "archived": false,
+     "api_mode": "chat_completions",
+     "tool_count": 8,
+     "credential_hint": "***"
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 55
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "message.complete",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "text": "I asked three things.",
+     "content": "I asked three things.",
+     "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+     "outcome": "completed",
+     "status": "complete",
+     "usage": {
+      "model": "fake-a",
+      "input": 2400,
+      "output": 200,
+      "reasoning": 80,
+      "prompt": 4000,
+      "completion": 200,
+      "total": 4200,
+      "calls": 4,
+      "context_used": 1000,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "cache_hit_pct": 40,
+      "avg_latency_s": 0.1,
+      "avg_tps": 355.4,
+      "active_subagents": 0
+     },
+     "persisted_turn": {
+      "row_ids": [
+       1,
+       2,
+       3,
+       4,
+       5,
+       6,
+       7,
+       8
+      ],
+      "complete": true,
+      "user_row_id": 1,
+      "user_row_ids": [
+       1
+      ],
+      "final_assistant_row_id": 8,
+      "submission_id": "sub-1795052143032876944"
+     }
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 56
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 7,
+   "method": "plugin.hypotaxis.form.list",
+   "params": {
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "6435f790b4d84ac8ad8615baf2321c5f",
+    "type": "session.info",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "stored_session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+     "pending": [],
+     "authority_epoch": 1,
+     "desktop_protocol": "hermes-gateway-v1",
+     "running": false,
+     "execution_generation": 1,
+     "revision": 1
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 57
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 7,
+   "result": {
+    "forms": [
+     {
+      "form_id": "01a1f172-06fe-7b1f-adfa-66f5b708c906",
+      "kind": "credential",
+      "title": "Add your openai api key",
+      "schema": {
+       "type": "object",
+       "properties": {
+        "value": {
+         "type": "string",
+         "title": "API key",
+         "x-secret": true,
+         "x-secret-ref": "secret://provider.openai/api_key"
+        }
+       },
+       "required": [
+        "value"
+       ]
+      },
+      "submit": {
+       "label": "Save"
+      },
+      "sensitive": true,
+      "origin": "agent",
+      "expires_at": "2026-11-19T02:35:44.382Z",
+      "body": "Needed to call openai. It is saved in your OS keychain, not in a file."
+     },
+     {
+      "form_id": "01a1f172-0732-7511-bf19-1cdd0fc773ca",
+      "kind": "question",
+      "title": "Keep the old alias?",
+      "schema": {
+       "type": "object",
+       "properties": {
+        "answer": {
+         "type": "string",
+         "title": "Answer",
+         "enum": [
+          "yes",
+          "no"
+         ],
+         "x-other": true
+        }
+       },
+       "required": [
+        "answer"
+       ]
+      },
+      "submit": {},
+      "sensitive": false,
+      "origin": "agent",
+      "expires_at": "2026-11-19T02:35:44.434Z"
+     },
+     {
+      "form_id": "01a1f172-075b-7b13-8c07-56c2289d4f06",
+      "kind": "setup",
+      "title": "Set the gate command",
+      "schema": {
+       "type": "object",
+       "properties": {
+        "gate": {
+         "type": "string",
+         "title": "Gate command",
+         "default": "npm test"
+        }
+       },
+       "required": [
+        "gate"
+       ]
+      },
+      "submit": {
+       "label": "Write config"
+      },
+      "sensitive": false,
+      "origin": "agent",
+      "expires_at": "2026-11-19T02:35:44.475Z",
+      "body": "Every ship ends at the gate."
+     }
+    ]
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 8,
+   "method": "plugin.hypotaxis.form.submit",
+   "params": {
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "form_id": "01a1f172-06fe-7b1f-adfa-66f5b708c906",
+    "values": {},
+    "provided": [
+     "value"
+    ]
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "actor": "user",
+     "hash": "a12ae9c556337117d2dd3efd07f6379cc42f547fd552910e4cb8b875d3b509ca",
+     "payload": {
+      "answered": [],
+      "args_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "duration_ms": 0,
+      "form_id": "01a1f172-06fe-7b1f-adfa-66f5b708c906",
+      "form_status": "submitted",
+      "kind": "credential",
+      "origin": "agent",
+      "provided": [
+       "value"
+      ],
+      "status": "ok",
+      "tool": "form.resolved",
+      "tool_call_id": "01a1f172-06fe-7b1f-adfa-66f5b708c906"
+     },
+     "prev_hash": "02424d3d2afd09779c7b8e14deda07985e6b4855ba672318cdb137637fe6ccab",
+     "seq": 12,
+     "ts": "2026-11-19T01:35:44.615Z",
+     "type": "tool.called"
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 58
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "plugin.hypotaxis.form.resolved",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "form_id": "01a1f172-06fe-7b1f-adfa-66f5b708c906",
+     "status": "submitted"
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 59
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 8,
+   "result": {
+    "form_id": "01a1f172-06fe-7b1f-adfa-66f5b708c906",
+    "status": "submitted"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 9,
+   "method": "plugin.hypotaxis.form.submit",
+   "params": {
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "form_id": "01a1f172-0732-7511-bf19-1cdd0fc773ca",
+    "values": {
+     "answer": "yes"
+    }
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "actor": "user",
+     "hash": "48c5c42115886eb9cc5552fa354d62aa8733ba1690a6a123afdff1592750e01a",
+     "payload": {
+      "answered": [
+       "answer"
+      ],
+      "args_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "duration_ms": 0,
+      "form_id": "01a1f172-0732-7511-bf19-1cdd0fc773ca",
+      "form_status": "submitted",
+      "kind": "question",
+      "origin": "agent",
+      "provided": [],
+      "status": "ok",
+      "tool": "form.resolved",
+      "tool_call_id": "01a1f172-0732-7511-bf19-1cdd0fc773ca"
+     },
+     "prev_hash": "a12ae9c556337117d2dd3efd07f6379cc42f547fd552910e4cb8b875d3b509ca",
+     "seq": 13,
+     "ts": "2026-11-19T01:35:44.629Z",
+     "type": "tool.called"
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 60
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "plugin.hypotaxis.form.resolved",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "form_id": "01a1f172-0732-7511-bf19-1cdd0fc773ca",
+     "status": "submitted"
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 61
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 9,
+   "result": {
+    "form_id": "01a1f172-0732-7511-bf19-1cdd0fc773ca",
+    "status": "submitted"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 10,
+   "method": "plugin.hypotaxis.form.cancel",
+   "params": {
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "form_id": "01a1f172-075b-7b13-8c07-56c2289d4f06"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "actor": "user",
+     "hash": "55844dc84b9e595e47a6d07419097809804f46d69008ed270d1746347eb6d436",
+     "payload": {
+      "answered": [],
+      "args_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "duration_ms": 0,
+      "form_id": "01a1f172-075b-7b13-8c07-56c2289d4f06",
+      "form_status": "cancelled",
+      "kind": "setup",
+      "origin": "agent",
+      "provided": [],
+      "status": "ok",
+      "tool": "form.resolved",
+      "tool_call_id": "01a1f172-075b-7b13-8c07-56c2289d4f06"
+     },
+     "prev_hash": "48c5c42115886eb9cc5552fa354d62aa8733ba1690a6a123afdff1592750e01a",
+     "seq": 14,
+     "ts": "2026-11-19T01:35:44.638Z",
+     "type": "tool.called"
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 62
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "plugin.hypotaxis.form.resolved",
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "payload": {
+     "form_id": "01a1f172-075b-7b13-8c07-56c2289d4f06",
+     "status": "cancelled"
+    },
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "seq": 63
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 10,
+   "result": {
+    "form_id": "01a1f172-075b-7b13-8c07-56c2289d4f06",
+    "status": "cancelled"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 11,
+   "method": "plugin.hypotaxis.form.list",
+   "params": {
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 11,
+   "result": {
+    "forms": []
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 12,
+   "method": "session.list",
+   "params": {
+    "limit": 100
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 12,
+   "result": {
+    "sessions": [
+     {
+      "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+      "id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+      "title": "@@call request_credential {\"provider\"\u2026",
+      "source": "local",
+      "started_at": 1795052142.626296,
+      "message_count": 8,
+      "model": "fake-a",
+      "running": false
+     }
+    ],
+    "scope": "live"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 13,
+   "method": "session.list",
+   "params": {
+    "limit": 100,
+    "include_hidden": true
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 13,
+   "result": {
+    "sessions": [
+     {
+      "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+      "id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+      "title": "@@call request_credential {\"provider\"\u2026",
+      "source": "local",
+      "started_at": 1795052142.626296,
+      "message_count": 8,
+      "model": "fake-a",
+      "running": false
+     }
+    ],
+    "scope": "live"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 14,
+   "method": "mcp.servers.status",
+   "params": {}
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 14,
+   "result": {
+    "servers": [],
+    "checked_at": 1795052144657
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 15,
+   "method": "session.resume",
+   "params": {
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 15,
+   "result": {
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "stored_session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "messages": [
+     {
+      "role": "user",
+      "content": "@@call request_credential {\"provider\": \"openai\"}@@ @@call ask {\"question\": \"Keep the old alias?\", \"options\": [\"yes\", \"no\"], \"other\": true}@@ @@call request_input {\"kind\": \"setup\", \"title\": \"Set the gate command\", \"body\": \"Every ship ends at the gate.\", \"schema\": {\"type\": \"object\", \"properties\": {\"gate\": {\"type\": \"string\", \"title\": \"Gate command\", \"default\": \"npm test\"}}, \"required\": [\"gate\"]}, \"submit\": {\"label\": \"Write config\"}}@@ @@usage {\"prompt_tokens\": 1000, \"completion_tokens\": 50, \"total_tokens\": 1050, \"prompt_tokens_details\": {\"cached_tokens\": 400}, \"completion_tokens_details\": {\"reasoning_tokens\": 20}}@@ @@reply I asked three things.@@",
+      "_db_persisted": true,
+      "message_uid": "f22013f0f9b646d38e02231c85736cdb",
+      "display_metadata": {
+       "gateway_input_owner": "b9f8e2ec-bffa-52ab-a1e9-fe56b98ac1bf",
+       "submission_id": "sub-1795052143032876944"
+      },
+      "timestamp": 1795052143.052024,
+      "message_id": "6435f790b4d84ac8ad8615baf2321c5f",
+      "row_id": 1
+     },
+     {
+      "role": "assistant",
+      "content": "",
+      "_db_persisted": true,
+      "message_uid": "12c17b1423c74b73820ed98ddbeb4939",
+      "_tool_call_uids": {
+       "call_94fbf7e056": "94f467571d154a4ba7355faa9eb1d996"
+      },
+      "display_metadata": {
+       "reasoning_tokens": 20
+      },
+      "timestamp": 1795052144.3622825,
+      "tool_calls": [
+       {
+        "id": "call_94fbf7e056",
+        "call_id": "call_94fbf7e056",
+        "response_item_id": "fc_94fbf7e056",
+        "type": "function",
+        "function": {
+         "name": "request_credential",
+         "arguments": "{\"provider\": \"openai\"}"
+        }
+       }
+      ],
+      "finish_reason": "tool_calls",
+      "row_id": 2
+     },
+     {
+      "role": "tool",
+      "content": "{\"form_id\": \"01a1f172-06fe-7b1f-adfa-66f5b708c906\", \"status\": \"pending\", \"kind\": \"credential\", \"note\": \"The form is open in the user's app. Keep working on whatever does not depend on the answer: when they answer, it arrives as your next message. Never ask for a secret in chat; credential forms are the way.\"}",
+      "_db_persisted": true,
+      "message_uid": "4597dad66cb74e6db995adb69922ce47",
+      "_tool_call_uid": "94f467571d154a4ba7355faa9eb1d996",
+      "timestamp": 1795052144.3891797,
+      "tool_call_id": "call_94fbf7e056",
+      "tool_name": "request_credential",
+      "row_id": 3
+     },
+     {
+      "role": "assistant",
+      "content": "",
+      "_db_persisted": true,
+      "message_uid": "b77dfe83433b43a083133d26aa732709",
+      "_tool_call_uids": {
+       "call_eab61a3ac4": "8bf2ce83a2124bba9000f864fb6ea476"
+      },
+      "display_metadata": {
+       "reasoning_tokens": 20
+      },
+      "timestamp": 1795052144.4206674,
+      "tool_calls": [
+       {
+        "id": "call_eab61a3ac4",
+        "call_id": "call_eab61a3ac4",
+        "response_item_id": "fc_eab61a3ac4",
+        "type": "function",
+        "function": {
+         "name": "ask",
+         "arguments": "{\"question\": \"Keep the old alias?\", \"options\": [\"yes\", \"no\"], \"other\": true}"
+        }
+       }
+      ],
+      "finish_reason": "tool_calls",
+      "row_id": 4
+     },
+     {
+      "role": "tool",
+      "content": "{\"form_id\": \"01a1f172-0732-7511-bf19-1cdd0fc773ca\", \"status\": \"pending\", \"kind\": \"question\", \"note\": \"The form is open in the user's app. Keep working on whatever does not depend on the answer: when they answer, it arrives as your next message. Never ask for a secret in chat; credential forms are the way.\"}",
+      "_db_persisted": true,
+      "message_uid": "d8dccba7fd624ceb9d8596fe1bf82eff",
+      "_tool_call_uid": "8bf2ce83a2124bba9000f864fb6ea476",
+      "timestamp": 1795052144.4405184,
+      "tool_call_id": "call_eab61a3ac4",
+      "tool_name": "ask",
+      "row_id": 5
+     },
+     {
+      "role": "assistant",
+      "content": "",
+      "_db_persisted": true,
+      "message_uid": "a9ee02b09bba4928b46f9d36708c4121",
+      "_tool_call_uids": {
+       "call_fb862ed014": "e7943a8103cb48fbb5d7237655f58a49"
+      },
+      "display_metadata": {
+       "reasoning_tokens": 20
+      },
+      "timestamp": 1795052144.4676652,
+      "tool_calls": [
+       {
+        "id": "call_fb862ed014",
+        "call_id": "call_fb862ed014",
+        "response_item_id": "fc_fb862ed014",
+        "type": "function",
+        "function": {
+         "name": "request_input",
+         "arguments": "{\"kind\": \"setup\", \"title\": \"Set the gate command\", \"body\": \"Every ship ends at the gate.\", \"schema\": {\"type\": \"object\", \"properties\": {\"gate\": {\"type\": \"string\", \"title\": \"Gate command\", \"default\": \"npm test\"}}, \"required\": [\"gate\"]}, \"submit\": {\"label\": \"Write config\"}}"
+        }
+       }
+      ],
+      "finish_reason": "tool_calls",
+      "row_id": 6
+     },
+     {
+      "role": "tool",
+      "content": "{\"form_id\": \"01a1f172-075b-7b13-8c07-56c2289d4f06\", \"status\": \"pending\", \"kind\": \"setup\", \"note\": \"The form is open in the user's app. Keep working on whatever does not depend on the answer: when they answer, it arrives as your next message. Never ask for a secret in chat; credential forms are the way.\"}",
+      "_db_persisted": true,
+      "message_uid": "b20c2088e45b4ddea4591b06f708869f",
+      "_tool_call_uid": "e7943a8103cb48fbb5d7237655f58a49",
+      "timestamp": 1795052144.4802032,
+      "tool_call_id": "call_fb862ed014",
+      "tool_name": "request_input",
+      "row_id": 7
+     },
+     {
+      "role": "assistant",
+      "content": "I asked three things.",
+      "_db_persisted": true,
+      "message_uid": "a66fec0b0a904ffd9f8b886d62e2696a",
+      "display_metadata": {
+       "reasoning_tokens": 20
+      },
+      "timestamp": 1795052144.5048418,
+      "finish_reason": "stop",
+      "row_id": 8
+     }
+    ],
+    "message_count": 8,
+    "todo_state": null,
+    "running": false,
+    "authority_epoch": 1,
+    "replay_epoch": "e6be9656e978473194b36cb336c19c63",
+    "last_sequence": 63,
+    "subscription_id": "b9e0c15fc5654d97a16c20941c4f2886",
+    "revision": 1,
+    "execution_generation": 1,
+    "pending": [],
+    "prompts": [],
+    "info": {
+     "tools": {
+      "hypotaxis": [
+       "ask",
+       "dispatch",
+       "exec",
+       "pack",
+       "request_credential",
+       "request_input",
+       "ship"
+      ],
+      "todo": [
+       "todo_list"
+      ]
+     },
+     "skills": "(trimmed)",
+     "mcp_servers": [],
+     "version": "unknown",
+     "release_date": "2026.9.24",
+     "update_behind": null,
+     "update_command": "hermes update",
+     "branch": "master",
+     "project": null,
+     "provider": "custom:main",
+     "system_prompt": "(trimmed)",
+     "context_length": 200000,
+     "enabled_toolsets": [
+      "hypotaxis",
+      "todo"
+     ],
+     "tool_availability": {
+      "unavailable_toolsets": [],
+      "lazy_tools": [],
+      "disabled_tools": []
+     },
+     "source": "gui",
+     "model": "fake-a",
+     "lazy": false,
+     "profile_id": "/work/hermes-home",
+     "desktop_protocol": "hermes-gateway-v1",
+     "profile_name": "default",
+     "cwd": "/work/proj",
+     "reasoning_effort": "",
+     "reasoning_effort_wire": "",
+     "service_tier": "",
+     "fast": false,
+     "launch_request": {
+      "client": {
+       "name": "hypotaxis",
+       "version": "0"
+      },
+      "cwd": "/work/proj",
+      "model": "fake-a",
+      "provider": "main",
+      "source": "gui",
+      "toolsets": [
+       "hypotaxis",
+       "todo"
+      ]
+     },
+     "client": {
+      "name": "hypotaxis",
+      "version": "0"
+     },
+     "title": "@@call request_credential {\"provider\"\u2026",
+     "started_at": 1795052142.626296,
+     "last_active_at": 1795052143.7021556,
+     "yolo": false,
+     "archived": false,
+     "api_mode": "chat_completions",
+     "tool_count": 8,
+     "credential_hint": "***",
+     "usage": {
+      "model": "fake-a",
+      "input": 2400,
+      "output": 200,
+      "reasoning": 80,
+      "prompt": 4000,
+      "completion": 200,
+      "total": 4200,
+      "calls": 4,
+      "context_used": 1000,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "cache_hit_pct": 40,
+      "avg_latency_s": 0.1,
+      "avg_tps": 355.4,
+      "active_subagents": 0
+     }
+    },
+    "pending_connection": null,
+    "open_requests": []
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 16,
+   "method": "session.info",
+   "params": {
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 16,
+   "result": {
+    "tools": {
+     "hypotaxis": [
+      "ask",
+      "dispatch",
+      "exec",
+      "pack",
+      "request_credential",
+      "request_input",
+      "ship"
+     ],
+     "todo": [
+      "todo_list"
+     ]
+    },
+    "skills": "(trimmed)",
+    "mcp_servers": [],
+    "version": "unknown",
+    "release_date": "2026.9.24",
+    "update_behind": null,
+    "update_command": "hermes update",
+    "branch": "master",
+    "project": null,
+    "provider": "custom:main",
+    "system_prompt": "(trimmed)",
+    "context_length": 200000,
+    "enabled_toolsets": [
+     "hypotaxis",
+     "todo"
+    ],
+    "tool_availability": {
+     "unavailable_toolsets": [],
+     "lazy_tools": [],
+     "disabled_tools": []
+    },
+    "source": "gui",
+    "model": "fake-a",
+    "lazy": false,
+    "profile_id": "/work/hermes-home",
+    "desktop_protocol": "hermes-gateway-v1",
+    "profile_name": "default",
+    "cwd": "/work/proj",
+    "reasoning_effort": "",
+    "reasoning_effort_wire": "",
+    "service_tier": "",
+    "fast": false,
+    "launch_request": {
+     "client": {
+      "name": "hypotaxis",
+      "version": "0"
+     },
+     "cwd": "/work/proj",
+     "model": "fake-a",
+     "provider": "main",
+     "source": "gui",
+     "toolsets": [
+      "hypotaxis",
+      "todo"
+     ]
+    },
+    "client": {
+     "name": "hypotaxis",
+     "version": "0"
+    },
+    "title": "@@call request_credential {\"provider\"\u2026",
+    "started_at": 1795052142.626296,
+    "last_active_at": 1795052143.7021556,
+    "yolo": false,
+    "archived": false,
+    "api_mode": "chat_completions",
+    "tool_count": 8,
+    "credential_hint": "***",
+    "usage": {
+     "model": "fake-a",
+     "input": 2400,
+     "output": 200,
+     "reasoning": 80,
+     "prompt": 4000,
+     "completion": 200,
+     "total": 4200,
+     "calls": 4,
+     "context_used": 1000,
+     "context_max": 200000,
+     "context_percent": 0,
+     "context_source": "provider_usage",
+     "context_estimated": false,
+     "compressions": 0,
+     "cache_hit_pct": 40,
+     "avg_latency_s": 0.1,
+     "avg_tps": 355.4,
+     "active_subagents": 0
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 17,
+   "method": "session.context_breakdown",
+   "params": {
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 17,
+   "result": {
+    "categories": [
+     {
+      "color": "var(--context-usage-system)",
+      "id": "system_prompt",
+      "label": "System prompt",
+      "tokens": 1685
+     },
+     {
+      "color": "var(--context-usage-tools)",
+      "id": "tool_definitions",
+      "label": "Tool definitions",
+      "tokens": 2844
+     },
+     {
+      "color": "var(--context-usage-rules)",
+      "id": "rules",
+      "label": "Rules",
+      "tokens": 423
+     },
+     {
+      "color": "var(--context-usage-conversation)",
+      "id": "conversation",
+      "label": "Conversation",
+      "tokens": 836
+     }
+    ],
+    "estimated_total": 5788,
+    "context_max": 200000,
+    "context_percent": 1,
+    "context_used": 1621,
+    "context_source": "provider_usage_plus_estimate",
+    "context_estimated": true,
+    "model": "fake-a",
+    "prompt_cache": {
+     "guaranteed_until": null,
+     "estimated_until": null,
+     "tier": null,
+     "confidence": "unknown",
+     "reason": "implicit_cache",
+     "refreshed_at": 1795052144.489892,
+     "coverage": {}
+    },
+    "context_files": [
+     {
+      "label": "SOUL.md",
+      "path": "/work/hermes-home/SOUL.md",
+      "chars": 663,
+      "est_tokens": 167,
+      "loaded": true,
+      "status": "loaded"
+     }
+    ]
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 18,
+   "method": "plugin.hypotaxis.describe",
+   "params": {
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 18,
+   "result": {
+    "session": {
+     "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+     "mode": "ungoverned",
+     "locked": true,
+     "cwd": "/work/proj"
+    },
+    "version": "0.1.0",
+    "protocol": "hypotaxis-v1",
+    "capabilities": [
+     "describe",
+     "mode.set",
+     "ledger.tail",
+     "ledger.verify",
+     "ledger.stats",
+     "cascade.state",
+     "prices.refresh",
+     "blank.fill",
+     "checkpoint.list",
+     "checkpoint.diff",
+     "form.submit",
+     "form.cancel",
+     "form.list"
+    ],
+    "hx": null,
+    "kernel": {
+     "ok": true,
+     "reason": ""
+    },
+    "config": {
+     "mode": "governed",
+     "cost_cap_usd": null,
+     "errors": [],
+     "ladder_errors": []
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 19,
+   "method": "plugin.hypotaxis.ledger.stats",
+   "params": {
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 19,
+   "result": {
+    "tokens": {
+     "input_uncached": 3000,
+     "output": 250,
+     "cache_read": 2000,
+     "reasoning": 100,
+     "cache_write": 0
+    },
+    "cost_usd": null,
+    "cost_api_equivalent_usd": null,
+    "unpriced_models": [
+     "custom/fake-a",
+     "main/fake-a"
+    ],
+    "round_trips": 5,
+    "escalations": 0,
+    "rollbacks": 0,
+    "blanks": 0,
+    "approvals": 0,
+    "price_table": "settings-44136fa355b3"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 20,
+   "method": "plugin.hypotaxis.cascade.state",
+   "params": {
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 20,
+   "result": {
+    "ladder": [
+     {
+      "name": "haiku",
+      "model": {
+       "provider": "anthropic",
+       "id": "claude-haiku-5-5"
+      },
+      "effort": "medium",
+      "max_tokens": 8000,
+      "retries": 0
+     },
+     {
+      "name": "sonnet",
+      "model": {
+       "provider": "anthropic",
+       "id": "claude-sonnet-5-5"
+      },
+      "effort": "medium",
+      "max_tokens": 8000,
+      "retries": 0
+     },
+     {
+      "name": "opus",
+      "model": {
+       "provider": "anthropic",
+       "id": "claude-opus-5-5"
+      },
+      "effort": "medium",
+      "max_tokens": 8000,
+      "retries": 0
+     }
+    ],
+    "status": "idle"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 21,
+   "method": "plugin.hypotaxis.checkpoint.list",
+   "params": {
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 21,
+   "result": {
+    "checkpoints": []
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 22,
+   "method": "plugin.hypotaxis.checkpoint.diff",
+   "params": {
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 22,
+   "result": {
+    "files": [],
+    "truncated": false
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 23,
+   "method": "plugin.hypotaxis.ledger.tail",
+   "params": {
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "since_seq": -1,
+    "limit": 1000
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 23,
+   "result": {
+    "events": [
+     {
+      "actor": "plugin",
+      "hash": "378a20a2c0216cb7a19e8f209f7792cd78af2c314bb12e0c0ebae740dd69815c",
+      "payload": {
+       "cwd": "/work/proj",
+       "hermes_version": "unknown",
+       "mode": "ungoverned",
+       "plugin_version": "0.1.0",
+       "price_table": "settings-44136fa355b3",
+       "profile": "default",
+       "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff"
+      },
+      "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "seq": 0,
+      "ts": "2026-11-19T01:35:43.751Z",
+      "type": "session.opened"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "278d04e0b822195d48c180a363ef33f3efffa68642574ef1fcc6ca432e668254",
+      "payload": {
+       "cache_read_tokens": 400,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 600,
+       "latency_ms": 527,
+       "model": "fake-a",
+       "output_tokens": 50,
+       "provider": "custom",
+       "reasoning_tokens": 20,
+       "request_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff:local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff:907e4015:api:1",
+       "role": "orchestrator",
+       "usage_schema": 2
+      },
+      "prev_hash": "378a20a2c0216cb7a19e8f209f7792cd78af2c314bb12e0c0ebae740dd69815c",
+      "seq": 1,
+      "ts": "2026-11-19T01:35:44.358Z",
+      "type": "usage.recorded"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "060aa4b6eaf17215486f4d8c65a87dd65b6827cd3bc5a2d57d75e1b9193eb171",
+      "payload": {
+       "args_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+       "duration_ms": 0,
+       "fields": [
+        "value"
+       ],
+       "form_id": "01a1f172-06fe-7b1f-adfa-66f5b708c906",
+       "kind": "credential",
+       "origin": "agent",
+       "secrets": [
+        "value"
+       ],
+       "status": "ok",
+       "tool": "form.opened",
+       "tool_call_id": "01a1f172-06fe-7b1f-adfa-66f5b708c906"
+      },
+      "prev_hash": "278d04e0b822195d48c180a363ef33f3efffa68642574ef1fcc6ca432e668254",
+      "seq": 2,
+      "ts": "2026-11-19T01:35:44.383Z",
+      "type": "tool.called"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "f6caab6d721fce3d79637853d6ca1e51029a087a3ebdd9a3fa31fb2c9da37918",
+      "payload": {
+       "args_sha256": "d76d41ab9f98ad7d0f1ca5695f8e0250bb8683eef53dce5c107431d816e37983",
+       "duration_ms": 13,
+       "status": "ok",
+       "task_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+       "tool": "request_credential",
+       "tool_call_id": "call_94fbf7e056"
+      },
+      "prev_hash": "060aa4b6eaf17215486f4d8c65a87dd65b6827cd3bc5a2d57d75e1b9193eb171",
+      "seq": 3,
+      "ts": "2026-11-19T01:35:44.387Z",
+      "type": "tool.called"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "8df890925f704d6d4ded8ddcee4396533bd019e583bd8e2b628b69eaa8aee993",
+      "payload": {
+       "cache_read_tokens": 400,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 600,
+       "latency_ms": 12,
+       "model": "fake-a",
+       "output_tokens": 50,
+       "provider": "custom",
+       "reasoning_tokens": 20,
+       "request_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff:local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff:907e4015:api:2",
+       "role": "orchestrator",
+       "usage_schema": 2
+      },
+      "prev_hash": "f6caab6d721fce3d79637853d6ca1e51029a087a3ebdd9a3fa31fb2c9da37918",
+      "seq": 4,
+      "ts": "2026-11-19T01:35:44.418Z",
+      "type": "usage.recorded"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "d07953f1d14e37a7e9db788d0a0ecbbc1710f5db69f9f8adbd15e193a0c7fa69",
+      "payload": {
+       "args_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+       "duration_ms": 0,
+       "fields": [
+        "answer"
+       ],
+       "form_id": "01a1f172-0732-7511-bf19-1cdd0fc773ca",
+       "kind": "question",
+       "origin": "agent",
+       "secrets": [],
+       "status": "ok",
+       "tool": "form.opened",
+       "tool_call_id": "01a1f172-0732-7511-bf19-1cdd0fc773ca"
+      },
+      "prev_hash": "8df890925f704d6d4ded8ddcee4396533bd019e583bd8e2b628b69eaa8aee993",
+      "seq": 5,
+      "ts": "2026-11-19T01:35:44.435Z",
+      "type": "tool.called"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "089f75b9acbd5a4144ff8ff911c87603e627e28d56d6118f9bb8499a79d7b32c",
+      "payload": {
+       "args_sha256": "8d9745cf7ff7750708e41f47c69a63f4fc534fcfd792bbc98ebe499b7decbb72",
+       "duration_ms": 13,
+       "status": "ok",
+       "task_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+       "tool": "ask",
+       "tool_call_id": "call_eab61a3ac4"
+      },
+      "prev_hash": "d07953f1d14e37a7e9db788d0a0ecbbc1710f5db69f9f8adbd15e193a0c7fa69",
+      "seq": 6,
+      "ts": "2026-11-19T01:35:44.438Z",
+      "type": "tool.called"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "18efa3f769ceb52c2f6f70d6cd8a73429ce439fd623a633c1680e8477ff33773",
+      "payload": {
+       "cache_read_tokens": 400,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 600,
+       "latency_ms": 13,
+       "model": "fake-a",
+       "output_tokens": 50,
+       "provider": "custom",
+       "reasoning_tokens": 20,
+       "request_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff:local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff:907e4015:api:3",
+       "role": "orchestrator",
+       "usage_schema": 2
+      },
+      "prev_hash": "089f75b9acbd5a4144ff8ff911c87603e627e28d56d6118f9bb8499a79d7b32c",
+      "seq": 7,
+      "ts": "2026-11-19T01:35:44.465Z",
+      "type": "usage.recorded"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "ed84e5345ae4c75d3516b2f7102b56792f099815eb53d95cac420cbe0dd89c22",
+      "payload": {
+       "args_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+       "duration_ms": 0,
+       "fields": [
+        "gate"
+       ],
+       "form_id": "01a1f172-075b-7b13-8c07-56c2289d4f06",
+       "kind": "setup",
+       "origin": "agent",
+       "secrets": [],
+       "status": "ok",
+       "tool": "form.opened",
+       "tool_call_id": "01a1f172-075b-7b13-8c07-56c2289d4f06"
+      },
+      "prev_hash": "18efa3f769ceb52c2f6f70d6cd8a73429ce439fd623a633c1680e8477ff33773",
+      "seq": 8,
+      "ts": "2026-11-19T01:35:44.475Z",
+      "type": "tool.called"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "2d25b563925a715c9b25e848e06c37f1c3ad1af0db93f2f94534a62bbee88489",
+      "payload": {
+       "args_sha256": "9f55be86a15fd8801327ef823a7e6b64d8608211cf3156fd06d25f37cf5d5027",
+       "duration_ms": 7,
+       "status": "ok",
+       "task_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+       "tool": "request_input",
+       "tool_call_id": "call_fb862ed014"
+      },
+      "prev_hash": "ed84e5345ae4c75d3516b2f7102b56792f099815eb53d95cac420cbe0dd89c22",
+      "seq": 9,
+      "ts": "2026-11-19T01:35:44.478Z",
+      "type": "tool.called"
+     },
+     {
+      "actor": "orchestrator:custom/fake-a",
+      "hash": "105261af05eb548f402010ff65e8f3aaf67bd972c069e91eb82f2d055b819871",
+      "payload": {
+       "cache_read_tokens": 400,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 600,
+       "latency_ms": 10,
+       "model": "fake-a",
+       "output_tokens": 50,
+       "provider": "custom",
+       "reasoning_tokens": 20,
+       "request_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff:local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff:907e4015:api:4",
+       "role": "orchestrator",
+       "usage_schema": 2
+      },
+      "prev_hash": "2d25b563925a715c9b25e848e06c37f1c3ad1af0db93f2f94534a62bbee88489",
+      "seq": 10,
+      "ts": "2026-11-19T01:35:44.502Z",
+      "type": "usage.recorded"
+     },
+     {
+      "actor": "plugin",
+      "hash": "02424d3d2afd09779c7b8e14deda07985e6b4855ba672318cdb137637fe6ccab",
+      "payload": {
+       "aux_task": "title_generation",
+       "cache_read_tokens": 400,
+       "cache_write_1h_tokens": 0,
+       "cache_write_5m_tokens": 0,
+       "input_tokens": 600,
+       "latency_ms": 8,
+       "model": "fake-a",
+       "output_tokens": 50,
+       "provider": "main",
+       "reasoning_tokens": 20,
+       "request_id": "aux-cda3cd51dfd340e3829d736c3a388dd3",
+       "role": "auxiliary",
+       "usage_schema": 2
+      },
+      "prev_hash": "105261af05eb548f402010ff65e8f3aaf67bd972c069e91eb82f2d055b819871",
+      "seq": 11,
+      "ts": "2026-11-19T01:35:44.534Z",
+      "type": "usage.recorded"
+     },
+     {
+      "actor": "user",
+      "hash": "a12ae9c556337117d2dd3efd07f6379cc42f547fd552910e4cb8b875d3b509ca",
+      "payload": {
+       "answered": [],
+       "args_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+       "duration_ms": 0,
+       "form_id": "01a1f172-06fe-7b1f-adfa-66f5b708c906",
+       "form_status": "submitted",
+       "kind": "credential",
+       "origin": "agent",
+       "provided": [
+        "value"
+       ],
+       "status": "ok",
+       "tool": "form.resolved",
+       "tool_call_id": "01a1f172-06fe-7b1f-adfa-66f5b708c906"
+      },
+      "prev_hash": "02424d3d2afd09779c7b8e14deda07985e6b4855ba672318cdb137637fe6ccab",
+      "seq": 12,
+      "ts": "2026-11-19T01:35:44.615Z",
+      "type": "tool.called"
+     },
+     {
+      "actor": "user",
+      "hash": "48c5c42115886eb9cc5552fa354d62aa8733ba1690a6a123afdff1592750e01a",
+      "payload": {
+       "answered": [
+        "answer"
+       ],
+       "args_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+       "duration_ms": 0,
+       "form_id": "01a1f172-0732-7511-bf19-1cdd0fc773ca",
+       "form_status": "submitted",
+       "kind": "question",
+       "origin": "agent",
+       "provided": [],
+       "status": "ok",
+       "tool": "form.resolved",
+       "tool_call_id": "01a1f172-0732-7511-bf19-1cdd0fc773ca"
+      },
+      "prev_hash": "a12ae9c556337117d2dd3efd07f6379cc42f547fd552910e4cb8b875d3b509ca",
+      "seq": 13,
+      "ts": "2026-11-19T01:35:44.629Z",
+      "type": "tool.called"
+     },
+     {
+      "actor": "user",
+      "hash": "55844dc84b9e595e47a6d07419097809804f46d69008ed270d1746347eb6d436",
+      "payload": {
+       "answered": [],
+       "args_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+       "duration_ms": 0,
+       "form_id": "01a1f172-075b-7b13-8c07-56c2289d4f06",
+       "form_status": "cancelled",
+       "kind": "setup",
+       "origin": "agent",
+       "provided": [],
+       "status": "ok",
+       "tool": "form.resolved",
+       "tool_call_id": "01a1f172-075b-7b13-8c07-56c2289d4f06"
+      },
+      "prev_hash": "48c5c42115886eb9cc5552fa354d62aa8733ba1690a6a123afdff1592750e01a",
+      "seq": 14,
+      "ts": "2026-11-19T01:35:44.638Z",
+      "type": "tool.called"
+     }
+    ],
+    "head_seq": 14
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 24,
+   "method": "plugin.hypotaxis.compat.inventory",
+   "params": {
+    "cwd": "/work/proj"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 24,
+   "result": {
+    "cwd": "/work/proj",
+    "project_root": "/work/proj",
+    "items": [],
+    "trust": {
+     "project_id": "5747c449fb809dc1fd38f5fa940baa9ab6638b0b29c17ad8062ecc15aef3a2f7",
+     "cwd": "/work/proj",
+     "kinds": {}
+    },
+    "hook_events": {
+     "mapped": {
+      "PreToolUse": {
+       "hermes": [
+        "pre_tool_call"
+       ],
+       "fidelity": "full",
+       "note": "A hook `allow` skips hypotaxis-level approval prompts only (COMPAT 4.4); Hermes approvals and hardline blocks still apply."
+      },
+      "PostToolUse": {
+       "hermes": [
+        "transform_tool_result"
+       ],
+       "fidelity": "full",
+       "note": "Runs for tools that executed with status ok. Feedback is appended to the tool result."
+      },
+      "PostToolUseFailure": {
+       "hermes": [
+        "transform_tool_result"
+       ],
+       "fidelity": "full",
+       "note": "The same Hermes hook with status other than ok."
+      },
+      "UserPromptSubmit": {
+       "hermes": [
+        "pre_llm_call"
+       ],
+       "fidelity": "full",
+       "note": "A blocked prompt is stored by Hermes as a withheld-message placeholder and never reaches a model; Claude Code erases it."
+      },
+      "SessionStart": {
+       "hermes": [
+        "on_session_start",
+        "on_session_open",
+        "on_session_reset",
+        "post_compaction"
+       ],
+       "fidelity": "partial",
+       "note": "These fire after the system prompt is built, so additionalContext is delivered through the next pre_llm_call and never the system prompt. Sources: startup, resume, clear, compact. fork does not exist on Hermes."
+      },
+      "SessionEnd": {
+       "hermes": [
+        "on_session_finalize"
+       ],
+       "fidelity": "partial",
+       "note": "Hermes does not say why a session ended, so reason is other."
+      },
+      "Stop": {
+       "hermes": [
+        "post_llm_call"
+       ],
+       "fidelity": "partial",
+       "note": "Hermes has no turn-end hook that can continue a turn, and its pre_verify fires only after write_file or patch edits (not ship). So Stop runs at the final post_llm_call of every completed turn, and a block re-enters as a queued user message through ctx.inject_message: a new turn that starts after the answer, not a continuation inside it. Needs plugins.entries.hypotaxis.allow_gateway_injection."
+      },
+      "SubagentStart": {
+       "hermes": [
+        "subagent_start"
+       ],
+       "fidelity": "observe",
+       "note": "Observe only; additionalContext cannot reach the child."
+      },
+      "SubagentStop": {
+       "hermes": [
+        "subagent_stop"
+       ],
+       "fidelity": "observe",
+       "note": "Observe only; a block cannot force the child to continue."
+      },
+      "Notification": {
+       "hermes": [
+        "on_human_input_request"
+       ],
+       "fidelity": "partial",
+       "note": "approval becomes permission_prompt, clarify becomes elicitation_dialog. idle_prompt and auth_success do not exist on Hermes."
+      },
+      "PostCompact": {
+       "hermes": [
+        "post_compaction"
+       ],
+       "fidelity": "full",
+       "note": "trigger is manual for /compress and auto otherwise."
+      }
+     },
+     "unsupported": {
+      "PreCompact": "Hermes has only post_compaction, so a compaction cannot be observed or blocked in advance.",
+      "PermissionRequest": "pre_approval_request is an observer on Hermes, which intentionally has no auto-allow or decision callback.",
+      "PermissionDenied": "Hermes has no permission-denied event; a block is a tool result.",
+      "UserPromptExpansion": "Hermes has no equivalent: slash-command expansion is not an event.",
+      "PostToolBatch": "Hermes has no per-batch event.",
+      "StopFailure": "Hermes has no event for a turn that ended in an API error that reaches plugins as a stop.",
+      "Setup": "Hermes has no init or maintenance event.",
+      "TaskCreated": "Hermes kanban hooks differ in meaning from Claude Code tasks.",
+      "TaskCompleted": "Hermes kanban hooks differ in meaning from Claude Code tasks.",
+      "TeammateIdle": "Hermes kanban hooks differ in meaning from Claude Code teammates.",
+      "ConfigChange": "Hermes has no config-change event.",
+      "FileChanged": "Hermes has no file-watch event.",
+      "CwdChanged": "Hermes has no cwd-change event.",
+      "DirectoryAdded": "Hermes has no additional-directory concept.",
+      "WorktreeCreate": "Worktrees are owned by the hypotaxis host, not by Hermes.",
+      "WorktreeRemove": "Worktrees are owned by the hypotaxis host, not by Hermes.",
+      "Elicitation": "Hermes MCP elicitation consent is an approval, not a hookable event.",
+      "ElicitationResult": "Hermes MCP elicitation consent is an approval, not a hookable event.",
+      "MessageDisplay": "Hermes has no message-display event.",
+      "InstructionsLoaded": "Synthesized by compat when it delivers memory and rules, which part 1 does not do yet.",
+      "PreModelSwitch": "Synthesized by the cascade, which is not built yet.",
+      "PostModelSwitch": "Synthesized by the cascade, which is not built yet."
+     }
+    },
+    "warnings": [],
+    "pending": false
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 25,
+   "method": "complete.path",
+   "params": {
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "cwd": "/work/proj",
+    "word": "@file:src/"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 25,
+   "result": {
+    "items": [
+     {
+      "text": "@file:src/a.py",
+      "display": "a.py",
+      "meta": ""
+     }
+    ]
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 26,
+   "method": "complete.path",
+   "params": {
+    "session_id": "local-e379d156282e80a244fcaa6869be791b01247701a91c5de0cb80a87044f8f3ff",
+    "cwd": "/work/proj",
+    "word": "@zzz-nothing"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 26,
+   "result": {
+    "items": []
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 27,
+   "method": "session.branch",
+   "params": {
+    "session_id": ""
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 27,
+   "error": {
+    "code": -32601,
+    "message": "unknown method: session.branch \u2014 not available on this Hermes backend",
+    "data": {
+     "reason": "unknown_method"
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 28,
+   "method": "session.compress",
+   "params": {
+    "session_id": ""
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 28,
+   "error": {
+    "code": -32601,
+    "message": "unknown method: session.compress \u2014 not available on this Hermes backend",
+    "data": {
+     "reason": "unknown_method"
+    }
+   }
+  }
+ }
+]

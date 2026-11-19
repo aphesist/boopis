@@ -114,7 +114,7 @@ export class HxCard extends HTMLElement {
     this.size = opts.size ?? 'inline';
     if (kind !== 'blank' && this.size === 'popover') this.size = 'compact';
     this.cardId = nid('cd'); this.sig = {};
-    this.state = opts.state ?? d.state ?? this.K.initial;
+    this.state = opts.state ?? d.state ?? (kind === 'form' && d.resolved ? ({ submitted: 'done', cancelled: 'cancelled', expired: 'expired' } as const)[d.resolved] : this.K.initial);
     delete d.state;
     if (!this.K.states.includes(this.state)) this.state = this.K.initial;
     this.at = d.decidedAt || Date.now();
@@ -256,7 +256,8 @@ export class HxCard extends HTMLElement {
       if (t) t.setAttribute('data-hx-attention', '');
     }
     this.toggleAttribute('data-resolved', !!(K.resolved && K.resolved(c)));
-    this.toggleAttribute('aria-busy', tone === 'pulse');
+    /* aria-busy needs a value: a bare attribute reads as false */
+    if (tone === 'pulse') this.setAttribute('aria-busy', 'true'); else this.removeAttribute('aria-busy');
     if (K.orb) {
       const r = K.orb(c);
       for (const o of this.querySelectorAll('orb-avatar')) if (o.getAttribute('reaction') !== r) o.setAttribute('reaction', r);

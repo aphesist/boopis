@@ -50,11 +50,10 @@ export function originOf(d: Data): KnownOrigin | null {
 }
 const nameOf = (id: string): string => bot(id)?.name ?? id;
 export const namesText = (ids: readonly string[]): string => { const n = ids.map(nameOf); return n.length < 3 ? n.join(' and ') : n.slice(0, -1).join(', ') + ' and ' + n[n.length - 1]; };
-const serverOf = (o: { server?: string | undefined }): string => o.server || 'An';
 export function originText(o: KnownOrigin | null): string {
   if (!o) return '';
   if (o.kind === 'teammate') return namesText(o.ids) + (o.via ? ', via ' + nameOf(o.via) : '');
-  if (o.kind === 'agent') return o.model;
+  if (o.kind === 'agent') return o.model || 'The agent';
   if (o.kind === 'mcp') return (o.server ? o.server + ' ' : '') + 'MCP server' + (o.trust ? ', ' + o.trust : '');
   return sys(o.kind)[1];
 }
@@ -81,7 +80,7 @@ function originLabel(o: KnownOrigin): string {
     const names = o.ids.length > 3 ? o.ids.slice(0, 2).map((x) => esc(nameOf(x))).join(', ') + ' and ' + (o.ids.length - 2) + ' more' : esc(namesText(o.ids));
     return '<span class="cd-by__name">' + names + '</span>' + (o.via ? '<span class="cd-by__via">via ' + esc(nameOf(o.via)) + '</span>' : '');
   }
-  if (o.kind === 'agent') return '<span class="cd-by__name cd-mono">' + (isRoute(o.model) ? U.html.modelRoute(o.model, { size: 14, mono: false }) : esc(o.model)) + '</span>';
+  if (o.kind === 'agent') return '<span class="cd-by__name cd-mono">' + (isRoute(o.model) ? U.html.modelRoute(o.model, { size: 14, mono: false }) : esc(o.model || 'The agent')) + '</span>';
   if (o.kind === 'mcp') return '<span class="cd-by__name">' + esc(o.server || 'MCP server') + '</span><span class="cd-by__via">' + (o.server ? 'MCP server' : '') + (o.trust ? (o.server ? ', ' : '') + esc(o.trust) : '') + '</span>';
   return '<span class="cd-by__name">' + esc(sys(o.kind)[1]) + '</span>';
 }
@@ -143,7 +142,7 @@ const shortWho = (x: KnownOrigin): string => (x.kind === 'teammate' ? (x.ids.len
 export function mini(ctx: Ctx, o: { lead?: string; who?: boolean; text: string; meta?: string }): string {
   const owe = ctx.owe, or = ctx.origin;
   const lead = o.lead != null ? o.lead : originVisual(or, 16, 2);
-  const who = or && o.who !== false ? '<span class="cd-mini__who">' + (or.kind === 'agent' ? mono(or.model) : esc(shortWho(or))) + '</span> ' : '';
+  const who = or && o.who !== false ? '<span class="cd-mini__who">' + (or.kind === 'agent' ? mono(or.model || 'The agent') : esc(shortWho(or))) + '</span> ' : '';
   return '<button type="button" class="cd-mini" data-action="open" aria-labelledby="' + ctx.id + '-t' + (owe ? ' ' + ctx.id + '-o' : '') + (o.meta ? ' ' + ctx.id + '-m' : '') + '">' +
     '<span class="cd-mini__lead" aria-hidden="true">' + lead + '</span>' +
     '<span class="cd-mini__text" id="' + ctx.id + '-t">' + who + o.text + '</span>' +
@@ -152,7 +151,6 @@ export function mini(ctx: Ctx, o: { lead?: string; who?: boolean; text: string; 
     '<span class="cd-mini__meta"' + (o.meta ? ' id="' + ctx.id + '-m"' : '') + '>' + (o.meta ?? '') + '</span></span></button>';
 }
 export const tones = (m: Record<string, string>) => (c: { s: string }): string | undefined => m[c.s];
-export { serverOf };
 
 /** 'expires in 9 min' stays live */
 export function expiryText(left: number, short: boolean): string {

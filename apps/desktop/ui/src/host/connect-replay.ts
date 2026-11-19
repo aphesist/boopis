@@ -2,12 +2,14 @@
 import type { DataProvider } from '../data/provider';
 import { GatewayClient } from './gateway';
 import { createLiveProvider } from './live-provider';
-import { ReplayHost, loadFrames } from './replay';
+import { ReplayHost, ReplaySecrets, loadFrames } from './replay';
 
 export async function connectReplay(name: string): Promise<DataProvider> {
   const host = new ReplayHost(await loadFrames(name));
   (window as unknown as Record<string, unknown>)['__hxReplay'] = host; // the smoke reads what the UI asked for
+  const secrets = new ReplaySecrets();
+  (window as unknown as Record<string, unknown>)['__hxReplaySecrets'] = secrets; // the smoke asks what reached the keychain
   const client = new GatewayClient(host);
   await client.connect();
-  return createLiveProvider({ client });
+  return createLiveProvider({ client, secrets });
 }
