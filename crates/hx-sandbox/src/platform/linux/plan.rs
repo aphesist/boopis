@@ -9,6 +9,21 @@ use crate::normalize::ResolvedPolicy;
 use crate::policy::NetworkPolicy;
 use crate::report::DimensionReport;
 
+/// How the whole process tree is ended, setsid escapees included. Chosen in this order: the
+/// kernel's own PID namespace reaping, a cgroup per run, a child subreaper.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum TreeMethod {
+    /// The program is init of a PID namespace (entered this way).
+    PidNamespace(NsAccess),
+    /// Every process of the run is in a cgroup v2 subtree that is ended with `cgroup.kill`.
+    Cgroup,
+    /// A supervisor that is a child subreaper kills everything it inherits.
+    Subreaper,
+    /// Nothing reaches a descendant that left the process group. Only chosen when the policy
+    /// allows a degraded process dimension.
+    GroupOnly,
+}
+
 /// The decisions for one run.
 #[derive(Debug)]
 pub(super) struct Plan {
@@ -20,6 +35,8 @@ pub(super) struct Plan {
     pub netns: Option<NsAccess>,
     /// Put the child in a PID namespace (how it is entered).
     pub pidns: Option<NsAccess>,
+    /// How the tree is ended.
+    pub tree: TreeMethod,
     /// The filesystem report.
     pub fs: DimensionReport,
     /// The network report.
@@ -69,8 +86,32 @@ fn degrade_network(
     }
 }
 
-/// Makes the plan or fails with `Unavailable`.
-pub(super) fn make(probe: &Probe, policy: &ResolvedPolicy) -> Result<Plan> {
+/// The best way this host has to end the whole tree, or `Unavailable` when it has none and the
+/// policy does not allow running without.
+fn choose_tree(probe: &Probe, policy: &ResolvedPolicy) -> Result<TreeMethod> {
+    if probe.pidns != NsAccess::None {
+        Ok(TreeMethod::PidNamespace(probe.pidns))
+    } else if probe.cgroup.is_ok() {
+        Ok(TreeMethod::Cgroup)
+    } else if probe.subreaper.is_ok() {
+        Ok(TreeMethod::Subreaper)
+    } else if policy.degraded.process {
+        Ok(TreeMethod::GroupOnly)
+    } else {
+        Err(Error::unavailable(
+            Dimension::Process,
+            format!(
+                "nothing here can end a descendant that calls setsid: no PID namespace (needs \
+                 CAP_SYS_ADMIN or unprivileged user namespaces), no cgroup ({}), no child subreaper ({})",
+                probe.cgroup.as_ref().err().map_or("", String::as_str),
+                probe.subreaper.as_ref().err().map_or("", String::as_str),
+            ),
+        ))
+    }
+}
+
+/// The filesystem decision: the Landlock ABI to enforce at and the report, or `Unavailable`.
+fn plan_fs(probe: &Probe, policy: &ResolvedPolicy) -> Result<(Option<u32>, DimensionReport)> {
     let landlock_abi = probe.usable_landlock_abi();
     let fs = if landlock_abi.is_some() {
         // Filled in with counts by the caller once the ruleset exists.
@@ -86,6 +127,12 @@ pub(super) fn make(probe: &Probe, policy: &ResolvedPolicy) -> Result<Plan> {
     } else {
         return Err(Error::unavailable(Dimension::Fs, fs_reason(probe)));
     };
+    Ok((landlock_abi, fs))
+}
+
+/// Makes the plan or fails with `Unavailable`.
+pub(super) fn make(probe: &Probe, policy: &ResolvedPolicy) -> Result<Plan> {
+    let (landlock_abi, fs) = plan_fs(probe, policy)?;
 
     let seccomp_ok = probe.seccomp_enforces;
     let need_seccomp = |why: &str| -> Result<()> {
@@ -164,12 +211,17 @@ pub(super) fn make(probe: &Probe, policy: &ResolvedPolicy) -> Result<Plan> {
         ),
     };
 
-    let pidns = (probe.pidns != NsAccess::None).then_some(probe.pidns);
+    let tree = choose_tree(probe, policy)?;
+    let pidns = match tree {
+        TreeMethod::PidNamespace(how) => Some(how),
+        _ => None,
+    };
     Ok(Plan {
         landlock_abi,
         socket_mode,
         netns,
         pidns,
+        tree,
         fs,
         network,
     })

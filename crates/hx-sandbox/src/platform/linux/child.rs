@@ -5,6 +5,7 @@
 //! in the parent. A failing step reports its id on the status pipe and aborts the spawn, so a
 //! child never reaches `exec` with part of its sandbox missing.
 
+use std::ffi::CString;
 use std::io;
 use std::os::fd::RawFd;
 
@@ -27,6 +28,8 @@ pub(super) mod step {
     pub const SECCOMP: u8 = 10;
     pub const RLIMIT: u8 = 11;
     pub const PID_FORK: u8 = 12;
+    pub const CGROUP_JOIN: u8 = 13;
+    pub const SUBREAPER: u8 = 14;
 }
 
 /// A setup step's name, for `Error::Setup`.
@@ -44,6 +47,8 @@ pub(super) fn step_name(id: u8) -> &'static str {
         step::SECCOMP => "seccomp filter install",
         step::RLIMIT => "setrlimit",
         step::PID_FORK => "fork into the PID namespace",
+        step::CGROUP_JOIN => "move into the run's cgroup",
+        step::SUBREAPER => "start the subreaper supervisor",
         _ => "sandbox setup",
     }
 }
@@ -77,6 +82,19 @@ impl UserMaps {
     }
 }
 
+/// What ends the tree when there is no PID namespace (with one, the kernel does it).
+#[derive(Debug, Clone)]
+pub(super) enum TreePlan {
+    /// Nothing beyond the process group, or a PID namespace that handles it.
+    None,
+    /// The child moves itself into this cgroup (the path of its `cgroup.procs`) first thing, so
+    /// every descendant is a member.
+    Cgroup(CString),
+    /// The child forks, and the original process stays behind as a child subreaper that kills
+    /// every process it inherits.
+    Subreaper,
+}
+
 /// Everything the child needs, prepared in the parent.
 pub(super) struct ChildPlan {
     /// The descriptor that must survive into the program, or -1.
@@ -85,6 +103,8 @@ pub(super) struct ChildPlan {
     pub status_fd: RawFd,
     /// Namespaces to enter.
     pub namespaces: Option<NamespacePlan>,
+    /// How the tree is ended when no PID namespace does it.
+    pub tree: TreePlan,
     /// `setrlimit` calls, applied after the namespaces.
     pub rlimits: Vec<RlimitSpec>,
     /// Empty the bounding set up to this capability number (None: do not try).
@@ -93,8 +113,8 @@ pub(super) struct ChildPlan {
     pub no_new_privs: bool,
     /// The Landlock ruleset to enforce.
     pub landlock_fd: Option<RawFd>,
-    /// The compiled seccomp program.
-    pub seccomp: Option<BpfProgram>,
+    /// The compiled seccomp programs, installed in order.
+    pub seccomp: Vec<BpfProgram>,
 }
 
 impl ChildPlan {
@@ -106,6 +126,11 @@ impl ChildPlan {
     /// Applies the plan in the child. Returns the OS error of the first failing step.
     pub(super) fn run(&self) -> io::Result<()> {
         crate::platform::unix_sys::child_setsid().map_err(|e| self.fail(step::SETSID, e))?;
+        // First, before any descendant exists and before a user namespace changes who we are to
+        // the cgroup filesystem: every process the program ever starts inherits membership.
+        if let TreePlan::Cgroup(procs) = &self.tree {
+            sys::child_write_file(procs, b"0").map_err(|e| self.fail(step::CGROUP_JOIN, e))?;
+        }
         sys::child_cloexec_all();
         if self.inherit_fd >= 0 {
             crate::platform::unix_sys::child_keep_fd(self.inherit_fd)
@@ -113,6 +138,10 @@ impl ChildPlan {
         }
         if let Some(ns) = &self.namespaces {
             setup_namespaces(ns).map_err(|(id, e)| self.fail(id, e))?;
+        }
+        if matches!(self.tree, TreePlan::Subreaper) {
+            // Returns only in the program; the supervisor stays here and never returns.
+            sys::child_become_subreaper_supervisor().map_err(|e| self.fail(step::SUBREAPER, e))?;
         }
         for spec in &self.rlimits {
             crate::platform::unix_sys::child_setrlimit(spec.resource, spec.soft, spec.hard)
@@ -128,7 +157,7 @@ impl ChildPlan {
         if let Some(fd) = self.landlock_fd {
             sys::child_landlock_restrict(fd).map_err(|e| self.fail(step::LANDLOCK, e))?;
         }
-        if let Some(program) = &self.seccomp {
+        for program in &self.seccomp {
             seccompiler::apply_filter(program).map_err(|e| match e {
                 seccompiler::Error::Prctl(io) | seccompiler::Error::Seccomp(io) => {
                     crate::platform::unix_sys::child_report(self.status_fd, step::SECCOMP);

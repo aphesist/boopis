@@ -166,7 +166,7 @@ impl Prepared {
             cmd.env(key, value);
         }
         spawn::install(&mut cmd, inherit_fd, status.write.as_raw_fd(), self.rlimits);
-        let launch = start(cmd, spec.stdin, Some(status), spawn::step_name);
+        let launch = start(cmd, spec.stdin, Some(status), spawn::step_name, None);
         drop(spec.inherit);
         launch
     }
@@ -201,8 +201,10 @@ pub(crate) fn capabilities() -> Capabilities {
             None,
             "Seatbelt filters by IP and port, not by host name; needs an egress proxy",
         ),
-        process_tree_kill: Capability::yes(
-            "setsid+killpg",
+        // Only the process group: a descendant that calls setsid or setpgid outlives a kill, so the
+        // capability is not claimed (the run itself still goes ahead and its report says so).
+        process_tree_kill: Capability::no(
+            Some("setsid+killpg"),
             "descendants that leave the process group are not reached",
         ),
         inherited_handle: Capability::yes(

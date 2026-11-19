@@ -2,12 +2,14 @@
 //! exercised in a forked child, not inferred from a version number: a container can expose a
 //! syscall and still forbid it.
 
+use std::path::PathBuf;
 use std::sync::OnceLock;
 
 use super::child::{NamespacePlan, UserMaps, setup_namespaces};
 use super::landlock::{MIN_ABI, handled_fs, scopes};
 use super::seccomp::{SocketMode, build};
 use super::sys;
+use super::tree;
 
 /// How a namespace can be had.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -38,6 +40,11 @@ pub(super) struct Probe {
     pub netns: NsAccess,
     /// How a PID namespace (with a forked init) can be created.
     pub pidns: NsAccess,
+    /// A cgroup v2 directory in which a subtree can be made, a process moved into it and the lot
+    /// ended with `cgroup.kill` (proved by a forked child), or why not.
+    pub cgroup: Result<PathBuf, String>,
+    /// A child subreaper supervisor works (proved by a forked child), or why not.
+    pub subreaper: Result<(), String>,
     /// Highest capability number the kernel knows.
     pub cap_last: u32,
     /// The process holds `CAP_SETPCAP`, so the bounding set can be emptied.
@@ -91,6 +98,8 @@ fn run() -> Probe {
     let seccomp_enforces = probe_seccomp();
     let netns = probe_ns(uid, gid, true, false);
     let pidns = probe_ns(uid, gid, false, true);
+    let cgroup = tree::probe_cgroup();
+    let subreaper = tree::probe_subreaper();
     let cap_last = std::fs::read_to_string("/proc/sys/kernel/cap_last_cap")
         .ok()
         .and_then(|s| s.trim().parse().ok())
@@ -106,6 +115,8 @@ fn run() -> Probe {
         seccomp_enforces,
         netns,
         pidns,
+        cgroup,
+        subreaper,
         cap_last,
         can_drop_bounding: cap_eff & CAP_SETPCAP != 0,
         is_root: euid == 0,
@@ -125,11 +136,14 @@ fn probe_landlock(abi: u32) -> bool {
 }
 
 fn probe_seccomp() -> bool {
-    let Ok(program) = build(SocketMode::Off) else {
+    let Ok(programs) = build(SocketMode::Off) else {
         return false;
     };
     sys::fork_probe(|| {
-        seccompiler::apply_filter(&program).is_ok() && sys::child_inet_socket_denied()
+        programs
+            .iter()
+            .all(|program| seccompiler::apply_filter(program).is_ok())
+            && sys::child_inet_socket_denied()
     })
 }
 

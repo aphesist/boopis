@@ -4,6 +4,7 @@
 use std::io;
 use std::os::fd::OwnedFd;
 use std::os::unix::process::ExitStatusExt;
+use std::sync::Arc;
 
 use tokio::process::Command;
 
@@ -11,11 +12,21 @@ use super::{BoxRead, BoxWrite, Launch, StdinMode, Streams, unix_sys};
 use crate::error::{Error, Result};
 use crate::report::ExitOutcome;
 
+/// A way of ending a tree that the process group cannot reach (a descendant that called
+/// `setsid` or `setpgid` is no longer in the group). It replaces the plain group kill.
+pub(super) trait TreeBackend: Send + Sync + std::fmt::Debug {
+    /// Ends every process of the tree, the leader included. `pgid` is the leader's group, which
+    /// is also its pid.
+    fn kill(&self, pgid: libc::pid_t);
+}
+
 /// Ends a whole process tree. Cheap to clone; valid for as long as the tree has a live member,
 /// so callers use it only while they still hold the [`Child`] or right after it was reaped.
 #[derive(Debug, Clone)]
 pub(crate) struct TreeKiller {
     pgid: libc::pid_t,
+    /// How to kill beyond the group; `None` means the group kill is all there is.
+    backend: Option<Arc<dyn TreeBackend>>,
 }
 
 impl TreeKiller {
@@ -30,9 +41,12 @@ impl TreeKiller {
         true
     }
 
-    /// Kills the tree (SIGKILL to the group).
+    /// Kills the tree: through the backend when there is one, else SIGKILL to the group.
     pub(crate) fn kill(&self) {
-        unix_sys::killpg(self.pgid, libc::SIGKILL);
+        match &self.backend {
+            Some(backend) => backend.kill(self.pgid),
+            None => unix_sys::killpg(self.pgid, libc::SIGKILL),
+        }
     }
 }
 
@@ -93,6 +107,7 @@ pub(super) fn start(
     stdin: StdinMode,
     status: Option<StatusPipe>,
     step_name: fn(u8) -> &'static str,
+    backend: Option<Arc<dyn TreeBackend>>,
 ) -> Result<Launch> {
     cmd.stdin(match stdin {
         StdinMode::Null => std::process::Stdio::null(),
@@ -121,7 +136,10 @@ pub(super) fn start(
                 .map_err(|_| Error::Io(io::Error::other("pid out of range for a process group")))?;
             Ok(Launch::Started(Child {
                 inner: child,
-                killer: TreeKiller { pgid: group },
+                killer: TreeKiller {
+                    pgid: group,
+                    backend,
+                },
                 streams: Some(Streams {
                     stdin,
                     stdout,

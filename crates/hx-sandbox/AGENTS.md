@@ -9,11 +9,13 @@ The OS sandbox for the exec kernel and the gate commands. Read `README.md` (thre
 4. **Paths are canonicalised once** (`normalize.rs`) and backends only ever see the resolved form. A `ro` path inside an `rw` tree is rejected, because no backend can subtract a grant.
 5. **The pre-exec hook is async-signal-safe.** `platform/linux/child.rs` and `sys.rs` run between `fork` and `exec` in a possibly multithreaded process: raw syscalls over memory the parent prepared, no allocation, no formatting, no locks. Build everything in the parent.
 6. **`unsafe` is confined** to modules marked `#![allow(unsafe_code)]` with a reason (`platform/*/sys.rs`, `spawn.rs`, the Windows `container.rs`, `launch.rs`, `loopback.rs`, `sys.rs`). Every block has a `SAFETY:` comment. The crate keeps the workspace's `deny`.
-7. **Pure logic stays pure** and is compiled and tested on every platform: `normalize`, `seatbelt`, `winpolicy`, `linux/plan`.
-8. Derived Codex code keeps its licence header and a line in `NOTICE`.
+7. **Never claim a way to end the tree that is not in force.** `process.mechanisms` names exactly one of `pid-namespace`, `cgroup-kill`, `subreaper`, built from what `prepare` applied (the cgroup is created there, in the parent); a host with none refuses (`Error::Unavailable`, process) unless `degraded.process`, and then the report is `degraded` and says `NOT ENFORCED`. `sandbox.process_tree_kill` is advertised only with one of them.
+8. **Namespaces are entered before the seccomp filter and never after.** The filter denies `unshare`, `setns` and `clone` with `CLONE_NEW*`, and answers `ENOSYS` for `clone3`; a setup step that needs them goes in `ChildPlan::run` before the filter loads.
+9. **Pure logic stays pure** and is compiled and tested on every platform: `normalize`, `seatbelt`, `winpolicy`, `linux/plan`.
+10. Derived Codex code keeps its licence header and a line in `NOTICE`.
 
 ## Layout
-`policy` / `normalize` / `report` / `wire` (types and validation), `process` (run, spawn, kill, timeout), `capture` (output cap), `program` (program lookup), `platform/{linux,macos,windows,unix}` (backends), `seatbelt` and `winpolicy` (pure translation), `tests/` (real processes), `examples/probe.rs` (the program the tests run inside the sandbox).
+`policy` / `normalize` / `report` / `wire` (types and validation), `process` (run, spawn, kill, timeout), `capture` (output cap), `program` (program lookup), `platform/{linux,macos,windows,unix}` (backends; `linux/tree.rs` ends the tree without a PID namespace), `seatbelt` and `winpolicy` (pure translation), `tests/` (real processes), `examples/probe.rs` (the program the tests run inside the sandbox).
 
 ## Test
 ```sh
@@ -26,4 +28,5 @@ cargo clippy --target x86_64-pc-windows-msvc --target aarch64-apple-darwin -p hx
 - Add a shell, a `PATH` lookup in the host's environment, or `sh -c`.
 - Inherit the host environment, or add a variable to `DEFAULT_ENV_ALLOWLIST` that can carry a secret.
 - Grant `/proc` or `/etc` by default, or `WRITE_DAC`/`WRITE_OWNER` on Windows.
+- Widen a vetted root: `runtime_ro` stays denied for credential locations and for anything that is not an interpreter or toolchain prefix (`normalize/runtime.rs`).
 - Report a mechanism you did not apply. Claims in `Enforcement` must be checkable from inside the child (see `the_enforcement_report_matches_the_child_s_own_view`).

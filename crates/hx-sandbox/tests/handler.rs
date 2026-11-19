@@ -180,6 +180,61 @@ async fn spawn_gives_the_plugin_a_private_channel_that_works_with_the_network_of
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn a_program_in_the_sandbox_cannot_take_its_own_channel() {
+    if !fs_available() {
+        return;
+    }
+    // With the network on, the child can reach a pathname socket, and it knows the directory. It
+    // tries first; the bridge must close that connection and keep serving, so the plugin still
+    // gets the real channel.
+    let d = dispatcher();
+    let w = World::new();
+    let dir = w.scratch.join("chan");
+    let sock = dir.join("channel.sock");
+    let script = format!(
+        "{p} unixread {sock} > {out}; {p} fdenv HX_CHANNEL_FD",
+        p = probe_path().display(),
+        sock = sock.display(),
+        out = w.scratch.join("stolen.txt").display(),
+    );
+    let mut p = base_params(&w, &["/bin/sh".to_owned(), "-c".to_owned(), script]);
+    p["ro"].as_array_mut().unwrap().push(json!("/usr"));
+    p["net"] = json!(true);
+    p["channel"] = json!({"dir": dir});
+    let spawned = ok(call(&d, "sandbox.spawn", p).await);
+    let path = spawned["channel"]["path"].as_str().unwrap().to_owned();
+
+    // Let the program make its attempt first: the plugin connects only once it has an answer.
+    let stolen_file = w.scratch.join("stolen.txt");
+    let started = std::time::Instant::now();
+    while std::fs::read_to_string(&stolen_file).map_or(true, |t| t.is_empty()) {
+        assert!(
+            started.elapsed() < Duration::from_secs(15),
+            "the child never tried"
+        );
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    let mut plugin = std::os::unix::net::UnixStream::connect(&path).unwrap();
+    plugin
+        .set_read_timeout(Some(Duration::from_secs(10)))
+        .unwrap();
+    let mut greeting = [0u8; 16];
+    plugin.read_exact(&mut greeting).unwrap();
+    assert_eq!(&greeting, b"hello-from-child");
+    plugin.write_all(b"howdy").unwrap();
+    let handle = spawned["handle"].as_str().unwrap();
+    let done = ok(call(
+        &d,
+        "sandbox.wait",
+        json!({"handle": handle, "timeout_ms": 10_000}),
+    )
+    .await);
+    assert_eq!(done["exit"], json!({"kind": "exited", "code": 0}), "{done}");
+    // The bridge closed the program's connection without a word.
+    assert_eq!(std::fs::read_to_string(&stolen_file).unwrap().trim(), "eof");
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn wait_polls_kill_ends_the_tree_and_the_exit_is_reported() {
     let d = dispatcher();
     let w = World::new();
