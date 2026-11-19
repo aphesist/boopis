@@ -18,6 +18,7 @@ import { data as provider } from '../../data';
 import type { CardKind, CardOpts, CardSize } from '../../components/card-registry';
 import { bot, expiryText, KINDS, parts } from './kinds';
 import { accentOf, originOf } from './parts';
+import { fitCard, unwatchFit, watchFit } from './fit';
 import { LIVE_FORM, dropSecrets, formKey, newFormState, wireForm } from './form';
 import type { FormState } from './form';
 import { animate, easeToken, motion } from './motion';
@@ -89,10 +90,12 @@ export class HxCard extends HTMLElement {
     LIVE.add(this);
     if (this.kind === 'approval' || this.kind === 'form') { this.tick(); this.timer = this.timer || window.setInterval(() => this.tick(), 1000); }
     if (this.state === 'holding' && typeof this.data.progress === 'number') requestAnimationFrame(() => { const h = this.holdBtn(); const c = holdOf(h); if (c) c.show(this.data.progress ?? 0); });
+    watchFit(this);
     emitAttention();
   }
   disconnectedCallback(): void {
     LIVE.delete(this);
+    unwatchFit(this);
     clearInterval(this.timer); this.timer = 0;
     const h = this.holdBtn(); const c = holdOf(h);
     if (h && c && h.dataset['state'] !== 'done') c.reset();
@@ -217,6 +220,7 @@ export class HxCard extends HTMLElement {
     this.hydrateCard();
     if (focusIn && !this.contains(focusIn)) this.restoreFocus(focusKey || '');
     if (motionOn && changed && this.size !== 'mini' && !(this.inlineOnly && this.kind === 'blank')) this.flipHeight(h0);
+    if (changed && this.isConnected) fitCard(this);
   }
 
   private restoreFocus(key: string): void {

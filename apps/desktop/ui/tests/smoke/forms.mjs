@@ -45,7 +45,7 @@ export async function formCards(env) {
     const origin = await page.evaluate(() => ({
       stack: document.querySelectorAll('hx-card [data-origin="joint"] .cd-stack__more').length,
       more: [...document.querySelectorAll('hx-card [data-origin="joint"] .ui-sr')].some((n) => /atlas/.test(n.textContent)),
-      relay: [...document.querySelectorAll('hx-card [data-origin="relay"] .cd-by__via')].some((n) => /via atlas/.test(n.textContent)),
+      relay: [...document.querySelectorAll('hx-card [data-origin="relay"] .cd-names__via')].some((n) => /via atlas/.test(n.textContent)),
       agent: !!document.querySelector('hx-card [data-origin="agent"] svg.ui-mm[data-family="claude"]'),
       system: !!document.querySelector('hx-card [data-origin="plugin"] .cd-glyph'), mcp: !!document.querySelector('hx-card [data-origin="mcp"] .cd-tile'), one: !!document.querySelector('hx-card [data-origin="teammate"] orb-avatar')
     }));

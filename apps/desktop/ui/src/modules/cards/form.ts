@@ -143,7 +143,7 @@ export const formKind: Kind = {
     const d = spec(c.d), t = formT(d), st = fst(c.card);
     if (DONE_FORM.includes(c.s)) {
       const act = c.s === 'deferred' ? btn('reopen', 'Open', 'ghost', { size: 's' }) : c.s === 'expired' ? btn('reopen', 'Ask again', 'ghost', { size: 's' }) : '';
-      return { head: '<div class="cd-collapsed"><span class="cd-mini__lead" aria-hidden="true">' + originVisual(c.origin, 16, 2) + '</span><p class="cd-collapsed__text" id="' + c.id + '-t">' + (c.s === 'done' ? check() : '') +
+      return { head: '<div class="cd-collapsed"><span class="cd-mini__lead" aria-hidden="true">' + originVisual(c.origin, 16, 2, true) + '</span><p class="cd-collapsed__text" id="' + c.id + '-t">' + (c.s === 'done' ? check() : '') +
         '<span class="cd-collapsed__what">' + fmt(cap(d.title)) + '</span><span class="cd-collapsed__how">' + esc(receiptHTML(c)) + '</span></p>' +
         '<span class="cd-mono cd-collapsed__at">' + esc(c.at) + '</span>' + act + '</div>', body: '', foot: '' };
     }
