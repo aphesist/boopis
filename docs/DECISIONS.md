@@ -319,6 +319,25 @@ They're not sandboxed, matching Claude Code. This is the only exception to the n
 - `grant.decided` and `grant.revoked` go upstream into contraprova with `form.*`. Until then, they're written as `tool.called`.
 - Four spikes come first: one card instead of two for `computer_use`; native-Wayland capture on Arch; an agent-owned display; DevTools MCP annotations.
 
+## ADR-0022 Claude Code mods run unchanged in a sandboxed runtime and draw through the design system
+**Context.**
+- The owner wants Claude Code mods to work in hypotaxis, compatible and looking right.
+- A mod is a plugin whose JavaScript or TypeScript module hooks Claude Code's events, calls a `$` API, and draws element trees into panes, a band above the prompt, toasts, a status line, transcript rows, a backdrop and Claude Code's own message views (`research/mods.md`).
+- Mods run inside Claude Code, unsandboxed, and no public spec covers running them anywhere else.
+
+**Decision.**
+- Implement the mods API from the docs (`docs/MODS.md`), as a new `hx-mods` library in the `hx` binary:
+  - an embedded JavaScript engine and a TypeScript/JSX transform, chosen by a spike;
+  - one isolate per session, inside `hx-sandbox`, whose only way out is `$`.
+- The plugin maps Hermes's hooks and the gateway's events onto mod events, through the same bridge as Claude Code's hooks. Every `$` call is decided by `hypotaxis.policy.check`, with the mod as principal.
+- Element trees travel to the UI as data, and one component draws them with the v6 library. Theme keys and colour names map onto semantic tokens, and each mod surface maps onto an app surface.
+- Report `surface: 'desktop'`. Headless sessions run hooks and draw nothing, as `claude -p` does.
+
+**Consequences.**
+- Compatible but stricter than Claude Code: `$.fs`, `$.http`, `$.process`, `$.mcp` and `$.model` calls can ask, through forms, where Claude Code would let them through.
+- New surfaces (the band above the composer, mod panes, the mod status line, placed rows, the mod origin) need the owner's design in v6 first.
+- A conformance suite against pinned public mods tracks support per Claude Code version.
+
 ## ADR-0012 Prices
 Prices come from the models.dev catalogue plus a user override table. Hermes's models.dev data is not reachable through its public plugin API, so:
 - the plugin reads a cached catalogue file, `<profile home>/hypotaxis/prices/models-dev.json`;

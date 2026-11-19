@@ -89,7 +89,8 @@ Legend: **N** native (no work), **T** translate (our code), **U** unsupported (r
 | `.claude/agents/*.md`, `--agents` JSON | **T** | Section 6. |
 | `.mcp.json`, `~/.claude.json` (local and user scope) | **T** | Section 7. |
 | Plugins and marketplaces | **T** | Section 9. |
-| Output styles, `.lsp.json`, `monitors`, `themes`, `bin/` | **U** | No Hermes surface. `bin/` could go on `PATH` and is deferred. **[verify]** whether Hermes LSP config (`lsp.*`) can take `.lsp.json`. |
+| Mods (`hooks/hooks.json` `modules`), `themes`, output styles, the `statusLine` setting | **T** (planned) | The app is the surface, not Hermes: `docs/MODS.md`. |
+| `.lsp.json`, `monitors`, `bin/` | **U** | No Hermes surface. `bin/` could go on `PATH` and is deferred. **[verify]** whether Hermes LSP config (`lsp.*`) can take `.lsp.json`. |
 | `claude.ai` connectors | **U** | Account-bound. |
 
 ### 3.2 Agent Skills (`F§2`)
