@@ -27,6 +27,7 @@ The boopis Hermes plugin (Python, stdlib only at runtime). It adds governance, a
 | `prompt.py` | the cache-stable governed-mode prompt section |
 | `errors.py`, `errors.json` | exception hierarchy and the plugin's wire error codes |
 | `mods/` | Claude Code mods (`docs/MODS.md`): `service.py` (sessions, `handle_call`: classify, `policy.check` with the mod as principal, ask, perform, ledger; the draw thread), `calls.py` (the `$` table), `decide.py` (permission and `$.ui.ask` forms, origin `{kind: mod, plugin}`), `store.py`, `io.py` (`fs`, `http`), `install.py`, `discovery.py`, `rpc.py` (`mod.*`). The events are the `ModEvents` half of the compat bridge (`compat/hooks/mod_events.py`) |
+| `bots/` | teammates (Hermes profiles, ADR-0006): `store.py` (`<profile>/boopis/bot.json`: look, settings, approvals; never a Hermes key), `homes.py` (where a profile lives, the name rule, never the default), `cli.py` (Hermes's own CLI behind a seam), `service.py` (read, write, inspect, archive = `profile rename` to `archived--<name>`, restore, delete = `profile delete`), `rpc.py` (`bots.*`). Everything else about a teammate is Hermes's `profiles.*` and `cron.manage`, which the UI calls itself |
 | `util/` | `schema` (JSON Schema subset), `globs`, `log` |
 
 ## Invariants

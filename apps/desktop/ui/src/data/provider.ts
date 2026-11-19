@@ -116,8 +116,9 @@ export interface BotsAdmin {
   create(draft: BotDraft & { instructions: string }, opts: { model: string | null }): Promise<Bot>;
   /** the writes a change would make, to show before saving */
   review(id: string, patch: BotPatch): readonly PlannedWrite[];
-  /** writes the change to the profile; rejects with a sentence the sheet shows when Hermes refused part of it */
-  save(id: string, patch: BotPatch): Promise<void>;
+  /** Writes the change to the profile. Rejects with a sentence the sheet shows when Hermes refused part of it, or with
+   *  `NeedsConfirmation` when Hermes wants the model pick confirmed (send `confirmModel` once the user has). */
+  save(id: string, patch: BotPatch, opts?: { confirmModel?: boolean }): Promise<void>;
   /** pauses or resumes one routine at once */
   setRoutinePaused(id: string, jobId: string, paused: boolean): Promise<void>;
   /** boopis's own settings and the look: saved in the bot's own store */

@@ -255,6 +255,7 @@ export function fillCards(el: HTMLElement | null): void {
 /* one library composer per bot, kept across renders so a draft survives; what you send lands in the bot's thread */
 export function composerFor(id: string): ReturnType<typeof ui.composer> | null {
   const b = botById(id); if (!b) return null;
+  if (data().info.unavailable['bots.send']) return null;   /* a bot that cannot be messaged yet has no composer, rather than one that sends nowhere */
   let c = X.composerEls.get(id);
   if (!c) {
     /* the library's compact composer: one row, mic and send in its corner; with `bot` the mic talks to this bot

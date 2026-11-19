@@ -16,7 +16,7 @@ import { formsHost } from './forms-host';
 import type { FieldSchema, FormSpec, PickerKind } from '../../data';
 import type { HxCard } from './card';
 import { animate } from './motion';
-import { actions, bot, breath, btn, cap, check, fmt, foot, headrow, meta, mini, originText, originVisual, sentenceHTML, sentenceText } from './parts';
+import { actions, bot, breath, btn, cap, check, diffWell, fmt, foot, headrow, meta, mini, originText, originVisual, sentenceHTML, sentenceText } from './parts';
 import { FORM_KINDS, PERMISSION, answerText, formT, hasCancel, holdForm, isReq, optLabel, props, receiptText, validateForm, valuesOf } from './form-model';
 import type { FieldError, Values } from './form-model';
 import type { Ctx, Data, Kind } from './types';
@@ -115,12 +115,7 @@ function fieldHTML(c: Ctx, st: FormState, name: string, p: FieldSchema): string 
 /** what the form shows before its fields: a config diff (setup), a plan (plan), a connector's contents and hash */
 function formExtras(d: FormSpec): string {
   let h = '';
-  if (d.diff) {
-    const lines = String(d.diff).split('\n');
-    h += '<div class="cd-well cd-diff" role="group" aria-label="' + esc('Changes to ' + (d.file || 'the config')) + '">' + (d.file ? '<div class="cd-diff__file">' + esc(d.file) + '</div>' : '') +
-      lines.map((l) => '<div class="cd-diff__l"' + (/^\+/.test(l) ? ' data-d="add"' : /^-/.test(l) ? ' data-d="del"' : '') + '><span aria-hidden="true">' + esc(l.charAt(0) === '+' || l.charAt(0) === '-' ? l.charAt(0) : ' ') + '</span>' +
-        '<span class="ui-sr">' + (/^\+/.test(l) ? 'added: ' : /^-/.test(l) ? 'removed: ' : '') + '</span>' + esc(l.replace(/^[+\- ]/, '')) + '</div>').join('') + '</div>';
-  }
+  if (d.diff) h += diffWell(String(d.diff), d.file);
   if (d.plan) h += '<ol class="cd-plan">' + d.plan.map((x) => '<li>' + fmt(x) + '</li>').join('') + '</ol>';
   if (d.contents) h += '<div class="cd-well cd-contents">' + d.contents.map((x) => '<div class="cd-well__line"><span class="cd-well__strong">' + esc(x[0]) + '</span><span>' + fmt(x[1] ?? '') + '</span></div>').join('') +
     (d.pinned ? '<div class="cd-well__line cd-pinned"><span>Pinned</span><span class="cd-mono">' + esc(d.pinned) + '</span></div>' : '') + '</div>';

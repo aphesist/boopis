@@ -8,6 +8,7 @@
    Nothing is written to a Hermes file here, and nothing is invented: what Hermes did not answer is null and says why in
    `info.notes`. A teammate cannot be messaged yet (team chat is phase 2), so the thread is empty and `send` says so. */
 import { logger } from '../../core/log';
+import { NeedsConfirmation } from '../../data/confirm';
 import { botIdBase, numbered } from '../../data/bot-id';
 import { APPROVALS, SUGGESTIONS } from '../../data/bot-catalog';
 import { scheduleWords } from '../../data/cron';
@@ -17,6 +18,7 @@ import { emitter, feed, store } from '../../data/store';
 import type { Bot, BotCatalog, BotInfo, BotJob, BotSession, Schedule, ThreadMessage } from '../../data/types';
 import type { CronManageResult, ModelOptionsResult, ProfileRow, ProfilesDescribeResult, SessionListRow } from '../../vendor/hermes-shared/gateway-contract.generated';
 import type { GatewayClient, GatewayEvent } from '../gateway';
+import { isUnknownMethod } from './wire';
 import { botFrom, botName, capabilitiesFrom, isArchived, jobFrom, modelLabel, sessionFrom, sortJobs, splitModel } from './map-bots';
 import type { Known, PluginBot } from './map-bots';
 
@@ -144,8 +146,8 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       rows = listed.profiles ?? [];
       rosterNote = null;
     } catch (e) {
-      rosterNote = 'The teammates could not be read from Hermes: ' + why(e);
-      log.warn('profiles.list failed', e);
+      rosterNote = isUnknownMethod(e) ? 'This Hermes has no profile methods, so teammates cannot be listed.' : 'The teammates could not be read from Hermes: ' + why(e);
+      (isUnknownMethod(e) ? log.info : log.warn)('profiles.list failed', e);
       return;
     }
     ownRecords = await readOwn();
@@ -245,7 +247,7 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       providerModels = out;
       providerSlugs = (o.providers ?? []).map((p) => p.slug);
       currentModel = o.model ? modelLabel(o.provider, o.model) : null;
-    } catch (e) { log.warn('model.options failed', e); }
+    } catch (e) { (isUnknownMethod(e) ? log.info : log.warn)('model.options failed', e); }
   }
   const modelList = (): string[] => {
     const labels = providerModels.map((m) => m.label);
@@ -312,15 +314,16 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       if (lines.length) out.push({ file: base(id) + 'cron: routines', diff: lines.join('\n') });
       return out;
     },
-    async save(id, patch: BotPatch) {
+    async save(id, patch: BotPatch, opts) {
       const r = need(id);
       const failures: string[] = [];
       const params: Record<string, unknown> = { name: id };
       if (patch.role !== undefined) params['description'] = patch.role.trim();
       if (patch.instructions !== undefined) params['soul'] = patch.instructions;
-      if (patch.model !== undefined) Object.assign(params, resolveModel(patch.model), { confirm_expensive_model: true });
+      if (patch.model !== undefined) Object.assign(params, resolveModel(patch.model), opts?.confirmModel ? { confirm_expensive_model: true } : {});
       if (Object.keys(params).length > 1) {
-        const res = await client.request('profiles.configure', params) as { ok?: boolean; applied?: Record<string, boolean | null> };
+        const res = await client.request('profiles.configure', params) as { ok?: boolean; applied?: Record<string, boolean | null>; confirm_required?: boolean | null; confirm_message?: string | null };
+        if (res.confirm_required) { r.loaded = false; await loadDetail(id); throw new NeedsConfirmation(res.confirm_message || 'Hermes asks you to confirm this model.'); }
         for (const [key, ok] of Object.entries(res.applied ?? {})) if (ok === false) failures.push(({ soul: 'SOUL.md', description: 'the role', model: 'the model' } as Record<string, string>)[key] ?? key);
       }
       if (patch.addRoutines?.length || patch.removeRoutines?.length) {

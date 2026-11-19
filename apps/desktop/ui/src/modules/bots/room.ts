@@ -8,13 +8,14 @@ import { ui } from '../../components';
 import type { MenuItem } from '../../components';
 import { data } from '../../data';
 import type { ApprovalMessage, Bot, BotsEvent, ThreadMessage } from '../../data';
-import { cronValid, cronWords } from './cron';
+import { cronValid, cronWords, scheduleWords } from './cron';
 import { bot, initModel, S, stateOf, thread } from './model';
 import { gentleFollow, orbButton, orbHTML, livenIn, setReact } from './orbs';
 import { markSelected, updateRow } from './list';
 import { openNew } from './new-bot';
 import { openSettings, toggleSettings } from './settings';
 import { checkClips, watchClips } from './clips';
+import { renderGlance } from './glance';
 
 const bots = () => data().bots;
 const NODE = new Map<string, HTMLElement>();
@@ -34,7 +35,7 @@ export function mountView(root: HTMLElement): void {
   S.room = room; S.newPane = nb; S.sheet = sheet;
   watchClips(root);
   buildRoom();
-  if (S.view === 'new') openNew(); else openBot(S.sel);
+  if (S.view === 'new' || !S.bots.length) openNew(); else openBot(S.sel);
   /* the new-bot view is ours to close: Esc leaves it for the bot you came from */
   nb.addEventListener('keydown', (e) => { if (e.key === 'Escape' && S.bots.length && !e.defaultPrevented) { e.preventDefault(); e.stopPropagation(); openBot(S.sel); focusConversation(); } });
 }
@@ -52,6 +53,8 @@ function buildRoom(): void {
   log.addEventListener('keydown', turnKeys);
   log.addEventListener('focusin', (e) => { const t = (e.target as Element).closest<HTMLElement>('[data-hx-turn]'); if (t) rove(t); });
   buildComposer(zone);
+  /* a live bot cannot be messaged yet: no composer, rather than one that sends nowhere */
+  zone.hidden = !!data().info.unavailable['bots.send'];
   const measure = (): void => { S.viewRoot?.style.setProperty('--bt-composer-h', zone.offsetHeight + 'px'); };
   new ResizeObserver(measure).observe(zone);
   measure();
@@ -71,6 +74,7 @@ export function openBot(id: string | null): void {
   paintComposer(b);
   S.composer?.setRunning(S.runs.has(b.id));
   emit('hx:title', { tab: 'bots', title: b.name });
+  if (b.info) void data().bots.admin?.open(b.id).catch(() => undefined);   /* its model, routines and sessions are read as it opens */
   if (S.sheetOpen && S.sheetFor !== b.id) openSettings(b.id, null, { keepFocus: true });
 }
 
@@ -102,7 +106,12 @@ export function refreshPresence(): void {
     st.insertAdjacentHTML('beforeend', '<span class="ui-state"' + (s.tone !== 'none' ? ' data-tone="' + s.tone + '"' : '') + '>' + esc(s.busy && b.activity && !S.transient ? b.activity : s.word) + '</span>');
     line.append(st);
   }
-  if (b.cfg.cron) line.append(el('button', { class: 'bt-p-sched ui-mono', type: 'button', 'data-tip': 'Schedule', onclick: () => openSettings(b.id, 'schedule') },
+  if (b.info) {
+    if (b.info.model) line.append(el('button', { class: 'bt-p-sched ui-mono', type: 'button', 'data-tip': 'Model', onclick: () => openSettings(b.id, 'model'), html: ui.html.model(b.info.model, { size: 12, mono: false }) }));
+    const next = b.info.jobs?.find((j) => j.enabled);
+    if (next) line.append(el('button', { class: 'bt-p-sched ui-mono', type: 'button', 'data-tip': 'Schedule', onclick: () => openSettings(b.id, 'schedule') },
+      [el('span', { html: ui.icon('clock') }), el('span', { text: scheduleWords(next.schedule) + (b.info.jobs && b.info.jobs.filter((j) => j.enabled).length > 1 ? ' and ' + (b.info.jobs.filter((j) => j.enabled).length - 1) + ' more' : '') })]));
+  } else if (b.cfg.cron) line.append(el('button', { class: 'bt-p-sched ui-mono', type: 'button', 'data-tip': 'Schedule', onclick: () => openSettings(b.id, 'schedule') },
     [el('span', { html: ui.icon('clock') }), el('span', { text: cronValid(b.cfg.cron) ? cronWords(b.cfg.cron) : 'schedule incomplete' })]));
   paintToolbar(b);
 }
@@ -112,7 +121,8 @@ function renderThread(b: Bot): void {
   const log = S.log as HTMLElement; log.textContent = '';
   NODE.clear();
   const msgs = thread(b.id);
-  if (!msgs.length) {
+  if (!msgs.length && b.info) log.append(renderGlance(b));
+  else if (!msgs.length) {
     const e = ui.empty({ title: 'Nothing here yet', text: 'Ask ' + b.name + ' something, or give it a schedule so it works on its own.' });
     if (b.ideas.length) {
       const ideas = el('div', { class: 'bt-ideas' }, b.ideas.map((t) => { const btn = ui.button({ label: t }); btn.addEventListener('click', () => setDraft(t)); return btn; }));
@@ -358,7 +368,7 @@ export function onBotsEvent(ev: BotsEvent, handlers: { announce: () => void }): 
       Object.assign(b, { ...ev.bot, cfg: b.cfg });
       Object.assign(b.cfg, ev.bot.cfg, { channels: { ...ev.bot.cfg.channels }, approvals: { ...ev.bot.cfg.approvals } });
       updateRow(b.id);
-      if (b.id === S.sel) refreshPresence();
+      if (b.id === S.sel) { refreshPresence(); if (b.info && S.view === 'bot' && !thread(b.id).length && S.log) S.log.replaceChildren(renderGlance(b)); }
       if (hadAttn !== !!b.attention) handlers.announce();
       break;
     }

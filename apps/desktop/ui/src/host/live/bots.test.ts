@@ -4,6 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import type { BotsEvent } from '../../data';
 import type { GatewayClient, GatewayEvent } from '../gateway';
+import { NeedsConfirmation } from '../../data/confirm';
 import { lookFor } from '../../data/looks';
 import { createLiveBots } from './bots';
 import type { LiveBots } from './bots';
@@ -244,10 +245,19 @@ describe('the settings sheet edits the real profile, and shows the diff first', 
   it('saves through profiles.configure and cron.manage, then reads the profile again', async () => {
     const { h, bots } = await open();
     await bots.source.admin!.save('atlas', { role: 'security reviewer', instructions: 'New soul\n', model: 'main/fake-b', addRoutines: [{ name: 'weekly', prompt: 'look', schedule: '0 9 * * 1' }], removeRoutines: ['j1'] });
-    expect(h.main.calls.find((c) => c.method === 'profiles.configure')!.params).toEqual({ name: 'atlas', description: 'security reviewer', soul: 'New soul\n', provider: 'main', model: 'fake-b', confirm_expensive_model: true });
+    expect(h.main.calls.find((c) => c.method === 'profiles.configure')!.params).toEqual({ name: 'atlas', description: 'security reviewer', soul: 'New soul\n', provider: 'main', model: 'fake-b' });
     expect(h.links.get('atlas')!.calls.filter((c) => c.method === 'cron.manage').map((c) => c.params['action'])).toEqual(expect.arrayContaining(['remove', 'add']));
     const b = botOf(bots, 'atlas')!;
     expect([b.role, b.cfg.instructions, b.cfg.model, b.info!.jobs?.map((j) => j.name)]).toEqual(['security reviewer', 'New soul\n', 'main/fake-b', ['weekly']]);
+  });
+  it('asks for confirmation when Hermes does, and sends the confirmed pick once', async () => {
+    const { h, bots } = await open();
+    const orig = h.main.requestRaw.bind(h.main);
+    h.main.requestRaw = async (m: string, p: Json) => (m === 'profiles.configure' && !p['confirm_expensive_model'] && p['model'] ? { ok: true, applied: {}, confirm_required: true, confirm_message: 'This model is expensive.' } : orig(m, p));
+    await expect(bots.source.admin!.save('atlas', { model: 'nous/hermes-4' })).rejects.toBeInstanceOf(NeedsConfirmation);
+    expect(botOf(bots, 'atlas')!.info!.model).toBe('main/fake-a');          // nothing of the model was written
+    await bots.source.admin!.save('atlas', { model: 'nous/hermes-4' }, { confirmModel: true });
+    expect(botOf(bots, 'atlas')!.info!.model).toBe('nous/hermes-4');
   });
   it('says what Hermes refused and keeps what it accepted', async () => {
     const { h, bots } = await open();

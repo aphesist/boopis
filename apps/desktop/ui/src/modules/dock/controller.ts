@@ -209,6 +209,7 @@ export function stopRun(): void {
 export function toggleSetting(key: 'governed' | 'network', on: boolean): void { data().run.setSetting(key, on); }
 export function schedAction(act: string, id: string): void {
   const s = S.sched.find((x) => x.id === id); if (!s) return;
+  if (act === 'sched-run' && data().info.unavailable['schedules.runNow']) { ui.toast(String(data().info.unavailable['schedules.runNow'])); return; }
   if (act === 'sched-run') { data().schedules.runNow(id); announce(`${botById(s.bot)?.name ?? ''} started ${s.what}`); return; }
   data().schedules.setPaused(id, !s.paused);   /* the provider answers on its list: onSchedules morphs */
 }

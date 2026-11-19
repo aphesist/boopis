@@ -128,6 +128,12 @@ export const sentenceText = (d: Data): string => { const w = originText(originOf
 export const headrow = (c: Ctx, html: string): string => '<div class="cd-headrow"><div class="cd-headmain">' + byline(c) + '<p class="cd-lead" id="' + c.id + '-t">' + html + '</p></div><span class="ui-stamp" data-stamp></span></div>';
 export const quote = (q?: string): string => (q ? '<p class="cd-quote">“' + fmt(q) + '”</p>' : '');
 export const breath = (): string => U.html.dot('run');
+/** a change as lines ('+ added', '- removed', '  kept') in the config diff's well: each line says added or removed to a screen reader */
+export function diffWell(diff: string, file?: string): string {
+  return '<div class="cd-well cd-diff" role="group" aria-label="' + esc('Changes to ' + (file || 'the config')) + '">' + (file ? '<div class="cd-diff__file">' + esc(file) + '</div>' : '') +
+    diff.split('\n').map((l) => '<div class="cd-diff__l"' + (/^\+/.test(l) ? ' data-d="add"' : /^-/.test(l) ? ' data-d="del"' : '') + '><span aria-hidden="true">' + esc(l.charAt(0) === '+' || l.charAt(0) === '-' ? l.charAt(0) : ' ') + '</span>' +
+      '<span class="ui-sr">' + (/^\+/.test(l) ? 'added: ' : /^-/.test(l) ? 'removed: ' : '') + '</span>' + esc(l.replace(/^[+\- ]/, '')) + '</div>').join('') + '</div>';
+}
 export function well(lines?: readonly string[]): string {
   const ls = (lines ?? []).filter(Boolean);
   if (!ls.length) return '';

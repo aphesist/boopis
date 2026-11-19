@@ -20,11 +20,18 @@ import { ui as uiLib } from '../../components';
 uiLib.squircle.auto('.bt-sugg, .bt-opt');
 
 let wired = false;
+/** the provider the module listens to: a different one (tests; a provider swapped at boot) is listened to instead */
+let listening: { source: unknown; off: () => void } | null = null;
 function wire(): void {
+  initModel();
+  const source = data().bots;
+  if (listening?.source !== source) { listening?.off(); listening = { source, off: subscribeBots() }; }
   if (wired) return;
   wired = true;
-  initModel();
-  data().bots.subscribe((ev) => {
+  wireBus();
+}
+function subscribeBots(): () => void {
+  return data().bots.subscribe((ev) => {
     if (ev.type === 'bot-created') {
       S.bots.push({ ...ev.bot });
       S.threads[ev.bot.id] ??= [];
@@ -36,10 +43,15 @@ function wire(): void {
       const [gone] = S.bots.splice(i, 1);
       const r = S.rows.get(ev.id); if (r) r.li.remove(); S.rows.delete(ev.id);
       if (gone?.attention) announceAttention();
+      /* the open bot went (archived or deleted here, or from Hermes's own command line): open the next, or the new-bot form */
+      if (S.sel === ev.id) { if (S.sheetFor === ev.id) closeSettings(true); S.sel = S.bots[0]?.id ?? null; if (S.view === 'bot' && S.room) { if (S.sel) openBot(S.sel); else openNew(); } }
+      syncRoving();
       return;
     }
     onBotsEvent(ev, { announce: announceAttention });
   });
+}
+function wireBus(): void {
   on('hx:bot-select', (d) => { if (d.from && String(d.from).startsWith('bots')) return; if (d.id && bot(d.id)) openBot(d.id); });
   on('hx:new-bot', () => openNew());
   on('hx:bot-settings', (d) => { if (d.open && !S.sheetOpen) openSettings(S.sel); });
