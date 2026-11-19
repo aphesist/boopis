@@ -2,14 +2,14 @@
 
 Status: plan, 2026-11-18. Evidence: `docs/research/cloud.md` (Claude Code on the web, Codex cloud, sandbox providers, Hermes's remote features) and this repository's own cloud session environment. Decision: ADR-0019.
 
-hypotaxis offers two kinds of session, side by side in the same list:
+boopis offers two kinds of session, side by side in the same list:
 - **Local session:** Hermes runs on your computer, with everything the plan already has: your files, toolchains, devices, the macOS VM.
 - **Cloud session:** the same software runs in a fresh, isolated container on infrastructure **you** own. It keeps working when your laptop is closed, and you open it from any device you're signed in on: desktop, phone, another computer. It can't touch your computer unless you allow it (section 7).
 
 This is how Claude Code's cloud sessions work. The one difference is that you bring the infrastructure instead of renting Anthropic's.
 
 ## 1. How Claude Code does it, and what we copy
-| Claude Code cloud | hypotaxis cloud |
+| Claude Code cloud | boopis cloud |
 |---|---|
 | One fresh VM per session, reclaimed when idle and rebuilt from the stored transcript | One fresh container per session on your runner, reclaimed when idle and restored from your session store |
 | The repository cloned in; work survives only if pushed | Same, and every passing `ship` is already a checkpoint commit, pushed to the session branch, so a reclaim loses nothing that passed the gate |
@@ -22,7 +22,7 @@ This is how Claude Code's cloud sessions work. The one difference is that you br
 | Self-hosted runners poll a queue, outbound only | Same: runners and sandboxes connect out, so no inbound ports are opened |
 
 ## 2. The pieces
-1. **The cloud image:** the official Hermes Docker image plus the hypotaxis plugin, `hx` and common toolchains, built per Hermes release in CI. Inside a cloud session Hermes runs exactly as on the desktop. Hermes's gateway and our plugin don't know where they are.
+1. **The cloud image:** the official Hermes Docker image plus the boopis plugin, `hx` and common toolchains, built per Hermes release in CI. Inside a cloud session Hermes runs exactly as on the desktop. Hermes's gateway and our plugin don't know where they are.
 2. **The control plane (`hx-cloud`):** one small service, in Rust, that you deploy once: a Docker Compose file for a VPS or home server, and later a Cloudflare deployment. It holds:
    - **environments:** name, image, setup script, env vars, network level, allowed hosts, network secrets, repositories, size, idle timeout and maximum lifetime;
    - **the session registry:** state, owner, environment, branch, runner;

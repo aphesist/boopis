@@ -1,6 +1,6 @@
 # hx-proto
 
-The wire contract between the hypotaxis plugin (Python) and `hx` (Rust). Pure types and plumbing: no file access, no business logic.
+The wire contract between the boopis plugin (Python) and `hx` (Rust). Pure types and plumbing: no file access, no business logic.
 
 ## Public API
 

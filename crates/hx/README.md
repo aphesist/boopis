@@ -1,6 +1,6 @@
 # hx
 
-The binary the hypotaxis Hermes plugin drives. One warm `hx serve` child per Hermes process speaks JSON-RPC 2.0 over stdio; the same methods are available as one-shot subcommands for debugging and tests.
+The binary the boopis Hermes plugin drives. One warm `hx serve` child per Hermes process speaks JSON-RPC 2.0 over stdio; the same methods are available as one-shot subcommands for debugging and tests.
 
 ```sh
 hx serve [--max-concurrency N] [--log-file PATH] [--log-level FILTER]

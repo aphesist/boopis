@@ -1,6 +1,6 @@
 # Compatibility spec: other harnesses' formats on Hermes
 
-Status: v1 draft, 2026-11-18. Binding for `plugins/hypotaxis/compat/`. Companion to `docs/ARCHITECTURE.md` section 9, `docs/STANDARDS.md` and ADR-0001, 0003, 0006 and 0011 in `docs/DECISIONS.md`. This file is a spec only. No code exists yet.
+Status: v1 draft, 2026-11-18. Binding for `plugins/boopis/compat/`. Companion to `docs/ARCHITECTURE.md` section 9, `docs/STANDARDS.md` and ADR-0001, 0003, 0006 and 0011 in `docs/DECISIONS.md`. This file is a spec only. No code exists yet.
 
 Sources:
 - `docs/research/formats.md` (formats, from docs only), cited as `F§n`.
@@ -21,7 +21,7 @@ Anything not verified is marked **[verify]** with how to verify it.
 4. Project content is **trust-gated** (section 11). Fail closed: untrusted means inert.
 5. Nothing is fabricated (invariant 5). A feature with no faithful mapping is **unsupported**, listed in the inventory, and never approximated silently.
 6. Translation is deterministic and idempotent. The same inputs produce the same bytes, which also keeps the prompt prefix stable across sessions.
-7. Foreign files and repositories are never modified. Compat writes only under `<profile home>/hypotaxis/` (and installs plugins under the profile `plugins/`).
+7. Foreign files and repositories are never modified. Compat writes only under `<profile home>/boopis/` (and installs plugins under the profile `plugins/`).
 
 ## 1. What Hermes already does natively (verified)
 
@@ -52,7 +52,7 @@ Anything not verified is marked **[verify]** with how to verify it.
 
 The model is `F§10`. Every concept carries `source{tool,scope,path,plugin?}`, `precedenceKey`, `raw` (round-trips unknown keys) and a content hash.
 
-**Timing.** *install* = plugin or marketplace install and update. *session* = `plugin.hypotaxis.compat.prepare{cwd}` (RPC), called by the host before `session.create`. In plain Hermes the same code runs lazily at `on_session_open`, so effects reach the next session. *change* = the file watcher refreshes the inventory and marks items **pending**. A pending item is applied at the next session and **never to a running one**.
+**Timing.** *install* = plugin or marketplace install and update. *session* = `plugin.boopis.compat.prepare{cwd}` (RPC), called by the host before `session.create`. In plain Hermes the same code runs lazily at `on_session_open`, so effects reach the next session. *change* = the file watcher refreshes the inventory and marks items **pending**. A pending item is applied at the next session and **never to a running one**.
 
 | Concept | Hermes surface | When |
 |---|---|---|
@@ -62,11 +62,11 @@ The model is `F§10`. Every concept carries `source{tool,scope,path,plugin?}`, `
 | Command | A skill (model-invocable) or `ctx.register_command` (user-only) | session |
 | Subagent | A delegation-provider route, optionally a profile (teammate) | session; promotion is explicit |
 | Hook | Python callbacks on `ctx.register_hook` (section 4) | callbacks registered at plugin load; the project's hook set is read from a session-frozen snapshot |
-| PermissionRule | The hypotaxis policy in `pre_tool_call` (deny > ask > allow) | session snapshot |
+| PermissionRule | The boopis policy in `pre_tool_call` (deny > ask > allow) | session snapshot |
 | McpServer | **Hosted by the plugin and exposed through exec** (section 7). Never written to the user's `config.yaml`. | session |
 | Plugin / Marketplace | Generated skills plugin plus lock file | install |
 | OutputStyle | **Unsupported.** Hermes has no hook to replace the system prompt after build. | none |
-| Settings (`env`, `model`) | `env` applies only to translated hook and MCP child processes. `model` is ignored (hypotaxis ladder). | session |
+| Settings (`env`, `model`) | `env` applies only to translated hook and MCP child processes. `model` is ignored (boopis ladder). | session |
 
 ## 3. Per format
 
@@ -82,7 +82,7 @@ Legend: **N** native (no work), **T** translate (our code), **U** unsupported (r
 | Subdirectory `CLAUDE.md` | **N** | Subdirectory hints. |
 | `.claude/rules/**/*.md` | **T** | `paths:` makes a glob rule. No `paths` means always. |
 | `settings.json` hooks | **T** | Section 4. |
-| `settings.json` permissions | **T** | Into the hypotaxis policy. Section 10. |
+| `settings.json` permissions | **T** | Into the boopis policy. Section 10. |
 | `settings.json` `env` | T | Child processes only. |
 | `.claude/skills/<n>/SKILL.md` | **T** | Registration, section 5.2. Most skills load as-is because Hermes ignores unknown keys. CC-only keys are handled in section 5.1. |
 | `.claude/commands/**/*.md`, `~/.claude/commands` | **T** | Section 5.1. The importer skips them. |
@@ -175,7 +175,7 @@ Verified kwargs are from `H:website/docs/user-guide/features/hooks.md` and `herm
 | UserPromptSubmit | `pre_llm_call(user_message,session_id,turn_id,...)`. Fires **once per user prompt**, before inference. Returns context, which is joined into the user message, or `{"action":"block"}`. | Full. **[verify]** whether a blocked prompt stays in history, since Claude erases it. |
 | SessionStart | `on_session_start(session_id,model,platform)` for `startup`, `on_session_open(reason=create\|resume)` for `resume`, `on_session_reset` for `clear`, `post_compaction` for `compact` | Observers fire **after** the system prompt is built. `additionalContext` is therefore delivered through the next `pre_llm_call`, and never the system prompt. |
 | SessionEnd | `on_session_finalize` | Partial: Claude's `reason` set is mapped to `other` unless the surface supplies `reason`. |
-| Stop | `post_llm_call`, which Hermes fires once when the tool loop ends in a final answer (not when interrupted). A block (exit 2 or `decision:"block"`) is fed back with `ctx.inject_message`. | **Partial.** Hermes has no turn-end hook that can continue a turn, and `pre_verify` fires only after `write_file` or `patch` edits (verified: `ship` writes do not count), so hypotaxis does not use it. The reason re-enters as a user-role message queued in the session's own FIFO: a **new turn after the answer**, not a continuation inside it. It needs `plugins.entries.hypotaxis.allow_gateway_injection: true` (reported in `compat.inventory`). Upstream proposal: `compat/UPSTREAM.md`. |
+| Stop | `post_llm_call`, which Hermes fires once when the tool loop ends in a final answer (not when interrupted). A block (exit 2 or `decision:"block"`) is fed back with `ctx.inject_message`. | **Partial.** Hermes has no turn-end hook that can continue a turn, and `pre_verify` fires only after `write_file` or `patch` edits (verified: `ship` writes do not count), so boopis does not use it. The reason re-enters as a user-role message queued in the session's own FIFO: a **new turn after the answer**, not a continuation inside it. It needs `plugins.entries.boopis.allow_gateway_injection: true` (reported in `compat.inventory`). Upstream proposal: `compat/UPSTREAM.md`. |
 | SubagentStart / SubagentStop | `subagent_start(child_goal,child_role,...)` / `subagent_stop(child_summary,child_status,...)` | Observe only. A SubagentStop block cannot force continuation. |
 | Notification | `on_human_input_request(kind=approval\|clarify\|sudo, prompt)`. `approval` becomes `permission_prompt`, `clarify` becomes `elicitation_dialog`. Do not also use `pre_approval_request`. | Partial. `idle_prompt` and `auth_success` do not exist. |
 | PostCompact | `post_compaction(session_id,old_session_id,kind,reason)` | Full |
@@ -204,7 +204,7 @@ Built per call from Hermes kwargs. Keys are exactly Claude's (`F§1.3`).
 |---|---|
 | `session_id` | Hermes `session_id` |
 | `prompt_id` | `turn_id` |
-| `transcript_path` | `<home>/hypotaxis/compat/transcripts/<session>.jsonl`, written **lazily** before the first spawn in a session and appended after each turn. Content is a best-effort Claude-shaped JSONL **[verify]** against real `transcript_path` consumers in the fixtures. |
+| `transcript_path` | `<home>/boopis/compat/transcripts/<session>.jsonl`, written **lazily** before the first spawn in a session and appended after each turn. Content is a best-effort Claude-shaped JSONL **[verify]** against real `transcript_path` consumers in the fixtures. |
 | `cwd` | `ctx.session_cwd()` |
 | `permission_mode` | `bypassPermissions` if YOLO or `approvals.mode: off`, else `default` |
 | `effort{level}` | the session's reasoning effort |
@@ -252,7 +252,7 @@ Environment of the child:
 |---|---|
 | `hookSpecificOutput.permissionDecision: "deny"` or top-level `decision:"block"` | `{"action":"block","message":reason}` |
 | `permissionDecision: "ask"` | `{"action":"approve","message":reason,"rule_key":"compat:<hook id>"}` (Hermes human gate) |
-| `permissionDecision: "allow"` | **Skips hypotaxis-level approval prompts for that call.** Hermes's own approvals (`pre_approval_request`) and **hardline blocks still apply**. It never overrides a `deny` (from any source) or a hypotaxis scope or protected-path veto. It is not a Hermes directive, so the call proceeds to Hermes's gates unchanged. Hermes has no auto-allow. |
+| `permissionDecision: "allow"` | **Skips boopis-level approval prompts for that call.** Hermes's own approvals (`pre_approval_request`) and **hardline blocks still apply**. It never overrides a `deny` (from any source) or a boopis scope or protected-path veto. It is not a Hermes directive, so the call proceeds to Hermes's gates unchanged. Hermes has no auto-allow. |
 | `permissionDecision: "defer"` | treated as `ask` |
 | `updatedInput` | `{"action":"modify","args":...}` (shallow merge, argument names translated back) **[verify]** `updatedInput` is not in `F§1.3` verified fields. |
 | `additionalContext` (cap 10,000 chars) | `pre_llm_call` context, or a suffix on the tool result |
@@ -265,7 +265,7 @@ Environment of the child:
 
 The hook sees a Claude name, `tool_input` is translated to Claude's field names, and `matcher` matches the Claude name.
 
-| Hypotaxis tool (default surface) | Claude name | Rule |
+| boopis tool (default surface) | Claude name | Rule |
 |---|---|---|
 | `pack` | `Read` for file, range or symbol; `Grep` for search; `Glob` for glob listing | by argument shape. Other `pack` modes (git status, diff, log) use `Read`. |
 | `ship` | `Write` (new file), `Edit` (one replacement), `MultiEdit` (several), `NotebookEdit` (`.ipynb`) | **One PreToolUse per target file.** Any block aborts the whole ship (it is transactional, so no partial writes). |
@@ -307,9 +307,9 @@ A command is a prompt template. It becomes a **skill** (so it appears as `/name`
 | Codex `~/.codex/prompts/*.md` | `$1`..`$9`, `$ARGUMENTS`, `$NAME` (call `NAME=value`), `$$` | user-only command (`/prompts:<name>`) |
 
 Rules:
-- **Shell injection** (`` !`cmd` ``, `!{}`) is expanded by compat, never by `skills.inline_shell`, so the setting is irrelevant. It runs only after trust, through the shared process helper (`hypotaxis.util.proc`: allowlisted env, timeout, output cap).
+- **Shell injection** (`` !`cmd` ``, `!{}`) is expanded by compat, never by `skills.inline_shell`, so the setting is irrelevant. It runs only after trust, through the shared process helper (`boopis.util.proc`: allowlisted env, timeout, output cap).
 - `disableSkillShellExecution` is honoured.
-- `allowed-tools` becomes a PermissionRule allow scoped to the invoking turn. It is the only case where compat can pre-approve, and it does so inside the hypotaxis policy and never in Hermes's approval gate. `model` and `effort` apply to the **turn** only if the ladder permits. Otherwise they are reported as ignored.
+- `allowed-tools` becomes a PermissionRule allow scoped to the invoking turn. It is the only case where compat can pre-approve, and it does so inside the boopis policy and never in Hermes's approval gate. `model` and `effort` apply to the **turn** only if the ladder permits. Otherwise they are reported as ignored.
 - `context: fork` runs through the subagent mechanism (section 6).
 - **Namespacing.** Subdirectory gives `frontend:component`. Plugin commands are `plugin:name`. Gemini extension commands are `ext.cmd` on conflict.
 - **Collisions**, by precedence:
@@ -322,11 +322,11 @@ Rules:
 ### 5.2 Skills registration (no files in the repo or the profile)
 
 Claude skills, Gemini and Antigravity skill dirs, and translated commands are **never copied into the repository, `.agents/skills` or any profile-global directory**.
-- At `session` time compat parses them into the per-project cache `<profile home>/hypotaxis/projects/<cwd-hash>/` (normalized `SKILL.md` files plus a manifest of content hashes; `<cwd-hash>` is the hash of the realpath).
+- At `session` time compat parses them into the per-project cache `<profile home>/boopis/projects/<cwd-hash>/` (normalized `SKILL.md` files plus a manifest of content hashes; `<cwd-hash>` is the hash of the realpath).
 - It then registers each with `ctx.register_skill(name, <cache path>/SKILL.md, description, frontmatter)`.
 - The target namespace is **`claude:<name>`**. Gemini and Antigravity sources use `gemini:` and `agy:`. A native skill of the same name is untouched (native wins).
 - **[verify] exact Hermes behaviour**, read from `H:hermes_cli/plugins_content.py`:
-  1. `register_skill` derives the namespace from the **registering plugin's manifest name** and forbids `:` in the skill name. So `claude:` needs a second tiny generated plugin named `claude` (no Python logic beyond the register calls). Otherwise the fallback is `hypotaxis:claude-<name>`.
+  1. `register_skill` derives the namespace from the **registering plugin's manifest name** and forbids `:` in the skill name. So `claude:` needs a second tiny generated plugin named `claude` (no Python logic beyond the register calls). Otherwise the fallback is `boopis:claude-<name>`.
   2. The registry `manager._plugin_skills` is **process-global**, and enabled plugin skills appear in every session's `<available_skills>`. Check whether a session in another cwd sees them.
   3. If it is global, scope with the `skills` list of `session.create` (an allowed create field, `H:gateway/session_policy.py` `CREATE_FIELDS`): the host passes only the cwd's `claude:*` names. **[verify]** whether that field filters the index or only preloads. If it only preloads, register at `on_session_open` and release (`PluginRegistration`) when the last session of that cwd closes, and accept the one-session visibility window.
 - CC-only keys are handled when writing the cache copy:
@@ -342,7 +342,7 @@ Claude skills, Gemini and Antigravity skill dirs, and translated commands are **
 
 Source files: `.claude/agents/*.md` (recursive), `~/.claude/agents`, plugin `agents/`, `--agents` JSON, Gemini `agents/*.md` (preview), Antigravity plugin subagents. Identity is `name`. Priority is managed > CLI > project > user > plugin.
 
-Compat registers a **delegation provider** `hypotaxis-agents` (`ctx.register_delegation_provider`, `H:agent/delegation_provider.py`). It adds one per-task enum parameter `agent` (names plus one-line descriptions, deterministic order) and routes a task:
+Compat registers a **delegation provider** `boopis-agents` (`ctx.register_delegation_provider`, `H:agent/delegation_provider.py`). It adds one per-task enum parameter `agent` (names plus one-line descriptions, deterministic order) and routes a task:
 
 | Claude field | Hermes |
 |---|---|
@@ -360,7 +360,7 @@ Compat registers a **delegation provider** `hypotaxis-agents` (`ctx.register_del
 
 Only **one** delegation provider is active (`delegation.backend`). If the user selected `model_map` or `profile_routes` (`OP:advanced-delegation`), compat does not take over. It exposes each definition as a skill `agent-<name>` whose body is the prompt, and reports the downgrade.
 
-**Promotion to a teammate** is explicit (`plugin.hypotaxis.compat.promote_agent{name}`):
+**Promotion to a teammate** is explicit (`plugin.boopis.compat.promote_agent{name}`):
 1. Run `hermes profile create hx-<name> --no-skills` **[verify]** flags on the pinned Hermes.
 2. Write `SOUL.md` from the prompt body and `config.yaml` (model, toolsets, `mcp_servers` subset). Copy the listed skills.
 3. Record the content hash. Never overwrite a `SOUL.md` whose hash differs from the recorded one, and ask instead.
@@ -372,12 +372,12 @@ Only **one** delegation provider is active (`delegation.backend`). If the user s
 
 **What Hermes has (verified).**
 - `session.create` accepts `editor.mcp_servers` (`H:gateway/session_local_editor.py`, `session_local_mcp.py`): session-scoped, frozen into the prompt prefix, at most 16 servers and 64 KB, ACP-schema stdio, http or sse entries.
-- It is **accepted only from `source: "acp"`**, and it forces `edit_approval_policy: "ask"` (one approval per edit, which conflicts with `ship`). hypotaxis launches with `source: "gui"`.
+- It is **accepted only from `source: "acp"`**, and it forces `edit_approval_policy: "ask"` (one approval per edit, which conflicts with `ship`). boopis launches with `source: "gui"`.
 - The entries carry no OAuth block and no `${...}` interpolation.
 - Plugins have no API to register an MCP server (`ctx.call_mcp` only reaches servers already in config).
 - The only other sources are `config.yaml` and portable Agent Plugin `mcp.json`, and both are profile-global.
 
-**Gap, stated plainly:** Hermes has **no session-scoped MCP mechanism usable by hypotaxis**. Two fallbacks:
+**Gap, stated plainly:** Hermes has **no session-scoped MCP mechanism usable by boopis**. Two fallbacks:
 
 | Fallback | Cost |
 |---|---|
@@ -410,7 +410,7 @@ Only **one** delegation provider is active (`delegation.backend`). If the user s
 | `$VAR` (Gemini) | `${VAR}` |
 | `${CLAUDE_PROJECT_DIR}`, `${workspacePath}` | `${workspaceFolder}` |
 | `${CLAUDE_PLUGIN_ROOT}`, `${extensionPath}` | absolute plugin path at install |
-| `${CLAUDE_PLUGIN_DATA}` | `<home>/hypotaxis/compat/plugin-data/<id>` |
+| `${CLAUDE_PLUGIN_DATA}` | `<home>/boopis/compat/plugin-data/<id>` |
 | `${user_config.KEY}` | non-sensitive value substituted. Sensitive values are `${HX_...}` references resolved from the keychain by the host. |
 
 An unresolved reference in `url` or `headers` fails the server closed (Hermes already does this).
@@ -434,7 +434,7 @@ An unresolved reference in `url` or `headers` fails the server closed (Hermes al
 Sources: Cursor `.mdc` (`alwaysApply`, `globs`, `description`), Claude `.claude/rules` (`paths`), Antigravity `.agents/rules` (`trigger`). All normalize to `Rule{mode: always|glob|model_decision|manual}`.
 
 **Constraints, verified:**
-- Plugin system prompt sections hold 4,000 chars each and **8,000 in total across all plugins**, shared with hypotaxis's own governance section.
+- Plugin system prompt sections hold 4,000 chars each and **8,000 in total across all plugins**, shared with boopis's own governance section.
 - Hermes already appends context to tool results through the subdirectory-hint mechanism.
 - Hermes injects `pre_llm_call` context into the user message.
 
@@ -450,7 +450,7 @@ Sources: Cursor `.mdc` (`alwaysApply`, `globs`, `description`), Claude `.claude/
 **Decision.**
 
 1. **always** rules and memory docs Hermes did not load natively:
-   - If the total is at most 2,000 chars, inline it in a compat section (`id: compat-rules`, at most 3,500 chars, so hypotaxis's governance section keeps at least 4,000 chars of the 8,000 total).
+   - If the total is at most 2,000 chars, inline it in a compat section (`id: compat-rules`, at most 3,500 chars, so boopis's governance section keeps at least 4,000 chars of the 8,000 total).
    - Otherwise the **bodies** go to the first `pre_llm_call` of the session (`is_first_turn`), prefixed `[Project rules]`, and are re-delivered once on the next prompt after any `post_compaction`. Only the index stays in the section. The choice is by size, recorded in the inventory.
 2. **glob** rules: the section (or first-turn block) lists `<globs> -> <rule name, one line>`. The body is **appended once per session** by a `transform_tool_result` callback to the first `pack` or `ship` result (or Hermes file tool) whose target path matches any glob. A per-session delivered set is kept. It is re-armed after `post_compaction`. The block is `[Rule <name> (<source path>)]` plus the body, capped at 8,000 chars (overflow gets a head-and-tail marker with the path).
    - Path matching uses gitignore-style globs against the repo-relative path, for `pack` read, search and glob results (any matched path) and for `ship` (each target).
@@ -489,9 +489,9 @@ The real fix is upstream (deferred, section 13). Where a project needs the exact
 | Agent Plugins v1 | root `plugin.json` | **N** |
 | Hermes plugin | `plugin.yaml` | **N** (`hermes plugins install`) |
 
-**Install flow** (`plugin.hypotaxis.compat.plugin.install{name@marketplace | source}`):
+**Install flow** (`plugin.boopis.compat.plugin.install{name@marketplace | source}`):
 1. Resolve the entry (marketplace `strict` rules, `F§1.9`). A `strict:false` entry that conflicts with its manifest fails with "conflicting manifests". A `url` marketplace cannot use relative sources.
-2. Fetch into `<home>/hypotaxis/compat/plugins/<slug>/source/`:
+2. Fetch into `<home>/boopis/compat/plugins/<slug>/source/`:
    - **Pinned to a 40-hex commit.** If the entry gives a `ref`, resolve it to a SHA at install. Never track a branch.
    - npm sources: no install scripts.
    - `command` sources and `archive` sources without `sha256` are refused.
@@ -501,7 +501,7 @@ The real fix is upstream (deferred, section 13). Where a project needs the exact
 6. Hooks, commands, agents, rules and MCP servers are read from `source/`. They are active **iff Hermes reports the generated plugin enabled** and the trust grant matches. **Hermes's enabled flag is the single source of truth for enable and disable as a unit.** Disabled plugins' hosted MCP servers do not start. Uninstall removes `plugins/<slug>`, the `source/` directory and the trust records.
 7. `plugin.update`: re-resolve, show the **component diff**, re-prompt (hash changed), then swap atomically. Claude's `${CLAUDE_PLUGIN_ROOT}` changes on update (as in Claude), and `${CLAUDE_PLUGIN_DATA}` persists.
 
-**Mods (built in M1):** `mod.install.prepare` and `mod.install.confirm` are steps 3 and 4 and the consent part of step 5 for a local source: the tree hash, `lock.json`, the install prompt (the hooks and the `$` namespaces found by static analysis of the transformed module, `hx mods.analyze`), and the trust record for the project. A mod is read from `<home>/hypotaxis/compat/plugins/<slug>/source/` and runs only when Hermes lists its slug as enabled and the content hash is the one approved. Steps 1, 2 (fetching from a marketplace, pinning a ref), 5 (the generated Agent Plugin v1) and 6 (`hermes plugins enable`) are not built yet; a source that is a clean git checkout records its commit.
+**Mods (built in M1):** `mod.install.prepare` and `mod.install.confirm` are steps 3 and 4 and the consent part of step 5 for a local source: the tree hash, `lock.json`, the install prompt (the hooks and the `$` namespaces found by static analysis of the transformed module, `hx mods.analyze`), and the trust record for the project. A mod is read from `<home>/boopis/compat/plugins/<slug>/source/` and runs only when Hermes lists its slug as enabled and the content hash is the one approved. Steps 1, 2 (fetching from a marketplace, pinning a ref), 5 (the generated Agent Plugin v1) and 6 (`hermes plugins enable`) are not built yet; a source that is a clean git checkout records its commit.
 
 Other rules:
 - Reserved marketplace names (`claude-plugins-official`, `anthropic-*`, ...) are accepted only from the sources Claude itself accepts, and `blockedMarketplaces` and `strictKnownMarketplaces` from managed settings are honoured.
@@ -545,7 +545,7 @@ General rule (STANDARDS section 2): **managed > CLI > project-local > project > 
 
 **Prompt contents** (rendered by the host, never by the repo): the project path and git remote, then per kind each item's exact text. For hooks, the full command line, the event, the matcher, the timeout, and the script file when the command is a path (with its hash). For MCP, the command or URL, argument list, header and env **names** (values redacted), the transport and OAuth use. For imports, the importing file, the import path and the imported file's hash. For plugins, source, SHA, tree hash, component list, `userConfig` requests. On a re-prompt, the **diff** against the approved set. Options: approve the kind, approve selected items, or decline. Declining leaves the items listed as untrusted.
 
-**Storage:** `<home>/hypotaxis/compat/trust.json` (versioned schema, atomic write, mode 0600). Entries:
+**Storage:** `<home>/boopis/compat/trust.json` (versioned schema, atomic write, mode 0600). Entries:
 `{project_id (realpath + git remote hash), kind, item_id, content_hash, decided_at, decided_by:"user"}`.
 
 **Hash:** SHA-256 of the canonical JSON of the translated item plus the bytes of every script file it names. Approval is per `(kind, item_id)` and valid only while the hash matches.
@@ -560,7 +560,7 @@ General rule (STANDARDS section 2): **managed > CLI > project-local > project > 
 
 ## 12. Conformance suite
 
-The suite lives in `plugins/hypotaxis/tests/compat/`. Fixtures are pinned in `tests/compat/fixtures.lock` (`repo`, 40-hex SHA, retrieval date). **Pinning happens at W3 start.** This session had no GitHub access, so no SHA is claimed here, and the Hermes pins are the only known ones. Hermes `v0.23.2` is `ae2a81cc`, and `hermes-official-plugins` is `e726eb7d`.
+The suite lives in `plugins/boopis/tests/compat/`. Fixtures are pinned in `tests/compat/fixtures.lock` (`repo`, 40-hex SHA, retrieval date). **Pinning happens at W3 start.** This session had no GitHub access, so no SHA is claimed here, and the Hermes pins are the only known ones. Hermes `v0.23.2` is `ae2a81cc`, and `hermes-official-plugins` is `e726eb7d`.
 
 | Fixture | Source | Passes when |
 |---|---|---|

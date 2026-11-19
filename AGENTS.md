@@ -1,6 +1,6 @@
-# AGENTS.md: hypotaxis
+# AGENTS.md: boopis
 
-hypotaxis is a desktop coding harness on **unmodified Hermes Agent**: Hermes does the work, a Hermes plugin adds governance and three tools, a Rust binary does the unsafe and fast parts, and a Tauri app is the experience. Read `docs/ARCHITECTURE.md` first, then `docs/STANDARDS.md`. Both are binding.
+boopis is a desktop coding harness on **unmodified Hermes Agent**: Hermes does the work, a Hermes plugin adds governance and three tools, a Rust binary does the unsafe and fast parts, and a Tauri app is the experience. Read `docs/ARCHITECTURE.md` first, then `docs/STANDARDS.md`. Both are binding.
 
 ## Invariants (never break these)
 1. **Hermes is never patched.**
@@ -17,11 +17,11 @@ hypotaxis is a desktop coding harness on **unmodified Hermes Agent**: Hermes doe
 ## Where things live (read the area's AGENTS.md before editing it)
 | Path | What | Area guide |
 |---|---|---|
-| `plugins/hypotaxis/` | Hermes plugin (Python): tools, governance, ledger, exec kernel, compat, RPC | `plugins/hypotaxis/AGENTS.md` |
+| `plugins/boopis/` | Hermes plugin (Python): tools, governance, ledger, exec kernel, compat, RPC | `plugins/boopis/AGENTS.md` |
 | `crates/` | `hx` binary and libraries: `hx-proto`, `hx-pack`, `hx-txn`, `hx-sandbox` | `crates/AGENTS.md` |
 | `apps/desktop/src-tauri/` | host (Rust): Hermes lifecycle, gateway proxy, keychain, OS | `apps/desktop/AGENTS.md` |
 | `apps/desktop/ui/` | UI (TypeScript), the v6 design system | `apps/desktop/AGENTS.md` |
-| `apps/shared/` | the hypotaxis-v1 OpenRPC contract and generated types | `apps/shared/AGENTS.md` |
+| `apps/shared/` | the boopis-v1 OpenRPC contract and generated types | `apps/shared/AGENTS.md` |
 | `skills/` | bundled skills (agentskills.io format) | `skills/AGENTS.md` |
 | `packaging/` | the terminal art (`brand/`), the installers' icons, the Arch install script; `scripts/install.sh` and `install.ps1` read it | `packaging/AGENTS.md` |
 | `docs/` | architecture, standards, decisions, protocol, ledger, compat, research | this file |
@@ -30,7 +30,7 @@ hypotaxis is a desktop coding harness on **unmodified Hermes Agent**: Hermes doe
 ## Commands
 ```sh
 cargo fmt --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace
-(cd plugins/hypotaxis && ruff check . && pyright && pytest)
+(cd plugins/boopis && ruff check . && pyright && pytest)
 (cd apps/desktop/ui && pnpm install --frozen-lockfile && pnpm typecheck && pnpm test)
 shellcheck scripts/install.sh scripts/embed-brand.sh scripts/test-brand.sh scripts/test-install.sh && scripts/test-brand.sh && scripts/test-install.sh
 ```

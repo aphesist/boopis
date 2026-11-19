@@ -1,6 +1,6 @@
-# contraprova engine map (for the hypotaxis Rust port)
+# contraprova engine map (for the boopis Rust port)
 
-Source: `/home/user/contraprova` (HEAD d70672d), Python 3.11, stdlib only. Paths below are relative to `src/contraprova/` unless stated. Rust port: `/home/user/hypotaxis/crates/contraprova-kernel/src/` (abbrev. `RK/`), contracts in `/home/user/hypotaxis/crates/hypotaxis-contracts/src/lib.rs`.
+Source: `/home/user/contraprova` (HEAD d70672d), Python 3.11, stdlib only. Paths below are relative to `src/contraprova/` unless stated. Rust port: `/home/user/boopis/crates/contraprova-kernel/src/` (abbrev. `RK/`), contracts in `/home/user/boopis/crates/boopis-contracts/src/lib.rs`.
 
 ## 1. Module map
 
@@ -167,7 +167,7 @@ Missing a cross-implementation test: a **golden log** (fixed events with fixed `
 
 Verdict: `contraprova-kernel` implements a **different system with the same vocabulary**. It is not log-compatible with Python.
 
-**Ledger (`RK/ledger.rs`, `hypotaxis-contracts/src/lib.rs:5-30`)**
+**Ledger (`RK/ledger.rs`, `boopis-contracts/src/lib.rs:5-30`)**
 - Envelope: `{seq, timestamp, kind, prev_hash, hash, payload}`; Python has `ts` and `type` and an **`actor`** (absent in Rust, so no actor attribution).
 - `seq` starts at **1** (`ledger.rs:89,168`); Python starts at 0.
 - Hash preimage is `format!("{seq}|{timestamp}|{kind}|{prev_hash}|{payload_json}")` (`:37-50`), pipe-joined, with only payload canonicalised; Python hashes the canonical JSON of the whole envelope including `actor`. Hashes never match.

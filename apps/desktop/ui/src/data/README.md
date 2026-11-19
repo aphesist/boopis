@@ -67,19 +67,19 @@ The v6 mock-up read `HX.data` (the `data.js` file) and mutated it from three mod
 
 ## The live provider (`src/host/`)
 
-`VITE_DATA_PROVIDER=live` (the desktop build: `vite --mode desktop`, `.env.desktop`) connects through the host (`bridge.ts`, `gateway.ts`) and serves the whole Sessions section from the gateway and the hypotaxis plugin:
+`VITE_DATA_PROVIDER=live` (the desktop build: `vite --mode desktop`, `.env.desktop`) connects through the host (`bridge.ts`, `gateway.ts`) and serves the whole Sessions section from the gateway and the boopis plugin:
 
 | Source | From |
 |---|---|
 | `sessions.list`, `archived`, `conversation`, `send`, `stop`, `rename`, `archive`, `restore` | `session.list`, `session.resume`, `message.*`, `tool.*`, `prompt.submit`, `session.interrupt`, `session.title`, `session.archive` |
-| `waits` | `approval.request` / `approval.respond`, the plugin's blanks, and forms (`plugin.hypotaxis.form.opened` / `.resolved`, Hermes's `clarify.request`) |
+| `waits` | `approval.request` / `approval.respond`, the plugin's blanks, and forms (`plugin.boopis.form.opened` / `.resolved`, Hermes's `clarify.request`) |
 | `details.context` | `session.context_breakdown` and the `session.usage` event |
 | `details.todos` | the `todo.updated` event and `session.resume`'s `todo_state` |
 | `details.output` | `tool.complete` and the plugin's `ship.completed` |
-| `details.connectors` | `mcp.servers.status`, plus the MCP servers of `plugin.hypotaxis.compat.inventory` |
-| `details.environment` | `session.info`, `plugin.hypotaxis.describe` |
-| `details.governance`, `ledger`, `models` | `plugin.hypotaxis.cascade.state` (the ladder), `ledger.stats` (spend and tokens, computed by the plugin from tokens), `describe` (mode, cap) |
-| `details.changes`, `sessions.diff` | `plugin.hypotaxis.checkpoint.diff` (the kept ships), refreshed on `ship.completed` and at the end of a turn |
+| `details.connectors` | `mcp.servers.status`, plus the MCP servers of `plugin.boopis.compat.inventory` |
+| `details.environment` | `session.info`, `plugin.boopis.describe` |
+| `details.governance`, `ledger`, `models` | `plugin.boopis.cascade.state` (the ladder), `ledger.stats` (spend and tokens, computed by the plugin from tokens), `describe` (mode, cap) |
+| `details.changes`, `sessions.diff` | `plugin.boopis.checkpoint.diff` (the kept ships), refreshed on `ship.completed` and at the end of a turn |
 | `run.current` | the running turn (events), `ledger.stats` and `cascade.state` |
 | forms (`waits`, `forms`, `AgentTurn.forms`) | `form.opened`, `form.resolved`; answered with `form.submit` / `form.cancel` (a secret first with the host's `secret_set`, named in `provided`); `form.list` when a session is resumed or the link returns; Hermes's `clarify.request` answered with `clarify.respond` |
 | blanks (`waits`, `sessions.answerBlank`) | `blank.opened`, `blank.filled`, `blank.lapsed`; the answer goes to `blank.fill` |
@@ -99,7 +99,7 @@ The v6 mock-up read `HX.data` (the `data.js` file) and mutated it from three mod
 ## Writing the live provider
 
 1. Implement `DataProvider` in a new file next to `mock-provider.ts`; build its streams with `store()` and `emitter()` or your own.
-2. Keep the entities exactly as they are (additive fields only; the UI ignores what it does not know). The wire types come from `apps/shared` (`hypotaxis-v1`); map them to these entities in the provider, not in a module.
+2. Keep the entities exactly as they are (additive fields only; the UI ignores what it does not know). The wire types come from `apps/shared` (`boopis-v1`); map them to these entities in the provider, not in a module.
 3. Resolve `ready` after the first snapshot. Emit events in order: a `message` before its `message-text`, a `turn-added` before its `step-added`.
 4. Add it to `select.ts` behind `VITE_DATA_PROVIDER=live`. Never fall back to the mock when it fails: show the failure.
 5. Run `pnpm test` (the mock's own tests show the event order modules rely on) and `pnpm test:smoke`.

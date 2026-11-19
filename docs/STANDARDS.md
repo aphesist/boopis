@@ -1,4 +1,4 @@
-# hypotaxis engineering standards
+# boopis engineering standards
 
 Every service, tool, store, module and function in this repository follows this document. It's settled before code is written. Changing a rule takes an ADR in `docs/DECISIONS.md`. The four goals, in order when they conflict: **security, correctness, performance, readability**. Updatability is a constraint on all four, not a fifth goal.
 
@@ -17,8 +17,8 @@ Every service, tool, store, module and function in this repository follows this 
 
 - **One schema per config surface**, with a JSON Schema as the source of truth: plugin settings (`plugin.yaml` `config_schema`), project settings, host settings, UI preferences. Types are generated from it.
 - **Where config lives:**
-  - plugin settings: Hermes `config.yaml` under `plugins.entries.hypotaxis.settings`;
-  - project settings: `<project>/.hermes/hypotaxis.yaml` (trust-gated);
+  - plugin settings: Hermes `config.yaml` under `plugins.entries.boopis.settings`;
+  - project settings: `<project>/.hermes/boopis.yaml` (trust-gated);
   - host settings: the app's config dir;
   - UI preferences: the app's store.
 - **Secrets never live in config files.** Secrets go to the OS keychain through the host, and Hermes's `.env` holds secrets only, following Hermes's policy.
@@ -33,7 +33,7 @@ Every service, tool, store, module and function in this repository follows this 
   - `anyhow` only in binaries' `main` and tests;
   - no `unwrap`/`expect`/`panic!` in non-test code, except proven invariants (static regex compilation), each with a comment saying why it can't fail. Enforced by clippy (`unwrap_used`, `expect_used`, `panic` set to deny outside tests).
 - **Python:**
-  - one exception hierarchy rooted at `HypotaxisError`, with subclasses per area;
+  - one exception hierarchy rooted at `BoopisError`, with subclasses per area;
   - tool handlers never raise to Hermes: they return a JSON error object;
   - hooks catch, log and return the fail-closed answer where the hook is a policy hook.
 - **TypeScript:** errors are typed values (`Result`-style unions) at module boundaries. `throw` only for programmer errors.
@@ -45,7 +45,7 @@ Every service, tool, store, module and function in this repository follows this 
 - **Rust:** `tracing`, structured fields, one span per request and per session (`session_id`, `turn_id`, `tool_call_id`). **Python:** stdlib `logging` through Hermes's logger conventions, the same field names. **TypeScript:** a single `log` module that forwards to the host.
 - **Levels:** `error` = needs action; `warn` = degraded; `info` = lifecycle (start, attach, version); `debug` = per request; `trace` = payloads, off by default.
 - **Redaction:** every log line passes the shared redactor (section 9). Prompts, file contents and tool payloads never go above `trace`.
-- **Where logs go:** files in the profile's `logs/hypotaxis/`, rotated at 10 MB with 5 kept.
+- **Where logs go:** files in the profile's `logs/boopis/`, rotated at 10 MB with 5 kept.
 - **No telemetry leaves the machine.** The ledger is the record of work. Logs are for debugging.
 
 ## 5. Security
@@ -104,7 +104,7 @@ General rules:
 ## 7. Wire protocols
 
 - **JSON-RPC 2.0 everywhere** (Hermes's style): requests, responses, `event` notifications carrying `{type, session_id, payload, seq}`.
-- **One schema source:** `apps/shared/hypotaxis-v1.openrpc.json` generates the Python, Rust and TypeScript types. CI fails on a stale generated file.
+- **One schema source:** `apps/shared/boopis-v1.openrpc.json` generates the Python, Rust and TypeScript types. CI fails on a stale generated file.
 - **Names:** methods `area.verb` (`ship.apply`, `blank.fill`), events `area.noun_or_past_participle` (`blank.opened`, `ship.completed`), fields `snake_case`.
 - **Additive evolution:** new optional fields are fine; removing or renaming one is a new method or event name, with the old one deprecated for at least 2 minor releases. Unknown fields are ignored on read (Hermes's manifest rule).
 - **Capabilities:** every peer advertises capability strings in its describe call. Features are gated on them, never on version numbers.
@@ -138,14 +138,14 @@ Before writing any of these, use the existing one.
 
 | Concern | Rust | Python (plugin) | TypeScript |
 |---|---|---|---|
-| Wire types | `hx-proto` (generated) | `plugins/hypotaxis/rpc/types.py` (generated) | `apps/shared/ts` (generated) |
-| Safe paths | `hx-txn::paths` | `hypotaxis.util.paths` | — |
-| Redaction (patterns + entropy) | `hx-pack::redact` | `hypotaxis.util.redact` (same rules file `redact.rules.json`) | — |
-| Process spawn (allowlisted env, group kill, timeout, cap) | `hx-sandbox::process` | `hypotaxis.util.proc` | — |
+| Wire types | `hx-proto` (generated) | `plugins/boopis/rpc/types.py` (generated) | `apps/shared/ts` (generated) |
+| Safe paths | `hx-txn::paths` | `boopis.util.paths` | — |
+| Redaction (patterns + entropy) | `hx-pack::redact` | `boopis.util.redact` (same rules file `redact.rules.json`) | — |
+| Process spawn (allowlisted env, group kill, timeout, cap) | `hx-sandbox::process` | `boopis.util.proc` | — |
 | Canonical JSON and hashing | — | contraprova `events.canonical_json` | — |
-| Ledger | — | `hypotaxis.ledger` (wraps contraprova `EventLog`) | read-only views from events |
-| Config loading and validation | `hx-proto::config` | `hypotaxis.config` | `ui/core/settings` |
-| Logging | `tracing` setup in `hx-proto::log` | `hypotaxis.util.log` | `ui/core/log` |
+| Ledger | — | `boopis.ledger` (wraps contraprova `EventLog`) | read-only views from events |
+| Config loading and validation | `hx-proto::config` | `boopis.config` | `ui/core/settings` |
+| Logging | `tracing` setup in `hx-proto::log` | `boopis.util.log` | `ui/core/log` |
 | Event bus | — | — | `ui/core/bus` (the v6 `HX.on/emit`) |
 | UI primitives | — | — | `ui/components` (the v6 `HX.ui.*` library) |
 
@@ -164,7 +164,7 @@ The redaction rules, protected-path patterns and the error-code list are data fi
   - `tsc`, `vitest`, Playwright smoke;
   - `hermes plugins validate --ci` against the pinned Hermes;
   - performance budgets.
-  hypotaxis's gate dogfoods on hypotaxis.
+  boopis's gate dogfoods on boopis.
 - **Test hygiene:** no network in unit tests, no sleeps (use clocks and events), temp dirs via `tempfile`/`tmp_path`.
 
 ## 11. Documentation

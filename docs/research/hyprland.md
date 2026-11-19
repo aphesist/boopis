@@ -51,7 +51,7 @@ RemoteDesktop / libei status, all in the xdph repo [V: github.com/hyprwm/xdg-des
 - **Types, current wiki** [V]: `screencopy` (default ASK; "access to your screen without going through xdg-desktop-portal-hyprland", e.g. grim, wf-recorder; denied = black frame with "permission denied"), `plugin` (default ASK; loading a plugin, regex on binary or plugin path; warns not to let hyprctl load plugins by default), `keyboard` (default **ALLOW**; "connecting a new keyboard", regex on the **device name**; "Why deny? Rubber duckies, malicious virtual / usb keyboards"), `cursorpos` (default ASK; cursor position and image via Wayland protocols), `input-capture` (default ASK; capture all input events). The 0.50 wiki listed only screencopy, plugin, keyboard.
 - Notes [V]: portals including xdph are ordinary apps and go through permissions too; the wiki tip says anyone who cares about permissions should also block access to Hyprland's IPC sockets, and "Hyprland itself cannot enforce this" (sandbox job).
 - **Not gated** [V by absence from the type list; the inference is [I]]: **virtual pointer** (`zwlr_virtual_pointer`), `hyprctl dispatch`/IPC, XWayland/XTest, `/dev/uinput`. Virtual **keyboard** is only gated by the `keyboard` device-name rule, whose default is ALLOW, so wtype is not gated by default; a `.*` deny rule would block it but also blocks everything not listed, and cannot name a binary [I].
-- [I] Net: Hyprland's permissions protect *capture* (grim, wf-recorder), *plugins*, and *cursor read*. They do not give a per-app "may inject input" consent. hypotaxis must own that consent.
+- [I] Net: Hyprland's permissions protect *capture* (grim, wf-recorder), *plugins*, and *cursor read*. They do not give a per-app "may inject input" consent. boopis must own that consent.
 
 ## 3. Screen capture
 
@@ -114,31 +114,31 @@ RemoteDesktop / libei status, all in the xdph repo [V: github.com/hyprwm/xdg-des
 ---
 ## Recommended route on Hyprland
 
-Principle (carries over from AUTOMATION.md): element actions first; pixels only where needed; nothing the compositor does not already gate may be assumed to be consented to. On Hyprland, **the compositor gates capture, plugins and cursor-read, but not input and not IPC**, so hypotaxis's own grant card is the main consent, and the compositor adds one layer for capture.
+Principle (carries over from AUTOMATION.md): element actions first; pixels only where needed; nothing the compositor does not already gate may be assumed to be consented to. On Hyprland, **the compositor gates capture, plugins and cursor-read, but not input and not IPC**, so boopis's own grant card is the main consent, and the compositor adds one layer for capture.
 
 **Perception (what is on screen)**
-1. `hyprctl clients -j` / `monitors -j` / `workspaces -j` for window list, class, pid, workspace and global geometry. Consent: none from Hyprland (IPC is unguarded [V]); it is hypotaxis's `desktop.observe` grant. Sandbox consideration: the IPC socket also allows `dispatch exec`, so do not hand it raw to the agent.
-2. AT-SPI tree through cua-driver or hypruse (`ui`). Consent: hypotaxis per-app `desktop.observe`; none from the desktop (the a11y bus has no consent layer [I]). Requires `at-spi2-core`, session env passed through, `--force-renderer-accessibility` for Chromium/Electron.
+1. `hyprctl clients -j` / `monitors -j` / `workspaces -j` for window list, class, pid, workspace and global geometry. Consent: none from Hyprland (IPC is unguarded [V]); it is boopis's `desktop.observe` grant. Sandbox consideration: the IPC socket also allows `dispatch exec`, so do not hand it raw to the agent.
+2. AT-SPI tree through cua-driver or hypruse (`ui`). Consent: boopis per-app `desktop.observe`; none from the desktop (the a11y bus has no consent layer [I]). Requires `at-spi2-core`, session env passed through, `--force-renderer-accessibility` for Chromium/Electron.
 3. Screenshots, see Capture.
 
 **Element actions (click/set by name, no pixels)**
-1. hypruse `click_ui` or cua AT-SPI actions. Work in the background, do not touch the user's cursor or focus [V2]. Consent: hypotaxis per-app `desktop.act` card. No compositor consent exists or is needed. This is the best-supported route and fits the existing grant model.
+1. hypruse `click_ui` or cua AT-SPI actions. Work in the background, do not touch the user's cursor or focus [V2]. Consent: boopis per-app `desktop.act` card. No compositor consent exists or is needed. This is the best-supported route and fits the existing grant model.
 2. Hermes already has the `hypruse` backend; selecting it costs a config line, not a server. Compare with cua's AT-SPI path after bumping cua's pin (spike).
 
 **Pixel input (coordinates and raw keys)**
-1. **X11/XWayland apps via cua** (XTest). Consent: hypotaxis `desktop.display`/`desktop.act`. Works when `xwayland.enabled` and the app runs under X [V for default, I for effect].
-2. **wlr virtual pointer + wtype (hypruse / mddragon18 provider)**. Works today on Hyprland [V]; foreground only, shared seat, steals focus unless the window is already focused [V2]. Consent: hypotaxis only (neither protocol is permission-gated; `keyboard` is allow by default [V]). Treat as high-impact and per-task, with the "do not type while the agent drives" warning shown on the card.
-3. **cua's Hyprland plugin (agent seats)**: the only isolated pixel-input path found; experimental, Qt 6 only for keys, version-pinned to an exact Hyprland build, off by default [V2]. Consent: Hyprland's `plugin` permission popup when it is loaded [V], plus the plugin's enable flag, plus hypotaxis's grant. Not suitable as default now.
+1. **X11/XWayland apps via cua** (XTest). Consent: boopis `desktop.display`/`desktop.act`. Works when `xwayland.enabled` and the app runs under X [V for default, I for effect].
+2. **wlr virtual pointer + wtype (hypruse / mddragon18 provider)**. Works today on Hyprland [V]; foreground only, shared seat, steals focus unless the window is already focused [V2]. Consent: boopis only (neither protocol is permission-gated; `keyboard` is allow by default [V]). Treat as high-impact and per-task, with the "do not type while the agent drives" warning shown on the card.
+3. **cua's Hyprland plugin (agent seats)**: the only isolated pixel-input path found; experimental, Qt 6 only for keys, version-pinned to an exact Hyprland build, off by default [V2]. Consent: Hyprland's `plugin` permission popup when it is loaded [V], plus the plugin's enable flag, plus boopis's grant. Not suitable as default now.
 4. **Portal RemoteDesktop**: not available (section 1); revisit if xdph PR #448 merges. Its design (consent prompt, per-app persistent tokens) matches what we want, and it would reuse the same wlr protocols underneath.
 5. Not recommended: uinput (`ydotool`, `hypr-cua-mcp`): bypasses the compositor, needs `/dev/uinput`.
 
 **Capture**
-1. `grim -T <toplevel>` (window) or `-o <output>`, grim 1.5+ with Hyprland 0.54+ for window capture [V/V2]. Consent: **Hyprland `screencopy` permission** (ASK popup, or an `allow` rule for exactly the binary the harness spawns; `deny` for everything else), which requires `enforce_permissions = true` and a Hyprland restart to configure [V]. Layer hypotaxis's `desktop.observe`/`desktop.display` grant on top. Note: hidden-window frames can be stale [V2].
+1. `grim -T <toplevel>` (window) or `-o <output>`, grim 1.5+ with Hyprland 0.54+ for window capture [V/V2]. Consent: **Hyprland `screencopy` permission** (ASK popup, or an `allow` rule for exactly the binary the harness spawns; `deny` for everything else), which requires `enforce_permissions = true` and a Hyprland restart to configure [V]. Layer boopis's `desktop.observe`/`desktop.display` grant on top. Note: hidden-window frames can be stale [V2].
 2. xdph ScreenCast / Screenshot portal: user picker dialog each time (persistence [?]). Use for "whole screen" grants. Needs a `screencopy allow` rule for the xdph binary if default is deny [V].
 3. cua's X11 capture of XWayland windows (no Wayland consent involved; [I]).
 
 **Agent-owned screen**
-1. Headless output (`hyprctl output create headless <name>`) + pinned workspace (`workspace` rule with `monitor:`) + `exec [workspace N silent]` launch + `grim -o` capture. Gives a screen the user never sees. **Perception and element actions work there; pixel input does not stay isolated on one seat** (section 5). Consent: hypotaxis's grant ("this task gets its own screen"); capture of that output still passes the `screencopy` rule; no Hyprland dialog for creating an output [I: the permission list has no such type].
+1. Headless output (`hyprctl output create headless <name>`) + pinned workspace (`workspace` rule with `monitor:`) + `exec [workspace N silent]` launch + `grim -o` capture. Gives a screen the user never sees. **Perception and element actions work there; pixel input does not stay isolated on one seat** (section 5). Consent: boopis's grant ("this task gets its own screen"); capture of that output still passes the `screencopy` rule; no Hyprland dialog for creating an output [I: the permission list has no such type].
 2. hypruse background workspaces (99..90) are the same idea without a headless output: windows stay on the user's monitors' workspace list but are hidden [V2]. Cheaper to run; weaker "screen" boundary (capture of hidden windows can be stale).
 3. Nested compositor or separate session as a true boundary: [?] not verified for Hyprland; Hermes Bot Screen (Xvnc) already exists for servers [V: earlier research].
 Spike needed: whether `exec` rules + headless pinned workspace keep a window off the user's monitors with no flicker; whether `movecursor` onto the headless output is allowed; and whether focus can be shifted without moving the user's cursor.

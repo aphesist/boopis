@@ -2,12 +2,12 @@
 
 Status: spec v1, 2026-11-18. Decision: ADR-0020.
 
-**Rule: nobody should ever leave hypotaxis to set something up.** Whenever the agent, a teammate, the plugin, Hermes or an MCP server needs something from the user (a key, a choice, a sign-in, a permission, a folder, a setting), it sends a **form**. The user answers it in place, and hypotaxis does the rest: it saves the key, writes the config, allows the host, retries the call.
+**Rule: nobody should ever leave boopis to set something up.** Whenever the agent, a teammate, the plugin, Hermes or an MCP server needs something from the user (a key, a choice, a sign-in, a permission, a folder, a setting), it sends a **form**. The user answers it in place, and boopis does the rest: it saves the key, writes the config, allows the host, retries the call.
 
 Forms are cards. They're built from the approved card system (`design/v6`, `apps/desktop/ui/src/modules/cards`) and look and behave like the rest of the app. The owner designs the visual family; this spec defines what a form *is*.
 
 ## 1. One primitive
-A form is defined by a schema, and one renderer draws every form. The schema is **MCP elicitation's** (`requestedSchema`: a flat object of string, number, boolean and enum fields, with title, description, default, format, min/max) **plus hypotaxis extensions**. MCP servers' own forms then render natively, and agents and plugins use the same standard.
+A form is defined by a schema, and one renderer draws every form. The schema is **MCP elicitation's** (`requestedSchema`: a flat object of string, number, boolean and enum fields, with title, description, default, format, min/max) **plus boopis extensions**. MCP servers' own forms then render natively, and agents and plugins use the same standard.
 
 | Field type | Source | Renders as |
 |---|---|---|
@@ -42,7 +42,7 @@ Every form has a `kind`, which picks its template, defaults and where the result
 
 ## 3. Secrets never reach the agent
 - A secret field's value goes from the UI to the host to its store (OS keychain, Hermes's secret source, or the cloud control plane), never through the agent, the transcript, the ledger or a log. The agent receives `{saved: true, ref: "secret://<scope>/<name>"}`.
-- Forms with secret fields are never mirrored to chat platforms. There, the user gets "Open hypotaxis to finish", with a deep link.
+- Forms with secret fields are never mirrored to chat platforms. There, the user gets "Open boopis to finish", with a deep link.
 - The ledger records `form.submitted` with field names and `provided: true` for secrets. It never records values.
 
 ## 4. Who can send a form

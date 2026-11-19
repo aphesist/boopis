@@ -1,6 +1,6 @@
-# Cloud sessions for coding agents: reference research for hypotaxis
+# Cloud sessions for coding agents: reference research for boopis
 
-Scope: how Claude Code and Codex implement "cloud sessions", which sandbox providers a self-hoster could pick, what Hermes Agent v0.23.2 already offers, and what that means for a hypotaxis "cloud session" next to "local session". Evidence levels: **[doc]** = read from the primary page during this research; **[src]** = read in the local Hermes checkout; **[bg]** = my background knowledge, not re-verified on a primary page (flagged so it can be checked before relying on it). Local Hermes root below: `vendor-src/hermes-agent-v0.23.2/`.
+Scope: how Claude Code and Codex implement "cloud sessions", which sandbox providers a self-hoster could pick, what Hermes Agent v0.23.2 already offers, and what that means for a boopis "cloud session" next to "local session". Evidence levels: **[doc]** = read from the primary page during this research; **[src]** = read in the local Hermes checkout; **[bg]** = my background knowledge, not re-verified on a primary page (flagged so it can be checked before relying on it). Local Hermes root below: `vendor-src/hermes-agent-v0.23.2/`.
 
 ---
 
@@ -177,7 +177,7 @@ Gaps: nothing creates/stops sandboxes or maps "environment definitions"; egress 
 
 ---
 
-## 5. Design implications for hypotaxis
+## 5. Design implications for boopis
 
 ### 5.1 The two candidate architectures
 
@@ -196,7 +196,7 @@ Gaps: nothing creates/stops sandboxes or maps "environment definitions"; egress 
 
 ### 5.2 Recommendation
 
-**Build (a), and keep (b) as a separate "remote tools" toggle.** Concretely: a cloud session is a sandbox running the standard Hermes image with hypotaxis plugin and hx baked in, repo cloned in, Hermes **`gateway run` + `serve`** supervised, and the desktop app attaching through the existing **Remote gateway / SSH** connection kinds. Reasons: it is the only design that delivers Claude-Code-style semantics (keeps running offline, attach from any device, reclaim/restore), Hermes already has the container, supervisor, auth gate and remote-attach client, and the Claude self-hosted-runner model shows the shape works with a thin control layer. Start with **one sandbox provider (Docker on a VPS, or E2B/Modal) behind an abstraction**, not many.
+**Build (a), and keep (b) as a separate "remote tools" toggle.** Concretely: a cloud session is a sandbox running the standard Hermes image with boopis plugin and hx baked in, repo cloned in, Hermes **`gateway run` + `serve`** supervised, and the desktop app attaching through the existing **Remote gateway / SSH** connection kinds. Reasons: it is the only design that delivers Claude-Code-style semantics (keeps running offline, attach from any device, reclaim/restore), Hermes already has the container, supervisor, auth gate and remote-attach client, and the Claude self-hosted-runner model shows the shape works with a thin control layer. Start with **one sandbox provider (Docker on a VPS, or E2B/Modal) behind an abstraction**, not many.
 
 ### 5.3 Components needed
 

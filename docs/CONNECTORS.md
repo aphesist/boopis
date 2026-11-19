@@ -1,6 +1,6 @@
 # Connectors
 
-The **connector collection** (`apps/shared/data/connectors.json`, schema `connectors.schema.json`) is the curated list of MCP servers hypotaxis knows how to install, configure and trust. Any MCP server still works without being listed (COMPAT §6); listing adds a one-click install, the right forms and verified settings.
+The **connector collection** (`apps/shared/data/connectors.json`, schema `connectors.schema.json`) is the curated list of MCP servers boopis knows how to install, configure and trust. Any MCP server still works without being listed (COMPAT §6); listing adds a one-click install, the right forms and verified settings.
 
 ## What an entry promises
 - **Pinned.** An exact package version or image digest, never `latest`. Bumps are reviewed changes to the file.

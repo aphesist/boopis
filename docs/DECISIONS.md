@@ -1,6 +1,7 @@
 # Architecture decisions
 
 Each record has a context, the decision, and its consequences. A superseded record stays and points to its replacement.
+Records before ADR-0028 name the product *hypotaxis*, its name when they were written; they are history and are not rewritten (ADR-0028 says what changed).
 Evidence for 0001–0010: `research/hermes.md` (Hermes v0.23.2 read from source), `research/audit.md` (first-pass code), `research/contraprova.md`, `research/formats.md`. These are kept with the W0 spec notes.
 
 ## ADR-0001 Hermes's organisational model
@@ -469,6 +470,29 @@ The decision of every `$` call is `policy.check` with the mod as principal; the 
 - The mechanism is proved live against a real Hermes without calling Nous (`setup_live`: `enabled` is false to a link that does not declare and true to one that does). The hidden window itself is untested against the real page: no call to Nous is made from tests, and a hidden WebKitGTK page may be throttled (Tauri has no background-throttling control on Linux), in which case the check times out after 90 s as Hermes Desktop's would.
 
 **Owner decision (19 November 2026).** Ship both the Nous free tier and OpenRouter's free models. If problems arise with Nous (terms or service), turn the Nous free tier off with `config::FREE_TIER_ENABLED` and keep OpenRouter.
+
+## ADR-0028 The product is named boopis
+**Context.**
+- Nothing had shipped publicly. The name *hypotaxis* was on every identifier, and the terminal faces (installers, Arch package, `boopis.art`) already said *boopis*, with the old names held in one block each.
+- The first public build is the last cheap moment to change a name that is a wire contract, a folder on disk and a keychain service.
+
+**Decision.** The product is **boopis**, always lowercase, in text, window titles, installers and docs.
+- **Renamed:**
+  - the Tauri `productName` and `identifier` (`dev.aphesist.boopis`), the Cargo bin `boopis`, the host crate `boopis-host`, the UI package `@boopis/desktop-ui`;
+  - the plugin (`plugin.yaml` name `boopis`, the directory `plugins/boopis`, the Python package `boopis`, `BoopisError`), the RPC namespace `plugin.boopis.*`, the protocol `boopis-v1`, the theme format `boopis-theme`;
+  - the project config `.hermes/boopis.yaml`, `<profile home>/boopis/` and `logs/boopis/`, the checkpoint refs `refs/boopis/checkpoints/`, the Hermes secret source `boopis_host`, the keychain services `boopis.provider.*`, the variables `BOOPIS_*`;
+  - the artifact names (`boopis_*.AppImage`, `boopis-*` workflow artifacts), the installers' and the Arch package's name blocks, the `.desktop` file and `StartupWMClass=boopis` (it matches the binary).
+- **Kept:** the engineering prefix `hx` (crates `hx-*`, the `hx` binary, `HX.ui`, `hx-` CSS, `HX_*` test variables, `hx-host-secrets-v1`); contraprova's names and format, and its vendored copy (byte for byte); Hermes's own names; the text of earlier ADRs; `legacy/`, the frozen first pass.
+- **No compatibility shims.** Nothing reads an old name after the first start. The one exception is a one-time move on that start (`apps/desktop/src-tauri/src/migrate.rs`), logged, tested, and skipped when there is nothing to move:
+  - the app's folders `dev.aphesist.hypotaxis` (data, config, cache) become `dev.aphesist.boopis`; when both exist nothing is touched and a warning says so;
+  - inside the private Hermes home (never the user's own `~/.hermes`): `hypotaxis/` (ledger, journals, `hx`, `setup.json`) and `logs/hypotaxis/` are renamed, the stale `plugins/hypotaxis` copy is removed (setup installs `plugins/boopis`), and the old words in `config.yaml` are rewritten;
+  - API keys in the keychain: the references in that `config.yaml` (`secret://scope/name`) name the entries to copy from `hypotaxis.<scope>` to `boopis.<scope>` before the old one is deleted. The keychain cannot be listed, so this is the only way to find them; a key that cannot be moved is entered again in Settings.
+- **Not moved:** git checkpoint refs in a project (`refs/hypotaxis/checkpoints/...`), `.hermes/hypotaxis.yaml` files in projects, a theme exported as `hypotaxis-theme`, and anything in the user's own Hermes home. Each is a user's file or repository, so the owner moves them by hand (`git update-ref` for the refs); in the user's own Hermes home the old plugin is disabled in Hermes.
+
+**Consequences.**
+- The repository is renamed on GitHub by its owner (`aphesist/boopis`); `Cargo.toml`, the installers and the PKGBUILD already point there.
+- Wire, folder and variable names change together: a build of one name cannot talk to the plugin of the other.
+- The logo is the product's mark in the app (`<boopis-logo>`, vendored), and the app icon has a light and a dark set (`apps/desktop/src-tauri/icons/`).
 
 ## ADR-0012 Prices
 Prices come from the models.dev catalogue plus a user override table. Hermes's models.dev data is not reachable through its public plugin API, so:

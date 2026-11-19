@@ -1,6 +1,6 @@
 # Ledger
 
-One hash-chained JSONL file per Hermes session: `<profile home>/hypotaxis/ledger/<session_id>.jsonl`. The format is **contraprova's** (`aphesist/contraprova`, `src/contraprova/events.py`, `log.py`, `docs/events.md`), byte for byte. `contraprova verify`, `cost` and `report` work on hypotaxis ledgers unchanged.
+One hash-chained JSONL file per Hermes session: `<profile home>/boopis/ledger/<session_id>.jsonl`. The format is **contraprova's** (`aphesist/contraprova`, `src/contraprova/events.py`, `log.py`, `docs/events.md`), byte for byte. `contraprova verify`, `cost` and `report` work on boopis ledgers unchanged.
 
 ## Envelope and hash
 - Every line is the canonical JSON of `{seq, type, actor, ts, payload, prev_hash, hash}`.
@@ -60,7 +60,7 @@ Providers that report a single cache-write bucket put it in `cache_write_5m_toke
 
 `output_tokens` is always the total billable output, **including** reasoning, and `reasoning_tokens` is a subset of it. Gemini reports thoughts separately, so its mapper adds them into `output_tokens`. Pricing charges reasoning at the reasoning rate when one is set and the output rate otherwise, never twice. Abstract effort levels are `none`, `low`, `medium`, `high`, `xhigh` and `max`.
 
-Each adapter maps its provider's usage into these fields. The mapping lives in one place (`hypotaxis.ledger.usage`), with a test per provider shape:
+Each adapter maps its provider's usage into these fields. The mapping lives in one place (`boopis.ledger.usage`), with a test per provider shape:
 - **OpenAI:** `prompt_tokens` *includes* `cached_tokens`, so subtract them.
 - **Gemini:** use `cachedContentTokenCount` and `thoughtsTokenCount`.
 - **DeepSeek:** use the hit and miss counts.

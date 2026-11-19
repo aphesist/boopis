@@ -1,6 +1,6 @@
 # Protocols
 
-Status: v1. Verified against a live Hermes v0.23.2 in the S0 spike (`docs/research/spike-s0.md`), except where marked **[verify]**. Wire rules (JSON-RPC 2.0, naming, additive evolution, capabilities, errors) are in `docs/STANDARDS.md` section 7. The source of truth for every type is `apps/shared/hypotaxis-v1.openrpc.json`. Python, Rust and TypeScript types are generated from it.
+Status: v1. Verified against a live Hermes v0.23.2 in the S0 spike (`docs/research/spike-s0.md`), except where marked **[verify]**. Wire rules (JSON-RPC 2.0, naming, additive evolution, capabilities, errors) are in `docs/STANDARDS.md` section 7. The source of truth for every type is `apps/shared/boopis-v1.openrpc.json`. Python, Rust and TypeScript types are generated from it.
 
 There are four seams, and each has one protocol:
 
@@ -8,7 +8,7 @@ There are four seams, and each has one protocol:
 |---|---|---|
 | UI and host | Tauri commands + Channels (typed with `tauri-specta`) | Tauri IPC |
 | Host and Hermes | `hermes-gateway-v1` (Hermes's own, unmodified) | WebSocket `ws://127.0.0.1:<port>/api/ws`, ticket subprotocol, no `Origin` |
-| UI and plugin | **`hypotaxis-v1`**: plugin RPC `plugin.hypotaxis.<method>` and events `plugin.hypotaxis.<event>`, carried inside `hermes-gateway-v1` | via the host's proxy |
+| UI and plugin | **`boopis-v1`**: plugin RPC `plugin.boopis.<method>` and events `plugin.boopis.<event>`, carried inside `hermes-gateway-v1` | via the host's proxy |
 | Plugin and `hx` | **`hx-v1`**: JSON-RPC over stdio, newline-delimited (`crates/hx-proto/schema/hx-v1.schema.json`) | child process |
 | Plugin and exec kernel | `hx-kernel-v1`: JSON-RPC over a private socket (never stdout) | Unix socket / named pipe |
 
@@ -50,12 +50,12 @@ Hermes's own protocol, used exactly as Hermes Desktop uses it (`apps/shared` in 
   - config: `config.get`, `config.set`;
   - discovery: `commands.catalog`, `skills.reload`;
   - other: `rollback.*`, `profiles.list`, `cron.*`.
-- **`session.create` from hypotaxis:**
-  - `source: "gui"`, `client: {name: "hypotaxis", version}`;
+- **`session.create` from boopis:**
+  - `source: "gui"`, `client: {name: "boopis", version}`;
   - `cwd`, `model`, `provider`;
-  - `toolsets: ["hypotaxis"]` (governed) or the profile's ungoverned set. A governed session is **always** created with it, including one whose mode is the plugin's default and not a choice; a `mode.set` that fails closes the new session, sends nothing to it and shows the error (the UI never runs a session whose mode it could not set);
+  - `toolsets: ["boopis"]` (governed) or the profile's ungoverned set. A governed session is **always** created with it, including one whose mode is the plugin's default and not a choice; a `mode.set` that fails closes the new session, sends nothing to it and shows the error (the UI never runs a session whose mode it could not set);
   - `skills`.
-  Never `safe_mode`, because that would skip plugin discovery and drop hypotaxis.
+  Never `safe_mode`, because that would skip plugin discovery and drop boopis.
 - **Approvals:** canonical only, as verified in S0. The flow is event `approval.request {prompt_id, execution_generation, command, description, choices: once|deny|session|always, timeout_s}`, then `approval.respond {session_id, execution_generation, prompt_id, choice}`, then event `approval.settled`. Server requests still carry `clarify`, `secret`, `sudo`, `vault.*`, `preview.*` and `theme.*`.
 - **Call rules:**
   - `prompt.submit` requires `submission_id`;
@@ -64,14 +64,14 @@ Hermes's own protocol, used exactly as Hermes Desktop uses it (`apps/shared` in 
   - `session.create` must omit `base_url` when using a named provider.
 - **Generated client:** the TypeScript client reuses `@hermes/shared`'s generated contract (`gateway-contract.generated.ts`, MIT), vendored per Hermes tag and diffed on every bump.
 
-## 3. UI and plugin: `hypotaxis-v1`
+## 3. UI and plugin: `boopis-v1`
 
-Methods are registered with `ctx.register_rpc(name, handler)` and appear as `plugin.hypotaxis.<name>`. Events are sent with `ctx.emit_to_session(session_id, event, payload)` and appear as `plugin.hypotaxis.<event>` gateway events. Gate the whole surface on the gateway capability `plugin-rpc-v1` and on `describe.capabilities`.
+Methods are registered with `ctx.register_rpc(name, handler)` and appear as `plugin.boopis.<name>`. Events are sent with `ctx.emit_to_session(session_id, event, payload)` and appear as `plugin.boopis.<event>` gateway events. Gate the whole surface on the gateway capability `plugin-rpc-v1` and on `describe.capabilities`.
 
 ### Methods
 | Method | Params | Result |
 |---|---|---|
-| `describe` | — | `{version, protocol: "hypotaxis-v1", capabilities[], hx: {version, protocol}\|null, kernel: {ok}\|null, session?, config: {mode, cost_cap_usd, errors, ladder_errors}}` |
+| `describe` | — | `{version, protocol: "boopis-v1", capabilities[], hx: {version, protocol}\|null, kernel: {ok}\|null, session?, config: {mode, cost_cap_usd, errors, ladder_errors}}` |
 | `mode.set` | `{session_id, mode: "governed"\|"ungoverned", ladder?: Tier[], model?: ModelRef, gate?: {enabled}}` | `{}`. Must be called before the first `prompt.submit` of a session; later calls fail with `hx.mode.locked` (prompt caching). **[verify when system-prompt sections are evaluated]** |
 | `feedforward.preview` | `{session_id, draft, cursor?}` | `{decisions: Decision[], assume: string}`. At most one model call per typing pause, which the UI debounces at 1.5 s |
 | `feedforward.set` | `{session_id, key, value}` | `{}`. Applied to the next turn and written to the ledger |
@@ -131,10 +131,10 @@ Defined in `crates/hx-proto`.
 - `hx.describe`.
 - `txn.validate`, `txn.apply`, `txn.restore`, `txn.discard`, `txn.recover`.
 - `pack.search`, `pack.read`, `pack.symbol`, `pack.outline`, `pack.status`, `pack.bundle`.
-- `sandbox.run` (`{argv, cwd, ro[], rw[], system_read, net: false|allowlist, env, timeout_ms, output_cap}`); `system_read: true` adds the platform's own system read paths, so callers never copy that list. `runtime_ro[]` is the program's own runtime (the interpreter's prefix, its virtual environment): read-only like `ro`, but vetted, since each is resolved first and refused unless it is an existing directory that is not `/`, `$HOME` or a parent of it, the working directory, or anything inside or above the working directory; is not, inside or above a credential location (`~/.ssh`, `~/.gnupg`, cloud and registry credentials, Hermes's `.env` and `hypotaxis/`); and looks like a runtime (a `bin/` holding an executable python, node, ruby, java, go, cargo or similar, or that `bin` itself). A Python managed under the user's home (Hermes's own is) is outside the system paths; the plugin passes its roots here, and hx grants only their canonical paths. `sandbox.spawn` takes the same plus `channel`.
+- `sandbox.run` (`{argv, cwd, ro[], rw[], system_read, net: false|allowlist, env, timeout_ms, output_cap}`); `system_read: true` adds the platform's own system read paths, so callers never copy that list. `runtime_ro[]` is the program's own runtime (the interpreter's prefix, its virtual environment): read-only like `ro`, but vetted, since each is resolved first and refused unless it is an existing directory that is not `/`, `$HOME` or a parent of it, the working directory, or anything inside or above the working directory; is not, inside or above a credential location (`~/.ssh`, `~/.gnupg`, cloud and registry credentials, Hermes's `.env` and `boopis/`); and looks like a runtime (a `bin/` holding an executable python, node, ruby, java, go, cargo or similar, or that `bin` itself). A Python managed under the user's home (Hermes's own is) is outside the system paths; the plugin passes its roots here, and hx grants only their canonical paths. `sandbox.spawn` takes the same plus `channel`.
 - `redact.apply {text} -> {text, count}`: hx-pack's redactor on free text (ADR-0016).
 - `mods.capabilities`, `mods.load {session_id, plugins: [{dir, tier?}]}`, `mods.unload {session_id, plugin?}`, `mods.list`, `mods.dispatch {session_id, event, payload}` (`{answered, value, answered_by?}`), `mods.render {session_id, component, id?, props}`, `mods.press`, `mods.input` and `mods.select` (`{session_id, handler, value?}`), `mods.reach {session_id}` (what the sandboxed worker could do, tried for real) and `mods.analyze {dir}` (the hooks and `$` namespaces of a plugin, without running it). `mods.load` starts `hx mods-worker` in the sandbox; see section 4a.
-- **`hx` sends requests too.** `mods.call {session_id, plugin, call, args}` goes from `hx` to the plugin, once per `$` call a mod makes; the plugin decides it (`hypotaxis.policy.check`, the mod as principal) and answers the result, or an error with `data.code` (`hx.policy.denied`, `hx.mods.unsupported`, `hx.overloaded`, ...), which the mod sees as an `Error` with that `code`. Notifications from `hx`: `mods.diagnostic {session_id, level, plugin, message}` and `mods.exited {session_id, reason, stderr}` (the worker is gone: the session's mods must be loaded again). Request ids from `hx` are strings (`hx-<n>`); the plugin's are numbers. The schema lists these under `peer_methods`.
+- **`hx` sends requests too.** `mods.call {session_id, plugin, call, args}` goes from `hx` to the plugin, once per `$` call a mod makes; the plugin decides it (`boopis.policy.check`, the mod as principal) and answers the result, or an error with `data.code` (`hx.policy.denied`, `hx.mods.unsupported`, `hx.overloaded`, ...), which the mod sees as an `Error` with that `code`. Notifications from `hx`: `mods.diagnostic {session_id, level, plugin, message}` and `mods.exited {session_id, reason, stderr}` (the worker is gone: the session's mods must be loaded again). Request ids from `hx` are strings (`hx-<n>`); the plugin's are numbers. The schema lists these under `peer_methods`.
 
 Cancellation uses `$/cancelRequest`. The plugin keeps one warm `hx serve` child per Hermes process and restarts it on crash, never more than 3 times a minute.
 
@@ -146,7 +146,7 @@ One JSON object per line over a socket pair that `hx` passes to `hx mods-worker`
 - **Kernel to plugin:** `tool.call {name, args}` goes through `ctx.dispatch_tool`; `mcp.call {server, tool, args}` goes through `ctx.call_mcp`; also `blank.open {question, options, blocks}`, `diagnostics {paths}` and `apple.*` (phase 3).
 - `harness.parallel([...])` is `asyncio.gather` over `tool.call`. The plugin bounds concurrency (`exec.max_concurrency`) and counts every request of a cell against `exec.max_calls_per_cell`.
 - Framing: one JSON object per line. The kernel sends `kernel.ready {protocol, pid, python, cwd, scratch}` first. `cell.run {cell_id, code, timeout_ms, output_cap_bytes, spill_cap_bytes, result_cap_bytes}` answers `{status, result_repr?, error?, output: {stdout, stderr: {bytes, shown, spill}}, execution_count, duration_ms}`; `status` `timeout` is the kernel's soft timeout (the cell was cancelled, state kept). Past the output cap, the whole stream is also written to `spill`, a file in the scratch directory. Requests also carry `cell_id`; the plugin refuses one that is not the running cell's.
-- Also kernel to plugin: `sh.call {argv, command}` (judged as a `terminal` call, answers `{call_id}`) and `sh.done {call_id, status, exit, timed_out, duration_ms}` around a command the kernel runs in its own sandbox. The plugin judges the `command` string the kernel reports (`shlex.join(argv)`) with the user's `Bash` deny and ask rules; the kernel runs its own `argv`, and it is the agent's own code, so those rules are an audit trail and not a boundary for exec: the sandbox is the boundary (`plugins/hypotaxis/AGENTS.md`, "exec"). A cell also cannot call a network tool (`web_search`, `web_extract`, `vision_analyze`, ...) through `tool.call` while `exec.network` is not `on`; `form.open {kind, title, body, schema, wait}` (a stub, see `docs/FORMS.md`).
+- Also kernel to plugin: `sh.call {argv, command}` (judged as a `terminal` call, answers `{call_id}`) and `sh.done {call_id, status, exit, timed_out, duration_ms}` around a command the kernel runs in its own sandbox. The plugin judges the `command` string the kernel reports (`shlex.join(argv)`) with the user's `Bash` deny and ask rules; the kernel runs its own `argv`, and it is the agent's own code, so those rules are an audit trail and not a boundary for exec: the sandbox is the boundary (`plugins/boopis/AGENTS.md`, "exec"). A cell also cannot call a network tool (`web_search`, `web_extract`, `vision_analyze`, ...) through `tool.call` while `exec.network` is not `on`; `form.open {kind, title, body, schema, wait}` (a stub, see `docs/FORMS.md`).
 - A plugin refusal is an error with `data.code`: `hx.policy.denied`, `hx.exec.call_limit`, `hx.exec.unsupported`, `hx.exec.invalid`.
 
 ## 6. Error codes

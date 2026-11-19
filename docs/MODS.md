@@ -4,7 +4,7 @@ Status: plan, 2026-11-19; **M0 (spike) and M1 (backend) done** (sections 8 and 9
 
 **Rule: a Claude Code mod installs and runs unchanged, and everything it draws is drawn by our design system, so it looks native.** A mod's behaviour runs wherever the session runs: the desktop app, plain Hermes on the command line, or a cloud session. It draws only where there's a screen, which is Claude Code's own model.
 
-A Claude Code mod is a plugin whose `hooks/hooks.json` names a JavaScript or TypeScript module. That module registers hooks on Claude Code's events, calls the `$` API (interface, themes, commands, tools, prompts, turns, files, network, state), and draws **element trees** (`Box`, `Text`, `Button`, `Input`, `Select`, `Markdown`, `Code`, `Link`, `Svg`, …) into surfaces: panes, a band above the prompt, toasts, a status line, transcript rows, a backdrop, and Claude Code's own message views. No public spec exists for running mods outside Claude Code, so hypotaxis implements the API, the event chain and the renderer from the docs, and keeps a conformance suite against real mods.
+A Claude Code mod is a plugin whose `hooks/hooks.json` names a JavaScript or TypeScript module. That module registers hooks on Claude Code's events, calls the `$` API (interface, themes, commands, tools, prompts, turns, files, network, state), and draws **element trees** (`Box`, `Text`, `Button`, `Input`, `Select`, `Markdown`, `Code`, `Link`, `Svg`, …) into surfaces: panes, a band above the prompt, toasts, a status line, transcript rows, a backdrop, and Claude Code's own message views. No public spec exists for running mods outside Claude Code, so boopis implements the API, the event chain and the renderer from the docs, and keeps a conformance suite against real mods.
 
 ## 1. Architecture
 - **Install:** a mod is a plugin, so it installs through COMPAT §9: pinned to a commit, hash-locked, with an install prompt. A `modules` key in `hooks/hooks.json` marks it as a mod. Before consent, the install prompt lists the mod's hooks and the `$` namespaces it calls, found by static analysis as `claude plugin validate` does.
@@ -13,7 +13,7 @@ A Claude Code mod is a plugin whose `hooks/hooks.json` names a JavaScript or Typ
   - A session's mods share one worker and one QuickJS runtime, as in Claude Code's single hooks worker, but **each mod has its own context**: no object is shared between mods, and the chain runs in a context of its own that no mod code reaches (section 9).
   - The worker is an `hx mods-worker` process inside `hx-sandbox`, with no file, network or process access. The only way out is `$`, as a request to the plugin.
   - The engine is QuickJS-NG through `rquickjs`, with `oxc` for the transform, as spike M0 proved (section 8).
-- **Each `$` call** is a request from `hx` to the plugin (`mods.call`). The plugin decides it with `hypotaxis.policy.check`, then performs it through Hermes, the host or the store. There is one table of calls and one implementation each.
+- **Each `$` call** is a request from `hx` to the plugin (`mods.call`). The plugin decides it with `boopis.policy.check`, then performs it through Hermes, the host or the store. There is one table of calls and one implementation each.
 - **Events:** the plugin maps Hermes's hooks and the gateway's events onto mod events, through the same bridge as Claude Code's hooks (COMPAT §4). There is one bridge for both.
   - `tool.check` and `tool.call` map to `pre_tool_call` and its result.
   - `prompt.*`, `turn.*` and `session.*` map to the gateway's prompt, turn and session events.
@@ -25,7 +25,7 @@ A Claude Code mod is a plugin whose `hooks/hooks.json` names a JavaScript or Typ
   - budgets (10 s per event, 50 ms for `prompt.edit`, 1 s for `.catch`);
   - three crashes unload every user mod.
 - **`e.surface` is `desktop`.** Mods take their Desktop path, which suits a desktop renderer. In headless sessions, as with `claude -p`, hooks run and nothing draws.
-- **Version:** hypotaxis states which Claude Code mods version it implements. The conformance table (§7) maps each gated feature ("requires v2.1.xxx") to supported, partial or not yet.
+- **Version:** boopis states which Claude Code mods version it implements. The conformance table (§7) maps each gated feature ("requires v2.1.xxx") to supported, partial or not yet.
 
 ## 2. One renderer: the design system
 - **Transport:** element trees travel from the plugin to the UI as data, through session events. Handlers (`onPress`, `onSubmit`, `onSelect`, `onInput`) become ids, and the UI answers with `ui.press`, `ui.input` and `ui.select` events. The UI never runs mod code.
@@ -50,7 +50,7 @@ A Claude Code mod is a plugin whose `hooks/hooks.json` names a JavaScript or Typ
 - **Limits** follow the docs: 100,000 characters drawn, 20,000 elements, depth 32, and the per-prop caps. A tree that fails validation is skipped, the site falls back to our own drawing, and the mod gets a log line, as in Claude Code.
 
 ## 3. Where each surface lands
-| Mod surface | In hypotaxis |
+| Mod surface | In boopis |
 |---|---|
 | Pane (`$.ui.open`) | a pane in the details panel, as its own tab (`placement: 'dock'`). In narrow windows, inline above the composer (`'inline'`). Our breakpoints replace the terminal column rules |
 | Band above the prompt | a band above the composer, one collapsible row per mod (`AbovePrompt`, `AbovePromptList`) |
@@ -62,7 +62,7 @@ A Claude Code mod is a plugin whose `hooks/hooks.json` names a JavaScript or Typ
 | `$.ui.ask` | a `choice` form (FORMS.md) with a new origin kind, `{kind: mod, plugin}` |
 | Backdrop | behind the conversation, under the scrim |
 | `$.theme.set({ colors })` | a theme layer. The mod's anchors go through our ramp generator into tokens. A card offers to keep it or reject it; one mod at a time, as in Claude Code |
-| Terminal themes (`themes/*.json`) | importable as hypotaxis themes: each token maps onto our semantic tokens |
+| Terminal themes (`themes/*.json`) | importable as boopis themes: each token maps onto our semantic tokens |
 | Redraw sites | each maps to one of our components: `UserMessage` and `AssistantMessage` to messages; `ToolUse`, `ToolResult` and `ToolGroup` to tool rows; `Spinner` to the working indicator; `TurnDuration` to the turn footer; `InfoNotice` to notices; `SessionMode` to the mode chip; `PromptHint` to the composer hint; `CommandOutput` to the command block. A prop change applies to the documented props; a replacement tree draws inside the component's slot. `AskUserQuestion` keeps our question card (as VS Code does). Approval cards and forms are never redrawable, matching Claude Code's permission prompt |
 | `$.command.register` | slash commands in the composer's `/` list and the palette, namespaced `plugin:name` |
 | `$.tool.register` | model tools `mcp__<plugin>__<name>`, decided by the policy. Toolsets are fixed at `session.create` (prompt caching), so a tool registered later is offered as deferred, or appears in the next session |
