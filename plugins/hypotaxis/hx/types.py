@@ -453,7 +453,7 @@ class ChannelInfo:
 
 @dataclass(frozen=True, slots=True)
 class ChannelRequest:
-    """Asks `sandbox.spawn` for a private channel between the plugin and the child. `hx` creates a connected socket pair, gives the child one end under a descriptor number it learns from the environment variable `env`, binds a Unix socket in a private directory (mode 0700, the socket 0600), and bridges the first connection to it onto the other end. The child needs no network and no path access to use it, so it works with `net: false`."""
+    """Asks `sandbox.spawn` for a private channel between the plugin and the child. `hx` creates a connected socket pair, gives the child one end under a descriptor number it learns from the environment variable `env`, binds a Unix socket in a private directory (mode 0700, the socket 0600), and bridges the first acceptable connection to it onto the other end: the same user, and not the sandboxed program or anything it started. The child needs no network and no path access to use it, so it works with `net: false`."""
 
     accept_timeout_ms: int | None = None
     dir: str | None = None

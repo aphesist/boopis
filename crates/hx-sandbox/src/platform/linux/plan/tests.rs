@@ -17,6 +17,8 @@ fn probe(
         seccomp_enforces: seccomp,
         netns,
         pidns: netns,
+        cgroup: Err("no cgroup in this synthetic probe".into()),
+        subreaper: Ok(()),
         cap_last: 40,
         can_drop_bounding: false,
         is_root: false,
@@ -188,4 +190,64 @@ fn a_pid_namespace_is_planned_whenever_one_is_available() {
     let none = probe(Ok(7), true, true, NsAccess::None);
     let p = make(&none, &policy(NetworkPolicy::On, Degraded::default())).unwrap();
     assert_eq!(p.pidns, None);
+}
+
+fn tree_probe(pidns: NsAccess, cgroup: bool, subreaper: bool) -> Probe {
+    Probe {
+        pidns,
+        cgroup: if cgroup {
+            Ok(PathBuf::from("/sys/fs/cgroup/delegated"))
+        } else {
+            Err("not delegated".into())
+        },
+        subreaper: if subreaper {
+            Ok(())
+        } else {
+            Err("no subreaper".into())
+        },
+        ..full()
+    }
+}
+
+#[test]
+fn the_tree_is_ended_by_the_best_mechanism_the_host_has() {
+    let pol = policy(NetworkPolicy::Off, Degraded::default());
+    let tree = |pidns, cgroup, subreaper| {
+        make(&tree_probe(pidns, cgroup, subreaper), &pol)
+            .unwrap()
+            .tree
+    };
+    assert_eq!(
+        tree(NsAccess::Direct, true, true),
+        TreeMethod::PidNamespace(NsAccess::Direct)
+    );
+    assert_eq!(
+        tree(NsAccess::ViaUserns, false, true),
+        TreeMethod::PidNamespace(NsAccess::ViaUserns)
+    );
+    assert_eq!(tree(NsAccess::None, true, true), TreeMethod::Cgroup);
+    assert_eq!(tree(NsAccess::None, false, true), TreeMethod::Subreaper);
+}
+
+#[test]
+fn a_host_with_nothing_but_the_process_group_refuses_unless_degraded() {
+    let probe = tree_probe(NsAccess::None, false, false);
+    let err = make(&probe, &policy(NetworkPolicy::Off, Degraded::default())).unwrap_err();
+    assert!(
+        matches!(
+            err,
+            Error::Unavailable {
+                dimension: Dimension::Process,
+                ..
+            }
+        ),
+        "{err}"
+    );
+    let degraded = Degraded {
+        process: true,
+        ..Degraded::default()
+    };
+    let plan = make(&probe, &policy(NetworkPolicy::Off, degraded)).unwrap();
+    assert_eq!(plan.tree, TreeMethod::GroupOnly);
+    assert!(plan.pidns.is_none());
 }

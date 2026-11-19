@@ -228,6 +228,13 @@ pub(super) fn child_become_pid_namespace_init() -> Result<(), i32> {
             unsafe { libc::_exit(127) }
         }
     }
+    mirror_exit(status)
+}
+
+/// Ends this process the way a child that returned `status` from `waitpid` ended: the same
+/// exit code, or the same fatal signal, so the host sees the program's outcome and not the
+/// supervisor's. Never returns.
+fn mirror_exit(status: libc::c_int) -> ! {
     if libc::WIFSIGNALED(status) {
         let sig = libc::WTERMSIG(status);
         // SAFETY: restore the default action then raise the same signal, so the host sees the
@@ -241,6 +248,183 @@ pub(super) fn child_become_pid_namespace_init() -> Result<(), i32> {
     }
     // SAFETY: `_exit` skips destructors, as a forked child must.
     unsafe { libc::_exit(libc::WEXITSTATUS(status)) }
+}
+
+/// The signal the host sends a subreaper supervisor to say "end everything now". `SIGKILL`
+/// cannot be used: it would kill the supervisor first, and its orphans with it gone would
+/// belong to `init`, out of reach.
+pub(super) const SUPERVISOR_KILL_SIGNAL: libc::c_int = libc::SIGUSR1;
+
+/// Makes this process the supervisor of a tree on a host without PID namespaces. It becomes a
+/// child subreaper (every orphaned descendant is reparented to it instead of `init`, even one
+/// that called `setsid`), forks the program, and watches. The program continues in the child
+/// (this returns `Ok(())` there, with the original signal mask restored). The supervisor never
+/// returns: when the program exits, or the host sends [`SUPERVISOR_KILL_SIGNAL`], it kills every
+/// process it parents, again and again until none is left, and ends like the program did.
+///
+/// Like the PID-namespace supervisor it closes every descriptor above 2, which includes the
+/// standard library's exec-status pipe, so the host's spawn is not held up.
+pub(super) fn child_become_subreaper_supervisor() -> Result<(), i32> {
+    // SAFETY: prctl with integer arguments.
+    if unsafe { libc::prctl(libc::PR_SET_CHILD_SUBREAPER, 1 as libc::c_ulong, 0, 0, 0) } < 0 {
+        return Err(errno());
+    }
+    // SAFETY: sigset_t is plain data; the set functions only write into the buffers given.
+    let (wait_set, block, mut old) = unsafe {
+        let mut wait: libc::sigset_t = std::mem::zeroed();
+        libc::sigemptyset(&raw mut wait);
+        libc::sigaddset(&raw mut wait, libc::SIGCHLD);
+        libc::sigaddset(&raw mut wait, SUPERVISOR_KILL_SIGNAL);
+        // The polite stop is a SIGTERM to the whole group, which includes this process: it has
+        // to survive it, and the others a terminal or a stray `kill` could send.
+        let mut block = wait;
+        for sig in [
+            libc::SIGTERM,
+            libc::SIGHUP,
+            libc::SIGINT,
+            libc::SIGQUIT,
+            libc::SIGUSR2,
+        ] {
+            libc::sigaddset(&raw mut block, sig);
+        }
+        (wait, block, std::mem::zeroed::<libc::sigset_t>())
+    };
+    // SAFETY: both sets are valid; single-threaded after fork, so sigprocmask is the right call.
+    if unsafe { libc::sigprocmask(libc::SIG_BLOCK, &raw const block, &raw mut old) } < 0 {
+        return Err(errno());
+    }
+    // SAFETY: fork has no arguments; the supervisor branch calls only async-signal-safe
+    // functions and never returns.
+    let pid = unsafe { libc::fork() };
+    if pid < 0 {
+        return Err(errno());
+    }
+    if pid == 0 {
+        // SAFETY: `old` is the mask this process had before; restoring it is always valid.
+        unsafe { libc::sigprocmask(libc::SIG_SETMASK, &raw const old, std::ptr::null_mut()) };
+        return Ok(());
+    }
+    // SAFETY: close_range takes integers only. Descriptors 0-2 stay (the output pipes).
+    unsafe {
+        libc::syscall(
+            libc::SYS_close_range,
+            3 as libc::c_uint,
+            u32::MAX,
+            0 as libc::c_uint,
+        );
+    }
+    supervise(pid, &wait_set)
+}
+
+/// The supervisor's loop. See [`child_become_subreaper_supervisor`].
+fn supervise(program: libc::pid_t, wait_set: &libc::sigset_t) -> ! {
+    let mut program_status: Option<libc::c_int> = None;
+    let mut sweeping = false;
+    loop {
+        // Collect every child that has already ended.
+        loop {
+            let mut status = 0;
+            // SAFETY: `status` is a valid out-pointer.
+            let r = unsafe { libc::waitpid(-1, &raw mut status, libc::WNOHANG) };
+            if r > 0 {
+                if r == program {
+                    program_status = Some(status);
+                    sweeping = true;
+                }
+                continue;
+            }
+            if r == 0 {
+                break;
+            }
+            if errno() == libc::EINTR {
+                continue;
+            }
+            // ECHILD: nothing is left, so the tree is over.
+            match program_status {
+                Some(status) => mirror_exit(status),
+                // SAFETY: `_exit` skips destructors, as a forked child must.
+                None => unsafe { libc::_exit(127) },
+            }
+        }
+        if sweeping {
+            if !child_kill_children() {
+                // No way to list the orphans (the probe checked this works, so only a vanished
+                // /proc gets here): end the program itself and let the host's group kill do the rest.
+                // SAFETY: kill takes two integers.
+                unsafe { libc::kill(program, libc::SIGKILL) };
+            }
+            let pause = libc::timespec {
+                tv_sec: 0,
+                tv_nsec: 1_000_000,
+            };
+            // SAFETY: `pause` is a valid timespec; a null remainder is allowed.
+            unsafe { libc::nanosleep(&raw const pause, std::ptr::null_mut()) };
+            continue;
+        }
+        // Nothing to do until a child changes state or the host asks for the end. The timeout
+        // is only a backstop; signals are not lost while they are blocked.
+        let timeout = libc::timespec {
+            tv_sec: 0,
+            tv_nsec: 200_000_000,
+        };
+        // SAFETY: an all-zero siginfo is a valid out-buffer; the set and timeout are valid.
+        let got = unsafe {
+            let mut info: libc::siginfo_t = std::mem::zeroed();
+            libc::sigtimedwait(wait_set, &raw mut info, &raw const timeout)
+        };
+        if got == SUPERVISOR_KILL_SIGNAL {
+            sweeping = true;
+        }
+    }
+}
+
+/// Sends SIGKILL to every child of this (single-threaded) process, from
+/// `/proc/thread-self/children`. Returns false when that file cannot be read.
+pub(super) fn child_kill_children() -> bool {
+    // SAFETY: NUL-terminated literal path.
+    let fd = unsafe {
+        libc::open(
+            c"/proc/thread-self/children".as_ptr(),
+            libc::O_RDONLY | libc::O_CLOEXEC,
+        )
+    };
+    if fd < 0 {
+        return false;
+    }
+    let mut buf = [0u8; 512];
+    let (mut pid, mut inside) = (0i32, false);
+    loop {
+        // SAFETY: `buf` is a valid writable buffer of the length passed.
+        let n = unsafe { libc::read(fd, buf.as_mut_ptr().cast(), buf.len()) };
+        if n < 0 && errno() == libc::EINTR {
+            continue;
+        }
+        let Ok(n) = usize::try_from(n) else { break };
+        if n == 0 {
+            break;
+        }
+        for &byte in &buf[..n] {
+            if byte.is_ascii_digit() {
+                pid = pid
+                    .saturating_mul(10)
+                    .saturating_add(i32::from(byte - b'0'));
+                inside = true;
+            } else {
+                if inside && pid > 1 {
+                    // SAFETY: kill takes two integers.
+                    unsafe { libc::kill(pid, libc::SIGKILL) };
+                }
+                (pid, inside) = (0, false);
+            }
+        }
+    }
+    if inside && pid > 1 {
+        // SAFETY: kill takes two integers.
+        unsafe { libc::kill(pid, libc::SIGKILL) };
+    }
+    // SAFETY: `fd` is ours.
+    unsafe { libc::close(fd) };
+    true
 }
 
 /// Writes `data` to the file at `path` (used for the `/proc/self/*_map` files).
@@ -421,6 +605,92 @@ pub(super) fn fork_probe(body: impl FnOnce() -> bool) -> bool {
                 }
             }
             libc::WIFEXITED(status) && libc::WEXITSTATUS(status) == 0
+        }
+    }
+}
+
+/// The body of the subreaper probe, run in a forked child: become a subreaper, let a grandchild
+/// be orphaned, and check that it comes back as a child that can be listed and killed.
+pub(super) fn child_probe_subreaper() -> bool {
+    // SAFETY: alarm takes an integer; it ends this probe if anything below blocks.
+    unsafe { libc::alarm(5) };
+    // SAFETY: prctl with integer arguments.
+    if unsafe { libc::prctl(libc::PR_SET_CHILD_SUBREAPER, 1 as libc::c_ulong, 0, 0, 0) } < 0 {
+        return false;
+    }
+    // SAFETY: fork has no arguments; the branches below call only async-signal-safe functions
+    // and end in `_exit` or `pause`.
+    let middle = unsafe { libc::fork() };
+    if middle < 0 {
+        return false;
+    }
+    if middle == 0 {
+        // SAFETY: as above; the grandchild waits (alarm bounds it) and the middle one leaves.
+        unsafe {
+            if libc::fork() == 0 {
+                libc::alarm(10);
+                loop {
+                    libc::pause();
+                }
+            }
+            libc::_exit(0)
+        }
+    }
+    let mut status = 0;
+    // SAFETY: waits for our own child; `status` is a valid out-pointer.
+    if unsafe { libc::waitpid(middle, &raw mut status, 0) } != middle {
+        return false;
+    }
+    if !child_kill_children() {
+        return false;
+    }
+    // SAFETY: `status` is a valid out-pointer; this reaps the orphan that came back to us.
+    let reaped = unsafe { libc::waitpid(-1, &raw mut status, 0) };
+    reaped > 0 && libc::WIFSIGNALED(status) && libc::WTERMSIG(status) == libc::SIGKILL
+}
+
+/// Forks a probe child that moves itself into the cgroup whose `cgroup.procs` is `procs`, then
+/// waits (at most five seconds) to be killed. It exits with status 3 when the move fails.
+pub(super) fn fork_cgroup_member(procs: &std::ffi::CStr) -> io::Result<libc::pid_t> {
+    // SAFETY: fork has no arguments; the child makes only async-signal-safe calls and ends in
+    // `_exit`.
+    let pid = unsafe { libc::fork() };
+    match pid {
+        0 => {
+            if child_write_file(procs, b"0").is_err() {
+                // SAFETY: `_exit` skips destructors, as a forked child must.
+                unsafe { libc::_exit(3) }
+            }
+            // SAFETY: alarm and pause take no pointers; `_exit` as above.
+            unsafe {
+                libc::alarm(5);
+                libc::pause();
+                libc::_exit(4)
+            }
+        }
+        p if p < 0 => Err(io::Error::last_os_error()),
+        p => Ok(p),
+    }
+}
+
+/// The wait status of `pid` if it has ended, without blocking.
+pub(super) fn try_wait_status(pid: libc::pid_t) -> Option<libc::c_int> {
+    let mut status = 0;
+    // SAFETY: waits for our own child; `status` is a valid out-pointer.
+    (unsafe { libc::waitpid(pid, &raw mut status, libc::WNOHANG) } == pid).then_some(status)
+}
+
+/// The wait status of `pid`, waiting for it to end.
+pub(super) fn wait_status(pid: libc::pid_t) -> Option<libc::c_int> {
+    let mut status = 0;
+    loop {
+        // SAFETY: waits for our own child; `status` is a valid out-pointer.
+        let r = unsafe { libc::waitpid(pid, &raw mut status, 0) };
+        if r == pid {
+            return Some(status);
+        }
+        if r < 0 && errno() != libc::EINTR {
+            return None;
         }
     }
 }

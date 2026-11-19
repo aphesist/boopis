@@ -108,6 +108,15 @@ fn cwd_must_be_inside_a_grant_and_a_directory() {
     assert!(err.to_string().contains("not a directory"), "{err}");
 }
 
+/// A directory laid out like an interpreter prefix: `bin/python3.12`, executable.
+pub(super) fn interpreter_prefix(prefix: &Path) {
+    use std::os::unix::fs::PermissionsExt;
+    fs::create_dir_all(prefix.join("bin")).unwrap();
+    let exe = prefix.join("bin").join("python3.12");
+    fs::write(&exe, "#!/bin/sh\n").unwrap();
+    fs::set_permissions(&exe, fs::Permissions::from_mode(0o755)).unwrap();
+}
+
 fn refused(p: &SandboxPolicy, home: Option<&Path>, needle: &str) {
     let home = home.map(|h| OsString::from(h.as_os_str()));
     let lookup = move |name: &OsStr| (name == "HOME").then(|| home.clone()).flatten();
@@ -124,7 +133,7 @@ fn runtime_roots_accept_an_interpreter_prefix_outside_the_workspace() {
     let work = t.path().join("work");
     let prefix = t.path().join("python").join("cpython-3.14");
     fs::create_dir_all(&work).unwrap();
-    fs::create_dir_all(prefix.join("bin")).unwrap();
+    interpreter_prefix(&prefix);
     let p = base(&work).with_ro([&work]).with_runtime_ro([&prefix]);
     let r = p.resolve_with_env(&lookup_none).unwrap();
     let want = fs::canonicalize(&prefix).unwrap();
@@ -204,7 +213,7 @@ fn a_runtime_root_alone_does_not_make_the_working_directory_reachable() {
     let work = t.path().join("work");
     let prefix = t.path().join("python");
     fs::create_dir_all(&work).unwrap();
-    fs::create_dir_all(&prefix).unwrap();
+    interpreter_prefix(&prefix);
     let p = base(&work).with_runtime_ro([&prefix]);
     refused(&p, None, "not inside any ro_paths or rw_paths");
 }

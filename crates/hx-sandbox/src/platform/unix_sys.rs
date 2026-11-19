@@ -22,6 +22,16 @@ pub(super) fn killpg(pgid: libc::pid_t, sig: libc::c_int) {
     }
 }
 
+/// Sends `sig` to one process. Returns whether the process was there to receive it.
+#[cfg(target_os = "linux")]
+pub(super) fn kill_pid(pid: libc::pid_t, sig: libc::c_int) -> bool {
+    if pid <= 1 {
+        return false;
+    }
+    // SAFETY: kill takes two integers and touches no memory; a stale pid at worst answers ESRCH.
+    unsafe { libc::kill(pid, sig) == 0 }
+}
+
 /// Sets or clears `FD_CLOEXEC` on `fd`.
 #[cfg(not(target_os = "linux"))]
 pub(super) fn set_cloexec(fd: BorrowedFd<'_>, on: bool) -> io::Result<()> {

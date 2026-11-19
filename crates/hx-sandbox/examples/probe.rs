@@ -13,6 +13,13 @@
     reason = "one flat dispatch table of independent probes reads better than many functions"
 )]
 #![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss,
+    clippy::decimal_bitwise_operands,
+    reason = "raw socket and syscall structures: sizes, families and flags as the C interfaces take them"
+)]
+#![allow(
     clippy::duration_suboptimal_units,
     reason = "seconds are the unit the tests reason in"
 )]
@@ -25,14 +32,53 @@ fn fail(msg: impl std::fmt::Display) -> ! {
     std::process::exit(3)
 }
 
-/// Writes an ever-increasing counter to `path` every 50 ms, forever.
+/// Writes an ever-increasing counter to `path` every 50 ms, forever. Each beat goes to a
+/// temporary file that is renamed over `path`, so a reader never sees the empty file that a
+/// truncate-then-write leaves for a moment.
 fn heartbeat(path: &str) -> ! {
+    let tmp = format!("{path}.tmp");
     let mut n = 0u64;
     loop {
-        let _ = std::fs::write(path, n.to_string());
+        if std::fs::write(&tmp, n.to_string()).is_ok() {
+            let _ = std::fs::rename(&tmp, path);
+        }
         n += 1;
         std::thread::sleep(std::time::Duration::from_millis(50));
     }
+}
+
+/// `TYPE[,nonblock][,cloexec]` as the `type` argument of `socket(2)`.
+#[cfg(target_os = "linux")]
+fn socket_type(spec: &str) -> libc::c_int {
+    let mut parts = spec.split(',');
+    let mut kind = match parts.next().unwrap_or("") {
+        "stream" => libc::SOCK_STREAM,
+        "dgram" => libc::SOCK_DGRAM,
+        "raw" => libc::SOCK_RAW,
+        "seqpacket" => libc::SOCK_SEQPACKET,
+        "rdm" => libc::SOCK_RDM,
+        other => fail(format!("unknown socket type {other}")),
+    };
+    for flag in parts {
+        kind |= match flag {
+            "nonblock" => libc::SOCK_NONBLOCK,
+            "cloexec" => libc::SOCK_CLOEXEC,
+            other => fail(format!("unknown socket flag {other}")),
+        };
+    }
+    kind
+}
+
+/// Prints the result of a raw syscall the way the tests read it: `ret N` or `errno N`, exit 3
+/// when the call failed.
+#[cfg(target_os = "linux")]
+fn report_syscall(rc: i64) {
+    if rc < 0 {
+        let errno = std::io::Error::last_os_error().raw_os_error().unwrap_or(0);
+        println!("errno {errno}");
+        std::process::exit(3);
+    }
+    println!("ret {rc}");
 }
 
 fn main() {
@@ -92,6 +138,22 @@ fn main() {
             Ok(_) => println!("ok"),
             Err(e) => fail(e),
         },
+        #[cfg(unix)]
+        "unixread" => {
+            // probe unixread PATH: connect to a Unix socket and say what the other side does:
+            // `data` (it talks to us), `eof` (it closed on us), or an error. A channel that
+            // refuses this process closes the connection without a word.
+            use std::io::Read;
+            let mut stream = std::os::unix::net::UnixStream::connect(arg(1))
+                .unwrap_or_else(|e| fail(format!("connect: {e}")));
+            let _ = stream.set_read_timeout(Some(std::time::Duration::from_secs(3)));
+            let mut byte = [0u8; 1];
+            match stream.read(&mut byte) {
+                Ok(0) => println!("eof"),
+                Ok(_) => println!("data"),
+                Err(e) => println!("err {e}"),
+            }
+        }
         "selfconnect" => {
             let r = std::net::TcpListener::bind("127.0.0.1:0").and_then(|l| {
                 let addr = l.local_addr()?;
@@ -199,36 +261,41 @@ fn main() {
             unsafe { libc::setsid() };
             heartbeat(&format!("{}.escaped", arg(1)));
         }
+        #[cfg(unix)]
         "forkbomb" => {
             // probe forkbomb N: start up to N sleeping children and say how many started.
+            //
+            // Raw `fork`, not `Command::spawn`: with a `pre_exec` hook (which glibc 2.35's
+            // `posix_spawn` needs avoided, because it reports any clone failure as EPERM and so
+            // hides the EAGAIN the kernel gave when RLIMIT_NPROC stopped the bomb) the standard
+            // library reports the child's exec status through a `SOCK_SEQPACKET` socket pair,
+            // which the sandbox denies by design when the network is off.
             let n: usize = arg(1).parse().unwrap_or_else(|e| fail(e));
-            let me = std::env::current_exe().unwrap_or_else(|e| fail(e));
-            let mut kids = Vec::new();
+            let mut kids: Vec<libc::pid_t> = Vec::new();
             let mut error = String::new();
             for _ in 0..n {
-                let mut child = std::process::Command::new(&me);
-                child.args(["sleep", "30"]);
-                #[cfg(unix)]
-                {
-                    use std::os::unix::process::CommandExt;
-                    // A pre_exec hook (even an empty one) makes the standard library fork and exec itself
-                    // instead of calling posix_spawn. glibc 2.35's posix_spawn (Ubuntu 22.04) reports any
-                    // clone failure as EPERM (it negates -1), which hides the EAGAIN the kernel gave when
-                    // RLIMIT_NPROC stopped the bomb; fork returns the kernel's own errno.
-                    // SAFETY: the hook does nothing, so it is trivially async-signal-safe.
-                    unsafe { child.pre_exec(|| Ok(())) };
-                }
-                match child.spawn() {
-                    Ok(k) => kids.push(k),
-                    Err(e) => {
-                        error = e.to_string();
-                        break;
+                // SAFETY: fork has no arguments; the child only sleeps and leaves with _exit.
+                let pid = unsafe { libc::fork() };
+                if pid == 0 {
+                    // SAFETY: sleep and _exit take integers only.
+                    unsafe {
+                        libc::sleep(30);
+                        libc::_exit(0)
                     }
                 }
+                if pid < 0 {
+                    error = std::io::Error::last_os_error().to_string();
+                    break;
+                }
+                kids.push(pid);
             }
             println!("started {} error {error}", kids.len());
-            for k in &mut kids {
-                let _ = k.kill();
+            for k in &kids {
+                // SAFETY: kill and waitpid take integers and a null status pointer.
+                unsafe {
+                    libc::kill(*k, libc::SIGKILL);
+                    libc::waitpid(*k, std::ptr::null_mut(), 0);
+                }
             }
         }
         "bigwrite" => {
@@ -371,6 +438,150 @@ fn main() {
                     )
                 }
             );
+        }
+        #[cfg(target_os = "linux")]
+        "socket" | "socketpair" => {
+            // probe socket|socketpair DOMAIN TYPE[,nonblock][,cloexec]: create one and say how it went.
+            let domain = match arg(1) {
+                "unix" => libc::AF_UNIX,
+                "inet" => libc::AF_INET,
+                "inet6" => libc::AF_INET6,
+                "netlink" => libc::AF_NETLINK,
+                other => fail(format!("unknown domain {other}")),
+            };
+            let kind = socket_type(arg(2));
+            let mut fds = [-1i32; 2];
+            // SAFETY: plain integers, and a two-element array that socketpair fills.
+            let rc = unsafe {
+                if arg(0) == "socket" {
+                    libc::socket(domain, kind, 0)
+                } else {
+                    libc::socketpair(domain, kind, 0, fds.as_mut_ptr())
+                }
+            };
+            if rc < 0 {
+                fail(format!(
+                    "errno {}",
+                    std::io::Error::last_os_error().raw_os_error().unwrap_or(0)
+                ));
+            }
+            println!("ok");
+        }
+        #[cfg(target_os = "linux")]
+        "datagram" => {
+            // probe datagram PATH TYPE: the way to a host datagram socket (journald, /dev/log):
+            // make an AF_UNIX socket of TYPE, bind it to an automatic address so the server can
+            // answer, send one message to PATH and print what comes back.
+            let kind = socket_type(arg(2));
+            // SAFETY: plain integers.
+            let fd = unsafe { libc::socket(libc::AF_UNIX, kind, 0) };
+            if fd < 0 {
+                fail(format!(
+                    "errno {}",
+                    std::io::Error::last_os_error().raw_os_error().unwrap_or(0)
+                ));
+            }
+            // SAFETY: an all-zero sockaddr_un is valid; only its family is set. Binding with just
+            // the family asks the kernel for an abstract address of its own.
+            let (bound, sent, reply) = unsafe {
+                let mut me: libc::sockaddr_un = std::mem::zeroed();
+                me.sun_family = libc::AF_UNIX as libc::sa_family_t;
+                let bound = libc::bind(
+                    fd,
+                    (&raw const me).cast(),
+                    std::mem::size_of::<libc::sa_family_t>() as libc::socklen_t,
+                );
+                let mut to: libc::sockaddr_un = std::mem::zeroed();
+                to.sun_family = libc::AF_UNIX as libc::sa_family_t;
+                for (slot, byte) in to.sun_path.iter_mut().zip(arg(1).bytes()) {
+                    *slot = byte as libc::c_char;
+                }
+                let msg = b"hello from inside the sandbox";
+                let sent = libc::sendto(
+                    fd,
+                    msg.as_ptr().cast(),
+                    msg.len(),
+                    0,
+                    (&raw const to).cast(),
+                    std::mem::size_of::<libc::sockaddr_un>() as libc::socklen_t,
+                );
+                let timeout = libc::timeval {
+                    tv_sec: 3,
+                    tv_usec: 0,
+                };
+                libc::setsockopt(
+                    fd,
+                    libc::SOL_SOCKET,
+                    libc::SO_RCVTIMEO,
+                    (&raw const timeout).cast(),
+                    std::mem::size_of::<libc::timeval>() as libc::socklen_t,
+                );
+                let mut buf = [0u8; 64];
+                let n = libc::recv(fd, buf.as_mut_ptr().cast(), buf.len(), 0);
+                (bound, sent, (n > 0).then(|| buf[..n as usize].to_vec()))
+            };
+            if bound < 0 || sent < 0 {
+                fail(format!(
+                    "errno {}",
+                    std::io::Error::last_os_error().raw_os_error().unwrap_or(0)
+                ));
+            }
+            match reply {
+                Some(r) => println!("reply {}", String::from_utf8_lossy(&r)),
+                None => fail("no reply"),
+            }
+        }
+        #[cfg(target_os = "linux")]
+        "unshare" => {
+            // probe unshare HEXFLAGS
+            let flags = i32::from_str_radix(arg(1), 16).unwrap_or_else(|e| fail(e));
+            // SAFETY: unshare takes only flags.
+            let rc = unsafe { libc::unshare(flags) };
+            report_syscall(i64::from(rc));
+        }
+        #[cfg(target_os = "linux")]
+        "clone" => {
+            // probe clone HEXFLAGS: the raw clone syscall with a fork's signal added; a child that
+            // gets created leaves at once.
+            let flags = i64::from_str_radix(arg(1), 16).unwrap_or_else(|e| fail(e));
+            // SAFETY: clone with no stack behaves like fork; the child only calls _exit.
+            let rc = unsafe { libc::syscall(libc::SYS_clone, flags | 17, 0, 0, 0, 0) };
+            if rc == 0 {
+                // SAFETY: the child of a raw clone must not return into Rust code.
+                unsafe { libc::_exit(0) };
+            }
+            if rc > 0 {
+                let mut status = 0;
+                // SAFETY: waits for the child just created.
+                unsafe { libc::waitpid(rc as libc::pid_t, &raw mut status, 0) };
+            }
+            report_syscall(rc);
+        }
+        #[cfg(target_os = "linux")]
+        "raw" => {
+            // probe raw NR [ARG...]: any syscall, with integer arguments (decimal or 0x hex, or
+            // `self` for this process's own pid).
+            let num = |i: usize| -> i64 {
+                args.get(i).map_or(0, |a| {
+                    if a == "self" {
+                        return i64::from(std::process::id());
+                    }
+                    a.strip_prefix("0x")
+                        .map_or_else(|| a.parse(), |h| i64::from_str_radix(h, 16))
+                        .unwrap_or_else(|e| fail(e))
+                })
+            };
+            // SAFETY: only used with calls whose integer arguments cannot make the kernel touch
+            // memory (bad descriptors, zero pointers).
+            let rc = unsafe { libc::syscall(num(1), num(2), num(3), num(4), num(5), num(6)) };
+            report_syscall(rc);
+        }
+        "threads" => {
+            // probe threads N: start and join N threads (glibc asks for clone3 first).
+            let n: usize = arg(1).parse().unwrap_or_else(|e| fail(e));
+            let handles: Vec<_> = (0..n).map(|i| std::thread::spawn(move || i * 2)).collect();
+            let sum: usize = handles.into_iter().filter_map(|h| h.join().ok()).sum();
+            println!("ok {sum}");
         }
         "pathexists" => println!("{}", Path::new(arg(1)).exists()),
         other => fail(format!("unknown subcommand {other}")),

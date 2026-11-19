@@ -188,13 +188,20 @@ async fn a_program_under_a_runtime_root_starts_even_through_a_venv_style_symlink
     }
     let w = World::new();
     let mut p = w.policy();
-    let real_dir = probe_path().parent().unwrap().to_path_buf();
-    p.ro_paths.retain(|r| r != &real_dir);
-    // a venv-style launcher: `venv/bin/probe` is a symlink into the interpreter's real directory
-    let venv = w.scratch.parent().unwrap().join("venv");
+    let probe_dir = probe_path().parent().unwrap().to_path_buf();
+    p.ro_paths.retain(|r| r != &probe_dir);
+    // An interpreter outside every grant: the probe, copied in as `python3`, so that the
+    // directories look like what a runtime root must look like (bin/python3).
+    let root = w.scratch.parent().unwrap();
+    let real_dir = root.join("interpreter").join("bin");
+    std::fs::create_dir_all(&real_dir).unwrap();
+    let real = real_dir.join("python3");
+    std::fs::copy(probe_path(), &real).unwrap();
+    // a venv-style launcher: `venv/bin/python3` is a symlink into the interpreter's real directory
+    let venv = root.join("venv");
     std::fs::create_dir_all(venv.join("bin")).unwrap();
-    let launcher = venv.join("bin").join(probe_path().file_name().unwrap());
-    std::os::unix::fs::symlink(probe_path(), &launcher).unwrap();
+    let launcher = venv.join("bin").join("python3");
+    std::os::unix::fs::symlink(&real, &launcher).unwrap();
     let argv: Vec<String> = std::iter::once(launcher.to_string_lossy().into_owned())
         .chain(["exit", "0"].map(str::to_owned))
         .collect();
@@ -219,6 +226,14 @@ async fn a_program_under_a_runtime_root_starts_even_through_a_venv_style_symlink
         .unwrap();
     assert_ne!(code(&write), Some(0));
     assert!(!target.exists());
+
+    // and a directory that holds no interpreter is not accepted as a runtime at all
+    p.runtime_ro_paths = vec![w.outside.clone()];
+    let err = run(&argv, &p).await.unwrap_err();
+    assert!(
+        matches!(&err, Error::InvalidPolicy(m) if m.contains("not an interpreter or toolchain prefix")),
+        "{err}"
+    );
 }
 
 // ---- network ------------------------------------------------------------------------------
@@ -424,7 +439,11 @@ async fn a_timeout_kills_the_whole_tree_including_grandchildren() {
     let base = w.scratch.join("beat");
     let beats = beat_files(&base, &["top", "mid", "leaf"]);
     let mut p = w.policy();
-    p.timeout_ms = 1_000;
+    // The deadline has to outlast three nested process starts, each of which sets up its own
+    // sandbox, on a runner that may be busy with other tests; the timeout is what ends the
+    // tree, so a start that has not happened by then would fail the "all started" check below
+    // for a reason that has nothing to do with the kill.
+    p.timeout_ms = 5_000;
     p.kill_grace_ms = 200;
     let started = Instant::now();
     let r = run(&probe(&["tree", base.to_str().unwrap()]), &p)
@@ -432,13 +451,14 @@ async fn a_timeout_kills_the_whole_tree_including_grandchildren() {
         .unwrap();
     assert_eq!(r.exit, ExitOutcome::TimedOut, "{r:?}");
     assert!(
-        started.elapsed() < Duration::from_secs(10),
+        started.elapsed() < Duration::from_secs(20),
         "took {:?}",
         started.elapsed()
     );
     assert!(
         all_started(&beats),
-        "tree, mid and leaf should all have started"
+        "tree, mid and leaf should all have started within the {} ms deadline",
+        p.timeout_ms
     );
     assert!(
         heartbeats_stopped(&beats),
@@ -494,7 +514,7 @@ async fn background_processes_do_not_outlive_their_parent() {
     );
 }
 #[tokio::test(flavor = "multi_thread")]
-async fn the_child_leads_its_own_session_and_group_or_is_init_of_a_pid_namespace() {
+async fn the_process_tree_has_the_shape_the_report_names() {
     let w = World::new();
     let r = run(&probe(&["ids"]), &w.policy()).await.unwrap();
     let ids: Vec<i64> = r
@@ -504,15 +524,18 @@ async fn the_child_leads_its_own_session_and_group_or_is_init_of_a_pid_namespace
         .map(|s| s.parse().unwrap())
         .collect();
     assert_ne!(ids[0], i64::from(std::process::id()));
-    if r.enforcement
-        .process
-        .mechanisms
-        .contains(&"pid-namespace".to_owned())
-    {
+    let mechanisms = &r.enforcement.process.mechanisms;
+    if mechanisms.contains(&"pid-namespace".to_owned()) {
         // Inside a PID namespace the program is pid 1; its group id belongs to the parent
         // namespace and reads as 0 from in here.
         assert_eq!(ids[0], 1, "{ids:?}");
+    } else if mechanisms.contains(&"subreaper".to_owned()) {
+        // The leader is the supervisor; the program is its child, in the supervisor's group and
+        // session.
+        assert_ne!(ids[0], ids[1], "pid should differ from pgid: {ids:?}");
+        assert_eq!(ids[1], ids[2], "pgid and sid are the supervisor's: {ids:?}");
     } else {
+        // A cgroup run has no supervisor: the program leads its own session and group.
         assert_eq!(ids[0], ids[1], "pgid should equal pid: {ids:?}");
         assert_eq!(ids[0], ids[2], "sid should equal pid: {ids:?}");
     }
@@ -680,6 +703,294 @@ async fn dangerous_syscalls_are_denied() {
         "io_uring_setup should fail with EPERM: {}",
         r.stdout.text
     );
+}
+
+// ---- sockets: with the network off only AF_UNIX streams exist ---------------------------------
+
+const EPERM_TEXT: &str = "errno 1";
+
+async fn out(w: &World, net: NetworkPolicy, args: &[&str]) -> (Option<i32>, String) {
+    let r = run(&probe(args), &w.policy().with_network(net))
+        .await
+        .unwrap();
+    (code(&r), r.stdout.text)
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn with_the_network_off_only_unix_stream_sockets_can_be_created() {
+    let w = World::new();
+    for call in ["socket", "socketpair"] {
+        // The one type that stays: plain, and with the flags libc and Python add.
+        for kind in [
+            "stream",
+            "stream,nonblock",
+            "stream,cloexec",
+            "stream,nonblock,cloexec",
+        ] {
+            let (c, text) = out(&w, NetworkPolicy::Off, &[call, "unix", kind]).await;
+            assert_eq!((c, text.trim()), (Some(0), "ok"), "{call} {kind}");
+        }
+        // Every other AF_UNIX type: DGRAM and RDM, SEQPACKET, and RAW (a datagram socket in
+        // the kernel), with and without the flags.
+        for kind in [
+            "dgram",
+            "raw",
+            "seqpacket",
+            "rdm",
+            "dgram,nonblock,cloexec",
+            "raw,cloexec",
+        ] {
+            let (c, text) = out(&w, NetworkPolicy::Off, &[call, "unix", kind]).await;
+            assert_eq!(c, Some(3), "{call} {kind} must be denied: {text}");
+            assert!(text.contains(EPERM_TEXT), "{call} {kind}: {text}");
+        }
+        for domain in ["inet", "inet6", "netlink"] {
+            let (c, text) = out(&w, NetworkPolicy::Off, &[call, domain, "stream"]).await;
+            assert_eq!(c, Some(3), "{call} {domain}: {text}");
+            assert!(text.contains(EPERM_TEXT), "{call} {domain}: {text}");
+        }
+        // Control: with the network on the same datagram and seqpacket sockets are created, so
+        // the denials above were the sandbox and not the kernel.
+        for kind in ["dgram", "raw", "seqpacket"] {
+            let (c, text) = out(&w, NetworkPolicy::On, &[call, "unix", kind]).await;
+            assert_eq!((c, text.trim()), (Some(0), "ok"), "control {call} {kind}");
+        }
+    }
+}
+
+/// A host datagram socket, the way journald and `/dev/log` are: addressed by a path the sandbox
+/// has no grant for. It answers whoever writes to it. Returns what it received, as a list.
+fn datagram_server(path: &std::path::Path) -> std::thread::JoinHandle<Vec<String>> {
+    let server = std::os::unix::net::UnixDatagram::bind(path).unwrap();
+    server
+        .set_read_timeout(Some(Duration::from_secs(4)))
+        .unwrap();
+    std::thread::spawn(move || {
+        let mut seen = Vec::new();
+        let mut buf = [0u8; 128];
+        while let Ok((n, from)) = server.recv_from(&mut buf) {
+            seen.push(String::from_utf8_lossy(&buf[..n]).into_owned());
+            let _ = server.send_to_addr(b"reply-from-host", &from);
+        }
+        seen
+    })
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_sandboxed_child_cannot_reach_a_host_datagram_socket() {
+    // The review's proof of concept: socket(AF_UNIX, SOCK_RAW) became a datagram socket that
+    // could write to any path-addressed datagram socket and read the reply.
+    let w = World::new();
+    for kind in ["raw", "dgram"] {
+        let sock = w.outside.join(format!("{kind}.sock"));
+        let server = datagram_server(&sock);
+        let r = run(
+            &probe(&["datagram", sock.to_str().unwrap(), kind]),
+            &w.policy(),
+        )
+        .await
+        .unwrap();
+        assert_eq!(code(&r), Some(3), "{kind}: {r:?}");
+        assert!(
+            r.stdout.text.contains(EPERM_TEXT),
+            "{kind}: {}",
+            r.stdout.text
+        );
+        let seen = server.join().unwrap();
+        assert!(seen.is_empty(), "{kind}: the host socket received {seen:?}");
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_datagram_proof_of_concept_works_when_the_network_is_on() {
+    // The control for the test above: the same child, the same socket, network on. If this does
+    // not reach the server, the test above proves nothing.
+    let w = World::new();
+    let sock = w.outside.join("control.sock");
+    let server = datagram_server(&sock);
+    let r = run(
+        &probe(&["datagram", sock.to_str().unwrap(), "raw"]),
+        &w.policy().with_network(NetworkPolicy::On),
+    )
+    .await
+    .unwrap();
+    assert_eq!(code(&r), Some(0), "{r:?}");
+    assert!(
+        r.stdout.text.contains("reply-from-host"),
+        "{}",
+        r.stdout.text
+    );
+    let seen = server.join().unwrap();
+    assert_eq!(seen, ["hello from inside the sandbox"]);
+}
+
+// ---- namespaces and the rest of the hardening list ------------------------------------------
+
+const ENOSYS_TEXT: &str = "errno 38";
+const NEW_FLAGS: [(&str, &str); 6] = [
+    ("user", "10000000"),
+    ("net", "40000000"),
+    ("pid", "20000000"),
+    ("mount", "00020000"),
+    ("uts", "04000000"),
+    ("ipc", "08000000"),
+];
+
+#[tokio::test(flavor = "multi_thread")]
+async fn namespaces_cannot_be_created_or_entered() {
+    let w = World::new();
+    for net in [NetworkPolicy::Off, NetworkPolicy::On] {
+        // unshare is denied outright: even unshare(0), which does nothing and succeeds without
+        // the filter.
+        for flags in ["0", "10000000", "40000000"] {
+            let (c, text) = out(&w, net.clone(), &["unshare", flags]).await;
+            assert_eq!(c, Some(3), "unshare {flags}: {text}");
+            assert!(text.contains(EPERM_TEXT), "unshare {flags}: {text}");
+        }
+        // setns(-1, 0) answers EBADF (errno 9) when it reaches the kernel.
+        let (_, text) = out(
+            &w,
+            net.clone(),
+            &["raw", &libc::SYS_setns.to_string(), "-1", "0"],
+        )
+        .await;
+        assert!(text.contains(EPERM_TEXT), "setns: {text}");
+        // clone with any namespace flag is denied...
+        for (name, flags) in NEW_FLAGS {
+            let (c, text) = out(&w, net.clone(), &["clone", flags]).await;
+            assert_eq!(c, Some(3), "clone CLONE_NEW{name}: {text}");
+            assert!(text.contains(EPERM_TEXT), "clone CLONE_NEW{name}: {text}");
+        }
+        // ...and a plain clone, the fork that libc makes, is not.
+        let (c, text) = out(&w, net.clone(), &["clone", "0"]).await;
+        assert_eq!(
+            (c, text.trim().starts_with("ret ")),
+            (Some(0), true),
+            "{text}"
+        );
+        // clone3 looks like a kernel without it, so that libc falls back to clone.
+        let (c, text) = out(&w, net.clone(), &["raw", &libc::SYS_clone3.to_string()]).await;
+        assert_eq!(c, Some(3));
+        assert!(text.contains(ENOSYS_TEXT), "clone3: {text}");
+        // Threads and processes still start, which needs that fallback.
+        let (c, text) = out(&w, net.clone(), &["threads", "8"]).await;
+        assert_eq!((c, text.trim()), (Some(0), "ok 56"));
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_other_escape_syscalls_are_denied() {
+    let w = World::new();
+    let nr = |n: i64| n.to_string();
+    // Each call answers something else when it reaches the kernel: pidfd_getfd(-1, -1, 0) EBADF,
+    // kcmp(self, self, KCMP_VM) 0, and so on. EPERM is the filter.
+    // `self` is the probe's own pid, which it can compare with itself.
+    let pid = "self".to_string();
+    let cases: Vec<(&str, Vec<String>)> = vec![
+        (
+            "pidfd_getfd",
+            vec![
+                nr(libc::SYS_pidfd_getfd),
+                "-1".into(),
+                "-1".into(),
+                "0".into(),
+            ],
+        ),
+        ("fsopen", vec![nr(libc::SYS_fsopen), "0".into(), "0".into()]),
+        (
+            "fsmount",
+            vec![nr(libc::SYS_fsmount), "-1".into(), "0".into(), "0".into()],
+        ),
+        (
+            "fspick",
+            vec![nr(libc::SYS_fspick), "-1".into(), "0".into(), "0".into()],
+        ),
+        (
+            "move_mount",
+            vec![
+                nr(libc::SYS_move_mount),
+                "-1".into(),
+                "0".into(),
+                "-1".into(),
+                "0".into(),
+                "0".into(),
+            ],
+        ),
+        (
+            "open_tree",
+            vec![nr(libc::SYS_open_tree), "-1".into(), "0".into(), "0".into()],
+        ),
+        (
+            "mount_setattr",
+            vec![
+                nr(libc::SYS_mount_setattr),
+                "-1".into(),
+                "0".into(),
+                "0".into(),
+                "0".into(),
+                "0".into(),
+            ],
+        ),
+        (
+            "open_by_handle_at",
+            vec![
+                nr(libc::SYS_open_by_handle_at),
+                "-1".into(),
+                "0".into(),
+                "0".into(),
+            ],
+        ),
+        (
+            "kcmp",
+            vec![
+                nr(libc::SYS_kcmp),
+                pid.clone(),
+                pid,
+                "1".into(),
+                "0".into(),
+                "0".into(),
+            ],
+        ),
+    ];
+    for (name, args) in cases {
+        let mut argv_: Vec<&str> = vec!["raw"];
+        argv_.extend(args.iter().map(String::as_str));
+        for net in [
+            NetworkPolicy::Off,
+            NetworkPolicy::Loopback,
+            NetworkPolicy::On,
+        ] {
+            if net == NetworkPolicy::Loopback
+                && !hx_sandbox::capabilities().network_loopback.available
+            {
+                continue;
+            }
+            let (c, text) = out(&w, net.clone(), &argv_).await;
+            assert_eq!(c, Some(3), "{name} {net:?}: {text}");
+            assert!(text.contains(EPERM_TEXT), "{name} {net:?}: {text}");
+        }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+#[tokio::test(flavor = "multi_thread")]
+async fn x32_system_calls_are_denied() {
+    // getpid through the x32 table: a kernel without x32 says ENOSYS, one with it answers with a
+    // pid. Only the filter makes it EPERM.
+    let w = World::new();
+    let x32_getpid = (0x4000_0000_i64 | libc::SYS_getpid).to_string();
+    for net in [NetworkPolicy::Off, NetworkPolicy::On] {
+        let (c, text) = out(&w, net, &["raw", &x32_getpid]).await;
+        assert_eq!(c, Some(3), "{text}");
+        assert!(text.contains(EPERM_TEXT), "{text}");
+    }
+    let (c, text) = out(
+        &w,
+        NetworkPolicy::Off,
+        &["raw", &libc::SYS_getpid.to_string()],
+    )
+    .await;
+    assert_eq!(c, Some(0), "the native table still works: {text}");
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -880,45 +1191,49 @@ async fn descriptors_leaked_by_the_host_do_not_reach_the_child() {
     drop(leaked);
 }
 
-// ---- PID namespace --------------------------------------------------------------------------
+// ---- ending the whole tree, setsid escapees included -----------------------------------------
 
-fn pid_namespace_available() -> bool {
+/// Whatever ends the tree on this host: a PID namespace, a cgroup, or a subreaper. The tests
+/// below do not care which; the report and the capabilities have to name it, and the escapee
+/// has to die. `src/platform/linux/tree/tests.rs` forces each mechanism by name.
+fn tree_mechanism() -> String {
     let caps = hx_sandbox::capabilities();
-    let yes = caps
-        .process_tree_kill
-        .mechanism
-        .as_deref()
-        .is_some_and(|m| m.contains("pid-namespace"));
-    if !yes {
-        eprintln!(
-            "SKIPPED: no PID namespace here: {}",
-            caps.process_tree_kill.detail
-        );
-    }
-    yes
+    assert!(
+        caps.process_tree_kill.available,
+        "no mechanism ends a setsid escapee here: {}",
+        caps.process_tree_kill.detail
+    );
+    caps.process_tree_kill.mechanism.unwrap()
+}
+
+fn assert_report_names(r: &hx_sandbox::RunResult) {
+    let mechanism = tree_mechanism();
+    let process = &r.enforcement.process;
+    assert_eq!(process.status, Status::Enforced, "{process:?}");
+    let named = ["pid-namespace", "cgroup-kill", "subreaper"]
+        .into_iter()
+        .filter(|m| process.mechanisms.contains(&(*m).to_owned()))
+        .collect::<Vec<_>>();
+    assert_eq!(named.len(), 1, "exactly one tree mechanism: {process:?}");
+    assert!(
+        mechanism.starts_with(named[0]),
+        "capabilities say {mechanism}, the run says {named:?}"
+    );
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn a_grandchild_that_calls_setsid_dies_on_timeout_with_a_pid_namespace() {
-    if !pid_namespace_available() {
-        return;
-    }
+async fn a_grandchild_that_calls_setsid_dies_on_timeout() {
     let w = World::new();
     let base = w.scratch.join("esc");
     let beats = beat_files(&base, &["top", "escaped"]);
     let mut p = w.policy();
-    p.timeout_ms = 1_000;
+    p.timeout_ms = 5_000;
     p.kill_grace_ms = 200;
     let r = run(&probe(&["escape", base.to_str().unwrap()]), &p)
         .await
         .unwrap();
     assert_eq!(r.exit, ExitOutcome::TimedOut, "{r:?}");
-    assert!(
-        r.enforcement
-            .process
-            .mechanisms
-            .contains(&"pid-namespace".to_owned())
-    );
+    assert_report_names(&r);
     assert!(
         all_started(&beats),
         "the escaping grandchild should have started"
@@ -931,9 +1246,6 @@ async fn a_grandchild_that_calls_setsid_dies_on_timeout_with_a_pid_namespace() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn a_setsid_escapee_does_not_outlive_a_normal_exit_either() {
-    if !pid_namespace_available() {
-        return;
-    }
     let w = World::new();
     let beat = w.scratch.join("late.beat");
     // The leader starts a session-leading background process and exits at once.
@@ -946,10 +1258,59 @@ async fn a_setsid_escapee_does_not_outlive_a_normal_exit_either() {
     p.ro_paths.push("/usr".into());
     let r = run(&argv(&["/bin/sh", "-c", &script]), &p).await.unwrap();
     assert_eq!(code(&r), Some(0), "{r:?}");
+    assert_report_names(&r);
     assert!(
         heartbeats_stopped(std::slice::from_ref(&beat)),
         "the setsid process survived the leader's exit"
     );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_setsid_escapee_dies_when_a_spawned_child_is_killed() {
+    let w = World::new();
+    let base = w.scratch.join("spawned");
+    let beats = beat_files(&base, &["top", "escaped"]);
+    let mut h = spawn(
+        &probe(&["escape", base.to_str().unwrap()]),
+        &w.policy(),
+        SpawnOptions::new(),
+    )
+    .await
+    .unwrap();
+    for _ in 0..200 {
+        if all_started(&beats) {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    assert!(all_started(&beats));
+    h.kill();
+    assert_eq!(h.wait().await.unwrap(), ExitOutcome::Signaled { signal: 9 });
+    assert!(
+        heartbeats_stopped(&beats),
+        "the escapee outlived the killed child"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_capability_is_claimed_only_with_a_mechanism_behind_it() {
+    let caps = hx_sandbox::capabilities();
+    let advertised = caps
+        .capability_strings()
+        .contains(&"sandbox.process_tree_kill".to_owned());
+    assert_eq!(advertised, caps.process_tree_kill.available);
+    let mechanism = caps.process_tree_kill.mechanism.as_deref().unwrap_or("");
+    if caps.process_tree_kill.available {
+        assert!(
+            ["pid-namespace", "cgroup-kill", "subreaper"]
+                .iter()
+                .any(|m| mechanism.starts_with(m)),
+            "{mechanism}"
+        );
+    } else {
+        // Only the process group is left, and the capability says so by not being claimed.
+        assert_eq!(mechanism, "setsid+killpg");
+    }
 }
 
 // ---- resource limits ------------------------------------------------------------------------

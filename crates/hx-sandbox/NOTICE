@@ -10,7 +10,8 @@ Derived files:
 
   src/platform/linux/seccomp.rs
     From codex-rs/linux-sandbox/src/seccomp.rs. Taken: the deny-list approach to
-    socket()/socketpair() domains, the x32 syscall-number aliases on x86_64, and the list of
+    socket()/socketpair() domains, the handling of x32 syscall numbers on x86_64 (a wholesale
+    denial here, instead of per-syscall aliases), and the list of
     syscalls that get around socket-family rules or the sandbox (io_uring, ptrace,
     process_vm_*). Changed: the filter is built from a three-mode enum (off, loopback, open)
     instead of Codex's proxy-routing modes; Unix socket path access (connect, bind, listen,
