@@ -242,7 +242,15 @@ async function checkRow(browser, origin, row, log) {
       await page.evaluate((p) => window.__lab.preset(p), preset);
       await settle(page, 80);
       /* a preset swap starts colour transitions (rows, chips, keys); R-colour-1 reads the colour a surface rests at, not one in flight */
-      await page.evaluate(() => Promise.all(document.getAnimations().filter((a) => a instanceof CSSTransition).map((a) => a.finished.catch(() => null))).then(() => null));
+      await page.evaluate(async () => {
+        const frame = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+        for (let i = 0; i < 6; i++) {
+          await frame();
+          const run = document.getAnimations().filter((a) => a instanceof CSSTransition);
+          if (!run.length) return;
+          await Promise.all(run.map((a) => a.finished.catch(() => null)));
+        }
+      });
       for (const w of WIDTHS) {
         if (!row.app && row.width && row.width + 48 > w) continue;   /* a fixed-width cell wider than this window: not meaningful */
         await setWidth(page, row, w);
