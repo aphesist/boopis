@@ -200,8 +200,8 @@ class FakeHostSecrets:
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 
     def start(self) -> dict[str, str]:
-        """Listens, and returns what the real host puts in the gateway's environment (the socket and the token: nothing is
-        written to a file), for the caller to give the gateway it starts."""
+        """Listens, and returns what the real host puts in the gateway's environment (the socket and the token:
+        nothing is written to a file), for the caller to give the gateway it starts."""
         self.sock.bind(str(self.path))
         self.sock.listen(4)
         threading.Thread(target=self._serve, daemon=True).start()
