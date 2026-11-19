@@ -4,6 +4,8 @@
 import { commands } from './bindings';
 import type { AppSettings, GpuPolicy, RendererReport } from './bindings';
 import { asHostError } from './bridge';
+import { currentPlan, planLines } from './free-tier';
+import type { PlanView } from './free-tier';
 
 /** what only the page knows; the GL strings are the GPU the web process really draws on (WebGL goes through the same EGL display as the page) */
 export interface DisplayFacts { devicePixelRatio: number; innerWidth: number; innerHeight: number; userAgent: string; glRenderer?: string | null; glVendor?: string | null }
@@ -62,7 +64,9 @@ const GPU_LABELS: Record<GpuPolicy, string> = { auto: 'Automatic', integrated: '
 export const gpuLabel = (p: GpuPolicy): string => GPU_LABELS[p];
 
 /** the report as plain text, one fact a line, for a message */
-export function reportText(r: RendererReport, d: DisplayFacts, f?: FrameStats | null): string {
+/** the renderer report, with what Hermes says about the models plan when the live connection can ask */
+export type Report = RendererReport & { plan?: PlanView | null };
+export function reportText(r: Report, d: DisplayFacts, f?: FrameStats | null): string {
   const gpus = r.gpus.length
     ? r.gpus.map((g) => `  ${g.card}  vendor ${g.vendor}  driver ${g.driver ?? 'none'}${g.boot_display ? '  (boot display)' : ''}`)
     : ['  none found in /sys/class/drm'];
@@ -93,12 +97,15 @@ export function reportText(r: RendererReport, d: DisplayFacts, f?: FrameStats | 
     'environment now:', ...env,
     `user agent: ${d.userAgent}`,
     'choices: ' + r.choices.map(([k, v]) => `${k} = ${v}`).join('; '),
+    ...(r.plan ? planLines(r.plan) : []),
     ...(f ? [`frames over ${f.seconds} s: ${describeFrames(f, rate)} (p50 ${f.p50} ms, p95 ${f.p95} ms, max ${f.max} ms, ${f.over33} over 33 ms, ${f.frames} frames)`] : [])
   ].join('\n');
 }
 
-export async function loadReport(): Promise<RendererReport> {
-  try { return await commands.rendererReport(); } catch (e) { throw asHostError(e); }
+export async function loadReport(): Promise<Report> {
+  let report: RendererReport;
+  try { report = await commands.rendererReport(); } catch (e) { throw asHostError(e); }
+  return { ...report, plan: await currentPlan() };   /* null where there is no live connection to ask */
 }
 /** open WebKitGTK's `webkit://gpu` page in its own window */
 export async function openGpuPage(): Promise<void> {

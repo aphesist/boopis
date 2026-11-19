@@ -13,7 +13,7 @@ import { readFlag } from '../core/settings';
 import { createDetails } from './live/details';
 import { todosFrom } from './live/map-details';
 import { blankData } from './live/blanks';
-import { createFormsHost, hasHostDialogs, tauriPickFolder } from './live/forms';
+import { chooseAnotherModel, createFormsHost, hasHostDialogs, tauriPickFolder } from './live/forms';
 import type { FormEntry } from './live/forms';
 import { tauriSecrets } from './secrets';
 import type { SecretsBridge } from './secrets';
@@ -37,6 +37,8 @@ export interface LiveOptions {
   secrets?: SecretsBridge;
   /** the folder dialog forms use; the host's own in the desktop app */
   pickFolder?: (() => Promise<string | null>) | null;
+  /** what a free-tier limit notice does with "choose another model"; the host's setup in the desktop app */
+  onFreeTierChoice?: (choice: string) => Promise<void>;
 }
 
 interface Running { turn: AgentTurn; text: string; steps: AgentTurn['steps'][number][]; startedAt: number }
@@ -164,6 +166,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   const formsHost = createFormsHost({
     client, secrets: opts.secrets ?? (hasHostDialogs() ? tauriSecrets() : noKeychain),
     pickFolder: opts.pickFolder !== undefined ? opts.pickFolder : hasHostDialogs() ? tauriPickFolder : null,
+    ...((opts.onFreeTierChoice ?? (hasHostDialogs() ? chooseAnotherModel : null)) ? { onFreeTierChoice: opts.onFreeTierChoice ?? chooseAnotherModel } : {}),
     hooks: {
       opened(entry: FormEntry) {
         const uiId = byGw.get(entry.gwSession), c = uiId ? convos.get(uiId) : undefined;

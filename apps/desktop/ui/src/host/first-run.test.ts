@@ -101,6 +101,44 @@ describe('first run', () => {
     } finally { vi.useRealTimers(); }
   });
 
+  it('offers the free models first and already chosen, so one press of Continue is the whole setup of a model', async () => {
+    vi.useFakeTimers();
+    try {
+      const names = ['Free models (Nous free tier, no account)', 'OpenRouter free models (needs a free OpenRouter key)', 'Claude: haiku, sonnet, opus (needs an Anthropic API key)'];
+      const ladder = form('setup.ladder', 'choice', { type: 'object', required: ['choice'], properties: { choice: { type: 'string', title: 'Model', enum: ['free', 'openrouter-free', 'anthropic'], enumNames: names, default: 'free' } } }, { body: 'Free models need no account and no key. Terms: https://portal.nousresearch.com/terms' });
+      const bridge = new Fake([status({ form: ladder }), status({ done: true, receipt: { lines: ['Models and keys: Nous free tier (nous/welcome): one model at every tier'] } })]);
+      void runFirstRun(bridge);
+      await vi.advanceTimersByTimeAsync(0);
+      await click('Set up');
+      const options = [...document.querySelectorAll<HTMLElement>('.cd-opt')];
+      expect(options.map((o) => o.querySelector('.cd-opt__text')?.textContent)).toEqual(names);
+      expect(options.map((o) => o.getAttribute('aria-checked'))).toEqual(['true', 'false', 'false']);
+      expect(document.body.textContent).toContain('portal.nousresearch.com/terms');
+      await click('Go');
+      await vi.advanceTimersByTimeAsync(900);
+      expect(bridge.answers[1]).toMatchObject({ answer: { form_id: 'setup.ladder', values: { choice: 'free' }, secrets: {} } });
+      expect(document.body.textContent).toContain('one model at every tier');
+    } finally { vi.useRealTimers(); }
+  });
+
+  it('asks for the free OpenRouter models with several picks and sends them as a list', async () => {
+    vi.useFakeTimers();
+    try {
+      const ids = ['a/small-3b:free', 'b/mid-27b:free', 'c/big-120b:free'];
+      const pick = form('setup.openrouter', 'choice', { type: 'object', required: ['picks'], properties: { picks: { type: 'string', title: 'Free models', 'x-multi': true, enum: ids, enumNames: ids, default: [ids[0], ids[2]] } } });
+      const bridge = new Fake([status({ form: pick }), status({ done: true })]);
+      void runFirstRun(bridge);
+      await vi.advanceTimersByTimeAsync(0);
+      await click('Set up');
+      const options = [...document.querySelectorAll<HTMLElement>('.cd-opt')];
+      expect(options.map((o) => o.getAttribute('aria-checked'))).toEqual(['true', 'false', 'true']);
+      options[1]?.click();
+      await click('Go');
+      await vi.advanceTimersByTimeAsync(900);
+      expect(bridge.answers[1]).toMatchObject({ answer: { form_id: 'setup.openrouter', values: { picks: [ids[0], ids[2], ids[1]] } } });   /* in the order picked: the host orders them by size */
+    } finally { vi.useRealTimers(); }
+  });
+
   it('says what went wrong inside the card when the host refuses the answer, and the form stays open', async () => {
     vi.useFakeTimers();
     try {
