@@ -14,7 +14,7 @@ Order, first to last:
    governed mode the cascade tool ``dispatch`` is refused: it has no cascade to run;
 5. an ``ask`` rule asks a human;
 6. an ``allow`` rule allows;
-7. in governed mode a network tool (``web_search``, ``web_extract``, ``vision_analyze``, ...) that no rule allowed asks a
+7. in governed mode a network tool (``web_search``, ``web_extract``, ``vision_analyze``, ...) that no rule allowed asks
    human: it sends data out. From an exec cell a network tool is refused unless ``exec.network`` is ``on``
    (step 2's neighbour: the sandbox keeps the cell off the network, so the plugin must not lend it one);
 8. otherwise the configured default (``allow`` unless set) applies.
@@ -74,7 +74,8 @@ def _check(call: ToolCall, session: SessionPolicy, defaults: Defaults) -> Decisi
         if call.tool in defaults.read_only_tools and call.tool not in defaults.network_tools:
             if confined and outside_workspace(call, defaults, session.cwd):
                 return block(
-                    "hypotaxis configuration is invalid, so only read-only tools inside the project run.", "config_invalid"
+                    "hypotaxis configuration is invalid, so only read-only tools inside the project run.",
+                    "config_invalid",
                 )
             return ALLOW
         return block(
@@ -113,7 +114,9 @@ def _check(call: ToolCall, session: SessionPolicy, defaults: Defaults) -> Decisi
         if match_rule(rule, call, root, defaults, deny_like=False) is Match.YES:
             return ALLOW
     if session.mode == "governed" and call.tool in defaults.network_tools:
-        return _ask("network", call, session)  # a read-only tool that sends data out: a human, or an allow rule, decides
+        return _ask(
+            "network", call, session
+        )  # a read-only tool that sends data out: a human, or an allow rule, decides
     if session.default == "deny":
         return block(f"{call.tool} is not covered by an allow rule.", "default_deny")
     if session.default == "ask":

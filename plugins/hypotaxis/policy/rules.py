@@ -105,7 +105,8 @@ _DIFF_PATH = re.compile(r"^(?:---|\+\+\+) (?:[ab]/)?(?P<path>\S+)", re.MULTILINE
 # Hermes's V4A patch grammar, copied from ``tools/patch_parser.py`` (v0.23.2) so this check reads a patch exactly as the
 # tool will: a marker is at column 0, spaces after ``***`` are optional, any whitespace may separate the words, and a
 # ``Move File`` names two paths. A line that starts with ``***`` and is none of these is not read leniently (Hermes
-# would take it for a context line): the path list cannot be trusted, so ``paths_of`` answers None and the call is blocked.
+# would take it for a context line): the path list cannot be trusted, so ``paths_of`` answers None and the call is
+# blocked.
 _V4A_BEGIN = re.compile(r"^\*\*\*\s*Begin\s+Patch\s*$")
 _V4A_END = re.compile(r"^\*\*\*\s*End\s+Patch\s*$")
 _V4A_OPS = (

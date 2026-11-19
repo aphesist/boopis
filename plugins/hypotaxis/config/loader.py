@@ -84,7 +84,9 @@ def _form_settings(raw: Mapping[str, Any] | None) -> FormSettings:
 def _gate_settings(raw: Mapping[str, Any] | None) -> GateSettings:
     given = raw or {}
     return GateSettings(
-        allow_unsandboxed=bool(given.get("allow_unsandboxed", schema_default("plugin-settings", "gate", "allow_unsandboxed")))
+        allow_unsandboxed=bool(
+            given.get("allow_unsandboxed", schema_default("plugin-settings", "gate", "allow_unsandboxed"))
+        )
     )
 
 

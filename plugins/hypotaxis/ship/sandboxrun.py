@@ -1,8 +1,8 @@
 """The gate's test command, run through ``hx sandbox.run`` (and, only by the user's explicit choice, without it).
 
-The command is code the agent may have just written (a ``conftest.py``, a ``package.json`` script, a ``Makefile``), so it
-runs like exec's kernel: the **copy** of the workspace is the only writable tree (with a scratch directory for ``HOME``
-and ``TMPDIR``), the real workspace is read-only, the network is off, and the environment is the allowlist of
+The command is code the agent may have just written (a ``conftest.py``, a ``package.json`` script, a ``Makefile``), so
+it runs like exec's kernel: the **copy** of the workspace is the only writable tree (with a scratch directory for
+``HOME`` and ``TMPDIR``), the real workspace is read-only, the network is off, and the environment is the allowlist of
 ``util.proc.safe_env`` with ``HOME`` and ``TMPDIR`` moved into the scratch: provider keys, tokens and the plugin's own
 secret source never reach it. The toolchain the command needs is mounted read-only (``toolchain``).
 
@@ -74,7 +74,9 @@ def sandbox_problem(client: HxClient | None) -> str:
 
 def gate_env(scratch: str, extra: Mapping[str, str] | None = None) -> dict[str, str]:
     """The child's whole environment: the plugin's allowlist, ``HOME`` and ``TMPDIR`` in the scratch."""
-    env = safe_env({"HOME": scratch, "TMPDIR": scratch, "TEMP": scratch, "TMP": scratch, "PYTHONDONTWRITEBYTECODE": "1"})
+    env = safe_env(
+        {"HOME": scratch, "TMPDIR": scratch, "TEMP": scratch, "TMP": scratch, "PYTHONDONTWRITEBYTECODE": "1"}
+    )
     env.update(extra or {})
     return env
 
@@ -98,9 +100,7 @@ def _clean(text: str, *paths: Path) -> str:
     return str(cp_sandbox.truncate(text))
 
 
-def _result(
-    command: Sequence[str], code: int | None, timed_out: bool, text: str, copy: Path, scratch: Path
-) -> Any:
+def _result(command: Sequence[str], code: int | None, timed_out: bool, text: str, copy: Path, scratch: Path) -> Any:
     cleaned = _clean(text, copy, scratch)
     counts = {} if code is None else cp_sandbox.parse_counts(text)
     return cp_sandbox.RunResult(tuple(command), code, timed_out, cleaned, counts)
@@ -135,7 +135,9 @@ def run_sandboxed(
         wire = client.request("sandbox.run", params.to_wire(), timeout=timeout + SPAWN_SLACK_S)
     except HxCallError as exc:
         if exc.code.startswith("hx.sandbox."):
-            raise SandboxUnavailableError(f"the sandbox refused the gate: {exc.message}", data={"reason": exc.message}) from exc
+            raise SandboxUnavailableError(
+                f"the sandbox refused the gate: {exc.message}", data={"reason": exc.message}
+            ) from exc
         raise
     run = RunResult.from_wire(wire)
     label, status = _summary(run.enforcement)
@@ -143,12 +145,16 @@ def run_sandboxed(
     exit_ = run.exit
     if isinstance(exit_, SpawnFailedExitOutcome):
         if tool.program is None:  # the command names nothing runnable: the project's mistake, a plain failure
-            return CommandRun(_result(command, None, False, f"[could not start: {exit_.reason}]", copy, scratch), label, status)
+            return CommandRun(
+                _result(command, None, False, f"[could not start: {exit_.reason}]", copy, scratch), label, status
+            )
         raise SandboxUnavailableError(
             f"the gate's command could not start inside the sandbox: {exit_.reason}", data={"reason": exit_.reason}
         )
     if isinstance(exit_, TimedOutExitOutcome):
-        return CommandRun(_result(command, None, True, text + f"\n[timed out after {timeout}s]", copy, scratch), label, status)
+        return CommandRun(
+            _result(command, None, True, text + f"\n[timed out after {timeout}s]", copy, scratch), label, status
+        )
     if isinstance(exit_, SignaledExitOutcome):
         return CommandRun(_result(command, -int(exit_.signal), False, text, copy, scratch), label, status)
     assert isinstance(exit_, ExitedExitOutcome)
@@ -165,7 +171,9 @@ def run_unsandboxed(command: Sequence[str], copy: Path, scratch: Path, timeout: 
         return CommandRun(_result(command, None, False, f"[could not start: {ran.error}]", copy, scratch), UNSANDBOXED)
     text = ran.stdout + ("\n" if ran.stdout and ran.stderr else "") + ran.stderr
     if ran.timed_out:
-        return CommandRun(_result(command, None, True, text + f"\n[timed out after {timeout}s]", copy, scratch), UNSANDBOXED)
+        return CommandRun(
+            _result(command, None, True, text + f"\n[timed out after {timeout}s]", copy, scratch), UNSANDBOXED
+        )
     return CommandRun(_result(command, ran.returncode, False, text, copy, scratch), UNSANDBOXED)
 
 
@@ -194,4 +202,3 @@ def run_gate_command(
                 raise SandboxUnavailableError(f"{exc.message}. {UNAVAILABLE_HINT}", data=exc.data) from exc
             _log.warning("no sandbox for the gate (%s)", exc.message)
             return run_unsandboxed(command, copy, scratch, timeout)
-

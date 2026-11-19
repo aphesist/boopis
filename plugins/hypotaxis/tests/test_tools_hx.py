@@ -447,6 +447,133 @@ def test_a_gate_that_cannot_run_denies(
     assert "return 1" in (workspace / "src" / "a.py").read_text()
 
 
+def test_an_unavailable_sandbox_refuses_the_ship_before_anything_is_written(
+    make_session: MakeSession, workspace: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from hypotaxis.ship import run as ship_run
+
+    rt, state, _ = make_session()
+    monkeypatch.setattr(
+        ship_run, "sandbox_problem", lambda _client: "this hx cannot enforce sandbox.fs on this machine"
+    )
+    result = tool(rt, state, replace("src/a.py", "return 1", "return 2"))
+    assert result["status"] == "refused" and result["wrote_nothing"] is True
+    assert "gate.allow_unsandboxed" in result["reason"] and "sandbox.fs" in result["reason"]
+    assert "return 1" in (workspace / "src" / "a.py").read_text()
+    assert types(rt, state) == ["session.opened"]
+
+
+def test_the_users_choice_lets_the_gate_run_unsandboxed_when_there_is_no_sandbox(
+    make_session: MakeSession, workspace: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from hypotaxis.ship import run as ship_run
+    from hypotaxis.ship import sandboxrun
+
+    rt, state, _ = make_session(gate={"allow_unsandboxed": True})
+    monkeypatch.setattr(
+        ship_run, "sandbox_problem", lambda _client: "no sandbox"
+    )  # the preflight is skipped by the choice
+    monkeypatch.setattr(sandboxrun, "sandbox_problem", lambda _client: "no sandbox")
+    result = tool(rt, state, replace("src/a.py", "return 1", "return 2"))
+    assert result["status"] == "shipped"
+    assert result["gate"]["enforcement"] == "unsandboxed:user_choice"
+    decided = next(e for e in rt.ledger(state).read() if e["type"] == "gate.decided")
+    assert decided["payload"]["enforcement"] == "unsandboxed:user_choice"
+
+
+def test_a_gate_whose_sandbox_fails_at_run_time_restores_and_says_why(
+    make_session: MakeSession, workspace: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from hypotaxis.ship import sandboxrun
+
+    rt, state, _ = make_session()
+    monkeypatch.setattr(sandboxrun, "sandbox_problem", lambda _client: "the kernel lost Landlock")
+    result = tool(rt, state, replace("src/a.py", "return 1", "return 2"))
+    assert result["status"] == "restored"
+    assert "gate could not run" in result["reason"] and "Landlock" in result["reason"]
+    assert "return 1" in (workspace / "src" / "a.py").read_text()
+    assert "gate.decided" not in types(rt, state), "no verdict is invented"
+
+
+# ---------------------------------------------------------------- a ship that touches what the hooks load
+
+
+def _trust_the_projects_hooks(rt: Runtime, workspace: Path, tmp_path: Path) -> Any:
+    from hypotaxis.compat.activation import all_hooks, classify_all
+    from hypotaxis.compat.scan import ScanEnv, scan
+    from hypotaxis.compat.trust import Trust
+    from hypotaxis.config.trust import TrustStore
+
+    (workspace / ".claude").mkdir()
+    (workspace / ".claude" / "settings.json").write_text(
+        json.dumps(
+            {"hooks": {"PostToolUse": [{"matcher": "Edit", "hooks": [{"type": "command", "command": "echo lint"}]}]}}
+        )
+    )
+    env = ScanEnv(
+        cwd=workspace, home=rt.home, user_home=tmp_path / "home", managed=None, plugin_enabled=lambda _s: True
+    )
+    trust = Trust(TrustStore(rt.home), str(workspace))
+
+    def states() -> list[str]:
+        result = scan(env, trust)
+        return [e.state for e in classify_all(all_hooks(result), workspace, result.effective.env, trust, result)]
+
+    for entry in classify_all(
+        all_hooks(scan(env, trust)), workspace, scan(env, trust).effective.env, trust, scan(env, trust)
+    ):
+        assert entry.item is not None
+        trust.approve(entry.item)
+    assert states() == ["active"]
+    return states
+
+
+def test_a_ship_that_touches_a_file_the_hooks_load_switches_them_off_and_asks(
+    make_session: MakeSession, workspace: Path, tmp_path: Path
+) -> None:
+    from hypotaxis.forms.tools import service
+
+    rt, state, _ = make_session()
+    states = _trust_the_projects_hooks(rt, workspace, tmp_path)
+    (workspace / "package.json").write_text('{"scripts": {}}\n')
+    result = tool(rt, state, {"op": "create", "path": "pkg/package.json", "content": '{"scripts": {"x": "y"}}\n'})
+    assert result["status"] == "shipped"
+    assert any("hooks" in w and "package.json" in w for w in result["warnings"])
+    assert states() == ["untrusted"]
+    (form,) = service(rt).open_forms(SID)
+    assert form.kind == "permission" and "package.json" in form.body and "echo lint" in form.body
+    assert form.effect is not None and "hooks" in form.effect
+
+    service(rt).submit(form.form_id, {"decision": "leave_off"}, session_id=SID)
+    assert states() == ["untrusted"], "only an explicit trust brings them back"
+
+
+def test_answering_trust_approves_the_hooks_again(make_session: MakeSession, workspace: Path, tmp_path: Path) -> None:
+    from hypotaxis.forms.tools import service
+
+    rt, state, _ = make_session()
+    states = _trust_the_projects_hooks(rt, workspace, tmp_path)
+    tool(rt, state, {"op": "create", "path": "Makefile", "content": "all:\n\ttrue\n"})
+    assert states() == ["untrusted"]
+    (form,) = service(rt).open_forms(SID)
+    answer = service(rt).submit(form.form_id, {"decision": "trust"}, session_id=SID)
+    assert answer["applied"] == {"trusted": 1}
+    assert states() == ["active"]
+
+
+def test_an_ordinary_ship_leaves_the_hooks_and_asks_nothing(
+    make_session: MakeSession, workspace: Path, tmp_path: Path
+) -> None:
+    from hypotaxis.forms.tools import service
+
+    rt, state, _ = make_session()
+    states = _trust_the_projects_hooks(rt, workspace, tmp_path)
+    result = tool(rt, state, replace("src/a.py", "return 1", "return 2"))
+    assert result["status"] == "shipped" and "warnings" not in result
+    assert states() == ["active"]
+    assert service(rt).open_forms(SID) == []
+
+
 def test_ship_without_hx_is_an_error(make_session: MakeSession, tmp_path: Path) -> None:
     rt, state, _ = make_session(hx_path=str(tmp_path / "nope"))
     assert tool(rt, state, replace("src/a.py", "a", "b"))["code"] == "hx.process.unavailable"

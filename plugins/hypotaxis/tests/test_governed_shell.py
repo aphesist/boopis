@@ -31,7 +31,9 @@ def test_the_review_payloads_are_not_read_only(command: str) -> None:
 
 @pytest.mark.parametrize("command", REVIEW_PAYLOADS)
 @pytest.mark.parametrize("role", ["orchestrator", "worker"])
-def test_governed_mode_has_no_terminal_for_any_role_whatever_the_command(tmp_path: Path, command: str, role: str) -> None:
+def test_governed_mode_has_no_terminal_for_any_role_whatever_the_command(
+    tmp_path: Path, command: str, role: str
+) -> None:
     session = SessionPolicy(mode="governed", cwd=str(tmp_path), role=role)  # type: ignore[arg-type]
     for source in ("hook", "kernel"):
         decision = check(ToolCall("terminal", {"command": command}, source=source), session)  # type: ignore[arg-type]
@@ -84,7 +86,7 @@ NOT_READ_ONLY = [
     "echo $HOME",
     "echo ${HOME}",
     "echo '$(touch x)'",
-    "echo \"$x\"",
+    'echo "$x"',
     "ls `pwd`",
     "echo $((1+1))",
     "cat $FILE",
@@ -262,11 +264,12 @@ def test_loopback_is_not_the_network_either(project: Path, net: str) -> None:
 
 
 def test_with_exec_network_on_a_cell_still_goes_through_the_policy(project: Path) -> None:
-    on = dict(mode="governed", cwd=str(project), role="worker", exec_network="on")
+    on = {"mode": "governed", "cwd": str(project), "role": "worker", "exec_network": "on"}
     asked = check(ToolCall("web_search", {"query": "q"}, source="kernel"), SessionPolicy(**on))  # type: ignore[arg-type]
     assert asked.kind == "approve"  # a cell cannot answer it: exec turns an approve into a refusal
     allowed = check(
-        ToolCall("web_search", {"query": "q"}, source="kernel"), SessionPolicy(allow=("web_search",), **on)  # type: ignore[arg-type]
+        ToolCall("web_search", {"query": "q"}, source="kernel"),
+        SessionPolicy(allow=("web_search",), **on),  # type: ignore[arg-type]
     )
     assert allowed.kind == "allow"
     denied = check(ToolCall("web_search", {"query": "q"}, source="kernel"), SessionPolicy(deny=("WebSearch",), **on))  # type: ignore[arg-type]

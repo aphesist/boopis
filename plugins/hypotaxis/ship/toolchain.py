@@ -9,7 +9,8 @@ through ``runtime_ro``, the same way exec does for its interpreter (``exec.launc
 - the program is found in the child's ``PATH`` (absolute entries only, as hx does), and its real directory is mounted;
 - when that directory is a ``bin`` of a self-contained prefix (a virtual environment, a Python or Node install, a Rust
   toolchain) the prefix is mounted too, because the program's libraries live there;
-- a script's ``#!`` interpreter is followed (``#!/usr/bin/env node`` is looked up in the same ``PATH``), a few levels deep.
+- a script's ``#!`` interpreter is followed (``#!/usr/bin/env node`` is looked up in the same ``PATH``), a few
+  levels deep.
 
 Nothing broader is granted: a prefix is mounted only when it looks like one, so ``~/.local`` is never mounted because
 ``~/.local/bin`` holds a symlink. ``util.roots.vet_runtime_roots`` then drops what hx would refuse (``/``, the home
@@ -106,7 +107,9 @@ def _candidates_of(path: str) -> list[str]:
     """The directories to grant for one program path (as found, and as it really is)."""
     out: list[str] = []
     real = os.path.realpath(path)
-    out.append(os.path.dirname(real))  # where the program really is; a directory that only holds a symlink is not needed
+    out.append(
+        os.path.dirname(real)
+    )  # where the program really is; a directory that only holds a symlink is not needed
     for variant in (path, real):
         prefix = _prefix_of(os.path.dirname(variant))
         if prefix is not None:

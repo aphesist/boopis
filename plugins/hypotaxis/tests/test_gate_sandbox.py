@@ -81,7 +81,7 @@ def test_the_network_is_off(client: hx.HxClient, ws: Path) -> None:
         server.bind(("127.0.0.1", 0))
         server.listen(1)
         port = server.getsockname()[1]
-        threading.Thread(target=lambda: server.accept(), daemon=True).start()
+        threading.Thread(target=server.accept, daemon=True).start()
         code = f"import socket; socket.create_connection(('127.0.0.1', {port}), timeout=3)"
         ran = run(client, ws, code)
     assert not ran.result.passed
@@ -181,9 +181,7 @@ def test_the_users_explicit_choice_runs_it_unsandboxed_logged_and_recorded(
 
 
 @needs_hx
-def test_the_setting_is_not_a_way_around_a_sandbox_that_works(
-    client: hx.HxClient, ws: Path
-) -> None:
+def test_the_setting_is_not_a_way_around_a_sandbox_that_works(client: hx.HxClient, ws: Path) -> None:
     ran = run(client, ws, "pass", allow=True)
     assert ran.enforcement == SANDBOXED
 

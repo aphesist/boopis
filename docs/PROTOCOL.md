@@ -53,7 +53,7 @@ Hermes's own protocol, used exactly as Hermes Desktop uses it (`apps/shared` in 
 - **`session.create` from hypotaxis:**
   - `source: "gui"`, `client: {name: "hypotaxis", version}`;
   - `cwd`, `model`, `provider`;
-  - `toolsets: ["hypotaxis"]` (governed) or the profile's ungoverned set;
+  - `toolsets: ["hypotaxis"]` (governed) or the profile's ungoverned set. A governed session is **always** created with it, including one whose mode is the plugin's default and not a choice; a `mode.set` that fails closes the new session, sends nothing to it and shows the error (the UI never runs a session whose mode it could not set);
   - `skills`.
   Never `safe_mode`, because that would skip plugin discovery and drop hypotaxis.
 - **Approvals:** canonical only, as verified in S0. The flow is event `approval.request {prompt_id, execution_generation, command, description, choices: once|deny|session|always, timeout_s}`, then `approval.respond {session_id, execution_generation, prompt_id, choice}`, then event `approval.settled`. Server requests still carry `clarify`, `secret`, `sudo`, `vault.*`, `preview.*` and `theme.*`.
@@ -125,7 +125,7 @@ Cancellation uses `$/cancelRequest`. The plugin keeps one warm `hx serve` child 
 - **Kernel to plugin:** `tool.call {name, args}` goes through `ctx.dispatch_tool`; `mcp.call {server, tool, args}` goes through `ctx.call_mcp`; also `blank.open {question, options, blocks}`, `diagnostics {paths}` and `apple.*` (phase 3).
 - `harness.parallel([...])` is `asyncio.gather` over `tool.call`. The plugin bounds concurrency (`exec.max_concurrency`) and counts every request of a cell against `exec.max_calls_per_cell`.
 - Framing: one JSON object per line. The kernel sends `kernel.ready {protocol, pid, python, cwd, scratch}` first. `cell.run {cell_id, code, timeout_ms, output_cap_bytes, spill_cap_bytes, result_cap_bytes}` answers `{status, result_repr?, error?, output: {stdout, stderr: {bytes, shown, spill}}, execution_count, duration_ms}`; `status` `timeout` is the kernel's soft timeout (the cell was cancelled, state kept). Past the output cap, the whole stream is also written to `spill`, a file in the scratch directory. Requests also carry `cell_id`; the plugin refuses one that is not the running cell's.
-- Also kernel to plugin: `sh.call {argv, command}` (judged as a `terminal` call, answers `{call_id}`) and `sh.done {call_id, status, exit, timed_out, duration_ms}` around a command the kernel runs in its own sandbox; `form.open {kind, title, body, schema, wait}` (a stub, see `docs/FORMS.md`).
+- Also kernel to plugin: `sh.call {argv, command}` (judged as a `terminal` call, answers `{call_id}`) and `sh.done {call_id, status, exit, timed_out, duration_ms}` around a command the kernel runs in its own sandbox. The plugin judges the `command` string the kernel reports (`shlex.join(argv)`) with the user's `Bash` deny and ask rules; the kernel runs its own `argv`, and it is the agent's own code, so those rules are an audit trail and not a boundary for exec: the sandbox is the boundary (`plugins/hypotaxis/AGENTS.md`, "exec"). A cell also cannot call a network tool (`web_search`, `web_extract`, `vision_analyze`, ...) through `tool.call` while `exec.network` is not `on`; `form.open {kind, title, body, schema, wait}` (a stub, see `docs/FORMS.md`).
 - A plugin refusal is an error with `data.code`: `hx.policy.denied`, `hx.exec.call_limit`, `hx.exec.unsupported`, `hx.exec.invalid`.
 
 ## 6. Error codes

@@ -203,7 +203,9 @@ def test_parse_command_is_a_vector_never_a_shell() -> None:
 
 
 PY = sys.executable
-UNSANDBOXED_RUNNER = gate.GateRunner(None, allow_unsandboxed=True)  # the gate's logic, with no hx; the sandbox has its own tests
+UNSANDBOXED_RUNNER = gate.GateRunner(
+    None, allow_unsandboxed=True
+)  # the gate's logic, with no hx; the sandbox has its own tests
 
 
 @pytest.fixture

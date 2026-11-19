@@ -169,7 +169,9 @@ def _tests(workspace: Path, command: Sequence[str] | None, timeout: float, runne
     """The test tier: the command on a copy of the post-apply tree (no files are passed: the copy already holds it,
     deletions included), sandboxed. Raises ``SandboxUnavailableError`` when it cannot run, so the ship is undone."""
     if command is None:
-        return GateResult(cp_gates.T0_VISIBLE, "pass", "", {"tests": {"status": "not_configured", "command": None}}), NOT_RUN
+        return GateResult(
+            cp_gates.T0_VISIBLE, "pass", "", {"tests": {"status": "not_configured", "command": None}}
+        ), NOT_RUN
     ran: CommandRun = run_gate_command(
         runner.client, command, workspace, timeout=timeout, allow_unsandboxed=runner.allow_unsandboxed
     )
