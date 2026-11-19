@@ -1,0 +1,3410 @@
+[
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "gateway.ready",
+    "payload": {
+     "change_events": true,
+     "heartbeat": true,
+     "replay_epoch": "dfce95a0b52c403f9f885b96022fa3c9",
+     "session_authority": true
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 1,
+   "method": "client.capabilities",
+   "params": {
+    "server_requests": true
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 1,
+   "result": {
+    "server_requests": [
+     "approval",
+     "clarify",
+     "display.install.sudo",
+     "preview.act",
+     "preview.read",
+     "secret",
+     "setup_beat",
+     "sudo",
+     "terminal.read",
+     "theme.apply",
+     "theme.pick",
+     "tour",
+     "vault.code",
+     "vault.save_login",
+     "vault.unlock_prompt",
+     "window.read"
+    ],
+    "declines_not_shown": true,
+    "canonical_clarify_batch": true
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 2,
+   "method": "runtime.describe",
+   "params": {}
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 2,
+   "result": {
+    "instance_id": "3c02365d6ee742a1bd6f4914de5207f8",
+    "profile_id": "/work/hermes-home",
+    "authority_epoch": 1,
+    "capabilities": [
+     "durable-admission-v1",
+     "event-replay-v1",
+     "local-cli-create-v1",
+     "acp-editor-policy-v1",
+     "acp-session-mcp-v1",
+     "clarify-batch-v1",
+     "plugin-rpc-v1",
+     "session-client-v1",
+     "session-transcript-v1",
+     "session-list-picker-v1",
+     "session-list-cursor-v1"
+    ],
+    "session_create": {
+     "sources": [
+      "acp",
+      "cli",
+      "gui",
+      "oneshot",
+      "tool",
+      "tui"
+     ],
+     "parameters": [
+      "accept_hooks",
+      "api_key",
+      "base_url",
+      "checkpoints",
+      "client",
+      "client_env",
+      "cwd",
+      "cwd_explicit",
+      "editor",
+      "follow_profile_config",
+      "ignore_rules",
+      "ignore_user_config",
+      "max_turns",
+      "model",
+      "pass_session_id",
+      "provider",
+      "reasoning",
+      "request_id",
+      "row_cwd",
+      "run_budget",
+      "safe_mode",
+      "service_tier",
+      "skills",
+      "source",
+      "title",
+      "toolsets",
+      "verbose",
+      "yolo"
+     ]
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 3,
+   "method": "session.create",
+   "params": {
+    "source": "gui",
+    "cwd": "/work/proj",
+    "request_id": "req-1795048564185701853",
+    "model": "fake-a",
+    "provider": "main",
+    "toolsets": [
+     "hypotaxis",
+     "todo"
+    ],
+    "client": {
+     "name": "hypotaxis",
+     "version": "0"
+    }
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "notification.show",
+    "session_id": "local-d7d480860cfdc848016da2e7e20ebc6bbd9bfbe4a862ae494a72bcd2425b8e22",
+    "payload": {
+     "text": "\u26a0 Low disk (4.1 GB free) \u00b7 /autoprune on|off|later",
+     "detail": "Low disk space: 4.1 GB free of 252.0 GB. Your session history (state.db) uses 0 MB.\nAuto-prune is off. Turning it on deletes ended sessions inactive for more than 90 days, once a day (pinned and open sessions are kept).\nPruning will not help right now: none of your 1 session is older than 90 days. Something else is filling this disk.\n/autoprune on to enable, /autoprune off to keep everything (never asked again), /autoprune later to be reminded in a week.",
+     "level": "warn",
+     "kind": "sticky",
+     "ttl_ms": null,
+     "key": "sessions.auto_prune",
+     "id": "sessions.auto_prune"
+    },
+    "replay_epoch": "f387880d24a24df1a4d0651ef02f7d5a",
+    "seq": 1
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 3,
+   "result": {
+    "session_id": "local-d7d480860cfdc848016da2e7e20ebc6bbd9bfbe4a862ae494a72bcd2425b8e22",
+    "stored_session_id": "local-d7d480860cfdc848016da2e7e20ebc6bbd9bfbe4a862ae494a72bcd2425b8e22",
+    "messages": [],
+    "message_count": 0,
+    "todo_state": null,
+    "running": false,
+    "authority_epoch": 1,
+    "replay_epoch": "f387880d24a24df1a4d0651ef02f7d5a",
+    "last_sequence": 0,
+    "subscription_id": "8172e90d5d5b4513abbdb71931119345",
+    "revision": 0,
+    "execution_generation": 0,
+    "pending": [],
+    "prompts": [],
+    "info": {
+     "tools": {
+      "hypotaxis": [
+       "dispatch",
+       "exec",
+       "pack",
+       "ship"
+      ],
+      "todo": [
+       "todo_list"
+      ]
+     },
+     "skills": "(trimmed)",
+     "mcp_servers": [
+      {
+       "name": "fakemcp",
+       "transport": "stdio",
+       "tools": 0,
+       "connected": false,
+       "disabled": false,
+       "status": "configured",
+       "needs_auth": false
+      }
+     ],
+     "version": "unknown",
+     "release_date": "2026.9.24",
+     "update_behind": null,
+     "update_command": "hermes update",
+     "branch": "master",
+     "project": null,
+     "provider": "custom:main",
+     "enabled_toolsets": [
+      "hypotaxis",
+      "todo"
+     ],
+     "tool_availability": {
+      "unavailable_toolsets": [],
+      "lazy_tools": [],
+      "disabled_tools": []
+     },
+     "source": "gui",
+     "model": "fake-a",
+     "lazy": true,
+     "profile_id": "/work/hermes-home",
+     "desktop_protocol": "hermes-gateway-v1",
+     "profile_name": "default",
+     "cwd": "/work/proj",
+     "reasoning_effort": "",
+     "reasoning_effort_wire": "",
+     "service_tier": "",
+     "fast": false,
+     "launch_request": {
+      "client": {
+       "name": "hypotaxis",
+       "version": "0"
+      },
+      "cwd": "/work/proj",
+      "model": "fake-a",
+      "provider": "main",
+      "source": "gui",
+      "toolsets": [
+       "hypotaxis",
+       "todo"
+      ]
+     },
+     "client": {
+      "name": "hypotaxis",
+      "version": "0"
+     },
+     "title": null,
+     "started_at": 1795048564.201586,
+     "last_active_at": 1795048564.201586,
+     "yolo": false,
+     "archived": false,
+     "api_mode": null,
+     "tool_count": 5,
+     "credential_hint": null,
+     "usage": {
+      "model": "fake-a",
+      "input": 0,
+      "output": 0,
+      "reasoning": 0,
+      "prompt": 0,
+      "completion": 0,
+      "total": 0,
+      "calls": 0
+     }
+    },
+    "pending_connection": null,
+    "open_requests": []
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 4,
+   "method": "session.create",
+   "params": {
+    "source": "gui",
+    "cwd": "/work/proj",
+    "request_id": "req-1795048564535268607",
+    "model": "fake-a",
+    "provider": "main",
+    "toolsets": [
+     "hypotaxis",
+     "todo"
+    ],
+    "client": {
+     "name": "hypotaxis",
+     "version": "0"
+    }
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 4,
+   "result": {
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "stored_session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "messages": [],
+    "message_count": 0,
+    "todo_state": null,
+    "running": false,
+    "authority_epoch": 1,
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "last_sequence": 0,
+    "subscription_id": "7e3a0ce259f64effa6816805a7468600",
+    "revision": 0,
+    "execution_generation": 0,
+    "pending": [],
+    "prompts": [],
+    "info": {
+     "tools": {
+      "hypotaxis": [
+       "dispatch",
+       "exec",
+       "pack",
+       "ship"
+      ],
+      "todo": [
+       "todo_list"
+      ]
+     },
+     "skills": "(trimmed)",
+     "mcp_servers": [
+      {
+       "name": "fakemcp",
+       "transport": "stdio",
+       "tools": 0,
+       "connected": false,
+       "disabled": false,
+       "status": "configured",
+       "needs_auth": false
+      }
+     ],
+     "version": "unknown",
+     "release_date": "2026.9.24",
+     "update_behind": null,
+     "update_command": "hermes update",
+     "branch": "master",
+     "project": null,
+     "provider": "custom:main",
+     "enabled_toolsets": [
+      "hypotaxis",
+      "todo"
+     ],
+     "tool_availability": {
+      "unavailable_toolsets": [],
+      "lazy_tools": [],
+      "disabled_tools": []
+     },
+     "source": "gui",
+     "model": "fake-a",
+     "lazy": true,
+     "profile_id": "/work/hermes-home",
+     "desktop_protocol": "hermes-gateway-v1",
+     "profile_name": "default",
+     "cwd": "/work/proj",
+     "reasoning_effort": "",
+     "reasoning_effort_wire": "",
+     "service_tier": "",
+     "fast": false,
+     "launch_request": {
+      "client": {
+       "name": "hypotaxis",
+       "version": "0"
+      },
+      "cwd": "/work/proj",
+      "model": "fake-a",
+      "provider": "main",
+      "source": "gui",
+      "toolsets": [
+       "hypotaxis",
+       "todo"
+      ]
+     },
+     "client": {
+      "name": "hypotaxis",
+      "version": "0"
+     },
+     "title": null,
+     "started_at": 1795048564.54222,
+     "last_active_at": 1795048564.54222,
+     "yolo": false,
+     "archived": false,
+     "api_mode": null,
+     "tool_count": 5,
+     "credential_hint": null,
+     "usage": {
+      "model": "fake-a",
+      "input": 0,
+      "output": 0,
+      "reasoning": 0,
+      "prompt": 0,
+      "completion": 0,
+      "total": 0,
+      "calls": 0
+     }
+    },
+    "pending_connection": null,
+    "open_requests": []
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 5,
+   "method": "plugin.hypotaxis.mode.set",
+   "params": {
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "mode": "ungoverned"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 5,
+   "result": {}
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 6,
+   "method": "plugin.hypotaxis.describe",
+   "params": {
+    "session_id": "local-d7d480860cfdc848016da2e7e20ebc6bbd9bfbe4a862ae494a72bcd2425b8e22"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 6,
+   "result": {
+    "session": {
+     "session_id": "local-d7d480860cfdc848016da2e7e20ebc6bbd9bfbe4a862ae494a72bcd2425b8e22",
+     "mode": "governed",
+     "locked": false,
+     "cwd": null
+    },
+    "version": "0.1.0",
+    "protocol": "hypotaxis-v1",
+    "capabilities": [
+     "describe",
+     "mode.set",
+     "ledger.tail",
+     "ledger.verify",
+     "ledger.stats",
+     "cascade.state",
+     "prices.refresh",
+     "blank.fill",
+     "checkpoint.list",
+     "checkpoint.diff"
+    ],
+    "hx": null,
+    "kernel": null,
+    "config": {
+     "mode": "governed",
+     "cost_cap_usd": 2.0,
+     "errors": [],
+     "ladder_errors": []
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 7,
+   "method": "plugin.hypotaxis.cascade.state",
+   "params": {
+    "session_id": "local-d7d480860cfdc848016da2e7e20ebc6bbd9bfbe4a862ae494a72bcd2425b8e22"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 7,
+   "result": {
+    "ladder": [
+     {
+      "name": "haiku",
+      "model": {
+       "provider": "anthropic",
+       "id": "claude-haiku-5-5"
+      },
+      "effort": "medium",
+      "max_tokens": 8000,
+      "retries": 0
+     },
+     {
+      "name": "sonnet",
+      "model": {
+       "provider": "anthropic",
+       "id": "claude-sonnet-5-5"
+      },
+      "effort": "medium",
+      "max_tokens": 8000,
+      "retries": 0
+     },
+     {
+      "name": "opus",
+      "model": {
+       "provider": "anthropic",
+       "id": "claude-opus-5-5"
+      },
+      "effort": "medium",
+      "max_tokens": 8000,
+      "retries": 0
+     }
+    ],
+    "status": "idle"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 8,
+   "method": "prompt.submit",
+   "params": {
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "text": "@@call todo_list {\"todos\": [{\"id\": \"1\", \"content\": \"read the call sites\", \"status\": \"completed\"}, {\"id\": \"2\", \"content\": \"round once per invoice\", \"status\": \"in_progress\"}, {\"id\": \"3\", \"content\": \"add a property test\", \"status\": \"pending\"}]}@@ @@call ship {\"edits\": [{\"op\": \"replace\", \"path\": \"src/a.py\", \"old\": \"return 1\", \"new\": \"return 2\"}]}@@ @@call exec {\"code\": \"blank = await harness.leave_blank(\\\"Keep the old alias?\\\", [\\\"yes\\\", \\\"no\\\"], [\\\"rename\\\"])\\nprint(blank[\\\"status\\\"])\\n\"}@@ @@usage {\"prompt_tokens\": 1000, \"completion_tokens\": 50, \"total_tokens\": 1050, \"prompt_tokens_details\": {\"cached_tokens\": 400}, \"completion_tokens_details\": {\"reasoning_tokens\": 20}}@@ @@reply Done. Rounded once per invoice.@@",
+    "submission_id": "sub-1795048564588300784"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 8,
+   "result": {
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "ref": {
+     "profile_id": "/work/hermes-home",
+     "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549"
+    },
+    "sequence": 1,
+    "status": "queued",
+    "outcome": null,
+    "authority_epoch": 1,
+    "execution_generation": null
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "session.info",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "stored_session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+     "pending": [
+      {
+       "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+       "ref": {
+        "profile_id": "/work/hermes-home",
+        "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549"
+       },
+       "sequence": 1,
+       "status": "queued",
+       "outcome": null,
+       "authority_epoch": 1,
+       "execution_generation": null,
+       "input_id": "sub-1795048564588300784",
+       "text": "@@call todo_list {\"todos\": [{\"id\": \"1\", \"content\": \"read the call sites\", \"status\": \"completed\"}, {\"id\": \"2\", \"content\": \"round once per invoice\", \"status\": \"in_progress\"}, {\"id\": \"3\", \"content\": \"add a property test\", \"status\": \"pending\"}]}@@ @@call ship {\"edits\": [{\"op\": \"replace\", \"path\": \"src/a.py\", \"old\": \"return 1\", \"new\": \"return 2\"}]}@@ @@call exec {\"code\": \"blank = await harness.leave_blank(\\\"Keep the old alias?\\\", [\\\"yes\\\", \\\"no\\\"], [\\\"rename\\\"])\\nprint(blank[\\\"status\\\"])\\n\"}@@ @@usage {\"prompt_tokens\": 1000, \"completion_tokens\": 50, \"total_tokens\": 1050, \"prompt_tokens_details\": {\"cached_tokens\": 400}, \"completion_tokens_details\": {\"reasoning_tokens\": 20}}@@ @@reply Done. Rounded once per invoice.@@",
+       "controls": [
+        "steer",
+        "replace"
+       ],
+       "steering": false
+      }
+     ],
+     "authority_epoch": 1,
+     "desktop_protocol": "hermes-gateway-v1",
+     "running": false,
+     "execution_generation": 0,
+     "revision": 0
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 1
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "message.start",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {},
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 2
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "session.info",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "stored_session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+     "pending": [
+      {
+       "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+       "ref": {
+        "profile_id": "/work/hermes-home",
+        "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549"
+       },
+       "sequence": 1,
+       "status": "started",
+       "outcome": null,
+       "authority_epoch": 1,
+       "execution_generation": 1,
+       "input_id": "sub-1795048564588300784",
+       "text": "@@call todo_list {\"todos\": [{\"id\": \"1\", \"content\": \"read the call sites\", \"status\": \"completed\"}, {\"id\": \"2\", \"content\": \"round once per invoice\", \"status\": \"in_progress\"}, {\"id\": \"3\", \"content\": \"add a property test\", \"status\": \"pending\"}]}@@ @@call ship {\"edits\": [{\"op\": \"replace\", \"path\": \"src/a.py\", \"old\": \"return 1\", \"new\": \"return 2\"}]}@@ @@call exec {\"code\": \"blank = await harness.leave_blank(\\\"Keep the old alias?\\\", [\\\"yes\\\", \\\"no\\\"], [\\\"rename\\\"])\\nprint(blank[\\\"status\\\"])\\n\"}@@ @@usage {\"prompt_tokens\": 1000, \"completion_tokens\": 50, \"total_tokens\": 1050, \"prompt_tokens_details\": {\"cached_tokens\": 400}, \"completion_tokens_details\": {\"reasoning_tokens\": 20}}@@ @@reply Done. Rounded once per invoice.@@",
+       "controls": [],
+       "steering": false
+      }
+     ],
+     "authority_epoch": 1,
+     "desktop_protocol": "hermes-gateway-v1",
+     "running": true,
+     "execution_generation": 1,
+     "revision": 0
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 3
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "actor": "plugin",
+     "hash": "8df56c1331bb7a8a61f5b3b73273c69fd8ecabb6b023834494894402e5d3d60c",
+     "payload": {
+      "cwd": "/work/proj",
+      "hermes_version": "unknown",
+      "mode": "ungoverned",
+      "plugin_version": "0.1.0",
+      "price_table": "settings-d98ebfc5788c",
+      "profile": "default",
+      "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549"
+     },
+     "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 0,
+     "ts": "2026-11-19T00:36:05.223Z",
+     "type": "session.opened"
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 4
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "session.info",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "source": "gui",
+     "model": "fake-a",
+     "lazy": false,
+     "profile_id": "/work/hermes-home",
+     "desktop_protocol": "hermes-gateway-v1",
+     "profile_name": "default",
+     "cwd": "/work/proj",
+     "reasoning_effort": "",
+     "reasoning_effort_wire": "",
+     "service_tier": "",
+     "fast": false,
+     "launch_request": {
+      "client": {
+       "name": "hypotaxis",
+       "version": "0"
+      },
+      "cwd": "/work/proj",
+      "model": "fake-a",
+      "provider": "main",
+      "source": "gui",
+      "toolsets": [
+       "hypotaxis",
+       "todo"
+      ]
+     },
+     "client": {
+      "name": "hypotaxis",
+      "version": "0"
+     },
+     "title": "@@call todo_list {\"todos\": [{\"id\": \"1\"\u2026",
+     "started_at": 1795048564.54222,
+     "last_active_at": 1795048565.1772003,
+     "yolo": false,
+     "archived": false,
+     "api_mode": "chat_completions",
+     "tool_count": 5,
+     "credential_hint": "***"
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 5
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "sessions.changed",
+    "session_id": "",
+    "payload": {}
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "tool.generating",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "name": "todo_list"
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 9
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "2f206e8787feec57819644920f72f60401c42c3d0bba64f0c508b45b8a88d6a5",
+     "payload": {
+      "cache_read_tokens": 400,
+      "cache_write_1h_tokens": 0,
+      "cache_write_5m_tokens": 0,
+      "input_tokens": 600,
+      "latency_ms": 508,
+      "model": "fake-a",
+      "output_tokens": 50,
+      "provider": "custom",
+      "reasoning_tokens": 20,
+      "request_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549:local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549:0afe8d29:api:1",
+      "role": "orchestrator",
+      "usage_schema": 2
+     },
+     "prev_hash": "8df56c1331bb7a8a61f5b3b73273c69fd8ecabb6b023834494894402e5d3d60c",
+     "seq": 1,
+     "ts": "2026-11-19T00:36:05.823Z",
+     "type": "usage.recorded"
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 11
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "message.delta",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "text": null
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 12
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "tool.start",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "tool_id": "call_685db9bacf",
+     "name": "todo_list",
+     "context": "planning 3 task(s)",
+     "tool_call_id": "call_685db9bacf",
+     "tool_name": "todo_list",
+     "args": {
+      "todos": [
+       {
+        "id": "1",
+        "content": "read the call sites",
+        "status": "completed"
+       },
+       {
+        "id": "2",
+        "content": "round once per invoice",
+        "status": "in_progress"
+       },
+       {
+        "id": "3",
+        "content": "add a property test",
+        "status": "pending"
+       }
+      ]
+     }
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 13
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "a93249a476f3b1db416126bf8ebb183207fb5d4572a9f190a79aa505f3352130",
+     "payload": {
+      "args_sha256": "eb309dfc924b0b33439cd99b2625727a0d3394564c8871ae9c7a0eef7433f0b1",
+      "duration_ms": 9,
+      "status": "ok",
+      "task_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+      "tool": "todo_list",
+      "tool_call_id": "call_685db9bacf"
+     },
+     "prev_hash": "2f206e8787feec57819644920f72f60401c42c3d0bba64f0c508b45b8a88d6a5",
+     "seq": 2,
+     "ts": "2026-11-19T00:36:05.846Z",
+     "type": "tool.called"
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 14
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "tool.complete",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "tool_id": "call_685db9bacf",
+     "name": "todo_list",
+     "context": "planning 3 task(s)",
+     "tool_call_id": "call_685db9bacf",
+     "tool_name": "todo_list",
+     "args": {
+      "todos": [
+       {
+        "id": "1",
+        "content": "read the call sites",
+        "status": "completed"
+       },
+       {
+        "id": "2",
+        "content": "round once per invoice",
+        "status": "in_progress"
+       },
+       {
+        "id": "3",
+        "content": "add a property test",
+        "status": "pending"
+       }
+      ]
+     },
+     "is_error": false,
+     "result": "{\"todos\": [{\"id\": \"1\", \"content\": \"read the call sites\", \"status\": \"completed\"}, {\"id\": \"2\", \"content\": \"round once per invoice\", \"status\": \"in_progress\"}, {\"id\": \"3\", \"content\": \"add a property test\", \"status\": \"pending\"}], \"revision\": 1, \"summary\": {\"total\": 3, \"pending\": 1, \"in_progress\": 1, \"completed\": 1, \"cancelled\": 0}}",
+     "duration_s": 0.011685416999966947,
+     "inline_diff": null,
+     "image_path": null,
+     "todos": [
+      {
+       "id": "1",
+       "content": "read the call sites",
+       "status": "completed"
+      },
+      {
+       "id": "2",
+       "content": "round once per invoice",
+       "status": "in_progress"
+      },
+      {
+       "id": "3",
+       "content": "add a property test",
+       "status": "pending"
+      }
+     ],
+     "revision": 1
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 15
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "todo.updated",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "todos": [
+      {
+       "id": "1",
+       "content": "read the call sites",
+       "status": "completed"
+      },
+      {
+       "id": "2",
+       "content": "round once per invoice",
+       "status": "in_progress"
+      },
+      {
+       "id": "3",
+       "content": "add a property test",
+       "status": "pending"
+      }
+     ],
+     "revision": 1
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 16
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "session.usage",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "usage": {
+      "model": "fake-a",
+      "input": 600,
+      "output": 50,
+      "reasoning": 20,
+      "prompt": 1000,
+      "completion": 50,
+      "total": 1050,
+      "calls": 1,
+      "context_used": 1000,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "cache_hit_pct": 40,
+      "avg_latency_s": 0.5,
+      "avg_tps": 98.5,
+      "active_subagents": 0
+     },
+     "input_tokens": 600,
+     "output_tokens": 50,
+     "cache_read_tokens": 400,
+     "cache_write_tokens": 0,
+     "prompt_tokens": 1000,
+     "completion_tokens": 50,
+     "total_tokens": 1050,
+     "reasoning_tokens": 20,
+     "api_calls": 1,
+     "last_prompt_tokens": 1000,
+     "context_tokens": 1166,
+     "context_length": 200000,
+     "config_context_length": 200000,
+     "context_source": "provider_usage",
+     "compression_count": 0,
+     "avg_latency_s": 0.51,
+     "tokens_per_s": 98.45,
+     "last_turn_tokens": 50,
+     "rate_limit": null,
+     "active_subagents": 0,
+     "model": "fake-a",
+     "provider": "custom",
+     "fallback_model": null
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 18
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "tool.generating",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "name": "ship"
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 21
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "40978e670735b05790cb3b24d233977dd1b1f2e628e78c9817c4fd65ef1fb95f",
+     "payload": {
+      "cache_read_tokens": 400,
+      "cache_write_1h_tokens": 0,
+      "cache_write_5m_tokens": 0,
+      "input_tokens": 600,
+      "latency_ms": 13,
+      "model": "fake-a",
+      "output_tokens": 50,
+      "provider": "custom",
+      "reasoning_tokens": 20,
+      "request_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549:local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549:0afe8d29:api:2",
+      "role": "orchestrator",
+      "usage_schema": 2
+     },
+     "prev_hash": "a93249a476f3b1db416126bf8ebb183207fb5d4572a9f190a79aa505f3352130",
+     "seq": 3,
+     "ts": "2026-11-19T00:36:05.876Z",
+     "type": "usage.recorded"
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 23
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "message.delta",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "text": null
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 24
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "tool.start",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "tool_id": "call_665a6abdd4",
+     "name": "ship",
+     "context": "",
+     "tool_call_id": "call_665a6abdd4",
+     "tool_name": "ship",
+     "args": {
+      "edits": [
+       {
+        "op": "replace",
+        "path": "src/a.py",
+        "old": "return 1",
+        "new": "return 2"
+       }
+      ]
+     }
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 25
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "actor": "plugin",
+     "hash": "4a6dbb43eb280a38f3dc3ea557c936a40d5e3613aa0f0cfc968da7707990d8c4",
+     "payload": {
+      "kind": "code",
+      "max_attempts": 1,
+      "scope": [
+       "**"
+      ],
+      "task_id": "ship:01a1f13b-6ca7-7277-ad3b-3716ade83f45",
+      "title": "ship src/a.py"
+     },
+     "prev_hash": "40978e670735b05790cb3b24d233977dd1b1f2e628e78c9817c4fd65ef1fb95f",
+     "seq": 4,
+     "ts": "2026-11-19T00:36:05.931Z",
+     "type": "task.created"
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 26
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "0e5e824cc23d2e2f159401d52bbbfdbc16f0ef2fb6a6c9b7f38d6f0793d35a76",
+     "payload": {
+      "task_id": "ship:01a1f13b-6ca7-7277-ad3b-3716ade83f45",
+      "worker": "orchestrator:custom/fake-a"
+     },
+     "prev_hash": "4a6dbb43eb280a38f3dc3ea557c936a40d5e3613aa0f0cfc968da7707990d8c4",
+     "seq": 5,
+     "ts": "2026-11-19T00:36:05.933Z",
+     "type": "task.claimed"
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 27
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "3e6483ad49ad94efbb54eb23175cbf4d3cf581303bc3c4877538113491dd14e2",
+     "payload": {
+      "files": [
+       {
+        "path": "src/a.py",
+        "sha256_after": "4436c9b1be34f14675fef593cc90fb944b07785e50cb0fd9fa56c747a3a4e0b9",
+        "sha256_before": "345a09077e88e5b84f401d3d3e82aee36008984b51eab4f049c08e4362539d3c"
+       }
+      ],
+      "journal_id": "01a1f13b-6ca7-7277-ad3b-3716ade83f45",
+      "ship_id": "01a1f13b-6ca7-7277-ad3b-3716ade83f45",
+      "task_id": "ship:01a1f13b-6ca7-7277-ad3b-3716ade83f45"
+     },
+     "prev_hash": "0e5e824cc23d2e2f159401d52bbbfdbc16f0ef2fb6a6c9b7f38d6f0793d35a76",
+     "seq": 6,
+     "ts": "2026-11-19T00:36:05.934Z",
+     "type": "ship.applied"
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 28
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "78da3493d24d048bce02b3477e4e615d4b79108bdcd548424a9b4db8a07e9e7f",
+     "payload": {
+      "attempt": 1,
+      "files": [
+       "src/a.py"
+      ],
+      "files_sha256": "dd58e5e0d9b263bdd0b9ae0a53c1f88df680b56aa97e22c758c54c1af8528e60",
+      "task_id": "ship:01a1f13b-6ca7-7277-ad3b-3716ade83f45"
+     },
+     "prev_hash": "3e6483ad49ad94efbb54eb23175cbf4d3cf581303bc3c4877538113491dd14e2",
+     "seq": 7,
+     "ts": "2026-11-19T00:36:05.935Z",
+     "type": "task.submitted"
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 29
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "actor": "gate",
+     "hash": "f4368c869b7e44df6e69945f03d184bbeb30769612a398a03a6d8d5c64735631",
+     "payload": {
+      "enforcement": "degraded:unsandboxed",
+      "gate": "T0.visible_tests",
+      "gates": [
+       {
+        "evidence": {
+         "blast_radius": {
+          "changed_lines": 2,
+          "manifests": [],
+          "max_changed_lines": 200
+         },
+         "enforcement": "degraded:unsandboxed",
+         "test_files": 0,
+         "tests_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+         "tiers": [
+          "T0.scope",
+          "T0.visible_tests"
+         ],
+         "touched": [
+          "src/a.py"
+         ],
+         "violations": []
+        },
+        "gate": "T0.scope",
+        "reason": "",
+        "verdict": "pass"
+       },
+       {
+        "evidence": {
+         "blast_radius": {
+          "changed_lines": 2,
+          "manifests": [],
+          "max_changed_lines": 200
+         },
+         "enforcement": "degraded:unsandboxed",
+         "tests": {
+          "command": null,
+          "status": "not_configured"
+         },
+         "tests_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+         "tiers": [
+          "T0.scope",
+          "T0.visible_tests"
+         ]
+        },
+        "gate": "T0.visible_tests",
+        "reason": "",
+        "verdict": "pass"
+       }
+      ],
+      "reason": "",
+      "task_id": "ship:01a1f13b-6ca7-7277-ad3b-3716ade83f45",
+      "tests_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "verdict": "pass"
+     },
+     "prev_hash": "78da3493d24d048bce02b3477e4e615d4b79108bdcd548424a9b4db8a07e9e7f",
+     "seq": 8,
+     "ts": "2026-11-19T00:36:05.940Z",
+     "type": "gate.decided"
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 30
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "actor": "plugin",
+     "hash": "965bd7caea2fe3cc4504a5b084697fc4dafeb4cc118a63a18799185b617dbe13",
+     "payload": {
+      "commit": "4cc42ff88cec4dbcf3174da8b1557bfd2289ae14",
+      "ref": "refs/hypotaxis/checkpoints/local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+      "ship_id": "01a1f13b-6ca7-7277-ad3b-3716ade83f45"
+     },
+     "prev_hash": "f4368c869b7e44df6e69945f03d184bbeb30769612a398a03a6d8d5c64735631",
+     "seq": 9,
+     "ts": "2026-11-19T00:36:05.966Z",
+     "type": "checkpoint.committed"
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 31
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "plugin.hypotaxis.ship.completed",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "ship_id": "01a1f13b-6ca7-7277-ad3b-3716ade83f45",
+     "status": "shipped",
+     "files": [
+      {
+       "path": "src/a.py",
+       "created": false,
+       "deleted": false
+      }
+     ],
+     "gate": {
+      "verdict": "pass",
+      "gates": [
+       "T0.scope",
+       "T0.visible_tests"
+      ],
+      "enforcement": "degraded:unsandboxed"
+     }
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 32
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "3d2de501b13d29978a400eaaaeebb0e0bcd4825e5121f92eac3b5b62817c63d1",
+     "payload": {
+      "args_sha256": "9b8ff2a0881b6ad6876c1b960723becd360bee7117432e7572d4db3fb3475b50",
+      "duration_ms": 87,
+      "status": "ok",
+      "task_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+      "tool": "ship",
+      "tool_call_id": "call_665a6abdd4"
+     },
+     "prev_hash": "965bd7caea2fe3cc4504a5b084697fc4dafeb4cc118a63a18799185b617dbe13",
+     "seq": 10,
+     "ts": "2026-11-19T00:36:05.969Z",
+     "type": "tool.called"
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 33
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "tool.complete",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "tool_id": "call_665a6abdd4",
+     "name": "ship",
+     "context": "",
+     "tool_call_id": "call_665a6abdd4",
+     "tool_name": "ship",
+     "args": {
+      "edits": [
+       {
+        "op": "replace",
+        "path": "src/a.py",
+        "old": "return 1",
+        "new": "return 2"
+       }
+      ]
+     },
+     "is_error": false,
+     "result": "{\"status\": \"shipped\", \"ship_id\": \"01a1f13b-6ca7-7277-ad3b-3716ade83f45\", \"files\": [{\"path\": \"src/a.py\", \"created\": false, \"deleted\": false}], \"gate\": {\"verdict\": \"pass\", \"gates\": [\"T0.scope\", \"T0.visible_tests\"], \"enforcement\": \"degraded:unsandboxed\"}, \"checkpoint\": {\"ref\": \"refs/hypotaxis/checkpoints/local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549\", \"commit\": \"4cc42ff88cec4dbcf3174da8b1557bfd2289ae14\"}}",
+     "duration_s": 0.08785054899999523,
+     "inline_diff": null,
+     "image_path": null
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 34
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "session.usage",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "usage": {
+      "model": "fake-a",
+      "input": 1200,
+      "output": 100,
+      "reasoning": 40,
+      "prompt": 2000,
+      "completion": 100,
+      "total": 2100,
+      "calls": 2,
+      "context_used": 1000,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "cache_hit_pct": 40,
+      "avg_latency_s": 0.3,
+      "avg_tps": 192.2,
+      "active_subagents": 0
+     },
+     "input_tokens": 1200,
+     "output_tokens": 100,
+     "cache_read_tokens": 800,
+     "cache_write_tokens": 0,
+     "prompt_tokens": 2000,
+     "completion_tokens": 100,
+     "total_tokens": 2100,
+     "reasoning_tokens": 40,
+     "api_calls": 2,
+     "last_prompt_tokens": 1000,
+     "context_tokens": 1399,
+     "context_length": 200000,
+     "config_context_length": 200000,
+     "context_source": "provider_usage",
+     "compression_count": 0,
+     "avg_latency_s": 0.26,
+     "tokens_per_s": 192.16,
+     "last_turn_tokens": 100,
+     "rate_limit": null,
+     "active_subagents": 0,
+     "model": "fake-a",
+     "provider": "custom",
+     "fallback_model": null
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 36
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "tool.generating",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "name": "exec"
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 39
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "c2d2bdd5d9b8ed2388ca1eb27f23b086d48943d4dd1dd7e4c8f35d1628d1c1fd",
+     "payload": {
+      "cache_read_tokens": 400,
+      "cache_write_1h_tokens": 0,
+      "cache_write_5m_tokens": 0,
+      "input_tokens": 600,
+      "latency_ms": 11,
+      "model": "fake-a",
+      "output_tokens": 50,
+      "provider": "custom",
+      "reasoning_tokens": 20,
+      "request_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549:local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549:0afe8d29:api:3",
+      "role": "orchestrator",
+      "usage_schema": 2
+     },
+     "prev_hash": "3d2de501b13d29978a400eaaaeebb0e0bcd4825e5121f92eac3b5b62817c63d1",
+     "seq": 11,
+     "ts": "2026-11-19T00:36:05.998Z",
+     "type": "usage.recorded"
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 41
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "message.delta",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "text": null
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 42
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "tool.start",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "tool_id": "call_8594f535e7",
+     "name": "exec",
+     "context": "blank = await harness.leave_blank(\"Keep the old alias?\", [\"yes\", \"no\"], [\"ren...",
+     "tool_call_id": "call_8594f535e7",
+     "tool_name": "exec",
+     "args": {
+      "code": "blank = await harness.leave_blank(\"Keep the old alias?\", [\"yes\", \"no\"], [\"rename\"])\nprint(blank[\"status\"])\n"
+     }
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 43
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "12408833a50c9774a18c11115bdb83dca094c191b6b63e639e54cafbb143b1ae",
+     "payload": {
+      "blank_id": "01a1f13b-6d4e-7b10-8ff2-019d3329695c",
+      "blocks": [
+       "rename"
+      ],
+      "options": [
+       "yes",
+       "no"
+      ],
+      "question": "Keep the old alias?",
+      "via": "exec"
+     },
+     "prev_hash": "c2d2bdd5d9b8ed2388ca1eb27f23b086d48943d4dd1dd7e4c8f35d1628d1c1fd",
+     "seq": 12,
+     "ts": "2026-11-19T00:36:06.103Z",
+     "type": "blank.opened"
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 44
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "plugin.hypotaxis.blank.opened",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "blank_id": "01a1f13b-6d4e-7b10-8ff2-019d3329695c",
+     "question": "Keep the old alias?",
+     "options": [
+      "yes",
+      "no"
+     ],
+     "blocks": [
+      "rename"
+     ]
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 45
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "2914e748250855f175cd34e8ced8c21a5efedf7a8b965e9f4c8062f411686515",
+     "payload": {
+      "args_sha256": "ea2ddc7417d8a93386c8b0813cb9921cc428c5036b80b372db9a3231950f9301",
+      "blank_id": "01a1f13b-6d4e-7b10-8ff2-019d3329695c",
+      "cell_id": "01a1f13b-6d4c-7183-a67e-c66a4e557662",
+      "duration_ms": 10,
+      "status": "ok",
+      "tool": "harness.leave_blank",
+      "tool_call_id": "01a1f13b-6d4c-7183-a67e-c66a4e557662:1",
+      "via": "exec"
+     },
+     "prev_hash": "12408833a50c9774a18c11115bdb83dca094c191b6b63e639e54cafbb143b1ae",
+     "seq": 13,
+     "ts": "2026-11-19T00:36:06.105Z",
+     "type": "tool.called"
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 46
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "e3cf6660082ea5573f0aa1e079e6e9d4e9efd5cc659f372d2b94af789b8db454",
+     "payload": {
+      "args_sha256": "1f2c5b48f0442cc122460d67f741fbf8760aa518025fcd9466069910a8b08398",
+      "duration_ms": 107,
+      "status": "ok",
+      "task_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+      "tool": "exec",
+      "tool_call_id": "call_8594f535e7"
+     },
+     "prev_hash": "2914e748250855f175cd34e8ced8c21a5efedf7a8b965e9f4c8062f411686515",
+     "seq": 14,
+     "ts": "2026-11-19T00:36:06.112Z",
+     "type": "tool.called"
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 47
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "tool.complete",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "tool_id": "call_8594f535e7",
+     "name": "exec",
+     "context": "blank = await harness.leave_blank(\"Keep the old alias?\", [\"yes\", \"no\"], [\"ren...",
+     "tool_call_id": "call_8594f535e7",
+     "tool_name": "exec",
+     "args": {
+      "code": "blank = await harness.leave_blank(\"Keep the old alias?\", [\"yes\", \"no\"], [\"rename\"])\nprint(blank[\"status\"])\n"
+     },
+     "is_error": false,
+     "result": "{\"status\": \"ok\", \"stdout\": \"open\\n\", \"calls\": {\"total\": 1, \"log\": [\"#1 harness.leave_blank ok 10ms\"]}, \"blanks\": [{\"blank_id\": \"01a1f13b-6d4e-7b10-8ff2-019d3329695c\", \"question\": \"Keep the old alias?\"}], \"duration_ms\": 13, \"cell\": 1}",
+     "duration_s": 0.11058808600000702,
+     "inline_diff": null,
+     "image_path": null
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 48
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "session.usage",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "usage": {
+      "model": "fake-a",
+      "input": 1800,
+      "output": 150,
+      "reasoning": 60,
+      "prompt": 3000,
+      "completion": 150,
+      "total": 3150,
+      "calls": 3,
+      "context_used": 1000,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "cache_hit_pct": 40,
+      "avg_latency_s": 0.2,
+      "avg_tps": 282.5,
+      "active_subagents": 0
+     },
+     "input_tokens": 1800,
+     "output_tokens": 150,
+     "cache_read_tokens": 1200,
+     "cache_write_tokens": 0,
+     "prompt_tokens": 3000,
+     "completion_tokens": 150,
+     "total_tokens": 3150,
+     "reasoning_tokens": 60,
+     "api_calls": 3,
+     "last_prompt_tokens": 1000,
+     "context_tokens": 1597,
+     "context_length": 200000,
+     "config_context_length": 200000,
+     "context_source": "provider_usage",
+     "compression_count": 0,
+     "avg_latency_s": 0.18,
+     "tokens_per_s": 282.5,
+     "last_turn_tokens": 150,
+     "rate_limit": null,
+     "active_subagents": 0,
+     "model": "fake-a",
+     "provider": "custom",
+     "fallback_model": null
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 50
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "message.delta",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "text": "\n\nDone. Rounde",
+     "turn_id": "32412b458b444f23be02dd01424900ef",
+     "segment": 0,
+     "offset": 0
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 53
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "message.delta",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "text": "d once per i",
+     "turn_id": "32412b458b444f23be02dd01424900ef",
+     "segment": 0,
+     "offset": 14
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 54
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "message.delta",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "text": "nvoice.",
+     "turn_id": "32412b458b444f23be02dd01424900ef",
+     "segment": 0,
+     "offset": 26
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 55
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "actor": "orchestrator:custom/fake-a",
+     "hash": "54471c948e84ccec8875e05b1e67f9f4ebbef62b5080599f3a3d87e4c5c7821f",
+     "payload": {
+      "cache_read_tokens": 400,
+      "cache_write_1h_tokens": 0,
+      "cache_write_5m_tokens": 0,
+      "input_tokens": 600,
+      "latency_ms": 14,
+      "model": "fake-a",
+      "output_tokens": 50,
+      "provider": "custom",
+      "reasoning_tokens": 20,
+      "request_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549:local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549:0afe8d29:api:4",
+      "role": "orchestrator",
+      "usage_schema": 2
+     },
+     "prev_hash": "e3cf6660082ea5573f0aa1e079e6e9d4e9efd5cc659f372d2b94af789b8db454",
+     "seq": 15,
+     "ts": "2026-11-19T00:36:06.141Z",
+     "type": "usage.recorded"
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 57
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "session.usage",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "usage": {
+      "model": "fake-a",
+      "input": 2400,
+      "output": 200,
+      "reasoning": 80,
+      "prompt": 4000,
+      "completion": 200,
+      "total": 4200,
+      "calls": 4,
+      "context_used": 1000,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "cache_hit_pct": 40,
+      "avg_latency_s": 0.1,
+      "avg_tps": 366.7,
+      "active_subagents": 0
+     },
+     "input_tokens": 2400,
+     "output_tokens": 200,
+     "cache_read_tokens": 1600,
+     "cache_write_tokens": 0,
+     "prompt_tokens": 4000,
+     "completion_tokens": 200,
+     "total_tokens": 4200,
+     "reasoning_tokens": 80,
+     "api_calls": 4,
+     "last_prompt_tokens": 1000,
+     "context_tokens": 1631,
+     "context_length": 200000,
+     "config_context_length": 200000,
+     "context_source": "provider_usage",
+     "compression_count": 0,
+     "avg_latency_s": 0.14,
+     "tokens_per_s": 366.72,
+     "last_turn_tokens": 200,
+     "rate_limit": null,
+     "active_subagents": 0,
+     "model": "fake-a",
+     "provider": "custom",
+     "fallback_model": null
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 58
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "session.info",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "provider": "custom:main",
+     "tools": {
+      "hypotaxis": [
+       "dispatch",
+       "exec",
+       "pack",
+       "ship"
+      ],
+      "todo": [
+       "todo_list"
+      ]
+     },
+     "system_prompt": "(trimmed)",
+     "context_length": 200000,
+     "source": "gui",
+     "model": "fake-a",
+     "lazy": false,
+     "profile_id": "/work/hermes-home",
+     "desktop_protocol": "hermes-gateway-v1",
+     "profile_name": "default",
+     "cwd": "/work/proj",
+     "reasoning_effort": "",
+     "reasoning_effort_wire": "",
+     "service_tier": "",
+     "fast": false,
+     "launch_request": {
+      "client": {
+       "name": "hypotaxis",
+       "version": "0"
+      },
+      "cwd": "/work/proj",
+      "model": "fake-a",
+      "provider": "main",
+      "source": "gui",
+      "toolsets": [
+       "hypotaxis",
+       "todo"
+      ]
+     },
+     "client": {
+      "name": "hypotaxis",
+      "version": "0"
+     },
+     "title": "@@call todo_list {\"todos\": [{\"id\": \"1\"\u2026",
+     "started_at": 1795048564.54222,
+     "last_active_at": 1795048565.1772003,
+     "yolo": false,
+     "archived": false,
+     "api_mode": "chat_completions",
+     "tool_count": 5,
+     "credential_hint": "***"
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 59
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "actor": "plugin",
+     "hash": "7a8a3dd28c6a5ecb31411991df2544de64f50b81a2256b6c50d03547726a5e57",
+     "payload": {
+      "aux_task": "title_generation",
+      "cache_read_tokens": 400,
+      "cache_write_1h_tokens": 0,
+      "cache_write_5m_tokens": 0,
+      "input_tokens": 600,
+      "latency_ms": 10,
+      "model": "fake-a",
+      "output_tokens": 50,
+      "provider": "main",
+      "reasoning_tokens": 20,
+      "request_id": "aux-1162060606064d28955ed67822e0201e",
+      "role": "auxiliary",
+      "usage_schema": 2
+     },
+     "prev_hash": "54471c948e84ccec8875e05b1e67f9f4ebbef62b5080599f3a3d87e4c5c7821f",
+     "seq": 16,
+     "ts": "2026-11-19T00:36:06.175Z",
+     "type": "usage.recorded"
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 60
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "message.complete",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "text": "Done. Rounded once per invoice.",
+     "content": "Done. Rounded once per invoice.",
+     "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+     "outcome": "completed",
+     "status": "complete",
+     "usage": {
+      "model": "fake-a",
+      "input": 2400,
+      "output": 200,
+      "reasoning": 80,
+      "prompt": 4000,
+      "completion": 200,
+      "total": 4200,
+      "calls": 4,
+      "context_used": 1000,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "cache_hit_pct": 40,
+      "avg_latency_s": 0.1,
+      "avg_tps": 366.7,
+      "active_subagents": 0
+     },
+     "persisted_turn": {
+      "row_ids": [
+       1,
+       2,
+       3,
+       4,
+       5,
+       6,
+       7,
+       8
+      ],
+      "complete": true,
+      "user_row_id": 1,
+      "user_row_ids": [
+       1
+      ],
+      "final_assistant_row_id": 8,
+      "submission_id": "sub-1795048564588300784"
+     }
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 61
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 9,
+   "method": "session.list",
+   "params": {
+    "limit": 100
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "authority_epoch": 1,
+    "execution_generation": 1,
+    "admission_id": "f4baee545e1f4c94b8060787621f08ad",
+    "type": "session.info",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "stored_session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+     "pending": [],
+     "authority_epoch": 1,
+     "desktop_protocol": "hermes-gateway-v1",
+     "running": false,
+     "execution_generation": 1,
+     "revision": 1
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 62
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 9,
+   "result": {
+    "sessions": [
+     {
+      "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+      "id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+      "title": "@@call todo_list {\"todos\": [{\"id\": \"1\"\u2026",
+      "source": "local",
+      "started_at": 1795048564.54222,
+      "message_count": 8,
+      "model": "fake-a",
+      "running": false
+     },
+     {
+      "session_id": "local-d7d480860cfdc848016da2e7e20ebc6bbd9bfbe4a862ae494a72bcd2425b8e22",
+      "id": "local-d7d480860cfdc848016da2e7e20ebc6bbd9bfbe4a862ae494a72bcd2425b8e22",
+      "title": "",
+      "source": "gui",
+      "started_at": 1795048564.201586,
+      "message_count": 0,
+      "model": "fake-a",
+      "running": false
+     }
+    ],
+    "scope": "live"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 10,
+   "method": "session.resume",
+   "params": {
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 10,
+   "result": {
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "stored_session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "messages": [
+     {
+      "role": "user",
+      "content": "@@call todo_list {\"todos\": [{\"id\": \"1\", \"content\": \"read the call sites\", \"status\": \"completed\"}, {\"id\": \"2\", \"content\": \"round once per invoice\", \"status\": \"in_progress\"}, {\"id\": \"3\", \"content\": \"add a property test\", \"status\": \"pending\"}]}@@ @@call ship {\"edits\": [{\"op\": \"replace\", \"path\": \"src/a.py\", \"old\": \"return 1\", \"new\": \"return 2\"}]}@@ @@call exec {\"code\": \"blank = await harness.leave_blank(\\\"Keep the old alias?\\\", [\\\"yes\\\", \\\"no\\\"], [\\\"rename\\\"])\\nprint(blank[\\\"status\\\"])\\n\"}@@ @@usage {\"prompt_tokens\": 1000, \"completion_tokens\": 50, \"total_tokens\": 1050, \"prompt_tokens_details\": {\"cached_tokens\": 400}, \"completion_tokens_details\": {\"reasoning_tokens\": 20}}@@ @@reply Done. Rounded once per invoice.@@",
+      "_db_persisted": true,
+      "message_uid": "9999b66cf87d4fc9bff0bb934cf7c41d",
+      "display_metadata": {
+       "gateway_input_owner": "3549b825-7687-5826-b322-ee24aec76aeb",
+       "submission_id": "sub-1795048564588300784"
+      },
+      "timestamp": 1795048564.618517,
+      "message_id": "f4baee545e1f4c94b8060787621f08ad",
+      "row_id": 1
+     },
+     {
+      "role": "assistant",
+      "content": "",
+      "_db_persisted": true,
+      "message_uid": "4caf3c958cf744e89e01c860c69b02f4",
+      "_tool_call_uids": {
+       "call_685db9bacf": "c5edd151eaaa4cb8939e4e142db8c789"
+      },
+      "display_metadata": {
+       "reasoning_tokens": 20
+      },
+      "timestamp": 1795048565.826535,
+      "tool_calls": [
+       {
+        "id": "call_685db9bacf",
+        "call_id": "call_685db9bacf",
+        "response_item_id": "fc_685db9bacf",
+        "type": "function",
+        "function": {
+         "name": "todo_list",
+         "arguments": "{\"todos\": [{\"id\": \"1\", \"content\": \"read the call sites\", \"status\": \"completed\"}, {\"id\": \"2\", \"content\": \"round once per invoice\", \"status\": \"in_progress\"}, {\"id\": \"3\", \"content\": \"add a property test\", \"status\": \"pending\"}]}"
+        }
+       }
+      ],
+      "finish_reason": "tool_calls",
+      "row_id": 2
+     },
+     {
+      "role": "tool",
+      "content": "{\"todos\": [{\"id\": \"1\", \"content\": \"read the call sites\", \"status\": \"completed\"}, {\"id\": \"2\", \"content\": \"round once per invoice\", \"status\": \"in_progress\"}, {\"id\": \"3\", \"content\": \"add a property test\", \"status\": \"pending\"}], \"revision\": 1, \"summary\": {\"total\": 3, \"pending\": 1, \"in_progress\": 1, \"completed\": 1, \"cancelled\": 0}}",
+      "_db_persisted": true,
+      "message_uid": "26fa033e48c34b3d8e5552042943d9bf",
+      "_tool_call_uid": "c5edd151eaaa4cb8939e4e142db8c789",
+      "timestamp": 1795048565.849242,
+      "tool_call_id": "call_685db9bacf",
+      "tool_name": "todo_list",
+      "row_id": 3
+     },
+     {
+      "role": "assistant",
+      "content": "",
+      "_db_persisted": true,
+      "message_uid": "c1c2f581b6bd4e8bb8b2c141f262f335",
+      "_tool_call_uids": {
+       "call_665a6abdd4": "8adb2253cb3b41cd995e3dbde81df441"
+      },
+      "display_metadata": {
+       "reasoning_tokens": 20
+      },
+      "timestamp": 1795048565.8783298,
+      "tool_calls": [
+       {
+        "id": "call_665a6abdd4",
+        "call_id": "call_665a6abdd4",
+        "response_item_id": "fc_665a6abdd4",
+        "type": "function",
+        "function": {
+         "name": "ship",
+         "arguments": "{\"edits\": [{\"op\": \"replace\", \"path\": \"src/a.py\", \"old\": \"return 1\", \"new\": \"return 2\"}]}"
+        }
+       }
+      ],
+      "finish_reason": "tool_calls",
+      "row_id": 4
+     },
+     {
+      "role": "tool",
+      "content": "{\"status\": \"shipped\", \"ship_id\": \"01a1f13b-6ca7-7277-ad3b-3716ade83f45\", \"files\": [{\"path\": \"src/a.py\", \"created\": false, \"deleted\": false}], \"gate\": {\"verdict\": \"pass\", \"gates\": [\"T0.scope\", \"T0.visible_tests\"], \"enforcement\": \"degraded:unsandboxed\"}, \"checkpoint\": {\"ref\": \"refs/hypotaxis/checkpoints/local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549\", \"commit\": \"4cc42ff88cec4dbcf3174da8b1557bfd2289ae14\"}}",
+      "_db_persisted": true,
+      "message_uid": "c13ed126fc384c16b8fb4f8a672763db",
+      "_tool_call_uid": "8adb2253cb3b41cd995e3dbde81df441",
+      "timestamp": 1795048565.9716072,
+      "tool_call_id": "call_665a6abdd4",
+      "tool_name": "ship",
+      "row_id": 5
+     },
+     {
+      "role": "assistant",
+      "content": "",
+      "_db_persisted": true,
+      "message_uid": "a93895f85dfb4f74b22dd1305de89bdb",
+      "_tool_call_uids": {
+       "call_8594f535e7": "3bd50b5ea6a54c7a9e3ca5978a3eaaab"
+      },
+      "display_metadata": {
+       "reasoning_tokens": 20
+      },
+      "timestamp": 1795048566.00041,
+      "tool_calls": [
+       {
+        "id": "call_8594f535e7",
+        "call_id": "call_8594f535e7",
+        "response_item_id": "fc_8594f535e7",
+        "type": "function",
+        "function": {
+         "name": "exec",
+         "arguments": "{\"code\": \"blank = await harness.leave_blank(\\\"Keep the old alias?\\\", [\\\"yes\\\", \\\"no\\\"], [\\\"rename\\\"])\\nprint(blank[\\\"status\\\"])\\n\"}"
+        }
+       }
+      ],
+      "finish_reason": "tool_calls",
+      "row_id": 6
+     },
+     {
+      "role": "tool",
+      "content": "{\"status\": \"ok\", \"stdout\": \"open\\n\", \"calls\": {\"total\": 1, \"log\": [\"#1 harness.leave_blank ok 10ms\"]}, \"blanks\": [{\"blank_id\": \"01a1f13b-6d4e-7b10-8ff2-019d3329695c\", \"question\": \"Keep the old alias?\"}], \"duration_ms\": 13, \"cell\": 1}",
+      "_db_persisted": true,
+      "message_uid": "d9df916c9ee94889939a008ff91a87ad",
+      "_tool_call_uid": "3bd50b5ea6a54c7a9e3ca5978a3eaaab",
+      "timestamp": 1795048566.114175,
+      "tool_call_id": "call_8594f535e7",
+      "tool_name": "exec",
+      "row_id": 7
+     },
+     {
+      "role": "assistant",
+      "content": "Done. Rounded once per invoice.",
+      "_db_persisted": true,
+      "message_uid": "a7bc540ed7994e5c84ff73e91ec23991",
+      "display_metadata": {
+       "reasoning_tokens": 20
+      },
+      "timestamp": 1795048566.1436636,
+      "finish_reason": "stop",
+      "row_id": 8
+     }
+    ],
+    "message_count": 8,
+    "todo_state": {
+     "todos": [
+      {
+       "id": "1",
+       "content": "read the call sites",
+       "status": "completed"
+      },
+      {
+       "id": "2",
+       "content": "round once per invoice",
+       "status": "in_progress"
+      },
+      {
+       "id": "3",
+       "content": "add a property test",
+       "status": "pending"
+      }
+     ],
+     "revision": 1
+    },
+    "running": false,
+    "authority_epoch": 1,
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "last_sequence": 62,
+    "subscription_id": "7e3a0ce259f64effa6816805a7468600",
+    "revision": 1,
+    "execution_generation": 1,
+    "pending": [],
+    "prompts": [],
+    "info": {
+     "tools": {
+      "hypotaxis": [
+       "dispatch",
+       "exec",
+       "pack",
+       "ship"
+      ],
+      "todo": [
+       "todo_list"
+      ]
+     },
+     "skills": "(trimmed)",
+     "mcp_servers": [
+      {
+       "name": "fakemcp",
+       "transport": "stdio",
+       "tools": 0,
+       "connected": false,
+       "disabled": false,
+       "status": "configured",
+       "needs_auth": false
+      }
+     ],
+     "version": "unknown",
+     "release_date": "2026.9.24",
+     "update_behind": null,
+     "update_command": "hermes update",
+     "branch": "master",
+     "project": null,
+     "provider": "custom:main",
+     "system_prompt": "(trimmed)",
+     "context_length": 200000,
+     "enabled_toolsets": [
+      "hypotaxis",
+      "todo"
+     ],
+     "tool_availability": {
+      "unavailable_toolsets": [],
+      "lazy_tools": [],
+      "disabled_tools": []
+     },
+     "source": "gui",
+     "model": "fake-a",
+     "lazy": false,
+     "profile_id": "/work/hermes-home",
+     "desktop_protocol": "hermes-gateway-v1",
+     "profile_name": "default",
+     "cwd": "/work/proj",
+     "reasoning_effort": "",
+     "reasoning_effort_wire": "",
+     "service_tier": "",
+     "fast": false,
+     "launch_request": {
+      "client": {
+       "name": "hypotaxis",
+       "version": "0"
+      },
+      "cwd": "/work/proj",
+      "model": "fake-a",
+      "provider": "main",
+      "source": "gui",
+      "toolsets": [
+       "hypotaxis",
+       "todo"
+      ]
+     },
+     "client": {
+      "name": "hypotaxis",
+      "version": "0"
+     },
+     "title": "@@call todo_list {\"todos\": [{\"id\": \"1\"\u2026",
+     "started_at": 1795048564.54222,
+     "last_active_at": 1795048565.1772003,
+     "yolo": false,
+     "archived": false,
+     "api_mode": "chat_completions",
+     "tool_count": 5,
+     "credential_hint": "***",
+     "usage": {
+      "model": "fake-a",
+      "input": 2400,
+      "output": 200,
+      "reasoning": 80,
+      "prompt": 4000,
+      "completion": 200,
+      "total": 4200,
+      "calls": 4,
+      "context_used": 1000,
+      "context_max": 200000,
+      "context_percent": 0,
+      "context_source": "provider_usage",
+      "context_estimated": false,
+      "compressions": 0,
+      "cache_hit_pct": 40,
+      "avg_latency_s": 0.1,
+      "avg_tps": 366.7,
+      "active_subagents": 0
+     }
+    },
+    "pending_connection": null,
+    "open_requests": []
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 11,
+   "method": "session.info",
+   "params": {
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 11,
+   "result": {
+    "tools": {
+     "hypotaxis": [
+      "dispatch",
+      "exec",
+      "pack",
+      "ship"
+     ],
+     "todo": [
+      "todo_list"
+     ]
+    },
+    "skills": "(trimmed)",
+    "mcp_servers": [
+     {
+      "name": "fakemcp",
+      "transport": "stdio",
+      "tools": 0,
+      "connected": false,
+      "disabled": false,
+      "status": "configured",
+      "needs_auth": false
+     }
+    ],
+    "version": "unknown",
+    "release_date": "2026.9.24",
+    "update_behind": null,
+    "update_command": "hermes update",
+    "branch": "master",
+    "project": null,
+    "provider": "custom:main",
+    "system_prompt": "(trimmed)",
+    "context_length": 200000,
+    "enabled_toolsets": [
+     "hypotaxis",
+     "todo"
+    ],
+    "tool_availability": {
+     "unavailable_toolsets": [],
+     "lazy_tools": [],
+     "disabled_tools": []
+    },
+    "source": "gui",
+    "model": "fake-a",
+    "lazy": false,
+    "profile_id": "/work/hermes-home",
+    "desktop_protocol": "hermes-gateway-v1",
+    "profile_name": "default",
+    "cwd": "/work/proj",
+    "reasoning_effort": "",
+    "reasoning_effort_wire": "",
+    "service_tier": "",
+    "fast": false,
+    "launch_request": {
+     "client": {
+      "name": "hypotaxis",
+      "version": "0"
+     },
+     "cwd": "/work/proj",
+     "model": "fake-a",
+     "provider": "main",
+     "source": "gui",
+     "toolsets": [
+      "hypotaxis",
+      "todo"
+     ]
+    },
+    "client": {
+     "name": "hypotaxis",
+     "version": "0"
+    },
+    "title": "@@call todo_list {\"todos\": [{\"id\": \"1\"\u2026",
+    "started_at": 1795048564.54222,
+    "last_active_at": 1795048565.1772003,
+    "yolo": false,
+    "archived": false,
+    "api_mode": "chat_completions",
+    "tool_count": 5,
+    "credential_hint": "***",
+    "usage": {
+     "model": "fake-a",
+     "input": 2400,
+     "output": 200,
+     "reasoning": 80,
+     "prompt": 4000,
+     "completion": 200,
+     "total": 4200,
+     "calls": 4,
+     "context_used": 1000,
+     "context_max": 200000,
+     "context_percent": 0,
+     "context_source": "provider_usage",
+     "context_estimated": false,
+     "compressions": 0,
+     "cache_hit_pct": 40,
+     "avg_latency_s": 0.1,
+     "avg_tps": 366.7,
+     "active_subagents": 0
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 12,
+   "method": "session.context_breakdown",
+   "params": {
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 12,
+   "result": {
+    "categories": [
+     {
+      "color": "var(--context-usage-system)",
+      "id": "system_prompt",
+      "label": "System prompt",
+      "tokens": 1685
+     },
+     {
+      "color": "var(--context-usage-tools)",
+      "id": "tool_definitions",
+      "label": "Tool definitions",
+      "tokens": 1727
+     },
+     {
+      "color": "var(--context-usage-rules)",
+      "id": "rules",
+      "label": "Rules",
+      "tokens": 423
+     },
+     {
+      "color": "var(--context-usage-conversation)",
+      "id": "conversation",
+      "label": "Conversation",
+      "tokens": 886
+     }
+    ],
+    "estimated_total": 4721,
+    "context_max": 200000,
+    "context_percent": 1,
+    "context_used": 1603,
+    "context_source": "provider_usage_plus_estimate",
+    "context_estimated": true,
+    "model": "fake-a",
+    "prompt_cache": {
+     "guaranteed_until": null,
+     "estimated_until": null,
+     "tier": null,
+     "confidence": "unknown",
+     "reason": "implicit_cache",
+     "refreshed_at": 1795048566.1253798,
+     "coverage": {}
+    },
+    "context_files": [
+     {
+      "label": "SOUL.md",
+      "path": "/work/hermes-home/SOUL.md",
+      "chars": 663,
+      "est_tokens": 167,
+      "loaded": true,
+      "status": "loaded"
+     }
+    ]
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 13,
+   "method": "session.list",
+   "params": {
+    "limit": 100,
+    "include_hidden": true
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 13,
+   "result": {
+    "sessions": [
+     {
+      "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+      "id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+      "title": "@@call todo_list {\"todos\": [{\"id\": \"1\"\u2026",
+      "source": "local",
+      "started_at": 1795048564.54222,
+      "message_count": 8,
+      "model": "fake-a",
+      "running": false
+     },
+     {
+      "session_id": "local-d7d480860cfdc848016da2e7e20ebc6bbd9bfbe4a862ae494a72bcd2425b8e22",
+      "id": "local-d7d480860cfdc848016da2e7e20ebc6bbd9bfbe4a862ae494a72bcd2425b8e22",
+      "title": "",
+      "source": "gui",
+      "started_at": 1795048564.201586,
+      "message_count": 0,
+      "model": "fake-a",
+      "running": false
+     }
+    ],
+    "scope": "live"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 14,
+   "method": "mcp.servers.status",
+   "params": {}
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 14,
+   "result": {
+    "servers": [
+     {
+      "name": "fakemcp",
+      "transport": "stdio",
+      "tools": 0,
+      "connected": false,
+      "disabled": false,
+      "status": "configured",
+      "needs_auth": false,
+      "source": "config",
+      "plugin": null
+     }
+    ],
+    "checked_at": 1795048566302
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 15,
+   "method": "plugin.hypotaxis.describe",
+   "params": {
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 15,
+   "result": {
+    "session": {
+     "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+     "mode": "ungoverned",
+     "locked": true,
+     "cwd": "/work/proj"
+    },
+    "version": "0.1.0",
+    "protocol": "hypotaxis-v1",
+    "capabilities": [
+     "describe",
+     "mode.set",
+     "ledger.tail",
+     "ledger.verify",
+     "ledger.stats",
+     "cascade.state",
+     "prices.refresh",
+     "blank.fill",
+     "checkpoint.list",
+     "checkpoint.diff"
+    ],
+    "hx": null,
+    "kernel": null,
+    "config": {
+     "mode": "governed",
+     "cost_cap_usd": 2.0,
+     "errors": [],
+     "ladder_errors": []
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 16,
+   "method": "plugin.hypotaxis.ledger.stats",
+   "params": {
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 16,
+   "result": {
+    "tokens": {
+     "input_uncached": 3000,
+     "output": 250,
+     "cache_read": 2000,
+     "reasoning": 100,
+     "cache_write": 0
+    },
+    "cost_usd": 5.5,
+    "cost_api_equivalent_usd": 5.5,
+    "unpriced_models": [],
+    "round_trips": 5,
+    "escalations": 0,
+    "rollbacks": 0,
+    "blanks": 1,
+    "approvals": 0,
+    "price_table": "settings-d98ebfc5788c"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 17,
+   "method": "plugin.hypotaxis.cascade.state",
+   "params": {
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 17,
+   "result": {
+    "ladder": [
+     {
+      "name": "haiku",
+      "model": {
+       "provider": "anthropic",
+       "id": "claude-haiku-5-5"
+      },
+      "effort": "medium",
+      "max_tokens": 8000,
+      "retries": 0
+     },
+     {
+      "name": "sonnet",
+      "model": {
+       "provider": "anthropic",
+       "id": "claude-sonnet-5-5"
+      },
+      "effort": "medium",
+      "max_tokens": 8000,
+      "retries": 0
+     },
+     {
+      "name": "opus",
+      "model": {
+       "provider": "anthropic",
+       "id": "claude-opus-5-5"
+      },
+      "effort": "medium",
+      "max_tokens": 8000,
+      "retries": 0
+     }
+    ],
+    "status": "idle"
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 18,
+   "method": "plugin.hypotaxis.checkpoint.list",
+   "params": {
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 18,
+   "result": {
+    "checkpoints": [
+     {
+      "ship_id": "01a1f13b-6ca7-7277-ad3b-3716ade83f45",
+      "commit": "4cc42ff88cec4dbcf3174da8b1557bfd2289ae14",
+      "ref": "refs/hypotaxis/checkpoints/local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+      "files": [
+       "src/a.py"
+      ],
+      "ts": "2026-11-19T00:36:05.966Z",
+      "task_id": "ship:01a1f13b-6ca7-7277-ad3b-3716ade83f45"
+     }
+    ]
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 19,
+   "method": "plugin.hypotaxis.checkpoint.diff",
+   "params": {
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 19,
+   "result": {
+    "ship_id": null,
+    "base": "cf976d9fc4e6c6bdf516c8c5e1eb307f11d4dd92",
+    "head": "4cc42ff88cec4dbcf3174da8b1557bfd2289ae14",
+    "files": [
+     {
+      "path": "src/a.py",
+      "status": "modified",
+      "add": 1,
+      "del": 1,
+      "binary": false,
+      "truncated": false,
+      "hunks": [
+       {
+        "header": "@@ -1,2 +1,2 @@",
+        "lines": [
+         " def hello():",
+         "-    return 1",
+         "+    return 2"
+        ]
+       }
+      ]
+     }
+    ],
+    "truncated": false
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 20,
+   "method": "plugin.hypotaxis.compat.inventory",
+   "params": {
+    "cwd": "/work/proj"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 20,
+   "result": {
+    "cwd": "/work/proj",
+    "project_root": "/work/proj",
+    "items": [],
+    "trust": {
+     "project_id": "de8fc2a548885afbf9e4ef182f69efc4bd093dcf711731a9e8b8dcd55b49bc21",
+     "cwd": "/work/proj",
+     "kinds": {}
+    },
+    "hook_events": {
+     "mapped": {
+      "PreToolUse": {
+       "hermes": [
+        "pre_tool_call"
+       ],
+       "fidelity": "full",
+       "note": "A hook `allow` skips hypotaxis-level approval prompts only (COMPAT 4.4); Hermes approvals and hardline blocks still apply."
+      },
+      "PostToolUse": {
+       "hermes": [
+        "transform_tool_result"
+       ],
+       "fidelity": "full",
+       "note": "Runs for tools that executed with status ok. Feedback is appended to the tool result."
+      },
+      "PostToolUseFailure": {
+       "hermes": [
+        "transform_tool_result"
+       ],
+       "fidelity": "full",
+       "note": "The same Hermes hook with status other than ok."
+      },
+      "UserPromptSubmit": {
+       "hermes": [
+        "pre_llm_call"
+       ],
+       "fidelity": "full",
+       "note": "A blocked prompt is stored by Hermes as a withheld-message placeholder and never reaches a model; Claude Code erases it."
+      },
+      "SessionStart": {
+       "hermes": [
+        "on_session_start",
+        "on_session_open",
+        "on_session_reset",
+        "post_compaction"
+       ],
+       "fidelity": "partial",
+       "note": "These fire after the system prompt is built, so additionalContext is delivered through the next pre_llm_call and never the system prompt. Sources: startup, resume, clear, compact. fork does not exist on Hermes."
+      },
+      "SessionEnd": {
+       "hermes": [
+        "on_session_finalize"
+       ],
+       "fidelity": "partial",
+       "note": "Hermes does not say why a session ended, so reason is other."
+      },
+      "Stop": {
+       "hermes": [
+        "post_llm_call"
+       ],
+       "fidelity": "partial",
+       "note": "Hermes has no turn-end hook that can continue a turn, and its pre_verify fires only after write_file or patch edits (not ship). So Stop runs at the final post_llm_call of every completed turn, and a block re-enters as a queued user message through ctx.inject_message: a new turn that starts after the answer, not a continuation inside it. Needs plugins.entries.hypotaxis.allow_gateway_injection."
+      },
+      "SubagentStart": {
+       "hermes": [
+        "subagent_start"
+       ],
+       "fidelity": "observe",
+       "note": "Observe only; additionalContext cannot reach the child."
+      },
+      "SubagentStop": {
+       "hermes": [
+        "subagent_stop"
+       ],
+       "fidelity": "observe",
+       "note": "Observe only; a block cannot force the child to continue."
+      },
+      "Notification": {
+       "hermes": [
+        "on_human_input_request"
+       ],
+       "fidelity": "partial",
+       "note": "approval becomes permission_prompt, clarify becomes elicitation_dialog. idle_prompt and auth_success do not exist on Hermes."
+      },
+      "PostCompact": {
+       "hermes": [
+        "post_compaction"
+       ],
+       "fidelity": "full",
+       "note": "trigger is manual for /compress and auto otherwise."
+      }
+     },
+     "unsupported": {
+      "PreCompact": "Hermes has only post_compaction, so a compaction cannot be observed or blocked in advance.",
+      "PermissionRequest": "pre_approval_request is an observer on Hermes, which intentionally has no auto-allow or decision callback.",
+      "PermissionDenied": "Hermes has no permission-denied event; a block is a tool result.",
+      "UserPromptExpansion": "Hermes has no equivalent: slash-command expansion is not an event.",
+      "PostToolBatch": "Hermes has no per-batch event.",
+      "StopFailure": "Hermes has no event for a turn that ended in an API error that reaches plugins as a stop.",
+      "Setup": "Hermes has no init or maintenance event.",
+      "TaskCreated": "Hermes kanban hooks differ in meaning from Claude Code tasks.",
+      "TaskCompleted": "Hermes kanban hooks differ in meaning from Claude Code tasks.",
+      "TeammateIdle": "Hermes kanban hooks differ in meaning from Claude Code teammates.",
+      "ConfigChange": "Hermes has no config-change event.",
+      "FileChanged": "Hermes has no file-watch event.",
+      "CwdChanged": "Hermes has no cwd-change event.",
+      "DirectoryAdded": "Hermes has no additional-directory concept.",
+      "WorktreeCreate": "Worktrees are owned by the hypotaxis host, not by Hermes.",
+      "WorktreeRemove": "Worktrees are owned by the hypotaxis host, not by Hermes.",
+      "Elicitation": "Hermes MCP elicitation consent is an approval, not a hookable event.",
+      "ElicitationResult": "Hermes MCP elicitation consent is an approval, not a hookable event.",
+      "MessageDisplay": "Hermes has no message-display event.",
+      "InstructionsLoaded": "Synthesized by compat when it delivers memory and rules, which part 1 does not do yet.",
+      "PreModelSwitch": "Synthesized by the cascade, which is not built yet.",
+      "PostModelSwitch": "Synthesized by the cascade, which is not built yet."
+     }
+    },
+    "warnings": [],
+    "pending": false
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 21,
+   "method": "complete.path",
+   "params": {
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "cwd": "/work/proj",
+    "word": "@file:src/"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 21,
+   "result": {
+    "items": [
+     {
+      "text": "@file:src/a.py",
+      "display": "a.py",
+      "meta": ""
+     }
+    ]
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 22,
+   "method": "complete.path",
+   "params": {
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "cwd": "/work/proj",
+    "word": "@zzz-nothing"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 22,
+   "result": {
+    "items": []
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 23,
+   "method": "session.branch",
+   "params": {
+    "session_id": ""
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 23,
+   "error": {
+    "code": -32601,
+    "message": "unknown method: session.branch \u2014 not available on this Hermes backend",
+    "data": {
+     "reason": "unknown_method"
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 24,
+   "method": "session.compress",
+   "params": {
+    "session_id": ""
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 24,
+   "error": {
+    "code": -32601,
+    "message": "unknown method: session.compress \u2014 not available on this Hermes backend",
+    "data": {
+     "reason": "unknown_method"
+    }
+   }
+  }
+ },
+ {
+  "dir": "out",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 25,
+   "method": "plugin.hypotaxis.blank.fill",
+   "params": {
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "blank_id": "01a1f13b-6d4e-7b10-8ff2-019d3329695c",
+    "answer": "yes, for one release"
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "plugin.hypotaxis.ledger.appended",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "actor": "user",
+     "hash": "4e762342eda349ba533638263ef77c0693604a1acdce0de6da00db1df5967208",
+     "payload": {
+      "answer": "yes, for one release",
+      "blank_id": "01a1f13b-6d4e-7b10-8ff2-019d3329695c",
+      "decided_by": "user"
+     },
+     "prev_hash": "7a8a3dd28c6a5ecb31411991df2544de64f50b81a2256b6c50d03547726a5e57",
+     "seq": 17,
+     "ts": "2026-11-19T00:36:06.345Z",
+     "type": "blank.filled"
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 63
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "method": "event",
+   "params": {
+    "type": "plugin.hypotaxis.blank.filled",
+    "session_id": "local-7f12f06747fe524206eb3bad9893e9bfbe5b78a9d859c87d8304e7c962043549",
+    "payload": {
+     "blank_id": "01a1f13b-6d4e-7b10-8ff2-019d3329695c",
+     "answer": "yes, for one release"
+    },
+    "replay_epoch": "6d8cb5c8bf0648c2b268024a4e37ba9c",
+    "seq": 64
+   }
+  }
+ },
+ {
+  "dir": "in",
+  "frame": {
+   "jsonrpc": "2.0",
+   "id": 25,
+   "result": {
+    "delivered": false
+   }
+  }
+ }
+]
