@@ -10,20 +10,27 @@ import { oc } from '../../components/orb';
 import { DRAFT_COLOR, paintOrb } from './paint';
 import { livenIn, orbHTML } from './orbs';
 import { bot, initModel, railOn, S } from './model';
-import type { Bot } from '../../data';
+import type { ArchivedBot, Bot } from '../../data';
+import { loadBots, saveBots } from '../../core/settings';
+import { archivedWhen, restoreBot, restoredWords } from '../../data/restore';
 import { focusConversation, openBot } from './room';
 import { checkClips, watchClips } from './clips';
+import { OUTSIDE_SHORT, outsideDescription, outsideRowMark } from './outside';
+
+const LIST_DESC = 'bt-outside-list';
 
 export function mountList(root: HTMLElement): void {
   initModel();
   if (S.listWrap && S.listWrap.parentNode) S.listWrap.remove();
   S.listRoot = root; S.rows.clear(); S.draftRow = null;
+  S.offArchived?.(); S.offArchived = null; S.archivedEl = null;
   if (root) root.dataset['rail'] = 'ok';
   const wrap = el('nav', { class: 'bt-list', 'aria-label': 'Bots' });
   const ul = el('ul', { class: 'ui-rows bt-rows', 'data-ui': 'rows' });
   if (data().info.preview.has('bots')) wrap.append(el('p', { class: 'bt-preview', role: 'note', text: 'Preview: sample bots' }));
   for (const b of S.bots) ul.append(makeRow(b));
-  wrap.append(ul);
+  const archived = el('div', { class: 'bt-archived' });
+  wrap.append(ul, archived, outsideDescription(LIST_DESC));
   (root || document.body).append(wrap);
   ui.hydrate(ul);
   ul.addEventListener('keydown', listKeys);
@@ -33,6 +40,8 @@ export function mountList(root: HTMLElement): void {
     if (id && bot(id)) { e.preventDefault(); openBot(id); emit('hx:bot-select', { id, from: 'bots-list' }); }
   });
   S.listWrap = wrap; S.rowsEl = ul;
+  S.archivedEl = archived; archivedOpen = loadBots().archivedOpen === true;
+  mountArchived(archived);
   watchClips(wrap); checkClips();
   syncListVisibility();
   syncRail();
@@ -47,13 +56,13 @@ function listKeys(e: KeyboardEvent): void {
   } else if (k === 'Escape') { e.preventDefault(); e.stopPropagation(); focusConversation(); }
 }
 function rowHTML(b: Bot): string {
-  const s = ui.botState(b), rail = railOn();
+  const s = ui.botState(b), rail = railOn(), outside = !!b.madeOutside;
   return ui.html.row({
     title: b.name, sub: b.role, value: b.id,
-    end: ui.html.stateWord(b), endTone: s.attention ? 'attention' : null,
+    end: (outside ? outsideRowMark() + ' ' : '') + ui.html.stateWord(b), endTone: s.attention ? 'attention' : null,
     lead: orbHTML(b, rail ? 24 : 20, { flag: true, state: b.state }),
     current: S.view === 'bot' && b.id === S.sel,
-    attrs: { 'aria-label': ui.botLabel(b), 'data-tip': rail ? b.name : null, 'data-tip-pos': 'right', 'data-tip-state': rail && s.key !== 'idle' ? s.word : null, 'data-tip-tone': rail && s.attention ? 'attention' : null }
+    attrs: { 'aria-label': ui.botLabel(b, outside ? OUTSIDE_SHORT : undefined), 'aria-describedby': outside ? LIST_DESC : null, 'data-tip': rail ? b.name : null, 'data-tip-pos': 'right', 'data-tip-state': rail && s.key !== 'idle' ? s.word : null, 'data-tip-tone': rail && s.attention ? 'attention' : null }
   });
 }
 export function makeRow(b: Bot): HTMLElement {
@@ -142,4 +151,55 @@ export function syncRail(): void {
   lastRail = rail;
   for (const id of S.rows.keys()) updateRow(id);
   if (S.draftRow) { S.draftRow.o.setAttribute('size', rail ? '24' : '20'); const w = S.draftRow.o.closest<HTMLElement>('.ui-orb'); w?.style.setProperty('--o', rail ? '24' : '20'); paintDraftRow(); }
+}
+
+/* ───────── the Archived group (owner decision, 19 November 2026) ─────────
+   Under the roster, collapsed until the user opens it and kept as they left it (`hx.v6.bots`). Each archived bot shows its name,
+   when it was archived and Restore, as an archived session does (DESIGN-SYSTEM 14.4: a quiet struck-through title, the action in
+   place of the meta on hover and focus). Restore is the provider's: a name that is in use again is refused and the row stays. */
+let archivedOpen = false;
+const pending = new Set<string>();
+function archivedRow(a: ArchivedBot): string {
+  const name = a.was || a.name, sub = archivedWhen(a.when);
+  return ui.html.row({
+    title: name, sub, archived: true, value: a.id,
+    acts: ui.html.iconButton({ icon: 'unarchive', label: 'Restore ' + name, size: 's', attrs: { 'data-act': 'restore', 'data-id': a.id } }),
+    attrs: { 'data-id': a.id, 'data-archived-bot': '', 'aria-label': name + ', ' + sub.toLowerCase() }
+  });
+}
+export function drawArchived(): void {
+  const host = S.archivedEl; if (!host) return;
+  const list = data().bots.archived.get();
+  host.replaceChildren();
+  host.hidden = !list.length;
+  if (!list.length) return;
+  const group = ui.group({ label: 'Archived (' + list.length + ')', collapsible: true, expanded: archivedOpen, id: 'bt-archived', rows: list.map(archivedRow).join('') });
+  host.append(group);
+  checkClips();
+}
+function mountArchived(host: HTMLElement): void {
+  host.addEventListener('ui:change', (e) => {
+    if (!(e.target as Element).closest('.ui-group__head')) return;
+    archivedOpen = !!(e as CustomEvent<{ value: boolean }>).detail.value;
+    saveBots({ archivedOpen });
+  });
+  host.addEventListener('click', (e) => {
+    const b = (e.target as Element).closest<HTMLElement>('[data-act="restore"]');
+    const id = b?.dataset['id'];
+    if (b && id) void restoreArchivedBot(id, b);
+  });
+  host.addEventListener('keydown', listKeys);
+  S.offArchived = data().bots.archived.subscribe(drawArchived);
+  drawArchived();
+}
+/** asks the provider, says what happened, and puts focus on the bot that came back; a refusal leaves everything where it was */
+async function restoreArchivedBot(id: string, button: HTMLElement): Promise<void> {
+  if (pending.has(id)) return;
+  pending.add(id);
+  button.setAttribute('aria-disabled', 'true');
+  try {
+    const r = await restoreBot(data().bots, id);
+    ui.toast(restoredWords(r));
+    if (r.ok) S.rows.get(r.name)?.btn.focus({ preventScroll: true });
+  } finally { pending.delete(id); button.removeAttribute('aria-disabled'); }
 }

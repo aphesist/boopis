@@ -25,6 +25,12 @@ export interface PluginBot {
   archived: { name?: string; at?: string; paused_jobs?: string[] } | null;
 }
 
+/** boopis never kept anything for this profile: the plugin read its folder and found no `boopis/bot.json` (`record: null`, and no
+ *  problem reading one), or one that holds no look, settings or approvals (archiving a bot writes only its `archived` note, so a
+ *  bot made outside boopis keeps the mark through an archive and a restore). A plugin that did not answer says nothing, so
+ *  nothing is marked on a guess. */
+export const madeOutside = (p: PluginBot | undefined): boolean =>
+  !!p && !p.problem && (p.record === null || !['look', 'settings', 'approvals'].some((k) => k in (p.record as Record<string, unknown>)));
 export const isArchived = (name: string, p: PluginBot | undefined): boolean => name.startsWith(ARCHIVE_PREFIX) || !!p?.archived;
 export const botName = (row: Pick<ProfileRow, 'name' | 'display_name'>): string => (row.display_name ?? '').trim() || row.name;
 
@@ -120,6 +126,7 @@ export function botFrom(k: Known, nowSeconds: number): Bot {
     id: row.name, name, role: (detail?.role ?? row.description ?? '').trim(),
     ...look,
     state: running ? 'working' : 'idle', attention: null, paused: false, activity: running ? (row.worker_session?.title ?? '').trim() : '', spent: '', last: null, ideas: [],
+    ...(madeOutside(plugin) ? { madeOutside: true as const } : {}),
     cfg: {
       instructions: detail?.soul ?? '', model: model ?? '',
       cron: (jobs?.find((j) => j.enabled) ?? null)?.schedule ?? '',

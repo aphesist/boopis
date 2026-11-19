@@ -30,7 +30,7 @@ export const commands = {
 	 *  configuration, read through Hermes's own CLI. Read-only. The plan's status is a question for the live gateway, which
 	 *  the UI asks itself (`free_tier.status`).
 	 */
-	setupModelsView: (profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<ModelsView>("setup_models_view", { profile }, options),
+	setupModelsView: (profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<ModelsView_Serialize>("setup_models_view", { profile }, options),
 	/**  The advanced setting "Use my own Hermes": which Hermes the app runs, what is saved, and whether a restart is due. */
 	hermesSourceGet: (options?: InvokeOptions) => __TAURI_INVOKE<SourceView_Serialize>("hermes_source_get", undefined, options),
 	/**
@@ -977,11 +977,30 @@ export type LadderTier = {
 };
 
 /**  What Settings > Models shows of the configuration (read-only). */
-export type ModelsView = {
+export type ModelsView = ModelsView_Serialize | ModelsView_Deserialize;
+
+/**  What Settings > Models shows of the configuration (read-only). */
+export type ModelsView_Deserialize = {
 	/**  Whether a ladder is saved, and whether it can be read. */
 	state: LadderState,
 	/**  Its tiers, cheapest first; empty unless `state` is `set`. */
 	tiers: LadderTier[],
+	/**  The user's Claude Code as the Claude subscription plugin would see it: signed in or not, and its version. */
+	claude: Probe_Deserialize,
+	/**  Whether Hermes lists the Claude subscription plugin's provider. */
+	claude_plugin: boolean,
+};
+
+/**  What Settings > Models shows of the configuration (read-only). */
+export type ModelsView_Serialize = {
+	/**  Whether a ladder is saved, and whether it can be read. */
+	state: LadderState,
+	/**  Its tiers, cheapest first; empty unless `state` is `set`. */
+	tiers: LadderTier[],
+	/**  The user's Claude Code as the Claude subscription plugin would see it: signed in or not, and its version. */
+	claude: Probe_Serialize,
+	/**  Whether Hermes lists the Claude subscription plugin's provider. */
+	claude_plugin: boolean,
 };
 
 /**
@@ -1052,6 +1071,37 @@ export type PowerSource =
 "battery" | 
 /**  No mains adapter is listed, or it could not be read: nothing is assumed. */
 "unknown";
+
+/**  What a look at the CLI found. Nothing here is a credential. */
+export type Probe = Probe_Serialize | Probe_Deserialize;
+
+/**  What a look at the CLI found. Nothing here is a credential. */
+export type Probe_Deserialize = {
+	/**  Where it stands. */
+	state: State,
+	/**  The version it reported (`2.1.328`), when it reported one. */
+	version?: string | null,
+	/**  The plan it reports (`Claude Max`), when signed in and it names one. */
+	plan?: string | null,
+	/**  One or two plain sentences: what is so, and what to do about it. */
+	detail: string,
+	/**  The model aliases its version serves, cheapest first. Empty unless the version was read. */
+	aliases: string[],
+};
+
+/**  What a look at the CLI found. Nothing here is a credential. */
+export type Probe_Serialize = {
+	/**  Where it stands. */
+	state: State,
+	/**  The version it reported (`2.1.328`), when it reported one. */
+	version: string | null,
+	/**  The plan it reports (`Claude Max`), when signed in and it names one. */
+	plan: string | null,
+	/**  One or two plain sentences: what is so, and what to do about it. */
+	detail: string,
+	/**  The model aliases its version serves, cheapest first. Empty unless the version was read. */
+	aliases: string[],
+};
 
 /**  A snapshot for the UI's diagnostics. */
 export type ProxyStats = ProxyStats_Serialize | ProxyStats_Deserialize;
@@ -1284,6 +1334,19 @@ export type SourceView_Serialize = {
 	/**  Whether this build carries a Hermes runtime at all (a source build does not, and always uses the machine's Hermes). */
 	carries_runtime: boolean,
 };
+
+/**  Where the CLI stands, in the words a person needs. */
+export type State = 
+/**  No `claude` was found. */
+"not_installed" | 
+/**  Installed, and it says it is not signed in. */
+"signed_out" | 
+/**  Installed and signed in, but with a key or a cloud login that bills API usage, not the subscription. */
+"metered" | 
+/**  Signed in, but older than the oldest model's minimum, or its version could not be read. */
+"old_version" | 
+/**  Installed, signed in with a Claude account, and new enough for at least one model. */
+"signed_in";
 
 /**  What `setup_advance` answers. */
 export type Status = Status_Serialize | Status_Deserialize;

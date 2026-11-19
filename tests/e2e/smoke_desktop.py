@@ -64,6 +64,14 @@ def wait_for(fn, what: str, timeout: float = 60.0):
     raise SystemExit(f"timed out waiting for {what} ({last})")
 
 
+def dump_logs(home: Path, keep: int = 3000) -> None:
+    """Prints the tail of every log under the Hermes home, for a failure's report."""
+    for log in sorted(home.rglob("*.log"))[:12]:
+        with contextlib.suppress(OSError):
+            tail = log.read_bytes()[-keep:].decode(errors="replace")
+            print(f"--- {log.relative_to(home)} (last {keep} bytes)", tail, sep="\n")
+
+
 def main() -> int:
     if len(sys.argv) < 2 or not shutil.which("xvfb-run") or not shutil.which("WebKitWebDriver"):
         print("usage: smoke_desktop.py <app> [shot.png]; needs xvfb-run and WebKitWebDriver", file=sys.stderr)
@@ -140,7 +148,19 @@ def main() -> int:
             script = "return Array.from(document.querySelectorAll('.ui-prose')).map((p) => p.innerText).join(' | ')"
             return call("POST", f"{s}/execute/sync", {"script": script, "args": []})["value"]
 
-        wait_for(lambda: REPLY in agent_text(), "the streamed reply in the conversation", 90)
+        try:
+            wait_for(lambda: REPLY in agent_text(), "the streamed reply in the conversation", 90)
+        except SystemExit:
+            # Say what the stack and the window were doing: a bare timeout is all a runner's log would hold.
+            with contextlib.suppress(Exception):
+                print("--- the window's text:", text().strip()[:1500], sep="\n")
+            with contextlib.suppress(Exception):
+                if shot:  # the window as it was, for the job's artifact
+                    import base64
+
+                    Path(shot).write_bytes(base64.b64decode(call("GET", f"{s}/screenshot")["value"]))
+            dump_logs(Path(info["home"]))
+            raise
         assert "proration" not in text(), "no mock draft or mock data in the live window"
         time.sleep(1)
         print("streamed reply seen in the window:", REPLY)

@@ -4,6 +4,7 @@
 //! and notifications. The UI owns the experience and the backend (Hermes plus the plugin) owns the work.
 
 pub mod brand;
+pub mod claude;
 pub mod cli;
 pub mod commands;
 pub mod config;

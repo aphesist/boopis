@@ -249,8 +249,8 @@ async fn run(cli: Cli) -> Result<ExitCode> {
             run_oneshot(name, Some(&input.json)).await
         }
         Command::ModsWorker => {
-            // The worker serves a channel, not the log: no logging, and no stdout frames.
-            hx::mods::run_worker().map(|()| ExitCode::SUCCESS)
+            // `main` runs the worker before it builds this runtime, so this arm is never reached.
+            unreachable!("mods-worker runs without an async runtime")
         }
         Command::Sandbox { action } => {
             init_logging(&cli, "warn")?;
@@ -266,8 +266,27 @@ async fn run(cli: Cli) -> Result<ExitCode> {
     }
 }
 
+/// The sandboxed mods worker. It serves a channel, not the log: no logging, and no stdout frames.
+///
+/// It runs before, and without, the async runtime. The multi-thread runtime starts one thread per
+/// core, and the worker's process allowance (`hx::mods`, `max_processes`) covers only its own main
+/// and reader threads: on a machine where the limit binds (any user but root) the runtime's
+/// threads were refused and the worker panicked at startup.
+fn run_mods_worker() -> ExitCode {
+    match hx::mods::run_worker() {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("hx: {e:#}");
+            ExitCode::from(70)
+        }
+    }
+}
+
 fn main() -> ExitCode {
     let cli = Cli::parse();
+    if matches!(cli.command, Command::ModsWorker) {
+        return run_mods_worker();
+    }
     let runtime = match tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()

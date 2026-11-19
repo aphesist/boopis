@@ -32,7 +32,7 @@ A command never returns the new state for the UI to apply. The UI calls `bots.se
 | `user` | `Watch<User>` | | shell (account menu, avatar) |
 | `sessions` | `list`, `archived` (`Watch<SessionSummary[]>`), `conversation(id)` (`Feed<Conversation, ConversationEvent>`), `diff(id, {blank})`, `draft()` | `create`, `rename`, `fork`, `archive`, `restore`, `send(id, text, meta)`, `stop`, `answerBlank`, `openPullRequest` | session tab, list, palette, title |
 | `details` | `context`, `todos`, `changes`, `output`, `connectors`, `environment`, `governance`, `ledger` (all `Watch`) | `compactContext`, `setGovernance`, `setConnector`, `signIn` | details panel, composer chips, dock (context) |
-| `bots` | `Feed<BotsSnapshot, BotsEvent>` (bots and their threads), `catalog()` | `send(id, text, via)`, `stop`, `decide`, `update`, `create`, `archive` | bots tab, dock sessions, palette |
+| `bots` | `Feed<BotsSnapshot, BotsEvent>` (bots and their threads), `catalog()`, `archived` (`Watch<ArchivedBot[]>`, newest first) | `send(id, text, via)`, `stop`, `decide`, `update`, `create`, `archive`, `restore(archivedId)` | bots tab (roster, Archived group), dock sessions, palette ("Restore bot…") |
 | `waits` | `Feed<Wait[], WaitsEvent>`: approvals, open questions and forms (`kind: 'form'`, data: a `FormSpec`) that wait on the user | `resolve(id, outcome)` (never for a form) | dock, shell attention |
 | `forms` | `can` (what this build can run: sign-in, upload, folder), `pickerItems(kind)` | `submit(id, {values, secrets})`, `cancel(id)`, `signin(id, field)`, `pickFolder()` | the form card (inline, in the dock, first-run) |
 | `run` | `current: Watch<RunSnapshot>` | `stop`, `setSetting` | dock |
@@ -102,7 +102,8 @@ The v6 mock-up read `HX.data` (the `data.js` file) and mutated it from three mod
 | `bots` model choices | `model.options` of the attached profile (a profile argument is refused with `profile_mismatch`); a new profile mirrors those keys |
 | a bot's schedule and recent sessions | `cron.manage` and `session.list` on the teammate's own link: `connect(profile)` is Hermes's `gateway attach` bound to that profile (the `profile` param of those methods is refused on the user's link) |
 | running | Hermes's own "active now" rule: it or a worker of it wrote within 90 s (`info.running`; null when Hermes sends neither) |
-| `bots.admin` create, save, archive, restore, delete | `profiles.create` (`no_alias`), `profiles.configure`, `plugin.boopis.bots.*` (Hermes's `profile rename` and `profile delete` through its CLI: the gateway has no method for either) |
+| `bots.archived`, `bots.restore` (the Archived group and the palette's "Restore bot…") | `plugin.boopis.bots.read` (`archived`, newest first) and `bots.restore` (the plugin refuses a name in use again; the provider says so first, in the plugin's words). `Bot.madeOutside` is `bots.read`'s `record: null` with no `problem`: boopis has no `boopis/bot.json` for the profile; a plugin that did not answer marks nothing |
+| `bots.admin` create, save, archive, delete | `profiles.create` (`no_alias`), `profiles.configure`, `plugin.boopis.bots.*` (Hermes's `profile rename` and `profile delete` through its CLI: the gateway has no method for either) |
 | a bot's look and boopis's own settings | the plugin's store, `<profile>/boopis/bot.json`; a bot with no look has the one its name gives it (`data/looks.ts`), never stored until it is changed |
 | `schedules` | the teammates' jobs: pause and resume through `cron.manage`; Hermes has no run-now method, so `runNow` is `unavailable` |
 

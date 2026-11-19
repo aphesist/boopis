@@ -159,6 +159,10 @@ async fn socket_path(home: &Path) -> std::path::PathBuf {
 }
 
 #[cfg(not(unix))]
+#[allow(
+    clippy::unused_async,
+    reason = "keeps the signature the same as on Unix, where the socket is read asynchronously"
+)]
 async fn query(
     _home: &Path,
     _request: &serde_json::Value,

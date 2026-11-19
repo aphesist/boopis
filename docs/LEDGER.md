@@ -54,7 +54,7 @@ Automation grants (`docs/AUTOMATION.md` section 9) follow the same path: `grant.
 - `latency_ms`;
 - `request_id`;
 - `usage_schema: 2`;
-- `subscription` (bool: billed to a plan, not the API).
+- `subscription` (bool: billed to a plan, not the API). The usage of Hermes's Claude subscription plugin (provider `claude-subscription-directsdk-experimental`, ADR-0029) always carries `true`, whatever the settings say (`PLAN_PROVIDERS`); the `subscription_providers` setting only adds providers. Such a record bills zero, and a list price the CLI reports natively (`total_cost_usd`) is never read, stored or shown as a charge: dollars come from tokens, and an API-equivalent figure exists only when the price table has the model. `ledger.stats` carries `subscription: true` when every request so far was a plan's, so the UI can say the plan covers it.
 
 Providers that report a single cache-write bucket put it in `cache_write_5m_tokens`.
 

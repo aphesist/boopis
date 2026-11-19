@@ -40,13 +40,23 @@ struct Fake {
 
 impl Fake {
     fn start() -> Self {
-        let mut child = Command::new(env!("CARGO_BIN_EXE_hx"))
+        Self::start_as(None)
+    }
+
+    /// Starts `hx serve` as `uid` (and the same gid) when one is given. Root is exempt from
+    /// `RLIMIT_NPROC`, so a run as root never shows what a process limit does to the workers.
+    fn start_as(uid: Option<u32>) -> Self {
+        use std::os::unix::process::CommandExt;
+        let mut command = Command::new(env!("CARGO_BIN_EXE_hx"));
+        command
             .arg("serve")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .spawn()
-            .unwrap();
+            .stderr(Stdio::null());
+        if let Some(id) = uid {
+            command.uid(id).gid(id);
+        }
+        let mut child = command.spawn().unwrap();
         let stdin = child.stdin.take().unwrap();
         let stdout = child.stdout.take().unwrap();
         let (tx, rx) = mpsc::channel();
@@ -202,7 +212,10 @@ fn example(name: &str) -> PathBuf {
 
 /// A started server, or None (with the reason printed) when mods cannot run here.
 fn available() -> Option<Fake> {
-    let mut hx = Fake::start();
+    available_with(Fake::start())
+}
+
+fn available_with(mut hx: Fake) -> Option<Fake> {
     let caps = hx.ok("mods.capabilities", Value::Null);
     if caps["available"] == true {
         Some(hx)
@@ -499,6 +512,45 @@ fn unloading_and_stopping_a_session() {
         )
         .unwrap_err();
     assert_eq!(e["data"]["code"], "hx.mods.no_session");
+}
+
+/// The worker's process allowance is counted for every user but root, so a run as root passes
+/// whatever the allowance is. This runs `hx` as an ordinary user (as CI's runners and a person's own
+/// machine do) and loads several mods, each a worker whose main and reader threads start inside it.
+#[test]
+fn every_worker_starts_for_an_ordinary_user() {
+    let owner = std::fs::metadata("/proc/self")
+        .map(|m| std::os::unix::fs::MetadataExt::uid(&m))
+        .unwrap();
+    // `nobody`, only to stop being root. Anyone else is already bound by the limit.
+    let user = (owner == 0).then_some(65534);
+    let Some(mut hx) = available_with(Fake::start_as(user)) else {
+        return;
+    };
+    let dir = tempfile_dir();
+    for n in ["a", "b", "c"] {
+        write_mod(
+            &dir,
+            n,
+            &format!("export function register(on) {{ on('go', async () => '{n}'); }}"),
+        );
+    }
+    let plugins: Vec<Value> = ["a", "b", "c"]
+        .iter()
+        .map(|n| json!({ "dir": dir.join(n) }))
+        .collect();
+    let loaded = hx.ok(
+        "mods.load",
+        json!({ "session_id": "u", "plugins": plugins }),
+    );
+    assert_eq!(loaded["loaded"].as_array().map(Vec::len), Some(3), "{loaded}");
+    assert_eq!(loaded["failed"], json!([]), "{loaded}");
+    let a = hx.ok(
+        "mods.dispatch",
+        json!({ "session_id": "u", "event": "go", "payload": {} }),
+    );
+    assert_eq!(a["answered"], true, "{a}");
+    hx.ok("mods.unload", json!({ "session_id": "u" }));
 }
 
 fn pid_of(hx: &mut Fake, session: &str, plugin: &str) -> u32 {

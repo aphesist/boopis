@@ -17,7 +17,7 @@ export interface TierWire { name: string; model: { provider: string; id: string 
 export interface CascadeWire { ladder?: TierWire[]; status?: string; task_id?: string; tier?: string; tier_index?: number; attempt?: number }
 export interface StatsWire {
   tokens?: { input_uncached?: number; output?: number; cache_read?: number; reasoning?: number; cache_write?: number };
-  cost_usd?: number | null; cost_api_equivalent_usd?: number | null; unpriced_models?: string[]; round_trips?: number; escalations?: number;
+  cost_usd?: number | null; cost_api_equivalent_usd?: number | null; subscription?: boolean; unpriced_models?: string[]; round_trips?: number; escalations?: number;
   rollbacks?: number; blanks?: number; approvals?: number;
 }
 export interface DescribeWire {

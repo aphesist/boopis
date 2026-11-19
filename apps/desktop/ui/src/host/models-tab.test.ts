@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 /* Settings > Models against fakes: the plan Hermes reports, the ladder the host read, and "Change models". */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ladderRows, mountModels } from './models-tab';
+import { claudeRows, ladderRows, mountModels } from './models-tab';
 import type { ModelsDeps } from './models-tab';
 import { changeModels } from './change-models';
 import { planView } from './free-tier';
@@ -10,7 +10,15 @@ import type { SetupBridge } from './setup-bridge';
 
 const NOW = 1_800_000_000_000;
 const free = planView({ status: { has_guest: true, enabled: true, available: true, notice_pending: false, model: 'nous/welcome', label: 'Nous · free tier' }, options: null, limit: null }, NOW);
-const SET: ModelsView = { state: 'set', tiers: [{ name: 'small', model: 'openrouter/a-3b:free' }, { name: 'big', model: 'openrouter/b-120b:free' }] };
+type Claude = ModelsView['claude'];
+const CLAUDE: Record<'ready' | 'out' | 'missing' | 'old' | 'metered', Claude> = {
+  ready: { state: 'signed_in', version: '2.1.328', plan: 'Claude Max', detail: 'Claude Code 2.1.328 is signed in (Claude Max).', aliases: ['haiku', 'sonnet', 'opus'] },
+  out: { state: 'signed_out', version: '2.1.328', plan: null, detail: 'Claude Code 2.1.328 is installed but not signed in. Sign in by running `claude auth login` in a terminal, then choose Check again.', aliases: ['haiku', 'sonnet', 'opus'] },
+  missing: { state: 'not_installed', version: null, plan: null, detail: 'Claude Code is not installed. Install it with `npm install -g @anthropic-ai/claude-code`, then sign in by running `claude auth login` in a terminal.', aliases: [] },
+  old: { state: 'old_version', version: '2.1.200', plan: null, detail: 'Claude Code 2.1.200 is older than the oldest one that serves a Claude model here (2.1.280). Update it with `claude update`, then choose Check again.', aliases: [] },
+  metered: { state: 'metered', version: '2.1.328', plan: null, detail: 'Claude Code 2.1.328 is signed in with an Anthropic API key, which bills API usage instead of your Claude subscription.', aliases: ['haiku', 'sonnet', 'opus'] }
+};
+const SET: ModelsView = { state: 'set', tiers: [{ name: 'small', model: 'openrouter/a-3b:free' }, { name: 'big', model: 'openrouter/b-120b:free' }], claude: CLAUDE.missing, claude_plugin: false };
 const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 
 function deps(over: Partial<ModelsDeps> = {}): ModelsDeps & { calls: string[] } {
@@ -24,7 +32,7 @@ describe('Settings > Models', () => {
     const panel = document.createElement('div');
     await mountModels(panel, deps());
     const heads = [...panel.querySelectorAll('h3')].map((h) => h.textContent);
-    expect(heads).toEqual(['Plan', 'Model ladder', 'Change']);
+    expect(heads).toEqual(['Plan', 'Model ladder', 'Claude subscription', 'Change']);
     expect(panel.textContent).toContain('Free (Nous · free tier)');
     expect(panel.textContent).toContain('nous/welcome');
     const rows = [...panel.querySelectorAll('.ui-ladder--list > li')];
@@ -39,14 +47,14 @@ describe('Settings > Models', () => {
 
   it('says the ladder is the built-in one when none is saved, and lists no tiers it was not told of', async () => {
     const panel = document.createElement('div');
-    await mountModels(panel, deps({ ladder: () => Promise.resolve({ state: 'default', tiers: [] }) }));
+    await mountModels(panel, deps({ ladder: () => Promise.resolve({ state: 'default', tiers: [], claude: CLAUDE.missing, claude_plugin: false }) }));
     expect(panel.querySelector('.ui-ladder--list')).toBeNull();
     expect(panel.textContent).toContain('No ladder is saved here, so boopis uses its built-in Claude ladder');
   });
 
   it('says a saved ladder it cannot read is not shown, and that Hermes could not be asked when it could not', async () => {
     const odd = document.createElement('div');
-    await mountModels(odd, deps({ ladder: () => Promise.resolve({ state: 'unreadable', tiers: [] }) }));
+    await mountModels(odd, deps({ ladder: () => Promise.resolve({ state: 'unreadable', tiers: [], claude: CLAUDE.missing, claude_plugin: false }) }));
     expect(odd.textContent).toContain('does not read as a list of named tiers');
     expect(odd.querySelector('.ui-ladder--list')).toBeNull();
     const down = document.createElement('div');
@@ -64,13 +72,13 @@ describe('Settings > Models', () => {
 
   it('asks both again on refresh, so a changed plan and a changed ladder show', async () => {
     const panel = document.createElement('div');
-    let ladder: ModelsView = { state: 'default', tiers: [] };
+    let ladder: ModelsView = { state: 'default', tiers: [], claude: CLAUDE.missing, claude_plugin: false };
     const m = await mountModels(panel, deps({ ladder: () => Promise.resolve(ladder) }));
     expect(panel.querySelectorAll('.ui-ladder--list > li')).toHaveLength(0);
     ladder = SET;
     await m.refresh();
     expect(panel.querySelectorAll('.ui-ladder--list > li')).toHaveLength(2);
-    expect(panel.querySelectorAll('section'), 'redrawn in place, not appended').toHaveLength(3);
+    expect(panel.querySelectorAll('section'), 'redrawn in place, not appended').toHaveLength(4);
   });
 
   it('"Change models" asks the question again and steps the dialog aside; a refusal is said and the dialog stays', async () => {
@@ -90,9 +98,60 @@ describe('Settings > Models', () => {
   });
 
   it('rows are plain text with no markup from a tier name or model', () => {
-    const rows = ladderRows({ state: 'set', tiers: [{ name: '<b>x</b>', model: 'a"b/c' }] }).join('');
+    const rows = ladderRows({ state: 'set', tiers: [{ name: '<b>x</b>', model: 'a"b/c' }], claude: CLAUDE.missing, claude_plugin: false }).join('');
     expect(rows).not.toContain('<b>x</b>');
     expect(rows).toContain('&lt;b&gt;x&lt;/b&gt;');
+  });
+});
+
+describe('Settings > Models: the Claude subscription', () => {
+  const text = (v: ModelsView | { error: string }): string => { const d = document.createElement('div'); d.innerHTML = claudeRows(v).join(''); return d.textContent ?? ''; };
+  const view = (claude: Claude, plugin = false): ModelsView => ({ state: 'default', tiers: [], claude, claude_plugin: plugin });
+
+  it('says signed in with the plan and the version, and that the plugin is there', () => {
+    const t = text(view(CLAUDE.ready, true));
+    expect(t).toContain('Signed in (Claude Max)');
+    expect(t).toContain('2.1.328');
+    expect(t).toContain('Installed in Hermes');
+    expect(t).toContain('boopis never sees your Claude login');
+    expect(t).not.toContain('Check again');
+  });
+  it('says not installed in its own words, with the commands to run and a way to look again', () => {
+    const t = text(view(CLAUDE.missing));
+    expect(t).toContain('Not installed');
+    expect(t).toContain('npm install -g @anthropic-ai/claude-code');
+    expect(t).toContain('claude auth login');
+    expect(t).toContain('Not reported');
+    expect(t).toContain('Check again');
+  });
+  it('says signed out, a login that is not the subscription, and an old version, each apart from the others', () => {
+    expect(text(view(CLAUDE.out))).toContain('Not signed in');
+    expect(text(view(CLAUDE.out))).toContain('2.1.328');
+    expect(text(view(CLAUDE.metered))).toContain('Signed in, but not to your subscription');
+    expect(text(view(CLAUDE.metered))).toContain('bills API usage');
+    expect(text(view(CLAUDE.old))).toContain('Needs an update');
+    expect(text(view(CLAUDE.old))).toContain('claude update');
+    expect(text(view(CLAUDE.old))).toContain('2.1.200');
+  });
+  it('says it could not be read when the host could not be asked', () => { expect(text({ error: 'hermes is not installed' })).toContain('Not read: hermes is not installed'); });
+  it('is drawn in the tab, from the same read as the ladder, and "Check again" reads again', async () => {
+    const panel = document.createElement('div');
+    let claude = CLAUDE.out;
+    let reads = 0;
+    await mountModels(panel, deps({ ladder: () => { reads += 1; return Promise.resolve(view(claude)); } }));
+    expect(reads, 'one read for both sections').toBe(1);
+    expect(panel.textContent).toContain('Not signed in');
+    claude = CLAUDE.ready;
+    panel.querySelector<HTMLButtonElement>('#hx-claude-check')?.click();
+    await tick();
+    expect(reads).toBe(2);
+    expect(panel.textContent).toContain('Signed in (Claude Max)');
+    expect(panel.querySelector('#hx-claude-check')).toBeNull();
+  });
+  it('is plain text: nothing from the CLI becomes markup', () => {
+    const t = claudeRows(view({ ...CLAUDE.ready, plan: '<img src=x>', version: '"><b>' })).join('');
+    expect(t).not.toContain('<img');
+    expect(t).toContain('&lt;img src=x&gt;');
   });
 });
 

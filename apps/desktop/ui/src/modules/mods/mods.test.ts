@@ -10,6 +10,7 @@ import { createModsModel } from '../../data/mods-model';
 import { setTokenReader } from '../../components/mod-colors';
 import { fixtures } from '../../host/testing';
 import { themeApi } from '../../styles/theme';
+import { installPreset } from '../../styles/testing';
 import { state } from '../../core/state';
 import '../cards';
 import { ctl } from './ctl';
@@ -20,6 +21,8 @@ import { queued, resetToasts, dismiss } from './toasts';
 import { openCards, previewingCard, recheck, themeCard, themeColors, placeThemeCard, swatchesOf } from './theme-card';
 import type { HxCard } from '../cards';
 
+/* jsdom has no stylesheet: the catalog preset's colours go on the page, so the theme card's contrast guard reads what a browser would */
+beforeAll(() => { installPreset('catalog'); });
 let reducedMotion = false;
 vi.mock('../../core/dom', async (orig) => ({ ...(await orig<typeof import('../../core/dom')>()), reduced: () => reducedMotion }));
 
@@ -443,6 +446,63 @@ describe('the theme card, and every way its preview ends', () => {
     expect(localStorage.getItem('hx.v6.theme')).toContain('b8a4f0');
     expect(c.textContent).toContain('Kept dusk’s colours. Undo in Settings, Appearance');
     expect(c.hasAttribute('data-previewing')).toBe(false);
+  });
+  describe('a colour that would make text hard to read', () => {
+    /* dark text on the theme's dark frame, and quiet text that is dark too: both would be unreadable, so neither is applied */
+    const DARK_TEXT = { '--text': '#1a1a1a', '--text-quiet': '#222222', '--brass': '#b8a4f0', '--bg-2': '#201e31' };
+    const text = (): string => root.style.getPropertyValue('--text');
+    it('is not applied while the card previews, the rest is, and the card says which it skipped in plain words', () => {
+      const c = offer(DARK_TEXT);
+      expect([themeApi.previewing(), brass(), root.style.getPropertyValue('--bg-2'), text(), root.style.getPropertyValue('--text-quiet')]).toEqual([true, '#b8a4f0', '#201e31', '', '']);
+      expect(c.querySelector('.cd-text')?.textContent).toContain('Skipped 2 colours that would make text hard to read: text on surface, quiet text.');
+      expect(c.querySelector('.cd-live')?.textContent).toBe('Previewing');
+    });
+    it('says nothing about skipping when every colour holds', () => {
+      const c = offer(DUSK);
+      expect(c.querySelector('.cd-text')?.textContent).not.toContain('Skipped');
+    });
+    it('Keep stores only what was applied, and the receipt says what was left out', async () => {
+      const c = offer(DARK_TEXT);
+      click(c, 'submit'); await tick();
+      const saved = JSON.parse(localStorage.getItem('hx.v6.theme') ?? '{}') as { colors: Record<string, string> };
+      expect(saved.colors).toEqual({ '--brass': '#b8a4f0', '--bg-2': '#201e31' });
+      expect([c.state, text()]).toEqual(['done', '']);
+      expect(c.textContent).toContain('Kept dusk’s colours, without 2 that would make text hard to read. Undo in Settings, Appearance');
+    });
+    it('Reject, and Esc, restore the previous theme as they do for any theme', () => {
+      const c = offer(DARK_TEXT);
+      click(c, 'cancel');
+      expect([themeApi.previewing(), brass(), text(), c.state]).toEqual([false, '', '', 'cancelled']);
+      expect(localStorage.getItem('hx.v6.theme') ?? '').not.toContain('b8a4f0');
+      const d = offer(DARK_TEXT, 'dusk2');
+      d.querySelector<HTMLElement>('[data-action="submit"]')?.focus();
+      d.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      expect([themeApi.previewing(), brass(), d.state]).toEqual([false, '', 'deferred']);
+    });
+    it('another theme chosen ends the preview, and a card opened again checks again', () => {
+      const c = offer(DARK_TEXT);
+      themeApi.preset('graphite');
+      expect([themeApi.previewing(), root.style.getPropertyValue('--bg-2')]).toEqual([false, '']);
+      click(c, 'reopen');
+      expect(c.hasAttribute('data-previewing')).toBe(false);
+    });
+    it('a card Kept without a preview showing it is checked before it is stored', async () => {
+      const c = offer(DARK_TEXT);
+      /* the card is set aside (another tab): no preview holds it, and Keep is still the guard's */
+      c.closest('.ui-entry')?.setAttribute('hidden', '');
+      recheck();
+      expect(themeApi.previewing()).toBe(false);
+      click(c, 'submit'); await tick();
+      const saved = JSON.parse(localStorage.getItem('hx.v6.theme') ?? '{}') as { colors: Record<string, string> };
+      expect(saved.colors).toEqual({ '--brass': '#b8a4f0', '--bg-2': '#201e31' });
+      expect(c.textContent).toContain('without 2 that would make text hard to read');
+    });
+    it('a mod whose every colour would fail is told so on Keep, and nothing changes', async () => {
+      const c = offer({ '--text': '#1a1a1a' });
+      click(c, 'submit'); await tick();
+      expect(localStorage.getItem('hx.v6.theme') ?? '').not.toContain('1a1a1a');
+      expect(c.textContent).toContain('Kept nothing: every colour of dusk would make text hard to read');
+    });
   });
   it('Reject restores the previous theme at once and says it is back as it was', () => {
     const c = offer(DUSK);

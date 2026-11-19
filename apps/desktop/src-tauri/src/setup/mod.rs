@@ -29,6 +29,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use specta::Type;
 
+use crate::claude::{self, ClaudeCli, SystemClaude};
 use crate::commands::Json;
 use crate::error::{Error, Result};
 use crate::runtime::{Outcome, Pass, Plan};
@@ -247,12 +248,18 @@ pub struct ModelsView {
     pub state: providers::LadderState,
     /// Its tiers, cheapest first; empty unless `state` is `set`.
     pub tiers: Vec<providers::LadderTier>,
+    /// The user's Claude Code as the Claude subscription plugin would see it: signed in or not, and its version.
+    pub claude: claude::Probe,
+    /// Whether Hermes lists the Claude subscription plugin's provider.
+    pub claude_plugin: bool,
 }
 
 /// The setup engine for one profile.
 pub struct Setup {
     ops: Arc<dyn HermesOps>,
     secrets: Arc<dyn SecretStore>,
+    /// The user's own Claude Code, looked at for the Claude subscription (ADR-0029).
+    claude: Arc<dyn ClaudeCli>,
     bundle: Bundle,
     install_command: String,
     /// The bundled Hermes runtime to unpack first (ADR-0023); `None` when the app uses a Hermes the user already has.
@@ -303,11 +310,19 @@ impl Setup {
         Self {
             ops,
             secrets,
+            claude: Arc::new(SystemClaude::new()),
             bundle,
             install_command: crate::hermes::install::installer_command().to_owned(),
             runtime: None,
             progress: None,
         }
+    }
+
+    /// Look at Claude Code through `claude` instead of the `claude` on this computer.
+    #[must_use]
+    pub fn with_claude(mut self, claude: Arc<dyn ClaudeCli>) -> Self {
+        self.claude = claude;
+        self
     }
 
     /// Tell `sink` how far long steps have come while `advance` runs.
@@ -397,6 +412,16 @@ impl Setup {
             });
             state.picks.clear();
             state.reopen_models = false;
+            state.claude_consent = false;
+        } else if id == "setup.claude" || id == "setup.claude.install" {
+            if answer.cancelled {
+                // back to the models question, with every choice it has
+                state.choice = None;
+                state.reopen_models = true;
+                state.claude_consent = false;
+            } else if id == "setup.claude.install" {
+                state.claude_consent = true;
+            }
         } else if id == "setup.openrouter" {
             if answer.cancelled {
                 state.choice = Some(String::new());
@@ -439,9 +464,19 @@ impl Setup {
     /// # Errors
     /// `hx.config.invalid` when Hermes cannot be asked.
     pub async fn models_view(&self) -> Result<ModelsView> {
-        let saved = self.ops.config_get(providers::LADDER_KEY).await?;
-        let (state, tiers) = providers::ladder_of(saved.as_ref());
-        Ok(ModelsView { state, tiers })
+        let (saved, probe, plugins) = tokio::join!(
+            self.ops.config_get(providers::LADDER_KEY),
+            self.claude.probe(),
+            self.ops.plugins()
+        );
+        let (state, tiers) = providers::ladder_of(saved?.as_ref());
+        Ok(ModelsView {
+            state,
+            tiers,
+            claude: probe,
+            // a Hermes that cannot list its plugins says nothing about this one
+            claude_plugin: plugins.is_ok_and(|l| l.iter().any(|p| p.name == claude::PROVIDER_ID)),
+        })
     }
 
     /// The user wants to choose the models again (from a limit notice): forget the choice and the ladder question's answer,
@@ -457,6 +492,7 @@ impl Setup {
         state.picks.clear();
         state.free_note = None;
         state.reopen_models = true;
+        state.claude_consent = false;
         state.pending_form = None;
         state.done_at = None;
         state::save(&home, &state)
@@ -487,7 +523,7 @@ impl Setup {
         state.pending_form = run.form.as_ref().map(|f| f.form_id.clone());
         let finished = !run.stop;
         let receipt = if finished {
-            Some(self.receipt(&run.steps, &state).await)
+            Some(Self::receipt(&run.steps, &state))
         } else {
             None
         };
@@ -750,6 +786,8 @@ impl Setup {
             picks: &state.picks,
             free_note: state.free_note.as_deref(),
             reopen: state.reopen_models,
+            claude_consent: state.claude_consent,
+            claude: self.claude.as_ref(),
         };
         let out = providers::run(
             self.ops.as_ref(),
@@ -776,7 +814,14 @@ impl Setup {
                 run.push(id, title, StepState::NeedsInput, form.title.clone(), None);
                 run.form = Some(form);
             }
-            Err(e) => run.blocked(id, title, "hx.setup.config_failed", &e),
+            Err(e) => {
+                // the subscription's own refusals (an unreachable catalog, a refused install) carry their own codes
+                let code = match &e {
+                    Error::Setup(code, _) => *code,
+                    _ => "hx.setup.config_failed",
+                };
+                run.blocked(id, title, code, &e);
+            }
         }
     }
 
@@ -821,20 +866,29 @@ impl Setup {
         Ok(())
     }
 
-    async fn receipt(&self, steps: &[Step], state: &State) -> Receipt {
+    fn receipt(steps: &[Step], state: &State) -> Receipt {
         let mut lines: Vec<String> = steps
             .iter()
             .filter(|s| !s.detail.is_empty())
             .map(|s| format!("{}: {}", s.title, s.detail))
             .collect();
-        if let Ok(list) = self.ops.plugins().await
-            && providers::subscription_enabled(&list)
-        {
-            lines.push("The Claude subscription plugin is enabled; choose its models in the plugin settings.".into());
-        }
         if state.consent == Consent::Declined {
             lines.push("You declined the Hermes settings, so some features are off (see Hermes settings above).".into());
         }
+        if cfg!(windows) {
+            lines.extend(windows_gaps().iter().map(|l| (*l).to_owned()));
+        }
         Receipt { lines }
     }
+}
+
+/// What does not work in the Windows build yet, one line each, for the receipt. The same list is in `docs/RELEASING.md`
+/// ("Windows") and is shown only on Windows. Nothing here is hidden: each line says what is missing and what still works.
+#[must_use]
+pub fn windows_gaps() -> [&'static str; 3] {
+    [
+        "Windows: API keys saved in the keychain cannot reach Hermes yet (the plugin's secret channel has no Windows transport). The free Nous models and the Claude subscription need no key.",
+        "Windows: the command sandbox has not been run on Windows yet. Where it cannot start, a governed ship is refused with the reason (hx.sandbox.unavailable); a command never runs unsandboxed.",
+        "Windows: mods are off (hx.mods.unavailable): the mods worker has no private channel on Windows yet.",
+    ]
 }

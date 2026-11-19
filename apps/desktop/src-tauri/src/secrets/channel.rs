@@ -286,6 +286,10 @@ pub async fn start(
 /// # Errors
 /// Always `Unavailable`.
 #[cfg(not(unix))]
+#[allow(
+    clippy::unused_async,
+    reason = "keeps the signature the same as on Unix, where the socket is bound asynchronously"
+)]
 pub async fn start(
     _store: Arc<dyn SecretStore>,
     _auth: &Auth,

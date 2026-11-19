@@ -8,8 +8,12 @@ use std::path::Path;
 
 use serde_json::{Value, json};
 
-use super::ops::HermesOps;
+use super::ops::{CatalogEntry, HermesOps};
 use super::{DiffLine, Form};
+use crate::claude::{
+    self, CATALOG_NAME, ClaudeCli, INSTALL_COMMAND, LOGIN_COMMAND, PROVIDER_ID, Probe, State,
+};
+use crate::commands::Json;
 use crate::config::FREE_TIER_ENABLED;
 use crate::error::{Error, Result};
 use crate::free_tier::FreeTier;
@@ -22,8 +26,10 @@ const ANTHROPIC_VARS: &[&str] = &[
     "ANTHROPIC_TOKEN",
     "CLAUDE_CODE_OAUTH_TOKEN",
 ];
-/// The Claude subscription plugin, which signs in through the `claude` CLI instead of a key.
-pub const SUBSCRIPTION_PLUGIN: &str = "claude-subscription-directsdk";
+/// The choice that runs on the user's Claude subscription, through Hermes's official plugin and their own Claude Code (ADR-0029).
+pub const CLAUDE_SUBSCRIPTION: &str = "claude-subscription";
+/// What the choice is called.
+const CLAUDE_SUBSCRIPTION_LABEL: &str = "Claude subscription (your Claude Code login)";
 pub(crate) const LADDER_KEY: &str = "plugins.entries.boopis.settings.ladder";
 /// One tier of the governed ladder, as Hermes's configuration holds it (`{name, model: "provider/id"}`).
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, specta::Type)]
@@ -97,7 +103,6 @@ pub enum Outcome {
 }
 
 /// What the providers step knows from earlier calls.
-#[derive(Default)]
 pub struct Input<'a> {
     /// The user's earlier answer (`""` means skip, `None` means not asked).
     pub choice: Option<&'a str>,
@@ -107,6 +112,10 @@ pub struct Input<'a> {
     pub free_note: Option<&'a str>,
     /// The user asked to choose again.
     pub reopen: bool,
+    /// The user agreed to install the Claude subscription plugin from Hermes's catalog.
+    pub claude_consent: bool,
+    /// The user's Claude Code, looked at when the Claude subscription is offered or chosen.
+    pub claude: &'a dyn ClaudeCli,
 }
 
 /// Names of the variables in `<home>/.env` that have a value. Values are never read into the result.
@@ -260,10 +269,15 @@ pub async fn run(
         return Ok(Outcome::Done("keeps the tier ladder you set".into()));
     }
     match choice {
-        None => Ok(Outcome::Form(ladder_form(&named, input.free_note))),
+        None => Ok(Outcome::Form(ladder_form(
+            &named,
+            input.free_note,
+            &input.claude.probe().await,
+        ))),
         Some("anthropic") => Ok(Outcome::Form(credential_form("anthropic"))),
-        Some(FREE) if FREE_TIER_ENABLED => free_tier(ops, &named, restart).await,
+        Some(FREE) if FREE_TIER_ENABLED => free_tier(ops, &named, input.claude, restart).await,
         Some(OPENROUTER_FREE) => openrouter(ops, store, &env, &named, input, restart).await,
+        Some(CLAUDE_SUBSCRIPTION) => subscription(ops, input, restart).await,
         Some(pick) => single_tier(ops, store, &env, &named, pick, restart).await,
     }
 }
@@ -271,7 +285,12 @@ pub async fn run(
 /// Nous's free tier: ask Hermes (on a link that declares the Desktop) whether it can be used, let Hermes claim it when it
 /// can, and write only the governed ladder. Hermes writes the identity itself and no model config: "Never written to
 /// config.yaml, so it stops applying the moment the user configures a real model" (`trial_model`).
-async fn free_tier(ops: &dyn HermesOps, named: &[Named], restart: &mut bool) -> Result<Outcome> {
+async fn free_tier(
+    ops: &dyn HermesOps,
+    named: &[Named],
+    claude: &dyn ClaudeCli,
+    restart: &mut bool,
+) -> Result<Outcome> {
     let mut status = ops.free_tier_status().await?;
     if !status.available && status.enabled {
         let claimed = ops.free_tier_provision().await?;
@@ -282,13 +301,15 @@ async fn free_tier(ops: &dyn HermesOps, named: &[Named], restart: &mut bool) -> 
         }
     }
     if !status.available {
-        return Ok(unavailable(named, &unclaimed_note(&status)));
+        return Ok(unavailable(named, &unclaimed_note(&status), claude).await);
     }
     if status.model.trim().is_empty() {
         return Ok(unavailable(
             named,
             "Hermes reported the free tier as ready but named no model, so no ladder can be set.",
-        ));
+            claude,
+        )
+        .await);
     }
     // The free tier offers one model, so the ladder is that model at every tier. It is what Hermes reports now, never a
     // name written in this code.
@@ -300,9 +321,9 @@ async fn free_tier(ops: &dyn HermesOps, named: &[Named], restart: &mut bool) -> 
     )))
 }
 
-fn unavailable(named: &[Named], note: &str) -> Outcome {
+async fn unavailable(named: &[Named], note: &str, claude: &dyn ClaudeCli) -> Outcome {
     Outcome::Unavailable {
-        form: ladder_form(named, Some(note)),
+        form: ladder_form(named, Some(note), &claude.probe().await),
         note: note.to_owned(),
     }
 }
@@ -350,7 +371,9 @@ async fn openrouter(
         return Ok(unavailable(
             named,
             "OpenRouter's catalogue lists no free models right now.",
-        ));
+            input.claude,
+        )
+        .await);
     }
     if input.picks.is_empty() {
         return Ok(Outcome::Form(models_form(&catalogue)));
@@ -458,7 +481,7 @@ fn models_form(catalogue: &[String]) -> Form {
     )
 }
 
-fn ladder_form(named: &[Named], free_note: Option<&str>) -> Form {
+fn ladder_form(named: &[Named], free_note: Option<&str>, claude: &Probe) -> Form {
     let mut ids = Vec::new();
     let mut labels = Vec::new();
     let offer_free = FREE_TIER_ENABLED && free_note.is_none();
@@ -470,6 +493,9 @@ fn ladder_form(named: &[Named], free_note: Option<&str>) -> Form {
     labels.push("OpenRouter free models (needs a free OpenRouter key)".to_owned());
     ids.push("anthropic".to_owned());
     labels.push("Claude: haiku, sonnet, opus (needs an Anthropic API key)".to_owned());
+    // beside the other Claude choice and after the free ones, which stay first and the default (ADR-0027)
+    ids.push(CLAUDE_SUBSCRIPTION.to_owned());
+    labels.push(CLAUDE_SUBSCRIPTION_LABEL.to_owned());
     for p in named {
         for m in &p.models {
             ids.push(format!("{}/{m}", p.name));
@@ -487,6 +513,15 @@ fn ladder_form(named: &[Named], free_note: Option<&str>) -> Form {
     }
     if let Some(note) = free_note {
         let _ = write!(body, "\n\nThe free tier is not available: {note}");
+    }
+    if claude.usable() {
+        let _ = write!(
+            body,
+            "\n\nClaude subscription: {} It runs on your own Claude Code login, through Hermes's official plugin; boopis never sees your Claude login.",
+            claude.detail
+        );
+    } else {
+        let _ = write!(body, "\n\nClaude subscription: {}", claude.detail);
     }
     let default = ids[0].clone();
     Form::new(
@@ -537,10 +572,216 @@ async fn single_tier(
     Ok(Outcome::Done(format!("one tier: {model} on {provider}")))
 }
 
-/// Whether the Claude subscription plugin is enabled (it needs no key).
+/// Why the subscription needs the user before it can go on: what is missing, and the official commands that fix it. boopis runs
+/// neither: it has no login screen of its own, and checks the result through the CLI (ADR-0029).
+fn claude_form(probe: &Probe) -> Form {
+    let title = match probe.state {
+        State::NotInstalled => "Install Claude Code to use your Claude subscription",
+        State::SignedOut => "Sign in to Claude Code",
+        State::Metered => "Claude Code is not signed in with your Claude account",
+        State::OldVersion => "Update Claude Code",
+        State::SignedIn => "Claude Code is ready",
+    };
+    let mut steps: Vec<(String, String)> = Vec::new();
+    match probe.state {
+        State::NotInstalled => {
+            steps.push(("1. Install it".into(), format!("`{INSTALL_COMMAND}`")));
+            steps.push(("2. Sign in".into(), format!("`{LOGIN_COMMAND}`")));
+        }
+        State::SignedOut | State::Metered => {
+            steps.push(("Sign in".into(), format!("`{LOGIN_COMMAND}`")));
+        }
+        State::OldVersion => {
+            steps.push(("Update it".into(), format!("`{}`", claude::UPDATE_COMMAND)));
+        }
+        State::SignedIn => {}
+    }
+    let mut form = Form::new(
+        "setup.claude",
+        "setup",
+        title,
+        &format!(
+            "{}\n\nRun the command{} in a terminal, then choose Check again. Claude Code is Anthropic's own program: it does the signing in and keeps your login. boopis never sees, reads or stores it; it only asks Claude Code whether it is signed in.",
+            probe.detail,
+            if steps.len() == 1 { "" } else { "s" }
+        ),
+        json!({"type": "object", "properties": {}}),
+    );
+    form.contents = steps;
+    form.submit = Json(json!({"label": "Check again"}));
+    form.cancel = Json(json!({"label": "Choose another model"}));
+    form
+}
+
+/// What installing the plugin does, shown before anything is changed (the same review the connectors use).
+fn install_form(entry: &CatalogEntry, probe: &Probe, home: &Path) -> Form {
+    let mut form = Form::new(
+        "setup.claude.install",
+        "connector",
+        "Install the Claude subscription plugin?",
+        "Hermes runs your Claude subscription through its official plugin, which drives the Claude Code you signed in to yourself. Hermes installs the catalog's pinned, reviewed build; boopis does not copy or change it.",
+        json!({"type": "object", "properties": {}}),
+    );
+    let place = |sub: &str| {
+        if sub.is_empty() {
+            String::new()
+        } else {
+            format!("#{sub}")
+        }
+    };
+    form.contents = vec![
+        (
+            "Plugin".into(),
+            format!(
+                "{} {} ({}, from Hermes's plugin catalog)",
+                entry.name, entry.version, entry.tier
+            ),
+        ),
+        (
+            "From".into(),
+            format!("{}{}", entry.repo, place(&entry.subdir)),
+        ),
+        (
+            "Into".into(),
+            format!("{}", super::ops::plugins_dir(home).display()),
+        ),
+        (
+            "What it does".into(),
+            if entry.provides.is_empty() {
+                "adds one model provider, and registers no tool, hook or middleware".into()
+            } else {
+                format!(
+                    "adds one model provider, and registers {}",
+                    entry.provides.join("; ")
+                )
+            },
+        ),
+        (
+            "Your login".into(),
+            "stays with Claude Code: the plugin has no credentials of its own".into(),
+        ),
+        (
+            "Claude Code".into(),
+            format!(
+                "{}{}",
+                probe.version.as_deref().unwrap_or("version unknown"),
+                probe
+                    .plan
+                    .as_deref()
+                    .map_or_else(String::new, |p| format!(", signed in ({p})"))
+            ),
+        ),
+    ];
+    form.pinned = Some(entry.sha.clone());
+    form.effect = Some(format!(
+        "Runs `hermes plugins install {CATALOG_NAME} --no-enable` in this profile, then restarts Hermes once to load it. A model provider needs no enable entry."
+    ));
+    form.submit = Json(json!({"label": "Install the plugin"}));
+    form.cancel = Json(json!({"label": "Choose another model"}));
+    form
+}
+
+/// The aliases the installed plugin's own model catalogue knows (`ALIASES = {'haiku': ..., }` in its `model_catalog.py`), so a
+/// ladder never names a model the pinned build does not serve. `None` when the file cannot be read: the caller then trusts the
+/// host's table, which is the plugin's documented set.
+fn plugin_aliases(home: &Path) -> Option<Vec<String>> {
+    let text = std::fs::read_to_string(
+        super::ops::plugins_dir(home)
+            .join(PROVIDER_ID)
+            .join("model_catalog.py"),
+    )
+    .ok()?;
+    let block = text.split_once("ALIASES = {")?.1.split_once('}')?.0;
+    let names: Vec<String> = block
+        .lines()
+        .filter_map(|l| {
+            let l = l.trim();
+            let quote = l.chars().next().filter(|c| *c == '\'' || *c == '"')?;
+            let end = l[1..].find(quote)?;
+            let name = &l[1..=end];
+            l[end + 2..]
+                .trim_start()
+                .starts_with(':')
+                .then(|| name.to_owned())
+        })
+        .collect();
+    (!names.is_empty()).then_some(names)
+}
+
+/// The tiers of the Claude subscription: the plugin's aliases the user's Claude Code serves and the pinned plugin knows,
+/// cheapest first, each as `<provider>/<alias>`.
 #[must_use]
-pub fn subscription_enabled(plugins: &[super::ops::PluginEntry]) -> bool {
-    plugins
+pub fn subscription_tiers(probe: &Probe, plugin: Option<&[String]>) -> Vec<(String, String)> {
+    probe
+        .aliases
         .iter()
-        .any(|p| p.name == SUBSCRIPTION_PLUGIN && p.enabled)
+        .filter(|a| plugin.is_none_or(|p| p.contains(a)))
+        .map(|a| (a.clone(), format!("{PROVIDER_ID}/{a}")))
+        .collect()
+}
+
+fn listed(plugins: &[super::ops::PluginEntry]) -> Option<&super::ops::PluginEntry> {
+    plugins.iter().find(|p| p.name == PROVIDER_ID)
+}
+
+/// The Claude subscription (ADR-0029): look at the user's Claude Code, install Hermes's pinned plugin once the user has seen
+/// what it is, and write a ladder of its model aliases. Each missing piece is a form that says what to do; none is guessed.
+async fn subscription(
+    ops: &dyn HermesOps,
+    input: &Input<'_>,
+    restart: &mut bool,
+) -> Result<Outcome> {
+    let probe = input.claude.probe().await;
+    if !probe.usable() {
+        return Ok(Outcome::Form(claude_form(&probe)));
+    }
+    let home = ops.home();
+    let present = listed(&ops.plugins().await?).cloned();
+    if present.is_none() {
+        if !input.claude_consent {
+            let Some(entry) = ops.catalog_entry(CATALOG_NAME).await? else {
+                return Err(Error::Setup(
+                    "hx.setup.subscription_install_failed",
+                    format!(
+                        "Hermes's plugin catalog has no plugin named {CATALOG_NAME}, so the Claude subscription cannot be set up here."
+                    ),
+                ));
+            };
+            return Ok(Outcome::Form(install_form(&entry, &probe, &home)));
+        }
+        ops.install_catalog_plugin(CATALOG_NAME).await?;
+        if listed(&ops.plugins().await?).is_none() {
+            return Err(Error::Setup(
+                "hx.setup.subscription_install_failed",
+                format!(
+                    "Hermes installed the plugin but does not list the {PROVIDER_ID} provider, so it cannot be used."
+                ),
+            ));
+        }
+        *restart = true;
+    } else if present.is_some_and(|p| !p.enabled) {
+        // someone switched the provider off by hand; the user chose it just now
+        ops.enable_plugin(PROVIDER_ID).await?;
+        *restart = true;
+    }
+    let tiers = subscription_tiers(&probe, plugin_aliases(&home).as_deref());
+    if tiers.is_empty() {
+        return Err(Error::Setup(
+            "hx.setup.subscription_install_failed",
+            format!(
+                "The installed plugin offers none of the models your Claude Code {} serves, so no ladder can be set.",
+                probe.version.as_deref().unwrap_or("(version unknown)")
+            ),
+        ));
+    }
+    *restart |= write_ladder(ops, &tiers).await?;
+    Ok(Outcome::Done(format!(
+        "Claude subscription ({}): {} on your Claude Code login",
+        probe.plan.as_deref().unwrap_or("plan not reported"),
+        tiers
+            .iter()
+            .map(|(n, _)| n.as_str())
+            .collect::<Vec<_>>()
+            .join(", ")
+    )))
 }

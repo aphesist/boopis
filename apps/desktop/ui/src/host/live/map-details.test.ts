@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { eventsOf, fixtures, resultOf } from '../testing';
-import { changesFrom, connectorsFrom, contextFrom, costNote, diffFilesFrom, environmentFrom, governanceFrom, ledgerFrom, ladderFrom, outputFor, runFrom, shipLine, todosFrom } from './map-details';
+import { changesFrom, connectorsFrom, contextFrom, costNote, diffFilesFrom, environmentFrom, governanceFrom, ledgerFrom, ladderFrom, outputFor, planNote, runFrom, shipLine, todosFrom } from './map-details';
 import { kTokens, dollars } from './format';
 import type { BreakdownWire, CascadeWire, DescribeWire, DiffWire, InfoWire, InventoryWire, McpStatusWire, StatsWire } from './wire';
 
@@ -71,6 +71,14 @@ describe('governance, the ladder and the ledger', () => {
     expect(costNote(unpriced)).toBe('cost: unknown — no price for custom/fake-a, main/fake-a');
     expect(governanceFrom({ describe: null, cascade: null, stats: unpriced, model: 'm', governed: true, locked: false }).spent).toBe('');
     expect(costNote(stats)).toBe('');
+  });
+  it('says a plan covers a session that ran only on one, and says nothing for any other', () => {
+    const plan: StatsWire = { cost_usd: 0, cost_api_equivalent_usd: null, subscription: true, unpriced_models: ['claude-subscription-directsdk-experimental/sonnet'], round_trips: 2 };
+    expect(planNote(plan)).toBe('cost: none, covered by your Claude plan (a list price is an estimate, not a charge)');
+    expect(ledgerFrom(plan).cost, 'billed zero is shown as the plugin computed it, never a list price').toBe(dollars(0));
+    expect(planNote({ ...plan, subscription: false })).toBe('');
+    expect(planNote(stats)).toBe('');
+    expect(planNote(null)).toBe('');
   });
   it('never computes a cost: the run carries the plugin’s number or null', () => {
     const run = (st: StatsWire | null, cap: number | null) => runFrom({ title: 't', model: 'fake-a', steps: 3, elapsedSeconds: 12, stopped: false, governed: false, stats: st, cascade: null, cap });

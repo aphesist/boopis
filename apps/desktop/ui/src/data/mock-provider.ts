@@ -10,7 +10,7 @@ import { botIdBase } from './bot-id';
 import { createModsModel } from './mods-model';
 import { emitter, feed, store } from './store';
 import type {
-  AgentTurn, ApprovalMessage, Bot, BotConfig, ContextUsage, ConversationEvent, DiffFile, RunSnapshot, SessionSummary, TextMessage, ThreadMessage, Turn, Wait
+  AgentTurn, ApprovalMessage, ArchivedBot, Bot, BotConfig, ContextUsage, ConversationEvent, DiffFile, RunSnapshot, SessionSummary, TextMessage, ThreadMessage, Turn, Wait
 } from './types';
 import * as M from './mock-data';
 
@@ -44,6 +44,8 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
     if (f) { bots.push(M.fixtureBot(f.bot)); seedThread(f.bot.id, f.thread); }
   }
   const botsEv = emitter<BotsEvent>();
+  const archivedSeeds = M.ARCHIVED_SEEDS.map((a) => ({ id: 'archived--' + a.bot.id, name: 'archived--' + a.bot.id, was: a.bot.id, at: a.at, when: a.when, seed: a.bot }));
+  const archivedBots = store<readonly ArchivedBot[]>(archivedSeeds.map(({ seed: _seed, ...row }) => row));
   const botById = (id: string): Bot | undefined => bots.find((b) => b.id === id);
   const threadOf = (id: string): ThreadMessage[] => (threads[id] ??= []);
   const cloneBot = (b: Bot): Bot => ({ ...b, ideas: [...b.ideas], last: b.last ? { ...b.last } : null, cfg: { ...b.cfg, channels: { ...b.cfg.channels }, approvals: { ...b.cfg.approvals } } });
@@ -180,6 +182,8 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
       const b = botById(id); if (!b) return;
       if (patch.role !== undefined) b.role = patch.role;
       if (patch.cfg) b.cfg = { ...b.cfg, ...patch.cfg, channels: { ...b.cfg.channels, ...patch.cfg.channels }, approvals: { ...b.cfg.approvals, ...patch.cfg.approvals } } as BotConfig;
+      /* a boopis setting is saved in the bot's own store, which a bot made outside boopis did not have: the mark goes */
+      if (patch.cfg && ['gov', 'cap', 'workspace', 'approvals'].some((k) => k in patch.cfg!)) delete b.madeOutside;
       announceBot(b);
     },
     create(draft) {
@@ -202,6 +206,18 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
       const i = bots.findIndex((b) => b.id === id); if (i < 0 || bots.length < 2) return;
       bots.splice(i, 1);
       botsEv.emit({ type: 'bot-archived', id });
+    },
+    archived: archivedBots,
+    restore(id) {
+      const a = archivedSeeds.find((x) => x.id === id);
+      if (!a) return Promise.reject(new Error(id + ' is not archived'));
+      if (botById(a.was)) return Promise.reject(new Error('there is a teammate called ' + a.was + ' already; archive or delete it, then restore'));
+      const nb = M.fixtureBot({ ...a.seed, id: a.was, name: a.was });
+      bots.push(nb);
+      archivedSeeds.splice(archivedSeeds.indexOf(a), 1);
+      archivedBots.set(archivedSeeds.map(({ seed: _seed, ...row }) => row));
+      botsEv.emit({ type: 'bot-created', bot: cloneBot(nb) });
+      return Promise.resolve();
     }
   };
   const lowerFirst = (s: string): string => s.charAt(0).toLowerCase() + s.slice(1);

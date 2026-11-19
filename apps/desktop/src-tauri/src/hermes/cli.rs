@@ -45,6 +45,11 @@ const PASS: &[&str] = &[
     "DISPLAY",
     "WAYLAND_DISPLAY",
     "DBUS_SESSION_BUS_ADDRESS",
+    // which `claude` and which login directory the Claude subscription plugin uses (paths, never a credential); setup
+    // looks at the same ones (`claude::PASS_VARS`, ADR-0029)
+    "CLAUDE_SUBSCRIPTION_DIRECTSDK_COMMAND",
+    "CLAUDE_SUBSCRIPTION_DIRECTSDK_CONFIG_DIR",
+    "CLAUDE_CONFIG_DIR",
 ];
 /// Prefixes that pass: Hermes's own settings, `uv`'s, the XDG directories and the locale.
 const PASS_PREFIX: &[&str] = &["HERMES_", "UV_", "XDG_", "LC_"];
@@ -202,10 +207,7 @@ impl Cli {
             .stderr(Stdio::piped())
             .kill_on_drop(true);
         #[cfg(windows)]
-        {
-            use std::os::windows::process::CommandExt;
-            cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
-        }
+        cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
         let mut child = cmd
             .spawn()
             .map_err(|e| Error::Unavailable(format!("cannot run {}: {e}", binary.display())))?;
@@ -258,12 +260,17 @@ mod tests {
             "XDG_RUNTIME_DIR",
             "LC_ALL",
             "HTTPS_PROXY",
+            "CLAUDE_SUBSCRIPTION_DIRECTSDK_COMMAND",
+            "CLAUDE_SUBSCRIPTION_DIRECTSDK_CONFIG_DIR",
+            "CLAUDE_CONFIG_DIR",
         ] {
             assert!(passes(ok), "{ok}");
         }
         for no in [
             "OPENAI_API_KEY",
             "ANTHROPIC_API_KEY",
+            "ANTHROPIC_AUTH_TOKEN",
+            "CLAUDE_CODE_OAUTH_TOKEN",
             "GITHUB_TOKEN",
             "AWS_SECRET_ACCESS_KEY",
             "SSH_AUTH_SOCK",

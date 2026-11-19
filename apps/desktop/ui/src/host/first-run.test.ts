@@ -313,6 +313,48 @@ describe('first run', () => {
     expect([...document.querySelectorAll('button')].filter((b) => b.textContent === 'Check again')).toHaveLength(1);
   });
 
+  it('shows the Claude Code commands to run, then "Check again" asks the host again with the same form open', async () => {
+    vi.useFakeTimers();
+    try {
+      const empty = { type: 'object', properties: {} };
+      const help = form('setup.claude', 'setup', empty, { title: 'Install Claude Code to use your Claude subscription', body: 'Claude Code is not installed.', submit: { label: 'Check again' }, cancel: { label: 'Choose another model' },
+        contents: [['1. Install it', '`npm install -g @anthropic-ai/claude-code`'], ['2. Sign in', '`claude auth login`']] });
+      const bridge = new Fake([status({ steps: [step('models', 'needs_input')], form: help }), status({ steps: [step('models', 'needs_input')], form: help })]);
+      void runFirstRun(bridge);
+      await vi.advanceTimersByTimeAsync(0);
+      await click('Set up');
+      const card = document.querySelector('hx-card[data-kind="form"]');
+      const lines = [...(card?.querySelectorAll('.cd-contents .cd-well__line') ?? [])].map((l) => l.textContent);
+      expect(lines).toEqual(['1. Install itnpm install -g @anthropic-ai/claude-code', '2. Sign inclaude auth login']);
+      expect(document.body.textContent).not.toContain('Sign in with');
+      await click('Check again');
+      await vi.advanceTimersByTimeAsync(900);
+      expect(bridge.answers[1]).toEqual({ answer: { form_id: 'setup.claude', cancelled: false, values: {}, secrets: {} }, reconsider: false });
+      expect(document.querySelector('hx-card[data-kind="form"] .cd-contents')).toBeTruthy();
+    } finally { vi.useRealTimers(); }
+  });
+
+  it('shows what installing the plugin is before it does anything: the pinned build, where from, where to', async () => {
+    vi.useFakeTimers();
+    try {
+      const review = form('setup.claude.install', 'connector', { type: 'object', properties: {} }, { title: 'Install the Claude subscription plugin?', submit: { label: 'Install the plugin' }, cancel: { label: 'Choose another model' },
+        contents: [['Plugin', 'claude-subscription-directsdk 0.3.5 (official, from Hermes\'s plugin catalog)'], ['Into', '/home/u/.hermes/plugins']], pinned: '6313fad5ddf2c060e7b16782f4860c0d5cdbfcac',
+        effect: 'Runs `hermes plugins install claude-subscription-directsdk --no-enable` in this profile, then restarts Hermes once to load it.' });
+      const bridge = new Fake([status({ steps: [step('models', 'needs_input')], form: review }), status({ done: true })]);
+      void runFirstRun(bridge);
+      await vi.advanceTimersByTimeAsync(0);
+      await click('Set up');
+      const card = document.querySelector('hx-card[data-kind="form"]');
+      expect(card?.textContent).toContain('claude-subscription-directsdk 0.3.5');
+      expect(card?.querySelector('.cd-pinned')?.textContent).toContain('6313fad5ddf2c060e7b16782f4860c0d5cdbfcac');
+      expect(card?.textContent).toContain('hermes plugins install claude-subscription-directsdk --no-enable');
+      expect(bridge.answers, 'showing it answers nothing').toHaveLength(1);
+      await click('Install the plugin');
+      await vi.advanceTimersByTimeAsync(900);
+      expect(bridge.answers[1]).toMatchObject({ answer: { form_id: 'setup.claude.install', cancelled: false } });
+    } finally { vi.useRealTimers(); }
+  });
+
   it('starts at once for "Change models", under its own heading, with no first screen', async () => {
     const bridge = new Fake([status({ steps: [step('models', 'needs_input')] })]);
     void runFirstRun(bridge, document.body, { autostart: true, title: 'Change models' });

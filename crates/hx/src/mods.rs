@@ -36,6 +36,7 @@ use hx_proto::method::Namespace;
 use hx_proto::registry::{BoxFuture, CallContext, Handler, HandlerResult, parse_params, to_result};
 use hx_proto::{AppError, codes};
 use serde_json::{Value, json};
+#[cfg(unix)]
 use tokio::io::{AsyncRead, AsyncReadExt};
 use tokio::sync::{Mutex as AsyncMutex, mpsc};
 
@@ -49,19 +50,37 @@ pub const LIMITS_ENV: &str = "HX_MODS_LIMITS";
 /// The longest `hx` waits for the plugin to answer one `$` call.
 const CALL_TIMEOUT: Duration = Duration::from_mins(25);
 /// The longest a worker may take to load a mod.
+#[cfg(unix)]
 const LOAD_TIMEOUT: Duration = Duration::from_mins(5);
 /// The longest a probe (`reach`) may take.
 const PROBE_TIMEOUT: Duration = Duration::from_secs(30);
 /// How long a replaced worker keeps running, so hooks already in flight in it can finish.
 const RETIRE_GRACE: Duration = Duration::from_secs(5);
-/// How much of the worker's error output is kept.
-const STDERR_KEEP: usize = 8 * 1024;
+/// The tasks (threads) a worker's sandbox may hold and no more: the sandbox's supervisor, the
+/// worker's main thread and its channel reader (`hx_mods::worker::serve`). `RLIMIT_NPROC` counts
+/// threads, and in the sandbox's fresh user namespace it counts from zero, so three is exactly
+/// that: any fork, clone or exec past it is refused. It was once 1, which refused the worker's own
+/// threads at startup for every user but root (root is exempt, which hid it);
+/// `every_worker_starts_for_an_ordinary_user` guards it. The worker runs before, and without, the
+/// async runtime (`main.rs`), which would start a thread per core.
+#[cfg(unix)]
+const WORKER_TASKS: u64 = 3;
+/// How much of the worker's error output is kept: the last bytes, which is where a panic message
+/// lands, and few enough to ride along in an error's `data` and in `mods.exited`.
+#[cfg(unix)]
+const STDERR_KEEP: usize = 2 * 1024;
+/// How long the exit task waits for the worker's error output to drain once the worker is gone.
+/// The pipe closes with the process, so this only bounds a reader that is stuck.
+#[cfg(unix)]
+const STDERR_DRAIN: Duration = Duration::from_millis(750);
 /// A mod's default heap budget, in MiB.
+#[cfg(unix)]
 const DEFAULT_HEAP_MIB: u64 = 64;
 /// The most a hook may run by default, in milliseconds.
 const DEFAULT_EVENT_MS: u64 = 10_000;
 /// Address space the worker may map besides the engine's heap: the binary, thread stacks, the
 /// allocator's arenas.
+#[cfg(unix)]
 const WORKER_OVERHEAD_MIB: u64 = 768;
 
 const METHODS: &[&str] = &[
@@ -142,6 +161,7 @@ impl HostSink for SessionSink {
 }
 
 /// One worker, from the parent's side.
+#[cfg_attr(not(unix), allow(dead_code))]
 struct Running {
     worker: Arc<ModWorker>,
     pid: u32,
@@ -153,11 +173,24 @@ struct Running {
     loaded: Mutex<(Vec<String>, u64)>,
     /// Replaced or unloaded on purpose: its exit is not news.
     retired: AtomicBool,
+    /// The task that reads the worker's error output.
+    reader: AsyncMutex<Option<tokio::task::JoinHandle<()>>>,
 }
 
+#[cfg_attr(not(unix), allow(dead_code))]
 impl Running {
     fn stderr_text(&self) -> String {
         lock(&self.stderr).clone()
+    }
+
+    /// Waits for the worker's error output to be read to its end. The exit can be seen before the
+    /// last of it has been read, and a panic message would be missing from the very report that needs it.
+    #[cfg(unix)]
+    async fn drain(&self) {
+        let mut reader = self.reader.lock().await;
+        if let Some(handle) = reader.take() {
+            let _ = tokio::time::timeout(STDERR_DRAIN, handle).await;
+        }
     }
 
     fn retire(&self) {
@@ -754,9 +787,9 @@ async fn spawn_worker(
     // The mod's heap budget is the engine's own limit; this is the process's, a second wall for a
     // mod that finds memory the engine does not count.
     policy.resources.memory_bytes = Some((heap_mib + WORKER_OVERHEAD_MIB) * 1024 * 1024);
-    // The worker has one thread besides its main one (the channel reader) and no reason to start a
-    // process: any fork or exec past that is refused by the kernel.
-    policy.resources.max_processes = Some(1);
+    // The supervisor, the worker's main thread and its channel reader, and nothing else: any fork,
+    // clone or exec past that is refused by the kernel (see `WORKER_TASKS`).
+    policy.resources.max_processes = Some(WORKER_TASKS);
     let argv = vec![exe.to_string_lossy().into_owned(), "mods-worker".to_owned()];
     let spawned =
         hx_sandbox::spawn(&argv, &policy, SpawnOptions::new().with_inherit(child_fd)).await;
@@ -774,9 +807,9 @@ async fn spawn_worker(
         }
     };
     let stderr: Arc<Mutex<String>> = Arc::default();
-    if let Some(r) = child.take_stderr() {
-        tokio::spawn(keep_tail(r, stderr.clone()));
-    }
+    let stderr_reader = child
+        .take_stderr()
+        .map(|r| tokio::spawn(keep_tail(r, stderr.clone())));
     if let Some(r) = child.take_stdout() {
         tokio::spawn(keep_tail(r, Arc::default()));
     }
@@ -800,6 +833,7 @@ async fn spawn_worker(
         stderr,
         loaded: Mutex::default(),
         retired: AtomicBool::new(false),
+        reader: AsyncMutex::new(stderr_reader),
     });
 
     // Reports the worker's end, once, whatever it was.
@@ -808,6 +842,7 @@ async fn spawn_worker(
         let (session, entry, running) = watcher;
         let outcome = child.wait().await;
         let _ = std::fs::remove_dir_all(&scratch);
+        running.drain().await;
         if running.retired.load(Ordering::SeqCst) {
             return;
         }
@@ -869,6 +904,7 @@ async fn spawn_worker(
         Err(e) => {
             running.retire();
             worker.kill();
+            running.drain().await;
             let stderr = running.stderr_text();
             Err(match e.code.as_str() {
                 "hx.mods.worker_failed" => worker_failed(e.message, &stderr),
@@ -935,7 +971,18 @@ fn worker_read_paths() -> Vec<std::path::PathBuf> {
     }
 }
 
-/// Keeps the last [`STDERR_KEEP`] bytes of a stream.
+/// Drops what a terminal would act on: every control character but the line break and the tab
+/// (escape sequences lose their escape, and a carriage return cannot overwrite a line). The text
+/// goes into an error and a notification, and from there to a screen and a log.
+#[cfg(unix)]
+fn strip_control(text: &str) -> String {
+    text.chars()
+        .filter(|c| !c.is_control() || matches!(c, '\n' | '\t'))
+        .collect()
+}
+
+/// Keeps the last [`STDERR_KEEP`] bytes of a stream, control characters stripped.
+#[cfg(unix)]
 async fn keep_tail<R: AsyncRead + Unpin>(mut r: R, into: Arc<Mutex<String>>) {
     let mut buf = [0u8; 2048];
     loop {
@@ -943,7 +990,7 @@ async fn keep_tail<R: AsyncRead + Unpin>(mut r: R, into: Arc<Mutex<String>>) {
             Ok(0) | Err(_) => return,
             Ok(n) => {
                 let mut t = lock(&into);
-                t.push_str(&String::from_utf8_lossy(&buf[..n]));
+                t.push_str(&strip_control(&String::from_utf8_lossy(&buf[..n])));
                 if t.len() > STDERR_KEEP {
                     let mut cut = t.len() - STDERR_KEEP;
                     while !t.is_char_boundary(cut) {
@@ -997,4 +1044,29 @@ pub fn run_worker() -> anyhow::Result<()> {
 #[cfg(not(unix))]
 pub fn run_worker() -> anyhow::Result<()> {
     anyhow::bail!("mods are off on this platform")
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn control_characters_are_stripped_but_lines_and_tabs_stay() {
+        let raw = "thread 'main' panicked\n\t\x1b[31mred\x1b[0m\r\0bell\x07 done";
+        assert_eq!(
+            strip_control(raw),
+            "thread 'main' panicked\n\t[31mred[0mbell done"
+        );
+    }
+
+    #[tokio::test]
+    async fn the_tail_is_bounded_and_clean() {
+        let kept: Arc<Mutex<String>> = Arc::default();
+        let text = "line \x1b[1mbold\x1b[0m é\n".repeat(500) + "the last line\n";
+        keep_tail(text.as_bytes(), kept.clone()).await;
+        let kept = lock(&kept).clone();
+        assert!(kept.len() <= STDERR_KEEP, "{} bytes", kept.len());
+        assert!(kept.ends_with("bold[0m é\nthe last line\n"), "{kept:?}");
+        assert!(!kept.contains('\x1b'));
+    }
 }

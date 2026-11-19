@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 # Build the Hermes runtime the app ships (ADR-0023): hermes-runtime-<os>-<arch>.tar.zst plus runtime.json.
 #
-#   scripts/build-runtime.sh [--out <dir>] [--work <dir>]
+#   scripts/build-runtime.sh [--target <os>-<arch>] [--out <dir>] [--work <dir>]
+#
+# --target is the platform the runtime is FOR, named as the archive names it (linux-x86_64, macos-aarch64, windows-x86_64);
+# the default is this machine. windows-x86_64 is built from Linux: the interpreter and uv are Hermes's own pins for
+# win32-x64, the dependencies are the locked wheels for win_amd64 (`uv pip install --python-platform`, hashes checked), and
+# nothing of the target runs, so it needs `uv` on PATH besides the tools below. See scripts/runtime/build_payload.py.
 #
 # Inputs (environment):
 #   HERMES_TAG        the Hermes release to bundle (default v0.23.2; the pin of REQUIRES_HERMES)
@@ -28,7 +33,7 @@
 #
 # Needs: bash, git, curl, GNU tar (gtar on macOS), zstd, sha256sum (or shasum), python3 3.11+, network (PyPI, GitHub), and
 # llvm-strip (optional: it takes the interpreter's debug symbols out, 46 MB; binutils' strip corrupts that file).
-# The Windows twin (build-runtime.ps1) is not written yet: docs/RELEASING.md says what is left.
+# A native Windows build (on a Windows runner) is not written: the Windows runtime is cross-built here (docs/RELEASING.md).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -38,8 +43,10 @@ EXTRAS="${RUNTIME_EXTRAS:-anthropic,mcp,uvloop}"
 BOOT_PYTHON="${BOOT_PYTHON:-python3}"
 OUT="$ROOT/dist/runtime"
 WORK=""
+WANT=""
 while [ $# -gt 0 ]; do
   case "$1" in
+    --target) WANT="$2"; shift 2 ;;
     --out) OUT="$2"; shift 2 ;;
     --work) WORK="$2"; shift 2 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
@@ -56,13 +63,25 @@ sha256() { if command -v sha256sum >/dev/null; then sha256sum "$1" | cut -d' ' -
 case "$(uname -s)" in
   Linux) OS=linux ;;
   Darwin) OS=macos ;;
-  *) echo "unsupported OS $(uname -s); the Windows build is build-runtime.ps1 (not written yet)" >&2; exit 1 ;;
+  *) echo "unsupported OS $(uname -s)" >&2; exit 1 ;;
 esac
 case "$(uname -m)" in
   x86_64|amd64) ARCH=x86_64 ;;
   arm64|aarch64) ARCH=aarch64 ;;
   *) echo "unsupported arch $(uname -m)" >&2; exit 1 ;;
 esac
+
+# The platform the runtime is for: this machine's unless --target says so.
+PM_TARGET=""
+if [ -n "$WANT" ]; then
+  case "$WANT" in
+    "$OS-$ARCH") ;;
+    windows-x86_64) OS=windows; ARCH=x86_64; PM_TARGET=win32-x64
+      [ "$(uname -s)" = Linux ] || { echo "windows-x86_64 is cross-built on Linux only" >&2; exit 1; }
+      command -v uv >/dev/null || { echo "uv is needed on PATH to cross-install the Windows dependencies" >&2; exit 1; } ;;
+    *) echo "cannot build $WANT on $OS-$ARCH (supported: this machine's own, and windows-x86_64 from Linux)" >&2; exit 1 ;;
+  esac
+fi
 
 if [ -z "$WORK" ]; then WORK="$(mktemp -d)"; CLEAN_WORK=1; else mkdir -p "$WORK"; CLEAN_WORK=0; fi
 WORK="$(cd "$WORK" && pwd)"
@@ -94,7 +113,7 @@ rm -rf "$PAYLOAD" "$WORK/home"; mkdir -p "$PAYLOAD" "$WORK/home"
     HERMES_PYTHON_SRC_ROOT="$SRC" XDG_CACHE_HOME="$WORK/home/cache" XDG_CONFIG_HOME="$WORK/home/config" \
     UV_CACHE_DIR="$WORK/uv-cache" PYTHONPATH="$SRC" \
     "$BOOT_PYTHON" -B "$ROOT/scripts/runtime/build_payload.py" --source "$SRC" --payload "$PAYLOAD" --cache "$WORK/uv-cache" \
-      --tag "$HERMES_TAG" --extras "$EXTRAS"
+      --tag "$HERMES_TAG" --extras "$EXTRAS" ${PM_TARGET:+--target "$PM_TARGET"}
 )
 rm -rf "$WORK/uv-cache" "$WORK/home"
 

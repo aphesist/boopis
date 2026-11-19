@@ -118,6 +118,21 @@ cp "$T/art/$NAME" "$rel/"
 out=$(BOOPIS_BASE_URL="file://$T/rel" run --version 0.0.0 --prefix "$T/p" --yes) || fail "download install exits 0 ($out)"
 check "download: installs the release's files" test "$(files_of "$T/p")" = "$expected"
 check "download: shows the release and the file" contains "$out" "v0.0.0"
+# no --version: the latest release, or the newest pre-release while there is no other (the API as files: a `releases`
+# file is the list, newest first, and a `releases/latest` file the latest release, which GitHub never answers with a pre-release)
+api=$T/api/repos/aphesist/boopis
+mkdir -p "$api"
+printf '[{"tag_name": "v0.0.0", "prerelease": true}, {"tag_name": "v0.0.0-older", "prerelease": true}]' >"$api/releases"
+fresh
+out=$(BOOPIS_BASE_URL="file://$T/rel" BOOPIS_API_URL="file://$T/api" run --prefix "$T/p" --yes) || fail "pre-release install exits 0 ($out)"
+check "latest: with only pre-releases, the newest one is installed" test "$(files_of "$T/p")" = "$expected"
+check "latest: and named" contains "$out" "v0.0.0"
+rm -f "$api/releases"
+mkdir -p "$api/releases"
+printf '{"tag_name": "v0.0.0", "prerelease": false}' >"$api/releases/latest"
+fresh
+out=$(BOOPIS_BASE_URL="file://$T/rel" BOOPIS_API_URL="file://$T/api" run --prefix "$T/p" --yes) || fail "latest install exits 0 ($out)"
+check "latest: the latest release is installed" test "$(files_of "$T/p")" = "$expected"
 fresh
 rc=0
 out=$(BOOPIS_BASE_URL="file://$T/rel" run --version v9.9.9 --prefix "$T/p" --yes) || rc=$?
@@ -148,6 +163,10 @@ out=$(run --help)
 check "--help lists --uninstall and --file" contains "$out" "--uninstall"
 
 # ---- 7. a terminal: colour, banner, animation switches (script gives the run a real tty)
+# Every variable the installer reads to decide what the terminal shows. A run starts without them, so the cases below test
+# the terminal path wherever the suite runs (GitHub's runners set CI=true; a person's shell may set NO_COLOR, COLORTERM
+# or LC_ALL) and each case sets only what it is about.
+TERM_VARS="-u CI -u NO_COLOR -u BOOPIS_NO_ANIMATION -u COLORTERM -u LC_ALL -u LC_CTYPE -u LANG -u COLUMNS"
 termrun() { # termrun <env assignments...> -- <installer args...>
   local envs=()
   while [ "$1" != -- ]; do
@@ -156,7 +175,7 @@ termrun() { # termrun <env assignments...> -- <installer args...>
   done
   shift
   fresh
-  script -qefc "env ${envs[*]} HOME=$T/home bash $installer --file $T/art/$NAME --prefix $T/p --yes $*" /dev/null 2>&1 | tr -d '\r'
+  script -qefc "env $TERM_VARS ${envs[*]} HOME=$T/home bash $installer --file $T/art/$NAME --prefix $T/p --yes $*" /dev/null 2>&1 | tr -d '\r'
 }
 base=(TERM=xterm-256color LANG=C.UTF-8)
 out=$(termrun "${base[@]}" COLORTERM=truecolor --)
