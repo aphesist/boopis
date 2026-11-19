@@ -144,10 +144,14 @@ async function setWidth(page, row, w) {
 async function redraw(page, row) {
   if (row.app) {
     const preset = await page.evaluate(() => document.documentElement.dataset.hxPreset);
-    await page.reload();
+    /* the state draws again IN the preset it is checked in: a tooltip or a menu is placed against the widths of the type it is drawn
+       with, and a preset applied after the draw would leave it where the previous preset's type put it (a tip 3px off centre) */
+    const u = new URL(page.url());
+    if (preset) u.searchParams.set('preset', preset);
+    await page.goto(u.href);
     await page.waitForFunction(() => document.documentElement.dataset.labReady, null, { timeout: 30000 }).catch(() => {});
     await page.addScriptTag({ path: PROBE });
-    if (preset && preset !== 'catalog') { await page.evaluate((p) => window.__lab.preset(p), preset); await settle(page, 80); }
+    await settle(page, 80);
   } else {
     await page.evaluate(() => window.__lab.rerender());
     await settle(page, 260);
