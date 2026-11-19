@@ -63,7 +63,7 @@ body {
   width: clamp(240px, 34vw, 480px); height: 26px; box-sizing: border-box;
   padding: 0 4px 0 10px;
   border: 0; border-radius: var(--r-s);
-  background: var(--bg-0); box-shadow: inset 0 0 0 1px var(--hair);
+  --sq-bg: var(--bg-0); background: var(--sq-bg); box-shadow: inset 0 0 0 1px var(--hair);
   color: var(--text-quiet); cursor: pointer; text-align: left;
   transition: box-shadow var(--dur-1) var(--ease), background-color var(--dur-1) var(--ease);
 }
@@ -118,17 +118,17 @@ body {
 .hx-foot { display: flex; align-items: center; gap: 4px; height: 52px; padding: 0 8px; flex: none; box-shadow: inset 0 1px 0 var(--hair); }
 .hx-me {
   display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; height: 36px;
-  padding: 0 8px; border: 0; border-radius: var(--r-s); background: transparent; cursor: pointer;
+  padding: 0 8px; border: 0; border-radius: var(--r-s); --sq-bg: transparent; background: var(--sq-bg); cursor: pointer;
   color: var(--text); font-size: var(--fs-s); text-align: left;
   transition: background-color var(--dur-1) var(--ease);
 }
-@media (hover: hover) and (pointer: fine) { .hx-me:hover { background: var(--hover); } }
+@media (hover: hover) and (pointer: fine) { .hx-me:hover { --sq-bg: var(--hover); } }
 .hx-me__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: opacity var(--dur-1) var(--ease); }
 .hx-avatar {
   display: inline-grid; place-items: center; flex: none;
   width: 24px; height: 24px; border-radius: var(--r-pill);
   background: var(--selected); color: var(--text-on-light);
-  font: 600 11px/1 var(--sans); text-transform: uppercase; corner-shape: round;
+  font: 600 11px/1 var(--sans); text-transform: uppercase;
 }
 .hx-avatar::after { content: attr(data-initial); }   /* the initial is drawn, not text: the account button's name does not have to repeat it */
 .hx-foot__gear { transition: opacity var(--dur-1) var(--ease), color var(--dur-1) var(--ease), background-color var(--dur-1) var(--ease); }
@@ -237,10 +237,10 @@ body {
 .hx-dialog__head h2 { margin: 0; font-size: var(--fs-l); font-weight: 600; color: var(--text-strong); text-transform: var(--ui-case); }
 .hx-dialog__head .ui-ib { margin-left: auto; border-radius: var(--r-in); }
 .hx-dtabs { display: flex; gap: 2px; }
-.hx-dtab { height: var(--ctl-s); padding: 0 10px; border: 0; border-radius: var(--r-s); background: transparent; color: var(--text-dim); font: 500 var(--fs-s)/1 var(--sans); cursor: pointer; text-transform: var(--ui-case); transition: background-color var(--dur-out) var(--ease), color var(--dur-out) var(--ease), transform var(--dur-press) var(--ease); }
-.hx-dtab:hover { background: var(--hover); color: var(--text); transition-duration: var(--dur-1); }
+.hx-dtab { height: var(--ctl-s); padding: 0 10px; border: 0; border-radius: var(--r-s); --sq-bg: transparent; background: var(--sq-bg); color: var(--text-dim); font: 500 var(--fs-s)/1 var(--sans); cursor: pointer; text-transform: var(--ui-case); transition: background-color var(--dur-out) var(--ease), color var(--dur-out) var(--ease), transform var(--dur-press) var(--ease); }
+.hx-dtab:hover { --sq-bg: var(--hover); color: var(--text); transition-duration: var(--dur-1); }
 .hx-dtab:active { transform: translateY(1px) scale(.985); }
-.hx-dtab[aria-selected="true"] { background: var(--current); color: var(--text-strong); }
+.hx-dtab[aria-selected="true"] { --sq-bg: var(--current); color: var(--text-strong); }
 .hx-dialog__body { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 20px 24px; }
 .hx-dialog.is-side .hx-dtabs { margin-right: -6px; }
 
@@ -282,13 +282,13 @@ body {
 .hxt-row__label { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: var(--fs-s); color: var(--text); }
 .hxt-row__label > span { display: inline-flex; align-items: center; gap: 6px; }
 .hxt-row__label small { font-size: var(--fs-xs); color: var(--text-quiet); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hxt-flag { width: 6px; height: 6px; border-radius: var(--r-pill); corner-shape: round; background: var(--warn); flex: none; }
+.hxt-flag { width: 6px; height: 6px; border-radius: var(--r-pill); background: var(--warn); flex: none; }
 .hxt-undo { visibility: hidden; }
 .hxt-row.is-changed .hxt-undo { visibility: visible; }
 .hxt-row.is-changed .hxt-hex { color: var(--text-strong); }
 .hxt-contrast { list-style: none; margin: 8px 0 0; padding: 0; }
 .hxt-contrast li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--hair); font-size: var(--fs-s); color: var(--text); }
-.hxt-contrast li.is-fail span:first-child::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 8px; vertical-align: 1px; border-radius: var(--r-pill); corner-shape: round; background: var(--warn); }
+.hxt-contrast li.is-fail span:first-child::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 8px; vertical-align: 1px; border-radius: var(--r-pill); background: var(--warn); }
 .hxt-ratio { font: 400 var(--fs-2xs)/1.6 var(--mono); color: var(--text-quiet); white-space: nowrap; }
 .hxt-json-label { display: block; margin: 8px 0 6px; font-size: var(--fs-xs); color: var(--text-dim); }
 .hxt-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
@@ -314,7 +314,7 @@ body {
 .hx-stub-list { padding: 0 8px 16px; }
 .hx-stub-list ul { margin: 0; padding: 0; list-style: none; }
 .hx-stub-rail { position: absolute; inset: 0 0 var(--hx-dock-space); display: grid; place-content: center; gap: 6px; justify-items: center; }
-.hx-stub-rail i { width: 4px; height: 4px; border-radius: var(--r-pill); corner-shape: round; background: var(--text-faint); }
+.hx-stub-rail i { width: 4px; height: 4px; border-radius: var(--r-pill); background: var(--text-faint); }
 .hx-stub-rail i.on { background: var(--text-dim); }
 .hx-stub-panel { position: absolute; inset: 0; padding: 8px 20px; }
 .hx-stub-panel dl { margin: 0; }
@@ -322,7 +322,7 @@ body {
 .hx-stub-panel dt { color: var(--text); text-transform: var(--ui-case); }
 .hx-stub-panel dd { margin: 0; color: var(--text-quiet); font: 400 var(--fs-2xs)/1 var(--mono); }
 .hx-stub-dock { position: absolute; bottom: 0; left: var(--hx-center-x); translate: -50% 0; transition: opacity var(--dur-2) var(--ease), translate var(--dur-3) var(--spring); }
-.hx-stub-orb { width: 40px; height: 40px; padding: 0; border: 0; border-radius: var(--r-pill); corner-shape: round; background: transparent; display: grid; place-items: center; cursor: pointer; }
+.hx-stub-orb { width: 40px; height: 40px; padding: 0; border: 0; border-radius: var(--r-pill); background: transparent; display: grid; place-items: center; cursor: pointer; }
 .hx[data-dock="off"] .hx-stub-dock { opacity: 0; translate: -50% 24px; visibility: hidden; transition: opacity var(--dur-1) var(--ease), translate var(--dur-3) var(--spring), visibility 0s linear var(--dur-3); }
 
 /* ───────────── narrow windows ───────────── */
@@ -370,3 +370,21 @@ body {
 .hx-goto__title { color: var(--text-strong); font-weight: 600; text-transform: var(--ui-case); }
 .hx-goto__opt { display: inline-flex; align-items: center; gap: 6px; text-transform: var(--ui-case); }
 .hx [data-hx-region-focus]:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+
+/* ───────────── drawn corners (DESIGN-SYSTEM.md §8; bound in boot() with HX.ui.squircle.auto) ─────────────
+   A bound element's inset line is --sq-line and a floating surface paints --sq-bg; the library draws both along the
+   continuous path and turns the box-shadow line off. */
+.hx-cmd { --sq-line: var(--hair); }
+@media (hover: hover) and (pointer: fine) { .hx-cmd:hover { --sq-line: var(--line); } }
+.hx-cmd[aria-expanded="true"] { --sq-line: var(--brass); }
+.hx-dialog__card { --r-outer: var(--r-l); --pad: 12px; --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad))); --sq-bg: var(--bg-1); --sq-line: var(--line); }
+.hx-palette__box { --r-outer: var(--r-l); --pad: 6px; --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad))); --sq-bg: var(--bg-1); --sq-line: var(--line); }
+.hx-dialog__card[data-sq-on], .hx-palette__box[data-sq-on], .hx-goto[data-sq-on] { box-shadow: var(--shadow-pop); }
+.hx-palette__list { padding: 4px 6px 6px; }
+.hx-pal-row { border-radius: var(--r-in); }
+.hx-goto { --sq-bg: var(--bg-3); --sq-line: var(--line); }
+.hxt-preset { --sq-bg: var(--bg-2); --sq-line: var(--line); }
+.hxt-preset:hover { --sq-line: var(--line-strong); }
+.hxt-preset:has(input:checked) { --sq-line: var(--brass); }
+.hxt-preset[data-sq-on]:has(input:checked)::after { clip-path: var(--sq-ring, var(--sq-edge)); }
+

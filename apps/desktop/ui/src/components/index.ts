@@ -2,7 +2,7 @@
      html            string templates for modules that build innerHTML
      the factories   button, iconButton, segmented, chip, row, group, ... -> an element, already wired
      hydrate(root)   wires every [data-ui] element under root once
-     menu, popover, layer, tooltip, toast, hold, composer, orb, liven, glance, announce, shape, icon, botState
+     menu, popover, layer, tooltip, toast, hold, composer, orb, liven, glance, announce, shape, squircle, modelMark, icon, botState
    Events bubble from the element and are cancelable where an action follows:
      'ui:change' {value}  segmented, switch, chip, option group
      'ui:commit'          hold to approve finished
@@ -19,8 +19,11 @@ import { html } from './html';
 import type { ButtonOpts, ChipOpts, EntryOpts, FieldOpts, IconButtonOpts, LadderOpts, MeasureOpts, MeasurePart, RowOpts, SegmentedOpts, StepItem } from './html';
 import { icon, iconNames } from './icons';
 import { layer, menu, popover } from './layer';
+import { isRoute, lastModel, modelFamily, modelHTML, modelMark as modelMarkEl, parseRoute, routeHTML, swapMark, families as modelFamilies } from './model-mark';
+import type { ModelOpts, ModelRef } from './model-mark';
 import { glance, liven, orb } from './orb';
 import { shape } from './shape';
+import { squircle } from './squircle';
 import { toast } from './toast';
 import { tooltip } from './tooltip';
 import { hydrate, hydrateOne } from './wire';
@@ -63,16 +66,22 @@ const legend = (parts: readonly MeasurePart[], fmt?: (n: number) => string): HTM
 const keys = (k: string): HTMLElement => frag(html.keys(k));
 const inline = (text: string): HTMLSpanElement => { const s = document.createElement('span'); s.innerHTML = html.inline(text); return s; };
 
+/** `ui.modelMark(ref, opts)` draws a provider mark; its properties read the family from a model id */
+const modelMark = Object.assign(modelMarkEl, { family: modelFamily, parse: parseRoute, last: lastModel, isRoute, swap: swapMark, families: modelFamilies });
+const model = (ref: ModelRef, o?: ModelOpts): HTMLElement => frag(modelHTML(ref, o));
+const modelRoute = (text: string, o?: ModelOpts): HTMLElement => frag(routeHTML(text, o));
+
 export const ui = {
   version, html, esc, icon, icons: iconNames, announce, botState, botLabel, states: STATES,
   ...factories, legend, keys, inline,
-  hydrate, orb, liven, glance, shape, menu, popover, layer, tooltip, toast, composer, card,
+  hydrate, orb, liven, glance, shape, squircle, modelMark, model, modelRoute, menu, popover, layer, tooltip, toast, composer, card,
   hold: Object.assign(holdElement, { wire: wireHold })
 };
 export type Ui = typeof ui;
-export { html, icon, hydrate, hydrateOne, announce, botState, botLabel, orb, liven, glance, shape, menu, popover, layer, tooltip, toast, composer, card, wireHold, holdElement };
+export { html, icon, hydrate, hydrateOne, announce, botState, botLabel, orb, liven, glance, shape, squircle, modelMark, menu, popover, layer, tooltip, toast, composer, card, wireHold, holdElement };
 export type { SegElement } from './wire';
 export type { ComposerEl, ComposerOpts, DecisionDetail, AssumptionDetail, DictateDetail, SendDetail } from './composer';
-export type { PageDef, MenuEntry, MenuItem, StepItem, LadderOpts, MeasurePart, Station } from './html';
+export type { PageDef, MenuEntry, MenuItem, StepItem, LadderOpts, MeasurePart, Station, CallLine } from './html';
+export type { ModelRef, ModelOpts, MarkOpts, ModelFamily } from './model-mark';
 export type { BotLike } from './bot-state';
 export type { CardKind, CardOpts, CardLike, CardData } from './card-registry';

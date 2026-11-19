@@ -37,8 +37,8 @@ function geom(w: number, h: number): { R: number; Fw: number } {
   return { R, Fw: F };
 }
 /* the slab as one path: concave flare out of the edge, side, rounded top, side, flare back into the edge. In svg
-   space the slab body spans x ∈ [F, F + w]. The library draws the corner CSS draws (continuous where corner-shape
-   exists, round otherwise); the minimised pill is a pill in a pill: R = h / 2 with round ends. */
+   space the slab body spans x ∈ [F, F + w]. The library draws the same continuous corner every other surface takes
+   (squircle-path.ts); the minimised pill is a pill in a pill: R = h / 2 with round ends. */
 function slabPath(w: number, h: number, g: { R: number; Fw: number }): string {
   const pill = S.mode === 'minimal' || S.mode === 'off';
   return ui.shape.slab(w, h, pill ? Math.min(h / 2, w / 2) : g.R, g.Fw, pill ? { round: true } : undefined);

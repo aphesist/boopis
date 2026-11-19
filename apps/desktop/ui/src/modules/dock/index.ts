@@ -23,6 +23,9 @@ import { makeOrb, paintSession, refreshBot, relocateLive, renderAll, renderMins,
 import { closeCard, goPage, onCardAction, onCardState, onWaitAdded, onWaitResolved, openCard, setMode, setOn, toggleSetting } from './controller';
 import { cancelOutside, fitRow, onClick, onDocDown, onDocUp, onFocusIn, onFocusOut, onKey, onLayout, onPointerDown, onPointerMove, onResize, onTouchMove, onTouchUp, onWheel, onDoubleGuard } from './input';
 import type { RunSnapshot } from '../../data';
+/* drawn corners (DESIGN-SYSTEM.md section 8): the dock's own surfaces; the tiles float, so they are surfaces */
+ui.squircle.auto('.dk-add, .dk-run-open, .dk-sched-row, .dk-sched-what');
+ui.squircle.auto('.dk-tile', { mode: 'surface' });
 
 const VIEW_CLASS: Record<string, string> = {
   'bots:min': 'dk-v-min', 'bots:norm': 'dk-v-bots-norm', 'bots:exp': 'dk-v-bots-exp', 'bots:card': 'dk-v-bots-card',

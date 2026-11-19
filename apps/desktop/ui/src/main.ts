@@ -19,6 +19,8 @@ import './modules/dock';
 import { boot } from './modules/shell';
 
 const log = logger('main');
+/* the continuous corners: observe the document before anything is drawn (each module binds its own surfaces at import) */
+ui.squircle.start();
 
 async function start(): Promise<void> {
   if (inTauri()) {

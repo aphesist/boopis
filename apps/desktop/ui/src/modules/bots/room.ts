@@ -275,7 +275,7 @@ function openModelMenu(): void {
   const b = bot(S.sel), c = S.composer; if (!b || !c) return;
   const anchor = c.chips.querySelector<HTMLElement>('[data-value="model"]') ?? c.input;
   const items: MenuItem[] = [{ label: 'Governed', desc: 'Starts cheap, climbs the ladder', value: 'governed', checked: b.cfg.gov === 'governed' },
-    ...bots().catalog().models.map((m): MenuItem => ({ label: m, mono: true, value: m, checked: b.cfg.gov !== 'governed' && b.cfg.model === m }))];
+    ...bots().catalog().models.map((m): MenuItem => ({ label: m, mono: true, value: m, model: m, checked: b.cfg.gov !== 'governed' && b.cfg.model === m }))];
   ui.menu.open(anchor, items, {
     label: 'Model', place: 'above',
     onClose: () => setTimeout(() => { const f = document.activeElement; if (!f || f === document.body || !f.isConnected || f.closest('.ui-menu')) c.focus(); }, 0),
@@ -308,7 +308,7 @@ export function paintToolbar(b: Bot): void {
   const gchip = ui.chip({ label: 'Governed', icon: 'ladder', pressed: gov, value: gov ? 'model' : 'governed', tip: 'Governance', attrs: { 'data-kbd': 'alt+G' } });
   gchip.addEventListener('ui:change', (e) => { e.preventDefault(); setGov(b, gov ? 'ungoverned' : 'governed'); });
   const kids: HTMLElement[] = [gchip];
-  if (!gov) { const mc = ui.chip({ label: b.cfg.model, mono: true, haspopup: 'menu', value: 'model', tip: 'Model', attrs: { 'data-kbd': 'alt+M' } }); mc.addEventListener('click', openModelMenu); kids.push(mc); }
+  if (!gov) { const mc = ui.chip({ model: b.cfg.model, haspopup: 'menu', value: 'model', tip: 'Model', attrs: { 'data-kbd': 'alt+M' } }); mc.addEventListener('click', openModelMenu); kids.push(mc); }
   if (chans.length) { const ch = ui.chip({ label: 'Also on ' + chans.join(', '), tip: 'Channels' }); ch.addEventListener('click', () => openSettings(b.id, 'channels')); kids.push(ch); }
   c.chips.replaceChildren(...kids);
 }

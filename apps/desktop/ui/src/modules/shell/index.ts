@@ -24,6 +24,9 @@ import { computeNow, layoutNow, queueLayout, setDockHeight, setInset } from './l
 import { closePalette, movePal, openPalette, paletteActive, renderPalette, resetActive, runPal, setActive } from './palette';
 import { cycleRegion, focusRegion, leaderActive, leaderKey, nextAttention, regionOf, rememberFocus, startLeader } from './regions';
 import { getLayout } from '../../core/state';
+/* drawn corners (DESIGN-SYSTEM.md section 8): the shell's surfaces; sheets and menus float, so they are surfaces */
+ui.squircle.auto('.hx-cmd, .hx-me, .hx-dtab, .hx-pal-row');
+ui.squircle.auto('.hx-dialog__card, .hx-palette__box, .hx-goto, .hxt-preset', { mode: 'surface' });
 
 const log = logger('shell');
 

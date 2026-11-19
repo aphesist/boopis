@@ -41,7 +41,7 @@
 .ss-path { font-size: var(--fs-xs); color: var(--text); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ss-dir { color: var(--text-quiet); }
 .ss-chev { width: 10px; height: 10px; color: var(--text-quiet); transition: transform var(--dur-2) var(--ease); }
-.ss-diff { width: 100%; border-radius: var(--r-m); background: var(--bg-0); overflow: hidden; }
+.ss-diff { width: 100%; border-radius: var(--r-m); --sq-bg: var(--bg-0); background: var(--sq-bg); overflow: hidden; }
 .ss-diff--bare { margin: 4px 0 var(--sp-2); }
 .ss-diff-file + .ss-diff-file { box-shadow: inset 0 1px 0 var(--hair); }
 .ss-diff-head {
@@ -88,18 +88,18 @@
 .ssr-task { display: flex; align-items: flex-start; gap: var(--sp-2); padding: 4px 0; font-size: var(--fs-s); line-height: var(--lh-ui); }
 .ssr-task-mark { width: 16px; height: 18px; display: grid; place-items: center; flex: none; color: var(--brass); }
 .ssr-task-mark .ui-icon { width: 14px; height: 14px; }
-.ssr-task-mark > i { width: 8px; height: 8px; border-radius: var(--r-pill); corner-shape: round; box-shadow: inset 0 0 0 1px var(--line-strong); }
+.ssr-task-mark > i { width: 8px; height: 8px; border-radius: var(--r-pill); box-shadow: inset 0 0 0 1px var(--line-strong); }
 .ssr-task[data-s="done"] { color: var(--text-quiet); }
 .ssr-file {
   appearance: none; width: calc(100% + 12px); display: flex; align-items: center; gap: var(--sp-2); min-height: var(--row-h); margin: 0 -6px; padding: 0 6px;
-  border: 0; border-radius: var(--r-s); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; transition: background-color var(--dur-1) var(--ease);
+  border: 0; border-radius: var(--r-s); --sq-bg: none; background: var(--sq-bg); color: inherit; font: inherit; text-align: left; cursor: pointer; transition: background-color var(--dur-1) var(--ease);
 }
-.ssr-file:hover { background: var(--hover); }
+.ssr-file:hover { --sq-bg: var(--hover); }
 .ssr-file .ss-n { margin-left: auto; }
 /* the copy button sits in the well's corner: the well declares its radius and inset, the button fits (DESIGN-SYSTEM §8.2) */
 .ssr-term-wrap { position: relative; --r-outer: var(--r-m); --pad: 4px; --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad))); }
 .ssr-term {
-  margin: 0; padding: 10px var(--sp-3); border-radius: var(--r-outer); background: var(--bg-0);
+  margin: 0; padding: 10px var(--sp-3); border-radius: var(--r-outer); --sq-bg: var(--bg-0); background: var(--sq-bg);
   font-size: var(--fs-2xs); line-height: 1.6; color: var(--text-dim); white-space: pre-wrap; overflow-wrap: anywhere;
 }
 .ssr-term .cmd { color: var(--text); }

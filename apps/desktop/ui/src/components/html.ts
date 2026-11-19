@@ -7,6 +7,8 @@ import { ariaKeys, keyLabel } from '../core/keys';
 import { botState } from './bot-state';
 import type { BotLike } from './bot-state';
 import { icon } from './icons';
+import { arrowHTML, isKnownModel, markHTML, modelHTML, routeHTML } from './model-mark';
+import type { ModelRef } from './model-mark';
 import { orbHtml } from './orb';
 
 type U<T> = T | undefined;
@@ -69,13 +71,14 @@ function segmented(o: SegmentedOpts): string {
       attrs({ [tabs ? 'aria-selected' : 'aria-checked']: String(j === i), tabindex: j === i ? '0' : '-1', 'aria-controls': o.controls?.[x.value], 'aria-label': x.ariaLabel, 'data-tip': x.tip, 'data-kbd': x.keys }) + '>' +
       (x.icon ? icon(x.icon, { size: 'm' }) : '') + (x.label != null ? '<span>' + esc(x.label) + '</span>' : '') + (x.dot != null ? dot('attention', { show: !!x.dot }) : '') + '</button>').join('') + '</div>';
 }
-export interface ChipOpts { label: string; icon?: U<string>; pressed?: U<boolean>; mono?: U<boolean>; haspopup?: U<string>; expanded?: U<boolean>; option?: U<boolean>; checked?: U<boolean>; tip?: U<string>; value?: U<string>; tabindex?: U<string>; class?: U<string>; attrs?: U<Attrs> }
+export interface ChipOpts { label?: U<string>; /** a model: its provider's mark leads, and the label defaults to the name */ model?: U<ModelRef>; modelColor?: U<'mono' | 'brand'>; icon?: U<string>; pressed?: U<boolean>; mono?: U<boolean>; haspopup?: U<string>; expanded?: U<boolean>; option?: U<boolean>; checked?: U<boolean>; tip?: U<string>; value?: U<string>; tabindex?: U<string>; class?: U<string>; attrs?: U<Attrs> }
+const modelName = (ref: ModelRef): string => (typeof ref === 'object' ? String(ref.model ?? ref.id ?? '') : String(ref).slice(String(ref).lastIndexOf('/') + 1));
 function chip(o: ChipOpts): string {
   const option = !!o.option;
-  return '<button type="button" class="' + cx('ui-chip', o.mono && 'ui-chip--mono', option && 'ui-chip--option', o.class) + '" data-ui="chip"' +
+  return '<button type="button" class="' + cx('ui-chip', (o.mono || (o.model && o.mono !== false)) && 'ui-chip--mono', option && 'ui-chip--option', o.class) + '" data-ui="chip"' +
     attrs({ role: option ? 'radio' : null, 'aria-checked': option ? String(!!o.checked) : null, 'aria-pressed': !option && o.pressed != null ? String(!!o.pressed) : null,
       'aria-haspopup': o.haspopup, 'aria-expanded': o.haspopup ? String(!!o.expanded) : null, 'data-tip': o.tip, 'data-value': o.value, tabindex: o.tabindex, ...o.attrs }) + '>' +
-    (o.icon ? icon(o.icon) : '') + '<span>' + esc(o.label) + '</span>' + (o.haspopup ? icon('chevron-down', { size: 's' }) : '') + '</button>';
+    (o.model ? markHTML(o.model, { size: 14, color: o.modelColor ?? 'mono' }) : o.icon ? icon(o.icon) : '') + '<span>' + esc(o.label ?? (o.model ? modelName(o.model) : '')) + '</span>' + (o.haspopup ? icon('chevron-down', { size: 's' }) : '') + '</button>';
 }
 const chipGroup = (o: { options: readonly { label: string; value: string }[]; value?: U<string | null>; label?: U<string> }): string =>
   '<div class="ui-chips" role="radiogroup" data-ui="options"' + attrs({ 'aria-label': o.label }) + ' style="display:flex;flex-wrap:wrap;gap:6px">' +
@@ -118,7 +121,7 @@ function ladder(o: LadderOpts): string {
   if (o.variant === 'list') {
     return '<ol class="ui-ladder ui-ladder--list"' + attrs({ 'aria-label': o.label || 'Model ladder', 'data-off': o.off, style }) + '>' + L.map((x, i) =>
       '<li' + (i === cur ? ' aria-current="step"' : '') + '><span class="ui-ladder__mark"><i class="ui-ladder__st" data-s="' + st(i) + '"></i></span>' +
-      '<span class="ui-ladder__name">' + esc(x[0]) + '</span><span class="ui-ladder__rule">' + esc(x[1] ?? '') + '</span></li>').join('') + '</ol>';
+      '<span class="ui-ladder__name">' + markHTML(x[0], { size: 14 }) + esc(x[0]) + '</span><span class="ui-ladder__rule">' + esc(x[1] ?? '') + '</span></li>').join('') + '</ol>';
   }
   const name = L[cur] ? L[cur][0] : '';
   return '<span class="ui-ladder" role="img"' + attrs({ 'aria-label': (o.label || 'Model ladder') + ', station ' + (cur + 1) + ' of ' + L.length + (name ? ': ' + name : ''), 'data-off': o.off, style }) + '>' +
@@ -155,9 +158,29 @@ function pages(o: { pages: readonly PageDef[]; current?: U<string>; interactive?
 const request = (text: string): string => '<div class="ui-request">' + esc(text) + '</div>';
 const disclosure = (o: { label: string; controls?: U<string>; expanded?: U<boolean> }): string =>
   '<button type="button" class="ui-disclosure" data-ui="disclosure"' + attrs({ 'aria-expanded': String(!!o.expanded), 'aria-controls': o.controls }) + '>' + icon('chevron') + '<span>' + esc(o.label) + '</span></button>';
-export interface EntryOpts { kind?: U<'user' | 'agent' | 'bot'>; who?: U<string>; callno?: U<readonly string[]>; body?: U<string>; steps?: U<{ count: number; id: string; open?: boolean }>; label?: U<string> }
+/** a call-number line: text, or a model drawn with its mark (`via`: the arrow that leads it) */
+export type CallLine = string | { model: string; via?: U<string>; size?: U<number> };
+export interface EntryOpts { kind?: U<'user' | 'agent' | 'bot'>; who?: U<string>; callno?: U<readonly CallLine[]>; body?: U<string>; steps?: U<{ count: number; id: string; open?: boolean }>; label?: U<string> }
+/** an agent's call number starts with its model, then '→ model' for each step up the ladder: those leading string lines are
+    read as models when they name a known family (a time or a cost never does) */
+function leadingModels(o: EntryOpts): CallLine[] {
+  const out = [...(o.callno ?? [])];
+  if (o.kind !== 'agent') return out;
+  for (let i = 0; i < out.length; i++) {
+    const l = out[i];
+    if (l === undefined || typeof l === 'object') continue;
+    const m = /^\s*(→|->)\s*(.+)$/.exec(l), name = m ? (m[2] ?? '') : l;
+    if ((i === 0) === !!m || !isKnownModel(name)) break;
+    out[i] = m ? { model: name, via: m[1] ?? '→' } : { model: name };
+  }
+  return out;
+}
+function callLine(l: CallLine, i: number, who: boolean): string {
+  if (typeof l === 'object') return '<span>' + (l.via ? arrowHTML(l.via) : '') + modelHTML(l.model, { size: l.size ?? 14 }) + '</span>';
+  return i === 0 && !who ? '<b>' + esc(l) + '</b>' : '<span>' + esc(l) + '</span>';
+}
 function entry(o: EntryOpts): string {
-  const lines = (o.callno ?? []).map((l, i) => (i === 0 && !o.who ? '<b>' + esc(l) + '</b>' : '<span>' + esc(l) + '</span>')).join('');
+  const lines = leadingModels(o).map((l, i) => callLine(l, i, !!o.who)).join('');
   const steps = o.steps ? disclosure({ label: o.steps.count + ' steps', controls: o.steps.id, expanded: o.steps.open }) : '';
   return '<article class="ui-entry"' + attrs({ 'data-kind': o.kind, 'aria-label': o.label }) + '><div class="ui-callno">' + (o.who ? '<span class="' + cx('ui-callno__who', o.kind === 'user' && 'is-you') + '">' + o.who + '</span>' : '') + lines + steps + '</div>' +
     '<div class="ui-entry__body">' + (o.body ?? '') + '</div></article>';
@@ -179,7 +202,7 @@ function section(o: { label: string; meta?: U<string>; open?: U<boolean>; body?:
 }
 
 export interface MenuItem {
-  label?: string; value?: string | number; desc?: string; icon?: string; keys?: string; checked?: boolean; mono?: boolean; disabled?: boolean; stamp?: string;
+  label?: string; /** a model: a brand mark leads the label (a menu of models is the picker) */ model?: ModelRef; modelColor?: 'mono' | 'brand'; value?: string | number; desc?: string; icon?: string; keys?: string; checked?: boolean; mono?: boolean; disabled?: boolean; stamp?: string;
   role?: 'menuitem' | 'menuitemradio' | 'menuitemcheckbox'; lead?: string; content?: boolean; title?: string; foot?: string;
 }
 export type MenuEntry = MenuItem | '-';
@@ -193,7 +216,7 @@ function menuItems(items: readonly MenuEntry[], o: { multi?: boolean | undefined
     const role = x.role ?? (radio ? (o.multi ? 'menuitemcheckbox' : 'menuitemradio') : 'menuitem');
     return '<button type="button" class="ui-menu__item" role="' + role + '"' + attrs({ 'aria-checked': role === 'menuitem' ? null : String(!!x.checked), 'data-value': itemValue(x), disabled: x.disabled, tabindex: '-1', 'aria-keyshortcuts': x.keys && ariaKeys(x.keys) }) + '>' +
       '<span class="ui-menu__glyph">' + (role !== 'menuitem' ? (x.checked ? icon('check') : '') : (x.lead ?? (x.icon ? icon(x.icon) : ''))) + '</span>' +
-      '<span class="ui-menu__text"><span class="' + cx('ui-menu__label', x.mono && 'ui-mono') + '"' + (x.content ? ' data-content' : '') + '>' + esc(x.label) + '</span>' + (x.desc ? '<span class="ui-menu__desc">' + esc(x.desc) + '</span>' : '') + '</span>' +
+      '<span class="ui-menu__text"><span class="' + cx('ui-menu__label', x.mono && 'ui-mono') + '"' + (x.content || x.model ? ' data-content' : '') + '>' + (x.model ? markHTML(x.model, { size: 16, color: x.modelColor ?? 'brand' }) : '') + esc(x.label) + '</span>' + (x.desc ? '<span class="ui-menu__desc">' + esc(x.desc) + '</span>' : '') + '</span>' +
       (x.stamp ? stamp(x.stamp) : '') + (x.keys ? keys(x.keys) : '') + '</button>';
   }).join('');
 }
@@ -220,5 +243,5 @@ const tip = (label: string, k?: string, state?: { text: string; tone?: string })
 
 export const html = {
   icon, keys, kbd: keys, code, inline, stamp, dot, capacity, button, iconButton, send, hold, switch: switchHtml, segmented, chip, chipGroup,
-  orb: orbHtml, stateWord, row, leadFor, group, ladder, measure, legend, pages, request, entry, disclosure, steps, blank, section, menuItems, field, setRow, empty, toast, tip
+  orb: orbHtml, model: modelHTML, modelRoute: routeHTML, modelMark: markHTML, stateWord, row, leadFor, group, ladder, measure, legend, pages, request, entry, disclosure, steps, blank, section, menuItems, field, setRow, empty, toast, tip
 };

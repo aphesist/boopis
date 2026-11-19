@@ -34,7 +34,7 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
   const g0 = gov();
   const govChip = ui.chip({ label: 'Governed', icon: 'ladder', pressed: g0.governed });
   const smart = ui.chip({ label: 'Smart', icon: 'spark', pressed: g0.smart });
-  const model = ui.chip({ label: g0.model, mono: true, haspopup: 'menu', expanded: false });
+  const model = ui.chip({ model: g0.model, haspopup: 'menu', expanded: false });
   const c = ui.composer({
     placeholder: 'Describe the change', label: 'Message the coding agent', value: opts.draft,
     chips: [govChip, smart, model], spend: { spent: g0.spent, cap: g0.cap },
@@ -50,7 +50,7 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
     govChip.setAttribute('aria-label', G.governed ? 'Governed: starts cheap, climbs the model ladder on failure, stops at the cost cap' : 'Ungoverned: one pinned model, no cost cap');
     smart.setAttribute('aria-pressed', String(G.smart)); smart.setAttribute('data-tip', G.smart ? 'Picks the model for each message' : 'You pick the model'); smart.setAttribute('data-kbd', 'alt+S');
     if (G.smart && model.contains(document.activeElement)) c.focus();   /* never drop focus with the chip */
-    model.hidden = G.smart; span(model).textContent = G.model; model.setAttribute('aria-label', 'Model: ' + G.model); model.setAttribute('data-tip', 'Model'); model.setAttribute('data-kbd', 'alt+M');
+    model.hidden = G.smart; span(model).textContent = G.model; ui.modelMark.swap(model, G.model); model.setAttribute('aria-label', 'Model: ' + G.model); model.setAttribute('data-tip', 'Model'); model.setAttribute('data-kbd', 'alt+M');
     c.setSpend(G.spent, G.governed ? G.cap : null);
     c.refresh();
   }
@@ -63,7 +63,7 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
     const items = [
       { title: 'Model' },
       { label: 'Smart', value: SMART_VALUE, desc: 'Picks the model for each message', checked: G.smart },
-      ...data().details.models.get().map((m) => ({ label: m, value: m, mono: true, checked: !G.smart && m === G.model }))
+      ...data().details.models.get().map((m) => ({ label: m, value: m, mono: true, model: m, checked: !G.smart && m === G.model }))
     ];
     ui.menu.open(anchor, items, {
       place: 'above', label: 'Model',

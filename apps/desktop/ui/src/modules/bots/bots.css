@@ -80,10 +80,10 @@
 .bt-appearance { display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); width: 100%; margin-bottom: var(--sp-6); }
 .bt-pick { width: 100%; min-height: calc(var(--ctl) + 6px); display: flex; justify-content: center; }
 .bt-opts { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-1); }
-.bt-opt { width: calc(var(--ctl) + 6px); height: calc(var(--ctl) + 6px); border-radius: var(--r-s); display: grid; place-items: center; transition: background-color var(--dur-out) var(--ease); }
-.bt-opt:hover { background: var(--hover); transition-duration: var(--dur-1); }
-.bt-opt[aria-checked="true"] { background: var(--current); box-shadow: inset 0 0 0 1px var(--brass); }
-.bt-swatch { width: 20px; height: 20px; border-radius: var(--r-pill); corner-shape: round; background: var(--c); box-shadow: inset 0 0 0 1px var(--hair); }
+.bt-opt { width: calc(var(--ctl) + 6px); height: calc(var(--ctl) + 6px); border-radius: var(--r-s); display: grid; place-items: center; transition: background-color var(--dur-out) var(--ease); --sq-bg: transparent; background: var(--sq-bg); }
+.bt-opt:hover { --sq-bg: var(--hover); transition-duration: var(--dur-1); }
+.bt-opt[aria-checked="true"] { --sq-bg: var(--current); box-shadow: inset 0 0 0 1px var(--brass); }
+.bt-swatch { width: 20px; height: 20px; border-radius: var(--r-pill); background: var(--c); box-shadow: inset 0 0 0 1px var(--hair); }
 .bt-new-field { width: min(480px, 100%); }
 .bt-go-row { display: flex; justify-content: center; margin-top: var(--sp-5); }
 .bt-go { min-width: 148px; }
@@ -92,7 +92,7 @@
 .bt-suggest-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-2); }
 .bt-sugg {
   display: flex; align-items: flex-start; gap: var(--sp-3); padding: 14px 16px; border-radius: var(--r-m); text-align: left;
-  background: var(--bg-0); box-shadow: inset 0 0 0 1px var(--hair); transition: box-shadow var(--dur-out) var(--ease);
+  --sq-bg: var(--bg-0); background: var(--sq-bg); box-shadow: inset 0 0 0 1px var(--hair); transition: box-shadow var(--dur-out) var(--ease);
 }
 .bt-sugg:hover { box-shadow: inset 0 0 0 1px var(--line); transition-duration: var(--dur-1); }
 .bt-sugg-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -127,3 +127,8 @@ orb-avatar.is-live { cursor: pointer; }
   .bt-sheet { width: 100%; }
   .bt-sheet-corner { display: none; }
 }
+
+/* drawn corners (DESIGN-SYSTEM.md §8; bound at start-up with HX.ui.squircle.auto): the line is --sq-line */
+.bt-sugg { --sq-line: var(--hair); }
+.bt-sugg:hover { --sq-line: var(--line); }
+.bt-opt[aria-checked="true"] { --sq-line: var(--brass); }
