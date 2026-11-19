@@ -2,6 +2,7 @@
 //! There is no command that returns a secret to the UI (`docs/PROTOCOL.md` section 1).
 
 pub mod channel;
+pub mod refs;
 pub mod store;
 
 pub use channel::SecretChannel;

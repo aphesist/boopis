@@ -12,6 +12,7 @@ pub mod hermes;
 pub mod os;
 pub mod secrets;
 pub mod settings;
+pub mod setup;
 pub mod state;
 
 use std::sync::Arc;
