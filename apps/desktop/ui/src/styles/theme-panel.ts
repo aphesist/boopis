@@ -28,7 +28,7 @@ export function mountThemePanel(container: HTMLElement | null): void {
   container.innerHTML =
     '<section class="ui-set" aria-labelledby="hxt-h-preset">' + ui.html.setHead({ id: 'hxt-h-preset', label: 'Theme' }) +
       '<div class="hxt-presets" role="radiogroup" aria-labelledby="hxt-h-preset">' + Object.entries(PRESETS).map(([id, p]) =>
-        '<label class="hxt-preset" data-hx-preset="' + id + '" data-hx-case="' + p.case + '"><input type="radio" name="hxt-preset" id="hxt-preset-' + id + '" value="' + id + '">' +
+        '<label class="hxt-preset ui-nest" data-hx-preset="' + id + '" data-hx-case="' + p.case + '"><input type="radio" name="hxt-preset" id="hxt-preset-' + id + '" value="' + id + '">' +
         '<span class="hxt-preset__chips" aria-hidden="true"><i style="background:var(--bg-1)"></i><i style="background:var(--bg-2)"></i><i style="background:var(--bg-3)"></i><i style="background:var(--text)"></i><i style="background:var(--brass)"></i><i style="background:var(--red)"></i></span>' +
         '<span class="hxt-preset__name">' + esc(p.name) + '</span><span class="hxt-preset__note">' + esc(p.note) + '</span></label>').join('') + '</div>' +
     '</section>' +

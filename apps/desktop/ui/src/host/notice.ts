@@ -5,7 +5,7 @@ export function showStartupFailure(err: unknown): void {
   const message = err instanceof Error ? err.message : String(err);
   const box = document.createElement('div');
   box.setAttribute('role', 'alert');
-  box.style.cssText = 'position:fixed;inset:0;display:grid;place-content:center;gap:12px;padding:32px;background:var(--bg-0);color:var(--text);font:inherit;text-align:center';
+  box.style.cssText = 'position:fixed;inset:0;display:grid;place-content:center;gap:var(--sp-3);padding:var(--sp-6);background:var(--bg-0);color:var(--text);font:inherit;text-align:center';
   const h = document.createElement('p');
   h.textContent = 'boopis could not reach its engine';
   h.style.cssText = 'margin:0;font-weight:600';

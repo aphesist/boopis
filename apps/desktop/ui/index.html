@@ -84,7 +84,7 @@
         <div id="hx-dtabs"></div>
         <button class="ui-ib ui-corner" type="button" id="hx-settings-close" aria-label="Close settings" data-tip="Close" data-kbd="esc"><span data-icon="close"></span></button>
       </header>
-      <div class="hx-dialog__body ui-scroll ui-scroll--stable ui-scroll--inset-end">
+      <div class="hx-dialog__body ui-scroll ui-scroll--stable ui-scroll--inset-end" tabindex="0" role="region" aria-labelledby="hx-settings-title">   <!-- focusable: a panel with nothing to focus (Keyboard) still scrolls from the keyboard -->
         <div class="hx-dpanel" id="hx-dpanel-general" role="tabpanel" aria-labelledby="hx-dtab-general">
           <section class="ui-set" aria-labelledby="hx-set-layout">
             <h3 class="ui-set__head" id="hx-set-layout">Layout</h3>
