@@ -148,6 +148,10 @@ out=$(run --help)
 check "--help lists --uninstall and --file" contains "$out" "--uninstall"
 
 # ---- 7. a terminal: colour, banner, animation switches (script gives the run a real tty)
+# Every variable the installer reads to decide what the terminal shows. A run starts without them, so the cases below test
+# the terminal path wherever the suite runs (GitHub's runners set CI=true; a person's shell may set NO_COLOR, COLORTERM
+# or LC_ALL) and each case sets only what it is about.
+TERM_VARS="-u CI -u NO_COLOR -u BOOPIS_NO_ANIMATION -u COLORTERM -u LC_ALL -u LC_CTYPE -u LANG -u COLUMNS"
 termrun() { # termrun <env assignments...> -- <installer args...>
   local envs=()
   while [ "$1" != -- ]; do
@@ -156,7 +160,7 @@ termrun() { # termrun <env assignments...> -- <installer args...>
   done
   shift
   fresh
-  script -qefc "env ${envs[*]} HOME=$T/home bash $installer --file $T/art/$NAME --prefix $T/p --yes $*" /dev/null 2>&1 | tr -d '\r'
+  script -qefc "env $TERM_VARS ${envs[*]} HOME=$T/home bash $installer --file $T/art/$NAME --prefix $T/p --yes $*" /dev/null 2>&1 | tr -d '\r'
 }
 base=(TERM=xterm-256color LANG=C.UTF-8)
 out=$(termrun "${base[@]}" COLORTERM=truecolor --)

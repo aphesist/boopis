@@ -44,8 +44,16 @@ const CALL_TIMEOUT: Duration = Duration::from_mins(25);
 /// The longest frame read from a worker. A worker is semi-trusted: a memory-safety bug in the
 /// engine would make it hostile, so what it sends is bounded.
 const MAX_WORKER_FRAME: usize = 16 * 1024 * 1024;
-/// How much of the worker's error output is kept.
-const STDERR_KEEP: usize = 8 * 1024;
+/// The tasks (threads) the worker's sandbox may hold and no more: the supervisor, the worker's
+/// main thread and its channel reader.
+#[cfg(unix)]
+const WORKER_TASKS: u64 = 3;
+/// How much of the worker's error output is kept: the last bytes, which is where a panic message
+/// lands, and few enough to ride along in an error's `data` and in `mods.exited`.
+const STDERR_KEEP: usize = 2 * 1024;
+/// How long the exit task waits for the worker's error output to drain once the worker is gone.
+/// The pipe closes with the process, so this only bounds a reader that is stuck.
+const STDERR_DRAIN: Duration = Duration::from_millis(750);
 
 const METHODS: &[&str] = &[
     wire::METHOD_CAPABILITIES,
@@ -106,7 +114,11 @@ impl Session {
     fn fail_all(&self, why: &AppError) {
         let doomed: Vec<_> = lock(&self.waiting).drain().collect();
         for (_, w) in doomed {
-            let _ = w.send(Err(json!({ "code": why.code, "message": why.message })));
+            let _ = w.send(Err(json!({
+                "code": why.code,
+                "message": why.message,
+                "stderr": why.details.get("stderr").cloned().unwrap_or(Value::Null),
+            })));
         }
     }
 
@@ -139,6 +151,12 @@ impl Session {
         }
         match tokio::time::timeout(OP_TIMEOUT, answer).await {
             Ok(Ok(Ok(v))) => Ok(v),
+            // The worker died with this operation outstanding: keep the code and the stderr tail the
+            // exit task attached, so the caller sees why instead of a bare internal error.
+            Ok(Ok(Err(e))) if e["code"] == codes::HX_MODS_WORKER_FAILED => Err(worker_failed(
+                e["message"].as_str().unwrap_or_default(),
+                e["stderr"].as_str().unwrap_or_default(),
+            )),
             Ok(Ok(Err(e))) => Err(app_error(
                 e["code"].as_str().unwrap_or("hx.internal_error"),
                 e["message"].as_str().unwrap_or_default().to_owned(),
@@ -470,9 +488,13 @@ async fn start_worker(
     policy.env_allowlist.clear();
     policy.timeout_ms = hx_sandbox::limits::MAX_TIMEOUT_MS;
     policy.resources.memory_bytes = Some(2 * 1024 * 1024 * 1024);
-    // The worker has one thread besides its main one (the channel reader) and no reason to start a
-    // process: any fork or exec past that is refused by the kernel.
-    policy.resources.max_processes = Some(1);
+    // `RLIMIT_NPROC` counts threads, and in the sandbox's fresh user namespace it counts from zero:
+    // the sandbox's own supervisor (it stays behind as the PID namespace's parent), the worker's
+    // main thread and its channel reader (`hx_mods::worker::serve`) are three tasks. Three is
+    // exactly that, so any fork, clone or exec past it is refused by the kernel. The limit was
+    // once 1, which refused the worker's own threads at startup for every user but root (root is
+    // exempt from the limit, which hid it). `the_worker_starts_for_an_ordinary_user` guards it.
+    policy.resources.max_processes = Some(WORKER_TASKS);
     let argv = vec![exe.to_string_lossy().into_owned(), "mods-worker".to_owned()];
     let spawned =
         hx_sandbox::spawn(&argv, &policy, SpawnOptions::new().with_inherit(child_fd)).await;
@@ -490,9 +512,9 @@ async fn start_worker(
         }
     };
     let stderr: Arc<Mutex<String>> = Arc::default();
-    if let Some(r) = child.take_stderr() {
-        tokio::spawn(keep_tail(r, stderr.clone()));
-    }
+    let stderr_reader = child
+        .take_stderr()
+        .map(|r| tokio::spawn(keep_tail(r, stderr.clone())));
     if let Some(r) = child.take_stdout() {
         tokio::spawn(keep_tail(r, Arc::default()));
     }
@@ -516,6 +538,11 @@ async fn start_worker(
         let outcome = child.wait().await;
         let _ = std::fs::remove_dir_all(&scratch);
         s.alive.store(false, Ordering::SeqCst);
+        // The exit can be seen before the last of the error output has been read: wait for the
+        // reader, or a panic message would be missing from the very report that needs it.
+        if let Some(reader) = stderr_reader {
+            let _ = tokio::time::timeout(STDERR_DRAIN, reader).await;
+        }
         let reason = match outcome {
             Ok(o) => format!("the worker exited: {o:?}"),
             Err(e) => format!("the worker could not be waited for: {e}"),
@@ -567,7 +594,16 @@ fn worker_read_paths() -> Vec<std::path::PathBuf> {
     }
 }
 
-/// Keeps the last [`STDERR_KEEP`] bytes of a stream.
+/// Drops what a terminal would act on: every control character but the line break and the tab
+/// (escape sequences lose their escape, and a carriage return cannot overwrite a line). The text
+/// goes into an error and a notification, and from there to a screen and a log.
+fn strip_control(text: &str) -> String {
+    text.chars()
+        .filter(|c| !c.is_control() || matches!(c, '\n' | '\t'))
+        .collect()
+}
+
+/// Keeps the last [`STDERR_KEEP`] bytes of a stream, control characters stripped.
 async fn keep_tail<R: AsyncRead + Unpin>(mut r: R, into: Arc<Mutex<String>>) {
     let mut buf = [0u8; 2048];
     loop {
@@ -575,7 +611,7 @@ async fn keep_tail<R: AsyncRead + Unpin>(mut r: R, into: Arc<Mutex<String>>) {
             Ok(0) | Err(_) => return,
             Ok(n) => {
                 let mut t = lock(&into);
-                t.push_str(&String::from_utf8_lossy(&buf[..n]));
+                t.push_str(&strip_control(&String::from_utf8_lossy(&buf[..n])));
                 if t.len() > STDERR_KEEP {
                     let mut cut = t.len() - STDERR_KEEP;
                     while !t.is_char_boundary(cut) {
@@ -698,4 +734,67 @@ pub fn run_worker() -> anyhow::Result<()> {
 #[cfg(not(unix))]
 pub fn run_worker() -> anyhow::Result<()> {
     anyhow::bail!("mods are off on this platform")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn session(stderr: &str) -> Arc<Session> {
+        Arc::new(Session {
+            id: "s".to_owned(),
+            writer: AsyncMutex::new(Box::new(tokio::io::sink())),
+            waiting: Mutex::default(),
+            next: AtomicU64::new(0),
+            alive: AtomicBool::new(true),
+            kill: Box::new(|| {}),
+            stderr: Arc::new(Mutex::new(stderr.to_owned())),
+            plugins: Mutex::default(),
+        })
+    }
+
+    #[test]
+    fn control_characters_are_stripped_but_lines_and_tabs_stay() {
+        let raw = "thread 'main' panicked\n\t\x1b[31mred\x1b[0m\r\0bell\x07 done";
+        assert_eq!(
+            strip_control(raw),
+            "thread 'main' panicked\n\t[31mred[0mbell done"
+        );
+    }
+
+    #[tokio::test]
+    async fn the_tail_is_bounded_and_clean() {
+        let kept: Arc<Mutex<String>> = Arc::default();
+        let text = "line \x1b[1mbold\x1b[0m é\n".repeat(500) + "the last line\n";
+        keep_tail(text.as_bytes(), kept.clone()).await;
+        let kept = lock(&kept).clone();
+        assert!(kept.len() <= STDERR_KEEP, "{} bytes", kept.len());
+        assert!(kept.ends_with("bold[0m é\nthe last line\n"), "{kept:?}");
+        assert!(!kept.contains('\x1b'));
+    }
+
+    #[tokio::test]
+    async fn an_operation_cut_short_by_the_workers_exit_carries_its_stderr() {
+        let s = session("thread 'main' panicked at worker.rs:1:1:\nboom\n");
+        let waiter = {
+            let s = s.clone();
+            tokio::spawn(async move { s.request(json!({ "op": "load" })).await })
+        };
+        // Wait until the operation is registered, as the exit task would find it.
+        while lock(&s.waiting).is_empty() {
+            tokio::task::yield_now().await;
+        }
+        s.alive.store(false, Ordering::SeqCst);
+        s.fail_all(&worker_failed(
+            "the worker exited: Exited { code: 101 }",
+            &s.stderr_text(),
+        ));
+        let e = waiter.await.unwrap().unwrap_err();
+        assert_eq!(e.code, codes::HX_MODS_WORKER_FAILED);
+        assert!(e.message.contains("101"), "{}", e.message);
+        assert_eq!(
+            e.details["stderr"],
+            json!("thread 'main' panicked at worker.rs:1:1:\nboom\n")
+        );
+    }
 }
