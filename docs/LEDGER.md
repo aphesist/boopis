@@ -45,6 +45,8 @@ The harness adds the types below. They go upstream into contraprova's `EVENT_TYP
 ### Pending upstream: form events
 Forms (`docs/FORMS.md` section 6) are recorded today as `tool.called` events whose `tool` is `form.opened` or `form.resolved`, because contraprova's `EVENT_TYPES` has no `form.*` yet. The extra keys are `form_id`, `kind`, `origin`, and then `fields` and `secrets` (names only) on open, or `form_status` (`submitted`, `cancelled`, `expired`), `provided` (the secret fields saved to the host) and `answered` (the non-secret field names) on resolve. Values are never written. Upstream adds `form.opened` (`form_id`, `kind`, `fields`) and `form.resolved` (`form_id`, `form_status`, `provided`) to `HARNESS_EVENT_TYPES` and `REQUIRED_FIELDS`; the plugin then writes them under those names and stops using `tool.called`. The vendored copy is not edited.
 
+Automation grants (`docs/AUTOMATION.md` section 9) follow the same path: `grant.decided` (`grant_id`, `principal`, `capability`, `subject`, `scope`) and `grant.revoked` (`grant_id`, `reason`) go upstream together with `form.*`, and until then are written as `tool.called` with that `tool` name. Gated tool calls add the keys `capability`, `target`, `action_class`, `grant_id`, `decision` and `lease_epoch` to `tool.called`.
+
 ## Usage, made provider-neutral
 `usage.recorded` keeps contraprova's required fields: `model`, `input_tokens`, `output_tokens`, `cache_read_tokens`, `cache_write_5m_tokens`, `cache_write_1h_tokens`. `input_tokens` means **uncached** input, as in contraprova. The harness adds:
 - `provider`;

@@ -108,7 +108,7 @@ A normal Hermes plugin (`plugin.yaml` manifest v2, `kind: standalone`, `__init__
 It registers:
 - **Tools** in toolset `hypotaxis` (section 7). Handlers return JSON strings. `check_fn` hides tools whose prerequisites are missing, for example `hx` not found.
 - **Hooks:**
-  - `pre_tool_call`: permission policy, scope and protected-path vetoes, approval escalation; fails closed;
+  - `pre_tool_call`: permission policy, scope and protected-path vetoes, capability grants for browsers, desktop apps and integrations (`docs/AUTOMATION.md`, ADR-0021), approval escalation; fails closed;
   - `post_tool_call`: ledger;
   - `post_api_request`: usage into the ledger, cost-cap accounting;
   - `pre_llm_call`: cost-cap block;

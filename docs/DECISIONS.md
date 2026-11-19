@@ -276,6 +276,49 @@ They're not sandboxed, matching Claude Code. This is the only exception to the n
 - New needs become a new `kind` (a template plus an effect), never a new component.
 - The owner designs the visual family as an extension of the approved cards.
 
+## ADR-0021 Automation: reuse Hermes's drivers, one capability and grant model for every tool
+**Context.**
+- The owner wants agents, on any model, to operate other programs and browsers (not only Chrome), and wants one way to give them permission across many tools.
+- Research (`research/automation.md`) found the following.
+  - Hermes already ships the drivers:
+    - `browser_exec`: Chromium over CDP, model-written Python;
+    - `browser_vault`;
+    - a real-profile copy;
+    - `computer_use` on cua-driver: the accessibility tree plus screenshots, for any tool-calling model;
+    - camofox.
+  - Its approvals leave three gaps:
+    - no approval or per-site grant for `browser_exec`;
+    - `computer_use` grants keyed by action, not by app;
+    - MCP trust is binary.
+  - Firefox has no CDP, so Hermes can't drive it. Claudezilla and Mozilla's BiDi server can.
+  - Claude in Chrome needs an Anthropic plan, so it isn't model-agnostic.
+
+**Decision.**
+- Build no drivers. Reuse Hermes's first, then add MCP servers where Hermes has none: Chrome DevTools MCP for the live Chrome, Claudezilla and firefox-devtools-mcp for Firefox. Build only the policy, cards, ledger records and revocation (`docs/AUTOMATION.md`).
+- **One vocabulary of capabilities** for every tool, mapped from tool names by a data file:
+  - `web.read`, `web.act`, `web.script`, `web.identity`;
+  - `desktop.observe`, `desktop.act`, `desktop.display`;
+  - `app.<server>`, `fs.*`, `secret.use`, `net.egress`.
+- **Grants:**
+  - each grant has a subject (an origin, an app, a folder, a server and tool) and a scope (once, turn, session, always), with expiry;
+  - grants only narrow down the layers;
+  - a project can't grant reach;
+  - each teammate has its own grant set and browser identity.
+- They're enforced by the one permission function, `hypotaxis.policy.check`, which both the `pre_tool_call` hook and the exec kernel call.
+- **Protected action classes** always ask, whatever the grants say: spend, send as the user, irreversible delete, credentials, download and run, upload, authorise, account creation, identity upgrade, script injection.
+- **A short never-allowed list:**
+  - CAPTCHA bypass;
+  - input to OS security prompts;
+  - Hermes's hard-blocked key combinations;
+  - cloud metadata addresses.
+- Content from pages and screenshots can never create or widen a grant. A taint rule escalates the outbound classes after untrusted content arrives.
+- Permissions reach the user as forms (ADR-0020): `permission`, `approval`, and `signin` as a takeover under Hermes's control lease.
+
+**Consequences.**
+- A1 (capability map, grant store, policy step, cards, ledger, revocation) covers every tool at once. The per-driver work after it is thin.
+- `grant.decided` and `grant.revoked` go upstream into contraprova with `form.*`. Until then, they're written as `tool.called`.
+- Four spikes come first: one card instead of two for `computer_use`; native-Wayland capture on Arch; an agent-owned display; DevTools MCP annotations.
+
 ## ADR-0012 Prices
 Prices come from the models.dev catalogue plus a user override table. Hermes's models.dev data is not reachable through its public plugin API, so:
 - the plugin reads a cached catalogue file, `<profile home>/hypotaxis/prices/models-dev.json`;
