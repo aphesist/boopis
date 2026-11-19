@@ -99,6 +99,7 @@
     at: [I16, '<circle cx="8" cy="8" r="2.6"/><path d="M10.6 8v1.1a1.9 1.9 0 0 0 3.6.6A6.2 6.2 0 1 0 11 13.4"/>'],
     clock: [I16, '<circle cx="8" cy="8" r="5.8"/><path d="M8 4.8V8l2.2 1.4"/>'],
     sliders: [I16, '<path d="M2.5 5h6M11.5 5h2M2.5 11h1.5M7 11h6.5"/><circle cx="10" cy="5" r="1.6"/><circle cx="5.5" cy="11" r="1.6"/>'],
+    dice: [I16, '<rect x="2.5" y="2.5" width="11" height="11" rx="2.6"/><circle class="is-fill" cx="5.6" cy="5.6" r="1.05"/><circle class="is-fill" cx="8" cy="8" r="1.05"/><circle class="is-fill" cx="10.4" cy="10.4" r="1.05"/>'],
     more: [I16, '<circle class="is-fill" cx="3.5" cy="8" r="1.1"/><circle class="is-fill" cx="8" cy="8" r="1.1"/><circle class="is-fill" cx="12.5" cy="8" r="1.1"/>'],
     phi: ['139.19 40.89 724.12 918.22', null]
   };

@@ -65,6 +65,8 @@
   .g-prose { margin: 0; }
   .g-mention { color: var(--text-strong); font-weight: 500; background: var(--brass-soft); border-radius: var(--r-xs); padding: 0 3px; }
   .g-who { max-width: 420px; }
+  .g-who-name { overflow-wrap: anywhere; }
+  .g-long-compact { display: flex; flex-direction: column; gap: 12px; }
   @media (max-width: 1100px) { .g-place { grid-template-columns: minmax(0, 1fr); } .g-surface { padding: 16px; } }
   .g-presets { display: flex; align-items: center; gap: 12px; margin: 0 0 32px; color: var(--text-quiet); font-size: var(--fs-xs); }
   .g-log { color: var(--text-quiet); font: 400 var(--fs-2xs)/1.45 var(--mono); min-height: 16px; margin: 16px 0 0; }
@@ -135,7 +137,7 @@ window.__cardViews = function (view, G) {
   const STATES = ['open', 'invalid', 'submitting', 'done', 'deferred', 'expired', 'cancelled'];
   const nav = el('nav', 'g-nav', '');
   const q = new URLSearchParams(location.search), preset = q.get('preset');
-  for (const [v, t] of [['', 'Cards'], ['forms', 'Forms'], ['place', 'In place'], ['team', 'Team chat'], ['who', 'Who is asking']]) {
+  for (const [v, t] of [['', 'Cards'], ['forms', 'Forms'], ['place', 'In place'], ['team', 'Team chat'], ['who', 'Who is asking'], ['long', 'Long names']]) {
     const a = el('a', null, t); a.href = '?' + (v ? 'view=' + v : '') + (preset ? (v ? '&' : '') + 'preset=' + preset : ''); if (v === view) a.setAttribute('aria-current', 'page'); nav.appendChild(a);
   }
   page.querySelector('.g-head').after(nav);
@@ -209,6 +211,64 @@ window.__cardViews = function (view, G) {
     dock.appendChild(card('form', Object.assign({}, F.credential), { size: 'compact', ground: 'dock' }));
     wrap.append(conv, el('div', 'g-place__side'));
     wrap.lastChild.append(bots, dock);
+    kinds.appendChild(wrap);
+    return;
+  }
+
+  if (view === 'long') {
+    /* long names: people give bots big names. The bots fixture in data.js is used when it has one; the gallery adds
+       its own (this page only) for the cases it lacks: a long name with spaces, a 40-letter single word, a long relay. */
+    const longBots = [
+      { id: 'chief', name: 'chief of staff for the billing migration', role: 'coordinates the cents migration', shape: 'squircle', color: '#ef4444', eyes: 'pill', state: 'needs' },
+      { id: 'ledgerbot', name: 'invoicereconciliationandledgerauditorbot', role: 'reconciles the ledger', shape: 'hexagon', color: '#a6a6ab', eyes: 'square', state: 'idle' },
+      { id: 'captain', name: 'night shift release captain for every region', role: 'releases overnight', shape: 'circle', color: '#f5a337', eyes: 'circle', state: 'working' }
+    ];
+    const fixture = D.bots.filter((b) => b.name.length >= 24);
+    for (const b of longBots) if (!D.bots.some((x) => x.id === b.id || x.name === b.name)) D.bots.push(b);
+    const L1 = (fixture[0] || longBots[0]).id, L2 = 'ledgerbot', L3 = 'captain';
+    const nm = (id) => D.bots.find((b) => b.id === id).name;
+    const LONG_MODEL = 'accounts/fireworks/models/qwen3-coder-480b-a35b-instruct';
+    const LF = {
+      one: { id: 'long-one', kind: 'approval', origin: { kind: 'teammate', ids: [L1] }, title: 'Deploy billing/cents to staging before the 16:00 review',
+        why: nm(L1) + ' wants staging up before the review. Tests are green; dry run first.', effect: 'Deploys to staging only. About $0.02.', expires: 'expires in 9 min', schema: { properties: {} } },
+      word: { id: 'long-word', kind: 'question', origin: { kind: 'teammate', ids: [L2] }, title: 'Can ' + nm(L2) + ' write to the ledger table?',
+        why: nm(L2) + ' found 14 invoices that do not match the ledger and wants to correct them.', effect: 'The answer goes to ' + nm(L2) + '.',
+        schema: { properties: { ok: { type: 'string', title: 'Ledger writes', enum: ['yes', 'dry', 'no'], enumNames: ['Let it write', 'Dry run only', 'No'] } }, required: ['ok'] } },
+      pair: { id: 'long-pair', kind: 'question', origin: { kind: 'teammate', ids: [L1, 'kai'] }, title: 'Ship the migration notes with the changelog?', why: 'We wrote them together and need one call.', effect: 'The answer goes to both.',
+        schema: { properties: { ship: { type: 'string', title: 'Notes', enum: ['now', 'later'], enumNames: ['Ship them now', 'After the review'] } }, required: ['ship'] } },
+      three: { id: 'long-three', kind: 'question', origin: { kind: 'teammate', ids: ['kai', 'iris', 'nina'] }, title: 'Freeze the staging branch tonight?', effect: 'The answer goes to kai, iris and nina.',
+        schema: { properties: { freeze: { type: 'string', title: 'Staging', enum: ['freeze', 'open'], enumNames: ['Freeze it', 'Leave it open'] } }, required: ['freeze'] } },
+      four: { id: 'long-four', kind: 'question', origin: { kind: 'teammate', ids: [L2, L1, 'kai', 'iris'] }, title: 'Who signs off the reconciliation report?', effect: 'The answer goes to all four.',
+        schema: { properties: { who: { type: 'string', title: 'Sign-off', enum: ['you', 'atlas'], enumNames: ['I will', 'atlas'] } }, required: ['who'] } },
+      relay: { id: 'long-relay', kind: 'question', origin: { kind: 'teammate', ids: [L1], via: L3 }, title: 'Keep staging up overnight?', why: nm(L3) + ' is asking for ' + nm(L1) + ', who is in the review.', effect: 'The answer goes to ' + nm(L1) + '.',
+        schema: { properties: { keep: { type: 'string', title: 'Staging', enum: ['keep', 'down'], enumNames: ['Keep it up', 'Take it down at 20:00'] } }, required: ['keep'] } },
+      model: Object.assign({}, F.permission, { id: 'long-model', origin: { kind: 'agent', model: LONG_MODEL } }),
+      short: { id: 'long-short', kind: 'approval', origin: { kind: 'teammate', ids: ['nina'] }, title: 'Deploy to staging', effect: 'Deploys to staging only.', expires: 'expires in 9 min', schema: { properties: {} } }
+    };
+    intro.textContent = 'People give bots big names. Each name stays on one line in a row and in a compact card (two in a card in the conversation), cut with an ellipsis and whole on hover, on focus and for screen readers; several names become “and 2 others” when they do not fit; a relay gives way before the asker; the queue’s columns never move.';
+    const wrap = el('div', 'g-place');
+    const conv = el('section', 'g-surface g-surface--ground'); conv.setAttribute('aria-label', 'Session conversation, long names');
+    const say = (k) => {
+      const f = LF[k], o = f.origin;
+      const e = o.kind === 'agent' ? entry('', [{ model: o.model }, '14:12'], 'agent') : entry(ui.html.orb(D.bots.find((b) => b.id === o.ids[0]), { size: 20 }) + '<span class="g-who-name">' + ui.esc(nm(o.ids[0])) + '</span>', ['14:12'], 'bot');
+      body(e).appendChild(card('form', Object.assign({}, f), { size: 'inline' })); conv.appendChild(e);
+    };
+    for (const k of ['one', 'word', 'pair', 'relay', 'model']) say(k);
+    const side = el('div', 'g-place__side');
+    const dock = el('section', 'g-surface g-dockslab'); dock.dataset.ground = 'dock'; dock.setAttribute('aria-label', 'Dock: waiting on you, long names');
+    dock.appendChild(el('p', 'g-dock-title', 'Waiting on you'));
+    for (const k of ['short', 'one', 'word', 'pair', 'three', 'four', 'relay', 'model']) dock.appendChild(card('form', Object.assign({}, LF[k]), { size: 'mini', ground: 'dock' }));
+    /* the blank the coding agent leaves in its answer, as the dock raises it: its model is the session's route */
+    const blank = (id, model) => card('blank', { id, model, question: 'Should I keep the old export name prorate as a deprecated alias?', short: 'Keep prorate as a deprecated alias?', options: ['Keep it, deprecated', 'Remove it'] }, { size: 'mini', ground: 'dock' });
+    dock.appendChild(blank('long-blank', D.conversation.find((m) => m.model).model));
+    dock.appendChild(blank('long-blank-model', 'qwen3-coder → ' + LONG_MODEL));
+    dock.appendChild(card('form', Object.assign({}, LF.relay), { size: 'compact', ground: 'dock' }));
+    const compact = el('section', 'g-surface g-surface--ground g-long-compact'); compact.setAttribute('aria-label', 'Compact cards, long names');
+    compact.appendChild(el('p', 'g-size', 'Compact'));
+    for (const k of ['one', 'four']) compact.appendChild(card('form', Object.assign({}, LF[k]), { size: 'compact' }));
+    compact.appendChild(card('teammate', { from: L3, title: 'take the overnight release for eu-west', quote: 'I can cover it if you approve the window.', item: ['eu-west · 3 services', 'release/2.4.1'], meta: 'expires in 20 min' }, { size: 'compact' }));
+    side.append(dock, compact);
+    wrap.append(conv, side);
     kinds.appendChild(wrap);
     return;
   }

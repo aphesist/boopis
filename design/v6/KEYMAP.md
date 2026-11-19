@@ -119,6 +119,7 @@ team chat). Single keys never act while focus is in a text field.
 | 1–9 | Pick an option: in the blank popover, and in a form's option list (the focused list, else the first). In a multi-select list they toggle |
 | ↑ ↓ | Move through a form's options (single choice selects as it moves); from the last option, ↓ goes to "Other" |
 | Tab, Shift+Tab | Move between a form's fields, then its buttons |
+| Tab (to a cut name) | A sender's name that is cut short in a card's byline takes focus only then, and its full name shows as the tooltip; in a one-row card the row itself shows it |
 | Enter | Submit the form from a field or an option (Ctrl or ⌘ + Enter from long text). A hold form moves focus to its hold button instead of submitting |
 | Esc | Defer the form ("Later": it collapses and waits in the dock; Open brings it back). In the blank popover, close it and return focus to the blank |
 
@@ -144,15 +145,27 @@ a form's first field, a failed gate's primary action), so F8 and Shift+F8 reach 
 
 ## 8. Dock (dock)
 
-| Key | Action |
-|---|---|
-| ← →, Home, End | Previous, next bot (roving focus); in the page nub, previous, next page |
-| Enter, Space | Open the bot's session in the dock: its last messages, its open card, a composer. Again closes it |
-| mod+Enter | Open the bot's full chat in the Bots tab (bot selected); the same as a double-click |
-| Esc | In a session (its composer included): close it, focus back on the orb. Otherwise collapse an expanded dock, then return focus to where it came from. A click anywhere outside the dock does the same (below) |
-| [ ], PageUp PageDown | Previous, next dock page |
-| 1–9 | Bot n (while the dock has focus; anywhere: mod+G 1–9) |
-| ↑ ↓ | Expand, collapse; ↓ on the normal dock minimises it |
+Each region of the dock is one Tab stop and the arrows move real focus inside it (roving tabindex): a screen reader
+announces each orb or row by its name, the focus ring is the squircle ring, and the arrows never scroll the page.
+
+| Region | Key | Action |
+|---|---|---|
+| Bot row (at rest) | ← →, Home, End | Previous, next bot (and "+"), first, last. The focused orb shows its tooltip, and grows if "Grow bots on hover" is on |
+| | ↑ | Open the grid on the same bot |
+| | ↓ | Minimise the dock |
+| | Enter, Space | Open the bot's session in the dock: its last messages, its open card, a composer. Again closes it |
+| | mod+Enter | Open the bot's full chat in the Bots tab (bot selected); the same as a double-click |
+| Grid (expanded) | ← → ↑ ↓, Home, End | Move in 2D; ← → wrap by rows; ↓ from the last row goes back to the bot row (on the same bot) |
+| | Enter, mod+Enter | Open the session, the full chat |
+| Session switcher (under the composer) | ← →, Home, End | Previous, next bot |
+| | Enter | Switch the session to that bot (focus stays in the switcher); on the open bot, close the session |
+| Queue (Needs you, at rest) | ↑ ↓, Home, End | Previous, next row |
+| | Enter | Expand it (the compact cards) |
+| Page nub | ← →, Home, End | Previous, next, first, last page (a tablist) |
+| Anywhere in the dock | [ ], PageUp PageDown | Previous, next dock page. The arrows never change pages |
+| | 1–9 | Bot n: in the row (or in the grid when it is open; anywhere: mod+G 1–9) |
+| | Esc | In a session (its composer included): close it, focus back on its orb (in the grid when it was opened there). Otherwise collapse an expanded dock, then return focus to where it came from. A click anywhere outside the dock does the same (below) |
+| | ↑ ↓ (elsewhere) | Expand, collapse; in a session they move nothing, and in its message log they scroll it |
 
 In a session the composer keeps §7 (Enter sends to that bot's thread, `HX.data.botThreads`; Shift+Enter breaks the
 line; alt+V talks to that bot, whose orb listens; Esc while listening stops listening before it closes the session)

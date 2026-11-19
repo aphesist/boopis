@@ -64,7 +64,9 @@
   const check = () => U().icon('check', { class: 'cd-ico' });
   /* a model wherever one appears: its provider's mark beside its name (components/model-mark.js), mono, from the tokens */
   const model = (m, size) => U().html.model(m, { size: size || 14, class: 'cd-mono', mono: false });
-  const isRoute = (m) => U().modelMark.parse(m).length > 1;
+  /* a route ('qwen3-coder → sonnet 5.5') asks as the model it ended on: one mark, one name, in every slot and row
+     (the route itself is the session's call number) */
+  const asker = (m) => U().modelMark.last(m) || String(m || '');
 
   /* ---------------------------------------------------------------- motion from the tokens */
   const tok = (name, fallback) => {
@@ -111,10 +113,10 @@
         const ids = (o.ids || (o.id ? [o.id] : [])).filter((x) => bot(x));
         return ids.length ? { kind: 'teammate', ids, via: o.via && bot(o.via) ? o.via : null } : null;
       }
-      return o;
+      return o.kind === 'agent' ? Object.assign({}, o, { model: asker(o.model), route: o.model }) : o;
     }
     if (d.from && bot(d.from)) return { kind: 'teammate', ids: [d.from], via: d.via && bot(d.via) ? d.via : null };
-    if (d.model) return { kind: 'agent', model: d.model };
+    if (d.model) return { kind: 'agent', model: asker(d.model), route: d.model };
     return null;
   }
   const namesText = (ids) => { const n = ids.map((x) => bot(x).name); return n.length < 3 ? n.join(' and ') : n.slice(0, -1).join(', ') + ' and ' + n[n.length - 1]; };
@@ -127,34 +129,48 @@
   }
   /* the visual alone: an orb, a stack, a glyph, a server's initial, or the agent's model mark (its provider's logo;
      a route draws its marks inline with the names instead) */
-  function originVisual(o, size, max) {
+  /* still: drawn in an aria-hidden slot (a row's lead), so nothing in it takes focus */
+  function originVisual(o, size, max, still) {
     if (!o) return '';
     if (o.kind === 'teammate') {
       if (o.ids.length === 1) return U().html.orb(bot(o.ids[0]), { size });
       const cap = Math.max(1, Math.min(max || 3, o.ids.length > (max || 3) ? (max || 3) - 1 : o.ids.length));
       const shown = o.ids.slice(0, cap), more = o.ids.length - shown.length;
-      return '<span class="cd-stack" style="--s:' + size + 'px"' + (more ? ' tabindex="0"' : '') + ' data-tip="' + esc(namesText(o.ids)) + '" role="img" aria-label="' + esc(namesText(o.ids)) + '">' +
+      return '<span class="cd-stack" style="--s:' + size + 'px"' + (more && !still ? ' tabindex="0"' : '') + ' data-tip="' + esc(namesText(o.ids)) + '" role="img" aria-label="' + esc(namesText(o.ids)) + '">' +
         shown.map((id) => '<span class="cd-stack__one">' + U().html.orb(bot(id), { size }) + '</span>').join('') +
         (more ? '<span class="cd-stack__more" aria-hidden="true">+' + more + '</span>' : '') + '</span>';
     }
-    if (o.kind === 'agent') return U().html.modelMark(U().modelMark.last(o.model), { size: 16, class: 'cd-glyph' });
+    if (o.kind === 'agent') return U().html.modelMark(o.model, { size: 16, class: 'cd-glyph' });
     if (o.kind === 'mcp') return '<span class="cd-tile" style="--cd-orb:' + size + 'px" aria-hidden="true">' + esc(String(o.server || '?').slice(0, 1).toUpperCase()) + '</span>';
     const g = SYSTEM[o.kind];
     return g ? U().icon(g[0], { class: 'cd-glyph' }) : '';
   }
-  function originLabel(o) {
+  /* the names of an origin as one unit that never overflows (fitted by fitCard): the asker first, keeping the most
+     room; then the others ("and kai", "and 2 others", chosen by measuring); then the relay or the server's kind
+     (", via atlas"), which gives way first. One line, ellipses where cut, the whole text on hover and focus and
+     always whole for screen readers. */
+  const restOf = (n) => n.length === 2 ? ' and ' + n[1] : n.length === 3 ? ', ' + n[1] + ' and ' + n[2] : ' and ' + (n.length - 1) + ' others';
+  function namesUnit(o, bare) {
+    let first = '', rest = '', via = '', many = null, mono = false;
     if (o.kind === 'teammate') {
-      const names = o.ids.length > 3 ? o.ids.slice(0, 2).map((x) => esc(bot(x).name)).join(', ') + ' and ' + (o.ids.length - 2) + ' more' : esc(namesText(o.ids));
-      return '<span class="cd-by__name">' + names + '</span>' + (o.via ? '<span class="cd-by__via">via ' + esc(bot(o.via).name) + '</span>' : '');
-    }
-    if (o.kind === 'agent') return '<span class="cd-by__name cd-mono">' + (isRoute(o.model) ? U().html.modelRoute(o.model, { size: 14, mono: false }) : esc(o.model)) + '</span>';
-    if (o.kind === 'mcp') return '<span class="cd-by__name">' + esc(o.server) + '</span><span class="cd-by__via">MCP server' + (o.trust ? ', ' + esc(o.trust) : '') + '</span>';
-    return '<span class="cd-by__name">' + esc((SYSTEM[o.kind] || ['', o.kind])[1]) + '</span>';
+      const n = o.ids.map((x) => bot(x).name);
+      first = n[0];
+      if (n.length > 1) { many = n; rest = restOf(n); }
+      if (o.via) via = ', via ' + bot(o.via).name;
+    } else if (o.kind === 'agent') { first = o.model; mono = true; }
+    else if (o.kind === 'mcp') { first = o.server; via = bare ? '' : ' MCP server' + (o.trust ? ', ' + o.trust : ''); }
+    else first = (SYSTEM[o.kind] || ['', o.kind])[1];
+    const vis = '<span class="cd-names__first' + (mono ? ' cd-mono' : '') + '">' + esc(first) + '</span>' +
+      (many ? '<span class="cd-names__rest">' + esc(rest) + '</span>' : '') + (via ? '<span class="cd-names__via">' + esc(via) + '</span>' : '');
+    /* several names or a relay: the drawn form may be shortened and is split into parts, so screen readers get one
+       whole sentence instead ("nina, via atlas") */
+    const whole = many || via;
+    return '<span class="cd-names" data-full="' + esc(originText(o)) + '"' + (many ? ' data-names="' + esc(JSON.stringify(many)) + '"' : '') + '>' +
+      (whole ? '<span class="cd-names__vis" aria-hidden="true">' + vis + '</span><span class="ui-sr">' + esc(originText(o)) + '</span>' : vis) + '</span>';
   }
-  /* the byline above a card's title; hidden names (+N) are read out with the label */
+  /* the byline above a card's title */
   const byline = (c) => (c.origin ? '<div class="cd-by" data-origin="' + (c.origin.kind === 'teammate' ? (c.origin.ids.length > 1 ? 'joint' : c.origin.via ? 'relay' : 'teammate') : c.origin.kind) + '">' +
-    (c.origin.kind === 'agent' && isRoute(c.origin.model) ? '' : originVisual(c.origin, c.size === 'compact' || c.size === 'popover' ? 18 : 20)) + '<span class="cd-by__label">' + originLabel(c.origin) + '</span>' +
-    (c.origin.kind === 'teammate' && c.origin.ids.length > 3 ? '<span class="ui-sr">: ' + esc(namesText(c.origin.ids)) + '</span>' : '') + '</div>' : '');
+    originVisual(c.origin, c.size === 'compact' || c.size === 'popover' ? 18 : 20) + '<span class="cd-by__label">' + namesUnit(c.origin) + '</span></div>' : '');
   /* one teammate lends its colour to the card as a restrained accent (a ring and a 5% tint); a nearly black orb
      is mixed toward the ink so the ring still shows on dark grounds */
   function accentOf(o) {
@@ -198,12 +214,12 @@
   /* one row: who (the origin's visual and name), what, the attention dot when it owes something, a short meta */
   function mini(ctx, o) {
     const owe = ctx.owe, or = ctx.origin;
-    const lead = o.lead != null ? o.lead : originVisual(or, 16, 2);
-    const short = (x) => x.kind === 'teammate' ? (x.ids.length > 2 ? bot(x.ids[0]).name + ' +' + (x.ids.length - 1) : namesText(x.ids)) : x.kind === 'mcp' ? x.server : originText(x);
-    const who = or && o.who !== false ? '<span class="cd-mini__who">' + (or.kind === 'agent' ? mono(or.model) : esc(short(or))) + '</span> ' : '';
+    const lead = o.lead != null ? o.lead : originVisual(or, 16, 2, true);
+    /* the who: at most half the line, more when the request is short (fitCard); an MCP server by its name alone */
+    const who = or && o.who !== false ? '<span class="cd-mini__who">' + namesUnit(or, true) + '</span> ' : '';
     return '<button type="button" class="cd-mini" data-action="open" aria-labelledby="' + ctx.id + '-t' + (owe ? ' ' + ctx.id + '-o' : '') + (o.meta ? ' ' + ctx.id + '-m' : '') + '">' +
       '<span class="cd-mini__lead" aria-hidden="true">' + lead + '</span>' +
-      '<span class="cd-mini__text" id="' + ctx.id + '-t">' + who + o.text + '</span>' +
+      '<span class="cd-mini__text" id="' + ctx.id + '-t">' + who + '<span class="cd-mini__what">' + o.text + '</span></span>' +
       '<span class="cd-mini__status"><span class="cd-mini__dot">' + (owe ? U().html.dot('attention') : '') + '</span>' +
       (owe ? '<span class="ui-sr" id="' + ctx.id + '-o">, ' + esc(owe) + '</span>' : '') +
       '<span class="cd-mini__meta"' + (o.meta ? ' id="' + ctx.id + '-m"' : '') + '>' + (o.meta || '') + '</span></span></button>';
@@ -680,7 +696,7 @@
       const d = c.d, t = formT(d);
       if (['done', 'deferred', 'expired', 'cancelled'].indexOf(c.s) >= 0) {
         const act = c.s === 'deferred' ? btn('reopen', 'Open', 'ghost', { size: 's' }) : c.s === 'expired' ? btn('reopen', 'Ask again', 'ghost', { size: 's' }) : '';
-        return { head: '<div class="cd-collapsed"><span class="cd-mini__lead" aria-hidden="true">' + originVisual(c.origin, 16, 2) + '</span><p class="cd-collapsed__text" id="' + c.id + '-t">' + (c.s === 'done' ? check() : '') +
+        return { head: '<div class="cd-collapsed"><span class="cd-mini__lead" aria-hidden="true">' + originVisual(c.origin, 16, 2, true) + '</span><p class="cd-collapsed__text" id="' + c.id + '-t">' + (c.s === 'done' ? check() : '') +
           '<span class="cd-collapsed__what">' + fmt(cap(d.title)) + '</span><span class="cd-collapsed__how">' + esc(this.receiptHTML(c)) + '</span></p>' +
           '<span class="cd-mono cd-collapsed__at">' + esc(c.at) + '</span>' + act + '</div>' };
       }
@@ -751,10 +767,12 @@
       if (this._kind === 'approval' || this._kind === 'form') { this._tick(); this._timer = this._timer || setInterval(() => this._tick(), 1000); }
       if (this._state === 'holding' && typeof this._d.progress === 'number') requestAnimationFrame(() => { const h = this._holdBtn(); if (h && h._hold) h._hold.show(this._d.progress); });
       primeOrbs(this);
+      if (fitRO) fitRO.observe(this);
       emitAttention();
     }
     disconnectedCallback() {
       LIVE.delete(this);
+      if (fitRO) { fitRO.unobserve(this); this._fitW = 0; }
       clearInterval(this._timer); this._timer = 0;
       const h = this._holdBtn(); if (h && h._hold && h.dataset.state !== 'done') h._hold.reset();
       emitAttention();
@@ -885,7 +903,7 @@
       this._hydrate(c);
       if (focusIn && !this.contains(focusIn)) this._restoreFocus(focusKey);
       if (motionOn && changed && this._size !== 'mini' && !(this._inlineOnly && this._kind === 'blank')) this._flipHeight(h0);
-      if (changed && this.isConnected) primeOrbs(this);
+      if (changed && this.isConnected) { primeOrbs(this); fitCard(this); }
     }
 
     _restoreFocus(key) {
@@ -1206,6 +1224,66 @@
     requestAnimationFrame(() => requestAnimationFrame(go));
     setTimeout(go, 400);
   }
+
+  /* ---------------------------------------------------------------- long names: measured, never overflowing
+     A name never makes a card wider or pushes a column. In a one-row card the who takes at most half the line, or
+     whatever the request leaves; several names take the longest form that still leaves the asker about five em
+     ("kai, iris and nina", then "kai and 2 others"; "chief of staff… and kai" when the asker is the long one); a relay
+     gives way before the asker. Whatever is cut is whole on hover and focus (the row, or the byline, which becomes
+     focusable only then) and always whole in the accessible name. Refitted when a card's width or the theme changes. */
+  const FIT_MIN_EM = 5;
+  const others = (k) => ' and ' + k + ' other' + (k > 1 ? 's' : '');
+  const cut = (el) => !!el && (el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1);
+  function fitNames(unit) {
+    let names = null;
+    try { names = JSON.parse(unit.dataset.names); } catch (e) { return false; }
+    const first = unit.querySelector('.cd-names__first'), rest = unit.querySelector('.cd-names__rest');
+    if (!names || !first || !rest) return false;
+    /* the last form is the asker alone: the stacked orbs beside it still count everyone, and the full names are on
+       hover, on focus and in the accessible name (a "+N" here would contradict the stack's own +N) */
+    const n = names.length, forms = (n <= 3 ? [restOf(names)] : []).concat([others(n - 1), '']);
+    /* the asker's floor is set (fitCard), so a form fits when what follows it is not cut */
+    let i = 0;
+    for (; i < forms.length; i++) { rest.textContent = forms[i]; if (!cut(rest)) break; }
+    if (i === forms.length) rest.textContent = forms[--i];
+    return i > 0;
+  }
+  function fitCard(card) {
+    if (!card.isConnected || !card.clientWidth) return;
+    for (const text of card.querySelectorAll('.cd-mini__text')) {
+      const who = text.querySelector('.cd-mini__who'), what = text.querySelector('.cd-mini__what');
+      if (!who || !what || !text.clientWidth) continue;
+      const fs = parseFloat(getComputedStyle(text).fontSize) || 13, avail = text.clientWidth;
+      const room = Math.max(avail * 0.5, avail - what.getBoundingClientRect().width - fs * 0.3);
+      who.style.setProperty('--cd-who-max', Math.floor(room) + 'px');
+    }
+    for (const unit of card.querySelectorAll('.cd-names')) {
+      /* floors from each part's own width and the room there is: the asker keeps up to five em (at least 60% of a
+         relayed line), the relay up to six of what is left, so a short name never leaves a gap and the two always fit */
+      const em = parseFloat(getComputedStyle(unit).fontSize) || 12;
+      const first = unit.querySelector('.cd-names__first'), via = unit.querySelector('.cd-names__via'), rest = unit.querySelector('.cd-names__rest');
+      if (first) first.style.minWidth = '';
+      if (via) via.style.minWidth = '';
+      if (rest && unit.dataset.names) { try { rest.textContent = restOf(JSON.parse(unit.dataset.names)); } catch (e) { /* keep */ } }
+      const room = unit.clientWidth;
+      const ff = first ? Math.min(first.scrollWidth, em * FIT_MIN_EM, room * (via ? 0.6 : 1)) : 0;
+      if (first) first.style.minWidth = ff + 'px';
+      if (via) via.style.minWidth = Math.max(0, Math.min(via.scrollWidth, em * 6, room - ff - (rest ? rest.scrollWidth : 0))) + 'px';
+      const shorter = unit.dataset.names ? fitNames(unit) : false;
+      const host = unit.closest('.cd-mini') || unit.closest('.cd-by__label');
+      if (!host) continue;
+      const clipped = shorter || [...unit.querySelectorAll('.cd-names__first, .cd-names__rest, .cd-names__via')].some(cut);
+      if (clipped) { host.setAttribute('data-tip', unit.dataset.full); if (host.tagName !== 'BUTTON') host.tabIndex = 0; }
+      else { host.removeAttribute('data-tip'); if (host.tagName !== 'BUTTON') host.removeAttribute('tabindex'); }
+    }
+  }
+  const fitRO = typeof ResizeObserver === 'function' ? new ResizeObserver((entries) => {
+    for (const e of entries) { const w = Math.round(e.contentRect.width); if (e.target._fitW !== w) { e.target._fitW = w; fitCard(e.target); } }
+  }) : null;
+  const refitAll = () => requestAnimationFrame(() => { for (const c of LIVE) fitCard(c); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(refitAll);
+  addEventListener('hx:theme', refitAll);
+  { const H = hx(); if (H && H.on) H.on('hx:theme', refitAll); }
 
   /* one id, one answer: every card with the same kind and id (the conversation, the dock, the Bots section, team
      chat) takes the state the user gave in any one of them, with the same receipt. Values of secret fields are never

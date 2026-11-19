@@ -10,7 +10,7 @@
 <script>
 /* Wrapper: the real shell (index.html is a fragment), all module styles after shell.css, and the modules in the
    integration order with vendor/orb-avatar.min.js before bots.js. Query: ?tab=bots (default) &bot=<id> &new=1
-   &settings=<section|1> &dock=off &left=rail. */
+   &settings=<section|1> &dock=off &left=rail &fixture=long (HX_DATA.botFixtures). */
 (async () => {
   try {
     const q = new URLSearchParams(location.search);
@@ -30,6 +30,12 @@
       'if (q.get("new")) H.emit("hx:new-bot", { from: "test" });' +
       'if (q.get("settings") && H.bots) H.bots.settings(q.get("bot") || null, q.get("settings") === "1" ? null : q.get("settings"));' +
       '}, 50));<\/script>';
+    /* &fixture=long: the long-name bot from HX_DATA.botFixtures, added before any module reads the data */
+    if (q.get('fixture')) {
+      const fx = '<script>(() => { const D = window.HX_DATA, f = D && D.botFixtures && D.botFixtures[' + JSON.stringify(q.get('fixture')) + ']; if (!f) return;' +
+        'D.bots.push(f.bot); D.botThreads[f.bot.id] = f.thread; })();<\/script>';
+      html = html.replace('<script src="data.js"><\/script>', m => m + '\n' + fx);
+    }
     if (css) html = html.includes(MARK) ? html.replace(MARK, css + '\n' + MARK) : html.replace('</head>', css + '\n</head>');
     html += '\n' + js + '\n' + boot;
     document.open(); document.write('<!doctype html>\n' + html); document.close();

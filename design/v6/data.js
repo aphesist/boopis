@@ -32,6 +32,18 @@ window.HX_DATA = {
     { name: 'chief of staff', desc: 'Manages your calendar and pulls your notes together', shape: 'squircle', color: '#ef4444' },
     { name: 'flaky test hunter', desc: 'Reruns failing tests and opens a fix when it finds one', shape: 'squircle', color: '#2fd26a' }
   ],
+  /* test fixtures, not shown by default: a bot with a long name and a long role, for the long-name rules (ellipsis
+     where space is fixed, two lines in a header). bots.test.html?fixture=long adds it to bots and botThreads. */
+  botFixtures: {
+    long: {
+      bot: { id: 'cassiopeia-staging-deploy-guardian', name: 'cassiopeia-staging-deploy-guardian', role: 'watches every staging deploy and rolls back on a failed health check', shape: 'star', color: '#e8b04a', eyes: 'pill', state: 'needs', attention: 'approval' },
+      thread: [
+        { who: 'you', t: '15:02', text: 'keep an eye on the staging deploys tonight' },
+        { who: 'cassiopeia-staging-deploy-guardian', t: '15:03', text: 'On it. I will watch each deploy for ten minutes and roll back if the health check fails twice.' },
+        { who: 'cassiopeia-staging-deploy-guardian', t: '15:40', card: 'approval', data: { title: 'roll back staging', quote: 'invoices-api 2.14.0 → 2.13.4', item: ['staging · invoices-api', 'health check failed 2 of 2'], meta: 'expires in 9 min', actions: ['deny', 'hold to approve'] } }
+      ]
+    }
+  },
   sessions: [
     { id: 's1', project: 'billing-api', title: 'proration drift in src/billing', when: 'now', running: true },
     { id: 's2', project: 'billing-api', title: 'webhook retries and idempotency', when: '2h' },

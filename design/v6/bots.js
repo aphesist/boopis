@@ -8,7 +8,8 @@
    Emits:      hx:attention {source:'bots', tab:'bots', count, ids}, hx:bot-select {id, from}, hx:bot-state {id, state, attention},
                hx:bot-created {bot}, hx:bot-archived {id}, hx:view-inset {tab:'bots', right}, hx:title {tab:'bots', title}
    Provides:   HX.provide('bot-settings'), HX.provide('stop')
-   Exposes:    HX.bots = { list(), get(id), open(id), newBot(seed), settings(id, section), toggleSettings() } */
+   Exposes:    HX.bots = { list(), get(id), open(id), newBot(seed), settings(id, section), toggleSettings() },
+               HX.botNames = { pick({avoid}), available(), taken(name), exhausted(), ready() } */
 (function () {
   'use strict';
 
@@ -105,6 +106,75 @@
     room: null, presence: null, composer: null, sheet: null, transient: null, typing: false, follow: null, draft: null, draftRow: null,
     runs: new Map()
   };
+
+  /* ------------------------------------------------------------------ names (HX.botNames)
+     The curated list lives in data/bot-names.json (read once, same origin). Availability is derived, never stored:
+     the list minus the names of the bots that exist now, case-insensitive, so a name is taken while its bot exists
+     (picked or typed) and comes back when the bot is archived. When every name is in use, pick() returns a list
+     name with the lowest free number (nova-2) and exhausted() says so. Until the file has loaded (or where it cannot,
+     a page opened from disk) a short seed of the same names stands in. */
+  const NAME_SEED = ['nova', 'lyra', 'orion', 'wren', 'juniper', 'ember', 'onyx', 'tide', 'fern', 'zephyr', 'pip', 'aster', 'rowan', 'cobalt', 'lumen'];
+  const names = { list: null, loading: null };
+  function loadNames() {
+    if (names.loading) return names.loading;
+    try {
+      names.loading = fetch(new URL('data/bot-names.json', document.baseURI)).then(r => r.ok ? r.json() : null)
+        .then(j => { if (j && Array.isArray(j.names) && j.names.length) names.list = [...new Set(j.names.map(n => String(n).trim().toLowerCase()).filter(Boolean))]; })
+        .catch(() => {});
+    } catch (e) { names.loading = Promise.resolve(); }
+    return names.loading;
+  }
+  const namePool = () => names.list || NAME_SEED;
+  function namesInUse() {
+    const list = S.bots.length ? S.bots : (data().bots || []);
+    const used = new Set();
+    for (const b of list) { if (b.name) used.add(String(b.name).toLowerCase()); if (b.id) used.add(String(b.id).toLowerCase()); }
+    return used;
+  }
+  const botNames = {
+    available() { const used = namesInUse(); return namePool().filter(n => !used.has(n)); },
+    taken(name) { return namesInUse().has(String(name || '').trim().toLowerCase()); },
+    exhausted() { return !botNames.available().length; },
+    /* a random free name; avoid (a string or a list) keeps a reroll from landing on what is already in the field */
+    pick(opts) {
+      const avoid = new Set([].concat((opts && opts.avoid) || []).map(s => String(s).toLowerCase()));
+      const free = botNames.available(), fresh = free.filter(n => !avoid.has(n));
+      const from = fresh.length ? fresh : free;
+      if (from.length) return from[Math.floor(Math.random() * from.length)];
+      const used = namesInUse(), pool = namePool(), base = pool[Math.floor(Math.random() * pool.length)];
+      let n = 2; while (used.has(base + '-' + n) || avoid.has(base + '-' + n)) n++;
+      return base + '-' + n;
+    },
+    ready: () => loadNames()
+  };
+  loadNames();
+  if (window.HX) window.HX.botNames = botNames;   /* again in register(), once the shell's HX exists */
+
+  /* ------------------------------------------------------------------ long names
+     Where the space is fixed (list rows, bylines, the sheet, the button) a name is one line with an ellipsis; the
+     header wraps to two lines. A name that does not fit shows whole in the library's tooltip; the accessible name and
+     hx:title always carry it whole. Checked after each render and on resize, one frame later. */
+  let clipRaf = 0;
+  function tipIfClipped(host, textEl, full) {
+    if (!host || !textEl || !textEl.isConnected) return;
+    if (host.hasAttribute('data-tip') && !host.hasAttribute('data-tip-auto')) return;   /* the rail's own tip */
+    const clipped = textEl.scrollWidth > textEl.clientWidth + 1 || textEl.scrollHeight > textEl.clientHeight + 1;
+    if (clipped) { host.setAttribute('data-tip', full); host.setAttribute('data-tip-auto', ''); }
+    else if (host.hasAttribute('data-tip-auto')) { host.removeAttribute('data-tip'); host.removeAttribute('data-tip-auto'); }
+  }
+  function checkClips() {
+    if (clipRaf) return;
+    clipRaf = requestAnimationFrame(() => {
+      clipRaf = 0;
+      if (!railOn()) for (const [id, r] of S.rows) { const b = bot(id); if (b) tipIfClipped(r.btn, r.li.querySelector('.ui-row__title'), b.name); }
+      if (S.draftRow && !railOn()) tipIfClipped(S.draftRow.btn, S.draftRow.name, S.draftRow.name.textContent);
+      const root = S.viewRoot; if (!root) return;
+      for (const n of root.querySelectorAll('.bt-p-name, .bt-who-name, .bt-sh-name')) tipIfClipped(n, n, n.textContent);
+      for (const gl of root.querySelectorAll('.bt-go-label, .bt-arch-label')) tipIfClipped(gl.closest('button'), gl, gl.textContent);
+    });
+  }
+  let clipObs = null;
+  const watchClips = n => { if (!n || !window.ResizeObserver) return; if (!clipObs) clipObs = new ResizeObserver(() => checkClips()); clipObs.observe(n); };
   function initModel() {
     if (S.bots.length) return;
     const d = data();
@@ -218,22 +288,48 @@
       for (const o of root.querySelectorAll('orb-avatar')) for (const a of ['color', 'eye-color']) { const v = o.getAttribute(a); if (v) o.setAttribute(a, v); }
     }
   }
-  /* gentle cursor following for the presence orb: look at a point pulled toward the orb, release when the pointer rests */
+  /* Gentle looking, for the presence orb and the new-bot preview. Every target (the pointer, a control in use, a new
+     message) is pulled toward the orb by k and clamped to a small turn (about 20 degrees): orb2 aims its face at
+     exactly the point it is given, and a full-angle look at a control 170px below a 128px preview pushed the face
+     past the body's rim, so the eyes clipped and the silhouette tipped on every tile the pointer crossed; how far
+     depends on where the shape puts its face (diamond, star, triangle, drop worst). One pointermove listener serves
+     every follower; a follower whose orb is gone is skipped and can be disposed. */
+  const FOLLOWERS = new Set();
+  let followPt = null, followRaf = 0;
+  addEventListener('pointermove', e => {
+    followPt = { x: e.clientX, y: e.clientY };
+    if (!followRaf) followRaf = requestAnimationFrame(() => { followRaf = 0; for (const f of FOLLOWERS) f.track(); });
+  }, { passive: true });
   function gentleFollow(getOrb, k) {
-    let raf = 0, x = 0, y = 0, rest = 0, held = false;
-    const tick = () => {
-      raf = 0; const o = getOrb(); if (!o || !o.isConnected || held || o._hover) return;
+    let rest = 0, held = false, holdT = 0;
+    const aim = (o, px, py) => {
       const r = o.getBoundingClientRect(); if (!r.width) return;
       const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-      oc(o, 'lookAt', cx + (x - cx) * k, cy + (y - cy) * k);
-      clearTimeout(rest); rest = setTimeout(() => { const q = getOrb(); if (q && !held) oc(q, 'lookAt'); }, 1600);
+      let vx = (px - cx) * k, vy = (py - cy) * k;
+      const max = 0.3 * Math.max(250, r.width * 1.65), len = Math.hypot(vx, vy);
+      if (len > max) { vx *= max / len; vy *= max / len; }
+      oc(o, 'lookAt', cx + vx, cy + vy);
     };
-    addEventListener('pointermove', e => { x = e.clientX; y = e.clientY; if (!raf) raf = requestAnimationFrame(tick); }, { passive: true });
-    return {
-      hold(px, py) { const o = getOrb(); if (!o) return; held = true; o._held = true; clearTimeout(rest); oc(o, 'lookAt', px, py); },
-      release() { held = false; const o = getOrb(); if (o) o._held = false; oc(o, 'lookAt'); },
-      glance(px, py, ms) { const o = getOrb(); if (!o || held) return; o._held = true; oc(o, 'lookAt', px, py); clearTimeout(rest); rest = setTimeout(() => { o._held = false; oc(o, 'lookAt'); }, ms || 1100); }
+    const f = {
+      track() {
+        const o = getOrb(); if (!o || !o.isConnected || held || o._hover || o._faceOn || !followPt) return;
+        aim(o, followPt.x, followPt.y);
+        clearTimeout(rest); rest = setTimeout(() => { const q = getOrb(); if (q && !held && !q._faceOn) oc(q, 'lookAt'); }, 1600);
+      },
+      hold(px, py) { const o = getOrb(); if (!o || o._faceOn) return; held = true; o._held = true; clearTimeout(rest); aim(o, px, py); },
+      release() { held = false; const o = getOrb(); if (o) o._held = false; if (o && !o._faceOn) oc(o, 'lookAt'); },
+      glance(px, py, ms) { const o = getOrb(); if (!o || held || o._faceOn) return; o._held = true; aim(o, px, py); clearTimeout(rest); rest = setTimeout(() => { o._held = false; oc(o, 'lookAt'); }, ms || 1100); },
+      /* face the viewer while the body changes, so the outline blends face-on and the eyes stay inside it */
+      faceOn(ms) {
+        const o = getOrb(); if (!o) return;
+        o._faceOn = true; clearTimeout(holdT); clearTimeout(rest);
+        const r = o.getBoundingClientRect(); oc(o, 'lookAt', r.left + r.width / 2, r.top + r.height / 2);
+        holdT = setTimeout(() => { o._faceOn = false; oc(o, 'lookAt'); }, ms || 520);
+      },
+      dispose() { FOLLOWERS.delete(f); clearTimeout(rest); clearTimeout(holdT); }
     };
+    FOLLOWERS.add(f);
+    return f;
   }
 
   /* ================================================================== SIDEBAR LIST (KEYMAP §4)
@@ -254,6 +350,7 @@
     ul.addEventListener('keydown', listKeys);
     ul.addEventListener('ui:select', e => { const id = e.detail && e.detail.value; if (id === '__draft') { e.preventDefault(); const n = S.newPane && S.newPane.querySelector('.bt-name'); if (n) n.focus(); return; } if (id && bot(id)) { e.preventDefault(); openBot(id); emit('hx:bot-select', { id, from: 'bots-list' }); } });
     S.listWrap = wrap; S.rowsEl = ul;
+    watchClips(wrap); checkClips();
     syncListVisibility();
     syncRail();
     markSelected();
@@ -282,6 +379,7 @@
     const btn = li.querySelector('.ui-row');
     btn.addEventListener('pointerenter', () => { if (!reduced()) oc(btn.querySelector('orb-avatar'), 'blink'); });
     S.rows.set(b.id, { li, btn });
+    checkClips();
     return li;
   }
   /* rows are re-rendered from the library on change; the live orb is carried over so it never restarts */
@@ -304,6 +402,7 @@
     btn.addEventListener('pointerenter', () => { if (!reduced()) oc(btn.querySelector('orb-avatar'), 'blink'); });
     r.li.replaceWith(li);
     S.rows.set(id, { li, btn });
+    checkClips();
     if (focused) btn.focus({ preventScroll: true });
   }
   function showDraftRow(on) {
@@ -324,7 +423,7 @@
     const n = d.name.trim() || 'New bot';
     r.name.textContent = n;
     r.btn.setAttribute('aria-label', n + ', draft');
-    if (railOn()) r.btn.setAttribute('data-tip', n); else r.btn.removeAttribute('data-tip');
+    if (railOn()) { r.btn.setAttribute('data-tip', n); r.btn.removeAttribute('data-tip-auto'); } else { r.btn.removeAttribute('data-tip'); r.btn.removeAttribute('data-tip-auto'); checkClips(); }
   }
   function markSelected() {
     for (const [id, r] of S.rows) {
@@ -371,6 +470,7 @@
     const sheet = el('aside', { class: 'ui-panel bt-sheet', 'data-hx-panel': '', 'aria-label': 'Bot settings', hidden: true });
     root.append(room, nb, sheet);
     S.room = room; S.newPane = nb; S.sheet = sheet;
+    watchClips(root);
     buildRoom();
     if (S.view === 'new') openNew(); else openBot(S.sel);
     /* the new-bot view is ours to close: Esc leaves it for the bot you came from */
@@ -426,6 +526,7 @@
     acts.append(UI().iconButton({ icon: 'gear', label: 'Bot settings', keys: 'mod+I', action: 'settings' }));
     acts.firstElementChild.addEventListener('click', () => toggleSettings());
     refreshPresence();
+    checkClips();
   }
   function refreshPresence() {
     const b = bot(S.sel); if (!b || !S.pLine) return;
@@ -490,7 +591,7 @@
     const you = m.who === 'you', who = you ? null : (bot(m.who) || b);
     const entry = frag(UI().html.entry({
       kind: you ? 'user' : 'bot',
-      who: you ? esc('You') : orbHTML(who, 20, { state: 'idle' }) + '<span>' + esc(who.name) + '</span>',
+      who: you ? esc('You') : orbHTML(who, 20, { state: 'idle' }) + '<span class="bt-who-name">' + esc(who.name) + '</span>',
       callno: m.t ? [m.t] : [],
       label: (you ? 'You' : who.name) + (m.t ? ', ' + m.t : '')
     }));
@@ -499,6 +600,7 @@
     entry._msgs = [m]; entry._who = m.who;
     livenIn(entry);
     S.log.append(entry);
+    checkClips();
     return entry;
   }
   function appendMsg(id, m) {
@@ -787,12 +889,22 @@
     const U = UI();
     const pane = S.newPane; pane.textContent = '';
     const d = S.draft = { name: '', role: '', color: DRAFT_COLOR, shape: 'circle', eyes: 'pill', tab: 'colour', ...(seed || {}) };
-    const pv = orbButton({ ...d, name: 'Preview' }, 128, 'Preview of the new bot', { motion: 'lively' });
+    /* calm, not lively: orb2's lively idle swings the head up to about 72 degrees (rim peeks, sky gazes); on a narrow,
+       pointy or low-faced body (triangle, drop, star, diamond, tall) that tips the whole silhouette and takes the face
+       past its edge, so the eyes vanish and pop back: the owner's "flickers and flashes, depending on the shape". Calm
+       glances (about 22 degrees), blinks and eye morphs keep the preview alive; under reduced motion it is the glance lead. */
+    const pv = orbButton({ ...d, name: 'Preview' }, 128, 'Preview of the new bot', { motion: 'calm' });
     const preview = pv.orb;
     preview.setAttribute('shadow', '');
-    const follow = gentleFollow(() => preview, .55);
+    if (S.newFollow) S.newFollow.dispose();
+    const follow = S.newFollow = gentleFollow(() => preview, .55);
 
-    const nameIn = el('input', { class: 'bt-name', type: 'text', maxlength: '24', placeholder: 'Name your bot', 'aria-label': 'Name', autocomplete: 'off', spellcheck: 'false', value: d.name, 'data-hx-focus': 'messages' });
+    const noteId = 'bt-name-note-' + Math.random().toString(36).slice(2, 7);
+    const nameIn = el('input', { class: 'bt-name', type: 'text', maxlength: '24', placeholder: 'Name your bot', 'aria-label': 'Name', 'aria-describedby': noteId, 'aria-keyshortcuts': 'Alt+R', autocomplete: 'off', spellcheck: 'false', value: d.name, 'data-hx-focus': 'messages' });
+    /* Surprise me: the library's icon button with its dice glyph */
+    const dice = U.iconButton({ icon: 'dice', label: 'Surprise me with a name', tip: 'Surprise me', keys: 'alt+R', size: 's' });
+    dice.classList.add('bt-dice');
+    const note = el('p', { class: 'bt-name-note', id: noteId });
     const TABS = [['colour', 'Colour'], ['shape', 'Shape'], ['eyes', 'Eyes']];
     const rowId = 'bt-pick-' + Math.random().toString(36).slice(2, 7);
     const tabs = U.segmented({ mode: 'tabs', label: 'Appearance', value: d.tab, options: TABS.map(([value, label]) => ({ value, label })), controls: { colour: rowId, shape: rowId, eyes: rowId } });
@@ -806,7 +918,8 @@
 
     const form = el('div', { class: 'bt-new-form' }, [
       el('div', { class: 'bt-stage' }, pv),
-      nameIn,
+      el('div', { class: 'bt-name-row' }, [nameIn, dice]),
+      note,
       el('div', { class: 'bt-appearance' }, [tabs, row]),
       el('div', { class: 'bt-new-field' }, roleField),
       el('div', { class: 'bt-go-row' }, go)
@@ -817,8 +930,10 @@
       el('div', { class: 'bt-suggest-row' }, sugg.map(s => {
         const btn = el('button', { class: 'bt-sugg', type: 'button' }, [orbEl({ shape: s.shape, color: s.color, eyes: 'pill', name: s.name }, 32), el('span', { class: 'bt-sugg-text' }, [el('span', { class: 'bt-sugg-name', text: cap(s.name) }), el('span', { class: 'bt-sugg-desc', text: s.desc })])]);
         btn.addEventListener('click', () => {
+          const reshape = s.shape !== d.shape;
           Object.assign(d, { name: s.name.replace(/\s+/g, '-'), role: s.desc, shape: s.shape, color: s.color });
-          nameIn.value = d.name; roleIn.value = d.role; roleIn.dispatchEvent(new Event('input')); apply('all'); oc(preview, 'poke', .9);
+          if (reshape) follow.faceOn(560);
+          nameIn.value = d.name; roleIn.value = d.role; roleIn.dispatchEvent(new Event('input')); apply('all'); oc(preview, 'poke', reshape ? .5 : .9, { react: !reshape });
         });
         return btn;
       }))
@@ -826,6 +941,17 @@
     pane.append(el('div', { class: 'bt-new-scroll' }, [el('div', { class: 'bt-new-col' }, [back, form, suggest])]));
 
     tabs.addEventListener('ui:change', e => { d.tab = e.detail.value; paintRow(); });
+    /* The tiles are built when the tab changes, never on a choice: rebuilding 15 orb canvases (each with its 3D body)
+       on every click cost 45-90ms in WebKitGTK, right as the morph started, so its first frames dropped and the
+       change read as a jump. A choice now moves the selection; a new colour repaints the tiles in place. */
+    function syncRow() {
+      const cur = d.tab === 'colour' ? d.color : d.tab === 'shape' ? d.shape : d.eyes;
+      for (const b of row.querySelectorAll('.bt-opt')) { const on = b.dataset.val === cur; b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1; }
+    }
+    function recolourRow() {
+      if (d.tab === 'colour') return;
+      for (const o of row.querySelectorAll('.bt-opt orb-avatar')) paintOrbColour(o, d.color);
+    }
     function paintRow() {
       row.textContent = ''; row.dataset.kind = d.tab;
       row.setAttribute('aria-label', cap(d.tab));
@@ -858,38 +984,68 @@
     }
     function choose(val) {
       if (d.tab === 'colour') { d.color = val; apply('color'); oc(preview, 'blink'); }
-      if (d.tab === 'shape') { d.shape = val; apply('shape'); oc(preview, 'poke', .8, { react: false }); }
+      if (d.tab === 'shape' && val !== d.shape) { follow.faceOn(560); d.shape = val; apply('shape'); oc(preview, 'poke', .5, { react: false }); }
       if (d.tab === 'eyes') { d.eyes = val; apply('eyes'); }
-      paintRow();
-      const sel = row.querySelector('[aria-checked="true"]'); if (sel) sel.focus({ preventScroll: true });
+      syncRow();
+      const sel = row.querySelector('[aria-checked="true"]'); if (sel && sel !== document.activeElement) sel.focus({ preventScroll: true });
     }
     function apply(what) {
       if (what === 'color' || what === 'all') paintOrb(preview, d);
       if (what === 'shape' || what === 'all') preview.setAttribute('shape', d.shape);
       if (what === 'eyes' || what === 'all') { if (typeof preview.morphEyes === 'function') preview.morphEyes(d.eyes); else preview.setAttribute('eye-shape', d.eyes); }
-      if (what === 'all') paintRow();
+      if (what === 'color' || what === 'all') recolourRow();
+      if (what === 'all') syncRow();
       paintGo(); paintDraftRow();
     }
+    /* the caption under the preview is the button: it names the bot as you type or roll (an empty name gets one
+       from the list on create, so the button is never disabled for want of a name) */
+    const goLabel = el('span', { class: 'bt-go-label' }); go.querySelector('span').replaceChildren(goLabel);
     function paintGo() {
       const n = d.name.trim();
-      go.disabled = !n;
-      go.querySelector('span').textContent = n ? 'Create ' + n : 'Create bot';
+      go.disabled = false;
+      goLabel.textContent = n ? 'Create ' + n : 'Create bot';
+      if (n) go.setAttribute('data-tip', 'Create ' + n); else go.removeAttribute('data-tip');
+      pv.setAttribute('aria-label', n ? 'Preview of ' + n : 'Preview of the new bot');
+      paintNote();
+      checkClips();
     }
+    /* what the name will turn into: a name in use gets a number on create; a rolled name past the end of the list
+       has one already (say why) */
+    let rolledOut = false;
+    function paintNote() {
+      const n = d.name.trim();
+      let t = '';
+      if (n && botNames.taken(n)) { let k = 2; while (bot(idBase(n) + '-' + k)) k++; t = 'There is already a bot called ' + n + '. This one will be ' + idBase(n) + '-' + k + '.'; }
+      else if (rolledOut && n) t = 'Every name in the list is taken, so this one has a number.';
+      if (note.textContent !== t) note.textContent = t;
+    }
+    function roll() {
+      const name = botNames.pick({ avoid: d.name });
+      rolledOut = botNames.exhausted();
+      d.name = name; nameIn.value = name;
+      paintGo(); paintDraftRow();
+      oc(preview, 'blink');
+      const U2 = UI(); if (U2 && U2.announce) U2.announce('Name: ' + name + (rolledOut ? '. Every name in the list is taken, so it has a number.' : ''));
+    }
+    dice.addEventListener('click', () => roll());
     form.addEventListener('focusin', e => {
       if (pv.contains(e.target)) { follow.release(); return; }
       const r = e.target.getBoundingClientRect(); follow.hold(r.left + r.width / 2, r.top + r.height / 2);
       if (e.target === nameIn || e.target === roleIn) setReact(preview, 'listening');
     });
     form.addEventListener('focusout', () => { follow.release(); if (preview.dataset.base === 'listening') setReact(preview, 'idle'); });
-    row.addEventListener('pointerover', e => { const b = e.target.closest('.bt-opt'); if (!b) return; const r = b.getBoundingClientRect(); follow.hold(r.left + r.width / 2, r.top + r.height / 2); });
-    row.addEventListener('pointerleave', () => follow.release());
-    nameIn.addEventListener('input', () => { d.name = nameIn.value.replace(/\s+/g, '-').toLowerCase(); if (d.name !== nameIn.value) { const p = nameIn.selectionStart; nameIn.value = d.name; nameIn.setSelectionRange(p, p); } paintGo(); paintDraftRow(); });
-    nameIn.addEventListener('keydown', e => { if (e.key === 'Enter' && !go.disabled) { e.preventDefault(); create(); } });
+    nameIn.addEventListener('input', () => { rolledOut = false; d.name = nameIn.value.replace(/\s+/g, '-').toLowerCase(); if (d.name !== nameIn.value) { const p = nameIn.selectionStart; nameIn.value = d.name; nameIn.setSelectionRange(p, p); } paintGo(); paintDraftRow(); });
+    nameIn.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !go.disabled) { e.preventDefault(); create(); return; }
+      /* alt+R rolls a name (KEYMAP: free in the app and in browsers; e.code, since ⌥R types ® on a Mac) */
+      if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.code === 'KeyR') { e.preventDefault(); e.stopPropagation(); roll(); }
+    });
     roleIn.addEventListener('input', () => { d.role = roleIn.value; });
     go.addEventListener('click', () => create());
 
     function create() {
-      let base = d.name.trim().toLowerCase().replace(/[^a-z0-9-]/g, '') || 'bot', id = base, n = 2;
+      if (!d.name.trim()) { d.name = botNames.pick(); rolledOut = botNames.exhausted(); nameIn.value = d.name; paintDraftRow(); }
+      let base = idBase(d.name), id = base, n = 2;
       while (bot(id)) id = base + '-' + n++;
       const role = shortRole(d.role);
       const nb = {
@@ -913,13 +1069,23 @@
     paintRow(); paintGo();
     if (!seed) later(() => nameIn.focus({ preventScroll: true }), 60);
   }
-  /* repaint an orb's body from bot data (the library decides dark-body eyes the same way) */
+  /* repaint an orb from bot data; only what changed is written, so orb2 morphs instead of restarting anything.
+     Dark bodies take the library's light eyes (the same rule as HX.ui.orb). */
+  const eyeColourCache = new Map();
+  function paintOrbColour(o, color) {
+    if (!o || !color) return;
+    if (!eyeColourCache.has(color)) eyeColourCache.set(color, UI().orb({ color, shape: 'circle' }, { size: 20 }).querySelector('orb-avatar').getAttribute('eye-color'));
+    const eye = eyeColourCache.get(color);
+    if (o.getAttribute('color') !== color) o.setAttribute('color', color);
+    if (eye) { if (o.getAttribute('eye-color') !== eye) o.setAttribute('eye-color', eye); } else if (o.hasAttribute('eye-color')) o.removeAttribute('eye-color');
+  }
   function paintOrb(o, d) {
     if (!o) return;
-    o.setAttribute('color', d.color); o.setAttribute('shape', d.shape); o.setAttribute('eye-shape', d.eyes);
-    const ref = UI().orb(d, { size: 20 }).querySelector('orb-avatar');
-    const eye = ref.getAttribute('eye-color'); if (eye) o.setAttribute('eye-color', eye); else o.removeAttribute('eye-color');
+    paintOrbColour(o, d.color);
+    if (o.getAttribute('shape') !== d.shape) o.setAttribute('shape', d.shape);
+    if (o.getAttribute('eye-shape') !== d.eyes) o.setAttribute('eye-shape', d.eyes);
   }
+  const idBase = n => String(n || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '') || 'bot';
   const lowerFirst = s => s.charAt(0).toLowerCase() + s.slice(1);
   function shortRole(t) {
     const first = (String(t || '').trim().split(/[.,;:\n]/)[0] || '').trim();
@@ -1020,6 +1186,7 @@
     paintWs();
 
     const who = el('div', { class: 'bt-sh-who' }, [orbButton(b, 28, b.name, { state: b.state }), el('span', { class: 'bt-sh-name', text: b.name }), el('span', { class: 'bt-sh-role', text: b.role })]);
+    checkClips();
     body.append(
       who,
       sec('role', 'Role and instructions', null, [roleF, instrF]),
@@ -1040,10 +1207,11 @@
     });
 
     const archive = U.button({ label: 'Archive ' + b.name });
+    const archLabel = el('span', { class: 'bt-arch-label', text: 'Archive ' + b.name }); archive.querySelector('span').replaceChildren(archLabel);
     archive.addEventListener('click', () => {
       if (archive.hasAttribute('data-armed')) { archiveBot(b.id); return; }
-      archive.setAttribute('data-armed', ''); archive.querySelector('span').textContent = 'Click again to archive';
-      setTimeout(() => { if (archive.isConnected) { archive.removeAttribute('data-armed'); archive.querySelector('span').textContent = 'Archive ' + b.name; } }, 4000);
+      archive.setAttribute('data-armed', ''); archLabel.textContent = 'Click again to archive'; checkClips();
+      setTimeout(() => { if (archive.isConnected) { archive.removeAttribute('data-armed'); archLabel.textContent = 'Archive ' + b.name; checkClips(); } }, 4000);
     });
     const done = U.button({ label: 'Done', variant: 'primary' });
     done.addEventListener('click', () => { closeSettings(); focusConversation(); });
@@ -1132,7 +1300,7 @@
     const H = hx(); if (!H || !H.register) return false;
     initModel();
     leadOrb();
-    H.bots = api;
+    H.bots = api; H.botNames = botNames;
     H.register('bots-list', { mount(root) { wire(); mountList(root); } });
     H.register('bots', { mount(root) { wire(); mountView(root); } });
     wire();

@@ -270,6 +270,12 @@
   const emptyWait = () => `<div class="dk-empty" data-e>${ui().html.empty({ title: 'Nothing needs you', text: 'Approvals and open questions from bots and runs land here.' })}</div>`;
   const btn = (label, act, o = {}) => ui().html.button(Object.assign({ label, attrs: Object.assign({ 'data-act': act }, o.attrs || {}) }, o, { attrs: Object.assign({ 'data-act': act }, o.attrs || {}) }));
 
+  /* long names (a bot can be "chief of staff for the billing migration"): a tooltip shows a clipped name, the
+     accessible name keeps it whole; rows and the session head ellipsise in CSS */
+  const clip = (t, n) => { t = String(t || ''); return t.length > n ? t.slice(0, n - 1).trimEnd() + '…' : t; };
+  const TIP_CH = 26;                       /* a tooltip's label stays within about 280px with its state and key */
+  const tipOf = b => { const n = clip(b.name, 18), room = TIP_CH - n.length - 2; return room >= 8 ? `${n}, ${clip(b.role, room)}` : n; };
+
   /* ------------------------------------------------------------------ view templates */
   const V = {
     'bots:min': () => {
@@ -278,18 +284,18 @@
     },
     'bots:norm': () => `<div class="dk-row" role="toolbar" aria-label="Bots" aria-orientation="horizontal">${S.bots.map((b, i) => { const s = st(b); return (
       `<button class="dk-bot" data-act="session" data-id="${b.id}" data-bot-label="${b.id}" aria-label="${esc(botLabel(b))}" aria-describedby="dk-bot-hint" aria-keyshortcuts="Enter ${MOD}+Enter" tabindex="${i === S.rowIdx ? 0 : -1}"` +
-      ` data-tip="${esc(b.name)}, ${esc(b.role)}"${s.key === 'idle' ? '' : ` data-tip-state="${esc(s.word)}"`}${s.attention ? ' data-tip-tone="attention"' : ''} data-kbd="enter" data-tip-pos="top">${slot(b)}</button>`); }).join('')}` +
+      ` data-tip="${esc(tipOf(b))}"${s.key === 'idle' ? '' : ` data-tip-state="${esc(s.word)}"`}${s.attention ? ' data-tip-tone="attention"' : ''} data-kbd="enter" data-tip-pos="top">${slot(b)}</button>`); }).join('')}` +
       `<button class="dk-add" data-act="new-bot" aria-label="New bot" data-tip="New bot" data-tip-pos="top" tabindex="${S.rowIdx === S.bots.length ? 0 : -1}"><span data-k="add">${icon('plus')}</span></button></div>`,
-    'bots:exp': () => `<ul class="dk-roster" aria-label="All bots">${S.bots.map(b => ui().html.row({ title: b.name, sub: phrase(b), lead: slot(b),
+    'bots:exp': () => `<ul class="dk-roster" aria-label="All bots">${S.bots.map((b, i) => ui().html.row({ title: b.name, sub: phrase(b), lead: slot(b), tabindex: i === S.rowIdx ? '0' : '-1',
         attrs: { 'data-act': 'session', 'data-id': b.id, 'data-bot-label': b.id, 'aria-label': botLabel(b), 'aria-describedby': 'dk-bot-hint' } })).join('')}` +
-      ui().html.row({ title: 'New bot', sub: 'Set one up', lead: `<span class="dk-add-ring"><span class="dk-add-ring-o" data-e></span><span data-k="add">${icon('plus')}</span></span>`, attrs: { 'data-act': 'new-bot' } }) + '</ul>',
+      ui().html.row({ title: 'New bot', sub: 'Set one up', tabindex: S.rowIdx === S.bots.length ? '0' : '-1', lead: `<span class="dk-add-ring"><span class="dk-add-ring-o" data-e></span><span data-k="add">${icon('plus')}</span></span>`, attrs: { 'data-act': 'new-bot' } }) + '</ul>',
     /* the bot's session: its last messages, its open cards, the library composer, and the other bots to switch to */
     'bots:card': () => {
       const b = botById(S.card); if (!b) return '';
       const s = st(b);
       return `<div class="dk-card-head">${slot(b)}
-        <div class="dk-card-who" data-e><div class="dk-card-name" id="dk-card-name">${esc(b.name)}</div>` +
-        `<div class="dk-card-state"${s.attention ? ' data-tone="attention"' : ''}>${sessState(b)}</div></div>` +
+        <div class="dk-card-who" data-e><div class="dk-card-line"><span class="dk-card-name" id="dk-card-name" title="${esc(b.name)}">${esc(b.name)}</span>` +
+        `<span class="dk-card-state"${s.attention ? ' data-tone="attention"' : ''}>${sessState(b)}</span></div><div class="dk-card-role">${esc(b.role)}</div></div>` +
         `<span class="dk-card-acts" data-e>` +
         ui().html.iconButton({ icon: 'bots', label: `Open the full chat with ${b.name}`, tip: 'Full chat', keys: 'mod+Enter', size: 's', tipPos: 'top', attrs: { 'data-act': 'open-chat', 'data-id': b.id } }) +
         ui().html.iconButton({ icon: 'close', label: `Close the session with ${b.name}`, tip: 'Close', keys: 'Esc', size: 's', tipPos: 'top', attrs: { 'data-act': 'close-card' } }) + `</span></div>
@@ -297,8 +303,8 @@
         ${S.waits.filter(w => w.bot === b.id).map(w => `<div class="dk-ask" data-e data-card="${w.id}" data-size="compact"></div>`).join('')}
         <div class="dk-sess-composer" data-e data-composer="${b.id}"></div>
         <div class="dk-strip" role="group" aria-label="Switch session">${S.bots.map(x => x.id === b.id
-          ? `<button class="ui-orb-btn dk-strip-bot" data-act="close-card" aria-current="true" aria-label="${esc(x.name)}, open; close the session" data-e>${ui().html.orb(x, { size: 18, render: 36 })}</button>`   /* the live orb sits in the head; the switcher shows a copy inside its selection ring */
-          : `<button class="ui-orb-btn dk-strip-bot" data-act="session" data-id="${x.id}" data-bot-label="${x.id}" aria-label="${esc(botLabel(x))}">${slot(x)}</button>`).join('')}</div>`;
+          ? `<button class="ui-orb-btn dk-strip-bot" data-act="close-card" aria-current="true" tabindex="0" aria-label="${esc(x.name)}, open; close the session" data-tip="${esc(clip(x.name, 18))}" data-tip-pos="top" data-e>${ui().html.orb(x, { size: 18, render: 36 })}</button>`   /* the live orb sits in the head; the switcher shows a copy inside its selection ring */
+          : `<button class="ui-orb-btn dk-strip-bot" data-act="session" data-id="${x.id}" data-bot-label="${x.id}" tabindex="-1" aria-label="${esc(botLabel(x))}" data-tip="${esc(clip(x.name, 18))}" data-tip-pos="top">${slot(x)}</button>`).join('')}</div>`;
     },
 
     'run:min': () => `${pillBtn(`Show the dock, run ${S.run.stopped ? 'stopped' : 'in progress'}, ${fmtDur(S.run.elapsed)}`)}${ladderLine()}<span class="dk-time" data-k="run:time" data-run-time>${fmtDur(S.run.elapsed)}</span><span data-k="run:cost" data-run-cost>${costHTML()}</span>${pillAtt()}`,
@@ -350,7 +356,7 @@
       <ul class="dk-tiles" aria-label="Pages in order">${S.pages.map((p, i) => tileHTML(p, i)).join('')}</ul>
       <div class="dk-edit-foot" data-e>${btn('Turn off the dock', 'dock-off', { variant: 'ghost' })}<p>${esc(keyHint())}</p></div>`
   };
-  const sessState = b => { const s = st(b); return `${dotFor(b)}<span>${esc(b.role)}</span>${s.key === 'idle' ? '' : `<span aria-hidden="true">·</span><span class="dk-card-word">${esc(s.word)}</span>`}`; };
+  const sessState = b => { const s = st(b); return `${dotFor(b)}${s.key === 'idle' ? '' : `<span class="dk-card-word">${esc(s.word)}</span>`}`; };
   function paintSession(b, log) {
     const v = curView && curView.dataset.view === 'bots:card' && S.card === b.id ? curView : null; if (!v) return;
     const el = v.querySelector('.dk-card-state');
@@ -403,6 +409,33 @@
     $$('.ui-ladder .ui-ladder__st', el).forEach((s, i) => { if (!s.closest('.dk-tile')) s.dataset.k = 'run:t' + i; });
     if (key === 'bots:exp') for (const r of $$('.ui-row', el)) { const tx = r.querySelector('.ui-row__text'); if (tx) tx.setAttribute('data-e', ''); const sub = r.querySelector('.ui-row__sub'); if (sub && r.dataset.id) sub.dataset.botPhrase = r.dataset.id; }
     fillCards(el);
+    syncRoving();
+  }
+  /* KEYMAP.md §8, roving tabindex: each region (the bot row, the grid, a session's switcher, the queue at rest) is one
+     Tab stop and the arrows move real focus inside it, so a screen reader announces each orb by its name. The row and
+     the grid share one index (S.rowIdx: the bots, then "+"), so Up from the row lands on the same bot in the grid. */
+  function syncRoving() {
+    if (!root) return;
+    S.rowIdx = clamp(S.rowIdx, 0, S.bots.length);
+    for (const box of $$('.dk-row', root)) $$('.dk-bot, .dk-add', box).forEach((el, k) => { el.tabIndex = k === S.rowIdx ? 0 : -1; });
+    for (const box of $$('.dk-roster', root)) $$('.ui-row', box).forEach((el, k) => { el.tabIndex = k === S.rowIdx ? 0 : -1; });
+    for (const box of $$('.dk-strip', root)) {
+      const items = $$('.dk-strip-bot', box), on = items.filter(x => x.tabIndex === 0);
+      const keep = on.find(x => x === document.activeElement) || items.find(x => x.getAttribute('aria-current') === 'true') || items[0];
+      items.forEach(x => { x.tabIndex = x === keep ? 0 : -1; });
+    }
+    for (const box of $$('.dk-v-wait-norm .dk-cards', root)) {
+      const items = $$('.cd-mini', box), keep = items.find(x => x === document.activeElement) || items.find(x => x.tabIndex === 0) || items[0];
+      items.forEach(x => { x.tabIndex = x === keep ? 0 : -1; });
+    }
+  }
+  /* move focus to items[j] (clamped), making it the region's one tab stop */
+  function rove(items, i, j) {
+    if (!items.length) return i;
+    j = clamp(j, 0, items.length - 1);
+    items.forEach((el, k) => { el.tabIndex = k === j ? 0 : -1; });
+    items[j].focus({ preventScroll: true });
+    return j;
   }
   /* a card element is shared by the views that show it (the compact approval sits in nina's card and in the
      expanded needs-you view), so every view that becomes visible takes its cards back */
@@ -850,6 +883,7 @@
     const nv = showView(viewKey());
     if (opts.render) for (const k of opts.render) renderView(k);
     fillCards(nv);
+    syncRoving();
     curView = nv;
     relocateLive();
     setOrbLife();
@@ -960,11 +994,11 @@
     }
   }
   /* one click (or Enter) opens the bot's session; the same orb again closes it; another orb switches */
-  function openCard(id, kbd) {
+  function openCard(id, kbd, focusSel) {
     if (!botById(id) || S.mode === 'off' || S.mode === 'edit') return;
     if (S.mode === 'expanded' && S.card === id && S.page === 'bots') return closeCard(kbd);
     S.rowIdx = Math.max(0, S.bots.findIndex(b => b.id === id));
-    setMode('expanded', { card: id, focus: 'composer' });
+    setMode('expanded', { card: id, focus: focusSel || 'composer' });
     const b = botById(id); if (b) announce(`Session with ${b.name}`);
   }
   function closeCard(kbd) {
@@ -986,6 +1020,7 @@
     cancelOut(inSec);
     const nv = showView(viewKey());
     fillCards(nv);
+    syncRoving();
     curView = nv;
     relocateLive();
     setOrbLife();
@@ -1229,7 +1264,8 @@
       case 'session':
         /* the poke is the click's feedback; its job is the session (owner, v10) */
         if (!kbd) armDouble(id, e);
-        openCard(id, kbd);
+        /* Enter in a session's switcher switches and keeps you in the switcher, on the newly open bot */
+        openCard(id, kbd, kbd && t.classList.contains('dk-strip-bot') ? '.dk-strip-bot[aria-current="true"]' : null);
         setTimeout(() => pokeBot(id, .6), reduce ? 0 : 120);
         break;
       case 'close-card': closeCard(true); break;
@@ -1282,33 +1318,68 @@
     }
     /* 1–9: bot n */
     if (plain && /^Digit[1-9]$/.test(e.code)) { e.preventDefault(); focusBot(+e.code.slice(5)); return; }
-    const inRow = t.closest && t.closest('.dk-row');
-    const inTabs = t.closest && t.closest('.dk-dots');
-    if (t.closest && t.closest('hx-card')) return;   /* a card owns its keys (KEYMAP.md §6) */
-    const tile = t.closest && t.closest('.dk-tile');
-    if (tile && e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) { e.preventDefault(); movePage(tile.dataset.tile, e.key === 'ArrowLeft' ? -1 : 1); return; }
-    if (inRow && ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {
+    const nav = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key) && plain;
+    const near = sel => t.closest && t.closest(sel);
+    const inRow = near('.dk-row'), inTabs = near('.dk-dots'), inStrip = near('.dk-strip'), inGrid = near('.dk-roster');
+    const step = (i, n) => e.key === 'Home' ? 0 : e.key === 'End' ? n - 1 : i + (e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 1);
+    /* the queue at rest (Needs you): Up / Down between its rows, Enter expands (the card's own action) */
+    const mini = near('.dk-v-wait-norm .cd-mini');
+    if (mini && nav && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') {
       e.preventDefault();
-      const items = $$('.dk-bot, .dk-add', inRow);
-      let i = items.indexOf(t.closest('.dk-bot, .dk-add'));
-      const step = e.key === 'ArrowLeft' ? -1 : 1;
-      i = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : clamp(i + step, 0, items.length - 1);
-      items.forEach((el, k) => { el.tabIndex = k === i ? 0 : -1; });
-      S.rowIdx = i;
-      items[i].focus();
+      const items = $$('.cd-mini', mini.closest('.dk-cards')).filter(rendered), i = items.indexOf(mini);
+      rove(items, i, step(i, items.length));
+      return;
+    }
+    if (near('hx-card')) { if (nav) e.preventDefault(); return; }   /* a card owns its keys (KEYMAP.md §6); arrows never scroll */
+    const tile = near('.dk-tile');
+    if (tile && e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) { e.preventDefault(); movePage(tile.dataset.tile, e.key === 'ArrowLeft' ? -1 : 1); return; }
+    /* the bot row: Left / Right / Home / End between the orbs and "+"; Up goes into the grid on the same bot; Down
+       minimises (the arrows never change pages: that is [ ] and PageUp / PageDown) */
+    if (inRow && nav) {
+      e.preventDefault();
+      if (e.key === 'ArrowUp') { up(true); return; }
+      if (e.key === 'ArrowDown') { down(true); return; }
+      const items = $$('.dk-bot, .dk-add', inRow), i = items.indexOf(near('.dk-bot, .dk-add'));
+      S.rowIdx = rove(items, i, step(i, items.length));
+      markFocus(); kick();
+      return;
+    }
+    /* a session's switcher: Left / Right / Home / End; Enter switches (on the open bot it closes the session) */
+    if (inStrip && nav) {
+      e.preventDefault();
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') return;
+      const items = $$('.dk-strip-bot', inStrip), i = items.indexOf(near('.dk-strip-bot'));
+      rove(items, i, step(i, items.length));
+      return;
+    }
+    /* the grid: all four arrows in 2D; Left / Right wrap by rows; Down from the last row goes back to the bot row */
+    if (inGrid && nav) {
+      e.preventDefault();
+      const items = $$('.ui-row', inGrid), i = items.indexOf(near('.ui-row'));
+      const top0 = items[0].offsetTop, cols = Math.max(1, items.findIndex(x => x.offsetTop !== top0) > 0 ? items.findIndex(x => x.offsetTop !== top0) : items.length);
+      let j = i;
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Home' || e.key === 'End') j = step(i, items.length);
+      else if (e.key === 'ArrowUp') j = i - cols >= 0 ? i - cols : i;
+      else if (Math.floor(i / cols) === Math.floor((items.length - 1) / cols)) { S.rowIdx = i; setMode('normal', { focus: 'default' }); return; }
+      else j = Math.min(i + cols, items.length - 1);
+      S.rowIdx = rove(items, i, j);
       markFocus();
       return;
     }
     switch (e.key) {
       case 'ArrowLeft': case 'ArrowRight':
-        /* arrows rove between bots (above); inside the page tablist they move between pages, as tabs do */
-        if (!inTabs) return;
+        /* inside the page tablist the arrows move between pages, as tabs do; elsewhere they move nothing (and never
+           scroll the page) */
+        if (!inTabs) { if (nav && !near('.dk-sess-log')) e.preventDefault(); return; }
         e.preventDefault(); stepPage(e.key === 'ArrowLeft' ? -1 : 1, { focusDot: true }); break;
       case 'Home': case 'End':
-        if (!inTabs) return;
+        if (!inTabs) { if (nav && !near('.dk-sess-log')) e.preventDefault(); return; }
         e.preventDefault(); { const o = shownPages(); goPage(e.key === 'Home' ? o[0] : o[o.length - 1], { focusDot: true }); } break;
-      case 'ArrowUp': e.preventDefault(); up(true); break;
-      case 'ArrowDown': e.preventDefault(); down(true); break;
+      case 'ArrowUp': case 'ArrowDown':
+        if (near('.dk-sess-log')) return;              /* the log scrolls itself */
+        e.preventDefault();
+        if (!plain || S.card) return;                   /* in a session the arrows move nothing; Esc closes it */
+        e.key === 'ArrowUp' ? up(true) : down(true); break;
       case 'Escape':
         /* KEYMAP.md §8: close the card, then collapse an expanded dock, then give focus back */
         e.preventDefault(); e.stopPropagation();
@@ -1591,6 +1662,10 @@
       btn.focus({ preventScroll: true });
       markFocus();
     };
+    if (S.mode === 'expanded' && S.page === 'bots' && !S.card && curView) {     /* in the grid: its bot n */
+      const items = $$('.dk-roster .ui-row', curView), j = S.bots.indexOf(b);
+      if (items[j]) { S.rowIdx = rove(items, j, j); markFocus(); return; }
+    }
     if (S.page !== 'bots') goPage('bots');
     if (S.mode !== 'normal') setMode('normal');
     go();
@@ -1599,7 +1674,7 @@
   function defaultTarget() {
     if (!curView) return null;
     if (curView.dataset.view === 'bots:card') { const c = composerEls.get(S.card); if (c && c.input) return c.input; }
-    return curView.querySelector('.dk-bot[tabindex="0"], .dk-add[tabindex="0"]') || curView.querySelector('.dk-roster .ui-row, button:not([disabled]):not([tabindex="-1"])');
+    return curView.querySelector('.dk-bot[tabindex="0"], .dk-add[tabindex="0"]') || curView.querySelector('.dk-roster .ui-row[tabindex="0"]') || curView.querySelector('.dk-roster .ui-row, button:not([disabled]):not([tabindex="-1"])');
   }
   function markFocus() {
     for (const el of $$('[data-hx-focus="dock"]', root)) if (el !== defaultTarget()) el.removeAttribute('data-hx-focus');

@@ -751,9 +751,9 @@ Elsewhere (lists, call numbers, cards) an orb is not a control on its own: its r
 | 26 | Dock roster | calm |
 | 40 | Dock row (rendered at 80 and scaled, so magnification stays crisp), bot header | calm; the header orb is `lively` |
 | 40 | Dock session head (the row orb, travelled) | calm |
-| 120 | New-bot preview | lively |
+| 120 | New-bot preview | calm (the glance lead still steps; its gaze is capped and turns face-on while the shape morphs, so the face never clips the rim) |
 
-- `idle-motion="calm"` everywhere except the one orb you are looking at (header, preview).
+- `idle-motion="calm"` everywhere except the bot header, which is `lively`. The new-bot preview is `calm`: a lively tilt plus a full turn toward the pointer clipped the face on pointy shapes.
 - **Reduced motion (Owner decision): reduce, never freeze.** Under `prefers-reduced-motion` an orb keeps its blinks,
   eye morphs, small glances and reaction faces; orb2 itself drops floating, head travel, hops, bounces and spins,
   `HX.ui.orb` lowers the jelly to .12 so a poke does not bounce, and `HX.ui.glance` (shared by the lists, the header
