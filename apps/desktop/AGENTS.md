@@ -30,11 +30,12 @@ src-tauri/
     runtime.rs    the bundled Hermes runtime (ADR-0023): runtime.json, hash-while-extracting unpack into <app data>/runtime/<version>-<sha8> (temporary directory, one rename, marker file, idempotent), remove_old, Plan (data dir, private home), Source (HYPOTAXIS_HERMES)
     hermes/       discover (binary, version, install-stamp.json, HERMES_HOME; `Bundled` makes the runtime the only Hermes), cli (allowlisted env, timeout, cap; `isolated` for the bundle),
                   attach (verdict, Ticket, Dial), control (the gateway control socket), lifecycle (Supervisor), install (stub)
-    gateway/      frame (validate), link (the transport traits), ws (tokio-tungstenite), outbox (bounded queue, coalescing),
+    gateway/      call (one request on an unserved link), oneshot (a short link for setup, may declare `desktop_local`), frame (validate), link (the transport traits), ws (tokio-tungstenite), outbox (bounded queue, coalescing),
                   reconnect (the pure state machine), hub (the shared link and its API), actor (dial, handshake, serve, replay),
                   route (response, event and server-request routing), metrics, tests (a scripted gateway)
     secrets/      store (SecretStore: Keychain, MemoryStore for tests), channel (the plugin socket)
-    setup/        first-run setup: mod (the engine, forms, steps), ops (HermesOps: Hermes's CLI behind a trait), install (copy the plugin, place hx, find the bundle), providers (detect, ask for keys, wire, ladder), state (setup.json)
+    setup/        first-run setup: mod (the engine, forms, steps), ops (HermesOps: Hermes's CLI and a one-shot gateway link behind a trait), install (copy the plugin, place hx, find the bundle), providers (detect, ask for keys, wire, ladder; the free choices: Nous's free tier and OpenRouter's free models), state (setup.json)
+    free_tier/    Nous's free tier (ADR-0026, `docs/research/free-tier.md`): `FreeTier` (what Hermes reports), challenge (the browser challenge: fragment phases, reveal/close, behind the `WindowHost` trait), serve (the event loop on a hub), windows (the Tauri hidden window: no capability, ephemeral, pinned to the portal)
     settings.rs   versioned AppSettings and its migration; os.rs (URL allowlist, home-relative paths, notification bounds)
     renderer.rs   which WebKitGTK renderer the webview gets (ADR-0024): probe GPUs and session, a pure decision table (by runtime WebKitGTK version too), the one set_var, the diagnostics report
     gpu.rs        which GPU the webview renders on (ADR-0025, HYPOTAXIS_GPU): power source, switcheroo-control's environment (parsed, filtered), a pure decision table, the second set_var

@@ -422,6 +422,28 @@ They're not sandboxed, matching Claude Code. This is the only exception to the n
 - The perf harness measures at the owner's geometry, and its numbers gate motion changes.
 - A machine stuck on the CPU renderer or WebKit's fixed 60 Hz timer gets a smooth 60, said plainly in Diagnostics, never a stutter at an unreachable 120.
 
+## ADR-0026 Hermes's free models in first-run setup: the Desktop declaration, never `HERMES_DESKTOP`
+**Context.**
+- The owner wants the models Hermes offers for free to work with no configuration. Research (`research/free-tier.md`, read in Hermes v0.23.2 and checked against a real Hermes) found three facts.
+  - **The Nous free tier** is one anonymous model, `nous/welcome`, on its own host. Hermes claims it only for a connection that declared itself the Desktop on this machine (`client.capabilities {desktop_local: true}`, counted only on a ticket from the gateway's private control socket), on a first install, once per OS user. It has no usage gauges; its limits arrive as refusals with a wait.
+  - **`HERMES_DESKTOP=1` is not that mechanism.** It changes the session platform, the toolsets every session gets and the system prompt (fixed at `session.create`, invariant 4), the telemetry offer and more.
+  - **The browser challenge** is a portal page whose URL fragment (`#working`, `#interactive`, `#done`, `#failed`) tells the host when to show or close its window.
+- Whether Nous's Terms let a third-party distribution of Hermes use the anonymous tier is **not stated** anywhere (`research/free-tier.md` section 5).
+
+**Decision.**
+- Setup's models question has "Free models (Nous free tier, no account)" first and chosen when no key is present, then "OpenRouter free models" (a `credential` form for the key, then the catalogue's free rows), then the Claude ladder and the named models.
+- Choosing the Nous tier makes the host declare its gateway link the Desktop, on that link only and only while that is the choice (`setup/state.rs::free_tier_chosen`, asked on every dial). Hermes makes the claim through its own path (`free_tier.provision`); the host writes no model, key or secret for it, only the governed ladder. `HERMES_DESKTOP` is never set and Hermes is never patched.
+- The ladder is chosen at run time. The free tier has one model, so one tier of `nous/<what free_tier.status reports>` at every level, and setup says so. For OpenRouter it is up to three of the catalogue's free models ordered by the size each name states (smallest, middle, largest), and models that state none are offered but not proposed.
+- The challenge: the host listens for `free_tier.challenge` on each gateway link, opens the page in a hidden webview window that matches no capability, is pinned to the portal origin, refuses popups and downloads, reveals it on `#interactive` (never for an optional challenge), closes it on `#done` or `#failed`, and reports `free_tier.challenge_result` as a hint. The window sits behind a trait so the flow is tested without a display.
+- The plan is shown as Hermes reports it (`free_tier.status`, `model.options`, a refused turn's `error_surface`) and nothing else: no allowance size, no bar where Hermes sends none. A refusal raises a notice that offers "choose another model", which asks setup's models question again.
+- `config::FREE_TIER_ENABLED` removes the Nous choice from a build, so the owner can decide the terms question without touching anything else.
+
+**Consequences.**
+- The declaration makes Hermes write `onboarding: {run: true}` into the private home and the machine marker under the real `$HOME`, and the claim uses up the once-per-user trial for Hermes's own Desktop app too. The choice form says so.
+- The account service sees `surface: desktop` from a client that is not Hermes Desktop; the block is self-reported and proves nothing, but the service cannot tell the two apart.
+- `nous/welcome` has no price in the user's price table, so its cost reads unknown (ADR-0012) and a session with a cost cap blocks on it. The host writes no zero for it.
+- The mechanism is proved live against a real Hermes without calling Nous (`setup_live`: `enabled` is false to a link that does not declare and true to one that does). The hidden window itself is untested against the real page: no call to Nous is made from tests, and a hidden WebKitGTK page may be throttled (Tauri has no background-throttling control on Linux), in which case the check times out after 90 s as Hermes Desktop's would.
+
 ## ADR-0012 Prices
 Prices come from the models.dev catalogue plus a user override table. Hermes's models.dev data is not reachable through its public plugin API, so:
 - the plugin reads a cached catalogue file, `<profile home>/hypotaxis/prices/models-dev.json`;
