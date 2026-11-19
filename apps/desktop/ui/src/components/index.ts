@@ -32,6 +32,7 @@ import { squircle } from './squircle';
 import { toast } from './toast';
 import { tooltip } from './tooltip';
 import { hydrate, hydrateOne } from './wire';
+import { scrollClass } from './scroll';
 import type { SegElement } from './wire';
 
 export const version = '1.0.0';
@@ -62,6 +63,7 @@ const factories = {
   steps: make<{ items: readonly StepItem[]; id?: string; hidden?: boolean }, HTMLOListElement>((o) => html.steps(o.items, o)),
   blank: make<{ answer?: string } | undefined, HTMLButtonElement>((o) => html.blank(o ?? {})),
   section: make<Parameters<typeof html.section>[0]>(html.section),
+  scroll: make<Parameters<typeof html.scroll>[0]>(html.scroll),
   field: make<FieldOpts>(html.field),
   select: make<SelectOpts, SelectElement>(html.select),
   empty: make<Parameters<typeof html.empty>[0]>(html.empty),
@@ -79,7 +81,7 @@ const modelRoute = (text: string, o?: ModelOpts): HTMLElement => frag(routeHTML(
 
 export const ui = {
   version, html, esc, icon, icons: iconNames, announce, botState, botLabel, states: STATES,
-  ...factories, legend, keys, inline,
+  ...factories, legend, keys, inline, scrollClass,
   hydrate, orb, liven, glance, shape, squircle, modelMark, model, modelRoute, menu, popover, layer, listbox, modelEntries, wireSelect, tooltip, toast, composer, card,
   hold: Object.assign(holdElement, { wire: wireHold }),
   /** a Claude Code mod's element tree, drawn with the library (MODS.md section 2) */

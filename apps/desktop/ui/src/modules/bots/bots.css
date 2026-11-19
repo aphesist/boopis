@@ -31,7 +31,7 @@
 /* ================================================================ view */
 .bt-view { overflow: hidden; }
 .bt-room, .bt-new { position: absolute; inset: 0; }
-.bt-scroll, .bt-new-scroll { position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; }
+.bt-scroll, .bt-new-scroll { position: absolute; inset: 0; }   /* scroll areas (.ui-scroll) */
 .bt-scroll { padding-bottom: calc(var(--bt-composer-h, 96px) + var(--hx-dock-space, 0px) + var(--composer-gap) + var(--sp-5)); }
 .bt-col, .bt-new-col {
   width: var(--hx-col-w, var(--col-w)); max-width: 100%;

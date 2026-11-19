@@ -123,7 +123,7 @@
 .dk-card-state[data-tone="attention"] .dk-card-word { color: var(--red-text); }
 .dk-card-role { margin-top: 2px; font-size: var(--fs-xs); color: var(--text-quiet); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dk-card-acts { display: flex; gap: 2px; align-self: start; margin-right: -6px; }
-.dk-sess-log { max-height: min(220px, 26vh); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; border-radius: var(--r-s); }   /* a tab stop, so the keyboard can scroll it */
+.dk-sess-log { max-height: min(220px, 26vh); border-radius: var(--r-s); }   /* a tab stop, so the keyboard can scroll it */
 .dk-sess-log .ui-entry + .ui-entry { margin-top: var(--sp-3); }
 .dk-sess-log .ui-entry__body { font-size: var(--fs-s); gap: var(--sp-2); max-width: 100%; }
 .dk-sess-log .ui-entry__body p { margin: 0; }

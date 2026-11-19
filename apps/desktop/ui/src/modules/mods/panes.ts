@@ -15,7 +15,7 @@ const paneById = (id: string): ModPane | undefined => ctl.s.panes.find((p) => p.
 
 /* ───────────── a pane's body: the tree, or what is true about it ───────────── */
 function paneBody(p: ModPane, inline: boolean): HTMLElement {
-  const wrap = el('div', { class: inline ? 'mod-inline__body' : 'mod-pane__body' });
+  const wrap = el('div', { class: inline ? 'mod-inline__body ui-scroll' : 'mod-pane__body' });
   const d = p.drawing;
   if (!d) { wrap.append(el('p', { class: 'mod-note', text: 'Waiting for ' + p.plugin + ' to draw this pane.' })); return wrap; }
   if (d.kind === 'default') { wrap.append(el('p', { class: 'mod-note', text: p.plugin + ' has not drawn this pane.' })); return wrap; }
@@ -67,7 +67,7 @@ function paneHead(p: ModPane, inline: boolean): HTMLElement {
 
 /* ───────────── the tabs of the details panel ───────────── */
 function tabs(list: readonly ModPane[]): HTMLElement {
-  const bar = el('div', { class: 'mod-tabs', role: 'tablist', 'aria-label': 'Session details and mod panes' });
+  const bar = el('div', { class: 'mod-tabs ui-scroll ui-scroll--x ui-scroll--bare', role: 'tablist', 'aria-label': 'Session details and mod panes' });
   const mk = (id: string, label: string, name: string | null, aria: string): HTMLButtonElement => {
     const b = el('button', { class: 'mod-tab', type: 'button', id: 'mod-tab-' + id, role: 'tab', 'aria-selected': String(ctl.active === id), tabindex: ctl.active === id ? '0' : '-1', 'aria-label': aria, 'data-id': id, ...(name ? { 'data-tip': name } : {}) });
     b.innerHTML = label;

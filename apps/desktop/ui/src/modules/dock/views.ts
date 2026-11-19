@@ -159,7 +159,7 @@ export const V: Record<string, () => string> = {
       `<span class="dk-card-acts" data-e>` +
       ui.html.iconButton({ icon: 'bots', label: `Open the full chat with ${b.name}`, tip: 'Full chat', keys: 'mod+Enter', size: 's', tipPos: 'top', attrs: { 'data-act': 'open-chat', 'data-id': b.id } }) +
       ui.html.iconButton({ icon: 'close', label: `Close the session with ${b.name}`, tip: 'Close', keys: 'Esc', size: 's', tipPos: 'top', attrs: { 'data-act': 'close-card' } }) + `</span></div>
-      <div class="dk-sess-log" data-e data-margin="off" role="log" tabindex="0" aria-label="Recent messages with ${esc(b.name)}">${logHTML(b)}</div>
+      <div class="dk-sess-log ui-scroll" data-e data-margin="off" role="log" tabindex="0" aria-label="Recent messages with ${esc(b.name)}">${logHTML(b)}</div>
       ${S.waits.filter((w) => w.bot === b.id).map((w) => `<div class="dk-ask" data-e data-card="${w.id}" data-size="compact"></div>`).join('')}
       <div class="dk-sess-composer" data-e data-composer="${b.id}"></div>
       <div class="dk-strip" role="group" aria-label="Switch session">${S.bots.map((x) => x.id === b.id

@@ -102,6 +102,6 @@ describe('no native controls in src', () => {
   it('the stylesheet keeps the rules that stand in for the platform\'s own', () => {
     const css = readFileSync(join(SRC, 'components/components.css'), 'utf8');
     expect(css).toMatch(/:-webkit-autofill/);                      /* autofill keeps the theme's colours */
-    expect(css).toMatch(/\[data-layer-host\]\) \* \{ scrollbar-width: thin/);   /* every scroller the app draws has the thin bar */
+    expect(css).toMatch(/\[data-layer-host\], \.ui-scroll\) ::-webkit-scrollbar/);   /* every scroller the app draws has the thin bar, in WebKitGTK too */
   });
 });

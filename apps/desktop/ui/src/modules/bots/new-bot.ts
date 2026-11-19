@@ -81,7 +81,7 @@ function buildNew(seed?: Partial<Draft>): void {
       return btn;
     }))
   ]) : null;
-  pane.append(el('div', { class: 'bt-new-scroll' }, [el('div', { class: 'bt-new-col' }, [back, form, suggest])]));
+  pane.append(el('div', { class: 'bt-new-scroll ui-scroll' }, [el('div', { class: 'bt-new-col' }, [back, form, suggest])]));
 
   tabs.addEventListener('ui:change', (e) => { d.tab = (e as CustomEvent<{ value: string }>).detail.value; paintRow(); });
   /* The tiles are built when the tab changes, never on a choice: rebuilding 15 orb canvases (each with its 3D body)

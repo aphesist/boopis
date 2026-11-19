@@ -37,12 +37,11 @@
 .mod-inline__head .mv-by { color: var(--text-dim); font-size: var(--fs-xs); }
 .mod-inline__title { flex: 1; min-width: 0; margin-left: var(--sp-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 var(--fs-s)/1 var(--sans); color: var(--text-strong); }
 .mod-inline__head .ui-ib { border-radius: var(--r-in); }
-.mod-inline__body { padding: var(--sp-1) 10px var(--sp-3); max-height: min(28vh, 260px); overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--bg-4) transparent; }
+.mod-inline__body { padding: var(--sp-1) 10px var(--sp-3); max-height: min(28vh, 260px); }   /* a scroll area (.ui-scroll) */
 
 /* ───────────── a pane: a tab in the details panel ───────────── */
 .mod-head { padding-right: 12px; }
-.mod-tabs { display: flex; gap: 2px; min-width: 0; margin-left: -6px; overflow-x: auto; scrollbar-width: none; }
-.mod-tabs::-webkit-scrollbar { display: none; }
+.mod-tabs { display: flex; gap: 2px; min-width: 0; margin-left: -6px; }   /* a bare sideways scroll area (.ui-scroll--x --bare) */
 .mod-tabs[data-more] { -webkit-mask-image: linear-gradient(to right, var(--text) calc(100% - 28px), transparent); mask-image: linear-gradient(to right, var(--text) calc(100% - 28px), transparent); }
 .mod-tab {
   appearance: none; flex: none; display: inline-flex; align-items: center; max-width: 148px; height: var(--ctl-s); padding: 0 10px; margin: 0; border: 0; border-radius: var(--r-s);

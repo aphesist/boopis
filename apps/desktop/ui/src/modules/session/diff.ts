@@ -13,7 +13,7 @@ export function renderDiff(files: readonly DiffFile[], openFirst: boolean, bare?
     const file = el('div', { class: 'ss-diff-file', 'data-open': String(open) });
     const head = el('button', { class: 'ss-diff-head', type: 'button', 'aria-expanded': String(open) }, [chevron(), el('span', { class: 'ss-path ui-mono' }, [el('span', { class: 'ss-dir', text: dir }), base]), counts(f.add, f.del)]);
     head.addEventListener('click', () => { const o = file.dataset['open'] !== 'true'; file.dataset['open'] = String(o); head.setAttribute('aria-expanded', String(o)); });
-    const body = el('div', { class: 'ss-diff-body ui-mono', role: 'region', 'aria-label': 'Diff of ' + f.path });
+    const body = el('div', { class: 'ss-diff-body ui-scroll ui-scroll--x ui-mono', role: 'region', 'aria-label': 'Diff of ' + f.path });
     f.hunks.forEach(([h, lines]) => {
       body.append(el('div', { class: 'ss-dl hunk', text: h }));
       let n = +((h.match(/\+(\d+)/) ?? [0, 1])[1] ?? 1);

@@ -41,7 +41,7 @@ export function mountView(root: HTMLElement): void {
   nb.addEventListener('keydown', (e) => { if (e.key === 'Escape' && S.bots.length && !e.defaultPrevented) { e.preventDefault(); e.stopPropagation(); openBot(S.sel); focusConversation(); } });
 }
 function buildRoom(): void {
-  const scroll = el('div', { class: 'bt-scroll' });
+  const scroll = el('div', { class: 'bt-scroll ui-scroll' });
   const col = el('div', { class: 'bt-col' });
   const presence = el('header', { class: 'bt-presence' });
   const log = el('div', { class: 'bt-log', role: 'log', 'aria-label': 'Messages' });
