@@ -104,8 +104,9 @@
 }
 .ssr-file:hover { --sq-bg: var(--hover); background: var(--sq-bg); }
 .ssr-file .ss-n { margin-left: auto; }
-/* the copy button sits in the well's corner: the well declares its radius and inset, the button fits (DESIGN-SYSTEM §8.2) */
-.ssr-term-wrap { position: relative; --r-outer: var(--r-m); --pad: 4px; --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad))); }
+/* the copy button sits in the well's corner: the well is a .ui-nest that declares its radius, inset and the small icon
+   button's size, and the button is a .ui-corner (data-corner="tr") that takes its radius and inset (DESIGN-SYSTEM §8.2) */
+.ssr-term-wrap { position: relative; --r-outer: var(--r-m); --pad: var(--pad-menu); --corner-size: 24px; }   /* the menu's 4px step: no token of its own yet */
 .ssr-term {
   margin: 0; padding: 10px var(--sp-3); border-radius: var(--r-outer); --sq-bg: var(--bg-0); background: var(--sq-bg);
   font-size: var(--fs-2xs); line-height: 1.6; color: var(--text-dim); white-space: pre-wrap; overflow-wrap: anywhere;
@@ -113,7 +114,7 @@
 .ssr-term .cmd { color: var(--text); }
 .ssr-term .pass { color: var(--ok); }
 .ssr-term .fail { color: var(--red-text); }
-.ssr-term-wrap > .ui-ib { position: absolute; top: var(--pad); right: var(--pad); border-radius: var(--r-in); opacity: 0; transition: opacity var(--dur-1) var(--ease); }
+.ssr-term-wrap > .ui-ib { opacity: 0; transition: opacity var(--dur-1) var(--ease); }
 .ssr-term-wrap:is(:hover, :focus-within) > .ui-ib { opacity: 1; }
 .ssr-cap { display: flex; align-items: center; gap: var(--sp-3); margin-top: var(--sp-2); font-size: var(--fs-s); color: var(--text-dim); }
 .ssr-cap .ssr-key { flex: 1; }

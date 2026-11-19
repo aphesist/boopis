@@ -15,11 +15,43 @@
 
 /* ───────────── corners (owner decisions, 18 November 2026): Apple continuous corners in every engine; nested corners fit ─────────────
    The scale (--r-xs to --r-l, --r-floor, --corner-smoothing, --composer-pad) lives in tokens.css (MIGRATION.md §0.8).
-   The corner is a path (HX.ui.squircle, below), so WebKit and Chromium draw the same curve. The nesting contract: a
-   surface that holds others declares --r-outer and --pad; what sits in its corners takes
-   --r-in = max(--r-floor, --r-outer − --pad). DESIGN-SYSTEM.md §8. */
-.ui-nest { --r-in: max(var(--r-floor), calc(var(--r-outer, var(--r-m)) - var(--pad, 0px))); border-radius: var(--r-outer, var(--r-m)); }
+   The corner is a path (HX.ui.squircle, below), so WebKit and Chromium draw the same curve.
+   The nesting contract (DESIGN-SYSTEM.md §8.2: R-corner-3, R-corner-4, R-corner-5, R-corner-9), declared ONCE, here; corners.ts is the same arithmetic, tested.
+   A container declares --r-outer and --pad from the tokens (--pad-menu, --pad-toast, --composer-pad, ...: its --r-in then
+   equals tokens.css's --r-in-* for it), and --corner-size when what sits in its corners is not a --ctl-s square;
+   the rule below derives, on the container itself:
+     --r-in          = min(outer, max(floor, outer − pad))   what a nested surface takes (.ui-fit)
+     --r-corner      = min(--r-in, size / 2)                 what a corner control takes (a 28px square is at most a circle)
+     --corner-inset  = outer − --r-corner                    where a corner control sits from both edges, so the two curves
+                                                             share a centre: the pad while the formula holds, less where
+                                                             the padding gives way to the floor, more where the control
+                                                             cannot be as round as --r-in
+     --corner-ring   = clamp(−2px, inset − 3px, 2px)         the focus ring's offset: ring and the container's line stay inside
+   A pill container declares its real radius (half its height), so a round piece inside stays a pill at the pad.
+   Containers: .ui-nest (any module surface) and the library's own, listed here. What sits in a corner: .ui-corner
+   (radius, size, ring); a row along an edge that holds corner controls at its ends: .ui-corners (the inset). Never set a
+   radius or an inset in a corner by hand. A squircle-drawn container also exposes its drawn radius as --r-outer when it
+   declared none (squircle.ts), so its children nest the same way. */
+:where(.ui-nest, .ui-composer__box, .ui-menu, .ui-pop, .ui-listbox, .ui-tip, .ui-toast, .ui-seg) {
+  --corner-size: var(--ctl-s);
+  --r-in: min(var(--r-outer), max(var(--r-floor), calc(var(--r-outer) - var(--pad))));
+  --r-corner: min(var(--r-in), calc(var(--corner-size) / 2));
+  --corner-inset: max(0px, calc(var(--r-outer) - var(--r-corner)));
+  --corner-ring: clamp(-2px, calc(var(--corner-inset) - 3px), 2px);
+}
+.ui-nest { --r-outer: var(--r-m); --pad: 0px; border-radius: var(--r-outer); }
 .ui-fit { border-radius: var(--r-in, var(--r-s)); }
+/* a row along a container's edge whose ends are its corners (a composer's bar, a toast's actions): inset from both sides
+   and the edge it sits on (bottom by default; data-edge="top", or "both" for a one-row container) */
+.ui-corners { padding-inline: var(--corner-inset, 0px); padding-block: 0 var(--corner-inset, 0px); }
+.ui-corners[data-edge="top"] { padding-block: var(--corner-inset, 0px) 0; }
+.ui-corners[data-edge="both"] { padding-block: var(--corner-inset, 0px); }
+/* one control set into a corner on its own (the container is position: relative): data-corner="tl|tr|br|bl" */
+.ui-corner[data-corner] { position: absolute; }
+.ui-corner[data-corner^="t"] { top: var(--corner-inset, 0px); }
+.ui-corner[data-corner^="b"] { bottom: var(--corner-inset, 0px); }
+.ui-corner[data-corner$="l"] { left: var(--corner-inset, 0px); }
+.ui-corner[data-corner$="r"] { right: var(--corner-inset, 0px); }
 
 /* ───────────── grounds: a scope that re-derives the roles for the surface it sits on ─────────────
    [data-ground="dock"]: everything inside the pitch-black dock (and a card set into it). The roles keep their
@@ -129,6 +161,11 @@
 .ui-send:active:not(:disabled) { transform: translateY(1px) scale(.96); }
 .ui-send:disabled { opacity: .35; cursor: default; }
 
+/* a control in a container's corner (the container's rule above derives the numbers): concentric with it, its size,
+   and a focus ring that stays inside. Its hover, pressed and disabled fills are its own background, so they share the
+   radius; a drawn (squircle) corner puts the ring inside the edge itself. Comes after the buttons so it wins. */
+.ui-corner { border-radius: var(--r-corner, var(--r-s)); min-width: var(--corner-size, var(--ctl-s)); height: var(--corner-size, var(--ctl-s)); outline-offset: var(--corner-ring, 2px); }
+
 /* ───────────── hold to approve (the one control that commits by holding) ─────────────
    Card stock at rest; as you hold, an ordered dot field gathers under the press and fuses into the bone fill. */
 .ui-hold { min-width: 148px; overflow: hidden; isolation: isolate; background: var(--bg-3); box-shadow: inset 0 0 0 1px var(--hair); touch-action: none; }
@@ -160,19 +197,19 @@
 .ui-seg {
   --n: 2; --i: 0;
   position: relative; display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; flex: none;
-  height: var(--ctl); padding: 3px; box-sizing: border-box;
-  --r-outer: var(--r-s); --pad: 3px; --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad))); border-radius: var(--r-outer);
+  height: var(--ctl); padding: var(--corner-inset); box-sizing: border-box;
+  --r-outer: var(--r-s); --pad: var(--pad-seg); border-radius: var(--r-outer);
   --sq-bg: var(--bg-0); background: var(--sq-bg); box-shadow: inset 0 0 0 1px var(--hair);
 }
 .ui-seg--fill { display: grid; width: 100%; }
 .ui-seg__thumb {
-  position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc((100% - 6px) / var(--n));
-  border-radius: var(--r-in); background: var(--selected); pointer-events: none;   /* concentric with the track */
+  position: absolute; top: var(--corner-inset); bottom: var(--corner-inset); left: var(--corner-inset); width: calc((100% - 2 * var(--corner-inset)) / var(--n));
+  border-radius: var(--r-corner); background: var(--selected); pointer-events: none;   /* concentric with the track: the container rule's inset and radius */
   transform: translateX(calc(100% * var(--i))); transition: transform var(--dur-slide) var(--ease);
 }
 .ui-seg__opt {
   appearance: none; position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  min-width: 0; padding: 0 14px; margin: 0; border: 0; border-radius: var(--r-in); background: transparent;
+  min-width: 0; padding: 0 14px; margin: 0; border: 0; border-radius: var(--r-corner); background: transparent;
   font: 500 var(--fs-s)/1 var(--sans); color: var(--text-dim); white-space: nowrap; text-transform: var(--ui-case); cursor: pointer;
   transition: color var(--dur-2) var(--ease);
 }
@@ -277,15 +314,15 @@ button.ui-group__head:hover { color: var(--text); }
 
 /* ───────────── floating surfaces: menu, popover, tooltip, toast ───────────── */
 .ui-menu, .ui-pop, .ui-listbox {
-  position: fixed; z-index: var(--z-menu); box-sizing: border-box; min-width: 220px; max-width: 340px; padding: 4px;
-  --r-outer: var(--r-m); --pad: 4px; --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad))); border-radius: var(--r-outer); background: var(--bg-1); box-shadow: inset 0 0 0 1px var(--line), var(--shadow-pop);
+  position: fixed; z-index: var(--z-menu); box-sizing: border-box; min-width: 220px; max-width: 340px; padding: var(--pad-menu);
+  --r-outer: var(--r-m); --pad: var(--pad-menu); border-radius: var(--r-outer); background: var(--bg-1); box-shadow: inset 0 0 0 1px var(--line), var(--shadow-pop);
   font: 400 var(--fs-s)/var(--lh-ui) var(--sans); color: var(--text);
   opacity: 0; translate: 0 -6px; transition: opacity var(--dur-2) var(--ease), translate var(--dur-2) var(--ease);
 }
 .ui-menu[data-place="above"], .ui-pop[data-place="above"], .ui-listbox[data-place="above"] { translate: 0 6px; }
 .ui-menu.is-in, .ui-pop.is-in, .ui-listbox.is-in { opacity: 1; translate: 0 0; }
 .ui-menu[data-static], .ui-pop[data-static] { position: relative; opacity: 1; translate: none; z-index: auto; }
-.ui-pop { padding: var(--sp-3); --pad: var(--sp-3); width: 360px; max-width: calc(100vw - 24px); }   /* a 12px inset: its controls keep their own step */
+.ui-pop { padding: var(--pad-pop); --pad: var(--pad-pop); width: 360px; max-width: calc(100vw - 24px); }   /* a 12px inset: its controls keep their own step */
 .ui-menu__title, .ui-listbox__head { padding: 6px 8px 4px; font: 500 var(--fs-xs)/var(--lh-ui) var(--sans); color: var(--text-quiet); text-transform: var(--ui-case); }
 .ui-menu__item, .ui-option {
   appearance: none; display: flex; align-items: flex-start; gap: 8px; width: 100%; box-sizing: border-box; min-height: var(--row-h); padding: 6px 8px; margin: 0; border: 0;
@@ -316,7 +353,7 @@ button.ui-group__head:hover { color: var(--text); }
 
 .ui-tip {
   position: fixed; z-index: var(--z-tooltip); pointer-events: none; display: flex; align-items: center; gap: 8px; box-sizing: border-box;
-  padding: 4px 4px 4px 8px; --r-outer: var(--r-s); --pad: 4px; --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad))); border-radius: var(--r-outer);
+  padding: var(--pad-tip) var(--pad-tip) var(--pad-tip) 8px; --r-outer: var(--r-s); --pad: var(--pad-tip); border-radius: var(--r-outer);
   background: var(--bg-3); box-shadow: inset 0 0 0 1px var(--hair), var(--shadow-tip);
   font: 400 var(--fs-xs)/var(--lh-ui) var(--sans); color: var(--text); white-space: nowrap;
   opacity: 0; transform: translateY(var(--tip-dy, 3px)); transition: opacity var(--dur-out) var(--ease), transform var(--dur-out) var(--ease);
@@ -332,7 +369,7 @@ button.ui-group__head:hover { color: var(--text); }
 .ui-toast {
   position: fixed; z-index: var(--z-toast); top: calc(var(--chrome-h) + 12px); left: var(--hx-center-x, 50vw); translate: -50% -6px;
   display: flex; align-items: center; gap: 12px; max-width: min(480px, calc(100vw - 32px)); box-sizing: border-box;
-  padding: 0 6px 0 14px; min-height: calc(var(--ctl-s) + 12px); --r-outer: var(--r-m); --pad: 6px; --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad))); border-radius: var(--r-outer);
+  padding: 0 var(--corner-inset) 0 14px; min-height: calc(var(--corner-size) + 2 * var(--corner-inset)); --r-outer: var(--r-m); --pad: var(--pad-toast); border-radius: var(--r-outer);
   background: var(--bg-3); box-shadow: inset 0 0 0 1px var(--hair), var(--shadow-pop);
   font: 400 var(--fs-s)/var(--lh-ui) var(--sans); color: var(--text); text-transform: var(--ui-case);
   opacity: 0; pointer-events: none; transition: opacity var(--dur-2) var(--ease), translate var(--dur-2) var(--ease), --hx-center-x var(--dur-3) var(--spring);
@@ -342,7 +379,7 @@ button.ui-group__head:hover { color: var(--text); }
 .ui-toast.is-in { opacity: 1; translate: -50% 0; pointer-events: auto; }
 .ui-toast[data-static] { position: relative; left: auto; top: auto; translate: none; opacity: 1; pointer-events: auto; z-index: auto; }
 .ui-toast > span { padding-block: 8px; }
-.ui-toast > .ui-btn { border-radius: var(--r-in); }
+/* the action is a .ui-corner (toast.ts): concentric with the toast, at its inset from the right and both edges */
 
 /* ───────────── fields ───────────── */
 .ui-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
@@ -499,8 +536,10 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 
 /* ───────────── composer: card stock, its actions set into its corner ─────────────
    A container (DESIGN-SYSTEM.md §8): radius --r-outer (--r-composer where a context sets it, else --r-m), inset --pad
-   (--composer-pad, 6px). Everything at its edge (attach, chips, the actions group, a file) is inset by --pad and takes
-   --r-in, so it fits the box. Full: the text, then the bar (attach, chips … spend, then the actions: mic, send).
+   (--composer-pad, 6px). The corner rule derives the rest: the bar is a .ui-corners row (inset --corner-inset from the
+   sides and the bottom), attach and send are .ui-corner controls (--r-corner: a 28px circle concentric with the box),
+   everything else at the edge takes --r-corner too. Nothing here depends on the page's box-sizing (the session view sets
+   border-box on everything inside it): the bar has no fixed height, its 28px controls give it one. Full: the text, then the bar (attach, chips … spend, then the actions: mic, send).
    Compact (data-compact: the dock session, any composer that is only text): one row, the text and the actions; the
    group sits on the text's line, in the bottom-right corner, and stays on the last line as the text grows. */
 .ui-composer { display: flex; flex-direction: column; width: 100%; font: 400 var(--fs-m)/var(--lh) var(--sans); color: var(--text); }
@@ -516,31 +555,31 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-assume:focus-visible { color: var(--text); outline: none; background: var(--current); box-shadow: inset 0 0 0 2px var(--focus); }
 .ui-composer:not([data-hinting]) .ui-composer__hint { pointer-events: none; }
 .ui-composer__box {
-  --r-outer: var(--r-composer, var(--r-m)); --pad: var(--composer-pad, 6px); --r-in: max(var(--r-floor), calc(var(--r-outer) - var(--pad)));
+  --r-outer: var(--r-composer, var(--r-m)); --pad: var(--composer-pad, 6px);
   position: relative; display: flex; flex-direction: column; min-width: 0; padding: 0; border-radius: var(--r-outer);
   --sq-bg: var(--bg-3); background: var(--sq-bg); box-shadow: inset 0 0 0 1px var(--hair); cursor: text; transition: box-shadow var(--dur-1) var(--ease);
 }
 .ui-composer__box:focus-within, .ui-composer[data-listening] .ui-composer__box { box-shadow: inset 0 0 0 1px var(--line-field); }   /* the frame answers focus at 3:1; the caret is brass */
-.ui-composer__files { display: flex; flex-wrap: wrap; gap: 6px; padding: var(--pad) var(--pad) 0; }
+.ui-composer__files { display: flex; flex-wrap: wrap; gap: 6px; padding: var(--corner-inset) var(--corner-inset) 0; }
 .ui-composer__files:empty { display: none; }
-.ui-file { display: inline-flex; align-items: center; gap: 6px; height: var(--ctl-s); padding: 0 0 0 8px; border-radius: var(--r-in, var(--r-s)); background: var(--bg-0); font: 400 var(--fs-2xs)/1 var(--mono); color: var(--text-dim); }
+.ui-file { display: inline-flex; align-items: center; gap: 6px; height: var(--ctl-s); padding: 0 0 0 8px; border-radius: var(--r-corner, var(--r-s)); background: var(--bg-0); font: 400 var(--fs-2xs)/1 var(--mono); color: var(--text-dim); }
 .ui-file .ui-icon { width: 14px; height: 14px; }
-.ui-file .ui-ib { border-radius: var(--r-in, var(--r-s)); }
+.ui-file .ui-ib { border-radius: var(--r-corner, var(--r-s)); }
 .ui-composer__input { min-height: calc(2 * 1.6em); max-height: 220px; padding: 12px 14px 4px; overflow-y: auto; outline: none; white-space: pre-wrap; overflow-wrap: anywhere; caret-color: var(--brass); scrollbar-width: thin; }
 .ui-composer__input:focus-visible { outline: none; }
 .ui-composer__input[data-empty="true"]::before { content: attr(data-placeholder); color: var(--text-quiet); pointer-events: none; text-transform: var(--ui-case); }
-.ui-composer__bar { display: flex; align-items: center; gap: 2px; min-width: 0; box-sizing: content-box; height: var(--ctl-s); padding: 6px var(--pad) var(--pad); }
+.ui-composer__bar { display: flex; align-items: center; gap: 2px; min-width: 0; padding-top: 6px; }
 .ui-composer__chips { display: flex; align-items: center; gap: 2px; min-width: 0; overflow: hidden; }
 .ui-composer__spacer { flex: 1; }
 .ui-composer__bar .ui-capacity { margin-right: 6px; }
 /* the actions group: mic, then send (Stop while a turn runs); every control at the edge fits the box */
 .ui-composer__acts { display: inline-flex; align-items: center; gap: 2px; flex: none; }
-.ui-composer__bar :is(.ui-ib, .ui-chip, .ui-send) { border-radius: var(--r-in); }
+.ui-composer__bar :is(.ui-ib, .ui-chip, .ui-send) { border-radius: var(--r-corner); }
 /* compact: one row; the input's padding centres one line on the 28px actions, so the row is the actions plus the inset */
 .ui-composer[data-compact] .ui-composer__box { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
 .ui-composer[data-compact] .ui-composer__files { grid-column: 1 / -1; }
-.ui-composer[data-compact] .ui-composer__input { min-height: 1.6em; padding: calc(var(--pad) + (var(--ctl-s) - 1.6em) / 2) 6px calc(var(--pad) + (var(--ctl-s) - 1.6em) / 2) 14px; }
-.ui-composer[data-compact] .ui-composer__bar { height: auto; padding: var(--pad) var(--pad) var(--pad) 0; }
+.ui-composer[data-compact] .ui-composer__input { min-height: 1.6em; padding: calc(var(--corner-inset) + (var(--corner-size) - 1.6em) / 2) 6px calc(var(--corner-inset) + (var(--corner-size) - 1.6em) / 2) 14px; }
+.ui-composer[data-compact] .ui-composer__bar { padding-block: var(--corner-inset); padding-inline-start: 0; }
 .ui-composer[data-compact] :is(.ui-composer__chips, .ui-composer__spacer, .ui-capacity) { display: none; }
 /* listening (the mic): pressed, the field's line, and the target bot's orb listening in the mic's place */
 .ui-composer__mic[aria-pressed="true"] { background: var(--current); }
