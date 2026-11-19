@@ -24,6 +24,10 @@
 (() => {
   const SKIP_INSIDE = 'orb-avatar, boopis-logo, svg, canvas, .hx-probe, script, style, template';
   const MAX = 4000;
+  /* R-space-2's named exceptions, by value (card 14 16, request 10 14, composer 12 14 4 and 6, button 0 14 / 10 / 8, chip 10 8,
+     field 6 10, menu 4 and 6 8, popover 12, tooltip 4 8, toast 6 14, segmented 3, stamp 7, code chip 1 5, key chip 4 and 3 apart,
+     label 6, settings row 10, dialog head 12 20, body 4 20 24) and R-space-1's 2px in a toolbar */
+  const SPACE_NAMED = new Set([1, 2, 3, 5, 6, 7, 10, 14, 20]);
   const px = (v) => parseFloat(v) || 0;
   const r1 = (n) => Math.round(n * 10) / 10;
 
@@ -71,12 +75,17 @@
         lengths.add(r1(w));
         if (/^--fs-/.test(n)) fs.add(r1(w));
         if (/^--r-/.test(n) || n === '--composer-pad') radii.add(r1(w));
-        if (/^--sp-|^--gutter|^--composer-(gap|pad)$/.test(n)) space.add(r1(w));
+        if (/^--sp-|^--gutter|^--composer-(gap|pad)$|^--pad-|^--ic-gap/.test(n)) space.add(r1(w));
         p.style.width = '1px';
       }
     }
+    const families = new Set();
+    for (const n of ['--sans', '--mono']) { p.style.fontFamily = 'var(' + n + ')'; const f = getComputedStyle(p).fontFamily.replace(/\s+/g, ' '); if (f) families.add(f); }
+    const roles = {};
+    for (const n of ['--brass', '--bg-0', '--bg-3', '--red', '--red-text']) { p.style.color = 'var(' + n + ')'; roles[n] = ckey(getComputedStyle(p).color); }
+    p.style.color = ''; p.style.fontFamily = '';
     p.remove();
-    const t = { key, colors, lengths, fs, radii, space };
+    const t = { key, colors, lengths, fs, radii, space, families, roles };
     tokenCache.set(ground, t);
     return t;
   }
@@ -182,7 +191,7 @@
   function run(o) {
     const scope = o.scope ? document.querySelector(o.scope) : (window.__lab && window.__lab.scope && window.__lab.scope()) || document.body;
     if (!scope) return { error: 'no scope', findings: [] };
-    const want = new Set(o.checks || ['geometry.contain', 'geometry.center', 'geometry.clip', 'geometry.hscroll', 'geometry.target', 'concentric', 'overlay', 'tokens.computed', 'tokens.spacing', 'native', 'scrollbar', 'brand']);
+    const want = new Set(o.checks || ['geometry.contain', 'geometry.center', 'geometry.clip', 'geometry.hscroll', 'geometry.target', 'concentric', 'overlay', 'tokens.computed', 'tokens.spacing', 'native', 'scrollbar', 'brand', 'copy', 'roles']);
     const els = elements(scope).filter((e) => shown(e));
     const cs = new Map(els.map((e) => [e, getComputedStyle(e)]));
     const shapes = new Map();
@@ -294,15 +303,16 @@
 
     /* geometry.target */
     if (want.has('geometry.target')) {
+      const HIT = px(getComputedStyle(document.documentElement).getPropertyValue('--hit-min')) || 24;
       const targets = els.filter((e) => e.matches('button, a[href], input:not([type="hidden"]), select, textarea, summary, [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], [role="switch"], [role="radio"], [role="checkbox"]') && !e.closest('[inert], [aria-hidden="true"]') && !e.disabled);
       const boxes = targets.map((t) => t.getBoundingClientRect());
       targets.forEach((t, i) => {
         const r = boxes[i];
-        if (r.width >= 24 - 0.01 && r.height >= 24 - 0.01) return;
+        if (r.width >= HIT - 0.01 && r.height >= HIT - 0.01) return;
         if (t.matches('a') && t.closest('p, li') && getComputedStyle(t).display === 'inline') return;   /* a link in a sentence: 2.5.8's inline exception */
         const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
         const clash = boxes.some((b, j) => j !== i && Math.max(b.left - cx, 0, cx - b.right) ** 2 + Math.max(b.top - cy, 0, cy - b.bottom) ** 2 < 12 * 12);
-        if (clash) add('geometry.target', t, 'target ' + r1(r.width) + ' x ' + r1(r.height) + 'px, under 24px and too close to another target');
+        if (clash) add('geometry.target', t, 'target ' + r1(r.width) + ' x ' + r1(r.height) + 'px, under --hit-min (' + HIT + 'px) and too close to another target');
       });
     }
 
@@ -315,7 +325,7 @@
         const tip = [...document.querySelectorAll('.ui-tip.is-in')].find(shown);
         const ta = document.activeElement && document.activeElement.closest && document.activeElement.closest('[data-tip]');
         if (tip && ta) layers.push([ta, tip]);
-        for (const l of document.querySelectorAll('.ui-menu:not([data-static]), .ui-pop')) { const a = document.querySelector('[aria-expanded="true"][aria-haspopup]'); if (a && shown(l)) layers.push([a, l]); }
+        for (const l of document.querySelectorAll('.ui-menu:not([data-static]), .ui-pop, .ui-listbox')) { const a = document.querySelector('[aria-expanded="true"][aria-haspopup]'); if (a && shown(l)) layers.push([a, l]); }
       }
       for (const [a, l] of layers) {
         const ar = a.getBoundingClientRect(), lr = l.getBoundingClientRect();
@@ -338,12 +348,18 @@
           const fits = [ar.left - 8, ar.left, ar.right - lr.width, (ar.left + ar.right) / 2 - lr.width / 2].some((x) => Math.abs(x - lr.left) <= 1);
           if (!fits) add('overlay', l, 'is aligned to neither its anchor\'s start (inset 8), end nor centre');
         }
+        if (isTip) {
+          const tipText = (l.querySelector('span') || l).textContent.trim();
+          const name = (a.getAttribute('aria-label') || a.textContent || '').trim().replace(/\s+/g, ' ');
+          if (tipText && name && tipText.toLowerCase() !== name.toLowerCase() && !name.toLowerCase().startsWith(tipText.toLowerCase())) add('overlay', l, 'says "' + tipText.slice(0, 40) + '" but its control is named "' + name.slice(0, 40) + '" (a tooltip repeats the accessible name, R-copy-7)');
+        }
         if (isTip && (below || above)) {
           const ideal = below ? 'bottom' : 'top';
           const nearBottom = ar.top > H - 160;
           if ((ideal === 'top') !== nearBottom && !a.getAttribute('data-tip-pos')) add('overlay', l, 'opens ' + (ideal === 'top' ? 'above' : 'below') + ' its anchor; the system opens tooltips below, above only within 160px of the window bottom');
         }
         const host = a.closest('[data-hx-composer], .ui-composer, .ui-field, hx-card, .ui-pop, dialog, .hx-palette__box, form') || a.parentElement;
+        if (l.matches('.ui-listbox') && a.matches('.ui-select, [role="combobox"]')) { /* a select's list opens under its own field */ }
         for (const f of host ? host.querySelectorAll('input:not([type="checkbox"]):not([type="radio"]), textarea, [contenteditable="true"], [role="textbox"], [role="combobox"]') : []) {
           if (f === a || !shown(f)) continue;
           const fr = f.getBoundingClientRect();
@@ -371,6 +387,9 @@
           }
           if (s.boxShadow && s.boxShadow !== 'none') for (const m of s.boxShadow.matchAll(/rgba?\([^)]+\)/g)) if (!transparent(m[0]) && !T.colors.has(ckey(m[0]))) { stray('tokens.computed', e, 'box-shadow colour', m[0]); break; }
           if (hasText && !T.fs.has(r1(px(s.fontSize)))) stray('tokens.computed', e, 'font-size', s.fontSize);
+          if (hasText && T.families.size && !T.families.has(s.fontFamily.replace(/\s+/g, ' '))) stray('tokens.computed', e, 'font-family', s.fontFamily.split(',')[0] + ' (not --sans or --mono, R-type-1)');
+          if (hasText && s.lineHeight !== 'normal') { const ratio = Math.round(px(s.lineHeight) / px(s.fontSize) * 100) / 100; if (![1, 1.2, 1.35, 1.45, 1.5, 1.6].some((x) => Math.abs(x - ratio) < 0.03)) stray('tokens.computed', e, 'line-height', s.lineHeight + ' (' + ratio + ', not a --lh-* ratio, R-type-4)'); }
+          if (hasText && /uppercase|capitalize/.test(s.textTransform)) stray('tokens.computed', e, 'text-transform', s.textTransform + ' (sentence case only; --ui-case lowers, R-copy-1)');
           const r = e.getBoundingClientRect(), pill = Math.min(r.width, r.height) / 2;
           for (const v of radiiOf(s)) {
             if (v === 0 || v >= 999 || T.radii.has(r1(v)) || Math.abs(v - pill) < 0.6) continue;
@@ -385,7 +404,7 @@
             const v = s.getPropertyValue(prop);
             if (!/px$/.test(v)) continue;
             const n = r1(px(v));
-            if (n === 0 || T.space.has(n) || n <= 2) continue;
+            if (n === 0 || T.space.has(n) || SPACE_NAMED.has(n)) continue;
             if (/gap/.test(prop) && !/flex|grid/.test(s.display)) continue;
             stray('tokens.spacing', e, prop, v);
           }
@@ -417,9 +436,40 @@
       }
     }
 
+    /* copy: what the engine says never reaches the interface (R-copy-6's machine half, R-copy-9) */
+    if (want.has('copy')) {
+      const BAD = /\b(undefined|NaN)\b|\[object Object\]|Traceback \(most recent|^\s*at \S+ \(.*:\d+:\d+\)|\bhx\.[a-z]+\.[a-z_.]+\b|\{"\w+":/;
+      const tw = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
+      const seen = new Set();
+      for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+        const e = n.parentElement;
+        if (!e || e.closest('script, style, code, pre, .ui-code, [class*="__pre"], [class*="term"], [data-lab-literal]') || !shown(e)) continue;
+        const m = BAD.exec(n.textContent);
+        if (m && !seen.has(e)) { seen.add(e); add('copy', e, 'shows "' + m[0].trim().slice(0, 40) + '": an engine value or error reached the interface'); }
+      }
+    }
+    /* roles: brass marks, never text (R-colour-3); never inset on inset, never raised on raised (R-colour-4) */
+    if (want.has('roles')) {
+      for (const e of els) {
+        const s = cs.get(e), T = tokens(o.tokenNames || [], groundOf(e));
+        if (!T.roles) continue;
+        const hasText = [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+        if (hasText && ckey(s.color) === T.roles['--brass'] && !e.closest('[role="menuitemradio"], [aria-current], .ui-ladder')) add('roles', e, 'text in --brass: brass marks position and choice, never text (R-colour-3)');
+        const bg = ckey(s.backgroundColor);
+        if (bg === T.roles['--bg-0'] || bg === T.roles['--bg-3']) {
+          for (let p = e.parentElement; p && p !== document.documentElement; p = p.parentElement) {
+            const pb = getComputedStyle(p).backgroundColor;
+            if (transparent(pb)) continue;
+            if (ckey(pb) === bg) add('roles', e, (bg === T.roles['--bg-0'] ? 'inset (--bg-0) on inset' : 'raised (--bg-3) on raised') + ': ' + describe(p) + ' paints the same (R-colour-4)');
+            break;
+          }
+        }
+      }
+    }
+
     /* native controls */
     if (want.has('native')) {
-      for (const e of scope.querySelectorAll('select, input, progress, meter, datalist, details > summary')) {
+      for (const e of scope.querySelectorAll('select, input, textarea, progress, meter, datalist, details > summary')) {
         if (!shown(e) && !e.matches('datalist')) continue;
         const s = getComputedStyle(e), t = (e.getAttribute('type') || 'text').toLowerCase();
         let why = null;
@@ -429,6 +479,7 @@
         else if (e.matches('summary') && s.display === 'list-item') why = 'a native disclosure marker';
         else if (['date', 'time', 'datetime-local', 'month', 'week', 'color', 'range', 'file', 'number'].includes(t)) why = 'a native ' + t + ' input';
         else if ((t === 'checkbox' || t === 'radio') && s.appearance !== 'none' && s.webkitAppearance !== 'none') why = 'a ' + t + ' drawn by the engine';
+        else if (e.matches('textarea') && s.resize !== 'none') why = 'a textarea with the engine\'s resize grip (R-field-4)';
         if (why) add('native', e, why + ' (the design system draws its own; the UI-controls work replaces these)');
       }
     }
@@ -447,6 +498,7 @@
         const thumb = rules.thumb.filter((r) => matchesBase(e, r.base));
         const hidden = bar.some((r) => r.display === 'none' || r.width === '0px');
         if (hidden) continue;
+        if (!isRoot && s.overscrollBehaviorY !== 'contain' && s.overscrollBehaviorY !== 'none' && overflowY) add('scrollbar', e, 'an inner scroller without overscroll-behavior: contain (R-scroll-8)');
         if (!bar.length) { add('scrollbar', e, 'scrolls with the engine\'s own scrollbar: no ::-webkit-scrollbar rule (WebKitGTK ignores scrollbar-width' + (s.scrollbarWidth && s.scrollbarWidth !== 'auto' ? ', which this sets to ' + s.scrollbarWidth : '') + ')'); continue; }
         const w = Math.max(...bar.map((r) => px(r.width || r.height || '0')));
         const size = px(getComputedStyle(document.documentElement).getPropertyValue('--scroll-size')) || 10;

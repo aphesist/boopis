@@ -23,7 +23,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, wri
 import { join, normalize } from 'node:path';
 import { createHash } from 'node:crypto';
 import { labRoute, typeOf, UI_ROOT } from './serve.mjs';
-import { CHECKS, AREAS, AREA_TITLES, BRAND_ALLOW, areaOf } from './rules.mjs';
+import { CHECKS, AREAS, AREA_TITLES, BRAND_ALLOW, areaOf, ruleCoverage } from './rules.mjs';
 import { scan } from './static-scan.mjs';
 import { writeReport } from './report.mjs';
 
@@ -151,7 +151,7 @@ async function shot(page, row) {
   const clip = await page.evaluate((app) => {
       const scope = window.__lab.scope();
       if (app && (!scope || scope.id === 'hx-app' || scope === document.body)) return null;
-      const els = [app ? scope : document.querySelector('.lab-cell'), ...document.querySelectorAll('.ui-tip.is-in, .ui-menu:not([data-static]), .ui-pop, .ui-toast.is-in')].filter(Boolean);
+      const els = [app ? scope : document.querySelector('.lab-cell'), ...document.querySelectorAll('.ui-tip.is-in, .ui-menu:not([data-static]), .ui-pop, .ui-listbox, .ui-toast.is-in')].filter(Boolean);
       let x0 = Infinity, y0 = Infinity, x1 = 0, y1 = 0;
       for (const e of els) { const r = e.getBoundingClientRect(); if (!r.width) continue; x0 = Math.min(x0, r.left); y0 = Math.min(y0, r.top); x1 = Math.max(x1, r.right); y1 = Math.max(y1, r.bottom); }
       const pad = 12;
@@ -372,11 +372,15 @@ for (const x of list) if (x.mock) x.mockShot = mockFiles[x.mock.url + '|' + (x.m
 await browser.close();
 await srv.close();
 
+const RULES_MD = join(UI_ROOT, '..', '..', '..', 'design', 'v6', 'design-system', 'RULES.md');
+const rules = existsSync(RULES_MD) ? ruleCoverage(readFileSync(RULES_MD, 'utf8')) : null;
 const summary = writeReport(REPORT, {
+  rules,
   generated: new Date().toISOString(), seconds: Math.round((Date.now() - t0) / 1000), presets: PRESETS, widths: WIDTHS, area: AREA, story: STORY || null, update: UPDATE,
   states: rows.length, stories: new Set(rows.map((r) => r.story)).size, checks: CHECKS, areas: AREA_TITLES, findings: list, static: staticFindings, rows
 });
 console.log(`\nlab: ${summary.failures} failures, ${summary.warnings} warnings in ${rows.length} states (${summary.seconds} s)`);
 for (const [a, n] of Object.entries(summary.byArea)) console.log('  ' + a.padEnd(11) + n);
+if (rules) console.log(`rules: ${rules.covered.length} of ${rules.total} RULES.md rules have a lab check (${rules.machine} are machine-checkable)`);
 console.log('report: ' + join(REPORT, 'index.html'));
 process.exit(flag('strict') && summary.failures ? 1 : 0);

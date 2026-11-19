@@ -10,7 +10,7 @@ const rowsOf = (n: number): string => Array.from({ length: n }, (_, i) => html.r
 
 const rowTypical = stage(['typical', 'variant'], ({ root }) => {
   list(root, rowsOf(5));
-  list(root, html.row({ title: 'nina', sub: 'deploys · needs you', lead: html.orb({ id: 'nina', name: 'nina', shape: 'triangle', color: '#f23b5a', eyes: 'pill', state: 'needs' }, { size: 20, still: true }), end: 'needs you', endTone: 'attention' }) +
+  list(root, html.row({ title: 'nina', sub: 'deploys · needs you', lead: html.orb({ id: 'nina', name: 'nina', shape: 'triangle', color: '#f23b5a', state: 'needs' }, { size: 20, still: true }), end: 'needs you', endTone: 'attention' }) +
     html.row({ title: 'audit log export', end: 'yesterday', acts: html.iconButton({ icon: 'archive', label: 'Archive' }) + html.iconButton({ icon: 'more', label: 'More' }) }) +
     html.row({ title: 'ledger', sub: 'archived yesterday', archived: true, end: html.button({ label: 'Restore', size: 's', variant: 'ghost' }) }));
 });

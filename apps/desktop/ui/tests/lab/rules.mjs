@@ -1,7 +1,6 @@
 /* The lab's checks, what each one enforces and where the design system says so. `rule` is the main rule ID in
-   design/v6/design-system/RULES.md (branch w12/design-system as of this writing); `rules` lists every rule a check
-   also covers. To add a check for a rule: add a row here, implement it in probe.js (in-page) or
-   check.mjs (needs the browser), and name the row's `rule`. Severity `warn` is reported and never counted as a failure. */
+   design/v6/design-system/RULES.md; `rules` lists every rule a check also covers (ALSO, below). To add a check for a rule: add a row here, implement it in probe.js (in-page) or
+   check.mjs (needs the browser), and name the row's `rule`. */
 export const CHECKS = {
   'errors':            { title: 'Draws without errors', ds: 'STANDARDS 10', rule: null, severity: 'fail', how: 'the state draws, with no console error or page error' },
   'geometry.contain':  { title: 'Children stay inside their container', ds: '8.2, 14.10', rule: 'R-corner-4', severity: 'fail', how: 'a shaped child (and its rounded corners, hover fill and focus ring) inside its shaped container\'s rounded rect or squircle path' },
@@ -12,11 +11,13 @@ export const CHECKS = {
   'concentric':        { title: 'Corners are concentric', ds: '8, 8.1, 8.2, 14.10', rule: 'R-corner-3', severity: 'fail', how: 'a shape in a container\'s corner: equal insets, radius = outer - inset (floor 8) or a pill, in rest, hover, focus and pressed' },
   'overlay':           { title: 'Overlays are placed as the system says', ds: '14.18, 14.19, 14.23', rule: 'R-float-1', severity: 'fail', how: 'outside the anchor, 8px gap (10 to the right), inside the window, aligned, flipped near the bottom, never over the anchor\'s text field' },
   'tokens.computed':   { title: 'Colours, type sizes and radii are tokens', ds: '3, 4, 6, 8', rule: 'R-colour-1', severity: 'fail', how: 'computed colour, background, border, outline, fill, shadow colour, font size and radius against the active preset\'s tokens' },
-  'tokens.spacing':    { title: 'Spacing is on the scale', ds: '7', rule: 'R-space-1', severity: 'warn', how: 'computed padding and gap against --sp-*, --gutter, --composer-*; the system names some literal paddings itself, so this warns' },
+  'tokens.spacing':    { title: 'Spacing is on the scale', ds: '7', rule: 'R-space-1', severity: 'fail', how: 'computed padding and gap against --sp-*, --pad-*, --gutter, --composer-* and the values of R-space-2\'s named exceptions' },
   'tokens.static':     { title: 'No hard-coded values in the source', ds: '3 ("tokens, never literals")', rule: 'R-colour-1', severity: 'fail', how: 'literal colours, font sizes and radii in CSS and TS outside the token files' },
   'native':            { title: 'No unthemed native controls', ds: '14.25, 14.21', rule: 'R-native-1', severity: 'fail', how: 'select, date, colour, range, file and number inputs, engine-drawn checkboxes and radios, progress, meter' },
   'scrollbar':         { title: 'Scrollers use the system\'s scrollbar', ds: '4.1 (--bg-4 is the thumb), components.css', rule: 'R-scroll-1', severity: 'fail', how: 'a ::-webkit-scrollbar rule no wider than 8px and a --bg-4 thumb on every scroller (WebKitGTK ignores scrollbar-width)' },
   'brand':             { title: 'The app never says "Hermes"', ds: 'owner rule (19 November 2026)', rule: 'R-copy-8', severity: 'fail', how: 'rendered text, aria-label, aria-description, title, placeholder and tooltips (any case), except a Hermes plugin store item under its own name or publisher (BRAND_ALLOW)' },
+  'copy':              { title: 'No engine values in the interface', ds: '2', rule: 'R-copy-9', severity: 'fail', how: 'rendered text with undefined, NaN, [object Object], a stack trace, an hx.* code or JSON (code and output wells excluded)' },
+  'roles':             { title: 'Colour roles', ds: '4.3, 9.1', rule: 'R-colour-3', severity: 'fail', how: 'no text in --brass; no --bg-0 on --bg-0 and no --bg-3 on --bg-3' },
   'axe':               { title: 'Accessibility (axe)', ds: '15', rule: 'R-a11y-1', severity: 'fail', how: 'axe-core, every rule but page landmarks' },
   'stability.render':  { title: 'Renders the same twice', ds: 'STANDARDS 6', rule: null, severity: 'fail', how: 'the DOM structure of two renders of the same state' },
   'stability.interact':{ title: 'No flicker, replacement or jump', ds: '11, STANDARDS 6', rule: 'R-motion-5', severity: 'fail', how: 'frames sampled during an interaction: nothing replaced, nothing invisible and back, no box that jumps away and back' },
@@ -24,9 +25,9 @@ export const CHECKS = {
 };
 /** every rule a check covers, beyond its main one */
 export const ALSO = {
-  'geometry.contain': ['R-corner-4', 'R-corner-8'], concentric: ['R-corner-3', 'R-corner-5', 'R-corner-9', 'R-kbd-2'], overlay: ['R-float-1', 'R-float-3', 'R-elev-6'],
-  'tokens.computed': ['R-colour-1', 'R-type-2', 'R-corner-1'], scrollbar: ['R-scroll-1', 'R-scroll-2', 'R-scroll-3', 'R-scroll-6'], 'geometry.hscroll': ['R-overflow-4', 'R-scroll-7', 'R-a11y-6'],
-  native: ['R-native-1', 'R-native-3'], 'stability.interact': ['R-motion-5', 'R-motion-8']
+  'geometry.contain': ['R-corner-4', 'R-corner-8'], concentric: ['R-corner-3', 'R-corner-5', 'R-corner-9', 'R-kbd-2'], overlay: ['R-float-1', 'R-float-3', 'R-elev-6', 'R-copy-7', 'R-tip-2', 'R-tip-4'],
+  'tokens.computed': ['R-colour-1', 'R-type-1', 'R-type-2', 'R-type-4', 'R-corner-1', 'R-copy-1'], copy: ['R-copy-9', 'R-copy-6'], roles: ['R-colour-3', 'R-colour-4'], scrollbar: ['R-scroll-1', 'R-scroll-2', 'R-scroll-3', 'R-scroll-6', 'R-scroll-8'], 'geometry.hscroll': ['R-overflow-4', 'R-scroll-7', 'R-a11y-6'],
+  native: ['R-native-1', 'R-native-3', 'R-field-4', 'R-select-1'], 'geometry.target': ['R-a11y-2'], brand: ['R-copy-8'], axe: ['R-a11y-1', 'R-a11y-3', 'R-a11y-8'], 'geometry.center': ['R-type-11'], 'tokens.spacing': ['R-space-1', 'R-space-2'], 'geometry.clip': ['R-overflow-1'], 'stability.interact': ['R-motion-5', 'R-motion-8']
 };
 for (const [k, v] of Object.entries(ALSO)) CHECKS[k].rules = v;
 export const checkIds = Object.keys(CHECKS);
@@ -54,3 +55,13 @@ export const BRAND_ALLOW = [
   '[data-store-item]',        // a Hermes plugin store item (its name or publisher)
   '[data-publisher]'          // a publisher's name as the store gives it
 ];
+
+/** RULES.md's rules, and which of them a lab check verifies (the report's rule coverage) */
+export function ruleCoverage(rulesMd) {
+  const rows = [...rulesMd.matchAll(/^\|\s*\[(R-[a-z0-9]+-\d+)\]\([^)]*\)\s*\|(.*?)\|(.*?)\|\s*(machine|by eye|both)\s*\|/gm)].map((m) => ({ id: m[1], rule: m[2].trim(), status: m[3].trim(), how: m[4] }));
+  const by = {};
+  for (const [check, c] of Object.entries(CHECKS)) for (const r of [c.rule, ...(c.rules ?? [])].filter(Boolean)) (by[r] ??= new Set()).add(check);
+  const covered = rows.filter((r) => by[r.id]).map((r) => ({ ...r, checks: [...by[r.id]] }));
+  const open = rows.filter((r) => !by[r.id]);
+  return { total: rows.length, machine: rows.filter((r) => r.how !== 'by eye').length, covered, uncovered: open, unknown: Object.keys(by).filter((id) => !rows.some((r) => r.id === id)) };
+}

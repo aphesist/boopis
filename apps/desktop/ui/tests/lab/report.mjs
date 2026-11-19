@@ -19,6 +19,7 @@ export function writeReport(dir, run) {
     stories: run.stories, states: run.states, failures: fail.length + run.static.length, warnings: warn.length,
     byArea, byCheck, byAreaCheck,
     findings: [...fail, ...run.static].map((x) => ({ area: x.area, check: x.check, rule: x.rule ?? null, story: x.story ?? null, state: x.state ?? null, file: x.file ?? null, line: x.line ?? null, msg: x.msg, el: x.el ?? null, where: x.where ?? null, crop: x.crop ?? null, mock: x.mockShot ?? null, diff: x.diff ?? null })),
+    rules: run.rules ? { total: run.rules.total, machine: run.rules.machine, covered: run.rules.covered.map((r) => ({ id: r.id, checks: r.checks })), uncovered: run.rules.uncovered.map((r) => ({ id: r.id, how: r.how, rule: r.rule })) } : null,
     warnings_list: warn.map((x) => ({ area: x.area, check: x.check, story: x.story, state: x.state, msg: x.msg, el: x.el }))
   };
   writeFileSync(join(dir, 'summary.json'), JSON.stringify(summary, null, 1));
@@ -54,6 +55,7 @@ export function writeReport(dir, run) {
       checks.map((c) => `<h3>${esc(c)} (${mine.filter((x) => x.check === c).length})</h3>` + mine.filter((x) => x.check === c).map(card).join('')).join('') +
       (st.length ? `<h3>tokens.static (${st.length})</h3><table>${st.map(staticRow).join('')}</table>` : '');
   }).join('')}
+  ${run.rules ? `<h2 id="rules">Rule coverage</h2><p>${run.rules.covered.length} of ${run.rules.total} rules in RULES.md have a lab check (${run.rules.machine} are machine-checkable).</p><details><summary>Rules with a check</summary><table>${run.rules.covered.map((r) => `<tr><td><code>${esc(r.id)}</code></td><td>${esc(r.rule)}</td><td>${esc(r.checks.join(', '))}</td></tr>`).join('')}</table></details><details><summary>Rules without a check (${run.rules.uncovered.length})</summary><table>${run.rules.uncovered.map((r) => `<tr><td><code>${esc(r.id)}</code></td><td>${esc(r.how)}</td><td>${esc(r.rule)}</td></tr>`).join('')}</table></details>` : ''}
   ${warn.length ? `<h2>Warnings</h2><details><summary>${warn.length} spacing values off the scale</summary><table>${warn.map((x) => `<tr><td>${esc(x.area)}</td><td>${esc(x.story)} · ${esc(x.state)}</td><td><code>${esc(x.el)}</code></td><td>${esc(x.msg)}</td></tr>`).join('')}</table></details>` : ''}
   </main></body></html>`;
   writeFileSync(join(dir, 'index.html'), html);
