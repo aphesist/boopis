@@ -8,6 +8,12 @@ Two workflows live in `.github/workflows/`. Neither can be run locally; `actionl
 - Verify: `sha256sum -c SHA256SUMS --ignore-missing`.
 
 ## Running it on Arch
+**The native package (recommended, ADR-0025):** `boopis-<version>-1-x86_64.pkg.tar.zst`, built against the system's WebKitGTK, so it gets Arch's current renderer and updates through pacman. Download it from the `release` run (artifact `hypotaxis-arch-x86_64-pkg`) or the Releases page, then:
+```sh
+sudo pacman -U boopis-*.pkg.tar.zst     # pulls webkit2gtk-4.1, gtk3 and the rest from the repositories
+boopis
+```
+Details, and what is still open, in "The Arch package" below. The AppImage works too:
 ```sh
 sudo pacman -S fuse2 webkit2gtk-4.1 gtk3 gnome-keyring   # fuse2 to mount AppImages; keyring for secret_set
 chmod +x Hypotaxis_*.AppImage
@@ -46,7 +52,45 @@ The installer carries `hermes-runtime-<os>-<arch>.tar.zst` and its `runtime.json
 - **macOS.** `build-runtime.sh` is written for it (`gtar`, Mach-O `strip -S` is not wired: only Linux strips) but has not run there; the runtime must be built on an Apple-silicon runner (`aarch64-apple-darwin`), the bundle must carry it (the macOS job has a TODO) and the whole app must be signed and notarised, including the interpreter and every `.so` in the runtime, which are unpacked into the app's data folder and must carry valid signatures to run under Gatekeeper's hardened runtime.
 - **Windows.** `build-runtime.ps1` is not written (`assemble` needs Hermes's distlib launcher mint for `Scripts\*.exe`), the host's `Bundled` path uses `bin/hermes` (`hermes.cmd` or `.exe` on Windows: `runtime.json` already carries the launcher's path, so only the script changes), long-path and antivirus behaviour on a 400 MB unpack are unmeasured, and the secret channel has no Windows transport yet.
 - **Linux aarch64** is the same script on an arm64 runner.
-- **A native Arch package** is a separate step. What it depends on from this layout: `runtime.json` and the archive are plain files that can be installed to `/usr/lib/hypotaxis/runtime/` (the host looks in the resource directory; the package would point it there), or the package can ship the unpacked tree and the host would skip the unpack when `runtime/<id>/` is already present (the marker file is the check); the host takes the system's WebKitGTK; `HYPOTAXIS_HERMES=existing` is the fallback for a package that depends on `hermes-agent` instead.
+- **A native Arch package** is done (see "The Arch package"): it installs `runtime.json` and the archive in `/usr/lib/boopis/runtime/` and the host unpacks on first run, like the AppImage. Shipping the unpacked tree, or depending on a `hermes-agent` package with `HYPOTAXIS_HERMES=existing`, stay options.
+
+## The Arch package (ADR-0025)
+`packaging/arch/PKGBUILD` builds `boopis`, the app against the system's `webkit2gtk-4.1` (2.54.2 or later on Arch, which has the NVIDIA explicit-sync fix and compositor-driven `linear()` animation). It does not carry WebKitGTK.
+
+**Layout.** `/usr/bin/boopis` (Cargo's `hypotaxis` binary, installed under the product's name), and in `/usr/lib/boopis/`: `hx`, `plugin/hypotaxis/` and `runtime/` (`runtime.json` and the Hermes archive), the same relative paths as `tauri.bundle.conf.json`, staged by the same `scripts/stage-bundle.sh` the AppImage uses. `hx` stays out of `/usr/bin` because Helix owns that name on Arch. Plus the desktop entry (`StartupWMClass=boopis`, which is the Wayland app id: GTK takes it from the binary's name), the light icon as `boopis` and the dark one as `boopis-dark` in hicolor sizes 16 to 512, the symbolic SVG, and licences (`NOTICE`, Hermes's MIT text read out of the runtime archive, the embedded fonts' licences). `install=boopis.install` is the installer branch's file; here it is a placeholder it overwrites.
+
+**How the host finds them.** Tauri looks in `<exe dir>/../lib/<productName>`, which is `Hypotaxis` today and will change with the rename, and a package should not depend on that. `src/resources.rs` therefore falls back to `<exe dir>/../lib/<binary name>` when Tauri's directory carries neither `plugin/` nor `runtime/`; the AppImage still takes Tauri's. `Bundle::locate` also looks for `hx` in that directory. Both have tests.
+
+**Why it builds from source inside `makepkg`** and does not repackage the CI binaries:
+- the binary is linked and tested against the libraries it will run with (a repackaged Ubuntu 22.04 build links Ubuntu's `libssl`, `libsoup` and glibc baseline, which only happen to match);
+- `makepkg`'s dependency check, `namcap` and an AUR submission all work on it unchanged;
+- the cost is a cold build of about 20 to 30 minutes on a runner, cut by caching the cargo registry and the build output.
+
+The one input it does not build is the Hermes runtime, which stays what CI's `runtime` job built and proved relocatable: it is the same archive the AppImage carries, so the end-to-end tests cover the bytes that ship. `prepare()` checks the archive against `runtime.json`; the host checks it again on first run.
+
+**Building it by hand.** On Arch, as a normal user, from a checkout:
+```sh
+scripts/build-runtime.sh --out dist/runtime            # or download the CI artifact hermes-runtime-linux-x86_64
+cp dist/runtime/runtime.json dist/runtime/hermes-runtime-linux-x86_64.tar.zst packaging/arch/
+cd packaging/arch && makepkg -s                        # needs network in prepare() for cargo and pnpm; build() is offline
+sudo pacman -U boopis-*.pkg.tar.zst
+```
+`BOOPIS_TARGET_DIR` keeps cargo's output outside the build directory. `packaging/arch/smoke.sh` checks an installed package.
+
+**The `arch` job in `release.yml`.** It runs in an `archlinux:latest` container, installs the PKGBUILD's own `makedepends` and `depends` (read from the file), checks that the PKGBUILD's `pkgver` equals the app's version (and the tag does on a tag), runs `makepkg` as a non-root user, prints `namcap` to the job summary (informational: it reports the plugin's Python imports as a missing `python` dependency, which is wrong, because the plugin runs on Hermes's own interpreter) and uploads `hypotaxis-arch-x86_64-pkg`. `arch-smoke` installs it with `pacman -U` in a clean Arch container and runs `smoke.sh`: the files are where the host looks, the runtime archive matches `runtime.json`, `ldd` shows `libwebkit2gtk-4.1` from `/usr/lib` and no carried WebKitGTK, nothing is unresolved, `pacman -Qkk` is clean, and `boopis --version` prints the version when the binary handles that flag (the installer branch's command line; until it lands the links are the start check). Neither job is needed by the AppImage, so a failure there does not block it. On a tag, `release` attaches the package only when `arch-smoke` passed.
+
+**pnpm.** Arch's `pnpm` (12.x when this was written) is newer than CI's 10 and refuses a lockfile entry published less than a day earlier (`ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`, seen on `source-map-js` and `tinybench` the day they were bumped). The PKGBUILD leaves that supply-chain check on: it is the owner's call whether to pin pnpm 10 as CI does, to relax the check for a frozen lockfile CI already installed, or to accept that a build the day of a dependency bump waits a day.
+
+**Bumping the version:** `pkgver` in the PKGBUILD, `version` in `tauri.conf.json` and the workspace version move together; the job fails when the first two differ.
+
+**The rename.** The old names are in one block at the top of the PKGBUILD (`_cargo_bin`, `_host_crate`, `_hx_crate`, `_plugin`, `_runtime_archive`, `_repo_url`), two lines of `smoke.sh` (`PLUGIN`, `RUNTIME_ARCHIVE`), `ARCH_ARTIFACT` and the `hypotaxis-*` release pattern in `release.yml`, and the `HYPOTAXIS_GPU` hint in `optdepends`. The package, binary, desktop entry and directories already say `boopis`.
+
+**Follow-up: an AUR package (`boopis`).** It needs:
+- a licence decision: the repository says `UNLICENSED` and the PKGBUILD says `LicenseRef-proprietary`; the AUR wants a statement it can point to;
+- the source as the release tarball (`source=("$url/archive/v$pkgver.tar.gz")`) with a real checksum, and the in-tree `$startdir/../..` copy dropped;
+- the Hermes runtime as a release asset with a checksum (today it is a workflow artifact, kept 30 days and not published) or built in a clean chroot, which needs network in `build()` and so is not allowed on the AUR, hence the asset;
+- `.SRCINFO` (`makepkg --printsrcinfo`), and a maintainer who bumps it per release (or a `-git` twin);
+- pnpm: Arch's `pnpm` is current and its default release-age policy rejects a lockfile entry published less than a day ago, so a build the same day a dependency is bumped can fail until the day passes (see "pnpm" above).
 
 ## `ci.yml` (every push and pull request)
 All jobs run in parallel on `ubuntu-22.04` and are cached (cargo through `Swatinem/rust-cache`, uv, pnpm, Playwright's Chromium, the Hermes install). Runs on a ref are cancelled by the next push to it.
@@ -75,7 +119,8 @@ Why 22.04: `hx-sandbox` needs unprivileged user namespaces, which 24.04 restrict
 - `linux` (needs `runtime`): Tauri release build for `x86_64-unknown-linux-gnu`, AppImage only (`NO_STRIP=true`); uploads the AppImage and its checksum.
 - `smoke`: runs the built AppImage under `xvfb-run` through `tests/e2e/smoke_desktop.py` (WebKitWebDriver) against the cached Hermes and the fake model: the UI loads, the host connects, a prompt streams a reply; first a cheap check that the AppImage extracts and every library resolves. Non-blocking, screenshot kept as `smoke-screenshot`.
 - `windows` (NSIS) and `macos` (dmg, Apple silicon): non-blocking, unsigned.
-- `release` (tags only): GitHub release from the artifacts plus `SHA256SUMS`.
+- `arch` and `arch-smoke`: the native Arch package, built and smoke-tested in `archlinux:latest` containers (see "The Arch package"). Independent of the AppImage.
+- `release` (tags only): GitHub release from the artifacts plus `SHA256SUMS`. The Arch package is attached when `arch-smoke` passed.
 
 **Bundle.** The Linux job builds `hx` in release mode, downloads the runtime artifact, runs `scripts/stage-bundle.sh --runtime <it>` and builds with `tauri.bundle.conf.json`, so the AppImage carries the `hx` sidecar, the plugin and the Hermes runtime (`resources/runtime/`), and prints the AppImage's size in the job summary. Windows and macOS builds still lack all three (marked TODO in the workflow). The smoke job first runs first-run setup against the spike Hermes (`cargo test -p hypotaxis-host --test setup_live`, whose `bundled` twin runs in `ci.yml` on the real archive), then the session check.
 
@@ -87,4 +132,5 @@ CI builds with Rust **1.97.0** (`dtolnay/rust-toolchain@1.97.0`, and `RUSTUP_TOO
 ## What is verified where
 - **Locally:** `actionlint` on both workflows (clean); `identity`, `checks` (all three `--check`s), `rust` (fmt, clippy `-D warnings`, `cargo test --workspace`: 496 passed), `plugin` (ruff, pyright and pytest, 3.11 and 3.14, with the same deselects), `e2e` (25 passed against the spike's Hermes install), `ui` typecheck, vitest (174 passed) and the Playwright smoke (156/156, with the pre-installed Chromium).
 - **Locally, for the runtime (v0.23.2, linux-x86_64):** `build-runtime.sh`, `verify-runtime.sh`, `setup_live bundled` on the real archive (unpack, plugin enabled, gateway on the bundled interpreter, fake model, `~/.hermes` untouched), `tests/e2e` and the sandbox tests on the unpacked runtime (all passed, contraprova installed from its checkout).
-- **Only in CI:** the apt installs, the `runtime` job's cache, the `smoke` job, the whole `release` build (disk, including the AppImage size), the Windows and macOS builds, the release creation, and the `CONTRAPROVA_TOKEN` path.
+- **Locally, for the Arch package:** `cargo fmt --check`, `clippy -D warnings` and `cargo test -p hypotaxis-host` (172 passed, with the new `resources` and `Bundle::locate` tests); `actionlint` on the workflow (the one finding, SC2211 in the `smoke` job, was there before); in an `archlinux:latest` container, `makepkg --printsrcinfo`, the dependency list resolving in the repositories, `package()` with stand-in binaries (the layout, the licences, the hash check, `namcap`, `pacman -U`, `desktop-file-validate`) and `smoke.sh` up to the link check. Not run locally: a full `makepkg`, because its `pnpm install` stopped at that release-age check (see "pnpm" above) and the machine had about 6 GB free.
+- **Only in CI:** the `arch` and `arch-smoke` jobs (the real build, the links to the system's WebKitGTK, `--version`), the apt installs, the `runtime` job's cache, the `smoke` job, the whole `release` build (disk, including the AppImage size), the Windows and macOS builds, the release creation, and the `CONTRAPROVA_TOKEN` path.

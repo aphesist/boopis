@@ -1,0 +1,6 @@
+# makepkg's working directories and products, and CI's inputs (the Hermes runtime is built by the runtime job)
+/src/
+/pkg/
+/*.pkg.tar.*
+/runtime.json
+/hermes-runtime-*.tar.zst

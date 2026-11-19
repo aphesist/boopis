@@ -1,0 +1,8 @@
+# Placeholder: the installer branch (scripts/install.sh, packaging/brand) overwrites this file.
+post_install() {
+  echo ":: boopis keeps API keys in the Secret Service: install and unlock a provider (gnome-keyring, kwallet, keepassxc) to use secret_set."
+}
+
+post_upgrade() {
+  :
+}

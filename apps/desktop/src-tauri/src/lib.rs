@@ -13,6 +13,7 @@ pub mod gpu;
 pub mod hermes;
 pub mod os;
 pub mod renderer;
+pub mod resources;
 pub mod runtime;
 pub mod secrets;
 pub mod settings;
@@ -173,13 +174,17 @@ pub fn run() {
                 std::env::var("HYPOTAXIS_HERMES").ok().as_deref(),
                 saved_source.as_deref(),
             );
+            // The plugin, the runtime and `hx`: Tauri's resource directory, or the one a native package names after
+            // its binary (resources.rs).
+            let exe = std::env::current_exe().ok();
+            let resource_dir = resources::locate(app.path().resource_dir().ok().as_deref(), exe.as_deref());
             let (plan, runtime_error) = match (source, app.path().app_data_dir()) {
                 (runtime::Source::Existing, _) => (None, None),
                 (runtime::Source::Bundled, Err(e)) => {
                     (None, Some(format!("the app has no data folder to unpack Hermes into: {e}")))
                 }
                 (runtime::Source::Bundled, Ok(data_dir)) => {
-                    match runtime::Runtime::locate(app.path().resource_dir().ok().as_deref()) {
+                    match runtime::Runtime::locate(resource_dir.as_deref()) {
                         Ok(Some(runtime)) => (Some(runtime::Plan { runtime, data_dir }), None),
                         Ok(None) => {
                             tracing::info!("this build carries no Hermes runtime; using the Hermes on this machine");
@@ -225,8 +230,8 @@ pub fn run() {
                 runtime: plan,
                 runtime_error,
                 bundle: setup::install::Bundle::locate(
-                    app.path().resource_dir().ok().as_deref(),
-                    std::env::current_exe().ok().as_deref().and_then(std::path::Path::parent),
+                    resource_dir.as_deref(),
+                    exe.as_deref().and_then(std::path::Path::parent),
                 ),
             });
             // The plugin's door to the keychain. A failure (no socket support, another host running) is logged and
