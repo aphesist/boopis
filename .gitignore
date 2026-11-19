@@ -11,3 +11,6 @@ __pycache__/
 *.log
 *.tmp
 .env
+
+# downloaded tool wheels never belong in the repository
+/*.whl
