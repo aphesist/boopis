@@ -1,4 +1,4 @@
-/* hypotaxis v6 · shell runtime (owner: wireframe agent)
+/* boopis v6 · shell runtime (owner: wireframe agent)
    Defines window.HX first (state, event bus, register/mount, setState), then wires the frame:
    chrome, left sidebar (open | rail | closed), tabs, right panel container, dock slot, command
    palette, account menu, settings, tooltips, keyboard shortcuts, and stubs for missing modules.

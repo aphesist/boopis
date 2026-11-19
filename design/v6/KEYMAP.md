@@ -1,4 +1,4 @@
-# hypotaxis keymap (v7)
+# boopis keymap (v7)
 
 One keymap for the whole app. The shell owns every global key and the region model; each module owns the keys
 inside its own region. The help sheet (`?` or `mod+/`), Settings > Keyboard, the palette and the tooltips all

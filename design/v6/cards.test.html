@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>hypotaxis cards</title>
+<title>boopis cards</title>
 <link rel="stylesheet" href="tokens.css">
 <script src="theme.js"></script>
 <link rel="stylesheet" href="components/components.css">
@@ -101,18 +101,18 @@ window.__cardViews = function (view, G) {
     credential: { id: 'f-openai', kind: 'credential', origin: { kind: 'agent', model: 'sonnet 5.5' }, title: 'Add your OpenAI key',
       why: 'The embeddings step calls text-embedding-3-small, and your OpenAI provider has no key yet. I’ll keep working on the parts that don’t need it.',
       effect: 'Saves to your keychain and connects the OpenAI provider. sonnet 5.5 never sees the key.', provider: 'OpenAI', expires: 'expires in 30 min',
-      schema: { properties: { key: { type: 'string', title: 'OpenAI API key', 'x-secret': true, 'x-ref': 'openai/api-key', placeholder: 'sk-…', pattern: '^sk-[A-Za-z0-9_-]{20,}$', 'x-error': 'That doesn’t look like an OpenAI key: it starts with sk- and is at least 23 characters', description: 'From platform.openai.com, API keys. Paste it once; hypotaxis keeps it.' } }, required: ['key'] } },
+      schema: { properties: { key: { type: 'string', title: 'OpenAI API key', 'x-secret': true, 'x-ref': 'openai/api-key', placeholder: 'sk-…', pattern: '^sk-[A-Za-z0-9_-]{20,}$', 'x-error': 'That doesn’t look like an OpenAI key: it starts with sk- and is at least 23 characters', description: 'From platform.openai.com, API keys. Paste it once; boopis keeps it.' } }, required: ['key'] } },
     question: { id: 'f-rounding', kind: 'question', origin: { kind: 'teammate', ids: ['atlas'] }, title: 'How should line items round before the total?',
       why: 'invoice.ts:88 divides before rounding. Pick a rule and I’ll apply it to every line item.', effect: 'Your answer goes back to atlas mid-review.',
       schema: { properties: { rule: { type: 'string', title: 'Rounding rule', enum: ['half-away', 'half-even', 'none'], enumNames: ['Half away from zero', 'Half to even (banker’s)', 'Don’t round line items'], 'x-other': true,
         'x-preview': [{ code: 'roundCents(100.5) → 101\nroundCents(101.5) → 102\n31 days, 3 splits: drift 0' }, { code: 'roundCents(100.5) → 100\nroundCents(101.5) → 102\n31 days, 3 splits: drift 0' }, { code: 'line items keep sub-cents\ntotal rounds once\n31 days, 3 splits: drift 0', note: 'Matches what money.ts does today.' }] } }, required: ['rule'] } },
     permission: { id: 'f-publish', kind: 'permission', origin: { kind: 'agent', model: 'sonnet 5.5' }, title: 'Allow npm publish in billing-api?',
-      why: 'To publish @acme/billing 2.4.0 to the npm registry, as you asked.', effect: 'Always writes the rule to .hermes/hypotaxis.yaml for this project. Deny stops the publish; nothing else changes.',
+      why: 'To publish @acme/billing 2.4.0 to the npm registry, as you asked.', effect: 'Always writes the rule to .hermes/boopis.yaml for this project. Deny stops the publish; nothing else changes.',
       schema: { properties: { scope: { type: 'string', title: 'Allow', enum: ['once', 'session', 'always', 'deny'], enumNames: ['Once', 'For this session', 'Always, in this project', 'Deny'], default: 'once' } }, required: ['scope'] }, cancel: false },
-    setup: { id: 'f-gate', kind: 'setup', origin: { kind: 'plugin' }, title: 'Set the gate command for billing-api', file: '.hermes/hypotaxis.yaml',
+    setup: { id: 'f-gate', kind: 'setup', origin: { kind: 'plugin' }, title: 'Set the gate command for billing-api', file: '.hermes/boopis.yaml',
       why: 'Every ship ends at the gate, and this project has none yet. I found npm test in package.json.',
       diff: ' project: billing-api\n+gate:\n+  command: npm test\n+  timeout: 5m\n+  network: false\n governance:\n-  cap: $0.60\n+  cap: $1.00',
-      effect: 'Writes .hermes/hypotaxis.yaml for this project only. Nothing outside the project changes.',
+      effect: 'Writes .hermes/boopis.yaml for this project only. Nothing outside the project changes.',
       schema: { properties: { gate: { type: 'string', title: 'Gate command', default: 'npm test', 'x-mono': true, minLength: 2 }, timeout: { type: 'integer', title: 'Timeout in minutes', default: 5, minimum: 1, maximum: 60 }, network: { type: 'boolean', title: 'Allow network during the gate', description: 'Off keeps the gate hermetic.', default: false } }, required: ['gate', 'timeout'] } },
     signin: { id: 'f-linear', kind: 'signin', origin: { kind: 'teammate', ids: ['kai'] }, title: 'Sign in to Linear', provider: 'Linear',
       why: 'I file the changelog as Linear issues. I only learn that sign-in worked.', effect: 'Saves the Linear token to your keychain. kai never sees it.',

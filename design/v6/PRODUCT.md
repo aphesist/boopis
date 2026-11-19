@@ -24,7 +24,7 @@ named bots: review, deploys, docs, on-call, data migrations.
 
 ## Product Purpose
 
-hypotaxis is a desktop harness for AI coding agents. Two tabs:
+boopis is a desktop harness for AI coding agents. Two tabs:
 
 - **session**: one unnamed coding agent works on a repository. The user asks in plain language; the agent reads,
   edits, tests and reports, and asks back through structured questions (a blank to fill, an approval) instead of
@@ -63,7 +63,7 @@ blank waiting in a session, an approval from a bot, a failed gate. The app runs 
 
 ## Brand Commitments
 
-- Name: "hypotaxis", always lowercase.
+- Name: "boopis", always lowercase.
 - Mark: a φ, neutral (white on dark), never red.
 - Bots: orb2 faces with their own colours (data.js).
 - Dark is the primary look; a light mirror is optional.

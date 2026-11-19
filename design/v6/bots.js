@@ -1,4 +1,4 @@
-/* hypotaxis v6 · bots tab (owner: bots agent). Built on the shared library (components/components.js, HX.ui) per
+/* boopis v6 · bots tab (owner: bots agent). Built on the shared library (components/components.js, HX.ui) per
    design-system/MIGRATION.md §4; keyboard per KEYMAP.md §3, §4, §5, §7, §9. The shell is the design authority.
    Bots keeps only what is its own: the presence header, the new-bot form (stage, name, pickers, suggestions), the
    cron preview, its layout, and the orbs' liveliness and play (owner, v7).
@@ -64,7 +64,7 @@
   const EYES = ['pill', 'tall', 'circle', 'wide', 'squint', 'square', 'grid', 'matrix', 'bars', 'arc', 'rest', 'plus', 'heart', 'circle wide'];
   const MODELS = ['opus 5.5', 'sonnet 5.5', 'haiku 4.5', 'qwen3-coder'];
   const CRON_PRESETS = [['', 'Only when asked'], ['0 * * * *', 'Hourly'], ['0 2 * * *', 'Every night'], ['0 9 * * 1-5', 'Weekday mornings']];
-  const CHANNELS = [['app', 'This app', 'always on'], ['slack', 'Slack', '#billing-alerts'], ['telegram', 'Telegram', '@enzo'], ['email', 'Email', 'enzo@hypotaxis.dev']];
+  const CHANNELS = [['app', 'This app', 'always on'], ['slack', 'Slack', '#billing-alerts'], ['telegram', 'Telegram', '@enzo'], ['email', 'Email', 'enzo@boopis.dev']];
   const APPROVALS = [
     ['deploys', 'Deploying anywhere'], ['push', 'Pushing to protected branches'], ['network', 'Reaching the network'],
     ['spend', 'Spending past the run cap'], ['people', 'Messaging people'], ['outside', 'Writing outside its workspace']

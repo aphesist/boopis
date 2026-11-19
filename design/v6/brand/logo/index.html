@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en" data-hx-preset="catalog">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>boopis logo</title>
+<link rel="stylesheet" href="../../tokens.css">
+<script src="boopis-logo.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg-2); color: var(--text); font: 400 var(--fs-m)/var(--lh) var(--sans); }
+  main { max-width: 1200px; margin: 0 auto; padding: var(--sp-7) var(--sp-5) 96px; display: flex; flex-direction: column; gap: 72px; }
+  h1 { font: 600 var(--fs-xl)/var(--lh-tight) var(--sans); margin: 0; color: var(--text-strong); }
+  h2 { font: 600 var(--fs-l)/var(--lh-tight) var(--sans); margin: 0 0 var(--sp-2); color: var(--text-strong); }
+  h3 { font: 600 var(--fs-m)/var(--lh-tight) var(--sans); margin: 0 0 var(--sp-2); color: var(--text-strong); }
+  p { margin: 0; color: var(--text-dim); max-width: 68ch; text-wrap: pretty; }
+  p + p { margin-top: var(--sp-2); }
+  ul { margin: var(--sp-2) 0 0; padding-left: var(--sp-5); color: var(--text-dim); max-width: 68ch; }
+  li + li { margin-top: var(--sp-1); }
+  code { font: 400 var(--fs-xs)/1 var(--mono); background: var(--chip); border-radius: var(--r-xs); padding: 2px 5px; color: var(--text); }
+  .mono { font: 400 var(--fs-2xs)/1.45 var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); font-variant-numeric: tabular-nums; }
+  header { display: flex; justify-content: space-between; align-items: flex-end; gap: var(--sp-5); }
+  header p { margin-top: var(--sp-2); }
+  .seg { display: inline-flex; background: var(--bg-0); border-radius: var(--r-s); padding: 2px; gap: 2px; flex: none; }
+  button { font: 500 var(--fs-s)/var(--lh-ui) var(--sans); color: var(--text); background: none; border: 0; border-radius: 10px; padding: 6px 12px; cursor: pointer; }
+  button:hover { background: var(--hover); }
+  button[aria-pressed="true"] { background: var(--selected); color: var(--text-on-light); }
+  button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .btn { background: var(--bg-3); }
+  .hero .btn { background: var(--bg-4); }
+  .btn[aria-pressed="true"], .hero .btn[aria-pressed="true"] { background: var(--selected); }
+  section > p { margin-bottom: var(--sp-4); }
+
+  /* the hero: the one big moment on this page, and the only logo that moves */
+  .hero { background: var(--bg-3); border-radius: var(--r-l); padding: var(--sp-6) var(--sp-6) var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-5); position: relative; color: var(--text-strong); }
+  .hero__view { height: 360px; display: grid; place-items: center; }
+  .hero__bar { display: flex; flex-wrap: wrap; gap: var(--sp-4) var(--sp-5); align-items: center; justify-content: space-between; }
+  .hero__bar .grp { display: flex; align-items: center; gap: var(--sp-2); }
+  .stamp { position: absolute; top: var(--sp-5); left: var(--sp-6); font: 500 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); text-transform: uppercase; color: var(--text-dim); border: 1px solid var(--line-strong); border-radius: var(--r-pill); padding: 5px 10px; }
+  .stage-state { position: absolute; top: var(--sp-5); right: var(--sp-6); }
+
+  /* panels: light and dark in any page theme */
+  .duo { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+  .panel { border-radius: var(--r-m); padding: var(--sp-5); background: var(--bg-2); color: var(--text-strong); display: flex; flex-direction: column; gap: var(--sp-4); border: 1px solid var(--bg-4); color-scheme: dark; }
+  .panel[data-hx-theme="light"] { color-scheme: light; }
+  .panel > .mono { align-self: flex-start; }
+  .ladder { display: flex; align-items: flex-end; gap: var(--sp-6); flex-wrap: wrap; }
+  .ladder figure, .fig { margin: 0; display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-2); }
+  .ladder.mid { align-items: center; }
+
+  .icons { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+  .icon-row { display: flex; align-items: flex-end; gap: var(--sp-5); flex-wrap: wrap; }
+  .icon-row .small { display: flex; align-items: flex-end; gap: var(--sp-3); }
+  .icon-row img { display: block; }
+  .swatches { display: flex; gap: var(--sp-5); flex-wrap: wrap; }
+  .sw { display: flex; align-items: center; gap: var(--sp-2); }
+  .sw i { width: 20px; height: 20px; border-radius: var(--r-xs); border: 1px solid var(--line-strong); display: block; }
+
+  .states { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-3); }
+  .states figure { margin: 0; background: var(--bg-3); border-radius: var(--r-m); padding: var(--sp-5) var(--sp-4) var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-4); align-items: center; color: var(--text-strong); }
+  .states figcaption { align-self: stretch; }
+
+  .box { background: var(--bg-1); border-radius: var(--r-m); padding: var(--sp-5); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+  .prot { display: inline-block; padding: .28em; outline: 1px dashed var(--text-quiet); outline-offset: 0; color: var(--text-strong); line-height: 0; }
+  .prot > boopis-logo { outline: 1px solid var(--mark-off); }
+  .prot-row { display: flex; gap: var(--sp-7); flex-wrap: wrap; align-items: flex-end; }
+  .dont { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-3); }
+  .dont figure { margin: 0; background: var(--bg-3); border-radius: var(--r-m); padding: var(--sp-5) var(--sp-4) var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-4); align-items: flex-start; color: var(--text-strong); min-height: 150px; justify-content: space-between; }
+  .dont .no { color: var(--red-text); }
+  .dont .view { display: flex; align-items: center; min-height: 56px; }
+  .plat { width: 100%; border-collapse: collapse; font-size: var(--fs-s); }
+  .plat th, .plat td { text-align: left; vertical-align: top; padding: var(--sp-3) var(--sp-4); border-top: 1px solid var(--hair); color: var(--text-dim); }
+  .plat th { color: var(--text-strong); font-weight: 600; white-space: nowrap; }
+  .plat thead th { border-top: 0; color: var(--text-quiet); font: 400 var(--fs-2xs)/1.45 var(--mono); letter-spacing: var(--track-mono); }
+  @media (max-width: 900px) { .duo, .icons, .two { grid-template-columns: 1fr; } .states, .dont { grid-template-columns: repeat(2, 1fr); } header { flex-direction: column; align-items: flex-start; } .hero__view { height: 220px; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>boopis logo</h1>
+      <p>The symbol is the two oval eyes of a bot. The wordmark is <b>boopis</b> with the same two ovals as its o's. One colour, drawn as paths, in one file: <code>&lt;boopis-logo&gt;</code>.</p>
+    </div>
+    <div class="seg" role="group" aria-label="Page theme" id="theme">
+      <button type="button" aria-pressed="true" data-t="dark">Dark</button>
+      <button type="button" aria-pressed="false" data-t="light">Light</button>
+    </div>
+  </header>
+
+  <section aria-labelledby="h-hero">
+    <h2 id="h-hero">Hero</h2>
+    <p>The playful letters, with live eyes and the hero loop. This is a big moment: a launch, a site hero or the app's first-run welcome. Nowhere else, never in chrome, lists or anything that repeats. The other logos on this page are still.</p>
+    <div class="hero">
+      <span class="stamp">Big moments only</span>
+      <span class="mono stage-state" id="hero-state" aria-hidden="true">idle</span>
+      <div class="hero__view"><boopis-logo id="hero" letters="play" look style="font-size: 200px"></boopis-logo></div>
+      <div class="hero__bar">
+        <div class="grp"><button class="btn" type="button" id="play">Play the hero</button><button class="btn" type="button" id="loop" aria-pressed="false">Loop it</button></div>
+        <div class="grp"><span class="mono">letters</span><span class="seg" id="s-letters"></span></div>
+        <div class="grp"><span class="mono">eyes</span><span class="seg" id="s-eyes"></span></div>
+        <div class="grp"><span class="mono">pointer</span><span class="seg" id="s-look"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-word">
+    <h2 id="h-word">Wordmark</h2>
+    <p>The type size is the font-size you set. Twenty pixels is the smallest: below it the element draws the mark by itself. Shown here still, in the light ink and the dark ink.</p>
+    <div class="duo" id="words"></div>
+  </section>
+
+  <section aria-labelledby="h-mark">
+    <h2 id="h-mark">Mark</h2>
+    <p>The two eyes alone, for places too small for the wordmark: avatars, favicons, the sidebar rail, the title bar. 16 pixels wide is the smallest.</p>
+    <div class="duo" id="marks"></div>
+  </section>
+
+  <section aria-labelledby="h-icon">
+    <h2 id="h-icon">App icon</h2>
+    <p>Two versions that coexist, on the continuous-corner tile (smoothing 0.6, corner 22.37% of the tile): black eyes on white for the light theme, white eyes on black for the dark theme. Plain ink, no cut-outs. Below 64 pixels the eyes are snapped to whole pixels and set larger, so two clear eyes survive at 16 and 32.</p>
+    <div class="icons" id="icons"></div>
+    <div class="swatches" style="margin-top: var(--sp-4)" id="inks"></div>
+  </section>
+
+  <section aria-labelledby="h-states">
+    <h2 id="h-states">Every state, still</h2>
+    <p>The bots' own 16 reactions, one frame each (time-based states are held at their first frame). The wide ones make the letters give way; nothing else moves. In the app they play only where a bot is the subject.</p>
+    <div class="states" id="states"></div>
+  </section>
+
+  <section aria-labelledby="h-static">
+    <h2 id="h-static">Static or animated</h2>
+    <p>Static is the default for anything that labels: the title bar, headers, footers, lists, documents, the window icon, exports. Pass <code>still</code>. Animated is for a logo that is the subject of the screen: the eyes are then live, glancing and blinking on their own, and following the pointer with <code>look</code>.</p>
+    <ul>
+      <li>One logo moves per screen, and never one that stays in a fixed header while someone reads.</li>
+      <li>Under reduced motion the eyes take small steps and no blink: reduced, never frozen. The playful letters do not run at all.</li>
+      <li>The logo rests while it is scrolled out of view.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="h-play">
+    <h2 id="h-play">Playful letters: big moments only</h2>
+    <p><code>letters="play"</code> is opt-in and the default stays still. Big moments are three: a launch, a site hero, the app's first-run welcome. Never in chrome, in lists, in a loading state that repeats, in a header, or below a type size of 32 pixels (where it is switched off by itself).</p>
+  </section>
+
+  <section aria-labelledby="h-space">
+    <h2 id="h-space">Protection area and size</h2>
+    <p>Keep 0.28 of the type size clear on every side, about half the height of an eye. It holds the eyes' travel and the playful letters' hops and turns. For the mark the same measure applies: a mark of width W has a type size of W / 1.156, so 0.24 of its width.</p>
+    <div class="box prot-row" style="margin-top: var(--sp-4)">
+      <figure class="fig"><div class="prot" style="font-size: 100px"><boopis-logo still></boopis-logo></div><span class="mono">wordmark: dashed, 0.28 of the type size</span></figure>
+      <figure class="fig"><div class="prot" style="font-size: 100px"><boopis-logo mark still></boopis-logo></div><span class="mono">mark: the same measure</span></figure>
+    </div>
+    <div class="box" style="margin-top: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-5)">
+      <div class="ladder" id="min"></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-colour">
+    <h2 id="h-colour">One colour</h2>
+    <p><code>currentColor</code> and nothing else: the ink of the surface it sits on (<code>--text-strong</code> on the frame, the dock's ink on the dock). The eyes and the letters are the same colour. No gradient, shadow, outline or second colour. Tokens only, never a literal.</p>
+  </section>
+
+  <section aria-labelledby="h-dont">
+    <h2 id="h-dont">Don't</h2>
+    <div class="dont" id="dont"></div>
+  </section>
+
+  <section aria-labelledby="h-plat">
+    <h2 id="h-plat">Platform icons</h2>
+    <p>Inside the app the mark always follows the theme: the ink of the surface, light ink on dark and dark ink on light, never the tile.</p>
+    <div class="box" style="margin-top: var(--sp-3); padding: var(--sp-2) 0">
+      <table class="plat">
+        <thead><tr><th>Platform</th><th>What the system supports</th><th>What the app ships</th></tr></thead>
+        <tbody>
+          <tr><th>macOS</th><td>Light, dark and tinted app icons, made in Icon Composer.</td><td><code>icon.icns</code> from the light icon, on Apple's grid. Dark and tinted need an Icon Composer document (not made here).</td></tr>
+          <tr><th>Windows</th><td>Light and dark taskbar icons (<code>altform</code> assets, in packaged apps).</td><td><code>icon.ico</code> from the light icon. The light and dark sets are ready for <code>altform-lightunplated</code> and <code>altform-unplated</code> if the app is ever packaged as MSIX.</td></tr>
+          <tr><th>Linux</th><td>One app icon, plus symbolic icons for trays and panels.</td><td>The light icon as PNG (<code>icon.png</code>, 32, 128, 256) and <code>boopis-symbolic.svg</code> for the tray.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  const B = window.BoopisLogo;
+  const $ = (q) => document.querySelector(q);
+  const el = (h) => { const t = document.createElement('template'); t.innerHTML = h.trim(); return t.content.firstChild; };
+  const root = document.documentElement;
+  const panel = (kind, inner, cap) => `<div class="panel" data-hx-preset="${kind === 'light' ? 'bone' : 'catalog'}" data-hx-theme="${kind}"><span class="mono">${cap}</span>${inner}</div>`;
+
+  /* page theme */
+  $('#theme').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    const light = b.dataset.t === 'light';
+    root.dataset.hxPreset = light ? 'bone' : 'catalog'; root.dataset.hxTheme = light ? 'light' : 'dark';
+    document.querySelectorAll('#theme button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  });
+
+  /* hero */
+  const hero = $('#hero'), hs = $('#hero-state');
+  const seg = (host, items, on, apply) => items.forEach(([v, l]) => { const b = el(`<button type="button" aria-pressed="${v === on}">${l || v}</button>`); b.onclick = () => { apply(v); [...host.children].forEach((x) => x.setAttribute('aria-pressed', String(x === b))); }; host.appendChild(b); });
+  seg($('#s-letters'), [['still'], ['play']], 'play', (v) => hero.setAttribute('letters', v));
+  seg($('#s-eyes'), [['live'], ['still']], 'live', (v) => hero.toggleAttribute('still', v === 'still'));
+  seg($('#s-look'), [['off'], ['look']], 'look', (v) => { hero.toggleAttribute('look', v === 'look'); if (v === 'off') hero.look(); });
+  hero.addEventListener('boopisstep', (e) => { hs.textContent = e.detail.state; });
+  let looping = false; const loopBtn = $('#loop');
+  async function run() { do { await hero.play('hero'); hs.textContent = 'idle'; if (!looping) break; await new Promise((r) => setTimeout(r, B.timing.rest * 1000)); } while (looping); }
+  $('#play').onclick = () => { looping = false; loopBtn.setAttribute('aria-pressed', 'false'); run(); };
+  loopBtn.onclick = () => { looping = !looping; loopBtn.setAttribute('aria-pressed', String(looping)); if (looping) run(); };
+
+  /* wordmark and mark at sizes, light and dark */
+  const WS = [20, 24, 32, 48, 64, 96], MS = [16, 24, 32, 48, 64, 96, 128];
+  $('#words').innerHTML = ['light', 'dark'].map((k) => panel(k, `<div class="ladder">${WS.map((s) => `<figure><boopis-logo still style="font-size:${s}px"></boopis-logo><span class="mono">${s}</span></figure>`).join('')}</div>`, k === 'light' ? 'light theme, dark ink' : 'dark theme, light ink')).join('');
+  $('#marks').innerHTML = ['light', 'dark'].map((k) => panel(k, `<div class="ladder">${MS.map((s) => `<figure><boopis-logo mark still style="width:${s}px"></boopis-logo><span class="mono">${s}</span></figure>`).join('')}</div>`, k === 'light' ? 'light theme, dark ink' : 'dark theme, light ink')).join('');
+
+  /* app icons: the real PNG files */
+  const SM = [16, 24, 32, 48, 64];
+  $('#icons').innerHTML = ['light', 'dark'].map((k) => panel(k, `<div class="icon-row"><figure class="fig"><img src="icons/${k}/boopis-icon-${k}-256.png" width="160" height="160" alt="boopis app icon, ${k} theme"><span class="mono">256, shown at 160</span></figure><div class="small">${SM.map((s) => `<figure class="fig"><img src="icons/${k}/boopis-icon-${k}-${s}.png" width="${s}" height="${s}" alt=""><span class="mono">${s}</span></figure>`).join('')}</div></div>`, k === 'light' ? 'light-theme icon: black eyes on a white tile' : 'dark-theme icon: white eyes on a black tile')).join('');
+  /* the swatches read the tokens themselves, each from the preset that owns it */
+  $('#inks').innerHTML = `<span class="sw"><span data-hx-preset="bone" style="display:flex"><i style="background: var(--text-strong)"></i></span><span class="mono">darkest ink: Bone <b>--text-strong</b> #0f0e0c, the dark icon's tile and the light icon's eyes</span></span><span class="sw"><span data-hx-preset="graphite" style="display:flex"><i style="background: var(--text-strong)"></i></span><span class="mono">lightest ink: Graphite and Typewriter <b>--text-strong</b> #ffffff, the light icon's tile and the dark icon's eyes</span></span>`;
+
+  /* states */
+  $('#states').innerHTML = B.states.map((s) => `<figure><boopis-logo still state="${s}" style="font-size:36px"></boopis-logo><figcaption class="mono">${s}</figcaption></figure>`).join('');
+
+  /* sizes: where the minimum bites */
+  $('#min').innerHTML = [12, 16, 18, 20, 24, 32].map((s) => `<figure class="fig"><boopis-logo still style="font-size:${s}px"></boopis-logo><span class="mono">${s}px${s < B.minEm ? ': the mark' : ''}</span></figure>`).join('');
+
+  /* don'ts: drawn from the static SVG, so each one can be broken on purpose */
+  const svg = (extra) => B.svg({ pad: 0 }).replace('<svg ', `<svg style="height:48px;width:auto;${extra || ''}" `);
+  const rows = [
+    ['Stretch or skew', svg('transform: scaleX(1.4) skewX(-12deg); transform-origin: left center; margin-right: 40px')],
+    ['A second colour', svg('')],
+    ['Outline or shadow', svg('filter: drop-shadow(var(--shadow-tip)); overflow: visible').replace('fill="currentColor"', 'fill="none" stroke="currentColor" stroke-width="22"')],
+    ['Set the word in live text', `<span style="font: 600 56px/1 var(--sans); letter-spacing: -.01em">boopis</span>`],
+    ['Below 20 px as a wordmark', `<span style="display:inline-block;height:14px;line-height:0">${B.svg({}).replace('<svg ', '<svg style="height:100%;width:auto" ')}</span>`],
+    ['Playful letters in chrome or a list', `<span class="mono">headers, rows, a repeating loader</span>`],
+    ['Put it on a busy ground', `<span class="mono">a photo, a pattern, a gradient: use a plain surface</span>`],
+    ['Crowd it', `<span style="display:inline-flex;align-items:center;gap:6px;outline:1px dashed var(--line-strong);padding:2px">${B.svg({}).replace('<svg ', '<svg style="height:36px;width:auto" ')}<span class="mono">text 4px away</span></span>`],
+  ];
+  $('#dont').innerHTML = rows.map(([t, v]) => `<figure><div class="view">${v}</div><span class="mono no">Don't: ${t}</span></figure>`).join('');
+  /* the "second colour" example recolours the eyes: they are the 2nd and 3rd paths of the static SVG */
+  { const f = $('#dont').children[1].querySelector('svg'); const p = f.querySelectorAll('path'); p[1].setAttribute('fill', 'var(--brass)'); p[2].setAttribute('fill', 'var(--brass)'); }
+})();
+</script>
+</body>
+</html>

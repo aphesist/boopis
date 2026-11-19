@@ -1,5 +1,5 @@
 ---
-name: hypotaxis
+name: boopis
 description: A desktop harness for AI coding agents; one nameless coding agent per session, named bots as teammates.
 colors:
   cabinet: "#121110"
@@ -79,7 +79,7 @@ components:
     height: "72px"
 ---
 
-# Design System: hypotaxis
+# Design System: boopis
 
 ## Overview
 
@@ -145,7 +145,7 @@ The dock is pitch black (`--dock-bg`, #000) in every theme and is not themeable.
 
 ### Named Rules
 - **Sentence case** for interface text ("New session", "Show the dock"). The brand is always lowercase:
-  "hypotaxis". Content keeps its own case. No all caps, no middle-dot meta strings, no em dashes in interface copy.
+  "boopis". Content keeps its own case. No all caps, no middle-dot meta strings, no em dashes in interface copy.
 
 ## Layout
 

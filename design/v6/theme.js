@@ -1,11 +1,14 @@
-/* hypotaxis v6 · theme runtime and customizer (owner: wireframe agent)
+/* boopis v6 · theme runtime and customizer (owner: wireframe agent)
    Loaded before the app markup so a saved theme applies before the first paint.
    A theme = a preset (a block of tokens in tokens.css, chosen with data-hx-preset on <html>) + the user's overrides
    (solid colours, interface and code fonts, interface case, corners, density). Overrides are written as inline
    custom properties on <html>; translucent tokens derive from the solid ones in tokens.css. The dock's black
    (--dock-bg) is fixed and never offered. Saved in localStorage when it is available.
    API: window.HX_THEME = { get, set(patch), preset(id), reset(), exportJSON(), importJSON(text), scheme(),
-   presets, mount(container) }. Emits 'hx:theme' (through HX when it exists, else on window). */
+   preview(patch), endPreview(commit), previewing(), presets, mount(container) }. Emits 'hx:theme' (through HX when it exists,
+   else on window) and 'hx:theme-preview' {previewing}.
+   A preview shows a patch of colours over the saved theme without saving it: reloading, or endPreview(false), gives the saved theme
+   back at once; endPreview(true) keeps what is shown. Any other change (set, preset, reset, importJSON) restores first. */
 (function () {
   'use strict';
   const KEY = 'hx.v6.theme';
@@ -98,6 +101,7 @@
   function save() { try { localStorage.setItem(KEY, JSON.stringify(theme)); } catch (e) { /* storage blocked: the theme still applies */ } }
 
   let theme = load();
+  let held = null;         // the saved theme, while a preview is showing (null otherwise)
   let applied = [];
   let ui = null;           // the customizer's container once Settings mounts it
   const loadedFonts = new Set(['Libre Franklin', 'IBM Plex Mono', 'System']);
@@ -160,6 +164,12 @@
     else window.dispatchEvent(new CustomEvent('hx:theme', { detail }));
   }
 
+  function emitPreview(on) {
+    const d = { previewing: on };
+    if (window.HX && typeof window.HX.emit === 'function') window.HX.emit('hx:theme-preview', d);
+    else window.dispatchEvent(new CustomEvent('hx:theme-preview', { detail: d }));
+  }
+
   function apply(quiet) {
     root.setAttribute('data-hx-preset', theme.preset);
     root.setAttribute('data-hx-case', eff('case'));
@@ -176,7 +186,7 @@
     const light = lum(hexOf('--bg-2')) > .4;
     root.style.setProperty('color-scheme', light ? 'light' : 'dark');
     if (light) root.setAttribute('data-hx-theme', 'light'); else root.removeAttribute('data-hx-theme');
-    save();
+    if (!held) save();      // a preview is never saved
     if (!quiet) emit({ preset: theme.preset, scheme: light ? 'light' : 'dark' });
     if (ui) refreshUI();
   }
@@ -184,25 +194,41 @@
   function exportObject() {
     const colors = {};
     for (const k of EDITABLE) colors[k] = hexOf(k);
-    return { format: 'hypotaxis-theme', version: 1, preset: theme.preset, sans: eff('sans'), mono: eff('mono'), case: eff('case'), corners: eff('corners'), density: eff('density'), logo: eff('logo'), colors };
+    return { format: 'boopis-theme', version: 1, preset: theme.preset, sans: eff('sans'), mono: eff('mono'), case: eff('case'), corners: eff('corners'), density: eff('density'), logo: eff('logo'), colors };
   }
 
   const API = {
     presets: PRESETS,
-    get: () => JSON.parse(JSON.stringify(theme)),
+    get: () => JSON.parse(JSON.stringify(held || theme)),
+    previewing: () => !!held,
+    preview(patch) {
+      if (!held) held = JSON.parse(JSON.stringify(theme));
+      theme = JSON.parse(JSON.stringify(held));
+      if (patch && patch.colors) theme.colors = Object.assign({}, theme.colors, sanitize({ preset: theme.preset, colors: patch.colors }).colors);
+      apply();
+      emitPreview(true);
+    },
+    endPreview(commit) {
+      if (!held) return false;
+      if (commit) { held = null; apply(); } else { theme = held; held = null; apply(); }
+      emitPreview(false);
+      return true;
+    },
     scheme: () => (root.getAttribute('data-hx-theme') === 'light' ? 'light' : 'dark'),
     set(patch) {
+      API.endPreview(false);
       if (patch && patch.colors) theme.colors = Object.assign({}, theme.colors, patch.colors);
       for (const k of ['sans', 'mono', 'case', 'corners', 'density', 'logo']) if (patch && k in patch) theme[k] = patch[k] === PRESETS[theme.preset][k] ? null : patch[k];
       apply();
     },
-    preset(id) { if (!PRESETS[id]) return; theme = Object.assign(blank(), { preset: id }); apply(); },
-    reset() { theme = Object.assign(blank(), { preset: theme.preset }); apply(); },
+    preset(id) { if (!PRESETS[id]) return; API.endPreview(false); theme = Object.assign(blank(), { preset: id }); apply(); },
+    reset() { API.endPreview(false); theme = Object.assign(blank(), { preset: theme.preset }); apply(); },
     exportJSON: () => JSON.stringify(exportObject(), null, 2),
     importJSON(text) {
+      API.endPreview(false);
       let obj;
       try { obj = JSON.parse(text); } catch (e) { throw new Error('The text is not valid JSON.'); }
-      if (!obj || obj.format !== 'hypotaxis-theme') throw new Error('This JSON is not a hypotaxis theme (it needs "format": "hypotaxis-theme").');
+      if (!obj || obj.format !== 'boopis-theme') throw new Error('This JSON is not a boopis theme (it needs "format": "boopis-theme").');
       const t = sanitize(obj);
       // keep only the colours that differ from the preset, so the preset stays meaningful
       const base = Object.assign(blank(), { preset: t.preset });

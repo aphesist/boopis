@@ -1,4 +1,4 @@
-/* hypotaxis v6 · cards (owner: cards agent)
+/* boopis v6 · cards (owner: cards agent)
    HX.cards.create(kind, data, opts) -> <hx-card>     el.update(patch)     el.state
    HX.cards.queue(items, opts)       -> .cd-queue      q.add(item)
    Events (bubble from the card, cancelable): 'hx:card-action' {kind, action, data, state, value, card}
@@ -105,7 +105,7 @@
      one teammate: its live orb, name and colour as the card's accent; several: stacked orbs (3, then +N) with every
      name on hover, focus and for screen readers; relayed: "nina, via atlas"; the agent: its model's provider mark and name;
      system sources: a quiet glyph and a label; an MCP server: its initial, name and trust. */
-  const SYSTEM = { plugin: ['ladder', 'Governance'], hermes: ['spark', 'Hermes'], host: ['gear', 'hypotaxis'] };
+  const SYSTEM = { plugin: ['ladder', 'Governance'], hermes: ['spark', 'Hermes'], host: ['gear', 'boopis'] };
   function originOf(d) {
     const o = d.origin;
     if (o && o.kind) {
@@ -125,6 +125,7 @@
     if (o.kind === 'teammate') return namesText(o.ids) + (o.via ? ', via ' + bot(o.via).name : '');
     if (o.kind === 'agent') return o.model;
     if (o.kind === 'mcp') return o.server + ' MCP server' + (o.trust ? ', ' + o.trust : '');
+    if (o.kind === 'mod') return o.plugin + ' mod';
     return (SYSTEM[o.kind] || ['', o.kind])[1];
   }
   /* the visual alone: an orb, a stack, a glyph, a server's initial, or the agent's model mark (its provider's logo;
@@ -141,6 +142,7 @@
         (more ? '<span class="cd-stack__more" aria-hidden="true">+' + more + '</span>' : '') + '</span>';
     }
     if (o.kind === 'agent') return U().html.modelMark(o.model, { size: 16, class: 'cd-glyph' });
+    if (o.kind === 'mod') return U().icon('mod', { class: 'cd-glyph' });
     if (o.kind === 'mcp') return '<span class="cd-tile" style="--cd-orb:' + size + 'px" aria-hidden="true">' + esc(String(o.server || '?').slice(0, 1).toUpperCase()) + '</span>';
     const g = SYSTEM[o.kind];
     return g ? U().icon(g[0], { class: 'cd-glyph' }) : '';
@@ -159,6 +161,7 @@
       if (o.via) via = ', via ' + bot(o.via).name;
     } else if (o.kind === 'agent') { first = o.model; mono = true; }
     else if (o.kind === 'mcp') { first = o.server; via = bare ? '' : ' MCP server' + (o.trust ? ', ' + o.trust : ''); }
+    else if (o.kind === 'mod') { first = o.plugin; via = bare ? '' : ' mod'; }
     else first = (SYSTEM[o.kind] || ['', o.kind])[1];
     const vis = '<span class="cd-names__first' + (mono ? ' cd-mono' : '') + '">' + esc(first) + '</span>' +
       (many ? '<span class="cd-names__rest">' + esc(rest) + '</span>' : '') + (via ? '<span class="cd-names__via">' + esc(via) + '</span>' : '');
@@ -545,7 +548,9 @@
     connector: { stamp: 'needs you', submit: 'Install', hold: true, busy: 'Installing', done: (f) => 'Installed ' + (f.name || 'the connector') },
     choice: { stamp: 'waiting for you', submit: 'Use this', busy: 'Saving', done: (f, v) => 'Chose ' + v },
     plan: { stamp: 'needs you', submit: 'Approve plan', cancel: 'Reject', busy: 'Starting the work', done: () => 'Plan approved', cancelled: 'Plan rejected' },
-    feedback: { stamp: '', submit: 'Send', cancel: false, busy: 'Saving', done: () => 'Thanks. Stored for you only' }
+    feedback: { stamp: '', submit: 'Send', cancel: false, busy: 'Saving', done: () => 'Thanks. Stored for you only' },
+    /* a mod's colours (MODS.md §3): not owed, so no stamp; Keep applies them, Reject leaves the theme as it is */
+    theme: { stamp: '', submit: 'Keep', cancel: 'Reject', busy: 'Applying', done: (f) => f.receipt || 'Kept', cancelled: 'Rejected' }
   };
   /* permission scopes, Claude Code's order: once, this session, always (written to the project), deny */
   const PERMISSION = {
@@ -653,6 +658,8 @@
         lines.map((l) => '<div class="cd-diff__l"' + (/^\+/.test(l) ? ' data-d="add"' : /^-/.test(l) ? ' data-d="del"' : '') + '><span aria-hidden="true">' + esc(l.charAt(0) === '+' || l.charAt(0) === '-' ? l.charAt(0) : ' ') + '</span>' +
           '<span class="ui-sr">' + (/^\+/.test(l) ? 'added: ' : /^-/.test(l) ? 'removed: ' : '') + '</span>' + esc(l.replace(/^[+\- ]/, '')) + '</div>').join('') + '</div>';
     }
+    if (d.swatches) h += '<div class="cd-well cd-swatches" role="group" aria-label="Colours">' + d.swatches.map((x) => '<span class="cd-swatch"><i style="background:' + esc(x[1]) + '" aria-hidden="true"></i><span>' + esc(x[0]) + '</span></span>').join('') +
+      (d.preview ? '<span class="cd-live" role="status"><i aria-hidden="true"></i><span>Previewing</span></span>' : '') + '</div>';
     if (d.plan) h += '<ol class="cd-plan">' + d.plan.map((x) => '<li>' + fmt(x) + '</li>').join('') + '</ol>';
     if (d.contents) h += '<div class="cd-well cd-contents">' + d.contents.map((x) => '<div class="cd-well__line"><span class="cd-well__strong">' + esc(x[0]) + '</span><span>' + fmt(x[1] || '') + '</span></div>').join('') +
       (d.pinned ? '<div class="cd-well__line cd-pinned"><span>Pinned</span><span class="cd-mono">' + esc(d.pinned) + '</span></div>' : '') + '</div>';
@@ -687,7 +694,7 @@
     receiptHTML(c) {
       const d = c.d, t = formT(d), who = c.origin ? originText(c.origin) : 'The agent';
       if (c.s === 'done') return d.receiptText || (typeof t.done === 'function' ? t.done(d, '', '') : t.done);
-      if (c.s === 'deferred') return 'Later. It waits in the dock';
+      if (c.s === 'deferred') return d.deferredText || 'Later. It waits in the dock';
       if (c.s === 'expired') return 'Expired, nothing was saved';
       if (c.s === 'cancelled') return d.cancelledText || ((t.cancelled || 'Cancelled') + '. ' + cap(who) + ' continues without it');
       return '';

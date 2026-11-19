@@ -1,0 +1,84 @@
+/* boopis v6 · mod view (proposal; MODS.md §2, §3). Everything a mod draws goes through here and through the library:
+   tokens only, the type scale, the spacing scale, the same corners, in every preset. No colour, family or size is
+   introduced; the only values a mod supplies are the ones it passes as data (a colour, a width). */
+
+.mv-root { display: flex; flex-direction: column; min-width: 0; box-sizing: border-box; font: 400 var(--fs-s)/var(--lh-ui) var(--sans); color: var(--text); }
+.mv-root *, .mv-root *::before, .mv-root *::after { box-sizing: border-box; }
+.mv-root > .mv-box { flex: 1; }
+
+/* Box: a flex container; a terminal Box is a row until it says otherwise */
+.mv-box { display: flex; flex-direction: row; min-width: 0; --mv-border: var(--hair); }
+.mv-box--border { border-radius: var(--r-s); box-shadow: inset 0 0 0 1px var(--mv-border); padding: var(--sp-2) var(--sp-3); }
+.mv-box--filled { border-radius: var(--r-xs); }
+.mv-box--border.mv-box--filled { border-radius: var(--r-s); }
+
+/* Text: the type scale. 13 interface by default, 12 mono, 11 for meta */
+.mv-text { min-width: 0; overflow-wrap: anywhere; }
+.mv-text--mono { font-family: var(--mono); font-size: var(--fs-xs); letter-spacing: var(--track-mono); }
+.mv-text--tab { font-variant-numeric: tabular-nums; }
+.mv-text--inverse { background: var(--selected); color: var(--text-on-light); padding: 0 4px; border-radius: var(--r-xs); }
+.mv-text--trunc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; overflow-wrap: normal; }
+.mv-text--nowrap { white-space: nowrap; overflow-wrap: normal; }
+.mv-text--quiet { color: var(--text-quiet); font-size: var(--fs-xs); }
+
+/* fields: the library's field, one control height with the small button beside it */
+.mv-input { display: flex; align-items: flex-start; gap: var(--sp-2); min-width: 0; flex: 1; }
+.mv-input .ui-input { flex: 1; min-width: 0; }
+.mv-root .ui-input:not(textarea) { min-height: var(--ctl-s); padding-block: 0; }
+.mv-root textarea.ui-input { min-height: calc(var(--ctl-s) * 2); padding-block: 6px; overflow: auto; }
+.mv-root[data-surface="ground"] .ui-input, .mv-root[data-surface="inset"] .ui-input { background: var(--bg-3); }
+.mv-select { display: flex; align-items: center; gap: var(--sp-2); text-align: left; cursor: pointer; width: auto; min-width: 0; flex: 0 1 auto; }
+.mv-select__v { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-transform: none; }
+.mv-select .ui-icon { color: var(--text-quiet); flex: none; }
+.mv-select[aria-expanded="true"] { box-shadow: inset 0 0 0 1px var(--focus); }
+
+/* Code: the session's well (--bg-0, mono 11, the corner of a card) */
+.mv-code { display: flex; flex-direction: column; min-width: 0; width: 100%; border-radius: var(--r-m); --sq-bg: var(--bg-0); background: var(--sq-bg); }
+.mv-root[data-surface="inset"] .mv-code { --sq-bg: var(--bg-1); }
+.mv-code__path { padding: 8px var(--sp-3) 0; font-size: var(--fs-2xs); color: var(--text-quiet); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mv-code__pre { margin: 0; padding: 10px var(--sp-3); overflow-x: auto; font-size: var(--fs-2xs); line-height: 1.6; color: var(--text-dim); white-space: pre; scrollbar-width: thin; scrollbar-color: var(--bg-4) transparent; border-radius: var(--r-m); }
+.mv-code--wrap .mv-code__pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.mv-code__pre:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.mv-code__l { display: block; min-height: 1.6em; }
+.mv-code__l[data-d] { margin: 0 calc(var(--sp-3) * -1); padding: 0 var(--sp-3); }
+.mv-code__l[data-d="add"] { background: color-mix(in srgb, var(--add) 10%, transparent); }
+.mv-code__l[data-d="del"] { background: color-mix(in srgb, var(--del) 10%, transparent); }
+.mv-code__l[data-d="hunk"] { color: var(--text-quiet); }
+.mv-code__sg { display: inline-block; width: 2ch; color: var(--text-quiet); user-select: none; }
+.mv-code__l[data-d="add"] .mv-code__sg { color: var(--add); } .mv-code__l[data-d="del"] .mv-code__sg { color: var(--del); }
+.mv-code__n { display: inline-block; min-width: 3ch; margin-right: var(--sp-3); text-align: right; color: var(--text-quiet); user-select: none; }
+.mv-code__pass { color: var(--ok); }
+.mv-code__fail { color: var(--red-text); }
+
+/* Link: https only, underlined in the hairline weight, never brass (brass is not text) */
+.mv-link { color: var(--text); text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; border-radius: var(--r-xs); transition: color var(--dur-1) var(--ease), text-decoration-color var(--dur-1) var(--ease); }
+.mv-link:hover { color: var(--text-strong); text-decoration-color: var(--text-dim); }
+.mv-link:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; text-decoration-color: transparent; }
+
+/* Svg: sanitised, fits the width, its text in mono */
+.mv-svg { display: block; width: 100%; min-width: 0; color: var(--text-quiet); }
+.mv-svg svg { display: block; width: 100%; height: auto; max-height: inherit; overflow: hidden; }
+
+/* Markdown: the library's prose, tighter */
+.mv-md { font-size: var(--fs-s); line-height: var(--lh-ui); color: var(--text); }
+.mv-md p, .mv-md ul, .mv-md ol { margin-bottom: var(--sp-2); }
+.mv-md__h { font-weight: 600; color: var(--text-strong); }
+
+/* the mod, as a name: its glyph and its name (origin slots, tabs, band rows, toasts, placed rows) */
+.mv-by { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.mv-by__g { width: 14px; height: 14px; flex: none; color: var(--icon); }
+.mv-by__n { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mv-root .ui-btn.mv-iconbtn { width: var(--ctl-s); padding: 0; }
+.mv-root .ui-btn[aria-pressed="true"]:not(.ui-btn--primary) { box-shadow: inset 0 0 0 1px var(--brass); }
+
+/* Progress: dots, never a bar (F18). Determinate is the library's measure row (4px dots, 6px apart, filled in proportion);
+   indeterminate adds one dot that travels along the row on the one loop's token, and stops under reduced motion. */
+.mv-dots { position: relative; align-self: center; flex: none; }
+.mv-dots[data-indeterminate] > .mv-dots__run {
+  position: absolute; left: 0; top: 0; width: 4px; height: 4px; border-radius: var(--r-pill); background: var(--text-dim);
+  animation: mv-travel var(--dur-breathe) var(--ease-io) infinite alternate; will-change: transform;
+}
+@keyframes mv-travel { from { transform: translateX(0); } to { transform: translateX(var(--mv-run)); } }
+@media (prefers-reduced-motion: reduce) {
+  .mv-dots[data-indeterminate] > .mv-dots__run { animation: none; transform: translateX(calc(var(--mv-run) / 2)); }   /* at rest in the middle; the words beside it say what is happening */
+}

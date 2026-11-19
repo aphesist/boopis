@@ -1,4 +1,4 @@
-# hypotaxis mock-up v6 — shared contract for the five agents
+# boopis mock-up v6 — shared contract for the five agents
 
 Root: /tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/v6/  (all paths below are relative to it)
 
@@ -19,11 +19,11 @@ Root: /tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/v
   heavy dither looks out of place. Dither may survive only if it is subtle and integrated, or not at all — cards agent decides.
 - All references are INSPIRATION ONLY (palette, organisation): don't copy. Focus on the owner's ideas.
 - The coding agent has NO name: answers show only the model ("sonnet 5.5", "qwen3-coder → sonnet 5.5"). Bots/teammates have names + orbs.
-- Brand: φ mark (white/neutral in the Figma top-left), lowercase "hypotaxis". Red is only for attention (blank waiting,
+- Brand: φ mark (white/neutral in the Figma top-left), lowercase "boopis". Red is only for attention (blank waiting,
   approval, failure) — the Figma shows a red dot on the open blank.
 
 ## FRESH START (owner, latest)
-Throw every earlier hypotaxis mock-up we made out of the window: make something completely new. It must feel TASTEFUL and THOUGHTFUL, neat and professional. Do not reuse code, layouts or styling from earlier mock-ups. Before designing, read `/mnt/skills/public/frontend-design/SKILL.md` and follow it; when reviewing your screenshots, run the `design:design-critique` skill (Skill tool) on them and act on its findings; use `design:accessibility-review` before you report. The owner's favourite design skills are now installed and MANDATORY: Impeccable at `/root/.claude/skills/impeccable/SKILL.md` (an app UI is its "Operate" mode: precision and restraint; read its references for your job: craft, layout, typeset, animate, polish, critique, component-review, quieter) and Taste at `/root/.claude/skills/taste-skill/SKILL.md` (built for websites; apply its anti-slop rules, copy rules, cards and motion references to an app UI). Read both SKILL.md files and the references relevant to your piece before designing further, and run Impeccable's critique/audit on your result. If the skill tool lists them (`impeccable`, `design-taste-frontend`), invoke them with the Skill tool; otherwise read the files directly.
+Throw every earlier boopis mock-up we made out of the window: make something completely new. It must feel TASTEFUL and THOUGHTFUL, neat and professional. Do not reuse code, layouts or styling from earlier mock-ups. Before designing, read `/mnt/skills/public/frontend-design/SKILL.md` and follow it; when reviewing your screenshots, run the `design:design-critique` skill (Skill tool) on them and act on its findings; use `design:accessibility-review` before you report. The owner's favourite design skills are now installed and MANDATORY: Impeccable at `/root/.claude/skills/impeccable/SKILL.md` (an app UI is its "Operate" mode: precision and restraint; read its references for your job: craft, layout, typeset, animate, polish, critique, component-review, quieter) and Taste at `/root/.claude/skills/taste-skill/SKILL.md` (built for websites; apply its anti-slop rules, copy rules, cards and motion references to an app UI). Read both SKILL.md files and the references relevant to your piece before designing further, and run Impeccable's critique/audit on your result. If the skill tool lists them (`impeccable`, `design-taste-frontend`), invoke them with the Skill tool; otherwise read the files directly.
 
 ## References (in ref/)
 - `figma-694-149.png` — THE owner's current design (1920×1080). Primary reference. `dock-crop.png`, `top-left-crop.png` zooms.
