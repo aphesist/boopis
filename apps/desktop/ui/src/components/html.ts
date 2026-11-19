@@ -11,6 +11,8 @@ import { logoHTML } from './logo';
 import { arrowHTML, isKnownModel, markHTML, modelHTML, routeHTML } from './model-mark';
 import type { ModelRef } from './model-mark';
 import { orbHtml } from './orb';
+import { modelEntries, selectHTML, toEntries } from './select-html';
+import type { SelectEntry } from './select-html';
 
 type U<T> = T | undefined;
 
@@ -221,20 +223,24 @@ function menuItems(items: readonly MenuEntry[], o: { multi?: boolean | undefined
       (x.stamp ? stamp(x.stamp) : '') + (x.keys ? keys(x.keys) : '') + '</button>';
   }).join('');
 }
-export interface FieldOpts { id?: U<string>; name?: U<string>; label?: U<string>; hint?: U<string>; error?: U<string>; kind?: U<'text' | 'textarea' | 'select'>; type?: U<string>; value?: U<string>; placeholder?: U<string>; mono?: U<boolean>; raised?: U<boolean>; options?: U<readonly string[]>; disabled?: U<boolean> }
+export interface FieldOpts { id?: U<string>; name?: U<string>; label?: U<string>; hint?: U<string>; error?: U<string>; /** 'select' draws the library's select; 'model' is the model picker (options are model ids, grouped by provider) */ kind?: U<'text' | 'textarea' | 'select' | 'model'>; type?: U<string>; value?: U<string>; placeholder?: U<string>; mono?: U<boolean>; raised?: U<boolean>; options?: U<readonly (string | SelectEntry)[]>; disabled?: U<boolean> }
 function field(o: FieldOpts): string {
   const id = o.id || nid('fld'), hid = id + '-hint';
   const common: Attrs = { id, name: o.name, placeholder: o.placeholder, 'aria-describedby': o.hint || o.error ? hid : null, 'aria-invalid': o.error ? 'true' : null, disabled: o.disabled, spellcheck: o.mono ? 'false' : null, autocomplete: 'off' };
   const cls = cx('ui-input', o.mono && 'ui-input--mono', o.raised && 'ui-input--raised');
   let control: string;
   if (o.kind === 'textarea') control = '<textarea class="' + cls + '" data-ui="autosize" rows="2"' + attrs(common) + '>' + esc(o.value ?? '') + '</textarea>';
-  else if (o.kind === 'select') control = '<select class="' + cls + '"' + attrs(common) + '>' + (o.options ?? []).map((x) => '<option' + (x === o.value ? ' selected' : '') + '>' + esc(x) + '</option>').join('') + '</select>';
-  else control = '<input type="' + (o.type ?? 'text') + '" class="' + cls + '"' + attrs({ ...common, value: o.value }) + '>';
-  return '<div class="ui-field">' + (o.label ? '<label class="ui-field__label" for="' + id + '">' + esc(o.label) + '</label>' : '') + control +
+  else if (o.kind === 'select' || o.kind === 'model') {
+    const list = o.options ?? [];
+    control = selectHTML({ id, name: o.name, entries: o.kind === 'model' ? modelEntries(list.filter((x): x is string => typeof x === 'string')) : toEntries(list), value: o.value, placeholder: o.placeholder,
+      labelId: o.label ? id + '-l' : null, label: o.label, describedby: o.hint || o.error ? hid : null, invalid: !!o.error, disabled: o.disabled, mono: o.mono, raised: o.raised });
+  } else control = '<input type="' + (o.type ?? 'text') + '" class="' + cls + '"' + attrs({ ...common, value: o.value }) + '>';
+  const picker = o.kind === 'select' || o.kind === 'model';   /* a button is named by aria-labelledby; a click on its label would open the list */
+  return '<div class="ui-field">' + (o.label ? (picker ? '<span class="ui-field__label" id="' + id + '-l">' + esc(o.label) + '</span>' : '<label class="ui-field__label" for="' + id + '">' + esc(o.label) + '</label>') : '') + control +
     (o.error || o.hint ? '<p class="ui-field__hint" id="' + hid + '"' + (o.error ? ' data-tone="attention"' : '') + '>' + esc(o.error || o.hint) + '</p>' : '') + '</div>';
 }
-const setRow = (o: { label: string; hint?: U<string | null>; for?: U<string | null>; control?: U<string> }): string =>
-  '<div class="ui-set__row"><' + (o.for ? 'label for="' + esc(o.for) + '"' : 'span') + ' class="ui-set__label"><span>' + esc(o.label) + '</span>' + (o.hint ? '<small>' + esc(o.hint) + '</small>' : '') + '</' + (o.for ? 'label' : 'span') + '>' + (o.control ?? '') + '</div>';
+const setRow = (o: { label: string; hint?: U<string | null>; for?: U<string | null>; /** the label's own id, for a control named by aria-labelledby (a select) */ labelId?: U<string>; control?: U<string> }): string =>
+  '<div class="ui-set__row"><' + (o.for ? 'label for="' + esc(o.for) + '"' : 'span') + attrs({ id: o.labelId }) + ' class="ui-set__label"><span>' + esc(o.label) + '</span>' + (o.hint ? '<small>' + esc(o.hint) + '</small>' : '') + '</' + (o.for ? 'label' : 'span') + '>' + (o.control ?? '') + '</div>';
 const empty = (o: { title: string; text?: U<string>; mark?: U<boolean>; action?: U<string> }): string =>
   '<div class="ui-empty">' + (o.mark ? '<span class="ui-empty__mark">' + logoHTML({ mark: true, label: false }) + '</span>' : '') + '<h2 class="ui-empty__title">' + esc(o.title) + '</h2>' + (o.text ? '<p class="ui-empty__text">' + esc(o.text) + '</p>' : '') + (o.action ?? '') + '</div>';
 
@@ -247,5 +253,5 @@ const tip = (label: string, k?: string, state?: { text: string; tone?: string })
 
 export const html = {
   icon, keys, kbd: keys, code, inline, stamp, dot, capacity, button, iconButton, send, hold, switch: switchHtml, segmented, chip, chipGroup,
-  orb: orbHtml, model: modelHTML, modelRoute: routeHTML, modelMark: markHTML, stateWord, row, leadFor, group, ladder, measure, legend, pages, request, entry, disclosure, steps, blank, section, menuItems, field, setRow, empty, toast, tip, mod
+  orb: orbHtml, model: modelHTML, modelRoute: routeHTML, modelMark: markHTML, stateWord, row, leadFor, group, ladder, measure, legend, pages, request, entry, disclosure, steps, blank, section, menuItems, field, select: selectHTML, setRow, empty, toast, tip, mod
 };

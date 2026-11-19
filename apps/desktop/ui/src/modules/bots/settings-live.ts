@@ -59,10 +59,8 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
   const models = [...admin.models()];
   if (info.model && !models.includes(info.model)) models.unshift(info.model);
   const modelHint = info.model ? 'The model Hermes runs this profile on.' : (info.notes.detail ?? 'Hermes has no model pinned for this profile.') + (models.length ? ' Pick one to pin it.' : ' No provider is configured yet.');
-  const modelF = ui.field({ kind: 'select', label: 'Model', options: models, value: info.model ?? '', hint: modelHint, disabled: !models.length });
-  const modelSel = $<HTMLSelectElement>('select', modelF);
-  if (!info.model) modelSel.selectedIndex = -1;
-  modelSel.addEventListener('change', () => { pend.model = modelSel.value; paintDirty(); });
+  const modelF = ui.field({ kind: 'model', label: 'Model', options: models, value: info.model ?? '', hint: modelHint, disabled: !models.length });
+  modelF.addEventListener('ui:change', (e) => { pend.model = (e as CustomEvent<{ value: string }>).detail.value; paintDirty(); });
 
   /* ───────── routines: Hermes's cron store, this profile's ───────── */
   const routines = el('ul', { class: 'bt-routines', 'aria-label': 'Routines' });
@@ -123,7 +121,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
   const ownErr = el('p', { class: 'ui-field__hint', role: 'alert', 'data-tone': 'attention', hidden: true });
   const gov = ui.segmented({ mode: 'radio', label: 'Governance', value: c.gov, options: [{ value: 'governed', label: 'Governed' }, { value: 'ungoverned', label: 'Ungoverned' }], fill: true });
   const capId = 'bt-cap-' + b.id;
-  const capRow = frag(ui.html.setRow({ label: 'Cap per run', hint: 'Dollars per run', for: capId, control: '<input class="ui-input ui-input--mono bt-cap" id="' + capId + '" inputmode="decimal" value="' + esc(c.cap) + '">' }));
+  const capRow = frag(ui.html.setRow({ label: 'Cap per run', hint: 'Dollars per run', for: capId, control: '<input class="ui-input ui-input--mono bt-cap" id="' + capId + '" inputmode="decimal" autocomplete="off" value="' + esc(c.cap) + '">' }));
   capRow.hidden = c.gov !== 'governed';
   let capTimer = 0;
   $<HTMLInputElement>('input', capRow).addEventListener('input', (e) => { const v = (e.target as HTMLInputElement).value.trim(); window.clearTimeout(capTimer); capTimer = window.setTimeout(() => { if (/^\d{1,4}(\.\d{1,4})?$/.test(v)) own({ cap: v }); }, 500); });

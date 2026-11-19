@@ -35,7 +35,8 @@ export function closeLayer(returnFocus?: boolean): void {
 function openLayerAt(anchor: HTMLElement, node: HTMLElement, o: LayerOpts): HTMLElement | null {
   if (openLayer && openLayer.anchor === anchor) { closeLayer(); return null; }
   closeLayer(false);
-  (o.layer ?? document.getElementById('hx-app') ?? document.body).appendChild(node);
+  /* a modal dialog (Settings) and the first-run view cover the app: a layer opened from inside one lives inside it */
+  (o.layer ?? anchor.closest('dialog, [data-layer-host]') ?? document.getElementById('hx-app') ?? document.body).appendChild(node);
   if (anchor) anchor.setAttribute('aria-expanded', 'true');
   place(node, anchor, o);
   requestAnimationFrame(() => node.classList.add('is-in'));
@@ -50,6 +51,7 @@ document.addEventListener('keydown', (e) => {
   if (!openLayer) return;
   const node = openLayer.node;
   if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeLayer(); return; }
+  if (node.classList.contains('ui-listbox')) return;   /* the listbox keeps its own keys (select.ts) */
   if (node.classList.contains('ui-menu')) {
     const items = [...node.querySelectorAll<HTMLElement>('.ui-menu__item:not(:disabled)')];
     const i = items.indexOf(document.activeElement as HTMLElement);

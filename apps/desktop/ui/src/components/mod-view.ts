@@ -16,7 +16,7 @@
      Text     the type scale (xs 11, s 13, m 14, l 16); `mono` is --mono, `tabular` tabular figures.
      Button   the library's button (variant and role become its variants). A `hotkey` that collides with the app's keys is
               dropped, never stolen; one that does not works while focus is inside the view.
-     Input    the field of FORMS.md (.ui-input). Select: the card layer's picker pattern, with the library's menu.
+     Input    the field of FORMS.md (.ui-input). Select: the library's select (a listbox).
      Markdown paragraphs, lists, inline code, bold, italic and https links, through the library's prose.
      Code     the session's well (mono 11, --bg-0), with a line gutter, a path line and a diff format.
      Link     https: only; anything else is plain text.
@@ -29,7 +29,7 @@ import { esc, isMac } from '../core/dom';
 import { logger } from '../core/log';
 import { html } from './html';
 import { iconNames } from './icons';
-import { menu } from './layer';
+import { listbox } from './select';
 import { MARK, SURFACE, TINT, isLiteral, paintColor } from './mod-colors';
 import type { Lit, PaintCtx, Surface } from './mod-colors';
 import { cleanSvg } from './mod-svg';
@@ -279,14 +279,14 @@ function buildSelect(p: Props, ctx: Ctx, path: string): HTMLElement {
     : { label: str(o), value: str(o) }));
   const cur = opts.find((o) => o.value === str(p['value'])) ?? opts[0] ?? { label: '', value: '' };
   const b = el('button', 'ui-input mv-select');
-  b.type = 'button'; b.setAttribute('aria-haspopup', 'menu'); b.setAttribute('aria-expanded', 'false'); b.setAttribute('data-mv-key', path);
+  b.type = 'button'; b.setAttribute('aria-haspopup', 'listbox'); b.setAttribute('aria-expanded', 'false'); b.setAttribute('data-mv-key', path);
   const lab = str(p['aria-label']) || str(p['label']) || 'Choose';
   b.setAttribute('aria-label', lab + ': ' + cur.label);
   b.append(el('span', 'mv-select__v', cur.label)); b.insertAdjacentHTML('beforeend', html.icon('chevron-down', { size: 's' }));
   const id = handlerId(p['onSelect']);
   b.addEventListener('click', () => {
-    menu.open(b, opts.map((o) => ({ label: o.label, value: o.value, checked: o.value === cur.value })), {
-      label: lab, align: 'start', onSelect: (v) => { b.setAttribute('aria-expanded', 'false'); if (id != null) ctx.dispatch({ type: 'ui.select', id, value: v }); }
+    listbox.open(b, opts.map((o) => ({ label: o.label, value: o.value })), {
+      label: lab, align: 'start', value: cur.value, onSelect: (v) => { b.setAttribute('aria-expanded', 'false'); if (id != null) ctx.dispatch({ type: 'ui.select', id, value: v }); }
     });
   });
   return b;
@@ -325,7 +325,7 @@ function buildLink(p: Props, kids: readonly ModChild[]): HTMLElement {
   const label = p['label'] != null ? str(p['label']) : (textOf(kids) || href);
   let ok = false;
   try { ok = new URL(href).protocol === 'https:'; } catch { ok = false; }
-  if (!ok) { const s = el('span', 'mv-text', label); s.title = 'Only https links open'; return s; }
+  if (!ok) { const s = el('span', 'mv-text', label); s.dataset['tip'] = 'Only https links open'; s.setAttribute('aria-description', 'Only https links open'); return s; }
   const a = el('a', 'mv-link', label);
   a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer';
   return a;

@@ -174,16 +174,16 @@ export async function keyWalk(env) {
     const chip = () => ev(() => { const b = [...document.querySelectorAll('#hx-view-session .ui-composer__chips button')].find((x) => x.hasAttribute('aria-haspopup')); return { hidden: b.hidden, text: b.textContent.trim() }; });
     check('7', 'smart starts on, the model chip is hidden', (await smartOn()) === 'true' && (await chip()).hidden);
     await press('Alt+m', 500);
-    const first = await ev(() => { const it = document.querySelector('.ui-menu .ui-menu__item'); return it ? { label: it.textContent.trim(), checked: it.getAttribute('aria-checked') } : null; });
-    check('7', 'alt+M opens the picker and Smart stays on', (await layer()).menu && (await smartOn()) === 'true' && first && /^Smart/.test(first.label) && first.checked === 'true', first);
+    const first = await ev(() => { const it = document.querySelector('.ui-listbox .ui-option'); return it ? { label: it.textContent.trim(), checked: it.getAttribute('aria-selected'), role: it.closest('[role="listbox"]').getAttribute('role') } : null; });
+    check('7', 'alt+M opens the picker and Smart stays on', (await layer()).menu && (await smartOn()) === 'true' && first && first.role === 'listbox' && /^Smart/.test(first.label) && first.checked === 'true', first);
     await press('Escape', 300);
     check('7', 'Esc changes nothing', (await smartOn()) === 'true' && !(await layer()).menu && (await where()).region === 'composer', await where());
     await press('Alt+m', 500);
-    await page.click('.ui-menu .ui-menu__item >> text=haiku'); await page.waitForTimeout(400);
+    await page.click('.ui-listbox .ui-option >> text=haiku'); await page.waitForTimeout(400);
     const c1 = await chip();
     check('7', 'picking a model pins it and turns Smart off', (await smartOn()) === 'false' && !c1.hidden && /haiku/.test(c1.text), c1);
     await press('Control+g', 100); await press('i', 300);
-    await press('Alt+m', 500); await page.click('.ui-menu .ui-menu__item >> text=Smart'); await page.waitForTimeout(400);
+    await press('Alt+m', 500); await page.click('.ui-listbox .ui-option >> text=Smart'); await page.waitForTimeout(400);
     check('7', 'choosing Smart turns it back on', (await smartOn()) === 'true' && (await chip()).hidden && (await where()).region === 'composer', await where());
   });
 

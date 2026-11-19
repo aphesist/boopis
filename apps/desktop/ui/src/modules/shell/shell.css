@@ -283,10 +283,9 @@ body {
 .hxt-hint { margin: 4px 0 4px; font-size: var(--fs-xs); line-height: 1.5; color: var(--text-dim); }
 .hxt-group { margin: 16px 0 2px; font: 500 var(--fs-xs)/var(--lh-ui) var(--sans); color: var(--text-quiet); text-transform: var(--ui-case); }
 .hxt-row { display: grid; grid-template-columns: 28px minmax(0, 1fr) 84px 52px; align-items: center; gap: 10px; min-height: 40px; padding: 4px 0; border-bottom: 1px solid var(--hair); }
-.hxt-swatch { width: 28px; height: 28px; padding: 0; border: 0; border-radius: var(--r-s); background: none; cursor: pointer; box-shadow: inset 0 0 0 1px var(--line-strong); }
-.hxt-swatch::-webkit-color-swatch-wrapper { padding: 2px; }
-.hxt-swatch::-webkit-color-swatch { border: 0; border-radius: max(var(--r-floor), calc(var(--r-s) - 2px)); }
-.hxt-swatch::-moz-color-swatch { border: 0; border-radius: max(var(--r-floor), calc(var(--r-s) - 2px)); }
+/* the swatch shows the colour (--sw, set from the theme); it is a button that moves to the hex field, never a platform colour chooser */
+.hxt-swatch { width: 28px; height: 28px; padding: 0; border: 0; border-radius: var(--r-s); background: var(--sw, transparent); cursor: pointer; box-shadow: inset 0 0 0 1px var(--line-strong); }
+.hxt-swatch:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .hxt-row__label { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: var(--fs-s); color: var(--text); }
 .hxt-row__label > span { display: inline-flex; align-items: center; gap: 6px; }
 .hxt-row__label small { font-size: var(--fs-xs); color: var(--text-quiet); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

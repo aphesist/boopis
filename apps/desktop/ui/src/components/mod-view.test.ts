@@ -141,14 +141,14 @@ describe('Input', () => {
 });
 
 describe('Select', () => {
-  it('shows the current option, opens the library menu and sends the chosen value as ui.select', () => {
+  it('shows the current option, opens the library listbox and sends the chosen value as ui.select', () => {
     const { root, events } = view(Select({ options: [{ label: 'All tests', value: 'all' }, { label: 'Failing only', value: 'failing' }, 'plain'], value: 'failing', label: 'Show', onSelect: { $handler: 'sel' } }));
     const b = q<HTMLButtonElement>(root, 'button.mv-select');
-    expect([b.textContent, b.getAttribute('aria-label'), b.getAttribute('aria-haspopup')]).toEqual(['Failing only', 'Show: Failing only', 'menu']);
+    expect([b.textContent, b.getAttribute('aria-label'), b.getAttribute('aria-haspopup')]).toEqual(['Failing only', 'Show: Failing only', 'listbox']);
     b.click();
-    const items = [...document.querySelectorAll<HTMLButtonElement>('.ui-menu__item')];
+    const items = [...document.querySelectorAll<HTMLElement>('.ui-listbox .ui-option')];
     expect(items.map((i) => i.dataset['value'])).toEqual(['all', 'failing', 'plain']);
-    expect(items[1]?.getAttribute('aria-checked')).toBe('true');
+    expect(items[1]?.getAttribute('aria-selected')).toBe('true');
     items[0]?.click();
     expect(events).toEqual([{ type: 'ui.select', id: 'sel', value: 'all' }]);
   });
@@ -206,7 +206,7 @@ describe('Link', () => {
     const a = root.querySelectorAll<HTMLAnchorElement>('a');
     expect(a.length).toBe(1);
     expect([a[0]?.target, a[0]?.rel]).toEqual(['_blank', 'noopener noreferrer']);
-    expect([...root.querySelectorAll<HTMLElement>('span.mv-text')].map((s) => [s.textContent, s.title])).toEqual([['plain http', 'Only https links open'], ['js', 'Only https links open'], ['bad', 'Only https links open']]);
+    expect([...root.querySelectorAll<HTMLElement>('span.mv-text')].map((s) => [s.textContent, s.dataset['tip']])).toEqual([['plain http', 'Only https links open'], ['js', 'Only https links open'], ['bad', 'Only https links open']]);
   });
 });
 
@@ -348,7 +348,7 @@ describe('handler round trips: what the user does goes back by id, whatever the 
     f.value = 'v'; f.dispatchEvent(new Event('input', { bubbles: true }));
     f.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     q<HTMLButtonElement>(root, 'button.mv-select').click();
-    document.querySelectorAll<HTMLButtonElement>('.ui-menu__item')[1]?.click();
+    document.querySelectorAll<HTMLElement>('.ui-listbox .ui-option')[1]?.click();
     expect(events).toEqual([{ type: 'ui.press', id: 'p' }, { type: 'ui.input', id: 'in', value: 'v' }, { type: 'ui.submit', id: 'su', value: 'v' }, { type: 'ui.select', id: 'se', value: 'b' }]);
   });
 });

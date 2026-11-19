@@ -73,7 +73,7 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
   const check = await bridge.check();
   if (!check.needed) return;
   const intro = introText(await bridge.source().catch(() => null));
-  const root = el('div', { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'fr-title', class: 'hx-first-run',
+  const root = el('div', { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'fr-title', class: 'hx-first-run', 'data-layer-host': '',
     style: 'position:fixed;inset:0;z-index:var(--z-palette);display:grid;place-content:center;gap:var(--sp-4);padding:var(--sp-6);background:var(--bg-0);color:var(--text);font:var(--fs-m)/var(--lh) var(--sans)' });
   /* the welcome is a big moment: the logo's hero, once, above whatever step is drawn (it is not redrawn with the card) */
   root.append(welcomeLogo());
