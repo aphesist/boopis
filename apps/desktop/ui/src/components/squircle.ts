@@ -18,7 +18,12 @@
    Crisp lines at any device pixel ratio: a native border snaps to device pixels, a clip path does not, so the path's
    straight edges are snapped inward to device pixels (from the element's place on screen) and the line is a whole number
    of device pixels thick. Positions change without a resize (a sidebar opening), so `resnap` re-reads them after
-   transitions, animations, scrolling and layout. */
+   transitions, animations, scrolling and layout.
+
+   Nesting (DESIGN-SYSTEM.md §8.2): a drawn container (frame or surface) exposes the radius it draws as --r-outer when
+   the radius it declares there is not that one (it declared none, so it would hand its children an ancestor's), so
+   what sits in its corners derives --r-in, --r-corner and --corner-inset from the curve it actually sees. A capsule
+   exposes half its height: a round piece inside a pill stays a pill. Read with the radii, written with the path. */
 import { on } from '../core/bus';
 import { concavePath, DEFAULT_SMOOTHING, slabPath, squirclePath } from './squircle-path';
 import type { Radii } from './squircle-path';
@@ -29,6 +34,8 @@ export interface BindOpts { mode?: SquircleMode | undefined }
 interface State {
   mode: SquircleMode; w: number; h: number; x: number; y: number;
   r: readonly [number, number, number, number] | null; /** the radii as a cache key, read with them */ rk: string; key: string; ringKey: string; on: boolean; focusable: boolean; at: string | null;
+  /** the --r-outer it declares or inherits (px, NaN for none), read with the radii; and the one this module exposed */
+  declared: number; exposed: number;
 }
 interface Built { key: string; clip: string; edge?: string; outer?: string; inner?: (t: number) => string; ring?: string; t2?: number }
 interface Snap { ox: number; oy: number; w: number; h: number; t: number; t2: number; D: number }
@@ -55,9 +62,21 @@ let started = false;
 let ro: ResizeObserver | null = null;
 
 const px = (v: string): number => parseFloat(v) || 0;
-function radii(el: Element): readonly [number, number, number, number] {
+const CONTAINER: ReadonlySet<SquircleMode> = new Set(['frame', 'surface']);
+function readRadii(el: Element, s: State): void {
   const cs = getComputedStyle(el);
-  return [px(cs.borderTopLeftRadius), px(cs.borderTopRightRadius), px(cs.borderBottomRightRadius), px(cs.borderBottomLeftRadius)];
+  s.r = [px(cs.borderTopLeftRadius), px(cs.borderTopRightRadius), px(cs.borderBottomRightRadius), px(cs.borderBottomLeftRadius)];
+  s.rk = s.r.join(',');
+  if (CONTAINER.has(s.mode)) { const d = cs.getPropertyValue('--r-outer').trim(); s.declared = /^-?[\d.]+px$/.test(d) ? parseFloat(d) : NaN; }
+}
+/** the drawn radius a container hands its children (written only when it changes and differs from what it declares) */
+function expose(el: HTMLElement, s: State, w: number, h: number): void {
+  if (!CONTAINER.has(s.mode) || !s.r) return;
+  const r = Math.min(Math.max(...s.r), Math.min(w, h) / 2);
+  const want = r > 0 && !(Math.abs(s.declared - r) < 0.5) ? Math.round(r * 100) / 100 : NaN;
+  if (want === s.exposed || (Number.isNaN(want) && Number.isNaN(s.exposed))) return;
+  if (Number.isNaN(want)) el.style.removeProperty('--r-outer'); else el.style.setProperty('--r-outer', want + 'px');
+  s.exposed = want;
 }
 const dpr = (): number => window.devicePixelRatio || 1;
 
@@ -103,6 +122,7 @@ function ring(el: HTMLElement, s: State, v: Built): void {
 function apply(el: HTMLElement, s: State): void {
   const g = snapOf(s), w = g.w, h = g.h;
   if (!(w >= 1 && h >= 1) || !s.r) return;
+  expose(el, s, s.w, s.h);
   const half = Math.min(w, h) / 2;
   const allZero = s.r.every((r) => r === 0);
   /* a corner as round as half the element (a capsule, a circle) needs no path: the browser draws it */
@@ -130,7 +150,7 @@ function onEntries(entries: ResizeObserverEntry[]): void {
     const b = e.borderBoxSize?.[0];
     s.w = b ? b.inlineSize : el.offsetWidth; s.h = b ? b.blockSize : el.offsetHeight;
     const rc = el.getBoundingClientRect(); s.x = rc.left; s.y = rc.top;
-    if (!s.r) { s.r = radii(el); s.rk = s.r.join(','); }
+    if (!s.r) readRadii(el, s);
     todo.push([el, s]);
   }
   for (const [el, s] of todo) apply(el, s);
@@ -149,17 +169,19 @@ export function bind(el: Element, o?: BindOpts): Element {
   let mode: SquircleMode = o?.mode ?? (el.getAttribute('data-sq-mode') as SquircleMode | null) ??
     (el.matches(SURFACE) ? 'surface' : el.matches('.ui-slab') ? 'slab' : el.matches('.ui-concave') ? 'concave' : el.matches(LEAF) ? 'clip' : 'frame');
   if (mode === 'clip' && !el.matches(LEAF)) mode = 'frame';   /* clip is for leaf controls only, whoever asks */
-  const s: State = { mode, w: 0, h: 0, x: 0, y: 0, r: null, rk: '', key: '', ringKey: '', on: false, focusable: (mode === 'clip' || mode === 'frame') && el.matches(FOCUSABLE), at: el.getAttribute('data-at') };
+  const s: State = { mode, w: 0, h: 0, x: 0, y: 0, r: null, rk: '', key: '', ringKey: '', on: false, focusable: (mode === 'clip' || mode === 'frame') && el.matches(FOCUSABLE), at: el.getAttribute('data-at'), declared: NaN, exposed: NaN };
   state.set(el, s); bound.add(el);
   el.setAttribute('data-sq-mode', mode);
   ro.observe(el, { box: 'border-box' });
   return el;
 }
 export function unbind(el: Element): void {
-  if (!state.get(el)) return;
+  const s = state.get(el);
+  if (!s) return;
   ro?.unobserve(el); state.delete(el); bound.delete(el);
   el.removeAttribute('data-sq-on'); el.removeAttribute('data-sq-mode');
   for (const k of ['--sq-clip', '--sq-edge', '--sq-ring']) (el as HTMLElement).style.removeProperty(k);
+  if (!Number.isNaN(s.exposed)) (el as HTMLElement).style.removeProperty('--r-outer');
 }
 
 function scan(root: Element): void {
@@ -203,7 +225,9 @@ export function refresh(force = true): void {
     tokenSig = sig;
     readSmoothing();
     const t0 = performance.now();
-    for (const el of bound) { const s = state.get(el); if (!s) continue; if (!el.isConnected) { unbind(el); continue; } s.r = radii(el); s.rk = s.r.join(','); s.key = ''; }
+    /* what this module exposed comes off first, so the declared radius is read fresh (one style pass, on a theme change) */
+    for (const el of bound) { const s = state.get(el); if (s && !Number.isNaN(s.exposed)) { (el as HTMLElement).style.removeProperty('--r-outer'); s.exposed = NaN; } }
+    for (const el of bound) { const s = state.get(el); if (!s) continue; if (!el.isConnected) { unbind(el); continue; } readRadii(el, s); s.key = ''; }
     for (const el of bound) { const s = state.get(el); if (s) apply(el as HTMLElement, s); }
     stats.lastMs = performance.now() - t0;
   });
