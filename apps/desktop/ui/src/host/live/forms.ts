@@ -4,7 +4,7 @@
    Secrets: `submit` splits them off (`splitSecrets`), stores each with the host's keychain (`secret_set`), and sends the
    plugin `provided: [field, ...]` only. A secret's value is in no frame, no event, no log and no error message. */
 import { logger } from '../../core/log';
-import type { FormOutcome, FormSpec, FormsSource, FormStatus, PickerItem, PickerKind } from '../../data';
+import type { FieldSchema, FormOutcome, FormSpec, FormsSource, FormStatus, PickerItem, PickerKind } from '../../data';
 import { inTauri } from '../bridge';
 import type { GatewayClient, GatewayEvent } from '../gateway';
 import { fromFreeTierLimit, fromGatewayEvent, fromPluginEvent, replyFor, splitSecrets } from '../forms';
@@ -12,6 +12,7 @@ import { limitFromSurface, rememberLimit } from '../free-tier';
 import type { ErrorSurface } from '../../vendor/hermes-shared/gateway-contract.generated';
 import type { FormModel } from '../forms';
 import type { SecretsBridge } from '../secrets';
+import type { ConnectorLogin, ConnectorsBridge } from '../connectors-bridge';
 
 const log = logger('forms');
 
@@ -26,7 +27,12 @@ export interface FormsOptions {
   pickFolder?: (() => Promise<string | null>) | null;
   /** what the person chose on a free-tier limit notice ('choose' another model, or 'wait'); the host's setup does the rest */
   onFreeTierChoice?: (choice: string) => Promise<void>;
+  /** runs a sign-in field (`x-signin`) in the host; null where there is no host. Rejects with the words the card shows */
+  signin?: ((s: XSignin) => Promise<void>) | null;
+  /** ends a sign-in that is running (the user cancelled it) */
+  cancelSignin?: ((s: XSignin) => Promise<void>) | null;
 }
+export type XSignin = NonNullable<FieldSchema['x-signin']>;
 export interface FormsHost {
   source: FormsSource;
   /** an event that may be a form's; true when it was */
@@ -89,9 +95,19 @@ export function createFormsHost(opts: FormsOptions): FormsHost {
       try { if (reply) await client.requestRaw(reply.method, reply.params); } catch (e) { log.warn('a form cancel was not delivered', e instanceof Error ? e.name : 'error'); }
       settle(id, 'cancelled');
     },
-    /* no OAuth flow exists in the host yet: the control says so instead of pretending (AGENTS.md invariant 5) */
-    signin(): Promise<void> { return Promise.reject(new Error('Signing in from here is not available in this build yet.')); },
-    can: { signin: false, upload: false, folder: !!opts.pickFolder },
+    /* the host runs it: Hermes's own OAuth flow for a connector (`server`), or a provider's own login command (`command`); where
+       there is no host the control says so instead of pretending (AGENTS.md invariant 5) */
+    async signin(id: string, field: string): Promise<void> {
+      if (!opts.signin) throw new Error('Signing in from here is not available in this build yet.');
+      const s = open.get(id)?.spec.schema.properties?.[field]?.['x-signin'];
+      if (!s) throw new Error('This form has no sign-in to run.');
+      await opts.signin(s);
+    },
+    cancelSignin: async (id: string, field: string): Promise<void> => {
+      const s = open.get(id)?.spec.schema.properties?.[field]?.['x-signin'];
+      if (s) await opts.cancelSignin?.(s);
+    },
+    can: { signin: !!opts.signin, upload: false, folder: !!opts.pickFolder },
     pickerItems: (_kind: PickerKind): readonly PickerItem[] => [],
     pickFolder: () => (opts.pickFolder ? opts.pickFolder() : Promise.resolve(null))
   };
@@ -143,3 +159,26 @@ export async function chooseAnotherModel(choice: string): Promise<void> {
   await changeModels();
 }
 export const hasHostDialogs = (): boolean => inTauri();
+
+/** What a sign-in command that did not succeed says to the person: how it ended, then the end of what it said. */
+export function loginFailure(r: ConnectorLogin): string {
+  if (r.timed_out) return 'The sign-in command was stopped for running too long.';
+  const last = r.output.at(-1);
+  return `${r.command_line} ended with ${r.code === null ? 'no exit code' : 'exit code ' + String(r.code)}.` + (last ? ' It said: ' + last : '');
+}
+/** Run a sign-in field in the host: a connector's OAuth through Hermes, or the provider's own login command, as shown. */
+export async function hostSignin(s: XSignin, bridge?: ConnectorsBridge): Promise<void> {
+  const b = bridge ?? (await import('../connectors-bridge')).tauriConnectorsBridge();
+  if (s.server) { await b.signin(s.server); return; }
+  if (s.command) {
+    const r = await b.login(s.command, s.args ?? []);
+    if (!r.ok) throw new Error(loginFailure(r));
+    return;
+  }
+  throw new Error('This sign-in names neither a connector nor a command, so there is nothing to run.');
+}
+export async function hostCancelSignin(s: XSignin, bridge?: ConnectorsBridge): Promise<void> {
+  if (!s.server) return;
+  const b = bridge ?? (await import('../connectors-bridge')).tauriConnectorsBridge();
+  await b.cancelSignin(s.server);
+}

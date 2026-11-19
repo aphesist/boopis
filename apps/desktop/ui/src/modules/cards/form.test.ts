@@ -87,6 +87,25 @@ describe('every field type', () => {
     expect(i?.hasAttribute('value')).toBe(false);
     expect(c.querySelector('[data-action="paste"]')?.getAttribute('aria-label')).toContain('Key');
   });
+  it('says a sign-in command runs on this computer, as the program and arguments shown, never a shell line', () => {
+    const c = mount(spec({ l: { 'x-signin': { provider: 'Claude', command: 'claude', args: ['auth', 'login', 'my profile'] } } }, ['l'], { kind: 'signin' }));
+    expect(c.querySelector('.cd-note')?.textContent).toBe("Runs claude auth login 'my profile' on this computer, then shows what it said.");
+  });
+  it('tells the host when a running sign-in is cancelled, and goes back to open so it can be tried again', async () => {
+    const stopped: string[] = [];
+    let release: () => void = () => undefined;
+    host.signin = () => new Promise<void>((r) => { release = r; });
+    (host as { cancelSignin?: (id: string, field: string) => Promise<void> }).cancelSignin = (id, field) => { stopped.push(id + ':' + field); return Promise.resolve(); };
+    const s = spec({ l: { 'x-signin': { provider: 'Linear', server: 'linear' } } }, ['l'], { kind: 'signin', id: 'sign1' });
+    const c = mount(s);
+    c.querySelector<HTMLElement>('[data-action="signin"]')?.click();
+    await tick();
+    expect(c.getAttribute('data-state') ?? c.dataset['state']).toBe('submitting');
+    c.querySelector<HTMLElement>('[data-action="cancel"]')?.click();
+    await tick();
+    expect(stopped).toEqual(['sign1:l']);
+    release();
+  });
   it('draws pickers, an upload drop and a sign-in, and disables the ones this build cannot run', () => {
     const s = spec({ p: { 'x-picker': 'model', title: 'Model', default: 'sonnet 5.5' }, f: { 'x-upload': true, title: 'Log' }, l: { 'x-signin': { provider: 'Linear', host: 'linear.app' } } });
     let c = mount(s);

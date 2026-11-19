@@ -14,6 +14,11 @@ use tauri::{AppHandle, Manager, State};
 use tauri_plugin_store::StoreExt;
 
 use crate::config::Limits;
+use crate::connectors::catalog::{self, CatalogEntry};
+use crate::connectors::{
+    Engine, GatewayMcp, InstallReport as ConnectorInstallReport, Installed, LoginReport, Opener,
+    RemoveReport, Request, Review, SignInReport, SourceKind, TestReport, plan as connector_plan,
+};
 use crate::error::{Error, HostError, Result};
 use crate::gateway::reconnect::Phase;
 use crate::gateway::{ConnectionId, FrameSink, ProxyStats};
@@ -61,6 +66,8 @@ pub struct AppState {
     pub source: Source,
     /// Whether this build carries a Hermes runtime.
     pub carries_runtime: bool,
+    /// The connector engine of each profile home, kept so a sign-in started by one command can be cancelled by another.
+    pub connectors: std::sync::Mutex<std::collections::HashMap<std::path::PathBuf, Arc<Engine>>>,
 }
 
 struct ChannelSink(Channel<Frame>);
@@ -559,4 +566,186 @@ pub async fn renderer_open_gpu_page(app: AppHandle) -> std::result::Result<(), H
         let _ = app;
         Err(Error::Os("webkit://gpu exists only in WebKitGTK (Linux)".into()).into())
     }
+}
+
+// ---------------------------------------------------------------- connectors (docs/CONNECTORS.md, docs/FORMS.md)
+
+/// Opens a page with the OS opener; the engine has already checked it.
+struct AppOpener(AppHandle);
+
+impl Opener for AppOpener {
+    fn open(&self, url: &str) -> Result<()> {
+        use tauri_plugin_opener::OpenerExt;
+        self.0
+            .opener()
+            .open_url(url, None::<&str>)
+            .map_err(|e| Error::Os(e.to_string()))
+    }
+}
+
+fn connector_engine(
+    app: &AppHandle,
+    state: &AppState,
+    profile: Option<String>,
+) -> Result<Arc<Engine>> {
+    let profile = profile_of(app, profile)?;
+    let home = state
+        .supervisor
+        .environment()
+        .profile_home(profile.as_deref())?;
+    let mut engines = state
+        .connectors
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    if let Some(e) = engines.get(&home) {
+        return Ok(e.clone());
+    }
+    let ops = GatewayMcp::new(state.supervisor.clone(), home.clone());
+    let engine = Arc::new(Engine::new(
+        Arc::new(ops),
+        state.secrets.clone(),
+        Arc::new(AppOpener(app.clone())),
+        state.limits.clone(),
+    ));
+    engines.insert(home, engine.clone());
+    Ok(engine)
+}
+
+/// The curated collection, for the picker. Data compiled into the app; asks Hermes nothing.
+#[tauri::command]
+#[specta::specta]
+pub fn connector_catalog() -> std::result::Result<Vec<CatalogEntry>, HostError> {
+    Ok(catalog::entries()?)
+}
+
+/// The form that asks for a source's inputs: a URL, a command, or the setup values of a collection entry
+/// (`connector` and `variant` name it). Nothing is validated or sent anywhere yet.
+#[tauri::command]
+#[specta::specta]
+pub fn connector_inputs(
+    source: SourceKind,
+    connector: Option<String>,
+    variant: Option<String>,
+) -> std::result::Result<crate::setup::Form, HostError> {
+    let entry = connector.as_deref().zip(variant.as_deref());
+    Ok(connector_plan::inputs_form(source, entry)?)
+}
+
+/// What an install would add, exactly: the review form (command and arguments, the hosts it reaches, the pin, the keys it
+/// needs, the config diff) and the hash the install must name. Validates the request; changes nothing.
+#[tauri::command]
+#[specta::specta]
+pub fn connector_review(request: Request) -> std::result::Result<Review, HostError> {
+    Ok(Engine::review(&request)?)
+}
+
+/// Install what the review showed. `secrets` carries the key fields' values to the keychain and no further.
+#[tauri::command]
+#[specta::specta]
+pub async fn connector_install(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    profile: Option<String>,
+    request: Request,
+    plan_hash: String,
+    secrets: std::collections::BTreeMap<String, String>,
+) -> std::result::Result<ConnectorInstallReport, HostError> {
+    let engine = connector_engine(&app, &state, profile)?;
+    Ok(engine.install(&request, &plan_hash, &secrets).await?)
+}
+
+/// The MCP servers Hermes has, with their state and the keychain references boopis holds for each.
+#[tauri::command]
+#[specta::specta]
+pub async fn connector_list(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    profile: Option<String>,
+) -> std::result::Result<Vec<Installed>, HostError> {
+    Ok(connector_engine(&app, &state, profile)?.list().await?)
+}
+
+/// Ask Hermes to connect to a server and list its tools.
+#[tauri::command]
+#[specta::specta]
+pub async fn connector_test(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    profile: Option<String>,
+    name: String,
+) -> std::result::Result<TestReport, HostError> {
+    Ok(connector_engine(&app, &state, profile)?.test(&name).await?)
+}
+
+/// Switch a server on or off, through Hermes.
+#[tauri::command]
+#[specta::specta]
+pub async fn connector_set_enabled(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    profile: Option<String>,
+    name: String,
+    enabled: bool,
+) -> std::result::Result<(), HostError> {
+    Ok(connector_engine(&app, &state, profile)?
+        .set_enabled(&name, enabled)
+        .await?)
+}
+
+/// Remove a server through Hermes. `delete_credentials` is the user's agreement to delete the keys boopis holds for it.
+#[tauri::command]
+#[specta::specta]
+pub async fn connector_remove(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    profile: Option<String>,
+    name: String,
+    delete_credentials: bool,
+) -> std::result::Result<RemoveReport, HostError> {
+    Ok(connector_engine(&app, &state, profile)?
+        .remove(&name, delete_credentials)
+        .await?)
+}
+
+/// Sign in to a remote server with OAuth, through Hermes's own flow (its listener, its token store). Resolves when the
+/// sign-in ends; `connector_signin_cancel` ends it early.
+#[tauri::command]
+#[specta::specta]
+pub async fn connector_signin(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    profile: Option<String>,
+    name: String,
+) -> std::result::Result<SignInReport, HostError> {
+    Ok(connector_engine(&app, &state, profile)?
+        .signin(&name)
+        .await?)
+}
+
+/// Cancel an open sign-in to `name`.
+#[tauri::command]
+#[specta::specta]
+pub fn connector_signin_cancel(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    profile: Option<String>,
+    name: String,
+) -> std::result::Result<(), HostError> {
+    connector_engine(&app, &state, profile)?.cancel_signin(&name);
+    Ok(())
+}
+
+/// Run a provider's own sign-in command (`claude auth login`) exactly as the card showed it: a program and an argument
+/// vector, never a shell string. Reports the exit status and the end of its output.
+#[tauri::command]
+#[specta::specta]
+pub async fn connector_login(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    command: String,
+    args: Vec<String>,
+) -> std::result::Result<LoginReport, HostError> {
+    Ok(connector_engine(&app, &state, None)?
+        .login(&command, &args)
+        .await?)
 }

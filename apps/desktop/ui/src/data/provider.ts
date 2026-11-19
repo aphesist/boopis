@@ -170,6 +170,8 @@ export interface FormsSource {
   cancel(formId: string): Promise<void>;
   /** runs a sign-in (`x-signin`) in the host; resolves when it succeeded, rejects when it failed or was cancelled */
   signin(formId: string, field: string): Promise<void>;
+  /** the user cancelled a sign-in that is running (the card returns to its open state); the host ends the flow it started */
+  cancelSignin?: (formId: string, field: string) => Promise<void>;
   /** what the fields that reach outside the page can do in this build: a control that cannot work is disabled and says so */
   can: FormCan;
   /** the choices of an `x-picker` field; a folder is picked with the host's own dialog */

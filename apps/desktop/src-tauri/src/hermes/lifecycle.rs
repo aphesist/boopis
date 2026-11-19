@@ -248,6 +248,36 @@ impl Supervisor {
         Ok(verdict.endpoint.unwrap_or_default())
     }
 
+    /// Stop the gateway of `home` if one runs, wait until nothing answers on its control socket, then start a fresh one with
+    /// [`Supervisor::ensure`]. `gateway stop` returns while the old gateway may still be shutting down, and an `ensure` must
+    /// not meet it: the new gateway has to be the host's own launch, so its first read of the keychain (a connector's key,
+    /// read when Hermes connects its MCP servers at start-up) is served. The wait is bounded by
+    /// `Limits::gateway_stop_wait`; when it passes, `ensure` runs anyway.
+    ///
+    /// # Errors
+    /// As [`Supervisor::ensure`].
+    pub async fn restart(&self, home: &Path) -> Result<EndpointInfo> {
+        let info = self.info().await?;
+        // It fails when no gateway runs, which is fine: `ensure` then starts one.
+        let _ = self
+            .cli
+            .run(
+                &info.binary,
+                home,
+                &["gateway", "stop", "--yes"],
+                self.limits.cli_timeout,
+            )
+            .await;
+        let deadline = tokio::time::Instant::now() + self.limits.gateway_stop_wait;
+        while control::identify(home).await.is_ok() && tokio::time::Instant::now() < deadline {
+            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        }
+        if let Ok(mut done) = self.ensured.lock() {
+            done.remove(home);
+        }
+        self.ensure(home).await
+    }
+
     /// Run [`Supervisor::ensure`] unless it is not needed: it already succeeded for `home` in this run, or the running
     /// gateway cannot be older than Hermes (it names no code identity, or it names the one the install stamp names).
     /// That check is a socket round trip instead of a Python start, which is what lets the first attach of a run meet

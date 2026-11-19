@@ -15,7 +15,9 @@ import { createLiveBots } from './live/bots';
 import { todosFrom } from './live/map-details';
 import { blankData } from './live/blanks';
 import { createModsHost } from './live/mods';
-import { chooseAnotherModel, createFormsHost, hasHostDialogs, tauriPickFolder } from './live/forms';
+import { chooseAnotherModel, createFormsHost, hasHostDialogs, hostCancelSignin, hostSignin, tauriPickFolder } from './live/forms';
+import type { XSignin } from './live/forms';
+import { tauriConnectorsBridge } from './connectors-bridge';
 import type { FormEntry } from './live/forms';
 import { tauriSecrets } from './secrets';
 import type { SecretsBridge } from './secrets';
@@ -45,6 +47,11 @@ export interface LiveOptions {
   pickFolder?: (() => Promise<string | null>) | null;
   /** what a free-tier limit notice does with "choose another model"; the host's setup in the desktop app */
   onFreeTierChoice?: (choice: string) => Promise<void>;
+  /** runs a sign-in field in the host (default in the desktop app: Hermes's OAuth for a connector, or the provider's own login command); null: none */
+  signin?: ((s: XSignin) => Promise<void>) | null;
+  /** the Connectors section's switch and Sign in (default in the desktop app: the host's connector commands) */
+  connectors?: { setEnabled(name: string, enabled: boolean): Promise<void>; signin(name: string): Promise<unknown> };
+  cancelSignin?: ((s: XSignin) => Promise<void>) | null;
   /** a teammate's own link to Hermes (the host's `connect(profile)`); without one its schedule and sessions are shown as unknown */
   linkTo?: (profile: string) => Promise<GatewayClient>;
   /** how often the teammates are read again (ms); null never (tests) */
@@ -89,7 +96,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     return c;
   };
   const bind = (c: Convo, gwId: string): void => { c.gwId = gwId; byGw.set(gwId, c.uiId); };
-  const details = createDetails({ client, now: () => now().getTime(), gwId: (id) => convos.get(id)?.gwId ?? (id.startsWith('new-') ? null : id), onRefreshed: (id) => { const c = convos.get(id); if (c) syncBlanks(c); } });
+  const details = createDetails({ client, ...(opts.connectors ? { connectors: opts.connectors } : hasHostDialogs() ? { connectors: tauriConnectorActions() } : {}), now: () => now().getTime(), gwId: (id) => convos.get(id)?.gwId ?? (id.startsWith('new-') ? null : id), onRefreshed: (id) => { const c = convos.get(id); if (c) syncBlanks(c); } });
   /* Claude Code mods: what a session's mods draw (`mod.*` events) and the answers sent back; one `ModSession` per session */
   const modsHost = createModsHost({ client, uiOf: (gw) => byGw.get(gw), gwOf: (id) => convos.get(id)?.gwId ?? null });
   const user = store<User>({ name: 'you', initials: 'y' });
@@ -193,6 +200,8 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     client, secrets: opts.secrets ?? (hasHostDialogs() ? tauriSecrets() : noKeychain),
     pickFolder: opts.pickFolder !== undefined ? opts.pickFolder : hasHostDialogs() ? tauriPickFolder : null,
     ...((opts.onFreeTierChoice ?? (hasHostDialogs() ? chooseAnotherModel : null)) ? { onFreeTierChoice: opts.onFreeTierChoice ?? chooseAnotherModel } : {}),
+    signin: opts.signin !== undefined ? opts.signin : hasHostDialogs() ? hostSignin : null,
+    cancelSignin: opts.cancelSignin !== undefined ? opts.cancelSignin : hasHostDialogs() ? hostCancelSignin : null,
     hooks: {
       opened(entry: FormEntry) {
         const uiId = byGw.get(entry.gwSession), c = uiId ? convos.get(uiId) : undefined;
@@ -440,4 +449,10 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
 function todosFromResume(res: unknown): ReturnType<typeof todosFrom> {
   const state = (res as { todo_state?: { todos?: Parameters<typeof todosFrom>[0] } | null }).todo_state;
   return todosFrom(state?.todos);
+}
+
+/** the details panel's connector controls, over the host's connector commands (desktop app only) */
+function tauriConnectorActions(): { setEnabled(name: string, enabled: boolean): Promise<void>; signin(name: string): Promise<unknown> } {
+  const bridge = tauriConnectorsBridge();
+  return { setEnabled: (name, enabled) => bridge.setEnabled(name, enabled), signin: (name) => bridge.signin(name) };
 }

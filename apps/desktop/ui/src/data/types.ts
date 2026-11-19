@@ -132,7 +132,9 @@ export interface FieldSchema {
   /** one preview per option, in the order of `enum` (code, text or a note) */
   'x-preview'?: ReadonlyArray<{ code?: string; text?: string; note?: string } | null>;
   'x-picker'?: PickerKind; 'x-upload'?: boolean;
-  'x-signin'?: { provider?: string; flow?: 'browser' | 'device'; host?: string };
+  /** `server`: an installed connector (an MCP server in Hermes) signed in with OAuth through Hermes's own flow; `command` and `args`: a provider's own
+      sign-in command (`claude auth login`), run by the host exactly as the card shows it, as a program and its arguments, never through a shell */
+  'x-signin'?: { provider?: string; flow?: 'browser' | 'device' | 'cli'; host?: string; server?: string; command?: string; args?: readonly string[] };
 }
 export interface FormSchema { type?: 'object'; properties?: Readonly<Record<string, FieldSchema>>; required?: readonly string[] }
 /** a form as the card draws it */

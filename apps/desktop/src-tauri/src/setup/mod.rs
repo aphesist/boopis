@@ -72,8 +72,15 @@ pub struct Form {
     pub sensitive: bool,
     /// Always `host`.
     pub origin: String,
-    /// The exact configuration changes, for a `setup` form.
+    /// The exact configuration changes, for a `setup` or `connector` form.
     pub diff: Vec<DiffLine>,
+    /// What a `connector` form installs, as `[label, text]` rows: the command, the hosts it reaches, the licence.
+    #[serde(default)]
+    pub contents: Vec<(String, String)>,
+    /// The exact version or hash a `connector` form pins; `None` when nothing is pinned.
+    pub pinned: Option<String>,
+    /// What submitting does, in one sentence (a `connector` form).
+    pub effect: Option<String>,
 }
 
 impl Form {
@@ -92,6 +99,9 @@ impl Form {
             sensitive,
             origin: "host".to_owned(),
             diff: Vec::new(),
+            contents: Vec::new(),
+            pinned: None,
+            effect: None,
         }
     }
 }
