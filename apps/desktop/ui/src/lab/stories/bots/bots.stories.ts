@@ -14,7 +14,7 @@ const roster: Story = {
     typical: st(['typical'], {}, bots),
     'no bots': st(['empty', 'owner'], { bots: 'none' }, bots),
     'one bot': st(['single'], { bots: 'one' }, bots),
-    '120 bots, scrolling': st(['many', 'scroll'], { bots: 120 }, bots),
+    '120 bots, scrolling': st(['many', 'scroll'], { bots: 120 }, bots, { allow: { axe: 'axe-core reports label-content-name-mismatch (WCAG 2.5.3, R-a11y-1) only for the row that straddles the window\'s bottom edge (bot-017 at 1440 x 900, then bot-034 once scrolled); the same row, with the same name "bot-017, generated teammate 17, needs you" and the same visible words, passes when moved 100 px up, so it is the checker\'s clipping of a half-visible row and not the name, which holds every visible word in order (botLabel, R-a11y-1)' } }),
     'a long name and the made-outside mark': st(['long'], { fixtures: ['long', 'outside'] }, bots),
     'archived group open': st(['variant', 'open'], { fixtures: ['outside'] }, async (c) => { await bots(c); await c.click('.bt-archived .ui-group__head'); await c.wait(300); }),
     rail: st(['variant'], {}, async (c) => { await bots(c); c.hx.setState({ left: 'rail' }); await c.wait(500); }),
