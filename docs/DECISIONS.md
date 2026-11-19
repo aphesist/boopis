@@ -494,6 +494,24 @@ The decision of every `$` call is `policy.check` with the mod as principal; the 
 - Wire, folder and variable names change together: a build of one name cannot talk to the plugin of the other.
 - The logo is the product's mark in the app (`<boopis-logo>`, vendored), and the app icon has a light and a dark set (`apps/desktop/src-tauri/icons/`).
 
+## ADR-0029 The Claude subscription runs through the user's own Claude Code (owner decision)
+**Context.**
+- The owner wants boopis to run on a Claude Pro/Max subscription, and has decided it several times. Agents kept forgetting and re-raising Anthropic's rule against third-party apps offering claude.ai login.
+- Hermes's official plugin `claude-subscription-directsdk` (Nous Research, `hermes-official-plugins`, pinned in Hermes's plugin catalog) drives the **unmodified, official Claude Code executable**, which the user installed and signed in to themselves (`claude auth login`).
+  - The plugin has no credentials of its own and never opens, copies, refreshes or prints Claude Code's credential files.
+  - Hermes keeps its own agent loop, tools, approvals and compaction.
+- Anthropic's legal page does not prevent "an end user from signing in to the unmodified Claude Code binary with their own Claude subscription, including where a platform hosts Claude Code".
+
+**Decision.** boopis offers the Claude subscription as a model choice, through that plugin and the user's own Claude Code. **Owner decision, 2026-11-19. Settled: do not re-raise it.**
+- boopis never sees, stores, reads or forwards Claude credentials or session tokens. Authentication belongs to the `claude` CLI.
+- boopis never offers its own claude.ai login screen. It shows the user `claude auth login`, the official CLI's own login, and checks the result through the CLI.
+- The plugin is installed from Hermes's catalog, pinned, through Hermes (`hermes plugins install`). boopis does not vendor or modify it.
+- The ledger marks its usage `subscription: true` (LEDGER.md). Its native cost figure is a list-price estimate, never a charge.
+
+**Consequences.**
+- First-run setup and Settings → Models offer "Claude subscription (your Claude Code login)" when `claude` is installed, and say what is missing when it is not or is signed out.
+- Anthropic API keys, Bedrock, Vertex and Foundry stay available beside it.
+
 ## ADR-0012 Prices
 Prices come from the models.dev catalogue plus a user override table. Hermes's models.dev data is not reachable through its public plugin API, so:
 - the plugin reads a cached catalogue file, `<profile home>/hypotaxis/prices/models-dev.json`;

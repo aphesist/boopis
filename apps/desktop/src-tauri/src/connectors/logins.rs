@@ -132,16 +132,9 @@ mod tests {
     }
 
     #[test]
-    fn nothing_that_runs_arbitrary_programs_or_a_claude_subscription_is_in_it() {
+    fn nothing_that_runs_arbitrary_programs_is_in_it() {
         let t = LoginTable::shared();
         for l in t.all() {
-            assert!(
-                !l.program.contains("claude")
-                    && !l.id.contains("claude")
-                    && !l.id.contains("anthropic"),
-                "{}",
-                l.id
-            );
             assert!(
                 ![
                     "curl", "wget", "rm", "python", "python3", "node", "sh", "bash", "env"
