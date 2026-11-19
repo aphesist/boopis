@@ -82,6 +82,16 @@ export function createFormsHost(opts: FormsOptions): FormsHost {
     hooks.resolved(entry, status);
   }
 
+  function restore(gwSession: string, openRequests: unknown): void {
+    if (!Array.isArray(openRequests)) return;
+    for (const r of openRequests) {
+      const o = (r && typeof r === 'object' ? r : {}) as { id?: unknown; method?: unknown; params?: unknown };
+      if (typeof o.method !== 'string' || (typeof o.id !== 'string' && typeof o.id !== 'number')) continue;
+      const params = (o.params && typeof o.params === 'object' ? o.params : {}) as Record<string, unknown>;
+      add(fromServerRequest(o.method, o.id, { ...params, session_id: typeof params['session_id'] === 'string' ? params['session_id'] : gwSession }), gwSession);
+    }
+  }
+
   const source: FormsSource = {
     async submit(id: string, outcome: FormOutcome): Promise<void> {
       const entry = open.get(id);
@@ -163,6 +173,11 @@ export function createFormsHost(opts: FormsOptions): FormsHost {
           if (limit) { rememberLimit(limit); add(fromFreeTierLimit(limit, `${ctx.gwSession}:${String(ev.seq ?? Date.now())}`), ctx.gwSession); }
           return false;
         }
+        case 'connection.open_requests':
+          /* the host's replay after a lost link: what Hermes still has open (a prompt raised during the gap is only here).
+             `add` ignores an id already drawn or closed, so nothing is drawn twice. */
+          restore(ctx.gwSession, p['open_requests']);
+          return true;
         case 'request.cancel': {
           /* the gateway withdrew a request (it waited out its own deadline, the turn was interrupted, the session closed, or another
              window answered): the form closes. Only a string prompt this module drew is its to close. */
@@ -189,15 +204,7 @@ export function createFormsHost(opts: FormsOptions): FormsHost {
       add(model, model.source.sessionId);
       return ANSWER_LATER;
     },
-    restore(gwSession, openRequests) {
-      if (!Array.isArray(openRequests)) return;
-      for (const r of openRequests) {
-        const o = (r && typeof r === 'object' ? r : {}) as { id?: unknown; method?: unknown; params?: unknown };
-        if (typeof o.method !== 'string' || (typeof o.id !== 'string' && typeof o.id !== 'number')) continue;
-        const params = (o.params && typeof o.params === 'object' ? o.params : {}) as Record<string, unknown>;
-        add(fromServerRequest(o.method, o.id, { ...params, session_id: typeof params['session_id'] === 'string' ? params['session_id'] : gwSession }), gwSession);
-      }
-    }
+    restore
   };
 }
 

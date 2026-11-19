@@ -15,13 +15,17 @@ use std::process::{Child, Command, Stdio};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use async_trait::async_trait;
 use boopis_host::config::Limits;
-use boopis_host::endpoint::EndpointConfig;
+use boopis_host::endpoint::{Endpoint, EndpointConfig, EndpointKind};
 use boopis_host::error::{Error, Result};
+use boopis_host::gateway::link::{GatewayConn, Inbound};
+use boopis_host::gateway::oneshot::Link;
 use boopis_host::gateway::{FrameSink, Hub};
 use boopis_host::hermes::{Environment, Supervisor};
+use futures_util::StreamExt;
 use serde_json::{Value, json};
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 
 const WAIT: Duration = Duration::from_mins(1);
 
@@ -328,4 +332,155 @@ async fn the_proxy_drives_a_session_on_a_real_gateway() {
     let (after, _) = response(&mut a, 5).await;
     assert!(after["result"]["sessions"].is_array(), "{after}");
     hub.shutdown();
+}
+
+/// The real endpoint with a switch: `cut` ends the link the host holds (as a dropped network does, the gateway keeps
+/// running) and `hold` makes every dial fail until `release`.
+struct Flaky {
+    inner: Arc<dyn Endpoint>,
+    held: std::sync::atomic::AtomicBool,
+    cut: std::sync::Mutex<Option<oneshot::Sender<()>>>,
+}
+
+impl Flaky {
+    fn hold(&self) {
+        self.held.store(true, std::sync::atomic::Ordering::SeqCst);
+        if let Some(cut) = self.cut.lock().unwrap().take() {
+            let _ = cut.send(());
+        }
+    }
+    fn release(&self) {
+        self.held.store(false, std::sync::atomic::Ordering::SeqCst);
+    }
+}
+
+#[async_trait]
+impl Endpoint for Flaky {
+    fn kind(&self) -> EndpointKind {
+        self.inner.kind()
+    }
+    async fn connect(&self) -> Result<GatewayConn> {
+        if self.held.load(std::sync::atomic::Ordering::SeqCst) {
+            return Err(Error::Unavailable("the link is held down".into()));
+        }
+        let conn = self.inner.connect().await?;
+        let (tx, rx) = oneshot::channel();
+        *self.cut.lock().unwrap() = Some(tx);
+        let ended = futures_util::stream::once(async { Ok(Inbound::Closed) });
+        Ok(GatewayConn {
+            rx: Box::pin(conn.rx.take_until(rx).chain(ended)),
+            tx: conn.tx,
+            attach: conn.attach,
+        })
+    }
+}
+
+const SKILL: &str = "---\nname: needs-token\ndescription: A skill that cannot run without a token\nrequired_environment_variables:\n  - name: BOOPIS_TEST_TOKEN\n    prompt: Enter the test token\n---\n# needs-token\n\nSay that the token is set.\n";
+
+/// A prompt Hermes raises while the host's link is down is not in the replay ring: the gateway reports it as
+/// `open_requests`, and the host hands it to the window after the reconnect.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_prompt_raised_while_the_link_is_down_reaches_the_window_after_the_reconnect() {
+    let Some(stack) = start_stack() else {
+        eprintln!(
+            "skipped: set HX_E2E_HERMES_ENV to the spike install to run against a real Hermes gateway"
+        );
+        return;
+    };
+    let skill = PathBuf::from(s(&stack.info["home"])).join("skills/needs-token");
+    std::fs::create_dir_all(&skill).unwrap();
+    std::fs::write(skill.join("SKILL.md"), SKILL).unwrap();
+    let sup = supervisor(&stack);
+    let limits = Limits::default();
+    let inner = EndpointConfig::Local { profile: None }
+        .build(&sup, &limits)
+        .unwrap();
+    let flaky = Arc::new(Flaky {
+        inner: inner.clone(),
+        held: false.into(),
+        cut: std::sync::Mutex::new(None),
+    });
+    let hub = Hub::new(flaky.clone(), limits);
+    let (tx, mut a) = mpsc::unbounded_channel();
+    hub.open(1, Arc::new(Collect(tx)), WAIT).await.unwrap();
+    let workdir = s(&stack.info["workdir"]);
+    hub.send(1, json!({"jsonrpc":"2.0","id":2,"method":"session.create","params":{"source":"gui","cwd":workdir,"model":"fake-a","provider":"main"}})).await.unwrap();
+    let (created, _) = response(&mut a, 2).await;
+    let session = s(&created["result"]["session_id"]);
+
+    // The link goes down and stays down; the gateway keeps running.
+    flaky.hold();
+    loop {
+        let v = next(&mut a).await;
+        if v["params"]["type"] == "connection.state"
+            && v["params"]["payload"]["state"] == "degraded"
+        {
+            break;
+        }
+    }
+    // Meanwhile the session's turn needs a token: nobody is attached, so the request waits on the gateway.
+    let mut other = Link::open(&*inner, true, limits_frame(), WAIT)
+        .await
+        .unwrap();
+    let text = "@@call skill_view {\"name\": \"needs-token\"}@@ @@reply done@@";
+    // (this link takes the session over as a second window would, and never answers what it is asked)
+    other
+        .call("client.capabilities", &json!({"server_requests": true}))
+        .await
+        .unwrap();
+    other
+        .call("session.resume", &json!({"session_id": session}))
+        .await
+        .unwrap();
+    other
+        .call(
+            "prompt.submit",
+            &json!({"session_id":session,"text":text,"submission_id":"sub-gap-1"}),
+        )
+        .await
+        .unwrap();
+    let deadline = Instant::now() + Duration::from_mins(1);
+    loop {
+        let r = other
+            .call(
+                "session.events.since",
+                &json!({"session_id":session,"last_seen":0}),
+            )
+            .await
+            .unwrap();
+        if r["open_requests"].as_array().is_some_and(|o| !o.is_empty()) {
+            assert_eq!(r["open_requests"][0]["method"], "secret", "{r}");
+            break;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "the gateway never raised the prompt"
+        );
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+
+    // The link returns: the window is told about the prompt, once, after the state frame.
+    flaky.release();
+    let mut ready = false;
+    let found = loop {
+        let v = next(&mut a).await;
+        match v["params"]["type"].as_str() {
+            Some("connection.state") if v["params"]["payload"]["state"] == "ready" => ready = true,
+            Some("connection.open_requests") => break v,
+            _ => {}
+        }
+    };
+    assert!(ready, "the prompt came after the link was ready again");
+    assert_eq!(found["params"]["session_id"], session.as_str());
+    let open = &found["params"]["payload"]["open_requests"];
+    assert_eq!(open.as_array().unwrap().len(), 1, "{found}");
+    assert_eq!(open[0]["method"], "secret");
+    assert!(open[0]["id"].as_str().unwrap().starts_with("srq-"));
+    assert_eq!(open[0]["params"]["env_var"], "BOOPIS_TEST_TOKEN");
+    drop(other);
+    hub.shutdown();
+}
+
+fn limits_frame() -> usize {
+    Limits::default().max_inbound_frame
 }

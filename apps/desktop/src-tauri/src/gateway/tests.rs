@@ -388,6 +388,66 @@ async fn a_lost_link_fails_pending_requests_and_the_host_reconnects_and_replays(
 }
 
 #[tokio::test]
+async fn a_replay_tells_the_ui_what_hermes_still_has_open() {
+    let mut r = rig();
+    let (mut ui, gw) = r.open(1).await;
+    let gw = gw.unwrap();
+    let _ = ui.next_data().await;
+    gw.send(&json!({"jsonrpc":"2.0","method":"event","params":{"type":"message.delta","session_id":"s1","payload":{"text":"1"},"replay_epoch":"e1","seq":1}}));
+    ui.next_data().await;
+    gw.drop_link();
+    ui.state("degraded").await;
+    let mut gw2 = r.gateway().await;
+    gw2.handshake().await;
+    let replay = gw2.recv().await;
+    assert_eq!(replay["method"], "session.events.since");
+    // A prompt raised during the gap: the ring has nothing of it, Hermes reports it apart.
+    let open =
+        json!([{"id":"srq-a1","method":"sudo","params":{"session_id":"s1","command":"sudo ls"}}]);
+    gw2.send(&json!({"jsonrpc":"2.0","id":replay["id"],"result":{"events":[
+        {"type":"message.delta","session_id":"s1","payload":{"text":"2"},"replay_epoch":"e1","seq":2}],
+        "latest_seq":2,"truncated":false,"count":1,"epoch":"e1","open_requests":open}}));
+    let mut seen = Vec::new();
+    while seen.len() < 2 {
+        let v = ui.next().await;
+        if v["params"]["session_id"] == "s1" {
+            seen.push(v);
+        }
+    }
+    assert_eq!(seen[0]["params"]["type"], "message.delta");
+    // After the events, in the host's own namespace, routed to the session, with Hermes's entries untouched.
+    assert_eq!(seen[1]["params"]["type"], "connection.open_requests");
+    assert_eq!(seen[1]["params"]["payload"]["open_requests"], open);
+}
+
+#[tokio::test]
+async fn a_replay_with_nothing_open_sends_no_open_requests_event() {
+    let mut r = rig();
+    let (mut ui, gw) = r.open(1).await;
+    let gw = gw.unwrap();
+    let _ = ui.next_data().await;
+    gw.send(&json!({"jsonrpc":"2.0","method":"event","params":{"type":"message.delta","session_id":"s1","payload":{"text":"1"},"replay_epoch":"e1","seq":1}}));
+    ui.next_data().await;
+    gw.drop_link();
+    ui.state("degraded").await;
+    let mut gw2 = r.gateway().await;
+    gw2.handshake().await;
+    let replay = gw2.recv().await;
+    gw2.send(&json!({"jsonrpc":"2.0","id":replay["id"],"result":{"events":[
+        {"type":"message.complete","session_id":"s1","payload":{"text":"1"},"replay_epoch":"e1","seq":2}],
+        "latest_seq":2,"truncated":false,"count":1,"epoch":"e1","open_requests":[]}}));
+    gw2.send(&json!({"jsonrpc":"2.0","method":"event","params":{"type":"session.usage","session_id":"s1","payload":{},"replay_epoch":"e1","seq":3}}));
+    let mut types = Vec::new();
+    while types.len() < 2 {
+        let v = ui.next().await;
+        if v["params"]["session_id"] == "s1" {
+            types.push(v["params"]["type"].as_str().unwrap().to_owned());
+        }
+    }
+    assert_eq!(types, ["message.complete", "session.usage"]);
+}
+
+#[tokio::test]
 async fn an_incompatible_gateway_parks_until_retry() {
     let mut r = rig();
     r.endpoint

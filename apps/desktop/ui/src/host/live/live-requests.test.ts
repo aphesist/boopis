@@ -211,6 +211,31 @@ describe('a resumed session', () => {
   });
 });
 
+describe('the link returns', () => {
+  /* the host's replay tells the UI what Hermes still has open, after the events it replays */
+  const replayed = (open: unknown[]): void => { host.event('connection.open_requests', SID, { open_requests: open }, 0); };
+  it('draws a prompt raised while the link was down, once, and leaves the form already on screen alone', async () => {
+    request('srq-a1', 'sudo', { command: 'sudo ls' });
+    const entry = [
+      { id: 'srq-a1', method: 'sudo', params: { session_id: SID, command: 'sudo ls' } },
+      { id: 'srq-b2', method: 'secret', params: { session_id: SID, env_var: 'GITHUB_TOKEN', prompt: 'p' } },
+      { id: 'srq-c3', method: 'clarify', params: { session_id: SID, questions: [] } }
+    ];
+    replayed(entry);
+    replayed(entry);
+    expect(forms().map((w) => w.id)).toEqual(['srq-a1', 'srq-b2']);
+    expect(conv.filter((e) => e.type === 'form-opened').map((e) => (e.type === 'form-opened' ? e.form.id : ''))).toEqual(['srq-a1', 'srq-b2']);
+    await provider.forms.submit('srq-b2', { values: {}, secrets: { value: SECRET } });
+    expect(responses()).toEqual([{ jsonrpc: '2.0', id: 'srq-b2', result: { value: SECRET } }]);
+  });
+  it('does not draw again a prompt that was answered or withdrawn before the replay', async () => {
+    request('srq-a1', 'sudo', { command: 'sudo ls' });
+    await provider.forms.cancel('srq-a1');
+    replayed([{ id: 'srq-a1', method: 'sudo', params: { session_id: SID, command: 'sudo ls' } }]);
+    expect(forms()).toEqual([]);
+  });
+});
+
 describe('nothing keeps what was typed', () => {
   it('is in no state the app holds after a submit: not the waits, not the turns, not the log, not another frame', async () => {
     request('srq-a1', 'secret', { env_var: 'GITHUB_TOKEN', prompt: 'p' });

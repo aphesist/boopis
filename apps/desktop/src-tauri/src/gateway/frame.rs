@@ -183,6 +183,13 @@ pub fn host_event(kind: &str, payload: &serde_json::Value) -> String {
     serde_json::json!({"jsonrpc": "2.0", "method": "event", "params": {"type": kind, "session_id": "", "payload": payload}}).to_string()
 }
 
+/// A host-made event about one session (type namespace `connection.`): like [`host_event`], with the session's id in the envelope
+/// so the UI routes it to that session.
+#[must_use]
+pub fn host_session_event(kind: &str, session: &str, payload: &serde_json::Value) -> String {
+    serde_json::json!({"jsonrpc": "2.0", "method": "event", "params": {"type": kind, "session_id": session, "payload": payload}}).to_string()
+}
+
 /// An error response to a UI request that cannot be forwarded.
 #[must_use]
 pub fn error_response(id: &Id, code: &str, message: &str) -> String {

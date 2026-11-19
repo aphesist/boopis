@@ -96,6 +96,7 @@ class HermesStack:
         model_url: str,
         plugin_settings: Mapping[str, Any] | None = None,
         extra_config: Mapping[str, Any] | None = None,
+        host_env: Mapping[str, str] | None = None,
     ) -> None:
         self.install = install
         self.root = root
@@ -104,6 +105,9 @@ class HermesStack:
         self.extra_config = dict(extra_config or {})
         self.home = root / "hermes-home"
         self.workdir = root / "work"
+        # What the real host puts in the environment of the gateway it starts (its secret channel): set before ``start``, which
+        # is what launches the gateway, so that gateway has it.
+        self.host_env = dict(host_env or {})
         self.started = False
 
     @property
@@ -128,7 +132,7 @@ class HermesStack:
                 "UV_PYTHON_INSTALL_DIR": str(spike / "uv-python"),
                 "UV_CACHE_DIR": str(spike / "uv-cache"),
             }
-        return {**base, **extra}
+        return {**base, **extra, **self.host_env}
 
     def config(self) -> dict[str, Any]:
         provider = {

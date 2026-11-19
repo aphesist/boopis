@@ -230,12 +230,12 @@ def forms_scenario(install: Any, tmp: Path, url: str) -> None:
     """The agent asks for a key and puts a question; the UI answers both with ``form.submit`` (the key named in
     ``provided``, never in a value) and cancels a third. Records the ``form.opened`` and ``form.resolved`` events and
     the RPC."""
-    stack = HermesStack(install, tmp, url, {"hx_path": HX}, {})
-    stack.start()
-    host = FakeHostSecrets(stack.home)
-    gateway_env = {**stack.env, **host.start()}  # the gateway the client starts below is the one handed the channel
+    host = FakeHostSecrets(tmp / "hermes-home")
+    # As the real host does: the channel exists first and its environment goes to the gateway that `stack.start` launches
+    stack = HermesStack(install, tmp, url, {"hx_path": HX}, {}, host_env=host.start())
     try:
-        gw = GatewayClient(hermes_bin=str(install.hermes), env=gateway_env, frames_log=tmp / "frames.jsonl")
+        stack.start()
+        gw = GatewayClient(hermes_bin=str(install.hermes), env=stack.env, frames_log=tmp / "frames.jsonl")
         gw.connect()
         gw.handshake()
         proj = make_project(tmp)

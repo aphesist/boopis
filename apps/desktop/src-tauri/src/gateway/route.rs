@@ -152,6 +152,20 @@ impl Shared {
                 self.broadcast(st, &frame, None);
             }
         }
+        // The ring cannot carry "a question still waiting": Hermes reports those apart, as `open_requests`. The UI is told
+        // (it draws the ones it has not drawn); a request Hermes withdrew meanwhile is a `request.cancel` in the events above.
+        if let Some(open) = result
+            .get("open_requests")
+            .filter(|o| o.as_array().is_some_and(|a| !a.is_empty()))
+        {
+            let frame: Arc<str> = frame::host_session_event(
+                "connection.open_requests",
+                session,
+                &serde_json::json!({"open_requests": open}),
+            )
+            .into();
+            self.broadcast(st, &frame, None);
+        }
         let epoch = result
             .get("epoch")
             .and_then(|e| e.as_str())
