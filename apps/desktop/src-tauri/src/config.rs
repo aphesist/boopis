@@ -30,6 +30,26 @@ pub struct Limits {
     pub backoff_max: std::time::Duration,
     /// Events the host replays per session after a reconnect, at most.
     pub replay_sessions: usize,
+    /// How long a connector's OAuth sign-in waits for the browser before the host cancels it. Hermes's own callback
+    /// window is `oauth.timeout` (300 s by default); the host's is a little longer so Hermes ends it first, in words.
+    pub connector_signin_timeout: std::time::Duration,
+    /// How long a restart waits for the old gateway to stop answering before it starts the new one.
+    pub gateway_stop_wait: std::time::Duration,
+    /// How long a sign-in start is retried while Hermes still counts the one just cancelled as open (its worker ends a moment
+    /// after the cancel).
+    pub connector_start_wait: std::time::Duration,
+    /// How often a restart that waits for idle sessions asks whether any has a turn running.
+    pub restart_poll_every: std::time::Duration,
+    /// The longest such a restart waits before it gives up and says so.
+    pub restart_wait_max: std::time::Duration,
+    /// How often the host asks Hermes how a sign-in stands.
+    pub connector_poll_every: std::time::Duration,
+    /// How long a provider's own `login` command may run.
+    pub login_timeout: std::time::Duration,
+    /// The most output kept from a `login` command, per stream.
+    pub login_output_cap: usize,
+    /// The last lines of its output shown to the user.
+    pub login_output_lines: usize,
 }
 
 impl Default for Limits {
@@ -48,6 +68,15 @@ impl Default for Limits {
             backoff_first: Duration::from_millis(400),
             backoff_max: Duration::from_secs(15),
             replay_sessions: 64,
+            connector_signin_timeout: Duration::from_secs(330),
+            gateway_stop_wait: Duration::from_secs(20),
+            connector_start_wait: Duration::from_secs(10),
+            restart_poll_every: Duration::from_secs(5),
+            restart_wait_max: Duration::from_hours(8),
+            connector_poll_every: Duration::from_secs(1),
+            login_timeout: Duration::from_mins(5),
+            login_output_cap: 64 * 1024,
+            login_output_lines: 30,
         }
     }
 }

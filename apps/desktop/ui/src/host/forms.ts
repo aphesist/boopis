@@ -344,3 +344,33 @@ export function answerFor(form: FormModel, outcome: { cancelled: true } | { canc
     case 'vault.code': return { value: secret('code').replace(/[\s-]/g, '') };
   }
 }
+
+/* ───────── connectors (docs/CONNECTORS.md, docs/FORMS.md): the host's install forms ───────── */
+type HostFormIn = Parameters<typeof fromHostForm>[0];
+export interface ConnectorFormIn extends HostFormIn { contents?: ReadonlyArray<readonly [string, string]>; pinned?: string | null; effect?: string | null }
+
+/** A `connector` form of the host: the card draws what will be added (the rows, the pinned version, the config diff) before its
+    fields. The submit says outright whether it is a hold (the review is; the questions before it are not), so the kind's
+    default never decides it. Answered by the connectors view, which gives the card its own answer sink. */
+export function fromConnectorForm(f: ConnectorFormIn): FormModel {
+  const base = fromHostForm(f);
+  const hold = obj(f.submit)['hold'] === true;
+  const spec: FormSpec = {
+    ...base.spec,
+    submit: { ...(base.spec.submit ?? {}), hold },
+    ...(f.contents?.length ? { contents: f.contents.map(([a, b]) => [a, b] as const) } : {}),
+    ...(f.pinned ? { pinned: f.pinned } : {}),
+    ...(f.effect ? { effect: f.effect } : {})
+  };
+  return { ...base, hold, spec };
+}
+
+/** The sign-in card shown after an install that needs one, or from the connector list: one `x-signin` field naming the server. */
+export function connectorSigninForm(server: string, provider: string, host: string): FormModel {
+  const id = 'connector.signin.' + server;
+  const title = 'Sign in to ' + provider;
+  const body = 'Hermes signs in for you: it opens ' + host + ' in your browser and keeps the tokens in its own store. boopis never sees them.';
+  const schema = { properties: { signin: { 'x-signin': { provider, flow: 'browser', host, server } } }, required: ['signin'] };
+  const spec = buildSpec({ id, kind: 'signin', title, body, schema, submit: { label: 'Sign in' }, cancel: { label: 'Not now' }, origin: { kind: 'host' }, defer: false });
+  return { id, kind: 'signin', title, body, fields: [], submitLabel: 'Sign in', cancelLabel: 'Not now', hold: false, sensitive: false, origin: 'host', diff: [], source: { kind: 'host' }, spec: { ...spec, provider } };
+}

@@ -28,6 +28,17 @@ const COMMANDS: &[&str] = &[
     "renderer_report",
     "renderer_open_gpu_page",
     "app_restart",
+    "connector_catalog",
+    "connector_inputs",
+    "connector_review",
+    "connector_install",
+    "connector_list",
+    "connector_test",
+    "connector_set_enabled",
+    "connector_remove",
+    "connector_signin",
+    "connector_signin_cancel",
+    "connector_login",
 ];
 
 fn main() {

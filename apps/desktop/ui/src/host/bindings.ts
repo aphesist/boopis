@@ -75,6 +75,41 @@ export const commands = {
 	 *  shared memory), the EGL and GL vendor, and the acceleration policy. The window has no access to the host's commands.
 	 */
 	rendererOpenGpuPage: (options?: InvokeOptions) => __TAURI_INVOKE<null>("renderer_open_gpu_page", undefined, options),
+	/**  The curated collection, for the picker. Data compiled into the app; asks Hermes nothing. */
+	connectorCatalog: (options?: InvokeOptions) => __TAURI_INVOKE<ConnectorCatalogEntry_Serialize[]>("connector_catalog", undefined, options),
+	/**
+	 *  The form that asks for a source's inputs: a URL, a command, or the setup values of a collection entry
+	 *  (`connector` and `variant` name it). Nothing is validated or sent anywhere yet.
+	 */
+	connectorInputs: (source: ConnectorSource, connector: string | null, variant: string | null, options?: InvokeOptions) => __TAURI_INVOKE<Form_Serialize>("connector_inputs", { source, connector, variant }, options),
+	/**
+	 *  What an install would add, exactly: the review form (command and arguments, the hosts it reaches, the pin, the keys it
+	 *  needs, the config diff) and the hash the install must name. Validates the request; changes nothing.
+	 */
+	connectorReview: (profile: string | null, request: ConnectorRequest, options?: InvokeOptions) => __TAURI_INVOKE<ConnectorReview_Serialize>("connector_review", { profile, request }, options),
+	/**  Install what the review showed. `secrets` carries the key fields' values to the keychain and no further. */
+	connectorInstall: (profile: string | null, request: ConnectorRequest, planHash: string, secrets: { [key in string]: string }, restart: ConnectorRestart | null, options?: InvokeOptions) => __TAURI_INVOKE<ConnectorInstall_Serialize>("connector_install", { profile, request, planHash, secrets, restart }, options),
+	/**  The MCP servers Hermes has, with their state and the keychain references boopis holds for each. */
+	connectorList: (profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<ConnectorInfo_Serialize[]>("connector_list", { profile }, options),
+	/**  Ask Hermes to connect to a server and list its tools. */
+	connectorTest: (profile: string | null, name: string, options?: InvokeOptions) => __TAURI_INVOKE<ConnectorTest_Serialize>("connector_test", { profile, name }, options),
+	/**  Switch a server on or off, through Hermes. */
+	connectorSetEnabled: (profile: string | null, name: string, enabled: boolean, options?: InvokeOptions) => __TAURI_INVOKE<null>("connector_set_enabled", { profile, name, enabled }, options),
+	/**  Remove a server through Hermes. `delete_credentials` is the user's agreement to delete the keys boopis holds for it. */
+	connectorRemove: (profile: string | null, name: string, deleteCredentials: boolean, options?: InvokeOptions) => __TAURI_INVOKE<ConnectorRemoval>("connector_remove", { profile, name, deleteCredentials }, options),
+	/**
+	 *  Sign in to a remote server with OAuth, through Hermes's own flow (its listener, its token store). Resolves when the
+	 *  sign-in ends; `connector_signin_cancel` ends it early.
+	 */
+	connectorSignin: (profile: string | null, name: string, options?: InvokeOptions) => __TAURI_INVOKE<ConnectorSignIn_Serialize>("connector_signin", { profile, name }, options),
+	/**  Cancel an open sign-in to `name`. */
+	connectorSigninCancel: (profile: string | null, name: string, options?: InvokeOptions) => __TAURI_INVOKE<null>("connector_signin_cancel", { profile, name }, options),
+	/**
+	 *  Run a provider's own sign-in command, by **provider id**: the host maps the id to a program and argument vector of its own
+	 *  (`apps/shared/data/logins.json`, or the named collection entry's reviewed `login`) and never runs what a form's schema says.
+	 *  An id outside the table is refused. Reports the exit status and the end of the output.
+	 */
+	connectorLogin: (provider: string, connector: string | null, options?: InvokeOptions) => __TAURI_INVOKE<ConnectorLogin_Serialize>("connector_login", { provider, connector }, options),
 	/**
 	 *  Restart the app, so the choices read at startup (the GPU, `BOOPIS_FPS`, the renderer) apply. The webview's GPU is
 	 *  fixed when the process starts; this is the only way to change it.
@@ -85,6 +120,7 @@ export const commands = {
 /** Events */
 export const events = {
 	connectionStateEvent: makeEvent<ConnectionStateEvent_Serialize, ConnectionStateEvent_Deserialize>("connection-state-event"),
+	connectorRestartEvent: makeEvent<ConnectorRestartEvent, ConnectorRestartEvent>("connector-restart-event"),
 	setupProgress: makeEvent<SetupProgress, SetupProgress>("setup-progress"),
 };
 
@@ -188,6 +224,363 @@ export type ConnectionStateEvent_Serialize = {
 	error: HostError | null,
 };
 
+/**  What the picker shows of a connector. */
+export type ConnectorCatalogEntry = ConnectorCatalogEntry_Serialize | ConnectorCatalogEntry_Deserialize;
+
+/**  What the picker shows of a connector. */
+export type ConnectorCatalogEntry_Deserialize = {
+	/**  The id. */
+	id: string,
+	/**  The name. */
+	name: string,
+	/**  The publisher. */
+	publisher: string,
+	/**  One line. */
+	description: string,
+	/**  The licence. */
+	license: string,
+	/**  The date it was checked against the publisher's sources. */
+	verified: string,
+	/**  The ways to run it, the default first. */
+	variants: ConnectorCatalogVariant_Deserialize[],
+};
+
+/**  What the picker shows of a connector. */
+export type ConnectorCatalogEntry_Serialize = {
+	/**  The id. */
+	id: string,
+	/**  The name. */
+	name: string,
+	/**  The publisher. */
+	publisher: string,
+	/**  One line. */
+	description: string,
+	/**  The licence. */
+	license: string,
+	/**  The date it was checked against the publisher's sources. */
+	verified: string,
+	/**  The ways to run it, the default first. */
+	variants: ConnectorCatalogVariant_Serialize[],
+};
+
+/**  One way to run it, as the picker shows it. */
+export type ConnectorCatalogVariant = ConnectorCatalogVariant_Serialize | ConnectorCatalogVariant_Deserialize;
+
+/**  One way to run it, as the picker shows it. */
+export type ConnectorCatalogVariant_Deserialize = {
+	/**  The id. */
+	id: string,
+	/**  The label. */
+	label: string,
+	/**  One line. */
+	summary: string,
+	/**  What it reaches. */
+	reaches: string,
+	/**  `package@version` for a program that runs here; `None` when hosted. */
+	pinned?: string | null,
+	/**  Whether this is the default way. */
+	default: boolean,
+};
+
+/**  One way to run it, as the picker shows it. */
+export type ConnectorCatalogVariant_Serialize = {
+	/**  The id. */
+	id: string,
+	/**  The label. */
+	label: string,
+	/**  One line. */
+	summary: string,
+	/**  What it reaches. */
+	reaches: string,
+	/**  `package@version` for a program that runs here; `None` when hosted. */
+	pinned: string | null,
+	/**  Whether this is the default way. */
+	default: boolean,
+};
+
+/**  One MCP server as Hermes reports it: its configuration without secret values, and its runtime state. */
+export type ConnectorInfo = ConnectorInfo_Serialize | ConnectorInfo_Deserialize;
+
+/**  One MCP server as Hermes reports it: its configuration without secret values, and its runtime state. */
+export type ConnectorInfo_Deserialize = {
+	/**  The name in `mcp_servers`. */
+	name: string,
+	/**  `stdio`, `http` or `sse`, as Hermes says it. */
+	transport: string,
+	/**  The URL of a remote server. */
+	url?: string | null,
+	/**  The program of a local one. */
+	command?: string | null,
+	/**  Its arguments. */
+	args: string[],
+	/**  The names of its environment variables (Hermes never lists the values). */
+	env: string[],
+	/**  `oauth` when it signs in through Hermes. */
+	auth?: string | null,
+	/**  Whether Hermes holds OAuth tokens for it; `None` when it does not use OAuth. */
+	oauth_tokens_present?: boolean | null,
+	/**  Whether it is switched on. */
+	enabled: boolean,
+	/**  The plugin that provides it, when one does (then it cannot be changed here). */
+	plugin?: string | null,
+	/**  `connected`, `disabled`, `connecting`, `failed`, `lazy`, `configured` or `unknown`. */
+	status: string,
+	/**  How many tools it has, when Hermes knows. */
+	tools?: number | null,
+	/**  Hermes parked it on a rejected sign-in. */
+	needs_auth: boolean,
+	/**  The keychain references boopis holds for it (`secret://connector.<name>/...`), never values. */
+	secrets: string[],
+};
+
+/**  One MCP server as Hermes reports it: its configuration without secret values, and its runtime state. */
+export type ConnectorInfo_Serialize = {
+	/**  The name in `mcp_servers`. */
+	name: string,
+	/**  `stdio`, `http` or `sse`, as Hermes says it. */
+	transport: string,
+	/**  The URL of a remote server. */
+	url: string | null,
+	/**  The program of a local one. */
+	command: string | null,
+	/**  Its arguments. */
+	args: string[],
+	/**  The names of its environment variables (Hermes never lists the values). */
+	env: string[],
+	/**  `oauth` when it signs in through Hermes. */
+	auth: string | null,
+	/**  Whether Hermes holds OAuth tokens for it; `None` when it does not use OAuth. */
+	oauth_tokens_present: boolean | null,
+	/**  Whether it is switched on. */
+	enabled: boolean,
+	/**  The plugin that provides it, when one does (then it cannot be changed here). */
+	plugin: string | null,
+	/**  `connected`, `disabled`, `connecting`, `failed`, `lazy`, `configured` or `unknown`. */
+	status: string,
+	/**  How many tools it has, when Hermes knows. */
+	tools: number | null,
+	/**  Hermes parked it on a rejected sign-in. */
+	needs_auth: boolean,
+	/**  The keychain references boopis holds for it (`secret://connector.<name>/...`), never values. */
+	secrets: string[],
+};
+
+/**  What an install did. */
+export type ConnectorInstall = ConnectorInstall_Serialize | ConnectorInstall_Deserialize;
+
+/**  What an install did. */
+export type ConnectorInstall_Deserialize = {
+	/**  The name it was installed under. */
+	name: string,
+	/**  What happened, step by step. */
+	steps: Step_Deserialize[],
+	/**  The connection test Hermes ran; `None` when the install stopped before it. */
+	test?: ConnectorTest_Deserialize | null,
+	/**  The server needs the user to sign in (OAuth); the UI shows the sign-in form next. */
+	signin_needed: boolean,
+	/**  Hermes was restarted to read the keys. */
+	restarted: boolean,
+	/**  The restart waits until no session has a turn running; the host does it then and says so. */
+	restart_pending: boolean,
+	/**  Plain lines the user should know. */
+	notes: string[],
+};
+
+/**  What an install did. */
+export type ConnectorInstall_Serialize = {
+	/**  The name it was installed under. */
+	name: string,
+	/**  What happened, step by step. */
+	steps: Step_Serialize[],
+	/**  The connection test Hermes ran; `None` when the install stopped before it. */
+	test: ConnectorTest_Serialize | null,
+	/**  The server needs the user to sign in (OAuth); the UI shows the sign-in form next. */
+	signin_needed: boolean,
+	/**  Hermes was restarted to read the keys. */
+	restarted: boolean,
+	/**  The restart waits until no session has a turn running; the host does it then and says so. */
+	restart_pending: boolean,
+	/**  Plain lines the user should know. */
+	notes: string[],
+};
+
+/**  What a provider's `login` command did. */
+export type ConnectorLogin = ConnectorLogin_Serialize | ConnectorLogin_Deserialize;
+
+/**  What a provider's `login` command did. */
+export type ConnectorLogin_Deserialize = {
+	/**  The command line exactly as it ran (display only: it ran as a vector). */
+	command_line: string,
+	/**  It exited with 0. */
+	ok: boolean,
+	/**  The exit code; `None` when it was stopped by a signal or the timeout. */
+	code?: number | null,
+	/**  It was stopped for running too long. */
+	timed_out: boolean,
+	/**  The last lines of its output, with anything that reads as a credential masked. */
+	output: string[],
+};
+
+/**  What a provider's `login` command did. */
+export type ConnectorLogin_Serialize = {
+	/**  The command line exactly as it ran (display only: it ran as a vector). */
+	command_line: string,
+	/**  It exited with 0. */
+	ok: boolean,
+	/**  The exit code; `None` when it was stopped by a signal or the timeout. */
+	code: number | null,
+	/**  It was stopped for running too long. */
+	timed_out: boolean,
+	/**  The last lines of its output, with anything that reads as a credential masked. */
+	output: string[],
+};
+
+/**  What a removal did. */
+export type ConnectorRemoval = {
+	/**  The name removed. */
+	name: string,
+	/**  Keychain entries deleted (references, never values). */
+	deleted_credentials: string[],
+	/**  Keychain entries kept, because the user did not agree to delete them. */
+	kept_credentials: string[],
+	/**  Plain lines. */
+	notes: string[],
+};
+
+/**
+ *  What the user chose: the form's values, by field name, all text. The host reads them (the fields are the ones
+ *  [`inputs_form`] defines) and validates every one.
+ */
+export type ConnectorRequest = {
+	/**  Which kind. */
+	source: ConnectorSource,
+	/**  The values. */
+	values: { [key in string]: string },
+};
+
+/**  When Hermes restarts to read a key that was just given. */
+export type ConnectorRestart = 
+/**  At once, ending any turn that is running in an open session. */
+"now" | 
+/**  When no session has a turn running; the host waits and then restarts. */
+"when_idle";
+
+/**  A restart that waited for idle sessions has ended: Hermes read the key (or could not be restarted). The app shows it as a notice. */
+export type ConnectorRestartEvent = {
+	/**  The connectors that were waiting for it. */
+	names: string[],
+	/**  Hermes restarted and read their keys. */
+	ok: boolean,
+	/**  What to tell the user, including each connector's connection test. */
+	message: string,
+};
+
+/**  A plan the host shows: the review form and the hash to send back with the install. */
+export type ConnectorReview = ConnectorReview_Serialize | ConnectorReview_Deserialize;
+
+/**  A plan the host shows: the review form and the hash to send back with the install. */
+export type ConnectorReview_Deserialize = {
+	/**  The install form. */
+	form: Form_Deserialize,
+	/**  What the install must name, so what is installed is what was shown. */
+	plan_hash: string,
+	/**  The name it will be installed under. */
+	name: string,
+};
+
+/**  A plan the host shows: the review form and the hash to send back with the install. */
+export type ConnectorReview_Serialize = {
+	/**  The install form. */
+	form: Form_Serialize,
+	/**  What the install must name, so what is installed is what was shown. */
+	plan_hash: string,
+	/**  The name it will be installed under. */
+	name: string,
+};
+
+/**  What a sign-in did. */
+export type ConnectorSignIn = ConnectorSignIn_Serialize | ConnectorSignIn_Deserialize;
+
+/**  What a sign-in did. */
+export type ConnectorSignIn_Deserialize = {
+	/**  The server. */
+	name: string,
+	/**  Where the tokens are: Hermes's own store. */
+	stored: string,
+	/**  The tools Hermes found once signed in. */
+	tools: string[],
+	/**  The connection test afterwards. */
+	test?: ConnectorTest_Deserialize | null,
+};
+
+/**  What a sign-in did. */
+export type ConnectorSignIn_Serialize = {
+	/**  The server. */
+	name: string,
+	/**  Where the tokens are: Hermes's own store. */
+	stored: string,
+	/**  The tools Hermes found once signed in. */
+	tools: string[],
+	/**  The connection test afterwards. */
+	test: ConnectorTest_Serialize | null,
+};
+
+/**  Where a connector comes from. */
+export type ConnectorSource = 
+/**  The curated collection. */
+"catalog" | 
+/**  A remote server, by URL. */
+"url" | 
+/**  A local program. */
+"command";
+
+/**  What a connection test found. The error text is Hermes's, with credentials already masked by Hermes. */
+export type ConnectorTest = ConnectorTest_Serialize | ConnectorTest_Deserialize;
+
+/**  What a connection test found. The error text is Hermes's, with credentials already masked by Hermes. */
+export type ConnectorTest_Deserialize = {
+	/**  It connected and listed its tools. */
+	ok: boolean,
+	/**  The tools. */
+	tools: ConnectorTool[],
+	/**  Why not. */
+	error?: string | null,
+	/**  Prompts, when counted. */
+	prompts?: number | null,
+	/**  Resources, when counted. */
+	resources?: number | null,
+	/**  The server uses OAuth. */
+	oauth_needed: boolean,
+	/**  Hermes holds no token for it yet. */
+	signin_needed: boolean,
+};
+
+/**  What a connection test found. The error text is Hermes's, with credentials already masked by Hermes. */
+export type ConnectorTest_Serialize = {
+	/**  It connected and listed its tools. */
+	ok: boolean,
+	/**  The tools. */
+	tools: ConnectorTool[],
+	/**  Why not. */
+	error: string | null,
+	/**  Prompts, when counted. */
+	prompts: number | null,
+	/**  Resources, when counted. */
+	resources: number | null,
+	/**  The server uses OAuth. */
+	oauth_needed: boolean,
+	/**  Hermes holds no token for it yet. */
+	signin_needed: boolean,
+};
+
+/**  One tool a server offers. */
+export type ConnectorTool = {
+	/**  Its name. */
+	name: string,
+	/**  What it says it does. */
+	description: string,
+};
+
 /**  One change to Hermes's configuration, as shown in the consent form. */
 export type DiffLine = DiffLine_Serialize | DiffLine_Deserialize;
 
@@ -234,8 +627,14 @@ export type Form_Deserialize = {
 	sensitive: boolean,
 	/**  Always `host`. */
 	origin: string,
-	/**  The exact configuration changes, for a `setup` form. */
+	/**  The exact configuration changes, for a `setup` or `connector` form. */
 	diff: DiffLine_Deserialize[],
+	/**  What a `connector` form installs, as `[label, text]` rows: the command, the hosts it reaches, the licence. */
+	contents?: ([string, string])[],
+	/**  The exact version or hash a `connector` form pins; `None` when nothing is pinned. */
+	pinned?: string | null,
+	/**  What submitting does, in one sentence (a `connector` form). */
+	effect?: string | null,
 };
 
 /**  A form for the UI, in the shape of the plugin's `form.opened` (`docs/FORMS.md` section 6). */
@@ -258,8 +657,14 @@ export type Form_Serialize = {
 	sensitive: boolean,
 	/**  Always `host`. */
 	origin: string,
-	/**  The exact configuration changes, for a `setup` form. */
+	/**  The exact configuration changes, for a `setup` or `connector` form. */
 	diff: DiffLine_Serialize[],
+	/**  What a `connector` form installs, as `[label, text]` rows: the command, the hosts it reaches, the licence. */
+	contents: ([string, string])[],
+	/**  The exact version or hash a `connector` form pins; `None` when nothing is pinned. */
+	pinned: string | null,
+	/**  What submitting does, in one sentence (a `connector` form). */
+	effect: string | null,
 };
 
 /**  What the owner asked for with `BOOPIS_FPS`. */

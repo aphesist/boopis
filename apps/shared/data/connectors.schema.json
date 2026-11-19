@@ -60,6 +60,12 @@
           }
         },
         "requires": { "type": "array", "items": { "type": "object" } },
+        "login": {
+          "type": "object",
+          "description": "A sign-in command of this variant, reviewed with the entry. A form names it by id and never supplies a command.",
+          "required": ["id", "name", "program", "args"],
+          "properties": { "id": { "type": "string" }, "name": { "type": "string" }, "program": { "type": "string" }, "args": { "type": "array", "items": { "type": "string" } } }
+        },
         "credentials": {
           "type": "array",
           "items": {

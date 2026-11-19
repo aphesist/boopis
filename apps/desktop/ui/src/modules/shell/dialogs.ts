@@ -32,7 +32,7 @@ export function openKeys(): void {
 let themeMounted = false;
 function showSettingsSection(section?: string): void {
   const d = els().settings;
-  const sec = ['general', 'models', 'appearance', 'keys'].includes(section ?? '') ? (section as string) : 'general';
+  const sec = ['general', 'models', 'connectors', 'appearance', 'keys'].includes(section ?? '') ? (section as string) : 'general';
   for (const t of $$('.hx-dtab', d)) {
     const on = t.dataset['section'] === sec;
     t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1;
@@ -40,6 +40,7 @@ function showSettingsSection(section?: string): void {
   for (const p of $$('.hx-dpanel', d)) p.hidden = p.id !== 'hx-dpanel-' + sec;
   if (sec === 'general') { mountDiagnostics(); mountAdvanced(); }
   if (sec === 'models') showModels();
+  if (sec === 'connectors') showConnectors();
   if (sec === 'appearance' && !themeMounted) { mountThemePanel($('#hx-dpanel-appearance')); themeMounted = true; mountOrbGrow(); }
   d.classList.toggle('is-side', sec === 'appearance');
   $('.hx-dialog__body', d).scrollTop = 0;
@@ -68,6 +69,23 @@ function showModels(): void {
     return;
   }
   void import('../../host/models-tab').then((m) => m.mountModels(panel, m.realModelsDeps(() => { els().settings.close(); }))).then((m) => { models = m; }).catch((e: unknown) => { log.warn('the models tab did not mount', e); }).finally(finish);
+}
+/* Settings > Connectors: the MCP servers Hermes has and how to add one (host/connectors.ts). Built the first time the tab opens
+   and asked again every time it opens, because Hermes's servers move while the dialog is closed and a form left open is dropped.
+   Without the desktop host there is no Hermes to ask or change: the tab says so and draws no control. */
+let connectors: { refresh: () => Promise<void> } | null = null;
+let connectorsMounting = false;
+function showConnectors(): void {
+  if (connectors) { void connectors.refresh().catch((e: unknown) => { log.warn('the connectors tab did not refresh', e); }); return; }
+  if (connectorsMounting) return;
+  const panel = $('#hx-dpanel-connectors'); if (!panel) return;
+  if (!inTauri()) { panel.innerHTML = '<p class="ui-field__hint">Connectors are added to Hermes by the desktop app. This page has no Hermes to ask.</p>'; return; }
+  connectorsMounting = true;
+  void Promise.all([import('../../host/connectors'), import('../../host/connectors-bridge')])
+    .then(([view, bridge]) => view.mountConnectors(panel, { bridge: bridge.tauriConnectorsBridge(), toast: (t) => { ui.toast(t); } }))
+    .then((m) => { connectors = m; })
+    .catch((e: unknown) => { log.warn('the connectors tab did not mount', e); })
+    .finally(() => { connectorsMounting = false; });
 }
 /* Settings > General > Diagnostics, in the desktop app only (the page has no host to ask): the renderer report to copy and
    WebKitGTK's own GPU page. Nothing in the main chrome; the report is read when a button is pressed. */

@@ -33,6 +33,14 @@ The UI never holds gateway tickets, tokens or keys.
 | `setup_advance` | `{profile?, answer?, reconsider}` | `{steps[], form?, done, install_command?, receipt?}`. Runs setup as far as it goes (below); `answer` is `{form_id, cancelled, values, secrets}` for the form the last call returned. Secret values travel here only to reach the keychain; the host never logs them. It never runs an installer |
 | `hermes_retry` | `{profile?}` | `{}`. Asks a link that parked as `incompatible` to try again |
 | `gateway_stats` | `{profile?}` | counters and p95 timings of the proxy |
+| `connector_catalog` | | the curated collection (`docs/CONNECTORS.md`) as the picker shows it |
+| `connector_inputs` | `{source: catalog\|url\|command, connector?, variant?}` | the form that asks for the source's inputs |
+| `connector_review` | `{profile?, request: {source, values}}` | `{form, plan_hash, name}`: what an install would add, exactly. Validates; changes nothing, except that it asks Hermes how many sessions have a turn running when the install would restart it |
+| `connector_install` | `{profile?, request, plan_hash, secrets, restart?: now\|when_idle}` | `{name, steps[], test, signin_needed, restarted, notes[]}`. Adds through Hermes, saves each key to the keychain, wires it, restarts Hermes if a key was given, then Hermes tests the connection. `secrets` goes to the keychain and no further |
+| `connector_list` | `{profile?}` | the MCP servers Hermes has (`mcp.servers.list` and `.status`), with the keychain references boopis holds for each, never a value |
+| `connector_test` / `connector_set_enabled` / `connector_remove` | `{profile?, name, ...}` | Hermes's test, `hermes config set mcp_servers.<name>.enabled`, and `hermes mcp remove` (with `delete_credentials` the user's agreement to delete the keys) |
+| `connector_signin` / `connector_signin_cancel` | `{profile?, name}` | Hermes's own OAuth flow for a remote server; resolves when it ends. Hermes's token store holds the result |
+| `connector_login` | `{provider, connector?}` | the host's own sign-in for a provider id in its table (`apps/shared/data/logins.json`, or the named collection entry's reviewed `login`), run as a program and an argument vector, never a shell; an id outside the table is refused. `{command_line, ok, code, timed_out, output[]}` |
 
 The host reconnects on gateway restarts (after `code_sha` mismatch, idle exit or crash) and replays with `session.events.since` using `seq` and `replay_epoch`. The UI sees host-made `event` frames (type namespace `connection.`, never from the gateway): `connection.state` (`payload.state`: `connecting`, `ready`, `degraded` or `incompatible`; `reconnected: true` after a loss), `connection.replay_gap` (`payload.session_id`: the replay buffer was truncated, reload that transcript) and `connection.backpressure` (`payload.coalesced`: `message.delta` frames were merged because the window fell behind). The same state is a typed `ConnectionStateEvent`. A window's `client.capabilities` and `runtime.describe` are answered by the host from the handshake it did once.
 
@@ -172,6 +180,7 @@ Stable string codes in `data.code`, listed in `crates/hx-proto/errors.json` (sha
 - `hx.hermes.incompatible`, `hx.hermes.unavailable`;
 - `hx.host.*` (the host's own: `consent_required`, `unauthorized`, `invalid_frame`, `unknown_connection`, `no_ui`, `os`);
 - `hx.secrets.*` (`unavailable`, `failed`, `not_found`, `invalid_ref`);
+- `hx.connectors.*` (`exists`, `not_found`, `rejected`, `plan_changed`, `secret_missing`, `plugin_owned`, `restart_choice`, `busy`, `unknown_login`, `not_oauth`, `signin_failed`, `signin_cancelled`, `signin_timeout`, `command_failed`, `failed`);
 - `hx.setup.*` (`hermes_missing`, `no_bundle`, `plugin_install_failed`, `config_failed`, `declined`, `invalid_answer`, `state_invalid`, `verify_failed`);
 - `hx.form.*` (`invalid_schema`, `invalid_values`, `not_found`, `resolved`, `timeout`, `secret_missing`, `unsupported`, `limit`);
 - `hx.mods.*` (`unavailable`, `load_failed`, `not_a_mod`, `already_loaded`, `no_session`, `worker_failed`, `crashed`, `no_host`, `host_timeout`, `host_failed`, `unsupported`).

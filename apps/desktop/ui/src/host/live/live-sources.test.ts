@@ -187,3 +187,41 @@ describe('files, fork and what stays a preview', () => {
     expect(provider.user.get().name).not.toBe('enzo');
   });
 });
+
+describe('the Connectors section\'s controls over the host', () => {
+  it('stay disabled with no host, and with one switch a server and sign in through it, then read Hermes\'s status again', async () => {
+    await open(fixtures.session);
+    expect(provider.details.can.get()).toMatchObject({ connectors: false, signIn: false });
+
+    const calls: string[] = [];
+    host = new ReplayHost(fixtures.session);
+    const client = new GatewayClient(host);
+    await client.connect();
+    provider = createLiveProvider({ client, now: () => NOW, connectors: { setEnabled: (n, on) => { calls.push(`enable:${n}:${String(on)}`); return Promise.resolve(); }, signin: (n) => { calls.push('signin:' + n); return Promise.resolve({}); } } });
+    await provider.ready;
+    provider.details.follow(SID);
+    await tick(); await provider.settled();
+    expect(provider.details.can.get()).toMatchObject({ connectors: true, signIn: true });
+    const before = count('mcp.servers.status');
+    provider.details.setConnector('fakemcp', false);
+    await tick(); await provider.settled();
+    await provider.details.signIn('fakemcp');
+    expect(calls).toEqual(['enable:fakemcp:false', 'signin:fakemcp']);
+    expect(count('mcp.servers.status'), 'the state is asked again after each change').toBeGreaterThanOrEqual(before + 2);
+  });
+
+  it('say nothing was switched when the host refuses, and ask Hermes again so the switch shows the truth', async () => {
+    host = new ReplayHost(fixtures.session);
+    const client = new GatewayClient(host);
+    await client.connect();
+    provider = createLiveProvider({ client, now: () => NOW, connectors: { setEnabled: () => Promise.reject(new Error('refused')), signin: () => Promise.reject(new Error('refused')) } });
+    await provider.ready;
+    provider.details.follow(SID);
+    await tick(); await provider.settled();
+    const before = count('mcp.servers.status');
+    provider.details.setConnector('fakemcp', false);
+    await tick(); await provider.settled();
+    expect(count('mcp.servers.status')).toBeGreaterThan(before);
+    await expect(provider.details.signIn('fakemcp')).rejects.toThrow('refused');
+  });
+});

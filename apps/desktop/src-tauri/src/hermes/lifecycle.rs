@@ -248,6 +248,46 @@ impl Supervisor {
         Ok(verdict.endpoint.unwrap_or_default())
     }
 
+    /// Stop the gateway of `home` if one runs, wait until nothing answers on its control socket, then start a fresh one with
+    /// [`Supervisor::ensure`]. `gateway stop` returns while the old gateway may still be shutting down, and an `ensure` must
+    /// not meet it: the new gateway has to be the host's own launch, so its first read of the keychain (a connector's key,
+    /// read when Hermes connects its MCP servers at start-up) is served. The wait is bounded by
+    /// `Limits::gateway_stop_wait`; when it passes, `ensure` runs anyway. `interrupt` passes `--yes`, which ends live work; without
+    /// it a gateway with live work is left alone (`hx.connectors.busy`).
+    ///
+    /// # Errors
+    /// As [`Supervisor::ensure`].
+    pub async fn restart(&self, home: &Path, interrupt: bool) -> Result<EndpointInfo> {
+        let info = self.info().await?;
+        // It fails when no gateway runs, which is fine: `ensure` then starts one. Without `--yes` Hermes itself refuses to stop
+        // a gateway that has live work (a turn, a cron job, a delegation), which is the host's safety net for a restart it
+        // meant to do only when idle: the gateway is then left running and the answer is `hx.connectors.busy`.
+        let args: &[&str] = if interrupt {
+            &["gateway", "stop", "--yes"]
+        } else {
+            &["gateway", "stop"]
+        };
+        let stopped = self
+            .cli
+            .run(&info.binary, home, args, self.limits.cli_timeout)
+            .await;
+        if !interrupt && stopped.is_ok_and(|o| o.code != 0) && control::identify(home).await.is_ok()
+        {
+            return Err(Error::Connector(
+                "hx.connectors.busy",
+                "Hermes has live work, so it was not restarted".into(),
+            ));
+        }
+        let deadline = tokio::time::Instant::now() + self.limits.gateway_stop_wait;
+        while control::identify(home).await.is_ok() && tokio::time::Instant::now() < deadline {
+            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        }
+        if let Ok(mut done) = self.ensured.lock() {
+            done.remove(home);
+        }
+        self.ensure(home).await
+    }
+
     /// Run [`Supervisor::ensure`] unless it is not needed: it already succeeded for `home` in this run, or the running
     /// gateway cannot be older than Hermes (it names no code identity, or it names the one the install stamp names).
     /// That check is a socket round trip instead of a Python start, which is what lets the first attach of a run meet

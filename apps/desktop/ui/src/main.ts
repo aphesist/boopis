@@ -39,6 +39,7 @@ async function start(): Promise<void> {
   startGlance();
   ui.tooltip.enable();
   boot();
+  if (inTauri()) void import('./host/connectors-notice').then((m) => m.listenConnectorRestarts()).catch((e: unknown) => { log.warn('connector notices are not listened for', e); });
   if (__HX_TEST_API__) {
     /* the Playwright smoke and parity tests drive the app through this; it is compiled in only for `vite build --mode e2e` */
     (window as unknown as Record<string, unknown>)['__hx'] = { state, setState, on, emit, ui, theme: themeApi, dock: getDockApi, layout: getLayout, data: () => provider, orbs: orbState };

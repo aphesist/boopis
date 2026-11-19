@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use serde_json::{Value, json};
 
-use super::call::{exchange, wait_ready};
+use super::call::{RpcFailure, exchange, exchange_rpc, wait_ready};
 use super::link::GatewayConn;
 use crate::endpoint::Endpoint;
 use crate::error::{Error, Result};
@@ -67,6 +67,36 @@ impl Link {
         tokio::time::timeout(
             self.wait,
             exchange(
+                &mut self.conn,
+                self.max_frame,
+                id,
+                method,
+                params,
+                &mut dropped,
+            ),
+        )
+        .await
+        .map_err(|_| Error::Timeout("the gateway's answer"))?
+    }
+}
+
+impl Link {
+    /// Ask one question and keep the gateway's own refusal apart from a broken link: `Ok(Err(..))` is an error answer with its
+    /// code (a duplicate name, a rejected configuration).
+    ///
+    /// # Errors
+    /// `Unavailable` for a closed link, `Timeout` after the wait given to `open`.
+    pub async fn call_rpc(
+        &mut self,
+        method: &str,
+        params: &Value,
+    ) -> Result<std::result::Result<Value, RpcFailure>> {
+        let id = self.next;
+        self.next += 1;
+        let mut dropped = Vec::new();
+        tokio::time::timeout(
+            self.wait,
+            exchange_rpc(
                 &mut self.conn,
                 self.max_frame,
                 id,

@@ -236,11 +236,16 @@ impl PeerPolicy {
             let Some(parent) = self.procs.parent(at) else {
                 return false;
             };
-            // The same pid *and* the same start time: a recycled pid is not the launcher.
-            if launchers
-                .iter()
-                .any(|l| l.pid == parent && self.procs.describe(parent).as_ref() == Some(l))
-            {
+            // The same pid *and* the same start time: a recycled pid is not the launcher. The executable is not compared:
+            // Hermes's launcher is a shell script that `exec`s Python, so the process the host noted as `sh` is `python` by
+            // the time its daemon asks, with the same pid and start time. (Rule A still pins the executable.)
+            if launchers.iter().any(|l| {
+                l.pid == parent
+                    && self
+                        .procs
+                        .describe(parent)
+                        .is_some_and(|now| now.pid == l.pid && now.start == l.start)
+            }) {
                 return true;
             }
             if parent <= 1 {
@@ -354,6 +359,20 @@ mod tests {
         assert_eq!(p.admit(Some(100)), Err(Refusal::NotTheGateway));
         assert_eq!(p.admit(Some(999)), Err(Refusal::Unreadable));
         assert_eq!(p.admit(None), Err(Refusal::NoPid));
+    }
+
+    #[test]
+    fn a_launcher_that_execs_another_program_is_still_the_launcher() {
+        let (t, p) = world();
+        // The host notes the `hermes` launcher it spawned while it is the shell script, and the script then execs Python.
+        t.put(150, 15, "/bin/sh", 100);
+        let _guard = p.begin_launch(150);
+        t.put(150, 15, PY, 100);
+        gateway(&t, 200, 20, 150);
+        assert_eq!(p.admit(Some(200)), Ok(()));
+        // A recycled pid (a later start time) in the launcher's place is still not it.
+        t.put(150, 99, PY, 100);
+        assert_eq!(p.admit(Some(200)), Err(Refusal::NotTheGateway));
     }
 
     #[test]

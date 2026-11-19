@@ -162,10 +162,10 @@ impl HermesOps for CliOps {
     }
 
     async fn restart_gateway(&self) -> Result<()> {
-        // `gateway stop` refuses while a turn is live without --yes; setup runs before any work, so it is passed.
-        // It also fails when no gateway runs, which is fine: `ensure` then starts one.
-        let _ = self.run(&["gateway", "stop", "--yes"]).await;
-        self.sup.ensure(&self.home).await.map(|_| ())
+        // `gateway stop` refuses while a turn is live without --yes; setup runs before any work, so the supervisor passes it.
+        // It waits for the old gateway to go before it starts the new one, so the new one is served its keys
+        // (`Supervisor::restart`).
+        self.sup.restart(&self.home, true).await.map(|_| ())
     }
 
     async fn free_tier_status(&self) -> Result<FreeTier> {

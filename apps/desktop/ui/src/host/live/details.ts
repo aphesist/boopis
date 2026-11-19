@@ -29,6 +29,9 @@ export interface DetailsDeps {
   now?: () => number;
   /** a read of a session finished (its blanks may have changed): the provider syncs its conversation and waits */
   onRefreshed?(uiId: string): void;
+  /** what the Connectors section's switch and Sign in button do: the host switches a server through Hermes and runs Hermes's own OAuth
+      flow for it. Without it (no desktop host) both controls are disabled and say nothing is wired */
+  connectors?: { setEnabled(name: string, enabled: boolean): Promise<void>; signin(name: string): Promise<unknown> };
 }
 export interface LiveDetails {
   source: DetailsSource;
@@ -198,7 +201,12 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
     jobs.push(probe('session.branch', 'sessions.fork', 'This Hermes has no session.branch, so a session cannot be forked.'));
     jobs.push(probe('session.compress', 'sessions.compact', 'This Hermes has no session.compress; it compacts on its own when the window fills.'));
     await Promise.all(jobs);
-    can.set({ compact: !unavailable['sessions.compact'], connectors: false, signIn: false });
+    can.set({ compact: !unavailable['sessions.compact'], connectors: !!deps.connectors, signIn: !!deps.connectors });
+    publishFollowed([]);
+  }
+  /** the servers' state again, after the host changed one */
+  async function reloadMcp(): Promise<void> {
+    mcp = await read<McpStatusWire>('mcp.servers.status', {});
     publishFollowed([]);
   }
 
@@ -238,8 +246,16 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
       publishFollowed(['info', 'usage']);
       return null;
     },
-    setConnector() { log.warn('turning a connector on or off is not wired yet'); },
-    signIn() { log.warn('signing in to a connector is not wired yet'); return Promise.resolve(); }
+    setConnector(name, on) {
+      const c = deps.connectors;
+      if (!c) { log.warn('turning a connector on or off needs the desktop host'); return; }
+      void track(c.setEnabled(name, on).then(reloadMcp)).catch((e: unknown) => { log.warn('could not switch a connector', e); void reloadMcp().catch(() => undefined); });
+    },
+    async signIn(name) {
+      const c = deps.connectors;
+      if (!c) { log.warn('signing in to a connector needs the desktop host'); return; }
+      try { await c.signin(name); } finally { await reloadMcp().catch(() => undefined); }
+    }
   };
   const runSource: RunSource = {
     current: watch(run),

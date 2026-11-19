@@ -8,7 +8,7 @@
    did not send: unknown is `null` or empty and the UI shows it as unknown. */
 import type {
   Bot, BotCatalog, BotDraft, BotConfig, BotInfo, Change, ConversationEvent, Conversation, Connector, ContextUsage, DecisionKind, DiffFile, Environment,
-  DetailsCan, DetailsNotes, FileCompletions, FormCan, FormOutcome, ModSession, ModsEvent, PickerItem, PickerKind, GovernanceState, LedgerStats, ProviderInfo, RunSnapshot, Schedule, SendMeta, SessionSummary, ThreadMessage, Todo, User, Wait, WaitOutcome
+  DetailsCan, DetailsNotes, FieldSchema, FileCompletions, FormCan, FormOutcome, ModSession, ModsEvent, PickerItem, PickerKind, GovernanceState, LedgerStats, ProviderInfo, RunSnapshot, Schedule, SendMeta, SessionSummary, ThreadMessage, Todo, User, Wait, WaitOutcome
 } from './types';
 
 export type Unsubscribe = () => void;
@@ -170,6 +170,10 @@ export interface FormsSource {
   cancel(formId: string): Promise<void>;
   /** runs a sign-in (`x-signin`) in the host; resolves when it succeeded, rejects when it failed or was cancelled */
   signin(formId: string, field: string): Promise<void>;
+  /** what the host would run for a sign-in field that names a provider (display only), or null when it is not one boopis knows; absent where there is no table to check against */
+  login?: (s: NonNullable<FieldSchema['x-signin']>) => { known: boolean; line?: string };
+  /** the user cancelled a sign-in that is running (the card returns to its open state); the host ends the flow it started */
+  cancelSignin?: (formId: string, field: string) => Promise<void>;
   /** what the fields that reach outside the page can do in this build: a control that cannot work is disabled and says so */
   can: FormCan;
   /** the choices of an `x-picker` field; a folder is picked with the host's own dialog */

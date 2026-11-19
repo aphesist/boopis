@@ -31,6 +31,17 @@
     "allow-open-external",
     "allow-renderer-report",
     "allow-renderer-open-gpu-page",
-    "allow-app-restart"
+    "allow-app-restart",
+    "allow-connector-catalog",
+    "allow-connector-inputs",
+    "allow-connector-review",
+    "allow-connector-install",
+    "allow-connector-list",
+    "allow-connector-test",
+    "allow-connector-set-enabled",
+    "allow-connector-remove",
+    "allow-connector-signin",
+    "allow-connector-signin-cancel",
+    "allow-connector-login"
   ]
 }

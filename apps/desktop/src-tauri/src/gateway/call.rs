@@ -39,6 +39,65 @@ pub(super) async fn wait_ready(
     }
 }
 
+/// A JSON-RPC error answer: the gateway's own code and message, for callers that tell its refusals apart (a duplicate name, a
+/// rejected configuration).
+#[derive(Debug, Clone, PartialEq)]
+pub struct RpcFailure {
+    /// The error's `code`.
+    pub code: i64,
+    /// The error's `message`.
+    pub message: String,
+    /// The whole `error` member, for a message that prints it.
+    pub raw: Value,
+}
+
+/// Send `method` with `params` under `id` and wait for its answer. An error answer is `Ok(Err(..))`, so the caller can read its
+/// code; a closed link or a transport failure is the outer error.
+///
+/// # Errors
+/// `Unavailable` for a closed link; whatever the transport reports.
+pub(super) async fn exchange_rpc(
+    conn: &mut GatewayConn,
+    max_frame: usize,
+    id: u64,
+    method: &str,
+    params: &Value,
+    buffered: &mut Vec<String>,
+) -> Result<std::result::Result<Value, RpcFailure>> {
+    let text = json!({"jsonrpc": "2.0", "id": id, "method": method, "params": params}).to_string();
+    conn.tx.send(Outbound::Text(text)).await?;
+    loop {
+        match conn.rx.next().await {
+            Some(Ok(Inbound::Text(t))) => match frame::classify(&t, max_frame) {
+                Ok(m) if matches!(&m.kind, Kind::Response { id: Some(Id::Num(n)) } if u64::try_from(*n) == Ok(id)) =>
+                {
+                    let v: Value =
+                        serde_json::from_str(&t).map_err(|e| Error::InvalidFrame(e.to_string()))?;
+                    if let Some(err) = v.get("error") {
+                        return Ok(Err(RpcFailure {
+                            code: err.get("code").and_then(Value::as_i64).unwrap_or(0),
+                            message: err
+                                .get("message")
+                                .and_then(Value::as_str)
+                                .map_or_else(|| err.to_string(), str::to_owned),
+                            raw: err.clone(),
+                        }));
+                    }
+                    return Ok(Ok(v.get("result").cloned().unwrap_or(Value::Null)));
+                }
+                _ => buffered.push(t),
+            },
+            Some(Ok(Inbound::Alive)) => {}
+            Some(Ok(Inbound::Closed)) | None => {
+                return Err(Error::Unavailable(format!(
+                    "the gateway closed during {method}"
+                )));
+            }
+            Some(Err(e)) => return Err(e),
+        }
+    }
+}
+
 /// Send `method` with `params` under `id` and wait for its answer.
 ///
 /// # Errors
@@ -51,29 +110,8 @@ pub(super) async fn exchange(
     params: &Value,
     buffered: &mut Vec<String>,
 ) -> Result<Value> {
-    let text = json!({"jsonrpc": "2.0", "id": id, "method": method, "params": params}).to_string();
-    conn.tx.send(Outbound::Text(text)).await?;
-    loop {
-        match conn.rx.next().await {
-            Some(Ok(Inbound::Text(t))) => match frame::classify(&t, max_frame) {
-                Ok(m) if matches!(&m.kind, Kind::Response { id: Some(Id::Num(n)) } if u64::try_from(*n) == Ok(id)) =>
-                {
-                    let v: Value =
-                        serde_json::from_str(&t).map_err(|e| Error::InvalidFrame(e.to_string()))?;
-                    if let Some(err) = v.get("error") {
-                        return Err(Error::Unavailable(format!("{method}: {err}")));
-                    }
-                    return Ok(v.get("result").cloned().unwrap_or(Value::Null));
-                }
-                _ => buffered.push(t),
-            },
-            Some(Ok(Inbound::Alive)) => {}
-            Some(Ok(Inbound::Closed)) | None => {
-                return Err(Error::Unavailable(format!(
-                    "the gateway closed during {method}"
-                )));
-            }
-            Some(Err(e)) => return Err(e),
-        }
+    match exchange_rpc(conn, max_frame, id, method, params, buffered).await? {
+        Ok(v) => Ok(v),
+        Err(f) => Err(Error::Unavailable(format!("{method}: {}", f.raw))),
     }
 }

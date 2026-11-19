@@ -67,8 +67,11 @@ function fieldHTML(c: Ctx, st: FormState, name: string, p: FieldSchema): string 
   }
   if (p['x-signin']) {
     const s = p['x-signin'];
-    const note = !can.signin ? 'Signing in from here is not available in this build yet.' : s.flow === 'device' ? 'Shows a code to enter on ' + (s.host || 'the provider’s site') + '.' : 'Opens ' + (s.host || s.provider || 'the provider') + ' in your browser.';
-    return wrap('<div class="cd-signin">' + U.html.button({ label: 'Sign in with ' + (s.provider || 'the provider'), variant: 'primary', action: 'signin', disabled: !can.signin, attrs: { 'data-field': name } }) +
+    /* A command or arguments in the field are never run, and a provider the host's table does not have is not a sign-in boopis knows: the
+       control is disabled and says so. Where the source has a table to check against (`login`) a known provider shows the line it runs. */
+    const known: { known: boolean; line?: string } = s.command !== undefined || s.args !== undefined ? { known: false } : s.server ? { known: true } : formsHost().login ? formsHost().login?.(s) ?? { known: false } : { known: true };
+    const note = !can.signin ? 'Signing in from here is not available in this build yet.' : !known.known ? 'This sign-in is not one boopis knows.' : known.line ? 'Runs ' + known.line + ' on this computer, then shows what it said.' : s.flow === 'device' ? 'Shows a code to enter on ' + (s.host || 'the provider’s site') + '.' : 'Opens ' + (s.host || s.provider || 'the provider') + ' in your browser.';
+    return wrap('<div class="cd-signin">' + U.html.button({ label: 'Sign in with ' + (s.provider || 'the provider'), variant: 'primary', action: 'signin', disabled: !can.signin || !known.known, attrs: { 'data-field': name } }) +
       '<span class="cd-note">' + esc(note) + '</span></div>' + err, 'cd-field--signin');
   }
   if (p['x-picker']) {
@@ -266,7 +269,12 @@ export async function submitForm(card: HxCard, viaHold: boolean): Promise<boolea
 export function cancelForm(card: HxCard): void {
   dropSecrets(card);
   const d = spec(card.data);
-  if (card.state === 'submitting' && d.kind === 'signin') { card.setState('open'); return; }
+  if (card.state === 'submitting' && d.kind === 'signin') {
+    const field = props(d).find(([, p]) => p['x-signin'])?.[0];
+    if (field) void formsHost().cancelSignin?.(d.id, field)?.catch(() => undefined);
+    card.setState('open');
+    return;
+  }
   card.setState('cancelled');
   if (!isLocalForm(d)) void formsHost().cancel(d.id).catch(() => undefined);
 }

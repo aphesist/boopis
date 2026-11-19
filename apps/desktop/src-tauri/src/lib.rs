@@ -7,6 +7,7 @@ pub mod brand;
 pub mod cli;
 pub mod commands;
 pub mod config;
+pub mod connectors;
 pub mod endpoint;
 pub mod error;
 pub mod frame_rate;
@@ -63,9 +64,24 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::open_external,
             commands::renderer_report,
             commands::renderer_open_gpu_page,
+            commands::connector_catalog,
+            commands::connector_inputs,
+            commands::connector_review,
+            commands::connector_install,
+            commands::connector_list,
+            commands::connector_test,
+            commands::connector_set_enabled,
+            commands::connector_remove,
+            commands::connector_signin,
+            commands::connector_signin_cancel,
+            commands::connector_login,
             commands::app_restart,
         ])
-        .events(collect_events![ConnectionStateEvent, setup::SetupProgress])
+        .events(collect_events![
+            ConnectionStateEvent,
+            setup::SetupProgress,
+            commands::ConnectorRestartEvent
+        ])
 }
 
 /// Write the TypeScript bindings to `path`.
@@ -326,6 +342,7 @@ pub fn run() {
                 runtime_error,
                 source,
                 carries_runtime,
+                connectors: std::sync::Mutex::default(),
                 bundle: setup::install::Bundle::locate(
                     resource_dir.as_deref(),
                     exe.as_deref().and_then(std::path::Path::parent),
