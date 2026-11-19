@@ -46,6 +46,9 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::setup_check,
             commands::setup_advance,
             commands::setup_reopen_models,
+            commands::setup_models_view,
+            commands::hermes_source_get,
+            commands::hermes_source_set,
             commands::gateway_connect,
             commands::gateway_send,
             commands::gateway_disconnect,
@@ -62,7 +65,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::renderer_open_gpu_page,
             commands::app_restart,
         ])
-        .events(collect_events![ConnectionStateEvent])
+        .events(collect_events![ConnectionStateEvent, setup::SetupProgress])
 }
 
 /// Write the TypeScript bindings to `path`.
@@ -252,6 +255,8 @@ pub fn run() {
                 resource_dir.as_deref(),
                 app.path().app_data_dir().map_err(|e| e.to_string()),
             );
+            // A build with a manifest, valid or not, is one that carries a runtime (a broken one is reported by setup).
+            let carries_runtime = !matches!(runtime::Runtime::locate(resource_dir.as_deref()), Ok(None));
             let mut environment = hermes::Environment::from_process();
             if let Some(plan) = &plan {
                 environment = environment.with_bundled(plan.bundled());
@@ -319,6 +324,8 @@ pub fn run() {
                 limits,
                 runtime: plan,
                 runtime_error,
+                source,
+                carries_runtime,
                 bundle: setup::install::Bundle::locate(
                     resource_dir.as_deref(),
                     exe.as_deref().and_then(std::path::Path::parent),

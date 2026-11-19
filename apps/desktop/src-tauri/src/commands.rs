@@ -21,13 +21,13 @@ use crate::hermes::install::{self, InstallReport};
 use crate::hermes::{HermesStatus, Supervisor};
 use crate::os::{self, PickedFolder};
 use crate::renderer::RendererReport;
-use crate::runtime::Plan;
+use crate::runtime::{Plan, Source, SourceView};
 use crate::secrets::SecretStore;
 use crate::secrets::store::{validate_name, validate_value};
 use crate::settings::AppSettings;
 use crate::setup::install::Bundle;
 use crate::setup::ops::CliOps;
-use crate::setup::{Answer, Check, Setup, Status};
+use crate::setup::{Answer, Check, ModelsView, Setup, Status};
 use crate::state::Hubs;
 
 /// A gateway frame, as JSON, exactly as the gateway sent it.
@@ -57,6 +57,10 @@ pub struct AppState {
     /// Why a runtime this build should carry cannot be used (a broken manifest): setup says so instead of quietly
     /// falling back to another Hermes.
     pub runtime_error: Option<String>,
+    /// Which Hermes this run started with (the advanced setting, `BOOPIS_HERMES`).
+    pub source: Source,
+    /// Whether this build carries a Hermes runtime.
+    pub carries_runtime: bool,
 }
 
 struct ChannelSink(Channel<Frame>);
@@ -137,7 +141,14 @@ fn setup_engine(app: &AppHandle, state: &AppState, profile: Option<String>) -> R
         ));
     }
     let ops = CliOps::new(state.supervisor.clone(), home);
-    let setup = Setup::new(Arc::new(ops), state.secrets.clone(), state.bundle.clone());
+    // The unpack runs for a while inside one `setup_advance` call; its progress reaches every window as an event meanwhile.
+    let events = app.clone();
+    let setup = Setup::new(Arc::new(ops), state.secrets.clone(), state.bundle.clone())
+        .with_progress(Arc::new(move |p| {
+            if let Err(e) = tauri_specta::Event::emit(&p, &events) {
+                tracing::debug!(error = %e, "could not emit the setup progress");
+            }
+        }));
     Ok(match &state.runtime {
         Some(plan) => setup.with_runtime(plan.clone()),
         None => setup,
@@ -182,6 +193,72 @@ pub fn setup_reopen_models(
     profile: Option<String>,
 ) -> std::result::Result<(), HostError> {
     Ok(setup_engine(&app, &state, profile)?.reopen_models()?)
+}
+
+/// What Settings > Models shows of the configuration: the ladder (which model at which tier) as it is in Hermes's
+/// configuration, read through Hermes's own CLI. Read-only. The plan's status is a question for the live gateway, which
+/// the UI asks itself (`free_tier.status`).
+#[tauri::command]
+#[specta::specta]
+pub async fn setup_models_view(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    profile: Option<String>,
+) -> std::result::Result<ModelsView, HostError> {
+    Ok(setup_engine(&app, &state, profile)?.models_view().await?)
+}
+
+fn stored_hermes_source(app: &AppHandle) -> Result<Option<String>> {
+    let store = app
+        .store("settings.json")
+        .map_err(|e| Error::Io(e.to_string()))?;
+    Ok(store
+        .get("hermes_source")
+        .and_then(|v| v.as_str().map(str::to_owned)))
+}
+
+fn source_view(app: &AppHandle, state: &AppState) -> Result<SourceView> {
+    Ok(SourceView::new(
+        std::env::var("BOOPIS_HERMES").ok().as_deref(),
+        stored_hermes_source(app)?.as_deref(),
+        state.source,
+        state.carries_runtime,
+    ))
+}
+
+/// The advanced setting "Use my own Hermes": which Hermes the app runs, what is saved, and whether a restart is due.
+#[tauri::command]
+#[specta::specta]
+pub fn hermes_source_get(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> std::result::Result<SourceView, HostError> {
+    Ok(source_view(&app, &state)?)
+}
+
+/// Save which Hermes the app runs (`settings.json`, `hermes_source`, which `BOOPIS_HERMES` overrides). It is read when the
+/// app starts, so nothing changes until a restart; the answer says whether one is due. A build with no bundled runtime has
+/// no choice to make, and is refused.
+#[tauri::command]
+#[specta::specta]
+pub fn hermes_source_set(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    source: Source,
+) -> std::result::Result<SourceView, HostError> {
+    if !state.carries_runtime {
+        return Err(Error::InvalidInput(
+            "this build carries no Hermes of its own, so it always uses the one on this computer"
+                .into(),
+        )
+        .into());
+    }
+    let store = app
+        .store("settings.json")
+        .map_err(|e| Error::Io(e.to_string()))?;
+    store.set("hermes_source", crate::runtime::source_value(source));
+    store.save().map_err(|e| Error::Io(e.to_string()))?;
+    Ok(source_view(&app, &state)?)
 }
 
 /// Ask a gateway link that gave up (`incompatible`) to try again, after the user fixed Hermes.

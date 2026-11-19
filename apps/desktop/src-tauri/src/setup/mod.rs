@@ -31,7 +31,7 @@ use specta::Type;
 
 use crate::commands::Json;
 use crate::error::{Error, Result};
-use crate::runtime::{Outcome, Plan};
+use crate::runtime::{Outcome, Pass, Plan};
 use crate::secrets::SecretStore;
 use crate::secrets::store::validate_value;
 use install::{Bundle, Installed};
@@ -209,6 +209,36 @@ fn text_of(v: &Value) -> String {
     v.as_str().map_or_else(|| v.to_string(), str::to_owned)
 }
 
+/// How far a long setup step has come, pushed while `advance` runs (the call itself answers only when the step is over).
+/// Today only the runtime step reports: its archive is read twice (hashed, then extracted), each pass from 0 to the whole
+/// archive. `total` is the archive's size in bytes from `runtime.json`, `read` the bytes of it passed so far; nothing here
+/// is estimated.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type, tauri_specta::Event)]
+pub struct SetupProgress {
+    /// The step, as in [`Step::id`] (`runtime`).
+    pub step: String,
+    /// Which pass over the archive: `verify` or `unpack`.
+    pub phase: Pass,
+    /// Bytes of the archive read so far in this pass.
+    #[specta(type = f64)]
+    pub read: u64,
+    /// The archive's size in bytes.
+    #[specta(type = f64)]
+    pub total: u64,
+}
+
+/// Where [`SetupProgress`] goes. It runs on the unpacking thread, so it must be quick and must not block.
+pub type ProgressSink = Arc<dyn Fn(SetupProgress) + Send + Sync>;
+
+/// What Settings > Models shows of the configuration (read-only).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
+pub struct ModelsView {
+    /// Whether a ladder is saved, and whether it can be read.
+    pub state: providers::LadderState,
+    /// Its tiers, cheapest first; empty unless `state` is `set`.
+    pub tiers: Vec<providers::LadderTier>,
+}
+
 /// The setup engine for one profile.
 pub struct Setup {
     ops: Arc<dyn HermesOps>,
@@ -217,6 +247,8 @@ pub struct Setup {
     install_command: String,
     /// The bundled Hermes runtime to unpack first (ADR-0023); `None` when the app uses a Hermes the user already has.
     runtime: Option<Plan>,
+    /// Told how far the runtime unpack has come.
+    progress: Option<ProgressSink>,
 }
 
 struct Run {
@@ -264,7 +296,15 @@ impl Setup {
             bundle,
             install_command: crate::hermes::install::installer_command().to_owned(),
             runtime: None,
+            progress: None,
         }
+    }
+
+    /// Tell `sink` how far long steps have come while `advance` runs.
+    #[must_use]
+    pub fn with_progress(mut self, sink: ProgressSink) -> Self {
+        self.progress = Some(sink);
+        self
     }
 
     /// Unpack the bundled Hermes runtime as the first step, and make it the only Hermes (ADR-0023).
@@ -384,6 +424,16 @@ impl Setup {
         Ok(())
     }
 
+    /// The configured ladder, read through Hermes's CLI. Changes nothing.
+    ///
+    /// # Errors
+    /// `hx.config.invalid` when Hermes cannot be asked.
+    pub async fn models_view(&self) -> Result<ModelsView> {
+        let saved = self.ops.config_get(providers::LADDER_KEY).await?;
+        let (state, tiers) = providers::ladder_of(saved.as_ref());
+        Ok(ModelsView { state, tiers })
+    }
+
     /// The user wants to choose the models again (from a limit notice): forget the choice and the ladder question's answer,
     /// so the next `advance` asks it again, with every choice Hermes can still offer. Nothing is changed in Hermes until
     /// the new choice is made.
@@ -498,10 +548,19 @@ impl Setup {
     async fn runtime_step(&self, plan: &Plan, run: &mut Run, state: &mut State) {
         let (id, title) = ("runtime", "Hermes runtime");
         let (runtime, dir) = (plan.runtime.clone(), plan.runtimes_dir());
+        let sink = self.progress.clone();
         let unpacked = tokio::task::spawn_blocking(move || {
             let mut last = 0;
             runtime.install(&dir, &mut |p| {
-                if p.percent() >= last + 10 || p.percent() == 100 {
+                if let Some(sink) = &sink {
+                    sink(SetupProgress {
+                        step: "runtime".into(),
+                        phase: p.phase,
+                        read: p.read,
+                        total: p.total,
+                    });
+                }
+                if p.phase == Pass::Unpack && (p.percent() >= last + 10 || p.percent() == 100) {
                     last = p.percent();
                     tracing::info!(percent = p.percent(), "unpacking the bundled Hermes");
                 }

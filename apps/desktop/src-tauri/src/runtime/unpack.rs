@@ -36,19 +36,23 @@ fn corrupt(why: &str) -> Error {
     )
 }
 
-/// SHA-256 of everything left in `file`, as lowercase hex.
+/// SHA-256 of everything left in `file`, as lowercase hex. `on_read` is told how many bytes have been hashed so far, after
+/// each read, so a caller can show how far the check has come.
 ///
 /// # Errors
 /// A read fails.
-pub(super) fn hash_file(file: &mut File) -> io::Result<String> {
+pub(super) fn hash_file(file: &mut File, on_read: &mut dyn FnMut(u64)) -> io::Result<String> {
     let mut hasher = Sha256::new();
     let mut buf = vec![0u8; 1 << 20];
+    let mut total = 0u64;
     loop {
         let n = file.read(&mut buf)?;
         if n == 0 {
             return Ok(hex::encode(hasher.finalize()));
         }
         hasher.update(&buf[..n]);
+        total += n as u64;
+        on_read(total);
     }
 }
 

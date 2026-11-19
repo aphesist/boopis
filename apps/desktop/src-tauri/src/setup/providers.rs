@@ -24,7 +24,50 @@ const ANTHROPIC_VARS: &[&str] = &[
 ];
 /// The Claude subscription plugin, which signs in through the `claude` CLI instead of a key.
 pub const SUBSCRIPTION_PLUGIN: &str = "claude-subscription-directsdk";
-const LADDER_KEY: &str = "plugins.entries.boopis.settings.ladder";
+pub(crate) const LADDER_KEY: &str = "plugins.entries.boopis.settings.ladder";
+/// One tier of the governed ladder, as Hermes's configuration holds it (`{name, model: "provider/id"}`).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, specta::Type)]
+pub struct LadderTier {
+    /// The tier's name (`haiku`, `free`).
+    pub name: String,
+    /// The model it runs, `provider/id`.
+    pub model: String,
+}
+
+/// Where the ladder stands in the configuration.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, specta::Type)]
+#[serde(rename_all = "snake_case")]
+pub enum LadderState {
+    /// None is saved: the plugin uses its built-in Claude ladder.
+    Default,
+    /// A ladder is saved and its tiers are listed, cheapest first.
+    Set,
+    /// Something is saved that does not read as a list of named tiers; nothing is listed and nothing is guessed.
+    Unreadable,
+}
+
+/// The ladder `plugins.entries.boopis.settings.ladder` holds, as a list of tiers (what setup writes, or what the user did).
+#[must_use]
+pub fn ladder_of(value: Option<&Value>) -> (LadderState, Vec<LadderTier>) {
+    let Some(v) = value else {
+        return (LadderState::Default, Vec::new());
+    };
+    let tiers: Option<Vec<LadderTier>> = v["tiers"].as_array().and_then(|a| {
+        a.iter()
+            .map(|t| {
+                Some(LadderTier {
+                    name: t["name"].as_str()?.to_owned(),
+                    model: t["model"].as_str()?.to_owned(),
+                })
+            })
+            .collect()
+    });
+    match tiers {
+        Some(t) if !t.is_empty() => (LadderState::Set, t),
+        _ => (LadderState::Unreadable, Vec::new()),
+    }
+}
+
 /// The choice that uses Nous's free tier (no account, no key): Hermes's own welcome-trial route.
 pub const FREE: &str = "free";
 /// The choice that uses `OpenRouter`'s `:free` models (a free `OpenRouter` key).

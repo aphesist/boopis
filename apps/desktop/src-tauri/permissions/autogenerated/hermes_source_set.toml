@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-hermes-source-set"
+description = "Enables the hermes_source_set command without any pre-configured scope."
+commands.allow = ["hermes_source_set"]
+
+[[permission]]
+identifier = "deny-hermes-source-set"
+description = "Denies the hermes_source_set command without any pre-configured scope."
+commands.deny = ["hermes_source_set"]

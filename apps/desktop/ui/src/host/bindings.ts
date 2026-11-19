@@ -25,6 +25,20 @@ export const commands = {
 	 *  the next `setup_advance` asks it with every choice Hermes can still offer. It changes nothing in Hermes by itself.
 	 */
 	setupReopenModels: (profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<null>("setup_reopen_models", { profile }, options),
+	/**
+	 *  What Settings > Models shows of the configuration: the ladder (which model at which tier) as it is in Hermes's
+	 *  configuration, read through Hermes's own CLI. Read-only. The plan's status is a question for the live gateway, which
+	 *  the UI asks itself (`free_tier.status`).
+	 */
+	setupModelsView: (profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<ModelsView>("setup_models_view", { profile }, options),
+	/**  The advanced setting "Use my own Hermes": which Hermes the app runs, what is saved, and whether a restart is due. */
+	hermesSourceGet: (options?: InvokeOptions) => __TAURI_INVOKE<SourceView_Serialize>("hermes_source_get", undefined, options),
+	/**
+	 *  Save which Hermes the app runs (`settings.json`, `hermes_source`, which `BOOPIS_HERMES` overrides). It is read when the
+	 *  app starts, so nothing changes until a restart; the answer says whether one is due. A build with no bundled runtime has
+	 *  no choice to make, and is refused.
+	 */
+	hermesSourceSet: (source: Source, options?: InvokeOptions) => __TAURI_INVOKE<SourceView_Serialize>("hermes_source_set", { source }, options),
 	/**  Open a UI connection to the gateway of a profile. Frames arrive on `frames`. */
 	gatewayConnect: (profile: string | null, frames: Channel<Frame>, options?: InvokeOptions) => __TAURI_INVOKE<Connected>("gateway_connect", { profile, frames }, options),
 	/**  Send a JSON-RPC frame to the gateway. The host validates shape and size and never alters `params`. */
@@ -71,6 +85,7 @@ export const commands = {
 /** Events */
 export const events = {
 	connectionStateEvent: makeEvent<ConnectionStateEvent_Serialize, ConnectionStateEvent_Deserialize>("connection-state-event"),
+	setupProgress: makeEvent<SetupProgress, SetupProgress>("setup-progress"),
 };
 
 /* Types */
@@ -539,6 +554,41 @@ export type InstallReport = {
 /**  Any JSON value, typed `unknown` on the TypeScript side (the UI narrows it with the generated gateway contract). */
 export type Json = unknown;
 
+/**  Where the ladder stands in the configuration. */
+export type LadderState = 
+/**  None is saved: the plugin uses its built-in Claude ladder. */
+"default" | 
+/**  A ladder is saved and its tiers are listed, cheapest first. */
+"set" | 
+/**  Something is saved that does not read as a list of named tiers; nothing is listed and nothing is guessed. */
+"unreadable";
+
+/**  One tier of the governed ladder, as Hermes's configuration holds it (`{name, model: "provider/id"}`). */
+export type LadderTier = {
+	/**  The tier's name (`haiku`, `free`). */
+	name: string,
+	/**  The model it runs, `provider/id`. */
+	model: string,
+};
+
+/**  What Settings > Models shows of the configuration (read-only). */
+export type ModelsView = {
+	/**  Whether a ladder is saved, and whether it can be read. */
+	state: LadderState,
+	/**  Its tiers, cheapest first; empty unless `state` is `set`. */
+	tiers: LadderTier[],
+};
+
+/**
+ *  Which pass over the archive a [`Progress`] belongs to. The archive is read twice: once to hash it before anything is
+ *  opened, once to extract it (hashed again as it goes), and each pass runs from 0 to the archive's size.
+ */
+export type Pass = 
+/**  Hashing the whole archive against the manifest. Nothing is written yet. */
+"verify" | 
+/**  Extracting into the temporary directory. */
+"unpack";
+
 /**  Where the link to the gateway is. */
 export type Phase = 
 /**  Dialling, or waiting for the handshake. */
@@ -765,6 +815,70 @@ export type Session =
 "x11" | 
 /**  Neither could be told. */
 "unknown";
+
+/**
+ *  How far a long setup step has come, pushed while `advance` runs (the call itself answers only when the step is over).
+ *  Today only the runtime step reports: its archive is read twice (hashed, then extracted), each pass from 0 to the whole
+ *  archive. `total` is the archive's size in bytes from `runtime.json`, `read` the bytes of it passed so far; nothing here
+ *  is estimated.
+ */
+export type SetupProgress = {
+	/**  The step, as in [`Step::id`] (`runtime`). */
+	step: string,
+	/**  Which pass over the archive: `verify` or `unpack`. */
+	phase: Pass,
+	/**  Bytes of the archive read so far in this pass. */
+	read: number | null,
+	/**  The archive's size in bytes. */
+	total: number | null,
+};
+
+/**  Which Hermes the app runs: the one it carries, or one the user already has (the advanced setting). */
+export type Source = 
+/**  The bundled runtime, in a private home (the default). */
+"bundled" | 
+/**  The `hermes` found on the machine, in the user's own home (`HERMES_HOME`, else `~/.hermes`). */
+"existing";
+
+/**
+ *  The advanced setting "Use my own Hermes", as Settings shows it (`hermes_source_get`). Everything is what the host knows:
+ *  nothing is guessed about a Hermes it has not looked at.
+ */
+export type SourceView = SourceView_Serialize | SourceView_Deserialize;
+
+/**
+ *  The advanced setting "Use my own Hermes", as Settings shows it (`hermes_source_get`). Everything is what the host knows:
+ *  nothing is guessed about a Hermes it has not looked at.
+ */
+export type SourceView_Deserialize = {
+	/**  What is saved (`None`: nothing was ever chosen, so the bundled runtime). */
+	saved?: Source | null,
+	/**  `BOOPIS_HERMES`, when it is set to a value that means something. It wins over the saved choice. */
+	from_env?: Source | null,
+	/**  Which Hermes the next start uses: the environment, else the saved choice, else the bundled runtime. */
+	next: Source,
+	/**  Which Hermes this run started with. A change in `saved` takes effect only when it differs and the app restarts. */
+	running: Source,
+	/**  Whether this build carries a Hermes runtime at all (a source build does not, and always uses the machine's Hermes). */
+	carries_runtime: boolean,
+};
+
+/**
+ *  The advanced setting "Use my own Hermes", as Settings shows it (`hermes_source_get`). Everything is what the host knows:
+ *  nothing is guessed about a Hermes it has not looked at.
+ */
+export type SourceView_Serialize = {
+	/**  What is saved (`None`: nothing was ever chosen, so the bundled runtime). */
+	saved: Source | null,
+	/**  `BOOPIS_HERMES`, when it is set to a value that means something. It wins over the saved choice. */
+	from_env: Source | null,
+	/**  Which Hermes the next start uses: the environment, else the saved choice, else the bundled runtime. */
+	next: Source,
+	/**  Which Hermes this run started with. A change in `saved` takes effect only when it differs and the app restarts. */
+	running: Source,
+	/**  Whether this build carries a Hermes runtime at all (a source build does not, and always uses the machine's Hermes). */
+	carries_runtime: boolean,
+};
 
 /**  What `setup_advance` answers. */
 export type Status = Status_Serialize | Status_Deserialize;

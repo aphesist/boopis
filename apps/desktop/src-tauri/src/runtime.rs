@@ -153,12 +153,25 @@ pub struct Layout {
     pub python: PathBuf,
 }
 
-/// How far an unpack has come.
+/// Which pass over the archive a [`Progress`] belongs to. The archive is read twice: once to hash it before anything is
+/// opened, once to extract it (hashed again as it goes), and each pass runs from 0 to the archive's size.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(rename_all = "snake_case")]
+pub enum Pass {
+    /// Hashing the whole archive against the manifest. Nothing is written yet.
+    Verify,
+    /// Extracting into the temporary directory.
+    Unpack,
+}
+
+/// How far a pass over the archive has come.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Progress {
-    /// Compressed bytes read so far.
+    /// Which pass.
+    pub phase: Pass,
+    /// Bytes of the archive read so far in this pass.
     pub read: u64,
-    /// The archive's size.
+    /// The archive's size, from the manifest (and checked against the file before the first byte is read).
     pub total: u64,
 }
 
@@ -319,7 +332,19 @@ impl Runtime {
         };
         let mut file = File::open(&archive_path).map_err(|e| io_err("open", &e))?;
         // Verify first: nothing is extracted from a file that does not hash to the manifest's value.
-        let first = unpack::hash_file(&mut file).map_err(|e| io_err("read", &e))?;
+        let mut last = u8::MAX;
+        let first = unpack::hash_file(&mut file, &mut |read| {
+            let p = Progress {
+                phase: Pass::Verify,
+                read,
+                total: expected.size,
+            };
+            if p.percent() != last {
+                last = p.percent();
+                progress(p);
+            }
+        })
+        .map_err(|e| io_err("read", &e))?;
         if first != expected.sha256 {
             return Err(hash_mismatch(&expected.sha256, &first));
         }
@@ -354,6 +379,7 @@ impl Runtime {
                 ));
             }
             let p = Progress {
+                phase: Pass::Unpack,
                 read: tally.borrow().bytes,
                 total: expected.size,
             };
@@ -365,10 +391,13 @@ impl Runtime {
         // The tar ends before the compressed stream does: read the rest so the hash covers every byte.
         let mut rest = tar.into_inner().finish();
         io::copy(&mut rest, &mut io::sink()).map_err(|e| io_err("read", &e))?;
-        progress(Progress {
-            read: expected.size,
-            total: expected.size,
-        });
+        if last != 100 {
+            progress(Progress {
+                phase: Pass::Unpack,
+                read: expected.size,
+                total: expected.size,
+            });
+        }
         // The bytes that were extracted are the bytes that were verified (the caller removes the tree on an error).
         let found = hex::encode(tally.borrow().hasher.clone().finalize());
         if found != expected.sha256 {
@@ -573,7 +602,8 @@ impl Plan {
 }
 
 /// Which Hermes the app runs: the one it carries, or one the user already has (the advanced setting).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "snake_case")]
 pub enum Source {
     /// The bundled runtime, in a private home (the default).
     #[default]
@@ -601,6 +631,65 @@ impl Source {
             .or_else(|| saved.and_then(Self::parse))
             .unwrap_or_default()
     }
+}
+
+impl Source {
+    /// The word the setting stores and `BOOPIS_HERMES` reads.
+    #[must_use]
+    pub fn word(self) -> &'static str {
+        match self {
+            Self::Bundled => "bundled",
+            Self::Existing => "existing",
+        }
+    }
+}
+
+/// The advanced setting "Use my own Hermes", as Settings shows it (`hermes_source_get`). Everything is what the host knows:
+/// nothing is guessed about a Hermes it has not looked at.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
+pub struct SourceView {
+    /// What is saved (`None`: nothing was ever chosen, so the bundled runtime).
+    pub saved: Option<Source>,
+    /// `BOOPIS_HERMES`, when it is set to a value that means something. It wins over the saved choice.
+    pub from_env: Option<Source>,
+    /// Which Hermes the next start uses: the environment, else the saved choice, else the bundled runtime.
+    pub next: Source,
+    /// Which Hermes this run started with. A change in `saved` takes effect only when it differs and the app restarts.
+    pub running: Source,
+    /// Whether this build carries a Hermes runtime at all (a source build does not, and always uses the machine's Hermes).
+    pub carries_runtime: bool,
+}
+
+impl SourceView {
+    /// Settings' view of the choice.
+    #[must_use]
+    pub fn new(
+        from_env: Option<&str>,
+        saved: Option<&str>,
+        running: Source,
+        carries_runtime: bool,
+    ) -> Self {
+        let saved_source = saved.and_then(Source::parse);
+        Self {
+            saved: saved_source,
+            from_env: from_env.and_then(Source::parse),
+            next: Source::resolve(from_env, saved),
+            running,
+            carries_runtime,
+        }
+    }
+
+    /// Whether a restart is needed for what is saved to be what runs.
+    #[must_use]
+    pub fn restart_needed(&self) -> bool {
+        self.carries_runtime && self.next != self.running
+    }
+}
+
+/// The value the settings file holds under `hermes_source` for `source`: what [`stored_source`] reads back.
+#[must_use]
+pub fn source_value(source: Source) -> serde_json::Value {
+    serde_json::Value::String(source.word().to_owned())
 }
 
 /// The Hermes this run uses, from the choice, the build and the app's data folder: the plan to unpack and run the bundled

@@ -296,10 +296,70 @@ fn progress_reaches_one_hundred_percent() {
     let tmp = tempfile::tempdir().unwrap();
     let rt = bundle(&tmp.path().join("res"), "0.23.2", &standard("a"), None);
     let mut seen = Vec::new();
-    rt.install(&tmp.path().join("runtime"), &mut |p| seen.push(p.percent()))
+    rt.install(&tmp.path().join("runtime"), &mut |p| seen.push(p))
         .unwrap();
-    assert_eq!(seen.last(), Some(&100));
-    assert!(seen.windows(2).all(|w| w[0] <= w[1]), "{seen:?}");
+    for phase in [Pass::Verify, Pass::Unpack] {
+        let of: Vec<u8> = seen
+            .iter()
+            .filter(|p| p.phase == phase)
+            .map(|p| p.percent())
+            .collect();
+        assert_eq!(of.last(), Some(&100), "{phase:?}: {of:?}");
+        assert!(of.windows(2).all(|w| w[0] < w[1]), "{phase:?}: {of:?}");
+    }
+}
+
+#[test]
+fn progress_names_the_pass_and_counts_bytes_of_the_manifests_size() {
+    let tmp = tempfile::tempdir().unwrap();
+    let bytes = standard("a");
+    let rt = bundle(&tmp.path().join("res"), "0.23.2", &bytes, None);
+    let mut seen = Vec::new();
+    rt.install(&tmp.path().join("runtime"), &mut |p| seen.push(p))
+        .unwrap();
+    let total = rt.manifest().archive.size;
+    assert_eq!(total, bytes.len() as u64);
+    assert!(
+        seen.iter().all(|p| p.total == total && p.read <= total),
+        "{seen:?}"
+    );
+    // the archive is hashed before it is opened, so every Verify report comes before the first Unpack one
+    let first_unpack = seen.iter().position(|p| p.phase == Pass::Unpack).unwrap();
+    assert!(seen[..first_unpack].iter().all(|p| p.phase == Pass::Verify));
+    assert!(seen[first_unpack..].iter().all(|p| p.phase == Pass::Unpack));
+    assert_eq!(
+        seen[first_unpack - 1].read,
+        total,
+        "verification ends at the whole archive"
+    );
+}
+
+#[test]
+fn a_runtime_that_is_already_unpacked_reports_no_progress() {
+    let tmp = tempfile::tempdir().unwrap();
+    let rt = bundle(&tmp.path().join("res"), "0.23.2", &standard("a"), None);
+    let runtimes = tmp.path().join("runtime");
+    rt.install(&runtimes, &mut |_| {}).unwrap();
+    let mut seen = 0;
+    let (_, outcome) = rt.install(&runtimes, &mut |_| seen += 1).unwrap();
+    assert_eq!((outcome, seen), (Outcome::Current, 0));
+}
+
+#[test]
+fn a_hash_mismatch_is_reported_as_verifying_and_never_as_unpacking() {
+    let tmp = tempfile::tempdir().unwrap();
+    let rt = bundle(
+        &tmp.path().join("res"),
+        "0.23.2",
+        &standard("a"),
+        Some(&"f".repeat(64)),
+    );
+    let mut seen = Vec::new();
+    let e = rt
+        .install(&tmp.path().join("runtime"), &mut |p| seen.push(p))
+        .unwrap_err();
+    assert_eq!(e.code(), "hx.setup.runtime_hash_mismatch");
+    assert!(!seen.is_empty() && seen.iter().all(|p| p.phase == Pass::Verify));
 }
 
 #[test]
@@ -372,16 +432,20 @@ fn append(
 #[test]
 fn the_hash_is_checked_before_anything_is_extracted() {
     // The archive holds a FIFO, which the extraction step refuses with `runtime_corrupt`. With a wrong hash the error is
-    // the hash's, and no progress was ever reported: the tar was never opened. With the right hash it is the FIFO's.
+    // the hash's, and no unpack progress was ever reported: the tar was never opened. With the right hash it is the FIFO's.
     let tmp = tempfile::tempdir().unwrap();
     let bytes = tar_zst_plus(|t| append(t, "pipe", tar::EntryType::Fifo, 0o644, b""));
     let runtimes = tmp.path().join("runtime");
     let wrong = "1".repeat(64);
     let rt = bundle(&tmp.path().join("bad"), "0.23.2", &bytes, Some(&wrong));
-    let mut reported = 0;
-    let err = rt.install(&runtimes, &mut |_| reported += 1).unwrap_err();
+    let mut unpacked = 0;
+    let err = rt
+        .install(&runtimes, &mut |p| {
+            unpacked += usize::from(p.phase == Pass::Unpack);
+        })
+        .unwrap_err();
     assert_eq!(err.code(), "hx.setup.runtime_hash_mismatch", "{err}");
-    assert_eq!(reported, 0, "nothing was read as a tar");
+    assert_eq!(unpacked, 0, "nothing was read as a tar");
     assert_eq!(names(&runtimes), vec![".lock".to_owned()]);
 
     let rt = bundle(&tmp.path().join("good"), "0.23.2", &bytes, None);
@@ -539,4 +603,72 @@ fn a_build_that_carries_a_runtime_uses_it_unless_the_user_chose_their_own_hermes
         plan.is_none() && error.is_none(),
         "a build without one uses the Hermes on the machine"
     );
+}
+
+// ── the advanced setting "Use my own Hermes" ────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn the_saved_source_is_read_back_from_the_settings_file_as_it_was_written() {
+    for source in [Source::Bundled, Source::Existing] {
+        // the file the Tauri store writes: the app's settings under "app", the Hermes choice at the top
+        let file =
+            serde_json::json!({"app": {"version": 1}, "hermes_source": source_value(source)})
+                .to_string();
+        let saved = stored_source(&file);
+        assert_eq!(saved.as_deref(), Some(source.word()));
+        assert_eq!(Source::resolve(None, saved.as_deref()), source);
+    }
+    // an absent, unreadable or unknown value is no saved choice, and the bundled runtime stays
+    for file in ["{}", "not json", r#"{"hermes_source": 3}"#] {
+        assert_eq!(stored_source(file), None, "{file}");
+    }
+    assert_eq!(Source::resolve(None, Some("elsewhere")), Source::Bundled);
+}
+
+#[test]
+fn the_view_says_what_is_saved_what_wins_and_what_runs_now() {
+    // nothing saved: the bundled runtime, and no restart for a choice nobody made
+    let v = SourceView::new(None, None, Source::Bundled, true);
+    assert_eq!((v.saved, v.from_env, v.next), (None, None, Source::Bundled));
+    assert!(!v.restart_needed());
+    // saved "existing" while the bundled one runs: it takes effect at the next start, so a restart is due
+    let v = SourceView::new(None, Some("existing"), Source::Bundled, true);
+    assert_eq!(
+        (v.saved, v.next, v.running),
+        (Some(Source::Existing), Source::Existing, Source::Bundled)
+    );
+    assert!(v.restart_needed());
+    // after that restart, the same saved value is what runs: nothing is due
+    assert!(!SourceView::new(None, Some("existing"), Source::Existing, true).restart_needed());
+    // BOOPIS_HERMES wins over the saved choice, so saving the other one changes nothing and asks for no restart
+    let v = SourceView::new(Some("EXISTING"), Some("bundled"), Source::Existing, true);
+    assert_eq!(
+        (v.from_env, v.saved, v.next),
+        (
+            Some(Source::Existing),
+            Some(Source::Bundled),
+            Source::Existing
+        )
+    );
+    assert!(!v.restart_needed());
+    // a value in the variable that means nothing is ignored, as at start-up
+    assert_eq!(
+        SourceView::new(Some("later"), None, Source::Bundled, true).from_env,
+        None
+    );
+    // a build with no runtime of its own has nothing to restart for
+    assert!(!SourceView::new(None, Some("existing"), Source::Bundled, false).restart_needed());
+}
+
+#[test]
+fn the_choice_crosses_the_ipc_as_a_lowercase_word() {
+    assert_eq!(
+        serde_json::to_string(&Source::Existing).unwrap(),
+        "\"existing\""
+    );
+    assert_eq!(
+        serde_json::from_str::<Source>("\"bundled\"").unwrap(),
+        Source::Bundled
+    );
+    assert!(serde_json::from_str::<Source>("\"Elsewhere\"").is_err());
 }

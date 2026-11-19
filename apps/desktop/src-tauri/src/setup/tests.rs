@@ -25,6 +25,8 @@ struct Fake {
     plugins: Mutex<Vec<PluginEntry>>,
     sets: Mutex<Vec<String>>,
     restarts: Mutex<u32>,
+    /// How many of the next restarts fail (the gateway does not come up).
+    restart_failures: Mutex<u32>,
     /// What Hermes says about the free tier: the status before a claim, and after it.
     free: Mutex<FreeScript>,
     /// The free rows of the `OpenRouter` catalogue.
@@ -50,6 +52,7 @@ impl Fake {
             plugins: Mutex::new(Vec::new()),
             sets: Mutex::new(Vec::new()),
             restarts: Mutex::new(0),
+            restart_failures: Mutex::new(0),
             free: Mutex::new(FreeScript::default()),
             catalogue: Mutex::new(Vec::new()),
         })
@@ -108,6 +111,11 @@ impl HermesOps for Fake {
         Ok(())
     }
     async fn restart_gateway(&self) -> Result<()> {
+        let mut failures = self.restart_failures.lock().unwrap();
+        if *failures > 0 {
+            *failures -= 1;
+            return Err(Error::Unavailable("the gateway did not start".into()));
+        }
         *self.restarts.lock().unwrap() += 1;
         Ok(())
     }
@@ -659,6 +667,215 @@ async fn a_runtime_that_fails_its_hash_stops_setup_with_the_reason() {
     assert!(
         !r.fake.home.join("plugins").exists(),
         "nothing after it ran"
+    );
+}
+
+/// A progress sink that keeps what it is told.
+fn collecting() -> (super::ProgressSink, Arc<Mutex<Vec<super::SetupProgress>>>) {
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    let sink = seen.clone();
+    (Arc::new(move |p| sink.lock().unwrap().push(p)), seen)
+}
+
+#[tokio::test]
+async fn the_unpack_reports_how_far_it_has_come_in_bytes_of_the_manifests_archive() {
+    use crate::runtime::Pass;
+    let r = rig(main_provider());
+    let (setup, plan) = with_runtime(&r, "0.23.2", None);
+    let (sink, seen) = collecting();
+    let setup = setup.with_progress(sink);
+    setup.advance(None, false).await.unwrap();
+    let total = plan.runtime.manifest().archive.size;
+    let events = seen.lock().unwrap().clone();
+    assert!(
+        events
+            .iter()
+            .all(|e| e.step == "runtime" && e.total == total && e.read <= total),
+        "{events:?}"
+    );
+    for phase in [Pass::Verify, Pass::Unpack] {
+        let last = events
+            .iter()
+            .rfind(|e| e.phase == phase)
+            .expect("a report per pass");
+        assert_eq!(last.read, total, "{phase:?} runs to the whole archive");
+    }
+    let first_unpack = events.iter().position(|e| e.phase == Pass::Unpack).unwrap();
+    assert!(
+        events[..first_unpack]
+            .iter()
+            .all(|e| e.phase == Pass::Verify),
+        "the archive is verified before it is unpacked: {events:?}"
+    );
+    // once it is unpacked there is nothing to report: no event is made up for a step that did no work
+    let before = events.len();
+    setup.advance(None, false).await.unwrap();
+    assert_eq!(seen.lock().unwrap().len(), before);
+}
+
+#[tokio::test]
+async fn a_failed_check_reports_verification_only_and_never_a_made_up_unpack() {
+    use crate::runtime::Pass;
+    let r = rig(main_provider());
+    let (setup, _) = with_runtime(&r, "0.23.2", Some(&"f".repeat(64)));
+    let (sink, seen) = collecting();
+    let s = setup
+        .with_progress(sink)
+        .advance(None, false)
+        .await
+        .unwrap();
+    assert_eq!(s.steps[0].state, StepState::Blocked);
+    let events = seen.lock().unwrap().clone();
+    assert!(
+        !events.is_empty() && events.iter().all(|e| e.phase == Pass::Verify),
+        "{events:?}"
+    );
+}
+
+#[tokio::test]
+async fn a_blocked_runtime_step_runs_again_on_the_next_call_without_a_new_engine_or_a_restart() {
+    let r = rig(main_provider());
+    let (setup, plan) = with_runtime(&r, "0.23.2", None);
+    let archive = r.dir.path().join("res").join("rt.tar.zst");
+    let bytes = std::fs::read(&archive).unwrap();
+    std::fs::remove_file(&archive).unwrap();
+    let s = setup.advance(None, false).await.unwrap();
+    assert_eq!(s.steps[0].state, StepState::Blocked);
+    assert_eq!(s.steps[0].code.as_deref(), Some("hx.setup.runtime_missing"));
+    assert!(!s.done);
+    // the user puts it right (here: the file is back) and presses Retry: the same engine, the same call
+    std::fs::write(&archive, bytes).unwrap();
+    let s = setup.advance(None, false).await.unwrap();
+    assert_eq!(s.steps[0].state, StepState::Done, "{:?}", s.steps[0]);
+    assert!(plan.runtime.is_installed(&plan.runtimes_dir()));
+    assert_eq!(s.steps[1].id, "hermes", "and setup went on from there");
+}
+
+#[tokio::test]
+async fn a_blocked_later_step_is_retried_alone_and_what_is_done_is_not_redone() {
+    let r = rig(main_provider());
+    r.store.set("boopis.provider.main", "api_key", KEY).unwrap();
+    let s = r.setup().advance(None, false).await.unwrap();
+    assert_eq!(s.form.as_ref().unwrap().form_id, "setup.config");
+    *r.fake.restart_failures.lock().unwrap() = 1;
+    let setup = r.setup();
+    let s = setup
+        .advance(Some(answer("setup.config", json!({}), json!({}))), false)
+        .await
+        .unwrap();
+    // the models question is the next stop; answer it with the one configured model
+    assert_eq!(s.form.as_ref().unwrap().form_id, "setup.ladder");
+    let s = setup
+        .advance(
+            Some(answer(
+                "setup.ladder",
+                json!({"choice": "main/fake-a"}),
+                json!({}),
+            )),
+            false,
+        )
+        .await
+        .unwrap();
+    assert_eq!(state_of(&s, "restart"), StepState::Blocked, "{:?}", s.steps);
+    assert_eq!(
+        s.steps
+            .iter()
+            .find(|x| x.id == "restart")
+            .unwrap()
+            .code
+            .as_deref(),
+        Some("hx.hermes.unavailable")
+    );
+    assert!(!s.done);
+    let sets = r.fake.sets.lock().unwrap().len();
+    // Retry: the same call as "Check again". It finishes, and writes nothing again.
+    let s = setup.advance(None, false).await.unwrap();
+    assert!(s.done, "{:?}", s.steps);
+    assert_eq!(state_of(&s, "restart"), StepState::Done);
+    assert_eq!(
+        r.fake.sets.lock().unwrap().len(),
+        sets,
+        "no setting was written twice"
+    );
+    assert_eq!(*r.fake.restarts.lock().unwrap(), 1);
+}
+
+#[tokio::test]
+async fn the_ladder_view_says_default_set_or_unreadable_and_lists_tiers_as_hermes_holds_them() {
+    use super::providers::{LadderState, LadderTier};
+    let r = rig(json!({}));
+    let v = r.setup().models_view().await.unwrap();
+    assert_eq!((v.state, v.tiers.len()), (LadderState::Default, 0));
+    r.fake
+        .config_set(
+            LADDER,
+            &json!({"tiers": [{"name": "small", "model": "openrouter/a:free"}, {"name": "big", "model": "openrouter/b:free", "effort": "high"}]}).to_string(),
+        )
+        .await
+        .unwrap();
+    let v = r.setup().models_view().await.unwrap();
+    assert_eq!(v.state, LadderState::Set);
+    assert_eq!(
+        v.tiers,
+        vec![
+            LadderTier {
+                name: "small".into(),
+                model: "openrouter/a:free".into()
+            },
+            LadderTier {
+                name: "big".into(),
+                model: "openrouter/b:free".into()
+            }
+        ]
+    );
+    for bad in [
+        json!({"tiers": []}),
+        json!({"tiers": [{"name": "x"}]}),
+        json!("nope"),
+        json!({"tiers": [3]}),
+    ] {
+        r.fake.config_set(LADDER, &bad.to_string()).await.unwrap();
+        let v = r.setup().models_view().await.unwrap();
+        assert_eq!(
+            (v.state, v.tiers.len()),
+            (LadderState::Unreadable, 0),
+            "{bad}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn the_view_shows_the_ladder_the_free_choice_wrote_and_change_models_asks_the_question_again()
+{
+    let r = rig(json!({}));
+    {
+        let mut f = r.fake.free.lock().unwrap();
+        f.before = welcome(false, true);
+        f.after = welcome(true, true);
+    }
+    at_models(&r).await;
+    choose(&r, "free").await;
+    let v = r.setup().models_view().await.unwrap();
+    assert_eq!(
+        v.tiers
+            .iter()
+            .map(|t| (t.name.as_str(), t.model.as_str()))
+            .collect::<Vec<_>>(),
+        [("free", "nous/nous/welcome")]
+    );
+    // "Change models": forget the choice, and the next call asks setup's question with the saved ladder still in place
+    r.setup().reopen_models().unwrap();
+    let s = r.setup().advance(None, false).await.unwrap();
+    assert_eq!(
+        s.form.as_ref().unwrap().form_id,
+        "setup.ladder",
+        "{:?}",
+        s.steps
+    );
+    assert_eq!(
+        r.setup().models_view().await.unwrap().tiers.len(),
+        1,
+        "asking changes nothing until the new choice is made"
     );
 }
 
