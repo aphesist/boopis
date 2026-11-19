@@ -30,7 +30,7 @@ pkgrel=1
 pkgdesc='Desktop coding harness on Hermes Agent, built on the system WebKitGTK'
 arch=('x86_64')
 url="$_repo_url"
-license=('LicenseRef-proprietary')   # the repository says UNLICENSED; see packaging/arch/NOTICE
+license=('Apache-2.0')
 depends=(
   'webkit2gtk-4.1'   # the point of this package: the system's WebKitGTK, never a bundled one
   'gtk3'
@@ -135,7 +135,8 @@ package() {
   install -Dm644 "$brand/icons/boopis-symbolic.svg" "$pkgdir/usr/share/icons/hicolor/symbolic/apps/$pkgname-symbolic.svg"
 
   # Licences: the notice, Hermes's MIT licence (it is inside the runtime archive it ships in), and the fonts the UI embeds.
-  install -Dm644 "$src/packaging/arch/NOTICE" "$pkgdir/usr/share/licenses/$pkgname/NOTICE"
+  install -Dm644 "$src/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 "$src/NOTICE" "$pkgdir/usr/share/licenses/$pkgname/NOTICE"
   zstd -dc < "$srcdir/$_runtime_archive" | tar -xO ./hermes-agent/LICENSE > "$srcdir/hermes-agent-LICENSE"
   install -Dm644 "$srcdir/hermes-agent-LICENSE" "$pkgdir/usr/share/licenses/$pkgname/hermes-agent-LICENSE"
   local f

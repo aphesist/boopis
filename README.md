@@ -17,4 +17,4 @@ Under construction. Phase 1 is the Sessions section, good enough to replace Clau
 - `design/v6/`: the approved interface design and its design system
 
 ## Licence
-To be chosen by the owner.
+Apache License 2.0 (`LICENSE`). Third-party work it includes and their licences are listed in `NOTICE`.

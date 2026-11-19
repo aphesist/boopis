@@ -6,7 +6,7 @@ members = ["crates/*", "apps/desktop/src-tauri"]
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.97"
-license = "UNLICENSED"
+license = "Apache-2.0"
 repository = "https://github.com/aphesist/hypotaxis"
 authors = ["aphesist <126630868+aphesist@users.noreply.github.com>"]
 

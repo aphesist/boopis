@@ -86,7 +86,7 @@ sudo pacman -U boopis-*.pkg.tar.zst
 **The rename.** The old names are in one block at the top of the PKGBUILD (`_cargo_bin`, `_host_crate`, `_hx_crate`, `_plugin`, `_runtime_archive`, `_repo_url`), two lines of `smoke.sh` (`PLUGIN`, `RUNTIME_ARCHIVE`), `ARCH_ARTIFACT` and the `hypotaxis-*` release pattern in `release.yml`, and the `HYPOTAXIS_GPU` hint in `optdepends`. The package, binary, desktop entry and directories already say `boopis`.
 
 **Follow-up: an AUR package (`boopis`).** It needs:
-- a licence decision: the repository says `UNLICENSED` and the PKGBUILD says `LicenseRef-proprietary`; the AUR wants a statement it can point to;
+- the licence is Apache-2.0 (`LICENSE`, with third-party notices in `NOTICE`), so the AUR has a statement to point to;
 - the source as the release tarball (`source=("$url/archive/v$pkgver.tar.gz")`) with a real checksum, and the in-tree `$startdir/../..` copy dropped;
 - the Hermes runtime as a release asset with a checksum (today it is a workflow artifact, kept 30 days and not published) or built in a clean chroot, which needs network in `build()` and so is not allowed on the AUR, hence the asset;
 - `.SRCINFO` (`makepkg --printsrcinfo`), and a maintainer who bumps it per release (or a `-git` twin);
