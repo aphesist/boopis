@@ -14,9 +14,10 @@ import { emit } from '../../core/bus';
 import { $$ } from '../../core/dom';
 import { ui } from '../../components';
 import {
-  EASE, GROW, GROW_ADD, K_DOT, K_FLIP, K_SINK, K_SLAB, K_SLIDE, MAG, MAG_ADD, S, SIG, X, atRest, clamp, flags, geomR, motion, rendered, shownPages, snapS, spring, stepS
+  EASE, GROW, GROW_ADD, K_DOT, K_FLIP, K_SINK, K_SLAB, K_SLIDE, MAG, MAG_ADD, S, SIG, X, atRest, flags, geomR, motion, rendered, shownPages, snapS, spring, stepS
 } from './ctx';
 import type { Spring } from './ctx';
+import { slabCorner, slabWidthFor } from './geometry';
 import { setOrbLife } from './orbs';
 import { holdOutsideDock, releaseOutsideDock } from '../../components/orb-runtime';
 import { springAt, springElapsed, springKeyframes } from '../../core/spring';
@@ -46,11 +47,7 @@ type Sec = HTMLElement & { _fade?: Animation | null };
 export const hideTip = (): void => { try { ui.tooltip.hide(); } catch { /* none */ } };
 
 /* ───────── geometry ───────── */
-function geom(w: number, h: number): { R: number; Fw: number } {
-  const R = Math.min(geomR.R_TOP, h / 2, w / 2);
-  const F = clamp(Math.min(geomR.FLARE, h - R), 0, geomR.FLARE);
-  return { R, Fw: F };
-}
+function geom(w: number, h: number): { R: number; Fw: number } { return slabCorner(w, h, geomR.R_TOP, geomR.FLARE); }
 /* the slab as one path: concave flare out of the edge, side, rounded top, side, flare back into the edge. In svg
    space the slab body spans x ∈ [F, F + w]. The library draws the same continuous corner every other surface takes
    (squircle-path.ts); the minimised pill is a pill in a pill: R = h / 2 with round ends. */
@@ -167,6 +164,10 @@ export function paint(): void {
   /* while anything travels, the content is held inside the slab (16px of headroom for the orbs' paint), so the black
      shape and what it carries never part; at rest nothing is clipped */
   const moving = !motion.reduce && h > 0.5 && (E.anims.size > 0 || E.slides.size > 0 || E.slideAn.size > 0 || E.pending.length > 0 || !atRest(E.slabW) || !atRest(E.slabH) || leaving.size > 0);
+  /* a focus ring is drawn where its element will be, not where the orb inside it is: while the slab travels the rings wait
+     (CSS, `data-moving`), or a roster row's ring hangs above a slab that has not reached it and a bot's ring circles an
+     empty slot while its orb is still on the way */
+  if (X.root.hasAttribute('data-moving') !== moving) X.root.toggleAttribute('data-moving', moving);
   const clip = moving ? `polygon(${(-w / 2).toFixed(1)}px ${(-(h + sink + 16)).toFixed(1)}px, ${(w / 2).toFixed(1)}px ${(-(h + sink + 16)).toFixed(1)}px, ${(w / 2).toFixed(1)}px 4px, ${(-w / 2).toFixed(1)}px 4px)` : '';
   if (X.stageEl.style.clipPath !== clip) X.stageEl.style.clipPath = clip;
   paintMag();
@@ -419,12 +420,28 @@ function fixFocus(opts: MorphOpts, hadFocus: boolean): void {
 let watched: HTMLElement | null = null, sent = '';
 const viewRO = typeof ResizeObserver === 'function' ? new ResizeObserver(() => {
   const v = X.curView;
-  if (flags.mounted && v && (v.offsetHeight !== E.baseH || v.offsetWidth !== E.baseW)) retarget(false);
+  if (flags.mounted && v && (v.offsetHeight !== E.baseH || slabWidth(v) !== E.baseW)) retarget(false);
 }) : null;
+/** The narrowest slab that still holds the foot (Arrange, the page nub, Minimise, with the foot's padding and the gap
+    between them). A view can be narrower than that: with no bots the row is one "+" (60px with its padding), and a slab
+    that narrow is a tombstone (the corners meet at the top: R is clamped to half the width) with the foot spilling out of
+    its sides. The slab is never narrower than its foot; the view stays centred in it. */
+function footWidth(): number {
+  const f = X.footEl;
+  let w = 0, n = 0;
+  for (const c of Array.from(f.children) as HTMLElement[]) { w += c.offsetWidth; n++; }
+  if (!n) return 0;
+  const cs = getComputedStyle(f);
+  return Math.ceil(w + (n - 1) * (parseFloat(cs.columnGap) || 0) + (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0));
+}
+/** the slab's width at rest: the view it wraps, or the foot when that is wider (the foot shows in the normal and expanded dock only) */
+function slabWidth(v: HTMLElement): number {
+  return slabWidthFor(S.mode, v.offsetWidth, S.mode === 'normal' || S.mode === 'expanded' ? footWidth() : 0);
+}
 export function retarget(snap: boolean): void {
   const v = X.curView;
   if (v !== watched && viewRO) { if (watched) viewRO.unobserve(watched); if (v) viewRO.observe(v); watched = v; }
-  E.baseW = v ? v.offsetWidth : 0;
+  E.baseW = v ? slabWidth(v) : 0;
   E.baseH = v ? v.offsetHeight : 0;
   E.sinkS.t = S.mode === 'off' ? E.baseH + 14 : 0;
   cacheMag();

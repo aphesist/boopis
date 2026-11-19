@@ -58,12 +58,15 @@
 :where(.dk) button:not([class*="ui-"]) { font: inherit; color: inherit; background: none; border: 0; margin: 0; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .dk :focus { outline: none; }
 .dk :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* while the slab and its content travel, a focus ring waits for its element to arrive (engine.ts paint) */
+.dk[data-moving] :focus-visible { outline-color: transparent; }
+.dk[data-moving] [data-sq-on]:focus-visible::after { opacity: 0; }
 
 /* ---------- the foot: Arrange · the page nub · Minimise, inside the slab's last 24px, always the slab's width ----------
    The nub is the library's page dots (the current page a short brass pill, the others --mark-off dots, a page that
    owes you something a red dot). It is a quiet affordance: clicking a dot pages, and so do swipes, [ ] and 1-9. */
-.dk-foot { position: absolute; left: 0; bottom: 0; height: var(--dock-band); transform: translateX(-50%); box-sizing: border-box; padding: 0 var(--sp-1); display: flex; align-items: center; justify-content: space-between; pointer-events: none; transition: opacity var(--dur-1) var(--ease), visibility 0s; }
-.dk-foot > * { pointer-events: auto; }
+.dk-foot { position: absolute; left: 0; bottom: 0; height: var(--dock-band); transform: translateX(-50%); box-sizing: border-box; padding: 0 var(--sp-1); display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); pointer-events: none; transition: opacity var(--dur-1) var(--ease), visibility 0s; }
+.dk-foot > * { pointer-events: auto; flex: none; }
 .dk-foot.is-off { opacity: 0; visibility: hidden; transition: opacity var(--dur-out) var(--ease), visibility 0s var(--dur-out); }
 .dk-dots { display: flex; align-items: center; }
 /* the dots stay 10px to look at; each answers a pointer over the foot's full 24px height */
