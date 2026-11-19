@@ -4,8 +4,8 @@
 
 .rl-id { display: inline-flex; gap: 6px; flex-wrap: wrap; margin: 0 0 10px; }
 .rl-id code { font: 400 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); color: var(--text-dim); padding: 4px 7px; border-radius: var(--r-pill); box-shadow: inset 0 0 0 1px var(--hair); }
-.rl-id code[data-proposed] { color: var(--text); box-shadow: inset 0 0 0 1px var(--line-strong); }
-.rl-id code[data-proposed]::after { content: " proposed"; color: var(--text-quiet); }
+.rl-id code[data-reviewed] { color: var(--text); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.rl-id code[data-reviewed]::after { content: " approved 19 Nov"; color: var(--text-quiet); }
 .rl-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--sp-4); }
 .rl-was { font: 400 var(--fs-2xs)/var(--lh-meta) var(--mono); color: var(--text-quiet); margin: 8px 0 0; }
 
