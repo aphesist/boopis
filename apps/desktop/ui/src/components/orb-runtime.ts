@@ -66,10 +66,13 @@ const phases = new WeakMap<Element, number>();
 const phaseOf = (o: Element): number => { let p = phases.get(o); if (p === undefined) { p = o.closest('#hx-dock') ? 0 : 1; phases.set(o, p); } return p; };
 let lastNow = Number.NaN, frame = 0, holdUntil = 0;
 const HOLD_MS = 120;
+/* when the orbs draw in a worker (components/orb-worker) the policy runs there; the dock's calls are forwarded to it */
+let bridge: { hold(): void; release(): void } | null = null;
+export function setHoldBridge(b: { hold(): void; release(): void } | null): void { bridge = b; }
 /** the dock is animating this frame: ambient orbs outside it wait (called by the dock's frame loop; expires on its own) */
-export function holdOutsideDock(): void { holdUntil = performance.now() + HOLD_MS; }
+export function holdOutsideDock(): void { if (bridge) bridge.hold(); else holdUntil = performance.now() + HOLD_MS; }
 /** the dock has settled: the orbs outside it go on at once */
-export function releaseOutsideDock(): void { holdUntil = 0; }
+export function releaseOutsideDock(): void { if (bridge) bridge.release(); else holdUntil = 0; }
 
 /** make a resized orb canvas repaint in the same task; returns whether the patch is in place */
 export function installOrbRuntime(): boolean {
