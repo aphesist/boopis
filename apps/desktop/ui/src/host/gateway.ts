@@ -32,6 +32,9 @@ export interface LinkState {
 }
 
 export interface ServerRequest { id: string | number; method: string; params: unknown }
+/** What a server-request handler returns when a person will answer later: the client sends nothing now and the handler's owner
+    answers with `respond(id, result)` (or `refuse`), so a failed delivery is its to report. */
+export const ANSWER_LATER = Symbol('answer-later');
 
 /** a JSON-RPC error answered by the gateway or the host */
 export class GatewayError extends Error {
@@ -97,8 +100,14 @@ export class GatewayClient {
 
   onEvent(fn: (e: GatewayEvent) => void): Unsubscribe { this.eventSubs.add(fn); return () => { this.eventSubs.delete(fn); }; }
   onState(fn: (s: LinkState) => void): Unsubscribe { this.stateSubs.add(fn); return () => { this.stateSubs.delete(fn); }; }
-  /** answer the gateway's own requests (clarify, secret, ...). Without a handler they are refused. */
+  /** answer the gateway's own requests (clarify, secret, ...). Without a handler they are refused. A handler may return
+      `ANSWER_LATER` and answer with `respond` when the person has. */
   onServerRequest(fn: (r: ServerRequest) => Promise<unknown> | unknown): void { this.serverHandler = fn; }
+  /** answer a server request now: the response frame with the request's own id. What a handler that returned `ANSWER_LATER`
+      calls, and what answers a request the gateway handed back in `open_requests` after a resume. Rejects when it was not sent. */
+  respond(id: string | number, result: unknown): Promise<void> {
+    return this.send({ jsonrpc: '2.0', id, result }).catch((e: unknown) => { throw asHostError(e); });
+  }
 
   private async send(frame: unknown): Promise<void> {
     if (this.connectionId === null) throw new GatewayError(-32000, 'not connected', { code: 'hx.hermes.unavailable' });
@@ -134,6 +143,7 @@ export class GatewayClient {
     try {
       if (!this.serverHandler) throw new GatewayError(-32601, 'this client does not answer ' + req.method, { code: 'hx.host.unsupported' });
       const result = await this.serverHandler(req);
+      if (result === ANSWER_LATER) return;
       await this.send({ jsonrpc: '2.0', id: req.id, result: result ?? {} });
     } catch (e) {
       const err = e instanceof GatewayError ? e : new GatewayError(-32000, e instanceof Error ? e.message : String(e));

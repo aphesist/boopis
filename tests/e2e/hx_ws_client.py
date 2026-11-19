@@ -30,6 +30,13 @@ JsonObject = dict[str, Any]
 EventPredicate = Callable[[JsonObject], bool]
 
 
+class NoAnswer:
+    """What a test's ``answerer`` returns to leave a server request open: the gateway waits, and may withdraw it."""
+
+
+NO_ANSWER = NoAnswer()
+
+
 class WSError(Exception):
     """A transport or protocol failure, or a JSON-RPC error answered to ``result``."""
 
@@ -155,6 +162,9 @@ class GatewayClient:
         self.frames_log = frames_log
         self.events: list[JsonObject] = []  # every ``event`` notification's params, in order
         self.server_requests: list[JsonObject] = []
+        # A test that plays the person answers a server request itself: this returns the result to send, ``None`` for
+        # the default (deny an approval, accept the rest empty), or ``NO_ANSWER`` to leave the request open.
+        self.answerer: Callable[[JsonObject], JsonObject | NoAnswer | None] | None = None
         self._cv = threading.Condition()
         self._pending: dict[int, JsonObject | None] = {}
         self._next_id = 1
@@ -242,8 +252,13 @@ class GatewayClient:
             self._cv.notify_all()
 
     def _answer_server_request(self, frame: JsonObject) -> None:
-        # Nothing in these tests answers a server request: deny approvals, accept the rest empty.
+        # Unless a test answers it, nothing answers a server request: deny approvals, accept the rest empty.
         result: JsonObject = {"choice": "deny"} if frame["method"] == "approval" else {}
+        chosen = self.answerer(frame) if self.answerer is not None else None
+        if isinstance(chosen, NoAnswer):
+            return
+        if chosen is not None:
+            result = chosen
         self._send({"jsonrpc": "2.0", "id": frame["id"], "result": result})
 
     def _send(self, frame: JsonObject) -> None:
