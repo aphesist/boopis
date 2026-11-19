@@ -202,7 +202,7 @@ mod tests {
         registered.sort();
         assert_eq!(allowed, declared, "capability vs build.rs");
         assert_eq!(registered, declared, "registry vs build.rs");
-        assert!(!allowed.is_empty());
+        assert_ne!(allowed.len(), 0, "the capability lists no command");
     }
 
     /// CI's staleness check: the checked-in bindings are exactly what the registry generates.

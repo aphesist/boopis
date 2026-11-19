@@ -11,6 +11,8 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: "0"
+  # The toolchain CI builds with (see docs/RELEASING.md). RUSTUP_TOOLCHAIN overrides rust-toolchain.toml's "stable".
+  RUSTUP_TOOLCHAIN: "1.97.0"
   # ubuntu-22.04 on purpose: hx-sandbox needs unprivileged user namespaces, which 24.04 restricts with AppArmor.
   # The sysctl step below keeps these jobs working if the image moves to 24.04.
 
@@ -60,7 +62,9 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev build-essential pkg-config
       - name: allow user namespaces (hx-sandbox tests)
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
-      - run: rustup show
+      - uses: dtolnay/rust-toolchain@1.97.0
+        with:
+          components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
         with: { shared-key: workspace }
       - run: cargo fmt --all --check
@@ -73,7 +77,9 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      - run: rustup show
+      - uses: dtolnay/rust-toolchain@1.97.0
+        with:
+          components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
         with: { shared-key: hx }
       - run: cargo build -p hx
