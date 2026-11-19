@@ -32,6 +32,8 @@ provides_hooks:
   - subagent_start
   - subagent_stop
   - on_human_input_request
+  # compat/ for Claude Code mods (docs/MODS.md): a model change is refused before the request goes out
+  - pre_api_request
 # Nothing here needs a granted capability: no tool override, no host-owned LLM calls.
 capabilities: []
 config_schema:
