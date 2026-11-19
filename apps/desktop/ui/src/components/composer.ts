@@ -255,7 +255,7 @@ export function composer(opts: ComposerOpts = {}): ComposerEl {
     for (const a of ['aria-label', 'data-tip', 'data-kbd', 'aria-keyshortcuts']) { if (s.hasAttribute(a)) send.setAttribute(a, s.getAttribute(a) ?? ''); else send.removeAttribute(a); }
     send.disabled = !running && !text().trim();
   };
-  api.setSpend = (spent, cap) => { const c = root.querySelector('.ui-capacity'); if (c) c.outerHTML = cap ? html.capacity(spent, cap) : '<span class="ui-capacity" aria-label="' + esc(spent + ' spent') + '"><b>' + esc(spent) + '</b></span>'; };
+  api.setSpend = (spent, cap) => { const c = root.querySelector('.ui-capacity'); if (c) c.outerHTML = cap ? html.capacity(spent, cap) : '<span class="ui-capacity" role="img" aria-label="' + esc(spent + ' spent') + '"><b>' + esc(spent) + '</b></span>'; };
   api.setHint = (h) => paintHint(h);
   api.setValue(o.value);
   return api;

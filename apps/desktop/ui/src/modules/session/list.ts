@@ -34,7 +34,7 @@ export function mountList(root: HTMLElement): void {
     const groups: Record<string, SessionSummary[]> = {};
     list.forEach((s) => (groups[s.project] ??= []).push(s));
     root.replaceChildren();
-    Object.keys(groups).forEach((p) => root.append(ui.group({ label: p, collapsible: true, expanded: !collapsed.has(p), rows: (groups[p] ?? []).map((s) => rowHTML(s, false)).join('') })));
+    Object.keys(groups).forEach((p) => root.append(ui.group({ label: p || 'No project', collapsible: true, expanded: !collapsed.has(p), rows: (groups[p] ?? []).map((s) => rowHTML(s, false)).join('') })));
     if (arch.length) root.append(ui.group({ label: 'Archived', collapsible: true, expanded: !collapsed.has('__arch'), rows: arch.map((s) => rowHTML(s, true)).join('') }));
     if (!list.length) root.append(ui.empty({ title: 'No sessions yet', text: 'Start one with New session.' }));
     root.querySelectorAll<HTMLElement>('.ui-group').forEach((g, i) => { g.dataset['group'] = Object.keys(groups)[i] || '__arch'; });

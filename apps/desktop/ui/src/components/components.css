@@ -32,7 +32,7 @@
    (radius, size, ring); a row along an edge that holds corner controls at its ends: .ui-corners (the inset). Never set a
    radius or an inset in a corner by hand. A squircle-drawn container also exposes its drawn radius as --r-outer when it
    declared none (squircle.ts), so its children nest the same way. */
-:where(.ui-nest, .ui-composer__box, .ui-file, .ui-menu, .ui-pop, .ui-listbox, .ui-tip, .ui-toast, .ui-seg, .ui-search--s, .ui-search--m,
+:where(.ui-nest, .ui-row-wrap, .ui-entry, .ui-composer__box, .ui-file, .ui-menu, .ui-pop, .ui-listbox, .ui-tip, .ui-toast, .ui-seg, .ui-search--s, .ui-search--m,
   hx-card[data-size="inline"], hx-card[data-size="compact"], hx-card[data-size="popover"]) {
   --corner-size: var(--ctl-s);
   --r-in: min(var(--r-outer), max(var(--r-floor), calc(var(--r-outer) - var(--pad))));
@@ -235,16 +235,17 @@
 .ui-seg {
   --n: 2; --i: 0;
   position: relative; display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; flex: none;
-  height: var(--ctl); max-width: 100%; padding: var(--corner-inset); box-sizing: border-box;
-  --r-outer: var(--r-s); --pad: var(--pad-seg); border-radius: var(--r-outer);
+  --seg-h: var(--ctl); height: var(--seg-h); max-width: 100%; padding: var(--corner-inset); box-sizing: border-box;
+  --r-outer: min(var(--r-s), calc(var(--seg-h) / 2));   /* the radius the track really draws: at most a pill, so the thumb's --r-in is concentric with it at every corners setting (R-corner-3) */ --pad: var(--pad-seg); border-radius: var(--r-outer);
   --sq-bg: var(--bg-0); background: var(--sq-bg); box-shadow: inset 0 0 0 1px var(--hair);
 }
 .ui-seg--fill { display: grid; width: 100%; }
 .ui-seg__thumb {
-  position: absolute; top: var(--corner-inset); bottom: var(--corner-inset); left: var(--corner-inset); width: calc((100% - 2 * var(--corner-inset)) / var(--n));
+  position: absolute; top: var(--corner-inset); bottom: var(--corner-inset); inset-inline-start: var(--corner-inset); width: calc((100% - 2 * var(--corner-inset)) / var(--n));
   border-radius: var(--r-corner); background: var(--selected); pointer-events: none;   /* concentric with the track: the container rule's inset and radius */
-  transform: translateX(calc(100% * var(--i))); transition: transform var(--dur-slide) var(--ease);
+  transform: translateX(calc(100% * var(--i) * var(--dir, 1))); transition: transform var(--dur-slide) var(--ease);
 }
+.ui-seg:dir(rtl) { --dir: -1; }   /* the options run right to left, so the thumb starts at the right and slides left */
 .ui-seg__opt {
   appearance: none; position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   min-width: 0; padding: 0 14px; margin: 0; border: 0; border-radius: var(--r-corner); background: transparent;
@@ -257,7 +258,7 @@
 .ui-seg__opt:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }   /* inside the track, which clips to its path */
 .ui-seg__opt .ui-dot { display: none; }
 .ui-seg__opt[aria-selected="false"] .ui-dot[data-show], .ui-seg__opt[aria-checked="false"] .ui-dot[data-show] { display: block; }
-.ui-seg--s { height: calc(var(--ctl) - 2px); }
+.ui-seg--s { --seg-h: calc(var(--ctl) - 2px); }
 .ui-seg--s .ui-seg__opt { padding: 0 12px; font-size: var(--fs-xs); }
 .ui-seg--vertical { grid-auto-flow: row; grid-auto-rows: 1fr; width: 36px; height: auto; }
 .ui-seg--vertical .ui-seg__thumb { left: 3px; right: 3px; width: auto; height: calc((100% - 6px) / var(--n)); transform: translateY(calc(100% * var(--i))); }
@@ -408,10 +409,15 @@ button.ui-group__head { cursor: pointer; }
 .ui-row:is(:hover, :focus-within) .ui-row__acts, .ui-row-wrap:is(:hover, :focus-within) .ui-row__acts { display: flex; }
 .ui-row-wrap:is(:hover, :focus-within) .ui-row__end[data-swap] { display: none; }
 .ui-row[data-archived] .ui-row__title { color: var(--text-quiet); text-decoration: line-through; text-decoration-color: var(--line-strong); }
-.ui-row-wrap { display: flex; align-items: center; border-radius: var(--r-s); }   /* the actions join the flow when the row is hovered or has focus, so the title ellipsises before them with no computed padding (R-space-1) */
+.ui-row-wrap {
+  --r-outer: var(--r-s); --pad: var(--pad-row);   /* the row's own radius; its action button sits --pad-row from every edge: concentric, --r-in-row (R-corner-3) */
+  display: flex; align-items: center; border-radius: var(--r-outer);
+}   /* the actions join the flow when the row is hovered or has focus, so the title ellipsises before them with no computed padding (R-space-1) */
 .ui-row-wrap > .ui-row { flex: 1; width: auto; min-width: 0; }
-.ui-row-wrap > .ui-row__acts { padding-right: var(--sp-1); }
-.ui-row-wrap:is(:focus-within) { background: var(--hover); }
+.ui-row-wrap > .ui-row__acts { padding-right: var(--corner-inset); }
+.ui-row-wrap > .ui-row__acts > .ui-ib { border-radius: var(--r-corner); }
+.ui-row-wrap :is(.ui-row, .ui-ib):focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--focus); }   /* flush with the wrap: the ring sits inside, where nothing cuts it (R-focus-2, R-corner-4) */
+.ui-row-wrap:focus-within { background: var(--hover); }
 @media (hover: hover) and (pointer: fine) { .ui-row-wrap:hover { background: var(--hover); } .ui-row-wrap > .ui-row:hover { --sq-bg: transparent; } }   /* one fill under the row and its actions */
 .ui-row-wrap:focus-within > .ui-row:not([aria-current], [aria-selected="true"]) { --sq-bg: transparent; }
 
@@ -646,7 +652,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-step__time { font: 400 var(--fs-2xs)/var(--lh-meta) var(--mono); color: var(--text-quiet); font-variant-numeric: tabular-nums; }
 
 /* the blank: a dotted red line under the gap, then the stamp, inside the sentence it belongs to */
-.ui-blank { appearance: none; display: inline-flex; align-items: center; gap: 8px; vertical-align: -4px; padding: 0; margin: 0 0 0 4px; border: 0; border-radius: var(--r-xs); background: none; font: inherit; color: var(--text); cursor: pointer; white-space: nowrap; }
+.ui-blank { appearance: none; display: inline-flex; align-items: center; gap: 8px; vertical-align: -4px; padding: 0; margin: 0 0 0 4px; border: 0; border-radius: var(--r-xs); background: none; font: inherit; color: var(--text); cursor: pointer; max-width: 100%; min-width: 0; text-align: start; overflow-wrap: anywhere; }   /* a long answer wraps inside the line instead of widening the window (R-overflow-1) */
 .ui-blank__gap { display: inline-block; min-width: 7ch; min-height: 1.2em; border-bottom: 1px dotted var(--red); }
 @media (hover: hover) and (pointer: fine) { .ui-blank:hover .ui-blank__gap { border-bottom-style: solid; } }
 .ui-blank[data-answered] .ui-blank__gap { min-width: 0; border-bottom: 1px dashed var(--text-quiet); }
@@ -699,7 +705,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 /* compact: one row; the input's padding centres one line on the 28px actions, so the row is the actions plus the inset */
 .ui-composer[data-compact] .ui-composer__box { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
 .ui-composer[data-compact] .ui-composer__files { grid-column: 1 / -1; }
-.ui-composer[data-compact] .ui-composer__input { min-height: 1.6em; align-self: center; padding: var(--corner-inset) 6px var(--corner-inset) 14px; }   /* one line, centred on the actions' row by the grid, not by a padding sum (R-type-11, R-space-1) */
+.ui-composer[data-compact] .ui-composer__input { min-height: 1.6em; align-self: center; padding: 0 6px 0 14px; margin-block: var(--corner-inset); }   /* one line, centred on the actions' row by the grid, not by a padding sum (R-type-11, R-space-1); the inset is a margin, so the field's own box is the text line and a tip beside the actions can stand 8px from them without covering it (R-tip-2, R-float-1); a press on the box around it still focuses it */
 .ui-composer[data-compact] .ui-composer__bar { align-self: end; }
 .ui-composer[data-compact] .ui-composer__bar { padding-block: var(--corner-inset); padding-inline-start: 0; }
 .ui-composer[data-compact] :is(.ui-composer__chips, .ui-composer__spacer, .ui-capacity) { display: none; }

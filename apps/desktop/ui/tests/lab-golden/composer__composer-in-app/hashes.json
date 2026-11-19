@@ -40,43 +40,63 @@
   "h": 64
  },
  "session-attach-hover@bone": {
-  "sha": "4b968715d10b679988216a37b29ff8d26062b130",
+  "sha": "82731434de4bdb1297db408141ae1353a4eb0fa0",
   "w": 744,
   "h": 149
  },
  "session-attach-hover@catalog": {
-  "sha": "e9b120e2e636e330657fc8dce21f4f1a075fdafc",
+  "sha": "526eb7381ab66028a3dd9aec71d62e2612dbe5ed",
   "w": 744,
   "h": 149
  },
  "session-attach-hover@graphite": {
-  "sha": "432fd01e92c2c7cd3b7235ec4280c39fa948caa9",
+  "sha": "86b5194f495a7ac79abfeffa2293addbf1966b4a",
   "w": 744,
   "h": 133
  },
  "session-attach-hover@typewriter": {
-  "sha": "dab7059a68ce943df965e7651b4a4ed7443c6883",
+  "sha": "1415093d33556ee5256d91646087a789b6fb7836",
   "w": 744,
   "h": 155
  },
+ "session-attach-menu@bone": {
+  "sha": "5d1f0f9422c7645460cc68cc1ee0f5606e905bf1",
+  "w": 746,
+  "h": 389
+ },
+ "session-attach-menu@catalog": {
+  "sha": "97c0ace4c97a8a2233fb9d9f57900e643b43dba1",
+  "w": 746,
+  "h": 389
+ },
+ "session-attach-menu@graphite": {
+  "sha": "ed43067f673755a45356e4ae9a22ab8da7dda269",
+  "w": 746,
+  "h": 389
+ },
+ "session-attach-menu@typewriter": {
+  "sha": "c6f9f6a72efbdf30bb7e8dc3dcb6a9209b2e753e",
+  "w": 746,
+  "h": 389
+ },
  "session-attach-tooltip@bone": {
-  "sha": "bbd788991e3b895ca199110c220d1b8711c9768f",
-  "w": 744,
+  "sha": "18d329bad441aba33ec0af509408d3744aaf9257",
+  "w": 777,
   "h": 159
  },
  "session-attach-tooltip@catalog": {
-  "sha": "69046e715d892d6f16f997b0978ebdebeaf974fc",
-  "w": 744,
+  "sha": "f06a481ae32540e0378c9735aa23bbd988214ea6",
+  "w": 777,
   "h": 159
  },
  "session-attach-tooltip@graphite": {
-  "sha": "f00abf537b0cb45d868f19f6c6eff5a333495e56",
-  "w": 744,
+  "sha": "b0b00d71f06a22a6ef29b081f786246edaf378a8",
+  "w": 777,
   "h": 159
  },
  "session-attach-tooltip@typewriter": {
-  "sha": "7e7494b86b294f847867a81f010efb28ed66719b",
-  "w": 744,
+  "sha": "4690e7ac7eeb64fee2b4fddc7d94d77504c85e59",
+  "w": 777,
   "h": 159
  },
  "session-empty@bone": {
@@ -100,42 +120,42 @@
   "h": 123
  },
  "session-send-hover@bone": {
-  "sha": "751350c5e48ed7c0cf4054226d6ca8734e469441",
+  "sha": "de3aca288d3d070ed696f2696357a8b75ea23f15",
   "w": 744,
   "h": 149
  },
  "session-send-hover@catalog": {
-  "sha": "9465eac3552a6bed93f3bed2d1d9d6b92261e79a",
+  "sha": "a8785fcb44de550c639af23a6624837b0e3f5577",
   "w": 744,
   "h": 149
  },
  "session-send-hover@graphite": {
-  "sha": "22eec05708f6d3ae3d61102071089d795975bce8",
+  "sha": "e5f09bb8373df13e7219e3661a701f0121901fab",
   "w": 744,
   "h": 133
  },
  "session-send-hover@typewriter": {
-  "sha": "0089582b0adaf45051e083ea5a472bd871eae588",
+  "sha": "aa8f6f4eb80d6543b88c80dc72f7f3e1a99921aa",
   "w": 744,
   "h": 155
  },
  "session@bone": {
-  "sha": "8f67666f07aa1fbe58f55e9132bf830f262ea22a",
+  "sha": "60605e1b29cac22627ff7cefebd0ea3e694b0913",
   "w": 744,
   "h": 149
  },
  "session@catalog": {
-  "sha": "b588fbb202942a841659d17c2e5e68335d695a48",
+  "sha": "71f09e3b6abb9c2ad001137c5fb035c662e05571",
   "w": 744,
   "h": 149
  },
  "session@graphite": {
-  "sha": "30eb861e68b92d70be5df7640cc64dbf1d47b3af",
+  "sha": "aa06138bcd99e9872387f68cc735910323a7e687",
   "w": 744,
   "h": 133
  },
  "session@typewriter": {
-  "sha": "99c12353bd7bce101fa8df9684f238624b0bb370",
+  "sha": "de3e033830be684c635aefe2f4a9585bbebd2b08",
   "w": 744,
   "h": 155
  }

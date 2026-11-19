@@ -830,7 +830,7 @@ before and after.
 
 The table above is tokens now (version 1.1): each container's inset is `--pad-*` and the radius of what sits in its
 corners is `--r-in-*` (`--r-in-dialog` 18, `--r-in-palette` 24, `--r-in-dock` 18, `--r-in-menu` 16, `--r-in-card` 8,
-`--r-in-composer` 14, `--r-in-toast` 14, `--r-in-field` 8, `--r-in-seg` 9 at default corners), computed from `--r-*` so
+`--r-in-composer` 14, `--r-in-toast` 14, `--r-in-field` 8, `--r-in-seg` 9, `--r-in-row` 11 at default corners), computed from `--r-*` so
 they follow the corners setting. A container's own `--r-in` (8.2) and these are the same number.
 
 **Rules**
