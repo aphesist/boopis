@@ -705,7 +705,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 /* compact: one row; the input's padding centres one line on the 28px actions, so the row is the actions plus the inset */
 .ui-composer[data-compact] .ui-composer__box { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
 .ui-composer[data-compact] .ui-composer__files { grid-column: 1 / -1; }
-.ui-composer[data-compact] .ui-composer__input { min-height: 1.6em; align-self: center; padding: var(--corner-inset) 6px var(--corner-inset) 14px; }   /* one line, centred on the actions' row by the grid, not by a padding sum (R-type-11, R-space-1) */
+.ui-composer[data-compact] .ui-composer__input { min-height: 1.6em; align-self: center; padding: 0 6px 0 14px; margin-block: var(--corner-inset); }   /* one line, centred on the actions' row by the grid, not by a padding sum (R-type-11, R-space-1); the inset is a margin, so the field's own box is the text line and a tip beside the actions can stand 8px from them without covering it (R-tip-2, R-float-1); a press on the box around it still focuses it */
 .ui-composer[data-compact] .ui-composer__bar { align-self: end; }
 .ui-composer[data-compact] .ui-composer__bar { padding-block: var(--corner-inset); padding-inline-start: 0; }
 .ui-composer[data-compact] :is(.ui-composer__chips, .ui-composer__spacer, .ui-capacity) { display: none; }
