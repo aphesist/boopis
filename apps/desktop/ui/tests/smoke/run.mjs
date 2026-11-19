@@ -11,6 +11,7 @@ import { formCards, liveForms, liveRequests } from './forms.mjs';
 import { corners } from './corners.mjs';
 import { dockEmpty } from './dock-empty.mjs';
 import { dockMotion } from './dock-motion.mjs';
+import { concentric } from './concentric.mjs';
 import { mods } from './mods.mjs';
 import { controls } from './controls.mjs';
 
@@ -46,7 +47,7 @@ if (want('themes')) {
 if (want('keys')) await keyWalk(env);
 if (want('owner')) await ownerDecisions(env);
 if (want('live')) await liveSessions(env);
-if (want('corners')) await corners(env);
+if (want('corners')) { await corners(env); await concentric(env); }
 if (want('dock-empty')) await dockEmpty(env);
 if (want('dock-motion')) await dockMotion(env);
 if (want('mods')) await mods(env, AXE);

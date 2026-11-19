@@ -47,9 +47,10 @@ function iconButton(o: IconButtonOpts): string {
     attrs({ 'aria-label': o.label, 'data-tip': o.tip === false ? null : (o.tip || o.label), 'data-kbd': o.keys, 'data-tip-pos': o.tipPos, 'aria-keyshortcuts': o.keys && ariaKeys(o.keys),
       'aria-pressed': o.pressed == null ? null : String(!!o.pressed), 'aria-expanded': o.expanded == null ? null : String(!!o.expanded), 'aria-haspopup': o.haspopup, disabled: o.disabled, 'data-action': o.action, ...o.attrs }) + '>' + icon(o.icon) + '</button>';
 }
-const send = (o: { running?: boolean; disabled?: boolean } = {}): string => {
+/** send: `corner` sets it into its container's corner (.ui-corner: concentric, inset by the container's rule) */
+const send = (o: { running?: boolean; disabled?: boolean; corner?: boolean } = {}): string => {
   const run = !!o.running;
-  return '<button type="button" class="ui-send" data-ui="send"' + attrs({ 'aria-label': run ? 'Stop' : 'Send', 'data-tip': run ? 'Stop' : 'Send', 'data-kbd': run ? 'mod+period' : 'enter', 'aria-keyshortcuts': run ? ariaKeys('mod+.') : 'Enter', disabled: o.disabled && !run }) + '>' + icon(run ? 'stop' : 'send') + '</button>';
+  return '<button type="button" class="' + cx('ui-send', o.corner && 'ui-corner') + '" data-ui="send"' + attrs({ 'aria-label': run ? 'Stop' : 'Send', 'data-tip': run ? 'Stop' : 'Send', 'data-kbd': run ? 'mod+period' : 'enter', 'aria-keyshortcuts': run ? ariaKeys('mod+.') : 'Enter', disabled: o.disabled && !run }) + '>' + icon(run ? 'stop' : 'send') + '</button>';
 };
 export interface HoldOpts { label?: U<string>; ms?: U<number>; fill?: U<'dots' | 'solid'>; hintId?: U<string>; ariaLabel?: U<string>; attrs?: U<Attrs>; doneLabel?: U<string>; announce?: U<(t: string) => void> }
 /** hold to approve. Wire with hold.wire(el) or hydrate(). */

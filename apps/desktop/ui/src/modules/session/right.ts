@@ -84,10 +84,10 @@ export function mountRight(root: HTMLElement): void {
       if (/PASS/.test(l)) { const j = l.indexOf('PASS'); span.append(l.slice(0, j), el('span', { class: 'pass', text: 'PASS' }), l.slice(j + 4)); } else span.textContent = l;
       term.append(span, i < lines.length - 1 ? '\n' : '');
     });
-    const copy = ui.iconButton({ icon: 'copy', label: 'Copy output', size: 's' });
+    const copy = ui.iconButton({ icon: 'copy', label: 'Copy output', size: 's', class: 'ui-corner', attrs: { 'data-corner': 'tr' } });
     copy.addEventListener('click', () => { void copyText(lines.join('\n')); });
     if (!lines.length && data().info.live) return [el('p', { class: 'ssr-note', text: 'No tool output yet.' })];
-    return [el('div', { class: 'ssr-term-wrap' }, [term, copy])];
+    return [el('div', { class: 'ssr-term-wrap ui-nest' }, [term, copy])];
   }
   function governanceBody(): Node[] {
     const gv = d().governance.get();
