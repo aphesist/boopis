@@ -341,7 +341,7 @@
       for (const e of els) {
         const s = cs.get(e);
         if (!/auto|scroll/.test(s.overflowX) || e.scrollWidth <= e.clientWidth + 1) continue;
-        if (e.matches('pre, code, .ui-code, [class*="__pre"], [class*="term"], .mod-tabs, [data-lab-hscroll]') || e.closest('pre')) continue;
+        if (e.matches('pre, code, .ui-code, [class*="__pre"], [class*="term"], .mod-tabs, .ui-tabs--scroll, [data-lab-hscroll]') || e.closest('pre')) continue;
         add('geometry.hscroll', e, 'scrolls sideways (' + e.scrollWidth + 'px content in ' + e.clientWidth + 'px)');
       }
     }
