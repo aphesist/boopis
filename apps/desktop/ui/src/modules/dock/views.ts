@@ -56,14 +56,17 @@ export function refreshBot(b: DockBot): void {
 
 /* ───────── formatting ───────── */
 export const fmtDur = (s: number): string => `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s`;
-export const fmtCost = (v: number): string => '$' + v.toFixed(2);
+export const fmtCost = (v: number | null): string => (v == null ? 'unknown' : v < 0.01 && v > 0 ? '$' + v.toFixed(4) : '$' + v.toFixed(2));
 const kfmt = (n: number): string => (n >= 1000 ? Math.round(n / 1000) + 'k' : String(n));
 const mono = (t: string): string => `<span class="dk-mono">${esc(t)}</span>`;
 const run = () => S.run as NonNullable<typeof S.run>;
 const runSub = (): string => run().stopped ? 'Stopped by you' : `${mono(run().model)} ${run().escalated ? `escalated ${run().escalated === 1 ? 'once' : run().escalated + ' times'}` : 'on the first try'}`;
 /** the run's spend: the library's running total and its row of dots (dots, not bars) */
-export const costHTML = (): string => ui.html.capacity(fmtCost(run().cost), fmtCost(run().cap), { label: `${fmtCost(run().cost)} of the ${fmtCost(run().cap)} cap spent` });
-export const meterHTML = (): string => ui.html.measure({ used: run().cost, total: run().cap || 1, dots: 10, variant: 'row', label: 'Cost cap' });
+/* a cost the plugin could not price is shown as unknown, and a run with no cap has no meter (ADR-0012) */
+export const costHTML = (): string => (run().cost == null || run().cap == null
+  ? `<span class="dk-mono">${esc(run().cost == null ? 'cost unknown' : fmtCost(run().cost))}</span>`
+  : ui.html.capacity(fmtCost(run().cost), fmtCost(run().cap), { label: `${fmtCost(run().cost)} of the ${fmtCost(run().cap)} cap spent` }));
+export const meterHTML = (): string => (run().cost == null || run().cap == null ? '' : ui.html.measure({ used: run().cost ?? 0, total: run().cap || 1, dots: 10, variant: 'row', label: 'Cost cap' }));
 /** the ladder (line at rest, list expanded); finish() keys its stations run:t0… so they travel between views */
 const ladderLine = (): string => `<span class="dk-ladder" data-tip="Model ladder: ${esc(run().model)}" data-tip-pos="top">${ui.html.ladder({ stations: run().ladder, current: run().current, ground: 'var(--dock-bg)' })}</span>`;
 const ladderList = (): string => ui.html.ladder({ variant: 'list', ground: 'var(--dock-bg)', current: run().current,

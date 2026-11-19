@@ -9,7 +9,8 @@ export const KEYS = {
   shell: 'hx.v6.shell',
   theme: 'hx.v6.theme',
   lastDark: 'hx.v6.lastDark',
-  dock: 'hx.dock.v6'
+  dock: 'hx.dock.v6',
+  preview: 'hx.v6.preview'
 } as const;
 export type StoreKey = (typeof KEYS)[keyof typeof KEYS];
 
@@ -53,3 +54,11 @@ export const loadShell = (): SavedShell => {
   const o = readJSON<Record<string, unknown>>(KEYS.shell);
   return o && typeof o === 'object' ? (o as SavedShell) : {};
 };
+
+/* ───────── preview flags: mock content a live build shows only when asked, always marked as a preview ───────── */
+/** `hx.v6.preview` is `{ "feedforward": true }` to turn a preview on; the default is off, and `VITE_PREVIEW_<NAME>=1` does the same in a build */
+export function readFlag(name: 'feedforward'): boolean {
+  const o = readJSON<Record<string, unknown>>(KEYS.preview);
+  const env = (import.meta.env as Record<string, string | undefined>)['VITE_PREVIEW_' + name.toUpperCase()];
+  return o?.[name] === true || env === '1';
+}

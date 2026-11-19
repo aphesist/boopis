@@ -8,7 +8,7 @@
    did not send: unknown is `null` or empty and the UI shows it as unknown. */
 import type {
   Bot, BotCatalog, BotDraft, BotConfig, Change, ConversationEvent, Conversation, Connector, ContextUsage, DecisionKind, DiffFile, Environment,
-  GovernanceState, LedgerStats, RunSnapshot, Schedule, SendMeta, SessionSummary, ThreadMessage, Todo, User, Wait, WaitOutcome
+  DetailsCan, DetailsNotes, FileCompletions, GovernanceState, LedgerStats, ProviderInfo, RunSnapshot, Schedule, SendMeta, SessionSummary, ThreadMessage, Todo, User, Wait, WaitOutcome
 } from './types';
 
 export type Unsubscribe = () => void;
@@ -47,9 +47,17 @@ export interface DetailsSource {
   environment: Watch<Environment>;
   governance: Watch<GovernanceState>;
   ledger: Watch<LedgerStats>;
+  /** the models a session can be pinned to */
+  models: Watch<readonly string[]>;
+  /** the panels follow this session; the live provider fetches its details when it is called */
+  follow(sessionId: string): void;
+  /** what a panel cannot know or this Hermes cannot do, in words */
+  notes: Watch<DetailsNotes>;
+  can: Watch<DetailsCan>;
   /** frees what can be compacted; resolves with the tokens freed (0 when there is nothing to compact) */
   compactContext(): Promise<number>;
-  setGovernance(patch: Partial<Pick<GovernanceState, 'governed' | 'smart' | 'model' | 'cap'>>): void;
+  /** applies what it can; returns why not (a locked mode, a choice this Hermes cannot make) or null */
+  setGovernance(patch: Partial<Pick<GovernanceState, 'governed' | 'smart' | 'model' | 'cap'>>): string | null;
   setConnector(name: string, on: boolean): void;
   /** starts a browser sign-in; resolves when the connector is connected or the sign-in failed */
   signIn(name: string): Promise<void>;
@@ -110,9 +118,12 @@ export interface DictationSource {
 export interface FilesSource {
   /** ask the host for a file or a folder; null when the user declined */
   pick(kind: 'file' | 'folder'): string | null;
+  /** completions of the `@` word being typed, for the session the composer belongs to */
+  complete(word: string, sessionId: string | null): Promise<FileCompletions>;
 }
 
 export interface DataProvider {
+  info: ProviderInfo;
   /** resolves when the first snapshot of everything is in: the app boots after it */
   ready: Promise<void>;
   user: Watch<User>;
