@@ -38,6 +38,7 @@ CONNECT_TIMEOUT_S = 10.0
 SPAWN_TIMEOUT_S = 30.0
 CHANNEL_CAPABILITY = "sandbox.channel.unix_socket"
 FS_CAPABILITY = "sandbox.fs"
+SPAWN_FAILED = "hx.sandbox.spawn_failed"
 
 
 @dataclass(frozen=True, slots=True)
@@ -218,7 +219,17 @@ class HxLauncher:
             memory_bytes=spec.memory_bytes,
             max_processes=spec.max_processes,
         )
-        wire = self._client.request("sandbox.spawn", params.to_wire(), timeout=SPAWN_TIMEOUT_S)
+        try:
+            wire = self._client.request("sandbox.spawn", params.to_wire(), timeout=SPAWN_TIMEOUT_S)
+        except HxCallError as exc:
+            if exc.code != SPAWN_FAILED:
+                raise
+            # hx refuses to start a program its grants do not cover (an interpreter outside the read paths, as with a
+            # uv-managed one), before any process exists. That is the same fact as a kernel that dies before
+            # ``kernel.ready`` (``KernelProcess.start``): the sandbox cannot run it, so exec is unavailable.
+            raise SandboxUnavailableError(
+                f"the kernel did not start inside the sandbox: {exc.message}", data={"reason": exc.message}
+            ) from exc
         result = SandboxSpawnResult.from_wire(wire)
         if result.channel is None:
             self._client.request("sandbox.kill", {"handle": result.handle}, timeout=10)
