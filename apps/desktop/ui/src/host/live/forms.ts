@@ -135,13 +135,11 @@ export async function tauriPickFolder(): Promise<string | null> {
   const picked = await commands.pickFolder();
   return picked ? picked.path : null;
 }
-/** the free-tier limit notice's "choose another model": ask the host to forget the choice, then show setup's models question
-    again (the same first-run view, with every choice Hermes can still offer). "wait" changes nothing. */
+/** the free-tier limit notice's "choose another model": ask setup's models question again (`change-models.ts`, the same thing
+    Settings > Models does). "wait" changes nothing. */
 export async function chooseAnotherModel(choice: string): Promise<void> {
   if (choice !== 'choose') return;
-  const { reopenModels, tauriSetupBridge } = await import('../setup-bridge');
-  await reopenModels();
-  const { runFirstRun } = await import('../first-run');
-  void runFirstRun(tauriSetupBridge());
+  const { changeModels } = await import('../change-models');
+  await changeModels();
 }
 export const hasHostDialogs = (): boolean => inTauri();

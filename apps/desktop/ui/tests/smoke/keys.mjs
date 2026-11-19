@@ -265,8 +265,10 @@ export async function keyWalk(env) {
     await press('Control+Comma', 400);
     const inside = []; for (let i = 0; i < 8; i++) { await press('Tab', 80); inside.push(await ev(() => !!document.activeElement.closest('#hx-settings'))); }
     check('10', 'dialog Tab cycles inside', inside.every(Boolean), inside.join());
-    await page.focus('#hx-dtab-general'); await press('ArrowRight', 300); check('10', 'settings tabs move with left and right', await ev(() => document.getElementById('hx-dtab-appearance').getAttribute('aria-selected') === 'true'));
-    await press('ArrowLeft', 300); await page.focus('#hx-dpanel-general .ui-seg [aria-checked="true"]'); await press('ArrowRight', 300);
+    await page.focus('#hx-dtab-general'); await press('ArrowRight', 300); check('10', 'settings tabs move with left and right', await ev(() => document.getElementById('hx-dtab-models').getAttribute('aria-selected') === 'true'));
+    check('10', 'Settings > Models in the page build says Hermes is not connected, and offers nothing it cannot do', await ev(() => { const p = document.getElementById('hx-dpanel-models'); return !p.hidden && /Hermes is not connected/.test(p.textContent) && !document.getElementById('hx-models-change') && !document.getElementById('hx-set-ladder-h'); }));
+    await press('ArrowRight', 300); check('10', 'the Models tab is followed by Appearance', await ev(() => document.getElementById('hx-dtab-appearance').getAttribute('aria-selected') === 'true'));
+    await press('ArrowLeft', 300); await press('ArrowLeft', 300); await page.focus('#hx-dpanel-general .ui-seg [aria-checked="true"]'); await press('ArrowRight', 300);
     check('10', 'segmented control left and right', await ev(() => document.querySelector('#hx-dpanel-general .ui-seg [aria-checked="true"]').dataset.value === 'closed'));
     await press('Escape', 300); check('10', 'Esc closes the dialog, focus returns', !(await layer()).settings && (await where()).id !== null, await where());
   });

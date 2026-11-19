@@ -3,6 +3,7 @@
 import './tokens.css';
 import '../components/components.css';
 import '../components/model-mark.css';
+import '../components/progress.css';
 import '../modules/shell/shell.css';
 import '../modules/cards/cards.css';
 import '../modules/session/session.css';

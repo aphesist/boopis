@@ -51,6 +51,7 @@ if (want('axe')) {
     ['session', {}, null], ['bots', {}, (p) => p.keyboard.press('Alt+2')], ['details panel', {}, (p) => p.keyboard.press('Control+i')],
     ['bots settings sheet', {}, async (p) => { await p.keyboard.press('Alt+2'); await p.waitForTimeout(500); await p.keyboard.press('Control+i'); }],
     ['palette', {}, (p) => p.keyboard.press('Control+k')], ['settings', {}, (p) => p.keyboard.press('Control+Comma')],
+    ['settings models', {}, async (p) => { await p.keyboard.press('Control+Comma'); await p.waitForTimeout(300); await p.click('#hx-dtab-models'); }],
     ['appearance', {}, (p) => p.keyboard.press('Control+Shift+Comma')], ['keys sheet', {}, (p) => p.keyboard.press('Control+Slash')],
     ['account menu', {}, (p) => p.click('#hx-btn-account')], ['model picker', {}, async (p) => { await p.keyboard.press('Control+g'); await p.keyboard.press('i'); await p.waitForTimeout(200); await p.keyboard.press('Alt+m'); }],
     ['blank popover', {}, async (p) => { await p.keyboard.press('Control+g'); await p.keyboard.press('m'); await p.waitForTimeout(200); await p.keyboard.press('b'); }],

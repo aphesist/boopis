@@ -11,6 +11,9 @@ import { FOCUSABLE, visible } from './regions';
 import { keysTableHTML } from './keymap';
 import { closePalette } from './palette';
 import { inTauri } from '../../host/bridge';
+import { logger } from '../../core/log';
+
+const log = logger('settings');
 
 export const closeMenu = (returnFocus?: boolean): void => ui.menu.close(returnFocus);
 
@@ -29,16 +32,42 @@ export function openKeys(): void {
 let themeMounted = false;
 function showSettingsSection(section?: string): void {
   const d = els().settings;
-  const sec = ['general', 'appearance', 'keys'].includes(section ?? '') ? (section as string) : 'general';
+  const sec = ['general', 'models', 'appearance', 'keys'].includes(section ?? '') ? (section as string) : 'general';
   for (const t of $$('.hx-dtab', d)) {
     const on = t.dataset['section'] === sec;
     t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1;
   }
   for (const p of $$('.hx-dpanel', d)) p.hidden = p.id !== 'hx-dpanel-' + sec;
-  if (sec === 'general') mountDiagnostics();
+  if (sec === 'general') { mountDiagnostics(); mountAdvanced(); }
+  if (sec === 'models') showModels();
   if (sec === 'appearance' && !themeMounted) { mountThemePanel($('#hx-dpanel-appearance')); themeMounted = true; mountOrbGrow(); }
   d.classList.toggle('is-side', sec === 'appearance');
   $('.hx-dialog__body', d).scrollTop = 0;
+}
+/* Settings > General > Advanced > "Use my own Hermes", in the desktop app only (the page has no host to save it with). */
+let advMounted = false;
+function mountAdvanced(): void {
+  if (advMounted || !inTauri()) return;
+  const panel = $('#hx-dpanel-general'); if (!panel) return;
+  advMounted = true;
+  void import('../../host/hermes-source').then((m) => m.mountHermesSource(panel)).catch((e: unknown) => { advMounted = false; log.warn('the Hermes choice did not mount', e); });
+}
+/* Settings > Models: the plan, the ladder and "Change models". Built the first time the tab opens, and asked again every time
+   it opens, because Hermes's plan and the saved ladder move while the dialog is closed. Without the desktop host there is no
+   Hermes to ask: the plan section says so and the ladder and the button are left out, rather than drawn empty. */
+let models: { refresh: () => Promise<void> } | null = null;
+let modelsMounting = false;
+function showModels(): void {
+  if (models) { void models.refresh().catch((e: unknown) => { log.warn('the models tab did not refresh', e); }); return; }
+  if (modelsMounting) return;
+  const panel = $('#hx-dpanel-models'); if (!panel) return;
+  modelsMounting = true;
+  const finish = (): void => { modelsMounting = false; };
+  if (!inTauri()) {
+    void import('../../host/plan-view').then((m) => m.mountPlan(panel)).then((m) => { models = m; }).catch((e: unknown) => { log.warn('the plan did not mount', e); }).finally(finish);
+    return;
+  }
+  void import('../../host/models-tab').then((m) => m.mountModels(panel, m.realModelsDeps(() => { els().settings.close(); }))).then((m) => { models = m; }).catch((e: unknown) => { log.warn('the models tab did not mount', e); }).finally(finish);
 }
 /* Settings > General > Diagnostics, in the desktop app only (the page has no host to ask): the renderer report to copy and
    WebKitGTK's own GPU page. Nothing in the main chrome; the report is read when a button is pressed. */

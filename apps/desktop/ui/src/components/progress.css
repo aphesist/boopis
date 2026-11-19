@@ -1,0 +1,12 @@
+/* Progress as dots (design system 14.27): the measure row, filled in proportion, or one dot travelling. Never a bar. */
+.ui-progress { display: inline-flex; align-items: center; gap: var(--sp-3); }
+.ui-progress__bar { position: relative; align-self: center; flex: none; }
+.ui-progress__bar[data-indeterminate] > .ui-progress__run {
+  position: absolute; left: 0; top: 0; width: 4px; height: 4px; border-radius: var(--r-pill); background: var(--text-dim);
+  animation: ui-progress-travel var(--dur-breathe) var(--ease-io) infinite alternate; will-change: transform;
+}
+@keyframes ui-progress-travel { from { transform: translateX(0); } to { transform: translateX(var(--run)); } }
+@media (prefers-reduced-motion: reduce) {
+  .ui-progress__bar[data-indeterminate] > .ui-progress__run { animation: none; transform: translateX(calc(var(--run) / 2)); }   /* at rest in the middle; the words beside it say what is happening */
+}
+.ui-progress__pct { min-width: 4ch; font: 400 var(--fs-2xs)/1.45 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: var(--track-mono); color: var(--text-dim); }

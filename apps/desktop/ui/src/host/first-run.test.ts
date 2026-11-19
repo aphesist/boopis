@@ -1,22 +1,35 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { runFirstRun } from './first-run';
-import type { SetupBridge, SetupStatus } from './setup-bridge';
+import { bytesText, describeProgress, introText, runFirstRun } from './first-run';
+import type { SetupBridge, SetupProgress, SetupStatus, SourceInfo } from './setup-bridge';
 import { HostError } from './bridge';
 
-const step = (id: string, state: SetupStatus['steps'][number]['state'], detail = '') => ({ id, title: id, state, detail, code: null });
+const step = (id: string, state: SetupStatus['steps'][number]['state'], detail = '', code: string | null = null) => ({ id, title: id, state, detail, code });
 const form = (id: string, kind: string, schema: unknown, extra: Partial<NonNullable<SetupStatus['form']>> = {}): NonNullable<SetupStatus['form']> => ({
   form_id: id, kind, title: 'Title ' + id, body: 'Why', schema, submit: { label: 'Go' }, cancel: { label: 'Skip' }, sensitive: false, origin: 'host', diff: [], ...extra });
 const status = (over: Partial<SetupStatus>): SetupStatus => ({ steps: [], form: null, done: false, install_command: null, receipt: null, ...over });
 
+const BUNDLED: SourceInfo = { saved: null, from_env: null, next: 'bundled', running: 'bundled', carries_runtime: true };
 class Fake implements SetupBridge {
   answers: unknown[] = [];
-  constructor(private script: (SetupStatus | Error)[], private needed = true) {}
+  listeners = new Set<(p: SetupProgress) => void>();
+  /** when set, `advance` waits for it, so a test can send progress while a call is running */
+  gate: Promise<void> | null = null;
+  stopped = 0;
+  constructor(private script: (SetupStatus | Error)[], private needed = true, public src: SourceInfo | null = BUNDLED) {}
   check() { return Promise.resolve({ hermes_installed: true, needed: this.needed, reason: 'x' }); }
-  advance(answer: Parameters<SetupBridge['advance']>[0], reconsider: boolean) {
+  source() { return Promise.resolve(this.src); }
+  onProgress(cb: (p: SetupProgress) => void) {
+    this.listeners.add(cb);
+    return Promise.resolve(() => { this.listeners.delete(cb); this.stopped += 1; });
+  }
+  emit(p: SetupProgress) { for (const l of [...this.listeners]) l(p); }
+  async advance(answer: Parameters<SetupBridge['advance']>[0], reconsider: boolean) {
     this.answers.push({ answer, reconsider });
+    if (this.gate) await this.gate;
     const next = this.script.shift();
-    return next instanceof Error ? Promise.reject(next) : Promise.resolve(next ?? status({}));
+    if (next instanceof Error) throw next;
+    return next ?? status({});
   }
 }
 const tick = (): Promise<void> => (vi.isFakeTimers() ? vi.advanceTimersByTimeAsync(0) : new Promise((r) => setTimeout(r, 0))).then(() => undefined);
@@ -53,7 +66,7 @@ describe('first run', () => {
       status({ steps: [step('hermes', 'blocked', 'missing')], install_command: 'curl -fsSL https://example.test/install.sh | bash' })]);
     void runFirstRun(bridge);
     await tick();
-    expect(document.body.textContent).toContain('asks before it changes any Hermes setting');
+    expect(document.body.textContent).toContain('It asks before it changes any Hermes setting');
     expect(bridge.answers).toHaveLength(0);
     await click('Set up');
     expect(document.body.textContent).toContain('curl -fsSL https://example.test/install.sh');
@@ -184,5 +197,129 @@ describe('first run', () => {
     await click('Set up');
     await click('Review again');
     expect(bridge.answers[1]).toEqual({ answer: null, reconsider: true });
+  });
+  it('says what the bundled runtime is about to do, and no longer says it installs its plugin into your Hermes profile', async () => {
+    const bridge = new Fake([]);
+    void runFirstRun(bridge);
+    await tick();
+    const text = document.querySelector('.hx-first-run')?.textContent ?? '';
+    expect(text).toContain('boopis comes with its own Hermes');
+    expect(text).toContain('unpacks it into boopis\'s own folder, then sets it up with the boopis plugin');
+    expect(text).toContain('never touches another Hermes');
+    expect(text).not.toContain('into your Hermes profile');
+    expect(text).not.toContain('Nothing is installed without you');
+    expect(text, 'no em dash, no exclamation mark, and the product is lowercase').not.toMatch(/[\u2014!]|Boopis/);
+  });
+
+  it('keeps the profile wording for the user\'s own Hermes, and claims nothing when it cannot tell', () => {
+    const own: SourceInfo = { saved: 'existing', from_env: null, next: 'existing', running: 'existing', carries_runtime: true };
+    expect(introText(own)).toContain('uses the Hermes already on this computer');
+    expect(introText(own)).toContain('installs the boopis plugin into its profile');
+    expect(introText(own)).not.toContain('unpacks');
+    expect(introText({ ...BUNDLED, carries_runtime: false })).toContain('already on this computer');
+    const unknown = introText(null);
+    expect(unknown).toContain('asks before it changes any Hermes setting');
+    expect(unknown).not.toMatch(/unpacks|already on this computer/);
+  });
+
+  it('shows the unpack as dots that fill with the archive\'s own bytes, then goes back to the steps', async () => {
+    let release: () => void = () => undefined;
+    const bridge = new Fake([status({ steps: [step('runtime', 'done', 'unpacked Hermes 0.23.2')], done: true, receipt: { lines: [] } })]);
+    bridge.gate = new Promise<void>((r) => { release = r; });
+    void runFirstRun(bridge);
+    await tick();
+    await click('Set up');
+    // nothing is known yet: one dot travelling, no percent
+    let bar = document.querySelector<HTMLElement>('[role=progressbar]');
+    expect(bar?.hasAttribute('data-indeterminate')).toBe(true);
+    expect(bar?.hasAttribute('aria-valuenow')).toBe(false);
+    expect(document.querySelectorAll('.ui-progress__bar > i[data-on]')).toHaveLength(0);
+    bridge.emit({ step: 'runtime', phase: 'verify', read: 50_000_000, total: 200_000_000 });
+    bar = document.querySelector<HTMLElement>('[role=progressbar]');
+    expect(bar?.getAttribute('aria-valuenow')).toBe('25');
+    expect(bar?.getAttribute('aria-label')).toBe('Checking the Hermes runtime');
+    expect(bar?.hasAttribute('data-indeterminate')).toBe(false);
+    expect(document.querySelector('.ui-progress__pct')?.textContent).toBe('25%');
+    expect(document.querySelector('#fr-work-bytes')?.textContent).toBe('50.0 MB of 200 MB');
+    // dots in proportion: 25% of 10 rounds to 3
+    expect(document.querySelectorAll('.ui-progress__bar > i[data-on]')).toHaveLength(3);
+    bridge.emit({ step: 'runtime', phase: 'unpack', read: 100_000_000, total: 200_000_000 });
+    expect(document.querySelector('[role=progressbar]')?.getAttribute('aria-label')).toBe('Unpacking Hermes');
+    expect(document.querySelector('#fr-work-label')?.textContent).toBe('Unpacking Hermes');
+    expect(document.querySelector('[role=progressbar]')?.getAttribute('aria-valuenow')).toBe('50');
+    expect(document.querySelectorAll('.ui-progress__bar > i[data-on]')).toHaveLength(5);
+    expect(document.querySelector('.hx-first-run')?.querySelector('.ui-progress__bar')?.tagName, 'a row of dots, never a bar element').toBe('SPAN');
+    expect(document.querySelector('progress, meter')).toBeNull();
+    release();
+    await tick();
+    expect(document.querySelector('[role=progressbar]')).toBeNull();
+    expect(document.querySelector('[data-state=done]')?.textContent).toContain('unpacked Hermes 0.23.2');
+    expect(bridge.stopped, 'the listener is dropped when the call ends').toBe(1);
+    expect(bridge.listeners.size).toBe(0);
+  });
+
+  it('never invents a figure: an event with no size keeps the dot travelling', async () => {
+    expect(describeProgress({ step: 'runtime', phase: 'unpack', read: null, total: null })).toEqual({ label: 'Unpacking Hermes', value: null, bytes: '' });
+    expect(describeProgress({ step: 'runtime', phase: 'unpack', read: 5, total: 0 }).value).toBeNull();
+    expect(describeProgress({ step: 'runtime', phase: 'verify', read: 999, total: 1000 }).value, 'a whole percent, rounded down: never 100 before it is').toBe(99);
+    expect(describeProgress({ step: 'runtime', phase: 'verify', read: 2000, total: 1000 }).value).toBe(100);
+    expect(bytesText(0)).toBe('0 B');
+    expect(bytesText(1500)).toBe('2 kB');
+    expect(bytesText(12_340_000)).toBe('12.3 MB');
+    expect(bytesText(310_000_000)).toBe('310 MB');
+    expect(bytesText(1_240_000_000)).toBe('1.2 GB');
+  });
+
+  it('still runs when the host cannot send progress', async () => {
+    const bridge = new Fake([status({ done: true, receipt: { lines: [] } })]);
+    bridge.onProgress = () => Promise.reject(new Error('no events'));
+    void runFirstRun(bridge);
+    await tick();
+    await click('Set up');
+    expect(document.body.textContent).toContain('You are set');
+  });
+
+  it('offers Retry on a stopped step, which runs setup again without restarting anything', async () => {
+    const stopped = step('runtime', 'blocked', 'the Hermes runtime is missing; reinstall the app', 'hx.setup.runtime_missing');
+    const bridge = new Fake([status({ steps: [stopped, step('receipt', 'pending')] }), status({ steps: [step('runtime', 'done', 'unpacked Hermes 0.23.2'), step('hermes', 'done')], done: true, receipt: { lines: ['ok'] } })]);
+    void runFirstRun(bridge);
+    await tick();
+    await click('Set up');
+    const retry = document.querySelector<HTMLButtonElement>('[data-retry="runtime"]');
+    expect(retry?.textContent).toBe('Retry');
+    expect(retry?.getAttribute('aria-label'), 'the name carries the visible text, first').toBe('Retry runtime');
+    expect(document.querySelectorAll('[data-retry]'), 'only the stopped step has one').toHaveLength(1);
+    await click('Retry');
+    expect(bridge.answers).toEqual([{ answer: null, reconsider: false }, { answer: null, reconsider: false }]);
+    expect(document.body.textContent).toContain('You are set');
+    expect(document.querySelector('[data-retry]')).toBeNull();
+  });
+
+  it('gives every kind of stopped step its Retry, and Hermes missing keeps its single "Check again"', async () => {
+    for (const id of ['runtime', 'hermes', 'plugin', 'hx', 'config', 'models', 'restart']) {
+      document.body.replaceChildren();
+      const bridge = new Fake([status({ steps: [step(id, 'blocked', 'it stopped')] })]);
+      void runFirstRun(bridge);
+      await tick();
+      await click('Set up');
+      expect(document.querySelector(`[data-retry="${id}"]`), id).toBeTruthy();
+    }
+    document.body.replaceChildren();
+    const missing = new Fake([status({ steps: [step('hermes', 'blocked', 'missing')], install_command: 'curl x | bash' })]);
+    void runFirstRun(missing);
+    await tick();
+    await click('Set up');
+    expect(document.querySelector('[data-retry]')).toBeNull();
+    expect([...document.querySelectorAll('button')].filter((b) => b.textContent === 'Check again')).toHaveLength(1);
+  });
+
+  it('starts at once for "Change models", under its own heading, with no first screen', async () => {
+    const bridge = new Fake([status({ steps: [step('models', 'needs_input')] })]);
+    void runFirstRun(bridge, document.body, { autostart: true, title: 'Change models' });
+    await tick();
+    await tick();
+    expect(bridge.answers).toEqual([{ answer: null, reconsider: false }]);
+    expect(document.querySelector('#fr-title')?.textContent).toBe('Change models');
+    expect([...document.querySelectorAll('button')].some((b) => b.textContent === 'Set up')).toBe(false);
   });
 });
