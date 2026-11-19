@@ -5,7 +5,7 @@
    - what boopis keeps (its look, governance, cap, workspace, what it asks first) is saved at once, in the bot's own store;
    - archive keeps everything and is undone from the toast; delete says what goes, and asks twice.
    Nothing is shown that Hermes did not report: a list it did not answer says so. */
-import { $, cap1, el, esc, frag } from '../../core/dom';
+import { $, cap1, el, frag } from '../../core/dom';
 import { ui } from '../../components';
 import { data, NeedsConfirmation } from '../../data';
 import type { Bot, BotConfig, BotsAdmin, BotPatch, RoutineDraft } from '../../data';
@@ -121,7 +121,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
   const ownErr = el('p', { class: 'ui-field__hint', role: 'alert', 'data-tone': 'attention', hidden: true });
   const gov = ui.segmented({ mode: 'radio', label: 'Governance', value: c.gov, options: [{ value: 'governed', label: 'Governed' }, { value: 'ungoverned', label: 'Ungoverned' }], fill: true });
   const capId = 'bt-cap-' + b.id;
-  const capRow = frag(ui.html.setRow({ label: 'Cap per run', hint: 'Dollars per run', for: capId, control: '<input class="ui-input ui-input--mono bt-cap" id="' + capId + '" inputmode="decimal" autocomplete="off" value="' + esc(c.cap) + '">' }));
+  const capRow = frag(ui.html.setRow({ label: 'Cap per run', hint: 'Dollars per run', for: capId, control: ui.html.input({ id: capId, value: c.cap, mono: true, class: 'bt-cap', attrs: { inputmode: 'decimal', spellcheck: null } }) }));
   capRow.hidden = c.gov !== 'governed';
   let capTimer = 0;
   $<HTMLInputElement>('input', capRow).addEventListener('input', (e) => { const v = (e.target as HTMLInputElement).value.trim(); window.clearTimeout(capTimer); capTimer = window.setTimeout(() => { if (/^\d{1,4}(\.\d{1,4})?$/.test(v)) own({ cap: v }); }, 500); });

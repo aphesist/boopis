@@ -47,19 +47,19 @@ export function mountThemePanel(container: HTMLElement | null): void {
         '<div class="hxt-row" data-token="' + t + '">' +
           '<button type="button" class="hxt-swatch" id="' + idOf(t) + '-c" aria-label="' + esc(label) + ' colour: edit its hex value"></button>' +
           '<label class="hxt-row__label" for="' + idOf(t) + '-x"><span>' + esc(label) + '<i class="hxt-flag" role="img" aria-label="Fails a contrast check" data-tip="Fails a contrast check" hidden></i></span>' + (note ? '<small>' + esc(note) + '</small>' : '') + '</label>' +
-          '<input type="text" class="ui-input ui-input--mono hxt-hex" id="' + idOf(t) + '-x" spellcheck="false" autocomplete="off" maxlength="7" aria-label="' + esc(label) + ' hex value">' +
-          '<button type="button" class="ui-btn ui-btn--ghost ui-btn--s hxt-undo" data-undo="' + t + '" aria-label="Reset ' + esc(label) + ' to the theme colour"><span>Reset</span></button>' +
+          ui.html.input({ id: idOf(t) + '-x', mono: true, class: 'hxt-hex', label: label + ' hex value', attrs: { maxlength: 7 } }) +
+          ui.html.button({ label: 'Reset', variant: 'ghost', size: 's', class: 'hxt-undo', attrs: { 'data-undo': t, 'aria-label': 'Reset ' + label + ' to the theme colour' } }) +
         '</div>').join('')).join('') +
     '</section>' +
     '<section class="ui-set" aria-labelledby="hxt-h-contrast">' + ui.html.setHead({ id: 'hxt-h-contrast', label: 'Contrast' }) + '<ul class="hxt-contrast" id="hxt-contrast" aria-live="polite"></ul></section>' +
     '<section class="ui-set" aria-labelledby="hxt-h-share">' + ui.html.setHead({ id: 'hxt-h-share', label: 'Share' }) +
       '<label class="hxt-json-label" for="hxt-json">Theme as JSON. Copy it to share, or paste one and apply it.</label>' +
-      '<textarea id="hxt-json" class="ui-input ui-input--mono hxt-json" rows="7" spellcheck="false"></textarea>' +
+      ui.html.input({ id: 'hxt-json', mono: true, rows: 7, class: 'hxt-json', attrs: { autocomplete: null } }) +
       '<div class="hxt-actions">' +
-        '<button type="button" class="ui-btn ui-btn--s" id="hxt-copy"><span>Copy JSON</span></button>' +
-        '<button type="button" class="ui-btn ui-btn--s" id="hxt-apply"><span>Apply JSON</span></button>' +
+        ui.html.button({ label: 'Copy JSON', size: 's', attrs: { id: 'hxt-copy' } }) +
+        ui.html.button({ label: 'Apply JSON', size: 's', attrs: { id: 'hxt-apply' } }) +
         '<label class="ui-btn ui-btn--s hxt-file" for="hxt-file"><span>Import file</span><input type="file" id="hxt-file" accept="application/json,.json"></label>' +
-        '<button type="button" class="ui-btn ui-btn--ghost ui-btn--s hxt-end" id="hxt-reset"><span>Reset to theme</span></button>' +
+        ui.html.button({ label: 'Reset to theme', variant: 'ghost', size: 's', class: 'hxt-end', attrs: { id: 'hxt-reset' } }) +
       '</div>' +
       '<p class="hxt-msg" id="hxt-msg" role="status"></p>' +
     '</section>';

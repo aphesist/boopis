@@ -72,7 +72,7 @@ export function openSettings(id: string | null, focusSection?: string | null, op
       const g = data().details.governance.get();
       modelBox.append(ui.ladder({ stations: g.ladder, current: 0, variant: 'list', label: 'Escalation ladder' }));
       const capId = 'bt-cap-' + b.id;
-      const row = frag(ui.html.setRow({ label: 'Cap per run', hint: 'Dollars per run', for: capId, control: '<input class="ui-input ui-input--mono bt-cap" id="' + capId + '" inputmode="decimal" autocomplete="off" value=""' + esc(c.cap) + '">' }));
+      const row = frag(ui.html.setRow({ label: 'Cap per run', hint: 'Dollars per run', for: capId, control: ui.html.input({ id: capId, value: c.cap, mono: true, class: 'bt-cap', attrs: { inputmode: 'decimal', spellcheck: null } }) }));
       $<HTMLInputElement>('input', row).addEventListener('input', (e) => { c.cap = (e.target as HTMLInputElement).value; push({ cap: c.cap }); paintToolbar(b); });
       modelBox.append(row);
     } else {

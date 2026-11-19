@@ -252,6 +252,23 @@ export interface BadgeOpts {
   focusable?: U<boolean>; describedBy?: U<string>;
   class?: U<string>; attrs?: U<Attrs>;
 }
+export interface InputOpts {
+  id?: U<string>; name?: U<string>; type?: U<string>; value?: U<string>; placeholder?: U<string>;
+  /** the accessible name when no visible label is bound with `for` */
+  label?: U<string>;
+  mono?: U<boolean>; raised?: U<boolean>;
+  /** a textarea of this many rows (a multi-line value: a theme's JSON) */
+  rows?: U<number>;
+  disabled?: U<boolean>; class?: U<string>; attrs?: U<Attrs>;
+}
+/** the bare text control (`.ui-input`, DESIGN-SYSTEM.md §14.25, R-field-1 to 4) for a place that has its own label: a settings row's
+    control, a rename in a list. `field()` is the same control with its label, hint and error. */
+function input(o: InputOpts): string {
+  const a: Attrs = { id: o.id, name: o.name, placeholder: o.placeholder, 'aria-label': o.label, disabled: o.disabled, autocomplete: 'off', spellcheck: o.mono ? 'false' : null, ...o.attrs };
+  const cls = cx('ui-input', o.mono && 'ui-input--mono', o.raised && 'ui-input--raised', o.class);
+  return o.rows ? '<textarea class="' + cls + '"' + attrs({ rows: o.rows, ...a }) + '>' + esc(o.value ?? '') + '</textarea>'
+    : '<input type="' + esc(o.type ?? 'text') + '" class="' + cls + '"' + attrs({ ...a, value: o.value }) + '>';
+}
 /** a quiet mark: a chip's capsule in mono 11, outlined, never filled and never red (a stamp is what the user owes). The "made outside
     boopis" mark (owner decision, 19 November 2026) is one. Pending rule: the design system describes this mark only for that place. */
 const badge = (o: BadgeOpts): string => '<span class="' + cx('ui-badge', o.class) + '"' +
@@ -276,5 +293,5 @@ const tip = (label: string, k?: string, state?: { text: string; tone?: string })
 export const html = {
   icon, keys, kbd, combo, comboKbds, code, inline, stamp, dot, capacity, button, iconButton, send, hold, switch: switchHtml, segmented, chip, chipGroup,
   orb: orbHtml, model: modelHTML, modelRoute: routeHTML, modelMark: markHTML, stateWord, row, leadFor, group, ladder, measure, legend, pages, request, entry, disclosure, steps, blank, section, menuItems, field, select: selectHTML, setRow, setHead, setSection, empty, toast, tip, mod,
-  scroll, tabs, search, tipBody, badge
+  scroll, tabs, search, tipBody, badge, input
 };

@@ -27,7 +27,7 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, props: Partial<Record
   return node;
 }
 const button = (text: string, variant: 'primary' | 'ghost' | '', onClick: () => void, type: 'button' | 'submit' = 'button'): HTMLButtonElement => {
-  const b = el('button', { type, class: 'ui-btn' + (variant ? ' ui-btn--' + variant : '') }, el('span', {}, text));
+  const b = ui.button({ label: text, type, ...(variant ? { variant } : {}) });
   b.addEventListener('click', (e) => { if (type === 'button') { e.preventDefault(); onClick(); } });
   return b;
 };
