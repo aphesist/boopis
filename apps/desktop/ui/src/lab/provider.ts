@@ -7,11 +7,30 @@ import { store } from '../data/store';
 import type { Bot, Wait } from '../data/types';
 import type { ProviderSpec } from './types';
 import { manyBots } from './fixtures';
+import type { RecordedFrame } from '../host/replay';
+
+/* The frames were recorded against the test model, which is driven by a script typed as the user's message ("@@call todo_list {...}@@
+   @@reply ...@@"). That is what the recorder typed, not what a person writes: the lab shows each such message as the plain request it
+   makes, "Run todo_list", from the calls the script names, so the conversation never shows a tool payload as a user's words (R-copy-9). */
+const SCRIPT = /@@call\s+([\w.-]+)/g;
+export const restate = (text: string): string => (text.includes('@@call') ? 'Run ' + [...text.matchAll(SCRIPT)].map((m) => m[1]).join(', ') : text);
+function restateScripts(frames: readonly RecordedFrame[]): readonly RecordedFrame[] {
+  const walk = (v: unknown): unknown => {
+    if (Array.isArray(v)) return v.map(walk);
+    if (v && typeof v === 'object') {
+      const o = v as Record<string, unknown>, out: Record<string, unknown> = {};
+      for (const [k, x] of Object.entries(o)) out[k] = (k === 'content' || k === 'text') && o['role'] === 'user' && typeof x === 'string' ? restate(x) : walk(x);
+      return out;
+    }
+    return v;
+  };
+  return frames.map((f) => ({ ...f, frame: walk(f.frame) as Record<string, unknown> }));
+}
 
 export async function labProvider(spec: ProviderSpec = {}): Promise<DataProvider> {
   if (spec.replay) {
     const { connectReplay } = await import('../host/connect-replay');
-    const p = await connectReplay(spec.replay);
+    const p = await connectReplay(spec.replay, restateScripts);
     return spec.patch ? spec.patch(p) : p;
   }
   let p = createMockProvider({ fixtures: spec.fixtures ?? [], simulate: spec.simulate ?? false });

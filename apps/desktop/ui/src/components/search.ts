@@ -8,7 +8,7 @@
    capsule on an 18px chip, as a key in a tooltip (§14.23). In the flush field they take the surface's own --r-in. */
 import { attrs, cx } from '../core/dom';
 import type { Attrs } from '../core/dom';
-import { ariaKeys } from '../core/keys';
+import { ariaKeys, kbdLabel } from '../core/keys';
 import { icon } from './icons';
 import { keys } from './kbd';
 
@@ -42,7 +42,10 @@ export function search(o: SearchOpts): string {
   const cls = cx('ui-search', 'ui-search--' + size, o.class);
   const glyph = icon('search', { class: 'ui-search__icon' });
   if (o.as === 'button') {
-    return '<button type="button" class="' + cls + '"' + attrs({ id: o.id, 'aria-label': o.label, 'aria-keyshortcuts': o.keys && ariaKeys(o.keys), ...o.attrs }) + '>' +
+    /* label in name (WCAG 2.5.3, R-a11y-3): the button's visible text (where you are, then its keys) is part of its name, in order */
+    const shown = (o.textHTML ?? '').replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim();
+    const name = shown || o.keys ? (o.label ?? 'Search') + '. Current: ' + [shown, o.keys ? kbdLabel(o.keys) : ''].filter(Boolean).join(' ') : o.label;
+    return '<button type="button" class="' + cls + '"' + attrs({ id: o.id, 'aria-label': name, 'aria-keyshortcuts': o.keys && ariaKeys(o.keys), ...o.attrs }) + '>' +
       /* a space between the text and the keys, so the visible text reads as the name does ("… title ctrl K", WCAG 2.5.3) */
       glyph + '<span class="ui-search__text">' + (o.textHTML ?? '') + '</span>' + (o.keys ? ' ' + chips(o.keys) : '') + '</button>';
   }

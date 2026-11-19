@@ -4,7 +4,8 @@
      (R-float-1; the rail's tooltip used to sit 10 away, F45).
    - A preferred side per control: `data-tip-pos` on the control or on a container of it ("top", "bottom", "left",
      "right", each with an optional "-start" or "-end": aligned to the control's edge instead of centred on it). A
-     composer's corner controls ask for "top-start" and "top-end", so a tip never hangs past the composer's corner.
+     tooltip is centred on its control (R-float-3); a composer's controls ask for "top", so the tip rises above the
+     composer, centred, and the window's margin is the only thing that moves it sideways.
    - Flip to the opposite side when the preferred one does not fit, and shift along the edge to stay in the window
      (8px from its edges).
    - Never over an input's text (R-tip-2, F40): a container names what must stay visible in `data-overlay-avoid` (a selector, matched
@@ -106,7 +107,15 @@ export interface PlaceAtOpts { side: Side; align?: Align | undefined; overhang?:
 /** place `node` (already in the document, positioned fixed or absolute to the window) against `anchor` */
 export function placeAt(node: HTMLElement, anchor: Element, o: PlaceAtOpts): Placement {
   readFloat();
-  const r = anchor.getBoundingClientRect(), w = node.offsetWidth, h = node.offsetHeight, avoid = avoidRects(anchor);
+  const r = anchor.getBoundingClientRect(), avoid = avoidRects(anchor);
+  let w = node.offsetWidth, h = node.offsetHeight;
+  /* taller than the room on either side of the anchor: it takes the roomier side and its list scrolls inside that room (R-float-4, R-select-2) */
+  const roomBelow = innerHeight - FLOAT.margin - (r.bottom + FLOAT.gap), roomAbove = r.top - FLOAT.gap - FLOAT.margin;
+  if ((o.side === 'top' || o.side === 'bottom') && h > Math.max(roomBelow, roomAbove)) {
+    const side: Side = roomAbove > roomBelow ? 'top' : 'bottom';
+    node.style.setProperty('--float-room', Math.max(roomAbove, roomBelow) + 'px');
+    w = node.offsetWidth; h = node.offsetHeight; o = { ...o, side };
+  } else node.style.removeProperty('--float-room');
   const p = placeRect({ anchor: r, w, h, view: { w: innerWidth, h: innerHeight }, side: o.side, align: o.align, overhang: o.overhang, gap: o.gap, avoid });
   node.style.left = p.x + 'px'; node.style.top = p.y + 'px';
   node.dataset['place'] = p.side === 'top' ? 'above' : p.side === 'bottom' ? 'below' : p.side;

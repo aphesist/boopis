@@ -19,7 +19,7 @@ const row: Story = {
   states: {
     typical: rowTypical, ...forced(rowTypical, '.ui-row'),
     single: stage(['single'], ({ root }) => { list(root, rowsOf(1)); }),
-    many: stage(['many', 'scroll'], ({ root }) => { const ul = list(root, rowsOf(120)); ul.style.maxHeight = '420px'; ul.style.overflowY = 'auto'; }),
+    many: stage(['many', 'scroll'], ({ root }) => { const ul = list(root, rowsOf(120)); ul.style.maxHeight = '420px'; ul.classList.add('ui-scroll'); }),
     long: stage(['long'], ({ root }) => { list(root, html.row({ title: LONG_TITLE, end: 'yesterday' }) + html.row({ title: UNBROKEN, sub: LONG_NAME + ' · ' + LONG_TITLE, end: '3 min' }) + html.row({ title: LONG_NAME, end: 'needs you', endTone: 'attention', acts: html.iconButton({ icon: 'archive', label: 'Archive' }) })); }),
     empty: stage(['empty'], ({ root }) => { list(root, ''); }, { note: 'no rows: the list draws nothing' }),
     rtl: stage(['rtl'], ({ root }) => { list(root, html.row({ title: RTL, end: 'yesterday' })); }, { dir: 'rtl' })

@@ -40,7 +40,7 @@ export default [
     states: {
       typical: stage(['typical', 'open'], async ({ root, wait }) => { const c = ui.chip({ model: 'sonnet 5.5', haspopup: 'listbox' }); line(root, c); ui.listbox.open(c, ui.modelEntries(MODELS), { value: 'sonnet 5.5', label: 'Model' }); await wait(260); }, { overlay: { anchor: '.ui-chip', layer: '.ui-listbox' } }),
       long: stage(['long', 'open'], async ({ root, wait }) => { const c = ui.chip({ label: 'Pick', haspopup: 'listbox' }); line(root, c); ui.listbox.open(c, [{ value: 'a', label: LONG_TITLE, desc: UNBROKEN }, { value: 'b', label: UNBROKEN }], { value: 'a', label: 'Long' }); await wait(260); }, { overlay: { anchor: '.ui-chip', layer: '.ui-listbox' } }),
-      empty: stage(['empty', 'open'], async ({ root, wait }) => { const c = ui.chip({ label: 'Pick', haspopup: 'listbox' }); line(root, c); ui.listbox.open(c, [], { label: 'Nothing' }); await wait(260); })
+      empty: stage(['empty', 'open'], async ({ root, wait }) => { const c = ui.chip({ label: 'Pick', haspopup: 'listbox' }); line(root, c); ui.listbox.open(c, [], { label: 'Nothing' }); await wait(260); }, { overlay: { anchor: '.ui-chip', layer: '.ui-listbox' } })
     }
   }
 ] satisfies Story[];

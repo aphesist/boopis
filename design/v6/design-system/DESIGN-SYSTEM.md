@@ -1055,7 +1055,7 @@ Motion explains a change of state and nothing else. No curve passes its mark: no
 
 | Token | Value | Curve | Use |
 |---|---|---|---|
-| `--dur-press` | 90ms | `--ease` | Press: translateY(1px) scale(.985) for buttons, .96 for icon buttons |
+| `--dur-press` | 90ms | `--ease` | Press: translateY(1px) scale(.985) for buttons, scale(.96) alone for icon buttons and send (no travel: a control in a corner keeps its equal inset, R-corner-3, R-state-1) |
 | `--dur-1` | 150ms | `--ease` | Hover in, colour changes |
 | `--dur-out` | 120ms | `--ease` | Hover out, exits, tooltips (library token) |
 | `--dur-2` | 200ms | `--ease` | Menus and popovers (fade with a 6px drop), fades, toasts |
@@ -1596,7 +1596,7 @@ One element (`<hx-card>`, `HX.ui.card(kind, data, opts)`), eight kinds, three si
 | Window | Icon at 36 × 28, `--icon-quiet` | Title bar only |
 | Send | Bone 28px square, 16px arrow; disabled at .35; Stop while running | The composer only |
 
-- **States:** hover (fine pointer only for icon buttons), press (1px down, scale .985 / .96), focus (brass ring),
+- **States:** hover (fine pointer only for icon buttons), press (buttons: 1px down, scale .985; icon buttons: scale .96 alone), focus (brass ring),
   disabled (`--text-quiet`; primary disabled on `--bg-4`), armed (a destructive confirm: strong line and the label
   "Click again to archive"; never red).
 - Height `--ctl`, radius `--r-s`, 13/500, sentence case through `--ui-case`. A button may show its keys on hover

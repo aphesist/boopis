@@ -68,16 +68,16 @@ export function composer(opts: ComposerOpts = {}): ComposerEl {
   const micLabelOf = (): string => (bot ? 'Talk to ' + (bot.name ?? '') : 'Dictate');
   /* corners (DESIGN-SYSTEM.md §8.2, §14.10): the box is a container, the bar a .ui-corners row, attach (bottom-left, in
      the full layout) and send (bottom-right) .ui-corner controls; the container's rule derives their radius, size,
-     inset and ring. Tips: above, aligned to the control (the bar's controls to their left edge, the actions to their
-     right edge), and never over the text or the assumptions (data-overlay-avoid; place.ts). */
+     inset and ring. Tips: above and centred on the control like every tooltip (R-float-3; the window clamps a tip at
+     its edge), and never over the text or the assumptions (data-overlay-avoid, R-tip-2; place.ts). */
   const attachHTML = o.attach ? html.iconButton({ icon: 'plus', label: 'Attach files, folders or a teammate', tip: 'Attach', keys: 'alt+A', haspopup: 'menu', expanded: false, class: compact ? 'ui-composer__attach' : 'ui-composer__attach ui-corner' }) : '';
-  const acts = '<span class="ui-composer__acts" data-tip-pos="top-end">' + (compact ? attachHTML : '') +
+  const acts = '<span class="ui-composer__acts" data-tip-pos="top">' + (compact ? attachHTML : '') +
     html.iconButton({ icon: 'mic', label: micLabelOf(), keys: 'alt+V', pressed: false, class: 'ui-composer__mic' }) + html.send({ disabled: true, corner: true }) + '</span>';
   const root = frag('<div class="ui-composer" data-ui="composer" data-hx-composer data-overlay-avoid=".ui-composer__input, .ui-composer[data-hinting] .ui-composer__hint"' + (compact ? ' data-compact' : '') + '>' +
     (o.hint ? '<div class="ui-composer__hint" role="group" aria-label="Will assume"></div>' : '') +
     '<div class="ui-composer__box"><div class="ui-composer__files"></div>' +
-    '<div class="ui-composer__input" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="false" data-hx-focus="composer"' + attrs({ 'aria-label': o.label, 'data-placeholder': o.placeholder, 'aria-description': o.feedforward ? 'Dashed words are a reading of your request. Alt and down arrow on one changes it; Tab reaches the assumptions.' : null }) + '></div>' +
-    '<div class="ui-composer__bar ui-corners" data-tip-pos="top-start">' + (compact ? '' : attachHTML) +
+    '<div class="ui-composer__input ui-scroll" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="false" data-hx-focus="composer"' + attrs({ 'aria-label': o.label, 'data-placeholder': o.placeholder, 'aria-description': o.feedforward ? 'Dashed words are a reading of your request. Alt and down arrow on one changes it; Tab reaches the assumptions.' : null }) + '></div>' +
+    '<div class="ui-composer__bar ui-corners" data-tip-pos="top">' + (compact ? '' : attachHTML) +
     '<span class="ui-composer__chips"></span><span class="ui-composer__spacer"></span>' + (o.spend ? html.capacity(o.spend.spent, o.spend.cap) : '') +
     acts + '</div></div></div>');
   const q = <T extends HTMLElement>(sel: string): T => root.querySelector<T>(sel) as T;

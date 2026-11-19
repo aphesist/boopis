@@ -32,7 +32,7 @@
    (radius, size, ring); a row along an edge that holds corner controls at its ends: .ui-corners (the inset). Never set a
    radius or an inset in a corner by hand. A squircle-drawn container also exposes its drawn radius as --r-outer when it
    declared none (squircle.ts), so its children nest the same way. */
-:where(.ui-nest, .ui-composer__box, .ui-menu, .ui-pop, .ui-listbox, .ui-tip, .ui-toast, .ui-seg, .ui-search--s,
+:where(.ui-nest, .ui-composer__box, .ui-file, .ui-menu, .ui-pop, .ui-listbox, .ui-tip, .ui-toast, .ui-seg, .ui-search--s, .ui-search--m,
   hx-card[data-size="inline"], hx-card[data-size="compact"], hx-card[data-size="popover"]) {
   --corner-size: var(--ctl-s);
   --r-in: min(var(--r-outer), max(var(--r-floor), calc(var(--r-outer) - var(--pad))));
@@ -101,17 +101,17 @@
    nothing sets the standard pair, except scrollbar-width: none on a hidden bar (R-scroll-1). The sizes and colours are the design
    system's scrollbar tokens (--scroll-*, tokens.css): R-scroll-2 and R-scroll-3 are Proposed, and a ruling changes a token, nothing
    here. */
-:where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll)::-webkit-scrollbar, :where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll) ::-webkit-scrollbar { width: var(--scroll-size); height: var(--scroll-size); background: transparent; }
-:where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll)::-webkit-scrollbar-thumb, :where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll) ::-webkit-scrollbar-thumb {
+:where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll)::-webkit-scrollbar, :where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll) ::-webkit-scrollbar { width: var(--scroll-size); height: var(--scroll-size); background: transparent; }
+:where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll)::-webkit-scrollbar-thumb, :where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll) ::-webkit-scrollbar-thumb {
   min-width: var(--scroll-thumb-min); min-height: var(--scroll-thumb-min); border-radius: var(--r-pill);
   border: calc((var(--scroll-size) - var(--scroll-thumb)) / 2) solid transparent;
   background: var(--scroll-thumb-color) padding-box;
 }
-@media (hover: hover) and (pointer: fine) { :where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll):is(::-webkit-scrollbar-thumb:hover, ::-webkit-scrollbar-thumb:active), :where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll) :is(::-webkit-scrollbar-thumb:hover, ::-webkit-scrollbar-thumb:active) {
+@media (hover: hover) and (pointer: fine) { :where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll):is(::-webkit-scrollbar-thumb:hover, ::-webkit-scrollbar-thumb:active), :where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll) :is(::-webkit-scrollbar-thumb:hover, ::-webkit-scrollbar-thumb:active) {
   border-width: calc((var(--scroll-size) - var(--scroll-thumb-active)) / 2); background-color: var(--scroll-thumb-color-active);
 } }
-:where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll):is(::-webkit-scrollbar-track, ::-webkit-scrollbar-corner), :where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll) :is(::-webkit-scrollbar-track, ::-webkit-scrollbar-corner) { background: transparent; }
-:where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll)::-webkit-scrollbar-button, :where(.ui-root, .ui-scope, [data-layer-host], .ui-scroll) ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+:where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll):is(::-webkit-scrollbar-track, ::-webkit-scrollbar-corner), :where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll) :is(::-webkit-scrollbar-track, ::-webkit-scrollbar-corner) { background: transparent; }
+:where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll)::-webkit-scrollbar-button, :where(:root, .ui-root, .ui-scope, [data-layer-host], .ui-scroll) ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
 /* the scroller itself (R-scroll-6 to 8): vertical by default (rows ellipsise, so it never scrolls sideways); --x a strip, code or a
    diff; --both a wide code block; --bare hides the bar (a tab strip, which fades its cut edge instead, R-scroll-7 and 9). It contains
    its scroll, so a wheel at its end never moves what is behind a dialog or a panel (R-scroll-8).
@@ -162,6 +162,11 @@
 .ui-btn[data-armed] { box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--text-strong); }
 .ui-btn .ui-icon { width: 16px; height: 16px; }
 .ui-btn__kbd { display: inline-flex; gap: 3px; margin-left: auto; opacity: 0; transition: opacity var(--dur-1) var(--ease); }
+/* key chips in a control's end corner (R-corner-3, R-corner-4, R-kbd-2): the chip is 18px, so it sits (height - 18) / 2 from the top and the
+   bottom, and the control's end padding is that same inset; its radius is the control's less the inset, down to the floor */
+.ui-btn:has(.ui-btn__kbd) { --kbd-inset: calc((var(--ctl) - 18px) / 2); padding-inline-end: var(--kbd-inset); }
+.ui-btn--s:has(.ui-btn__kbd) { --kbd-inset: calc((var(--ctl-s) - 18px) / 2); }
+.ui-btn__kbd > .ui-keys > .ui-kbd { border-radius: max(var(--r-floor), calc(var(--r-s) - var(--kbd-inset))); }
 .ui-btn:hover .ui-btn__kbd, .ui-btn:focus-visible .ui-btn__kbd { opacity: 1; }
 
 /* icon button: 28px, radius 6, 18px glyph */
@@ -174,7 +179,7 @@
 @media (hover: hover) and (pointer: fine) {
   .ui-ib:hover:not(:disabled) { color: var(--text-strong); background: var(--hover); transition-duration: var(--dur-1), var(--dur-1), var(--dur-press); }
 }
-.ui-ib:active:not(:disabled) { transform: translateY(1px) scale(.96); }
+.ui-ib:active:not(:disabled) { transform: scale(.96); }   /* the state table: icon buttons press by scale alone, so a control in a corner keeps its equal inset (R-corner-3) */
 .ui-ib:disabled { color: var(--icon-off); cursor: default; }
 .ui-ib[aria-pressed="true"] { color: var(--brass); }
 .ui-ib .is-fill-on { opacity: 0; transition: opacity var(--dur-2) var(--ease); }
@@ -191,7 +196,7 @@
 }
 .ui-send .ui-icon { width: 16px; height: 16px; }
 @media (hover: hover) and (pointer: fine) { .ui-send:hover:not(:disabled) { background: var(--text-strong); } }
-.ui-send:active:not(:disabled) { transform: translateY(1px) scale(.96); }
+.ui-send:active:not(:disabled) { transform: scale(.96); }
 .ui-send:disabled { opacity: .35; cursor: default; }
 
 /* a control in a container's corner (the container's rule above derives the numbers): concentric with it, its size,
@@ -230,7 +235,7 @@
 .ui-seg {
   --n: 2; --i: 0;
   position: relative; display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; flex: none;
-  height: var(--ctl); padding: var(--corner-inset); box-sizing: border-box;
+  height: var(--ctl); max-width: 100%; padding: var(--corner-inset); box-sizing: border-box;
   --r-outer: var(--r-s); --pad: var(--pad-seg); border-radius: var(--r-outer);
   --sq-bg: var(--bg-0); background: var(--sq-bg); box-shadow: inset 0 0 0 1px var(--hair);
 }
@@ -246,8 +251,9 @@
   font: 500 var(--fs-s)/1 var(--sans); color: var(--text-dim); white-space: nowrap; text-transform: var(--ui-case); cursor: pointer;
   transition: color var(--dur-2) var(--ease);
 }
-@media (hover: hover) and (pointer: fine) { .ui-seg__opt:hover { color: var(--text-strong); } }
+@media (hover: hover) and (pointer: fine) { .ui-seg__opt:hover:not([aria-selected="true"], [aria-checked="true"]) { color: var(--text-strong); } }   /* the chosen option keeps its ink on the thumb */
 .ui-seg__opt[aria-selected="true"], .ui-seg__opt[aria-checked="true"] { color: var(--text-on-light); cursor: default; }
+.ui-seg__opt > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .ui-seg__opt:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }   /* inside the track, which clips to its path */
 .ui-seg__opt .ui-dot { display: none; }
 .ui-seg__opt[aria-selected="false"] .ui-dot[data-show], .ui-seg__opt[aria-checked="false"] .ui-dot[data-show] { display: block; }
@@ -283,6 +289,7 @@
 .ui-search { display: flex; align-items: center; gap: 10px; box-sizing: border-box; min-width: 0; color: var(--text-quiet); font-family: var(--sans); }
 .ui-search__icon { width: 14px; height: 14px; }
 .ui-search__text { flex: 1; min-width: 0; display: flex; gap: 6px; overflow: hidden; white-space: nowrap; font-size: var(--fs-xs); }
+.ui-search__text > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .ui-search__input { flex: 1; min-width: 0; height: 100%; padding: 0; margin: 0; border: 0; background: transparent; outline: none; color: var(--text-strong); caret-color: var(--brass); font: 400 var(--fs-m)/1 var(--sans); }
 .ui-search__input:focus-visible { outline: none; }   /* the caret and the surface show focus: the field is the surface's head */
 .ui-search__input::placeholder { color: var(--text-quiet); opacity: 1; text-transform: var(--ui-case); }
@@ -302,7 +309,7 @@
 .ui-search--l .ui-search__icon { width: 16px; height: 16px; }
 /* m: a search in a form, a field's box with the glyph at its start (R-search-1); the ring sits on the box (§14.24) */
 .ui-search--m {
-  min-height: var(--ctl); padding: 0 10px 0 calc((var(--ctl) - 14px) / 2); gap: 8px; border-radius: var(--r-s);
+  --r-outer: var(--r-s); --pad: calc((var(--ctl) - 18px) / 2); min-height: var(--ctl); padding: 0 var(--pad) 0 calc((var(--ctl) - 14px) / 2); gap: 8px; border-radius: var(--r-outer);
   background: var(--bg-0); box-shadow: inset 0 0 0 1px var(--line-field); transition: box-shadow var(--dur-1) var(--ease);
 }
 @media (hover: hover) and (pointer: fine) { .ui-search--m:hover { box-shadow: inset 0 0 0 1px var(--text-quiet); } }
@@ -338,6 +345,7 @@
   font: 400 var(--fs-2xs)/1 var(--mono); letter-spacing: 0; color: var(--text-dim); white-space: nowrap;
 }
 .ui-keys { display: inline-flex; gap: 3px; flex: none; }
+.ui-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
 /* fit: the chips sit in a control's corner and are concentric with it (DESIGN-SYSTEM.md §8.2: a key in a tooltip, in the search field) */
 .ui-keys--fit > .ui-kbd { border-radius: var(--r-in, var(--r-xs)); }
 /* raised: on a raised surface (a tooltip, §14.17): --bg-4, no hairline */
@@ -345,7 +353,7 @@
 
 /* ───────────── marks: stamp, dot ───────────── */
 .ui-stamp {
-  display: inline-flex; align-items: center; flex: none; height: 20px; padding: 0 7px; box-sizing: border-box; border-radius: var(--r-xs);
+  display: inline-flex; align-items: center; flex: none; height: 20px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; padding: 0 7px; box-sizing: border-box; border-radius: var(--r-xs);
   box-shadow: inset 0 0 0 1px var(--red); color: var(--red-text); font: 500 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono);
   white-space: nowrap; text-transform: var(--ui-case); transition: background-color var(--dur-1) var(--ease);
 }
@@ -353,7 +361,7 @@
 .ui-stamp:empty { display: none; }
 /* badge: a quiet mark, a chip's capsule in mono 11, outlined (the "made outside boopis" mark); never filled, never a stamp */
 .ui-badge {
-  display: inline-flex; align-items: center; flex: none; height: 18px; padding: 0 7px; box-sizing: border-box; vertical-align: middle;
+  display: inline-flex; align-items: center; flex: none; height: 18px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; padding: 0 7px; box-sizing: border-box; vertical-align: middle;
   border-radius: var(--r-pill); box-shadow: inset 0 0 0 1px var(--line); color: var(--text-quiet);
   font: 400 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); text-transform: none; white-space: nowrap;
 }
@@ -400,10 +408,12 @@ button.ui-group__head { cursor: pointer; }
 .ui-row:is(:hover, :focus-within) .ui-row__acts, .ui-row-wrap:is(:hover, :focus-within) .ui-row__acts { display: flex; }
 .ui-row-wrap:is(:hover, :focus-within) .ui-row__end[data-swap] { display: none; }
 .ui-row[data-archived] .ui-row__title { color: var(--text-quiet); text-decoration: line-through; text-decoration-color: var(--line-strong); }
-.ui-row-wrap { position: relative; display: flex; align-items: center; }
-.ui-row-wrap > .ui-row { flex: 1; }
-.ui-row-wrap > .ui-row__acts { position: absolute; right: 4px; }
-.ui-row-wrap:is(:hover, :focus-within) > .ui-row { padding-right: calc(var(--acts, 0) * (var(--ctl-s) + 2px) + 8px); }   /* the title ellipsises before the actions */
+.ui-row-wrap { display: flex; align-items: center; border-radius: var(--r-s); }   /* the actions join the flow when the row is hovered or has focus, so the title ellipsises before them with no computed padding (R-space-1) */
+.ui-row-wrap > .ui-row { flex: 1; width: auto; min-width: 0; }
+.ui-row-wrap > .ui-row__acts { padding-right: var(--sp-1); }
+.ui-row-wrap:is(:focus-within) { background: var(--hover); }
+@media (hover: hover) and (pointer: fine) { .ui-row-wrap:hover { background: var(--hover); } .ui-row-wrap > .ui-row:hover { --sq-bg: transparent; } }   /* one fill under the row and its actions */
+.ui-row-wrap:focus-within > .ui-row:not([aria-current], [aria-selected="true"]) { --sq-bg: transparent; }
 
 /* ───────────── floating surfaces: menu, popover, tooltip, toast ───────────── */
 .ui-menu, .ui-pop, .ui-listbox {
@@ -415,10 +425,12 @@ button.ui-group__head { cursor: pointer; }
 .ui-menu[data-place="above"], .ui-pop[data-place="above"], .ui-listbox[data-place="above"] { translate: 0 6px; }
 .ui-menu.is-in, .ui-pop.is-in, .ui-listbox.is-in { opacity: 1; translate: 0 0; }
 .ui-menu[data-static], .ui-pop[data-static] { position: relative; opacity: 1; translate: none; z-index: auto; }
-.ui-pop { padding: var(--pad-pop); --pad: var(--pad-pop); width: 360px; max-width: calc(100vw - 24px); }   /* a 12px inset: its controls keep their own step */
+.ui-pop { padding: var(--pad-pop); --pad: var(--pad-pop); width: 360px; max-width: calc(100vw - 24px); }
+/* the controls of a popover sit within its corner radius of the corners (R-corner-3): they take the concentric radius, the container's less its inset, down to the floor */
+.ui-pop :is(.ui-btn, .ui-input) { border-radius: var(--r-in); }
 .ui-menu__title, .ui-listbox__head { padding: 6px 8px 4px; font: 500 var(--fs-xs)/var(--lh-ui) var(--sans); color: var(--text-quiet); text-transform: var(--ui-case); }
 .ui-menu__item, .ui-option {
-  appearance: none; display: flex; align-items: flex-start; gap: 8px; width: 100%; box-sizing: border-box; min-height: var(--row-h); padding: 6px 8px; margin: 0; border: 0;
+  appearance: none; display: flex; align-items: center; gap: 8px; width: 100%; box-sizing: border-box; min-height: var(--row-h); padding: 6px 8px; margin: 0; border: 0;
   border-radius: var(--r-in); --sq-bg: transparent; background: var(--sq-bg); font: inherit; color: var(--text); text-align: left; cursor: pointer;   /* concentric with the menu */
 }
 @media (hover: hover) and (pointer: fine) { .ui-menu__item:hover, .ui-option:hover { --sq-bg: var(--hover); background: var(--sq-bg); } }
@@ -430,19 +442,24 @@ button.ui-group__head { cursor: pointer; }
 .ui-menu__item[aria-checked="true"] .ui-menu__glyph, .ui-option[aria-selected="true"] .ui-menu__glyph { color: var(--brass); }
 .ui-option[aria-selected="true"] { color: var(--text-strong); }
 .ui-menu__text { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
-.ui-menu__label { text-transform: var(--ui-case); }
+.ui-menu__label { overflow-wrap: anywhere; text-transform: var(--ui-case); }
 .ui-menu__label.ui-mono, .ui-menu__label[data-content] { text-transform: none; }
-.ui-menu__desc { font-size: var(--fs-xs); color: var(--text-quiet); text-transform: var(--ui-case); }
+.ui-menu__desc { overflow-wrap: anywhere; font-size: var(--fs-xs); color: var(--text-quiet); text-transform: var(--ui-case); }
 .ui-menu__item .ui-keys, .ui-option .ui-keys { margin-left: auto; align-self: center; }
+/* an item that ends in key chips or a stamp: the end padding is the chip's inset from the top and bottom, (row - chip) / 2, and the chip's radius the item's less that (R-corner-3, R-corner-4) */
+.ui-menu__item:has(.ui-keys, .ui-stamp), .ui-option:has(.ui-keys, .ui-stamp) { --kbd-inset: calc((var(--row-h) - 18px) / 2); padding-inline-end: var(--kbd-inset); }
+:is(.ui-menu__item, .ui-option) :is(.ui-kbd, .ui-stamp) { border-radius: var(--r-pill); }   /* an 18px chip at (row - 18) / 2 inside the item's corner: the item's radius less that inset is half the chip, a capsule (R-corner-9) */
+:is(.ui-menu__item, .ui-option) .ui-stamp { height: 18px; }
+.ui-menu__list { max-height: min(calc(100vh - 2 * var(--float-margin) - 2 * var(--pad-menu)), calc(var(--float-room, 100vh) - 2 * var(--pad-menu))); border-radius: var(--r-in); }   /* a long menu scrolls inside its surface (R-float-4, R-select-2) */
 .ui-menu__item .ui-stamp { margin-left: auto; align-self: center; }
 .ui-menu__sep { height: 1px; margin: 4px 6px; background: var(--hair); }
 /* the select's list: the menu's surface and rows, as a scrolling listbox; provider headers are the menu's titles with a mark */
-.ui-listbox { display: flex; flex-direction: column; max-width: min(520px, calc(100vw - 16px)); }
+.ui-listbox { display: flex; flex-direction: column; max-width: min(520px, calc(100vw - 2 * var(--float-margin))); }
 .ui-listbox__list { flex: 1; min-height: 0; border-radius: var(--r-in); }   /* the surface does not scroll: its drawn corner would go with the content */
 .ui-listbox__head { display: flex; align-items: center; gap: var(--sp-2); }
 .ui-listbox__group + .ui-listbox__group { margin-top: 4px; }
 .ui-option { overflow-wrap: anywhere; }
-.ui-menu__foot { margin-top: 4px; padding: 8px 8px 4px; box-shadow: inset 0 1px 0 var(--hair); font-size: var(--fs-xs); color: var(--text-quiet); }
+.ui-menu__foot { margin-top: 4px; padding: 8px 8px 4px; border-radius: 0 0 var(--r-in) var(--r-in); box-shadow: inset 0 1px 0 var(--hair); font-size: var(--fs-xs); color: var(--text-quiet); }
 
 .ui-tip {
   position: fixed; z-index: var(--z-tooltip); pointer-events: none; display: flex; align-items: center; gap: 8px; box-sizing: border-box;
@@ -470,7 +487,7 @@ button.ui-group__head { cursor: pointer; }
 .ui-toast:not(:has(button)) { padding-right: 14px; }
 .ui-toast.is-in { opacity: 1; translate: -50% 0; pointer-events: auto; }
 .ui-toast[data-static] { position: relative; left: auto; top: auto; translate: none; opacity: 1; pointer-events: auto; z-index: auto; }
-.ui-toast > span { padding-block: 8px; }
+.ui-toast > span { min-width: 0; padding-block: 8px; overflow-wrap: anywhere; }
 /* the action is a .ui-corner (toast.ts): concentric with the toast, at its inset from the right and both edges */
 
 /* ───────────── fields ───────────── */
@@ -517,7 +534,9 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-ladder__st { position: relative; display: block; width: var(--st); height: var(--st); border-radius: var(--r-pill); background: var(--ui-ladder-ground, var(--bg-2)); box-shadow: inset 0 0 0 1px var(--mark-off); }
 .ui-ladder__st[data-s="past"] { background: var(--text-dim); box-shadow: none; }
 .ui-ladder__st[data-s="now"] { background: var(--brass); box-shadow: none; }
-.ui-ladder[data-off] { opacity: .45; }
+/* off: the role colours of a disabled thing, not an opacity (R-state-6): text in --text-quiet, which holds AA, marks in --mark-off */
+.ui-ladder[data-off] :is(.ui-ladder__name, .ui-ladder__rule), .ui-ladder--list[data-off] > li[aria-current="step"] :is(.ui-ladder__name, .ui-ladder__rule) { color: var(--text-quiet); }
+.ui-ladder[data-off] .ui-ladder__st:is([data-s="past"], [data-s="now"]) { background: var(--mark-off); box-shadow: none; }
 /* list: one station per row, with the model and the rule that reaches it */
 .ui-ladder--list { --st: 8px; display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; column-gap: 8px; row-gap: 0; align-items: center; }
 .ui-ladder--list::before { display: none; }
@@ -539,6 +558,9 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-measure > i { display: block; width: 4px; height: 4px; border-radius: var(--r-pill); background: var(--text-faint); }
 .ui-measure > i[data-on] { background: var(--text-dim); }
 .ui-measure--strip { flex-direction: column-reverse; }
+/* the strip's dots sit in the button's corners: 4px dots in 8px boxes (a transparent 2px border), so the button's 8px padding and 24px width leave the same inset on every side (R-corner-3, R-corner-4) */
+.ui-measure-btn .ui-measure--strip { gap: 2px; }
+.ui-measure-btn .ui-measure--strip > i { box-sizing: content-box; border: 2px solid transparent; background-clip: padding-box; }
 .ui-measure--row { flex-direction: row; }
 .ui-measure--grid { display: grid; grid-template-columns: repeat(var(--cols, 20), 1fr); gap: 6px 0; justify-items: center; width: 100%; }
 .ui-measure--grid > i { width: 5px; height: 5px; background: var(--line); }
@@ -548,7 +570,8 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-measure > i[data-p="3"] { background: var(--text-faint); }
 .ui-measure-btn { appearance: none; display: grid; place-items: center; min-width: 24px; min-height: 24px; box-sizing: border-box; padding: 8px 6px; margin: 0; border: 0; border-radius: var(--r-s); background: transparent; cursor: pointer; transition: background-color var(--dur-1) var(--ease); }
 @media (hover: hover) and (pointer: fine) { .ui-measure-btn:hover { background: var(--hover); } }
-.ui-legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.ui-measure-btn:focus-visible { outline: none; background: var(--current); box-shadow: inset 0 0 0 2px var(--focus); }   /* a strip at the panel's edge: its ring sits inside, where nothing cuts it (R-focus-2) */
+.ui-legend { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
 .ui-legend li { display: flex; align-items: center; gap: 10px; min-height: calc(var(--row-h) - 4px); font-size: var(--fs-s); color: var(--text-dim); }
 .ui-legend li > span:first-of-type { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ui-legend i { width: 6px; height: 6px; border-radius: var(--r-pill); flex: none; }
@@ -558,6 +581,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 /* pages: the dock's page dots (a tablist) and a queue's position (an image); the current one is brass */
 .ui-pages { position: relative; display: inline-flex; align-items: center; height: 10px; }
 .ui-pages__dot { appearance: none; position: relative; display: grid; place-items: center; width: 10px; height: 10px; padding: 0; margin: 0; border: 0; border-radius: var(--r-xs); background: transparent; cursor: pointer; }
+.ui-pages__dot::after { content: ""; position: absolute; left: 0; right: 0; top: calc((10px - var(--hit-min)) / 2); bottom: calc((10px - var(--hit-min)) / 2); }   /* the 24px hit area around a 10px mark (R-a11y-2); the dots tile the strip, so a press beside the current dot lands on its neighbour */
 .ui-pages__dot > i { display: block; width: 4px; height: 4px; border-radius: var(--r-pill); background: var(--mark-off); transition: background-color var(--dur-1) var(--ease); }
 @media (hover: hover) and (pointer: fine) { .ui-pages__dot:hover > i { background: var(--text-dim); } }
 .ui-pages__dot:is([aria-selected="true"], [data-current]) { width: 20px; cursor: default; }
@@ -595,16 +619,17 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-request { width: fit-content; max-width: 100%; box-sizing: border-box; padding: 10px 14px; border-radius: var(--r-m); --sq-bg: var(--bg-3); background: var(--sq-bg); color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; font: 400 var(--fs-m)/var(--lh) var(--sans); }
 .ui-prose { max-width: 100%; }
 .ui-prose p, .ui-prose ul, .ui-prose ol { margin: 0 0 var(--sp-3); }
-.ui-prose ul, .ui-prose ol { padding-left: 18px; }
+.ui-prose ul, .ui-prose ol { padding-left: var(--sp-4); }
 .ui-prose li { margin-bottom: 4px; }
 .ui-prose li::marker { color: var(--text-quiet); }
 .ui-prose > :last-child { margin-bottom: 0; }
 .ui-disclosure {
-  appearance: none; display: inline-flex; align-items: center; gap: 4px; margin: 4px 0 0 -4px; padding: 2px 6px 2px 4px; border: 0; border-radius: var(--r-xs);
+  appearance: none; display: inline-flex; align-items: center; gap: 4px; min-height: var(--hit-min); margin: 0; padding: 0 var(--sp-2) 0 var(--sp-1); border: 0; border-radius: var(--r-xs);
   background: transparent; font: inherit; color: var(--text-quiet); cursor: pointer; text-transform: var(--ui-case);
   transition: background-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
 }
 @media (hover: hover) and (pointer: fine) { .ui-disclosure:hover { background: var(--hover); color: var(--text); } }
+.ui-disclosure:focus-visible { outline: none; background: var(--current); box-shadow: inset 0 0 0 2px var(--focus); }   /* flush with its column: the ring sits inside (R-focus-2, R-corner-4) */
 .ui-disclosure .ui-icon { width: 10px; height: 10px; transition: transform var(--dur-2) var(--ease); }
 .ui-disclosure[aria-expanded="true"] .ui-icon { transform: rotate(90deg); }
 .ui-steps { list-style: none; margin: 0; padding: 0; width: 100%; }
@@ -618,7 +643,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-step[data-kind="escalate"] .ui-step__mark > i { width: 7px; height: 7px; background: transparent; box-shadow: inset 0 0 0 1.5px var(--text-dim); }
 .ui-step__title { color: var(--text); min-width: 0; }
 .ui-step__meta { display: flex; flex-wrap: wrap; gap: 0 12px; margin-top: 2px; font: 400 var(--fs-2xs)/1.45 var(--mono); color: var(--text-quiet); }
-.ui-step__time { font: 400 var(--fs-2xs)/18px var(--mono); color: var(--text-quiet); font-variant-numeric: tabular-nums; }
+.ui-step__time { font: 400 var(--fs-2xs)/var(--lh-meta) var(--mono); color: var(--text-quiet); font-variant-numeric: tabular-nums; }
 
 /* the blank: a dotted red line under the gap, then the stamp, inside the sentence it belongs to */
 .ui-blank { appearance: none; display: inline-flex; align-items: center; gap: 8px; vertical-align: -4px; padding: 0; margin: 0 0 0 4px; border: 0; border-radius: var(--r-xs); background: none; font: inherit; color: var(--text); cursor: pointer; white-space: nowrap; }
@@ -654,10 +679,14 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-composer__box:focus-within, .ui-composer[data-listening] .ui-composer__box { box-shadow: inset 0 0 0 1px var(--line-field); }   /* the frame answers focus at 3:1; the caret is brass */
 .ui-composer__files { display: flex; flex-wrap: wrap; gap: 6px; padding: var(--corner-inset) var(--corner-inset) 0; }
 .ui-composer__files:empty { display: none; }
-.ui-file { display: inline-flex; align-items: center; gap: 6px; height: var(--ctl-s); padding: 0 0 0 8px; border-radius: var(--r-corner, var(--r-s)); background: var(--bg-0); font: 400 var(--fs-2xs)/1 var(--mono); color: var(--text-dim); }
-.ui-file .ui-icon { width: 14px; height: 14px; }
-.ui-file .ui-ib { border-radius: var(--r-corner, var(--r-s)); }
-.ui-composer__input { min-height: calc(2 * 1.6em); max-height: 220px; padding: 12px 14px 4px; overflow-y: auto; outline: none; white-space: pre-wrap; overflow-wrap: anywhere; caret-color: var(--brass); }
+/* a file chip is a pill container (its radius is half its height) whose remove button, a 24px square, sits in its end corner at
+   the equal inset: --corner-inset on all three sides it touches. A long name ellipsises inside the box (R-overflow-1). */
+.ui-file { --r-outer: calc(var(--ctl-s) / 2); --pad: 2px; --corner-size: 24px; display: inline-flex; align-items: center; gap: 6px; box-sizing: border-box; max-width: 100%; min-width: 0; height: var(--ctl-s); padding: 0 var(--corner-inset) 0 8px; border-radius: var(--r-outer); background: var(--bg-0); font: 400 var(--fs-2xs)/1 var(--mono); color: var(--text-dim); }
+.ui-file .ui-icon { width: 14px; height: 14px; flex: none; }
+.ui-file > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ui-file .ui-ib { flex: none; border-radius: var(--r-corner); }
+.ui-file .ui-ib:focus-visible { outline: none; background: var(--current); box-shadow: inset 0 0 0 2px var(--focus); }   /* the chip's own corner holds the button: the ring sits inside (R-focus-2, R-corner-4) */
+.ui-composer__input { min-height: calc(2 * 1.6em); max-height: 220px; padding: 12px 14px 4px; outline: none; white-space: pre-wrap; overflow-wrap: anywhere; caret-color: var(--brass); }
 .ui-composer__input:focus-visible { outline: none; }
 .ui-composer__input[data-empty="true"]::before { content: attr(data-placeholder); color: var(--text-quiet); pointer-events: none; text-transform: var(--ui-case); }
 .ui-composer__bar { display: flex; align-items: center; gap: 2px; min-width: 0; padding-top: 6px; }
@@ -670,7 +699,8 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 /* compact: one row; the input's padding centres one line on the 28px actions, so the row is the actions plus the inset */
 .ui-composer[data-compact] .ui-composer__box { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
 .ui-composer[data-compact] .ui-composer__files { grid-column: 1 / -1; }
-.ui-composer[data-compact] .ui-composer__input { min-height: 1.6em; padding: calc(var(--corner-inset) + (var(--corner-size) - 1.6em) / 2) 6px calc(var(--corner-inset) + (var(--corner-size) - 1.6em) / 2) 14px; }
+.ui-composer[data-compact] .ui-composer__input { min-height: 1.6em; align-self: center; padding: var(--corner-inset) 6px var(--corner-inset) 14px; }   /* one line, centred on the actions' row by the grid, not by a padding sum (R-type-11, R-space-1) */
+.ui-composer[data-compact] .ui-composer__bar { align-self: end; }
 .ui-composer[data-compact] .ui-composer__bar { padding-block: var(--corner-inset); padding-inline-start: 0; }
 .ui-composer[data-compact] :is(.ui-composer__chips, .ui-composer__spacer, .ui-capacity) { display: none; }
 /* listening (the mic): pressed, the field's line, and the target bot's orb listening in the mic's place */
@@ -690,14 +720,15 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-panel__title { flex: 1; margin: 0; font: 600 var(--fs-s)/1 var(--sans); color: var(--text-strong); text-transform: var(--ui-case); }
 .ui-panel__body { flex: 1; min-height: 0; padding-bottom: 24px; }   /* a scroll area (.ui-scroll --stable) */
 .ui-panel__foot { display: flex; justify-content: space-between; gap: var(--sp-3); flex: none; padding: var(--sp-3) 20px; border-top: 1px solid var(--hair); }
-.ui-sec { box-shadow: inset 0 1px 0 var(--hair); }
+.ui-sec { width: 100%; min-width: 0; box-shadow: inset 0 1px 0 var(--hair); }
 .ui-sec__head { appearance: none; display: flex; align-items: center; gap: 8px; width: 100%; height: calc(var(--row-h) + 10px); padding: 0 calc(16px - var(--scroll-gutter, 0px)) 0 20px; margin: 0; border: 0; background: transparent; font: inherit; color: var(--text); text-align: left; cursor: pointer; transition: background-color var(--dur-1) var(--ease); }
 @media (hover: hover) and (pointer: fine) { .ui-sec__head:hover { background: var(--hover); } }
-.ui-sec__label { font-size: var(--fs-s); text-transform: var(--ui-case); }
-.ui-sec__meta { margin-left: auto; display: inline-flex; gap: 8px; font: 400 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); font-variant-numeric: tabular-nums; }
+.ui-sec__head:focus-visible { outline: none; background: var(--current); box-shadow: inset 0 0 0 2px var(--focus); }   /* a row flush with its container: the ring sits inside (R-focus-2) */
+.ui-sec__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-s); text-transform: var(--ui-case); }
+.ui-sec__meta { min-width: 0; max-width: 40%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin-left: auto; display: inline-flex; gap: 8px; font: 400 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); font-variant-numeric: tabular-nums; }
 .ui-sec__head .ui-icon { width: 12px; height: 12px; color: var(--text-quiet); transition: transform var(--dur-2) var(--ease); }
 .ui-sec__head[aria-expanded="true"] .ui-icon { transform: rotate(90deg); }
-.ui-sec__body { padding: 0 calc(20px - var(--scroll-gutter, 0px)) 16px 20px; }
+.ui-sec__body { overflow-wrap: anywhere; padding: 0 calc(20px - var(--scroll-gutter, 0px)) 16px 20px; }
 .ui-sec__head[aria-expanded="false"] + .ui-sec__body { display: none; }
 .ui-sec[data-flash] > .ui-sec__head { animation: ui-flash 1.2s var(--ease); }
 @keyframes ui-flash { 0%, 40% { background: var(--brass-soft); } 100% { background: transparent; } }

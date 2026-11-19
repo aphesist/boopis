@@ -29,7 +29,8 @@ function show(t: HTMLElement, now: boolean): void {
     const side: Side = pref ? pref.side : t.getBoundingClientRect().top > innerHeight - 160 ? 'top' : 'bottom';
     const p = placeAt(n, t, { side, align: pref?.align ?? 'center' });
     n.style.setProperty('--tip-dy', p.side === 'top' ? '3px' : p.side === 'bottom' ? '-3px' : '0px');
-    requestAnimationFrame(() => n.classList.add('is-in'));
+    /* fonts and key chips settle after the first measure: place once more before it shows, so a tip held at the window's edge sits on its margin */
+    requestAnimationFrame(() => { if (cur === t) placeAt(n, t, { side: p.side, align: p.align }); n.classList.add('is-in'); });
   }, now || performance.now() < warm ? 0 : 480);
 }
 function hide(): void { clearTimeout(timer); if (cur) warm = performance.now() + 700; cur = null; if (node) node.classList.remove('is-in'); }

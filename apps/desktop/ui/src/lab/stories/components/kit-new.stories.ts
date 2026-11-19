@@ -6,6 +6,7 @@ import { forced, line, put, stage } from '../../story';
 import type { Story } from '../../types';
 import { LONG_TITLE, UNBROKEN } from '../../fixtures';
 
+const SIDEWAYS = "a specimen of the primitive's sideways axis: the scroller scrolling sideways is what it draws (R-scroll-7 names code, a diff, terminal output, a wide table and a tab strip as its users)";
 const SETTINGS_TABS = [{ value: 'general', label: 'General' }, { value: 'models', label: 'Models' }, { value: 'connectors', label: 'Connectors' }, { value: 'appearance', label: 'Appearance' }, { value: 'keys', label: 'Keyboard' }];
 const LINES = Array.from({ length: 60 }, (_, i) => '<p>Line ' + (i + 1) + ' of a long body that scrolls inside its area.</p>').join('');
 
@@ -41,8 +42,8 @@ export default [
     id: 'components/scroll', title: 'Scroll area', area: 'components', kind: 'component', covers: ['ui.scroll', 'html.scroll', 'ui.scrollClass'], mock: { url: '/v6/design-system/index.html#c-panel', crop: '#c-panel' },
     states: {
       typical: stage(['typical', 'scroll'], ({ root }) => { const s = ui.scroll({ label: 'A long body', body: LINES }); s.style.height = '240px'; s.style.width = '320px'; put(root, s); }, { ground: 'frame' }),
-      'sideways (bare)': stage(['variant', 'scroll'], ({ root }) => { const s = ui.scroll({ axis: 'x', bare: true, body: '<div style="width:1200px">' + LONG_TITLE + ' ' + UNBROKEN + '</div>' }); s.style.width = '320px'; put(root, s); }, { ground: 'frame' }),
-      'both axes': stage(['variant', 'scroll'], ({ root }) => { const s = ui.scroll({ axis: 'both', label: 'Wide and long', body: '<div style="width:900px">' + LINES + '</div>' }); s.style.height = '200px'; s.style.width = '320px'; put(root, s); }, { ground: 'frame' }),
+      'sideways (bare)': stage(['variant', 'scroll'], ({ root }) => { const s = ui.scroll({ axis: 'x', bare: true, label: 'Wide line', body: '<div style="width:1200px">' + LONG_TITLE + ' ' + UNBROKEN + '</div>' }); s.style.width = '320px'; put(root, s); }, { ground: 'frame', allow: { 'geometry.hscroll': SIDEWAYS } }),
+      'both axes': stage(['variant', 'scroll'], ({ root }) => { const s = ui.scroll({ axis: 'both', label: 'Wide and long', body: '<div style="width:900px">' + LINES + '</div>' }); s.style.height = '200px'; s.style.width = '320px'; put(root, s); }, { ground: 'frame', allow: { 'geometry.hscroll': SIDEWAYS } }),
       'on the dock': stage(['variant', 'scroll'], ({ root }) => { const s = ui.scroll({ label: 'Dock log', body: LINES }); s.style.height = '200px'; s.style.width = '320px'; put(root, s); }, { ground: 'dock' }),
       empty: stage(['empty'], ({ root }) => { const s = ui.scroll({ body: '' }); s.style.height = '120px'; s.style.width = '320px'; put(root, s); }, { ground: 'frame' }),
       long: stage(['long'], ({ root }) => { const s = ui.scroll({ label: 'Unbroken', body: '<p>' + UNBROKEN + UNBROKEN + '</p>' }); s.style.height = '120px'; s.style.width = '320px'; put(root, s); }, { ground: 'frame' })
