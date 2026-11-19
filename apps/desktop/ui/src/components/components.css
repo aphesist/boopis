@@ -235,7 +235,7 @@
 .ui-seg {
   --n: 2; --i: 0;
   position: relative; display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; flex: none;
-  height: var(--ctl); padding: var(--corner-inset); box-sizing: border-box;
+  height: var(--ctl); max-width: 100%; padding: var(--corner-inset); box-sizing: border-box;
   --r-outer: var(--r-s); --pad: var(--pad-seg); border-radius: var(--r-outer);
   --sq-bg: var(--bg-0); background: var(--sq-bg); box-shadow: inset 0 0 0 1px var(--hair);
 }
@@ -251,8 +251,9 @@
   font: 500 var(--fs-s)/1 var(--sans); color: var(--text-dim); white-space: nowrap; text-transform: var(--ui-case); cursor: pointer;
   transition: color var(--dur-2) var(--ease);
 }
-@media (hover: hover) and (pointer: fine) { .ui-seg__opt:hover { color: var(--text-strong); } }
+@media (hover: hover) and (pointer: fine) { .ui-seg__opt:hover:not([aria-selected="true"], [aria-checked="true"]) { color: var(--text-strong); } }   /* the chosen option keeps its ink on the thumb */
 .ui-seg__opt[aria-selected="true"], .ui-seg__opt[aria-checked="true"] { color: var(--text-on-light); cursor: default; }
+.ui-seg__opt > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .ui-seg__opt:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }   /* inside the track, which clips to its path */
 .ui-seg__opt .ui-dot { display: none; }
 .ui-seg__opt[aria-selected="false"] .ui-dot[data-show], .ui-seg__opt[aria-checked="false"] .ui-dot[data-show] { display: block; }
@@ -352,7 +353,7 @@
 
 /* ───────────── marks: stamp, dot ───────────── */
 .ui-stamp {
-  display: inline-flex; align-items: center; flex: none; height: 20px; padding: 0 7px; box-sizing: border-box; border-radius: var(--r-xs);
+  display: inline-flex; align-items: center; flex: none; height: 20px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; padding: 0 7px; box-sizing: border-box; border-radius: var(--r-xs);
   box-shadow: inset 0 0 0 1px var(--red); color: var(--red-text); font: 500 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono);
   white-space: nowrap; text-transform: var(--ui-case); transition: background-color var(--dur-1) var(--ease);
 }
@@ -360,7 +361,7 @@
 .ui-stamp:empty { display: none; }
 /* badge: a quiet mark, a chip's capsule in mono 11, outlined (the "made outside boopis" mark); never filled, never a stamp */
 .ui-badge {
-  display: inline-flex; align-items: center; flex: none; height: 18px; padding: 0 7px; box-sizing: border-box; vertical-align: middle;
+  display: inline-flex; align-items: center; flex: none; height: 18px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; padding: 0 7px; box-sizing: border-box; vertical-align: middle;
   border-radius: var(--r-pill); box-shadow: inset 0 0 0 1px var(--line); color: var(--text-quiet);
   font: 400 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); text-transform: none; white-space: nowrap;
 }
@@ -439,9 +440,9 @@ button.ui-group__head { cursor: pointer; }
 .ui-menu__item[aria-checked="true"] .ui-menu__glyph, .ui-option[aria-selected="true"] .ui-menu__glyph { color: var(--brass); }
 .ui-option[aria-selected="true"] { color: var(--text-strong); }
 .ui-menu__text { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
-.ui-menu__label { text-transform: var(--ui-case); }
+.ui-menu__label { overflow-wrap: anywhere; text-transform: var(--ui-case); }
 .ui-menu__label.ui-mono, .ui-menu__label[data-content] { text-transform: none; }
-.ui-menu__desc { font-size: var(--fs-xs); color: var(--text-quiet); text-transform: var(--ui-case); }
+.ui-menu__desc { overflow-wrap: anywhere; font-size: var(--fs-xs); color: var(--text-quiet); text-transform: var(--ui-case); }
 .ui-menu__item .ui-keys, .ui-option .ui-keys { margin-left: auto; align-self: center; }
 /* an item that ends in key chips or a stamp: the end padding is the chip's inset from the top and bottom, (row - chip) / 2, and the chip's radius the item's less that (R-corner-3, R-corner-4) */
 .ui-menu__item:has(.ui-keys, .ui-stamp), .ui-option:has(.ui-keys, .ui-stamp) { --kbd-inset: calc((var(--row-h) - 18px) / 2); padding-inline-end: var(--kbd-inset); }
@@ -566,7 +567,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-measure-btn { appearance: none; display: grid; place-items: center; min-width: 24px; min-height: 24px; box-sizing: border-box; padding: 8px 6px; margin: 0; border: 0; border-radius: var(--r-s); background: transparent; cursor: pointer; transition: background-color var(--dur-1) var(--ease); }
 @media (hover: hover) and (pointer: fine) { .ui-measure-btn:hover { background: var(--hover); } }
 .ui-measure-btn:focus-visible { outline: none; background: var(--current); box-shadow: inset 0 0 0 2px var(--focus); }   /* a strip at the panel's edge: its ring sits inside, where nothing cuts it (R-focus-2) */
-.ui-legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.ui-legend { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
 .ui-legend li { display: flex; align-items: center; gap: 10px; min-height: calc(var(--row-h) - 4px); font-size: var(--fs-s); color: var(--text-dim); }
 .ui-legend li > span:first-of-type { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ui-legend i { width: 6px; height: 6px; border-radius: var(--r-pill); flex: none; }
@@ -637,7 +638,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-step[data-kind="escalate"] .ui-step__mark > i { width: 7px; height: 7px; background: transparent; box-shadow: inset 0 0 0 1.5px var(--text-dim); }
 .ui-step__title { color: var(--text); min-width: 0; }
 .ui-step__meta { display: flex; flex-wrap: wrap; gap: 0 12px; margin-top: 2px; font: 400 var(--fs-2xs)/1.45 var(--mono); color: var(--text-quiet); }
-.ui-step__time { font: 400 var(--fs-2xs)/18px var(--mono); color: var(--text-quiet); font-variant-numeric: tabular-nums; }
+.ui-step__time { font: 400 var(--fs-2xs)/var(--lh-meta) var(--mono); color: var(--text-quiet); font-variant-numeric: tabular-nums; }
 
 /* the blank: a dotted red line under the gap, then the stamp, inside the sentence it belongs to */
 .ui-blank { appearance: none; display: inline-flex; align-items: center; gap: 8px; vertical-align: -4px; padding: 0; margin: 0 0 0 4px; border: 0; border-radius: var(--r-xs); background: none; font: inherit; color: var(--text); cursor: pointer; white-space: nowrap; }
@@ -679,6 +680,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-file .ui-icon { width: 14px; height: 14px; flex: none; }
 .ui-file > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ui-file .ui-ib { flex: none; border-radius: var(--r-corner); }
+.ui-file .ui-ib:focus-visible { outline: none; background: var(--current); box-shadow: inset 0 0 0 2px var(--focus); }   /* the chip's own corner holds the button: the ring sits inside (R-focus-2, R-corner-4) */
 .ui-composer__input { min-height: calc(2 * 1.6em); max-height: 220px; padding: 12px 14px 4px; outline: none; white-space: pre-wrap; overflow-wrap: anywhere; caret-color: var(--brass); }
 .ui-composer__input:focus-visible { outline: none; }
 .ui-composer__input[data-empty="true"]::before { content: attr(data-placeholder); color: var(--text-quiet); pointer-events: none; text-transform: var(--ui-case); }
@@ -713,15 +715,15 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-panel__title { flex: 1; margin: 0; font: 600 var(--fs-s)/1 var(--sans); color: var(--text-strong); text-transform: var(--ui-case); }
 .ui-panel__body { flex: 1; min-height: 0; padding-bottom: 24px; }   /* a scroll area (.ui-scroll --stable) */
 .ui-panel__foot { display: flex; justify-content: space-between; gap: var(--sp-3); flex: none; padding: var(--sp-3) 20px; border-top: 1px solid var(--hair); }
-.ui-sec { box-shadow: inset 0 1px 0 var(--hair); }
+.ui-sec { width: 100%; min-width: 0; box-shadow: inset 0 1px 0 var(--hair); }
 .ui-sec__head { appearance: none; display: flex; align-items: center; gap: 8px; width: 100%; height: calc(var(--row-h) + 10px); padding: 0 calc(16px - var(--scroll-gutter, 0px)) 0 20px; margin: 0; border: 0; background: transparent; font: inherit; color: var(--text); text-align: left; cursor: pointer; transition: background-color var(--dur-1) var(--ease); }
 @media (hover: hover) and (pointer: fine) { .ui-sec__head:hover { background: var(--hover); } }
 .ui-sec__head:focus-visible { outline: none; background: var(--current); box-shadow: inset 0 0 0 2px var(--focus); }   /* a row flush with its container: the ring sits inside (R-focus-2) */
-.ui-sec__label { font-size: var(--fs-s); text-transform: var(--ui-case); }
-.ui-sec__meta { margin-left: auto; display: inline-flex; gap: 8px; font: 400 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); font-variant-numeric: tabular-nums; }
+.ui-sec__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-s); text-transform: var(--ui-case); }
+.ui-sec__meta { min-width: 0; max-width: 40%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin-left: auto; display: inline-flex; gap: 8px; font: 400 var(--fs-2xs)/1 var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); font-variant-numeric: tabular-nums; }
 .ui-sec__head .ui-icon { width: 12px; height: 12px; color: var(--text-quiet); transition: transform var(--dur-2) var(--ease); }
 .ui-sec__head[aria-expanded="true"] .ui-icon { transform: rotate(90deg); }
-.ui-sec__body { padding: 0 calc(20px - var(--scroll-gutter, 0px)) 16px 20px; }
+.ui-sec__body { overflow-wrap: anywhere; padding: 0 calc(20px - var(--scroll-gutter, 0px)) 16px 20px; }
 .ui-sec__head[aria-expanded="false"] + .ui-sec__body { display: none; }
 .ui-sec[data-flash] > .ui-sec__head { animation: ui-flash 1.2s var(--ease); }
 @keyframes ui-flash { 0%, 40% { background: var(--brass-soft); } 100% { background: transparent; } }
