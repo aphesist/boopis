@@ -10,6 +10,7 @@ import { els, sh } from './ctx';
 import { FOCUSABLE, visible } from './regions';
 import { keysTableHTML } from './keymap';
 import { closePalette } from './palette';
+import { inTauri } from '../../host/bridge';
 
 export const closeMenu = (returnFocus?: boolean): void => ui.menu.close(returnFocus);
 
@@ -34,9 +35,37 @@ function showSettingsSection(section?: string): void {
     t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1;
   }
   for (const p of $$('.hx-dpanel', d)) p.hidden = p.id !== 'hx-dpanel-' + sec;
+  if (sec === 'general') mountDiagnostics();
   if (sec === 'appearance' && !themeMounted) { mountThemePanel($('#hx-dpanel-appearance')); themeMounted = true; mountOrbGrow(); }
   d.classList.toggle('is-side', sec === 'appearance');
   $('.hx-dialog__body', d).scrollTop = 0;
+}
+/* Settings > General > Diagnostics, in the desktop app only (the page has no host to ask): the renderer report to copy and
+   WebKitGTK's own GPU page. Nothing in the main chrome; the report is read when a button is pressed. */
+let diagMounted = false;
+function mountDiagnostics(): void {
+  if (diagMounted || !inTauri()) return;
+  const panel = $('#hx-dpanel-general'); if (!panel) return;
+  diagMounted = true;
+  const sec = document.createElement('section');
+  sec.className = 'hx-set'; sec.setAttribute('aria-labelledby', 'hx-set-diag-h');
+  sec.innerHTML = '<h3 class="ui-set__head" id="hx-set-diag-h">Diagnostics</h3>' + ui.html.setRow({ label: 'Graphics renderer', hint: 'What the window draws with. Copy it when asked why the app is slow or blank.',
+    control: '<div class="ui-set__actions">' + ui.html.button({ label: 'Copy report', size: 's', attrs: { id: 'hx-diag-copy' } }) + ui.html.button({ label: 'Measure frames', size: 's', variant: 'ghost', attrs: { id: 'hx-diag-fps' } }) + ui.html.button({ label: 'WebKit GPU page', size: 's', variant: 'ghost', attrs: { id: 'hx-diag-gpu' } }) + '</div>' });
+  panel.appendChild(sec);
+  ui.hydrate(sec);
+  const fail = (e: unknown): void => { ui.toast(e instanceof Error ? e.message : 'That did not work'); };
+  let frames: import('../../host/renderer').FrameStats | null = null;
+  $('#hx-diag-fps', sec).addEventListener('click', () => {
+    ui.toast('Measuring for 5 seconds: close this and move the pointer along the dock', { ms: 6000 });
+    void import('../../host/renderer').then(async (m) => { frames = await m.measureFrames(5000); ui.toast(`${frames.fps} fps, p95 ${frames.p95} ms: Copy report includes it`, { ms: 6000 }); }).catch(fail);
+  });
+  $('#hx-diag-copy', sec).addEventListener('click', () => {
+    void import('../../host/renderer').then(async (m) => {
+      const text = m.reportText(await m.loadReport(), m.displayFacts(), frames);
+      try { await navigator.clipboard.writeText(text); ui.toast('Copied'); } catch { ui.toast('Copy is blocked here'); }
+    }).catch(fail);
+  });
+  $('#hx-diag-gpu', sec).addEventListener('click', () => { void import('../../host/renderer').then((m) => m.openGpuPage()).catch(fail); });
 }
 function mountOrbGrow(): void {
   const panel = $('#hx-dpanel-appearance'); if (!panel || panel.querySelector('#hx-set-orb-grow')) return;

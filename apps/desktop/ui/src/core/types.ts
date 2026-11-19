@@ -25,4 +25,6 @@ export interface Layout {
   chromeH: number; dockSpace: number; marginW: number; composerW: number;
   dock: DockSwitch; tab: Tab; left: LeftMode; right: RightMode;
   duration: number; easing: string; animate: boolean;
+  /** this layout answers a change of the window's size (the dock snaps to it instead of springing) */
+  resized?: boolean;
 }

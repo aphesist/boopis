@@ -20,6 +20,7 @@ use crate::gateway::{ConnectionId, FrameSink, ProxyStats};
 use crate::hermes::install::{self, InstallReport};
 use crate::hermes::{HermesStatus, Supervisor};
 use crate::os::{self, PickedFolder};
+use crate::renderer::RendererReport;
 use crate::secrets::SecretStore;
 use crate::secrets::store::{validate_name, validate_value};
 use crate::settings::AppSettings;
@@ -386,4 +387,45 @@ pub fn open_external(app: AppHandle, url: String) -> std::result::Result<(), Hos
         .open_url(url.as_str(), None::<&str>)
         .map_err(|e| Error::Os(e.to_string()))?;
     Ok(())
+}
+
+/// What the host decided about the webview's renderer at startup (managed state, read-only).
+pub struct RendererState(pub RendererReport);
+
+/// The renderer diagnostics: the session, the GPUs and their drivers, the rule that decided, and the environment the
+/// web process was started with. Read-only; the numbers in it are what the owner sends when asked.
+#[tauri::command]
+#[specta::specta]
+#[must_use]
+pub fn renderer_report(state: State<'_, RendererState>) -> RendererReport {
+    state.0.clone()
+}
+
+/// Open `WebKitGTK`'s own `webkit://gpu` page in a window of its own: its version, the buffer path in use (`DMABUF` or
+/// shared memory), the EGL and GL vendor, and the acceleration policy. The window has no access to the host's commands.
+#[tauri::command]
+#[specta::specta]
+pub async fn renderer_open_gpu_page(app: AppHandle) -> std::result::Result<(), HostError> {
+    #[cfg(target_os = "linux")]
+    {
+        use tauri::{WebviewUrl, WebviewWindowBuilder};
+        if let Some(w) = app.get_webview_window("webkit-gpu") {
+            w.set_focus().map_err(|e| Error::Os(e.to_string()))?;
+            return Ok(());
+        }
+        let url = "webkit://gpu"
+            .parse()
+            .map_err(|e: url::ParseError| Error::Os(e.to_string()))?;
+        WebviewWindowBuilder::new(&app, "webkit-gpu", WebviewUrl::External(url))
+            .title("WebKit GPU information")
+            .inner_size(900.0, 720.0)
+            .build()
+            .map_err(|e| Error::Os(e.to_string()))?;
+        Ok(())
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = app;
+        Err(Error::Os("webkit://gpu exists only in WebKitGTK (Linux)".into()).into())
+    }
 }

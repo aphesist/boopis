@@ -4,6 +4,7 @@ import './styles';
 import '../vendor/orb-avatar.min.js';
 import { ui } from './components';
 import { startGlance } from './components/orb';
+import { installOrbRuntime } from './components/orb-runtime';
 import { logger } from './core/log';
 import { getDockApi } from './core/registry';
 import { getLayout, setState, state } from './core/state';
@@ -19,6 +20,7 @@ import './modules/dock';
 import { boot } from './modules/shell';
 
 const log = logger('main');
+installOrbRuntime();
 /* the continuous corners: observe the document before anything is drawn (each module binds its own surfaces at import) */
 ui.squircle.start();
 

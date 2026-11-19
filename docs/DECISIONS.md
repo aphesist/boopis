@@ -361,6 +361,25 @@ They're not sandboxed, matching Claude Code. This is the only exception to the n
 - Signed updates need an update-signing key, which the owner creates and stores as a CI secret. It never goes in the repository.
 - ARCHITECTURE §4 is amended: the earlier plan had the host run Hermes's installer on the user's machine.
 
+## ADR-0024 The host picks WebKitGTK's renderer from evidence, never blanket
+**Context.**
+- Tauri draws with WebKitGTK on Linux. Its renderer is chosen by environment switches read when the web view is created: `WEBKIT_DISABLE_DMABUF_RENDERER` (shared-memory buffers instead of DMABUF), `WEBKIT_DISABLE_COMPOSITING_MODE` (no accelerated compositing), `__NV_DISABLE_EXPLICIT_SYNC` (NVIDIA on Wayland).
+- They cure a blank window or a crash on some NVIDIA setups (WebKit bugs 259644, 261874; Tauri's Linux graphics guide). They cost frames wherever the default works, and Tauri's own guide says not to ship them unconditionally.
+- They are not equivalent. Checked on WebKitGTK 2.52.6 with `webkit://gpu`: `WEBKIT_DISABLE_DMABUF_RENDERER=1` makes the acceleration policy `never` (no GL context, the CPU paints every frame), while `WEBKIT_DMABUF_RENDERER_FORCE_SHM=1` keeps policy `always` and GL compositing and copies frames through shared memory. Ubuntu ships a patch that forces that shared-memory transport for NVIDIA (2.52.6-0ubuntu0.24.04.2).
+- The owner's laptop is a hybrid NVIDIA machine on Hyprland (Wayland, scale 1.6) and runs with `WEBKIT_DISABLE_DMABUF_RENDERER=1` from the start: so it paints on the CPU at 3600x2250 buffer pixels. The frame drops measured there (see `apps/desktop/ui/tests/perf`) are largely the page's work in that path.
+
+**Decision.**
+- `renderer.rs` probes the GPUs (`/sys/class/drm`: vendor, bound driver, boot display), the session type and the compositor, and decides before any thread starts. It is a pure table, unit-tested.
+- Automatic rule: only the NVIDIA proprietary driver as the display GPU on X11 gets `WEBKIT_DMABUF_RENDERER_FORCE_SHM=1` (the GPU stays). A hybrid machine whose display is the integrated GPU, any other vendor, and any Wayland session are left to WebKitGTK.
+- `HYPOTAXIS_RENDERER=auto|default|shm|cpu|nosync|software` is the owner's explicit choice (`shm` is `FORCE_SHM`, `cpu` is `DISABLE_DMABUF_RENDERER`). A WebKit or NVIDIA switch already in the environment wins over everything.
+- The decision is logged at startup. Settings > General > Diagnostics copies a report (session, GPUs and drivers, rule, environment, the page's size and `devicePixelRatio`) and opens WebKitGTK's `webkit://gpu` page in its own window, with no access to the host's commands.
+- `set_var` is the one `unsafe` call in the host (`#[allow(unsafe_code)]` with its SAFETY note): it runs first in `run()`, before the logger, tokio or Tauri start a thread.
+
+**Consequences.**
+- No machine pays for a workaround it does not need. A machine that does need one sets a variable and sends the report.
+- Wayland plus NVIDIA is not auto-fixed: the evidence is crashes and blank windows, which the host cannot see in advance. The diagnostics and the variable make the fix one step.
+- Distribution patches differ (Ubuntu forces the shared-memory transport for NVIDIA in 2.52.6; Arch's package is not known to), so the report, not an assumption, says what a machine does.
+
 ## ADR-0012 Prices
 Prices come from the models.dev catalogue plus a user override table. Hermes's models.dev data is not reachable through its public plugin API, so:
 - the plugin reads a cached catalogue file, `<profile home>/hypotaxis/prices/models-dev.json`;

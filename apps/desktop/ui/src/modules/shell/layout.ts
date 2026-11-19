@@ -10,7 +10,9 @@ import { els, sh } from './ctx';
 
 let probes: Record<string, number> = {};
 const insets: Record<Tab, { left: number; right: number }> = { session: { left: 0, right: 0 }, bots: { left: 0, right: 0 } };
-let layoutQueued = 0, layoutAnimate = false;
+let layoutQueued = 0, layoutAnimate = false, layoutResized = false;
+/** the next layout answers a resize of the window */
+export function markResized(): void { layoutResized = true; }
 let dockHeight: number | null = null;   // the dock's current height from hx:dock (rest or expanded); null until it reports
 
 export function setInset(tab: Tab, left: number, right: number): void { insets[tab] = { left, right }; }
@@ -92,7 +94,7 @@ function computeLayout(): Layout {
     leftW: s.sideW, rightW: s.rightVW, leftMode: s.leftMode, rightMode: s.rightMode,
     chromeH: probes['chrome'] || 40, dockSpace: s.dockSpace, marginW: s.marginW, composerW: s.colWidth, dock: state.dock,
     tab: state.tab, left: state.left, right: state.right,
-    duration: durMs(), easing: 'var(--spring)', animate: layoutAnimate && !app.classList.contains('is-booting')
+    duration: durMs(), easing: 'var(--spring)', animate: layoutAnimate && !app.classList.contains('is-booting'), resized: layoutResized
   };
   setLayout(L);
   return L;
@@ -105,7 +107,7 @@ export function queueLayout(animate: boolean): void {
     layoutQueued = 0;
     if (!sh.app) return;
     const L = computeLayout();
-    layoutAnimate = false;
+    layoutAnimate = false; layoutResized = false;
     emit('hx:layout', L);
   });
 }

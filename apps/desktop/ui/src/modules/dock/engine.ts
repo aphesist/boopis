@@ -11,6 +11,7 @@ import {
 } from './ctx';
 import type { Spring } from './ctx';
 import { setOrbLife } from './orbs';
+import { holdOutsideDock, releaseOutsideDock } from '../../components/orb-runtime';
 import { fillCards, relocateLive, renderView, viewKey } from './views';
 import { syncRoving } from './roving';
 import { PAGE_NAME } from './ctx';
@@ -47,13 +48,18 @@ function slabPath(w: number, h: number, g: { R: number; Fw: number }): string {
 /* centring: the dock rides the shell's animated --hx-center-x (left: var(...)), so it moves on the very curve the
    composer uses; without it, hx:layout.centerX is set as --dk-cx and a CSS transition runs */
 export const cxNow = (): number => X.root.getBoundingClientRect().left;
-export const shellVar = (): boolean => !!getComputedStyle(X.root).getPropertyValue('--hx-center-x').trim();
+/* Whether the shell publishes the centre line. `--hx-center-x` is a registered property with an initial value, so once the
+   shell is there the answer never goes back to no: it is read (a forced style recalculation of the whole page, after the
+   shell has just rewritten every layout property) until it is yes, and not again. */
+let shellVarSeen = false;
+export const shellVar = (): boolean => (shellVarSeen ||= !!getComputedStyle(X.root).getPropertyValue('--hx-center-x').trim());
 export function anchor(): { x: number; y: number } { const r = X.stageEl.getBoundingClientRect(); return { x: r.left, y: r.top }; }
 function relRect(el: Element, a: { x: number; y: number }): { l: number; b: number; w: number; h: number } { const r = el.getBoundingClientRect(); return { l: r.left - a.x, b: a.y - r.bottom, w: r.width, h: r.height }; }
 
 export function kick(): void { if (!E.raf && flags.mounted) { E.lastT = performance.now(); E.raf = requestAnimationFrame(frame); } }
 function frame(now: number): void {
   E.raf = 0;
+  holdOutsideDock();
   const dt = Math.min(0.05, Math.max(0, (now - E.lastT) / 1000)) * motion.timeScale;
   E.lastT = now;
   const magBusy = stepMag(dt);
@@ -103,6 +109,7 @@ export function paint(): void {
   paintMag();
 }
 function settled(): void {
+  releaseOutsideDock();
   tidy();
   if (S.mode === 'off' && !X.root.classList.contains('is-gone')) {
     X.root.classList.add('is-gone');
