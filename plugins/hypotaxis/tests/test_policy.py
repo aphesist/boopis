@@ -186,6 +186,78 @@ def test_v4a_patch_paths_are_checked(tmp_path: Path) -> None:
     assert kind(tmp_path, "patch", {"mode": "patch", "patch": "nothing parseable"}) == "block"  # no target: fail closed
 
 
+def patch_kind(tmp_path: Path, patch: str, **session: Any) -> str:
+    return kind(tmp_path, "patch", {"mode": "patch", "patch": patch}, **session)
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "*** Move File: src/a.py -> .env",  # the destination of a move is a write
+        "*** Move File: .env -> src/a.py",  # and so is its source (it is removed)
+        "***Move File: src/a.py->.env",  # no spaces: Hermes reads them all the same
+        "*** Move   File:\tsrc/a.py   ->   .env",
+        "***Add File:.env",
+        "***Update File: .env",
+        "***Delete File: .env",
+        "*** Add File:\t.env",
+        "*** Add\u00a0File: .env",  # any Unicode space: Hermes's regex is the same \s
+    ],
+)
+def test_every_spelling_of_a_hermes_patch_operation_is_checked_for_protected_paths(tmp_path: Path, line: str) -> None:
+    for wrap in ("*** Begin Patch\n{}\n*** End Patch", "{}", "*** Begin Patch\n{}", "***Begin Patch\n{}\n***End Patch"):
+        patch = wrap.format(line + ("\n+X=1" if "Add" in line else "\n@@\n-a\n+b"))
+        assert patch_kind(tmp_path, patch) == "block", patch
+
+
+def test_a_move_between_unprotected_paths_is_allowed(tmp_path: Path) -> None:
+    assert patch_kind(tmp_path, "*** Begin Patch\n*** Move File: src/a.py -> src/b.py\n*** End Patch") == "allow"
+    assert patch_kind(tmp_path, "***Begin Patch\n***Update File: src/a.py\n@@\n-a\n+b\n***End Patch") == "allow"
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "*** Move to: .env",  # not Hermes's grammar: Hermes would read it as a context line, so it is not trusted
+        "*** Rename File: a -> .env",
+        "*** Copy File: a -> b",
+        "*** Update File .env",  # no colon
+        "*** Begin Patch now",
+        "***",
+        "*** ",
+        "**** Update File: a.py",
+    ],
+)
+def test_an_unrecognised_star_line_fails_closed(tmp_path: Path, line: str) -> None:
+    patch = f"*** Begin Patch\n*** Update File: src/a.py\n@@\n-a\n+b\n{line}\n*** End Patch"
+    assert patch_kind(tmp_path, patch) == "block"
+
+
+def test_markers_inside_hunk_text_are_content_not_operations(tmp_path: Path) -> None:
+    # lines that begin with a hunk prefix ('+', '-', ' ') are content; the patch only touches src/a.py
+    patch = "*** Begin Patch\n*** Update File: src/a.py\n@@\n-a\n+*** Add File: .env\n+*** End Patch\n*** End Patch"
+    assert patch_kind(tmp_path, patch) == "allow"
+
+
+def test_operations_outside_the_begin_end_markers_are_still_checked(tmp_path: Path) -> None:
+    # Hermes parses from the last Begin before the first End; this check reads every line, so no placement hides one
+    sneaky = "*** Update File: .env\n@@\n-a\n+b\n*** Begin Patch\n*** Update File: src/a.py\n@@\n-a\n+b\n*** End Patch"
+    assert patch_kind(tmp_path, sneaky) == "block"
+    trailing = "*** Begin Patch\n*** Update File: src/a.py\n@@\n-a\n+b\n*** End Patch\n*** Delete File: .env"
+    assert patch_kind(tmp_path, trailing) == "block"
+
+
+def test_crlf_patches_are_read_like_hermes_reads_them(tmp_path: Path) -> None:
+    patch = "*** Begin Patch\r\n*** Move File: src/a.py -> .env\r\n*** End Patch\r\n"
+    assert patch_kind(tmp_path, patch) == "block"
+
+
+def test_a_deny_rule_sees_both_ends_of_a_move(tmp_path: Path) -> None:
+    patch = "*** Begin Patch\n*** Move File: src/a.py -> secrets/x.py\n*** End Patch"
+    assert patch_kind(tmp_path, patch, deny=("Edit(secrets/**)",)) == "block"
+    assert patch_kind(tmp_path, patch) == "allow"
+
+
 # ---------------------------------------------------------------- other tools and mcp
 
 OTHER: list[tuple[str, str, dict[str, Any], bool]] = [
