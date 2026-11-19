@@ -39,7 +39,8 @@ export function scan() {
           at('literal colour ' + m[0], m);
         }
         const sw = /scrollbar-(width|color)\s*:\s*([^;]+)/.exec(line);
-        if (sw) findings.push({ check: 'scrollbar', area: areaOfPath(rel), file: 'src/' + rel, line: i + 1, msg: 'sets scrollbar-' + sw[1] + ' (' + sw[2].trim() + '), which WebKitGTK ignores; scrollbars are drawn with ::-webkit-scrollbar (R-scroll-1)', snippet: line.trim().slice(0, 160), key: 'scrollbar|' + rel + '|' + i });
+        /* R-scroll-1 allows exactly one setting: scrollbar-width: none on a hidden bar (R-scroll-7's tab strips) */
+        if (sw && !(sw[1] === 'width' && sw[2].trim() === 'none')) findings.push({ check: 'scrollbar', area: areaOfPath(rel), file: 'src/' + rel, line: i + 1, msg: 'sets scrollbar-' + sw[1] + ' (' + sw[2].trim() + '), which WebKitGTK ignores; scrollbars are drawn with ::-webkit-scrollbar (R-scroll-1)', snippet: line.trim().slice(0, 160), key: 'scrollbar|' + rel + '|' + i });
         const fs = /font(?:-size)?\s*:[^;]*?\b(\d+(?:\.\d+)?)px/.exec(line);
         if (fs && !/var\(--fs/.test(line.slice(fs.index, fs.index + fs[0].length + 10))) at('literal font size ' + fs[1] + 'px', fs);
         const br = /border-radius\s*:\s*([^;]*)/.exec(line);
