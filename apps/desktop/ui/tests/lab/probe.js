@@ -572,7 +572,8 @@
         for (const sel of r.selectorText.split(/,(?![^(]*\))/)) {
           const m = /^(.*?)::-webkit-scrollbar(-thumb)?(?::[\w-]+)*\s*$/.exec(sel.trim());
           if (!m) continue;
-          const base = m[1].trim() || '*';
+          /* `X ::-webkit-scrollbar` styles the bars of everything inside X (a descendant combinator), `X::-webkit-scrollbar` X's own */
+          const base = m[1].trim() ? (/\s$/.test(m[1]) ? m[1].trim() + ' *' : m[1].trim()) : '*';
           if (m[2]) thumb.push({ base, bg: r.style.backgroundColor || r.style.background });
           else bar.push({ base, width: r.style.width, height: r.style.height, display: r.style.display });
         }
