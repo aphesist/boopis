@@ -7,6 +7,7 @@ import type { GatewayClient, GatewayEvent } from '../gateway';
 import { NeedsConfirmation } from '../../data/confirm';
 import { lookFor } from '../../data/looks';
 import { createLiveBots } from './bots';
+import { madeOutside } from './map-bots';
 import type { LiveBots } from './bots';
 
 const NOW = new Date('2026-11-19T10:00:00Z');
@@ -321,6 +322,14 @@ describe('archive keeps everything, delete asks first and says what goes', () =>
 });
 
 describe('which profiles boopis did not make (the "made outside boopis" mark)', () => {
+  it('keeps the mark through an archive and a restore: those write only the `archived` note, never a look or a setting', () => {
+    const p = (record: Record<string, unknown> | null) => ({ name: 'nina', path: '/p', record, problem: null, archived: null }) as Parameters<typeof madeOutside>[0];
+    expect(madeOutside(p({ schema_version: 1, archived: { name: 'nina', at: '2026-11-19T12:00:00' } }))).toBe(true);
+    expect(madeOutside(p({ schema_version: 1 }))).toBe(true);
+    expect(madeOutside(p({ schema_version: 1, look: { color: '#4fc9a8' } }))).toBe(false);
+    expect(madeOutside(p({ schema_version: 1, settings: { cap: '1.00' } }))).toBe(false);
+    expect(madeOutside(p({ schema_version: 1, approvals: { deploy: true } }))).toBe(false);
+  });
   it('a profile with no store of boopis’s own is marked, and one with a store is not', async () => {
     const { bots } = await open();
     expect(botOf(bots, 'nina')!.madeOutside).toBe(true);        // no boopis/bot.json: the plugin reads `record: null`

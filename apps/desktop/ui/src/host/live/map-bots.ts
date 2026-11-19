@@ -26,8 +26,11 @@ export interface PluginBot {
 }
 
 /** boopis never kept anything for this profile: the plugin read its folder and found no `boopis/bot.json` (`record: null`, and no
- *  problem reading one). A plugin that did not answer says nothing, so nothing is marked on a guess. */
-export const madeOutside = (p: PluginBot | undefined): boolean => !!p && p.record === null && !p.problem;
+ *  problem reading one), or one that holds no look, settings or approvals (archiving a bot writes only its `archived` note, so a
+ *  bot made outside boopis keeps the mark through an archive and a restore). A plugin that did not answer says nothing, so
+ *  nothing is marked on a guess. */
+export const madeOutside = (p: PluginBot | undefined): boolean =>
+  !!p && !p.problem && (p.record === null || !['look', 'settings', 'approvals'].some((k) => k in (p.record as Record<string, unknown>)));
 export const isArchived = (name: string, p: PluginBot | undefined): boolean => name.startsWith(ARCHIVE_PREFIX) || !!p?.archived;
 export const botName = (row: Pick<ProfileRow, 'name' | 'display_name'>): string => (row.display_name ?? '').trim() || row.name;
 
