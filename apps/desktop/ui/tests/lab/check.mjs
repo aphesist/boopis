@@ -241,6 +241,8 @@ async function checkRow(browser, origin, row, log) {
     for (const preset of PRESETS) {
       await page.evaluate((p) => window.__lab.preset(p), preset);
       await settle(page, 80);
+      /* a preset swap starts colour transitions (rows, chips, keys); R-colour-1 reads the colour a surface rests at, not one in flight */
+      await page.evaluate(() => Promise.all(document.getAnimations().filter((a) => a instanceof CSSTransition).map((a) => a.finished.catch(() => null))).then(() => null));
       for (const w of WIDTHS) {
         if (!row.app && row.width && row.width + 48 > w) continue;   /* a fixed-width cell wider than this window: not meaningful */
         await setWidth(page, row, w);
