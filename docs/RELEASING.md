@@ -16,7 +16,7 @@ bash install.sh --version v0.1.0      # a release
 bash install.sh --file ./boopis_0.1.0_amd64.AppImage [--sha256 <hex>]   # a file you already have
 bash install.sh --uninstall           # removes exactly what the manifest lists
 ```
-- **Linux:** the AppImage goes to `~/.local/share/boopis/`, a `boopis` launcher to `~/.local/bin/`, a menu entry and the hicolor icons (light, with a dark twin, and the symbolic one for panels). Without FUSE 2 the launcher makes the AppImage extract itself.
+- **Linux:** the AppImage goes to `~/.local/share/boopis/`, a `boopis` launcher to `~/.local/bin/`, a menu entry (with GenericName, and `Icon=` as the absolute path of the 256 px PNG, which every launcher resolves) and the hicolor icons (light, with a dark twin, and the symbolic one for panels); the icon and menu caches are refreshed when `gtk-update-icon-cache` and `update-desktop-database` exist. Without FUSE 2 the launcher makes the AppImage extract itself.
 - **macOS:** the app from the dmg goes to `~/Applications` (or `/Applications` with `--system`), and a `boopis` launcher to `~/.local/bin/`.
 - **Windows:** the NSIS setup runs silently, per user, with no administrator rights; `-Uninstall` runs the uninstaller it registered.
 - `--prefix DIR`, `--yes`, `--quiet`, `--no-color`, `--system` (the only way sudo is asked for). `NO_COLOR`, `CI` and `BOOPIS_NO_ANIMATION` are honoured.
