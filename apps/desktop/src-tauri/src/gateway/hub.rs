@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 use serde::Serialize;
 use serde_json::Value;
 use specta::Type;
-use tokio::sync::{Notify, mpsc, watch};
+use tokio::sync::{Notify, broadcast, mpsc, oneshot, watch};
 use tokio_util::sync::CancellationToken;
 
 use super::frame::{self, Id, Kind};
@@ -40,6 +40,8 @@ pub(super) enum Owner {
     },
     /// The host's own `session.events.since` for this session, after a reconnect.
     Replay(String),
+    /// A request the host itself made (`Hub::request`): the answer goes to whoever waits on it.
+    Host(oneshot::Sender<Result<Value>>),
 }
 
 pub(super) struct Pending {
@@ -89,8 +91,26 @@ pub struct LinkStatus {
     pub error: Option<HostError>,
 }
 
+/// Whether the link should declare itself as the Desktop on this machine (`client.capabilities {desktop_local: true}`),
+/// asked on every dial.
+pub type Declare = Arc<dyn Fn() -> bool + Send + Sync>;
+
+/// A gateway event of a kind the host itself acts on (`free_tier.*`), copied out of the stream; the UI still gets it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TapEvent {
+    /// The event type, for example `free_tier.challenge`.
+    pub event_type: String,
+    /// Its payload, as the gateway sent it (`null` when it carried none).
+    pub payload: Value,
+}
+
+/// The event types the host copies out of the stream: those starting with this.
+pub(super) const TAPPED_PREFIX: &str = "free_tier.";
+
 pub(super) struct Shared {
     pub limits: Limits,
+    pub declare: Declare,
+    pub taps: broadcast::Sender<TapEvent>,
     pub endpoint: Arc<dyn Endpoint>,
     pub state: Mutex<State>,
     pub metrics: Metrics,
@@ -183,6 +203,14 @@ impl Hub {
     /// A proxy over `endpoint`. Nothing is dialled until the first connection opens.
     #[must_use]
     pub fn new(endpoint: Arc<dyn Endpoint>, limits: Limits) -> Self {
+        Self::with_declaration(endpoint, limits, Arc::new(|| false))
+    }
+
+    /// A proxy that asks `declare` on every dial whether to declare itself as the Desktop on this machine. Hermes counts
+    /// that declaration only on a connection that holds a ticket from its private control socket, which is what the
+    /// local endpoint dials with. Nothing is dialled until the first connection opens.
+    #[must_use]
+    pub fn with_declaration(endpoint: Arc<dyn Endpoint>, limits: Limits, declare: Declare) -> Self {
         let (cmd_tx, cmd_rx) = mpsc::channel(1024);
         let (status, _) = watch::channel(LinkStatus {
             phase: Phase::Connecting,
@@ -191,6 +219,8 @@ impl Hub {
         });
         let shared = Arc::new(Shared {
             limits,
+            declare,
+            taps: broadcast::channel(64).0,
             endpoint,
             state: Mutex::new(State {
                 phase: Phase::Connecting,
@@ -392,6 +422,54 @@ impl Hub {
         shared.metrics.frames_out.fetch_add(1, Ordering::Relaxed);
         shared.metrics.route_out.record(started.elapsed());
         Ok(())
+    }
+
+    /// The events the host acts on (`free_tier.*`). A receiver that falls behind skips the oldest.
+    #[must_use]
+    pub fn events(&self) -> broadcast::Receiver<TapEvent> {
+        self.shared.taps.subscribe()
+    }
+
+    /// Ask the gateway something as the host (no UI connection involved) and wait for the answer.
+    ///
+    /// # Errors
+    /// `Unavailable` while the link is not ready or when the gateway answers with an error, `Timeout` after `wait`.
+    pub async fn request(&self, method: &str, params: Value, wait: Duration) -> Result<Value> {
+        let shared = &self.shared;
+        let (tx, rx) = oneshot::channel();
+        let id = shared.next_req.fetch_add(1, Ordering::Relaxed);
+        {
+            let mut st = shared.lock();
+            if st.phase != Phase::Ready {
+                return Err(Error::Unavailable(format!(
+                    "the gateway is {}",
+                    st.phase.as_str()
+                )));
+            }
+            st.pending.insert(
+                id,
+                Pending {
+                    owner: Owner::Host(tx),
+                    started: Instant::now(),
+                    method: method.to_owned(),
+                },
+            );
+        }
+        let text =
+            serde_json::json!({"jsonrpc": "2.0", "id": id, "method": method, "params": params})
+                .to_string();
+        if shared.cmd_tx.send(Cmd { text }).await.is_err() {
+            shared.lock().pending.remove(&id);
+            return Err(Error::Unavailable("the proxy stopped".into()));
+        }
+        match tokio::time::timeout(wait, rx).await {
+            Ok(Ok(answer)) => answer,
+            Ok(Err(_)) => Err(Error::Unavailable("the gateway connection was lost".into())),
+            Err(_) => {
+                shared.lock().pending.remove(&id);
+                Err(Error::Timeout("the gateway's answer"))
+            }
+        }
     }
 
     /// Close a UI connection. Its pending requests are forgotten; their answers are dropped.

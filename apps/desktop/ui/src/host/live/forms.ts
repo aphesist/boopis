@@ -7,7 +7,9 @@ import { logger } from '../../core/log';
 import type { FormOutcome, FormSpec, FormsSource, FormStatus, PickerItem, PickerKind } from '../../data';
 import { inTauri } from '../bridge';
 import type { GatewayClient, GatewayEvent } from '../gateway';
-import { fromGatewayEvent, fromPluginEvent, replyFor, splitSecrets } from '../forms';
+import { fromFreeTierLimit, fromGatewayEvent, fromPluginEvent, replyFor, splitSecrets } from '../forms';
+import { limitFromSurface, rememberLimit } from '../free-tier';
+import type { ErrorSurface } from '../../vendor/hermes-shared/gateway-contract.generated';
 import type { FormModel } from '../forms';
 import type { SecretsBridge } from '../secrets';
 
@@ -22,6 +24,8 @@ export interface FormsOptions {
   client: GatewayClient; secrets: SecretsBridge; hooks: FormHooks;
   /** the folder dialog of the host; null where there is none (a plain browser) */
   pickFolder?: (() => Promise<string | null>) | null;
+  /** what the person chose on a free-tier limit notice ('choose' another model, or 'wait'); the host's setup does the rest */
+  onFreeTierChoice?: (choice: string) => Promise<void>;
 }
 export interface FormsHost {
   source: FormsSource;
@@ -69,6 +73,9 @@ export function createFormsHost(opts: FormsOptions): FormsHost {
       for (const t of targets) {
         try { await secrets.set(t.service, t.account, t.value); } catch (e) { throw new Error('The key could not be saved to your keychain: ' + words(e)); }
       }
+      if (entry.model.source.kind === 'free-tier') {
+        try { await opts.onFreeTierChoice?.(String(plain['choice'] ?? '')); } catch (e) { throw new Error(words(e)); }
+      }
       const reply = replyFor(entry.model, { cancelled: false, values: plain, provided: targets.map((t) => t.field) });
       if (reply) {
         try { await client.requestRaw(reply.method, reply.params); } catch (e) { log.warn('a form answer was not delivered', e instanceof Error ? e.name : 'error'); throw new Error(words(e)); }
@@ -101,6 +108,13 @@ export function createFormsHost(opts: FormsOptions): FormsHost {
           return true;
         }
         case 'clarify.request': add(fromGatewayEvent('clarify.request', ctx.gwSession, { ...p, ...(typeof ev['execution_generation'] === 'number' && p['execution_generation'] === undefined ? { execution_generation: ev['execution_generation'] } : {}) }, ctx.model), ctx.gwSession); return true;
+        case 'message.complete': {
+          /* a turn the free tier refused: remember what Hermes said (Settings shows it later) and raise the notice; the turn's
+             own completion is still the provider's to handle, so this is never "a form's event" */
+          const limit = limitFromSurface(p['error_surface'] as ErrorSurface | null | undefined);
+          if (limit) { rememberLimit(limit); add(fromFreeTierLimit(limit, `${ctx.gwSession}:${String(ev.seq ?? Date.now())}`), ctx.gwSession); }
+          return false;
+        }
         case 'clarify.settled': case 'clarify.cancelled': settle(String(p['prompt_id'] ?? ''), ev.type === 'clarify.cancelled' ? 'cancelled' : 'submitted'); return true;
         default: return false;
       }
@@ -120,5 +134,14 @@ export async function tauriPickFolder(): Promise<string | null> {
   const { commands } = await import('../bindings');
   const picked = await commands.pickFolder();
   return picked ? picked.path : null;
+}
+/** the free-tier limit notice's "choose another model": ask the host to forget the choice, then show setup's models question
+    again (the same first-run view, with every choice Hermes can still offer). "wait" changes nothing. */
+export async function chooseAnotherModel(choice: string): Promise<void> {
+  if (choice !== 'choose') return;
+  const { reopenModels, tauriSetupBridge } = await import('../setup-bridge');
+  await reopenModels();
+  const { runFirstRun } = await import('../first-run');
+  void runFirstRun(tauriSetupBridge());
 }
 export const hasHostDialogs = (): boolean => inTauri();

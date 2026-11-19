@@ -22,3 +22,8 @@ export function tauriSetupBridge(): SetupBridge {
     advance: async (answer, reconsider) => (await call(commands.setupAdvance(null, answer, reconsider))) as SetupStatus
   };
 }
+
+/** ask the host to forget the models choice, so the next `advance` asks it again (from a free-tier limit notice) */
+export async function reopenModels(): Promise<void> {
+  await call(commands.setupReopenModels(null));
+}

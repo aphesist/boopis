@@ -72,4 +72,4 @@ windows-sys = { version = "0.61", features = ["Win32_System_Console"] }
 
 [dev-dependencies]
 tempfile.workspace = true
-tokio = { workspace = true, features = ["rt-multi-thread", "macros", "sync", "time", "process", "io-util", "net", "fs"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "sync", "time", "process", "io-util", "net", "fs", "test-util"] }

@@ -10,6 +10,7 @@ pub mod config;
 pub mod endpoint;
 pub mod error;
 pub mod frame_rate;
+pub mod free_tier;
 pub mod gateway;
 pub mod gpu;
 pub mod hermes;
@@ -43,6 +44,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::hermes_retry,
             commands::setup_check,
             commands::setup_advance,
+            commands::setup_reopen_models,
             commands::gateway_connect,
             commands::gateway_send,
             commands::gateway_disconnect,
@@ -267,8 +269,30 @@ pub fn run() {
                 }
             });
             let secrets: Arc<dyn secrets::SecretStore> = Arc::new(secrets::Keychain);
+            // The free tier's browser challenge: each gateway link is watched for it, and a hidden window with no access to
+            // the host runs it (free_tier/).
+            let challenge = config::Challenge::default();
+            let observer: state::HubObserver = match url::Url::parse(&challenge.portal_origin) {
+                Ok(portal) => {
+                    let windows = Arc::new(free_tier::challenge::Windows::new(
+                        Arc::new(free_tier::windows::TauriWindows::new(app.handle().clone(), portal)),
+                        challenge,
+                    ));
+                    Arc::new(move |hub, active| {
+                        tauri::async_runtime::spawn(free_tier::serve::run(
+                            hub.clone(),
+                            windows.clone(),
+                            active,
+                        ));
+                    })
+                }
+                Err(e) => {
+                    tracing::error!(error = %e, "the free tier's portal origin is not a URL; challenges will not run");
+                    Arc::new(|_, _| {})
+                }
+            };
             app.manage(AppState {
-                hubs: state::Hubs::new(supervisor.clone(), limits.clone(), emitter),
+                hubs: state::Hubs::new(supervisor.clone(), limits.clone(), emitter).with_observer(observer),
                 supervisor: supervisor.clone(),
                 secrets: secrets.clone(),
                 limits,

@@ -345,6 +345,27 @@ impl Setup {
                     .ok_or_else(|| invalid("a model must be chosen"))?
                     .to_owned()
             });
+            state.picks.clear();
+            state.reopen_models = false;
+        } else if id == "setup.openrouter" {
+            if answer.cancelled {
+                state.choice = Some(String::new());
+            } else {
+                // a multi-select answers with a list; a single pick may arrive as the bare id
+                let picked = &answer.values.0["picks"];
+                state.picks = match picked {
+                    Value::Array(a) => a
+                        .iter()
+                        .filter_map(Value::as_str)
+                        .map(str::to_owned)
+                        .collect(),
+                    Value::String(one) => vec![one.clone()],
+                    _ => Vec::new(),
+                };
+                if state.picks.is_empty() {
+                    return Err(invalid("at least one model must be chosen"));
+                }
+            }
         } else if let Some(provider) = id.strip_prefix("setup.credential.") {
             if answer.cancelled {
                 state.choice = Some(String::new());
@@ -361,6 +382,24 @@ impl Setup {
         }
         state.pending_form = None;
         Ok(())
+    }
+
+    /// The user wants to choose the models again (from a limit notice): forget the choice and the ladder question's answer,
+    /// so the next `advance` asks it again, with every choice Hermes can still offer. Nothing is changed in Hermes until
+    /// the new choice is made.
+    ///
+    /// # Errors
+    /// `hx.setup.state_invalid` for a progress file that cannot be used.
+    pub fn reopen_models(&self) -> Result<()> {
+        let home = self.ops.home();
+        let mut state = state::load(&home)?;
+        state.choice = None;
+        state.picks.clear();
+        state.free_note = None;
+        state.reopen_models = true;
+        state.pending_form = None;
+        state.done_at = None;
+        state::save(&home, &state)
     }
 
     /// Run the steps as far as they go. `answer` is the user's reply to the form the last call returned;
@@ -637,15 +676,29 @@ impl Setup {
     async fn models_step(&self, run: &mut Run, state: &mut State) {
         let (id, title) = ("models", "Models and keys");
         let mut restart = false;
+        let input = providers::Input {
+            choice: state.choice.as_deref(),
+            picks: &state.picks,
+            free_note: state.free_note.as_deref(),
+            reopen: state.reopen_models,
+        };
         let out = providers::run(
             self.ops.as_ref(),
             self.secrets.as_ref(),
-            state.choice.as_deref(),
+            &input,
             &mut restart,
         )
         .await;
         state.restart_pending |= restart;
         match out {
+            Ok(providers::Outcome::Unavailable { form, note }) => {
+                // The choice cannot be used here: forget it (the host stops declaring itself the Desktop) and say why.
+                state.choice = None;
+                state.picks.clear();
+                state.free_note = Some(note.clone());
+                run.push(id, title, StepState::NeedsInput, note, None);
+                run.form = Some(form);
+            }
             Ok(providers::Outcome::Done(line)) => run.done(id, title, line),
             Ok(providers::Outcome::Skipped(line)) => {
                 run.push(id, title, StepState::Skipped, line, None);

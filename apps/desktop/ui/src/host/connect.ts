@@ -4,6 +4,7 @@
 import { createLiveProvider } from './live-provider';
 import type { LiveProvider } from './live-provider';
 import { GatewayClient } from './gateway';
+import { loadPlan, registerPlanSource } from './free-tier';
 import { inTauri, tauriBridge } from './bridge';
 import type { DataProvider } from '../data/provider';
 
@@ -11,6 +12,7 @@ export async function connectLive(profile: string | null = null): Promise<DataPr
   if (!inTauri()) throw new Error('The live data provider needs the desktop app: this page has no host to reach Hermes through.');
   const client = new GatewayClient(tauriBridge());
   await client.connect(profile);
+  registerPlanSource(() => loadPlan(client));   /* Settings and Diagnostics ask Hermes about the plan through this connection */
   const provider: LiveProvider = createLiveProvider({ client });
   return provider;
 }

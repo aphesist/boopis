@@ -2,16 +2,18 @@
 //! shared connection per profile multiplexed by request id.
 
 mod actor;
+mod call;
 pub mod frame;
 pub mod hub;
 pub mod link;
 pub mod metrics;
+pub mod oneshot;
 pub mod outbox;
 pub mod reconnect;
 mod route;
 pub mod ws;
 
-pub use hub::{ConnectionId, FrameSink, Hub, LinkStatus, Opened};
+pub use hub::{ConnectionId, Declare, FrameSink, Hub, LinkStatus, Opened, TapEvent};
 pub use metrics::ProxyStats;
 
 #[cfg(test)]

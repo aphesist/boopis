@@ -33,6 +33,13 @@ pub struct State {
     pub consent: Consent,
     /// The ladder choice (`provider/model`), when the user made one.
     pub choice: Option<String>,
+    /// The models the user picked from a catalogue (`OpenRouter`'s free ones), in the order they were offered.
+    /// Added without a version bump: a file from before has none.
+    pub picks: Vec<String>,
+    /// Why the free tier is not offered on this machine, in Hermes's terms, once it said so.
+    pub free_note: Option<String>,
+    /// The user asked to choose the models again (from a limit notice): the models step asks even when something is set.
+    pub reopen_models: bool,
     /// The form the host last showed, so an answer is checked against it.
     pub pending_form: Option<String>,
     /// Hermes has changes (a new plugin, new configuration, a new key) that need a gateway restart to take effect.
@@ -84,6 +91,15 @@ pub fn load(home: &Path) -> Result<State> {
         schema_version: VERSION,
         ..state
     })
+}
+
+/// Whether the user chose Nous's free tier and it is still the choice: the host then declares its gateway link the Desktop
+/// on this machine (the only way Hermes lets the free tier work, `docs/research/free-tier.md` section 2). A progress file
+/// that cannot be read counts as no.
+#[must_use]
+pub fn free_tier_chosen(home: &Path) -> bool {
+    crate::config::FREE_TIER_ENABLED
+        && load(home).is_ok_and(|s| s.choice.as_deref() == Some(super::providers::FREE))
 }
 
 /// Write the state atomically (a temp file, then a rename).

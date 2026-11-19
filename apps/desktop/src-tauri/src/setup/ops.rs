@@ -6,9 +6,12 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use serde_json::Value;
+use serde_json::{Value, json};
 
+use crate::endpoint::Local;
 use crate::error::{Error, Result};
+use crate::free_tier::FreeTier;
+use crate::gateway::oneshot::Link;
 use crate::hermes::Supervisor;
 
 /// One plugin as `hermes plugins list --json` reports it.
@@ -40,6 +43,14 @@ pub trait HermesOps: Send + Sync {
     async fn enable_plugin(&self, name: &str) -> Result<()>;
     /// Stop the gateway if it runs and start it again, so it loads the plugin and re-reads its secret sources.
     async fn restart_gateway(&self) -> Result<()>;
+    /// Nous's free tier as Hermes reports it (`free_tier.status`), asked on a link that declares itself the Desktop on this
+    /// machine, because Hermes answers "claimable" only to that. Call it only after the user chose the free tier.
+    async fn free_tier_status(&self) -> Result<FreeTier>;
+    /// Ask Hermes to claim the free tier (`free_tier.provision`), the one call that reaches Nous's account service. Hermes
+    /// applies its own rules (a first install, once per OS user); the answer carries Hermes's own reason when it did not.
+    async fn free_tier_provision(&self) -> Result<FreeTier>;
+    /// The models of `provider` that Hermes's catalogue lists as free (`model.options`), in the catalogue's order.
+    async fn free_models(&self, provider: &str) -> Result<Vec<String>>;
 }
 
 /// The real thing: Hermes's CLI through the supervisor's runner.
@@ -53,6 +64,19 @@ impl CliOps {
     #[must_use]
     pub fn new(sup: Arc<Supervisor>, home: PathBuf) -> Self {
         Self { sup, home }
+    }
+
+    /// A short-lived link to this home's gateway (started when none runs).
+    async fn link(&self, desktop_local: bool) -> Result<Link> {
+        let limits = self.sup.limits();
+        let endpoint = Local::new(self.sup.clone(), self.home.clone(), limits.clone());
+        Link::open(
+            &endpoint,
+            desktop_local,
+            limits.max_inbound_frame,
+            limits.ensure_timeout + limits.cli_timeout,
+        )
+        .await
     }
 
     async fn run(&self, args: &[&str]) -> Result<crate::hermes::cli::Output> {
@@ -143,6 +167,58 @@ impl HermesOps for CliOps {
         let _ = self.run(&["gateway", "stop", "--yes"]).await;
         self.sup.ensure(&self.home).await.map(|_| ())
     }
+
+    async fn free_tier_status(&self) -> Result<FreeTier> {
+        let answer = self
+            .link(true)
+            .await?
+            .call("free_tier.status", &json!({}))
+            .await?;
+        serde_json::from_value(answer)
+            .map_err(|e| Error::Config(format!("free_tier.status answered badly: {e}")))
+    }
+
+    async fn free_tier_provision(&self) -> Result<FreeTier> {
+        let answer = self
+            .link(true)
+            .await?
+            .call("free_tier.provision", &json!({}))
+            .await?;
+        serde_json::from_value(answer)
+            .map_err(|e| Error::Config(format!("free_tier.provision answered badly: {e}")))
+    }
+
+    async fn free_models(&self, provider: &str) -> Result<Vec<String>> {
+        let answer = self
+            .link(false)
+            .await?
+            .call("model.options", &json!({"include_unconfigured": true}))
+            .await?;
+        Ok(free_models_of(&answer, provider))
+    }
+}
+
+/// The ids of `provider`'s models that a `model.options` answer lists as free: priced zero by the catalogue
+/// (`pricing[id].free`), or tagged `:free` by the provider's own naming.
+#[must_use]
+pub fn free_models_of(answer: &Value, provider: &str) -> Vec<String> {
+    let Some(row) = answer["providers"]
+        .as_array()
+        .and_then(|rows| rows.iter().find(|r| r["slug"].as_str() == Some(provider)))
+    else {
+        return Vec::new();
+    };
+    row["models"]
+        .as_array()
+        .map(|models| {
+            models
+                .iter()
+                .filter_map(Value::as_str)
+                .filter(|id| id.ends_with(":free") || row["pricing"][*id]["free"] == true)
+                .map(str::to_owned)
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 /// The directory a profile's plugins live in.

@@ -9,6 +9,8 @@
    Every adapter also builds the `FormSpec` the card draws (`model.spec`): the schema is kept whole (previews, pickers,
    uploads, sign-in and limits included), so there is one renderer and one adapter per source. */
 import type { FieldSchema, FormKind, FormSchema, FormSpec, Origin } from '../data/types';
+import type { LimitView } from './free-tier';
+import { limitTitle, resetText } from './free-tier';
 
 export interface FormField {
   name: string;
@@ -32,6 +34,7 @@ export interface DiffLine { key: string; from: unknown; to: unknown }
 export type FormSource =
   | { kind: 'host' }
   | { kind: 'plugin'; sessionId: string }
+  | { kind: 'free-tier' }
   | { kind: 'hermes'; sessionId: string; method: 'approval.respond' | 'clarify.respond'; promptId: string; generation: number; multi: boolean };
 
 export interface FormModel {
@@ -170,12 +173,32 @@ export function fromGatewayEvent(type: string, sessionId: string, p: Obj, model 
   return null;
 }
 
+/** the choices a free-tier limit offers: Hermes never switches model on its own, so the person is asked */
+export const LIMIT_CHOICES = ['choose', 'wait'] as const;
+
+/** A turn the free tier refused, as a notice with the other ways on (docs/FORMS.md section 4): Hermes's own sentence and
+    when it says the limit lifts, then "choose another model" (setup's models question, with every choice Hermes can still
+    offer) or "wait". Nothing is invented: no allowance size, no time Hermes did not give. `now` and `key` make the form id
+    unique per refusal, so a limit hit again later is shown again. */
+export function fromFreeTierLimit(limit: LimitView, key: string, now = Date.now()): FormModel {
+  const id = 'free-tier-limit:' + key;
+  const title = limitTitle(limit.code);
+  const body = [limit.message, resetText(limit.resetsAtMs, now)].filter(Boolean).join('\n');
+  const names = ['Choose another model', limit.resetsAtMs ? 'Wait until it lifts' : 'Wait and try again'];
+  const field: FormField = { name: 'choice', type: 'string', title: 'What next', description: '', required: true, options: LIMIT_CHOICES, optionNames: names, multi: false, other: false, secret: false, secretRef: null, default: 'choose' };
+  return {
+    id, kind: 'choice', title, body, fields: [field], submitLabel: 'Continue', cancelLabel: 'Dismiss', hold: false, sensitive: false, origin: 'hermes', diff: [],
+    source: { kind: 'free-tier' },
+    spec: buildSpec({ id, kind: 'choice', title, body, origin: { kind: 'hermes' }, schema: { properties: { choice: { type: 'string', title: 'What next', enum: [...LIMIT_CHOICES], enumNames: names, default: 'choose' } }, required: ['choice'] }, submit: { label: 'Continue' }, cancel: { label: 'Dismiss' } })
+  };
+}
+
 export interface Reply { method: string; params: Obj }
 
 /** the frame that answers (or cancels) a form of the gateway or the plugin; the host's own forms answer through `setup_advance`, so none */
 export function replyFor(form: FormModel, outcome: { cancelled: true } | { cancelled: false; values: Obj; provided?: readonly string[] }): Reply | null {
   const src = form.source;
-  if (src.kind === 'host') return null;
+  if (src.kind === 'host' || src.kind === 'free-tier') return null;
   if (src.kind === 'plugin') {
     if (outcome.cancelled) return { method: 'plugin.hypotaxis.form.cancel', params: { session_id: src.sessionId, form_id: form.id } };
     return { method: 'plugin.hypotaxis.form.submit', params: { session_id: src.sessionId, form_id: form.id, values: outcome.values, provided: [...(outcome.provided ?? [])] } };

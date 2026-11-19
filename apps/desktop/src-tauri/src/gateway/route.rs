@@ -52,6 +52,9 @@ impl Shared {
                             self.deliver(&mut st, conn, reply.into());
                         }
                         Owner::Replay(session) => self.replay_answer(&mut st, &session, &text),
+                        Owner::Host(tx) => {
+                            let _ = tx.send(host_answer(&text, &pending.method));
+                        }
                     }
                 } else {
                     tracing::debug!(
@@ -111,6 +114,18 @@ impl Shared {
                 trim_cursors(st, self.limits.replay_sessions);
             }
         }
+        if let Some(kind) = meta
+            .event_type
+            .as_deref()
+            .filter(|k| k.starts_with(super::hub::TAPPED_PREFIX))
+            && let Ok(v) = serde_json::from_str::<serde_json::Value>(&text)
+        {
+            // Nobody listening is fine: the UI still gets the frame.
+            let _ = self.taps.send(super::hub::TapEvent {
+                event_type: kind.to_owned(),
+                payload: v["params"]["payload"].clone(),
+            });
+        }
         let delta = (meta.event_type.as_deref() == Some("message.delta"))
             .then(|| meta.session_id.clone().unwrap_or_default());
         let text: Arc<str> = text.into();
@@ -161,6 +176,16 @@ impl Shared {
             .into();
             self.broadcast(st, &gap, None);
         }
+    }
+}
+
+/// The result of a response to a request the host made, or its error.
+fn host_answer(text: &str, method: &str) -> crate::error::Result<serde_json::Value> {
+    let v: serde_json::Value =
+        serde_json::from_str(text).map_err(|e| crate::error::Error::InvalidFrame(e.to_string()))?;
+    match v.get("error") {
+        Some(err) => Err(crate::error::Error::Unavailable(format!("{method}: {err}"))),
+        None => Ok(v.get("result").cloned().unwrap_or(serde_json::Value::Null)),
     }
 }
 
