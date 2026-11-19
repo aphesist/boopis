@@ -1,8 +1,11 @@
 name: ci
-# The gate (docs/STANDARDS.md section 10): every push and every pull request. Jobs run in parallel and are cached.
+# The gate (docs/STANDARDS.md section 10): pushes to develop and main, every pull request, and on demand. Work branches
+# run the same gate locally before they merge; running it on every branch push spent the account's Actions minutes.
 on:
   push:
+    branches: [develop, main]
   pull_request:
+  workflow_dispatch:
 permissions:
   contents: read
 concurrency:
