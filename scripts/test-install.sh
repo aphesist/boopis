@@ -22,6 +22,19 @@ contains() { grep -qF -- "$2" <<<"$1"; }
 lacks() { ! grep -qF -- "$2" <<<"$1"; }
 empty_dir() { [ -z "$(find "$1" -mindepth 1)" ]; }
 
+# The suite must not depend on what the machine has: the two cache tools are hidden from PATH (links to every other command
+# on it), and the cases about them put stand-ins back.
+mkdir -p "$T/path"
+IFS=: read -ra path_dirs <<<"$PATH"
+for d in "${path_dirs[@]}"; do
+  [ -d "$d" ] || continue
+  for f in "$d"/*; do
+    case "${f##*/}" in gtk-update-icon-cache | update-desktop-database) continue ;; esac
+    [ -x "$f" ] && [ ! -e "$T/path/${f##*/}" ] && ln -s "$f" "$T/path/${f##*/}"
+  done
+done
+export PATH="$T/path"
+
 NAME=boopis_0.0.0_amd64.AppImage
 mkdir -p "${T:?}/art"
 printf '#!/bin/sh\necho "dummy appimage $*"\n' >"$T/art/$NAME"
@@ -66,7 +79,10 @@ check "install: the launcher runs the app" test "$("$T/p/bin/boopis" --flag)" = 
 check "install: the app is executable" test -x "$T/p/share/boopis/boopis.AppImage"
 check "install: the menu entry points at the launcher" grep -qx "Exec=$T/p/bin/boopis %U" "$T/p/share/applications/boopis.desktop"
 check "install: the menu entry carries the window class of the AppImage's binary" grep -qx 'StartupWMClass=boopis' "$T/p/share/applications/boopis.desktop"
-check "install: the menu entry names the light icon" grep -qx 'Icon=boopis' "$T/p/share/applications/boopis.desktop"
+check "install: the menu entry names the light icon by absolute path" grep -qx "Icon=$T/p/share/icons/hicolor/256x256/apps/boopis.png" "$T/p/share/applications/boopis.desktop"
+check "install: that icon file exists" test -f "$T/p/share/icons/hicolor/256x256/apps/boopis.png"
+check "install: the menu entry has a GenericName" grep -qx 'GenericName=Coding harness' "$T/p/share/applications/boopis.desktop"
+check "install: the menu entry has Keywords" grep -q '^Keywords=.' "$T/p/share/applications/boopis.desktop"
 check "install: the icons are PNGs" test "$(head -c 8 "$T/p/share/icons/hicolor/64x64/apps/boopis.png" | od -An -tx1 | tr -d ' \n')" = 89504e470d0a1a0a
 check "install: the final box says it is ready" contains "$out" "boopis is ready"
 check "install: the box says how to uninstall" contains "$out" "uninstall.sh"
@@ -81,6 +97,43 @@ fresh
 run --file "$T/art/$NAME" --prefix "$T/p" --yes --quiet >/dev/null
 env HOME="$T/home" bash "$T/p/share/boopis/uninstall.sh" >/dev/null
 check "uninstall.sh: removes everything" empty_dir "$T/p"
+
+# ---- 2b. --icon dark points the entry at the dark 256 px icon
+fresh
+run --file "$T/art/$NAME" --prefix "$T/p" --yes --quiet --icon dark >/dev/null
+check "--icon dark: the entry's absolute path is the dark icon, and it exists" grep -qx "Icon=$T/p/share/icons/hicolor/256x256/apps/boopis-dark.png" "$T/p/share/applications/boopis.desktop"
+check "--icon dark: that file exists" test -f "$T/p/share/icons/hicolor/256x256/apps/boopis-dark.png"
+
+# ---- 2c. the caches: refreshed when the tools exist, skipped when not, and removed with the rest
+# Stand-ins that log their call and make the cache file the real tools make.
+mkdir -p "$T/cachebin"
+cat >"$T/cachebin/gtk-update-icon-cache" <<'SH'
+#!/bin/sh
+echo "gtk-update-icon-cache $*" >>"$CACHE_LOG"
+for last; do :; done
+: >"$last/icon-theme.cache"
+SH
+cat >"$T/cachebin/update-desktop-database" <<'SH'
+#!/bin/sh
+echo "update-desktop-database $*" >>"$CACHE_LOG"
+: >"$1/mimeinfo.cache"
+SH
+chmod +x "$T/cachebin/gtk-update-icon-cache" "$T/cachebin/update-desktop-database"
+fresh
+: >"$T/cache.log"
+CACHE_LOG=$T/cache.log PATH="$T/cachebin:$PATH" run --file "$T/art/$NAME" --prefix "$T/p" --yes --quiet >/dev/null
+check "caches: the icon cache is refreshed" grep -qxF "gtk-update-icon-cache -f -t $T/p/share/icons/hicolor" "$T/cache.log"
+check "caches: the menu database is refreshed" grep -qxF "update-desktop-database $T/p/share/applications" "$T/cache.log"
+check "caches: the files the tools made are in the manifest" grep -qx "f $T/p/share/icons/hicolor/icon-theme.cache" "$T/p/share/boopis/manifest"
+CACHE_LOG=$T/cache.log PATH="$T/cachebin:$PATH" run --uninstall --prefix "$T/p" >/dev/null
+check "caches: uninstall removes them with the rest" empty_dir "$T/p"
+# Without the tools (a PATH of the system's tools only, with none of them) nothing is attempted and nothing fails.
+fresh
+: >"$T/cache.log"
+out=$(run --file "$T/art/$NAME" --prefix "$T/p" --yes --quiet) || fail "caches: install without the tools exits 0"
+check "caches: absent tools are skipped silently" test -z "$out"
+check "caches: and leave no cache file" test -z "$(find "$T/p" -name '*.cache')"
+check "caches: the file list is the same" test "$(files_of "$T/p")" = "$expected"
 
 # ---- 3. a second install replaces the first, and leaves no second set of files
 fresh
