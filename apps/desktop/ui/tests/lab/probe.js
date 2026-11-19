@@ -503,7 +503,9 @@
         const bg = ckey(s.backgroundColor);
         if (bg === T.roles['--bg-0'] || bg === T.roles['--bg-3']) {
           for (let p = e.parentElement; p && p !== document.documentElement; p = p.parentElement) {
-            const pb = getComputedStyle(p).backgroundColor;
+            let pb = getComputedStyle(p).backgroundColor;
+            /* a drawn shape (the squircle) paints its fill from --sq-bg and leaves background-color clear: that fill is its surface */
+            if (transparent(pb) && shapes.has(p)) { const sq = getComputedStyle(p).getPropertyValue('--sq-bg').trim(); if (sq) { const q = probeEl(); q.style.cssText += ';transition:none !important;color:' + sq; pb = getComputedStyle(q).color; } }
             if (transparent(pb)) continue;
             if (ckey(pb) === bg) add('roles', e, (bg === T.roles['--bg-0'] ? 'inset (--bg-0) on inset' : 'raised (--bg-3) on raised') + ': ' + describe(p) + ' paints the same (R-colour-4)');
             break;
