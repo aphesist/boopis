@@ -43,7 +43,8 @@ export function search(o: SearchOpts): string {
   const glyph = icon('search', { class: 'ui-search__icon' });
   if (o.as === 'button') {
     return '<button type="button" class="' + cls + '"' + attrs({ id: o.id, 'aria-label': o.label, 'aria-keyshortcuts': o.keys && ariaKeys(o.keys), ...o.attrs }) + '>' +
-      glyph + '<span class="ui-search__text">' + (o.textHTML ?? '') + '</span>' + chips(o.keys) + '</button>';
+      /* a space between the text and the keys, so the visible text reads as the name does ("… title ctrl K", WCAG 2.5.3) */
+      glyph + '<span class="ui-search__text">' + (o.textHTML ?? '') + '</span>' + (o.keys ? ' ' + chips(o.keys) : '') + '</button>';
   }
   return '<div class="' + cls + '">' + glyph +
     '<input type="text" class="ui-search__input"' + attrs({ id: o.id, 'aria-label': o.label, placeholder: o.placeholder, value: o.value, autocomplete: 'off', spellcheck: 'false', ...o.attrs }) + '>' +
