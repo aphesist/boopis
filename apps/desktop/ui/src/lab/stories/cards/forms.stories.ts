@@ -34,7 +34,10 @@ const askers: Story = {
   states: {
     typical: { tags: ['typical'], width: 608, render: draw(FORM_SPECS['question'] as Record<string, unknown>) },
     'long teammate name': { tags: ['long'], width: 608, render: draw(FORM_LONG['one'] as Record<string, unknown>) },
-    'five askers': { tags: ['many'], width: 608, render: draw(FORM_LONG['five'] as Record<string, unknown>) },
+    'five askers': { tags: ['many'], width: 608, render: draw(FORM_LONG['five'] as Record<string, unknown>), allow: {
+      concentric: 'the first asker is an orb and orbs are circles (R-corner-2, the pill row: "orbs are circles"); R-corner-9 keeps a round piece round',
+      roles: 'the stacked discs are masks in the card\'s own colour so the overlapped orb is hidden behind the next, not a second inset surface (R-colour-4 is about surfaces)'
+    } },
     'a relay': { tags: ['variant'], width: 608, render: draw(FORM_LONG['relay'] as Record<string, unknown>) },
     'a long model': { tags: ['long'], width: 608, render: draw(FORM_LONG['model'] as Record<string, unknown>) },
     'five askers, compact on the dock': { tags: ['many', 'size'], width: 400, ground: 'dock', render: draw(FORM_LONG['five'] as Record<string, unknown>, { size: 'compact', ground: 'dock' }) },

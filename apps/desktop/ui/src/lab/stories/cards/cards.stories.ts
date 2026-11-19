@@ -32,6 +32,7 @@ function story(kind: CardKind): Story {
   for (const s of CARD_STATES[kind] ?? []) {
     const tags: State['tags'][number][] = s === CARD_STATES[kind]?.[0] ? ['typical', ...(TAG[s] ? [TAG[s]] : [])] : [TAG[s] ?? 'variant'];
     const st: State = { tags, render: draw(kind, d, { state: s }), width: INLINE };
+    if (kind === 'ship') st.allow = { concentric: 'the branch chip is centred in the 30px control row beside the buttons (R-type-11), so its bottom inset is the row\'s slack; both insets are at least --pad (R-corner-4: inset by --pad from both edges)' };
     if (s === 'holding') st.allow = { 'stability.render': 'a hold in progress is time based', visual: 'a hold in progress is time based' };
     states[s] = st;
   }
@@ -39,6 +40,7 @@ function story(kind: CardKind): Story {
   states['long'] = { tags: ['long'], render: draw(kind, long, { state: first }), width: INLINE };
   states['compact'] = { tags: ['size'], render: draw(kind, d, { state: first, size: 'compact' }), width: COMPACT };
   states['compact, long'] = { tags: ['size', 'long'], render: draw(kind, long, { state: first, size: 'compact' }), width: COMPACT };
+  if (kind === 'escalation') states['compact, long']!.allow = { roles: 'a ladder station is a disc in the card\'s colour that hides the rail behind it (a mask, not an inset surface); R-colour-4 is about surfaces' };
   states['compact, on the dock'] = { tags: ['size', 'variant'], render: draw(kind, d, { state: first, size: 'compact', ground: 'dock' }), width: COMPACT, ground: 'dock' };
   states['mini'] = { tags: ['size'], render: draw(kind, d, { state: first, size: 'mini' }), width: MINI };
   states['mini, long'] = { tags: ['size', 'long'], render: draw(kind, long, { state: first, size: 'mini' }), width: MINI };

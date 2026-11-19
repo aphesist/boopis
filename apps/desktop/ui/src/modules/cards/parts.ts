@@ -173,9 +173,9 @@ export function mini(ctx: Ctx, o: { lead?: string; who?: boolean; text: string; 
   return '<button type="button" class="cd-mini" data-action="open" aria-labelledby="' + ctx.id + '-t' + (o.meta ? ' ' + ctx.id + '-m' : '') + (owe ? ' ' + ctx.id + '-o' : '') + '">' +
     '<span class="cd-mini__lead" aria-hidden="true">' + lead + '</span>' +
     '<span class="cd-mini__text" id="' + ctx.id + '-t">' + who + '<span class="cd-mini__what">' + o.text + '</span></span>' +
-    '<span class="cd-mini__status"><span class="cd-mini__dot">' + (owe ? U.html.dot('attention') : '') + '</span>' +
+    ' <span class="cd-mini__status"><span class="cd-mini__dot">' + (owe ? U.html.dot('attention') : '') + '</span>' +
     (owe ? '<span class="ui-sr" id="' + ctx.id + '-o">, ' + esc(owe) + '</span>' : '') +
-    '<span class="cd-mini__meta"' + (o.meta ? ' id="' + ctx.id + '-m"' : '') + '>' + (o.meta ?? '') + '</span></span></button>';
+    ' <span class="cd-mini__meta"' + (o.meta ? ' id="' + ctx.id + '-m"' : '') + '>' + (o.meta ?? '') + '</span></span></button>';
 }
 export const tones = (m: Record<string, string>) => (c: { s: string }): string | undefined => m[c.s];
 
