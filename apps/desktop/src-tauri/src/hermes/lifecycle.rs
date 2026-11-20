@@ -301,6 +301,10 @@ impl Supervisor {
         }
         let info = self.info().await?;
         if let Ok(identity) = control::identify(home).await {
+            if let Some(theirs) = identity.stale_home(home) {
+                tracing::warn!(home = %home.display(), serves = %theirs, "the gateway on this home's socket serves a folder that no longer exists; restarting it");
+                return self.restart(home, true).await.map(|_| ());
+            }
             self.note_gateway(&identity);
             let settled = identity.state == "ready"
                 && match (

@@ -37,6 +37,8 @@ pub struct ServedProfile {
 
 impl Identify {
     /// The profile id that serves `home`: the entry with that home, or the only entry.
+    /// The only entry stands in for `home` when none names it (a symlinked or differently spelled home), unless that entry's
+    /// home is gone from the disk ([`Identify::stale_home`]).
     #[must_use]
     pub fn profile_id_for(&self, home: &Path) -> Option<&str> {
         let same = |p: &ServedProfile| {
@@ -47,11 +49,34 @@ impl Identify {
             .iter()
             .find(|p| same(p))
             .or_else(|| {
-                (self.served_profiles.len() == 1)
+                (self.served_profiles.len() == 1 && self.stale_home(home).is_none())
                     .then(|| self.served_profiles.first())
                     .flatten()
             })
             .map(|p| p.profile_id.as_str())
+    }
+
+    /// The home this gateway serves when it is not `home`, is `home`'s sibling and no longer exists: a gateway whose folder was
+    /// renamed under it (ADR-0031's `hermes-home` to `engine`) still answers on the moved control socket, but its
+    /// database was moved while open, so its writes are refused (`storage_unavailable`). Such a gateway is stopped and
+    /// started again, never used.
+    #[must_use]
+    pub fn stale_home(&self, home: &Path) -> Option<String> {
+        let named = |p: &ServedProfile| {
+            p.home.as_deref().is_some_and(|h| Path::new(h) == home)
+                || Path::new(&p.profile_id) == home
+        };
+        if self.served_profiles.iter().any(named) {
+            return None;
+        }
+        let [only] = self.served_profiles.as_slice() else {
+            return None;
+        };
+        let theirs = only.home.as_deref().unwrap_or(&only.profile_id);
+        let path = Path::new(theirs);
+        // A folder renamed under it: a sibling of `home` (same parent) that is gone while `home` is there.
+        (path.is_absolute() && !path.exists() && home.exists() && path.parent() == home.parent())
+            .then(|| theirs.to_owned())
     }
 }
 
@@ -194,6 +219,32 @@ mod tests {
         .unwrap();
         assert_eq!(two.profile_id_for(Path::new("/b")), Some("/b"));
         assert_eq!(two.profile_id_for(Path::new("/c")), None);
+    }
+
+    #[test]
+    fn a_gateway_whose_home_is_gone_from_the_disk_is_stale_and_never_stands_in() {
+        let dir = tempfile::tempdir().unwrap();
+        let (old, new) = (dir.path().join("hermes-home"), dir.path().join("engine"));
+        std::fs::create_dir(&new).unwrap();
+        let json = format!(
+            r#"{{"state":"ready","served_profiles":[{{"profile_id":"{0}","home":"{0}"}}]}}"#,
+            old.display()
+        );
+        let moved: Identify = serde_json::from_str(&json).unwrap();
+        assert_eq!(moved.stale_home(&new), Some(old.display().to_string()));
+        assert_eq!(
+            moved.profile_id_for(&new),
+            None,
+            "never the stand-in for the new home"
+        );
+        std::fs::create_dir(&old).unwrap();
+        assert_eq!(
+            moved.stale_home(&new),
+            None,
+            "a home that exists is a symlink or a spelling, not a stale gateway"
+        );
+        assert!(moved.profile_id_for(&new).is_some());
+        assert_eq!(moved.stale_home(&old), None, "it serves exactly this home");
     }
 
     #[cfg(unix)]
