@@ -568,6 +568,23 @@ The decision of every `$` call is `policy.check` with the mod as principal; the 
 - A saved `hermes_source: existing` is ignored after the update: start with `--engine existing` instead.
 - Diagnostics is the one screen where the engine's own words appear.
 
+## ADR-0032 Smart runs in the UI, per message, through the engine's own switches (owner decision on the need, 2026-11-20)
+**Context.**
+- The owner: "Smart (the automatic model choice) is not built yet", "a quicker way to change models ... a menu in the chatbox where you can just choose who will answer you next". Smart had been a switch that refused with "not built yet".
+- The plugin's hooks (`pre_llm_call` and the others) can add context or block a call; they cannot change the model of a request, and mods may not either (`turn.step` model is refused). The engine does have a per-session model switch (`config.set` key `model` with `--provider X --session`; at creation `session.create` takes `model` and `provider`), and the plugin has a start tier for a governed task.
+
+**Decision.** Smart is a pure function in the UI (`ui/src/data/smart.ts`), run in the live provider just before `prompt.submit` (`details.prepareSend`). It is not in the plugin and not in the Rust host.
+- **Why there.** The UI is where the message, its attachments and the session's recent failures are all known at the moment of sending, and where the choice must be visible (the chip previews it while typing; the turn's meta says "Smart: debugging"). Neither the plugin nor the engine can switch a model per request, so a plugin rule would still need the UI to carry it out. A rule in the UI is unit-tested with no engine.
+- **The rule.** A level 0, 1 or 2 from the message: design, architecture or migration words, over 1,500 characters, over 40 lines of code, 4 or more attachments, or two of the last three turns failed raise it to 2; debugging words, refactoring words, a diff or code block, over 400 characters, any attachment or `@file` mention, or the last turn failing give 1; anything else is 0. The highest signal wins and is the reason. The level is spread over the session's ladder (cheapest first): 0 the first tier, 2 the last, 1 the middle (the lower of two). The cheapest tier answers by default. With no ladder known Smart refuses to turn on and says so; it never guesses.
+- **Ungoverned:** the pick is applied with `config.set model ... --session` once per change (`--session` always, so nothing is written to the profile's configuration). **Governed:** the pick is where the ladder starts, through the new plugin RPC `cascade.start_tier` (allowed after the first prompt, unlike `mode.set`, because the start tier is read at dispatch and does not touch the cached prompt); the gate still escalates past it. In governed mode only the ladder's tiers can be picked.
+- **Who answered** is the engine's word: `usage.model` of `message.complete` (ungoverned), and the tiers of `plugin.boopis.cascade.updated` in order (governed, shown as the route). Smart's reason is shown in the turn's meta.
+- **Names.** Model ids are written for people by a small parser over `apps/shared/data/model-names.json`; the engine reports no label for a model, so only a provider's name is the engine's, and the provider's plan is secondary text.
+
+**Consequences.**
+- A failed switch stops the message with a sentence saying which model; nobody is answered by a model nobody chose.
+- Smart is off by default (the engine's own model answers until the user chooses), so nothing changes silently.
+- The ledger does not record a start-tier change or a Smart pick yet; the turn's meta is the record for now.
+
 ## ADR-0012 Prices
 Prices come from the models.dev catalogue plus a user override table. Hermes's models.dev data is not reachable through its public plugin API, so:
 - the plugin reads a cached catalogue file, `<profile home>/hypotaxis/prices/models-dev.json`;

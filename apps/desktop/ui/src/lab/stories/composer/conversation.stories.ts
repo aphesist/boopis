@@ -16,6 +16,8 @@ export default [
       typical: stage(['typical', 'variant'], ({ root }) => {
         put(root, ui.entry({ kind: 'user', who: 'you', callno: ['14:01'], body: html.request('proration drifts by a cent on long invoices. move src/billing to integer cents.') }),
           ui.entry({ kind: 'agent', callno: ['qwen3-coder', '→ sonnet 5.5', '3m 42s', '$0.37'], steps: { count: 6, id: 'lab-steps' }, body: '<p>' + html.inline(PARAGRAPH) + '</p>' }),
+          ui.entry({ kind: 'agent', callno: ['claude-subscription-directsdk-experimental/sonnet', 'Smart: debugging', '48s', '$0.00'], body: '<p>Fixed the rounding in one place.</p>' }),
+          ui.entry({ kind: 'agent', callno: ['claude-subscription-directsdk-experimental/haiku', '→ claude-subscription-directsdk-experimental/opus', '3m 42s', '$0.00'], steps: { count: 6, id: 'lab-steps2' }, body: '<p>' + html.inline(PARAGRAPH) + '</p>' }),
           ui.entry({ kind: 'bot', who: 'nina', callno: ['14:08'], body: '<p>Tests are green on billing/cents.</p>' }),
           ui.entry({ kind: 'mod', who: html.mod('sunset'), callno: ['14:09'], body: '<p>A mod wrote this row.</p>' }));
       }, { width: W }),

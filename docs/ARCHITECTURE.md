@@ -144,7 +144,7 @@ It registers:
   | **Governed** | Feedforward picks the starting tier for each message from the ladder, and escalation climbs from there | The user's chosen model is the starting tier; escalation climbs the ladder above it |
   | **Ungoverned** | A routing choice per message, with no gate and no escalation | Exactly the chosen model |
 
-  Alt+M opens the model picker without turning Smart off. Choosing a model pins it and turns Smart off; choosing "Smart" turns it back on.
+  Alt+M, or the model chip, opens the "who answers next" menu: Automatic (Smart) first, then every model the user can use, by provider. Choosing a model pins it and turns Smart off; choosing Automatic turns it back on (alt+S toggles). The rule and where it runs are ADR-0032.
 - **Model selection:**
   - per attempt, through the boopis delegation provider;
   - pinned models through `session.mutate` (named providers only, revision-fenced).

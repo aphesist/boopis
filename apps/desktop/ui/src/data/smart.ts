@@ -1,5 +1,5 @@
 /* Smart: the automatic model choice for each message. Pure: no client, no DOM, no clock, so the rule is tested alone and
-   the composer can preview it as the user types. Where it lives and why: docs/DECISIONS.md, ADR-0032.
+   the composer can preview it as the user types. Where it lives and why: docs/DECISIONS.md, ADR-0032 (the rule below is the one table).
 
    The rule (docs/SMART.md has the same table). A message is given a level, 0 (cheapest tier), 1 (middle) or 2 (strongest),
    and the level is spread over the tiers of the session's ladder (cheapest first). The cheapest tier answers by default;
