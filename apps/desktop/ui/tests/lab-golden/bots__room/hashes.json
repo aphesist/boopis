@@ -5,12 +5,12 @@
   "h": 872
  },
  "a-long-name@catalog": {
-  "sha": "531a76c5a01a48d94582da13190ed64f61a82423",
+  "sha": "41cb76d541337e2b77c9c07170633a2717d6b0f4",
   "w": 1196,
   "h": 872
  },
  "a-long-name@graphite": {
-  "sha": "8348f79a95d328bca88fd523d1bf0f7039bdd94f",
+  "sha": "bbef9708cdd107b372ff32879a82d533f19efd10",
   "w": 1196,
   "h": 872
  },
@@ -25,7 +25,7 @@
   "h": 872
  },
  "atlas-a-thread@catalog": {
-  "sha": "d41d6e1a875a01a0fb93247fee4d2fd80bfacb70",
+  "sha": "7160e2979d081cd997448d338d501fbaf42e563d",
   "w": 1196,
   "h": 872
  },
@@ -40,22 +40,22 @@
   "h": 872
  },
  "composer-attach-tooltip@bone": {
-  "sha": "61a51d0ab7d8c07551636abc5737bfc45b26acb7",
+  "sha": "a09fda2739f91e28b3631441feb61a0982c7dd93",
   "w": 1196,
   "h": 872
  },
  "composer-attach-tooltip@catalog": {
-  "sha": "140f49f7ceb34218e84fca0cbe7c7b5fcb871663",
+  "sha": "0d1853c5a57367d2016fd825c73e4925f907cda6",
   "w": 1196,
   "h": 872
  },
  "composer-attach-tooltip@graphite": {
-  "sha": "a6430809b1b86f866109323e52566c52de87e481",
+  "sha": "ae5a32b976021b21d8a068dd42b1b3ed61c77eb1",
   "w": 1196,
   "h": 872
  },
  "composer-attach-tooltip@typewriter": {
-  "sha": "c9bd969fd89dd618ad08d86230163842a64af5d2",
+  "sha": "468fcd411e4dc979c83a117c23dcd7b66cf944a5",
   "w": 1196,
   "h": 872
  },
@@ -65,12 +65,12 @@
   "h": 872
  },
  "composer-send-hover@catalog": {
-  "sha": "d41d6e1a875a01a0fb93247fee4d2fd80bfacb70",
+  "sha": "9fdf642eb7b1b20bb3f545c5a02350961965a8d6",
   "w": 1196,
   "h": 872
  },
  "composer-send-hover@graphite": {
-  "sha": "667f47da3db50069315e851882c2a4a4f9bbd3f2",
+  "sha": "7c2fe232ba9e4df714db1828cc3a85886f6a44b1",
   "w": 1196,
   "h": 872
  },
@@ -90,7 +90,7 @@
   "h": 872
  },
  "kai-no-thread-yet@graphite": {
-  "sha": "d169a139320a79fa119771ba664d453fe7d80280",
+  "sha": "4382391c2196644b8a73f470766fd37b7b3d5baa",
   "w": 1196,
   "h": 872
  },
@@ -100,22 +100,22 @@
   "h": 872
  },
  "made-outside-boopis@bone": {
-  "sha": "520b021a76918163bc5266f01fba1289d02929d2",
+  "sha": "65253517b25d5cef0dfc0020db6167dd40855d43",
   "w": 1196,
   "h": 872
  },
  "made-outside-boopis@catalog": {
-  "sha": "666030de132b04d5e42eab2b0bce5bb104c4b556",
+  "sha": "dbcb747bc8abe5e1b02f8340d0bb9d30f9f7323e",
   "w": 1196,
   "h": 872
  },
  "made-outside-boopis@graphite": {
-  "sha": "70708ab0f780438e236fa30ff4a20b2ecda4d731",
+  "sha": "834a3a80e7a5c7c262542df2f268263468bf3e8a",
   "w": 1196,
   "h": 872
  },
  "made-outside-boopis@typewriter": {
-  "sha": "b5a19665cc377e4c923f898e7e62f4ddcfd9304b",
+  "sha": "864c48e8e703935dce59b6a554dc1decdb7bd934",
   "w": 1196,
   "h": 872
  },
@@ -150,7 +150,7 @@
   "h": 872
  },
  "no-bots-at-all@graphite": {
-  "sha": "46e7b555e91fd90100bf12d5461673175230f7db",
+  "sha": "f3add86b1da313b7d983cdd5150dfcc688bfe80a",
   "w": 1196,
   "h": 872
  },

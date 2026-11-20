@@ -55,7 +55,7 @@
   "h": 231
  },
  "compact@typewriter": {
-  "sha": "4469927404eb8db78c7b0b50fda3a5e2cacc20be",
+  "sha": "06dd449af56ce19be4a11bebb0224e7a44d6744c",
   "w": 424,
   "h": 231
  },
@@ -75,7 +75,7 @@
   "h": 211
  },
  "dismissed@typewriter": {
-  "sha": "ca66246fdde812585bfa5de0192cd21ee65ac49d",
+  "sha": "60d829f9c9c45c255959d40019280369978c9fcf",
   "w": 632,
   "h": 211
  },
@@ -185,12 +185,12 @@
   "h": 211
  },
  "scheduled@catalog": {
-  "sha": "4021fac06bb42cd1155ac180d7e22b178c5515a0",
+  "sha": "f0e58b3cd24f3b4b1aa99cf8a03b8cd63f2c4a79",
   "w": 632,
   "h": 211
  },
  "scheduled@graphite": {
-  "sha": "c14834c613b31739a04c21a3a963552f0e3ae481",
+  "sha": "1ead41b5ae5551e1257345eda6cbeebc2b894632",
   "w": 632,
   "h": 211
  },

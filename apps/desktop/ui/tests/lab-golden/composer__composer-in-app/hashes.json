@@ -65,22 +65,22 @@
   "h": 389
  },
  "session-attach-menu@catalog": {
-  "sha": "15fe4d6a633a6b51109ff07f01f2b9a47cd0a3bc",
+  "sha": "97c0ace4c97a8a2233fb9d9f57900e643b43dba1",
   "w": 746,
   "h": 389
  },
  "session-attach-menu@graphite": {
-  "sha": "b1d883c3c3c60be311d67d54e9903a2165e5aabd",
+  "sha": "776063f0311ee27ce16ef9871d47f84955b6e13c",
   "w": 746,
-  "h": 389
+  "h": 373
  },
  "session-attach-menu@typewriter": {
-  "sha": "455da29e98fb86298f0a1ec603b6c3772cb19ab9",
-  "w": 746,
-  "h": 389
+  "sha": "3d55449669c8a0d81d0107737f406ee64b53c5ec",
+  "w": 744,
+  "h": 395
  },
  "session-attach-tooltip@bone": {
-  "sha": "23bd6c024357cedc76727b6868ba85d95ad51d4d",
+  "sha": "565ed70e77b7ed27ddfdb58122e99f20698e968d",
   "w": 777,
   "h": 159
  },
@@ -90,14 +90,14 @@
   "h": 159
  },
  "session-attach-tooltip@graphite": {
-  "sha": "87de04db6d97cd2858dfacb6aa7ecf311e24146c",
-  "w": 777,
-  "h": 159
+  "sha": "611afd42c1e8e4e7bd7c0f90bd11efcf66d07b32",
+  "w": 776,
+  "h": 143
  },
  "session-attach-tooltip@typewriter": {
-  "sha": "4690e7ac7eeb64fee2b4fddc7d94d77504c85e59",
-  "w": 777,
-  "h": 159
+  "sha": "e55d7502deb4af29ef24a40ed63cd5143251a0b3",
+  "w": 774,
+  "h": 165
  },
  "session-empty@bone": {
   "sha": "ff0043654ad958f28f959c047d649f6173e15347",
@@ -145,7 +145,7 @@
   "h": 149
  },
  "session@catalog": {
-  "sha": "6c42b42ca496ad413cd9fa07062ee4b6f1b63c8a",
+  "sha": "f6e5c54ebbad7bc4a7ba844ff7a39eb94b6f4dd8",
   "w": 744,
   "h": 149
  },

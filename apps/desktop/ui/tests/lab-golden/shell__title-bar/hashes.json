@@ -55,12 +55,12 @@
   "h": 64
  },
  "command-field-hover@typewriter": {
-  "sha": "420cdf656ff3a75293d19d58c06c1f6aa8fd49b1",
+  "sha": "5e65f57042cba830ede81e036b128730095bf522",
   "w": 1440,
   "h": 64
  },
  "sidebar-button-tooltip@bone": {
-  "sha": "65da3fff7a72becc9114991098f8fc003d13eab8",
+  "sha": "fe7cd952d84a19319dd6a44cd75cda0a8b96828f",
   "w": 1440,
   "h": 92
  },
@@ -70,12 +70,12 @@
   "h": 92
  },
  "sidebar-button-tooltip@graphite": {
-  "sha": "8376735d370a170e3f2a572588132947a77c3b2f",
+  "sha": "96c39dd7fd87b64f98d4dfcf4487fdd3e67af478",
   "w": 1440,
   "h": 92
  },
  "sidebar-button-tooltip@typewriter": {
-  "sha": "4386dade46d62f07d172471f753ba923a9ef5fe8",
+  "sha": "4750118541889a3bf753dc7030d80cd0c3f576ba",
   "w": 1440,
   "h": 92
  },
@@ -85,17 +85,17 @@
   "h": 64
  },
  "typical@catalog": {
-  "sha": "bfe2877f3be0d3640b99749b7f6bd68ef7c5060e",
+  "sha": "7a435a9f1804cadd545bf5fc2df4e44e4941d6d8",
   "w": 1440,
   "h": 64
  },
  "typical@graphite": {
-  "sha": "fb40768e95e6c66f1805ec61eca3773ff6974a30",
+  "sha": "8a85cd7e46ac6668c1c0b83f50cab4e03eb05768",
   "w": 1440,
   "h": 64
  },
  "typical@typewriter": {
-  "sha": "fa17ba95d5d980f81fd33118bbbb3b269a36809c",
+  "sha": "86606ca813e7f62c9fba0bf869e61b85c3a2ef75",
   "w": 1440,
   "h": 64
  }

@@ -1,21 +1,21 @@
 {
  "120-bots-expanded@bone": {
-  "sha": "02caaef3697d1565ef3aa90557efdb4bcd5a23a7",
+  "sha": "13c5ac40f29aacba443264db71ae587bba917560",
   "w": 1440,
   "h": 84
  },
  "120-bots-expanded@catalog": {
-  "sha": "9521842b0046cbea78151c70a82e068dc84992e4",
+  "sha": "3ee77e73432149289c3b9988e43f09134c43cdcf",
   "w": 1440,
   "h": 84
  },
  "120-bots-expanded@graphite": {
-  "sha": "df4a13869a33bdaa7dba8adb3e163e8363e98426",
+  "sha": "752c8d9f8438699cf96bda195c0fd042e60387b7",
   "w": 1440,
   "h": 84
  },
  "120-bots-expanded@typewriter": {
-  "sha": "b09563561a109d86fe2e43a4a086076c1171bb3f",
+  "sha": "845175d9f724c576208d4744d6623d455682b4be",
   "w": 1440,
   "h": 84
  },
@@ -85,7 +85,7 @@
   "h": 84
  },
  "at-rest-11-bots@catalog": {
-  "sha": "d54363134ab640d2e50cbd172179e631629acd31",
+  "sha": "33c351f45f66ba2916dd2805b7ab3fb3d3b64588",
   "w": 1440,
   "h": 84
  },
@@ -120,17 +120,17 @@
   "h": 84
  },
  "expanded@bone": {
-  "sha": "5ac63ec679904111ec80b23f6f0e8dab55d33a3b",
+  "sha": "368553f68d7ce2167aac58456b25d06169edb906",
   "w": 1440,
   "h": 84
  },
  "expanded@catalog": {
-  "sha": "2d5c7826269fcb458c7c303e8ad6e0008ef25b4e",
+  "sha": "f3a81df8bcd9fac4147350232a71d9b9203c1c67",
   "w": 1440,
   "h": 84
  },
  "expanded@graphite": {
-  "sha": "8d16dc118d0d478b8b2e705cbdeda68ba154dbb7",
+  "sha": "9eb3c630ea67bde6cfe9008dd23446099f929d36",
   "w": 1440,
   "h": 84
  },
@@ -145,7 +145,7 @@
   "h": 84
  },
  "minimised@catalog": {
-  "sha": "a193f0846aa3d9cd21cbf3b533808ffc6bfffcd2",
+  "sha": "fe8da88875e16c006161bc6f89be61d4d7f84f38",
   "w": 1440,
   "h": 84
  },
@@ -180,7 +180,7 @@
   "h": 84
  },
  "no-bots-expanded@bone": {
-  "sha": "099a2d20dd390ce8b1a11e94748ef9c7ca16c66d",
+  "sha": "9f40a0480a95c4420d7180d1cf8af1b3a12917f9",
   "w": 1440,
   "h": 84
  },
@@ -205,12 +205,12 @@
   "h": 84
  },
  "no-bots-the-empty-shape@catalog": {
-  "sha": "ea193764ba4d393641e345fe13e04bfb225c400f",
+  "sha": "9d6bcb700fae5c043c0a09dd448d350069bbc57d",
   "w": 1440,
   "h": 84
  },
  "no-bots-the-empty-shape@graphite": {
-  "sha": "bf36306368759861f88768ef0fce6d26b08b432f",
+  "sha": "c4e43cf74a14491441cb634edaa742cccc188be0",
   "w": 1440,
   "h": 84
  },
@@ -225,7 +225,7 @@
   "h": 84
  },
  "no-waits-no-schedules-one-bot@catalog": {
-  "sha": "7a7cce48ee0af32ccf4aa3e079ee1c4d6fef3f51",
+  "sha": "b9aa82c38f1a98b78e9552453cf59ea4ab0622ce",
   "w": 1440,
   "h": 84
  },
@@ -245,7 +245,7 @@
   "h": 84
  },
  "off@catalog": {
-  "sha": "8715d9d280cebd140fbfab954f032a2d89b9cb08",
+  "sha": "931a7775e060206760a87484052bcff6cd01985c",
   "w": 1440,
   "h": 84
  },
@@ -310,12 +310,12 @@
   "h": 119
  },
  "orb-focus@graphite": {
-  "sha": "f394c2b7484259437e1015caaa4a3382ae6e3b0f",
+  "sha": "6acbebdd3462ce5a382988218167eeb8f2e8e6a6",
   "w": 1440,
   "h": 119
  },
  "orb-focus@typewriter": {
-  "sha": "f3974430fcd24d7038ce1a59535e5b131dc1fd47",
+  "sha": "49e2e89aca86d5d4ff1761b0a244e582aa40b9de",
   "w": 1440,
   "h": 119
  },
@@ -340,7 +340,7 @@
   "h": 84
  },
  "orb-tooltip@bone": {
-  "sha": "9ba1acf8ab40eabec18f2981d42e5144c91add44",
+  "sha": "85c4a1f2628ae329871ac1f60eb9fe8526cefe35",
   "w": 1440,
   "h": 119
  },
@@ -350,12 +350,12 @@
   "h": 119
  },
  "orb-tooltip@graphite": {
-  "sha": "f394c2b7484259437e1015caaa4a3382ae6e3b0f",
+  "sha": "af9e9c7af81225c7749f7026ddc4dd3da7c85653",
   "w": 1440,
   "h": 119
  },
  "orb-tooltip@typewriter": {
-  "sha": "fe9208a8433497a280ccd59b9e9dbe0e88a71e85",
+  "sha": "a82ed914e73e17484529266bd3b3a07aee5ad0f6",
   "w": 1440,
   "h": 119
  },
@@ -385,7 +385,7 @@
   "h": 84
  },
  "the-schedules-page@catalog": {
-  "sha": "d87502671b85a926067a361dba33dbf1b247bd24",
+  "sha": "1172abaea7141d19007bd58020797e911fc5ae10",
   "w": 1440,
   "h": 84
  },
@@ -395,12 +395,12 @@
   "h": 84
  },
  "the-schedules-page@typewriter": {
-  "sha": "eb19876e153b799debbdc0c34dcba30e8d343e23",
+  "sha": "bc7457728a464a954471b0128a9f2b4818d3dc76",
   "w": 1440,
   "h": 84
  },
  "the-waiting-page@bone": {
-  "sha": "385c94588b1ed8bab4be2bca53c2ba197f67b380",
+  "sha": "b44e6bc231368761bc64d023eedcfc48005088cc",
   "w": 1440,
   "h": 84
  },
