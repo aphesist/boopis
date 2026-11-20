@@ -139,7 +139,8 @@ All jobs run in parallel on `ubuntu-22.04` and are cached (cargo through `Swatin
 | `rust` | `cargo fmt --check`, `clippy --workspace --all-targets -D warnings`, `cargo test --workspace`, the Tauri host included (WebKitGTK apt packages); the bindings test is the staleness check for `bindings.ts` |
 | `hx` | builds the `hx` binary once and shares it with `plugin` and `e2e` |
 | `plugin` | ruff (check and format), pyright and pytest on Python 3.11 and 3.14, no Hermes needed |
-| `ui` | `pnpm typecheck`, `pnpm test` (vitest), Playwright smoke with Chromium |
+| `ui` | `pnpm typecheck`, `pnpm test` (vitest), Playwright smoke with Chromium, and the dock in real WebKitGTK (`tests/e2e/dock_webkit.py`) |
+| `lab` | the UI lab (`docs/UI-LAB.md`): all 720 states in every preset and width; **blocking for every check but `visual`**, whose screenshot differences are counted and uploaded (`lab-report`) but never fail the job, since the runner's font rasteriser differs from the machine the goldens were taken on |
 | `runtime` | builds the Hermes runtime the installer ships (`scripts/build-runtime.sh`, cached on the scripts) and proves it relocatable (`scripts/verify-runtime.sh`); uploads `hermes-runtime-linux-x86_64` |
 | `e2e` | **non-blocking for now** (`continue-on-error`): the `runtime` artifact unpacked (what ships), plus the fake model: `tests/e2e`, the sandbox tests (also on the bundled interpreter), and the host's first-run test, which unpacks the archive itself (`setup_live bundled`) |
 

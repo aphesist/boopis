@@ -323,11 +323,11 @@ jobs:
 
   lab:
     # The UI lab (docs/UI-LAB.md): every story's every state through the geometry, concentric-corner, overlay, token,
-    # native-control, scrollbar, brand, axe, stability and screenshot checks, in every preset and width. NON-BLOCKING
-    # until the fix agents get it green (docs/UI-LAB-FINDINGS.md lists what fails today): continue-on-error keeps the
-    # workflow green while the job shows red. Make it blocking by deleting continue-on-error once a run passes.
+    # native-control, scrollbar, brand, axe, stability and screenshot checks, in every preset and width. BLOCKING for
+    # every check but `visual`: a full run reported 0 failures in all 720 states on 20 November 2026. The screenshot
+    # comparison stays a report (counted, uploaded, never failing the job): its goldens are taken in the lab's Chromium on
+    # a developer machine, and the runner's font rasteriser differs, so a pixel diff here is not a defect by itself.
     runs-on: ubuntu-22.04
-    continue-on-error: true
     timeout-minutes: 180
     defaults:
       run:
@@ -354,9 +354,18 @@ jobs:
         if: steps.pw-cache.outputs.cache-hit != 'true'
       - run: pnpm exec playwright install-deps chromium
         if: steps.pw-cache.outputs.cache-hit == 'true'
-      # the whole matrix: about an hour on four cores. Goldens were taken in the lab's own Chromium; a font rasteriser that
-      # differs here shows as visual failures only (docs/UI-LAB.md)
-      - run: pnpm lab:check --strict --jobs 2
+      # the whole matrix: about 40 minutes at two at a time. The run itself always finishes; the next step decides
+      - run: pnpm lab:check --jobs 2
+      - name: every check but the screenshot comparison passes
+        run: |
+          node -e '
+            const s = require("./lab-report/summary.json");
+            const bad = s.findings.filter((f) => f.check !== "visual");
+            const visual = s.findings.length - bad.length;
+            console.log("lab: " + bad.length + " failures that block, " + visual + " screenshot differences (reported only)");
+            for (const f of bad.slice(0, 50)) console.log("  " + f.check + " | " + f.story + " / " + f.state + " | " + f.el + " | " + f.msg);
+            process.exit(bad.length ? 1 : 0);
+          '
       - uses: actions/upload-artifact@v4
         if: always()
         with:

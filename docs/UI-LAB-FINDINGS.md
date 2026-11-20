@@ -1,5 +1,7 @@
 # UI lab findings
 
+**Resolved.** This is the first run's record, kept for its causes. Four area fixers and two finishing passes took it from 4,207 failures to 0: a full `pnpm lab:check` of all 720 states on 20 November 2026 reports none, and CI's `lab` job now blocks on every check but `visual` (docs/RELEASING.md).
+
 The first full run of the lab on the kit, `@boopis/ui` (`pnpm lab:check`, docs/UI-LAB.md), on 2026-11-19: 719 states in 106 stories, in the presets catalog, graphite, bone, typewriter at 390, 1200, 1440, 1920 px, each at rest and with hover, focus and pressed forced. **4207 failures** (the same failure in several states counts once per state). Screenshots were accepted as the first goldens in this run, so there are no visual failures yet.
 
 Each area is one fix agent's. Run one area with `pnpm lab:check --area <id>` (add `--quick` while fixing), and one story with `--story <id>`. The report (`lab-report/index.html`) has a crop of every failure and the mock's counterpart. Lines below collapse the same failure across states: the element, the states (with their count), where it shows (presets, widths, forced state), and a one-line guess at the cause. The guesses are guesses: read the crop first.

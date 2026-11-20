@@ -20,7 +20,7 @@ pnpm lab:check --story dock/dock --state "one bot"
 pnpm lab:check --quick                # two presets (catalog, bone), one width (1440): the fast loop while fixing
 pnpm lab:check --draw-only            # only that every state draws without an error
 pnpm lab:check --update               # accept the screenshots as the new goldens
-pnpm lab:check --strict               # exit 1 on any failure (CI)
+pnpm lab:check --strict               # exit 1 on any failure (CI blocks on every check but visual: docs/RELEASING.md)
 ```
 
 Other flags: `--presets catalog,bone`, `--widths 390,1440`, `--jobs 3`, `--dpr 1.6` (the owner's fractional scale as the device pixel ratio; add `--no-visual`, the goldens are at 1), `--no-visual`, `--no-axe`, `--no-stability`.
