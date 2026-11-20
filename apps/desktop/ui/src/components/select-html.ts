@@ -7,6 +7,7 @@ import type { Attrs } from '../core/dom';
 import { ariaKeys, keyLabel } from '../core/keys';
 import { icon } from './icons';
 import { markHTML, modelFamily } from './model-mark';
+import { modelName } from './model-name';
 import type { ModelRef } from './model-mark';
 
 type U<T> = T | undefined;
@@ -36,7 +37,7 @@ export function modelEntries(models: readonly string[]): SelectEntry[] {
     const f = modelFamily(m);
     let g = byFamily.get(f.id);
     if (!g) { g = { name: f.name, first: m, options: [] }; byFamily.set(f.id, g); }
-    g.options.push({ value: m, model: m, mono: true });
+    g.options.push({ value: m, label: modelName(m) || m, model: m });
   }
   if (byFamily.size < 2) return [...byFamily.values()].flatMap((g) => g.options);
   return [...byFamily.values()].map((g) => ({ label: g.name, model: g.first, options: g.options }));
@@ -55,14 +56,14 @@ export function optionHTML(o: SelectOption, selected: boolean): string {
 }
 /** the open list: a surface (the library's squircle frame, which does not scroll) around the scrolling `role="listbox"`; a header is
     the accessible name of its `group` and is not itself an option */
-export function listboxHTML(entries: readonly SelectEntry[], o: { id: string; label?: U<string>; value?: U<string | null> }): string {
+export function listboxHTML(entries: readonly SelectEntry[], o: { id: string; label?: U<string>; value?: U<string | null>; foot?: U<string> }): string {
   const body = entries.map((e) => {
     if (!isGroup(e)) return optionHTML(e, e.value === o.value);
     const gid = nid('lbg'), mark = e.model != null ? markHTML(e.model, { size: 16, label: false }) : e.icon ? icon(e.icon) : '';
     return '<div class="ui-listbox__group" role="group" aria-labelledby="' + gid + '"><div class="ui-listbox__head" role="presentation" id="' + gid + '">' + mark + '<span>' + esc(e.label) + '</span></div>' +
       e.options.map((x) => optionHTML(x, x.value === o.value)).join('') + '</div>';
   }).join('');
-  return '<div class="ui-listbox"><div class="ui-listbox__list ui-scroll ui-scroll--inset-both" role="listbox" id="' + esc(o.id) + '"' + attrs({ 'aria-label': o.label }) + '>' + body + '</div></div>';
+  return '<div class="ui-listbox"><div class="ui-listbox__list ui-scroll ui-scroll--inset-both" role="listbox" id="' + esc(o.id) + '"' + attrs({ 'aria-label': o.label, 'aria-describedby': o.foot ? o.id + '-foot' : null }) + '>' + body + '</div>' + (o.foot ? '<div class="ui-menu__foot" id="' + esc(o.id) + '-foot">' + esc(o.foot) + '</div>' : '') + '</div>';
 }
 
 export interface SelectOpts {

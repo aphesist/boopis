@@ -15,6 +15,8 @@ import { createLiveBots } from './live/bots';
 import { todosFrom } from './live/map-details';
 import { blankData } from './live/blanks';
 import { createModsHost } from './live/mods';
+import { loadModelsView } from './setup-bridge';
+import { tiersFromHost } from './live/models';
 import { chooseAnotherModel, createFormsHost, hasHostDialogs, hostCancelSignin, hostSignin, tauriPickFolder } from './live/forms';
 import type { XSignin } from './live/forms';
 import { tauriConnectorsBridge } from './connectors-bridge';
@@ -60,7 +62,7 @@ export interface LiveOptions {
   botsPollMs?: number | null;
 }
 
-interface Running { turn: AgentTurn; text: string; steps: AgentTurn['steps'][number][]; startedAt: number }
+interface Running { /** the tiers the ladder ran this turn on, as 'provider/model', in order */ tiers: string[]; turn: AgentTurn; text: string; steps: AgentTurn['steps'][number][]; startedAt: number }
 interface Convo {
   uiId: string;
   /** the gateway's id for the session once it is live there */
@@ -71,6 +73,8 @@ interface Convo {
   events: ReturnType<typeof emitter<ConversationEvent>>;
   hydrated: boolean;
   model: string;
+  /** why Smart chose the model of the message just sent; read by the turn that starts */
+  why: string | null;
   running: Running | null;
 }
 
@@ -96,11 +100,11 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   const creating = new Set<Promise<string>>();
   const convo = (uiId: string): Convo => {
     let c = convos.get(uiId);
-    if (!c) { c = { uiId, gwId: null, generation: 0, turns: [], events: emitter<ConversationEvent>(), hydrated: false, model: '', running: null }; convos.set(uiId, c); }
+    if (!c) { c = { uiId, gwId: null, generation: 0, turns: [], events: emitter<ConversationEvent>(), hydrated: false, model: '', why: null, running: null }; convos.set(uiId, c); }
     return c;
   };
   const bind = (c: Convo, gwId: string): void => { c.gwId = gwId; byGw.set(gwId, c.uiId); };
-  const details = createDetails({ client, ...(opts.connectors ? { connectors: opts.connectors } : hasHostDialogs() ? { connectors: tauriConnectorActions() } : {}), now: () => now().getTime(), gwId: (id) => convos.get(id)?.gwId ?? (id.startsWith('new-') ? null : id), onRefreshed: (id) => { const c = convos.get(id); if (c) syncBlanks(c); } });
+  const details = createDetails({ client, ...(hasHostDialogs() ? { hostLadder: async () => { const v = await loadModelsView(); return v.state === 'set' ? tiersFromHost(v.tiers) : []; } } : {}), ...(opts.connectors ? { connectors: opts.connectors } : hasHostDialogs() ? { connectors: tauriConnectorActions() } : {}), now: () => now().getTime(), gwId: (id) => convos.get(id)?.gwId ?? (id.startsWith('new-') ? null : id), onRefreshed: (id) => { const c = convos.get(id); if (c) syncBlanks(c); } });
   /* Claude Code mods: what a session's mods draw (`mod.*` events) and the answers sent back; one `ModSession` per session */
   const modsHost = createModsHost({ client, uiOf: (gw) => byGw.get(gw), gwOf: (id) => convos.get(id)?.gwId ?? null });
   const user = store<User>({ name: 'you', initials: 'y' });
@@ -175,9 +179,10 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   /* ───────── events → the conversation ───────── */
   function startTurn(c: Convo): Running {
     if (c.running) return c.running;
-    const turn: AgentTurn = { id: nextId('t'), role: 'assistant', model: c.model, time: '0s', cost: '', stepCount: 0, steps: [], paragraphs: [], bullets: [], status: 'running' };
+    const turn: AgentTurn = { id: nextId('t'), role: 'assistant', model: c.model || details.currentModel(c.uiId), ...(c.why ? { why: c.why } : {}), time: '0s', cost: '', stepCount: 0, steps: [], paragraphs: [], bullets: [], status: 'running' };
     c.turns.push(turn);
-    c.running = { turn, text: '', steps: [], startedAt: Date.now() };
+    c.running = { turn, tiers: [], text: '', steps: [], startedAt: Date.now() };
+    c.why = null;
     c.events.emit({ type: 'turn-added', turn });
     patchSession(c.uiId, { running: true, when: 'now' });
     return c.running;
@@ -186,17 +191,19 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     r.steps.push(step);
     c.events.emit({ type: 'step-added', turnId: r.turn.id, step });
   }
-  function finishTurn(c: Convo, text: string | null, stopped: boolean): void {
+  function finishTurn(c: Convo, text: string | null, stopped: boolean, answered?: string): void {
     const r = c.running;
     if (!r) return;
     const finalText = text ?? r.text;
     const paras = paragraphs(finalText);
     const time = elapsed(Date.now() - r.startedAt);
     const i = c.turns.indexOf(r.turn);
-    const done: AgentTurn = { ...r.turn, time, stepCount: r.steps.length, steps: r.steps, paragraphs: paras, status: stopped ? 'stopped' : 'done' };
+    /* who answered: the tiers the ladder ran (governed), else the model the engine reported for the turn */
+    const model = r.tiers.length ? r.tiers.join(' → ') : answered || r.turn.model;
+    const done: AgentTurn = { ...r.turn, model, time, stepCount: r.steps.length, steps: r.steps, paragraphs: paras, status: stopped ? 'stopped' : 'done' };
     if (i >= 0) c.turns[i] = done;
     c.running = null;
-    c.events.emit({ type: 'turn-finished', turnId: r.turn.id, time, cost: '', stepCount: r.steps.length, paragraphs: paras, stopped });
+    c.events.emit({ type: 'turn-finished', turnId: r.turn.id, time, cost: '', stepCount: r.steps.length, paragraphs: paras, stopped, model, ...(r.turn.why ? { why: r.turn.why } : {}) });
     patchSession(c.uiId, { running: false });
   }
 
@@ -264,8 +271,19 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
         const text = typeof p['text'] === 'string' ? p['text'] : null;
         const outcome = typeof p['outcome'] === 'string' ? p['outcome'] : 'completed';
         if (!c.running) startTurn(c);
-        finishTurn(c, text, outcome !== 'completed');
+        const usage = p['usage'] as { model?: unknown } | undefined;
+        finishTurn(c, text, outcome !== 'completed', typeof usage?.model === 'string' ? usage.model : undefined);
         if (!modsHost.known(uiId)) void modsHost.attach(uiId);   /* mods load at a session's first prompt */
+        break;
+      }
+      case 'plugin.boopis.cascade.updated': {
+        /* governed: the tier a task attempt runs on. The turn shows the tiers in order, the last one answered */
+        const r = c.running, tier = p['tier'];
+        const t = typeof tier === 'string' ? details.model(uiId).cascade?.ladder?.find((x) => x.name === tier) : undefined;
+        if (r && t) {
+          const ref = t.model.provider + '/' + t.model.id;
+          if (r.tiers[r.tiers.length - 1] !== ref) { r.tiers.push(ref); c.events.emit({ type: 'turn-model', turnId: r.turn.id, model: r.tiers.join(' → ') }); }
+        }
         break;
       }
       case 'approval.request': {
@@ -409,7 +427,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
       client.request('session.archive', { session_id: id, archived: false }).catch((e: unknown) => { log.warn('could not restore', e); });
     },
     send(id, text, meta: SendMeta) {
-      // governed and Smart live in the details source (the user's choice, applied when the session is created); the attachments ride here
+      // governed mode lives in the details source; who answers is decided per message below, and the attachments ride here
       const c = convo(id);
       details.onSent(id, text);
       const attachments = meta.attachments ?? [];
@@ -417,6 +435,8 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
       c.turns.push(user);
       c.events.emit({ type: 'turn-added', turn: user });
       ensureLive(c)
+        /* who answers is decided now, for this message: Smart's rule or the user's pick, applied through the engine before it goes */
+        .then(async (gw) => { const who = await details.prepareSend(id, text, { attachments: attachments.length }); if (who.model) c.model = who.model; c.why = who.why; return gw; })
         .then(async (gw) => {
           const refs = attachments.length ? await stageAttachments((m, p) => client.requestRaw(m, p), gw, attachments) : [];   /* files, pictures and folders go first (live/attachments.ts) */
           return client.requestRaw('prompt.submit', { session_id: gw, text: withRefs(text, refs), submission_id: 'sub-' + crypto.randomUUID() }); /* the gateway requires submission_id; the vendored contract does not list it yet */

@@ -40,23 +40,103 @@
   "h": 194
  },
  "typical@bone": {
-  "sha": "09b0f3c1f41cc22001d98425d21276f189e6ad71",
+  "sha": "7a8b4bab5461c538cfb30cc894ab7827c64348b8",
   "w": 1416,
   "h": 363
  },
  "typical@catalog": {
-  "sha": "f187139e42a8c2ca8f8a1740a2d407763a361a45",
+  "sha": "e6ad05ee178223452bfca98a43d79e2aac265462",
   "w": 1416,
   "h": 363
  },
  "typical@graphite": {
-  "sha": "edb3545e16c6f6e51e1c5d3a0844655cf7919c12",
+  "sha": "df80b644830c7336ca5abd3309a2bf2ba2e9d810",
   "w": 1416,
   "h": 363
  },
  "typical@typewriter": {
-  "sha": "b3ed9a59f6afd29bb0bbf82d63535f74d1d740aa",
+  "sha": "bf899cd2bf4f239e13965e3e6f6374fb09be9ebb",
   "w": 1416,
   "h": 363
+ },
+ "who-answers-next-a-model-chosen@bone": {
+  "sha": "9df50d94193ae631f034be93d0d2aa86ab753d70",
+  "w": 1416,
+  "h": 418
+ },
+ "who-answers-next-a-model-chosen@catalog": {
+  "sha": "7f549970875ec170bfd0f382431fae51756f5743",
+  "w": 1416,
+  "h": 418
+ },
+ "who-answers-next-a-model-chosen@graphite": {
+  "sha": "5aa07a1dccd3908d9e64d3c57792e36f887bfe0e",
+  "w": 1416,
+  "h": 418
+ },
+ "who-answers-next-a-model-chosen@typewriter": {
+  "sha": "027a9d5192377c969b731f742edd6de06333db78",
+  "w": 1416,
+  "h": 418
+ },
+ "who-answers-next-governed-off-ladder-models-disabled@bone": {
+  "sha": "e2c3acdb64b563261cb2afa58f4d5c0a53de79bd",
+  "w": 1416,
+  "h": 418
+ },
+ "who-answers-next-governed-off-ladder-models-disabled@catalog": {
+  "sha": "870b60ea485fa8b0b8448b4bad7bdf3203086d66",
+  "w": 1416,
+  "h": 418
+ },
+ "who-answers-next-governed-off-ladder-models-disabled@graphite": {
+  "sha": "3caf783cd3f8e085e0b3ea59b32baa2ae6af307f",
+  "w": 1416,
+  "h": 418
+ },
+ "who-answers-next-governed-off-ladder-models-disabled@typewriter": {
+  "sha": "c67df27d1b2b245370da408497807fb3ddabdf90",
+  "w": 1416,
+  "h": 418
+ },
+ "who-answers-next-smart-on@bone": {
+  "sha": "6199d863c9df1ba5d2ad038b4955db37361410c8",
+  "w": 1416,
+  "h": 418
+ },
+ "who-answers-next-smart-on@catalog": {
+  "sha": "e3d01ed1f68c461d8f89fdc6438447402166869a",
+  "w": 1416,
+  "h": 418
+ },
+ "who-answers-next-smart-on@graphite": {
+  "sha": "80d23d08fe99c83ebf940f51995189086f497690",
+  "w": 1416,
+  "h": 418
+ },
+ "who-answers-next-smart-on@typewriter": {
+  "sha": "72d8a2799a7b3899a15bd30cb5a6ee0f095c364f",
+  "w": 1416,
+  "h": 418
+ },
+ "who-answers-next-the-answering-model-is-not-listed@bone": {
+  "sha": "4fe9a4b2597307515b9ea0bfa7836d76d57c312f",
+  "w": 1416,
+  "h": 418
+ },
+ "who-answers-next-the-answering-model-is-not-listed@catalog": {
+  "sha": "79466cb4b6c924f38092c5187287aad4c91e6560",
+  "w": 1416,
+  "h": 418
+ },
+ "who-answers-next-the-answering-model-is-not-listed@graphite": {
+  "sha": "b49520dfea38dabf9bf412b9c2b4b25f8dab1a85",
+  "w": 1416,
+  "h": 418
+ },
+ "who-answers-next-the-answering-model-is-not-listed@typewriter": {
+  "sha": "03fc47797e0c75857c94248160bcae3c3a8b0e33",
+  "w": 1416,
+  "h": 418
  }
 }

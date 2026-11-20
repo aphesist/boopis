@@ -251,7 +251,8 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
       return Promise.resolve(freed);
     },
     setGovernance(patch) { governance.update((g) => ({ ...g, ...patch })); return null; },
-    models: store(M.CATALOG.models), follow() { /* the mock has one session's details */ }, notes: store({}), can: store({ compact: true, connectors: true, signIn: true }),
+    models: store(M.CATALOG.models), /* the preview's models as the ladder runs them: the catalogue lists the strongest first, the ladder starts with the cheapest */
+    choices: store(M.CATALOG.models.map((m, i, all) => ({ value: 'mock/' + m, provider: 'mock', model: m, providerName: 'Preview', tier: all.length - 1 - i, tierName: m.split(' ')[0] ?? m }))), follow() { /* the mock has one session's details */ }, notes: store({}), can: store({ compact: true, connectors: true, signIn: true }),
     setConnector(name, on) { connectors.update((l) => l.map((c) => (c.name === name ? { ...c, state: on ? 'on' : 'off' } : c))); },
     signIn(name) {
       return new Promise((resolve) => { setTimeout(() => { connectors.update((l) => l.map((c) => (c.name === name ? { ...c, state: 'on' } : c))); resolve(); }, 900); });

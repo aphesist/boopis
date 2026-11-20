@@ -25,12 +25,12 @@ const KIT_TS = ALL.filter((p) => p.startsWith('src/components/') && p.endsWith('
 describe('the kit is pure', () => {
   /* what the kit may import outside itself: the DOM and key helpers, the log, the event bus (re-reading tokens on hx:theme), the colour
      maths, the token source, and the vendored elements */
-  const ALLOWED = [/^\.\.?\/(?!\.\.)/, /^\.\.\/core\/(dom|keys|log|bus|types)$/, /^\.\.\/\.\.\/core\/(dom|keys|log|bus|types)$/, /^\.\.\/styles\/colour$/, /^(\.\.\/)+vendor\//, /^node:/];
+  const ALLOWED = [/^\.\.?\/(?!\.\.)/, /^\.\.\/core\/(dom|keys|log|bus|types)$/, /^\.\.\/\.\.\/core\/(dom|keys|log|bus|types)$/, /^\.\.\/styles\/colour$/, /^(\.\.\/)+vendor\//, /^(\.\.\/)+shared\/data\/model-names\.json$/, /^node:/];
   it('imports nothing from the app', () => {
     const bad: string[] = [];
     for (const p of KIT_TS) for (const m of read(p).matchAll(/(?:^|\n)\s*(?:import|export)[^'"\n]*?from\s+'([^']+)'/g)) {
       const spec = m[1] ?? '';
-      if (!ALLOWED.some((r) => r.test(spec)) || /\/(modules|host|data)\//.test(spec) || /core\/(state|settings|registry)$/.test(spec)) bad.push(p + ' -> ' + spec);
+      if (!ALLOWED.some((r) => r.test(spec)) || /\/(modules|host|data)\//.test(spec.replace('shared/data/', '')) || /core\/(state|settings|registry)$/.test(spec)) bad.push(p + ' -> ' + spec);
     }
     expect(bad).toEqual([]);
   });

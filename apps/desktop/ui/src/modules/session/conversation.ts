@@ -53,8 +53,23 @@ function userTurn(text: string, at: string, attachments: readonly Attached[] = [
   const chips = attachments.length ? [el('div', { class: 'ss-attached', role: 'list', 'aria-label': 'Attached' }, attachments.map((a) => { const f = fileChip(a.name, { kind: a.kind, ...(a.path ? { title: a.path } : {}) }); f.setAttribute('role', 'listitem'); return f; }))] : [];
   return turn({ kind: 'user', callno: ['You', at], label: 'You, ' + at, body: [ui.request(text), ...chips], copy: true, md: () => '> ' + text, text });
 }
-const modelLines = (model: string): string[] => String(model).split(/\s*→\s*/).map((m, i) => (i ? '→ ' : '') + m);
-const modelSay = (model: string): string => String(model).split(/\s*→\s*/).join(' then ');
+/* the models of a turn as call-number lines: a family the kit knows is drawn with its mark and readable name by the entry; one it
+   does not know is written by its readable name here, never as the engine's id */
+const known = (m: string): boolean => ui.modelMark.family(m).id !== 'generic';
+const modelLines = (model: string): string[] => ui.modelMark.parse(model).map((m, i) => (i ? '→ ' : '') + (known(m) ? m : ui.modelMark.called(m) || m));
+const modelSay = (model: string): string => ui.modelMark.parse(model).map((m) => ui.modelMark.called(m) || m).join(' then ');
+/** what a turn's meta says of its model: the models, then why Smart picked them */
+const metaLines = (model: string, why?: string): string[] => [...modelLines(model), ...(why ? [why] : [])];
+/** the time of a turn is the last plain line of its call number; the lines before it are its models (and why) */
+function timeLine(t: HTMLElement): HTMLElement { const l = [...$('.ui-callno', t).children].filter((c) => c.tagName === 'SPAN' && !c.classList.contains('ui-callno__who') && !c.classList.contains('ss-acts')); return l[l.length - 1] as HTMLElement; }
+/** draw the models (and the reason) of a turn again, leaving the time where it is */
+function setModelLines(t: HTMLElement, model: string, why?: string): void {
+  const callno = $('.ui-callno', t), time = timeLine(t);
+  const tmp = ui.entry({ kind: 'agent', callno: [...metaLines(model, why), '0s'], label: '' });
+  const fresh = [...tmp.querySelectorAll('.ui-callno > :is(span, b)')].slice(0, -1);
+  for (const c of [...callno.children]) { if (c === time) break; if (!c.classList.contains('ui-callno__who')) c.remove(); }
+  fresh.forEach((n) => callno.insertBefore(n, time));
+}
 function prose(paras: readonly string[], bullets?: readonly string[]): HTMLElement {
   const p = el('div', { class: 'ui-prose' });
   paras.forEach((t) => p.append(el('p', { html: ui.html.inline(t) })));
@@ -156,7 +171,7 @@ function assistantTurn(a: AgentTurn): HTMLElement {
   VIEW.reveal = el('div', { class: 'ss-reveal', hidden: true });
   const hasSteps = a.steps.length > 0;
   const t = turn({
-    kind: 'agent', callno: modelLines(a.model).concat([a.time, a.cost], hasSteps ? [] : [a.stepCount + ' steps']), steps: hasSteps ? { count: a.stepCount, id } : undefined,
+    kind: 'agent', callno: metaLines(a.model, a.why).concat([a.time, a.cost], hasSteps ? [] : [a.stepCount + ' steps']), steps: hasSteps ? { count: a.stepCount, id } : undefined,
     label: modelSay(a.model) + ', ' + a.time + ', ' + a.cost, body: [hasSteps ? ui.steps({ items: a.steps as Step[], id, hidden: true }) : null, p, a.ship ? VIEW.reveal : null].filter((n): n is HTMLElement => !!n),
     copy: true, md: () => mdOf(p)
   });
@@ -168,16 +183,16 @@ function assistantTurn(a: AgentTurn): HTMLElement {
 }
 
 /* a turn that is still running: a live call number and steps, then the answer arrives on the feed */
-interface Live { t: HTMLElement; ol: HTMLElement; disc: HTMLElement; timeEl: HTMLElement; tick: number; secs: number; model: string; count: number; startedAt: number; prose: HTMLElement | null; blankEl: HTMLElement | null }
+interface Live { t: HTMLElement; ol: HTMLElement; disc: HTMLElement; timeEl: HTMLElement; tick: number; secs: number; model: string; why: string | undefined; count: number; startedAt: number; prose: HTMLElement | null; blankEl: HTMLElement | null }
 const live = new Map<string, Live>();
 function liveTurn(a: AgentTurn): void {
   const id = 'ss-steps-' + randomId('');
   const ol = ui.steps({ items: [], id });
-  const t = turn({ kind: 'agent', callno: [a.model, '0s'], steps: { count: 0, id, open: true }, label: a.model + ', working', body: [ol], md: () => '' });
+  const t = turn({ kind: 'agent', callno: [...metaLines(a.model, a.why), '0s'], steps: { count: 0, id, open: true }, label: modelSay(a.model) + ', working', body: [ol], md: () => '' });
   t.setAttribute('aria-busy', 'true');
-  const disc = $('.ui-disclosure', t), timeEl = $('.ui-callno span', t);
+  const disc = $('.ui-disclosure', t), timeEl = timeLine(t);
   $('span', disc).textContent = 'Working'; disc.prepend(frag(ui.html.dot('run')));
-  const L: Live = { t, ol, disc, timeEl, tick: 0, secs: 0, model: a.model, count: 0, startedAt: Date.now(), prose: null, blankEl: null };
+  const L: Live = { t, ol, disc, timeEl, tick: 0, secs: 0, model: a.model, why: a.why, count: 0, startedAt: Date.now(), prose: null, blankEl: null };
   L.tick = window.setInterval(() => { L.secs++; timeEl.textContent = L.secs + 's'; }, 1000);
   live.set(a.id, L);
   if (a.blank) addLiveBlank(L, a);
@@ -202,7 +217,8 @@ function finishLive(id: string, ev: Extract<ConversationEvent, { type: 'turn-fin
   timeEl.textContent = ev.time; timeEl.after(el('span', { text: ev.cost }));
   disc.replaceChildren(frag(ui.icon('chevron')), el('span', { text: (ev.stopped ? 'Stopped after ' : '') + ev.stepCount + ' steps' }));
   disc.setAttribute('aria-expanded', 'false'); ol.hidden = true;
-  t.removeAttribute('aria-busy'); t.setAttribute('aria-label', L.model + ', ' + ev.time + ', ' + ev.cost);
+  t.removeAttribute('aria-busy'); if (ev.model) { L.model = ev.model; L.why = ev.why ?? L.why; setModelLines(t, ev.model, L.why); }
+  t.setAttribute('aria-label', modelSay(L.model) + ', ' + ev.time + ', ' + ev.cost);
   const p = prose(ev.paragraphs);
   if (L.prose) L.prose.replaceWith(p); else if (L.blankEl) L.blankEl.before(p); else placeProse(t, p);
   TURN.set(t, { md: () => mdOf(p), kind: 'agent' });
@@ -261,6 +277,7 @@ function onConversationEvent(ev: ConversationEvent): void {
   }
   else if (ev.type === 'form-opened') addForm(ev.turnId, ev.form);
   else if (ev.type === 'form-resolved') resolveForm(ev.formId, ev.status);
+  else if (ev.type === 'turn-model') { const L = live.get(ev.turnId); if (L) { L.model = ev.model; setModelLines(L.t, ev.model, L.why); } }
   else if (ev.type === 'turn-finished') finishLive(ev.turnId, ev);
   else if (ev.type === 'blank-answered') {
     const first = !VIEW.blank;

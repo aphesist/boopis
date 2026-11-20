@@ -98,7 +98,7 @@ export function mountRight(root: HTMLElement): void {
     capBtn.addEventListener('click', () => ui.menu.open(capBtn, [{ title: 'Stop the session at' }, ...['$0.30', '$0.60', '$1.00', '$2.00'].map((v) => ({ label: v, value: v, mono: true, checked: v === gv.cap }))], { align: 'end', onSelect: (v) => setGovernance({ cap: v }) }));
     const capRow = gv.governed
       ? (gv.cap && gv.spent ? el('div', { class: 'ssr-cap' }, [el('span', { class: 'ssr-key', text: 'Spend' }), ui.capacity({ spent: gv.spent, cap: gv.cap }), capBtn]) : el('p', { class: 'ssr-note', text: gv.spent ? 'Spent ' + gv.spent + ', no cap set.' : 'Spend: unknown' + (gv.cap ? ', cap ' + gv.cap : '') }))
-      : el('p', { class: 'ssr-note', text: 'Ungoverned: every turn runs on ' + gv.model + ' with no cost cap. The sandbox still applies.' });
+      : el('p', { class: 'ssr-note', text: 'Ungoverned: every turn runs on ' + ui.modelMark.called(gv.model) + ' with no cost cap. The sandbox still applies.' });
     const ladderEl = gv.ladder.length ? [ladder] : [];
     return [seg, ...ladderEl, capRow, ...(gv.locked ? [el('p', { class: 'ssr-note', text: 'The mode is fixed once the first message is sent.' })] : []), ...noteOf('governance')];
   }

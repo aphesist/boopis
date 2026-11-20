@@ -4,8 +4,8 @@
    has no roster: the Bots tab must show none of the mock's, not say Preview, and open on the form that makes the first. */
 import { check, scenario } from './harness.mjs';
 
-/* words only the mock's data contains (data/mock-data.ts) */
-const MOCK = ['billing-api', 'proration', 'prorate', 'enzo', 'qwen3', 'sonnet 5.5', 'haiku 4.5', 'opus 5.5', 'cents/proration', '142 passed', 'src/billing', 'invoices-sample', 'bubblewrap', 'github', 'postgres', 'linear', 'sentry'];
+/* words only the mock's data contains (data/mock-data.ts). Its model names ('sonnet 5.5') are left out: a readable Claude model name is also what a real ladder reads as */
+const MOCK = ['billing-api', 'proration', 'prorate', 'enzo', 'qwen3', 'cents/proration', '142 passed', 'src/billing', 'invoices-sample', 'bubblewrap', 'github', 'postgres', 'linear', 'sentry'];
 const text = (page, sel) => page.evaluate((q) => [...document.querySelectorAll(q)].map((n) => n.textContent).join('\n'), sel);
 const leaks = (t) => MOCK.filter((w) => t.toLowerCase().includes(w.toLowerCase()));
 

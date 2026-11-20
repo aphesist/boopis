@@ -26,7 +26,7 @@ Searched `apps/desktop/ui/src` and `index.html` for `<select>`, `<option>`, `<da
 | `modules/bots/new-bot.ts` (confirm sheet: "This makes a Hermes profile for …") | `<select>` Model | `ui.field({ kind: 'model' })` |
 | `modules/bots/settings-live.ts` (bot settings, live) | `<select>` Model | the same |
 | `modules/bots/settings.ts` (bot settings, preview) | `<select>` Model | the same |
-| `modules/session/composer.ts` (alt+M, the model chip) | `ui.menu` of models (role `menu`, not native, but a second picker) | `ui.listbox.open` with Smart first, then `ui.modelEntries` |
+| `modules/session/composer.ts` (alt+M, the model chip) | `ui.menu` of models (role `menu`, not native, but a second picker) | `ui.listbox.open` with Automatic (Smart) first, then the usable models by provider (`modules/session/model-menu.ts`) |
 | `modules/cards/form.ts`, enum titled "Model" (setup's ladder form "Which model should do the work?", through the first-run view and Settings > Models > Change models) | a long radio list | `ui.html.select` with the provider's mark on each model. Titled "Model" is the rule, see the open points |
 | `modules/cards/form.ts`, `x-picker` (model, teammate, folder, file, repo, host, branch) | `ui.menu` of `menuitemradio` | `ui.listbox.open` (the model one is the model picker) |
 | `modules/cards/form.ts`, `integer` and `number` fields | `<input type="number">` (spin buttons) | `type="text"` with `inputmode` `numeric` or `decimal`; `form-model.ts` already validates the number, its range and "whole number" |

@@ -521,3 +521,18 @@ def test_errors_carry_their_code_in_the_text() -> None:
     assert str(err) == "hx.mode.locked: fixed"
     assert parse_code(f"ModeLockedError: {err}") == "hx.mode.locked"
     assert parse_code("nothing here") is None
+
+
+def test_cascade_start_tier_is_allowed_after_the_lock_and_checked_against_the_ladder(make_runtime: MakeRuntime) -> None:
+    rt, ctx = make_runtime()
+    rpc.mode_set({"session_id": SID, "mode": "governed"})
+    first_prompt(rt, ctx)
+    names = [t["name"] for t in rpc.cascade_state({"session_id": SID})["ladder"]]
+    assert len(names) >= 2
+    rpc.cascade_start_tier({"session_id": SID, "start_tier": names[1]})
+    assert rt.start_tier_of(rt.state(SID)) == names[1]
+    with pytest.raises(Exception, match="not a tier"):
+        rpc.cascade_start_tier({"session_id": SID, "start_tier": "nope"})
+    rpc.cascade_start_tier({"session_id": SID, "start_tier": None})
+    assert rt.start_tier_of(rt.state(SID)) != names[1]
+    assert "cascade.start_tier" in rpc.CAPABILITIES

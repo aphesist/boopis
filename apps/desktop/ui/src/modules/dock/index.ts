@@ -85,7 +85,7 @@ function onRun(next: RunSnapshot): void {
   const cost = costHTML(), meter = meterHTML();
   for (const el of $$('[data-run-cost]', X.root)) patchHTML(el, cost);
   for (const el of $$('[data-run-meter]', X.root)) patchHTML(el, meter);
-  if (next.governed !== prev.governed) { const hint = X.root.querySelector('label[for="dk-sw-governed"] small'); if (hint) hint.textContent = next.governed ? 'The ladder picks the model' : `Stays on ${next.model}`; }
+  if (next.governed !== prev.governed) { const hint = X.root.querySelector('label[for="dk-sw-governed"] small'); if (hint) hint.textContent = next.governed ? 'The ladder picks the model' : `Stays on ${ui.modelMark.called(next.model)}`; }
 }
 /** the first session started: the session part exists now. The dock rises in if it was not there, or grows to take the part in. */
 function firstSession(): void {

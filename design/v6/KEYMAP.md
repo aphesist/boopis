@@ -136,8 +136,8 @@ a form's first field, a failed gate's primary action), so F8 and Shift+F8 reach 
 | ↑ (composer empty, caret at start) | Edit your last message |
 | Tab (when "Will assume" shows) | Into the assumptions row: ← → between them, Enter or Space changes the focused one, Delete drops it, shift+Tab or Esc back to the text. With no assumptions, Tab moves on as usual |
 | alt+G | Governed or ungoverned |
-| alt+S | Smart on or off |
-| alt+M | Model picker (↑ ↓, Enter, Esc) |
+| alt+S | Smart (Automatic) on or off |
+| alt+M | Who answers next: the model chip's menu. Automatic (Smart) first, then every usable model by provider (↑ ↓, Enter, Esc) |
 | alt+A | Attach files |
 | alt+V | Talk (the mic, in every composer; owner decision): a tap toggles listening, a hold of 400ms or more talks while held and stops on release. With a bot as the target its orb listens |
 | Esc, while listening | Stop listening (the composer consumes it); the next Esc does what it always does |

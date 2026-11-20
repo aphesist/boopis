@@ -6,14 +6,18 @@
 import { logger } from '../../core/log';
 import type { DetailsSource, RunSource, Watch } from '../../data/provider';
 import { store } from '../../data/store';
-import type { DetailsCan, DetailsNotes, DiffFile, Environment, FileCompletions, GovernanceState, ProviderInfo, RunSnapshot } from '../../data/types';
+import type { ModelChoice, DetailsCan, DetailsNotes, DiffFile, Environment, FileCompletions, GovernanceState, ProviderInfo, RunSnapshot } from '../../data/types';
 import type { GatewayClient, GatewayEvent } from '../gateway';
 import { changesFrom, connectorsFrom, contextFrom, contextNote, costNote, diffFilesFrom, diffNote, environmentFrom, governanceFrom, ledgerFrom, planNote, runFrom } from './map-details';
 import { blanksFromLedger } from './blanks';
+import { recentFailures, smartPick } from '../../data/smart';
+import { choicesFrom, splitValue, switchValue, valueOf } from './models';
+import type { LadderTier } from './models';
+import { ui } from '@boopis/ui';
 import { applyEvent, newModel } from './session-model';
 import type { Part, SessionModel } from './session-model';
 import { isUnknownMethod } from './wire';
-import type { BreakdownWire, CascadeWire, CompletionWire, DescribeWire, DiffWire, InfoWire, InventoryWire, McpStatusWire, StatsWire } from './wire';
+import type { BreakdownWire, CascadeWire, ConfigSetModelWire, ModelOptionsWire, CompletionWire, DescribeWire, DiffWire, InfoWire, InventoryWire, McpStatusWire, StatsWire } from './wire';
 
 const log = logger('live.details');
 const PLUGIN = 'plugin.boopis.';
@@ -29,6 +33,8 @@ export interface DetailsDeps {
   now?: () => number;
   /** a read of a session finished (its blanks may have changed): the provider syncs its conversation and waits */
   onRefreshed?(uiId: string): void;
+  /** the ladder the host has saved (Settings > Models), for a session that is not on the gateway yet and so has no `cascade.state`; empty when none is saved */
+  hostLadder?(): Promise<LadderTier[]>;
   /** what the Connectors section's switch and Sign in button do: the host switches a server through Hermes and runs Hermes's own OAuth
       flow for it. Without it (no desktop host) both controls are disabled and say nothing is wired */
   connectors?: { setEnabled(name: string, enabled: boolean): Promise<void>; signin(name: string): Promise<unknown> };
@@ -49,6 +55,12 @@ export interface LiveDetails {
   /** the link came back after a loss, or events were lost for a session: read again what they would have said */
   onLinkReady(): void;
   onReplayGap(uiId: string): void;
+  /** before a message goes out: choose the model that answers it (Smart's rule, or the user's pick), apply it through the engine's
+   *  per-session model switch (ungoverned) or the plugin's start tier (governed), and say who will answer and why. Rejects when the
+   *  switch fails: the message must not be answered by a model nobody chose. */
+  prepareSend(uiId: string, text: string, meta?: { attachments: number }): Promise<{ model: string; why: string | null }>;
+  /** the model the session answers with now (the engine's, or the user's pick), 'provider/model', for a turn that has not heard from the engine */
+  currentModel(uiId: string): string;
   /** the mode and model the user chose before the first message, to apply at creation */
   chosen(uiId: string): { governed: boolean | null; model: string | null };
   /** whether a session about to be created is governed: the user's choice, else the plugin's default mode. An unknown
@@ -83,13 +95,20 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
   const governance = store<GovernanceState>(EMPTY_GOV);
   const ledger = store(ledgerFrom(null));
   const modelList = store<readonly string[]>([]);
+  const choices = store<readonly ModelChoice[]>([]);
+  let options: ModelOptionsWire | null = null;
+  let hostTiers: LadderTier[] = [];
   const notes = store<DetailsNotes>({});
   const can = store<DetailsCan>({ compact: false, connectors: false, signIn: false });
   const run = store<RunSnapshot>(runFrom({ title: '', model: '', steps: 0, elapsedSeconds: 0, stopped: false, governed: false, stats: null, cascade: null, cap: null }));
 
   const locked = (m: SessionModel): boolean => m.started || m.describe?.session?.locked === true;
   const governedOf = (m: SessionModel): boolean => (locked(m) ? m.describe?.session?.mode === 'governed' : (m.wantGoverned ?? m.describe?.session?.mode === 'governed') || (m.describe?.session == null && m.wantGoverned == null && defaultMode === 'governed'));
-  const modelOf = (m: SessionModel): string => m.wantModel ?? m.info?.model ?? m.usage?.model ?? '';
+  const engineModel = (m: SessionModel): string => (m.info?.model ? valueOf(m.info.provider ?? '', m.info.model) : m.usage?.model ?? (options?.model ? valueOf(options.provider ?? '', options.model) : ''));
+  const modelOf = (m: SessionModel): string => m.wantModel ?? engineModel(m);
+  /** the ladder this session runs: the plugin's, once the session is on the gateway; else the one the host has saved */
+  const ladderOf = (m: SessionModel): LadderTier[] => (m.cascade?.ladder?.length ? m.cascade.ladder.map((t) => ({ name: t.name, provider: t.model.provider, id: t.model.id })) : hostTiers);
+  const publishChoices = (m: SessionModel): void => { choices.set(choicesFrom(options, ladderOf(m))); };
 
   /* ───────── publish: the followed session's record into the panels ───────── */
   function publishFollowed(parts: readonly Part[]): void {
@@ -105,7 +124,8 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
     if (has('diff')) changes.set(changesFrom(m.diff));
     if (has('output')) output.set(m.output);
     if (has('stats')) ledger.set(ledgerFrom(m.stats));
-    if (has('usage', 'info', 'stats', 'cascade')) governance.set(governanceFrom({ describe: m.describe, cascade: m.cascade, stats: m.stats, model: modelOf(m), governed: governedOf(m), locked: locked(m) }));
+    if (has('usage', 'info', 'stats', 'cascade')) governance.set(governanceFrom({ describe: m.describe, cascade: m.cascade, stats: m.stats, model: modelOf(m), governed: governedOf(m), locked: locked(m), smart: m.smart }));
+    if (has('info', 'cascade')) publishChoices(m);
     connectors.set(connectorsFrom(mcp, m.inventory));
     notes.set({
       ...(known ? (contextNote(m.breakdown, true) ? { context: contextNote(m.breakdown, true) } : {}) : { context: contextNote(null, false) }),
@@ -194,6 +214,8 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
     const jobs: Promise<void>[] = [];
     if (pluginOk) jobs.push(read<DescribeWire>(PLUGIN + 'describe', {}).then((r) => { defaultMode = r?.config?.mode ?? null; }));
     jobs.push(read<McpStatusWire>('mcp.servers.status', {}).then((r) => { mcp = r; }));
+    jobs.push((client.requestRaw('model.options', {}) as Promise<ModelOptionsWire>).then((r) => { options = r; }, (e: unknown) => { log.info('model.options was not read, so only the ladder is offered', e); }));
+    if (deps.hostLadder) jobs.push(deps.hostLadder().then((t) => { hostTiers = t; }).catch((e: unknown) => { log.warn('the saved ladder could not be read', e); }));
     /* what this Hermes cannot do is learned by asking with a session id that matches nothing: only "no such method" counts */
     const probe = async (method: string, key: string, why: string): Promise<void> => {
       try { await client.requestRaw(method, { session_id: '' }); } catch (e) { if (isUnknownMethod(e)) unavailable[key] = why; }
@@ -203,6 +225,7 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
     await Promise.all(jobs);
     can.set({ compact: !unavailable['sessions.compact'], connectors: !!deps.connectors, signIn: !!deps.connectors });
     publishFollowed([]);
+    publishChoices(model(followed));
   }
   /** the servers' state again, after the host changed one */
   async function reloadMcp(): Promise<void> {
@@ -214,7 +237,7 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
   const watch = <T>(s: Watch<T>): Watch<T> => s;
   const source: DetailsSource = {
     context: watch(context), todos: watch(todos), changes: watch(changes), output: watch(output), connectors: watch(connectors), environment: watch(environment),
-    governance: watch(governance), ledger: watch(ledger), models: watch(modelList), notes: watch(notes), can: watch(can),
+    governance: watch(governance), ledger: watch(ledger), models: watch(modelList), choices: watch(choices), notes: watch(notes), can: watch(can),
     follow(id) {
       if (id === followed) return;
       followed = id;
@@ -232,18 +255,21 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
     },
     setGovernance(patch) {
       const m = model(followed), gw = deps.gwId(followed);
-      if (patch.smart !== undefined && patch.smart) return 'Smart (the automatic model choice) is not built yet. In governed mode the ladder picks the model.';
+      if (patch.smart !== undefined && patch.smart && ladderOf(m).length === 0) return 'Smart chooses among the tiers of the model ladder, and none is known yet. Choose a model yourself, or set up a ladder in Settings > Models.';
       if (patch.cap !== undefined) return 'The cost cap is the plugin’s cost_cap_usd setting; it cannot be changed from here yet.';
       if (patch.governed !== undefined) {
         if (locked(m)) return 'The mode is fixed once the first message is sent (prompt caching). Start a new session to change it.';
         m.wantGoverned = patch.governed;
         if (gw && pluginOk) void track(read(PLUGIN + 'mode.set', { session_id: gw, mode: patch.governed ? 'governed' : 'ungoverned' }).then(() => refresh(followed, ['info'])));
       }
+      if (patch.smart !== undefined) m.smart = patch.smart;
       if (patch.model !== undefined) {
-        if (locked(m)) return 'Changing the model of a session that has started is not wired yet.';
+        /* a person's pick answers the next messages of this session; it is applied when the message goes out (`prepareSend`) */
+        if (governedOf(m) && !ladderOf(m).some((t) => ui.modelMark.same(valueOf(t.provider, t.id), patch.model))) return 'In governed mode the ladder runs the work. Choose one of its tiers to say where it starts.';
         m.wantModel = patch.model;
+        m.smart = false;
       }
-      publishFollowed(['info', 'usage']);
+      publishFollowed(['info', 'usage', 'cascade']);
       return null;
     },
     setConnector(name, on) {
@@ -289,6 +315,45 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
     onSent(uiId, text) { const m = model(uiId); m.started = true; m.title = text.split('\n')[0]?.trim().slice(0, 80) ?? ''; publishRun(); },
     onLinkReady() { void track(read<McpStatusWire>('mcp.servers.status', {}).then((r) => { mcp = r; })); for (const [id] of models) if (deps.gwId(id)) void track(refresh(id, ALL)); },
     onReplayGap(uiId) { models.set(uiId, Object.assign(newModel(), { title: model(uiId).title, started: true })); void track(refresh(uiId, ALL)); },
+    async prepareSend(uiId, text, meta) {
+      const m = model(uiId), gw = deps.gwId(uiId);
+      if (!m.smart && !m.wantModel) return { model: '', why: null };
+      let tiers = ladderOf(m);
+      if (m.smart && !m.cascade && gw && pluginOk) { const c = await read<CascadeWire>(PLUGIN + 'cascade.state', { session_id: gw }); if (c) m.cascade = c; tiers = ladderOf(m); }
+      let target: { provider: string; model: string; tier?: string } | null = null;
+      let why: string | null = null;
+      if (m.smart) {
+        const pick = smartPick({ text, attachments: meta?.attachments ?? 0, failures: recentFailures(m.history) }, tiers.length);
+        if (!pick) throw new Error('Smart has no ladder to choose from, so the message was not sent. Choose a model yourself.');
+        const t = tiers[pick.index] as LadderTier;
+        target = { provider: t.provider, model: t.id, tier: t.name };
+        why = 'Smart: ' + pick.reason;
+      } else if (m.wantModel) {
+        const s = splitValue(m.wantModel);
+        const t = tiers.find((x) => ui.modelMark.same(valueOf(x.provider, x.id), m.wantModel));
+        target = { provider: s.provider, model: s.model, ...(t ? { tier: t.name } : {}) };
+      }
+      if (!target) return { model: '', why: null };
+      const value = valueOf(target.provider, target.model);
+      const say = ui.modelMark.called(target.model) || target.model;
+      if (governedOf(m)) {
+        if (!target.tier) throw new Error('In governed mode the ladder runs the work, and ' + say + ' is not one of its tiers, so the message was not sent.');
+        if (gw && pluginOk && m.appliedTier !== target.tier) {
+          try { await client.requestRaw(PLUGIN + 'cascade.start_tier', { session_id: gw, start_tier: target.tier }); m.appliedTier = target.tier; }
+          catch (e) { throw new Error('The ladder could not be told to start on ' + say + ' (' + (e instanceof Error ? e.message : String(e)) + '), so the message was not sent.'); }
+        }
+      } else if (gw && m.appliedModel !== value && !ui.modelMark.same(engineModel(m), value)) {
+        try {
+          const r = (await client.requestRaw('config.set', { session_id: gw, key: 'model', value: switchValue(target), confirm_expensive_model: true })) as ConfigSetModelWire | null;
+          if (r?.confirm_required) throw new Error(r.confirm_message || 'the engine asked for a confirmation');
+          m.appliedModel = value;
+          m.info = { ...(m.info ?? {}), model: target.model, provider: target.provider };
+        } catch (e) { throw new Error('The model could not be switched to ' + say + ' (' + (e instanceof Error ? e.message : String(e)) + '), so the message was not sent.'); }
+      } else m.appliedModel = value;
+      publishFollowed(['info', 'usage']);
+      return { model: value, why };
+    },
+    currentModel(uiId) { return modelOf(model(uiId)); },
     chosen(uiId) { const m = model(uiId); return { governed: m.wantGoverned, model: m.wantModel }; },
     governedAtCreation(uiId) { return pluginOk && (model(uiId).wantGoverned ?? (defaultMode ?? 'governed') === 'governed'); },
     async settled() { flush(); while (inflight.size) await Promise.allSettled([...inflight]); }

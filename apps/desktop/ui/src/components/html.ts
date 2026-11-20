@@ -9,6 +9,7 @@ import { botState } from './bot-state';
 import type { BotLike } from './bot-state';
 import { icon } from './icons';
 import { logoHTML } from './logo';
+import { modelName } from './model-name';
 import { arrowHTML, isKnownModel, markHTML, modelHTML, routeHTML } from './model-mark';
 import type { ModelRef } from './model-mark';
 import { orbHtml } from './orb';
@@ -79,7 +80,6 @@ function segmented(o: SegmentedOpts): string {
       (x.icon ? icon(x.icon, { size: 'm' }) : '') + (x.label != null ? '<span>' + esc(x.label) + '</span>' : '') + (x.dot != null ? dot('attention', { show: !!x.dot }) : '') + '</button>').join('') + '</div>';
 }
 export interface ChipOpts { label?: U<string>; /** a model: its provider's mark leads, and the label defaults to the name */ model?: U<ModelRef>; modelColor?: U<'mono' | 'brand'>; icon?: U<string>; pressed?: U<boolean>; mono?: U<boolean>; haspopup?: U<string>; expanded?: U<boolean>; option?: U<boolean>; checked?: U<boolean>; tip?: U<string>; value?: U<string>; tabindex?: U<string>; class?: U<string>; attrs?: U<Attrs> }
-const modelName = (ref: ModelRef): string => (typeof ref === 'object' ? String(ref.model ?? ref.id ?? '') : String(ref).slice(String(ref).lastIndexOf('/') + 1));
 function chip(o: ChipOpts): string {
   const option = !!o.option;
   return '<button type="button" class="' + cx('ui-chip', (o.mono || (o.model && o.mono !== false)) && 'ui-chip--mono', option && 'ui-chip--option', o.class) + '" data-ui="chip"' +
@@ -127,10 +127,10 @@ function ladder(o: LadderOpts): string {
   if (o.variant === 'list') {
     return '<ol class="ui-ladder ui-ladder--list"' + attrs({ 'aria-label': o.label || 'Model ladder', 'data-off': o.off, style }) + '>' + L.map((x, i) =>
       '<li' + (i === cur ? ' aria-current="step"' : '') + '><span class="ui-ladder__mark"><i class="ui-ladder__st" data-s="' + st(i) + '"></i></span>' +
-      '<span class="ui-ladder__name">' + markHTML(x[0], { size: 14 }) + esc(x[0]) + '</span><span class="ui-ladder__rule">' + esc(x[1] ?? '') + '</span></li>').join('') + '</ol>';
+      '<span class="ui-ladder__name">' + markHTML(x[0], { size: 14 }) + esc(modelName(x[0]) || x[0]) + '</span><span class="ui-ladder__rule">' + esc(x[1] ?? '') + '</span></li>').join('') + '</ol>';
   }
   const name = L[cur] ? L[cur][0] : '';
-  return '<span class="ui-ladder" role="img"' + attrs({ 'aria-label': (o.label || 'Model ladder') + ', station ' + (cur + 1) + ' of ' + L.length + (name ? ': ' + name : ''), 'data-off': o.off, style }) + '>' +
+  return '<span class="ui-ladder" role="img"' + attrs({ 'aria-label': (o.label || 'Model ladder') + ', station ' + (cur + 1) + ' of ' + L.length + (name ? ': ' + (modelName(name) || name) : ''), 'data-off': o.off, style }) + '>' +
     L.map((_, i) => '<i class="ui-ladder__st" data-s="' + st(i) + '"></i>').join('') + '</span>';
 }
 

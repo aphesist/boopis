@@ -41,3 +41,11 @@ export function isUnknownMethod(e: unknown): boolean {
   const data = err?.data as { reason?: unknown } | undefined;
   return err?.rpcCode === -32601 || data?.reason === 'unknown_method';
 }
+
+/** `model.options`: the providers the engine can run, each with its models (ids, no labels), and the engine's current model */
+export interface ModelOptionsWire {
+  providers?: { slug: string; name?: string; models?: string[]; featured_models?: string[] | null; authenticated?: boolean | null }[];
+  model?: string; provider?: string;
+}
+/** the answer of `config.set` for the `model` key */
+export interface ConfigSetModelWire { key?: string; value?: string; warning?: string; confirm_required?: boolean; confirm_message?: string; scope?: string; deferred?: boolean }

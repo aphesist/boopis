@@ -41,7 +41,7 @@ describe('the markup the CSS depends on', () => {
   });
   it('a ladder says which station it is on', () => {
     const l = frag(ui.html.ladder({ stations: [['a', 'first'], ['b', 'then']], current: 1 }));
-    expect(l.getAttribute('aria-label')).toBe('Model ladder, station 2 of 2: b');
+    expect(l.getAttribute('aria-label')).toBe('Model ladder, station 2 of 2: B');
     expect([...l.querySelectorAll('i')].map((i) => i.getAttribute('data-s'))).toEqual(['past', 'now']);
   });
   it('a menu with a checked item is a radio menu, and gives each item its value', () => {

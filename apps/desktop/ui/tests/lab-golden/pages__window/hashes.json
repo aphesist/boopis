@@ -1,11 +1,11 @@
 {
  "a-conversation@bone": {
-  "sha": "78a0f0a6a2e8b006463ba59365c9ad05c29a41ff",
+  "sha": "f249b3e4cbf2d9216c0f0295f393b824b09bb3fd",
   "w": 1440,
   "h": 900
  },
  "a-conversation@catalog": {
-  "sha": "54c7b388675a052f316bd5220236de3f71807f00",
+  "sha": "ed349556a2936358cdad3ab659393b6049a6e515",
   "w": 1440,
   "h": 900
  },
@@ -20,12 +20,12 @@
   "h": 900
  },
  "a-live-conversation-recorded-frames@bone": {
-  "sha": "d2b6ef13b7d9c2ab8b93f6658f209f311d71ac2d",
+  "sha": "7ee2083654c56ba82de67fc975457aa2df615fc9",
   "w": 1440,
   "h": 900
  },
  "a-live-conversation-recorded-frames@catalog": {
-  "sha": "2fcef072288fa341851c6f673ad599e18565ad40",
+  "sha": "3411f53680034ba032bd94ae66c6704499e11d8b",
   "w": 1440,
   "h": 900
  },
@@ -40,12 +40,12 @@
   "h": 900
  },
  "a-live-conversation-with-a-form-recorded@bone": {
-  "sha": "abe9b64b1de323c754133b921d550f4abd5d89e4",
+  "sha": "d4b33371489089e59ebf1b91f5895d53a1e1a110",
   "w": 1440,
   "h": 900
  },
  "a-live-conversation-with-a-form-recorded@catalog": {
-  "sha": "6c7fdb0194d4e43e60e20f5d928f88070fec0709",
+  "sha": "a0ca2730280c4e97f94893b5675724dfc504dfcb",
   "w": 1440,
   "h": 900
  },
@@ -65,7 +65,7 @@
   "h": 900
  },
  "bots-with-120-bots@catalog": {
-  "sha": "32d53707ed6a7b53d1ba3512f2b49ed84008447b",
+  "sha": "74157c273ed4c1c45d187cf10844ef3609102155",
   "w": 1440,
   "h": 900
  },
@@ -80,12 +80,12 @@
   "h": 900
  },
  "bots@bone": {
-  "sha": "91ca24b70c24dec8cad3f47fae290ab7e73ff136",
+  "sha": "49aad7291041829560b9245262acbc691a325079",
   "w": 1440,
   "h": 900
  },
  "bots@catalog": {
-  "sha": "0718a7e252e583202eda4b0aac4957b4bc17aa2a",
+  "sha": "5b55017df586d71b9afbaea893a9f428cd9bf9d1",
   "w": 1440,
   "h": 900
  },
@@ -100,12 +100,12 @@
   "h": 900
  },
  "details-panel-open@bone": {
-  "sha": "e2a4ff6539cc2e581ead215d7489ede0ee8c3391",
+  "sha": "300bb122bc1f33be223b716c2d74816e504669fd",
   "w": 1440,
   "h": 900
  },
  "details-panel-open@catalog": {
-  "sha": "0bdba22d95638f83accac59033db93fdbfa17667",
+  "sha": "17a0e7c78da15715f2d82efe7422bc6ecf230687",
   "w": 1440,
   "h": 900
  },
@@ -120,12 +120,12 @@
   "h": 900
  },
  "empty-app@bone": {
-  "sha": "381e19e989c3f9251a5239a72620baa400711f3d",
+  "sha": "1f8b85e215bc779c323cd2a65c0c19cc6c5870c4",
   "w": 1440,
   "h": 900
  },
  "empty-app@catalog": {
-  "sha": "90caf7f6da3f6aea8a59978b4b6af9494f052f5a",
+  "sha": "15f641f5006091c549c875fa99a5395152f472f2",
   "w": 1440,
   "h": 900
  },
@@ -160,12 +160,12 @@
   "h": 24
  },
  "long-names-everywhere@bone": {
-  "sha": "fd26f5d4b0c71db3687a4b3f1221cbd3e5bb3ff2",
+  "sha": "df93960e885c22011fbedcbe7ab82cdc6e58144b",
   "w": 1440,
   "h": 900
  },
  "long-names-everywhere@catalog": {
-  "sha": "2d1d23ee4f4cc1fa80bdc745a0e1cd820e5aa5f8",
+  "sha": "744c53877bc1b1282c4f370329c75fd1aeb77a81",
   "w": 1440,
   "h": 900
  },
@@ -180,12 +180,12 @@
   "h": 900
  },
  "palette-open@bone": {
-  "sha": "e5e24aa6a5328659d02fa622efa2d362f76788bb",
+  "sha": "1cdabd49fd323d2a757ddd753046cfce290d348d",
   "w": 1440,
   "h": 900
  },
  "palette-open@catalog": {
-  "sha": "d74fbf4d3ac46c31bddbcac22b51b773bb007c95",
+  "sha": "5f9af78f0e4cdeacde2a7f1ed02ad5196b59f9c3",
   "w": 1440,
   "h": 900
  },
@@ -200,12 +200,12 @@
   "h": 900
  },
  "settings-open@bone": {
-  "sha": "dc4daa6c6a6b4da4058be14c9d01ac5f3e97547d",
+  "sha": "b0468b549eaecedadc7e9c6c8a31089a7293dc80",
   "w": 1440,
   "h": 900
  },
  "settings-open@catalog": {
-  "sha": "64214a2644910b3fcb50299e495e6e366b188057",
+  "sha": "b51e30444313650b0c31d521cce522689a2f47f5",
   "w": 1440,
   "h": 900
  },
@@ -220,12 +220,12 @@
   "h": 900
  },
  "sidebar-as-a-rail@bone": {
-  "sha": "70c195c585c033dfd37e074ee379d60afb66b20d",
+  "sha": "afffabb28444f6d2cb06b8b7749388143f1d8323",
   "w": 1440,
   "h": 900
  },
  "sidebar-as-a-rail@catalog": {
-  "sha": "30e30084d7a00fb841b786a9067f4367c8b35dd0",
+  "sha": "757820a44c4e35601205678ed2dee8c7d9b065df",
   "w": 1440,
   "h": 900
  },
@@ -240,12 +240,12 @@
   "h": 900
  },
  "sidebar-closed-dock-off@bone": {
-  "sha": "63493a8454dfc6e763081130cfb986e27201e3b0",
+  "sha": "70ac01d4594854fa20a963d55938b8c36b98cfb7",
   "w": 1440,
   "h": 900
  },
  "sidebar-closed-dock-off@catalog": {
-  "sha": "9769a2f82fd07407838350903eaff3150d12f5ad",
+  "sha": "8035c9fc30d14c81ba56bd0ed5da6a795769074c",
   "w": 1440,
   "h": 900
  },
@@ -260,12 +260,12 @@
   "h": 900
  },
  "unpriced-models-recorded@bone": {
-  "sha": "9930de6f48be041d11db7be65fc5ede4a0f239ab",
+  "sha": "9a5203770d0c66052aba191ad8773fc88a5f7f06",
   "w": 1440,
   "h": 900
  },
  "unpriced-models-recorded@catalog": {
-  "sha": "b50ee2eb0b4a8186a848f255496e97e8537bbd48",
+  "sha": "41de804d5cfdfba343dce3f172b64d41747e85e5",
   "w": 1440,
   "h": 900
  },

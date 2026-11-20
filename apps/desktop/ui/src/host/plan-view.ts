@@ -12,7 +12,7 @@ export function planRows(view: PlanView, now = Date.now()): string[] {
   const rows = [
     ui.html.setRow({ label: 'Plan', hint: view.detail, control: '<span class="ui-set__value">' + esc(view.label ? `${PLAN_WORD[view.kind]} (${view.label})` : PLAN_WORD[view.kind]) + '</span>' })
   ];
-  if (view.model) rows.push(ui.html.setRow({ label: 'Model', control: '<span class="ui-set__value">' + esc(view.model) + '</span>' }));
+  if (view.model) rows.push(ui.html.setRow({ label: 'Model', control: '<span class="ui-set__value">' + esc(ui.modelMark.called(view.model) || view.model) + '</span>' }));
   if (view.limit) {
     const when = resetText(view.limit.resetsAtMs, now);
     rows.push(ui.html.setRow({ label: 'Limit', hint: [view.limit.message, when].filter(Boolean).join(' ') || null, control: '<span class="ui-set__value">' + esc(view.limit.code.replace(/^free_tier_/, '').replace(/_/g, ' ')) + '</span>' }));

@@ -91,6 +91,7 @@ Methods are registered with `ctx.register_rpc(name, handler)` and appear as `plu
 | `ledger.verify` | `{session_id}` | `{ok, broken_at_seq?}` |
 | `ledger.stats` | `{session_id}` | `{tokens: Usage, cost_usd, cost_api_equivalent_usd, round_trips, escalations, rollbacks, blanks, approvals, price_table}`. Costs are computed on read |
 | `cascade.state` | `{session_id}` | `{task_id?, tier?, ladder: Tier[], status}` |
+| `cascade.start_tier` | `{session_id, start_tier: string\|null}` | `{}`. Where the next governed task starts on the ladder (a tier name; `null` is the configured start). Allowed after the first prompt, unlike `mode.set`: it is read when a task is dispatched and does not touch the cached prompt. The UI's pick and Smart choice use it (ADR-0032); the gate still escalates past it. An unknown tier is `hx.invalid_params` with the tiers |
 | `ladder.get` / `ladder.set` | `{profile}` / `{profile, ladder}` | |
 | `checkpoint.list` | `{session_id}` | `{checkpoints: [{ship_id, commit, ref, files, ts, task_id?}]}`, kept ships only, oldest first (a restored ship has no checkpoint). Read off the ledger |
 | `checkpoint.diff` | `{session_id, ship_id?}` | `{files: [{path, status, add, del, binary, truncated, hunks: [{header, lines}]}], truncated, base?, head?, unavailable?}`. One ship, or every kept ship together. A hunk line keeps its `' '`, `'+'` or `'-'`. `unavailable` says why there is nothing to show (folder gone, no parent commit) |

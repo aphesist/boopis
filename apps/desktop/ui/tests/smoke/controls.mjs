@@ -34,7 +34,7 @@ export async function controls(env, AXE) {
       await page.addScriptTag({ content: AXE });
       const trigger = page.locator('#probe .ui-select');
       const tr = await trigger.evaluate((b) => ({ role: b.getAttribute('role'), popup: b.getAttribute('aria-haspopup'), expanded: b.getAttribute('aria-expanded'), mark: !!b.querySelector('svg.ui-mm'), text: b.textContent.trim() }));
-      check('controls', `${name}: the model field is a combobox button with the provider's mark, not a <select>`, tr.role === 'combobox' && tr.popup === 'listbox' && tr.expanded === 'false' && tr.mark && /sonnet/.test(tr.text), tr);
+      check('controls', `${name}: the model field is a combobox button with the provider's mark, not a <select>`, tr.role === 'combobox' && tr.popup === 'listbox' && tr.expanded === 'false' && tr.mark && /sonnet/i.test(tr.text), tr);
 
       await trigger.click(); await page.waitForTimeout(350);
       const open = await page.evaluate(() => {
@@ -68,7 +68,7 @@ export async function controls(env, AXE) {
       const jumped = await page.evaluate(() => document.activeElement.dataset.value);
       await page.keyboard.press('Enter'); await page.waitForTimeout(300);
       const chosen = await page.evaluate(() => ({ chg: window.__chg, text: document.querySelector('#probe .ui-select__v').textContent, family: document.querySelector('#probe .ui-select svg.ui-mm').dataset.family, open: !!document.querySelector('.ui-listbox.is-in'), focus: document.activeElement.className.includes('ui-select') }));
-      check('controls', `${name}: Down opens, typing "qw" jumps to qwen3-coder, Enter chooses it, tells ui:change once and shows its mark`, jumped === 'qwen3-coder' && chosen.chg.join() === 'qwen3-coder' && chosen.text === 'qwen3-coder' && chosen.family === 'qwen' && !chosen.open && chosen.focus, { jumped, ...chosen });
+      check('controls', `${name}: Down opens, typing "qw" jumps to qwen3-coder, Enter chooses it, tells ui:change once and shows its mark`, jumped === 'qwen3-coder' && chosen.chg.join() === 'qwen3-coder' && chosen.text === 'Qwen3 Coder' && chosen.family === 'qwen' && !chosen.open && chosen.focus, { jumped, ...chosen });
     });
   }
 

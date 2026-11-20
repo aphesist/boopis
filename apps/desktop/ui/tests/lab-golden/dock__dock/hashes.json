@@ -1,11 +1,11 @@
 {
  "120-bots-expanded@bone": {
-  "sha": "13c5ac40f29aacba443264db71ae587bba917560",
+  "sha": "02caaef3697d1565ef3aa90557efdb4bcd5a23a7",
   "w": 1440,
   "h": 84
  },
  "120-bots-expanded@catalog": {
-  "sha": "3ee77e73432149289c3b9988e43f09134c43cdcf",
+  "sha": "9521842b0046cbea78151c70a82e068dc84992e4",
   "w": 1440,
   "h": 84
  },
@@ -125,7 +125,7 @@
   "h": 84
  },
  "expanded@catalog": {
-  "sha": "f3a81df8bcd9fac4147350232a71d9b9203c1c67",
+  "sha": "2d5c7826269fcb458c7c303e8ad6e0008ef25b4e",
   "w": 1440,
   "h": 84
  },
@@ -140,12 +140,12 @@
   "h": 84
  },
  "minimised@bone": {
-  "sha": "bb2a99a7255bddbb5b1cbf1aef90218bf8bd9a7f",
+  "sha": "5fd56c74eb9920fea9d4198d58da8a66fbe5400f",
   "w": 1440,
   "h": 84
  },
  "minimised@catalog": {
-  "sha": "fe8da88875e16c006161bc6f89be61d4d7f84f38",
+  "sha": "3418df08c1c64fb112480e3b8a28e4a10b33f0c7",
   "w": 1440,
   "h": 84
  },
@@ -180,7 +180,7 @@
   "h": 84
  },
  "no-bots-expanded@bone": {
-  "sha": "9f40a0480a95c4420d7180d1cf8af1b3a12917f9",
+  "sha": "099a2d20dd390ce8b1a11e94748ef9c7ca16c66d",
   "w": 1440,
   "h": 84
  },
@@ -200,12 +200,12 @@
   "h": 84
  },
  "no-bots-the-empty-shape@bone": {
-  "sha": "55c4a3c474c34e15dcd1f37df6d7dc706f697e94",
+  "sha": "c6b9d9f0e71cb63798e806c9643e0322728795a8",
   "w": 1440,
   "h": 84
  },
  "no-bots-the-empty-shape@catalog": {
-  "sha": "9d6bcb700fae5c043c0a09dd448d350069bbc57d",
+  "sha": "187a6bbec7442158284043ada99bf658c1c03ba3",
   "w": 1440,
   "h": 84
  },
@@ -240,12 +240,12 @@
   "h": 84
  },
  "off@bone": {
-  "sha": "038a3766b2b54bc9a682b82d1e59afde7bb14f51",
+  "sha": "90f01cbf30f41754500735175d04e1bfb38d6212",
   "w": 1440,
   "h": 84
  },
  "off@catalog": {
-  "sha": "931a7775e060206760a87484052bcff6cd01985c",
+  "sha": "95a38977d04383244c43cf5904dd0a3e2c088331",
   "w": 1440,
   "h": 84
  },
@@ -280,7 +280,7 @@
   "h": 84
  },
  "one-bot@bone": {
-  "sha": "2bd9a21e057153c79d8fb6b00a3fccd693af72ac",
+  "sha": "d468e686e5e8de3e025d6b09bf378200dff88f53",
   "w": 1440,
   "h": 84
  },
@@ -300,12 +300,12 @@
   "h": 84
  },
  "orb-focus@bone": {
-  "sha": "9ba1acf8ab40eabec18f2981d42e5144c91add44",
+  "sha": "8d6bc6e9039154128cc488f40f6679f06add01cb",
   "w": 1440,
   "h": 119
  },
  "orb-focus@catalog": {
-  "sha": "321f41ccf9f5d47aed0080c260f40e93b9950bb0",
+  "sha": "343f6d494ee6091859e24cb369013f5c193b332d",
   "w": 1440,
   "h": 119
  },
@@ -325,7 +325,7 @@
   "h": 84
  },
  "orb-hover@catalog": {
-  "sha": "33c351f45f66ba2916dd2805b7ab3fb3d3b64588",
+  "sha": "d54363134ab640d2e50cbd172179e631629acd31",
   "w": 1440,
   "h": 84
  },
@@ -340,12 +340,12 @@
   "h": 84
  },
  "orb-tooltip@bone": {
-  "sha": "85c4a1f2628ae329871ac1f60eb9fe8526cefe35",
+  "sha": "b32deffca3f4198f610b06f432c90dcbb764c65e",
   "w": 1440,
   "h": 119
  },
  "orb-tooltip@catalog": {
-  "sha": "321f41ccf9f5d47aed0080c260f40e93b9950bb0",
+  "sha": "343f6d494ee6091859e24cb369013f5c193b332d",
   "w": 1440,
   "h": 119
  },
@@ -380,7 +380,7 @@
   "h": 84
  },
  "the-schedules-page@bone": {
-  "sha": "4e75c27fef8748459a088e7fc4dd3561a0049dc2",
+  "sha": "2a4674dd002f8a6ae715164fbec2a6c78a5ee388",
   "w": 1440,
   "h": 84
  },
@@ -400,7 +400,7 @@
   "h": 84
  },
  "the-waiting-page@bone": {
-  "sha": "b44e6bc231368761bc64d023eedcfc48005088cc",
+  "sha": "385c94588b1ed8bab4be2bca53c2ba197f67b380",
   "w": 1440,
   "h": 84
  },

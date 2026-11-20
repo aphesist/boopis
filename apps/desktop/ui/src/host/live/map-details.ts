@@ -67,11 +67,11 @@ const tierRule = (i: number): string => (i === 0 ? 'first try' : 'after a failed
 export function ladderFrom(cascade: CascadeWire | null): ReadonlyArray<readonly [string, string]> {
   return (cascade?.ladder ?? []).map((t, i) => [tierLabel(t), tierRule(i)] as const);
 }
-export function governanceFrom(o: { describe: DescribeWire | null; cascade: CascadeWire | null; stats: StatsWire | null; model: string; governed: boolean; locked: boolean }): GovernanceState {
+export function governanceFrom(o: { describe: DescribeWire | null; cascade: CascadeWire | null; stats: StatsWire | null; model: string; governed: boolean; locked: boolean; smart?: boolean }): GovernanceState {
   const cap = o.describe?.config?.cost_cap_usd;
   const cost = o.stats?.cost_usd;
   return {
-    governed: o.governed, smart: false, model: o.model, cap: cap == null ? '' : dollars(cap), spent: cost == null ? '' : dollars(cost),
+    governed: o.governed, smart: o.smart === true, model: o.model, cap: cap == null ? '' : dollars(cap), spent: cost == null ? '' : dollars(cost),
     ladder: ladderFrom(o.cascade), current: Math.max(0, o.cascade?.tier_index ?? 0), locked: o.locked
   };
 }
