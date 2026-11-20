@@ -25,6 +25,7 @@ CAPABILITIES = (
     "ledger.verify",
     "ledger.stats",
     "cascade.state",
+    "cascade.start_tier",
     "prices.refresh",
     "blank.fill",
     "checkpoint.list",
@@ -190,6 +191,26 @@ def ledger_stats(params: Mapping[str, Any], *, session_id: str | None = None, **
     return compute_stats(rt.ledger(state).read(), book, state.settings.subscription_providers)
 
 
+def cascade_start_tier(params: Mapping[str, Any], *, session_id: str | None = None, **_: Any) -> dict[str, Any]:
+    """``cascade.start_tier``: where the next governed task starts on the ladder (a tier name), or ``null`` for the
+    configured start. Unlike ``mode.set`` it is allowed after the first prompt: the start tier is read when a task is
+    dispatched, so it does not touch the cached prompt. It is how a person's pick, or the UI's Smart choice, applies in
+    governed mode; the gate still escalates past it."""
+    sid = _session_id(params, session_id)
+    start = params.get("start_tier")
+    if start is not None and (not isinstance(start, str) or not start):
+        raise InvalidParamsError("start_tier must be the name of a tier or null", data={"found": repr(start)})
+    rt = runtime()
+    state = rt.state(sid)
+    with state.lock:
+        if start is not None:
+            names = rt.ladder_of(state).names
+            if start not in names:
+                raise InvalidParamsError(f"start_tier {start!r} is not a tier of the ladder", data={"tiers": list(names)})
+        state.start_tier = start
+    return {}
+
+
 def cascade_state(params: Mapping[str, Any], *, session_id: str | None = None, **_: Any) -> dict[str, Any]:
     """Where the session's cascade is: its ladder, and the current task, tier, attempt and status (``idle`` when no
     task has run). ``governance.engine.state_view`` reads the ledger and the live run."""
@@ -226,6 +247,7 @@ def handlers() -> dict[str, Handler]:
         "ledger.verify": ledger_verify,
         "ledger.stats": ledger_stats,
         "cascade.state": cascade_state,
+        "cascade.start_tier": cascade_start_tier,
         "prices.refresh": prices_refresh,
         "blank.fill": blank_fill,
         "checkpoint.list": checkpoint_list,

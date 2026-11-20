@@ -29,6 +29,7 @@ RPC_METHODS = (
     "ledger.verify",
     "ledger.stats",
     "cascade.state",
+    "cascade.start_tier",
     "prices.refresh",
     "blank.fill",
     "checkpoint.list",
