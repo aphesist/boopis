@@ -251,7 +251,7 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
       return Promise.resolve(freed);
     },
     setGovernance(patch) { governance.update((g) => ({ ...g, ...patch })); return null; },
-    models: store(M.CATALOG.models), follow() { /* the mock has one session's details */ }, notes: store({}), can: store({ compact: true, connectors: true, signIn: true }),
+    models: store(M.CATALOG.models), choices: store(M.CATALOG.models.map((m) => ({ value: 'mock/' + m, provider: 'mock', model: m, providerName: 'Preview'}))), follow() { /* the mock has one session's details */ }, notes: store({}), can: store({ compact: true, connectors: true, signIn: true }),
     setConnector(name, on) { connectors.update((l) => l.map((c) => (c.name === name ? { ...c, state: on ? 'on' : 'off' } : c))); },
     signIn(name) {
       return new Promise((resolve) => { setTimeout(() => { connectors.update((l) => l.map((c) => (c.name === name ? { ...c, state: 'on' } : c))); resolve(); }, 900); });

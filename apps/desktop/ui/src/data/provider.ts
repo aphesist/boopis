@@ -8,7 +8,7 @@
    did not send: unknown is `null` or empty and the UI shows it as unknown. */
 import type {
   ArchivedBot, Bot, BotCatalog, BotDraft, BotConfig, BotInfo, Change, ConversationEvent, Conversation, Connector, ContextUsage, DecisionKind, DiffFile, Environment,
-  DetailsCan, DetailsNotes, FieldSchema, FileCompletions, FormCan, FormOutcome, ModSession, ModsEvent, PickerItem, PickerKind, GovernanceState, LedgerStats, ProviderInfo, RunSnapshot, Schedule, SendMeta, SessionSummary, ThreadMessage, Todo, User, Wait, WaitOutcome
+  DetailsCan, DetailsNotes, ModelChoice, FieldSchema, FileCompletions, FormCan, FormOutcome, ModSession, ModsEvent, PickerItem, PickerKind, GovernanceState, LedgerStats, ProviderInfo, RunSnapshot, Schedule, SendMeta, SessionSummary, ThreadMessage, Todo, User, Wait, WaitOutcome
 } from './types';
 
 export type Unsubscribe = () => void;
@@ -49,6 +49,8 @@ export interface DetailsSource {
   ledger: Watch<LedgerStats>;
   /** the models a session can be pinned to */
   models: Watch<readonly string[]>;
+  /** who can answer next: the ladder's tiers, then the other configured providers' models */
+  choices: Watch<readonly ModelChoice[]>;
   /** the panels follow this session; the live provider fetches its details when it is called */
   follow(sessionId: string): void;
   /** what a panel cannot know or this Hermes cannot do, in words */

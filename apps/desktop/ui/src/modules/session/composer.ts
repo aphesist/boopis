@@ -1,9 +1,8 @@
-/* the session's composer: the library's, with the session's chips (governed, smart, model), its reading of the
-   request (feedforward) and its keys (KEYMAP section 7: alt+G, alt+S, alt+M; alt+A and alt+V are the library's).
-   OWNER DECISION (Smart and model): alt+M, or the model chip, opens the model picker and Smart stays ON. The picker's first
-   entry is "Smart" (automatic; the current choice while Smart is on), then the models. Choosing a model pins it and
-   turns Smart off; choosing Smart keeps or turns it back on; Esc changes nothing. While Smart is on the model chip stays
-   hidden and the picker opens against the Smart chip. */
+/* the session's composer: the library's, with the session's chips (governed, and the model), its reading of the request
+   (feedforward) and its keys (KEYMAP section 7: alt+G, alt+S, alt+M; alt+A and alt+V are the library's).
+   The model chip always says who answers next: a model's logo and readable name, or Smart (with what it would pick for the text
+   being typed). The chip, or alt+M, opens the "who answers next" menu (`model-menu.ts`): Automatic (Smart) first, then every model
+   the user can use now, by provider. alt+S turns Smart on or off. Esc changes nothing. */
 import { emit } from '../../core/bus';
 import { cap1, isMac } from '../../core/dom';
 import { ui } from '@boopis/ui';
@@ -12,8 +11,9 @@ import type { ComposerEl, DecisionDetail, AssumptionDetail, DictateDetail } from
 import { data } from '../../data';
 import type { GovernanceState } from '../../data';
 import { costAssume, kindOf, makeReader, optionsFor } from './feedforward';
+import { FOOT_GOVERNED, FOOT_UNGOVERNED, SMART_VALUE, currentChoice, modelEntries, smartPreview } from './model-menu';
 
-export const SMART_VALUE = '__smart';
+export { SMART_VALUE };
 const gov = (): GovernanceState => data().details.governance.get();
 
 /** the one way the session changes governance: the provider owns the state, the UI announces the change */
@@ -33,14 +33,13 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
   const reader = makeReader(gov);
   const g0 = gov();
   const govChip = ui.chip({ label: 'Governed', icon: 'ladder', pressed: g0.governed });
-  const smart = ui.chip({ label: 'Smart', icon: 'spark', pressed: g0.smart });
   const model = ui.chip({ model: g0.model, haspopup: 'menu', expanded: false });
   const c = ui.composer({
     placeholder: 'Describe the change', label: 'Message the coding agent', value: opts.draft,
-    chips: [govChip, smart, model], spend: { spent: g0.spent, cap: g0.cap },
+    chips: [govChip, model], spend: { spent: g0.spent, cap: g0.cap },
     hint: (t) => (t ? reader.items(t) : []), feedforward: (t) => reader.marks(t)
   }) as SessionComposer;
-  govChip.setAttribute('aria-keyshortcuts', 'Alt+G'); smart.setAttribute('aria-keyshortcuts', 'Alt+S'); model.setAttribute('aria-keyshortcuts', 'Alt+M');
+  govChip.setAttribute('aria-keyshortcuts', 'Alt+G'); model.setAttribute('aria-keyshortcuts', 'Alt+M Alt+S');
   const span = (n: HTMLElement): HTMLElement => n.querySelector('span') as HTMLElement;
 
   function sync(): void {
@@ -48,28 +47,42 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
     govChip.setAttribute('aria-pressed', String(G.governed)); span(govChip).textContent = G.governed ? 'Governed' : 'Ungoverned';
     govChip.setAttribute('data-tip', G.governed ? 'Climbs the model ladder, stops at ' + G.cap : 'Pinned to ' + G.model + ', no cap'); govChip.setAttribute('data-kbd', 'alt+G');
     govChip.setAttribute('aria-label', G.governed ? 'Governed: starts cheap, climbs the model ladder on failure, stops at the cost cap' : 'Ungoverned: one pinned model, no cost cap');
-    smart.setAttribute('aria-pressed', String(G.smart)); smart.setAttribute('data-tip', G.smart ? 'Picks the model for each message' : 'You pick the model'); smart.setAttribute('data-kbd', 'alt+S');
-    if (G.smart && model.contains(document.activeElement)) c.focus();   /* never drop focus with the chip */
-    model.hidden = G.smart; span(model).textContent = G.model; ui.modelMark.swap(model, G.model); model.setAttribute('aria-label', 'Model: ' + G.model); model.setAttribute('data-tip', 'Model'); model.setAttribute('data-kbd', 'alt+M');
+    drawModel(G);
     c.setSpend(G.spent, G.governed ? G.cap : null);
     c.refresh();
   }
+  /* the chip says who answers next */
+  const attachments = (): number => c.querySelector('.ui-composer__files')?.children.length ?? 0;
+  function drawModel(G: GovernanceState): void {
+    const choices = data().details.choices.get();
+    const prev = G.smart ? smartPreview(choices, { text: c.value, attachments: attachments() }) : null;
+    const name = ui.modelMark.called(G.model) || G.model;
+    const label = G.smart ? (prev ? 'Smart: ' + (ui.modelMark.called(prev.choice.model) || prev.choice.model) : 'Smart') : name || 'Choose a model';
+    const t = document.createElement('template');
+    t.innerHTML = ui.html.chip(G.smart || !G.model ? { label, icon: 'spark', haspopup: 'menu' } : { model: G.model, label, haspopup: 'menu' });
+    const fresh = t.content.firstElementChild as HTMLElement;
+    model.replaceChildren(...fresh.childNodes);
+    model.classList.toggle('ui-chip--mono', !G.smart && !!G.model);
+    model.setAttribute('aria-label', 'Who answers next: ' + (G.smart ? 'Smart' + (prev ? ', it would pick ' + (ui.modelMark.called(prev.choice.model) || prev.choice.model) + ' (' + prev.reason + ')' : ', it picks for each message') : name));
+    model.setAttribute('data-tip', G.smart ? 'Smart picks the model for each message' + (prev ? ': ' + prev.reason : '') : 'Who answers next'); model.setAttribute('data-kbd', 'alt+M');
+  }
+  c.input.addEventListener('input', () => { if (gov().smart) drawModel(gov()); });
   govChip.addEventListener('ui:change', (e) => { e.preventDefault(); setGovernance({ governed: !gov().governed }); c.flashHint(); });
-  smart.addEventListener('ui:change', (e) => { e.preventDefault(); setGovernance({ smart: !gov().smart }); c.flashHint(); });
 
   function openModel(viaKeyboard: boolean): void {
     const G = gov();
-    const anchor = G.smart ? smart : model;
-    /* the model picker: the same listbox as every model choice (Smart first, then the models by provider) */
-    const entries = [{ value: SMART_VALUE, label: 'Smart', desc: 'Picks the model for each message' }, ...ui.modelEntries(data().details.models.get())];
-    ui.listbox.open(anchor, entries, {
-      place: 'above', label: 'Model', value: G.smart ? SMART_VALUE : G.model,
+    const choices = data().details.choices.get();
+    const entries = modelEntries(choices, { current: G.model, governed: G.governed });
+    ui.listbox.open(model, entries, {
+      place: 'above', label: 'Who answers next', value: G.smart ? SMART_VALUE : currentChoice(choices, G.model)?.value ?? G.model,
+      foot: G.governed ? FOOT_GOVERNED : FOOT_UNGOVERNED,
       onClose: viaKeyboard ? () => { c.focus(); } : undefined,
       onSelect: (v) => { setGovernance(v === SMART_VALUE ? { smart: true } : { smart: false, model: v }); c.flashHint(); }
     });
   }
   model.addEventListener('click', () => openModel(false));
   data().details.governance.subscribe(sync);
+  data().details.choices.subscribe(() => { drawModel(gov()); });
 
   /* a dashed word, or an assumption: what it is read as */
   function openReading(anchor: HTMLElement, kind: string | undefined, text: string): void {
@@ -135,7 +148,7 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
   c.addEventListener('keydown', (e) => {
     if (!e.altKey || modKey(e) || e.shiftKey) return;
     if (e.code === 'KeyG') { e.preventDefault(); govChip.click(); }
-    else if (e.code === 'KeyS') { e.preventDefault(); smart.click(); }
+    else if (e.code === 'KeyS') { e.preventDefault(); setGovernance({ smart: !gov().smart }); c.flashHint(); }
     else if (e.code === 'KeyM') { e.preventDefault(); requestAnimationFrame(() => openModel(true)); }
   });
   c.addEventListener('ui:send', () => { reader.clear(); });

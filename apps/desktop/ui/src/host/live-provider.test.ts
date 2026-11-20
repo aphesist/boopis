@@ -32,9 +32,10 @@ function gateway(f: Record<string, unknown>): void {
   }
 }
 
-async function setup(): Promise<void> {
+async function setup(handler: (f: Record<string, unknown>) => void = gateway, plugin = false): Promise<void> {
   host = new FakeHost();
-  host.autoReply = gateway;
+  if (plugin) host.describe = { instance_id: 'inst', capabilities: ['event-replay-v1', 'plugin-rpc-v1'] };
+  host.autoReply = handler;
   listCalls = 0;
   client = new GatewayClient(host);
   await client.connect();
@@ -43,7 +44,7 @@ async function setup(): Promise<void> {
 }
 const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 
-beforeEach(setup);
+beforeEach(() => setup());
 
 describe('the live provider: sessions', () => {
   it('lists the gateway sessions, and shows what it does not know as empty', () => {
@@ -124,6 +125,70 @@ describe('the live provider: the conversation stream, from recorded frames', () 
     seen.length = 0;
     host.event('message.start', 'local-someone-elses');
     expect(seen).toEqual([]);
+  });
+
+  it('names the model the engine reported as the one that answered', async () => {
+    const conv = provider.sessions.conversation(SESSION);
+    const seen: ConversationEvent[] = [];
+    conv.subscribe((e) => seen.push(e));
+    await tick();
+    host.event('message.start', SESSION);
+    host.event('message.complete', SESSION, { text: 'Done.', outcome: 'completed', usage: { model: 'claude-sonnet-5-5[1m]' } });
+    const done = seen.at(-1);
+    expect(done?.type === 'turn-finished' && done.model).toBe('claude-sonnet-5-5[1m]');
+    const t = conv.snapshot().turns.at(-1);
+    expect(t?.role === 'assistant' && t.model).toBe('claude-sonnet-5-5[1m]');
+  });
+
+  it('Smart picks the model before the message goes, and the turn says what it picked and why', async () => {
+    const P = 'claude-subscription-directsdk-experimental';
+    const ladder = ['haiku', 'sonnet', 'opus'].map((n) => ({ name: n, model: { provider: P, id: n } }));
+    const sent: string[] = [];
+    await setup((f) => {
+      const id = f['id'];
+      if (f['method'] === 'plugin.boopis.cascade.state') { host.result(id, { ladder, status: 'idle' }); return; }
+      if (f['method'] === 'plugin.boopis.ledger.tail') { host.result(id, { events: [] }); return; }
+      if (String(f['method']).startsWith('plugin.boopis.')) { host.result(id, {}); return; }
+      if (f['method'] === 'config.set') { sent.push((f['params'] as { value: string }).value); host.result(id, { key: 'model', value: 'x' }); return; }
+      gateway(f);
+    }, true);
+    const conv = provider.sessions.conversation(SESSION);
+    await tick();
+    provider.details.follow(SESSION);
+    await tick();
+    expect(provider.details.setGovernance({ smart: true })).toBeNull();
+    provider.sessions.send(SESSION, 'debug why the login test is flaky', { ...META, smart: true });
+    await tick(); await tick();
+    expect(sent).toEqual(['sonnet --provider ' + P + ' --session']);
+    expect(host.last('prompt.submit')).toBeDefined();
+    host.event('message.start', SESSION);
+    const t = conv.snapshot().turns.at(-1);
+    expect(t?.role === 'assistant' && [t.model, t.why]).toEqual([P + '/sonnet', 'Smart: debugging']);
+  });
+
+  it('a governed turn shows the tiers the ladder ran, in order, and the last one answered', async () => {
+    const P = 'claude-subscription-directsdk-experimental';
+    const ladder = ['haiku', 'sonnet'].map((n) => ({ name: n, model: { provider: P, id: n } }));
+    await setup((f) => {
+      const m = String(f['method']);
+      if (m === 'plugin.boopis.cascade.state') host.result(f['id'], { ladder, status: 'idle' });
+      else if (m === 'plugin.boopis.ledger.tail') host.result(f['id'], { events: [] });
+      else if (m.startsWith('plugin.boopis.')) host.result(f['id'], {});
+      else gateway(f);
+    }, true);
+    const conv = provider.sessions.conversation(SESSION);
+    const seen: ConversationEvent[] = [];
+    conv.subscribe((e) => seen.push(e));
+    await tick();
+    provider.details.follow(SESSION);
+    await tick(); await provider.settled();
+    host.event('message.start', SESSION);
+    host.event('plugin.boopis.cascade.updated', SESSION, { task_id: 't1', tier: 'haiku', status: 'working', attempt: 1 });
+    host.event('plugin.boopis.cascade.updated', SESSION, { task_id: 't1', tier: 'sonnet', status: 'working', attempt: 2 });
+    host.event('message.complete', SESSION, { text: 'Done.', outcome: 'completed', usage: { model: 'haiku' } });
+    expect(seen.filter((e) => e.type === 'turn-model').map((e) => (e.type === 'turn-model' ? e.model : ''))).toEqual([P + '/haiku', P + '/haiku → ' + P + '/sonnet']);
+    const done = seen.at(-1);
+    expect(done?.type === 'turn-finished' && done.model).toBe(P + '/haiku → ' + P + '/sonnet');
   });
 
   it('shows an interrupted turn as stopped and a failed tool as a failed step', async () => {

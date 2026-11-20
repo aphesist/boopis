@@ -46,10 +46,10 @@ describe('the details panels follow a session and show only what Hermes and the 
     expect(provider.sessions.diff(SID, { blank: null })[0]?.hunks[0]?.[1]).toContain('+    return 2');
     expect(d.connectors.get()[0]).toMatchObject({ name: 'fakemcp' });
     expect(d.environment.get()).toMatchObject({ cwd: '/work/proj', branch: 'master', harness: 'boopis 0.1.0' });
-    expect(d.governance.get()).toMatchObject({ governed: false, locked: true, cap: '$2.00', model: 'fake-a' });
+    expect(d.governance.get()).toMatchObject({ governed: false, locked: true, cap: '$2.00', model: 'custom:main/fake-a' });
     expect(d.governance.get().ladder.map((l) => l[0])).toEqual(['claude-haiku-5-5', 'claude-sonnet-5-5', 'claude-opus-5-5']);
     expect(d.ledger.get()).toMatchObject({ trips: TRIPS, escalations: 0 });
-    expect(d.models.get()).toEqual(['fake-a']);
+    expect(d.models.get()).toEqual(['custom:main/fake-a']);
     expect(d.can.get()).toEqual({ compact: false, connectors: false, signIn: false });
     expect(d.notes.get().environment).toMatch(/fork, compact/);
     expect(JSON.stringify([d.context.get(), d.environment.get(), d.output.get()])).not.toMatch(/billing|proration|enzo/i);
@@ -59,7 +59,9 @@ describe('the details panels follow a session and show only what Hermes and the 
     provider.details.follow(SID);
     await tick(); await provider.settled();
     expect(provider.details.setGovernance({ governed: true })).toMatch(/fixed once the first message/);
-    expect(provider.details.setGovernance({ smart: true })).toMatch(/not built yet/);
+    expect(provider.details.setGovernance({ model: 'custom:main/fake-b' })).toBeNull();   /* a pick is applied when the message goes out */
+    expect(provider.details.setGovernance({ smart: true })).toBeNull();                    /* the ladder is known: Smart has tiers to choose from */
+    expect(provider.details.governance.get().smart).toBe(true);
     expect(provider.details.setGovernance({ cap: '$1.00' })).toMatch(/cost_cap_usd/);
     expect(provider.details.governance.get().governed).toBe(false);
   });

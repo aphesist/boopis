@@ -17,11 +17,22 @@ export interface SessionModel {
   blanks: BlankState[];
   /** the mode the user chose before the first message (applied when the session is created on the gateway) */
   wantGoverned: boolean | null; wantModel: string | null;
+  /** Smart is on: each message's model is chosen by the rule (`data/smart.ts`) */
+  smart: boolean;
+  /** the last turns, oldest first: did each fail (a tool error, a stopped turn, a ship rolled back) */
+  history: boolean[]; turnFailed: boolean;
+  /** the model the engine was last told to use for this session ('provider/model'), so a pick is switched once */
+  appliedModel: string | null;
+  /** the tier the plugin was last told to start on */
+  appliedTier: string | null;
+  /** the model that answered the last turn, as the engine reported it (`usage.model` of `message.complete`) */
+  answered: string | null;
 }
 export function newModel(): SessionModel {
   return {
     todos: [], todoRevision: -1, usage: null, breakdown: null, info: null, output: [], steps: 0, running: false, stopped: false, turnStartedAt: null, turnEndedAt: null, title: '', started: false,
-    stats: null, cascade: null, describe: null, diff: null, inventory: null, blanks: [], wantGoverned: null, wantModel: null
+    stats: null, cascade: null, describe: null, diff: null, inventory: null, blanks: [], wantGoverned: null, wantModel: null,
+    smart: false, history: [], turnFailed: false, appliedModel: null, appliedTier: null, answered: null
   };
 }
 
@@ -46,15 +57,16 @@ export function applyEvent(m: SessionModel, ev: GatewayEvent, nowMs: number): Pa
       if (typeof p['turn_started_at'] === 'number' && m.running) m.turnStartedAt = p['turn_started_at'] * 1000;
       return ['info', 'usage'];
     }
-    case 'message.start': m.running = true; m.stopped = false; m.steps = 0; m.turnStartedAt = nowMs; m.turnEndedAt = null; return ['run'];
+    case 'message.start': m.turnFailed = false; m.running = true; m.stopped = false; m.steps = 0; m.turnStartedAt = nowMs; m.turnEndedAt = null; return ['run'];
     case 'tool.start': if (!m.running) { m.running = true; m.turnStartedAt ??= nowMs; } m.steps++; return ['run'];
-    case 'tool.complete': m.output = capLines([...m.output, ...outputFor(p as Parameters<typeof outputFor>[0])]); return ['output'];
+    case 'tool.complete': if (p['is_error'] === true) m.turnFailed = true; m.output = capLines([...m.output, ...outputFor(p as Parameters<typeof outputFor>[0])]); return ['output'];
     case 'message.complete': {
       m.running = false; m.turnEndedAt = nowMs; m.stopped = typeof p['outcome'] === 'string' && p['outcome'] !== 'completed';
-      if (p['usage'] && typeof p['usage'] === 'object') m.usage = p['usage'] as UsageWire;
+      if (p['usage'] && typeof p['usage'] === 'object') { m.usage = p['usage'] as UsageWire; if (typeof m.usage.model === 'string' && m.usage.model) m.answered = m.usage.model; }
+      m.history = [...m.history, m.turnFailed || m.stopped].slice(-6); m.turnFailed = false;
       return ['run', 'usage', 'stats', 'cascade', 'diff'];
     }
-    case 'plugin.boopis.ship.completed': m.output = capLines([...m.output, ...shipLine(p as unknown as ShipWire)]); return ['output', 'diff'];
+    case 'plugin.boopis.ship.completed': if ((p as { status?: string }).status === 'restored') m.turnFailed = true; m.output = capLines([...m.output, ...shipLine(p as unknown as ShipWire)]); return ['output', 'diff'];
     case 'plugin.boopis.cascade.updated': return ['cascade', 'stats'];
     case 'plugin.boopis.ledger.appended': return ['stats'];
     case 'plugin.boopis.blank.opened': {

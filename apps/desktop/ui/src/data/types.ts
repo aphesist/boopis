@@ -233,6 +233,8 @@ export interface AgentTurn {
   blank?: BlankData | undefined; ship?: Ship | undefined;
   /** the forms the agent (or the plugin) opened in this turn, open or answered */
   forms?: readonly FormSpec[] | undefined;
+  /** why Smart picked this model, in a few words ("debugging"); absent when a person picked it or the engine's default answered */
+  why?: string | undefined;
   status: 'done' | 'running' | 'stopped';
 }
 export type Turn = UserTurn | AgentTurn;
@@ -240,7 +242,10 @@ export interface Conversation { turns: readonly Turn[] }
 export type ConversationEvent =
   | { type: 'turn-added'; turn: Turn }
   | { type: 'step-added'; turnId: string; step: Step }
-  | { type: 'turn-finished'; turnId: string; time: string; cost: string; stepCount: number; paragraphs: readonly string[]; stopped: boolean }
+  | { type: 'turn-finished'; turnId: string; time: string; cost: string; stepCount: number; paragraphs: readonly string[]; stopped: boolean;
+      /** the model (or the route of tiers) that actually answered, as the engine reported it; absent when it said nothing new */ model?: string | undefined; why?: string | undefined }
+  /** the model (route) of a running turn changed: the ladder escalated, or the engine named the model that took over */
+  | { type: 'turn-model'; turnId: string; model: string }
   | { type: 'blank-answered'; turnId: string; answer: string }
   /** a blank was opened while the turn runs (the live provider's, additive) */
   | { type: 'blank-opened'; turnId: string; blank: BlankData }
@@ -253,7 +258,16 @@ export type ConversationEvent =
   | { type: 'reset' };
 
 export interface DiffFile { path: string; add: number; del: number; hunks: ReadonlyArray<readonly [header: string, lines: readonly string[]]> }
-export interface SendMeta { governed: boolean; smart: boolean; model: string; assume: readonly string[] }
+export interface SendMeta { governed: boolean; smart: boolean; model: string; assume: readonly string[]; /** files and folders attached to the message */ attachments?: number }
+/** a model the user can have answer the next messages: a tier of the ladder, or a model of another configured provider */
+export interface ModelChoice {
+  /** 'provider/model': what a pick is called to the engine's per-session switch */
+  value: string; provider: string; model: string;
+  /** the provider's plan or service, secondary text */
+  providerName: string;
+  /** the tier of the ladder (0 is the cheapest) and its tier name, when this model is one */
+  tier?: number; tierName?: string;
+}
 
 /* ───────── the details panel ───────── */
 export interface ContextUsage { total: number; parts: ReadonlyArray<readonly [label: string, tokens: number]> }
