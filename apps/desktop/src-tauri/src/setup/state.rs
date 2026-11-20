@@ -46,6 +46,10 @@ pub struct State {
     pub restart_pending: bool,
     /// When setup last finished (seconds since the Unix epoch).
     pub done_at: Option<u64>,
+    /// The engine's default model was checked against the ladder once (setups before 0.1.4 wrote only the ladder, and a
+    /// session with no default model cannot be read back by the engine). Added without a version bump: a file from
+    /// before has none, so the check runs once on the first start of this build.
+    pub route_checked: bool,
 }
 
 /// Where the file lives.

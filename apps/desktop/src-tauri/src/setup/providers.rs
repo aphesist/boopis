@@ -438,11 +438,44 @@ async fn openrouter(
         .iter()
         .map(|id| (tier_name(id), format!("openrouter/{id}")))
         .collect();
-    *restart |= write_ladder(ops, &ladder).await?;
+    *restart |= write_route(ops, &ladder).await?;
     Ok(Outcome::Done(format!(
         "OpenRouter free models, smallest to largest: {}",
         tiers.join(", ")
     )))
+}
+
+/// Write the ladder and the engine's own default model, its first (cheapest) tier: `model.provider` and `model.default`.
+/// A session freezes the engine's default model when it is created; with none in the config it froze `None`, which the
+/// engine then refused to read back on the first message ("invalid policy", answered as `storage_unavailable`: the
+/// owner's report, 20 November 2026). Every choice but the free tier, whose claim the engine routes itself. True when
+/// it wrote anything.
+async fn write_route(ops: &dyn HermesOps, tiers: &[(String, String)]) -> Result<bool> {
+    let mut wrote = write_ladder(ops, tiers).await?;
+    if let Some((_, first)) = tiers.first() {
+        wrote |= write_default_model(ops, first).await?;
+    }
+    Ok(wrote)
+}
+
+/// Set `model.provider` and `model.default` to a tier's `provider/id` (the id may hold more slashes), each only when it
+/// differs. True when it wrote.
+async fn write_default_model(ops: &dyn HermesOps, tier: &str) -> Result<bool> {
+    let Some((provider, id)) = tier
+        .split_once('/')
+        .filter(|(p, i)| !p.is_empty() && !i.is_empty())
+    else {
+        return Ok(false);
+    };
+    let mut wrote = false;
+    for (key, want) in [("model.provider", provider), ("model.default", id)] {
+        if ops.config_get(key).await?.as_ref().and_then(Value::as_str) == Some(want) {
+            continue;
+        }
+        ops.config_set(key, want).await?;
+        wrote = true;
+    }
+    Ok(wrote)
 }
 
 /// Write the governed ladder (`tiers`: name and `provider/id`) when it differs from what is there. True when it wrote.
@@ -621,11 +654,7 @@ async fn single_tier(
     if saved(store, &r) && !wire(ops, provider, true).await?.is_empty() {
         *restart = true;
     }
-    let ladder = json!({"tiers": [{"name": model, "model": pick}]});
-    if ops.config_get(LADDER_KEY).await?.as_ref() != Some(&ladder) {
-        ops.config_set(LADDER_KEY, &ladder.to_string()).await?;
-        *restart = true;
-    }
+    *restart |= write_route(ops, &[(model.to_owned(), pick.to_owned())]).await?;
     Ok(Outcome::Done(format!("one tier: {model} on {provider}")))
 }
 
@@ -762,7 +791,7 @@ async fn subscription(
             ),
         ));
     }
-    *restart |= write_ladder(ops, &tiers).await?;
+    *restart |= write_route(ops, &tiers).await?;
     Ok(Outcome::Done(format!(
         "Claude subscription ({}): {} on your Claude Code login",
         probe.plan.as_deref().unwrap_or("plan not reported"),
@@ -803,7 +832,7 @@ async fn chatgpt(ops: &dyn HermesOps, input: &Input<'_>, restart: &mut bool) -> 
         .iter()
         .map(|(name, id)| ((*name).to_owned(), format!("{CHATGPT_PROVIDER}/{id}")))
         .collect();
-    *restart |= write_ladder(ops, &tiers).await?;
+    *restart |= write_route(ops, &tiers).await?;
     Ok(Outcome::Done(format!(
         "ChatGPT subscription: {} on your ChatGPT sign-in",
         CHATGPT_LADDER
@@ -833,7 +862,7 @@ async fn gemini(
         .iter()
         .map(|(name, id)| ((*name).to_owned(), format!("{GEMINI}/{id}")))
         .collect();
-    *restart |= write_ladder(ops, &tiers).await?;
+    *restart |= write_route(ops, &tiers).await?;
     Ok(Outcome::Done(format!(
         "Gemini on your Google AI Studio key: {}",
         GEMINI_LADDER

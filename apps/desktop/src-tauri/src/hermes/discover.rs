@@ -33,6 +33,10 @@ pub struct Bundled {
     pub home: PathBuf,
     /// Where Python writes its bytecode, so nothing lands in the user's own cache (`PYTHONPYCACHEPREFIX`).
     pub pycache: PathBuf,
+    /// The engine's one-gateway-per-user lock folder (`HERMES_GATEWAY_LOCK_DIR`), in the app's own folder. By default the
+    /// engine keeps it in `~/.local/state/hermes`, shared with every Hermes of this user, so a gateway an earlier build
+    /// left running, or the user's own Hermes, refused boopis's ("a gateway already owns this host"; exit 75).
+    pub locks: PathBuf,
 }
 
 impl Environment {
@@ -320,6 +324,7 @@ mod tests {
             binary: ours.clone(),
             home: dir.path().join("app/hermes-home"),
             pycache: dir.path().join("app/pycache"),
+            locks: dir.path().join("app/locks"),
         });
         assert_eq!(env.hermes_root(), dir.path().join("app/hermes-home"));
         assert_eq!(

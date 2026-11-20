@@ -673,6 +673,62 @@ async fn the_e2e_setup_marker_is_what_makes_the_ui_show_a_session() {
     assert!(!done.needed, "{}", done.reason);
 }
 
+#[tokio::test]
+async fn a_finished_setup_whose_ladder_has_no_engine_default_runs_once_more_to_write_it() {
+    // Setups before 0.1.4 wrote only the ladder: every session froze no model, and the engine refused it on the first
+    // message (storage_unavailable). Such an install asks for setup once; one that has the default records the check.
+    let r = rig(main_provider());
+    a_home_with_the_plugin(&r);
+    let marker = super::state::path(&r.fake.home);
+    std::fs::create_dir_all(marker.parent().unwrap()).unwrap();
+    std::fs::write(&marker, E2E_SETUP_DONE).unwrap();
+    let ladder = json!({"tiers": [{"name": "haiku", "model": "claude-subscription-directsdk-experimental/haiku"}]});
+    r.fake
+        .config_set(LADDER, &ladder.to_string())
+        .await
+        .unwrap();
+    r.fake
+        .config
+        .lock()
+        .unwrap()
+        .as_object_mut()
+        .unwrap()
+        .remove("model");
+    let missing = r.setup().check().await.unwrap();
+    assert!(
+        missing.needed && missing.reason == "the engine has no default model",
+        "{}",
+        missing.reason
+    );
+    assert!(
+        !super::state::load(&r.fake.home).unwrap().route_checked,
+        "not recorded while it is missing"
+    );
+
+    r.fake.config_set("model.default", "haiku").await.unwrap();
+    let fine = r.setup().check().await.unwrap();
+    assert!(!fine.needed, "{}", fine.reason);
+    assert!(
+        super::state::load(&r.fake.home).unwrap().route_checked,
+        "recorded, so later starts read no configuration"
+    );
+
+    // the free tier routes itself: nothing to repair
+    let r = rig(json!({}));
+    a_home_with_the_plugin(&r);
+    let marker = super::state::path(&r.fake.home);
+    std::fs::create_dir_all(marker.parent().unwrap()).unwrap();
+    std::fs::write(&marker, E2E_SETUP_DONE).unwrap();
+    r.fake
+        .config_set(
+            LADDER,
+            &json!({"tiers": [{"name": "free", "model": "nous/nous/welcome"}]}).to_string(),
+        )
+        .await
+        .unwrap();
+    assert!(!r.setup().check().await.unwrap().needed);
+}
+
 fn with_runtime(
     r: &Rig,
     version: &str,
@@ -1648,6 +1704,16 @@ async fn once_claude_code_is_signed_in_the_bundled_plugin_s_ladder_is_written_wi
             {"name": "haiku", "model": "claude-subscription-directsdk-experimental/haiku"},
             {"name": "sonnet", "model": "claude-subscription-directsdk-experimental/sonnet"},
             {"name": "opus", "model": "claude-subscription-directsdk-experimental/opus"}]})
+    );
+    // the engine's own default model is the first tier: a session freezes it when it is created, and with none the
+    // engine refused to read the session back on the first message (storage_unavailable)
+    assert_eq!(
+        r.fake.config_get("model.provider").await.unwrap(),
+        Some(json!("claude-subscription-directsdk-experimental"))
+    );
+    assert_eq!(
+        r.fake.config_get("model.default").await.unwrap(),
+        Some(json!("haiku"))
     );
     let receipt = s.receipt.unwrap().lines.join("\n");
     assert!(

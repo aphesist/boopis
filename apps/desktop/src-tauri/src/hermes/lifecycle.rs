@@ -64,11 +64,23 @@ impl Supervisor {
     #[must_use]
     pub fn new(env: Environment, limits: Limits) -> Self {
         let cli = match &env.bundled {
-            // the bundled Hermes: the user's HERMES_* and UV_* stay out, and Python's bytecode goes to the app's own folder
-            Some(b) => Cli::new(&limits).isolated().with_env(vec![(
-                "PYTHONPYCACHEPREFIX".to_owned(),
-                b.pycache.display().to_string(),
-            )]),
+            // the bundled Hermes: the user's HERMES_* and UV_* stay out, Python's bytecode and the engine's per-user gateway
+            // lock go to the app's own folder (no other Hermes, and no gateway an earlier build left, can hold boopis's)
+            Some(b) => {
+                if let Err(e) = std::fs::create_dir_all(&b.locks) {
+                    tracing::warn!(error = %e, dir = %b.locks.display(), "could not make the engine's lock folder");
+                }
+                Cli::new(&limits).isolated().with_env(vec![
+                    (
+                        "PYTHONPYCACHEPREFIX".to_owned(),
+                        b.pycache.display().to_string(),
+                    ),
+                    (
+                        "HERMES_GATEWAY_LOCK_DIR".to_owned(),
+                        b.locks.display().to_string(),
+                    ),
+                ])
+            }
             None => Cli::new(&limits),
         };
         Self {

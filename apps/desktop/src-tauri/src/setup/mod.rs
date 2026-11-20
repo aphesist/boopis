@@ -429,6 +429,9 @@ impl Setup {
             (Some(_), Some(i), true) if bundled.is_some_and(|b| b != i) => {
                 (true, "the app carries a newer plugin")
             }
+            _ if !state.route_checked && self.route_missing(&home, state.clone()).await => {
+                (true, "the engine has no default model")
+            }
             _ => (false, "set up"),
         };
         Ok(Check {
@@ -586,6 +589,8 @@ impl Setup {
                 .ok()
                 .map(|d| d.as_secs());
         }
+        // a finished run's models step wrote the route with the ladder (`providers::write_route`)
+        state.route_checked |= finished;
         state::save(&home, &state)?;
         if !finished {
             run.push("receipt", "Ready", StepState::Pending, "", None);
@@ -848,6 +853,45 @@ impl Setup {
                 run.push(id, title, StepState::NeedsInput, "Only these three settings are written; nothing else is touched.", None);
             }
         }
+    }
+
+    /// Once per install (`State::route_checked`): whether the ladder names a model the engine has no default for. A setup
+    /// before 0.1.4 wrote only the ladder, so every session froze no model and the engine refused it on the first message.
+    /// The free tier routes itself, and an install with no ladder has nothing to repair. A route that is in place is
+    /// recorded, so later starts read no configuration here.
+    async fn route_missing(&self, home: &std::path::Path, mut state: State) -> bool {
+        let ladder = self
+            .ops
+            .config_get(providers::LADDER_KEY)
+            .await
+            .ok()
+            .flatten();
+        let first = ladder
+            .as_ref()
+            .and_then(|l| l.get("tiers"))
+            .and_then(|t| t.get(0))
+            .and_then(|t| t.get("model"))
+            .and_then(Value::as_str)
+            .map(str::to_owned);
+        let missing = match first {
+            Some(m) if !m.starts_with("nous/") => self
+                .ops
+                .config_get("model.default")
+                .await
+                .ok()
+                .flatten()
+                .as_ref()
+                .and_then(Value::as_str)
+                .is_none_or(|d| d.trim().is_empty()),
+            _ => false,
+        };
+        if !missing {
+            state.route_checked = true;
+            if let Err(e) = state::save(home, &state) {
+                tracing::warn!(error = %e, "could not record that the engine's default model was checked");
+            }
+        }
+        missing
     }
 
     async fn models_step(&self, run: &mut Run, state: &mut State) {

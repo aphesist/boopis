@@ -612,6 +612,7 @@ impl Plan {
             binary: self.runtime.layout(&self.runtimes_dir()).hermes,
             home: self.home(),
             pycache: self.data_dir.join("cache").join("pycache"),
+            locks: self.data_dir.join("locks"),
         }
     }
 }
