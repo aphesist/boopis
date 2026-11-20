@@ -115,7 +115,7 @@ describe('a live bot’s room shows what Hermes reports and nothing it made up',
     const line = q('.bt-p-line').textContent ?? '';
     expect(line).toContain('reviews pull requests');
     expect(line).toContain('weekdays at 09:00');
-    expect(document.querySelector('.bt-p-sched[data-tip="Model"]')?.textContent).toContain('fake-a');
+    expect(document.querySelector('.bt-p-sched[data-tip="Model"]')?.textContent).toContain('Fake A');
   });
   it('a session list Hermes did not answer is shown as unknown with the reason', () => {
     const b = { ...atlas(), info: { ...INFO, sessions: null, notes: { sessions: 'Its schedule and sessions could not be read: no link.' } } };

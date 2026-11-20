@@ -38,7 +38,7 @@ describe('Settings > Models', () => {
     expect(panel.textContent).toContain('nous/welcome');
     const rows = [...panel.querySelectorAll('.ui-ladder--list > li')];
     expect(rows).toHaveLength(2);
-    expect(rows[0]?.querySelector('.ui-ladder__name')?.textContent).toContain('openrouter/a-3b:free');
+    expect(rows[0]?.querySelector('.ui-ladder__name')?.textContent).toContain('A 3B');
     expect(rows[0]?.querySelector('.ui-ladder__rule')?.textContent).toBe('small');
     expect(rows[1]?.querySelector('.ui-ladder__rule')?.textContent).toBe('big');
     expect(rows[0]?.getAttribute('aria-current'), 'the first tier is where a task starts').toBe('step');

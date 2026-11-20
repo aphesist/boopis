@@ -69,7 +69,7 @@ const runModel = (): string => ui.html.model(run().model, { size: 14 });
 const runHow = (): string => (run().escalated ? `escalated ${run().escalated === 1 ? 'once' : run().escalated + ' times'}` : 'on the first try');
 const runSub = (): string => run().stopped ? 'Stopped by you' : `${runModel()} ${runHow()}`;
 /** the run button's name: its visible words, in order (WCAG 2.5.3), then what it does */
-const runName = (): string => `${run().title} ${run().stopped ? 'Stopped by you' : `${run().model} ${runHow()}`}, show run details`;
+const runName = (): string => `${run().title} ${run().stopped ? 'Stopped by you' : `${ui.modelMark.called(run().model)} ${runHow()}`}, show run details`;
 /** the run's spend: the library's running total and its row of dots (dots, not bars) */
 /* a cost the plugin could not price is shown as unknown, and a run with no cap has no meter (ADR-0012) */
 export const costHTML = (): string => (run().cost == null || run().cap == null
@@ -77,7 +77,7 @@ export const costHTML = (): string => (run().cost == null || run().cap == null
   : ui.html.capacity(fmtCost(run().cost), fmtCost(run().cap), { label: `${fmtCost(run().cost)} of the ${fmtCost(run().cap)} cap spent` }));
 export const meterHTML = (): string => (run().cost == null || run().cap == null ? '' : ui.html.measure({ used: run().cost ?? 0, total: run().cap || 1, dots: 10, variant: 'row', label: 'Cost cap' }));
 /** the ladder (line at rest, list expanded); finish() keys its stations run:t0… so they travel between views */
-const ladderLine = (): string => `<span class="dk-ladder" data-tip="Model ladder: ${esc(run().model)}" data-tip-pos="top">${ui.html.ladder({ stations: run().ladder, current: run().current, ground: 'var(--dock-bg)' })}</span>`;
+const ladderLine = (): string => `<span class="dk-ladder" data-tip="Model ladder: ${esc(ui.modelMark.called(run().model))}" data-tip-pos="top">${ui.html.ladder({ stations: run().ladder, current: run().current, ground: 'var(--dock-bg)' })}</span>`;
 const ladderList = (): string => ui.html.ladder({ variant: 'list', ground: 'var(--dock-bg)', current: run().current,
   stations: run().ladder.map(([m, rule], i) => [m, i === run().current && !run().stopped ? `${rule}, running` : rule] as const) });
 /** a page that shows sample data in a live build says so (the mock's bots and schedules are previews) */
@@ -184,7 +184,7 @@ export const V: Record<string, () => string> = {
     <hr class="dk-rule" data-e><div class="dk-runx-spend"><span class="dk-time" data-k="run:time" data-run-time>${fmtDur(run().elapsed)}</span><span data-k="run:cost" data-run-cost>${costHTML()}</span><span data-k="run:meter" data-run-meter>${meterHTML()}</span>
       <span class="dk-runx-more" data-e>${esc(run().tokens || 'unknown')} tokens, ${run().trips} round trips, step ${run().step}</span></div>
     <div class="dk-settings" data-e>` +
-      ui.html.setRow({ label: 'Governed', hint: run().governed ? 'The ladder picks the model' : `Stays on ${run().model}`, for: 'dk-sw-governed', control: ui.html.switch({ id: 'dk-sw-governed', checked: run().governed }) }) +
+      ui.html.setRow({ label: 'Governed', hint: run().governed ? 'The ladder picks the model' : `Stays on ${ui.modelMark.called(run().model)}`, for: 'dk-sw-governed', control: ui.html.switch({ id: 'dk-sw-governed', checked: run().governed }) }) +
       (data().info.live ? '' : ui.html.setRow({ label: 'Sandbox network', for: 'dk-sw-network', control: ui.html.switch({ id: 'dk-sw-network', checked: run().network }) })) + '</div>',
 
   'wait:min': () => {

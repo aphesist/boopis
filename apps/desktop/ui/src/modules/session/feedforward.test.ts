@@ -37,8 +37,8 @@ describe('how the agent reads decision words in the composer', () => {
     expect(r.items('look at src/billing/money').map((i) => i.text)).toContain('src/billing/money');
   });
   it('governance decides the cost assumption: ungoverned pins a model, smart off starts on the chosen one', () => {
-    expect(costAssume({ governed: false, smart: true, model: 'opus 5.5' }, null)).toBe('>ungoverned, pinned to opus 5.5');
-    expect(costAssume({ governed: true, smart: false, model: 'haiku 4.5' }, null)).toBe('>governed starts on haiku');
+    expect(costAssume({ governed: false, smart: true, model: 'opus 5.5' }, null)).toBe('>ungoverned, pinned to Claude Opus 5.5');
+    expect(costAssume({ governed: true, smart: false, model: 'haiku 4.5' }, null)).toBe('>governed starts on Claude Haiku 4.5');
     expect(costAssume(gov, 'thorough')).toBe('>governed starts on sonnet');
   });
   it('with no decision words and the defaults on, there is nothing to assume', () => {

@@ -26,6 +26,7 @@ import { glance, liven, orb } from './orb';
 import { listbox, wireSelect } from './select';
 import type { SelectElement } from './select';
 import { modelEntries } from './select-html';
+import { aliasOf, canon, modelName, providerName, sameModel, splitRef } from './model-name';
 import type { SelectEntry, SelectGroup, SelectOpts, SelectOption } from './select-html';
 import { shape } from './shape';
 import { squircle } from './squircle';
@@ -77,7 +78,7 @@ const keys = (k: string): HTMLElement => frag(html.keys(k));
 const inline = (text: string): HTMLSpanElement => { const s = document.createElement('span'); s.innerHTML = html.inline(text); return s; };
 
 /** `ui.modelMark(ref, opts)` draws a provider mark; its properties read the family from a model id */
-const modelMark = Object.assign(modelMarkEl, { family: modelFamily, parse: parseRoute, last: lastModel, isRoute, swap: swapMark, families: modelFamilies });
+const modelMark = Object.assign(modelMarkEl, { called: modelName, provider: providerName, same: sameModel, split: splitRef, canon, aliasOf, family: modelFamily, parse: parseRoute, last: lastModel, isRoute, swap: swapMark, families: modelFamilies });
 const model = (ref: ModelRef, o?: ModelOpts): HTMLElement => frag(modelHTML(ref, o));
 const modelRoute = (text: string, o?: ModelOpts): HTMLElement => frag(routeHTML(text, o));
 

@@ -1,6 +1,7 @@
 /* feedforward: how the agent reads decision words in the composer. The catalog (patterns, options, guesses) comes from
    the provider; this file is the reading itself: which words are decisions, what each is taken to mean, which ones
    were confirmed or dropped. */
+import { ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { DecisionKind, DecisionOption } from '../../data';
 
@@ -27,8 +28,8 @@ function guess(k: DecisionKind, text: string): string {
 }
 /** the cost assumption: governed starts on a model, ungoverned pins one */
 export function costAssume(g: GovernanceView, costVal: string | null): string {
-  if (!g.governed) return '>ungoverned, pinned to ' + g.model;
-  if (!g.smart) return '>governed starts on ' + g.model.split(' ')[0];
+  if (!g.governed) return '>ungoverned, pinned to ' + (ui.modelMark.called(g.model) || g.model);
+  if (!g.smart) return '>governed starts on ' + (ui.modelMark.called(g.model) || g.model);
   const cost = kindOf('cost');
   return '>governed starts on ' + ((cost.options ?? []).find((x) => x.value === costVal) ?? (cost.options ?? [])[0])?.start;
 }

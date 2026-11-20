@@ -10,6 +10,8 @@
    The mapping and the icons are data (vendor/model-icons: LobeHub icons, MIT, see NOTICE), typed below. */
 import data from '../vendor/model-icons/icons.json';
 import { esc } from '../core/dom';
+import { modelName, splitRef } from './model-name';
+import type { ModelRef } from './model-name';
 
 interface Variant { viewBox: string; attrs?: string; body: string }
 interface Icon { mono: Variant; color?: Variant }
@@ -22,16 +24,11 @@ const ICONS = data.icons as unknown as Record<string, Icon>;
 const FAMILIES = MAP.families.map((f) => ({ ...f, re: new RegExp(f.match, 'i') }));
 
 export interface ModelFamily { id: string; name: string; icon: string; model: string; host: string }
-/** a model id, optionally behind a host path ('openrouter/anthropic/claude-sonnet-4.5'), or `{model, host}` */
-export type ModelRef = string | { model?: string; id?: string; host?: string; provider?: string; via?: string };
+export type { ModelRef };
 export interface MarkOpts { size?: number | undefined; color?: 'mono' | 'brand' | undefined; /** the accessible name; false when the mark sits in an aria-hidden slot */ label?: string | false | undefined; class?: string | undefined }
 export interface ModelOpts extends MarkOpts { name?: string; mono?: boolean }
 
-function split(ref: ModelRef | null | undefined): { model: string; host: string } {
-  if (ref && typeof ref === 'object') return { model: String(ref.model ?? ref.id ?? ''), host: String(ref.host ?? ref.provider ?? ref.via ?? '').toLowerCase() };
-  const s = String(ref ?? '').trim(), i = s.lastIndexOf('/');
-  return i < 0 ? { model: s, host: '' } : { model: s.slice(i + 1), host: s.slice(0, i).toLowerCase() };
-}
+const split = splitRef;
 
 const familyCache = new Map<string, ModelFamily>();
 export function modelFamily(ref: ModelRef | null | undefined): ModelFamily {
@@ -82,9 +79,9 @@ function frag(s: string): SVGElement & HTMLElement {
 
 /** mark + name: the name stays (a logo alone is never the answer to "which model"), and the pair never wraps apart */
 export function modelHTML(ref: ModelRef, o: ModelOpts = {}): string {
-  const f = modelFamily(ref), name = o.name ?? (typeof ref === 'object' ? f.model : String(ref));
+  const f = modelFamily(ref), name = o.name ?? (modelName(ref) || f.model);
   return '<span class="ui-model' + (o.class ? ' ' + esc(o.class) : '') + '" data-family="' + esc(f.id) + '">' + markHTML(ref, o) +
-    '<span class="' + (o.mono === false ? 'ui-model__name' : 'ui-model__name ui-mono') + '">' + esc(name) + '</span></span>';
+    '<span class="' + (o.mono === true ? 'ui-model__name ui-mono' : 'ui-model__name') + '">' + esc(name) + '</span></span>';
 }
 export const arrowHTML = (via?: string): string => '<span class="ui-model-route__to" aria-hidden="true">' + esc(via || '→') + '</span><span class="ui-sr">then</span>';
 export const routeHTML = (text: string, o: ModelOpts = {}): string =>

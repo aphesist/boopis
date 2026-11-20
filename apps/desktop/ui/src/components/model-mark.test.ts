@@ -48,8 +48,8 @@ describe('drawing a mark', () => {
   it('keeps the name beside the mark as one unit', () => {
     const h = modelHTML('sonnet 5.5');
     expect(h).toContain('class="ui-model"');
-    expect(h).toContain('>sonnet 5.5</span>');
-    expect(h.indexOf('<svg')).toBeLessThan(h.indexOf('sonnet 5.5'));
+    expect(h).toContain('>Claude Sonnet 5.5</span>');
+    expect(h.indexOf('<svg')).toBeLessThan(h.indexOf('Claude Sonnet 5.5'));
   });
   it('draws a route with both marks and the arrow, and says "then" to a screen reader', () => {
     const r = routeHTML('qwen3-coder → sonnet 5.5');
@@ -78,7 +78,7 @@ describe('the library takes a model through the one primitive', () => {
   it('a chip {model} takes a mono mark and the model name as its label', () => {
     const h = html.chip({ model: 'gpt-5' });
     expect(h).toContain('data-color="mono"');
-    expect(h).toContain('<span>gpt-5</span>');
+    expect(h).toContain('<span>GPT-5</span>');
   });
   it('a list ladder marks every station', () => {
     const h = html.ladder({ variant: 'list', stations: [['qwen3-coder', 'first'], ['sonnet 5.5', 'on failure']] });

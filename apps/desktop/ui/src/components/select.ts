@@ -16,13 +16,15 @@ export interface ListboxOpts {
   layer?: Element | undefined; onSelect?: ((value: string, option: SelectOption) => void) | undefined; onClose?: (() => void) | undefined;
   /** the first typed letter, when the list was opened by typing */
   query?: string | undefined;
+  /** a quiet line under the list (what a choice means), read as the list's description */
+  foot?: string | undefined;
 }
 const TYPE_MS = 700;
 
 /** the thing a listbox is anchored to is the select's trigger, or any button (a chip) that says it has a popup */
 function openListbox(anchor: HTMLElement, list: readonly (string | SelectEntry)[], o: ListboxOpts = {}): HTMLElement | null {
   const entries = toEntries(list), id = nid('lb');
-  const node = frag(listboxHTML(entries, { id, label: o.label, value: o.value }));
+  const node = frag(listboxHTML(entries, { id, label: o.label, value: o.value, foot: o.foot }));
   const r = anchor.getBoundingClientRect();
   /* as wide as the field, as tall as the room beside it allows, then scrolls */
   node.style.minWidth = Math.round(r.width) + 'px';
