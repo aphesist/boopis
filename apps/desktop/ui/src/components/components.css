@@ -492,6 +492,7 @@ button.ui-group__head { cursor: pointer; }
   --hx-center-x: var(--hx-center-x-to);
 }
 .ui-toast:not(:has(button)) { padding-right: 14px; }
+.ui-toast > .ui-btn { align-self: stretch; height: auto; min-height: var(--corner-size); margin-block: var(--corner-inset); }   /* the action keeps --corner-inset from the right, the top and the bottom edge whatever the height of the text beside it: a toast that wraps stretches it instead of centring it 11px from the top (R-corner-3) */
 .ui-toast.is-in { opacity: 1; translate: -50% 0; pointer-events: auto; }
 .ui-toast[data-static] { position: relative; left: auto; top: auto; translate: none; opacity: 1; pointer-events: auto; z-index: auto; }
 .ui-toast > span { min-width: 0; padding-block: 8px; overflow-wrap: anywhere; }

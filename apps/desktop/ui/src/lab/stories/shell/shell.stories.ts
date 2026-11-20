@@ -51,10 +51,10 @@ const menus: Story = {
   states: {
     'account menu': st(['typical', 'open'], async (c) => { await c.click('#hx-btn-account'); await c.wait(300); }, {}, { overlay: { anchor: '#hx-btn-account', layer: '.ui-menu' } }),
     'attach menu': st(['open', 'owner'], async (c) => { await c.click('#hx-view-session .ui-composer__attach'); await c.wait(300); }, {}, { overlay: { anchor: '#hx-view-session .ui-composer__attach', layer: '.ui-menu' } }),
-    'model picker': st(['open'], async (c) => { c.$('#hx-view-session [role="textbox"]').focus(); await c.key('m', { altKey: true }); await c.wait(400); }),
-    'the blank popover': st(['open'], async (c) => { await c.click('#hx-view-session .ui-blank'); await c.wait(400); }),
-    'account menu, rail': st(['open', 'variant'], async (c) => { c.hx.setState({ left: 'rail' }); await c.wait(500); await c.click('#hx-btn-account'); await c.wait(300); }),
-    'a menu item hover': st(['hover'], async (c) => { await c.click('#hx-btn-account'); await c.wait(300); }, {}, { force: [{ sel: '.ui-menu .ui-menu__item:nth-of-type(2)', state: 'hover' }] })
+    'model picker': st(['open'], async (c) => { c.$('#hx-view-session [role="textbox"]').focus(); await c.key('m', { altKey: true }); await c.wait(400); }, {}, { overlay: { anchor: '#hx-view-session .ui-composer [aria-expanded="true"]', layer: '.ui-listbox' } }),
+    'the blank popover': st(['open'], async (c) => { await c.click('#hx-view-session .ui-blank'); await c.wait(400); }, {}, { overlay: { anchor: '#hx-view-session .ui-blank', layer: 'hx-card[data-size="popover"]' } }),
+    'account menu, rail': st(['open', 'variant'], async (c) => { c.hx.setState({ left: 'rail' }); await c.wait(500); await c.click('#hx-btn-account'); await c.wait(300); }, {}, { overlay: { anchor: '#hx-btn-account', layer: '.ui-menu' } }),
+    'a menu item hover': st(['hover'], async (c) => { await c.click('#hx-btn-account'); await c.wait(300); }, {}, { force: [{ sel: '.ui-menu .ui-menu__item:nth-of-type(2)', state: 'hover' }], overlay: { anchor: '#hx-btn-account', layer: '.ui-menu' } })
   }
 };
 const toast: Story = {
