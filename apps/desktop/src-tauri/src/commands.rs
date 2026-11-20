@@ -35,6 +35,7 @@ use crate::setup::install::Bundle;
 use crate::setup::ops::CliOps;
 use crate::setup::{Answer, Check, ModelsView, Setup, Status};
 use crate::state::Hubs;
+use crate::window::{Attachment, Detected, describe_all};
 
 /// A gateway frame, as JSON, exactly as the gateway sent it.
 #[derive(Clone, Serialize, Type)]
@@ -446,6 +447,140 @@ pub async fn pick_folder(app: AppHandle) -> std::result::Result<Option<PickedFol
     };
     let path = picked.into_path().map_err(|e| Error::Os(e.to_string()))?;
     Ok(Some(os::to_home_relative(&path, &home)))
+}
+
+/// The window as the title bar needs it: the desktop the host found at start, and the window's state now.
+#[derive(Debug, Clone, Serialize, Type)]
+pub struct WindowFacts {
+    /// What the host detected once at start.
+    pub detected: Detected,
+    /// Whether the window is maximised.
+    pub maximized: bool,
+    /// Whether the window is full screen.
+    pub fullscreen: bool,
+}
+
+/// What a title-bar button asks of the window.
+#[derive(Debug, Clone, Copy, serde::Deserialize, Type)]
+#[serde(rename_all = "snake_case")]
+pub enum WindowAction {
+    /// Minimise.
+    Minimize,
+    /// Maximise, or restore (leaves full screen first).
+    ToggleMaximize,
+    /// Full screen on or off.
+    ToggleFullscreen,
+    /// Close the window (the app quits with its last window).
+    Close,
+}
+
+/// The window's state, pushed when it changes so the maximise button's icon follows it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type, tauri_specta::Event)]
+pub struct WindowStateEvent {
+    /// Whether the window is maximised.
+    pub maximized: bool,
+    /// Whether the window is full screen.
+    pub fullscreen: bool,
+}
+
+/// A file being dragged over the window, or dropped on it.
+#[derive(Debug, Clone, Serialize, Type, tauri_specta::Event)]
+pub struct FileDragEvent {
+    /// `enter`, `over`, `leave` or `drop`.
+    pub phase: String,
+    /// The pointer, in CSS pixels from the page's top left.
+    pub x: f64,
+    /// The pointer, in CSS pixels from the page's top left.
+    pub y: f64,
+    /// What was dropped (empty unless `phase` is `drop`).
+    pub attachments: Vec<Attachment>,
+}
+
+/// The desktop detected at start (managed state).
+pub struct WindowDetected(pub Detected);
+
+fn main_window(app: &AppHandle) -> std::result::Result<tauri::WebviewWindow, Error> {
+    app.get_webview_window("main")
+        .ok_or_else(|| Error::Os("the main window is not there".into()))
+}
+
+/// The desktop's kind and the window's state.
+#[tauri::command]
+#[specta::specta]
+pub fn window_facts(
+    app: AppHandle,
+    detected: State<'_, WindowDetected>,
+) -> std::result::Result<WindowFacts, HostError> {
+    let w = main_window(&app)?;
+    Ok(WindowFacts {
+        detected: detected.0.clone(),
+        maximized: w.is_maximized().unwrap_or(false),
+        fullscreen: w.is_fullscreen().unwrap_or(false),
+    })
+}
+
+/// Minimise, maximise or restore, full screen, or close the main window.
+#[tauri::command]
+#[specta::specta]
+pub fn window_control(app: AppHandle, action: WindowAction) -> std::result::Result<(), HostError> {
+    let w = main_window(&app)?;
+    let done = match action {
+        WindowAction::Minimize => w.minimize(),
+        WindowAction::ToggleMaximize => {
+            if w.is_fullscreen().unwrap_or(false) {
+                w.set_fullscreen(false)
+            } else if w.is_maximized().unwrap_or(false) {
+                w.unmaximize()
+            } else {
+                w.maximize()
+            }
+        }
+        WindowAction::ToggleFullscreen => {
+            let on = w.is_fullscreen().unwrap_or(false);
+            w.set_fullscreen(!on)
+        }
+        WindowAction::Close => w.close(),
+    };
+    done.map_err(|e| Error::Os(e.to_string()).into())
+}
+
+/// Ask for files or folders to attach to a message, in the system's own dialog. Empty when cancelled.
+#[tauri::command]
+#[specta::specta]
+pub async fn pick_attachments(
+    app: AppHandle,
+    kind: String,
+) -> std::result::Result<Vec<Attachment>, HostError> {
+    use tauri_plugin_dialog::DialogExt;
+    let folders = match kind.as_str() {
+        "file" => false,
+        "folder" => true,
+        other => {
+            return Err(
+                Error::InvalidInput(format!("attach a file or a folder, not {other:?}")).into(),
+            );
+        }
+    };
+    let start = app
+        .path()
+        .home_dir()
+        .map_err(|e| Error::Os(e.to_string()))?;
+    let picked = tokio::task::spawn_blocking(move || {
+        let d = app.dialog().file().set_directory(start);
+        if folders {
+            d.blocking_pick_folders()
+        } else {
+            d.blocking_pick_files()
+        }
+    })
+    .await
+    .map_err(|e| Error::Os(e.to_string()))?;
+    let paths: Vec<std::path::PathBuf> = picked
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|p| p.into_path().ok())
+        .collect();
+    Ok(describe_all(paths.iter().map(std::path::PathBuf::as_path)))
 }
 
 /// Open an `http` or `https` link in the user's browser.

@@ -29,6 +29,9 @@ The UI never holds gateway tickets, tokens or keys.
 | `notify` | `{title, body, action?}` | `{}`. Desktop notifications carry no action buttons; `action` is validated and ignored |
 | `pick_folder` | | `{path, home_relative}` or `null`: `~/x/y` under the user's home, absolute outside it |
 | `open_external` | `{url}` | `{}`. `http` and `https` only, no credentials in the URL |
+| `window_facts` | | `{detected: {platform, kind, desktop, evidence}, maximized, fullscreen}`: the desktop the host found once at start (`window.rs`: the compositor's variables, the session's names, a running tiling manager) and the window's state now |
+| `window_control` | `{action}` | `{}`. `minimize`, `toggle_maximize`, `toggle_fullscreen` or `close` on the main window. The title bar draws close alone on a tiling manager |
+| `pick_attachments` | `{kind}` | `[{path, name, kind, bytes}]` from the system's file (`file`, several) or folder (`folder`) dialog; `[]` when cancelled. `kind` is `file`, `image` or `folder` |
 | `setup_check` | `{profile?}` | `{hermes_installed, needed, reason}`. Read-only: does first-run setup still have to run |
 | `setup_advance` | `{profile?, answer?, reconsider}` | `{steps[], form?, done, install_command?, receipt?}`. Runs setup as far as it goes (below); `answer` is `{form_id, cancelled, values, secrets}` for the form the last call returned. Secret values travel here only to reach the keychain; the host never logs them. It never runs an installer |
 | `hermes_retry` | `{profile?}` | `{}`. Asks a link that parked as `incompatible` to try again |

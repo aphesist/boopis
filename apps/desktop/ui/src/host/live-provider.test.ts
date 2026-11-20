@@ -153,6 +153,71 @@ describe('the live provider: the conversation stream, from recorded frames', () 
     expect(done?.type === 'turn-finished' && done.paragraphs.join(' ')).toContain('The message was not sent: boopis\'s engine could not do that');
   });
 
+  describe('attachments', () => {
+    const methods = (): string[] => host.sent.map((s) => String(s.frame['method'])).filter((m) => /^(image|file)\.|prompt\.submit/.test(m));
+    const answer = (refuse?: string): void => {
+      host.autoReply = (f) => {
+        const p = f['params'] as { path?: string };
+        if (f['method'] === 'image.attach') host.result(f['id'], { attached: true, path: p.path, count: 1 });
+        else if (f['method'] === 'image.detach') host.result(f['id'], { detached: true, count: 0 });
+        else if (f['method'] === 'file.attach') {
+          if (refuse && p.path === refuse) host.error(f['id'], 5028, 'file not found on gateway');
+          else host.result(f['id'], { attached: true, name: 'notes.md', path: '/x/attachments/notes.md', ref_path: 'attachments/notes.md', ref_text: '@file:attachments/notes.md', uploaded: true });
+        } else gateway(f);
+      };
+    };
+    const ATT = [
+      { name: 'notes.md', kind: 'file' as const, path: '/home/u/my notes.md' },
+      { name: 'shot.png', kind: 'image' as const, path: '/home/u/shot.png' },
+      { name: 'src', kind: 'folder' as const, path: '/home/u/my project/src' }
+    ];
+
+    it('attaches a picture and a file with the engine first, then sends the words with the references', async () => {
+      answer();
+      provider.sessions.conversation(SESSION);
+      await tick();
+      provider.sessions.send(SESSION, 'look at these', { ...META, attachments: ATT });
+      await tick();
+      expect(methods()).toEqual(['file.attach', 'image.attach', 'prompt.submit']);
+      expect(host.sent.find((s) => s.frame['method'] === 'file.attach')?.frame['params']).toEqual({ session_id: SESSION, path: '/home/u/my notes.md' });
+      expect(host.sent.find((s) => s.frame['method'] === 'image.attach')?.frame['params']).toEqual({ session_id: SESSION, path: '/home/u/shot.png' });
+      const submit = host.last('prompt.submit')?.['params'] as { text: string };
+      expect(submit.text).toBe('look at these\n\n@file:attachments/notes.md @folder:`/home/u/my project/src`');
+    });
+
+    it('shows the attachments on the user turn', async () => {
+      answer();
+      const conv = provider.sessions.conversation(SESSION);
+      const seen: ConversationEvent[] = [];
+      conv.subscribe((e) => seen.push(e));
+      await tick();
+      provider.sessions.send(SESSION, 'hi', { ...META, attachments: ATT });
+      const added = seen.find((e) => e.type === 'turn-added' && e.turn.role === 'user');
+      expect(added?.type === 'turn-added' && added.turn.role === 'user' && added.turn.attachments).toEqual(ATT);
+    });
+
+    it('stops and says which one when the engine refuses, and takes the queued pictures back', async () => {
+      answer('/home/u/my notes.md');
+      const conv = provider.sessions.conversation(SESSION);
+      const seen: ConversationEvent[] = [];
+      conv.subscribe((e) => seen.push(e));
+      await tick();
+      provider.sessions.send(SESSION, 'hi', { ...META, attachments: [ATT[1] as (typeof ATT)[number], ATT[0] as (typeof ATT)[number]] });
+      await tick();
+      expect(methods()).toEqual(['image.attach', 'file.attach', 'image.detach']);
+      const done = seen.at(-1);
+      expect(done?.type === 'turn-finished' && done.paragraphs.join(' ')).toContain('notes.md was not attached');
+    });
+
+    it('sends a plain message with no attach calls at all', async () => {
+      provider.sessions.conversation(SESSION);
+      await tick();
+      provider.sessions.send(SESSION, 'plain', META);
+      await tick();
+      expect(methods()).toEqual(['prompt.submit']);
+    });
+  });
+
   it('stops by interrupting the live session', async () => {
     provider.sessions.conversation(SESSION);
     await tick();

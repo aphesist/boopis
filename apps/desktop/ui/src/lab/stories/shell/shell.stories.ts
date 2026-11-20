@@ -28,6 +28,10 @@ const titleBar: Story = {
   id: 'shell/title-bar', title: 'Title bar', area: 'shell', kind: 'surface', covers: ['surface:title-bar'], scope: '.hx-bar', mock: MOCK,
   states: {
     typical: st(['typical']),
+    'close only (a tiling window manager)': st(['variant'], async (c) => { c.hx.emit('hx:window-controls', { layout: 'close' }); await c.wait(150); }),
+    'all three (a floating desktop)': st(['variant'], async (c) => { c.hx.emit('hx:window-controls', { layout: 'all' }); await c.wait(150); }),
+    'close, minimize, zoom (macOS)': st(['variant'], async (c) => { c.hx.emit('hx:window-controls', { layout: 'mac' }); await c.wait(150); }),
+    'close only, hover': st(['hover'], async (c) => { c.hx.emit('hx:window-controls', { layout: 'close' }); await c.wait(150); }, {}, { force: [{ sel: '#hx-btn-close', state: 'hover' }] }),
     'command field hover': st(['hover'], undefined, {}, { force: [{ sel: '#hx-btn-search', state: 'hover' }] }),
     'command field focus': st(['focus'], undefined, {}, { force: [{ sel: '#hx-btn-search', state: 'focus' }] }),
     'sidebar button tooltip': st(['tooltip'], async (c) => { const b = c.$('#hx-btn-left'); b.focus(); c.hx.ui.tooltip.show(b); await c.wait(250); }, {}, { overlay: { anchor: '#hx-btn-left', layer: '.ui-tip' } }),

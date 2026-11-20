@@ -126,3 +126,8 @@
 
 @media (max-width: 640px) { .ss-col { width: calc(100% - 32px); } }
 .ss-composer .ui-chip[hidden] { display: none; }   /* the model chip shows only when Smart is off */
+
+/* what a sent message carried: its files, pictures and folders, as the composer's chips without the remove button */
+.ss-attached { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); }
+/* a file dragged over the composer: its box takes the focus ring's colour until the file is dropped or leaves */
+.ui-composer[data-drop] .ui-composer__box { box-shadow: inset 0 0 0 2px var(--focus); }

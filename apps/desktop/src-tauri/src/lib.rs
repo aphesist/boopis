@@ -29,13 +29,14 @@ pub mod settings;
 pub mod setup;
 pub mod state;
 pub mod webkit;
+pub mod window;
 
 use std::sync::Arc;
 
 use tauri::Manager;
 use tauri_specta::{Builder, Event, collect_commands, collect_events};
 
-use commands::{AppState, ConnectionStateEvent};
+use commands::{AppState, ConnectionStateEvent, FileDragEvent, WindowStateEvent};
 
 /// Where the generated TypeScript bindings live, relative to this crate.
 pub const BINDINGS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../ui/src/host/bindings.ts");
@@ -65,6 +66,9 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::notify,
             commands::pick_folder,
             commands::open_external,
+            commands::window_facts,
+            commands::window_control,
+            commands::pick_attachments,
             commands::renderer_report,
             commands::renderer_open_gpu_page,
             commands::connector_catalog,
@@ -88,6 +92,8 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             ConnectionStateEvent,
             setup::SetupProgress,
             chatgpt::ChatgptSigninEvent,
+            WindowStateEvent,
+            FileDragEvent,
             commands::ConnectorRestartEvent
         ])
 }
@@ -165,6 +171,58 @@ pub fn startup(apply: bool) -> Startup {
     }
 }
 
+/// The last window state the UI was told, so a resize that changes neither flag says nothing.
+#[derive(Default)]
+struct LastWindowState(std::sync::Mutex<Option<commands::WindowStateEvent>>);
+
+/// The main window's events the UI needs: its maximised and full-screen state, and files dragged over it or dropped on it.
+fn window_events(window: &tauri::Window, event: &tauri::WindowEvent) {
+    use tauri::DragDropEvent;
+    let app = window.app_handle();
+    match event {
+        tauri::WindowEvent::Resized(_) => {
+            let now = commands::WindowStateEvent {
+                maximized: window.is_maximized().unwrap_or(false),
+                fullscreen: window.is_fullscreen().unwrap_or(false),
+            };
+            let Some(last) = window.try_state::<LastWindowState>() else {
+                return;
+            };
+            let Ok(mut last) = last.0.lock() else { return };
+            if *last != Some(now) {
+                *last = Some(now);
+                if let Err(e) = now.emit(app) {
+                    tracing::debug!(error = %e, "could not emit the window state");
+                }
+            }
+        }
+        tauri::WindowEvent::DragDrop(drag) => {
+            let scale = window.scale_factor().unwrap_or(1.0).max(0.1);
+            let css = |p: &tauri::PhysicalPosition<f64>| (p.x / scale, p.y / scale);
+            let (phase, (x, y), attachments) = match drag {
+                DragDropEvent::Enter { position, .. } => ("enter", css(position), Vec::new()),
+                DragDropEvent::Over { position } => ("over", css(position), Vec::new()),
+                DragDropEvent::Drop { paths, position } => (
+                    "drop",
+                    css(position),
+                    window::describe_all(paths.iter().map(std::path::PathBuf::as_path)),
+                ),
+                _ => ("leave", (0.0, 0.0), Vec::new()),
+            };
+            let event = commands::FileDragEvent {
+                phase: phase.into(),
+                x,
+                y,
+                attachments,
+            };
+            if let Err(e) = event.emit(app) {
+                tracing::debug!(error = %e, "could not emit the drag");
+            }
+        }
+        _ => {}
+    }
+}
+
 /// Run the app, or one of the command-line commands (`boopis --version`, `boopis doctor`) when the arguments ask.
 #[allow(clippy::too_many_lines)] // one linear start-up: decide the GPU and renderer, then build the app
 pub fn run() {
@@ -231,6 +289,9 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(builder.invoke_handler())
         .on_window_event(|window, event| {
+            if window.label() == "main" {
+                window_events(window, event);
+            }
             // A window dragged to another monitor may have another refresh rate (ADR-0025); a look at a rate that has
             // not changed is one GDK query.
             if window.label() == "main"
@@ -246,6 +307,11 @@ pub fn run() {
         .setup(move |app| {
             builder.mount_events(app);
             app.manage(commands::RendererState(renderer_report));
+            // Which desktop this is, decided once: the title bar draws the controls that mean something there.
+            let detected = window::detect_here();
+            tracing::info!(platform = ?detected.platform, kind = ?detected.kind, desktop = ?detected.desktop, evidence = %detected.evidence, "desktop");
+            app.manage(commands::WindowDetected(detected));
+            app.manage(LastWindowState::default());
             app.manage(commands::GpuState {
                 inputs: gpu_inputs,
                 source: gpu_source,

@@ -17,7 +17,8 @@ import { themeApi } from '../../styles/theme';
 import { openKeys, openMenu, openSettings, SETTINGS_SECTIONS, wireDialogs } from './dialogs';
 import { collectEls, els, sh } from './ctx';
 import { reportAttention, seedAttention, setTitleOverride, updateAttentionDots, updateTitle } from './attention';
-import { newThing, syncFullscreenIcon, toast, toggleDockExpand, toggleFullscreen, toggleLightDark, togglePanel } from './actions';
+import { newThing, toast, toggleDockExpand, toggleLightDark, togglePanel } from './actions';
+import { wireWindowControls } from './window';
 import { go, pushHistory } from './history';
 import { classifyKey, keysTableHTML } from './keymap';
 import { computeNow, layoutNow, markResized, queueLayout, setDockHeight, setInset } from './layout';
@@ -208,8 +209,6 @@ export function boot(): void {
   applyState();
   computeNow();
   pushHistory({ tab: state.tab, sel: null });
-  syncFullscreenIcon();
-
   wire();
 
   sh.booted = true;
@@ -239,10 +238,7 @@ function wire(): void {
   el.btnFwd.addEventListener('click', () => go(1));
   el.btnSearch.addEventListener('click', () => openPalette({}));
   el.btnRight.addEventListener('click', () => toggle('right'));
-  el.btnMin.addEventListener('click', () => toast('Minimize works in the desktop app'));
-  el.btnClose.addEventListener('click', () => toast('Close works in the desktop app'));
-  el.btnMax.addEventListener('click', () => { void toggleFullscreen(); });
-  document.addEventListener('fullscreenchange', syncFullscreenIcon);
+  wireWindowControls();
 
   // tabs (both the pill and the rail): the library moves the thumb and the focus, the shell owns the state
   for (const sg of [sh.seg.tabs, sh.seg.rail]) sg?.addEventListener('ui:change', (e) => setState({ tab: (e as CustomEvent<{ value: string }>).detail.value }));

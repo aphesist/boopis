@@ -35,6 +35,14 @@ export interface ComposerOpts {
   hint?: (text: string) => string | HintItem[];
   feedforward?: (text: string) => FeedforwardMark[];
 }
+export interface FileChipOpts { kind?: 'file' | 'image' | 'folder'; /** the full path, as the tooltip */ title?: string; onRemove?: () => void }
+/** the file chip: with `onRemove` a button takes it away (the composer's), without it the chip only shows (a sent turn's) */
+export function fileChip(name: string, o: FileChipOpts = {}): HTMLElement {
+  const removable = !!o.onRemove;
+  const f = frag('<span class="ui-file' + (removable ? '' : ' ui-file--static') + '"' + (o.title ? ' data-tip="' + esc(o.title) + '"' : '') + '>' + icon(o.kind === 'folder' ? 'folder' : 'file') + '<span>' + esc(name) + '</span>' + (removable ? html.iconButton({ icon: 'close', label: 'Remove ' + name, size: 's', tip: false }) : '') + '</span>');
+  if (o.onRemove) { const remove = o.onRemove; f.querySelector('button')?.addEventListener('click', () => { f.remove(); remove(); }); }
+  return f;
+}
 export interface SendDetail { text: string }
 export interface DictateDetail { value: boolean; bot: string | null; mode: 'toggle' | 'hold' | null }
 export interface DecisionDetail { kind: string | undefined; text: string; el: HTMLElement }
@@ -53,7 +61,8 @@ export interface ComposerEl extends HTMLElement {
   flashHint(ms?: number): void;
   setListening(v: boolean): void;
   setBot(b: BotLike | null): void;
-  addFile(name: string): void;
+  /** a chip for a file, picture or folder; `onRemove` is called when the person takes it away */
+  addFile(name: string, opts?: FileChipOpts): void;
   setRunning(v: boolean): void;
   setSpend(spent: string, cap: string | null): void;
   setHint(h: string | HintItem[]): void;
@@ -243,9 +252,8 @@ export function composer(opts: ComposerOpts = {}): ComposerEl {
     mic.querySelector('.ui-orb')?.remove();
     mic.setAttribute('aria-label', micLabelOf()); mic.setAttribute('data-tip', micLabelOf());
   };
-  api.addFile = (name) => {
-    const f = frag('<span class="ui-file">' + icon('file') + '<span>' + esc(name) + '</span>' + html.iconButton({ icon: 'close', label: 'Remove ' + name, size: 's', tip: false }) + '</span>');
-    f.querySelector('button')?.addEventListener('click', () => { f.remove(); input.focus(); });
+  api.addFile = (name, o) => {
+    const f = fileChip(name, { ...o, onRemove: () => { o?.onRemove?.(); input.focus(); } });
     files.appendChild(f);
   };
   api.setRunning = (v) => {

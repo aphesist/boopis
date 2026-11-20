@@ -57,6 +57,7 @@ const composer: Story = {
     'empty, attach tooltip': tooltipState(full(), '.ui-composer__attach', SESSION_W),
     running: { tags: ['loading'], width: SESSION_W, async render(ctx) { await full('')(ctx); ctx.root.querySelector<HTMLElement & { setRunning(v: boolean): void }>('.ui-composer')?.setRunning(true); await frames(2); } },
     listening: { tags: ['variant'], width: SESSION_W, async render(ctx) { await full('', { bot: BOT_LIKE })(ctx); ctx.root.querySelector<HTMLElement & { setListening(v: boolean): void }>('.ui-composer')?.setListening(true); await frames(2); }, allow: { 'stability.render': 'the listening orb animates' } },
+    'with a folder and a picture': { tags: ['variant'], width: SESSION_W, async render(ctx) { await withText(ctx); const c = ctx.root.querySelector<HTMLElement & { addFile(n: string, o?: { kind: string }): void }>('.ui-composer'); c?.addFile('src/billing', { kind: 'folder' }); c?.addFile('screenshot.png', { kind: 'image' }); await frames(2); } },
     'with files': { tags: ['variant'], width: SESSION_W, async render(ctx) { await withText(ctx); const c = ctx.root.querySelector<HTMLElement & { addFile(n: string): void }>('.ui-composer'); c?.addFile('invoices-sample.csv'); c?.addFile(UNBROKEN); await frames(2); } },
     rtl: { tags: ['rtl'], render: full(RTL), width: SESSION_W, dir: 'rtl' },
     'narrow (390)': { tags: ['variant', 'owner'], render: withText, width: 358 },

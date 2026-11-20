@@ -7,7 +7,7 @@ import { setState, state, toggle } from '../../core/state';
 import { themeApi } from '../../styles/theme';
 import { ui } from '@boopis/ui';
 import type { Tab } from '../../core/types';
-import { els, sh } from './ctx';
+import { sh } from './ctx';
 
 export const toast = (m: string, o?: Parameters<typeof ui.toast>[1]): void => { ui.toast(m, o); };
 
@@ -20,18 +20,6 @@ export function newThing(tab?: Tab): void {
 export function openPanel(panel: string): void {
   setState({ right: 'open' });
   emit('hx:open-panel', { panel, from: 'shell' });
-}
-export async function toggleFullscreen(): Promise<void> {
-  try {
-    if (document.fullscreenElement) await document.exitFullscreen();
-    else await document.documentElement.requestFullscreen();
-  } catch { toast('Full screen is not available in this view'); }
-}
-export function syncFullscreenIcon(): void {
-  const el = els(), fs = !!document.fullscreenElement;
-  el.btnMax.innerHTML = ui.icon(fs ? 'restore' : 'maximize');
-  el.btnMax.dataset['tip'] = fs ? 'Exit full screen' : 'Full screen';
-  el.btnMax.setAttribute('aria-label', el.btnMax.dataset['tip']);
 }
 /** mod+I: the session's details panel, or the open bot's settings (the bots tab provides that) */
 export function togglePanel(): void {

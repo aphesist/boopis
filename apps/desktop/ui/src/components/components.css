@@ -694,6 +694,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 /* a file chip is a pill container (its radius is half its height) whose remove button, a 24px square, sits in its end corner at
    the equal inset: --corner-inset on all three sides it touches. A long name ellipsises inside the box (R-overflow-1). */
 .ui-file { --r-outer: calc(var(--ctl-s) / 2); --pad: 2px; --corner-size: 24px; display: inline-flex; align-items: center; gap: 6px; box-sizing: border-box; max-width: 100%; min-width: 0; height: var(--ctl-s); padding: 0 var(--corner-inset) 0 8px; border-radius: var(--r-outer); background: var(--bg-0); font: 400 var(--fs-2xs)/1 var(--mono); color: var(--text-dim); }
+.ui-file--static { padding: 0 8px; }   /* a sent turn's chip has no button to hold in its corner */
 .ui-file .ui-icon { width: 14px; height: 14px; flex: none; }
 .ui-file > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ui-file .ui-ib { flex: none; border-radius: var(--r-corner); }

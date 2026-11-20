@@ -1,4 +1,24 @@
 {
+ "a-sent-message-with-files@bone": {
+  "sha": "74e788f3f66946c8bf0a42d3dbdfec9a60ba1761",
+  "w": 744,
+  "h": 151
+ },
+ "a-sent-message-with-files@catalog": {
+  "sha": "32ae66dc6cee7db5835163b0e8041a9725ca0e23",
+  "w": 744,
+  "h": 151
+ },
+ "a-sent-message-with-files@graphite": {
+  "sha": "ba3e9e009b7d58760896183957cd93dcf1083acc",
+  "w": 744,
+  "h": 151
+ },
+ "a-sent-message-with-files@typewriter": {
+  "sha": "2a18559e8c5ef4ebf49cbdc9f2693a88f2f05256",
+  "w": 744,
+  "h": 151
+ },
  "empty@bone": {
   "sha": "e13a4c2d3d6fa53f4d5c75d198befb5b91668431",
   "w": 744,

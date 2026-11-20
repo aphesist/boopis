@@ -309,7 +309,7 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
       /* the first message of a session starts the run the dock shows, named by its first line (the live provider's `onSent`) */
       if (run.get().title === '') run.set({ ...run.get(), title: text.split('\n')[0]?.trim().slice(0, 80) ?? '', model: meta.model, elapsed: 0, cost: 0, stopped: false });
       const turns = turnsOf(id), ev = evOf(id);
-      const user: Turn = { id: mid('t'), role: 'user', at: hhmm(), text };
+      const user: Turn = { id: mid('t'), role: 'user', at: hhmm(), text, ...(meta.attachments?.length ? { attachments: meta.attachments } : {}) };
       turns.push(user); ev.emit({ type: 'turn-added', turn: user });
       const start = meta.governed && meta.smart ? ((meta.assume.join(' ').match(/starts on (\w+)/) ?? [0, 'qwen'])[1] as string) : (meta.model.split(' ')[0] ?? '');
       const model = ({ qwen: 'qwen3-coder', haiku: 'haiku 4.5', sonnet: 'sonnet 5.5', opus: 'opus 5.5' } as Record<string, string>)[start] ?? meta.model;
@@ -410,7 +410,7 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
     start(_o, onTranscript) { const t = window.setTimeout(() => onTranscript('and update the changelog'), 2200); return () => clearTimeout(t); }
   };
   const files: FilesSource = {
-    pick: (kind) => (kind === 'file' ? 'invoices-sample.csv' : 'src/billing/fixtures'),
+    pick: (kind) => Promise.resolve([kind === 'file' ? { name: 'invoices-sample.csv', kind: 'file' as const } : { name: 'src/billing/fixtures', kind: 'folder' as const }]),
     complete: (word) => Promise.resolve({ items: M.FILE_PATHS.filter((p) => p.includes(word.replace(/^@(file:)?/, ''))).map((p) => ({ text: '@file:' + p, display: p.slice(p.lastIndexOf('/') + 1), meta: '' })) })
   };
 

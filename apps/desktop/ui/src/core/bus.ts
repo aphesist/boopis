@@ -35,6 +35,8 @@ export interface EventMap {
   /** the dock reports its size: the room the composer keeps above it */
   'hx:dock': { mode: DockMode; page: string; width: number; height: number; /** the slab at rest, without the hover headroom */ rest?: number };
   'hx:dock-expand': { toggle: boolean; from: string };
+  /** the title bar's controls changed (the setting, or the host's answer); the lab sends it to draw a layout */
+  'hx:window-controls': { layout: 'close' | 'all' | 'mac' };
   'hx:governance': { governed: boolean; smart: boolean; model: string; cap: string };
 }
 export type EventName = keyof EventMap;

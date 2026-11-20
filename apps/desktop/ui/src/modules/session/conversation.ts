@@ -4,10 +4,10 @@
 import { emit, on } from '../../core/bus';
 import { $, el, frag, isMac, reduced } from '../../core/dom';
 import { provide } from '../../core/registry';
-import { ui } from '@boopis/ui';
+import { fileChip, ui } from '@boopis/ui';
 import type { ComposerEl } from '@boopis/ui';
 import { data } from '../../data';
-import type { AgentTurn, ConversationEvent, FormSpec, Ship, Step, Turn } from '../../data';
+import type { AgentTurn, Attached, ConversationEvent, FormSpec, Ship, Step, Turn } from '../../data';
 import { renderDiff } from './diff';
 import { sessionComposer } from './composer';
 import type { SessionComposer } from './composer';
@@ -49,8 +49,9 @@ function turn(o: TurnOpts): HTMLElement {
   const cp = callno.querySelector('.ss-acts button'); if (cp) cp.addEventListener('click', () => { void copyText(info.md()); });
   return art;
 }
-function userTurn(text: string, at: string): HTMLElement {
-  return turn({ kind: 'user', callno: ['You', at], label: 'You, ' + at, body: [ui.request(text)], copy: true, md: () => '> ' + text, text });
+function userTurn(text: string, at: string, attachments: readonly Attached[] = []): HTMLElement {
+  const chips = attachments.length ? [el('div', { class: 'ss-attached', role: 'list', 'aria-label': 'Attached' }, attachments.map((a) => { const f = fileChip(a.name, { kind: a.kind, ...(a.path ? { title: a.path } : {}) }); f.setAttribute('role', 'listitem'); return f; }))] : [];
+  return turn({ kind: 'user', callno: ['You', at], label: 'You, ' + at, body: [ui.request(text), ...chips], copy: true, md: () => '> ' + text, text });
 }
 const modelLines = (model: string): string[] => String(model).split(/\s*→\s*/).map((m, i) => (i ? '→ ' : '') + m);
 const modelSay = (model: string): string => String(model).split(/\s*→\s*/).join(' then ');
@@ -230,7 +231,7 @@ export function renderConversation(): void {
   if (!snap.length) {
     const s = sessions().list.get().find((x) => x.id === VIEW.current);
     col.append(ui.empty({ title: s?.project ? 'What should change in ' + s.project + '?' : data().info.live ? 'What should change?' : 'What should change in ' + (s ? s.project : 'billing-api') + '?', text: 'Words I will act on get a dashed underline as you type. Click one, or press alt and down arrow on it, to change how I read it.' }));
-  } else for (const t of snap) { if (t.role === 'user') col.append(userTurn(t.text, t.at)); else if (t.status === 'running') liveTurn(t); else col.append(assistantTurn(t)); }
+  } else for (const t of snap) { if (t.role === 'user') col.append(userTurn(t.text, t.at, t.attachments)); else if (t.status === 'running') liveTurn(t); else col.append(assistantTurn(t)); }
   rove(lastTurn());
   setAttention(!VIEW.blank && openBlankOf(snap) ? 1 : 0);
   unsubConv = conv.subscribe(onConversationEvent);
@@ -240,7 +241,7 @@ function onConversationEvent(ev: ConversationEvent): void {
   const col = VIEW.col; if (!col) return;
   if (ev.type === 'turn-added') {
     col.querySelector('.ui-empty')?.remove();
-    if (ev.turn.role === 'user') { col.append(userTurn(ev.turn.text, ev.turn.at)); if (VIEW.scroll) VIEW.scroll.scrollTop = VIEW.scroll.scrollHeight; }
+    if (ev.turn.role === 'user') { col.append(userTurn(ev.turn.text, ev.turn.at, ev.turn.attachments)); if (VIEW.scroll) VIEW.scroll.scrollTop = VIEW.scroll.scrollHeight; }
     else liveTurn(ev.turn);
   } else if (ev.type === 'step-added') {
     const L = live.get(ev.turnId); if (!L) return;
@@ -371,8 +372,8 @@ export function mountView(root: HTMLElement): void {
   root.append(host);
   surface.onConversation?.(VIEW.current);
   c.addEventListener('ui:send', (e) => {
-    const text = (e as CustomEvent<{ text: string }>).detail.text, assume = c.lastAssume();
-    setTimeout(() => { const g = data().details.governance.get(); sessions().send(VIEW.current, text, { governed: g.governed, smart: g.smart, model: g.model, assume }); }, 0);
+    const text = (e as CustomEvent<{ text: string }>).detail.text, assume = c.lastAssume(), attachments = c.takeAttachments();
+    setTimeout(() => { const g = data().details.governance.get(); sessions().send(VIEW.current, text, { governed: g.governed, smart: g.smart, model: g.model, assume, attachments }); }, 0);
   });
   c.addEventListener('ui:stop', () => { sessions().stop(VIEW.current); });
   c.addEventListener('ui:edit-last', (e) => {
