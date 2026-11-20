@@ -92,7 +92,7 @@ function mountWindowControls(): void {
   const sec = document.createElement('section');
   sec.className = 'ui-set'; sec.setAttribute('aria-labelledby', 'hx-set-window-h');
   sec.innerHTML = ui.html.setHead({ id: 'hx-set-window-h', label: 'Window' }) +
-    ui.html.setRow({ label: 'Window controls', hint: '', control: '<div id="hx-win-seg"></div>' });
+    ui.html.setRow({ label: 'Window controls', hint: describeDesktop(windowInfo()), control: '<div id="hx-win-seg"></div>' });
   const layout = panel.querySelector('section.ui-set');
   if (layout) layout.after(sec); else panel.prepend(sec);
   ui.hydrate(sec);

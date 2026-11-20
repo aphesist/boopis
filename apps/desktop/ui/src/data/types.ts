@@ -221,7 +221,9 @@ export type ModsEvent =
 export interface SessionSummary { id: string; project: string; title: string; when: string; running?: boolean }
 export interface Step { title: string; mono?: boolean; meta?: readonly string[]; time: string; kind?: 'step' | 'fail' | 'escalate' }
 export interface Ship { title: string; quote: string; passed: number; rolledBack: number; files: number; add: number; del: number; branch: string }
-export interface UserTurn { id: string; role: 'user'; at: string; text: string }
+/** something attached to a message: a file, a picture or a folder. `path` is absolute on the machine the engine runs on; the page build has only a name. */
+export interface Attached { name: string; kind: 'file' | 'image' | 'folder'; path?: string; bytes?: number }
+export interface UserTurn { id: string; role: 'user'; at: string; text: string; attachments?: readonly Attached[] }
 export interface AgentTurn {
   id: string; role: 'assistant';
   /** "qwen3-coder → sonnet 5.5": the models the turn ran on (the agent has no name) */
@@ -253,7 +255,7 @@ export type ConversationEvent =
   | { type: 'reset' };
 
 export interface DiffFile { path: string; add: number; del: number; hunks: ReadonlyArray<readonly [header: string, lines: readonly string[]]> }
-export interface SendMeta { governed: boolean; smart: boolean; model: string; assume: readonly string[] }
+export interface SendMeta { governed: boolean; smart: boolean; model: string; assume: readonly string[]; attachments?: readonly Attached[] }
 
 /* ───────── the details panel ───────── */
 export interface ContextUsage { total: number; parts: ReadonlyArray<readonly [label: string, tokens: number]> }

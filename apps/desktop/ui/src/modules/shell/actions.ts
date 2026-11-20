@@ -21,13 +21,6 @@ export function openPanel(panel: string): void {
   setState({ right: 'open' });
   emit('hx:open-panel', { panel, from: 'shell' });
 }
-export async function toggleFullscreen(): Promise<void> {
-  if (await (await import('./window')).toggleWindowFullscreen()) return;   /* the desktop app's own window */
-  try {
-    if (document.fullscreenElement) await document.exitFullscreen();
-    else await document.documentElement.requestFullscreen();
-  } catch { toast('Full screen is not available in this view'); }
-}
 /** mod+I: the session's details panel, or the open bot's settings (the bots tab provides that) */
 export function togglePanel(): void {
   if (state.tab === 'session') { toggle('right'); return; }

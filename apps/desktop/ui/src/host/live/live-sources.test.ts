@@ -173,7 +173,6 @@ describe('files, fork and what stays a preview', () => {
     expect(await provider.files.complete('@file:src/', SID)).toEqual({ items: [{ text: '@file:src/a.py', display: 'a.py', meta: '' }] });
     expect(host.requests.find((r) => r.method === 'complete.path')?.params).toMatchObject({ session_id: SID, cwd: '/work/proj', word: '@file:src/' });
     expect((await provider.files.complete('@file:', 'new-s1')).unavailable).toMatch(/started session/);
-    expect(provider.files.pick('file')).toBeNull();
   });
 
   it('does not fork on a Hermes without session.branch', () => {

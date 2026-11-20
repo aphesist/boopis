@@ -92,6 +92,8 @@ export const ui = {
 export type Ui = typeof ui;
 export { html, icon, hydrate, hydrateOne, wireSelect, announce, botState, botLabel, orb, liven, glance, shape, squircle, modelMark, menu, popover, layer, listbox, modelEntries, tooltip, toast, composer, card, wireHold, holdElement };
 export type { SegElement } from './wire';
+export { fileChip } from './composer';
+export type { FileChipOpts } from './composer';
 /* runtime pieces the app's modules and host wire (the orbs' engine, the card layer's factory, the first run's moments) */
 export { oc, startGlance } from './orb';
 export type { OrbOpts } from './orb';

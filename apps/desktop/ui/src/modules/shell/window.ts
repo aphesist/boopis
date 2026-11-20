@@ -9,15 +9,14 @@ import { logger } from '../../core/log';
 import { ui } from '@boopis/ui';
 import { inTauri } from '../../host/bridge';
 import { resolveControls, tauriWindowHost } from '../../host/window';
-import type { ControlsLayout, WindowHost, WindowInfo } from '../../host/window';
+import type { ControlsLayout, WindowInfo } from '../../host/window';
 import { els } from './ctx';
-import { toast, toggleFullscreen } from './actions';
+import { toast } from './actions';
 
 const log = logger('window');
 
 let pref: WindowControlsPref = 'auto';
 let info: WindowInfo | null = null;
-let host: WindowHost | null = null;
 const listeners = new Set<() => void>();
 
 export const windowPref = (): WindowControlsPref => pref;
@@ -68,8 +67,7 @@ export function wireWindowControls(): void {
     syncMaxIcon(null);
     return;
   }
-  host = tauriWindowHost();
-  const h = host;
+  const h = tauriWindowHost();
   const fail = (what: string) => (e: unknown): void => { log.warn(what, e); toast(e instanceof Error ? e.message : what); };
   applyLayout(resolveControls(pref, null));
   syncMaxIcon({ maximized: false, fullscreen: false });
@@ -80,8 +78,10 @@ export function wireWindowControls(): void {
   h.onState((s) => { syncMaxIcon(s); }).catch((e: unknown) => { log.warn('the window state is not followed', e); });
 }
 
-/** full screen from the keyboard or the palette: the window's, in the desktop app */
-export async function toggleWindowFullscreen(): Promise<boolean> {
-  if (!host) return false;
-  try { await host.control('toggle_fullscreen'); return true; } catch (e) { log.warn('full screen failed', e); return false; }
+/** the page's stand-in for maximise: the browser's full screen */
+async function toggleFullscreen(): Promise<void> {
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else await document.documentElement.requestFullscreen();
+  } catch { toast('Full screen is not available in this view'); }
 }

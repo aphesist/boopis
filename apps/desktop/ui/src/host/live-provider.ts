@@ -20,6 +20,8 @@ import type { XSignin } from './live/forms';
 import { tauriConnectorsBridge } from './connectors-bridge';
 import type { FormEntry } from './live/forms';
 import { tauriSecrets } from './secrets';
+import { dropsFromHost, pickAttachments } from './attach';
+import { stageAttachments, withRefs } from './live/attachments';
 import type { SecretsBridge } from './secrets';
 import type { GatewayClient, GatewayEvent } from './gateway';
 import type { RpcMethods } from '../vendor/hermes-shared/gateway-contract.generated';
@@ -407,14 +409,18 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
       client.request('session.archive', { session_id: id, archived: false }).catch((e: unknown) => { log.warn('could not restore', e); });
     },
     send(id, text, meta: SendMeta) {
-      void meta; // governed and Smart live in the details source (the user's choice, applied when the session is created)
+      // governed and Smart live in the details source (the user's choice, applied when the session is created); the attachments ride here
       const c = convo(id);
       details.onSent(id, text);
-      const user: UserTurn = { id: nextId('t'), role: 'user', at: clock(now()), text };
+      const attachments = meta.attachments ?? [];
+      const user: UserTurn = { id: nextId('t'), role: 'user', at: clock(now()), text, ...(attachments.length ? { attachments } : {}) };
       c.turns.push(user);
       c.events.emit({ type: 'turn-added', turn: user });
       ensureLive(c)
-        .then((gw) => client.requestRaw('prompt.submit', { session_id: gw, text, submission_id: 'sub-' + crypto.randomUUID() })) /* the gateway requires submission_id; the vendored contract does not list it yet */
+        .then(async (gw) => {
+          const refs = attachments.length ? await stageAttachments((m, p) => client.requestRaw(m, p), gw, attachments) : [];   /* files, pictures and folders go first (live/attachments.ts) */
+          return client.requestRaw('prompt.submit', { session_id: gw, text: withRefs(text, refs), submission_id: 'sub-' + crypto.randomUUID() }); /* the gateway requires submission_id; the vendored contract does not list it yet */
+        })
         .catch((e: unknown) => {
           log.error('the message was not accepted', e);
           startTurn(c);
@@ -452,7 +458,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     info: { live: true, preview: new Set(['feedforward']), unavailable: details.unavailable },
     ready, sessions, waits, user, forms: formsHost.source, bots: liveBots.source, schedules: liveBots.schedules,
     details: details.source, run: details.run, mods: modsHost.source,
-    files: { pick: () => null, complete: (word, id) => details.files.complete(word, id) },
+    files: { pick: (kind) => pickAttachments(kind), drops: dropsFromHost(), complete: (word, id) => details.files.complete(word, id) },
     dictation: { start: () => () => undefined }, // nothing hears you yet: the mock's transcript is invented text
     feedforward: { catalog: () => (flag ? mock.feedforward.catalog() : []) },
     settled: async () => { await details.settled(); await liveBots.settled(); },

@@ -15,12 +15,92 @@
   "h": 64
  },
  "a-long-session-title@typewriter": {
-  "sha": "35a762008a81c952f2d91df8f4f1635af3da6e74",
+  "sha": "7064ba0eca6121063a389586c8faee3a8dab14e9",
+  "w": 1440,
+  "h": 64
+ },
+ "all-three-a-floating-desktop@bone": {
+  "sha": "8e5e7eb77d2f2f3b0de9588fb6ba07501f5fa5df",
+  "w": 1440,
+  "h": 64
+ },
+ "all-three-a-floating-desktop@catalog": {
+  "sha": "7a435a9f1804cadd545bf5fc2df4e44e4941d6d8",
+  "w": 1440,
+  "h": 64
+ },
+ "all-three-a-floating-desktop@graphite": {
+  "sha": "fb40768e95e6c66f1805ec61eca3773ff6974a30",
+  "w": 1440,
+  "h": 64
+ },
+ "all-three-a-floating-desktop@typewriter": {
+  "sha": "fa17ba95d5d980f81fd33118bbbb3b269a36809c",
+  "w": 1440,
+  "h": 64
+ },
+ "close-minimize-zoom-macos@bone": {
+  "sha": "f43fb5de3eaf9fa561510ec9689b1c55d9eb1290",
+  "w": 1440,
+  "h": 64
+ },
+ "close-minimize-zoom-macos@catalog": {
+  "sha": "a3c702fb74719d94c220d3e332d32476681e1b0f",
+  "w": 1440,
+  "h": 64
+ },
+ "close-minimize-zoom-macos@graphite": {
+  "sha": "f3be4672345a70fa3334d0ad437d2d4468388cdb",
+  "w": 1440,
+  "h": 64
+ },
+ "close-minimize-zoom-macos@typewriter": {
+  "sha": "684263cfe8c08828856e5c2948dfae355b37a8a2",
+  "w": 1440,
+  "h": 64
+ },
+ "close-only-a-tiling-window-manager@bone": {
+  "sha": "14dd72a68d79f0ba6608aa62904e63688bfe62ed",
+  "w": 1440,
+  "h": 64
+ },
+ "close-only-a-tiling-window-manager@catalog": {
+  "sha": "a7af181fd3a3d5232bdadfa89da2e7f44c546233",
+  "w": 1440,
+  "h": 64
+ },
+ "close-only-a-tiling-window-manager@graphite": {
+  "sha": "006960c2db92cae49b22e4562711252015dcf51a",
+  "w": 1440,
+  "h": 64
+ },
+ "close-only-a-tiling-window-manager@typewriter": {
+  "sha": "6b8061b09714f23da1be2bf13845ce7908830e30",
+  "w": 1440,
+  "h": 64
+ },
+ "close-only-hover@bone": {
+  "sha": "421bdaa4f18483fc8e637eab5f7200299565c5fc",
+  "w": 1440,
+  "h": 64
+ },
+ "close-only-hover@catalog": {
+  "sha": "aa3c27caa3cfc0cf57328f359b13765d52bb6348",
+  "w": 1440,
+  "h": 64
+ },
+ "close-only-hover@graphite": {
+  "sha": "36a11f9979a2e839131094d03b8cf3a9bd1e6ad9",
+  "w": 1440,
+  "h": 64
+ },
+ "close-only-hover@typewriter": {
+  "sha": "3cb900e61a987a703dbeb2879980e17f5a95fe47",
   "w": 1440,
   "h": 64
  },
  "command-field-focus@bone": {
-  "sha": "3400c2b9133368e391e07ff0fbcc9bc9c1c22cac",
+  "sha": "89be3aa733f71311ff66d3cee35ae48dfabcf713",
   "w": 1440,
   "h": 64
  },
@@ -55,22 +135,22 @@
   "h": 64
  },
  "command-field-hover@typewriter": {
-  "sha": "5e65f57042cba830ede81e036b128730095bf522",
+  "sha": "420cdf656ff3a75293d19d58c06c1f6aa8fd49b1",
   "w": 1440,
   "h": 64
  },
  "sidebar-button-tooltip@bone": {
-  "sha": "fe7cd952d84a19319dd6a44cd75cda0a8b96828f",
+  "sha": "0ef112b2529ff96fa73de6e9df23d787c9649bea",
   "w": 1440,
   "h": 92
  },
  "sidebar-button-tooltip@catalog": {
-  "sha": "7f3e2873fdab4b97006f49172e53a65007ea782b",
+  "sha": "86d8357e8591f0553c7be8c3f4e22b292cd3b28b",
   "w": 1440,
   "h": 92
  },
  "sidebar-button-tooltip@graphite": {
-  "sha": "96c39dd7fd87b64f98d4dfcf4487fdd3e67af478",
+  "sha": "8376735d370a170e3f2a572588132947a77c3b2f",
   "w": 1440,
   "h": 92
  },
@@ -80,7 +160,7 @@
   "h": 92
  },
  "typical@bone": {
-  "sha": "8e5e7eb77d2f2f3b0de9588fb6ba07501f5fa5df",
+  "sha": "5239ddcad315878895a6db75077e95d545612207",
   "w": 1440,
   "h": 64
  },
@@ -90,12 +170,12 @@
   "h": 64
  },
  "typical@graphite": {
-  "sha": "8a85cd7e46ac6668c1c0b83f50cab4e03eb05768",
+  "sha": "fb40768e95e6c66f1805ec61eca3773ff6974a30",
   "w": 1440,
   "h": 64
  },
  "typical@typewriter": {
-  "sha": "86606ca813e7f62c9fba0bf869e61b85c3a2ef75",
+  "sha": "fa17ba95d5d980f81fd33118bbbb3b269a36809c",
   "w": 1440,
   "h": 64
  }

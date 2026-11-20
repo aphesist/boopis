@@ -8,7 +8,7 @@
    did not send: unknown is `null` or empty and the UI shows it as unknown. */
 import type {
   ArchivedBot, Bot, BotCatalog, BotDraft, BotConfig, BotInfo, Change, ConversationEvent, Conversation, Connector, ContextUsage, DecisionKind, DiffFile, Environment,
-  DetailsCan, DetailsNotes, FieldSchema, FileCompletions, FormCan, FormOutcome, ModSession, ModsEvent, PickerItem, PickerKind, GovernanceState, LedgerStats, ProviderInfo, RunSnapshot, Schedule, SendMeta, SessionSummary, ThreadMessage, Todo, User, Wait, WaitOutcome
+  Attached, DetailsCan, DetailsNotes, FieldSchema, FileCompletions, FormCan, FormOutcome, ModSession, ModsEvent, PickerItem, PickerKind, GovernanceState, LedgerStats, ProviderInfo, RunSnapshot, Schedule, SendMeta, SessionSummary, ThreadMessage, Todo, User, Wait, WaitOutcome
 } from './types';
 
 export type Unsubscribe = () => void;
@@ -213,9 +213,13 @@ export interface DictationSource {
   /** start listening; `onTranscript` gets what was heard; the returned function cancels */
   start(opts: { botId: string | null }, onTranscript: (text: string) => void): Unsubscribe;
 }
+/** a drag over the window: `x` and `y` in CSS pixels; `attachments` only on `drop` */
+export interface FileDrag { phase: 'enter' | 'over' | 'leave' | 'drop'; x: number; y: number; attachments: readonly Attached[] }
 export interface FilesSource {
-  /** ask the host for a file or a folder; null when the user declined */
-  pick(kind: 'file' | 'folder'): string | null;
+  /** ask the host for files or a folder (its own dialog); empty when the user declined */
+  pick(kind: 'file' | 'folder'): Promise<Attached[]>;
+  /** files dragged over the app or dropped on it (the desktop app only: the page's own drop has names and no paths) */
+  drops?: { subscribe(fn: (e: FileDrag) => void): Unsubscribe };
   /** completions of the `@` word being typed, for the session the composer belongs to */
   complete(word: string, sessionId: string | null): Promise<FileCompletions>;
 }

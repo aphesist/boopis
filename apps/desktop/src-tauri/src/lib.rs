@@ -36,7 +36,7 @@ use std::sync::Arc;
 use tauri::Manager;
 use tauri_specta::{Builder, Event, collect_commands, collect_events};
 
-use commands::{AppState, ConnectionStateEvent};
+use commands::{AppState, ConnectionStateEvent, FileDragEvent, WindowStateEvent};
 
 /// Where the generated TypeScript bindings live, relative to this crate.
 pub const BINDINGS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../ui/src/host/bindings.ts");
@@ -92,9 +92,9 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             ConnectionStateEvent,
             setup::SetupProgress,
             chatgpt::ChatgptSigninEvent,
-            commands::ConnectorRestartEvent,
-            commands::WindowStateEvent,
-            commands::FileDragEvent
+            WindowStateEvent,
+            FileDragEvent,
+            commands::ConnectorRestartEvent
         ])
 }
 

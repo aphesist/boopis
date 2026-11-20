@@ -719,6 +719,26 @@
   "w": 744,
   "h": 306
  },
+ "with-a-folder-and-a-picture@bone": {
+  "sha": "6a4f7c7b585c21db047cf124d51d772e1c5ad5d1",
+  "w": 744,
+  "h": 159
+ },
+ "with-a-folder-and-a-picture@catalog": {
+  "sha": "44b256b41255d19cd865030aa9bb84aa819b92c6",
+  "w": 744,
+  "h": 159
+ },
+ "with-a-folder-and-a-picture@graphite": {
+  "sha": "ab0773372bb592c8b36bed6ba56c2d5c8ef48d6a",
+  "w": 744,
+  "h": 159
+ },
+ "with-a-folder-and-a-picture@typewriter": {
+  "sha": "549e89a53a9a36e2193e76742fb55a6294d999e4",
+  "w": 744,
+  "h": 171
+ },
  "with-files@bone": {
   "sha": "f8c4af06cb8e0a8d581ce4149285ea41a23e08d3",
   "w": 744,

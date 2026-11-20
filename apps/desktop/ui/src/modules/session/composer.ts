@@ -10,7 +10,7 @@ import { ui } from '@boopis/ui';
 import type { ComposerEl, DecisionDetail, AssumptionDetail, DictateDetail } from '@boopis/ui';
 
 import { data } from '../../data';
-import type { GovernanceState } from '../../data';
+import type { Attached, GovernanceState } from '../../data';
 import { costAssume, kindOf, makeReader, optionsFor } from './feedforward';
 
 export const SMART_VALUE = '__smart';
@@ -27,6 +27,8 @@ export function setGovernance(patch: Partial<Pick<GovernanceState, 'governed' | 
 export interface SessionComposer extends ComposerEl {
   /** the assumptions row as it stood when the message was sent */
   lastAssume(): string[];
+  /** what is attached, handed over for the send: the chips are cleared with it */
+  takeAttachments(): Attached[];
 }
 
 export function sessionComposer(opts: { draft: string; sessionId: () => string }): SessionComposer {
@@ -91,7 +93,46 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
     ui.announce('Dropped ' + it.label);
   });
 
-  /* attach */
+  /* attach: the host's own dialog picks (desktop app), or a drop on the composer; each becomes a chip, and the send carries them */
+  const attached: Attached[] = [];
+  function addAttached(list: readonly Attached[]): void {
+    for (const a of list) {
+      if (attached.some((x) => (a.path ? x.path === a.path : x.name === a.name))) continue;
+      attached.push(a);
+      c.addFile(a.name, { kind: a.kind, ...(a.path ? { title: a.path } : {}), onRemove: () => { const i = attached.indexOf(a); if (i >= 0) attached.splice(i, 1); } });
+    }
+  }
+  function pickAttachments(kind: 'file' | 'folder'): void {
+    data().files.pick(kind).then(addAttached).catch((e: unknown) => { ui.toast(e instanceof Error ? e.message : 'Attaching did not work'); }).finally(() => { c.focus(); });
+  }
+  c.takeAttachments = (): Attached[] => {
+    const out = attached.splice(0);
+    c.querySelector('.ui-composer__files')?.replaceChildren();
+    return out;
+  };
+  const dropArea = (): HTMLElement => c.parentElement ?? c;
+  const over = (x: number, y: number): boolean => { const r = dropArea().getBoundingClientRect(); return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; };
+  const drops = data().files.drops;
+  if (drops) {
+    /* the desktop app: the host reports where files are dragged and what was dropped, with their paths */
+    const off = drops.subscribe((e) => {
+      if (!c.isConnected) { off(); return; }
+      if (e.phase === 'drop') { c.removeAttribute('data-drop'); if (over(e.x, e.y)) { addAttached(e.attachments); c.focus(); } return; }
+      c.toggleAttribute('data-drop', e.phase !== 'leave' && over(e.x, e.y));
+    });
+  } else {
+    /* the page build: the browser's drop knows names only */
+    const area = dropArea();
+    area.addEventListener('dragover', (e) => { if (e.dataTransfer?.types.includes('Files')) { e.preventDefault(); c.setAttribute('data-drop', ''); } });
+    area.addEventListener('dragleave', () => { c.removeAttribute('data-drop'); });
+    area.addEventListener('drop', (e) => {
+      c.removeAttribute('data-drop');
+      const files = [...(e.dataTransfer?.files ?? [])]; if (!files.length) return;
+      e.preventDefault();
+      addAttached(files.map((f) => ({ name: f.name, kind: /\.(png|jpe?g|gif|webp|bmp)$/i.test(f.name) ? 'image' as const : 'file' as const, bytes: f.size })));
+      c.focus();
+    });
+  }
   if (c.attach) {
     const attach = c.attach;
     attach.addEventListener('click', () => {
@@ -105,7 +146,7 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
       ], { place: 'above', label: 'Attach', onSelect: (v) => {
         requestAnimationFrame(() => {
           if (v === '@file:') { openMention(v); return; }
-          if (v === 'file' || v === 'folder') { const name = data().files.pick(v); if (name) { c.addFile(name); } else if (data().info.live) ui.toast('Picking a file is not wired in the desktop app yet. Mention one instead.'); c.focus(); }
+          if (v === 'file' || v === 'folder') { pickAttachments(v); return; }
           else c.insert((c.value && !/\s$/.test(c.value) ? ' ' : '') + v + (v === '/' ? '' : ' '));
         });
       } });

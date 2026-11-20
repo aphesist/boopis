@@ -39,6 +39,7 @@ async function start(): Promise<void> {
   startGlance();
   ui.tooltip.enable();
   boot();
+  if (inTauri()) void import('./host/links').then((m) => m.wireExternalLinks(undefined, (e) => { ui.toast(e instanceof Error ? e.message : 'The link did not open'); }));
   if (inTauri()) void import('./host/connectors-notice').then((m) => m.listenConnectorRestarts()).catch((e: unknown) => { log.warn('connector notices are not listened for', e); });
   if (__HX_TEST_API__) {
     /* the Playwright smoke and parity tests drive the app through this; it is compiled in only for `vite build --mode e2e` */
