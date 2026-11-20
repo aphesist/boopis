@@ -568,6 +568,30 @@ The decision of every `$` call is `policy.check` with the mod as principal; the 
 - A saved `hermes_source: existing` is ignored after the update: start with `--engine existing` instead.
 - Diagnostics is the one screen where the engine's own words appear.
 
+## ADR-0033 Talking to bots, and team chat on the engine's Group Chat rooms
+**Context.**
+- The owner, 20 November 2026: "the session works, but i can't send any bots messages nor create bot groups." A bot was a profile whose room could only show its schedule and sessions; `docs/ARCHITECTURE.md` section 10a left open which engine primitive carries team chat (**[verify]**: group sessions `groups.*`, bot relay `bot_relay.*`, agent-to-agent `a2a.forward`, Kanban).
+- Read in the engine's source (v0.23.2, `tui_gateway/methods_groups.py`, `gateway/hosted_room_*.py`, `gateway/session_bot.py`, `gateway/session_a2a.py`):
+  - **`groups.*` (Group Chat rooms) is a group chat.** A room is a name and a frozen roster of two to six local profiles (`member_id`, `profile`, `handle`, `display_name`). `groups.send` appends a `message.user`; the room worker (the gateway's, started with it) runs a *Discussion*: it hands the message to every member, or to those the text names with `@handle` (`resolve_mentions`; `@all` and `@everyone` are reserved), each member answers as its own profile in its own session, and the answers are republished to the others for up to three rounds and ten messages; a bare "pass" is silence. Every message is an event of a durable, monotonic log (`groups.log`, `message.member` with the member's id), and the engine pushes `groups.changed`. `groups.rename`, `groups.stop`, `groups.continue` (after the cap), `groups.state` (who is working) and `groups.context` (purpose, notes, routing `everyone`, `lead` or `auto`) exist.
+  - `bot_relay.*` carries messages between a *client's own* bots and the engine (roster sync, deliver, reply, an outbox): it is for a desktop that hosts bots itself, not for the engine's profiles.
+  - `a2a.forward` forwards one session's message to another gateway's session (`session_a2a.py`): one hop between two sessions, with no room, no roster and no shared thread.
+  - Kanban (`kanban.db`) is a durable task board: right for a hand-off that must survive, wrong for conversation.
+
+**Decision.**
+- **Group Chat rooms (`groups.*`) carry team chat.** A boopis group is a room; its members are bots (profile names); the thread is the room's log; `@name` is the engine's own `@handle` (the handle is the profile name), so boopis does not route anything itself. `a2a.forward` and Kanban stay what hand-offs use later (the contract lane of section 10a); `bot_relay.*` is not used.
+- **A conversation with one bot is a session of its own profile**, on the bot's own link (`connect(profile)`; the engine binds a ticket to one profile): `session.create` on the first message, `prompt.submit`, the reply streaming back as `message.*` events attributed to the bot, `approval.respond`, `session.interrupt`. The bot's recent sessions are the ones `session.list` gives on that link; `session.resume` opens one as the thread. It runs with the profile's own soul, memory, skills and model; boopis's governed mode (the `boopis` toolset) is the Sessions section's and is not applied to a bot's conversation (the room worker cannot apply it to a member's turn either).
+- **What the engine's rooms cannot do is said, not faked.**
+  - *Members:* a roster is frozen at creation. Changing the members makes a new room with the same name and archives the old one; the form says so before it does. The new room starts empty; the old one's messages stay readable in Archived.
+  - *Archive:* a room can only be disbanded for good (`groups.disband`). Archiving is boopis's own mark on this computer (`core/settings`, `hx.v6.bots.archivedGroups`), reversible with Restore; the room and its log are untouched. Another computer's boopis, or another client of the same engine, still lists it.
+  - *Replies arrive whole*, not word by word: the engine publishes a member's message when the member has finished it. The room shows who is replying (`groups.state`, `member_activity`) in the meantime.
+  - *Who answers:* with no `@name` every member answers, then reads the others; so a group is a conversation among bots that each see the others' replies, not a router that picks one.
+- **The UI says what it is:** the empty room and the new-group form carry `GroupsSource.nature` ("Each member reads what you write and what the others said, and answers in its own words. Write @name to ask one of them."). Where the room worker is off or the engine has no `groups.*`, the form and the room say so (`GroupsSource.note`) and nothing is pretended.
+
+**Consequences.**
+- No plugin change, no new RPC and no engine patch: everything above is the engine's public methods, typed by the vendored contract (ADR-0023).
+- A group holds two to six bots; a user with one bot cannot make one yet.
+- A group's thread is the engine's, so it survives a restart and is the same in any client of that engine.
+
 ## ADR-0012 Prices
 Prices come from the models.dev catalogue plus a user override table. Hermes's models.dev data is not reachable through its public plugin API, so:
 - the plugin reads a cached catalogue file, `<profile home>/hypotaxis/prices/models-dev.json`;

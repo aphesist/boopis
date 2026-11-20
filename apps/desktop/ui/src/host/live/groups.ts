@@ -1,4 +1,4 @@
-/* The live groups: the engine's Group Chat rooms (`groups.*`, ADR-0036), on the user's own link.
+/* The live groups: the engine's Group Chat rooms (`groups.*`, ADR-0033), on the user's own link.
      a group                       a room: a name and two to six local profiles, `groups.create`, `groups.list`
      a message                     `groups.send`: the engine's room worker runs a Discussion: it hands the message to the members
                                    (all of them, or those the text names with `@handle`), each answers as its own profile,

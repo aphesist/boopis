@@ -13,6 +13,8 @@ import { bot, initModel, S, stateOf, thread } from './model';
 import { gentleFollow, orbButton, orbHTML, livenIn, setReact } from './orbs';
 import { markSelected, updateRow } from './list';
 import { openNew } from './new-bot';
+import { mountGroupPane } from './group-room';
+import { mountNewGroupPane } from './new-group';
 import { openSettings, toggleSettings } from './settings';
 import { checkClips, watchClips } from './clips';
 import { renderGlance } from './glance';
@@ -48,6 +50,7 @@ export function mountView(root: HTMLElement): void {
   const sheet = el('aside', { class: 'ui-panel bt-sheet', 'data-hx-panel': '', 'aria-label': 'Bot settings', hidden: true });
   root.append(room, nb, sheet);
   S.room = room; S.newPane = nb; S.sheet = sheet;
+  mountGroupPane(root); mountNewGroupPane(root);
   watchClips(root);
   buildRoom();
   if (S.view === 'new' || !S.bots.length) openNew(); else openBot(S.sel);
@@ -84,6 +87,8 @@ export function openBot(id: string | null): void {
   markSelected();
   if (!S.room) return;
   S.room.hidden = false; (S.newPane as HTMLElement).hidden = true;
+  if (S.groupPane) S.groupPane.hidden = true;
+  if (S.newGroupPane) S.newGroupPane.hidden = true;
   renderPresence(b);
   renderThread(b);
   paintComposer(b);
