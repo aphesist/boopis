@@ -63,7 +63,8 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
     const fresh = t.content.firstElementChild as HTMLElement;
     model.replaceChildren(...fresh.childNodes);
     model.classList.toggle('ui-chip--mono', !G.smart && !!G.model);
-    model.setAttribute('aria-label', 'Who answers next: ' + (G.smart ? 'Smart' + (prev ? ', it would pick ' + (ui.modelMark.called(prev.choice.model) || prev.choice.model) + ' (' + prev.reason + ')' : ', it picks for each message') : name));
+    /* the accessible name starts with the words on the chip (WCAG 2.5.3), then says what it is */
+    model.setAttribute('aria-label', label + ', who answers next' + (G.smart ? (prev ? ' (Smart would pick it for this message: ' + prev.reason + ')' : ' (Smart picks for each message)') : ''));
     model.setAttribute('data-tip', G.smart ? 'Smart picks the model for each message' + (prev ? ': ' + prev.reason : '') : 'Who answers next'); model.setAttribute('data-kbd', 'alt+M');
   }
   c.input.addEventListener('input', () => { if (gov().smart) drawModel(gov()); });

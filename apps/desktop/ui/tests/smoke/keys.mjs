@@ -172,7 +172,7 @@ export async function keyWalk(env) {
     await press('Control+g', 100); await press('i', 300);
     const chip = () => ev(() => { const b = [...document.querySelectorAll('#hx-view-session .ui-composer__chips button')].find((x) => x.hasAttribute('aria-haspopup')); return { hidden: b.hidden, text: b.textContent.trim(), label: b.getAttribute('aria-label') }; });
     const c0 = await chip();
-    check('7', 'the model chip is always shown and says Smart answers next', !c0.hidden && /^Smart/.test(c0.text) && /Who answers next: Smart/.test(c0.label), c0);
+    check('7', 'the model chip is always shown and says Smart answers next', !c0.hidden && /^Smart/.test(c0.text) && /^Smart.*who answers next/.test(c0.label), c0);
     await press('Alt+m', 500);
     const first = await ev(() => { const it = document.querySelector('.ui-listbox .ui-option'); return it ? { label: it.textContent.trim(), checked: it.getAttribute('aria-selected'), role: it.closest('[role="listbox"]').getAttribute('role'), foot: !!document.querySelector('.ui-listbox .ui-menu__foot') } : null; });
     check('7', 'alt+M opens the menu, Automatic (Smart) first and chosen, with a hint', (await layer()).menu && first && first.role === 'listbox' && /^Automatic \(Smart\)/.test(first.label) && first.checked === 'true' && first.foot, first);

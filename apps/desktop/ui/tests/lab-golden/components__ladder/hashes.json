@@ -20,24 +20,24 @@
   "h": 24
  },
  "long@bone": {
-  "sha": "742889f38dcaaa1a41a6fd36e73dbf3982bf48df",
+  "sha": "2940e5ea63381ec4ac420e55318c3762510e7c92",
   "w": 344,
-  "h": 184
+  "h": 168
  },
  "long@catalog": {
-  "sha": "164c1b16683dc4b7c5abca9ecde6a6fa861ee06f",
+  "sha": "2bc73e15a05815d59eaea53bf5186c19d5ca8757",
   "w": 344,
-  "h": 184
+  "h": 168
  },
  "long@graphite": {
-  "sha": "96c8dd5f66de5cd27bc8d1f597a8f1f2d6a8a911",
+  "sha": "6cecde1caeb70f0abb68dbf73033c1c286a1b9d2",
   "w": 344,
-  "h": 184
+  "h": 168
  },
  "long@typewriter": {
-  "sha": "181b5fe5e6db7861951662b9513d7c29ab6bd3db",
+  "sha": "92f4b174174427a51182b7a9f38c78577916ce34",
   "w": 344,
-  "h": 184
+  "h": 168
  },
  "many@bone": {
   "sha": "60abb95af76461f6c0216e6d90bcefa9dd19bae7",
@@ -60,42 +60,42 @@
   "h": 29
  },
  "off@bone": {
-  "sha": "86d28758f4ab0dd1ba422ab16f2dd4884f33f0b5",
+  "sha": "10dba49ae2f60f558736a54c3257b967139ed186",
   "w": 344,
   "h": 136
  },
  "off@catalog": {
-  "sha": "04ffc4fd1e825eae165c7c3c03c8fb2a249c0654",
+  "sha": "563c314289dad750969c29a0e8076a3541440189",
   "w": 344,
   "h": 136
  },
  "off@graphite": {
-  "sha": "c10504d2acd725eaaaafa8e89368f62bf7d2da05",
+  "sha": "bc63803ab77aa26a5916b039815f245d392d9992",
   "w": 344,
   "h": 136
  },
  "off@typewriter": {
-  "sha": "f2971c858265c0dbc7d69046486bf5a30e0eac98",
+  "sha": "3fef0a1261b4dd36a25488e3270aaeedb5c02d31",
   "w": 344,
   "h": 136
  },
  "typical@bone": {
-  "sha": "7292351d78cb39cfc11a4c3e1eb22175f172c9c5",
+  "sha": "283b4a51c71a9a0924a8239a8c1e96be55191a94",
   "w": 344,
   "h": 157
  },
  "typical@catalog": {
-  "sha": "585282ab7bf17ba3d8d283d0bb6e013c6de40069",
+  "sha": "d5b501e3c3c14d679c6ee5468fdb7a36c780f63c",
   "w": 344,
   "h": 157
  },
  "typical@graphite": {
-  "sha": "24997690396670370eadbc7eb1f78c4e4a3f5efe",
+  "sha": "816ea4106c4542022060e863bbc5f28a20ad7873",
   "w": 344,
   "h": 157
  },
  "typical@typewriter": {
-  "sha": "bebbffb3efd34d8598f5f1fd5be07336e7dd9fac",
+  "sha": "a7fc14f467bd9dcea3e429fd1aa8e4e31ac6855f",
   "w": 344,
   "h": 157
  }

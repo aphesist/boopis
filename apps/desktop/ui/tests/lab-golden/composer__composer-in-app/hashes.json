@@ -40,12 +40,12 @@
   "h": 64
  },
  "session-attach-hover@bone": {
-  "sha": "82731434de4bdb1297db408141ae1353a4eb0fa0",
+  "sha": "b9374369a07c12540a438c4e971ab079e00ec68d",
   "w": 744,
   "h": 149
  },
  "session-attach-hover@catalog": {
-  "sha": "3cfb59e1da7a933a2a9cd497f62029828afef621",
+  "sha": "69654b34069349121932f2905f656793bca18c00",
   "w": 744,
   "h": 149
  },
@@ -60,12 +60,12 @@
   "h": 155
  },
  "session-attach-menu@bone": {
-  "sha": "5d1f0f9422c7645460cc68cc1ee0f5606e905bf1",
+  "sha": "163ecb5d4d2e6e486a303bfed8d5f599d8268a33",
   "w": 746,
   "h": 389
  },
  "session-attach-menu@catalog": {
-  "sha": "97c0ace4c97a8a2233fb9d9f57900e643b43dba1",
+  "sha": "147b280f006afaba1c52d9735ef737894ce42369",
   "w": 746,
   "h": 389
  },
@@ -80,12 +80,12 @@
   "h": 395
  },
  "session-attach-tooltip@bone": {
-  "sha": "565ed70e77b7ed27ddfdb58122e99f20698e968d",
+  "sha": "3fb072c6e1832e422969900d28028dbdc3920b81",
   "w": 777,
   "h": 159
  },
  "session-attach-tooltip@catalog": {
-  "sha": "f06a481ae32540e0378c9735aa23bbd988214ea6",
+  "sha": "6ca57021679d4ceb784f40e470dfcf25b195c9af",
   "w": 777,
   "h": 159
  },
@@ -100,12 +100,12 @@
   "h": 165
  },
  "session-empty@bone": {
-  "sha": "ff0043654ad958f28f959c047d649f6173e15347",
+  "sha": "92d8363f5b41920fd857ae0217fc93d051d26403",
   "w": 744,
   "h": 117
  },
  "session-empty@catalog": {
-  "sha": "d16d8c3c0268572daa58aa54f018dd5a614023bb",
+  "sha": "1353f9a2027fe4670a841d3ec608779d88951257",
   "w": 744,
   "h": 117
  },
@@ -120,12 +120,12 @@
   "h": 123
  },
  "session-send-hover@bone": {
-  "sha": "de3aca288d3d070ed696f2696357a8b75ea23f15",
+  "sha": "7196dc1f3b63b2eb2604ff2ebea2a72c26c4c488",
   "w": 744,
   "h": 149
  },
  "session-send-hover@catalog": {
-  "sha": "a8785fcb44de550c639af23a6624837b0e3f5577",
+  "sha": "01b4a1e3f60149849df4b507c4845fac17184a40",
   "w": 744,
   "h": 149
  },
@@ -140,12 +140,12 @@
   "h": 155
  },
  "session@bone": {
-  "sha": "60605e1b29cac22627ff7cefebd0ea3e694b0913",
+  "sha": "0b5b0adf61c99908fc622d637330567fb8041aae",
   "w": 744,
   "h": 149
  },
  "session@catalog": {
-  "sha": "f6e5c54ebbad7bc4a7ba844ff7a39eb94b6f4dd8",
+  "sha": "eb5b4f43f89448953039804b874636ed7202fc85",
   "w": 744,
   "h": 149
  },
