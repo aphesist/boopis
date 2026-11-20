@@ -13,6 +13,7 @@ import type {
   AgentTurn, ApprovalMessage, ArchivedBot, Bot, BotConfig, ContextUsage, ConversationEvent, DiffFile, RunSnapshot, SessionSummary, TextMessage, ThreadMessage, Turn, Wait
 } from './types';
 import * as M from './mock-data';
+import { createMockGroups } from './mock-groups';
 
 let nextId = 0;
 const mid = (p: string): string => p + (++nextId).toString(36);
@@ -417,5 +418,6 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
   /* the mock has no mods: a session's mods are always empty, and a press goes nowhere */
   const noMods = createModsModel();
   const mods: ModsSource = { ...noMods.source, press() { /* no mods */ }, input() { /* no mods */ }, select() { /* no mods */ }, props() { /* no mods */ } };
-  return { info: { live: false, preview: new Set(), unavailable: {} }, ready: Promise.resolve(), user: store(M.USER), sessions, details, bots: botsSource, waits: waitsSource, forms, run: runSource, schedules, feedforward, dictation, files, mods };
+  const groups = createMockGroups({ bots: () => bots, simulate, seed: !!opts.fixtures?.includes('groups') });
+  return { info: { live: false, preview: new Set(), unavailable: {} }, ready: Promise.resolve(), user: store(M.USER), sessions, details, bots: botsSource, groups, waits: waitsSource, forms, run: runSource, schedules, feedforward, dictation, files, mods };
 }

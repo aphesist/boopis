@@ -188,3 +188,10 @@ orb-avatar.is-live { cursor: pointer; }
 .bt-routine-note { font-size: var(--fs-xs); color: var(--text-quiet); }
 .bt-add-row { display: flex; justify-content: flex-end; margin-top: var(--sp-2); }
 .bt-caps { display: grid; gap: var(--sp-1); }
+
+/* a recent session opens as the thread (a button spanning its row) and the app's own lines sit quietly in the thread */
+.bt-glance-open { all: unset; box-sizing: border-box; display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-3); width: 100%; min-width: 0; cursor: pointer; }
+.bt-glance-open:hover .bt-glance-title { text-decoration: underline; }
+.bt-glance-open:focus-visible { outline: var(--focus-w) solid var(--focus); outline-offset: var(--focus-offset); }
+.bt-note { margin: var(--sp-2) 0 var(--sp-2) var(--hx-margin-w, var(--margin-w)); font-size: var(--fs-xs); line-height: 1.5; color: var(--text-quiet); max-width: 60ch; }
+[data-margin="off"] .bt-note { margin-left: 0; }

@@ -103,6 +103,19 @@ class FakeHermes {
   private linkCall(profile: string, method: string, p: Json): unknown {
     const jobs = (this.jobs[profile] ??= []);
     if (method === 'session.list') return { sessions: [{ id: 's1', title: 'review billing', started_at: SEC - 600, message_count: 4 }, { id: 's0', title: '', preview: 'first words', started_at: SEC - 86400 * 2, source: 'cron' }] };
+    const link = this.links.get(profile) as FakeLink;
+    if (method === 'session.create') return { session_id: 'gw-' + profile, stored_session_id: 'st-' + profile, message_count: 0, messages: [], info: {} };
+    if (method === 'prompt.submit') {
+      queueMicrotask(() => {
+        const ev = (type: string, payload: Json): void => link.emit({ type, session_id: p['session_id'], payload });
+        ev('message.start', {});
+        if (p['text'] === 'deploy') ev('approval.request', { prompt_id: 'a1', command: 'make deploy', description: 'ships it', execution_generation: 3 });
+        else { ev('tool.start', { name: 'git' }); ev('message.delta', { text: 'On ' }); ev('message.delta', { text: 'it.' }); ev('message.complete', { text: 'On it.' }); }
+      });
+      return { ok: true };
+    }
+    if (method === 'session.resume') return { session_id: 'gw2-' + profile, stored_session_id: p['session_id'], message_count: 3, messages: [{ role: 'user', text: 'review billing', timestamp: SEC - 600 }, { role: 'tool', name: 'git' }, { role: 'assistant', text: 'Looks fine.' }], info: {} };
+    if (method === 'approval.respond' || method === 'session.interrupt') return { ok: true };
     if (method !== 'cron.manage') throw new Error('unexpected ' + method);
     switch (p['action']) {
       case 'list': return { success: true, jobs: jobs.map((j) => ({ ...j })) };
@@ -202,7 +215,7 @@ describe('the schedules are the teammates’ routines', () => {
   it('cannot run a routine on demand and says so', async () => {
     const { bots } = await open();
     expect(bots.unavailable['schedules.runNow']).toMatch(/on demand/);
-    expect(bots.unavailable['bots.send']).toMatch(/team chat/);
+    expect(bots.unavailable['bots.send']).toBeUndefined();
   });
 });
 
@@ -410,14 +423,110 @@ describe('archived bots, restored from the Archived group and the palette', () =
   });
 });
 
-describe('what a teammate cannot do yet is not pretended', () => {
-  it('sending to it does nothing and nothing is added to its thread', async () => {
+const tickAll = async (): Promise<void> => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
+const kinds = (events: BotsEvent[]): string[] => events.map((e) => e.type);
+
+describe('a conversation with a teammate is a session of its own profile', () => {
+  it('makes the session on the bot’s own link and submits the message there, never on the user’s', async () => {
+    const { h, bots } = await open();
+    bots.source.send('atlas', 'hello', 'bots');
+    await tickAll();
+    const calls = h.links.get('atlas')!.calls.map((c) => c.method);
+    expect(calls).toContain('session.create');
+    expect(h.links.get('atlas')!.calls.find((c) => c.method === 'prompt.submit')!.params).toMatchObject({ session_id: 'gw-atlas', text: 'hello' });
+    expect(h.main.calls.map((c) => c.method)).not.toContain('session.create');
+    expect(bots.source.sessions!.current('atlas')).toBe('st-atlas');
+  });
+  it('streams the reply as one message attributed to the bot, and the user’s own message comes first', async () => {
     const { bots, events } = await open();
     events.length = 0;
-    bots.source.send('atlas', 'hello', 'bots');
-    expect(events).toEqual([]);
-    expect(bots.source.stop('atlas')).toBe(false);
+    bots.source.send('atlas', 'hello', 'dock');
+    await tickAll();
+    const msgs = events.filter((e): e is Extract<BotsEvent, { type: 'message' }> => e.type === 'message');
+    expect(msgs.map((m) => [m.message.who, m.streaming])).toEqual([['you', false], ['atlas', true]]);
+    const end = events.find((e) => e.type === 'message-end') as Extract<BotsEvent, { type: 'message-end' }>;
+    expect(end.text).toBe('On it.');
+    expect(kinds(events).filter((k) => k === 'run')).toHaveLength(3);   // running on send, on the reply's start, and done
+    expect(events.filter((e) => e.type === 'run').pop()).toMatchObject({ running: false });
+    expect(bots.source.snapshot().threads['atlas']!.map((m) => m.kind === 'text' ? m.text : '')).toEqual(['hello', 'On it.']);
   });
+  it('shows the bot working while it runs a tool, and idle again after', async () => {
+    const { bots, events } = await open();
+    events.length = 0;
+    bots.source.send('nina', 'hello', 'bots');
+    await tickAll();
+    const states = events.filter((e): e is Extract<BotsEvent, { type: 'bot' }> => e.type === 'bot').map((e) => [e.bot.state, e.bot.activity]);
+    expect(states).toContainEqual(['working', 'git']);
+    expect(botOf(bots, 'nina')!.state).toBe('idle');
+  });
+  it('a message that is not accepted says so in the thread and stops the run', async () => {
+    const h = new FakeHermes(); h.failLink = true;
+    const { bots, events } = await open(h);
+    events.length = 0;
+    bots.source.send('atlas', 'hello', 'bots');
+    await tickAll();
+    const note = bots.source.snapshot().threads['atlas']!.find((m) => m.kind === 'note');
+    expect(note).toMatchObject({ kind: 'note' });
+    expect((note as { text: string }).text).toMatch(/not sent/);
+    expect(events.filter((e) => e.type === 'run').pop()).toMatchObject({ running: false });
+  });
+  it('an approval is a card in the thread, answered with approval.respond on the bot’s link', async () => {
+    const { h, bots, events } = await open();
+    bots.source.send('atlas', 'deploy', 'bots');
+    await tickAll();
+    expect(botOf(bots, 'atlas')!.attention).toBe('approval');
+    bots.source.decide('atlas', 'ap-a1', 'approved');
+    await tickAll();
+    expect(h.links.get('atlas')!.calls.find((c) => c.method === 'approval.respond')!.params).toMatchObject({ session_id: 'gw-atlas', prompt_id: 'a1', choice: 'once', execution_generation: 3 });
+    expect(events.find((e) => e.type === 'message-resolved')).toMatchObject({ resolved: 'approved' });
+    expect(botOf(bots, 'atlas')!.attention).toBeNull();
+  });
+  it('stops the reply with session.interrupt, and only while one is running', async () => {
+    const { h, bots } = await open();
+    expect(bots.source.stop('atlas')).toBe(false);
+    bots.source.send('atlas', 'deploy', 'bots');
+    await tickAll();
+    expect(bots.source.stop('atlas')).toBe(true);
+    await tickAll();
+    expect(h.links.get('atlas')!.calls.map((c) => c.method)).toContain('session.interrupt');
+  });
+  it('opening a recent session resumes it: its words are the thread and the next message continues it', async () => {
+    const { h, bots, events } = await open();
+    await bots.source.sessions!.open('atlas', 's1');
+    const thread = bots.source.snapshot().threads['atlas']!;
+    expect(thread.map((m) => (m.kind === 'text' ? [m.who, m.text] : m.kind))).toEqual([['you', 'review billing'], ['atlas', 'Looks fine.']]);
+    expect(events.find((e) => e.type === 'thread')).toMatchObject({ botId: 'atlas' });
+    expect(bots.source.sessions!.current('atlas')).toBe('s1');
+    bots.source.send('atlas', 'and now?', 'bots');
+    await tickAll();
+    const calls = h.links.get('atlas')!.calls;
+    expect(calls.map((c) => c.method)).not.toContain('session.create');
+    expect(calls.find((c) => c.method === 'prompt.submit')!.params['session_id']).toBe('gw2-atlas');
+  });
+  it('starting over empties the thread and the next message makes a new session', async () => {
+    const { h, bots } = await open();
+    await bots.source.sessions!.open('atlas', 's1');
+    bots.source.sessions!.fresh('atlas');
+    expect(bots.source.snapshot().threads['atlas']).toEqual([]);
+    expect(bots.source.sessions!.current('atlas')).toBeNull();
+    bots.source.send('atlas', 'new', 'bots');
+    await tickAll();
+    expect(h.links.get('atlas')!.calls.map((c) => c.method)).toContain('session.create');
+  });
+  it('refuses to open a session while the bot is replying', async () => {
+    const { bots } = await open();
+    bots.source.send('atlas', 'deploy', 'bots');
+    await tickAll();
+    await expect(bots.source.sessions!.open('atlas', 's1')).rejects.toThrow(/finish its reply/);
+  });
+  it('is messageable where a link exists, and says why where it does not', async () => {
+    expect((await open()).bots.unavailable['bots.send']).toBeUndefined();
+    const bare = createLiveBots({ client: new FakeHermes().main as unknown as GatewayClient, now: () => NOW, pollMs: null });
+    expect(bare.unavailable['bots.send']).toMatch(/cannot talk to a teammate/);
+  });
+});
+
+describe('what a teammate cannot do yet is not pretended', () => {
   it('the catalog lists only this app as a channel, and reserves default', async () => {
     const { bots } = await open();
     expect(bots.source.catalog().channels).toEqual([{ id: 'app', name: 'This app', hint: 'always on' }]);

@@ -34,11 +34,18 @@ describe('settings persistence', () => {
 
 describe('the Bots tab’s own setting: whether the Archived group is open', () => {
   it('is closed until the user opens it, and keeps what they chose', () => {
-    expect(loadBots()).toEqual({ archivedOpen: false });
+    expect(loadBots()).toEqual({ archivedOpen: false, archivedGroups: [] });
     expect(saveBots({ archivedOpen: true })).toBe(true);
-    expect(loadBots()).toEqual({ archivedOpen: true });
+    expect(loadBots()).toEqual({ archivedOpen: true, archivedGroups: [] });
     saveBots({ archivedOpen: false });
-    expect(loadBots()).toEqual({ archivedOpen: false });
+    expect(loadBots()).toEqual({ archivedOpen: false, archivedGroups: [] });
+  });
+  it('keeps the archived groups beside it: saving one leaves the other as it was', () => {
+    saveBots({ archivedGroups: ['g1'] });
+    saveBots({ archivedOpen: true });
+    expect(loadBots()).toEqual({ archivedOpen: true, archivedGroups: ['g1'] });
+    localStorage.setItem(KEYS.bots, JSON.stringify({ archivedGroups: [1, 'g2'] }));
+    expect(loadBots().archivedGroups).toEqual(['g2']);
   });
   it('anything but a true is closed, and a corrupt value or blocked storage never throws', () => {
     localStorage.setItem(KEYS.bots, JSON.stringify({ archivedOpen: 'yes' }));

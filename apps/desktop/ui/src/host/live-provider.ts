@@ -12,6 +12,7 @@ import type { AgentTurn, BlankData, BlankWait, ConversationEvent, FormStatus, Fo
 import { readFlag } from '../core/settings';
 import { createDetails } from './live/details';
 import { createLiveBots } from './live/bots';
+import { createLiveGroups } from './live/groups';
 import { todosFrom } from './live/map-details';
 import { blankData } from './live/blanks';
 import { createModsHost } from './live/mods';
@@ -445,17 +446,18 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
 
   const liveBots = createLiveBots({ client, now, ...(opts.linkTo ? { linkTo: opts.linkTo } : {}), ...(opts.botsPollMs !== undefined ? { pollMs: opts.botsPollMs } : {}) });
   Object.assign(details.unavailable, liveBots.unavailable);
-  const ready = Promise.all([refreshList(), details.start(), liveBots.ready]).then(() => undefined);
+  const liveGroups = createLiveGroups({ client, bots: () => liveBots.source.snapshot().bots, now, ...(opts.botsPollMs !== undefined ? { pollMs: opts.botsPollMs } : {}) });
+  const ready = Promise.all([refreshList(), details.start(), liveBots.ready, liveGroups.ready]).then(() => undefined);
   const flag = readFlag('feedforward');
   return {
     ...mock,
     info: { live: true, preview: new Set(['feedforward']), unavailable: details.unavailable },
-    ready, sessions, waits, user, forms: formsHost.source, bots: liveBots.source, schedules: liveBots.schedules,
+    ready, sessions, waits, user, forms: formsHost.source, bots: liveBots.source, groups: liveGroups.source, schedules: liveBots.schedules,
     details: details.source, run: details.run, mods: modsHost.source,
     files: { pick: () => null, complete: (word, id) => details.files.complete(word, id) },
     dictation: { start: () => () => undefined }, // nothing hears you yet: the mock's transcript is invented text
     feedforward: { catalog: () => (flag ? mock.feedforward.catalog() : []) },
-    settled: async () => { await details.settled(); await liveBots.settled(); },
+    settled: async () => { await details.settled(); await liveBots.settled(); await liveGroups.settled(); },
     ledger: { totals: () => ledgerTotals, subscribe(fn) { ledgerSubs.add(fn); return () => { ledgerSubs.delete(fn); }; } }
   };
 }
