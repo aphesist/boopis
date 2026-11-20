@@ -42,6 +42,19 @@ describe('binding', () => {
     size(pill, 80, 24);
     expect(pill.hasAttribute('data-sq-on')).toBe(false);
   });
+  it('draws a left and a right concave flare of one size each its own way', () => {
+    /* once drawn, a flare's own radii read 0 (it is clipped instead), so its side must be in the path's cache key, or the
+       right flare takes the left one's path (the owner's report: Typewriter's right corner curved the wrong way) */
+    vi.spyOn(window, 'getComputedStyle').mockImplementation(() => ({ borderTopLeftRadius: '0px', borderTopRightRadius: '0px', borderBottomRightRadius: '0px', borderBottomLeftRadius: '0px', getPropertyValue: () => '', transitionProperty: 'none', transitionDuration: '0s' }) as unknown as CSSStyleDeclaration);
+    const left = document.createElement('div'); left.className = 'ui-concave'; left.setAttribute('data-at', 'tl');
+    const right = document.createElement('div'); right.className = 'ui-concave'; right.setAttribute('data-at', 'tr');
+    document.body.append(left, right);
+    squircle.bind(left); squircle.bind(right);
+    size(left, 36, 36); size(right, 36, 36);
+    const l = left.style.getPropertyValue('--sq-clip'), r = right.style.getPropertyValue('--sq-clip');
+    expect(l).toMatch(/^path\("M0 0L36 0/);
+    expect(r).toMatch(/^path\("M36 0L0 0/);
+  });
   it('lets go of an element that is unbound', () => {
     const el = document.createElement('div'); el.setAttribute('data-sq', '');
     document.body.append(el);

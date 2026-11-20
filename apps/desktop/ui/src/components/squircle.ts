@@ -106,8 +106,10 @@ function snapOf(s: State): Snap {
 
 function build(s: State, g: Snap): Built {
   const w = g.w, h = g.h, R = s.r ?? [0, 0, 0, 0] as const;
-  /* the key is built every frame for every element whose size changed: plain numbers, no formatting */
-  const key = s.mode + '|' + w + '|' + h + '|' + s.rk + (s.focusable ? '|1|' : '|0|') + smoothing + '|' + g.ox + '|' + g.oy + '|' + g.D;
+  /* the key is built every frame for every element whose size changed: plain numbers, no formatting. A concave flare's
+     side (data-at) is in it: once drawn, both flares read radius 0, so a left and a right flare of one size would share a
+     path, and the right one would curve the left way (Typewriter's 36px flares on WebKitGTK) */
+  const key = s.mode + '|' + w + '|' + h + '|' + s.rk + (s.focusable ? '|1|' : '|0|') + smoothing + '|' + g.ox + '|' + g.oy + '|' + g.D + (s.mode === 'concave' ? '|' + s.at : '');
   const hit = cache.get(key);
   if (hit) return hit;
   if (cache.size > PATH_CACHE_MAX) cache.clear();
