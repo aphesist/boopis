@@ -226,6 +226,7 @@
   content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: var(--r-pill); background: var(--text-quiet);
   transition: transform var(--dur-2) var(--ease), background-color var(--dur-1) var(--ease);
 }
+.ui-switch::after { content: ""; position: absolute; inset: calc((20px - var(--hit-min)) / 2) 0; }   /* the track is 20px tall, under --hit-min: a hit area of 24 around it (R-a11y-2), so a switch scrolled next to another control is never a target too small and too close */
 .ui-switch:checked { background: var(--selected); box-shadow: none; }
 .ui-switch:checked::before { transform: translateX(14px); background: var(--text-on-light); }
 .ui-switch:disabled { opacity: .45; cursor: default; }
