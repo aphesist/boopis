@@ -289,8 +289,11 @@
             const problems = [];
             /* a mark (a status dot, a page dot: under 12px) is carried by its row, not set into the corner as a control: it only has to keep the container's --pad from both edges (R-corner-4) */
             const mark = Math.min(er.width, er.height) < 12, padC = px(ccs.getPropertyValue('--pad'));
-            if (Math.abs(dx - dy) > 1 && !(mark && Math.min(dx, dy) >= padC - 1)) problems.push('insets ' + r1(dx) + 'px and ' + r1(dy) + 'px are not equal');
-            if (Math.abs(r - want8) > 1 && !(isPill && want8 >= pillR - 1)) problems.push('radius ' + r1(r) + 'px, the corner wants ' + r1(want8) + 'px (' + r1(R) + ' - ' + r1(inset) + (R - inset < FLOOR ? ', floor ' + FLOOR : '') + ')' + (isPill ? ' or a pill of ' + r1(pillR) + 'px' : ''));
+            /* a piece set into a line of text (the blank in a sentence) is placed by the line breaking, which moves with the font, not set
+               into the corner: like a mark it only has to keep the container's --pad from both edges (R-corner-4), and its radius is its own */
+            const inText = /^inline/.test(getComputedStyle(e).display) && !/flex|grid/.test(getComputedStyle(e.parentElement || e).display) && !!e.closest('p, li, article');
+            if (Math.abs(dx - dy) > 1 && !((mark || inText) && Math.min(dx, dy) >= padC - 1)) problems.push('insets ' + r1(dx) + 'px and ' + r1(dy) + 'px are not equal');
+            if (!inText && Math.abs(r - want8) > 1 && !(isPill && want8 >= pillR - 1)) problems.push('radius ' + r1(r) + 'px, the corner wants ' + r1(want8) + 'px (' + r1(R) + ' - ' + r1(inset) + (R - inset < FLOOR ? ', floor ' + FLOOR : '') + ')' + (isPill ? ' or a pill of ' + r1(pillR) + 'px' : ''));
             if (problems.length) add('concentric', e, 'in the ' + name + ' corner of ' + describe(c) + ': ' + problems.join('; ') + ' [' + why.join(',') + ']', { container: rectOf(c) });
           }
         }
