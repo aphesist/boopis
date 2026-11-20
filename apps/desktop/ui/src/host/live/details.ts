@@ -214,7 +214,7 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
     const jobs: Promise<void>[] = [];
     if (pluginOk) jobs.push(read<DescribeWire>(PLUGIN + 'describe', {}).then((r) => { defaultMode = r?.config?.mode ?? null; }));
     jobs.push(read<McpStatusWire>('mcp.servers.status', {}).then((r) => { mcp = r; }));
-    jobs.push(read<ModelOptionsWire>('model.options', {}).then((r) => { options = r; }));
+    jobs.push((client.requestRaw('model.options', {}) as Promise<ModelOptionsWire>).then((r) => { options = r; }, (e: unknown) => { log.info('model.options was not read, so only the ladder is offered', e); }));
     if (deps.hostLadder) jobs.push(deps.hostLadder().then((t) => { hostTiers = t; }).catch((e: unknown) => { log.warn('the saved ladder could not be read', e); }));
     /* what this Hermes cannot do is learned by asking with a session id that matches nothing: only "no such method" counts */
     const probe = async (method: string, key: string, why: string): Promise<void> => {
