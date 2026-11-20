@@ -93,6 +93,13 @@ const WIRE: Record<string, Wire> = {
     el.addEventListener('scroll', () => { el.toggleAttribute('data-more', el.scrollLeft + el.clientWidth < el.scrollWidth - 2); }, { passive: true });
     el.addEventListener('ui:change', () => { requestAnimationFrame(() => fitTabs(el)); });
     requestAnimationFrame(() => fitTabs(el));
+    /* the fade follows the strip's width and its tabs' widths: a resized window, or the web font arriving after the first
+       layout (wider labels), can make the strip overflow, or stop, after it was first fitted */
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(() => { fitTabs(el); });
+      ro.observe(el);
+      for (const t of el.querySelectorAll('.ui-tab')) ro.observe(t);
+    }
   },
   rows: wireRows,
   select: wireSelect,
