@@ -60,6 +60,12 @@ export const commands = {
 	pickFolder: (options?: InvokeOptions) => __TAURI_INVOKE<PickedFolder | null>("pick_folder", undefined, options),
 	/**  Open an `http` or `https` link in the user's browser. */
 	openExternal: (url: string, options?: InvokeOptions) => __TAURI_INVOKE<null>("open_external", { url }, options),
+	/**  The desktop's kind and the window's state. */
+	windowFacts: (options?: InvokeOptions) => __TAURI_INVOKE<WindowFacts_Serialize>("window_facts", undefined, options),
+	/**  Minimise, maximise or restore, full screen, or close the main window. */
+	windowControl: (action: WindowAction, options?: InvokeOptions) => __TAURI_INVOKE<null>("window_control", { action }, options),
+	/**  Ask for files or folders to attach to a message, in the system's own dialog. Empty when cancelled. */
+	pickAttachments: (kind: string, options?: InvokeOptions) => __TAURI_INVOKE<Attachment_Serialize[]>("pick_attachments", { kind }, options),
 	/**
 	 *  The renderer diagnostics: the session, the GPUs and their drivers, the rule that decided, the environment the web
 	 *  process was started with, the `WebKitGTK` version and origin, the display's refresh rate, whether `WebKit`'s 60 fps
@@ -130,7 +136,9 @@ export const events = {
 	chatgptSigninEvent: makeEvent<ChatgptSigninEvent, ChatgptSigninEvent>("chatgpt-signin-event"),
 	connectionStateEvent: makeEvent<ConnectionStateEvent_Serialize, ConnectionStateEvent_Deserialize>("connection-state-event"),
 	connectorRestartEvent: makeEvent<ConnectorRestartEvent, ConnectorRestartEvent>("connector-restart-event"),
+	fileDragEvent: makeEvent<FileDragEvent_Serialize, FileDragEvent_Deserialize>("file-drag-event"),
 	setupProgress: makeEvent<SetupProgress, SetupProgress>("setup-progress"),
+	windowStateEvent: makeEvent<WindowStateEvent, WindowStateEvent>("window-state-event"),
 };
 
 /* Types */
@@ -177,6 +185,42 @@ export type AppSettings_Serialize = {
 	 *  Added without a version bump: a file from before has none and gets `auto`.
 	 */
 	gpu: GpuPolicy,
+};
+
+/**  One attached path. */
+export type Attachment = Attachment_Serialize | Attachment_Deserialize;
+
+/**  What an attached path is. */
+export type AttachmentKind = 
+/**  A file the model reads as text or through a tool. */
+"file" | 
+/**  A picture the model sees. */
+"image" | 
+/**  A folder added to the context. */
+"folder";
+
+/**  One attached path. */
+export type Attachment_Deserialize = {
+	/**  The absolute path on this machine. */
+	path: string,
+	/**  The last component, for the chip. */
+	name: string,
+	/**  File, image or folder. */
+	kind: AttachmentKind,
+	/**  The size of a file in bytes; unknown for a folder. */
+	bytes?: number | null,
+};
+
+/**  One attached path. */
+export type Attachment_Serialize = {
+	/**  The absolute path on this machine. */
+	path: string,
+	/**  The last component, for the chip. */
+	name: string,
+	/**  File, image or folder. */
+	kind: AttachmentKind,
+	/**  The size of a file in bytes; unknown for a folder. */
+	bytes: number | null,
 };
 
 /**  The code the user types, and where. */
@@ -638,6 +682,42 @@ export type ConnectorTool = {
 	description: string,
 };
 
+/**  What kind of window manager the desktop has. */
+export type DesktopKind = 
+/**  A tiling window manager: windows are placed by the manager, minimise and maximise mean nothing. */
+"tiling" | 
+/**  A floating desktop (GNOME, KDE, Windows, ...): windows minimise, maximise and close. */
+"floating" | 
+/**  Nothing recognised. */
+"unknown";
+
+/**  What the host found out about the desktop, once at start. */
+export type Detected = Detected_Serialize | Detected_Deserialize;
+
+/**  What the host found out about the desktop, once at start. */
+export type Detected_Deserialize = {
+	/**  The operating system. */
+	platform: Platform,
+	/**  The kind of window manager. */
+	kind: DesktopKind,
+	/**  The desktop or window manager by name, when known (`Hyprland`, `GNOME`). */
+	desktop?: string | null,
+	/**  What told us (`SWAYSOCK`, `XDG_CURRENT_DESKTOP`, a process name, the platform), for Diagnostics. */
+	evidence: string,
+};
+
+/**  What the host found out about the desktop, once at start. */
+export type Detected_Serialize = {
+	/**  The operating system. */
+	platform: Platform,
+	/**  The kind of window manager. */
+	kind: DesktopKind,
+	/**  The desktop or window manager by name, when known (`Hyprland`, `GNOME`). */
+	desktop: string | null,
+	/**  What told us (`SWAYSOCK`, `XDG_CURRENT_DESKTOP`, a process name, the platform), for Diagnostics. */
+	evidence: string,
+};
+
 /**  One change to Hermes's configuration, as shown in the consent form. */
 export type DiffLine = DiffLine_Serialize | DiffLine_Deserialize;
 
@@ -670,6 +750,33 @@ export type EngineView = {
 	running: Source,
 	/**  Whether this build carries an engine at all (a source build does not, and always uses the machine's). */
 	carries_runtime: boolean,
+};
+
+/**  A file being dragged over the window, or dropped on it. */
+export type FileDragEvent = FileDragEvent_Serialize | FileDragEvent_Deserialize;
+
+/**  A file being dragged over the window, or dropped on it. */
+export type FileDragEvent_Deserialize = {
+	/**  `enter`, `over`, `leave` or `drop`. */
+	phase: string,
+	/**  The pointer, in CSS pixels from the page's top left. */
+	x: number | null,
+	/**  The pointer, in CSS pixels from the page's top left. */
+	y: number | null,
+	/**  What was dropped (empty unless `phase` is `drop`). */
+	attachments: Attachment_Deserialize[],
+};
+
+/**  A file being dragged over the window, or dropped on it. */
+export type FileDragEvent_Serialize = {
+	/**  `enter`, `over`, `leave` or `drop`. */
+	phase: string,
+	/**  The pointer, in CSS pixels from the page's top left. */
+	x: number | null,
+	/**  The pointer, in CSS pixels from the page's top left. */
+	y: number | null,
+	/**  What was dropped (empty unless `phase` is `drop`). */
+	attachments: Attachment_Serialize[],
 };
 
 /**  A form for the UI, in the shape of the plugin's `form.opened` (`docs/FORMS.md` section 6). */
@@ -1134,6 +1241,17 @@ export type PickedFolder = {
 	home_relative: boolean,
 };
 
+/**  The operating system. */
+export type Platform = 
+/**  Linux and the other Unix desktops. */
+"linux" | 
+/**  Windows. */
+"windows" | 
+/**  macOS. */
+"macos" | 
+/**  Anything else. */
+"other";
+
 /**  What the user asked for with `BOOPIS_RENDERER`. */
 export type Policy = 
 /**  The host's evidence-based rule. */
@@ -1563,6 +1681,48 @@ export type WebkitReport_Serialize = {
 	origin: WebkitOrigin,
 	/**  The path of the loaded `libwebkit2gtk`. */
 	library: string | null,
+};
+
+/**  What a title-bar button asks of the window. */
+export type WindowAction = 
+/**  Minimise. */
+"minimize" | 
+/**  Maximise, or restore (leaves full screen first). */
+"toggle_maximize" | 
+/**  Full screen on or off. */
+"toggle_fullscreen" | 
+/**  Close the window (the app quits with its last window). */
+"close";
+
+/**  The window as the title bar needs it: the desktop the host found at start, and the window's state now. */
+export type WindowFacts = WindowFacts_Serialize | WindowFacts_Deserialize;
+
+/**  The window as the title bar needs it: the desktop the host found at start, and the window's state now. */
+export type WindowFacts_Deserialize = {
+	/**  What the host detected once at start. */
+	detected: Detected_Deserialize,
+	/**  Whether the window is maximised. */
+	maximized: boolean,
+	/**  Whether the window is full screen. */
+	fullscreen: boolean,
+};
+
+/**  The window as the title bar needs it: the desktop the host found at start, and the window's state now. */
+export type WindowFacts_Serialize = {
+	/**  What the host detected once at start. */
+	detected: Detected_Serialize,
+	/**  Whether the window is maximised. */
+	maximized: boolean,
+	/**  Whether the window is full screen. */
+	fullscreen: boolean,
+};
+
+/**  The window's state, pushed when it changes so the maximise button's icon follows it. */
+export type WindowStateEvent = {
+	/**  Whether the window is maximised. */
+	maximized: boolean,
+	/**  Whether the window is full screen. */
+	fullscreen: boolean,
 };
 
 /* Tauri Specta runtime */

@@ -68,6 +68,7 @@ body {
 .hx-bar__lead, .hx-bar__end { display: flex; align-items: center; gap: 2px; }
 .hx-bar__end { gap: 10px; }
 .hx-win { display: flex; gap: 2px; }
+.hx-win [hidden] { display: none; }   /* a tiling window manager shows close alone (host/window.ts) */
 
 /* the command centre: where you are, and the way to anywhere else */
 .hx-cmd { position: absolute; left: 50%; top: 7px; translate: -50% 0; width: clamp(240px, 34vw, 480px); }   /* the library's search field (.ui-search--s), placed */

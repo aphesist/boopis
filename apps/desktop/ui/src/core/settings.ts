@@ -11,7 +11,8 @@ export const KEYS = {
   lastDark: 'hx.v6.lastDark',
   dock: 'hx.dock.v6',
   bots: 'hx.v6.bots',
-  preview: 'hx.v6.preview'
+  preview: 'hx.v6.preview',
+  window: 'hx.v6.window'
 } as const;
 export type StoreKey = (typeof KEYS)[keyof typeof KEYS];
 
@@ -71,3 +72,11 @@ export function readFlag(name: 'feedforward'): boolean {
   const env = (import.meta.env as Record<string, string | undefined>)['VITE_PREVIEW_' + name.toUpperCase()];
   return o?.[name] === true || env === '1';
 }
+
+/* ───────── the title bar's controls: automatic (the host reads the desktop), close only, or all three ───────── */
+export type WindowControlsPref = 'auto' | 'close' | 'all';
+export const loadWindowPref = (): WindowControlsPref => {
+  const v = readJSON<Record<string, unknown>>(KEYS.window)?.['controls'];
+  return v === 'close' || v === 'all' ? v : 'auto';
+};
+export const saveWindowPref = (controls: WindowControlsPref): boolean => writeJSON(KEYS.window, { controls });
