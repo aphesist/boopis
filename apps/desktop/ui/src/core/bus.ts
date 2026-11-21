@@ -28,6 +28,8 @@ export interface EventMap {
   'hx:new-session': { from?: string; project?: string };
   'hx:new-bot': { from?: string; source?: string };
   'hx:new-group': { from?: string };
+  /** open the store view (a module asks; the shell owns the dialog) */
+  'hx:open-store': { screen?: 'browse' | 'installed' | 'sources'; from?: string };
   'hx:nav': { action: 'first' | 'last'; region: RegionName | null };
   'hx:region': { region: RegionName };
   /** a surface asks the shell to open Settings at a section (`models`) */

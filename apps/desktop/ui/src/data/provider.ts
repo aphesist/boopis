@@ -280,6 +280,8 @@ export interface StoreProvider {
   checkUpdates(id?: string): Promise<readonly UpdateDiff[]>;
   /** the review of an update: stage the new pin, and return the plan to approve (install it with `install`) */
   reviewUpdate(id: string): Promise<{ stage: StageResult; plan: InstallPlan }>;
+  /** switch an installed item on or off; it takes effect in the next session (`store_set_enabled`, an addition to the contract) */
+  setEnabled(id: string, enabled: boolean): Promise<void>;
   /** go back to the version kept one step back */
   rollback(id: string): Promise<InstallReceipt>;
   /** remove an item; `deleteSecrets` is the user's agreement to delete its keys from the keychain */

@@ -188,6 +188,11 @@ export function createMockStore(opts: MockStoreOptions = {}): StoreProvider {
       if (diff?.to) { out.plan.version = diff.to.version; out.plan.pinned = diff.to.pinned; out.plan.plan_hash = mockHash(JSON.stringify(out.plan)); staged.set(out.stage.stage_id, out.plan); }
       return { stage: out.stage, plan: clone(out.plan) };
     },
+    setEnabled(id, enabled) {
+      if (!installed.get().some((r) => r.item_id === id)) return reject('hx.store.not_installed', 'That item is not installed.');
+      installed.update((l) => l.map((r) => (r.item_id === id ? { ...r, enabled } : r)));
+      return Promise.resolve();
+    },
     rollback(id) {
       const have = installed.get().find((r) => r.item_id === id);
       if (!have) return reject('hx.store.not_installed', 'That item is not installed.');

@@ -22,6 +22,8 @@ const log = logger('connectors');
 export interface ConnectorsDeps {
   bridge: ConnectorsBridge;
   toast: (text: string) => void;
+  /** opens the store view ("Browse the store"); absent: the row is left out */
+  openStore?: () => void;
   /** the delay before the next card replaces one that just answered, so its receipt shows (0 in tests) */
   settle?: number;
 }
@@ -273,11 +275,13 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
         })));
       }
     }
+    if (deps.openStore) rows.unshift(ui.html.setRow({ label: 'From the store', hint: 'Recommended connectors, and every other source boopis can read, to search and review.', control: ui.html.button({ label: 'Browse the store', size: 's', variant: 'primary', attrs: { 'data-add-store': '' } }) }));
     rows.push(ui.html.setRow({ label: 'From a URL', hint: 'A remote MCP server. https only; keys go to your keychain.', control: ui.html.button({ label: 'Add', size: 's', attrs: { 'data-add-url': '', 'aria-label': 'Add a connector from a URL' } }) }));
     rows.push(ui.html.setRow({ label: 'From a command', hint: 'A local program that speaks MCP. It runs on this computer as you.', control: ui.html.button({ label: 'Add', size: 's', attrs: { 'data-add-command': '', 'aria-label': 'Add a connector from a command' } }) }));
     add.innerHTML = ui.html.setHead({ id: 'hx-conn-add-h', label: 'Add' }) + rows.join('');
     ui.hydrate(add);
     for (const b of add.querySelectorAll<HTMLElement>('[data-add-catalog]')) b.addEventListener('click', () => { void addFlow('catalog', { id: b.dataset['addCatalog'] ?? '', variant: b.dataset['addVariant'] ?? '' }); });
+    add.querySelector('[data-add-store]')?.addEventListener('click', () => { deps.openStore?.(); });
     add.querySelector('[data-add-url]')?.addEventListener('click', () => { void addFlow('url'); });
     add.querySelector('[data-add-command]')?.addEventListener('click', () => { void addFlow('command'); });
   }

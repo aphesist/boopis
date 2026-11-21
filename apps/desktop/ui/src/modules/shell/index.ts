@@ -14,7 +14,7 @@ import type { Tab } from '../../core/types';
 import { ui } from '@boopis/ui';
 import { data } from '../../data';
 import { themeApi } from '../../styles/theme';
-import { openKeys, openMenu, openSettings, SETTINGS_SECTIONS, wireDialogs } from './dialogs';
+import { openKeys, openMenu, openSettings, openStore, SETTINGS_SECTIONS, wireDialogs } from './dialogs';
 import { collectEls, els, sh } from './ctx';
 import { reportAttention, seedAttention, setTitleOverride, updateAttentionDots, updateTitle } from './attention';
 import { newThing, toast, toggleDockExpand, toggleLightDark, togglePanel } from './actions';
@@ -79,7 +79,7 @@ function applyState(): void {
 
 /* ───────── the keyboard ───────── */
 const typingIn = (n: Element | null): boolean => !!n && (n.matches('input, textarea, select, [contenteditable="true"], [role="textbox"]') || !!n.closest('[contenteditable="true"]'));
-const layerOpen = (): boolean => !els().palette.hidden || els().settings.open || !!(document.getElementById('hx-keys-sheet') as HTMLDialogElement | null)?.open || !!ui.popover.current;
+const layerOpen = (): boolean => !els().palette.hidden || els().settings.open || !!(document.getElementById('hx-store') as HTMLDialogElement | null)?.open || !!(document.getElementById('hx-keys-sheet') as HTMLDialogElement | null)?.open || !!ui.popover.current;
 
 function onKey(e: KeyboardEvent): void {
   if (e.defaultPrevented || e.isComposing) return;
@@ -117,6 +117,7 @@ function onKey(e: KeyboardEvent): void {
     case 'settings': openSettings(cmd.section); return;
     case 'light-dark': toggleLightDark(); return;
     case 'keys': openKeys(); return;
+    case 'store': openStore(); return;
     case 'leader': startLeader(cmd.withMod); return;
     case 'tab': closePalette(true); setState({ tab: cmd.tab }); return;
     case 'composer': focusRegion('composer'); return;
@@ -318,6 +319,7 @@ function wire(): void {
   });
   on('hx:title', (d) => { if (!d) return; setTitleOverride((TABS as readonly string[]).includes(d.tab ?? '') ? (d.tab as Tab) : state.tab, d.title || d.text || null); updateTitle(); });
   on('hx:open-settings', (d) => { if (d) openSettings(d.section); });
+  on('hx:open-store', (d) => { openStore(d?.screen); });
   on('hx:open-panel', (d) => { if (d && d.from !== 'shell' && state.right !== 'open') setState({ right: 'open' }); });
   on('hx:attention', (d) => { if (d) reportAttention(d.source || 'unknown', d.count, d.tab, d.ids); });
   on('hx:view-inset', (d) => {

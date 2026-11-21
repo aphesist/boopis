@@ -7,7 +7,7 @@ import type { DataProvider } from '../data/provider';
 import type { DockApi } from '../core/registry';
 
 /** the fix agents' areas; `pnpm lab:check --area <id>` runs one */
-export type Area = 'components' | 'composer' | 'shell' | 'settings' | 'bots' | 'cards' | 'dock';
+export type Area = 'components' | 'composer' | 'shell' | 'settings' | 'bots' | 'cards' | 'dock' | 'store';
 export const AREAS: Readonly<Record<Area, string>> = {
   components: 'Components (the HX.ui primitives)',
   composer: 'Conversation and composer',
@@ -15,7 +15,8 @@ export const AREAS: Readonly<Record<Area, string>> = {
   settings: 'Settings and first run',
   bots: 'Bots',
   cards: 'Cards, forms and mods',
-  dock: 'Dock'
+  dock: 'Dock',
+  store: 'Store'
 };
 export type StoryKind = 'component' | 'card' | 'surface' | 'page';
 
