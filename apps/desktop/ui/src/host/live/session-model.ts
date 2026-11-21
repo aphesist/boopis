@@ -3,6 +3,7 @@
    knows what to publish and what to fetch again. */
 import type { Todo } from '../../data/types';
 import type { GatewayEvent } from '../gateway';
+import { isCouncilReport } from './council';
 import { capLines, outputFor, shipLine, todosFrom } from './map-details';
 import type { BlankWire, BreakdownWire, CascadeWire, DescribeWire, DiffWire, InfoWire, InventoryWire, ShipWire, StatsWire, TodoWire, UsageWire } from './wire';
 
@@ -30,12 +31,27 @@ export interface SessionModel {
   /** a message went to one model only (an "@" mention): the model the session answers with by default, which the engine puts back
    *  after that turn; the engine's reports in between name the mentioned model and are not the session's. Cleared by the next send. */
   once: { default: string } | null;
+  /** a council answers this turn, of this many members: the chip says so, and the engine's reports in between name its preset, not a model */
+  council: number | null;
+}
+
+/** an engine report of the session's info without a model that is the council's preset (see `isCouncilReport`): the session's stays */
+export function infoReport(info: InfoWire): InfoWire {
+  if (!isCouncilReport(info.provider, info.model)) return info;
+  const { model: _model, provider: _provider, ...rest } = info;
+  return rest;
+}
+/** a usage report without a model that is the council's preset */
+export function usageReport(usage: UsageWire): UsageWire {
+  if (!isCouncilReport(null, usage.model)) return usage;
+  const { model: _model, ...rest } = usage;
+  return rest;
 }
 export function newModel(): SessionModel {
   return {
     todos: [], todoRevision: -1, usage: null, breakdown: null, info: null, output: [], steps: 0, running: false, stopped: false, turnStartedAt: null, turnEndedAt: null, title: '', started: false,
     stats: null, cascade: null, describe: null, diff: null, inventory: null, blanks: [], wantGoverned: null, wantModel: null,
-    smart: false, history: [], turnFailed: false, appliedModel: null, appliedTier: null, answered: null, once: null
+    smart: false, history: [], turnFailed: false, appliedModel: null, appliedTier: null, answered: null, once: null, council: null
   };
 }
 
@@ -52,11 +68,11 @@ export function applyEvent(m: SessionModel, ev: GatewayEvent, nowMs: number): Pa
       m.todoRevision = rev; m.todos = todosFrom(p['todos'] as TodoWire[] | undefined);
       return ['todos'];
     }
-    case 'session.usage': { const u = p['usage']; if (u && typeof u === 'object') { m.usage = u as UsageWire; return ['usage']; } return []; }
+    case 'session.usage': { const u = p['usage']; if (u && typeof u === 'object') { m.usage = usageReport(u as UsageWire); return ['usage']; } return []; }
     case 'session.info': {
-      const info = { ...(m.info ?? {}), ...(p as InfoWire) } as InfoWire;
+      const info = { ...(m.info ?? {}), ...infoReport(p as InfoWire) } as InfoWire;
       m.info = info;
-      if (info.usage) m.usage = info.usage;
+      if (info.usage) m.usage = usageReport(info.usage);
       if (typeof p['turn_started_at'] === 'number' && m.running) m.turnStartedAt = p['turn_started_at'] * 1000;
       return ['info', 'usage'];
     }
@@ -65,7 +81,7 @@ export function applyEvent(m: SessionModel, ev: GatewayEvent, nowMs: number): Pa
     case 'tool.complete': if (p['is_error'] === true) m.turnFailed = true; m.output = capLines([...m.output, ...outputFor(p as Parameters<typeof outputFor>[0])]); return ['output'];
     case 'message.complete': {
       m.running = false; m.turnEndedAt = nowMs; m.stopped = typeof p['outcome'] === 'string' && p['outcome'] !== 'completed';
-      if (p['usage'] && typeof p['usage'] === 'object') { m.usage = p['usage'] as UsageWire; if (typeof m.usage.model === 'string' && m.usage.model) m.answered = m.usage.model; }
+      if (p['usage'] && typeof p['usage'] === 'object') { m.usage = usageReport(p['usage'] as UsageWire); if (typeof m.usage.model === 'string' && m.usage.model) m.answered = m.usage.model; }
       m.history = [...m.history, m.turnFailed || m.stopped].slice(-6); m.turnFailed = false;
       return ['run', 'usage', 'stats', 'cascade', 'diff'];
     }

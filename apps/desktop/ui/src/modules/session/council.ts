@@ -16,6 +16,8 @@ export const COUNCIL_DESC = 'Several models answer your next message, one combin
 export const COUNCIL_KEYS = 'alt+C';
 /** the cost, said as it is: one call for each member, and the combiner's own turn on top (it keeps the session's tools, so it may take several steps) */
 export const COST_NOTE = 'Costs one call for each member, plus the combiner\'s own turn, which may take several steps.';
+/** a resumed answer that was longer than the turn book keeps (ADR-0036): said, never passed off as the whole answer */
+export const CUT_NOTE = 'This answer was shortened when it was saved. The rest is not kept.';
 export const TOOLS_NOTE = 'Members answer without tools. The combiner keeps them.';
 
 const nameOf = (s: CouncilSlot): string => ui.modelMark.called(s.model) || s.model;
@@ -49,6 +51,7 @@ function memberRow(host: HTMLElement, c: CouncilTurn, i: number): HTMLElement {
   const state = el('span', { class: 'ui-state', text: word, ...(tone ? { 'data-tone': tone } : {}) });
   const body = el('div', { class: 'ss-council__text ui-prose', id, hidden: !(open && has) });
   for (const p of m.text.split(/\n{2,}/).map((t) => t.trim()).filter(Boolean)) body.append(el('p', { html: ui.html.inline(p) }));
+  if (m.cut) body.append(el('p', { class: 'ss-council__why', text: CUT_NOTE }));
   head.addEventListener('ui:change', (e) => {
     const set = OPEN.get(host) ?? new Set<number>();
     if ((e as CustomEvent<{ value: boolean }>).detail.value) set.add(i); else set.delete(i);

@@ -17,7 +17,7 @@ import { routeMentions } from '../../data/mentions';
 import { prepareOnce } from './attribution';
 import type { LadderTier } from './models';
 import { ui } from '@boopis/ui';
-import { applyEvent, newModel } from './session-model';
+import { applyEvent, infoReport, newModel, usageReport } from './session-model';
 import type { Part, SessionModel } from './session-model';
 import { isUnknownMethod } from './wire';
 import type { BreakdownWire, CascadeWire, ConfigSetModelWire, ModelOptionsWire, CompletionWire, DescribeWire, DiffWire, InfoWire, InventoryWire, McpStatusWire, StatsWire } from './wire';
@@ -72,6 +72,8 @@ export interface LiveDetails {
   councilContext(uiId: string): { options: ModelOptionsWire | null; ladder: LadderTier[]; current: string; governed: boolean; running: boolean };
   /** the model the session answers with now (the engine's, or the user's pick), 'provider/model', for a turn that has not heard from the engine */
   currentModel(uiId: string): string;
+  /** a council answers this session's turn (of `members`), or none does any more (null): the chip says "Council of N" meanwhile */
+  councilTurn(uiId: string, members: number | null): void;
   /** the mode and model the user chose before the first message, to apply at creation */
   chosen(uiId: string): { governed: boolean | null; model: string | null };
   /** whether a session about to be created is governed: the user's choice, else the plugin's default mode. An unknown
@@ -143,7 +145,7 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
     if (has('diff')) changes.set(changesFrom(m.diff));
     if (has('output')) output.set(m.output);
     if (has('stats')) ledger.set(ledgerFrom(m.stats));
-    if (has('usage', 'info', 'stats', 'cascade')) governance.set(governanceFrom({ describe: m.describe, cascade: m.cascade, stats: m.stats, model: modelOf(m), governed: governedOf(m), locked: locked(m), smart: m.smart, frontier: frontierOf(m) }));
+    if (has('usage', 'info', 'stats', 'cascade')) governance.set(governanceFrom({ describe: m.describe, cascade: m.cascade, stats: m.stats, model: modelOf(m), governed: governedOf(m), locked: locked(m), smart: m.smart, frontier: frontierOf(m), council: m.council }));
     if (has('info', 'cascade')) publishChoices(m);
     connectors.set(connectorsFrom(mcp, m.inventory));
     notes.set({
@@ -190,7 +192,7 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
     const want = (...x: Part[]): boolean => x.some((y) => parts.includes(y));
     const jobs: Promise<void>[] = [];
     if (gw && want('info', 'usage')) {
-      jobs.push(read<InfoWire>('session.info', p).then((r) => { if (r) { m.info = { ...(m.info ?? {}), ...r }; if (r.usage) m.usage = r.usage; } }));
+      jobs.push(read<InfoWire>('session.info', p).then((r) => { if (r) { m.info = { ...(m.info ?? {}), ...infoReport(r) }; if (r.usage) m.usage = usageReport(r.usage); } }));
       jobs.push(read<BreakdownWire>('session.context_breakdown', p).then((r) => { if (r) m.breakdown = r; }));
     }
     if (pluginOk && gw) {
@@ -333,6 +335,12 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
       if (uiId === followed) publishFollowed(here);
       else publishRun();
       return parts;
+    },
+    councilTurn(uiId, members) {
+      const m = model(uiId);
+      if (m.council === members) return;
+      m.council = members;
+      if (uiId === followed) publishFollowed(['info']); else publishRun();
     },
     onBound(uiId) { void track(refresh(uiId, ALL)); },
     onSent(uiId, text) { const m = model(uiId); m.started = true; m.title = text.split('\n')[0]?.trim().slice(0, 80) ?? ''; publishRun(); },

@@ -41,14 +41,28 @@ const GOVERNED: Turn[] = [
   answer('a2', LUNA, ['It runs the project\'s test command on a copy, with the sandbox on.'], { ungoverned: true })
 ];
 
-function withModels(turns: Turn[], governed: boolean): (p: DataProvider) => DataProvider {
+/* a council turn read back after a resume: the combiner is the model, the members' answers are the book's */
+const COUNCIL_RESUMED: Turn[] = [
+  ask('u1', 'which index should the report use?', '10:02'),
+  answer('a1', P + '/sonnet', ['A partial index on account_id where closed_at is null: small, and exact for the report\'s lookups.'], {
+    time: '14s', why: 'Council of 3',
+    council: { phase: 'done', done: 2, total: 3, combiner: { provider: P, model: 'sonnet' }, members: [
+      { slot: { provider: P, model: 'opus' }, state: 'answered', text: 'Use a partial index on (account_id) where closed_at is null.' },
+      { slot: { provider: 'openai-codex', model: 'gpt-6-luna' }, state: 'answered', text: 'A hash index is faster for equality but the planner will not use it for the range scans.', cut: true },
+      { slot: { provider: 'gemini', model: 'gemini-3.8-pro' }, state: 'failed', text: '' }
+    ] }
+  }),
+  ask('u2', 'and the migration?', '10:04'),
+  answer('a2', HAIKU, ['Add it with CREATE INDEX CONCURRENTLY, in its own migration.'])
+];
+function withModels(turns: Turn[], governed: boolean, council?: number): (p: DataProvider) => DataProvider {
   return (p) => ({
     ...p,
     sessions: { ...p.sessions, conversation: () => ({ snapshot: () => ({ turns }), subscribe: () => () => undefined }) },
-    details: { ...p.details, choices: store(CHOICES), governance: store({ ...p.details.governance.get(), governed, smart: false, model: HAIKU }) }
+    details: { ...p.details, choices: store(CHOICES), governance: store({ ...p.details.governance.get(), governed, smart: false, model: HAIKU, ...(council ? { council } : {}) }) }
   });
 }
-const spec = (turns: Turn[], governed = false): ProviderSpec => ({ simulate: false, patch: withModels(turns, governed) });
+const spec = (turns: Turn[], governed = false, council?: number): ProviderSpec => ({ simulate: false, patch: withModels(turns, governed, council) });
 const app = (tags: State['tags'], provider: ProviderSpec, setup?: (c: AppCtx) => Promise<void>, extra: Partial<State> = {}): State => ({ tags, app: { provider, ...(setup ? { setup } : {}) }, ...extra });
 /* at 390 the call number of a governed turn (a route of two models, the time, the cost, the steps) wraps to a second row; the check compares an item of the first row with the centre of the whole row */
 const WRAPS = { 'geometry.center': { reason: 'at 390 px the call number wraps to a second row, and the check compares an item of the first row with the centre of both rows; each item is centred in its own row (align-items: center)', el: 'ui-callno' } } as const;
@@ -74,6 +88,8 @@ const story: Story = {
     'three models, with dividers': app(['variant', 'owner'], spec(THREE), async (c) => { await c.wait(400); }),
     'after a resume: one reply of unknown model': app(['variant'], spec(RESUMED), async (c) => { await c.wait(400); }),
     'governed: the tier route, then an ungoverned turn': app(['variant', 'owner'], spec(GOVERNED, true), async (c) => { await c.wait(400); }, { allow: WRAPS }),
+    'after a resume: a council turn with its members': app(['variant', 'owner'], spec(COUNCIL_RESUMED), async (c) => { await c.wait(400); }, { allow: WRAPS }),
+    'a council is answering: the chip says so': app(['variant', 'owner'], spec(COUNCIL_RESUMED, false, 3), async (c) => { await c.wait(400); }, { allow: WRAPS }),
     'the "@" menu': app(['open', 'owner'], spec(THREE), async (c) => { await typeAt(c); }, { overlay: MENU }),
     'a mention chip in the composer': app(['typical', 'owner'], spec(THREE), draft('@Claude Haiku rename the helper in src/billing')),
     'two mentions in one message': app(['variant'], spec(THREE), draft('@Claude Haiku rename it, then @GPT-6 Luna review it')),

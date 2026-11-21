@@ -24,6 +24,9 @@ const log = logger('live.council');
     overwritten; it is written only by the council form */
 export const COUNCIL_PRESET = 'boopis-council';
 /** the one-turn switch: the preset, on the engine's virtual provider, for this turn only (the engine restores the model after it) */
+/** a report of the session's model that is the council's own: the engine names a council turn by its preset on its virtual provider
+    (`boopis-council`, provider `moa`). It is not a model, so it is never the session's (the chip, the details, the answer) */
+export const isCouncilReport = (provider: string | null | undefined, model: string | null | undefined): boolean => provider === 'moa' || model === COUNCIL_PRESET;
 export const onceValue = (preset = COUNCIL_PRESET): string => preset + ' --provider moa --once';
 
 /* ───────── who sits by default ───────── */

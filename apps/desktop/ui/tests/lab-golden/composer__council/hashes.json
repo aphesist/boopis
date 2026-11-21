@@ -119,6 +119,46 @@
   "w": 744,
   "h": 178
  },
+ "a-resumed-council-turn-a-cut-answer-open@bone": {
+  "sha": "d6e96e74c733ab34397070e6f4b71d2e18587b4c",
+  "w": 744,
+  "h": 383
+ },
+ "a-resumed-council-turn-a-cut-answer-open@catalog": {
+  "sha": "7d22e2da85934af34d0f48f22f324c214f65c1a0",
+  "w": 744,
+  "h": 383
+ },
+ "a-resumed-council-turn-a-cut-answer-open@graphite": {
+  "sha": "d129fa83b2aa279fd76a6f339a9bc95a4023f916",
+  "w": 744,
+  "h": 383
+ },
+ "a-resumed-council-turn-a-cut-answer-open@typewriter": {
+  "sha": "59d2e7b52b27bb640e267dc2259decf1635f3d26",
+  "w": 744,
+  "h": 405
+ },
+ "a-resumed-council-turn@bone": {
+  "sha": "b1f34076c77885011353e9bbf979c443113b7ce7",
+  "w": 744,
+  "h": 255
+ },
+ "a-resumed-council-turn@catalog": {
+  "sha": "903bacefed8445e2d0258f015cc9dee967014801",
+  "w": 744,
+  "h": 255
+ },
+ "a-resumed-council-turn@graphite": {
+  "sha": "c5818cd53f4e717410a5f009d8121f572555809b",
+  "w": 744,
+  "h": 255
+ },
+ "a-resumed-council-turn@typewriter": {
+  "sha": "5a6bf7113d95e3ad38371387cadd52f8c9a9feba",
+  "w": 744,
+  "h": 278
+ },
  "the-form-long-names@bone": {
   "sha": "318f272d1b7d0ba3096de6485dce24e20873cd07",
   "w": 384,

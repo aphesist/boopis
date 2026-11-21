@@ -265,6 +265,8 @@ export interface ChildTask {
   now: string;
   /** what it reported, or why it failed ('' until it ends) */
   summary: string;
+  /** a resumed turn: the report was longer than the turn book keeps (ADR-0036), so the summary ends early. The card says so */
+  cut?: boolean | undefined;
 }
 export interface UserTurn { id: string; role: 'user'; at: string; text: string; attachments?: readonly Attached[] }
 export interface AgentTurn {
@@ -281,7 +283,7 @@ export interface AgentTurn {
   blank?: BlankData | undefined; ship?: Ship | undefined;
   /** the forms the agent (or the plugin) opened in this turn, open or answered */
   forms?: readonly FormSpec[] | undefined;
-  /** the tasks the session handed to other models in this turn (live: a resumed transcript does not carry them) */
+  /** the tasks the session handed to other models in this turn (live, or read back from the turn book after a resume: the engine's transcript does not carry them) */
   children?: readonly ChildTask[] | undefined;
   /** why Smart picked this model, in a few words ("debugging"); absent when a person picked it or the engine's default answered */
   why?: string | undefined;
@@ -322,7 +324,11 @@ export interface CouncilSlot { provider: string; model: string }
 export interface CouncilChoice { members: readonly CouncilSlot[]; combiner: CouncilSlot }
 export const MIN_COUNCIL = 2;
 /** one member's answer: waiting until it comes, then its text, or the reason it failed */
-export interface CouncilMember { slot: CouncilSlot; state: 'waiting' | 'answered' | 'failed'; text: string }
+export interface CouncilMember {
+  slot: CouncilSlot; state: 'waiting' | 'answered' | 'failed'; text: string;
+  /** a resumed turn: the answer was longer than the turn book keeps (ADR-0036), so the text ends early. The card says so */
+  cut?: boolean | undefined;
+}
 /** what a council turn shows: every member, the combiner, and how far it has got */
 export interface CouncilTurn {
   members: readonly CouncilMember[]; combiner: CouncilSlot | null;
@@ -384,6 +390,9 @@ export interface GovernanceState {
   /** governed mode can only run on frontier models; set when it cannot run at all (no frontier model is set up) */
   frontier?: FrontierView;
   governed: boolean; smart: boolean; model: string; cap: string; spent: string;
+  /** a council is answering this turn, of this many members: the model chip reads "Council of N" until the turn ends (the engine's own
+   *  name for the turn, its preset, is not a model and is never shown) */
+  council?: number | undefined;
   /** the model ladder: [model, when it is used] */
   ladder: ReadonlyArray<readonly [model: string, rule: string]>;
   /** the station the session is on */

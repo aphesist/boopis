@@ -78,15 +78,17 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
     const choices = data().details.choices.get();
     const prev = G.smart ? smartPreview(choices, { text: c.value, attachments: attachments() }) : null;
     const name = ui.modelMark.called(G.model) || G.model;
+    /* a council is armed for the next message, or is answering this one: the chip says so (the engine's name for its turn is not a model) */
     const armed = data().council.armed(opts.sessionId());
-    const label = armed ? 'Council of ' + armed.members.length : G.smart ? (prev ? 'Smart: ' + (ui.modelMark.called(prev.choice.model) || prev.choice.model) : 'Smart') : name || 'Choose a model';
+    const asking = armed?.members.length ?? G.council ?? 0;
+    const label = asking ? 'Council of ' + asking : G.smart ? (prev ? 'Smart: ' + (ui.modelMark.called(prev.choice.model) || prev.choice.model) : 'Smart') : name || 'Choose a model';
     const t = document.createElement('template');
-    t.innerHTML = ui.html.chip(armed || G.smart || !G.model ? { label, icon: armed ? 'bots' : 'spark', haspopup: 'menu' } : { model: G.model, label, haspopup: 'menu' });
+    t.innerHTML = ui.html.chip(asking || G.smart || !G.model ? { label, icon: asking ? 'bots' : 'spark', haspopup: 'menu' } : { model: G.model, label, haspopup: 'menu' });
     const fresh = t.content.firstElementChild as HTMLElement;
     model.replaceChildren(...fresh.childNodes);
-    model.classList.toggle('ui-chip--mono', !armed && !G.smart && !!G.model);
+    model.classList.toggle('ui-chip--mono', !asking && !G.smart && !!G.model);
     /* the accessible name starts with the words on the chip (WCAG 2.5.3), then says what it is */
-    model.setAttribute('aria-label', label + ', who answers next' + (armed ? ' (the next message goes to a council)' : G.smart ? (prev ? ' (Smart would pick it for this message: ' + prev.reason + ')' : ' (Smart picks for each message)') : ''));
+    model.setAttribute('aria-label', label + ', who answers next' + (armed ? ' (the next message goes to a council)' : asking ? ' (a council is answering)' : G.smart ? (prev ? ' (Smart would pick it for this message: ' + prev.reason + ')' : ' (Smart picks for each message)') : ''));
     model.setAttribute('data-tip', G.smart ? 'Smart picks the model for each message' + (prev ? ': ' + prev.reason : '') : 'Who answers next'); model.setAttribute('data-kbd', 'alt+M');
   }
   c.input.addEventListener('input', (e) => {

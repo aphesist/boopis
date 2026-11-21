@@ -11,7 +11,7 @@ import { emitter, feed, store } from '../data/store';
 import type { AgentTurn, BlankData, CouncilChoice, BlankWait, ConversationEvent, FormStatus, FormWait, SendMeta, SessionSummary, Turn, User, UserTurn, Wait, WaitOutcome } from '../data/types';
 import { readFlag } from '../core/settings';
 import { createDetails } from './live/details';
-import { applyMoa, createCouncil, finishedCouncil, startedCouncil, valueOfSlot } from './live/council';
+import { applyMoa, createCouncil, isCouncilReport, finishedCouncil, startedCouncil, valueOfSlot } from './live/council';
 import { createLiveBots } from './live/bots';
 import { createLiveGroups } from './live/groups';
 import { todosFrom } from './live/map-details';
@@ -144,7 +144,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     const res = await client.request('session.resume', { session_id: c.uiId });
     bind(c, res.session_id);
     void modsHost.attach(c.uiId);   /* the mods already loaded in a resumed session */
-    c.model = res.info.model ?? '';
+    c.model = res.info.model && !isCouncilReport((res.info as { provider?: string }).provider, res.info.model) ? res.info.model : '';
     c.turns = transcriptToTurns(res.messages, c.uiId + ':', await loadTurnBook(client, res.session_id));   /* each past turn has its own recorded model, or none */
     c.hydrated = true;
     if (c.turns.some((t) => t.role === 'user')) details.model(c.uiId).started = true;
@@ -183,12 +183,17 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
       }
     }
     bind(c, res.session_id);
-    c.model = res.info.model ?? '';
+    c.model = res.info.model && !isCouncilReport((res.info as { provider?: string }).provider, res.info.model) ? res.info.model : '';
     details.onBound(c.uiId);
     return res.session_id;
   }
 
   /* ───────── events → the conversation ───────── */
+  /** the council that answers this turn (or none): the chip reads "Council of N" meanwhile (never the engine's name for the turn) */
+  function setCouncil(c: Convo, choice: CouncilChoice | null): void {
+    c.council = choice;
+    details.councilTurn(c.uiId, choice ? choice.members.length : null);
+  }
   function startTurn(c: Convo): Running {
     if (c.running) return c.running;
     /* a council turn: the combiner is the model that answers (the engine's own name for the turn, the preset's, is not a model) */
@@ -205,9 +210,9 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     r.steps.push(step);
     c.events.emit({ type: 'step-added', turnId: r.turn.id, step });
   }
-  function finishTurn(c: Convo, text: string | null, stopped: boolean, answered?: string): void {
+  function finishTurn(c: Convo, text: string | null, stopped: boolean, answered?: string): AgentTurn | null {
     const r = c.running;
-    if (!r) return;
+    if (!r) return null;
     const finalText = text ?? r.text;
     const paras = paragraphs(finalText);
     const time = elapsed(Date.now() - r.startedAt);
@@ -216,10 +221,11 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     const model = r.tiers.length ? r.tiers.join(' → ') : r.turn.council ? r.turn.model : answered || r.turn.model;
     const done: AgentTurn = { ...r.turn, model, ...(r.turn.council ? { council: finishedCouncil(r.turn.council) } : {}), time, stepCount: r.steps.length, steps: r.steps, paragraphs: paras, status: stopped ? 'stopped' : 'done' };
     if (i >= 0) c.turns[i] = done;
-    c.running = null; c.council = null;
+    c.running = null; setCouncil(c, null);
     if (done.council) c.events.emit({ type: 'council', turnId: r.turn.id, council: done.council });
     c.events.emit({ type: 'turn-finished', turnId: r.turn.id, time, cost: '', stepCount: r.steps.length, paragraphs: paras, stopped, model, ...(r.turn.why ? { why: r.turn.why } : {}) });
     patchSession(c.uiId, { running: false });
+    return done;
   }
 
   const waitList: Wait[] = [];
@@ -289,7 +295,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     if (ev.type.startsWith('plugin.boopis.blank.')) { syncBlanks(c); return; }
     if (formsHost.handle(ev, { gwSession: ev.session_id ?? '', model: c.model })) return;
     switch (ev.type) {
-      case 'session.info': { const profile = p['profile_name']; if (typeof profile === 'string' && profile) user.set({ name: profile, initials: profile.slice(0, 1).toLowerCase() }); const m = p['model']; if (typeof m === 'string' && m && !c.once && !c.council) c.model = m;   /* an "@" message or a council names its own model here (a council's is the preset's name, not a model); the session's stays */ const t = p['title']; if (typeof t === 'string' && t) patchSession(uiId, { title: sessionTitle({ title: t, preview: '' }) }); break; }
+      case 'session.info': { const profile = p['profile_name']; if (typeof profile === 'string' && profile) user.set({ name: profile, initials: profile.slice(0, 1).toLowerCase() }); const m = p['model']; if (typeof m === 'string' && m && !c.once && !c.council && !isCouncilReport(typeof p['provider'] === 'string' ? p['provider'] : null, m)) c.model = m;   /* an "@" message or a council names its own model here (a council's is the preset's name on the provider `moa`, which is not a model, also when a slash command asked for it); the session's stays */ const t = p['title']; if (typeof t === 'string' && t) patchSession(uiId, { title: sessionTitle({ title: t, preview: '' }) }); break; }
       case 'message.start': startTurn(c); break;
       case 'subagent.spawn_requested': case 'subagent.start': case 'subagent.progress': case 'subagent.thinking': case 'subagent.tool': case 'subagent.complete': childFrame(c, ev.type, p); break;
       case 'moa.reference': case 'moa.progress': case 'moa.phase': case 'moa.aggregating': {
@@ -311,9 +317,9 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
         const outcome = typeof p['outcome'] === 'string' ? p['outcome'] : 'completed';
         if (!c.running) startTurn(c);
         const usage = p['usage'] as { model?: unknown } | undefined;
-        finishTurn(c, text, outcome !== 'completed', typeof usage?.model === 'string' ? usage.model : undefined);
+        const finished = finishTurn(c, text, outcome !== 'completed', typeof usage?.model === 'string' ? usage.model : undefined);
         c.once = null;   /* the engine has put the session's model back; the plugin governs the next message again */
-        if (ev.session_id) bindTurn(client, ev.session_id, p['persisted_turn']);   /* who answered, kept for a resume */
+        if (ev.session_id) bindTurn(client, ev.session_id, p['persisted_turn'], { council: finished?.council, children: finished?.children });   /* who answered, and what the turn showed, kept for a resume */
         if (!modsHost.known(uiId)) void modsHost.attach(uiId);   /* mods load at a session's first prompt */
         break;
       }
@@ -491,14 +497,14 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
           c.once = null; c.model = keep;
           const who = await details.prepareSend(id, text, { attachments: attachments.length }); if (who.model) c.model = who.model; c.why = who.why; return gw;
         })
-        .then(async (gw) => { if (asked) c.council = await councilHost.start(id); return gw; })
+        .then(async (gw) => { if (asked) setCouncil(c, await councilHost.start(id)); return gw; })
         .then(async (gw) => {
           const refs = attachments.length ? await stageAttachments((m, p) => client.requestRaw(m, p), gw, attachments) : [];   /* files, pictures and folders go first (live/attachments.ts) */
           return client.requestRaw('prompt.submit', { session_id: gw, text: withRefs(text, refs), submission_id: 'sub-' + crypto.randomUUID() }); /* the gateway requires submission_id; the vendored contract does not list it yet */
         })
         .catch(async (e: unknown) => {
           log.error('the message was not accepted', e);
-          c.once = null; c.council = null;
+          c.once = null; setCouncil(c, null);
           await abortOnce?.();   /* nothing started: the exception and the switch are taken back */
           startTurn(c);
           finishTurn(c, 'The message was not sent: ' + (e instanceof Error ? e.message : String(e)), true);

@@ -19,6 +19,8 @@ const TEXT = ['Use a partial index on (account_id) where closed_at is null. It k
 const running: CouncilTurn = { members: [{ slot: M[0], state: 'answered', text: '' }, { slot: M[1], state: 'waiting', text: '' }, { slot: M[2], state: 'waiting', text: '' }], combiner: slot(C, 'sonnet'), phase: 'members', done: 1, total: 3 };
 const combining: CouncilTurn = { members: [{ slot: M[0], state: 'answered', text: TEXT.join('\n\n') }, { slot: M[1], state: 'answered', text: TEXT[1] as string }, { slot: M[2], state: 'answered', text: TEXT[0] as string }], combiner: slot(C, 'sonnet'), phase: 'combining', done: 3, total: 3 };
 const done3: CouncilTurn = { ...combining, phase: 'done' };
+/* read back from the turn book after a resume: the same block, finished; one answer was cut when it was saved, one member never answered */
+const resumed: CouncilTurn = { ...done3, done: 2, members: [{ ...(done3.members[0] as CouncilTurn['members'][number]), cut: true }, done3.members[1] as CouncilTurn['members'][number], { slot: M[2], state: 'failed', text: '' }] };
 const entry = (model: string, why: string, c: CouncilTurn, body: string): HTMLElement => {
   const e = ui.entry({ kind: 'agent', callno: [model, why, '14s'], body: '' });
   const b = e.querySelector('.ui-entry__body') as HTMLElement;
@@ -44,6 +46,8 @@ export default [{
     'a council turn done, three members': stage(['typical', 'success'], ({ root }) => { put(root, entry(C + '/sonnet', 'Council of 3', done3, PARAGRAPH)); }, { width: W }),
     'a council turn, answers open': stage(['variant', 'open'], ({ root }) => { const e = entry(C + '/sonnet', 'Council of 3', done3, PARAGRAPH); put(root, e); e.querySelector<HTMLElement>('.ss-council .ui-disclosure')?.click(); }, { width: W }),
     'a council turn, one member failed': stage(['error'], ({ root }) => { put(root, entry(C + '/sonnet', 'Council of 3', { ...done3, members: [done3.members[0] as CouncilTurn['members'][number], { slot: M[1], state: 'failed', text: '' }, done3.members[2] as CouncilTurn['members'][number]] }, PARAGRAPH)); }, { width: W }),
+    'a resumed council turn': stage(['variant', 'success'], ({ root }) => { put(root, entry(C + '/sonnet', 'Council of 3', resumed, PARAGRAPH)); }, { width: W }),
+    'a resumed council turn, a cut answer open': stage(['variant', 'open'], ({ root }) => { const e = entry(C + '/sonnet', 'Council of 3', resumed, PARAGRAPH); put(root, e); e.querySelector<HTMLElement>('.ss-council .ui-disclosure')?.click(); }, { width: W }),
     'a council turn, no member reported': stage(['empty'], ({ root }) => { put(root, entry(C + '/sonnet', 'Council of 2', { members: [], combiner: slot(C, 'sonnet'), phase: 'combining', done: 0, total: 0 }, PARAGRAPH)); }, { width: W })
   }
 } satisfies Story] satisfies Story[];

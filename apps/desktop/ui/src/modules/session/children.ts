@@ -21,8 +21,11 @@ const SEEN = new Map<string, ChildTask>();   /* the latest state of every card o
 const OPEN = new Set<string>();              /* the children whose log is open */
 let clock = 0;
 
+/** a resumed report that was longer than the turn book keeps (ADR-0036): said, never passed off as the whole report */
+export const CUT_NOTE = ' (Shortened when it was saved: the rest is not kept.)';
+
 export const opts = (c: ChildTask, h: Pick<ChildHost, 'now' | 'stop' | 'transcript'>): ChildOpts => ({
-  id: c.id, model: c.model || 'a model', goal: c.goal || 'a task', status: c.status, time: childTime(c, h.now()), now: c.now, tools: c.tools, summary: c.summary,
+  id: c.id, model: c.model || 'a model', goal: c.goal || 'a task', status: c.status, time: childTime(c, h.now()), now: c.now, tools: c.tools, summary: c.cut ? c.summary + CUT_NOTE : c.summary,
   canOpen: !!h.transcript && !!c.childSession, canStop: !!h.stop && !!c.subagentId
 });
 

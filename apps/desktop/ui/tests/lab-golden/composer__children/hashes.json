@@ -1,4 +1,24 @@
 {
+ "after-a-resume@bone": {
+  "sha": "3c7110b5defd759f1a86ccebefda08d89837acb0",
+  "w": 744,
+  "h": 432
+ },
+ "after-a-resume@catalog": {
+  "sha": "4e3b3bee964ff98c3a61312e48332f8ade95252a",
+  "w": 744,
+  "h": 432
+ },
+ "after-a-resume@graphite": {
+  "sha": "d9ffe0fce7cbcc57817e178989c81fab93ce3f0e",
+  "w": 744,
+  "h": 432
+ },
+ "after-a-resume@typewriter": {
+  "sha": "2e726af04d9935823500901dde87401a33aa8528",
+  "w": 744,
+  "h": 472
+ },
  "empty@bone": {
   "sha": "2eb0967c98b4c21ffe47cc1b80d7c89bc7dbb5d2",
   "w": 444,

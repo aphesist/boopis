@@ -80,13 +80,13 @@ export function frontierFrom(plugin: DescribeWire['frontier'] | null | undefined
   const no = (plugin ? !plugin.available : false) || (sm ? !sm.frontier : false) || (host ? !host.available : false);
   return { available: !no, why: why ?? '', sentence, allowed };
 }
-export function governanceFrom(o: { describe: DescribeWire | null; cascade: CascadeWire | null; stats: StatsWire | null; model: string; governed: boolean; locked: boolean; smart?: boolean; frontier?: FrontierView | null }): GovernanceState {
+export function governanceFrom(o: { describe: DescribeWire | null; cascade: CascadeWire | null; stats: StatsWire | null; model: string; governed: boolean; locked: boolean; smart?: boolean; frontier?: FrontierView | null; council?: number | null }): GovernanceState {
   const cap = o.describe?.config?.cost_cap_usd;
   const cost = o.stats?.cost_usd;
   return {
     governed: o.governed, smart: o.smart === true, model: o.model, cap: cap == null ? '' : dollars(cap), spent: cost == null ? '' : dollars(cost),
     ladder: ladderFrom(o.cascade), current: Math.max(0, o.cascade?.tier_index ?? 0), locked: o.locked,
-    ...(o.frontier && !o.frontier.available ? { frontier: o.frontier } : {})
+    ...(o.frontier && !o.frontier.available ? { frontier: o.frontier } : {}), ...(o.council ? { council: o.council } : {})
   };
 }
 export function ledgerFrom(stats: StatsWire | null): LedgerStats {

@@ -1,4 +1,24 @@
 {
+ "a-council-is-answering-the-chip-says-so@bone": {
+  "sha": "6a97e7e467c0ac59b0557615f9bfee39beec0e5e",
+  "w": 1180,
+  "h": 872
+ },
+ "a-council-is-answering-the-chip-says-so@catalog": {
+  "sha": "ff942c0a636ab34b2440ff82674924308a8a907c",
+  "w": 1180,
+  "h": 872
+ },
+ "a-council-is-answering-the-chip-says-so@graphite": {
+  "sha": "c3031e6e52f89bac85cfbcabb464e4ed13a1c258",
+  "w": 1180,
+  "h": 872
+ },
+ "a-council-is-answering-the-chip-says-so@typewriter": {
+  "sha": "9613f2773dc514908bfdfbd27c21682d3b4e6871",
+  "w": 1180,
+  "h": 872
+ },
  "a-mention-chip-in-the-composer@bone": {
   "sha": "85687a814593ef9407dd02c540e92fd4ffe7fc4c",
   "w": 1180,
@@ -16,6 +36,26 @@
  },
  "a-mention-chip-in-the-composer@typewriter": {
   "sha": "24e284e65ed670be64031a823c83f3314c423441",
+  "w": 1180,
+  "h": 872
+ },
+ "after-a-resume-a-council-turn-with-its-members@bone": {
+  "sha": "5a5b76fb03c6acd0d93b5afcfa91e825851b5271",
+  "w": 1180,
+  "h": 872
+ },
+ "after-a-resume-a-council-turn-with-its-members@catalog": {
+  "sha": "b5f3691e6e980da6d384d64df7118e29cb29521b",
+  "w": 1180,
+  "h": 872
+ },
+ "after-a-resume-a-council-turn-with-its-members@graphite": {
+  "sha": "c283f2cb5181d339b0b5a9795528fe3e833558c9",
+  "w": 1180,
+  "h": 872
+ },
+ "after-a-resume-a-council-turn-with-its-members@typewriter": {
+  "sha": "1801e54926ed95afb8ced5955f523f2536b800f2",
   "w": 1180,
   "h": 872
  },

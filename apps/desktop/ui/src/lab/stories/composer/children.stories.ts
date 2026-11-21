@@ -6,6 +6,7 @@ import type { ChildOpts } from '@boopis/ui';
 import { line, put, stage } from '../../story';
 import type { Story } from '../../types';
 import { LONG_TITLE, UNBROKEN } from '../../fixtures';
+import { CUT_NOTE } from '../../../modules/session/children';
 
 const CONV = { url: '/v6/design-system/index.html#c-conversation', crop: '#c-conversation' };
 const W = 720;
@@ -15,6 +16,13 @@ const FOUR: readonly ChildOpts[] = [
   { id: 'b', model: 'gpt-6-luna', goal: 'Write the migration that moves invoices to integer cents', status: 'done', time: '1m 04s', tools: 9, summary: 'Added 0042_integer_cents.sql and a rollback; both run on the sample database.', canOpen: true },
   { id: 'c', model: 'gemini-3.8-flash', goal: 'Find every caller of prorate() outside src/billing', status: 'failed', time: '8s', tools: 2, summary: 'The search tool timed out twice.', canOpen: true },
   { id: 'd', model: 'grok-4', goal: 'Draft the changelog entry', status: 'stopped', time: '5s', tools: 1, summary: 'Stopped before it finished.', canOpen: true }
+];
+/* the same cards after a resume (read back from the turn book): finished, so the clock is the time they ran, none can be stopped, they open
+   their own session read-only; one that never ended is drawn stopped; a report longer than the book keeps says it was shortened */
+const RESUMED: readonly ChildOpts[] = [
+  { id: 'ra', model: 'claude-opus-5-5', goal: 'Review the diff in src/billing for rounding errors', status: 'done', time: '48s', tools: 7, summary: 'Two rounding errors, in prorate() and in the invoice total.', canOpen: true },
+  { id: 'rb', model: 'gpt-6-luna', goal: 'Write the migration that moves invoices to integer cents', status: 'done', time: '1m 04s', tools: 9, summary: 'Added 0042_integer_cents.sql and a rollback; both run on the sample database, and every row moves.' + CUT_NOTE, canOpen: true },
+  { id: 'rc', model: 'gemini-3.8-flash', goal: 'Find every caller of prorate() outside src/billing', status: 'stopped', tools: 0, canOpen: false }
 ];
 const turnWith = (kids: readonly ChildOpts[]): HTMLElement => {
   const box = document.createElement('div'); box.className = 'ss-children';
@@ -27,6 +35,7 @@ export default [
     id: 'composer/children', title: 'Tasks handed to other models', area: 'composer', kind: 'component', covers: ['ui.child', 'html.child'], mock: CONV,
     states: {
       typical: stage(['typical', 'variant', 'many'], ({ root }) => { put(root, turnWith(FOUR)); ui.hydrate(root); }, { width: W }),
+      'after a resume': stage(['variant', 'success'], ({ root }) => { put(root, turnWith(RESUMED)); ui.hydrate(root); }, { width: W }),
       'the card alone': stage(['single', 'variant'], ({ root }) => { line(root, ui.child(FOUR[0] as ChildOpts)); }, { width: 420 }),
       'queued, and no session to open yet': stage(['variant'], ({ root }) => { line(root, ui.child({ id: 'q', model: 'claude-haiku-5-5', goal: 'Summarise the README', status: 'queued' })); }, { width: 420 }),
       long: stage(['long'], ({ root }) => { line(root, ui.child({ id: 'l', model: 'claude-sonnet-5-5-20261101-extended-context-preview', goal: LONG_TITLE + ' ' + UNBROKEN, status: 'running', time: '3m 02s', now: UNBROKEN, tools: 120, canOpen: true, canStop: true }), ui.child({ id: 'm', model: 'gpt-6-luna', goal: LONG_TITLE, status: 'done', time: '9m 59s', summary: LONG_TITLE + ' ' + UNBROKEN, canOpen: true })); }, { width: 420 }),

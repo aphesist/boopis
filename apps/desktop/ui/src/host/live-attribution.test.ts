@@ -34,6 +34,8 @@ async function setup(o: Opts = {}): Promise<{ host: FakeHost; provider: LiveProv
       case 'plugin.boopis.cascade.state': host.result(id, { ladder: LADDER, status: 'idle' }); break;
       case 'plugin.boopis.ledger.tail': host.result(id, { events: [] }); break;
       case 'plugin.boopis.mode.once': host.result(id, { armed: o.armed !== false && (f['params'] as { armed: boolean }).armed }); break;
+      case 'cli.exec': host.result(id, { code: 0, output: '{}' }); break;
+      case 'config.get': host.result(id, { config: {} }); break;
       case 'plugin.boopis.turns.models': host.result(id, { turns: o.turns ?? [] }); break;
       default: host.result(id, {});
     }
@@ -187,3 +189,114 @@ describe('a plugin older than this UI', () => {
     expect((await loadTurnBook(old, 'g1')).size).toBe(0);
   });
 });
+
+const COUNCIL_CHOICE = { members: [{ provider: P, model: 'opus' }, { provider: 'openai-codex', model: 'gpt-6-luna' }], combiner: { provider: P, model: 'sonnet' } };
+const MOA = { model: 'boopis-council', provider: 'moa' };
+
+describe('a council turn: the model chip', () => {
+  it('reads "Council of N" for the turn and never the engine\'s name for it, whatever the engine reports', async () => {
+    const { host, provider } = await councilTurn();
+    host.event('message.start', SESSION);
+    expect(provider.details.governance.get().council).toBe(2);
+    host.event('session.info', SESSION, { ...MOA, cwd: '/w', usage: { model: 'boopis-council', input: 1 } });
+    host.event('session.usage', SESSION, { usage: { model: 'boopis-council' } });
+    await tick(); await provider.settled();
+    const gov = provider.details.governance.get();
+    expect(gov.model).toBe(P + '/haiku');   /* the session's own model, not the preset */
+    expect(gov.council).toBe(2);
+    expect(JSON.stringify([gov, provider.details.models.get(), provider.details.environment.get()])).not.toMatch(/moa|boopis-council/);
+  });
+  it('a read of the session info that still names the preset does not change the model either', async () => {
+    const { host, provider } = await councilTurn();
+    const orig = host.autoReply;
+    host.autoReply = (f) => { if (f['method'] === 'session.info') host.result(f['id'], { ...MOA, cwd: '/w' }); else orig?.(f); };
+    host.event('message.start', SESSION);
+    host.event('message.complete', SESSION, { text: 'combined', outcome: 'completed', usage: { model: 'boopis-council' } });
+    await tick(); await provider.settled(); await tick(); await provider.settled();
+    expect(provider.details.governance.get().model).toBe(P + '/haiku');
+    expect(provider.details.governance.get().council).toBeUndefined();   /* the turn is over: the chip is the session's model again */
+  });
+  it('a council a slash command started (no armed choice) never makes the preset the session\'s model', async () => {
+    const { host, provider } = await setup();
+    host.event('session.info', SESSION, MOA);
+    host.event('session.usage', SESSION, { usage: { model: 'boopis-council' } });
+    expect(provider.details.governance.get().model).toBe(P + '/haiku');
+  });
+});
+
+describe('what a turn showed survives a resume', () => {
+  it('a council turn is bound with its members\' answers, and read back as the same block with the combiner as the model', async () => {
+    const { host } = await councilTurn();
+    host.event('message.start', SESSION);
+    host.event('moa.reference', SESSION, { label: P + ':opus', text: 'Use a partial index.', count: 2 });
+    host.event('moa.reference', SESSION, { label: 'openai-codex:gpt-6-luna', text: '[failed: 401 token sk-secret]', count: 2 });
+    host.event('moa.aggregating', SESSION, { aggregator: P + ':sonnet', refs_done: 2, refs_total: 2 });
+    host.event('message.complete', SESSION, { text: 'combined', outcome: 'completed', usage: { model: 'boopis-council' }, persisted_turn: { row_ids: [2, 3], user_row_id: 2 } });
+    await tick();
+    const sent = host.last('plugin.boopis.turns.bind')?.['params'] as { council?: { members: { model: string; state: string; text: string }[]; combiner: string } };
+    expect(sent.council).toEqual({ members: [{ model: P + '/opus', state: 'answered', text: 'Use a partial index.' }, { model: 'openai-codex/gpt-6-luna', state: 'failed', text: '' }], combiner: P + '/sonnet' });
+    expect(JSON.stringify(sent)).not.toContain('sk-secret');
+  });
+  it('a resumed council turn draws the members, the combiner and no "waiting" member; the preset\'s name is never the model', async () => {
+    const { provider } = await setup({
+      messages: [{ role: 'user', row_id: 1, text: 'which index?' }, { role: 'assistant', row_id: 2, text: 'combined' }],
+      turns: [{ model: 'moa/boopis-council', route: [], ungoverned: false, row_ids: [1, 2], council: { members: [{ model: P + '/opus', state: 'answered', text: 'Use a partial index.', cut: true }, { model: 'openai-codex/gpt-6-luna', state: 'failed', text: '' }, { model: 'gemini/pro', state: 'waiting', text: '' }], combiner: P + '/sonnet' } }]
+    });
+    const [t] = provider.sessions.conversation(SESSION).snapshot().turns.filter((x): x is AgentTurn => x.role === 'assistant');
+    expect(t?.model).toBe(P + '/sonnet');
+    expect(t?.why).toBe('Council of 3');
+    expect(t?.council).toMatchObject({ phase: 'done', done: 1, total: 3, combiner: { provider: P, model: 'sonnet' } });
+    expect(t?.council?.members.map((m) => [m.slot.model, m.state, m.text, m.cut === true])).toEqual([['opus', 'answered', 'Use a partial index.', true], ['gpt-6-luna', 'failed', '', false], ['pro', 'failed', '', false]]);
+  });
+  it('task cards are bound from the turn\'s subagent frames, and read back with no stop and no clock', async () => {
+    const { host, provider } = await setup();
+    provider.sessions.send(SESSION, 'send this to codex', META);
+    await tick(); await tick(); await tick();
+    host.event('message.start', SESSION);
+    host.event('subagent.start', SESSION, { subagent_id: 'sa1', task_index: 0, goal: 'fix the parser', model: 'gpt-6-luna', child_session_id: 'child-1' });
+    host.event('subagent.complete', SESSION, { subagent_id: 'sa1', task_index: 0, goal: 'fix the parser', model: 'gpt-6-luna', status: 'completed', summary: 'Fixed it.', duration_seconds: 12.5, tool_count: 4, child_session_id: 'child-1' });
+    host.event('message.complete', SESSION, { text: 'done', outcome: 'completed', usage: { model: 'haiku' }, persisted_turn: { row_ids: [2, 3], user_row_id: 2 } });
+    await tick();
+    const sent = host.last('plugin.boopis.turns.bind')?.['params'] as { children?: unknown[]; council?: unknown };
+    expect(sent.children).toEqual([{ model: 'gpt-6-luna', goal: 'fix the parser', status: 'done', summary: 'Fixed it.', child_session_id: 'child-1', tool_count: 4, duration_ms: 12500 }]);
+    expect(sent.council).toBeUndefined();
+  });
+  it('resumed cards: a finished one keeps everything and can open its session, one that never ended is stopped, none can be stopped', async () => {
+    const { provider } = await setup({
+      messages: [{ role: 'user', row_id: 1, text: 'tasks' }, { role: 'assistant', row_id: 2, text: 'done' }],
+      turns: [{ model: P + '/haiku', route: [], ungoverned: false, row_ids: [1, 2], children: [
+        { model: 'gpt-6-luna', goal: 'fix the parser', status: 'done', summary: 'Fixed it.', child_session_id: 'child-1', tool_count: 4, duration_ms: 12500, cut: true },
+        { model: 'gemini/pro', goal: 'write docs', status: 'running', summary: '', child_session_id: '', tool_count: 0 }
+      ] }]
+    });
+    const [t] = provider.sessions.conversation(SESSION).snapshot().turns.filter((x): x is AgentTurn => x.role === 'assistant');
+    expect(t?.model).toBe(P + '/haiku');
+    const [a, b] = t?.children ?? [];
+    expect(a).toMatchObject({ model: 'gpt-6-luna', goal: 'fix the parser', status: 'done', summary: 'Fixed it.', childSession: 'child-1', tools: 4, seconds: 12.5, subagentId: '', startedAt: null, cut: true });
+    expect(b).toMatchObject({ status: 'stopped', startedAt: null });
+    expect(new Set(t?.children?.map((c) => c.id)).size).toBe(2);
+  });
+  it('a mix: recorded turns draw their blocks, an unrecorded turn draws none', async () => {
+    const { provider } = await setup({
+      messages: [
+        { role: 'user', row_id: 1, text: 'one' }, { role: 'assistant', row_id: 2, text: 'A' },
+        { role: 'user', row_id: 3, text: 'two' }, { role: 'assistant', row_id: 4, text: 'B' },
+        { role: 'user', row_id: 5, text: 'three' }, { role: 'assistant', row_id: 6, text: 'C' }
+      ],
+      turns: [
+        { model: 'moa/boopis-council', route: [], ungoverned: false, row_ids: [1, 2], council: { members: [{ model: P + '/opus', state: 'answered', text: 'x' }, { model: 'openai-codex/gpt-6-luna', state: 'answered', text: 'y' }], combiner: P + '/sonnet' } },
+        { model: P + '/haiku', route: [], ungoverned: false, row_ids: [3, 4] }
+      ]
+    });
+    const agents = provider.sessions.conversation(SESSION).snapshot().turns.filter((x): x is AgentTurn => x.role === 'assistant');
+    expect(agents.map((a) => [!!a.council, !!a.children, a.model])).toEqual([[true, false, P + '/sonnet'], [false, false, P + '/haiku'], [false, false, '']]);
+  });
+});
+
+async function councilTurn(): Promise<Awaited<ReturnType<typeof setup>>> {
+  const s = await setup();
+  await s.provider.council.arm(SESSION, COUNCIL_CHOICE);
+  s.provider.sessions.send(SESSION, 'which index?', META);
+  await tick(); await tick(); await tick();
+  return s;
+}

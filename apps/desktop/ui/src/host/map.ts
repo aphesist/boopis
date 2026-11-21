@@ -2,10 +2,11 @@
    tested against recorded frames. A field the gateway does not send is empty or `null` and the UI shows it as
    unknown (AGENTS.md invariant 5): nothing here invents a model name, a cost or a project. */
 import type { SessionListRow, TranscriptMessage } from '../vendor/hermes-shared/gateway-contract.generated';
-import type { AgentTurn, ApprovalWait, SessionSummary, Step, Turn, UserTurn, WaitOutcome } from '../data/types';
+import type { AgentTurn, ApprovalWait, ChildTask, SessionSummary, Step, Turn, UserTurn, WaitOutcome } from '../data/types';
 import type { GatewayEvent } from './gateway';
 import { EMPTY_BOOK, answeredBy } from './live/attribution';
 import type { TurnBook } from './live/attribution';
+import { valueOfSlot } from './live/council';
 
 const pad = (n: number): string => String(n).padStart(2, '0');
 export const clock = (d: Date): string => pad(d.getHours()) + ':' + pad(d.getMinutes());
@@ -84,9 +85,14 @@ export function transcriptToTurns(rows: readonly TranscriptMessage[], idPrefix: 
   const flush = (): void => {
     if (!agent) return;
     const rec = [...(userRow !== null ? [userRow] : []), ...agent.rowIds].map((id) => book.get(id)).find((r) => r !== undefined);
+    const id = idPrefix + 't' + turns.length;
+    /* a council's turn: the engine named it by its preset ('moa/boopis-council'), which is not a model; the combiner answered */
+    const council = rec?.council;
+    const combiner = council?.combiner ? valueOfSlot(council.combiner) : '';
     const a: AgentTurn = {
-      id: idPrefix + 't' + turns.length, role: 'assistant', model: rec ? answeredBy(rec) : '', ...(rec?.ungoverned ? { ungoverned: true } : {}), time: '', cost: '', stepCount: agent.steps.length, steps: agent.steps,
-      paragraphs: agent.texts.flatMap((t) => paragraphs(t)), bullets: [], status: 'done'
+      id, role: 'assistant', model: council ? combiner : rec ? answeredBy(rec) : '', ...(rec?.ungoverned ? { ungoverned: true } : {}), ...(council ? { ...(council.members.length ? { why: 'Council of ' + council.members.length } : {}), council } : {}),
+      ...(rec?.children ? { children: rec.children.map((c, i): ChildTask => ({ ...c, id: id + ':k' + i })) } : {}),
+      time: '', cost: '', stepCount: agent.steps.length, steps: agent.steps, paragraphs: agent.texts.flatMap((t) => paragraphs(t)), bullets: [], status: 'done'
     };
     turns.push(a);
     agent = null;
