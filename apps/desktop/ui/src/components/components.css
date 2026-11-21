@@ -673,7 +673,7 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
    group sits on the text's line, in the bottom-right corner, and stays on the last line as the text grows. */
 .ui-composer { display: flex; flex-direction: column; width: 100%; font: 400 var(--fs-m)/var(--lh) var(--sans); color: var(--text); }
 .ui-composer__hint {
-  margin-bottom: 8px; padding: 0 15px; font: 400 var(--fs-xs)/var(--lh-ui) var(--sans); color: var(--text-quiet);
+  margin-bottom: 8px; padding: 0 14px; font: 400 var(--fs-xs)/var(--lh-ui) var(--sans); color: var(--text-quiet);   /* the text inset of the field below (14px), so the hint starts where the typing does */
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: var(--ui-case);
   opacity: 0; translate: 0 3px; transition: opacity var(--dur-2) var(--ease), translate var(--dur-2) var(--ease);
 }
