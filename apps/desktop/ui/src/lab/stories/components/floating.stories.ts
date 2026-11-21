@@ -4,6 +4,7 @@ import { html, ui, type MenuEntry } from '@boopis/ui';
 import { line, put, stage } from '../../story';
 import type { Story } from '../../types';
 import { LONG_TITLE, UNBROKEN } from '../../fixtures';
+import { governedUnavailableEntries } from '../../../modules/session/model-menu';
 
 const FLOAT = { url: '/v6/design-system/index.html#c-float', crop: '#c-float' };
 const ITEMS: MenuEntry[] = [
@@ -11,6 +12,7 @@ const ITEMS: MenuEntry[] = [
   { label: 'Copy link', icon: 'copy', desc: 'boopis://session/s1' }, { label: 'Delete', icon: 'trash', disabled: true }, { foot: 'Archived sessions stay searchable.' }
 ];
 const MODELS: MenuEntry[] = [{ label: 'Smart', desc: 'Picks the model for each message', checked: true }, '-', ...['opus 5.5', 'sonnet 5.5', 'haiku 4.5', 'qwen3-coder'].map((m) => ({ model: m, label: m, checked: false }))];
+const NO_FRONTIER = { available: false, why: 'Governed mode cannot run: the saved ladder has no frontier model (tier \'free\' runs nous/nous/welcome).', sentence: 'Claude Opus 5.5 or later, Claude Fable 5.2 or later, GPT-6.2 Astra or later and Gemini 4 Carbon or later', allowed: ['Claude Opus 5.5', 'Claude Fable 5.2', 'GPT-6.2 Astra', 'Gemini 4 Carbon'] };
 const many = (n: number): MenuEntry[] => Array.from({ length: n }, (_, i) => ({ label: 'Item ' + i, keys: i < 9 ? 'mod+' + (i + 1) : undefined } as MenuEntry));
 
 async function openMenu(root: HTMLElement, items: readonly MenuEntry[], o: { place?: 'above' | 'below'; align?: 'start' | 'end' | 'center' } = {}, wait?: (ms: number) => Promise<void>): Promise<void> {
@@ -31,6 +33,8 @@ export default [
       'open, end aligned': stage(['open', 'variant'], async ({ root, wait }) => { root.style.alignItems = 'flex-end'; root.style.width = '100%'; await openMenu(root, MODELS, { align: 'end' }, wait); }, { overlay: { anchor: '.ui-btn', layer: '.ui-menu' } }),
       'many, scrolling': stage(['many', 'scroll', 'open'], ({ root, wait }) => openMenu(root, many(80), {}, wait), { overlay: { anchor: '.ui-btn', layer: '.ui-menu' } }),
       empty: stage(['empty'], ({ root }) => { line(root, ui.menu.still([], { label: 'Nothing' })); }),
+      'governed mode unavailable (the Governed chip)': stage(['open', 'error'], ({ root, wait }) => openMenu(root, governedUnavailableEntries(NO_FRONTIER), { place: 'above' }, wait), { overlay: { anchor: '.ui-btn', layer: '.ui-menu' } }),
+      'governed mode unavailable, at rest': stage(['variant'], ({ root }) => { line(root, ui.menu.still(governedUnavailableEntries(NO_FRONTIER), { label: 'Governed mode is unavailable' })); }, { width: 360 }),
       long: stage(['long'], ({ root }) => { line(root, ui.menu.still([{ label: LONG_TITLE, desc: UNBROKEN, keys: 'mod+shift+alt+K' }, { label: UNBROKEN, stamp: 'needs you' }], { label: 'Long' })); })
     }
   },

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { eventsOf, fixtures, resultOf } from '../testing';
-import { changesFrom, connectorsFrom, contextFrom, costNote, diffFilesFrom, environmentFrom, governanceFrom, ledgerFrom, ladderFrom, outputFor, planNote, runFrom, shipLine, todosFrom } from './map-details';
+import { frontierFrom, changesFrom, connectorsFrom, contextFrom, costNote, diffFilesFrom, environmentFrom, governanceFrom, ledgerFrom, ladderFrom, outputFor, planNote, runFrom, shipLine, todosFrom } from './map-details';
 import { kTokens, dollars } from './format';
 import type { BreakdownWire, CascadeWire, DescribeWire, DiffWire, InfoWire, InventoryWire, McpStatusWire, StatsWire } from './wire';
 
@@ -111,5 +111,21 @@ describe('output, from tool steps and ships', () => {
     const long = outputFor({ name: 't', result_text: Array.from({ length: 40 }, (_, i) => 'l' + i).join('\n') });
     expect(long).toHaveLength(14);
     expect(long.at(-1)).toBe('… 28 more lines');
+  });
+});
+
+describe('frontierFrom (ADR-0034)', () => {
+  const ok = { allowed: ['Claude Opus 5.5'], sentence: 'S', available: true, why: null };
+  it('says nothing when neither side did', () => { expect(frontierFrom(null, null)).toBeNull(); });
+  it('is available only when every voice says so, and carries the first reason', () => {
+    expect(frontierFrom(ok, { available: true, sentence: 'S', allowed: [] })?.available).toBe(true);
+    expect(frontierFrom({ ...ok, available: false, why: 'plugin' }, { available: false, why: 'host', sentence: 'S', allowed: [] })).toMatchObject({ available: false, why: 'plugin' });
+    expect(frontierFrom(ok, { available: false, why: 'host', sentence: 'S', allowed: [] })).toMatchObject({ available: false, why: 'host' });
+    expect(frontierFrom({ ...ok, session_model: { provider: 'a', model: 'b', frontier: false, why: 'model' } }, null)).toMatchObject({ available: false, why: 'model' });
+  });
+  it('governanceFrom carries it only when governed mode cannot run', () => {
+    const base = { describe: null, cascade: null, stats: null, model: 'm', governed: false, locked: false };
+    expect(governanceFrom({ ...base, frontier: frontierFrom(ok, null) }).frontier).toBeUndefined();
+    expect(governanceFrom({ ...base, frontier: frontierFrom({ ...ok, available: false, why: 'w' }, null) }).frontier?.why).toBe('w');
   });
 });

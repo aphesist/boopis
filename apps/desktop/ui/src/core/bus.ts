@@ -30,6 +30,8 @@ export interface EventMap {
   'hx:new-group': { from?: string };
   'hx:nav': { action: 'first' | 'last'; region: RegionName | null };
   'hx:region': { region: RegionName };
+  /** a surface asks the shell to open Settings at a section (`models`) */
+  'hx:open-settings': { section: string; from?: string };
   'hx:bot-settings': { open?: boolean; toggle?: boolean; from?: string };
   'hx:view-inset': { tab?: Tab; left?: number; right?: number; source?: string };
   'hx:toast': { text?: string; message?: string };

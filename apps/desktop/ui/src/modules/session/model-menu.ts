@@ -1,8 +1,8 @@
 /* The "who answers next" menu: Automatic (Smart) first, then every model the user can use right now, grouped by provider with the
    provider's logo and each model's readable name. Pure: it builds the entries, the composer opens them in the kit's listbox. */
 import { ui } from '@boopis/ui';
-import type { SelectEntry, SelectOption } from '@boopis/ui';
-import type { ModelChoice } from '../../data';
+import type { MenuEntry, SelectEntry, SelectOption } from '@boopis/ui';
+import type { FrontierView, ModelChoice } from '../../data';
 import { smartPick } from '../../data/smart';
 import type { SmartInput } from '../../data/smart';
 
@@ -47,4 +47,17 @@ export function smartPreview(choices: readonly ModelChoice[], input: SmartInput)
   const p = smartPick(input, tiers.length);
   const choice = p ? tiers[p.index] : undefined;
   return p && choice ? { choice, reason: p.reason } : null;
+}
+
+export const SETTINGS_VALUE = '__settings';
+/** The menu the Governed chip opens when governed mode cannot run (ADR-0034): it says so in plain words, names the models it allows and
+    offers the way to get one (Settings > Models), never a dead control. */
+export function governedUnavailableEntries(f: FrontierView): MenuEntry[] {
+  const why = f.why || 'No frontier model is set up.';
+  return [
+    { title: 'Governed mode is unavailable' },
+    { foot: why + ' Governed mode runs only on ' + f.sentence + '.' },
+    '-',
+    { label: 'Open Settings, Models', value: SETTINGS_VALUE, icon: 'gear' }
+  ];
 }

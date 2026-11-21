@@ -6,9 +6,10 @@
 import { logger } from '../../core/log';
 import type { DetailsSource, RunSource, Watch } from '../../data/provider';
 import { store } from '../../data/store';
-import type { ModelChoice, DetailsCan, DetailsNotes, DiffFile, Environment, FileCompletions, GovernanceState, ProviderInfo, RunSnapshot } from '../../data/types';
+import type { ModelChoice, FrontierView, DetailsCan, DetailsNotes, DiffFile, Environment, FileCompletions, GovernanceState, ProviderInfo, RunSnapshot } from '../../data/types';
 import type { GatewayClient, GatewayEvent } from '../gateway';
-import { changesFrom, connectorsFrom, contextFrom, contextNote, costNote, diffFilesFrom, diffNote, environmentFrom, governanceFrom, ledgerFrom, planNote, runFrom } from './map-details';
+import type { HostGoverned } from './map-details';
+import { changesFrom, connectorsFrom, contextFrom, contextNote, costNote, diffFilesFrom, diffNote, environmentFrom, frontierFrom, governanceFrom, ledgerFrom, planNote, runFrom } from './map-details';
 import { blanksFromLedger } from './blanks';
 import { recentFailures, smartPick } from '../../data/smart';
 import { choicesFrom, splitValue, switchValue, valueOf } from './models';
@@ -35,6 +36,8 @@ export interface DetailsDeps {
   onRefreshed?(uiId: string): void;
   /** the ladder the host has saved (Settings > Models), for a session that is not on the gateway yet and so has no `cascade.state`; empty when none is saved */
   hostLadder?(): Promise<LadderTier[]>;
+  /** whether governed mode can run on what the host has saved (Settings > Models' own read); rejects when the host cannot say */
+  hostGoverned?(): Promise<HostGoverned>;
   /** what the Connectors section's switch and Sign in button do: the host switches a server through Hermes and runs Hermes's own OAuth
       flow for it. Without it (no desktop host) both controls are disabled and say nothing is wired */
   connectors?: { setEnabled(name: string, enabled: boolean): Promise<void>; signin(name: string): Promise<unknown> };
@@ -80,6 +83,8 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
   const model = (id: string): SessionModel => { let m = models.get(id); if (!m) { m = newModel(); models.set(id, m); } return m; };
   let followed = '';
   let defaultMode: 'governed' | 'ungoverned' | null = null;
+  let pluginFrontier: DescribeWire['frontier'] | null = null;
+  let hostGoverned: HostGoverned | null = null;
   let mcp: McpStatusWire | null = null;
   let pluginOk = true;
   const unavailable: Record<string, string> = {};
@@ -103,7 +108,11 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
   const run = store<RunSnapshot>(runFrom({ title: '', model: '', steps: 0, elapsedSeconds: 0, stopped: false, governed: false, stats: null, cascade: null, cap: null }));
 
   const locked = (m: SessionModel): boolean => m.started || m.describe?.session?.locked === true;
-  const governedOf = (m: SessionModel): boolean => (locked(m) ? m.describe?.session?.mode === 'governed' : (m.wantGoverned ?? m.describe?.session?.mode === 'governed') || (m.describe?.session == null && m.wantGoverned == null && defaultMode === 'governed'));
+  /** whether governed mode can run for this session: the plugin's and the host's words together (null: nothing known to stop it) */
+  const frontierOf = (m: SessionModel): FrontierView | null => frontierFrom(m.describe?.frontier ?? pluginFrontier, hostGoverned);
+  /** a session nobody has chosen a mode for starts in the plugin's default mode, unless governed mode cannot run (it never starts governed then) */
+  const defaultGoverned = (m: SessionModel): boolean => defaultMode === 'governed' && frontierOf(m)?.available !== false;
+  const governedOf = (m: SessionModel): boolean => (locked(m) ? m.describe?.session?.mode === 'governed' : (m.wantGoverned ?? m.describe?.session?.mode === 'governed') || (m.describe?.session == null && m.wantGoverned == null && defaultGoverned(m)));
   const engineModel = (m: SessionModel): string => (m.info?.model ? valueOf(m.info.provider ?? '', m.info.model) : m.usage?.model ?? (options?.model ? valueOf(options.provider ?? '', options.model) : ''));
   const modelOf = (m: SessionModel): string => m.wantModel ?? engineModel(m);
   /** the ladder this session runs: the plugin's, once the session is on the gateway; else the one the host has saved */
@@ -124,7 +133,7 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
     if (has('diff')) changes.set(changesFrom(m.diff));
     if (has('output')) output.set(m.output);
     if (has('stats')) ledger.set(ledgerFrom(m.stats));
-    if (has('usage', 'info', 'stats', 'cascade')) governance.set(governanceFrom({ describe: m.describe, cascade: m.cascade, stats: m.stats, model: modelOf(m), governed: governedOf(m), locked: locked(m), smart: m.smart }));
+    if (has('usage', 'info', 'stats', 'cascade')) governance.set(governanceFrom({ describe: m.describe, cascade: m.cascade, stats: m.stats, model: modelOf(m), governed: governedOf(m), locked: locked(m), smart: m.smart, frontier: frontierOf(m) }));
     if (has('info', 'cascade')) publishChoices(m);
     connectors.set(connectorsFrom(mcp, m.inventory));
     notes.set({
@@ -212,9 +221,10 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
     const caps = ((client.describe as { capabilities?: string[] } | null)?.capabilities) ?? [];
     pluginOk = caps.length === 0 || caps.includes('plugin-rpc-v1');
     const jobs: Promise<void>[] = [];
-    if (pluginOk) jobs.push(read<DescribeWire>(PLUGIN + 'describe', {}).then((r) => { defaultMode = r?.config?.mode ?? null; }));
+    if (pluginOk) jobs.push(read<DescribeWire>(PLUGIN + 'describe', {}).then((r) => { defaultMode = r?.config?.mode ?? null; pluginFrontier = r?.frontier ?? null; }));
     jobs.push(read<McpStatusWire>('mcp.servers.status', {}).then((r) => { mcp = r; }));
     jobs.push((client.requestRaw('model.options', {}) as Promise<ModelOptionsWire>).then((r) => { options = r; }, (e: unknown) => { log.info('model.options was not read, so only the ladder is offered', e); }));
+    if (deps.hostGoverned) jobs.push(deps.hostGoverned().then((g) => { hostGoverned = g; }).catch((e: unknown) => { log.warn('whether governed mode can run was not read from the host', e); }));
     if (deps.hostLadder) jobs.push(deps.hostLadder().then((t) => { hostTiers = t; }).catch((e: unknown) => { log.warn('the saved ladder could not be read', e); }));
     /* what this Hermes cannot do is learned by asking with a session id that matches nothing: only "no such method" counts */
     const probe = async (method: string, key: string, why: string): Promise<void> => {
@@ -259,6 +269,8 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
       if (patch.cap !== undefined) return 'The cost cap is the plugin’s cost_cap_usd setting; it cannot be changed from here yet.';
       if (patch.governed !== undefined) {
         if (locked(m)) return 'The mode is fixed once the first message is sent (prompt caching). Start a new session to change it.';
+        const fr = frontierOf(m);
+        if (patch.governed && fr && !fr.available) return 'Governed mode runs only on frontier models (' + fr.sentence + '). ' + fr.why;
         m.wantGoverned = patch.governed;
         if (gw && pluginOk) void track(read(PLUGIN + 'mode.set', { session_id: gw, mode: patch.governed ? 'governed' : 'ungoverned' }).then(() => refresh(followed, ['info'])));
       }
@@ -355,7 +367,7 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
     },
     currentModel(uiId) { return modelOf(model(uiId)); },
     chosen(uiId) { const m = model(uiId); return { governed: m.wantGoverned, model: m.wantModel }; },
-    governedAtCreation(uiId) { return pluginOk && (model(uiId).wantGoverned ?? (defaultMode ?? 'governed') === 'governed'); },
+    governedAtCreation(uiId) { const m = model(uiId); return pluginOk && (m.wantGoverned ?? ((defaultMode ?? 'governed') === 'governed' && frontierOf(m)?.available !== false)); },
     async settled() { flush(); while (inflight.size) await Promise.allSettled([...inflight]); }
   };
 }

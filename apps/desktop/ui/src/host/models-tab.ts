@@ -99,16 +99,40 @@ export function geminiRows(view: ModelsView | { error: string }): string[] {
   })];
 }
 
+/** a tier's second line: its name, and when governed mode will not run it, that (ADR-0034) */
+const tierRule = (view: ModelsView, t: { name: string; model: string }): string =>
+  view.governed.tiers.find((g) => g.name === t.name && g.model === t.model)?.frontier === false ? `${t.name}, not used in governed mode` : t.name;
+
+/** Governed mode's section (ADR-0034): the models it allows, each also in any later version, and whether the saved ladder lets it run.
+    When it cannot, the row says why in one sentence and offers the way to get a model (Change models, the same question as setup's).
+    The allowed list is the plugin's data file as the host reads it, never typed here. */
+export function governedRows(view: ModelsView | { error: string }): string[] {
+  if ('error' in view) return [ui.html.setRow({ label: 'Governed mode', hint: `Not read: ${view.error}` })];
+  const g = view.governed;
+  const status = g.available
+    ? ui.html.setRow({ label: 'Status', hint: view.state === 'set' ? 'Every tier of the saved ladder is a frontier model.' : 'No ladder is saved, so boopis uses its built-in one: Opus, then Fable, on your Anthropic key.', control: '<span class="ui-set__value">Available</span>' })
+    : ui.html.setRow({
+      label: 'Status',
+      hint: `${g.why ?? 'No frontier model is set up.'} To use governed mode, sign in with your Claude subscription (Opus, Fable), sign in with ChatGPT on a plan that includes GPT-6.2 Astra, or add a Gemini key for Gemini 4 Carbon. Sessions that are not governed can use any model.`,
+      control: '<span class="ui-set__value">Unavailable</span>' + ui.html.button({ label: 'Change models', size: 's', attrs: { id: 'hx-governed-change' } })
+    });
+  return [
+    ui.html.setRow({ label: 'Allowed models', hint: 'Governed mode runs every tier and the session itself only on these, or a later version of them. Anything else, and Grok, stays available outside governed mode.' }),
+    ...g.allowed.map((name) => ui.html.setRow({ label: esc(name), control: '<span class="ui-set__value">or later</span>' })),
+    status
+  ];
+}
+
 /** the ladder section's rows for what the host read, or for why it could not */
 export function ladderRows(view: ModelsView | { error: string }): string[] {
   if ('error' in view) return [ui.html.setRow({ label: 'Tiers', hint: `The ladder could not be read, so it is not shown: ${view.error}` })];
   if (view.state === 'set') {
     return [
       ui.html.setRow({ label: 'Tiers', hint: `Cheapest first. ${SCOPE}` }),
-      '<div class="hx-ladder">' + ui.html.ladder({ variant: 'list', current: 0, label: 'Model ladder', stations: view.tiers.map((t) => [t.model, t.name] as const) }) + '</div>'
+      '<div class="hx-ladder">' + ui.html.ladder({ variant: 'list', current: 0, label: 'Model ladder', stations: view.tiers.map((t) => [t.model, tierRule(view, t)] as const) }) + '</div>'
     ];
   }
-  if (view.state === 'default') return [ui.html.setRow({ label: 'Tiers', hint: 'No ladder is saved here, so boopis uses its built-in Claude ladder: haiku, sonnet, opus. Change models saves one of your own.' })];
+  if (view.state === 'default') return [ui.html.setRow({ label: 'Tiers', hint: 'No ladder is saved here, so boopis uses its built-in Claude ladder: Opus, then Fable. Change models saves one of your own.' })];
   return [ui.html.setRow({ label: 'Tiers', hint: 'A ladder is saved, but it does not read as a list of named tiers, so none is shown. Change models saves a new one.' })];
 }
 
@@ -123,6 +147,7 @@ const section = (panel: HTMLElement, id: string): HTMLElement => {
 /** Put the tab into `panel`. `refresh` asks the host again; call it each time the tab is shown. */
 export async function mountModels(panel: HTMLElement, deps: ModelsDeps): Promise<{ refresh: () => Promise<void> }> {
   const plan = await mountPlan(panel, deps.plan);
+  const governed = section(panel, 'hx-set-governed-h');
   const ladder = section(panel, 'hx-set-ladder-h');
   const claude = section(panel, 'hx-set-claude-h');
   const chatgpt = section(panel, 'hx-set-chatgpt-h');
@@ -142,13 +167,15 @@ export async function mountModels(panel: HTMLElement, deps: ModelsDeps): Promise
   const drawAll = async (): Promise<void> => {
     let view: ModelsView | { error: string };
     try { view = await deps.ladder(); } catch (e) { view = { error: e instanceof Error ? e.message : 'unknown error' }; }
+    governed.innerHTML = ui.html.setHead({ id: 'hx-set-governed-h', label: 'Governed mode' }) + governedRows(view).join('');
     ladder.innerHTML = ui.html.setHead({ id: 'hx-set-ladder-h', label: 'Model ladder' }) + ladderRows(view).join('');
     claude.innerHTML = ui.html.setHead({ id: 'hx-set-claude-h', label: 'Claude subscription' }) + claudeRows(view).join('');
     card?.destroy();
     card = null;
     chatgpt.innerHTML = ui.html.setHead({ id: 'hx-set-chatgpt-h', label: 'ChatGPT subscription' }) + chatgptRows(view, !!deps.chatgpt).join('') + '<div id="hx-chatgpt-card"></div>';
     gemini.innerHTML = ui.html.setHead({ id: 'hx-set-gemini-h', label: 'Gemini' }) + geminiRows(view).join('');
-    for (const s of [ladder, claude, chatgpt, gemini]) ui.hydrate(s);
+    for (const s of [governed, ladder, claude, chatgpt, gemini]) ui.hydrate(s);
+    governed.querySelector('#hx-governed-change')?.addEventListener('click', askAgain);
     claude.querySelector('#hx-claude-check')?.addEventListener('click', () => { void drawAll(); });
     const login = deps.login;
     const signin = claude.querySelector<HTMLButtonElement>('#hx-claude-signin');

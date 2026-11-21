@@ -11,7 +11,7 @@ import type { ComposerEl, DecisionDetail, AssumptionDetail, DictateDetail } from
 import { data } from '../../data';
 import type { Attached, GovernanceState } from '../../data';
 import { costAssume, kindOf, makeReader, optionsFor } from './feedforward';
-import { FOOT_GOVERNED, FOOT_UNGOVERNED, SMART_VALUE, currentChoice, modelEntries, smartPreview } from './model-menu';
+import { FOOT_GOVERNED, FOOT_UNGOVERNED, SETTINGS_VALUE, SMART_VALUE, currentChoice, governedUnavailableEntries, modelEntries, smartPreview } from './model-menu';
 
 export { SMART_VALUE };
 const gov = (): GovernanceState => data().details.governance.get();
@@ -49,6 +49,12 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
     govChip.setAttribute('aria-pressed', String(G.governed)); span(govChip).textContent = G.governed ? 'Governed' : 'Ungoverned';
     govChip.setAttribute('data-tip', G.governed ? 'Climbs the model ladder, stops at ' + G.cap : 'Pinned to ' + G.model + ', no cap'); govChip.setAttribute('data-kbd', 'alt+G');
     govChip.setAttribute('aria-label', G.governed ? 'Governed: starts cheap, climbs the model ladder on failure, stops at the cost cap' : 'Ungoverned: one pinned model, no cost cap');
+    if (G.frontier) {
+      /* governed mode cannot run (ADR-0034): the chip says so, and a press explains and offers Settings */
+      govChip.setAttribute('data-tip', 'Governed mode is unavailable: no frontier model is set up');
+      govChip.setAttribute('aria-label', (G.governed ? 'Governed' : 'Ungoverned') + '. Governed mode is unavailable: ' + (G.frontier.why || 'no frontier model is set up'));
+      govChip.setAttribute('aria-haspopup', 'menu');
+    } else govChip.removeAttribute('aria-haspopup');
     drawModel(G);
     c.setSpend(G.spent, G.governed ? G.cap : null);
     c.refresh();
@@ -70,7 +76,17 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
     model.setAttribute('data-tip', G.smart ? 'Smart picks the model for each message' + (prev ? ': ' + prev.reason : '') : 'Who answers next'); model.setAttribute('data-kbd', 'alt+M');
   }
   c.input.addEventListener('input', () => { if (gov().smart) drawModel(gov()); });
-  govChip.addEventListener('ui:change', (e) => { e.preventDefault(); setGovernance({ governed: !gov().governed }); c.flashHint(); });
+  /** turning governed mode on: refused with the reason and the way out while no frontier model can run it */
+  function toggleGoverned(anchor: HTMLElement, on: boolean): void {
+    const f = gov().frontier;
+    if (on && f) {
+      ui.menu.open(anchor, governedUnavailableEntries(f), { place: 'above', label: 'Governed mode is unavailable', onSelect: (v) => { if (v === SETTINGS_VALUE) emit('hx:open-settings', { section: 'models', from: 'composer' }); } });
+      return;
+    }
+    setGovernance({ governed: on });
+    c.flashHint();
+  }
+  govChip.addEventListener('ui:change', (e) => { e.preventDefault(); toggleGoverned(govChip, !gov().governed); });
 
   function openModel(viaKeyboard: boolean): void {
     const G = gov();
@@ -91,7 +107,7 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
   function openReading(anchor: HTMLElement, kind: string | undefined, text: string): void {
     if (kind === 'preview') return;
     if (kind === 'governance' || !text || !kind) {
-      ui.menu.open(anchor, [{ title: 'Governance' }, { label: 'Governed', value: 'on', checked: gov().governed, desc: 'Start cheap, climb on failure' }, { label: 'Ungoverned', value: 'off', checked: !gov().governed, desc: 'One pinned model, no cap' }], { place: 'above', onSelect: (v) => setGovernance({ governed: v === 'on' }) });
+      ui.menu.open(anchor, [{ title: 'Governance' }, { label: 'Governed', value: 'on', checked: gov().governed, desc: 'Start cheap, climb on failure' }, { label: 'Ungoverned', value: 'off', checked: !gov().governed, desc: 'One pinned model, no cap' }], { place: 'above', onSelect: (v) => { toggleGoverned(anchor, v === 'on'); } });
       return;
     }
     const r = reader.reading(kind, text), k = kindOf(kind);

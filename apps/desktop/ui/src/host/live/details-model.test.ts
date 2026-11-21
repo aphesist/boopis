@@ -18,7 +18,7 @@ const OPTIONS = {
   ]
 };
 
-function setup(o: { governed?: boolean; ladder?: boolean; failSwitch?: boolean; model?: string } = {}) {
+function setup(o: { governed?: boolean; ladder?: boolean; failSwitch?: boolean; model?: string; defaultMode?: string; frontier?: Json; hostGoverned?: Json } = {}) {
   const calls: { method: string; params: Json }[] = [];
   const client = {
     async requestRaw(method: string, params: Json): Promise<unknown> {
@@ -27,7 +27,7 @@ function setup(o: { governed?: boolean; ladder?: boolean; failSwitch?: boolean; 
         case 'model.options': return OPTIONS;
         case 'session.info': return { model: o.model ?? 'haiku', provider: P, cwd: '/w' };
         case 'config.set': if (o.failSwitch) throw new Error('no such model'); return { key: 'model', value: params['value'], confirm_required: false };
-        case 'plugin.boopis.describe': return { session: { session_id: 'g1', mode: o.governed ? 'governed' : 'ungoverned', locked: false, cwd: '/w' }, config: { mode: 'ungoverned', cost_cap_usd: 2 } };
+        case 'plugin.boopis.describe': return { session: { session_id: 'g1', mode: o.governed ? 'governed' : 'ungoverned', locked: false, cwd: '/w' }, config: { mode: o.defaultMode ?? 'ungoverned', cost_cap_usd: 2 }, ...(o.frontier ? { frontier: o.frontier } : {}) };
         case 'plugin.boopis.cascade.state': return o.ladder === false ? { ladder: [], status: 'idle' } : { ladder: LADDER, status: 'idle' };
         case 'plugin.boopis.ledger.tail': return { events: [] };
         default: return {};
@@ -35,7 +35,7 @@ function setup(o: { governed?: boolean; ladder?: boolean; failSwitch?: boolean; 
     },
     request(method: string, params: Json): Promise<unknown> { return this.requestRaw(method, params); }
   };
-  const d = createDetails({ client: client as unknown as GatewayClient, gwId: () => 'g1', now: () => 0 });
+  const d = createDetails({ client: client as unknown as GatewayClient, gwId: () => 'g1', now: () => 0, ...(o.hostGoverned ? { hostGoverned: async () => o.hostGoverned as never } : {}) });
   return { d, calls };
 }
 async function ready(o: Parameters<typeof setup>[0] = {}) {
@@ -146,5 +146,45 @@ describe('who answers next, governed', () => {
     d.source.setGovernance({ smart: true });
     expect(await d.prepareSend('s1', 'design the sync layer')).toEqual({ model: P + '/opus', why: 'Smart: design work' });
     expect(calls.some((c) => c.method === 'plugin.boopis.cascade.start_tier' && c.params['start_tier'] === 'opus')).toBe(true);
+  });
+});
+
+describe('governed mode needs a frontier model (ADR-0034)', () => {
+  const SENTENCE = 'Claude Opus 5.5 or later, Claude Fable 5.2 or later, GPT-6.2 Astra or later and Gemini 4 Carbon or later';
+  const NO = { allowed: ['Claude Opus 5.5'], sentence: SENTENCE, available: false, why: 'Governed mode runs only on frontier models, and tier \'free\' runs nous/welcome, which is not one.' };
+  const OK = { allowed: ['Claude Opus 5.5'], sentence: SENTENCE, available: true, why: null };
+
+  it('a new session does not start governed when the plugin says no frontier model can run, and the state says why', async () => {
+    const { d } = await ready({ defaultMode: 'governed', frontier: NO });
+    expect(d.governedAtCreation('new-1')).toBe(false);
+    const g = d.source.governance.get();
+    expect(g.governed).toBe(false);
+    expect(g.frontier?.available).toBe(false);
+    expect(g.frontier?.why).toContain('nous/welcome');
+    expect(g.frontier?.sentence).toBe(SENTENCE);
+  });
+  it('the host\'s word counts too: a saved ladder with a cheap tier, or no key for the built-in ladder', async () => {
+    const { d } = await ready({ defaultMode: 'governed', frontier: OK, hostGoverned: { available: false, why: 'tier \'haiku\' runs a/b, which is not a frontier model', sentence: SENTENCE, allowed: ['Claude Opus 5.5'] } });
+    expect(d.governedAtCreation('new-1')).toBe(false);
+    expect(d.source.governance.get().frontier?.why).toContain('tier \'haiku\'');
+  });
+  it('turning governed on is refused with the reason while it cannot run, and allowed again when it can', async () => {
+    const no = await ready({ defaultMode: 'governed', frontier: NO });
+    expect(no.d.source.setGovernance({ governed: true })).toContain('Governed mode runs only on frontier models (' + SENTENCE + ')');
+    expect(no.d.source.setGovernance({ governed: false })).toBeNull();
+    const yes = await ready({ defaultMode: 'governed', frontier: OK });
+    expect(yes.d.governedAtCreation('new-1')).toBe(true);
+    expect(yes.d.source.governance.get().frontier).toBeUndefined();
+    expect(yes.d.source.setGovernance({ governed: true })).toBeNull();
+  });
+  it('a session whose own model is not frontier is refused, with the plugin\'s sentence', async () => {
+    const f = { ...OK, session_model: { provider: 'anthropic', model: 'claude-sonnet-5-5', frontier: false, why: 'this session runs anthropic/claude-sonnet-5-5, which is not one' } };
+    const { d } = await ready({ governed: true, frontier: f });
+    expect(d.source.governance.get().frontier?.why).toContain('claude-sonnet-5-5');
+  });
+  it('an older plugin that says nothing about it leaves governed mode as it was', async () => {
+    const { d } = await ready({ defaultMode: 'governed' });
+    expect(d.governedAtCreation('new-1')).toBe(true);
+    expect(d.source.governance.get().frontier).toBeUndefined();
   });
 });

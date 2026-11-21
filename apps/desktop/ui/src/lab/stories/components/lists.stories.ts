@@ -4,6 +4,8 @@ import { line, list, put, stage, forced } from '../../story';
 import type { Story } from '../../types';
 import { LONG_NAME, LONG_TITLE, RTL, UNBROKEN } from '../../fixtures';
 import { SESSIONS } from '../../../data/mock-data';
+import { governedRows, ladderRows } from '../../../host/models-tab';
+import type { ModelsView } from '../../../host/setup-bridge';
 
 const LISTS = { url: '/v6/design-system/index.html#c-lists', crop: '#c-lists' };
 const rowsOf = (n: number): string => Array.from({ length: n }, (_, i) => html.row({ title: (SESSIONS[i % SESSIONS.length]?.title ?? 'session') + (i >= SESSIONS.length ? ' ' + i : ''), end: SESSIONS[i % SESSIONS.length]?.when ?? '', lead: html.leadFor({ running: i === 1, attention: i === 2, current: i === 0 }), current: i === 0 })).join('');
@@ -55,11 +57,32 @@ const setTypical = stage(['typical', 'variant'], ({ root }) => {
     html.setRow({ label: 'Graphics', hint: 'Which GPU draws the window', control: html.segmented({ mode: 'radio', size: 's', label: 'Graphics', value: 'auto', options: [{ value: 'auto', label: 'Auto' }, { value: 'integrated', label: 'Integrated' }, { value: 'dedicated', label: 'Dedicated' }] }) }));
   ui.hydrate(root);
 }, { width: 560, ground: 'frame' });
+/* Settings > Models, the governed-mode section and the ladder it marks (ADR-0034), drawn from what the host reads */
+const SENTENCE = 'Claude Opus 5.5 or later, Claude Fable 5.2 or later, GPT-6.2 Astra or later and Gemini 4 Carbon or later';
+const ALLOWED = ['Claude Opus 5.5', 'Claude Fable 5.2', 'GPT-6.2 Astra', 'Gemini 4 Carbon'];
+const CP = 'claude-subscription-directsdk-experimental';
+const MODELS_VIEW = (governed: ModelsView['governed'], tiers: ModelsView['tiers']): ModelsView => ({
+  state: 'set', tiers, governed, claude_plugin: true, chatgpt: null, gemini_key: false,
+  claude: { state: 'signed_in', version: '2.1.328', plan: 'Claude Max', detail: '', aliases: [] }
+});
+const governedDraw = (view: ModelsView) => ({ root }: { root: HTMLElement }): void => {
+  const sec = document.createElement('section');
+  sec.className = 'ui-set';
+  sec.innerHTML = html.setHead({ id: 'lab-gov-h', label: 'Governed mode' }) + governedRows(view).join('') + ladderRows(view).join('');
+  root.append(sec);
+  ui.hydrate(sec);
+};
+const OK_TIERS = [{ name: 'opus', model: CP + '/opus' }, { name: 'fable', model: CP + '/fable' }];
+const CHEAP_TIERS = [{ name: 'haiku', model: CP + '/haiku' }, { name: 'sonnet', model: CP + '/sonnet' }, { name: 'opus', model: CP + '/opus' }];
+const govView = (tiers: ModelsView['tiers'], why: string | null): ModelsView => MODELS_VIEW({ allowed: ALLOWED, sentence: SENTENCE, available: why === null, why, tiers: tiers.map((t) => ({ ...t, frontier: !/haiku|sonnet|welcome/.test(t.model) })) }, tiers);
 const setRow: Story = {
   id: 'components/set-row', title: 'Settings row', area: 'components', kind: 'component', covers: ['html.setRow'], mock: { url: '/v6/design-system/index.html#c-fields', crop: '#c-fields' },
   states: {
     typical: setTypical, ...forced(setTypical, '.ui-seg__opt, .ui-switch'),
     long: stage(['long'], ({ root }) => { put(root, html.setRow({ label: LONG_TITLE, hint: UNBROKEN, control: html.switch({ label: 'x' }) })); ui.hydrate(root); }, { width: 560, ground: 'frame' }),
+    'governed mode, available (Settings > Models)': stage(['variant'], governedDraw(govView(OK_TIERS, null)), { width: 560, ground: 'frame' }),
+    'governed mode, unavailable: no frontier model (Settings > Models)': stage(['variant', 'error'], governedDraw(govView([{ name: 'free', model: 'nous/nous/welcome' }], 'tier \'free\' runs nous/nous/welcome, which is not a frontier model: it is not in a family on that list')), { width: 560, ground: 'frame' }),
+    'governed mode, a ladder with cheap tiers marked (Settings > Models)': stage(['variant', 'long'], governedDraw(govView(CHEAP_TIERS, 'tier \'haiku\' runs ' + CP + '/haiku, which is not a frontier model: it is not in a family on that list')), { width: 560, ground: 'frame' }),
     narrow: stage(['variant'], ({ root }) => { put(root, html.setRow({ label: 'When the sidebar collapses', hint: 'Rail keeps the icons', control: html.segmented({ mode: 'radio', size: 's', label: 'x', value: 'rail', options: [{ value: 'rail', label: 'Rail' }, { value: 'closed', label: 'Hide' }] }) })); ui.hydrate(root); }, { width: 300, ground: 'frame' })
   }
 };
