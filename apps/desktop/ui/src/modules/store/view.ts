@@ -71,7 +71,13 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
     return e;
   };
   const back = (label: string, go: () => void): HTMLElement => { const b = ui.button({ label, size: 's', variant: 'ghost' }); b.addEventListener('click', go); return b; };
-  const place = (...kids: Node[]): void => { main.replaceChildren(...kids); };
+  /* A screen that redraws itself (a switch was turned and the list came back) keeps the focus where it was: the control with the same
+     id takes it again, so a keyboard user is not sent back to the top of the page after every switch. */
+  const place = (...kids: Node[]): void => {
+    const held = document.activeElement instanceof HTMLElement && main.contains(document.activeElement) ? document.activeElement.id : '';
+    main.replaceChildren(...kids);
+    if (held) main.querySelector<HTMLElement>('#' + CSS.escape(held))?.focus({ preventScroll: true });
+  };
 
   /* ───────── rows ───────── */
   const installedList = (): readonly InstallReceipt[] => store.installed.get();

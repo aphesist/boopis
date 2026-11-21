@@ -97,6 +97,19 @@ describe('the store view', () => {
     sw.checked = false; sw.dispatchEvent(new Event('change', { bubbles: true })); await tick(10);
     expect(store.installed.get().find((r) => r.item_id === 'boopis:firecrawl')?.enabled).toBe(false);
   });
+  it('keeps the focus on a switch after turning it, though the screen redraws with the new state', async () => {
+    const { root, view } = mount(); view.show('installed'); await tick(30);
+    const find = (): HTMLInputElement => root.querySelector<HTMLInputElement>('input[role=switch][name="boopis:firecrawl"]') as HTMLInputElement;
+    document.body.append(root);
+    const before = find(); before.focus();
+    before.checked = false; before.dispatchEvent(new Event('change', { bubbles: true })); await tick(30);
+    expect(find()).not.toBe(before);
+    expect(document.activeElement).toBe(find());
+    view.show('sources'); await tick(30);
+    const src = root.querySelector<HTMLInputElement>('input[role=switch][name="mcp-registry"]') as HTMLInputElement;
+    src.focus(); src.checked = false; src.dispatchEvent(new Event('change', { bubbles: true })); await tick(30);
+    expect(document.activeElement).toBe(root.querySelector('input[role=switch][name="mcp-registry"]'));
+  });
   it('shows the project switch on by default for a governed project', async () => {
     const { root, view } = mount({}, '~/work/api');
     view.show('installed'); await tick(30);
