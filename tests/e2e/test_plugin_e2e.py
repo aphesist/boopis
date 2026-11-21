@@ -20,7 +20,7 @@ from typing import Any
 import pytest
 from fake_model_server import FakeModelServer
 from hx_ws_client import GatewayClient, RpcError
-from stack import AUX_MODEL, HermesInstall, HermesStack, run_stack
+from stack import AUX_MODEL, GOVERNED_PROVIDER, SIDE_PROVIDER, HermesInstall, HermesStack, run_stack
 
 JsonObject = dict[str, Any]
 # What the fake server reports for the scripted prompts: OpenAI chat usage with a cache read and reasoning.
@@ -32,9 +32,14 @@ USAGE = {
     "completion_tokens_details": {"reasoning_tokens": 20},
 }
 # USD per Mtok, so one scripted turn costs about $1.1. Hermes reports the provider of a custom endpoint
-# as "custom" for the turn itself and as the configured name ("main") for its title call.
+# as "custom" for the turn itself and as the configured name ("side") for its title call; a built-in provider is
+# reported by its own name.
 RATES = {"input": 1000.0, "output": 2000.0}
-PRICES = {f"{p}/{m}": RATES for p in ("custom", "main") for m in ("claude-opus-5-5", "claude-sonnet-5-5", AUX_MODEL)}
+PRICES = {
+    f"{p}/{m}": RATES
+    for p in ("custom", "main", SIDE_PROVIDER, GOVERNED_PROVIDER)
+    for m in ("claude-opus-5-5", "claude-sonnet-5-5", AUX_MODEL)
+}
 CAP = 0.5
 NOT_FRONTIER = "claude-sonnet-5-5"  # a real model the lock refuses (ADR-0037); the fake provider serves it too
 SUBSCRIPTIONS: dict[str, str] = {}  # session id -> the viewer subscription session.create returned
@@ -109,7 +114,7 @@ def test_hermes_loaded_the_plugin_and_serves_its_rpc(gateway: GatewayClient, sta
 
 
 def test_a_prompt_writes_a_verifiable_ledger_with_the_models_usage(gateway: GatewayClient, stack: HermesStack) -> None:
-    sid = create_session(gateway, stack)
+    sid = create_session(gateway, stack, provider=GOVERNED_PROVIDER)
     gateway.result("plugin.boopis.mode.set", {"session_id": sid, "mode": "governed"})
     events = run_prompt(gateway, sid, f"@@usage {json.dumps(USAGE)}@@ @@reply hello from the fake@@")
 
@@ -161,7 +166,7 @@ def test_a_governed_session_on_a_model_that_is_not_frontier_is_refused_with_the_
 ) -> None:
     """ADR-0037, end to end: the fake provider serves a model that is real but not frontier (Sonnet 5.5), the session
     is governed, and the turn is refused before any model call, with the plugin's sentence."""
-    sid = create_session(gateway, stack, model=NOT_FRONTIER)
+    sid = create_session(gateway, stack, provider=GOVERNED_PROVIDER, model=NOT_FRONTIER)
     gateway.result("plugin.boopis.mode.set", {"session_id": sid, "mode": "governed"})
     before = len(fake_model.chat_requests())
     turn = run_prompt(gateway, sid, "@@reply this must not be answered@@")
@@ -192,6 +197,32 @@ def test_a_governed_session_on_a_model_that_is_not_frontier_is_refused_with_the_
     assert frontier["session_model"]["model"] == NOT_FRONTIER
 
 
+def test_a_governed_session_on_a_custom_endpoint_is_refused_even_with_a_frontier_name(
+    gateway: GatewayClient, stack: HermesStack, fake_model: FakeModelServer
+) -> None:
+    """ADR-0039, end to end: the user-defined provider ``main`` (the engine reports it as ``custom``) serves the model
+    ``claude-opus-5-5``, a frontier name. Governed mode never runs on a custom endpoint, whatever the model is called,
+    so the turn is refused before any model call, with the plugin's sentence, and the fake server gets no request."""
+    sid = create_session(gateway, stack, provider="main", model="claude-opus-5-5")
+    gateway.result("plugin.boopis.mode.set", {"session_id": sid, "mode": "governed"})
+    before = len(fake_model.requests)
+    turn = run_prompt(gateway, sid, "@@reply this must not be answered@@")
+
+    told = json.dumps([e for e in turn if e.get("type") == "message.complete"])
+    assert "Governed mode runs only on frontier models" in told, told
+    assert "custom/claude-opus-5-5" in told, told  # the engine's name for the provider, and the model, as refused
+    assert "an endpoint of your own or on this computer, which governed mode never uses" in told, told
+    assert "this must not be answered" not in told
+    assert len(fake_model.requests) == before, "a refused turn must not reach the server at all"
+    assert not [e for e in read_ledger(stack, sid) if e["type"] == "usage.recorded"]
+    assert contraprova_verify(stack.ledger_dir / f"{sid}.jsonl").returncode == 0
+
+    # the plugin's own view agrees, so the UI says the same thing
+    session_model = gateway.result("plugin.boopis.describe", {"session_id": sid})["frontier"]["session_model"]
+    assert session_model["frontier"] is False
+    assert session_model["model"] == "claude-opus-5-5"
+
+
 def test_the_mode_is_locked_after_the_first_prompt(gateway: GatewayClient, stack: HermesStack) -> None:
     sid = create_session(gateway, stack)
     run_prompt(gateway, sid, "@@reply hi@@")
@@ -204,7 +235,7 @@ def test_governed_mode_blocks_a_write_before_it_happens(
     gateway: GatewayClient, stack: HermesStack, fake_model: FakeModelServer
 ) -> None:
     target = stack.workdir / "should-not-exist.txt"
-    sid = create_session(gateway, stack)
+    sid = create_session(gateway, stack, provider=GOVERNED_PROVIDER)
     gateway.result("plugin.boopis.mode.set", {"session_id": sid, "mode": "governed"})
     call = json.dumps({"path": str(target), "content": "nope"})
     run_prompt(gateway, sid, f"@@call write_file {call}@@")
@@ -224,7 +255,7 @@ def test_governed_mode_blocks_a_write_before_it_happens(
 
 def test_governed_mode_lets_a_read_only_tool_run(gateway: GatewayClient, stack: HermesStack) -> None:
     (stack.workdir / "notes.txt").write_text("readable")
-    sid = create_session(gateway, stack)
+    sid = create_session(gateway, stack, provider=GOVERNED_PROVIDER)
     gateway.result("plugin.boopis.mode.set", {"session_id": sid, "mode": "governed"})
     call = json.dumps({"path": str(stack.workdir / "notes.txt")})
     run_prompt(gateway, sid, f"@@call read_file {call}@@")
@@ -467,7 +498,9 @@ def test_an_ungoverned_session_uses_pack_and_ship_end_to_end(
 def test_governed_mode_still_blocks_the_hermes_write_tools_even_if_the_host_exposes_them(
     tools_gateway: GatewayClient, tools_stack: HermesStack, project: Path
 ) -> None:
-    sid = create_session(tools_gateway, tools_stack, cwd=str(project), toolsets=["boopis", "file"])
+    sid = create_session(
+        tools_gateway, tools_stack, cwd=str(project), toolsets=["boopis", "file"], provider=GOVERNED_PROVIDER
+    )
     tools_gateway.result("plugin.boopis.mode.set", {"session_id": sid, "mode": "governed"})
     target = project / "sneaky.txt"
     run_prompt(tools_gateway, sid, f"@@call write_file {json.dumps({'path': str(target), 'content': 'x'})}@@")

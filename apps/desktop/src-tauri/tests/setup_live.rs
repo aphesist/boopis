@@ -41,6 +41,10 @@ const KEY: &str = "sk-setup-e2e-0123456789";
 /// The model the fake provider serves for the session and the ladder: governed mode runs only on frontier models
 /// (ADR-0037) and matches by the model id, so the fake model carries a frontier id. Side calls stay on `fake-a`.
 const FRONTIER: &str = "claude-opus-5-5";
+/// The engine's own provider for the governed session: `OpenRouter`, whose base URL the engine reads from `OPENROUTER_BASE_URL`
+/// and which the engine reports as `openrouter`, not `custom`. `OpenRouter` keys start with `sk-or-`.
+const GOVERNED_PROVIDER: &str = "openrouter";
+const GOVERNED_KEY: &str = "sk-or-v1-setup-e2e-governed";
 const AUX: &[&str] = &[
     "vision",
     "compression",
@@ -381,14 +385,20 @@ async fn run_flow(install: Install) {
     }
     let mut aux = serde_json::Map::new();
     for t in AUX {
-        aux.insert((*t).into(), json!({"provider": "main", "model": "fake-a"}));
+        // `side`, not `main`: "main" in an auxiliary task means the provider of the session that runs, which in the governed
+        // session is the built-in OpenRouter the engine would reach on the real network.
+        aux.insert((*t).into(), json!({"provider": "side", "model": "fake-a"}));
     }
     let fixture = json!({
         "model": {"provider": "main", "default": FRONTIER}, "updates": {"check": false},
         "model_catalog": {"enabled": false},
         "models_dev": {"url": fake.url.trim_end_matches("/v1").to_owned() + "/models-dev-api.json"},
-        "providers": {"main": {"api": fake.url, "transport": "openai_chat", "discover_models": false,
-            "models": {"fake-a": {"context_length": 200_000}, FRONTIER: {"context_length": 200_000}}}},
+        "providers": {
+            "main": {"api": fake.url, "transport": "openai_chat", "discover_models": false,
+                "models": {"fake-a": {"context_length": 200_000}, FRONTIER: {"context_length": 200_000}}},
+            "side": {"api": fake.url, "transport": "openai_chat", "discover_models": false,
+                "models": {"fake-a": {"context_length": 200_000}}},
+        },
         "auxiliary": aux,
     });
     std::fs::write(hermes_home.join("config.yaml"), fixture.to_string()).unwrap(); // JSON is YAML
@@ -413,6 +423,11 @@ async fn run_flow(install: Install) {
     };
     let mut child_env: Vec<(String, String)> = vec![
         ("HOME".into(), home.display().to_string()),
+        // The governed session of step 5 runs on a built-in provider of the engine, pointed at the fake model through the
+        // variable the engine reads its base URL from (ADR-0039: a custom endpoint never runs governed mode, and the engine
+        // reports every user-defined `providers:` entry as `custom`).
+        ("OPENROUTER_BASE_URL".into(), fake.url.clone()),
+        ("OPENROUTER_API_KEY".into(), GOVERNED_KEY.into()),
         ("NO_PROXY".into(), "127.0.0.1,localhost,::1".into()),
         ("no_proxy".into(), "127.0.0.1,localhost,::1".into()),
     ];
@@ -625,6 +640,13 @@ async fn run_flow(install: Install) {
         .as_str()
         .expect("a session")
         .to_owned();
+    // The provider setup wrote is a user-defined one, which the engine reports as `custom`: governed mode never runs on it
+    // (ADR-0039), so this session answers ungoverned. It proves the key; step 5 proves governed mode on a built-in provider.
+    hub.send(1, json!({"jsonrpc":"2.0","id":20,"method":"plugin.boopis.mode.set","params":{"session_id":session,"mode":"ungoverned"}}))
+        .await
+        .unwrap();
+    let (mode, _) = response(&mut rx, 20).await;
+    assert!(mode.get("error").is_none(), "{mode}");
     let frames = turn(
         &hub,
         &mut rx,
@@ -648,7 +670,25 @@ async fn run_flow(install: Install) {
         "the fake model must have received the keychain key; it saw: {seen}"
     );
 
-    // 5. A governed session works: its first prompt locks the mode, and the plugin's own tool answers and is recorded.
+    // 5. A governed session works: its first prompt locks the mode, and the plugin's own tool answers and is recorded. It runs
+    // on the engine's built-in OpenRouter provider (pointed at the fake model), with a frontier-named model.
+    hub.send(
+        1,
+        json!({"jsonrpc":"2.0","id":21,"method":"session.create","params":{
+        "source":"gui","cwd":work,"model":FRONTIER,"provider":GOVERNED_PROVIDER,"toolsets":["boopis"]}}),
+    )
+    .await
+    .unwrap();
+    let (created, _) = response(&mut rx, 21).await;
+    let session = created["result"]["session_id"]
+        .as_str()
+        .expect("a governed session")
+        .to_owned();
+    hub.send(1, json!({"jsonrpc":"2.0","id":22,"method":"plugin.boopis.mode.set","params":{"session_id":session,"mode":"governed"}}))
+        .await
+        .unwrap();
+    let (mode, _) = response(&mut rx, 22).await;
+    assert!(mode.get("error").is_none(), "{mode}");
     let frames = turn(&hub, &mut rx, 4, &session,
         r#"@@call request_input {"kind":"question","title":"Which branch?","schema":{"type":"object","properties":{"branch":{"type":"string"}}}}@@ @@reply asked@@"#).await;
     assert!(

@@ -3,8 +3,13 @@
 Two fake model endpoints serve different model ids, and each model id has a fixed behaviour (its script), so which
 tier did the work is a fact of the servers' request logs:
 
-    endpoint 1 ("main")    serves  claude-opus-5-6 (the session model)  and  claude-opus-5-5 (tier 1, "cheap")
-    endpoint 2 ("second")  serves  claude-fable-5-2 (tier 2, "strong")
+    endpoint 1 (OpenRouter)  serves  claude-opus-5-6 (the session model)  and  claude-opus-5-5 (tier 1, "cheap")
+    endpoint 2 (DeepSeek)    serves  claude-fable-5-2 (tier 2, "strong")
+
+Governed mode never runs on a custom endpoint (ADR-0039), and the engine reports every user-defined
+``providers:`` entry as ``custom``. So the two endpoints are two of the engine's built-in providers, each
+pointed at its fake server through the base URL variable the engine reads (``OPENROUTER_BASE_URL``,
+``DEEPSEEK_BASE_URL``); the model ids stay frontier-shaped.
 
 The project is a real, tiny one: ``calc.add`` has a bug, ``tests/test_calc.py`` is its test suite, and the pinned
 gate command runs it. Model A's attempt is wrong, so the gate blocks and the workspace comes back; the plugin (not
@@ -24,7 +29,7 @@ from typing import Any
 import pytest
 from fake_model_server import FakeModelServer, RecordedRequest
 from hx_ws_client import GatewayClient
-from stack import HX_BIN, HermesInstall, HermesStack, run_stack
+from stack import GOVERNED_KEY, GOVERNED_PROVIDER, HX_BIN, SECOND_PROVIDER, HermesInstall, HermesStack, run_stack
 
 JsonObject = dict[str, Any]
 
@@ -85,31 +90,21 @@ def stack(
         "ladder": {
             "same_tier_scope_retry": True,
             "tiers": [
-                {"name": "cheap", "model": "main/claude-opus-5-5", "effort": "low"},
-                {"name": "strong", "model": "second/claude-fable-5-2", "effort": "high"},
+                {"name": "cheap", "model": f"{GOVERNED_PROVIDER}/claude-opus-5-5", "effort": "low"},
+                {"name": "strong", "model": f"{SECOND_PROVIDER}/claude-fable-5-2", "effort": "high"},
             ],
         },
     }
     extra: JsonObject = {
-        "model": {"provider": "main", "default": "claude-opus-5-6"},
         "delegation": {"backend": "boopis"},  # set by the host or installer, with consent (ADR-0007)
-        "providers": {
-            "main": {
-                "models": {
-                    "claude-opus-5-6": {"context_length": 200000},
-                    "claude-opus-5-5": {"context_length": 200000},
-                }
-            },
-            "second": {
-                "api": two.url,
-                "api_key": "k2",
-                "transport": "openai_chat",
-                "discover_models": False,
-                "models": {"claude-fable-5-2": {"context_length": 200000}},
-            },
-        },
     }
-    yield from run_stack(hermes_install, stack_root / "cascade", one.url, settings, extra)
+    env = {
+        "OPENROUTER_BASE_URL": one.url,
+        "OPENROUTER_API_KEY": GOVERNED_KEY,
+        "DEEPSEEK_BASE_URL": two.url,
+        "DEEPSEEK_API_KEY": "fake-key-2",
+    }
+    yield from run_stack(hermes_install, stack_root / "cascade", one.url, settings, extra, env)
 
 
 @pytest.fixture(scope="module")
@@ -163,7 +158,7 @@ def start_session(gw: GatewayClient, project: Path) -> str:
             "cwd": str(project),
             "request_id": f"req-{time.time_ns()}",
             "model": "claude-opus-5-6",
-            "provider": "main",
+            "provider": GOVERNED_PROVIDER,
             "toolsets": ["boopis"],
             "client": {"name": "boopis-e2e", "version": "0"},
         },
@@ -281,8 +276,8 @@ def test_a_gate_block_climbs_to_the_stronger_model_and_the_orchestrator_hears_th
     ]
     claimed = of_type(ledger, "task.claimed")
     assert [c["worker"] for c in claimed] == [
-        "worker:main/claude-opus-5-5",
-        "worker:second/claude-fable-5-2",
+        f"worker:{GOVERNED_PROVIDER}/claude-opus-5-5",
+        f"worker:{SECOND_PROVIDER}/claude-fable-5-2",
     ]
     (scored,) = of_type(ledger, "outcome.scored")
     assert (scored["solved"], scored["model"], scored["evidence"]["source"]) == (
@@ -294,8 +289,8 @@ def test_a_gate_block_climbs_to_the_stronger_model_and_the_orchestrator_hears_th
     # the children's usage is in the parent's ledger, tagged with the task, the tier and the worker role
     usage = [e for e in ledger if e["type"] == "usage.recorded" and e["payload"].get("role") == "worker"]
     assert {(u["payload"]["tier"], u["payload"]["model"], u["actor"]) for u in usage} == {
-        ("cheap", "claude-opus-5-5", "worker:main/claude-opus-5-5"),
-        ("strong", "claude-fable-5-2", "worker:second/claude-fable-5-2"),
+        ("cheap", "claude-opus-5-5", f"worker:{GOVERNED_PROVIDER}/claude-opus-5-5"),
+        ("strong", "claude-fable-5-2", f"worker:{SECOND_PROVIDER}/claude-fable-5-2"),
     }
     assert {u["payload"]["task_id"] for u in usage} == {task_id}
     tools = [e for e in ledger if e["type"] == "tool.called" and e["payload"].get("role") == "worker"]
@@ -318,7 +313,9 @@ def test_a_gate_block_climbs_to_the_stronger_model_and_the_orchestrator_hears_th
     system = next(m["content"] for m in a_requests[0].messages if m.get("role") == "system")
     assert "boopis: governed worker" in system
     assert "You are the orchestrator" not in system
-    orch_system = next(m["content"] for m in one.chat_requests()[before[0] :][0].messages if m.get("role") == "system")
+    # the orchestrator's own first request (a side call, such as the title, may be the first the server got)
+    orchestrator = next(r for r in one.chat_requests()[before[0] :] if r.model == "claude-opus-5-6")
+    orch_system = next(m["content"] for m in orchestrator.messages if m.get("role") == "system")
     assert "You are the orchestrator" in orch_system
     # the next tier was handed the brief and the failure, not the transcript
     handed = user_text(b_requests[0])

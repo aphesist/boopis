@@ -20,7 +20,7 @@ from typing import Any
 import pytest
 from fake_model_server import FakeModelServer
 from hx_ws_client import GatewayClient
-from stack import HermesInstall, HermesStack, run_stack
+from stack import GOVERNED_PROVIDER, HermesInstall, HermesStack, run_stack
 
 JsonObject = dict[str, Any]
 HX_BIN = os.environ.get("HX_BIN", "")
@@ -87,16 +87,10 @@ def endpoint() -> Iterator[FakeModelServer]:
 def stack(hermes_install: HermesInstall, stack_root: Path, endpoint: FakeModelServer) -> Iterator[HermesStack]:
     settings = {
         "hx_path": HX_BIN,
-        "ladder": {"tiers": [{"name": "cheap", "model": "main/claude-opus-5-5", "effort": "low"}]},
+        "ladder": {"tiers": [{"name": "cheap", "model": f"{GOVERNED_PROVIDER}/claude-opus-5-5", "effort": "low"}]},
     }
     extra: JsonObject = {
-        "model": {"provider": "main", "default": "claude-opus-5-6"},
         "delegation": {"backend": "boopis"},
-        "providers": {
-            "main": {
-                "models": {"claude-opus-5-6": {"context_length": 200000}, "claude-opus-5-5": {"context_length": 200000}}
-            }
-        },
     }
     yield from run_stack(hermes_install, stack_root / "exec-worker", endpoint.url, settings, extra)
 
@@ -169,7 +163,7 @@ def test_a_worker_runs_exec_in_the_sandbox_and_every_kernel_call_is_governed(
             "cwd": str(project),
             "request_id": f"req-{time.time_ns()}",
             "model": "claude-opus-5-6",
-            "provider": "main",
+            "provider": GOVERNED_PROVIDER,
             "toolsets": ["boopis"],
             "client": {"name": "boopis-e2e", "version": "0"},
         },
@@ -202,7 +196,9 @@ def test_a_worker_runs_exec_in_the_sandbox_and_every_kernel_call_is_governed(
     # the orchestrator never had exec; the worker's kernel calls are in the parent's ledger, tagged as the worker's
     kernel = [e for e in by("tool.called") if e["payload"].get("via") == "exec"]
     assert [e["payload"]["tool"] for e in kernel].count("pack") == 2
-    assert all(e["payload"]["role"] == "worker" and e["actor"] == "worker:main/claude-opus-5-5" for e in kernel)
+    assert all(
+        e["payload"]["role"] == "worker" and e["actor"] == f"worker:{GOVERNED_PROVIDER}/claude-opus-5-5" for e in kernel
+    )
     denied = [e["payload"] for e in kernel if e["payload"]["tool"] == "write_file"]
     assert [(d["status"], d["error_code"]) for d in denied] == [("blocked", "hx.policy.denied")]
     execs = [e["payload"] for e in by("tool.called") if e["payload"]["tool"] == "exec"]

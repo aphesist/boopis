@@ -18,7 +18,7 @@ from typing import Any
 import pytest
 from fake_model_server import FakeModelServer
 from hx_ws_client import GatewayClient
-from stack import HermesInstall, HermesStack
+from stack import GOVERNED_PROVIDER, HermesInstall, HermesStack
 from test_plugin_e2e import create_session, run_prompt
 
 SHA = "a1" * 20
@@ -141,7 +141,7 @@ def test_the_skills_register_namespaced_and_a_governed_session_does_not_carry_th
     # a governed session's toolsets are the boopis tools only: no skills tool, so neither skill can be listed or read.
     # (this project has the switch off, so the bot's engine plugin does not stop the session: the next test is that)
     gateway.result("plugin.boopis.store.policy.set", {"cwd": str(stack.workdir), "block": False})
-    governed = create_session(gateway, stack, toolsets=["boopis"])
+    governed = create_session(gateway, stack, toolsets=["boopis"], provider=GOVERNED_PROVIDER)
     assert gateway.result("plugin.boopis.mode.set", {"session_id": governed, "mode": "governed"}) == {}
     mark = len(fake_model.chat_requests())
     run_prompt(gateway, governed, '@@call skill_view {"name": "e2e-kit:audit"}@@')
@@ -170,7 +170,7 @@ def test_a_governed_session_in_a_project_with_the_switch_on_is_refused_while_the
     project.mkdir(parents=True)
     policy = gateway.result("plugin.boopis.store.policy.get", {"cwd": str(project)})
     assert policy["governed"] is True and policy["explicit"] is None and policy["effective"] is True
-    sid = create_session(gateway, stack, cwd=str(project), toolsets=["boopis"])
+    sid = create_session(gateway, stack, cwd=str(project), toolsets=["boopis"], provider=GOVERNED_PROVIDER)
     gateway.result("plugin.boopis.mode.set", {"session_id": sid, "mode": "governed"})
     before = len(fake_model.chat_requests())
     turn = run_prompt(gateway, sid, "@@reply this must not be answered@@")

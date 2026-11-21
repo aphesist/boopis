@@ -32,6 +32,17 @@ AUX_TASKS = (
     "tts_audio_tags", "voice_chat", "triage_specifier", "kanban_decomposer", "profile_describer",
     "goal_judge", "group_router", "curator", "monitor", "background_review", "moa_reference", "moa_aggregator",
 )  # fmt: skip
+# The engine's own provider for the governed tests (ADR-0039). The engine reports every user-defined
+# ``providers:`` entry as ``custom``, and custom endpoints can never run governed mode whatever their model is
+# called, so the governed sessions run on a built-in provider whose base URL the engine reads from the
+# environment: OpenRouter (``OPENROUTER_BASE_URL``, OpenAI chat completions, the engine reports it as
+# ``openrouter``). The model ids stay frontier-shaped.
+GOVERNED_PROVIDER = "openrouter"
+GOVERNED_KEY = "sk-or-v1-fake-e2e-key"  # OpenRouter keys start with sk-or- (the engine checks)
+# A second built-in provider, for the tests that need two endpoints (the cascade's stronger tier): DeepSeek reads its
+# base URL from ``DEEPSEEK_BASE_URL`` and speaks OpenAI chat completions too; the engine reports it as ``deepseek``.
+SECOND_PROVIDER = "deepseek"
+SIDE_PROVIDER = "side"
 PLUGIN_SRC = Path(__file__).resolve().parents[2] / "plugins" / "boopis"
 sys.path.insert(0, str(PLUGIN_SRC.parent))  # the plugin package is importable as `boopis` (trust-store helpers)
 HX_BIN = os.environ.get("HX_BIN", "")  # a built hx (cargo build -p hx); the pack and ship tests skip without it
@@ -111,7 +122,11 @@ class HermesStack:
         self.workdir = root / "work"
         # What the real host puts in the environment of the gateway it starts (its secret channel): set before
         # ``start``, which is what launches the gateway, so that gateway has it.
-        self.host_env = dict(host_env or {})
+        self.host_env = {
+            "OPENROUTER_BASE_URL": model_url,
+            "OPENROUTER_API_KEY": GOVERNED_KEY,
+            **(host_env or {}),
+        }
         self.started = False
 
     @property
@@ -156,8 +171,11 @@ class HermesStack:
             "model_catalog": {"enabled": False},
             "models_dev": {"url": self.model_url.removesuffix("/v1") + "/models-dev-api.json"},
             "tools": {"tool_search": {"enabled": "off"}},  # ADR-0014: direct tool surface
-            "providers": {"main": provider},
-            "auxiliary": {t: {"provider": "main", "model": AUX_MODEL} for t in AUX_TASKS},
+            # ``side`` serves the engine's own side calls. It is not ``main``: "main" in an auxiliary task means the
+            # provider of the session's runtime, which in a governed session is a built-in one that the engine would
+            # reach on the real network.
+            "providers": {"main": provider, SIDE_PROVIDER: provider},
+            "auxiliary": {t: {"provider": SIDE_PROVIDER, "model": AUX_MODEL} for t in AUX_TASKS},
             "plugins": {
                 "enabled": ["boopis"],
                 "entries": {"boopis": {"settings": self.plugin_settings}},
@@ -211,9 +229,10 @@ def run_stack(
     model_url: str,
     plugin_settings: Mapping[str, Any],
     extra_config: Mapping[str, Any] | None = None,
+    host_env: Mapping[str, str] | None = None,
 ) -> Iterator[HermesStack]:
     """A fixture body: start a stack, yield it, always stop it."""
-    stack = HermesStack(install, root, model_url, plugin_settings, extra_config)
+    stack = HermesStack(install, root, model_url, plugin_settings, extra_config, host_env)
     try:
         stack.start()
         yield stack
