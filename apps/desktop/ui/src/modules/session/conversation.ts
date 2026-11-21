@@ -13,6 +13,7 @@ import { sessionComposer } from './composer';
 import type { SessionComposer } from './composer';
 import { copyText, mdOf, randomId } from './shared';
 import { openPanel } from './right';
+import { councilBlock, drawCouncil } from './council';
 import { setAttention, changed } from './state';
 import { surface } from '../mods/surfaces';
 
@@ -177,6 +178,7 @@ function assistantTurn(a: AgentTurn): HTMLElement {
   });
   t.dataset['turnId'] = a.id;
   if (a.forms?.length) $('.ui-entry__body', t).append(formsBlock(a.forms));
+  if (a.council) p.before(councilBlock(a.council));
   if (VIEW.blank) showShip(false);
   if (VIEW.diffOpen) refreshDiff();
   return t;
@@ -190,6 +192,7 @@ function liveTurn(a: AgentTurn): void {
   const ol = ui.steps({ items: [], id });
   const t = turn({ kind: 'agent', callno: [...metaLines(a.model, a.why), '0s'], steps: { count: 0, id, open: true }, label: modelSay(a.model) + ', working', body: [ol], md: () => '' });
   t.setAttribute('aria-busy', 'true');
+  if (a.council) $('.ui-entry__body', t).append(councilBlock(a.council));
   const disc = $('.ui-disclosure', t), timeEl = timeLine(t);
   $('span', disc).textContent = 'Working'; disc.prepend(frag(ui.html.dot('run')));
   const L: Live = { t, ol, disc, timeEl, tick: 0, secs: 0, model: a.model, why: a.why, count: 0, startedAt: Date.now(), prose: null, blankEl: null };
@@ -278,6 +281,7 @@ function onConversationEvent(ev: ConversationEvent): void {
   else if (ev.type === 'form-opened') addForm(ev.turnId, ev.form);
   else if (ev.type === 'form-resolved') resolveForm(ev.formId, ev.status);
   else if (ev.type === 'turn-model') { const L = live.get(ev.turnId); if (L) { L.model = ev.model; setModelLines(L.t, ev.model, L.why); } }
+  else if (ev.type === 'council') { const b = col.querySelector<HTMLElement>('[data-turn-id="' + ev.turnId + '"] .ss-council'); if (b) drawCouncil(b, ev.council); }
   else if (ev.type === 'turn-finished') finishLive(ev.turnId, ev);
   else if (ev.type === 'blank-answered') {
     const first = !VIEW.blank;

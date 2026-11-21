@@ -2,7 +2,8 @@
    provider's logo and each model's readable name. Pure: it builds the entries, the composer opens them in the kit's listbox. */
 import { ui } from '@boopis/ui';
 import type { SelectEntry, SelectOption } from '@boopis/ui';
-import type { ModelChoice } from '../../data';
+import type { CouncilSay, ModelChoice } from '../../data';
+import { COUNCIL_DESC, COUNCIL_KEYS, COUNCIL_VALUE } from './council';
 import { smartPick } from '../../data/smart';
 import type { SmartInput } from '../../data/smart';
 
@@ -15,7 +16,7 @@ export const FOOT_GOVERNED = 'Governed: your pick is where the ladder starts. Th
 export const currentChoice = (choices: readonly ModelChoice[], current: string): ModelChoice | undefined =>
   choices.find((c) => c.value === current) ?? choices.find((c) => ui.modelMark.same(c.value, current));
 
-export function modelEntries(choices: readonly ModelChoice[], o: { current: string; governed: boolean }): SelectEntry[] {
+export function modelEntries(choices: readonly ModelChoice[], o: { current: string; governed: boolean; council?: CouncilSay }): SelectEntry[] {
   const list = [...choices];
   /* the model answering now is always on the list, even when the engine did not offer it */
   if (o.current && !currentChoice(list, o.current)) {
@@ -37,6 +38,7 @@ export function modelEntries(choices: readonly ModelChoice[], o: { current: stri
   }
   return [
     { value: SMART_VALUE, label: 'Automatic (Smart)', desc: SMART_DESC, icon: 'spark' },
+    ...(o.council ? [{ value: COUNCIL_VALUE, label: 'Ask a council', desc: o.council.ok ? COUNCIL_DESC : o.council.reason, icon: 'bots', keys: COUNCIL_KEYS, ...(o.council.ok ? {} : { disabled: true }) }] : []),
     ...[...groups.values()].map((g) => ({ label: g.name, model: g.first, options: g.options }))
   ];
 }

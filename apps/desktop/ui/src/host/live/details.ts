@@ -59,6 +59,8 @@ export interface LiveDetails {
    *  per-session model switch (ungoverned) or the plugin's start tier (governed), and say who will answer and why. Rejects when the
    *  switch fails: the message must not be answered by a model nobody chose. */
   prepareSend(uiId: string, text: string, meta?: { attachments: number }): Promise<{ model: string; why: string | null }>;
+  /** what a council needs of a session: the models on offer, the tiers, the session's model and mode, whether a turn runs */
+  councilContext(uiId: string): { options: ModelOptionsWire | null; ladder: LadderTier[]; current: string; governed: boolean; running: boolean };
   /** the model the session answers with now (the engine's, or the user's pick), 'provider/model', for a turn that has not heard from the engine */
   currentModel(uiId: string): string;
   /** the mode and model the user chose before the first message, to apply at creation */
@@ -354,6 +356,7 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
       return { model: value, why };
     },
     currentModel(uiId) { return modelOf(model(uiId)); },
+    councilContext(uiId) { const m = model(uiId); return { options, ladder: ladderOf(m), current: modelOf(m), governed: governedOf(m), running: m.running }; },
     chosen(uiId) { const m = model(uiId); return { governed: m.wantGoverned, model: m.wantModel }; },
     governedAtCreation(uiId) { return pluginOk && (model(uiId).wantGoverned ?? (defaultMode ?? 'governed') === 'governed'); },
     async settled() { flush(); while (inflight.size) await Promise.allSettled([...inflight]); }

@@ -10,7 +10,7 @@ import { botIdBase } from './bot-id';
 import { createModsModel } from './mods-model';
 import { emitter, feed, store } from './store';
 import type {
-  AgentTurn, ApprovalMessage, ArchivedBot, Bot, BotConfig, ContextUsage, ConversationEvent, DiffFile, RunSnapshot, SessionSummary, TextMessage, ThreadMessage, Turn, Wait
+  CouncilSource, AgentTurn, ApprovalMessage, ArchivedBot, Bot, BotConfig, ContextUsage, ConversationEvent, DiffFile, RunSnapshot, SessionSummary, TextMessage, ThreadMessage, Turn, Wait
 } from './types';
 import * as M from './mock-data';
 import { createMockGroups } from './mock-groups';
@@ -419,6 +419,13 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
   /* the mock has no mods: a session's mods are always empty, and a press goes nowhere */
   const noMods = createModsModel();
   const mods: ModsSource = { ...noMods.source, press() { /* no mods */ }, input() { /* no mods */ }, select() { /* no mods */ }, props() { /* no mods */ } };
+  /* a council is the engine's (several models answer, one combines them): the page build has none, and says so */
+  const council: CouncilSource = {
+    can: () => ({ ok: false, reason: 'A council runs in the desktop app, on your models. This page is a preview.' }),
+    prepare: () => Promise.reject(new Error('A council needs the desktop app.')),
+    arm: () => Promise.reject(new Error('A council needs the desktop app.')),
+    armed: () => null, disarm() { /* nothing is armed */ }, subscribe: () => () => undefined
+  };
   const groups = createMockGroups({ bots: () => bots, simulate, seed: !!opts.fixtures?.includes('groups') });
-  return { info: { live: false, preview: new Set(), unavailable: {} }, ready: Promise.resolve(), user: store(M.USER), sessions, details, bots: botsSource, groups, waits: waitsSource, forms, run: runSource, schedules, feedforward, dictation, files, mods };
+  return { info: { live: false, preview: new Set(), unavailable: {} }, ready: Promise.resolve(), user: store(M.USER), sessions, details, bots: botsSource, groups, waits: waitsSource, forms, run: runSource, schedules, feedforward, dictation, files, council, mods };
 }

@@ -257,6 +257,8 @@ export interface AgentTurn {
   /** why Smart picked this model, in a few words ("debugging"); absent when a person picked it or the engine's default answered */
   why?: string | undefined;
   status: 'done' | 'running' | 'stopped';
+  /** a council turn: the members' answers and the combiner (`host/live/council.ts`); absent on every other turn */
+  council?: CouncilTurn | undefined;
 }
 export type Turn = UserTurn | AgentTurn;
 export interface Conversation { turns: readonly Turn[] }
@@ -268,6 +270,8 @@ export type ConversationEvent =
   /** the model (route) of a running turn changed: the ladder escalated, or the engine named the model that took over */
   | { type: 'turn-model'; turnId: string; model: string }
   | { type: 'blank-answered'; turnId: string; answer: string }
+  /** a council turn's members answered (one more of them, or the combiner started); the whole state of the council, replacing the last */
+  | { type: 'council'; turnId: string; council: CouncilTurn }
   /** a blank was opened while the turn runs (the live provider's, additive) */
   | { type: 'blank-opened'; turnId: string; blank: BlankData }
   /** a form was opened where this turn raised it, and later answered, cancelled or lapsed (here or in another place) */
@@ -280,6 +284,38 @@ export type ConversationEvent =
 
 export interface DiffFile { path: string; add: number; del: number; hunks: ReadonlyArray<readonly [header: string, lines: readonly string[]]> }
 export interface SendMeta { governed: boolean; smart: boolean; model: string; assume: readonly string[]; /** files and folders attached to the message (Smart counts them) */ attachments?: readonly Attached[] }
+/* ───────── the council: several models answer one message and one combines them ───────── */
+/** a model of the council as the engine names it: its provider's slug and the model id (`model.options`) */
+export interface CouncilSlot { provider: string; model: string }
+/** who sits on a council: at least `MIN_COUNCIL` members (each answers once, without tools) and the combiner (the session's model by default; it keeps the tools) */
+export interface CouncilChoice { members: readonly CouncilSlot[]; combiner: CouncilSlot }
+export const MIN_COUNCIL = 2;
+/** one member's answer: waiting until it comes, then its text, or the reason it failed */
+export interface CouncilMember { slot: CouncilSlot; state: 'waiting' | 'answered' | 'failed'; text: string }
+/** what a council turn shows: every member, the combiner, and how far it has got */
+export interface CouncilTurn {
+  members: readonly CouncilMember[]; combiner: CouncilSlot | null;
+  /** the members answer first, then the combiner writes the answer */
+  phase: 'members' | 'combining' | 'done';
+  /** how many members have answered, of how many */
+  done: number; total: number;
+}
+/** what the form needs before it opens: what is on offer, and where it starts */
+export interface CouncilForm { options: readonly ModelChoice[]; choice: CouncilChoice; remembered: boolean }
+export type CouncilSay = { ok: true } | { ok: false; reason: string };
+export interface CouncilSource {
+  /** whether a council may be asked of this session now, or why not (a governed session, a turn running) */
+  can(uiId: string): CouncilSay;
+  /** what the form starts from: the last council (read from the profile's configuration), else the best model of each provider */
+  prepare(uiId: string): Promise<CouncilForm>;
+  /** write the council's preset through the engine's own configuration command, then make the next message of this session a council's. Rejects with a sentence when the engine refuses */
+  arm(uiId: string, choice: CouncilChoice): Promise<void>;
+  /** the council the next message of this session goes to, if one is armed */
+  armed(uiId: string): CouncilChoice | null;
+  disarm(uiId: string): void;
+  subscribe(fn: () => void): () => void;
+}
+
 /** a model the user can have answer the next messages: a tier of the ladder, or a model of another configured provider */
 export interface ModelChoice {
   /** 'provider/model': what a pick is called to the engine's per-session switch */

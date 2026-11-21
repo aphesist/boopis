@@ -71,6 +71,7 @@ export const KEYGROUPS: ReadonlyArray<readonly [string, ReadonlyArray<readonly [
     ['Governed or ungoverned', 'alt+G'],
     ['Smart on or off', 'alt+S'],
     ['Who answers next: the model menu (the first entry is Automatic, Smart)', 'alt+M'],
+    ['Ask a council: several models answer the next message, one combines them', 'alt+C'],
     ['Attach files', 'alt+A'],
     ['Talk: a tap toggles listening, a hold talks while held', 'alt+V'],
     ['Stop listening (while listening)', 'esc']
