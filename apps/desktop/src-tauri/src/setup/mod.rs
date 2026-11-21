@@ -991,6 +991,32 @@ impl Setup {
         needed
     }
 
+    /// The hub's "continue": read what is connected and keep the concrete choice (a decision), so a later run does not resolve it
+    /// again. "Do it later" is the free choice and is kept as it is.
+    async fn resolve_connected(
+        &self,
+        state: &mut State,
+        chatgpt_signed_in: bool,
+        xai_signed_in: bool,
+    ) {
+        if state.choice.as_deref() != Some(providers::CONNECTED) {
+            return;
+        }
+        let pre = providers::Input {
+            choice: None,
+            picks: &[],
+            free_note: None,
+            reopen: false,
+            claude: self.claude.as_ref(),
+            chatgpt_signed_in,
+            xai_signed_in,
+            grok: self.grok.as_ref(),
+            optins: state.optins(),
+        };
+        state.choice =
+            Some(providers::connected_choice(self.ops.as_ref(), self.secrets.as_ref(), &pre).await);
+    }
+
     async fn models_step(&self, run: &mut Run, state: &mut State) {
         let (id, title) = ("models", "Models and keys");
         let mut restart = false;
@@ -1029,24 +1055,8 @@ impl Setup {
             Some(x) => x.signed_in().await.unwrap_or(false),
             None => false,
         };
-        // The hub's "continue": read what is connected and keep the concrete choice (a decision), so a later run does not
-        // resolve it again; "do it later" is the free choice, kept as it is.
-        if state.choice.as_deref() == Some(providers::CONNECTED) {
-            let pre = providers::Input {
-                choice: None,
-                picks: &[],
-                free_note: None,
-                reopen: false,
-                claude: self.claude.as_ref(),
-                chatgpt_signed_in,
-                xai_signed_in,
-                grok: self.grok.as_ref(),
-                optins: state.optins(),
-            };
-            state.choice = Some(
-                providers::connected_choice(self.ops.as_ref(), self.secrets.as_ref(), &pre).await,
-            );
-        }
+        self.resolve_connected(state, chatgpt_signed_in, xai_signed_in)
+            .await;
         let input = providers::Input {
             choice: state.choice.as_deref(),
             picks: &state.picks,

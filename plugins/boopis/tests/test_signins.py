@@ -10,7 +10,6 @@ import time
 from pathlib import Path
 from typing import Any
 
-import pytest
 from boopis.hostsecrets.channel import ChannelError
 from boopis.signins import chatgpt
 from boopis.signins.pool import Grant

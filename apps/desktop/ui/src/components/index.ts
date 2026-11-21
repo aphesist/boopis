@@ -32,6 +32,7 @@ import type { SelectEntry, SelectGroup, SelectOpts, SelectOption } from './selec
 import { shape } from './shape';
 import { squircle } from './squircle';
 import { toast } from './toast';
+import type { SigninButtonOpts } from './signin-button';
 import { tooltip } from './tooltip';
 import { hydrate, hydrateOne } from './wire';
 import { scrollClass } from './scroll';
@@ -73,7 +74,8 @@ const factories = {
   empty: make<Parameters<typeof html.empty>[0]>(html.empty),
   row: make<RowOpts, HTMLLIElement>(html.row),
   group: make<Parameters<typeof html.group>[0]>(html.group),
-  child: make<ChildOpts, HTMLElement>(html.child)
+  child: make<ChildOpts, HTMLElement>(html.child),
+  signinButton: make<SigninButtonOpts, HTMLButtonElement>(html.signinButton)
 };
 const legend = (parts: readonly MeasurePart[], fmt?: (n: number) => string): HTMLElement => frag(html.legend(parts, fmt));
 const keys = (k: string): HTMLElement => frag(html.keys(k));
@@ -110,6 +112,8 @@ export { modViewUpdate } from './mod-view';
 export type { ModEvent, ModRoot } from './mod-view';
 export { MARK, parseLiteral, setTokenReader } from './mod-colors';
 export { welcomeLogo } from './logo';
+export { BRANDS as SIGNIN_BRANDS_DEF, SIGNIN_BRANDS, signinLabel } from './signin-button';
+export type { SigninBrand, SigninButtonOpts } from './signin-button';
 export { progressDots, setProgress } from './progress';
 export { kbd, keys as keyChips, combo, comboKbds, keysVariants } from './kbd';
 export type { KeysOpts } from './kbd';

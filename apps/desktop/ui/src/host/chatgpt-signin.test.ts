@@ -12,7 +12,7 @@ import type { ConnectorLogin } from './bindings';
 const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 /* the program's sign-in has a page and nothing to type */
 const PAGE = { verification_url: 'https://auth.openai.com/api/accounts/authorize?client_id=dynamic_agent_client&state=s', user_code: '', expires_at: Date.now() + 15 * 60000 };
-const OUT: ChatgptStatus = { state: 'signed_out', plan: null, code: null, route: null, account: null, notice: null };
+const OUT: ChatgptStatus = { state: 'signed_out', plan: null, code: null, account: null, notice: null };
 
 function fake(over: Partial<ChatgptBridge> = {}): ChatgptBridge & { calls: string[]; end: (e: ChatgptSigninEvent) => void; listening: () => boolean } {
   let listener: ((e: ChatgptSigninEvent) => void) | null = null;
@@ -41,7 +41,7 @@ describe('the ChatGPT sign-in card', () => {
     const b = fake();
     let signedIn = 0;
     mountChatgptSignin(host, b, { label: 'Sign in with ChatGPT', onSignedIn: () => { signedIn += 1; } });
-    expect(act(host, 'start')?.textContent).toBe('Sign in with ChatGPT');
+    expect(act(host, 'start')?.querySelector('.ui-sso__label')?.textContent, 'the lab\u2019s own button, with its own words').toBe('Continue with ChatGPT');
     act(host, 'start')?.click();
     await tick(); await tick();
     expect(host.querySelector('[data-code]'), 'the page does everything: nothing to type').toBeNull();

@@ -362,12 +362,13 @@ mod tests {
             (ProviderStatus::Connected, Some("octocat"))
         );
 
-        // a sign-in from before the program says so, in the detail, beside the plan
+        // a sign-in from before the program is cut off: it is signed out, with the one notice and Sign in on offer
         store.set("boopis.chatgpt", "access_token", "a").unwrap();
         store.set("boopis.chatgpt", "refresh_token", "r").unwrap();
         let st = s.status(CHATGPT).await.unwrap();
-        assert_eq!(st.status, ProviderStatus::Connected);
-        assert!(st.detail.unwrap().contains("Sign in again"));
+        assert_eq!(st.status, ProviderStatus::SignedOut);
+        assert!(st.detail.unwrap().contains("Sign in with ChatGPT"));
+        assert!(store.get("boopis.chatgpt", "access_token").unwrap().is_none());
         assert_eq!(
             s.status("anthropic.signin").await.unwrap_err().code(),
             "hx.provider.unsupported"

@@ -18,6 +18,10 @@ export interface SetupBridge {
   source(): Promise<SourceInfo | null>;
   /** be told how far the unpack has come while `advance` runs; resolves to a function that stops listening */
   onProgress(cb: (p: SetupProgress) => void): Promise<() => void>;
+  /** what the host wrote for the models (the summary after the hub); absent where a bridge cannot say */
+  modelsView?(): Promise<ModelsView>;
+  /** the host forgets the models choice so the next `advance` asks it again (the summary's "change my starting model") */
+  reopen?(): Promise<void>;
 }
 
 async function call<T>(p: Promise<T>): Promise<T> {
@@ -29,7 +33,9 @@ export function tauriSetupBridge(): SetupBridge {
     check: () => call(commands.setupCheck(null)),
     advance: async (answer, reconsider) => (await call(commands.setupAdvance(null, answer, reconsider))) as SetupStatus,
     source: () => Promise.resolve(commands.engineSourceGet()).catch(() => null),
-    onProgress: (cb) => events.setupProgress.listen((e) => { cb(e.payload); })
+    onProgress: (cb) => events.setupProgress.listen((e) => { cb(e.payload); }),
+    modelsView: () => call(commands.setupModelsView(null)),
+    reopen: reopenModels
   };
 }
 

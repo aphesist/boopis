@@ -16,6 +16,7 @@
    up again). `destroy` takes the card away and stops listening; the host's wait goes on (Cancel ends it, and so does the
    code's lifetime). A flow with no code to type gives `code: ''`, and the card then shows the page button and the wait only. */
 import { ui } from '@boopis/ui';
+import type { SigninBrand } from '@boopis/ui';
 import { commands, events } from './bindings';
 import type { ProviderState, SigninCode } from './bindings';
 import { asHostError } from './bridge';
@@ -57,6 +58,8 @@ export interface SigninBridge {
 export interface SigninCopy {
   /** the `data-signin` mark: `chatgpt`, `github-copilot` */
   provider: string;
+  /** the lab's branded button (ADR-0040) for the first button; none draws the plain primary button */
+  brand?: SigninBrand;
   /** the first button, when no sign-in waits */
   button: string;
   /** the button while the host starts the sign-in */
@@ -112,7 +115,11 @@ export function mountSigninCard(host: HTMLElement, bridge: SigninBridge, copy: S
     waiting = false;
     const kids: Node[] = [];
     if (note) kids.push(el('p', { role: alert ? 'alert' : 'status', style: 'margin:0;color:' + (alert ? 'var(--red-text)' : 'var(--text-dim)') }, note));
-    kids.push(button(note ? 'Try again' : (opts.label ?? copy.button), 'primary', () => { void begin(); }, { 'data-act': 'start' }));
+    if (copy.brand && !note) {
+      const b = ui.signinButton({ brand: copy.brand, attrs: { 'data-act': 'start' } });
+      b.addEventListener('click', (e) => { e.preventDefault(); void begin(); });
+      kids.push(b);
+    } else kids.push(button(note ? 'Try again' : (opts.label ?? copy.button), 'primary', () => { void begin(); }, { 'data-act': 'start' }));
     draw(...kids);
   };
   const showPage = (page: SigninPage): void => {
@@ -151,7 +158,8 @@ export function mountSigninCard(host: HTMLElement, bridge: SigninBridge, copy: S
     idle(e.message || 'The sign-in did not finish.', e.outcome !== 'cancelled');
   };
   const begin = async (): Promise<void> => {
-    draw(button(copy.starting, 'primary', () => undefined, { disabled: '', 'data-act': 'start' }));
+    if (copy.brand) draw(ui.signinButton({ brand: copy.brand, disabled: true, attrs: { 'data-act': 'start' } }));
+    else draw(button(copy.starting, 'primary', () => undefined, { disabled: '', 'data-act': 'start' }));
     try {
       stop ??= await bridge.onEnd(ended).catch(() => null);
       const page = await bridge.start();

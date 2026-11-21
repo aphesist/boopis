@@ -1,0 +1,40 @@
+/* First run (host/first-run.ts, ADR-0040): one calm surface, a step at a time, with where you are above it. Built from the kit's
+   own components (buttons, the setting rows, the pages dots, the form card, the model mark and the sign-in button) and the
+   tokens: spacing from --sp-*, corners from --r-*, type from --fs-*, colour from the preset. Nothing here redefines a kit class. */
+.hx-first-run { position: fixed; inset: 0; z-index: var(--z-palette); display: grid; background: var(--bg-2); color: var(--text); font: var(--fs-m)/var(--lh) var(--sans); }
+.fr-shell { margin: auto; display: grid; gap: var(--sp-5); justify-items: center; width: 100%; box-sizing: border-box; padding: var(--sp-6) var(--sp-4); }
+.fr-shell > .ui-logo--welcome { margin-bottom: var(--sp-3); }
+.fr-progress { display: flex; align-items: center; justify-content: center; gap: var(--sp-3); color: var(--text-quiet); font: var(--fs-xs)/var(--lh-ui) var(--sans); }
+.fr-progress__text { white-space: nowrap; }
+.fr-card { box-sizing: border-box; width: min(100%, var(--measure)); padding: var(--sp-5); border-radius: var(--r-m); background: var(--bg-1); box-shadow: inset 0 0 0 1px var(--hair); }
+.fr-card[data-wide] { width: min(100%, calc(var(--measure) * 3 / 2)); }
+.fr-stack { display: grid; gap: var(--sp-4); min-width: 0; }
+.fr-title { margin: 0; font: 600 var(--fs-xl)/var(--lh-tight) var(--sans); color: var(--text-strong); }
+.fr-lede { margin: 0; color: var(--text-dim); max-width: var(--measure); }
+.fr-note { margin: 0; color: var(--text-dim); }
+.fr-note[data-error] { color: var(--red-text); }
+.fr-hint { margin: 0; color: var(--text-quiet); font: var(--fs-xs)/var(--lh-small) var(--sans); text-align: end; }
+.fr-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--sp-3); padding-top: var(--sp-4); border-top: 1px solid var(--hair); }
+.fr-actions__quiet { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-inline-end: auto; }
+.fr-steps { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--sp-3); }
+.fr-step { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; column-gap: var(--sp-3); row-gap: var(--sp-1); }
+.fr-step + .fr-step { padding-top: var(--sp-3); border-top: 1px solid var(--hair); }
+.fr-step__title { color: var(--text-strong); font-weight: 500; }
+.fr-step__state { color: var(--text-quiet); font: var(--fs-xs)/var(--lh-ui) var(--sans); }
+.fr-step__detail { grid-column: 1 / -1; color: var(--text-dim); font: var(--fs-s)/var(--lh-small) var(--sans); overflow-wrap: anywhere; }
+.fr-step__act { grid-column: 1 / -1; }
+.fr-working { display: grid; gap: var(--sp-2); justify-items: start; }
+.fr-bytes { color: var(--text-quiet); font: var(--fs-2xs)/var(--lh-meta) var(--mono); font-variant-numeric: tabular-nums; }
+.fr-extras { display: grid; gap: var(--sp-3); justify-items: start; }
+.fr-out { margin: 0; white-space: pre-wrap; }
+.fr-receipt { margin: 0; padding-inline-start: var(--sp-5); color: var(--text-dim); }
+/* the models hub: the accounts first, as tiles that all have the same size, then the section's own rows */
+.fr-hub { min-width: 0; }
+.fr-accounts { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(calc(var(--sp-7) * 5), 1fr)); gap: var(--sp-3); }
+.fr-account { display: grid; align-content: start; gap: var(--sp-2); min-width: 0; padding: var(--sp-4); border-radius: var(--r-s); background: var(--bg-2); box-shadow: inset 0 0 0 1px var(--hair); }
+.fr-account__head { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
+.fr-account__head > .ui-set__value { margin-inline-start: auto; }
+.fr-account__name { color: var(--text-strong); font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fr-account__hint { margin: 0; }
+.fr-account__act { display: grid; gap: var(--sp-2); align-self: end; padding-top: var(--sp-2); }
+.fr-more { margin-top: var(--sp-4); }

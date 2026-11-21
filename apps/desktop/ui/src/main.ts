@@ -26,12 +26,15 @@ const orbs = setupOrbs();
 /* the continuous corners: observe the document before anything is drawn (each module binds its own surfaces at import) */
 ui.squircle.start();
 
+/** where first run's optional steps asked to land once the app is up (`connectors`, `store`) */
+let landing: 'connectors' | 'store' | null = null;
+
 async function start(): Promise<void> {
   await orbs;
   if (inTauri()) {
     /* first run: the host sets Hermes up for boopis (plugin, settings, a key) before anything connects; a screen of its own, thin on purpose */
     const [{ runFirstRun }, { tauriSetupBridge }] = await Promise.all([import('./host/first-run'), import('./host/setup-bridge')]);
-    await runFirstRun(tauriSetupBridge());
+    await runFirstRun(tauriSetupBridge(), document.body, { onExit: (e) => { landing = e.open; } });
   }
   const provider = await selectProvider();
   setProvider(provider);
@@ -39,6 +42,8 @@ async function start(): Promise<void> {
   startGlance();
   ui.tooltip.enable();
   boot();
+  if (landing === 'connectors') emit('hx:open-settings', { section: 'connectors', from: 'first-run' });
+  else if (landing === 'store') emit('hx:open-store', { from: 'first-run' });
   if (inTauri()) void import('./host/links').then((m) => m.wireExternalLinks(undefined, (e) => { ui.toast(e instanceof Error ? e.message : 'The link did not open'); }));
   if (inTauri()) void import('./host/connectors-notice').then((m) => m.listenConnectorRestarts()).catch((e: unknown) => { log.warn('connector notices are not listened for', e); });
   if (__HX_TEST_API__) {

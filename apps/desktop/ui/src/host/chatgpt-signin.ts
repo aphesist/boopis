@@ -48,6 +48,7 @@ export function tauriChatgptBridge(): ChatgptBridge {
 /** ChatGPT's words: the page does everything, so there is no code to type */
 export const CHATGPT_COPY: SigninCopy = {
   provider: 'chatgpt',
+  brand: 'chatgpt',
   button: 'Sign in with ChatGPT',
   starting: 'Opening OpenAI…',
   explain: () => 'boopis opened OpenAI’s sign-in page in your browser. Sign in with your ChatGPT account and allow boopis to use your ChatGPT plan, and the browser sends you back. If the page did not open, use the button.',

@@ -1,0 +1,11 @@
+OpenAI (chatgpt-logo-black.svg, chatgpt-logo-white.svg)
+Source: https://developers.openai.com/assets/siwc/sign-in-buttons/chatgpt-logo-{black,white}.svg (21x21 viewBox, flat black or white fill), downloaded 2026-11-21.
+Published by OpenAI in its Sign in with ChatGPT docs for building the approved buttons. No open licence is stated. Use only for ChatGPT sign-in / ChatGPT-plan UI per https://developers.openai.com/siwc/ui-ux-guidelines and https://openai.com/brand/ . Do not recolour, stretch or add effects. Sign in with ChatGPT is a limited-trial program: confirm eligibility with OpenAI before shipping.
+
+GitHub (github-invertocat-black.svg, github-invertocat-white.svg; GitHub_Invertocat_{Black,White}.svg of GitHub_Logos.zip, unmodified)
+Source: https://brand.github.com/GitHub_Logos.zip (from https://brand.github.com/foundations/logo ; /github.com/logos redirects there). Downloaded 2026-11-21.
+Trademarks of GitHub, Inc.; no open licence. Page permits "indicating that your project integrates with GitHub" and using logos less prominently than your own brand; any other use needs written permission (https://github.com/contact). Only white, black (rarely grey/green) allowed; no shadows/gradients, no distortion, do not combine with other words or design elements. GitHub publishes NO sign-in button spec. Kept here: Invertocat and Lockup black/white, Copilot icon black/white (SVG).
+
+Claude and xAI have no official sign-in button and their trademark rules need permission (Anthropic's policy) or could not be read (xAI's page answered 403).
+Until the owner decides, their buttons draw the LobeHub marks of vendor/model-icons (MIT, see its NOTICE), behind one swap point: BRANDS in
+components/signin-button.ts. Gemini has no sign-in in boopis and never gets the Google "G".

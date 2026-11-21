@@ -21,6 +21,7 @@ import { mountChatgptSignin } from './chatgpt-signin';
 import type { ChatgptBridge } from './chatgpt-signin';
 import { localUseNote, useLocalRuntime } from './local-runtime';
 import type { ConnectorLogin } from './bindings';
+import { brandOf } from './signin-brands';
 
 export type Filter = 'all' | 'connected' | 'signin' | 'key' | 'local' | 'custom';
 export const FILTERS: ReadonlyArray<{ value: Filter; label: string }> = [
@@ -49,6 +50,20 @@ export interface ProvidersDeps {
   settle?: number;
   /** cards for other sign-ins, by way id; the registry's are used when absent */
   signinCards?: Readonly<Record<string, SigninMount>>;
+  /** another arrangement of the same list (first-run setup's hub, `providers-hub.ts`); the section's own when absent. The rows keep
+      their `data-do` and `data-way` buttons, so every action below is the section's own. */
+  layout?: ProvidersLayout;
+  /** told after every read with what the host said (the hub counts what is connected) */
+  onStates?: (states: ReadonlyMap<string, ProviderState>) => void;
+}
+
+/** How the list is arranged: the heading, the markup of a plan, and the words of the way back from a form card. */
+export interface ProvidersLayout {
+  title: string;
+  /** the level of every heading in the section (first run's title is the h1; Settings' headings sit under its dialog's) */
+  level?: 2 | 3;
+  planHtml: (p: Plan, canSignin: (w: Way) => boolean, tailOpen: boolean) => string;
+  back: string;
 }
 
 /* ───────── what to say and what to offer: pure, tested ───────── */
@@ -162,27 +177,34 @@ export function plan(states: ReadonlyMap<string, ProviderState>, filter: Filter,
 }
 
 /* ───────── drawing ───────── */
-const button = (a: Action, way: string, label: string): string => ui.html.button({
+const button = (a: Action, way: string, label: string, calm = false): string => {
+  /* a sign-in button of a lab with a brand is that lab's own (ADR-0040); its name is its words, so it needs no label of ours */
+  const brand = a.do === 'signin' ? brandOf(way) : null;
+  if (brand) return ui.html.signinButton({ brand, attrs: { 'data-do': a.do, 'data-way': way } });
+  return plainButton(calm ? { ...a, primary: false } : a, way, label);
+};
+const plainButton = (a: Action, way: string, label: string): string => ui.html.button({
   label: a.label, size: 's', ...(a.primary ? { variant: 'primary' as const } : a.ghost ? { variant: 'ghost' as const } : {}),
   attrs: { 'data-do': a.do, 'data-way': way, 'aria-label': `${a.label}, ${label}` }
 });
 
-function rowHtml(r: Row, canSignin: (w: Way) => boolean): string {
+/** `calm`: no row action is the primary one (the hub's one primary action is Continue) */
+export function rowHtml(r: Row, canSignin: (w: Way) => boolean, calm = false): string {
   const actions = actionsFor(r.way, r.state, canSignin(r.way));
   /* the add-an-endpoint row is an action, not a state: it says no word */
   const word = r.way.kind === 'custom' ? '' : `<span class="ui-set__value" data-status="${esc(r.state?.status ?? 'unread')}">${esc(statusWord(r.state))}</span>`;
-  const control = `<span style="display:inline-flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center;justify-content:flex-end">${word}${actions.map((a) => button(a, r.way.id, r.way.label)).join('')}</span>`;
+  const control = `<span style="display:inline-flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center;justify-content:flex-end">${word}${actions.map((a) => button(a, r.way.id, r.way.label, calm)).join('')}</span>`;
   const notes = r.way.notes.filter(rowNote).map((n) => `<p class="ui-field__hint" data-note="${esc(n.id)}">${esc(n.text)}</p>`).join('');
   return ui.html.setRow({ label: r.way.label, hint: hintOf(r.way, r.state), control }) + notes;
 }
-function endpointRowHtml(s: ProviderState): string {
+function endpointRowHtml(s: ProviderState, calm = false): string {
   const slug = s.way.slice('custom.'.length);
-  const control = `<span style="display:inline-flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center;justify-content:flex-end"><span class="ui-set__value" data-status="${esc(s.status)}">${esc(statusWord(s))}</span>${button({ do: 'remove', label: 'Remove', ghost: true }, s.way, slug)}</span>`;
+  const control = `<span style="display:inline-flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center;justify-content:flex-end"><span class="ui-set__value" data-status="${esc(s.status)}">${esc(statusWord(s))}</span>${button({ do: 'remove', label: 'Remove', ghost: true }, s.way, slug, calm)}</span>`;
   return ui.html.setRow({ label: slug, hint: [s.base_url, s.detail].filter(Boolean).join(' '), control });
 }
-const head = (id: string, label: string): string => ui.html.setHead({ id: 'hx-prov-h-' + id, label });
-const blockHtml = (b: Block, canSignin: (w: Way) => boolean): string =>
-  head(b.id, b.head) + b.rows.map((r) => rowHtml(r, canSignin)).join('') + (b.endpoints ?? []).map(endpointRowHtml).join('');
+export const head = (id: string, label: string, level: 2 | 3 = 3): string => ui.html.setHead({ id: 'hx-prov-h-' + id, label, level });
+export const blockHtml = (b: Block, canSignin: (w: Way) => boolean, calm = false, level: 2 | 3 = 3): string =>
+  head(b.id, b.head, level) + b.rows.map((r) => rowHtml(r, canSignin, calm)).join('') + (b.endpoints ?? []).map((e) => endpointRowHtml(e, calm)).join('');
 
 /** the list's markup for a plan; `tailOpen` says whether "More providers" is expanded */
 export function planHtml(p: Plan, canSignin: (w: Way) => boolean, tailOpen: boolean): string {
@@ -242,7 +264,7 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
   let abort: () => void = () => undefined;
   let card: { destroy: () => void } | null = null;
 
-  host.innerHTML = ui.html.setHead({ id: 'hx-set-providers-h', label: 'Providers' }) +
+  host.innerHTML = ui.html.setHead({ id: 'hx-set-providers-h', label: deps.layout?.title ?? 'Providers', level: deps.layout?.level ?? 3 }) +
     '<div data-prov-bar style="display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center;padding:var(--sp-2) 0">' +
     ui.html.search({ size: 'm', as: 'input', id: 'hx-prov-q', label: 'Search providers', placeholder: 'Search providers' }) +
     ui.html.chipGroup({ options: FILTERS, value: 'all', label: 'Show providers' }) + '</div>' +
@@ -266,8 +288,9 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
     status.textContent = [readError && `Not read: ${readError}`, probeError && `Could not look for runtimes on this computer: ${probeError}`].filter(Boolean).join(' ');
   };
   const draw = (): void => {
+    deps.onStates?.(states);
     if (readError && !states.size) { body.innerHTML = ''; say(); return; }
-    body.innerHTML = planHtml(plan(states, filter, query), canSignin, tailOpen);
+    body.innerHTML = (deps.layout?.planHtml ?? planHtml)(plan(states, filter, query), canSignin, tailOpen);
     ui.hydrate(body);
     say();
   };
@@ -292,7 +315,7 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
   const show = (...kids: Node[]): void => {
     flowOpen = true;
     bar.hidden = true; body.hidden = true; flow.hidden = false;
-    const backBtn = ui.button({ label: 'Back to providers', size: 's', variant: 'ghost' });
+    const backBtn = ui.button({ label: deps.layout?.back ?? 'Back to providers', size: 's', variant: 'ghost' });
     backBtn.addEventListener('click', back);
     flow.replaceChildren(el('div', { style: 'display:grid;gap:var(--sp-3);padding:var(--sp-3) 0' }, ...kids, backBtn));
   };

@@ -9,8 +9,8 @@ in-process, through the engine's public credential-pool API (``pool.py``): one r
 
 The address is ``https://api.openai.com/v1``, the Responses API, which is what the program's tokens are for; the host
 writes it (``secret://chatgpt/base_url``) with the tokens. A token with no address is a sign-in made before the program,
-which is cut off (the host removes it at its next look): it is never handed to the runtime, and ChatGPT's Codex backend is
-no longer an address this module knows. The engine's own Codex provider follows the row's address
+which is cut off (the host removes it at its next look): it is never handed to the runtime, and ChatGPT's Codex
+backend is no longer an address this module knows. The engine's own Codex provider follows the row's address
 (``_pool_entry_mode_and_url``)."""
 
 from __future__ import annotations
@@ -36,9 +36,9 @@ _lock = threading.Lock()
 
 
 def _read_grant() -> Grant | None:
-    """The access token and the address the host holds now; ``None`` when it holds no token (signed out), or a token with
-    no address (a sign-in from before the program, which the host ends). Raises ``ChannelError`` when the host cannot
-    answer."""
+    """The access token and the address the host holds now. ``None`` when it holds no token (signed out), or a
+    token with no address (a sign-in from before the program, which the host ends). Raises ``ChannelError`` when the
+    host cannot answer."""
     token = pool.read_ref(REF)
     if token is None:
         return None

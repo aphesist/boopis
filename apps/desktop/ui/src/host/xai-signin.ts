@@ -14,6 +14,7 @@ export const XAI_WAY = 'xai.signin';
 /** xAI's words, as `SigninCopy` (the mapping `signin-card.ts` documents for a lab that wrote them as start, open, warning and done) */
 export const XAI_COPY: SigninCopy = {
   provider: 'xai',
+  brand: 'xai',
   button: 'Sign in with SuperGrok',
   starting: 'Getting a code…',
   explain: () => 'Open xAI’s sign-in page, sign in with your X or xAI account and approve it. The page already has the code; if it asks, type this one.',

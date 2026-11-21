@@ -453,19 +453,19 @@ describe('Settings > Models: Providers', () => {
 
   it('offers Sign in for SuperGrok and Copilot through the shared card, and a registered card replaces one', async () => {
     const panel = await providersPanel(fakeProviders());
-    for (const label of ['SuperGrok subscription', 'GitHub Copilot subscription']) {
-      expect(rowOf(panel, label)?.querySelector('[data-do="signin"]')?.textContent, label).toBe('Sign in');
+    for (const [label, word] of [['SuperGrok subscription', 'Continue with xAI'], ['GitHub Copilot subscription', 'Continue with GitHub']] as const) {
+      expect(rowOf(panel, label)?.querySelector('[data-do="signin"] .ui-sso__label')?.textContent, label).toBe(word);
     }
     rowOf(panel, 'SuperGrok subscription')?.querySelector<HTMLButtonElement>('[data-do="signin"]')?.click();
-    expect(section(panel).querySelector('[data-signin="xai"] [data-act="start"]')?.textContent, 'the shared card, with xAI\u2019s words').toBe('Sign in with SuperGrok');
+    expect(section(panel).querySelector('[data-signin="xai"] [data-act="start"]')?.textContent, 'the shared card, with the lab\u2019s own button').toContain('Continue with xAI');
     const other = await providersPanel(fakeProviders());
     rowOf(other, 'GitHub Copilot subscription')?.querySelector<HTMLButtonElement>('[data-do="signin"]')?.click();
-    expect(section(other).querySelector('[data-signin="github-copilot.signin"] [data-act="start"]')?.textContent).toBe('Sign in with GitHub');
+    expect(section(other).querySelector('[data-signin="github-copilot.signin"] [data-act="start"]')?.textContent).toContain('Continue with GitHub');
     let mounted = 0;
     registerSigninCard('xai.signin', (host, done) => { mounted += 1; host.append(document.createTextNode('card')); void done; return { destroy: () => undefined }; });
     const again = await providersPanel(fakeProviders());
     const btn = rowOf(again, 'SuperGrok subscription')?.querySelector<HTMLButtonElement>('[data-do="signin"]') as HTMLButtonElement;
-    expect(btn.textContent).toBe('Sign in');
+    expect(btn.querySelector('.ui-sso__label')?.textContent).toBe('Continue with xAI');
     btn.click();
     expect(mounted).toBe(1);
     expect(section(again).textContent).toContain('card');

@@ -10,6 +10,7 @@ import type { BotLike } from './bot-state';
 import { icon } from './icons';
 import { logoHTML } from './logo';
 import { modelName } from './model-name';
+import { signinButton } from './signin-button';
 import { arrowHTML, isKnownModel, markHTML, modelHTML, routeHTML } from './model-mark';
 import type { ModelRef } from './model-mark';
 import { orbHtml } from './orb';
@@ -276,7 +277,8 @@ function input(o: InputOpts): string {
 const badge = (o: BadgeOpts): string => '<span class="' + cx('ui-badge', o.class) + '"' +
   attrs({ role: o.focusable ? 'note' : null, tabindex: o.focusable ? '0' : null, 'data-tip': o.tip, 'data-tip-pos': o.tipPos, 'aria-describedby': o.describedBy, ...o.attrs }) + '>' + esc(o.label) + '</span>';
 /** a settings section's heading (12/500 quiet, 20 above: DESIGN-SYSTEM.md §14.21); the section is a `<section class="ui-set">` named by it */
-const setHead = (o: { label: string; id: string }): string => '<h3 class="ui-set__head" id="' + esc(o.id) + '">' + esc(o.label) + '</h3>';
+/** a section's heading; `level` 2 where the page's own title is the h1 and no h2 sits between (first run), else 3 under the dialog's */
+const setHead = (o: { label: string; id: string; level?: 2 | 3 }): string => { const h = 'h' + String(o.level ?? 3); return '<' + h + ' class="ui-set__head" id="' + esc(o.id) + '">' + esc(o.label) + '</' + h + '>'; };
 /** a settings section: its heading, then its rows (`setRow`) */
 const setSection = (o: { label: string; id: string; body?: U<string>; attrs?: U<Attrs> }): string =>
   '<section class="ui-set"' + attrs({ 'aria-labelledby': o.id, ...o.attrs }) + '>' + setHead(o) + (o.body ?? '') + '</section>';
@@ -312,5 +314,5 @@ function child(o: ChildOpts): string {
 export const html = {
   icon, keys, kbd, combo, comboKbds, code, inline, stamp, dot, capacity, button, iconButton, send, hold, switch: switchHtml, segmented, chip, chipGroup,
   orb: orbHtml, model: modelHTML, modelRoute: routeHTML, modelMark: markHTML, stateWord, row, leadFor, group, ladder, measure, legend, pages, request, entry, disclosure, steps, blank, section, menuItems, field, select: selectHTML, setRow, setHead, setSection, empty, toast, tip, mod,
-  scroll, tabs, search, tipBody, badge, input, child
+  scroll, tabs, search, tipBody, badge, input, child, signinButton
 };

@@ -12,6 +12,7 @@ export const COPILOT_WAY = 'github-copilot.signin';
 
 export const COPILOT_COPY: SigninCopy = {
   provider: COPILOT_WAY,
+  brand: 'github',
   button: 'Sign in with GitHub',
   starting: 'Getting a code…',
   explain: () => 'Open GitHub’s sign-in page, sign in with the account that has GitHub Copilot, then type this code.',

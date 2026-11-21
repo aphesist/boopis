@@ -6,9 +6,11 @@ import { CHILD_STATUSES } from './child';
 import { keysVariants } from './kbd';
 import { scrollVariants } from './scroll';
 import { searchVariants } from './search';
+import { signinVariants } from './signin-button';
 import { tabsVariants } from './tabs';
 
 export const variants = {
+  signinButton: signinVariants,
   button: { variant: ['secondary', 'primary', 'ghost'], size: ['m', 's'], keys: [false, true], disabled: [false, true] },
   iconButton: { size: [undefined, 's'], window: [false, true], pressed: [undefined, false, true], expanded: [undefined, false, true] },
   send: { running: [false, true], disabled: [false, true] },
