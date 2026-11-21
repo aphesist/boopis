@@ -68,6 +68,7 @@ Each row: what it is for, its variants (the options `variants.ts` lists for the 
 | `entry`, `steps`, `disclosure`, `blank`, `request` | the conversation's parts | `entry.kind: user, agent, bot, mod`; `steps[].kind` | §14.5 to 14.9 |
 | `composer` | every composer (session, Bots tab, dock) | `running`; mic in each | §14.10 |
 | `orb`, `modelMark`, `icon`, `logo` | bots, provider marks, icons, the mark | `orb.size`, `still`; `modelMark.color: mono, brand` | §10, §12, §13 |
+| `child` | a task a session handed to another model: mark and name, goal, what it does now, how it ended; open and stop | `status: queued, running, done, failed, stopped`; `canOpen`, `canStop`; `time`, `now`, `tools`, `summary` | §8 containers, R-corner-3, R-state-* |
 | `modView` | a mod's element tree, drawn with the kit | `limits`, `colors` | §14.29 |
 | `squircle`, `shape` | continuous corners; nested corners fit | `frame`, `clip`, `surface` modes | R-corner-1 to 9 |
 

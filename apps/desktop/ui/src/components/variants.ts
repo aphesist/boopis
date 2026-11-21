@@ -2,6 +2,7 @@
    each list in step with the options its template takes. A variant here is a value of an option of `ui.html.<name>(opts)`; states
    (hover, focus, pressed, disabled) are the design system's (§14.35) and are drawn by the lab with the element's own attributes.
    Pure data: no DOM, no globals. */
+import { CHILD_STATUSES } from './child';
 import { keysVariants } from './kbd';
 import { scrollVariants } from './scroll';
 import { searchVariants } from './search';
@@ -29,6 +30,7 @@ export const variants = {
   setRow: { hint: [false, true] },
   setSection: {},
   row: { sub: [false, true], current: [false, true], archived: [false, true], acts: [false, true] },
+  child: { status: CHILD_STATUSES, canOpen: [false, true], canStop: [false, true] },
   group: { collapsible: [false, true], expanded: [false, true] },
   section: { open: [false, true] },
   scroll: scrollVariants,

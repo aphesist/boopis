@@ -13,6 +13,8 @@ import { sessionComposer } from './composer';
 import type { SessionComposer } from './composer';
 import { copyText, mdOf, randomId } from './shared';
 import { openPanel } from './right';
+import { childrenBlock, resetChildren, upsertChild } from './children';
+import type { ChildHost } from './children';
 import { setAttention, changed } from './state';
 import { surface } from '../mods/surfaces';
 
@@ -27,6 +29,8 @@ export const VIEW = {
   running: false
 };
 const sessions = () => data().sessions;
+/** what the cards of handed-off tasks ask of the session: its column, and the provider's stop and read (absent where it has none) */
+const childHost = (): ChildHost => ({ col: () => VIEW.col, now: Date.now, stop: sessions().stopChild ? (id) => sessions().stopChild?.(VIEW.current, id) : undefined, transcript: sessions().childTranscript ? (id) => sessions().childTranscript?.(VIEW.current, id) ?? Promise.reject(new Error('unavailable')) : undefined });
 const turnsEls = (): HTMLElement[] => (VIEW.col ? [...VIEW.col.querySelectorAll<HTMLElement>('[data-hx-turn]')] : []);
 const lastTurn = (): HTMLElement | undefined => turnsEls().slice(-1)[0];
 export function rove(t: HTMLElement | undefined, focus?: boolean): void {
@@ -144,7 +148,7 @@ function showShip(animate: boolean): void {
 const FORM_STATE = { submitted: 'done', cancelled: 'cancelled', expired: 'expired' } as const;
 function formCard(f: FormSpec): HTMLElement { const c = ui.card('form', f as unknown as Record<string, unknown>, { size: 'inline' }); c.dataset['formId'] = f.id; return c; }
 /** the answer's prose goes above the forms the turn raised */
-function placeProse(t: HTMLElement, p: HTMLElement): void { const box = t.querySelector('.ui-entry__body > .ss-forms'); if (box) box.before(p); else $('.ui-entry__body', t).append(p); }
+function placeProse(t: HTMLElement, p: HTMLElement): void { const box = t.querySelector('.ui-entry__body > :is(.ss-forms, .ss-children)'); if (box) box.before(p); else $('.ui-entry__body', t).append(p); }
 function formsBlock(forms: readonly FormSpec[]): HTMLElement { return el('div', { class: 'ss-forms' }, forms.map(formCard)); }
 /** a form opened (or lapsed) while the conversation is on screen */
 function addForm(turnId: string, f: FormSpec): void {
@@ -177,6 +181,7 @@ function assistantTurn(a: AgentTurn): HTMLElement {
   });
   t.dataset['turnId'] = a.id;
   if (a.forms?.length) $('.ui-entry__body', t).append(formsBlock(a.forms));
+  if (a.children?.length) $('.ui-entry__body', t).append(childrenBlock(a.children, childHost()));
   if (VIEW.blank) showShip(false);
   if (VIEW.diffOpen) refreshDiff();
   return t;
@@ -198,6 +203,7 @@ function liveTurn(a: AgentTurn): void {
   if (a.blank) addLiveBlank(L, a);
   t.dataset['turnId'] = a.id;
   if (a.forms?.length) $('.ui-entry__body', t).append(formsBlock(a.forms));
+  if (a.children?.length) $('.ui-entry__body', t).append(childrenBlock(a.children, childHost()));
   (VIEW.col as HTMLElement).append(t);
   VIEW.composer?.setRunning(true); VIEW.running = true; surface.onWorking?.(true);
   if (VIEW.scroll) VIEW.scroll.scrollTop = VIEW.scroll.scrollHeight;
@@ -238,6 +244,7 @@ export function renderConversation(): void {
   const col = VIEW.col as HTMLElement; col.replaceChildren();
   for (const L of live.values()) clearInterval(L.tick);
   live.clear();
+  resetChildren();
   VIEW.reveal = null; VIEW.ship = null; VIEW.blankCard = null;
   unsubConv?.();
   const conv = sessions().conversation(VIEW.current);
@@ -277,6 +284,7 @@ function onConversationEvent(ev: ConversationEvent): void {
   }
   else if (ev.type === 'form-opened') addForm(ev.turnId, ev.form);
   else if (ev.type === 'form-resolved') resolveForm(ev.formId, ev.status);
+  else if (ev.type === 'child-updated') upsertChild(ev.turnId, ev.child, childHost());
   else if (ev.type === 'turn-model') { const L = live.get(ev.turnId); if (L) { L.model = ev.model; setModelLines(L.t, ev.model, L.why); } }
   else if (ev.type === 'turn-finished') finishLive(ev.turnId, ev);
   else if (ev.type === 'blank-answered') {

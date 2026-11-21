@@ -7,7 +7,7 @@
    and the boopis plugin) implements the same interfaces. Nothing in a module may fabricate data a provider
    did not send: unknown is `null` or empty and the UI shows it as unknown. */
 import type {
-  ArchivedBot, Bot, BotCatalog, BotDraft, BotConfig, BotInfo, Change, ConversationEvent, Conversation, Connector, ContextUsage, DecisionKind, DiffFile, Environment, ArchivedGroup,
+  ArchivedBot, Turn, Bot, BotCatalog, BotDraft, BotConfig, BotInfo, Change, ConversationEvent, Conversation, Connector, ContextUsage, DecisionKind, DiffFile, Environment, ArchivedGroup,
   Attached, DetailsCan, DetailsNotes, FieldSchema, FileCompletions, FormCan, FormOutcome, ModSession, ModsEvent, PickerItem, PickerKind, GovernanceState, LedgerStats, ProviderInfo, RunSnapshot, Schedule, SendMeta, SessionSummary, ThreadMessage, Todo, User, Wait, WaitOutcome, ModelChoice, Group, GroupMessage
 } from './types';
 
@@ -34,6 +34,10 @@ export interface SessionsSource {
   send(sessionId: string, text: string, meta: SendMeta): void;
   stop(sessionId: string): void;
   answerBlank(sessionId: string, answer: string): void;
+  /** stop one task the session handed to another model (a card's stop); the card ends when the engine says so */
+  stopChild?(sessionId: string, childId: string): void;
+  /** what a handed-off task did, read from its own session without opening it for writing; rejects with a sentence the card shows */
+  childTranscript?(sessionId: string, childId: string): Promise<readonly Turn[]>;
   openPullRequest(sessionId: string): void;
 }
 
