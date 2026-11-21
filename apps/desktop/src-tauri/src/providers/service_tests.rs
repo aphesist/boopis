@@ -62,7 +62,11 @@ impl HermesOps for Fake {
         let cfg = self.config.lock().unwrap();
         let mut at = &*cfg;
         // an environment setting (`GLM_BASE_URL`) is one top-level name, as Hermes keeps it in `.env`
-        let parts: Vec<&str> = if key.contains('.') { key.split('.').collect() } else { vec![key] };
+        let parts: Vec<&str> = if key.contains('.') {
+            key.split('.').collect()
+        } else {
+            vec![key]
+        };
         for part in parts {
             match at.get(part) {
                 Some(v) => at = v,
@@ -79,9 +83,17 @@ impl HermesOps for Fake {
         let parsed = serde_json::from_str::<Value>(value).unwrap_or_else(|_| json!(value));
         let mut cfg = self.config.lock().unwrap();
         let mut at = &mut *cfg;
-        let parts: Vec<&str> = if key.contains('.') { key.split('.').collect() } else { vec![key] };
+        let parts: Vec<&str> = if key.contains('.') {
+            key.split('.').collect()
+        } else {
+            vec![key]
+        };
         for part in &parts[..parts.len() - 1] {
-            at = at.as_object_mut().unwrap().entry(*part).or_insert_with(|| json!({}));
+            at = at
+                .as_object_mut()
+                .unwrap()
+                .entry(*part)
+                .or_insert_with(|| json!({}));
         }
         at[parts[parts.len() - 1]] = parsed;
         Ok(())
@@ -90,7 +102,11 @@ impl HermesOps for Fake {
         self.sets.lock().unwrap().push(format!("unset {key}"));
         let mut cfg = self.config.lock().unwrap();
         let mut at = &mut *cfg;
-        let parts: Vec<&str> = if key.contains('.') { key.split('.').collect() } else { vec![key] };
+        let parts: Vec<&str> = if key.contains('.') {
+            key.split('.').collect()
+        } else {
+            vec![key]
+        };
         for part in &parts[..parts.len() - 1] {
             match at.get_mut(*part) {
                 Some(v) => at = v,
@@ -140,9 +156,16 @@ struct Script {
 
 impl Transport for Script {
     fn get(&self, url: &str, headers: &[(String, String)]) -> std::result::Result<Reply, String> {
-        self.seen.lock().unwrap().push((url.to_owned(), headers.to_vec()));
+        self.seen
+            .lock()
+            .unwrap()
+            .push((url.to_owned(), headers.to_vec()));
         let mut r = self.replies.lock().unwrap();
-        if r.is_empty() { Err("no answer scripted".into()) } else { r.remove(0) }
+        if r.is_empty() {
+            Err("no answer scripted".into())
+        } else {
+            r.remove(0)
+        }
     }
 }
 
@@ -151,8 +174,13 @@ fn listing(ids: &[&str]) -> std::result::Result<Reply, String> {
     answer(200, &json!({"data": data}).to_string())
 }
 
+#[allow(clippy::unnecessary_wraps)] // a scripted transport answer
 fn answer(status: u16, body: &str) -> std::result::Result<Reply, String> {
-    Ok(Reply { status, body: body.to_owned(), location: None })
+    Ok(Reply {
+        status,
+        body: body.to_owned(),
+        location: None,
+    })
 }
 
 struct Rig {
@@ -169,9 +197,18 @@ fn rig(replies: Vec<std::result::Result<Reply, String>>) -> Rig {
     std::fs::create_dir_all(&fake.home).unwrap();
     let store = Arc::new(MemoryStore::default());
     let seen: Seen = Arc::default();
-    let t = Arc::new(Script { replies: Mutex::new(replies), seen: seen.clone() });
+    let t = Arc::new(Script {
+        replies: Mutex::new(replies),
+        seen: seen.clone(),
+    });
     let svc = Providers::new(fake.clone(), store.clone(), t);
-    Rig { _dir: dir, fake, store, seen, svc }
+    Rig {
+        _dir: dir,
+        fake,
+        store,
+        seen,
+        svc,
+    }
 }
 
 fn kept(store: &MemoryStore, scope: &str) -> Option<String> {
@@ -201,7 +238,12 @@ async fn each_key_way_writes_exactly_its_config_keys_and_its_secret() {
 
         // the secret is where the data says, and nowhere else
         let engine = way.engine.as_deref().unwrap();
-        assert_eq!(kept(&r.store, &format!("provider.{engine}")).as_deref(), Some(KEY), "{}", way.id);
+        assert_eq!(
+            kept(&r.store, &format!("provider.{engine}")).as_deref(),
+            Some(KEY),
+            "{}",
+            way.id
+        );
         let wire = way.key.as_ref().unwrap().wire_var.clone().unwrap();
         let mut want: BTreeSet<String> = [
             format!("secrets.boopis_host.env.{wire}"),
@@ -214,7 +256,11 @@ async fn each_key_way_writes_exactly_its_config_keys_and_its_secret() {
         let got: BTreeSet<String> = r.fake.sets().into_iter().collect();
         assert_eq!(got, want, "{}", way.id);
         assert_eq!(
-            r.fake.config_get(&format!("secrets.boopis_host.env.{wire}")).await.unwrap().unwrap(),
+            r.fake
+                .config_get(&format!("secrets.boopis_host.env.{wire}"))
+                .await
+                .unwrap()
+                .unwrap(),
             json!(format!("secret://provider.{engine}/api_key")),
             "{}",
             way.id
@@ -225,13 +271,23 @@ async fn each_key_way_writes_exactly_its_config_keys_and_its_secret() {
         assert_eq!(seen.len(), 1, "{}", way.id);
         let base = way.base_url.as_ref().unwrap().default.clone().unwrap();
         let host = url::Url::parse(&base).unwrap();
-        assert_eq!(url::Url::parse(&seen[0].0).unwrap().host_str(), host.host_str(), "{}", way.id);
+        assert_eq!(
+            url::Url::parse(&seen[0].0).unwrap().host_str(),
+            host.host_str(),
+            "{}",
+            way.id
+        );
 
         // running it again with the same key changes nothing in the configuration
         let before = r.fake.sets().len();
         let r2 = r.svc.set_key(&way.id, KEY).await;
         assert!(r2.is_ok(), "{}", way.id);
-        assert_eq!(r.fake.sets().len(), before, "{}: a second save wrote config", way.id);
+        assert_eq!(
+            r.fake.sets().len(),
+            before,
+            "{}: a second save wrote config",
+            way.id
+        );
         // and the key is in no part of the answer
         let json = serde_json::to_string(&format!("{s:?}")).unwrap();
         assert!(!json.contains(KEY));
@@ -243,12 +299,22 @@ async fn the_openai_key_uses_the_registry_slug_not_the_alias() {
     let r = rig(vec![listing(&["gpt-6.1-terra"])]);
     r.svc.set_key("openai.key", KEY).await.unwrap();
     assert_eq!(kept(&r.store, "provider.openai-api").as_deref(), Some(KEY));
-    assert!(kept(&r.store, "provider.openai").is_none(), "`openai` is the engine's alias of OpenRouter");
+    assert!(
+        kept(&r.store, "provider.openai").is_none(),
+        "`openai` is the engine's alias of OpenRouter"
+    );
     assert_eq!(
-        r.fake.config_get("secrets.boopis_host.env.OPENAI_API_KEY").await.unwrap().unwrap(),
+        r.fake
+            .config_get("secrets.boopis_host.env.OPENAI_API_KEY")
+            .await
+            .unwrap()
+            .unwrap(),
         json!("secret://provider.openai-api/api_key")
     );
-    assert_eq!(r.seen.lock().unwrap()[0].0, "https://api.openai.com/v1/models");
+    assert_eq!(
+        r.seen.lock().unwrap()[0].0,
+        "https://api.openai.com/v1/models"
+    );
 }
 
 #[tokio::test]
@@ -258,7 +324,11 @@ async fn bad_input_is_refused_before_anything_is_saved() {
         ("anthropic.key", "   ", "hx.provider.key_invalid"),
         ("anthropic.key", "sk ant", "hx.provider.key_invalid"),
         ("anthropic.key", "sk\u{0}ant", "hx.provider.key_invalid"),
-        ("moonshot.key", "sk-kimi-abcdefgh", "hx.provider.key_invalid"),
+        (
+            "moonshot.key",
+            "sk-kimi-abcdefgh",
+            "hx.provider.key_invalid",
+        ),
         ("nope.key", KEY, "hx.provider.unknown"),
         ("custom.something", KEY, "hx.provider.unknown"),
         ("custom.custom-x", KEY, "hx.provider.unsupported"),
@@ -271,10 +341,21 @@ async fn bad_input_is_refused_before_anything_is_saved() {
         let r = rig(vec![]);
         let e = r.svc.set_key(way, key).await.unwrap_err();
         assert_eq!(code_of(&e), code, "{way}: {e}");
-        assert!(!e.to_string().contains("abcdefgh"), "{way}: the key is in the message");
+        assert!(
+            !e.to_string().contains("abcdefgh"),
+            "{way}: the key is in the message"
+        );
         assert!(r.fake.sets().is_empty(), "{way}: config was written");
-        assert!(r.store.get("boopis.provider.anthropic", "api_key").unwrap().is_none());
-        assert!(r.seen.lock().unwrap().is_empty(), "{way}: something was dialled");
+        assert!(
+            r.store
+                .get("boopis.provider.anthropic", "api_key")
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            r.seen.lock().unwrap().is_empty(),
+            "{way}: something was dialled"
+        );
     }
 }
 
@@ -285,17 +366,29 @@ async fn z_ai_and_kimi_stay_on_the_pay_as_you_go_address() {
     // an upper-case name writes; the data pins it, so setting a key sets it
     for (way, var, address) in [
         ("zai.key", "GLM_BASE_URL", "https://api.z.ai/api/paas/v4"),
-        ("moonshot.key", "KIMI_BASE_URL", "https://api.moonshot.ai/v1"),
+        (
+            "moonshot.key",
+            "KIMI_BASE_URL",
+            "https://api.moonshot.ai/v1",
+        ),
     ] {
         let r = rig(vec![listing(&["m"])]);
         r.svc.set_key(way, KEY).await.unwrap();
-        assert_eq!(r.fake.config_get(var).await.unwrap().unwrap(), json!(address), "{way}");
+        assert_eq!(
+            r.fake.config_get(var).await.unwrap().unwrap(),
+            json!(address),
+            "{way}"
+        );
         // the check dialled that address too, never a coding-plan one
         assert!(r.seen.lock().unwrap()[0].0.starts_with(address), "{way}");
         // a hand-set coding-plan address is put back
         r.fake.config.lock().unwrap()[var] = json!("https://api.z.ai/api/coding/paas/v4");
         r.svc.set_key(way, KEY).await.ok();
-        assert_eq!(r.fake.config_get(var).await.unwrap().unwrap(), json!(address), "{way}");
+        assert_eq!(
+            r.fake.config_get(var).await.unwrap().unwrap(),
+            json!(address),
+            "{way}"
+        );
     }
     // the China twin of Kimi has no pin in the data and gets none
     let r = rig(vec![listing(&["m"])]);
@@ -303,20 +396,45 @@ async fn z_ai_and_kimi_stay_on_the_pay_as_you_go_address() {
     assert!(!r.fake.sets().iter().any(|s| s.ends_with("_BASE_URL")));
     // a coding-plan key never reaches the keychain
     let r = rig(vec![]);
-    assert!(r.svc.set_key("moonshot.key", "sk-kimi-0123456789").await.is_err());
+    assert!(
+        r.svc
+            .set_key("moonshot.key", "sk-kimi-0123456789")
+            .await
+            .is_err()
+    );
     assert!(kept(&r.store, "provider.kimi-coding").is_none());
 }
 
 #[tokio::test]
 async fn the_check_says_what_the_provider_said_and_the_key_stays_saved() {
-    let cases: Vec<(std::result::Result<Reply, String>, ProviderStatus, Option<&str>)> = vec![
+    let cases: Vec<(
+        std::result::Result<Reply, String>,
+        ProviderStatus,
+        Option<&str>,
+    )> = vec![
         (listing(&["a"]), ProviderStatus::Connected, None),
-        (answer(401, r#"{"error":"no"}"#), ProviderStatus::Error, Some("hx.provider.key_rejected")),
-        (answer(403, "forbidden"), ProviderStatus::Error, Some("hx.provider.key_rejected")),
-        (Err("timed out".into()), ProviderStatus::Error, Some("hx.provider.unreachable")),
+        (
+            answer(401, r#"{"error":"no"}"#),
+            ProviderStatus::Error,
+            Some("hx.provider.key_rejected"),
+        ),
+        (
+            answer(403, "forbidden"),
+            ProviderStatus::Error,
+            Some("hx.provider.key_rejected"),
+        ),
+        (
+            Err("timed out".into()),
+            ProviderStatus::Error,
+            Some("hx.provider.unreachable"),
+        ),
         // an answer the check cannot read does not fail the key: it is saved and not verified, and the state says so
         (answer(404, "not found"), ProviderStatus::Connected, None),
-        (answer(200, "<html></html>"), ProviderStatus::Connected, None),
+        (
+            answer(200, "<html></html>"),
+            ProviderStatus::Connected,
+            None,
+        ),
     ];
     for (reply, status, code) in cases {
         let r = rig(vec![reply]);
@@ -324,9 +442,18 @@ async fn the_check_says_what_the_provider_said_and_the_key_stays_saved() {
         assert_eq!(s.status, status);
         assert_eq!(s.code.as_deref(), code);
         assert!(s.is_consistent());
-        assert_eq!(kept(&r.store, "provider.deepseek").as_deref(), Some(KEY), "the key stays saved");
+        assert_eq!(
+            kept(&r.store, "provider.deepseek").as_deref(),
+            Some(KEY),
+            "the key stays saved"
+        );
         if status == ProviderStatus::Connected && s.models_count.is_none() {
-            assert!(s.detail.as_deref().unwrap().contains("could not be used to check"));
+            assert!(
+                s.detail
+                    .as_deref()
+                    .unwrap()
+                    .contains("could not be used to check")
+            );
         }
     }
 }
@@ -347,7 +474,10 @@ async fn the_key_goes_as_each_wire_says_and_only_to_its_own_host() {
     assert!(h.contains(&("x-api-key".into(), KEY.into())));
     assert!(!h.iter().any(|(n, _)| n == "Authorization"));
     let (url, h) = header("google.key").await;
-    assert_eq!(url, "https://generativelanguage.googleapis.com/v1beta/models");
+    assert_eq!(
+        url,
+        "https://generativelanguage.googleapis.com/v1beta/models"
+    );
     assert!(h.contains(&("x-goog-api-key".into(), KEY.into())));
     let (url, h) = header("xai.key").await;
     assert_eq!(url, "https://api.x.ai/v1/models");
@@ -355,24 +485,43 @@ async fn the_key_goes_as_each_wire_says_and_only_to_its_own_host() {
     // OpenRouter's model list is public, so its key is checked at its own key endpoint, and a 200 there is a pass
     let r = rig(vec![answer(200, r#"{"data":{"label":"k"}}"#)]);
     let s = r.svc.set_key("openrouter.key", KEY).await.unwrap();
-    assert_eq!(r.seen.lock().unwrap()[0].0, "https://openrouter.ai/api/v1/key");
+    assert_eq!(
+        r.seen.lock().unwrap()[0].0,
+        "https://openrouter.ai/api/v1/key"
+    );
     assert_eq!(s.status, ProviderStatus::Connected);
     let r = rig(vec![answer(401, "{}")]);
-    assert_eq!(r.svc.set_key("openrouter.key", KEY).await.unwrap().code.as_deref(), Some("hx.provider.key_rejected"));
+    assert_eq!(
+        r.svc
+            .set_key("openrouter.key", KEY)
+            .await
+            .unwrap()
+            .code
+            .as_deref(),
+        Some("hx.provider.key_rejected")
+    );
 }
 
 #[tokio::test]
 async fn a_failed_config_write_puts_the_keychain_back() {
     let r = rig(vec![listing(&["m"])]);
-    r.store.set("boopis.provider.deepseek", "api_key", "old-key").unwrap();
+    r.store
+        .set("boopis.provider.deepseek", "api_key", "old-key")
+        .unwrap();
     *r.fake.fail_on.lock().unwrap() = Some("secrets.boopis_host.enabled".into());
     let e = r.svc.set_key("deepseek.key", KEY).await.unwrap_err();
     assert_eq!(e.code(), "hx.setup.config_failed");
-    assert_eq!(kept(&r.store, "provider.deepseek").as_deref(), Some("old-key"));
+    assert_eq!(
+        kept(&r.store, "provider.deepseek").as_deref(),
+        Some("old-key")
+    );
     let r = rig(vec![]);
     *r.fake.fail_on.lock().unwrap() = Some("secrets.boopis_host.enabled".into());
     assert!(r.svc.set_key("deepseek.key", KEY).await.is_err());
-    assert!(kept(&r.store, "provider.deepseek").is_none(), "nothing saved when it fails");
+    assert!(
+        kept(&r.store, "provider.deepseek").is_none(),
+        "nothing saved when it fails"
+    );
 }
 
 #[tokio::test]
@@ -380,13 +529,21 @@ async fn a_saved_key_restarts_the_engine_when_idle_and_is_remembered_when_a_turn
     let r = rig(vec![listing(&["m"])]);
     let s = r.svc.set_key("deepseek.key", KEY).await.unwrap();
     assert_eq!(*r.fake.idle_restarts.lock().unwrap(), [true]);
-    assert!(!crate::setup::state::load(&r.fake.home).unwrap().restart_pending);
+    assert!(
+        !crate::setup::state::load(&r.fake.home)
+            .unwrap()
+            .restart_pending
+    );
     assert!(!s.detail.unwrap().contains("restart"));
 
     let r = rig(vec![listing(&["m"])]);
     *r.fake.restart_answer.lock().unwrap() = false;
     let s = r.svc.set_key("deepseek.key", KEY).await.unwrap();
-    assert!(crate::setup::state::load(&r.fake.home).unwrap().restart_pending);
+    assert!(
+        crate::setup::state::load(&r.fake.home)
+            .unwrap()
+            .restart_pending
+    );
     assert!(s.detail.unwrap().contains("next restart"));
     assert_eq!(s.status, ProviderStatus::Connected);
 }
@@ -398,8 +555,17 @@ async fn remove_takes_the_secret_and_the_wiring_and_says_when_there_is_nothing()
     let s = r.svc.remove("zai.key").await.unwrap();
     assert_eq!(s.status, ProviderStatus::NeedsKey);
     assert!(kept(&r.store, "provider.zai").is_none());
-    assert!(r.fake.config_get("secrets.boopis_host.env.GLM_API_KEY").await.unwrap().is_none());
-    assert!(r.fake.config_get("GLM_BASE_URL").await.unwrap().is_none(), "the pin boopis set goes with the key");
+    assert!(
+        r.fake
+            .config_get("secrets.boopis_host.env.GLM_API_KEY")
+            .await
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        r.fake.config_get("GLM_BASE_URL").await.unwrap().is_none(),
+        "the pin boopis set goes with the key"
+    );
     let e = r.svc.remove("zai.key").await.unwrap_err();
     assert_eq!(e.code(), "hx.provider.not_found");
 
@@ -430,22 +596,46 @@ async fn the_list_reads_keys_endpoints_and_leaves_hidden_ways_and_the_add_row_ou
     r.svc.add_endpoint(&req).await.unwrap();
     let all = r.svc.list().await.unwrap();
     assert!(all.iter().all(super::ProviderState::is_consistent));
-    let by = |w: &str| all.iter().find(|s| s.way == w).unwrap_or_else(|| panic!("{w}"));
+    let by = |w: &str| {
+        all.iter()
+            .find(|s| s.way == w)
+            .unwrap_or_else(|| panic!("{w}"))
+    };
     assert_eq!(by("deepseek.key").status, ProviderStatus::Connected);
-    assert_eq!(by("xai.key").status, ProviderStatus::Connected, "a key in the profile's .env counts");
+    assert_eq!(
+        by("xai.key").status,
+        ProviderStatus::Connected,
+        "a key in the profile's .env counts"
+    );
     assert_eq!(by("openai.key").status, ProviderStatus::NeedsKey);
     assert_eq!(by("ollama.local").status, ProviderStatus::NotFound);
-    assert!(by("ollama.local").checked_at.is_none(), "list never dials a runtime");
-    assert_eq!(by("anthropic.signin").status, ProviderStatus::Error, "no Claude Code is read in this rig");
-    assert!(!all.iter().any(|s| s.way == "alibaba.qwen-signin"), "hidden");
+    assert!(
+        by("ollama.local").checked_at.is_none(),
+        "list never dials a runtime"
+    );
+    assert_eq!(
+        by("anthropic.signin").status,
+        ProviderStatus::Error,
+        "no Claude Code is read in this rig"
+    );
+    assert!(
+        !all.iter().any(|s| s.way == "alibaba.qwen-signin"),
+        "hidden"
+    );
     assert!(!all.iter().any(|s| s.way == "custom.endpoint"));
     let mine = by("custom.custom-my-server");
-    assert_eq!((mine.kind, mine.status, mine.models_count), (WayKind::Custom, ProviderStatus::Connected, Some(2)));
+    assert_eq!(
+        (mine.kind, mine.status, mine.models_count),
+        (WayKind::Custom, ProviderStatus::Connected, Some(2))
+    );
     assert_eq!(mine.base_url.as_deref(), Some("http://127.0.0.1:8000/v1"));
     // the catalogue's order, then the endpoints
     let order: Vec<&str> = all.iter().map(|s| s.way.as_str()).collect();
     let pos = |w: &str| order.iter().position(|x| *x == w).unwrap();
-    assert!(pos("anthropic.signin") < pos("deepseek.key") && pos("deepseek.key") < pos("custom.custom-my-server"));
+    assert!(
+        pos("anthropic.signin") < pos("deepseek.key")
+            && pos("deepseek.key") < pos("custom.custom-my-server")
+    );
 }
 
 fn endpoint_request(name: &str, url: &str, models: &[&str]) -> EndpointRequest {
@@ -468,10 +658,17 @@ async fn an_endpoint_writes_exactly_its_entry_and_is_never_frontier() {
     let r = rig(vec![]);
     let s = r
         .svc
-        .add_endpoint(&endpoint_request("My Server", "http://127.0.0.1:8000/v1", &["claude-opus-5-5", "llama3"]))
+        .add_endpoint(&endpoint_request(
+            "My Server",
+            "http://127.0.0.1:8000/v1",
+            &["claude-opus-5-5", "llama3"],
+        ))
         .await
         .unwrap();
-    assert_eq!((s.provider.as_str(), s.way.as_str(), s.kind), ("custom", "custom.custom-my-server", WayKind::Custom));
+    assert_eq!(
+        (s.provider.as_str(), s.way.as_str(), s.kind),
+        ("custom", "custom.custom-my-server", WayKind::Custom)
+    );
     let got: BTreeSet<String> = r.fake.sets().into_iter().collect();
     let want: BTreeSet<String> = [
         "base_url",
@@ -484,7 +681,12 @@ async fn an_endpoint_writes_exactly_its_entry_and_is_never_frontier() {
     .map(|k| format!("providers.custom-my-server.{k}"))
     .collect();
     assert_eq!(got, want, "no key: no wiring, and the model is not touched");
-    let e = r.fake.config_get("providers.custom-my-server").await.unwrap().unwrap();
+    let e = r
+        .fake
+        .config_get("providers.custom-my-server")
+        .await
+        .unwrap()
+        .unwrap();
     assert_eq!(e["base_url"], "http://127.0.0.1:8000/v1");
     assert_eq!(e["api_mode"], "chat_completions");
     assert_eq!(e["models"], json!({"claude-opus-5-5": {}, "llama3": {}}));
@@ -497,10 +699,26 @@ async fn an_endpoint_writes_exactly_its_entry_and_is_never_frontier() {
         assert!(!crate::frontier::is_frontier("custom-my-server", m));
     }
     // the same name again is another endpoint, by the slug rule
-    let s2 = r.svc.add_endpoint(&endpoint_request("My Server", "http://127.0.0.1:8001/v1", &[])).await.unwrap();
+    let s2 = r
+        .svc
+        .add_endpoint(&endpoint_request(
+            "My Server",
+            "http://127.0.0.1:8001/v1",
+            &[],
+        ))
+        .await
+        .unwrap();
     assert_eq!(s2.way, "custom.custom-my-server-2");
     // the fixed runtime names are taken
-    let s3 = r.svc.add_endpoint(&endpoint_request("Ollama", "http://127.0.0.1:11434/v1", &[])).await.unwrap();
+    let s3 = r
+        .svc
+        .add_endpoint(&endpoint_request(
+            "Ollama",
+            "http://127.0.0.1:11434/v1",
+            &[],
+        ))
+        .await
+        .unwrap();
     assert_eq!(s3.way, "custom.custom-ollama-2");
 }
 
@@ -521,66 +739,163 @@ async fn an_endpoint_with_a_key_wires_it_and_can_become_the_model() {
     req.discover = false;
     let s = r.svc.add_endpoint(&req).await.unwrap();
     assert_eq!(s.way, "custom.custom-lab-gpu");
-    assert_eq!(kept(&r.store, "provider.custom-lab-gpu").as_deref(), Some(KEY));
+    assert_eq!(
+        kept(&r.store, "provider.custom-lab-gpu").as_deref(),
+        Some(KEY)
+    );
     let sref = crate::secrets::refs::SecretRef::provider_key("custom-lab-gpu");
-    let e = r.fake.config_get("providers.custom-lab-gpu").await.unwrap().unwrap();
+    let e = r
+        .fake
+        .config_get("providers.custom-lab-gpu")
+        .await
+        .unwrap()
+        .unwrap();
     assert_eq!(e["key_env"], sref.env_name());
     assert_eq!(e["api_mode"], "anthropic_messages");
     assert_eq!(e["discover_models"], false);
     assert_eq!(e["context_length"], 32768);
-    assert_eq!(e["request_timeout_seconds"], 120, "longer only on this computer");
     assert_eq!(
-        r.fake.config_get(&format!("secrets.boopis_host.env.{}", sref.env_name())).await.unwrap().unwrap(),
+        e["request_timeout_seconds"], 120,
+        "longer only on this computer"
+    );
+    assert_eq!(
+        r.fake
+            .config_get(&format!("secrets.boopis_host.env.{}", sref.env_name()))
+            .await
+            .unwrap()
+            .unwrap(),
         json!("secret://provider.custom-lab-gpu/api_key")
     );
-    assert_eq!(r.fake.config_get("secrets.boopis_host.enabled").await.unwrap().unwrap(), json!(true));
-    assert_eq!(r.fake.config_get("model.provider").await.unwrap().unwrap(), "custom-lab-gpu");
-    assert_eq!(r.fake.config_get("model.default").await.unwrap().unwrap(), "qwen-72b");
-    assert_eq!(r.idle_restart_count(), 1, "a key needs a restart to be read");
+    assert_eq!(
+        r.fake
+            .config_get("secrets.boopis_host.enabled")
+            .await
+            .unwrap()
+            .unwrap(),
+        json!(true)
+    );
+    assert_eq!(
+        r.fake.config_get("model.provider").await.unwrap().unwrap(),
+        "custom-lab-gpu"
+    );
+    assert_eq!(
+        r.fake.config_get("model.default").await.unwrap().unwrap(),
+        "qwen-72b"
+    );
+    assert_eq!(
+        r.idle_restart_count(),
+        1,
+        "a key needs a restart to be read"
+    );
     assert!(!format!("{s:?}").contains(KEY));
 
     // removing it takes the entry, the wiring and the secret
     let gone = r.svc.remove("custom.custom-lab-gpu").await.unwrap();
     assert_eq!(gone.status, ProviderStatus::NotFound);
-    assert!(r.fake.config_get("providers.custom-lab-gpu").await.unwrap().is_none());
+    assert!(
+        r.fake
+            .config_get("providers.custom-lab-gpu")
+            .await
+            .unwrap()
+            .is_none()
+    );
     assert!(kept(&r.store, "provider.custom-lab-gpu").is_none());
-    assert!(r
-        .fake
-        .config_get(&format!("secrets.boopis_host.env.{}", sref.env_name()))
-        .await
-        .unwrap()
-        .is_none());
-    assert_eq!(r.svc.remove("custom.custom-lab-gpu").await.unwrap_err().code(), "hx.provider.not_found");
+    assert!(
+        r.fake
+            .config_get(&format!("secrets.boopis_host.env.{}", sref.env_name()))
+            .await
+            .unwrap()
+            .is_none()
+    );
+    assert_eq!(
+        r.svc
+            .remove("custom.custom-lab-gpu")
+            .await
+            .unwrap_err()
+            .code(),
+        "hx.provider.not_found"
+    );
 }
 
 #[tokio::test]
 async fn a_bad_endpoint_request_saves_nothing() {
     for (name, url, models, code) in [
-        ("", "http://127.0.0.1:1/v1", vec![], "hx.provider.endpoint_invalid"),
-        ("!!!", "http://127.0.0.1:1/v1", vec![], "hx.provider.endpoint_invalid"),
-        ("x", "http://192.168.1.20:8000/v1", vec![], "hx.provider.endpoint_blocked"),
-        ("x", "https://u:p@example.com/v1", vec![], "hx.provider.endpoint_invalid"),
-        ("x", "https://example.com/v1?key=abc", vec![], "hx.provider.endpoint_invalid"),
-        ("x", "ftp://example.com", vec![], "hx.provider.endpoint_invalid"),
-        ("x", "https://example.com/v1", vec!["two words"], "hx.provider.endpoint_invalid"),
+        (
+            "",
+            "http://127.0.0.1:1/v1",
+            vec![],
+            "hx.provider.endpoint_invalid",
+        ),
+        (
+            "!!!",
+            "http://127.0.0.1:1/v1",
+            vec![],
+            "hx.provider.endpoint_invalid",
+        ),
+        (
+            "x",
+            "http://192.168.1.20:8000/v1",
+            vec![],
+            "hx.provider.endpoint_blocked",
+        ),
+        (
+            "x",
+            "https://u:p@example.com/v1",
+            vec![],
+            "hx.provider.endpoint_invalid",
+        ),
+        (
+            "x",
+            "https://example.com/v1?key=abc",
+            vec![],
+            "hx.provider.endpoint_invalid",
+        ),
+        (
+            "x",
+            "ftp://example.com",
+            vec![],
+            "hx.provider.endpoint_invalid",
+        ),
+        (
+            "x",
+            "https://example.com/v1",
+            vec!["two words"],
+            "hx.provider.endpoint_invalid",
+        ),
     ] {
         let r = rig(vec![]);
-        let e = r.svc.add_endpoint(&endpoint_request(name, url, &models)).await.unwrap_err();
+        let e = r
+            .svc
+            .add_endpoint(&endpoint_request(name, url, &models))
+            .await
+            .unwrap_err();
         assert_eq!(e.code(), code, "{name:?} {url}");
         assert!(r.fake.sets().is_empty(), "{name:?} {url}");
     }
     let r = rig(vec![]);
     let mut req = endpoint_request("x", "https://example.com/v1", &[]);
     req.key = Some("a b".into());
-    assert_eq!(r.svc.add_endpoint(&req).await.unwrap_err().code(), "hx.provider.key_invalid");
+    assert_eq!(
+        r.svc.add_endpoint(&req).await.unwrap_err().code(),
+        "hx.provider.key_invalid"
+    );
     assert!(r.fake.sets().is_empty());
     // a write that fails half way leaves neither entry nor secret
     let r = rig(vec![]);
     *r.fake.fail_on.lock().unwrap() = Some("providers.custom-x.models".into());
     let mut req = endpoint_request("x", "https://example.com/v1", &["a"]);
     req.key = Some(KEY.into());
-    assert_eq!(r.svc.add_endpoint(&req).await.unwrap_err().code(), "hx.setup.config_failed");
-    assert!(r.fake.config_get("providers.custom-x").await.unwrap().is_none());
+    assert_eq!(
+        r.svc.add_endpoint(&req).await.unwrap_err().code(),
+        "hx.setup.config_failed"
+    );
+    assert!(
+        r.fake
+            .config_get("providers.custom-x")
+            .await
+            .unwrap()
+            .is_none()
+    );
     assert!(kept(&r.store, "provider.custom-x").is_none());
 }
 
@@ -590,7 +905,10 @@ type Requests = Arc<Mutex<Vec<(String, String)>>>;
 
 /// A loopback server answering `routes` (path, status, extra header, body) to the next `n` requests; it keeps each request's path
 /// and its raw head.
-fn server(routes: Vec<(&'static str, u16, &'static str, String)>, n: usize) -> (String, Requests, std::thread::JoinHandle<()>) {
+fn server(
+    routes: Vec<(&'static str, u16, &'static str, String)>,
+    n: usize,
+) -> (String, Requests, std::thread::JoinHandle<()>) {
     let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
     let base = format!("http://{}", listener.local_addr().unwrap());
     let seen: Requests = Arc::default();
@@ -598,7 +916,8 @@ fn server(routes: Vec<(&'static str, u16, &'static str, String)>, n: usize) -> (
     let handle = std::thread::spawn(move || {
         for _ in 0..n {
             let (mut sock, _) = listener.accept().unwrap();
-            sock.set_read_timeout(Some(std::time::Duration::from_secs(5))).unwrap();
+            sock.set_read_timeout(Some(std::time::Duration::from_secs(5)))
+                .unwrap();
             let mut head = Vec::new();
             let mut buf = [0u8; 1024];
             while !head.windows(4).any(|w| w == b"\r\n\r\n") {
@@ -614,7 +933,9 @@ fn server(routes: Vec<(&'static str, u16, &'static str, String)>, n: usize) -> (
             let (status, extra, body) = routes
                 .iter()
                 .find(|(p, ..)| *p == path)
-                .map_or((404, "", "not found".to_owned()), |(_, s, e, b)| (*s, *e, b.clone()));
+                .map_or((404, "", "not found".to_owned()), |(_, s, e, b)| {
+                    (*s, *e, b.clone())
+                });
             let reply = format!(
                 "HTTP/1.1 {status} X\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n{extra}\r\n{body}",
                 body.len()
@@ -641,7 +962,9 @@ fn real() -> Arc<dyn Transport> {
 async fn test_lists_an_openai_shaped_server_and_sends_the_key_as_a_bearer_token() {
     let body = json!({"object":"list","data":[{"id":"qwen"},{"id":"llama"}]}).to_string();
     let (base, seen, h) = server(vec![("/v1/models", 200, "", body)], 1);
-    let r = test_endpoint(real(), test_request(&base, Some(KEY))).await.unwrap();
+    let r = test_endpoint(real(), test_request(&base, Some(KEY)))
+        .await
+        .unwrap();
     h.join().unwrap();
     assert_eq!(r.outcome, EndpointOutcome::Listed);
     assert_eq!(r.models, ["qwen", "llama"]);
@@ -649,7 +972,10 @@ async fn test_lists_an_openai_shaped_server_and_sends_the_key_as_a_bearer_token(
     assert_eq!(r.status, Some(200));
     assert!(r.code.is_none() && r.answered_at.as_ref().unwrap().ends_with("/v1/models"));
     let req = seen.lock().unwrap()[0].1.to_lowercase();
-    assert!(req.contains(&format!("authorization: bearer {KEY}")), "{req}");
+    assert!(
+        req.contains(&format!("authorization: bearer {KEY}")),
+        "{req}"
+    );
     assert!(!format!("{r:?}").contains(KEY));
 }
 
@@ -657,21 +983,36 @@ async fn test_lists_an_openai_shaped_server_and_sends_the_key_as_a_bearer_token(
 async fn test_tries_the_second_path_when_the_first_is_not_a_model_list() {
     // `/v1/models` is the base's own `/models`; the first path 404s here, so the second (`/v1/v1/models`) is asked, then it stops
     let (base, seen, h) = server(vec![], 2);
-    let r = test_endpoint(real(), test_request(&base, None)).await.unwrap();
+    let r = test_endpoint(real(), test_request(&base, None))
+        .await
+        .unwrap();
     h.join().unwrap();
     assert_eq!(r.outcome, EndpointOutcome::NotAModelServer);
     assert_eq!(r.code.as_deref(), Some("hx.provider.not_a_model_server"));
-    let paths: Vec<String> = seen.lock().unwrap().iter().map(|(p, _)| p.clone()).collect();
+    let paths: Vec<String> = seen
+        .lock()
+        .unwrap()
+        .iter()
+        .map(|(p, _)| p.clone())
+        .collect();
     assert_eq!(paths, ["/v1/models", "/v1/v1/models"]);
     // no key was typed: none was sent
-    assert!(!seen.lock().unwrap()[0].1.to_lowercase().contains("authorization"));
+    assert!(
+        !seen.lock().unwrap()[0]
+            .1
+            .to_lowercase()
+            .contains("authorization")
+    );
 }
 
 #[tokio::test]
 async fn test_reads_an_ollama_shaped_list() {
-    let body = json!({"models":[{"name":"llama3:8b","model":"llama3:8b"},{"name":"qwen2.5:7b"}]}).to_string();
+    let body = json!({"models":[{"name":"llama3:8b","model":"llama3:8b"},{"name":"qwen2.5:7b"}]})
+        .to_string();
     let (base, _, h) = server(vec![("/v1/models", 200, "", body)], 1);
-    let r = test_endpoint(real(), test_request(&base, None)).await.unwrap();
+    let r = test_endpoint(real(), test_request(&base, None))
+        .await
+        .unwrap();
     h.join().unwrap();
     assert_eq!(r.outcome, EndpointOutcome::Listed);
     assert_eq!(r.models, ["llama3:8b", "qwen2.5:7b"]);
@@ -679,8 +1020,13 @@ async fn test_reads_an_ollama_shaped_list() {
 
 #[tokio::test]
 async fn test_says_empty_for_a_server_that_lists_nothing() {
-    let (base, _, h) = server(vec![("/v1/models", 200, "", json!({"data": []}).to_string())], 1);
-    let r = test_endpoint(real(), test_request(&base, None)).await.unwrap();
+    let (base, _, h) = server(
+        vec![("/v1/models", 200, "", json!({"data": []}).to_string())],
+        1,
+    );
+    let r = test_endpoint(real(), test_request(&base, None))
+        .await
+        .unwrap();
     h.join().unwrap();
     assert_eq!(r.outcome, EndpointOutcome::Empty);
     assert!(r.models.is_empty());
@@ -691,24 +1037,36 @@ async fn test_says_empty_for_a_server_that_lists_nothing() {
 async fn test_says_needs_key_for_a_401_and_never_echoes_the_servers_words() {
     let body = json!({"error": {"message": format!("bad key {KEY}")}}).to_string();
     let (base, _, h) = server(vec![("/v1/models", 401, "", body)], 1);
-    let r = test_endpoint(real(), test_request(&base, Some(KEY))).await.unwrap();
+    let r = test_endpoint(real(), test_request(&base, Some(KEY)))
+        .await
+        .unwrap();
     h.join().unwrap();
     assert_eq!(r.outcome, EndpointOutcome::NeedsKey);
     assert_eq!(r.status, Some(401));
     assert_eq!(r.code.as_deref(), Some("hx.provider.key_rejected"));
-    assert!(!format!("{r:?}").contains(KEY), "what the server said is never shown");
+    assert!(
+        !format!("{r:?}").contains(KEY),
+        "what the server said is never shown"
+    );
 }
 
 #[tokio::test]
 async fn test_says_not_a_model_server_for_an_html_page() {
     let (base, _, h) = server(
         vec![
-            ("/v1/models", 200, "", "<html><body>Welcome to nginx</body></html>".into()),
+            (
+                "/v1/models",
+                200,
+                "",
+                "<html><body>Welcome to nginx</body></html>".into(),
+            ),
             ("/v1/v1/models", 200, "", "<html></html>".into()),
         ],
         2,
     );
-    let r = test_endpoint(real(), test_request(&base, None)).await.unwrap();
+    let r = test_endpoint(real(), test_request(&base, None))
+        .await
+        .unwrap();
     h.join().unwrap();
     assert_eq!(r.outcome, EndpointOutcome::NotAModelServer);
     assert!(r.models.is_empty());
@@ -719,7 +1077,9 @@ async fn test_says_unreachable_when_nothing_listens() {
     let free = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
     let base = format!("http://{}", free.local_addr().unwrap());
     drop(free);
-    let r = test_endpoint(real(), test_request(&base, None)).await.unwrap();
+    let r = test_endpoint(real(), test_request(&base, None))
+        .await
+        .unwrap();
     assert_eq!(r.outcome, EndpointOutcome::Unreachable);
     assert_eq!(r.code.as_deref(), Some("hx.provider.unreachable"));
     assert!(r.status.is_none() && r.answered_at.is_none());
@@ -730,10 +1090,20 @@ async fn test_follows_a_redirect_on_the_same_host_and_refuses_one_to_another_wit
     // same origin: `/v1/models` redirects to `/v1/models/`
     let body = json!({"data":[{"id":"m"}]}).to_string();
     let (base, _, h) = server(
-        vec![("/v1/models", 301, "Location: /v1/models/\r\n", String::new()), ("/v1/models/", 200, "", body.clone())],
+        vec![
+            (
+                "/v1/models",
+                301,
+                "Location: /v1/models/\r\n",
+                String::new(),
+            ),
+            ("/v1/models/", 200, "", body.clone()),
+        ],
         2,
     );
-    let r = test_endpoint(real(), test_request(&base, Some(KEY))).await.unwrap();
+    let r = test_endpoint(real(), test_request(&base, Some(KEY)))
+        .await
+        .unwrap();
     h.join().unwrap();
     assert_eq!(r.models, ["m"]);
 
@@ -743,44 +1113,79 @@ async fn test_follows_a_redirect_on_the_same_host_and_refuses_one_to_another_wit
     let target = format!("http://{}/steal", other.local_addr().unwrap());
     let location: &'static str = Box::leak(format!("Location: {target}\r\n").into_boxed_str());
     let (base, _, h) = server(vec![("/v1/models", 302, location, String::new())], 1);
-    let e = test_endpoint(real(), test_request(&base, Some(KEY))).await.unwrap_err();
+    let e = test_endpoint(real(), test_request(&base, Some(KEY)))
+        .await
+        .unwrap_err();
     h.join().unwrap();
     assert_eq!(e.code(), "hx.provider.endpoint_blocked");
-    assert!(other.accept().is_err(), "nothing connected to the other host");
+    assert!(
+        other.accept().is_err(),
+        "nothing connected to the other host"
+    );
 }
 
 #[tokio::test]
 async fn test_refuses_an_address_it_may_not_dial_before_dialling() {
     for (url, code) in [
-        ("http://192.168.1.20:8000/v1", "hx.provider.endpoint_blocked"),
+        (
+            "http://192.168.1.20:8000/v1",
+            "hx.provider.endpoint_blocked",
+        ),
         ("http://example.com/v1", "hx.provider.endpoint_blocked"),
         ("ftp://example.com", "hx.provider.endpoint_invalid"),
         ("https://a:b@example.com/v1", "hx.provider.endpoint_invalid"),
     ] {
-        let req = EndpointTestRequest { base_url: url.into(), api_mode: ApiMode::ChatCompletions, key: Some(KEY.into()) };
+        let req = EndpointTestRequest {
+            base_url: url.into(),
+            api_mode: ApiMode::ChatCompletions,
+            key: Some(KEY.into()),
+        };
         let e = test_endpoint(real(), req).await.unwrap_err();
         assert_eq!(e.code(), code, "{url}");
     }
-    let bad_key = EndpointTestRequest { base_url: "https://example.com/v1".into(), api_mode: ApiMode::ChatCompletions, key: Some("a b".into()) };
-    assert_eq!(test_endpoint(real(), bad_key).await.unwrap_err().code(), "hx.provider.key_invalid");
+    let bad_key = EndpointTestRequest {
+        base_url: "https://example.com/v1".into(),
+        api_mode: ApiMode::ChatCompletions,
+        key: Some("a b".into()),
+    };
+    assert_eq!(
+        test_endpoint(real(), bad_key).await.unwrap_err().code(),
+        "hx.provider.key_invalid"
+    );
 }
 
 #[tokio::test]
 async fn the_anthropic_wire_sends_x_api_key() {
-    let (base, seen, h) = server(vec![("/v1/models", 200, "", json!({"data":[{"id":"c"}]}).to_string())], 1);
+    let (base, seen, h) = server(
+        vec![(
+            "/v1/models",
+            200,
+            "",
+            json!({"data":[{"id":"c"}]}).to_string(),
+        )],
+        1,
+    );
     let mut req = test_request(&base, Some(KEY));
     req.api_mode = ApiMode::AnthropicMessages;
     test_endpoint(real(), req).await.unwrap();
     h.join().unwrap();
     let head = seen.lock().unwrap()[0].1.to_lowercase();
-    assert!(head.contains(&format!("x-api-key: {KEY}")) && !head.contains("authorization"), "{head}");
+    assert!(
+        head.contains(&format!("x-api-key: {KEY}")) && !head.contains("authorization"),
+        "{head}"
+    );
     assert!(head.contains("anthropic-version"));
 }
 
 #[test]
 fn the_check_enum_is_what_the_state_reads() {
     // a guard against the two enums drifting: every check result has a state
-    for c in [KeyCheck::Accepted(1), KeyCheck::Unverified(404), KeyCheck::Rejected, KeyCheck::Unreachable] {
+    for c in [
+        KeyCheck::Accepted(1),
+        KeyCheck::Unverified(404),
+        KeyCheck::Rejected,
+        KeyCheck::Unreachable,
+    ] {
         let _ = format!("{c:?}");
     }
 }

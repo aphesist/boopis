@@ -949,7 +949,6 @@ fn provider_stub<T>(command: &str) -> std::result::Result<T, HostError> {
     .into())
 }
 
-
 /// The provider commands' engine for a profile: its configuration through the engine's own CLI, the keychain, the one outbound read,
 /// and the two sign-ins this host can read (Claude Code's, ChatGPT's).
 fn providers_engine(
@@ -1020,7 +1019,9 @@ pub async fn provider_remove(
     way: String,
     profile: Option<String>,
 ) -> std::result::Result<crate::providers::ProviderState, HostError> {
-    Ok(providers_engine(&app, &state, profile)?.remove(&way).await?)
+    Ok(providers_engine(&app, &state, profile)?
+        .remove(&way)
+        .await?)
 }
 
 /// Test an endpoint before saving it: one GET of `/models` (then `/v1/models`) on the address, with the key as the wire says,
@@ -1033,11 +1034,10 @@ pub async fn provider_remove(
 pub async fn provider_test_endpoint(
     request: crate::providers::endpoint::EndpointTestRequest,
 ) -> std::result::Result<crate::providers::endpoint::EndpointTestResult, HostError> {
-    Ok(crate::providers::service::test_endpoint(
-        crate::providers::service::https(),
-        request,
+    Ok(
+        crate::providers::service::test_endpoint(crate::providers::service::https(), request)
+            .await?,
     )
-    .await?)
 }
 
 /// Save an endpoint of the person's own: the slug is derived from the name (`custom-<name>`, the catalogue's rule), the key goes

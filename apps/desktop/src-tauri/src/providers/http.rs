@@ -79,7 +79,11 @@ impl Https {
 impl Transport for Https {
     fn get(&self, url: &str, headers: &[(String, String)]) -> std::result::Result<Reply, String> {
         let loopback = Url::parse(url).is_ok_and(|u| is_loopback(&u));
-        let agent = if loopback { &self.direct } else { &self.proxied };
+        let agent = if loopback {
+            &self.direct
+        } else {
+            &self.proxied
+        };
         let mut req = agent.get(url).header("Accept", "application/json");
         for (k, v) in headers {
             req = req.header(k.as_str(), v.as_str());
@@ -135,7 +139,9 @@ impl Address {
         let invalid = |why: &str| Error::Provider("hx.provider.endpoint_invalid", why.to_owned());
         let text = text.trim();
         if text.is_empty() || text.len() > 2048 || text.chars().any(char::is_control) {
-            return Err(invalid("the address is empty, too long or has control characters"));
+            return Err(invalid(
+                "the address is empty, too long or has control characters",
+            ));
         }
         let url = Url::parse(text).map_err(|_| invalid("that is not a web address"))?;
         if !matches!(url.scheme(), "http" | "https") {
@@ -145,7 +151,9 @@ impl Address {
             return Err(invalid("the address has no host"));
         }
         if !url.username().is_empty() || url.password().is_some() {
-            return Err(invalid("the address must not carry a user name or password"));
+            return Err(invalid(
+                "the address must not carry a user name or password",
+            ));
         }
         if url.query().is_some() || url.fragment().is_some() {
             return Err(invalid("the address must not carry a query or a fragment"));
@@ -240,8 +248,14 @@ mod tests {
             Err(Error::Provider(c, _)) => c,
             other => panic!("{u}: {other:?}"),
         };
-        assert_eq!(code("http://192.168.1.20:8000/v1"), "hx.provider.endpoint_blocked");
-        assert_eq!(code("http://example.com/v1"), "hx.provider.endpoint_blocked");
+        assert_eq!(
+            code("http://192.168.1.20:8000/v1"),
+            "hx.provider.endpoint_blocked"
+        );
+        assert_eq!(
+            code("http://example.com/v1"),
+            "hx.provider.endpoint_blocked"
+        );
         for bad in [
             "",
             "   ",
@@ -277,7 +291,9 @@ mod tests {
         // an address on this network is not this computer, even when it looks private
         assert!(!Address::parse("https://192.168.1.20/v1").unwrap().loopback);
         assert_eq!(
-            Address::parse("https://api.example.com/v1/").unwrap().text(),
+            Address::parse("https://api.example.com/v1/")
+                .unwrap()
+                .text(),
             "https://api.example.com/v1"
         );
     }
@@ -289,12 +305,14 @@ mod tests {
         }
     }
 
+    #[allow(clippy::unnecessary_wraps)] // a scripted transport answer
     fn redirect(to: &str) -> std::result::Result<Reply, String> {
-        Ok(Reply {
+        let reply = Reply {
             status: 302,
             body: String::new(),
             location: Some(to.to_owned()),
-        })
+        };
+        Ok(reply)
     }
 
     #[test]

@@ -12,13 +12,13 @@ use serde_json::{Value, json};
 
 use super::ops::HermesOps;
 use super::state::Optins;
-use crate::providers::{HeavySwitch, catalogue};
 use super::{DiffLine, Form};
 use crate::claude::{self, ClaudeCli, INSTALL_COMMAND, PROVIDER_ID, Probe, State};
 use crate::commands::Json;
 use crate::config::FREE_TIER_ENABLED;
 use crate::error::{Error, Result};
 use crate::free_tier::FreeTier;
+use crate::providers::{HeavySwitch, catalogue};
 use crate::secrets::SecretStore;
 use crate::secrets::refs::{SOURCE, SecretRef, builtin_provider_env};
 
@@ -46,7 +46,7 @@ pub const CHATGPT_RUNGS: &[(&str, &str)] = &[
 /// the slug spike). Its ladder is the ChatGPT one, built from what the key lists.
 pub const OPENAI_KEY: &str = "openai-key";
 const OPENAI_KEY_LABEL: &str = "OpenAI (an API key from the OpenAI platform)";
-/// The engine's provider for an OpenAI API key (`openai-api`, never `openai`: that is the engine's alias of OpenRouter).
+/// The engine's provider for an OpenAI API key (`openai-api`, never `openai`: that is the engine's alias of `OpenRouter`).
 pub const OPENAI_API_PROVIDER: &str = "openai-api";
 /// Where an OpenAI key is made.
 pub const OPENAI_KEY_URL: &str = "https://platform.openai.com/api-keys";
@@ -250,7 +250,9 @@ const NAMES_JSON: &str = include_str!("../../../../shared/data/model-names.json"
 /// The model an alias of the Claude route is on an Anthropic key (`fable` is `claude-fable-5-2`), read from the names table.
 fn alias_pinned(alias: &str) -> Option<String> {
     let names: Value = serde_json::from_str(NAMES_JSON).ok()?;
-    names["aliases"][alias]["pinned"].as_str().map(str::to_owned)
+    names["aliases"][alias]["pinned"]
+        .as_str()
+        .map(str::to_owned)
 }
 
 fn all_on(tiers: &[LadderTier], provider: &str) -> bool {
@@ -329,7 +331,7 @@ pub fn heavy_choices(
             let blocked = (sw.pick == "route_alias"
                 && !on
                 && engine == Some(PROVIDER_ID)
-                && !probe.aliases.iter().any(|a| *a == sw.id))
+                && !probe.aliases.contains(&sw.id))
             .then(|| {
                 // the alias's own name and the oldest Claude Code that serves it (`claude::ALIASES`)
                 let mut name = sw.id.clone();
@@ -451,7 +453,8 @@ async fn heavy_tier(
         "route_alias" => format!("{engine}/{}", alias_pinned(&sw.id).ok_or_else(none_listed)?),
         _ => {
             let catalogue = ops.provider_models(engine).await?;
-            let id = lowest_in_family(engine, &sw.family, &catalogue, true).ok_or_else(none_listed)?;
+            let id =
+                lowest_in_family(engine, &sw.family, &catalogue, true).ok_or_else(none_listed)?;
             format!("{engine}/{id}")
         }
     };
@@ -465,7 +468,11 @@ async fn heavy_tier(
 /// engines include `provider`, picks the lowest model of its family and is on in `optins` (Gemini 4 Carbon after Neon; Grok on an
 /// xAI ladder). A switch whose family the catalogue lacks adds nothing.
 #[must_use]
-pub fn heavy_rungs(provider: &str, catalogue_ids: &[String], optins: &Optins) -> Vec<(String, String)> {
+pub fn heavy_rungs(
+    provider: &str,
+    catalogue_ids: &[String],
+    optins: &Optins,
+) -> Vec<(String, String)> {
     catalogue()
         .heavy_switches
         .iter()
@@ -1152,7 +1159,9 @@ fn chatgpt_without_terra(tiers: &[LadderTier]) -> bool {
                         && crate::frontier::family_of(p, id).as_deref() == Some(*family)
                 })
         })
-        && tiers.windows(2).all(|w| w[0].name == "sol" && w[1].name == "astra")
+        && tiers
+            .windows(2)
+            .all(|w| w[0].name == "sol" && w[1].name == "astra")
 }
 
 /// The candidate's ChatGPT ladder: one tier named `astra` on a GPT Astra.

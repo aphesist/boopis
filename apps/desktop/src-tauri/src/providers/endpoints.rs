@@ -34,7 +34,13 @@ pub fn slug_for(name: &str, taken: &[String]) -> Result<String> {
     if base.is_empty() {
         return Err(invalid("the name needs at least one letter or digit"));
     }
-    let cut = |s: &str, n: usize| s.chars().take(n).collect::<String>().trim_end_matches('-').to_owned();
+    let cut = |s: &str, n: usize| {
+        s.chars()
+            .take(n)
+            .collect::<String>()
+            .trim_end_matches('-')
+            .to_owned()
+    };
     let first = format!("{prefix}{}", cut(base, room));
     if !taken.contains(&first) {
         return Ok(first);
@@ -180,15 +186,26 @@ mod tests {
     use crate::providers::ApiMode;
 
     fn slug(name: &str, taken: &[&str]) -> Result<String> {
-        slug_for(name, &taken.iter().map(|t| (*t).to_owned()).collect::<Vec<_>>())
+        slug_for(
+            name,
+            &taken.iter().map(|t| (*t).to_owned()).collect::<Vec<_>>(),
+        )
     }
 
     #[test]
     fn the_slug_rule_follows_the_catalogues_examples() {
         let rules = &catalogue().endpoint.slug;
         for ex in rules["examples"].as_array().unwrap() {
-            let taken: Vec<&str> = ex["taken"].as_array().unwrap().iter().map(|t| t.as_str().unwrap()).collect();
-            assert_eq!(slug(ex["name"].as_str().unwrap(), &taken).unwrap(), ex["slug"].as_str().unwrap());
+            let taken: Vec<&str> = ex["taken"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|t| t.as_str().unwrap())
+                .collect();
+            assert_eq!(
+                slug(ex["name"].as_str().unwrap(), &taken).unwrap(),
+                ex["slug"].as_str().unwrap()
+            );
         }
         for bad in rules["invalid_names"].as_array().unwrap() {
             assert!(slug(bad.as_str().unwrap(), &[]).is_err(), "{bad}");
@@ -197,7 +214,10 @@ mod tests {
 
     #[test]
     fn every_slug_matches_the_pattern_and_is_never_frontier() {
-        let pattern = catalogue().endpoint.slug["pattern"].as_str().unwrap().to_owned();
+        let pattern = catalogue().endpoint.slug["pattern"]
+            .as_str()
+            .unwrap()
+            .to_owned();
         let re = |s: &str| {
             // ^custom-[a-z0-9][a-z0-9-]{0,39}$
             let rest = s.strip_prefix("custom-").unwrap_or("");
@@ -205,15 +225,27 @@ mod tests {
             pattern.starts_with("^custom-")
                 && (1..=40).contains(&b.len())
                 && (b[0].is_ascii_lowercase() || b[0].is_ascii_digit())
-                && b.iter().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || *c == b'-')
+                && b.iter()
+                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || *c == b'-')
         };
         let long = "A very long name that goes on and on and on and on and on".to_owned();
         let mut taken = Vec::new();
-        for name in ["Ünïcode Server", "x", "---a---", "9lives", long.as_str(), "ÄÖ x ÄÖ"] {
+        for name in [
+            "Ünïcode Server",
+            "x",
+            "---a---",
+            "9lives",
+            long.as_str(),
+            "ÄÖ x ÄÖ",
+        ] {
             let s = slug_for(name, &taken).unwrap();
             assert!(re(&s), "{name}: {s}");
             assert!(!crate::frontier::is_frontier(&s, "claude-opus-5-5"), "{s}");
-            assert!(crate::secrets::refs::SecretRef::parse(&format!("secret://provider.{s}/api_key")).is_ok(), "{s}");
+            assert!(
+                crate::secrets::refs::SecretRef::parse(&format!("secret://provider.{s}/api_key"))
+                    .is_ok(),
+                "{s}"
+            );
             taken.push(s);
         }
         // a long name still takes its suffixes inside the limit and stays unique
@@ -239,12 +271,26 @@ mod tests {
     fn a_key_is_one_clean_token_and_a_coding_plan_key_is_refused() {
         let kimi = vec!["sk-kimi-".to_owned()];
         assert_eq!(clean_key("  sk-abc123\n", &[]).unwrap(), "sk-abc123");
-        for bad in ["", "   ", "sk abc", "sk-a\tb", "sk-a\u{7}b", &"k".repeat(5000)] {
-            assert_eq!(clean_key(bad, &[]).unwrap_err().code(), "hx.provider.key_invalid", "{bad:?}");
+        for bad in [
+            "",
+            "   ",
+            "sk abc",
+            "sk-a\tb",
+            "sk-a\u{7}b",
+            &"k".repeat(5000),
+        ] {
+            assert_eq!(
+                clean_key(bad, &[]).unwrap_err().code(),
+                "hx.provider.key_invalid",
+                "{bad:?}"
+            );
         }
         let e = clean_key("sk-kimi-abcdef", &kimi).unwrap_err();
         assert_eq!(e.code(), "hx.provider.key_invalid");
-        assert!(!e.to_string().contains("abcdef"), "the key is never in the message");
+        assert!(
+            !e.to_string().contains("abcdef"),
+            "the key is never in the message"
+        );
         assert!(clean_key("sk-moon-abcdef", &kimi).is_ok());
     }
 
@@ -276,15 +322,42 @@ mod tests {
             f(&mut r);
             check(&r).unwrap_err().code()
         };
-        assert_eq!(code(&|r| r.base_url = "http://10.0.0.5/v1".into()), "hx.provider.endpoint_blocked");
-        assert_eq!(code(&|r| r.base_url = "ftp://x".into()), "hx.provider.endpoint_invalid");
-        assert_eq!(code(&|r| r.models = vec!["two words".into()]), "hx.provider.endpoint_invalid");
-        assert_eq!(code(&|r| r.models = vec!["x".repeat(201)]), "hx.provider.endpoint_invalid");
-        assert_eq!(code(&|r| r.models = (0..51).map(|i| format!("m{i}")).collect()), "hx.provider.endpoint_invalid");
-        assert_eq!(code(&|r| r.use_model = Some("zzz".into())), "hx.provider.endpoint_invalid");
-        assert_eq!(code(&|r| r.context_length = Some(10)), "hx.provider.endpoint_invalid");
-        assert_eq!(code(&|r| r.request_timeout_s = Some(0)), "hx.provider.endpoint_invalid");
-        assert_eq!(code(&|r| r.key = Some("a b".into())), "hx.provider.key_invalid");
+        assert_eq!(
+            code(&|r| r.base_url = "http://10.0.0.5/v1".into()),
+            "hx.provider.endpoint_blocked"
+        );
+        assert_eq!(
+            code(&|r| r.base_url = "ftp://x".into()),
+            "hx.provider.endpoint_invalid"
+        );
+        assert_eq!(
+            code(&|r| r.models = vec!["two words".into()]),
+            "hx.provider.endpoint_invalid"
+        );
+        assert_eq!(
+            code(&|r| r.models = vec!["x".repeat(201)]),
+            "hx.provider.endpoint_invalid"
+        );
+        assert_eq!(
+            code(&|r| r.models = (0..51).map(|i| format!("m{i}")).collect()),
+            "hx.provider.endpoint_invalid"
+        );
+        assert_eq!(
+            code(&|r| r.use_model = Some("zzz".into())),
+            "hx.provider.endpoint_invalid"
+        );
+        assert_eq!(
+            code(&|r| r.context_length = Some(10)),
+            "hx.provider.endpoint_invalid"
+        );
+        assert_eq!(
+            code(&|r| r.request_timeout_s = Some(0)),
+            "hx.provider.endpoint_invalid"
+        );
+        assert_eq!(
+            code(&|r| r.key = Some("a b".into())),
+            "hx.provider.key_invalid"
+        );
         let mut r = request();
         r.key = Some("   ".into());
         assert!(check(&r).unwrap().key.is_none(), "a blank key is no key");

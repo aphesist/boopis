@@ -1359,18 +1359,20 @@ export type Gpu_Serialize = {
 
 /**
  *  One heavy model's opt-in (Settings > Models, the governed section): a model that is frontier but token-heavy or costly, so
- *  governed mode runs it only when the user turned it on (ADR-0037). The data file marks the family heavy; this is what the user
- *  can do about it.
+ *  governed mode runs it only when the user turned it on (ADR-0037, ADR-0039). The data file marks the family heavy and holds the
+ *  switch (`heavy_switches` in `providers.json`: label, reason, the engines a ladder must be on, the key, how the tier is chosen
+ *  and what is said when it cannot be); this is what the user can do about it.
  */
 export type HeavyChoice = HeavyChoice_Serialize | HeavyChoice_Deserialize;
 
 /**
  *  One heavy model's opt-in (Settings > Models, the governed section): a model that is frontier but token-heavy or costly, so
- *  governed mode runs it only when the user turned it on (ADR-0037). The data file marks the family heavy; this is what the user
- *  can do about it.
+ *  governed mode runs it only when the user turned it on (ADR-0037, ADR-0039). The data file marks the family heavy and holds the
+ *  switch (`heavy_switches` in `providers.json`: label, reason, the engines a ladder must be on, the key, how the tier is chosen
+ *  and what is said when it cannot be); this is what the user can do about it.
  */
 export type HeavyChoice_Deserialize = {
-	/**  `fable` or `grok`: what `setup_set_heavy` takes. */
+	/**  A switch of `heavy_switches` (`fable`, `grok`, `carbon`): what `setup_set_heavy` takes. */
 	id: string,
 	/**  The switch's label: `Climb to Fable`. */
 	label: string,
@@ -1386,11 +1388,12 @@ export type HeavyChoice_Deserialize = {
 
 /**
  *  One heavy model's opt-in (Settings > Models, the governed section): a model that is frontier but token-heavy or costly, so
- *  governed mode runs it only when the user turned it on (ADR-0037). The data file marks the family heavy; this is what the user
- *  can do about it.
+ *  governed mode runs it only when the user turned it on (ADR-0037, ADR-0039). The data file marks the family heavy and holds the
+ *  switch (`heavy_switches` in `providers.json`: label, reason, the engines a ladder must be on, the key, how the tier is chosen
+ *  and what is said when it cannot be); this is what the user can do about it.
  */
 export type HeavyChoice_Serialize = {
-	/**  `fable` or `grok`: what `setup_set_heavy` takes. */
+	/**  A switch of `heavy_switches` (`fable`, `grok`, `carbon`): what `setup_set_heavy` takes. */
 	id: string,
 	/**  The switch's label: `Climb to Fable`. */
 	label: string,

@@ -100,7 +100,9 @@ impl SecretRef {
 pub fn builtin_provider_env(provider: &str) -> Option<String> {
     if let Some(var) = crate::providers::catalogue()
         .ways()
-        .find(|(_, w)| w.config == crate::providers::Config::Builtin && w.engine.as_deref() == Some(provider))
+        .find(|(_, w)| {
+            w.config == crate::providers::Config::Builtin && w.engine.as_deref() == Some(provider)
+        })
         .and_then(|(_, w)| w.key.as_ref()?.wire_var.clone())
     {
         return Some(var);
@@ -147,9 +149,15 @@ mod tests {
         );
         assert_eq!(builtin_provider_env("nope"), None);
         // every lab with a key reads it from the variable its way names, whether or not the older table lists it
-        assert_eq!(builtin_provider_env("openai-api").unwrap(), "OPENAI_API_KEY");
+        assert_eq!(
+            builtin_provider_env("openai-api").unwrap(),
+            "OPENAI_API_KEY"
+        );
         assert_eq!(builtin_provider_env("zai").unwrap(), "GLM_API_KEY");
-        assert_eq!(builtin_provider_env("kimi-coding-cn").unwrap(), "KIMI_CN_API_KEY");
+        assert_eq!(
+            builtin_provider_env("kimi-coding-cn").unwrap(),
+            "KIMI_CN_API_KEY"
+        );
         // a sign-in or a way boopis writes as an endpoint has none
         assert_eq!(builtin_provider_env("openai-codex"), None);
         assert_eq!(builtin_provider_env("custom-ollama"), None);

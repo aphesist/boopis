@@ -15,16 +15,16 @@ use super::check::{KeyCheck, check_key, timeout};
 use super::endpoint::EndpointRequest;
 use super::endpoints::{check, clean_key, models_value, reserved, slug_for};
 use super::http::{Address, Transport};
-use super::{
-    ApiMode, Config, Entry, ProviderState, ProviderStatus, Way, WayKind, catalogue,
-};
+use super::{ApiMode, Config, Entry, ProviderState, ProviderStatus, Way, WayKind, catalogue};
 use crate::chatgpt::{self, ChatGpt};
 use crate::claude::{self, ClaudeCli};
 use crate::error::{Error, Result};
 use crate::secrets::SecretStore;
 use crate::secrets::refs::{SOURCE, SecretRef, builtin_provider_env};
 use crate::setup::ops::HermesOps;
-use crate::setup::providers::{dotenv_names, key_in_place, pinned_address, saved, wire, write_default_model};
+use crate::setup::providers::{
+    dotenv_names, key_in_place, pinned_address, saved, wire, write_default_model,
+};
 use crate::setup::state;
 
 /// What the last probe of the runtimes on this computer found, by way id (this run only; `provider_probe_local` fills it).
@@ -75,7 +75,9 @@ fn resolve(id: &str) -> Result<Target> {
     if let Some((e, w)) = catalogue().way(id) {
         return Ok(Target::Way(e, w));
     }
-    let prefix = catalogue().endpoint.slug["prefix"].as_str().unwrap_or("custom-");
+    let prefix = catalogue().endpoint.slug["prefix"]
+        .as_str()
+        .unwrap_or("custom-");
     match id.strip_prefix("custom.") {
         Some(slug) if slug.starts_with(prefix) && slug.len() > prefix.len() => {
             Ok(Target::Endpoint(slug.to_owned()))
@@ -178,7 +180,13 @@ impl Providers {
             ("claude.rs", Some(c), _) => claude_state(entry, way, &c.probe().await),
             ("chatgpt/", _, Some(g)) => match g.status().await {
                 Ok(s) => chatgpt_state(entry, way, &s),
-                Err(e) => ProviderState::error(&entry.id, &way.id, WayKind::Signin, e.code(), "boopis could not read the sign-in."),
+                Err(e) => ProviderState::error(
+                    &entry.id,
+                    &way.id,
+                    WayKind::Signin,
+                    e.code(),
+                    "boopis could not read the sign-in.",
+                ),
             },
             _ => ProviderState::error(
                 &entry.id,
@@ -193,7 +201,10 @@ impl Providers {
     async fn endpoint_states(&self) -> Result<Vec<ProviderState>> {
         let taken = reserved(&[]);
         let providers = self.ops.config_get("providers").await?;
-        let prefix = catalogue().endpoint.slug["prefix"].as_str().unwrap_or("custom-").to_owned();
+        let prefix = catalogue().endpoint.slug["prefix"]
+            .as_str()
+            .unwrap_or("custom-")
+            .to_owned();
         let Some(map) = providers.as_ref().and_then(Value::as_object) else {
             return Ok(Vec::new());
         };
@@ -229,7 +240,10 @@ impl Providers {
             .as_ref()
             .filter(|_| way.kind != WayKind::Signin && way.config == Config::Builtin && !way.hidden)
             .ok_or_else(|| unsupported("this way takes no key here"))?;
-        let engine = way.engine.as_deref().ok_or_else(|| unsupported("this way has no provider"))?;
+        let engine = way
+            .engine
+            .as_deref()
+            .ok_or_else(|| unsupported("this way has no provider"))?;
         let key = clean_key(raw, &rule.refuse_prefixes)?;
         let r = SecretRef::parse(&way.secret_ref().ok_or_else(|| unsupported("no key"))?)?;
         let previous = self.secrets.get(&r.service(), &r.name)?;
@@ -262,9 +276,11 @@ impl Providers {
         let address = Address::parse(&base)?;
         let url = listing_url(&address, mode);
         let (t, key) = (self.transport.clone(), key.to_owned());
-        let found = tokio::task::spawn_blocking(move || check_key(t.as_ref(), &address, &url.0, mode, &key).map(|c| (c, url.1)))
-            .await
-            .map_err(|e| Error::Io(e.to_string()))??;
+        let found = tokio::task::spawn_blocking(move || {
+            check_key(t.as_ref(), &address, &url.0, mode, &key).map(|c| (c, url.1))
+        })
+        .await
+        .map_err(|e| Error::Io(e.to_string()))??;
         Ok(match found {
             // a listing that is public (OpenRouter's) cannot tell a bad key; its key check answers 200 with no list
             (KeyCheck::Unverified(s), true) if (200..300).contains(&s) => KeyCheck::Accepted(0),
@@ -286,8 +302,12 @@ impl Providers {
         };
         match self.ops.restart_gateway_when_idle().await {
             Ok(true) => None,
-            Ok(false) => pending("Saved. boopis's engine uses it after its next restart: a turn is running now."),
-            Err(_) => pending("Saved, but boopis could not restart its engine. Restart boopis to use it."),
+            Ok(false) => pending(
+                "Saved. boopis's engine uses it after its next restart: a turn is running now.",
+            ),
+            Err(_) => {
+                pending("Saved, but boopis could not restart its engine. Restart boopis to use it.")
+            }
         }
     }
 
@@ -313,25 +333,44 @@ impl Providers {
     }
 
     async fn remove_key(&self, entry: &Entry, way: &Way) -> Result<ProviderState> {
-        let engine = way.engine.as_deref().ok_or_else(|| unsupported("no provider"))?;
+        let engine = way
+            .engine
+            .as_deref()
+            .ok_or_else(|| unsupported("no provider"))?;
         let r = SecretRef::parse(&way.secret_ref().ok_or_else(|| unsupported("no key"))?)?;
         let var = builtin_provider_env(engine);
         let bound = match &var {
-            Some(v) => self.ops.config_get(&format!("secrets.{SOURCE}.env.{v}")).await?.is_some(),
+            Some(v) => self
+                .ops
+                .config_get(&format!("secrets.{SOURCE}.env.{v}"))
+                .await?
+                .is_some(),
             None => false,
         };
         let had = self.secrets.get(&r.service(), &r.name)?.is_some();
         if !had && !bound {
-            return Err(Error::Provider("hx.provider.not_found", "there is no saved key to remove".into()));
+            return Err(Error::Provider(
+                "hx.provider.not_found",
+                "there is no saved key to remove".into(),
+            ));
         }
         self.secrets.delete(&r.service(), &r.name)?;
         let cfg = |e: Error| Error::Setup("hx.setup.config_failed", e.to_string());
         if let Some(v) = &var {
-            self.ops.config_unset(&format!("secrets.{SOURCE}.env.{v}")).await.map_err(cfg)?;
+            self.ops
+                .config_unset(&format!("secrets.{SOURCE}.env.{v}"))
+                .await
+                .map_err(cfg)?;
         }
         // the pinned address was set by boopis alongside the key; take it away only while it is still the one it set
         if let Some((env, address)) = pinned_address(engine)
-            && self.ops.config_get(&env).await?.as_ref().and_then(Value::as_str) == Some(address.as_str())
+            && self
+                .ops
+                .config_get(&env)
+                .await?
+                .as_ref()
+                .and_then(Value::as_str)
+                == Some(address.as_str())
         {
             self.ops.config_unset(&env).await.map_err(cfg)?;
         }
@@ -355,13 +394,22 @@ impl Providers {
         let r = SecretRef::provider_key(slug);
         let had = self.secrets.get(&r.service(), &r.name)?.is_some();
         if current.is_none() && !had {
-            return Err(Error::Provider("hx.provider.not_found", "there is no such endpoint".into()));
+            return Err(Error::Provider(
+                "hx.provider.not_found",
+                "there is no such endpoint".into(),
+            ));
         }
         self.secrets.delete(&r.service(), &r.name)?;
         let cfg = |e: Error| Error::Setup("hx.setup.config_failed", e.to_string());
-        self.ops.config_unset(&format!("secrets.{SOURCE}.env.{}", r.env_name())).await.map_err(cfg)?;
+        self.ops
+            .config_unset(&format!("secrets.{SOURCE}.env.{}", r.env_name()))
+            .await
+            .map_err(cfg)?;
         if current.is_some() {
-            self.ops.config_unset(&format!("providers.{slug}")).await.map_err(cfg)?;
+            self.ops
+                .config_unset(&format!("providers.{slug}"))
+                .await
+                .map_err(cfg)?;
         }
         let note = self.reload().await;
         let mut s = endpoint_gone(slug);
@@ -394,21 +442,42 @@ impl Providers {
             self.rollback_endpoint(&slug, &r).await;
             return Err(Error::Setup("hx.setup.config_failed", e.to_string()));
         }
-        let note = if ok.key.is_some() { self.reload().await } else { None };
+        let note = if ok.key.is_some() {
+            self.reload().await
+        } else {
+            None
+        };
         let mut s = endpoint_state_of(&slug, &ok.address.text(), ok.models.len(), false);
         s.checked_at = Some(now_ms());
         s.detail = note;
         Ok(s)
     }
 
-    async fn write_endpoint(&self, slug: &str, req: &EndpointRequest, ok: &super::endpoints::Checked) -> Result<()> {
+    async fn write_endpoint(
+        &self,
+        slug: &str,
+        req: &EndpointRequest,
+        ok: &super::endpoints::Checked,
+    ) -> Result<()> {
         let mode = serde_json::to_value(req.api_mode).unwrap_or(Value::Null);
         let mut writes: Vec<(String, String)> = vec![
             (format!("providers.{slug}.base_url"), ok.address.text()),
-            (format!("providers.{slug}.api_mode"), mode.as_str().unwrap_or("chat_completions").to_owned()),
-            (format!("providers.{slug}.models"), models_value(&ok.models).to_string()),
-            (format!("providers.{slug}.discover_models"), req.discover.to_string()),
-            (format!("providers.{slug}.request_timeout_seconds"), ok.timeout_s.to_string()),
+            (
+                format!("providers.{slug}.api_mode"),
+                mode.as_str().unwrap_or("chat_completions").to_owned(),
+            ),
+            (
+                format!("providers.{slug}.models"),
+                models_value(&ok.models).to_string(),
+            ),
+            (
+                format!("providers.{slug}.discover_models"),
+                req.discover.to_string(),
+            ),
+            (
+                format!("providers.{slug}.request_timeout_seconds"),
+                ok.timeout_s.to_string(),
+            ),
         ];
         if let Some(c) = req.context_length {
             writes.push((format!("providers.{slug}.context_length"), c.to_string()));
@@ -427,13 +496,16 @@ impl Providers {
 
     async fn rollback_endpoint(&self, slug: &str, r: &SecretRef) {
         let _ = self.secrets.delete(&r.service(), &r.name);
-        let _ = self.ops.config_unset(&format!("secrets.{SOURCE}.env.{}", r.env_name())).await;
+        let _ = self
+            .ops
+            .config_unset(&format!("secrets.{SOURCE}.env.{}", r.env_name()))
+            .await;
         let _ = self.ops.config_unset(&format!("providers.{slug}")).await;
     }
 }
 
 /// Where a key's listing is asked, and whether that listing is the provider's authenticated key check (`/key`) instead of its
-/// model list. OpenRouter's model list is public, so it cannot tell a bad key; its key endpoint can.
+/// model list. `OpenRouter`'s model list is public, so it cannot tell a bad key; its key endpoint can.
 fn listing_url(base: &Address, mode: ApiMode) -> (String, bool) {
     let text = base.text();
     if text.contains("//openrouter.ai/") {
@@ -484,7 +556,12 @@ fn chatgpt_state(entry: &Entry, way: &Way, s: &chatgpt::Status) -> ProviderState
     out
 }
 
-fn key_state(entry: &Entry, way: &Way, found: &std::result::Result<KeyCheck, Error>, note: Option<String>) -> ProviderState {
+fn key_state(
+    entry: &Entry,
+    way: &Way,
+    found: &std::result::Result<KeyCheck, Error>,
+    note: Option<String>,
+) -> ProviderState {
     let (e, w) = (&entry.id, &way.id);
     let mut s = match found {
         Ok(KeyCheck::Accepted(n)) => {
@@ -495,12 +572,31 @@ fn key_state(entry: &Entry, way: &Way, found: &std::result::Result<KeyCheck, Err
         }
         Ok(KeyCheck::Unverified(_)) => {
             let mut c = ProviderState::connected(e, w, WayKind::Key);
-            c.detail = Some("Saved. The provider's model list could not be used to check the key.".into());
+            c.detail =
+                Some("Saved. The provider's model list could not be used to check the key.".into());
             c
         }
-        Ok(KeyCheck::Rejected) => ProviderState::error(e, w, WayKind::Key, "hx.provider.key_rejected", "The provider did not accept that key. Check it, or make a new one."),
-        Ok(KeyCheck::Unreachable) => ProviderState::error(e, w, WayKind::Key, "hx.provider.unreachable", "boopis could not reach the provider to check the key. The key is saved."),
-        Err(err) => ProviderState::error(e, w, WayKind::Key, err.code(), "boopis could not check the key. The key is saved."),
+        Ok(KeyCheck::Rejected) => ProviderState::error(
+            e,
+            w,
+            WayKind::Key,
+            "hx.provider.key_rejected",
+            "The provider did not accept that key. Check it, or make a new one.",
+        ),
+        Ok(KeyCheck::Unreachable) => ProviderState::error(
+            e,
+            w,
+            WayKind::Key,
+            "hx.provider.unreachable",
+            "boopis could not reach the provider to check the key. The key is saved.",
+        ),
+        Err(err) => ProviderState::error(
+            e,
+            w,
+            WayKind::Key,
+            err.code(),
+            "boopis could not check the key. The key is saved.",
+        ),
     };
     s.checked_at = Some(now_ms());
     if let (Some(n), None) = (note, s.code.as_ref()) {
@@ -538,12 +634,26 @@ fn endpoint_state(store: &dyn SecretStore, slug: &str, v: &Value) -> ProviderSta
         Value::Array(a) => a.len(),
         _ => 0,
     };
-    let names_key = v["key_env"].as_str().or_else(|| v["api_key_env"].as_str()).is_some();
+    let names_key = v["key_env"]
+        .as_str()
+        .or_else(|| v["api_key_env"].as_str())
+        .is_some();
     let r = SecretRef::provider_key(slug);
     let needs_key = names_key && !saved(store, &r);
-    let mut s = endpoint_state_of(slug, v["base_url"].as_str().unwrap_or_default(), models, needs_key);
+    let mut s = endpoint_state_of(
+        slug,
+        v["base_url"].as_str().unwrap_or_default(),
+        models,
+        needs_key,
+    );
     if s.status == ProviderStatus::Connected && v["base_url"].as_str().is_none() {
-        s = ProviderState::error("custom", &s.way, WayKind::Custom, "hx.config.invalid", "This endpoint has no address.");
+        s = ProviderState::error(
+            "custom",
+            &s.way,
+            WayKind::Custom,
+            "hx.config.invalid",
+            "This endpoint has no address.",
+        );
     }
     s
 }
@@ -558,12 +668,22 @@ pub async fn test_endpoint(
     request: super::endpoint::EndpointTestRequest,
 ) -> Result<super::endpoint::EndpointTestResult> {
     let address = Address::parse(&request.base_url)?;
-    let key = match request.key.as_deref().map(str::trim).filter(|k| !k.is_empty()) {
+    let key = match request
+        .key
+        .as_deref()
+        .map(str::trim)
+        .filter(|k| !k.is_empty())
+    {
         Some(k) => Some(clean_key(k, &[])?),
         None => None,
     };
     tokio::task::spawn_blocking(move || {
-        super::check::test_endpoint(transport.as_ref(), &address, request.api_mode, key.as_deref())
+        super::check::test_endpoint(
+            transport.as_ref(),
+            &address,
+            request.api_mode,
+            key.as_deref(),
+        )
     })
     .await
     .map_err(|e| Error::Io(e.to_string()))?

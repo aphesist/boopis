@@ -543,7 +543,7 @@ impl Catalogue {
         // the engine reads a provider name in lower case, so a name that differs only in case is the same provider
         let provider = provider.trim().to_ascii_lowercase();
         let n = &self.never_frontier;
-        n.engines.iter().any(|e| *e == provider)
+        n.engines.contains(&provider)
             || n.slug_prefixes
                 .iter()
                 .any(|p| provider.starts_with(p.as_str()))
@@ -872,7 +872,11 @@ mod tests {
                 .find(|f| f["id"] == h.family)
                 .unwrap_or_else(|| panic!("{}: family {}", h.id, h.family));
             // every switch is held to the heavy mark in frontier-models.json (Carbon's landed with its switch)
-            assert_eq!(fam["heavy"], true, "{}: heavy mark in frontier-models.json", h.id);
+            assert_eq!(
+                fam["heavy"], true,
+                "{}: heavy mark in frontier-models.json",
+                h.id
+            );
             let (_, key_way) = catalogue().way(&h.key_way).unwrap();
             assert_eq!(key_way.kind, WayKind::Key);
             for e in &h.engines {
@@ -894,7 +898,10 @@ mod tests {
         // and every family marked heavy has a switch: nothing is heavy that the user cannot turn on
         for f in families.iter().filter(|f| f["heavy"] == true) {
             assert!(
-                catalogue().heavy_switches.iter().any(|h| h.family == f["id"]),
+                catalogue()
+                    .heavy_switches
+                    .iter()
+                    .any(|h| h.family == f["id"]),
                 "{} is heavy with no switch",
                 f["id"]
             );

@@ -32,7 +32,7 @@ fn id_of(v: &Value) -> Option<String> {
     Some(text.strip_prefix("models/").unwrap_or(text).to_owned())
 }
 
-/// Read a listing in the shapes servers use: `{"data": [{"id"}]}` (OpenAI, Anthropic, OpenRouter, vLLM, LM Studio),
+/// Read a listing in the shapes servers use: `{"data": [{"id"}]}` (OpenAI, Anthropic, `OpenRouter`, vLLM, LM Studio),
 /// `{"models": [{"name"} | {"model"}]}` (Ollama, Google), or a bare array. Ids are de-duplicated in order, an id with a control
 /// character or over `max_chars` is dropped, and at most `max` are kept.
 #[must_use]
@@ -128,7 +128,11 @@ pub fn timeout() -> std::time::Duration {
 fn paths() -> Vec<String> {
     super::catalogue().endpoint.test["paths"]
         .as_array()
-        .map(|a| a.iter().filter_map(|p| p.as_str().map(str::to_owned)).collect())
+        .map(|a| {
+            a.iter()
+                .filter_map(|p| p.as_str().map(str::to_owned))
+                .collect()
+        })
         .filter(|p: &Vec<String>| !p.is_empty())
         .unwrap_or_else(|| vec!["/models".to_owned(), "/v1/models".to_owned()])
 }
@@ -202,7 +206,8 @@ fn result_of(last: Option<(Attempt, String)>, loopback: bool) -> EndpointTestRes
         }
         EndpointOutcome::Empty => {
             r.code = Some("hx.provider.no_models".into());
-            r.detail = Some("The server answered but lists no models. Add the model ids by hand.".into());
+            r.detail =
+                Some("The server answered but lists no models. Add the model ids by hand.".into());
         }
         EndpointOutcome::NeedsKey => {
             r.code = Some("hx.provider.key_rejected".into());
@@ -270,9 +275,18 @@ mod tests {
     fn the_shapes_servers_use() {
         let p = |b: &str| parse_listing(b, 50, 200);
         let m = |v: &[&str]| Listing::Models(v.iter().map(|s| (*s).to_owned()).collect());
-        assert_eq!(p(r#"{"object":"list","data":[{"id":"gpt-x"},{"id":"gpt-y"}]}"#), m(&["gpt-x", "gpt-y"]));
-        assert_eq!(p(r#"{"models":[{"name":"llama3:8b","model":"llama3:8b"},{"name":"qwen"}]}"#), m(&["llama3:8b", "qwen"]));
-        assert_eq!(p(r#"{"models":[{"name":"models/gemini-4-neon"}]}"#), m(&["gemini-4-neon"]));
+        assert_eq!(
+            p(r#"{"object":"list","data":[{"id":"gpt-x"},{"id":"gpt-y"}]}"#),
+            m(&["gpt-x", "gpt-y"])
+        );
+        assert_eq!(
+            p(r#"{"models":[{"name":"llama3:8b","model":"llama3:8b"},{"name":"qwen"}]}"#),
+            m(&["llama3:8b", "qwen"])
+        );
+        assert_eq!(
+            p(r#"{"models":[{"name":"models/gemini-4-neon"}]}"#),
+            m(&["gemini-4-neon"])
+        );
         assert_eq!(p(r#"["a","b","a"]"#), m(&["a", "b"]));
         assert_eq!(p(r#"{"data":[]}"#), m(&[]));
         assert_eq!(p("<html><body>hi</body></html>"), Listing::Other);
@@ -280,9 +294,22 @@ mod tests {
         assert_eq!(p("42"), Listing::Other);
         assert_eq!(p(""), Listing::Other);
         // an id with a control character, an empty one and one over the limit are dropped
-        assert_eq!(parse_listing(r#"{"data":[{"id":"a\u0007b"},{"id":""},{"id":"abcdef"},{"id":"ok"}]}"#, 50, 5), m(&["ok"]));
+        assert_eq!(
+            parse_listing(
+                r#"{"data":[{"id":"a\u0007b"},{"id":""},{"id":"abcdef"},{"id":"ok"}]}"#,
+                50,
+                5
+            ),
+            m(&["ok"])
+        );
         // the list is cut at the most the form keeps
-        let many = format!("{{\"data\":[{}]}}", (0..80).map(|i| format!("{{\"id\":\"m{i}\"}}")).collect::<Vec<_>>().join(","));
+        let many = format!(
+            "{{\"data\":[{}]}}",
+            (0..80)
+                .map(|i| format!("{{\"id\":\"m{i}\"}}"))
+                .collect::<Vec<_>>()
+                .join(",")
+        );
         match parse_listing(&many, 50, 200) {
             Listing::Models(v) => assert_eq!(v.len(), 50),
             Listing::Other => panic!(),
@@ -292,13 +319,23 @@ mod tests {
     #[test]
     fn the_key_travels_as_the_wire_says() {
         let get = |m, k, h| auth_headers(m, k, h);
-        assert_eq!(get(ApiMode::ChatCompletions, Some("k"), "api.example.com"), [("Authorization".to_owned(), "Bearer k".to_owned())]);
+        assert_eq!(
+            get(ApiMode::ChatCompletions, Some("k"), "api.example.com"),
+            [("Authorization".to_owned(), "Bearer k".to_owned())]
+        );
         let a = get(ApiMode::AnthropicMessages, Some("k"), "api.anthropic.com");
-        assert!(a.contains(&("x-api-key".into(), "k".into())) && !a.iter().any(|(n, _)| n == "Authorization"));
+        assert!(
+            a.contains(&("x-api-key".into(), "k".into()))
+                && !a.iter().any(|(n, _)| n == "Authorization")
+        );
         assert!(a.contains(&("anthropic-version".into(), "2023-06-01".into())));
         assert!(get(ApiMode::CodexResponses, None, "x").is_empty());
         assert!(get(ApiMode::ChatCompletions, Some(""), "x").is_empty());
-        let g = get(ApiMode::ChatCompletions, Some("k"), "generativelanguage.googleapis.com");
+        let g = get(
+            ApiMode::ChatCompletions,
+            Some("k"),
+            "generativelanguage.googleapis.com",
+        );
         assert!(g.contains(&("x-goog-api-key".into(), "k".into())));
         let other = get(ApiMode::ChatCompletions, Some("k"), "api.example.com");
         assert!(!other.iter().any(|(n, _)| n == "x-goog-api-key"));

@@ -355,7 +355,8 @@ mod tests {
     }
 
     #[test]
-    fn a_custom_endpoint_or_a_runtime_on_this_computer_is_never_frontier_whatever_the_model_is_called() {
+    fn a_custom_endpoint_or_a_runtime_on_this_computer_is_never_frontier_whatever_the_model_is_called()
+     {
         // the rule's own examples (`never_frontier.examples` in providers.json), asked of the whole check
         let c = crate::providers::catalogue();
         assert!(c.never_frontier.examples.len() >= 8);

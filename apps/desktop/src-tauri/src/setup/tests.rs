@@ -1955,10 +1955,7 @@ async fn the_models_question_offers_chatgpt_and_gemini_after_the_free_choices() 
         names[4],
         "ChatGPT subscription (sign in with your ChatGPT account)"
     );
-    assert_eq!(
-        names[5],
-        "OpenAI (an API key from the OpenAI platform)"
-    );
+    assert_eq!(names[5], "OpenAI (an API key from the OpenAI platform)");
     assert_eq!(names[6], "Gemini (a free API key from Google AI Studio)");
     assert_eq!(
         form.schema.0["properties"]["choice"]["default"], "free",
@@ -2479,7 +2476,12 @@ async fn the_models_tab_turns_fable_on_and_off_on_the_subscription_and_setup_run
     assert!(heavy_of(&v, "fable").1);
     assert_eq!(ladder_names(&r).await, ["opus", "fable"]);
     assert!(v.governed.tiers.iter().any(|t| t.heavy && t.frontier));
-    assert!(super::state::load(&r.fake.home).unwrap().optins().has("fable"));
+    assert!(
+        super::state::load(&r.fake.home)
+            .unwrap()
+            .optins()
+            .has("fable")
+    );
 
     // setup run again (choosing the subscription once more) keeps it
     assert!(choose_again(&r, "claude-subscription").await.done);
@@ -2488,7 +2490,12 @@ async fn the_models_tab_turns_fable_on_and_off_on_the_subscription_and_setup_run
     let v = r.setup().set_heavy("fable", false).await.unwrap();
     assert!(!heavy_of(&v, "fable").1);
     assert_eq!(ladder_names(&r).await, ["opus"]);
-    assert!(!super::state::load(&r.fake.home).unwrap().optins().has("fable"));
+    assert!(
+        !super::state::load(&r.fake.home)
+            .unwrap()
+            .optins()
+            .has("fable")
+    );
     assert!(choose_again(&r, "claude-subscription").await.done);
     assert_eq!(ladder_names(&r).await, ["opus"]);
 
@@ -2499,7 +2506,12 @@ async fn the_models_tab_turns_fable_on_and_off_on_the_subscription_and_setup_run
     let e = r.setup().set_heavy("fable", true).await.unwrap_err();
     assert!(e.to_string().contains("2.1.321"), "{e}");
     assert_eq!(ladder_names(&r).await, ["opus"]);
-    assert!(!super::state::load(&r.fake.home).unwrap().optins().has("fable"));
+    assert!(
+        !super::state::load(&r.fake.home)
+            .unwrap()
+            .optins()
+            .has("fable")
+    );
 
     // an id that is not a heavy model is refused
     assert!(r.setup().set_heavy("opus", true).await.is_err());
@@ -2616,8 +2628,7 @@ async fn the_chatgpt_ladder_is_terra_then_sol_then_astra_from_what_the_account_l
 
     // each model on its own and in pairs: the rung the account lacks is left out, never guessed
     let own = |ladder: Option<Value>| {
-        ladder
-            .unwrap()["tiers"]
+        ladder.unwrap()["tiers"]
             .as_array()
             .unwrap()
             .iter()
@@ -2628,7 +2639,10 @@ async fn the_chatgpt_ladder_is_terra_then_sol_then_astra_from_what_the_account_l
         (vec!["gpt-6.1-terra", "gpt-6-sol"], vec!["terra"]),
         (vec!["gpt-6.2-sol", "gpt-6-astra"], vec!["sol"]),
         (vec!["gpt-6.2-astra", "gpt-6.1-sol"], vec!["astra"]),
-        (vec!["gpt-6.1-terra", "gpt-6.2-astra"], vec!["terra", "astra"]),
+        (
+            vec!["gpt-6.1-terra", "gpt-6.2-astra"],
+            vec!["terra", "astra"],
+        ),
         (vec!["gpt-6.2-sol", "gpt-6.1-terra"], vec!["terra", "sol"]),
     ] {
         let (ladder, _) = chatgpt_ladder_for(&listed).await;
@@ -2776,7 +2790,12 @@ async fn xai_alone_has_no_governed_mode_until_grok_is_turned_on_and_the_choice_i
         Some(json!("grok-4.7"))
     );
     assert!(v.governed.tiers[0].heavy && v.governed.tiers[0].frontier);
-    assert!(super::state::load(&r.fake.home).unwrap().optins().has("grok"));
+    assert!(
+        super::state::load(&r.fake.home)
+            .unwrap()
+            .optins()
+            .has("grok")
+    );
 
     // setup run again keeps it
     assert!(choose_again(&r, "xai").await.done);
@@ -2789,7 +2808,12 @@ async fn xai_alone_has_no_governed_mode_until_grok_is_turned_on_and_the_choice_i
     let v = r.setup().set_heavy("grok", false).await.unwrap();
     assert!(!heavy_of(&v, "grok").1 && !v.governed.available);
     assert!(r.fake.config_get(LADDER).await.unwrap().is_none());
-    assert!(!super::state::load(&r.fake.home).unwrap().optins().has("grok"));
+    assert!(
+        !super::state::load(&r.fake.home)
+            .unwrap()
+            .optins()
+            .has("grok")
+    );
     let s = choose_again(&r, "xai").await;
     assert!(s.done);
     assert!(r.fake.config_get(LADDER).await.unwrap().is_none());
@@ -2809,7 +2833,12 @@ async fn grok_needs_an_xai_key_and_a_grok_in_its_catalogue() {
     let e = r.setup().set_heavy("grok", true).await.unwrap_err();
     assert!(e.to_string().contains("no Grok 4.7 or later"), "{e}");
     assert!(r.fake.config_get(LADDER).await.unwrap().is_none());
-    assert!(!super::state::load(&r.fake.home).unwrap().optins().has("grok"));
+    assert!(
+        !super::state::load(&r.fake.home)
+            .unwrap()
+            .optins()
+            .has("grok")
+    );
 }
 
 #[tokio::test]
@@ -2976,10 +3005,510 @@ fn the_old_fable_opt_in_is_read_into_the_heavy_list_once() {
     let st = super::state::load(dir.path()).unwrap();
     assert!(st.optins().has("fable") && !st.optins().has("grok") && !st.subscription_fable);
     super::state::save(dir.path(), &st).unwrap();
-    assert!(super::state::load(dir.path()).unwrap().optins().has("fable"));
+    assert!(
+        super::state::load(dir.path())
+            .unwrap()
+            .optins()
+            .has("fable")
+    );
     // turning it off sticks
     let mut st = super::state::load(dir.path()).unwrap();
     st.set_heavy("fable", false);
     super::state::save(dir.path(), &st).unwrap();
-    assert!(!super::state::load(dir.path()).unwrap().optins().has("fable"));
+    assert!(
+        !super::state::load(dir.path())
+            .unwrap()
+            .optins()
+            .has("fable")
+    );
+}
+
+// ---- ADR-0039: the Carbon switch, data-driven
+
+fn gemini_rig(models_listed: &[&str]) -> Rig {
+    let r = rig(json!({}));
+    r.store
+        .set("boopis.provider.gemini", "api_key", KEY)
+        .unwrap();
+    *r.fake.gemini_models.lock().unwrap() = models(models_listed);
+    r
+}
+
+const GEMINI_ALL: &[&str] = &[
+    "gemini-3.8-flash",
+    "gemini-4-hydrogen",
+    "gemini-4-neon",
+    "gemini-4-carbon",
+];
+
+async fn tier_names(r: &Rig) -> Vec<String> {
+    ladder_names(r).await
+}
+
+#[tokio::test]
+async fn carbon_is_a_switch_on_a_gemini_ladder_off_by_default_and_remembered() {
+    let r = gemini_rig(GEMINI_ALL);
+    at_models(&r).await;
+    let s = choose(&r, "gemini").await;
+    assert!(s.done, "{:?}", s.steps);
+    assert_eq!(
+        tier_names(&r).await,
+        ["hydrogen", "neon"],
+        "Carbon is not on the ladder setup writes"
+    );
+
+    let v = r.setup().models_view().await.unwrap();
+    let carbon = v.heavy.iter().find(|c| c.id == "carbon").unwrap();
+    assert!(carbon.applies && !carbon.on && carbon.blocked.is_none());
+    // the words are the data's, and use ADR-0037's figures only
+    let sw = crate::providers::catalogue().heavy("carbon").unwrap();
+    assert_eq!(
+        (carbon.label.as_str(), carbon.reason.as_str()),
+        (sw.label.as_str(), sw.reason.as_str())
+    );
+    assert!(
+        carbon.reason.contains("$5.19")
+            && carbon.reason.contains("$4.38")
+            && carbon.reason.contains("72.6%")
+    );
+    assert!(
+        v.governed
+            .heavy
+            .iter()
+            .any(|h| h.starts_with("Gemini 4 Carbon"))
+    );
+    assert!(v.governed.available);
+
+    // on: Carbon is the top tier, after Neon, and the choice is remembered
+    let v = r.setup().set_heavy("carbon", true).await.unwrap();
+    assert_eq!(tier_names(&r).await, ["hydrogen", "neon", "carbon"]);
+    assert_eq!(
+        r.fake.config_get(LADDER).await.unwrap().unwrap()["tiers"][2]["model"],
+        "gemini/gemini-4-carbon"
+    );
+    assert_eq!(heavy_of(&v, "carbon"), (true, true, true));
+    assert!(
+        v.governed.available,
+        "a heavy tier the user chose is still frontier"
+    );
+    assert!(
+        v.governed
+            .tiers
+            .iter()
+            .find(|t| t.name == "carbon")
+            .unwrap()
+            .heavy
+    );
+    assert!(
+        super::state::load(&r.fake.home)
+            .unwrap()
+            .optins()
+            .has("carbon")
+    );
+    // Fable and Grok are untouched by it
+    assert!(
+        !super::state::load(&r.fake.home)
+            .unwrap()
+            .optins()
+            .has("grok")
+    );
+
+    // setup run again (the Gemini choice) keeps Carbon because the user asked for it
+    let s = choose_again(&r, "gemini").await;
+    assert!(s.done, "{:?}", s.steps);
+    assert_eq!(tier_names(&r).await, ["hydrogen", "neon", "carbon"]);
+    let sets_before = r.fake.sets.lock().unwrap().len();
+    let s = choose_again(&r, "gemini").await;
+    assert!(s.done);
+    let written: Vec<String> = r.fake.sets.lock().unwrap()[sets_before..]
+        .iter()
+        .filter(|k| k.contains("ladder"))
+        .cloned()
+        .collect();
+    assert!(
+        written.is_empty(),
+        "running it again changes nothing: {written:?}"
+    );
+
+    // off: it is taken away, and the others stay
+    let v = r.setup().set_heavy("carbon", false).await.unwrap();
+    assert_eq!(tier_names(&r).await, ["hydrogen", "neon"]);
+    assert_eq!(heavy_of(&v, "carbon"), (true, false, true));
+    assert!(
+        !super::state::load(&r.fake.home)
+            .unwrap()
+            .optins()
+            .has("carbon")
+    );
+    // off again is a no-op
+    assert!(r.setup().set_heavy("carbon", false).await.is_ok());
+}
+
+#[tokio::test]
+async fn the_carbon_switch_says_its_own_words_when_it_cannot_apply() {
+    let sw = crate::providers::catalogue().heavy("carbon").unwrap();
+    // no Gemini key, whatever the ladder: no choice to make, and never the xAI sentence
+    let r = rig(json!({}));
+    r.fake
+        .config_set(
+            LADDER,
+            &json!({"tiers": [{"name": "neon", "model": "gemini/gemini-4-neon"}]}).to_string(),
+        )
+        .await
+        .unwrap();
+    let v = r.setup().models_view().await.unwrap();
+    assert!(!v.heavy.iter().find(|c| c.id == "carbon").unwrap().applies);
+    let e = r.setup().set_heavy("carbon", true).await.unwrap_err();
+    assert_eq!(e.to_string(), sw.not_applicable);
+    assert!(!e.to_string().contains("xAI"), "{e}");
+
+    // a key but no ladder: the plugin's own default ladder is Claude, so Carbon has no ladder to join
+    let r = gemini_rig(GEMINI_ALL);
+    let v = r.setup().models_view().await.unwrap();
+    assert!(!v.heavy.iter().find(|c| c.id == "carbon").unwrap().applies);
+    assert_eq!(
+        r.setup()
+            .set_heavy("carbon", true)
+            .await
+            .unwrap_err()
+            .to_string(),
+        sw.not_applicable
+    );
+
+    // a key and a Claude ladder: not a Gemini one
+    let r = gemini_rig(GEMINI_ALL);
+    r.fake
+        .config_set(
+            LADDER,
+            &json!({"tiers": [{"name": "opus", "model": "anthropic/claude-opus-5-5"}]}).to_string(),
+        )
+        .await
+        .unwrap();
+    assert!(r.setup().set_heavy("carbon", true).await.is_err());
+
+    // a Gemini ladder and a key, but a catalogue with no Carbon: nothing to turn on, nothing written, nothing remembered
+    let r = gemini_rig(&["gemini-4-hydrogen", "gemini-4-neon", "gemini-3-carbon"]);
+    r.fake
+        .config_set(
+            LADDER,
+            &json!({"tiers": [{"name": "hydrogen", "model": "gemini/gemini-4-hydrogen"}]})
+                .to_string(),
+        )
+        .await
+        .unwrap();
+    let e = r.setup().set_heavy("carbon", true).await.unwrap_err();
+    assert_eq!(e.to_string(), sw.none_listed.clone().unwrap());
+    assert!(
+        !super::state::load(&r.fake.home)
+            .unwrap()
+            .optins()
+            .has("carbon")
+    );
+    assert_eq!(tier_names(&r).await, ["hydrogen"]);
+
+    // Neon is not a heavy model, and an id the data does not know is an invalid answer
+    for id in ["neon", "hydrogen", "opus", ""] {
+        let e = r.setup().set_heavy(id, true).await.unwrap_err();
+        assert_eq!(e.code(), "hx.setup.invalid_answer", "{id}");
+    }
+}
+
+#[tokio::test]
+async fn the_three_switches_say_their_own_sentences_and_do_not_borrow_each_others() {
+    // the old two-way branch answered every other id with the xAI sentence: each switch now says its own
+    let r = rig(json!({}));
+    for id in ["fable", "grok", "carbon"] {
+        let sw = crate::providers::catalogue().heavy(id).unwrap();
+        let e = r.setup().set_heavy(id, true).await.unwrap_err();
+        assert_eq!(e.to_string(), sw.not_applicable, "{id}");
+        assert_eq!(e.code(), "hx.setup.subscription_unavailable");
+    }
+}
+
+#[tokio::test]
+async fn the_candidates_carbon_ladder_keeps_carbon_only_for_a_user_who_turned_it_on() {
+    let carbon = json!({"tiers": [{"name": "carbon", "model": "gemini/gemini-4-carbon"}]});
+    // never asked for it: Hydrogen then Neon, as before
+    let r = gemini_rig(GEMINI_ALL);
+    finished_with(&r, &carbon).await;
+    assert!(r.setup().advance(None, false).await.unwrap().done);
+    assert_eq!(tier_names(&r).await, ["hydrogen", "neon"]);
+    // turned on first: the rewritten ladder carries Carbon again
+    let r = gemini_rig(GEMINI_ALL);
+    finished_with(&r, &carbon).await;
+    let mut st = super::state::load(&r.fake.home).unwrap();
+    st.set_heavy("carbon", true);
+    super::state::save(&r.fake.home, &st).unwrap();
+    assert!(r.setup().advance(None, false).await.unwrap().done);
+    assert_eq!(tier_names(&r).await, ["hydrogen", "neon", "carbon"]);
+}
+
+#[tokio::test]
+async fn a_hand_written_gemini_ladder_with_carbon_is_the_users_own() {
+    let hand = json!({"tiers": [
+        {"name": "cheap", "model": "gemini/gemini-4-hydrogen"},
+        {"name": "big", "model": "gemini/gemini-4-carbon"}]});
+    let r = gemini_rig(GEMINI_ALL);
+    finished_with(&r, &hand).await;
+    let s = r.setup().advance(None, false).await.unwrap();
+    assert!(s.done);
+    assert_eq!(r.fake.config_get(LADDER).await.unwrap().unwrap(), hand);
+    let v = r.setup().models_view().await.unwrap();
+    assert!(v.governed.available);
+    assert_eq!(
+        heavy_of(&v, "carbon"),
+        (true, true, true),
+        "it reads as on: the user put it there"
+    );
+}
+
+// ---- ADR-0039: the Terra rung, repaired once
+
+fn chatgpt_06() -> Value {
+    json!({"tiers": [
+        {"name": "sol", "model": "openai-codex/gpt-6.2-sol"},
+        {"name": "astra", "model": "openai-codex/gpt-6.2-astra"}]})
+}
+
+async fn finished_0_1_6(r: &Rig, ladder: &Value) {
+    finished_with(r, ladder).await;
+    // an install of 0.1.6 had its ladders checked already; the Terra check is new
+    let mut st = super::state::load(&r.fake.home).unwrap();
+    st.frontier_checked = true;
+    st.ladders_checked = true;
+    super::state::save(&r.fake.home, &st).unwrap();
+}
+
+#[tokio::test]
+async fn the_0_1_6_chatgpt_ladder_gains_terra_once_when_the_account_lists_it() {
+    let r = rig(main_provider());
+    *r.fake.chatgpt_models.lock().unwrap() =
+        models(&["gpt-6.1-terra", "gpt-6.2-sol", "gpt-6.2-astra"]);
+    finished_0_1_6(&r, &chatgpt_06()).await;
+    assert!(
+        r.setup().check().await.unwrap().needed,
+        "the Terra check is new"
+    );
+    let s = r.setup().advance(None, false).await.unwrap();
+    assert!(s.done, "{:?}", s.steps);
+    assert_eq!(
+        r.fake.config_get(LADDER).await.unwrap().unwrap(),
+        json!({"tiers": [
+            {"name": "terra", "model": "openai-codex/gpt-6.1-terra"},
+            {"name": "sol", "model": "openai-codex/gpt-6.2-sol"},
+            {"name": "astra", "model": "openai-codex/gpt-6.2-astra"}]})
+    );
+    assert_eq!(
+        r.fake.config_get("model.default").await.unwrap(),
+        Some(json!("gpt-6.1-terra"))
+    );
+    assert!(
+        s.receipt
+            .unwrap()
+            .lines
+            .join("\n")
+            .contains("GPT-6.1 Terra is the cheapest GPT rung")
+    );
+    assert!(!r.setup().check().await.unwrap().needed, "once per install");
+    // the user then takes Terra off by hand: it is theirs now, and setup does not put it back
+    let hand = json!({"tiers": [{"name": "sol", "model": "openai-codex/gpt-6.2-sol"}]});
+    r.fake.config_set(LADDER, &hand.to_string()).await.unwrap();
+    assert!(!r.setup().check().await.unwrap().needed);
+    r.setup().advance(None, false).await.unwrap();
+    assert_eq!(r.fake.config_get(LADDER).await.unwrap().unwrap(), hand);
+}
+
+#[tokio::test]
+async fn the_0_1_6_ladders_of_one_rung_gain_terra_too() {
+    for old in [
+        json!({"tiers": [{"name": "sol", "model": "openai-codex/gpt-6.2-sol"}]}),
+        json!({"tiers": [{"name": "astra", "model": "openai-codex/gpt-6.2-astra"}]}),
+    ] {
+        let r = rig(main_provider());
+        *r.fake.chatgpt_models.lock().unwrap() =
+            models(&["gpt-6.1-terra", "gpt-6.2-sol", "gpt-6.2-astra"]);
+        finished_0_1_6(&r, &old).await;
+        assert!(r.setup().advance(None, false).await.unwrap().done);
+        let names = ladder_names(&r).await;
+        assert_eq!(names[0], "terra");
+        assert!(names.len() >= 2);
+    }
+}
+
+#[tokio::test]
+async fn without_terra_listed_the_0_1_6_ladder_stays_and_is_recorded_as_checked() {
+    let r = rig(main_provider());
+    *r.fake.chatgpt_models.lock().unwrap() =
+        models(&["gpt-6.2-sol", "gpt-6.2-astra", "gpt-6-terra"]);
+    finished_0_1_6(&r, &chatgpt_06()).await;
+    let s = r.setup().advance(None, false).await.unwrap();
+    assert!(s.done);
+    assert_eq!(
+        r.fake.config_get(LADDER).await.unwrap().unwrap(),
+        chatgpt_06()
+    );
+    assert!(!r.setup().check().await.unwrap().needed);
+    assert!(super::state::load(&r.fake.home).unwrap().terra_checked);
+}
+
+#[tokio::test]
+async fn a_hand_written_chatgpt_ladder_is_never_given_terra() {
+    for hand in [
+        // the same models under names the user chose
+        json!({"tiers": [{"name": "a", "model": "openai-codex/gpt-6.2-sol"}, {"name": "b", "model": "openai-codex/gpt-6.2-astra"}]}),
+        // sol and astra with a tier of their own after them
+        json!({"tiers": [{"name": "sol", "model": "openai-codex/gpt-6.2-sol"}, {"name": "astra", "model": "openai-codex/gpt-6.2-astra"}, {"name": "mine", "model": "custom-x/y"}]}),
+        // astra before sol: setup never wrote that order
+        json!({"tiers": [{"name": "astra", "model": "openai-codex/gpt-6.2-astra"}, {"name": "sol", "model": "openai-codex/gpt-6.2-sol"}]}),
+    ] {
+        let r = rig(main_provider());
+        *r.fake.chatgpt_models.lock().unwrap() =
+            models(&["gpt-6.1-terra", "gpt-6.2-sol", "gpt-6.2-astra"]);
+        finished_0_1_6(&r, &hand).await;
+        r.setup().advance(None, false).await.unwrap();
+        assert_eq!(
+            r.fake.config_get(LADDER).await.unwrap().unwrap(),
+            hand,
+            "{hand}"
+        );
+    }
+}
+
+// ---- ADR-0039: the OpenAI key
+
+#[tokio::test]
+async fn the_openai_key_choice_asks_for_a_key_wires_it_and_writes_terra_sol_astra() {
+    let r = rig(json!({}));
+    *r.fake.chatgpt_models.lock().unwrap() = models(&[
+        "gpt-6-luna",
+        "gpt-6.1-terra",
+        "gpt-6.2-sol",
+        "gpt-6.2-astra",
+    ]);
+    let form = {
+        at_models(&r).await;
+        choose(&r, "openai-key").await.form.unwrap()
+    };
+    assert_eq!(form.form_id, "setup.credential.openai-api");
+    assert_eq!(form.title, "Add your OpenAI API key");
+    assert_eq!(
+        form.schema.0["properties"]["value"]["x-secret-ref"],
+        "secret://provider.openai-api/api_key"
+    );
+    assert_eq!(form.links.len(), 1);
+    let s = r
+        .setup()
+        .advance(
+            Some(answer(
+                "setup.credential.openai-api",
+                json!({}),
+                json!({"value": KEY}),
+            )),
+            false,
+        )
+        .await
+        .unwrap();
+    assert!(s.done, "{:?}", s.steps);
+    assert_eq!(
+        r.store
+            .get("boopis.provider.openai-api", "api_key")
+            .unwrap()
+            .as_deref(),
+        Some(KEY)
+    );
+    assert!(
+        r.store
+            .get("boopis.provider.openai", "api_key")
+            .unwrap()
+            .is_none()
+    );
+    assert_eq!(
+        r.fake
+            .config_get("secrets.boopis_host.env.OPENAI_API_KEY")
+            .await
+            .unwrap(),
+        Some(json!("secret://provider.openai-api/api_key"))
+    );
+    assert_eq!(
+        r.fake.config_get(LADDER).await.unwrap().unwrap(),
+        json!({"tiers": [
+            {"name": "terra", "model": "openai-api/gpt-6.1-terra"},
+            {"name": "sol", "model": "openai-api/gpt-6.2-sol"},
+            {"name": "astra", "model": "openai-api/gpt-6.2-astra"}]})
+    );
+    assert_eq!(
+        r.fake.config_get("model.provider").await.unwrap(),
+        Some(json!("openai-api"))
+    );
+    assert_eq!(
+        r.fake.config_get("model.default").await.unwrap(),
+        Some(json!("gpt-6.1-terra"))
+    );
+    assert!(!r.fake.config.lock().unwrap().to_string().contains(KEY));
+    // every tier is frontier, and none is heavy
+    let v = r.setup().models_view().await.unwrap();
+    assert!(v.governed.available);
+
+    // setup run again changes nothing
+    let before = r.fake.sets.lock().unwrap().len();
+    let s = choose_again(&r, "openai-key").await;
+    assert!(s.done, "{:?}", s.steps);
+    assert_eq!(
+        r.fake.sets.lock().unwrap().len(),
+        before,
+        "the second run wrote nothing"
+    );
+}
+
+#[tokio::test]
+async fn an_openai_key_that_lists_none_of_the_three_writes_no_ladder_and_says_so() {
+    let r = rig(json!({}));
+    r.store
+        .set("boopis.provider.openai-api", "api_key", KEY)
+        .unwrap();
+    *r.fake.chatgpt_models.lock().unwrap() = models(&["gpt-6-luna", "gpt-6-terra", "gpt-6.1-sol"]);
+    at_models(&r).await;
+    let s = choose(&r, "openai-key").await;
+    assert!(s.done);
+    assert!(r.fake.config_get(LADDER).await.unwrap().is_none());
+    assert!(
+        s.receipt
+            .unwrap()
+            .lines
+            .join("\n")
+            .contains("governed mode is unavailable on it")
+    );
+}
+
+#[tokio::test]
+async fn a_bad_answer_to_the_openai_key_form_is_invalid() {
+    let r = rig(json!({}));
+    at_models(&r).await;
+    choose(&r, "openai-key").await;
+    let e = r
+        .setup()
+        .advance(
+            Some(answer("setup.credential.openai-api", json!({}), json!({}))),
+            false,
+        )
+        .await
+        .unwrap_err();
+    assert_eq!(e.code(), "hx.setup.invalid_answer");
+    let e = r
+        .setup()
+        .advance(
+            Some(answer(
+                "setup.credential.xai",
+                json!({}),
+                json!({"value": KEY}),
+            )),
+            false,
+        )
+        .await
+        .unwrap_err();
+    assert_eq!(
+        e.code(),
+        "hx.setup.invalid_answer",
+        "an answer to another form"
+    );
 }
