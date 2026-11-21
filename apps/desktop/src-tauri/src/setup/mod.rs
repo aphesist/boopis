@@ -437,7 +437,9 @@ impl Setup {
             _ if !state.route_checked && self.route_missing(&home, state.clone()).await => {
                 (true, "the engine has no default model")
             }
-            _ if !state.ladders_checked && self.ladders_unrepaired(&home, state.optins()).await => {
+            _ if (!state.ladders_checked || !state.terra_checked)
+                && self.ladders_unrepaired(&home, &state.optins()).await =>
+            {
                 (
                     true,
                     "governed mode runs only on frontier models, and heavy ones only when you turn them on",
@@ -537,8 +539,8 @@ impl Setup {
         );
         let (state, tiers) = providers::ladder_of(saved?.as_ref());
         let keys = self.keys();
-        let governed = providers::governed_view(state, &tiers, keys);
-        let heavy = providers::heavy_choices(state, &tiers, &probe, keys);
+        let governed = providers::governed_view(state, &tiers, &keys);
+        let heavy = providers::heavy_choices(state, &tiers, &probe, &keys);
         Ok(ModelsView {
             state,
             tiers,
@@ -552,13 +554,9 @@ impl Setup {
         })
     }
 
-    /// Which provider keys are in place.
+    /// Which provider keys the governed section reads are in place.
     fn keys(&self) -> providers::Keys {
-        let home = self.ops.home();
-        providers::Keys {
-            anthropic: providers::anthropic_key(self.secrets.as_ref(), &home),
-            xai: providers::xai_key(self.secrets.as_ref(), &home),
-        }
+        providers::Keys::read(self.secrets.as_ref(), &self.ops.home())
     }
 
     /// The user turns a heavy model (`fable`, `grok`) on or off for the saved ladder (Settings > Models). A heavy model is
@@ -570,7 +568,7 @@ impl Setup {
     /// model, `hx.setup.state_invalid` for a progress file that cannot be used.
     pub async fn set_heavy(&self, id: &str, on: bool) -> Result<ModelsView> {
         let probe = self.claude.probe().await;
-        providers::set_heavy(self.ops.as_ref(), &probe, self.keys(), id, on).await?;
+        providers::set_heavy(self.ops.as_ref(), &probe, &self.keys(), id, on).await?;
         let home = self.ops.home();
         let mut st = state::load(&home)?;
         st.set_heavy(id, on);
@@ -943,7 +941,7 @@ impl Setup {
     /// ChatGPT and Gemini ladders, which Sol, Neon and Hydrogen replace. Only then does setup run again, to rewrite it
     /// (`providers::repair`); a hand-written ladder, the free choices and a ladder that is already right ask for nothing, and the
     /// check is recorded.
-    async fn ladders_unrepaired(&self, home: &std::path::Path, optins: state::Optins) -> bool {
+    async fn ladders_unrepaired(&self, home: &std::path::Path, optins: &state::Optins) -> bool {
         let ladder = self
             .ops
             .config_get(providers::LADDER_KEY)
@@ -957,6 +955,7 @@ impl Setup {
             let mut state = state::load(home).unwrap_or_default();
             state.frontier_checked = true;
             state.ladders_checked = true;
+            state.terra_checked = true;
             if let Err(e) = state::save(home, &state) {
                 tracing::warn!(error = %e, "could not record that the ladder was checked for frontier and heavy models");
             }
@@ -967,11 +966,14 @@ impl Setup {
     async fn models_step(&self, run: &mut Run, state: &mut State) {
         let (id, title) = ("models", "Models and keys");
         let mut restart = false;
-        if !state.ladders_checked && state.choice.is_none() && !state.reopen_models {
+        if (!state.ladders_checked || !state.terra_checked)
+            && state.choice.is_none()
+            && !state.reopen_models
+        {
             let repaired = providers::repair(
                 self.ops.as_ref(),
                 self.claude.as_ref(),
-                state.optins(),
+                &state.optins(),
                 &mut restart,
             )
             .await;
@@ -980,11 +982,13 @@ impl Setup {
                 Ok(providers::Repair::Rewrote(line) | providers::Repair::Report(line)) => {
                     state.frontier_checked = true;
                     state.ladders_checked = true;
+                    state.terra_checked = true;
                     return run.done(id, title, line);
                 }
                 Ok(providers::Repair::Nothing) => {
                     state.frontier_checked = true;
                     state.ladders_checked = true;
+                    state.terra_checked = true;
                 }
                 Err(e) => return run.blocked(id, title, "hx.setup.config_failed", &e),
             }

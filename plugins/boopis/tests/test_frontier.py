@@ -25,6 +25,46 @@ def test_the_shared_examples(ex: dict[str, Any]) -> None:
     assert frontier.is_frontier(ex["provider"], ex["model"]) is ex["frontier"]
 
 
+PROVIDERS = Path(__file__).resolve().parents[3] / "apps" / "shared" / "data" / "providers.json"
+NEVER = json.loads(PROVIDERS.read_text(encoding="utf-8"))["never_frontier"]
+
+
+@pytest.mark.parametrize("ex", NEVER["examples"], ids=lambda e: f"{e['provider']}/{e['model']}")
+def test_the_never_frontier_examples(ex: dict[str, Any]) -> None:
+    """ADR-0039: a custom endpoint or a runtime on this computer is never frontier, whatever the model is called. The
+    rule's own examples, asked of the whole check (the rule, then the name)."""
+    assert frontier.is_frontier(ex["provider"], ex["model"]) is ex["frontier"]
+
+
+def test_the_rule_comes_first_for_every_frontier_example_of_the_list() -> None:
+    providers = ["custom", "custom-x", "custom-my-server", "ollama", "lmstudio", "llamacpp", "llama-cpp", "vllm"]
+    providers += ["Custom-Mine", " ollama "]  # the engine reads a name in lower case
+    for ex in EXAMPLES:
+        for provider in providers:
+            assert not frontier.is_frontier(provider, ex["model"]), (provider, ex["model"])
+            assert not frontier.is_heavy(provider, ex["model"]), (provider, ex["model"])
+
+
+def test_a_provider_that_only_starts_like_the_prefix_is_judged_by_its_models_name() -> None:
+    assert frontier.is_frontier("my-gateway", "claude-opus-5-5")
+    assert frontier.is_frontier("customer-api", "claude-opus-5-5")  # `custom-` has the dash
+
+
+def test_a_ladder_tier_on_a_custom_endpoint_is_refused_with_its_own_reason() -> None:
+    lad = resolve_ladder({"tiers": [{"name": "mine", "model": "custom-my-server/claude-opus-5-5"}]})
+    problems = frontier.ladder_refusals(lad.tiers)
+    assert len(problems) == 1
+    assert "an endpoint of your own or on this computer" in problems[0]
+    assert frontier.view(lad.tiers)["available"] is False
+    assert frontier.session_refusal("ollama", "claude-opus-5-5") is not None
+
+
+def test_the_never_frontier_rule_is_the_hosts_data() -> None:
+    assert (frontier._PROVIDERS.read_bytes()) == PROVIDERS.read_bytes(), "run scripts/sync-shared-data.sh"
+    assert {"custom", "ollama", "lmstudio", "llamacpp", "llama-cpp", "vllm"} <= set(NEVER["engines"])
+    assert NEVER["slug_prefixes"] == ["custom-"]
+
+
 def test_the_plugins_copy_is_the_shared_file() -> None:
     assert frontier._FILE.read_bytes() == DATA.read_bytes(), "run scripts/sync-shared-data.sh"
 
@@ -269,13 +309,15 @@ def test_sol_astra_and_luna_do_not_clash_and_neither_do_the_gemini_families() ->
 
 def test_heavy_is_a_mark_on_a_family_and_only_a_frontier_model_is_heavy() -> None:
     sub = "claude-subscription-directsdk-experimental"
-    assert frontier.heavy_families() == ["Claude Fable 5.2", "Grok 4.7"]
+    assert frontier.heavy_families() == ["Claude Fable 5.2", "Gemini 4 Carbon", "Grok 4.7"]
     for provider, model in [
         ("anthropic", "claude-fable-5-2"),
         ("anthropic", "claude-fable-6"),
         (sub, "fable"),
         ("xai", "grok-4.7"),
         ("xai", "grok-4.8"),
+        ("gemini", "gemini-4-carbon"),  # the owner's second answer: Carbon is heavy, Neon is not (ADR-0039)
+        ("gemini", "models/gemini-5-carbon-high"),
     ]:
         assert frontier.is_frontier(provider, model), model
         assert frontier.is_heavy(provider, model), model
@@ -284,6 +326,8 @@ def test_heavy_is_a_mark_on_a_family_and_only_a_frontier_model_is_heavy() -> Non
         (sub, "opus"),
         ("openai-codex", "gpt-6.2-sol"),
         ("gemini", "gemini-4-neon"),
+        ("gemini", "gemini-4-hydrogen"),
+        ("gemini", "gemini-3-carbon"),  # below its floor: not frontier, so not heavy either
         ("anthropic", "claude-fable-5-1"),  # below its floor: not frontier, so not a heavy frontier model either
         ("xai", "grok-4.6"),
         ("anthropic", ""),
@@ -310,7 +354,7 @@ def test_a_ladder_the_user_wrote_with_fable_is_accepted_as_it_is() -> None:
     got = frontier.view(lad.tiers)
     assert got["available"] is True
     assert [t["heavy"] for t in got["tiers"]] == [False, True, True]
-    assert got["heavy"] == ["Claude Fable 5.2", "Grok 4.7"]
+    assert got["heavy"] == ["Claude Fable 5.2", "Gemini 4 Carbon", "Grok 4.7"]
 
 
 def test_a_session_may_orchestrate_on_a_heavy_model_it_was_asked_to_use(make_runtime: MakeRuntime) -> None:

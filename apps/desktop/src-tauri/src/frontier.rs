@@ -154,17 +154,24 @@ fn find(provider: &str, model: &str) -> Option<Found> {
     None
 }
 
-/// Whether `provider`/`model` may do governed work. Unknown, empty and unrecognised are not.
+/// Whether `provider`'s models can never be frontier: a custom endpoint or a runtime on this computer (ADR-0039, `never_frontier` in
+/// `providers.json`). The rule comes first, before the name is looked at, so no model name can make such a model frontier.
+fn never(provider: &str) -> bool {
+    crate::providers::catalogue().never_frontier(provider)
+}
+
+/// Whether `provider`/`model` may do governed work. Unknown, empty and unrecognised are not, and neither is anything on a custom
+/// endpoint or a runtime on this computer, whatever it is called.
 #[must_use]
 pub fn is_frontier(provider: &str, model: &str) -> bool {
-    find(provider, model).is_some_and(|f| f.frontier)
+    !never(provider) && find(provider, model).is_some_and(|f| f.frontier)
 }
 
 /// Whether `provider`/`model` is a frontier model of a heavy family (Claude Fable, Grok 4.7 and later): governed mode may run
 /// it, but only when the user asked for it. Nothing that picks a model by itself may pick one.
 #[must_use]
 pub fn is_heavy(provider: &str, model: &str) -> bool {
-    find(provider, model).is_some_and(|f| f.frontier && f.heavy)
+    !never(provider) && find(provider, model).is_some_and(|f| f.frontier && f.heavy)
 }
 
 /// The id of the family `provider`/`model` is in (`gpt-sol`), whether or not it is at its floor; `None` in no family.
@@ -210,6 +217,9 @@ pub fn allowed_sentence() -> String {
 /// family.
 #[must_use]
 pub fn why_not(provider: &str, model: &str) -> String {
+    if never(provider) {
+        return "it runs on an endpoint of your own or on this computer, which governed mode never uses".to_owned();
+    }
     match find(provider, model) {
         Some(f) if !f.frontier => format!(
             "it is {}, and the lowest version allowed is {}",
@@ -284,7 +294,10 @@ mod tests {
             ]
         );
         assert!(allowed_sentence().ends_with("and Grok 4.7 or later"));
-        assert_eq!(heavy_families(), ["Claude Fable 5.2", "Grok 4.7"]);
+        assert_eq!(
+            heavy_families(),
+            ["Claude Fable 5.2", "Gemini 4 Carbon", "Grok 4.7"]
+        );
         assert_eq!(
             why_not("anthropic", "claude-opus-5-4"),
             "it is Claude Opus 5.4, and the lowest version allowed is 5.5"
@@ -322,6 +335,8 @@ mod tests {
             ("claude-subscription-directsdk-experimental", "fable"),
             ("xai", "grok-4.7"),
             ("xai", "grok-5"),
+            ("gemini", "gemini-4-carbon"),
+            ("gemini", "models/gemini-5-carbon-high"),
         ] {
             assert!(is_heavy(p, m), "{p}/{m}");
         }
@@ -329,12 +344,79 @@ mod tests {
             ("anthropic", "claude-opus-5-5"),
             ("openai-codex", "gpt-6.2-sol"),
             ("gemini", "gemini-4-neon"),
+            ("gemini", "gemini-4-hydrogen"),
+            ("gemini", "gemini-3-carbon"),
             ("anthropic", "claude-fable-5-1"),
             ("xai", "grok-4.6"),
             ("anthropic", ""),
         ] {
             assert!(!is_heavy(p, m), "{p}/{m}");
         }
+    }
+
+    #[test]
+    fn a_custom_endpoint_or_a_runtime_on_this_computer_is_never_frontier_whatever_the_model_is_called()
+     {
+        // the rule's own examples (`never_frontier.examples` in providers.json), asked of the whole check
+        let c = crate::providers::catalogue();
+        assert!(c.never_frontier.examples.len() >= 8);
+        for e in &c.never_frontier.examples {
+            assert_eq!(
+                is_frontier(&e.provider, &e.model),
+                e.frontier,
+                "{}/{}",
+                e.provider,
+                e.model
+            );
+            if !e.frontier {
+                assert!(
+                    !is_heavy(&e.provider, &e.model),
+                    "{}/{}",
+                    e.provider,
+                    e.model
+                );
+            }
+        }
+        // the rule comes first: every frontier example of the list, asked as a custom or local provider, is refused
+        let raw: serde_json::Value = serde_json::from_str(FRONTIER_JSON).unwrap();
+        for e in raw["examples"].as_array().unwrap() {
+            let model = e["model"].as_str().unwrap();
+            for provider in [
+                "custom",
+                "custom-x",
+                "custom-my-server",
+                "ollama",
+                "lmstudio",
+                "llamacpp",
+                "llama-cpp",
+                "vllm",
+                "Custom-Mine",
+                " ollama ",
+            ] {
+                assert!(
+                    !is_frontier(provider, model) && !is_heavy(provider, model),
+                    "{provider}/{model}"
+                );
+            }
+        }
+        // a hand-written provider keeps the rule by name, and a name that only starts like the prefix is not one
+        assert!(is_frontier("my-gateway", "claude-opus-5-5"));
+        assert!(is_frontier("customer-api", "claude-opus-5-5"));
+        assert!(
+            why_not("custom-x", "claude-opus-5-5")
+                .starts_with("it runs on an endpoint of your own or on this computer")
+        );
+        assert!(
+            non_frontier_names(&["custom-x/claude-opus-5-5"]),
+            "a ladder tier on a custom endpoint is refused with that reason"
+        );
+    }
+
+    fn non_frontier_names(tiers: &[&str]) -> bool {
+        tiers.iter().all(|t| {
+            let (p, m) = split(t);
+            !is_frontier(p, m) && why_not(p, m).contains("your own")
+        })
     }
 
     #[test]

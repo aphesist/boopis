@@ -7,6 +7,7 @@
 
    Pure: no client, no DOM. */
 import file from '../../../../shared/data/frontier-models.json';
+import { neverFrontier } from './providers';
 
 interface Family { id: string; prefix: readonly string[]; suffix: readonly string[]; min: string; heavy?: boolean }
 interface File { families: readonly Family[]; ignorable_suffixes: readonly string[]; aliases: Record<string, Record<string, string>> }
@@ -63,8 +64,9 @@ function find(provider: string, model: string): Found | null {
   return null;
 }
 
-/** whether `provider`/`model` may do governed work; unknown, empty and unrecognised are not */
-export const isFrontier = (provider: string, model: string): boolean => find(provider, model)?.frontier === true;
+/** whether `provider`/`model` may do governed work; unknown, empty and unrecognised are not, and neither is anything on a custom endpoint or a
+    runtime on this computer: that rule (`never_frontier` in providers.json, ADR-0039) comes first, so no model name can make such a model frontier */
+export const isFrontier = (provider: string, model: string): boolean => !neverFrontier(provider) && find(provider, model)?.frontier === true;
 
 /** whether it is a frontier model of a heavy family (Claude Fable, Grok 4.7 and later): never an automatic pick, only the user's own choice */
-export const isHeavy = (provider: string, model: string): boolean => { const f = find(provider, model); return f !== null && f.frontier && f.family.heavy === true; };
+export const isHeavy = (provider: string, model: string): boolean => { if (neverFrontier(provider)) return false; const f = find(provider, model); return f !== null && f.frontier && f.family.heavy === true; };

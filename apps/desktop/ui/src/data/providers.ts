@@ -97,7 +97,8 @@ export function field(id: string, path: string): unknown {
     ask this before the frontier list: `never` wins whatever the model is called. */
 export function neverFrontier(provider: string): boolean {
   const n = F.never_frontier;
-  return n.engines.includes(provider) || n.slug_prefixes.some((p) => provider.startsWith(p));
+  const name = provider.trim().toLowerCase(); // the engine reads a provider name in lower case
+  return n.engines.includes(name) || n.slug_prefixes.some((p) => name.startsWith(p));
 }
 
 /** the word a status gets beside a row (text, never colour alone) */

@@ -94,9 +94,19 @@ impl SecretRef {
     }
 }
 
-/// The environment variable a built-in provider reads its key from, when the shared table knows it.
+/// The environment variable a built-in provider reads its key from: the `wire_var` of its key way in `providers.json` (ADR-0039,
+/// every lab with a key), else the shared table's older entry. A new lab is one entry in the data.
 #[must_use]
 pub fn builtin_provider_env(provider: &str) -> Option<String> {
+    if let Some(var) = crate::providers::catalogue()
+        .ways()
+        .find(|(_, w)| {
+            w.config == crate::providers::Config::Builtin && w.engine.as_deref() == Some(provider)
+        })
+        .and_then(|(_, w)| w.key.as_ref()?.wire_var.clone())
+    {
+        return Some(var);
+    }
     let rules: serde_json::Value = serde_json::from_str(RULES_JSON).ok()?;
     rules["builtin_provider_env"][provider]
         .as_str()
@@ -138,5 +148,48 @@ mod tests {
             "ANTHROPIC_API_KEY"
         );
         assert_eq!(builtin_provider_env("nope"), None);
+        // every lab with a key reads it from the variable its way names, whether or not the older table lists it
+        assert_eq!(
+            builtin_provider_env("openai-api").unwrap(),
+            "OPENAI_API_KEY"
+        );
+        assert_eq!(builtin_provider_env("zai").unwrap(), "GLM_API_KEY");
+        assert_eq!(
+            builtin_provider_env("kimi-coding-cn").unwrap(),
+            "KIMI_CN_API_KEY"
+        );
+        // a sign-in or a way boopis writes as an endpoint has none
+        assert_eq!(builtin_provider_env("openai-codex"), None);
+        assert_eq!(builtin_provider_env("custom-ollama"), None);
+    }
+
+    #[test]
+    fn every_key_way_has_a_valid_reference_and_the_table_agrees_with_the_data() {
+        use crate::providers::{WayKind, catalogue};
+        let mut seen = std::collections::BTreeSet::new();
+        for (_, w) in catalogue().ways().filter(|(_, w)| w.secret_ref().is_some()) {
+            let text = w.secret_ref().unwrap_or_default();
+            let r = SecretRef::parse(&text).unwrap_or_else(|e| panic!("{}: {e}", w.id));
+            assert_eq!(r.text(), text);
+            assert!(r.env_name().starts_with("BOOPIS_PROVIDER_"), "{}", w.id);
+            assert!(seen.insert(text), "{}: a reference used by two ways", w.id);
+            if w.kind == WayKind::Key {
+                assert_eq!(
+                    builtin_provider_env(w.engine.as_deref().unwrap()),
+                    w.key.as_ref().unwrap().wire_var,
+                    "{}",
+                    w.id
+                );
+            }
+        }
+        // the older table is a subset of the data: nothing in it may say another variable
+        let rules: serde_json::Value = serde_json::from_str(RULES_JSON).unwrap();
+        for (engine, var) in rules["builtin_provider_env"].as_object().unwrap() {
+            assert_eq!(
+                builtin_provider_env(engine).as_deref(),
+                var.as_str(),
+                "{engine}"
+            );
+        }
     }
 }

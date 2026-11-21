@@ -37,9 +37,11 @@ def test_a_ladder_that_hermes_can_run_has_no_problems() -> None:
 
 @pytest.mark.parametrize("provider", ["custom", "auto"])
 def test_a_tier_must_name_a_provider_not_hermes_pick(provider: str) -> None:
-    (problem,) = ladder_problems(ladder(f"{provider}/claude-opus-5-5"), lambda _p: True)
-    assert "named provider" in problem
+    problems = ladder_problems(ladder(f"{provider}/claude-opus-5-5"), lambda _p: True)
+    # `custom` is never frontier (ADR-0039), so it is refused for that too; the unnamed provider is still said
+    (problem,) = (p for p in problems if "named provider" in p)
     assert "'t0'" in problem
+    assert len(problems) == (2 if provider == "custom" else 1)
 
 
 def test_a_provider_hermes_does_not_know_is_refused_with_the_tier_that_names_it() -> None:

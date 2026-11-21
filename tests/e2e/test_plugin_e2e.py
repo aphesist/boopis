@@ -171,6 +171,7 @@ def test_a_governed_session_on_a_model_that_is_not_frontier_is_refused_with_the_
     for allowed in (
         "Claude Opus 5.5",
         "Claude Fable 5.2",
+        "GPT-6.1 Terra",
         "GPT-6.2 Astra",
         "GPT-6.2 Sol",
         "Gemini 4 Carbon",

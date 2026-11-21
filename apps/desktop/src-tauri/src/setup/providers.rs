@@ -18,15 +18,10 @@ use crate::commands::Json;
 use crate::config::FREE_TIER_ENABLED;
 use crate::error::{Error, Result};
 use crate::free_tier::FreeTier;
+use crate::providers::{HeavySwitch, catalogue};
 use crate::secrets::SecretStore;
 use crate::secrets::refs::{SOURCE, SecretRef, builtin_provider_env};
 
-/// The variables Hermes accepts as an Anthropic credential.
-const ANTHROPIC_VARS: &[&str] = &[
-    "ANTHROPIC_API_KEY",
-    "ANTHROPIC_TOKEN",
-    "CLAUDE_CODE_OAUTH_TOKEN",
-];
 /// The choice that runs on the user's Claude subscription, through Hermes's official plugin and their own Claude Code (ADR-0029).
 pub const CLAUDE_SUBSCRIPTION: &str = "claude-subscription";
 /// What the choice is called.
@@ -36,23 +31,35 @@ pub const CHATGPT_SUBSCRIPTION: &str = "chatgpt-subscription";
 const CHATGPT_SUBSCRIPTION_LABEL: &str = "ChatGPT subscription (sign in with your ChatGPT account)";
 /// The engine's provider for a ChatGPT sign-in (OpenAI's Codex models on chatgpt.com).
 pub const CHATGPT_PROVIDER: &str = "openai-codex";
-/// The ChatGPT and OpenAI ladder, cheapest first (ADR-0037): `(family id in the frontier list, tier name)`. Each rung is the
-/// lowest model of that family the signed-in account's own catalogue lists (Sol is cheaper per task than Astra and scores below
-/// it, so a failed gate climbs from one to the other). Astra and Sol are account-gated, so the engine's offline list omits them
-/// and a plan with neither has no governed ladder. It replaces `luna` and `sol` (`LEGACY_CHATGPT`), which are not frontier.
-pub const CHATGPT_RUNGS: &[(&str, &str)] = &[("gpt-sol", "sol"), ("gpt-astra", "astra")];
+/// The ChatGPT and OpenAI ladder, cheapest first (ADR-0037, ADR-0039): `(family id in the frontier list, tier name)`. Terra
+/// (70.4% at about $0.46 a task in Ramp's benchmark) is the cheapest rung, then Sol, then Astra, so work that fails the gate on
+/// Terra climbs to Sol, and then to Astra. Each rung is the lowest model of that family the account's own catalogue lists; a
+/// rung the catalogue lacks is left out, never guessed. Terra, Sol and Astra are account-gated, so the engine's offline list may
+/// omit them, and a plan with none of them has no governed ladder. It replaces `luna` and `sol` (`LEGACY_CHATGPT`), which are not
+/// frontier, and the 0.1.6 ladders of Sol and Astra without Terra (`written_by_setup`).
+pub const CHATGPT_RUNGS: &[(&str, &str)] = &[
+    ("gpt-terra", "terra"),
+    ("gpt-sol", "sol"),
+    ("gpt-astra", "astra"),
+];
+/// The choice that runs on an OpenAI API key (pay per use, the platform's own key), the engine's `openai-api` provider (ADR-0039,
+/// the slug spike). Its ladder is the ChatGPT one, built from what the key lists.
+pub const OPENAI_KEY: &str = "openai-key";
+const OPENAI_KEY_LABEL: &str = "OpenAI (an API key from the OpenAI platform)";
+/// The engine's provider for an OpenAI API key (`openai-api`, never `openai`: that is the engine's alias of `OpenRouter`).
+pub const OPENAI_API_PROVIDER: &str = "openai-api";
+/// Where an OpenAI key is made.
+pub const OPENAI_KEY_URL: &str = "https://platform.openai.com/api-keys";
 /// The choice that uses Gemini with a free Google AI Studio key.
 pub const GEMINI: &str = "gemini";
 const GEMINI_LABEL: &str = "Gemini (a free API key from Google AI Studio)";
 /// Where a Gemini key is made.
 pub const GEMINI_KEY_URL: &str = "https://aistudio.google.com/apikey";
-/// The variables the engine's Gemini provider reads a key from (`plugins/model-providers/gemini`), in its order.
-const GEMINI_VARS: &[&str] = &["GOOGLE_API_KEY", "GEMINI_API_KEY"];
 /// The Gemini ladder, cheapest first (ADR-0037): Hydrogen, then Neon, each only when the engine's Gemini catalogue lists it. Whether
 /// a given key may use a model is Google's decision and nothing the engine reports; a refusal at run time is said plainly. Gemini 4
-/// Carbon stays allowed but is not on this ladder: it scored below Neon (72.6 against 76.2) at a higher cost ($5.19 against $4.38 a
-/// task, Ramp's SWE-Bench v2), so nothing setup writes climbs to it. It replaces `flash` and `pro` (`LEGACY_GEMINI`), which are not
-/// frontier.
+/// Carbon is frontier but heavy (ADR-0039): it scored below Neon (72.6 against 76.2) at a higher cost ($5.19 against $4.38 a task,
+/// Ramp's SWE-Bench v2), so it is on the ladder only when the user turned its switch on (`heavy_rungs`). The ladder replaces `flash`
+/// and `pro` (`LEGACY_GEMINI`), which are not frontier.
 pub const GEMINI_RUNGS: &[(&str, &str)] =
     &[("gemini-hydrogen", "hydrogen"), ("gemini-neon", "neon")];
 /// The choice that uses an xAI key. Grok 4.7 and later is frontier but heavy (ADR-0037), so this choice writes a governed
@@ -60,14 +67,11 @@ pub const GEMINI_RUNGS: &[(&str, &str)] =
 pub const XAI: &str = "xai";
 const XAI_LABEL: &str =
     "xAI Grok (needs an xAI API key; governed mode only after you turn on Grok, a heavy model)";
-/// The variable the engine's xAI provider reads a key from.
-const XAI_VARS: &[&str] = &["XAI_API_KEY"];
-/// The family id of Grok in the frontier list, and the tier setup names it.
-const GROK_FAMILY: &str = "grok";
 /// Claude on an Anthropic key: the provider, and the models the plugin's own ladder names (the vendored contraprova's `OPUS` and
 /// `FABLE`; a test holds them frontier). Opus is the default ladder; Fable is a heavy opt-in.
 pub const ANTHROPIC: &str = "anthropic";
 pub(crate) const ANTHROPIC_OPUS: &str = "claude-opus-5-5";
+#[cfg(test)]
 pub(crate) const ANTHROPIC_FABLE: &str = "claude-fable-5-2";
 /// What setup wrote before ADR-0037, to recognise a ladder setup itself wrote (and so may repair).
 const LEGACY_CHATGPT: &[(&str, &str)] = &[
@@ -161,34 +165,72 @@ pub struct GovernedView {
 /// Whether an Anthropic key is in place: by name in the profile's `.env`, or in the keychain.
 #[must_use]
 pub fn anthropic_key(store: &dyn SecretStore, home: &Path) -> bool {
-    let env = dotenv_names(home);
-    ANTHROPIC_VARS.iter().any(|v| env.iter().any(|e| e == v))
-        || saved(store, &SecretRef::provider_key("anthropic"))
+    key_in_place(store, &dotenv_names(home), "anthropic.key")
 }
 
-/// Which keys are in place (the profile's `.env` by name, or the keychain).
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct Keys {
-    /// An Anthropic key.
-    pub anthropic: bool,
-    /// An xAI key.
-    pub xai: bool,
+/// Which key ways have a key in place (the profile's `.env` by name, or the keychain), by the way's id in `providers.json`
+/// (`anthropic.key`). Only the ways the governed section reads are looked at (`Keys::read`): every keychain read is a call to the OS.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Keys(Vec<String>);
+
+impl Keys {
+    /// Whether the key way `way` has a key.
+    #[must_use]
+    pub fn has(&self, way: &str) -> bool {
+        self.0.iter().any(|w| w == way)
+    }
+
+    /// Keys for exactly these ways (what a test or a caller that already knows says).
+    #[must_use]
+    pub fn of(ways: &[&str]) -> Self {
+        Self(ways.iter().map(|w| (*w).to_owned()).collect())
+    }
+
+    /// Look for the keys the governed section reads: each heavy switch's key way, and the Anthropic key (the plugin's own default
+    /// ladder runs on it).
+    #[must_use]
+    pub fn read(store: &dyn SecretStore, home: &Path) -> Self {
+        let env = dotenv_names(home);
+        let mut ways: Vec<&str> = catalogue()
+            .heavy_switches
+            .iter()
+            .map(|h| h.key_way.as_str())
+            .collect();
+        ways.push("anthropic.key");
+        ways.sort_unstable();
+        ways.dedup();
+        Self(
+            ways.into_iter()
+                .filter(|w| key_in_place(store, &env, w))
+                .map(str::to_owned)
+                .collect(),
+        )
+    }
 }
 
-/// Whether an xAI key is in place: by name in the profile's `.env`, or in the keychain.
+/// Whether the key way `way` has a key: one of its variables by name in `env` (the profile's `.env`), or its secret in the keychain.
+/// A way with no key, or none in the catalogue, has none.
 #[must_use]
-pub fn xai_key(store: &dyn SecretStore, home: &Path) -> bool {
-    let env = dotenv_names(home);
-    XAI_VARS.iter().any(|v| env.iter().any(|e| e == v))
-        || saved(store, &SecretRef::provider_key(XAI))
+pub fn key_in_place(store: &dyn SecretStore, env: &[String], way: &str) -> bool {
+    let Some((_, w)) = catalogue().way(way) else {
+        return false;
+    };
+    let Some(key) = &w.key else {
+        return false;
+    };
+    key.vars.iter().any(|v| env.iter().any(|e| e == v))
+        || w.secret_ref()
+            .and_then(|r| SecretRef::parse(&r).ok())
+            .is_some_and(|r| saved(store, &r))
 }
 
 /// One heavy model's opt-in (Settings > Models, the governed section): a model that is frontier but token-heavy or costly, so
-/// governed mode runs it only when the user turned it on (ADR-0037). The data file marks the family heavy; this is what the user
-/// can do about it.
+/// governed mode runs it only when the user turned it on (ADR-0037, ADR-0039). The data file marks the family heavy and holds the
+/// switch (`heavy_switches` in `providers.json`: label, reason, the engines a ladder must be on, the key, how the tier is chosen
+/// and what is said when it cannot be); this is what the user can do about it.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, specta::Type)]
 pub struct HeavyChoice {
-    /// `fable` or `grok`: what `setup_set_heavy` takes.
+    /// A switch of `heavy_switches` (`fable`, `grok`, `carbon`): what `setup_set_heavy` takes.
     pub id: String,
     /// The switch's label: `Climb to Fable`.
     pub label: String,
@@ -202,34 +244,15 @@ pub struct HeavyChoice {
     pub blocked: Option<String>,
 }
 
-/// What a heavy model is called, which family it is and why it is off by default.
-struct HeavyKind {
-    id: &'static str,
-    family: &'static str,
-    label: &'static str,
-    reason: &'static str,
-}
+/// The pinned models of the Claude aliases (`aliases` of `model-names.json`): what an alias is on an Anthropic key.
+const NAMES_JSON: &str = include_str!("../../../../shared/data/model-names.json");
 
-const HEAVY: &[HeavyKind] = &[
-    HeavyKind {
-        id: "fable",
-        family: "claude-fable",
-        label: "Climb to Fable",
-        reason: "Fable is token-heavy: Ramp's benchmark measured $3.79 a task against Opus's $1.53, and on a Claude Pro plan it bills usage credits from the first request. So boopis never adds it by itself. Off: governed work stays on Opus, and a failed gate retries there. On: Fable is the top tier, and a failed gate climbs to it.",
-    },
-    HeavyKind {
-        id: "grok",
-        family: GROK_FAMILY,
-        label: "Use Grok",
-        reason: "Grok 4.7 is token-heavy: Ramp's benchmark measured it at $4.32 a task, with the most tool calls of any model (161 a task). So boopis never adds it by itself. Off: boopis does not run governed work on it. On: Grok is the top tier of the ladder.",
-    },
-];
-
-/// How a saved ladder reaches Claude, which says what Fable's tier would be called.
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum ClaudeRoute {
-    Subscription,
-    ApiKey,
+/// The model an alias of the Claude route is on an Anthropic key (`fable` is `claude-fable-5-2`), read from the names table.
+fn alias_pinned(alias: &str) -> Option<String> {
+    let names: Value = serde_json::from_str(NAMES_JSON).ok()?;
+    names["aliases"][alias]["pinned"]
+        .as_str()
+        .map(str::to_owned)
 }
 
 fn all_on(tiers: &[LadderTier], provider: &str) -> bool {
@@ -239,24 +262,40 @@ fn all_on(tiers: &[LadderTier], provider: &str) -> bool {
             .all(|t| crate::frontier::split(&t.model).0 == provider)
 }
 
-fn claude_route(state: LadderState, tiers: &[LadderTier], keys: Keys) -> Option<ClaudeRoute> {
+/// The engine whose key way `sw` names: a ladder on it needs that key.
+fn key_engine(sw: &HeavySwitch) -> Option<&'static str> {
+    catalogue()
+        .way(&sw.key_way)
+        .and_then(|(_, w)| w.engine.as_deref())
+}
+
+/// The engine of the saved ladder that `sw` can join: one of its engines the whole ladder is on, and, for the engine that has the
+/// key way, with that key in place. With no ladder saved, the key's engine when the switch applies then (`applies_when_unset`) and
+/// its key is there: the plugin's own default ladder runs on it.
+fn switch_engine<'a>(
+    sw: &'a HeavySwitch,
+    state: LadderState,
+    tiers: &[LadderTier],
+    keys: &Keys,
+) -> Option<&'a str> {
     match state {
-        LadderState::Set if all_on(tiers, PROVIDER_ID) => Some(ClaudeRoute::Subscription),
-        LadderState::Set if all_on(tiers, ANTHROPIC) => Some(ClaudeRoute::ApiKey),
-        LadderState::Default if keys.anthropic => Some(ClaudeRoute::ApiKey),
+        LadderState::Set => sw
+            .engines
+            .iter()
+            .find(|e| {
+                all_on(tiers, e) && (key_engine(sw) != Some(e.as_str()) || keys.has(&sw.key_way))
+            })
+            .map(String::as_str),
+        LadderState::Default if sw.applies_when_unset && keys.has(&sw.key_way) => key_engine(sw),
         _ => None,
     }
 }
 
-fn grok_applies(state: LadderState, tiers: &[LadderTier], keys: Keys) -> bool {
-    keys.xai && (state == LadderState::Default || (state == LadderState::Set && all_on(tiers, XAI)))
-}
-
 /// The tiers the saved ladder holds now, where an unset ladder is the plugin's own default (Opus on an Anthropic key, else none).
-fn current_tiers(state: LadderState, tiers: &[LadderTier], keys: Keys) -> Vec<LadderTier> {
+fn current_tiers(state: LadderState, tiers: &[LadderTier], keys: &Keys) -> Vec<LadderTier> {
     match state {
         LadderState::Set => tiers.to_vec(),
-        LadderState::Default if keys.anthropic => vec![LadderTier {
+        LadderState::Default if keys.has("anthropic.key") => vec![LadderTier {
             name: "opus".to_owned(),
             model: format!("{ANTHROPIC}/{ANTHROPIC_OPUS}"),
         }],
@@ -272,34 +311,45 @@ fn holds(tiers: &[LadderTier], family: &str) -> bool {
     })
 }
 
-/// The heavy models' opt-ins as Settings > Models shows them: whether each applies to the saved ladder, is on, and can be turned on.
+/// The heavy models' opt-ins as Settings > Models shows them, one for each `heavy_switches` row of the data: whether it applies to
+/// the saved ladder, is on, and can be turned on.
 #[must_use]
 pub fn heavy_choices(
     state: LadderState,
     tiers: &[LadderTier],
     probe: &Probe,
-    keys: Keys,
+    keys: &Keys,
 ) -> Vec<HeavyChoice> {
-    let route = claude_route(state, tiers, keys);
-    HEAVY
+    catalogue()
+        .heavy_switches
         .iter()
-        .map(|k| {
-            let applies = if k.id == "fable" {
-                route.is_some()
-            } else {
-                grok_applies(state, tiers, keys)
-            };
-            let on = applies && holds(tiers, k.family);
-            let blocked = (applies
+        .map(|sw| {
+            let engine = switch_engine(sw, state, tiers, keys);
+            let applies = engine.is_some();
+            let on = applies && holds(tiers, &sw.family);
+            // a Claude route's alias is served by the user's own Claude Code: an old one does not know it yet
+            let blocked = (sw.pick == "route_alias"
                 && !on
-                && k.id == "fable"
-                && route == Some(ClaudeRoute::Subscription)
-                && !probe.aliases.iter().any(|a| a == claude::FABLE))
-            .then(|| "Your Claude Code does not serve Fable yet (it needs 2.1.321). Update it with `claude update`.".to_owned());
+                && engine == Some(PROVIDER_ID)
+                && !probe.aliases.contains(&sw.id))
+            .then(|| {
+                // the alias's own name and the oldest Claude Code that serves it (`claude::ALIASES`)
+                let mut name = sw.id.clone();
+                name[..1].make_ascii_uppercase();
+                let needs = claude::ALIASES
+                    .iter()
+                    .find(|(a, _)| *a == sw.id)
+                    .map(|(_, (a, b, c))| format!(" (it needs {a}.{b}.{c})"))
+                    .unwrap_or_default();
+                format!(
+                    "Your Claude Code does not serve {name} yet{needs}. Update it with `{}`.",
+                    claude::UPDATE_COMMAND
+                )
+            });
             HeavyChoice {
-                id: k.id.to_owned(),
-                label: k.label.to_owned(),
-                reason: k.reason.to_owned(),
+                id: sw.id.clone(),
+                label: sw.label.clone(),
+                reason: sw.reason.clone(),
                 applies,
                 on,
                 blocked,
@@ -309,20 +359,21 @@ pub fn heavy_choices(
 }
 
 /// Turn a heavy model on or off for the saved ladder (the user's choice, Settings > Models): on adds it as the top tier, off takes
-/// it away; a ladder it leaves empty is unset. Only a ladder the model can join changes. For Grok the tier is the lowest Grok 4.7
-/// or later the xAI account's own catalogue lists. Takes effect for sessions started afterwards.
+/// it away. Which switches there are, which ladders each can join, how its tier is chosen, what is said when it cannot be and what
+/// happens to a ladder it leaves empty are all rows of `heavy_switches` in `providers.json`; nothing here branches on an id. Only
+/// a ladder the model can join changes. Takes effect for sessions started afterwards.
 ///
 /// # Errors
-/// `hx.setup.invalid_answer` for an id that is not a heavy model; `hx.setup.subscription_unavailable` when the saved ladder is
-/// not one it can join, Claude Code does not serve Fable or the xAI catalogue lists no Grok; whatever Hermes refuses.
+/// `hx.setup.invalid_answer` for an id that is not a switch; `hx.setup.subscription_unavailable` when the saved ladder is not one it
+/// can join (the switch's own sentence), Claude Code does not serve the alias, or the catalogue lists none; whatever Hermes refuses.
 pub async fn set_heavy(
     ops: &dyn HermesOps,
     probe: &Probe,
-    keys: Keys,
+    keys: &Keys,
     id: &str,
     on: bool,
 ) -> Result<()> {
-    let Some(kind) = HEAVY.iter().find(|k| k.id == id) else {
+    let Some(sw) = catalogue().heavy(id) else {
         return Err(Error::Setup(
             "hx.setup.invalid_answer",
             format!("{id:?} is not a heavy model"),
@@ -336,11 +387,7 @@ pub async fn set_heavy(
     if !choice.applies {
         return Err(Error::Setup(
             "hx.setup.subscription_unavailable",
-            if id == "fable" {
-                "The saved ladder is not a Claude one, so there is no Fable choice to make. Change models sets that up.".into()
-            } else {
-                "There is no xAI key, or the saved ladder is not an xAI one, so there is no Grok choice to make. Change models sets that up.".into()
-            },
+            sw.not_applicable.clone(),
         ));
     }
     if !on && !choice.on {
@@ -352,19 +399,19 @@ pub async fn set_heavy(
             return Err(Error::Setup("hx.setup.subscription_unavailable", why));
         }
         if !choice.on {
-            tiers.push(heavy_tier(ops, kind, state, &saved_tiers, keys).await?);
+            tiers.push(heavy_tier(ops, sw, state, &saved_tiers, keys).await?);
         }
     } else {
         tiers.retain(|t| {
             let (p, m) = crate::frontier::split(&t.model);
             !(crate::frontier::is_heavy(p, m)
-                && crate::frontier::family_of(p, m).as_deref() == Some(kind.family))
+                && crate::frontier::family_of(p, m).as_deref() == Some(sw.family.as_str()))
         });
     }
     if tiers.is_empty() {
-        // An xAI ladder of Grok alone: with Grok off nothing is left to run, so none is saved and governed mode says why. Any other
-        // ladder is never left empty.
-        if kind.id == "grok" && state == LadderState::Set {
+        // A ladder of this model alone: with it off nothing is left to run. The switch says whether none is saved (and governed
+        // mode says why) or the ladder is kept as it is.
+        if sw.empty_ladder == "unset" && state == LadderState::Set {
             ops.config_unset(LADDER_KEY).await?;
         }
         return Ok(());
@@ -378,38 +425,72 @@ pub async fn set_heavy(
     Ok(())
 }
 
-/// The tier a heavy model adds: Fable is the Claude route's own alias or the Anthropic model, Grok the lowest the xAI catalogue lists.
+/// The tier a heavy model adds, by the switch's `pick`: `route_alias` is the Claude route's own alias on the subscription or the
+/// alias's pinned model on an Anthropic key; `lowest_in_family` is the lowest model of the family the engine's catalogue lists.
 async fn heavy_tier(
     ops: &dyn HermesOps,
-    kind: &HeavyKind,
+    sw: &HeavySwitch,
     state: LadderState,
     saved_tiers: &[LadderTier],
-    keys: Keys,
+    keys: &Keys,
 ) -> Result<LadderTier> {
-    let model = if kind.id == "fable" {
-        match claude_route(state, saved_tiers, keys) {
-            Some(ClaudeRoute::Subscription) => format!("{PROVIDER_ID}/{}", claude::FABLE),
-            _ => format!("{ANTHROPIC}/{ANTHROPIC_FABLE}"),
+    let engine = switch_engine(sw, state, saved_tiers, keys).ok_or_else(|| {
+        Error::Setup(
+            "hx.setup.subscription_unavailable",
+            sw.not_applicable.clone(),
+        )
+    })?;
+    let none_listed = || {
+        Error::Setup(
+            "hx.setup.subscription_unavailable",
+            sw.none_listed
+                .clone()
+                .unwrap_or_else(|| sw.not_applicable.clone()),
+        )
+    };
+    let model = match sw.pick.as_str() {
+        "route_alias" if engine == PROVIDER_ID => format!("{engine}/{}", sw.id),
+        "route_alias" => format!("{engine}/{}", alias_pinned(&sw.id).ok_or_else(none_listed)?),
+        _ => {
+            let catalogue = ops.provider_models(engine).await?;
+            let id =
+                lowest_in_family(engine, &sw.family, &catalogue, true).ok_or_else(none_listed)?;
+            format!("{engine}/{id}")
         }
-    } else {
-        let catalogue = ops.provider_models(XAI).await?;
-        let id = lowest_in_family(XAI, kind.family, &catalogue, true).ok_or_else(|| {
-            Error::Setup(
-                "hx.setup.subscription_unavailable",
-                "Your xAI key lists no Grok 4.7 or later, so there is nothing to turn on.".into(),
-            )
-        })?;
-        format!("{XAI}/{id}")
     };
     Ok(LadderTier {
-        name: kind.id.to_owned(),
+        name: sw.id.clone(),
         model,
     })
 }
 
+/// The heavy tiers the user turned on that `provider`'s ladder can carry, from what its catalogue lists: one for each switch whose
+/// engines include `provider`, picks the lowest model of its family and is on in `optins` (Gemini 4 Carbon after Neon; Grok on an
+/// xAI ladder). A switch whose family the catalogue lacks adds nothing.
+#[must_use]
+pub fn heavy_rungs(
+    provider: &str,
+    catalogue_ids: &[String],
+    optins: &Optins,
+) -> Vec<(String, String)> {
+    catalogue()
+        .heavy_switches
+        .iter()
+        .filter(|sw| {
+            sw.pick == "lowest_in_family"
+                && optins.has(&sw.id)
+                && sw.engines.iter().any(|e| e == provider)
+        })
+        .filter_map(|sw| {
+            lowest_in_family(provider, &sw.family, catalogue_ids, true)
+                .map(|id| (sw.id.clone(), format!("{provider}/{id}")))
+        })
+        .collect()
+}
+
 /// What governed mode can do with the saved ladder.
 #[must_use]
-pub fn governed_view(state: LadderState, tiers: &[LadderTier], keys: Keys) -> GovernedView {
+pub fn governed_view(state: LadderState, tiers: &[LadderTier], keys: &Keys) -> GovernedView {
     let checks: Vec<TierCheck> = tiers
         .iter()
         .map(|t| {
@@ -424,10 +505,10 @@ pub fn governed_view(state: LadderState, tiers: &[LadderTier], keys: Keys) -> Go
         .collect();
     let why = match state {
         LadderState::Set => non_frontier(tiers).into_iter().next(),
-        LadderState::Default if !keys.anthropic && keys.xai => Some(
+        LadderState::Default if !keys.has("anthropic.key") && keys.has("xai.key") => Some(
             "no ladder is saved, and the only frontier model an xAI key reaches is Grok 4.7 or later, a heavy model that governed mode runs only when you turn it on. Turn on Grok below".to_owned(),
         ),
-        LadderState::Default if !keys.anthropic => Some(format!(
+        LadderState::Default if !keys.has("anthropic.key") => Some(format!(
             "no ladder is saved, and boopis's own ladder runs on Claude through an Anthropic key, which is not set up; governed mode runs only on {}",
             crate::frontier::allowed_sentence()
         )),
@@ -542,13 +623,11 @@ fn named_providers(cfg: Option<&Value>) -> Vec<Named> {
 /// Whether a Gemini key is in place: in the keychain, or by name in the profile's `.env`.
 #[must_use]
 pub fn gemini_key(store: &dyn SecretStore, home: &Path) -> bool {
-    let env = dotenv_names(home);
-    GEMINI_VARS.iter().any(|v| env.iter().any(|e| e == v))
-        || saved(store, &SecretRef::provider_key(GEMINI))
+    key_in_place(store, &dotenv_names(home), "google.key")
 }
 
 /// Whether the keychain holds the secret. A direct call: the Secret Service answers in milliseconds, and setup runs once.
-fn saved(store: &dyn SecretStore, r: &SecretRef) -> bool {
+pub(crate) fn saved(store: &dyn SecretStore, r: &SecretRef) -> bool {
     matches!(store.get(&r.service(), &r.name), Ok(Some(_)))
 }
 
@@ -564,6 +643,12 @@ fn credential_form(provider: &str) -> Form {
         ),
         "anthropic" => ("Anthropic", format!("Models need it to answer. {kept}")),
         XAI => ("xAI", format!("Grok needs it to answer. {kept}")),
+        OPENAI_API_PROVIDER => (
+            "OpenAI",
+            format!(
+                "An OpenAI API key is pay per use. Open {OPENAI_KEY_URL}, sign in and choose Create new secret key, then paste it here. {kept}"
+            ),
+        ),
         GEMINI => (
             "Gemini",
             format!(
@@ -583,7 +668,21 @@ fn credential_form(provider: &str) -> Form {
     if provider == GEMINI {
         form.links = vec![("Get a free key".into(), GEMINI_KEY_URL.into())];
     }
+    if provider == OPENAI_API_PROVIDER {
+        form.links = vec![("Get an API key".into(), OPENAI_KEY_URL.into())];
+    }
     form
+}
+
+/// The address the data pins for the built-in provider `engine`, with the variable the engine reads it from (`base_url.pin`,
+/// `base_url.env` and `base_url.default` of its key way in `providers.json`), or `None` for a provider whose address is not pinned.
+#[must_use]
+pub fn pinned_address(engine: &str) -> Option<(String, String)> {
+    let (_, way) = catalogue()
+        .ways()
+        .find(|(_, w)| w.engine.as_deref() == Some(engine) && w.key.is_some())?;
+    let base = way.base_url.as_ref().filter(|b| b.pin)?;
+    Some((base.env.clone()?, base.default.clone()?))
 }
 
 /// Make Hermes read `r` as the key of `provider`: a named entry gets `key_env`, a built-in provider keeps its own
@@ -608,6 +707,12 @@ pub async fn wire(ops: &dyn HermesOps, provider: &str, named: bool) -> Result<Ve
     ];
     if named {
         writes.insert(0, (format!("providers.{provider}.key_env"), var));
+    }
+    // an address the data pins (Z.ai and Kimi: a coding-plan key would otherwise be followed to its own endpoint, because the engine
+    // lets an explicit `<PROVIDER>_BASE_URL` win over its own detection): set the pay-as-you-go one, which the engine reads from the
+    // profile's `.env`, not a secret
+    if !named && let Some((var, address)) = pinned_address(provider) {
+        writes.push((var, address));
     }
     let mut made = Vec::new();
     for (key, value) in writes {
@@ -644,8 +749,7 @@ pub async fn run(
     let env = dotenv_names(&home);
     let named = named_providers(ops.config_get("providers").await?.as_ref());
     let anthropic_ref = SecretRef::provider_key("anthropic");
-    let claude_key =
-        ANTHROPIC_VARS.iter().any(|v| env.iter().any(|e| e == v)) || saved(store, &anthropic_ref);
+    let claude_key = key_in_place(store, &env, "anthropic.key");
     let claude = if claude_key {
         if saved(store, &anthropic_ref) && !wire(ops, "anthropic", false).await?.is_empty() {
             *restart = true;
@@ -678,7 +782,8 @@ pub async fn run(
         Some(OPENROUTER_FREE) => openrouter(ops, store, &env, &named, input, restart).await,
         Some(CLAUDE_SUBSCRIPTION) => subscription(ops, input, restart).await,
         Some(CHATGPT_SUBSCRIPTION) => chatgpt(ops, input, restart).await,
-        Some(GEMINI) => gemini(ops, store, &env, restart).await,
+        Some(OPENAI_KEY) => openai_key(ops, store, &env, restart).await,
+        Some(GEMINI) => gemini(ops, store, &env, input, restart).await,
         Some(XAI) => xai(ops, store, &env, input, restart).await,
         Some(pick) => single_tier(ops, store, &env, &named, pick, restart).await,
     }
@@ -813,7 +918,7 @@ async fn write_route(ops: &dyn HermesOps, tiers: &[(String, String)]) -> Result<
 
 /// Set `model.provider` and `model.default` to a tier's `provider/id` (the id may hold more slashes), each only when it
 /// differs. True when it wrote.
-async fn write_default_model(ops: &dyn HermesOps, tier: &str) -> Result<bool> {
+pub(crate) async fn write_default_model(ops: &dyn HermesOps, tier: &str) -> Result<bool> {
     let Some((provider, id)) = tier
         .split_once('/')
         .filter(|(p, i)| !p.is_empty() && !i.is_empty())
@@ -933,6 +1038,8 @@ fn ladder_form(named: &[Named], free_note: Option<&str>, claude: &Probe) -> Form
     labels.push(CLAUDE_SUBSCRIPTION_LABEL.to_owned());
     ids.push(CHATGPT_SUBSCRIPTION.to_owned());
     labels.push(CHATGPT_SUBSCRIPTION_LABEL.to_owned());
+    ids.push(OPENAI_KEY.to_owned());
+    labels.push(OPENAI_KEY_LABEL.to_owned());
     ids.push(GEMINI.to_owned());
     labels.push(GEMINI_LABEL.to_owned());
     ids.push(XAI.to_owned());
@@ -967,7 +1074,7 @@ fn ladder_form(named: &[Named], free_note: Option<&str>, claude: &Probe) -> Form
     }
     let _ = write!(
         body,
-        "\n\nChatGPT subscription: you sign in with your ChatGPT account on OpenAI's own page, and boopis keeps the sign-in in your OS keychain. Gemini: a free key from Google AI Studio. xAI: an API key from xAI."
+        "\n\nChatGPT subscription: you sign in with your ChatGPT account on OpenAI's own page, and boopis keeps the sign-in in your OS keychain. OpenAI: an API key from the OpenAI platform. Gemini: a free key from Google AI Studio. xAI: an API key from xAI."
     );
     let default = ids[0].clone();
     Form::new(
@@ -1030,6 +1137,31 @@ pub(crate) fn written_by_setup(tiers: &[LadderTier]) -> bool {
         || pairs == LEGACY_GEMINI
         || pairs == CANDIDATE_GEMINI
         || candidate_chatgpt(tiers)
+        || chatgpt_without_terra(tiers)
+}
+
+/// The 0.1.6 ChatGPT ladder: Sol and Astra, each named for its family and on a model of it, with no Terra rung (Terra became the
+/// cheapest rung in 0.1.7, ADR-0039). Setup wrote it, so setup may write it again, once per install.
+fn chatgpt_without_terra(tiers: &[LadderTier]) -> bool {
+    let rung = |family: &str| {
+        CHATGPT_RUNGS
+            .iter()
+            .any(|(f, n)| *f == family && tiers.iter().any(|t| t.name == *n))
+    };
+    !tiers.is_empty()
+        && !rung("gpt-terra")
+        && tiers.iter().all(|t| {
+            let (p, id) = crate::frontier::split(&t.model);
+            p == CHATGPT_PROVIDER
+                && CHATGPT_RUNGS.iter().any(|(family, name)| {
+                    t.name == *name
+                        && matches!(*family, "gpt-sol" | "gpt-astra")
+                        && crate::frontier::family_of(p, id).as_deref() == Some(*family)
+                })
+        })
+        && tiers
+            .windows(2)
+            .all(|w| w[0].name == "sol" && w[1].name == "astra")
 }
 
 /// The candidate's ChatGPT ladder: one tier named `astra` on a GPT Astra.
@@ -1040,20 +1172,21 @@ fn candidate_chatgpt(tiers: &[LadderTier]) -> bool {
     })
 }
 
-/// Whether a ladder setup wrote needs to be written again (ADR-0037, the once-per-install repair): it has tiers governed mode will
-/// not use, a heavy tier the user did not opt in to, or it is the candidate's one-tier ChatGPT or Gemini ladder, which the new
-/// ladders replace. Cheap: it asks nothing of the engine.
-pub(crate) fn stale(tiers: &[LadderTier], optins: Optins) -> bool {
+/// Whether a ladder setup wrote needs to be written again (ADR-0037, ADR-0039, the once-per-install repair): it has tiers governed
+/// mode will not use, a heavy tier the user did not opt in to, it is the candidate's one-tier ChatGPT or Gemini ladder, or it is the
+/// 0.1.6 ChatGPT ladder of Sol and Astra, which the ladder with Terra replaces. Cheap: it asks nothing of the engine.
+pub(crate) fn stale(tiers: &[LadderTier], optins: &Optins) -> bool {
     if !written_by_setup(tiers) {
         return false;
     }
     let heavy_unasked = tiers.iter().any(|t| {
         let (p, id) = crate::frontier::split(&t.model);
-        crate::frontier::is_heavy(p, id) && !optins.fable
+        !optins.allows(p, id)
     });
     !non_frontier(tiers).is_empty()
         || heavy_unasked
         || candidate_chatgpt(tiers)
+        || chatgpt_without_terra(tiers)
         || tiers
             .iter()
             .map(|t| (t.name.as_str(), t.model.as_str()))
@@ -1072,7 +1205,7 @@ pub(crate) fn stale(tiers: &[LadderTier], optins: Optins) -> bool {
 pub async fn repair(
     ops: &dyn HermesOps,
     claude: &dyn ClaudeCli,
-    optins: Optins,
+    optins: &Optins,
     restart: &mut bool,
 ) -> Result<Repair> {
     let (state, tiers) = ladder_of(ops.config_get(LADDER_KEY).await?.as_ref());
@@ -1108,7 +1241,7 @@ pub async fn repair(
                 .filter(|t| !bad.iter().any(|b| b.contains(&format!("'{}'", t.name))))
                 .filter(|t| {
                     let (p, id) = crate::frontier::split(&t.model);
-                    optins.fable || !crate::frontier::is_heavy(p, id)
+                    optins.allows(p, id)
                 })
                 .map(|t| (t.name.clone(), t.model.clone()))
                 .collect()
@@ -1121,7 +1254,7 @@ pub async fn repair(
         ladder_from_catalogue(CHATGPT_PROVIDER, &catalogue, CHATGPT_RUNGS)
     } else {
         let catalogue = ops.provider_models(GEMINI).await.unwrap_or_default();
-        ladder_from_catalogue(GEMINI, &catalogue, GEMINI_RUNGS)
+        gemini_tiers(&catalogue, optins)
     };
     let current: Vec<(String, String)> = tiers
         .iter()
@@ -1137,7 +1270,7 @@ pub async fn repair(
     }
     *restart |= write_route(ops, &target).await?;
     Ok(Repair::Rewrote(format!(
-        "the tier ladder is now {}, because governed mode runs only on frontier models and heavy ones only when you turn them on",
+        "the tier ladder is now {}, because governed mode runs only on frontier models, heavy ones only when you turn them on, and GPT-6.1 Terra is the cheapest GPT rung",
         target
             .iter()
             .map(|(_, m)| m.as_str())
@@ -1267,14 +1400,14 @@ fn plugin_aliases(home: &Path) -> Option<Vec<String>> {
 pub fn subscription_tiers(
     probe: &Probe,
     plugin: Option<&[String]>,
-    optins: Optins,
+    optins: &Optins,
 ) -> Vec<(String, String)> {
     probe
         .aliases
         .iter()
         .filter(|a| plugin.is_none_or(|p| p.contains(a)))
         .filter(|a| crate::frontier::is_frontier(PROVIDER_ID, a))
-        .filter(|a| optins.fable || !crate::frontier::is_heavy(PROVIDER_ID, a))
+        .filter(|a| optins.allows(PROVIDER_ID, a))
         .map(|a| (a.clone(), format!("{PROVIDER_ID}/{a}")))
         .collect()
 }
@@ -1310,7 +1443,7 @@ async fn subscription(
         }
         Some(_) => {}
     }
-    let tiers = subscription_tiers(&probe, plugin_aliases(&home).as_deref(), input.optins);
+    let tiers = subscription_tiers(&probe, plugin_aliases(&home).as_deref(), &input.optins);
     if tiers.is_empty() {
         return Err(Error::Setup(
             "hx.setup.subscription_unavailable",
@@ -1396,8 +1529,9 @@ pub fn ladder_from_catalogue(
 }
 
 /// The ChatGPT subscription (ADR-0030): signed in through boopis's own sign-in, then the account's own catalogue is asked for a GPT
-/// Sol and a GPT Astra of 6.2 or later (ADR-0037). The ladder is the ones it lists, Sol first. Without either, nothing is written:
-/// the plan has no model governed mode may use, and the line says so.
+/// Terra of 6.1 or later and a GPT Sol and a GPT Astra of 6.2 or later (ADR-0037, ADR-0039). The ladder is the ones it lists,
+/// Terra first, then Sol, then Astra. With none of them nothing is written: the plan has no model governed mode may use, and the
+/// line says so.
 async fn chatgpt(ops: &dyn HermesOps, input: &Input<'_>, restart: &mut bool) -> Result<Outcome> {
     if !input.chatgpt_signed_in {
         return Ok(Outcome::Form(chatgpt_form()));
@@ -1406,13 +1540,43 @@ async fn chatgpt(ops: &dyn HermesOps, input: &Input<'_>, restart: &mut bool) -> 
     let tiers = ladder_from_catalogue(CHATGPT_PROVIDER, &catalogue, CHATGPT_RUNGS);
     if tiers.is_empty() {
         return Ok(Outcome::Done(format!(
-            "ChatGPT subscription: signed in, but your plan lists no GPT Sol or GPT Astra of 6.2 or later, so governed mode is unavailable on it. It runs only on {}. Sessions that are not governed can use your plan's models",
+            "ChatGPT subscription: signed in, but your plan lists no GPT Terra of 6.1 or later and no GPT Sol or GPT Astra of 6.2 or later, so governed mode is unavailable on it. It runs only on {}. Sessions that are not governed can use your plan's models",
             crate::frontier::allowed_sentence()
         )));
     }
     *restart |= write_route(ops, &tiers).await?;
     Ok(Outcome::Done(format!(
         "ChatGPT subscription: {} on your ChatGPT sign-in",
+        ladder_models(&tiers)
+    )))
+}
+
+/// An OpenAI API key (ADR-0039): the key (a form, with the link to make one), then the same ladder as the ChatGPT one, Terra, Sol
+/// and Astra, from what the key lists. OpenAI lists only what the key can use, so the listing is final: a rung it lacks is left out.
+async fn openai_key(
+    ops: &dyn HermesOps,
+    store: &dyn SecretStore,
+    env: &[String],
+    restart: &mut bool,
+) -> Result<Outcome> {
+    let r = SecretRef::provider_key(OPENAI_API_PROVIDER);
+    if !key_in_place(store, env, "openai.key") {
+        return Ok(Outcome::Form(credential_form(OPENAI_API_PROVIDER)));
+    }
+    if saved(store, &r) && !wire(ops, OPENAI_API_PROVIDER, false).await?.is_empty() {
+        *restart = true;
+    }
+    let catalogue = ops.provider_models(OPENAI_API_PROVIDER).await?;
+    let tiers = ladder_from_catalogue(OPENAI_API_PROVIDER, &catalogue, CHATGPT_RUNGS);
+    if tiers.is_empty() {
+        return Ok(Outcome::Done(format!(
+            "OpenAI on your API key: it lists no GPT Terra of 6.1 or later and no GPT Sol or GPT Astra of 6.2 or later, so no governed ladder was written and governed mode is unavailable on it. It runs only on {}",
+            crate::frontier::allowed_sentence()
+        )));
+    }
+    *restart |= write_route(ops, &tiers).await?;
+    Ok(Outcome::Done(format!(
+        "OpenAI on your API key: {}",
         ladder_models(&tiers)
     )))
 }
@@ -1426,27 +1590,36 @@ fn ladder_models(tiers: &[(String, String)]) -> String {
         .join(", then ")
 }
 
+/// The Gemini ladder from the engine's catalogue: Hydrogen, then Neon, and Gemini 4 Carbon after them when the user turned its switch
+/// on and the catalogue lists one (`heavy_rungs`).
+#[must_use]
+pub fn gemini_tiers(catalogue: &[String], optins: &Optins) -> Vec<(String, String)> {
+    let mut tiers = ladder_from_catalogue(GEMINI, catalogue, GEMINI_RUNGS);
+    tiers.extend(heavy_rungs(GEMINI, catalogue, optins));
+    tiers
+}
+
 /// Gemini with a Google AI Studio key: the key (a form, with the link to make one), then a ladder from what the engine's Gemini
-/// catalogue lists: Hydrogen, then Neon. Carbon is allowed but not on the ladder (it scored below Neon at a higher cost).
+/// catalogue lists: Hydrogen, then Neon. Carbon is frontier but heavy: it is on the ladder only once its switch is on.
 async fn gemini(
     ops: &dyn HermesOps,
     store: &dyn SecretStore,
     env: &[String],
+    input: &Input<'_>,
     restart: &mut bool,
 ) -> Result<Outcome> {
     let r = SecretRef::provider_key(GEMINI);
-    let in_env = GEMINI_VARS.iter().any(|v| env.iter().any(|e| e == v));
-    if !in_env && !saved(store, &r) {
+    if !key_in_place(store, env, "google.key") {
         return Ok(Outcome::Form(credential_form(GEMINI)));
     }
     if saved(store, &r) && !wire(ops, GEMINI, false).await?.is_empty() {
         *restart = true;
     }
     let catalogue = ops.provider_models(GEMINI).await?;
-    let tiers = ladder_from_catalogue(GEMINI, &catalogue, GEMINI_RUNGS);
+    let tiers = gemini_tiers(&catalogue, &input.optins);
     if tiers.is_empty() {
         return Ok(Outcome::Done(format!(
-            "Gemini on your Google AI Studio key: its catalogue lists no Gemini 4 Hydrogen or Gemini 4 Neon, so no governed ladder was written and governed mode is unavailable on it. Gemini 4 Carbon is allowed but is not on the ladder setup writes (it scored below Neon at a higher cost). It runs only on {}",
+            "Gemini on your Google AI Studio key: its catalogue lists no Gemini 4 Hydrogen or Gemini 4 Neon, so no governed ladder was written and governed mode is unavailable on it. Gemini 4 Carbon is frontier but heavy, so it is on a ladder only when you turn it on in Settings, Models. It runs only on {}",
             crate::frontier::allowed_sentence()
         )));
     }
@@ -1467,25 +1640,26 @@ async fn xai(
     restart: &mut bool,
 ) -> Result<Outcome> {
     let r = SecretRef::provider_key(XAI);
-    let in_env = XAI_VARS.iter().any(|v| env.iter().any(|e| e == v));
-    if !in_env && !saved(store, &r) {
+    if !key_in_place(store, env, "xai.key") {
         return Ok(Outcome::Form(credential_form(XAI)));
     }
     if saved(store, &r) && !wire(ops, XAI, false).await?.is_empty() {
         *restart = true;
     }
-    if !input.optins.grok {
+    if !input.optins.has("grok") {
         return Ok(Outcome::Done(
             "xAI key saved. Grok 4.7 and later is a heavy model (token-heavy), so governed mode stays unavailable on it until you turn on Grok in Settings, Models. Sessions that are not governed can use it now".into(),
         ));
     }
     let catalogue = ops.provider_models(XAI).await?;
-    let Some(id) = lowest_in_family(XAI, GROK_FAMILY, &catalogue, true) else {
+    let tiers = heavy_rungs(XAI, &catalogue, &input.optins);
+    let Some((_, model)) = tiers.first() else {
         return Ok(Outcome::Done(
             "xAI key saved, but your xAI catalogue lists no Grok 4.7 or later, so governed mode is unavailable on it".into(),
         ));
     };
-    *restart |= write_route(ops, &[("grok".to_owned(), format!("{XAI}/{id}"))]).await?;
+    let id = crate::frontier::split(model).1.to_owned();
+    *restart |= write_route(ops, &tiers).await?;
     Ok(Outcome::Done(format!(
         "xAI: {id} on your xAI key (heavy: it is on the ladder because you turned it on)"
     )))
