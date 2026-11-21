@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-provider-test-endpoint"
+description = "Enables the provider_test_endpoint command without any pre-configured scope."
+commands.allow = ["provider_test_endpoint"]
+
+[[permission]]
+identifier = "deny-provider-test-endpoint"
+description = "Denies the provider_test_endpoint command without any pre-configured scope."
+commands.deny = ["provider_test_endpoint"]

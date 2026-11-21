@@ -78,6 +78,9 @@ pub enum Error {
     /// A connector operation failed with its own stable code (`hx.connectors.*`).
     #[error("{1}")]
     Connector(&'static str, String),
+    /// A provider operation failed with its own stable code (`hx.provider.*`).
+    #[error("{1}")]
+    Provider(&'static str, String),
 }
 
 /// A specialised `Result`.
@@ -103,7 +106,7 @@ impl Error {
             Self::Secrets(_) => "hx.secrets.failed",
             Self::SecretNotFound => "hx.secrets.not_found",
             Self::Os(_) => "hx.host.os",
-            Self::Setup(code, _) | Self::Connector(code, _) => code,
+            Self::Setup(code, _) | Self::Connector(code, _) | Self::Provider(code, _) => code,
         }
     }
 }

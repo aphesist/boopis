@@ -51,6 +51,15 @@
     "allow-chatgpt-status",
     "allow-chatgpt-signin-start",
     "allow-chatgpt-signin-cancel",
-    "allow-chatgpt-sign-out"
+    "allow-chatgpt-sign-out",
+    "allow-provider-list",
+    "allow-provider-set-key",
+    "allow-provider-remove",
+    "allow-provider-test-endpoint",
+    "allow-provider-add-endpoint",
+    "allow-provider-probe-local",
+    "allow-provider-signin-start",
+    "allow-provider-signin-cancel",
+    "allow-provider-sign-out"
   ]
 }

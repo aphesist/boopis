@@ -258,6 +258,7 @@ mod tests {
         for (family, below, at) in [
             ("claude-opus-{}", "5-4", "5-5"),
             ("claude-fable-{}", "5-1", "5-2"),
+            ("gpt-{}-terra", "6", "6-1"),
             ("gpt-{}-astra", "6-1", "6-2"),
             ("gemini-{}-carbon", "3", "4"),
             ("gpt-{}-sol", "6-1", "6-2"),
@@ -273,6 +274,7 @@ mod tests {
             [
                 "Claude Opus 5.5",
                 "Claude Fable 5.2",
+                "GPT-6.1 Terra",
                 "GPT-6.2 Astra",
                 "GPT-6.2 Sol",
                 "Gemini 4 Carbon",

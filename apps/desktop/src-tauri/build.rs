@@ -46,6 +46,15 @@ const COMMANDS: &[&str] = &[
     "chatgpt_signin_start",
     "chatgpt_signin_cancel",
     "chatgpt_sign_out",
+    "provider_list",
+    "provider_set_key",
+    "provider_remove",
+    "provider_test_endpoint",
+    "provider_add_endpoint",
+    "provider_probe_local",
+    "provider_signin_start",
+    "provider_signin_cancel",
+    "provider_sign_out",
 ];
 
 fn main() {
