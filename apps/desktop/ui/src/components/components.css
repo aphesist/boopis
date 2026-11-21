@@ -725,6 +725,9 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 .ui-ff { border-bottom: 1px dashed var(--text-dim); cursor: pointer; transition: border-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease); }
 @media (hover: hover) and (pointer: fine) { .ui-ff:hover { border-bottom-color: var(--text-strong); color: var(--text-strong); } }
 .ui-ff[data-confirmed] { border-bottom-style: solid; border-bottom-color: var(--brass); }
+/* a mention ("@Claude Haiku"): the model that answers this message only, set in the text as a quiet capsule, never dashed (it is the person's own word, not a reading of it) */
+.ui-ff[data-kind="mention"] { border-bottom: 0; border-radius: var(--r-pill); padding: 0 var(--sp-1); margin: 0 -1px; background: var(--bg-3); box-shadow: inset 0 0 0 1px var(--hair); color: var(--text-strong); }
+@media (hover: hover) and (pointer: fine) { .ui-ff[data-kind="mention"]:hover { box-shadow: inset 0 0 0 1px var(--line); } }
 @media (max-width: 640px) { .ui-composer__bar .ui-capacity { display: none; } }
 /* who answers next, at phone width: the provider's mark (or Smart's spark) and the chevron; the name is in the chip's aria-label and its tooltip, so the row keeps clear of the box's corner (R-corner-3, R-corner-4) */
 @media (max-width: 640px) { .ui-composer__bar .ui-chip--who > span { display: none; } }

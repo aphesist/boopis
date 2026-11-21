@@ -4,6 +4,8 @@
 import type { SessionListRow, TranscriptMessage } from '../vendor/hermes-shared/gateway-contract.generated';
 import type { AgentTurn, ApprovalWait, SessionSummary, Step, Turn, UserTurn, WaitOutcome } from '../data/types';
 import type { GatewayEvent } from './gateway';
+import { EMPTY_BOOK, answeredBy } from './live/attribution';
+import type { TurnBook } from './live/attribution';
 
 const pad = (n: number): string => String(n).padStart(2, '0');
 export const clock = (d: Date): string => pad(d.getHours()) + ':' + pad(d.getMinutes());
@@ -67,31 +69,44 @@ export function failedStep(payload: Record<string, unknown> | undefined): Step {
   return { title: name + ' failed', kind: 'fail', time: seconds };
 }
 
+/** the engine's own note that the model changed ("[Model switched to X via provider Y ...]"): a stored user row, not a message
+ *  the person wrote. The divider between two answers replaces it, so it is not a turn. */
+const isModelSwitchNote = (r: TranscriptMessage, text: string): boolean => r.display_kind === 'model_switch' || /^\[Model switched to /.test(text);
+
 /** the stored transcript as turns: each user message is a turn, and everything the agent did until the next one is a
- *  finished agent turn (its tool rows are its steps). `model` is what the session reports, '' when unknown. */
-export function transcriptToTurns(rows: readonly TranscriptMessage[], model: string, idPrefix: string): Turn[] {
+ *  finished agent turn (its tool rows are its steps). Each agent turn says which model answered it from `book` (what the
+ *  plugin recorded, by stored row); a turn the book does not list has an empty `model`: unknown, never the session's
+ *  current model (invariant 5). */
+export function transcriptToTurns(rows: readonly TranscriptMessage[], idPrefix: string, book: TurnBook = EMPTY_BOOK): Turn[] {
   const turns: Turn[] = [];
-  let agent: { steps: Step[]; texts: string[] } | null = null;
+  let agent: { steps: Step[]; texts: string[]; rowIds: number[] } | null = null;
+  let userRow: number | null = null;
   const flush = (): void => {
     if (!agent) return;
+    const rec = [...(userRow !== null ? [userRow] : []), ...agent.rowIds].map((id) => book.get(id)).find((r) => r !== undefined);
     const a: AgentTurn = {
-      id: idPrefix + 't' + turns.length, role: 'assistant', model, time: '', cost: '', stepCount: agent.steps.length, steps: agent.steps,
+      id: idPrefix + 't' + turns.length, role: 'assistant', model: rec ? answeredBy(rec) : '', ...(rec?.ungoverned ? { ungoverned: true } : {}), time: '', cost: '', stepCount: agent.steps.length, steps: agent.steps,
       paragraphs: agent.texts.flatMap((t) => paragraphs(t)), bullets: [], status: 'done'
     };
     turns.push(a);
     agent = null;
   };
+  const rowOf = (r: TranscriptMessage): number[] => (typeof r.row_id === 'number' ? [r.row_id] : []);
   for (const r of rows) {
     const text = r.text ?? (typeof r.content === 'string' ? r.content : '');
+    if (isModelSwitchNote(r, text ?? '')) continue;
     if (r.role === 'user') {
       flush();
+      userRow = typeof r.row_id === 'number' ? r.row_id : null;
       const u: UserTurn = { id: idPrefix + 't' + turns.length, role: 'user', at: r.timestamp ? clock(new Date(r.timestamp * 1000)) : '', text: text ?? '' };
       turns.push(u);
     } else if (r.role === 'assistant') {
-      agent ??= { steps: [], texts: [] };
+      agent ??= { steps: [], texts: [], rowIds: [] };
+      agent.rowIds.push(...rowOf(r));
       if (text) agent.texts.push(text);
     } else if (r.role === 'tool') {
-      agent ??= { steps: [], texts: [] };
+      agent ??= { steps: [], texts: [], rowIds: [] };
+      agent.rowIds.push(...rowOf(r));
       agent.steps.push(toolStep({ name: r.name, context: r.context }));
     }
   }

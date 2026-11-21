@@ -245,8 +245,11 @@ export interface Attached { name: string; kind: 'file' | 'image' | 'folder'; pat
 export interface UserTurn { id: string; role: 'user'; at: string; text: string; attachments?: readonly Attached[] }
 export interface AgentTurn {
   id: string; role: 'assistant';
-  /** "qwen3-coder → sonnet 5.5": the models the turn ran on (the agent has no name) */
+  /** "qwen3-coder → sonnet 5.5": the models the turn ran on (the agent has no name). Empty when nothing recorded who answered
+   *  (a turn from before it was recorded): shown as unknown, never as the model the session has now */
   model: string;
+  /** the turn ran outside governed mode: the person asked for it with an "@" mention (the plugin's one-turn exception, ADR-0041) */
+  ungoverned?: boolean | undefined;
   /** elapsed and cost as shown ("3m 42s", "$0.37") */
   time: string; cost: string;
   stepCount: number; steps: readonly Step[];

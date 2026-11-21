@@ -12,6 +12,8 @@ import { changesFrom, connectorsFrom, contextFrom, contextNote, costNote, diffFi
 import { blanksFromLedger } from './blanks';
 import { recentFailures, smartPick } from '../../data/smart';
 import { choicesFrom, splitValue, switchValue, valueOf } from './models';
+import { routeMentions } from '../../data/mentions';
+import { prepareOnce } from './attribution';
 import type { LadderTier } from './models';
 import { ui } from '@boopis/ui';
 import { applyEvent, newModel } from './session-model';
@@ -59,6 +61,10 @@ export interface LiveDetails {
    *  per-session model switch (ungoverned) or the plugin's start tier (governed), and say who will answer and why. Rejects when the
    *  switch fails: the message must not be answered by a model nobody chose. */
   prepareSend(uiId: string, text: string, meta?: { attachments: number }): Promise<{ model: string; why: string | null }>;
+  /** a message whose only mention is one model ("@Claude Haiku ...") goes to that model for this turn only: the engine's one-turn
+   *  switch (and, in a governed session, the plugin's one-turn exception). Null when the message mentions no model, or two or more
+   *  (the task-splitting tool reads those). Rejects when it cannot be set up: the message must not go to a model nobody chose. */
+  prepareMention(uiId: string, text: string, o: { idle: boolean }): Promise<{ model: string; why: string; ungoverned: boolean; abort(): Promise<void> } | null>;
   /** the model the session answers with now (the engine's, or the user's pick), 'provider/model', for a turn that has not heard from the engine */
   currentModel(uiId: string): string;
   /** the mode and model the user chose before the first message, to apply at creation */
@@ -104,7 +110,9 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
 
   const locked = (m: SessionModel): boolean => m.started || m.describe?.session?.locked === true;
   const governedOf = (m: SessionModel): boolean => (locked(m) ? m.describe?.session?.mode === 'governed' : (m.wantGoverned ?? m.describe?.session?.mode === 'governed') || (m.describe?.session == null && m.wantGoverned == null && defaultMode === 'governed'));
-  const engineModel = (m: SessionModel): string => (m.info?.model ? valueOf(m.info.provider ?? '', m.info.model) : m.usage?.model ?? (options?.model ? valueOf(options.provider ?? '', options.model) : ''));
+  /** the "@" message is over: the engine has put the session's model back, so what the info says is the default again */
+  const endOnce = (m: SessionModel): void => { if (!m.once) return; const s = splitValue(m.once.default); m.info = { ...(m.info ?? {}), model: s.model, ...(s.provider ? { provider: s.provider } : {}) }; m.once = null; };
+  const engineModel = (m: SessionModel): string => m.once ? m.once.default : (m.info?.model ? valueOf(m.info.provider ?? '', m.info.model) : m.usage?.model ?? (options?.model ? valueOf(options.provider ?? '', options.model) : ''));
   const modelOf = (m: SessionModel): string => m.wantModel ?? engineModel(m);
   /** the ladder this session runs: the plugin's, once the session is on the gateway; else the one the host has saved */
   const ladderOf = (m: SessionModel): LadderTier[] => (m.cascade?.ladder?.length ? m.cascade.ladder.map((t) => ({ name: t.name, provider: t.model.provider, id: t.model.id })) : hostTiers);
@@ -268,6 +276,7 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
         if (governedOf(m) && !ladderOf(m).some((t) => ui.modelMark.same(valueOf(t.provider, t.id), patch.model))) return 'In governed mode the ladder runs the work. Choose one of its tiers to say where it starts.';
         m.wantModel = patch.model;
         m.smart = false;
+        endOnce(m);
       }
       publishFollowed(['info', 'usage', 'cascade']);
       return null;
@@ -315,8 +324,19 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
     onSent(uiId, text) { const m = model(uiId); m.started = true; m.title = text.split('\n')[0]?.trim().slice(0, 80) ?? ''; publishRun(); },
     onLinkReady() { void track(read<McpStatusWire>('mcp.servers.status', {}).then((r) => { mcp = r; })); for (const [id] of models) if (deps.gwId(id)) void track(refresh(id, ALL)); },
     onReplayGap(uiId) { models.set(uiId, Object.assign(newModel(), { title: model(uiId).title, started: true })); void track(refresh(uiId, ALL)); },
+    async prepareMention(uiId, text, o) {
+      const m = model(uiId), gw = deps.gwId(uiId);
+      endOnce(m);
+      const route = routeMentions(text, choices.get(), (x) => ui.modelMark.called(x));
+      if (route.kind !== 'one' || !gw) return null;
+      const c = route.choice, say = ui.modelMark.called(c.model) || c.model, was = engineModel(m);
+      const run = await prepareOnce({ client, gw, governed: governedOf(m), pluginOk, idle: o.idle, target: { provider: c.provider, model: c.model }, previous: was ? splitValue(was) : null, say });
+      m.once = { default: was };
+      return { model: c.value, why: 'You asked for ' + say, ungoverned: run.ungoverned, abort: run.abort };
+    },
     async prepareSend(uiId, text, meta) {
       const m = model(uiId), gw = deps.gwId(uiId);
+      endOnce(m);
       if (!m.smart && !m.wantModel) return { model: '', why: null };
       let tiers = ladderOf(m);
       if (m.smart && !m.cascade && gw && pluginOk) { const c = await read<CascadeWire>(PLUGIN + 'cascade.state', { session_id: gw }); if (c) m.cascade = c; tiers = ladderOf(m); }

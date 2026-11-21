@@ -28,6 +28,7 @@ import { stageAttachments, withRefs } from './live/attachments';
 import type { SecretsBridge } from './secrets';
 import type { GatewayClient, GatewayEvent } from './gateway';
 import type { RpcMethods } from '../vendor/hermes-shared/gateway-contract.generated';
+import { bindTurn, loadTurnBook } from './live/attribution';
 import { approvalToWait, choiceFor, clock, elapsed, failedStep, paragraphs, reduceLedger, sessionRowToSummary, sessionTitle, toolStep, transcriptToTurns } from './map';
 import type { LedgerTotals } from './map';
 
@@ -76,6 +77,8 @@ interface Convo {
   model: string;
   /** why Smart chose the model of the message just sent; read by the turn that starts */
   why: string | null;
+  /** the message just sent went to one model only (an "@" mention): the turn that starts answers with it, the session's `model` stays */
+  once: { model: string; ungoverned: boolean } | null;
   running: Running | null;
 }
 
@@ -101,7 +104,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   const creating = new Set<Promise<string>>();
   const convo = (uiId: string): Convo => {
     let c = convos.get(uiId);
-    if (!c) { c = { uiId, gwId: null, generation: 0, turns: [], events: emitter<ConversationEvent>(), hydrated: false, model: '', why: null, running: null }; convos.set(uiId, c); }
+    if (!c) { c = { uiId, gwId: null, generation: 0, turns: [], events: emitter<ConversationEvent>(), hydrated: false, model: '', why: null, once: null, running: null }; convos.set(uiId, c); }
     return c;
   };
   const bind = (c: Convo, gwId: string): void => { c.gwId = gwId; byGw.set(gwId, c.uiId); };
@@ -135,7 +138,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     bind(c, res.session_id);
     void modsHost.attach(c.uiId);   /* the mods already loaded in a resumed session */
     c.model = res.info.model ?? '';
-    c.turns = transcriptToTurns(res.messages, c.model, c.uiId + ':');
+    c.turns = transcriptToTurns(res.messages, c.uiId + ':', await loadTurnBook(client, res.session_id));   /* each past turn has its own recorded model, or none */
     c.hydrated = true;
     if (c.turns.some((t) => t.role === 'user')) details.model(c.uiId).started = true;
     details.model(c.uiId).todos = todosFromResume(res);
@@ -180,7 +183,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   /* ───────── events → the conversation ───────── */
   function startTurn(c: Convo): Running {
     if (c.running) return c.running;
-    const turn: AgentTurn = { id: nextId('t'), role: 'assistant', model: c.model || details.currentModel(c.uiId), ...(c.why ? { why: c.why } : {}), time: '0s', cost: '', stepCount: 0, steps: [], paragraphs: [], bullets: [], status: 'running' };
+    const turn: AgentTurn = { id: nextId('t'), role: 'assistant', model: c.once?.model || c.model || details.currentModel(c.uiId), ...(c.once?.ungoverned ? { ungoverned: true } : {}), ...(c.why ? { why: c.why } : {}), time: '0s', cost: '', stepCount: 0, steps: [], paragraphs: [], bullets: [], status: 'running' };
     c.turns.push(turn);
     c.running = { turn, tiers: [], text: '', steps: [], startedAt: Date.now() };
     c.why = null;
@@ -258,7 +261,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     if (ev.type.startsWith('plugin.boopis.blank.')) { syncBlanks(c); return; }
     if (formsHost.handle(ev, { gwSession: ev.session_id ?? '', model: c.model })) return;
     switch (ev.type) {
-      case 'session.info': { const profile = p['profile_name']; if (typeof profile === 'string' && profile) user.set({ name: profile, initials: profile.slice(0, 1).toLowerCase() }); const m = p['model']; if (typeof m === 'string' && m) c.model = m; const t = p['title']; if (typeof t === 'string' && t) patchSession(uiId, { title: sessionTitle({ title: t, preview: '' }) }); break; }
+      case 'session.info': { const profile = p['profile_name']; if (typeof profile === 'string' && profile) user.set({ name: profile, initials: profile.slice(0, 1).toLowerCase() }); const m = p['model']; if (typeof m === 'string' && m && !c.once) c.model = m;   /* an "@" message names its own model here; the session's stays */ const t = p['title']; if (typeof t === 'string' && t) patchSession(uiId, { title: sessionTitle({ title: t, preview: '' }) }); break; }
       case 'message.start': startTurn(c); break;
       case 'tool.start': addStep(c, startTurn(c), toolStep(p)); break;
       case 'tool.complete': if (p['is_error'] === true) addStep(c, startTurn(c), failedStep(p)); break;
@@ -274,6 +277,8 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
         if (!c.running) startTurn(c);
         const usage = p['usage'] as { model?: unknown } | undefined;
         finishTurn(c, text, outcome !== 'completed', typeof usage?.model === 'string' ? usage.model : undefined);
+        c.once = null;   /* the engine has put the session's model back; the plugin governs the next message again */
+        if (ev.session_id) bindTurn(client, ev.session_id, p['persisted_turn']);   /* who answered, kept for a resume */
         if (!modsHost.known(uiId)) void modsHost.attach(uiId);   /* mods load at a session's first prompt */
         break;
       }
@@ -407,7 +412,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
         .then((res) => {
           const r = res as { session_id: string; messages?: Parameters<typeof transcriptToTurns>[0]; info?: { model?: string } };
           bind(c, r.session_id);
-          c.turns = transcriptToTurns(r.messages ?? [], r.info?.model ?? '', s.id + ':');
+          c.turns = transcriptToTurns(r.messages ?? [], s.id + ':');   /* a branch is a new session: nothing recorded who answered its copied turns */
           details.model(s.id).started = true;
           c.events.emit({ type: 'reset' });
           details.onBound(s.id);
@@ -435,15 +440,23 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
       const user: UserTurn = { id: nextId('t'), role: 'user', at: clock(now()), text, ...(attachments.length ? { attachments } : {}) };
       c.turns.push(user);
       c.events.emit({ type: 'turn-added', turn: user });
+      let abortOnce: (() => Promise<void>) | null = null;
       ensureLive(c)
         /* who answers is decided now, for this message: Smart's rule or the user's pick, applied through the engine before it goes */
-        .then(async (gw) => { const who = await details.prepareSend(id, text, { attachments: attachments.length }); if (who.model) c.model = who.model; c.why = who.why; return gw; })
+        .then(async (gw) => {
+          /* "@model": this message only goes to that model (the engine's one-turn switch); the session's model and the sticky pick stay. Smart does not override it. */
+          const mention = await details.prepareMention(id, text, { idle: !c.running });
+          if (mention) { c.once = { model: mention.model, ungoverned: mention.ungoverned }; c.why = mention.why; abortOnce = mention.abort; return gw; }
+          const who = await details.prepareSend(id, text, { attachments: attachments.length }); if (who.model) c.model = who.model; c.why = who.why; return gw;
+        })
         .then(async (gw) => {
           const refs = attachments.length ? await stageAttachments((m, p) => client.requestRaw(m, p), gw, attachments) : [];   /* files, pictures and folders go first (live/attachments.ts) */
           return client.requestRaw('prompt.submit', { session_id: gw, text: withRefs(text, refs), submission_id: 'sub-' + crypto.randomUUID() }); /* the gateway requires submission_id; the vendored contract does not list it yet */
         })
-        .catch((e: unknown) => {
+        .catch(async (e: unknown) => {
           log.error('the message was not accepted', e);
+          c.once = null;
+          await abortOnce?.();   /* nothing started: the exception and the switch are taken back */
           startTurn(c);
           finishTurn(c, 'The message was not sent: ' + (e instanceof Error ? e.message : String(e)), true);
         });

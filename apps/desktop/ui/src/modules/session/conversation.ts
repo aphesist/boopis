@@ -15,6 +15,7 @@ import { copyText, mdOf, randomId } from './shared';
 import { openPanel } from './right';
 import { setAttention, changed } from './state';
 import { surface } from '../mods/surfaces';
+import { UNKNOWN_MODEL, markAnswered, stampUngoverned, syncDividers } from './attribution';
 
 /** per-turn data the keyboard and the clipboard need */
 interface TurnInfo { md(): string; kind: 'user' | 'agent'; text?: string | undefined }
@@ -56,8 +57,8 @@ function userTurn(text: string, at: string, attachments: readonly Attached[] = [
 /* the models of a turn as call-number lines: a family the kit knows is drawn with its mark and readable name by the entry; one it
    does not know is written by its readable name here, never as the engine's id */
 const known = (m: string): boolean => ui.modelMark.family(m).id !== 'generic';
-const modelLines = (model: string): string[] => ui.modelMark.parse(model).map((m, i) => (i ? '→ ' : '') + (known(m) ? m : ui.modelMark.called(m) || m));
-const modelSay = (model: string): string => ui.modelMark.parse(model).map((m) => ui.modelMark.called(m) || m).join(' then ');
+const modelLines = (model: string): string[] => !ui.modelMark.parse(model).length ? [UNKNOWN_MODEL] : ui.modelMark.parse(model).map((m, i) => (i ? '→ ' : '') + (known(m) ? m : ui.modelMark.called(m) || m));
+const modelSay = (model: string): string => ui.modelMark.parse(model).map((m) => ui.modelMark.called(m) || m).join(' then ') || 'unknown model';
 /** what a turn's meta says of its model: the models, then why Smart picked them */
 const metaLines = (model: string, why?: string): string[] => [...modelLines(model), ...(why ? [why] : [])];
 /** the time of a turn is the last plain line of its call number; the lines before it are its models (and why) */
@@ -176,6 +177,7 @@ function assistantTurn(a: AgentTurn): HTMLElement {
     copy: true, md: () => mdOf(p)
   });
   t.dataset['turnId'] = a.id;
+  markAnswered(t, a.model); stampUngoverned(t, !!a.ungoverned);
   if (a.forms?.length) $('.ui-entry__body', t).append(formsBlock(a.forms));
   if (VIEW.blank) showShip(false);
   if (VIEW.diffOpen) refreshDiff();
@@ -197,8 +199,10 @@ function liveTurn(a: AgentTurn): void {
   live.set(a.id, L);
   if (a.blank) addLiveBlank(L, a);
   t.dataset['turnId'] = a.id;
+  markAnswered(t, a.model); stampUngoverned(t, !!a.ungoverned);
   if (a.forms?.length) $('.ui-entry__body', t).append(formsBlock(a.forms));
   (VIEW.col as HTMLElement).append(t);
+  syncDividers(VIEW.col as HTMLElement);
   VIEW.composer?.setRunning(true); VIEW.running = true; surface.onWorking?.(true);
   if (VIEW.scroll) VIEW.scroll.scrollTop = VIEW.scroll.scrollHeight;
 }
@@ -217,7 +221,7 @@ function finishLive(id: string, ev: Extract<ConversationEvent, { type: 'turn-fin
   timeEl.textContent = ev.time; timeEl.after(el('span', { text: ev.cost }));
   disc.replaceChildren(frag(ui.icon('chevron')), el('span', { text: (ev.stopped ? 'Stopped after ' : '') + ev.stepCount + ' steps' }));
   disc.setAttribute('aria-expanded', 'false'); ol.hidden = true;
-  t.removeAttribute('aria-busy'); if (ev.model) { L.model = ev.model; L.why = ev.why ?? L.why; setModelLines(t, ev.model, L.why); }
+  t.removeAttribute('aria-busy'); if (ev.model) { L.model = ev.model; L.why = ev.why ?? L.why; setModelLines(t, ev.model, L.why); markAnswered(t, ev.model); stampUngoverned(t, t.hasAttribute('data-ungoverned')); if (VIEW.col) syncDividers(VIEW.col); }
   t.setAttribute('aria-label', modelSay(L.model) + ', ' + ev.time + ', ' + ev.cost);
   const p = prose(ev.paragraphs);
   if (L.prose) L.prose.replaceWith(p); else if (L.blankEl) L.blankEl.before(p); else placeProse(t, p);
@@ -248,6 +252,7 @@ export function renderConversation(): void {
     const s = sessions().list.get().find((x) => x.id === VIEW.current);
     col.append(ui.empty({ title: s?.project ? 'What should change in ' + s.project + '?' : data().info.live ? 'What should change?' : 'What should change in ' + (s ? s.project : 'billing-api') + '?', text: 'Words I will act on get a dashed underline as you type. Click one, or press alt and down arrow on it, to change how I read it.' }));
   } else for (const t of snap) { if (t.role === 'user') col.append(userTurn(t.text, t.at, t.attachments)); else if (t.status === 'running') liveTurn(t); else col.append(assistantTurn(t)); }
+  syncDividers(col);
   rove(lastTurn());
   setAttention(!VIEW.blank && openBlankOf(snap) ? 1 : 0);
   unsubConv = conv.subscribe(onConversationEvent);
@@ -277,7 +282,7 @@ function onConversationEvent(ev: ConversationEvent): void {
   }
   else if (ev.type === 'form-opened') addForm(ev.turnId, ev.form);
   else if (ev.type === 'form-resolved') resolveForm(ev.formId, ev.status);
-  else if (ev.type === 'turn-model') { const L = live.get(ev.turnId); if (L) { L.model = ev.model; setModelLines(L.t, ev.model, L.why); } }
+  else if (ev.type === 'turn-model') { const L = live.get(ev.turnId); if (L) { L.model = ev.model; setModelLines(L.t, ev.model, L.why); markAnswered(L.t, ev.model); stampUngoverned(L.t, L.t.hasAttribute('data-ungoverned')); if (VIEW.col) syncDividers(VIEW.col); } }
   else if (ev.type === 'turn-finished') finishLive(ev.turnId, ev);
   else if (ev.type === 'blank-answered') {
     const first = !VIEW.blank;

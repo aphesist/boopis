@@ -48,3 +48,25 @@ export function smartPreview(choices: readonly ModelChoice[], input: SmartInput)
   const choice = p ? tiers[p.index] : undefined;
   return p && choice ? { choice, reason: p.reason } : null;
 }
+
+/* The "@" menu: the same models as "who answers next", without Smart (a mention is an explicit pick, and Smart never overrides it).
+   A mention answers one message only; in a governed session every model can be mentioned, and that message runs outside governed mode. */
+export const REMOVE_MENTION = '__remove-mention';
+export const FOOT_MENTION = 'This message only goes to the model you pick. The session keeps answering with its own.';
+export const FOOT_MENTION_GOVERNED = 'This message runs without governance: no cascade, no gate. The next message is governed again.';
+export const MENTION_GOVERNED_DESC = 'Runs without governance';
+
+export function mentionEntries(choices: readonly ModelChoice[], o: { current: string; governed: boolean; removable?: boolean }): SelectEntry[] {
+  const groups = modelEntries(choices, { current: o.current, governed: false }).filter((e): e is Extract<SelectEntry, { options: readonly SelectOption[] }> => 'options' in e);
+  const tiers = choices.filter((c) => c.tier !== undefined).length;
+  const withDesc = (opt: SelectOption): SelectOption => {
+    const { disabled: _off, ...rest } = opt;
+    const c = choices.find((x) => x.value === opt.value);
+    const onLadder = c?.tier !== undefined;
+    return { ...rest, ...(o.governed ? { desc: (onLadder ? 'Tier ' + ((c?.tier as number) + 1) + ' of ' + tiers + '. ' : '') + MENTION_GOVERNED_DESC } : {}) };
+  };
+  return [
+    ...(o.removable ? [{ value: REMOVE_MENTION, label: 'Remove the mention', icon: 'close' } as SelectOption] : []),
+    ...groups.map((g) => ({ ...g, options: g.options.map(withDesc) }))
+  ];
+}
