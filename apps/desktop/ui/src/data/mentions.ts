@@ -46,3 +46,27 @@ export function routeMentions(text: string, choices: readonly ModelChoice[], cal
   const [only] = all;
   return all.length === 0 || !only ? { kind: 'none' } : all.length === 1 ? { kind: 'one', choice: only } : { kind: 'many', choices: all };
 }
+
+/** The "@" being typed, read from the text before the caret: where its "@" is and the letters typed after it. The "@" must start a
+ *  word (the start of the text or after a space or an opening bracket), and what follows is a name being typed only while it is
+ *  letters, digits, dots and hyphens that start with a letter ("@op", "@gpt-6"). Anything else ("@@", "@ ", "@5pm") is not a mention
+ *  being typed: the composer closes its menu and the text stays as written. */
+export function mentionQuery(before: string): { at: number; query: string } | null {
+  const m = /(^|[\s([{])@([^\s@]*)$/.exec(before);
+  if (!m) return null;
+  const query = m[2] ?? '';
+  if (query && !/^[a-z][a-z0-9.-]*$/i.test(query)) return null;
+  return { at: m.index + (m[1] ?? '').length, query };
+}
+
+/** The choice a typed query names: a readable name, or a word of it, that starts with the query ("op" is Claude Opus 5.5, "gpt-6 l"
+ *  is not a query). The first choice in the menu's order wins; an empty query names nothing, so Enter still sends the message. */
+export function bestMention(query: string, choices: readonly ModelChoice[], called: (model: string) => string): ModelChoice | null {
+  const q = query.toLowerCase();
+  if (!q) return null;
+  for (const c of choices) {
+    const name = mentionName(c, called).toLowerCase();
+    if (name.startsWith(q) || name.split(/[\s/]+/).some((w) => w.startsWith(q)) || c.model.toLowerCase().startsWith(q)) return c;
+  }
+  return null;
+}

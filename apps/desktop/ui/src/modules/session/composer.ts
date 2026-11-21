@@ -9,11 +9,11 @@ import { ui } from '@boopis/ui';
 import type { ComposerEl, DecisionDetail, AssumptionDetail, DictateDetail } from '@boopis/ui';
 
 import { data } from '../../data';
-import type { Attached, GovernanceState } from '../../data';
+import type { Attached, GovernanceState, ModelChoice } from '../../data';
 import { costAssume, kindOf, makeReader, optionsFor } from './feedforward';
 import { COUNCIL_VALUE, openCouncilForm } from './council';
 import { FOOT_GOVERNED, FOOT_MENTION, FOOT_MENTION_GOVERNED, FOOT_UNGOVERNED, REMOVE_MENTION, SETTINGS_VALUE, SMART_VALUE, currentChoice, governedUnavailableEntries, mentionEntries, modelEntries, smartPreview } from './model-menu';
-import { findMentions, mentionName, routeMentions } from '../../data/mentions';
+import { bestMention, findMentions, mentionName, mentionQuery, routeMentions } from '../../data/mentions';
 
 export { SMART_VALUE };
 const gov = (): GovernanceState => data().details.governance.get();
@@ -91,16 +91,55 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
     model.setAttribute('aria-label', label + ', who answers next' + (armed ? ' (the next message goes to a council)' : asking ? ' (a council is answering)' : G.smart ? (prev ? ' (Smart would pick it for this message: ' + prev.reason + ')' : ' (Smart picks for each message)') : ''));
     model.setAttribute('data-tip', G.smart ? 'Smart picks the model for each message' + (prev ? ': ' + prev.reason : '') : 'Who answers next'); model.setAttribute('data-kbd', 'alt+M');
   }
+  /* The "@" typed at the start of a word opens the menu as suggestions, never as a picker that takes the keyboard: the caret stays in
+     the message and typing goes on into it. The menu closes as soon as what follows the "@" cannot be a model's name ("@@", "@ 5pm",
+     a space after the name), so nothing typed is ever lost. Enter or Tab takes the model the typed letters name ("@op"); with nothing
+     that matches, Enter sends as usual. The arrow keys move into the list, and a click on a row picks it. */
+  let suggesting = false;
+  let menuNode: HTMLElement | null = null;
+  let listRange: Range | null = null;   /* where the caret was when the arrow keys moved into the list */
   c.input.addEventListener('input', (e) => {
     if (gov().smart) drawModel(gov());
-    if ((e as InputEvent).data === '@' && atWordStart()) requestAnimationFrame(() => openMentionMenu(null));
+    if (suggesting) { if (!typedMention()) ui.listbox.close(false); return; }
+    if ((e as InputEvent).data === '@' && atWordStart()) requestAnimationFrame(() => { if (!suggesting && typedMention()) openMentionMenu(null, true); });
   });
+  /* the composer's own keys (Enter sends) come after these: capture on the composer runs first */
+  c.addEventListener('keydown', (e) => {
+    if (!suggesting || !c.input.contains(document.activeElement)) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      const opts = [...(menuNode?.querySelectorAll<HTMLElement>('.ui-option:not([aria-disabled="true"])') ?? [])];
+      const to = e.key === 'ArrowDown' ? opts[0] : opts[opts.length - 1];
+      if (!to) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      const sel = getSelection(); listRange = sel && sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null;
+      to.focus();
+      return;
+    }
+    if (e.key === 'Enter' || e.key === 'Tab') {
+      const t = typedMention(), pick = t ? bestMention(t.query, choicesNow(), called) : null;
+      if (pick && t) { e.preventDefault(); e.stopImmediatePropagation(); takeMention(pick, t); }
+      ui.listbox.close(false);
+    }
+  }, true);
   /* the "@" just typed starts a word: not the middle of an address or a file mention */
   function atWordStart(): boolean {
     const s = getSelection(); const n = s?.anchorNode;
     if (!s || !n || !c.input.contains(n) || n.nodeType !== 3) return false;
     const before = (n.textContent ?? '').slice(0, s.anchorOffset - 1);
     return before === '' || /\s$/.test(before);
+  }
+  /** the mention being typed at the caret ("@op"), if what follows the "@" can still become a model's name */
+  function typedMention(): { at: number; query: string; node: Text; offset: number } | null {
+    const s = getSelection(); const n = s?.anchorNode;
+    if (!s || !s.isCollapsed || !n || !c.input.contains(n) || n.nodeType !== 3) return null;
+    const q = mentionQuery((n.textContent ?? '').slice(0, s.anchorOffset));
+    return q ? { ...q, node: n as Text, offset: s.anchorOffset } : null;
+  }
+  /** the letters typed after the "@" become the model's readable name and a space, as one edit the undo stack keeps */
+  function takeMention(pick: ModelChoice, t: { at: number; node: Text; offset: number }): void {
+    const r = document.createRange(); r.setStart(t.node, t.at + 1); r.setEnd(t.node, t.offset);
+    const s = getSelection(); s?.removeAllRanges(); s?.addRange(r);
+    document.execCommand('insertText', false, mentionName(pick, called) + ' ');
   }
   /* the "@" menu: every model the user can pick (the "who answers next" list, without Smart). Picking one writes its name after the
      "@" (a new mention), or replaces the mention clicked (`over`); the chip is drawn from the text. */
@@ -111,28 +150,39 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
     if (!a) { a = document.createElement('span'); a.className = 'ss-mention-anchor'; a.setAttribute('role', 'combobox'); a.setAttribute('aria-hidden', 'true'); a.setAttribute('aria-label', 'Answer this message with'); c.querySelector('.ui-composer__box')?.append(a); }
     return a;
   }
-  function openMentionMenu(over: HTMLElement | null): void {
+  function openMentionMenu(over: HTMLElement | null, suggest = false): void {
     const G = gov(), choices = choicesNow();
     const entries = mentionEntries(choices, { current: G.model, governed: G.governed, removable: !!over });
     /* the caret is where the "@" is, which is not always the end: it is put back, not moved to the end */
     const sel = getSelection(), saved = sel && sel.rangeCount && c.input.contains(sel.anchorNode) ? sel.getRangeAt(0).cloneRange() : null;
-    const back = (): void => { c.input.focus(); if (saved) { const s2 = getSelection(); s2?.removeAllRanges(); s2?.addRange(saved); } };
-    ui.listbox.open(mentionAnchor(), entries, {
+    const put = (r: Range | null): void => { c.input.focus(); if (r) { const s2 = getSelection(); s2?.removeAllRanges(); s2?.addRange(r); } };
+    const back = (): void => put(suggest ? listRange ?? saved : saved);
+    menuNode = ui.listbox.open(mentionAnchor(), entries, {
       place: 'above', label: 'Answer this message with', foot: G.governed ? FOOT_MENTION_GOVERNED : FOOT_MENTION,
-      onClose: back,
+      onClose: () => {
+        const wasIn = !c.input.contains(document.activeElement);
+        suggesting = false; menuNode = null;
+        if (!suggest || wasIn) back();   /* suggestions never took the caret, so it stays where the typing left it */
+        listRange = null;
+      },
       onSelect: (v) => {
+        const pick = choices.find((x) => x.value === v);
+        const from = listRange ?? saved;
         requestAnimationFrame(() => {
-          const pick = choices.find((x) => x.value === v);
           if (over) {
             const text = c.value, old = over.textContent ?? '', at = text.indexOf(old);
             if (at < 0) return;
             c.setValue(text.slice(0, at) + (v === REMOVE_MENTION || !pick ? '' : '@' + mentionName(pick, called)) + text.slice(at + old.length));
             c.focus(); return;
           }
-          if (pick) { back(); document.execCommand('insertText', false, mentionName(pick, called) + ' '); }
+          if (!pick) return;
+          put(from);
+          const t = typedMention();
+          if (t) takeMention(pick, t); else document.execCommand('insertText', false, mentionName(pick, called) + ' ');
         });
       }
     });
+    if (suggest && menuNode) { suggesting = true; put(saved); }
   }
   /** turning governed mode on: refused with the reason and the way out while no frontier model can run it */
   function toggleGoverned(anchor: HTMLElement, on: boolean): void {

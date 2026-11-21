@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findMentions, mentionName, routeMentions } from './mentions';
+import { bestMention, findMentions, mentionName, mentionQuery, routeMentions } from './mentions';
 import type { ModelChoice } from './types';
 
 const choice = (model: string, tier?: number): ModelChoice => ({ value: 'p/' + model, provider: 'p', model, providerName: 'P', ...(tier !== undefined ? { tier } : {}) });
@@ -31,4 +31,28 @@ describe('mentions', () => {
     expect(routeMentions('fix @file:src/a.ts please', CHOICES, called)).toEqual({ kind: 'none' });
   });
   it('the menu writes the name the reader looks for', () => { expect(mentionName(CHOICES[2] as ModelChoice, called)).toBe('GPT-6 Luna'); });
+});
+
+describe('the "@" being typed', () => {
+  it('is an "@" that starts a word, with letters after it', () => {
+    expect(mentionQuery('@')).toEqual({ at: 0, query: '' });
+    expect(mentionQuery('fix this @op')).toEqual({ at: 9, query: 'op' });
+    expect(mentionQuery('(@gpt-6')).toEqual({ at: 1, query: 'gpt-6' });
+  });
+  it('is not one when what follows cannot start a name, so the text is left as typed', () => {
+    expect(mentionQuery('@@')).toBeNull();               /* the fake model's "@@reply ...@@" and any doubled "@" */
+    expect(mentionQuery('@@reply hello')).toBeNull();
+    expect(mentionQuery('see you @ 5')).toBeNull();
+    expect(mentionQuery('at @5pm')).toBeNull();
+    expect(mentionQuery('mail me@home')).toBeNull();      /* an address: the "@" does not start a word */
+    expect(mentionQuery('@opus fix')).toBeNull();         /* a space ends it: the name was typed, the message goes on */
+  });
+  it('names the first choice a name or a word of it starts with', () => {
+    expect(bestMention('cl', CHOICES, called)?.model).toBe('haiku');
+    expect(bestMention('hai', CHOICES, called)?.model).toBe('haiku');
+    expect(bestMention('luna', CHOICES, called)?.model).toBe('gpt-6-luna');
+    expect(bestMention('gpt-6', CHOICES, called)?.model).toBe('gpt-6');
+    expect(bestMention('zz', CHOICES, called)).toBeNull();
+    expect(bestMention('', CHOICES, called)).toBeNull();  /* nothing typed after "@": Enter sends the message */
+  });
 });

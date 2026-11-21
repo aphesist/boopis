@@ -15,6 +15,7 @@ import { dockPresence } from './dock-presence.mjs';
 import { concentric } from './concentric.mjs';
 import { mods } from './mods.mjs';
 import { controls } from './controls.mjs';
+import { mentions } from './mention.mjs';
 
 const require = createRequire(import.meta.url);
 const AXE = readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
@@ -54,6 +55,7 @@ if (want('dock-motion')) await dockMotion(env);
 if (want('dock-presence')) await dockPresence(env);
 if (want('mods')) await mods(env, AXE);
 if (want('controls')) await controls(env, AXE);
+if (want('mention')) await mentions(env);
 if (want('forms')) { await formCards(env); await liveForms(env); await liveRequests(env); }
 
 if (want('axe')) {
