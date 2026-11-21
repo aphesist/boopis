@@ -4,7 +4,7 @@
    engine; this file does three things with what it already has:
      1. writes the preset into the profile's configuration with the engine's own command (`cli.exec` runs `config set
         moa.presets.council.<field> <value>`; the host never edits the file, ADR-0014);
-     2. makes the next message of one session a council's with `config.set model "council --provider moa --once"`, then
+     2. makes the next message of one session a council's with `config.set model "boopis-council --provider moa --once"`, then
         `prompt.submit` as always. The engine puts the session's model back after that turn;
      3. reads the turn's `moa.reference`, `moa.progress`, `moa.phase` and `moa.aggregating` events into a `CouncilTurn`.
    The pure parts (who sits by default, the preset's writes, the labels, the event reducer) are tested alone; the rest is thin. */
