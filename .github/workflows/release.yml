@@ -3,7 +3,9 @@ name: release
 # deliverable (the owner runs Arch); Windows and macOS bundles are non-blocking extras. Builds are unsigned.
 # On a tag, the AppImage, the Arch package and SHA256SUMS become a GitHub release. A release can also be cut from the
 # Actions tab without a clone: run this workflow with `release` set to the version's tag (vX.Y.Z, equal to the app's
-# version); the release job then creates that tag on the commit it built and publishes. How to use it: docs/RELEASING.md.
+# version); the release job then creates that tag on the commit it built and publishes. With `from_run` set, nothing is
+# built: the smoke jobs run (with this commit's scripts) against the artifacts of an earlier run of this workflow, and
+# `release` publishes exactly those. How to use it: docs/RELEASING.md.
 on:
   push:
     branches: [develop]
@@ -12,6 +14,10 @@ on:
     inputs:
       release:
         description: "Publish a release with this tag (vX.Y.Z, equal to the app's version). Empty: build only."
+        required: false
+        default: ""
+      from_run:
+        description: "Publish from an earlier run: the id of a release.yml run of this repository on the same version. Skips every build, downloads that run's installers, smoke-tests them with this commit's scripts, and publishes them if `release` is set."
         required: false
         default: ""
 permissions:
@@ -37,7 +43,75 @@ env:
   ARCH_ARTIFACT: boopis-arch-x86_64-pkg
 
 jobs:
+  reuse:
+    # Only with `from_run`: checks that the earlier run's artifacts may be published from this commit. They must come from a
+    # release.yml run of this repository, be the version this commit's app has, and have been built from a commit that differs
+    # from this one only in files the smoke jobs read or that nothing ships (tests, workflows, docs). Anything else is refused:
+    # a change to shipped code needs a new build. It replaces every build job, which `if: inputs.from_run == ''` skips.
+    if: ${{ inputs.from_run != '' }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      sha: ${{ steps.guard.outputs.sha }}
+      version: ${{ steps.guard.outputs.version }}
+      has_arch: ${{ steps.guard.outputs.has_arch }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: the run's artifacts may be published from this commit
+        id: guard
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FROM_RUN: ${{ inputs.from_run }}
+        run: |
+          refuse() { echo "::error title=Refusing to publish from run $FROM_RUN::$*"; exit 1; }
+          [[ "$FROM_RUN" =~ ^[0-9]+$ ]] || refuse "from_run must be a run id (digits only), not '$FROM_RUN'."
+          run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$FROM_RUN") || refuse "there is no run $FROM_RUN in $GITHUB_REPOSITORY."
+          path=$(jq -r .path <<<"$run"); repo=$(jq -r .repository.full_name <<<"$run"); head_repo=$(jq -r '.head_repository.full_name // ""' <<<"$run")
+          status=$(jq -r .status <<<"$run"); sha=$(jq -r .head_sha <<<"$run")
+          case "$path" in
+            .github/workflows/release.yml|.github/workflows/release.yml@*) ;;
+            *) refuse "run $FROM_RUN is a run of $path, not of .github/workflows/release.yml." ;;
+          esac
+          [ "$repo" = "$GITHUB_REPOSITORY" ] && [ "$head_repo" = "$GITHUB_REPOSITORY" ] || refuse "run $FROM_RUN is not a run of $GITHUB_REPOSITORY itself ($repo, head from $head_repo)."
+          [ "$status" = completed ] || refuse "run $FROM_RUN is $status; wait for it to finish."
+          echo "run $FROM_RUN: release.yml at $sha"
+
+          # the artifacts must still be kept
+          names=$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs/$FROM_RUN/artifacts" --jq '.artifacts[] | select(.expired | not) | .name')
+          grep -qx boopis-linux-x86_64-appimage <<<"$names" || refuse "run $FROM_RUN has no kept AppImage artifact (boopis-linux-x86_64-appimage): its build failed or the artifacts expired."
+          has_arch=false; grep -qx "$ARCH_ARTIFACT" <<<"$names" && has_arch=true
+          echo "kept artifacts: $(tr '\n' ' ' <<<"$names")"
+
+          # the version: the artifacts' commit and this commit must name the same app version
+          git cat-file -e "$sha^{commit}" 2>/dev/null || git fetch --quiet origin "$sha" || refuse "commit $sha of run $FROM_RUN is not fetchable."
+          then_v=$(git show "$sha:apps/desktop/src-tauri/tauri.conf.json" | jq -r .version)
+          now_v=$(jq -r .version apps/desktop/src-tauri/tauri.conf.json)
+          [ "$then_v" = "$now_v" ] || refuse "run $FROM_RUN built version $then_v, but this commit's app is $now_v."
+          if [ -n "$RELEASE_TAG" ]; then
+            [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] || refuse "release tag $RELEASE_TAG is not vX.Y.Z."
+            [ "$RELEASE_TAG" = "v$now_v" ] || refuse "release tag $RELEASE_TAG, but the app is $now_v."
+          fi
+
+          # the commits may differ only in files that do not ship (tests, workflows, docs) and the two helper scripts the smoke jobs read
+          bad=$(git diff --no-renames --name-only "$sha" "$GITHUB_SHA" | grep -Ev '^(tests/|docs/|\.github/|packaging/arch/smoke\.sh$|scripts/install-hermes-e2e\.sh$)|/tests/' || true)
+          if [ -n "$bad" ]; then
+            echo "$bad" | awk '{print "  changed: " $0}'
+            refuse "this commit ($GITHUB_SHA) differs from the artifacts' commit ($sha) in files that ship, listed above. Only tests/, docs/, .github/ and the smoke helper scripts may differ; build again instead."
+          fi
+          echo "ok: version $now_v, and the commits differ only in files that do not ship"
+          {
+            echo "sha=$sha"
+            echo "version=$now_v"
+            echo "has_arch=$has_arch"
+          } >> "$GITHUB_OUTPUT"
+          echo "Publishing from run $FROM_RUN (built at ${sha:0:8}, smoke scripts from ${GITHUB_SHA:0:8}), version $now_v." >> "$GITHUB_STEP_SUMMARY"
+
   runtime:
+    if: ${{ inputs.from_run == '' }}
     # The Hermes runtime the installer carries (ADR-0023): python-build-standalone, uv and Hermes v0.23.2 with its locked,
     # hash-checked dependencies, built by Hermes's own build code. Proven relocatable before anything uses it. The same
     # script and cache key as ci.yml's runtime job, so the e2e tests run on the bytes that ship.
@@ -74,6 +148,7 @@ jobs:
           retention-days: 30
 
   linux:
+    if: ${{ inputs.from_run == '' }}
     needs: runtime
     # ubuntu-22.04: the oldest glibc and WebKitGTK 4.1 the app needs, so the AppImage runs on every newer distro.
     runs-on: ubuntu-22.04
@@ -86,65 +161,26 @@ jobs:
           v=$(jq -r .version apps/desktop/src-tauri/tauri.conf.json)
           [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] || { echo "release tag $RELEASE_TAG is not vX.Y.Z"; exit 1; }
           [ "$RELEASE_TAG" = "v$v" ] || { echo "tag $RELEASE_TAG but tauri.conf.json says $v"; exit 1; }
-      - name: Tauri's Linux prerequisites and the AppImage tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev \
-            build-essential pkg-config libfuse2 patchelf file xdg-utils
-      - uses: dtolnay/rust-toolchain@1.97.0
-        with:
-          components: clippy, rustfmt
-      - uses: Swatinem/rust-cache@v2
-        with: { shared-key: release-linux }
-      - uses: pnpm/action-setup@v4
-        with: { version: 10 }
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: apps/desktop/ui/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-        working-directory: apps/desktop/ui
-      - name: build hx (release), the sidecar
-        run: cargo build --release -p hx
       - uses: actions/download-artifact@v4
         with:
           name: hermes-runtime-linux-x86_64
           path: ${{ runner.temp }}/runtime
-      - name: stage the hx sidecar, the plugin and the Hermes runtime (scripts/stage-bundle.sh)
-        run: scripts/stage-bundle.sh --hx target/release/hx --runtime "$RUNNER_TEMP/runtime"
-      - name: build the AppImage (release, x86_64-unknown-linux-gnu) with the bundle config
-        working-directory: apps/desktop/src-tauri
-        env:
-          NO_STRIP: "true"  # linuxdeploy's bundled strip chokes on newer ELF sections
-        run: pnpm dlx @tauri-apps/cli@2 build --bundles appimage --target x86_64-unknown-linux-gnu --config tauri.bundle.conf.json
-      - name: collect the AppImage and its checksum
-        run: |
-          mkdir -p dist
-          cp target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage dist/
-          cd dist && sha256sum -- *.AppImage | tee SHA256SUMS
-          {
-            echo "AppImage: $(stat -c %s -- *.AppImage) bytes"
-            echo "of which the Hermes runtime archive: $(jq .archive.size "$RUNNER_TEMP/runtime/runtime.json") bytes (carried once, already compressed)"
-          } | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: build the AppImage (the steps ci.yml's desktop-smoke job builds with too)
+        uses: ./.github/actions/build-appimage
+        with:
+          runtime-dir: ${{ runner.temp }}/runtime
       - uses: actions/upload-artifact@v4
         with:
           name: boopis-linux-x86_64-appimage
           path: dist/*
           if-no-files-found: error
           retention-days: 30
-      - uses: actions/upload-artifact@v4
-        with:
-          # not named boopis-*: the release job publishes only those
-          name: hx-release-linux
-          path: target/release/hx
-          if-no-files-found: error
-          retention-days: 1
 
   arch:
     # The native Arch package (ADR-0025): built with makepkg in an Arch container, so it links the system's WebKitGTK
     # (2.54.x, not the AppImage's Ubuntu 22.04 one). It needs only the runtime archive, which the AppImage needs too, and
     # nothing needs it: a failure here does not stop the AppImage or the release. docs/RELEASING.md, "The Arch package".
+    if: ${{ inputs.from_run == '' }}
     needs: runtime
     runs-on: ubuntu-22.04
     container: archlinux:latest
@@ -208,10 +244,15 @@ jobs:
   arch-smoke:
     # The built package in a clean Arch container: pacman -U pulls the dependencies from the repositories, then
     # packaging/arch/smoke.sh checks the links (the system's libwebkit2gtk-4.1 from /usr/lib), the runtime archive and --version.
-    needs: arch
+    # With `from_run` it tests the package of that run, with this commit's smoke.sh.
+    if: ${{ !cancelled() && (needs.arch.result == 'success' || (needs.reuse.result == 'success' && needs.reuse.outputs.has_arch == 'true')) }}
+    needs: [arch, reuse]
     runs-on: ubuntu-22.04
     container: archlinux:latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
     steps:
       - name: a current system (no partial upgrades), git for the checkout
         run: pacman -Syu --noconfirm --needed git desktop-file-utils
@@ -220,6 +261,13 @@ jobs:
         with:
           name: ${{ env.ARCH_ARTIFACT }}
           path: pkg
+          run-id: ${{ inputs.from_run || github.run_id }}
+          github-token: ${{ github.token }}
+      - name: the package is this commit's version
+        run: |
+          v=$(sed -n 's/^ *"version": *"\(.*\)",/\1/p' apps/desktop/src-tauri/tauri.conf.json | head -1)
+          ls pkg
+          ls pkg/boopis-"$v"-*.pkg.tar.zst >/dev/null || { echo "no package for version $v in pkg/"; exit 1; }
       - name: pacman -U
         run: pacman -U --noconfirm pkg/*.pkg.tar.zst
       - name: smoke
@@ -230,69 +278,35 @@ jobs:
   smoke:
     # The built AppImage, headless (Xvfb + WebKitWebDriver), against real Hermes v0.23.2 and the fake model:
     # the UI loads, the host connects, a prompt streams a reply. Required: a failure fails the run and stops a tag's release.
-    needs: linux
+    # The steps are the composite action ci.yml's desktop-smoke job runs too. With `from_run` the AppImage is the earlier
+    # run's and the scripts are this commit's.
+    if: ${{ !cancelled() && (needs.linux.result == 'success' || needs.reuse.result == 'success') }}
+    needs: [linux, reuse]
     runs-on: ubuntu-22.04
     timeout-minutes: 30
-    env:
-      HX_E2E_HERMES_ENV: /home/runner/hermes-e2e
+    permissions:
+      contents: read
+      actions: read
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
       - uses: actions/download-artifact@v4
         with:
           name: boopis-linux-x86_64-appimage
           path: ${{ runner.temp }}/app
-      - name: runtime libraries, Xvfb and WebKitWebDriver (same WebKitGTK as the build image)
+          run-id: ${{ inputs.from_run || github.run_id }}
+          github-token: ${{ github.token }}
+      - name: the AppImage is this commit's version
         run: |
-          sudo apt-get update
-          sudo apt-get install -y xvfb webkit2gtk-driver libfuse2 libwebkit2gtk-4.1-0 libgtk-3-0
-      - name: the AppImage starts (it extracts and every shared library resolves)
-        run: |
-          chmod +x "$RUNNER_TEMP"/app/*.AppImage
-          cd "$RUNNER_TEMP" && ./app/*.AppImage --appimage-extract >/dev/null
-          bin=$(find squashfs-root/usr/bin -maxdepth 1 -name 'boopis*' -type f | head -1)
-          echo "binary: $bin"
-          if ldd "$bin" | grep 'not found'; then echo "missing libraries above"; exit 1; fi
-      - name: Hermes v0.23.2 install (cache shared with ci's e2e job)
-        uses: actions/cache@v4
+          v=$(jq -r .version apps/desktop/src-tauri/tauri.conf.json)
+          ls "$RUNNER_TEMP"/app
+          ls "$RUNNER_TEMP"/app/boopis_"$v"_amd64.AppImage >/dev/null || { echo "no boopis_${v}_amd64.AppImage: the artifact is another version than this commit's app"; exit 1; }
+      - uses: ./.github/actions/desktop-smoke
         with:
-          path: |
-            /home/runner/hermes-e2e
-            !/home/runner/hermes-e2e/uv-cache
-          key: hermes-v0.23.2-ubuntu-22.04-${{ hashFiles('scripts/install-hermes-e2e.sh') }}
-      - run: SP="$HX_E2E_HERMES_ENV" scripts/install-hermes-e2e.sh
-      - uses: dtolnay/rust-toolchain@1.97.0
-        with:
-          components: clippy, rustfmt
-      - name: WebKitGTK headers (the setup test drives the host's library)
-        run: |
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev build-essential pkg-config
-      - uses: Swatinem/rust-cache@v2
-        with: { shared-key: release-smoke }
-      - uses: actions/download-artifact@v4
-        with:
-          name: hx-release-linux
-          path: ${{ runner.temp }}/hx
-      - name: first-run setup, non-interactively, against the e2e Hermes (tests/setup_live.rs)
-        env:
-          HX_BIN: ${{ runner.temp }}/hx/hx
-        run: |
-          chmod +x "$HX_BIN"
-          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
-          cargo test -p boopis-host --test setup_live -- --nocapture
-      - name: smoke the AppImage against Hermes and the fake model (the session check)
-        run: |
-          uv run --no-project --python 3.11 --with ruamel.yaml python tests/e2e/smoke_desktop.py \
-            "$(ls "$RUNNER_TEMP"/app/*.AppImage)" "$RUNNER_TEMP/smoke.png"
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: smoke-screenshot
-          path: ${{ runner.temp }}/smoke.png
-          if-no-files-found: ignore
-          retention-days: 7
+          app-dir: ${{ runner.temp }}/app
+          screenshot-artifact: smoke-screenshot
 
   runtime-windows:
+    if: ${{ inputs.from_run == '' }}
     # The Hermes runtime for Windows x64 (ADR-0023), cross-built on Linux: Hermes's own build code stages python-build-standalone
     # and uv for win32-x64, `uv pip install --python-platform x86_64-pc-windows-msvc` installs the locked wheels (hashes checked,
     # no source builds) and the launchers are minted with distlib's Windows stub. Nothing of the target runs here, so the checks
@@ -337,7 +351,7 @@ jobs:
 
   windows:
     # macOS minutes count ten times and Windows twice: build them for tags and on demand, not every develop push
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
+    if: ${{ inputs.from_run == '' && (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch') }}
     # Non-blocking. The installer carries what the Linux one does (hx.exe, the plugin, the Hermes runtime), staged by the same
     # scripts/stage-bundle.sh that scripts/build-windows.sh uses when it cross-builds this on Linux. Unsigned: SmartScreen asks.
     # What does not work on Windows yet (the secret channel, the sandbox's first run, mods) is in docs/RELEASING.md, "Windows".
@@ -394,7 +408,7 @@ jobs:
 
   macos:
     # macOS minutes count ten times and Windows twice: build them for tags and on demand, not every develop push
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
+    if: ${{ inputs.from_run == '' && (startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch') }}
     # Non-blocking. macos-latest is Apple silicon: the bundle is aarch64-apple-darwin. Unsigned and not notarised, so
     # Gatekeeper asks the user to allow it.
     runs-on: macos-latest
@@ -430,11 +444,13 @@ jobs:
   release:
     # Tags only: a GitHub release with the AppImage, whatever extra bundles built (the Arch package among them), the two
     # installers, and SHA256SUMS over all of them. The AppImage and its smoke test are what the release waits on; the others are attached if they built.
-    if: ${{ !cancelled() && needs.linux.result == 'success' && needs.smoke.result == 'success' && (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.release != '')) }}
-    needs: [linux, smoke, windows, macos, arch, arch-smoke]
+    # With `from_run` it publishes the artifacts of that earlier run (smoke-tested above with this commit's scripts), not a build of this one.
+    if: ${{ !cancelled() && (needs.linux.result == 'success' || needs.reuse.result == 'success') && needs.smoke.result == 'success' && (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.release != '')) }}
+    needs: [reuse, linux, smoke, windows, macos, arch, arch-smoke]
     runs-on: ubuntu-22.04
     permissions:
       contents: write
+      actions: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -444,6 +460,8 @@ jobs:
           pattern: boopis-*
           path: release-files
           merge-multiple: true
+          run-id: ${{ inputs.from_run || github.run_id }}
+          github-token: ${{ github.token }}
       - name: the installers go next to the artifacts (before the checksums, so SHA256SUMS covers them)
         run: cp scripts/install.sh scripts/install.ps1 release-files/
       - name: the Arch package is published only when its smoke test passed
@@ -459,12 +477,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          ARTIFACTS_SHA: ${{ needs.reuse.outputs.sha }}  # set with from_run: the commit that built the files
         # Before 1.0, and for any tag with a suffix (v1.2.0-rc.1), the release is a pre-release. The installers take the newest
         # pre-release while there is no other (scripts/install.sh, install.ps1: GitHub's "latest" never answers with one).
         run: |
           pre=()
           case "$RELEASE_TAG" in v0.*|*-*) pre=(--prerelease) ;; esac
-          # A pushed tag must exist already; a manual run creates its tag on the commit this run built (GITHUB_SHA).
-          if [ "$GITHUB_REF_TYPE" = tag ]; then where=(--verify-tag); else where=(--target "$GITHUB_SHA"); fi
+          # A pushed tag must exist already; a manual run creates its tag on the commit this run built (GITHUB_SHA), and a run
+          # from an earlier one on the commit that built the files it publishes (they may differ from this one only in tests and docs).
+          if [ "$GITHUB_REF_TYPE" = tag ]; then where=(--verify-tag); else where=(--target "${ARTIFACTS_SHA:-$GITHUB_SHA}"); fi
           gh release create "$RELEASE_TAG" release-files/* \
             --title "$RELEASE_TAG" --generate-notes "${where[@]}" "${pre[@]}"

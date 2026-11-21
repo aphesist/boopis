@@ -282,6 +282,52 @@ jobs:
           HX_E2E_RUNTIME_ARCHIVE: ${{ runner.temp }}/runtime
         run: cargo test -p boopis-host --test setup_live bundled -- --nocapture
 
+  appimage:
+    # The Linux AppImage, built by the same composite action as release.yml's `linux` job (ADR-0023's runtime inside it), so
+    # `desktop-smoke` tests what a release would ship. Non-blocking like it: see the note there. Kept one day.
+    needs: runtime
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: hermes-runtime-linux-x86_64
+          path: ${{ runner.temp }}/runtime
+      - uses: ./.github/actions/build-appimage
+        with:
+          runtime-dir: ${{ runner.temp }}/runtime
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ci-appimage  # not boopis-*: nothing here is published
+          path: dist/*.AppImage
+          if-no-files-found: error
+          retention-days: 1
+
+  desktop-smoke:
+    # release.yml's `smoke` job, on every change: the AppImage above driven headless (Xvfb, WebKitWebDriver) through
+    # tests/e2e/smoke_desktop.py against real Hermes and the fake model, with the same composite action (.github/actions/desktop-smoke),
+    # so a broken smoke shows here, on a branch, before anyone starts a release (0.1.7 found one only after every installer had built).
+    # NON-BLOCKING for now, like `e2e` and for the same reason: it has not yet run here (a cold Hermes install and a full AppImage
+    # build). continue-on-error keeps the workflow's result green when it fails; the failure still shows red on the run. Remove
+    # `continue-on-error: true` from this job and from `appimage` once it has been green for a few runs. release.yml's own smoke stays required.
+    needs: appimage
+    if: ${{ needs.appimage.result == 'success' }}
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci-appimage
+          path: ${{ runner.temp }}/app
+      - uses: ./.github/actions/desktop-smoke
+        with:
+          app-dir: ${{ runner.temp }}/app
+          screenshot-artifact: desktop-smoke-screenshot
+
   ui:
     runs-on: ubuntu-22.04
     defaults:

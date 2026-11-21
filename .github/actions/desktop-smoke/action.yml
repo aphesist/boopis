@@ -1,0 +1,78 @@
+name: desktop smoke
+description: >
+  The built AppImage, headless (Xvfb + WebKitWebDriver), against real Hermes v0.23.2 and the fake model: first the cheap
+  check that it extracts and every shared library resolves, then first-run setup (tests/setup_live.rs) and the session
+  check (tests/e2e/smoke_desktop.py). Shared by release.yml's `smoke` job and ci.yml's `desktop-smoke` job, so a smoke that
+  is broken shows on a branch before a release starts. The caller checks out the repository and downloads the AppImage.
+  The hx the setup test drives is the sidecar inside the AppImage, which is the binary that ships.
+inputs:
+  app-dir:
+    description: Absolute path of the directory holding the .AppImage.
+    required: true
+  screenshot-artifact:
+    description: Name of the artifact the window's screenshot is uploaded as (on a failure too).
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: astral-sh/setup-uv@v5
+    - name: runtime libraries, Xvfb and WebKitWebDriver (same WebKitGTK as the build image)
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y xvfb webkit2gtk-driver libfuse2 libwebkit2gtk-4.1-0 libgtk-3-0
+    - name: the AppImage starts (it extracts and every shared library resolves), and carries hx
+      shell: bash
+      env:
+        APP_DIR: ${{ inputs.app-dir }}
+      run: |
+        chmod +x "$APP_DIR"/*.AppImage
+        cd "$RUNNER_TEMP" && rm -rf squashfs-root && "$APP_DIR"/*.AppImage --appimage-extract >/dev/null
+        bin=$(find squashfs-root/usr/bin -maxdepth 1 -name 'boopis*' -type f | head -1)
+        echo "binary: $bin"
+        if ldd "$bin" | grep 'not found'; then echo "missing libraries above"; exit 1; fi
+        hx="$RUNNER_TEMP/squashfs-root/usr/bin/hx"
+        [ -x "$hx" ] || { echo "the AppImage has no usr/bin/hx sidecar"; ls squashfs-root/usr/bin; exit 1; }
+        echo "HX_BIN=$hx" >> "$GITHUB_ENV"
+    - name: Hermes v0.23.2 install (cache shared with ci's e2e job)
+      uses: actions/cache@v4
+      with:
+        path: |
+          /home/runner/hermes-e2e
+          !/home/runner/hermes-e2e/uv-cache
+        key: hermes-v0.23.2-ubuntu-22.04-${{ hashFiles('scripts/install-hermes-e2e.sh') }}
+    - shell: bash
+      env:
+        SP: /home/runner/hermes-e2e
+      run: scripts/install-hermes-e2e.sh
+    - uses: dtolnay/rust-toolchain@1.97.0
+      with:
+        components: clippy, rustfmt
+    - name: WebKitGTK headers (the setup test drives the host's library)
+      shell: bash
+      run: |
+        sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev build-essential pkg-config
+    - uses: Swatinem/rust-cache@v2
+      with: { shared-key: release-smoke }
+    - name: first-run setup, non-interactively, against the e2e Hermes (tests/setup_live.rs)
+      shell: bash
+      env:
+        HX_E2E_HERMES_ENV: /home/runner/hermes-e2e
+      run: |
+        sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+        cargo test -p boopis-host --test setup_live -- --nocapture
+    - name: smoke the AppImage against Hermes and the fake model (the session check)
+      shell: bash
+      env:
+        APP_DIR: ${{ inputs.app-dir }}
+        HX_E2E_HERMES_ENV: /home/runner/hermes-e2e
+      run: |
+        uv run --no-project --python 3.11 --with ruamel.yaml python tests/e2e/smoke_desktop.py \
+          "$(ls "$APP_DIR"/*.AppImage)" "$RUNNER_TEMP/smoke.png"
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: ${{ inputs.screenshot-artifact }}
+        path: ${{ runner.temp }}/smoke.png
+        if-no-files-found: ignore
+        retention-days: 7
