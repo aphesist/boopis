@@ -531,6 +531,14 @@ pub fn governed_view(state: LadderState, tiers: &[LadderTier], keys: &Keys) -> G
 
 /// The choice that uses Nous's free tier (no account, no key): Hermes's own welcome-trial route.
 pub const FREE: &str = "free";
+/// The choice of the setup hub's "continue": use what is connected now. The host reads what the person connected (the Providers
+/// commands, the Claude Code login, the sign-ins) and writes the route and the governed ladder from it, so the first run's hub
+/// can connect many labs and then continue. Nothing connected is the free choice. It is resolved once into a concrete choice
+/// ([`connected_choice`]), which is what `setup.json` keeps: a decision, never a secret, and never re-resolved by a later run.
+pub const CONNECTED: &str = "connected";
+/// The choice of "Do it later": start on the free models (ADR-0027) and connect labs in Settings, Models. Where the free tier is
+/// not available it skips the question, so the person still starts, with the reason in the line.
+pub const LATER: &str = "later";
 /// The choice that uses `OpenRouter`'s `:free` models (a free `OpenRouter` key).
 pub const OPENROUTER_FREE: &str = "openrouter-free";
 /// Where the free tier's terms are (shown, never decided here: `docs/research/free-tier.md` section 5).
@@ -740,6 +748,41 @@ pub async fn wire(ops: &dyn HermesOps, provider: &str, named: bool) -> Result<Ve
     Ok(made)
 }
 
+/// What "use what is connected" means now, as one of the choices below, in this order: an Anthropic key, the Claude subscription,
+/// the ChatGPT sign-in, an OpenAI key, a Gemini key, the SuperGrok sign-in, an xAI key; the free models when none of them is
+/// connected. One lab is the default; the others stay connected and in the model menu, and the summary lets the person pick another
+/// (a lab with no governed ladder, such as one with a non-frontier model only, is never the default: ADR-0037 keeps it off the
+/// ladder).
+pub async fn connected_choice(
+    ops: &dyn HermesOps,
+    store: &dyn SecretStore,
+    input: &Input<'_>,
+) -> String {
+    let env = dotenv_names(&ops.home());
+    if key_in_place(store, &env, "anthropic.key") {
+        return "anthropic".to_owned();
+    }
+    if input.claude.probe().await.usable() {
+        return CLAUDE_SUBSCRIPTION.to_owned();
+    }
+    if input.chatgpt_signed_in {
+        return CHATGPT_SUBSCRIPTION.to_owned();
+    }
+    if key_in_place(store, &env, "openai.key") {
+        return OPENAI_KEY.to_owned();
+    }
+    if key_in_place(store, &env, "google.key") {
+        return GEMINI.to_owned();
+    }
+    if input.xai_signed_in {
+        return super::xai_ways::XAI_SUBSCRIPTION.to_owned();
+    }
+    if key_in_place(store, &env, "xai.key") {
+        return XAI.to_owned();
+    }
+    FREE.to_owned()
+}
+
 /// Decide and act. `input.choice` is the user's earlier answer (`""` means skip).
 ///
 /// # Errors
@@ -788,6 +831,7 @@ pub async fn run(
         Some(FREE) if FREE_TIER_ENABLED => {
             free_tier(ops, &named, input.claude, input.xai_signed_in, restart).await
         }
+        Some(LATER) => later(ops, &named, input, restart).await,
         Some(OPENROUTER_FREE) => openrouter(ops, store, &env, &named, input, restart).await,
         Some(CLAUDE_SUBSCRIPTION) => subscription(ops, input, restart).await,
         Some(CHATGPT_SUBSCRIPTION) => chatgpt(ops, input, restart).await,
@@ -799,6 +843,27 @@ pub async fn run(
         }
         Some(super::xai_ways::GROK_CLI) => super::xai_ways::program(ops, input, restart).await,
         Some(pick) => single_tier(ops, store, &env, &named, pick, restart).await,
+    }
+}
+
+/// "Do it later": the free choice, and where it is not available the question is skipped with the reason, so the person still
+/// starts and connects a lab in Settings, Models.
+async fn later(
+    ops: &dyn HermesOps,
+    named: &[Named],
+    input: &Input<'_>,
+    restart: &mut bool,
+) -> Result<Outcome> {
+    if !FREE_TIER_ENABLED {
+        return Ok(Outcome::Skipped(
+            "no model connected yet; connect one in Settings, Models whenever you like".into(),
+        ));
+    }
+    match free_tier(ops, named, input.claude, input.xai_signed_in, restart).await? {
+        Outcome::Unavailable { note, .. } => Ok(Outcome::Skipped(format!(
+            "no model connected yet, and the free models are not available here right now ({note}); connect one in Settings, Models whenever you like"
+        ))),
+        done => Ok(done),
     }
 }
 
@@ -1071,6 +1136,11 @@ fn ladder_form(
     ids.push(XAI.to_owned());
     labels.push(XAI_LABEL.to_owned());
     super::xai_ways::add_choices(&mut ids, &mut labels, xai_signed_in);
+    // the hub's two answers: carry on with what is connected, or do it later (the free models)
+    ids.push(CONNECTED.to_owned());
+    labels.push("Continue with what you connected".to_owned());
+    ids.push(LATER.to_owned());
+    labels.push("Do it later (start on the free models)".to_owned());
     for p in named {
         for m in &p.models {
             ids.push(format!("{}/{m}", p.name));

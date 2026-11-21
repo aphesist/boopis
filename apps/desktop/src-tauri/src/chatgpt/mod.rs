@@ -11,9 +11,10 @@
 //! token and the address to call it on, through the plugin's secret channel (`plugins/boopis/signins/chatgpt.py` gives them to
 //! the runtime's credential pool, as a key it never tries to refresh).
 //!
-//! **People who signed in before the program** hold tokens of the Codex CLI's client. They keep working and keep renewing (the
-//! old route) until the person signs in again, and [`Status::notice`] says so in plain words; if OpenAI stops accepting them the
-//! account is signed out with a notice, never silently.
+//! **People who signed in before the program** hold tokens of the Codex CLI's client. That older route is cut off (the owner's
+//! decision of 21 November 2026, ADR-0030): at the next launch or check [`ChatGpt::retire_older`] takes those tokens out of the
+//! keychain, and [`Status::notice`] says why and the card offers Sign in. Nothing renews them and nothing calls the address they
+//! used.
 
 pub mod callback;
 pub mod oauth;
@@ -43,8 +44,8 @@ pub const REFRESH: &str = "refresh_token";
 pub const ID_TOKEN: &str = "id_token";
 /// The registration's name in the scope: the issued client id and this installation's host id, as JSON.
 pub const REGISTRATION: &str = "registration";
-/// The address the engine calls the access token on, written beside it when it came from the program. The plugin reads it;
-/// a sign-in made before the program has none, and the plugin then uses the old address.
+/// The address the engine calls the access token on, written beside it with the program's tokens. The plugin reads it. A
+/// token with no address and no issued client is a sign-in of the older route, which is cut off.
 pub const BASE_URL: &str = "base_url";
 
 /// Where the sign-in stands.
@@ -58,17 +59,6 @@ pub enum State {
     SigningIn,
     /// Signed in.
     SignedIn,
-}
-
-/// Which route a signed-in account is on.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
-#[serde(rename_all = "snake_case")]
-#[serde(rename = "ChatgptRoute")]
-pub enum Route {
-    /// OpenAI's Sign in with ChatGPT program.
-    Program,
-    /// The older sign-in with the Codex CLI's client, from before the program: it works until the person signs in again.
-    Older,
 }
 
 /// Where to go, and (for a flow that has one) the code to type.
@@ -94,12 +84,10 @@ pub struct Status {
     pub plan: Option<String>,
     /// While signing in: the page to open.
     pub code: Option<CodeView>,
-    /// While signed in: the route the account is on.
-    pub route: Option<Route>,
     /// The account's email, when OpenAI said one.
     pub account: Option<String>,
-    /// One plain sentence the person should read, when there is one: an older sign-in that should be redone, or why the last
-    /// one ended.
+    /// One plain sentence the person should read, when there is one: why the last sign-in ended (the older route's cut-off
+    /// included).
     pub notice: Option<String>,
 }
 
@@ -263,15 +251,15 @@ fn forget_tokens(store: &dyn SecretStore) -> Result<()> {
     del(store, BASE_URL)
 }
 
-fn route_of(reg: &Registration) -> Route {
-    if reg.client_id.is_some() {
-        Route::Program
-    } else {
-        Route::Older
-    }
+/// What marks the older route: tokens in the keychain that no registration of boopis's own issued (the program's sign-in
+/// writes the issued client first and the address with the tokens).
+fn is_older(has_tokens: bool, reg: &Registration, has_address: bool) -> bool {
+    has_tokens && reg.client_id.is_none() && !has_address
 }
 
-const NOTICE_OLDER: &str = "This sign-in was made before boopis joined OpenAI's Sign in with ChatGPT program. It still works. Sign in again to move it onto the program.";
+/// The `ended` mark of an older sign-in that was cut off.
+const ENDED_OLDER: &str = "older_route";
+const NOTICE_OLDER_CUT: &str = "OpenAI's Sign in with ChatGPT program replaced the older sign-in that boopis used before it, so that sign-in was ended on this computer. Sign in with ChatGPT again to use your plan.";
 const NOTICE_ENDED: &str = "OpenAI no longer accepts the saved ChatGPT sign-in (it was disconnected, or it expired). Sign in again to keep using your ChatGPT plan.";
 const NOTICE_PLAN: &str = "You signed in last time without letting boopis use your ChatGPT plan. Sign in again and allow it.";
 
@@ -347,17 +335,20 @@ impl ChatGpt {
             .map(|f| f.code.clone())
     }
 
-    /// Where the sign-in stands, from the keychain and the flow in progress. Changes nothing.
+    /// Where the sign-in stands, from the keychain and the flow in progress. The only thing it changes is the cut-off of an
+    /// older sign-in ([`ChatGpt::retire_older`]).
     ///
     /// # Errors
     /// `hx.secrets.*` when the keychain cannot be read.
     pub async fn status(&self) -> Result<Status> {
         let code = self.waiting();
+        self.retire_older().await?;
         let (tokens, reg) = self
             .blocking(|s, _| Ok((read_tokens(s)?, read_registration(s)?)))
             .await?;
         let ended = match reg.ended.as_deref() {
             Some("plan_not_allowed") => Some(NOTICE_PLAN.to_owned()),
+            Some(ENDED_OLDER) => Some(NOTICE_OLDER_CUT.to_owned()),
             Some(_) => Some(NOTICE_ENDED.to_owned()),
             None => None,
         };
@@ -366,34 +357,57 @@ impl ChatGpt {
                 state: State::SigningIn,
                 plan: None,
                 code: Some(code),
-                route: None,
                 account: None,
                 notice: None,
             },
-            (Some(t), None) => {
-                let route = route_of(&reg);
-                Status {
-                    state: State::SignedIn,
-                    plan: t
-                        .id
-                        .as_deref()
-                        .and_then(oauth::plan)
-                        .or_else(|| oauth::plan(&t.access)),
-                    code: None,
-                    route: Some(route),
-                    account: reg.email.clone(),
-                    notice: (route == Route::Older).then(|| NOTICE_OLDER.to_owned()),
-                }
-            }
+            (Some(t), None) => Status {
+                state: State::SignedIn,
+                plan: t
+                    .id
+                    .as_deref()
+                    .and_then(oauth::plan)
+                    .or_else(|| oauth::plan(&t.access)),
+                code: None,
+                account: reg.email.clone(),
+                notice: None,
+            },
             (None, None) => Status {
                 state: State::SignedOut,
                 plan: None,
                 code: None,
-                route: None,
                 account: None,
                 notice: ended,
             },
         })
+    }
+
+    /// Cut off the older route: tokens that boopis made with the Codex CLI's client, before OpenAI's program, are removed from
+    /// the keychain and the registration records why, so the next status says it once. True when it removed any. It runs at
+    /// launch (the refresher's first look), at every status and before every check, so no older sign-in outlives the next
+    /// look. A sign-in of the program is never touched.
+    ///
+    /// # Errors
+    /// `hx.secrets.*`.
+    pub async fn retire_older(&self) -> Result<bool> {
+        let _held = self.refreshing.lock().await;
+        let retired = self
+            .blocking(|s, _| {
+                let tokens = read_tokens(s)?;
+                let mut reg = read_registration(s)?;
+                if !is_older(tokens.is_some(), &reg, get(s, BASE_URL)?.is_some()) {
+                    return Ok(false);
+                }
+                forget_tokens(s)?;
+                reg.ended = Some(ENDED_OLDER.to_owned());
+                write_registration(s, &reg)?;
+                Ok(true)
+            })
+            .await?;
+        if retired {
+            tracing::info!("the older ChatGPT sign-in was ended on this computer");
+            self.emit("signed_out", NOTICE_OLDER_CUT);
+        }
+        Ok(retired)
     }
 
     /// Whether an account is signed in (both tokens are in the keychain).
@@ -401,6 +415,7 @@ impl ChatGpt {
     /// # Errors
     /// `hx.secrets.*`.
     pub async fn signed_in(&self) -> Result<bool> {
+        self.retire_older().await?;
         Ok(self.blocking(|s, _| read_tokens(s)).await?.is_some())
     }
 
@@ -598,8 +613,7 @@ impl ChatGpt {
             let tokens = read_tokens(s)?;
             let reg = read_registration(s)?;
             let mut revoked = false;
-            if let Some(tokens) = &tokens {
-                let client = reg.client_id.as_deref().unwrap_or(oauth::LEGACY_CLIENT_ID);
+            if let (Some(tokens), Some(client)) = (&tokens, reg.client_id.as_deref()) {
                 for attempt in 0..2 {
                     match oauth::revoke(t, &ep, client, &tokens.refresh) {
                         Ok(done) => {
@@ -627,6 +641,7 @@ impl ChatGpt {
     /// # Errors
     /// `hx.secrets.*`, or `hx.signin.*` for a refresh that could not run (the tokens are kept: it is tried again later).
     pub async fn refresh_if_due(&self) -> Result<bool> {
+        self.retire_older().await?;
         let _held = self.refreshing.lock().await;
         let (ep, ahead) = (self.endpoints.clone(), self.timing.refresh_ahead);
         let (renewed, ended) = self
@@ -638,12 +653,10 @@ impl ChatGpt {
                     return Ok((false, false));
                 }
                 let mut reg = read_registration(s)?;
-                let next = match reg.client_id.as_deref() {
-                    Some(client) => {
-                        oauth::refresh(t, &ep, client, &tokens.refresh, tokens.id.as_deref())?
-                    }
-                    None => oauth::legacy_refresh(t, &ep, &tokens.refresh)?,
+                let Some(client) = reg.client_id.as_deref() else {
+                    return Ok((false, false)); // no client of boopis's own: `retire_older` ends it
                 };
+                let next = oauth::refresh(t, &ep, client, &tokens.refresh, tokens.id.as_deref())?;
                 match next {
                     Refreshed::Tokens(next) => {
                         save_tokens(s, &next)?;

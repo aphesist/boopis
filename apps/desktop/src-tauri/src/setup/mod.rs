@@ -1029,6 +1029,23 @@ impl Setup {
             Some(x) => x.signed_in().await.unwrap_or(false),
             None => false,
         };
+        // The hub's "continue": read what is connected and keep the concrete choice (a decision), so a later run does not
+        // resolve it again; "do it later" is the free choice, kept as it is.
+        if state.choice.as_deref() == Some(providers::CONNECTED) {
+            let pre = providers::Input {
+                choice: None,
+                picks: &[],
+                free_note: None,
+                reopen: false,
+                claude: self.claude.as_ref(),
+                chatgpt_signed_in,
+                xai_signed_in,
+                grok: self.grok.as_ref(),
+                optins: state.optins(),
+            };
+            state.choice =
+                Some(providers::connected_choice(self.ops.as_ref(), self.secrets.as_ref(), &pre).await);
+        }
         let input = providers::Input {
             choice: state.choice.as_deref(),
             picks: &state.picks,
@@ -1059,6 +1076,10 @@ impl Setup {
             }
             Ok(providers::Outcome::Done(line)) => run.done(id, title, line),
             Ok(providers::Outcome::Skipped(line)) => {
+                // "do it later" that could not claim the free models is answered: it is not asked again
+                if state.choice.as_deref() == Some(providers::LATER) {
+                    state.choice = Some(String::new());
+                }
                 run.push(id, title, StepState::Skipped, line, None);
             }
             Ok(providers::Outcome::Form(form)) => {

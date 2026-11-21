@@ -1,5 +1,5 @@
 //! The wire of the ChatGPT sign-in: OpenAI's **Sign in with ChatGPT** program for open-source apps (terms in force from
-//! 4 November 2026), and the renewal of the older sign-in that boopis made with the Codex CLI's client before it. Each call
+//! 4 November 2026). Each call
 //! is one blocking HTTPS request through [`Transport`]; the caller runs it on `spawn_blocking`. Nothing here stores
 //! anything, and no value it handles is ever logged or put in an error.
 //!
@@ -21,8 +21,7 @@
 //!   (<https://developers.openai.com/siwc/token-sharing-open-source/token-reference>). A refresh is
 //!   `grant_type=refresh_token` with the issued client id, the refresh token and the `resource`, no `scope`.
 //!
-//! The older route (`legacy_refresh`): the Codex CLI's public client at `{issuer}/oauth/token`, which boopis used before the
-//! program. Tokens it made keep renewing until the user signs in again through the program, so nobody is cut off silently.
+//! The older route (the Codex CLI's public client, which boopis used before the program) is cut off: it has no code here.
 
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -33,9 +32,6 @@ use crate::error::{Error, Result};
 pub const ISSUER: &str = "https://auth.openai.com";
 /// The audience of the program's tokens, and the base the Responses API is called on.
 pub const RESOURCE: &str = "https://api.openai.com/v1";
-/// The public client of OpenAI's Codex sign-in, which boopis used before the program (`CODEX_OAUTH_CLIENT_ID` in the engine).
-/// Only the renewal of a sign-in made with it still uses this.
-pub const LEGACY_CLIENT_ID: &str = "app_EMoamEEZ73f0CkXaXp7hrann";
 /// The registration entry point of the program: the first authorization of a host and account.
 pub const DYNAMIC_CLIENT: &str = "dynamic_agent_client";
 /// The app's name as the program wants it (`agent_name_hint`: the actual name, the same on every installation).
@@ -93,9 +89,6 @@ impl Endpoints {
     }
     fn token(&self) -> String {
         format!("{}/api/accounts/oauth/token", self.issuer)
-    }
-    fn legacy_token(&self) -> String {
-        format!("{}/oauth/token", self.issuer)
     }
     fn revoke(&self) -> String {
         format!("{}/api/accounts/oauth/revoke", self.issuer)
@@ -210,7 +203,7 @@ pub struct Tokens {
     pub access: String,
     /// The token that gets the next access token (it rotates: each refresh may send the next one).
     pub refresh: String,
-    /// The ID token, kept so a later sign-in can name the account (`id_token_hint`); the older route has none.
+    /// The ID token, kept so a later sign-in can name the account (`id_token_hint`).
     pub id: Option<String>,
 }
 
@@ -715,25 +708,6 @@ pub fn refresh(
     ]);
     let r = send(t, &ep.token(), "application/x-www-form-urlencoded", &body)?;
     refreshed(&r, refresh_token, previous_id)
-}
-
-/// The next access token of a sign-in made with the Codex client before the program (the older route).
-///
-/// # Errors
-/// As [`refresh`].
-pub fn legacy_refresh(t: &dyn Transport, ep: &Endpoints, refresh_token: &str) -> Result<Refreshed> {
-    let body = form(&[
-        ("grant_type", "refresh_token"),
-        ("refresh_token", refresh_token),
-        ("client_id", LEGACY_CLIENT_ID),
-    ]);
-    let r = send(
-        t,
-        &ep.legacy_token(),
-        "application/x-www-form-urlencoded",
-        &body,
-    )?;
-    refreshed(&r, refresh_token, None)
 }
 
 fn refreshed(r: &Reply, refresh_token: &str, previous_id: Option<&str>) -> Result<Refreshed> {

@@ -1931,6 +1931,18 @@ fn sign_in_to_chatgpt(r: &Rig) {
     r.store
         .set("boopis.chatgpt", "refresh_token", "rt-setup")
         .unwrap();
+    // a sign-in of OpenAI's program: its issued client and the address it is called on (one without them is the older route,
+    // which is cut off at the next look)
+    r.store
+        .set("boopis.chatgpt", "base_url", "https://api.openai.com/v1")
+        .unwrap();
+    r.store
+        .set(
+            "boopis.chatgpt",
+            "registration",
+            &json!({"client_id": "oaiapp_setup", "host_id": "urn:uuid:h"}).to_string(),
+        )
+        .unwrap();
 }
 
 #[tokio::test]
@@ -3726,4 +3738,120 @@ async fn the_program_choice_looks_at_grok_says_how_to_install_it_and_writes_its_
         r.fake.config_get("model.provider").await.unwrap(),
         Some(json!("grok-acp"))
     );
+}
+
+// ---------------------------------------------------------------- the hub: connect many, continue; do it later
+
+#[tokio::test]
+async fn the_hub_s_two_answers_come_after_the_choices_and_the_free_tier_stays_the_default() {
+    let r = rig(json!({}));
+    let form = at_models(&r).await.form.unwrap();
+    let ids = enum_of(&form, "choice");
+    assert!(ids.contains(&"connected".to_owned()) && ids.contains(&"later".to_owned()));
+    assert_eq!(ids[0], "free", "free stays first");
+    assert_eq!(form.schema.0["properties"]["choice"]["default"], "free");
+    let names = &form.schema.0["properties"]["choice"]["enumNames"];
+    assert!(names.to_string().contains("Do it later"));
+}
+
+#[tokio::test]
+async fn continue_with_nothing_connected_is_the_free_choice() {
+    let r = rig(json!({}));
+    {
+        let mut f = r.fake.free.lock().unwrap();
+        f.before = welcome(true, true);
+        f.after = welcome(true, true);
+    }
+    at_models(&r).await;
+    let s = choose(&r, "connected").await;
+    assert!(s.done && s.form.is_none(), "{:?}", s.steps);
+    assert_eq!(
+        r.fake.config_get(LADDER).await.unwrap().unwrap(),
+        json!({"tiers": [{"name": "free", "model": "nous/nous/welcome"}]})
+    );
+    let on_disk = std::fs::read_to_string(super::state::path(&r.fake.home)).unwrap();
+    assert!(
+        on_disk.contains("\"free\"") && !on_disk.contains("connected"),
+        "setup.json keeps the concrete decision: {on_disk}"
+    );
+}
+
+#[tokio::test]
+async fn continue_reads_what_is_connected_and_writes_the_route_and_ladder_from_it() {
+    let r = rig(json!({}));
+    sign_in_to_chatgpt(&r);
+    *r.fake.chatgpt_models.lock().unwrap() = vec!["gpt-6.2-astra".into(), "gpt-6.2-sol".into()];
+    at_models(&r).await;
+    let s = choose(&r, "connected").await;
+    assert!(s.done && s.form.is_none(), "{:?}", s.steps);
+    let ladder = r.fake.config_get(LADDER).await.unwrap().unwrap();
+    assert!(
+        ladder.to_string().contains("openai-codex/gpt-6.2-sol"),
+        "{ladder}"
+    );
+    assert_eq!(
+        r.fake.config_get("model.provider").await.unwrap().unwrap(),
+        json!("openai-codex"),
+        "the engine's own default follows the ladder"
+    );
+    let on_disk = std::fs::read_to_string(super::state::path(&r.fake.home)).unwrap();
+    assert!(
+        on_disk.contains("chatgpt-subscription") && !on_disk.contains("rt-setup"),
+        "a decision, never a secret: {on_disk}"
+    );
+    // running it again changes nothing that is already right
+    let sets = r.fake.sets.lock().unwrap().len();
+    let again = r.setup().advance(None, false).await.unwrap();
+    assert!(again.done);
+    assert_eq!(r.fake.sets.lock().unwrap().len(), sets);
+}
+
+#[tokio::test]
+async fn continue_prefers_the_claude_login_over_the_other_labs_and_a_signed_out_one_is_not_connected() {
+    let r = rig(json!({}));
+    sign_in_to_chatgpt(&r);
+    *r.fake.chatgpt_models.lock().unwrap() = vec!["gpt-6.2-sol".into()];
+    // Claude Code is not signed in: the ChatGPT sign-in is the default
+    let setup = r.setup();
+    let a = at_models(&r).await;
+    assert_eq!(a.form.as_ref().unwrap().form_id, "setup.ladder");
+    let s = setup
+        .advance(Some(answer("setup.ladder", json!({"choice": "connected"}), json!({}))), false)
+        .await
+        .unwrap();
+    assert!(s.receipt.unwrap().lines.join("\n").contains("ChatGPT subscription"));
+}
+
+#[tokio::test]
+async fn do_it_later_is_the_free_choice_and_says_where_to_connect_when_the_free_tier_is_not_there() {
+    // the free tier is there
+    let r = rig(json!({}));
+    {
+        let mut f = r.fake.free.lock().unwrap();
+        f.before = welcome(true, true);
+        f.after = welcome(true, true);
+    }
+    at_models(&r).await;
+    let s = choose(&r, "later").await;
+    assert!(s.done && s.form.is_none());
+    assert_eq!(
+        r.fake.config_get(LADDER).await.unwrap().unwrap(),
+        json!({"tiers": [{"name": "free", "model": "nous/nous/welcome"}]})
+    );
+    // the free tier is not available: the person still starts, with the reason and where to connect
+    let r = rig(json!({}));
+    {
+        let mut f = r.fake.free.lock().unwrap();
+        f.before = welcome(false, false);
+        f.after = welcome(false, false);
+    }
+    at_models(&r).await;
+    let s = choose(&r, "later").await;
+    assert!(s.done && s.form.is_none(), "{:?}", s.steps);
+    assert_eq!(state_of(&s, "models"), StepState::Skipped);
+    assert!(s.receipt.unwrap().lines.join("\n").contains("Settings, Models"));
+    assert!(r.fake.config_get(LADDER).await.unwrap().is_none());
+    // and it is not asked again
+    let again = r.setup().advance(None, false).await.unwrap();
+    assert!(again.done && again.form.is_none());
 }

@@ -1,7 +1,7 @@
 //! The ChatGPT sign-in against a scripted OpenAI and a real loopback listener: the program's flow's ends (approved, a returning
 //! account, cancelled, timed out, declined, a stray request, refused, a bad ID token, plan use not allowed, another account),
-//! what reaches the keychain, the refresh (renewed, rotated, revoked, client gone, rate-limited) on both routes, sign-out,
-//! the migration of a sign-in made before the program, a locked keychain, and the real HTTPS transport against a loopback
+//! what reaches the keychain, the refresh (renewed, rotated, revoked, client gone, rate-limited), sign-out,
+//! the cut-off of a sign-in made before the program, a locked keychain, and the real HTTPS transport against a loopback
 //! server.
 //!
 //! The ID tokens are really signed (RS256) with a throwaway test key (`testdata/test-signing-key.p8.b64`, made for these tests
@@ -18,7 +18,7 @@ use serde_json::{Value, json};
 
 use super::oauth::{self, Endpoints, Reply, Transport};
 use super::{
-    ACCESS, BASE_URL, Browser, ChatGpt, ChatgptSigninEvent, ID_TOKEN, REFRESH, REGISTRATION, Route,
+    ACCESS, BASE_URL, Browser, ChatGpt, ChatgptSigninEvent, ID_TOKEN, REFRESH, REGISTRATION,
     State, Timing, due,
 };
 use crate::error::Error;
@@ -345,14 +345,12 @@ async fn a_first_sign_in_registers_boopis_and_keeps_what_is_checked_in_the_keych
     assert_eq!(
         (
             st.state,
-            st.route,
             st.plan.as_deref(),
             st.account.as_deref(),
             st.notice
         ),
         (
             State::SignedIn,
-            Some(Route::Program),
             Some("pro"),
             Some("ada@example.com"),
             None
@@ -718,7 +716,7 @@ async fn unreachable_and_rate_limited_services_fail_with_words_and_keep_nothing(
     assert_eq!(kept(&r.store, ACCESS), None);
 }
 
-// ---------------------------------------------------------------- the refresh, on both routes
+// ---------------------------------------------------------------- the refresh
 
 fn signed_in_on_the_program(store: &MemoryStore, access_token: &str) {
     store.set("boopis.chatgpt", ACCESS, access_token).unwrap();
@@ -832,7 +830,7 @@ async fn a_revoked_session_signs_out_with_a_notice_and_a_rate_limit_keeps_the_to
     assert_eq!(registration(&r.store).get("client_id"), None);
 }
 
-// ---------------------------------------------------------------- the sign-in from before the program
+// ---------------------------------------------------------------- the sign-in from before the program is cut off
 
 fn signed_in_before_the_program(store: &MemoryStore, access_token: &str) {
     store.set("boopis.chatgpt", ACCESS, access_token).unwrap();
@@ -840,38 +838,40 @@ fn signed_in_before_the_program(store: &MemoryStore, access_token: &str) {
 }
 
 #[tokio::test]
-async fn a_sign_in_from_before_the_program_keeps_working_says_so_and_moves_when_the_person_signs_in_again()
- {
+async fn a_sign_in_from_before_the_program_is_signed_out_at_the_next_check_with_one_notice_and_no_call_to_openai() {
     let r = rig();
-    let old = access(60);
-    signed_in_before_the_program(&r.store, &old);
+    signed_in_before_the_program(&r.store, &access(3600));
     let st = r.svc.status().await.unwrap();
-    assert_eq!((st.state, st.route), (State::SignedIn, Some(Route::Older)));
-    assert!(st.notice.unwrap().contains("Sign in again"));
-    assert!(r.svc.signed_in().await.unwrap());
-
-    // it renews on the old route: the Codex client, at the old address
-    let fresh = access(3600);
-    r.script.post(
-        "/oauth/token",
-        200,
-        &json!({"access_token": fresh, "refresh_token": "rt-legacy-2"}),
+    assert_eq!(st.state, State::SignedOut);
+    assert!(
+        st.notice.as_deref().unwrap().contains("Sign in with ChatGPT"),
+        "one plain notice that says why and offers Sign in"
     );
-    assert!(r.svc.refresh_if_due().await.unwrap());
-    let form: std::collections::HashMap<String, String> =
-        url::form_urlencoded::parse(r.script.seen()[0].2.as_bytes())
-            .into_owned()
-            .collect();
-    assert_eq!(form["client_id"], oauth::LEGACY_CLIENT_ID);
-    assert!(!r.script.seen()[0].0.contains("/api/accounts/"));
-    assert_eq!(kept(&r.store, REFRESH).as_deref(), Some("rt-legacy-2"));
-    assert_eq!(
-        kept(&r.store, BASE_URL),
-        None,
-        "the engine keeps the old address for it"
-    );
+    assert_eq!(kept(&r.store, ACCESS), None, "the tokens leave the keychain");
+    assert_eq!(kept(&r.store, REFRESH), None);
+    assert!(!r.svc.signed_in().await.unwrap());
+    assert!(r.script.seen().is_empty(), "nothing renews it or ends it at OpenAI");
+    assert_eq!(r.events.lock().unwrap()[0].outcome, "signed_out");
+    // the notice stays until the person signs in, and says nothing else
+    assert!(r.svc.status().await.unwrap().notice.is_some());
+}
 
-    // the person signs in again: the program's tokens replace the old ones, and the address moves with them
+#[tokio::test]
+async fn the_cut_off_also_runs_at_launch_through_the_refresher_s_first_look_even_when_the_token_is_due() {
+    let r = rig();
+    signed_in_before_the_program(&r.store, &access(-5));
+    assert!(!r.svc.refresh_if_due().await.unwrap());
+    assert!(r.script.seen().is_empty(), "no refresh goes to the old address");
+    assert_eq!(kept(&r.store, ACCESS), None);
+    assert_eq!(kept(&r.store, REFRESH), None);
+}
+
+#[tokio::test]
+async fn the_person_signs_in_again_and_the_notice_goes_with_the_program_s_tokens() {
+    let r = rig();
+    signed_in_before_the_program(&r.store, &access(3600));
+    assert!(r.svc.status().await.unwrap().notice.is_some());
+    r.events.lock().unwrap().clear(); // the cut-off's own event
     r.svc.start().await.unwrap();
     let url = r.browser.last().unwrap();
     assert_eq!(
@@ -882,31 +882,22 @@ async fn a_sign_in_from_before_the_program_keeps_working_says_so_and_moves_when_
     approve(&r, &url, "oaiapp_9", "user-1", PLAN_SCOPES).await;
     assert_eq!(ended(&r.events).await.outcome, "signed_in");
     let st = r.svc.status().await.unwrap();
-    assert_eq!((st.route, st.notice), (Some(Route::Program), None));
+    assert_eq!((st.state, st.notice), (State::SignedIn, None));
     assert_eq!(
         kept(&r.store, BASE_URL).as_deref(),
         Some("https://api.openai.com/v1")
     );
-    assert_ne!(kept(&r.store, REFRESH).as_deref(), Some("rt-legacy-2"));
+    assert_ne!(kept(&r.store, REFRESH).as_deref(), Some("rt-legacy"));
 }
 
 #[tokio::test]
-async fn an_older_sign_in_that_openai_refuses_is_signed_out_with_a_notice() {
+async fn the_cut_off_never_touches_a_sign_in_of_the_program() {
     let r = rig();
-    signed_in_before_the_program(&r.store, &access(-5));
-    r.script.post(
-        "/oauth/token",
-        401,
-        &json!({"error": "refresh_token_reused"}),
-    );
-    assert!(!r.svc.refresh_if_due().await.unwrap());
+    signed_in_on_the_program(&r.store, &access(3600));
+    assert!(!r.svc.retire_older().await.unwrap());
     let st = r.svc.status().await.unwrap();
-    assert_eq!(st.state, State::SignedOut);
-    assert!(
-        st.notice.is_some(),
-        "the person is told, not left with a sign-in that fails"
-    );
-    assert_eq!(r.events.lock().unwrap()[0].outcome, "signed_out");
+    assert_eq!((st.state, st.notice), (State::SignedIn, None));
+    assert!(kept(&r.store, ACCESS).is_some() && kept(&r.store, REFRESH).is_some());
 }
 
 #[tokio::test]
@@ -920,18 +911,6 @@ async fn signing_out_tells_when_openai_did_not_confirm_and_still_removes_the_tok
     let out = r.svc.sign_out().await.unwrap();
     assert!(!out.revoked, "OpenAI never said it was done");
     assert!(!r.svc.signed_in().await.unwrap());
-
-    // an older sign-in is ended with its own client
-    let r = rig();
-    signed_in_before_the_program(&r.store, &access(3600));
-    r.script.post("/api/accounts/oauth/revoke", 200, &json!({}));
-    assert!(r.svc.sign_out().await.unwrap().revoked);
-    let form: std::collections::HashMap<String, String> =
-        url::form_urlencoded::parse(r.script.seen()[0].2.as_bytes())
-            .into_owned()
-            .collect();
-    assert_eq!(form["client_id"], oauth::LEGACY_CLIENT_ID);
-    assert_eq!(r.svc.status().await.unwrap().state, State::SignedOut);
 }
 
 // ---------------------------------------------------------------- a locked keychain, and no secret anywhere it should not be

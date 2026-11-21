@@ -378,13 +378,6 @@ export type ChatgptCode = {
 	expires_at: number | null,
 };
 
-/**  Which route a signed-in account is on. */
-export type ChatgptRoute = 
-/**  OpenAI's Sign in with ChatGPT program. */
-"program" | 
-/**  The older sign-in with the Codex CLI's client, from before the program: it works until the person signs in again. */
-"older";
-
 /**  What signing out did at OpenAI. */
 export type ChatgptSignedOut = {
 	/**
@@ -422,13 +415,11 @@ export type ChatgptStatus_Deserialize = {
 	plan?: string | null,
 	/**  While signing in: the page to open. */
 	code?: ChatgptCode | null,
-	/**  While signed in: the route the account is on. */
-	route?: ChatgptRoute | null,
 	/**  The account's email, when OpenAI said one. */
 	account?: string | null,
 	/**
-	 *  One plain sentence the person should read, when there is one: an older sign-in that should be redone, or why the last
-	 *  one ended.
+	 *  One plain sentence the person should read, when there is one: why the last sign-in ended (the older route's cut-off
+	 *  included).
 	 */
 	notice?: string | null,
 };
@@ -441,13 +432,11 @@ export type ChatgptStatus_Serialize = {
 	plan: string | null,
 	/**  While signing in: the page to open. */
 	code: ChatgptCode | null,
-	/**  While signed in: the route the account is on. */
-	route: ChatgptRoute | null,
 	/**  The account's email, when OpenAI said one. */
 	account: string | null,
 	/**
-	 *  One plain sentence the person should read, when there is one: an older sign-in that should be redone, or why the last
-	 *  one ended.
+	 *  One plain sentence the person should read, when there is one: why the last sign-in ended (the older route's cut-off
+	 *  included).
 	 */
 	notice: string | null,
 };

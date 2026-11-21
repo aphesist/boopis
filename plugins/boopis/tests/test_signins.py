@@ -23,7 +23,6 @@ from signin_kit import (
 )
 
 PROGRAM = "https://api.openai.com/v1"
-BEFORE_THE_PROGRAM = "https://chatgpt.com/backend-api/codex"
 
 
 def jwt(exp: int) -> str:
@@ -62,17 +61,9 @@ def test_the_row_follows_the_host_s_token_and_address_and_never_carries_a_refres
     assert chatgpt.sync(lambda: None, lambda: a) == "none"
 
 
-def test_a_sign_in_from_before_the_program_keeps_the_old_address_until_the_person_signs_in_again() -> None:
-    a = api()
-    token = jwt(int(time.time()) + 3600)
-    assert chatgpt.sync(lambda: Grant(token), lambda: a) == "added"
-    assert [r.base_url for r in mine(a)] == [BEFORE_THE_PROGRAM], "the host names no address: the old one"
-    # the person signs in again: the same slot now holds the program's token on the program's address
-    moved = jwt(int(time.time()) + 3600)
-    assert chatgpt.sync(lambda: Grant(moved, PROGRAM), lambda: a) == "replaced"
-    assert [(r.access_token, r.base_url) for r in mine(a)] == [(moved, PROGRAM)]
-    # the same token on another address is a change too
-    assert chatgpt.sync(lambda: Grant(moved, BEFORE_THE_PROGRAM), lambda: a) == "replaced"
+def test_the_old_codex_backend_is_no_address_of_the_row() -> None:
+    assert chatgpt.BASE_URL == PROGRAM
+    assert "backend-api" not in chatgpt.BASE_URL
 
 
 def test_a_host_that_cannot_answer_leaves_the_row_as_it_is() -> None:
@@ -120,13 +111,17 @@ def test_the_token_and_address_come_over_the_host_s_real_channel(host_secrets: A
     assert all(r.refresh_token != "rt-host" for r in a.pool.rows), "the refresh token stays with the host"
 
 
-def test_no_address_from_the_host_is_a_sign_in_from_before_the_program(
+def test_a_token_with_no_address_is_a_cut_off_sign_in_and_never_reaches_the_runtime(
     host_secrets: Any, clean_channel_state: None
 ) -> None:
     host_secrets(["boopis.chatgpt/access_token=old-token", "boopis.chatgpt/refresh_token=rt-host"])
     a = api()
-    assert chatgpt.sync(pool_api=lambda: a) == "added"
-    assert [(r.access_token, r.base_url) for r in mine(a)] == [("old-token", BEFORE_THE_PROGRAM)]
+    assert chatgpt.sync(pool_api=lambda: a) == "none"
+    assert mine(a) == []
+    # one the runtime already held is removed when the host's address goes (the host ends the sign-in)
+    a.pool.rows.append(Row("openai-codex", "x", "x", "api_key", 1, chatgpt.SOURCE, "old"))
+    assert chatgpt.sync(pool_api=lambda: a) == "removed"
+    assert mine(a) == []
 
 
 def test_signed_out_on_the_host_removes_the_row(host_secrets: Any, clean_channel_state: None) -> None:
@@ -150,26 +145,21 @@ print(json.dumps({"sync": first, "again": chatgpt.sync(), "creds": got}))
 """
 
 
-@pytest.mark.parametrize(
-    ("base_url", "want"),
-    [(PROGRAM, PROGRAM), (None, BEFORE_THE_PROGRAM)],
-    ids=["the program's token on the Responses API", "a sign-in from before the program"],
-)
-def test_the_engine_s_own_codex_provider_resolves_the_host_s_token_and_address(
-    tmp_path: Path, base_url: str | None, want: str
-) -> None:
+def test_the_engine_s_own_codex_provider_resolves_the_host_s_token_and_address(tmp_path: Path) -> None:
     python = engine_python()
     token = jwt(int(time.time()) + 3600)
     home = tmp_path / "home"
     (home / ".hermes").mkdir(parents=True)
-    secrets = [f"boopis.chatgpt/access_token={token}", "boopis.chatgpt/refresh_token=rt-host"]
-    if base_url:
-        secrets.append(f"boopis.chatgpt/base_url={base_url}")
+    secrets = [
+        f"boopis.chatgpt/access_token={token}",
+        "boopis.chatgpt/refresh_token=rt-host",
+        f"boopis.chatgpt/base_url={PROGRAM}",
+    ]
     result = run_in_engine(python, home, tmp_path, secrets, LIVE)
     assert result["sync"] == "added" and result["again"] == "kept", result
     assert result["creds"] == {
         "api_key": token,
-        "base_url": want,
+        "base_url": PROGRAM,
         "provider": "openai-codex",
         "api_mode": "codex_responses",
     }
