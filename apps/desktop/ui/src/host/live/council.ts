@@ -264,7 +264,8 @@ export function createCouncil(deps: CouncilDeps): CouncilHost {
       const gw = deps.gwId(uiId);
       if (!gw) throw new Error('The council could not start: this session is not on the engine yet.');
       /* a session made a moment ago has no agent until the engine has built it, and a one-turn switch needs one: it answers that it is
-         "a live session" that is missing (or still starting); try again for a while rather than failing the first message */
+         "a live session" that is missing (code 5001) or says it is still starting (5032). The engine's words are not shown to us (the gateway
+         keeps them for Diagnostics), so the code tells them apart from a refusal of the model itself (4002), which is not tried again */
       let last: unknown = null;
       for (let i = 0; i < 12; i++) {
         try {
@@ -273,7 +274,8 @@ export function createCouncil(deps: CouncilDeps): CouncilHost {
           return choice;
         } catch (e) {
           last = e;
-          if (isUnknownMethod(e) || !/live session|still starting|initiali[sz]ation/i.test(sentence(e))) break;
+          const code = (e as { rpcCode?: number } | null)?.rpcCode;
+          if (isUnknownMethod(e) || (code !== 5001 && code !== 5032)) break;
           await wait(500);
         }
       }

@@ -30,6 +30,7 @@ const OPEN = new WeakMap<HTMLElement, Set<number>>();
 /** the progress line: where the council has got to, in words */
 export function councilStatus(c: CouncilTurn): string {
   const answered = c.members.filter((m) => m.state === 'answered').length;
+  if (c.phase !== 'members' && !c.members.length) return 'The members\' answers were not reported, so only the combined answer is shown.';
   if (c.phase === 'members') return c.total ? 'Asking ' + plural(c.total, 'member', 'members') + ': ' + c.done + ' of ' + c.total + ' answered.' : 'Asking the members.';
   if (c.phase === 'combining') return (c.combiner ? nameOf(c.combiner) : 'The combiner') + ' is combining ' + plural(answered, 'answer', 'answers') + '.';
   return (c.combiner ? nameOf(c.combiner) : 'The combiner') + ' combined ' + plural(answered, 'answer', 'answers') + '.';
@@ -61,13 +62,15 @@ function memberRow(host: HTMLElement, c: CouncilTurn, i: number): HTMLElement {
 /** draw (or draw again) a council turn's block into `host`; the answers the reader has opened stay open */
 export function drawCouncil(host: HTMLElement, c: CouncilTurn): HTMLElement {
   host.className = 'ss-council'; host.setAttribute('role', 'group'); host.setAttribute('aria-label', 'Council');
-  const status = el('p', { class: 'ss-council__status', role: 'status', 'aria-live': 'polite', text: councilStatus(c) });
+  const byline = !!c.combiner && c.phase !== 'members' && c.members.length > 0;
+  const status = el('p', { class: 'ss-council__status', role: 'status', 'aria-live': 'polite', text: byline ? '' : councilStatus(c) });
   host.replaceChildren(
     el('p', { class: 'ss-council__note', text: TOOLS_NOTE + ' ' + COST_NOTE }),
     ...c.members.map((_, i) => memberRow(host, c, i)),
     status
   );
-  if (c.combiner && c.phase !== 'members') status.prepend(modelEl(c.combiner), ' ');
+  /* the combiner's byline: its mark and name, then what it did (the name is not written twice) */
+  if (byline && c.combiner) status.append(modelEl(c.combiner), ' ' + councilStatus(c).slice(nameOf(c.combiner).length + 1));
   host.toggleAttribute('data-done', c.phase === 'done');
   return host;
 }
@@ -87,8 +90,8 @@ export function councilFormNode(form: CouncilForm, submit: (c: CouncilChoice) =>
   let combiner = valueOf(form.choice.combiner);
 
   const lead = el('p', { class: 'ss-cf__lead', text: 'Your next message goes to several models, each answering on its own. One then combines their answers.' });
-  const mList = el('div', { class: 'ss-cf__list ' + ui.scrollClass({ axis: 'y' }), role: 'group', 'aria-label': 'Members' });
-  const cList = el('div', { class: 'ss-cf__list ' + ui.scrollClass({ axis: 'y' }), role: 'group', 'aria-label': 'Combiner' });
+  const mList = el('div', { class: 'ss-cf__list ' + ui.scrollClass({ axis: 'y' }), role: 'menu', 'aria-label': 'Members' });
+  const cList = el('div', { class: 'ss-cf__list ' + ui.scrollClass({ axis: 'y' }), role: 'menu', 'aria-label': 'Combiner' });
   const items = (list: Item[], role: 'menuitemcheckbox' | 'menuitemradio'): string => ui.html.menuItems(list.map((i) => ({ label: i.label, model: i.model, modelColor: 'mono' as const, value: i.value, desc: i.desc, checked: i.checked, role })));
   const err = el('p', { class: 'ss-cf__err', role: 'alert', 'data-tone': 'attention' });
   const go = ui.button({ label: 'Ask the council', variant: 'primary' });
@@ -103,6 +106,7 @@ export function councilFormNode(form: CouncilForm, submit: (c: CouncilChoice) =>
   };
   mList.innerHTML = items(listOf(options, (c) => members.has(c.value)), 'menuitemcheckbox');
   cList.innerHTML = items(listOf(options, (c) => c.value === combiner), 'menuitemradio');
+  for (const b of [...mList.querySelectorAll<HTMLElement>('.ui-menu__item'), ...cList.querySelectorAll<HTMLElement>('.ui-menu__item')]) b.tabIndex = 0;   /* in a form each row is a tab stop (the menu's arrow keys belong to the layer's menu) */
   mList.addEventListener('click', (e) => {
     const b = (e.target as Element).closest<HTMLElement>('.ui-menu__item'); if (!b) return;
     const v = b.dataset['value'] ?? ''; if (members.has(v)) members.delete(v); else members.add(v);

@@ -21,7 +21,7 @@ export const HTML_ONLY_EXCUSED: Readonly<Record<string, string>> = {
 export const SURFACES: readonly string[] = [
   'dock', 'composer', 'sidebar', 'title-bar', 'palette', 'menus', 'popover', 'toasts', 'details-panel', 'keys-sheet',
   'settings', 'settings-general', 'settings-models', 'settings-connectors', 'settings-appearance', 'settings-keys', 'first-run',
-  'bots-roster', 'bots-room', 'bots-sheet', 'bots-new', 'bots-group', 'bots-new-group'
+  'council', 'bots-roster', 'bots-room', 'bots-sheet', 'bots-new', 'bots-group', 'bots-new-group'
 ];
 /** where a mod draws (docs/MODS.md section 3) */
 export const MOD_SURFACES: readonly string[] = ['band', 'status', 'pane', 'toast', 'theme-card', 'placed-row', 'log'];
