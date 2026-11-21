@@ -95,6 +95,15 @@ function lrow(mark: string, title: string, sub: string, state: string, control: 
   return `<div class="fr-lrow" data-sq data-state="${state}"><span class="fr-lrow__mark" aria-hidden="true">${mark}</span><span class="fr-lrow__t"><b>${esc(title)}</b><span>${esc(sub)}</span></span>${control}</div>`;
 }
 
+/** the names the "More providers" tile gives: labs not already on the wall first (a lab's regional key, such as Kimi's for
+    China, carries the lab's name, so naming it again would repeat a tile that is right there), then the regional ways by their own names */
+export function moreNames(tail: Row[], shown: Row[]): string {
+  const onWall = new Set(shown.map((r) => r.entry.id));
+  const fresh = tail.filter((r) => !onWall.has(r.entry.id)).map((r) => r.entry.label);
+  const names = (fresh.length ? fresh : tail.map((r) => r.way.label)).filter((v, i, a) => a.indexOf(v) === i);
+  return names.slice(0, 3).join(', ');
+}
+
 /** the hub's list for a plan */
 export function hubHtml(p: Plan, canSignin: (w: Way) => boolean, tailOpen: boolean): string {
   const rows = [...p.main, ...p.more].flatMap((b) => b.rows);
@@ -106,7 +115,7 @@ export function hubHtml(p: Plan, canSignin: (w: Way) => boolean, tailOpen: boole
   out.push(`<section aria-labelledby="fr-h-accounts"><div class="fr-sec"><h2 class="fr-sec__h" id="fr-h-accounts">Sign in with your plan</h2><span class="fr-sec__n">${String(accounts.filter(connected).length)} of ${String(accounts.length)} connected</span></div>` +
     `<div class="fr-plates">${accounts.map((r) => plateHtml(r, canSignin)).join('')}</div></section>`);
   const more = tail.length
-    ? `<div class="fr-tilewrap"><button type="button" class="fr-tile fr-tile--more" data-sq id="hx-prov-more" aria-expanded="${String(tailOpen)}" aria-controls="hx-prov-tail"><span class="fr-tile__top"><span class="fr-tile__mark" aria-hidden="true">${ui.html.icon('ladder')}</span><span class="fr-st"><span>${String(tail.length)} more</span></span></span><span class="fr-tile__name">More providers</span><span class="fr-tile__sub">${esc(tail.slice(0, 3).map((r) => r.entry.label).filter((v, i, a) => a.indexOf(v) === i).join(', '))} and more</span></button></div>`
+    ? `<div class="fr-tilewrap"><button type="button" class="fr-tile fr-tile--more" data-sq id="hx-prov-more" aria-expanded="${String(tailOpen)}" aria-controls="hx-prov-tail"><span class="fr-tile__top"><span class="fr-tile__mark" aria-hidden="true">${ui.html.icon('ladder')}</span><span class="fr-st"><span>${String(tail.length)} more</span></span></span><span class="fr-tile__name">More providers</span><span class="fr-tile__sub">${esc(moreNames(tail, keys))} and more</span></button></div>`
     : '';
   out.push(`<section aria-labelledby="fr-h-keys"><div class="fr-sec"><h2 class="fr-sec__h" id="fr-h-keys">Or add an API key</h2><span class="fr-sec__n">${String(keys.filter(connected).length)} of ${String(keys.length)} connected</span></div>` +
     `<div class="fr-tiles">${tilesOf(keys)}${more}</div><div id="hx-prov-tail"${tailOpen ? '' : ' hidden'}><div class="fr-tiles fr-tiles--tail">${tilesOf(tail)}</div></div></section>`);
