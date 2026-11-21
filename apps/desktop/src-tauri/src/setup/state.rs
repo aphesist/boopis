@@ -54,9 +54,44 @@ pub struct State {
     /// The saved ladder was checked for frontier models once (ADR-0037): one that setup wrote with tiers governed mode will not
     /// use is rewritten, and a hand-written one is only reported. Added without a version bump, like `route_checked`.
     pub frontier_checked: bool,
-    /// The user opted in to climbing to Fable on the Claude subscription (Settings > Models): Fable bills usage credits from the
-    /// first request on a Pro plan, so the ladder setup writes is Opus alone until this is set (ADR-0037).
+    /// The heavy models the user turned on in Settings > Models (`fable`, `grok`; ADR-0037). A heavy model is token-heavy or costly
+    /// (Fable bills usage credits from the first request on a Claude Pro plan), so no ladder setup writes has one until its id is
+    /// here, and setup run again keeps it. Added without a version bump: a file from before has none.
+    pub heavy: Vec<String>,
+    /// What the Fable opt-in was called before it covered every heavy model: read once into `heavy`, never written again.
     pub subscription_fable: bool,
+    /// The saved ladder was checked once for what ADR-0037 says about heavy models and the Sol, Neon and Hydrogen ladders (the
+    /// 0.1.6 candidate's opus-and-fable, astra-only and carbon-only ladders are rewritten if setup wrote them). Added without a
+    /// version bump, like `frontier_checked`.
+    pub ladders_checked: bool,
+}
+
+/// The heavy models the user opted in to (ADR-0037).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Optins {
+    /// Claude Fable on a Claude ladder (the subscription or an Anthropic key).
+    pub fable: bool,
+    /// Grok on an xAI key.
+    pub grok: bool,
+}
+
+impl State {
+    /// The heavy opt-ins as the ladders read them.
+    #[must_use]
+    pub fn optins(&self) -> Optins {
+        Optins {
+            fable: self.heavy.iter().any(|h| h == "fable"),
+            grok: self.heavy.iter().any(|h| h == "grok"),
+        }
+    }
+
+    /// Turn one heavy model's opt-in on or off.
+    pub fn set_heavy(&mut self, id: &str, on: bool) {
+        self.heavy.retain(|h| h != id);
+        if on {
+            self.heavy.push(id.to_owned());
+        }
+    }
 }
 
 /// Where the file lives.
@@ -98,10 +133,14 @@ pub fn load(home: &Path) -> Result<State> {
             ),
         ));
     }
-    Ok(State {
+    let mut state = State {
         schema_version: VERSION,
         ..state
-    })
+    };
+    if std::mem::take(&mut state.subscription_fable) {
+        state.set_heavy("fable", true);
+    }
+    Ok(state)
 }
 
 /// Whether the user chose Nous's free tier and it is still the choice: the host then declares its gateway link the Desktop

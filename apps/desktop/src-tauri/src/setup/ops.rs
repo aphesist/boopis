@@ -37,6 +37,8 @@ pub trait HermesOps: Send + Sync {
     async fn config_get(&self, key: &str) -> Result<Option<Value>>;
     /// Set a configuration value (`hermes config set`). `value` is text; JSON objects and booleans are coerced by Hermes.
     async fn config_set(&self, key: &str, value: &str) -> Result<()>;
+    /// Remove a configuration value (`hermes config unset`), so the key reads as unset again.
+    async fn config_unset(&self, key: &str) -> Result<()>;
     /// Every plugin Hermes knows.
     async fn plugins(&self) -> Result<Vec<PluginEntry>>;
     /// Enable a plugin (`hermes plugins enable`).
@@ -126,6 +128,17 @@ impl HermesOps for CliOps {
         if out.code != 0 {
             return Err(Error::Config(format!(
                 "hermes refused {key}: {}",
+                tail(&out.stderr).trim().to_owned() + &tail(&out.stdout)
+            )));
+        }
+        Ok(())
+    }
+
+    async fn config_unset(&self, key: &str) -> Result<()> {
+        let out = self.run(&["config", "unset", key]).await?;
+        if out.code != 0 {
+            return Err(Error::Config(format!(
+                "hermes refused to unset {key}: {}",
                 tail(&out.stderr).trim().to_owned() + &tail(&out.stdout)
             )));
         }

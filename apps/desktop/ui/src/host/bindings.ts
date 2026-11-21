@@ -31,8 +31,11 @@ export const commands = {
 	 *  the UI asks itself (`free_tier.status`).
 	 */
 	setupModelsView: (profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<ModelsView_Serialize>("setup_models_view", { profile }, options),
-	/**  Opt in to Fable on the Claude subscription ladder, or out (Settings > Models). Returns the models view as it is after. */
-	setupSetSubscriptionFable: (on: boolean, profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<ModelsView_Serialize>("setup_set_subscription_fable", { on, profile }, options),
+	/**
+	 *  Turn a heavy model (`fable`, `grok`) on or off for the saved ladder (Settings > Models): on adds it as the top tier, off takes
+	 *  it away, and the choice is remembered. Returns the models view as it is after.
+	 */
+	setupSetHeavy: (id: string, on: boolean, profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<ModelsView_Serialize>("setup_set_heavy", { id, on, profile }, options),
 	/**
 	 *  Which engine this run uses (the bundled one or the machine's), so the first-run screen says what setup is about to
 	 *  do. Read-only: the choice is `boopis --engine existing` or `BOOPIS_HERMES`, never a setting (ADR-0031).
@@ -754,16 +757,6 @@ export type EngineView = {
 	carries_runtime: boolean,
 };
 
-/**  The Fable opt-in on the Claude subscription ladder (Settings > Models). */
-export type FableChoice = {
-	/**  The saved ladder is the Claude subscription's, so the choice means something. */
-	applies: boolean,
-	/**  Fable is on the saved ladder now. */
-	on: boolean,
-	/**  The user's Claude Code serves Fable (it needs 2.1.321). */
-	served: boolean,
-};
-
 /**  A file being dragged over the window, or dropped on it. */
 export type FileDragEvent = FileDragEvent_Serialize | FileDragEvent_Deserialize;
 
@@ -958,13 +951,15 @@ export type GovernedView = GovernedView_Serialize | GovernedView_Deserialize;
 export type GovernedView_Deserialize = {
 	/**  The allowed models, one per family (`Claude Opus 5.5`); each also qualifies in any later version. */
 	allowed: string[],
+	/**  The heavy ones among them, which no automatic ladder includes: they run only when the user asked for them. */
+	heavy: string[],
 	/**  The allowed models as one sentence. */
 	sentence: string,
 	/**  The saved ladder's tiers, each marked; empty unless the ladder is saved. */
 	tiers: TierCheck[],
 	/**
 	 *  Whether governed mode can run: every saved tier is frontier, or no ladder is saved and an Anthropic key is in place
-	 *  (the plugin's own ladder is Opus then Fable).
+	 *  (the plugin's own ladder is Opus alone).
 	 */
 	available: boolean,
 	/**  Why not, in one plain sentence; `None` when it can. */
@@ -975,13 +970,15 @@ export type GovernedView_Deserialize = {
 export type GovernedView_Serialize = {
 	/**  The allowed models, one per family (`Claude Opus 5.5`); each also qualifies in any later version. */
 	allowed: string[],
+	/**  The heavy ones among them, which no automatic ladder includes: they run only when the user asked for them. */
+	heavy: string[],
 	/**  The allowed models as one sentence. */
 	sentence: string,
 	/**  The saved ladder's tiers, each marked; empty unless the ladder is saved. */
 	tiers: TierCheck[],
 	/**
 	 *  Whether governed mode can run: every saved tier is frontier, or no ladder is saved and an Anthropic key is in place
-	 *  (the plugin's own ladder is Opus then Fable).
+	 *  (the plugin's own ladder is Opus alone).
 	 */
 	available: boolean,
 	/**  Why not, in one plain sentence; `None` when it can. */
@@ -1143,6 +1140,53 @@ export type Gpu_Serialize = {
 	boot_display: boolean,
 };
 
+/**
+ *  One heavy model's opt-in (Settings > Models, the governed section): a model that is frontier but token-heavy or costly, so
+ *  governed mode runs it only when the user turned it on (ADR-0037). The data file marks the family heavy; this is what the user
+ *  can do about it.
+ */
+export type HeavyChoice = HeavyChoice_Serialize | HeavyChoice_Deserialize;
+
+/**
+ *  One heavy model's opt-in (Settings > Models, the governed section): a model that is frontier but token-heavy or costly, so
+ *  governed mode runs it only when the user turned it on (ADR-0037). The data file marks the family heavy; this is what the user
+ *  can do about it.
+ */
+export type HeavyChoice_Deserialize = {
+	/**  `fable` or `grok`: what `setup_set_heavy` takes. */
+	id: string,
+	/**  The switch's label: `Climb to Fable`. */
+	label: string,
+	/**  Why it is off by default, in the user's terms. */
+	reason: string,
+	/**  The saved ladder is one this model can join, so the choice means something. */
+	applies: boolean,
+	/**  The model is on the saved ladder now. */
+	on: boolean,
+	/**  Why it cannot be turned on right now (an old Claude Code), or `None`. */
+	blocked?: string | null,
+};
+
+/**
+ *  One heavy model's opt-in (Settings > Models, the governed section): a model that is frontier but token-heavy or costly, so
+ *  governed mode runs it only when the user turned it on (ADR-0037). The data file marks the family heavy; this is what the user
+ *  can do about it.
+ */
+export type HeavyChoice_Serialize = {
+	/**  `fable` or `grok`: what `setup_set_heavy` takes. */
+	id: string,
+	/**  The switch's label: `Climb to Fable`. */
+	label: string,
+	/**  Why it is off by default, in the user's terms. */
+	reason: string,
+	/**  The saved ladder is one this model can join, so the choice means something. */
+	applies: boolean,
+	/**  The model is on the saved ladder now. */
+	on: boolean,
+	/**  Why it cannot be turned on right now (an old Claude Code), or `None`. */
+	blocked: string | null,
+};
+
 /**  The `hermes_status` answer (`docs/PROTOCOL.md` section 1). */
 export type HermesStatus = HermesStatus_Serialize | HermesStatus_Deserialize;
 
@@ -1242,8 +1286,11 @@ export type ModelsView_Deserialize = {
 	gemini_key: boolean,
 	/**  Whether governed mode can run on what is saved, and which models it allows (ADR-0037). */
 	governed: GovernedView_Deserialize,
-	/**  The Fable opt-in on the Claude subscription ladder: whether it applies, is on, and whether Claude Code serves Fable. */
-	fable: FableChoice,
+	/**
+	 *  The heavy models' opt-ins (Claude Fable, Grok): each with whether it applies to the saved ladder, is on, and can be turned
+	 *  on. Off by default: no ladder setup writes has a heavy model until the user turns it on (ADR-0037).
+	 */
+	heavy: HeavyChoice_Deserialize[],
 };
 
 /**  What Settings > Models shows of the configuration (read-only). */
@@ -1265,8 +1312,11 @@ export type ModelsView_Serialize = {
 	gemini_key: boolean,
 	/**  Whether governed mode can run on what is saved, and which models it allows (ADR-0037). */
 	governed: GovernedView_Serialize,
-	/**  The Fable opt-in on the Claude subscription ladder: whether it applies, is on, and whether Claude Code serves Fable. */
-	fable: FableChoice,
+	/**
+	 *  The heavy models' opt-ins (Claude Fable, Grok): each with whether it applies to the saved ladder, is on, and can be turned
+	 *  on. Off by default: no ladder setup writes has a heavy model until the user turns it on (ADR-0037).
+	 */
+	heavy: HeavyChoice_Serialize[],
 };
 
 /**
@@ -1701,6 +1751,8 @@ export type TierCheck = {
 	model: string,
 	/**  Whether it is a frontier model. */
 	frontier: boolean,
+	/**  Whether it is a heavy one (Claude Fable, Grok 4.7 and later): on the ladder because the user put it there. */
+	heavy: boolean,
 };
 
 /**  Where the loaded `libwebkit2gtk` lives. */

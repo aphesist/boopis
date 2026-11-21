@@ -15,10 +15,14 @@ type Version = Vec<u32>;
 
 #[derive(Debug, Deserialize)]
 struct FamilyRow {
+    id: String,
     name: String,
     prefix: Vec<String>,
     suffix: Vec<String>,
     min: String,
+    /// Frontier but token-heavy or costly: never on a ladder setup writes or the plugin defaults to, never an automatic pick.
+    #[serde(default)]
+    heavy: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -112,8 +116,10 @@ fn resolve_alias(provider: &str, model: &str) -> String {
 
 /// A model recognised as a family: its readable name, whether it is at or above the family's floor, and the floor.
 struct Found {
+    family: String,
     called: String,
     frontier: bool,
+    heavy: bool,
     floor: String,
 }
 
@@ -137,6 +143,8 @@ fn find(provider: &str, model: &str) -> Option<Found> {
         if tail_ignorable(&tokens[end..]) {
             let floor = parse_version(&f.min);
             return Some(Found {
+                family: f.id.clone(),
+                heavy: f.heavy,
                 called: f.name.replace("{v}", &show(&parts)),
                 frontier: at_least(&parts, &floor),
                 floor: show(&floor),
@@ -152,6 +160,29 @@ pub fn is_frontier(provider: &str, model: &str) -> bool {
     find(provider, model).is_some_and(|f| f.frontier)
 }
 
+/// Whether `provider`/`model` is a frontier model of a heavy family (Claude Fable, Grok 4.7 and later): governed mode may run
+/// it, but only when the user asked for it. Nothing that picks a model by itself may pick one.
+#[must_use]
+pub fn is_heavy(provider: &str, model: &str) -> bool {
+    find(provider, model).is_some_and(|f| f.frontier && f.heavy)
+}
+
+/// The id of the family `provider`/`model` is in (`gpt-sol`), whether or not it is at its floor; `None` in no family.
+#[must_use]
+pub fn family_of(provider: &str, model: &str) -> Option<String> {
+    find(provider, model).map(|f| f.family)
+}
+
+/// The heavy families' names for people, as `allowed` gives them: `Claude Fable 5.2`.
+#[must_use]
+pub fn heavy_families() -> Vec<String> {
+    FILE.families
+        .iter()
+        .filter(|f| f.heavy)
+        .map(|f| f.name.replace("{v}", &f.min))
+        .collect()
+}
+
 /// The allowed models for people, one per family: `Claude Opus 5.5`.
 #[must_use]
 pub fn allowed() -> Vec<String> {
@@ -161,7 +192,7 @@ pub fn allowed() -> Vec<String> {
         .collect()
 }
 
-/// `Claude Opus 5.5 or later, ... and Gemini 4 Carbon or later`.
+/// `Claude Opus 5.5 or later, ... and Grok 4.7 or later`.
 #[must_use]
 pub fn allowed_sentence() -> String {
     let names: Vec<String> = allowed()
@@ -214,6 +245,11 @@ mod tests {
                 e["frontier"].as_bool().unwrap(),
                 "{p}/{m}"
             );
+            assert_eq!(
+                is_heavy(p, m),
+                e["heavy"].as_bool().unwrap_or(false),
+                "heavy: {p}/{m}"
+            );
         }
     }
 
@@ -224,6 +260,10 @@ mod tests {
             ("claude-fable-{}", "5-1", "5-2"),
             ("gpt-{}-astra", "6-1", "6-2"),
             ("gemini-{}-carbon", "3", "4"),
+            ("gpt-{}-sol", "6-1", "6-2"),
+            ("gemini-{}-neon", "3", "4"),
+            ("gemini-{}-hydrogen", "3", "4"),
+            ("grok-{}", "4-6", "4-7"),
         ] {
             assert!(!is_frontier("p", &family.replace("{}", below)), "{family}");
             assert!(is_frontier("p", &family.replace("{}", at)), "{family}");
@@ -234,22 +274,65 @@ mod tests {
                 "Claude Opus 5.5",
                 "Claude Fable 5.2",
                 "GPT-6.2 Astra",
-                "Gemini 4 Carbon"
+                "GPT-6.2 Sol",
+                "Gemini 4 Carbon",
+                "Gemini 4 Neon",
+                "Gemini 4 Hydrogen",
+                "Grok 4.7"
             ]
         );
-        assert!(allowed_sentence().ends_with("and Gemini 4 Carbon or later"));
+        assert!(allowed_sentence().ends_with("and Grok 4.7 or later"));
+        assert_eq!(heavy_families(), ["Claude Fable 5.2", "Grok 4.7"]);
         assert_eq!(
             why_not("anthropic", "claude-opus-5-4"),
             "it is Claude Opus 5.4, and the lowest version allowed is 5.5"
         );
         assert_eq!(
-            why_not("xai", "grok-4.7"),
+            why_not("xai", "grok-4.6"),
+            "it is Grok 4.6, and the lowest version allowed is 4.7"
+        );
+        assert_eq!(
+            why_not("xai", "grok-code-fast-1"),
             "it is not in a family on that list"
         );
         assert_eq!(
             split("openai-codex/gpt-6.2-astra"),
             ("openai-codex", "gpt-6.2-astra")
         );
+    }
+
+    #[test]
+    fn sol_astra_and_luna_do_not_clash_and_neither_do_the_gemini_families() {
+        let fam = |m: &str| family_of("p", m);
+        assert_eq!(fam("gpt-6.2-sol").as_deref(), Some("gpt-sol"));
+        assert_eq!(fam("gpt-6.2-astra").as_deref(), Some("gpt-astra"));
+        assert_eq!(fam("gpt-6.2-luna"), None);
+        assert_eq!(fam("gemini-4-neon").as_deref(), Some("gemini-neon"));
+        assert_eq!(fam("gemini-4-hydrogen").as_deref(), Some("gemini-hydrogen"));
+        assert_eq!(fam("gemini-4-carbon").as_deref(), Some("gemini-carbon"));
+        assert!(!is_frontier("p", "gpt-6.2-sol-astra"));
+    }
+
+    #[test]
+    fn only_a_frontier_model_of_a_heavy_family_is_heavy() {
+        for (p, m) in [
+            ("anthropic", "claude-fable-5-2"),
+            ("claude-subscription-directsdk-experimental", "fable"),
+            ("xai", "grok-4.7"),
+            ("xai", "grok-5"),
+        ] {
+            assert!(is_heavy(p, m), "{p}/{m}");
+        }
+        for (p, m) in [
+            ("anthropic", "claude-opus-5-5"),
+            ("openai-codex", "gpt-6.2-sol"),
+            ("gemini", "gemini-4-neon"),
+            ("anthropic", "claude-fable-5-1"),
+            ("xai", "grok-4.6"),
+            ("anthropic", ""),
+        ] {
+            assert!(!is_heavy(p, m), "{p}/{m}");
+        }
     }
 
     #[test]

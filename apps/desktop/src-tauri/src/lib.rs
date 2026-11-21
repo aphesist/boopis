@@ -54,7 +54,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::setup_advance,
             commands::setup_reopen_models,
             commands::setup_models_view,
-            commands::setup_set_subscription_fable,
+            commands::setup_set_heavy,
             commands::engine_source_get,
             commands::gateway_connect,
             commands::gateway_send,

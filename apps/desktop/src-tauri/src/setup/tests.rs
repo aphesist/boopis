@@ -36,6 +36,10 @@ struct Fake {
     claude_aliases: Mutex<Vec<&'static str>>,
     /// The models the signed-in ChatGPT account's own catalogue lists (`model.options`, `openai-codex`).
     chatgpt_models: Mutex<Vec<String>>,
+    /// The engine's Gemini catalogue (`model.options`, `gemini`).
+    gemini_models: Mutex<Vec<String>>,
+    /// The xAI catalogue (`model.options`, `xai`).
+    xai_models: Mutex<Vec<String>>,
 }
 
 /// A scripted Claude Code: what the look finds, and how many looks there were.
@@ -122,6 +126,18 @@ impl Fake {
             catalogue: Mutex::new(Vec::new()),
             claude_aliases: Mutex::new(vec!["sonnet", "haiku", "opus", "fable"]),
             chatgpt_models: Mutex::new(vec!["gpt-6-luna".into(), "gpt-6-sol".into()]),
+            // the engine's own static list: Hydrogen and Carbon are there, Neon is not
+            gemini_models: Mutex::new(
+                [
+                    "gemini-3.8-flash",
+                    "gemini-4-hydrogen",
+                    "gemini-4-carbon",
+                    "gemini-4-argon",
+                ]
+                .map(Into::into)
+                .to_vec(),
+            ),
+            xai_models: Mutex::new(["grok-4.6", "grok-4.7"].map(Into::into).to_vec()),
         })
     }
 }
@@ -165,6 +181,22 @@ impl HermesOps for Fake {
         at[parts[parts.len() - 1]] = parsed;
         Ok(())
     }
+    async fn config_unset(&self, key: &str) -> Result<()> {
+        self.sets.lock().unwrap().push(format!("unset {key}"));
+        let mut cfg = self.config.lock().unwrap();
+        let mut at = &mut *cfg;
+        let parts: Vec<&str> = key.split('.').collect();
+        for part in &parts[..parts.len() - 1] {
+            match at.get_mut(*part) {
+                Some(v) => at = v,
+                None => return Ok(()),
+            }
+        }
+        if let Some(o) = at.as_object_mut() {
+            o.remove(parts[parts.len() - 1]);
+        }
+        Ok(())
+    }
     async fn plugins(&self) -> Result<Vec<PluginEntry>> {
         Ok(self.plugins.lock().unwrap().clone())
     }
@@ -206,8 +238,12 @@ impl HermesOps for Fake {
         Ok(self.catalogue.lock().unwrap().clone())
     }
     async fn provider_models(&self, provider: &str) -> Result<Vec<String>> {
-        assert_eq!(provider, "openai-codex");
-        Ok(self.chatgpt_models.lock().unwrap().clone())
+        Ok(match provider {
+            "openai-codex" => self.chatgpt_models.lock().unwrap().clone(),
+            "gemini" => self.gemini_models.lock().unwrap().clone(),
+            "xai" => self.xai_models.lock().unwrap().clone(),
+            other => panic!("setup asked the catalogue of {other}"),
+        })
     }
 }
 
@@ -2024,7 +2060,8 @@ async fn chatgpt_asks_for_the_sign_in_then_writes_the_astra_ladder_from_the_acco
 }
 
 #[tokio::test]
-async fn gemini_asks_for_a_key_with_the_link_keeps_it_in_the_keychain_and_writes_gemini_4_carbon() {
+async fn gemini_asks_for_a_key_with_the_link_keeps_it_in_the_keychain_and_writes_the_ladder_from_its_catalogue()
+ {
     let r = rig(json!({}));
     at_models(&r).await;
     let s = choose(&r, "gemini").await;
@@ -2088,7 +2125,8 @@ async fn gemini_asks_for_a_key_with_the_link_keeps_it_in_the_keychain_and_writes
     );
     assert_eq!(
         r.fake.config_get(LADDER).await.unwrap().unwrap(),
-        json!({"tiers": [{"name": "carbon", "model": "gemini/gemini-4-carbon"}]})
+        json!({"tiers": [{"name": "hydrogen", "model": "gemini/gemini-4-hydrogen"}]}),
+        "the catalogue lists Hydrogen and Carbon, not Neon: Hydrogen alone, and never Carbon"
     );
     // the key is never in the configuration or the receipt
     let cfg = r.fake.config.lock().unwrap().to_string();
@@ -2104,7 +2142,7 @@ async fn a_gemini_key_already_in_the_profile_is_used_without_asking() {
     at_models(&r).await;
     let s = choose(&r, "gemini").await;
     assert!(s.done && s.form.is_none(), "{:?}", s.steps);
-    assert_eq!(ladder_names(&r).await, ["carbon"]);
+    assert_eq!(ladder_names(&r).await, ["hydrogen"]);
     assert!(
         r.fake
             .config_get("secrets.boopis_host.env.GOOGLE_API_KEY")
@@ -2182,8 +2220,9 @@ fn the_windows_gaps_are_named_with_what_still_works() {
 }
 
 #[tokio::test]
-async fn a_chatgpt_plan_with_no_astra_writes_no_ladder_and_says_governed_mode_is_unavailable() {
-    // the account's catalogue lists luna and sol and a GPT-6 Astra below the 6.2 floor: no frontier model
+async fn a_chatgpt_plan_with_no_sol_or_astra_writes_no_ladder_and_says_governed_mode_is_unavailable()
+ {
+    // the account's catalogue lists luna and a GPT-6 Sol and Astra below the 6.2 floor: no frontier model
     let r = rig(json!({}));
     at_models(&r).await;
     choose(&r, "chatgpt-subscription").await;
@@ -2202,8 +2241,9 @@ async fn a_chatgpt_plan_with_no_astra_writes_no_ladder_and_says_governed_mode_is
     assert!(r.fake.config_get(LADDER).await.unwrap().is_none());
     let receipt = s.receipt.unwrap().lines.join("\n");
     assert!(
-        receipt.contains("lists no frontier model, so governed mode is unavailable")
-            && receipt.contains("GPT-6.2 Astra or later"),
+        receipt.contains(
+            "lists no GPT Sol or GPT Astra of 6.2 or later, so governed mode is unavailable"
+        ) && receipt.contains("GPT-6.2 Astra or later"),
         "{receipt}"
     );
 }
@@ -2241,7 +2281,9 @@ async fn a_ladder_setup_wrote_with_cheap_tiers_is_rewritten_once_to_the_frontier
     finished_with(&r, &legacy_claude()).await;
     let c = r.setup().check().await.unwrap();
     assert!(
-        c.needed && c.reason == "governed mode runs only on frontier models",
+        c.needed
+            && c.reason
+                .starts_with("governed mode runs only on frontier models"),
         "{}",
         c.reason
     );
@@ -2260,7 +2302,8 @@ async fn a_ladder_setup_wrote_with_cheap_tiers_is_rewritten_once_to_the_frontier
     assert!(receipt.contains("the tier ladder is now"), "{receipt}");
     // recorded: later starts ask for nothing
     assert!(!r.setup().check().await.unwrap().needed);
-    assert!(super::state::load(&r.fake.home).unwrap().frontier_checked);
+    let st = super::state::load(&r.fake.home).unwrap();
+    assert!(st.frontier_checked && st.ladders_checked);
 }
 
 #[tokio::test]
@@ -2276,7 +2319,11 @@ async fn the_chatgpt_and_gemini_ladders_of_an_earlier_setup_are_rewritten_too() 
     .await;
     assert!(r.setup().check().await.unwrap().needed);
     assert!(r.setup().advance(None, false).await.unwrap().done);
-    assert_eq!(ladder_names(&r).await, ["astra"]);
+    assert_eq!(
+        ladder_names(&r).await,
+        ["astra"],
+        "the catalogue lists no 6.2 Sol"
+    );
 
     let r = rig(main_provider());
     finished_with(
@@ -2289,7 +2336,7 @@ async fn the_chatgpt_and_gemini_ladders_of_an_earlier_setup_are_rewritten_too() 
     assert!(r.setup().advance(None, false).await.unwrap().done);
     assert_eq!(
         r.fake.config_get(LADDER).await.unwrap().unwrap(),
-        json!({"tiers": [{"name": "carbon", "model": "gemini/gemini-4-carbon"}]})
+        json!({"tiers": [{"name": "hydrogen", "model": "gemini/gemini-4-hydrogen"}]})
     );
 }
 
@@ -2325,6 +2372,7 @@ async fn a_ladder_the_user_wrote_by_hand_is_never_rewritten_only_reported() {
     // but if it does run, the ladder is as the user left it
     let mut st = super::state::load(&r.fake.home).unwrap();
     st.frontier_checked = false;
+    st.ladders_checked = false;
     super::state::save(&r.fake.home, &st).unwrap();
     let s = r.setup().advance(None, false).await.unwrap();
     assert!(s.done);
@@ -2377,7 +2425,7 @@ async fn fable_joins_the_subscription_ladder_only_when_the_user_opted_in_and_cla
     r.fake.bundled_claude();
     r.claude.signed_in("2.1.328 (Claude Code)");
     let mut st = super::state::load(&r.fake.home).unwrap();
-    st.subscription_fable = true;
+    st.set_heavy("fable", true);
     super::state::save(&r.fake.home, &st).unwrap();
     assert!(choose_subscription(&r).await.done);
     assert_eq!(ladder_names(&r).await, ["opus", "fable"]);
@@ -2387,50 +2435,524 @@ async fn fable_joins_the_subscription_ladder_only_when_the_user_opted_in_and_cla
     r.fake.bundled_claude();
     r.claude.signed_in("2.1.320 (Claude Code)");
     let mut st = super::state::load(&r.fake.home).unwrap();
-    st.subscription_fable = true;
+    st.set_heavy("fable", true);
     super::state::save(&r.fake.home, &st).unwrap();
     assert!(choose_subscription(&r).await.done);
     assert_eq!(ladder_names(&r).await, ["opus"]);
 }
 
+/// "Change models": the question is asked again and the user picks `choice`.
+async fn choose_again(r: &Rig, choice: &str) -> super::Status {
+    r.setup().reopen_models().unwrap();
+    let s = r.setup().advance(None, false).await.unwrap();
+    assert_eq!(s.form.as_ref().unwrap().form_id, "setup.ladder");
+    choose(r, choice).await
+}
+
+fn heavy_of(v: &super::ModelsView, id: &str) -> (bool, bool, bool) {
+    let c = v.heavy.iter().find(|c| c.id == id).unwrap();
+    (c.applies, c.on, c.blocked.is_none())
+}
+
 #[tokio::test]
-async fn the_models_tab_opts_in_to_fable_and_out_again_and_the_choice_is_remembered() {
+async fn the_models_tab_turns_fable_on_and_off_on_the_subscription_and_setup_run_again_keeps_the_choice()
+ {
     let r = rig(json!({}));
     r.fake.bundled_claude();
     r.claude.signed_in("2.1.328 (Claude Code)");
     assert!(choose_subscription(&r).await.done);
     let v = r.setup().models_view().await.unwrap();
-    assert_eq!(
-        (v.fable.applies, v.fable.on, v.fable.served),
-        (true, false, true)
+    assert_eq!(heavy_of(&v, "fable"), (true, false, true));
+    assert!(!heavy_of(&v, "grok").0, "no xAI key: no Grok choice");
+    assert!(
+        v.heavy[0]
+            .reason
+            .contains("usage credits from the first request")
     );
 
-    let v = r.setup().set_subscription_fable(true).await.unwrap();
-    assert!(v.fable.on);
+    let v = r.setup().set_heavy("fable", true).await.unwrap();
+    assert!(heavy_of(&v, "fable").1);
     assert_eq!(ladder_names(&r).await, ["opus", "fable"]);
-    assert!(super::state::load(&r.fake.home).unwrap().subscription_fable);
+    assert!(v.governed.tiers.iter().any(|t| t.heavy && t.frontier));
+    assert!(super::state::load(&r.fake.home).unwrap().optins().fable);
 
-    let v = r.setup().set_subscription_fable(false).await.unwrap();
-    assert!(!v.fable.on);
+    // setup run again (choosing the subscription once more) keeps it
+    assert!(choose_again(&r, "claude-subscription").await.done);
+    assert_eq!(ladder_names(&r).await, ["opus", "fable"]);
+
+    let v = r.setup().set_heavy("fable", false).await.unwrap();
+    assert!(!heavy_of(&v, "fable").1);
     assert_eq!(ladder_names(&r).await, ["opus"]);
-    assert!(!super::state::load(&r.fake.home).unwrap().subscription_fable);
+    assert!(!super::state::load(&r.fake.home).unwrap().optins().fable);
+    assert!(choose_again(&r, "claude-subscription").await.done);
+    assert_eq!(ladder_names(&r).await, ["opus"]);
 
     // a Claude Code too old to serve it refuses, and writes nothing
     r.claude.signed_in("2.1.300 (Claude Code)");
-    let e = r.setup().set_subscription_fable(true).await.unwrap_err();
+    let v = r.setup().models_view().await.unwrap();
+    assert_eq!(heavy_of(&v, "fable"), (true, false, false));
+    let e = r.setup().set_heavy("fable", true).await.unwrap_err();
     assert!(e.to_string().contains("2.1.321"), "{e}");
     assert_eq!(ladder_names(&r).await, ["opus"]);
+    assert!(!super::state::load(&r.fake.home).unwrap().optins().fable);
 
-    // a ladder that is not the subscription's has no such choice
+    // an id that is not a heavy model is refused
+    assert!(r.setup().set_heavy("opus", true).await.is_err());
+}
+
+#[tokio::test]
+async fn on_an_anthropic_key_the_default_ladder_is_opus_alone_and_fable_is_the_same_opt_in() {
     let r = rig(json!({}));
+    r.store
+        .set("boopis.provider.anthropic", "api_key", KEY)
+        .unwrap();
     r.claude.signed_in("2.1.328 (Claude Code)");
-    r.fake
-        .config_set(
-            LADDER,
-            &json!({"tiers": [{"name": "opus", "model": "anthropic/claude-opus-5-5"}]}).to_string(),
+    let s = r.setup().advance(None, false).await.unwrap();
+    assert_eq!(s.form.as_ref().unwrap().form_id, "setup.config");
+    let s = r
+        .setup()
+        .advance(Some(answer("setup.config", json!({}), json!({}))), false)
+        .await
+        .unwrap();
+    assert!(s.done, "{:?}", s.steps);
+    let receipt = s.receipt.unwrap().lines.join("\n");
+    assert!(
+        receipt.contains("Claude ladder: Opus 5.5 on your Anthropic key")
+            && !receipt.contains("then Fable"),
+        "{receipt}"
+    );
+    assert!(
+        r.fake.config_get(LADDER).await.unwrap().is_none(),
+        "the plugin's own default stands"
+    );
+
+    let v = r.setup().models_view().await.unwrap();
+    assert!(v.governed.available);
+    assert_eq!(heavy_of(&v, "fable"), (true, false, true));
+
+    let v = r.setup().set_heavy("fable", true).await.unwrap();
+    assert!(heavy_of(&v, "fable").1 && v.governed.available);
+    assert_eq!(
+        r.fake.config_get(LADDER).await.unwrap().unwrap(),
+        json!({"tiers": [
+            {"name": "opus", "model": "anthropic/claude-opus-5-5"},
+            {"name": "fable", "model": "anthropic/claude-fable-5-2"}]})
+    );
+    let v = r.setup().set_heavy("fable", false).await.unwrap();
+    assert!(!heavy_of(&v, "fable").1);
+    assert_eq!(ladder_names(&r).await, ["opus"]);
+}
+
+#[test]
+fn the_models_the_host_names_for_an_anthropic_key_are_the_plugins_own_frontier_ones_and_only_fable_is_heavy()
+ {
+    use super::providers::{ANTHROPIC, ANTHROPIC_FABLE, ANTHROPIC_OPUS};
+    // the plugin's default ladder names these through the vendored contraprova: the two must not drift
+    let vendored = include_str!("../../../../../plugins/boopis/_vendor/contraprova/interfaces.py");
+    assert!(vendored.contains(&format!("OPUS = \"{ANTHROPIC_OPUS}\"")));
+    assert!(vendored.contains(&format!("FABLE = \"{ANTHROPIC_FABLE}\"")));
+    assert!(crate::frontier::is_frontier(ANTHROPIC, ANTHROPIC_OPUS));
+    assert!(!crate::frontier::is_heavy(ANTHROPIC, ANTHROPIC_OPUS));
+    assert!(crate::frontier::is_frontier(ANTHROPIC, ANTHROPIC_FABLE));
+    assert!(crate::frontier::is_heavy(ANTHROPIC, ANTHROPIC_FABLE));
+}
+
+// ---- ADR-0037, the added families: every setup ladder, with and without the new models in the provider's list
+
+fn models(list: &[&str]) -> Vec<String> {
+    list.iter().map(|m| (*m).to_owned()).collect()
+}
+
+async fn chatgpt_ladder_for(listed: &[&str]) -> (Option<Value>, String) {
+    let r = rig(json!({}));
+    at_models(&r).await;
+    choose(&r, "chatgpt-subscription").await;
+    sign_in_to_chatgpt(&r);
+    *r.fake.chatgpt_models.lock().unwrap() = models(listed);
+    let s = r
+        .setup()
+        .advance(Some(answer("setup.chatgpt", json!({}), json!({}))), false)
+        .await
+        .unwrap();
+    assert!(s.done && s.form.is_none(), "{:?}", s.steps);
+    (
+        r.fake.config_get(LADDER).await.unwrap(),
+        s.receipt.unwrap().lines.join("\n"),
+    )
+}
+
+#[tokio::test]
+async fn the_chatgpt_ladder_is_sol_then_astra_from_what_the_account_lists() {
+    let (ladder, receipt) = chatgpt_ladder_for(&[
+        "gpt-6-luna",
+        "gpt-6.2-astra",
+        "gpt-6.3-sol",
+        "gpt-6.2-sol",
+        "gpt-6.1-sol",
+        "gpt-6-astra",
+    ])
+    .await;
+    assert_eq!(
+        ladder.unwrap(),
+        json!({"tiers": [
+            {"name": "sol", "model": "openai-codex/gpt-6.2-sol"},
+            {"name": "astra", "model": "openai-codex/gpt-6.2-astra"}]})
+    );
+    assert!(
+        receipt.contains("gpt-6.2-sol, then gpt-6.2-astra on your ChatGPT sign-in"),
+        "{receipt}"
+    );
+
+    // Sol alone and Astra alone: the rung the account lacks is left out, never guessed
+    let (ladder, _) = chatgpt_ladder_for(&["gpt-6.2-sol", "gpt-6-astra"]).await;
+    assert_eq!(
+        ladder.unwrap(),
+        json!({"tiers": [{"name": "sol", "model": "openai-codex/gpt-6.2-sol"}]})
+    );
+    let (ladder, _) = chatgpt_ladder_for(&["gpt-6.2-astra", "gpt-6.1-sol"]).await;
+    assert_eq!(
+        ladder.unwrap(),
+        json!({"tiers": [{"name": "astra", "model": "openai-codex/gpt-6.2-astra"}]})
+    );
+    // neither: no ladder, and the line says why (the other test of this file checks its words)
+    let (ladder, receipt) = chatgpt_ladder_for(&["gpt-6-luna", "gpt-6.1-sol"]).await;
+    assert!(ladder.is_none());
+    assert!(
+        receipt.contains("governed mode is unavailable"),
+        "{receipt}"
+    );
+}
+
+async fn gemini_ladder_for(listed: &[&str]) -> (Option<Value>, String) {
+    let r = rig(json!({}));
+    std::fs::write(r.fake.home.join(".env"), "GEMINI_API_KEY=abc\n").unwrap();
+    *r.fake.gemini_models.lock().unwrap() = models(listed);
+    at_models(&r).await;
+    let s = choose(&r, "gemini").await;
+    assert!(s.done && s.form.is_none(), "{:?}", s.steps);
+    (
+        r.fake.config_get(LADDER).await.unwrap(),
+        s.receipt.unwrap().lines.join("\n"),
+    )
+}
+
+#[tokio::test]
+async fn the_gemini_ladder_is_hydrogen_then_neon_from_what_the_catalogue_lists_and_never_carbon() {
+    let (ladder, receipt) = gemini_ladder_for(&[
+        "gemini-3.8-flash",
+        "gemini-4-neon",
+        "gemini-4-carbon",
+        "gemini-4-hydrogen",
+    ])
+    .await;
+    assert_eq!(
+        ladder.unwrap(),
+        json!({"tiers": [
+            {"name": "hydrogen", "model": "gemini/gemini-4-hydrogen"},
+            {"name": "neon", "model": "gemini/gemini-4-neon"}]})
+    );
+    assert!(
+        receipt.contains("gemini-4-hydrogen, then gemini-4-neon"),
+        "{receipt}"
+    );
+    let (ladder, _) =
+        gemini_ladder_for(&["gemini-4-neon", "gemini-4-carbon", "gemini-3-hydrogen"]).await;
+    assert_eq!(
+        ladder.unwrap(),
+        json!({"tiers": [{"name": "neon", "model": "gemini/gemini-4-neon"}]})
+    );
+    // Carbon alone is allowed but is not on the ladder: no ladder, and the line says so
+    let (ladder, receipt) = gemini_ladder_for(&["gemini-3.8-flash", "gemini-4-carbon"]).await;
+    assert!(ladder.is_none());
+    assert!(
+        receipt.contains("no Gemini 4 Hydrogen or Gemini 4 Neon")
+            && receipt.contains("Gemini 4 Carbon is allowed but is not on the ladder"),
+        "{receipt}"
+    );
+}
+
+#[tokio::test]
+async fn setup_never_writes_a_heavy_model_to_a_ladder_it_builds_from_a_catalogue() {
+    use super::providers::{CHATGPT_RUNGS, GEMINI_RUNGS, ladder_from_catalogue};
+    // a catalogue that lists Grok and Fable under a provider is no way onto a ladder: the rungs name their families, and a heavy
+    // family is never a rung
+    let weird = models(&[
+        "grok-4.7",
+        "claude-fable-5-2",
+        "gpt-6.2-sol",
+        "gemini-4-neon",
+    ]);
+    for rungs in [CHATGPT_RUNGS, GEMINI_RUNGS] {
+        for provider in ["openai-codex", "gemini", "xai", "anthropic"] {
+            for (_, m) in ladder_from_catalogue(provider, &weird, rungs) {
+                let (p, id) = crate::frontier::split(&m);
+                assert!(!crate::frontier::is_heavy(p, id), "{m}");
+            }
+        }
+    }
+    for (family, _) in CHATGPT_RUNGS.iter().chain(GEMINI_RUNGS) {
+        assert!(
+            ["gpt-sol", "gpt-astra", "gemini-hydrogen", "gemini-neon"].contains(family),
+            "{family}"
+        );
+    }
+}
+
+// ---- heavy models: Grok on an xAI key
+
+fn xai_rig() -> Rig {
+    let r = rig(json!({}));
+    r.store.set("boopis.provider.xai", "api_key", KEY).unwrap();
+    r
+}
+
+#[tokio::test]
+async fn xai_alone_has_no_governed_mode_until_grok_is_turned_on_and_the_choice_is_remembered() {
+    let r = xai_rig();
+    // no ladder, no Anthropic key, an xAI key: governed mode is unavailable, and the reason says why and where the switch is
+    let v = r.setup().models_view().await.unwrap();
+    assert!(!v.governed.available);
+    let why = v.governed.why.clone().unwrap();
+    assert!(
+        why.contains("heavy") && why.contains("Turn on Grok"),
+        "{why}"
+    );
+    assert_eq!(heavy_of(&v, "grok"), (true, false, true));
+    assert!(!heavy_of(&v, "fable").0);
+    let grok = v.heavy.iter().find(|c| c.id == "grok").unwrap();
+    assert!(grok.reason.contains("token-heavy"), "{}", grok.reason);
+
+    // choosing xAI in setup with the switch off writes no ladder and says so
+    at_models(&r).await;
+    let s = choose(&r, "xai").await;
+    assert!(s.done && s.form.is_none(), "{:?}", s.steps);
+    assert!(r.fake.config_get(LADDER).await.unwrap().is_none());
+    let receipt = s.receipt.unwrap().lines.join("\n");
+    assert!(
+        receipt.contains("governed mode stays unavailable on it until you turn on Grok"),
+        "{receipt}"
+    );
+
+    // turning it on: Grok is the ladder, and the engine's default model
+    let v = r.setup().set_heavy("grok", true).await.unwrap();
+    assert!(
+        heavy_of(&v, "grok").1 && v.governed.available,
+        "{:?}",
+        v.governed.why
+    );
+    assert_eq!(
+        r.fake.config_get(LADDER).await.unwrap().unwrap(),
+        json!({"tiers": [{"name": "grok", "model": "xai/grok-4.7"}]})
+    );
+    assert_eq!(
+        r.fake.config_get("model.default").await.unwrap(),
+        Some(json!("grok-4.7"))
+    );
+    assert!(v.governed.tiers[0].heavy && v.governed.tiers[0].frontier);
+    assert!(super::state::load(&r.fake.home).unwrap().optins().grok);
+
+    // setup run again keeps it
+    assert!(choose_again(&r, "xai").await.done);
+    assert_eq!(
+        r.fake.config_get(LADDER).await.unwrap().unwrap(),
+        json!({"tiers": [{"name": "grok", "model": "xai/grok-4.7"}]})
+    );
+
+    // turning it off takes it away: no ladder is left, and governed mode is unavailable again
+    let v = r.setup().set_heavy("grok", false).await.unwrap();
+    assert!(!heavy_of(&v, "grok").1 && !v.governed.available);
+    assert!(r.fake.config_get(LADDER).await.unwrap().is_none());
+    assert!(!super::state::load(&r.fake.home).unwrap().optins().grok);
+    let s = choose_again(&r, "xai").await;
+    assert!(s.done);
+    assert!(r.fake.config_get(LADDER).await.unwrap().is_none());
+}
+
+#[tokio::test]
+async fn grok_needs_an_xai_key_and_a_grok_in_its_catalogue() {
+    // no key: no choice to make
+    let r = rig(json!({}));
+    let v = r.setup().models_view().await.unwrap();
+    assert!(!heavy_of(&v, "grok").0);
+    assert!(r.setup().set_heavy("grok", true).await.is_err());
+
+    // a key, but a catalogue with no Grok 4.7 or later: nothing is written, and nothing is remembered
+    let r = xai_rig();
+    *r.fake.xai_models.lock().unwrap() = models(&["grok-4.6", "grok-4"]);
+    let e = r.setup().set_heavy("grok", true).await.unwrap_err();
+    assert!(e.to_string().contains("no Grok 4.7 or later"), "{e}");
+    assert!(r.fake.config_get(LADDER).await.unwrap().is_none());
+    assert!(!super::state::load(&r.fake.home).unwrap().optins().grok);
+}
+
+#[tokio::test]
+async fn the_xai_choice_asks_for_a_key_and_wires_it() {
+    let r = rig(json!({}));
+    at_models(&r).await;
+    let form = choose(&r, "xai").await.form.unwrap();
+    assert_eq!(form.form_id, "setup.credential.xai");
+    assert_eq!(form.title, "Add your xAI API key");
+    assert_eq!(
+        form.schema.0["properties"]["value"]["x-secret-ref"],
+        "secret://provider.xai/api_key"
+    );
+    let s = r
+        .setup()
+        .advance(
+            Some(answer(
+                "setup.credential.xai",
+                json!({}),
+                json!({"value": KEY}),
+            )),
+            false,
         )
         .await
         .unwrap();
-    assert!(!r.setup().models_view().await.unwrap().fable.applies);
-    assert!(r.setup().set_subscription_fable(true).await.is_err());
+    assert!(s.done, "{:?}", s.steps);
+    assert_eq!(
+        r.fake
+            .config_get("secrets.boopis_host.env.XAI_API_KEY")
+            .await
+            .unwrap(),
+        Some(json!("secret://provider.xai/api_key"))
+    );
+    assert!(!r.fake.config.lock().unwrap().to_string().contains(KEY));
+}
+
+// ---- ADR-0037: the repair of the ladders the 0.1.6 candidate wrote
+
+#[tokio::test]
+async fn the_candidates_opus_and_fable_ladder_is_rewritten_to_opus_unless_the_user_opted_in() {
+    let ladder = json!({"tiers": [
+        {"name": "opus", "model": "claude-subscription-directsdk-experimental/opus"},
+        {"name": "fable", "model": "claude-subscription-directsdk-experimental/fable"}]});
+    let r = rig(main_provider());
+    r.fake.bundled_claude();
+    r.claude.signed_in("2.1.328 (Claude Code)");
+    finished_with(&r, &ladder).await;
+    let c = r.setup().check().await.unwrap();
+    assert!(c.needed, "{}", c.reason);
+    let s = r.setup().advance(None, false).await.unwrap();
+    assert!(s.done, "{:?}", s.steps);
+    assert_eq!(ladder_names(&r).await, ["opus"]);
+    assert!(!r.setup().check().await.unwrap().needed);
+
+    // the same ladder with Fable turned on is what the user asked for: nothing to do
+    let r = rig(main_provider());
+    r.fake.bundled_claude();
+    r.claude.signed_in("2.1.328 (Claude Code)");
+    finished_with(&r, &ladder).await;
+    let mut st = super::state::load(&r.fake.home).unwrap();
+    st.set_heavy("fable", true);
+    super::state::save(&r.fake.home, &st).unwrap();
+    assert!(!r.setup().check().await.unwrap().needed);
+    assert_eq!(
+        r.fake.config_get(LADDER).await.unwrap().unwrap(),
+        ladder,
+        "left alone"
+    );
+}
+
+#[tokio::test]
+async fn the_candidates_astra_only_ladder_becomes_sol_then_astra_and_stays_when_sol_is_not_listed()
+{
+    let astra = json!({"tiers": [{"name": "astra", "model": "openai-codex/gpt-6.2-astra"}]});
+    let r = rig(main_provider());
+    *r.fake.chatgpt_models.lock().unwrap() = models(&["gpt-6.2-sol", "gpt-6.2-astra"]);
+    finished_with(&r, &astra).await;
+    assert!(r.setup().check().await.unwrap().needed);
+    let s = r.setup().advance(None, false).await.unwrap();
+    assert!(s.done, "{:?}", s.steps);
+    assert_eq!(
+        r.fake.config_get(LADDER).await.unwrap().unwrap(),
+        json!({"tiers": [
+            {"name": "sol", "model": "openai-codex/gpt-6.2-sol"},
+            {"name": "astra", "model": "openai-codex/gpt-6.2-astra"}]})
+    );
+    assert_eq!(
+        r.fake.config_get("model.default").await.unwrap(),
+        Some(json!("gpt-6.2-sol"))
+    );
+    assert!(!r.setup().check().await.unwrap().needed);
+
+    // the account lists no Sol: the same ladder stays, and it is recorded
+    let r = rig(main_provider());
+    *r.fake.chatgpt_models.lock().unwrap() = models(&["gpt-6.2-astra"]);
+    finished_with(&r, &astra).await;
+    let s = r.setup().advance(None, false).await.unwrap();
+    assert!(s.done);
+    assert_eq!(r.fake.config_get(LADDER).await.unwrap().unwrap(), astra);
+    assert!(!r.setup().check().await.unwrap().needed);
+}
+
+#[tokio::test]
+async fn the_candidates_carbon_only_ladder_becomes_hydrogen_then_neon_and_stays_when_neither_is_listed()
+ {
+    let carbon = json!({"tiers": [{"name": "carbon", "model": "gemini/gemini-4-carbon"}]});
+    let r = rig(main_provider());
+    *r.fake.gemini_models.lock().unwrap() =
+        models(&["gemini-4-hydrogen", "gemini-4-neon", "gemini-4-carbon"]);
+    finished_with(&r, &carbon).await;
+    assert!(r.setup().check().await.unwrap().needed);
+    assert!(r.setup().advance(None, false).await.unwrap().done);
+    assert_eq!(ladder_names(&r).await, ["hydrogen", "neon"]);
+
+    let r = rig(main_provider());
+    *r.fake.gemini_models.lock().unwrap() = models(&["gemini-4-carbon"]);
+    finished_with(&r, &carbon).await;
+    let s = r.setup().advance(None, false).await.unwrap();
+    assert!(s.done);
+    assert_eq!(
+        r.fake.config_get(LADDER).await.unwrap().unwrap(),
+        carbon,
+        "Carbon is allowed: a working ladder is not taken away"
+    );
+}
+
+#[tokio::test]
+async fn a_hand_written_ladder_that_names_a_heavy_model_is_the_users_own_and_is_left_alone() {
+    for hand in [
+        json!({"tiers": [
+            {"name": "cheap", "model": "anthropic/claude-opus-5-5"},
+            {"name": "strong", "model": "anthropic/claude-fable-5-2"}]}),
+        json!({"tiers": [{"name": "g", "model": "xai/grok-4.7"}]}),
+        json!({"tiers": [
+            {"name": "opus", "model": "claude-subscription-directsdk-experimental/opus"},
+            {"name": "mine", "model": "claude-subscription-directsdk-experimental/fable"},
+            {"name": "x", "model": "xai/grok-4.7"}]}),
+    ] {
+        let r = rig(main_provider());
+        r.fake.bundled_claude();
+        r.claude.signed_in("2.1.328 (Claude Code)");
+        finished_with(&r, &hand).await;
+        let c = r.setup().check().await.unwrap();
+        assert!(!c.needed, "{}: {hand}", c.reason);
+        // and when setup does run, the ladder is as it was and governed mode accepts it
+        let mut st = super::state::load(&r.fake.home).unwrap();
+        st.frontier_checked = false;
+        st.ladders_checked = false;
+        super::state::save(&r.fake.home, &st).unwrap();
+        assert!(r.setup().advance(None, false).await.unwrap().done);
+        assert_eq!(r.fake.config_get(LADDER).await.unwrap().unwrap(), hand);
+        let v = r.setup().models_view().await.unwrap();
+        assert!(v.governed.available, "{hand}");
+        assert!(v.governed.tiers.iter().any(|t| t.heavy));
+    }
+}
+
+#[test]
+fn the_old_fable_opt_in_is_read_into_the_heavy_list_once() {
+    let dir = tempfile::tempdir().unwrap();
+    let p = super::state::path(dir.path());
+    std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+    std::fs::write(&p, r#"{"schema_version": 1, "subscription_fable": true}"#).unwrap();
+    let st = super::state::load(dir.path()).unwrap();
+    assert!(st.optins().fable && !st.optins().grok && !st.subscription_fable);
+    super::state::save(dir.path(), &st).unwrap();
+    assert!(super::state::load(dir.path()).unwrap().optins().fable);
+    // turning it off sticks
+    let mut st = super::state::load(dir.path()).unwrap();
+    st.set_heavy("fable", false);
+    super::state::save(dir.path(), &st).unwrap();
+    assert!(!super::state::load(dir.path()).unwrap().optins().fable);
 }
