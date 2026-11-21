@@ -12,7 +12,7 @@ describe('the global keys (KEYMAP.md section 1)', () => {
   it.each([
     ['KeyK', {}, 'palette-toggle'], ['KeyP', {}, 'palette-items'], ['KeyO', { shiftKey: true }, 'new'], ['KeyB', {}, 'sidebar-toggle'], ['KeyB', { shiftKey: true }, 'sidebar-hide-toggle'],
     ['KeyI', {}, 'details'], ['KeyJ', {}, 'dock-toggle'], ['KeyJ', { shiftKey: true }, 'dock-expand'], ['BracketLeft', {}, 'back'], ['BracketRight', {}, 'forward'],
-    ['Comma', {}, 'settings'], ['KeyL', { shiftKey: true }, 'light-dark'], ['Slash', {}, 'keys'], ['KeyG', {}, 'leader'], ['KeyF', {}, 'find'], ['Period', {}, 'stop']
+    ['Comma', {}, 'settings'], ['KeyL', { shiftKey: true }, 'light-dark'], ['KeyS', { shiftKey: true }, 'store'], ['Slash', {}, 'keys'], ['KeyG', {}, 'leader'], ['KeyF', {}, 'find'], ['Period', {}, 'stop']
   ])('mod+%s %j is %s', (code, extra, expected) => { expect(type(key({ code, ctrlKey: true, ...extra }))).toBe(expected); });
   it('mod is Command on a Mac and Control elsewhere, and the other one is not mod', () => {
     expect(type(key({ code: 'KeyK', metaKey: true }), mac)).toBe('palette-toggle');

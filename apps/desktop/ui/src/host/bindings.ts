@@ -158,6 +158,8 @@ export const commands = {
 	storeUpdate: (id: string, request: InstallRequest_Deserialize, profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<InstallReceipt_Serialize>("store_update", { id, request, profile }, options),
 	/**  Go back to the version kept one step back. */
 	storeRollback: (id: string, profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<InstallReceipt_Serialize>("store_rollback", { id, profile }, options),
+	/**  Switch an installed item on or off for the bot. It takes effect in the next session. */
+	storeSetEnabled: (id: string, enabled: boolean, profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<null>("store_set_enabled", { id, enabled, profile }, options),
 	/**  The sources, with their state. */
 	storeSources: (options?: InvokeOptions) => __TAURI_INVOKE<StoreSource_Serialize[]>("store_sources", undefined, options),
 	/**  Switch a source on or off. */
