@@ -68,6 +68,42 @@ def test_the_words_are_the_shared_tables_and_every_model_keeps_its_own_id() -> N
     assert "claude" not in words  # a generic word names no model
 
 
+NAMED = [
+    {"provider": "gemini", "model": "gemini-4-carbon"},
+    {"provider": "openai-codex", "model": "gpt-6.2-astra"},
+    {"provider": "openai-codex", "model": "gpt-6-sol-pro"},
+    {"provider": "openai-codex", "model": "gpt-6-sol"},
+    {"provider": "gemini", "model": "gemini-3.8-flash"},
+    {"provider": "claude-subscription-directsdk", "model": "claude-fable-5-2"},
+    {"provider": "xai", "model": "grok-4"},
+]
+
+
+def test_a_model_answers_to_its_own_name_after_the_version() -> None:
+    words = aliases(NAMED)
+    assert words["carbon"] == ("gemini", "gemini-4-carbon")
+    assert words["astra"] == ("openai-codex", "gpt-6.2-astra")
+    assert words["flash"] == ("gemini", "gemini-3.8-flash")
+    assert words["fable"][1] == "claude-fable-5-2"
+    assert words["sol"] == ("openai-codex", "gpt-6-sol")  # the plain model keeps it, though the variant is listed first
+    assert "pro" not in words
+    assert words["gpt-6-sol-pro"] == ("openai-codex", "gpt-6-sol-pro")  # the variant is still reachable by its id
+
+
+def test_a_variant_alone_still_has_the_name_word() -> None:
+    assert aliases([{"provider": "openai-codex", "model": "gpt-6-sol-pro"}])["sol"][1] == "gpt-6-sol-pro"
+
+
+def test_the_owners_sentence_routes_all_four(rt: Runtime) -> None:
+    rt.roster.set_models([MODELS[1], MODELS[3], *NAMED])
+    say(rt, "send this task to opus, this one to codex, and this one to carbon, and this one to grok")
+    got = {
+        w: directed_route(rt, rt.roster, {"goal": "g", "target": w}, SID)["model"]
+        for w in ("opus", "codex", "carbon", "grok")
+    }
+    assert got == {"opus": "claude-opus-5-5[1m]", "codex": "gpt-6-luna", "carbon": "gemini-4-carbon", "grok": "grok-4"}
+
+
 def test_a_word_is_never_given_to_two_models_and_a_model_listed_twice_is_one() -> None:
     twice = [*MODELS, {"provider": "claude-subscription-directsdk", "model": "claude-opus-5-5"}]
     entries = rosters.build(twice)

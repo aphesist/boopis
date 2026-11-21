@@ -69,7 +69,30 @@ def _words(provider: str, slug: str) -> list[str]:
     family = re.match(r"[a-z]+", slug)
     if family and len(family.group(0)) >= 3 and family.group(0) not in generic:
         out.append(family.group(0))
+    out.extend(w for w in name_words(slug) if w not in out)
     return out
+
+
+def _segments(slug: str) -> list[str]:
+    return [p for p in re.split(r"[-_.]+", slug) if p]
+
+
+def name_words(slug: str) -> list[str]:
+    """The model's own name: the alphabetic segments after the first (the family) and after the version, minus the
+    generic words and the modifiers (``carbon`` of ``gemini-4-carbon``, ``astra`` of ``gpt-6.2-astra``)."""
+    dispatch = cast("Mapping[str, Any]", _names().get("dispatch", {}))
+    skip = {str(w) for w in cast("list[Any]", dispatch.get("generic", []))} | _modifiers()
+    return [p for p in _segments(slug)[1:] if p.isalpha() and len(p) >= 3 and p not in skip]
+
+
+def _modifiers() -> set[str]:
+    dispatch = cast("Mapping[str, Any]", _names().get("dispatch", {}))
+    return {str(w) for w in cast("list[Any]", dispatch.get("modifiers", []))}
+
+
+def is_variant(slug: str) -> bool:
+    """A model that carries a modifier (``gpt-6-sol-pro``): a variant of the plain one, which keeps its name words."""
+    return any(p in _modifiers() for p in _segments(slug)[1:])
 
 
 def build(models: Iterable[Mapping[str, Any]]) -> tuple[Entry, ...]:
@@ -77,16 +100,22 @@ def build(models: Iterable[Mapping[str, Any]]) -> tuple[Entry, ...]:
     first model that claims it; a model's own id is always a word, so none is out of reach."""
     claimed: dict[str, Entry] = {}
     seen: set[tuple[str, str]] = set()
+    listed: list[tuple[str, str, str]] = []
     for item in models:
         provider, model = str(item.get("provider") or ""), str(item.get("model") or "")
         slug = slug_of(model)
         if not model or not slug or (provider, slug) in seen:
             continue
         seen.add((provider, slug))
-        for word in [*_words(provider, slug), slug]:
-            claimed.setdefault(word, Entry(word, provider, model))
+        listed.append((provider, model, slug))
         if len(seen) >= MAX_MODELS:
             break
+    # plain models claim their words first, so a variant (``-pro``) never takes the word of the model it varies
+    for variant in (False, True):
+        for provider, model, slug in listed:
+            if is_variant(slug) is variant:
+                for word in [*_words(provider, slug), slug]:
+                    claimed.setdefault(word, Entry(word, provider, model))
     return tuple(claimed.values())
 
 
