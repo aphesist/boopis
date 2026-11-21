@@ -5,6 +5,7 @@ import '../modules/shell/shell.css';
 import '../modules/cards/cards.css';
 import '../modules/session/session.css';
 import '../modules/session/children.css';
+import '../modules/session/council.css';
 import '../modules/bots/bots.css';
 import '../modules/dock/dock.css';
 import '../modules/mods/mods.css';

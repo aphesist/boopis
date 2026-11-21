@@ -8,9 +8,10 @@ import { logger } from '../core/log';
 import { createMockProvider } from '../data/mock-provider';
 import type { DataProvider, SessionsSource, WaitsEvent, WaitsSource } from '../data/provider';
 import { emitter, feed, store } from '../data/store';
-import type { AgentTurn, BlankData, BlankWait, ConversationEvent, FormStatus, FormWait, SendMeta, SessionSummary, Turn, User, UserTurn, Wait, WaitOutcome } from '../data/types';
+import type { AgentTurn, BlankData, CouncilChoice, BlankWait, ConversationEvent, FormStatus, FormWait, SendMeta, SessionSummary, Turn, User, UserTurn, Wait, WaitOutcome } from '../data/types';
 import { readFlag } from '../core/settings';
 import { createDetails } from './live/details';
+import { applyMoa, createCouncil, finishedCouncil, startedCouncil, valueOfSlot } from './live/council';
 import { createLiveBots } from './live/bots';
 import { createLiveGroups } from './live/groups';
 import { todosFrom } from './live/map-details';
@@ -82,6 +83,8 @@ interface Convo {
   /** the message just sent went to one model only (an "@" mention): the turn that starts answers with it, the session's `model` stays */
   once: { model: string; ungoverned: boolean } | null;
   running: Running | null;
+  /** the council running this turn (set when its message goes out, spent when the turn finishes) */
+  council: CouncilChoice | null;
 }
 
 export interface LiveProvider extends DataProvider {
@@ -106,11 +109,12 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   const creating = new Set<Promise<string>>();
   const convo = (uiId: string): Convo => {
     let c = convos.get(uiId);
-    if (!c) { c = { uiId, gwId: null, generation: 0, turns: [], events: emitter<ConversationEvent>(), hydrated: false, model: '', why: null, once: null, running: null }; convos.set(uiId, c); }
+    if (!c) { c = { uiId, gwId: null, generation: 0, turns: [], events: emitter<ConversationEvent>(), hydrated: false, model: '', why: null, once: null, running: null, council: null }; convos.set(uiId, c); }
     return c;
   };
   const bind = (c: Convo, gwId: string): void => { c.gwId = gwId; byGw.set(gwId, c.uiId); };
   const details = createDetails({ client, ...(hasHostDialogs() ? { hostLadder: async () => { const v = await loadModelsView(); return v.state === 'set' ? tiersFromHost(v.tiers) : []; } } : {}), ...(opts.connectors ? { connectors: opts.connectors } : hasHostDialogs() ? { connectors: tauriConnectorActions() } : {}), now: () => now().getTime(), gwId: (id) => convos.get(id)?.gwId ?? (id.startsWith('new-') ? null : id), onRefreshed: (id) => { const c = convos.get(id); if (c) syncBlanks(c); } });
+  const councilHost = createCouncil({ client, gwId: (id) => convos.get(id)?.gwId ?? null, context: (id) => details.councilContext(id) });
   /* Claude Code mods: what a session's mods draw (`mod.*` events) and the answers sent back; one `ModSession` per session */
   const modsHost = createModsHost({ client, uiOf: (gw) => byGw.get(gw), gwOf: (id) => convos.get(id)?.gwId ?? null });
   const user = store<User>({ name: 'you', initials: 'y' });
@@ -187,7 +191,9 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   /* ───────── events → the conversation ───────── */
   function startTurn(c: Convo): Running {
     if (c.running) return c.running;
-    const turn: AgentTurn = { id: nextId('t'), role: 'assistant', model: c.once?.model || c.model || details.currentModel(c.uiId), ...(c.once?.ungoverned ? { ungoverned: true } : {}), ...(c.why ? { why: c.why } : {}), time: '0s', cost: '', stepCount: 0, steps: [], paragraphs: [], bullets: [], status: 'running' };
+    /* a council turn: the combiner is the model that answers (the engine's own name for the turn, the preset's, is not a model) */
+    const council = c.council ? startedCouncil(c.council) : undefined;
+    const turn: AgentTurn = { id: nextId('t'), role: 'assistant', model: c.council ? valueOfSlot(c.council.combiner) : c.once?.model || c.model || details.currentModel(c.uiId), ...(c.once?.ungoverned ? { ungoverned: true } : {}), ...(c.council ? { why: 'Council of ' + c.council.members.length } : c.why ? { why: c.why } : {}), ...(council ? { council } : {}), time: '0s', cost: '', stepCount: 0, steps: [], paragraphs: [], bullets: [], status: 'running' };
     c.turns.push(turn);
     c.running = { turn, tiers: [], text: '', steps: [], startedAt: Date.now() };
     c.why = null;
@@ -207,10 +213,11 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     const time = elapsed(Date.now() - r.startedAt);
     const i = c.turns.indexOf(r.turn);
     /* who answered: the tiers the ladder ran (governed), else the model the engine reported for the turn */
-    const model = r.tiers.length ? r.tiers.join(' → ') : answered || r.turn.model;
-    const done: AgentTurn = { ...r.turn, model, time, stepCount: r.steps.length, steps: r.steps, paragraphs: paras, status: stopped ? 'stopped' : 'done' };
+    const model = r.tiers.length ? r.tiers.join(' → ') : r.turn.council ? r.turn.model : answered || r.turn.model;
+    const done: AgentTurn = { ...r.turn, model, ...(r.turn.council ? { council: finishedCouncil(r.turn.council) } : {}), time, stepCount: r.steps.length, steps: r.steps, paragraphs: paras, status: stopped ? 'stopped' : 'done' };
     if (i >= 0) c.turns[i] = done;
-    c.running = null;
+    c.running = null; c.council = null;
+    if (done.council) c.events.emit({ type: 'council', turnId: r.turn.id, council: done.council });
     c.events.emit({ type: 'turn-finished', turnId: r.turn.id, time, cost: '', stepCount: r.steps.length, paragraphs: paras, stopped, model, ...(r.turn.why ? { why: r.turn.why } : {}) });
     patchSession(c.uiId, { running: false });
   }
@@ -282,9 +289,15 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     if (ev.type.startsWith('plugin.boopis.blank.')) { syncBlanks(c); return; }
     if (formsHost.handle(ev, { gwSession: ev.session_id ?? '', model: c.model })) return;
     switch (ev.type) {
-      case 'session.info': { const profile = p['profile_name']; if (typeof profile === 'string' && profile) user.set({ name: profile, initials: profile.slice(0, 1).toLowerCase() }); const m = p['model']; if (typeof m === 'string' && m && !c.once) c.model = m;   /* an "@" message names its own model here; the session's stays */ const t = p['title']; if (typeof t === 'string' && t) patchSession(uiId, { title: sessionTitle({ title: t, preview: '' }) }); break; }
+      case 'session.info': { const profile = p['profile_name']; if (typeof profile === 'string' && profile) user.set({ name: profile, initials: profile.slice(0, 1).toLowerCase() }); const m = p['model']; if (typeof m === 'string' && m && !c.once && !c.council) c.model = m;   /* an "@" message or a council names its own model here (a council's is the preset's name, not a model); the session's stays */ const t = p['title']; if (typeof t === 'string' && t) patchSession(uiId, { title: sessionTitle({ title: t, preview: '' }) }); break; }
       case 'message.start': startTurn(c); break;
       case 'subagent.spawn_requested': case 'subagent.start': case 'subagent.progress': case 'subagent.thinking': case 'subagent.tool': case 'subagent.complete': childFrame(c, ev.type, p); break;
+      case 'moa.reference': case 'moa.progress': case 'moa.phase': case 'moa.aggregating': {
+        /* the council's members answering, and the combiner starting: a turn that none armed (a slash command) still shows them */
+        const r = startTurn(c), next = applyMoa(r.turn.council ?? null, ev);
+        if (next) { r.turn.council = next; c.events.emit({ type: 'council', turnId: r.turn.id, council: next }); }
+        break;
+      }
       case 'tool.start': addStep(c, startTurn(c), toolStep(p)); break;
       case 'tool.complete': if (p['is_error'] === true) addStep(c, startTurn(c), failedStep(p)); break;
       case 'message.delta': {
@@ -459,6 +472,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
       const c = convo(id);
       details.onSent(id, text);
       const attachments = meta.attachments ?? [];
+      const asked = councilHost.armed(id);   /* a council armed for this message: it goes out below (`councilHost.start`) */
       const user: UserTurn = { id: nextId('t'), role: 'user', at: clock(now()), text, ...(attachments.length ? { attachments } : {}) };
       c.turns.push(user);
       c.events.emit({ type: 'turn-added', turn: user });
@@ -466,6 +480,8 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
       ensureLive(c)
         /* who answers is decided now, for this message: Smart's rule or the user's pick, applied through the engine before it goes */
         .then(async (gw) => {
+          /* a council armed for this message: Smart or the pick as usual, then the council's own one-turn switch (next step); a mention does not apply */
+          if (asked) { const who = await details.prepareSend(id, text, { attachments: attachments.length }); if (who.model) c.model = who.model; c.why = who.why; return gw; }
           /* "@model": this message only goes to that model (the engine's one-turn switch); the session's model and the sticky pick stay. Smart does not override it. */
           const keep = c.model;
           c.once = { model: '', ungoverned: false };   /* the engine reports the switch while it is made: those reports name the mentioned model, not the session's */
@@ -475,13 +491,14 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
           c.once = null; c.model = keep;
           const who = await details.prepareSend(id, text, { attachments: attachments.length }); if (who.model) c.model = who.model; c.why = who.why; return gw;
         })
+        .then(async (gw) => { if (asked) c.council = await councilHost.start(id); return gw; })
         .then(async (gw) => {
           const refs = attachments.length ? await stageAttachments((m, p) => client.requestRaw(m, p), gw, attachments) : [];   /* files, pictures and folders go first (live/attachments.ts) */
           return client.requestRaw('prompt.submit', { session_id: gw, text: withRefs(text, refs), submission_id: 'sub-' + crypto.randomUUID() }); /* the gateway requires submission_id; the vendored contract does not list it yet */
         })
         .catch(async (e: unknown) => {
           log.error('the message was not accepted', e);
-          c.once = null;
+          c.once = null; c.council = null;
           await abortOnce?.();   /* nothing started: the exception and the switch are taken back */
           startTurn(c);
           finishTurn(c, 'The message was not sent: ' + (e instanceof Error ? e.message : String(e)), true);
@@ -501,7 +518,8 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
       const hit = childOf(id, childId);
       if (!hit?.child.childSession) throw new Error('This task has no session of its own to read yet.');
       const res = await (await client.requestRaw('session.transcript', { session_id: hit.child.childSession, limit: 200, order: 'oldest' })) as { rows?: unknown[] };
-      return transcriptToTurns((res.rows ?? []) as never, hit.child.model, childId + ':');
+      /* every answer in a child's own session is the child's model (the turn book is the parent session's) */
+      return transcriptToTurns((res.rows ?? []) as never, childId + ':').map((t) => (t.role === 'assistant' ? { ...t, model: hit.child.model } : t));
     },
     openPullRequest: () => { log.warn('pull requests are not wired yet'); }
   };
@@ -530,7 +548,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     info: { live: true, preview: new Set(['feedforward']), unavailable: details.unavailable },
     ready, sessions, waits, user, forms: formsHost.source, bots: liveBots.source, groups: liveGroups.source, schedules: liveBots.schedules,
     details: details.source, run: details.run, mods: modsHost.source,
-    files: { pick: (kind) => pickAttachments(kind), drops: dropsFromHost(), complete: (word, id) => details.files.complete(word, id) },
+    council: councilHost, files: { pick: (kind) => pickAttachments(kind), drops: dropsFromHost(), complete: (word, id) => details.files.complete(word, id) },
     dictation: { start: () => () => undefined }, // nothing hears you yet: the mock's transcript is invented text
     feedforward: { catalog: () => (flag ? mock.feedforward.catalog() : []) },
     settled: async () => { await details.settled(); await liveBots.settled(); await liveGroups.settled(); },

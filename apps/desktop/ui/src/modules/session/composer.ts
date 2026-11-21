@@ -11,6 +11,7 @@ import type { ComposerEl, DecisionDetail, AssumptionDetail, DictateDetail } from
 import { data } from '../../data';
 import type { Attached, GovernanceState } from '../../data';
 import { costAssume, kindOf, makeReader, optionsFor } from './feedforward';
+import { COUNCIL_VALUE, openCouncilForm } from './council';
 import { FOOT_GOVERNED, FOOT_MENTION, FOOT_MENTION_GOVERNED, FOOT_UNGOVERNED, REMOVE_MENTION, SMART_VALUE, currentChoice, mentionEntries, modelEntries, smartPreview } from './model-menu';
 import { findMentions, mentionName, routeMentions } from '../../data/mentions';
 
@@ -71,14 +72,15 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
     const choices = data().details.choices.get();
     const prev = G.smart ? smartPreview(choices, { text: c.value, attachments: attachments() }) : null;
     const name = ui.modelMark.called(G.model) || G.model;
-    const label = G.smart ? (prev ? 'Smart: ' + (ui.modelMark.called(prev.choice.model) || prev.choice.model) : 'Smart') : name || 'Choose a model';
+    const armed = data().council.armed(opts.sessionId());
+    const label = armed ? 'Council of ' + armed.members.length : G.smart ? (prev ? 'Smart: ' + (ui.modelMark.called(prev.choice.model) || prev.choice.model) : 'Smart') : name || 'Choose a model';
     const t = document.createElement('template');
-    t.innerHTML = ui.html.chip(G.smart || !G.model ? { label, icon: 'spark', haspopup: 'menu' } : { model: G.model, label, haspopup: 'menu' });
+    t.innerHTML = ui.html.chip(armed || G.smart || !G.model ? { label, icon: armed ? 'bots' : 'spark', haspopup: 'menu' } : { model: G.model, label, haspopup: 'menu' });
     const fresh = t.content.firstElementChild as HTMLElement;
     model.replaceChildren(...fresh.childNodes);
-    model.classList.toggle('ui-chip--mono', !G.smart && !!G.model);
+    model.classList.toggle('ui-chip--mono', !armed && !G.smart && !!G.model);
     /* the accessible name starts with the words on the chip (WCAG 2.5.3), then says what it is */
-    model.setAttribute('aria-label', label + ', who answers next' + (G.smart ? (prev ? ' (Smart would pick it for this message: ' + prev.reason + ')' : ' (Smart picks for each message)') : ''));
+    model.setAttribute('aria-label', label + ', who answers next' + (armed ? ' (the next message goes to a council)' : G.smart ? (prev ? ' (Smart would pick it for this message: ' + prev.reason + ')' : ' (Smart picks for each message)') : ''));
     model.setAttribute('data-tip', G.smart ? 'Smart picks the model for each message' + (prev ? ': ' + prev.reason : '') : 'Who answers next'); model.setAttribute('data-kbd', 'alt+M');
   }
   c.input.addEventListener('input', (e) => {
@@ -129,17 +131,18 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
   function openModel(viaKeyboard: boolean): void {
     const G = gov();
     const choices = data().details.choices.get();
-    const entries = modelEntries(choices, { current: G.model, governed: G.governed });
+    const entries = modelEntries(choices, { current: G.model, governed: G.governed, council: data().council.can(opts.sessionId()) });
     ui.listbox.open(model, entries, {
       place: 'above', label: 'Who answers next', value: G.smart ? SMART_VALUE : currentChoice(choices, G.model)?.value ?? G.model,
       foot: G.governed ? FOOT_GOVERNED : FOOT_UNGOVERNED,
       onClose: viaKeyboard ? () => { c.focus(); } : undefined,
-      onSelect: (v) => { setGovernance(v === SMART_VALUE ? { smart: true } : { smart: false, model: v }); c.flashHint(); }
+      onSelect: (v) => { if (v === COUNCIL_VALUE) { requestAnimationFrame(() => { void openCouncilForm(model, opts.sessionId(), () => { drawModel(gov()); c.flashHint(); }); }); return; } setGovernance(v === SMART_VALUE ? { smart: true } : { smart: false, model: v }); c.flashHint(); }
     });
   }
   model.addEventListener('click', () => openModel(false));
   data().details.governance.subscribe(sync);
   data().details.choices.subscribe(() => { drawModel(gov()); });
+  data().council.subscribe(() => { drawModel(gov()); });
 
   /* a dashed word, or an assumption: what it is read as */
   function openReading(anchor: HTMLElement, kind: string | undefined, text: string): void {
@@ -245,6 +248,7 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
     if (!e.altKey || modKey(e) || e.shiftKey) return;
     if (e.code === 'KeyG') { e.preventDefault(); govChip.click(); }
     else if (e.code === 'KeyS') { e.preventDefault(); setGovernance({ smart: !gov().smart }); c.flashHint(); }
+    else if (e.code === 'KeyC') { e.preventDefault(); requestAnimationFrame(() => { void openCouncilForm(model, opts.sessionId(), () => { drawModel(gov()); c.flashHint(); }); }); }
     else if (e.code === 'KeyM') { e.preventDefault(); requestAnimationFrame(() => openModel(true)); }
   });
   c.addEventListener('ui:send', () => { reader.clear(); });

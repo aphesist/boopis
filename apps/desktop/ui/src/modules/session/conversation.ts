@@ -15,6 +15,7 @@ import { copyText, mdOf, randomId } from './shared';
 import { openPanel } from './right';
 import { childrenBlock, resetChildren, upsertChild } from './children';
 import type { ChildHost } from './children';
+import { councilBlock, drawCouncil } from './council';
 import { setAttention, changed } from './state';
 import { surface } from '../mods/surfaces';
 import { UNKNOWN_MODEL, markAnswered, stampUngoverned, syncDividers } from './attribution';
@@ -184,6 +185,7 @@ function assistantTurn(a: AgentTurn): HTMLElement {
   markAnswered(t, a.model); stampUngoverned(t, !!a.ungoverned);
   if (a.forms?.length) $('.ui-entry__body', t).append(formsBlock(a.forms));
   if (a.children?.length) $('.ui-entry__body', t).append(childrenBlock(a.children, childHost()));
+  if (a.council) p.before(councilBlock(a.council));
   if (VIEW.blank) showShip(false);
   if (VIEW.diffOpen) refreshDiff();
   return t;
@@ -197,6 +199,7 @@ function liveTurn(a: AgentTurn): void {
   const ol = ui.steps({ items: [], id });
   const t = turn({ kind: 'agent', callno: [...metaLines(a.model, a.why), '0s'], steps: { count: 0, id, open: true }, label: modelSay(a.model) + ', working', body: [ol], md: () => '' });
   t.setAttribute('aria-busy', 'true');
+  if (a.council) $('.ui-entry__body', t).append(councilBlock(a.council));
   const disc = $('.ui-disclosure', t), timeEl = timeLine(t);
   $('span', disc).textContent = 'Working'; disc.prepend(frag(ui.html.dot('run')));
   const L: Live = { t, ol, disc, timeEl, tick: 0, secs: 0, model: a.model, why: a.why, count: 0, startedAt: Date.now(), prose: null, blankEl: null };
@@ -292,6 +295,7 @@ function onConversationEvent(ev: ConversationEvent): void {
   else if (ev.type === 'form-resolved') resolveForm(ev.formId, ev.status);
   else if (ev.type === 'child-updated') upsertChild(ev.turnId, ev.child, childHost());
   else if (ev.type === 'turn-model') { const L = live.get(ev.turnId); if (L) { L.model = ev.model; setModelLines(L.t, ev.model, L.why); markAnswered(L.t, ev.model); stampUngoverned(L.t, L.t.hasAttribute('data-ungoverned')); if (VIEW.col) syncDividers(VIEW.col); } }
+  else if (ev.type === 'council') { const b = col.querySelector<HTMLElement>('[data-turn-id="' + ev.turnId + '"] .ss-council'); if (b) drawCouncil(b, ev.council); }
   else if (ev.type === 'turn-finished') finishLive(ev.turnId, ev);
   else if (ev.type === 'blank-answered') {
     const first = !VIEW.blank;

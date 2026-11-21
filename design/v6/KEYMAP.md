@@ -138,6 +138,7 @@ a form's first field, a failed gate's primary action), so F8 and Shift+F8 reach 
 | alt+G | Governed or ungoverned |
 | alt+S | Smart (Automatic) on or off |
 | alt+M | Who answers next: the model chip's menu. Automatic (Smart) first, then every usable model by provider (↑ ↓, Enter, Esc) |
+| alt+C | Ask a council: opens the form (members, combiner); the next message is answered by several models and combined by one. Not offered in a governed session |
 | alt+A | Attach files |
 | alt+V | Talk (the mic, in every composer; owner decision): a tap toggles listening, a hold of 400ms or more talks while held and stops on release. With a bot as the target its orb listens |
 | Esc, while listening | Stop listening (the composer consumes it); the next Esc does what it always does |
