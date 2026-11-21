@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-store-search"
+description = "Enables the store_search command without any pre-configured scope."
+commands.allow = ["store_search"]
+
+[[permission]]
+identifier = "deny-store-search"
+description = "Denies the store_search command without any pre-configured scope."
+commands.deny = ["store_search"]

@@ -1069,7 +1069,10 @@ pub async fn provider_probe_local(
     profile: Option<String>,
 ) -> std::result::Result<Vec<crate::providers::ProviderState>, HostError> {
     let _ = profile;
-    Ok(crate::local::probe_local().await)
+    let states = crate::local::probe_local().await;
+    // `provider_list` never dials: it repeats this answer
+    crate::providers::service::remember_local_probe(&states);
+    Ok(states)
 }
 
 /// Start a sign-in for a sign-in way the host owns (`SuperGrok`, GitHub Copilot, and ChatGPT once it moves to OpenAI's program):

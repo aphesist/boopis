@@ -269,7 +269,7 @@ const state = (way: string, status: ProviderState['status'], extra: Partial<Prov
 };
 /** the host's answer for every way of the catalogue: keys missing, sign-ins out, runtimes not found (never probed) */
 const baseline = (): ProviderState[] => entries().flatMap((e) => e.ways.filter((w) => !w.hidden).map((w) => state(w.id, w.kind === 'key' ? 'needs_key' : w.kind === 'signin' ? 'signed_out' : w.kind === 'local' ? 'not_found' : 'connected')))
-  .map((x) => (x.way === 'custom.endpoint' ? { ...x, status: 'connected' as const } : x));
+  .filter((x) => x.way !== 'custom.endpoint');   /* the host leaves the add-one row out and lists the endpoints made */
 
 function fakeProviders(over: Partial<Record<string, unknown>> = {}): ProvidersBridge & { calls: string[]; keys: string[]; added: EndpointRequest[]; list: () => Promise<ProviderState[]> } {
   const calls: string[] = [];

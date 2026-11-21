@@ -75,6 +75,8 @@ export function hintOf(way: Way, state: ProviderState | null | undefined): strin
 
 /** which buttons a row has, from the way and its state; `canSignin` says whether this build can run that sign-in */
 export function actionsFor(way: Way, state: ProviderState | null | undefined, canSignin: boolean): Action[] {
+  /* the host lists the endpoints made, not the catalogue's add-one row: that row always offers the form */
+  if (way.kind === 'custom') return [{ do: 'endpoint', label: 'Add endpoint', primary: true }];
   if (!state) return [];
   const s = state.status;
   switch (way.kind) {
@@ -83,8 +85,6 @@ export function actionsFor(way: Way, state: ProviderState | null | undefined, ca
       return [{ do: 'key', label: 'Change key' }, { do: 'remove', label: 'Remove', ghost: true }];
     case 'local':
       return s === 'found_local' ? [{ do: 'use', label: 'Use', primary: true }] : [{ do: 'recheck', label: 'Check again' }];
-    case 'custom':
-      return [{ do: 'endpoint', label: 'Add endpoint', primary: true }];
     case 'signin': {
       const flow = way.signin?.flow;
       if (s === 'connected') return flow === 'device_code' || flow === 'official_program' ? [{ do: 'signout', label: 'Sign out', ghost: true }] : [];

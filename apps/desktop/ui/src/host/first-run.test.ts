@@ -484,6 +484,7 @@ describe('first run ways: regrouping the host\'s choices from the catalogue', ()
   it('maps a way to the host\'s choice by its own id, its slug or engine, or the id used before the catalogue', () => {
     const w = (id: string) => catalogueWay(id)?.way as NonNullable<ReturnType<typeof catalogueWay>>['way'];
     expect(choiceFor(w('google.key'), ['gemini'])).toBe('gemini');
+    expect(choiceFor(w('openai.key'), ['openai-key'])).toBe('openai-key');
     expect(choiceFor(w('deepseek.key'), ['deepseek.key'])).toBe('deepseek.key');
     expect(choiceFor(w('deepseek.key'), ['gemini'])).toBeNull();
   });

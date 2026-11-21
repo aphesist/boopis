@@ -24,7 +24,7 @@ export const WAY_LABELS: Readonly<Record<WayId, string>> = {
 /** the choice ids the host's `setup.ladder` already used before the catalogue, by the way each belongs to */
 const LEGACY: Readonly<Record<string, string>> = {
   'anthropic.signin': 'claude-subscription', 'openai.signin': 'chatgpt-subscription', 'anthropic.key': 'anthropic',
-  'google.key': 'gemini', 'xai.key': 'xai', 'openrouter.key': 'openrouter-free'
+  'openai.key': 'openai-key', 'google.key': 'gemini', 'xai.key': 'xai', 'openrouter.key': 'openrouter-free'
 };
 
 /** the host's choice for a way, if its enum has one: the way's id, its slug or engine, or the id it used before the catalogue */
