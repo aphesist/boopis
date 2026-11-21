@@ -359,7 +359,7 @@ describe('Settings > Models: Providers', () => {
   it('filters by how a lab is reached, and Connected lists only what is connected', async () => {
     const list = baseline().map((s) => (s.way === 'deepseek.key' ? { ...s, status: 'connected' as const } : s));
     const panel = await providersPanel(fakeProviders({ list: () => Promise.resolve(list) }));
-    const pick = (v: string): void => { (section(panel).querySelector(`.ui-seg [data-value="${v}"]`) as HTMLElement).click(); };
+    const pick = (v: string): void => { (section(panel).querySelector(`.ui-chips [data-value="${v}"]`) as HTMLElement).click(); };
     pick('connected');
     const labels = [...section(panel).querySelectorAll('.ui-set__label > span')].map((x) => x.textContent);
     expect(labels).toContain('DeepSeek API key');
@@ -388,7 +388,7 @@ describe('Settings > Models: Providers', () => {
     const panel = await providersPanel(b);
     expect(b.calls.filter((c) => c === 'probe')).toHaveLength(1);
     type(section(panel).querySelector<HTMLInputElement>('#hx-prov-q') as HTMLInputElement, 'ollama');
-    (section(panel).querySelector('.ui-seg [data-value="local"]') as HTMLElement).click();
+    (section(panel).querySelector('.ui-chips [data-value="local"]') as HTMLElement).click();
     expect(b.calls.filter((c) => c === 'probe')).toHaveLength(1);
     (section(panel).querySelector('[data-do="recheck"]') as HTMLElement).click();
     await tick();

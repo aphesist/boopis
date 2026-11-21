@@ -168,7 +168,9 @@ const button = (a: Action, way: string, label: string): string => ui.html.button
 
 function rowHtml(r: Row, canSignin: (w: Way) => boolean): string {
   const actions = actionsFor(r.way, r.state, canSignin(r.way));
-  const control = `<span style="display:inline-flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center;justify-content:flex-end"><span class="ui-set__value" data-status="${esc(r.state?.status ?? 'unread')}">${esc(statusWord(r.state))}</span>${actions.map((a) => button(a, r.way.id, r.way.label)).join('')}</span>`;
+  /* the add-an-endpoint row is an action, not a state: it says no word */
+  const word = r.way.kind === 'custom' ? '' : `<span class="ui-set__value" data-status="${esc(r.state?.status ?? 'unread')}">${esc(statusWord(r.state))}</span>`;
+  const control = `<span style="display:inline-flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center;justify-content:flex-end">${word}${actions.map((a) => button(a, r.way.id, r.way.label)).join('')}</span>`;
   const notes = r.way.notes.filter(rowNote).map((n) => `<p class="ui-field__hint" data-note="${esc(n.id)}">${esc(n.text)}</p>`).join('');
   return ui.html.setRow({ label: r.way.label, hint: hintOf(r.way, r.state), control }) + notes;
 }
@@ -222,7 +224,7 @@ const sink = (h: FlowHandlers): FormsSource => ({
   can: { signin: false, upload: false, folder: false }, pickerItems: () => [], pickFolder: () => Promise.resolve(null)
 });
 
-export interface ProvidersView { refresh: (opts?: { probe?: boolean }) => Promise<void>; destroy: () => void }
+export interface ProvidersView { refresh: (opts?: { probe?: boolean }) => Promise<void>; destroy: () => void; /** the first read of the host (and the probe) has been drawn */ ready: Promise<void> }
 
 /** Draw the section into `host` (a `<section class="ui-set">`). It reads the host once now, and asks the runtimes on this computer
     once now; `refresh({probe: true})` does both again (the tab being shown, "Check again"). It never polls. */
@@ -242,7 +244,7 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
   host.innerHTML = ui.html.setHead({ id: 'hx-set-providers-h', label: 'Providers' }) +
     '<div data-prov-bar style="display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center;padding:var(--sp-2) 0">' +
     ui.html.search({ size: 'm', as: 'input', id: 'hx-prov-q', label: 'Search providers or models', placeholder: 'Search providers or models' }) +
-    ui.html.segmented({ options: FILTERS, value: 'all', mode: 'radio', size: 's', label: 'Show providers' }) + '</div>' +
+    ui.html.chipGroup({ options: FILTERS, value: 'all', label: 'Show providers' }) + '</div>' +
     '<p class="ui-field__hint" role="status" data-prov-status></p><div data-prov-body></div><div data-prov-flow hidden></div>';
   ui.hydrate(host);
   const bar = host.querySelector<HTMLElement>('[data-prov-bar]') as HTMLElement;
@@ -383,8 +385,9 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
   host.querySelector<HTMLInputElement>('#hx-prov-q')?.addEventListener('input', (e) => { query = (e.target as HTMLInputElement).value; draw(); });
   bar.addEventListener('ui:change', (e) => { filter = (e as CustomEvent<{ value: string }>).detail.value as Filter; draw(); });
 
-  void read(true);
+  const ready = read(true);
   return {
+    ready,
     refresh: async (o) => { if (flowOpen) return; await read(o?.probe ?? false); },
     destroy: () => { closeFlow(); }
   };
