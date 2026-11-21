@@ -38,6 +38,7 @@ Every form has a `kind`, which picks its template, defaults and where the result
 | `connector` | install an MCP server from the curated collection (`docs/CONNECTORS.md`) or a plugin found in a marketplace | the install flow (COMPAT §8), with its contents and pinned hash shown |
 | `choice` | the model picker; pick a teammate; pick a folder for Remote Control | the selection |
 | `plan` | approve the plan before work starts (plan mode) | the plan accepted, edited or rejected |
+| `endpoint` | add an endpoint of your own (ADR-0039) | the host's own card (`providers.json`, `endpoint.fields`: name, base URL, wire, optional key, "keep the list up to date", and the models Test found plus ids by hand). Its secret field goes to the host command (`provider_test_endpoint`, `provider_add_endpoint`) and nowhere else: never to the keychain by the card, never into text on the page. Its models are never frontier |
 | `feedback` | "Was this result right?" | stored for the user only; feeds nothing automatically |
 
 ## 3. Secrets never reach the agent
