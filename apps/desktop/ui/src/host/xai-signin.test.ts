@@ -39,7 +39,7 @@ describe('the SuperGrok sign-in card', () => {
     const b = fake();
     let signedIn = 0;
     mountXaiSignin(host, b, { onSignedIn: () => { signedIn += 1; }, now: () => NOW });
-    expect(act(host, 'start')?.querySelector('.ui-sso__label')?.textContent).toBe('Continue with xAI');
+    expect(act(host, 'start')?.querySelector('.ui-sso__label')?.textContent).toBe('Sign in with xAI');
     act(host, 'start')?.click();
     await tick(); await tick();
     const code = host.querySelector<HTMLElement>('[data-code]');
@@ -116,7 +116,7 @@ describe('the SuperGrok sign-in card', () => {
     const b = fake();
     const card = mountXaiSignin(host, b);
     b.end(ev('signed_in'));
-    expect(host.textContent, 'an event while nothing waits changes nothing').toContain('Continue with xAI');
+    expect(host.textContent, 'an event while nothing waits changes nothing').toContain('Sign in with xAI');
     act(host, 'start')?.click();
     await tick(); await tick();
     expect(b.listening()).toBe(true);
@@ -147,7 +147,7 @@ describe('first-run setup: the form that offers the SuperGrok sign-in', () => {
     const b = fake();
     const deps = (): SetupSignins => ({ chatgpt: {} as never, xai: b, login: () => Promise.reject(new Error('no')), open: () => Promise.resolve() });
     let next = 0;
-    const form = { form_id: 'setup.xai', kind: 'setup', title: 'Continue with xAI', body: 'Why', schema: { type: 'object', properties: {} }, submit: { label: 'Check again' }, cancel: { label: 'Choose another model' }, sensitive: false, origin: 'host', diff: [], signin: { provider: 'xai', label: 'Continue with xAI' } };
+    const form = { form_id: 'setup.xai', kind: 'setup', title: 'Sign in with xAI', body: 'Why', schema: { type: 'object', properties: {} }, submit: { label: 'Check again' }, cancel: { label: 'Choose another model' }, sensitive: false, origin: 'host', diff: [], signin: { provider: 'xai', label: 'Sign in with xAI' } };
     const extras = formExtras(form as never, deps, () => { next += 1; });
     expect(extras).toBeTruthy();
     document.body.append(extras?.node as Node);

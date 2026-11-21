@@ -26,4 +26,4 @@ boopis includes or distributes the following third-party work, each under its ow
   Libre Franklin): SIL Open Font License 1.1.
 
 WebKitGTK and GTK are system libraries on Linux packages; the AppImage carries them under their own licences (LGPL).
-- Sign-in marks, vendored unmodified in the interface (`apps/desktop/ui/src/vendor/signin-marks`): the ChatGPT logo (OpenAI's Sign in with ChatGPT assets) and the GitHub Invertocat (GitHub's logo pack). They are trademarks of OpenAI and GitHub, used only to identify the account the person signs in with, under their brand rules; no open licence is stated. See `NOTICE` in that folder.
+- Sign-in marks, vendored unmodified in the interface (`apps/desktop/ui/src/vendor/signin-marks`): the ChatGPT logo (OpenAI's Sign in with ChatGPT assets), the GitHub Invertocat and Copilot icon (GitHub's logo pack), the Claude logo (Anthropic's branding samples) and the xAI mark (a Wikimedia Commons vector, not an xAI file). They are trademarks of OpenAI, GitHub, Anthropic and xAI, used only to identify the lab or account the person connects, under their brand rules; no open licence is stated. See `NOTICE` in that folder.

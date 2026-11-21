@@ -4,16 +4,24 @@
    connected tile inverts to the light fill); then what was found on this computer, and your own endpoint. This file is only the
    arrangement (`ProvidersLayout`): every button keeps its `data-do` and `data-way`, so the actions are the section's own.
    A status is always a word, never colour alone. Pure: markup from a plan, no host, no listeners. */
-import { ui } from '@boopis/ui';
+import { signinLogo, ui } from '@boopis/ui';
+import type { SigninBrand } from '@boopis/ui';
 import { esc } from '../core/dom';
 import type { Way } from '../data/providers';
 import { actionsFor, hintOf } from './providers-view';
 import type { Plan, ProvidersLayout, Row } from './providers-view';
 import { brandOf } from './signin-brands';
 
-/** a lab's mark: the id of the model family that draws it (`ui.modelMark` reads a model's name) */
-const MARK_OF: Readonly<Record<string, string>> = { anthropic: 'claude', openai: 'gpt', google: 'gemini', xai: 'grok', zai: 'glm', moonshot: 'kimi' };
-export const labMark = (entryId: string, size = 24): string => ui.html.modelMark(MARK_OF[entryId] ?? entryId, { size, label: false });
+/** Every lab's mark on this screen, in its own colours (the owner's decision, ADR-0040): the official file where the lab published
+    one (OpenAI's, GitHub's, Anthropic's; xAI's is the faithful vector the sign-in button draws), else the colour version of the
+    vendored icon set. A lab has one mark on the whole screen: the key tile of xAI draws the mark of its sign-in button. */
+const OFFICIAL: Readonly<Record<string, SigninBrand | 'copilot'>> = { openai: 'chatgpt', anthropic: 'claude', xai: 'xai', 'github-copilot': 'copilot' };
+const FAMILY: Readonly<Record<string, string>> = { google: 'gemini', zai: 'glm', moonshot: 'kimi' };
+export const labMark = (entryId: string, size = 24): string => {
+  const own = OFFICIAL[entryId];
+  if (own) return `<span class="fr-mark fr-mark--${size === 20 ? 's' : 'm'}">${signinLogo(own)}</span>`;
+  return ui.html.modelMark(FAMILY[entryId] ?? entryId, { size, color: 'brand', label: false });
+};
 
 /** the plate's one line, in boopis's words: what the account is used for (no model is named here; the summary says what runs) */
 const PLATE_COPY: Readonly<Record<string, { title: string; line: string }>> = {
@@ -60,7 +68,7 @@ export function plateHtml(r: Row, canSignin: (w: Way) => boolean): string {
       : smallButton(a.label, a.do, r.way.id, copy.title, a.do !== 'signin'))).join('');
   }
   return `<article class="fr-plate" data-sq data-way="${esc(r.way.id)}" data-state="${st === 'connected' ? 'connected' : st === 'signing_in' ? 'connecting' : st === 'error' ? 'failed' : 'off'}" aria-label="${esc(copy.title)}">` +
-    `<header class="fr-plate__h"><h3 class="fr-plate__t">${esc(copy.title)}</h3>${stateWord(r)}</header>` +
+    `<header class="fr-plate__h"><h3 class="fr-plate__t"><span class="fr-plate__mark" aria-hidden="true">${labMark(r.entry.id, 20)}</span>${esc(copy.title)}</h3>${stateWord(r)}</header>` +
     `<p class="fr-plate__p">${esc(copy.line)}</p>${note ? `<p class="fr-plate__note" data-note>${esc(note)}</p>` : ''}<div class="fr-plate__act">${action}</div></article>`;
 }
 

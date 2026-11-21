@@ -75,11 +75,6 @@ export function startChoices(list: readonly Connected[]): Connected[] {
   return list.filter((c) => c.choice !== null && !seen.has(c.choice) && !!seen.add(c.choice));
 }
 
-/** what the primary button of the hub says */
-export function continueLabel(connected: number): string {
-  return connected === 0 ? 'Continue' : connected === 1 ? 'Continue with 1 connected' : `Continue with ${String(connected)} connected`;
-}
-
 export interface Summary {
   /** how the person starts: "the free models", or the first tier's model */
   startsWith: { free: boolean; model: string | null; tier: string | null };

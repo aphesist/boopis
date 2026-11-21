@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ui } from '@boopis/ui';
-import { markOf, SIGNIN_BRANDS, SIGNIN_STYLE, SIGNIN_STYLES, signinLabel } from './signin-button';
+import { markOf, SIGNIN_BRANDS, signinLabel } from './signin-button';
 import { brandOf } from '../host/signin-brands';
 import { entries } from '../data/providers';
 
@@ -19,15 +19,15 @@ describe('the branded sign-in buttons (ADR-0040)', () => {
       expect(el.querySelector('svg')).toBeTruthy();
       return el.textContent?.replace(/\s+/g, ' ').trim();
     });
-    expect(names).toEqual(['Continue with ChatGPT', 'Continue with GitHub', 'Continue with Claude', 'Continue with xAI']);
-    expect(signinLabel('chatgpt')).toBe('Continue with ChatGPT');
+    expect(names).toEqual(['Sign in with ChatGPT', 'Sign in with GitHub', 'Sign in with Claude', 'Sign in with xAI']);
+    expect(signinLabel('chatgpt')).toBe('Sign in with ChatGPT');
   });
   it('is one shell: the same markup and class for every lab, so none is more prominent', () => {
     const shapes = new Set(SIGNIN_BRANDS.map((b) => ui.signinButton({ brand: b }).outerHTML.replace(/data-brand="\w+"/, '').replace(/<span class="ui-sso__logo"[\s\S]*?<\/span><span class="ui-sso__label">[^<]*<\/span>/, '')));
     expect(shapes.size).toBe(1);
   });
-  it('draws ChatGPT and GitHub from the labs\' own files, unmodified in their paths, in pure black and pure white', () => {
-    for (const [key, black, white] of [['chatgpt', 'chatgpt-logo-black.svg', 'chatgpt-logo-white.svg'], ['github', 'github-invertocat-black.svg', 'github-invertocat-white.svg']] as const) {
+  it('draws ChatGPT, GitHub and Copilot from the labs\' own files, unmodified in their paths, in pure black and pure white', () => {
+    for (const [key, black, white] of [['chatgpt', 'chatgpt-logo-black.svg', 'chatgpt-logo-white.svg'], ['github', 'github-invertocat-black.svg', 'github-invertocat-white.svg'], ['copilot', 'github-copilot-icon-black.svg', 'github-copilot-icon-white.svg']] as const) {
       const b = readFileSync(join(VENDOR, black), 'utf8');
       const w = readFileSync(join(VENDOR, white), 'utf8');
       const m = markOf(key) as { black: string; white: string };
@@ -47,14 +47,6 @@ describe('the branded sign-in buttons (ADR-0040)', () => {
     expect(x.black).toContain('fill="black"');
     expect(x.white).toContain('fill="white"');
     expect(x.black.replace('fill="black"', '')).toBe(x.white.replace('fill="white"', ''));
-  });
-  it('has two styles, themed and brand, one component, and the default is one line', () => {
-    expect(SIGNIN_STYLES).toEqual(['themed', 'brand']);
-    expect(SIGNIN_STYLE).toBe('themed');
-    expect(ui.signinButton({ brand: 'github' }).dataset['style']).toBe('themed');
-    expect(ui.signinButton({ brand: 'github', style: 'brand' }).dataset['style']).toBe('brand');
-    const same = (s: 'themed' | 'brand'): string => ui.signinButton({ brand: 'claude', style: s }).outerHTML.replace(/data-style="\w+"/, '');
-    expect(same('themed')).toBe(same('brand'));
   });
   it('says which ways carry one: the four sign-ins, never a key, never Gemini, never the grok program', () => {
     const ways = entries().flatMap((e) => e.ways);

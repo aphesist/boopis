@@ -77,6 +77,7 @@ changed most is that it is now the kit's component, one markup for both fields a
   the shell, mods and cards is gone. **Left:** the dock's `--r-card` (`dock.css`, the dock branch's) and the palette's
   last row (a 30px row cannot be concentric 6px from a 30px corner: the owner's call on row height or inset,
   `docs/UI-LAB-FINDINGS.md`). The toast's action and the terminal's copy were converted on `w12/corners`.
+- **Sign-in button** (ADR-0040): `signinButton` (`components/signin-button.ts`, `.css`; the four labs, the themed shell, "A1"), the labs' own logos in `vendor/signin-marks/` (`signinLogo` draws a lab's mark anywhere). Used by first run's hub and by the sign-in rows of Settings > Models and the shared sign-in card.
 - **Debt (allowlisted):** the theme panel's "Import file" is a `<label class="ui-btn">` that opens the file chooser;
   the kit has no file button yet.
 

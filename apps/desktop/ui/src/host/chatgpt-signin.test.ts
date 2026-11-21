@@ -41,7 +41,7 @@ describe('the ChatGPT sign-in card', () => {
     const b = fake();
     let signedIn = 0;
     mountChatgptSignin(host, b, { label: 'Sign in with ChatGPT', onSignedIn: () => { signedIn += 1; } });
-    expect(act(host, 'start')?.querySelector('.ui-sso__label')?.textContent, 'the lab\u2019s own button, with its own words').toBe('Continue with ChatGPT');
+    expect(act(host, 'start')?.querySelector('.ui-sso__label')?.textContent, 'the lab\u2019s own button, with its own words').toBe('Sign in with ChatGPT');
     act(host, 'start')?.click();
     await tick(); await tick();
     expect(host.querySelector('[data-code]'), 'the page does everything: nothing to type').toBeNull();

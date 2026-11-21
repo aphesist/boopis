@@ -73,7 +73,7 @@
 .fr-plate[data-state="connecting"] { --sq-line: var(--line-strong); }
 .fr-plate[data-state="failed"] { --sq-line: var(--red); box-shadow: inset 0 0 0 1px var(--red); }
 .fr-plate__h { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); padding: var(--sp-1) var(--sp-1) 0; }
-.fr-plate__t { margin: 0; color: var(--text-strong); font: 600 var(--fs-m)/var(--lh-ui) var(--sans); min-width: 0; overflow-wrap: anywhere; }
+.fr-plate__t { display: inline-flex; align-items: center; gap: var(--sp-2); margin: 0; color: var(--text-strong); font: 600 var(--fs-m)/var(--lh-ui) var(--sans); min-width: 0; overflow-wrap: anywhere; }
 .fr-plate__p, .fr-plate__note { margin: 0; padding: 0 var(--sp-1); color: var(--text-dim); font: var(--fs-xs)/var(--lh-small) var(--sans); text-wrap: pretty; }
 .fr-plate__p { min-height: calc(2 * 1.5em); }
 .fr-plate__note { color: var(--text-dim); overflow-wrap: anywhere; }
@@ -149,3 +149,15 @@
   .fr-foot__sum { display: none; }
   .fr-foot .ui-btn--primary { flex: 1; }
 }
+
+/* a lab's mark in its own colours (`labMark`): a box of the size asked, whatever file is inside it; the inverted tile reads on the
+   other ground, so it shows the other black or white file and the colour set that was made for that ground */
+.fr-mark { display: inline-flex; flex: none; width: calc(var(--sp-4) + var(--sp-1)); height: calc(var(--sp-4) + var(--sp-1)); }
+.fr-mark--m { width: calc(var(--sp-5)); height: var(--sp-5); }
+.fr-mark .ui-sso__logo { width: 100%; height: 100%; }
+.fr-plate__mark { display: inline-flex; flex: none; }
+.fr-tile[data-state="connected"] { color-scheme: light; }
+:root[data-hx-theme="light"] .fr-tile[data-state="connected"] { color-scheme: dark; }
+:root[data-hx-theme="light"] .fr-tile[data-state="connected"] .ui-sso__ink[data-ink="black"], :root:not([data-hx-theme="light"]) .fr-tile[data-state="connected"] .ui-sso__ink[data-ink="white"] { display: none; }
+:root[data-hx-theme="light"] .fr-tile[data-state="connected"] .ui-sso__ink[data-ink="white"], :root:not([data-hx-theme="light"]) .fr-tile[data-state="connected"] .ui-sso__ink[data-ink="black"] { display: block; }
+.fr-tile__mark { display: inline-flex; flex: none; width: var(--sp-5); height: var(--sp-5); }

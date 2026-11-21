@@ -165,7 +165,7 @@
   "h": 789
  },
  "filter-sign-in@catalog": {
-  "sha": "7bd6d997294d2c8b1f5f819c0510bd691d954472",
+  "sha": "72514ce03e7c0cb0f7f1418f1435c0b5b43254bf",
   "w": 544,
   "h": 789
  },
@@ -305,7 +305,7 @@
   "h": 295
  },
  "remove-asks-first@catalog": {
-  "sha": "aa1c817073ed8c91371ef93d69f0f68e194e9e8c",
+  "sha": "e3dc288b13deff5ff101786fd2eb3da7dda615bd",
   "w": 544,
   "h": 295
  },
@@ -390,7 +390,7 @@
   "h": 922
  },
  "the-endpoint-form-models-found@graphite": {
-  "sha": "0d7588f93f59bccc370e28bde44f7d06b0067600",
+  "sha": "31744b972e9236fcab834a15091743ccd48eab7e",
   "w": 544,
   "h": 922
  },

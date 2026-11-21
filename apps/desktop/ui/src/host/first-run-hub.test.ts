@@ -58,8 +58,8 @@ describe('the models hub', () => {
     const setup = new Setup([AT_MODELS]);
     await start(setup, [state('openai.signin', 'signed_out'), state('github-copilot.signin', 'signed_out'), state('xai.signin', 'signed_out'), state('anthropic.signin', 'signed_out'), state('google.key', 'needs_key')]);
     expect(document.querySelector('h1')?.textContent).toBe('Connect your labs');
-    expect(names()).toEqual(['Continue with ChatGPT', 'Continue with GitHub', 'Continue with Claude', 'Continue with xAI'].sort((a, b) => names().indexOf(a) - names().indexOf(b)));
-    expect(names().sort()).toEqual(['Continue with ChatGPT', 'Continue with Claude', 'Continue with GitHub', 'Continue with xAI']);
+    expect(names()).toEqual(['Sign in with ChatGPT', 'Sign in with GitHub', 'Sign in with Claude', 'Sign in with xAI'].sort((a, b) => names().indexOf(a) - names().indexOf(b)));
+    expect(names().sort()).toEqual(['Sign in with ChatGPT', 'Sign in with Claude', 'Sign in with GitHub', 'Sign in with xAI']);
     expect(document.querySelector('.fr-plates')).toBeTruthy();
     expect(document.querySelectorAll('.fr-plate')).toHaveLength(4);
     expect(document.body.textContent).toContain('Gemini');
