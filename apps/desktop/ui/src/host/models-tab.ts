@@ -8,7 +8,7 @@ import { changeModels } from './change-models';
 import { currentPlan } from './free-tier';
 import type { PlanView } from './free-tier';
 import { mountPlan } from './plan-view';
-import { loadModelsView } from './setup-bridge';
+import { loadModelsView, setSubscriptionFable } from './setup-bridge';
 import type { ModelsView } from './setup-bridge';
 import { mountChatgptSignin, tauriChatgptBridge } from './chatgpt-signin';
 import type { ChatgptBridge } from './chatgpt-signin';
@@ -26,12 +26,14 @@ export interface ModelsDeps {
   toast: (text: string) => void;
   /** boopis's own ChatGPT sign-in; without it the section shows the state and offers nothing */
   chatgpt?: ChatgptBridge;
+  /** opt in to Fable on the Claude subscription ladder, or out; rejects with the host's sentence */
+  setFable?: (on: boolean) => Promise<unknown>;
   /** the host's sign-in for a provider id in its table (Claude Code's own login); without it, only "Check again" */
   login?: (provider: string) => Promise<ConnectorLogin>;
 }
 export const realModelsDeps = (closeSettings: () => void): ModelsDeps => ({
   plan: currentPlan, ladder: loadModelsView, change: () => changeModels(), closeSettings, toast: (t) => { ui.toast(t); },
-  chatgpt: tauriChatgptBridge(),
+  chatgpt: tauriChatgptBridge(), setFable: setSubscriptionFable,
   login: async (provider) => (await import('./connectors-bridge')).tauriConnectorsBridge().login(provider)
 });
 
@@ -60,6 +62,13 @@ export function claudeRows(view: ModelsView | { error: string }): string[] {
     }),
     ui.html.setRow({ label: 'Version', control: '<span class="ui-set__value">' + esc(c.version ?? 'Not reported') + '</span>' })
   ];
+  if (view.fable.applies) {
+    rows.push(ui.html.setRow({
+      label: 'Climb to Fable',
+      hint: 'Off: governed work stays on Opus, and a failed gate retries there. On: it climbs to Fable when Opus fails. Fable bills usage credits from the first request on a Claude Pro plan, so boopis never adds it on its own.' + (view.fable.served ? '' : ' Your Claude Code does not serve Fable yet (it needs 2.1.321); update it with `claude update`.') + ' Applies to sessions you start after this.',
+      control: ui.html.switch({ id: 'hx-fable-on', checked: view.fable.on, disabled: !view.fable.on && !view.fable.served, label: 'Climb to Fable' })
+    }));
+  }
   if (!view.claude_plugin) {
     rows.push(ui.html.setRow({ label: 'Availability', hint: 'The Claude subscription comes with boopis\u2019s own engine. With your own engine (Settings, General, Advanced) it is not available.', control: '<span class="ui-set__value">Not in this engine</span>' }));
   }
@@ -177,6 +186,12 @@ export async function mountModels(panel: HTMLElement, deps: ModelsDeps): Promise
     for (const s of [governed, ladder, claude, chatgpt, gemini]) ui.hydrate(s);
     governed.querySelector('#hx-governed-change')?.addEventListener('click', askAgain);
     claude.querySelector('#hx-claude-check')?.addEventListener('click', () => { void drawAll(); });
+    const fable = claude.querySelector<HTMLInputElement>('#hx-fable-on');
+    if (fable && deps.setFable) {
+      fable.addEventListener('change', () => {
+        deps.setFable?.(fable.checked).then(() => drawAll(), (e: unknown) => { deps.toast(e instanceof Error ? e.message : 'That did not work'); return drawAll(); });
+      });
+    } else fable?.setAttribute('disabled', '');
     const login = deps.login;
     const signin = claude.querySelector<HTMLButtonElement>('#hx-claude-signin');
     if (signin && login) {

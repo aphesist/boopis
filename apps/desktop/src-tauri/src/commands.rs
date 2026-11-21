@@ -220,6 +220,20 @@ pub async fn setup_models_view(
     Ok(setup_engine(&app, &state, profile)?.models_view().await?)
 }
 
+/// Opt in to Fable on the Claude subscription ladder, or out (Settings > Models). Returns the models view as it is after.
+#[tauri::command]
+#[specta::specta]
+pub async fn setup_set_subscription_fable(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    on: bool,
+    profile: Option<String>,
+) -> std::result::Result<ModelsView, HostError> {
+    Ok(setup_engine(&app, &state, profile)?
+        .set_subscription_fable(on)
+        .await?)
+}
+
 /// Which engine this run uses (the bundled one or the machine's), so the first-run screen says what setup is about to
 /// do. Read-only: the choice is `boopis --engine existing` or `BOOPIS_HERMES`, never a setting (ADR-0031).
 #[tauri::command]

@@ -287,6 +287,8 @@ pub struct ModelsView {
     pub gemini_key: bool,
     /// Whether governed mode can run on what is saved, and which models it allows (ADR-0034).
     pub governed: providers::GovernedView,
+    /// The Fable opt-in on the Claude subscription ladder: whether it applies, is on, and whether Claude Code serves Fable.
+    pub fable: providers::FableChoice,
 }
 
 /// The setup engine for one profile.
@@ -535,6 +537,7 @@ impl Setup {
             &tiers,
             providers::anthropic_key(self.secrets.as_ref(), &self.ops.home()),
         );
+        let fable = providers::fable_choice(state, &tiers, &probe);
         Ok(ModelsView {
             state,
             tiers,
@@ -544,7 +547,25 @@ impl Setup {
             chatgpt: chatgpt?,
             gemini_key: providers::gemini_key(self.secrets.as_ref(), &self.ops.home()),
             governed,
+            fable,
         })
+    }
+
+    /// The user opts in to Fable on the Claude subscription ladder, or out (Settings > Models). Fable bills usage credits from the
+    /// first request on a Pro plan, so it is never on the ladder unless the user asked; the choice is remembered so setup run
+    /// again keeps it.
+    ///
+    /// # Errors
+    /// `hx.setup.subscription_unavailable` when there is nothing to choose, `hx.setup.state_invalid` for a progress file that
+    /// cannot be used.
+    pub async fn set_subscription_fable(&self, on: bool) -> Result<ModelsView> {
+        let probe = self.claude.probe().await;
+        providers::set_fable(self.ops.as_ref(), &probe, on).await?;
+        let home = self.ops.home();
+        let mut st = state::load(&home)?;
+        st.subscription_fable = on;
+        state::save(&home, &st)?;
+        self.models_view().await
     }
 
     /// The user wants to choose the models again (from a limit notice): forget the choice and the ladder question's answer,
@@ -935,8 +956,13 @@ impl Setup {
         let (id, title) = ("models", "Models and keys");
         let mut restart = false;
         if !state.frontier_checked && state.choice.is_none() && !state.reopen_models {
-            let repaired =
-                providers::repair(self.ops.as_ref(), self.claude.as_ref(), &mut restart).await;
+            let repaired = providers::repair(
+                self.ops.as_ref(),
+                self.claude.as_ref(),
+                state.subscription_fable,
+                &mut restart,
+            )
+            .await;
             state.restart_pending |= restart;
             match repaired {
                 Ok(providers::Repair::Rewrote(line) | providers::Repair::Report(line)) => {
@@ -958,6 +984,7 @@ impl Setup {
             reopen: state.reopen_models,
             claude: self.claude.as_ref(),
             chatgpt_signed_in,
+            fable: state.subscription_fable,
         };
         let out = providers::run(
             self.ops.as_ref(),

@@ -21,7 +21,8 @@ const CLAUDE: Record<'ready' | 'out' | 'missing' | 'old' | 'metered', Claude> = 
 };
 const ALLOWED = ['Claude Opus 5.5', 'Claude Fable 5.2', 'GPT-6.2 Astra', 'Gemini 4 Carbon'];
 const GOV_OK: ModelsView['governed'] = { allowed: ALLOWED, sentence: 'Claude Opus 5.5 or later, Claude Fable 5.2 or later, GPT-6.2 Astra or later and Gemini 4 Carbon or later', tiers: [], available: true, why: null };
-const SET: ModelsView = { state: 'set', tiers: [{ name: 'small', model: 'openrouter/a-3b:free' }, { name: 'big', model: 'openrouter/b-120b:free' }], claude: CLAUDE.missing, claude_plugin: false, chatgpt: null, gemini_key: false, governed: GOV_OK };
+const NO_FABLE: ModelsView['fable'] = { applies: false, on: false, served: true };
+const SET: ModelsView = { state: 'set', tiers: [{ name: 'small', model: 'openrouter/a-3b:free' }, { name: 'big', model: 'openrouter/b-120b:free' }], claude: CLAUDE.missing, claude_plugin: false, chatgpt: null, gemini_key: false, governed: GOV_OK, fable: NO_FABLE };
 const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 
 function deps(over: Partial<ModelsDeps> = {}): ModelsDeps & { calls: string[] } {
@@ -50,14 +51,14 @@ describe('Settings > Models', () => {
 
   it('says the ladder is the built-in one when none is saved, and lists no tiers it was not told of', async () => {
     const panel = document.createElement('div');
-    await mountModels(panel, deps({ ladder: () => Promise.resolve({ state: 'default', tiers: [], claude: CLAUDE.missing, claude_plugin: false, chatgpt: null, gemini_key: false, governed: GOV_OK }) }));
+    await mountModels(panel, deps({ ladder: () => Promise.resolve({ state: 'default', tiers: [], claude: CLAUDE.missing, claude_plugin: false, chatgpt: null, gemini_key: false, governed: GOV_OK, fable: NO_FABLE }) }));
     expect(panel.querySelector('.ui-ladder--list')).toBeNull();
     expect(panel.textContent).toContain('No ladder is saved here, so boopis uses its built-in Claude ladder');
   });
 
   it('says a saved ladder it cannot read is not shown, and that Hermes could not be asked when it could not', async () => {
     const odd = document.createElement('div');
-    await mountModels(odd, deps({ ladder: () => Promise.resolve({ state: 'unreadable', tiers: [], claude: CLAUDE.missing, claude_plugin: false, chatgpt: null, gemini_key: false, governed: GOV_OK }) }));
+    await mountModels(odd, deps({ ladder: () => Promise.resolve({ state: 'unreadable', tiers: [], claude: CLAUDE.missing, claude_plugin: false, chatgpt: null, gemini_key: false, governed: GOV_OK, fable: NO_FABLE }) }));
     expect(odd.textContent).toContain('does not read as a list of named tiers');
     expect(odd.querySelector('.ui-ladder--list')).toBeNull();
     const down = document.createElement('div');
@@ -75,7 +76,7 @@ describe('Settings > Models', () => {
 
   it('asks both again on refresh, so a changed plan and a changed ladder show', async () => {
     const panel = document.createElement('div');
-    let ladder: ModelsView = { state: 'default', tiers: [], claude: CLAUDE.missing, claude_plugin: false, chatgpt: null, gemini_key: false, governed: GOV_OK };
+    let ladder: ModelsView = { state: 'default', tiers: [], claude: CLAUDE.missing, claude_plugin: false, chatgpt: null, gemini_key: false, governed: GOV_OK, fable: NO_FABLE };
     const m = await mountModels(panel, deps({ ladder: () => Promise.resolve(ladder) }));
     expect(panel.querySelectorAll('.ui-ladder--list > li')).toHaveLength(0);
     ladder = SET;
@@ -101,7 +102,7 @@ describe('Settings > Models', () => {
   });
 
   it('rows are plain text with no markup from a tier name or model', () => {
-    const rows = ladderRows({ state: 'set', tiers: [{ name: '<b>x</b>', model: 'a"b/c' }], claude: CLAUDE.missing, claude_plugin: false, chatgpt: null, gemini_key: false, governed: GOV_OK }).join('');
+    const rows = ladderRows({ state: 'set', tiers: [{ name: '<b>x</b>', model: 'a"b/c' }], claude: CLAUDE.missing, claude_plugin: false, chatgpt: null, gemini_key: false, governed: GOV_OK, fable: NO_FABLE }).join('');
     expect(rows).not.toContain('<b>x</b>');
     expect(rows).toContain('&lt;b&gt;x&lt;/b&gt;');
   });
@@ -109,7 +110,7 @@ describe('Settings > Models', () => {
 
 describe('Settings > Models: the Claude subscription', () => {
   const text = (v: ModelsView | { error: string }): string => { const d = document.createElement('div'); d.innerHTML = claudeRows(v).join(''); return d.textContent ?? ''; };
-  const view = (claude: Claude, plugin = false): ModelsView => ({ state: 'default', tiers: [], claude, claude_plugin: plugin, chatgpt: null, gemini_key: false, governed: GOV_OK });
+  const view = (claude: Claude, plugin = false): ModelsView => ({ state: 'default', tiers: [], claude, claude_plugin: plugin, chatgpt: null, gemini_key: false, governed: GOV_OK, fable: NO_FABLE });
 
   it('says signed in with the plan and the version, and names no engine', () => {
     const t = text(view(CLAUDE.ready, true));
@@ -201,7 +202,7 @@ describe('change models', () => {
 });
 
 describe('Settings > Models: ChatGPT and Gemini (ADR-0030)', () => {
-  const base: ModelsView = { state: 'default', tiers: [], claude: CLAUDE.ready, claude_plugin: true, chatgpt: { state: 'signed_out', plan: null, code: null }, gemini_key: false, governed: GOV_OK };
+  const base: ModelsView = { state: 'default', tiers: [], claude: CLAUDE.ready, claude_plugin: true, chatgpt: { state: 'signed_out', plan: null, code: null }, gemini_key: false, governed: GOV_OK, fable: NO_FABLE };
   const text = (rows: string[]): string => { const d = document.createElement('div'); d.innerHTML = rows.join(''); return d.textContent ?? ''; };
 
   function fakeChatgpt(): ChatgptBridge & { calls: string[]; end: (e: ChatgptSigninEvent) => void } {
@@ -309,5 +310,46 @@ describe('Settings > Models: governed mode (ADR-0034)', () => {
   });
   it('says it could not be read when the host could not be asked', () => {
     expect(text(governedRows({ error: 'no engine' }))).toContain('Not read: no engine');
+  });
+});
+
+describe('Settings > Models: the Fable opt-in (ADR-0034)', () => {
+  const ladder = (on: boolean, served = true): ModelsView => ({ ...SET, state: 'set', claude: CLAUDE.ready, claude_plugin: true, fable: { applies: true, on, served } });
+  const text = (v: ModelsView): string => { const d = document.createElement('div'); d.innerHTML = claudeRows(v).join(''); return d.textContent ?? ''; };
+
+  it('says plainly that Fable bills usage credits from the first request on a Pro plan, and that the default stays on Opus', () => {
+    const t = text(ladder(false));
+    expect(t).toContain('Climb to Fable');
+    expect(t).toContain('bills usage credits from the first request on a Claude Pro plan');
+    expect(t).toContain('governed work stays on Opus');
+  });
+  it('shows nothing about Fable when the saved ladder is not the subscription\'s', () => {
+    expect(text({ ...SET, claude: CLAUDE.ready, fable: NO_FABLE })).not.toContain('Climb to Fable');
+  });
+  it('turning it on asks the host, then redraws; a refusal is shown', async () => {
+    const calls: boolean[] = [];
+    let view = ladder(false);
+    const panel = document.createElement('div');
+    await mountModels(panel, deps({ ladder: () => Promise.resolve(view), setFable: (on) => { calls.push(on); view = ladder(on); return Promise.resolve(); } }));
+    const sw = (): HTMLInputElement => panel.querySelector<HTMLInputElement>('#hx-fable-on') as HTMLInputElement;
+    expect(sw().checked).toBe(false);
+    sw().checked = true; sw().dispatchEvent(new Event('change'));
+    await tick(); await tick();
+    expect(calls).toEqual([true]);
+    expect(sw().checked).toBe(true);
+
+    const d = deps({ ladder: () => Promise.resolve(ladder(false)), setFable: () => Promise.reject(new Error('Your Claude Code does not serve Fable yet (it needs 2.1.321).')) });
+    const p2 = document.createElement('div');
+    await mountModels(p2, d);
+    const s2 = p2.querySelector<HTMLInputElement>('#hx-fable-on') as HTMLInputElement;
+    s2.checked = true; s2.dispatchEvent(new Event('change'));
+    await tick(); await tick();
+    expect(d.calls.some((c) => c.includes('2.1.321'))).toBe(true);
+  });
+  it('is off and cannot be turned on while Claude Code does not serve Fable', () => {
+    const d = document.createElement('div');
+    d.innerHTML = claudeRows(ladder(false, false)).join('');
+    expect(d.querySelector<HTMLInputElement>('#hx-fable-on')?.disabled).toBe(true);
+    expect(d.textContent).toContain('needs 2.1.321');
   });
 });

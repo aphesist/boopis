@@ -140,6 +140,76 @@ pub fn anthropic_key(store: &dyn SecretStore, home: &Path) -> bool {
         || saved(store, &SecretRef::provider_key("anthropic"))
 }
 
+/// The Fable opt-in on the Claude subscription ladder (Settings > Models).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, specta::Type)]
+pub struct FableChoice {
+    /// The saved ladder is the Claude subscription's, so the choice means something.
+    pub applies: bool,
+    /// Fable is on the saved ladder now.
+    pub on: bool,
+    /// The user's Claude Code serves Fable (it needs 2.1.321).
+    pub served: bool,
+}
+
+/// What the saved ladder says about the Fable opt-in.
+#[must_use]
+pub fn fable_choice(state: LadderState, tiers: &[LadderTier], probe: &Probe) -> FableChoice {
+    let applies = state == LadderState::Set
+        && !tiers.is_empty()
+        && tiers
+            .iter()
+            .all(|t| crate::frontier::split(&t.model).0 == PROVIDER_ID);
+    FableChoice {
+        applies,
+        on: applies
+            && tiers
+                .iter()
+                .any(|t| t.model == format!("{PROVIDER_ID}/{}", claude::FABLE)),
+        served: probe.aliases.iter().any(|a| a == claude::FABLE),
+    }
+}
+
+/// Add Fable to the Claude subscription ladder, or take it off (the user's choice, Settings > Models). Only a ladder of that
+/// subscription's own tiers changes; Fable is added after the tiers there and needs a Claude Code that serves it. Takes effect
+/// for sessions started afterwards.
+///
+/// # Errors
+/// `hx.setup.subscription_unavailable` when the ladder is not the subscription's or Claude Code does not serve Fable; whatever
+/// Hermes refuses.
+pub async fn set_fable(ops: &dyn HermesOps, probe: &Probe, on: bool) -> Result<()> {
+    let (state, mut tiers) = ladder_of(ops.config_get(LADDER_KEY).await?.as_ref());
+    let choice = fable_choice(state, &tiers, probe);
+    if !choice.applies {
+        return Err(Error::Setup(
+            "hx.setup.subscription_unavailable",
+            "The saved ladder is not the Claude subscription's, so there is no Fable choice to make. Change models sets that up.".into(),
+        ));
+    }
+    let model = format!("{PROVIDER_ID}/{}", claude::FABLE);
+    if on {
+        if !choice.served {
+            return Err(Error::Setup(
+                "hx.setup.subscription_unavailable",
+                "Your Claude Code does not serve Fable yet (it needs 2.1.321). Update it with `claude update`, then try again.".into(),
+            ));
+        }
+        if !choice.on {
+            tiers.push(LadderTier {
+                name: claude::FABLE.to_owned(),
+                model,
+            });
+        }
+    } else {
+        tiers.retain(|t| t.model != model);
+        if tiers.is_empty() {
+            return Ok(()); // a ladder is never left empty
+        }
+    }
+    let pairs: Vec<(String, String)> = tiers.into_iter().map(|t| (t.name, t.model)).collect();
+    write_ladder(ops, &pairs).await?;
+    Ok(())
+}
+
 /// What governed mode can do with the saved ladder.
 #[must_use]
 pub fn governed_view(state: LadderState, tiers: &[LadderTier], anthropic: bool) -> GovernedView {
@@ -216,6 +286,8 @@ pub struct Input<'a> {
     pub claude: &'a dyn ClaudeCli,
     /// A ChatGPT account is signed in through boopis's own sign-in (both tokens are in the keychain).
     pub chatgpt_signed_in: bool,
+    /// The user opted in to Fable on the Claude subscription ladder (it bills usage credits on a Pro plan).
+    pub fable: bool,
 }
 
 /// Names of the variables in `<home>/.env` that have a value. Values are never read into the result.
@@ -757,6 +829,7 @@ pub(crate) fn written_by_setup(tiers: &[LadderTier]) -> bool {
 pub async fn repair(
     ops: &dyn HermesOps,
     claude: &dyn ClaudeCli,
+    fable: bool,
     restart: &mut bool,
 ) -> Result<Repair> {
     let (state, tiers) = ladder_of(ops.config_get(LADDER_KEY).await?.as_ref());
@@ -780,7 +853,7 @@ pub async fn repair(
     let target: Vec<(String, String)> = if provider == PROVIDER_ID {
         let probe = claude.probe().await;
         if probe.usable() {
-            subscription_tiers(&probe, plugin_aliases(&ops.home()).as_deref())
+            subscription_tiers(&probe, plugin_aliases(&ops.home()).as_deref(), fable)
         } else {
             // Claude Code cannot say what it serves now: keep the tiers that are already frontier
             tiers
@@ -932,14 +1005,20 @@ fn plugin_aliases(home: &Path) -> Option<Vec<String>> {
 }
 
 /// The tiers of the Claude subscription: the plugin's aliases the user's Claude Code serves and the pinned plugin knows, and
-/// that the frontier list allows (opus and fable: ADR-0034), cheapest first, each as `<provider>/<alias>`.
+/// that the frontier list allows (opus and fable: ADR-0034) and, for fable, that the user opted in to, cheapest first, each as `<provider>/<alias>`.
 #[must_use]
-pub fn subscription_tiers(probe: &Probe, plugin: Option<&[String]>) -> Vec<(String, String)> {
+pub fn subscription_tiers(
+    probe: &Probe,
+    plugin: Option<&[String]>,
+    fable: bool,
+) -> Vec<(String, String)> {
     probe
         .aliases
         .iter()
         .filter(|a| plugin.is_none_or(|p| p.contains(a)))
         .filter(|a| crate::frontier::is_frontier(PROVIDER_ID, a))
+        // Fable bills usage credits from the first request on a Pro plan: only when the user opted in
+        .filter(|a| fable || a.as_str() != claude::FABLE)
         .map(|a| (a.clone(), format!("{PROVIDER_ID}/{a}")))
         .collect()
 }
@@ -975,7 +1054,7 @@ async fn subscription(
         }
         Some(_) => {}
     }
-    let tiers = subscription_tiers(&probe, plugin_aliases(&home).as_deref());
+    let tiers = subscription_tiers(&probe, plugin_aliases(&home).as_deref(), input.fable);
     if tiers.is_empty() {
         return Err(Error::Setup(
             "hx.setup.subscription_unavailable",

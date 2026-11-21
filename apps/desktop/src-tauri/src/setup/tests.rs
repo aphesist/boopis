@@ -1707,9 +1707,7 @@ async fn once_claude_code_is_signed_in_the_bundled_plugin_s_ladder_is_written_wi
     assert!(s.done && s.form.is_none(), "{:?}", s.steps);
     assert_eq!(
         r.fake.config_get(LADDER).await.unwrap().unwrap(),
-        json!({"tiers": [
-            {"name": "opus", "model": "claude-subscription-directsdk-experimental/opus"},
-            {"name": "fable", "model": "claude-subscription-directsdk-experimental/fable"}]})
+        json!({"tiers": [{"name": "opus", "model": "claude-subscription-directsdk-experimental/opus"}]})
     );
     // the engine's own default model is the first tier: a session freezes it when it is created, and with none the
     // engine refused to read the session back on the first message (storage_unavailable)
@@ -1723,7 +1721,7 @@ async fn once_claude_code_is_signed_in_the_bundled_plugin_s_ladder_is_written_wi
     );
     let receipt = s.receipt.unwrap().lines.join("\n");
     assert!(
-        receipt.contains("Claude subscription (Claude Max): opus, fable on your Claude Code login"),
+        receipt.contains("Claude subscription (Claude Max): opus on your Claude Code login"),
         "{receipt}"
     );
     // a model provider needs no enable entry, and none was written
@@ -1746,6 +1744,7 @@ async fn once_claude_code_is_signed_in_the_bundled_plugin_s_ladder_is_written_wi
 
 #[tokio::test]
 async fn the_ladder_follows_what_the_installed_claude_code_and_plugin_serve_and_is_frontier_only() {
+    // Fable is frontier but bills usage credits on a Pro plan, so it is never on the ladder setup writes unless the user opted in
     // Claude Code 2.1.285 serves sonnet and opus, not haiku or fable; sonnet is not frontier, so the ladder is opus alone
     let r = rig(json!({}));
     r.fake.bundled_claude();
@@ -1840,7 +1839,7 @@ async fn a_plugin_switched_off_by_hand_is_switched_back_on_when_chosen() {
             .iter()
             .any(|p| p.name == PROVIDER_ID && p.enabled)
     );
-    assert_eq!(ladder_names(&r).await.len(), 2);
+    assert_eq!(ladder_names(&r).await.len(), 1);
 }
 
 #[tokio::test]
@@ -2248,7 +2247,11 @@ async fn a_ladder_setup_wrote_with_cheap_tiers_is_rewritten_once_to_the_frontier
     );
     let s = r.setup().advance(None, false).await.unwrap();
     assert!(s.done, "{:?}", s.steps);
-    assert_eq!(ladder_names(&r).await, ["opus", "fable"]);
+    assert_eq!(
+        ladder_names(&r).await,
+        ["opus"],
+        "Fable bills usage credits on a Pro plan: opt-in only"
+    );
     assert_eq!(
         r.fake.config_get("model.default").await.unwrap(),
         Some(json!("opus"))
@@ -2364,4 +2367,70 @@ async fn the_models_view_says_whether_governed_mode_can_run_on_what_is_saved() {
         .unwrap();
     let v = r.setup().models_view().await.unwrap();
     assert!(v.governed.available && v.governed.why.is_none());
+}
+
+#[tokio::test]
+async fn fable_joins_the_subscription_ladder_only_when_the_user_opted_in_and_claude_code_serves_it()
+{
+    // opted in, and Claude Code 2.1.328 serves it: opus, then fable
+    let r = rig(json!({}));
+    r.fake.bundled_claude();
+    r.claude.signed_in("2.1.328 (Claude Code)");
+    let mut st = super::state::load(&r.fake.home).unwrap();
+    st.subscription_fable = true;
+    super::state::save(&r.fake.home, &st).unwrap();
+    assert!(choose_subscription(&r).await.done);
+    assert_eq!(ladder_names(&r).await, ["opus", "fable"]);
+
+    // opted in, but 2.1.320 does not serve it (it needs 2.1.321): opus alone
+    let r = rig(json!({}));
+    r.fake.bundled_claude();
+    r.claude.signed_in("2.1.320 (Claude Code)");
+    let mut st = super::state::load(&r.fake.home).unwrap();
+    st.subscription_fable = true;
+    super::state::save(&r.fake.home, &st).unwrap();
+    assert!(choose_subscription(&r).await.done);
+    assert_eq!(ladder_names(&r).await, ["opus"]);
+}
+
+#[tokio::test]
+async fn the_models_tab_opts_in_to_fable_and_out_again_and_the_choice_is_remembered() {
+    let r = rig(json!({}));
+    r.fake.bundled_claude();
+    r.claude.signed_in("2.1.328 (Claude Code)");
+    assert!(choose_subscription(&r).await.done);
+    let v = r.setup().models_view().await.unwrap();
+    assert_eq!(
+        (v.fable.applies, v.fable.on, v.fable.served),
+        (true, false, true)
+    );
+
+    let v = r.setup().set_subscription_fable(true).await.unwrap();
+    assert!(v.fable.on);
+    assert_eq!(ladder_names(&r).await, ["opus", "fable"]);
+    assert!(super::state::load(&r.fake.home).unwrap().subscription_fable);
+
+    let v = r.setup().set_subscription_fable(false).await.unwrap();
+    assert!(!v.fable.on);
+    assert_eq!(ladder_names(&r).await, ["opus"]);
+    assert!(!super::state::load(&r.fake.home).unwrap().subscription_fable);
+
+    // a Claude Code too old to serve it refuses, and writes nothing
+    r.claude.signed_in("2.1.300 (Claude Code)");
+    let e = r.setup().set_subscription_fable(true).await.unwrap_err();
+    assert!(e.to_string().contains("2.1.321"), "{e}");
+    assert_eq!(ladder_names(&r).await, ["opus"]);
+
+    // a ladder that is not the subscription's has no such choice
+    let r = rig(json!({}));
+    r.claude.signed_in("2.1.328 (Claude Code)");
+    r.fake
+        .config_set(
+            LADDER,
+            &json!({"tiers": [{"name": "opus", "model": "anthropic/claude-opus-5-5"}]}).to_string(),
+        )
+        .await
+        .unwrap();
+    assert!(!r.setup().models_view().await.unwrap().fable.applies);
+    assert!(r.setup().set_subscription_fable(true).await.is_err());
 }

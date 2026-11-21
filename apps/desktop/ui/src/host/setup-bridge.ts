@@ -40,3 +40,6 @@ export async function reopenModels(): Promise<void> {
 
 /** the configured ladder (Settings > Models) */
 export const loadModelsView = (): Promise<ModelsView> => call(commands.setupModelsView(null));
+
+/** opt in to Fable on the Claude subscription ladder, or out (it bills usage credits from the first request on a Pro plan); resolves with the view as it is after */
+export const setSubscriptionFable = (on: boolean): Promise<ModelsView> => call(commands.setupSetSubscriptionFable(on, null));

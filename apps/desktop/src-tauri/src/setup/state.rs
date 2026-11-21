@@ -54,6 +54,9 @@ pub struct State {
     /// The saved ladder was checked for frontier models once (ADR-0034): one that setup wrote with tiers governed mode will not
     /// use is rewritten, and a hand-written one is only reported. Added without a version bump, like `route_checked`.
     pub frontier_checked: bool,
+    /// The user opted in to climbing to Fable on the Claude subscription (Settings > Models): Fable bills usage credits from the
+    /// first request on a Pro plan, so the ladder setup writes is Opus alone until this is set (ADR-0034).
+    pub subscription_fable: bool,
 }
 
 /// Where the file lives.

@@ -1,4 +1,24 @@
 {
+ "claude-subscription-the-fable-opt-in-off-and-on-settings-models@bone": {
+  "sha": "c16a279ceaeda25461f2660fed69a9b218cf1499",
+  "w": 584,
+  "h": 579
+ },
+ "claude-subscription-the-fable-opt-in-off-and-on-settings-models@catalog": {
+  "sha": "2bf8f72c983e98a8c09b352745ddd76a7675b2c0",
+  "w": 584,
+  "h": 579
+ },
+ "claude-subscription-the-fable-opt-in-off-and-on-settings-models@graphite": {
+  "sha": "d03081440e5dd767db64596178a3613013d6fa04",
+  "w": 584,
+  "h": 579
+ },
+ "claude-subscription-the-fable-opt-in-off-and-on-settings-models@typewriter": {
+  "sha": "a85aed0b8bfc8d828d2b5e9fd8f51a855fb86538",
+  "w": 584,
+  "h": 651
+ },
  "focus@bone": {
   "sha": "b7f9e43d5d4ad4333da03f820a682c51fa04caea",
   "w": 584,
@@ -18,6 +38,66 @@
   "sha": "5540d0ea87e9ec2a91ac53e0f87c60a800a6b6f4",
   "w": 584,
   "h": 238
+ },
+ "governed-mode-a-ladder-with-cheap-tiers-marked-settings-models@bone": {
+  "sha": "233bf82806865555dd271361b49701eaa3bd763a",
+  "w": 584,
+  "h": 733
+ },
+ "governed-mode-a-ladder-with-cheap-tiers-marked-settings-models@catalog": {
+  "sha": "d7d030d277880878c0bac6503a94bf504a330602",
+  "w": 584,
+  "h": 733
+ },
+ "governed-mode-a-ladder-with-cheap-tiers-marked-settings-models@graphite": {
+  "sha": "4142ac4f067f4b073073a51ad1989b7c9c1e7826",
+  "w": 584,
+  "h": 733
+ },
+ "governed-mode-a-ladder-with-cheap-tiers-marked-settings-models@typewriter": {
+  "sha": "2d8ea1baab39256abc60db795ac47c670c42716b",
+  "w": 584,
+  "h": 805
+ },
+ "governed-mode-available-settings-models@bone": {
+  "sha": "a67dbb2a465cfca8fc86487b5e7a648a7b6cd426",
+  "w": 584,
+  "h": 599
+ },
+ "governed-mode-available-settings-models@catalog": {
+  "sha": "ba184fbec92a89f2b996128c9a668d7df9b65db3",
+  "w": 584,
+  "h": 599
+ },
+ "governed-mode-available-settings-models@graphite": {
+  "sha": "24ac63bc7986012271cd789e158c7fb0f18ad940",
+  "w": 584,
+  "h": 599
+ },
+ "governed-mode-available-settings-models@typewriter": {
+  "sha": "41efdd7e0e36b64e72e7884bc71c81d1aa48ce5c",
+  "w": 584,
+  "h": 651
+ },
+ "governed-mode-unavailable-no-frontier-model-settings-models@bone": {
+  "sha": "c830fd94927229690510d7a585ae233ea738be5e",
+  "w": 584,
+  "h": 659
+ },
+ "governed-mode-unavailable-no-frontier-model-settings-models@catalog": {
+  "sha": "5cb9c9c63f43974fb73bff12ce69941319bfa254",
+  "w": 584,
+  "h": 659
+ },
+ "governed-mode-unavailable-no-frontier-model-settings-models@graphite": {
+  "sha": "7b805bdc6f4562d6064d1e2215c25311319a5052",
+  "w": 584,
+  "h": 659
+ },
+ "governed-mode-unavailable-no-frontier-model-settings-models@typewriter": {
+  "sha": "05bfa76cb0ab0588cd2548fa3637151ff40e8d8c",
+  "w": 584,
+  "h": 731
  },
  "hover@bone": {
   "sha": "1851c0e8d68d1581eac8a1d5fd50883b2aa3005c",

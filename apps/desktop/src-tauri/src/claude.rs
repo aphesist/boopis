@@ -47,10 +47,14 @@ pub const UPDATE_COMMAND: &str = "claude update";
 /// A Claude Code version, `major.minor.patch`.
 pub type Version = (u32, u32, u32);
 
+/// The alias that is frontier but bills usage credits on a Pro plan: on the subscription ladder only when the user opts in.
+pub const FABLE: &str = "fable";
+
 /// The model aliases the plugin offers for a ladder, cheapest first, each with the oldest Claude Code that serves it. From the
 /// plugin's README ("Requirements", plugin 0.4.0, checked 2026-11-19): Haiku 5.5 needs 2.1.293, Sonnet 5.5 2.1.284 and Opus 5.5
 /// 2.1.280, and Fable 5.2 2.1.321; an older CLI answers `400 Claude Code ... does not support this model`. Which of them a
-/// ladder uses is the frontier list's call (ADR-0034: opus and fable). Fable bills usage credits on a Pro plan.
+/// ladder uses is the frontier list's call (ADR-0034: opus and fable). Fable is frontier, but on a Pro plan it bills usage credits
+/// from the first request, so the subscription ladder setup writes is Opus alone and Fable is an opt-in (`FABLE`).
 pub const ALIASES: &[(&str, Version)] = &[
     ("haiku", (2, 1, 293)),
     ("sonnet", (2, 1, 284)),
