@@ -20,9 +20,9 @@ import { isUnknownMethod } from './wire';
 
 const log = logger('live.council');
 
-/** the preset boopis keeps in the profile's `moa:` section: it is written for the council form, so a preset of the user's own
-    under another name is never touched */
-export const COUNCIL_PRESET = 'council';
+/** the preset boopis keeps in the profile's `moa:` section. The name is unmistakably boopis's, so a preset of the user's own is never
+    overwritten; it is written only by the council form */
+export const COUNCIL_PRESET = 'boopis-council';
 /** the one-turn switch: the preset, on the engine's virtual provider, for this turn only (the engine restores the model after it) */
 export const onceValue = (preset = COUNCIL_PRESET): string => preset + ' --provider moa --once';
 
@@ -102,6 +102,19 @@ export function choiceFromPreset(p: PresetWire | null | undefined): CouncilChoic
 /** the writes that make the saved preset this choice, as `[key, value]` for the engine's `config set`; only what differs from `saved` (a
     council asked twice the same way writes nothing). `fanout: user_turn` is the cheapest cadence (the members answer once per message, not
     once per tool step) and is what the cost note says. */
+/** the whole preset, as the engine keeps it */
+export const fullPreset = (choice: CouncilChoice): PresetWire & { aggregator: { provider: string; model: string } } => ({
+  enabled: true, reference_models: choice.members.map(slotWire), aggregator: slotWire(choice.combiner), fanout: 'user_turn'
+});
+
+/** The first time anything is written under `moa.presets`, the engine's seeded presets (`default`, from DEFAULT_CONFIG) are in the merged
+    configuration only: a user's explicit `presets` map replaces the seeded one outright (`apply_user_moa_presets`), so writing just ours
+    would make `default` vanish, and `/moa` would then run ours. This writes the whole map once, with the presets the merged configuration
+    shows today (`merged`) and ours: whatever `/moa` did before, it still does. Returns the one `config set` to make. */
+export function firstWrite(choice: CouncilChoice, merged: Record<string, unknown>, preset = COUNCIL_PRESET): [string, string] {
+  return ['moa.presets', JSON.stringify({ ...merged, [preset]: fullPreset(choice) })];
+}
+
 export function presetWrites(choice: CouncilChoice, saved: PresetWire | null | undefined, preset = COUNCIL_PRESET): Array<[string, string]> {
   const key = (f: string): string => 'moa.presets.' + preset + '.' + f;
   const out: Array<[string, string]> = [];
@@ -209,12 +222,29 @@ export function createCouncil(deps: CouncilDeps): CouncilHost {
   const subs = new Set<() => void>();
   const notify = (): void => { for (const f of [...subs]) f(); };
 
-  /** the engine's own configuration, as it stands: the `moa` section of the profile (null when it cannot be read) */
+  /** the profile's own `moa.presets` (the user layer, without the engine's defaults): null when the user has no map of their own */
+  async function userPresets(): Promise<Record<string, PresetWire> | null> {
+    const r = (await client.requestRaw('config.get', { key: 'full' })) as { config?: { moa?: { presets?: unknown } } } | null;
+    const p = r?.config?.moa?.presets;
+    return p && typeof p === 'object' && !Array.isArray(p) ? (p as Record<string, PresetWire>) : null;
+  }
   async function savedPreset(): Promise<PresetWire | null> {
+    try { return (await userPresets())?.[COUNCIL_PRESET] ?? null; } catch (e) { log.info('the council preset was not read', e); return null; }
+  }
+  /** the presets the engine shows today, defaults included (`hermes config get moa.presets --json` reads the merged configuration) */
+  async function mergedPresets(): Promise<Record<string, unknown>> {
+    const r = (await client.requestRaw('cli.exec', { argv: ['config', 'get', 'moa.presets', '--json'], timeout: 60 })) as { blocked?: boolean; code?: number; output?: string } | null;
+    const text = r?.output ?? '';
+    const from = text.indexOf('{');
     try {
-      const r = (await client.requestRaw('config.get', { key: 'full' })) as { config?: { moa?: { presets?: Record<string, PresetWire> } } } | null;
-      return r?.config?.moa?.presets?.[COUNCIL_PRESET] ?? null;
-    } catch (e) { log.info('the council preset was not read', e); return null; }
+      if (!r || r.blocked || r.code !== 0 || from < 0) throw new Error('unreadable');
+      const v = JSON.parse(text.slice(from, text.lastIndexOf('}') + 1)) as unknown;
+      if (!v || typeof v !== 'object' || Array.isArray(v)) throw new Error('not a map');
+      return v as Record<string, unknown>;
+    } catch (e) {
+      log.warn('the engine\'s presets were not read', { e, r });
+      throw new Error('boopis could not read the engine\'s current presets, so it did not change them. Try again.');
+    }
   }
   /** `hermes config set` through the gateway: the engine writes its own file. A refusal says why in the engine's words, which go to the log, not the screen */
   async function configSet(key: string, value: string): Promise<void> {
@@ -248,7 +278,9 @@ export function createCouncil(deps: CouncilDeps): CouncilHost {
       if (choice.members.length < MIN_COUNCIL) throw new Error('A council needs at least ' + MIN_COUNCIL + ' members.');
       const said = this.can(uiId);
       if (!said.ok) throw new Error(said.reason);
-      const writes = presetWrites(choice, await savedPreset());
+      const mine = await userPresets().catch((e: unknown) => { throw new Error('boopis could not read the engine\'s settings, so it did not change them (' + sentence(e) + ').'); });
+      /* no map of the user's own yet: write the engine's presets with ours in one go (see `firstWrite`); else only our preset's fields */
+      const writes = mine === null ? [firstWrite(choice, await mergedPresets())] : presetWrites(choice, mine[COUNCIL_PRESET]);
       for (const [k, v] of writes) await configSet(k, v);   /* one after another: each is a read and a write of the same file */
       armedBy.set(uiId, choice);
       notify();

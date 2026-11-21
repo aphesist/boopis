@@ -5,7 +5,7 @@ import { GatewayClient } from '../gateway';
 import { createLiveProvider } from '../live-provider';
 import type { LiveProvider } from '../live-provider';
 import { FakeHost } from '../testing';
-import { applyMoa, bestOf, choiceFromPreset, defaultChoice, defaultMembers, onceValue, presetWrites, slotOfLabel, startedCouncil, versionOf } from './council';
+import { applyMoa, bestOf, firstWrite, choiceFromPreset, defaultChoice, defaultMembers, onceValue, presetWrites, slotOfLabel, startedCouncil, versionOf } from './council';
 
 const C = 'claude-subscription-directsdk-experimental';
 const ch = (provider: string, model: string, tier?: number): ModelChoice => ({ value: provider + '/' + model, provider, model, providerName: provider, ...(tier !== undefined ? { tier, tierName: model } : {}) });
@@ -35,7 +35,7 @@ describe('the preset', () => {
   const choice: CouncilChoice = { members: [{ provider: 'a', model: 'x' }, { provider: 'b', model: 'y' }], combiner: { provider: 'a', model: 'x' } };
   it('writes every field into the council preset, as JSON the engine parses', () => {
     const w = presetWrites(choice, null);
-    expect(w.map(([k]) => k)).toEqual(['moa.presets.council.reference_models', 'moa.presets.council.aggregator', 'moa.presets.council.fanout']);
+    expect(w.map(([k]) => k)).toEqual(['moa.presets.boopis-council.reference_models', 'moa.presets.boopis-council.aggregator', 'moa.presets.boopis-council.fanout']);
     expect(JSON.parse(w[0]?.[1] ?? '')).toEqual([{ provider: 'a', model: 'x' }, { provider: 'b', model: 'y' }]);
     expect(JSON.parse(w[1]?.[1] ?? '')).toEqual({ provider: 'a', model: 'x' });
     expect(w[2]?.[1]).toBe('user_turn');
@@ -47,10 +47,15 @@ describe('the preset', () => {
   });
   it('writes only the combiner when only it changed, and turns a disabled preset on', () => {
     const saved = { enabled: false, reference_models: [{ provider: 'a', model: 'x' }, { provider: 'b', model: 'y' }], aggregator: { provider: 'b', model: 'y' }, fanout: 'user_turn' };
-    expect(presetWrites(choice, saved).map(([k]) => k)).toEqual(['moa.presets.council.aggregator', 'moa.presets.council.enabled']);
+    expect(presetWrites(choice, saved).map(([k]) => k)).toEqual(['moa.presets.boopis-council.aggregator', 'moa.presets.boopis-council.enabled']);
   });
   it('a preset with fewer than two members is not a council to remember', () => { expect(choiceFromPreset({ reference_models: [{ provider: 'a', model: 'x' }], aggregator: { provider: 'a', model: 'x' } })).toBeNull(); });
-  it('the one-turn switch names the preset on the virtual provider', () => { expect(onceValue()).toBe('council --provider moa --once'); });
+  it('the first write is one map: what the engine shows today, plus ours, with the seeded preset untouched', () => {
+    const [key, value] = firstWrite(choice, { default: { enabled: true } });
+    expect(key).toBe('moa.presets');
+    expect(Object.keys(JSON.parse(value) as object)).toEqual(['default', 'boopis-council']);
+  });
+  it('the one-turn switch names the preset on the virtual provider', () => { expect(onceValue()).toBe('boopis-council --provider moa --once'); });
 });
 
 describe('the events of a council', () => {
@@ -78,7 +83,20 @@ describe('the events of a council', () => {
 
 /* ───────── the provider over fake frames ───────── */
 const OPTIONS = { model: 'sonnet', provider: C, providers: [{ slug: C, name: 'Claude', models: ['sonnet', 'opus'], authenticated: true }, { slug: 'openai-codex', name: 'OpenAI', models: ['gpt-6-luna'], authenticated: true }] };
-let host: FakeHost; let provider: LiveProvider; let calls: { method: string; params: Record<string, unknown> }[]; let saved: unknown; let onceFails: number;
+let host: FakeHost; let provider: LiveProvider; let calls: { method: string; params: Record<string, unknown> }[]; let onceFails: number;
+/* a small model of the engine's configuration: the user's own file (no `moa.presets` until something writes one), and the merge with the seeded
+   `default` preset that `hermes config get` shows, in which a user map replaces the seeded one outright (`apply_user_moa_presets`) */
+const SEED = { default: { reference_models: [{ provider: 'openai-codex', model: 'gpt-5.5' }], aggregator: { provider: 'openrouter', model: 'anthropic/claude-opus-4.8' }, enabled: true } };
+let userMap: Record<string, Record<string, unknown>> | null;
+const merged = (): Record<string, unknown> => userMap ?? SEED;
+const exec = (argv: string[]): { blocked: boolean; code: number; output: string } => {
+  if (argv[1] === 'get') return { blocked: false, code: 0, output: JSON.stringify(merged(), null, 2) + '\n' };
+  const key = argv[2] as string, value = JSON.parse(argv[3] === 'user_turn' ? '"user_turn"' : (argv[3] as string)) as unknown;
+  const parts = key.split('.');
+  if (key === 'moa.presets') userMap = value as typeof userMap;
+  else { userMap ??= {}; const name = parts[2] as string; userMap[name] = { ...(userMap[name] ?? {}), [parts[3] as string]: value }; }
+  return { blocked: false, code: 0, output: 'ok' };
+};
 const tick = (n = 5): Promise<void> => new Promise((r) => { let i = 0; const go = (): void => { if (++i >= n) r(); else setTimeout(go, 0); }; go(); });
 function gateway(f: Record<string, unknown>): void {
   const id = f['id'], params = (f['params'] ?? {}) as Record<string, unknown>;
@@ -87,8 +105,8 @@ function gateway(f: Record<string, unknown>): void {
     case 'session.list': host.result(id, { sessions: [] }); break;
     case 'model.options': host.result(id, OPTIONS); break;
     case 'session.create': host.result(id, { session_id: 'g1', info: { model: 'sonnet' } }); break;
-    case 'config.get': host.result(id, { config: { moa: { presets: saved ? { council: saved } : {} } } }); break;
-    case 'cli.exec': host.result(id, { blocked: false, code: 0, output: 'ok' }); break;
+    case 'config.get': host.result(id, { config: { moa: userMap ? { presets: userMap } : {} } }); break;
+    case 'cli.exec': host.result(id, exec(params['argv'] as string[])); break;
     case 'config.set': if (onceFails-- > 0) host.error(id, 5001, 'config.set --once requires a live session'); else host.result(id, { key: 'model', value: 'council', scope: 'once' }); break;
     case 'prompt.submit': host.result(id, { status: 'streaming' }); break;
     case 'profiles.list': host.result(id, { profiles: [] }); break;
@@ -98,7 +116,7 @@ function gateway(f: Record<string, unknown>): void {
   }
 }
 beforeEach(async () => {
-  host = new FakeHost(); host.autoReply = gateway; calls = []; saved = null; onceFails = 0;
+  host = new FakeHost(); host.autoReply = gateway; calls = []; userMap = null; onceFails = 0;
   const client = new GatewayClient(host); await client.connect();
   provider = createLiveProvider({ client, mock: createMockProvider({ simulate: false }) });
   await provider.ready;
@@ -117,22 +135,46 @@ describe('asking a council, end to end over fake frames', () => {
   it('writes the preset with the engine\'s own config command, and arms the next message', async () => {
     const s = provider.sessions.create('p');
     await provider.council.arm(s.id, CHOICE);
-    const sets = calls.filter((c) => c.method === 'cli.exec').map((c) => c.params['argv'] as string[]);
-    expect(sets.map((a) => a.slice(0, 3))).toEqual([['config', 'set', 'moa.presets.council.reference_models'], ['config', 'set', 'moa.presets.council.aggregator'], ['config', 'set', 'moa.presets.council.fanout']]);
+    const argvs = calls.filter((c) => c.method === 'cli.exec').map((c) => c.params['argv'] as string[]);
+    expect(argvs.map((a) => a.slice(0, 3).join(' '))).toEqual(['config get moa.presets', 'config set moa.presets']);
     expect(provider.council.armed(s.id)).toEqual(CHOICE);
   });
+  it('the first write keeps the engine\'s seeded preset: the merged presets still have default, unchanged, beside ours', async () => {
+    const s = provider.sessions.create('p');
+    await provider.council.arm(s.id, CHOICE);
+    const m = merged() as Record<string, Record<string, unknown>>;
+    expect(m['default']).toEqual(SEED.default);
+    expect(m['boopis-council']).toMatchObject({ reference_models: CHOICE.members, aggregator: CHOICE.combiner, fanout: 'user_turn' });
+  });
+  it('with presets of the user\'s own, they stay exactly as they were and only boopis-council\'s fields are written', async () => {
+    const mine = { review: { reference_models: [{ provider: 'a', model: 'x' }], aggregator: { provider: 'a', model: 'x' } }, council: { reference_models: [{ provider: 'b', model: 'y' }], aggregator: { provider: 'b', model: 'y' } } };
+    userMap = JSON.parse(JSON.stringify(mine));
+    const s = provider.sessions.create('p');
+    await provider.council.arm(s.id, CHOICE);
+    const m = merged() as Record<string, unknown>;
+    expect(m['review']).toEqual(mine.review);
+    expect(m['council']).toEqual(mine.council);   /* a preset the user called council is not ours to touch */
+    expect(Object.keys(m).sort()).toEqual(['boopis-council', 'council', 'review']);
+    expect(calls.filter((c) => c.method === 'cli.exec').every((c) => (c.params['argv'] as string[])[2]?.startsWith('moa.presets.boopis-council.'))).toBe(true);
+  });
+  it('does not write at all when the engine\'s presets cannot be read', async () => {
+    host.autoReply = (f) => { if (f['method'] === 'cli.exec' && (f['params'] as { argv: string[] }).argv[1] === 'get') host.result(f['id'], { blocked: false, code: 1, output: 'boom' }); else gateway(f); };
+    const s = provider.sessions.create('p');
+    await expect(provider.council.arm(s.id, CHOICE)).rejects.toThrow(/did not change them/);
+    expect(userMap).toBeNull();
+  });
   it('remembers the last council: a saved preset is where the form starts, and asking it again writes nothing', async () => {
-    saved = { reference_models: CHOICE.members, aggregator: CHOICE.combiner, fanout: 'user_turn' };
+    userMap = { 'boopis-council': { reference_models: CHOICE.members, aggregator: CHOICE.combiner, fanout: 'user_turn' }, default: SEED.default };
     const s = provider.sessions.create('p'); provider.details.follow(s.id);
     const f = await provider.council.prepare(s.id);
     expect(f.remembered).toBe(true); expect(f.choice).toEqual(CHOICE);
     await provider.council.arm(s.id, CHOICE);
-    expect(calls.some((c) => c.method === 'cli.exec')).toBe(false);
+    expect(calls.some((c) => c.method === 'cli.exec' && (c.params['argv'] as string[])[1] === 'set')).toBe(false);
   });
   it('refuses fewer than two members, and a refusal of the engine leaves nothing armed and says so in plain words', async () => {
     const s = provider.sessions.create('p');
     await expect(provider.council.arm(s.id, { ...CHOICE, members: [CHOICE.members[0] as CouncilChoice['members'][number]] })).rejects.toThrow(/at least 2/);
-    host.autoReply = (f) => { if (f['method'] === 'cli.exec') host.result(f['id'], { blocked: false, code: 1, output: 'Traceback boom' }); else gateway(f); };
+    host.autoReply = (f) => { if (f['method'] === 'cli.exec' && (f['params'] as { argv: string[] }).argv[1] === 'set') host.result(f['id'], { blocked: false, code: 1, output: 'Traceback boom' }); else gateway(f); };
     await expect(provider.council.arm(s.id, CHOICE)).rejects.toThrow(/would not save the council/);
     expect(provider.council.armed(s.id)).toBeNull();
   });
@@ -152,8 +194,8 @@ describe('asking a council, end to end over fake frames', () => {
     provider.sessions.send(s.id, 'which index?', { governed: false, smart: false, model: '', assume: [] });
     await tick(20);
     const order = calls.map((c) => c.method).filter((m) => ['cli.exec', 'config.set', 'prompt.submit'].includes(m));
-    expect(order).toEqual(['cli.exec', 'cli.exec', 'cli.exec', 'config.set', 'prompt.submit']);
-    expect(calls.find((c) => c.method === 'config.set')?.params).toMatchObject({ session_id: 'g1', key: 'model', value: 'council --provider moa --once' });
+    expect(order).toEqual(['cli.exec', 'cli.exec', 'config.set', 'prompt.submit']);
+    expect(calls.find((c) => c.method === 'config.set')?.params).toMatchObject({ session_id: 'g1', key: 'model', value: 'boopis-council --provider moa --once' });
     expect(provider.council.armed(s.id)).toBeNull();
     host.event('message.start', 'g1');
     host.event('moa.progress', 'g1', { label: C + ':opus', refs_done: 1, refs_total: 2 });
