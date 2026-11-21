@@ -18,6 +18,7 @@ FILES=(
   "apps/shared/data/model-names.json:required"  # the aliases of delegate_task's `target` (governance/roster.py)
   "crates/hx-pack/never_pack.json:required"  # the ship gate leaves these files out of its copy (ship/secrets.py)
   "apps/shared/data/frontier-models.json:required"  # which models may do governed work (governance/frontier.py)
+  "apps/shared/data/providers.json:required"  # the never-frontier rule for custom endpoints and local runtimes (governance/frontier.py)
   # hx-pack's redact.rules.json joins this list when plugin code reads it. Not yet: `hermes plugins validate`'s
   # security scan flags it (its examples contain a private-key header and os.environ text), and hx redacts
   # everything the plugin sends through `redact.apply`.

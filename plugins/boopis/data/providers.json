@@ -1,0 +1,2928 @@
+{
+  "schema_version": 1,
+  "description": "Every lab and route boopis can set up: sign-ins, API keys, models on this computer and endpoints of your own (ADR-0039). One reviewed file, read by the host (apps/desktop/src-tauri/src/providers, with include_str!), the UI (apps/desktop/ui/src/data/providers.ts) and the plugin (a copy made by scripts/sync-shared-data.sh); the readers are tested against `examples`. To add a lab: one entry here, and an example. An entry is a lab (or a host, or a runtime on this computer) with the ways to connect to it; the array is the display order, `rank` is the research ranking (equal for ties, ADR-0039), and `shown` says whether setup and Settings list it by default or under More providers (search always finds every entry that is not hidden). A way is one route: `kind` signin, key, local or custom; `engine` is the provider slug exactly as the engine spells it (`model.provider` and the `<slug>/<model>` of a ladder tier), cited in `engine_source`; for a custom endpoint or a runtime written as one, `slug` is the name of the `providers.<slug>` entry boopis writes. Key variables are the names the engine reads, in its order; `key.wire_var` is the one boopis binds to the keychain secret `secret://provider.<engine or slug>/api_key`. Labels, hints and notes are boopis's own words and never name the engine (ADR-0031); notes marked `terms` are the owner's to approve. Setup and Settings are drawn from this file, never from a list in code. Routes that are not offered yet are in `not_offered`, with who they wait for.",
+  "engine": {
+    "version": "v0.23.2",
+    "commit": "ae2a81c",
+    "about": "The engine release every `engine_source` and slug was read from. A new engine release is a reason to re-read them, not to change them blind."
+  },
+  "groups": [
+    {
+      "id": "labs",
+      "label": "Labs",
+      "order": 1
+    },
+    {
+      "id": "gateways",
+      "label": "Gateways and hosts",
+      "order": 2
+    },
+    {
+      "id": "local",
+      "label": "On this computer",
+      "order": 3
+    },
+    {
+      "id": "custom",
+      "label": "Your own endpoint",
+      "order": 4
+    }
+  ],
+  "providers": [
+    {
+      "id": "anthropic",
+      "lab": "anthropic",
+      "label": "Anthropic",
+      "summary": "Claude Opus and Fable: on your Claude subscription or an API key.",
+      "group": "labs",
+      "rank": 1,
+      "shown": "default",
+      "keywords": [
+        "claude",
+        "opus",
+        "fable",
+        "sonnet",
+        "haiku"
+      ],
+      "ways": [
+        {
+          "id": "anthropic.signin",
+          "kind": "signin",
+          "label": "Claude subscription",
+          "hint": "Runs on your own Claude Code login. boopis never sees your Claude login.",
+          "engine": "claude-subscription-directsdk-experimental",
+          "slug": null,
+          "config": "external",
+          "hidden": false,
+          "key": null,
+          "base_url": null,
+          "api_mode": null,
+          "discovery": {
+            "method": "none"
+          },
+          "signin": {
+            "flow": "cli",
+            "login": "claude-code",
+            "owner": "claude.rs"
+          },
+          "frontier": "by_name",
+          "engine_source": [
+            "ofp/repo/claude-subscription-directsdk (the official subscription plugin, bundled by boopis; ADR-0029)"
+          ],
+          "notes": [
+            {
+              "id": "own-claude-code",
+              "kind": "terms",
+              "where": "detail",
+              "text": "Anthropic lets you sign in to the unmodified Claude Code with your own subscription. boopis runs that program and never holds or forwards your Claude login.",
+              "source": "https://code.claude.com/docs/en/legal-and-compliance"
+            },
+            {
+              "id": "fable-credits",
+              "kind": "limit",
+              "where": "detail",
+              "text": "On a Claude Pro plan, Claude Fable bills usage credits from the first request, which is why it stays off until you turn it on."
+            }
+          ],
+          "offered_when": "always"
+        },
+        {
+          "id": "anthropic.key",
+          "kind": "key",
+          "label": "Anthropic API key",
+          "hint": "Pay per use with a key from the Anthropic console.",
+          "engine": "anthropic",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "ANTHROPIC_API_KEY",
+              "ANTHROPIC_TOKEN",
+              "CLAUDE_CODE_OAUTH_TOKEN"
+            ],
+            "wire_var": "ANTHROPIC_API_KEY",
+            "url": "https://console.anthropic.com/settings/keys",
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://api.anthropic.com",
+            "env": "ANTHROPIC_BASE_URL",
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "anthropic_messages",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/anthropic/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)"
+          ],
+          "notes": [
+            {
+              "id": "token-vars",
+              "kind": "info",
+              "where": "detail",
+              "text": "Only ANTHROPIC_API_KEY and ANTHROPIC_TOKEN hold a key; CLAUDE_CODE_OAUTH_TOKEN is a sign-in token that the engine also reads."
+            }
+          ],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "openai",
+      "lab": "openai",
+      "label": "OpenAI",
+      "summary": "GPT Astra, Sol and Luna: on your ChatGPT subscription or an API key.",
+      "group": "labs",
+      "rank": 2,
+      "shown": "default",
+      "keywords": [
+        "gpt",
+        "chatgpt",
+        "codex",
+        "astra",
+        "sol",
+        "luna",
+        "terra"
+      ],
+      "ways": [
+        {
+          "id": "openai.signin",
+          "kind": "signin",
+          "label": "ChatGPT subscription",
+          "hint": "Sign in with your ChatGPT account on OpenAI's own page.",
+          "engine": "openai-codex",
+          "slug": null,
+          "config": "external",
+          "hidden": false,
+          "key": null,
+          "base_url": {
+            "default": "https://chatgpt.com/backend-api/codex",
+            "env": null,
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "codex_responses",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": {
+            "flow": "official_program",
+            "login": null,
+            "owner": "chatgpt/"
+          },
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/openai-codex/__init__.py",
+            "hermes_cli/auth_codex.py"
+          ],
+          "notes": [
+            {
+              "id": "plan-limits",
+              "kind": "limit",
+              "where": "detail",
+              "text": "Your plan's own limits apply, and Astra and Sol depend on what your plan includes."
+            },
+            {
+              "id": "signin-program",
+              "kind": "terms",
+              "where": "detail",
+              "text": "boopis signs in through OpenAI's Sign in with ChatGPT program for open-source apps. It does not pool, resell or share your sign-in, and you pay boopis nothing for it.",
+              "source": "https://openai.com/policies/sign-in-with-chatgpt-terms/"
+            }
+          ],
+          "offered_when": "always"
+        },
+        {
+          "id": "openai.key",
+          "kind": "key",
+          "label": "OpenAI API key",
+          "hint": "Pay per use with a key from the OpenAI platform.",
+          "engine": "openai-api",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "OPENAI_API_KEY"
+            ],
+            "wire_var": "OPENAI_API_KEY",
+            "url": "https://platform.openai.com/api-keys",
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://api.openai.com/v1",
+            "env": "OPENAI_BASE_URL",
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "codex_responses",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "hermes_cli/auth.py (_REGISTRY_ROWS)",
+            "hermes_cli/providers.py (HERMES_OVERLAYS)",
+            "hermes_cli/models_catalog_static.py (CANONICAL_PROVIDERS, _PROVIDER_MODELS)"
+          ],
+          "notes": [
+            {
+              "id": "listing-is-final",
+              "kind": "info",
+              "where": "detail",
+              "text": "OpenAI lists only what your key can use, so a model that is not on that list is turned down."
+            }
+          ],
+          "slug_spike": "openai-key-slug",
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "google",
+      "lab": "google",
+      "label": "Google Gemini",
+      "summary": "Gemini Hydrogen, Neon and Carbon with a Google AI Studio key.",
+      "group": "labs",
+      "rank": 3,
+      "shown": "default",
+      "keywords": [
+        "gemini",
+        "carbon",
+        "neon",
+        "hydrogen",
+        "ai studio"
+      ],
+      "ways": [
+        {
+          "id": "google.key",
+          "kind": "key",
+          "label": "Gemini API key",
+          "hint": "A free key from Google AI Studio works. Google sets its daily limits.",
+          "engine": "gemini",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "GOOGLE_API_KEY",
+              "GEMINI_API_KEY"
+            ],
+            "wire_var": "GOOGLE_API_KEY",
+            "url": "https://aistudio.google.com/apikey",
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://generativelanguage.googleapis.com/v1beta",
+            "env": "GEMINI_BASE_URL",
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/gemini/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)"
+          ],
+          "notes": [
+            {
+              "id": "no-subscription-signin",
+              "kind": "terms",
+              "where": "row",
+              "text": "Google has no sign-in that other apps may use with a Google AI Pro or Ultra subscription, so Gemini here is by API key only.",
+              "source": "https://discuss.ai.google.dev/t/gemini-subscription-access-for-third-party-apps-is-a-sanctioned-program-planned/175577"
+            },
+            {
+              "id": "model-access",
+              "kind": "info",
+              "where": "detail",
+              "text": "Which Gemini models a key can use is Google's decision. A refusal at run time says so."
+            }
+          ],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "openrouter",
+      "lab": "openrouter",
+      "label": "OpenRouter",
+      "summary": "One key for models from many labs.",
+      "group": "gateways",
+      "rank": 4,
+      "shown": "default",
+      "keywords": [
+        "router",
+        "free models",
+        "aggregator"
+      ],
+      "ways": [
+        {
+          "id": "openrouter.key",
+          "kind": "key",
+          "label": "OpenRouter API key",
+          "hint": "One key for models from many labs, including free ones.",
+          "engine": "openrouter",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "OPENROUTER_API_KEY"
+            ],
+            "wire_var": "OPENROUTER_API_KEY",
+            "url": "https://openrouter.ai/keys",
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://openrouter.ai/api/v1",
+            "env": "OPENROUTER_BASE_URL",
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/openrouter/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)",
+            "hermes_cli/providers.py (HERMES_OVERLAYS)"
+          ],
+          "notes": [],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "deepseek",
+      "lab": "deepseek",
+      "label": "DeepSeek",
+      "summary": "DeepSeek models with a DeepSeek key.",
+      "group": "labs",
+      "rank": 5,
+      "shown": "default",
+      "keywords": [
+        "deepseek",
+        "v4"
+      ],
+      "ways": [
+        {
+          "id": "deepseek.key",
+          "kind": "key",
+          "label": "DeepSeek API key",
+          "hint": "Pay per use with a key from the DeepSeek platform.",
+          "engine": "deepseek",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "DEEPSEEK_API_KEY"
+            ],
+            "wire_var": "DEEPSEEK_API_KEY",
+            "url": "https://platform.deepseek.com/api_keys",
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://api.deepseek.com/v1",
+            "env": "DEEPSEEK_BASE_URL",
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/deepseek/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)",
+            "hermes_cli/config_defaults.py (OPTIONAL_ENV_VARS)"
+          ],
+          "notes": [],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "xai",
+      "lab": "xai",
+      "label": "xAI",
+      "summary": "Grok with SuperGrok, an xAI key or your own Grok program.",
+      "group": "labs",
+      "rank": 6,
+      "shown": "default",
+      "keywords": [
+        "grok",
+        "x.ai",
+        "supergrok"
+      ],
+      "ways": [
+        {
+          "id": "xai.signin",
+          "kind": "signin",
+          "label": "SuperGrok subscription",
+          "hint": "Sign in with your X or xAI account. boopis keeps the sign-in in your OS keychain.",
+          "engine": "xai-oauth",
+          "slug": null,
+          "config": "external",
+          "hidden": false,
+          "key": null,
+          "base_url": {
+            "default": "https://api.x.ai/v1",
+            "env": "XAI_BASE_URL",
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "codex_responses",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": {
+            "flow": "device_code",
+            "login": null,
+            "owner": "xai/"
+          },
+          "frontier": "by_name",
+          "engine_source": [
+            "hermes_cli/auth.py (_REGISTRY_ROWS)",
+            "hermes_cli/auth_xai.py (issuer, device endpoint, scope)",
+            "agent/credential_pool.py (_SINGLE_USE_REFRESH_PROVIDERS)"
+          ],
+          "notes": [
+            {
+              "id": "plan-gating",
+              "kind": "limit",
+              "where": "detail",
+              "text": "xAI may refuse the sign-in on some plans, whatever your subscription says. The key way below works then."
+            }
+          ],
+          "offered_when": "always"
+        },
+        {
+          "id": "xai.key",
+          "kind": "key",
+          "label": "xAI API key",
+          "hint": "Pay per use with a key from the xAI console.",
+          "engine": "xai",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "XAI_API_KEY"
+            ],
+            "wire_var": "XAI_API_KEY",
+            "url": "https://console.x.ai/",
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://api.x.ai/v1",
+            "env": "XAI_BASE_URL",
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "codex_responses",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/xai/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)",
+            "hermes_cli/providers.py (HERMES_OVERLAYS)"
+          ],
+          "notes": [
+            {
+              "id": "grok-heavy",
+              "kind": "info",
+              "where": "detail",
+              "text": "Grok 4.7 and later is a heavy model: governed mode uses it only when you turn it on in Settings > Models."
+            }
+          ],
+          "offered_when": "always"
+        },
+        {
+          "id": "xai.cli",
+          "kind": "signin",
+          "label": "Your own Grok program",
+          "hint": "Runs on the grok program already installed and signed in on this computer.",
+          "engine": "grok-acp",
+          "slug": null,
+          "config": "external",
+          "hidden": false,
+          "offered_when": "signin_unused",
+          "key": null,
+          "base_url": null,
+          "api_mode": null,
+          "discovery": {
+            "method": "none"
+          },
+          "signin": {
+            "flow": "cli_drive",
+            "login": null,
+            "owner": "xai/"
+          },
+          "frontier": "by_name",
+          "engine_source": [
+            "plugin-catalog/grok-acp.yaml (community plugin, repo nicolasdmolina/hermes-grok-acp at sha 2851d66; the provider slug is taken from the plugin's name and is confirmed when it is bundled)"
+          ],
+          "notes": [
+            {
+              "id": "own-program",
+              "kind": "info",
+              "where": "detail",
+              "text": "boopis starts your grok program and keeps no xAI login of its own. Shown only when the SuperGrok sign-in is not possible or not in use."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "zai",
+      "lab": "zai",
+      "label": "Z.ai (GLM)",
+      "summary": "GLM models with a pay-as-you-go Z.ai key.",
+      "group": "labs",
+      "rank": 7,
+      "shown": "default",
+      "keywords": [
+        "glm",
+        "zhipu",
+        "z.ai"
+      ],
+      "ways": [
+        {
+          "id": "zai.key",
+          "kind": "key",
+          "label": "Z.ai API key (pay as you go)",
+          "hint": "Pay per use with a key from Z.ai.",
+          "engine": "zai",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "GLM_API_KEY",
+              "ZAI_API_KEY",
+              "Z_AI_API_KEY"
+            ],
+            "wire_var": "GLM_API_KEY",
+            "url": "https://z.ai/",
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://api.z.ai/api/paas/v4",
+            "env": "GLM_BASE_URL",
+            "editable": false,
+            "pin": true,
+            "pin_reason": "Left alone, the engine probes four Z.ai endpoints, two of them for the GLM Coding Plan, and uses the first that answers. The address is pinned to the pay-as-you-go one so boopis never runs on a coding plan."
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/zai/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)",
+            "hermes_cli/auth_zai_kimi.py (ZAI_ENDPOINTS, _resolve_zai_base_url)"
+          ],
+          "notes": [
+            {
+              "id": "coding-plan",
+              "kind": "terms",
+              "where": "detail",
+              "text": "A GLM Coding Plan key is not for boopis: Z.ai limits that plan to its list of supported tools, and boopis is not on it. Use a pay-as-you-go key.",
+              "source": "https://docs.z.ai/devpack/overview"
+            }
+          ],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "moonshot",
+      "lab": "moonshot",
+      "label": "Moonshot (Kimi)",
+      "summary": "Kimi models with a Moonshot key.",
+      "group": "labs",
+      "rank": 8,
+      "shown": "default",
+      "keywords": [
+        "kimi",
+        "moonshot"
+      ],
+      "ways": [
+        {
+          "id": "moonshot.key",
+          "kind": "key",
+          "label": "Moonshot API key (pay as you go)",
+          "hint": "Pay per use with a key from the Moonshot platform.",
+          "engine": "kimi-coding",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "KIMI_API_KEY",
+              "KIMI_CODING_API_KEY"
+            ],
+            "wire_var": "KIMI_API_KEY",
+            "url": "https://platform.moonshot.ai/",
+            "required": true,
+            "refuse_prefixes": [
+              "sk-kimi-"
+            ]
+          },
+          "base_url": {
+            "default": "https://api.moonshot.ai/v1",
+            "env": "KIMI_BASE_URL",
+            "editable": false,
+            "pin": true,
+            "pin_reason": "A key that starts with sk-kimi- is a Kimi Code key, and the engine sends it to the Kimi Code endpoint on its own. The address is pinned to the pay-as-you-go one, and such a key is turned down."
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/kimi-coding/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)",
+            "hermes_cli/auth_zai_kimi.py (_resolve_kimi_base_url)"
+          ],
+          "notes": [
+            {
+              "id": "code-plan",
+              "kind": "terms",
+              "where": "detail",
+              "text": "A Kimi Code key is not for boopis: that membership works only in the tools Kimi lists, and boopis is not one. Use a pay-as-you-go key.",
+              "source": "https://www.kimi.com/en/help/kimi-code/third-party-agents"
+            }
+          ],
+          "offered_when": "always"
+        },
+        {
+          "id": "moonshot.key-cn",
+          "kind": "key",
+          "label": "Moonshot API key (China)",
+          "hint": "For the platform in China.",
+          "engine": "kimi-coding-cn",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "KIMI_CN_API_KEY"
+            ],
+            "wire_var": "KIMI_CN_API_KEY",
+            "url": "https://platform.moonshot.cn/",
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://api.moonshot.cn/v1",
+            "env": null,
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/kimi-coding/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)"
+          ],
+          "notes": [],
+          "region": "china",
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "minimax",
+      "lab": "minimax",
+      "label": "MiniMax",
+      "summary": "MiniMax models with a MiniMax key.",
+      "group": "labs",
+      "rank": 9,
+      "shown": "default",
+      "keywords": [
+        "minimax",
+        "m3"
+      ],
+      "ways": [
+        {
+          "id": "minimax.key",
+          "kind": "key",
+          "label": "MiniMax API key",
+          "hint": "Pay per use with a key from MiniMax.",
+          "engine": "minimax",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "MINIMAX_API_KEY"
+            ],
+            "wire_var": "MINIMAX_API_KEY",
+            "url": "https://www.minimax.io/",
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://api.minimax.io/anthropic",
+            "env": "MINIMAX_BASE_URL",
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "anthropic_messages",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/minimax/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)",
+            "hermes_cli/config_defaults.py (OPTIONAL_ENV_VARS)"
+          ],
+          "notes": [],
+          "offered_when": "always"
+        },
+        {
+          "id": "minimax.key-cn",
+          "kind": "key",
+          "label": "MiniMax API key (China)",
+          "hint": "For the platform in China.",
+          "engine": "minimax-cn",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "MINIMAX_CN_API_KEY"
+            ],
+            "wire_var": "MINIMAX_CN_API_KEY",
+            "url": "https://www.minimaxi.com/",
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://api.minimaxi.com/anthropic",
+            "env": "MINIMAX_CN_BASE_URL",
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "anthropic_messages",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/minimax/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)",
+            "hermes_cli/config_defaults.py (OPTIONAL_ENV_VARS)"
+          ],
+          "notes": [],
+          "region": "china",
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "ollama",
+      "lab": "ollama",
+      "label": "Ollama",
+      "summary": "Models you run on this computer.",
+      "group": "local",
+      "rank": 10,
+      "shown": "default",
+      "keywords": [
+        "ollama",
+        "local",
+        "llama"
+      ],
+      "ways": [
+        {
+          "id": "ollama.local",
+          "kind": "local",
+          "label": "Ollama on this computer",
+          "hint": "Models you run yourself. No account and no cost.",
+          "engine": null,
+          "slug": "custom-ollama",
+          "config": "endpoint",
+          "hidden": false,
+          "key": {
+            "vars": [],
+            "wire_var": null,
+            "url": null,
+            "required": false,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "http://127.0.0.1:11434/v1",
+            "env": null,
+            "editable": true,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "probe",
+            "host": "127.0.0.1",
+            "port": 11434,
+            "path": "/api/tags",
+            "shape": "ollama_tags",
+            "fallback_path": "/v1/models",
+            "timeout_ms": 2000
+          },
+          "signin": null,
+          "frontier": "never",
+          "engine_source": [
+            "hermes_cli/models_local.py (_OLLAMA_DEFAULT_PORT, the /api/tags probe)",
+            "plugins/model-providers/custom/__init__.py"
+          ],
+          "notes": [
+            {
+              "id": "loopback",
+              "kind": "info",
+              "where": "detail",
+              "text": "Found only on this computer: boopis asks 127.0.0.1 when Settings > Models opens and when you choose Check again."
+            },
+            {
+              "id": "never-frontier",
+              "kind": "info",
+              "where": "detail",
+              "text": "Models on this computer are available, not in governed mode."
+            }
+          ],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "lm-studio",
+      "lab": "lm-studio",
+      "label": "LM Studio",
+      "summary": "Models you run in LM Studio.",
+      "group": "local",
+      "rank": 10,
+      "shown": "default",
+      "keywords": [
+        "lm studio",
+        "lmstudio",
+        "local"
+      ],
+      "ways": [
+        {
+          "id": "lm-studio.local",
+          "kind": "local",
+          "label": "LM Studio on this computer",
+          "hint": "Models you run yourself. No account and no cost.",
+          "engine": "lmstudio",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "LM_API_KEY"
+            ],
+            "wire_var": "LM_API_KEY",
+            "url": null,
+            "required": false,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "http://127.0.0.1:1234/v1",
+            "env": "LM_BASE_URL",
+            "editable": true,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "probe",
+            "host": "127.0.0.1",
+            "port": 1234,
+            "path": "/api/v1/models",
+            "shape": "lmstudio_models",
+            "fallback_path": null,
+            "timeout_ms": 2000
+          },
+          "signin": null,
+          "frontier": "never",
+          "engine_source": [
+            "plugins/model-providers/lmstudio/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)",
+            "hermes_cli/models_local.py (/api/v1/models)"
+          ],
+          "notes": [
+            {
+              "id": "loopback",
+              "kind": "info",
+              "where": "detail",
+              "text": "Found only on this computer: boopis asks 127.0.0.1 when Settings > Models opens and when you choose Check again."
+            },
+            {
+              "id": "loaded-only",
+              "kind": "info",
+              "where": "detail",
+              "text": "LM Studio turns down a model it has not loaded or listed."
+            },
+            {
+              "id": "never-frontier",
+              "kind": "info",
+              "where": "detail",
+              "text": "Models on this computer are available, not in governed mode."
+            }
+          ],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "llama-cpp",
+      "lab": "llama-cpp",
+      "label": "llama.cpp",
+      "summary": "Models you run with llama.cpp.",
+      "group": "local",
+      "rank": 10,
+      "shown": "default",
+      "keywords": [
+        "llama.cpp",
+        "llamacpp",
+        "llama-server",
+        "local"
+      ],
+      "ways": [
+        {
+          "id": "llama-cpp.local",
+          "kind": "local",
+          "label": "llama.cpp on this computer",
+          "hint": "Models you run yourself. No account and no cost.",
+          "engine": null,
+          "slug": "custom-llama-cpp",
+          "config": "endpoint",
+          "hidden": false,
+          "key": {
+            "vars": [],
+            "wire_var": null,
+            "url": null,
+            "required": false,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "http://127.0.0.1:8080/v1",
+            "env": null,
+            "editable": true,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "probe",
+            "host": "127.0.0.1",
+            "port": 8080,
+            "path": "/props",
+            "shape": "llamacpp_props",
+            "fallback_path": null,
+            "timeout_ms": 2000
+          },
+          "signin": null,
+          "frontier": "never",
+          "engine_source": [
+            "hermes_cli/local_runtime/detect.py (DEFAULT_PROBE_PORTS, the /props fingerprint)"
+          ],
+          "notes": [
+            {
+              "id": "loopback",
+              "kind": "info",
+              "where": "detail",
+              "text": "Found only on this computer: boopis asks 127.0.0.1 when Settings > Models opens and when you choose Check again."
+            },
+            {
+              "id": "never-frontier",
+              "kind": "info",
+              "where": "detail",
+              "text": "Models on this computer are available, not in governed mode."
+            }
+          ],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "vllm",
+      "lab": "vllm",
+      "label": "vLLM",
+      "summary": "Models you run with vLLM.",
+      "group": "local",
+      "rank": 10,
+      "shown": "default",
+      "keywords": [
+        "vllm",
+        "local"
+      ],
+      "ways": [
+        {
+          "id": "vllm.local",
+          "kind": "local",
+          "label": "vLLM on this computer",
+          "hint": "Models you run yourself. No account and no cost.",
+          "engine": null,
+          "slug": "custom-vllm",
+          "config": "endpoint",
+          "hidden": false,
+          "key": {
+            "vars": [],
+            "wire_var": null,
+            "url": null,
+            "required": false,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "http://127.0.0.1:8000/v1",
+            "env": null,
+            "editable": true,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "probe",
+            "host": "127.0.0.1",
+            "port": 8000,
+            "path": "/v1/models",
+            "shape": "openai_models",
+            "fallback_path": null,
+            "timeout_ms": 2000
+          },
+          "signin": null,
+          "frontier": "never",
+          "engine_source": [
+            "plugins/model-providers/custom/__init__.py (alias vllm)",
+            "OpenCode's provider docs (opencode.ai/docs/providers) for port 8000"
+          ],
+          "notes": [
+            {
+              "id": "loopback",
+              "kind": "info",
+              "where": "detail",
+              "text": "Found only on this computer: boopis asks 127.0.0.1 when Settings > Models opens and when you choose Check again."
+            },
+            {
+              "id": "never-frontier",
+              "kind": "info",
+              "where": "detail",
+              "text": "Models on this computer are available, not in governed mode."
+            }
+          ],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "custom",
+      "lab": "custom",
+      "label": "Your own endpoint",
+      "summary": "A server of your own, or any compatible service.",
+      "group": "custom",
+      "rank": 11,
+      "shown": "default",
+      "keywords": [
+        "custom",
+        "endpoint",
+        "openai compatible",
+        "base url",
+        "proxy"
+      ],
+      "ways": [
+        {
+          "id": "custom.endpoint",
+          "kind": "custom",
+          "label": "Add an endpoint",
+          "hint": "Any server that speaks the OpenAI or Anthropic API, with or without a key.",
+          "engine": null,
+          "slug": null,
+          "config": "endpoint",
+          "hidden": false,
+          "key": {
+            "vars": [],
+            "wire_var": null,
+            "url": null,
+            "required": false,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": null,
+            "env": null,
+            "editable": true,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": null,
+          "discovery": {
+            "method": "get_models",
+            "path": "/models",
+            "fallback_path": "/v1/models",
+            "timeout_ms": 10000
+          },
+          "signin": null,
+          "frontier": "never",
+          "engine_source": [
+            "plugins/model-providers/custom/__init__.py",
+            "hermes_cli/config_providers.py (_KNOWN_PROVIDER_KEYS)",
+            "hermes_cli/models.py (probe_api_models)"
+          ],
+          "notes": [
+            {
+              "id": "never-frontier",
+              "kind": "info",
+              "where": "detail",
+              "text": "Models on your own endpoint are available, not in governed mode."
+            }
+          ],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "github-copilot",
+      "lab": "github",
+      "label": "GitHub Copilot",
+      "summary": "Models from several labs on your GitHub Copilot plan.",
+      "group": "labs",
+      "rank": 12,
+      "shown": "default",
+      "keywords": [
+        "copilot",
+        "github"
+      ],
+      "ways": [
+        {
+          "id": "github-copilot.signin",
+          "kind": "signin",
+          "label": "GitHub Copilot subscription",
+          "hint": "Sign in with your GitHub account. boopis keeps the sign-in in your OS keychain.",
+          "engine": "copilot",
+          "slug": null,
+          "config": "external",
+          "hidden": false,
+          "key": null,
+          "base_url": {
+            "default": "https://api.githubcopilot.com",
+            "env": null,
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": {
+            "flow": "device_code",
+            "login": null,
+            "owner": "copilot/"
+          },
+          "frontier": "by_name",
+          "engine_source": [
+            "plugin-catalog/github-copilot.yaml (community plugin NousResearch/hermes-labs-plugins, subdir github-copilot, sha df8f132; the slug `copilot` and the GitHub device flow are from its description, confirmed when it is bundled)"
+          ],
+          "notes": [
+            {
+              "id": "models-are-others",
+              "kind": "info",
+              "where": "detail",
+              "text": "Copilot serves models from several labs under your plan. A model is frontier by its name, as everywhere."
+            },
+            {
+              "id": "billing",
+              "kind": "limit",
+              "where": "detail",
+              "text": "Your Copilot plan's own limits and credits apply."
+            }
+          ],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "meta",
+      "lab": "meta",
+      "label": "Meta (Muse)",
+      "summary": "Muse models with a Meta key.",
+      "group": "labs",
+      "rank": 14,
+      "shown": "more",
+      "keywords": [
+        "muse",
+        "meta",
+        "llama"
+      ],
+      "ways": [
+        {
+          "id": "meta.key",
+          "kind": "key",
+          "label": "Meta Model API key",
+          "hint": "Pay per use with a key from Meta.",
+          "engine": "meta-ai",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "MODEL_API_KEY",
+              "META_API_KEY",
+              "META_MODEL_API_KEY"
+            ],
+            "wire_var": "MODEL_API_KEY",
+            "url": "https://developer.meta.com/ai/",
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://api.meta.ai/v1",
+            "env": "META_BASE_URL",
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "codex_responses",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/meta-ai/__init__.py"
+          ],
+          "notes": [
+            {
+              "id": "preview",
+              "kind": "limit",
+              "where": "detail",
+              "text": "Meta's model API is a paid public preview. Whether your account can use it is Meta's decision.",
+              "source": "https://developer.meta.com/ai/products/meta-model-api/"
+            }
+          ],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "alibaba",
+      "lab": "alibaba",
+      "label": "Alibaba (Qwen)",
+      "summary": "Qwen models with an Alibaba Cloud key.",
+      "group": "labs",
+      "rank": 15,
+      "shown": "more",
+      "keywords": [
+        "qwen",
+        "alibaba",
+        "dashscope"
+      ],
+      "ways": [
+        {
+          "id": "alibaba.key",
+          "kind": "key",
+          "label": "Alibaba Cloud API key",
+          "hint": "Pay per use with a DashScope key.",
+          "engine": "alibaba",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "DASHSCOPE_API_KEY"
+            ],
+            "wire_var": "DASHSCOPE_API_KEY",
+            "url": "https://modelstudio.console.alibabacloud.com/",
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+            "env": "DASHSCOPE_BASE_URL",
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/alibaba/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)",
+            "hermes_cli/config_defaults.py (OPTIONAL_ENV_VARS)"
+          ],
+          "notes": [],
+          "offered_when": "always"
+        },
+        {
+          "id": "alibaba.qwen-signin",
+          "kind": "signin",
+          "label": "Qwen sign-in",
+          "hint": "The free Qwen sign-in tier has ended.",
+          "engine": "qwen-oauth",
+          "slug": null,
+          "config": "external",
+          "hidden": true,
+          "hidden_reason": "Qwen's free sign-in tier ended on 15 April 2026, so nothing works behind this sign-in.",
+          "key": null,
+          "base_url": {
+            "default": "https://portal.qwen.ai/v1",
+            "env": null,
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "none"
+          },
+          "signin": {
+            "flow": "external_token",
+            "login": null,
+            "owner": "engine"
+          },
+          "frontier": "never",
+          "engine_source": [
+            "plugins/model-providers/qwen-oauth/__init__.py",
+            "hermes_cli/auth_qwen.py"
+          ],
+          "notes": [
+            {
+              "id": "free-tier-ended",
+              "kind": "terms",
+              "where": "detail",
+              "text": "Alibaba ended the free Qwen Code sign-in tier on 15 April 2026.",
+              "source": "https://decrypt.co/364501/alibaba-shuts-down-free-tier-qwen-code"
+            }
+          ],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "xiaomi",
+      "lab": "xiaomi",
+      "label": "Xiaomi (MiMo)",
+      "summary": "MiMo models with a Xiaomi key.",
+      "group": "labs",
+      "rank": 16,
+      "shown": "more",
+      "keywords": [
+        "mimo",
+        "xiaomi"
+      ],
+      "ways": [
+        {
+          "id": "xiaomi.key",
+          "kind": "key",
+          "label": "Xiaomi MiMo API key",
+          "hint": "Pay per use with a key.",
+          "engine": "xiaomi",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "XIAOMI_API_KEY"
+            ],
+            "wire_var": "XIAOMI_API_KEY",
+            "url": "https://platform.xiaomimimo.com",
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://api.xiaomimimo.com/v1",
+            "env": "XIAOMI_BASE_URL",
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/xiaomi/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)"
+          ],
+          "notes": [],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "stepfun",
+      "lab": "stepfun",
+      "label": "StepFun",
+      "summary": "Step models with a StepFun key.",
+      "group": "labs",
+      "rank": 16,
+      "shown": "more",
+      "keywords": [
+        "step",
+        "stepfun"
+      ],
+      "ways": [
+        {
+          "id": "stepfun.key",
+          "kind": "key",
+          "label": "StepFun API key",
+          "hint": "Pay per use with a key.",
+          "engine": "stepfun",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "STEPFUN_API_KEY"
+            ],
+            "wire_var": "STEPFUN_API_KEY",
+            "url": "https://platform.stepfun.com/",
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://api.stepfun.ai/step_plan/v1",
+            "env": "STEPFUN_BASE_URL",
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/stepfun/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)"
+          ],
+          "notes": [
+            {
+              "id": "step-plan",
+              "kind": "info",
+              "where": "detail",
+              "text": "This key is for StepFun's Step Plan. boopis has not checked that plan's terms for other apps."
+            }
+          ],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "tencent",
+      "lab": "tencent",
+      "label": "Tencent (Hy)",
+      "summary": "Hy models with a Tencent TokenHub key.",
+      "group": "labs",
+      "rank": 16,
+      "shown": "more",
+      "keywords": [
+        "hy",
+        "hunyuan",
+        "tencent",
+        "tokenhub"
+      ],
+      "ways": [
+        {
+          "id": "tencent.key",
+          "kind": "key",
+          "label": "Tencent TokenHub API key",
+          "hint": "Pay per use with a key.",
+          "engine": "tencent-tokenhub",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "TOKENHUB_API_KEY"
+            ],
+            "wire_var": "TOKENHUB_API_KEY",
+            "url": null,
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://tokenhub.tencentmaas.com/v1",
+            "env": "TOKENHUB_BASE_URL",
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/tencent-tokenhub/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)"
+          ],
+          "notes": [],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "nvidia",
+      "lab": "nvidia",
+      "label": "NVIDIA NIM",
+      "summary": "Nemotron and other models with an NVIDIA key.",
+      "group": "labs",
+      "rank": 16,
+      "shown": "more",
+      "keywords": [
+        "nvidia",
+        "nim",
+        "nemotron"
+      ],
+      "ways": [
+        {
+          "id": "nvidia.key",
+          "kind": "key",
+          "label": "NVIDIA NIM API key",
+          "hint": "Pay per use with a key.",
+          "engine": "nvidia",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "NVIDIA_API_KEY"
+            ],
+            "wire_var": "NVIDIA_API_KEY",
+            "url": "https://build.nvidia.com/",
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://integrate.api.nvidia.com/v1",
+            "env": "NVIDIA_BASE_URL",
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/nvidia/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)"
+          ],
+          "notes": [],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "arcee",
+      "lab": "arcee",
+      "label": "Arcee",
+      "summary": "Arcee models with an Arcee key.",
+      "group": "labs",
+      "rank": 16,
+      "shown": "more",
+      "keywords": [
+        "arcee",
+        "trinity"
+      ],
+      "ways": [
+        {
+          "id": "arcee.key",
+          "kind": "key",
+          "label": "Arcee API key",
+          "hint": "Pay per use with a key.",
+          "engine": "arcee",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "ARCEEAI_API_KEY"
+            ],
+            "wire_var": "ARCEEAI_API_KEY",
+            "url": "https://chat.arcee.ai/",
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://api.arcee.ai/api/v1",
+            "env": "ARCEE_BASE_URL",
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/arcee/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)"
+          ],
+          "notes": [],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "upstage",
+      "lab": "upstage",
+      "label": "Upstage (Solar)",
+      "summary": "Solar models with an Upstage key.",
+      "group": "labs",
+      "rank": 16,
+      "shown": "more",
+      "keywords": [
+        "solar",
+        "upstage"
+      ],
+      "ways": [
+        {
+          "id": "upstage.key",
+          "kind": "key",
+          "label": "Upstage API key",
+          "hint": "Pay per use with a key.",
+          "engine": "upstage",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "UPSTAGE_API_KEY"
+            ],
+            "wire_var": "UPSTAGE_API_KEY",
+            "url": "https://console.upstage.ai/api-keys",
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://api.upstage.ai/v1",
+            "env": "UPSTAGE_BASE_URL",
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/upstage/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)"
+          ],
+          "notes": [],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "gmi",
+      "lab": "gmi",
+      "label": "GMI Cloud",
+      "summary": "Open models hosted by GMI Cloud.",
+      "group": "labs",
+      "rank": 16,
+      "shown": "more",
+      "keywords": [
+        "gmi"
+      ],
+      "ways": [
+        {
+          "id": "gmi.key",
+          "kind": "key",
+          "label": "GMI Cloud API key",
+          "hint": "Pay per use with a key.",
+          "engine": "gmi",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "GMI_API_KEY"
+            ],
+            "wire_var": "GMI_API_KEY",
+            "url": "https://www.gmicloud.ai/",
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://api.gmi-serving.com/v1",
+            "env": "GMI_BASE_URL",
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/gmi/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)"
+          ],
+          "notes": [],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "huggingface",
+      "lab": "huggingface",
+      "label": "Hugging Face",
+      "summary": "Open models through Hugging Face.",
+      "group": "gateways",
+      "rank": 17,
+      "shown": "more",
+      "keywords": [
+        "hugging face",
+        "hf",
+        "inference providers"
+      ],
+      "ways": [
+        {
+          "id": "huggingface.key",
+          "kind": "key",
+          "label": "Hugging Face token",
+          "hint": "Pay per use with an access token.",
+          "engine": "huggingface",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "HF_TOKEN"
+            ],
+            "wire_var": "HF_TOKEN",
+            "url": "https://huggingface.co/settings/tokens",
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://router.huggingface.co/v1",
+            "env": "HF_BASE_URL",
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/huggingface/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)"
+          ],
+          "notes": [],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "fireworks",
+      "lab": "fireworks",
+      "label": "Fireworks AI",
+      "summary": "Open models hosted by Fireworks AI.",
+      "group": "gateways",
+      "rank": 17,
+      "shown": "more",
+      "keywords": [
+        "fireworks"
+      ],
+      "ways": [
+        {
+          "id": "fireworks.key",
+          "kind": "key",
+          "label": "Fireworks AI API key",
+          "hint": "Pay per use with a key.",
+          "engine": "fireworks",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "FIREWORKS_API_KEY"
+            ],
+            "wire_var": "FIREWORKS_API_KEY",
+            "url": "https://app.fireworks.ai/settings/users/api-keys",
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://api.fireworks.ai/inference/v1",
+            "env": null,
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/fireworks/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)"
+          ],
+          "notes": [],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "deepinfra",
+      "lab": "deepinfra",
+      "label": "DeepInfra",
+      "summary": "Open models hosted by DeepInfra.",
+      "group": "gateways",
+      "rank": 17,
+      "shown": "more",
+      "keywords": [
+        "deepinfra",
+        "deep infra"
+      ],
+      "ways": [
+        {
+          "id": "deepinfra.key",
+          "kind": "key",
+          "label": "DeepInfra API key",
+          "hint": "Pay per use with a key.",
+          "engine": "deepinfra",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "DEEPINFRA_API_KEY"
+            ],
+            "wire_var": "DEEPINFRA_API_KEY",
+            "url": "https://deepinfra.com/dash/api_keys",
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://api.deepinfra.com/v1/openai",
+            "env": "DEEPINFRA_BASE_URL",
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/deepinfra/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)"
+          ],
+          "notes": [],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "vercel",
+      "lab": "vercel",
+      "label": "Vercel AI Gateway",
+      "summary": "Models from many labs through Vercel.",
+      "group": "gateways",
+      "rank": 17,
+      "shown": "more",
+      "keywords": [
+        "vercel",
+        "ai gateway"
+      ],
+      "ways": [
+        {
+          "id": "vercel.key",
+          "kind": "key",
+          "label": "Vercel AI Gateway key",
+          "hint": "Pay per use with a key.",
+          "engine": "ai-gateway",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "AI_GATEWAY_API_KEY"
+            ],
+            "wire_var": "AI_GATEWAY_API_KEY",
+            "url": null,
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://ai-gateway.vercel.sh/v1",
+            "env": "AI_GATEWAY_BASE_URL",
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/ai-gateway/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)"
+          ],
+          "notes": [],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "opencode",
+      "lab": "opencode",
+      "label": "OpenCode",
+      "summary": "Models from OpenCode's Zen and Go services.",
+      "group": "gateways",
+      "rank": 17,
+      "shown": "more",
+      "keywords": [
+        "opencode",
+        "zen",
+        "go"
+      ],
+      "ways": [
+        {
+          "id": "opencode.zen",
+          "kind": "key",
+          "label": "OpenCode Zen key",
+          "hint": "Pay per use for a curated set of models.",
+          "engine": "opencode-zen",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "OPENCODE_ZEN_API_KEY"
+            ],
+            "wire_var": "OPENCODE_ZEN_API_KEY",
+            "url": "https://opencode.ai/auth",
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://opencode.ai/zen/v1",
+            "env": "OPENCODE_ZEN_BASE_URL",
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/opencode-zen/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)"
+          ],
+          "notes": [],
+          "offered_when": "always"
+        },
+        {
+          "id": "opencode.go",
+          "kind": "key",
+          "label": "OpenCode Go key",
+          "hint": "A subscription for open models.",
+          "engine": "opencode-go",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "OPENCODE_GO_API_KEY"
+            ],
+            "wire_var": "OPENCODE_GO_API_KEY",
+            "url": "https://opencode.ai/auth",
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://opencode.ai/zen/go/v1",
+            "env": "OPENCODE_GO_BASE_URL",
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/opencode-zen/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)"
+          ],
+          "notes": [],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "kilo",
+      "lab": "kilo",
+      "label": "Kilo",
+      "summary": "Models through the Kilo gateway.",
+      "group": "gateways",
+      "rank": 17,
+      "shown": "more",
+      "keywords": [
+        "kilo",
+        "kilocode"
+      ],
+      "ways": [
+        {
+          "id": "kilo.key",
+          "kind": "key",
+          "label": "Kilo key",
+          "hint": "Pay per use with a key.",
+          "engine": "kilocode",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "KILOCODE_API_KEY"
+            ],
+            "wire_var": "KILOCODE_API_KEY",
+            "url": null,
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://api.kilo.ai/api/gateway",
+            "env": "KILOCODE_BASE_URL",
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/kilocode/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)"
+          ],
+          "notes": [],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "ollama-cloud",
+      "lab": "ollama-cloud",
+      "label": "Ollama Cloud",
+      "summary": "Open models hosted by Ollama.",
+      "group": "gateways",
+      "rank": 17,
+      "shown": "more",
+      "keywords": [
+        "ollama cloud",
+        "ollama"
+      ],
+      "ways": [
+        {
+          "id": "ollama-cloud.key",
+          "kind": "key",
+          "label": "Ollama Cloud key",
+          "hint": "Pay per use with a key.",
+          "engine": "ollama-cloud",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "OLLAMA_API_KEY"
+            ],
+            "wire_var": "OLLAMA_API_KEY",
+            "url": "https://ollama.com/settings",
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://ollama.com/v1",
+            "env": "OLLAMA_BASE_URL",
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/ollama-cloud/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)"
+          ],
+          "notes": [],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "nebius",
+      "lab": "nebius",
+      "label": "Nebius Token Factory",
+      "summary": "Open models hosted by Nebius.",
+      "group": "gateways",
+      "rank": 17,
+      "shown": "more",
+      "keywords": [
+        "nebius",
+        "token factory"
+      ],
+      "ways": [
+        {
+          "id": "nebius.key",
+          "kind": "key",
+          "label": "Nebius Token Factory key",
+          "hint": "Pay per use with a key.",
+          "engine": "nebius-token-factory",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "NEBIUS_API_KEY",
+              "NEBIUS_TOKEN_FACTORY_API_KEY"
+            ],
+            "wire_var": "NEBIUS_API_KEY",
+            "url": "https://tokenfactory.nebius.com/",
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://api.tokenfactory.nebius.com/v1",
+            "env": "NEBIUS_BASE_URL",
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/nebius-token-factory/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)"
+          ],
+          "notes": [],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "novita",
+      "lab": "novita",
+      "label": "NovitaAI",
+      "summary": "Open models hosted by NovitaAI.",
+      "group": "gateways",
+      "rank": 17,
+      "shown": "more",
+      "keywords": [
+        "novita"
+      ],
+      "ways": [
+        {
+          "id": "novita.key",
+          "kind": "key",
+          "label": "NovitaAI key",
+          "hint": "Pay per use with a key.",
+          "engine": "novita",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "NOVITA_API_KEY"
+            ],
+            "wire_var": "NOVITA_API_KEY",
+            "url": "https://novita.ai/settings/key-management",
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://api.novita.ai/openai/v1",
+            "env": "NOVITA_BASE_URL",
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/novita/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)"
+          ],
+          "notes": [],
+          "offered_when": "always"
+        }
+      ]
+    },
+    {
+      "id": "nous",
+      "lab": "nous",
+      "label": "Nous Portal",
+      "summary": "Nous Research's models with a Portal key.",
+      "group": "labs",
+      "rank": 18,
+      "shown": "more",
+      "keywords": [
+        "nous",
+        "nous research",
+        "portal"
+      ],
+      "ways": [
+        {
+          "id": "nous.key",
+          "kind": "key",
+          "label": "Nous Portal API key",
+          "hint": "Pay per use with a key from Nous Research.",
+          "engine": "nous",
+          "slug": null,
+          "config": "builtin",
+          "hidden": false,
+          "key": {
+            "vars": [
+              "NOUS_API_KEY"
+            ],
+            "wire_var": "NOUS_API_KEY",
+            "url": "https://nousresearch.com/",
+            "required": true,
+            "refuse_prefixes": []
+          },
+          "base_url": {
+            "default": "https://inference-api.nousresearch.com/v1",
+            "env": "NOUS_BASE_URL",
+            "editable": false,
+            "pin": false,
+            "pin_reason": null
+          },
+          "api_mode": "chat_completions",
+          "discovery": {
+            "method": "engine_options"
+          },
+          "signin": null,
+          "frontier": "by_name",
+          "engine_source": [
+            "plugins/model-providers/nous/__init__.py",
+            "hermes_cli/auth.py (_REGISTRY_ROWS)"
+          ],
+          "notes": [],
+          "offered_when": "always"
+        }
+      ]
+    }
+  ],
+  "heavy_switches": [
+    {
+      "id": "fable",
+      "family": "claude-fable",
+      "label": "Climb to Fable",
+      "reason": "Fable is token-heavy: Ramp's benchmark measured $3.79 a task against Opus's $1.53, and on a Claude Pro plan it bills usage credits from the first request. So boopis never adds it by itself. Off: governed work stays on Opus, and a failed gate retries there. On: Fable is the top tier, and a failed gate climbs to it.",
+      "engines": [
+        "claude-subscription-directsdk-experimental",
+        "anthropic"
+      ],
+      "key_way": "anthropic.key",
+      "applies_when_unset": true,
+      "pick": "route_alias",
+      "not_applicable": "The saved ladder is not a Claude one, so there is no Fable choice to make. Change models sets that up.",
+      "none_listed": null,
+      "empty_ladder": "keep"
+    },
+    {
+      "id": "grok",
+      "family": "grok",
+      "label": "Use Grok",
+      "reason": "Grok 4.7 is token-heavy: Ramp's benchmark measured it at $4.32 a task, with the most tool calls of any model (161 a task). So boopis never adds it by itself. Off: boopis does not run governed work on it. On: Grok is the top tier of the ladder.",
+      "engines": [
+        "xai",
+        "xai-oauth",
+        "grok-acp"
+      ],
+      "key_way": "xai.key",
+      "applies_when_unset": true,
+      "pick": "lowest_in_family",
+      "not_applicable": "There is no xAI key, or the saved ladder is not an xAI one, so there is no Grok choice to make. Change models sets that up.",
+      "none_listed": "Your xAI key lists no Grok 4.7 or later, so there is nothing to turn on.",
+      "empty_ladder": "unset"
+    },
+    {
+      "id": "carbon",
+      "family": "gemini-carbon",
+      "label": "Use Gemini 4 Carbon",
+      "reason": "Gemini 4 Carbon is the costliest frontier model in Ramp's benchmark: $5.19 a task against Neon's $4.38 and Hydrogen's $3.24, and it solved 72.6% where Neon solved 76.2%. So boopis never adds it by itself. Off: governed work stays on Hydrogen and Neon. On: Carbon is the top tier of the ladder.",
+      "engines": [
+        "gemini"
+      ],
+      "key_way": "google.key",
+      "applies_when_unset": false,
+      "pick": "lowest_in_family",
+      "not_applicable": "There is no Google key, or the saved ladder is not a Gemini one, so there is no Carbon choice to make. Change models sets that up.",
+      "none_listed": "Your Google key lists no Gemini 4 Carbon or later, so there is nothing to turn on.",
+      "empty_ladder": "keep"
+    }
+  ],
+  "never_frontier": {
+    "about": "Custom endpoints and models on this computer are never frontier (fail closed, ADR-0037 and ADR-0039), so they can never run governed mode, whatever their model is called. A model is never frontier when its provider is in `engines` or starts with one of `slug_prefixes`; every other provider is judged by the model's name as before. The three readers of frontier-models.json apply this first.",
+    "engines": [
+      "custom",
+      "ollama",
+      "lmstudio",
+      "llamacpp",
+      "llama-cpp",
+      "vllm"
+    ],
+    "slug_prefixes": [
+      "custom-"
+    ],
+    "examples": [
+      {
+        "provider": "custom-my-server",
+        "model": "claude-opus-5-5",
+        "frontier": false
+      },
+      {
+        "provider": "custom-ollama",
+        "model": "gpt-6.2-astra",
+        "frontier": false
+      },
+      {
+        "provider": "lmstudio",
+        "model": "gemini-4-neon",
+        "frontier": false
+      },
+      {
+        "provider": "ollama",
+        "model": "claude-opus-5-5",
+        "frontier": false
+      },
+      {
+        "provider": "vllm",
+        "model": "grok-4.7",
+        "frontier": false
+      },
+      {
+        "provider": "custom",
+        "model": "claude-opus-5-5",
+        "frontier": false
+      },
+      {
+        "provider": "anthropic",
+        "model": "claude-opus-5-5",
+        "frontier": true
+      },
+      {
+        "provider": "openai-api",
+        "model": "gpt-6.2-astra",
+        "frontier": true
+      },
+      {
+        "provider": "openrouter",
+        "model": "anthropic/claude-opus-5.5",
+        "frontier": true
+      }
+    ]
+  },
+  "endpoint": {
+    "about": "The form for adding an endpoint of your own (form kind `endpoint`, docs/FORMS.md) and what `provider_test_endpoint` and `provider_add_endpoint` accept. The form is the host's own: its secret field goes to the command, never to the keychain by the card and never into text on the page.",
+    "api_modes": [
+      {
+        "id": "chat_completions",
+        "label": "OpenAI chat"
+      },
+      {
+        "id": "codex_responses",
+        "label": "OpenAI Responses"
+      },
+      {
+        "id": "anthropic_messages",
+        "label": "Anthropic"
+      }
+    ],
+    "default_api_mode": "chat_completions",
+    "url": {
+      "schemes": [
+        "https",
+        "http"
+      ],
+      "http_only_for": [
+        "127.0.0.1",
+        "localhost",
+        "[::1]"
+      ],
+      "forbid": [
+        "credentials",
+        "query",
+        "fragment"
+      ],
+      "redirects": "never to another host",
+      "examples": [
+        {
+          "url": "http://127.0.0.1:8000/v1",
+          "valid": true
+        },
+        {
+          "url": "http://localhost:11434/v1",
+          "valid": true
+        },
+        {
+          "url": "https://api.example.com/v1",
+          "valid": true
+        },
+        {
+          "url": "http://192.168.1.20:8000/v1",
+          "valid": false,
+          "why": "plain http is allowed only on this computer"
+        },
+        {
+          "url": "https://user:pass@example.com/v1",
+          "valid": false,
+          "why": "no credentials in the address"
+        },
+        {
+          "url": "https://example.com/v1?key=abc",
+          "valid": false,
+          "why": "no query in the address"
+        },
+        {
+          "url": "ftp://example.com",
+          "valid": false,
+          "why": "http or https only"
+        }
+      ]
+    },
+    "slug": {
+      "pattern": "^custom-[a-z0-9][a-z0-9-]{0,39}$",
+      "prefix": "custom-",
+      "rule": "custom- + the name in lower case, runs of anything but letters and digits as one dash, dashes trimmed, cut to 40 characters; when taken, -2, -3 and so on",
+      "examples": [
+        {
+          "name": "My Server",
+          "taken": [],
+          "slug": "custom-my-server"
+        },
+        {
+          "name": "  vLLM @ lab!! ",
+          "taken": [],
+          "slug": "custom-vllm-lab"
+        },
+        {
+          "name": "My Server",
+          "taken": [
+            "custom-my-server"
+          ],
+          "slug": "custom-my-server-2"
+        },
+        {
+          "name": "My Server",
+          "taken": [
+            "custom-my-server",
+            "custom-my-server-2"
+          ],
+          "slug": "custom-my-server-3"
+        }
+      ],
+      "invalid_names": [
+        "",
+        "   ",
+        "!!!"
+      ]
+    },
+    "limits": {
+      "max_models": 50,
+      "max_model_id_chars": 200,
+      "request_timeout_loopback_s": 300,
+      "request_timeout_s": 120,
+      "context_length_min": 1024
+    },
+    "test": {
+      "method": "GET",
+      "paths": [
+        "/models",
+        "/v1/models"
+      ],
+      "timeout_ms": 10000,
+      "outcomes": [
+        "listed",
+        "empty",
+        "needs_key",
+        "unreachable",
+        "not_a_model_server"
+      ],
+      "about": "One GET per path, the first that answers wins. The key, when there is one, is sent as the API mode says (a bearer token for the OpenAI modes, x-api-key for Anthropic) and only to the address typed."
+    },
+    "fields": [
+      {
+        "name": "name",
+        "type": "string",
+        "title": "Name",
+        "description": "What you call this endpoint. It names the provider in your model list.",
+        "required": true,
+        "placeholder": "My server"
+      },
+      {
+        "name": "base_url",
+        "type": "string",
+        "format": "uri",
+        "title": "Base URL",
+        "description": "The address up to and including /v1, for example http://127.0.0.1:8000/v1.",
+        "required": true,
+        "placeholder": "http://127.0.0.1:8000/v1"
+      },
+      {
+        "name": "api_mode",
+        "type": "string",
+        "title": "Wire",
+        "description": "Which API the server speaks.",
+        "required": true,
+        "enum": [
+          "chat_completions",
+          "codex_responses",
+          "anthropic_messages"
+        ],
+        "enumNames": [
+          "OpenAI chat",
+          "OpenAI Responses",
+          "Anthropic"
+        ],
+        "default": "chat_completions"
+      },
+      {
+        "name": "key",
+        "type": "string",
+        "title": "API key",
+        "description": "Leave empty when the server needs none. Kept in your OS keychain and never shown again.",
+        "required": false,
+        "secret": true
+      },
+      {
+        "name": "discover",
+        "type": "boolean",
+        "title": "Keep the model list up to date",
+        "description": "Ask the server for its models whenever the list is needed.",
+        "required": false,
+        "default": true
+      },
+      {
+        "name": "picks",
+        "type": "string",
+        "title": "Models found",
+        "description": "Tick the models to use. Test finds them.",
+        "required": false,
+        "multi": true,
+        "after_test": true
+      },
+      {
+        "name": "extra_models",
+        "type": "string",
+        "title": "Add model ids",
+        "description": "One id per line, for a server that lists none.",
+        "required": false,
+        "multiline": true,
+        "mono": true
+      }
+    ]
+  },
+  "not_offered": [
+    {
+      "id": "openrouter.pkce",
+      "lab": "openrouter",
+      "route": "Connect with OpenRouter (PKCE)",
+      "waits_for": "owner",
+      "why": "Returns an ordinary key, so a pasted key does the same job. It needs a loopback listener in the host, which model sign-ins have not used; the owner decides."
+    },
+    {
+      "id": "google.subscription",
+      "lab": "google",
+      "route": "Google AI Pro or Ultra sign-in",
+      "waits_for": "none",
+      "why": "Google offers no sanctioned way for another app to use a consumer Google AI subscription. Not offered."
+    },
+    {
+      "id": "zai.coding-plan",
+      "lab": "zai",
+      "route": "GLM Coding Plan key",
+      "waits_for": "terms",
+      "why": "Z.ai limits the plan to listed tools and boopis is not on the list. No coding-plan endpoint is added."
+    },
+    {
+      "id": "moonshot.kimi-code",
+      "lab": "moonshot",
+      "route": "Kimi Code membership key",
+      "waits_for": "terms",
+      "why": "Kimi limits the membership to the tools it lists and boopis is not one. No coding-plan endpoint is added, and a key that starts with sk-kimi- is turned down."
+    },
+    {
+      "id": "alibaba.coding-plan",
+      "lab": "alibaba",
+      "route": "Alibaba Coding Plan key",
+      "waits_for": "terms",
+      "why": "The plan's terms for other apps were not found."
+    },
+    {
+      "id": "minimax.signin",
+      "lab": "minimax",
+      "route": "MiniMax sign-in",
+      "waits_for": "later",
+      "why": "The engine has one, but only a key is offered."
+    },
+    {
+      "id": "nous.signin",
+      "lab": "nous",
+      "route": "Nous Portal sign-in",
+      "waits_for": "none",
+      "why": "Nous Portal is the engine maker's own model service, not a consumer lab (owner, 21 November 2026): a key only, under More providers. The free tier (ADR-0027) is separate and unchanged."
+    },
+    {
+      "id": "bedrock",
+      "lab": "anthropic",
+      "route": "Claude through AWS Bedrock",
+      "waits_for": "later",
+      "why": "Cloud routes (Bedrock, Vertex, Foundry) are a later wave: one Cloud group, with the cloud's own credentials chain and nothing stored by boopis. A hand-written configuration still works."
+    },
+    {
+      "id": "vertex",
+      "lab": "google",
+      "route": "Gemini through Google Vertex",
+      "waits_for": "later",
+      "why": "Same wave as Bedrock."
+    },
+    {
+      "id": "azure-foundry",
+      "lab": "azure",
+      "route": "Azure Foundry",
+      "waits_for": "later",
+      "why": "Same wave as Bedrock."
+    }
+  ],
+  "spikes": [
+    {
+      "id": "openai-key-slug",
+      "date": "2026-11-21",
+      "question": "Which provider slug does a direct OpenAI API key use in the engine: `openai` or `openai-api`?",
+      "result": "`openai-api`. It is a registry row, not a plugin: id `openai-api`, key variable OPENAI_API_KEY, base URL variable OPENAI_BASE_URL, default https://api.openai.com/v1, wire `codex_responses`. The slug `openai` is wrong for the key: the engine's provider table lists it as a legacy alias of `openrouter`, so a model.provider of `openai` would send the key to OpenRouter's route. The ChatGPT subscription is a different slug, `openai-codex`. The `openai` spelling in boopis's own data (frontier examples, the names table) is harmless for the frontier match, which is by model name, but the names table's dispatch entry should say `openai-api`.",
+      "evidence": [
+        "hermes_cli/auth.py _REGISTRY_ROWS: (\"openai-api\", \"OpenAI API\", \"https://api.openai.com/v1\", (\"OPENAI_API_KEY\",), \"OPENAI_BASE_URL\")",
+        "hermes_cli/providers.py HERMES_OVERLAYS: \"openai-api\" with transport codex_responses, base_url_override https://api.openai.com/v1, base_url_env_var OPENAI_BASE_URL",
+        "hermes_cli/providers.py _ALIAS_GROUPS: \"openrouter\": (\"openai\",), so normalize_provider(\"openai\") is \"openrouter\"; resolve_provider_full tries a user-written providers.openai first, which is why that one is not hijacked",
+        "hermes_cli/models_catalog_static.py: CANONICAL_PROVIDERS has (\"openai-api\", \"OpenAI API\", ...) and _PROVIDER_MODELS[\"openai-api\"] is the curated list; PROVIDER_GROUPS[\"openai\"] is the picker group [\"openai-codex\", \"openai-api\"]",
+        "hermes_cli/models_validate.py: for openai and openai-api on an official OpenAI host the live listing is final, so a model the key cannot list is rejected rather than soft-accepted",
+        "hermes_cli/auth.py _openrouter_auto_detected: OPENAI_API_KEY counts as an OpenRouter key only when it looks like one; a real OpenAI key falls through to the `openai-api` row",
+        "hermes_cli/main_provider_setup.py _GENERIC_API_KEY_PROVIDERS lists `openai-api` among the plain key providers"
+      ],
+      "decision": "Setup writes model.provider `openai-api`, binds OPENAI_API_KEY to secret://provider.openai-api/api_key, and the ladder tier reads openai-api/<model>."
+    }
+  ],
+  "examples": [
+    {
+      "way": "xai.signin",
+      "expect": {
+        "engine": "xai-oauth",
+        "signin.flow": "device_code",
+        "signin.owner": "xai/",
+        "offered_when": "always",
+        "secret_ref": null
+      }
+    },
+    {
+      "way": "xai.cli",
+      "expect": {
+        "engine": "grok-acp",
+        "signin.flow": "cli_drive",
+        "offered_when": "signin_unused"
+      }
+    },
+    {
+      "way": "github-copilot.signin",
+      "expect": {
+        "engine": "copilot",
+        "signin.flow": "device_code",
+        "shown": "default"
+      }
+    },
+    {
+      "way": "nous.key",
+      "expect": {
+        "engine": "nous",
+        "shown": "more"
+      }
+    },
+    {
+      "way": "anthropic.key",
+      "expect": {
+        "engine": "anthropic",
+        "key.wire_var": "ANTHROPIC_API_KEY",
+        "shown": "default",
+        "hidden": false,
+        "secret_ref": "secret://provider.anthropic/api_key"
+      }
+    },
+    {
+      "way": "anthropic.signin",
+      "expect": {
+        "engine": "claude-subscription-directsdk-experimental",
+        "signin.login": "claude-code",
+        "shown": "default"
+      }
+    },
+    {
+      "way": "openai.key",
+      "expect": {
+        "engine": "openai-api",
+        "key.wire_var": "OPENAI_API_KEY",
+        "base_url.env": "OPENAI_BASE_URL",
+        "secret_ref": "secret://provider.openai-api/api_key",
+        "slug_spike": "openai-key-slug"
+      }
+    },
+    {
+      "way": "openai.signin",
+      "expect": {
+        "engine": "openai-codex",
+        "signin.flow": "official_program",
+        "secret_ref": null
+      }
+    },
+    {
+      "way": "google.key",
+      "expect": {
+        "engine": "gemini",
+        "key.wire_var": "GOOGLE_API_KEY",
+        "secret_ref": "secret://provider.gemini/api_key"
+      }
+    },
+    {
+      "way": "openrouter.key",
+      "expect": {
+        "engine": "openrouter",
+        "key.wire_var": "OPENROUTER_API_KEY",
+        "shown": "default"
+      }
+    },
+    {
+      "way": "xai.key",
+      "expect": {
+        "engine": "xai",
+        "key.wire_var": "XAI_API_KEY",
+        "api_mode": "codex_responses"
+      }
+    },
+    {
+      "way": "zai.key",
+      "expect": {
+        "engine": "zai",
+        "base_url.pin": true,
+        "base_url.env": "GLM_BASE_URL"
+      }
+    },
+    {
+      "way": "moonshot.key",
+      "expect": {
+        "engine": "kimi-coding",
+        "base_url.pin": true,
+        "key.refuse_prefixes": [
+          "sk-kimi-"
+        ]
+      }
+    },
+    {
+      "way": "deepseek.key",
+      "expect": {
+        "engine": "deepseek",
+        "shown": "default"
+      }
+    },
+    {
+      "way": "meta.key",
+      "expect": {
+        "engine": "meta-ai",
+        "key.wire_var": "MODEL_API_KEY",
+        "shown": "more"
+      }
+    },
+    {
+      "way": "alibaba.qwen-signin",
+      "expect": {
+        "engine": "qwen-oauth",
+        "hidden": true
+      }
+    },
+    {
+      "way": "ollama.local",
+      "expect": {
+        "slug": "custom-ollama",
+        "config": "endpoint",
+        "discovery.port": 11434,
+        "frontier": "never",
+        "secret_ref": "secret://provider.custom-ollama/api_key"
+      }
+    },
+    {
+      "way": "lm-studio.local",
+      "expect": {
+        "engine": "lmstudio",
+        "config": "builtin",
+        "discovery.path": "/api/v1/models",
+        "frontier": "never"
+      }
+    },
+    {
+      "way": "custom.endpoint",
+      "expect": {
+        "kind": "custom",
+        "engine": null,
+        "frontier": "never",
+        "shown": "default"
+      }
+    }
+  ]
+}

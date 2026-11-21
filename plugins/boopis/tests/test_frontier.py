@@ -61,6 +61,7 @@ def test_both_sides_of_each_floor() -> None:
     for family, below, at in [
         ("claude-opus-{}", "5-4", "5-5"),
         ("claude-fable-{}", "5-1", "5-2"),
+        ("gpt-{}-terra", "6", "6-1"),
         ("gpt-{}-astra", "6-1", "6-2"),
         ("gemini-{}-carbon", "3", "4"),
         ("gpt-{}-sol", "6-1", "6-2"),
@@ -82,6 +83,7 @@ def test_the_allowed_list_is_readable() -> None:
     assert frontier.allowed() == [
         "Claude Opus 5.5",
         "Claude Fable 5.2",
+        "GPT-6.1 Terra",
         "GPT-6.2 Astra",
         "GPT-6.2 Sol",
         "Gemini 4 Carbon",
@@ -90,7 +92,7 @@ def test_the_allowed_list_is_readable() -> None:
         "Grok 4.7",
     ]
     assert frontier.allowed_sentence() == (
-        "Claude Opus 5.5 or later, Claude Fable 5.2 or later, GPT-6.2 Astra or later, GPT-6.2 Sol or later, "
+        "Claude Opus 5.5 or later, Claude Fable 5.2 or later, GPT-6.1 Terra or later, GPT-6.2 Astra or later, GPT-6.2 Sol or later, "
         "Gemini 4 Carbon or later, Gemini 4 Neon or later, Gemini 4 Hydrogen or later and Grok 4.7 or later"
     )
 
