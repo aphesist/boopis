@@ -41,5 +41,6 @@ export async function reopenModels(): Promise<void> {
 /** the configured ladder (Settings > Models) */
 export const loadModelsView = (): Promise<ModelsView> => call(commands.setupModelsView(null));
 
-/** opt in to Fable on the Claude subscription ladder, or out (it bills usage credits from the first request on a Pro plan); resolves with the view as it is after */
-export const setSubscriptionFable = (on: boolean): Promise<ModelsView> => call(commands.setupSetSubscriptionFable(on, null));
+/** turn a heavy model (`fable`, `grok`) on or off for the saved ladder: heavy models are token-heavy or costly, so none is on a
+    ladder unless the user asked (ADR-0037); resolves with the view as it is after */
+export const setHeavy = (id: string, on: boolean): Promise<ModelsView> => call(commands.setupSetHeavy(id, on, null));

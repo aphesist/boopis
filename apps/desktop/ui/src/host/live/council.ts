@@ -10,6 +10,7 @@
    The pure parts (who sits by default, the preset's writes, the labels, the event reducer) are tested alone; the rest is thin. */
 import { ui } from '@boopis/ui';
 import { logger } from '../../core/log';
+import { isHeavy } from '../../data/frontier';
 import { MIN_COUNCIL } from '../../data/types';
 import type { CouncilChoice, CouncilForm, CouncilMember, CouncilSay, CouncilSlot, CouncilSource, CouncilTurn, ModelChoice } from '../../data/types';
 import type { GatewayClient } from '../gateway';
@@ -31,9 +32,10 @@ export const onceValue = (preset = COUNCIL_PRESET): string => preset + ' --provi
 
 /* ───────── who sits by default ───────── */
 
-/* Models the default never picks. Fable bills usage credits from its first request on a Pro plan (`claude.rs`, ALIASES: the
-   ladder leaves it out for the same reason), so it is the user's to add in the form, never a default. */
-const NOT_BY_DEFAULT = /fable|mythos/i;
+/* Models the default never picks: the heavy ones (ADR-0037), read from the frontier list's own mark (`data/frontier.ts`), the same
+   data the plugin and the host read. Fable bills usage credits from its first request on a Pro plan and is token-heavy, Grok 4.7 is
+   token-heavy: each is the user's to add in the form, never a default. A model the user names or adds is their specification. */
+const notByDefault = (provider: string, model: string): boolean => isHeavy(provider, model);
 /* a model that is the small or cheap one of its family loses to the family's main one */
 const LIGHT = /mini|nano|lite|flash|haiku|small|air\b|instant/i;
 /* a tier word, higher is stronger: the families name their top model by one of these */
@@ -47,15 +49,16 @@ export function versionOf(id: string): number[] {
 const byVersion = (a: number[], b: number[]): number => { for (let i = 0; i < Math.max(a.length, b.length); i++) { const d = (b[i] ?? -1) - (a[i] ?? -1); if (d) return d; } return 0; };
 
 /** the best model of a provider's list: not a small one while a main one exists, the strongest tier, the newest version; the order the engine
-    lists them breaks a tie. A model that is never a default (see above) is skipped unless nothing else is left. */
-export function bestOf(models: readonly string[]): string | null {
-  const pool = models.filter((m) => !NOT_BY_DEFAULT.test(m));
-  const list = pool.length ? pool : [...models];
+    lists them breaks a tie. A model that is never a default (see above) is never chosen, even when it is all the provider lists: that
+    provider then has no default member, and the user adds the model themselves. `provider` says whose list it is, because an alias
+    (the Claude subscription's `fable`) means a model only under its own provider. */
+export function bestOf(models: readonly string[], provider = ''): string | null {
+  const list = models.filter((m) => !notByDefault(provider, m));
   const ranked = list.map((m, i) => ({ m, i })).sort((a, b) => Number(LIGHT.test(a.m)) - Number(LIGHT.test(b.m)) || tierOf(b.m) - tierOf(a.m) || byVersion(versionOf(a.m), versionOf(b.m)) || a.i - b.i);
   return ranked[0]?.m ?? null;
 }
 
-/** the best model of each provider the user can use: a provider with tiers on the ladder gives its highest tier (the user's own
+/** the best model of each provider the user can use: a provider with tiers on the ladder gives its highest tier that is not heavy (the user's own
     configuration of what to trust), any other its `bestOf`; one member per provider, in the order the providers are offered */
 export function defaultMembers(choices: readonly ModelChoice[]): CouncilSlot[] {
   const byProvider = new Map<string, ModelChoice[]>();
@@ -65,8 +68,9 @@ export function defaultMembers(choices: readonly ModelChoice[]): CouncilSlot[] {
   }
   const out: CouncilSlot[] = [];
   for (const [provider, list] of byProvider) {
-    const tiers = list.filter((c) => c.tier !== undefined).sort((a, b) => (b.tier as number) - (a.tier as number));
-    const model = tiers[0]?.model ?? bestOf(list.map((c) => c.model));
+    /* the highest tier the user configured, but never a heavy one: it is on the ladder for a failed gate to climb to, not as a default */
+    const tiers = list.filter((c) => c.tier !== undefined && !notByDefault(provider, c.model)).sort((a, b) => (b.tier as number) - (a.tier as number));
+    const model = tiers[0]?.model ?? bestOf(list.map((c) => c.model), provider);
     if (model) out.push({ provider, model });
   }
   return out;

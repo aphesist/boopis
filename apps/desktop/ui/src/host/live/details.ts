@@ -11,7 +11,7 @@ import type { GatewayClient, GatewayEvent } from '../gateway';
 import type { HostGoverned } from './map-details';
 import { changesFrom, connectorsFrom, contextFrom, contextNote, costNote, diffFilesFrom, diffNote, environmentFrom, frontierFrom, governanceFrom, ledgerFrom, planNote, runFrom } from './map-details';
 import { blanksFromLedger } from './blanks';
-import { recentFailures, smartPick } from '../../data/smart';
+import { automaticTiers, recentFailures, smartPick } from '../../data/smart';
 import { choicesFrom, splitValue, switchValue, valueOf } from './models';
 import { routeMentions } from '../../data/mentions';
 import { prepareOnce } from './attribution';
@@ -278,6 +278,7 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
     setGovernance(patch) {
       const m = model(followed), gw = deps.gwId(followed);
       if (patch.smart !== undefined && patch.smart && ladderOf(m).length === 0) return 'Smart chooses among the tiers of the model ladder, and none is known yet. Choose a model yourself, or set up a ladder in Settings > Models.';
+      if (patch.smart !== undefined && patch.smart && automaticTiers(ladderOf(m), (x) => ({ provider: x.provider, model: x.id })).length === 0) return 'Smart chooses among the tiers of the model ladder, and every tier of it is a heavy model, which Smart never picks on its own. Choose a model yourself, or add a lighter tier in Settings > Models.';
       if (patch.cap !== undefined) return 'The cost cap is the plugin’s cost_cap_usd setting; it cannot be changed from here yet.';
       if (patch.governed !== undefined) {
         if (locked(m)) return 'The mode is fixed once the first message is sent (prompt caching). Start a new session to change it.';
@@ -367,9 +368,11 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
       let target: { provider: string; model: string; tier?: string } | null = null;
       let why: string | null = null;
       if (m.smart) {
-        const pick = smartPick({ text, attachments: meta?.attachments ?? 0, failures: recentFailures(m.history) }, tiers.length);
-        if (!pick) throw new Error('Smart has no ladder to choose from, so the message was not sent. Choose a model yourself.');
-        const t = tiers[pick.index] as LadderTier;
+        /* a heavy tier is the user's own, as the one a failed gate climbs to: Smart never starts a task on it */
+        const among = automaticTiers(tiers, (x) => ({ provider: x.provider, model: x.id }));
+        const pick = smartPick({ text, attachments: meta?.attachments ?? 0, failures: recentFailures(m.history) }, among.length);
+        if (!pick) throw new Error(tiers.length ? 'Every tier of the ladder is a heavy model, and Smart never picks one on its own, so the message was not sent. Choose a model yourself.' : 'Smart has no ladder to choose from, so the message was not sent. Choose a model yourself.');
+        const t = among[pick.index] as LadderTier;
         target = { provider: t.provider, model: t.id, tier: t.name };
         why = 'Smart: ' + pick.reason;
       } else if (m.wantModel) {
