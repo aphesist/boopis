@@ -22,7 +22,8 @@ const bridge = (list: () => Promise<ProviderState[]>, probe: ProviderState[] = [
   setKey: () => Promise.reject(new Error('lab')), remove: () => Promise.reject(new Error('lab')), signOut: () => Promise.reject(new Error('lab')),
   signinStart: () => Promise.reject(new Error('lab')), signinCancel: () => Promise.resolve(), onSigninEnd: () => Promise.resolve(() => undefined),
   testEndpoint: () => Promise.resolve({ outcome: 'listed', models: ['qwen3-coder-30b', 'llama-3.3-70b-instruct'], answered_at: null, status: 200, loopback: true, code: null, detail: null }),
-  addEndpoint: () => Promise.reject(new Error('lab'))
+  addEndpoint: () => Promise.reject(new Error('lab')),
+  useLocal: () => Promise.reject(new Error('lab'))
 });
 const found = (way: string, base: string, n: number, detail: string): ProviderState => ({ provider: way.split('.')[0] ?? way, way, kind: 'local', status: 'found_local', code: null, detail, plan: null, models_count: n, base_url: base, signin: null, checked_at: 1 });
 const endpoint = (slug: string, status: ProviderState['status'], base: string, detail: string | null = null): ProviderState => ({ provider: 'custom', way: 'custom.' + slug, kind: 'custom', status, code: status === 'error' ? 'hx.provider.unreachable' : null, detail, plan: null, models_count: null, base_url: base, signin: null, checked_at: null });

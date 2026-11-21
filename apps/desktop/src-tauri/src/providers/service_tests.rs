@@ -1189,3 +1189,218 @@ fn the_check_enum_is_what_the_state_reads() {
         let _ = format!("{c:?}");
     }
 }
+
+// ---------------------------------------------------------------- LM Studio is the engine's built-in provider
+
+fn lmstudio() -> (&'static super::Entry, &'static super::Way) {
+    catalogue().way("lm-studio.local").expect("lm-studio.local")
+}
+
+#[tokio::test]
+async fn lm_studio_is_configured_as_the_built_in_provider_with_only_the_models_it_listed() {
+    let r = rig(vec![]);
+    let (entry, way) = lmstudio();
+    let listed = vec!["qwen3-coder-30b".to_owned(), "gemma-4-12b".to_owned()];
+    let st = r
+        .svc
+        .use_local_with(
+            entry,
+            way,
+            crate::local::Outcome::Found(listed.clone()),
+            None,
+        )
+        .await
+        .unwrap();
+    assert_eq!(st.status, ProviderStatus::FoundLocal);
+    assert_eq!(st.way, "lm-studio.local");
+    assert_eq!(st.models_count, Some(2));
+    assert!(st.detail.unwrap().contains("Using qwen3-coder-30b"));
+    // the engine's own provider, the first listed id, the address its registry reads: and no endpoint made up for it
+    let cfg = r.fake.config.lock().unwrap().clone();
+    assert_eq!(cfg["model"]["provider"], "lmstudio");
+    assert_eq!(cfg["model"]["default"], "qwen3-coder-30b");
+    assert_eq!(cfg["LM_BASE_URL"], "http://127.0.0.1:1234/v1");
+    assert!(
+        cfg.get("providers").is_none(),
+        "no providers.custom-lmstudio entry: {cfg}"
+    );
+    assert!(
+        r.fake.sets().iter().all(|k| !k.contains("custom-lmstudio")),
+        "{:?}",
+        r.fake.sets()
+    );
+
+    // a model of the person's choosing, when the runtime lists it
+    r.svc
+        .use_local_with(
+            entry,
+            way,
+            crate::local::Outcome::Found(listed.clone()),
+            Some("gemma-4-12b"),
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        r.fake.config.lock().unwrap()["model"]["default"],
+        "gemma-4-12b"
+    );
+
+    // LM Studio rejects an id it does not list, so one it did not list is refused and nothing changes
+    let before = r.fake.sets().len();
+    let err = r
+        .svc
+        .use_local_with(
+            entry,
+            way,
+            crate::local::Outcome::Found(listed),
+            Some("claude-opus-5-5"),
+        )
+        .await
+        .unwrap_err();
+    assert_eq!(code_of(&err), "hx.provider.endpoint_invalid");
+    assert_eq!(r.fake.sets().len(), before);
+}
+
+#[tokio::test]
+async fn lm_studio_answers_plainly_when_it_is_not_there_or_lists_nothing() {
+    use crate::local::Outcome;
+    let (entry, way) = lmstudio();
+    for (outcome, code) in [
+        (Outcome::Nothing, "hx.provider.unreachable"),
+        (Outcome::Slow, "hx.provider.unreachable"),
+        (Outcome::Other, "hx.provider.unreachable"),
+        (Outcome::NeedsKey, "hx.provider.key_rejected"),
+        (Outcome::Found(vec![]), "hx.provider.no_models"),
+        (Outcome::FoundUnnamed, "hx.provider.no_models"),
+    ] {
+        let r = rig(vec![]);
+        let err = r
+            .svc
+            .use_local_with(entry, way, outcome.clone(), None)
+            .await
+            .unwrap_err();
+        assert_eq!(code_of(&err), code, "{outcome:?}");
+        assert!(
+            r.fake.sets().is_empty(),
+            "nothing is written for {outcome:?}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn only_the_built_in_local_way_goes_this_path_and_its_models_are_never_frontier() {
+    let r = rig(vec![]);
+    for other in [
+        "ollama.local",
+        "llama-cpp.local",
+        "vllm.local",
+        "openai.key",
+        "nope.way",
+    ] {
+        let err = r.svc.use_local(other, None).await.unwrap_err();
+        assert!(
+            ["hx.provider.unsupported", "hx.provider.unknown"].contains(&code_of(&err)),
+            "{other}: {err}"
+        );
+    }
+    // a probed id that is named like a frontier model is still not one, on the provider boopis wrote
+    let (entry, way) = lmstudio();
+    let name = "claude-opus-5-5";
+    r.svc
+        .use_local_with(
+            entry,
+            way,
+            crate::local::Outcome::Found(vec![name.to_owned()]),
+            None,
+        )
+        .await
+        .unwrap();
+    let cfg = r.fake.config.lock().unwrap().clone();
+    let provider = cfg["model"]["provider"].as_str().unwrap();
+    assert_eq!(provider, "lmstudio");
+    assert!(!crate::frontier::is_frontier(provider, name));
+    assert!(!crate::frontier::is_heavy(provider, name));
+    assert!(
+        crate::frontier::family_of(provider, name).is_none()
+            || !crate::frontier::is_frontier(provider, name)
+    );
+}
+
+// ---------------------------------------------------------------- the host's own sign-ins are in the list
+
+#[tokio::test]
+async fn the_list_shows_every_sign_in_way_with_its_real_state_and_the_program_only_while_the_sign_in_is_unused()
+ {
+    use super::signin::fakes::signins;
+    let r = rig(vec![]);
+    let svc = Providers::new(
+        r.fake.clone(),
+        r.store.clone(),
+        Arc::new(Script {
+            replies: Mutex::new(vec![]),
+            seen: Arc::default(),
+        }),
+    )
+    .with_signins(Arc::new(signins(&r.store)));
+    let ways = [
+        "openai.signin",
+        "github-copilot.signin",
+        "xai.signin",
+        "xai.key",
+        "xai.cli",
+    ];
+    let all = svc.list().await.unwrap();
+    assert!(all.iter().all(super::ProviderState::is_consistent));
+    let by = |all: &[super::ProviderState], w: &str| all.iter().find(|s| s.way == w).cloned();
+    for w in ways {
+        let s = by(&all, w).unwrap_or_else(|| panic!("{w} is listed"));
+        assert_ne!(
+            s.code.as_deref(),
+            Some("hx.provider.unsupported"),
+            "{w} is read from its owner, not answered as not built"
+        );
+    }
+    assert_eq!(
+        by(&all, "xai.signin").unwrap().status,
+        ProviderStatus::SignedOut
+    );
+    assert_eq!(
+        by(&all, "github-copilot.signin").unwrap().status,
+        ProviderStatus::SignedOut
+    );
+    assert_eq!(
+        by(&all, "openai.signin").unwrap().status,
+        ProviderStatus::SignedOut
+    );
+    let cli =
+        by(&all, "xai.cli").expect("the program's way is offered while the sign-in is unused");
+    assert_eq!(cli.way, "xai.cli");
+    // the order is the catalogue's
+    let order: Vec<&str> = all.iter().map(|s| s.way.as_str()).collect();
+    let pos = |w: &str| order.iter().position(|x| *x == w).unwrap();
+    assert!(pos("xai.signin") < pos("xai.key") && pos("xai.key") < pos("xai.cli"));
+
+    // signed in to each, as the keychain says
+    r.store.set("boopis.xai", "access_token", "xat").unwrap();
+    r.store.set("boopis.xai", "refresh_token", "xrt").unwrap();
+    r.store
+        .set("boopis.copilot", "github_token", "ghu")
+        .unwrap();
+    r.store
+        .set("boopis.copilot", "account", r#"{"login":"octocat"}"#)
+        .unwrap();
+    let all = svc.list().await.unwrap();
+    assert_eq!(
+        by(&all, "xai.signin").unwrap().status,
+        ProviderStatus::Connected
+    );
+    let copilot = by(&all, "github-copilot.signin").unwrap();
+    assert_eq!(
+        (copilot.status, copilot.detail.as_deref()),
+        (ProviderStatus::Connected, Some("octocat"))
+    );
+    assert!(
+        by(&all, "xai.cli").is_none(),
+        "the program is not offered while the SuperGrok sign-in is in use (offered_when: signin_unused)"
+    );
+}

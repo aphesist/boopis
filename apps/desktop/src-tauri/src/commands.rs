@@ -1331,6 +1331,28 @@ pub async fn provider_probe_local(
     Ok(states)
 }
 
+/// Use a runtime on this computer that the engine has its own provider for (LM Studio, the built-in `lmstudio`): the host asks it
+/// which models it lists (loopback, no key) and makes `model` (or the first it lists) the person's model, on the engine's
+/// `lmstudio` provider and not on an endpoint made up for it. Only a model the runtime lists can be chosen, because LM Studio
+/// refuses any other id. Models on this computer are never frontier, so governed mode stays off for them. The other runtimes are
+/// ordinary endpoints: `provider_add_endpoint`.
+///
+/// Errors: `hx.provider.unknown`, `hx.provider.unsupported`, `hx.provider.unreachable`, `hx.provider.key_rejected`,
+/// `hx.provider.no_models`, `hx.provider.endpoint_invalid`, `hx.setup.config_failed`.
+#[tauri::command]
+#[specta::specta]
+pub async fn provider_use_local(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    way: String,
+    model: Option<String>,
+    profile: Option<String>,
+) -> std::result::Result<crate::providers::ProviderState, HostError> {
+    Ok(providers_engine(&app, &state, profile)?
+        .use_local(&way, model.as_deref())
+        .await?)
+}
+
 /// The sign-ins the host owns (ChatGPT's, Copilot's and SuperGrok's), as one service.
 fn signins(state: &AppState) -> crate::providers::signin::Signins {
     crate::providers::signin::Signins {

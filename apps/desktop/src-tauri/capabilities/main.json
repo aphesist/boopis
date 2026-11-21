@@ -75,6 +75,7 @@
     "allow-provider-test-endpoint",
     "allow-provider-add-endpoint",
     "allow-provider-probe-local",
+    "allow-provider-use-local",
     "allow-provider-signin-start",
     "allow-provider-signin-cancel",
     "allow-provider-sign-out",

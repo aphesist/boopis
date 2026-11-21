@@ -11,7 +11,7 @@ import { ui } from '@boopis/ui';
 import '../modules/cards';
 import { useFormsHost } from '../modules/cards/forms-host';
 import { esc } from '../core/dom';
-import { endpointRules, entries, groups, listed, search as searchEntries, STATUS_WORDS } from '../data/providers';
+import { entries, groups, listed, search as searchEntries, STATUS_WORDS } from '../data/providers';
 import type { Entry, Way } from '../data/providers';
 import type { FormSpec, FormsSource } from '../data';
 import { startEndpointFlow } from './endpoint-form';
@@ -19,6 +19,7 @@ import type { FlowHandlers, FlowUi } from './endpoint-form';
 import type { ProviderState, ProvidersBridge } from './providers-bridge';
 import { mountChatgptSignin } from './chatgpt-signin';
 import type { ChatgptBridge } from './chatgpt-signin';
+import { localUseNote, useLocalRuntime } from './local-runtime';
 import type { ConnectorLogin } from './bindings';
 
 export type Filter = 'all' | 'connected' | 'signin' | 'key' | 'local' | 'custom';
@@ -342,16 +343,12 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
       return read(false);
     }, (e: unknown) => { deps.toast(message(e)); btn.disabled = false; });
   };
-  /** Use a runtime that answered: ask it for its models (loopback, no key), save it as an endpoint under the catalogue's own name
-      and make its first model the person's model. The slug the host derives is the catalogue's (`custom-ollama`, ...). */
+  /** Use a runtime that answered (`local-runtime.ts`): LM Studio through the engine's own provider, the others as endpoints under the
+      catalogue's own name; the first model it listed becomes the person's model. */
   const useLocal = async (r: Row): Promise<void> => {
-    const base = r.state?.base_url ?? r.way.base_url?.default ?? '';
-    const name = (r.way.slug ?? r.way.engine ?? r.way.id).replace(/^custom-/, '');
     try {
-      const t = await bridge.testEndpoint({ base_url: base, api_mode: r.way.api_mode ?? 'chat_completions' });
-      const first = t.models[0] ?? null;
-      await bridge.addEndpoint({ name, base_url: base, api_mode: r.way.api_mode ?? 'chat_completions', key: null, models: t.models.slice(0, endpointRules().limits.max_models), discover: true, context_length: null, request_timeout_s: null, use_model: first });
-      deps.toast(first ? `Using ${first} on ${r.entry.label}. Governed mode stays off for models on this computer.` : `${r.entry.label} is added. Choose a model from your model list.`);
+      const use = await useLocalRuntime(bridge, r.way, r.state?.base_url ?? r.way.base_url?.default ?? '');
+      deps.toast(localUseNote(r.entry, use));
     } catch (e) { deps.toast(message(e)); }
     await read(false);
   };

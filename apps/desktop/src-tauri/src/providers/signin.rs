@@ -213,18 +213,32 @@ impl Signins {
     }
 }
 
+/// The doubles the tests of this module and of the provider list share: services over an in-memory keychain that never reach the
+/// network and a `grok` program that is not installed.
 #[cfg(test)]
-mod tests {
+pub(crate) mod fakes {
     use std::time::Duration;
 
     use super::*;
     use crate::chatgpt::oauth::Https;
-    use crate::providers::ProviderStatus;
-    use crate::secrets::SecretStore;
     use crate::secrets::store::MemoryStore;
 
+    /// A way out that never reaches the network: signing out tells xAI to forget the refresh token, and a test must not.
+    pub(crate) struct Offline;
+
+    impl crate::chatgpt::oauth::Transport for Offline {
+        fn post(
+            &self,
+            _: &str,
+            _: &str,
+            _: &str,
+        ) -> std::result::Result<crate::chatgpt::oauth::Reply, String> {
+            Err("offline".to_owned())
+        }
+    }
+
     /// A `grok` program that is not installed, so `xai.cli` says so without looking at this computer.
-    struct NoGrok;
+    pub(crate) struct NoGrok;
 
     #[async_trait::async_trait]
     impl GrokCli for NoGrok {
@@ -233,7 +247,7 @@ mod tests {
         }
     }
 
-    fn signins(store: &Arc<MemoryStore>) -> Signins {
+    pub(crate) fn signins(store: &Arc<MemoryStore>) -> Signins {
         let http = Arc::new(Https::new(Duration::from_secs(1)));
         Signins {
             chatgpt: Arc::new(ChatGpt::new(
@@ -252,10 +266,23 @@ mod tests {
                     signin: Duration::from_mins(15),
                 },
             )),
-            xai: Arc::new(Xai::new(store.clone(), http, xai::Timing::app())),
+            xai: Arc::new(Xai::new(
+                store.clone(),
+                Arc::new(Offline),
+                xai::Timing::app(),
+            )),
             grok: Arc::new(NoGrok),
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::fakes::signins;
+    use super::*;
+    use crate::providers::ProviderStatus;
+    use crate::secrets::SecretStore;
+    use crate::secrets::store::MemoryStore;
 
     #[test]
     fn the_owned_ways_are_in_the_catalogue_and_the_rest_are_answered_plainly() {
@@ -314,14 +341,14 @@ mod tests {
         );
 
         // signed in to SuperGrok: its state is Connected and the program's way is not offered
-        store.set("xai", xai::ACCESS, "xat_x").unwrap();
-        store.set("xai", xai::REFRESH, "xrt_x").unwrap();
+        store.set("boopis.xai", xai::ACCESS, "xat_x").unwrap();
+        store.set("boopis.xai", xai::REFRESH, "xrt_x").unwrap();
         let st = s.status(XAI).await.unwrap();
         assert_eq!(st.status, ProviderStatus::Connected);
         let all = s.states(key).await.unwrap();
         assert!(all.iter().all(|a| a.way != xai::WAY_CLI));
-        store.delete("xai", xai::ACCESS).unwrap();
-        store.delete("xai", xai::REFRESH).unwrap();
+        store.delete("boopis.xai", xai::ACCESS).unwrap();
+        store.delete("boopis.xai", xai::REFRESH).unwrap();
 
         store
             .set("boopis.copilot", "github_token", "ghu_x")
@@ -363,10 +390,10 @@ mod tests {
         );
         assert_eq!(store.get("boopis.copilot", "github_token").unwrap(), None);
 
-        store.set("xai", xai::ACCESS, "xat_x").unwrap();
-        store.set("xai", xai::REFRESH, "xrt_x").unwrap();
+        store.set("boopis.xai", xai::ACCESS, "xat_x").unwrap();
+        store.set("boopis.xai", xai::REFRESH, "xrt_x").unwrap();
         let st = s.sign_out(XAI).await.unwrap();
         assert_eq!(st.status, ProviderStatus::SignedOut);
-        assert_eq!(store.get("xai", xai::ACCESS).unwrap(), None);
+        assert_eq!(store.get("boopis.xai", xai::ACCESS).unwrap(), None);
     }
 }

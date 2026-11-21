@@ -117,6 +117,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::provider_test_endpoint,
             commands::provider_add_endpoint,
             commands::provider_probe_local,
+            commands::provider_use_local,
             commands::provider_signin_start,
             commands::provider_signin_cancel,
             commands::provider_sign_out,

@@ -287,6 +287,7 @@ function fakeProviders(over: Partial<Record<string, unknown>> = {}): ProvidersBr
     onSigninEnd: () => Promise.resolve(() => undefined),
     testEndpoint: () => { calls.push('test'); return Promise.resolve({ outcome: 'listed' as const, models: ['llama3.2:latest', 'qwen3:8b'], answered_at: null, status: 200, loopback: true, code: null, detail: null }); },
     addEndpoint: (r: EndpointRequest) => { added.push(r); return Promise.resolve(state('custom.' + r.name, 'connected')); },
+    useLocal: (way: string, model: string | null) => { calls.push(`useLocal:${way}:${model ?? ''}`); return Promise.resolve(state(way, 'found_local', { detail: 'Using qwen3-coder-30b.' })); },
     ...over
   };
   return b as never;
@@ -418,6 +419,19 @@ describe('Settings > Models: Providers', () => {
     expect(b.added[0]).toMatchObject({ name: 'ollama', base_url: 'http://127.0.0.1:11434/v1', api_mode: 'chat_completions', key: null, use_model: 'llama3.2:latest', discover: true });
   });
 
+  it('uses LM Studio through the engine\u2019s own provider: no endpoint named custom-lmstudio, no model of ours', async () => {
+    const found = state('lm-studio.local', 'found_local', { base_url: 'http://127.0.0.1:1234/v1', models_count: 2, detail: 'qwen3-coder-30b, gemma-4-12b', checked_at: 1 });
+    const b = fakeProviders({ probe: () => Promise.resolve([found]) });
+    const panel = await providersPanel(b);
+    const row = rowOf(panel, 'LM Studio on this computer') as HTMLElement;
+    expect(row, 'the found LM Studio row').toBeTruthy();
+    (row.querySelector('[data-do="use"]') as HTMLElement).click();
+    await tick(); await tick(); await tick();
+    expect(b.added, 'it is the built-in provider, not an endpoint').toHaveLength(0);
+    expect(b.calls.filter((c) => c.startsWith('useLocal'))).toEqual(['useLocal:lm-studio.local:']);
+    expect(b.calls, 'the host asks LM Studio itself; nothing is tested from the page').not.toContain('test');
+  });
+
   it('has no Found group when nothing answered', async () => {
     const panel = await providersPanel(fakeProviders());
     expect(heads(panel)).not.toContain('Found on this computer');
@@ -437,9 +451,16 @@ describe('Settings > Models: Providers', () => {
     expect(rowOf(inn, 'Your own Grok program')).toBeUndefined();
   });
 
-  it('offers a sign-in only where this build has one, and a registered card brings the button', async () => {
+  it('offers Sign in for SuperGrok and Copilot through the shared card, and a registered card replaces one', async () => {
     const panel = await providersPanel(fakeProviders());
-    expect(rowOf(panel, 'SuperGrok subscription')?.querySelector('button')).toBeNull();
+    for (const label of ['SuperGrok subscription', 'GitHub Copilot subscription']) {
+      expect(rowOf(panel, label)?.querySelector('[data-do="signin"]')?.textContent, label).toBe('Sign in');
+    }
+    rowOf(panel, 'SuperGrok subscription')?.querySelector<HTMLButtonElement>('[data-do="signin"]')?.click();
+    expect(section(panel).querySelector('[data-signin="xai"] [data-act="start"]')?.textContent, 'the shared card, with xAI\u2019s words').toBe('Sign in with SuperGrok');
+    const other = await providersPanel(fakeProviders());
+    rowOf(other, 'GitHub Copilot subscription')?.querySelector<HTMLButtonElement>('[data-do="signin"]')?.click();
+    expect(section(other).querySelector('[data-signin="github-copilot.signin"] [data-act="start"]')?.textContent).toBe('Sign in with GitHub');
     let mounted = 0;
     registerSigninCard('xai.signin', (host, done) => { mounted += 1; host.append(document.createTextNode('card')); void done; return { destroy: () => undefined }; });
     const again = await providersPanel(fakeProviders());

@@ -19,6 +19,7 @@ import type { SigninBridge } from './xai-signin';
 import type { ChatgptBridge } from './chatgpt-signin';
 import type { SetupBridge, SetupProgress, SetupStatus, SourceInfo } from './setup-bridge';
 import { labForm, localForm, stepsFor, wayForm } from './first-run-ways';
+import { localUseNote, useLocalRuntime } from './local-runtime';
 import type { Steps, WayId } from './first-run-ways';
 import { tauriProvidersBridge } from './providers-bridge';
 import type { ProvidersBridge } from './providers-bridge';
@@ -246,11 +247,8 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
       const cat = (await import('../data/providers')).way(wayId);
       if (!hit || !cat || !providers) return;
       try {
-        const mode = hit.api_mode as 'chat_completions' | 'codex_responses' | 'anthropic_messages';
-        const t = await providers.testEndpoint({ base_url: hit.base_url, api_mode: mode });
-        const first = t.models[0] ?? null;
-        await providers.addEndpoint({ name: (cat.way.slug ?? cat.way.engine ?? cat.way.id).replace(/^custom-/, ''), base_url: hit.base_url, api_mode: mode, key: null, models: t.models, discover: true, context_length: null, request_timeout_s: null, use_model: first });
-        note = first ? `Saved ${cat.entry.label} as your endpoint, using ${first}. Governed mode stays off for models on this computer.` : `Saved ${cat.entry.label} as your endpoint. Choose a model from your model list.`;
+        const use = await useLocalRuntime(providers, cat.way, hit.base_url);
+        note = use.builtin || !use.model ? localUseNote(cat.entry, use) : `Saved ${cat.entry.label} as your endpoint, using ${use.model}. Governed mode stays off for models on this computer.`;
       } catch (e) { const err = asHostError(e); throw new Error(err.message); }
       let next: SetupStatus;
       try { next = await bridge.advance({ form_id: formId, cancelled: true, values: {}, secrets: {} }, false); } catch (e) { const err = asHostError(e); throw new Error(err.message); }

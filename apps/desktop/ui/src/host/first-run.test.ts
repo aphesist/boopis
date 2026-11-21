@@ -437,11 +437,12 @@ describe('first run: the models question in two steps (ADR-0039)', () => {
 
   describe('a model on this computer', () => {
     const found = (way: string, extra: Partial<ProviderState> = {}): ProviderState => ({ provider: way.split('.')[0] ?? way, way, kind: 'local', status: 'found_local', code: null, detail: null, plan: null, models_count: 2, base_url: catalogueWay(way)?.way.base_url?.default ?? null, signin: null, checked_at: 1, ...extra });
-    const providers = (probe: ProviderState[]): ProvidersBridge & { added: EndpointRequest[]; probes: number } => {
-      const b = { added: [] as EndpointRequest[], probes: 0,
+    const providers = (probe: ProviderState[]): ProvidersBridge & { added: EndpointRequest[]; used: string[]; probes: number } => {
+      const b = { added: [] as EndpointRequest[], used: [] as string[], probes: 0,
         probe: () => { b.probes += 1; return Promise.resolve(probe); },
         testEndpoint: () => Promise.resolve({ outcome: 'listed', models: ['llama3.2:latest', 'qwen3:8b'], answered_at: null, status: 200, loopback: true, code: null, detail: null }),
-        addEndpoint: (r: EndpointRequest) => { b.added.push(r); return Promise.resolve({} as ProviderState); } };
+        addEndpoint: (r: EndpointRequest) => { b.added.push(r); return Promise.resolve({} as ProviderState); },
+        useLocal: (way: string, model: string | null) => { b.used.push(`${way}:${model ?? ''}`); return Promise.resolve({ detail: 'Using qwen3-coder-30b.' } as ProviderState); } };
       return b as never;
     };
     it('asks the runtimes when chosen, lists what answered, saves it under the catalogue\'s name with its first model, and leaves the ladder question unanswered', async () => {
@@ -461,6 +462,24 @@ describe('first run: the models question in two steps (ADR-0039)', () => {
         expect(p.added).toHaveLength(1);
         expect(p.added[0]).toMatchObject({ name: 'ollama', base_url: 'http://127.0.0.1:11434/v1', key: null, use_model: 'llama3.2:latest', discover: true });
         expect(bridge.answers[1]).toMatchObject({ answer: { form_id: 'setup.ladder', cancelled: true } });
+        expect(document.body.textContent).toContain('Governed mode stays off for models on this computer');
+      } finally { vi.useRealTimers(); }
+    });
+    it('uses LM Studio as the engine\u2019s own provider, with the models the host got from it, not as an endpoint', async () => {
+      vi.useFakeTimers();
+      try {
+        const p = providers([found('lm-studio.local')]);
+        const bridge = new Fake([status({ form: ladder() }), status({ done: true })]);
+        void runFirstRun(bridge, document.body, { providers: p });
+        await vi.advanceTimersByTimeAsync(0);
+        await click('Set up');
+        await pickWay('Use a model on this computer');
+        expect(names()).toEqual(['LM Studio on this computer (2 models)']);
+        await click('Use this');
+        await vi.advanceTimersByTimeAsync(900);
+        expect(p.added, 'no custom-lmstudio endpoint').toHaveLength(0);
+        expect(p.used).toEqual(['lm-studio.local:']);
+        expect(document.body.textContent).toContain('Using qwen3-coder-30b.');
         expect(document.body.textContent).toContain('Governed mode stays off for models on this computer');
       } finally { vi.useRealTimers(); }
     });

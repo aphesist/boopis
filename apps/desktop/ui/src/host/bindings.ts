@@ -222,6 +222,17 @@ export const commands = {
 	 */
 	providerProbeLocal: (profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<ProviderState_Serialize[]>("provider_probe_local", { profile }, options),
 	/**
+	 *  Use a runtime on this computer that the engine has its own provider for (LM Studio, the built-in `lmstudio`): the host asks it
+	 *  which models it lists (loopback, no key) and makes `model` (or the first it lists) the person's model, on the engine's
+	 *  `lmstudio` provider and not on an endpoint made up for it. Only a model the runtime lists can be chosen, because LM Studio
+	 *  refuses any other id. Models on this computer are never frontier, so governed mode stays off for them. The other runtimes are
+	 *  ordinary endpoints: `provider_add_endpoint`.
+	 * 
+	 *  Errors: `hx.provider.unknown`, `hx.provider.unsupported`, `hx.provider.unreachable`, `hx.provider.key_rejected`,
+	 *  `hx.provider.no_models`, `hx.provider.endpoint_invalid`, `hx.setup.config_failed`.
+	 */
+	providerUseLocal: (way: string, model: string | null, profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<ProviderState_Serialize>("provider_use_local", { way, model, profile }, options),
+	/**
 	 *  Start a sign-in for a sign-in way the host owns (ChatGPT through OpenAI's Sign in with ChatGPT program, GitHub Copilot, and
 	 *  SuperGrok): returns the lab's own page to open and the code to type; a flow whose page does everything
 	 *  (ChatGPT's) has an empty `user_code`. The host opens the browser itself for ChatGPT; the page address returned carries no

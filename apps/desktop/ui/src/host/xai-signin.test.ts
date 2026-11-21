@@ -2,20 +2,19 @@
 /* The SuperGrok sign-in card (ADR-0039) against fakes of the host: the code and the page, the wait, each way it ends, a card drawn
    again while a code waits, and the first-run form that offers it. */
 import { beforeEach, describe, expect, it } from 'vitest';
-import { mountSigninCard, mountXaiSignin, tauriSigninBridge, XAI_WAY, XAI_WORDS } from './xai-signin';
-import type { ProviderSigninEvent, SigninBridge, SigninCode } from './xai-signin';
+import { mountXaiSignin, tauriXaiBridge, XAI_COPY, XAI_WAY } from './xai-signin';
+import { mountSigninCard } from './signin-card';
+import type { SigninBridge, SigninEnd, SigninPage } from './signin-card';
 import { formExtras } from './first-run';
 import type { SetupSignins } from './first-run';
-import type { ProviderState } from './bindings';
 
 const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 const NOW = 1_000_000_000_000;
-const CODE: SigninCode = { verification_url: 'https://accounts.x.ai/oauth2/device?user_code=QMJM-H3XJ', user_code: 'QMJM-H3XJ', expires_at: NOW + 30 * 60_000 };
-const OUT: ProviderState = { provider: 'xai', way: 'xai.signin', kind: 'signin', status: 'signed_out' };
-const ev = (outcome: string, message = ''): ProviderSigninEvent => ({ way: XAI_WAY, outcome, message });
+const CODE: SigninPage = { url: 'https://accounts.x.ai/oauth2/device?user_code=QMJM-H3XJ', code: 'QMJM-H3XJ', expiresAt: NOW + 30 * 60_000 };
+const ev = (outcome: string, message = ''): SigninEnd => ({ outcome, message });
 
-function fake(over: Partial<SigninBridge> = {}): SigninBridge & { calls: string[]; end: (e: ProviderSigninEvent) => void; listening: () => boolean } {
-  let listener: ((e: ProviderSigninEvent) => void) | null = null;
+function fake(over: Partial<SigninBridge> = {}): SigninBridge & { calls: string[]; end: (e: SigninEnd) => void; listening: () => boolean } {
+  let listener: ((e: SigninEnd) => void) | null = null;
   const calls: string[] = [];
   return {
     calls,
@@ -24,7 +23,6 @@ function fake(over: Partial<SigninBridge> = {}): SigninBridge & { calls: string[
     waiting: () => Promise.resolve(null),
     start: () => { calls.push('start'); return Promise.resolve(CODE); },
     cancel: () => { calls.push('cancel'); return Promise.resolve(); },
-    signOut: () => { calls.push('signout'); return Promise.resolve(OUT); },
     onEnd: (cb) => { listener = cb; return Promise.resolve(() => { listener = null; }); },
     open: (url) => { calls.push('open:' + url); return Promise.resolve(); },
     copy: (t) => { calls.push('copy:' + t); return Promise.resolve(); },
@@ -56,7 +54,7 @@ describe('the SuperGrok sign-in card', () => {
     act(host, 'open')?.click();
     act(host, 'copy')?.click();
     await tick();
-    expect(b.calls).toEqual(['start', 'open:' + CODE.verification_url, 'copy:QMJM-H3XJ']);
+    expect(b.calls).toEqual(['start', 'open:' + CODE.url, 'copy:QMJM-H3XJ']);
     expect(host.textContent).toContain('Copied');
     b.end(ev('signed_in'));
     expect(host.textContent).toContain('Signed in with SuperGrok.');
@@ -67,7 +65,7 @@ describe('the SuperGrok sign-in card', () => {
 
   it('says nothing about minutes when the host named no expiry', async () => {
     const host = document.createElement('div');
-    mountXaiSignin(host, fake({ start: () => Promise.resolve({ ...CODE, expires_at: null }) }));
+    mountXaiSignin(host, fake({ start: () => Promise.resolve({ ...CODE, expiresAt: null }) }));
     act(host, 'start')?.click();
     await tick(); await tick();
     expect(host.textContent).not.toContain('minutes');
@@ -130,7 +128,7 @@ describe('the SuperGrok sign-in card', () => {
 
   it('is one card with a lab’s words as its argument', async () => {
     const host = document.createElement('div');
-    mountSigninCard(host, fake(), { ...XAI_WORDS, start: 'Sign in to another lab', done: 'Signed in.' }, 'other');
+    mountSigninCard(host, fake(), { ...XAI_COPY, provider: 'other', button: 'Sign in to another lab', done: 'Signed in.' });
     expect(act(host, 'start')?.textContent).toBe('Sign in to another lab');
     expect(host.querySelector('[data-signin="other"]')).toBeTruthy();
   });
@@ -138,7 +136,7 @@ describe('the SuperGrok sign-in card', () => {
 
 describe('the host bridge', () => {
   it('names the way in every call', () => {
-    const b = tauriSigninBridge('xai.signin');
+    const b = tauriXaiBridge();
     expect(typeof b.start).toBe('function');
     expect(XAI_WAY).toBe('xai.signin');
   });

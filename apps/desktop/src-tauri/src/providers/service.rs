@@ -457,6 +457,112 @@ impl Providers {
         Ok(s)
     }
 
+    // ------------------------------------------------------------ built-in local
+
+    /// Use a runtime on this computer that the engine has its own provider for (LM Studio: the built-in `lmstudio`, not an
+    /// endpoint named `custom-lmstudio`, which the engine would not know as LM Studio). The host asks the runtime itself, on
+    /// its own loopback address, which models it lists; only those ids can be the model, because LM Studio refuses an id it
+    /// does not list. Models on this computer are never frontier.
+    ///
+    /// # Errors
+    /// `hx.provider.unknown`, `hx.provider.unsupported` (a way that is an ordinary endpoint: add it with
+    /// `provider_add_endpoint`), `hx.provider.unreachable`, `hx.provider.key_rejected`, `hx.provider.no_models`,
+    /// `hx.provider.endpoint_invalid` (a model the runtime does not list), `hx.setup.config_failed`.
+    pub async fn use_local(&self, way_id: &str, model: Option<&str>) -> Result<ProviderState> {
+        let (entry, way) = builtin_local(way_id)?;
+        let outcome = match crate::local::target(way) {
+            Some(addr) => crate::local::ask(way, addr).await,
+            None => crate::local::Outcome::Nothing,
+        };
+        self.use_local_with(entry, way, outcome, model).await
+    }
+
+    /// [`Providers::use_local`] over what the runtime answered (the tests give it their own answers).
+    ///
+    /// # Errors
+    /// As [`Providers::use_local`].
+    pub(crate) async fn use_local_with(
+        &self,
+        entry: &Entry,
+        way: &Way,
+        outcome: crate::local::Outcome,
+        model: Option<&str>,
+    ) -> Result<ProviderState> {
+        use crate::local::Outcome;
+        let name = &entry.label;
+        let ids = match outcome {
+            Outcome::Found(ids) if !ids.is_empty() => ids,
+            Outcome::Found(_) | Outcome::FoundUnnamed => {
+                return Err(Error::Provider(
+                    "hx.provider.no_models",
+                    format!(
+                        "{name} is running and lists no model. Load one in {name}, then check again."
+                    ),
+                ));
+            }
+            Outcome::NeedsKey => {
+                return Err(Error::Provider(
+                    "hx.provider.key_rejected",
+                    format!("{name} asks for a key, so it cannot be used from here."),
+                ));
+            }
+            Outcome::Nothing | Outcome::Other | Outcome::Slow => {
+                return Err(Error::Provider(
+                    "hx.provider.unreachable",
+                    format!(
+                        "{name} did not answer on this computer. Start its local server, then check again."
+                    ),
+                ));
+            }
+        };
+        let chosen = match model {
+            Some(m) => ids.iter().find(|i| i.as_str() == m).ok_or_else(|| {
+                Error::Provider(
+                    "hx.provider.endpoint_invalid",
+                    format!("{name} does not list {m}."),
+                )
+            })?,
+            None => &ids[0],
+        };
+        let engine = way
+            .engine
+            .as_deref()
+            .ok_or_else(|| unsupported("no engine provider"))?;
+        let cfg = |e: Error| Error::Setup("hx.setup.config_failed", e.to_string());
+        let base = way.base_url.as_ref();
+        let address = base.and_then(|b| b.default.clone());
+        // the engine reads the address from the variable its registry names; set it to the address that was asked
+        let mut wrote = false;
+        if let (Some(env), Some(address)) = (base.and_then(|b| b.env.as_deref()), &address)
+            && self
+                .ops
+                .config_get(env)
+                .await?
+                .as_ref()
+                .and_then(Value::as_str)
+                != Some(address.as_str())
+        {
+            self.ops.config_set(env, address).await.map_err(cfg)?;
+            wrote = true;
+        }
+        wrote |= write_default_model(self.ops.as_ref(), &format!("{engine}/{chosen}"))
+            .await
+            .map_err(cfg)?;
+        let note = if wrote { self.reload().await } else { None };
+        let mut s = ProviderState::found_local(
+            &entry.id,
+            &way.id,
+            address.as_deref().unwrap_or_default(),
+            u32::try_from(ids.len()).unwrap_or(u32::MAX),
+        );
+        s.checked_at = Some(now_ms());
+        s.detail = Some(match note {
+            Some(n) => format!("Using {chosen}. {n}"),
+            None => format!("Using {chosen}."),
+        });
+        Ok(s)
+    }
+
     // -------------------------------------------------------------- endpoint
 
     /// Save an endpoint of the person's own.
@@ -555,6 +661,17 @@ fn listing_url(base: &Address, mode: ApiMode) -> (String, bool) {
         ApiMode::AnthropicMessages => (base.join("/v1/models"), false),
         _ => (base.join("/models"), false),
     }
+}
+
+/// The local way `way_id` names, when the engine has its own provider for it (`config: builtin`: LM Studio).
+fn builtin_local(way_id: &str) -> Result<(&'static Entry, &'static Way)> {
+    let (entry, way) = catalogue().way(way_id).ok_or_else(|| unknown(way_id))?;
+    if way.kind != WayKind::Local || way.config != Config::Builtin {
+        return Err(unsupported(
+            "that runtime is an ordinary endpoint: add it with its address",
+        ));
+    }
+    Ok((entry, way))
 }
 
 fn claude_state(entry: &Entry, way: &Way, p: &claude::Probe) -> ProviderState {

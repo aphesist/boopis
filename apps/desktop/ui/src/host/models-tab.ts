@@ -13,6 +13,7 @@ import type { ModelsView } from './setup-bridge';
 import { tauriChatgptBridge } from './chatgpt-signin';
 import { mountProviders } from './providers-view';
 import type { ProvidersView } from './providers-view';
+import './signin-cards'; /* registers SuperGrok's and Copilot's cards, the shared sign-in card with a lab's words */
 import { tauriProvidersBridge } from './providers-bridge';
 import type { ProvidersBridge } from './providers-bridge';
 import type { ChatgptBridge } from './chatgpt-signin';

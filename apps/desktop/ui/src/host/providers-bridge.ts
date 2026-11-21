@@ -23,6 +23,8 @@ export interface ProvidersBridge {
   onSigninEnd(cb: (e: ProviderSigninEvent) => void): Promise<() => void>;
   testEndpoint(request: { base_url: string; api_mode: EndpointRequest['api_mode']; key?: string | null }): Promise<EndpointTest>;
   addEndpoint(request: EndpointRequest): Promise<ProviderState>;
+  /** use a runtime the engine has its own provider for (LM Studio): the host asks it which models it lists and takes `model`, or the first */
+  useLocal(way: string, model: string | null): Promise<ProviderState>;
 }
 
 async function call<T>(p: Promise<T>): Promise<T> {
@@ -40,6 +42,7 @@ export function tauriProvidersBridge(): ProvidersBridge {
     signinCancel: async (way) => { await call(commands.providerSigninCancel(way)); },
     onSigninEnd: (cb) => events.providerSigninEvent.listen((e) => { cb(e.payload); }),
     testEndpoint: (r) => call(commands.providerTestEndpoint({ base_url: r.base_url, api_mode: r.api_mode, key: r.key ?? null })),
-    addEndpoint: (r) => call(commands.providerAddEndpoint(r))
+    addEndpoint: (r) => call(commands.providerAddEndpoint(r)),
+    useLocal: (way, model) => call(commands.providerUseLocal(way, model, null))
   };
 }

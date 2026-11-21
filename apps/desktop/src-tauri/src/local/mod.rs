@@ -218,7 +218,7 @@ pub fn read_shape(shape: &str, body: &[u8]) -> Option<Outcome> {
 }
 
 /// Ask one way's runtime at `addr` (the way's own `discovery`, but at the given address: tests aim it at a server of their own).
-async fn ask(way: &Way, addr: SocketAddr) -> Outcome {
+pub(crate) async fn ask(way: &Way, addr: SocketAddr) -> Outcome {
     let d = &way.discovery;
     let (Some(path), Some(shape)) = (d.path.as_deref(), d.shape.as_deref()) else {
         return Outcome::Nothing;
