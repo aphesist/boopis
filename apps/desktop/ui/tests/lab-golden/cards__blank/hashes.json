@@ -40,12 +40,12 @@
   "h": 498
  },
  "compact-on-the-dock@bone": {
-  "sha": "4092fa865027a56cb8dac4b899e95991264b097a",
+  "sha": "7532c86d3331a1e19d04dc345995ba3756057072",
   "w": 424,
   "h": 278
  },
  "compact-on-the-dock@catalog": {
-  "sha": "20a3a191847420d0f4f247ed3faba4e44e919651",
+  "sha": "9518f7255b8bb4751fbfa8538d2c598b334ade65",
   "w": 424,
   "h": 278
  },
@@ -65,7 +65,7 @@
   "h": 297
  },
  "compact@catalog": {
-  "sha": "75ffe3092f0e9ee0803ca755a7a4777efecdc23c",
+  "sha": "f5f180450c9357843bd75576501f93483baa2f78",
   "w": 424,
   "h": 297
  },
@@ -185,12 +185,12 @@
   "h": 258
  },
  "popover@catalog": {
-  "sha": "5bbfac9e457c9b922b64e9da882f0b0941041827",
+  "sha": "84e89429d6d06dd6aa0372fd3720bac7c299f6f7",
   "w": 632,
   "h": 258
  },
  "popover@graphite": {
-  "sha": "7627037a46dfe0459a6e001832c097d80c813467",
+  "sha": "6d96a4bb40561bd653932d48e93fb7f7a3b48a32",
   "w": 632,
   "h": 258
  },

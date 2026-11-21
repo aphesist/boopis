@@ -1,61 +1,61 @@
 {
  "a-long-name@bone": {
-  "sha": "1eb91a9c63fbd2e48f30a647f6df907073823527",
+  "sha": "bb4975d3942e309dedc6192de363d0e87801fe5b",
   "w": 1196,
   "h": 872
  },
  "a-long-name@catalog": {
-  "sha": "05e07c0dca4db983d71828059d20b3973d8372d4",
+  "sha": "7e84517539ec3bf84cc30042371c2eceecb2a0f4",
   "w": 1196,
   "h": 872
  },
  "a-long-name@graphite": {
-  "sha": "045d910fb9f4075747ef5e023b65d53ab98a4e79",
+  "sha": "73f4627486c1f722cdb97591d07f40205179c67b",
   "w": 1196,
   "h": 872
  },
  "a-long-name@typewriter": {
-  "sha": "00f2944ecaf737d459b186c34d82fdd35fe98cde",
+  "sha": "ef593d915e7f2a612f709b49ce89a558f272bf8f",
   "w": 1196,
   "h": 872
  },
  "a-member-chip-hover@bone": {
-  "sha": "0de1a61eff4014d981d266824a6d6b4828586895",
+  "sha": "701a6a3014b3a1643a6a9bdccbfd61431c3cecfb",
   "w": 1196,
   "h": 872
  },
  "a-member-chip-hover@catalog": {
-  "sha": "a3d192846c2e1274305ae0a687bdc4589e332433",
+  "sha": "7d3659664314c37fe1cb7bbf522c3fd66e891347",
   "w": 1196,
   "h": 872
  },
  "a-member-chip-hover@graphite": {
-  "sha": "3570821b42c356f09b01240894b03af9c27a56ad",
+  "sha": "922702aeaad8e4d3bb868fb9194b52fba1661a5d",
   "w": 1196,
   "h": 872
  },
  "a-member-chip-hover@typewriter": {
-  "sha": "36f0522dec933e466f74cd70b4f52c844b6f5182",
+  "sha": "ec1161faf7088a859b1294626f50adfb31b7b35f",
   "w": 1196,
   "h": 872
  },
  "group-chat-is-off@bone": {
-  "sha": "aa48ee54588d379c4d52a0c3a773132b2b2dcf2c",
+  "sha": "99dd3b185bc043e2c1ae1b5275ee006e42a4d5cc",
   "w": 1196,
   "h": 872
  },
  "group-chat-is-off@catalog": {
-  "sha": "3be07686cd762ce054d0d356c0f9e5004d5e5f41",
+  "sha": "98dbcb9f66880d831898e79a9dae13c9df9a5241",
   "w": 1196,
   "h": 872
  },
  "group-chat-is-off@graphite": {
-  "sha": "61ceb44e1bcef09237fc9cde401787e9adec0d99",
+  "sha": "56cff07ff96bac42d746bde12691b3d6372fa501",
   "w": 1196,
   "h": 872
  },
  "group-chat-is-off@typewriter": {
-  "sha": "4c5fb916c9f860649d9d781e89810a24f634f919",
+  "sha": "3b05c75974514e8e07a346a061715ce7e922a786",
   "w": 1196,
   "h": 872
  },
@@ -70,7 +70,7 @@
   "h": 872
  },
  "no-messages-yet@graphite": {
-  "sha": "ee8da1b9323a0b3538c415ad0089b6de438c4f5c",
+  "sha": "fe7a1d89afa2d955277045a41dea9dda7e4cf278",
   "w": 1196,
   "h": 872
  },
@@ -80,62 +80,62 @@
   "h": 872
  },
  "renaming@bone": {
-  "sha": "61b876f8f05bcff29930a612e11b1eefd4bb757a",
+  "sha": "95fe970f6aa69519b625cba2653aba61e67f19e2",
   "w": 1196,
   "h": 872
  },
  "renaming@catalog": {
-  "sha": "c5a636fa7e7f423413aafcdf7ba695517ab8c098",
+  "sha": "6a33dbc76e0c87d0aabf8036dd2bac7c106a91b8",
   "w": 1196,
   "h": 872
  },
  "renaming@graphite": {
-  "sha": "8e4e41ad5ec4131c8c18af86ae526fc77245f460",
+  "sha": "0f2e384ac66d7be18e6d7ddd5960339649b061db",
   "w": 1196,
   "h": 872
  },
  "renaming@typewriter": {
-  "sha": "c298db4b482e71317e799983067a13f6365b7e89",
+  "sha": "f05ae69da4a93be981fea98365de65a93253ed7e",
   "w": 1196,
   "h": 872
  },
  "several-members-answered@bone": {
-  "sha": "381f3e261c31dca8564adf8cef57107c24d8279a",
+  "sha": "30b880cb5641e5d721b71b0e84af45f266068960",
   "w": 1196,
   "h": 872
  },
  "several-members-answered@catalog": {
-  "sha": "9e4c0746a0ed7bbdbf545207c6b4697186f8ed3f",
+  "sha": "8d15c24aa9d294340906747e5effbb12e06fde10",
   "w": 1196,
   "h": 872
  },
  "several-members-answered@graphite": {
-  "sha": "dcf879874ac70fd1cbba49ec82af25bfedbf31f0",
+  "sha": "d3218570a11406b87919e3ec9754163d9bd8a392",
   "w": 1196,
   "h": 872
  },
  "several-members-answered@typewriter": {
-  "sha": "a4c10b303983bc00994defe30579cc9849cb038a",
+  "sha": "9db9648043702d0964d504df4f67e8d83f239b30",
   "w": 1196,
   "h": 872
  },
  "two-members-replying@bone": {
-  "sha": "2f3ac66b6e251c1975780466ca7c00896e9f88f5",
+  "sha": "62965fe4eac346d97aacec2892f5ee2eb65e7f23",
   "w": 1196,
   "h": 872
  },
  "two-members-replying@catalog": {
-  "sha": "5402e2cb0d9461acdd2f92d38da4ed52d00f50b4",
+  "sha": "b30c59a29529700108f9703ed09ed90c137106dc",
   "w": 1196,
   "h": 872
  },
  "two-members-replying@graphite": {
-  "sha": "a5d45068af3aac2013f9c6223a4adfb99eac80a7",
+  "sha": "348876a75df678b714fc2f2287afda51b6ddf688",
   "w": 1196,
   "h": 872
  },
  "two-members-replying@typewriter": {
-  "sha": "f4beeae15a9848553506bcf425d921d8f1b5ba4c",
+  "sha": "c0caf8707e7330e2dc2b7f8ebb83d720ff211793",
   "w": 1196,
   "h": 872
  }

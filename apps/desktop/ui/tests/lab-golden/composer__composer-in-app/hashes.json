@@ -45,17 +45,17 @@
   "h": 149
  },
  "session-attach-hover@catalog": {
-  "sha": "69654b34069349121932f2905f656793bca18c00",
+  "sha": "732c99975b9303625af104f81078f3eafb9fe92c",
   "w": 744,
   "h": 149
  },
  "session-attach-hover@graphite": {
-  "sha": "86b5194f495a7ac79abfeffa2293addbf1966b4a",
+  "sha": "d82e23b01e357b141ed9af21329fbab4229033e0",
   "w": 744,
   "h": 133
  },
  "session-attach-hover@typewriter": {
-  "sha": "1415093d33556ee5256d91646087a789b6fb7836",
+  "sha": "43dd6a29dbff039e6c8e365b22dd1a504361f571",
   "w": 744,
   "h": 155
  },
@@ -65,22 +65,22 @@
   "h": 389
  },
  "session-attach-menu@catalog": {
-  "sha": "147b280f006afaba1c52d9735ef737894ce42369",
+  "sha": "8a543c29d2538c462a54613ab08df8ed0c252111",
   "w": 746,
   "h": 389
  },
  "session-attach-menu@graphite": {
-  "sha": "776063f0311ee27ce16ef9871d47f84955b6e13c",
+  "sha": "f529c3f40df521ae5dbaf3424ee05b90ef5da9b2",
   "w": 746,
   "h": 373
  },
  "session-attach-menu@typewriter": {
-  "sha": "3d55449669c8a0d81d0107737f406ee64b53c5ec",
+  "sha": "74ce1aa945fb9c6b29c3c980b6d7b0af31a08d3d",
   "w": 744,
   "h": 395
  },
  "session-attach-tooltip@bone": {
-  "sha": "3fb072c6e1832e422969900d28028dbdc3920b81",
+  "sha": "bb7da4c1e183b7459e89287cbd2a7417ca4e7c6e",
   "w": 777,
   "h": 159
  },
@@ -90,12 +90,12 @@
   "h": 159
  },
  "session-attach-tooltip@graphite": {
-  "sha": "611afd42c1e8e4e7bd7c0f90bd11efcf66d07b32",
+  "sha": "8f8535e2023eb3321603ffc76f2c91ecb645806c",
   "w": 776,
   "h": 143
  },
  "session-attach-tooltip@typewriter": {
-  "sha": "e55d7502deb4af29ef24a40ed63cd5143251a0b3",
+  "sha": "5b3d13890b78854084db65086bffc9c4b5e96cf9",
   "w": 774,
   "h": 165
  },
@@ -105,17 +105,17 @@
   "h": 117
  },
  "session-empty@catalog": {
-  "sha": "1353f9a2027fe4670a841d3ec608779d88951257",
+  "sha": "862caebeb4161df36711b92ebea11e396e6168dd",
   "w": 744,
   "h": 117
  },
  "session-empty@graphite": {
-  "sha": "152ee9c49dd596d058e1b8945a6028fad318b25c",
+  "sha": "da699192e3badb046ae0aa4c5b8d09d71e72d586",
   "w": 744,
   "h": 117
  },
  "session-empty@typewriter": {
-  "sha": "3220687ed28ac35c605272f247c3caf1fb40e229",
+  "sha": "e4a2349323622cd2a54ca599977bf84a5e1a7e99",
   "w": 744,
   "h": 123
  },
@@ -125,17 +125,17 @@
   "h": 149
  },
  "session-send-hover@catalog": {
-  "sha": "01b4a1e3f60149849df4b507c4845fac17184a40",
+  "sha": "58f516aba09946112b9301086ab51203a4a07187",
   "w": 744,
   "h": 149
  },
  "session-send-hover@graphite": {
-  "sha": "e5f09bb8373df13e7219e3661a701f0121901fab",
+  "sha": "d516c3aadf446165c551230e7e6498f73f13d797",
   "w": 744,
   "h": 133
  },
  "session-send-hover@typewriter": {
-  "sha": "aa8f6f4eb80d6543b88c80dc72f7f3e1a99921aa",
+  "sha": "c3dad74b4bd5e74310da38734635a7c8395d0132",
   "w": 744,
   "h": 155
  },
@@ -150,12 +150,12 @@
   "h": 149
  },
  "session@graphite": {
-  "sha": "aa06138bcd99e9872387f68cc735910323a7e687",
+  "sha": "6b6174b3b639c3e9b922f527d643e38e3699f3d5",
   "w": 744,
   "h": 133
  },
  "session@typewriter": {
-  "sha": "de3e033830be684c635aefe2f4a9585bbebd2b08",
+  "sha": "fcbea85595c3e146c30de842308edd9f364deddc",
   "w": 744,
   "h": 155
  }

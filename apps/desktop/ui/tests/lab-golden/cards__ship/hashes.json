@@ -95,17 +95,17 @@
   "h": 211
  },
  "failed@typewriter": {
-  "sha": "a2041f80c3aca68f252ea65d37b3be89ab2c352c",
+  "sha": "05f41d2557bef08e29375b24fb7ff770f1a06a66",
   "w": 632,
   "h": 211
  },
  "long@bone": {
-  "sha": "af984ce4648cde0a10c88bdf766a386c318307a8",
+  "sha": "ae0fc1edd447e3ae277ddda53b578c0ab2fcf7e1",
   "w": 632,
   "h": 411
  },
  "long@catalog": {
-  "sha": "8f4183638b6ef78e92de24288621390cc550d4e4",
+  "sha": "b8e4e1c3c5463b60b0c71a7901f49cb8091a830f",
   "w": 632,
   "h": 411
  },
@@ -115,7 +115,7 @@
   "h": 411
  },
  "long@typewriter": {
-  "sha": "b6348b0d64e4e1c06ba6d9dad297709b803590a7",
+  "sha": "c1847e3913193ed9c43f839b2ffb17a87a3013e3",
   "w": 632,
   "h": 430
  },
@@ -160,7 +160,7 @@
   "h": 54
  },
  "passed@bone": {
-  "sha": "2e5f065a39c2178cbad6c444318fba38c3ccd60d",
+  "sha": "cab00bc103be2c441a4d5a6dd092d8f6b63c4da6",
   "w": 632,
   "h": 270
  },
@@ -175,27 +175,27 @@
   "h": 270
  },
  "passed@typewriter": {
-  "sha": "c8eb1583e413e9d829d847562a0eca01f0ef51f9",
+  "sha": "cabb2f64fff2b3d0e7ae32bf895babb9b02668c4",
   "w": 632,
   "h": 270
  },
  "rolled-back@bone": {
-  "sha": "e0d989da0b79b68924772f9432dffc205ecf9c9f",
+  "sha": "45fe719a844064d19986703f34e413da659a7a5e",
   "w": 632,
   "h": 270
  },
  "rolled-back@catalog": {
-  "sha": "e7cbd4294b196ca60089d58d35dd198e95f9bf8d",
+  "sha": "e9989d8bc8151e881d85bf69b60c7ac61207f390",
   "w": 632,
   "h": 270
  },
  "rolled-back@graphite": {
-  "sha": "e1e2498163b3ac197a07dd94c4c31b1c02e66b17",
+  "sha": "f5ff98836cc2be44c8b40e79f1be243208cb3c8c",
   "w": 632,
   "h": 270
  },
  "rolled-back@typewriter": {
-  "sha": "7ff2fd5704dfdbd661a2c6e96a85b31352ce5e3a",
+  "sha": "7a46e9eee30a1baac2f27ff7098089dca62d23cd",
   "w": 632,
   "h": 291
  }

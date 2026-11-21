@@ -5,7 +5,7 @@
   "h": 872
  },
  "dice-hover@catalog": {
-  "sha": "714b1104c649839d381b458cb06787eef73cdff5",
+  "sha": "a57f3be61125aac665c54945ee377bf589c8d2ea",
   "w": 1196,
   "h": 872
  },
@@ -20,22 +20,22 @@
   "h": 872
  },
  "from-no-bots@bone": {
-  "sha": "a4581f61603cf25f208186b647e7a3873ae8e409",
+  "sha": "f1b8f96bdab51debe7a5a8367cd7d204d85006ff",
   "w": 1196,
   "h": 872
  },
  "from-no-bots@catalog": {
-  "sha": "479ebee37363c6023e8d0885538634e3b4c14904",
+  "sha": "010bad78e87138f05c9a60e25be06c6473595e0e",
   "w": 1196,
   "h": 872
  },
  "from-no-bots@graphite": {
-  "sha": "59691f3fbcbd076497df361b95930eda2d45c248",
+  "sha": "a7ababa2b0cb6085e5e7726d39fe2396c631d5ee",
   "w": 1196,
   "h": 872
  },
  "from-no-bots@typewriter": {
-  "sha": "5ce9acea5ddec8f4e02774cdb2b2ef50b20e9038",
+  "sha": "f4774b50554cec66f28bd8e6984f22bbc50c8d6e",
   "w": 1196,
   "h": 872
  },
@@ -55,7 +55,7 @@
   "h": 872
  },
  "typical@typewriter": {
-  "sha": "ed8f819b839d47e839e9b2455c546d5df1b5303c",
+  "sha": "3ff739b521c7756a9943979cae9d79d2bc2e867c",
   "w": 1196,
   "h": 872
  }

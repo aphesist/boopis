@@ -35,7 +35,7 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
   const reader = makeReader(gov);
   const g0 = gov();
   const govChip = ui.chip({ label: 'Governed', icon: 'ladder', pressed: g0.governed });
-  const model = ui.chip({ model: g0.model, haspopup: 'menu', expanded: false });
+  const model = ui.chip({ model: g0.model, haspopup: 'menu', expanded: false, class: 'ui-chip--who' });
   const c = ui.composer({
     placeholder: 'Describe the change', label: 'Message the coding agent', value: opts.draft,
     chips: [govChip, model], spend: { spent: g0.spent, cap: g0.cap },

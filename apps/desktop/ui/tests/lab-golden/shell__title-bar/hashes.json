@@ -15,7 +15,7 @@
   "h": 64
  },
  "a-long-session-title@typewriter": {
-  "sha": "7064ba0eca6121063a389586c8faee3a8dab14e9",
+  "sha": "35a762008a81c952f2d91df8f4f1635af3da6e74",
   "w": 1440,
   "h": 64
  },
@@ -40,12 +40,12 @@
   "h": 64
  },
  "close-minimize-zoom-macos@bone": {
-  "sha": "f43fb5de3eaf9fa561510ec9689b1c55d9eb1290",
+  "sha": "4a3ad1b4604f8c7c2402d68a5f062a59243334b8",
   "w": 1440,
   "h": 64
  },
  "close-minimize-zoom-macos@catalog": {
-  "sha": "a3c702fb74719d94c220d3e332d32476681e1b0f",
+  "sha": "a7f293683c0648c081d9614fce9f0f03130332c2",
   "w": 1440,
   "h": 64
  },
@@ -55,7 +55,7 @@
   "h": 64
  },
  "close-minimize-zoom-macos@typewriter": {
-  "sha": "684263cfe8c08828856e5c2948dfae355b37a8a2",
+  "sha": "ee01877a0b831c45164353ca276797452bf8c881",
   "w": 1440,
   "h": 64
  },
@@ -80,7 +80,7 @@
   "h": 64
  },
  "close-only-hover@bone": {
-  "sha": "421bdaa4f18483fc8e637eab5f7200299565c5fc",
+  "sha": "5be4e61dd8e24e05578f6da71f8e6b514b9f79ed",
   "w": 1440,
   "h": 64
  },
@@ -100,7 +100,7 @@
   "h": 64
  },
  "command-field-focus@bone": {
-  "sha": "89be3aa733f71311ff66d3cee35ae48dfabcf713",
+  "sha": "3400c2b9133368e391e07ff0fbcc9bc9c1c22cac",
   "w": 1440,
   "h": 64
  },
@@ -145,7 +145,7 @@
   "h": 92
  },
  "sidebar-button-tooltip@catalog": {
-  "sha": "86d8357e8591f0553c7be8c3f4e22b292cd3b28b",
+  "sha": "7f3e2873fdab4b97006f49172e53a65007ea782b",
   "w": 1440,
   "h": 92
  },
@@ -160,7 +160,7 @@
   "h": 92
  },
  "typical@bone": {
-  "sha": "5239ddcad315878895a6db75077e95d545612207",
+  "sha": "8e5e7eb77d2f2f3b0de9588fb6ba07501f5fa5df",
   "w": 1440,
   "h": 64
  },
@@ -175,7 +175,7 @@
   "h": 64
  },
  "typical@typewriter": {
-  "sha": "fa17ba95d5d980f81fd33118bbbb3b269a36809c",
+  "sha": "86606ca813e7f62c9fba0bf869e61b85c3a2ef75",
   "w": 1440,
   "h": 64
  }

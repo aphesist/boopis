@@ -1,6 +1,6 @@
 {
  "120-bots-expanded@bone": {
-  "sha": "02caaef3697d1565ef3aa90557efdb4bcd5a23a7",
+  "sha": "13c5ac40f29aacba443264db71ae587bba917560",
   "w": 1440,
   "h": 84
  },
@@ -15,7 +15,7 @@
   "h": 84
  },
  "120-bots-expanded@typewriter": {
-  "sha": "845175d9f724c576208d4744d6623d455682b4be",
+  "sha": "b09563561a109d86fe2e43a4a086076c1171bb3f",
   "w": 1440,
   "h": 84
  },
@@ -75,7 +75,7 @@
   "h": 84
  },
  "a-long-named-bot@typewriter": {
-  "sha": "a9e8df594fca88d87231aae4d0be3e6dc65e5113",
+  "sha": "8161e8c4050038c6e50ee365852c2b2675c7af96",
   "w": 1440,
   "h": 84
  },
@@ -150,12 +150,12 @@
   "h": 84
  },
  "minimised@graphite": {
-  "sha": "b05f60e89c51fd0c32a16844b9c654318a41f515",
+  "sha": "150b688544bb22dde71499e1fb0b5998a5379617",
   "w": 1440,
   "h": 84
  },
  "minimised@typewriter": {
-  "sha": "74612c9ba51fee3a8310f447a5d39494e31db851",
+  "sha": "de7311809db9761ecb6fc5b82be40ab927cb0bea",
   "w": 1440,
   "h": 84
  },
@@ -210,12 +210,12 @@
   "h": 84
  },
  "no-bots-the-empty-shape@graphite": {
-  "sha": "c4e43cf74a14491441cb634edaa742cccc188be0",
+  "sha": "dc46699beaf62db90e75213cc18bfc44b5608682",
   "w": 1440,
   "h": 84
  },
  "no-bots-the-empty-shape@typewriter": {
-  "sha": "d6da03d8a30660ac6b0ff874664edb72a7768cf2",
+  "sha": "e7ffcc1de096dcc2826a1c59a01a678b6584a81f",
   "w": 1440,
   "h": 84
  },
@@ -250,12 +250,12 @@
   "h": 84
  },
  "off@graphite": {
-  "sha": "a108806feebb9b81c329d580bc1fb4a582194088",
+  "sha": "88324516c776a450b8e2682a2fd76cca855a9612",
   "w": 1440,
   "h": 84
  },
  "off@typewriter": {
-  "sha": "ce25b0e90ddadcb3ab8e51905e46536502dddcd8",
+  "sha": "4bd2e8bbfb74d4915c88d28845fd500b67b75f5d",
   "w": 1440,
   "h": 84
  },
@@ -280,7 +280,7 @@
   "h": 84
  },
  "one-bot@bone": {
-  "sha": "d468e686e5e8de3e025d6b09bf378200dff88f53",
+  "sha": "2bd9a21e057153c79d8fb6b00a3fccd693af72ac",
   "w": 1440,
   "h": 84
  },
@@ -300,22 +300,22 @@
   "h": 84
  },
  "orb-focus@bone": {
-  "sha": "8d6bc6e9039154128cc488f40f6679f06add01cb",
+  "sha": "52403832390819ded7519eef641bc6bd2d79cc5a",
   "w": 1440,
   "h": 119
  },
  "orb-focus@catalog": {
-  "sha": "343f6d494ee6091859e24cb369013f5c193b332d",
+  "sha": "0c5be3e3707a594686dc8907057051b59e85b3c0",
   "w": 1440,
   "h": 119
  },
  "orb-focus@graphite": {
-  "sha": "6acbebdd3462ce5a382988218167eeb8f2e8e6a6",
+  "sha": "c4e7c6a6a02bc58dfe1753e910b8184dbad34324",
   "w": 1440,
   "h": 119
  },
  "orb-focus@typewriter": {
-  "sha": "49e2e89aca86d5d4ff1761b0a244e582aa40b9de",
+  "sha": "46c75e4c8f6735288dced78d09ba301c4b8cbd28",
   "w": 1440,
   "h": 119
  },
@@ -325,7 +325,7 @@
   "h": 84
  },
  "orb-hover@catalog": {
-  "sha": "d54363134ab640d2e50cbd172179e631629acd31",
+  "sha": "33c351f45f66ba2916dd2805b7ab3fb3d3b64588",
   "w": 1440,
   "h": 84
  },
@@ -340,7 +340,7 @@
   "h": 84
  },
  "orb-tooltip@bone": {
-  "sha": "b32deffca3f4198f610b06f432c90dcbb764c65e",
+  "sha": "52403832390819ded7519eef641bc6bd2d79cc5a",
   "w": 1440,
   "h": 119
  },
@@ -350,12 +350,12 @@
   "h": 119
  },
  "orb-tooltip@graphite": {
-  "sha": "af9e9c7af81225c7749f7026ddc4dd3da7c85653",
+  "sha": "e13f05625c4453ab9db11f5097802d9651ef9a4c",
   "w": 1440,
   "h": 119
  },
  "orb-tooltip@typewriter": {
-  "sha": "a82ed914e73e17484529266bd3b3a07aee5ad0f6",
+  "sha": "7d730a0659b0bb2891ba6db298316b74faf2b1b2",
   "w": 1440,
   "h": 119
  },
@@ -380,22 +380,22 @@
   "h": 84
  },
  "the-schedules-page@bone": {
-  "sha": "2a4674dd002f8a6ae715164fbec2a6c78a5ee388",
+  "sha": "4e75c27fef8748459a088e7fc4dd3561a0049dc2",
   "w": 1440,
   "h": 84
  },
  "the-schedules-page@catalog": {
-  "sha": "1172abaea7141d19007bd58020797e911fc5ae10",
+  "sha": "d87502671b85a926067a361dba33dbf1b247bd24",
   "w": 1440,
   "h": 84
  },
  "the-schedules-page@graphite": {
-  "sha": "3957189eec8ba653cc7a540ea37f83837dbb94c8",
+  "sha": "f809260bd904a82d671f605af41cd561397335de",
   "w": 1440,
   "h": 84
  },
  "the-schedules-page@typewriter": {
-  "sha": "bc7457728a464a954471b0128a9f2b4818d3dc76",
+  "sha": "eb19876e153b799debbdc0c34dcba30e8d343e23",
   "w": 1440,
   "h": 84
  },

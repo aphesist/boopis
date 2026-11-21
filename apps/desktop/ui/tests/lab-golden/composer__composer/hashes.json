@@ -115,7 +115,7 @@
   "h": 64
  },
  "compact-attach-hover@typewriter": {
-  "sha": "8ba34aa9a1ae829578888e740de5a9339992e89a",
+  "sha": "c9503ef86fcb5f1fc2e64b11cba85f2f9133060c",
   "w": 424,
   "h": 64
  },
@@ -175,7 +175,7 @@
   "h": 64
  },
  "compact-empty@typewriter": {
-  "sha": "b2c7e09c71a35403847552bb7be009bcb71a494a",
+  "sha": "5f1411866571171a99ad35d09abc60556a3d4324",
   "w": 424,
   "h": 64
  },
@@ -235,7 +235,7 @@
   "h": 64
  },
  "compact-mic-hover@typewriter": {
-  "sha": "7208b921561f2cf78c21e938cf3ced28f92db959",
+  "sha": "b58ee618d2e1d66164795ca87d1666f987c355f5",
   "w": 424,
   "h": 64
  },
@@ -260,7 +260,7 @@
   "h": 64
  },
  "compact-multi-line@bone": {
-  "sha": "c199ee4d3a707e7618be263b716812e94135286d",
+  "sha": "632c9d2c8b0668a763fde5ba636b710590c1ad00",
   "w": 424,
   "h": 171
  },
@@ -300,7 +300,7 @@
   "h": 64
  },
  "compact-send-hover@bone": {
-  "sha": "bb29eacc554b7dbab11d9f2a4c08d8a7e4e50f7e",
+  "sha": "f445b929e72be532346bb9760a9d957e4fcb8cf9",
   "w": 424,
   "h": 64
  },
@@ -375,7 +375,7 @@
   "h": 64
  },
  "compact-with-text@typewriter": {
-  "sha": "9302e3f386498abd5cc6c5b53c58f8d4682bcb32",
+  "sha": "39919ef275b9f05d272ff92bd996087c54d0b746",
   "w": 424,
   "h": 64
  },
@@ -420,12 +420,12 @@
   "h": 131
  },
  "listening@bone": {
-  "sha": "3c21cd1c2e3c1f6a5bcf469d261d6fe5fb75ca1b",
+  "sha": "fea0eec101e2b05b3446c510369d99007e0497b0",
   "w": 744,
   "h": 125
  },
  "listening@catalog": {
-  "sha": "da3cce78fc0c5db53943ffc4553a7ec42873547d",
+  "sha": "0a8c7205312f279901e88140169c5f8f0e14dac3",
   "w": 744,
   "h": 125
  },
@@ -525,7 +525,7 @@
   "h": 153
  },
  "mic-tooltip@catalog": {
-  "sha": "de83b642b06b391b11b653cd14c9fe80fccce412",
+  "sha": "c8a3329088754328df967c4a2e778e69a776a629",
   "w": 749,
   "h": 153
  },
@@ -725,7 +725,7 @@
   "h": 159
  },
  "with-a-folder-and-a-picture@catalog": {
-  "sha": "44b256b41255d19cd865030aa9bb84aa819b92c6",
+  "sha": "370f42ea7c4448ad841710e8d68fed0f67f5580c",
   "w": 744,
   "h": 159
  },

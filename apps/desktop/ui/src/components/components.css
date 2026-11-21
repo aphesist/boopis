@@ -726,6 +726,8 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 @media (hover: hover) and (pointer: fine) { .ui-ff:hover { border-bottom-color: var(--text-strong); color: var(--text-strong); } }
 .ui-ff[data-confirmed] { border-bottom-style: solid; border-bottom-color: var(--brass); }
 @media (max-width: 640px) { .ui-composer__bar .ui-capacity { display: none; } }
+/* who answers next, at phone width: the provider's mark (or Smart's spark) and the chevron; the name is in the chip's aria-label and its tooltip, so the row keeps clear of the box's corner (R-corner-3, R-corner-4) */
+@media (max-width: 640px) { .ui-composer__bar .ui-chip--who > span { display: none; } }
 
 /* ───────────── panel and section: the right panel, the bot settings sheet ───────────── */
 .ui-panel { position: relative; display: flex; flex-direction: column; height: 100%; background: var(--bg-1); font: 400 var(--fs-s)/var(--lh-ui) var(--sans); color: var(--text); }
