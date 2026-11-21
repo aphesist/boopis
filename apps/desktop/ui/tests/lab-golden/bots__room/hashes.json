@@ -1,16 +1,16 @@
 {
  "a-long-name@bone": {
-  "sha": "fd29fee3a386672776c0d079ce026cf88f804c03",
+  "sha": "f626d4ffe1f0311c37375dcba97034d7a3a4f65a",
   "w": 1196,
   "h": 872
  },
  "a-long-name@catalog": {
-  "sha": "41cb76d541337e2b77c9c07170633a2717d6b0f4",
+  "sha": "531a76c5a01a48d94582da13190ed64f61a82423",
   "w": 1196,
   "h": 872
  },
  "a-long-name@graphite": {
-  "sha": "bbef9708cdd107b372ff32879a82d533f19efd10",
+  "sha": "8348f79a95d328bca88fd523d1bf0f7039bdd94f",
   "w": 1196,
   "h": 872
  },
@@ -25,7 +25,7 @@
   "h": 872
  },
  "atlas-a-thread@catalog": {
-  "sha": "7160e2979d081cd997448d338d501fbaf42e563d",
+  "sha": "d41d6e1a875a01a0fb93247fee4d2fd80bfacb70",
   "w": 1196,
   "h": 872
  },
@@ -35,32 +35,32 @@
   "h": 872
  },
  "atlas-a-thread@typewriter": {
-  "sha": "10e1cda94d950b90f1fac5df6f5a3d3741603135",
+  "sha": "a44d2f25b76e386b9c74d4dfe01979a6c00cef0d",
   "w": 1196,
   "h": 872
  },
  "composer-attach-tooltip@bone": {
-  "sha": "a09fda2739f91e28b3631441feb61a0982c7dd93",
+  "sha": "be3989daa2830bad9dbbfba9d1098f99f742aac5",
   "w": 1196,
   "h": 872
  },
  "composer-attach-tooltip@catalog": {
-  "sha": "0d1853c5a57367d2016fd825c73e4925f907cda6",
+  "sha": "5463d4235796ff4fe2b95f2b80b517d7e7ae5ded",
   "w": 1196,
   "h": 872
  },
  "composer-attach-tooltip@graphite": {
-  "sha": "ae5a32b976021b21d8a068dd42b1b3ed61c77eb1",
+  "sha": "bd260afb5c414a97b066a09b0ee3ee262b604f2b",
   "w": 1196,
   "h": 872
  },
  "composer-attach-tooltip@typewriter": {
-  "sha": "468fcd411e4dc979c83a117c23dcd7b66cf944a5",
+  "sha": "4b22d4bad2c24a30471e7b6a7744a6243b515a7a",
   "w": 1196,
   "h": 872
  },
  "composer-send-hover@bone": {
-  "sha": "404651db036ce65221a650daff0683df4f7b470b",
+  "sha": "4c03b355e84510f8271b5118d86dc7c36254496d",
   "w": 1196,
   "h": 872
  },
@@ -75,17 +75,17 @@
   "h": 872
  },
  "composer-send-hover@typewriter": {
-  "sha": "a44d2f25b76e386b9c74d4dfe01979a6c00cef0d",
+  "sha": "fa59751e1f090f81ecef132f3391348c2d0ac738",
   "w": 1196,
   "h": 872
  },
  "kai-no-thread-yet@bone": {
-  "sha": "160adb4d09b37b76a6d64f4b2f09b69f062f2222",
+  "sha": "0a06826b86c7b7cf6c1cc54ce9f4ae68f272e83b",
   "w": 1196,
   "h": 872
  },
  "kai-no-thread-yet@catalog": {
-  "sha": "81f617516169f5717521255fd2bf0d917d413fdd",
+  "sha": "df5e56ec2f01380d99fd1e05451b8257858c3d56",
   "w": 1196,
   "h": 872
  },
@@ -95,7 +95,67 @@
   "h": 872
  },
  "kai-no-thread-yet@typewriter": {
-  "sha": "8b0fa427f2bb29c1fa1083d6c08e0ce40b4102a2",
+  "sha": "88a021cce0a419e56708e77f96527aaffcf4c939",
+  "w": 1196,
+  "h": 872
+ },
+ "live-bot-a-long-name@bone": {
+  "sha": "23f3301ab8ca7869af2b3d0c74b7e37f2e6b81a4",
+  "w": 1196,
+  "h": 872
+ },
+ "live-bot-a-long-name@catalog": {
+  "sha": "55b9b19e5546642d001e6dba979345769b03a30f",
+  "w": 1196,
+  "h": 872
+ },
+ "live-bot-a-long-name@graphite": {
+  "sha": "855beb1c773460869cb8de7cf15b5fb79e82d629",
+  "w": 1196,
+  "h": 872
+ },
+ "live-bot-a-long-name@typewriter": {
+  "sha": "96feb29541e36f5e8690eaa065056c19383dd897",
+  "w": 1196,
+  "h": 872
+ },
+ "live-bot-a-session-open-with-a-line-the-app-says@bone": {
+  "sha": "7cb6fe6a6fbc0bbf4f2b6942f9e5ad7f15ed9af4",
+  "w": 1196,
+  "h": 872
+ },
+ "live-bot-a-session-open-with-a-line-the-app-says@catalog": {
+  "sha": "a0f927f73f5f9fb46f8a22e3a888d6b171dc5f08",
+  "w": 1196,
+  "h": 872
+ },
+ "live-bot-a-session-open-with-a-line-the-app-says@graphite": {
+  "sha": "d1eb45e0f9cbf51220981de9f9a831e360591363",
+  "w": 1196,
+  "h": 872
+ },
+ "live-bot-a-session-open-with-a-line-the-app-says@typewriter": {
+  "sha": "098ceb364849f911018eb787ada469470e361ab1",
+  "w": 1196,
+  "h": 872
+ },
+ "live-bot-recent-sessions-and-a-live-composer@bone": {
+  "sha": "5b57045ed83fc2eb5c5c06921d0d2d27955e118a",
+  "w": 1196,
+  "h": 872
+ },
+ "live-bot-recent-sessions-and-a-live-composer@catalog": {
+  "sha": "4a2f6f12f3961031668f514614f822cd03b89c4f",
+  "w": 1196,
+  "h": 872
+ },
+ "live-bot-recent-sessions-and-a-live-composer@graphite": {
+  "sha": "90e6a8cc75a34923328272665562e139f1c3a8fa",
+  "w": 1196,
+  "h": 872
+ },
+ "live-bot-recent-sessions-and-a-live-composer@typewriter": {
+  "sha": "c72fe218a0cac6ea7c23773128c68fd087d33c74",
   "w": 1196,
   "h": 872
  },
@@ -105,17 +165,17 @@
   "h": 872
  },
  "made-outside-boopis@catalog": {
-  "sha": "dbcb747bc8abe5e1b02f8340d0bb9d30f9f7323e",
+  "sha": "8bf88df7e0851f29722d9dc7f8c08f11f8ce65ab",
   "w": 1196,
   "h": 872
  },
  "made-outside-boopis@graphite": {
-  "sha": "834a3a80e7a5c7c262542df2f268263468bf3e8a",
+  "sha": "c334755467bd1fa45a4bc8aedc3e9c0223c3388e",
   "w": 1196,
   "h": 872
  },
  "made-outside-boopis@typewriter": {
-  "sha": "864c48e8e703935dce59b6a554dc1decdb7bd934",
+  "sha": "b5a19665cc377e4c923f898e7e62f4ddcfd9304b",
   "w": 1196,
   "h": 872
  },
@@ -140,22 +200,22 @@
   "h": 872
  },
  "no-bots-at-all@bone": {
-  "sha": "1a7115646e02d588043a20077b63cd739000a1a2",
+  "sha": "9153c1056683f4941f729745f03bc9c2f50675ca",
   "w": 1196,
   "h": 872
  },
  "no-bots-at-all@catalog": {
-  "sha": "de058f4cdab194b23171b5dc01c1bdfde0a1a8c2",
+  "sha": "4c3c94aaa22489cc746aba03b74abe826bc7bf08",
   "w": 1196,
   "h": 872
  },
  "no-bots-at-all@graphite": {
-  "sha": "f3add86b1da313b7d983cdd5150dfcc688bfe80a",
+  "sha": "bf6a97f3fa496e18dd86eeb4e937ceb5f0b4af27",
   "w": 1196,
   "h": 872
  },
  "no-bots-at-all@typewriter": {
-  "sha": "1b4b1bdb857dc8143406f89f36e719106db47434",
+  "sha": "ed611372b085308732ad8d63ac803d0b6dbf6762",
   "w": 1196,
   "h": 872
  }

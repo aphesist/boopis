@@ -167,7 +167,7 @@ export function createLiveGroups(deps: GroupsDeps) {
         publishArchived();
       } catch (e) {
         unavailable = isUnknownMethod(e) ? NO_GROUPS : 'Groups could not be read: ' + why(e);
-        log.warn('groups.list failed', e);
+        (isUnknownMethod(e) ? log.info : log.warn)('groups.list failed', e);
       }
     })().finally(() => { refreshing = null; }));
     return refreshing;

@@ -1,0 +1,102 @@
+{
+ "changing-the-members@bone": {
+  "sha": "96997c9b9eae8e6b612dc6e30955ec5d266d4325",
+  "w": 1196,
+  "h": 872
+ },
+ "changing-the-members@catalog": {
+  "sha": "32a5067dc2e1626b1c98c3e86c3a550dd0c7eba9",
+  "w": 1196,
+  "h": 872
+ },
+ "changing-the-members@graphite": {
+  "sha": "4d06b9ea6ca05d47971e0ce26ecee96318847ff4",
+  "w": 1196,
+  "h": 872
+ },
+ "changing-the-members@typewriter": {
+  "sha": "d300ca40c7430dd3bb57be0c150b6eb188a0f3ee",
+  "w": 1196,
+  "h": 872
+ },
+ "group-chat-is-off@bone": {
+  "sha": "47ae914c55ab671e0f134d701a576b5b28b1b037",
+  "w": 1196,
+  "h": 872
+ },
+ "group-chat-is-off@catalog": {
+  "sha": "21826da45e4eceab7ccaaa72dd4a1bc570fc520c",
+  "w": 1196,
+  "h": 872
+ },
+ "group-chat-is-off@graphite": {
+  "sha": "77dc1e205112d24eec3580d76e30d7321a86878f",
+  "w": 1196,
+  "h": 872
+ },
+ "group-chat-is-off@typewriter": {
+  "sha": "a60eeeafda622a30d03e7e993a258246a90ed6bc",
+  "w": 1196,
+  "h": 872
+ },
+ "members-picked@bone": {
+  "sha": "3556e4189ba5c25b50c3d6ff4b8a5eaf9c11b735",
+  "w": 1196,
+  "h": 872
+ },
+ "members-picked@catalog": {
+  "sha": "cf66909d2260470ca590f74ed2035f153e6dbc74",
+  "w": 1196,
+  "h": 872
+ },
+ "members-picked@graphite": {
+  "sha": "6a4b46adcb584c393321db72c843d6549c749757",
+  "w": 1196,
+  "h": 872
+ },
+ "members-picked@typewriter": {
+  "sha": "0c6b74dd2297ef76aca302fb550c8e5aff07d859",
+  "w": 1196,
+  "h": 872
+ },
+ "only-one-bot@bone": {
+  "sha": "59b93d1f87d24e08ef9a8e723e619b6a52fcb056",
+  "w": 1196,
+  "h": 872
+ },
+ "only-one-bot@catalog": {
+  "sha": "608277094144613cd8af31436debc48a3662a34c",
+  "w": 1196,
+  "h": 872
+ },
+ "only-one-bot@graphite": {
+  "sha": "a797b7c354ca184116a5a08d6e1be5972fd65810",
+  "w": 1196,
+  "h": 872
+ },
+ "only-one-bot@typewriter": {
+  "sha": "6f1d50f0f768813f660f0722577418bf86f6ff93",
+  "w": 1196,
+  "h": 872
+ },
+ "typical@bone": {
+  "sha": "8385f3f17a6aac2c1dccbcc8811167a8a977d414",
+  "w": 1196,
+  "h": 872
+ },
+ "typical@catalog": {
+  "sha": "63f2e9aed73fefba86ccf7088ca261896f0f1caa",
+  "w": 1196,
+  "h": 872
+ },
+ "typical@graphite": {
+  "sha": "df8cda35d82fa7fc292bc448d994e8e045d98706",
+  "w": 1196,
+  "h": 872
+ },
+ "typical@typewriter": {
+  "sha": "ea76a4e4015ff1c83e8ece178d75f4f15a0527cc",
+  "w": 1196,
+  "h": 872
+ }
+}

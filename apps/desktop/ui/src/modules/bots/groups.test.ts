@@ -49,7 +49,7 @@ describe('groups in the list', () => {
     const rows = [...document.querySelectorAll('.bt-groups .ui-row')];
     expect(rows).toHaveLength(2);
     expect(rows[0]!.textContent).toContain('release crew');
-    expect(rows[0]!.getAttribute('aria-label')).toMatch(/^release crew, a group of /);
+    expect(rows[0]!.getAttribute('aria-label')).toMatch(/^release crew, /);
     expect(rows[1]!.textContent).toContain('New group');
   });
   it('shows only New group when there are no groups', () => {

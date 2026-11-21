@@ -31,7 +31,7 @@ export function renderGlance(b: Bot, onOpen?: (sessionId: string) => void): HTML
       const meta = [s.source && s.source !== 'gui' ? s.source : '', s.messages != null ? count(s.messages, 'message', 'messages') : '', s.when].filter(Boolean).join(' · ');
       const inner = [el('span', { class: 'bt-glance-title', text: title }), el('span', { class: 'bt-glance-meta ui-mono', text: meta })];
       /* opening a session resumes it: its messages are the thread and the next message continues it */
-      return el('li', { class: 'bt-glance-row' }, onOpen ? el('button', { class: 'bt-glance-open', type: 'button', 'aria-label': 'Open ' + title + (meta ? ', ' + meta : ''), onclick: () => { onOpen(s.id); } }, inner) : inner);
+      return el('li', { class: 'bt-glance-row' }, onOpen ? el('button', { class: 'bt-glance-open', type: 'button', 'data-tip': 'Open this session', onclick: () => { onOpen(s.id); } }, inner) : inner);
     })));
   }
   root.append(head('What it can use'));

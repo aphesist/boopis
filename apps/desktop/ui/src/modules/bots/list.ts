@@ -226,21 +226,21 @@ function groupRow(g: Group): string {
   return ui.html.row({
     title: g.name, sub: namesOf(g.members), value: g.id, lead: stackOf(g.members, railOn() ? 20 : 16, true),
     end: busy ? ui.html.dot('run') : '', current: S.view === 'group' && g.id === S.groupSel,
-    attrs: { 'aria-label': g.name + ', a group of ' + namesOf(g.members) + (busy ? ', replying' : ''), 'data-gid': g.id, 'data-tip': railOn() ? g.name : null, 'data-tip-pos': 'right' }
+    attrs: { 'aria-label': g.name + ', ' + namesOf(g.members) + (busy ? ', replying' : ''), 'data-gid': g.id, 'data-tip': railOn() ? g.name : null, 'data-tip-pos': 'right' }
   });
 }
 export function drawGroups(): void {
   const host = S.groupsEl; if (!host) return;
   const focusId = (document.activeElement as HTMLElement | null)?.closest<HTMLElement>('[data-gid],[data-new-group]')?.dataset['gid'] ?? ((document.activeElement as HTMLElement | null)?.closest('[data-new-group]') ? '__new' : null);
   host.replaceChildren();
-  const ul = el('ul', { class: 'ui-rows bt-rows bt-group-rows', 'data-ui': 'rows', 'aria-label': 'Groups' });
+  const ul = el('ul', { class: 'ui-rows bt-group-rows', 'data-ui': 'rows', 'aria-label': 'Groups' });
   S.groupRows.clear();
   for (const g of S.groups) {
     const li = frag(groupRow(g));
     ul.append(li);
     S.groupRows.set(g.id, { li, btn: $('.ui-row', li) });
   }
-  const nl = frag(ui.html.row({ title: 'New group', sub: 'Bots talking together', value: '__new-group', lead: '<span class="bt-group-add">' + ui.icon('plus') + '</span>', attrs: { 'data-new-group': '', 'data-tip-pos': 'right', 'aria-label': 'New group' } }));
+  const nl = frag(ui.html.row({ title: 'New group', sub: 'Bots talking together', value: '__new-group', lead: '<span class="bt-group-add">' + ui.icon('plus') + '</span>', attrs: { 'data-new-group': '', 'data-tip': railOn() ? 'New group' : null, 'data-tip-pos': 'right', 'aria-label': 'New group, bots talking together' } }));
   nl.querySelector('.ui-row')?.setAttribute('data-new-group', '');
   ul.append(nl);
   host.append(el('h2', { class: 'ui-group__head bt-groups-h', text: 'Groups' }), ul);
