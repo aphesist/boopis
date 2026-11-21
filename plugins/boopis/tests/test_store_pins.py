@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from boopis.compat.trust import tree_hash
 from boopis.session import Runtime
 from boopis.store import pins
 from boopis.store import plan as planner
@@ -180,7 +181,5 @@ def test_an_npm_package_with_install_scripts_is_not_installed(rt: Runtime, tmp_p
         planner.build(rt, params)
     assert caught.value.code == "hx.store.kind_unsupported" and caught.value.data["scripts"] == ["postinstall"]
     files["package.json"] = json.dumps({"name": "p", "scripts": {"test": "jest"}})
-    params["tree_sha256"] = __import__("boopis.compat.trust", fromlist=["tree_hash"]).tree_hash(
-        write_tree(tmp_path / "s", files)
-    )
+    params["tree_sha256"] = tree_hash(write_tree(tmp_path / "s", files))
     planner.build(rt, params)

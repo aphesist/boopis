@@ -9,13 +9,32 @@ and the receipt says so (a plugin that is not enabled does nothing).
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 from typing import Protocol
 
 from ..util.proc import run_captured, safe_env
+from .data import limit
 
-TIMEOUT_S = 60.0
+#: What the engine's own command needs from this process besides the allowlist: where its runtime and tools are, and how it
+#: reaches the network (a proxy and a certificate bundle) to sync its environment when it admits a plugin.
+PASS_THROUGH = (
+    "HERMES_",
+    "UV_",
+    "SSL_CERT_",
+    "REQUESTS_CA_BUNDLE",
+    "CURL_CA_BUNDLE",
+    "NODE_EXTRA_CA_CERTS",
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "ALL_PROXY",
+    "NO_PROXY",
+    "http_proxy",
+    "https_proxy",
+    "all_proxy",
+    "no_proxy",
+)
 
 
 class Enabler(Protocol):
@@ -31,9 +50,13 @@ class EngineCli:
         self.home = home
 
     def _run(self, verb: str, slug: str) -> tuple[bool, str]:
-        env = safe_env({"HERMES_HOME": str(self.home)})  # no secret reaches the child by inheritance
+        # the allowlisted environment plus what the engine's own command needs: nothing else reaches it by inheritance
+        passed = {k: v for k, v in os.environ.items() if k.startswith(PASS_THROUGH)}
+        env = safe_env({**passed, "HERMES_HOME": str(self.home)})
         result = run_captured(
-            [sys.executable, "-m", "hermes_cli.main", "plugins", verb, slug], timeout_s=TIMEOUT_S, env=env
+            [sys.executable, "-m", "hermes_cli.main", "plugins", verb, slug],
+            timeout_s=float(limit("enable_timeout_s")),
+            env=env,
         )
         if result.returncode == 0:
             return True, ""

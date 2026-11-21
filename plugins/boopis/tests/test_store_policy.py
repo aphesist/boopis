@@ -88,6 +88,21 @@ def test_an_explicit_choice_wins_either_way_and_is_per_project(
     assert (rt.home / "boopis" / "store" / "policy.json").stat().st_mode & 0o777 == 0o600
 
 
+def test_the_capability_and_every_method_are_declared(make_runtime: MakeRuntime) -> None:
+    from boopis import RPC_METHODS
+    from boopis.rpc import CAPABILITIES
+    from boopis.store import CAPABILITY
+    from boopis.store import RPC_METHODS as STORE_METHODS
+    from boopis.store.rpc import HANDLERS
+
+    make_runtime({"mode": "governed"})
+    assert CAPABILITY == "store-v1" and CAPABILITY in CAPABILITIES
+    assert set(STORE_METHODS) == set(HANDLERS) == {m for m in RPC_METHODS if m.startswith("store.")}
+    assert set(STORE_METHODS) <= set(CAPABILITIES) and set(STORE_METHODS) <= set(rpc.handlers())
+    described = rpc.handlers()["describe"]({})
+    assert "store-v1" in described["capabilities"] and "store.prepare" in described["capabilities"]
+
+
 def test_the_rpc_validates_its_params(make_runtime: MakeRuntime, project: Path) -> None:
     make_runtime({"mode": "governed"})
     handlers = rpc.handlers()
