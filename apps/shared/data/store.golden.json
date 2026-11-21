@@ -1,0 +1,160 @@
+{
+  "$schema": "store.schema.json",
+  "description": "Golden vectors for the three rules two layers must compute the same way (docs/STORE.md section 6). The Python side is plugins/boopis/tests/test_store_plan.py, the Rust side is workstream A's. `tree_hash`: sha256 over the lines `<relative path, POSIX>\\0<sha256 of the file's bytes>` joined by `\\n`, for every regular file under the root, in the order of Python's PurePath comparison (path components compared one by one, so `a/b.txt` sorts before `a-b.txt`), leaving out any path with a `.git` component, a file that cannot be read counting as the word `unreadable`; empty folders, modes and times do not count; a link to a file inside the tree is read as that file. `canonical`: keys sorted, `,` and `:` without spaces, UTF-8 characters kept as they are (not \\u-escaped), control characters escaped as JSON does. `plugin_hash`: sha256 of the canonical JSON of a PluginPlan without `plugin_hash`.",
+  "tree_hash": [
+    {
+      "name": "one file",
+      "files": {
+        "a.txt": "hello\n"
+      },
+      "tree_sha256": "8debee6c7f2cfa502cd357e780dc8704bd68ab6a69e661037e018277ca2d2fd9"
+    },
+    {
+      "name": "empty tree",
+      "files": {},
+      "tree_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "slash sorts before hyphen by path components",
+      "files": {
+        "a/b.txt": "slash",
+        "a-b.txt": "hyphen",
+        "a.txt": "dot"
+      },
+      "tree_sha256": "0fe8f19be60bc288be97fc0e40a9521810a9c4331ac469f11c0bc0d1c7fba6b8"
+    },
+    {
+      "name": ".git is left out at any depth",
+      "files": {
+        "x.txt": "x",
+        ".git/config": "ignored",
+        "sub/.git/HEAD": "ignored",
+        "sub/y.txt": "y"
+      },
+      "tree_sha256": "056daeb074d11db6b7625ebabce0e2db66c6c2b60e76986ce994f7cd6879f048"
+    },
+    {
+      "name": "unicode names and an empty file",
+      "files": {
+        "café/ü.md": "é\n",
+        "empty": ""
+      },
+      "tree_sha256": "6931e6692feb2215fb4f9d516d87e5f46c11e2999909f88b6016e77b7df8cb0d"
+    },
+    {
+      "name": "nested plugin",
+      "files": {
+        ".claude-plugin/plugin.json": "{\"name\":\"x\"}",
+        "skills/review/SKILL.md": "---\nname: review\n---\nbody\n"
+      },
+      "tree_sha256": "67d8e0b07d320b63f42b58dca87bb11f7cd811a2401bde209f506eabef7185e9"
+    }
+  ],
+  "canonical": [
+    {
+      "value": {
+        "b": 1,
+        "a": [
+          true,
+          null,
+          "x"
+        ]
+      },
+      "json": "{\"a\":[true,null,\"x\"],\"b\":1}"
+    },
+    {
+      "value": {
+        "z": {
+          "y": 2,
+          "x": 1
+        },
+        "é": "ü",
+        "q": "a\"b\\c\n\t\u0007"
+      },
+      "json": "{\"q\":\"a\\\"b\\\\c\\n\\t\\u0007\",\"z\":{\"x\":1,\"y\":2},\"é\":\"ü\"}"
+    },
+    {
+      "value": [],
+      "json": "[]"
+    },
+    {
+      "value": {
+        "n": 0,
+        "big": 9007199254740991,
+        "neg": -3
+      },
+      "json": "{\"big\":9007199254740991,\"n\":0,\"neg\":-3}"
+    }
+  ],
+  "plugin_hash": [
+    {
+      "plan": {
+        "kind": "plugin",
+        "slug": "lint-kit",
+        "tree_sha256": "67d8e0b07d320b63f42b58dca87bb11f7cd811a2401bde209f506eabef7185e9",
+        "components": [
+          {
+            "type": "skill",
+            "name": "lint-kit:review",
+            "detail": "Review a change"
+          },
+          {
+            "type": "hook",
+            "name": "PostToolUse [Edit]",
+            "detail": "sh hooks/lint.sh"
+          }
+        ],
+        "code_runs": [
+          {
+            "what": "hook",
+            "command": "sh hooks/lint.sh",
+            "where": "outside-sandbox",
+            "sha256": "0000000000000000000000000000000000000000000000000000000000000001",
+            "detail": "runs on PostToolUse"
+          }
+        ],
+        "hosts": {
+          "basis": "unknown",
+          "hosts": []
+        },
+        "secrets": [],
+        "files_written": [
+          {
+            "path": "~/.local/share/boopis/compat/plugins/lint-kit/source/",
+            "purpose": "the plugin's files",
+            "bytes": 2048
+          }
+        ],
+        "consent": [
+          {
+            "id": "run-1",
+            "text": "Run the hook `sh hooks/lint.sh` on your computer, outside the sandbox.",
+            "runs_code": true
+          }
+        ],
+        "warnings": [
+          {
+            "code": "next-session",
+            "level": "info",
+            "text": "It takes effect in new sessions: é."
+          }
+        ],
+        "governed": {
+          "allowed": true,
+          "switch_blocks": true,
+          "text": "Allowed once you trust it."
+        },
+        "cost": {
+          "tools": 0,
+          "context_tokens": 7
+        },
+        "scan": {
+          "verdict": "safe",
+          "scanner": "boopis component scan",
+          "findings": []
+        }
+      },
+      "plugin_hash": "806dcc58cccad6cb680d0463d8b33387c20fd3daef48825b775603c318f789ad"
+    }
+  ]
+}

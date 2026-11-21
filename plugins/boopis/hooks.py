@@ -181,6 +181,11 @@ def pre_llm_call(**kw: Any) -> dict[str, Any] | None:
         refused = session_refusal(state.provider, state.model)  # ADR-0037: the orchestrator is frontier too
         if refused is not None:
             return _block(refused)
+        from .store.policy import session_refusal as store_refusal
+
+        engine_plugins = store_refusal(rt, state.cwd, governed=True)  # docs/STORE.md 5.8: the project's switch
+        if engine_plugins is not None:
+            return _block(engine_plugins)
         from .governance.lifecycle import turn_directive
 
         return turn_directive(rt, state, str(kw.get("user_message") or ""))

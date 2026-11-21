@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "_comment": "The component scan's patterns (docs/STORE.md 5.5 step 3). A pattern scan of the text a hook, command or script would run: it finds the well-known bad shapes and proves nothing about the rest. `dangerous` is never installable; `caution` is shown on the card.",
+  "dangerous": [
+    {"id": "pipe-to-shell", "pattern": "(?:curl|wget|fetch)\\b[^|\\n;]*\\|\\s*(?:sudo\\s+)?(?:ba|z|da)?sh\\b", "text": "downloads a script and runs it without reading it"},
+    {"id": "decode-to-shell", "pattern": "base64\\s+(?:-d|--decode)[^|\\n;]*\\|\\s*(?:ba|z|da)?sh\\b", "text": "decodes hidden text and runs it"},
+    {"id": "reverse-shell", "pattern": "(?:/dev/tcp/|\\bnc\\b[^\\n;|]*\\s-e\\s|\\bncat\\b[^\\n;|]*\\s-e\\s|bash\\s+-i\\s*>&)", "text": "opens a shell for someone else on the network"},
+    {"id": "wipe-home", "pattern": "\\brm\\s+(?:-[a-zA-Z]*[rf][a-zA-Z]*\\s+)+(?:/|~|\\$HOME|\\$\\{HOME\\})(?:\\s|/?$|\\*)", "text": "deletes the root or the home folder"},
+    {"id": "ssh-keys", "pattern": "(?:~|\\$HOME|\\$\\{HOME\\})/\\.(?:ssh|gnupg|aws)\\b", "text": "reads or writes the folder of your keys"},
+    {"id": "persistence", "pattern": "(?:crontab\\s+-|/etc/cron|\\.bashrc|\\.zshrc|\\.profile|LaunchAgents|systemctl\\s+(?:--user\\s+)?enable)", "text": "installs itself to run again later"}
+  ],
+  "caution": [
+    {"id": "network-tool", "pattern": "\\b(?:curl|wget|nc|ncat|scp|rsync|ssh|ftp)\\b", "text": "uses a network tool"},
+    {"id": "privilege", "pattern": "\\b(?:sudo|doas|su)\\b", "text": "asks for more privileges"},
+    {"id": "eval", "pattern": "\\b(?:eval|exec)\\s", "text": "evaluates built text"},
+    {"id": "env-dump", "pattern": "\\b(?:printenv|env)\\s*(?:\\||>|$)", "text": "reads every environment variable"}
+  ],
+  "binary_magic": ["7f454c46", "cafebabe", "feedface", "feedfacf", "4d5a"]
+}

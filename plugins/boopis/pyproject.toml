@@ -25,6 +25,7 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "prompt.py" = ["E501"]  # prose, one paragraph per line
 "governance/handover.py" = ["E501"]  # prose a worker reads, one rule per line
+"store/*.py" = ["E501"]  # the review card's sentences and the docstrings that explain them are prose, one sentence per line
 "tests/**" = ["S", "PLR", "BLE001", "E501", "PLW1510", "RUF059"]
 "../../tests/e2e/**" = ["S", "PLR", "BLE001"]
 
