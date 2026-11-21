@@ -7,6 +7,7 @@
 //! [`ProviderState`] ([`state`]) and the endpoint form's request and result ([`endpoint`]).
 
 pub mod endpoint;
+pub mod signin;
 pub mod state;
 
 use std::collections::BTreeMap;

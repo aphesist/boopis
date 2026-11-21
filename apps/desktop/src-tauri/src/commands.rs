@@ -70,6 +70,8 @@ pub struct AppState {
     pub carries_runtime: bool,
     /// boopis's own ChatGPT sign-in (ADR-0030).
     pub chatgpt: Arc<crate::chatgpt::ChatGpt>,
+    /// boopis's own GitHub Copilot sign-in (ADR-0039).
+    pub copilot: Arc<crate::copilot::Copilot>,
     /// The connector engine of each profile home, kept so a sign-in started by one command can be cancelled by another.
     pub connectors: std::sync::Mutex<std::collections::HashMap<std::path::PathBuf, Arc<Engine>>>,
 }
@@ -611,6 +613,20 @@ pub fn open_external(app: AppHandle, url: String) -> std::result::Result<(), Hos
     Ok(())
 }
 
+/// Opens a sign-in page in the person's browser through the system opener (the ChatGPT sign-in's authorization address carries
+/// the account hints, so the host opens it itself and the webview is never handed it).
+pub struct SystemBrowser(pub AppHandle);
+
+impl crate::chatgpt::Browser for SystemBrowser {
+    fn open(&self, url: &str) -> bool {
+        use tauri_plugin_opener::OpenerExt;
+        let Ok(url) = os::validate_external_url(url) else {
+            return false;
+        };
+        self.0.opener().open_url(url.as_str(), None::<&str>).is_ok()
+    }
+}
+
 /// What the host decided about the webview's renderer at startup (managed state, read-only).
 pub struct RendererState(pub RendererReport);
 
@@ -928,10 +944,13 @@ pub fn chatgpt_signin_cancel(state: State<'_, AppState>) {
     state.chatgpt.cancel();
 }
 
-/// Sign out of ChatGPT: both tokens leave the keychain.
+/// Sign out of ChatGPT: OpenAI is asked to end the renewable session, then both tokens leave the keychain. The answer says
+/// whether OpenAI confirmed it.
 #[tauri::command]
 #[specta::specta]
-pub async fn chatgpt_sign_out(state: State<'_, AppState>) -> std::result::Result<(), HostError> {
+pub async fn chatgpt_sign_out(
+    state: State<'_, AppState>,
+) -> std::result::Result<crate::chatgpt::SignedOut, HostError> {
     Ok(state.chatgpt.sign_out().await?)
 }
 
@@ -1038,42 +1057,70 @@ pub fn provider_probe_local(
     provider_stub("provider_probe_local")
 }
 
-/// Start a sign-in for a sign-in way the host owns (`SuperGrok`, GitHub Copilot, and ChatGPT once it moves to OpenAI's program):
-/// returns the lab's own page to open and the code to type. The wait runs in the host and ends with a `ProviderSigninEvent`; the
-/// tokens go to the keychain and never to the webview. A way owned by someone else (Claude's, which is Claude Code's own
-/// sign-in, and driving the user's own grok program) has nothing to start. Mirrors `chatgpt_signin_start`.
+/// The sign-ins the host owns (ChatGPT's and Copilot's), as one service.
+fn signins(state: &AppState) -> crate::providers::signin::Signins {
+    crate::providers::signin::Signins {
+        chatgpt: state.chatgpt.clone(),
+        copilot: state.copilot.clone(),
+    }
+}
+
+/// Start a sign-in for a sign-in way the host owns (ChatGPT through OpenAI's Sign in with ChatGPT program, GitHub Copilot, and
+/// `SuperGrok` once it lands): returns the lab's own page to open and the code to type; a flow whose page does everything
+/// (ChatGPT's) has an empty `user_code`. The host opens the browser itself for ChatGPT; the page address returned carries no
+/// token. The wait runs in the host and ends with a `ProviderSigninEvent`; the tokens go to the keychain and never to the
+/// webview. A way owned by someone else (Claude's, which is Claude Code's own sign-in, and driving the user's own grok program)
+/// has nothing to start. Mirrors `chatgpt_signin_start`.
 ///
-/// Errors: `hx.provider.unknown`, `hx.provider.unsupported`, `hx.provider.unreachable`, `hx.secrets.*`.
+/// Errors: `hx.provider.unknown`, `hx.provider.unsupported`, `hx.provider.unreachable`, `hx.secrets.*`, `hx.signin.*`.
 #[tauri::command]
 #[specta::specta]
-pub fn provider_signin_start(
+pub async fn provider_signin_start(
+    state: State<'_, AppState>,
     way: String,
     profile: Option<String>,
 ) -> std::result::Result<crate::providers::SigninCode, HostError> {
-    let _ = (way, profile);
-    provider_stub("provider_signin_start")
+    let _ = profile;
+    Ok(signins(&state).start(&way).await?)
 }
 
 /// Cancel the sign-in that is waiting for `way`. Mirrors `chatgpt_signin_cancel`.
 ///
-/// Errors: `hx.provider.unknown`.
+/// Errors: `hx.provider.unknown`, `hx.provider.unsupported`.
 #[tauri::command]
 #[specta::specta]
-pub fn provider_signin_cancel(way: String) -> std::result::Result<(), HostError> {
-    let _ = way;
-    provider_stub("provider_signin_cancel")
+pub fn provider_signin_cancel(
+    state: State<'_, AppState>,
+    way: String,
+) -> std::result::Result<(), HostError> {
+    Ok(signins(&state).cancel(&way)?)
 }
 
 /// Sign out of a sign-in way the host owns: its tokens leave the keychain and the engine's copy is dropped. Returns the state
-/// afterwards. Mirrors `chatgpt_sign_out`.
+/// afterwards; its `detail` says so when OpenAI did not confirm ending a ChatGPT session. Mirrors `chatgpt_sign_out`.
 ///
 /// Errors: `hx.provider.unknown`, `hx.provider.unsupported`, `hx.secrets.*`.
 #[tauri::command]
 #[specta::specta]
-pub fn provider_sign_out(
+pub async fn provider_sign_out(
+    state: State<'_, AppState>,
     way: String,
     profile: Option<String>,
 ) -> std::result::Result<crate::providers::ProviderState, HostError> {
-    let _ = (way, profile);
-    provider_stub("provider_sign_out")
+    let _ = profile;
+    Ok(signins(&state).sign_out(&way).await?)
+}
+
+/// Where a sign-in way the host owns stands: signed in (with the plan or the account), not signed in (with the reason the last
+/// sign-in ended, if it ended by itself), or waiting for the person (with the page and the code). Read-only; the sign-in
+/// cards draw from it and from `ProviderSigninEvent`.
+///
+/// Errors: `hx.provider.unknown`, `hx.provider.unsupported`, `hx.secrets.*`.
+#[tauri::command]
+#[specta::specta]
+pub async fn provider_signin_status(
+    state: State<'_, AppState>,
+    way: String,
+) -> std::result::Result<crate::providers::ProviderState, HostError> {
+    Ok(signins(&state).status(&way).await?)
 }

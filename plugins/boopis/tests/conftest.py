@@ -21,6 +21,7 @@ if _src and _src not in sys.path:
 from boopis import hooks  # noqa: E402
 from boopis.hermes_api import bind  # noqa: E402
 from boopis.session import Runtime  # noqa: E402
+from signin_kit import clean_channel_state, host_secrets  # noqa: E402, F401 - fixtures the sign-in tests use
 from support import FakeCtx  # noqa: E402
 
 

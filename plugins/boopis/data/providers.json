@@ -164,7 +164,7 @@
           "hidden": false,
           "key": null,
           "base_url": {
-            "default": "https://chatgpt.com/backend-api/codex",
+            "default": "https://api.openai.com/v1",
             "env": null,
             "editable": false,
             "pin": false,
@@ -1229,7 +1229,7 @@
           },
           "frontier": "by_name",
           "engine_source": [
-            "plugin-catalog/github-copilot.yaml (community plugin NousResearch/hermes-labs-plugins, subdir github-copilot, sha df8f132; the slug `copilot` and the GitHub device flow are from its description, confirmed when it is bundled)"
+            "plugin-catalog/github-copilot.yaml (community plugin NousResearch/hermes-labs-plugins, subdir github-copilot, sha df8f1321941125d45dde71ab20196fbeea093191, bundled and pinned by scripts/build-runtime.sh); slug confirmed in its copilot/__init__.py: ProviderProfile(name=\"copilot\", aliases github-copilot, github-models, github-model, github; env_vars COPILOT_GITHUB_TOKEN, GH_TOKEN, GITHUB_TOKEN; auth_type copilot; base_url https://api.githubcopilot.com)"
           ],
           "notes": [
             {

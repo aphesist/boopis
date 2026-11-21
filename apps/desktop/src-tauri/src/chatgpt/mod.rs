@@ -1,17 +1,21 @@
-//! The ChatGPT subscription's sign-in (ADR-0030): boopis's own flow, run by the host. The user signs in with their ChatGPT
-//! account through OpenAI's device-code sign-in (the one the official Codex CLI uses, same service and client): the host
-//! asks for a code, the card shows the page to open and the code to type, and the host waits for OpenAI to approve it. The
-//! tokens go to the OS keychain (`secret://chatgpt/access_token` and `secret://chatgpt/refresh_token`) and nowhere else.
+//! The ChatGPT subscription's sign-in (ADR-0030, moved onto OpenAI's Sign in with ChatGPT program): boopis's own flow, run by
+//! the host. The host opens the browser at OpenAI's authorization page with a loopback redirect it listens on, the person signs
+//! in and allows boopis to use their ChatGPT plan, and OpenAI returns to the host with a code. The first sign-in of an
+//! installation **registers boopis itself** (`dynamic_agent_client`, no application and no secret: the program is for
+//! open-source apps) and keeps the issued client id; later sign-ins reuse it. The tokens go to the OS keychain and nowhere else
+//! (`secret://chatgpt/access_token`, `refresh_token`, `id_token`, and `registration`, the issued client id and this
+//! installation's host id).
 //!
-//! Why the device code and not the browser's redirect: the Codex client's redirect is fixed at `localhost:1455`, which a
-//! running Codex CLI sign-in may hold, and it needs a listener in the host; the code needs neither, works in any browser on
-//! any device, and is the flow OpenAI's own CLI offers for exactly this case.
+//! **Refresh stays here.** The refresh token rotates on every use, so exactly one program may hold it: the host. A background
+//! task renews the access token before its hour is up ([`ChatGpt::run_refresher`]); the engine is only ever handed the access
+//! token and the address to call it on, through the plugin's secret channel (`plugins/boopis/signins/chatgpt.py` gives them to
+//! the runtime's credential pool, as a key it never tries to refresh).
 //!
-//! **Refresh stays here.** The refresh token is single-use, so exactly one program may hold it: the host. A background task
-//! renews the access token before it expires ([`ChatGpt::run_refresher`]); the engine is only ever handed the access token,
-//! through the plugin's secret channel (`plugins/boopis/signins/chatgpt.py` gives it to the runtime's credential pool, as a
-//! key it never tries to refresh).
+//! **People who signed in before the program** hold tokens of the Codex CLI's client. They keep working and keep renewing (the
+//! old route) until the person signs in again, and [`Status::notice`] says so in plain words; if OpenAI stops accepting them the
+//! account is signed out with a notice, never silently.
 
+pub mod callback;
 pub mod oauth;
 
 #[cfg(test)]
@@ -20,14 +24,14 @@ mod tests;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use specta::Type;
 use tokio_util::sync::CancellationToken;
 
 use crate::error::{Error, Result};
 use crate::secrets::SecretStore;
 use crate::secrets::refs::SecretRef;
-use oauth::{DeviceCode, Endpoints, Poll, Refreshed, Tokens, Transport};
+use oauth::{Attempt, Endpoints, Exchange, Refreshed, Tokens, Transport};
 
 /// The keychain scope of the sign-in.
 pub const SCOPE: &str = "chatgpt";
@@ -35,6 +39,13 @@ pub const SCOPE: &str = "chatgpt";
 pub const ACCESS: &str = "access_token";
 /// The refresh token's name in the scope.
 pub const REFRESH: &str = "refresh_token";
+/// The retained ID token's name in the scope (it names the account to the next sign-in).
+pub const ID_TOKEN: &str = "id_token";
+/// The registration's name in the scope: the issued client id and this installation's host id, as JSON.
+pub const REGISTRATION: &str = "registration";
+/// The address the engine calls the access token on, written beside it when it came from the program. The plugin reads it;
+/// a sign-in made before the program has none, and the plugin then uses the old address.
+pub const BASE_URL: &str = "base_url";
 
 /// Where the sign-in stands.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
@@ -43,20 +54,34 @@ pub const REFRESH: &str = "refresh_token";
 pub enum State {
     /// No ChatGPT account is signed in.
     SignedOut,
-    /// A sign-in is waiting for the user to type the code.
+    /// A sign-in is waiting for the person to finish in the browser.
     SigningIn,
     /// Signed in.
     SignedIn,
 }
 
-/// The code the user types, and where.
+/// Which route a signed-in account is on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "snake_case")]
+#[serde(rename = "ChatgptRoute")]
+pub enum Route {
+    /// OpenAI's Sign in with ChatGPT program.
+    Program,
+    /// The older sign-in with the Codex CLI's client, from before the program: it works until the person signs in again.
+    Older,
+}
+
+/// Where to go, and (for a flow that has one) the code to type.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type)]
 #[serde(rename = "ChatgptCode")]
 pub struct CodeView {
-    /// The page to open (OpenAI's own).
+    /// OpenAI's own page, free of any token: the card shows it and opens it again when the browser did not open.
     pub verification_url: String,
-    /// The one-time code to type there.
+    /// A one-time code to type there. Empty for this flow: the page does everything, and there is nothing to type.
     pub user_code: String,
+    /// When the attempt lapses, in milliseconds since the Unix epoch.
+    #[specta(type = f64)]
+    pub expires_at: u64,
 }
 
 /// What the Models tab and setup show.
@@ -67,14 +92,30 @@ pub struct Status {
     pub state: State,
     /// The ChatGPT plan the account's token names (`plus`, `pro`), when it names one.
     pub plan: Option<String>,
-    /// While signing in: the code and its page.
+    /// While signing in: the page to open.
     pub code: Option<CodeView>,
+    /// While signed in: the route the account is on.
+    pub route: Option<Route>,
+    /// The account's email, when OpenAI said one.
+    pub account: Option<String>,
+    /// One plain sentence the person should read, when there is one: an older sign-in that should be redone, or why the last
+    /// one ended.
+    pub notice: Option<String>,
+}
+
+/// What signing out did at OpenAI.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+#[serde(rename = "ChatgptSignedOut")]
+pub struct SignedOut {
+    /// OpenAI confirmed that it ended the renewable session. When false, the tokens are gone from this computer all the same,
+    /// and the person can disconnect boopis in ChatGPT's settings.
+    pub revoked: bool,
 }
 
 /// How a sign-in ended, pushed to every window.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Type, tauri_specta::Event)]
 pub struct ChatgptSigninEvent {
-    /// `signed_in`, `failed`, `cancelled` or `timed_out`.
+    /// `signed_in`, `failed`, `cancelled`, `timed_out`, or `signed_out` (OpenAI stopped accepting the saved sign-in).
     pub outcome: String,
     /// What to tell the user, in plain words; empty when signed in.
     pub message: String,
@@ -83,15 +124,41 @@ pub struct ChatgptSigninEvent {
 /// Where a [`ChatgptSigninEvent`] goes.
 pub type Sink = Arc<dyn Fn(ChatgptSigninEvent) + Send + Sync>;
 
+/// Opens a page in the person's browser (the host's opener; a recorder in tests). True when it was asked to.
+pub trait Browser: Send + Sync + 'static {
+    /// Open `url`.
+    fn open(&self, url: &str) -> bool;
+}
+
 /// The numbers the flow runs by (from `config::Limits`).
 #[derive(Debug, Clone, Copy)]
 pub struct Timing {
-    /// How long the user has to type the code (OpenAI's own window is 15 minutes).
+    /// How long the person has to finish in the browser.
     pub signin: Duration,
     /// Renew the access token when it has less than this left (or half its life, if that is shorter).
     pub refresh_ahead: Duration,
     /// How often the refresher looks.
     pub refresh_every: Duration,
+}
+
+/// What stays in the keychain across a sign-out: who this installation is to OpenAI, and which account it registered.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+struct Registration {
+    /// The issued `oaiapp_` client id; `None` before the first sign-in (and after OpenAI forgot the client).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    client_id: Option<String>,
+    /// This installation's host id (`urn:uuid:…`), chosen before the first sign-in and kept.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    host_id: Option<String>,
+    /// The account the registration belongs to.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    subject: Option<String>,
+    /// The account's email, a hint for the next sign-in's account selector.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    email: Option<String>,
+    /// Why the last sign-in ended without the person asking: `revoked`, `client_gone` or `plan_not_allowed`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    ended: Option<String>,
 }
 
 struct Flow {
@@ -105,10 +172,12 @@ pub struct ChatGpt {
     transport: Arc<dyn Transport>,
     endpoints: Endpoints,
     timing: Timing,
+    preferred_port: u16,
     flow: Mutex<Option<Flow>>,
-    /// One refresh at a time: the refresh token is single-use.
+    /// One refresh at a time: the refresh token rotates.
     refreshing: tokio::sync::Mutex<()>,
     sink: Option<Sink>,
+    browser: Option<Arc<dyn Browser>>,
 }
 
 fn now() -> u64 {
@@ -130,6 +199,82 @@ pub fn due(access: &str, ahead: Duration, at: u64) -> bool {
     exp <= at.saturating_add(margin)
 }
 
+fn reference(name: &str) -> SecretRef {
+    SecretRef {
+        scope: SCOPE.to_owned(),
+        name: name.to_owned(),
+    }
+}
+
+fn get(store: &dyn SecretStore, name: &str) -> Result<Option<String>> {
+    let r = reference(name);
+    store.get(&r.service(), &r.name)
+}
+
+fn put(store: &dyn SecretStore, name: &str, value: &str) -> Result<()> {
+    let r = reference(name);
+    store.set(&r.service(), &r.name, value)
+}
+
+fn del(store: &dyn SecretStore, name: &str) -> Result<()> {
+    let r = reference(name);
+    store.delete(&r.service(), &r.name)
+}
+
+fn read_tokens(store: &dyn SecretStore) -> Result<Option<Tokens>> {
+    Ok(match (get(store, ACCESS)?, get(store, REFRESH)?) {
+        (Some(access), Some(refresh)) => Some(Tokens {
+            access,
+            refresh,
+            id: get(store, ID_TOKEN)?,
+        }),
+        _ => None,
+    })
+}
+
+fn read_registration(store: &dyn SecretStore) -> Result<Registration> {
+    // an unreadable record reads as none: the next sign-in registers anew, which is always safe
+    Ok(get(store, REGISTRATION)?
+        .and_then(|t| serde_json::from_str(&t).ok())
+        .unwrap_or_default())
+}
+
+fn write_registration(store: &dyn SecretStore, r: &Registration) -> Result<()> {
+    let text = serde_json::to_string(r).map_err(|e| Error::Io(e.to_string()))?;
+    put(store, REGISTRATION, &text)
+}
+
+/// The refresh token first, the access token last: a crash between the writes leaves the new refresh token, which still
+/// renews, and the access token (which the plugin reads) changes only once everything it depends on is in place.
+fn save_tokens(store: &dyn SecretStore, t: &Tokens) -> Result<()> {
+    put(store, REFRESH, &t.refresh)?;
+    if let Some(id) = &t.id {
+        put(store, ID_TOKEN, id)?;
+    }
+    put(store, ACCESS, &t.access)
+}
+
+/// Both tokens, the retained ID token and the address leave the keychain. The registration stays (the program asks a host to
+/// keep its client and host id across a sign-out).
+fn forget_tokens(store: &dyn SecretStore) -> Result<()> {
+    del(store, ACCESS)?;
+    del(store, REFRESH)?;
+    del(store, ID_TOKEN)?;
+    del(store, BASE_URL)
+}
+
+fn route_of(reg: &Registration) -> Route {
+    if reg.client_id.is_some() {
+        Route::Program
+    } else {
+        Route::Older
+    }
+}
+
+const NOTICE_OLDER: &str = "This sign-in was made before boopis joined OpenAI's Sign in with ChatGPT program. It still works. Sign in again to move it onto the program.";
+const NOTICE_ENDED: &str = "OpenAI no longer accepts the saved ChatGPT sign-in (it was disconnected, or it expired). Sign in again to keep using your ChatGPT plan.";
+const NOTICE_PLAN: &str = "You signed in last time without letting boopis use your ChatGPT plan. Sign in again and allow it.";
+
 impl ChatGpt {
     /// A service that keeps the tokens in `store` and reaches OpenAI through `transport`.
     #[must_use]
@@ -139,9 +284,11 @@ impl ChatGpt {
             transport,
             endpoints: Endpoints::openai(),
             timing,
+            preferred_port: callback::PREFERRED_PORT,
             flow: Mutex::new(None),
             refreshing: tokio::sync::Mutex::new(()),
             sink: None,
+            browser: None,
         }
     }
 
@@ -159,19 +306,26 @@ impl ChatGpt {
         self
     }
 
+    /// Open the authorization page with `browser`.
+    #[must_use]
+    pub fn with_browser(mut self, browser: Arc<dyn Browser>) -> Self {
+        self.browser = Some(browser);
+        self
+    }
+
+    /// Listen for the redirect on `port` when it is free (tests use 0: any free port).
+    #[must_use]
+    pub fn with_port(mut self, port: u16) -> Self {
+        self.preferred_port = port;
+        self
+    }
+
     fn emit(&self, outcome: &str, message: impl Into<String>) {
         if let Some(sink) = &self.sink {
             sink(ChatgptSigninEvent {
                 outcome: outcome.to_owned(),
                 message: message.into(),
             });
-        }
-    }
-
-    fn reference(name: &str) -> SecretRef {
-        SecretRef {
-            scope: SCOPE.to_owned(),
-            name: name.to_owned(),
         }
     }
 
@@ -185,30 +339,12 @@ impl ChatGpt {
             .map_err(|e| Error::Io(e.to_string()))?
     }
 
-    fn read(store: &dyn SecretStore) -> Result<Option<Tokens>> {
-        let (a, r) = (Self::reference(ACCESS), Self::reference(REFRESH));
-        Ok(
-            match (
-                store.get(&a.service(), &a.name)?,
-                store.get(&r.service(), &r.name)?,
-            ) {
-                (Some(access), Some(refresh)) => Some(Tokens { access, refresh }),
-                _ => None,
-            },
-        )
-    }
-
-    /// The refresh token first: a crash between the two writes leaves the new refresh token, which still renews.
-    fn save(store: &dyn SecretStore, t: &Tokens) -> Result<()> {
-        let (a, r) = (Self::reference(ACCESS), Self::reference(REFRESH));
-        store.set(&r.service(), &r.name, &t.refresh)?;
-        store.set(&a.service(), &a.name, &t.access)
-    }
-
-    fn forget(store: &dyn SecretStore) -> Result<()> {
-        let (a, r) = (Self::reference(ACCESS), Self::reference(REFRESH));
-        store.delete(&a.service(), &a.name)?;
-        store.delete(&r.service(), &r.name)
+    fn waiting(&self) -> Option<CodeView> {
+        self.flow
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .as_ref()
+            .map(|f| f.code.clone())
     }
 
     /// Where the sign-in stands, from the keychain and the flow in progress. Changes nothing.
@@ -216,28 +352,46 @@ impl ChatGpt {
     /// # Errors
     /// `hx.secrets.*` when the keychain cannot be read.
     pub async fn status(&self) -> Result<Status> {
-        let code = self
-            .flow
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .as_ref()
-            .map(|f| f.code.clone());
-        let tokens = self.blocking(|s, _| Self::read(s)).await?;
+        let code = self.waiting();
+        let (tokens, reg) = self
+            .blocking(|s, _| Ok((read_tokens(s)?, read_registration(s)?)))
+            .await?;
+        let ended = match reg.ended.as_deref() {
+            Some("plan_not_allowed") => Some(NOTICE_PLAN.to_owned()),
+            Some(_) => Some(NOTICE_ENDED.to_owned()),
+            None => None,
+        };
         Ok(match (tokens, code) {
             (_, Some(code)) => Status {
                 state: State::SigningIn,
                 plan: None,
                 code: Some(code),
+                route: None,
+                account: None,
+                notice: None,
             },
-            (Some(t), None) => Status {
-                state: State::SignedIn,
-                plan: oauth::plan(&t.access),
-                code: None,
-            },
+            (Some(t), None) => {
+                let route = route_of(&reg);
+                Status {
+                    state: State::SignedIn,
+                    plan: t
+                        .id
+                        .as_deref()
+                        .and_then(oauth::plan)
+                        .or_else(|| oauth::plan(&t.access)),
+                    code: None,
+                    route: Some(route),
+                    account: reg.email.clone(),
+                    notice: (route == Route::Older).then(|| NOTICE_OLDER.to_owned()),
+                }
+            }
             (None, None) => Status {
                 state: State::SignedOut,
                 plan: None,
                 code: None,
+                route: None,
+                account: None,
+                notice: ended,
             },
         })
     }
@@ -247,30 +401,51 @@ impl ChatGpt {
     /// # Errors
     /// `hx.secrets.*`.
     pub async fn signed_in(&self) -> Result<bool> {
-        Ok(self.blocking(|s, _| Self::read(s)).await?.is_some())
+        Ok(self.blocking(|s, _| read_tokens(s)).await?.is_some())
     }
 
-    /// Start a sign-in and return the code to show; the wait for the user runs in the background and ends with a
-    /// [`ChatgptSigninEvent`]. A sign-in already waiting is returned as it is (one at a time).
+    /// Start a sign-in: listen for OpenAI's redirect, open the browser at the authorization page, and return the page's
+    /// address (for the card's button); the wait runs in the background and ends with a [`ChatgptSigninEvent`]. A sign-in
+    /// already waiting is returned as it is (one at a time).
     ///
     /// # Errors
-    /// `hx.signin.*` when OpenAI gave no code.
+    /// `hx.secrets.*`, or `hx.signin.failed` when nothing on this computer can listen for the answer.
     pub async fn start(self: &Arc<Self>) -> Result<CodeView> {
-        if let Some(f) = self
-            .flow
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .as_ref()
-        {
-            return Ok(f.code.clone());
+        if let Some(view) = self.waiting() {
+            return Ok(view);
         }
-        let ep = self.endpoints.clone();
-        let code = self
-            .blocking(move |_, t| oauth::request_code(t, &ep))
+        // the host id is chosen and kept before the first sign-in; a returning account brings its client and hints
+        let (reg, id_token) = self
+            .blocking(|s, _| {
+                let mut reg = read_registration(s)?;
+                if reg.host_id.is_none() {
+                    reg.host_id = Some(oauth::new_host_id()?);
+                    write_registration(s, &reg)?;
+                }
+                Ok((reg, get(s, ID_TOKEN)?))
+            })
             .await?;
+        let listener = callback::Listener::bind(self.preferred_port)
+            .await
+            .map_err(|e| {
+                Error::Setup(
+                    "hx.signin.failed",
+                    format!("boopis could not listen on this computer for OpenAI's answer ({e})"),
+                )
+            })?;
+        let mut attempt = Attempt::new(
+            listener.redirect_uri(),
+            reg.host_id.clone().unwrap_or_default(),
+            reg.client_id.clone(),
+        )?;
+        attempt.id_token_hint = id_token;
+        attempt.login_hint.clone_from(&reg.email);
+        attempt.force_consent = reg.ended.as_deref() == Some("plan_not_allowed");
+        let opens = oauth::authorize_url(&self.endpoints, &attempt, true);
         let view = CodeView {
-            verification_url: code.verification_url.clone(),
-            user_code: code.user_code.clone(),
+            verification_url: oauth::authorize_url(&self.endpoints, &attempt, false),
+            user_code: String::new(),
+            expires_at: (now() + self.timing.signin.as_secs()) * 1000,
         };
         let cancel = CancellationToken::new();
         {
@@ -286,9 +461,16 @@ impl ChatGpt {
                 cancel: cancel.clone(),
             });
         }
+        if let Some(browser) = &self.browser
+            && !browser.open(&opens)
+        {
+            tracing::info!(
+                "the browser was not opened for the ChatGPT sign-in; the card offers the page"
+            );
+        }
         let me = self.clone();
         tokio::spawn(async move {
-            let (outcome, message) = me.wait(code, &cancel).await;
+            let (outcome, message) = me.finish(&listener, attempt, reg, &cancel).await;
             me.flow
                 .lock()
                 .unwrap_or_else(std::sync::PoisonError::into_inner)
@@ -303,44 +485,91 @@ impl ChatGpt {
         Ok(view)
     }
 
-    async fn wait(&self, code: DeviceCode, cancel: &CancellationToken) -> (&'static str, String) {
-        let deadline = tokio::time::Instant::now() + self.timing.signin;
-        let every = Duration::from_secs(code.interval);
-        let code = Arc::new(code);
-        loop {
-            tokio::select! {
-                () = cancel.cancelled() => return ("cancelled", "The sign-in was cancelled.".into()),
-                () = tokio::time::sleep_until(deadline) => {
-                    return ("timed_out", "The code expired before the sign-in finished. Start again for a new code.".into());
-                }
-                () = tokio::time::sleep(every) => {}
+    /// Wait for the redirect, then finish: exchange the code, check the ID token and the granted scopes, and keep what is
+    /// checked. Nothing is kept for an attempt that fails any step.
+    async fn finish(
+        &self,
+        listener: &callback::Listener,
+        attempt: Attempt,
+        reg: Registration,
+        cancel: &CancellationToken,
+    ) -> (&'static str, String) {
+        let params = match listener
+            .wait(&attempt.state, self.timing.signin, cancel)
+            .await
+        {
+            callback::Wait::Cancelled => return ("cancelled", "The sign-in was cancelled.".into()),
+            callback::Wait::TimedOut => {
+                return (
+                    "timed_out",
+                    "The sign-in did not finish in time. Start again.".into(),
+                );
             }
-            let (ep, c) = (self.endpoints.clone(), code.clone());
-            let polled = self.blocking(move |_, t| oauth::poll(t, &ep, &c)).await;
-            let (auth_code, verifier) = match polled {
-                Ok(Poll::Pending) => continue,
-                Ok(Poll::Approved { code, verifier }) => (code, verifier),
-                // a rate limit while waiting is OpenAI asking to slow down: keep waiting, more slowly
-                Err(Error::Setup("hx.signin.rate_limited", _)) => {
-                    tokio::time::sleep(every).await;
-                    continue;
-                }
-                Err(e) => return ("failed", e.to_string()),
+            callback::Wait::Got(p) => p,
+        };
+        if let Some(error) = params.error.as_deref() {
+            return if error == "access_denied" {
+                (
+                    "failed",
+                    "You did not allow boopis to use your ChatGPT plan, so nothing was signed in."
+                        .into(),
+                )
+            } else {
+                (
+                    "failed",
+                    "OpenAI ended the sign-in without finishing it.".into(),
+                )
             };
-            if cancel.is_cancelled() {
-                return ("cancelled", "The sign-in was cancelled.".into());
+        }
+        let Some(code) = params.code else {
+            return (
+                "failed",
+                "OpenAI's answer carried no code to finish the sign-in.".into(),
+            );
+        };
+        // a registered account keeps its client; a new registration must come back with one
+        let client_id = match (attempt.client_id.as_deref(), params.client_id) {
+            (Some(saved), Some(back)) if saved != back => {
+                return (
+                    "failed",
+                    "OpenAI answered for another registration than boopis's own. Nothing was signed in.".into(),
+                );
             }
-            let ep = self.endpoints.clone();
-            let saved = self
-                .blocking(move |s, t| {
-                    let tokens = oauth::exchange(t, &ep, &auth_code, &verifier)?;
-                    Self::save(s, &tokens)
-                })
-                .await;
-            return match saved {
-                Ok(()) => ("signed_in", String::new()),
-                Err(e) => ("failed", e.to_string()),
-            };
+            (Some(saved), _) => saved.to_owned(),
+            (None, Some(issued)) => issued,
+            (None, None) => {
+                return (
+                    "failed",
+                    "OpenAI did not finish registering boopis. Nothing was signed in. Try again."
+                        .into(),
+                );
+            }
+        };
+        let (ep, was_registered) = (self.endpoints.clone(), attempt.client_id.is_some());
+        let work = self
+            .blocking(move |s, t| complete(s, t, &ep, &client_id, &code, &attempt, &reg))
+            .await;
+        match work {
+            Ok(Completed::Signed) => ("signed_in", String::new()),
+            Ok(Completed::Refused(message)) => ("failed", message),
+            Ok(Completed::Rejected) => {
+                if was_registered {
+                    // OpenAI does not accept the saved registration: drop it so the next try registers anew
+                    let _ = self
+                        .blocking(|s, _| {
+                            let mut reg = read_registration(s)?;
+                            reg.client_id = None;
+                            reg.subject = None;
+                            write_registration(s, &reg)
+                        })
+                        .await;
+                }
+                (
+                    "failed",
+                    "OpenAI did not accept the sign-in code. Try again.".into(),
+                )
+            }
+            Err(e) => ("failed", e.to_string()),
         }
     }
 
@@ -356,47 +585,90 @@ impl ChatGpt {
         }
     }
 
-    /// Sign out: both tokens leave the keychain. The plugin drops the runtime's copy of the access token the next time it
-    /// looks (`signins/chatgpt.py`).
+    /// Sign out: OpenAI is asked to end the renewable session (twice at most), then both tokens leave the keychain whatever
+    /// it answered. The plugin drops the runtime's copy the next time it looks (`signins/chatgpt.py`).
     ///
     /// # Errors
     /// `hx.secrets.*`.
-    pub async fn sign_out(&self) -> Result<()> {
+    pub async fn sign_out(&self) -> Result<SignedOut> {
         self.cancel();
         let _held = self.refreshing.lock().await;
-        self.blocking(|s, _| Self::forget(s)).await
+        let ep = self.endpoints.clone();
+        self.blocking(move |s, t| {
+            let tokens = read_tokens(s)?;
+            let reg = read_registration(s)?;
+            let mut revoked = false;
+            if let Some(tokens) = &tokens {
+                let client = reg.client_id.as_deref().unwrap_or(oauth::LEGACY_CLIENT_ID);
+                for attempt in 0..2 {
+                    match oauth::revoke(t, &ep, client, &tokens.refresh) {
+                        Ok(done) => {
+                            revoked = done;
+                            break;
+                        }
+                        Err(_) if attempt == 0 => std::thread::sleep(Duration::from_millis(400)),
+                        Err(_) => {}
+                    }
+                }
+            }
+            forget_tokens(s)?;
+            let mut reg = reg;
+            if reg.ended.take().is_some() {
+                write_registration(s, &reg)?;
+            }
+            Ok(SignedOut { revoked })
+        })
+        .await
     }
 
     /// Renew the access token if it is due. True when it renewed. A refresh token OpenAI refuses for good signs the account
-    /// out (both tokens are removed), so the Models tab says "Not signed in" instead of failing at every turn.
+    /// out with a notice (both tokens are removed), so the Models tab says why instead of failing at every turn.
     ///
     /// # Errors
     /// `hx.secrets.*`, or `hx.signin.*` for a refresh that could not run (the tokens are kept: it is tried again later).
     pub async fn refresh_if_due(&self) -> Result<bool> {
         let _held = self.refreshing.lock().await;
         let (ep, ahead) = (self.endpoints.clone(), self.timing.refresh_ahead);
-        self.blocking(move |s, t| {
-            let Some(tokens) = Self::read(s)? else {
-                return Ok(false);
-            };
-            if !due(&tokens.access, ahead, now()) {
-                return Ok(false);
-            }
-            match oauth::refresh(t, &ep, &tokens.refresh)? {
-                Refreshed::Tokens(next) => {
-                    Self::save(s, &next)?;
-                    Ok(true)
+        let (renewed, ended) = self
+            .blocking(move |s, t| {
+                let Some(tokens) = read_tokens(s)? else {
+                    return Ok((false, false));
+                };
+                if !due(&tokens.access, ahead, now()) {
+                    return Ok((false, false));
                 }
-                Refreshed::Revoked => {
-                    tracing::warn!(
-                        "OpenAI refused the ChatGPT refresh token; the account is signed out"
-                    );
-                    Self::forget(s)?;
-                    Ok(false)
+                let mut reg = read_registration(s)?;
+                let next = match reg.client_id.as_deref() {
+                    Some(client) => {
+                        oauth::refresh(t, &ep, client, &tokens.refresh, tokens.id.as_deref())?
+                    }
+                    None => oauth::legacy_refresh(t, &ep, &tokens.refresh)?,
+                };
+                match next {
+                    Refreshed::Tokens(next) => {
+                        save_tokens(s, &next)?;
+                        Ok((true, false))
+                    }
+                    Refreshed::Revoked | Refreshed::ClientGone => {
+                        tracing::warn!(
+                            "OpenAI refused the ChatGPT refresh token; the account is signed out"
+                        );
+                        forget_tokens(s)?;
+                        if matches!(next, Refreshed::ClientGone) {
+                            reg.client_id = None;
+                            reg.subject = None;
+                        }
+                        reg.ended = Some("revoked".into());
+                        write_registration(s, &reg)?;
+                        Ok((false, true))
+                    }
                 }
-            }
-        })
-        .await
+            })
+            .await?;
+        if ended {
+            self.emit("signed_out", NOTICE_ENDED);
+        }
+        Ok(renewed)
     }
 
     /// Keep the access token fresh for as long as the app runs: look at once (the app may have been closed past its expiry),
@@ -414,4 +686,65 @@ impl ChatGpt {
             tokio::time::sleep(self.timing.refresh_every).await;
         }
     }
+}
+
+enum Completed {
+    Signed,
+    /// A step failed in a way the person can act on; nothing was kept.
+    Refused(String),
+    Rejected,
+}
+
+/// The blocking half of finishing a sign-in: exchange, check, keep.
+fn complete(
+    store: &dyn SecretStore,
+    t: &dyn Transport,
+    ep: &Endpoints,
+    client_id: &str,
+    code: &str,
+    attempt: &Attempt,
+    reg: &Registration,
+) -> Result<Completed> {
+    let (tokens, scopes) = match oauth::exchange(t, ep, client_id, code, attempt)? {
+        Exchange::Tokens { tokens, scopes } => (tokens, scopes),
+        Exchange::Rejected => return Ok(Completed::Rejected),
+    };
+    let Some(id_token) = tokens.id.as_deref() else {
+        return Ok(Completed::Refused(
+            "OpenAI did not send the ID token that proves who signed in. Nothing was signed in."
+                .into(),
+        ));
+    };
+    let identity = oauth::verify_id_token(t, ep, id_token, client_id, &attempt.nonce, now())?;
+    if let Some(saved) = reg.subject.as_deref()
+        && saved != identity.subject
+    {
+        // the saved registration belongs to another account: forget it, so the next sign-in registers this account
+        let mut fresh = reg.clone();
+        fresh.client_id = None;
+        fresh.subject = None;
+        write_registration(store, &fresh)?;
+        return Ok(Completed::Refused(
+            "That is a different ChatGPT account than the one boopis was registered with. Nothing was signed in; try again to register this account.".into(),
+        ));
+    }
+    let mut kept = Registration {
+        client_id: Some(client_id.to_owned()),
+        subject: Some(identity.subject),
+        email: identity.email.or_else(|| reg.email.clone()),
+        ended: None,
+        ..reg.clone()
+    };
+    if !scopes.iter().any(|s| s == oauth::PLAN_SCOPE) {
+        // signed in, but the plan was not allowed: keep the registration, not the tokens, and ask for consent next time
+        kept.ended = Some("plan_not_allowed".into());
+        write_registration(store, &kept)?;
+        return Ok(Completed::Refused(
+            "You signed in, but did not allow boopis to use your ChatGPT plan, so there is nothing to use. Sign in again and allow it.".into(),
+        ));
+    }
+    write_registration(store, &kept)?;
+    put(store, BASE_URL, oauth::RESOURCE)?;
+    save_tokens(store, &tokens)?;
+    Ok(Completed::Signed)
 }
