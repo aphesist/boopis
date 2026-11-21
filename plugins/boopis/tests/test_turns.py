@@ -207,6 +207,118 @@ def test_bind_rejects_bad_row_ids_and_the_book_skips_torn_lines(make_runtime: Ma
     assert len(rpc.turns_models({"session_id": SID})["turns"]) == 1
 
 
+# ---------------------------------------------------------------- what the turn showed
+
+COUNCIL = {
+    "members": [
+        {"model": "anthropic/opus", "state": "answered", "text": "Use a partial index."},
+        {"model": "openai-codex/gpt-6", "state": "failed", "text": "[failed: 401 token abc]"},
+        {"model": "gemini/pro", "state": "waiting", "text": "half"},
+    ],
+    "combiner": "anthropic/sonnet",
+}
+CHILD = {
+    "model": "openai-codex/gpt-6",
+    "goal": "fix the parser",
+    "status": "done",
+    "summary": "Fixed it.",
+    "child_session_id": "child-1",
+    "tool_count": 4,
+    "duration_ms": 12500,
+}
+
+
+def bound(**extra: Any) -> dict[str, Any]:
+    turn("moa", "boopis-council", "t1")
+    rpc.turns_bind({"session_id": SID, "user_row_id": 1, "row_ids": [2], **extra})
+    (got,) = rpc.turns_models({"session_id": SID})["turns"]
+    return got
+
+
+def test_a_council_and_task_cards_are_bound_and_read_back_after_a_restart(
+    make_runtime: MakeRuntime, home: Path
+) -> None:
+    rt, ctx = make_runtime()
+    opened(rt, ctx, "ungoverned")
+    turn("moa", "boopis-council", "t1")
+    rpc.turns_bind({"session_id": SID, "user_row_id": 1, "row_ids": [2], "council": COUNCIL, "children": [CHILD]})
+    rt2 = Runtime(ctx, home=home)
+    hooks.install(rt2)
+    (got,) = rpc.turns_models({"session_id": SID})["turns"]
+    assert got["council"]["combiner"] == "anthropic/sonnet"
+    assert [(m["model"], m["state"], m["text"]) for m in got["council"]["members"]] == [
+        ("anthropic/opus", "answered", "Use a partial index."),
+        ("openai-codex/gpt-6", "failed", ""),  # the engine's error text is never stored
+        ("gemini/pro", "waiting", ""),
+    ]
+    assert got["children"] == [CHILD]
+
+
+def test_a_turn_without_them_has_neither_field(make_runtime: MakeRuntime) -> None:
+    rt, ctx = make_runtime()
+    opened(rt, ctx, "ungoverned")
+    got = bound()
+    assert "council" not in got and "children" not in got
+
+
+def test_old_book_lines_without_the_fields_still_read(make_runtime: MakeRuntime) -> None:
+    rt, ctx = make_runtime()
+    opened(rt, ctx, "ungoverned")
+    path = turns.book_path(rt, rt.state(SID))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        '{"turn_id":"t0","model":"p/m","route":[],"ungoverned":false,"user_row_id":1,"row_ids":[1,2],"at":1}\n'
+    )
+    (got,) = rpc.turns_models({"session_id": SID})["turns"]
+    assert got["model"] == "p/m" and "council" not in got and "children" not in got
+
+
+def test_text_is_capped_and_a_cut_is_marked(make_runtime: MakeRuntime) -> None:
+    rt, ctx = make_runtime()
+    opened(rt, ctx, "ungoverned")
+    long_member = {"model": "a/b", "state": "answered", "text": "x" * (turns.MEMBER_TEXT_MAX + 50)}
+    short_member = {"model": "c/d", "state": "answered", "text": "short"}
+    long_child = {**CHILD, "summary": "y" * (turns.SUMMARY_MAX + 1), "goal": "g" * (turns.GOAL_MAX + 1)}
+    got = bound(council={"members": [long_member, short_member], "combiner": "a/b"}, children=[long_child, CHILD])
+    m1, m2 = got["council"]["members"]
+    assert len(m1["text"]) == turns.MEMBER_TEXT_MAX and m1["cut"] is True
+    assert m2["text"] == "short" and "cut" not in m2
+    c1, c2 = got["children"]
+    assert len(c1["summary"]) == turns.SUMMARY_MAX and len(c1["goal"]) == turns.GOAL_MAX and c1["cut"] is True
+    assert "cut" not in c2
+
+
+def test_the_number_of_members_and_cards_is_bounded(make_runtime: MakeRuntime) -> None:
+    rt, ctx = make_runtime()
+    opened(rt, ctx, "ungoverned")
+    members = [{"model": f"p/m{i}", "state": "answered", "text": "t"} for i in range(turns.MAX_MEMBERS + 5)]
+    got = bound(council={"members": members, "combiner": None}, children=[CHILD] * (turns.MAX_CHILDREN + 5))
+    assert len(got["council"]["members"]) == turns.MAX_MEMBERS
+    assert len(got["children"]) == turns.MAX_CHILDREN
+
+
+def test_malformed_extras_are_left_out_and_the_model_is_still_recorded(make_runtime: MakeRuntime) -> None:
+    rt, ctx = make_runtime()
+    opened(rt, ctx, "ungoverned")
+    got = bound(
+        council={
+            "members": [{"model": "a/b", "state": "bogus", "text": "t"}, "x", {"state": "answered"}],
+            "combiner": 5,
+        },
+        children=[{"status": "exploded"}, 3, {**CHILD, "tool_count": -2, "duration_ms": "fast"}],
+    )
+    assert got["model"] == "moa/boopis-council"
+    assert got["council"] == {"members": [], "combiner": None}
+    assert [(c["tool_count"], c["duration_ms"]) for c in got["children"]] == [(0, None)]
+
+
+def test_a_council_that_is_not_a_map_is_left_out(make_runtime: MakeRuntime) -> None:
+    rt, ctx = make_runtime()
+    opened(rt, ctx, "ungoverned")
+    got = bound(council="all of them", children="none")
+    assert "council" not in got and "children" not in got
+
+
 def test_usage_recorded_carries_the_turn_id(make_runtime: MakeRuntime) -> None:
     rt, ctx = make_runtime()
     opened(rt, ctx, "ungoverned")

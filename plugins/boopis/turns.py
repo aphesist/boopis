@@ -7,6 +7,12 @@ so it keeps the turn's calls here, and the desktop binds them to the turn's stor
 beside the session's ledger (``<ledger>.turns.jsonl``): the ledger's format is contraprova's, byte for byte, and gains
 nothing for this. ``turns.models`` reads it back for a resume. A turn with no line is *unknown*; nothing is guessed.
 
+**What the turn showed.** The same line can also carry the council's member answers and the task cards the turn raised
+(ADR-0034, ADR-0035): the engine keeps neither (references are side calls, children are live state), so the desktop
+sends them in the same ``turns.bind`` and ``turns.models`` returns them, and a resume draws them again. They are
+optional, bounded (``MEMBER_TEXT_MAX``, ``SUMMARY_MAX``: a cut is said with ``cut: true``) and never carry the engine's
+error text: a member that failed is the state word and nothing else. A line without them reads as before.
+
 **One ungoverned turn.** The owner's rule: an ``@model`` message in a governed session runs without governance, for that
 message only. The mode and toolsets are fixed at the first prompt, so the plugin does not change them: it *arms* the
 session (``mode.once``), and the next orchestrator turn is judged as ungoverned: no turn directive, the ungoverned
@@ -34,6 +40,17 @@ if TYPE_CHECKING:
 _log = get_logger("turns")
 ONCE_TTL_S = 120.0  # an armed session that sends nothing for this long is governed again
 MAX_BOOK = 5000
+# What a turn's line may hold of what it showed. A resume reads the whole book, so a line stays near 100 KB at worst
+# (12 members of 6000 characters, 20 tasks of about 2000): enough to read an answer or a report in full for nearly every
+# turn, and a cut is never silent (``cut: true``, which the UI says in words).
+MAX_MEMBERS = 12
+MEMBER_TEXT_MAX = 6000
+MAX_CHILDREN = 20
+SUMMARY_MAX = 1500
+GOAL_MAX = 400
+NAME_MAX = 200
+MEMBER_STATES = frozenset({"waiting", "answered", "failed"})
+CHILD_STATUSES = frozenset({"queued", "running", "done", "failed", "stopped"})
 CONTEXT = (
     "[boopis] The person asked for this one message to be answered directly, outside governed mode: there is no "
     "cascade and no dispatch for it. Answer it yourself with your own tools (pack, exec, ship). The session is "
@@ -142,9 +159,71 @@ def _ids(value: Any, name: str) -> list[int]:
     return out
 
 
+def _text(value: Any, limit: int) -> tuple[str, bool]:
+    """A string cut to ``limit`` characters, and whether it was cut. Anything else is empty."""
+    if not isinstance(value, str):
+        return "", False
+    return (value[:limit], True) if len(value) > limit else (value, False)
+
+
+def _count(value: Any) -> int | None:
+    return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else None
+
+
+def _council(value: Any) -> dict[str, Any] | None:
+    """The council a turn showed, as stored: ``{members: [{model, state, text, cut?}], combiner}``. A member that did
+    not answer keeps its state word only: whatever text came with it is the engine's error, never stored. ``None`` when
+    the value is not a council (the turn then has none, nothing is guessed)."""
+    if not isinstance(value, Mapping) or not isinstance(value.get("members"), Sequence):
+        return None
+    members: list[dict[str, Any]] = []
+    for m in value["members"][:MAX_MEMBERS]:
+        if not isinstance(m, Mapping) or not isinstance(m.get("model"), str) or not m["model"]:
+            continue
+        state = m.get("state")
+        if state not in MEMBER_STATES:
+            continue
+        text, cut = _text(m.get("text"), MEMBER_TEXT_MAX) if state == "answered" else ("", False)
+        item: dict[str, Any] = {"model": m["model"][:NAME_MAX], "state": state, "text": text}
+        if cut or (state == "answered" and m.get("cut") is True):
+            item["cut"] = True
+        members.append(item)
+    combiner = value.get("combiner")
+    return {"members": members, "combiner": combiner[:NAME_MAX] if isinstance(combiner, str) and combiner else None}
+
+
+def _children(value: Any) -> list[dict[str, Any]] | None:
+    """The task cards a turn raised, as stored: ``[{model, goal, status, summary, child_session_id, tool_count,
+    duration_ms, cut?}]``. ``None`` when the value is not a list."""
+    if not isinstance(value, Sequence) or isinstance(value, str):
+        return None
+    out: list[dict[str, Any]] = []
+    for c in value[:MAX_CHILDREN]:
+        if not isinstance(c, Mapping) or c.get("status") not in CHILD_STATUSES:
+            continue
+        summary, cut = _text(c.get("summary"), SUMMARY_MAX)
+        goal, goal_cut = _text(c.get("goal"), GOAL_MAX)
+        session = c.get("child_session_id")
+        model = c.get("model")
+        item: dict[str, Any] = {
+            "model": model[:NAME_MAX] if isinstance(model, str) else "",
+            "goal": goal,
+            "status": c["status"],
+            "summary": summary,
+            "child_session_id": session[:NAME_MAX] if isinstance(session, str) else "",
+            "tool_count": _count(c.get("tool_count")) or 0,
+            "duration_ms": _count(c.get("duration_ms")),
+        }
+        if cut or goal_cut or c.get("cut") is True:
+            item["cut"] = True
+        out.append(item)
+    return out
+
+
 def bind(rt: Runtime, state: SessionState, params: Mapping[str, Any]) -> dict[str, Any]:
     """``turns.bind``: the turn that just completed has these stored rows. Writes one line when the plugin saw the
-    turn's model requests; otherwise the turn stays unknown."""
+    turn's model requests; otherwise the turn stays unknown. ``council`` and ``children`` are what the turn showed
+    beyond its answer; a malformed one is left out and the line is still written."""
     row_ids = _ids(params.get("row_ids"), "row_ids")
     user_row = params.get("user_row_id")
     if user_row is not None and (isinstance(user_row, bool) or not isinstance(user_row, int) or user_row <= 0):
@@ -169,6 +248,12 @@ def bind(rt: Runtime, state: SessionState, params: Mapping[str, Any]) -> dict[st
         "row_ids": row_ids,
         "at": time.time(),
     }
+    council = _council(params.get("council"))
+    if council is not None:
+        record["council"] = council
+    children = _children(params.get("children"))
+    if children:
+        record["children"] = children
     try:
         path = book_path(rt, state)
         path.parent.mkdir(parents=True, exist_ok=True)

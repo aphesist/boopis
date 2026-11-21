@@ -216,7 +216,8 @@ def mode_once(params: Mapping[str, Any], *, session_id: str | None = None, **_: 
 
 def turns_bind(params: Mapping[str, Any], *, session_id: str | None = None, **_: Any) -> dict[str, Any]:
     """``turns.bind``: the turn that just completed was stored as these rows (``message.complete.persisted_turn``), so
-    the model that answered survives a resume. ``{recorded: false}`` when the plugin saw no model request for it."""
+    the model that answered, and what the turn showed (a council's member answers, the task cards), survive a resume.
+    ``{recorded: false}`` when the plugin saw no model request for it."""
     from .. import turns
 
     rt = runtime()
@@ -225,7 +226,8 @@ def turns_bind(params: Mapping[str, Any], *, session_id: str | None = None, **_:
 
 def turns_models(params: Mapping[str, Any], *, session_id: str | None = None, **_: Any) -> dict[str, Any]:
     """``turns.models``: the recorded turns of the session, oldest first: ``{model, route, ungoverned, user_row_id,
-    row_ids}``, ``model`` as ``provider/model``. A turn that is not listed is unknown."""
+    row_ids}`` and, when the turn showed them, ``council`` and ``children``; ``model`` as ``provider/model``. A turn
+    that is not listed is unknown."""
     from .. import turns
 
     rt = runtime()
