@@ -103,7 +103,9 @@ def test_hermes_loaded_the_plugin_and_serves_its_rpc(gateway: GatewayClient, sta
     assert gateway.result("plugin.boopis.mode.set", {"session_id": sid, "mode": "governed"}) == {}
     state = gateway.result("plugin.boopis.cascade.state", {"session_id": sid})
     assert state["status"] == "idle"
-    assert [t["name"] for t in state["ladder"]] == ["opus", "fable"]  # the plugin's frontier default (ADR-0037)
+    assert [t["name"] for t in state["ladder"]] == [
+        "opus"
+    ]  # the plugin's frontier default: Opus alone, no heavy model (ADR-0037)
 
 
 def test_a_prompt_writes_a_verifiable_ledger_with_the_models_usage(gateway: GatewayClient, stack: HermesStack) -> None:
@@ -166,7 +168,16 @@ def test_a_governed_session_on_a_model_that_is_not_frontier_is_refused_with_the_
 
     told = json.dumps([e for e in turn if e.get("type") == "message.complete"])
     assert "Governed mode runs only on frontier models" in told, told
-    for allowed in ("Claude Opus 5.5", "Claude Fable 5.2", "GPT-6.2 Astra", "Gemini 4 Carbon"):
+    for allowed in (
+        "Claude Opus 5.5",
+        "Claude Fable 5.2",
+        "GPT-6.2 Astra",
+        "GPT-6.2 Sol",
+        "Gemini 4 Carbon",
+        "Gemini 4 Neon",
+        "Gemini 4 Hydrogen",
+        "Grok 4.7",
+    ):
         assert f"{allowed} or later" in told, told
     assert NOT_FRONTIER in told, told  # it names the model that was refused
     assert "this must not be answered" not in told

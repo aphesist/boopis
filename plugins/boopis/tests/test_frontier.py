@@ -63,6 +63,10 @@ def test_both_sides_of_each_floor() -> None:
         ("claude-fable-{}", "5-1", "5-2"),
         ("gpt-{}-astra", "6-1", "6-2"),
         ("gemini-{}-carbon", "3", "4"),
+        ("gpt-{}-sol", "6-1", "6-2"),
+        ("gemini-{}-neon", "3", "4"),
+        ("gemini-{}-hydrogen", "3", "4"),
+        ("grok-{}", "4-6", "4-7"),
     ]:
         assert not frontier.is_frontier("p", family.format(below)), family
         assert frontier.is_frontier("p", family.format(at)), family
@@ -75,9 +79,19 @@ def test_the_subscription_aliases_resolve_only_for_that_provider() -> None:
 
 
 def test_the_allowed_list_is_readable() -> None:
-    assert frontier.allowed() == ["Claude Opus 5.5", "Claude Fable 5.2", "GPT-6.2 Astra", "Gemini 4 Carbon"]
+    assert frontier.allowed() == [
+        "Claude Opus 5.5",
+        "Claude Fable 5.2",
+        "GPT-6.2 Astra",
+        "GPT-6.2 Sol",
+        "Gemini 4 Carbon",
+        "Gemini 4 Neon",
+        "Gemini 4 Hydrogen",
+        "Grok 4.7",
+    ]
     assert frontier.allowed_sentence() == (
-        "Claude Opus 5.5 or later, Claude Fable 5.2 or later, GPT-6.2 Astra or later and Gemini 4 Carbon or later"
+        "Claude Opus 5.5 or later, Claude Fable 5.2 or later, GPT-6.2 Astra or later, GPT-6.2 Sol or later, "
+        "Gemini 4 Carbon or later, Gemini 4 Neon or later, Gemini 4 Hydrogen or later and Grok 4.7 or later"
     )
 
 
@@ -89,18 +103,23 @@ def test_the_refusal_names_the_model_why_and_what_is_allowed() -> None:
     assert "it is Claude Opus 5.4, and the lowest version allowed is 5.5" in text
     assert "GPT-6.2 Astra or later" in text
     assert text.count(". ") == 0 and text.endswith(".")  # one sentence
-    grok = frontier.refusal("xai", "grok-4.7", "this session")
+    grok = frontier.refusal("xai", "grok-4.6", "this session")
     assert grok is not None
-    assert "not in a family on that list" in grok
+    assert "it is Grok 4.6, and the lowest version allowed is 4.7" in grok
+    assert frontier.refusal("xai", "grok-4.7", "this session") is None  # heavy is still frontier
+    other = frontier.refusal("xai", "grok-5-mini", "this session")
+    assert other is not None
+    assert "not in a family on that list" in other
     unknown = frontier.refusal("", "", "this session")
     assert unknown is not None
     assert "could not tell which model" in unknown
 
 
-def test_the_default_ladder_is_frontier_opus_then_fable() -> None:
+def test_the_default_ladder_is_frontier_opus_alone() -> None:
     default = resolve_ladder(None)
-    assert default.names == ("opus", "fable")
+    assert default.names == ("opus",)
     assert frontier.ladder_refusals(default.tiers) == []
+    assert not any(frontier.is_heavy(t.model.provider, t.model.id) for t in default.tiers)
 
 
 def test_a_ladder_of_one_tier_is_a_ladder() -> None:
@@ -126,7 +145,7 @@ def test_view_for_the_ui() -> None:
     lad = resolve_ladder({"tiers": [{"name": "a", "model": "nous/welcome"}]})
     got = frontier.view(lad.tiers)
     assert got["available"] is False
-    assert got["tiers"] == [{"tier": "a", "provider": "nous", "model": "welcome", "frontier": False}]
+    assert got["tiers"] == [{"tier": "a", "provider": "nous", "model": "welcome", "frontier": False, "heavy": False}]
     assert "nous/welcome" in got["why"]
     assert got["allowed"][0] == "Claude Opus 5.5"
     assert frontier.view(())["available"] is False  # no tiers, no governed mode
@@ -191,8 +210,107 @@ def test_describe_carries_the_list_and_the_session_model(make_runtime: MakeRunti
     first(rt, ctx, "claude-opus-5-5", "anthropic")
     got = rpc.describe({}, session_id=SID)["frontier"]
     assert got["available"] is True
-    assert [t["tier"] for t in got["tiers"]] == ["opus", "fable"]
+    assert [t["tier"] for t in got["tiers"]] == ["opus"]
+    assert [t["heavy"] for t in got["tiers"]] == [False]
     assert got["session_model"]["frontier"] is True
     bare = rpc.describe({})["frontier"]
     assert "session_model" not in bare
     assert bare["allowed"] == frontier.allowed()
+
+
+# ---------------------------------------------------------------- the three added families and the heavy mark
+
+
+@pytest.mark.parametrize(
+    ("model", "frontier_"),
+    [
+        ("gpt-6.2-sol", True),
+        ("gpt-6-2-sol-high", True),
+        ("gpt-6.3-sol", True),
+        ("gpt-7-sol", True),
+        ("gpt-6.1-sol", False),  # scored 59.6: the floor matters
+        ("gpt-6-sol", False),
+        ("gemini-4-neon", True),
+        ("gemini-5-neon", True),
+        ("gemini-3-neon", False),
+        ("gemini-4-hydrogen", True),
+        ("gemini-5-hydrogen", True),
+        ("gemini-3-hydrogen", False),
+    ],
+)
+def test_the_added_families_on_both_sides_of_their_floors(model: str, frontier_: bool) -> None:
+    assert frontier.is_frontier("p", model) is frontier_
+
+
+def test_sol_astra_and_luna_do_not_clash_and_neither_do_the_gemini_families() -> None:
+    names = {
+        m: frontier.match("p", m)
+        for m in (
+            "gpt-6.2-sol",
+            "gpt-6.2-astra",
+            "gpt-6.2-luna",
+            "gemini-4-neon",
+            "gemini-4-hydrogen",
+            "gemini-4-carbon",
+        )
+    }
+    assert [m.family.id if m else None for m in names.values()] == [
+        "gpt-sol",
+        "gpt-astra",
+        None,  # Luna is in no family: the cheap tier is not frontier
+        "gemini-neon",
+        "gemini-hydrogen",
+        "gemini-carbon",
+    ]
+    assert not frontier.is_frontier("p", "gpt-6.2-sol-astra")  # two names in one id is no model
+
+
+def test_heavy_is_a_mark_on_a_family_and_only_a_frontier_model_is_heavy() -> None:
+    sub = "claude-subscription-directsdk-experimental"
+    assert frontier.heavy_families() == ["Claude Fable 5.2", "Grok 4.7"]
+    for provider, model in [
+        ("anthropic", "claude-fable-5-2"),
+        ("anthropic", "claude-fable-6"),
+        (sub, "fable"),
+        ("xai", "grok-4.7"),
+        ("xai", "grok-4.8"),
+    ]:
+        assert frontier.is_frontier(provider, model), model
+        assert frontier.is_heavy(provider, model), model
+    for provider, model in [
+        ("anthropic", "claude-opus-5-5"),
+        (sub, "opus"),
+        ("openai-codex", "gpt-6.2-sol"),
+        ("gemini", "gemini-4-neon"),
+        ("anthropic", "claude-fable-5-1"),  # below its floor: not frontier, so not a heavy frontier model either
+        ("xai", "grok-4.6"),
+        ("anthropic", ""),
+    ]:
+        assert not frontier.is_heavy(provider, model), model
+
+
+@pytest.mark.parametrize("ex", EXAMPLES, ids=lambda e: f"{e['provider']}/{e['model']}")
+def test_the_shared_examples_say_which_are_heavy(ex: dict[str, Any]) -> None:
+    assert frontier.is_heavy(ex["provider"], ex["model"]) is ex.get("heavy", False)
+
+
+def test_a_ladder_the_user_wrote_with_fable_is_accepted_as_it_is() -> None:
+    lad = resolve_ladder(
+        {
+            "tiers": [
+                {"name": "opus", "model": "anthropic/claude-opus-5-5"},
+                {"name": "fable", "model": "anthropic/claude-fable-5-2"},
+                {"name": "grok", "model": "xai/grok-4.7"},
+            ]
+        }
+    )
+    assert ladder_problems(lad, lambda _p: True) == []
+    got = frontier.view(lad.tiers)
+    assert got["available"] is True
+    assert [t["heavy"] for t in got["tiers"]] == [False, True, True]
+    assert got["heavy"] == ["Claude Fable 5.2", "Grok 4.7"]
+
+
+def test_a_session_may_orchestrate_on_a_heavy_model_it_was_asked_to_use(make_runtime: MakeRuntime) -> None:
+    rt, ctx = make_runtime()
+    assert first(rt, ctx, "claude-fable-5-2", "anthropic") is None

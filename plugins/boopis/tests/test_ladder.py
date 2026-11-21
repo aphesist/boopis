@@ -20,8 +20,8 @@ def ladder(*tiers: str, scope_retry: bool = True, retries: int = 0) -> Any:
 
 def test_the_default_is_contraprovas_measured_claude_ladder_as_data() -> None:
     default = resolve_ladder(None)
-    assert default.names == ("opus", "fable")
-    assert [t.model.provider for t in default.tiers] == ["anthropic"] * 2
+    assert default.names == ("opus",)  # Fable is heavy, so it is never on the default (ADR-0037)
+    assert [t.model.provider for t in default.tiers] == ["anthropic"]
     assert default.same_tier_scope_retry is True
     again = resolve_ladder(default.to_dict())  # it round-trips as plain data
     assert again == default

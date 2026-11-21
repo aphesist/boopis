@@ -40,6 +40,7 @@ class Family:
     prefix: tuple[str, ...]
     suffix: tuple[str, ...]
     minimum: Version
+    heavy: bool = False  # frontier, but token-heavy or costly: never on an automatic ladder, only on the user's word
 
     def called(self, version: Version | None = None) -> str:
         return self.name.replace("{v}", _show(version if version is not None else self.minimum))
@@ -87,6 +88,7 @@ def load() -> Frontier:
             prefix=tuple(f["prefix"]),
             suffix=tuple(f["suffix"]),
             minimum=_version(str(f["min"])),
+            heavy=bool(f.get("heavy", False)),
         )
         for f in raw["families"]
     )
@@ -160,13 +162,26 @@ def is_frontier(provider: str, model: str) -> bool:
     return found is not None and found.frontier
 
 
+def is_heavy(provider: str, model: str) -> bool:
+    """Whether ``provider``/``model`` is a frontier model of a heavy family (Claude Fable, Grok 4.7 and later): costly
+    enough that nothing automatic may pick it. Governed mode still runs it when the user asked for it (a ladder written
+    by hand, a toggle in Settings > Models). Unknown and below the floor are not heavy: they are not frontier at all."""
+    found = match(provider, model)
+    return found is not None and found.frontier and found.family.heavy
+
+
+def heavy_families() -> list[str]:
+    """The heavy families' names for people, as ``allowed`` gives them: ``Claude Fable 5.2``."""
+    return [f.called() for f in load().families if f.heavy]
+
+
 def allowed() -> list[str]:
     """The allowed models for people, one per family: ``Claude Opus 5.5``."""
     return [f.called() for f in load().families]
 
 
 def allowed_sentence() -> str:
-    """``Claude Opus 5.5 or later, Claude Fable 5.2 or later, GPT-6.2 Astra or later and Gemini 4 Carbon or later``."""
+    """``Claude Opus 5.5 or later, ... and Grok 4.7 or later``."""
     names = [f"{n} or later" for n in allowed()]
     return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
 
@@ -214,16 +229,24 @@ def session_refusal(provider: str, model: str) -> str | None:
 
 def view(ladder: Sequence[Any] | None = None) -> dict[str, Any]:
     """What the UI reads (``describe``, ``frontier``): the allowed models, one line saying so and, for the
-    ladder given, each tier with whether it is frontier. ``available`` is whether the ladder can do governed work."""
+    ladder given, each tier with whether it is frontier and whether it is heavy. ``available`` is whether the ladder can
+    do governed work."""
     tiers: list[dict[str, Any]] = []
     for tier in ladder or ():
         why = refusal(tier.model.provider, tier.model.id, f"tier {tier.name!r}")
         tiers.append(
-            {"tier": tier.name, "provider": tier.model.provider, "model": tier.model.id, "frontier": why is None}
+            {
+                "tier": tier.name,
+                "provider": tier.model.provider,
+                "model": tier.model.id,
+                "frontier": why is None,
+                "heavy": is_heavy(tier.model.provider, tier.model.id),
+            }
         )
     problems = ladder_refusals(ladder or ())
     return {
         "allowed": allowed(),
+        "heavy": heavy_families(),
         "sentence": allowed_sentence(),
         "tiers": tiers,
         "available": bool(tiers) and not problems,

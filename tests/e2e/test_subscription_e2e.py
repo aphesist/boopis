@@ -36,7 +36,9 @@ PROVIDER = "claude-subscription-directsdk-experimental"
 COMMAND_VAR = "CLAUDE_SUBSCRIPTION_DIRECTSDK_COMMAND"
 LIST_PRICE_USD = 0.012345  # what the fake CLI reports natively as `total_cost_usd`
 USAGE = {"input_tokens": 1000, "output_tokens": 50, "cache_read_input_tokens": 400, "cache_creation_input_tokens": 0}
-# The ladder the host writes for a Claude Code that serves every alias (setup/providers.rs, `subscription_tiers`).
+# The ladder the host writes for a Claude Code that serves every alias when the user turned on the Fable opt-in
+# (Settings > Models; setup/providers.rs, `subscription_tiers`): without it the host writes `opus` alone, because Fable
+# is heavy (ADR-0037).
 LADDER = {"tiers": [{"name": a, "model": f"{PROVIDER}/{a}"} for a in ("opus", "fable")]}
 
 
