@@ -75,7 +75,13 @@ def classify(
         return HookEntry(hook, ident, "invalid", bad, None)
     item = hook_item(hook, project_dir, env, label)
     if hook.source.plugin and plugin_ok is not None and not plugin_ok.get(hook.source.plugin, False):
-        return HookEntry(hook, item.item_id, "disabled", "its plugin is not enabled and approved", item)
+        return HookEntry(
+            hook,
+            item.item_id,
+            "disabled",
+            "its plugin is not enabled and approved, or this project turns plugin hooks off",
+            item,
+        )
     state = trust.state(item)
     if state == "trusted":
         return HookEntry(hook, item.item_id, "active", "approved", item)
@@ -85,11 +91,21 @@ def classify(
 
 
 def plugin_flags(result: ScanResult, trust: Trust) -> dict[str, bool]:
-    """``slug -> usable``: enabled in Hermes and approved by the user (docs/COMPAT.md section 9, step 6)."""
+    """``slug -> usable``: enabled in Hermes, approved by the user (docs/COMPAT.md section 9, step 6), not on the
+    store's kill list, and not under the project's switch "no engine plugins and no plugin hooks" (STORE.md 5.8)."""
+    from ..store import policy, records
+
+    blocked = policy.hooks_blocked(trust.store.home, trust.cwd)
+    killed = records.killed_slugs(trust.store.home)
     ok: dict[str, bool] = {}
     for plugin in result.plugins:
         slug = plugin.slug or plugin.name
-        ok[plugin.name] = slug in result.plugins_enabled and trust.is_trusted(plugin_item(plugin, Path(plugin.root)))
+        ok[plugin.name] = (
+            not blocked
+            and slug not in killed
+            and slug in result.plugins_enabled
+            and trust.is_trusted(plugin_item(plugin, Path(plugin.root)))
+        )
     return ok
 
 

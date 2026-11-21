@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "_comment": "Caps the plugin re-checks on a staged tree (docs/STORE.md 5.3). The host enforces the same ones when it stages; the plugin never trusts that it did. Bytes and counts. `enable_timeout_s`: the engine's own `plugins enable` also syncs its environment, which can take a while.",
+  "max_entries": 10000,
+  "max_depth": 32,
+  "max_file_bytes": 16777216,
+  "max_tree_bytes": 67108864,
+  "max_script_bytes": 1048576,
+  "description_context_chars_per_token": 4,
+  "findings_shown": 20,
+  "enable_timeout_s": 180
+}
