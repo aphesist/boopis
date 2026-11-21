@@ -57,29 +57,34 @@ describe('the models hub', () => {
   it('lists every lab in one place: the four sign-ins as branded buttons first, then the keys and the rest, with Continue off until something is connected', async () => {
     const setup = new Setup([AT_MODELS]);
     await start(setup, [state('openai.signin', 'signed_out'), state('github-copilot.signin', 'signed_out'), state('xai.signin', 'signed_out'), state('anthropic.signin', 'signed_out'), state('google.key', 'needs_key')]);
-    expect(document.querySelector('h1')?.textContent).toBe('Connect your models');
+    expect(document.querySelector('h1')?.textContent).toBe('Connect your labs');
     expect(names()).toEqual(['Continue with ChatGPT', 'Continue with GitHub', 'Continue with Claude', 'Continue with xAI'].sort((a, b) => names().indexOf(a) - names().indexOf(b)));
     expect(names().sort()).toEqual(['Continue with ChatGPT', 'Continue with Claude', 'Continue with GitHub', 'Continue with xAI']);
-    expect(document.querySelector('.fr-accounts')).toBeTruthy();
+    expect(document.querySelector('.fr-plates')).toBeTruthy();
+    expect(document.querySelectorAll('.fr-plate')).toHaveLength(4);
     expect(document.body.textContent).toContain('Gemini');
     expect(document.body.textContent, 'Gemini is a key, never a sign-in').not.toMatch(/Continue with Google|Sign in with Google/);
     const go = document.querySelector<HTMLButtonElement>('[data-fr-continue]');
     expect(go?.disabled).toBe(true);
-    expect(document.querySelectorAll('.ui-btn--primary'), 'one primary action in the step').toHaveLength(1);
+    expect(document.querySelectorAll('.ui-btn--primary'), 'one primary action in the step: Continue').toHaveLength(1);
     expect(btn('Do it later'), 'the quiet way out').toBeTruthy();
     expect(document.body.textContent).toContain('Settings, Models');
-    expect(document.querySelector('.fr-progress__text')?.textContent).toBe('Step 4 of 6: Models');
+    expect(document.querySelector('.fr-progress__text')?.textContent).toBe('Step 2 of 4');
+    expect(document.querySelector('.fr-line__i[aria-current="step"]')?.textContent).toBe('Models');
+    expect(document.querySelector('[data-fr-sum]')?.textContent).toBe('Nothing connected yet');
   });
 
   it('shows each lab\'s state in words and continues with what is connected, sending the host the one answer "connected"', async () => {
     const setup = new Setup([AT_MODELS, DONE], { state: 'set', tiers: [{ name: 'sol', model: 'openai-codex/gpt-6.2-sol' }, { name: 'astra', model: 'openai-codex/gpt-6.2-astra' }], governed: { available: true, why: null, allowed: [], heavy: [], sentence: '', tiers: [] } } as never);
     await start(setup, [state('openai.signin', 'connected', { plan: 'ChatGPT Plus' }), state('github-copilot.signin', 'signed_out'), state('google.key', 'connected')]);
-    expect(document.querySelector('[data-way="openai.signin"]')?.textContent).toContain('Connected (ChatGPT Plus)');
-    expect(document.querySelector('[data-way="github-copilot.signin"]')?.textContent).toContain('Not signed in');
+    expect(document.querySelector('.fr-plate[data-way="openai.signin"]')?.textContent).toContain('connected');
+    expect(document.querySelector('.fr-plate[data-way="openai.signin"]')?.textContent).toContain('ChatGPT Plus');
+    expect(document.querySelector('.fr-plate[data-way="github-copilot.signin"]')?.textContent).toContain('not connected');
+    expect(document.querySelector('.fr-tile[data-way="google.key"]')?.getAttribute('data-state'), 'a connected key tile inverts').toBe('connected');
     const go = document.querySelector<HTMLButtonElement>('[data-fr-continue]');
     expect(go?.disabled).toBe(false);
-    expect(go?.textContent).toContain('Continue with 2 connected');
-    await click('Continue with 2 connected');
+    expect(document.querySelector('[data-fr-sum]')?.textContent).toBe('2 connected. Starts on OpenAI (ChatGPT Plus).');
+    await click('Continue');
     expect(setup.answers.at(-1)).toEqual({ form_id: 'setup.ladder', cancelled: false, values: { choice: 'connected' }, secrets: {} });
     // the summary: what it starts with, the ladder, whether governed mode can run, what is connected
     const text = document.body.textContent ?? '';
@@ -94,7 +99,7 @@ describe('the models hub', () => {
     const setup = new Setup([AT_MODELS, status({ steps: [step('runtime', 'done'), step('models', 'done', 'Nous free tier')], done: true, receipt: { lines: [] } })], { state: 'set', tiers: [{ name: 'free', model: 'nous/nous/welcome' }], governed: { available: false, why: 'Needs a frontier model.', allowed: [], heavy: [], sentence: '', tiers: [] } } as never);
     await start(setup, []);
     expect(document.querySelectorAll('[data-fr-later-line]')).toHaveLength(1);
-    expect(document.body.textContent).toContain('You can connect any lab at any time in Settings, Models.');
+    expect(document.querySelector('[data-fr-later-line]')?.textContent).toContain('Settings, Models');
     await click('Do it later');
     expect(setup.answers.at(-1)).toEqual({ form_id: 'setup.ladder', cancelled: false, values: { choice: 'later' }, secrets: {} });
     expect(document.querySelector('h1')?.textContent).toBe('You are starting on the free models');
@@ -107,7 +112,7 @@ describe('the models hub', () => {
     const view = { state: 'set', tiers: [{ name: 'sol', model: 'openai-codex/gpt-6.2-sol' }], governed: { available: true, why: null, allowed: [], heavy: [], sentence: '', tiers: [] } } as never;
     const setup = new Setup([AT_MODELS, DONE, status({ steps: [step('runtime', 'done'), step('models', 'needs_input')], form: ladder() }), DONE], view);
     await start(setup, [state('openai.signin', 'connected'), state('google.key', 'connected')]);
-    await click('Continue with 2 connected');
+    await click('Continue');
     await click('Change my starting model');
     expect(document.querySelector('h1')?.textContent).toBe('Which one should boopis start with?');
     const radios = [...document.querySelectorAll<HTMLElement>('[role=radio]')].map((r) => r.textContent?.trim());
@@ -122,7 +127,7 @@ describe('the models hub', () => {
   it('offers no change when only one lab is connected, and none for a lab the host sets up no route for', async () => {
     const setup = new Setup([AT_MODELS, DONE], { state: 'set', tiers: [{ name: 'sol', model: 'openai-codex/gpt-6.2-sol' }], governed: { available: true, why: null, allowed: [], heavy: [], sentence: '', tiers: [] } } as never);
     await start(setup, [state('openai.signin', 'connected'), state('deepseek.key', 'connected')]);
-    await click('Continue with 2 connected');
+    await click('Continue');
     expect(btn('Change my starting model')).toBeUndefined();
   });
 });
@@ -142,13 +147,13 @@ describe('the optional steps and the end', () => {
     await toExtras();
     expect(document.querySelector('h1')?.textContent).toBe('Connect your tools');
     expect(document.body.textContent).toContain('Pull requests and issues.');
-    expect(document.querySelector('.fr-progress__text')?.textContent).toBe('Step 5 of 6: Extras');
+    expect(document.querySelector('.fr-progress__text')?.textContent).toBe('Step 3 of 4');
     await click('Skip');
     expect(document.querySelector('h1')?.textContent).toBe('Look at the store');
     expect(document.body.textContent).toContain('Does a thing.');
     await click('Skip');
     expect(document.querySelector('h1')?.textContent).toBe('You are set');
-    expect(document.querySelector('.fr-progress__text')?.textContent).toBe('Step 6 of 6: Ready');
+    expect(document.querySelector('.fr-progress__text')?.textContent).toBe('All steps done');
   });
 
   it('can open the connectors after the app starts: the first-run view does not open a screen that is not there yet', async () => {

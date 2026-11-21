@@ -39,7 +39,7 @@ describe('the SuperGrok sign-in card', () => {
     const b = fake();
     let signedIn = 0;
     mountXaiSignin(host, b, { onSignedIn: () => { signedIn += 1; }, now: () => NOW });
-    expect(act(host, 'start')?.textContent).toBe('Continue with xAI');
+    expect(act(host, 'start')?.querySelector('.ui-sso__label')?.textContent).toBe('Continue with xAI');
     act(host, 'start')?.click();
     await tick(); await tick();
     const code = host.querySelector<HTMLElement>('[data-code]');

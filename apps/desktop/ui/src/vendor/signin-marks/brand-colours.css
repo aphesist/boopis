@@ -1,0 +1,6 @@
+/* The labs' own button colours, for the `brand` style of the sign-in button (components/signin-button.css). Data, not styling: they
+   are the labs' colours and no token of the system. Light and dark follow the preset's colour scheme.
+   OpenAI publishes its Sign in with ChatGPT button as black or white with the logo; GitHub and xAI publish their marks in black or
+   white only; Anthropic publishes its button's colours (platform.claude.com/docs/en/manage-claude/oauth-apps/branding-samples). */
+.ui-sso[data-style="brand"] { --sso-fill: light-dark(#000000, #ffffff); --sso-hover: light-dark(#262626, #e6e6e6); --sso-ink: light-dark(#ffffff, #000000); --sso-line: light-dark(#000000, #ffffff); }
+.ui-sso[data-style="brand"][data-brand="claude"] { --sso-fill: light-dark(#ffffff, #141413); --sso-hover: light-dark(#f5f4ed, #262624); --sso-ink: light-dark(#141413, #faf9f5); --sso-line: light-dark(#87867f, #73726c); }

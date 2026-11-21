@@ -80,44 +80,44 @@
   "h": 297
  },
  "getting-a-code@bone": {
-  "sha": "cc46d0f6696d69de7a2ad298cba926cf4708702c",
+  "sha": "38c14d4bb190dae83e86720045a90fd8f4f53632",
   "w": 504,
-  "h": 54
+  "h": 62
  },
  "getting-a-code@catalog": {
-  "sha": "48911d30c45e079832e91087f77f9364d779a14c",
+  "sha": "055fb462b489b5e28f13b54eb6a5b34792f6f3f0",
   "w": 504,
-  "h": 54
+  "h": 62
  },
  "getting-a-code@graphite": {
-  "sha": "7f820b3979a1c12b3b6e359627fc0df0fd5e23cd",
+  "sha": "c2db9377250f77ff601e8540441bf5dd263c00a3",
   "w": 504,
-  "h": 54
+  "h": 62
  },
  "getting-a-code@typewriter": {
-  "sha": "68829e788a808566e18524675999c55afa289878",
+  "sha": "c51ec15b7abe71f518398d08ad815b147cbc5d56",
   "w": 504,
-  "h": 54
+  "h": 62
  },
  "its-button@bone": {
-  "sha": "4abfe59fe54a594ca3064fdeaae76ceaf10a09d3",
+  "sha": "802db00e2531666654655003a1954449cbc811be",
   "w": 504,
-  "h": 54
+  "h": 62
  },
  "its-button@catalog": {
-  "sha": "181354a9d2752a13b07faf21ceb2a5143a6d2028",
+  "sha": "378dc89b935f9d11dbe78a1593ebce4656ef1696",
   "w": 504,
-  "h": 54
+  "h": 62
  },
  "its-button@graphite": {
-  "sha": "6648b77cc901a3795aca898360aca04dbc4e89cf",
+  "sha": "a52a6a8b895446b826093e574e019253ef3e84cf",
   "w": 504,
-  "h": 54
+  "h": 62
  },
  "its-button@typewriter": {
-  "sha": "0026ea346f4469c452437526200d4488530f0bd4",
+  "sha": "f92cf21baa238f6324d842ae970ed44d7221676c",
   "w": 504,
-  "h": 54
+  "h": 62
  },
  "long-message@bone": {
   "sha": "fed69e5f549483c9c41672cca6ea378865dfd62b",

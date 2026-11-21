@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { connectedList, continueLabel, LATER_LINE, phaseOf, PHASES, progressText, startChoices, summaryOf } from './first-run-model';
+import { connectedList, LATER_LINE, phaseOf, PHASES, progressText, startChoices, startSentence, startsOn, START_ORDER, stepStates, summaryOf } from './first-run-model';
 import type { ModelsView, ProviderState } from './bindings';
 import type { SetupStatus } from './setup-bridge';
 
@@ -11,16 +11,19 @@ const form = (id: string) => ({ form_id: id, kind: 'choice', title: 't', body: '
 const OFFERED = ['free', 'connected', 'later', 'anthropic', 'claude-subscription', 'chatgpt-subscription', 'openai-key', 'gemini', 'xai', 'xai-subscription'];
 
 describe('the steps', () => {
-  it('lists six steps in order and says where the person is', () => {
-    expect(PHASES.map((p) => p.id)).toEqual(['welcome', 'engine', 'settings', 'models', 'extras', 'ready']);
-    expect(progressText('models')).toBe('Step 4 of 6: Models');
+  it('lists four steps in order and says where the person is', () => {
+    expect(PHASES.map((p) => p.id)).toEqual(['welcome', 'models', 'connectors', 'store']);
+    expect(progressText('models')).toBe('Step 2 of 4');
+    expect(progressText('ready')).toBe('All steps done');
+    expect(stepStates('connectors').map((x) => x.s)).toEqual(['past', 'past', 'now', 'next']);
+    expect(stepStates('ready').map((x) => x.s)).toEqual(['past', 'past', 'past', 'past']);
   });
-  it('reads the phase from the form that is open, else the first step that is not done', () => {
+  it('reads the phase from the form that is open, else the first step that is not done: the engine and the consent are the welcome\'s', () => {
     expect(phaseOf(null)).toBe('welcome');
-    expect(phaseOf(status({ steps: [step('runtime', 'pending')] }))).toBe('engine');
-    expect(phaseOf(status({ steps: [step('runtime', 'done'), step('config', 'needs_input')], form: form('setup.config') }))).toBe('settings');
+    expect(phaseOf(status({ steps: [step('runtime', 'pending')] }))).toBe('welcome');
+    expect(phaseOf(status({ steps: [step('runtime', 'done'), step('config', 'needs_input')], form: form('setup.config') }))).toBe('welcome');
     expect(phaseOf(status({ steps: [step('runtime', 'done'), step('models', 'needs_input')], form: form('setup.ladder') }))).toBe('models');
-    expect(phaseOf(status({ steps: [step('runtime', 'done'), step('config', 'blocked')] }))).toBe('settings');
+    expect(phaseOf(status({ steps: [step('runtime', 'done'), step('config', 'blocked')] }))).toBe('welcome');
     expect(phaseOf(status({ steps: [step('runtime', 'done')], done: true }))).toBe('models');
   });
 });
@@ -47,8 +50,14 @@ describe('what is connected', () => {
     const starts = startChoices(connectedList(states, OFFERED));
     expect(starts.map((c) => c.choice)).toEqual(['chatgpt-subscription', 'openai-key']);
   });
-  it('words the primary button by how many are connected, and never claims one when none is', () => {
-    expect([0, 1, 3].map(continueLabel)).toEqual(['Continue', 'Continue with 1 connected', 'Continue with 3 connected']);
+  it('says what boopis will do in one line: where it starts, in the host\'s own order, and nothing when nothing is connected', () => {
+    expect(startSentence([])).toBe('Nothing connected yet');
+    const states = new Map([['google.key', st('google.key', 'connected')], ['openai.signin', st('openai.signin', 'connected', { kind: 'signin', plan: 'ChatGPT Plus' })], ['deepseek.key', st('deepseek.key', 'connected')]]);
+    const list = connectedList(states, OFFERED);
+    expect(startsOn(list)?.choice, 'ChatGPT comes before Gemini').toBe('chatgpt-subscription');
+    expect(startSentence(list)).toBe('3 connected. Starts on OpenAI (ChatGPT Plus).');
+    expect(startSentence(connectedList(new Map([['deepseek.key', st('deepseek.key', 'connected')]]), OFFERED))).toBe('1 connected. Starts on the free models; DeepSeek stays in the model menu.');
+    expect(START_ORDER).toEqual(['anthropic', 'claude-subscription', 'chatgpt-subscription', 'openai-key', 'gemini', 'xai-subscription', 'xai']);
   });
 });
 

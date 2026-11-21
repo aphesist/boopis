@@ -41,7 +41,7 @@ const FREE = view([{ name: 'free', model: 'nous/nous/welcome' }], false, 'Govern
 
 const kindOf = (kind: string): ProviderState['kind'] => kind as ProviderState['kind'];
 const baseline = (over: Over = {}, extra: ProviderState[] = []): ProviderState[] => [
-  ...entries().flatMap((e) => e.ways.filter((w) => !w.hidden).map((w): ProviderState => ({
+  ...entries().flatMap((e) => e.ways.filter((w) => !w.hidden && w.kind !== 'custom').map((w): ProviderState => ({
     provider: e.id, way: w.id, kind: kindOf(w.kind), code: null, detail: null, plan: null, models_count: null, base_url: null, signin: null, checked_at: null,
     status: w.kind === 'key' ? 'needs_key' : w.kind === 'signin' ? 'signed_out' : w.kind === 'local' ? 'not_found' : 'connected', ...over[w.id]
   }))), ...extra
@@ -130,16 +130,17 @@ const first: Story = {
     'models hub, a runtime found on this computer': FR(['variant'], hub(baseline(), { probe: [OLLAMA] })),
     'models hub, trouble in words': FR(['error'], hub(TROUBLE)),
     'models hub, a key form in place': FR(['open'], hub(baseline(), { after: (root) => { press(root, '[data-do="key"][data-way="google.key"]'); } })),
-    'models hub, search': FR(['variant'], hub(baseline(), { after: (root) => { const i = root.querySelector<HTMLInputElement>('#hx-prov-q'); if (i) { i.value = 'meta'; i.dispatchEvent(new Event('input', { bubbles: true })); } } })),
+    'models hub, more providers open': FR(['open'], hub(baseline(), { after: (root) => { press(root, '#hx-prov-more'); } })),
+    'models hub, a connected key can be removed': FR(['variant'], hub(SOME, { after: (root) => { press(root, '[data-do="remove"][data-way="google.key"]'); } })),
     'sign-in: ChatGPT, at its button': FR(['open'], hub(baseline(), { after: (root) => { press(root, '[data-do="signin"][data-way="openai.signin"]'); } })),
     'sign-in: ChatGPT, waiting': FR(['loading'], hub(baseline(), { after: async (root) => { press(root, '[data-do="signin"][data-way="openai.signin"]'); await wait(900); press(root, '[data-act="start"]'); await wait(300); } })),
     'sign-in: GitHub, the code': FR(['loading'], hub(baseline(), { after: async (root) => { press(root, '[data-do="signin"][data-way="github-copilot.signin"]'); await wait(900); press(root, '[data-act="start"]'); await wait(300); } })),
     'sign-in: xAI, the code': FR(['loading'], hub(baseline(), { after: async (root) => { press(root, '[data-do="signin"][data-way="xai.signin"]'); await wait(900); press(root, '[data-act="start"]'); await wait(300); } })),
     'sign-in: Claude, waiting for the browser': FR(['loading'], hub(baseline(), { after: (root) => { press(root, '[data-do="signin"][data-way="anthropic.signin"]'); } })),
     'do it later: the summary': FR(['variant'], { script: [AT_MODELS, status({ steps: STEPS({ ...ALL_DONE }, { models: 'Nous free tier: one model at every tier' }), done: true, receipt: { lines: [] } })], model: FREE, list: baseline(), after: (root) => through(root, 'Do it later') }),
-    'summary: a ladder from what is connected': FR(['success'], { script: [AT_MODELS, DONE], model: SOL, list: SOME, after: (root) => through(root, 'Continue with 2 connected') }),
-    'summary: several labs, change the start': FR(['variant'], { script: [AT_MODELS, DONE], model: SOL, list: EVERYTHING, after: (root) => through(root, 'Continue with 8 connected') }),
-    'summary: choose where to start': FR(['open'], { script: [AT_MODELS, DONE], model: SOL, list: EVERYTHING, after: (root) => through(root, 'Continue with 8 connected', 'Change my starting model') }),
+    'summary: a ladder from what is connected': FR(['success'], { script: [AT_MODELS, DONE], model: SOL, list: SOME, after: (root) => through(root, 'Continue') }),
+    'summary: several labs, change the start': FR(['variant'], { script: [AT_MODELS, DONE], model: SOL, list: EVERYTHING, after: (root) => through(root, 'Continue') }),
+    'summary: choose where to start': FR(['open'], { script: [AT_MODELS, DONE], model: SOL, list: EVERYTHING, after: (root) => through(root, 'Continue', 'Change my starting model') }),
     'optional: connectors': FR(['variant'], { script: [AT_MODELS, DONE], model: FREE, list: baseline(), after: (root) => through(root, 'Do it later', 'Continue') }),
     'optional: connectors, none to list': FR(['empty'], { script: [AT_MODELS, DONE], model: FREE, list: baseline(), extras: { connectors: () => Promise.resolve([]), store: () => Promise.resolve([]) }, after: (root) => through(root, 'Do it later', 'Continue') }),
     'optional: the store': FR(['variant'], { script: [AT_MODELS, DONE], model: FREE, list: baseline(), after: (root) => through(root, 'Do it later', 'Continue', 'Skip') }),

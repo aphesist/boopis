@@ -20,24 +20,24 @@
   "h": 278
  },
  "chatgpt-at-its-button@bone": {
-  "sha": "cc6bf00822843eb0d510dab3748786fdf35d8539",
+  "sha": "f1973f978cf8a354f24e7fb28af75fd2db458d63",
   "w": 1416,
-  "h": 54
+  "h": 62
  },
  "chatgpt-at-its-button@catalog": {
-  "sha": "b42de9234b59e8229878d335425c08dc34df9cb8",
+  "sha": "115baabe20d1921623ffe9b8ca2ef4d70f537efb",
   "w": 1416,
-  "h": 54
+  "h": 62
  },
  "chatgpt-at-its-button@graphite": {
-  "sha": "812959485ed4490fc15223db0cf40c8a4dd124cf",
+  "sha": "2ff81debf13c5883b47fba35fa350a3f932eeb31",
   "w": 1416,
-  "h": 54
+  "h": 62
  },
  "chatgpt-at-its-button@typewriter": {
-  "sha": "b038615e9e940c782caca536160bfd69e6f471bc",
+  "sha": "d509d26c798179e8ffb71e5c8fd890c0a27aa386",
   "w": 1416,
-  "h": 54
+  "h": 62
  },
  "chatgpt-cancel-focus@bone": {
   "sha": "ca5a5c9fe72c8bc6c02ef4a2bda501c4fa4aabe0",
@@ -140,24 +140,24 @@
   "h": 238
  },
  "chatgpt-opening-the-page@bone": {
-  "sha": "3d6fd95ce10206bacabc1762137e5a82821058ac",
+  "sha": "2b50052cb4922b9b2787c020928c0032e8a75c39",
   "w": 1416,
-  "h": 54
+  "h": 62
  },
  "chatgpt-opening-the-page@catalog": {
-  "sha": "7d946edcaa2ad968090669503030aa350d76b0b2",
+  "sha": "f9eeafeab6f2aca05ca1889f41a5832f5908954f",
   "w": 1416,
-  "h": 54
+  "h": 62
  },
  "chatgpt-opening-the-page@graphite": {
-  "sha": "959f911f647d67b077cf3c126c841242fb78f992",
+  "sha": "417a8042fb4358fde2bcb261af41987400b7f7b2",
   "w": 1416,
-  "h": 54
+  "h": 62
  },
  "chatgpt-opening-the-page@typewriter": {
-  "sha": "d310b227e651a903e73e6a1e832e83682badf8c2",
+  "sha": "bc491400a52f65b8b39bd44e7e109adb0678659f",
   "w": 1416,
-  "h": 54
+  "h": 62
  },
  "chatgpt-signed-in@bone": {
   "sha": "e65fc9716d08cc4a40f9dac6b4b933cb0a3e1a21",
@@ -180,24 +180,24 @@
   "h": 42
  },
  "chatgpt-start-pressed@bone": {
-  "sha": "cc6bf00822843eb0d510dab3748786fdf35d8539",
+  "sha": "9b9a22589bcf916db99b88bc423f10936a30740c",
   "w": 1416,
-  "h": 54
+  "h": 62
  },
  "chatgpt-start-pressed@catalog": {
-  "sha": "b42de9234b59e8229878d335425c08dc34df9cb8",
+  "sha": "d231feffad357ac271d5e234560c0177accb300d",
   "w": 1416,
-  "h": 54
+  "h": 62
  },
  "chatgpt-start-pressed@graphite": {
-  "sha": "812959485ed4490fc15223db0cf40c8a4dd124cf",
+  "sha": "c3f498567f2f42370a32bfbae7344116d47aa5e1",
   "w": 1416,
-  "h": 54
+  "h": 62
  },
  "chatgpt-start-pressed@typewriter": {
-  "sha": "b038615e9e940c782caca536160bfd69e6f471bc",
+  "sha": "b4b2bf21cfbaf6b171ce67e11c2bc06c83640993",
   "w": 1416,
-  "h": 54
+  "h": 62
  },
  "chatgpt-timed-out@bone": {
   "sha": "8f8c76a55ec70ecc1d0fca3a3934236def09e1be",
@@ -240,24 +240,24 @@
   "h": 238
  },
  "copilot-at-its-button@bone": {
-  "sha": "f61a291d7bb00369ccafc40747bdf38aaeba1945",
+  "sha": "eab8496a939778ba66901219f2a00e9f26e5a451",
   "w": 1416,
-  "h": 54
+  "h": 62
  },
  "copilot-at-its-button@catalog": {
-  "sha": "6f0e23c6bd68a0e7dc92d32a57ddd3b69f32269d",
+  "sha": "7cc561f649e79f3377590f6952d65eef136e3163",
   "w": 1416,
-  "h": 54
+  "h": 62
  },
  "copilot-at-its-button@graphite": {
-  "sha": "de5e03a9cc1c9a5cebdac4b3dda18e0c8b65552d",
+  "sha": "4d89eab3465cb9b3c6817d2b397035be141035f4",
   "w": 1416,
-  "h": 54
+  "h": 62
  },
  "copilot-at-its-button@typewriter": {
-  "sha": "1a875b54430dbac6e2b475f2167b123dbea7eed8",
+  "sha": "1c4f5b9f8065b7efcec3e96f346c60eab76433db",
   "w": 1416,
-  "h": 54
+  "h": 62
  },
  "copilot-code-copied@bone": {
   "sha": "5cbbd76d23fdab3218686ae6081f2f394af6d344",
@@ -340,24 +340,24 @@
   "h": 84
  },
  "copilot-getting-a-code@bone": {
-  "sha": "2393135760f0c643a09d87479348a4ee6ad4b294",
+  "sha": "4e5ad0cf17445e6bdfc00308c2ddf98c2afc9e7b",
   "w": 1416,
-  "h": 54
+  "h": 62
  },
  "copilot-getting-a-code@catalog": {
-  "sha": "b3a4cf50e49e46a534419aa3265cca2617946780",
+  "sha": "cdede4848ac63e91399df527a10da325347268f6",
   "w": 1416,
-  "h": 54
+  "h": 62
  },
  "copilot-getting-a-code@graphite": {
-  "sha": "193983ee9a7d237c96126f410f193c982eb9904f",
+  "sha": "e8b2d800cc16b3d6c81b0bd7af27cd239e0dc757",
   "w": 1416,
-  "h": 54
+  "h": 62
  },
  "copilot-getting-a-code@typewriter": {
-  "sha": "f75caa74904d9ce9b94bb708804a7990c5c81284",
+  "sha": "341b4d5cc41b674a23e3556e711dbe5bb0333a31",
   "w": 1416,
-  "h": 54
+  "h": 62
  },
  "copilot-no-copilot-plan-a-long-reason@bone": {
   "sha": "af373bd9d060fd91207e88f4c9ea9c9bf1ae3276",

@@ -62,6 +62,8 @@ export interface ProvidersLayout {
   title: string;
   /** the level of every heading in the section (first run's title is the h1; Settings' headings sit under its dialog's) */
   level?: 2 | 3;
+  /** no search field and no filter: the page lists everything it has room for (first run) */
+  bare?: boolean;
   planHtml: (p: Plan, canSignin: (w: Way) => boolean, tailOpen: boolean) => string;
   back: string;
 }
@@ -264,8 +266,8 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
   let abort: () => void = () => undefined;
   let card: { destroy: () => void } | null = null;
 
-  host.innerHTML = ui.html.setHead({ id: 'hx-set-providers-h', label: deps.layout?.title ?? 'Providers', level: deps.layout?.level ?? 3 }) +
-    '<div data-prov-bar style="display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center;padding:var(--sp-2) 0">' +
+  host.innerHTML = (deps.layout?.bare ? '' : ui.html.setHead({ id: 'hx-set-providers-h', label: deps.layout?.title ?? 'Providers', level: deps.layout?.level ?? 3 })) +
+    '<div data-prov-bar' + (deps.layout?.bare ? ' hidden' : '') + ' style="display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center;padding:var(--sp-2) 0">' +
     ui.html.search({ size: 'm', as: 'input', id: 'hx-prov-q', label: 'Search providers', placeholder: 'Search providers' }) +
     ui.html.chipGroup({ options: FILTERS, value: 'all', label: 'Show providers' }) + '</div>' +
     '<p class="ui-field__hint" role="status" data-prov-status></p><div data-prov-body></div><div data-prov-flow hidden></div>';
@@ -309,7 +311,7 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
     useFormsHost(null);
     flowOpen = false;
     flow.hidden = true; flow.replaceChildren();
-    bar.hidden = false; body.hidden = false;
+    bar.hidden = !!deps.layout?.bare; body.hidden = false;
   };
   const back = (): void => { closeFlow(); void read(false); };
   const show = (...kids: Node[]): void => {

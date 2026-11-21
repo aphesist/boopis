@@ -368,7 +368,12 @@ mod tests {
         let st = s.status(CHATGPT).await.unwrap();
         assert_eq!(st.status, ProviderStatus::SignedOut);
         assert!(st.detail.unwrap().contains("Sign in with ChatGPT"));
-        assert!(store.get("boopis.chatgpt", "access_token").unwrap().is_none());
+        assert!(
+            store
+                .get("boopis.chatgpt", "access_token")
+                .unwrap()
+                .is_none()
+        );
         assert_eq!(
             s.status("anthropic.signin").await.unwrap_err().code(),
             "hx.provider.unsupported"

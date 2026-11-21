@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ui } from '@boopis/ui';
-import { BRANDS, SIGNIN_BRANDS, signinLabel } from './signin-button';
+import { markOf, SIGNIN_BRANDS, SIGNIN_STYLE, SIGNIN_STYLES, signinLabel } from './signin-button';
 import { brandOf } from '../host/signin-brands';
 import { entries } from '../data/providers';
 
@@ -27,21 +27,34 @@ describe('the branded sign-in buttons (ADR-0040)', () => {
     expect(shapes.size).toBe(1);
   });
   it('draws ChatGPT and GitHub from the labs\' own files, unmodified in their paths, in pure black and pure white', () => {
-    for (const [brand, black, white] of [['chatgpt', 'chatgpt-logo-black.svg', 'chatgpt-logo-white.svg'], ['github', 'github-invertocat-black.svg', 'github-invertocat-white.svg']] as const) {
+    for (const [key, black, white] of [['chatgpt', 'chatgpt-logo-black.svg', 'chatgpt-logo-white.svg'], ['github', 'github-invertocat-black.svg', 'github-invertocat-white.svg']] as const) {
       const b = readFileSync(join(VENDOR, black), 'utf8');
       const w = readFileSync(join(VENDOR, white), 'utf8');
-      const html = ui.signinButton({ brand }).outerHTML;
-      expect(pathsOf(html).sort()).toEqual([...pathsOf(b), ...pathsOf(w)].sort());
-      expect(/fill="(black|#000|#000000)"/.test(b) || /fill="#?[0-9a-f]{3,6}"/i.test(b)).toBe(true);
-      expect(html, 'never recoloured: no fill is added to the lab\'s file').not.toMatch(/#D97757/i);
-      expect(html.match(/data-ink="/g)?.length, 'both inks are there; the preset shows the one that reads').toBe(2);
+      const m = markOf(key) as { black: string; white: string };
+      expect(pathsOf(m.black), key).toEqual(pathsOf(b));
+      expect(pathsOf(m.white), key).toEqual(pathsOf(w));
+      expect(m.black + m.white, 'never recoloured: no colour is added to the lab\'s file').not.toMatch(/#D97757/i);
     }
+    const html = ui.signinButton({ brand: 'chatgpt' }).outerHTML;
+    expect(html.match(/data-ink="/g)?.length, 'both inks are there; the preset shows the one that reads').toBe(2);
   });
-  it('keeps Claude\'s mark at its own colour behind the one swap point, and xAI on the app\'s own mark', () => {
-    expect(BRANDS.claude.mark).toEqual({ ink: 'family', ref: 'claude' });
-    expect(BRANDS.xai.mark).toEqual({ ink: 'family', ref: 'grok' });
-    expect(ui.signinButton({ brand: 'claude' }).querySelector('.ui-mm')?.getAttribute('data-color')).toBe('brand');
-    expect(ui.signinButton({ brand: 'claude' }).innerHTML).toMatch(/#D97757/i);
+  it('draws Claude from Anthropic\'s own file at its own colour, and xAI from its mark in flat black or white', () => {
+    const claude = readFileSync(join(VENDOR, 'claude-logo.svg'), 'utf8');
+    const m = markOf('claude') as { colour: string };
+    expect(pathsOf(m.colour)).toEqual(pathsOf(claude));
+    expect(m.colour).toMatch(/#D97757/i);
+    const x = markOf('xai') as { black: string; white: string };
+    expect(x.black).toContain('fill="black"');
+    expect(x.white).toContain('fill="white"');
+    expect(x.black.replace('fill="black"', '')).toBe(x.white.replace('fill="white"', ''));
+  });
+  it('has two styles, themed and brand, one component, and the default is one line', () => {
+    expect(SIGNIN_STYLES).toEqual(['themed', 'brand']);
+    expect(SIGNIN_STYLE).toBe('themed');
+    expect(ui.signinButton({ brand: 'github' }).dataset['style']).toBe('themed');
+    expect(ui.signinButton({ brand: 'github', style: 'brand' }).dataset['style']).toBe('brand');
+    const same = (s: 'themed' | 'brand'): string => ui.signinButton({ brand: 'claude', style: s }).outerHTML.replace(/data-style="\w+"/, '');
+    expect(same('themed')).toBe(same('brand'));
   });
   it('says which ways carry one: the four sign-ins, never a key, never Gemini, never the grok program', () => {
     const ways = entries().flatMap((e) => e.ways);

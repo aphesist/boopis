@@ -117,7 +117,7 @@
   }
   /* bot data, not interface colour: an orb's colour where the system allows it (R-colour-8: orbs, hx-card[data-accent]),
      a swatch of a bot's or a theme's colour drawn from data (an inline colour) */
-  const dataColour = (e, prop) => !!e.closest('hx-card[data-accent], [data-swatch], .bt-swatch, .mod-swatches, .hxt-swatch, .ui-sso__logo') || (/background|box-shadow/.test(prop) && /#|rgb/.test(e.getAttribute('style') || ''));
+  const dataColour = (e, prop) => !!e.closest('hx-card[data-accent], [data-swatch], .bt-swatch, .mod-swatches, .hxt-swatch, .ui-sso__logo, .ui-sso[data-style="brand"]') || (/background|box-shadow/.test(prop) && /#|rgb/.test(e.getAttribute('style') || ''));
 
 
   /* in a whole-app state, which fix agent's area an element belongs to (a card in the conversation is the cards area's) */

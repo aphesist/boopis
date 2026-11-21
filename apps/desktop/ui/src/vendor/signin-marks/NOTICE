@@ -6,6 +6,15 @@ GitHub (github-invertocat-black.svg, github-invertocat-white.svg; GitHub_Inverto
 Source: https://brand.github.com/GitHub_Logos.zip (from https://brand.github.com/foundations/logo ; /github.com/logos redirects there). Downloaded 2026-11-21.
 Trademarks of GitHub, Inc.; no open licence. Page permits "indicating that your project integrates with GitHub" and using logos less prominently than your own brand; any other use needs written permission (https://github.com/contact). Only white, black (rarely grey/green) allowed; no shadows/gradients, no distortion, do not combine with other words or design elements. GitHub publishes NO sign-in button spec. Kept here: Invertocat and Lockup black/white, Copilot icon black/white (SVG).
 
-Claude and xAI have no official sign-in button and their trademark rules need permission (Anthropic's policy) or could not be read (xAI's page answered 403).
-Until the owner decides, their buttons draw the LobeHub marks of vendor/model-icons (MIT, see its NOTICE), behind one swap point: BRANDS in
-components/signin-button.ts. Gemini has no sign-in in boopis and never gets the Google "G".
+Anthropic (claude-logo.svg)
+Source: https://platform.claude.com/docs/en/manage-claude/oauth-apps/branding-samples ("Download the logo", claude-logo.svg, copied verbatim; the mark is #D97757).
+Published by Anthropic for its "Link your Claude organization" button; its use on a sign-in is not cleared by Anthropic's trademark policy
+(https://www.anthropic.com/legal/trademark-guidelines: prior permission, marketing@anthropic.com). Trademark of Anthropic; no open licence.
+
+xAI (xai-logo.svg)
+Source: https://commons.wikimedia.org/wiki/File:XAI_Logo.svg. A faithful vector of the mark, NOT an xAI file: x.ai/legal/brand-guidelines answered 403 and
+xAI's GitHub organisation holds no logo file. Replace it with xAI's own file when legal@x.ai supplies one. Drawn flat in the button's ink.
+Trademark of xAI; no open licence.
+
+Each is used only to identify the account the person signs in with, and implies no endorsement or affiliation.
+Gemini has no sign-in in boopis and never gets the Google "G".

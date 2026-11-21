@@ -19,6 +19,9 @@ export default {
   id: 'components/signin-button', title: 'Sign-in button', area: 'components', kind: 'component', covers: ['ui.signinButton', 'html.signinButton'], mock: { url: '/v6/design-system/index.html#c-buttons', note: 'the mock has no sign-in button; the research is in ADR-0040' },
   states: {
     typical, ...forced(typical, '.ui-sso'),
+    'brand style (each lab\'s own colours)': stage(['variant'], ({ root }) => { column(root, (b) => ui.signinButton({ brand: b, style: 'brand' })); }, { width: 320, ground: 'frame' }),
+    'brand style, hovered': stage(['hover', 'variant'], ({ root }) => { column(root, (b) => ui.signinButton({ brand: b, style: 'brand' })); }, { width: 320, ground: 'frame', force: [{ sel: '.ui-sso', state: 'hover' }] }),
+    'brand style, focused': stage(['focus', 'variant'], ({ root }) => { column(root, (b) => ui.signinButton({ brand: b, style: 'brand' })); }, { width: 320, ground: 'frame', force: [{ sel: '.ui-sso', state: 'focus' }] }),
     disabled: stage(['disabled'], ({ root }) => { column(root, (b) => ui.signinButton({ brand: b, disabled: true })); }, { width: 320, ground: 'frame' }),
     'a custom verb': stage(['variant'], ({ root }) => { column(root, (b) => ui.signinButton({ brand: b, verb: 'Sign in' })); }, { width: 320, ground: 'frame' }),
     long: stage(['long'], ({ root }) => { column(root, (b) => ui.signinButton({ brand: b, verb: 'Continue and keep me signed in' })); }, { width: 220, ground: 'frame' })

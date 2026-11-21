@@ -25,7 +25,7 @@ import { tauriProvidersBridge } from './providers-bridge';
 import { mountProviders } from './providers-view';
 import { HUB_LAYOUT } from './providers-hub';
 import './signin-cards';
-import { connectedList, continueLabel, LATER_LINE, phaseOf, PHASES, progressText, startChoices, summaryOf } from './first-run-model';
+import { connectedList, LATER_LINE, phaseOf, progressText, startChoices, startSentence, stepStates, summaryOf } from './first-run-model';
 import type { Connected, PhaseId, Summary } from './first-run-model';
 import type { ProviderState } from './providers-bridge';
 import type { ConnectorCatalogEntry, ModelsView } from './bindings';
@@ -175,20 +175,17 @@ export function formExtras(form: Form_Deserialize, deps: () => SetupSignins, nex
   return { node, destroy };
 }
 
-/** the heading of a phase, and what it says under it */
-const LEDE: Readonly<Record<string, string>> = {
-  hub: 'Connect as many as you like, in any order, or none. Everything here is also in Settings, Models, so nothing is final.'
-};
-
 /** The first-run view: a step at a time, with where you are, on one calm surface. Shows first-run setup if it is needed and
     resolves when the person is through it (or setup was not needed). */
 export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = document.body, opts: FirstRunOptions = {}): Promise<void> {
   const check = await bridge.check();
   if (!check.needed) return;
   const intro = introText(await bridge.source().catch(() => null));
-  const root = el('div', { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'fr-title', class: 'hx-first-run ui-scroll', 'data-layer-host': '' });
+  const root = el('div', { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'fr-title', class: 'hx-first-run', 'data-layer-host': '' });
+  const scroller = el('div', { class: 'fr-scroll ui-scroll' });
   const shell = el('div', { class: 'fr-shell' });
-  root.append(shell);
+  scroller.append(shell);
+  root.append(scroller);
   /* the welcome is a big moment: the logo's hero, once, above whatever step is drawn (it is not redrawn with the card); it steps
      aside once the welcome is over, so the steps that need room have it */
   const logo = welcomeLogo();
@@ -213,7 +210,6 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
     let offered: string[] = [];
     let states: ReadonlyMap<string, ProviderState> = new Map();
     let exitOpen: FirstRunExit['open'] = null;
-    let startedOnHub = false;
     const providers: ProvidersBridge | null = opts.providers ?? (inTauri() ? tauriProvidersBridge() : null);
     const extrasSource = (): ExtrasSource => (opts.extras ??= tauriExtras());
     const ladderChoices = (form: NonNullable<SetupStatus['form']>): { ids: string[]; names: string[] } => {
@@ -225,27 +221,46 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
       const { ids, names } = ladderChoices(form);
       return stepsFor(ids, names, providers !== null);
     };
-    const leave = (): void => { hub?.destroy(); hub = null; extras(); extras = () => undefined; useFormsHost(null); root.remove(); opts.onExit?.({ open: exitOpen }); resolve(); };
+    const leave = (): void => { hub?.destroy(); hub = null; extras(); extras = () => undefined; useFormsHost(null); foot?.remove(); root.remove(); opts.onExit?.({ open: exitOpen }); resolve(); };
 
     /* ───────── the frame every step shares: where you are, and the card ───────── */
     const progress = (id: PhaseId): HTMLElement => {
-      const i = PHASES.findIndex((p) => p.id === id);
       const wrap = el('div', { class: 'fr-progress', 'data-fr-phase': id });
-      wrap.innerHTML = ui.html.pages({ pages: PHASES.map((p) => ({ id: p.id, label: p.label })), current: id, label: progressText(PHASES[i]?.id ?? 'welcome') });
       wrap.append(el('span', { class: 'fr-progress__text' }, progressText(id)));
+      const line = el('ol', { class: 'fr-line', 'aria-label': `Setup. ${progressText(id)}` });
+      for (const st of stepStates(id)) {
+        const item = el('li', { class: 'fr-line__i', 'data-s': st.s });
+        if (st.s === 'now') item.setAttribute('aria-current', 'step');
+        item.append(el('span', { class: 'ui-ladder__st', 'data-s': st.s }), el('span', { class: 'fr-line__n' }, st.label));
+        line.append(item);
+      }
+      wrap.append(line);
       return wrap;
     };
-    const place = (id: PhaseId, card: HTMLElement, wide = false): void => {
-      logo.hidden = id !== 'welcome' && id !== 'engine';
+    /** the footer of the hub, pinned under the scrolling page; absent from every other step */
+    let foot: HTMLElement | null = null;
+    const place = (id: PhaseId, card: HTMLElement, wide: HTMLElement | null = null): void => {
+      logo.hidden = id !== 'welcome';
       card.dataset['frCard'] = '';
-      card.classList.add('fr-card');
-      if (wide) card.dataset['wide'] = '';
+      card.classList.add(wide ? 'fr-page' : 'fr-card');
+      root.dataset['frLayout'] = wide ? 'hub' : 'card';
       const bar = progress(id);
       const shown = shell.querySelector('[data-fr-card]');
       const oldBar = shell.querySelector('.fr-progress');
-      if (shown) shown.replaceWith(card); else shell.append(card);
-      if (oldBar) oldBar.replaceWith(bar); else shell.insertBefore(bar, card);
-      root.scrollTo?.({ top: 0 });
+      if (wide) {
+        /* the page: its title and lede, and the progress beside them, then the body; the footer is the window's, not the page's */
+        const head = card.querySelector('.fr-head');
+        head?.append(bar);
+        if (shown) shown.replaceWith(card); else shell.append(card);
+        oldBar?.remove();
+      } else {
+        if (shown) shown.replaceWith(card); else shell.append(card);
+        if (oldBar) oldBar.replaceWith(bar); else shell.insertBefore(bar, card);
+      }
+      foot?.remove();
+      foot = wide;
+      if (wide) root.append(wide);
+      scroller.scrollTo?.({ top: 0 });
     };
     const heading = (text: string, lede = ''): HTMLElement[] => {
       const out = [el('h1', { id: 'fr-title', class: 'fr-title' }, opts.title ?? text)];
@@ -268,15 +283,15 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
       extras = () => undefined;
       const card = el('div', { class: 'fr-stack' });
       const phase = phaseOf(status);
-      card.append(...heading(phase === 'welcome' ? 'Set up boopis' : phase === 'engine' ? 'Getting boopis ready' : phase === 'settings' ? 'Settings boopis needs' : 'Connect your models'));
+      const open = status?.steps.find((x) => x.state !== 'done' && x.state !== 'skipped' && x.state !== 'declined');
+      card.append(...heading(phase === 'welcome' ? (status?.form?.form_id === 'setup.config' ? 'Settings boopis needs' : open && open.id !== 'config' ? 'Getting boopis ready' : 'Set up boopis') : 'Connect your labs'));
       if (error) card.append(el('p', { role: 'alert', class: 'fr-note', 'data-error': '' }, error));
       if (!status) {
         card.append(el('p', { class: 'fr-lede' }, intro));
         card.append(actions(button('Set up', 'primary', () => { void run(null, false); })));
         return place('welcome', card);
       }
-      let wide = false;
-      if (!status.form || status.steps.some((s) => s.state === 'blocked' || s.state === 'declined' || s.state === 'skipped') || phase === 'engine') card.append(steps(status, () => { void run(null, false); }));
+      if (!status.form || status.steps.some((s) => s.state === 'blocked' || s.state === 'declined' || s.state === 'skipped') || phase === 'welcome') card.append(steps(status, () => { void run(null, false); }));
       /* no engine on this computer (only with `--engine existing`): the step says what to do; boopis installs nothing */
       if (status.install_command) card.append(actions(button('Check again', 'primary', () => { void run(null, false); })));
       if (status.steps.some((s) => s.state === 'declined')) card.append(actions(null, button('Review again', 'ghost', () => { void run(null, true); })));
@@ -285,9 +300,8 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
         const steps = stepsOf(form);
         if (note) { card.append(el('p', { role: 'status', 'data-fr-note': '', class: 'fr-note' }, note)); note = ''; }
         if (steps && providers && ladderChoices(form).ids.includes('connected')) {
-          wide = true;
-          card.append(...hubView(form));
-          startedOnHub = true;
+          const built = hubView(form);
+          return place('models', built.page, built.foot);
         } else if (steps) {
           if (stage.kind === 'way') card.append(formCard(fromConnectorForm(wayForm(steps, form.body, typeof (form.cancel as { label?: unknown } | null)?.label === 'string' ? String((form.cancel as { label: string }).label) : 'Skip for now'))));
           else if (stage.kind === 'lab') card.append(formCard(fromConnectorForm(labForm(stage.way, steps))));
@@ -303,16 +317,19 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
         }
       }
       if (status.done) { useFormsHost(null); return finished(status); }
-      place(phase === 'welcome' ? 'engine' : phase, card, wide);
+      place(phase, card);
     };
 
     /* ───────── the models hub: connect everything in one place, then continue, or do it later ───────── */
-    const hubView = (form: NonNullable<SetupStatus['form']>): HTMLElement[] => {
+    const hubView = (form: NonNullable<SetupStatus['form']>): { page: HTMLElement; foot: HTMLElement } => {
       offered = ladderChoices(form).ids;
-      const section = el('section', { class: 'ui-set fr-hub', 'aria-label': 'Your models' });
-      const cont = ui.button({ label: continueLabel(0), variant: 'primary', disabled: true, attrs: { 'data-fr-continue': '' } });
+      const section = el('section', { class: 'ui-set fr-hub', 'aria-label': 'Your labs' });
+      const cont = ui.button({ label: 'Continue', variant: 'primary', disabled: true, attrs: { 'data-fr-continue': '' } });
       const skip = ui.button({ label: 'Do it later', variant: 'ghost', attrs: { 'data-fr-later': '' } });
-      const say = el('p', { class: 'fr-hint', 'data-fr-later-line': '' }, `Do it later starts boopis on the free models. ${LATER_LINE}`);
+      const sum = el('span', { class: 'fr-foot__sum', role: 'status', 'data-fr-sum': '' }, startSentence([]));
+      const foot = el('footer', { class: 'fr-foot', 'aria-label': 'Continue or do it later' },
+        el('div', { class: 'fr-foot__later' }, skip, el('p', { class: 'fr-hint', 'data-fr-later-line': '' }, `Start with the free models. ${LATER_LINE}`)),
+        el('div', { class: 'fr-foot__end' }, sum, cont));
       const answer = (choice: string): void => {
         later = choice === 'later';
         viaHub = true;
@@ -324,19 +341,22 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
       };
       cont.addEventListener('click', () => { answer('connected'); });
       skip.addEventListener('click', () => { answer(ladderChoices(form).ids.includes('later') ? 'later' : 'free'); });
-      queueMicrotask(() => {
-        const prov = mountProviders(section, {
-          bridge: providers as ProvidersBridge, login: (p) => deps().login(p), chatgpt: deps().chatgpt, toast: (t) => { ui.toast(t); }, layout: HUB_LAYOUT,
-          onStates: (s) => {
-            states = s;
-            const n = connectedList(s, offered).length;
-            cont.querySelector('span')?.replaceChildren(document.createTextNode(continueLabel(n)));
-            cont.disabled = n === 0;
-          }
-        });
-        hub = { destroy: prov.destroy };
+      const prov = mountProviders(section, {
+        bridge: providers as ProvidersBridge, login: (p) => deps().login(p), chatgpt: deps().chatgpt, toast: (t) => { ui.toast(t); }, layout: HUB_LAYOUT,
+        onStates: (st) => {
+          states = st;
+          const list = connectedList(st, offered);
+          sum.textContent = startSentence(list);
+          cont.disabled = list.length === 0;
+          cont.setAttribute('aria-describedby', 'fr-sum');
+        }
       });
-      return [el('p', { class: 'fr-lede' }, LEDE['hub'] ?? ''), section, actions(cont, skip), say];
+      sum.id = 'fr-sum';
+      hub = { destroy: prov.destroy };
+      const page = el('div', { class: 'fr-stack fr-stack--page' },
+        el('header', { class: 'fr-head' }, el('div', { class: 'fr-head__t' }, ...heading('Connect your labs', 'Sign in with a plan you already pay for, or add an API key. Connect as many as you like; boopis builds its model ladder from what you connect.'))),
+        section);
+      return { page, foot };
     };
 
     /* ───────── after the host is done: the summary, the optional steps, the end ───────── */
@@ -417,7 +437,7 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
       card.append(actions(
         button(connectors ? 'Open Connectors' : 'Browse the store', 'primary', () => { exitOpen = which; after = 'ready'; finished(status); }),
         button('Skip', 'ghost', next)));
-      place('extras', card);
+      place(connectors ? 'connectors' : 'store', card);
     };
     const ready = (status: SetupStatus): void => {
       const card = el('div', { class: 'fr-stack' });
@@ -504,7 +524,7 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
       const card = el('div', { class: 'fr-stack' },
         el('h1', { id: 'fr-title', class: 'fr-title' }, opts.title ?? 'Getting boopis ready'),
         el('div', { class: 'fr-working', 'data-fr-working': '' }, label, dots, bytes));
-      place('engine', card);
+      place('welcome', card);
       let said = '';
       return (p) => {
         const d = describeProgress(p);
@@ -534,7 +554,6 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
         root.removeAttribute('aria-busy');
       }
     };
-    void startedOnHub;
     if (opts.autostart) void run(null, false); else draw(null, '');
   });
 }

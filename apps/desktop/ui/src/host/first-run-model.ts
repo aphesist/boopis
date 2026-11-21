@@ -5,35 +5,40 @@ import type { ModelsView, ProviderState } from './bindings';
 import type { SetupStatus } from './setup-bridge';
 import { choiceFor } from './first-run-ways';
 
-/** the steps the progress shows, in order: the person always sees where they are and how many are left */
+/** the steps the progress shows, in order: where you are, and how many are left. The engine and the consent are the welcome's;
+    the summary is the models'; the end is after the last (every step past). */
 export const PHASES = [
   { id: 'welcome', label: 'Welcome' },
-  { id: 'engine', label: 'Engine' },
-  { id: 'settings', label: 'Settings' },
   { id: 'models', label: 'Models' },
-  { id: 'extras', label: 'Extras' },
-  { id: 'ready', label: 'Ready' }
+  { id: 'connectors', label: 'Connectors' },
+  { id: 'store', label: 'Store' }
 ] as const;
-export type PhaseId = (typeof PHASES)[number]['id'];
+export type PhaseId = (typeof PHASES)[number]['id'] | 'ready';
 
-/** the phase a status is in: the form that is open says it, else the first step that is not done */
+/** the phase a status is in: the engine, the consent and the checklist are the welcome's; the models question and what follows are
+    the models'. A blocked step stays where it is. */
 export function phaseOf(status: SetupStatus | null): PhaseId {
   if (!status) return 'welcome';
   const form = status.form?.form_id ?? '';
-  if (form === 'setup.config') return 'settings';
+  if (form === 'setup.config') return 'welcome';
   if (form.startsWith('setup.')) return 'models';
   if (status.done) return 'models';
   const open = status.steps.find((s) => s.state !== 'done' && s.state !== 'skipped' && s.state !== 'declined');
   if (!open) return 'models';
-  if (open.id === 'config') return 'settings';
-  if (open.id === 'models' || open.id === 'restart') return 'models';
-  return 'engine';
+  return open.id === 'models' || open.id === 'restart' ? 'models' : 'welcome';
 }
 
-/** "Step 3 of 6: Models", the progress's words */
+/** each step of the line as `past`, `now` or `next` */
+export const stepStates = (id: PhaseId): ReadonlyArray<{ id: string; label: string; s: 'past' | 'now' | 'next' }> => {
+  const at = id === 'ready' ? PHASES.length : PHASES.findIndex((p) => p.id === id);
+  return PHASES.map((p, i) => ({ id: p.id, label: p.label, s: i < at ? 'past' : i === at ? 'now' : 'next' }));
+};
+
+/** "Step 2 of 4", the progress's words; the end says so */
 export function progressText(id: PhaseId): string {
+  if (id === 'ready') return 'All steps done';
   const i = PHASES.findIndex((p) => p.id === id);
-  return `Step ${String(i + 1)} of ${String(PHASES.length)}: ${PHASES[i]?.label ?? ''}`;
+  return `Step ${String(i + 1)} of ${String(PHASES.length)}`;
 }
 
 /** one connected way, as the hub and the summary say it */
@@ -55,7 +60,8 @@ export function connectedList(states: ReadonlyMap<string, ProviderState>, offere
   const out: Connected[] = [];
   const known = ways();
   for (const s of states.values()) {
-    if (s.status !== 'connected') continue;
+    /* `custom.endpoint` is the catalogue's add-one row, not an endpoint the person made */
+    if (s.status !== 'connected' || s.way === 'custom.endpoint') continue;
     const hit = known.find((w) => w.way.id === s.way);
     if (hit) out.push({ way: s.way, lab: hit.entry.label, label: hit.way.label, plan: s.plan ?? null, choice: choiceFor(hit.way, offered) });
     else if (s.way.startsWith('custom.')) out.push({ way: s.way, lab: 'Your own endpoint', label: s.way.slice('custom.'.length), plan: null, choice: null });
@@ -101,3 +107,23 @@ export function summaryOf(view: ModelsView | null, connected: readonly Connected
 
 /** the one line under "Do it later" and in the summary of someone who connected nothing */
 export const LATER_LINE = 'You can connect any lab at any time in Settings, Models.';
+
+/** the order the host starts from what is connected (`setup::providers::connected_choice`): the first connected lab with a route is
+    where a new session begins. Kept in step with the host by the setup test that names the same order. */
+export const START_ORDER = ['anthropic', 'claude-subscription', 'chatgpt-subscription', 'openai-key', 'gemini', 'xai-subscription', 'xai'] as const;
+
+/** the lab the host starts on, from what is connected, or null when none of it has a route (the free models) */
+export function startsOn(list: readonly Connected[]): Connected | null {
+  for (const c of START_ORDER) { const hit = list.find((x) => x.choice === c); if (hit) return hit; }
+  return null;
+}
+
+/** the footer's one line of what boopis will do */
+export function startSentence(list: readonly Connected[]): string {
+  if (list.length === 0) return 'Nothing connected yet';
+  const first = startsOn(list);
+  const n = `${String(list.length)} connected.`;
+  if (first) return `${n} Starts on ${first.lab}${first.plan ? ` (${first.plan})` : ''}.`;
+  const labs = list.map((c) => c.lab).filter((v, i, a) => a.indexOf(v) === i);
+  return `${n} Starts on the free models; ${labs.join(', ')} ${labs.length === 1 ? 'stays' : 'stay'} in the model menu.`;
+}
