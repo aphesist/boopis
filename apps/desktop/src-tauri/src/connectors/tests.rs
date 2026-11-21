@@ -135,6 +135,10 @@ impl McpOps for Fake {
     }
     async fn config_get(&self, key: &str) -> Result<Option<Value>> {
         let st = self.st();
+        // A value set as a whole (a JSON list, as `hermes config set` parses one) reads back as that value.
+        if let Some(v) = st.config.get(key) {
+            return Ok(Some(serde_json::from_str(v).unwrap_or_else(|_| json!(v))));
+        }
         let prefix = format!("{key}.");
         let m: serde_json::Map<String, Value> = st
             .config
@@ -372,7 +376,11 @@ async fn an_install_without_keys_wires_nothing_and_restarts_nothing() {
         st.servers["mine"],
         json!({"command": "npx", "args": ["-y", "foo@1.0.0"]})
     );
-    assert!(st.config.is_empty());
+    assert_eq!(
+        st.config.keys().map(String::as_str).collect::<Vec<_>>(),
+        [super::GOVERNED_ALLOWLIST],
+        "the only setting written is the governed allowlist"
+    );
     assert_eq!(st.restarts, 0);
     assert!(!report.restarted);
 }
@@ -1576,4 +1584,73 @@ async fn the_review_says_boopis_restarts_and_how_many_turns_would_end_and_asks_w
         &[("name", "m"), ("command", "npx"), ("args", "x@1")],
     );
     assert!(say(&r.engine.review(&plain).await.unwrap()).is_none());
+}
+
+// ---------------------------------------------------------------- the governed gap (docs/STORE.md 5.5 step 7)
+
+fn governed_list(r: &Rig) -> Vec<String> {
+    r.hermes
+        .st()
+        .config
+        .get(super::GOVERNED_ALLOWLIST)
+        .map(|v| serde_json::from_str(v).unwrap())
+        .unwrap_or_default()
+}
+
+fn plain(name: &str) -> Request {
+    req(
+        SourceKind::Command,
+        &[("name", name), ("command", "npx"), ("args", "-y\nfoo@1.0.0")],
+    )
+}
+
+#[tokio::test]
+async fn an_install_puts_the_server_on_the_governed_list_and_a_removal_takes_it_off() {
+    let r = rig();
+    for name in ["beta", "alpha"] {
+        let request = plain(name);
+        let report = r
+            .engine
+            .install(&request, &hash(&request), &BTreeMap::new(), None)
+            .await
+            .unwrap();
+        assert!(report.steps.iter().any(|s| s.id == "governed"));
+    }
+    assert_eq!(governed_list(&r), ["alpha", "beta"], "sorted, each once");
+    r.engine.grant_governed("alpha").await.unwrap();
+    assert_eq!(governed_list(&r), ["alpha", "beta"], "granting twice changes nothing");
+    r.engine.remove("alpha", false).await.unwrap();
+    assert_eq!(governed_list(&r), ["beta"]);
+    r.engine.remove("beta", false).await.unwrap();
+    assert!(
+        !r.hermes.st().config.contains_key(super::GOVERNED_ALLOWLIST),
+        "an empty list is removed, not left as []"
+    );
+}
+
+#[tokio::test]
+async fn a_refused_grant_undoes_the_add() {
+    let r = rig();
+    r.hermes.st().fail_config_set = true;
+    let request = plain("alpha");
+    let e = r
+        .engine
+        .install(&request, &hash(&request), &BTreeMap::new(), None)
+        .await
+        .unwrap_err();
+    assert_eq!(e.code(), "hx.connectors.failed");
+    assert!(r.hermes.st().servers.is_empty(), "the server was removed again");
+    assert!(governed_list(&r).is_empty());
+}
+
+#[tokio::test]
+async fn a_server_that_is_not_installed_here_is_not_granted() {
+    let r = rig();
+    let request = plain("alpha");
+    r.engine
+        .install(&request, &hash(&request), &BTreeMap::new(), None)
+        .await
+        .unwrap();
+    r.engine.revoke_governed("never-installed").await.unwrap();
+    assert_eq!(governed_list(&r), ["alpha"]);
 }

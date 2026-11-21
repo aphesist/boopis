@@ -21,7 +21,8 @@ pub mod validate;
 mod tests;
 
 pub use engine::{
-    Engine, InstallReport, LoginReport, Opener, RemoveReport, RestartDone, RestartWhen,
+    Engine, GOVERNED_ALLOWLIST, InstallReport, LoginReport, Opener, Planner, RemoveReport,
+    RestartDone, RestartWhen,
     SignInReport,
 };
 pub use ops::{GatewayMcp, Installed, McpOps, TestReport, ToolInfo};

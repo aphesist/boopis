@@ -34,6 +34,9 @@ pub struct Connector {
     pub source: String,
     /// The licence.
     pub license: String,
+    /// What it is for, as the data file lists them.
+    #[serde(default)]
+    pub categories: Vec<String>,
     /// What was verified, when, against which sources.
     pub verified: Verified,
     /// The ways to run it.

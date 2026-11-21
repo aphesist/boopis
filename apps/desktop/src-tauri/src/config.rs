@@ -58,6 +58,60 @@ pub struct Limits {
     pub chatgpt_refresh_ahead: std::time::Duration,
     /// How often the host looks whether the ChatGPT access token is due.
     pub chatgpt_refresh_every: std::time::Duration,
+    /// The store's caps and timings (`docs/STORE.md` 5.3), as data.
+    pub store: StoreLimits,
+}
+
+/// The caps and timings of the store: what the host accepts from a source, and for how long it keeps what it fetched.
+#[derive(Debug, Clone)]
+pub struct StoreLimits {
+    /// The largest catalogue response read.
+    pub max_catalogue_bytes: u64,
+    /// The largest archive downloaded.
+    pub max_archive_bytes: u64,
+    /// Entries in a staged tree, at most.
+    pub max_entries: u64,
+    /// Directory depth in a staged tree, at most.
+    pub max_depth: usize,
+    /// One staged file, at most.
+    pub max_file_bytes: u64,
+    /// The longest a connection may take.
+    pub connect_timeout: std::time::Duration,
+    /// The longest a whole request may take.
+    pub request_timeout: std::time::Duration,
+    /// Redirects followed per request (each hop is checked against the host list).
+    pub max_redirects: u32,
+    /// How old a source's cache may be before a refresh is due.
+    pub refresh_every: std::time::Duration,
+    /// The same for the MCP Registry, which is synced more often.
+    pub registry_refresh_every: std::time::Duration,
+    /// How long a staging folder lives.
+    pub stage_ttl: std::time::Duration,
+    /// Pages of the MCP Registry read in one refresh, at most (100 servers a page).
+    pub registry_max_pages: u32,
+    /// Items one source may hold in the cache.
+    pub max_items_per_source: usize,
+}
+
+impl Default for StoreLimits {
+    fn default() -> Self {
+        use std::time::Duration;
+        Self {
+            max_catalogue_bytes: 16 * 1024 * 1024,
+            max_archive_bytes: 64 * 1024 * 1024,
+            max_entries: 10_000,
+            max_depth: 32,
+            max_file_bytes: 16 * 1024 * 1024,
+            connect_timeout: Duration::from_secs(10),
+            request_timeout: Duration::from_secs(60),
+            max_redirects: 5,
+            refresh_every: Duration::from_hours(6),
+            registry_refresh_every: Duration::from_hours(1),
+            stage_ttl: Duration::from_hours(1),
+            registry_max_pages: 120,
+            max_items_per_source: 20_000,
+        }
+    }
 }
 
 impl Default for Limits {
@@ -89,6 +143,7 @@ impl Default for Limits {
             chatgpt_signin_timeout: Duration::from_mins(15),
             chatgpt_refresh_ahead: Duration::from_mins(30),
             chatgpt_refresh_every: Duration::from_mins(5),
+            store: StoreLimits::default(),
         }
     }
 }

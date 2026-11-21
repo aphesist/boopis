@@ -528,6 +528,155 @@ fn catalog_http(
     Ok(())
 }
 
+/// Where one key goes in a [`ServerSpec`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SecretTarget {
+    /// An environment variable of a local program.
+    Env(String),
+    /// An HTTP header of a remote server (`Authorization` gets `Bearer ${VAR}`).
+    Header(String),
+}
+
+/// One key a [`ServerSpec`] needs.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SpecSecret {
+    /// The field: part of the keychain reference (`secret://connector.<name>/<field>`), so lowercase letters, digits, `_`, `-`.
+    pub field: String,
+    /// The label.
+    pub title: String,
+    /// Whether the server works without it.
+    pub optional: bool,
+    /// Where it goes.
+    pub target: SecretTarget,
+}
+
+/// How a [`ServerSpec`] runs.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SpecTransport {
+    /// A local program.
+    Command {
+        /// The program.
+        command: String,
+        /// Its arguments.
+        args: Vec<String>,
+        /// Plain environment (no key).
+        env: Vec<(String, String)>,
+    },
+    /// A remote server.
+    Url {
+        /// Its address.
+        url: String,
+        /// Plain headers (no key).
+        headers: Vec<(String, String)>,
+    },
+}
+
+/// A server described by something other than the connector form: the store's registry entries and bundles. It goes through
+/// the same builder as a request, so the same validators, the same `${VAR}` references and the same hash apply, and it may
+/// carry several keys.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ServerSpec {
+    /// The name in `mcp_servers`.
+    pub name: String,
+    /// The display name.
+    pub title: String,
+    /// How it runs.
+    pub transport: SpecTransport,
+    /// Its keys.
+    pub secrets: Vec<SpecSecret>,
+    /// `package@version`, when something local is pinned.
+    pub pinned: Option<String>,
+    /// What it reaches, in words.
+    pub reaches: String,
+    /// Rows for the review, after the standard ones.
+    pub rows: Vec<(String, String)>,
+    /// Why it is installed.
+    pub why: String,
+}
+
+/// The plan for a [`ServerSpec`]; `provided` is as for [`build`].
+///
+/// # Errors
+/// `InvalidInput` with the reason in words, for anything the validators refuse.
+pub fn build_server(spec: &ServerSpec, provided: Option<&BTreeSet<String>>) -> Result<Plan> {
+    validate::name(&spec.name)?;
+    let mut b = Builder::new(&spec.name, &spec.title);
+    match &spec.transport {
+        SpecTransport::Command { command, args, env } => {
+            validate::command(command)?;
+            validate::args(command, args)?;
+            b.config.insert("command".into(), json!(command));
+            if !args.is_empty() {
+                b.config.insert("args".into(), json!(args));
+            }
+            let mut env_obj = Map::new();
+            for (k, v) in env {
+                validate::env_name(k)?;
+                validate::env_value(k, v)?;
+                env_obj.insert(k.clone(), json!(v));
+            }
+            for s in &spec.secrets {
+                let SecretTarget::Env(var_name) = &s.target else {
+                    return Err(invalid("a program takes its keys in its environment"));
+                };
+                validate::env_name(var_name)?;
+                if env_obj.contains_key(var_name) {
+                    return Err(invalid(format!("{var_name} is set and is also a key")));
+                }
+                if let Some(var) = b.need(&s.field, &s.title, s.optional, provided)? {
+                    env_obj.insert(var_name.clone(), json!(var));
+                }
+            }
+            if !env_obj.is_empty() {
+                b.config.insert("env".into(), Value::Object(env_obj));
+            }
+            b.row("Command", command);
+            b.row(
+                "Arguments",
+                if args.is_empty() { "none".to_owned() } else { validate::display_args(args) },
+            );
+        }
+        SpecTransport::Url { url, headers } => {
+            let parsed = validate::url(url)?;
+            b.config.insert("url".into(), json!(parsed.as_str()));
+            let mut hdr = Map::new();
+            for (k, v) in headers {
+                validate::plain_header(k, v)?;
+                hdr.insert(k.clone(), json!(v));
+            }
+            for s in &spec.secrets {
+                let SecretTarget::Header(name) = &s.target else {
+                    return Err(invalid("a remote server takes its keys in a header"));
+                };
+                validate::header_name(name)?;
+                if hdr.keys().any(|k| k.eq_ignore_ascii_case(name)) {
+                    return Err(invalid(format!("{name} is set and is also a key")));
+                }
+                if let Some(var) = b.need(&s.field, &s.title, s.optional, provided)? {
+                    hdr.insert(name.clone(), json!(bearer(name, &var)));
+                }
+            }
+            if !hdr.is_empty() {
+                b.config.insert("headers".into(), Value::Object(hdr));
+            }
+            b.row("Connects to", parsed.as_str());
+        }
+    }
+    b.pinned.clone_from(&spec.pinned);
+    b.row("Reaches", spec.reaches.clone());
+    b.row(
+        "Version",
+        spec.pinned
+            .clone()
+            .unwrap_or_else(|| "Not pinned: the publisher runs this server and can change it".into()),
+    );
+    for (k, v) in &spec.rows {
+        b.row(k, v.clone());
+    }
+    b.why.clone_from(&spec.why);
+    Ok(b.finish())
+}
+
 /// What the review says about the restart a key brings. Present only when the plan has a key.
 #[derive(Debug, Clone, Copy)]
 pub struct RestartInfo {
