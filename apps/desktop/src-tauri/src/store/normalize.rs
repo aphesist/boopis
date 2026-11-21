@@ -408,6 +408,26 @@ pub struct MarketBase {
     pub repo: Option<String>,
     /// The commit of that repository the marketplace was read at.
     pub commit: Option<String>,
+    /// The licence of the marketplace repository's root `LICENSE`, read by whoever checked it. Applied only to Anthropic's own
+    /// plugins under `plugins/`, never to third-party entries that happen to sit in the same repository.
+    pub root_license: Option<String>,
+}
+
+/// Anthropic's own: a path under `plugins/` of its marketplace repository, or a repository of the `anthropics` account.
+/// Everything else in its marketplace (`external_plugins/`, a git or url source elsewhere, a command) is third-party, and the
+/// README of `claude-plugins-official` says Anthropic cannot verify it.
+fn anthropic_own(source: Option<&PluginSource>, entry: &Value) -> bool {
+    match source {
+        Some(PluginSource::Git { repo, subdir, .. }) => {
+            let rel = entry.get("source").and_then(Value::as_str).is_some();
+            if rel {
+                subdir.as_deref().is_some_and(|p| p.starts_with("plugins/")) || subdir.is_none() && repo.starts_with("https://github.com/anthropics/")
+            } else {
+                repo.starts_with("https://github.com/anthropics/")
+            }
+        }
+        _ => false,
+    }
 }
 
 /// How a marketplace entry's `source` reads.
@@ -519,7 +539,8 @@ pub fn marketplace(source_id: &str, tier: Tier, source_tier: &str, doc: &Value, 
                 d.source_url = d.homepage.clone().unwrap_or_default();
                 d.pinned = sha.as_ref().map(|c| Pin { kind: PinKind::Commit, value: c.clone(), repo: Some(repo.clone()) });
                 d.components = ComponentCounts { known: true, skills: 1, ..no_components() };
-                d.tier = tier;
+                let own = source_id != "anthropic" || anthropic_own(source.as_ref(), e);
+                d.tier = if own { tier } else { Tier::NotReviewed };
                 d.proof = NamespaceProof::Github;
                 d.source_tier = Some(source_tier.to_owned());
                 let raw = serde_json::json!({"kind": "skill", "repo": repo, "subdir": sub, "sha": sha, "marketplace": market});
@@ -565,9 +586,17 @@ pub fn marketplace(source_id: &str, tier: Tier, source_tier: &str, doc: &Value, 
             mcp_servers: count_of(e.get("mcpServers")),
             ..no_components()
         };
-        d.tier = tier;
+        let own = source_id != "anthropic" || anthropic_own(source.as_ref(), e);
+        d.tier = if own { tier } else { Tier::NotReviewed };
+        if source_id == "anthropic" && own && d.license.is_none() && matches!(&source, Some(PluginSource::Git { subdir: Some(p), .. }) if p.starts_with("plugins/")) {
+            d.license.clone_from(&base.root_license);
+        }
         d.proof = if matches!(&source, Some(PluginSource::Git { repo, .. }) if repo.starts_with("https://github.com/")) { NamespaceProof::Github } else { NamespaceProof::None };
-        d.source_tier = Some(source_tier.to_owned());
+        d.source_tier = Some(if own {
+            source_tier.to_owned()
+        } else {
+            format!("listed in {market}, which says its publisher cannot verify what a third-party plugin does")
+        });
         d.source_url = base.repo.clone().unwrap_or_default();
         out.push(Entry { item: d.build(fetched_at), raw: serde_json::json!({"kind": "plugin", "entry": e, "marketplace": market, "base_commit": base.commit}) });
     }
@@ -649,26 +678,33 @@ mod tests {
 
     #[test]
     fn an_anthropic_plugin_is_pinned_by_the_commit_its_source_names_or_the_marketplaces() {
-        let base = MarketBase { repo: Some("https://github.com/anthropics/claude-plugins-official".into()), commit: Some("a".repeat(40)) };
+        let base = MarketBase { repo: Some("https://github.com/anthropics/claude-plugins-official".into()), commit: Some("a".repeat(40)), root_license: Some("Apache-2.0".into()) };
         let items = marketplace("anthropic", Tier::Verified, "Anthropic's marketplace", &serde_json::from_str(OFFICIAL).unwrap(), &base, NOW);
         assert_eq!(items.len(), 6);
         let sub = by_id(&items, "anthropic:42crunch-api-security-testing");
-        assert_eq!((sub.kind, sub.tier, sub.publisher.as_str()), (ItemKind::Plugin, Tier::Verified, "42Crunch"));
+        assert_eq!((sub.kind, sub.tier, sub.publisher.as_str()), (ItemKind::Plugin, Tier::NotReviewed, "42Crunch"), "a third-party git-subdir source");
+        assert!(sub.provenance.source_tier.as_deref().unwrap().contains("cannot verify"));
         let pin = sub.pinned.as_ref().unwrap();
         assert_eq!(pin.kind, PinKind::Commit);
         assert_eq!(pin.value.len(), 40);
         assert!(pin.repo.as_deref().unwrap().starts_with("https://github.com/"));
         let rel = by_id(&items, "anthropic:asana");
+        assert_eq!(rel.tier, Tier::NotReviewed, "external_plugins are third-party");
         assert_eq!(rel.pinned.as_ref().unwrap().value, "a".repeat(40), "a relative source is pinned at the marketplace's commit");
+        let own = by_id(&items, "anthropic:agent-sdk-dev");
+        assert_eq!((own.tier, own.license.as_str()), (Tier::Verified, "Apache-2.0"), "plugins/ is Anthropic's own, under the repository's root licence");
+        assert_eq!(own.provenance.source_tier.as_deref(), Some("Anthropic's marketplace"));
+        assert_eq!(by_id(&items, "anthropic:agentforce-adlc").tier, Tier::NotReviewed, "a url source outside anthropics");
+        assert_eq!(by_id(&items, "anthropic:xcode").tier, Tier::NotReviewed);
+        assert_eq!(by_id(&items, "anthropic:github").license, NOT_STATED, "a third-party entry does not take the repository's licence");
         let cmd = by_id(&items, "anthropic:xcode");
         assert!(cmd.pinned.is_none(), "a command source is never pinned, so never installed");
-        assert_eq!(rel.provenance.source_tier.as_deref(), Some("Anthropic's marketplace"));
-        assert_eq!(rel.license, NOT_STATED, "no licence is invented");
+
     }
 
     #[test]
     fn a_relative_source_with_no_known_commit_is_listed_unpinned() {
-        let base = MarketBase { repo: Some("https://github.com/anthropics/claude-plugins-official".into()), commit: None };
+        let base = MarketBase { repo: Some("https://github.com/anthropics/claude-plugins-official".into()), commit: None, root_license: None };
         let items = marketplace("anthropic", Tier::Verified, "x", &serde_json::from_str(OFFICIAL).unwrap(), &base, NOW);
         assert!(by_id(&items, "anthropic:asana").pinned.is_none());
         assert!(by_id(&items, "anthropic:42crunch-api-security-testing").pinned.is_some(), "its own sha still pins it");
@@ -676,13 +712,15 @@ mod tests {
 
     #[test]
     fn a_skills_marketplace_lists_each_skill_once_at_the_marketplaces_commit() {
-        let base = MarketBase { repo: Some("https://github.com/anthropics/skills".into()), commit: Some("b".repeat(40)) };
+        let base = MarketBase { repo: Some("https://github.com/anthropics/skills".into()), commit: Some("b".repeat(40)), root_license: None };
         let items = marketplace("anthropic", Tier::Verified, "Anthropic's skills", &serde_json::from_str(SKILLS).unwrap(), &base, NOW);
         let skills: Vec<_> = items.iter().filter(|e| e.item.kind == ItemKind::Skill).collect();
         assert!(skills.len() >= 16, "{}", skills.len());
         let pdf = by_id(&items, "anthropic:anthropics/skills/skills/pdf");
         assert_eq!(pdf.title, "pdf");
         assert_eq!(pdf.pinned.as_ref().unwrap().value, "b".repeat(40));
+        assert_eq!(pdf.tier, Tier::Verified, "anthropics/skills is Anthropic's own");
+        assert_eq!(pdf.license, NOT_STATED, "each skill carries its own LICENSE.txt, read when it is staged");
         assert_eq!(items.iter().filter(|e| e.item.id.ends_with("/skills/pdf")).count(), 1);
         let raw = &items.iter().find(|e| e.item.id.ends_with("/skills/pdf")).unwrap().raw;
         assert_eq!(raw["subdir"], "skills/pdf");

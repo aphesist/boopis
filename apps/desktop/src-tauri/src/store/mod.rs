@@ -16,4 +16,6 @@ pub mod stage;
 pub mod types;
 
 #[cfg(test)]
+mod net_tests;
+#[cfg(test)]
 mod stage_tests;
