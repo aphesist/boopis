@@ -47,8 +47,12 @@ export function hostsWords(h: StoreHosts, verified?: string | null): string {
   const list = h.hosts.length ? h.hosts.join(', ') : 'no host';
   return h.basis === 'verified' ? `${list}. Checked by boopis${verified ? ' on ' + verified : ''}.` : `${list}. Declared by the publisher, not enforced.`;
 }
+export const REMOTE_WORDS = 'Hosted by the publisher, can change without a new version.';
+/** a hosted connector has no code or digest to pin: the host pins it as `remote:<url>` */
+export const isRemote = (p: StorePin | null | undefined): boolean => !!p?.repo?.startsWith('remote:');
 export function pinWords(p: StorePin | null): string {
   if (!p) return 'Not pinned: boopis will not install it.';
+  if (isRemote(p)) return 'Not pinned to code: the service is hosted by the publisher.';
   const kind: Record<StorePin['type'], string> = { commit: 'commit', 'archive-sha256': 'archive hash', 'tree-sha256': 'folder hash', 'oci-digest': 'image digest', version: 'version' };
   return `${kind[p.type]} ${p.value}`;
 }
@@ -114,7 +118,9 @@ const WARN_LABEL = { strong: 'Read this first', caution: 'Take care', info: 'Not
 /** the review as a `connector`-kind form: plan sections as rows, the consent items, the hash, keys as secret fields, and a hold */
 export function reviewSpec(plan: InstallPlan, o: ReviewOpts = {}): FormSpec {
   const rows: Array<readonly [string, string?]> = [];
-  const warnings = [...plan.warnings].sort((a, b) => ['strong', 'caution', 'info'].indexOf(a.level) - ['strong', 'caution', 'info'].indexOf(b.level));
+  const warnings = [...plan.warnings];
+  if (isRemote(plan.pinned) && !warnings.some((w) => /remote|hosted/i.test(w.code + ' ' + w.text))) warnings.push({ code: 'remote-hosted', level: 'caution', text: 'This connector is a service the publisher hosts. ' + REMOTE_WORDS + ' What you approve now is its address, not its code.' });
+  warnings.sort((a, b) => ['strong', 'caution', 'info'].indexOf(a.level) - ['strong', 'caution', 'info'].indexOf(b.level));
   for (const w of warnings) rows.push([WARN_LABEL[w.level], w.text]);
   if (o.update) {
     rows.push(['Changes', o.update.changes.length ? o.update.changes.map((c) => `${c.change} ${c.type} ${c.name}`).join('; ') : 'No component changes.']);
@@ -145,7 +151,7 @@ export function reviewSpec(plan: InstallPlan, o: ReviewOpts = {}): FormSpec {
   return {
     id: 'store.review.' + plan.item_id, kind: 'connector', title: (o.update ? 'Update ' : 'Install ') + plan.title, origin: { kind: 'host' }, defer: false,
     why: `${KIND_LABEL[plan.kind]} by ${plan.publisher}${plan.version ? ', version ' + plan.version : ''}. ${strong ? 'Nobody has vouched for everything in it, so read each line.' : 'This is what it adds and what it runs.'}`,
-    schema: { properties, required }, contents: rows, pinned: plan.pinned.value,
+    schema: { properties, required }, contents: rows, pinned: isRemote(plan.pinned) ? (plan.pinned.repo ?? plan.pinned.value) : plan.pinned.value,
     effect: sessions + ' It takes effect in new sessions.', name: plan.title,
     submit: { label: o.update ? 'Update' : 'Install', hold: true }, cancel: { label: 'Back' }, receipt: (o.update ? 'Updated ' : 'Installed ') + plan.title + '. It takes effect in new sessions.'
   };

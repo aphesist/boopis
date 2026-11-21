@@ -71,6 +71,20 @@ describe('the store view', () => {
     expect(text(root)).toContain('is installed');
     expect(engineWordsIn(root)).toEqual([]);
   });
+  it('offers a fresh review when the plan changed, and only this bot where the project forbids hooks', async () => {
+    const { root, view, store } = mount({ empty: true }, '~/work/api');
+    const bad = { ...store, install: () => Promise.reject({ code: 'hx.store.plan_changed', message: 'What would be installed changed since the card was shown, so nothing was installed. Review it again.' }) };
+    const host = document.createElement('div'); document.body.append(host);
+    const v2 = mountStore(host, { store: bad, toast: () => undefined, project: () => '~/work/api', settle: 0, enter: false });
+    v2.show('browse', 'anthropic:example-lint-kit'); await tick(20);
+    host.querySelector<HTMLElement>('.hx-store__sheet .ui-btn--primary')?.click(); await tick(40);
+    expect(host.textContent).toContain('This project has engine plugins and plugin hooks turned off');
+    expect(host.querySelector('[role=radio][data-value="bot-project"]')).toBeNull();
+    const card = host.querySelector('hx-card') as never;
+    await submitForm(card, true); await tick(30);
+    expect(host.textContent).toContain('Review again');
+    void root; void view;
+  });
   it('Installed has switches, an update with its diff, Roll back and Remove', async () => {
     const { root, view, store } = mount();
     await store.checkUpdates();

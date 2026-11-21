@@ -51,6 +51,11 @@ const killListed = (s: StoreProvider): StoreProvider => {
   if (have) w.update((l) => l.map((r) => (r.item_id === have.item_id ? { ...r, kill_listed: { reason: 'Its source took it down after a report', by: 'source' as const } } : r)));
   return s;
 };
+const hosted = (s: StoreProvider): StoreProvider => withItems((i) => (i.id === 'mcp-registry:com.example/tickets' && i.pinned ? { ...i, pinned: { ...i.pinned, repo: 'remote:https://mcp.example.com/' } } : i))({
+  ...s,
+  detail: async (id) => { const d = await s.detail(id); return d.item.pinned ? { ...d, item: { ...d.item, pinned: { ...d.item.pinned, repo: 'remote:https://mcp.example.com/' } } } : d; },
+  review: async (id, sc) => { const r = await s.review(id, sc); return { ...r, plan: { ...r.plan, pinned: { ...r.plan.pinned, repo: 'remote:https://mcp.example.com/' } } }; }
+});
 const LONG = 'A connector with an extremely long name that goes on and on without any sensible place to stop, ending in a_very_long_unbroken_identifier_that_must_not_push_the_row_wider_than_the_window';
 
 const browse: Story = {
@@ -74,6 +79,7 @@ const detail: Story = {
     'a recommended connector': view(['typical'], null, { item: 'boopis:firecrawl' }),
     'not reviewed, with undeclared egress': view(['variant'], null, { item: 'mcp-registry:com.example/tickets' }),
     'an engine plugin (runs inside the engine)': view(['variant'], null, { item: 'engine-plugins:example-metrics' }),
+    'a hosted connector': view(['variant'], null, { item: 'mcp-registry:com.example/tickets', patch: hosted }),
     'taken down by its source': view(['error'], null, { item: 'engine-plugins:example-old-sync' }),
     'not pinned (cannot be installed)': view(['disabled'], null, { item: 'github:example-org/loose-skill' }),
     'installed, with an update': view(['variant'], async (c) => { await c.store.checkUpdates(); c.view.show('browse', 'anthropic:example-lint-kit'); await c.wait(150); }),
@@ -87,6 +93,7 @@ const review: Story = {
     'a connector with a key': view(['typical'], (c) => click(c, '.hx-store__sheet .ui-btn--primary, .hx-store__sheet button[class*="primary"]', 250), { item: 'boopis:firecrawl', mock: { empty: true } }),
     'an engine plugin (strong warning)': view(['variant'], (c) => click(c, '.hx-store__sheet button[class*="primary"]', 250), { item: 'engine-plugins:example-metrics', mock: { empty: true } }),
     'not reviewed (strong warning)': view(['variant'], (c) => click(c, '.hx-store__sheet button[class*="primary"]', 250), { item: 'github:example-org/changelog-skills' }),
+    'a hosted connector (standing caution)': view(['variant'], (c) => click(c, '.hx-store__sheet button[class*="primary"]', 250), { item: 'mcp-registry:com.example/tickets', patch: hosted }),
     'in a project (scope choice)': view(['variant'], (c) => click(c, '.hx-store__sheet button[class*="primary"]', 250), { item: 'boopis:release-notes', project: '~/work/api' }),
     'an update with its diff': view(['variant'], async (c) => { await c.store.checkUpdates(); c.view.show('browse', 'anthropic:example-lint-kit'); await c.wait(150); await click(c, '.hx-store__sheet button[class*="primary"]', 250); }),
     'could not be checked': view(['error'], (c) => click(c, '.hx-store__sheet button[class*="primary"]', 250), { item: 'boopis:release-notes', patch: (s) => ({ ...s, review: () => Promise.reject({ code: 'hx.store.digest_mismatch', message: 'What was downloaded is not what the catalogue promised, so it was thrown away and nothing was installed.' }) }) }),

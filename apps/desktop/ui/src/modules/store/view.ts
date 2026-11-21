@@ -11,7 +11,7 @@ import type { FormOutcome, FormSpec, FormsSource, InstallPlan, InstallReceipt, S
 import '../cards';
 import { useFormsHost } from '../cards/forms-host';
 import {
-  ENGINE_PLUGIN_NOTE, KIND_FILTERS, KIND_LABEL, STATE_WORDS, TIER_TIPS, TIER_WORDS, ageWords, countsWords, errorText, filterOf, freshness, hostsWords, isFront, licenseWords, pinWords, plural,
+  errorCode, ENGINE_PLUGIN_NOTE, REMOTE_WORDS, isRemote, KIND_FILTERS, KIND_LABEL, STATE_WORDS, TIER_TIPS, TIER_WORDS, ageWords, countsWords, errorText, filterOf, freshness, hostsWords, isFront, licenseWords, pinWords, plural,
   reviewSpec, scanWords, sourceState, stateOf
 } from './model';
 import { projectSwitch } from './policy';
@@ -162,6 +162,7 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
     const warn: string[] = [];
     if (it.removed) warn.push(R('Taken down', `${it.removed.reason}. It cannot be installed${d.installed ? ' and is switched off from the next session' : ''}.`));
     if (!it.pinned) warn.push(R('Not pinned', 'This item is not pinned to an exact version, so boopis will not install it.'));
+    if (isRemote(it.pinned)) warn.push(R('Hosted by the publisher', REMOTE_WORDS));
     if (it.tier === 'not-reviewed') warn.push(R('Not reviewed', TIER_TIPS['not-reviewed']));
     if (it.kind === 'engine-plugin') warn.push(R('Runs inside the engine', ENGINE_PLUGIN_NOTE));
     if (d.update?.status === 'available') warn.push(R('Update available', d.update.widened ? 'It adds new code, hosts or keys. The review shows what.' : 'A newer version is listed. The review shows what changes.'));
@@ -205,17 +206,33 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
     const diff = mode === 'update' ? updatesList().find((d) => d.item_id === plan.item_id) ?? null : null;
     const result = el('div', { class: 'hx-store__stack', 'aria-live': 'polite' });
     const kids: Node[] = [];
+    const scopeBox = el('div', { class: 'hx-store__scope' });
     if (project && mode === 'install') {
-      const seg = ui.segmented({ mode: 'radio', size: 's', label: 'Install for', value: plan.scope.level, options: [{ value: 'bot', label: 'This bot' }, { value: 'bot-project', label: 'This bot, trusted here', ariaLabel: 'This bot, trusted here, in ' + project }] });
-      seg.addEventListener('ui:change', (e) => { const level = (e as CustomEvent<{ value: 'bot' | 'bot-project' }>).detail.value; void startReview(plan.item_id, mode, from, { level, bot: plan.scope.bot, ...(level === 'bot-project' ? { project } : {}) }); });
-      kids.push(el('div', { class: 'hx-store__scope' }, seg));
+      const drawScope = (blocked: boolean): void => {
+        const opts = [{ value: 'bot', label: 'This bot' }, ...(blocked ? [] : [{ value: 'bot-project', label: 'This bot, trusted here', ariaLabel: 'This bot, trusted here, in ' + project }])];
+        const seg = ui.segmented({ mode: 'radio', size: 's', label: 'Install for', value: blocked ? 'bot' : plan.scope.level, options: opts });
+        seg.addEventListener('ui:change', (e) => { const level = (e as CustomEvent<{ value: 'bot' | 'bot-project' }>).detail.value; void startReview(plan.item_id, mode, from, { level, bot: plan.scope.bot, ...(level === 'bot-project' ? { project } : {}) }); });
+        scopeBox.replaceChildren(seg, ...(blocked ? [el('p', { class: 'ui-field__hint', role: 'status' }, 'This project has engine plugins and plugin hooks turned off, so this plugin cannot be trusted here. It installs for this bot alone, and you can turn the switch off under Installed.')] : []));
+      };
+      drawScope(false);
+      const hasHooks = plan.components.some((c) => c.type === 'hook');
+      if (hasHooks) store.projectPolicy(project).then((p) => { if (p.effective) drawScope(true); }).catch(() => undefined);
+      kids.push(scopeBox);
     }
     const spec = reviewSpec(plan, { update: diff });
     const c = card(spec, sinkOf({
       async submit(_id, o) {
         const restart = o.values['restart'];
         let r: InstallReceipt;
-        try { r = await store.install({ stage_id: stage.stage_id, plan_hash: plan.plan_hash, ...(Object.keys(o.secrets).length ? { secrets: o.secrets } : {}), ...(restart === 'now' || restart === 'when-idle' ? { restart } : {}) }); } catch (e) { throw new Error(errorText(e)); }
+        try { r = await store.install({ stage_id: stage.stage_id, plan_hash: plan.plan_hash, ...(Object.keys(o.secrets).length ? { secrets: o.secrets } : {}), ...(restart === 'now' || restart === 'when-idle' ? { restart } : {}) }); } catch (e) {
+          /* what was shown is no longer what would be installed (the plan changed, the download is gone, the engine restarted meanwhile): the way on is a fresh review */
+          if (['hx.store.plan_changed', 'hx.store.stage_missing'].includes(errorCode(e))) {
+            const again = ui.button({ label: 'Review again', variant: 'primary', size: 's' });
+            again.addEventListener('click', () => { void startReview(plan.item_id, mode, from); });
+            result.replaceChildren(el('p', { class: 'ui-field__hint', role: 'status' }, 'Nothing was installed. Review it again to see what it would do now.'), again);
+          }
+          throw new Error(errorText(e));
+        }
         later(() => { drawDone(r, result, from); });
       },
       cancel() { void openItem(plan.item_id, from); return Promise.resolve(); }

@@ -54,6 +54,12 @@ describe('the review card', () => {
     const unreviewed = reviewSpec({ ...plan('boopis:firecrawl'), tier: 'not-reviewed', warnings: [{ code: 'unreviewed', level: 'strong', text: 'Nobody has reviewed this item.' }] });
     expect(unreviewed.contents?.[0]).toEqual(['Read this first', 'Nobody has reviewed this item.']);
   });
+  it('warns plainly for a hosted connector, in the plan and never hidden', () => {
+    const p = { ...plan('boopis:firecrawl'), pinned: { type: 'version' as const, value: '1', repo: 'remote:https://mcp.example.com/' }, warnings: [] };
+    const rows = reviewSpec(p).contents ?? [];
+    expect(rows[0]?.[0]).toBe('Take care');
+    expect(rows[0]?.[1]).toContain('can change without a new version');
+  });
   it('asks for a key as a secret field and for the restart choice while a turn runs', () => {
     const p = { ...plan('boopis:firecrawl'), sessions_open: 1 };
     const spec = reviewSpec(p);
