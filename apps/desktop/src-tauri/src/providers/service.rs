@@ -15,8 +15,8 @@ use super::check::{KeyCheck, check_key, timeout};
 use super::endpoint::EndpointRequest;
 use super::endpoints::{check, clean_key, models_value, reserved, slug_for};
 use super::http::{Address, Transport};
+use super::signin::Signins;
 use super::{ApiMode, Config, Entry, ProviderState, ProviderStatus, Way, WayKind, catalogue};
-use crate::chatgpt::{self, ChatGpt};
 use crate::claude::{self, ClaudeCli};
 use crate::error::{Error, Result};
 use crate::secrets::SecretStore;
@@ -92,7 +92,7 @@ pub struct Providers {
     secrets: Arc<dyn SecretStore>,
     transport: Arc<dyn Transport>,
     claude: Option<Arc<dyn ClaudeCli>>,
-    chatgpt: Option<Arc<ChatGpt>>,
+    signins: Option<Arc<Signins>>,
 }
 
 impl Providers {
@@ -108,7 +108,7 @@ impl Providers {
             secrets,
             transport,
             claude: None,
-            chatgpt: None,
+            signins: None,
         }
     }
 
@@ -119,10 +119,10 @@ impl Providers {
         self
     }
 
-    /// Read the ChatGPT sign-in's state from this service.
+    /// Read the sign-ins the host owns (ChatGPT's, Copilot's, SuperGrok's, and the user's own grok program) from these.
     #[must_use]
-    pub fn with_chatgpt(mut self, chatgpt: Arc<ChatGpt>) -> Self {
-        self.chatgpt = Some(chatgpt);
+    pub fn with_signins(mut self, signins: Arc<Signins>) -> Self {
+        self.signins = Some(signins);
         self
     }
 
@@ -135,6 +135,9 @@ impl Providers {
     pub async fn list(&self) -> Result<Vec<ProviderState>> {
         let env = dotenv_names(&self.ops.home());
         let keyed = self.key_states(env).await?;
+        // the sign-in ways the host owns, read once: ChatGPT's, Copilot's and xAI's (`Xai::way_states`, which leaves
+        // `xai.cli` out while the SuperGrok sign-in is in use)
+        let owned = self.owned_signins(&keyed).await;
         let mut out = Vec::new();
         for (entry, way) in catalogue().ways().filter(|(_, w)| !w.hidden) {
             match way.kind {
@@ -143,13 +146,33 @@ impl Providers {
                     last_local(&way.id)
                         .unwrap_or_else(|| ProviderState::not_found(&entry.id, &way.id)),
                 ),
-                WayKind::Signin => out.push(self.signin_state(entry, way).await),
+                WayKind::Signin => out.extend(self.signin_state(entry, way, &owned).await),
                 // the row that adds an endpoint is not a connection: the endpoints it made are listed below
                 WayKind::Custom => {}
             }
         }
         out.extend(self.endpoint_states().await?);
         Ok(out)
+    }
+
+    /// What the host's own sign-ins say, by way id; the read's failure, when it failed.
+    async fn owned_signins(
+        &self,
+        keyed: &BTreeMap<String, ProviderState>,
+    ) -> std::result::Result<BTreeMap<String, ProviderState>, Error> {
+        let Some(signins) = &self.signins else {
+            return Ok(BTreeMap::new());
+        };
+        let xai_key = keyed
+            .get(crate::xai::WAY_KEY)
+            .cloned()
+            .unwrap_or_else(|| ProviderState::needs_key(crate::xai::PROVIDER, crate::xai::WAY_KEY));
+        Ok(signins
+            .states(xai_key)
+            .await?
+            .into_iter()
+            .map(|s| (s.way.clone(), s))
+            .collect())
     }
 
     async fn key_states(&self, env: Vec<String>) -> Result<BTreeMap<String, ProviderState>> {
@@ -172,30 +195,47 @@ impl Providers {
         .map_err(|e| Error::Io(e.to_string()))
     }
 
-    /// A sign-in way the host or Claude Code owns: its state, read from its owner. A sign-in nothing owns yet is an error
-    /// state saying so, never a guess.
-    async fn signin_state(&self, entry: &Entry, way: &Way) -> ProviderState {
+    /// A sign-in way the host or Claude Code owns: its state, read from its owner. A way that is offered only while the entry's
+    /// sign-in is unused is left out while it is in use (`None`). A sign-in nothing owns yet is an error state saying so,
+    /// never a guess.
+    async fn signin_state(
+        &self,
+        entry: &Entry,
+        way: &Way,
+        owned: &std::result::Result<BTreeMap<String, ProviderState>, Error>,
+    ) -> Option<ProviderState> {
         let owner = way.signin.as_ref().map_or("", |s| s.owner.as_str());
-        match (owner, &self.claude, &self.chatgpt) {
-            ("claude.rs", Some(c), _) => claude_state(entry, way, &c.probe().await),
-            ("chatgpt/", _, Some(g)) => match g.status().await {
-                Ok(s) => chatgpt_state(entry, way, &s),
-                Err(e) => ProviderState::error(
+        if owner == "claude.rs" {
+            if let Some(c) = &self.claude {
+                return Some(claude_state(entry, way, &c.probe().await));
+            }
+        }
+        match owned {
+            Ok(map) => {
+                if let Some(state) = map.get(&way.id) {
+                    return Some(state.clone());
+                }
+                if self.signins.is_some() && !way.offered_when.offered(true) {
+                    return None;
+                }
+            }
+            Err(e) => {
+                return Some(ProviderState::error(
                     &entry.id,
                     &way.id,
                     WayKind::Signin,
                     e.code(),
                     "boopis could not read the sign-in.",
-                ),
-            },
-            _ => ProviderState::error(
-                &entry.id,
-                &way.id,
-                WayKind::Signin,
-                "hx.provider.unsupported",
-                "This sign-in is not available in this version yet.",
-            ),
+                ));
+            }
         }
+        Some(ProviderState::error(
+            &entry.id,
+            &way.id,
+            WayKind::Signin,
+            "hx.provider.unsupported",
+            "This sign-in is not available in this version yet.",
+        ))
     }
 
     async fn endpoint_states(&self) -> Result<Vec<ProviderState>> {
@@ -532,28 +572,6 @@ fn claude_state(entry: &Entry, way: &Way, p: &claude::Probe) -> ProviderState {
     }
     s.checked_at = Some(now_ms());
     s
-}
-
-fn chatgpt_state(entry: &Entry, way: &Way, s: &chatgpt::Status) -> ProviderState {
-    let mut out = match s.state {
-        chatgpt::State::SignedIn => ProviderState::connected(&entry.id, &way.id, WayKind::Signin),
-        chatgpt::State::SignedOut => ProviderState::signed_out(&entry.id, &way.id),
-        chatgpt::State::SigningIn => match &s.code {
-            Some(c) => ProviderState::signing_in(
-                &entry.id,
-                &way.id,
-                super::SigninCode {
-                    verification_url: c.verification_url.clone(),
-                    user_code: c.user_code.clone(),
-                    // OpenAI's code lives 15 minutes (`chatgpt/oauth.rs`); the status does not carry the exact moment
-                    expires_at: now_ms() + 15 * 60 * 1000,
-                },
-            ),
-            None => ProviderState::signed_out(&entry.id, &way.id),
-        },
-    };
-    out.plan.clone_from(&s.plan);
-    out
 }
 
 fn key_state(

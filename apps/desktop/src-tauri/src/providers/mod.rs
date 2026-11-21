@@ -82,6 +82,18 @@ pub enum OfferedWhen {
     SigninUnused,
 }
 
+impl OfferedWhen {
+    /// Whether a way with this rule is offered now, given whether its entry's sign-in is in use (connected, or waiting for the
+    /// person). `always` is always; `signin_unused` only while the sign-in is not in use.
+    #[must_use]
+    pub const fn offered(self, signin_in_use: bool) -> bool {
+        match self {
+            Self::Always => true,
+            Self::SigninUnused => !signin_in_use,
+        }
+    }
+}
+
 /// A group of entries in Settings.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]

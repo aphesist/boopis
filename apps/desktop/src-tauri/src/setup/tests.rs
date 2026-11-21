@@ -241,7 +241,7 @@ impl HermesOps for Fake {
         Ok(match provider {
             "openai-codex" | "openai-api" => self.chatgpt_models.lock().unwrap().clone(),
             "gemini" => self.gemini_models.lock().unwrap().clone(),
-            "xai" => self.xai_models.lock().unwrap().clone(),
+            "xai" | "xai-oauth" | "grok-acp" => self.xai_models.lock().unwrap().clone(),
             other => panic!("setup asked the catalogue of {other}"),
         })
     }
@@ -3510,5 +3510,220 @@ async fn a_bad_answer_to_the_openai_key_form_is_invalid() {
         e.code(),
         "hx.setup.invalid_answer",
         "an answer to another form"
+    );
+}
+
+// ---- ADR-0039: the xAI ways that are not a key (the SuperGrok sign-in, the user's own grok program)
+
+use crate::xai::cli::{GrokCli, Probe as GrokProbe, State as GrokState};
+
+struct FakeGrok(Mutex<GrokProbe>);
+
+#[async_trait]
+impl GrokCli for FakeGrok {
+    async fn probe(&self) -> GrokProbe {
+        self.0.lock().unwrap().clone()
+    }
+}
+
+fn grok(state: GrokState) -> Arc<FakeGrok> {
+    Arc::new(FakeGrok(Mutex::new(crate::xai::cli::assess(
+        state != GrokState::NotInstalled,
+        Some("grok 1.0.41"),
+        (state == GrokState::SignedIn).then_some("You are logged in with SuperGrok"),
+    ))))
+}
+
+fn xai_rig_with(r: &Rig, signed_in: bool, program: &Arc<FakeGrok>) -> Setup {
+    let xai = crate::xai::Xai::new(
+        r.store.clone(),
+        Arc::new(NoNetwork),
+        crate::xai::Timing::app(),
+    );
+    if signed_in {
+        r.store.set("boopis.xai", "access_token", "at").unwrap();
+        r.store.set("boopis.xai", "refresh_token", "rt").unwrap();
+    }
+    r.setup().with_xai(Arc::new(xai)).with_grok(program.clone())
+}
+
+/// "Change models" with a Setup that knows the xAI sign-in and the grok program, then the pick.
+async fn choose_with(r: &Rig, setup: Setup, choice: &str) -> super::Status {
+    r.setup().reopen_models().unwrap();
+    let s = setup.advance(None, false).await.unwrap();
+    assert_eq!(s.form.as_ref().unwrap().form_id, "setup.ladder");
+    let a = answer("setup.ladder", json!({"choice": choice}), json!({}));
+    setup.advance(Some(a), false).await.unwrap()
+}
+
+#[tokio::test]
+async fn the_models_question_offers_the_program_only_while_the_supergrok_sign_in_is_not_in_use() {
+    // signed out: both are offered
+    let r = rig(json!({}));
+    let program = grok(GrokState::SignedIn);
+    let form = {
+        let setup = xai_rig_with(&r, false, &program);
+        setup.advance(None, false).await.unwrap();
+        setup
+            .advance(Some(answer("setup.config", json!({}), json!({}))), false)
+            .await
+            .unwrap()
+            .form
+            .unwrap()
+    };
+    let ids = enum_of(&form, "choice");
+    assert!(
+        ids.contains(&"xai-subscription".to_owned()) && ids.contains(&"grok-cli".to_owned()),
+        "{ids:?}"
+    );
+    assert!(ids.contains(&"xai".to_owned()), "the key way stays");
+
+    // signed in: the program is not offered
+    let r = rig(json!({}));
+    let form = {
+        let setup = xai_rig_with(&r, true, &program);
+        setup.advance(None, false).await.unwrap();
+        setup
+            .advance(Some(answer("setup.config", json!({}), json!({}))), false)
+            .await
+            .unwrap()
+            .form
+            .unwrap()
+    };
+    let ids = enum_of(&form, "choice");
+    assert!(ids.contains(&"xai-subscription".to_owned()));
+    assert!(!ids.contains(&"grok-cli".to_owned()), "{ids:?}");
+}
+
+#[tokio::test]
+async fn the_supergrok_choice_asks_for_the_sign_in_then_writes_its_own_route_once_grok_is_on() {
+    let r = rig(json!({}));
+    let program = grok(GrokState::SignedOut);
+    at_models(&r).await;
+    // not signed in: the card's form, with the sign-in named (never a command)
+    let s = choose_with(&r, xai_rig_with(&r, false, &program), "xai-subscription").await;
+    let form = s.form.unwrap();
+    assert_eq!(form.form_id, "setup.xai");
+    assert_eq!(form.signin.as_ref().unwrap().provider, "xai");
+    assert!(
+        form.body.contains("API key"),
+        "the way out of a refusal is named"
+    );
+    assert!(r.fake.config_get(LADDER).await.unwrap().is_none());
+
+    // signed in, Grok off: nothing is written, and the line says why
+    let s = choose_with(&r, xai_rig_with(&r, true, &program), "xai-subscription").await;
+    assert!(s.done, "{:?}", s.steps);
+    assert!(r.fake.config_get(LADDER).await.unwrap().is_none());
+    assert!(s.receipt.unwrap().lines.join("\n").contains("turn on Grok"));
+
+    // Grok on: the ladder and the default model are the sign-in's provider, and nothing names the key's
+    let mut st = super::state::load(&r.fake.home).unwrap();
+    st.set_heavy("grok", true);
+    super::state::save(&r.fake.home, &st).unwrap();
+    let s = choose_with(&r, xai_rig_with(&r, true, &program), "xai-subscription").await;
+    assert!(s.done, "{:?}", s.steps);
+    assert_eq!(
+        r.fake.config_get(LADDER).await.unwrap().unwrap(),
+        json!({"tiers": [{"name": "grok", "model": "xai-oauth/grok-4.7"}]})
+    );
+    assert_eq!(
+        r.fake.config_get("model.provider").await.unwrap(),
+        Some(json!("xai-oauth"))
+    );
+    assert_eq!(
+        r.fake.config_get("model.default").await.unwrap(),
+        Some(json!("grok-4.7"))
+    );
+    // no key or token in the configuration
+    let cfg = r.fake.config.lock().unwrap().to_string();
+    assert!(!cfg.contains("\"at\"") && !cfg.contains("\"rt\""), "{cfg}");
+
+    // switching to the key way rewrites the route whole: no tier is left naming the sign-in
+    r.store.set("boopis.provider.xai", "api_key", KEY).unwrap();
+    assert!(choose_again(&r, "xai").await.done);
+    assert_eq!(
+        r.fake.config_get(LADDER).await.unwrap().unwrap(),
+        json!({"tiers": [{"name": "grok", "model": "xai/grok-4.7"}]})
+    );
+    assert_eq!(
+        r.fake.config_get("model.provider").await.unwrap(),
+        Some(json!("xai"))
+    );
+}
+
+#[tokio::test]
+async fn the_program_choice_looks_at_grok_says_how_to_install_it_and_writes_its_own_route() {
+    let r = rig(json!({}));
+    at_models(&r).await;
+    // not installed: the install command, no sign-in button (grok does its own login)
+    let missing = grok(GrokState::NotInstalled);
+    let form = choose_with(&r, xai_rig_with(&r, false, &missing), "grok-cli")
+        .await
+        .form
+        .unwrap();
+    assert_eq!(form.form_id, "setup.grok");
+    assert!(form.title.contains("Install"));
+    assert!(form.body.contains("grok login") && form.body.contains("x.ai/cli/install"));
+    assert!(form.signin.is_none());
+    // installed, signed out
+    let out = grok(GrokState::SignedOut);
+    let form = choose_with(&r, xai_rig_with(&r, false, &out), "grok-cli")
+        .await
+        .form
+        .unwrap();
+    assert!(
+        form.title.contains("Sign in") && form.contents.iter().any(|c| c.1.contains("grok login"))
+    );
+
+    // ready, but the engine lacks the plugin: said plainly
+    let ready = grok(GrokState::SignedIn);
+    r.setup().reopen_models().unwrap();
+    let setup = xai_rig_with(&r, false, &ready);
+    setup.advance(None, false).await.unwrap();
+    let e = setup
+        .advance(
+            Some(answer(
+                "setup.ladder",
+                json!({"choice": "grok-cli"}),
+                json!({}),
+            )),
+            false,
+        )
+        .await;
+    assert!(
+        format!("{e:?}").contains("subscription_unavailable") || e.is_err(),
+        "{e:?}"
+    );
+    r.fake.plugins.lock().unwrap().push(PluginEntry {
+        name: "grok-acp".into(),
+        enabled: false,
+    });
+    // ready, plugin present but off: it is enabled (the user chose it just now), Grok off writes no ladder
+    let s = choose_with(&r, xai_rig_with(&r, false, &ready), "grok-cli").await;
+    assert!(s.done, "{:?}", s.steps);
+    assert!(
+        r.fake
+            .plugins
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|p| p.name == "grok-acp" && p.enabled)
+    );
+    assert!(r.fake.config_get(LADDER).await.unwrap().is_none());
+
+    // Grok on: the ladder is grok-acp's
+    let mut st = super::state::load(&r.fake.home).unwrap();
+    st.set_heavy("grok", true);
+    super::state::save(&r.fake.home, &st).unwrap();
+    let s = choose_with(&r, xai_rig_with(&r, false, &ready), "grok-cli").await;
+    assert!(s.done, "{:?}", s.steps);
+    assert_eq!(
+        r.fake.config_get(LADDER).await.unwrap().unwrap(),
+        json!({"tiers": [{"name": "grok", "model": "grok-acp/grok-4.7"}]})
+    );
+    assert_eq!(
+        r.fake.config_get("model.provider").await.unwrap(),
+        Some(json!("grok-acp"))
     );
 }

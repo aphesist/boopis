@@ -223,7 +223,7 @@ export const commands = {
 	providerProbeLocal: (profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<ProviderState_Serialize[]>("provider_probe_local", { profile }, options),
 	/**
 	 *  Start a sign-in for a sign-in way the host owns (ChatGPT through OpenAI's Sign in with ChatGPT program, GitHub Copilot, and
-	 *  `SuperGrok` once it lands): returns the lab's own page to open and the code to type; a flow whose page does everything
+	 *  SuperGrok): returns the lab's own page to open and the code to type; a flow whose page does everything
 	 *  (ChatGPT's) has an empty `user_code`. The host opens the browser itself for ChatGPT; the page address returned carries no
 	 *  token. The wait runs in the host and ends with a `ProviderSigninEvent`; the tokens go to the keychain and never to the
 	 *  webview. A way owned by someone else (Claude's, which is Claude Code's own sign-in, and driving the user's own grok program)

@@ -74,6 +74,8 @@ pub struct AppState {
     pub store: Arc<crate::store::Store>,
     /// boopis's own GitHub Copilot sign-in (ADR-0039).
     pub copilot: Arc<crate::copilot::Copilot>,
+    /// boopis's own SuperGrok sign-in (ADR-0039).
+    pub xai: Arc<crate::xai::Xai>,
     /// The connector engine of each profile home, kept so a sign-in started by one command can be cancelled by another.
     pub connectors: std::sync::Mutex<std::collections::HashMap<std::path::PathBuf, Arc<Engine>>>,
 }
@@ -160,6 +162,7 @@ fn setup_engine(app: &AppHandle, state: &AppState, profile: Option<String>) -> R
     let events = app.clone();
     let setup = Setup::new(Arc::new(ops), state.secrets.clone(), state.bundle.clone())
         .with_chatgpt(state.chatgpt.clone())
+        .with_xai(state.xai.clone())
         .with_progress(Arc::new(move |p| {
             if let Err(e) = tauri_specta::Event::emit(&p, &events) {
                 tracing::debug!(error = %e, "could not emit the setup progress");
@@ -1221,7 +1224,7 @@ fn providers_engine(
         crate::providers::service::https(),
     )
     .with_claude(Arc::new(crate::claude::SystemClaude::new()))
-    .with_chatgpt(state.chatgpt.clone()))
+    .with_signins(Arc::new(signins(state))))
 }
 
 /// Every way's state: the catalogue's ways in order (hidden ones left out), then the endpoints the person added. Read-only,
@@ -1328,16 +1331,18 @@ pub async fn provider_probe_local(
     Ok(states)
 }
 
-/// The sign-ins the host owns (ChatGPT's and Copilot's), as one service.
+/// The sign-ins the host owns (ChatGPT's, Copilot's and SuperGrok's), as one service.
 fn signins(state: &AppState) -> crate::providers::signin::Signins {
     crate::providers::signin::Signins {
         chatgpt: state.chatgpt.clone(),
         copilot: state.copilot.clone(),
+        xai: state.xai.clone(),
+        grok: Arc::new(crate::xai::cli::SystemGrok::new()),
     }
 }
 
 /// Start a sign-in for a sign-in way the host owns (ChatGPT through OpenAI's Sign in with ChatGPT program, GitHub Copilot, and
-/// `SuperGrok` once it lands): returns the lab's own page to open and the code to type; a flow whose page does everything
+/// SuperGrok): returns the lab's own page to open and the code to type; a flow whose page does everything
 /// (ChatGPT's) has an empty `user_code`. The host opens the browser itself for ChatGPT; the page address returned carries no
 /// token. The wait runs in the host and ends with a `ProviderSigninEvent`; the tokens go to the keychain and never to the
 /// webview. A way owned by someone else (Claude's, which is Claude Code's own sign-in, and driving the user's own grok program)

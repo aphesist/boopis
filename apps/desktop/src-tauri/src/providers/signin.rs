@@ -1,6 +1,6 @@
 //! The sign-in ways the host owns, behind the contract's four commands (`provider_signin_start`, `provider_signin_cancel`,
 //! `provider_sign_out`, `provider_signin_status`): ChatGPT through OpenAI's program (`crate::chatgpt`, ADR-0030) and GitHub
-//! Copilot (`crate::copilot`, ADR-0039). A way somebody else owns (Claude's is Claude Code's own) answers
+//! Copilot (`crate::copilot`, ADR-0039) and SuperGrok (`crate::xai`, ADR-0039). A way somebody else owns (Claude's is Claude Code's own) answers
 //! `hx.provider.unsupported`; an id the catalogue does not hold answers `hx.provider.unknown`. Another sign-in the host
 //! comes to own is one more arm in each function here.
 //!
@@ -12,11 +12,14 @@ use super::{ProviderState, SigninCode, WayKind, catalogue};
 use crate::chatgpt::{self, ChatGpt};
 use crate::copilot::{self, Copilot};
 use crate::error::{Error, Result};
+use crate::xai::{self, Xai, cli::GrokCli};
 
 /// The ChatGPT way's id in the catalogue.
 pub const CHATGPT: &str = "openai.signin";
 /// The Copilot way's id in the catalogue.
 pub const COPILOT: &str = copilot::WAY;
+/// The SuperGrok way's id in the catalogue.
+pub const XAI: &str = xai::WAY_SIGNIN;
 
 /// The services behind the ways.
 pub struct Signins {
@@ -24,17 +27,23 @@ pub struct Signins {
     pub chatgpt: Arc<ChatGpt>,
     /// Copilot's sign-in.
     pub copilot: Arc<Copilot>,
+    /// SuperGrok's sign-in.
+    pub xai: Arc<Xai>,
+    /// The user's own `grok` program, which `xai.cli` reports on.
+    pub grok: Arc<dyn GrokCli>,
 }
 
 enum Owned {
     ChatGpt,
     Copilot,
+    Xai,
 }
 
 fn owned(way: &str) -> Result<Owned> {
     match way {
         CHATGPT => Ok(Owned::ChatGpt),
         COPILOT => Ok(Owned::Copilot),
+        XAI => Ok(Owned::Xai),
         other if catalogue().way(other).is_some() => Err(Error::Provider(
             "hx.provider.unsupported",
             format!("{other} is not a sign-in boopis runs itself"),
@@ -112,18 +121,23 @@ impl Signins {
         Ok(match owned(way)? {
             Owned::ChatGpt => chatgpt_state(&self.chatgpt.status().await?),
             Owned::Copilot => copilot_state(&self.copilot.status().await?),
+            Owned::Xai => self.xai.provider_state().await?,
         })
     }
 
-    /// The states of every way the host owns, for `provider_list`.
+    /// The states of every sign-in way the host reads, for `provider_list`: ChatGPT's, Copilot's, and xAI's ways from
+    /// [`Xai::way_states`] (`xai.signin`, `xai.key` as `xai_key` says, and `xai.cli`, which is left out while the sign-in is
+    /// in use). The caller picks the ones it lists by their way id.
     ///
     /// # Errors
     /// `hx.secrets.*`.
-    pub async fn states(&self) -> Result<Vec<ProviderState>> {
-        Ok(vec![
+    pub async fn states(&self, xai_key: ProviderState) -> Result<Vec<ProviderState>> {
+        let mut out = vec![
             chatgpt_state(&self.chatgpt.status().await?),
             copilot_state(&self.copilot.status().await?),
-        ])
+        ];
+        out.extend(self.xai.way_states(xai_key, self.grok.as_ref()).await?);
+        Ok(out)
     }
 
     /// Start a sign-in: the page to open (and the code to type, for a flow that has one; empty for ChatGPT's, whose page does
@@ -149,6 +163,7 @@ impl Signins {
                     expires_at: c.expires_at,
                 }
             }
+            Owned::Xai => self.xai.start().await?.into(),
         })
     }
 
@@ -160,6 +175,7 @@ impl Signins {
         match owned(way)? {
             Owned::ChatGpt => self.chatgpt.cancel(),
             Owned::Copilot => self.copilot.cancel(),
+            Owned::Xai => self.xai.cancel(),
         }
         Ok(())
     }
@@ -189,6 +205,10 @@ impl Signins {
                 );
                 Ok(st)
             }
+            Owned::Xai => {
+                self.xai.sign_out().await?;
+                self.xai.provider_state().await
+            }
         }
     }
 }
@@ -202,6 +222,16 @@ mod tests {
     use crate::providers::ProviderStatus;
     use crate::secrets::SecretStore;
     use crate::secrets::store::MemoryStore;
+
+    /// A `grok` program that is not installed, so `xai.cli` says so without looking at this computer.
+    struct NoGrok;
+
+    #[async_trait::async_trait]
+    impl GrokCli for NoGrok {
+        async fn probe(&self) -> xai::cli::Probe {
+            xai::cli::assess(false, None, None)
+        }
+    }
 
     fn signins(store: &Arc<MemoryStore>) -> Signins {
         let http = Arc::new(Https::new(Duration::from_secs(1)));
@@ -217,17 +247,19 @@ mod tests {
             )),
             copilot: Arc::new(Copilot::new(
                 store.clone(),
-                http,
+                http.clone(),
                 copilot::Timing {
                     signin: Duration::from_mins(15),
                 },
             )),
+            xai: Arc::new(Xai::new(store.clone(), http, xai::Timing::app())),
+            grok: Arc::new(NoGrok),
         }
     }
 
     #[test]
     fn the_owned_ways_are_in_the_catalogue_and_the_rest_are_answered_plainly() {
-        for way in [CHATGPT, COPILOT] {
+        for way in [CHATGPT, COPILOT, XAI] {
             let (_, w) = catalogue().way(way).expect(way);
             assert_eq!(w.kind, WayKind::Signin);
         }
@@ -251,7 +283,7 @@ mod tests {
             "hx.provider.unknown"
         );
         assert!(
-            s.cancel(CHATGPT).is_ok() && s.cancel(COPILOT).is_ok(),
+            s.cancel(CHATGPT).is_ok() && s.cancel(COPILOT).is_ok() && s.cancel(XAI).is_ok(),
             "cancelling nothing is fine"
         );
     }
@@ -260,12 +292,36 @@ mod tests {
     async fn a_state_is_drawn_from_the_keychain_for_each_way() {
         let store = Arc::new(MemoryStore::default());
         let s = signins(&store);
-        let all = s.states().await.unwrap();
-        assert_eq!(all.len(), 2);
+        let key = ProviderState::needs_key("xai", xai::WAY_KEY);
+        let all = s.states(key.clone()).await.unwrap();
+        let ways: Vec<&str> = all.iter().map(|a| a.way.as_str()).collect();
+        assert_eq!(
+            ways,
+            [
+                CHATGPT,
+                COPILOT,
+                xai::WAY_SIGNIN,
+                xai::WAY_KEY,
+                xai::WAY_CLI
+            ],
+            "every sign-in, xAI's three ways in the catalogue's order, the program included while the sign-in is unused"
+        );
+        assert!(all.iter().all(ProviderState::is_consistent));
         assert!(
             all.iter()
-                .all(|a| a.status == ProviderStatus::SignedOut && a.is_consistent())
+                .filter(|a| a.way != xai::WAY_KEY && a.way != xai::WAY_CLI)
+                .all(|a| a.status == ProviderStatus::SignedOut)
         );
+
+        // signed in to SuperGrok: its state is Connected and the program's way is not offered
+        store.set("xai", xai::ACCESS, "xat_x").unwrap();
+        store.set("xai", xai::REFRESH, "xrt_x").unwrap();
+        let st = s.status(XAI).await.unwrap();
+        assert_eq!(st.status, ProviderStatus::Connected);
+        let all = s.states(key).await.unwrap();
+        assert!(all.iter().all(|a| a.way != xai::WAY_CLI));
+        store.delete("xai", xai::ACCESS).unwrap();
+        store.delete("xai", xai::REFRESH).unwrap();
 
         store
             .set("boopis.copilot", "github_token", "ghu_x")
@@ -306,5 +362,11 @@ mod tests {
                 .contains("github.com/settings/applications")
         );
         assert_eq!(store.get("boopis.copilot", "github_token").unwrap(), None);
+
+        store.set("xai", xai::ACCESS, "xat_x").unwrap();
+        store.set("xai", xai::REFRESH, "xrt_x").unwrap();
+        let st = s.sign_out(XAI).await.unwrap();
+        assert_eq!(st.status, ProviderStatus::SignedOut);
+        assert_eq!(store.get("xai", xai::ACCESS).unwrap(), None);
     }
 }

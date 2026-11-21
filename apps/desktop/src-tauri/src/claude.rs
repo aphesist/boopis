@@ -178,7 +178,7 @@ pub fn install_dirs(env: &HashMap<String, String>) -> Vec<PathBuf> {
 }
 
 /// `name` as a runnable file in `dirs` (on Windows with the extensions the shell runs).
-fn find_in(dirs: &[PathBuf], name: &str) -> Option<PathBuf> {
+pub(crate) fn find_in(dirs: &[PathBuf], name: &str) -> Option<PathBuf> {
     let candidates: Vec<String> = if cfg!(windows) && Path::new(name).extension().is_none() {
         ["exe", "cmd", "bat", "com"]
             .iter()
@@ -192,7 +192,7 @@ fn find_in(dirs: &[PathBuf], name: &str) -> Option<PathBuf> {
         .find(|p| runnable(p))
 }
 
-fn runnable(p: &Path) -> bool {
+pub(crate) fn runnable(p: &Path) -> bool {
     let Ok(meta) = std::fs::metadata(p) else {
         return false;
     };
@@ -395,35 +395,51 @@ impl SystemClaude {
         }
     }
 
-    /// One command of the CLI: its standard output, or `None` when it did not run, failed to start or took too long. Standard
-    /// input is closed, the working directory is the system's temporary one (never a project, whose settings it would read).
+    /// One command of the CLI: its standard output, or `None` when it did not run, failed to start or took too long.
     async fn ask(&self, exe: &Path, args: &[&str]) -> Option<String> {
-        let mut cmd = Command::new(exe);
-        cmd.args(args)
-            .env_clear()
-            .envs(&self.env)
-            .current_dir(std::env::temp_dir())
-            .stdin(Stdio::null())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .kill_on_drop(true);
-        #[cfg(windows)]
-        {
-            use std::os::windows::process::CommandExt;
-            cmd.creation_flags(0x0800_0000);
-        }
-        let out = tokio::time::timeout(self.timeout, cmd.output())
-            .await
-            .ok()?
-            .ok()?;
-        // `auth status` exits 1 when signed out and still prints its JSON, so the exit code is not what decides
-        Some(
-            String::from_utf8_lossy(&out.stdout)
-                .chars()
-                .take(64 * 1024)
-                .collect(),
-        )
+        ask_cli(&self.env, self.timeout, exe, args, false).await
     }
+}
+
+/// One command of a user's own CLI (Claude Code, `grok`): its output, or `None` when it did not run, failed to start or took too
+/// long. Standard input is closed, the environment is exactly `env`, the working directory is the system's temporary one (never a
+/// project, whose settings it would read). The exit code is not what decides (`auth status` exits 1 when signed out and still
+/// prints its JSON); with `stderr` the CLI's standard error follows its standard output.
+pub(crate) async fn ask_cli(
+    env: &HashMap<String, String>,
+    timeout: Duration,
+    exe: &Path,
+    args: &[&str],
+    stderr: bool,
+) -> Option<String> {
+    let mut cmd = Command::new(exe);
+    cmd.args(args)
+        .env_clear()
+        .envs(env)
+        .current_dir(std::env::temp_dir())
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(if stderr {
+            Stdio::piped()
+        } else {
+            Stdio::null()
+        })
+        .kill_on_drop(true);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x0800_0000);
+    }
+    let out = tokio::time::timeout(timeout, cmd.output())
+        .await
+        .ok()?
+        .ok()?;
+    let mut text = String::from_utf8_lossy(&out.stdout).into_owned();
+    if stderr {
+        text.push('\n');
+        text.push_str(&String::from_utf8_lossy(&out.stderr));
+    }
+    Some(text.chars().take(64 * 1024).collect())
 }
 
 #[async_trait]

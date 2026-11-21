@@ -15,6 +15,9 @@ boopis includes or distributes the following third-party work, each under its ow
 - github-copilot (Nous Research's community plugin for GitHub Copilot, a Hermes Labs plugin), unmodified, inside the bundled
   runtime archive at the commit Hermes's plugin catalog pins (plugins/github-copilot/, with its LICENSE): MIT License,
   Copyright (c) 2026 Nous Research.
+- grok-acp (the community plugin hermes-grok-acp by Nicky Molina, which drives the user's own grok program), unmodified,
+  inside the bundled runtime archive at the commit Hermes's plugin catalog pins (plugins/grok-acp/, with its LICENSE):
+  MIT License, Copyright (c) 2026 Nicky Molina.
 - orb-avatar (orb2), vendored in the interface: MIT License.
 - boopis-logo (the logo element, vendored in the interface): Apache License 2.0, like the rest of boopis; its letters are
   Libre Franklin outlines drawn as paths, under the SIL Open Font License 1.1 (apps/desktop/ui/vendor/boopis-logo.NOTICE).

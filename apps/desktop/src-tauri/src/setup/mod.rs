@@ -19,6 +19,7 @@ pub mod install;
 pub mod ops;
 pub mod providers;
 pub mod state;
+pub mod xai_ways;
 
 #[cfg(test)]
 mod tests;
@@ -36,6 +37,8 @@ use crate::error::{Error, Result};
 use crate::runtime::{Outcome, Pass, Plan};
 use crate::secrets::SecretStore;
 use crate::secrets::store::validate_value;
+use crate::xai::Xai;
+use crate::xai::cli::{GrokCli, SystemGrok};
 use install::{Bundle, Installed};
 use ops::HermesOps;
 use state::{Consent, State};
@@ -104,6 +107,8 @@ pub struct SignIn {
 
 /// The [`SignIn::provider`] of boopis's own ChatGPT sign-in.
 pub const SIGNIN_CHATGPT: &str = "chatgpt";
+/// The [`SignIn::provider`] of boopis's own SuperGrok sign-in (`provider_signin_start` with the way `xai.signin`).
+pub const SIGNIN_XAI: &str = "xai";
 
 impl Form {
     pub(crate) fn new(id: &str, kind: &str, title: &str, body: &str, schema: Value) -> Self {
@@ -298,6 +303,10 @@ pub struct Setup {
     secrets: Arc<dyn SecretStore>,
     /// The user's own Claude Code, looked at for the Claude subscription (ADR-0029).
     claude: Arc<dyn ClaudeCli>,
+    /// The user's own `grok` program (the xAI program way, ADR-0039).
+    grok: Arc<dyn GrokCli>,
+    /// boopis's own SuperGrok sign-in (ADR-0039), when this run has one.
+    xai: Option<Arc<Xai>>,
     /// boopis's own ChatGPT sign-in (ADR-0030); `None` where none runs (tests that do not need it).
     chatgpt: Option<Arc<ChatGpt>>,
     bundle: Bundle,
@@ -357,6 +366,8 @@ impl Setup {
             ops,
             secrets,
             claude: Arc::new(SystemClaude::new()),
+            grok: Arc::new(SystemGrok::new()),
+            xai: None,
             chatgpt: None,
             bundle,
             install_command: crate::hermes::install::installer_command().to_owned(),
@@ -369,6 +380,20 @@ impl Setup {
     #[must_use]
     pub fn with_claude(mut self, claude: Arc<dyn ClaudeCli>) -> Self {
         self.claude = claude;
+        self
+    }
+
+    /// Look at the user's `grok` program through `grok` instead of the one on this computer.
+    #[must_use]
+    pub fn with_grok(mut self, grok: Arc<dyn GrokCli>) -> Self {
+        self.grok = grok;
+        self
+    }
+
+    /// Ask `xai` whether an xAI account is signed in through the SuperGrok sign-in.
+    #[must_use]
+    pub fn with_xai(mut self, xai: Arc<Xai>) -> Self {
+        self.xai = Some(xai);
         self
     }
 
@@ -477,7 +502,10 @@ impl Setup {
             });
             state.picks.clear();
             state.reopen_models = false;
-        } else if id == "setup.claude" || id == "setup.chatgpt" {
+        } else if matches!(
+            id,
+            "setup.claude" | "setup.chatgpt" | "setup.xai" | "setup.grok"
+        ) {
             if answer.cancelled {
                 // back to the models question, with every choice it has
                 state.choice = None;
@@ -997,6 +1025,10 @@ impl Setup {
             Some(c) => c.signed_in().await.unwrap_or(false),
             None => false,
         };
+        let xai_signed_in = match &self.xai {
+            Some(x) => x.signed_in().await.unwrap_or(false),
+            None => false,
+        };
         let input = providers::Input {
             choice: state.choice.as_deref(),
             picks: &state.picks,
@@ -1004,6 +1036,8 @@ impl Setup {
             reopen: state.reopen_models,
             claude: self.claude.as_ref(),
             chatgpt_signed_in,
+            xai_signed_in,
+            grok: self.grok.as_ref(),
             optins: state.optins(),
         };
         let out = providers::run(

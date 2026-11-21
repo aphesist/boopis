@@ -35,6 +35,7 @@ pub mod state;
 pub mod store;
 pub mod webkit;
 pub mod window;
+pub mod xai;
 
 use std::sync::Arc;
 
@@ -498,9 +499,25 @@ pub fn run() {
                 })),
             );
             tauri::async_runtime::spawn(copilot.clone().run_watcher(limits.chatgpt_refresh_every));
+            // boopis's own SuperGrok sign-in (ADR-0039): the same shape, with its own event and refresher.
+            let xai_events = app.handle().clone();
+            let xai = Arc::new(
+                xai::Xai::new(
+                    secrets.clone(),
+                    Arc::new(chatgpt::oauth::Https::new(limits.chatgpt_http_timeout)),
+                    xai::Timing::app(),
+                )
+                .with_sink(Arc::new(move |e| {
+                    if let Err(err) = e.emit(&xai_events) {
+                        tracing::debug!(error = %err, "could not emit the xAI sign-in outcome");
+                    }
+                })),
+            );
+            tauri::async_runtime::spawn(xai.clone().run_refresher());
             app.manage(AppState {
                 chatgpt,
                 copilot,
+                xai,
                 hubs: state::Hubs::new(supervisor.clone(), limits.clone(), emitter).with_observer(observer),
                 supervisor: supervisor.clone(),
                 secrets: secrets.clone(),

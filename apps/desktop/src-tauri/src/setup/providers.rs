@@ -67,6 +67,8 @@ pub const GEMINI_RUNGS: &[(&str, &str)] =
 pub const XAI: &str = "xai";
 const XAI_LABEL: &str =
     "xAI Grok (needs an xAI API key; governed mode only after you turn on Grok, a heavy model)";
+/// The family id of Grok in the frontier list, and the tier setup names it.
+pub(super) const GROK_FAMILY: &str = "grok";
 /// Claude on an Anthropic key: the provider, and the models the plugin's own ladder names (the vendored contraprova's `OPUS` and
 /// `FABLE`; a test holds them frontier). Opus is the default ladder; Fable is a heavy opt-in.
 pub const ANTHROPIC: &str = "anthropic";
@@ -569,6 +571,10 @@ pub struct Input<'a> {
     pub claude: &'a dyn ClaudeCli,
     /// A ChatGPT account is signed in through boopis's own sign-in (both tokens are in the keychain).
     pub chatgpt_signed_in: bool,
+    /// An xAI account is signed in through boopis's own SuperGrok sign-in (the tokens are in the keychain).
+    pub xai_signed_in: bool,
+    /// The user's own `grok` program, looked at when its way is offered or chosen.
+    pub grok: &'a dyn crate::xai::cli::GrokCli,
     /// The heavy models the user turned on (Settings > Models): only these may be on a ladder setup writes.
     pub optins: Optins,
 }
@@ -776,15 +782,22 @@ pub async fn run(
             &named,
             input.free_note,
             &input.claude.probe().await,
+            input.xai_signed_in,
         ))),
         Some("anthropic") => Ok(Outcome::Form(credential_form("anthropic"))),
-        Some(FREE) if FREE_TIER_ENABLED => free_tier(ops, &named, input.claude, restart).await,
+        Some(FREE) if FREE_TIER_ENABLED => {
+            free_tier(ops, &named, input.claude, input.xai_signed_in, restart).await
+        }
         Some(OPENROUTER_FREE) => openrouter(ops, store, &env, &named, input, restart).await,
         Some(CLAUDE_SUBSCRIPTION) => subscription(ops, input, restart).await,
         Some(CHATGPT_SUBSCRIPTION) => chatgpt(ops, input, restart).await,
         Some(OPENAI_KEY) => openai_key(ops, store, &env, restart).await,
         Some(GEMINI) => gemini(ops, store, &env, input, restart).await,
         Some(XAI) => xai(ops, store, &env, input, restart).await,
+        Some(super::xai_ways::XAI_SUBSCRIPTION) => {
+            super::xai_ways::subscription(ops, input, restart).await
+        }
+        Some(super::xai_ways::GROK_CLI) => super::xai_ways::program(ops, input, restart).await,
         Some(pick) => single_tier(ops, store, &env, &named, pick, restart).await,
     }
 }
@@ -796,6 +809,7 @@ async fn free_tier(
     ops: &dyn HermesOps,
     named: &[Named],
     claude: &dyn ClaudeCli,
+    xai_signed_in: bool,
     restart: &mut bool,
 ) -> Result<Outcome> {
     let mut status = ops.free_tier_status().await?;
@@ -808,13 +822,14 @@ async fn free_tier(
         }
     }
     if !status.available {
-        return Ok(unavailable(named, &unclaimed_note(&status), claude).await);
+        return Ok(unavailable(named, &unclaimed_note(&status), claude, xai_signed_in).await);
     }
     if status.model.trim().is_empty() {
         return Ok(unavailable(
             named,
             "The free tier reported itself ready but named no model, so no ladder can be set.",
             claude,
+            xai_signed_in,
         )
         .await);
     }
@@ -828,9 +843,14 @@ async fn free_tier(
     )))
 }
 
-async fn unavailable(named: &[Named], note: &str, claude: &dyn ClaudeCli) -> Outcome {
+async fn unavailable(
+    named: &[Named],
+    note: &str,
+    claude: &dyn ClaudeCli,
+    xai_signed_in: bool,
+) -> Outcome {
     Outcome::Unavailable {
-        form: ladder_form(named, Some(note), &claude.probe().await),
+        form: ladder_form(named, Some(note), &claude.probe().await, xai_signed_in),
         note: note.to_owned(),
     }
 }
@@ -879,6 +899,7 @@ async fn openrouter(
             named,
             "OpenRouter's catalogue lists no free models right now.",
             input.claude,
+            input.xai_signed_in,
         )
         .await);
     }
@@ -908,7 +929,7 @@ async fn openrouter(
 /// engine then refused to read back on the first message ("invalid policy", answered as `storage_unavailable`: the
 /// owner's report, 20 November 2026). Every choice but the free tier, whose claim the engine routes itself. True when
 /// it wrote anything.
-async fn write_route(ops: &dyn HermesOps, tiers: &[(String, String)]) -> Result<bool> {
+pub(super) async fn write_route(ops: &dyn HermesOps, tiers: &[(String, String)]) -> Result<bool> {
     let mut wrote = write_ladder(ops, tiers).await?;
     if let Some((_, first)) = tiers.first() {
         wrote |= write_default_model(ops, first).await?;
@@ -1021,7 +1042,12 @@ fn models_form(catalogue: &[String]) -> Form {
     )
 }
 
-fn ladder_form(named: &[Named], free_note: Option<&str>, claude: &Probe) -> Form {
+fn ladder_form(
+    named: &[Named],
+    free_note: Option<&str>,
+    claude: &Probe,
+    xai_signed_in: bool,
+) -> Form {
     let mut ids = Vec::new();
     let mut labels = Vec::new();
     let offer_free = FREE_TIER_ENABLED && free_note.is_none();
@@ -1044,6 +1070,7 @@ fn ladder_form(named: &[Named], free_note: Option<&str>, claude: &Probe) -> Form
     labels.push(GEMINI_LABEL.to_owned());
     ids.push(XAI.to_owned());
     labels.push(XAI_LABEL.to_owned());
+    super::xai_ways::add_choices(&mut ids, &mut labels, xai_signed_in);
     for p in named {
         for m in &p.models {
             ids.push(format!("{}/{m}", p.name));
@@ -1489,7 +1516,7 @@ fn chatgpt_form() -> Form {
 /// The lowest model of `family` that `provider`'s catalogue lists and the frontier list allows: the rung of a ladder. Versions order
 /// by number (`gpt-6.2-sol` before `gpt-6.10-sol`); models of one version keep the catalogue's order. A heavy model is taken
 /// only when `heavy` says the user asked for it.
-fn lowest_in_family(
+pub(super) fn lowest_in_family(
     provider: &str,
     family: &str,
     catalogue: &[String],
