@@ -166,6 +166,7 @@ def pre_llm_call(**kw: Any) -> dict[str, Any] | None:
         session_id = str(kw.get("session_id") or "")
         if rt.is_worker(session_id):
             return _worker_turn(rt, rt.caller(session_id), str(kw.get("model") or ""))
+        rt.roster.note_message(session_id, str(kw.get("user_message") or ""))  # what the user named (delegation guard)
         state = _locked(rt, session_id, model=str(kw.get("model") or ""))
         capped = _cost_cap(rt, state, state.provider, state.model)
         if capped is not None or state.mode != "governed":

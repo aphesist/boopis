@@ -26,6 +26,7 @@ CAPABILITIES = (
     "ledger.stats",
     "cascade.state",
     "cascade.start_tier",
+    "dispatch.roster",
     "prices.refresh",
     "blank.fill",
     "checkpoint.list",
@@ -213,6 +214,23 @@ def cascade_start_tier(params: Mapping[str, Any], *, session_id: str | None = No
     return {}
 
 
+def dispatch_roster(params: Mapping[str, Any], **_: Any) -> dict[str, Any]:
+    """``dispatch.roster``: the models the person can use right now (``{models: [{provider, model}]}``, in the order he
+    prefers them), so that ``delegate_task`` of a session made *after* this call can name them (``target``). The tools
+    of a session are fixed when it is created (prompt caching), so a model signed in later is named by the next session.
+    Returns the words each model answers to. Not session-bound: it is the process's menu, set by the desktop."""
+    models = params.get("models")
+    if not isinstance(models, list):
+        raise InvalidParamsError("models must be a list of {provider, model}")
+    items: list[Mapping[str, Any]] = []
+    for i, item in enumerate(cast("list[Any]", models)):
+        if not isinstance(item, Mapping) or not isinstance(item.get("model"), str) or not item.get("model"):
+            raise InvalidParamsError(f"models[{i}] must be an object with a model", data={"found": repr(item)})
+        items.append(cast("Mapping[str, Any]", item))
+    entries = runtime().roster.set_models(items)
+    return {"aliases": [{"alias": e.alias, "provider": e.provider, "model": e.model} for e in entries]}
+
+
 def cascade_state(params: Mapping[str, Any], *, session_id: str | None = None, **_: Any) -> dict[str, Any]:
     """Where the session's cascade is: its ladder, and the current task, tier, attempt and status (``idle`` when no
     task has run). ``governance.engine.state_view`` reads the ledger and the live run."""
@@ -250,6 +268,7 @@ def handlers() -> dict[str, Handler]:
         "ledger.stats": ledger_stats,
         "cascade.state": cascade_state,
         "cascade.start_tier": cascade_start_tier,
+        "dispatch.roster": dispatch_roster,
         "prices.refresh": prices_refresh,
         "blank.fill": blank_fill,
         "checkpoint.list": checkpoint_list,
