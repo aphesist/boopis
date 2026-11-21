@@ -239,7 +239,7 @@ impl HermesOps for Fake {
     }
     async fn provider_models(&self, provider: &str) -> Result<Vec<String>> {
         Ok(match provider {
-            "openai-codex" => self.chatgpt_models.lock().unwrap().clone(),
+            "openai-codex" | "openai-api" => self.chatgpt_models.lock().unwrap().clone(),
             "gemini" => self.gemini_models.lock().unwrap().clone(),
             "xai" => self.xai_models.lock().unwrap().clone(),
             other => panic!("setup asked the catalogue of {other}"),
@@ -1939,13 +1939,14 @@ async fn the_models_question_offers_chatgpt_and_gemini_after_the_free_choices() 
     let form = at_models(&r).await.form.unwrap();
     let ids = enum_of(&form, "choice");
     assert_eq!(
-        &ids[..6],
+        &ids[..7],
         [
             "free",
             "openrouter-free",
             "anthropic",
             "claude-subscription",
             "chatgpt-subscription",
+            "openai-key",
             "gemini"
         ]
     );
@@ -1954,7 +1955,11 @@ async fn the_models_question_offers_chatgpt_and_gemini_after_the_free_choices() 
         names[4],
         "ChatGPT subscription (sign in with your ChatGPT account)"
     );
-    assert_eq!(names[5], "Gemini (a free API key from Google AI Studio)");
+    assert_eq!(
+        names[5],
+        "OpenAI (an API key from the OpenAI platform)"
+    );
+    assert_eq!(names[6], "Gemini (a free API key from Google AI Studio)");
     assert_eq!(
         form.schema.0["properties"]["choice"]["default"], "free",
         "free stays the default"
@@ -2242,7 +2247,7 @@ async fn a_chatgpt_plan_with_no_sol_or_astra_writes_no_ladder_and_says_governed_
     let receipt = s.receipt.unwrap().lines.join("\n");
     assert!(
         receipt.contains(
-            "lists no GPT Sol or GPT Astra of 6.2 or later, so governed mode is unavailable"
+            "lists no GPT Terra of 6.1 or later and no GPT Sol or GPT Astra of 6.2 or later, so governed mode is unavailable"
         ) && receipt.contains("GPT-6.2 Astra or later"),
         "{receipt}"
     );
@@ -2474,7 +2479,7 @@ async fn the_models_tab_turns_fable_on_and_off_on_the_subscription_and_setup_run
     assert!(heavy_of(&v, "fable").1);
     assert_eq!(ladder_names(&r).await, ["opus", "fable"]);
     assert!(v.governed.tiers.iter().any(|t| t.heavy && t.frontier));
-    assert!(super::state::load(&r.fake.home).unwrap().optins().fable);
+    assert!(super::state::load(&r.fake.home).unwrap().optins().has("fable"));
 
     // setup run again (choosing the subscription once more) keeps it
     assert!(choose_again(&r, "claude-subscription").await.done);
@@ -2483,7 +2488,7 @@ async fn the_models_tab_turns_fable_on_and_off_on_the_subscription_and_setup_run
     let v = r.setup().set_heavy("fable", false).await.unwrap();
     assert!(!heavy_of(&v, "fable").1);
     assert_eq!(ladder_names(&r).await, ["opus"]);
-    assert!(!super::state::load(&r.fake.home).unwrap().optins().fable);
+    assert!(!super::state::load(&r.fake.home).unwrap().optins().has("fable"));
     assert!(choose_again(&r, "claude-subscription").await.done);
     assert_eq!(ladder_names(&r).await, ["opus"]);
 
@@ -2494,7 +2499,7 @@ async fn the_models_tab_turns_fable_on_and_off_on_the_subscription_and_setup_run
     let e = r.setup().set_heavy("fable", true).await.unwrap_err();
     assert!(e.to_string().contains("2.1.321"), "{e}");
     assert_eq!(ladder_names(&r).await, ["opus"]);
-    assert!(!super::state::load(&r.fake.home).unwrap().optins().fable);
+    assert!(!super::state::load(&r.fake.home).unwrap().optins().has("fable"));
 
     // an id that is not a heavy model is refused
     assert!(r.setup().set_heavy("opus", true).await.is_err());
@@ -2582,40 +2587,55 @@ async fn chatgpt_ladder_for(listed: &[&str]) -> (Option<Value>, String) {
 }
 
 #[tokio::test]
-async fn the_chatgpt_ladder_is_sol_then_astra_from_what_the_account_lists() {
+async fn the_chatgpt_ladder_is_terra_then_sol_then_astra_from_what_the_account_lists() {
     let (ladder, receipt) = chatgpt_ladder_for(&[
         "gpt-6-luna",
         "gpt-6.2-astra",
         "gpt-6.3-sol",
         "gpt-6.2-sol",
         "gpt-6.1-sol",
+        "gpt-6.1-terra",
+        "gpt-6.2-terra",
+        "gpt-6-terra",
         "gpt-6-astra",
     ])
     .await;
     assert_eq!(
         ladder.unwrap(),
         json!({"tiers": [
+            {"name": "terra", "model": "openai-codex/gpt-6.1-terra"},
             {"name": "sol", "model": "openai-codex/gpt-6.2-sol"},
             {"name": "astra", "model": "openai-codex/gpt-6.2-astra"}]})
     );
     assert!(
-        receipt.contains("gpt-6.2-sol, then gpt-6.2-astra on your ChatGPT sign-in"),
+        receipt.contains(
+            "gpt-6.1-terra, then gpt-6.2-sol, then gpt-6.2-astra on your ChatGPT sign-in"
+        ),
         "{receipt}"
     );
 
-    // Sol alone and Astra alone: the rung the account lacks is left out, never guessed
-    let (ladder, _) = chatgpt_ladder_for(&["gpt-6.2-sol", "gpt-6-astra"]).await;
-    assert_eq!(
-        ladder.unwrap(),
-        json!({"tiers": [{"name": "sol", "model": "openai-codex/gpt-6.2-sol"}]})
-    );
-    let (ladder, _) = chatgpt_ladder_for(&["gpt-6.2-astra", "gpt-6.1-sol"]).await;
-    assert_eq!(
-        ladder.unwrap(),
-        json!({"tiers": [{"name": "astra", "model": "openai-codex/gpt-6.2-astra"}]})
-    );
-    // neither: no ladder, and the line says why (the other test of this file checks its words)
-    let (ladder, receipt) = chatgpt_ladder_for(&["gpt-6-luna", "gpt-6.1-sol"]).await;
+    // each model on its own and in pairs: the rung the account lacks is left out, never guessed
+    let own = |ladder: Option<Value>| {
+        ladder
+            .unwrap()["tiers"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|t| t["name"].as_str().unwrap().to_owned())
+            .collect::<Vec<_>>()
+    };
+    for (listed, want) in [
+        (vec!["gpt-6.1-terra", "gpt-6-sol"], vec!["terra"]),
+        (vec!["gpt-6.2-sol", "gpt-6-astra"], vec!["sol"]),
+        (vec!["gpt-6.2-astra", "gpt-6.1-sol"], vec!["astra"]),
+        (vec!["gpt-6.1-terra", "gpt-6.2-astra"], vec!["terra", "astra"]),
+        (vec!["gpt-6.2-sol", "gpt-6.1-terra"], vec!["terra", "sol"]),
+    ] {
+        let (ladder, _) = chatgpt_ladder_for(&listed).await;
+        assert_eq!(own(ladder), want, "{listed:?}");
+    }
+    // none: no ladder, and the line says why (the other test of this file checks its words)
+    let (ladder, receipt) = chatgpt_ladder_for(&["gpt-6-luna", "gpt-6.1-sol", "gpt-6-terra"]).await;
     assert!(ladder.is_none());
     assert!(
         receipt.contains("governed mode is unavailable"),
@@ -2666,7 +2686,7 @@ async fn the_gemini_ladder_is_hydrogen_then_neon_from_what_the_catalogue_lists_a
     assert!(ladder.is_none());
     assert!(
         receipt.contains("no Gemini 4 Hydrogen or Gemini 4 Neon")
-            && receipt.contains("Gemini 4 Carbon is allowed but is not on the ladder"),
+            && receipt.contains("Gemini 4 Carbon is frontier but heavy"),
         "{receipt}"
     );
 }
@@ -2692,7 +2712,14 @@ async fn setup_never_writes_a_heavy_model_to_a_ladder_it_builds_from_a_catalogue
     }
     for (family, _) in CHATGPT_RUNGS.iter().chain(GEMINI_RUNGS) {
         assert!(
-            ["gpt-sol", "gpt-astra", "gemini-hydrogen", "gemini-neon"].contains(family),
+            [
+                "gpt-terra",
+                "gpt-sol",
+                "gpt-astra",
+                "gemini-hydrogen",
+                "gemini-neon"
+            ]
+            .contains(family),
             "{family}"
         );
     }
@@ -2749,7 +2776,7 @@ async fn xai_alone_has_no_governed_mode_until_grok_is_turned_on_and_the_choice_i
         Some(json!("grok-4.7"))
     );
     assert!(v.governed.tiers[0].heavy && v.governed.tiers[0].frontier);
-    assert!(super::state::load(&r.fake.home).unwrap().optins().grok);
+    assert!(super::state::load(&r.fake.home).unwrap().optins().has("grok"));
 
     // setup run again keeps it
     assert!(choose_again(&r, "xai").await.done);
@@ -2762,7 +2789,7 @@ async fn xai_alone_has_no_governed_mode_until_grok_is_turned_on_and_the_choice_i
     let v = r.setup().set_heavy("grok", false).await.unwrap();
     assert!(!heavy_of(&v, "grok").1 && !v.governed.available);
     assert!(r.fake.config_get(LADDER).await.unwrap().is_none());
-    assert!(!super::state::load(&r.fake.home).unwrap().optins().grok);
+    assert!(!super::state::load(&r.fake.home).unwrap().optins().has("grok"));
     let s = choose_again(&r, "xai").await;
     assert!(s.done);
     assert!(r.fake.config_get(LADDER).await.unwrap().is_none());
@@ -2782,7 +2809,7 @@ async fn grok_needs_an_xai_key_and_a_grok_in_its_catalogue() {
     let e = r.setup().set_heavy("grok", true).await.unwrap_err();
     assert!(e.to_string().contains("no Grok 4.7 or later"), "{e}");
     assert!(r.fake.config_get(LADDER).await.unwrap().is_none());
-    assert!(!super::state::load(&r.fake.home).unwrap().optins().grok);
+    assert!(!super::state::load(&r.fake.home).unwrap().optins().has("grok"));
 }
 
 #[tokio::test]
@@ -2947,12 +2974,12 @@ fn the_old_fable_opt_in_is_read_into_the_heavy_list_once() {
     std::fs::create_dir_all(p.parent().unwrap()).unwrap();
     std::fs::write(&p, r#"{"schema_version": 1, "subscription_fable": true}"#).unwrap();
     let st = super::state::load(dir.path()).unwrap();
-    assert!(st.optins().fable && !st.optins().grok && !st.subscription_fable);
+    assert!(st.optins().has("fable") && !st.optins().has("grok") && !st.subscription_fable);
     super::state::save(dir.path(), &st).unwrap();
-    assert!(super::state::load(dir.path()).unwrap().optins().fable);
+    assert!(super::state::load(dir.path()).unwrap().optins().has("fable"));
     // turning it off sticks
     let mut st = super::state::load(dir.path()).unwrap();
     st.set_heavy("fable", false);
     super::state::save(dir.path(), &st).unwrap();
-    assert!(!super::state::load(dir.path()).unwrap().optins().fable);
+    assert!(!super::state::load(dir.path()).unwrap().optins().has("fable"));
 }

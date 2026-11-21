@@ -949,17 +949,41 @@ fn provider_stub<T>(command: &str) -> std::result::Result<T, HostError> {
     .into())
 }
 
+
+/// The provider commands' engine for a profile: its configuration through the engine's own CLI, the keychain, the one outbound read,
+/// and the two sign-ins this host can read (Claude Code's, ChatGPT's).
+fn providers_engine(
+    app: &AppHandle,
+    state: &AppState,
+    profile: Option<String>,
+) -> Result<crate::providers::service::Providers> {
+    let profile = profile_of(app, profile)?;
+    let home = state
+        .supervisor
+        .environment()
+        .profile_home(profile.as_deref())?;
+    let ops = CliOps::new(state.supervisor.clone(), home);
+    Ok(crate::providers::service::Providers::new(
+        Arc::new(ops),
+        state.secrets.clone(),
+        crate::providers::service::https(),
+    )
+    .with_claude(Arc::new(crate::claude::SystemClaude::new()))
+    .with_chatgpt(state.chatgpt.clone()))
+}
+
 /// Every way's state: the catalogue's ways in order (hidden ones left out), then the endpoints the person added. Read-only,
 /// and it never dials a runtime on this computer: those ways answer from the last `provider_probe_local` of this run.
 ///
 /// Errors: `hx.config.invalid`, `hx.secrets.*`.
 #[tauri::command]
 #[specta::specta]
-pub fn provider_list(
+pub async fn provider_list(
+    app: AppHandle,
+    state: State<'_, AppState>,
     profile: Option<String>,
 ) -> std::result::Result<Vec<crate::providers::ProviderState>, HostError> {
-    let _ = profile;
-    provider_stub("provider_list")
+    Ok(providers_engine(&app, &state, profile)?.list().await?)
 }
 
 /// Save a key for a key way, wire it and check it once. The key goes to the keychain (`secret://provider.<slug>/api_key`) and
@@ -971,13 +995,16 @@ pub fn provider_list(
 /// `hx.setup.config_failed`.
 #[tauri::command]
 #[specta::specta]
-pub fn provider_set_key(
+pub async fn provider_set_key(
+    app: AppHandle,
+    state: State<'_, AppState>,
     way: String,
     key: String,
     profile: Option<String>,
 ) -> std::result::Result<crate::providers::ProviderState, HostError> {
-    let _ = (way, key, profile);
-    provider_stub("provider_set_key")
+    Ok(providers_engine(&app, &state, profile)?
+        .set_key(&way, &key)
+        .await?)
 }
 
 /// Take a way away: its keychain secret and its configuration (for an endpoint, its whole `providers.<slug>` entry). A ladder
@@ -987,12 +1014,13 @@ pub fn provider_set_key(
 /// ChatGPT's is `chatgpt_sign_out`), `hx.provider.not_found`, `hx.secrets.*`, `hx.setup.config_failed`.
 #[tauri::command]
 #[specta::specta]
-pub fn provider_remove(
+pub async fn provider_remove(
+    app: AppHandle,
+    state: State<'_, AppState>,
     way: String,
     profile: Option<String>,
 ) -> std::result::Result<crate::providers::ProviderState, HostError> {
-    let _ = (way, profile);
-    provider_stub("provider_remove")
+    Ok(providers_engine(&app, &state, profile)?.remove(&way).await?)
 }
 
 /// Test an endpoint before saving it: one GET of `/models` (then `/v1/models`) on the address, with the key as the wire says,
@@ -1002,11 +1030,14 @@ pub fn provider_remove(
 /// Errors: `hx.provider.endpoint_invalid`, `hx.provider.endpoint_blocked`.
 #[tauri::command]
 #[specta::specta]
-pub fn provider_test_endpoint(
+pub async fn provider_test_endpoint(
     request: crate::providers::endpoint::EndpointTestRequest,
 ) -> std::result::Result<crate::providers::endpoint::EndpointTestResult, HostError> {
-    let _ = request;
-    provider_stub("provider_test_endpoint")
+    Ok(crate::providers::service::test_endpoint(
+        crate::providers::service::https(),
+        request,
+    )
+    .await?)
 }
 
 /// Save an endpoint of the person's own: the slug is derived from the name (`custom-<name>`, the catalogue's rule), the key goes
@@ -1017,11 +1048,14 @@ pub fn provider_test_endpoint(
 /// `hx.provider.key_invalid`, `hx.secrets.*`, `hx.setup.config_failed`.
 #[tauri::command]
 #[specta::specta]
-pub fn provider_add_endpoint(
+pub async fn provider_add_endpoint(
+    app: AppHandle,
+    state: State<'_, AppState>,
     request: crate::providers::endpoint::EndpointRequest,
 ) -> std::result::Result<crate::providers::ProviderState, HostError> {
-    let _ = request;
-    provider_stub("provider_add_endpoint")
+    Ok(providers_engine(&app, &state, request.profile.clone())?
+        .add_endpoint(&request)
+        .await?)
 }
 
 /// Ask the runtimes on this computer (Ollama, LM Studio, llama.cpp, vLLM) whether they answer, each on its own default port at

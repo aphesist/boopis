@@ -6,8 +6,15 @@
 //! readers are tested against the file's `examples`. It also holds the types the host commands exchange with the UI:
 //! [`ProviderState`] ([`state`]) and the endpoint form's request and result ([`endpoint`]).
 
+pub mod check;
 pub mod endpoint;
+pub mod endpoints;
+pub mod http;
+pub mod service;
 pub mod state;
+
+#[cfg(test)]
+mod service_tests;
 
 use std::collections::BTreeMap;
 use std::sync::LazyLock;
@@ -533,8 +540,10 @@ impl Catalogue {
     /// Whether a provider's models can never be frontier (a custom endpoint or a runtime on this computer).
     #[must_use]
     pub fn never_frontier(&self, provider: &str) -> bool {
+        // the engine reads a provider name in lower case, so a name that differs only in case is the same provider
+        let provider = provider.trim().to_ascii_lowercase();
         let n = &self.never_frontier;
-        n.engines.iter().any(|e| e == provider)
+        n.engines.iter().any(|e| *e == provider)
             || n.slug_prefixes
                 .iter()
                 .any(|p| provider.starts_with(p.as_str()))
@@ -849,12 +858,8 @@ mod tests {
 
     #[test]
     fn heavy_switches_name_real_families_and_key_ways() {
-        const MARK_PENDING: &[&str] = &["carbon"];
         let frontier: Value = serde_json::from_str(crate::frontier::FRONTIER_JSON).unwrap();
         let families: Vec<&Value> = frontier["families"].as_array().unwrap().iter().collect();
-        // Carbon's family is marked heavy by the stream that adds its switch to the host (ADR-0039); until then the
-        // data names it and the mark is still absent. When the mark lands, delete this list: the test then holds
-        // every switch to the mark.
         let ids: Vec<&str> = catalogue()
             .heavy_switches
             .iter()
@@ -866,13 +871,8 @@ mod tests {
                 .iter()
                 .find(|f| f["id"] == h.family)
                 .unwrap_or_else(|| panic!("{}: family {}", h.id, h.family));
-            let marked = fam["heavy"] == true;
-            assert_eq!(
-                !marked,
-                MARK_PENDING.contains(&h.id.as_str()),
-                "{}: heavy mark in frontier-models.json",
-                h.id
-            );
+            // every switch is held to the heavy mark in frontier-models.json (Carbon's landed with its switch)
+            assert_eq!(fam["heavy"], true, "{}: heavy mark in frontier-models.json", h.id);
             let (_, key_way) = catalogue().way(&h.key_way).unwrap();
             assert_eq!(key_way.kind, WayKind::Key);
             for e in &h.engines {
@@ -891,11 +891,20 @@ mod tests {
                 h.id
             );
         }
+        // and every family marked heavy has a switch: nothing is heavy that the user cannot turn on
+        for f in families.iter().filter(|f| f["heavy"] == true) {
+            assert!(
+                catalogue().heavy_switches.iter().any(|h| h.family == f["id"]),
+                "{} is heavy with no switch",
+                f["id"]
+            );
+        }
+        // Neon is the owner's counter-example: less costly than Opus per token, so not heavy
+        assert!(!crate::frontier::is_heavy("gemini", "gemini-4-neon"));
     }
 
     #[test]
-    fn the_existing_heavy_switches_say_what_the_host_says_today() {
-        // Until stream A deletes the host's own table, the data and the table must not drift.
+    fn the_heavy_choices_are_the_data_s_switches_word_for_word() {
         use crate::claude::{Probe, State};
         use crate::setup::providers::{Keys, LadderState, heavy_choices};
         let probe = Probe {
@@ -905,7 +914,8 @@ mod tests {
             detail: String::new(),
             aliases: vec![],
         };
-        let choices = heavy_choices(LadderState::Default, &[], &probe, Keys::default());
+        let choices = heavy_choices(LadderState::Default, &[], &probe, &Keys::default());
+        assert_eq!(choices.len(), catalogue().heavy_switches.len());
         for c in choices {
             let h = catalogue()
                 .heavy(&c.id)
