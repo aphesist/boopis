@@ -446,3 +446,133 @@ export interface DecisionKind {
   /** stop after the first match in a text */
   single: boolean;
 }
+
+/* ───────── the store (ADR-0038, docs/STORE.md) ─────────
+   Field for field the shapes of apps/shared/data/store.schema.json, which is the contract: the host's Rust types
+   (src-tauri/src/store/types.rs) match it too, and a test (store-schema.test.ts) validates the fixture items against it.
+   Keys are snake_case because they are the wire's. Every type is data a provider sends: nothing here is fabricated, and a
+   member that is `null` is unknown or absent, never a default. */
+/** what an item is; a plugin is a Claude Code plugin, a mod is a plugin with modules, an engine plugin is Python that runs in the engine */
+export type StoreKind = 'skill' | 'connector' | 'plugin' | 'mod' | 'engine-plugin';
+/** "Recommended by boopis", "Verified by its source", "Not reviewed" */
+export type StoreTier = 'recommended' | 'verified' | 'not-reviewed';
+/** a source's id: `boopis`, `engine-plugins`, `skills-hub`, `anthropic`, `mcp-registry`, `github`, `marketplace-url`, `local`, or `added-…` */
+export type StoreSourceId = string;
+/** pinned or refused: a branch, a tag and `latest` are not pins */
+export interface StorePin { type: 'commit' | 'archive-sha256' | 'tree-sha256' | 'oci-digest' | 'version'; value: string; repo?: string }
+/** `declared` is the publisher's word and enforced by nothing; `verified` was checked by boopis; `unknown` is shown as not known, never as none */
+export interface StoreHosts { basis: 'declared' | 'verified' | 'loopback' | 'unknown'; hosts: readonly string[] }
+/** a key an item needs; the value is never in a store shape (it goes to the keychain) */
+export interface StoreSecret { id: string; title: string; env?: string; host?: string; optional: boolean }
+export interface StoreComponentCounts { known: boolean; skills: number; commands: number; agents: number; hooks: number; mcp_servers: number; modules: number; scripts: number; python: number }
+export interface StoreRemoved { reason: string; by: 'boopis' | 'source' | 'registry' | 'engine'; date?: string }
+export type StoreScanVerdict = 'safe' | 'caution' | 'dangerous' | 'not-scanned';
+export interface StoreScanFinding { level: 'info' | 'caution' | 'dangerous'; text: string; path?: string }
+export interface StoreScan { verdict: StoreScanVerdict; scanner: string; findings: readonly StoreScanFinding[] }
+export interface Provenance {
+  source: StoreSourceId; publisher: string;
+  namespace_proof: 'github' | 'dns' | 'http' | 'curated' | 'registry' | 'none';
+  pinned: StorePin | null; tree_sha256: string | null; scan: StoreScan;
+  source_url: string; fetched_at: string; last_updated?: string;
+  /** the source's own word for the item ("official", "verified", "community", "trusted") */
+  source_tier?: string;
+}
+/** one catalogue entry; an item whose `pinned` is null is listed and cannot be installed */
+export interface StoreItem {
+  /** `source:name` */
+  id: string; kind: StoreKind; title: string; publisher: string; summary: string;
+  license: string; homepage: string | null; version: string | null; pinned: StorePin | null;
+  components: StoreComponentCounts; hosts: StoreHosts; secrets: readonly StoreSecret[];
+  tier: StoreTier; source: StoreSourceId;
+  /** the date it was checked against its publisher's own sources; null: nobody did */
+  verified: string | null;
+  removed: StoreRemoved | null;
+  tags?: readonly string[];
+  provenance: Provenance;
+}
+export type StoreSourceFetch = 'compiled-in' | 'engine-gateway' | 'git-marketplace' | 'git-repo' | 'http-json' | 'registry-api' | 'github-api' | 'local';
+/** a place items come from; the last five members are the host's state and are absent in the data file */
+export interface StoreSource {
+  id: StoreSourceId; label: string; description?: string; kinds: readonly StoreKind[]; fetch: StoreSourceFetch;
+  default_tier: StoreTier; default_on: boolean; user_added: boolean;
+  /** items come from the engine's own store: their own text may name the engine and is marked `data-store-item`; the label never does */
+  engine_origin: boolean;
+  url?: string; path?: string; terms?: 'own' | 'checked' | 'unverified' | 'not-applicable'; note?: string;
+  enabled?: boolean; refreshed_at?: string | null; items?: number | null; error?: string | null;
+}
+/** which layer installs it: the host's connector engine, boopis's plugin (Claude plugins and mods) or the engine's own manager */
+export type StoreLayer = 'connector' | 'plugin' | 'engine';
+export type StoreComponentKind = 'skill' | 'command' | 'agent' | 'hook' | 'mcp-server' | 'module' | 'script' | 'python-plugin' | 'theme' | 'other';
+export interface StoreComponent { type: StoreComponentKind; name: string; detail?: string }
+/** code that runs on the user's machine once installed and active, and where */
+export interface StoreCodeRun {
+  what: 'hook' | 'mcp-command' | 'package-start' | 'script' | 'module' | 'python'; command: string;
+  where: 'sandbox' | 'outside-sandbox' | 'engine-process'; sha256?: string; detail?: string;
+}
+export interface StoreFileWrite { path: string; purpose: string; bytes?: number }
+/** `bot` is the install scope; `bot-project` adds the user's trust for one project. "Bot", never "profile", in words. */
+export interface StoreScope { level: 'bot' | 'bot-project'; bot: string; project?: string }
+/** `runs_code` items need the hold to approve */
+export interface StoreConsent { id: string; text: string; runs_code: boolean }
+export interface StoreWarning { code: string; level: 'info' | 'caution' | 'strong'; text: string }
+export interface StoreGoverned { allowed: boolean; switch_blocks: boolean; text: string }
+export interface StoreCost { tools: number | null; context_tokens: number | null }
+/** what an install would do, exactly: the review card's data; `plan_hash` is what the install names */
+export interface InstallPlan {
+  item_id: string; kind: StoreKind; title: string; source: StoreSourceId; publisher: string;
+  version: string | null; pinned: StorePin; tree_sha256: string | null; stage_id?: string; layer: StoreLayer;
+  components: readonly StoreComponent[]; code_runs: readonly StoreCodeRun[]; hosts: StoreHosts; secrets: readonly StoreSecret[];
+  files_written: readonly StoreFileWrite[]; scope: StoreScope; consent: readonly StoreConsent[]; warnings: readonly StoreWarning[];
+  governed: StoreGoverned; cost: StoreCost; tier: StoreTier; scan: StoreScan;
+  /** sessions with a turn running now, which keep what they started with; null: not known. Not part of the hash. */
+  sessions_open: number | null;
+  plan_hash: string;
+}
+/** what boopis's plugin returns from `plugin.boopis.store.prepare`: its half of a plan (the host merges it and hashes the merge) */
+export interface PluginPlan {
+  kind: 'skill' | 'plugin' | 'mod' | 'engine-plugin'; slug: string; tree_sha256: string | null;
+  components: readonly StoreComponent[]; code_runs: readonly StoreCodeRun[]; hosts: StoreHosts; secrets: readonly StoreSecret[];
+  files_written: readonly StoreFileWrite[]; consent: readonly StoreConsent[]; warnings: readonly StoreWarning[];
+  governed: StoreGoverned; cost: StoreCost; scan: StoreScan; plugin_hash: string;
+}
+export interface StoreInstallStep { name: string; ok: boolean; note?: string }
+/** the version kept one step back, and a version in an update's diff */
+export interface StorePrevious { version: string | null; pinned: StorePin; tree_sha256?: string | null }
+/** what an install, update or rollback did; also a row of the installed list */
+export interface InstallReceipt {
+  item_id: string; kind: StoreKind; title?: string; source: StoreSourceId; layer: StoreLayer;
+  version: string | null; pinned: StorePin; plan_hash: string; tree_sha256: string | null; installed_at: string;
+  scope: StoreScope; files: readonly string[]; enabled: boolean;
+  /** an install never changes a running session */
+  effective: 'next-session';
+  trusted_projects?: readonly string[]; previous: StorePrevious | null; kill_listed?: StoreRemoved;
+  restart_needed?: boolean; steps: readonly StoreInstallStep[]; notes: readonly string[];
+}
+export interface StoreChange {
+  change: 'added' | 'removed' | 'changed';
+  type: StoreComponentKind | 'host' | 'secret' | 'license'; name: string; detail?: string;
+}
+/** what changes if an installed item moves to the catalogue's pin; `widened` (new code, hosts or secrets) needs the whole review again */
+export interface UpdateDiff {
+  item_id: string; status: 'available' | 'up-to-date' | 'removed' | 'unpinned' | 'source-unreachable';
+  from: StorePrevious; to: StorePrevious | null; changes: readonly StoreChange[];
+  new_hosts: readonly string[]; new_secrets: readonly StoreSecret[]; new_code: readonly StoreCodeRun[]; widened: boolean;
+  tier_changed: { from: StoreTier; to: StoreTier } | null; removed: StoreRemoved | null; to_plan_hash: string | null;
+}
+/** what browse and search narrow by; sources the user switched off are never searched */
+export interface StoreFilter { kind?: StoreKind; tier?: StoreTier; source?: StoreSourceId; installed?: boolean; hide_unpinned?: boolean }
+/** a page of the catalogue from the local cache; `recommended` is the front page, on the first page of an unfiltered browse */
+export interface StoreBrowse {
+  items: readonly StoreItem[]; total: number; next_cursor: string | null; recommended?: readonly StoreItem[];
+  /** the oldest refresh among the searched sources; null: never */
+  refreshed_at: string | null; stale: boolean; offline: boolean;
+}
+export interface StoreDetail { item: StoreItem; installed: InstallReceipt | null; update: UpdateDiff | null; governed: StoreGoverned; cost: StoreCost }
+/** what staging left: fetched, verified against the pin, unpacked within the caps, hashed; nothing has run */
+export interface StageResult { stage_id: string; item_id: string; pinned: StorePin; tree_sha256: string | null; files: number; bytes: number; scan: StoreScan; expires_at: string }
+export interface InstallRequest { stage_id: string; plan_hash: string; secrets?: Readonly<Record<string, string>>; restart?: 'now' | 'when-idle' }
+export interface UninstallResult { item_id: string; removed: readonly string[]; kept_secrets: readonly string[]; notes: readonly string[] }
+/** a project's switch "no engine plugins and no plugin hooks"; on by default for a governed project */
+export interface ProjectPolicy { project: string; governed: boolean; explicit: boolean | null; effective: boolean }
+/** a rejection of a store call: the stable code (`hx.store.*`, `hx.connectors.*`) and a sentence the UI shows */
+export interface StoreError { code: string; message: string }
