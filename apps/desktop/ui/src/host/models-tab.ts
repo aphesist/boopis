@@ -121,7 +121,7 @@ export function heavyRows(view: ModelsView): string[] {
 
 /** Governed mode's section (ADR-0037): the models it allows, each also in any later version, and whether the saved ladder lets it run.
     When it cannot, the row says why in one sentence and offers the way to get a model (Change models, the same question as setup's).
-    The heavy models (Fable, Grok) are on a ladder only when their switch, right under the status, is on. The allowed list and the
+    The heavy models (Fable, Carbon, Grok) are on a ladder only when their switch, right under the status, is on. The allowed list and the
     heavy mark are the plugin's data file as the host reads it, never typed here. */
 export function governedRows(view: ModelsView | { error: string }): string[] {
   if ('error' in view) return [ui.html.setRow({ label: 'Governed mode', hint: `Not read: ${view.error}` })];
@@ -130,7 +130,7 @@ export function governedRows(view: ModelsView | { error: string }): string[] {
     ? ui.html.setRow({ label: 'Status', hint: view.state === 'set' ? 'Every tier of the saved ladder is a frontier model.' : 'No ladder is saved, so boopis uses its built-in one: Opus, on your Anthropic key.', control: '<span class="ui-set__value">Available</span>' })
     : ui.html.setRow({
       label: 'Status',
-      hint: `${g.why ?? 'No frontier model is set up.'} To use governed mode, sign in with your Claude subscription (Opus), sign in with ChatGPT on a plan that includes GPT-6.2 Sol or Astra, add a Gemini key for Gemini 4 Hydrogen or Neon, or turn on Grok with an xAI key. Sessions that are not governed can use any model.`,
+      hint: `${g.why ?? 'No frontier model is set up.'} To use governed mode, sign in with your Claude subscription (Opus), sign in with ChatGPT or add an OpenAI key, on a plan or key that includes GPT-6.1 Terra, Sol or Astra, add a Gemini key for Gemini 4 Hydrogen or Neon, or turn on Grok with an xAI key. Sessions that are not governed can use any model.`,
       control: '<span class="ui-set__value">Unavailable</span>' + ui.html.button({ label: 'Change models', size: 's', attrs: { id: 'hx-governed-change' } })
     });
   return [
@@ -140,7 +140,6 @@ export function governedRows(view: ModelsView | { error: string }): string[] {
       hint: g.heavy.includes(name) ? 'Heavy: only when you turn it on.' : undefined,
       control: '<span class="ui-set__value">or later</span>'
     })),
-    ui.html.setRow({ label: 'Gemini 4 Carbon on the ladder', hint: 'Allowed, but boopis\u2019s Gemini ladder is Hydrogen, then Neon: in Ramp\u2019s SWE-Bench v2 Carbon solved 72.6% at $5.19 a task, Neon 76.2% at $4.38.', control: '<span class="ui-set__value">Not on it</span>' }),
     status,
     ...heavyRows(view)
   ];

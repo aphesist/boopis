@@ -20,124 +20,144 @@
   "h": 238
  },
  "governed-mode-a-ladder-with-cheap-tiers-marked-settings-models@bone": {
-  "sha": "1d97af5b7db148be3a608db92009a195d47e969c",
+  "sha": "c2c832cb9b0fbb47753a84a10b011f1c4d47464a",
   "w": 584,
-  "h": 1258
+  "h": 1242
  },
  "governed-mode-a-ladder-with-cheap-tiers-marked-settings-models@catalog": {
-  "sha": "192cc8bf872ccdb33ab94ecbf23670ca8f774329",
+  "sha": "daf2c8e4ae341960a049d177782339e5685421a9",
   "w": 584,
-  "h": 1258
+  "h": 1242
  },
  "governed-mode-a-ladder-with-cheap-tiers-marked-settings-models@graphite": {
-  "sha": "d65fffcfb0a97134bea1bfb06f7aa71c70c0a8bb",
+  "sha": "8d577318d7e2163321bce51132b9630764e6c84c",
   "w": 584,
-  "h": 1258
+  "h": 1242
  },
  "governed-mode-a-ladder-with-cheap-tiers-marked-settings-models@typewriter": {
-  "sha": "a5c850bc1c3dae004ab7216205fca325a6c8c60a",
+  "sha": "944062c24d48cbf063ee2d6a509c7efb575364dd",
   "w": 584,
-  "h": 1438
+  "h": 1404
  },
  "governed-mode-an-xai-key-alone-unavailable-until-grok-is-on-settings-models@bone": {
-  "sha": "7c246a9b41412b65376013fd4b6d2621915414ba",
+  "sha": "d007c719bde322ea4f9a07dcb95f4af3c7a3f772",
   "w": 584,
-  "h": 1096
+  "h": 1061
  },
  "governed-mode-an-xai-key-alone-unavailable-until-grok-is-on-settings-models@catalog": {
-  "sha": "e23ba33422a3c0a668dc884614ffe518f58740a4",
+  "sha": "17ba64123ebe6acee1c1425abcaaa5bf0a10635b",
   "w": 584,
-  "h": 1096
+  "h": 1061
  },
  "governed-mode-an-xai-key-alone-unavailable-until-grok-is-on-settings-models@graphite": {
-  "sha": "6fb17a488f4f7ec5355dfbd5d50ecb027019a974",
+  "sha": "aabf39ae92a07d199cdf19659dc0a2bae725f4ff",
   "w": 584,
-  "h": 1096
+  "h": 1061
  },
  "governed-mode-an-xai-key-alone-unavailable-until-grok-is-on-settings-models@typewriter": {
-  "sha": "2299d49a1ce54e563ad25ba5a6d16d1ff069c2f8",
+  "sha": "a79e075ae3c1cb1055a345216567f8636586848c",
   "w": 584,
-  "h": 1240
+  "h": 1205
  },
  "governed-mode-available-settings-models@bone": {
-  "sha": "021e9df51a2db590ddeb31cfbacb8f3bd739416b",
+  "sha": "d6ec8312f5b1c77c19ceb27542198573f34530fd",
   "w": 584,
-  "h": 1096
+  "h": 1061
  },
  "governed-mode-available-settings-models@catalog": {
-  "sha": "e3a7bb7c9237583579476309bd159850e8ddee05",
+  "sha": "30ec5f56b2aabbf74c1a068fcf097024527420c9",
   "w": 584,
-  "h": 1096
+  "h": 1061
  },
  "governed-mode-available-settings-models@graphite": {
-  "sha": "8582bd2d48d7a87a51ce66dabece3f3a73b96cf7",
+  "sha": "340c027544c9b270f2833b09bd49a6c8a884c985",
   "w": 584,
-  "h": 1096
+  "h": 1061
  },
  "governed-mode-available-settings-models@typewriter": {
-  "sha": "44086f268ba13119f1d3c996979b8af94a3d71d1",
+  "sha": "8b34b3152f8b5eb827f045d716954fbd5680523f",
   "w": 584,
-  "h": 1238
+  "h": 1186
+ },
+ "governed-mode-the-carbon-switch-on-a-gemini-ladder-off-then-on-settings-models@bone": {
+  "sha": "849c40ef4d89c8e9b22cb288e142e33971866a7f",
+  "w": 584,
+  "h": 1600
+ },
+ "governed-mode-the-carbon-switch-on-a-gemini-ladder-off-then-on-settings-models@catalog": {
+  "sha": "3c54b979308f88fb13aec32a8be24bcd098b35f4",
+  "w": 584,
+  "h": 1600
+ },
+ "governed-mode-the-carbon-switch-on-a-gemini-ladder-off-then-on-settings-models@graphite": {
+  "sha": "53ef073891dfb7fd5a829e2d89ba238d55bccc8b",
+  "w": 584,
+  "h": 1600
+ },
+ "governed-mode-the-carbon-switch-on-a-gemini-ladder-off-then-on-settings-models@typewriter": {
+  "sha": "729d9314d4e59539aea4cab94744e89b40021400",
+  "w": 584,
+  "h": 1600
  },
  "governed-mode-the-grok-switch-on-and-off-beside-fable-on-settings-models@bone": {
-  "sha": "2e697459ccce4eaf4ae42039879eb6f9521e3ad9",
+  "sha": "66e9b3781a073167b494f7a9818673ba8011a2f2",
   "w": 584,
   "h": 1600
  },
  "governed-mode-the-grok-switch-on-and-off-beside-fable-on-settings-models@catalog": {
-  "sha": "124b260f3e67230b0fd9b01890efb5a0a1dda78b",
+  "sha": "a8911350e3c9bc2e1d616045f86d0ff18cd4e326",
   "w": 584,
   "h": 1600
  },
  "governed-mode-the-grok-switch-on-and-off-beside-fable-on-settings-models@graphite": {
-  "sha": "362ef7c42444bd03b3a070119bc1a39f210b32eb",
+  "sha": "7b56b97c4ea2b77682db8aac64dbfe81df6898cc",
   "w": 584,
   "h": 1600
  },
  "governed-mode-the-grok-switch-on-and-off-beside-fable-on-settings-models@typewriter": {
-  "sha": "4d76541d68c20b422cf6c2ac47e89342a1966897",
+  "sha": "a074d86091193d9d68fbee065459044965ab307e",
   "w": 584,
   "h": 1600
  },
  "governed-mode-the-heavy-switches-fable-off-then-on-settings-models@bone": {
-  "sha": "84cfaffcbab7bcc8fe3229fdfd62aeda28b45764",
+  "sha": "f15366150630ee39004839166216c54dbb710334",
   "w": 584,
   "h": 1600
  },
  "governed-mode-the-heavy-switches-fable-off-then-on-settings-models@catalog": {
-  "sha": "2bf8ea9760d505a0b10651a0e75badd85565e115",
+  "sha": "9466f0b39f50444e366439bdd5c18c253b28a1cc",
   "w": 584,
   "h": 1600
  },
  "governed-mode-the-heavy-switches-fable-off-then-on-settings-models@graphite": {
-  "sha": "25fdb5749059f0d6f95a7d4ed23e77a7f4498ce4",
+  "sha": "6dca5fc1e6f2e3732f687882c18de52e738b6e21",
   "w": 584,
   "h": 1600
  },
  "governed-mode-the-heavy-switches-fable-off-then-on-settings-models@typewriter": {
-  "sha": "b748b6e3d4680b9ae200ea83d4c8fca456b8518f",
+  "sha": "612f426818fb7b39678d1e63f73365c3acbc17e8",
   "w": 584,
   "h": 1600
  },
  "governed-mode-unavailable-no-frontier-model-settings-models@bone": {
-  "sha": "ceca3abf353286b672f9711e7c59717ab6f8ec60",
+  "sha": "06949a9b36a01d68860f2a06ca889c688ac1e876",
   "w": 584,
-  "h": 1202
+  "h": 1168
  },
  "governed-mode-unavailable-no-frontier-model-settings-models@catalog": {
-  "sha": "e27fb5a5f01bb564bc52a805a987b7e7854e7cd4",
+  "sha": "76265ad34d9c192a636064906ae822501191a16c",
   "w": 584,
-  "h": 1202
+  "h": 1168
  },
  "governed-mode-unavailable-no-frontier-model-settings-models@graphite": {
-  "sha": "6ceb6b099632a15603c059f33ebfb9d641fb1f29",
+  "sha": "55acb663e0e89b159a969d52c440a30af310c39d",
   "w": 584,
-  "h": 1202
+  "h": 1168
  },
  "governed-mode-unavailable-no-frontier-model-settings-models@typewriter": {
-  "sha": "d2b743e5cb7ab33bfc3d5cd372ee2ca5fb714bb4",
+  "sha": "67508ed6ab529602b749de78c7f5232176b1341d",
   "w": 584,
-  "h": 1364
+  "h": 1330
  },
  "hover@bone": {
   "sha": "1851c0e8d68d1581eac8a1d5fd50883b2aa3005c",

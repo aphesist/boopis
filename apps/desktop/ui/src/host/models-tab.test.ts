@@ -19,13 +19,15 @@ const CLAUDE: Record<'ready' | 'out' | 'missing' | 'old' | 'metered', Claude> = 
   old: { state: 'old_version', version: '2.1.200', plan: null, detail: 'Claude Code 2.1.200 is older than the oldest one that serves a Claude model here (2.1.280). Update it with `claude update`, then choose Check again.', aliases: [] },
   metered: { state: 'metered', version: '2.1.328', plan: null, detail: 'Claude Code 2.1.328 is signed in with an Anthropic API key, which bills API usage instead of your Claude subscription.', aliases: ['haiku', 'sonnet', 'opus'] }
 };
-const ALLOWED = ['Claude Opus 5.5', 'Claude Fable 5.2', 'GPT-6.2 Astra', 'GPT-6.2 Sol', 'Gemini 4 Carbon', 'Gemini 4 Neon', 'Gemini 4 Hydrogen', 'Grok 4.7'];
-const HEAVY_NAMES = ['Claude Fable 5.2', 'Grok 4.7'];
-const GOV_OK: ModelsView['governed'] = { allowed: ALLOWED, heavy: HEAVY_NAMES, sentence: 'Claude Opus 5.5 or later, Claude Fable 5.2 or later, GPT-6.2 Astra or later, GPT-6.2 Sol or later, Gemini 4 Carbon or later, Gemini 4 Neon or later, Gemini 4 Hydrogen or later and Grok 4.7 or later', tiers: [], available: true, why: null };
+const ALLOWED = ['Claude Opus 5.5', 'Claude Fable 5.2', 'GPT-6.1 Terra', 'GPT-6.2 Astra', 'GPT-6.2 Sol', 'Gemini 4 Carbon', 'Gemini 4 Neon', 'Gemini 4 Hydrogen', 'Grok 4.7'];
+const HEAVY_NAMES = ['Claude Fable 5.2', 'Gemini 4 Carbon', 'Grok 4.7'];
+const GOV_OK: ModelsView['governed'] = { allowed: ALLOWED, heavy: HEAVY_NAMES, sentence: 'Claude Opus 5.5 or later, Claude Fable 5.2 or later, GPT-6.1 Terra or later, GPT-6.2 Astra or later, GPT-6.2 Sol or later, Gemini 4 Carbon or later, Gemini 4 Neon or later, Gemini 4 Hydrogen or later and Grok 4.7 or later', tiers: [], available: true, why: null };
 const FABLE_WHY = 'Fable is token-heavy: Ramp\'s benchmark measured $3.79 a task against Opus\'s $1.53, and on a Claude Pro plan it bills usage credits from the first request. So boopis never adds it by itself.';
 const GROK_WHY = 'Grok 4.7 is token-heavy: Ramp\'s benchmark measured it at $4.32 a task, with the most tool calls of any model (161 a task). So boopis never adds it by itself.';
-const choice = (id: 'fable' | 'grok', over: Partial<ModelsView['heavy'][number]> = {}): ModelsView['heavy'][number] => ({ id, label: id === 'fable' ? 'Climb to Fable' : 'Use Grok', reason: id === 'fable' ? FABLE_WHY : GROK_WHY, applies: false, on: false, blocked: null, ...over });
-const NO_HEAVY: ModelsView['heavy'] = [choice('fable'), choice('grok')];
+const CARBON_WHY = 'Gemini 4 Carbon is the costliest frontier model in Ramp\'s benchmark: $5.19 a task against Neon\'s $4.38 and Hydrogen\'s $3.24, and it solved 72.6% where Neon solved 76.2%. So boopis never adds it by itself.';
+const SWITCHES = { fable: ['Climb to Fable', FABLE_WHY], grok: ['Use Grok', GROK_WHY], carbon: ['Use Gemini 4 Carbon', CARBON_WHY] } as const;
+const choice = (id: 'fable' | 'grok' | 'carbon', over: Partial<ModelsView['heavy'][number]> = {}): ModelsView['heavy'][number] => ({ id, label: SWITCHES[id][0], reason: SWITCHES[id][1], applies: false, on: false, blocked: null, ...over });
+const NO_HEAVY: ModelsView['heavy'] = [choice('fable'), choice('grok'), choice('carbon')];
 const SET: ModelsView = { state: 'set', tiers: [{ name: 'small', model: 'openrouter/a-3b:free' }, { name: 'big', model: 'openrouter/b-120b:free' }], claude: CLAUDE.missing, claude_plugin: false, chatgpt: null, gemini_key: false, governed: GOV_OK, heavy: NO_HEAVY };
 const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 
@@ -333,13 +335,19 @@ describe('Settings > Models: the heavy models\' switches (ADR-0037)', () => {
     expect(claudeRows(fableView(false)).join('')).not.toContain('Climb to Fable');
     const d = document.createElement('div');
     d.innerHTML = governedRows(fableView(false)).join('');
-    expect(d.textContent?.match(/Heavy: only when you turn it on/g)).toHaveLength(2);
+    expect(d.textContent?.match(/Heavy: only when you turn it on/g)).toHaveLength(3); // Fable, Carbon and Grok
   });
-  it('says Carbon is allowed but not on the Gemini ladder, and why', () => {
-    const t = text(fableView(false));
-    expect(t).toContain('Gemini 4 Carbon on the ladder');
-    expect(t).toContain('Hydrogen, then Neon');
+  it('shows Carbon as a switch like the others once the saved ladder is a Gemini one, with its reason, and no separate row about it', () => {
+    const v: ModelsView = { ...SET, heavy: [choice('fable'), choice('grok'), choice('carbon', { applies: true })] };
+    const t = text(v);
+    expect(t).toContain('Use Gemini 4 Carbon');
     expect(t).toContain('72.6%');
+    expect(t).toContain('never adds it by itself');
+    expect(t).not.toContain('Gemini 4 Carbon on the ladder');
+    expect(governedRows(v).join('')).toContain('id="hx-heavy-carbon"');
+    // off the Gemini ladder there is no switch to show, and Neon never has one
+    expect(text(fableView(false))).not.toContain('Use Gemini 4 Carbon');
+    expect(text(v)).not.toMatch(/Neon[^.]*switch/);
   });
   it('shows nothing about a heavy model the saved ladder cannot take', () => {
     const t = text({ ...SET, claude: CLAUDE.ready });

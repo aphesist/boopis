@@ -186,7 +186,7 @@ describe('who answers next, governed', () => {
 });
 
 describe('governed mode needs a frontier model (ADR-0037)', () => {
-  const SENTENCE = 'Claude Opus 5.5 or later, Claude Fable 5.2 or later, GPT-6.2 Astra or later, GPT-6.2 Sol or later, Gemini 4 Carbon or later, Gemini 4 Neon or later, Gemini 4 Hydrogen or later and Grok 4.7 or later';
+  const SENTENCE = 'Claude Opus 5.5 or later, Claude Fable 5.2 or later, GPT-6.1 Terra or later, GPT-6.2 Astra or later, GPT-6.2 Sol or later, Gemini 4 Carbon or later, Gemini 4 Neon or later, Gemini 4 Hydrogen or later and Grok 4.7 or later';
   const NO = { allowed: ['Claude Opus 5.5'], sentence: SENTENCE, available: false, why: 'Governed mode runs only on frontier models, and tier \'free\' runs nous/welcome, which is not one.' };
   const OK = { allowed: ['Claude Opus 5.5'], sentence: SENTENCE, available: true, why: null };
 
