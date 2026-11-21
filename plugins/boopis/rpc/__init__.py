@@ -206,7 +206,9 @@ def cascade_start_tier(params: Mapping[str, Any], *, session_id: str | None = No
         if start is not None:
             names = rt.ladder_of(state).names
             if start not in names:
-                raise InvalidParamsError(f"start_tier {start!r} is not a tier of the ladder", data={"tiers": list(names)})
+                raise InvalidParamsError(
+                    f"start_tier {start!r} is not a tier of the ladder", data={"tiers": list(names)}
+                )
         state.start_tier = start
     return {}
 
