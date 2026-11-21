@@ -83,11 +83,12 @@ export function tileHtml(r: Row, name: string): string {
     `<span class="fr-tile__name">${esc(name)}</span><span class="fr-tile__sub">${sub}</span></button>${remove}</div>`;
 }
 
-const nameOf = (r: Row, first: boolean): string => (first ? r.entry.label : r.way.label);
+/** the entry's name for its first key way, the way's own for any other (a second key of the same lab, the one for China) */
+const nameOf = (r: Row): string => (r.entry.ways.find((w) => w.kind === 'key' && !w.hidden)?.id === r.way.id ? r.entry.label : r.way.label);
 /** every key way of a list of blocks, as tiles: the entry's name for its first way, the way's own for the others */
 const keyRows = (blocks: Plan['main']): Row[] => blocks.flatMap((b) => b.rows.filter((r) => r.way.kind === 'key'));
 const regional = (r: Row): boolean => r.way.region !== undefined;
-const tilesOf = (rows: Row[]): string => rows.map((r, i, all) => tileHtml(r, nameOf(r, all.findIndex((x) => x.entry.id === r.entry.id) === i))).join('');
+const tilesOf = (rows: Row[]): string => rows.map((r) => tileHtml(r, nameOf(r))).join('');
 
 /** a runtime found on this computer, or an endpoint that is set up */
 function lrow(mark: string, title: string, sub: string, state: string, control: string): string {

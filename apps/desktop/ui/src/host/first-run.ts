@@ -246,7 +246,7 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
       root.dataset['frLayout'] = wide ? 'hub' : 'card';
       const bar = progress(id);
       const shown = shell.querySelector('[data-fr-card]');
-      const oldBar = shell.querySelector('.fr-progress');
+      const oldBar = shell.querySelector(':scope > .fr-progress');
       if (wide) {
         /* the page: its title and lede, and the progress beside them, then the body; the footer is the window's, not the page's */
         const head = card.querySelector('.fr-head');

@@ -89,6 +89,8 @@ describe('the models hub', () => {
     // the summary: what it starts with, the ladder, whether governed mode can run, what is connected
     const text = document.body.textContent ?? '';
     expect(document.querySelector('h1')?.textContent).toBe('Your models are set');
+    expect(document.querySelector('.fr-progress__text')?.textContent, 'the step line is on the summary too').toBe('Step 2 of 4');
+    expect(document.querySelectorAll('.fr-progress')).toHaveLength(1);
     expect(text).toContain('Starts with');
     expect(document.querySelector('[data-fr-summary] .ui-ladder')).toBeTruthy();
     expect(text).toContain('Governed mode');
