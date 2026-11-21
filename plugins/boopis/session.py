@@ -37,6 +37,7 @@ from .hx import HxClient
 from .ledger import PriceBook, SessionLedger, build_book, ledger_filename, load_catalogue, project_costs, usage_records
 from .ledger.store import LedgerEvent
 from .policy import SessionPolicy
+from .turns import TurnTrack
 from .util.log import get_logger
 from .version import PLUGIN_VERSION
 
@@ -69,6 +70,13 @@ class SessionState:
         default_factory=dict
     )  # tool_call_id -> (reason, rule) of the block
     lock: threading.RLock = field(default_factory=threading.RLock)
+    track: TurnTrack = field(default_factory=TurnTrack)  # who answers the current turn, and the one-turn exception
+
+    @property
+    def effective_mode(self) -> Mode:
+        """The mode the running turn is judged by: the session's, except for a turn the person asked to run outside
+        governed mode (``turns.py``). The session's own ``mode`` never changes."""
+        return "ungoverned" if self.track.active else self.mode
 
     def actor(self) -> str:
         """The ledger actor for what the session's own model does."""
@@ -215,7 +223,7 @@ class Runtime:
         base = caller.state.policy
         assert base is not None
         if caller.link is None:
-            return base
+            return replace(base, mode="ungoverned") if caller.state.track.active else base
         return replace(base, role="worker", ship_closed=caller.link.closed_reason())
 
     def ladder_of(self, state: SessionState) -> TierLadder:

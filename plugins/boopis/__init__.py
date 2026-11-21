@@ -18,6 +18,7 @@ HOOKS = (
     "post_auxiliary_call",
     "pre_llm_call",
     "on_session_start",
+    "on_session_end",
     "on_session_finalize",
     "subagent_start",
     "subagent_stop",
@@ -25,6 +26,9 @@ HOOKS = (
 RPC_METHODS = (
     "describe",
     "mode.set",
+    "mode.once",
+    "turns.bind",
+    "turns.models",
     "ledger.tail",
     "ledger.verify",
     "ledger.stats",

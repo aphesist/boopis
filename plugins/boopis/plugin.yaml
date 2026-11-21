@@ -22,6 +22,7 @@ provides_hooks:
   - post_auxiliary_call
   - pre_llm_call
   - on_session_start
+  - on_session_end
   - on_session_finalize
   # compat/: the Claude Code hooks bridge (docs/COMPAT.md section 4)
   - transform_tool_result
