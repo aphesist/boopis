@@ -1,24 +1,4 @@
 {
- "claude-subscription-the-fable-opt-in-off-and-on-settings-models@bone": {
-  "sha": "c16a279ceaeda25461f2660fed69a9b218cf1499",
-  "w": 584,
-  "h": 579
- },
- "claude-subscription-the-fable-opt-in-off-and-on-settings-models@catalog": {
-  "sha": "2bf8f72c983e98a8c09b352745ddd76a7675b2c0",
-  "w": 584,
-  "h": 579
- },
- "claude-subscription-the-fable-opt-in-off-and-on-settings-models@graphite": {
-  "sha": "d03081440e5dd767db64596178a3613013d6fa04",
-  "w": 584,
-  "h": 579
- },
- "claude-subscription-the-fable-opt-in-off-and-on-settings-models@typewriter": {
-  "sha": "a85aed0b8bfc8d828d2b5e9fd8f51a855fb86538",
-  "w": 584,
-  "h": 651
- },
  "focus@bone": {
   "sha": "b7f9e43d5d4ad4333da03f820a682c51fa04caea",
   "w": 584,
@@ -40,64 +20,124 @@
   "h": 238
  },
  "governed-mode-a-ladder-with-cheap-tiers-marked-settings-models@bone": {
-  "sha": "233bf82806865555dd271361b49701eaa3bd763a",
+  "sha": "1d97af5b7db148be3a608db92009a195d47e969c",
   "w": 584,
-  "h": 733
+  "h": 1258
  },
  "governed-mode-a-ladder-with-cheap-tiers-marked-settings-models@catalog": {
-  "sha": "d7d030d277880878c0bac6503a94bf504a330602",
+  "sha": "192cc8bf872ccdb33ab94ecbf23670ca8f774329",
   "w": 584,
-  "h": 733
+  "h": 1258
  },
  "governed-mode-a-ladder-with-cheap-tiers-marked-settings-models@graphite": {
-  "sha": "4142ac4f067f4b073073a51ad1989b7c9c1e7826",
+  "sha": "d65fffcfb0a97134bea1bfb06f7aa71c70c0a8bb",
   "w": 584,
-  "h": 733
+  "h": 1258
  },
  "governed-mode-a-ladder-with-cheap-tiers-marked-settings-models@typewriter": {
-  "sha": "2d8ea1baab39256abc60db795ac47c670c42716b",
+  "sha": "a5c850bc1c3dae004ab7216205fca325a6c8c60a",
   "w": 584,
-  "h": 805
+  "h": 1438
+ },
+ "governed-mode-an-xai-key-alone-unavailable-until-grok-is-on-settings-models@bone": {
+  "sha": "7c246a9b41412b65376013fd4b6d2621915414ba",
+  "w": 584,
+  "h": 1096
+ },
+ "governed-mode-an-xai-key-alone-unavailable-until-grok-is-on-settings-models@catalog": {
+  "sha": "e23ba33422a3c0a668dc884614ffe518f58740a4",
+  "w": 584,
+  "h": 1096
+ },
+ "governed-mode-an-xai-key-alone-unavailable-until-grok-is-on-settings-models@graphite": {
+  "sha": "6fb17a488f4f7ec5355dfbd5d50ecb027019a974",
+  "w": 584,
+  "h": 1096
+ },
+ "governed-mode-an-xai-key-alone-unavailable-until-grok-is-on-settings-models@typewriter": {
+  "sha": "2299d49a1ce54e563ad25ba5a6d16d1ff069c2f8",
+  "w": 584,
+  "h": 1240
  },
  "governed-mode-available-settings-models@bone": {
-  "sha": "a67dbb2a465cfca8fc86487b5e7a648a7b6cd426",
+  "sha": "021e9df51a2db590ddeb31cfbacb8f3bd739416b",
   "w": 584,
-  "h": 599
+  "h": 1096
  },
  "governed-mode-available-settings-models@catalog": {
-  "sha": "ba184fbec92a89f2b996128c9a668d7df9b65db3",
+  "sha": "e3a7bb7c9237583579476309bd159850e8ddee05",
   "w": 584,
-  "h": 599
+  "h": 1096
  },
  "governed-mode-available-settings-models@graphite": {
-  "sha": "24ac63bc7986012271cd789e158c7fb0f18ad940",
+  "sha": "8582bd2d48d7a87a51ce66dabece3f3a73b96cf7",
   "w": 584,
-  "h": 599
+  "h": 1096
  },
  "governed-mode-available-settings-models@typewriter": {
-  "sha": "41efdd7e0e36b64e72e7884bc71c81d1aa48ce5c",
+  "sha": "44086f268ba13119f1d3c996979b8af94a3d71d1",
   "w": 584,
-  "h": 651
+  "h": 1238
+ },
+ "governed-mode-the-grok-switch-on-and-off-beside-fable-on-settings-models@bone": {
+  "sha": "2e697459ccce4eaf4ae42039879eb6f9521e3ad9",
+  "w": 584,
+  "h": 1600
+ },
+ "governed-mode-the-grok-switch-on-and-off-beside-fable-on-settings-models@catalog": {
+  "sha": "124b260f3e67230b0fd9b01890efb5a0a1dda78b",
+  "w": 584,
+  "h": 1600
+ },
+ "governed-mode-the-grok-switch-on-and-off-beside-fable-on-settings-models@graphite": {
+  "sha": "362ef7c42444bd03b3a070119bc1a39f210b32eb",
+  "w": 584,
+  "h": 1600
+ },
+ "governed-mode-the-grok-switch-on-and-off-beside-fable-on-settings-models@typewriter": {
+  "sha": "4d76541d68c20b422cf6c2ac47e89342a1966897",
+  "w": 584,
+  "h": 1600
+ },
+ "governed-mode-the-heavy-switches-fable-off-then-on-settings-models@bone": {
+  "sha": "84cfaffcbab7bcc8fe3229fdfd62aeda28b45764",
+  "w": 584,
+  "h": 1600
+ },
+ "governed-mode-the-heavy-switches-fable-off-then-on-settings-models@catalog": {
+  "sha": "2bf8ea9760d505a0b10651a0e75badd85565e115",
+  "w": 584,
+  "h": 1600
+ },
+ "governed-mode-the-heavy-switches-fable-off-then-on-settings-models@graphite": {
+  "sha": "25fdb5749059f0d6f95a7d4ed23e77a7f4498ce4",
+  "w": 584,
+  "h": 1600
+ },
+ "governed-mode-the-heavy-switches-fable-off-then-on-settings-models@typewriter": {
+  "sha": "b748b6e3d4680b9ae200ea83d4c8fca456b8518f",
+  "w": 584,
+  "h": 1600
  },
  "governed-mode-unavailable-no-frontier-model-settings-models@bone": {
-  "sha": "c830fd94927229690510d7a585ae233ea738be5e",
+  "sha": "ceca3abf353286b672f9711e7c59717ab6f8ec60",
   "w": 584,
-  "h": 659
+  "h": 1202
  },
  "governed-mode-unavailable-no-frontier-model-settings-models@catalog": {
-  "sha": "5cb9c9c63f43974fb73bff12ce69941319bfa254",
+  "sha": "e27fb5a5f01bb564bc52a805a987b7e7854e7cd4",
   "w": 584,
-  "h": 659
+  "h": 1202
  },
  "governed-mode-unavailable-no-frontier-model-settings-models@graphite": {
-  "sha": "7b805bdc6f4562d6064d1e2215c25311319a5052",
+  "sha": "6ceb6b099632a15603c059f33ebfb9d641fb1f29",
   "w": 584,
-  "h": 659
+  "h": 1202
  },
  "governed-mode-unavailable-no-frontier-model-settings-models@typewriter": {
-  "sha": "05bfa76cb0ab0588cd2548fa3637151ff40e8d8c",
+  "sha": "d2b743e5cb7ab33bfc3d5cd372ee2ca5fb714bb4",
   "w": 584,
-  "h": 731
+  "h": 1364
  },
  "hover@bone": {
   "sha": "1851c0e8d68d1581eac8a1d5fd50883b2aa3005c",
