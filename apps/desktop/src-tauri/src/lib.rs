@@ -16,6 +16,7 @@ mod engine_words;
 pub mod error;
 pub mod frame_rate;
 pub mod free_tier;
+pub mod frontier;
 pub mod gateway;
 pub mod gpu;
 pub mod hermes;

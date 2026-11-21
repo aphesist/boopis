@@ -939,6 +939,43 @@ export type GatewayState =
 /**  Hermes is installed but too old or otherwise not usable. */
 "incompatible";
 
+/**  Whether governed mode can run with what is saved, and the models it allows. */
+export type GovernedView = GovernedView_Serialize | GovernedView_Deserialize;
+
+/**  Whether governed mode can run with what is saved, and the models it allows. */
+export type GovernedView_Deserialize = {
+	/**  The allowed models, one per family (`Claude Opus 5.5`); each also qualifies in any later version. */
+	allowed: string[],
+	/**  The allowed models as one sentence. */
+	sentence: string,
+	/**  The saved ladder's tiers, each marked; empty unless the ladder is saved. */
+	tiers: TierCheck[],
+	/**
+	 *  Whether governed mode can run: every saved tier is frontier, or no ladder is saved and an Anthropic key is in place
+	 *  (the plugin's own ladder is Opus then Fable).
+	 */
+	available: boolean,
+	/**  Why not, in one plain sentence; `None` when it can. */
+	why?: string | null,
+};
+
+/**  Whether governed mode can run with what is saved, and the models it allows. */
+export type GovernedView_Serialize = {
+	/**  The allowed models, one per family (`Claude Opus 5.5`); each also qualifies in any later version. */
+	allowed: string[],
+	/**  The allowed models as one sentence. */
+	sentence: string,
+	/**  The saved ladder's tiers, each marked; empty unless the ladder is saved. */
+	tiers: TierCheck[],
+	/**
+	 *  Whether governed mode can run: every saved tier is frontier, or no ladder is saved and an Anthropic key is in place
+	 *  (the plugin's own ladder is Opus then Fable).
+	 */
+	available: boolean,
+	/**  Why not, in one plain sentence; `None` when it can. */
+	why: string | null,
+};
+
 /**  One graphics device, as `/sys/class/drm` reports it. */
 export type Gpu = Gpu_Serialize | Gpu_Deserialize;
 
@@ -1191,6 +1228,8 @@ export type ModelsView_Deserialize = {
 	chatgpt?: ChatgptStatus_Deserialize | null,
 	/**  Whether a Gemini key is in place (the keychain, or the profile's `.env` by name). */
 	gemini_key: boolean,
+	/**  Whether governed mode can run on what is saved, and which models it allows (ADR-0034). */
+	governed: GovernedView_Deserialize,
 };
 
 /**  What Settings > Models shows of the configuration (read-only). */
@@ -1210,6 +1249,8 @@ export type ModelsView_Serialize = {
 	chatgpt: ChatgptStatus_Serialize | null,
 	/**  Whether a Gemini key is in place (the keychain, or the profile's `.env` by name). */
 	gemini_key: boolean,
+	/**  Whether governed mode can run on what is saved, and which models it allows (ADR-0034). */
+	governed: GovernedView_Serialize,
 };
 
 /**
@@ -1634,6 +1675,16 @@ export type Step_Serialize = {
 	detail: string,
 	/**  A stable `hx.setup.*` code when blocked. */
 	code: string | null,
+};
+
+/**  One tier of the saved ladder with whether governed mode may use it (ADR-0034). */
+export type TierCheck = {
+	/**  The tier's name. */
+	name: string,
+	/**  The model it runs, `provider/id`. */
+	model: string,
+	/**  Whether it is a frontier model. */
+	frontier: boolean,
 };
 
 /**  Where the loaded `libwebkit2gtk` lives. */

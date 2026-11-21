@@ -49,12 +49,13 @@ pub type Version = (u32, u32, u32);
 
 /// The model aliases the plugin offers for a ladder, cheapest first, each with the oldest Claude Code that serves it. From the
 /// plugin's README ("Requirements", plugin 0.4.0, checked 2026-11-19): Haiku 5.5 needs 2.1.293, Sonnet 5.5 2.1.284 and Opus 5.5
-/// 2.1.280; an older CLI answers `400 Claude Code ... does not support this model`. `fable` is left out on purpose: on a Pro
-/// plan it bills usage credits from the first request, which a ladder that climbs on its own must not do.
+/// 2.1.280, and Fable 5.2 2.1.321; an older CLI answers `400 Claude Code ... does not support this model`. Which of them a
+/// ladder uses is the frontier list's call (ADR-0034: opus and fable). Fable bills usage credits on a Pro plan.
 pub const ALIASES: &[(&str, Version)] = &[
     ("haiku", (2, 1, 293)),
     ("sonnet", (2, 1, 284)),
     ("opus", (2, 1, 280)),
+    ("fable", (2, 1, 321)),
 ];
 
 /// Where the CLI stands, in the words a person needs.
@@ -456,7 +457,19 @@ mod tests {
 
     #[test]
     fn each_alias_needs_the_cli_version_the_plugin_documents() {
-        assert_eq!(aliases_for((2, 1, 328)), ["haiku", "sonnet", "opus"]);
+        assert_eq!(
+            aliases_for((2, 1, 328)),
+            ["haiku", "sonnet", "opus", "fable"]
+        );
+        assert_eq!(
+            aliases_for((2, 1, 321)),
+            ["haiku", "sonnet", "opus", "fable"]
+        );
+        assert_eq!(
+            aliases_for((2, 1, 320)),
+            ["haiku", "sonnet", "opus"],
+            "fable needs 2.1.321"
+        );
         assert_eq!(aliases_for((2, 1, 293)), ["haiku", "sonnet", "opus"]);
         assert_eq!(
             aliases_for((2, 1, 292)),
@@ -468,7 +481,7 @@ mod tests {
         assert_eq!(aliases_for((2, 1, 280)), ["opus"]);
         assert!(aliases_for((2, 1, 279)).is_empty());
         assert!(aliases_for((1, 9, 999)).is_empty());
-        assert_eq!(aliases_for((3, 0, 0)).len(), 3);
+        assert_eq!(aliases_for((3, 0, 0)).len(), 4);
         assert_eq!(oldest_supported(), (2, 1, 280));
     }
 
@@ -501,7 +514,7 @@ mod tests {
         assert_eq!(ok.state, State::SignedIn);
         assert!(ok.usable());
         assert_eq!(ok.plan.as_deref(), Some("Claude Max"));
-        assert_eq!(ok.aliases, ["haiku", "sonnet", "opus"]);
+        assert_eq!(ok.aliases, ["haiku", "sonnet", "opus", "fable"]);
         assert_eq!(ok.detail, "Claude Code 2.1.328 is signed in (Claude Max).");
     }
 

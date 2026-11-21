@@ -51,6 +51,9 @@ pub trait HermesOps: Send + Sync {
     async fn free_tier_provision(&self) -> Result<FreeTier>;
     /// The models of `provider` that Hermes's catalogue lists as free (`model.options`), in the catalogue's order.
     async fn free_models(&self, provider: &str) -> Result<Vec<String>>;
+    /// Every model `provider`'s row of Hermes's catalogue lists (`model.options`), in the catalogue's order: for a signed-in
+    /// ChatGPT account the account's own list, which is the only one that names an account-gated model.
+    async fn provider_models(&self, provider: &str) -> Result<Vec<String>>;
 }
 
 /// The real thing: Hermes's CLI through the supervisor's runner.
@@ -196,6 +199,34 @@ impl HermesOps for CliOps {
             .await?;
         Ok(free_models_of(&answer, provider))
     }
+
+    async fn provider_models(&self, provider: &str) -> Result<Vec<String>> {
+        let answer = self
+            .link(false)
+            .await?
+            .call(
+                "model.options",
+                &json!({"include_unconfigured": true, "refresh": true}),
+            )
+            .await?;
+        Ok(models_of(&answer, provider))
+    }
+}
+
+/// The ids of every model `provider`'s row of a `model.options` answer lists.
+#[must_use]
+pub fn models_of(answer: &Value, provider: &str) -> Vec<String> {
+    answer["providers"]
+        .as_array()
+        .and_then(|rows| rows.iter().find(|r| r["slug"].as_str() == Some(provider)))
+        .and_then(|row| row["models"].as_array())
+        .map(|m| {
+            m.iter()
+                .filter_map(Value::as_str)
+                .map(str::to_owned)
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 /// The ids of `provider`'s models that a `model.options` answer lists as free: priced zero by the catalogue

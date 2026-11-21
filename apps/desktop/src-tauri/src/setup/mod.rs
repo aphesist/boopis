@@ -285,6 +285,8 @@ pub struct ModelsView {
     pub chatgpt: Option<chatgpt::Status>,
     /// Whether a Gemini key is in place (the keychain, or the profile's `.env` by name).
     pub gemini_key: bool,
+    /// Whether governed mode can run on what is saved, and which models it allows (ADR-0034).
+    pub governed: providers::GovernedView,
 }
 
 /// The setup engine for one profile.
@@ -432,6 +434,9 @@ impl Setup {
             _ if !state.route_checked && self.route_missing(&home, state.clone()).await => {
                 (true, "the engine has no default model")
             }
+            _ if !state.frontier_checked && self.frontier_unrepaired(&home).await => {
+                (true, "governed mode runs only on frontier models")
+            }
             _ => (false, "set up"),
         };
         Ok(Check {
@@ -525,6 +530,11 @@ impl Setup {
             chatgpt
         );
         let (state, tiers) = providers::ladder_of(saved?.as_ref());
+        let governed = providers::governed_view(
+            state,
+            &tiers,
+            providers::anthropic_key(self.secrets.as_ref(), &self.ops.home()),
+        );
         Ok(ModelsView {
             state,
             tiers,
@@ -533,6 +543,7 @@ impl Setup {
             claude_plugin: plugins.is_ok_and(|l| l.iter().any(|p| p.name == claude::PROVIDER_ID)),
             chatgpt: chatgpt?,
             gemini_key: providers::gemini_key(self.secrets.as_ref(), &self.ops.home()),
+            governed,
         })
     }
 
@@ -591,6 +602,7 @@ impl Setup {
         }
         // a finished run's models step wrote the route with the ladder (`providers::write_route`)
         state.route_checked |= finished;
+        state.frontier_checked |= finished;
         state::save(&home, &state)?;
         if !finished {
             run.push("receipt", "Ready", StepState::Pending, "", None);
@@ -894,9 +906,47 @@ impl Setup {
         missing
     }
 
+    /// Once per install (`State::frontier_checked`): whether the saved ladder is one that setup wrote before ADR-0034 and that
+    /// has tiers governed mode will not use. Only then does setup run again, to rewrite it (`providers::repair`); a hand-written
+    /// ladder, the free choices and a ladder that is already frontier ask for nothing, and the check is recorded.
+    async fn frontier_unrepaired(&self, home: &std::path::Path) -> bool {
+        let ladder = self
+            .ops
+            .config_get(providers::LADDER_KEY)
+            .await
+            .ok()
+            .flatten();
+        let (kind, tiers) = providers::ladder_of(ladder.as_ref());
+        let needed = kind == providers::LadderState::Set
+            && !providers::non_frontier(&tiers).is_empty()
+            && providers::written_by_setup(&tiers);
+        if !needed {
+            // the state as it is now: `route_missing` may have just recorded its own check
+            let mut state = state::load(home).unwrap_or_default();
+            state.frontier_checked = true;
+            if let Err(e) = state::save(home, &state) {
+                tracing::warn!(error = %e, "could not record that the ladder was checked for frontier models");
+            }
+        }
+        needed
+    }
+
     async fn models_step(&self, run: &mut Run, state: &mut State) {
         let (id, title) = ("models", "Models and keys");
         let mut restart = false;
+        if !state.frontier_checked && state.choice.is_none() && !state.reopen_models {
+            let repaired =
+                providers::repair(self.ops.as_ref(), self.claude.as_ref(), &mut restart).await;
+            state.restart_pending |= restart;
+            match repaired {
+                Ok(providers::Repair::Rewrote(line) | providers::Repair::Report(line)) => {
+                    state.frontier_checked = true;
+                    return run.done(id, title, line);
+                }
+                Ok(providers::Repair::Nothing) => state.frontier_checked = true,
+                Err(e) => return run.blocked(id, title, "hx.setup.config_failed", &e),
+            }
+        }
         let chatgpt_signed_in = match &self.chatgpt {
             Some(c) => c.signed_in().await.unwrap_or(false),
             None => false,
