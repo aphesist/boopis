@@ -81,9 +81,10 @@ describe('the schema is the contract', () => {
     const { license: _l, ...rest } = item;
     expect(check(rest, 'StoreItem')).not.toEqual([]);
   });
-  it('the sources are the brief\'s, in boopis\'s words: no engine name, only anthropic off', () => {
+  it('the sources are the brief\'s, in boopis\'s words: no engine name, every one on by default (anthropic after its terms were checked)', () => {
     expect(sources.sources.map((s) => s.id)).toEqual(['boopis', 'engine-plugins', 'skills-hub', 'anthropic', 'mcp-registry', 'github', 'marketplace-url', 'local']);
-    expect(sources.sources.filter((s) => !s.default_on).map((s) => s.id)).toEqual(['anthropic']);
+    expect(sources.sources.filter((s) => !s.default_on).map((s) => s.id)).toEqual([]);
+    expect(sources.sources.find((s) => s.id === 'anthropic')).toMatchObject({ default_on: true, terms: 'checked' });
     for (const s of sources.sources) expect(s.label.toLowerCase()).not.toContain('hermes');
     expect(sources.sources.filter((s) => s.engine_origin).map((s) => s.id)).toEqual(['engine-plugins', 'skills-hub']);
   });
