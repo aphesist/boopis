@@ -77,6 +77,14 @@ manifest_files=$(awk '$1 == "f" {print $2}' "$T/p/share/boopis/manifest" | sed "
 check "the manifest lists exactly the files that appeared" test "$manifest_files" = "$expected"
 check "install: the launcher runs the app" test "$("$T/p/bin/boopis" --flag)" = "dummy appimage --flag"
 check "install: the app is executable" test -x "$T/p/share/boopis/boopis.AppImage"
+mv "$T/p/share/boopis/boopis.AppImage" "$T/gone.AppImage"
+gone_rc=0
+gone=$("$T/p/bin/boopis" 2>&1) || gone_rc=$?
+mv "$T/gone.AppImage" "$T/p/share/boopis/boopis.AppImage"
+check "install: with the app gone, the launcher exits 127" test "$gone_rc" = 127
+check "install: with the app gone, the launcher names the missing file" contains "$gone" "$T/p/share/boopis/boopis.AppImage is missing"
+check "install: with the app gone, the launcher says how to install it again" contains "$gone" "scripts/install.sh | bash"
+check "install: with the app gone, the launcher says how to remove itself" contains "$gone" "rm \"$T/p/bin/boopis\""
 check "install: the menu entry points at the launcher" grep -qx "Exec=$T/p/bin/boopis %U" "$T/p/share/applications/boopis.desktop"
 check "install: the menu entry carries the window class of the AppImage's binary" grep -qx 'StartupWMClass=boopis' "$T/p/share/applications/boopis.desktop"
 check "install: the menu entry names the light icon by absolute path" grep -qx "Icon=$T/p/share/icons/hicolor/256x256/apps/boopis.png" "$T/p/share/applications/boopis.desktop"

@@ -31,6 +31,11 @@ done
 [ "$(stat -c %a "$LIB/hx")" = 755 ] || fail "$LIB/hx is not executable"
 if [ -e /usr/bin/hx ] && [ "$(pacman -Qoq /usr/bin/hx 2>/dev/null)" = boopis ]; then fail "hx must not be in /usr/bin (Helix owns that name)"; fi
 ok "binary, hx, plugin, runtime, desktop entry, icons and licences are in place"
+# the menu entry names its icon by absolute path, as install.sh's does: some launchers (an app list built when the shell
+# starts, for one) never find a theme name installed after them, and show a placeholder letter
+icon="$(sed -n 's/^Icon=//p' /usr/share/applications/boopis.desktop)"
+case "$icon" in /*) [ -f "$icon" ] || fail "the menu entry's icon $icon does not exist" ;; *) fail "the menu entry's Icon= is not an absolute path: $icon" ;; esac
+ok "the menu entry's icon is $icon"
 
 # the runtime archive is the one runtime.json describes
 want="$(sed -n 's/.*"sha256": *"\([0-9a-f]*\)".*/\1/p' "$LIB/runtime/runtime.json")"

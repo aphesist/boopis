@@ -497,6 +497,17 @@ verify() { # verify <file> <name>
   fi
 }
 
+# The launcher's first lines: when the app it starts is gone (deleted by hand, say, with the launcher and menu entry left
+# behind), say so and how to fix it, instead of the shell's bare "No such file or directory".
+# shellcheck disable=SC2016 # $0 is the launcher's own, expanded when it runs
+missing_app_check() { # missing_app_check <path the launcher runs>
+  printf 'if [ ! -x "%s" ]; then\n' "$1"
+  printf '  echo "%s: %s is missing, so %s cannot start." >&2\n' "$APP" "$1" "$APP"
+  printf '  echo "Install it again:  curl -fsSL https://raw.githubusercontent.com/%s/%s/main/scripts/install.sh | bash" >&2\n' "$BOOPIS_OWNER" "$BOOPIS_REPO"
+  printf '  echo "Or remove this launcher:  rm \\"$0\\"" >&2\n'
+  printf '  exit 127\nfi\n'
+}
+
 install_linux() { # install_linux <appimage>
   local src=$1 share="$PREFIX/share" bin="$PREFIX/bin" exe
   exe="$share/$APP/$APP.AppImage"
@@ -510,6 +521,7 @@ install_linux() { # install_linux <appimage>
   {
     printf '#!/bin/sh\n# %s launcher, written by the installer\n' "$APP"
     [ "$FUSE_MISSING" = 0 ] || printf 'APPIMAGE_EXTRACT_AND_RUN=1\nexport APPIMAGE_EXTRACT_AND_RUN\n'
+    missing_app_check "$exe"
     printf 'exec "%s" "$@"\n' "$exe"
   } | put_text 755 "$bin/$APP"
   # The menu entry. Its file name and StartupWMClass are the window's app id: the AppImage's binary is `boopis`, and GTK
@@ -563,6 +575,7 @@ install_macos() { # install_macos <dmg>
   # A command for the terminal: no arguments opens the app, `boopis doctor` and the like run its binary.
   {
     printf '#!/bin/sh\n# %s launcher, written by the installer\n' "$APP"
+    missing_app_check "$exe"
     printf 'if [ "$#" -eq 0 ]; then exec open "%s"; fi\nexec "%s" "$@"\n' "$dest" "$exe"
   } | put_text 755 "$PREFIX/bin/$APP"
   INSTALLED_AT=$(tilde "$dest")
