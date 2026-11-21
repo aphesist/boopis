@@ -37,7 +37,7 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
   const g0 = gov();
   const govChip = ui.chip({ label: 'Governed', icon: 'ladder', pressed: g0.governed });
   const model = ui.chip({ model: g0.model, haspopup: 'menu', expanded: false, class: 'ui-chip--who' });
-  /* "@": a mention names the model that answers this message only (ADR-0041). It is drawn as a chip in the text (a mark of kind
+  /* "@": a mention names the model that answers this message only (ADR-0036). It is drawn as a chip in the text (a mark of kind
      'mention'), and the assumptions row says what it does. The words are read by `data/mentions.ts`, the same as the send. */
   const called = (m: string): string => ui.modelMark.called(m);
   const choicesNow = () => data().details.choices.get();
@@ -94,13 +94,20 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
   }
   /* the "@" menu: every model the user can pick (the "who answers next" list, without Smart). Picking one writes its name after the
      "@" (a new mention), or replaces the mention clicked (`over`); the chip is drawn from the text. */
+  /* the menu opens above the composer's box. The layer marks its anchor expanded, which a text box may not carry, so the anchor is a quiet
+     button-shaped layer over the box (never focused, never in the reading order) */
+  function mentionAnchor(): HTMLElement {
+    let a = c.querySelector<HTMLElement>('.ss-mention-anchor');
+    if (!a) { a = document.createElement('span'); a.className = 'ss-mention-anchor'; a.setAttribute('role', 'combobox'); a.setAttribute('aria-hidden', 'true'); a.setAttribute('aria-label', 'Answer this message with'); c.querySelector('.ui-composer__box')?.append(a); }
+    return a;
+  }
   function openMentionMenu(over: HTMLElement | null): void {
     const G = gov(), choices = choicesNow();
     const entries = mentionEntries(choices, { current: G.model, governed: G.governed, removable: !!over });
     /* the caret is where the "@" is, which is not always the end: it is put back, not moved to the end */
     const sel = getSelection(), saved = sel && sel.rangeCount && c.input.contains(sel.anchorNode) ? sel.getRangeAt(0).cloneRange() : null;
     const back = (): void => { c.input.focus(); if (saved) { const s2 = getSelection(); s2?.removeAllRanges(); s2?.addRange(saved); } };
-    ui.listbox.open(over ?? c.input, entries, {
+    ui.listbox.open(mentionAnchor(), entries, {
       place: 'above', label: 'Answer this message with', foot: G.governed ? FOOT_MENTION_GOVERNED : FOOT_MENTION,
       onClose: back,
       onSelect: (v) => {

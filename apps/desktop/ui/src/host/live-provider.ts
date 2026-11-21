@@ -445,8 +445,12 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
         /* who answers is decided now, for this message: Smart's rule or the user's pick, applied through the engine before it goes */
         .then(async (gw) => {
           /* "@model": this message only goes to that model (the engine's one-turn switch); the session's model and the sticky pick stay. Smart does not override it. */
-          const mention = await details.prepareMention(id, text, { idle: !c.running });
-          if (mention) { c.once = { model: mention.model, ungoverned: mention.ungoverned }; c.why = mention.why; abortOnce = mention.abort; return gw; }
+          const keep = c.model;
+          c.once = { model: '', ungoverned: false };   /* the engine reports the switch while it is made: those reports name the mentioned model, not the session's */
+          let mention: Awaited<ReturnType<typeof details.prepareMention>>;
+          try { mention = await details.prepareMention(id, text, { idle: !c.running }); } catch (e) { c.once = null; c.model = keep; throw e; }
+          if (mention) { c.model = keep; c.once = { model: mention.model, ungoverned: mention.ungoverned }; c.why = mention.why; abortOnce = mention.abort; return gw; }
+          c.once = null; c.model = keep;
           const who = await details.prepareSend(id, text, { attachments: attachments.length }); if (who.model) c.model = who.model; c.why = who.why; return gw;
         })
         .then(async (gw) => {

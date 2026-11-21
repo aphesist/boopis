@@ -17,8 +17,10 @@ export function markAnswered(t: HTMLElement, model: string): void { t.dataset['a
 
 /** the row between two answers by different models: "Claude Haiku → GPT-6 Luna", each with its logo */
 export function dividerRow(from: string, to: string): HTMLElement {
-  const row = el('div', { class: 'ss-divider', role: 'separator', 'aria-label': 'The answering model changed from ' + (ui.modelMark.called(from) || from) + ' to ' + (ui.modelMark.called(to) || to) });
-  row.append(el('span', { class: 'ss-divider__rule', 'aria-hidden': 'true' }), el('span', { class: 'ss-divider__who' }, ui.modelRoute(from + ' → ' + to)), el('span', { class: 'ss-divider__rule', 'aria-hidden': 'true' }));
+  /* the conversation is a feed, whose children are turns: the row is a plain block, drawn for the eye (aria-hidden) and said once in words */
+  const row = el('div', { class: 'ss-divider' });
+  row.append(el('span', { class: 'ui-sr', text: 'The answering model changed from ' + (ui.modelMark.called(from) || from) + ' to ' + (ui.modelMark.called(to) || to) }),
+    el('span', { class: 'ss-divider__rule', 'aria-hidden': 'true' }), el('span', { class: 'ss-divider__who', 'aria-hidden': 'true' }, ui.modelRoute(from + ' → ' + to)), el('span', { class: 'ss-divider__rule', 'aria-hidden': 'true' }));
   return row;
 }
 
@@ -40,8 +42,11 @@ export function stampUngoverned(t: HTMLElement, on: boolean): void {
   if (!callno) return;
   callno.querySelector('.ss-ungov')?.remove();
   t.toggleAttribute('data-ungoverned', on);
+  /* the badge is not a control, so the turn's name says it too (a screen reader reads the turn, not the badge) */
+  const named = (t.getAttribute('aria-label') ?? '').replace(/, ungoverned$/, '');
+  if (named) t.setAttribute('aria-label', named + (on ? ', ungoverned' : ''));
   if (!on) return;
-  const badge = ui.html.badge({ label: 'ungoverned', tip: UNGOVERNED_TIP, focusable: true, class: 'ss-ungov' });
+  const badge = ui.html.badge({ label: 'ungoverned', tip: UNGOVERNED_TIP, class: 'ss-ungov' });
   const mark = document.createElement('template');
   mark.innerHTML = badge;
   const kids = [...callno.children].filter((c) => !c.classList.contains('ui-callno__who'));

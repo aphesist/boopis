@@ -138,3 +138,5 @@
 .ss-divider__who { display: inline-flex; flex: 0 1 auto; min-width: 0; }
 /* a turn the person sent to one model outside governed mode: the quiet mark sits beside the model, before the time */
 .ss-ungov { margin-inline-start: var(--sp-1); }
+/* the layer the "@" menu opens from: the composer's box, not interactive */
+.ss-mention-anchor { position: absolute; inset: 0; pointer-events: none; border-radius: inherit; }

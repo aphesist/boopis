@@ -3,9 +3,10 @@
    resume): a turn the book does not list is shown as unknown, never as the model the session has now (invariant 5).
    The one-message switch is the engine's `config.set ... --once` followed by `prompt.submit` on an idle session: the engine
    restores the session's model itself after that turn, so the session's default and the sticky pick stay as they were. In a
-   governed session the plugin is told first (`mode.once`) to run the turn outside governed mode (ADR-0041). */
+   governed session the plugin is told first (`mode.once`) to run the turn outside governed mode (ADR-0036). */
 import { logger } from '../../core/log';
 import type { GatewayClient } from '../gateway';
+import { isUnknownMethod } from './wire';
 
 const log = logger('live.attribution');
 const PLUGIN = 'plugin.boopis.';
@@ -35,7 +36,11 @@ export function bookFrom(res: unknown): TurnBook {
 /** the session's recorded turns; an empty book (every turn unknown) when the plugin cannot say */
 export async function loadTurnBook(client: GatewayClient, gw: string): Promise<TurnBook> {
   try { return bookFrom(await client.requestRaw(PLUGIN + 'turns.models', { session_id: gw })); }
-  catch (e) { log.warn('the models of the past turns could not be read; they show as unknown', e); return EMPTY_BOOK; }
+  catch (e) {
+    /* a plugin that is older than this UI has no such method: its turns are unknown, which is not a fault to report */
+    if (!isUnknownMethod(e)) log.warn('the models of the past turns could not be read; they show as unknown', e);
+    return EMPTY_BOOK;
+  }
 }
 
 /** `message.complete.persisted_turn`: bind the turn that just ended to its stored rows (best effort: a turn not bound is unknown) */
@@ -43,7 +48,7 @@ export function bindTurn(client: GatewayClient, gw: string, persisted: unknown):
   const p = persisted as { row_ids?: unknown; user_row_id?: unknown } | null | undefined;
   if (!p || !Array.isArray(p.row_ids) || !p.row_ids.length) return;
   client.requestRaw(PLUGIN + 'turns.bind', { session_id: gw, row_ids: p.row_ids, ...(typeof p.user_row_id === 'number' ? { user_row_id: p.user_row_id } : {}) })
-    .catch((e: unknown) => { log.warn('the answering model of a turn was not recorded', e); });
+    .catch((e: unknown) => { if (!isUnknownMethod(e)) log.warn('the answering model of a turn was not recorded', e); });
 }
 
 /** `config.set` value for one turn only: the engine puts the session's model back after the turn */

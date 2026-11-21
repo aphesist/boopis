@@ -223,6 +223,7 @@ function finishLive(id: string, ev: Extract<ConversationEvent, { type: 'turn-fin
   disc.setAttribute('aria-expanded', 'false'); ol.hidden = true;
   t.removeAttribute('aria-busy'); if (ev.model) { L.model = ev.model; L.why = ev.why ?? L.why; setModelLines(t, ev.model, L.why); markAnswered(t, ev.model); stampUngoverned(t, t.hasAttribute('data-ungoverned')); if (VIEW.col) syncDividers(VIEW.col); }
   t.setAttribute('aria-label', modelSay(L.model) + ', ' + ev.time + ', ' + ev.cost);
+  stampUngoverned(t, t.hasAttribute('data-ungoverned'));
   const p = prose(ev.paragraphs);
   if (L.prose) L.prose.replaceWith(p); else if (L.blankEl) L.blankEl.before(p); else placeProse(t, p);
   TURN.set(t, { md: () => mdOf(p), kind: 'agent' });

@@ -179,3 +179,11 @@ describe('who answered, after a resume', () => {
     expect(agents.map((a) => a.ungoverned === true)).toEqual([false, true, false]);
   });
 });
+
+describe('a plugin older than this UI', () => {
+  it('has no turns.models: every past turn is unknown, and that is not reported as a fault', async () => {
+    const { loadTurnBook } = await import('./live/attribution');
+    const old = { requestRaw: () => Promise.reject(Object.assign(new Error('unknown method'), { rpcCode: -32601 })) } as unknown as GatewayClient;
+    expect((await loadTurnBook(old, 'g1')).size).toBe(0);
+  });
+});

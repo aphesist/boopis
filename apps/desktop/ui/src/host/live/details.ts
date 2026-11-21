@@ -330,8 +330,10 @@ export function createDetails(deps: DetailsDeps): LiveDetails {
       const route = routeMentions(text, choices.get(), (x) => ui.modelMark.called(x));
       if (route.kind !== 'one' || !gw) return null;
       const c = route.choice, say = ui.modelMark.called(c.model) || c.model, was = engineModel(m);
-      const run = await prepareOnce({ client, gw, governed: governedOf(m), pluginOk, idle: o.idle, target: { provider: c.provider, model: c.model }, previous: was ? splitValue(was) : null, say });
-      m.once = { default: was };
+      m.once = { default: was };   /* before the switch: the engine's report of it must not become the chip */
+      let run;
+      try { run = await prepareOnce({ client, gw, governed: governedOf(m), pluginOk, idle: o.idle, target: { provider: c.provider, model: c.model }, previous: was ? splitValue(was) : null, say }); }
+      catch (e) { m.once = null; throw e; }
       return { model: c.value, why: 'You asked for ' + say, ungoverned: run.ungoverned, abort: run.abort };
     },
     async prepareSend(uiId, text, meta) {

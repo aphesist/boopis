@@ -3,7 +3,7 @@
 
    A mention is "@" and a model's readable name, as the "who answers next" menu writes it; the name must end at a space, a
    punctuation mark or the end of the text, and the longest name wins ("@GPT-6 Luna" is not "@GPT-6"). The rules for what a
-   message does (docs/DECISIONS.md, ADR-0041):
+   message does (docs/DECISIONS.md, ADR-0036):
      - exactly one model mentioned (however many times)  -> that model answers this message only
      - two or more different models mentioned            -> left as written: the task-splitting tool reads them
      - none                                              -> an ordinary message */

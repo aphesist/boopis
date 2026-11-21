@@ -1,4 +1,4 @@
-"""Who answered each turn, and the one-turn exception to governed mode (ADR-0041).
+"""Who answered each turn, and the one-turn exception to governed mode (ADR-0036).
 
 **Who answered.** Hermes's transcript has no model column, so after a resume nothing says which model wrote which
 reply. The plugin sees every model request (``post_api_request``: the real provider and model, also after a fallback),
