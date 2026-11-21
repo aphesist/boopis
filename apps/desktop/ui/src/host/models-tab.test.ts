@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 /* Settings > Models against fakes: the plan Hermes reports, the ladder the host read, and "Change models". */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { chatgptRows, claudeRows, geminiRows, governedRows, ladderRows, mountModels } from './models-tab';
-import type { ChatgptBridge, ChatgptSigninEvent } from './chatgpt-signin';
+import { governedRows, ladderRows, mountModels } from './models-tab';
+import { registerSigninCard } from './providers-view';
+import type { EndpointRequest, ProviderState, ProvidersBridge } from './providers-bridge';
+import { entries } from '../data/providers';
 import type { ModelsDeps } from './models-tab';
 import { changeModels } from './change-models';
 import { planView } from './free-tier';
@@ -40,7 +42,7 @@ describe('Settings > Models', () => {
     const panel = document.createElement('div');
     await mountModels(panel, deps());
     const heads = [...panel.querySelectorAll('h3')].map((h) => h.textContent);
-    expect(heads).toEqual(['Plan', 'Governed mode', 'Model ladder', 'Claude subscription', 'ChatGPT subscription', 'Gemini', 'Change']);
+    expect(heads).toEqual(['Plan', 'Governed mode', 'Model ladder', 'Providers', 'Change']);
     expect(panel.textContent).toContain('Free (Nous · free tier)');
     expect(panel.textContent).toContain('nous/welcome');
     const rows = [...panel.querySelectorAll('.ui-ladder--list > li')];
@@ -86,7 +88,7 @@ describe('Settings > Models', () => {
     ladder = SET;
     await m.refresh();
     expect(panel.querySelectorAll('.ui-ladder--list > li')).toHaveLength(2);
-    expect(panel.querySelectorAll('section'), 'redrawn in place, not appended').toHaveLength(7);
+    expect(panel.querySelectorAll('section'), 'redrawn in place, not appended').toHaveLength(5);
   });
 
   it('"Change models" asks the question again and steps the dialog aside; a refusal is said and the dialog stays', async () => {
@@ -112,82 +114,6 @@ describe('Settings > Models', () => {
   });
 });
 
-describe('Settings > Models: the Claude subscription', () => {
-  const text = (v: ModelsView | { error: string }): string => { const d = document.createElement('div'); d.innerHTML = claudeRows(v).join(''); return d.textContent ?? ''; };
-  const view = (claude: Claude, plugin = false): ModelsView => ({ state: 'default', tiers: [], claude, claude_plugin: plugin, chatgpt: null, gemini_key: false, governed: GOV_OK, heavy: NO_HEAVY });
-
-  it('says signed in with the plan and the version, and names no engine', () => {
-    const t = text(view(CLAUDE.ready, true));
-    expect(t).toContain('Signed in (Claude Max)');
-    expect(t).toContain('2.1.328');
-    expect(t).toContain('boopis never sees your Claude login');
-    expect(t).not.toContain('Check again');
-    expect(t).not.toContain('Hermes');
-    expect(t).not.toContain('Not in this engine');
-  });
-  it('says when this engine does not include the subscription', () => {
-    expect(text(view(CLAUDE.ready, false))).toContain('Not in this engine');
-  });
-  it('offers Sign in to Claude while signed out or on a metered login, and runs Claude Code\u2019s own login through the host table', async () => {
-    const d = document.createElement('div');
-    d.innerHTML = claudeRows(view(CLAUDE.out)).join('');
-    expect(d.querySelector('#hx-claude-signin')?.textContent).toBe('Sign in to Claude');
-    d.innerHTML = claudeRows(view(CLAUDE.metered)).join('');
-    expect(d.querySelector('#hx-claude-signin')).toBeTruthy();
-    d.innerHTML = claudeRows(view(CLAUDE.missing)).join('');
-    expect(d.querySelector('#hx-claude-signin'), 'nothing to sign in to before it is installed').toBeNull();
-    const panel = document.createElement('div');
-    let claude = CLAUDE.out;
-    const asked: string[] = [];
-    const t = deps({
-      ladder: () => Promise.resolve(view(claude, true)),
-      login: (p) => { asked.push(p); claude = CLAUDE.ready; return Promise.resolve({ command_line: 'claude auth login --claudeai', ok: true, code: 0, timed_out: false, output: [] }); }
-    });
-    await mountModels(panel, t);
-    panel.querySelector<HTMLButtonElement>('#hx-claude-signin')?.click();
-    await tick(); await tick();
-    expect(asked).toEqual(['claude-code']);
-    expect(panel.textContent).toContain('Signed in (Claude Max)');
-  });
-  it('says not installed in its own words, with the commands to run and a way to look again', () => {
-    const t = text(view(CLAUDE.missing));
-    expect(t).toContain('Not installed');
-    expect(t).toContain('npm install -g @anthropic-ai/claude-code');
-    expect(t).toContain('claude auth login');
-    expect(t).toContain('Not reported');
-    expect(t).toContain('Check again');
-  });
-  it('says signed out, a login that is not the subscription, and an old version, each apart from the others', () => {
-    expect(text(view(CLAUDE.out))).toContain('Not signed in');
-    expect(text(view(CLAUDE.out))).toContain('2.1.328');
-    expect(text(view(CLAUDE.metered))).toContain('Signed in, but not to your subscription');
-    expect(text(view(CLAUDE.metered))).toContain('bills API usage');
-    expect(text(view(CLAUDE.old))).toContain('Needs an update');
-    expect(text(view(CLAUDE.old))).toContain('claude update');
-    expect(text(view(CLAUDE.old))).toContain('2.1.200');
-  });
-  it('says it could not be read when the host could not be asked', () => { expect(text({ error: 'hermes is not installed' })).toContain('Not read: hermes is not installed'); });
-  it('is drawn in the tab, from the same read as the ladder, and "Check again" reads again', async () => {
-    const panel = document.createElement('div');
-    let claude = CLAUDE.out;
-    let reads = 0;
-    await mountModels(panel, deps({ ladder: () => { reads += 1; return Promise.resolve(view(claude)); } }));
-    expect(reads, 'one read for both sections').toBe(1);
-    expect(panel.textContent).toContain('Not signed in');
-    claude = CLAUDE.ready;
-    panel.querySelector<HTMLButtonElement>('#hx-claude-check')?.click();
-    await tick();
-    expect(reads).toBe(2);
-    expect(panel.textContent).toContain('Signed in (Claude Max)');
-    expect(panel.querySelector('#hx-claude-check')).toBeNull();
-  });
-  it('is plain text: nothing from the CLI becomes markup', () => {
-    const t = claudeRows(view({ ...CLAUDE.ready, plan: '<img src=x>', version: '"><b>' })).join('');
-    expect(t).not.toContain('<img');
-    expect(t).toContain('&lt;img src=x&gt;');
-  });
-});
-
 describe('change models', () => {
   const bridge = {} as SetupBridge;
   it('forgets the choice first, then shows the first-run view at once, under its own heading', async () => {
@@ -202,83 +128,6 @@ describe('change models', () => {
     const run = vi.fn(() => Promise.resolve());
     await expect(changeModels({ reopen: () => Promise.reject(new Error('refused')), run, bridge: () => bridge })).rejects.toThrow('refused');
     expect(run).not.toHaveBeenCalled();
-  });
-});
-
-describe('Settings > Models: ChatGPT and Gemini (ADR-0030)', () => {
-  const base: ModelsView = { state: 'default', tiers: [], claude: CLAUDE.ready, claude_plugin: true, chatgpt: { state: 'signed_out', plan: null, code: null }, gemini_key: false, governed: GOV_OK, heavy: NO_HEAVY };
-  const text = (rows: string[]): string => { const d = document.createElement('div'); d.innerHTML = rows.join(''); return d.textContent ?? ''; };
-
-  function fakeChatgpt(): ChatgptBridge & { calls: string[]; end: (e: ChatgptSigninEvent) => void } {
-    let listener: ((e: ChatgptSigninEvent) => void) | null = null;
-    const calls: string[] = [];
-    return {
-      calls,
-      end: (e) => { listener?.(e); },
-      status: () => Promise.resolve({ state: 'signed_out', plan: null, code: null }),
-      start: () => { calls.push('start'); return Promise.resolve({ verification_url: 'https://auth.openai.com/codex/device', user_code: 'ABCD-1234' }); },
-      cancel: () => { calls.push('cancel'); return Promise.resolve(); },
-      signOut: () => { calls.push('signout'); return Promise.resolve(); },
-      onEnd: (cb) => { listener = cb; return Promise.resolve(() => { listener = null; }); },
-      open: (url) => { calls.push('open:' + url); return Promise.resolve(); },
-      copy: (t) => { calls.push('copy:' + t); return Promise.resolve(); }
-    };
-  }
-
-  it('says signed out, signed in with the plan, or not available, and offers Sign in or Sign out', () => {
-    expect(text(chatgptRows(base, true))).toContain('Not signed in');
-    const d = document.createElement('div');
-    d.innerHTML = chatgptRows(base, true).join('');
-    expect(d.querySelector('#hx-chatgpt-signin')).toBeTruthy();
-    const inView: ModelsView = { ...base, chatgpt: { state: 'signed_in', plan: 'plus', code: null } };
-    expect(text(chatgptRows(inView, true))).toContain('Signed in (Plus)');
-    d.innerHTML = chatgptRows(inView, true).join('');
-    expect(d.querySelector('#hx-chatgpt-signout')).toBeTruthy();
-    expect(text(chatgptRows({ ...base, chatgpt: null }, true))).toContain('not available here');
-    expect(text(chatgptRows({ error: 'x' }, true))).toContain('Not read: x');
-    expect(text(chatgptRows(base, true))).not.toContain('Hermes');
-  });
-
-  it('says whether a Gemini key is saved and offers Add key, which asks the models question', async () => {
-    expect(text(geminiRows(base))).toContain('No key');
-    expect(text(geminiRows(base))).toContain('aistudio.google.com/apikey');
-    expect(text(geminiRows({ ...base, gemini_key: true }))).toContain('Saved');
-    const panel = document.createElement('div');
-    const d = deps({ ladder: () => Promise.resolve(base) });
-    await mountModels(panel, d);
-    panel.querySelector<HTMLButtonElement>('#hx-gemini-add')?.click();
-    await tick();
-    expect(d.calls).toEqual(['change', 'close']);
-  });
-
-  it('Sign in draws the sign-in card in place, and the tab reads again once it is signed in', async () => {
-    const panel = document.createElement('div');
-    let current: ModelsView = base;
-    const bridge = fakeChatgpt();
-    await mountModels(panel, deps({ ladder: () => Promise.resolve(current), chatgpt: bridge }));
-    panel.querySelector<HTMLButtonElement>('#hx-chatgpt-signin')?.click();
-    await tick();
-    panel.querySelector<HTMLButtonElement>('[data-signin="chatgpt"] [data-act="start"]')?.click();
-    await tick(); await tick();
-    expect(bridge.calls).toEqual(['start']);
-    expect(panel.querySelector('[data-code]')?.textContent).toBe('ABCD-1234');
-    current = { ...base, chatgpt: { state: 'signed_in', plan: 'pro', code: null } };
-    bridge.end({ outcome: 'signed_in', message: '' });
-    await tick(); await tick();
-    expect(panel.textContent).toContain('Signed in (Pro)');
-    panel.querySelector<HTMLButtonElement>('#hx-chatgpt-signout')?.click();
-    await tick();
-    expect(bridge.calls).toContain('signout');
-  });
-
-  it('a sign-in already waiting shows its code when the tab is drawn', async () => {
-    const panel = document.createElement('div');
-    const bridge = fakeChatgpt();
-    bridge.status = () => Promise.resolve({ state: 'signing_in', plan: null, code: { verification_url: 'https://auth.openai.com/codex/device', user_code: 'WXYZ-9' } });
-    await mountModels(panel, deps({ ladder: () => Promise.resolve({ ...base, chatgpt: { state: 'signing_in', plan: null, code: null } }), chatgpt: bridge }));
-    await tick(); await tick();
-    expect(panel.querySelector('[data-code]')?.textContent).toBe('WXYZ-9');
-    expect(bridge.calls, 'it asks OpenAI for no new code').toEqual([]);
   });
 });
 
@@ -330,7 +179,6 @@ describe('Settings > Models: the heavy models\' switches (ADR-0037)', () => {
     expect(t).toContain('never adds it by itself');
   });
   it('lives in the governed section, not the Claude one, and marks the heavy models in the allowed list', () => {
-    expect(claudeRows(fableView(false)).join('')).not.toContain('Climb to Fable');
     const d = document.createElement('div');
     d.innerHTML = governedRows(fableView(false)).join('');
     expect(d.textContent?.match(/Heavy: only when you turn it on/g)).toHaveLength(2);
@@ -402,5 +250,223 @@ describe('Settings > Models: the heavy models\' switches (ADR-0037)', () => {
     const panel = document.createElement('div');
     await mountModels(panel, deps({ ladder: () => Promise.resolve(fableView(false)) }));
     expect(panel.querySelector<HTMLInputElement>('#hx-heavy-fable')?.disabled).toBe(true);
+  });
+});
+
+
+/* ───────── Providers (ADR-0039) ───────── */
+const state = (way: string, status: ProviderState['status'], extra: Partial<ProviderState> = {}): ProviderState => {
+  const kind = (way.endsWith('.local') ? 'local' : way.endsWith('.key') || way.includes('.key-') || way.startsWith('opencode.') ? 'key' : way === 'custom.endpoint' || way.startsWith('custom.') ? 'custom' : 'signin') as ProviderState['kind'];
+  return { provider: way.split('.')[0] ?? way, way, kind, status, code: null, detail: null, plan: null, models_count: null, base_url: null, signin: null, checked_at: null, ...extra };
+};
+/** the host's answer for every way of the catalogue: keys missing, sign-ins out, runtimes not found (never probed) */
+const baseline = (): ProviderState[] => entries().flatMap((e) => e.ways.filter((w) => !w.hidden).map((w) => state(w.id, w.kind === 'key' ? 'needs_key' : w.kind === 'signin' ? 'signed_out' : w.kind === 'local' ? 'not_found' : 'connected')))
+  .map((x) => (x.way === 'custom.endpoint' ? { ...x, status: 'connected' as const } : x));
+
+function fakeProviders(over: Partial<Record<string, unknown>> = {}): ProvidersBridge & { calls: string[]; keys: string[]; added: EndpointRequest[]; list: () => Promise<ProviderState[]> } {
+  const calls: string[] = [];
+  const keys: string[] = [];
+  const added: EndpointRequest[] = [];
+  const b = {
+    calls, keys, added,
+    list: () => { calls.push('list'); return Promise.resolve(baseline()); },
+    probe: () => { calls.push('probe'); return Promise.resolve([] as ProviderState[]); },
+    setKey: (way: string, key: string) => { calls.push('setKey:' + way); keys.push(key); return Promise.resolve(state(way, 'connected')); },
+    remove: (way: string) => { calls.push('remove:' + way); return Promise.resolve(state(way, 'needs_key')); },
+    signOut: (way: string) => { calls.push('signOut:' + way); return Promise.resolve(state(way, 'signed_out')); },
+    signinStart: () => Promise.reject(new Error('not here')),
+    signinCancel: () => Promise.resolve(),
+    onSigninEnd: () => Promise.resolve(() => undefined),
+    testEndpoint: () => { calls.push('test'); return Promise.resolve({ outcome: 'listed' as const, models: ['llama3.2:latest', 'qwen3:8b'], answered_at: null, status: 200, loopback: true, code: null, detail: null }); },
+    addEndpoint: (r: EndpointRequest) => { added.push(r); return Promise.resolve(state('custom.' + r.name, 'connected')); },
+    ...over
+  };
+  return b as never;
+}
+async function providersPanel(bridge: ProvidersBridge, extra: Partial<ModelsDeps> = {}): Promise<HTMLElement> {
+  const panel = document.createElement('div');
+  document.body.append(panel);
+  await mountModels(panel, deps({ providers: bridge, ...extra }));
+  await tick(); await tick();
+  return panel;
+}
+const section = (panel: HTMLElement): HTMLElement => panel.querySelector('[aria-labelledby="hx-set-providers-h"]') as HTMLElement;
+const heads = (panel: HTMLElement): string[] => [...section(panel).querySelectorAll('h3')].map((h) => h.textContent ?? '');
+const rowOf = (panel: HTMLElement, label: string): HTMLElement | undefined => [...section(panel).querySelectorAll<HTMLElement>('.ui-set__row')].find((r) => r.querySelector('.ui-set__label > span')?.textContent === label);
+const type = (el: HTMLInputElement, v: string): void => { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); };
+
+describe('Settings > Models: Providers', () => {
+  it('draws one head per lab with one row per way, a status word and one button, from the catalogue and the host\'s states', async () => {
+    const panel = await providersPanel(fakeProviders());
+    const h = heads(panel);
+    expect(h.slice(0, 4)).toEqual(['Providers', 'Anthropic', 'OpenAI', 'Google Gemini']);
+    expect(h).toContain('On this computer');
+    expect(h).toContain('Your own endpoint');
+    const claude = rowOf(panel, 'Claude subscription') as HTMLElement;
+    expect(claude.querySelector('.ui-set__value')?.textContent).toBe('Not signed in');
+    const key = rowOf(panel, 'Anthropic API key') as HTMLElement;
+    expect(key.querySelector('.ui-set__value')?.textContent).toBe('No key');
+    expect([...key.querySelectorAll('button')].map((b) => b.textContent)).toEqual(['Add key']);
+    expect(key.querySelector('button')?.getAttribute('aria-label')).toBe('Add key, Anthropic API key');
+  });
+
+  it('says every state in words: connected with the plan, a problem with its reason, not installed, a runtime not yet checked', async () => {
+    const list = baseline().map((s) => s.way === 'anthropic.signin' ? { ...s, status: 'connected' as const, plan: 'Claude Max' }
+      : s.way === 'anthropic.key' ? { ...s, status: 'error' as const, code: 'hx.provider.key_rejected', detail: 'Anthropic refused the key.' }
+        : s.way === 'openai.key' ? { ...s, status: 'connected' as const, models_count: 7 } : s);
+    const panel = await providersPanel(fakeProviders({ list: () => Promise.resolve(list) }));
+    expect(rowOf(panel, 'Claude subscription')?.querySelector('.ui-set__value')?.textContent).toBe('Connected (Claude Max)');
+    const bad = rowOf(panel, 'Anthropic API key') as HTMLElement;
+    expect(bad.querySelector('.ui-set__value')?.textContent).toBe('Key refused');
+    expect(bad.textContent).toContain('Anthropic refused the key.');
+    expect([...bad.querySelectorAll('button')].map((b) => b.textContent)).toEqual(['Change key', 'Remove']);
+    expect(rowOf(panel, 'OpenAI API key')?.textContent).toContain('7 models found.');
+    expect(rowOf(panel, 'Ollama on this computer')?.querySelector('.ui-set__value')?.textContent).toBe('Not checked');
+  });
+
+  it('never shows a state by colour alone: every status is a non-empty word beside its row', async () => {
+    const panel = await providersPanel(fakeProviders());
+    const marks = [...section(panel).querySelectorAll('[data-status]')];
+    expect(marks.length).toBeGreaterThan(10);
+    for (const m of marks) expect(m.textContent?.trim().length, m.getAttribute('data-status') ?? '').toBeGreaterThan(2);
+    expect(section(panel).innerHTML).not.toMatch(/style="[^"]*(color|background)/);
+  });
+
+  it('collapses the labs under More providers, and search and filters still reach them', async () => {
+    const panel = await providersPanel(fakeProviders());
+    const more = section(panel).querySelector<HTMLButtonElement>('#hx-prov-more') as HTMLButtonElement;
+    expect(more.textContent).toMatch(/^More providers \(\d+\)$/);
+    expect(more.getAttribute('aria-expanded')).toBe('false');
+    const tail = section(panel).querySelector<HTMLElement>('#hx-prov-tail') as HTMLElement;
+    expect(tail.hidden).toBe(true);
+    expect(tail.textContent).toContain('Meta (Muse)');
+    more.click();
+    expect(more.getAttribute('aria-expanded')).toBe('true');
+    expect(tail.hidden).toBe(false);
+    more.click();
+    const q = section(panel).querySelector<HTMLInputElement>('#hx-prov-q') as HTMLInputElement;
+    type(q, 'meta');
+    expect(heads(panel)).toContain('Meta (Muse)');
+    expect(section(panel).querySelector('#hx-prov-more'), 'a search lists everything flat').toBeNull();
+    type(q, 'qwen');
+    expect(heads(panel), 'a hidden way is found by nothing').not.toContain('Alibaba');
+    type(q, 'no such lab');
+    expect(section(panel).querySelector('[data-prov-none]')?.textContent).toContain('No provider matches');
+    type(q, 'claude');
+    expect(heads(panel)).toContain('Anthropic');
+  });
+
+  it('filters by how a lab is reached, and Connected lists only what is connected', async () => {
+    const list = baseline().map((s) => (s.way === 'deepseek.key' ? { ...s, status: 'connected' as const } : s));
+    const panel = await providersPanel(fakeProviders({ list: () => Promise.resolve(list) }));
+    const pick = (v: string): void => { (section(panel).querySelector(`.ui-seg [data-value="${v}"]`) as HTMLElement).click(); };
+    pick('connected');
+    const labels = [...section(panel).querySelectorAll('.ui-set__label > span')].map((x) => x.textContent);
+    expect(labels).toContain('DeepSeek API key');
+    expect(labels).not.toContain('Anthropic API key');
+    pick('signin');
+    expect([...section(panel).querySelectorAll('.ui-set__label > span')].map((x) => x.textContent)).toContain('Claude subscription');
+    expect(section(panel).textContent).not.toContain('Anthropic API key');
+    pick('local');
+    expect(heads(panel)).toContain('On this computer');
+    expect(section(panel).textContent).not.toContain('Claude subscription');
+    pick('custom');
+    expect(heads(panel)).toContain('Your own endpoint');
+    expect(rowOf(panel, 'Your own endpoint')?.querySelector('button')?.textContent ?? [...section(panel).querySelectorAll('button')].map((b) => b.textContent).join()).toContain('Add endpoint');
+  });
+
+  it('shows the terms notes as quiet lines under their rows', async () => {
+    const panel = await providersPanel(fakeProviders());
+    const notes = [...section(panel).querySelectorAll('[data-note]')].map((n) => n.textContent ?? '');
+    expect(notes.some((n) => n.includes('Google has no sign-in'))).toBe(true);
+    expect(notes.some((n) => n.includes('GLM Coding Plan'))).toBe(true);
+    expect(notes.some((n) => n.includes('Kimi Code'))).toBe(true);
+  });
+
+  it('asks the runtimes once when drawn and again on Check again, never when typing, filtering or redrawing', async () => {
+    const b = fakeProviders();
+    const panel = await providersPanel(b);
+    expect(b.calls.filter((c) => c === 'probe')).toHaveLength(1);
+    type(section(panel).querySelector<HTMLInputElement>('#hx-prov-q') as HTMLInputElement, 'ollama');
+    (section(panel).querySelector('.ui-seg [data-value="local"]') as HTMLElement).click();
+    expect(b.calls.filter((c) => c === 'probe')).toHaveLength(1);
+    (section(panel).querySelector('[data-do="recheck"]') as HTMLElement).click();
+    await tick();
+    expect(b.calls.filter((c) => c === 'probe')).toHaveLength(2);
+  });
+
+  it('puts a runtime that answered under "Found on this computer" with one Use button, once', async () => {
+    const found = state('ollama.local', 'found_local', { base_url: 'http://127.0.0.1:11434/v1', models_count: 2, detail: 'llama3.2:latest, qwen3:8b', checked_at: 1 });
+    const b = fakeProviders({ probe: () => Promise.resolve([found]) });
+    const panel = await providersPanel(b);
+    expect(heads(panel)[1]).toBe('Found on this computer');
+    const row = rowOf(panel, 'Ollama on this computer') as HTMLElement;
+    expect(row.querySelector('.ui-set__value')?.textContent).toBe('Running on this computer');
+    expect(row.textContent).toContain('llama3.2:latest, qwen3:8b');
+    expect([...section(panel).querySelectorAll('.ui-set__label > span')].filter((x) => x.textContent === 'Ollama on this computer')).toHaveLength(1);
+    (row.querySelector('[data-do="use"]') as HTMLElement).click();
+    await tick(); await tick(); await tick();
+    expect(b.added).toHaveLength(1);
+    expect(b.added[0]).toMatchObject({ name: 'ollama', base_url: 'http://127.0.0.1:11434/v1', api_mode: 'chat_completions', key: null, use_model: 'llama3.2:latest', discover: true });
+  });
+
+  it('has no Found group when nothing answered', async () => {
+    const panel = await providersPanel(fakeProviders());
+    expect(heads(panel)).not.toContain('Found on this computer');
+  });
+
+  it('says it could not be read when the host cannot list, rather than drawing rows', async () => {
+    const panel = await providersPanel(fakeProviders({ list: () => Promise.reject(new Error('provider_list is not built yet')) }));
+    expect(section(panel).textContent).toContain('Not read: provider_list is not built yet');
+    expect(section(panel).querySelectorAll('.ui-set__row')).toHaveLength(0);
+  });
+
+  it('offers the user\'s own grok program only while the xAI sign-in is not connected', async () => {
+    const out = await providersPanel(fakeProviders());
+    expect(rowOf(out, 'Your own Grok program')).toBeTruthy();
+    const list = baseline().map((s) => (s.way === 'xai.signin' ? { ...s, status: 'connected' as const } : s));
+    const inn = await providersPanel(fakeProviders({ list: () => Promise.resolve(list) }));
+    expect(rowOf(inn, 'Your own Grok program')).toBeUndefined();
+  });
+
+  it('offers a sign-in only where this build has one, and a registered card brings the button', async () => {
+    const panel = await providersPanel(fakeProviders());
+    expect(rowOf(panel, 'SuperGrok subscription')?.querySelector('button')).toBeNull();
+    let mounted = 0;
+    registerSigninCard('xai.signin', (host, done) => { mounted += 1; host.append(document.createTextNode('card')); void done; return { destroy: () => undefined }; });
+    const again = await providersPanel(fakeProviders());
+    const btn = rowOf(again, 'SuperGrok subscription')?.querySelector<HTMLButtonElement>('[data-do="signin"]') as HTMLButtonElement;
+    expect(btn.textContent).toBe('Sign in');
+    btn.click();
+    expect(mounted).toBe(1);
+    expect(section(again).textContent).toContain('card');
+    expect(section(again).querySelector('[data-prov-body]')?.hasAttribute('hidden')).toBe(true);
+  });
+
+  it('Add key opens the credential card in place; the key goes to the host command and never into the page\'s text', async () => {
+    const b = fakeProviders();
+    const panel = await providersPanel(b, { });
+    (rowOf(panel, 'Gemini API key')?.querySelector('[data-do="key"]') as HTMLElement).click();
+    const card = section(panel).querySelector('[data-prov-flow]') as HTMLElement;
+    expect(card.textContent).toContain('aistudio.google.com/apikey');
+    const input = card.querySelector<HTMLInputElement>('input[data-secret="key"]') as HTMLInputElement;
+    expect(input.type).toBe('password');
+    type(input, 'AIza-SECRET-VALUE-123');
+    expect(card.textContent).not.toContain('SECRET-VALUE');
+    expect(card.innerHTML).not.toContain('SECRET-VALUE');
+    (card.querySelector('[data-action="submit"]') as HTMLElement).click();
+    await tick(); await tick();
+    expect(b.keys).toEqual(['AIza-SECRET-VALUE-123']);
+    expect(b.calls).toContain('setKey:google.key');
+    expect(section(panel).innerHTML).not.toContain('SECRET-VALUE');
+  });
+
+  it('Remove asks first, and removes through the host command', async () => {
+    const list = baseline().map((s) => (s.way === 'deepseek.key' ? { ...s, status: 'connected' as const } : s));
+    const b = fakeProviders({ list: () => Promise.resolve(list) });
+    const panel = await providersPanel(b);
+    (rowOf(panel, 'DeepSeek API key')?.querySelector('[data-do="remove"]') as HTMLElement).click();
+    expect(section(panel).textContent).toContain('Remove DeepSeek API key?');
+    expect(b.calls.some((c) => c.startsWith('remove:'))).toBe(false);
   });
 });

@@ -23,6 +23,8 @@ export const FORM_KINDS: Readonly<Record<string, KindTemplate>> = {
   connector: { stamp: 'needs you', submit: 'Install', hold: true, busy: 'Installing', done: (f) => f.receipt || 'Installed ' + (f.name || 'the connector') },
   choice: { stamp: 'waiting for you', submit: 'Use this', busy: 'Saving', done: (_f, v) => 'Chose ' + v },
   plan: { stamp: 'needs you', submit: 'Approve plan', cancel: 'Reject', busy: 'Starting the work', done: () => 'Plan approved', cancelled: 'Plan rejected' },
+  /** an endpoint of the person's own (ADR-0039): the card's first step is Test, the second saves what Test found */
+  endpoint: { stamp: 'needs you', submit: 'Test', busy: 'Asking the server', done: (f) => f.receipt || 'Saved', cancelled: 'Cancelled' },
   feedback: { stamp: '', submit: 'Send', cancel: false, busy: 'Saving', done: () => 'Thanks. Stored for you only' },
   /** a mod's colours (MODS.md section 3): not owed, so no stamp; Keep applies them, Reject leaves the theme as it is */
   theme: { stamp: '', submit: 'Keep', cancel: 'Reject', busy: 'Applying', done: (f) => f.receipt || 'Kept', cancelled: 'Rejected' }

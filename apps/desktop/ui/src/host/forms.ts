@@ -11,6 +11,8 @@
    Every adapter also builds the `FormSpec` the card draws (`model.spec`): the schema is kept whole (previews, pickers,
    uploads, sign-in and limits included), so there is one renderer and one adapter per source. */
 import { unlessEngine } from './errors';
+import { endpointSchema } from '../data/providers';
+import type { EndpointValues } from '../data/providers';
 import type { FieldSchema, FormKind, FormSchema, FormSpec, Origin } from '../data/types';
 import type { LimitView } from './free-tier';
 import { limitTitle, resetText } from './free-tier';
@@ -374,4 +376,31 @@ export function connectorSigninForm(server: string, provider: string, host: stri
   const schema = { properties: { signin: { 'x-signin': { provider, flow: 'browser', host, server } } }, required: ['signin'] };
   const spec = buildSpec({ id, kind: 'signin', title, body, schema, submit: { label: 'Sign in' }, cancel: { label: 'Not now' }, origin: { kind: 'host' }, defer: false });
   return { id, kind: 'signin', title, body, fields: [], submitLabel: 'Sign in', cancelLabel: 'Not now', hold: false, sensitive: false, origin: 'host', diff: [], source: { kind: 'host' }, spec: { ...spec, provider } };
+}
+
+/** The `endpoint` form (ADR-0039, docs/FORMS.md): one card family in two steps. `test` asks the address, the wire and an optional
+    key and its button is Test; `save` follows once Test listed models: it offers exactly those (all ticked, as the schema's
+    `after_test` field says) beside a free-text field for ids by hand, and its button is Save. The key is asked only in the first
+    step: the second never draws the secret field (the flow keeps what was typed in memory until Save). `values` fills the fields
+    the person already typed. */
+export function endpointForm(step: 'test' | 'save', o: { found?: readonly string[]; values?: Partial<EndpointValues> } = {}): FormModel {
+  const id = 'endpoint.' + step;
+  const title = step === 'test' ? 'Add an endpoint of your own' : 'Choose its models';
+  const body = step === 'test'
+    ? 'Any server that speaks an OpenAI-style or Anthropic API: one on this computer, or one you reach over https. Test asks it for its models and saves nothing.'
+    : o.found?.length ? 'Test found these models. Untick any you do not want, or add ids by hand.' : 'Test reached the server, but it lists no models. Add the model ids it serves by hand, one per line.';
+  const full = endpointSchema(step === 'save' ? o.found ?? [] : undefined);
+  const hide = step === 'test' ? ['extra_models', 'picks'] : ['key'];
+  const properties: Record<string, FieldSchema> = {};
+  for (const [name, f] of Object.entries(full.properties ?? {})) {
+    if (hide.includes(name)) continue;
+    const v = (o.values as Record<string, unknown> | undefined)?.[name];
+    properties[name] = v !== undefined && name !== 'picks' ? { ...f, default: v } : f;
+  }
+  const schema = { type: 'object' as const, properties, required: (full.required ?? []).filter((n) => !hide.includes(n)) };
+  const receipt = step === 'test' ? 'Tested. What it found is next.' : 'Saved. Its models are in your model list.';
+  const submit = { label: step === 'test' ? 'Test' : 'Save endpoint' };
+  const cancel = { label: 'Cancel' };
+  const spec = buildSpec({ id, kind: 'endpoint', title, body, schema, submit, cancel, origin: { kind: 'host' }, defer: false });
+  return { id, kind: 'endpoint', title, body, fields: fieldsOf(schema), submitLabel: submit.label, cancelLabel: cancel.label, hold: false, sensitive: step === 'test', origin: 'host', diff: [], source: { kind: 'host' }, spec: { ...spec, receipt, ...(step === 'test' ? { busyText: 'Asking the server' } : { busyText: 'Saving' }) } };
 }

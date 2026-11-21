@@ -16,9 +16,9 @@ export interface BaseUrlRule { default: string | null; env: string | null; edita
 export interface Discovery { method: 'engine_options' | 'get_models' | 'probe' | 'none'; host?: string; port?: number; path?: string; fallback_path?: string | null; shape?: string; timeout_ms?: number }
 export interface Way {
   id: string; kind: WayKind; label: string; hint: string; engine: string | null; slug: string | null; config: 'builtin' | 'external' | 'endpoint';
-  hidden: boolean; hidden_reason?: string; region?: 'china'; slug_spike?: string;
+  hidden: boolean; hidden_reason?: string; offered_when: 'always' | 'signin_unused'; region?: 'china'; slug_spike?: string;
   key: KeyRule | null; base_url: BaseUrlRule | null; api_mode: ApiMode | null; discovery: Discovery;
-  signin: { flow: 'cli' | 'device_code' | 'external_token'; login: string | null; owner: string } | null;
+  signin: { flow: 'cli' | 'cli_drive' | 'device_code' | 'official_program' | 'external_token'; login: string | null; owner: string } | null;
   frontier: 'by_name' | 'never'; engine_source: readonly string[]; notes: readonly Note[];
 }
 export interface Entry { id: string; lab: string; label: string; summary: string; group: string; rank: number; shown: Shown; keywords: readonly string[]; ways: readonly Way[] }
