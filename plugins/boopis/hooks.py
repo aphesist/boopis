@@ -170,6 +170,11 @@ def pre_llm_call(**kw: Any) -> dict[str, Any] | None:
         capped = _cost_cap(rt, state, state.provider, state.model)
         if capped is not None or state.mode != "governed":
             return capped
+        from .governance.frontier import session_refusal
+
+        refused = session_refusal(state.provider, state.model)  # ADR-0034: the orchestrator is frontier too
+        if refused is not None:
+            return _block(refused)
         from .governance.lifecycle import turn_directive
 
         return turn_directive(rt, state, str(kw.get("user_message") or ""))

@@ -2,7 +2,8 @@
 
 The ladder is contraprova's own ``TierLadder`` (vendored): an ordered list of ``{name, model:
 'provider/id', effort, max_tokens, retries}``, cheapest first. When the user has set none the default is
-contraprova's measured Claude ladder (haiku, sonnet, opus), which that module expresses as data too.
+the frontier Claude ladder: Opus 5.5, then Fable 5.2 (ADR-0034). Contraprova's own default starts on haiku, which
+governed mode does not allow, so the plugin overrides it here. Every tier must also be a frontier model (``frontier``).
 
 Every tier names a Hermes *named* provider: routing a delegated child by a bare ``custom`` provider
 resolved to the wrong endpoint in the S0 spike (docs/research/spike-s0.md 4e), so it is refused here,
@@ -14,18 +15,25 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from .._vendor.contraprova.interfaces import DEFAULT_CLAUDE_LADDER, TierLadder
+from .._vendor.contraprova.interfaces import FABLE, OPUS, ModelRef, Tier, TierLadder
+from .frontier import ladder_refusals
 
 # providers Hermes resolves by itself and that no tier may name: "custom" is whichever endpoint the
 # config happens to hold, "auto" is Hermes's own pick
 UNNAMED_PROVIDERS = frozenset({"custom", "auto"})
 
 
+# the plugin's default ladder: frontier only, cheapest first (Opus before Fable)
+DEFAULT_FRONTIER_LADDER = TierLadder(
+    (Tier("opus", ModelRef("anthropic", OPUS)), Tier("fable", ModelRef("anthropic", FABLE)))
+)
+
+
 def resolve_ladder(configured: Mapping[str, Any] | None) -> TierLadder:
     """The configured ladder, else the default. Raises ValueError (or KeyError) if ``configured`` is malformed;
     settings validation has already rejected that, so a failure here is a bug worth seeing."""
     if configured is None:
-        return DEFAULT_CLAUDE_LADDER  # type: ignore[no-any-return]
+        return DEFAULT_FRONTIER_LADDER
     return TierLadder.from_dict(configured)  # type: ignore[no-any-return]
 
 
@@ -33,7 +41,7 @@ def ladder_problems(
     ladder: TierLadder, provider_known: Callable[[str], bool], start_tier: str | None = None
 ) -> list[str]:
     """What stops this ladder from running, one sentence each; empty means it can run."""
-    problems: list[str] = []
+    problems: list[str] = ladder_refusals(ladder.tiers)
     for tier in ladder.tiers:
         provider = tier.model.provider
         if provider in UNNAMED_PROVIDERS:

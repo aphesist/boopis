@@ -27,7 +27,13 @@ HERMES_USAGE = {
     "prompt_tokens": 100,
     "total_tokens": 110,
 }
-INFO = {"session_id": SID, "model": "m", "provider": "p", "platform": "desktop", "profile_name": "default"}
+INFO = {
+    "session_id": SID,
+    "model": "claude-opus-5-5",
+    "provider": "anthropic",
+    "platform": "desktop",
+    "profile_name": "default",
+}
 
 
 def events(rt: Runtime, sid: str = SID) -> list[dict[str, Any]]:
@@ -41,8 +47,8 @@ def types(rt: Runtime, sid: str = SID) -> list[str]:
 def first_prompt(rt: Runtime, ctx: FakeCtx, **info: Any) -> str:
     """What Hermes does at a session's first prompt: render the section, then fire the hooks."""
     text = hooks.system_prompt_section({**INFO, "cwd": ctx.cwd, **info})
-    hooks.on_session_start(session_id=SID, model="m")
-    hooks.pre_llm_call(session_id=SID, model="m", user_message="hi")
+    hooks.on_session_start(session_id=SID, model="claude-opus-5-5")
+    hooks.pre_llm_call(session_id=SID, model="claude-opus-5-5", user_message="hi")
     return text
 
 
@@ -126,7 +132,9 @@ def test_finalize_of_a_session_that_never_prompted_writes_nothing(make_runtime: 
 def test_ledger_appended_is_emitted_for_every_event(make_runtime: MakeRuntime) -> None:
     rt, ctx = make_runtime()
     first_prompt(rt, ctx)
-    hooks.post_api_request(session_id=SID, model="m", provider="p", usage=HERMES_USAGE, api_duration=0.5)
+    hooks.post_api_request(
+        session_id=SID, model="claude-opus-5-5", provider="anthropic", usage=HERMES_USAGE, api_duration=0.5
+    )
     sent = [(sid, ev, payload) for sid, ev, payload in ctx.emitted if ev == "ledger.appended"]
     assert [p["seq"] for _, _, p in sent] == list(range(len(events(rt))))
     assert all(sid == SID for sid, _, _ in sent)
@@ -258,7 +266,7 @@ def test_tool_called_hashes_arguments(make_runtime: MakeRuntime) -> None:
         "args_sha256": hashlib.sha256(canonical_json(args).encode()).hexdigest(),
         "task_id": "t",
     }
-    assert called["actor"] == "orchestrator:p/m"  # the model named in the session info
+    assert called["actor"] == "orchestrator:anthropic/claude-opus-5-5"  # the model named in the session info
 
 
 def test_unknown_tool_status_is_an_error(make_runtime: MakeRuntime) -> None:
@@ -275,13 +283,18 @@ def test_post_api_request_records_usage(make_runtime: MakeRuntime) -> None:
     rt, ctx = make_runtime()
     first_prompt(rt, ctx)
     hooks.post_api_request(
-        session_id=SID, model="m", provider="p", usage=HERMES_USAGE, api_duration=0.25, api_request_id="r1"
+        session_id=SID,
+        model="claude-opus-5-5",
+        provider="anthropic",
+        usage=HERMES_USAGE,
+        api_duration=0.25,
+        api_request_id="r1",
     )
     usage = [e for e in events(rt) if e["type"] == "usage.recorded"][-1]
-    assert usage["actor"] == "orchestrator:p/m"
+    assert usage["actor"] == "orchestrator:anthropic/claude-opus-5-5"
     assert usage["payload"] == {
-        "model": "m",
-        "provider": "p",
+        "model": "claude-opus-5-5",
+        "provider": "anthropic",
         "input_tokens": 100,
         "output_tokens": 10,
         "cache_read_tokens": 0,
@@ -298,7 +311,7 @@ def test_a_response_without_usage_records_nothing(make_runtime: MakeRuntime) -> 
     rt, ctx = make_runtime()
     first_prompt(rt, ctx)
     before = len(events(rt))
-    hooks.post_api_request(session_id=SID, model="m", provider="p", usage=None, api_duration=0.1)
+    hooks.post_api_request(session_id=SID, model="claude-opus-5-5", provider="anthropic", usage=None, api_duration=0.1)
     assert len(events(rt)) == before
 
 
@@ -306,25 +319,32 @@ def test_auxiliary_calls_are_recorded_and_tagged(make_runtime: MakeRuntime) -> N
     rt, ctx = make_runtime()
     first_prompt(rt, ctx)
     hooks.post_auxiliary_call(
-        session_id=SID, model="m", provider="p", usage=HERMES_USAGE, aux_task="title_generation", api_duration=0.1
+        session_id=SID,
+        model="claude-opus-5-5",
+        provider="anthropic",
+        usage=HERMES_USAGE,
+        aux_task="title_generation",
+        api_duration=0.1,
     )
     last = [e for e in events(rt) if e["type"] == "usage.recorded"][-1]
     assert (last["payload"]["role"], last["payload"]["aux_task"]) == ("auxiliary", "title_generation")
     assert last["actor"] == "plugin"  # a side call is not the session's model
-    assert rt.state(SID).provider == "p"  # and does not change which model the session is on
+    assert rt.state(SID).provider == "anthropic"  # and does not change which model the session is on
 
 
 def test_an_auxiliary_call_on_another_model_does_not_become_the_session_model(make_runtime: MakeRuntime) -> None:
     rt, ctx = make_runtime()
     first_prompt(rt, ctx)
     hooks.post_auxiliary_call(session_id=SID, model="titler", provider="other", usage=HERMES_USAGE, api_duration=0.1)
-    assert (rt.state(SID).provider, rt.state(SID).model) == ("p", "m")
+    assert (rt.state(SID).provider, rt.state(SID).model) == ("anthropic", "claude-opus-5-5")
 
 
 def test_subscription_providers_are_flagged(make_runtime: MakeRuntime) -> None:
-    rt, ctx = make_runtime({"subscription_providers": ["p"]})
+    rt, ctx = make_runtime({"subscription_providers": ["anthropic"]})
     first_prompt(rt, ctx)
-    hooks.post_api_request(session_id=SID, model="m", provider="p", usage=HERMES_USAGE, api_duration=0.1)
+    hooks.post_api_request(
+        session_id=SID, model="claude-opus-5-5", provider="anthropic", usage=HERMES_USAGE, api_duration=0.1
+    )
     assert [e for e in events(rt) if e["type"] == "usage.recorded"][-1]["payload"]["subscription"] is True
 
 
@@ -342,24 +362,32 @@ def test_the_claude_code_login_is_flagged_without_any_setting(make_runtime: Make
 
 # ---------------------------------------------------------------- the cost cap
 
-PRICES = {"p/m": {"input": 1000.0, "output": 2000.0}}  # $1000 and $2000 per Mtok: 100 + 10 tokens = $0.12
+PRICES = {
+    "anthropic/claude-opus-5-5": {"input": 1000.0, "output": 2000.0}
+}  # $1000 and $2000 per Mtok: 100 + 10 tokens = $0.12
 
 
 def test_no_cap_never_blocks(make_runtime: MakeRuntime) -> None:
     rt, ctx = make_runtime({"prices": {"overrides": PRICES}})
     first_prompt(rt, ctx)
     for _ in range(3):
-        hooks.post_api_request(session_id=SID, model="m", provider="p", usage=HERMES_USAGE, api_duration=0.1)
-    assert hooks.pre_llm_call(session_id=SID, model="m") is None
+        hooks.post_api_request(
+            session_id=SID, model="claude-opus-5-5", provider="anthropic", usage=HERMES_USAGE, api_duration=0.1
+        )
+    assert hooks.pre_llm_call(session_id=SID, model="claude-opus-5-5") is None
 
 
 def test_the_cap_blocks_the_turn_once_reached(make_runtime: MakeRuntime) -> None:
     rt, ctx = make_runtime({"prices": {"overrides": PRICES}, "cost_cap_usd": 0.2})
     first_prompt(rt, ctx)
-    hooks.post_api_request(session_id=SID, model="m", provider="p", usage=HERMES_USAGE, api_duration=0.1)  # $0.12
-    assert hooks.pre_llm_call(session_id=SID, model="m") is None
-    hooks.post_api_request(session_id=SID, model="m", provider="p", usage=HERMES_USAGE, api_duration=0.1)  # $0.24
-    blocked = hooks.pre_llm_call(session_id=SID, model="m")
+    hooks.post_api_request(
+        session_id=SID, model="claude-opus-5-5", provider="anthropic", usage=HERMES_USAGE, api_duration=0.1
+    )  # $0.12
+    assert hooks.pre_llm_call(session_id=SID, model="claude-opus-5-5") is None
+    hooks.post_api_request(
+        session_id=SID, model="claude-opus-5-5", provider="anthropic", usage=HERMES_USAGE, api_duration=0.1
+    )  # $0.24
+    blocked = hooks.pre_llm_call(session_id=SID, model="claude-opus-5-5")
     assert blocked is not None
     assert blocked["action"] == "block"
     assert "$0.2400" in blocked["message"]
@@ -375,16 +403,18 @@ def test_the_cap_blocks_the_turn_once_reached(make_runtime: MakeRuntime) -> None
 def test_a_cap_with_an_unpriced_model_blocks_rather_than_guess(make_runtime: MakeRuntime) -> None:
     rt, ctx = make_runtime({"cost_cap_usd": 5.0})
     first_prompt(rt, ctx)
-    blocked = hooks.pre_llm_call(session_id=SID, model="m")
+    blocked = hooks.pre_llm_call(session_id=SID, model="claude-opus-5-5")
     assert blocked is not None
-    assert "no price is configured for m" in blocked["message"]
+    assert "no price is configured for claude-opus-5-5" in blocked["message"]
 
 
 def test_a_subscription_provider_needs_no_price_and_costs_nothing(make_runtime: MakeRuntime) -> None:
-    rt, ctx = make_runtime({"cost_cap_usd": 0.01, "subscription_providers": ["p"]})
+    rt, ctx = make_runtime({"cost_cap_usd": 0.01, "subscription_providers": ["anthropic"]})
     first_prompt(rt, ctx)
-    hooks.post_api_request(session_id=SID, model="m", provider="p", usage=HERMES_USAGE, api_duration=0.1)
-    assert hooks.pre_llm_call(session_id=SID, model="m") is None
+    hooks.post_api_request(
+        session_id=SID, model="claude-opus-5-5", provider="anthropic", usage=HERMES_USAGE, api_duration=0.1
+    )
+    assert hooks.pre_llm_call(session_id=SID, model="claude-opus-5-5") is None
 
 
 def test_the_claude_code_login_passes_a_cap_with_no_price(make_runtime: MakeRuntime) -> None:
@@ -392,7 +422,7 @@ def test_the_claude_code_login_passes_a_cap_with_no_price(make_runtime: MakeRunt
     first_prompt(rt, ctx)
     provider = "claude-subscription-directsdk-experimental"
     hooks.post_api_request(session_id=SID, model="sonnet", provider=provider, usage=HERMES_USAGE, api_duration=0.1)
-    assert hooks.pre_llm_call(session_id=SID, model="sonnet", provider=provider) is None
+    assert hooks.pre_llm_call(session_id=SID, model="opus", provider=provider) is None
 
 
 def test_a_resumed_session_counts_its_earlier_spend(make_runtime: MakeRuntime, home: Path) -> None:
@@ -400,11 +430,13 @@ def test_a_resumed_session_counts_its_earlier_spend(make_runtime: MakeRuntime, h
     rt, ctx = make_runtime(config)
     first_prompt(rt, ctx)
     for _ in range(2):
-        hooks.post_api_request(session_id=SID, model="m", provider="p", usage=HERMES_USAGE, api_duration=0.1)
+        hooks.post_api_request(
+            session_id=SID, model="claude-opus-5-5", provider="anthropic", usage=HERMES_USAGE, api_duration=0.1
+        )
     rt2 = Runtime(ctx, home=home)
     hooks.install(rt2)
     hooks.system_prompt_section({**INFO, "cwd": ctx.cwd})
-    assert hooks.pre_llm_call(session_id=SID, model="m") is not None
+    assert hooks.pre_llm_call(session_id=SID, model="claude-opus-5-5") is not None
 
 
 # ---------------------------------------------------------------- RPC
@@ -425,7 +457,9 @@ def test_describe(make_runtime: MakeRuntime) -> None:
 def test_ledger_tail_verify_stats(make_runtime: MakeRuntime) -> None:
     rt, ctx = make_runtime({"prices": {"overrides": PRICES}})
     first_prompt(rt, ctx)
-    hooks.post_api_request(session_id=SID, model="m", provider="p", usage=HERMES_USAGE, api_duration=0.1)
+    hooks.post_api_request(
+        session_id=SID, model="claude-opus-5-5", provider="anthropic", usage=HERMES_USAGE, api_duration=0.1
+    )
     tail = rpc.ledger_tail({"session_id": SID, "since_seq": -1, "limit": 100})
     assert tail["head_seq"] == len(tail["events"]) - 1
     assert tail["events"][0]["type"] == "session.opened"
@@ -462,7 +496,7 @@ def test_cascade_state_with_no_task_is_idle_and_shows_the_default_ladder(make_ru
     got = rpc.cascade_state({"session_id": SID})
     assert got["status"] == "idle"
     assert "task_id" not in got  # nothing has run, so no task, tier or attempt is invented
-    assert [t["name"] for t in got["ladder"]] == ["haiku", "sonnet", "opus"]  # contraprova's measured ladder
+    assert [t["name"] for t in got["ladder"]] == ["opus", "fable"]  # the frontier default
     assert {t["model"]["provider"] for t in got["ladder"]} == {"anthropic"}
 
 
