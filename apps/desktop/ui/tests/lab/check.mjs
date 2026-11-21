@@ -131,7 +131,13 @@ async function openState(browser, origin, row, o = {}) {
   await page.addScriptTag({ path: PROBE });
   return { ctx, page, ready: ready[0] === '1', error: ready[1] || (ready[0] ? '' : 'the state never finished drawing (30 s)') };
 }
-const settle = (page, ms) => page.waitForTimeout(ms);
+/* wait the given time, then until the web fonts have loaded and two frames have passed: text that reflows when a late
+   font arrives (CI's fonts arrive later than a developer machine's) is measured again, and so are the shapes and
+   tooltips the app recomputes one frame after a size change (the squircle paths, the clipped-name tooltips) */
+const settle = async (page, ms) => {
+  await page.waitForTimeout(ms);
+  await page.evaluate(() => (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))).catch(() => {});
+};
 async function setWidth(page, row, w) {
   const size = { width: w, height: w <= 390 ? 844 : 900 };
   const cur = page.viewportSize();

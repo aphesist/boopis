@@ -48,8 +48,15 @@ export function checkClips(): void {
   raf = requestAnimationFrame(() => { raf = 0; runChecks(); });
 }
 let obs: ResizeObserver | null = null;
-/** check again whenever `node` changes size */
+let fontsWatched = false;
+/** check again whenever `node` changes size, and when a web font finishes loading: a name measured in the fallback
+    font can fit and then be cut once the real font, often wider, arrives (or the other way), while nothing resizes */
 export function watchClips(node: Element | null): void {
+  if (!fontsWatched && typeof document !== 'undefined' && document.fonts) {
+    fontsWatched = true;
+    document.fonts.addEventListener('loadingdone', () => checkClips());
+    void document.fonts.ready.then(() => checkClips());
+  }
   if (!node || typeof ResizeObserver !== 'function') return;
   obs ??= new ResizeObserver(() => checkClips());
   obs.observe(node);
