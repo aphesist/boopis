@@ -15,15 +15,15 @@ export const COPILOT_COPY: SigninCopy = {
   button: 'Sign in with GitHub',
   starting: 'Getting a code…',
   explain: () => 'Open GitHub’s sign-in page, sign in with the account that has GitHub Copilot, then type this code.',
-  caution: (page) => {
-    const left = minutesLeft(page.expiresAt);
+  caution: (page, now) => {
+    const left = minutesLeft(page.expiresAt, now);
     return `The code works for ${left === null ? 'a few' : String(left)} minutes. Type it only on github.com, and only if you started this sign-in in boopis.`;
   },
   done: 'Signed in with GitHub.',
   gave: 'GitHub gave no code.'
 };
 
-export type CopilotBridge = SigninBridge & { signOut(): Promise<string | null> };
+export type CopilotBridge = SigninBridge & { signOut(): Promise<ProviderState> };
 export const tauriCopilotBridge = (): CopilotBridge => providerSigninBridge(COPILOT_WAY);
 
 /** What Settings needs of Copilot's sign-in: where it stands, and the card's bridge. */

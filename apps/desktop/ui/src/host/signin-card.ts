@@ -9,12 +9,15 @@
         owns, or hand it your own fake in a test),
      2. a `SigninCopy`: the provider's words, one object (see `copilot-signin.ts` for the shortest),
      3. `opts.onSignedIn`, if something must happen when the account is in.
+   A lab whose words are written as { start, open, warning(minutes, host), done, noCode } (the xAI card's) maps onto
+   `SigninCopy` in five lines: button = start, explain = () => open, caution = (p, now) => warning(minutesLeft(p.expiresAt, now),
+   new URL(p.url).hostname), done = done, gave = noCode (plus `provider` and `starting`).
    The card starts at its button, or at the page and code when a sign-in already waits in the host (a redrawn view picks it
    up again). `destroy` takes the card away and stops listening; the host's wait goes on (Cancel ends it, and so does the
    code's lifetime). A flow with no code to type gives `code: ''`, and the card then shows the page button and the wait only. */
 import { ui } from '@boopis/ui';
 import { commands, events } from './bindings';
-import type { SigninCode } from './bindings';
+import type { ProviderState, SigninCode } from './bindings';
 import { asHostError } from './bridge';
 
 /** Where to go, and the code to type there if there is one. */
@@ -60,8 +63,8 @@ export interface SigninCopy {
   starting: string;
   /** what to do, once the page is up; `hasCode` says whether there is a code to type */
   explain: (hasCode: boolean) => string;
-  /** the one line of caution under it (where to type, how long it lasts) */
-  caution: (page: SigninPage) => string;
+  /** the one line of caution under it (where to type, how long it lasts); `now` is the card's clock, for the minutes left */
+  caution: (page: SigninPage, now: number) => string;
   /** the line when the account is in */
   done: string;
   /** what to say when the host gave no reason for a failed start */
@@ -73,6 +76,8 @@ export interface SigninOptions {
   label?: string;
   /** called once the account is signed in */
   onSignedIn?: () => void;
+  /** the clock, for the minutes a code has left (tests) */
+  now?: () => number;
 }
 
 /** the page's address as the card prints it: host and path, no scheme */
@@ -129,7 +134,7 @@ export function mountSigninCard(host: HTMLElement, bridge: SigninBridge, copy: S
         copied));
     }
     kids.push(
-      el('p', { style: 'margin:0;color:var(--text-quiet)' }, copy.caution(page)),
+      el('p', { style: 'margin:0;color:var(--text-quiet)' }, copy.caution(page, (opts.now ?? Date.now)())),
       el('p', { role: 'status', style: 'margin:0;color:var(--text-dim)', 'data-waiting': '' }, 'Waiting for you to finish signing in…'),
       button('Cancel', 'ghost', () => { void bridge.cancel(); }, { 'data-act': 'cancel' })
     );
@@ -179,8 +184,8 @@ async function call<T>(p: Promise<T>): Promise<T> {
 export const pageOf = (c: { verification_url: string; user_code: string; expires_at: number | null }): SigninPage => ({ url: c.verification_url, code: c.user_code, expiresAt: c.expires_at });
 
 /** The card's bridge for any way the host runs a sign-in for, over the generic commands (`provider_signin_*`) and the
-    `ProviderSigninEvent` of that way. Also signs out. */
-export function providerSigninBridge(way: string): SigninBridge & { signOut(): Promise<string | null> } {
+    `ProviderSigninEvent` of that way. Also signs out, resolving to the state afterwards (its `detail` says what to tell the person). */
+export function providerSigninBridge(way: string): SigninBridge & { signOut(): Promise<ProviderState> } {
   return {
     waiting: async () => {
       const s = await call(commands.providerSigninStatus(way));
@@ -191,6 +196,6 @@ export function providerSigninBridge(way: string): SigninBridge & { signOut(): P
     onEnd: (cb) => events.providerSigninEvent.listen((e) => { if (e.payload.way === way) cb({ outcome: e.payload.outcome, message: e.payload.message }); }),
     open: async (url) => { await call(commands.openExternal(url)); },
     copy: (text) => navigator.clipboard.writeText(text),
-    signOut: async () => (await call(commands.providerSignOut(way, null))).detail ?? null
+    signOut: () => call(commands.providerSignOut(way, null))
   };
 }

@@ -284,7 +284,7 @@ export async function mountModels(panel: HTMLElement, deps: ModelsDeps): Promise
         mountCard();
       });
       copilot.querySelector('#hx-copilot-signout')?.addEventListener('click', () => {
-        copilotBridge.signOut().then((note) => { if (note) deps.toast(note); return drawAll(); }, (e: unknown) => { deps.toast(e instanceof Error ? e.message : 'Could not sign out'); });
+        copilotBridge.signOut().then((after) => { if (after.detail) deps.toast(after.detail); return drawAll(); }, (e: unknown) => { deps.toast(e instanceof Error ? e.message : 'Could not sign out'); });
       });
       if (!!copilotState && !('error' in copilotState) && copilotState.status === 'signing_in') mountCard();
     }

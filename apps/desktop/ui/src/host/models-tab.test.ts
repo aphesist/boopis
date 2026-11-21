@@ -442,7 +442,7 @@ describe('Settings > Models: GitHub Copilot (ADR-0039)', () => {
         onEnd: (cb) => { listener = cb; return Promise.resolve(() => { listener = null; }); },
         open: (u) => { calls.push('open:' + u); return Promise.resolve(); },
         copy: (t) => { calls.push('copy:' + t); return Promise.resolve(); },
-        signOut: () => { calls.push('signout'); return Promise.resolve('Signed out here. To remove boopis\u2019s access on GitHub too, remove it at github.com/settings/applications.'); }
+        signOut: () => { calls.push('signout'); return Promise.resolve(state({ detail: 'Signed out here. To remove boopis\u2019s access on GitHub too, remove it at github.com/settings/applications.' })); }
       }
     };
   }
