@@ -45,6 +45,14 @@ pub trait HermesOps: Send + Sync {
     async fn enable_plugin(&self, name: &str) -> Result<()>;
     /// Stop the gateway if it runs and start it again, so it loads the plugin and re-reads its secret sources.
     async fn restart_gateway(&self) -> Result<()>;
+    /// Restart the gateway so it reads a key saved since it started, but only when no turn is running (ending one is never silent).
+    /// `true` when it restarted, `false` when it was left running (a turn is live) or this double does not restart.
+    ///
+    /// # Errors
+    /// As [`HermesOps::restart_gateway`], when the restart itself failed.
+    async fn restart_gateway_when_idle(&self) -> Result<bool> {
+        Ok(false)
+    }
     /// Nous's free tier as Hermes reports it (`free_tier.status`), asked on a link that declares itself the Desktop on this
     /// machine, because Hermes answers "claimable" only to that. Call it only after the user chose the free tier.
     async fn free_tier_status(&self) -> Result<FreeTier>;
@@ -182,6 +190,14 @@ impl HermesOps for CliOps {
         // It waits for the old gateway to go before it starts the new one, so the new one is served its keys
         // (`Supervisor::restart`).
         self.sup.restart(&self.home, true).await.map(|_| ())
+    }
+
+    async fn restart_gateway_when_idle(&self) -> Result<bool> {
+        match self.sup.restart(&self.home, false).await {
+            Ok(_) => Ok(true),
+            Err(Error::Connector("hx.connectors.busy", _)) => Ok(false),
+            Err(e) => Err(e),
+        }
     }
 
     async fn free_tier_status(&self) -> Result<FreeTier> {

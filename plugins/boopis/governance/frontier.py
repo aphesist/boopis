@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any, cast
 
 _FILE = Path(__file__).resolve().parent.parent / "data" / "frontier-models.json"
+_PROVIDERS = Path(__file__).resolve().parent.parent / "data" / "providers.json"  # the never-frontier rule (ADR-0039)
 Version = tuple[int, ...]
 
 _BRACKET = re.compile(r"\[[^\]]*\]$")  # a context-window suffix: claude-opus-5-5[1m]
@@ -61,6 +62,10 @@ class Frontier:
     families: tuple[Family, ...]
     ignorable: frozenset[str]
     aliases: Mapping[str, Mapping[str, str]]
+    never_engines: frozenset[str] = (
+        frozenset()
+    )  # providers whose models are never frontier (a runtime on this computer)
+    never_prefixes: tuple[str, ...] = ()  # slug prefixes whose models are never frontier (``custom-``)
 
 
 def _version(text: str) -> Version:
@@ -92,11 +97,23 @@ def load() -> Frontier:
         )
         for f in raw["families"]
     )
+    never = cast("Mapping[str, Any]", json.loads(_PROVIDERS.read_text(encoding="utf-8"))["never_frontier"])
     return Frontier(
         families=families,
         ignorable=frozenset(raw["ignorable_suffixes"]),
         aliases={p: dict(a) for p, a in raw["aliases"].items()},
+        never_engines=frozenset(str(e).lower() for e in never["engines"]),
+        never_prefixes=tuple(str(p).lower() for p in never["slug_prefixes"]),
     )
+
+
+def never_frontier(provider: str) -> bool:
+    """Whether ``provider``'s models can never be frontier: a custom endpoint or a runtime on this computer (ADR-0039,
+    ``never_frontier`` in ``data/providers.json``). The rule comes first, before the name is looked at: no model name
+    can make such a model frontier (fail closed). The engine reads a provider name in lower case, so this does too."""
+    name = provider.strip().lower()
+    rule = load()
+    return name in rule.never_engines or any(name.startswith(p) for p in rule.never_prefixes)
 
 
 def normalise(model: str) -> list[str]:
@@ -157,7 +174,10 @@ def match(provider: str, model: str) -> Match | None:
 
 
 def is_frontier(provider: str, model: str) -> bool:
-    """Whether ``provider``/``model`` may do governed work. Unknown, empty and unrecognised are not."""
+    """Whether ``provider``/``model`` may do governed work. Unknown, empty and unrecognised are not, and neither is
+    anything on a custom endpoint or a runtime on this computer, whatever it is called."""
+    if never_frontier(provider):
+        return False
     found = match(provider, model)
     return found is not None and found.frontier
 
@@ -166,6 +186,8 @@ def is_heavy(provider: str, model: str) -> bool:
     """Whether ``provider``/``model`` is a frontier model of a heavy family (Claude Fable, Grok 4.7 and later): costly
     enough that nothing automatic may pick it. Governed mode still runs it when the user asked for it (a ladder written
     by hand, a toggle in Settings > Models). Unknown and below the floor are not heavy: they are not frontier at all."""
+    if never_frontier(provider):
+        return False
     found = match(provider, model)
     return found is not None and found.frontier and found.family.heavy
 
@@ -187,6 +209,8 @@ def allowed_sentence() -> str:
 
 
 def _why(provider: str, model: str) -> str:
+    if never_frontier(provider):
+        return "it runs on an endpoint of your own or on this computer, which governed mode never uses"
     found = match(provider, model)
     if found is None:
         return "it is not in a family on that list"

@@ -57,6 +57,25 @@ const firstRun = (script: SetupStatus[] | null): Render => async ({ root, wait }
 const FR = (tags: State['tags'], script: SetupStatus[] | null, extra: Partial<State> = {}): State => ({ tags, render: firstRun(script), scope: '.hx-first-run', allow: { 'stability.render': 'the welcome logo plays once' }, ...extra });
 const ASK = { form_id: 'f-key', kind: 'credential', title: 'Add a key for your models', body: 'boopis needs one provider key to start. It goes to your keychain.', schema: { properties: { key: { type: 'string', title: 'Anthropic API key', 'x-secret': true } }, required: ['key'] }, submit: { label: 'Save key' }, cancel: { label: 'Skip' }, sensitive: true, origin: 'host', diff: [] };
 
+const LADDER_IDS = ['free', 'openrouter-free', 'anthropic', 'claude-subscription', 'chatgpt-subscription', 'gemini', 'xai'];
+const LADDER_NAMES = ['Free models (Nous free tier, no account)', 'OpenRouter free models (needs a free OpenRouter key)', 'Claude: Opus (needs an Anthropic API key)', 'Claude subscription (your Claude Code login)', 'ChatGPT subscription (sign in with your ChatGPT account)', 'Gemini (a free API key from Google AI Studio)', 'xAI: an API key from xAI'];
+const LADDER = { form_id: 'setup.ladder', kind: 'choice', title: 'Which model should do the work?', body: 'boopis runs governed work on a ladder of models, cheapest first, and only on frontier models. Free models and the other choices work for sessions that are not governed. Pick where to start; you can change the ladder later.', schema: { type: 'object', required: ['choice'], properties: { choice: { type: 'string', title: 'Model', enum: LADDER_IDS, enumNames: LADDER_NAMES, default: 'free' } } }, submit: { label: 'Use this' }, cancel: { label: 'Skip' }, sensitive: false, origin: 'host', diff: [] };
+const lab = { provider: 'ollama', way: 'ollama.local', kind: 'local', status: 'found_local', code: null, detail: null, plan: null, models_count: 2, base_url: 'http://127.0.0.1:11434/v1', signin: null, checked_at: 1 };
+/** the two-step models question: `way` is the choice made in step 1 (null: stay on step 1); `probe` is what the runtimes on this computer answered */
+const twoStep = (way: string | null, probe: unknown[] = []): Render => async ({ root, wait }) => {
+  const providers = { probe: () => Promise.resolve(probe), testEndpoint: () => Promise.reject(new Error('lab')), addEndpoint: () => Promise.reject(new Error('lab')) } as never;
+  void runFirstRun(bridge([status({ steps: STEPS({ hermes: 'done', plugin: 'done', hx: 'done', config: 'done', models: 'needs_input' }), form: LADDER as never })]), root, { providers });
+  await wait(300);
+  root.querySelector<HTMLButtonElement>('.hx-first-run button')?.click();
+  await wait(500);
+  if (!way) return;
+  const rows = [...root.querySelectorAll<HTMLElement>('.cd-opt')];
+  const want = ({ signin: 'Sign in to a subscription', key: 'Use an API key', local: 'Use a model on this computer' } as Record<string, string>)[way];
+  rows.find((r) => r.textContent?.startsWith(want ?? ''))?.click();
+  [...root.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Continue')?.click();
+  await wait(1000);
+};
+
 const first: Story = {
   id: 'settings/first-run', title: 'First run', area: 'settings', kind: 'surface', covers: ['surface:first-run'], mock: { url: '/v6/__index.html', note: 'the mock has no first run' },
   states: {
@@ -66,6 +85,11 @@ const first: Story = {
     blocked: FR(['error'], [status({ steps: STEPS({ hermes: 'blocked' }, { hermes: 'The engine is not on this computer yet.' }), install_command: 'curl -fsSL https://example.invalid/install.sh | sh' })]),
     'declined and skipped': FR(['disabled'], [status({ steps: STEPS({ hermes: 'done', plugin: 'declined', hx: 'skipped', config: 'done', models: 'done', restart: 'done' }), done: true, receipt: { lines: ['The plugin was declined: boopis runs without its tools.'] } })]),
     done: FR(['success'], [status({ steps: STEPS({ hermes: 'done', plugin: 'done', hx: 'done', config: 'done', models: 'done', restart: 'done' }), done: true, receipt: { lines: ['Installed the boopis plugin 0.1.1', 'Saved one key to your keychain', 'Models: sonnet 5.5, then opus 5.5 on a failed gate'] } })]),
+    'connect: how': FR(['variant'], null, { render: twoStep(null) }),
+    'connect: a subscription': FR(['variant'], null, { render: twoStep('signin') }),
+    'connect: an API key': FR(['variant'], null, { render: twoStep('key') }),
+    'connect: a model on this computer': FR(['variant'], null, { render: twoStep('local', [lab]) }),
+    'connect: nothing found on this computer': FR(['empty'], null, { render: twoStep('local', []) }),
     'long details': FR(['long'], [status({ steps: STEPS({ hermes: 'done', plugin: 'blocked' }, { plugin: 'src/billing/integrations/stripe/webhooks/handlers/invoice_payment_succeeded_idempotency_guard_v2_final.ts could not be written: permission denied (EACCES) while unpacking' }) })])
   }
 };

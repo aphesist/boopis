@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import approvalFrames from './fixtures/approval.frames.json';
-import { fieldsOf, fromGatewayEvent, fromHostForm, fromPluginEvent, replyFor, splitSecrets } from './forms';
+import { endpointForm, fieldsOf, fromGatewayEvent, fromHostForm, fromPluginEvent, replyFor, splitSecrets } from './forms';
 
 const CRED = { type: 'object', required: ['value'], properties: { value: { type: 'string', title: 'API key', 'x-secret': true, 'x-secret-ref': 'secret://provider.main/api_key' } } };
 
@@ -91,5 +91,35 @@ describe('secrets', () => {
     expect(splitSecrets(m, { value: '' }).secrets).toEqual([]);
     const bad = fromPluginEvent('s', { form_id: 'f', schema: { type: 'object', properties: { k: { type: 'string', 'x-secret': true } } } })!;
     expect(() => splitSecrets(bad, { k: 'v' })).toThrow(/no place to store/);
+  });
+});
+
+describe('the endpoint form kind (ADR-0039)', () => {
+  it('draws the first step from the catalogue: name, address, wire, an optional secret key, keep-up-to-date; no models yet', () => {
+    const m = endpointForm('test');
+    expect(m.kind).toBe('endpoint');
+    expect(m.spec.kind).toBe('endpoint');
+    expect(m.fields.map((f) => f.name)).toEqual(['name', 'base_url', 'api_mode', 'key', 'discover']);
+    const key = m.fields.find((f) => f.name === 'key');
+    expect(key).toMatchObject({ secret: true, required: false, default: undefined });
+    expect(m.fields.find((f) => f.name === 'api_mode')).toMatchObject({ options: ['chat_completions', 'codex_responses', 'anthropic_messages'], optionNames: ['OpenAI chat', 'OpenAI Responses', 'Anthropic'], default: 'chat_completions' });
+    expect(m.fields.filter((f) => f.required).map((f) => f.name)).toEqual(['name', 'base_url', 'api_mode']);
+    expect(m.submitLabel).toBe('Test');
+  });
+  it('draws the second step with exactly the models Test found, all ticked, and no secret field', () => {
+    const m = endpointForm('save', { found: ['a', 'b'], values: { name: 'My server', base_url: 'http://127.0.0.1:8000/v1', api_mode: 'chat_completions', discover: false } });
+    expect(m.fields.map((f) => f.name)).toEqual(['name', 'base_url', 'api_mode', 'discover', 'picks', 'extra_models']);
+    const picks = m.fields.find((f) => f.name === 'picks');
+    expect(picks).toMatchObject({ multi: true, options: ['a', 'b'], default: ['a', 'b'] });
+    expect(m.fields.some((f) => f.secret)).toBe(false);
+    expect(m.fields.find((f) => f.name === 'name')?.default).toBe('My server');
+    expect(m.fields.find((f) => f.name === 'discover')?.default).toBe(false);
+    expect(m.submitLabel).toBe('Save endpoint');
+  });
+  it('asks for ids by hand when Test found none', () => {
+    const m = endpointForm('save', { found: [] });
+    expect(m.fields.map((f) => f.name)).toContain('extra_models');
+    expect(m.fields.map((f) => f.name)).not.toContain('picks');
+    expect(m.body).toContain('lists no models');
   });
 });

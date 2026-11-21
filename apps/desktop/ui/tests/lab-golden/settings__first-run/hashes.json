@@ -39,6 +39,106 @@
   "w": 1416,
   "h": 24
  },
+ "connect-a-model-on-this-computer@bone": {
+  "sha": "b2b62e0619d8a049ae12a013f76f2f676495802b",
+  "w": 1416,
+  "h": 24
+ },
+ "connect-a-model-on-this-computer@catalog": {
+  "sha": "b551b10325ea90863b9382d4f2dc1045c2787400",
+  "w": 1416,
+  "h": 24
+ },
+ "connect-a-model-on-this-computer@graphite": {
+  "sha": "12828489a66dfd03405f7d13202b882e7ffd842f",
+  "w": 1416,
+  "h": 24
+ },
+ "connect-a-model-on-this-computer@typewriter": {
+  "sha": "12828489a66dfd03405f7d13202b882e7ffd842f",
+  "w": 1416,
+  "h": 24
+ },
+ "connect-a-subscription@bone": {
+  "sha": "b2b62e0619d8a049ae12a013f76f2f676495802b",
+  "w": 1416,
+  "h": 24
+ },
+ "connect-a-subscription@catalog": {
+  "sha": "b551b10325ea90863b9382d4f2dc1045c2787400",
+  "w": 1416,
+  "h": 24
+ },
+ "connect-a-subscription@graphite": {
+  "sha": "12828489a66dfd03405f7d13202b882e7ffd842f",
+  "w": 1416,
+  "h": 24
+ },
+ "connect-a-subscription@typewriter": {
+  "sha": "12828489a66dfd03405f7d13202b882e7ffd842f",
+  "w": 1416,
+  "h": 24
+ },
+ "connect-an-api-key@bone": {
+  "sha": "b2b62e0619d8a049ae12a013f76f2f676495802b",
+  "w": 1416,
+  "h": 24
+ },
+ "connect-an-api-key@catalog": {
+  "sha": "b551b10325ea90863b9382d4f2dc1045c2787400",
+  "w": 1416,
+  "h": 24
+ },
+ "connect-an-api-key@graphite": {
+  "sha": "12828489a66dfd03405f7d13202b882e7ffd842f",
+  "w": 1416,
+  "h": 24
+ },
+ "connect-an-api-key@typewriter": {
+  "sha": "12828489a66dfd03405f7d13202b882e7ffd842f",
+  "w": 1416,
+  "h": 24
+ },
+ "connect-how@bone": {
+  "sha": "b2b62e0619d8a049ae12a013f76f2f676495802b",
+  "w": 1416,
+  "h": 24
+ },
+ "connect-how@catalog": {
+  "sha": "b551b10325ea90863b9382d4f2dc1045c2787400",
+  "w": 1416,
+  "h": 24
+ },
+ "connect-how@graphite": {
+  "sha": "12828489a66dfd03405f7d13202b882e7ffd842f",
+  "w": 1416,
+  "h": 24
+ },
+ "connect-how@typewriter": {
+  "sha": "12828489a66dfd03405f7d13202b882e7ffd842f",
+  "w": 1416,
+  "h": 24
+ },
+ "connect-nothing-found-on-this-computer@bone": {
+  "sha": "b2b62e0619d8a049ae12a013f76f2f676495802b",
+  "w": 1416,
+  "h": 24
+ },
+ "connect-nothing-found-on-this-computer@catalog": {
+  "sha": "b551b10325ea90863b9382d4f2dc1045c2787400",
+  "w": 1416,
+  "h": 24
+ },
+ "connect-nothing-found-on-this-computer@graphite": {
+  "sha": "12828489a66dfd03405f7d13202b882e7ffd842f",
+  "w": 1416,
+  "h": 24
+ },
+ "connect-nothing-found-on-this-computer@typewriter": {
+  "sha": "12828489a66dfd03405f7d13202b882e7ffd842f",
+  "w": 1416,
+  "h": 24
+ },
  "declined-and-skipped@bone": {
   "sha": "b2b62e0619d8a049ae12a013f76f2f676495802b",
   "w": 1416,

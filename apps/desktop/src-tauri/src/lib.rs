@@ -20,8 +20,10 @@ pub mod frontier;
 pub mod gateway;
 pub mod gpu;
 pub mod hermes;
+pub mod local;
 pub mod migrate;
 pub mod os;
+pub mod providers;
 pub mod renderer;
 pub mod resources;
 pub mod runtime;
@@ -107,11 +109,21 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::store_source_set_enabled,
             commands::store_source_add,
             commands::store_source_remove,
+            commands::provider_list,
+            commands::provider_set_key,
+            commands::provider_remove,
+            commands::provider_test_endpoint,
+            commands::provider_add_endpoint,
+            commands::provider_probe_local,
+            commands::provider_signin_start,
+            commands::provider_signin_cancel,
+            commands::provider_sign_out,
         ])
         .events(collect_events![
             ConnectionStateEvent,
             setup::SetupProgress,
             chatgpt::ChatgptSigninEvent,
+            providers::ProviderSigninEvent,
             WindowStateEvent,
             FileDragEvent,
             commands::ConnectorRestartEvent

@@ -3,6 +3,7 @@
    rest are the hard cases every story needs: long names, unbroken strings, many lines, many items, right to left. */
 import type { Bot } from '../data/types';
 import type { CardData } from '../modules/cards';
+import { endpointForm } from '../host/forms';
 import { CHANGES, GOVERNANCE, OUTPUT, S1_TURNS, STEPS } from '../data/mock-data';
 
 /* ───────── text ───────── */
@@ -83,6 +84,8 @@ export const FORM_SPECS: Readonly<Record<string, CardData>> = {
   feedback: { id: 'f-feedback', kind: 'feedback', origin: { kind: 'host' }, title: 'Was this result right?', effect: 'Stored for you only. It feeds nothing automatically.',
     schema: { properties: { verdict: { type: 'string', title: 'The result was', enum: ['right', 'partly', 'wrong'], enumNames: ['Right', 'Partly right', 'Wrong'] }, note: { type: 'string', title: 'What was off?', 'x-multiline': true } }, required: ['verdict'] } },
   theme: { id: 'f-theme', kind: 'theme', origin: { kind: 'mod', plugin: 'sunset' }, title: 'Apply sunset’s colours?', why: 'The sunset mod proposes a warmer accent.', swatches: [['Accent', '#e0a458'], ['Ground', '#1b1712'], ['Text', '#f3e9da']], preview: false, schema: { properties: {} } },
+  endpoint: { ...endpointForm('test').spec, origin: { kind: 'host' } } as unknown as CardData,
+  'endpoint-found': { ...endpointForm('save', { found: ['qwen3-coder-30b', 'llama-3.3-70b-instruct', 'mistral-small-3.2'], values: { name: 'Lab server', base_url: 'http://127.0.0.1:8000/v1' } }).spec, origin: { kind: 'host' } } as unknown as CardData,
   multi: { id: 'f-rerun', kind: 'question', origin: { kind: 'teammate', ids: ['moss'] }, title: 'Which suites should I rerun?', why: 'Three suites flaked overnight.', effect: 'moss reruns them on the next free runner.',
     schema: { properties: { suites: { type: 'string', title: 'Suites', 'x-multi': true, enum: ['invoice.test.ts', 'prorate.test.ts', 'webhook.test.ts'] }, log: { 'x-upload': true, title: 'Failing log' } }, required: ['suites'] } }
 };

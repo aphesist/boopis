@@ -168,6 +168,78 @@ export const commands = {
 	storeSourceAdd: (url: string | null, path: string | null, label: string | null, options?: InvokeOptions) => __TAURI_INVOKE<StoreSource_Serialize>("store_source_add", { url, path, label }, options),
 	/**  Remove a source the user added. */
 	storeSourceRemove: (id: string, options?: InvokeOptions) => __TAURI_INVOKE<null>("store_source_remove", { id }, options),
+	/**
+	 *  Every way's state: the catalogue's ways in order (hidden ones left out), then the endpoints the person added. Read-only,
+	 *  and it never dials a runtime on this computer: those ways answer from the last `provider_probe_local` of this run.
+	 * 
+	 *  Errors: `hx.config.invalid`, `hx.secrets.*`.
+	 */
+	providerList: (profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<ProviderState_Serialize[]>("provider_list", { profile }, options),
+	/**
+	 *  Save a key for a key way, wire it and check it once. The key goes to the keychain (`secret://provider.<slug>/api_key`) and
+	 *  the engine's configuration gets the two usual writes; the key is in no result, log or error. The check is one model listing:
+	 *  a refusal or a failure to reach the provider comes back in the returned state (status `error`, code `hx.provider.key_rejected`
+	 *  or `hx.provider.unreachable`) and the key stays saved. An error means nothing was saved.
+	 * 
+	 *  Errors: `hx.provider.unknown`, `hx.provider.unsupported` (a way with no key), `hx.provider.key_invalid`, `hx.secrets.*`,
+	 *  `hx.setup.config_failed`.
+	 */
+	providerSetKey: (way: string, key: string, profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<ProviderState_Serialize>("provider_set_key", { way, key, profile }, options),
+	/**
+	 *  Take a way away: its keychain secret and its configuration (for an endpoint, its whole `providers.<slug>` entry). A ladder
+	 *  tier that names it is left as it is and governed mode says why it cannot run. Returns the state afterwards.
+	 * 
+	 *  Errors: `hx.provider.unknown`, `hx.provider.unsupported` (a sign-in the host does not own: Claude's is Claude Code's own,
+	 *  ChatGPT's is `chatgpt_sign_out`), `hx.provider.not_found`, `hx.secrets.*`, `hx.setup.config_failed`.
+	 */
+	providerRemove: (way: string, profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<ProviderState_Serialize>("provider_remove", { way, profile }, options),
+	/**
+	 *  Test an endpoint before saving it: one GET of `/models` (then `/v1/models`) on the address, with the key as the wire says,
+	 *  no redirect to another host, loopback or https only. Saves and changes nothing. A dial that failed is an outcome in the
+	 *  result, not an error.
+	 * 
+	 *  Errors: `hx.provider.endpoint_invalid`, `hx.provider.endpoint_blocked`.
+	 */
+	providerTestEndpoint: (request: EndpointTestRequest_Deserialize, options?: InvokeOptions) => __TAURI_INVOKE<EndpointTestResult_Serialize>("provider_test_endpoint", { request }, options),
+	/**
+	 *  Save an endpoint of the person's own: the slug is derived from the name (`custom-<name>`, the catalogue's rule), the key goes
+	 *  to the keychain, `providers.<slug>` gets `base_url`, `key_env`, `api_mode`, `models` and `discover_models`, and, when
+	 *  `use_model` is set, `model.provider` and `model.default`. Its models are never frontier. Returns the new way's state.
+	 * 
+	 *  Errors: `hx.provider.endpoint_invalid`, `hx.provider.endpoint_blocked`, `hx.provider.endpoint_exists`,
+	 *  `hx.provider.key_invalid`, `hx.secrets.*`, `hx.setup.config_failed`.
+	 */
+	providerAddEndpoint: (request: EndpointRequest_Deserialize, options?: InvokeOptions) => __TAURI_INVOKE<ProviderState_Serialize>("provider_add_endpoint", { request }, options),
+	/**
+	 *  Ask the runtimes on this computer (Ollama, LM Studio, llama.cpp, vLLM) whether they answer, each on its own default port at
+	 *  127.0.0.1 with the catalogue's short timeout, no key, no other host. Called when Settings > Models opens and on Check again,
+	 *  never in the background. Returns one state per local way: `found_local` with its address and model count, or `not_found`.
+	 * 
+	 *  Errors: none for a runtime that does not answer; `hx.internal_error` only for a bug.
+	 */
+	providerProbeLocal: (profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<ProviderState_Serialize[]>("provider_probe_local", { profile }, options),
+	/**
+	 *  Start a sign-in for a sign-in way the host owns (`SuperGrok`, GitHub Copilot, and ChatGPT once it moves to OpenAI's program):
+	 *  returns the lab's own page to open and the code to type. The wait runs in the host and ends with a `ProviderSigninEvent`; the
+	 *  tokens go to the keychain and never to the webview. A way owned by someone else (Claude's, which is Claude Code's own
+	 *  sign-in, and driving the user's own grok program) has nothing to start. Mirrors `chatgpt_signin_start`.
+	 * 
+	 *  Errors: `hx.provider.unknown`, `hx.provider.unsupported`, `hx.provider.unreachable`, `hx.secrets.*`.
+	 */
+	providerSigninStart: (way: string, profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<SigninCode>("provider_signin_start", { way, profile }, options),
+	/**
+	 *  Cancel the sign-in that is waiting for `way`. Mirrors `chatgpt_signin_cancel`.
+	 * 
+	 *  Errors: `hx.provider.unknown`.
+	 */
+	providerSigninCancel: (way: string, options?: InvokeOptions) => __TAURI_INVOKE<null>("provider_signin_cancel", { way }, options),
+	/**
+	 *  Sign out of a sign-in way the host owns: its tokens leave the keychain and the engine's copy is dropped. Returns the state
+	 *  afterwards. Mirrors `chatgpt_sign_out`.
+	 * 
+	 *  Errors: `hx.provider.unknown`, `hx.provider.unsupported`, `hx.secrets.*`.
+	 */
+	providerSignOut: (way: string, profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<ProviderState_Serialize>("provider_sign_out", { way, profile }, options),
 };
 
 /** Events */
@@ -176,6 +248,7 @@ export const events = {
 	connectionStateEvent: makeEvent<ConnectionStateEvent_Serialize, ConnectionStateEvent_Deserialize>("connection-state-event"),
 	connectorRestartEvent: makeEvent<ConnectorRestartEvent, ConnectorRestartEvent>("connector-restart-event"),
 	fileDragEvent: makeEvent<FileDragEvent_Serialize, FileDragEvent_Deserialize>("file-drag-event"),
+	providerSigninEvent: makeEvent<ProviderSigninEvent, ProviderSigninEvent>("provider-signin-event"),
 	setupProgress: makeEvent<SetupProgress, SetupProgress>("setup-progress"),
 	windowStateEvent: makeEvent<WindowStateEvent, WindowStateEvent>("window-state-event"),
 };
@@ -192,6 +265,15 @@ export type Answer = {
 	/**  The secret fields' values (credential forms), by field name. */
 	secrets: Json,
 };
+
+/**  The engine's three wire formats, spelled as the engine spells them. */
+export type ApiMode = 
+/**  OpenAI chat completions. */
+"chat_completions" | 
+/**  OpenAI Responses. */
+"codex_responses" | 
+/**  Anthropic Messages. */
+"anthropic_messages";
 
 /**  What the host remembers. */
 export type AppSettings = AppSettings_Serialize | AppSettings_Deserialize;
@@ -780,6 +862,141 @@ export type DiffLine_Serialize = {
 	to: unknown,
 };
 
+/**  What Test found. */
+export type EndpointOutcome = 
+/**  It listed models. */
+"listed" | 
+/**  It answered like a model server but lists none (add ids by hand). */
+"empty" | 
+/**  It refused: a key is needed, or the one given is wrong (401 or 403). */
+"needs_key" | 
+/**  Nothing answered in time, or the connection failed. */
+"unreachable" | 
+/**  Something answered, but not like a model server (an HTML page, another shape). */
+"not_a_model_server";
+
+/**  An endpoint to save. */
+export type EndpointRequest = EndpointRequest_Serialize | EndpointRequest_Deserialize;
+
+/**  An endpoint to save. */
+export type EndpointRequest_Deserialize = {
+	/**  What the person calls it; the slug is derived from it. */
+	name: string,
+	/**  The address. */
+	base_url: string,
+	/**  The wire. */
+	api_mode: ApiMode,
+	/**  The key, when there is one: kept in the keychain, wired as `key_env`. */
+	key?: string | null,
+	/**  The ids to save (ticked from Test, and typed by hand). */
+	models: string[],
+	/**  Ask the server for its models whenever the list is needed (`discover_models`). */
+	discover: boolean,
+	/**  Context length, when the person set one. */
+	context_length?: number | null,
+	/**  Request timeout in seconds; `None` is the catalogue's default (longer on this computer). */
+	request_timeout_s?: number | null,
+	/**  A model (one of `models`) to also set as the person's model, or `None` to leave the model alone. */
+	use_model?: string | null,
+	/**  The profile. */
+	profile?: string | null,
+};
+
+/**  An endpoint to save. */
+export type EndpointRequest_Serialize = {
+	/**  What the person calls it; the slug is derived from it. */
+	name: string,
+	/**  The address. */
+	base_url: string,
+	/**  The wire. */
+	api_mode: ApiMode,
+	/**  The key, when there is one: kept in the keychain, wired as `key_env`. */
+	key: string | null,
+	/**  The ids to save (ticked from Test, and typed by hand). */
+	models: string[],
+	/**  Ask the server for its models whenever the list is needed (`discover_models`). */
+	discover: boolean,
+	/**  Context length, when the person set one. */
+	context_length: number | null,
+	/**  Request timeout in seconds; `None` is the catalogue's default (longer on this computer). */
+	request_timeout_s: number | null,
+	/**  A model (one of `models`) to also set as the person's model, or `None` to leave the model alone. */
+	use_model: string | null,
+	/**  The profile. */
+	profile: string | null,
+};
+
+/**  What Test asks: one address, one wire, an optional key. */
+export type EndpointTestRequest = EndpointTestRequest_Serialize | EndpointTestRequest_Deserialize;
+
+/**  What Test asks: one address, one wire, an optional key. */
+export type EndpointTestRequest_Deserialize = {
+	/**  The address typed. */
+	base_url: string,
+	/**  The wire the server speaks. */
+	api_mode: ApiMode,
+	/**  The key typed, when there is one. Sent only to `base_url`. */
+	key?: string | null,
+};
+
+/**  What Test asks: one address, one wire, an optional key. */
+export type EndpointTestRequest_Serialize = {
+	/**  The address typed. */
+	base_url: string,
+	/**  The wire the server speaks. */
+	api_mode: ApiMode,
+	/**  The key typed, when there is one. Sent only to `base_url`. */
+	key: string | null,
+};
+
+/**
+ *  The result of a Test. A dial that failed is an outcome here, not an error; an address that may not be dialled at all is
+ *  the error `hx.provider.endpoint_invalid` or `hx.provider.endpoint_blocked`.
+ */
+export type EndpointTestResult = EndpointTestResult_Serialize | EndpointTestResult_Deserialize;
+
+/**
+ *  The result of a Test. A dial that failed is an outcome here, not an error; an address that may not be dialled at all is
+ *  the error `hx.provider.endpoint_invalid` or `hx.provider.endpoint_blocked`.
+ */
+export type EndpointTestResult_Deserialize = {
+	/**  What happened. */
+	outcome: EndpointOutcome,
+	/**  The model ids found, at most `limits.max_models`. */
+	models: string[],
+	/**  The address that answered (no query), when one did. */
+	answered_at?: string | null,
+	/**  The HTTP status, when there was one. */
+	status?: number | null,
+	/**  Whether the address is on this computer. */
+	loopback: boolean,
+	/**  A stable code for a failed outcome (`hx.provider.key_rejected`, `unreachable`, `no_models`, `not_a_model_server`). */
+	code?: string | null,
+	/**  One plain line, never the server's own text and never a secret. */
+	detail?: string | null,
+};
+
+/**
+ *  The result of a Test. A dial that failed is an outcome here, not an error; an address that may not be dialled at all is
+ *  the error `hx.provider.endpoint_invalid` or `hx.provider.endpoint_blocked`.
+ */
+export type EndpointTestResult_Serialize = {
+	/**  What happened. */
+	outcome: EndpointOutcome,
+	/**  The model ids found, at most `limits.max_models`. */
+	models: string[],
+	/**  The address that answered (no query), when one did. */
+	answered_at: string | null,
+	/**  The HTTP status, when there was one. */
+	status: number | null,
+	/**  Whether the address is on this computer. */
+	loopback: boolean,
+	/**  A stable code for a failed outcome (`hx.provider.key_rejected`, `unreachable`, `no_models`, `not_a_model_server`). */
+	code: string | null,
+	/**  One plain line, never the server's own text and never a secret. */
+	detail: string | null,
+};
+
 /**
  *  Which engine this run uses, for the first-run screen's words (`engine_source_get`). The choice itself is made on the
  *  command line or in the environment only (ADR-0031), so there is nothing to save here.
@@ -1176,18 +1393,20 @@ export type Gpu_Serialize = {
 
 /**
  *  One heavy model's opt-in (Settings > Models, the governed section): a model that is frontier but token-heavy or costly, so
- *  governed mode runs it only when the user turned it on (ADR-0037). The data file marks the family heavy; this is what the user
- *  can do about it.
+ *  governed mode runs it only when the user turned it on (ADR-0037, ADR-0039). The data file marks the family heavy and holds the
+ *  switch (`heavy_switches` in `providers.json`: label, reason, the engines a ladder must be on, the key, how the tier is chosen
+ *  and what is said when it cannot be); this is what the user can do about it.
  */
 export type HeavyChoice = HeavyChoice_Serialize | HeavyChoice_Deserialize;
 
 /**
  *  One heavy model's opt-in (Settings > Models, the governed section): a model that is frontier but token-heavy or costly, so
- *  governed mode runs it only when the user turned it on (ADR-0037). The data file marks the family heavy; this is what the user
- *  can do about it.
+ *  governed mode runs it only when the user turned it on (ADR-0037, ADR-0039). The data file marks the family heavy and holds the
+ *  switch (`heavy_switches` in `providers.json`: label, reason, the engines a ladder must be on, the key, how the tier is chosen
+ *  and what is said when it cannot be); this is what the user can do about it.
  */
 export type HeavyChoice_Deserialize = {
-	/**  `fable` or `grok`: what `setup_set_heavy` takes. */
+	/**  A switch of `heavy_switches` (`fable`, `grok`, `carbon`): what `setup_set_heavy` takes. */
 	id: string,
 	/**  The switch's label: `Climb to Fable`. */
 	label: string,
@@ -1203,11 +1422,12 @@ export type HeavyChoice_Deserialize = {
 
 /**
  *  One heavy model's opt-in (Settings > Models, the governed section): a model that is frontier but token-heavy or costly, so
- *  governed mode runs it only when the user turned it on (ADR-0037). The data file marks the family heavy; this is what the user
- *  can do about it.
+ *  governed mode runs it only when the user turned it on (ADR-0037, ADR-0039). The data file marks the family heavy and holds the
+ *  switch (`heavy_switches` in `providers.json`: label, reason, the engines a ladder must be on, the key, how the tier is chosen
+ *  and what is said when it cannot be); this is what the user can do about it.
  */
 export type HeavyChoice_Serialize = {
-	/**  `fable` or `grok`: what `setup_set_heavy` takes. */
+	/**  A switch of `heavy_switches` (`fable`, `grok`, `carbon`): what `setup_set_heavy` takes. */
 	id: string,
 	/**  The switch's label: `Climb to Fable`. */
 	label: string,
@@ -1624,6 +1844,88 @@ export type Provenance_Serialize = {
 	source_tier?: string,
 };
 
+/**  How a sign-in ended, pushed to every window (`ProviderSigninEvent`), mirroring `ChatgptSigninEvent`. */
+export type ProviderSigninEvent = {
+	/**  The way that signed in. */
+	way: string,
+	/**  `signed_in`, `failed`, `cancelled` or `timed_out`. */
+	outcome: string,
+	/**  What to tell the person, in plain words; empty when signed in. */
+	message: string,
+};
+
+/**  One way's state. */
+export type ProviderState = ProviderState_Serialize | ProviderState_Deserialize;
+
+/**  One way's state. */
+export type ProviderState_Deserialize = {
+	/**  The catalogue entry's id (`anthropic`), or `custom` for an endpoint the person added. */
+	provider: string,
+	/**  The way's id (`anthropic.key`), or `custom.<slug>` for an endpoint the person added. */
+	way: string,
+	/**  How it connects. */
+	kind: WayKind,
+	/**  Where it stands. */
+	status: ProviderStatus,
+	/**  A stable code, present exactly when `status` is `error` (`hx.provider.*`, or `hx.setup.*`, `hx.secrets.*`). */
+	code?: string | null,
+	/**  One plain line to show beside the word: the reason for an error, a count, a note. Never a secret. */
+	detail?: string | null,
+	/**  The plan a sign-in reports (`Claude Max`, `ChatGPT Plus`), when it does. */
+	plan?: string | null,
+	/**  How many models the last check found; `None` when not checked or not known. */
+	models_count?: number | null,
+	/**  The address that answered, for a runtime on this computer or an endpoint. */
+	base_url?: string | null,
+	/**  While `status` is `signing_in`: the page to open and the code to type. */
+	signin?: SigninCode | null,
+	/**  When it was last checked, in milliseconds since the Unix epoch; `None` when never. */
+	checked_at?: number | null,
+};
+
+/**  One way's state. */
+export type ProviderState_Serialize = {
+	/**  The catalogue entry's id (`anthropic`), or `custom` for an endpoint the person added. */
+	provider: string,
+	/**  The way's id (`anthropic.key`), or `custom.<slug>` for an endpoint the person added. */
+	way: string,
+	/**  How it connects. */
+	kind: WayKind,
+	/**  Where it stands. */
+	status: ProviderStatus,
+	/**  A stable code, present exactly when `status` is `error` (`hx.provider.*`, or `hx.setup.*`, `hx.secrets.*`). */
+	code: string | null,
+	/**  One plain line to show beside the word: the reason for an error, a count, a note. Never a secret. */
+	detail: string | null,
+	/**  The plan a sign-in reports (`Claude Max`, `ChatGPT Plus`), when it does. */
+	plan: string | null,
+	/**  How many models the last check found; `None` when not checked or not known. */
+	models_count: number | null,
+	/**  The address that answered, for a runtime on this computer or an endpoint. */
+	base_url: string | null,
+	/**  While `status` is `signing_in`: the page to open and the code to type. */
+	signin: SigninCode | null,
+	/**  When it was last checked, in milliseconds since the Unix epoch; `None` when never. */
+	checked_at: number | null,
+};
+
+/**  Where a way stands. */
+export type ProviderStatus = 
+/**  Ready to use: signed in, or a key is in place and was accepted (or not yet checked and nothing says otherwise). */
+"connected" | 
+/**  A key way with no key saved. */
+"needs_key" | 
+/**  A sign-in way not signed in. */
+"signed_out" | 
+/**  A sign-in is waiting for the person (`signin` holds the page and the code). */
+"signing_in" | 
+/**  A runtime on this computer answered the last probe. */
+"found_local" | 
+/**  A runtime on this computer did not answer the last probe (or was never probed: `checked_at` is then `None`). */
+"not_found" | 
+/**  Something is wrong; `code` says what, in the catalogue of `crates/hx-proto/errors.json`. */
+"error";
+
 /**  A snapshot for the UI's diagnostics. */
 export type ProxyStats = ProxyStats_Serialize | ProxyStats_Deserialize;
 
@@ -1838,6 +2140,19 @@ export type SignIn = {
 	provider: string,
 	/**  The button's words. */
 	label: string,
+};
+
+/**
+ *  The page to open and the one-time code to type for a sign-in that waits (not a secret: it only works for the person who
+ *  types it on the lab's own page).
+ */
+export type SigninCode = {
+	/**  The lab's own page. */
+	verification_url: string,
+	/**  The code to type there. */
+	user_code: string,
+	/**  When the code lapses, in milliseconds since the Unix epoch. */
+	expires_at: number | null,
 };
 
 /**  Which Hermes the app runs: the one it carries, or one the user already has (`boopis --engine existing`). */
@@ -2499,6 +2814,17 @@ export type UpdateDiff_Serialize = {
 	removed: StoreRemoved_Serialize | null,
 	to_plan_hash: string | null,
 };
+
+/**  How a way connects, as in the catalogue's `kind`. */
+export type WayKind = 
+/**  A subscription sign-in. */
+"signin" | 
+/**  An API key. */
+"key" | 
+/**  A runtime on this computer. */
+"local" | 
+/**  An endpoint of the person's own. */
+"custom";
 
 /**  Where the loaded `libwebkit2gtk` lives. */
 export type WebkitOrigin = 

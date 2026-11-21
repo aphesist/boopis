@@ -1,0 +1,230 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/aphesist/boopis/apps/shared/data/providers.schema.json",
+  "title": "boopis provider catalogue",
+  "description": "The shape of apps/shared/data/providers.json (ADR-0039). The Rust reader (apps/desktop/src-tauri/src/providers) refuses a field this schema does not name, and the TypeScript reader (apps/desktop/ui/src/data/providers.ts) types the same fields; the tests of both check the file's structure and its examples.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "description", "engine", "groups", "providers", "heavy_switches", "never_frontier", "endpoint", "not_offered", "spikes", "examples"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "description": { "type": "string" },
+    "engine": {
+      "type": "object", "additionalProperties": false, "required": ["version", "commit", "about"],
+      "properties": { "version": { "type": "string" }, "commit": { "type": "string" }, "about": { "type": "string" } }
+    },
+    "groups": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/group" } },
+    "providers": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/entry" } },
+    "heavy_switches": { "type": "array", "items": { "$ref": "#/$defs/heavy" } },
+    "never_frontier": { "$ref": "#/$defs/neverFrontier" },
+    "endpoint": { "$ref": "#/$defs/endpoint" },
+    "not_offered": { "type": "array", "items": { "$ref": "#/$defs/notOffered" } },
+    "spikes": { "type": "array", "items": { "$ref": "#/$defs/spike" } },
+    "examples": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/example" } }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "wayId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*$", "description": "`<entry id>.<name>`, unique in the file. A custom endpoint the user adds is `custom.<slug>` and is not in this file." },
+    "engineSlug": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$", "description": "A provider slug exactly as the engine spells it." },
+    "envVar": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+    "group": {
+      "type": "object", "additionalProperties": false, "required": ["id", "label", "order"],
+      "properties": { "id": { "$ref": "#/$defs/id" }, "label": { "type": "string" }, "order": { "type": "integer", "minimum": 1 } }
+    },
+    "entry": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "lab", "label", "summary", "group", "rank", "shown", "keywords", "ways"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "lab": { "$ref": "#/$defs/id", "description": "Whose models these are, for the lab's mark; equal to `id` unless a host serves another lab's models." },
+        "label": { "type": "string", "description": "What the row is called, in boopis's words." },
+        "summary": { "type": "string", "description": "One line: what the lab unlocks." },
+        "group": { "type": "string", "description": "A `groups` id." },
+        "rank": { "type": "integer", "minimum": 1, "description": "The research ranking (ADR-0039); ties share a number. Entries are listed by rank, then in file order." },
+        "shown": { "enum": ["default", "more"], "description": "`default`: listed in setup and Settings. `more`: under More providers (search still finds it)." },
+        "keywords": { "type": "array", "items": { "type": "string" }, "description": "Extra words search matches (model families, old names)." },
+        "ways": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/way" } }
+      }
+    },
+    "way": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "kind", "label", "hint", "engine", "slug", "config", "hidden", "offered_when", "key", "base_url", "api_mode", "discovery", "signin", "frontier", "engine_source", "notes"],
+      "properties": {
+        "id": { "$ref": "#/$defs/wayId" },
+        "kind": { "enum": ["signin", "key", "local", "custom"] },
+        "label": { "type": "string", "description": "The way's name in boopis's words (no engine names)." },
+        "hint": { "type": "string", "description": "One line under the label." },
+        "engine": { "oneOf": [{ "$ref": "#/$defs/engineSlug" }, { "type": "null" }], "description": "`model.provider`, and the part before the slash in a ladder tier. Null when boopis writes a `providers.<slug>` entry instead." },
+        "slug": { "oneOf": [{ "type": "string", "pattern": "^custom-[a-z0-9][a-z0-9-]*$" }, { "type": "null" }], "description": "For `config: endpoint`: the name of the `providers.<slug>` entry (fixed for a runtime on this computer, derived for a custom endpoint)." },
+        "config": { "enum": ["builtin", "external", "endpoint"], "description": "`builtin`: the engine knows the slug; setup writes only the key wiring (and a base URL when it differs). `external`: a sign-in someone else owns (claude.rs, chatgpt/). `endpoint`: boopis writes `providers.<slug>` (base_url, key_env, api_mode, models, discover_models)." },
+        "hidden": { "type": "boolean", "description": "Never listed, not even by search, and its engine slug is left out of the model picker too." },
+        "hidden_reason": { "type": "string" },
+        "offered_when": { "enum": ["always", "signin_unused"], "description": "`signin_unused`: the way is shown only when the entry's other sign-in is not possible or not in use (xAI: driving the user's own grok program)." },
+        "region": { "enum": ["china"], "description": "A regional twin of another way; listed under it, not beside it." },
+        "slug_spike": { "type": "string", "description": "A `spikes` id that settled this way's slug." },
+        "key": { "oneOf": [{ "$ref": "#/$defs/key" }, { "type": "null" }] },
+        "base_url": { "oneOf": [{ "$ref": "#/$defs/baseUrl" }, { "type": "null" }] },
+        "api_mode": { "oneOf": [{ "enum": ["chat_completions", "codex_responses", "anthropic_messages"] }, { "type": "null" }], "description": "How the engine talks to it (informational for `builtin`, written for `endpoint`)." },
+        "discovery": { "$ref": "#/$defs/discovery" },
+        "signin": { "oneOf": [{ "$ref": "#/$defs/signin" }, { "type": "null" }] },
+        "frontier": { "enum": ["by_name", "never"], "description": "`by_name`: a model of this route is frontier when its name is in frontier-models.json. `never`: no model of it is, ever (fail closed)." },
+        "engine_source": { "type": "array", "minItems": 1, "items": { "type": "string" }, "description": "Where in the engine's source (at `engine.version`) the slug and the variables were read." },
+        "notes": { "type": "array", "items": { "$ref": "#/$defs/note" } }
+      },
+      "allOf": [
+        { "if": { "properties": { "kind": { "const": "key" } } }, "then": { "properties": { "key": { "type": "object" }, "base_url": { "type": "object" }, "engine": { "type": "string" }, "config": { "const": "builtin" } } } },
+        { "if": { "properties": { "kind": { "const": "signin" } } }, "then": { "properties": { "signin": { "type": "object" }, "key": { "type": "null" }, "config": { "const": "external" } } } },
+        { "if": { "properties": { "kind": { "enum": ["local", "custom"] } } }, "then": { "properties": { "frontier": { "const": "never" } } } },
+        { "if": { "properties": { "config": { "const": "endpoint" } } }, "then": { "properties": { "engine": { "type": "null" } } } },
+        { "if": { "properties": { "hidden": { "const": true } } }, "then": { "required": ["hidden_reason"] } }
+      ]
+    },
+    "key": {
+      "type": "object", "additionalProperties": false, "required": ["vars", "wire_var", "url", "required", "refuse_prefixes"],
+      "properties": {
+        "vars": { "type": "array", "items": { "$ref": "#/$defs/envVar" }, "description": "The variables the engine reads a key from, in its order. A key found under one of them by name counts as in place." },
+        "wire_var": { "oneOf": [{ "$ref": "#/$defs/envVar" }, { "type": "null" }], "description": "The variable boopis binds to the keychain secret. One of `vars`; null for an endpoint, whose key goes by a generated name." },
+        "url": { "oneOf": [{ "type": "string", "format": "uri" }, { "type": "null" }], "description": "Where a person makes a key." },
+        "required": { "type": "boolean", "description": "False: works without a key (a server on this computer)." },
+        "refuse_prefixes": { "type": "array", "items": { "type": "string" }, "description": "A key that starts with one of these is turned down with `hx.provider.key_invalid` (a plan key that is not for boopis)." }
+      }
+    },
+    "baseUrl": {
+      "type": "object", "additionalProperties": false, "required": ["default", "env", "editable", "pin", "pin_reason"],
+      "properties": {
+        "default": { "oneOf": [{ "type": "string" }, { "type": "null" }] },
+        "env": { "oneOf": [{ "$ref": "#/$defs/envVar" }, { "type": "null" }], "description": "The variable that overrides the address for the engine." },
+        "editable": { "type": "boolean", "description": "The person may change the address (a server on this computer, an endpoint of your own)." },
+        "pin": { "type": "boolean", "description": "boopis always sets the address to `default`, so the engine does not choose another by itself (it would otherwise follow a coding-plan key to a coding-plan endpoint)." },
+        "pin_reason": { "oneOf": [{ "type": "string" }, { "type": "null" }] }
+      }
+    },
+    "discovery": {
+      "type": "object", "additionalProperties": false, "required": ["method"],
+      "properties": {
+        "method": { "enum": ["engine_options", "get_models", "probe", "none"], "description": "`engine_options`: the engine's own model listing for the slug. `get_models`: GET `path` (then `fallback_path`) on the base URL. `probe`: a loopback probe (`host`, `port`, `path`, `shape`), run only when Settings > Models opens and on Check again. `none`: nothing to list." },
+        "host": { "const": "127.0.0.1" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "path": { "type": "string", "pattern": "^/" },
+        "fallback_path": { "oneOf": [{ "type": "string", "pattern": "^/" }, { "type": "null" }] },
+        "shape": { "enum": ["ollama_tags", "lmstudio_models", "llamacpp_props", "openai_models"], "description": "What the answer must look like to count as that runtime (anything else, such as an HTML page, is not it)." },
+        "timeout_ms": { "type": "integer", "minimum": 100, "maximum": 30000 }
+      },
+      "allOf": [{ "if": { "properties": { "method": { "const": "probe" } } }, "then": { "required": ["host", "port", "path", "shape", "timeout_ms"] } }]
+    },
+    "signin": {
+      "type": "object", "additionalProperties": false, "required": ["flow", "login", "owner"],
+      "properties": {
+        "flow": { "enum": ["cli", "cli_drive", "device_code", "official_program", "external_token"], "description": "`cli`: the user's own program signs in, run from the host's login table. `cli_drive`: the engine drives the user's own program, which holds the login. `device_code`: a flow the host owns, tokens in the keychain. `official_program`: the host owns the flow of a lab's program for open-source apps (ChatGPT). `external_token`: a token file the engine reads (hidden)." },
+        "login": { "oneOf": [{ "type": "string" }, { "type": "null" }], "description": "The id in apps/shared/data/logins.json, for `cli`." },
+        "owner": { "type": "string", "description": "The code that owns the sign-in (claude.rs, chatgpt/)." }
+      }
+    },
+    "note": {
+      "type": "object", "additionalProperties": false, "required": ["id", "kind", "where", "text"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": { "enum": ["terms", "limit", "info"], "description": "`terms`: what the lab's terms allow, which the owner approves. `limit`: a plan or quota limit. `info`: anything else a person should know." },
+        "where": { "enum": ["row", "detail"], "description": "`row`: shown under the row itself. `detail`: shown in the card that opens from the row." },
+        "text": { "type": "string", "maxLength": 400 },
+        "source": { "type": "string", "format": "uri" }
+      }
+    },
+    "heavy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "family", "label", "reason", "engines", "key_way", "applies_when_unset", "pick", "not_applicable", "none_listed", "empty_ladder"],
+      "description": "One heavy-model switch (ADR-0037, ADR-0039): what `setup_set_heavy(id, on)` takes. Replaces the host's hard-coded table; nothing in the host branches on an id.",
+      "properties": {
+        "id": { "$ref": "#/$defs/id", "description": "Also the tier's name on the ladder." },
+        "family": { "type": "string", "description": "A family id in frontier-models.json." },
+        "label": { "type": "string" },
+        "reason": { "type": "string", "description": "Why it is off by default, from ADR-0037's figures only." },
+        "engines": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/engineSlug" }, "description": "The switch applies when every tier of the saved ladder is on one of these." },
+        "key_way": { "type": "string", "description": "The key way whose key must be in place when no ladder is saved (and for the plugin's default ladder to stand)." },
+        "applies_when_unset": { "type": "boolean", "description": "Whether the switch also applies when no ladder is saved and `key_way`'s key is in place." },
+        "pick": { "enum": ["route_alias", "lowest_in_family"], "description": "`route_alias`: the Claude route's own alias or model. `lowest_in_family`: the lowest model of `family` the provider's catalogue lists." },
+        "not_applicable": { "type": "string", "description": "The sentence for `hx.setup.subscription_unavailable` when it does not apply." },
+        "none_listed": { "oneOf": [{ "type": "string" }, { "type": "null" }], "description": "The sentence when the catalogue lists no model of the family (for `lowest_in_family`)." },
+        "empty_ladder": { "enum": ["keep", "unset"], "description": "What to do when turning it off leaves a ladder with no tier: `unset` saves none (governed mode then says why); `keep` never leaves a ladder empty." }
+      }
+    },
+    "neverFrontier": {
+      "type": "object", "additionalProperties": false, "required": ["about", "engines", "slug_prefixes", "examples"],
+      "properties": {
+        "about": { "type": "string" },
+        "engines": { "type": "array", "items": { "$ref": "#/$defs/engineSlug" } },
+        "slug_prefixes": { "type": "array", "items": { "type": "string" } },
+        "examples": {
+          "type": "array", "minItems": 1,
+          "items": { "type": "object", "additionalProperties": false, "required": ["provider", "model", "frontier"], "properties": { "provider": { "type": "string" }, "model": { "type": "string" }, "frontier": { "type": "boolean" } } }
+        }
+      }
+    },
+    "endpoint": {
+      "type": "object", "additionalProperties": false, "required": ["about", "api_modes", "default_api_mode", "url", "slug", "limits", "test", "fields"],
+      "properties": {
+        "about": { "type": "string" },
+        "api_modes": { "type": "array", "minItems": 1, "items": { "type": "object", "additionalProperties": false, "required": ["id", "label"], "properties": { "id": { "enum": ["chat_completions", "codex_responses", "anthropic_messages"] }, "label": { "type": "string" } } } },
+        "default_api_mode": { "enum": ["chat_completions", "codex_responses", "anthropic_messages"] },
+        "url": {
+          "type": "object", "additionalProperties": false, "required": ["schemes", "http_only_for", "forbid", "redirects", "examples"],
+          "properties": {
+            "schemes": { "type": "array", "items": { "enum": ["https", "http"] } },
+            "http_only_for": { "type": "array", "items": { "type": "string" } },
+            "forbid": { "type": "array", "items": { "enum": ["credentials", "query", "fragment"] } },
+            "redirects": { "type": "string" },
+            "examples": { "type": "array", "minItems": 1, "items": { "type": "object", "additionalProperties": false, "required": ["url", "valid"], "properties": { "url": { "type": "string" }, "valid": { "type": "boolean" }, "why": { "type": "string" } } } }
+          }
+        },
+        "slug": {
+          "type": "object", "additionalProperties": false, "required": ["pattern", "prefix", "rule", "examples", "invalid_names"],
+          "properties": {
+            "pattern": { "type": "string" }, "prefix": { "type": "string" }, "rule": { "type": "string" },
+            "examples": { "type": "array", "minItems": 1, "items": { "type": "object", "additionalProperties": false, "required": ["name", "taken", "slug"], "properties": { "name": { "type": "string" }, "taken": { "type": "array", "items": { "type": "string" } }, "slug": { "type": "string" } } } },
+            "invalid_names": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "limits": {
+          "type": "object", "additionalProperties": false, "required": ["max_models", "max_model_id_chars", "request_timeout_loopback_s", "request_timeout_s", "context_length_min"],
+          "properties": { "max_models": { "type": "integer" }, "max_model_id_chars": { "type": "integer" }, "request_timeout_loopback_s": { "type": "integer" }, "request_timeout_s": { "type": "integer" }, "context_length_min": { "type": "integer" } }
+        },
+        "test": {
+          "type": "object", "additionalProperties": false, "required": ["method", "paths", "timeout_ms", "outcomes", "about"],
+          "properties": { "method": { "const": "GET" }, "paths": { "type": "array", "items": { "type": "string" } }, "timeout_ms": { "type": "integer" }, "outcomes": { "type": "array", "items": { "enum": ["listed", "empty", "needs_key", "unreachable", "not_a_model_server"] } }, "about": { "type": "string" } }
+        },
+        "fields": {
+          "type": "array", "minItems": 1,
+          "description": "The `endpoint` form's fields, in order. The builders on both sides turn each into a schema property (`secret` is `x-secret`, `multi` `x-multi`, `multiline` `x-multiline`, `mono` `x-mono`); `after_test` fields exist only once Test has found models.",
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["name", "type", "title", "description", "required"],
+            "properties": {
+              "name": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+              "type": { "enum": ["string", "boolean", "integer"] },
+              "format": { "type": "string" }, "title": { "type": "string" }, "description": { "type": "string" }, "placeholder": { "type": "string" },
+              "required": { "type": "boolean" },
+              "enum": { "type": "array", "items": { "type": "string" } }, "enumNames": { "type": "array", "items": { "type": "string" } },
+              "default": {},
+              "secret": { "type": "boolean" }, "multi": { "type": "boolean" }, "multiline": { "type": "boolean" }, "mono": { "type": "boolean" }, "after_test": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "notOffered": {
+      "type": "object", "additionalProperties": false, "required": ["id", "lab", "route", "why", "waits_for"],
+      "properties": {
+        "id": { "type": "string" }, "lab": { "type": "string" }, "route": { "type": "string" }, "why": { "type": "string" },
+        "waits_for": { "enum": ["owner", "terms", "later", "none"], "description": "`owner`: a decision only the owner can make. `terms`: the lab's terms do not allow it. `later`: a later wave. `none`: not possible." }
+      }
+    },
+    "spike": {
+      "type": "object", "additionalProperties": false, "required": ["id", "date", "question", "result", "evidence", "decision"],
+      "properties": { "id": { "$ref": "#/$defs/id" }, "date": { "type": "string", "format": "date" }, "question": { "type": "string" }, "result": { "type": "string" }, "evidence": { "type": "array", "items": { "type": "string" } }, "decision": { "type": "string" } }
+    },
+    "example": {
+      "type": "object", "additionalProperties": false, "required": ["way", "expect"],
+      "description": "What a reader must answer for a way. `expect` maps a dotted path (`key.wire_var`, `discovery.port`) to its value; `shown` is the entry's, `secret_ref` is `secret://provider.<engine or slug>/api_key` (null for a way with no key), the rest are the way's own fields.",
+      "properties": { "way": { "$ref": "#/$defs/wayId" }, "expect": { "type": "object" } }
+    }
+  }
+}

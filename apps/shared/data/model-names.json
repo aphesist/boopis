@@ -27,6 +27,7 @@
     "providers": {
       "openai-codex": ["codex", "gpt", "chatgpt"],
       "openai": ["gpt", "openai"],
+      "openai-api": ["gpt", "openai"],
       "xai": ["grok"],
       "gemini": ["gemini"],
       "google": ["gemini"],
@@ -46,6 +47,7 @@
     "anthropic": "Anthropic API",
     "openai-codex": "ChatGPT subscription",
     "openai": "OpenAI API",
+    "openai-api": "OpenAI API",
     "gemini": "Gemini",
     "google": "Gemini",
     "openrouter": "OpenRouter",

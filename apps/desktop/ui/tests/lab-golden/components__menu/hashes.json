@@ -40,44 +40,44 @@
   "h": 267
  },
  "governed-mode-unavailable-at-rest@bone": {
-  "sha": "cc3a096606b2d2512ad2530f51b1b666d470519e",
+  "sha": "ef475a46d9b351890fa5d15845e6dd761053b60c",
   "w": 384,
-  "h": 211
+  "h": 227
  },
  "governed-mode-unavailable-at-rest@catalog": {
-  "sha": "276f8b6baa3c574e88255fa10a59009a177472d4",
+  "sha": "8d3448e1bef448f90d0c479488f1402e8cee42f9",
   "w": 384,
-  "h": 211
+  "h": 227
  },
  "governed-mode-unavailable-at-rest@graphite": {
-  "sha": "4c0a6ed06ea16e9b6ea8f644cf3846212b075de0",
+  "sha": "409a3e5feebf9f1df2156db665d21df48d306643",
   "w": 384,
-  "h": 211
+  "h": 227
  },
  "governed-mode-unavailable-at-rest@typewriter": {
-  "sha": "c0ba352e7519e89e8edf2ca52db63a9809dd0378",
+  "sha": "fa3fe2b3c1a56c20a90941be47b2491ce187f4e9",
   "w": 384,
-  "h": 243
+  "h": 259
  },
  "governed-mode-unavailable-the-governed-chip@bone": {
-  "sha": "e5e491ebc027afa92c89b17eebcf37825bab4c92",
+  "sha": "038697b6d3de37215ea7c312e77dbc328caa06a9",
   "w": 1424,
-  "h": 249
+  "h": 265
  },
  "governed-mode-unavailable-the-governed-chip@catalog": {
-  "sha": "266ee9797288272a01456c3acc1dbafed78f641b",
+  "sha": "8431951478ee0d8a72f962e2edf43a5622ca6cfc",
   "w": 1424,
-  "h": 249
+  "h": 265
  },
  "governed-mode-unavailable-the-governed-chip@graphite": {
-  "sha": "18e9a0fd4928546af6467ecb4cbb15cb661966f4",
+  "sha": "ff2b4040dba536d324614256c71ee05369492655",
   "w": 1424,
-  "h": 249
+  "h": 265
  },
  "governed-mode-unavailable-the-governed-chip@typewriter": {
-  "sha": "38a8c5c3aa69a6a597aa90bb0accfa0cc0d02e41",
+  "sha": "63062fcb842be9217713fa1707badf9ef9c7fd2e",
   "w": 1424,
-  "h": 281
+  "h": 297
  },
  "hover@bone": {
   "sha": "2414afd7ab17d3a8e63914820ec8b60f481b2a5e",

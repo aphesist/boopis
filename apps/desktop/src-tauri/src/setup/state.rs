@@ -54,7 +54,7 @@ pub struct State {
     /// The saved ladder was checked for frontier models once (ADR-0037): one that setup wrote with tiers governed mode will not
     /// use is rewritten, and a hand-written one is only reported. Added without a version bump, like `route_checked`.
     pub frontier_checked: bool,
-    /// The heavy models the user turned on in Settings > Models (`fable`, `grok`; ADR-0037). A heavy model is token-heavy or costly
+    /// The heavy models the user turned on in Settings > Models (`fable`, `grok`, `carbon`: the `heavy_switches` of `providers.json`; ADR-0037, ADR-0039). A heavy model is token-heavy or costly
     /// (Fable bills usage credits from the first request on a Claude Pro plan), so no ladder setup writes has one until its id is
     /// here, and setup run again keeps it. Added without a version bump: a file from before has none.
     pub heavy: Vec<String>,
@@ -64,25 +64,49 @@ pub struct State {
     /// 0.1.6 candidate's opus-and-fable, astra-only and carbon-only ladders are rewritten if setup wrote them). Added without a
     /// version bump, like `frontier_checked`.
     pub ladders_checked: bool,
+    /// The saved ladder was checked once for what ADR-0039 says about Terra: a ChatGPT ladder that setup wrote (Sol and Astra, the
+    /// 0.1.6 shape) is rewritten to Terra, then Sol, then Astra, from what the account lists. Added without a version bump: a file
+    /// from before has none, so the check runs once on the first start of this build.
+    pub terra_checked: bool,
 }
 
-/// The heavy models the user opted in to (ADR-0037).
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct Optins {
-    /// Claude Fable on a Claude ladder (the subscription or an Anthropic key).
-    pub fable: bool,
-    /// Grok on an xAI key.
-    pub grok: bool,
+/// The heavy models the user opted in to (ADR-0037, ADR-0039): the ids of the `heavy_switches` in `providers.json` that are on.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Optins(Vec<String>);
+
+impl Optins {
+    /// The opt-ins with these switch ids on.
+    #[must_use]
+    pub fn of(ids: &[&str]) -> Self {
+        Self(ids.iter().map(|i| (*i).to_owned()).collect())
+    }
+
+    /// Whether the switch `id` (`fable`, `grok`, `carbon`) is on.
+    #[must_use]
+    pub fn has(&self, id: &str) -> bool {
+        self.0.iter().any(|h| h == id)
+    }
+
+    /// Whether a ladder setup writes may carry `provider`/`model`: any model that is not heavy, and a heavy one only when the
+    /// switch of its family is on.
+    #[must_use]
+    pub fn allows(&self, provider: &str, model: &str) -> bool {
+        if !crate::frontier::is_heavy(provider, model) {
+            return true;
+        }
+        let family = crate::frontier::family_of(provider, model);
+        crate::providers::catalogue()
+            .heavy_switches
+            .iter()
+            .any(|sw| Some(&sw.family) == family.as_ref() && self.has(&sw.id))
+    }
 }
 
 impl State {
     /// The heavy opt-ins as the ladders read them.
     #[must_use]
     pub fn optins(&self) -> Optins {
-        Optins {
-            fable: self.heavy.iter().any(|h| h == "fable"),
-            grok: self.heavy.iter().any(|h| h == "grok"),
-        }
+        Optins(self.heavy.clone())
     }
 
     /// Turn one heavy model's opt-in on or off.

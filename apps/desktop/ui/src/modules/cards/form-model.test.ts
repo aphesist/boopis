@@ -5,11 +5,12 @@ import { FORM_KINDS, PERMISSION, answerText, formT, hasCancel, holdForm, isLocal
 const spec = (props: Record<string, unknown>, required: string[] = [], extra: Partial<FormSpec> = {}): FormSpec => ({ id: 'f', kind: 'question', title: 't', schema: { properties: props as never, required }, ...extra });
 
 describe('the kinds are templates', () => {
-  it('has all ten kinds of docs/FORMS.md, each with its words, and the theme card of a mod (a kind the UI answers itself)', () => {
-    expect(Object.keys(FORM_KINDS).sort()).toEqual(['approval', 'choice', 'connector', 'credential', 'feedback', 'permission', 'plan', 'question', 'setup', 'signin', 'theme']);
+  it('has every kind of docs/FORMS.md, each with its words, and the theme card of a mod (a kind the UI answers itself)', () => {
+    expect(Object.keys(FORM_KINDS).sort()).toEqual(['approval', 'choice', 'connector', 'credential', 'endpoint', 'feedback', 'permission', 'plan', 'question', 'setup', 'signin', 'theme']);
     expect(formT({ kind: 'theme' })).toMatchObject({ stamp: '', submit: 'Keep', cancel: 'Reject' });
     expect(isLocalForm({ kind: 'theme' })).toBe(true);
     expect(['question', 'choice', 'permission'].some((kind) => isLocalForm({ kind: kind as never }))).toBe(false);
+    expect(formT({ kind: 'endpoint' })).toMatchObject({ submit: 'Test', cancelled: 'Cancelled' });
     expect(formT({ kind: 'credential' }).submit).toBe('Save key');
     expect(formT({ kind: 'plan' }).cancel).toBe('Reject');
   });

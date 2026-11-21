@@ -1178,3 +1178,183 @@ pub fn store_source_remove(
 ) -> std::result::Result<(), HostError> {
     Ok(state.store.source_remove(&id)?)
 }
+
+// ---------------------------------------------------------------- setup for every lab (ADR-0039)
+//
+// The signatures below are the contract (`docs/PROTOCOL.md`, "Providers"). Until the streams that own them land, each answers
+// `hx.provider.unsupported` and does nothing: a stub never reports a state it did not read.
+
+/// The stub's one answer.
+fn provider_stub<T>(command: &str) -> std::result::Result<T, HostError> {
+    Err(crate::error::Error::Provider(
+        "hx.provider.unsupported",
+        format!("{command} is not built yet"),
+    )
+    .into())
+}
+
+/// The provider commands' engine for a profile: its configuration through the engine's own CLI, the keychain, the one outbound read,
+/// and the two sign-ins this host can read (Claude Code's, ChatGPT's).
+fn providers_engine(
+    app: &AppHandle,
+    state: &AppState,
+    profile: Option<String>,
+) -> Result<crate::providers::service::Providers> {
+    let profile = profile_of(app, profile)?;
+    let home = state
+        .supervisor
+        .environment()
+        .profile_home(profile.as_deref())?;
+    let ops = CliOps::new(state.supervisor.clone(), home);
+    Ok(crate::providers::service::Providers::new(
+        Arc::new(ops),
+        state.secrets.clone(),
+        crate::providers::service::https(),
+    )
+    .with_claude(Arc::new(crate::claude::SystemClaude::new()))
+    .with_chatgpt(state.chatgpt.clone()))
+}
+
+/// Every way's state: the catalogue's ways in order (hidden ones left out), then the endpoints the person added. Read-only,
+/// and it never dials a runtime on this computer: those ways answer from the last `provider_probe_local` of this run.
+///
+/// Errors: `hx.config.invalid`, `hx.secrets.*`.
+#[tauri::command]
+#[specta::specta]
+pub async fn provider_list(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    profile: Option<String>,
+) -> std::result::Result<Vec<crate::providers::ProviderState>, HostError> {
+    Ok(providers_engine(&app, &state, profile)?.list().await?)
+}
+
+/// Save a key for a key way, wire it and check it once. The key goes to the keychain (`secret://provider.<slug>/api_key`) and
+/// the engine's configuration gets the two usual writes; the key is in no result, log or error. The check is one model listing:
+/// a refusal or a failure to reach the provider comes back in the returned state (status `error`, code `hx.provider.key_rejected`
+/// or `hx.provider.unreachable`) and the key stays saved. An error means nothing was saved.
+///
+/// Errors: `hx.provider.unknown`, `hx.provider.unsupported` (a way with no key), `hx.provider.key_invalid`, `hx.secrets.*`,
+/// `hx.setup.config_failed`.
+#[tauri::command]
+#[specta::specta]
+pub async fn provider_set_key(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    way: String,
+    key: String,
+    profile: Option<String>,
+) -> std::result::Result<crate::providers::ProviderState, HostError> {
+    Ok(providers_engine(&app, &state, profile)?
+        .set_key(&way, &key)
+        .await?)
+}
+
+/// Take a way away: its keychain secret and its configuration (for an endpoint, its whole `providers.<slug>` entry). A ladder
+/// tier that names it is left as it is and governed mode says why it cannot run. Returns the state afterwards.
+///
+/// Errors: `hx.provider.unknown`, `hx.provider.unsupported` (a sign-in the host does not own: Claude's is Claude Code's own,
+/// ChatGPT's is `chatgpt_sign_out`), `hx.provider.not_found`, `hx.secrets.*`, `hx.setup.config_failed`.
+#[tauri::command]
+#[specta::specta]
+pub async fn provider_remove(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    way: String,
+    profile: Option<String>,
+) -> std::result::Result<crate::providers::ProviderState, HostError> {
+    Ok(providers_engine(&app, &state, profile)?
+        .remove(&way)
+        .await?)
+}
+
+/// Test an endpoint before saving it: one GET of `/models` (then `/v1/models`) on the address, with the key as the wire says,
+/// no redirect to another host, loopback or https only. Saves and changes nothing. A dial that failed is an outcome in the
+/// result, not an error.
+///
+/// Errors: `hx.provider.endpoint_invalid`, `hx.provider.endpoint_blocked`.
+#[tauri::command]
+#[specta::specta]
+pub async fn provider_test_endpoint(
+    request: crate::providers::endpoint::EndpointTestRequest,
+) -> std::result::Result<crate::providers::endpoint::EndpointTestResult, HostError> {
+    Ok(
+        crate::providers::service::test_endpoint(crate::providers::service::https(), request)
+            .await?,
+    )
+}
+
+/// Save an endpoint of the person's own: the slug is derived from the name (`custom-<name>`, the catalogue's rule), the key goes
+/// to the keychain, `providers.<slug>` gets `base_url`, `key_env`, `api_mode`, `models` and `discover_models`, and, when
+/// `use_model` is set, `model.provider` and `model.default`. Its models are never frontier. Returns the new way's state.
+///
+/// Errors: `hx.provider.endpoint_invalid`, `hx.provider.endpoint_blocked`, `hx.provider.endpoint_exists`,
+/// `hx.provider.key_invalid`, `hx.secrets.*`, `hx.setup.config_failed`.
+#[tauri::command]
+#[specta::specta]
+pub async fn provider_add_endpoint(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    request: crate::providers::endpoint::EndpointRequest,
+) -> std::result::Result<crate::providers::ProviderState, HostError> {
+    Ok(providers_engine(&app, &state, request.profile.clone())?
+        .add_endpoint(&request)
+        .await?)
+}
+
+/// Ask the runtimes on this computer (Ollama, LM Studio, llama.cpp, vLLM) whether they answer, each on its own default port at
+/// 127.0.0.1 with the catalogue's short timeout, no key, no other host. Called when Settings > Models opens and on Check again,
+/// never in the background. Returns one state per local way: `found_local` with its address and model count, or `not_found`.
+///
+/// Errors: none for a runtime that does not answer; `hx.internal_error` only for a bug.
+#[tauri::command]
+#[specta::specta]
+pub async fn provider_probe_local(
+    profile: Option<String>,
+) -> std::result::Result<Vec<crate::providers::ProviderState>, HostError> {
+    let _ = profile;
+    let states = crate::local::probe_local().await;
+    // `provider_list` never dials: it repeats this answer
+    crate::providers::service::remember_local_probe(&states);
+    Ok(states)
+}
+
+/// Start a sign-in for a sign-in way the host owns (`SuperGrok`, GitHub Copilot, and ChatGPT once it moves to OpenAI's program):
+/// returns the lab's own page to open and the code to type. The wait runs in the host and ends with a `ProviderSigninEvent`; the
+/// tokens go to the keychain and never to the webview. A way owned by someone else (Claude's, which is Claude Code's own
+/// sign-in, and driving the user's own grok program) has nothing to start. Mirrors `chatgpt_signin_start`.
+///
+/// Errors: `hx.provider.unknown`, `hx.provider.unsupported`, `hx.provider.unreachable`, `hx.secrets.*`.
+#[tauri::command]
+#[specta::specta]
+pub fn provider_signin_start(
+    way: String,
+    profile: Option<String>,
+) -> std::result::Result<crate::providers::SigninCode, HostError> {
+    let _ = (way, profile);
+    provider_stub("provider_signin_start")
+}
+
+/// Cancel the sign-in that is waiting for `way`. Mirrors `chatgpt_signin_cancel`.
+///
+/// Errors: `hx.provider.unknown`.
+#[tauri::command]
+#[specta::specta]
+pub fn provider_signin_cancel(way: String) -> std::result::Result<(), HostError> {
+    let _ = way;
+    provider_stub("provider_signin_cancel")
+}
+
+/// Sign out of a sign-in way the host owns: its tokens leave the keychain and the engine's copy is dropped. Returns the state
+/// afterwards. Mirrors `chatgpt_sign_out`.
+///
+/// Errors: `hx.provider.unknown`, `hx.provider.unsupported`, `hx.secrets.*`.
+#[tauri::command]
+#[specta::specta]
+pub fn provider_sign_out(
+    way: String,
+    profile: Option<String>,
+) -> std::result::Result<crate::providers::ProviderState, HostError> {
+    let _ = (way, profile);
+    provider_stub("provider_sign_out")
+}

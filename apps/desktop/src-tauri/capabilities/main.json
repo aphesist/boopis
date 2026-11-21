@@ -68,6 +68,15 @@
     "allow-store-sources",
     "allow-store-source-set-enabled",
     "allow-store-source-add",
-    "allow-store-source-remove"
+    "allow-store-source-remove",
+    "allow-provider-list",
+    "allow-provider-set-key",
+    "allow-provider-remove",
+    "allow-provider-test-endpoint",
+    "allow-provider-add-endpoint",
+    "allow-provider-probe-local",
+    "allow-provider-signin-start",
+    "allow-provider-signin-cancel",
+    "allow-provider-sign-out"
   ]
 }

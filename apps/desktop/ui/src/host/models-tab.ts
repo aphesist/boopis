@@ -1,6 +1,6 @@
-/* Settings > Models: the plan (`mountPlan`), the ladder the plugin runs governed work on (which model at which tier), each
-   provider's state with the same sign-in or key it offers in setup (the Claude subscription, the ChatGPT subscription,
-   Gemini: ADR-0030), and "Change models", which asks setup's models question again through the same first-run view and
+/* Settings > Models: the plan (`mountPlan`), governed mode and its heavy switches, the ladder the plugin runs governed work on
+   (which model at which tier), the Providers section (ADR-0039: every lab's sign-in, key, runtime on this computer and
+   endpoint of your own, drawn from the catalogue by `providers-view.ts`), and "Change models", which asks setup's models question again through the same first-run view and
    forms. Everything shown is read now, from the host; what could not be read is said so, never filled in. The rows are the
    design system's settings rows and ladder list. */
 import { ui } from '@boopis/ui';
@@ -10,7 +10,11 @@ import type { PlanView } from './free-tier';
 import { mountPlan } from './plan-view';
 import { loadModelsView, setHeavy } from './setup-bridge';
 import type { ModelsView } from './setup-bridge';
-import { mountChatgptSignin, tauriChatgptBridge } from './chatgpt-signin';
+import { tauriChatgptBridge } from './chatgpt-signin';
+import { mountProviders } from './providers-view';
+import type { ProvidersView } from './providers-view';
+import { tauriProvidersBridge } from './providers-bridge';
+import type { ProvidersBridge } from './providers-bridge';
 import type { ChatgptBridge } from './chatgpt-signin';
 import type { ConnectorLogin } from './bindings';
 
@@ -30,76 +34,18 @@ export interface ModelsDeps {
   setHeavy?: (id: string, on: boolean) => Promise<unknown>;
   /** the host's sign-in for a provider id in its table (Claude Code's own login); without it, only "Check again" */
   login?: (provider: string) => Promise<ConnectorLogin>;
+  /** the provider commands (the Providers section); without them the section says it could not be read */
+  providers?: ProvidersBridge;
 }
 export const realModelsDeps = (closeSettings: () => void): ModelsDeps => ({
   plan: currentPlan, ladder: loadModelsView, change: () => changeModels(), closeSettings, toast: (t) => { ui.toast(t); },
-  chatgpt: tauriChatgptBridge(), setHeavy,
+  chatgpt: tauriChatgptBridge(), setHeavy, providers: tauriProvidersBridge(),
   login: async (provider) => (await import('./connectors-bridge')).tauriConnectorsBridge().login(provider)
 });
 
 const SCOPE = 'A task starts at the first tier and moves to the next only when its gate fails.';
 
-const CLAUDE_STATE: Readonly<Record<ModelsView['claude']['state'], string>> = {
-  signed_in: 'Signed in', signed_out: 'Not signed in', not_installed: 'Not installed', metered: 'Signed in, but not to your subscription', old_version: 'Needs an update'
-};
 const esc = (t: string): string => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] ?? c);
-
-/** The Claude subscription section's rows: whether the user's own Claude Code is signed in and its version, with "Sign in to
-    Claude" (Claude Code's own `claude auth login`) while it is not, and whether this engine includes the subscription.
-    Everything is what the host read from the CLI's own commands; a plan or version it did not report is not shown. */
-export function claudeRows(view: ModelsView | { error: string }): string[] {
-  if ('error' in view) return [ui.html.setRow({ label: 'Claude Code', hint: `Not read: ${view.error}` })];
-  const c = view.claude;
-  const word = c.state === 'signed_in' && c.plan ? `${CLAUDE_STATE[c.state]} (${c.plan})` : CLAUDE_STATE[c.state];
-  const hint = c.state === 'signed_in' ? 'Runs on your own Claude Code login. boopis never sees your Claude login.' : c.detail;
-  const signIn = c.state === 'signed_out' || c.state === 'metered';
-  const rows = [
-    ui.html.setRow({
-      label: 'Claude Code', hint,
-      control: '<span class="ui-set__value">' + esc(word) + '</span>' +
-        (signIn ? ui.html.button({ label: 'Sign in to Claude', size: 's', attrs: { id: 'hx-claude-signin' } }) : '') +
-        (c.state === 'signed_in' ? '' : ui.html.button({ label: 'Check again', size: 's', attrs: { id: 'hx-claude-check' } }))
-    }),
-    ui.html.setRow({ label: 'Version', control: '<span class="ui-set__value">' + esc(c.version ?? 'Not reported') + '</span>' })
-  ];
-  if (!view.claude_plugin) {
-    rows.push(ui.html.setRow({ label: 'Availability', hint: 'The Claude subscription comes with boopis\u2019s own engine. With your own engine (Settings, General, Advanced) it is not available.', control: '<span class="ui-set__value">Not in this engine</span>' }));
-  }
-  return rows;
-}
-
-const CHATGPT_STATE: Readonly<Record<NonNullable<ModelsView['chatgpt']>['state'], string>> = { signed_in: 'Signed in', signed_out: 'Not signed in', signing_in: 'Signing in' };
-const planWord = (p: string): string => p.charAt(0).toUpperCase() + p.slice(1);
-
-/** The ChatGPT subscription section's rows (ADR-0030): signed in or not with the plan the account names, and Sign in or Sign
-    out. The sign-in card itself is drawn under the rows, in `#hx-chatgpt-card`. */
-export function chatgptRows(view: ModelsView | { error: string }, canSignIn: boolean): string[] {
-  if ('error' in view) return [ui.html.setRow({ label: 'ChatGPT', hint: `Not read: ${view.error}` })];
-  const c = view.chatgpt;
-  if (!c) return [ui.html.setRow({ label: 'ChatGPT', hint: 'Signing in with ChatGPT is not available here.' })];
-  const word = c.state === 'signed_in' && c.plan ? `${CHATGPT_STATE[c.state]} (${planWord(c.plan)})` : CHATGPT_STATE[c.state];
-  const hint = c.state === 'signed_in'
-    ? 'boopis keeps the sign-in in your OS keychain and renews it by itself. Change models to run governed work on it.'
-    : 'Sign in with your ChatGPT account on OpenAI\u2019s own page. Governed work can then run on the models your ChatGPT plan includes.';
-  const control = '<span class="ui-set__value">' + esc(word) + '</span>' + (!canSignIn ? '' : c.state === 'signed_in'
-    ? ui.html.button({ label: 'Sign out', size: 's', attrs: { id: 'hx-chatgpt-signout' } })
-    : c.state === 'signed_out' ? ui.html.button({ label: 'Sign in', size: 's', attrs: { id: 'hx-chatgpt-signin' } }) : '');
-  return [ui.html.setRow({ label: 'ChatGPT', hint, control })];
-}
-
-/** The Gemini section's rows: whether a key is in place, and "Add key", which asks the models question (where the key is
-    asked for and kept in the keychain). */
-export function geminiRows(view: ModelsView | { error: string }): string[] {
-  if ('error' in view) return [ui.html.setRow({ label: 'Gemini key', hint: `Not read: ${view.error}` })];
-  return [ui.html.setRow({
-    label: 'Gemini key',
-    hint: view.gemini_key
-      ? 'Kept in your OS keychain. Change models to run governed work on Gemini.'
-      : 'A free key from Google AI Studio (aistudio.google.com/apikey). Add key asks for it and keeps it in your OS keychain.',
-    control: '<span class="ui-set__value">' + (view.gemini_key ? 'Saved' : 'No key') + '</span>' +
-      (view.gemini_key ? '' : ui.html.button({ label: 'Add key', size: 's', attrs: { id: 'hx-gemini-add' } }))
-  })];
-}
 
 /** a tier's second line: its name, and when governed mode will not run it, that, or that it is a heavy model the user chose (ADR-0037) */
 const tierRule = (view: ModelsView, t: { name: string; model: string }): string => {
@@ -121,7 +67,7 @@ export function heavyRows(view: ModelsView): string[] {
 
 /** Governed mode's section (ADR-0037): the models it allows, each also in any later version, and whether the saved ladder lets it run.
     When it cannot, the row says why in one sentence and offers the way to get a model (Change models, the same question as setup's).
-    The heavy models (Fable, Grok) are on a ladder only when their switch, right under the status, is on. The allowed list and the
+    The heavy models (Fable, Carbon, Grok) are on a ladder only when their switch, right under the status, is on. The allowed list and the
     heavy mark are the plugin's data file as the host reads it, never typed here. */
 export function governedRows(view: ModelsView | { error: string }): string[] {
   if ('error' in view) return [ui.html.setRow({ label: 'Governed mode', hint: `Not read: ${view.error}` })];
@@ -130,7 +76,7 @@ export function governedRows(view: ModelsView | { error: string }): string[] {
     ? ui.html.setRow({ label: 'Status', hint: view.state === 'set' ? 'Every tier of the saved ladder is a frontier model.' : 'No ladder is saved, so boopis uses its built-in one: Opus, on your Anthropic key.', control: '<span class="ui-set__value">Available</span>' })
     : ui.html.setRow({
       label: 'Status',
-      hint: `${g.why ?? 'No frontier model is set up.'} To use governed mode, sign in with your Claude subscription (Opus), sign in with ChatGPT on a plan that includes GPT-6.2 Sol or Astra, add a Gemini key for Gemini 4 Hydrogen or Neon, or turn on Grok with an xAI key. Sessions that are not governed can use any model.`,
+      hint: `${g.why ?? 'No frontier model is set up.'} To use governed mode, sign in with your Claude subscription (Opus), sign in with ChatGPT or add an OpenAI key, on a plan or key that includes GPT-6.1 Terra, Sol or Astra, add a Gemini key for Gemini 4 Hydrogen or Neon, or turn on Grok with an xAI key. Sessions that are not governed can use any model.`,
       control: '<span class="ui-set__value">Unavailable</span>' + ui.html.button({ label: 'Change models', size: 's', attrs: { id: 'hx-governed-change' } })
     });
   return [
@@ -140,7 +86,6 @@ export function governedRows(view: ModelsView | { error: string }): string[] {
       hint: g.heavy.includes(name) ? 'Heavy: only when you turn it on.' : undefined,
       control: '<span class="ui-set__value">or later</span>'
     })),
-    ui.html.setRow({ label: 'Gemini 4 Carbon on the ladder', hint: 'Allowed, but boopis\u2019s Gemini ladder is Hydrogen, then Neon: in Ramp\u2019s SWE-Bench v2 Carbon solved 72.6% at $5.19 a task, Neon 76.2% at $4.38.', control: '<span class="ui-set__value">Not on it</span>' }),
     status,
     ...heavyRows(view)
   ];
@@ -172,12 +117,10 @@ export async function mountModels(panel: HTMLElement, deps: ModelsDeps): Promise
   const plan = await mountPlan(panel, deps.plan);
   const governed = section(panel, 'hx-set-governed-h');
   const ladder = section(panel, 'hx-set-ladder-h');
-  const claude = section(panel, 'hx-set-claude-h');
-  const chatgpt = section(panel, 'hx-set-chatgpt-h');
-  const gemini = section(panel, 'hx-set-gemini-h');
+  const providersEl = section(panel, 'hx-set-providers-h');
   const change = section(panel, 'hx-set-change-h');
   change.innerHTML = ui.html.setHead({ id: 'hx-set-change-h', label: 'Change' }) + ui.html.setRow({
-    label: 'Models', hint: 'Ask the models question again: free models, OpenRouter\u2019s free models, Claude, ChatGPT, Gemini, or a model you set up. Nothing changes until you answer.',
+    label: 'Models', hint: 'Ask the models question again: how to connect, then which provider. Nothing changes until you answer.',
     control: ui.html.button({ label: 'Change models', size: 's', attrs: { id: 'hx-models-change' } })
   });
   ui.hydrate(change);
@@ -185,21 +128,24 @@ export async function mountModels(panel: HTMLElement, deps: ModelsDeps): Promise
     void deps.change().then(() => { deps.closeSettings(); }).catch((e: unknown) => { deps.toast(e instanceof Error ? e.message : 'That did not work'); });
   };
   change.querySelector('#hx-models-change')?.addEventListener('click', askAgain);
-  let card: { destroy: () => void } | null = null;
-  /* one read of the host feeds every section: the ladder, Claude Code's state, the ChatGPT sign-in and the Gemini key */
+  /* the Providers section reads the host when it is drawn, and asks the runtimes on this computer then: never in the background */
+  let providers: ProvidersView | null = null;
+  if (deps.providers) {
+    providers = mountProviders(providersEl, {
+      bridge: deps.providers, toast: deps.toast,
+      ...(deps.login ? { login: deps.login } : {}), ...(deps.chatgpt ? { chatgpt: deps.chatgpt } : {})
+    });
+  } else {
+    providersEl.innerHTML = ui.html.setHead({ id: 'hx-set-providers-h', label: 'Providers' }) + ui.html.setRow({ label: 'Providers', hint: 'Not read: the host is not connected.' });
+  }
+  /* one read of the host feeds governed mode and the ladder */
   const drawAll = async (): Promise<void> => {
     let view: ModelsView | { error: string };
     try { view = await deps.ladder(); } catch (e) { view = { error: e instanceof Error ? e.message : 'unknown error' }; }
     governed.innerHTML = ui.html.setHead({ id: 'hx-set-governed-h', label: 'Governed mode' }) + governedRows(view).join('');
     ladder.innerHTML = ui.html.setHead({ id: 'hx-set-ladder-h', label: 'Model ladder' }) + ladderRows(view).join('');
-    claude.innerHTML = ui.html.setHead({ id: 'hx-set-claude-h', label: 'Claude subscription' }) + claudeRows(view).join('');
-    card?.destroy();
-    card = null;
-    chatgpt.innerHTML = ui.html.setHead({ id: 'hx-set-chatgpt-h', label: 'ChatGPT subscription' }) + chatgptRows(view, !!deps.chatgpt).join('') + '<div id="hx-chatgpt-card"></div>';
-    gemini.innerHTML = ui.html.setHead({ id: 'hx-set-gemini-h', label: 'Gemini' }) + geminiRows(view).join('');
-    for (const s of [governed, ladder, claude, chatgpt, gemini]) ui.hydrate(s);
+    for (const s of [governed, ladder]) ui.hydrate(s);
     governed.querySelector('#hx-governed-change')?.addEventListener('click', askAgain);
-    claude.querySelector('#hx-claude-check')?.addEventListener('click', () => { void drawAll(); });
     for (const sw of governed.querySelectorAll<HTMLInputElement>('input[id^="hx-heavy-"]')) {
       const id = sw.id.slice('hx-heavy-'.length);
       if (!deps.setHeavy) { sw.setAttribute('disabled', ''); continue; }
@@ -207,36 +153,8 @@ export async function mountModels(panel: HTMLElement, deps: ModelsDeps): Promise
         deps.setHeavy?.(id, sw.checked).then(() => drawAll(), (e: unknown) => { deps.toast(e instanceof Error ? e.message : 'That did not work'); return drawAll(); });
       });
     }
-    const login = deps.login;
-    const signin = claude.querySelector<HTMLButtonElement>('#hx-claude-signin');
-    if (signin && login) {
-      signin.addEventListener('click', () => {
-        signin.disabled = true;
-        deps.toast('Finish signing in to Claude in your browser.');
-        login('claude-code').then((r) => {
-          if (!r.ok) deps.toast(r.timed_out ? 'The Claude sign-in took too long and was stopped.' : 'The Claude sign-in did not finish.');
-          return drawAll();
-        }, (e: unknown) => { deps.toast(e instanceof Error ? e.message : 'The Claude sign-in did not start.'); signin.disabled = false; });
-      });
-    } else signin?.remove();
-    const bridge = deps.chatgpt;
-    if (bridge) {
-      chatgpt.querySelector('#hx-chatgpt-signin')?.addEventListener('click', () => {
-        chatgpt.querySelector('#hx-chatgpt-signin')?.remove();
-        const host = chatgpt.querySelector<HTMLElement>('#hx-chatgpt-card');
-        if (host) card = mountChatgptSignin(host, bridge, { onSignedIn: () => { void drawAll(); } });
-      });
-      chatgpt.querySelector('#hx-chatgpt-signout')?.addEventListener('click', () => {
-        bridge.signOut().then(() => drawAll(), (e: unknown) => { deps.toast(e instanceof Error ? e.message : 'Could not sign out'); });
-      });
-      /* a sign-in already waiting (begun in setup, or before the tab was redrawn) shows its code in place */
-      if (!('error' in view) && view.chatgpt?.state === 'signing_in') {
-        const host = chatgpt.querySelector<HTMLElement>('#hx-chatgpt-card');
-        if (host) card = mountChatgptSignin(host, bridge, { onSignedIn: () => { void drawAll(); } });
-      }
-    }
-    gemini.querySelector('#hx-gemini-add')?.addEventListener('click', askAgain);
   };
   await drawAll();
-  return { refresh: async () => { await Promise.all([plan.refresh(), drawAll()]); } };
+  /* shown again: the plan, governed mode and the ladder are read again, and the providers (a probe of this computer included) */
+  return { refresh: async () => { await Promise.all([plan.refresh(), drawAll(), providers?.refresh({ probe: true })]); } };
 }

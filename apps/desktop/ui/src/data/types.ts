@@ -138,7 +138,7 @@ export type Wait = ApprovalWait | BlankWait | FormWait;
 export type WaitOutcome = 'approved' | 'denied' | string;
 
 /* ───────── forms (docs/FORMS.md): one schema-driven card for everything that needs the user ───────── */
-export type FormKind = 'credential' | 'question' | 'approval' | 'permission' | 'signin' | 'setup' | 'connector' | 'choice' | 'plan' | 'feedback' | 'theme';
+export type FormKind = 'credential' | 'question' | 'approval' | 'permission' | 'signin' | 'setup' | 'connector' | 'choice' | 'plan' | 'feedback' | 'theme' | 'endpoint';
 export type PickerKind = 'folder' | 'file' | 'model' | 'repo' | 'host' | 'teammate' | 'branch';
 /** who is asking (FORMS.md section 4a); the same slot draws every card, in every place a card can appear */
 export type Origin =

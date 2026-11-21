@@ -63,6 +63,15 @@ const COMMANDS: &[&str] = &[
     "store_source_set_enabled",
     "store_source_add",
     "store_source_remove",
+    "provider_list",
+    "provider_set_key",
+    "provider_remove",
+    "provider_test_endpoint",
+    "provider_add_endpoint",
+    "provider_probe_local",
+    "provider_signin_start",
+    "provider_signin_cancel",
+    "provider_sign_out",
 ];
 
 fn main() {
