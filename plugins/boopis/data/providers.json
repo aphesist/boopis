@@ -555,7 +555,7 @@
           },
           "frontier": "by_name",
           "engine_source": [
-            "plugin-catalog/grok-acp.yaml (community plugin, repo nicolasdmolina/hermes-grok-acp at sha 2851d66; the provider slug is taken from the plugin's name and is confirmed when it is bundled)"
+            "plugin-catalog/grok-acp.yaml (community plugin, repo nicolasdmolina/hermes-grok-acp at sha 2851d66; the provider slug is grok-acp, confirmed from the plugin's plugin.yaml and profile)"
           ],
           "notes": [
             {

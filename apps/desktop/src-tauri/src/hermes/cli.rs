@@ -59,6 +59,9 @@ const PASS: &[&str] = &[
     "CLAUDE_SUBSCRIPTION_DIRECTSDK_COMMAND",
     "CLAUDE_SUBSCRIPTION_DIRECTSDK_CONFIG_DIR",
     "CLAUDE_CONFIG_DIR",
+    // the same for the user's own `grok` program (`xai::cli::PASS_VARS`, ADR-0039): paths, never a key
+    "GROK_CLI_PATH",
+    "GROK_HOME",
 ];
 /// Prefixes that pass: Hermes's own settings, `uv`'s, the XDG directories and the locale.
 const PASS_PREFIX: &[&str] = &["HERMES_", "UV_", "XDG_", "LC_"];

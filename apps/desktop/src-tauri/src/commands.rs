@@ -70,6 +70,8 @@ pub struct AppState {
     pub carries_runtime: bool,
     /// boopis's own ChatGPT sign-in (ADR-0030).
     pub chatgpt: Arc<crate::chatgpt::ChatGpt>,
+    /// boopis's own SuperGrok sign-in (ADR-0039).
+    pub xai: Arc<crate::xai::Xai>,
     /// The connector engine of each profile home, kept so a sign-in started by one command can be cancelled by another.
     pub connectors: std::sync::Mutex<std::collections::HashMap<std::path::PathBuf, Arc<Engine>>>,
 }
@@ -156,6 +158,7 @@ fn setup_engine(app: &AppHandle, state: &AppState, profile: Option<String>) -> R
     let events = app.clone();
     let setup = Setup::new(Arc::new(ops), state.secrets.clone(), state.bundle.clone())
         .with_chatgpt(state.chatgpt.clone())
+        .with_xai(state.xai.clone())
         .with_progress(Arc::new(move |p| {
             if let Err(e) = tauri_specta::Event::emit(&p, &events) {
                 tracing::debug!(error = %e, "could not emit the setup progress");
@@ -1038,30 +1041,60 @@ pub fn provider_probe_local(
     provider_stub("provider_probe_local")
 }
 
+/// Why a way has no sign-in of the host's to start, cancel or end: `hx.provider.unknown` when the catalogue does not list it,
+/// else `hx.provider.unsupported` (a key, a runtime, an endpoint, or a program that holds its own login).
+fn not_a_host_signin(way: &str) -> HostError {
+    use crate::error::Error;
+    match crate::providers::catalogue().way(way) {
+        None => Error::Provider(
+            "hx.provider.unknown",
+            format!("{way} is not a way boopis knows"),
+        ),
+        Some(_) => Error::Provider(
+            "hx.provider.unsupported",
+            format!("{way} has no sign-in that boopis runs"),
+        ),
+    }
+    .into()
+}
+
 /// Start a sign-in for a sign-in way the host owns (`SuperGrok`, GitHub Copilot, and ChatGPT once it moves to OpenAI's program):
 /// returns the lab's own page to open and the code to type. The wait runs in the host and ends with a `ProviderSigninEvent`; the
 /// tokens go to the keychain and never to the webview. A way owned by someone else (Claude's, which is Claude Code's own
 /// sign-in, and driving the user's own grok program) has nothing to start. Mirrors `chatgpt_signin_start`.
 ///
-/// Errors: `hx.provider.unknown`, `hx.provider.unsupported`, `hx.provider.unreachable`, `hx.secrets.*`.
+/// Errors: `hx.provider.unknown`, `hx.provider.unsupported`, `hx.provider.unreachable`, `hx.provider.signin_rate_limited`,
+/// `hx.provider.signin_denied`, `hx.provider.signin_failed`, `hx.secrets.*`.
 #[tauri::command]
 #[specta::specta]
-pub fn provider_signin_start(
+pub async fn provider_signin_start(
+    state: State<'_, AppState>,
     way: String,
     profile: Option<String>,
 ) -> std::result::Result<crate::providers::SigninCode, HostError> {
-    let _ = (way, profile);
-    provider_stub("provider_signin_start")
+    let _ = profile;
+    match way.as_str() {
+        crate::xai::WAY_SIGNIN => Ok(state.xai.start().await?.into()),
+        _ => Err(not_a_host_signin(&way)),
+    }
 }
 
 /// Cancel the sign-in that is waiting for `way`. Mirrors `chatgpt_signin_cancel`.
 ///
-/// Errors: `hx.provider.unknown`.
+/// Errors: `hx.provider.unknown`, `hx.provider.unsupported`.
 #[tauri::command]
 #[specta::specta]
-pub fn provider_signin_cancel(way: String) -> std::result::Result<(), HostError> {
-    let _ = way;
-    provider_stub("provider_signin_cancel")
+pub fn provider_signin_cancel(
+    state: State<'_, AppState>,
+    way: String,
+) -> std::result::Result<(), HostError> {
+    match way.as_str() {
+        crate::xai::WAY_SIGNIN => {
+            state.xai.cancel();
+            Ok(())
+        }
+        _ => Err(not_a_host_signin(&way)),
+    }
 }
 
 /// Sign out of a sign-in way the host owns: its tokens leave the keychain and the engine's copy is dropped. Returns the state
@@ -1070,10 +1103,17 @@ pub fn provider_signin_cancel(way: String) -> std::result::Result<(), HostError>
 /// Errors: `hx.provider.unknown`, `hx.provider.unsupported`, `hx.secrets.*`.
 #[tauri::command]
 #[specta::specta]
-pub fn provider_sign_out(
+pub async fn provider_sign_out(
+    state: State<'_, AppState>,
     way: String,
     profile: Option<String>,
 ) -> std::result::Result<crate::providers::ProviderState, HostError> {
-    let _ = (way, profile);
-    provider_stub("provider_sign_out")
+    let _ = profile;
+    match way.as_str() {
+        crate::xai::WAY_SIGNIN => {
+            state.xai.sign_out().await?;
+            Ok(state.xai.provider_state().await?)
+        }
+        _ => Err(not_a_host_signin(&way)),
+    }
 }

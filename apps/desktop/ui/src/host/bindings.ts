@@ -190,13 +190,14 @@ export const commands = {
 	 *  tokens go to the keychain and never to the webview. A way owned by someone else (Claude's, which is Claude Code's own
 	 *  sign-in, and driving the user's own grok program) has nothing to start. Mirrors `chatgpt_signin_start`.
 	 * 
-	 *  Errors: `hx.provider.unknown`, `hx.provider.unsupported`, `hx.provider.unreachable`, `hx.secrets.*`.
+	 *  Errors: `hx.provider.unknown`, `hx.provider.unsupported`, `hx.provider.unreachable`, `hx.provider.signin_rate_limited`,
+	 *  `hx.provider.signin_denied`, `hx.provider.signin_failed`, `hx.secrets.*`.
 	 */
 	providerSigninStart: (way: string, profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<SigninCode>("provider_signin_start", { way, profile }, options),
 	/**
 	 *  Cancel the sign-in that is waiting for `way`. Mirrors `chatgpt_signin_cancel`.
 	 * 
-	 *  Errors: `hx.provider.unknown`.
+	 *  Errors: `hx.provider.unknown`, `hx.provider.unsupported`.
 	 */
 	providerSigninCancel: (way: string, options?: InvokeOptions) => __TAURI_INVOKE<null>("provider_signin_cancel", { way }, options),
 	/**

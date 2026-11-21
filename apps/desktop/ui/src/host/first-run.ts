@@ -14,6 +14,8 @@ import { fromConnectorForm } from './forms';
 import type { FormModel } from './forms';
 import type { Answer, ConnectorLogin, Form_Deserialize } from './bindings';
 import { mountChatgptSignin, tauriChatgptBridge } from './chatgpt-signin';
+import { mountXaiSignin, tauriXaiBridge } from './xai-signin';
+import type { SigninBridge } from './xai-signin';
 import type { ChatgptBridge } from './chatgpt-signin';
 import type { SetupBridge, SetupProgress, SetupStatus, SourceInfo } from './setup-bridge';
 import { asHostError } from './bridge';
@@ -68,6 +70,8 @@ export function describeProgress(p: SetupProgress): { label: string; value: numb
     own table (Claude Code's `claude auth login`), and pages to open (where to make a key). */
 export interface SetupSignins {
   chatgpt: ChatgptBridge;
+  /** boopis's own SuperGrok sign-in (ADR-0039); a form that offers it needs it */
+  xai?: SigninBridge;
   /** the host's sign-in for a provider id in its table; it never runs a command a form names */
   login: (provider: string) => Promise<ConnectorLogin>;
   open: (url: string) => Promise<void>;
@@ -77,6 +81,7 @@ export function tauriSignins(): SetupSignins {
   const chatgpt = tauriChatgptBridge();
   return {
     chatgpt,
+    xai: tauriXaiBridge(),
     login: async (provider) => (await import('./connectors-bridge')).tauriConnectorsBridge().login(provider),
     open: (url) => chatgpt.open(url)
   };
@@ -102,6 +107,8 @@ export function formExtras(form: Form_Deserialize, deps: () => SetupSignins, nex
   const signin = form.signin;
   if (signin?.provider === 'chatgpt') {
     destroy = mountChatgptSignin(node, deps().chatgpt, { label: signin.label, onSignedIn: next }).destroy;
+  } else if (signin?.provider === 'xai' && deps().xai) {
+    destroy = mountXaiSignin(node, deps().xai as SigninBridge, { label: signin.label, onSignedIn: next }).destroy;
   } else if (signin) {
     const say = el('p', { role: 'status', style: 'margin:0;color:var(--text-dim)' });
     const out = el('pre', { class: 'ui-code', style: 'margin:0;white-space:pre-wrap;display:none' });

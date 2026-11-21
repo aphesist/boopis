@@ -27,7 +27,8 @@
 #   enabled-features.json    the extras the venv carries
 #   bin/hermes               Hermes's own launcher, location-independent
 #   plugins/<name>/          the plugins the app carries (ADR-0030), each unmodified at the commit Hermes's own plugin
-#                            catalog pins, with its licence: claude-subscription-directsdk (MIT), the Claude subscription.
+#                            catalog pins, with its licence: claude-subscription-directsdk (MIT), the Claude subscription, and
+#                            grok-acp (MIT, a community plugin, ADR-0039), which drives the user's own grok program.
 #                            First-run setup places them in the profile; nothing is downloaded on the user's machine.
 #
 # Left out on purpose (Hermes's package manager fetches them on first use, into the private home): Chromium, Node and npm,
@@ -147,6 +148,7 @@ bundle_plugin() {  # <catalog name>
   rm -rf "$WORK/plugin-$1"
 }
 bundle_plugin claude-subscription-directsdk
+bundle_plugin grok-acp  # community tier (nicolasdmolina/hermes-grok-acp): the catalog pins the commit, boopis only carries it (ADR-0039)
 
 # 3. what the manifest says: the launcher and interpreter paths inside the archive, the interpreter's build
 read -r HERMES_CMD PY_REL PY_VERSION TARGET < <("$BOOT_PYTHON" - "$PAYLOAD/manifest.json" <<'PY'

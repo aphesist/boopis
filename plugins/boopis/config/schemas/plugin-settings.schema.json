@@ -146,7 +146,9 @@
       },
       "default": [
         "claude-subscription-directsdk-experimental",
-        "openai-codex"
+        "openai-codex",
+        "xai-oauth",
+        "grok-acp"
       ]
     },
     "permissions": {

@@ -24,6 +24,7 @@ src-tauri/
   src/
     lib.rs        the registry (tauri-specta), `startup` (probe the machine and decide the GPU and renderer), run(), the two guard tests (capability list, bindings freshness)
     chatgpt/      the ChatGPT subscription's sign-in (ADR-0030): oauth (OpenAI's device-code flow and the refresh, one blocking HTTPS request each behind `Transport`; `Https` is ureq on rustls with the OS trust store), mod (`ChatGpt`: start, the wait, cancel, sign out, the refresher; the tokens in the keychain), tests (a scripted OpenAI, a loopback server)
+    xai/          the SuperGrok sign-in (ADR-0039): oauth (xAI's device-code flow, refresh and revoke over the ChatGPT sign-in's `Transport`), mod (`Xai`: start, wait, cancel, sign out, the refresher, the way states), cli (the user's own `grok` program: detect, version floor, the offered-when rule), tests
     brand.rs      the terminal art from `packaging/brand/boopis.art` (ADR-0026): parse, draw at truecolor, 256, 16 and no colour, the terminal rules (`NO_COLOR`, `TERM`, `COLORTERM`, locale, `CI`)
     cli.rs        `boopis --version`, `boopis doctor`, `--engine existing|bundled` (first, before a command; `docs/ENGINE.md`), and the branded line printed when started from a terminal; none of them names the engine
     commands.rs   every UI-facing command and the typed ConnectionStateEvent; Frame (raw JSON out)
