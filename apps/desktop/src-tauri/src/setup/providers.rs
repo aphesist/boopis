@@ -34,7 +34,7 @@ const CLAUDE_SUBSCRIPTION_LABEL: &str = "Claude subscription (your Claude Code l
 /// The choice that runs on the user's ChatGPT subscription, signed in through boopis's own ChatGPT sign-in (ADR-0030).
 pub const CHATGPT_SUBSCRIPTION: &str = "chatgpt-subscription";
 const CHATGPT_SUBSCRIPTION_LABEL: &str = "ChatGPT subscription (sign in with your ChatGPT account)";
-/// The engine's provider for a ChatGPT sign-in (OpenAI's Codex models on chatgpt.com).
+/// The engine's provider for a ChatGPT sign-in (its Codex provider, called on the Responses API through OpenAI's program, ADR-0030).
 pub const CHATGPT_PROVIDER: &str = "openai-codex";
 /// The ChatGPT and OpenAI ladder, cheapest first (ADR-0037): `(family id in the frontier list, tier name)`. Each rung is the
 /// lowest model of that family the signed-in account's own catalogue lists (Sol is cheaper per task than Astra and scores below
