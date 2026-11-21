@@ -1,12 +1,15 @@
 // @vitest-environment jsdom
 /* Settings > Models against fakes: the plan Hermes reports, the ladder the host read, and "Change models". */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { chatgptRows, claudeRows, geminiRows, governedRows, ladderRows, mountModels } from './models-tab';
+import { chatgptRows, claudeRows, copilotRows, geminiRows, governedRows, ladderRows, mountModels } from './models-tab';
 import type { ChatgptBridge, ChatgptSigninEvent } from './chatgpt-signin';
 import type { ModelsDeps } from './models-tab';
 import { changeModels } from './change-models';
 import { planView } from './free-tier';
 import type { ModelsView } from './setup-bridge';
+import type { CopilotHandle } from './copilot-signin';
+import type { ProviderState } from './bindings';
+import type { SigninEnd } from './signin-card';
 import type { SetupBridge } from './setup-bridge';
 
 const NOW = 1_800_000_000_000;
@@ -205,6 +208,8 @@ describe('change models', () => {
   });
 });
 
+const PAGE = 'https://auth.openai.com/api/accounts/authorize?client_id=x';
+
 describe('Settings > Models: ChatGPT and Gemini (ADR-0030)', () => {
   const base: ModelsView = { state: 'default', tiers: [], claude: CLAUDE.ready, claude_plugin: true, chatgpt: { state: 'signed_out', plan: null, code: null }, gemini_key: false, governed: GOV_OK, heavy: NO_HEAVY };
   const text = (rows: string[]): string => { const d = document.createElement('div'); d.innerHTML = rows.join(''); return d.textContent ?? ''; };
@@ -215,10 +220,10 @@ describe('Settings > Models: ChatGPT and Gemini (ADR-0030)', () => {
     return {
       calls,
       end: (e) => { listener?.(e); },
-      status: () => Promise.resolve({ state: 'signed_out', plan: null, code: null }),
-      start: () => { calls.push('start'); return Promise.resolve({ verification_url: 'https://auth.openai.com/codex/device', user_code: 'ABCD-1234' }); },
+      status: () => Promise.resolve({ state: 'signed_out', plan: null, code: null, route: null, account: null, notice: null }),
+      start: () => { calls.push('start'); return Promise.resolve({ verification_url: PAGE, user_code: '', expires_at: null }); },
       cancel: () => { calls.push('cancel'); return Promise.resolve(); },
-      signOut: () => { calls.push('signout'); return Promise.resolve(); },
+      signOut: () => { calls.push('signout'); return Promise.resolve({ revoked: true }); },
       onEnd: (cb) => { listener = cb; return Promise.resolve(() => { listener = null; }); },
       open: (url) => { calls.push('open:' + url); return Promise.resolve(); },
       copy: (t) => { calls.push('copy:' + t); return Promise.resolve(); }
@@ -237,6 +242,17 @@ describe('Settings > Models: ChatGPT and Gemini (ADR-0030)', () => {
     expect(text(chatgptRows({ ...base, chatgpt: null }, true))).toContain('not available here');
     expect(text(chatgptRows({ error: 'x' }, true))).toContain('Not read: x');
     expect(text(chatgptRows(base, true))).not.toContain('Hermes');
+  });
+
+  it('an older sign-in says so in the host\u2019s words and offers to sign in again beside Sign out; why a sign-in ended is shown too', () => {
+    const d = document.createElement('div');
+    const older: ModelsView = { ...base, chatgpt: { state: 'signed_in', plan: 'plus', code: null, route: 'older', account: null, notice: 'This sign-in was made before the program. Sign in again.' } };
+    d.innerHTML = chatgptRows(older, true).join('');
+    expect(d.textContent).toContain('This sign-in was made before the program. Sign in again.');
+    expect(d.querySelector('#hx-chatgpt-signin')?.textContent).toBe('Sign in again');
+    expect(d.querySelector('#hx-chatgpt-signout')).toBeTruthy();
+    const ended: ModelsView = { ...base, chatgpt: { state: 'signed_out', plan: null, code: null, route: null, account: null, notice: 'OpenAI no longer accepts the saved ChatGPT sign-in.' } };
+    expect(text(chatgptRows(ended, true))).toContain('no longer accepts');
   });
 
   it('says whether a Gemini key is saved and offers Add key, which asks the models question', async () => {
@@ -261,7 +277,8 @@ describe('Settings > Models: ChatGPT and Gemini (ADR-0030)', () => {
     panel.querySelector<HTMLButtonElement>('[data-signin="chatgpt"] [data-act="start"]')?.click();
     await tick(); await tick();
     expect(bridge.calls).toEqual(['start']);
-    expect(panel.querySelector('[data-code]')?.textContent).toBe('ABCD-1234');
+    expect(panel.querySelector('[data-code]'), 'the program\'s page has nothing to type').toBeNull();
+    expect(panel.querySelector('[data-page]')?.textContent).toBe('auth.openai.com/api/accounts/authorize');
     current = { ...base, chatgpt: { state: 'signed_in', plan: 'pro', code: null } };
     bridge.end({ outcome: 'signed_in', message: '' });
     await tick(); await tick();
@@ -271,14 +288,14 @@ describe('Settings > Models: ChatGPT and Gemini (ADR-0030)', () => {
     expect(bridge.calls).toContain('signout');
   });
 
-  it('a sign-in already waiting shows its code when the tab is drawn', async () => {
+  it('a sign-in already waiting shows its page when the tab is drawn', async () => {
     const panel = document.createElement('div');
     const bridge = fakeChatgpt();
-    bridge.status = () => Promise.resolve({ state: 'signing_in', plan: null, code: { verification_url: 'https://auth.openai.com/codex/device', user_code: 'WXYZ-9' } });
+    bridge.status = () => Promise.resolve({ state: 'signing_in', plan: null, code: { verification_url: PAGE, user_code: '', expires_at: null }, route: null, account: null, notice: null });
     await mountModels(panel, deps({ ladder: () => Promise.resolve({ ...base, chatgpt: { state: 'signing_in', plan: null, code: null } }), chatgpt: bridge }));
     await tick(); await tick();
-    expect(panel.querySelector('[data-code]')?.textContent).toBe('WXYZ-9');
-    expect(bridge.calls, 'it asks OpenAI for no new code').toEqual([]);
+    expect(panel.querySelector('[data-page]')?.textContent).toBe('auth.openai.com/api/accounts/authorize');
+    expect(bridge.calls, 'it opens no new page').toEqual([]);
   });
 });
 
@@ -402,5 +419,73 @@ describe('Settings > Models: the heavy models\' switches (ADR-0037)', () => {
     const panel = document.createElement('div');
     await mountModels(panel, deps({ ladder: () => Promise.resolve(fableView(false)) }));
     expect(panel.querySelector<HTMLInputElement>('#hx-heavy-fable')?.disabled).toBe(true);
+  });
+});
+
+describe('Settings > Models: GitHub Copilot (ADR-0039)', () => {
+  const state = (over: Partial<ProviderState> = {}): ProviderState => ({ provider: 'github-copilot', way: 'github-copilot.signin', kind: 'signin', status: 'signed_out', code: null, detail: null, plan: null, models_count: null, base_url: null, signin: null, checked_at: null, ...over } as ProviderState);
+  const text = (rows: string[]): string => { const d = document.createElement('div'); d.innerHTML = rows.join(''); return d.textContent ?? ''; };
+
+  function fakeCopilot(initial: ProviderState): CopilotHandle & { calls: string[]; set: (s: ProviderState) => void; end: (e: SigninEnd) => void } {
+    let current = initial;
+    let listener: ((e: SigninEnd) => void) | null = null;
+    const calls: string[] = [];
+    return {
+      calls,
+      set: (s) => { current = s; },
+      end: (e) => { listener?.(e); },
+      state: () => Promise.resolve(current),
+      bridge: {
+        waiting: () => Promise.resolve(null),
+        start: () => { calls.push('start'); return Promise.resolve({ url: 'https://github.com/login/device', code: 'WDJB-MJHT', expiresAt: Date.now() + 15 * 60000 }); },
+        cancel: () => { calls.push('cancel'); return Promise.resolve(); },
+        onEnd: (cb) => { listener = cb; return Promise.resolve(() => { listener = null; }); },
+        open: (u) => { calls.push('open:' + u); return Promise.resolve(); },
+        copy: (t) => { calls.push('copy:' + t); return Promise.resolve(); },
+        signOut: () => { calls.push('signout'); return Promise.resolve('Signed out here. To remove boopis\u2019s access on GitHub too, remove it at github.com/settings/applications.'); }
+      }
+    };
+  }
+
+  it('says not signed in, signed in as the GitHub login, or why it could not be read, with Sign in or Sign out', () => {
+    expect(copilotRows(null, true)).toEqual([]);
+    expect(text(copilotRows(state(), true))).toContain('Not signed in');
+    const d = document.createElement('div');
+    d.innerHTML = copilotRows(state(), true).join('');
+    expect(d.querySelector('#hx-copilot-signin')).toBeTruthy();
+    const on = state({ status: 'connected', detail: 'octocat' });
+    expect(text(copilotRows(on, true))).toContain('Signed in (octocat)');
+    d.innerHTML = copilotRows(on, true).join('');
+    expect(d.querySelector('#hx-copilot-signout')).toBeTruthy();
+    expect(text(copilotRows({ error: 'x' }, true))).toContain('Not read: x');
+    expect(text(copilotRows(state({ detail: 'GitHub no longer accepts the saved Copilot sign-in (it expired). Sign in again to keep using Copilot.' }), true))).toContain('it expired');
+    expect(text(copilotRows(on, true))).not.toContain('Hermes');
+  });
+
+  it('draws no section without the host\u2019s sign-in, and with it a section that signs in with the shared card and out again', async () => {
+    const without = document.createElement('div');
+    await mountModels(without, deps());
+    expect(without.querySelector('#hx-set-copilot-h')).toBeNull();
+
+    const panel = document.createElement('div');
+    const handle = fakeCopilot(state());
+    const d = deps({ copilot: handle });
+    await mountModels(panel, d);
+    expect([...panel.querySelectorAll('h3')].map((h) => h.textContent)).toContain('GitHub Copilot');
+    panel.querySelector<HTMLButtonElement>('#hx-copilot-signin')?.click();
+    await tick();
+    panel.querySelector<HTMLButtonElement>('[data-signin="github-copilot.signin"] [data-act="start"]')?.click();
+    await tick(); await tick();
+    expect(handle.calls).toEqual(['start']);
+    expect(panel.querySelector('[data-code]')?.textContent).toBe('WDJB-MJHT');
+    expect(panel.querySelector('[data-page]')?.textContent).toBe('github.com/login/device');
+    handle.set(state({ status: 'connected', detail: 'octocat' }));
+    handle.end({ outcome: 'signed_in', message: '' });
+    await tick(); await tick();
+    expect(panel.textContent).toContain('Signed in (octocat)');
+    panel.querySelector<HTMLButtonElement>('#hx-copilot-signout')?.click();
+    await tick(); await tick();
+    expect(handle.calls).toContain('signout');
+    expect(d.calls.some((c) => c.startsWith('toast:Signed out here.'))).toBe(true);
   });
 });

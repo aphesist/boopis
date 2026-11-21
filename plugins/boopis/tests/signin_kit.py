@@ -121,13 +121,19 @@ def host_secrets(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[An
 
 
 def engine_python() -> Path:
+    """The engine's own Python: from the spike's ``env.sh``, else from the install ``scripts/install-hermes-e2e.sh`` made."""
     spike = os.environ.get("HX_E2E_HERMES_ENV")
     if not spike:
         pytest.skip("needs a real engine: set HX_E2E_HERMES_ENV")
-    for line in (Path(spike) / "env.sh").read_text().splitlines():
-        if line.startswith("export VENV="):
-            return Path(line.split("=", 1)[1].strip()) / "bin" / "python"
-    pytest.skip("HX_E2E_HERMES_ENV has no VENV")
+    env_sh = Path(spike) / "env.sh"
+    if env_sh.exists():
+        for line in env_sh.read_text().splitlines():
+            if line.startswith("export VENV="):
+                return Path(line.split("=", 1)[1].strip()) / "bin" / "python"
+    found = sorted(Path(spike).glob("hermes-home/installs/*/environments/*/venv/bin/python"))
+    if not found:
+        pytest.skip("HX_E2E_HERMES_ENV holds no engine install")
+    return found[0]
 
 
 def run_in_engine(python: Path, home: Path, tmp: Path, secrets: list[str], script: str) -> dict[str, Any]:

@@ -92,12 +92,24 @@ def test_signed_out_on_the_host_removes_the_row(host_secrets: Any, clean_channel
 
 LIVE = """
 import json
+import providers
+profile = providers.get_provider_profile("copilot")  # the engine finds the plugin and imports its package
 from boopis.signins import copilot
 first = copilot.sync()
 from agent.credential_pool import read_credential_pool
 rows = [{"source": e.get("source"), "token": e.get("access_token")} for e in (read_credential_pool("copilot") or ())]
-from github_copilot_plugin.copilot.activation import github_calls_allowed
-print(json.dumps({"sync": first, "again": copilot.sync(), "rows": rows, "chosen": github_calls_allowed()}))
+import importlib
+package = type(profile).__module__.rsplit(".", 1)[0] if type(profile).__module__.endswith(".copilot.__init__") else type(profile).__module__
+activation = importlib.import_module(package + ".activation")  # the plugin's own gate, under the name the engine gave it
+github_calls_allowed = activation.github_calls_allowed
+from hermes_cli import runtime_provider as rp
+try:
+    r = rp.resolve_runtime_provider(requested="copilot")
+    runtime = {"provider": r["provider"], "api_key": r["api_key"], "base_url": r["base_url"], "source": str(r.get("source"))}
+except Exception as exc:
+    runtime = {"error": type(exc).__name__}
+print(json.dumps({"runtime": runtime, "sync": first, "again": copilot.sync(), "rows": rows, "chosen": github_calls_allowed(),
+                  "profile": profile.name if profile else None}))
 """
 
 
@@ -116,6 +128,13 @@ def test_the_engine_s_copilot_plugin_takes_the_row_as_the_user_s_choice_and_hold
     result = run_in_engine(python, home, tmp_path, [f"boopis.copilot/github_token={TOKEN}"], LIVE)
     assert result["sync"] == "added" and result["again"] == "kept", result
     assert result["rows"] == [{"source": "manual:boopis_copilot", "token": TOKEN}]
+    # with no network the engine's exchange of the GitHub token for a Copilot token degrades to the raw token it was handed: so
+    # what the runtime resolves is exactly the host's token, on the Copilot API (with a network it is the exchange of it)
+    assert result["runtime"]["provider"] == "copilot" and result["runtime"]["api_key"] == TOKEN, result["runtime"]
+    assert result["runtime"]["base_url"].startswith("https://api"), result["runtime"]
+    assert result["profile"] == "copilot", (
+        "the engine's provider for the plugin is the slug the sign-in hands its token to"
+    )
     assert result["chosen"] is True, (
         "the plugin may talk to GitHub for this home: a manual row is the user's own choice"
     )

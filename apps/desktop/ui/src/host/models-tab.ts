@@ -12,7 +12,9 @@ import { loadModelsView, setHeavy } from './setup-bridge';
 import type { ModelsView } from './setup-bridge';
 import { mountChatgptSignin, tauriChatgptBridge } from './chatgpt-signin';
 import type { ChatgptBridge } from './chatgpt-signin';
-import type { ConnectorLogin } from './bindings';
+import { mountCopilotSignin, tauriCopilot } from './copilot-signin';
+import type { CopilotHandle } from './copilot-signin';
+import type { ConnectorLogin, ProviderState } from './bindings';
 
 export interface ModelsDeps {
   /** Hermes's report of the plan; null when Hermes is not connected */
@@ -26,6 +28,8 @@ export interface ModelsDeps {
   toast: (text: string) => void;
   /** boopis's own ChatGPT sign-in; without it the section shows the state and offers nothing */
   chatgpt?: ChatgptBridge;
+  /** boopis's own GitHub Copilot sign-in (ADR-0039); without it the section is not drawn */
+  copilot?: CopilotHandle;
   /** turn a heavy model (`fable`, `grok`) on or off for the saved ladder; rejects with the host's sentence */
   setHeavy?: (id: string, on: boolean) => Promise<unknown>;
   /** the host's sign-in for a provider id in its table (Claude Code's own login); without it, only "Check again" */
@@ -33,7 +37,7 @@ export interface ModelsDeps {
 }
 export const realModelsDeps = (closeSettings: () => void): ModelsDeps => ({
   plan: currentPlan, ladder: loadModelsView, change: () => changeModels(), closeSettings, toast: (t) => { ui.toast(t); },
-  chatgpt: tauriChatgptBridge(), setHeavy,
+  chatgpt: tauriChatgptBridge(), copilot: tauriCopilot(), setHeavy,
   login: async (provider) => (await import('./connectors-bridge')).tauriConnectorsBridge().login(provider)
 });
 
@@ -78,13 +82,36 @@ export function chatgptRows(view: ModelsView | { error: string }, canSignIn: boo
   const c = view.chatgpt;
   if (!c) return [ui.html.setRow({ label: 'ChatGPT', hint: 'Signing in with ChatGPT is not available here.' })];
   const word = c.state === 'signed_in' && c.plan ? `${CHATGPT_STATE[c.state]} (${planWord(c.plan)})` : CHATGPT_STATE[c.state];
-  const hint = c.state === 'signed_in'
-    ? 'boopis keeps the sign-in in your OS keychain and renews it by itself. Change models to run governed work on it.'
-    : 'Sign in with your ChatGPT account on OpenAI\u2019s own page. Governed work can then run on the models your ChatGPT plan includes.';
+  const base = c.state === 'signed_in'
+    ? 'boopis keeps the sign-in in your OS keychain and renews it by itself. Change models to run governed work on it. Manage what boopis may use on ChatGPT\u2019s usage settings.'
+    : 'Sign in with your ChatGPT account on OpenAI\u2019s own page, through OpenAI\u2019s Sign in with ChatGPT program. Governed work can then run on the models your ChatGPT plan includes.';
+  /* what the host says the person should read (an older sign-in to redo, why the last one ended) comes first, in its words */
+  const hint = c.notice ? esc(c.notice) + ' ' + base : base;
+  const older = c.state === 'signed_in' && c.route === 'older';
   const control = '<span class="ui-set__value">' + esc(word) + '</span>' + (!canSignIn ? '' : c.state === 'signed_in'
-    ? ui.html.button({ label: 'Sign out', size: 's', attrs: { id: 'hx-chatgpt-signout' } })
+    ? (older ? ui.html.button({ label: 'Sign in again', size: 's', attrs: { id: 'hx-chatgpt-signin' } }) : '') + ui.html.button({ label: 'Sign out', size: 's', attrs: { id: 'hx-chatgpt-signout' } })
     : c.state === 'signed_out' ? ui.html.button({ label: 'Sign in', size: 's', attrs: { id: 'hx-chatgpt-signin' } }) : '');
   return [ui.html.setRow({ label: 'ChatGPT', hint, control })];
+}
+
+const COPILOT_STATE: Readonly<Record<string, string>> = { connected: 'Signed in', signed_out: 'Not signed in', signing_in: 'Signing in' };
+
+/** The GitHub Copilot section's rows (ADR-0039): whether a GitHub account with Copilot is signed in (the login, when GitHub said
+    it), with Sign in or Sign out, and the reason the last sign-in ended when it ended by itself. What the host could not read is
+    said so. The sign-in card is drawn under the row, in `#hx-copilot-card`. */
+export function copilotRows(state: ProviderState | { error: string } | null, canSignIn: boolean): string[] {
+  if (state === null) return [];
+  if ('error' in state) return [ui.html.setRow({ label: 'GitHub Copilot', hint: `Not read: ${state.error}` })];
+  const word = COPILOT_STATE[state.status] ?? 'Not signed in';
+  const signedIn = state.status === 'connected';
+  const base = signedIn
+    ? 'boopis keeps the GitHub sign-in in your OS keychain. Copilot\u2019s models run on your Copilot plan, with its limits. To remove boopis\u2019s access on GitHub too, remove it at github.com/settings/applications.'
+    : 'Sign in with the GitHub account that has Copilot. boopis keeps the sign-in in your OS keychain, and Copilot\u2019s models then run on your Copilot plan.';
+  const hint = state.detail && !signedIn ? esc(state.detail) + ' ' + base : base;
+  const control = '<span class="ui-set__value">' + esc(signedIn && state.detail ? `${word} (${state.detail})` : word) + '</span>' + (!canSignIn ? '' : signedIn
+    ? ui.html.button({ label: 'Sign out', size: 's', attrs: { id: 'hx-copilot-signout' } })
+    : state.status === 'signed_out' ? ui.html.button({ label: 'Sign in', size: 's', attrs: { id: 'hx-copilot-signin' } }) : '');
+  return [ui.html.setRow({ label: 'GitHub Copilot', hint, control })];
 }
 
 /** The Gemini section's rows: whether a key is in place, and "Add key", which asks the models question (where the key is
@@ -174,6 +201,8 @@ export async function mountModels(panel: HTMLElement, deps: ModelsDeps): Promise
   const ladder = section(panel, 'hx-set-ladder-h');
   const claude = section(panel, 'hx-set-claude-h');
   const chatgpt = section(panel, 'hx-set-chatgpt-h');
+  const copilot = section(panel, 'hx-set-copilot-h');
+  if (!deps.copilot) copilot.remove(); /* a build without the host's Copilot sign-in has no section at all */
   const gemini = section(panel, 'hx-set-gemini-h');
   const change = section(panel, 'hx-set-change-h');
   change.innerHTML = ui.html.setHead({ id: 'hx-set-change-h', label: 'Change' }) + ui.html.setRow({
@@ -186,6 +215,7 @@ export async function mountModels(panel: HTMLElement, deps: ModelsDeps): Promise
   };
   change.querySelector('#hx-models-change')?.addEventListener('click', askAgain);
   let card: { destroy: () => void } | null = null;
+  let copilotCard: { destroy: () => void } | null = null;
   /* one read of the host feeds every section: the ladder, Claude Code's state, the ChatGPT sign-in and the Gemini key */
   const drawAll = async (): Promise<void> => {
     let view: ModelsView | { error: string };
@@ -195,9 +225,17 @@ export async function mountModels(panel: HTMLElement, deps: ModelsDeps): Promise
     claude.innerHTML = ui.html.setHead({ id: 'hx-set-claude-h', label: 'Claude subscription' }) + claudeRows(view).join('');
     card?.destroy();
     card = null;
+    copilotCard?.destroy();
+    copilotCard = null;
     chatgpt.innerHTML = ui.html.setHead({ id: 'hx-set-chatgpt-h', label: 'ChatGPT subscription' }) + chatgptRows(view, !!deps.chatgpt).join('') + '<div id="hx-chatgpt-card"></div>';
+    /* Copilot: its own read of the host (the sign-in's state); a section only where the host runs the sign-in */
+    let copilotState: ProviderState | { error: string } | null = null;
+    if (deps.copilot) { try { copilotState = await deps.copilot.state(); } catch (e) { copilotState = { error: e instanceof Error ? e.message : 'unknown error' }; } }
+    const copilotHtml = copilotRows(copilotState, !!deps.copilot).join('');
+    copilot.hidden = copilotHtml === '';
+    copilot.innerHTML = copilotHtml === '' ? '' : ui.html.setHead({ id: 'hx-set-copilot-h', label: 'GitHub Copilot' }) + copilotHtml + '<div id="hx-copilot-card"></div>';
     gemini.innerHTML = ui.html.setHead({ id: 'hx-set-gemini-h', label: 'Gemini' }) + geminiRows(view).join('');
-    for (const s of [governed, ladder, claude, chatgpt, gemini]) ui.hydrate(s);
+    for (const s of [governed, ladder, claude, chatgpt, copilot, gemini]) ui.hydrate(s);
     governed.querySelector('#hx-governed-change')?.addEventListener('click', askAgain);
     claude.querySelector('#hx-claude-check')?.addEventListener('click', () => { void drawAll(); });
     for (const sw of governed.querySelectorAll<HTMLInputElement>('input[id^="hx-heavy-"]')) {
@@ -227,13 +265,28 @@ export async function mountModels(panel: HTMLElement, deps: ModelsDeps): Promise
         if (host) card = mountChatgptSignin(host, bridge, { onSignedIn: () => { void drawAll(); } });
       });
       chatgpt.querySelector('#hx-chatgpt-signout')?.addEventListener('click', () => {
-        bridge.signOut().then(() => drawAll(), (e: unknown) => { deps.toast(e instanceof Error ? e.message : 'Could not sign out'); });
+        bridge.signOut().then((r) => { if (!r.revoked) deps.toast('Signed out here. OpenAI did not confirm ending the session, so you can also disconnect boopis in ChatGPT\u2019s settings.'); return drawAll(); }, (e: unknown) => { deps.toast(e instanceof Error ? e.message : 'Could not sign out'); });
       });
       /* a sign-in already waiting (begun in setup, or before the tab was redrawn) shows its code in place */
       if (!('error' in view) && view.chatgpt?.state === 'signing_in') {
         const host = chatgpt.querySelector<HTMLElement>('#hx-chatgpt-card');
         if (host) card = mountChatgptSignin(host, bridge, { onSignedIn: () => { void drawAll(); } });
       }
+    }
+    const copilotBridge = deps.copilot?.bridge;
+    if (copilotBridge) {
+      const mountCard = (): void => {
+        const host = copilot.querySelector<HTMLElement>('#hx-copilot-card');
+        if (host) copilotCard = mountCopilotSignin(host, copilotBridge, { onSignedIn: () => { void drawAll(); } });
+      };
+      copilot.querySelector('#hx-copilot-signin')?.addEventListener('click', () => {
+        copilot.querySelector('#hx-copilot-signin')?.remove();
+        mountCard();
+      });
+      copilot.querySelector('#hx-copilot-signout')?.addEventListener('click', () => {
+        copilotBridge.signOut().then((note) => { if (note) deps.toast(note); return drawAll(); }, (e: unknown) => { deps.toast(e instanceof Error ? e.message : 'Could not sign out'); });
+      });
+      if (!!copilotState && !('error' in copilotState) && copilotState.status === 'signing_in') mountCard();
     }
     gemini.querySelector('#hx-gemini-add')?.addEventListener('click', askAgain);
   };
