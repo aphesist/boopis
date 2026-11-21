@@ -226,6 +226,60 @@ pub fn boopis_connectors(catalog: &crate::connectors::catalog::Catalog, fetched_
         .collect()
 }
 
+// ---------------------------------------------------------------- what the user pointed at
+
+/// An item read from a folder or a repository the user pointed at (a GitHub address, a local folder or file). The user vouches for
+/// nothing: it is `not-reviewed`, its namespace proof is `none` unless GitHub names the owner, and its pin is what the host
+/// resolved (a commit) or computed (a tree or file hash).
+pub struct Found {
+    /// The user-added source's id (`added-…`).
+    pub source: String,
+    /// The kind.
+    pub kind: ItemKind,
+    /// The id's name part.
+    pub name: String,
+    /// The title.
+    pub title: String,
+    /// Who published it, as far as the files say.
+    pub publisher: String,
+    /// What it is.
+    pub summary: String,
+    /// Its licence, as its files state it.
+    pub license: Option<String>,
+    /// Its page.
+    pub homepage: Option<String>,
+    /// Its version.
+    pub version: Option<String>,
+    /// Its pin.
+    pub pinned: Option<Pin>,
+    /// What it holds.
+    pub components: ComponentCounts,
+    /// The proof the name belongs to its publisher.
+    pub proof: NamespaceProof,
+    /// Where it was read from.
+    pub source_url: String,
+    /// What the host keeps for the install.
+    pub raw: Value,
+}
+
+/// An [`Entry`] for something the user pointed at.
+#[must_use]
+pub fn found(f: Found, fetched_at: &str) -> Entry {
+    let mut d = Draft::new(&f.source, &f.name, f.kind);
+    d.title = f.title;
+    d.publisher = f.publisher;
+    d.summary = cap(&f.summary, 400);
+    d.license = f.license;
+    d.homepage = f.homepage;
+    d.version = f.version;
+    d.pinned = f.pinned;
+    d.components = f.components;
+    d.proof = f.proof;
+    d.source_url = f.source_url;
+    d.source_tier = Some("added by you".into());
+    Entry { item: d.build(fetched_at), raw: f.raw }
+}
+
 // ---------------------------------------------------------------- the MCP Registry
 
 fn namespace(name: &str) -> (String, NamespaceProof) {
@@ -598,7 +652,7 @@ pub fn marketplace(source_id: &str, tier: Tier, source_tier: &str, doc: &Value, 
             format!("listed in {market}, which says its publisher cannot verify what a third-party plugin does")
         });
         d.source_url = base.repo.clone().unwrap_or_default();
-        out.push(Entry { item: d.build(fetched_at), raw: serde_json::json!({"kind": "plugin", "entry": e, "marketplace": market, "base_commit": base.commit}) });
+        out.push(Entry { item: d.build(fetched_at), raw: serde_json::json!({"kind": "plugin", "entry": e, "marketplace": market, "base_commit": base.commit, "base_repo": base.repo}) });
     }
     out
 }

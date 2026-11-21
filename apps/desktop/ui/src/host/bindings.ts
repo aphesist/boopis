@@ -134,6 +134,38 @@ export const commands = {
 	chatgptSigninCancel: (options?: InvokeOptions) => __TAURI_INVOKE<void>("chatgpt_signin_cancel", undefined, options),
 	/**  Sign out of ChatGPT: both tokens leave the keychain. */
 	chatgptSignOut: (options?: InvokeOptions) => __TAURI_INVOKE<null>("chatgpt_sign_out", undefined, options),
+	/**  A page of the catalogue, from the cache. Works offline; `stale` and `offline` say how old it is. */
+	storeCatalogList: (filter: StoreFilter_Deserialize | null, cursor: string | null, limit: number | null, options?: InvokeOptions) => __TAURI_INVOKE<StoreBrowse_Serialize>("store_catalog_list", { filter, cursor, limit }, options),
+	/**  Search the catalogue. Local: no query leaves the machine. */
+	storeSearch: (query: string, filter: StoreFilter_Deserialize | null, cursor: string | null, limit: number | null, options?: InvokeOptions) => __TAURI_INVOKE<StoreBrowse_Serialize>("store_search", { query, filter, cursor, limit }, options),
+	/**  Read the sources again (all that are on, or one). */
+	storeRefresh: (source: string | null, options?: InvokeOptions) => __TAURI_INVOKE<StoreSource_Serialize[]>("store_refresh", { source }, options),
+	/**  Everything the detail page shows. */
+	storeItemDetail: (id: string, profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<StoreDetail_Serialize>("store_item_detail", { id, profile }, options),
+	/**  Fetch an item's pin into staging and check it. Nothing runs. */
+	storeStage: (id: string, profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<StageResult_Serialize>("store_stage", { id, profile }, options),
+	/**  What installing a staged item would do, exactly, with the hash the install must name. */
+	storePlan: (stageId: string, scope: StoreScope_Deserialize | null, profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<InstallPlan_Serialize>("store_plan", { stageId, scope, profile }, options),
+	/**  Install what the card showed. `request.secrets` go to the keychain and no further. */
+	storeInstall: (request: InstallRequest_Deserialize, profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<InstallReceipt_Serialize>("store_install", { request, profile }, options),
+	/**  Remove an installed item. `delete_credentials` is the user's agreement to delete its keys. */
+	storeUninstall: (id: string, deleteCredentials: boolean | null, profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<UninstallResult>("store_uninstall", { id, deleteCredentials, profile }, options),
+	/**  What is installed for a bot: the host's record and the plugin's. */
+	storeInstalled: (profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<InstallReceipt_Serialize[]>("store_installed", { profile }, options),
+	/**  Which installed items have a newer pin, were taken down, or lost their pin. Installs nothing. */
+	storeUpdateCheck: (id: string | null, profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<UpdateDiff_Serialize[]>("store_update_check", { id, profile }, options),
+	/**  The install flow on the new pin, after `store_stage`, `store_plan` and the hold. */
+	storeUpdate: (id: string, request: InstallRequest_Deserialize, profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<InstallReceipt_Serialize>("store_update", { id, request, profile }, options),
+	/**  Go back to the version kept one step back. */
+	storeRollback: (id: string, profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<InstallReceipt_Serialize>("store_rollback", { id, profile }, options),
+	/**  The sources, with their state. */
+	storeSources: (options?: InvokeOptions) => __TAURI_INVOKE<StoreSource_Serialize[]>("store_sources", undefined, options),
+	/**  Switch a source on or off. */
+	storeSourceSetEnabled: (id: string, enabled: boolean, options?: InvokeOptions) => __TAURI_INVOKE<null>("store_source_set_enabled", { id, enabled }, options),
+	/**  Add a source: a marketplace address, a GitHub repository, a local folder or a bundle file. */
+	storeSourceAdd: (url: string | null, path: string | null, label: string | null, options?: InvokeOptions) => __TAURI_INVOKE<StoreSource_Serialize>("store_source_add", { url, path, label }, options),
+	/**  Remove a source the user added. */
+	storeSourceRemove: (id: string, options?: InvokeOptions) => __TAURI_INVOKE<null>("store_source_remove", { id }, options),
 };
 
 /** Events */
@@ -1234,6 +1266,116 @@ export type HostError = {
 	message: string,
 };
 
+/**  What an install would do, exactly: the review card's data. */
+export type InstallPlan = InstallPlan_Serialize | InstallPlan_Deserialize;
+
+/**  What an install would do, exactly: the review card's data. */
+export type InstallPlan_Deserialize = {
+	item_id: string,
+	kind: StoreKind,
+	title: string,
+	source: string,
+	publisher: string,
+	version?: string | null,
+	pinned: StorePin_Deserialize,
+	tree_sha256?: string | null,
+	stage_id?: string | null,
+	layer: StoreLayer,
+	components: StoreComponent_Deserialize[],
+	code_runs: StoreCodeRun_Deserialize[],
+	hosts: StoreHosts,
+	secrets: StoreSecret_Deserialize[],
+	files_written: StoreFileWrite_Deserialize[],
+	scope: StoreScope_Deserialize,
+	consent: StoreConsent[],
+	warnings: StoreWarning[],
+	governed: StoreGoverned,
+	cost: StoreCost_Deserialize,
+	tier: StoreTier,
+	scan: StoreScan_Deserialize,
+	sessions_open?: number | null,
+	plan_hash: string,
+};
+
+/**  What an install would do, exactly: the review card's data. */
+export type InstallPlan_Serialize = {
+	item_id: string,
+	kind: StoreKind,
+	title: string,
+	source: string,
+	publisher: string,
+	version: string | null,
+	pinned: StorePin_Serialize,
+	tree_sha256: string | null,
+	stage_id?: string,
+	layer: StoreLayer,
+	components: StoreComponent_Serialize[],
+	code_runs: StoreCodeRun_Serialize[],
+	hosts: StoreHosts,
+	secrets: StoreSecret_Serialize[],
+	files_written: StoreFileWrite_Serialize[],
+	scope: StoreScope_Serialize,
+	consent: StoreConsent[],
+	warnings: StoreWarning[],
+	governed: StoreGoverned,
+	cost: StoreCost_Serialize,
+	tier: StoreTier,
+	scan: StoreScan_Serialize,
+	sessions_open: number | null,
+	plan_hash: string,
+};
+
+/**  What an install, update or rollback did; also the row of the installed list. */
+export type InstallReceipt = InstallReceipt_Serialize | InstallReceipt_Deserialize;
+
+/**  What an install, update or rollback did; also the row of the installed list. */
+export type InstallReceipt_Deserialize = {
+	item_id: string,
+	kind: StoreKind,
+	title?: string | null,
+	source: string,
+	layer: StoreLayer,
+	version?: string | null,
+	pinned: StorePin_Deserialize,
+	plan_hash: string,
+	tree_sha256?: string | null,
+	installed_at: string,
+	scope: StoreScope_Deserialize,
+	files: string[],
+	enabled: boolean,
+	effective: StoreEffective,
+	trusted_projects?: string[] | null,
+	previous?: StorePrevious_Deserialize | null,
+	kill_listed?: StoreRemoved_Deserialize | null,
+	restart_needed?: boolean | null,
+	steps: StoreInstallStep_Deserialize[],
+	notes: string[],
+};
+
+/**  What an install, update or rollback did; also the row of the installed list. */
+export type InstallReceipt_Serialize = {
+	item_id: string,
+	kind: StoreKind,
+	title?: string,
+	source: string,
+	layer: StoreLayer,
+	version: string | null,
+	pinned: StorePin_Serialize,
+	plan_hash: string,
+	tree_sha256: string | null,
+	installed_at: string,
+	scope: StoreScope_Serialize,
+	files: string[],
+	enabled: boolean,
+	effective: StoreEffective,
+	trusted_projects?: string[],
+	previous: StorePrevious_Serialize | null,
+	kill_listed?: StoreRemoved_Serialize,
+	restart_needed?: boolean,
+	steps: StoreInstallStep_Serialize[],
+	notes: string[],
+};
+
 /**  What `hermes_install` answers. */
 export type InstallReport = {
 	/**  Always `false` for now: nothing was run. */
@@ -1242,6 +1384,25 @@ export type InstallReport = {
 	command: string,
 	/**  A line saying what happened. */
 	note: string,
+};
+
+/**  The staging handle and the hash of the plan the user saw; secret values travel to the keychain and no further. */
+export type InstallRequest = InstallRequest_Serialize | InstallRequest_Deserialize;
+
+/**  The staging handle and the hash of the plan the user saw; secret values travel to the keychain and no further. */
+export type InstallRequest_Deserialize = {
+	stage_id: string,
+	plan_hash: string,
+	secrets?: { [key in string]: string } | null,
+	restart?: StoreRestartWhen | null,
+};
+
+/**  The staging handle and the hash of the plan the user saw; secret values travel to the keychain and no further. */
+export type InstallRequest_Serialize = {
+	stage_id: string,
+	plan_hash: string,
+	secrets?: { [key in string]: string },
+	restart?: StoreRestartWhen,
 };
 
 /**  Any JSON value, typed `unknown` on the TypeScript side (the UI narrows it with the generated gateway contract). */
@@ -1428,6 +1589,37 @@ export type Probe_Serialize = {
 	detail: string,
 	/**  The model aliases its version serves, cheapest first. Empty unless the version was read. */
 	aliases: string[],
+};
+
+/**  Where an item came from and how far that can be checked. */
+export type Provenance = Provenance_Serialize | Provenance_Deserialize;
+
+/**  Where an item came from and how far that can be checked. */
+export type Provenance_Deserialize = {
+	source: string,
+	publisher: string,
+	namespace_proof: StoreNamespaceProof,
+	pinned?: StorePin_Deserialize | null,
+	tree_sha256?: string | null,
+	scan: StoreScan_Deserialize,
+	source_url: string,
+	fetched_at: string,
+	last_updated?: string | null,
+	source_tier?: string | null,
+};
+
+/**  Where an item came from and how far that can be checked. */
+export type Provenance_Serialize = {
+	source: string,
+	publisher: string,
+	namespace_proof: StoreNamespaceProof,
+	pinned: StorePin_Serialize | null,
+	tree_sha256: string | null,
+	scan: StoreScan_Serialize,
+	source_url: string,
+	fetched_at: string,
+	last_updated?: string,
+	source_tier?: string,
 };
 
 /**  A snapshot for the UI's diagnostics. */
@@ -1653,6 +1845,33 @@ export type Source =
 /**  The `hermes` found on the machine, in the user's own home (`HERMES_HOME`, else `~/.hermes`). */
 "existing";
 
+/**  What staging an item left in the staging folder. Nothing has run. */
+export type StageResult = StageResult_Serialize | StageResult_Deserialize;
+
+/**  What staging an item left in the staging folder. Nothing has run. */
+export type StageResult_Deserialize = {
+	stage_id: string,
+	item_id: string,
+	pinned: StorePin_Deserialize,
+	tree_sha256?: string | null,
+	files: number,
+	bytes: number | null,
+	scan: StoreScan_Deserialize,
+	expires_at: string,
+};
+
+/**  What staging an item left in the staging folder. Nothing has run. */
+export type StageResult_Serialize = {
+	stage_id: string,
+	item_id: string,
+	pinned: StorePin_Serialize,
+	tree_sha256: string | null,
+	files: number,
+	bytes: number | null,
+	scan: StoreScan_Serialize,
+	expires_at: string,
+};
+
 /**  Where the CLI stands, in the words a person needs. */
 export type State = 
 /**  No `claude` was found. */
@@ -1743,6 +1962,487 @@ export type Step_Serialize = {
 	code: string | null,
 };
 
+/**  A page of the catalogue, from the local cache. */
+export type StoreBrowse = StoreBrowse_Serialize | StoreBrowse_Deserialize;
+
+/**  A page of the catalogue, from the local cache. */
+export type StoreBrowse_Deserialize = {
+	items: StoreItem_Deserialize[],
+	total: number,
+	next_cursor?: string | null,
+	recommended?: StoreItem_Deserialize[] | null,
+	refreshed_at?: string | null,
+	stale: boolean,
+	offline: boolean,
+};
+
+/**  A page of the catalogue, from the local cache. */
+export type StoreBrowse_Serialize = {
+	items: StoreItem_Serialize[],
+	total: number,
+	next_cursor: string | null,
+	recommended?: StoreItem_Serialize[],
+	refreshed_at: string | null,
+	stale: boolean,
+	offline: boolean,
+};
+
+/**  One line of an update's component diff. */
+export type StoreChange = StoreChange_Serialize | StoreChange_Deserialize;
+
+/**  Whether a line of a diff adds, removes or changes. */
+export type StoreChangeAction = "added" | "removed" | "changed";
+
+/**  What a line of a diff is about: a component kind, a host, a secret or the licence. */
+export type StoreChangeKind = "skill" | "command" | "agent" | "hook" | "mcp-server" | "module" | "script" | "python-plugin" | "theme" | "other" | "host" | "secret" | "license";
+
+/**  One line of an update's component diff. */
+export type StoreChange_Deserialize = {
+	change: StoreChangeAction,
+	type: StoreChangeKind,
+	name: string,
+	detail?: string | null,
+};
+
+/**  One line of an update's component diff. */
+export type StoreChange_Serialize = {
+	change: StoreChangeAction,
+	type: StoreChangeKind,
+	name: string,
+	detail?: string,
+};
+
+/**  What kind of code runs. */
+export type StoreCodeKind = "hook" | "mcp-command" | "package-start" | "script" | "module" | "python";
+
+/**  Code that runs on the user's machine once the item is installed and active. */
+export type StoreCodeRun = StoreCodeRun_Serialize | StoreCodeRun_Deserialize;
+
+/**  Code that runs on the user's machine once the item is installed and active. */
+export type StoreCodeRun_Deserialize = {
+	what: StoreCodeKind,
+	command: string,
+	where: StoreCodeWhere,
+	sha256?: string | null,
+	detail?: string | null,
+};
+
+/**  Code that runs on the user's machine once the item is installed and active. */
+export type StoreCodeRun_Serialize = {
+	what: StoreCodeKind,
+	command: string,
+	where: StoreCodeWhere,
+	sha256?: string,
+	detail?: string,
+};
+
+/**  Where code runs. */
+export type StoreCodeWhere = "sandbox" | "outside-sandbox" | "engine-process";
+
+/**  One thing an install adds. */
+export type StoreComponent = StoreComponent_Serialize | StoreComponent_Deserialize;
+
+/**  What an item holds, as counts. */
+export type StoreComponentCounts = {
+	known: boolean,
+	skills: number,
+	commands: number,
+	agents: number,
+	hooks: number,
+	mcp_servers: number,
+	modules: number,
+	scripts: number,
+	python: number,
+};
+
+/**  What a component is. */
+export type StoreComponentKind = "skill" | "command" | "agent" | "hook" | "mcp-server" | "module" | "script" | "python-plugin" | "theme" | "other";
+
+/**  One thing an install adds. */
+export type StoreComponent_Deserialize = {
+	type: StoreComponentKind,
+	name: string,
+	detail?: string | null,
+};
+
+/**  One thing an install adds. */
+export type StoreComponent_Serialize = {
+	type: StoreComponentKind,
+	name: string,
+	detail?: string,
+};
+
+/**  One thing the user agrees to. */
+export type StoreConsent = {
+	id: string,
+	text: string,
+	runs_code: boolean,
+};
+
+/**  What an item costs every session. */
+export type StoreCost = StoreCost_Serialize | StoreCost_Deserialize;
+
+/**  What an item costs every session. */
+export type StoreCost_Deserialize = {
+	tools?: number | null,
+	context_tokens?: number | null,
+};
+
+/**  What an item costs every session. */
+export type StoreCost_Serialize = {
+	tools: number | null,
+	context_tokens: number | null,
+};
+
+/**  Everything the detail page shows. */
+export type StoreDetail = StoreDetail_Serialize | StoreDetail_Deserialize;
+
+/**  Everything the detail page shows. */
+export type StoreDetail_Deserialize = {
+	item: StoreItem_Deserialize,
+	installed?: InstallReceipt_Deserialize | null,
+	update?: UpdateDiff_Deserialize | null,
+	governed: StoreGoverned,
+	cost: StoreCost_Deserialize,
+};
+
+/**  Everything the detail page shows. */
+export type StoreDetail_Serialize = {
+	item: StoreItem_Serialize,
+	installed: InstallReceipt_Serialize | null,
+	update: UpdateDiff_Serialize | null,
+	governed: StoreGoverned,
+	cost: StoreCost_Serialize,
+};
+
+/**  An install takes effect in the next session, always. */
+export type StoreEffective = "next-session";
+
+export type StoreFileWrite = StoreFileWrite_Serialize | StoreFileWrite_Deserialize;
+
+export type StoreFileWrite_Deserialize = {
+	path: string,
+	purpose: string,
+	bytes?: number | null,
+};
+
+export type StoreFileWrite_Serialize = {
+	path: string,
+	purpose: string,
+	bytes?: number | null,
+};
+
+/**  What browse and search narrow by. */
+export type StoreFilter = StoreFilter_Serialize | StoreFilter_Deserialize;
+
+/**  What browse and search narrow by. */
+export type StoreFilter_Deserialize = {
+	kind?: StoreKind | null,
+	tier?: StoreTier | null,
+	source?: string | null,
+	installed?: boolean | null,
+	hide_unpinned?: boolean | null,
+};
+
+/**  What browse and search narrow by. */
+export type StoreFilter_Serialize = {
+	kind?: StoreKind,
+	tier?: StoreTier,
+	source?: string,
+	installed?: boolean,
+	hide_unpinned?: boolean,
+};
+
+/**  How serious a finding, a warning or a note is. */
+export type StoreFindingLevel = "info" | "caution" | "dangerous";
+
+/**  What governed mode does with the item. */
+export type StoreGoverned = {
+	allowed: boolean,
+	switch_blocks: boolean,
+	text: string,
+};
+
+/**  How far to trust a host list. */
+export type StoreHostBasis = "declared" | "verified" | "loopback" | "unknown";
+
+/**  The network hosts an item reaches. */
+export type StoreHosts = {
+	basis: StoreHostBasis,
+	hosts: string[],
+};
+
+export type StoreInstallStep = StoreInstallStep_Serialize | StoreInstallStep_Deserialize;
+
+export type StoreInstallStep_Deserialize = {
+	name: string,
+	ok: boolean,
+	note?: string | null,
+};
+
+export type StoreInstallStep_Serialize = {
+	name: string,
+	ok: boolean,
+	note?: string,
+};
+
+/**  One catalogue entry, normalised from any source. */
+export type StoreItem = StoreItem_Serialize | StoreItem_Deserialize;
+
+/**  One catalogue entry, normalised from any source. */
+export type StoreItem_Deserialize = {
+	id: string,
+	kind: StoreKind,
+	title: string,
+	publisher: string,
+	summary: string,
+	license: string,
+	homepage?: string | null,
+	version?: string | null,
+	pinned?: StorePin_Deserialize | null,
+	components: StoreComponentCounts,
+	hosts: StoreHosts,
+	secrets: StoreSecret_Deserialize[],
+	tier: StoreTier,
+	source: string,
+	verified?: string | null,
+	removed?: StoreRemoved_Deserialize | null,
+	tags?: string[] | null,
+	provenance: Provenance_Deserialize,
+};
+
+/**  One catalogue entry, normalised from any source. */
+export type StoreItem_Serialize = {
+	id: string,
+	kind: StoreKind,
+	title: string,
+	publisher: string,
+	summary: string,
+	license: string,
+	homepage: string | null,
+	version: string | null,
+	pinned: StorePin_Serialize | null,
+	components: StoreComponentCounts,
+	hosts: StoreHosts,
+	secrets: StoreSecret_Serialize[],
+	tier: StoreTier,
+	source: string,
+	verified: string | null,
+	removed: StoreRemoved_Serialize | null,
+	tags?: string[],
+	provenance: Provenance_Serialize,
+};
+
+/**  What an item is. */
+export type StoreKind = "skill" | "connector" | "plugin" | "mod" | "engine-plugin";
+
+/**  Which layer installs the item. */
+export type StoreLayer = "connector" | "plugin" | "engine";
+
+/**  How the source proved the publisher owns the name. */
+export type StoreNamespaceProof = "github" | "dns" | "http" | "curated" | "registry" | "none";
+
+/**  What an item is pinned to. Pinned or refused. */
+export type StorePin = StorePin_Serialize | StorePin_Deserialize;
+
+/**  What a pin is made of. */
+export type StorePinKind = "commit" | "archive-sha256" | "tree-sha256" | "oci-digest" | "version";
+
+/**  What an item is pinned to. Pinned or refused. */
+export type StorePin_Deserialize = {
+	type: StorePinKind,
+	value: string,
+	repo?: string | null,
+};
+
+/**  What an item is pinned to. Pinned or refused. */
+export type StorePin_Serialize = {
+	type: StorePinKind,
+	value: string,
+	repo?: string,
+};
+
+/**  The version kept one step back, and a version in an update's diff. */
+export type StorePrevious = StorePrevious_Serialize | StorePrevious_Deserialize;
+
+/**  The version kept one step back, and a version in an update's diff. */
+export type StorePrevious_Deserialize = {
+	version?: string | null,
+	pinned: StorePin_Deserialize,
+	tree_sha256?: string | null,
+};
+
+/**  The version kept one step back, and a version in an update's diff. */
+export type StorePrevious_Serialize = {
+	version: string | null,
+	pinned: StorePin_Serialize,
+	tree_sha256?: string,
+};
+
+/**  The kill list's entry for an item. */
+export type StoreRemoved = StoreRemoved_Serialize | StoreRemoved_Deserialize;
+
+/**  Who took an item down. */
+export type StoreRemovedBy = "boopis" | "source" | "registry" | "engine";
+
+/**  The kill list's entry for an item. */
+export type StoreRemoved_Deserialize = {
+	reason: string,
+	by: StoreRemovedBy,
+	date?: string | null,
+};
+
+/**  The kill list's entry for an item. */
+export type StoreRemoved_Serialize = {
+	reason: string,
+	by: StoreRemovedBy,
+	date?: string,
+};
+
+/**  When an install that needs an engine restart happens. */
+export type StoreRestartWhen = "now" | "when-idle";
+
+export type StoreScan = StoreScan_Serialize | StoreScan_Deserialize;
+
+export type StoreScanFinding = StoreScanFinding_Serialize | StoreScanFinding_Deserialize;
+
+export type StoreScanFinding_Deserialize = {
+	level: StoreFindingLevel,
+	text: string,
+	path?: string | null,
+};
+
+export type StoreScanFinding_Serialize = {
+	level: StoreFindingLevel,
+	text: string,
+	path?: string,
+};
+
+/**  A static check's verdict. */
+export type StoreScanVerdict = "safe" | "caution" | "dangerous" | "not-scanned";
+
+export type StoreScan_Deserialize = {
+	verdict: StoreScanVerdict,
+	scanner: string,
+	findings: StoreScanFinding_Deserialize[],
+};
+
+export type StoreScan_Serialize = {
+	verdict: StoreScanVerdict,
+	scanner: string,
+	findings: StoreScanFinding_Serialize[],
+};
+
+export type StoreScope = StoreScope_Serialize | StoreScope_Deserialize;
+
+/**  Where an install lives. */
+export type StoreScopeLevel = "bot" | "bot-project";
+
+export type StoreScope_Deserialize = {
+	level: StoreScopeLevel,
+	bot: string,
+	project?: string | null,
+};
+
+export type StoreScope_Serialize = {
+	level: StoreScopeLevel,
+	bot: string,
+	project?: string,
+};
+
+/**  A key or credential an item needs (never its value). */
+export type StoreSecret = StoreSecret_Serialize | StoreSecret_Deserialize;
+
+/**  A key or credential an item needs (never its value). */
+export type StoreSecret_Deserialize = {
+	id: string,
+	title: string,
+	env?: string | null,
+	host?: string | null,
+	optional: boolean,
+};
+
+/**  A key or credential an item needs (never its value). */
+export type StoreSecret_Serialize = {
+	id: string,
+	title: string,
+	env?: string,
+	host?: string,
+	optional: boolean,
+};
+
+/**  A place items come from. The last five fields are the host's runtime state and are absent in the data file. */
+export type StoreSource = StoreSource_Serialize | StoreSource_Deserialize;
+
+/**  How the host reads a source. */
+export type StoreSourceFetch = "compiled-in" | "engine-gateway" | "git-marketplace" | "git-repo" | "http-json" | "registry-api" | "github-api" | "local";
+
+/**  A place items come from. The last five fields are the host's runtime state and are absent in the data file. */
+export type StoreSource_Deserialize = {
+	id: string,
+	label: string,
+	description?: string | null,
+	kinds: StoreKind[],
+	fetch: StoreSourceFetch,
+	default_tier: StoreTier,
+	default_on: boolean,
+	user_added: boolean,
+	engine_origin: boolean,
+	url?: string | null,
+	path?: string | null,
+	terms?: StoreTerms | null,
+	note?: string | null,
+	enabled?: boolean | null,
+	refreshed_at?: string | null,
+	items?: number | null,
+	error?: string | null,
+};
+
+/**  A place items come from. The last five fields are the host's runtime state and are absent in the data file. */
+export type StoreSource_Serialize = {
+	id: string,
+	label: string,
+	description?: string,
+	kinds: StoreKind[],
+	fetch: StoreSourceFetch,
+	default_tier: StoreTier,
+	default_on: boolean,
+	user_added: boolean,
+	engine_origin: boolean,
+	url?: string,
+	path?: string,
+	terms?: StoreTerms,
+	note?: string,
+	enabled?: boolean,
+	refreshed_at?: string,
+	items?: number,
+	error?: string,
+};
+
+/**  Whether the terms for listing a source's items were read. */
+export type StoreTerms = "own" | "checked" | "unverified" | "not-applicable";
+
+/**  The item's tier: "Recommended by boopis", "Verified by its source", "Not reviewed". */
+export type StoreTier = "recommended" | "verified" | "not-reviewed";
+
+export type StoreTierChange = {
+	from: StoreTier,
+	to: StoreTier,
+};
+
+/**  Where an update stands. */
+export type StoreUpdateStatus = "available" | "up-to-date" | "removed" | "unpinned" | "source-unreachable";
+
+/**  A line the review card must show. */
+export type StoreWarning = {
+	code: string,
+	level: StoreWarningLevel,
+	text: string,
+};
+
+/**  How strong a warning is. */
+export type StoreWarningLevel = "info" | "caution" | "strong";
+
 /**  One tier of the saved ladder with whether governed mode may use it (ADR-0037). */
 export type TierCheck = {
 	/**  The tier's name. */
@@ -1753,6 +2453,49 @@ export type TierCheck = {
 	frontier: boolean,
 	/**  Whether it is a heavy one (Claude Fable, Grok 4.7 and later): on the ladder because the user put it there. */
 	heavy: boolean,
+};
+
+/**  What an uninstall removed and what it kept. */
+export type UninstallResult = {
+	item_id: string,
+	removed: string[],
+	kept_secrets: string[],
+	notes: string[],
+};
+
+/**  What changes if an installed item moves to the catalogue's pin. */
+export type UpdateDiff = UpdateDiff_Serialize | UpdateDiff_Deserialize;
+
+/**  What changes if an installed item moves to the catalogue's pin. */
+export type UpdateDiff_Deserialize = {
+	item_id: string,
+	status: StoreUpdateStatus,
+	from: StorePrevious_Deserialize,
+	to?: StorePrevious_Deserialize | null,
+	changes: StoreChange_Deserialize[],
+	new_hosts: string[],
+	new_secrets: StoreSecret_Deserialize[],
+	new_code: StoreCodeRun_Deserialize[],
+	widened: boolean,
+	tier_changed?: StoreTierChange | null,
+	removed?: StoreRemoved_Deserialize | null,
+	to_plan_hash?: string | null,
+};
+
+/**  What changes if an installed item moves to the catalogue's pin. */
+export type UpdateDiff_Serialize = {
+	item_id: string,
+	status: StoreUpdateStatus,
+	from: StorePrevious_Serialize,
+	to: StorePrevious_Serialize | null,
+	changes: StoreChange_Serialize[],
+	new_hosts: string[],
+	new_secrets: StoreSecret_Serialize[],
+	new_code: StoreCodeRun_Serialize[],
+	widened: boolean,
+	tier_changed: StoreTierChange | null,
+	removed: StoreRemoved_Serialize | null,
+	to_plan_hash: string | null,
 };
 
 /**  Where the loaded `libwebkit2gtk` lives. */

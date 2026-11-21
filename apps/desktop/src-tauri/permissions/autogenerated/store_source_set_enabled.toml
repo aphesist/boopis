@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-store-source-set-enabled"
+description = "Enables the store_source_set_enabled command without any pre-configured scope."
+commands.allow = ["store_source_set_enabled"]
+
+[[permission]]
+identifier = "deny-store-source-set-enabled"
+description = "Denies the store_source_set_enabled command without any pre-configured scope."
+commands.deny = ["store_source_set_enabled"]

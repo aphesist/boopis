@@ -51,6 +51,22 @@
     "allow-chatgpt-status",
     "allow-chatgpt-signin-start",
     "allow-chatgpt-signin-cancel",
-    "allow-chatgpt-sign-out"
+    "allow-chatgpt-sign-out",
+    "allow-store-catalog-list",
+    "allow-store-search",
+    "allow-store-refresh",
+    "allow-store-item-detail",
+    "allow-store-stage",
+    "allow-store-plan",
+    "allow-store-install",
+    "allow-store-uninstall",
+    "allow-store-installed",
+    "allow-store-update-check",
+    "allow-store-update",
+    "allow-store-rollback",
+    "allow-store-sources",
+    "allow-store-source-set-enabled",
+    "allow-store-source-add",
+    "allow-store-source-remove"
   ]
 }

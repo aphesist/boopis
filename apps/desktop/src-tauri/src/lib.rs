@@ -90,6 +90,22 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::chatgpt_signin_start,
             commands::chatgpt_signin_cancel,
             commands::chatgpt_sign_out,
+            commands::store_catalog_list,
+            commands::store_search,
+            commands::store_refresh,
+            commands::store_item_detail,
+            commands::store_stage,
+            commands::store_plan,
+            commands::store_install,
+            commands::store_uninstall,
+            commands::store_installed,
+            commands::store_update_check,
+            commands::store_update,
+            commands::store_rollback,
+            commands::store_sources,
+            commands::store_source_set_enabled,
+            commands::store_source_add,
+            commands::store_source_remove,
         ])
         .events(collect_events![
             ConnectionStateEvent,
@@ -429,6 +445,16 @@ pub fn run() {
                 })),
             );
             tauri::async_runtime::spawn(chatgpt.clone().run_refresher());
+            let store_root = app.path().app_data_dir().map_err(|e| e.to_string())?.join("store");
+            let store = Arc::new(
+                store::Store::new(
+                    &store_root,
+                    limits.clone(),
+                    Arc::new(store::net::Https::new(&limits.store)),
+                    Arc::new(commands::AppHost(app.handle().clone())),
+                )
+                .map_err(|e| e.to_string())?,
+            );
             app.manage(AppState {
                 chatgpt,
                 hubs: state::Hubs::new(supervisor.clone(), limits.clone(), emitter).with_observer(observer),
@@ -440,6 +466,7 @@ pub fn run() {
                 source,
                 carries_runtime,
                 connectors: std::sync::Mutex::default(),
+                store,
                 bundle: setup::install::Bundle::locate(
                     resource_dir.as_deref(),
                     exe.as_deref().and_then(std::path::Path::parent),

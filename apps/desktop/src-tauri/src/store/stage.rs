@@ -49,6 +49,8 @@ pub struct Stats {
     pub bytes: u64,
     /// Links inside the tree that were not kept.
     pub skipped_links: Vec<String>,
+    /// The commit a GitHub tarball says it was made from (its pax header's `comment`), lowercase.
+    pub commit: Option<String>,
 }
 
 /// The place an unpack writes to, and the running caps.
@@ -88,7 +90,7 @@ fn clean(raw: &str, max_depth: usize) -> Result<Vec<String>> {
 
 /// Whether a link at `at` (the parts of its own path) pointing to `target` stays inside the root. Lexical: a link is never
 /// followed here, so this is all there is to decide.
-fn link_stays_inside(at: &[String], target: &str) -> bool {
+pub(super) fn link_stays_inside(at: &[String], target: &str) -> bool {
     if target.is_empty() || target.starts_with('/') || target.contains(['\0', '\\']) {
         return false;
     }
@@ -251,7 +253,21 @@ pub fn unpack_tar_gz(bytes: &[u8], dest: &Path, select: &Select, limits: &StoreL
     for entry in entries {
         let mut entry = entry.map_err(|e| unsafe_archive(format!("a damaged archive ({e})")))?;
         let kind = entry.header().entry_type();
-        if kind.is_pax_global_extensions() || kind.is_pax_local_extensions() || kind.is_gnu_longname() || kind.is_gnu_longlink() {
+        if kind.is_pax_global_extensions() {
+            if let Ok(Some(ext)) = entry.pax_extensions() {
+                for e in ext.flatten() {
+                    if e.key() == Ok("comment")
+                        && let Ok(v) = e.value()
+                        && v.len() == 40
+                        && v.bytes().all(|b| b.is_ascii_hexdigit())
+                    {
+                        sink.stats.commit = Some(v.to_ascii_lowercase());
+                    }
+                }
+            }
+            continue;
+        }
+        if kind.is_pax_local_extensions() || kind.is_gnu_longname() || kind.is_gnu_longlink() {
             continue;
         }
         let raw = entry
@@ -645,4 +661,63 @@ impl Staging {
             }
         }
     }
+}
+
+// ---------------------------------------------------------------- a local folder
+
+/// Copy the folder `src` into `dst` under the same caps. A symlink is never followed or copied: one that leaves the folder is
+/// refused, one that stays inside is skipped (and counted in [`Stats::skipped_links`]); a file is copied as it is, with its exec bit.
+///
+/// # Errors
+/// `hx.store.unsafe_archive`, `hx.store.too_large`, `Io`.
+pub fn copy_tree(src: &Path, dst: &Path, limits: &StoreLimits) -> Result<Stats> {
+    let mut sink = Sink::new(dst, limits)?;
+    let root = fs::canonicalize(src).map_err(|e| Error::Io(format!("cannot read that folder: {e}")))?;
+    copy_dir(&root, &root, &mut Vec::new(), &mut sink)?;
+    Ok(sink.stats)
+}
+
+fn copy_dir(root: &Path, dir: &Path, parts: &mut Vec<String>, sink: &mut Sink) -> Result<()> {
+    let mut names: Vec<_> = fs::read_dir(dir).map_err(|e| Error::Io(e.to_string()))?.flatten().collect();
+    names.sort_by_key(std::fs::DirEntry::file_name);
+    for e in names {
+        let name = e.file_name().to_string_lossy().into_owned();
+        if name == ".git" {
+            continue;
+        }
+        let ft = e.file_type().map_err(|e| Error::Io(e.to_string()))?;
+        parts.push(name);
+        if parts.len() > sink.limits.max_depth {
+            return Err(too_large("a folder nested deeper than boopis accepts"));
+        }
+        if ft.is_symlink() {
+            let target = fs::canonicalize(e.path()).ok();
+            if !target.is_some_and(|t| t.starts_with(root)) {
+                return Err(unsafe_archive(format!("the link {:?} points outside the folder", parts.join("/"))));
+            }
+            sink.count()?;
+            sink.stats.skipped_links.push(parts.join("/"));
+        } else if ft.is_dir() {
+            sink.mkdir(parts)?;
+            copy_dir(root, &e.path(), parts, sink)?;
+        } else if ft.is_file() {
+            #[cfg(unix)]
+            let exec = {
+                use std::os::unix::fs::PermissionsExt;
+                e.metadata().map(|m| m.permissions().mode()).unwrap_or(0)
+            };
+            #[cfg(not(unix))]
+            let exec = 0u32;
+            if exec & 0o7000 != 0 {
+                return Err(unsafe_archive(format!("{:?} has a setuid, setgid or sticky bit", parts.join("/"))));
+            }
+            let size = e.metadata().map_or(0, |m| m.len());
+            let f = File::open(e.path()).map_err(|e| Error::Io(e.to_string()))?;
+            sink.file(parts, size, exec & 0o111 != 0, f)?;
+        } else {
+            return Err(unsafe_archive(format!("{:?} is a device, a pipe or a socket", parts.join("/"))));
+        }
+        parts.pop();
+    }
+    Ok(())
 }

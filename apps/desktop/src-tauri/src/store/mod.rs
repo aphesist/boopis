@@ -7,13 +7,22 @@
 //! - [`servers`]: registry `server.json` and MCP bundle manifests as connector specs.
 //! - [`normalize`]: each source's shape to a `StoreItem`.
 
+pub mod backend;
+pub mod cache;
 pub mod discover;
+pub mod install;
 pub mod github;
 pub mod net;
 pub mod normalize;
+pub mod plan;
+pub mod search;
 pub mod servers;
+pub mod service;
 pub mod stage;
+pub mod time;
 pub mod types;
+
+pub use service::Store;
 
 #[cfg(test)]
 mod net_tests;

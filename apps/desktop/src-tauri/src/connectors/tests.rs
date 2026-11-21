@@ -461,7 +461,10 @@ async fn an_optional_key_left_out_leaves_the_header_out() {
         .await
         .unwrap();
     assert!(r.hermes.st().servers["firecrawl"].get("headers").is_none());
-    assert!(r.hermes.st().config.is_empty());
+    assert!(
+        r.hermes.st().config.keys().all(|k| k == super::GOVERNED_ALLOWLIST),
+        "no key was wired; only the governed allowlist was written"
+    );
 }
 
 #[tokio::test]

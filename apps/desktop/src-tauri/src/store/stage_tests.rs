@@ -184,6 +184,7 @@ fn a_github_tarball_is_unpacked_without_its_top_folder_and_with_its_exec_bit() {
     let out = d.path().join("out");
     let stats = unpack_tar_gz(&archive, &out, &Select { strip_top: true, subdir: Some("skills/pdf".into()) }, &limits()).unwrap();
     assert_eq!(stats.files, 2);
+    assert_eq!(stats.commit.as_deref(), Some("0123456789abcdef0123456789abcdef01234567"), "the commit the tarball says it holds");
     assert_eq!(std::fs::read(out.join("SKILL.md")).unwrap(), b"skill");
     assert!(!out.join("README.md").exists() && !out.join("other").exists(), "only the selected folder is kept");
     #[cfg(unix)]
