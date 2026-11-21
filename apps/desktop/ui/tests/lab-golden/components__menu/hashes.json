@@ -40,44 +40,44 @@
   "h": 267
  },
  "governed-mode-unavailable-at-rest@bone": {
-  "sha": "791dbb7ec556396e518a2bc7d99971886945fc73",
-  "w": 384,
-  "h": 195
- },
- "governed-mode-unavailable-at-rest@catalog": {
-  "sha": "3eaf7702a42cea368a48e8bf51303e1cb218bc8f",
-  "w": 384,
-  "h": 195
- },
- "governed-mode-unavailable-at-rest@graphite": {
-  "sha": "c123b4af8ff6e23ac756ba40a99352ccf176d5a4",
-  "w": 384,
-  "h": 195
- },
- "governed-mode-unavailable-at-rest@typewriter": {
-  "sha": "156d46e415a33478eba5445811894989dfdb7cbd",
+  "sha": "cc3a096606b2d2512ad2530f51b1b666d470519e",
   "w": 384,
   "h": 211
  },
+ "governed-mode-unavailable-at-rest@catalog": {
+  "sha": "276f8b6baa3c574e88255fa10a59009a177472d4",
+  "w": 384,
+  "h": 211
+ },
+ "governed-mode-unavailable-at-rest@graphite": {
+  "sha": "4c0a6ed06ea16e9b6ea8f644cf3846212b075de0",
+  "w": 384,
+  "h": 211
+ },
+ "governed-mode-unavailable-at-rest@typewriter": {
+  "sha": "c0ba352e7519e89e8edf2ca52db63a9809dd0378",
+  "w": 384,
+  "h": 243
+ },
  "governed-mode-unavailable-the-governed-chip@bone": {
-  "sha": "ccb38e9d3376bd6ed4199f5134f76224f487ab4a",
-  "w": 1424,
-  "h": 233
- },
- "governed-mode-unavailable-the-governed-chip@catalog": {
-  "sha": "0b8c711900e812b0345004582ab01210dd125571",
-  "w": 1424,
-  "h": 233
- },
- "governed-mode-unavailable-the-governed-chip@graphite": {
-  "sha": "284c5cd95267c0f6a5bdf17e7558eec9e0c524f3",
-  "w": 1424,
-  "h": 233
- },
- "governed-mode-unavailable-the-governed-chip@typewriter": {
-  "sha": "fe5bcc461899624c28bd2fdae4b410580e1499f9",
+  "sha": "e5e491ebc027afa92c89b17eebcf37825bab4c92",
   "w": 1424,
   "h": 249
+ },
+ "governed-mode-unavailable-the-governed-chip@catalog": {
+  "sha": "266ee9797288272a01456c3acc1dbafed78f641b",
+  "w": 1424,
+  "h": 249
+ },
+ "governed-mode-unavailable-the-governed-chip@graphite": {
+  "sha": "18e9a0fd4928546af6467ecb4cbb15cb661966f4",
+  "w": 1424,
+  "h": 249
+ },
+ "governed-mode-unavailable-the-governed-chip@typewriter": {
+  "sha": "38a8c5c3aa69a6a597aa90bb0accfa0cc0d02e41",
+  "w": 1424,
+  "h": 281
  },
  "hover@bone": {
   "sha": "2414afd7ab17d3a8e63914820ec8b60f481b2a5e",

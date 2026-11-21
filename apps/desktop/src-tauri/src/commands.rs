@@ -220,17 +220,19 @@ pub async fn setup_models_view(
     Ok(setup_engine(&app, &state, profile)?.models_view().await?)
 }
 
-/// Opt in to Fable on the Claude subscription ladder, or out (Settings > Models). Returns the models view as it is after.
+/// Turn a heavy model (`fable`, `grok`) on or off for the saved ladder (Settings > Models): on adds it as the top tier, off takes
+/// it away, and the choice is remembered. Returns the models view as it is after.
 #[tauri::command]
 #[specta::specta]
-pub async fn setup_set_subscription_fable(
+pub async fn setup_set_heavy(
     app: AppHandle,
     state: State<'_, AppState>,
+    id: String,
     on: bool,
     profile: Option<String>,
 ) -> std::result::Result<ModelsView, HostError> {
     Ok(setup_engine(&app, &state, profile)?
-        .set_subscription_fable(on)
+        .set_heavy(&id, on)
         .await?)
 }
 

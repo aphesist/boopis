@@ -19,10 +19,14 @@ const CLAUDE: Record<'ready' | 'out' | 'missing' | 'old' | 'metered', Claude> = 
   old: { state: 'old_version', version: '2.1.200', plan: null, detail: 'Claude Code 2.1.200 is older than the oldest one that serves a Claude model here (2.1.280). Update it with `claude update`, then choose Check again.', aliases: [] },
   metered: { state: 'metered', version: '2.1.328', plan: null, detail: 'Claude Code 2.1.328 is signed in with an Anthropic API key, which bills API usage instead of your Claude subscription.', aliases: ['haiku', 'sonnet', 'opus'] }
 };
-const ALLOWED = ['Claude Opus 5.5', 'Claude Fable 5.2', 'GPT-6.2 Astra', 'Gemini 4 Carbon'];
-const GOV_OK: ModelsView['governed'] = { allowed: ALLOWED, sentence: 'Claude Opus 5.5 or later, Claude Fable 5.2 or later, GPT-6.2 Astra or later and Gemini 4 Carbon or later', tiers: [], available: true, why: null };
-const NO_FABLE: ModelsView['fable'] = { applies: false, on: false, served: true };
-const SET: ModelsView = { state: 'set', tiers: [{ name: 'small', model: 'openrouter/a-3b:free' }, { name: 'big', model: 'openrouter/b-120b:free' }], claude: CLAUDE.missing, claude_plugin: false, chatgpt: null, gemini_key: false, governed: GOV_OK, fable: NO_FABLE };
+const ALLOWED = ['Claude Opus 5.5', 'Claude Fable 5.2', 'GPT-6.2 Astra', 'GPT-6.2 Sol', 'Gemini 4 Carbon', 'Gemini 4 Neon', 'Gemini 4 Hydrogen', 'Grok 4.7'];
+const HEAVY_NAMES = ['Claude Fable 5.2', 'Grok 4.7'];
+const GOV_OK: ModelsView['governed'] = { allowed: ALLOWED, heavy: HEAVY_NAMES, sentence: 'Claude Opus 5.5 or later, Claude Fable 5.2 or later, GPT-6.2 Astra or later, GPT-6.2 Sol or later, Gemini 4 Carbon or later, Gemini 4 Neon or later, Gemini 4 Hydrogen or later and Grok 4.7 or later', tiers: [], available: true, why: null };
+const FABLE_WHY = 'Fable is token-heavy: Ramp\'s benchmark measured $3.79 a task against Opus\'s $1.53, and on a Claude Pro plan it bills usage credits from the first request. So boopis never adds it by itself.';
+const GROK_WHY = 'Grok 4.7 is token-heavy: Ramp\'s benchmark measured it at $4.32 a task, with the most tool calls of any model (161 a task). So boopis never adds it by itself.';
+const choice = (id: 'fable' | 'grok', over: Partial<ModelsView['heavy'][number]> = {}): ModelsView['heavy'][number] => ({ id, label: id === 'fable' ? 'Climb to Fable' : 'Use Grok', reason: id === 'fable' ? FABLE_WHY : GROK_WHY, applies: false, on: false, blocked: null, ...over });
+const NO_HEAVY: ModelsView['heavy'] = [choice('fable'), choice('grok')];
+const SET: ModelsView = { state: 'set', tiers: [{ name: 'small', model: 'openrouter/a-3b:free' }, { name: 'big', model: 'openrouter/b-120b:free' }], claude: CLAUDE.missing, claude_plugin: false, chatgpt: null, gemini_key: false, governed: GOV_OK, heavy: NO_HEAVY };
 const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 
 function deps(over: Partial<ModelsDeps> = {}): ModelsDeps & { calls: string[] } {
@@ -51,14 +55,14 @@ describe('Settings > Models', () => {
 
   it('says the ladder is the built-in one when none is saved, and lists no tiers it was not told of', async () => {
     const panel = document.createElement('div');
-    await mountModels(panel, deps({ ladder: () => Promise.resolve({ state: 'default', tiers: [], claude: CLAUDE.missing, claude_plugin: false, chatgpt: null, gemini_key: false, governed: GOV_OK, fable: NO_FABLE }) }));
+    await mountModels(panel, deps({ ladder: () => Promise.resolve({ state: 'default', tiers: [], claude: CLAUDE.missing, claude_plugin: false, chatgpt: null, gemini_key: false, governed: GOV_OK, heavy: NO_HEAVY }) }));
     expect(panel.querySelector('.ui-ladder--list')).toBeNull();
     expect(panel.textContent).toContain('No ladder is saved here, so boopis uses its built-in Claude ladder');
   });
 
   it('says a saved ladder it cannot read is not shown, and that Hermes could not be asked when it could not', async () => {
     const odd = document.createElement('div');
-    await mountModels(odd, deps({ ladder: () => Promise.resolve({ state: 'unreadable', tiers: [], claude: CLAUDE.missing, claude_plugin: false, chatgpt: null, gemini_key: false, governed: GOV_OK, fable: NO_FABLE }) }));
+    await mountModels(odd, deps({ ladder: () => Promise.resolve({ state: 'unreadable', tiers: [], claude: CLAUDE.missing, claude_plugin: false, chatgpt: null, gemini_key: false, governed: GOV_OK, heavy: NO_HEAVY }) }));
     expect(odd.textContent).toContain('does not read as a list of named tiers');
     expect(odd.querySelector('.ui-ladder--list')).toBeNull();
     const down = document.createElement('div');
@@ -76,7 +80,7 @@ describe('Settings > Models', () => {
 
   it('asks both again on refresh, so a changed plan and a changed ladder show', async () => {
     const panel = document.createElement('div');
-    let ladder: ModelsView = { state: 'default', tiers: [], claude: CLAUDE.missing, claude_plugin: false, chatgpt: null, gemini_key: false, governed: GOV_OK, fable: NO_FABLE };
+    let ladder: ModelsView = { state: 'default', tiers: [], claude: CLAUDE.missing, claude_plugin: false, chatgpt: null, gemini_key: false, governed: GOV_OK, heavy: NO_HEAVY };
     const m = await mountModels(panel, deps({ ladder: () => Promise.resolve(ladder) }));
     expect(panel.querySelectorAll('.ui-ladder--list > li')).toHaveLength(0);
     ladder = SET;
@@ -102,7 +106,7 @@ describe('Settings > Models', () => {
   });
 
   it('rows are plain text with no markup from a tier name or model', () => {
-    const rows = ladderRows({ state: 'set', tiers: [{ name: '<b>x</b>', model: 'a"b/c' }], claude: CLAUDE.missing, claude_plugin: false, chatgpt: null, gemini_key: false, governed: GOV_OK, fable: NO_FABLE }).join('');
+    const rows = ladderRows({ state: 'set', tiers: [{ name: '<b>x</b>', model: 'a"b/c' }], claude: CLAUDE.missing, claude_plugin: false, chatgpt: null, gemini_key: false, governed: GOV_OK, heavy: NO_HEAVY }).join('');
     expect(rows).not.toContain('<b>x</b>');
     expect(rows).toContain('&lt;b&gt;x&lt;/b&gt;');
   });
@@ -110,7 +114,7 @@ describe('Settings > Models', () => {
 
 describe('Settings > Models: the Claude subscription', () => {
   const text = (v: ModelsView | { error: string }): string => { const d = document.createElement('div'); d.innerHTML = claudeRows(v).join(''); return d.textContent ?? ''; };
-  const view = (claude: Claude, plugin = false): ModelsView => ({ state: 'default', tiers: [], claude, claude_plugin: plugin, chatgpt: null, gemini_key: false, governed: GOV_OK, fable: NO_FABLE });
+  const view = (claude: Claude, plugin = false): ModelsView => ({ state: 'default', tiers: [], claude, claude_plugin: plugin, chatgpt: null, gemini_key: false, governed: GOV_OK, heavy: NO_HEAVY });
 
   it('says signed in with the plan and the version, and names no engine', () => {
     const t = text(view(CLAUDE.ready, true));
@@ -202,7 +206,7 @@ describe('change models', () => {
 });
 
 describe('Settings > Models: ChatGPT and Gemini (ADR-0030)', () => {
-  const base: ModelsView = { state: 'default', tiers: [], claude: CLAUDE.ready, claude_plugin: true, chatgpt: { state: 'signed_out', plan: null, code: null }, gemini_key: false, governed: GOV_OK, fable: NO_FABLE };
+  const base: ModelsView = { state: 'default', tiers: [], claude: CLAUDE.ready, claude_plugin: true, chatgpt: { state: 'signed_out', plan: null, code: null }, gemini_key: false, governed: GOV_OK, heavy: NO_HEAVY };
   const text = (rows: string[]): string => { const d = document.createElement('div'); d.innerHTML = rows.join(''); return d.textContent ?? ''; };
 
   function fakeChatgpt(): ChatgptBridge & { calls: string[]; end: (e: ChatgptSigninEvent) => void } {
@@ -280,7 +284,7 @@ describe('Settings > Models: ChatGPT and Gemini (ADR-0030)', () => {
 
 describe('Settings > Models: governed mode (ADR-0037)', () => {
   const view = (governed: ModelsView['governed'], over: Partial<ModelsView> = {}): ModelsView => ({ ...SET, claude: CLAUDE.ready, governed, ...over });
-  const NO: ModelsView['governed'] = { ...GOV_OK, available: false, why: 'tier \'haiku\' runs claude-subscription-directsdk-experimental/haiku, which is not a frontier model: it is not in a family on that list', tiers: [{ name: 'haiku', model: 'claude-subscription-directsdk-experimental/haiku', frontier: false }, { name: 'opus', model: 'claude-subscription-directsdk-experimental/opus', frontier: true }] };
+  const NO: ModelsView['governed'] = { ...GOV_OK, available: false, why: 'tier \'haiku\' runs claude-subscription-directsdk-experimental/haiku, which is not a frontier model: it is not in a family on that list', tiers: [{ name: 'haiku', model: 'claude-subscription-directsdk-experimental/haiku', frontier: false, heavy: false }, { name: 'opus', model: 'claude-subscription-directsdk-experimental/opus', frontier: true, heavy: false }] };
   const text = (rows: string[]): string => { const d = document.createElement('div'); d.innerHTML = rows.join(''); return d.textContent ?? ''; };
 
   it('lists the models governed mode allows, as the host read them, and says it is available', () => {
@@ -313,43 +317,90 @@ describe('Settings > Models: governed mode (ADR-0037)', () => {
   });
 });
 
-describe('Settings > Models: the Fable opt-in (ADR-0037)', () => {
-  const ladder = (on: boolean, served = true): ModelsView => ({ ...SET, state: 'set', claude: CLAUDE.ready, claude_plugin: true, fable: { applies: true, on, served } });
-  const text = (v: ModelsView): string => { const d = document.createElement('div'); d.innerHTML = claudeRows(v).join(''); return d.textContent ?? ''; };
+describe('Settings > Models: the heavy models\' switches (ADR-0037)', () => {
+  const fableView = (on: boolean, blocked: string | null = null): ModelsView => ({ ...SET, state: 'set', claude: CLAUDE.ready, claude_plugin: true, heavy: [choice('fable', { applies: true, on, blocked }), choice('grok')] });
+  const grokView = (on: boolean): ModelsView => ({ ...SET, state: on ? 'set' : 'default', tiers: on ? [{ name: 'grok', model: 'xai/grok-4.7' }] : [], claude: CLAUDE.missing, heavy: [choice('fable'), choice('grok', { applies: true, on })], governed: on ? { ...GOV_OK, tiers: [{ name: 'grok', model: 'xai/grok-4.7', frontier: true, heavy: true }] } : { ...GOV_OK, available: false, why: 'no ladder is saved, and the only frontier model an xAI key reaches is Grok 4.7 or later, a heavy model that governed mode runs only when you turn it on. Turn on Grok below' } });
+  const text = (v: ModelsView): string => { const d = document.createElement('div'); d.innerHTML = governedRows(v).join(''); return d.textContent ?? ''; };
 
-  it('says plainly that Fable bills usage credits from the first request on a Pro plan, and that the default stays on Opus', () => {
-    const t = text(ladder(false));
+  it('says plainly why Fable is off by default: usage credits from the first request on a Pro plan, and token-heavy', () => {
+    const t = text(fableView(false));
     expect(t).toContain('Climb to Fable');
-    expect(t).toContain('bills usage credits from the first request on a Claude Pro plan');
-    expect(t).toContain('governed work stays on Opus');
+    expect(t).toContain('bills usage credits from the first request');
+    expect(t).toContain('token-heavy');
+    expect(t).toContain('never adds it by itself');
   });
-  it('shows nothing about Fable when the saved ladder is not the subscription\'s', () => {
-    expect(text({ ...SET, claude: CLAUDE.ready, fable: NO_FABLE })).not.toContain('Climb to Fable');
+  it('lives in the governed section, not the Claude one, and marks the heavy models in the allowed list', () => {
+    expect(claudeRows(fableView(false)).join('')).not.toContain('Climb to Fable');
+    const d = document.createElement('div');
+    d.innerHTML = governedRows(fableView(false)).join('');
+    expect(d.textContent?.match(/Heavy: only when you turn it on/g)).toHaveLength(2);
   });
-  it('turning it on asks the host, then redraws; a refusal is shown', async () => {
-    const calls: boolean[] = [];
-    let view = ladder(false);
+  it('says Carbon is allowed but not on the Gemini ladder, and why', () => {
+    const t = text(fableView(false));
+    expect(t).toContain('Gemini 4 Carbon on the ladder');
+    expect(t).toContain('Hydrogen, then Neon');
+    expect(t).toContain('72.6%');
+  });
+  it('shows nothing about a heavy model the saved ladder cannot take', () => {
+    const t = text({ ...SET, claude: CLAUDE.ready });
+    expect(t).not.toContain('Climb to Fable');
+    expect(t).not.toContain('Use Grok');
+  });
+  it('turning Fable on asks the host with its id, then redraws; a refusal is shown', async () => {
+    const calls: string[] = [];
+    let view = fableView(false);
     const panel = document.createElement('div');
-    await mountModels(panel, deps({ ladder: () => Promise.resolve(view), setFable: (on) => { calls.push(on); view = ladder(on); return Promise.resolve(); } }));
-    const sw = (): HTMLInputElement => panel.querySelector<HTMLInputElement>('#hx-fable-on') as HTMLInputElement;
+    await mountModels(panel, deps({ ladder: () => Promise.resolve(view), setHeavy: (id, on) => { calls.push(`${id}:${String(on)}`); view = fableView(on); return Promise.resolve(); } }));
+    const sw = (): HTMLInputElement => panel.querySelector<HTMLInputElement>('#hx-heavy-fable') as HTMLInputElement;
     expect(sw().checked).toBe(false);
     sw().checked = true; sw().dispatchEvent(new Event('change'));
     await tick(); await tick();
-    expect(calls).toEqual([true]);
+    expect(calls).toEqual(['fable:true']);
     expect(sw().checked).toBe(true);
+    sw().checked = false; sw().dispatchEvent(new Event('change'));
+    await tick(); await tick();
+    expect(calls).toEqual(['fable:true', 'fable:false']);
+    expect(sw().checked).toBe(false);
 
-    const d = deps({ ladder: () => Promise.resolve(ladder(false)), setFable: () => Promise.reject(new Error('Your Claude Code does not serve Fable yet (it needs 2.1.321).')) });
+    const d = deps({ ladder: () => Promise.resolve(fableView(false)), setHeavy: () => Promise.reject(new Error('Your Claude Code does not serve Fable yet (it needs 2.1.321).')) });
     const p2 = document.createElement('div');
     await mountModels(p2, d);
-    const s2 = p2.querySelector<HTMLInputElement>('#hx-fable-on') as HTMLInputElement;
+    const s2 = p2.querySelector<HTMLInputElement>('#hx-heavy-fable') as HTMLInputElement;
     s2.checked = true; s2.dispatchEvent(new Event('change'));
     await tick(); await tick();
     expect(d.calls.some((c) => c.includes('2.1.321'))).toBe(true);
   });
-  it('is off and cannot be turned on while Claude Code does not serve Fable', () => {
+  it('is off and cannot be turned on while the host says it cannot (an old Claude Code), with the reason shown', () => {
     const d = document.createElement('div');
-    d.innerHTML = claudeRows(ladder(false, false)).join('');
-    expect(d.querySelector<HTMLInputElement>('#hx-fable-on')?.disabled).toBe(true);
+    d.innerHTML = governedRows(fableView(false, 'Your Claude Code does not serve Fable yet (it needs 2.1.321). Update it with `claude update`.')).join('');
+    expect(d.querySelector<HTMLInputElement>('#hx-heavy-fable')?.disabled).toBe(true);
     expect(d.textContent).toContain('needs 2.1.321');
+    // but one that is on can always be turned off
+    d.innerHTML = governedRows(fableView(true, 'whatever')).join('');
+    expect(d.querySelector<HTMLInputElement>('#hx-heavy-fable')?.disabled).toBe(false);
+  });
+  it('with an xAI key alone, governed mode is unavailable in words, and the Grok switch is right there', async () => {
+    const t = text(grokView(false));
+    expect(t).toContain('Unavailable');
+    expect(t).toContain('only frontier model an xAI key reaches is Grok 4.7 or later, a heavy model');
+    expect(t).toContain('Turn on Grok below');
+    expect(t).toContain('Use Grok');
+    expect(t).toContain('token-heavy');
+    const calls: string[] = [];
+    let view = grokView(false);
+    const panel = document.createElement('div');
+    await mountModels(panel, deps({ ladder: () => Promise.resolve(view), setHeavy: (id, on) => { calls.push(`${id}:${String(on)}`); view = grokView(on); return Promise.resolve(); } }));
+    const sw = panel.querySelector<HTMLInputElement>('#hx-heavy-grok') as HTMLInputElement;
+    sw.checked = true; sw.dispatchEvent(new Event('change'));
+    await tick(); await tick();
+    expect(calls).toEqual(['grok:true']);
+    expect(panel.textContent).toContain('Available');
+    expect(panel.querySelector<HTMLInputElement>('#hx-heavy-grok')?.checked).toBe(true);
+    expect(panel.textContent).toContain('heavy: on the ladder because you chose it');
+  });
+  it('without a way to ask the host the switches stay off', async () => {
+    const panel = document.createElement('div');
+    await mountModels(panel, deps({ ladder: () => Promise.resolve(fableView(false)) }));
+    expect(panel.querySelector<HTMLInputElement>('#hx-heavy-fable')?.disabled).toBe(true);
   });
 });

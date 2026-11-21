@@ -11,7 +11,7 @@ const COMMANDS: &[&str] = &[
     "setup_advance",
     "setup_reopen_models",
     "setup_models_view",
-    "setup_set_subscription_fable",
+    "setup_set_heavy",
     "engine_source_get",
     "gateway_connect",
     "gateway_send",

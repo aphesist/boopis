@@ -496,7 +496,7 @@ def test_cascade_state_with_no_task_is_idle_and_shows_the_default_ladder(make_ru
     got = rpc.cascade_state({"session_id": SID})
     assert got["status"] == "idle"
     assert "task_id" not in got  # nothing has run, so no task, tier or attempt is invented
-    assert [t["name"] for t in got["ladder"]] == ["opus", "fable"]  # the frontier default
+    assert [t["name"] for t in got["ladder"]] == ["opus"]  # the frontier default, with no heavy model
     assert {t["model"]["provider"] for t in got["ladder"]} == {"anthropic"}
 
 
@@ -558,7 +558,14 @@ def test_errors_carry_their_code_in_the_text() -> None:
 
 
 def test_cascade_start_tier_is_allowed_after_the_lock_and_checked_against_the_ladder(make_runtime: MakeRuntime) -> None:
-    rt, ctx = make_runtime()
+    # the default is Opus alone (Fable is heavy), so the two-tier ladder here is the user's own
+    two = {
+        "tiers": [
+            {"name": "opus", "model": "anthropic/claude-opus-5-5"},
+            {"name": "fable", "model": "anthropic/claude-fable-5-2"},
+        ]
+    }
+    rt, ctx = make_runtime({"ladder": two})
     rpc.mode_set({"session_id": SID, "mode": "governed"})
     first_prompt(rt, ctx)
     names = [t["name"] for t in rpc.cascade_state({"session_id": SID})["ladder"]]

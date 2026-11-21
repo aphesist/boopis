@@ -4,7 +4,7 @@ import { line, list, put, stage, forced } from '../../story';
 import type { Story } from '../../types';
 import { LONG_NAME, LONG_TITLE, RTL, UNBROKEN } from '../../fixtures';
 import { SESSIONS } from '../../../data/mock-data';
-import { claudeRows, governedRows, ladderRows } from '../../../host/models-tab';
+import { governedRows, ladderRows } from '../../../host/models-tab';
 import type { ModelsView } from '../../../host/setup-bridge';
 
 const LISTS = { url: '/v6/design-system/index.html#c-lists', crop: '#c-lists' };
@@ -58,11 +58,14 @@ const setTypical = stage(['typical', 'variant'], ({ root }) => {
   ui.hydrate(root);
 }, { width: 560, ground: 'frame' });
 /* Settings > Models, the governed-mode section and the ladder it marks (ADR-0037), drawn from what the host reads */
-const SENTENCE = 'Claude Opus 5.5 or later, Claude Fable 5.2 or later, GPT-6.2 Astra or later and Gemini 4 Carbon or later';
-const ALLOWED = ['Claude Opus 5.5', 'Claude Fable 5.2', 'GPT-6.2 Astra', 'Gemini 4 Carbon'];
+const SENTENCE = 'Claude Opus 5.5 or later, Claude Fable 5.2 or later, GPT-6.2 Astra or later, GPT-6.2 Sol or later, Gemini 4 Carbon or later, Gemini 4 Neon or later, Gemini 4 Hydrogen or later and Grok 4.7 or later';
+const ALLOWED = ['Claude Opus 5.5', 'Claude Fable 5.2', 'GPT-6.2 Astra', 'GPT-6.2 Sol', 'Gemini 4 Carbon', 'Gemini 4 Neon', 'Gemini 4 Hydrogen', 'Grok 4.7'];
+const HEAVY_NAMES = ['Claude Fable 5.2', 'Grok 4.7'];
+const FABLE_CHOICE: ModelsView['heavy'][number] = { id: 'fable', label: 'Climb to Fable', applies: true, on: false, blocked: null, reason: 'Fable is token-heavy: Ramp\u2019s benchmark measured $3.79 a task against Opus\u2019s $1.53, and on a Claude Pro plan it bills usage credits from the first request. So boopis never adds it by itself. Off: governed work stays on Opus, and a failed gate retries there. On: Fable is the top tier, and a failed gate climbs to it.' };
+const GROK_CHOICE: ModelsView['heavy'][number] = { id: 'grok', label: 'Use Grok', applies: false, on: false, blocked: null, reason: 'Grok 4.7 is token-heavy: Ramp\u2019s benchmark measured it at $4.32 a task, with the most tool calls of any model (161 a task). So boopis never adds it by itself. Off: boopis does not run governed work on it. On: Grok is the top tier of the ladder.' };
 const CP = 'claude-subscription-directsdk-experimental';
 const MODELS_VIEW = (governed: ModelsView['governed'], tiers: ModelsView['tiers']): ModelsView => ({
-  state: 'set', tiers, governed, fable: { applies: true, on: false, served: true }, claude_plugin: true, chatgpt: null, gemini_key: false,
+  state: 'set', tiers, governed, heavy: [FABLE_CHOICE, GROK_CHOICE], claude_plugin: true, chatgpt: null, gemini_key: false,
   claude: { state: 'signed_in', version: '2.1.328', plan: 'Claude Max', detail: '', aliases: [] }
 });
 const governedDraw = (view: ModelsView) => ({ root }: { root: HTMLElement }): void => {
@@ -72,9 +75,11 @@ const governedDraw = (view: ModelsView) => ({ root }: { root: HTMLElement }): vo
   root.append(sec);
   ui.hydrate(sec);
 };
-const OK_TIERS = [{ name: 'opus', model: CP + '/opus' }, { name: 'fable', model: CP + '/fable' }];
+const OPUS_TIER = [{ name: 'opus', model: CP + '/opus' }];
+const FABLE_TIERS = [...OPUS_TIER, { name: 'fable', model: CP + '/fable' }];
+const OK_TIERS = OPUS_TIER;
 const CHEAP_TIERS = [{ name: 'haiku', model: CP + '/haiku' }, { name: 'sonnet', model: CP + '/sonnet' }, { name: 'opus', model: CP + '/opus' }];
-const govView = (tiers: ModelsView['tiers'], why: string | null): ModelsView => MODELS_VIEW({ allowed: ALLOWED, sentence: SENTENCE, available: why === null, why, tiers: tiers.map((t) => ({ ...t, frontier: !/haiku|sonnet|welcome/.test(t.model) })) }, tiers);
+const govView = (tiers: ModelsView['tiers'], why: string | null): ModelsView => MODELS_VIEW({ allowed: ALLOWED, heavy: HEAVY_NAMES, sentence: SENTENCE, available: why === null, why, tiers: tiers.map((t) => ({ ...t, frontier: !/haiku|sonnet|welcome/.test(t.model), heavy: /fable|grok/.test(t.model) })) }, tiers);
 const setRow: Story = {
   id: 'components/set-row', title: 'Settings row', area: 'components', kind: 'component', covers: ['html.setRow'], mock: { url: '/v6/design-system/index.html#c-fields', crop: '#c-fields' },
   states: {
@@ -83,14 +88,34 @@ const setRow: Story = {
     'governed mode, available (Settings > Models)': stage(['variant'], governedDraw(govView(OK_TIERS, null)), { width: 560, ground: 'frame' }),
     'governed mode, unavailable: no frontier model (Settings > Models)': stage(['variant', 'error'], governedDraw(govView([{ name: 'free', model: 'nous/nous/welcome' }], 'tier \'free\' runs nous/nous/welcome, which is not a frontier model: it is not in a family on that list')), { width: 560, ground: 'frame' }),
     'governed mode, a ladder with cheap tiers marked (Settings > Models)': stage(['variant', 'long'], governedDraw(govView(CHEAP_TIERS, 'tier \'haiku\' runs ' + CP + '/haiku, which is not a frontier model: it is not in a family on that list')), { width: 560, ground: 'frame' }),
-    'Claude subscription, the Fable opt-in off and on (Settings > Models)': stage(['variant'], ({ root }) => {
-      for (const on of [false, true]) {
+    'governed mode, the heavy switches: Fable off, then on (Settings > Models)': stage(['variant'], ({ root }) => {
+      for (const [on, tiers] of [[false, OPUS_TIER], [true, FABLE_TIERS]] as const) {
+        const view: ModelsView = { ...govView(tiers, null), heavy: [{ ...FABLE_CHOICE, on }, GROK_CHOICE] };
         const sec = document.createElement('section');
         sec.className = 'ui-set';
-        sec.innerHTML = claudeRows({ ...MODELS_VIEW(govView(OK_TIERS, null).governed, OK_TIERS), fable: { applies: true, on, served: true } }).join('');
+        sec.innerHTML = governedRows(view).join('');
         root.append(sec);
         ui.hydrate(sec);
       }
+    }, { width: 560, ground: 'frame' }),
+    'governed mode, the Grok switch on and off beside Fable on (Settings > Models)': stage(['variant'], ({ root }) => {
+      for (const grokOn of [false, true]) {
+        const tiers = grokOn ? [...FABLE_TIERS, { name: 'grok', model: 'xai/grok-4.7' }] : FABLE_TIERS;
+        const view: ModelsView = { ...govView(tiers, null), heavy: [{ ...FABLE_CHOICE, on: true }, { ...GROK_CHOICE, applies: true, on: grokOn }] };
+        const sec = document.createElement('section');
+        sec.className = 'ui-set';
+        sec.innerHTML = governedRows(view).join('');
+        root.append(sec);
+        ui.hydrate(sec);
+      }
+    }, { width: 560, ground: 'frame' }),
+    'governed mode, an xAI key alone: unavailable until Grok is on (Settings > Models)': stage(['variant', 'error'], ({ root }) => {
+      const view: ModelsView = { ...govView([], 'no ladder is saved, and the only frontier model an xAI key reaches is Grok 4.7 or later, a heavy model that governed mode runs only when you turn it on. Turn on Grok below'), state: 'default', heavy: [{ ...FABLE_CHOICE, applies: false }, { ...GROK_CHOICE, applies: true }] };
+      const sec = document.createElement('section');
+      sec.className = 'ui-set';
+      sec.innerHTML = html.setHead({ id: 'lab-xai-h', label: 'Governed mode' }) + governedRows(view).join('');
+      root.append(sec);
+      ui.hydrate(sec);
     }, { width: 560, ground: 'frame' }),
     narrow: stage(['variant'], ({ root }) => { put(root, html.setRow({ label: 'When the sidebar collapses', hint: 'Rail keeps the icons', control: html.segmented({ mode: 'radio', size: 's', label: 'x', value: 'rail', options: [{ value: 'rail', label: 'Rail' }, { value: 'closed', label: 'Hide' }] }) })); ui.hydrate(root); }, { width: 300, ground: 'frame' })
   }

@@ -4,7 +4,7 @@ import { ui } from '@boopis/ui';
 import type { MenuEntry, SelectEntry, SelectOption } from '@boopis/ui';
 import type { CouncilSay, FrontierView, ModelChoice } from '../../data';
 import { COUNCIL_DESC, COUNCIL_KEYS, COUNCIL_VALUE } from './council';
-import { smartPick } from '../../data/smart';
+import { automaticTiers, smartPick } from '../../data/smart';
 import type { SmartInput } from '../../data/smart';
 
 export const SMART_VALUE = '__smart';
@@ -43,9 +43,9 @@ export function modelEntries(choices: readonly ModelChoice[], o: { current: stri
   ];
 }
 
-/** what Smart would pick for the text being typed, among the ladder's tiers; null when there is no ladder to choose from */
+/** what Smart would pick for the text being typed, among the ladder's tiers that are not heavy (Smart never picks one); null when there is nothing to choose from */
 export function smartPreview(choices: readonly ModelChoice[], input: SmartInput): { choice: ModelChoice; reason: string } | null {
-  const tiers = choices.filter((c) => c.tier !== undefined).sort((a, b) => (a.tier as number) - (b.tier as number));
+  const tiers = automaticTiers(choices.filter((c) => c.tier !== undefined).sort((a, b) => (a.tier as number) - (b.tier as number)), (c) => c);
   const p = smartPick(input, tiers.length);
   const choice = p ? tiers[p.index] : undefined;
   return p && choice ? { choice, reason: p.reason } : null;

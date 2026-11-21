@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { recentFailures, smartLevel, smartPick, tierFor } from './smart';
+import { automaticTiers, recentFailures, smartLevel, smartPick, tierFor } from './smart';
 
 const fence = (n: number): string => '```ts\n' + 'const x = 1;\n'.repeat(n) + '```';
 
@@ -54,5 +54,32 @@ describe('Smart: the tier', () => {
   it('counts failures among the last three turns', () => {
     expect(recentFailures([true, false, false, true, true])).toBe(2);
     expect(recentFailures([])).toBe(0);
+  });
+});
+
+describe('Smart never picks a heavy model (ADR-0037)', () => {
+  const P = 'claude-subscription-directsdk-experimental';
+  const tier = (provider: string, model: string): { provider: string; model: string } => ({ provider, model });
+  const of = (t: { provider: string; model: string }): { provider: string; model: string } => t;
+  const LADDER = [tier(P, 'opus'), tier(P, 'fable')];
+
+  it('leaves the heavy tiers out of what it chooses among, in order', () => {
+    expect(automaticTiers(LADDER, of)).toEqual([tier(P, 'opus')]);
+    expect(automaticTiers([tier('anthropic', 'claude-opus-5-5'), tier('anthropic', 'claude-fable-5-2'), tier('xai', 'grok-4.7'), tier('openai-codex', 'gpt-6.2-sol')], of).map((t) => t.model)).toEqual(['claude-opus-5-5', 'gpt-6.2-sol']);
+    expect(automaticTiers([tier(P, 'fable'), tier('xai', 'grok-4.7')], of)).toEqual([]);
+  });
+  it('whatever the message, the pick is never a heavy tier', () => {
+    const among = automaticTiers([tier(P, 'haiku'), tier(P, 'opus'), tier('xai', 'grok-4.7'), tier(P, 'fable')], of);
+    const texts = ['', 'hi', 'design the sync layer', 'debug this', 'refactor it', 'x '.repeat(900), 'a\n```\n' + 'l\n'.repeat(60) + '```', 'summarise'];
+    for (const text of texts) for (const failures of [0, 1, 2, 3]) for (const attachments of [0, 1, 5]) {
+      const p = smartPick({ text, failures, attachments }, among.length);
+      expect(p).not.toBeNull();
+      const picked = among[p?.index ?? -1];
+      expect(picked).toBeDefined();
+      expect(['fable', 'grok-4.7']).not.toContain(picked?.model);
+    }
+  });
+  it('nothing to choose from when every tier is heavy', () => {
+    expect(smartPick({ text: 'design it' }, automaticTiers([tier(P, 'fable')], of).length)).toBeNull();
   });
 });

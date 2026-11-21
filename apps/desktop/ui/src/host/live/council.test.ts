@@ -18,9 +18,25 @@ describe('who sits on a council by default', () => {
     expect(bestOf(['gemini-3.8-flash', 'gemini-3.8-pro'])).toBe('gemini-3.8-pro');
     expect(bestOf(['gpt-5', 'gpt-5.5'])).toBe('gpt-5.5');
   });
-  it('never picks fable on its own (it bills usage credits on a Pro plan), but keeps it when it is all there is', () => {
+  it('never picks a heavy model on its own, read from the frontier list\'s mark: Fable (usage credits on a Pro plan) and Grok 4.7 and later', () => {
     expect(bestOf(['claude-opus-5-5', 'claude-fable-5-2'])).toBe('claude-opus-5-5');
-    expect(bestOf(['claude-fable-5-2'])).toBe('claude-fable-5-2');
+    expect(bestOf(['claude-fable-5-2[1m]', 'claude-opus-5-5[1m]'])).toBe('claude-opus-5-5[1m]');
+    expect(bestOf(['fable', 'opus'], C), 'the alias is heavy under the subscription').toBe('opus');
+    expect(bestOf(['grok-4.7', 'grok-4.6'], 'xai')).toBe('grok-4.6');
+    expect(bestOf(['grok-4.8', 'grok-5'], 'xai'), 'later Groks are heavy too').toBeNull();
+    expect(bestOf(['claude-fable-5-2']), 'not even when it is all there is: the user adds it themselves').toBeNull();
+    expect(bestOf(['gpt-6.2-sol', 'gpt-6.2-astra']), 'the new frontier families are not heavy').not.toBeNull();
+    expect(bestOf(['gemini-4-neon', 'gemini-4-hydrogen'])).not.toBeNull();
+  });
+  it('a heavy model on the ladder (the user\'s own specification) is not a default member either', () => {
+    const withFable = [ch(C, 'opus', 0), ch(C, 'fable', 1), ch('xai', 'grok-4.7', 0), ch('xai', 'grok-4.6')];
+    expect(defaultMembers(withFable)).toEqual([{ provider: C, model: 'opus' }, { provider: 'xai', model: 'grok-4.6' }]);
+    expect(defaultMembers([ch('xai', 'grok-4.7')])).toEqual([]);
+  });
+  it('a model the user adds to a council stays allowed: the form\'s own choice is written as it is', () => {
+    const choice: CouncilChoice = { members: [{ provider: C, model: 'fable' }, { provider: 'xai', model: 'grok-4.7' }], combiner: { provider: C, model: 'fable' } };
+    expect(JSON.parse(presetWrites(choice, null)[0]?.[1] ?? '')).toEqual([{ provider: C, model: 'fable' }, { provider: 'xai', model: 'grok-4.7' }]);
+    expect(defaultChoice([ch(C, 'opus', 0), ch(C, 'fable', 1)], C + '/fable').combiner).toEqual({ provider: C, model: 'fable' });
   });
   it('one member per provider: the highest tier of the ladder where there is one, else the best', () => {
     expect(defaultMembers(CHOICES)).toEqual([{ provider: C, model: 'opus' }, { provider: 'openai-codex', model: 'gpt-6-luna' }, { provider: 'gemini', model: 'gemini-3.8-pro' }]);

@@ -19,7 +19,13 @@
    an attachment, a mentioned file or folder                     1       "an attachment"
    the last turn failed                                          1       "the last turn failed"
 
-   Nothing is guessed silently: a signal is a word, a length or a count, and each is named in the reason. */
+   Nothing is guessed silently: a signal is a word, a length or a count, and each is named in the reason.
+
+   Smart never picks a heavy model (ADR-0037: Claude Fable, Grok 4.7 and later; the mark is data, `data/frontier.ts`). A heavy
+   model on a ladder is there because the user put it there, as the tier a failed gate climbs to; the level is spread over the
+   tiers that are not heavy (`automaticTiers`), so level 2 is the strongest of those. A model the user picks in the menu or
+   mentions with "@" is theirs, not Smart's. */
+import { isHeavy } from './frontier';
 
 export interface SmartInput {
   text: string;
@@ -75,6 +81,11 @@ export function smartLevel(i: SmartInput): SmartPick {
 export function tierFor(level: SmartLevel, tiers: number): number {
   if (tiers <= 1) return 0;
   return Math.min(tiers - 1, Math.floor((level * (tiers - 1)) / 2));
+}
+
+/** the tiers Smart may choose among: the ladder without its heavy ones, in order (`of` says which provider and model a tier is) */
+export function automaticTiers<T>(tiers: readonly T[], of: (t: T) => { provider: string; model: string }): T[] {
+  return tiers.filter((t) => { const m = of(t); return !isHeavy(m.provider, m.model); });
 }
 
 /** the choice for a message: the tier index and the reason, or null when the ladder is empty (Smart has nothing to choose from) */

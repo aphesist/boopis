@@ -18,7 +18,7 @@ const OPTIONS = {
   ]
 };
 
-function setup(o: { governed?: boolean; ladder?: boolean; failSwitch?: boolean; model?: string; defaultMode?: string; frontier?: Json; hostGoverned?: Json } = {}) {
+function setup(o: { governed?: boolean; ladder?: boolean; tiers?: Json[]; failSwitch?: boolean; model?: string; defaultMode?: string; frontier?: Json; hostGoverned?: Json } = {}) {
   const calls: { method: string; params: Json }[] = [];
   const client = {
     async requestRaw(method: string, params: Json): Promise<unknown> {
@@ -28,7 +28,7 @@ function setup(o: { governed?: boolean; ladder?: boolean; failSwitch?: boolean; 
         case 'session.info': return { model: o.model ?? 'haiku', provider: P, cwd: '/w' };
         case 'config.set': if (o.failSwitch) throw new Error('no such model'); return { key: 'model', value: params['value'], confirm_required: false };
         case 'plugin.boopis.describe': return { session: { session_id: 'g1', mode: o.governed ? 'governed' : 'ungoverned', locked: false, cwd: '/w' }, config: { mode: o.defaultMode ?? 'ungoverned', cost_cap_usd: 2 }, ...(o.frontier ? { frontier: o.frontier } : {}) };
-        case 'plugin.boopis.cascade.state': return o.ladder === false ? { ladder: [], status: 'idle' } : { ladder: LADDER, status: 'idle' };
+        case 'plugin.boopis.cascade.state': return o.ladder === false ? { ladder: [], status: 'idle' } : { ladder: o.tiers ?? LADDER, status: 'idle' };
         case 'plugin.boopis.ledger.tail': return { events: [] };
         default: return {};
       }
@@ -129,6 +129,42 @@ describe('who answers next', () => {
   });
 });
 
+describe('Smart never picks a heavy model (ADR-0037)', () => {
+  const FABLE_TIER = { name: 'fable', model: { provider: P, id: 'fable' } };
+  const WITH_FABLE = [...LADDER, FABLE_TIER];
+  const MESSAGES = ['hello', 'rename this label', 'debug why the login test is flaky', 'design the sync layer', 'x '.repeat(900), 'a\n```\n' + 'l\n'.repeat(60) + '```'];
+
+  it('spreads its levels over the tiers that are not heavy: a ladder with Fable on top still starts on Opus at its highest', async () => {
+    const { d, calls } = await ready({ tiers: WITH_FABLE });
+    d.source.setGovernance({ smart: true });
+    const picked: string[] = [];
+    for (const text of MESSAGES) picked.push((await d.prepareSend('s1', text)).model);
+    expect(picked.length).toBe(MESSAGES.length);
+    expect(picked.every((v) => v.startsWith(P + '/') && !v.endsWith('/fable')), picked.join()).toBe(true);
+    expect(picked).toContain(P + '/opus');
+    expect(sets(calls).some((v) => v.startsWith('fable'))).toBe(false);
+  });
+  it('governed, the start tier is never the heavy one (a failed gate may still climb to it: that is the user\'s ladder)', async () => {
+    const { d, calls } = await ready({ governed: true, tiers: WITH_FABLE });
+    d.source.setGovernance({ smart: true });
+    for (const text of MESSAGES) await d.prepareSend('s1', text);
+    const starts = calls.filter((c) => c.method === 'plugin.boopis.cascade.start_tier').map((c) => c.params['start_tier']);
+    expect(starts.length).toBeGreaterThan(0);
+    expect(starts).not.toContain('fable');
+  });
+  it('the user\'s own pick of the heavy tier is theirs and is applied as it is', async () => {
+    const { d, calls } = await ready({ tiers: WITH_FABLE });
+    expect(d.source.setGovernance({ model: P + '/fable' })).toBeNull();
+    expect(await d.prepareSend('s1', 'hello')).toEqual({ model: P + '/fable', why: null });
+    expect(sets(calls)).toEqual(['fable --provider ' + P + ' --session']);
+  });
+  it('a ladder of heavy tiers alone gives Smart nothing to choose from, and it says so', async () => {
+    const { d } = await ready({ tiers: [FABLE_TIER] });
+    expect(d.source.setGovernance({ smart: true })).toMatch(/every tier of it is a heavy model/);
+    expect(d.source.governance.get().smart).toBe(false);
+  });
+});
+
 describe('who answers next, governed', () => {
   it('a pick on the ladder is where the ladder starts, and the plugin is told', async () => {
     const { d, calls } = await ready({ governed: true });
@@ -150,7 +186,7 @@ describe('who answers next, governed', () => {
 });
 
 describe('governed mode needs a frontier model (ADR-0037)', () => {
-  const SENTENCE = 'Claude Opus 5.5 or later, Claude Fable 5.2 or later, GPT-6.2 Astra or later and Gemini 4 Carbon or later';
+  const SENTENCE = 'Claude Opus 5.5 or later, Claude Fable 5.2 or later, GPT-6.2 Astra or later, GPT-6.2 Sol or later, Gemini 4 Carbon or later, Gemini 4 Neon or later, Gemini 4 Hydrogen or later and Grok 4.7 or later';
   const NO = { allowed: ['Claude Opus 5.5'], sentence: SENTENCE, available: false, why: 'Governed mode runs only on frontier models, and tier \'free\' runs nous/welcome, which is not one.' };
   const OK = { allowed: ['Claude Opus 5.5'], sentence: SENTENCE, available: true, why: null };
 

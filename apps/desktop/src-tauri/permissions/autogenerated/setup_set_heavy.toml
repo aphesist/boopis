@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-setup-set-heavy"
+description = "Enables the setup_set_heavy command without any pre-configured scope."
+commands.allow = ["setup_set_heavy"]
+
+[[permission]]
+identifier = "deny-setup-set-heavy"
+description = "Denies the setup_set_heavy command without any pre-configured scope."
+commands.deny = ["setup_set_heavy"]
