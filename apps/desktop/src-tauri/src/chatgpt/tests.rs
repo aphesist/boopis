@@ -18,8 +18,8 @@ use serde_json::{Value, json};
 
 use super::oauth::{self, Endpoints, Reply, Transport};
 use super::{
-    ACCESS, BASE_URL, Browser, ChatGpt, ChatgptSigninEvent, ID_TOKEN, REFRESH, REGISTRATION,
-    State, Timing, due,
+    ACCESS, BASE_URL, Browser, ChatGpt, ChatgptSigninEvent, ID_TOKEN, REFRESH, REGISTRATION, State,
+    Timing, due,
 };
 use crate::error::Error;
 use crate::secrets::SecretStore;
@@ -349,12 +349,7 @@ async fn a_first_sign_in_registers_boopis_and_keeps_what_is_checked_in_the_keych
             st.account.as_deref(),
             st.notice
         ),
-        (
-            State::SignedIn,
-            Some("pro"),
-            Some("ada@example.com"),
-            None
-        )
+        (State::SignedIn, Some("pro"), Some("ada@example.com"), None)
     );
 
     // the exchange: the issued client, the verifier that matches the challenge, the same redirect, the resource, no secret
@@ -838,30 +833,45 @@ fn signed_in_before_the_program(store: &MemoryStore, access_token: &str) {
 }
 
 #[tokio::test]
-async fn a_sign_in_from_before_the_program_is_signed_out_at_the_next_check_with_one_notice_and_no_call_to_openai() {
+async fn a_sign_in_from_before_the_program_is_signed_out_at_the_next_check_with_one_notice_and_no_call_to_openai()
+ {
     let r = rig();
     signed_in_before_the_program(&r.store, &access(3600));
     let st = r.svc.status().await.unwrap();
     assert_eq!(st.state, State::SignedOut);
     assert!(
-        st.notice.as_deref().unwrap().contains("Sign in with ChatGPT"),
+        st.notice
+            .as_deref()
+            .unwrap()
+            .contains("Sign in with ChatGPT"),
         "one plain notice that says why and offers Sign in"
     );
-    assert_eq!(kept(&r.store, ACCESS), None, "the tokens leave the keychain");
+    assert_eq!(
+        kept(&r.store, ACCESS),
+        None,
+        "the tokens leave the keychain"
+    );
     assert_eq!(kept(&r.store, REFRESH), None);
     assert!(!r.svc.signed_in().await.unwrap());
-    assert!(r.script.seen().is_empty(), "nothing renews it or ends it at OpenAI");
+    assert!(
+        r.script.seen().is_empty(),
+        "nothing renews it or ends it at OpenAI"
+    );
     assert_eq!(r.events.lock().unwrap()[0].outcome, "signed_out");
     // the notice stays until the person signs in, and says nothing else
     assert!(r.svc.status().await.unwrap().notice.is_some());
 }
 
 #[tokio::test]
-async fn the_cut_off_also_runs_at_launch_through_the_refresher_s_first_look_even_when_the_token_is_due() {
+async fn the_cut_off_also_runs_at_launch_through_the_refresher_s_first_look_even_when_the_token_is_due()
+ {
     let r = rig();
     signed_in_before_the_program(&r.store, &access(-5));
     assert!(!r.svc.refresh_if_due().await.unwrap());
-    assert!(r.script.seen().is_empty(), "no refresh goes to the old address");
+    assert!(
+        r.script.seen().is_empty(),
+        "no refresh goes to the old address"
+    );
     assert_eq!(kept(&r.store, ACCESS), None);
     assert_eq!(kept(&r.store, REFRESH), None);
 }

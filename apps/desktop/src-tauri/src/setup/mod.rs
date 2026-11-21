@@ -1043,8 +1043,9 @@ impl Setup {
                 grok: self.grok.as_ref(),
                 optins: state.optins(),
             };
-            state.choice =
-                Some(providers::connected_choice(self.ops.as_ref(), self.secrets.as_ref(), &pre).await);
+            state.choice = Some(
+                providers::connected_choice(self.ops.as_ref(), self.secrets.as_ref(), &pre).await,
+            );
         }
         let input = providers::Input {
             choice: state.choice.as_deref(),

@@ -3807,7 +3807,8 @@ async fn continue_reads_what_is_connected_and_writes_the_route_and_ladder_from_i
 }
 
 #[tokio::test]
-async fn continue_prefers_the_claude_login_over_the_other_labs_and_a_signed_out_one_is_not_connected() {
+async fn continue_prefers_the_claude_login_over_the_other_labs_and_a_signed_out_one_is_not_connected()
+ {
     let r = rig(json!({}));
     sign_in_to_chatgpt(&r);
     *r.fake.chatgpt_models.lock().unwrap() = vec!["gpt-6.2-sol".into()];
@@ -3816,14 +3817,28 @@ async fn continue_prefers_the_claude_login_over_the_other_labs_and_a_signed_out_
     let a = at_models(&r).await;
     assert_eq!(a.form.as_ref().unwrap().form_id, "setup.ladder");
     let s = setup
-        .advance(Some(answer("setup.ladder", json!({"choice": "connected"}), json!({}))), false)
+        .advance(
+            Some(answer(
+                "setup.ladder",
+                json!({"choice": "connected"}),
+                json!({}),
+            )),
+            false,
+        )
         .await
         .unwrap();
-    assert!(s.receipt.unwrap().lines.join("\n").contains("ChatGPT subscription"));
+    assert!(
+        s.receipt
+            .unwrap()
+            .lines
+            .join("\n")
+            .contains("ChatGPT subscription")
+    );
 }
 
 #[tokio::test]
-async fn do_it_later_is_the_free_choice_and_says_where_to_connect_when_the_free_tier_is_not_there() {
+async fn do_it_later_is_the_free_choice_and_says_where_to_connect_when_the_free_tier_is_not_there()
+{
     // the free tier is there
     let r = rig(json!({}));
     {
@@ -3849,7 +3864,13 @@ async fn do_it_later_is_the_free_choice_and_says_where_to_connect_when_the_free_
     let s = choose(&r, "later").await;
     assert!(s.done && s.form.is_none(), "{:?}", s.steps);
     assert_eq!(state_of(&s, "models"), StepState::Skipped);
-    assert!(s.receipt.unwrap().lines.join("\n").contains("Settings, Models"));
+    assert!(
+        s.receipt
+            .unwrap()
+            .lines
+            .join("\n")
+            .contains("Settings, Models")
+    );
     assert!(r.fake.config_get(LADDER).await.unwrap().is_none());
     // and it is not asked again
     let again = r.setup().advance(None, false).await.unwrap();
