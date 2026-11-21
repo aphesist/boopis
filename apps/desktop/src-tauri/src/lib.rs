@@ -16,6 +16,7 @@ mod engine_words;
 pub mod error;
 pub mod frame_rate;
 pub mod free_tier;
+pub mod frontier;
 pub mod gateway;
 pub mod gpu;
 pub mod hermes;
@@ -53,6 +54,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::setup_advance,
             commands::setup_reopen_models,
             commands::setup_models_view,
+            commands::setup_set_subscription_fable,
             commands::engine_source_get,
             commands::gateway_connect,
             commands::gateway_send,

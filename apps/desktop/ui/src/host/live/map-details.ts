@@ -1,7 +1,7 @@
 /* Pure mappings from gateway and plugin results to the details entities (`data/types.ts`). No state and no I/O, so each
    is tested against recorded frames. A value the sender did not give is `null`, empty or "unknown" (AGENTS.md
    invariant 5, ADR-0012): nothing here computes a cost (the plugin does, from tokens) or invents a name. */
-import type { Change, ContextUsage, Connector, DiffFile, Environment, GovernanceState, LedgerStats, RunSnapshot, Todo, TodoState } from '../../data/types';
+import type { Change, ContextUsage, Connector, DiffFile, Environment, FrontierView, GovernanceState, LedgerStats, RunSnapshot, Todo, TodoState } from '../../data/types';
 import { UNKNOWN_COST, dollars, kTokens } from './format';
 import type { BreakdownWire, CascadeWire, DescribeWire, DiffWire, InfoWire, InventoryWire, McpStatusWire, StatsWire, TodoWire, UsageWire } from './wire';
 
@@ -67,12 +67,26 @@ const tierRule = (i: number): string => (i === 0 ? 'first try' : 'after a failed
 export function ladderFrom(cascade: CascadeWire | null): ReadonlyArray<readonly [string, string]> {
   return (cascade?.ladder ?? []).map((t, i) => [tierLabel(t), tierRule(i)] as const);
 }
-export function governanceFrom(o: { describe: DescribeWire | null; cascade: CascadeWire | null; stats: StatsWire | null; model: string; governed: boolean; locked: boolean; smart?: boolean }): GovernanceState {
+/** what the host read of the saved ladder: whether governed mode can run on it (`models_view().governed`) */
+export interface HostGoverned { available: boolean; why?: string | null; sentence: string; allowed: readonly string[] }
+/** Whether governed mode can run (ADR-0037), from the plugin's word (the list, the ladder, the session's own model) and the host's (the
+    saved ladder, and whether the default ladder has a key). Null when neither said anything. Any "no" is a no, in the first reason found. */
+export function frontierFrom(plugin: DescribeWire['frontier'] | null | undefined, host: HostGoverned | null | undefined): FrontierView | null {
+  if (!plugin && !host) return null;
+  const sentence = plugin?.sentence ?? host?.sentence ?? '';
+  const allowed = plugin?.allowed ?? host?.allowed ?? [];
+  const sm = plugin?.session_model;
+  const why = (plugin && !plugin.available ? plugin.why : null) ?? (sm && !sm.frontier ? sm.why : null) ?? (host && !host.available ? host.why : null);
+  const no = (plugin ? !plugin.available : false) || (sm ? !sm.frontier : false) || (host ? !host.available : false);
+  return { available: !no, why: why ?? '', sentence, allowed };
+}
+export function governanceFrom(o: { describe: DescribeWire | null; cascade: CascadeWire | null; stats: StatsWire | null; model: string; governed: boolean; locked: boolean; smart?: boolean; frontier?: FrontierView | null }): GovernanceState {
   const cap = o.describe?.config?.cost_cap_usd;
   const cost = o.stats?.cost_usd;
   return {
     governed: o.governed, smart: o.smart === true, model: o.model, cap: cap == null ? '' : dollars(cap), spent: cost == null ? '' : dollars(cost),
-    ladder: ladderFrom(o.cascade), current: Math.max(0, o.cascade?.tier_index ?? 0), locked: o.locked
+    ladder: ladderFrom(o.cascade), current: Math.max(0, o.cascade?.tier_index ?? 0), locked: o.locked,
+    ...(o.frontier && !o.frontier.available ? { frontier: o.frontier } : {})
   };
 }
 export function ledgerFrom(stats: StatsWire | null): LedgerStats {

@@ -113,7 +113,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     return c;
   };
   const bind = (c: Convo, gwId: string): void => { c.gwId = gwId; byGw.set(gwId, c.uiId); };
-  const details = createDetails({ client, ...(hasHostDialogs() ? { hostLadder: async () => { const v = await loadModelsView(); return v.state === 'set' ? tiersFromHost(v.tiers) : []; } } : {}), ...(opts.connectors ? { connectors: opts.connectors } : hasHostDialogs() ? { connectors: tauriConnectorActions() } : {}), now: () => now().getTime(), gwId: (id) => convos.get(id)?.gwId ?? (id.startsWith('new-') ? null : id), onRefreshed: (id) => { const c = convos.get(id); if (c) syncBlanks(c); } });
+  const details = createDetails({ client, ...(hasHostDialogs() ? { hostLadder: async () => { const v = await loadModelsView(); return v.state === 'set' ? tiersFromHost(v.tiers) : []; }, hostGoverned: async () => (await loadModelsView()).governed } : {}), ...(opts.connectors ? { connectors: opts.connectors } : hasHostDialogs() ? { connectors: tauriConnectorActions() } : {}), now: () => now().getTime(), gwId: (id) => convos.get(id)?.gwId ?? (id.startsWith('new-') ? null : id), onRefreshed: (id) => { const c = convos.get(id); if (c) syncBlanks(c); } });
   const councilHost = createCouncil({ client, gwId: (id) => convos.get(id)?.gwId ?? null, context: (id) => details.councilContext(id) });
   /* Claude Code mods: what a session's mods draw (`mod.*` events) and the answers sent back; one `ModSession` per session */
   const modsHost = createModsHost({ client, uiOf: (gw) => byGw.get(gw), gwOf: (id) => convos.get(id)?.gwId ?? null });

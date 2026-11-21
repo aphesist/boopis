@@ -31,6 +31,8 @@ export const commands = {
 	 *  the UI asks itself (`free_tier.status`).
 	 */
 	setupModelsView: (profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<ModelsView_Serialize>("setup_models_view", { profile }, options),
+	/**  Opt in to Fable on the Claude subscription ladder, or out (Settings > Models). Returns the models view as it is after. */
+	setupSetSubscriptionFable: (on: boolean, profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<ModelsView_Serialize>("setup_set_subscription_fable", { on, profile }, options),
 	/**
 	 *  Which engine this run uses (the bundled one or the machine's), so the first-run screen says what setup is about to
 	 *  do. Read-only: the choice is `boopis --engine existing` or `BOOPIS_HERMES`, never a setting (ADR-0031).
@@ -752,6 +754,16 @@ export type EngineView = {
 	carries_runtime: boolean,
 };
 
+/**  The Fable opt-in on the Claude subscription ladder (Settings > Models). */
+export type FableChoice = {
+	/**  The saved ladder is the Claude subscription's, so the choice means something. */
+	applies: boolean,
+	/**  Fable is on the saved ladder now. */
+	on: boolean,
+	/**  The user's Claude Code serves Fable (it needs 2.1.321). */
+	served: boolean,
+};
+
 /**  A file being dragged over the window, or dropped on it. */
 export type FileDragEvent = FileDragEvent_Serialize | FileDragEvent_Deserialize;
 
@@ -938,6 +950,43 @@ export type GatewayState =
 "stopped" | 
 /**  Hermes is installed but too old or otherwise not usable. */
 "incompatible";
+
+/**  Whether governed mode can run with what is saved, and the models it allows. */
+export type GovernedView = GovernedView_Serialize | GovernedView_Deserialize;
+
+/**  Whether governed mode can run with what is saved, and the models it allows. */
+export type GovernedView_Deserialize = {
+	/**  The allowed models, one per family (`Claude Opus 5.5`); each also qualifies in any later version. */
+	allowed: string[],
+	/**  The allowed models as one sentence. */
+	sentence: string,
+	/**  The saved ladder's tiers, each marked; empty unless the ladder is saved. */
+	tiers: TierCheck[],
+	/**
+	 *  Whether governed mode can run: every saved tier is frontier, or no ladder is saved and an Anthropic key is in place
+	 *  (the plugin's own ladder is Opus then Fable).
+	 */
+	available: boolean,
+	/**  Why not, in one plain sentence; `None` when it can. */
+	why?: string | null,
+};
+
+/**  Whether governed mode can run with what is saved, and the models it allows. */
+export type GovernedView_Serialize = {
+	/**  The allowed models, one per family (`Claude Opus 5.5`); each also qualifies in any later version. */
+	allowed: string[],
+	/**  The allowed models as one sentence. */
+	sentence: string,
+	/**  The saved ladder's tiers, each marked; empty unless the ladder is saved. */
+	tiers: TierCheck[],
+	/**
+	 *  Whether governed mode can run: every saved tier is frontier, or no ladder is saved and an Anthropic key is in place
+	 *  (the plugin's own ladder is Opus then Fable).
+	 */
+	available: boolean,
+	/**  Why not, in one plain sentence; `None` when it can. */
+	why: string | null,
+};
 
 /**  One graphics device, as `/sys/class/drm` reports it. */
 export type Gpu = Gpu_Serialize | Gpu_Deserialize;
@@ -1191,6 +1240,10 @@ export type ModelsView_Deserialize = {
 	chatgpt?: ChatgptStatus_Deserialize | null,
 	/**  Whether a Gemini key is in place (the keychain, or the profile's `.env` by name). */
 	gemini_key: boolean,
+	/**  Whether governed mode can run on what is saved, and which models it allows (ADR-0037). */
+	governed: GovernedView_Deserialize,
+	/**  The Fable opt-in on the Claude subscription ladder: whether it applies, is on, and whether Claude Code serves Fable. */
+	fable: FableChoice,
 };
 
 /**  What Settings > Models shows of the configuration (read-only). */
@@ -1210,6 +1263,10 @@ export type ModelsView_Serialize = {
 	chatgpt: ChatgptStatus_Serialize | null,
 	/**  Whether a Gemini key is in place (the keychain, or the profile's `.env` by name). */
 	gemini_key: boolean,
+	/**  Whether governed mode can run on what is saved, and which models it allows (ADR-0037). */
+	governed: GovernedView_Serialize,
+	/**  The Fable opt-in on the Claude subscription ladder: whether it applies, is on, and whether Claude Code serves Fable. */
+	fable: FableChoice,
 };
 
 /**
@@ -1634,6 +1691,16 @@ export type Step_Serialize = {
 	detail: string,
 	/**  A stable `hx.setup.*` code when blocked. */
 	code: string | null,
+};
+
+/**  One tier of the saved ladder with whether governed mode may use it (ADR-0037). */
+export type TierCheck = {
+	/**  The tier's name. */
+	name: string,
+	/**  The model it runs, `provider/id`. */
+	model: string,
+	/**  Whether it is a frontier model. */
+	frontier: boolean,
 };
 
 /**  Where the loaded `libwebkit2gtk` lives. */

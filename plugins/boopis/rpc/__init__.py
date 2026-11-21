@@ -93,10 +93,14 @@ def describe(params: Mapping[str, Any], *, session_id: str | None = None, **_: A
     session: dict[str, Any] | None = None
     sid = params.get("session_id") or session_id
     ladder_errors: list[str] = []
+    ladder_now = None
+    now_state = None
     if isinstance(sid, str) and sid:
         state = rt.state(sid)
         session = {"session_id": sid, "mode": state.mode, "locked": state.locked, "cwd": state.cwd or None}
         ladder_errors = _ladder_errors(rt, state)
+        ladder_now = _effective_ladder(rt, state)
+        now_state = state
     return {
         "session": session,
         "version": PLUGIN_VERSION,
@@ -110,7 +114,33 @@ def describe(params: Mapping[str, Any], *, session_id: str | None = None, **_: A
             "errors": list(loaded.errors),
             "ladder_errors": ladder_errors,
         },
+        "frontier": _frontier(rt, loaded.value, now_state, ladder_now),
     }
+
+
+def _effective_ladder(rt: Any, state: Any) -> Any:
+    try:
+        return rt.ladder_of(state)
+    except (ValueError, KeyError):
+        return None
+
+
+def _frontier(rt: Any, settings: Any, state: Any, ladder: Any) -> dict[str, Any]:
+    """``frontier`` (ADR-0037): the models governed mode allows, whether the ladder (the session's, else the configured
+    one) is all frontier, and, for a session that has begun, whether its own model is."""
+    from ..governance.frontier import session_refusal, view
+    from ..governance.ladder import resolve_ladder
+
+    if ladder is None:
+        try:
+            ladder = resolve_ladder(settings.ladder)
+        except (ValueError, KeyError):
+            ladder = None
+    out = view(ladder.tiers if ladder is not None else ())
+    if state is not None and state.model:
+        why = session_refusal(state.provider, state.model)
+        out["session_model"] = {"provider": state.provider, "model": state.model, "frontier": why is None, "why": why}
+    return out
 
 
 def _ladder_errors(rt: Any, state: Any) -> list[str]:

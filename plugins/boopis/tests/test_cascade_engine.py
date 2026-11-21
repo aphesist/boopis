@@ -24,8 +24,8 @@ SID = "orch-1"
 LADDER = {
     "same_tier_scope_retry": True,
     "tiers": [
-        {"name": "cheap", "model": "main/model-a", "effort": "low"},
-        {"name": "strong", "model": "second/model-b", "effort": "high"},
+        {"name": "cheap", "model": "main/claude-opus-5-5", "effort": "low"},
+        {"name": "strong", "model": "second/claude-fable-5-2", "effort": "high"},
     ],
 }
 BRIEF = "scope: calc.py\ngoal: make add add\nChange add in calc.py.\ntest: rm -rf /"
@@ -89,7 +89,9 @@ def setup(home: Path, project: Path) -> Setup:
         redactor=lambda text: text,  # a fake redactor: no hx here, and unredacted text is never written otherwise
     )
     hooks.install(rt)
-    hooks.system_prompt_section({"session_id": SID, "cwd": str(project), "model": "orch", "provider": "main"})
+    hooks.system_prompt_section(
+        {"session_id": SID, "cwd": str(project), "model": "claude-opus-5-5", "provider": "main"}
+    )
     state = rt.lock(SID, cwd=str(project))
     state.project = ProjectConfig(ProjectSettings(gate_command="python -m unittest", gate_timeout_s=20), "trusted")
     return Setup(rt, ctx, state)
@@ -109,18 +111,23 @@ def test_dispatch_starts_a_task_on_the_first_tier_and_ignores_the_briefs_test_li
     (route,) = setup.payloads("route.decided")
     assert (route["tier"], route["action"], route["decision"], route["propensities"]) == (
         "cheap",
-        "model-a",
+        "claude-opus-5-5",
         "initial",
-        {"model-a": 1.0},
+        {"claude-opus-5-5": 1.0},
     )
     (launch,) = setup.ctx.hermes.launched
-    assert launch["route"] == {"provider": "main", "model": "model-a", "reasoning_effort": "low", "label": "cheap"}
+    assert launch["route"] == {
+        "provider": "main",
+        "model": "claude-opus-5-5",
+        "reasoning_effort": "low",
+        "label": "cheap",
+    }
     assert "scope: calc.py" in launch["context"]
     assert "rm -rf" not in launch["context"]
     assert setup.ctx.dispatched[0][0] == "delegate_task"
     assert set(setup.ctx.dispatched[0][2]) == {"parent_agent"}
     (claim,) = setup.payloads("task.claimed")
-    assert claim["worker"] == "worker:main/model-a"
+    assert claim["worker"] == "worker:main/claude-opus-5-5"
 
 
 @pytest.mark.parametrize(
@@ -179,7 +186,7 @@ def test_a_block_makes_the_plugin_launch_the_next_tier_with_the_findings(setup: 
     setup.dispatch()
     setup.decide("child-1", "block")
     first, second = setup.ctx.hermes.launched
-    assert second["route"]["model"] == "model-b"
+    assert second["route"]["model"] == "claude-fable-5-2"
     assert second["route"]["provider"] == "second"
     assert "## Previous attempt failed" in second["context"]
     assert "AssertionError: 6 != 5" in second["context"]
@@ -197,13 +204,13 @@ def test_a_pass_ends_the_task_and_the_orchestrator_is_told_once(setup: Setup) ->
     setup.decide("child-2", "pass", "T0.visible_tests")
     assert len(setup.ctx.hermes.launched) == 2  # nothing is launched after a pass
     (scored,) = setup.payloads("outcome.scored")
-    assert (scored["solved"], scored["model"], scored["gate_passed"]) == (True, "model-b", True)
+    assert (scored["solved"], scored["model"], scored["gate_passed"]) == (True, "claude-fable-5-2", True)
     assert scored["evidence"]["source"] == "project gate"
-    told = hooks.pre_llm_call(session_id=SID, model="orch", user_message="[ASYNC DELEGATION BATCH COMPLETE]")
+    told = hooks.pre_llm_call(session_id=SID, model="claude-opus-5-5", user_message="[ASYNC DELEGATION BATCH COMPLETE]")
     assert told is not None
     assert "PASSED at tier 2 of 2 (strong)" in told["context"]
     assert "attempt 1, tier cheap: blocked by T0.visible_tests" in told["context"]
-    assert hooks.pre_llm_call(session_id=SID, model="orch", user_message="thanks") is None  # told once
+    assert hooks.pre_llm_call(session_id=SID, model="claude-opus-5-5", user_message="thanks") is None  # told once
     assert _cascade_state(setup)["status"] == "passed"
     assert setup.rt.ledger(setup.state).verify()[0] is True
 
@@ -215,7 +222,7 @@ def test_the_ladder_spent_ends_the_task_failed(setup: Setup) -> None:
     assert len(setup.ctx.hermes.launched) == 2
     (scored,) = setup.payloads("outcome.scored")
     assert scored["solved"] is False
-    told = hooks.pre_llm_call(session_id=SID, model="orch", user_message="x")
+    told = hooks.pre_llm_call(session_id=SID, model="claude-opus-5-5", user_message="x")
     assert told is not None
     assert "FAILED after the last tier, tier 2 of 2 (strong)" in told["context"]
     assert "Do not retry it yourself" in told["context"]
@@ -255,30 +262,34 @@ def test_a_launch_that_fails_ends_the_task_without_inventing_a_verdict(setup: Se
     assert out["status"] == "failed"
     assert "depth limit" in out["reason"]
     assert setup.payloads("outcome.scored") == []  # nothing was scored
-    told = hooks.pre_llm_call(session_id=SID, model="orch", user_message="x")
+    told = hooks.pre_llm_call(session_id=SID, model="claude-opus-5-5", user_message="x")
     assert told is not None
     assert "before a gate could decide" in told["context"]
 
 
 def test_the_cost_cap_stops_a_tier_that_would_be_bought_over_it(home: Path, project: Path) -> None:
     ctx = FakeCtx({"ladder": LADDER, "cost_cap_usd": 1.0, "prices": {"overrides": {
-        "main/model-a": {"input": 1000.0, "output": 1000.0}, "second/model-b": {"input": 1000.0, "output": 1000.0},
+        "main/claude-opus-5-5": {"input": 1000.0, "output": 1000.0}, "second/claude-fable-5-2": {"input": 1000.0, "output": 1000.0},
     }}}, cwd=str(project))  # fmt: skip
     bind(ctx)
     rt = Runtime(ctx, home=home, provider_known=lambda _p: True, delegation_backend=lambda: "boopis",
                  active_parent=object, redactor=lambda text: text)  # fmt: skip
     hooks.install(rt)
-    hooks.system_prompt_section({"session_id": SID, "cwd": str(project), "model": "orch", "provider": "main"})
+    hooks.system_prompt_section(
+        {"session_id": SID, "cwd": str(project), "model": "claude-opus-5-5", "provider": "main"}
+    )
     state = rt.lock(SID, cwd=str(project))
     state.project = ProjectConfig(ProjectSettings(gate_command="x"), "trusted")
     s = Setup(rt, ctx, state)
     assert s.dispatch()["status"] == "dispatched"
-    hooks.post_api_request(session_id="child-1", provider="main", model="model-a", usage=HERMES_USAGE)  # 0.11 + 0.01
+    hooks.post_api_request(
+        session_id="child-1", provider="main", model="claude-opus-5-5", usage=HERMES_USAGE
+    )  # 0.11 + 0.01
     state.spend_usd = 2.0  # the worker's spend counts: the cap is the session's
     s.decide("child-1", "block")
     assert len(ctx.hermes.launched) == 1  # the stronger tier was not bought
     assert s.payloads("budget.blocked")[0]["cap_usd"] == 1.0
-    told = hooks.pre_llm_call(session_id=SID, model="orch", user_message="x")
+    told = hooks.pre_llm_call(session_id=SID, model="claude-opus-5-5", user_message="x")
     assert told is not None
     assert told.get("action") == "block"  # the capped orchestrator turn is blocked by the cap itself, as ever
 
@@ -288,9 +299,11 @@ def test_the_cost_cap_stops_a_tier_that_would_be_bought_over_it(home: Path, proj
 
 def test_a_workers_usage_and_calls_go_to_the_parents_ledger_tagged(setup: Setup) -> None:
     setup.dispatch()
-    hooks.post_api_request(session_id="child-1", provider="main", model="model-a", usage=HERMES_USAGE, api_duration=0.5)
+    hooks.post_api_request(
+        session_id="child-1", provider="main", model="claude-opus-5-5", usage=HERMES_USAGE, api_duration=0.5
+    )
     (usage,) = [e for e in setup.ledger() if e["type"] == "usage.recorded"]
-    assert usage["actor"] == "worker:main/model-a"
+    assert usage["actor"] == "worker:main/claude-opus-5-5"
     p = usage["payload"]
     assert (p["role"], p["tier"], p["attempt"], p["task_id"]) == (
         "worker",
@@ -337,8 +350,8 @@ def test_the_policy_by_role_and_the_end_of_an_attempt(setup: Setup) -> None:
 
 def test_a_worker_must_run_on_the_tiers_model(setup: Setup) -> None:
     setup.dispatch()
-    assert hooks.pre_llm_call(session_id="child-1", model="model-a") is None
-    got = hooks.pre_llm_call(session_id="child-1", model="orch")
+    assert hooks.pre_llm_call(session_id="child-1", model="claude-opus-5-5") is None
+    got = hooks.pre_llm_call(session_id="child-1", model="claude-fable-5-2")
     assert got is not None
     assert got["action"] == "block"
     assert "a tier is the plugin's choice" in got["message"]
@@ -347,11 +360,13 @@ def test_a_worker_must_run_on_the_tiers_model(setup: Setup) -> None:
 def test_an_interim_completion_is_answered_without_a_model_call(setup: Setup) -> None:
     setup.dispatch()
     setup.decide("child-1", "block")  # tier 2 is now running
-    veto = hooks.pre_llm_call(session_id=SID, model="orch", user_message="[ASYNC DELEGATION BATCH COMPLETE - d]")
+    veto = hooks.pre_llm_call(
+        session_id=SID, model="claude-opus-5-5", user_message="[ASYNC DELEGATION BATCH COMPLETE - d]"
+    )
     assert veto is not None
     assert veto["action"] == "block"
     assert "strong" in veto["message"]
-    note = hooks.pre_llm_call(session_id=SID, model="orch", user_message="how is it going?")
+    note = hooks.pre_llm_call(session_id=SID, model="claude-opus-5-5", user_message="how is it going?")
     assert note is not None
     assert "still running" in note["context"]
 
@@ -384,7 +399,7 @@ def test_route_task_reads_the_tier_from_the_ledger_and_ignores_what_the_model_as
         route = tier_route(setup.rt)
     finally:
         CURRENT.reset(token)
-    assert route["model"] == "model-b"
+    assert route["model"] == "claude-fable-5-2"
 
 
 def test_route_task_refuses_a_task_nobody_launched(setup: Setup) -> None:
@@ -408,7 +423,7 @@ def test_the_provider_declares_no_task_parameters_so_hermes_refuses_a_requested_
         route = provider.route_task({"goal": "g", "tier": "strong", "model": "opus"}, {"model": "elsewhere"})
     finally:
         CURRENT.reset(token)
-    assert route["model"] == "model-a"  # the plugin's tier, not the one asked for
+    assert route["model"] == "claude-opus-5-5"  # the plugin's tier, not the one asked for
 
 
 def _status(setup: Setup) -> str:

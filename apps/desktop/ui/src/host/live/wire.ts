@@ -24,6 +24,12 @@ export interface DescribeWire {
   session?: { session_id: string; mode: 'governed' | 'ungoverned'; locked: boolean; cwd: string | null } | null;
   version?: string; capabilities?: string[]; hx?: { version?: string } | null; kernel?: { ok?: boolean } | null;
   config?: { mode?: 'governed' | 'ungoverned'; cost_cap_usd?: number | null };
+  /** the frontier list, whether the ladder is all frontier, and, for a session that has begun, whether its own model is (ADR-0037) */
+  frontier?: {
+    allowed: string[]; sentence: string; available: boolean; why: string | null;
+    tiers?: { tier: string; provider: string; model: string; frontier: boolean }[];
+    session_model?: { provider: string; model: string; frontier: boolean; why: string | null };
+  };
 }
 export interface DiffWire {
   files?: { path: string; status?: string; add: number; del: number; binary?: boolean; truncated?: boolean; hunks: { header: string; lines: string[] }[] }[];

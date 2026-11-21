@@ -176,6 +176,11 @@ def pre_llm_call(**kw: Any) -> dict[str, Any] | None:
             return {"context": turns.CONTEXT}
         if state.mode != "governed":
             return None
+        from .governance.frontier import session_refusal
+
+        refused = session_refusal(state.provider, state.model)  # ADR-0037: the orchestrator is frontier too
+        if refused is not None:
+            return _block(refused)
         from .governance.lifecycle import turn_directive
 
         return turn_directive(rt, state, str(kw.get("user_message") or ""))

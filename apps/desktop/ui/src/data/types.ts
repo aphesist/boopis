@@ -369,7 +369,20 @@ export interface Connector {
   hint?: string;
 }
 export interface Environment { cwd: string; branch: string; sandbox: string; runtime: string; harness: string; gate: string }
+/** whether governed mode can run, and the models it allows (ADR-0037): the plugin's list, read from `describe`, and the host's read of
+ *  the saved ladder. Absent means nothing is known to stop it. */
+export interface FrontierView {
+  available: boolean;
+  /** one plain sentence when it is not available: which model, and why */
+  why: string;
+  /** the allowed models as one sentence: "Claude Opus 5.5 or later, ..." */
+  sentence: string;
+  /** one per family, for a list: "Claude Opus 5.5" */
+  allowed: readonly string[];
+}
 export interface GovernanceState {
+  /** governed mode can only run on frontier models; set when it cannot run at all (no frontier model is set up) */
+  frontier?: FrontierView;
   governed: boolean; smart: boolean; model: string; cap: string; spent: string;
   /** the model ladder: [model, when it is used] */
   ladder: ReadonlyArray<readonly [model: string, rule: string]>;

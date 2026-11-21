@@ -26,6 +26,7 @@ pub enum Consent {
 /// Everything setup remembers between calls.
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
 #[serde(default)]
+#[allow(clippy::struct_excessive_bools)] // one flag per once-per-install check, as the file always had
 pub struct State {
     /// The schema version.
     pub schema_version: u32,
@@ -50,6 +51,12 @@ pub struct State {
     /// session with no default model cannot be read back by the engine). Added without a version bump: a file from
     /// before has none, so the check runs once on the first start of this build.
     pub route_checked: bool,
+    /// The saved ladder was checked for frontier models once (ADR-0037): one that setup wrote with tiers governed mode will not
+    /// use is rewritten, and a hand-written one is only reported. Added without a version bump, like `route_checked`.
+    pub frontier_checked: bool,
+    /// The user opted in to climbing to Fable on the Claude subscription (Settings > Models): Fable bills usage credits from the
+    /// first request on a Pro plan, so the ladder setup writes is Opus alone until this is set (ADR-0037).
+    pub subscription_fable: bool,
 }
 
 /// Where the file lives.

@@ -20,8 +20,8 @@ def ladder(*tiers: str, scope_retry: bool = True, retries: int = 0) -> Any:
 
 def test_the_default_is_contraprovas_measured_claude_ladder_as_data() -> None:
     default = resolve_ladder(None)
-    assert default.names == ("haiku", "sonnet", "opus")
-    assert [t.model.provider for t in default.tiers] == ["anthropic"] * 3
+    assert default.names == ("opus", "fable")
+    assert [t.model.provider for t in default.tiers] == ["anthropic"] * 2
     assert default.same_tier_scope_retry is True
     again = resolve_ladder(default.to_dict())  # it round-trips as plain data
     assert again == default
@@ -29,23 +29,26 @@ def test_the_default_is_contraprovas_measured_claude_ladder_as_data() -> None:
 
 
 def test_a_ladder_that_hermes_can_run_has_no_problems() -> None:
-    assert ladder_problems(ladder("main/a", "second/b"), lambda p: p in ("main", "second")) == []
+    assert (
+        ladder_problems(ladder("main/claude-opus-5-5", "second/claude-fable-5-2"), lambda p: p in ("main", "second"))
+        == []
+    )
 
 
 @pytest.mark.parametrize("provider", ["custom", "auto"])
 def test_a_tier_must_name_a_provider_not_hermes_pick(provider: str) -> None:
-    (problem,) = ladder_problems(ladder(f"{provider}/m"), lambda _p: True)
+    (problem,) = ladder_problems(ladder(f"{provider}/claude-opus-5-5"), lambda _p: True)
     assert "named provider" in problem
     assert "'t0'" in problem
 
 
 def test_a_provider_hermes_does_not_know_is_refused_with_the_tier_that_names_it() -> None:
-    problems = ladder_problems(ladder("main/a", "ghost/b"), lambda p: p == "main")
+    problems = ladder_problems(ladder("main/claude-opus-5-5", "ghost/claude-fable-5-2"), lambda p: p == "main")
     assert problems == ["tier 't1' names the provider 'ghost', which is not configured"]
 
 
 def test_start_tier_must_name_a_tier() -> None:
-    lad = ladder("main/a", "main/b")
+    lad = ladder("main/claude-opus-5-5", "main/claude-fable-5-2")
     assert ladder_problems(lad, lambda _p: True, "t1") == []
     assert "start_tier 'nope'" in ladder_problems(lad, lambda _p: True, "nope")[0]
     assert start_index(lad, "t1") == 1
@@ -60,10 +63,12 @@ def test_settings_reject_a_start_tier_that_is_not_in_the_configured_ladder() -> 
 
 
 def test_max_attempts_counts_tries_retries_and_one_scope_retry_per_tier() -> None:
-    assert max_attempts(ladder("p/a", "p/b", "p/c")) == 6
-    assert max_attempts(ladder("p/a", "p/b", "p/c", scope_retry=False)) == 3
-    assert max_attempts(ladder("p/a", "p/b", retries=1)) == 2 * 2 + 2
-    assert max_attempts(ladder("p/a", "p/b", "p/c"), first=1) == 4  # a start tier skips the cheaper ones
+    assert max_attempts(ladder("p/claude-opus-5-5", "p/claude-fable-5-2", "p/gpt-6.2-astra")) == 6
+    assert max_attempts(ladder("p/claude-opus-5-5", "p/claude-fable-5-2", "p/gpt-6.2-astra", scope_retry=False)) == 3
+    assert max_attempts(ladder("p/claude-opus-5-5", "p/claude-fable-5-2", retries=1)) == 2 * 2 + 2
+    assert (
+        max_attempts(ladder("p/claude-opus-5-5", "p/claude-fable-5-2", "p/gpt-6.2-astra"), first=1) == 4
+    )  # a start tier skips the cheaper ones
 
 
 def test_forks_are_a_flag_that_defaults_off() -> None:

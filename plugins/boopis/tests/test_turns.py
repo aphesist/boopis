@@ -14,13 +14,15 @@ from support import FakeCtx
 
 SID = "local-turns-1"
 MakeRuntime = Callable[..., tuple[Runtime, FakeCtx]]
+# a governed session's own model must be frontier (ADR-0037), so the orchestrator here is one
+ORCH, ORCH_PROVIDER = "claude-opus-5-5", "anthropic"
 USAGE = {"input_tokens": 10, "output_tokens": 5, "cache_read_tokens": 0, "reasoning_tokens": 0}
 
 
 def opened(rt: Runtime, ctx: FakeCtx, mode: str = "governed") -> None:
     rpc.mode_set({"session_id": SID, "mode": mode})
-    hooks.system_prompt_section({"session_id": SID, "model": "m", "provider": "p", "cwd": ctx.cwd})
-    hooks.on_session_start(session_id=SID, model="m")
+    hooks.system_prompt_section({"session_id": SID, "model": ORCH, "provider": ORCH_PROVIDER, "cwd": ctx.cwd})
+    hooks.on_session_start(session_id=SID, model=ORCH)
 
 
 def turn(provider: str = "p", model: str = "m", turn_id: str = "t1", text: str = "do it") -> Any:
@@ -49,7 +51,7 @@ def test_an_armed_governed_session_runs_its_next_turn_ungoverned_and_is_governed
     opened(rt, ctx)
     assert rpc.mode_once({"session_id": SID}) == {"armed": True}
     assert rt.state(SID).mode == "governed" and rt.state(SID).effective_mode == "governed"  # armed is not active yet
-    out = hooks.pre_llm_call(session_id=SID, model="m", user_message="@opus fix", turn_id="t1")
+    out = hooks.pre_llm_call(session_id=SID, model=ORCH, user_message="@opus fix", turn_id="t1")
     assert out is not None and "answered directly" in out["context"]
     state = rt.state(SID)
     assert state.mode == "governed" and state.effective_mode == "ungoverned"
@@ -57,7 +59,7 @@ def test_an_armed_governed_session_runs_its_next_turn_ungoverned_and_is_governed
     hooks.on_session_end(session_id=SID, completed=True, failed=False, interrupted=False)
     assert state.effective_mode == "governed"
     assert judged(rt, "dispatch") != "block"
-    out = hooks.pre_llm_call(session_id=SID, model="m", user_message="next", turn_id="t2")
+    out = hooks.pre_llm_call(session_id=SID, model=ORCH, user_message="next", turn_id="t2")
     assert out is None and state.effective_mode == "governed"  # the next message is governed again
     first, second = changes(rt)
     assert (first["from"], first["to"], first["scope"], first["gate"], first["cascade"]) == (
@@ -84,19 +86,19 @@ def test_the_exception_ends_with_the_turn_whatever_happens(
     rt, ctx = make_runtime()
     opened(rt, ctx)
     rpc.mode_once({"session_id": SID})
-    hooks.pre_llm_call(session_id=SID, model="m", user_message="x", turn_id="t1")
+    hooks.pre_llm_call(session_id=SID, model=ORCH, user_message="x", turn_id="t1")
     hooks.on_session_end(session_id=SID, **kw)
     assert rt.state(SID).effective_mode == "governed"
     assert changes(rt)[-1]["reason"] == reason
-    assert hooks.pre_llm_call(session_id=SID, model="m", user_message="y", turn_id="t2") is None
+    assert hooks.pre_llm_call(session_id=SID, model=ORCH, user_message="y", turn_id="t2") is None
 
 
 def test_a_missed_turn_end_is_closed_by_the_next_turn(make_runtime: MakeRuntime) -> None:
     rt, ctx = make_runtime()
     opened(rt, ctx)
     rpc.mode_once({"session_id": SID})
-    hooks.pre_llm_call(session_id=SID, model="m", user_message="x", turn_id="t1")
-    hooks.pre_llm_call(session_id=SID, model="m", user_message="y", turn_id="t2")  # no end was heard of
+    hooks.pre_llm_call(session_id=SID, model=ORCH, user_message="x", turn_id="t1")
+    hooks.pre_llm_call(session_id=SID, model=ORCH, user_message="y", turn_id="t2")  # no end was heard of
     assert rt.state(SID).effective_mode == "governed"
     assert [c["reason"] for c in changes(rt)] == ["armed", "lost"]
 
@@ -110,11 +112,11 @@ def test_an_armed_session_that_sends_nothing_lapses_and_can_be_withdrawn(
     monkeypatch.setattr(turns.time, "monotonic", lambda: clock[0])
     rpc.mode_once({"session_id": SID})
     clock[0] += turns.ONCE_TTL_S + 1
-    assert hooks.pre_llm_call(session_id=SID, model="m", user_message="x", turn_id="t1") is None
+    assert hooks.pre_llm_call(session_id=SID, model=ORCH, user_message="x", turn_id="t1") is None
     assert changes(rt) == []
     rpc.mode_once({"session_id": SID})
     assert rpc.mode_once({"session_id": SID, "armed": False}) == {"armed": False}  # the send failed: withdrawn
-    assert hooks.pre_llm_call(session_id=SID, model="m", user_message="y", turn_id="t2") is None
+    assert hooks.pre_llm_call(session_id=SID, model=ORCH, user_message="y", turn_id="t2") is None
     assert changes(rt) == []
 
 
@@ -122,7 +124,7 @@ def test_an_ungoverned_session_has_nothing_to_suspend(make_runtime: MakeRuntime)
     rt, ctx = make_runtime()
     opened(rt, ctx, "ungoverned")
     assert rpc.mode_once({"session_id": SID}) == {"armed": False}
-    assert hooks.pre_llm_call(session_id=SID, model="m", user_message="x", turn_id="t1") is None
+    assert hooks.pre_llm_call(session_id=SID, model=ORCH, user_message="x", turn_id="t1") is None
     assert changes(rt) == []
 
 
@@ -130,7 +132,7 @@ def test_a_workers_turn_end_does_not_end_the_exception(make_runtime: MakeRuntime
     rt, ctx = make_runtime()
     opened(rt, ctx)
     rpc.mode_once({"session_id": SID})
-    hooks.pre_llm_call(session_id=SID, model="m", user_message="x", turn_id="t1")
+    hooks.pre_llm_call(session_id=SID, model=ORCH, user_message="x", turn_id="t1")
     from boopis.governance.links import WorkerLink
 
     rt.links["child-1"] = WorkerLink(

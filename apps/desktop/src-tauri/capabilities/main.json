@@ -14,6 +14,7 @@
     "allow-setup-check",
     "allow-setup-advance",
     "allow-setup-reopen-models",
+    "allow-setup-set-subscription-fable",
     "allow-setup-models-view",
     "allow-engine-source-get",
     "allow-gateway-connect",
