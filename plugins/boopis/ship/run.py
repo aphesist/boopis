@@ -87,7 +87,7 @@ def _run(rt: Runtime, state: SessionState, args: Mapping[str, Any], worker: Work
     project = state.project
     gate_on = state.gate_enabled is not False
     command_text = project.settings.gate_command if project else None
-    if state.mode == "governed" and gate_on and not command_text:
+    if state.effective_mode == "governed" and gate_on and not command_text:
         return out.refused(
             "governed mode needs the project's gate command, and none is configured and trusted "
             "(gate.command in .hermes/boopis.yaml, approved by the user). Nothing was written."

@@ -12,7 +12,7 @@ import hashlib
 from collections.abc import Mapping
 from typing import Any
 
-from . import budget, policy
+from . import budget, policy, turns
 from .hermes_api import bound
 from .ledger import project_costs, usage_event_payload
 from .policy import ToolCall
@@ -168,8 +168,13 @@ def pre_llm_call(**kw: Any) -> dict[str, Any] | None:
             return _worker_turn(rt, rt.caller(session_id), str(kw.get("model") or ""))
         state = _locked(rt, session_id, model=str(kw.get("model") or ""))
         capped = _cost_cap(rt, state, state.provider, state.model)
-        if capped is not None or state.mode != "governed":
+        if capped is not None:
+            state.track.armed_at = None  # a blocked turn does not use the exception
             return capped
+        if turns.begin(rt, state, str(kw.get("turn_id") or "")):
+            return {"context": turns.CONTEXT}
+        if state.mode != "governed":
+            return None
         from .governance.lifecycle import turn_directive
 
         return turn_directive(rt, state, str(kw.get("user_message") or ""))
@@ -263,6 +268,11 @@ def _record_usage(kw: Mapping[str, Any], *, auxiliary: bool) -> None:
     caller = rt.caller(str(kw.get("session_id") or ""))
     state = caller.state
     provider, model = str(kw.get("provider") or ""), str(kw.get("model") or "")
+    if not auxiliary:
+        link = caller.link
+        turns.note_call(
+            state, provider=provider, model=model, worker=turns.ref(link.provider, link.model) if link else ""
+        )
     if not auxiliary and not caller.worker:  # a side call (a title, a compression) is not the session's model
         state.provider, state.model = provider or state.provider, model or state.model
     subscription = provider in state.settings.subscription_providers
@@ -277,6 +287,8 @@ def _record_usage(kw: Mapping[str, Any], *, auxiliary: bool) -> None:
     if payload is None:
         return
     payload |= _tags(caller)
+    if kw.get("turn_id"):
+        payload["turn_id"] = str(kw["turn_id"])
     payload["role"] = "auxiliary" if auxiliary else ("worker" if caller.worker else "orchestrator")
     if auxiliary and kw.get("aux_task"):
         payload["aux_task"] = str(kw["aux_task"])
@@ -316,6 +328,19 @@ def on_session_start(**kw: Any) -> None:
             _locked(rt, session_id, model=str(kw.get("model") or ""))
     except Exception:  # noqa: BLE001
         _log.error("session open not recorded", exc_info=True)
+
+
+def on_session_end(**kw: Any) -> None:
+    """A turn ended (completed, failed or interrupted): a message that ran outside governed mode is governed again."""
+    try:
+        rt = runtime()
+        session_id = str(kw.get("session_id") or "")
+        if rt.is_worker(session_id):
+            return
+        reason = "interrupted" if kw.get("interrupted") else "failed" if kw.get("failed") else "completed"
+        turns.end(rt, rt.state(session_id), reason)
+    except Exception:  # noqa: BLE001
+        _log.error("the end of a turn was not recorded", exc_info=True)
 
 
 def on_session_finalize(**kw: Any) -> None:

@@ -11,7 +11,8 @@ import type { ComposerEl, DecisionDetail, AssumptionDetail, DictateDetail } from
 import { data } from '../../data';
 import type { Attached, GovernanceState } from '../../data';
 import { costAssume, kindOf, makeReader, optionsFor } from './feedforward';
-import { FOOT_GOVERNED, FOOT_UNGOVERNED, SMART_VALUE, currentChoice, modelEntries, smartPreview } from './model-menu';
+import { FOOT_GOVERNED, FOOT_MENTION, FOOT_MENTION_GOVERNED, FOOT_UNGOVERNED, REMOVE_MENTION, SMART_VALUE, currentChoice, mentionEntries, modelEntries, smartPreview } from './model-menu';
+import { findMentions, mentionName, routeMentions } from '../../data/mentions';
 
 export { SMART_VALUE };
 const gov = (): GovernanceState => data().details.governance.get();
@@ -36,10 +37,21 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
   const g0 = gov();
   const govChip = ui.chip({ label: 'Governed', icon: 'ladder', pressed: g0.governed });
   const model = ui.chip({ model: g0.model, haspopup: 'menu', expanded: false, class: 'ui-chip--who' });
+  /* "@": a mention names the model that answers this message only (ADR-0036). It is drawn as a chip in the text (a mark of kind
+     'mention'), and the assumptions row says what it does. The words are read by `data/mentions.ts`, the same as the send. */
+  const called = (m: string): string => ui.modelMark.called(m);
+  const choicesNow = () => data().details.choices.get();
+  const mentionMarks = (t: string): Array<{ text: string; kind: string; confirmed: boolean; at: number }> => findMentions(t, choicesNow(), called).map((m) => ({ text: m.text, kind: 'mention', confirmed: true, at: m.start }));
+  function mentionHint(t: string): Array<{ label: string; kind: string; text: string }> | null {
+    const r = routeMentions(t, choicesNow(), called);
+    if (r.kind !== 'one') return null;
+    const who = mentionName(r.choice, called);
+    return [{ label: '>to ' + who + ' only' + (gov().governed ? ', ungoverned' : ''), kind: 'mention', text: '' }];
+  }
   const c = ui.composer({
     placeholder: 'Describe the change', label: 'Message the coding agent', value: opts.draft,
     chips: [govChip, model], spend: { spent: g0.spent, cap: g0.cap },
-    hint: (t) => (t ? reader.items(t) : []), feedforward: (t) => reader.marks(t)
+    hint: (t) => (t ? mentionHint(t) ?? reader.items(t) : []), feedforward: (t) => [...mentionMarks(t), ...reader.marks(t)]
   }) as SessionComposer;
   govChip.setAttribute('aria-keyshortcuts', 'Alt+G'); model.setAttribute('aria-keyshortcuts', 'Alt+M Alt+S');
   const span = (n: HTMLElement): HTMLElement => n.querySelector('span') as HTMLElement;
@@ -69,7 +81,49 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
     model.setAttribute('aria-label', label + ', who answers next' + (G.smart ? (prev ? ' (Smart would pick it for this message: ' + prev.reason + ')' : ' (Smart picks for each message)') : ''));
     model.setAttribute('data-tip', G.smart ? 'Smart picks the model for each message' + (prev ? ': ' + prev.reason : '') : 'Who answers next'); model.setAttribute('data-kbd', 'alt+M');
   }
-  c.input.addEventListener('input', () => { if (gov().smart) drawModel(gov()); });
+  c.input.addEventListener('input', (e) => {
+    if (gov().smart) drawModel(gov());
+    if ((e as InputEvent).data === '@' && atWordStart()) requestAnimationFrame(() => openMentionMenu(null));
+  });
+  /* the "@" just typed starts a word: not the middle of an address or a file mention */
+  function atWordStart(): boolean {
+    const s = getSelection(); const n = s?.anchorNode;
+    if (!s || !n || !c.input.contains(n) || n.nodeType !== 3) return false;
+    const before = (n.textContent ?? '').slice(0, s.anchorOffset - 1);
+    return before === '' || /\s$/.test(before);
+  }
+  /* the "@" menu: every model the user can pick (the "who answers next" list, without Smart). Picking one writes its name after the
+     "@" (a new mention), or replaces the mention clicked (`over`); the chip is drawn from the text. */
+  /* the menu opens above the composer's box. The layer marks its anchor expanded, which a text box may not carry, so the anchor is a quiet
+     button-shaped layer over the box (never focused, never in the reading order) */
+  function mentionAnchor(): HTMLElement {
+    let a = c.querySelector<HTMLElement>('.ss-mention-anchor');
+    if (!a) { a = document.createElement('span'); a.className = 'ss-mention-anchor'; a.setAttribute('role', 'combobox'); a.setAttribute('aria-hidden', 'true'); a.setAttribute('aria-label', 'Answer this message with'); c.querySelector('.ui-composer__box')?.append(a); }
+    return a;
+  }
+  function openMentionMenu(over: HTMLElement | null): void {
+    const G = gov(), choices = choicesNow();
+    const entries = mentionEntries(choices, { current: G.model, governed: G.governed, removable: !!over });
+    /* the caret is where the "@" is, which is not always the end: it is put back, not moved to the end */
+    const sel = getSelection(), saved = sel && sel.rangeCount && c.input.contains(sel.anchorNode) ? sel.getRangeAt(0).cloneRange() : null;
+    const back = (): void => { c.input.focus(); if (saved) { const s2 = getSelection(); s2?.removeAllRanges(); s2?.addRange(saved); } };
+    ui.listbox.open(mentionAnchor(), entries, {
+      place: 'above', label: 'Answer this message with', foot: G.governed ? FOOT_MENTION_GOVERNED : FOOT_MENTION,
+      onClose: back,
+      onSelect: (v) => {
+        requestAnimationFrame(() => {
+          const pick = choices.find((x) => x.value === v);
+          if (over) {
+            const text = c.value, old = over.textContent ?? '', at = text.indexOf(old);
+            if (at < 0) return;
+            c.setValue(text.slice(0, at) + (v === REMOVE_MENTION || !pick ? '' : '@' + mentionName(pick, called)) + text.slice(at + old.length));
+            c.focus(); return;
+          }
+          if (pick) { back(); document.execCommand('insertText', false, mentionName(pick, called) + ' '); }
+        });
+      }
+    });
+  }
   govChip.addEventListener('ui:change', (e) => { e.preventDefault(); setGovernance({ governed: !gov().governed }); c.flashHint(); });
 
   function openModel(viaKeyboard: boolean): void {
@@ -89,7 +143,7 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
 
   /* a dashed word, or an assumption: what it is read as */
   function openReading(anchor: HTMLElement, kind: string | undefined, text: string): void {
-    if (kind === 'preview') return;
+    if (kind === 'preview' || kind === 'mention') return;
     if (kind === 'governance' || !text || !kind) {
       ui.menu.open(anchor, [{ title: 'Governance' }, { label: 'Governed', value: 'on', checked: gov().governed, desc: 'Start cheap, climb on failure' }, { label: 'Ungoverned', value: 'off', checked: !gov().governed, desc: 'One pinned model, no cap' }], { place: 'above', onSelect: (v) => setGovernance({ governed: v === 'on' }) });
       return;
@@ -98,11 +152,11 @@ export function sessionComposer(opts: { draft: string; sessionId: () => string }
     const items = [{ title: k.title + ' "' + text + '"' }, ...optionsFor(k, text).map((o) => ({ label: o.label, value: o.value, desc: o.desc, mono: !!o.mono, checked: o.value === r.value })), { foot: 'Dashed: my guess. Solid: your choice.' }];
     ui.menu.open(anchor, items, { place: 'above', label: 'How to read ' + text, onSelect: (v) => { r.value = v; r.confirmed = true; c.refresh(); c.flashHint(); requestAnimationFrame(() => c.focus()); } });
   }
-  c.addEventListener('ui:decision', (e) => { const d = (e as CustomEvent<DecisionDetail>).detail; openReading(d.el, d.kind, d.text); });
+  c.addEventListener('ui:decision', (e) => { const d = (e as CustomEvent<DecisionDetail>).detail; if (d.kind === 'mention') openMentionMenu(d.el); else openReading(d.el, d.kind, d.text); });
   c.addEventListener('ui:assumption', (e) => { const d = (e as CustomEvent<AssumptionDetail>).detail; if (d.item) openReading(d.el, d.item.kind, d.item.text); });
   c.addEventListener('ui:assumption-drop', (e) => {
     const it = (e as CustomEvent<{ item?: { kind: string; text: string; label: string } }>).detail.item; if (!it) return;
-    if (it.kind === 'governance') return;
+    if (it.kind === 'governance' || it.kind === 'mention') return;
     if (it.text) reader.reading(it.kind, it.text).dropped = true;
     ui.announce('Dropped ' + it.label);
   });

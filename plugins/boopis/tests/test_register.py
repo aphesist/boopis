@@ -49,6 +49,9 @@ def test_register_wires_hooks_rpc_and_the_prompt_section() -> None:
     own = {
         "describe",
         "mode.set",
+        "mode.once",
+        "turns.bind",
+        "turns.models",
         "ledger.tail",
         "ledger.verify",
         "ledger.stats",

@@ -21,6 +21,9 @@ Handler = Callable[..., Any]
 CAPABILITIES = (
     "describe",
     "mode.set",
+    "mode.once",
+    "turns.bind",
+    "turns.models",
     "ledger.tail",
     "ledger.verify",
     "ledger.stats",
@@ -164,6 +167,40 @@ def mode_set(params: Mapping[str, Any], *, session_id: str | None = None, **_: A
     return {}
 
 
+def mode_once(params: Mapping[str, Any], *, session_id: str | None = None, **_: Any) -> dict[str, Any]:
+    """``mode.once``: the next message of a governed session runs outside governed mode, for that turn only (the owner's
+    "@ ... can turn off governed mode for that message"). The mode and toolsets are fixed at the first prompt and stay
+    fixed: this arms one turn (``turns.py``). It resets itself when the turn ends, however it ends, and lapses if no
+    turn starts within two minutes. ``armed: false`` withdraws it (the message could not be sent). Answers whether the
+    session is armed: an ungoverned session has no governance to suspend, so it answers ``armed: false``."""
+    from .. import turns
+
+    sid = _session_id(params, session_id)
+    armed = params.get("armed", True)
+    if not isinstance(armed, bool):
+        raise InvalidParamsError("armed must be a boolean", data={"found": repr(armed)})
+    rt = runtime()
+    return {"armed": turns.arm(rt, rt.state(sid), armed)}
+
+
+def turns_bind(params: Mapping[str, Any], *, session_id: str | None = None, **_: Any) -> dict[str, Any]:
+    """``turns.bind``: the turn that just completed was stored as these rows (``message.complete.persisted_turn``), so
+    the model that answered survives a resume. ``{recorded: false}`` when the plugin saw no model request for it."""
+    from .. import turns
+
+    rt = runtime()
+    return turns.bind(rt, rt.state(_session_id(params, session_id)), params)
+
+
+def turns_models(params: Mapping[str, Any], *, session_id: str | None = None, **_: Any) -> dict[str, Any]:
+    """``turns.models``: the recorded turns of the session, oldest first: ``{model, route, ungoverned, user_row_id,
+    row_ids}``, ``model`` as ``provider/model``. A turn that is not listed is unknown."""
+    from .. import turns
+
+    rt = runtime()
+    return turns.models(rt, rt.state(_session_id(params, session_id)))
+
+
 def ledger_tail(params: Mapping[str, Any], *, session_id: str | None = None, **_: Any) -> dict[str, Any]:
     sid = _session_id(params, session_id)
     since = _int(params, "since_seq", -1)
@@ -245,6 +282,9 @@ def handlers() -> dict[str, Handler]:
         "form.list": form_list,
         "describe": describe,
         "mode.set": mode_set,
+        "mode.once": mode_once,
+        "turns.bind": turns_bind,
+        "turns.models": turns_models,
         "ledger.tail": ledger_tail,
         "ledger.verify": ledger_verify,
         "ledger.stats": ledger_stats,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { TranscriptMessage } from '../vendor/hermes-shared/gateway-contract.generated';
 import type { AgentTurn, UserTurn } from '../data/types';
+import { bookFrom } from './live/attribution';
 import { approvalToWait, choiceFor, elapsed, failedStep, paragraphs, reduceLedger, sessionRowToSummary, toolStep, transcriptToTurns, whenLabel } from './map';
 import { recorded } from './testing';
 
@@ -60,18 +61,18 @@ describe('the stored transcript', () => {
     { role: 'user', text: 'thanks' }
   ];
   it('is a user turn, then one finished agent turn made of everything until the next user message', () => {
-    const turns = transcriptToTurns(rows, 'fake-a', 's:');
+    const turns = transcriptToTurns(rows, 's:');
     expect(turns.map((t) => t.role)).toEqual(['user', 'assistant', 'user']);
     expect((turns[0] as UserTurn).at).toBe('09:05');
     const a = turns[1] as AgentTurn;
     expect(a.status).toBe('done');
     expect(a.steps).toEqual([{ title: 'grep', mono: true, meta: ['prorate'], time: '' }]);
     expect(a.paragraphs).toEqual(['Looking.', 'Done.', 'Tests pass.']);
-    expect(a.model).toBe('fake-a');
+    expect(a.model).toBe('');   /* nothing recorded who answered: unknown, not the session's current model */
     expect(a.cost).toBe('');
     expect(new Set(turns.map((t) => t.id)).size).toBe(3);
   });
-  it('an empty transcript is no turns', () => { expect(transcriptToTurns([], '', 's:')).toEqual([]); });
+  it('an empty transcript is no turns', () => { expect(transcriptToTurns([], 's:')).toEqual([]); });
 });
 
 describe('approvals, from recorded frames', () => {
@@ -100,5 +101,41 @@ describe('the ledger', () => {
     t = reduceLedger(t, { type: 'gate.decided', payload: {} });
     t = reduceLedger(t, { type: 'usage.recorded', payload: { input_tokens: 1, output_tokens: 1 } });
     expect(t).toEqual({ tokens: 117, trips: 2 });
+  });
+});
+
+describe('transcriptToTurns: who answered each turn', () => {
+  const P = 'claude-subscription-directsdk-experimental';
+  const rows: TranscriptMessage[] = [
+    { role: 'user', row_id: 1, text: 'one' }, { role: 'assistant', row_id: 2, text: 'A' },
+    { role: 'user', row_id: 3, text: '[Model switched to gpt-6-luna via provider openai-codex. From this point forward ...]', display_kind: 'model_switch' },
+    { role: 'user', row_id: 4, text: 'two' }, { role: 'tool', row_id: 5, name: 'pack' }, { role: 'assistant', row_id: 6, text: 'B' },
+    { role: 'user', row_id: 7, text: 'three' }, { role: 'assistant', row_id: 8, text: 'C' },
+    { role: 'user', row_id: 9, text: 'four' }, { role: 'assistant', row_id: 10, text: 'D' }
+  ];
+  const book = bookFrom({ turns: [
+    { model: P + '/haiku', route: [], ungoverned: false, user_row_id: 1, row_ids: [1, 2] },
+    { model: 'openai-codex/gpt-6-luna', route: [], ungoverned: true, user_row_id: 4, row_ids: [4, 5, 6] },
+    { model: P + '/orch', route: [P + '/haiku', P + '/sonnet'], ungoverned: false, user_row_id: 7, row_ids: [7, 8] }
+  ] });
+  const agents = (): AgentTurn[] => transcriptToTurns(rows, 's:', book).filter((t): t is AgentTurn => t.role === 'assistant');
+  it('each past turn has its own recorded model; a governed turn keeps its tier route', () => {
+    const [a, b, c] = agents();
+    expect(a?.model).toBe(P + '/haiku');
+    expect(b?.model).toBe('openai-codex/gpt-6-luna');
+    expect(c?.model).toBe(P + '/haiku → ' + P + '/sonnet');
+  });
+  it('a turn with no record is unknown, and the ungoverned one says so', () => {
+    const t = agents();
+    expect(t[3]?.model).toBe('');
+    expect(t.map((x) => x.ungoverned === true)).toEqual([false, true, false, false]);
+  });
+  it('the engine\'s own "[Model switched to ...]" row is not a turn', () => {
+    const turns = transcriptToTurns(rows, 's:', book);
+    expect(turns.filter((t) => t.role === 'user').map((t) => (t as UserTurn).text)).toEqual(['one', 'two', 'three', 'four']);
+  });
+  it('a book that is not a list, or has no models, is empty', () => {
+    expect(bookFrom(null).size).toBe(0);
+    expect(bookFrom({ turns: [{ model: '', row_ids: [1] }, { row_ids: 'x' }] }).size).toBe(0);
   });
 });

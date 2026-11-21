@@ -27,12 +27,15 @@ export interface SessionModel {
   appliedTier: string | null;
   /** the model that answered the last turn, as the engine reported it (`usage.model` of `message.complete`) */
   answered: string | null;
+  /** a message went to one model only (an "@" mention): the model the session answers with by default, which the engine puts back
+   *  after that turn; the engine's reports in between name the mentioned model and are not the session's. Cleared by the next send. */
+  once: { default: string } | null;
 }
 export function newModel(): SessionModel {
   return {
     todos: [], todoRevision: -1, usage: null, breakdown: null, info: null, output: [], steps: 0, running: false, stopped: false, turnStartedAt: null, turnEndedAt: null, title: '', started: false,
     stats: null, cascade: null, describe: null, diff: null, inventory: null, blanks: [], wantGoverned: null, wantModel: null,
-    smart: false, history: [], turnFailed: false, appliedModel: null, appliedTier: null, answered: null
+    smart: false, history: [], turnFailed: false, appliedModel: null, appliedTier: null, answered: null, once: null
   };
 }
 
