@@ -806,3 +806,197 @@ fn req_url(name: &str, url: &str, auth: &str) -> Request {
             .collect(),
     }
 }
+
+// ---------------------------------------------------------------- the store's connector path (docs/STORE.md 5.5 step 7)
+
+struct StoreHost {
+    engine: Arc<Engine>,
+    backend: Arc<boopis_host::store::backend::GatewayBackend>,
+}
+
+impl boopis_host::store::backend::Host for StoreHost {
+    fn bot(&self, profile: Option<String>) -> Result<String> {
+        Ok(profile.unwrap_or_else(|| "default".into()))
+    }
+    fn connectors(&self, _bot: &str) -> Result<Arc<Engine>> {
+        Ok(self.engine.clone())
+    }
+    fn backend(&self, _bot: &str) -> Result<Arc<dyn boopis_host::store::backend::Backend>> {
+        Ok(self.backend.clone())
+    }
+}
+
+#[allow(clippy::cast_possible_truncation)] // a test archive of a few small files
+fn crc32(data: &[u8]) -> u32 {
+    let mut c = !0u32;
+    for b in data {
+        c ^= u32::from(*b);
+        for _ in 0..8 {
+            c = if c & 1 == 1 {
+                0xEDB8_8320 ^ (c >> 1)
+            } else {
+                c >> 1
+            };
+        }
+    }
+    !c
+}
+
+/// A zip of stored entries: enough for an MCP bundle.
+#[allow(clippy::cast_possible_truncation)] // a few small files
+fn zip_of(entries: &[(&str, &[u8])]) -> Vec<u8> {
+    let (mut out, mut central) = (Vec::new(), Vec::new());
+    for (name, data) in entries {
+        let (off, crc) = (out.len() as u32, crc32(data));
+        for (buf, local) in [(&mut out, true), (&mut central, false)] {
+            buf.extend_from_slice(
+                &(if local {
+                    0x0403_4b50u32
+                } else {
+                    0x0201_4b50u32
+                })
+                .to_le_bytes(),
+            );
+            if !local {
+                buf.extend_from_slice(&[20, 3]);
+            }
+            buf.extend_from_slice(&[20, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+            buf.extend_from_slice(&crc.to_le_bytes());
+            buf.extend_from_slice(&(data.len() as u32).to_le_bytes());
+            buf.extend_from_slice(&(data.len() as u32).to_le_bytes());
+            buf.extend_from_slice(&(name.len() as u16).to_le_bytes());
+            if local {
+                buf.extend_from_slice(&0u16.to_le_bytes());
+                buf.extend_from_slice(name.as_bytes());
+                buf.extend_from_slice(data);
+            } else {
+                buf.extend_from_slice(&[0u8; 8]);
+                buf.extend_from_slice(&(0o100_644u32 << 16).to_le_bytes());
+                buf.extend_from_slice(&off.to_le_bytes());
+                buf.extend_from_slice(name.as_bytes());
+            }
+        }
+    }
+    let cd = out.len() as u32;
+    out.extend_from_slice(&central);
+    out.extend_from_slice(&0x0605_4b50u32.to_le_bytes());
+    out.extend_from_slice(&[0, 0, 0, 0]);
+    out.extend_from_slice(&(entries.len() as u16).to_le_bytes());
+    out.extend_from_slice(&(entries.len() as u16).to_le_bytes());
+    out.extend_from_slice(&(central.len() as u32).to_le_bytes());
+    out.extend_from_slice(&cd.to_le_bytes());
+    out.extend_from_slice(&0u16.to_le_bytes());
+    out
+}
+
+/// A bundle of the stdio test server goes through the store (a local file as the source), is installed by the connector
+/// engine of a real Hermes, and the governed allowlist is written, read back by Hermes as a list, and removed with the server.
+/// What this does not show: a governed session's `exec` calling the server. That needs a session with the fake model and the
+/// plugin's kernel (`tests/e2e/test_exec_worker_e2e.py` is the pattern); the engine's own gate for it is
+/// `plugins.entries.boopis.mcp_allowlist`, which is what is asserted here.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_bundle_installed_through_the_store_is_allowed_for_governed_exec_by_a_real_hermes() {
+    let Some(r) = rig().await else {
+        eprintln!(
+            "skipped: set HX_E2E_HERMES_ENV to the spike install to run the store's connector path against a real Hermes"
+        );
+        return;
+    };
+    let server = std::fs::read(&r.script).unwrap();
+    let manifest = serde_json::json!({
+        "manifest_version": "0.3", "name": "storefake", "display_name": "Store fake", "version": "1.0.0",
+        "description": "A stdio test server.", "author": {"name": "boopis tests"},
+        "server": {"type": "python", "entry_point": "server.py",
+                   "mcp_config": {"command": "python3", "args": ["${__dirname}/server.py", "--no-op"]}}
+    });
+    let bundle = r.scratch.path().join("storefake.mcpb");
+    std::fs::write(
+        &bundle,
+        zip_of(&[
+            ("manifest.json", manifest.to_string().as_bytes()),
+            ("server.py", &server),
+        ]),
+    )
+    .unwrap();
+
+    let ops = GatewayMcp::new(r.sup.clone(), r.hermes_home.clone());
+    let host = StoreHost {
+        engine: Arc::new(Engine::new(
+            Arc::new(ops),
+            r.keys.clone(),
+            Arc::new(NoBrowser),
+            Limits::default(),
+        )),
+        backend: Arc::new(boopis_host::store::backend::GatewayBackend::new(
+            r.sup.clone(),
+            r.hermes_home.clone(),
+        )),
+    };
+    let store = boopis_host::store::Store::new(
+        &r.scratch.path().join("store"),
+        Limits::default(),
+        Arc::new(boopis_host::store::net::Https::new(
+            &Limits::default().store,
+        )),
+        Arc::new(host),
+    )
+    .unwrap();
+    let source = store
+        .source_add(None, Some(bundle.to_string_lossy().into_owned()), None)
+        .await
+        .expect("the bundle is a source");
+    let item = format!("{}:storefake", source.id);
+    let staged = store.stage(&item, None).await.expect("stages");
+    assert_eq!(staged.files, 2);
+    let plan = store
+        .plan(&staged.stage_id, None, None)
+        .await
+        .expect("plans");
+    assert!(
+        plan.consent.iter().any(|c| c.runs_code),
+        "a bundle runs code, so the card needs a hold"
+    );
+    let receipt = store
+        .install(
+            boopis_host::store::types::InstallRequest {
+                stage_id: staged.stage_id,
+                plan_hash: plan.plan_hash,
+                secrets: None,
+                restart: None,
+            },
+            None,
+            false,
+        )
+        .await
+        .unwrap_or_else(|e| panic!("installs: {e}\n{}", logs_tail(&r)));
+    assert!(receipt.steps.iter().all(|s| s.ok), "{:?}", receipt.steps);
+
+    let test = r.engine.test("storefake").await.expect("Hermes tests it");
+    assert!(
+        test.ok && test.tools.iter().any(|t| t.name == "echo"),
+        "{test:?}"
+    );
+    let ops = GatewayMcp::new(r.sup.clone(), r.hermes_home.clone());
+    let listed = ops
+        .config_get(boopis_host::connectors::GOVERNED_ALLOWLIST)
+        .await
+        .unwrap()
+        .expect("Hermes holds the allowlist");
+    assert_eq!(
+        listed,
+        serde_json::json!(["storefake"]),
+        "Hermes reads it back as a list: {}",
+        config_text(&r)
+    );
+
+    store.uninstall(&item, false, None).await.expect("removes");
+    assert!(
+        ops.config_get(boopis_host::connectors::GOVERNED_ALLOWLIST)
+            .await
+            .unwrap()
+            .is_none(),
+        "the allowlist goes with its last server: {}",
+        config_text(&r)
+    );
+    assert!(r.engine.test("storefake").await.is_err());
+}

@@ -366,6 +366,7 @@ pub struct FileWrite {
     pub path: String,
     pub purpose: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[specta(type = Option<f64>)]
     pub bytes: Option<u64>,
 }
 
@@ -680,6 +681,7 @@ pub struct StageResult {
     pub pinned: Pin,
     pub tree_sha256: Option<String>,
     pub files: u32,
+    #[specta(type = f64)]
     pub bytes: u64,
     pub scan: Scan,
     pub expires_at: String,

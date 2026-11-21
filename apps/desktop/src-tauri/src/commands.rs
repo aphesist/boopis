@@ -70,6 +70,8 @@ pub struct AppState {
     pub carries_runtime: bool,
     /// boopis's own ChatGPT sign-in (ADR-0030).
     pub chatgpt: Arc<crate::chatgpt::ChatGpt>,
+    /// The store: catalogue, sources, staging and installs (ADR-0038).
+    pub store: Arc<crate::store::Store>,
     /// The connector engine of each profile home, kept so a sign-in started by one command can be cancelled by another.
     pub connectors: std::sync::Mutex<std::collections::HashMap<std::path::PathBuf, Arc<Engine>>>,
 }
@@ -116,7 +118,7 @@ fn settings(app: &AppHandle) -> Result<AppSettings> {
     AppSettings::migrate(store.get("app").as_ref())
 }
 
-fn profile_of(app: &AppHandle, asked: Option<String>) -> Result<Option<String>> {
+pub(crate) fn profile_of(app: &AppHandle, asked: Option<String>) -> Result<Option<String>> {
     Ok(asked.or(settings(app)?.profile))
 }
 
@@ -698,7 +700,7 @@ impl Opener for AppOpener {
     }
 }
 
-fn connector_engine(
+pub(crate) fn connector_engine(
     app: &AppHandle,
     state: &AppState,
     profile: Option<String>,
@@ -933,4 +935,234 @@ pub fn chatgpt_signin_cancel(state: State<'_, AppState>) {
 #[specta::specta]
 pub async fn chatgpt_sign_out(state: State<'_, AppState>) -> std::result::Result<(), HostError> {
     Ok(state.chatgpt.sign_out().await?)
+}
+
+// ---------------------------------------------------------------- the store (docs/STORE.md, docs/PROTOCOL.md 1a)
+
+/// What the store asks of the app: which bot, its connector engine, its gateway.
+pub struct AppHost(pub AppHandle);
+
+impl crate::store::backend::Host for AppHost {
+    fn bot(&self, profile: Option<String>) -> Result<String> {
+        let p = profile_of(&self.0, profile)?;
+        match p.as_deref() {
+            None | Some("" | "default") => Ok("default".to_owned()),
+            Some(name) => {
+                // The same rule as a profile's name: plain characters only.
+                self.0
+                    .state::<AppState>()
+                    .supervisor
+                    .environment()
+                    .profile_home(Some(name))
+                    .map(|_| name.to_owned())
+            }
+        }
+    }
+
+    fn connectors(&self, bot: &str) -> Result<Arc<Engine>> {
+        let state = self.0.state::<AppState>();
+        connector_engine(&self.0, &state, (bot != "default").then(|| bot.to_owned()))
+    }
+
+    fn backend(&self, bot: &str) -> Result<Arc<dyn crate::store::backend::Backend>> {
+        let state = self.0.state::<AppState>();
+        let home = state
+            .supervisor
+            .environment()
+            .profile_home((bot != "default").then_some(bot))?;
+        Ok(Arc::new(crate::store::backend::GatewayBackend::new(
+            state.supervisor.clone(),
+            home,
+        )))
+    }
+}
+
+use crate::store::types as st;
+
+/// A page of the catalogue, from the cache. Works offline; `stale` and `offline` say how old it is.
+#[tauri::command]
+#[specta::specta]
+pub async fn store_catalog_list(
+    state: State<'_, AppState>,
+    filter: Option<st::StoreFilter>,
+    cursor: Option<String>,
+    limit: Option<u32>,
+) -> std::result::Result<st::StoreBrowse, HostError> {
+    Ok(state
+        .store
+        .browse(None, &filter.unwrap_or_default(), cursor.as_deref(), limit)?)
+}
+
+/// Search the catalogue. Local: no query leaves the machine.
+#[tauri::command]
+#[specta::specta]
+pub async fn store_search(
+    state: State<'_, AppState>,
+    query: String,
+    filter: Option<st::StoreFilter>,
+    cursor: Option<String>,
+    limit: Option<u32>,
+) -> std::result::Result<st::StoreBrowse, HostError> {
+    Ok(state.store.browse(
+        Some(&query),
+        &filter.unwrap_or_default(),
+        cursor.as_deref(),
+        limit,
+    )?)
+}
+
+/// Read the sources again (all that are on, or one).
+#[tauri::command]
+#[specta::specta]
+pub async fn store_refresh(
+    state: State<'_, AppState>,
+    source: Option<String>,
+) -> std::result::Result<Vec<st::StoreSource>, HostError> {
+    Ok(state.store.refresh(source.as_deref()).await?)
+}
+
+/// Everything the detail page shows.
+#[tauri::command]
+#[specta::specta]
+pub async fn store_item_detail(
+    state: State<'_, AppState>,
+    id: String,
+    profile: Option<String>,
+) -> std::result::Result<st::StoreDetail, HostError> {
+    Ok(state.store.detail(&id, profile).await?)
+}
+
+/// Fetch an item's pin into staging and check it. Nothing runs.
+#[tauri::command]
+#[specta::specta]
+pub async fn store_stage(
+    state: State<'_, AppState>,
+    id: String,
+    profile: Option<String>,
+) -> std::result::Result<st::StageResult, HostError> {
+    Ok(state.store.stage(&id, profile).await?)
+}
+
+/// What installing a staged item would do, exactly, with the hash the install must name.
+#[tauri::command]
+#[specta::specta]
+pub async fn store_plan(
+    state: State<'_, AppState>,
+    stage_id: String,
+    scope: Option<st::Scope>,
+    profile: Option<String>,
+) -> std::result::Result<st::InstallPlan, HostError> {
+    Ok(state.store.plan(&stage_id, scope, profile).await?)
+}
+
+/// Install what the card showed. `request.secrets` go to the keychain and no further.
+#[tauri::command]
+#[specta::specta]
+pub async fn store_install(
+    state: State<'_, AppState>,
+    request: st::InstallRequest,
+    profile: Option<String>,
+) -> std::result::Result<st::InstallReceipt, HostError> {
+    Ok(state.store.install(request, profile, false).await?)
+}
+
+/// Remove an installed item. `delete_credentials` is the user's agreement to delete its keys.
+#[tauri::command]
+#[specta::specta]
+pub async fn store_uninstall(
+    state: State<'_, AppState>,
+    id: String,
+    delete_credentials: Option<bool>,
+    profile: Option<String>,
+) -> std::result::Result<st::UninstallResult, HostError> {
+    Ok(state
+        .store
+        .uninstall(&id, delete_credentials.unwrap_or(false), profile)
+        .await?)
+}
+
+/// What is installed for a bot: the host's record and the plugin's.
+#[tauri::command]
+#[specta::specta]
+pub async fn store_installed(
+    state: State<'_, AppState>,
+    profile: Option<String>,
+) -> std::result::Result<Vec<st::InstallReceipt>, HostError> {
+    Ok(state.store.installed(profile).await?)
+}
+
+/// Which installed items have a newer pin, were taken down, or lost their pin. Installs nothing.
+#[tauri::command]
+#[specta::specta]
+pub async fn store_update_check(
+    state: State<'_, AppState>,
+    id: Option<String>,
+    profile: Option<String>,
+) -> std::result::Result<Vec<st::UpdateDiff>, HostError> {
+    Ok(state.store.update_check(id, profile).await?)
+}
+
+/// The install flow on the new pin, after `store_stage`, `store_plan` and the hold.
+#[tauri::command]
+#[specta::specta]
+pub async fn store_update(
+    state: State<'_, AppState>,
+    id: String,
+    request: st::InstallRequest,
+    profile: Option<String>,
+) -> std::result::Result<st::InstallReceipt, HostError> {
+    Ok(state.store.update(&id, request, profile).await?)
+}
+
+/// Go back to the version kept one step back.
+#[tauri::command]
+#[specta::specta]
+pub async fn store_rollback(
+    state: State<'_, AppState>,
+    id: String,
+    profile: Option<String>,
+) -> std::result::Result<st::InstallReceipt, HostError> {
+    Ok(state.store.rollback(&id, profile).await?)
+}
+
+/// The sources, with their state.
+#[tauri::command]
+#[specta::specta]
+pub fn store_sources(
+    state: State<'_, AppState>,
+) -> std::result::Result<Vec<st::StoreSource>, HostError> {
+    Ok(state.store.sources())
+}
+
+/// Switch a source on or off.
+#[tauri::command]
+#[specta::specta]
+pub fn store_source_set_enabled(
+    state: State<'_, AppState>,
+    id: String,
+    enabled: bool,
+) -> std::result::Result<(), HostError> {
+    Ok(state.store.set_enabled(&id, enabled)?)
+}
+
+/// Add a source: a marketplace address, a GitHub repository, a local folder or a bundle file.
+#[tauri::command]
+#[specta::specta]
+pub async fn store_source_add(
+    state: State<'_, AppState>,
+    url: Option<String>,
+    path: Option<String>,
+    label: Option<String>,
+) -> std::result::Result<st::StoreSource, HostError> {
+    Ok(state.store.source_add(url, path, label).await?)
+}
+
+/// Remove a source the user added.
+#[tauri::command]
+#[specta::specta]
+pub fn store_source_remove(
+    state: State<'_, AppState>,
+    id: String,
+) -> std::result::Result<(), HostError> {
+    Ok(state.store.source_remove(&id)?)
 }

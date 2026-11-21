@@ -72,7 +72,7 @@ The store (`docs/STORE.md`, ADR-0038) is a host feature: the host is the only la
 | `store_source_add` | `{url?: string, path?: string, label?: string}` | `StoreSource`. A marketplace address, a git repository (a GitHub URL included) or a local folder or file; the host validates it, reads it once and refuses what it cannot parse. `hx.store.invalid_source`, `source_unreachable`, `too_large`, `unsafe_archive`, `invalid_manifest` |
 | `store_source_remove` | `{id}` | `{}`. Only a source the user added; its items go from the cache, installed items stay. `hx.store.invalid_source` |
 
-The UI's `store.review` is `store_stage` then `store_plan`; its `install` is `store_install`, and `store_update` for an update. A project's switch is not a host command: it is the plugin's (below), read and set over the gateway.
+The host stages in `<app data>/store/staging/<id>/{meta.json, tree/}`; the plugin is given `tree/`. `store_update`'s `id` is checked against the staged item. The UI's `store.review` is `store_stage` then `store_plan`; its `install` is `store_install`, and `store_update` for an update. A project's switch is not a host command: it is the plugin's (below), read and set over the gateway.
 
 ## 2. Host and Hermes: `hermes-gateway-v1`
 

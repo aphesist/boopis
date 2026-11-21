@@ -78,10 +78,49 @@ pub enum Error {
     /// A connector operation failed with its own stable code (`hx.connectors.*`).
     #[error("{1}")]
     Connector(&'static str, String),
+    /// A store operation failed with its own stable code (`hx.store.*`, `docs/STORE.md`).
+    #[error("{1}")]
+    Store(&'static str, String),
 }
 
 /// A specialised `Result`.
 pub type Result<T> = std::result::Result<T, Error>;
+
+/// Every `hx.store.*` code (`crates/hx-proto/errors.json`), so a code that arrives as text (a plugin's refusal) can be carried as
+/// the `&'static str` an [`Error::Store`] holds. A code outside the list is not a store code.
+pub const STORE_CODES: &[&str] = &[
+    "hx.store.unpinned",
+    "hx.store.digest_mismatch",
+    "hx.store.plan_changed",
+    "hx.store.source_unreachable",
+    "hx.store.too_large",
+    "hx.store.unsafe_archive",
+    "hx.store.dangerous_verdict",
+    "hx.store.kind_unsupported",
+    "hx.store.governed_refused",
+    "hx.store.not_installed",
+    "hx.store.offline",
+    "hx.store.not_found",
+    "hx.store.already_installed",
+    "hx.store.removed",
+    "hx.store.invalid_source",
+    "hx.store.invalid_manifest",
+    "hx.store.stage_missing",
+    "hx.store.no_previous",
+    "hx.store.rate_limited",
+    "hx.store.install_failed",
+];
+
+impl Error {
+    /// A store error with a code from [`STORE_CODES`]; `None` for any other text.
+    #[must_use]
+    pub fn store_code(code: &str, message: impl Into<String>) -> Option<Self> {
+        STORE_CODES
+            .iter()
+            .find(|c| **c == code)
+            .map(|c| Self::Store(c, message.into()))
+    }
+}
 
 impl Error {
     /// The stable, namespaced code of this error.
@@ -103,7 +142,7 @@ impl Error {
             Self::Secrets(_) => "hx.secrets.failed",
             Self::SecretNotFound => "hx.secrets.not_found",
             Self::Os(_) => "hx.host.os",
-            Self::Setup(code, _) | Self::Connector(code, _) => code,
+            Self::Setup(code, _) | Self::Connector(code, _) | Self::Store(code, _) => code,
         }
     }
 }
@@ -156,6 +195,7 @@ const ENGINE_CODES: &[&str] = &[
     "hx.connectors.signin_failed",
     "hx.connectors.failed",
     "hx.bots.engine_failed",
+    "hx.store.install_failed",
 ];
 
 /// The fallback for a code the catalog gives no sentence.
@@ -326,6 +366,8 @@ mod tests {
                 "hx.connectors.exists",
                 "A connector named x exists already.".into(),
             ),
+            Error::Store("hx.store.install_failed", raw.into()),
+            Error::Store("hx.store.source_unreachable", raw.into()),
         ];
         for e in all {
             let shown: HostError = e.into();
