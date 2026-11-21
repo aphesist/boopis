@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { bytesText, describeProgress, introText, runFirstRun } from './first-run';
 import type { SetupBridge, SetupProgress, SetupStatus, SourceInfo } from './setup-bridge';
 import { HostError } from './bridge';
+import { choiceFor, stepsFor } from './first-run-ways';
+import { way as catalogueWay } from '../data/providers';
+import type { EndpointRequest, ProviderState, ProvidersBridge } from './providers-bridge';
 
 const step = (id: string, state: SetupStatus['steps'][number]['state'], detail = '', code: string | null = null) => ({ id, title: id, state, detail, code });
 const form = (id: string, kind: string, schema: unknown, extra: Partial<NonNullable<SetupStatus['form']>> = {}): NonNullable<SetupStatus['form']> => ({
@@ -101,16 +104,22 @@ describe('first run', () => {
   it('sends a choice, and a secret only in the secrets part, then clears the field', async () => {
     vi.useFakeTimers();
     try {
-      const ladder = form('setup.ladder', 'choice', { type: 'object', required: ['choice'], properties: { choice: { type: 'string', enum: ['anthropic', 'main/fake-a'], enumNames: ['Claude', 'fake-a on main'] } } });
+      const ladder = form('setup.ladder', 'choice', { type: 'object', required: ['choice'], properties: { choice: { type: 'string', enum: ['anthropic', 'main/fake-a'], enumNames: ['Claude: Opus (needs an Anthropic API key)', 'fake-a on main'] } } });
       const cred = form('setup.credential.main', 'credential', { type: 'object', required: ['value'], properties: { value: { type: 'string', title: 'API key', 'x-secret': true, 'x-secret-ref': 'secret://provider.main/api_key' } } }, { sensitive: true });
       const bridge = new Fake([status({ form: ladder }), status({ form: cred }), status({ done: true })]);
       void runFirstRun(bridge);
       await vi.advanceTimersByTimeAsync(0);
       await click('Set up');
-      const options = document.querySelectorAll<HTMLElement>('.cd-opt');
-      expect(options).toHaveLength(2);
-      options[1]?.click();
-      await click('Go');
+      /* two steps: how to connect, then which provider; nothing goes to the host until the second is answered */
+      const ways = document.querySelectorAll<HTMLElement>('.cd-opt');
+      expect([...ways].map((o) => o.textContent?.replace(/\d$/, ''))).toEqual(['Use an API key', 'A model you already set up']);
+      ways[1]?.click();
+      await click('Continue');
+      await vi.advanceTimersByTimeAsync(900);
+      expect(bridge.answers).toHaveLength(1);
+      const labs = document.querySelectorAll<HTMLElement>('.cd-opt');
+      expect([...labs].map((o) => o.textContent?.replace(/\d$/, ''))).toEqual(['fake-a on main']);
+      await click('Use this');
       await vi.advanceTimersByTimeAsync(900);
       expect(bridge.answers[1]).toMatchObject({ answer: { form_id: 'setup.ladder', values: { choice: 'main/fake-a' }, secrets: {} } });
       const key = document.querySelector<HTMLInputElement>('input[type=password]');
@@ -134,17 +143,12 @@ describe('first run', () => {
       void runFirstRun(bridge);
       await vi.advanceTimersByTimeAsync(0);
       await click('Set up');
-      /* a model choice is the model picker: the first is already chosen, the rest are in its list */
-      const pick = document.querySelector<HTMLButtonElement>('.ui-select')!;
-      expect(pick.querySelector('.ui-select__v')?.textContent).toBe(names[0]);
-      pick.click();
-      const options = [...document.querySelectorAll<HTMLElement>('.ui-listbox .ui-option')];
-      expect(options.map((o) => o.querySelector('.ui-menu__label')?.textContent)).toEqual(names);
-      expect(options.map((o) => o.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false']);
-      expect(document.querySelector('.ui-listbox')?.closest('.hx-first-run')).toBeTruthy();   /* the list lives inside the view that covers the app */
-      options[0]!.click();
+      /* step 1: free is first and already chosen; the host's own words (the free tier's terms) are on the card */
+      const ways = [...document.querySelectorAll<HTMLElement>('.cd-opt')];
+      expect(ways.map((o) => o.textContent?.replace(/\d$/, ''))).toEqual(['Free models (no account)', 'Use an API key']);
+      expect(ways.map((o) => o.getAttribute('aria-checked'))).toEqual(['true', 'false']);
       expect(document.body.textContent).toContain('portal.nousresearch.com/terms');
-      await click('Go');
+      await click('Continue');
       await vi.advanceTimersByTimeAsync(900);
       expect(bridge.answers[1]).toMatchObject({ answer: { form_id: 'setup.ladder', values: { choice: 'free' }, secrets: {} } });
       expect(document.body.textContent).toContain('one model at every tier');
@@ -172,7 +176,7 @@ describe('first run', () => {
   it('says what went wrong inside the card when the host refuses the answer, and the form stays open', async () => {
     vi.useFakeTimers();
     try {
-      const ladder = form('setup.ladder', 'choice', { type: 'object', required: ['choice'], properties: { choice: { type: 'string', enum: ['a', 'b'] } } });
+      const ladder = form('setup.other', 'choice', { type: 'object', required: ['choice'], properties: { choice: { type: 'string', enum: ['a', 'b'] } } });
       const bridge = new Fake([status({ form: ladder }), new HostError('hx.setup.state_invalid', 'setup.json is not valid')]);
       void runFirstRun(bridge);
       await vi.advanceTimersByTimeAsync(0);
@@ -368,5 +372,125 @@ describe('first run', () => {
     expect(bridge.answers).toEqual([{ answer: null, reconsider: false }]);
     expect(document.querySelector('#fr-title')?.textContent).toBe('Change models');
     expect([...document.querySelectorAll('button')].some((b) => b.textContent === 'Set up')).toBe(false);
+  });
+});
+
+
+describe('first run: the models question in two steps (ADR-0039)', () => {
+  const IDS = ['free', 'openrouter-free', 'anthropic', 'claude-subscription', 'chatgpt-subscription', 'gemini', 'xai'];
+  const NAMES = ['Free models (Nous free tier, no account)', 'OpenRouter free models (needs a free OpenRouter key)', 'Claude: Opus (needs an Anthropic API key)', 'Claude subscription (your Claude Code login)', 'ChatGPT subscription (sign in with your ChatGPT account)', 'Gemini (a free API key from Google AI Studio)', 'xAI: an API key from xAI'];
+  const ladder = (): NonNullable<SetupStatus['form']> => form('setup.ladder', 'choice', { type: 'object', required: ['choice'], properties: { choice: { type: 'string', enum: IDS, enumNames: NAMES, default: 'free' } } });
+  const names = (): (string | undefined)[] => [...document.querySelectorAll<HTMLElement>('.cd-opt')].map((o) => o.textContent?.replace(/\d$/, ''));
+  const pickWay = async (label: string): Promise<void> => {
+    const row = [...document.querySelectorAll<HTMLElement>('.cd-opt')].find((o) => o.textContent?.replace(/\d$/, '') === label);
+    expect(row, label).toBeTruthy();
+    row?.click();
+    await click('Continue');
+    await vi.advanceTimersByTimeAsync(900);
+  };
+
+  it('asks how to connect first: free, then subscriptions, keys; a model on this computer only where the app can look', async () => {
+    vi.useFakeTimers();
+    try {
+      void runFirstRun(new Fake([status({ form: ladder() })]));
+      await vi.advanceTimersByTimeAsync(0);
+      await click('Set up');
+      expect(document.body.textContent).toContain('How do you want to connect?');
+      expect(names()).toEqual(['Free models (no account)', 'Sign in to a subscription', 'Use an API key']);
+    } finally { vi.useRealTimers(); }
+  });
+
+  it('lists the labs for a way in the host\'s own words, and Back returns to the first step without telling the host anything', async () => {
+    vi.useFakeTimers();
+    try {
+      const bridge = new Fake([status({ form: ladder() }), status({ done: true })]);
+      void runFirstRun(bridge);
+      await vi.advanceTimersByTimeAsync(0);
+      await click('Set up');
+      await pickWay('Sign in to a subscription');
+      expect(names()).toEqual(['Claude subscription (your Claude Code login)', 'ChatGPT subscription (sign in with your ChatGPT account)']);
+      await click('Back');
+      await vi.advanceTimersByTimeAsync(900);
+      expect(names()[0]).toBe('Free models (no account)');
+      expect(bridge.answers).toHaveLength(1);
+      await pickWay('Use an API key');
+      expect(names()).toEqual(['Claude: Opus (needs an Anthropic API key)', 'Gemini (a free API key from Google AI Studio)', 'OpenRouter free models (needs a free OpenRouter key)', 'xAI: an API key from xAI']);   /* the catalogue's rank order */
+      const labs = document.querySelectorAll<HTMLElement>('.cd-opt');
+      labs[1]?.click();
+      await click('Use this');
+      await vi.advanceTimersByTimeAsync(900);
+      expect(bridge.answers[1]).toMatchObject({ answer: { form_id: 'setup.ladder', cancelled: false, values: { choice: 'gemini' } } });
+    } finally { vi.useRealTimers(); }
+  });
+
+  it('skips with the host\'s own button, which leaves the question unanswered', async () => {
+    vi.useFakeTimers();
+    try {
+      const bridge = new Fake([status({ form: ladder() }), status({ done: true })]);
+      void runFirstRun(bridge);
+      await vi.advanceTimersByTimeAsync(0);
+      await click('Set up');
+      await click('Skip');
+      expect(bridge.answers[1]).toMatchObject({ answer: { form_id: 'setup.ladder', cancelled: true } });
+    } finally { vi.useRealTimers(); }
+  });
+
+  describe('a model on this computer', () => {
+    const found = (way: string, extra: Partial<ProviderState> = {}): ProviderState => ({ provider: way.split('.')[0] ?? way, way, kind: 'local', status: 'found_local', code: null, detail: null, plan: null, models_count: 2, base_url: catalogueWay(way)?.way.base_url?.default ?? null, signin: null, checked_at: 1, ...extra });
+    const providers = (probe: ProviderState[]): ProvidersBridge & { added: EndpointRequest[]; probes: number } => {
+      const b = { added: [] as EndpointRequest[], probes: 0,
+        probe: () => { b.probes += 1; return Promise.resolve(probe); },
+        testEndpoint: () => Promise.resolve({ outcome: 'listed', models: ['llama3.2:latest', 'qwen3:8b'], answered_at: null, status: 200, loopback: true, code: null, detail: null }),
+        addEndpoint: (r: EndpointRequest) => { b.added.push(r); return Promise.resolve({} as ProviderState); } };
+      return b as never;
+    };
+    it('asks the runtimes when chosen, lists what answered, saves it under the catalogue\'s name with its first model, and leaves the ladder question unanswered', async () => {
+      vi.useFakeTimers();
+      try {
+        const p = providers([found('ollama.local'), { ...found('vllm.local'), status: 'not_found' }]);
+        const bridge = new Fake([status({ form: ladder() }), status({ done: true })]);
+        void runFirstRun(bridge, document.body, { providers: p });
+        await vi.advanceTimersByTimeAsync(0);
+        await click('Set up');
+        expect(p.probes, 'nothing is probed before the choice').toBe(0);
+        await pickWay('Use a model on this computer');
+        expect(p.probes).toBe(1);
+        expect(names()).toEqual(['Ollama on this computer (2 models)']);
+        await click('Use this');
+        await vi.advanceTimersByTimeAsync(900);
+        expect(p.added).toHaveLength(1);
+        expect(p.added[0]).toMatchObject({ name: 'ollama', base_url: 'http://127.0.0.1:11434/v1', key: null, use_model: 'llama3.2:latest', discover: true });
+        expect(bridge.answers[1]).toMatchObject({ answer: { form_id: 'setup.ladder', cancelled: true } });
+        expect(document.body.textContent).toContain('Governed mode stays off for models on this computer');
+      } finally { vi.useRealTimers(); }
+    });
+    it('says so when nothing answered, and Check again asks again', async () => {
+      vi.useFakeTimers();
+      try {
+        const p = providers([]);
+        void runFirstRun(new Fake([status({ form: ladder() })]), document.body, { providers: p });
+        await vi.advanceTimersByTimeAsync(0);
+        await click('Set up');
+        await pickWay('Use a model on this computer');
+        expect(document.querySelector('[data-fr-none]')?.textContent).toContain('Nothing answered on this computer');
+        await click('Check again');
+        expect(p.probes).toBe(2);
+      } finally { vi.useRealTimers(); }
+    });
+  });
+});
+
+describe('first run ways: regrouping the host\'s choices from the catalogue', () => {
+  it('maps a way to the host\'s choice by its own id, its slug or engine, or the id used before the catalogue', () => {
+    const w = (id: string) => catalogueWay(id)?.way as NonNullable<ReturnType<typeof catalogueWay>>['way'];
+    expect(choiceFor(w('google.key'), ['gemini'])).toBe('gemini');
+    expect(choiceFor(w('deepseek.key'), ['deepseek.key'])).toBe('deepseek.key');
+    expect(choiceFor(w('deepseek.key'), ['gemini'])).toBeNull();
+  });
+  it('lists a choice no way claims under "a model you already set up", and offers nothing it has no choice for', () => {
+    const s = stepsFor(['free', 'main/fake-a'], ['Free', 'fake-a on main'], false);
+    expect(s?.ways.map((x) => x.id)).toEqual(['free', 'configured']);
+    expect(s?.labs.signin).toEqual([]);
+    expect(stepsFor([], [], true)).toBeNull();
   });
 });

@@ -16,6 +16,11 @@ import type { Answer, ConnectorLogin, Form_Deserialize } from './bindings';
 import { mountChatgptSignin, tauriChatgptBridge } from './chatgpt-signin';
 import type { ChatgptBridge } from './chatgpt-signin';
 import type { SetupBridge, SetupProgress, SetupStatus, SourceInfo } from './setup-bridge';
+import { labForm, localForm, stepsFor, wayForm } from './first-run-ways';
+import type { Steps, WayId } from './first-run-ways';
+import { tauriProvidersBridge } from './providers-bridge';
+import type { ProvidersBridge } from './providers-bridge';
+import { inTauri } from './bridge';
 import { asHostError } from './bridge';
 import { reduced } from '../core/dom';
 import { logger } from '../core/log';
@@ -89,6 +94,8 @@ export interface FirstRunOptions {
   title?: string;
   /** the sign-ins and pages a form may offer; the host's own commands when absent */
   signins?: SetupSignins;
+  /** the provider commands, for "Use a model on this computer" (the host's own when in the app; without them that way is not offered) */
+  providers?: ProvidersBridge;
 }
 
 /** The sign-in and the pages a setup form offers, drawn under its card. `next` runs setup again once a sign-in finished
@@ -142,7 +149,23 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
     let signins: SetupSignins | null = opts.signins ?? null;
     const deps = (): SetupSignins => (signins ??= tauriSignins());
     let extras = (): void => undefined;
+    /* the models question in two steps (first-run-ways.ts): where in it the person is, and what to say once at the next draw */
+    type Stage = { kind: 'way' } | { kind: 'lab'; way: 'signin' | 'key' | 'configured' } | { kind: 'local'; found: Array<{ way: string; label: string; base_url: string; api_mode: string }> };
+    let stage: Stage = { kind: 'way' };
+    let note = '';
+    let current: SetupStatus | null = null;
+    const providers: ProvidersBridge | null = opts.providers ?? (inTauri() ? tauriProvidersBridge() : null);
+    const ladderChoices = (form: NonNullable<SetupStatus['form']>): { ids: string[]; names: string[] } => {
+      const p = ((form.schema as { properties?: Record<string, { enum?: unknown[]; enumNames?: unknown[] }> } | null)?.properties ?? {})['choice'];
+      return { ids: (p?.enum ?? []).map(String), names: (p?.enumNames ?? []).map(String) };
+    };
+    const stepsOf = (form: NonNullable<SetupStatus['form']>): Steps | null => {
+      if (form.form_id !== 'setup.ladder') return null;
+      const { ids, names } = ladderChoices(form);
+      return stepsFor(ids, names, providers !== null);
+    };
     const draw = (status: SetupStatus | null, error: string): void => {
+      current = status;
       extras();
       extras = () => undefined;
       const card = el('div', { style: 'display:grid;gap:var(--sp-4);max-width:var(--measure);width:min(90vw,var(--measure))' });
@@ -158,13 +181,27 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
         if (status.steps.some((s) => s.state === 'declined')) card.append(button('Review again', 'ghost', () => { void run(null, true); }));
         if (status.form) {
           const form = status.form;
-          card.append(formCard(fromConnectorForm(form)));
-          const more = formExtras(form, deps, () => { void run({ form_id: form.form_id, cancelled: false, values: {}, secrets: {} }, false); });
-          if (more) { card.append(more.node); extras = more.destroy; }
+          const steps = stepsOf(form);
+          if (note) { card.append(el('p', { role: 'status', 'data-fr-note': '', style: 'margin:0;color:var(--text-dim)' }, note)); note = ''; }
+          if (steps) {
+            if (stage.kind === 'way') card.append(formCard(fromConnectorForm(wayForm(steps, form.body, typeof (form.cancel as { label?: unknown } | null)?.label === 'string' ? String((form.cancel as { label: string }).label) : 'Skip for now'))));
+            else if (stage.kind === 'lab') card.append(formCard(fromConnectorForm(labForm(stage.way, steps))));
+            else if (stage.found.length) card.append(formCard(fromConnectorForm(localForm(stage.found))));
+            else {
+              card.append(el('p', { role: 'status', 'data-fr-none': '', style: 'margin:0' }, 'Nothing answered on this computer. Start Ollama, LM Studio, llama.cpp or vLLM, then check again.'));
+              card.append(el('div', { style: 'display:flex;flex-wrap:wrap;gap:var(--sp-2)' },
+                button('Check again', 'primary', () => { void probeLocal(); }), button('Back', 'ghost', () => { stage = { kind: 'way' }; draw(current, ''); })));
+            }
+          } else {
+            card.append(formCard(fromConnectorForm(form)));
+            const more = formExtras(form, deps, () => { void run({ form_id: form.form_id, cancelled: false, values: {}, secrets: {} }, false); });
+            if (more) { card.append(more.node); extras = more.destroy; }
+          }
         }
         if (status.done) {
           useFormsHost(null);
           card.append(el('h2', { style: 'margin:0;font:600 var(--fs-l)/var(--lh-tight) var(--sans)' }, 'You are set'));
+          if (note) { card.append(el('p', { role: 'status', 'data-fr-note': '', style: 'margin:0;color:var(--text-dim)' }, note)); note = ''; }
           const list = el('ul', { style: 'margin:0;padding-left:var(--sp-5);color:var(--text-dim)' });
           for (const line of status.receipt?.lines ?? []) list.append(el('li', {}, line));
           card.append(list, button('Open boopis', 'primary', () => { useFormsHost(null); root.remove(); resolve(); }));
@@ -175,14 +212,62 @@ export async function runFirstRun(bridge: SetupBridge, mount: HTMLElement = docu
       if (shown) shown.replaceWith(card); else root.append(card);
     };
     /* the form card's answer sink: `setup_advance` takes the answer, and what it returns is drawn once the receipt has shown */
+    const ask = async (answer: Answer): Promise<void> => {
+      let next: SetupStatus;
+      try { next = await bridge.advance(answer, false); } catch (e) { const err = asHostError(e); log.warn('setup step failed', err.code); throw new Error(err.message); }
+      stage = { kind: 'way' };
+      window.setTimeout(() => { draw(next, ''); }, reduced() ? 200 : 700);
+    };
+    const goTo = (to: Stage): void => { stage = to; window.setTimeout(() => { draw(current, ''); }, reduced() ? 200 : 700); };
+    /* ask the runtimes on this computer, loopback only, and keep what answered with its address and wire */
+    const probeLocal = async (): Promise<void> => {
+      const found: Array<{ way: string; label: string; base_url: string; api_mode: string }> = [];
+      try {
+        for (const s of await (providers as ProvidersBridge).probe()) {
+          if (s.status !== 'found_local') continue;
+          const hit = (await import('../data/providers')).way(s.way);
+          if (hit && s.base_url) found.push({ way: s.way, label: hit.way.label + (s.models_count != null ? ` (${String(s.models_count)} ${s.models_count === 1 ? 'model' : 'models'})` : ''), base_url: s.base_url, api_mode: hit.way.api_mode ?? 'chat_completions' });
+        }
+      } catch (e) { log.warn('the probe failed', asHostError(e).code); }
+      stage = { kind: 'local', found };
+      draw(current, '');
+    };
+    /* a runtime chosen: ask it for its models, save it as an endpoint under the catalogue's own name and make its first model
+       the person's model; the ladder question then stays unanswered (models on this computer are never governed ones) */
+    const useLocal = async (wayId: string, formId: string): Promise<void> => {
+      const hit = stage.kind === 'local' ? stage.found.find((f) => f.way === wayId) : undefined;
+      const cat = (await import('../data/providers')).way(wayId);
+      if (!hit || !cat || !providers) return;
+      try {
+        const mode = hit.api_mode as 'chat_completions' | 'codex_responses' | 'anthropic_messages';
+        const t = await providers.testEndpoint({ base_url: hit.base_url, api_mode: mode });
+        const first = t.models[0] ?? null;
+        await providers.addEndpoint({ name: (cat.way.slug ?? cat.way.engine ?? cat.way.id).replace(/^custom-/, ''), base_url: hit.base_url, api_mode: mode, key: null, models: t.models, discover: true, context_length: null, request_timeout_s: null, use_model: first });
+        note = first ? `Saved ${cat.entry.label} as your endpoint, using ${first}. Governed mode stays off for models on this computer.` : `Saved ${cat.entry.label} as your endpoint. Choose a model from your model list.`;
+      } catch (e) { const err = asHostError(e); throw new Error(err.message); }
+      let next: SetupStatus;
+      try { next = await bridge.advance({ form_id: formId, cancelled: true, values: {}, secrets: {} }, false); } catch (e) { const err = asHostError(e); throw new Error(err.message); }
+      stage = { kind: 'way' };
+      window.setTimeout(() => { draw(next, ''); }, reduced() ? 200 : 700);
+    };
     const hostForms = (): FormsSource => ({
       async submit(id, outcome) {
-        let next: SetupStatus;
-        try { next = await bridge.advance({ form_id: id, cancelled: false, values: outcome.values as Answer['values'], secrets: outcome.secrets as Answer['secrets'] }, false); } catch (e) { const err = asHostError(e); log.warn('setup step failed', err.code); throw new Error(err.message); }
-        window.setTimeout(() => { draw(next, ''); }, reduced() ? 200 : 700);
+        const choice = String(outcome.values['choice'] ?? '');
+        if (id === 'setup.way') {
+          const way = choice as WayId;
+          if (way === 'free') return ask({ form_id: 'setup.ladder', cancelled: false, values: { choice: 'free' }, secrets: {} });
+          if (way === 'local') { await probeLocal(); return; }
+          goTo({ kind: 'lab', way: way as 'signin' | 'key' | 'configured' });
+          return;
+        }
+        if (id === 'setup.lab') return ask({ form_id: 'setup.ladder', cancelled: false, values: { choice }, secrets: {} });
+        if (id === 'setup.local') return useLocal(choice, 'setup.ladder');
+        return ask({ form_id: id, cancelled: false, values: outcome.values as Answer['values'], secrets: outcome.secrets as Answer['secrets'] });
       },
       async cancel(id) {
-        try { draw(await bridge.advance({ form_id: id, cancelled: true, values: {}, secrets: {} }, false), ''); } catch (e) { const err = asHostError(e); draw(null, err.code + ': ' + err.message); }
+        if (id === 'setup.lab' || id === 'setup.local') { goTo({ kind: 'way' }); return; }
+        const formId = id === 'setup.way' ? 'setup.ladder' : id;
+        try { draw(await bridge.advance({ form_id: formId, cancelled: true, values: {}, secrets: {} }, false), ''); } catch (e) { const err = asHostError(e); draw(null, err.code + ': ' + err.message); }
       },
       signin: () => Promise.reject(new Error('Signing in is not part of setup.')),
       can: { signin: false, upload: false, folder: false }, pickerItems: () => [], pickFolder: () => Promise.resolve(null)
