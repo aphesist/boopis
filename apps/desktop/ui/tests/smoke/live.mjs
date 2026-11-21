@@ -23,8 +23,12 @@ export async function liveSessions(env) {
     const missing = Object.entries(want).filter(([, re]) => !re.test(panel)).map(([k]) => k);
     check('live', 'the details panel shows the recorded session (tasks, changes, connectors, environment, governance)', missing.length === 0, { missing, panel: panel.slice(-700) });
     check('live', 'the details panel says what it cannot do instead of pretending', /compact|fork/i.test(panel) && /unknown|Not available/i.test(panel), panel.slice(0, 600));
-    const compactDisabled = await page.evaluate(() => [...document.querySelectorAll('.ssr-actions button')].every((b) => b.disabled));
-    check('live', 'Compact conversation is disabled when this Hermes has no session.compress', compactDisabled);
+    /* the button itself, by its name: other actions in these panels (the connectors panel's "Browse the store") are enabled on purpose */
+    const compact = await page.evaluate(() => {
+      const found = [...document.querySelectorAll('.ssr-panel button')].filter((b) => b.textContent.trim() === 'Compact conversation');
+      return { count: found.length, disabled: found.every((b) => b.disabled) };
+    });
+    check('live', 'Compact conversation is disabled when this Hermes has no session.compress', compact.count === 1 && compact.disabled, compact);
 
     const session = await text(page, '.ss-view, #hx-list-session, .ssr-panel, [data-hx-composer]');
     check('live', 'the Sessions section shows no mock content', leaks(session).length === 0, leaks(session));

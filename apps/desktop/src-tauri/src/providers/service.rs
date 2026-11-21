@@ -204,11 +204,11 @@ impl Providers {
         way: &Way,
         owned: &std::result::Result<BTreeMap<String, ProviderState>, Error>,
     ) -> Option<ProviderState> {
-        let owner = way.signin.as_ref().map_or("", |s| s.owner.as_str());
-        if owner == "claude.rs" {
-            if let Some(c) = &self.claude {
-                return Some(claude_state(entry, way, &c.probe().await));
-            }
+        let who = way.signin.as_ref().map_or("", |s| s.owner.as_str());
+        if who == "claude.rs"
+            && let Some(c) = &self.claude
+        {
+            return Some(claude_state(entry, way, &c.probe().await));
         }
         match owned {
             Ok(map) => {
