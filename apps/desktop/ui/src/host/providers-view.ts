@@ -244,7 +244,7 @@ export function mountProviders(host: HTMLElement, deps: ProvidersDeps): Provider
 
   host.innerHTML = ui.html.setHead({ id: 'hx-set-providers-h', label: 'Providers' }) +
     '<div data-prov-bar style="display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center;padding:var(--sp-2) 0">' +
-    ui.html.search({ size: 'm', as: 'input', id: 'hx-prov-q', label: 'Search providers or models', placeholder: 'Search providers or models' }) +
+    ui.html.search({ size: 'm', as: 'input', id: 'hx-prov-q', label: 'Search providers', placeholder: 'Search providers' }) +
     ui.html.chipGroup({ options: FILTERS, value: 'all', label: 'Show providers' }) + '</div>' +
     '<p class="ui-field__hint" role="status" data-prov-status></p><div data-prov-body></div><div data-prov-flow hidden></div>';
   ui.hydrate(host);
