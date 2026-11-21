@@ -3,6 +3,7 @@
 import '../components/kit.css';   /* the kit: tokens and the component library */
 import '../modules/shell/shell.css';
 import '../modules/cards/cards.css';
+import '../modules/store/store.css';
 import '../modules/session/session.css';
 import '../modules/session/children.css';
 import '../modules/session/council.css';

@@ -15,7 +15,7 @@ build (`vite build --mode e2e`); the desktop app's production build has one inpu
 cd apps/desktop/ui
 pnpm lab                              # the dev server opens http://localhost:5173/lab.html
 pnpm lab:check                        # every state, every preset, every width; writes lab-report/
-pnpm lab:check --area composer        # one area: components, composer, shell, settings, bots, cards, dock
+pnpm lab:check --area composer        # one area: components, composer, shell, settings, bots, cards, dock, store
 pnpm lab:check --story dock/dock --state "one bot"
 pnpm lab:check --quick                # two presets (catalog, bone), one width (1440): the fast loop while fixing
 pnpm lab:check --draw-only            # only that every state draws without an error

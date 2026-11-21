@@ -77,7 +77,7 @@ function showConnectors(): void {
   if (!inTauri()) { panel.innerHTML = '<p class="ui-field__hint">Connectors are added in the desktop app. This page cannot reach boopis\'s engine.</p>'; return; }
   connectorsMounting = true;
   void Promise.all([import('../../host/connectors'), import('../../host/connectors-bridge')])
-    .then(([view, bridge]) => view.mountConnectors(panel, { bridge: bridge.tauriConnectorsBridge(), toast: (t) => { ui.toast(t); } }))
+    .then(([view, bridge]) => view.mountConnectors(panel, { bridge: bridge.tauriConnectorsBridge(), toast: (t) => { ui.toast(t); }, openStore: () => { openStore(); } }))
     .then((m) => { connectors = m; })
     .catch((e: unknown) => { log.warn('the connectors tab did not mount', e); })
     .finally(() => { connectorsMounting = false; });
@@ -186,6 +186,27 @@ export function openSettings(section?: string): void {
   const card = $('.hx-dialog__card', d); card.tabIndex = -1; card.focus({ preventScroll: true });
 }
 
+/* ───────── the store: its own full view (modules/store), reached from the palette, mod+shift+S, the Connectors tab and the session details panel ───────── */
+let storeView: import('../store/view').StoreView | null = null;
+let storeMounting: Promise<void> | null = null;
+const storeDialog = (): HTMLDialogElement => $<HTMLDialogElement>('#hx-store', sh.app);
+export function openStore(screen: 'browse' | 'installed' | 'sources' = 'browse', item?: string): void {
+  closePalette(); closeMenu(false);
+  const d = storeDialog();
+  if (els().settings.open) els().settings.close();
+  const ret = document.activeElement as HTMLElement | null;
+  const go = (): void => { storeView?.show(screen, item); };
+  if (!d.open) { try { d.showModal(); } catch { d.setAttribute('open', ''); } }
+  d.addEventListener('close', () => { ret?.focus?.(); }, { once: true });
+  if (storeView) { go(); } else {
+    storeMounting ??= import('../store/view').then((m) => {
+      storeView = m.mountStore($('#hx-store-body', d), { store: data().store, toast: (t) => { ui.toast(t); }, project: () => data().details.environment.get().cwd || null });
+    }).catch((e: unknown) => { log.warn('the store did not mount', e); });
+    void storeMounting.then(go);
+  }
+  const card = $('.hx-dialog__card', d); card.tabIndex = -1; card.focus({ preventScroll: true });
+}
+
 /* ───────── the account menu ───────── */
 export function openMenu(): void {
   ui.tooltip.hide();
@@ -214,6 +235,9 @@ export function wireDialogs(): void {
   const el = els();
   $('#hx-set-dock').addEventListener('change', (e) => setState({ dock: (e.target as HTMLInputElement).checked ? 'on' : 'off' }));
   $('#hx-settings-close').addEventListener('click', () => el.settings.close());
+  const sd = storeDialog();
+  $('#hx-store-close', sd).addEventListener('click', () => sd.close());
+  sd.addEventListener('click', (e) => { if (e.target === sd) sd.close(); });
   $('.hx-dtabs', el.settings).addEventListener('ui:change', (e) => showSettingsSection((e as CustomEvent<{ value: string }>).detail.value));
   el.settings.addEventListener('click', (e) => { if (e.target === el.settings) el.settings.close(); });
   const ks = $<HTMLDialogElement>('#hx-keys-sheet', sh.app);
@@ -221,13 +245,13 @@ export function wireDialogs(): void {
   $<HTMLInputElement>('#hx-keys-filter', ks).addEventListener('input', (e) => { $('#hx-keys-body', ks).innerHTML = keysTableHTML((e.target as HTMLInputElement).value); });
   ks.addEventListener('click', (e) => { if (e.target === ks) ks.close(); });
   // close on Esc explicitly: a module's window-level key handler must never be able to keep a dialog open
-  for (const d of [ks, el.settings]) d.addEventListener('keydown', (e) => { if (e.key === 'Escape' && d.open) { e.preventDefault(); e.stopPropagation(); d.close(); } });
+  for (const d of [ks, el.settings, sd]) d.addEventListener('keydown', (e) => { if (e.key === 'Escape' && d.open) { e.preventDefault(); e.stopPropagation(); d.close(); } });
   // Tab cycles inside a dialog: a modal dialog would otherwise hand focus to the browser after its last control
   const tabStops = (d: HTMLElement): HTMLElement[] => $$(FOCUSABLE, d).filter((n) => {
     const r = n as HTMLInputElement;
     return visible(n) && n.tabIndex >= 0 && !(r.type === 'radio' && !r.checked && $$<HTMLInputElement>('input[type="radio"][name="' + r.name + '"]', d).some((x) => x.checked));
   });
-  for (const d of [ks, el.settings]) d.addEventListener('keydown', (e) => {
+  for (const d of [ks, el.settings, sd]) d.addEventListener('keydown', (e) => {
     if (e.key !== 'Tab' || !d.open || ui.popover.current) return;
     const f = tabStops(d); if (!f.length) return;
     const first = f[0] as HTMLElement, last = f[f.length - 1] as HTMLElement, a = document.activeElement;

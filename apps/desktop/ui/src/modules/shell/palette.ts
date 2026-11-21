@@ -11,7 +11,7 @@ import { archivedWhen, restoreBot, restoredWords } from '../../data/restore';
 import { updateTitle } from './attention';
 import { els, sh } from './ctx';
 import { newThing, openPanel, toggleDockExpand, toggleLightDark, toggleOrbGrow, togglePanel } from './actions';
-import { openKeys, openSettings, closeMenu } from './dialogs';
+import { openKeys, openSettings, openStore, closeMenu } from './dialogs';
 import { REGION_NAME, focusRegion, nextAttention } from './regions';
 import { pushHistory } from './history';
 import type { RegionName } from '../../core/bus';
@@ -65,6 +65,8 @@ function paletteItems(): Item[] {
   if (api) cmd('Minimise the dock', '', () => { if (state.dock !== 'on') setState({ dock: 'on' }); api.setMode('minimal'); }, ICON('dock'), 'dock small minimal');
   cmd('Toggle grow bots on hover', '', toggleOrbGrow, ICON('bots'), 'dock orb magnify size hover grow ' + (state.orbGrow ? 'on' : 'off'));
   cmd('Settings', 'mod+,', () => openSettings(), ICON('gear'), 'preferences');
+  cmd('Store', 'mod+shift+S', () => openStore(), ICON('plus'), 'marketplace install skills connectors plugins mods browse search recommended');
+  cmd('Installed from the store', '', () => openStore('installed'), ICON('plus'), 'store installed update roll back remove');
   cmd('Keyboard shortcuts', 'mod+/', openKeys, ICON('gear'), 'keys help keymap');
   cmd('Appearance and theme', 'mod+shift+,', () => openSettings('appearance'), ICON('sliders'), 'theme colours fonts logo');
   cmd('Light or dark theme', 'mod+shift+L', toggleLightDark, ICON('sliders'), 'theme appearance');
