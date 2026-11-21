@@ -13,6 +13,7 @@ import { esc, frag } from '../core/dom';
 import { announce } from './announce';
 import { botLabel, botState, STATES } from './bot-state';
 import { card } from './card-registry';
+import type { ChildOpts } from './child';
 import { composer } from './composer';
 import { holdElement, wireHold } from './hold';
 import { html } from './html';
@@ -71,7 +72,8 @@ const factories = {
   select: make<SelectOpts, SelectElement>(html.select),
   empty: make<Parameters<typeof html.empty>[0]>(html.empty),
   row: make<RowOpts, HTMLLIElement>(html.row),
-  group: make<Parameters<typeof html.group>[0]>(html.group)
+  group: make<Parameters<typeof html.group>[0]>(html.group),
+  child: make<ChildOpts, HTMLElement>(html.child)
 };
 const legend = (parts: readonly MeasurePart[], fmt?: (n: number) => string): HTMLElement => frag(html.legend(parts, fmt));
 const keys = (k: string): HTMLElement => frag(html.keys(k));
@@ -122,6 +124,8 @@ export { tabs, tabsVariants, fitTabs } from './tabs';
 export { search, searchVariants, SEARCH_SIZES } from './search';
 export type { SearchOpts, SearchSize } from './search';
 export type { TabDef, TabsOpts } from './tabs';
+export { CHILD_STATUSES, STATUS_WORD as CHILD_STATUS_WORDS } from './child';
+export type { ChildOpts, ChildStatus } from './child';
 export type { ScrollAxis, ScrollOpts, ScrollHtmlOpts } from './scroll';
 export type { ComposerEl, ComposerOpts, DecisionDetail, AssumptionDetail, DictateDetail, SendDetail } from './composer';
 export type { PageDef, MenuEntry, MenuItem, StepItem, LadderOpts, MeasurePart, Station, CallLine } from './html';

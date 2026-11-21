@@ -1,0 +1,62 @@
+{
+  "about": "How a model id is written for people. The engine reports ids ('claude-sonnet-5-5[1m]', 'gpt-6-luna'), not names, so the parser in apps/desktop/ui/src/components/model-name.ts turns an id into 'Claude Sonnet 5.5', 'GPT-6 Luna', 'Gemini 3.8 Flash'. Matched on the id (the last path segment of a ref), never on the host: Claude through Bedrock is still Claude. A raw 'provider/id' is never shown.",
+  "aliases": {
+    "about": "Short names the Claude subscription provider accepts and the ladder uses (the Claude subscription plugin, claude-subscription-directsdk, model_catalog.py ALIASES at commit 6313fad5ddf2c060e7b16782f4860c0d5cdbfcac). An alias floats to the newest model of its tier, so it is named by its tier only; the pinned id it points at today is `pinned`, used to fold the same model listed twice into one row.",
+    "haiku": { "name": "Claude Haiku", "pinned": "claude-haiku-5-5" },
+    "sonnet": { "name": "Claude Sonnet", "pinned": "claude-sonnet-5-5" },
+    "opus": { "name": "Claude Opus", "pinned": "claude-opus-5-5" },
+    "fable": { "name": "Claude Fable", "pinned": "claude-fable-5-2" }
+  },
+  "families": [
+    { "id": "claude", "match": "^(claude|haiku|sonnet|opus|fable|mythos)\\b", "brand": "Claude", "unbranded": ["haiku", "sonnet", "opus", "fable", "mythos"] },
+    { "id": "gpt", "match": "^(gpt|chatgpt)\\b", "joinVersion": "-" },
+    { "id": "glm", "match": "^glm\\b", "joinVersion": "-" },
+    { "id": "o-series", "match": "^o[134](-|$)", "verbatim": true }
+  ],
+  "words": {
+    "about": "Words that are not written as Title Case. Everything else is Title Case; a number or a version (3.8, v3.2, 4o) stays as written; a size (70b) is upper case.",
+    "gpt": "GPT", "glm": "GLM", "chatgpt": "ChatGPT", "deepseek": "DeepSeek", "minimax": "MiniMax", "qwq": "QwQ", "qvq": "QVQ",
+    "codex": "Codex", "xai": "xAI", "llm": "LLM", "ai": "AI", "it": "IT", "mixtral": "Mixtral", "ocr": "OCR", "vl": "VL", "moe": "MoE"
+  },
+  "drop": {
+    "about": "Words that say nothing a person needs: a packaging, a quantisation or a moving-target word. A date stamp (20251001, a trailing 2501 or 0905) is dropped too.",
+    "words": ["latest", "instruct", "it", "hf", "gguf", "fp8", "fp16", "bf16", "awq", "gptq", "int4", "int8", "free", "beta", "default"]
+  },
+  "dispatch": {
+    "about": "What a person calls a model when he tells a session which model gets which task ('send this one to codex'). The plugin's delegation backend (plugins/boopis/governance/roster.py) builds the aliases of delegate_task's `target` from this table and from `aliases` above; a model is always reachable by its own id too. A model's name word is the alphabetic part after the version of its id (carbon of gemini-4-carbon, astra of gpt-6.2-astra, flash of gemini-3.8-flash), unless it is a modifier; a model that carries a modifier (gpt-6-sol-pro) claims its name words only after every plain model has. A provider's words name its first listed model; two providers claiming a word give it to the one listed first.",
+    "providers": {
+      "openai-codex": ["codex", "gpt", "chatgpt"],
+      "openai": ["gpt", "openai"],
+      "xai": ["grok"],
+      "gemini": ["gemini"],
+      "google": ["gemini"],
+      "deepseek": ["deepseek"],
+      "kimi-coding": ["kimi"],
+      "zai": ["glm"],
+      "mistral": ["mistral"],
+      "minimax": ["minimax"]
+    },
+    "generic": ["claude", "models", "free", "model", "default", "latest"],
+    "modifiers": ["pro", "mini", "nano", "lite", "preview", "fast", "turbo", "thinking", "reasoning", "latest", "code", "coding", "highspeed", "max", "plus", "ultra", "instruct", "chat", "exp", "experimental", "beta", "free", "extended", "high", "low", "medium"]
+  },
+  "providers": {
+    "about": "The provider's own plan or service, the secondary text under a model, never the model's name. The engine's own name for a provider (model.options `name`) is used for a slug not listed here.",
+    "claude-subscription-directsdk-experimental": "Claude subscription",
+    "claude-subscription-directsdk": "Claude subscription",
+    "anthropic": "Anthropic API",
+    "openai-codex": "ChatGPT subscription",
+    "openai": "OpenAI API",
+    "gemini": "Gemini",
+    "google": "Gemini",
+    "openrouter": "OpenRouter",
+    "ollama": "Ollama",
+    "nous": "Nous Portal",
+    "deepseek": "DeepSeek API",
+    "xai": "xAI API",
+    "mistral": "Mistral API",
+    "zai": "Z.ai",
+    "kimi-coding": "Kimi",
+    "minimax": "MiniMax API",
+    "custom": "Your own endpoint"
+  }
+}

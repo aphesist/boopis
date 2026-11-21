@@ -57,6 +57,7 @@ def test_register_wires_hooks_rpc_and_the_prompt_section() -> None:
         "ledger.stats",
         "cascade.state",
         "cascade.start_tier",
+        "dispatch.roster",
         "prices.refresh",
         "blank.fill",
         "checkpoint.list",

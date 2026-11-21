@@ -95,6 +95,7 @@ Methods are registered with `ctx.register_rpc(name, handler)` and appear as `plu
 | `mode.once` | `{session_id, armed?: boolean = true}` | `{armed: boolean}`. The next orchestrator turn of a *governed* session runs outside governed mode, for that turn only (ADR-0036: the owner's "@ in governed mode can turn off governed mode for that message"). The mode and toolsets are fixed at the first prompt and stay fixed; this arms one turn. It resets itself when the turn ends (completed, failed or interrupted), lapses after 120 s unused, and `armed: false` withdraws it. An ungoverned session answers `armed: false`. The turn is two `mode.changed` ledger events with `scope: turn` |
 | `turns.bind` | `{session_id, row_ids: int[], user_row_id?: int}` | `{recorded: boolean}`. The turn that just completed is these stored rows (`message.complete.persisted_turn`): the plugin writes the model (and tiers) it saw answer it. `recorded: false` when it saw no request for it |
 | `turns.models` | `{session_id}` | `{turns: [{model: "provider/model", route: string[], ungoverned: boolean, user_row_id, row_ids: int[], turn_id, at}]}`, oldest first. A resume reads it to say which model answered each past turn; a turn not listed is unknown |
+| `dispatch.roster` | `{models: [{provider, model}]}` | `{aliases: [{alias, provider, model}]}`. The models the user can use now, in the order he prefers them (ADR-0034). The plugin keeps them for the process and builds the enum of `delegate_task`'s `target` from them (shared names table `apps/shared/data/model-names.json`; each model also answers to its own id). Not session-bound. Call it before `session.create` and `session.resume`: a session's tools are fixed when they are built, so a model signed in later is named by the next session |
 | `ladder.get` / `ladder.set` | `{profile}` / `{profile, ladder}` | |
 | `checkpoint.list` | `{session_id}` | `{checkpoints: [{ship_id, commit, ref, files, ts, task_id?}]}`, kept ships only, oldest first (a restored ship has no checkpoint). Read off the ledger |
 | `checkpoint.diff` | `{session_id, ship_id?}` | `{files: [{path, status, add, del, binary, truncated, hunks: [{header, lines}]}], truncated, base?, head?, unavailable?}`. One ship, or every kept ship together. A hunk line keeps its `' '`, `'+'` or `'-'`. `unavailable` says why there is nothing to show (folder gone, no parent commit) |
@@ -116,6 +117,10 @@ Methods are registered with `ctx.register_rpc(name, handler)` and appear as `plu
 | `bots.delete` | `{name, confirm}` | `{deleted, path}`. Hermes's `profile delete`; `confirm` must be the name (`hx.bots.refused` otherwise) |
 | `compat.inventory` | `{cwd}` | `{items: CompatItem[], trust: TrustState}` |
 | `trust.set` | `{cwd, decision: "trust"\|"deny", content_hash}` | `{}` |
+
+
+### The delegation backend (`delegation.backend: boopis`)
+`delegate_task` gains one per-task parameter, `target` (ADR-0034), an enum of the roster's words. Routing: a cascade launch (`dispatch`) is routed by the ledger's tier, as before; in a governed session anything else is refused; in a session that is not governed, a task with `target` runs on that word's provider and model **only if the message that started the turn (`pre_llm_call` `user_message`) wrote that word**. Refusals reach the model as the tool error: not named, unknown (with the available words), no `target`, no active turn. The child runs in parallel with a fresh context (`goal`, `context`); the parent's events are the engine's `subagent.*` frames, `subagent.interrupt` stops one and `session.transcript` reads the child's session.
 
 ### Events
 | Event | Payload |

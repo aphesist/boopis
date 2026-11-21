@@ -242,6 +242,30 @@ export interface Step { title: string; mono?: boolean; meta?: readonly string[];
 export interface Ship { title: string; quote: string; passed: number; rolledBack: number; files: number; add: number; del: number; branch: string }
 /** something attached to a message: a file, a picture or a folder. `path` is absolute on the machine the engine runs on; the page build has only a name. */
 export interface Attached { name: string; kind: 'file' | 'image' | 'folder'; path?: string; bytes?: number }
+/** a task the session handed to another model (the engine's child agent): who runs it, what it was told, how it is going */
+export type ChildStatus = 'queued' | 'running' | 'done' | 'failed' | 'stopped';
+export interface ChildTask {
+  /** the card's identity: the engine's subagent id once it has one, else the delegation and task index */
+  id: string;
+  /** the engine's subagent id (what stopping a child names); '' until the child starts */
+  subagentId: string;
+  /** the child's own session: what "open" reads; '' until it exists */
+  childSession: string;
+  index: number;
+  goal: string;
+  /** the model the child runs on, as the engine reports it; '' until it says */
+  model: string;
+  status: ChildStatus;
+  /** when it started (ms), for the running clock; null before */
+  startedAt: number | null;
+  /** how long it ran, once it ended (seconds); null while it runs or when the engine did not say */
+  seconds: number | null;
+  tools: number;
+  /** what it is doing now: the last tool it called, or a line of its thinking */
+  now: string;
+  /** what it reported, or why it failed ('' until it ends) */
+  summary: string;
+}
 export interface UserTurn { id: string; role: 'user'; at: string; text: string; attachments?: readonly Attached[] }
 export interface AgentTurn {
   id: string; role: 'assistant';
@@ -257,6 +281,8 @@ export interface AgentTurn {
   blank?: BlankData | undefined; ship?: Ship | undefined;
   /** the forms the agent (or the plugin) opened in this turn, open or answered */
   forms?: readonly FormSpec[] | undefined;
+  /** the tasks the session handed to other models in this turn (live: a resumed transcript does not carry them) */
+  children?: readonly ChildTask[] | undefined;
   /** why Smart picked this model, in a few words ("debugging"); absent when a person picked it or the engine's default answered */
   why?: string | undefined;
   status: 'done' | 'running' | 'stopped';
@@ -276,6 +302,8 @@ export type ConversationEvent =
   /** a form was opened where this turn raised it, and later answered, cancelled or lapsed (here or in another place) */
   | { type: 'form-opened'; turnId: string; form: FormSpec }
   | { type: 'form-resolved'; turnId: string; formId: string; status: FormStatus; receipt?: string }
+  /** a task handed to another model started, progressed or ended (the whole card, again) */
+  | { type: 'child-updated'; turnId: string; child: ChildTask }
   /** the running turn's answer so far (the live provider streams it; the mock sends the whole answer with `turn-finished`) */
   | { type: 'turn-text'; turnId: string; paragraphs: readonly string[] }
   /** the whole conversation changed under the reader (a transcript loaded, or events were lost): read the snapshot again */

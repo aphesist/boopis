@@ -17,6 +17,8 @@ import { modelEntries, selectHTML, toEntries } from './select-html';
 import type { SelectEntry } from './select-html';
 import { scroll } from './scroll';
 import { tabs } from './tabs';
+import { STATUS_DOT, STATUS_WORD } from './child';
+import type { ChildOpts } from './child';
 import { search } from './search';
 
 type U<T> = T | undefined;
@@ -290,8 +292,25 @@ export const tipBody = (label: string, k?: string | null, state?: { text: string
   '<span>' + esc(label) + '</span>' + (state ? '<span class="ui-tip__state"' + attrs({ 'data-tone': state.tone }) + '>' + esc(state.text) + '</span>' : '') + (k ? keys(k, { fit: true, raised: true }) : '');
 const tip = (label: string, k?: string, state?: { text: string; tone?: string }): string => '<div class="ui-tip" data-static>' + tipBody(label, k, state) + '</div>';
 
+
+/** a task a session handed to another model (child.ts): mark and name, goal, what it does now, how it ended. The actions carry
+    `data-action` `open` and `stop`; the session wires them. */
+function child(o: ChildOpts): string {
+  const word = STATUS_WORD[o.status];
+  const live = o.status === 'running' || o.status === 'queued';
+  const meta = [word, o.time, o.tools ? o.tools + (o.tools === 1 ? ' tool' : ' tools') : ''].filter(Boolean).map(esc).join(' \u00b7 ');
+  return '<article class="ui-child"' + attrs({ 'data-status': o.status, 'data-child-id': o.id, 'aria-label': o.goal + ', ' + word }) + '>' +
+    '<header class="ui-child__head"><span class="ui-child__who">' + modelHTML(o.model) + '</span><span class="ui-child__acts">' +
+    (o.canOpen ? iconButton({ icon: 'session', label: 'Open this task\u2019s session', size: 's', action: 'open' }) : '') +
+    (o.canStop && live ? iconButton({ icon: 'stop', label: 'Stop this task', size: 's', action: 'stop' }) : '') + '</span></header>' +
+    '<p class="ui-child__goal">' + esc(o.goal) + '</p>' +
+    '<p class="ui-child__state">' + dot(STATUS_DOT[o.status] || undefined, { size: 's' }) + '<span class="ui-child__meta">' + meta + '</span></p>' +
+    (live && o.now ? '<p class="ui-child__now">' + esc(o.now) + '</p>' : '') +
+    (!live && o.summary ? '<p class="ui-child__summary">' + esc(o.summary) + '</p>' : '') + '</article>';
+}
+
 export const html = {
   icon, keys, kbd, combo, comboKbds, code, inline, stamp, dot, capacity, button, iconButton, send, hold, switch: switchHtml, segmented, chip, chipGroup,
   orb: orbHtml, model: modelHTML, modelRoute: routeHTML, modelMark: markHTML, stateWord, row, leadFor, group, ladder, measure, legend, pages, request, entry, disclosure, steps, blank, section, menuItems, field, select: selectHTML, setRow, setHead, setSection, empty, toast, tip, mod,
-  scroll, tabs, search, tipBody, badge, input
+  scroll, tabs, search, tipBody, badge, input, child
 };

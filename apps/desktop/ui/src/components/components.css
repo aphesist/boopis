@@ -32,7 +32,7 @@
    (radius, size, ring); a row along an edge that holds corner controls at its ends: .ui-corners (the inset). Never set a
    radius or an inset in a corner by hand. A squircle-drawn container also exposes its drawn radius as --r-outer when it
    declared none (squircle.ts), so its children nest the same way. */
-:where(.ui-nest, .ui-row-wrap, .ui-entry, .ui-composer__box, .ui-file, .ui-menu, .ui-pop, .ui-listbox, .ui-tip, .ui-toast, .ui-seg, .ui-search--s, .ui-search--m,
+:where(.ui-nest, .ui-row-wrap, .ui-entry, .ui-composer__box, .ui-file, .ui-child, .ui-menu, .ui-pop, .ui-listbox, .ui-tip, .ui-toast, .ui-seg, .ui-search--s, .ui-search--m,
   hx-card[data-size="inline"], hx-card[data-size="compact"], hx-card[data-size="popover"]) {
   --corner-size: var(--ctl-s);
   --r-in: min(var(--r-outer), max(var(--r-floor), calc(var(--r-outer) - var(--pad))));
@@ -846,3 +846,25 @@ hx-card[data-accent] .cd-mini { --sq-line: color-mix(in srgb, var(--cd-accent) 3
 
 /* the first-run welcome's logo: the hero (letters="play" needs a 32px type size); sized from the spacing scale, inked like the frame */
 .ui-logo--welcome { display: block; justify-self: center; font-size: calc(var(--sp-6) * 3); color: var(--text-strong); }
+
+/* ───────────── child: a task a session handed to another model (child.ts) ─────────────
+   A container (DESIGN-SYSTEM.md §8) on card stock: radius --r-outer, inset --pad. Its two actions, open and stop, are the
+   .ui-ib in its top corner at --corner-inset (R-corner-3). A running child breathes its dot; a failed one carries the
+   attention dot; the rest are still. A long goal or summary wraps inside the card and a long unbroken run ellipsises (R-overflow-1). */
+.ui-child {
+  --r-outer: var(--r-s); --pad: var(--sp-2); --corner-size: 24px;
+  position: relative; display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; padding: var(--pad) var(--sp-3) var(--sp-3); border-radius: var(--r-outer);
+  --sq-bg: var(--bg-3); background: var(--sq-bg); box-shadow: inset 0 0 0 1px var(--hair); font: 400 var(--fs-s)/var(--lh-ui) var(--sans); color: var(--text);
+}
+.ui-child__head { display: flex; align-items: center; min-width: 0; min-height: var(--corner-size); }
+.ui-child__who { min-width: 0; overflow: hidden; font-weight: 500; }
+.ui-child:has(.ui-child__acts > button) .ui-child__who { margin-right: calc(var(--corner-size) * 2 + var(--sp-2)); }
+.ui-child__acts { position: absolute; top: var(--corner-inset); right: var(--corner-inset); display: flex; gap: var(--sp-1); }
+.ui-child__acts:empty { display: none; }
+.ui-child__acts .ui-ib { border-radius: var(--r-corner, var(--r-xs)); }
+.ui-child__goal { margin: 0; overflow-wrap: anywhere; color: var(--text); }
+.ui-child__state { display: flex; align-items: center; gap: var(--sp-2); margin: 0; color: var(--text-quiet); }
+.ui-child__meta { font: 400 var(--fs-2xs)/var(--lh-meta) var(--mono); font-variant-numeric: tabular-nums; }
+.ui-child__now { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 var(--fs-2xs)/var(--lh-meta) var(--mono); color: var(--text-quiet); }
+.ui-child__summary { margin: 0; overflow-wrap: anywhere; color: var(--text-dim); }
+.ui-child[data-status="stopped"] .ui-child__goal, .ui-child[data-status="failed"] .ui-child__goal { color: var(--text-dim); }

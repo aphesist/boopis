@@ -16,6 +16,8 @@ import { createLiveGroups } from './live/groups';
 import { todosFrom } from './live/map-details';
 import { blankData } from './live/blanks';
 import { createModsHost } from './live/mods';
+import { foldChild, isSubagentEvent } from './live/children';
+import { sendRoster } from './live/dispatch';
 import { loadModelsView } from './setup-bridge';
 import { tiersFromHost } from './live/models';
 import { chooseAnotherModel, createFormsHost, hasHostDialogs, hostCancelSignin, hostSignin, tauriPickFolder } from './live/forms';
@@ -134,6 +136,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
 
   /* ───────── a session becomes live on the gateway (created, or resumed with its transcript) ───────── */
   async function resume(c: Convo): Promise<void> {
+    await sendRoster(client, details.source.choices.get());   /* its tools are rebuilt now: the models it can name are today's */
     const res = await client.request('session.resume', { session_id: c.uiId });
     bind(c, res.session_id);
     void modsHost.attach(c.uiId);   /* the mods already loaded in a resumed session */
@@ -162,6 +165,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     /* the toolset is fixed here for good (Hermes's prompt cache): a governed session has only the boopis tools, so no
        Hermes tool the plugin would have to police ever reaches the model. The generated contract's create params do not
        list `toolsets` yet (the gateway's canonical ones do), hence the raw call. */
+    await sendRoster(client, details.source.choices.get());   /* the models a message can send a task to, fixed with the session's tools (a governed session has no delegate_task: it is harmless there) */
     const res = await client.requestRaw('session.create', { source: 'gui', ...(governed ? { toolsets: GOVERNED_TOOLSETS } : {}) }) as RpcMethods['session.create']['result'];
     const want = details.chosen(c.uiId);
     if (want.governed !== null || governed) {
@@ -247,6 +251,23 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   });
   const approvalRoute = new Map<string, { gwSession: string; generation: number }>();
 
+  /* a task handed to another model: the engine's `subagent.*` frames, folded into the turn that started it (live/children.ts) */
+  function childFrame(c: Convo, type: string, p: Record<string, unknown>): void {
+    if (!isSubagentEvent(type)) return;
+    const t = raisingTurn(c);
+    if (!t) return;
+    const folded = foldChild(t.children ?? [], type, p as never, Date.now());
+    if (!folded) return;
+    t.children = folded.list;
+    c.events.emit({ type: 'child-updated', turnId: t.id, child: folded.child });
+  }
+  const childOf = (id: string, childId: string): { gw: string; child: import('../data/types').ChildTask } | null => {
+    const c = convos.get(id);
+    if (!c?.gwId) return null;
+    for (const t of c.turns) if (t.role === 'assistant') { const child = t.children?.find((x) => x.id === childId); if (child) return { gw: c.gwId, child }; }
+    return null;
+  };
+
   function onEvent(ev: GatewayEvent): void {
     if (ev.type === 'sessions.changed') { refreshList().catch((e: unknown) => { log.warn('could not refresh the session list', e); }); return; }
     if (ev.type === 'plugin.boopis.ledger.appended') { ledgerTotals = reduceLedger(ledgerTotals, (ev.payload ?? {}) as { type?: unknown; payload?: unknown }); for (const f of [...ledgerSubs]) f(ledgerTotals); }
@@ -263,6 +284,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     switch (ev.type) {
       case 'session.info': { const profile = p['profile_name']; if (typeof profile === 'string' && profile) user.set({ name: profile, initials: profile.slice(0, 1).toLowerCase() }); const m = p['model']; if (typeof m === 'string' && m && !c.once) c.model = m;   /* an "@" message names its own model here; the session's stays */ const t = p['title']; if (typeof t === 'string' && t) patchSession(uiId, { title: sessionTitle({ title: t, preview: '' }) }); break; }
       case 'message.start': startTurn(c); break;
+      case 'subagent.spawn_requested': case 'subagent.start': case 'subagent.progress': case 'subagent.thinking': case 'subagent.tool': case 'subagent.complete': childFrame(c, ev.type, p); break;
       case 'tool.start': addStep(c, startTurn(c), toolStep(p)); break;
       case 'tool.complete': if (p['is_error'] === true) addStep(c, startTurn(c), failedStep(p)); break;
       case 'message.delta': {
@@ -470,6 +492,17 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
       if (gw) client.request('session.interrupt', { session_id: gw }).catch((e: unknown) => { log.warn('could not stop', e); });
     },
     answerBlank,
+    stopChild(id, childId) {
+      const hit = childOf(id, childId);
+      if (!hit?.child.subagentId) return;
+      client.request('subagent.interrupt', { session_id: hit.gw, subagent_id: hit.child.subagentId }).catch((e: unknown) => { log.warn('could not stop the task', e); });
+    },
+    async childTranscript(id, childId) {
+      const hit = childOf(id, childId);
+      if (!hit?.child.childSession) throw new Error('This task has no session of its own to read yet.');
+      const res = await (await client.requestRaw('session.transcript', { session_id: hit.child.childSession, limit: 200, order: 'oldest' })) as { rows?: unknown[] };
+      return transcriptToTurns((res.rows ?? []) as never, hit.child.model, childId + ':');
+    },
     openPullRequest: () => { log.warn('pull requests are not wired yet'); }
   };
 
