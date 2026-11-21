@@ -33,8 +33,8 @@ for (const [k, v] of Object.entries(ALSO)) CHECKS[k].rules = v;
 export const checkIds = Object.keys(CHECKS);
 
 /** the fix agents' areas and the words that select them */
-export const AREAS = ['components', 'composer', 'shell', 'settings', 'bots', 'cards', 'dock'];
-export const AREA_TITLES = { components: 'Components (the HX.ui primitives)', composer: 'Conversation and composer', shell: 'Shell (sidebar, palette, menus, toasts)', settings: 'Settings and first run', bots: 'Bots', cards: 'Cards, forms and mods', dock: 'Dock', static: 'Source (static scan)' };
+export const AREAS = ['components', 'composer', 'shell', 'settings', 'bots', 'cards', 'dock', 'store'];
+export const AREA_TITLES = { components: 'Components (the HX.ui primitives)', composer: 'Conversation and composer', shell: 'Shell (sidebar, palette, menus, toasts)', settings: 'Settings and first run', bots: 'Bots', cards: 'Cards, forms and mods', dock: 'Dock', store: 'Store', static: 'Source (static scan)' };
 const ALIAS = { conversation: 'composer', session: 'composer', sidebar: 'shell', palette: 'shell', menus: 'shell', toasts: 'shell', 'first-run': 'settings', firstrun: 'settings', forms: 'cards', mods: 'cards', primitives: 'components', ui: 'components' };
 export const areaOf = (word) => ALIAS[word] ?? word;
 
@@ -45,6 +45,7 @@ export function areaOfPath(p) {
   if (/modules\/bots/.test(p)) return 'bots';
   if (/modules\/(cards|mods)|components\/mod-/.test(p)) return 'cards';
   if (/modules\/dock/.test(p)) return 'dock';
+  if (/modules\/store|host\/live\/store|host\/store-bridge/.test(p)) return 'store';
   if (/host\/|styles\/theme-panel/.test(p)) return 'settings';
   return 'components';
 }

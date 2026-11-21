@@ -56,6 +56,17 @@ RPC_METHODS = (
     "bots.archive",
     "bots.restore",
     "bots.delete",
+    # store/: the plugin's half of the store (docs/STORE.md, docs/PROTOCOL.md section 3)
+    "store.prepare",
+    "store.confirm",
+    "store.uninstall",
+    "store.diff",
+    "store.rollback",
+    "store.set_enabled",
+    "store.list",
+    "store.removed.set",
+    "store.policy.get",
+    "store.policy.set",
 )
 
 

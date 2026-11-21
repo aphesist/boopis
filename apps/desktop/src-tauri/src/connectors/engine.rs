@@ -39,6 +39,12 @@ pub trait Opener: Send + Sync {
     fn open(&self, url: &str) -> Result<()>;
 }
 
+/// A way of building a connector's plan: `None` is the plan shown, `Some(keys)` the one installed with those keys given.
+pub type Planner<'a> = &'a (dyn Fn(Option<&BTreeSet<String>>) -> Result<plan::Plan> + Send + Sync);
+
+/// The engine's own key for the servers the boopis plugin may call from governed `exec`.
+pub const GOVERNED_ALLOWLIST: &str = "plugins.entries.boopis.mcp_allowlist";
+
 /// When Hermes restarts to read a key that was just given.
 #[derive(Debug, Clone, Copy, serde::Deserialize, Type, PartialEq, Eq)]
 #[serde(rename_all = "snake_case", rename = "ConnectorRestart")]
@@ -237,7 +243,15 @@ impl Engine {
     /// # Errors
     /// `InvalidInput`, in words, for anything the validators refuse.
     pub async fn review(&self, request: &Request) -> Result<Review> {
-        let plan = plan::build(request, None)?;
+        self.review_with(&|p| plan::build(request, p)).await
+    }
+
+    /// [`Engine::review`] for any way of building the plan (the store's servers are not form requests).
+    ///
+    /// # Errors
+    /// As [`Engine::review`].
+    pub async fn review_with(&self, build: Planner<'_>) -> Result<Review> {
+        let plan = build(None)?;
         let restart = if plan.wires.is_empty() {
             None
         } else {
@@ -272,7 +286,6 @@ impl Engine {
     /// # Errors
     /// `InvalidInput` for a plan that changed or a missing key, `hx.connectors.exists` for a name taken, Hermes's refusals,
     /// the keychain's.
-    #[allow(clippy::too_many_lines)] // one linear install: check, add, keys, wires, restart, test
     pub async fn install(
         &self,
         request: &Request,
@@ -280,7 +293,25 @@ impl Engine {
         secrets: &BTreeMap<String, String>,
         restart: Option<RestartWhen>,
     ) -> Result<InstallReport> {
-        let shown = plan::build(request, None)?;
+        self.install_with(&|p| plan::build(request, p), plan_hash, secrets, restart)
+            .await
+    }
+
+    /// [`Engine::install`] for any way of building the plan: `build(None)` is the plan shown, `build(Some(given))` the one
+    /// installed. The store builds its servers from a registry entry or a bundle and installs them here, so a store install and a
+    /// form install are one code path: the same checks, the same order, the same rollback, the same governed grant.
+    ///
+    /// # Errors
+    /// As [`Engine::install`].
+    #[allow(clippy::too_many_lines)] // one linear install: check, add, keys, wires, restart, test
+    pub async fn install_with(
+        &self,
+        build: Planner<'_>,
+        plan_hash: &str,
+        secrets: &BTreeMap<String, String>,
+        restart: Option<RestartWhen>,
+    ) -> Result<InstallReport> {
+        let shown = build(None)?;
         if shown.hash != plan_hash {
             return Err(Error::Connector(
                 "hx.connectors.plan_changed",
@@ -313,7 +344,7 @@ impl Engine {
         for v in &values {
             validate_value(v)?;
         }
-        let plan = plan::build(request, Some(&given))?;
+        let plan = build(Some(&given))?;
         let mut steps = Vec::new();
         // A key means a restart of Hermes, which ends a turn that is running in any open session. Never silently: unless no
         // turn is running (or the user chose when), nothing is changed at all and the caller is asked to choose.
@@ -353,6 +384,18 @@ impl Engine {
             "Added",
             StepState::Done,
             format!("as {}, with boopis's connectors", plan.name),
+        ));
+        // The governed gap: a governed `exec` reaches an MCP server only through `ctx.call_mcp`, which the engine denies unless
+        // the server is in `plugins.entries.boopis.mcp_allowlist` (docs/STORE.md 5.5 step 7). A failure undoes the add.
+        if let Err(e) = self.grant_governed(&plan.name).await {
+            self.rollback(&plan.name, &[]).await;
+            return Err(e);
+        }
+        steps.push(step(
+            "governed",
+            "Allowed for governed work",
+            StepState::Done,
+            "governed sessions reach it only through exec, and each call is decided by your permissions",
         ));
 
         let mut saved: Vec<SecretRef> = Vec::new();
@@ -484,6 +527,63 @@ impl Engine {
         })
     }
 
+    /// The servers the boopis plugin may call, as Hermes holds them.
+    async fn governed_list(&self) -> Result<Vec<String>> {
+        Ok(self
+            .ops
+            .config_get(GOVERNED_ALLOWLIST)
+            .await?
+            .and_then(|v| v.as_array().cloned())
+            .map(|a| {
+                a.into_iter()
+                    .filter_map(|x| x.as_str().map(str::to_owned))
+                    .collect()
+            })
+            .unwrap_or_default())
+    }
+
+    /// Put `name` on the list of servers a governed `exec` may call (`hermes config set`, the route the keys take; the file is
+    /// Hermes's own and the host never writes it). One that is on it already stays once.
+    ///
+    /// # Errors
+    /// Hermes's refusal.
+    pub async fn grant_governed(&self, name: &str) -> Result<()> {
+        let mut list = self.governed_list().await?;
+        if list.iter().any(|n| n == name) {
+            return Ok(());
+        }
+        list.push(name.to_owned());
+        list.sort();
+        self.ops
+            .config_set(
+                GOVERNED_ALLOWLIST,
+                &serde_json::to_string(&list).unwrap_or_default(),
+            )
+            .await
+    }
+
+    /// Take `name` off that list, and the list with it when it is empty.
+    ///
+    /// # Errors
+    /// Hermes's refusal.
+    pub async fn revoke_governed(&self, name: &str) -> Result<()> {
+        let list = self.governed_list().await?;
+        if !list.iter().any(|n| n == name) {
+            return Ok(());
+        }
+        let rest: Vec<String> = list.into_iter().filter(|n| n != name).collect();
+        if rest.is_empty() {
+            self.ops.config_unset(GOVERNED_ALLOWLIST).await
+        } else {
+            self.ops
+                .config_set(
+                    GOVERNED_ALLOWLIST,
+                    &serde_json::to_string(&rest).unwrap_or_default(),
+                )
+                .await
+        }
+    }
+
     /// Queue `name` for the restart that waits until no session has a turn running; start the one waiter when none runs.
     fn wait_for_idle(&self, name: &str) {
         let first = {
@@ -558,6 +658,9 @@ impl Engine {
 
     /// Undo an install that failed part of the way: the server and the keys this call saved.
     async fn rollback(&self, name: &str, saved: &[SecretRef]) {
+        if let Err(e) = self.revoke_governed(name).await {
+            tracing::warn!(error = %e, "could not take a connector off the governed list after a failed install");
+        }
         if let Err(e) = self.ops.remove(name).await {
             tracing::warn!(error = %e, "could not remove a connector after a failed install");
         }
@@ -636,6 +739,7 @@ impl Engine {
             })
             .collect();
         self.ops.remove(name).await?;
+        self.revoke_governed(name).await?;
         let mut report = RemoveReport {
             name: name.to_owned(),
             deleted_credentials: Vec::new(),

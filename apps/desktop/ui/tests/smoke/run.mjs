@@ -1,6 +1,6 @@
 /* Playwright smoke: boot without console errors, the four theme presets (and their contrast), the keyboard walk-through
    (KEYMAP.md), the owner's decisions and the dock's gestures, and an axe scan with zero violations.
-   `node tests/smoke/run.mjs [boot|themes|keys|owner|live|forms|mods|controls|corners|concentric|dock-empty|dock-motion|dock-presence|axe]` runs one part. Exit code 1 on any failure. */
+   `node tests/smoke/run.mjs [boot|themes|keys|owner|live|forms|mods|controls|store|corners|concentric|dock-empty|dock-motion|dock-presence|axe]` runs one part. Exit code 1 on any failure. */
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { check, errorsAll, results, scenario, start } from './harness.mjs';
@@ -16,6 +16,7 @@ import { concentric } from './concentric.mjs';
 import { mods } from './mods.mjs';
 import { controls } from './controls.mjs';
 import { mentions } from './mention.mjs';
+import { store } from './store.mjs';
 
 const require = createRequire(import.meta.url);
 const AXE = readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
@@ -56,6 +57,7 @@ if (want('dock-presence')) await dockPresence(env);
 if (want('mods')) await mods(env, AXE);
 if (want('controls')) await controls(env, AXE);
 if (want('mention')) await mentions(env);
+if (want('store')) await store(env);
 if (want('forms')) { await formCards(env); await liveForms(env); await liveRequests(env); }
 
 if (want('axe')) {
@@ -68,6 +70,8 @@ if (want('axe')) {
     ['palette', {}, (p) => p.keyboard.press('Control+k')], ['settings', {}, (p) => p.keyboard.press('Control+Comma')],
     ['settings models', {}, async (p) => { await p.keyboard.press('Control+Comma'); await p.waitForTimeout(300); await p.click('#hx-dtab-models'); }],
     ['appearance', {}, (p) => p.keyboard.press('Control+Shift+Comma')], ['keys sheet', {}, (p) => p.keyboard.press('Control+Slash')],
+    ['store', {}, (p) => p.keyboard.press('Control+Shift+S')],
+    ['store installed', {}, async (p) => { await p.keyboard.press('Control+Shift+S'); await p.waitForSelector('#hx-store-body [role=tab]'); await p.getByRole('tab', { name: 'Installed' }).click(); }],
     ['account menu', {}, (p) => p.click('#hx-btn-account')], ['model picker', {}, async (p) => { await p.keyboard.press('Control+g'); await p.keyboard.press('i'); await p.waitForTimeout(200); await p.keyboard.press('Alt+m'); }],
     ['blank popover', {}, async (p) => { await p.keyboard.press('Control+g'); await p.keyboard.press('m'); await p.waitForTimeout(200); await p.keyboard.press('b'); }],
     ['dock with no bots', { q: 'fixture=none' }, null],

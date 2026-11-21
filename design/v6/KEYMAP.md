@@ -40,6 +40,7 @@ render from the table in `shell.js` (`KEYGROUPS`), so this file and that table m
 | mod+shift+J | Dock expanded or normal | shell calls `window.hxDock.setMode()` |
 | mod+, | Settings | |
 | mod+shift+, | Settings > Appearance (theme customizer) | |
+| mod+shift+S | Store: browse and install skills, connectors, plugins and mods | opens the store view; Esc closes it |
 | mod+shift+L | Light or dark | to Bone, and back to the user's last dark theme with its overrides |
 | mod+/ | Keyboard shortcuts sheet | also `?` outside text fields |
 | F6, shift+F6 | Next, previous region | order: title bar, sidebar list, conversation, composer, details panel, dock; skips what is closed |

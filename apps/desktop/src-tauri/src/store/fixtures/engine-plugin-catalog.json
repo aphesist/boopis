@@ -1,0 +1,136 @@
+{
+ "generated_at": "2026-11-21T06:33:55.619140+00:00",
+ "entries": [
+  {
+   "name": "0bull",
+   "repo": "https://github.com/0bull/agent-plugin",
+   "sha": "240890a71715375bc877b238491e414517e9d902",
+   "description": "Control real iPhones rented from 0bull (screenshots, on-screen text, taps, typing, device commands, recorded macros, an on-phone agent) and publish videos to TikTok and YouTube Shorts from them, through the hosted 0bull Streamable HTTP MCP server plus three workflow skills. Portable Agent Plugins v1 package (mcp.json + skills/), no plugin code. Requires a 0bull account with a rented phone and browser OAuth consent (add the server with auth: oauth, then hermes mcp login 0bull); no API key or client secret is stored in the plugin. Posting sends the user's video and caption to TikTok or YouTube through the phone's own apps. Disclosure \u2014 hosted-only connector; screenshots, on-screen text, anything typed on the phone (including passwords or codes you hand the agent) and your videos and captions go to 0bull.net; posts publish publicly to TikTok or YouTube; the server also exposes rental tools that spend money, which the skills tell the model never to call but Hermes does not block.",
+   "maintainer": "0bull",
+   "tier": "community",
+   "category": "tools",
+   "docs_url": "https://github.com/0bull/agent-plugin#readme",
+   "version": "1.0.0",
+   "platforms": [],
+   "capabilities": {
+    "provides_tools": [],
+    "provides_hooks": [],
+    "provides_middleware": [],
+    "requires_env": []
+   }
+  },
+  {
+   "name": "accent-picker",
+   "repo": "https://github.com/NousResearch/hermes-official-plugins",
+   "sha": "80025332933bf84fb3c7b68f369d9fe59a771e98",
+   "subdir": "accent-picker",
+   "title": "Accent Picker",
+   "description": "OKLCH accent colour picker for the Hermes Desktop status bar: drag it and the whole theme retints live, with palette commands to reset to the theme default or copy the current colour. A theme-authoring tool; the colour is scratch state and is never persisted. Desktop-only (desktop/plugin.js inside the plugin SDK surface); no agent tools, hooks, middleware or env vars.",
+   "maintainer": "NousResearch",
+   "tier": "official",
+   "category": "desktop",
+   "version": "1.1.0",
+   "docs_url": "https://github.com/NousResearch/hermes-official-plugins/tree/main/accent-picker",
+   "image": "https://raw.githubusercontent.com/NousResearch/hermes-official-plugins/80025332933bf84fb3c7b68f369d9fe59a771e98/assets/accent-picker.jpg",
+   "platforms": [],
+   "capabilities": {
+    "provides_tools": [],
+    "provides_hooks": [],
+    "provides_middleware": [],
+    "requires_env": []
+   }
+  },
+  {
+   "name": "adaption",
+   "title": "Adaption",
+   "repo": "https://github.com/adaptionlabs/adaption-hermes-plugin",
+   "sha": "3ab5264a043ea65ad03f2fbad841219d9649fb6a",
+   "description": "Dataset import, adaptation, augmentation, translation, localization, synthetic generation (Invent), and AutoScientist fine-tuning through Adaption's hosted MCP server, with three workflow skills bundled. Agent Plugins v1 package (plugin.json + mcp.json + skills/), configuration only. Disclosure \u2014 every tool call goes to Adaption's hosted server (api.prod.adaptionlabs.ai) and acts on the user's Adaption account, tagged with a fixed hermes-plugin source parameter and header; the tool set is served by that server at runtime and is not covered by the pinned sha. Sign-in runs the pinned mcp-remote@0.1.49 through npx (Node.js 20.18.1+ and npm required; its own npm dependencies resolve to their latest matching versions at first run) with Adaption's pre-registered public OAuth client, which opens a browser and a local callback port on first use and stores OAuth tokens under ~/.mcp-auth. Launching runs spends Adaption credits; the package marks the server untrusted, so Hermes asks before every tool the server does not mark read-only (including cost estimates) and refuses them in unattended runs.",
+   "maintainer": "adaptionlabs",
+   "tier": "verified",
+   "category": "tools",
+   "requires_hermes": ">=0.21.6",
+   "docs_url": "https://github.com/adaptionlabs/adaption-hermes-plugin#readme",
+   "version": "0.3.0",
+   "readme": true,
+   "platforms": [],
+   "capabilities": {
+    "provides_tools": [],
+    "provides_hooks": [],
+    "provides_middleware": [],
+    "requires_env": []
+   }
+  },
+  {
+   "name": "1toolring",
+   "title": "1ToolRing",
+   "repo": "https://github.com/khmuhtadin/1toolring-mcp",
+   "sha": "d4df0c005dd6cfd85f85f26872ffc9c82a97ec76",
+   "version": "1.0.0",
+   "description": "One API key and one prepaid balance for thousands of pay-per-call tools: search and SEO data, maps and places, shopping prices, market data, web pages, images, video, voice and more. Runs on 1ToolRing's hosted MCP server.\n\n- Search and SEO: Google search results, keyword and SEO data\n- Maps and places: Google Maps places\n- Shopping: e-commerce product prices\n- Also market data, web pages, images, video and voice, from third-party providers\n- Four MCP tools: discover_tools, inspect_tool and get_tool_run (free, read-only) and run_tool (paid)\n- Bundles the 1toolring skill; Agent Plugins v1 package (plugin.json + mcp.json + skills/), configuration only\n\nDisclosures\n- Hosted-only connector with no local code: every tool call, with its arguments, goes to mcp.1toolring.com (Streamable HTTP, API key auth).\n- run_tool spends the key owner's prepaid 1ToolRing balance at the price inspect_tool shows; failed runs are not charged and there is no subscription.\n- The package marks the server untrusted, so Hermes asks before every run_tool call.\n- The key is read from ONETOOLRING_API_KEY in the profile .env (or the plugin's settings form) and sent as a bearer header.\n- The tool set is served by the remote server at runtime and is not covered by the pinned sha.\n",
+   "maintainer": "khmuhtadin",
+   "tier": "community",
+   "category": "tools",
+   "docs_url": "https://github.com/khmuhtadin/1toolring-mcp#set-up",
+   "requires_hermes": ">=0.21.6",
+   "image": "https://raw.githubusercontent.com/khmuhtadin/1toolring-mcp/d4df0c005dd6cfd85f85f26872ffc9c82a97ec76/assets/logo-400.png",
+   "readme": true,
+   "platforms": [],
+   "capabilities": {
+    "provides_tools": [],
+    "provides_hooks": [],
+    "provides_middleware": [],
+    "requires_env": [
+     "ONETOOLRING_API_KEY"
+    ]
+   }
+  },
+  {
+   "name": "abeyance",
+   "repo": "https://github.com/0xkinno/abeyance",
+   "subdir": "abeyance",
+   "sha": "a005208a79ac9d4a1e51a53e5528e6580925dd56",
+   "title": "Abeyance",
+   "description": "Your Hermes cron jobs wait for you instead of guessing. When a scheduled run reaches a step that publishes, pushes, merges, deploys, pays, sends a message, deletes in the cloud, writes a database or destroys local work, Abeyance stops that step before it runs (pre_tool_call), keeps the work already done, freezes the run and replaces its delivered output with a card for the owner. Replying `resume CODE` checks the repo and touched files are unchanged since the card (git HEAD, branch, upstream, uncommitted changes, file hashes) and refuses with the exact change if not (pre_llm_call block, no model call); otherwise the agent's first action must be the exact parked call, which goes to Hermes's own approval gate. Single use, owner-only (stable platform ids), expires after 18 h by default, exactly-once. Subagents of a cron run are bound so a held step cannot hide there. Also /abeyance, hermes abeyance (list, show, deny, test, demo), a bundled skill, a Nightly release blueprint and a Desktop half (status chip, Waiting for you page, Resume and Drop). Disclosure \u2014 Abeyance runs read-only local git (rev-parse, status) on the host in the cron job's working folder with a minimal environment, user/system git config, core.fsmonitor and hooks off, and skips status when the repo defines filter drivers (including through include.path and config.worktree); it stores parked commands and their arguments verbatim (not redacted), git snapshots and up to 300-character output excerpts in its own SQLite store under the profile's plugin data; it never approves a step itself.",
+   "maintainer": "0xkinno",
+   "tier": "community",
+   "category": "automation",
+   "requires_hermes": ">=0.23.0",
+   "docs_url": "https://github.com/0xkinno/abeyance#readme",
+   "version": "0.1.4",
+   "image": "https://raw.githubusercontent.com/0xkinno/abeyance/a005208a79ac9d4a1e51a53e5528e6580925dd56/assets/cover.jpg",
+   "screenshots": [
+    "https://raw.githubusercontent.com/0xkinno/abeyance/a005208a79ac9d4a1e51a53e5528e6580925dd56/assets/screenshots/telegram-card.png",
+    "https://raw.githubusercontent.com/0xkinno/abeyance/a005208a79ac9d4a1e51a53e5528e6580925dd56/assets/screenshots/approval-after-resume.png",
+    "https://raw.githubusercontent.com/0xkinno/abeyance/a005208a79ac9d4a1e51a53e5528e6580925dd56/assets/screenshots/demo-cli.png"
+   ],
+   "platforms": [
+    "linux"
+   ],
+   "capabilities": {
+    "provides_tools": [],
+    "provides_hooks": [
+     "pre_tool_call",
+     "post_tool_call",
+     "transform_llm_output",
+     "pre_llm_call",
+     "subagent_start"
+    ],
+    "provides_middleware": [],
+    "requires_env": []
+   }
+  }
+ ],
+ "removed": [
+  {
+   "name": "or-picker",
+   "reason": "Folded into openrouter-picker. Installing the provider alone left the picker broken. Install openrouter-picker.",
+   "date": "2026-09-28"
+  },
+  {
+   "name": "flowcanvas",
+   "reason": "Renamed to arachne-flow (the plugin id changed in 1.1.0). Install arachne-flow; flows stay in plugin-data/flowcanvas/ and can be copied to plugin-data/arachne-flow/.",
+   "date": "2026-11-19"
+  }
+ ]
+}

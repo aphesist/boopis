@@ -15,6 +15,7 @@ export const KEYGROUPS: ReadonlyArray<readonly [string, ReadonlyArray<readonly [
     ['Back, forward', 'mod+[ | mod+]'],
     ['Settings', 'mod+,'],
     ['Appearance and theme', 'mod+shift+,'],
+    ['Store: skills, connectors, plugins and mods', 'mod+shift+S'],
     ['Light or dark theme', 'mod+shift+L'],
     ['Keyboard shortcuts', 'mod+/ | ?'],
     ['Close the top layer, or leave the composer', 'esc']
@@ -130,7 +131,7 @@ export interface KeyCtx {
 export type KeyCommand =
   | { type: 'palette-toggle' } | { type: 'palette-items' } | { type: 'find' } | { type: 'new' } | { type: 'stop' }
   | { type: 'sidebar-toggle' } | { type: 'sidebar-hide-toggle' } | { type: 'details' } | { type: 'dock-toggle' } | { type: 'dock-expand' }
-  | { type: 'back' } | { type: 'forward' } | { type: 'settings'; section: 'general' | 'appearance' } | { type: 'light-dark' } | { type: 'keys' }
+  | { type: 'back' } | { type: 'forward' } | { type: 'settings'; section: 'general' | 'appearance' } | { type: 'light-dark' } | { type: 'keys' } | { type: 'store' }
   | { type: 'leader'; withMod: boolean } | { type: 'region'; dir: 1 | -1 } | { type: 'attention'; dir: 1 | -1 }
   | { type: 'tab'; tab: 'session' | 'bots' } | { type: 'composer' } | { type: 'escape' };
 /** `take`: the shell prevents the browser's default; `consume`: the shell has no action but the key must not reach the page */
@@ -167,6 +168,7 @@ export function classifyKey(e: KeyLike, c: KeyCtx): Classified | null {
       case 'BracketRight': if (!sh) return take({ type: 'forward' }); break;
       case 'Comma': return take({ type: 'settings', section: sh ? 'appearance' : 'general' });
       case 'KeyL': if (sh) return take({ type: 'light-dark' }); break;
+      case 'KeyS': if (sh) return take({ type: 'store' }); break;
       case 'Slash': return take({ type: 'keys' });
       case 'KeyG': if (!sh) return take({ type: 'leader', withMod: true }); break;
       default: break;

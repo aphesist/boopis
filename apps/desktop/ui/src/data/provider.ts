@@ -8,7 +8,8 @@
    did not send: unknown is `null` or empty and the UI shows it as unknown. */
 import type {
   ArchivedBot, Turn, Bot, BotCatalog, BotDraft, BotConfig, BotInfo, Change, ConversationEvent, Conversation, Connector, ContextUsage, DecisionKind, DiffFile, Environment, ArchivedGroup,
-  Attached, DetailsCan, DetailsNotes, FieldSchema, FileCompletions, FormCan, FormOutcome, ModSession, ModsEvent, PickerItem, PickerKind, GovernanceState, LedgerStats, ProviderInfo, RunSnapshot, Schedule, SendMeta, SessionSummary, ThreadMessage, Todo, User, Wait, WaitOutcome, ModelChoice, CouncilSource, Group, GroupMessage
+  Attached, DetailsCan, DetailsNotes, FieldSchema, FileCompletions, FormCan, FormOutcome, ModSession, ModsEvent, PickerItem, PickerKind, GovernanceState, LedgerStats, ProviderInfo, RunSnapshot, Schedule, SendMeta, SessionSummary, ThreadMessage, Todo, User, Wait, WaitOutcome, ModelChoice, CouncilSource, Group, GroupMessage,
+  InstallPlan, InstallReceipt, InstallRequest, ProjectPolicy, StageResult, StoreBrowse, StoreDetail, StoreFilter, StoreScope, StoreSource, UninstallResult, UpdateDiff
 } from './types';
 
 export type Unsubscribe = () => void;
@@ -252,6 +253,50 @@ export interface ModsSource {
   props(sessionId: string, component: string, id: string | null, props: Readonly<Record<string, unknown>>): void;
 }
 
+/* ───────── the store: browse, review and install everything installable (ADR-0038, docs/STORE.md) ─────────
+   Browse and search read the host's local cache and never leave the machine; a module never fetches. Every call that can fail
+   rejects with a `StoreError` (`{code, message}`): the stable `hx.store.*` code and a sentence to show. Nothing installs in a
+   running session: an install takes effect in the next one. A mock serves the fixture items (data/mock-provider.ts). */
+export interface StoreProvider {
+  /** whether this build can install: the page build and a build with no host cannot, and say why; browsing works either way */
+  can: { install: boolean; reason?: string };
+  /** the sources, their state and when each was last read; a new value on every refresh or switch */
+  sources: Watch<readonly StoreSource[]>;
+  /** what is installed for the followed bot, one receipt each; a new value on every install, update, rollback and removal */
+  installed: Watch<readonly InstallReceipt[]>;
+  /** updates found by the last check, one diff per item that changed; empty until a check ran */
+  updates: Watch<readonly UpdateDiff[]>;
+  /** a page of the catalogue (the front page when unfiltered), from the cache */
+  browse(filter?: StoreFilter, cursor?: string | null): Promise<StoreBrowse>;
+  /** local search over the cached catalogue: name, summary, tags, publisher; nothing leaves the machine */
+  search(query: string, filter?: StoreFilter, cursor?: string | null): Promise<StoreBrowse>;
+  /** the detail page's data */
+  detail(id: string): Promise<StoreDetail>;
+  /** the review: fetch and verify the pin into staging, analyse without running anything, and return the plan (with its hash) for `scope` */
+  review(id: string, scope?: StoreScope): Promise<{ stage: StageResult; plan: InstallPlan }>;
+  /** install what the review showed, after the hold; rejects with `hx.store.plan_changed` when it is no longer the same plan */
+  install(request: InstallRequest): Promise<InstallReceipt>;
+  /** look for newer pins and return what changed; `id` limits it to one item. Nothing updates itself. */
+  checkUpdates(id?: string): Promise<readonly UpdateDiff[]>;
+  /** the review of an update: stage the new pin, and return the plan to approve (install it with `install`) */
+  reviewUpdate(id: string): Promise<{ stage: StageResult; plan: InstallPlan }>;
+  /** switch an installed item on or off; it takes effect in the next session (`store_set_enabled`, an addition to the contract) */
+  setEnabled(id: string, enabled: boolean): Promise<void>;
+  /** go back to the version kept one step back */
+  rollback(id: string): Promise<InstallReceipt>;
+  /** remove an item; `deleteSecrets` is the user's agreement to delete its keys from the keychain */
+  uninstall(id: string, opts?: { deleteSecrets?: boolean }): Promise<UninstallResult>;
+  /** read the sources again (all, or one) */
+  refresh(source?: string): Promise<readonly StoreSource[]>;
+  setSourceEnabled(id: string, enabled: boolean): Promise<void>;
+  /** add a marketplace address, a git repository or a local folder or file as a source */
+  addSource(input: { url?: string; path?: string; label?: string }): Promise<StoreSource>;
+  removeSource(id: string): Promise<void>;
+  /** a project's "no engine plugins and no plugin hooks" switch (on by default for a governed project) */
+  projectPolicy(project: string): Promise<ProjectPolicy>;
+  setProjectPolicy(project: string, blockEnginePluginsAndHooks: boolean): Promise<ProjectPolicy>;
+}
+
 /* ───────── the dock's run and schedules ───────── */
 export interface RunSource {
   current: Watch<RunSnapshot>;
@@ -300,4 +345,6 @@ export interface DataProvider {
   mods: ModsSource;
   /** asking a council: several models answer one message and one combines them (ADR-0035) */
   council: CouncilSource;
+  /** the store: everything installable in one place (ADR-0038) */
+  store: StoreProvider;
 }

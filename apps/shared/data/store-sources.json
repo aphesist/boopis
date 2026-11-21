@@ -1,0 +1,142 @@
+{
+  "$schema": "./store.schema.json",
+  "schema_version": 1,
+  "description": "Where the store's items come from (ADR-0038, docs/STORE.md section 5.2). Every source is searched by default, in one place in the store, and each can be switched off there; `anthropic` is on after its terms were checked on 2026-11-21 (`terms: checked`, docs/STORE.md 5.2). Labels are in boopis's words: the engine's name never appears in one (ADR-0031). `default_tier` is the lowest tier the source's own review supports; a source's own marks can raise single items to `verified`, and only boopis's own list yields `recommended`.",
+  "sources": [
+    {
+      "id": "boopis",
+      "label": "Recommended by boopis",
+      "description": "boopis's own list: items a person at boopis checked against their publisher's sources and pinned. The front page of the store. Compiled into the app; a signed hosted index comes later.",
+      "kinds": [
+        "skill",
+        "connector",
+        "plugin",
+        "mod"
+      ],
+      "fetch": "compiled-in",
+      "default_tier": "recommended",
+      "default_on": true,
+      "user_added": false,
+      "engine_origin": false,
+      "terms": "own"
+    },
+    {
+      "id": "engine-plugins",
+      "label": "From the engine's store",
+      "description": "The plugins the engine's own store lists, every tier, read through the engine. These are Python that runs inside the engine, in every session.",
+      "kinds": [
+        "engine-plugin",
+        "plugin",
+        "connector"
+      ],
+      "fetch": "engine-gateway",
+      "default_tier": "not-reviewed",
+      "default_on": true,
+      "user_added": false,
+      "engine_origin": true,
+      "terms": "not-applicable",
+      "note": "The engine marks entries official, verified or community. Official and verified entries show as \"Verified by its source\"; community entries are \"Not reviewed\"."
+    },
+    {
+      "id": "skills-hub",
+      "label": "Skills from the engine's hub",
+      "description": "The engine's skills hub: its trusted repositories, its hosted index and the other places it reads, searched through the engine.",
+      "kinds": [
+        "skill"
+      ],
+      "fetch": "engine-gateway",
+      "default_tier": "not-reviewed",
+      "default_on": true,
+      "user_added": false,
+      "engine_origin": true,
+      "terms": "not-applicable",
+      "note": "The hub's trusted repositories show as \"Verified by its source\"; everything else is \"Not reviewed\"."
+    },
+    {
+      "id": "anthropic",
+      "label": "Anthropic's plugins and skills",
+      "description": "The plugins in Anthropic's marketplace (claude-plugins-official) and the skills in its skills repository, each pinned at a commit boopis resolves. Named to say where they come from; Anthropic does not endorse boopis or these items.",
+      "kinds": [
+        "plugin",
+        "skill",
+        "connector"
+      ],
+      "fetch": "git-marketplace",
+      "default_tier": "verified",
+      "default_on": true,
+      "user_added": false,
+      "engine_origin": false,
+      "url": "https://github.com/anthropics/claude-plugins-official",
+      "terms": "checked",
+      "note": "Terms checked 2026-11-21 with the owner's go-ahead: both repositories are Apache 2.0 (claude-plugins-official at its root; anthropics/skills per skill, each with its own LICENSE.txt), and Anthropic's Software Directory Policy governs developers who submit to its directories, not apps that read the public repositories (docs/STORE.md 5.2). Anthropic's own plugins (plugins/) and its skills are \"Verified by its source\"; the third-party entries in its marketplace (external_plugins/, and git or url sources outside its repositories) are \"Not reviewed\", because Anthropic says it cannot verify them. Each item shows its own licence, or \"not stated\"."
+    },
+    {
+      "id": "mcp-registry",
+      "label": "The MCP Registry",
+      "description": "The official registry of MCP servers (a preview service). Names are proven to belong to their publisher; the servers are not reviewed. Synced into the local cache about hourly and searched locally.",
+      "kinds": [
+        "connector"
+      ],
+      "fetch": "registry-api",
+      "default_tier": "not-reviewed",
+      "default_on": true,
+      "user_added": false,
+      "engine_origin": false,
+      "url": "https://registry.modelcontextprotocol.io",
+      "terms": "checked",
+      "note": "Deleted entries are dropped; deprecated ones are flagged. Egress and tools are shown as not known."
+    },
+    {
+      "id": "github",
+      "label": "GitHub",
+      "description": "Skill and plugin repositories on GitHub. Searched in boopis's cached lists; \"add from a GitHub URL\" resolves any single repository. Live GitHub search turns on only when boopis has a GitHub sign-in, because unauthenticated limits are low.",
+      "kinds": [
+        "skill",
+        "plugin",
+        "mod",
+        "connector"
+      ],
+      "fetch": "github-api",
+      "default_tier": "not-reviewed",
+      "default_on": true,
+      "user_added": false,
+      "engine_origin": false,
+      "url": "https://github.com",
+      "terms": "not-applicable"
+    },
+    {
+      "id": "marketplace-url",
+      "label": "Added by you",
+      "description": "Any plugin marketplace address or git repository you add. Nothing here until you add one; items are \"Not reviewed\".",
+      "kinds": [
+        "skill",
+        "connector",
+        "plugin",
+        "mod"
+      ],
+      "fetch": "git-marketplace",
+      "default_tier": "not-reviewed",
+      "default_on": true,
+      "user_added": false,
+      "engine_origin": false,
+      "terms": "not-applicable"
+    },
+    {
+      "id": "local",
+      "label": "From your computer",
+      "description": "A folder or file you pick: a skill folder, a plugin or mod folder, an MCP bundle. Items are \"Not reviewed\".",
+      "kinds": [
+        "skill",
+        "connector",
+        "plugin",
+        "mod"
+      ],
+      "fetch": "local",
+      "default_tier": "not-reviewed",
+      "default_on": true,
+      "user_added": false,
+      "engine_origin": false,
+      "terms": "not-applicable"
+    }
+  ]
+}

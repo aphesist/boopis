@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-store-rollback"
+description = "Enables the store_rollback command without any pre-configured scope."
+commands.allow = ["store_rollback"]
+
+[[permission]]
+identifier = "deny-store-rollback"
+description = "Denies the store_rollback command without any pre-configured scope."
+commands.deny = ["store_rollback"]

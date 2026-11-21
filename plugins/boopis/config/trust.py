@@ -13,6 +13,7 @@ import json
 import os
 import re
 import tempfile
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -143,6 +144,15 @@ class TrustStore:
                 and (item_id is None or e.get("item_id") == item_id)
             )
         ]
+        if len(kept) != len(entries):
+            self._write(kept)
+        return len(entries) - len(kept)
+
+    def revoke_where(self, match: Callable[[dict[str, Any]], bool]) -> int:
+        """Withdraw every approval, in every project, whose entry ``match`` selects. Used when a plugin is updated,
+        rolled back or removed: what it was approved for is gone or has changed, so the user is asked afresh."""
+        entries = self._entries()
+        kept = [e for e in entries if not match(e)]
         if len(kept) != len(entries):
             self._write(kept)
         return len(entries) - len(kept)

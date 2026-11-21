@@ -78,6 +78,16 @@ def test_register_wires_hooks_rpc_and_the_prompt_section() -> None:
         "bots.inspect",
         "bots.archive",
         "bots.restore",
+        "store.prepare",
+        "store.confirm",
+        "store.uninstall",
+        "store.diff",
+        "store.rollback",
+        "store.set_enabled",
+        "store.list",
+        "store.removed.set",
+        "store.policy.get",
+        "store.policy.set",
         "bots.delete",
     }
     assert set(ctx.rpc) == own | set(compat.RPC_METHODS)

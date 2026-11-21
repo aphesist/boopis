@@ -46,6 +46,23 @@ const COMMANDS: &[&str] = &[
     "chatgpt_signin_start",
     "chatgpt_signin_cancel",
     "chatgpt_sign_out",
+    "store_catalog_list",
+    "store_search",
+    "store_refresh",
+    "store_item_detail",
+    "store_stage",
+    "store_plan",
+    "store_install",
+    "store_uninstall",
+    "store_installed",
+    "store_update_check",
+    "store_update",
+    "store_rollback",
+    "store_set_enabled",
+    "store_sources",
+    "store_source_set_enabled",
+    "store_source_add",
+    "store_source_remove",
 ];
 
 fn main() {

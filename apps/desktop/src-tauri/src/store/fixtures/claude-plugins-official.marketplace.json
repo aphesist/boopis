@@ -1,0 +1,78 @@
+{
+ "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+ "name": "claude-plugins-official",
+ "description": "Directory of popular Claude Code extensions including development tools, productivity plugins, and MCP integrations",
+ "owner": {
+  "name": "Anthropic",
+  "email": "support@anthropic.com"
+ },
+ "plugins": [
+  {
+   "name": "42crunch-api-security-testing",
+   "description": "Automate API security directly in Claude Code with 42Crunch - automatically audit OpenAPI specs, detect vulnerabilities aligned with OWASP API Security risks (including BOLA/BFLA), and apply AI-powered fixes. Designed for AI-assisted development workflows, it provides continuous guardrails through an audit->scan->remediate->validate loop, ensuring APIs meet enterprise security standards before deployment.",
+   "author": {
+    "name": "42Crunch"
+   },
+   "category": "security",
+   "source": {
+    "source": "git-subdir",
+    "url": "https://github.com/42Crunch-AI/claude-plugins.git",
+    "path": "plugins/api-security-testing",
+    "ref": "v1.5.5",
+    "sha": "faf5305385de8afed9468904e8639be737aff39e"
+   },
+   "homepage": "https://42crunch.com"
+  },
+  {
+   "name": "agent-sdk-dev",
+   "description": "Development kit for working with the Claude Agent SDK",
+   "author": {
+    "name": "Anthropic",
+    "email": "support@anthropic.com"
+   },
+   "source": "./plugins/agent-sdk-dev",
+   "category": "development",
+   "homepage": "https://github.com/anthropics/claude-plugins-public/tree/main/plugins/agent-sdk-dev"
+  },
+  {
+   "name": "agentforce-adlc",
+   "description": "Agentforce Agent Development Life Cycle \u2014 author, discover, scaffold, deploy, test, and optimize .agent files",
+   "category": "development",
+   "source": {
+    "source": "url",
+    "url": "https://github.com/SalesforceAIResearch/agentforce-adlc.git",
+    "sha": "09bf1539d41f9ff355ba3eb5d05d4a75813423bb"
+   },
+   "homepage": "https://github.com/SalesforceAIResearch/agentforce-adlc"
+  },
+  {
+   "name": "asana",
+   "description": "Asana project management integration. Connects Claude Code to Asana's V2 MCP server to create and manage tasks, search projects, update assignments, and track progress. Requires a one-time Asana OAuth app setup \u2014 run /asana-setup after installing.",
+   "category": "productivity",
+   "source": "./external_plugins/asana",
+   "homepage": "https://github.com/anthropics/claude-plugins-public/tree/main/external_plugins/asana"
+  },
+  {
+   "name": "xcode",
+   "displayName": "Xcode",
+   "description": "Work with Xcode projects from Claude Code: build, run, and test schemes, render SwiftUI previews, drive simulators and devices, read build logs and diagnostics, and search Apple developer documentation.",
+   "author": {
+    "name": "Apple Inc."
+   },
+   "category": "development",
+   "source": {
+    "source": "command",
+    "command": "xcrun agent plugin path --plugin-format claude",
+    "mode": "link"
+   },
+   "homepage": "https://developer.apple.com/xcode/"
+  },
+  {
+   "name": "github",
+   "description": "Official GitHub MCP server for repository management. Create issues, manage pull requests, review code, search repositories, and interact with GitHub's full API directly from Claude Code.",
+   "category": "productivity",
+   "source": "./external_plugins/github",
+   "homepage": "https://github.com/anthropics/claude-plugins-public/tree/main/external_plugins/github"
+  }
+ ]
+}

@@ -24,6 +24,10 @@ import { tiersFromHost } from './live/models';
 import { chooseAnotherModel, createFormsHost, hasHostDialogs, hostCancelSignin, hostSignin, tauriPickFolder } from './live/forms';
 import type { XSignin } from './live/forms';
 import { tauriConnectorsBridge } from './connectors-bridge';
+import { createLiveStore } from './live/store';
+import { tauriStoreBridge } from './store-bridge';
+import type { StoreBridge } from './store-bridge';
+import { inTauri } from './bridge';
 import type { FormEntry } from './live/forms';
 import { tauriSecrets } from './secrets';
 import { dropsFromHost, pickAttachments } from './attach';
@@ -65,6 +69,8 @@ export interface LiveOptions {
   linkTo?: (profile: string) => Promise<GatewayClient>;
   /** how often the teammates are read again (ms); null never (tests) */
   botsPollMs?: number | null;
+  /** the store's host commands (default in the desktop app: the host's `store_*` commands; elsewhere none, and the store says so: it never shows fixtures) */
+  storeBridge?: StoreBridge | null;
 }
 
 interface Running { /** the tiers the ladder ran this turn on, as 'provider/model', in order */ tiers: string[]; turn: AgentTurn; text: string; steps: AgentTurn['steps'][number][]; startedAt: number }
@@ -547,17 +553,18 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
   const liveBots = createLiveBots({ client, now, ...(opts.linkTo ? { linkTo: opts.linkTo } : {}), ...(opts.botsPollMs !== undefined ? { pollMs: opts.botsPollMs } : {}) });
   Object.assign(details.unavailable, liveBots.unavailable);
   const liveGroups = createLiveGroups({ client, bots: () => liveBots.source.snapshot().bots, now, ...(opts.botsPollMs !== undefined ? { pollMs: opts.botsPollMs } : {}) });
+  const liveStore = createLiveStore({ bridge: opts.storeBridge !== undefined ? opts.storeBridge : inTauri() ? tauriStoreBridge() : null, plugin: (method, params) => client.requestRaw('plugin.boopis.' + method, params) });
   const ready = Promise.all([refreshList(), details.start(), liveBots.ready, liveGroups.ready]).then(() => undefined);
   const flag = readFlag('feedforward');
   return {
     ...mock,
     info: { live: true, preview: new Set(['feedforward']), unavailable: details.unavailable },
     ready, sessions, waits, user, forms: formsHost.source, bots: liveBots.source, groups: liveGroups.source, schedules: liveBots.schedules,
-    details: details.source, run: details.run, mods: modsHost.source,
+    details: details.source, run: details.run, mods: modsHost.source, store: liveStore,
     council: councilHost, files: { pick: (kind) => pickAttachments(kind), drops: dropsFromHost(), complete: (word, id) => details.files.complete(word, id) },
     dictation: { start: () => () => undefined }, // nothing hears you yet: the mock's transcript is invented text
     feedforward: { catalog: () => (flag ? mock.feedforward.catalog() : []) },
-    settled: async () => { await details.settled(); await liveBots.settled(); await liveGroups.settled(); },
+    settled: async () => { await liveStore.settled(); await details.settled(); await liveBots.settled(); await liveGroups.settled(); },
     ledger: { totals: () => ledgerTotals, subscribe(fn) { ledgerSubs.add(fn); return () => { ledgerSubs.delete(fn); }; } }
   };
 }

@@ -51,6 +51,17 @@ CAPABILITIES = (
     "bots.archive",
     "bots.restore",
     "bots.delete",
+    "store-v1",
+    "store.prepare",
+    "store.confirm",
+    "store.uninstall",
+    "store.diff",
+    "store.rollback",
+    "store.set_enabled",
+    "store.list",
+    "store.removed.set",
+    "store.policy.get",
+    "store.policy.set",
 )
 DEFAULT_TAIL_LIMIT = 200
 MAX_TAIL_LIMIT = 1000
@@ -323,9 +334,11 @@ def handlers() -> dict[str, Handler]:
     from ..bots.rpc import HANDLERS as BOT_HANDLERS
     from ..forms.rpc import form_cancel, form_list, form_submit
     from ..mods.rpc import HANDLERS as MOD_HANDLERS
+    from ..store.rpc import HANDLERS as STORE_HANDLERS
 
     return {
         **MOD_HANDLERS,
+        **STORE_HANDLERS,
         **BOT_HANDLERS,
         "form.submit": form_submit,
         "form.cancel": form_cancel,

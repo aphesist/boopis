@@ -14,6 +14,7 @@ import type {
 } from './types';
 import * as M from './mock-data';
 import { createMockGroups } from './mock-groups';
+import { createMockStore } from './mock-store';
 
 let nextId = 0;
 const mid = (p: string): string => p + (++nextId).toString(36);
@@ -427,5 +428,5 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
     armed: () => null, disarm() { /* nothing is armed */ }, subscribe: () => () => undefined
   };
   const groups = createMockGroups({ bots: () => bots, simulate, seed: !!opts.fixtures?.includes('groups') });
-  return { info: { live: false, preview: new Set(), unavailable: {} }, ready: Promise.resolve(), user: store(M.USER), sessions, details, bots: botsSource, groups, waits: waitsSource, forms, run: runSource, schedules, feedforward, dictation, files, council, mods };
+  return { info: { live: false, preview: new Set(), unavailable: {} }, ready: Promise.resolve(), user: store(M.USER), sessions, details, bots: botsSource, groups, waits: waitsSource, forms, run: runSource, schedules, feedforward, dictation, files, council, mods, store: createMockStore() };
 }

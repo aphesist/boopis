@@ -1,6 +1,6 @@
 /* right panel (KEYMAP section 9): collapsed, a quiet context measure; opened, every section. Reads the details
    streams of the provider and sends its commands (compact, governance, connectors). */
-import { on } from '../../core/bus';
+import { emit, on } from '../../core/bus';
 import { cap1, el, esc, frag, isMac } from '../../core/dom';
 import { setState, state } from '../../core/state';
 import { ui } from '@boopis/ui';
@@ -12,6 +12,7 @@ import { modKeyOf } from './keys';
 import { copyText, counts, kTokens, partsEl, splitPath } from './shared';
 import { onChanged } from './state';
 import { surface } from '../mods/surfaces';
+import { projectSwitch } from '../store/policy';
 
 const SECTIONS = ['context', 'tasks', 'changes', 'output', 'governance', 'connectors', 'environment'];
 const RIGHT = { open: {} as Record<string, boolean>, refresh: null as ((flash?: string) => void) | null, note: null as string | null };
@@ -100,10 +101,14 @@ export function mountRight(root: HTMLElement): void {
       ? (gv.cap && gv.spent ? el('div', { class: 'ssr-cap' }, [el('span', { class: 'ssr-key', text: 'Spend' }), ui.capacity({ spent: gv.spent, cap: gv.cap }), capBtn]) : el('p', { class: 'ssr-note', text: gv.spent ? 'Spent ' + gv.spent + ', no cap set.' : 'Spend: unknown' + (gv.cap ? ', cap ' + gv.cap : '') }))
       : el('p', { class: 'ssr-note', text: 'Ungoverned: every turn runs on ' + ui.modelMark.called(gv.model) + ' with no cost cap. The sandbox still applies.' });
     const ladderEl = gv.ladder.length ? [ladder] : [];
-    return [seg, ...ladderEl, capRow, ...(gv.locked ? [el('p', { class: 'ssr-note', text: 'The mode is fixed once the first message is sent.' })] : []), ...noteOf('governance')];
+    const cwd = d().environment.get().cwd;
+    const project = cwd ? [projectSwitch(data().store, cwd, (t) => { ui.toast(t); }, 'ssr-store-policy')] : [];
+    return [seg, ...ladderEl, capRow, ...project, ...(gv.locked ? [el('p', { class: 'ssr-note', text: 'The mode is fixed once the first message is sent.' })] : []), ...noteOf('governance')];
   }
   function connectorsBody(): HTMLElement[] {
-    return d().connectors.get().map((c) => {
+    const browse = ui.button({ label: 'Browse the store', size: 's', variant: 'ghost' });
+    browse.addEventListener('click', () => { emit('hx:open-store', { screen: 'browse', from: 'details' }); });
+    return [el('div', { class: 'ssr-actions' }, browse), ...d().connectors.get().map((c) => {
       const id = 'ssr-conn-' + c.name;
       const can = d().can.get();
       const control = c.state === 'sign in' ? ui.html.button({ label: 'Sign in', size: 's', disabled: !can.signIn, attrs: { id, 'data-conn': c.name } }) : ui.html.switch({ id, checked: c.state === 'on', disabled: !can.connectors });
@@ -112,7 +117,7 @@ export function mountRight(root: HTMLElement): void {
       if (sw) { ui.hydrate(row); sw.addEventListener('change', () => d().setConnector(c.name, sw.checked)); }
       if (sb) sb.addEventListener('click', () => { const l = sb.querySelector('span'); if (l) l.textContent = 'Connecting'; sb.disabled = true; void d().signIn(c.name); });
       return row;
-    }).concat(d().connectors.get().length || !data().info.live ? [] : [el('p', { class: 'ssr-note', text: 'No connectors are set up yet.' })]);
+    }), ...(d().connectors.get().length || !data().info.live ? [] : [el('p', { class: 'ssr-note', text: 'No connectors are set up yet.' })])];
   }
   function envBody(): HTMLElement[] {
     const e = d().environment.get();
