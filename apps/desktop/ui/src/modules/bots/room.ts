@@ -13,6 +13,8 @@ import { bot, initModel, S, stateOf, thread } from './model';
 import { gentleFollow, orbButton, orbHTML, livenIn, setReact } from './orbs';
 import { markSelected, updateRow } from './list';
 import { openNew } from './new-bot';
+import { mountGroupPane } from './group-room';
+import { mountNewGroupPane } from './new-group';
 import { openSettings, toggleSettings } from './settings';
 import { checkClips, watchClips } from './clips';
 import { renderGlance } from './glance';
@@ -22,6 +24,20 @@ const bots = () => data().bots;
 const NODE = new Map<string, HTMLElement>();
 const ENTRY = new WeakMap<HTMLElement, { msgs: ThreadMessage[]; who: string }>();
 const toast = (t: string): void => { ui.toast(t); };
+/** a recent session of the open bot is opened: its messages become the thread */
+function openSession(sessionId: string): void {
+  const b = bot(S.sel), sessions = bots().sessions; if (!b || !sessions) return;
+  sessions.open(b.id, sessionId).catch((e: unknown) => { toast(e instanceof Error ? e.message : 'The session could not be opened.'); });
+}
+function newSession(): void {
+  const b = bot(S.sel), sessions = bots().sessions; if (!b || !sessions) return;
+  sessions.fresh(b.id);
+  S.composer?.focus();
+}
+function paintNewSession(): void {
+  const btn = S.pActs?.querySelector<HTMLElement>('[data-action="new-session"]'); if (!btn) return;
+  btn.hidden = !(S.sel && thread(S.sel).length);
+}
 
 /* ───────── view ───────── */
 export function mountView(root: HTMLElement): void {
@@ -34,6 +50,7 @@ export function mountView(root: HTMLElement): void {
   const sheet = el('aside', { class: 'ui-panel bt-sheet', 'data-hx-panel': '', 'aria-label': 'Bot settings', hidden: true });
   root.append(room, nb, sheet);
   S.room = room; S.newPane = nb; S.sheet = sheet;
+  mountGroupPane(root); mountNewGroupPane(root);
   watchClips(root);
   buildRoom();
   if (S.view === 'new' || !S.bots.length) openNew(); else openBot(S.sel);
@@ -70,6 +87,8 @@ export function openBot(id: string | null): void {
   markSelected();
   if (!S.room) return;
   S.room.hidden = false; (S.newPane as HTMLElement).hidden = true;
+  if (S.groupPane) S.groupPane.hidden = true;
+  if (S.newGroupPane) S.newGroupPane.hidden = true;
   renderPresence(b);
   renderThread(b);
   paintComposer(b);
@@ -89,9 +108,11 @@ function renderPresence(b: Bot): void {
   const acts = el('div', { class: 'bt-p-actions' });
   p.append(el('div', { class: 'bt-p-orb' }, ob), el('div', { class: 'bt-p-text' }, [name, line]), acts);
   S.pLine = line; S.pActs = acts;
+  if (bots().sessions) { const ns = ui.iconButton({ icon: 'plus', label: 'New session with ' + b.name, tip: 'New session', action: 'new-session' }); ns.addEventListener('click', newSession); acts.append(ns); }
   acts.append(ui.iconButton({ icon: 'gear', label: 'Bot settings', keys: 'mod+I', action: 'settings' }));
-  acts.firstElementChild?.addEventListener('click', () => toggleSettings());
+  acts.querySelector('[data-action="settings"]')?.addEventListener('click', () => toggleSettings());
   refreshPresence();
+  paintNewSession();
   checkClips();
 }
 export function refreshPresence(): void {
@@ -123,7 +144,7 @@ function renderThread(b: Bot): void {
   const log = S.log as HTMLElement; log.textContent = '';
   NODE.clear();
   const msgs = thread(b.id);
-  if (!msgs.length && b.info) log.append(renderGlance(b));
+  if (!msgs.length && b.info) log.append(renderGlance(b, openSession));
   else if (!msgs.length) {
     const e = ui.empty({ title: 'Nothing here yet', text: 'Ask ' + b.name + ' something, or give it a schedule so it works on its own.' });
     if (b.ideas.length) {
@@ -141,13 +162,15 @@ function renderThread(b: Bot): void {
 }
 const paras = (t: string): string => '<div class="ui-prose">' + String(t || '').split(/\n{2,}/).map((p) => '<p>' + ui.html.inline(p) + '</p>').join('') + '</div>';
 function msgContent(b: Bot, m: ThreadMessage): HTMLElement {
+  if (m.kind === 'note') return el('p', { class: 'bt-note', role: 'status', text: m.text });
   if (m.kind === 'approval') return renderCard(b, m);
   if (m.who === 'you') return frag(ui.html.request(m.text));
   return frag(paras(m.text));
 }
-function renderMsg(b: Bot, m: ThreadMessage, prev: ThreadMessage | null, prevEntry: HTMLElement | null): HTMLElement {
+function renderMsg(b: Bot, m: ThreadMessage, prev: ThreadMessage | null, prevEntry: HTMLElement | null): HTMLElement | null {
   const node = msgContent(b, m);
   NODE.set(m.id, node);
+  if (m.kind === 'note') { (S.log as HTMLElement).append(node); return null; }
   if (prev && prev.who === m.who && prevEntry && prevEntry.isConnected) {
     $('.ui-entry__body', prevEntry).append(node);
     ENTRY.get(prevEntry)?.msgs.push(m);
@@ -172,6 +195,7 @@ function appendMsg(id: string, m: ThreadMessage, streaming: boolean): void {
   const list = thread(id), prev = list[list.length - 1] ?? null;
   list.push(m);
   if (id !== S.sel || S.view !== 'bot') return;
+  paintNewSession();
   const log = S.log as HTMLElement;
   log.querySelector('.bt-empty')?.remove();
   const lastEntry = log.lastElementChild && log.lastElementChild.matches('[data-hx-turn]') ? (log.lastElementChild as HTMLElement) : null;
@@ -199,7 +223,7 @@ export function focusConversation(): void {
 }
 export const allTurns = turns;
 function turnText(t: HTMLElement): string {
-  return (ENTRY.get(t)?.msgs ?? []).map((m) => (m.kind === 'approval' ? '> ' + (m.data.title || 'approval') : m.text)).join('\n\n');
+  return (ENTRY.get(t)?.msgs ?? []).map((m) => (m.kind === 'approval' ? '> ' + (m.data.title || 'approval') : m.kind === 'note' ? '' : m.text)).join('\n\n');
 }
 function turnKeys(e: KeyboardEvent): void {
   const t = (e.target as Element).closest<HTMLElement>('[data-hx-turn]');
@@ -371,7 +395,7 @@ export function onBotsEvent(ev: BotsEvent, handlers: { announce: () => void }): 
       Object.assign(b, { ...ev.bot, cfg: b.cfg });
       Object.assign(b.cfg, ev.bot.cfg, { channels: { ...ev.bot.cfg.channels }, approvals: { ...ev.bot.cfg.approvals } });
       updateRow(b.id);
-      if (b.id === S.sel) { refreshPresence(); if (b.info && S.view === 'bot' && !thread(b.id).length && S.log) S.log.replaceChildren(renderGlance(b)); }
+      if (b.id === S.sel) { refreshPresence(); if (b.info && S.view === 'bot' && !thread(b.id).length && S.log) S.log.replaceChildren(renderGlance(b, openSession)); }
       if (hadAttn !== !!b.attention) handlers.announce();
       break;
     }
@@ -396,6 +420,12 @@ export function onBotsEvent(ev: BotsEvent, handlers: { announce: () => void }): 
       list[i] = { ...m, resolved: ev.resolved, resolvedAt: ev.resolvedAt };
       const card = NODE.get(ev.messageId)?.querySelector<HTMLElement & { update?: (p: Record<string, unknown>) => void; state?: string }>('hx-card');
       if (card && typeof card.update === 'function' && card.state !== ev.resolved) card.update({ state: ev.resolved });
+      break;
+    }
+    case 'thread': {
+      S.threads[ev.botId] = [...ev.messages];
+      const b = bot(ev.botId);
+      if (b && ev.botId === S.sel && S.view === 'bot' && S.log) { S.log.removeAttribute('aria-busy'); renderThread(b); paintNewSession(); }
       break;
     }
     case 'run': {

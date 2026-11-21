@@ -16,7 +16,7 @@ export function inventoryLine(label: string, one: string, many: string, list: re
   return label + ': ' + count(names.length, one, many) + ' on' + (names.length < list.length ? ' of ' + list.length : '') + (names.length && names.length <= 6 ? ' (' + names.join(', ') + ')' : '');
 }
 
-export function renderGlance(b: Bot): HTMLElement {
+export function renderGlance(b: Bot, onOpen?: (sessionId: string) => void): HTMLElement {
   const info = b.info;
   const root = el('div', { class: 'bt-glance' });
   if (!info) return root;
@@ -26,11 +26,13 @@ export function renderGlance(b: Bot): HTMLElement {
   if (sessions === null) root.append(el('p', { class: 'bt-glance-line', text: 'Unknown. ' + (info.notes.sessions ?? '') }));
   else if (!sessions.length) root.append(el('p', { class: 'bt-glance-line', text: b.name + ' has not run a session yet.' }));
   else {
-    root.append(el('ul', { class: 'bt-glance-list', 'aria-label': 'Recent sessions of ' + b.name }, sessions.map((s) =>
-      el('li', { class: 'bt-glance-row' }, [
-        el('span', { class: 'bt-glance-title', text: s.title || 'Untitled session' }),
-        el('span', { class: 'bt-glance-meta ui-mono', text: [s.source && s.source !== 'gui' ? s.source : '', s.messages != null ? count(s.messages, 'message', 'messages') : '', s.when].filter(Boolean).join(' · ') })
-      ]))));
+    root.append(el('ul', { class: 'bt-glance-list', 'aria-label': 'Recent sessions of ' + b.name }, sessions.map((s) => {
+      const title = s.title || 'Untitled session';
+      const meta = [s.source && s.source !== 'gui' ? s.source : '', s.messages != null ? count(s.messages, 'message', 'messages') : '', s.when].filter(Boolean).join(' · ');
+      const inner = [el('span', { class: 'bt-glance-title', text: title }), el('span', { class: 'bt-glance-meta ui-mono', text: meta })];
+      /* opening a session resumes it: its messages are the thread and the next message continues it */
+      return el('li', { class: 'bt-glance-row' }, onOpen ? el('button', { class: 'bt-glance-open', type: 'button', 'data-tip': 'Open this session', onclick: () => { onOpen(s.id); } }, inner) : inner);
+    })));
   }
   root.append(head('What it can use'));
   root.append(el('p', { class: 'bt-glance-line', text: inventoryLine('Skills', 'skill', 'skills', info.skills, info.notes.detail) }));

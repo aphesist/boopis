@@ -58,12 +58,14 @@ export const loadShell = (): SavedShell => {
 };
 
 /* ───────── the Bots tab's own: the Archived group is collapsed until the user opens it, and stays as they left it ───────── */
-export interface SavedBots { archivedOpen?: boolean }
-export const loadBots = (): SavedBots => {
+export interface SavedBots { archivedOpen?: boolean; archivedGroups?: readonly string[] }
+export const loadBots = (): Required<SavedBots> => {
   const o = readJSON<Record<string, unknown>>(KEYS.bots);
-  return { archivedOpen: o?.['archivedOpen'] === true };
+  const groups = o?.['archivedGroups'];
+  return { archivedOpen: o?.['archivedOpen'] === true, archivedGroups: Array.isArray(groups) ? groups.filter((x): x is string => typeof x === 'string') : [] };
 };
-export const saveBots = (v: SavedBots): boolean => writeJSON(KEYS.bots, { archivedOpen: v.archivedOpen === true });
+/** merges into what is kept: a field left out stays as it was */
+export const saveBots = (v: SavedBots): boolean => { const cur = loadBots(); return writeJSON(KEYS.bots, { archivedOpen: (v.archivedOpen ?? cur.archivedOpen) === true, archivedGroups: v.archivedGroups ?? cur.archivedGroups }); };
 
 /* ───────── preview flags: mock content a live build shows only when asked, always marked as a preview ───────── */
 /** `hx.v6.preview` is `{ "feedforward": true }` to turn a preview on; the default is off, and `VITE_PREVIEW_<NAME>=1` does the same in a build */

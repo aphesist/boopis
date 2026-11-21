@@ -7,8 +7,8 @@
    and the boopis plugin) implements the same interfaces. Nothing in a module may fabricate data a provider
    did not send: unknown is `null` or empty and the UI shows it as unknown. */
 import type {
-  ArchivedBot, Bot, BotCatalog, BotDraft, BotConfig, BotInfo, Change, ConversationEvent, Conversation, Connector, ContextUsage, DecisionKind, DiffFile, Environment,
-  Attached, DetailsCan, DetailsNotes, FieldSchema, FileCompletions, FormCan, FormOutcome, ModSession, ModsEvent, PickerItem, PickerKind, GovernanceState, LedgerStats, ProviderInfo, RunSnapshot, Schedule, SendMeta, SessionSummary, ThreadMessage, Todo, User, Wait, WaitOutcome, ModelChoice
+  ArchivedBot, Bot, BotCatalog, BotDraft, BotConfig, BotInfo, Change, ConversationEvent, Conversation, Connector, ContextUsage, DecisionKind, DiffFile, Environment, ArchivedGroup,
+  Attached, DetailsCan, DetailsNotes, FieldSchema, FileCompletions, FormCan, FormOutcome, ModSession, ModsEvent, PickerItem, PickerKind, GovernanceState, LedgerStats, ProviderInfo, RunSnapshot, Schedule, SendMeta, SessionSummary, ThreadMessage, Todo, User, Wait, WaitOutcome, ModelChoice, Group, GroupMessage
 } from './types';
 
 export type Unsubscribe = () => void;
@@ -76,7 +76,9 @@ export type BotsEvent =
   | { type: 'message-end'; botId: string; messageId: string; text: string }
   | { type: 'message-resolved'; botId: string; messageId: string; resolved: 'approved' | 'denied'; resolvedAt: string }
   /** a reply is being worked on (true) or finished or was stopped (false) */
-  | { type: 'run'; botId: string; running: boolean };
+  | { type: 'run'; botId: string; running: boolean }
+  /** the whole thread changed under the room (a session was opened or a new one started): draw it again */
+  | { type: 'thread'; botId: string; messages: readonly ThreadMessage[] };
 export interface BotsSnapshot { bots: readonly Bot[]; threads: Readonly<Record<string, readonly ThreadMessage[]>> }
 /** a routine a bot is asked to take on: a job in its profile's cron store */
 export interface RoutineDraft { name: string; prompt: string; schedule: string }
@@ -136,6 +138,17 @@ export interface BotsAdmin {
   /** why the roster could not be read (Hermes said no), null when it could */
   note(): string | null;
 }
+/** The live provider's: a bot's conversation is a session of its own profile. The room's thread is the one session open; the
+ *  recent sessions the room lists are opened with `open`. */
+export interface BotSessions {
+  /** opens a session of the bot (one of its recent sessions): its messages become the thread and the next message continues it.
+   *  Rejects with a sentence for the user (the bot is replying; the session could not be read). */
+  open(botId: string, sessionId: string): Promise<void>;
+  /** starts over: the thread is empty and the next message begins a new session */
+  fresh(botId: string): void;
+  /** the id of the session the thread is, null before the first message */
+  current(botId: string): string | null;
+}
 export interface BotsSource extends Feed<BotsSnapshot, BotsEvent> {
   catalog(): BotCatalog;
   /* commands */
@@ -154,6 +167,44 @@ export interface BotsSource extends Feed<BotsSnapshot, BotsEvent> {
   restore(id: string): Promise<void>;
   /** the live provider's: real profiles (see `BotsAdmin`); absent on the mock */
   admin?: BotsAdmin;
+  /** the live provider's: the bot's sessions as conversations; absent on the mock, whose threads are its own */
+  sessions?: BotSessions;
+}
+
+/* ───────── groups: team chat, several bots and the user in one thread ───────── */
+export type GroupsEvent =
+  | { type: 'group'; group: Group }
+  | { type: 'group-created'; group: Group }
+  | { type: 'group-archived'; id: string }
+  | { type: 'message'; groupId: string; message: GroupMessage }
+  /** the whole thread is drawn again (a room read from the start) */
+  | { type: 'thread'; groupId: string; messages: readonly GroupMessage[] };
+export interface GroupsSnapshot { groups: readonly Group[]; threads: Readonly<Record<string, readonly GroupMessage[]>> }
+export interface GroupsSource extends Feed<GroupsSnapshot, GroupsEvent> {
+  /** what a group chat is in this build, in a sentence the room says: who answers, and what the members see of each other */
+  nature: string;
+  /** how many bots a group has: a room is a conversation among two to six */
+  limits: { min: number; max: number };
+  /** why group chat cannot be used now (the engine's room worker is off, the roster could not be read), null when it can */
+  note(): string | null;
+  /** reads the group's messages as it opens (the live provider reads a room's log when it is first shown); resolves when they are in */
+  open(groupId: string): Promise<void>;
+  /** the message reaches the members; an `@name` in it addresses that member alone. The replies arrive as `message` events */
+  send(groupId: string, text: string): void;
+  /** stops the members' replies; false when none was running */
+  stop(groupId: string): boolean;
+  /** lets a conversation that paused at its limit run on (`GroupNote.more` names what) */
+  continueTalk(groupId: string, more: string): Promise<void>;
+  /** makes a group of bots (profile names); rejects with a sentence for the user */
+  create(draft: { name: string; bots: readonly string[] }): Promise<Group>;
+  rename(id: string, name: string): Promise<void>;
+  /** A room's members are fixed when it is made: a different set is a new room with the same name, and the old one is archived.
+   *  Resolves with the new group. */
+  setMembers(id: string, bots: readonly string[]): Promise<Group>;
+  /** puts the group away (its messages are kept); resolves with the way back */
+  archive(id: string): Promise<{ undo(): Promise<void> }>;
+  archived: Watch<readonly ArchivedGroup[]>;
+  restore(id: string): Promise<void>;
 }
 
 /* ───────── what waits on the user (approvals, open questions and forms), for the dock and the shell ───────── */
@@ -234,6 +285,7 @@ export interface DataProvider {
   sessions: SessionsSource;
   details: DetailsSource;
   bots: BotsSource;
+  groups: GroupsSource;
   waits: WaitsSource;
   forms: FormsSource;
   run: RunSource;

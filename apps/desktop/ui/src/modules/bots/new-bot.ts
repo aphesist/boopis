@@ -24,6 +24,8 @@ export function openNew(seed?: Partial<Draft>): void {
   if (!S.room) { markSelected(); return; }
   closeSettings(true);
   S.room.hidden = true; (S.newPane as HTMLElement).hidden = false;
+  if (S.groupPane) S.groupPane.hidden = true;
+  if (S.newGroupPane) S.newGroupPane.hidden = true;
   buildNew(seed);
   markSelected();
   emit('hx:title', { tab: 'bots', title: 'New bot' });

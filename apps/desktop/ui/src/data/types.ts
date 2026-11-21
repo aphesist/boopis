@@ -101,7 +101,26 @@ export interface ApprovalData {
 }
 export interface TextMessage { kind: 'text'; id: string; who: string; t: string; text: string; via?: 'bots' | 'dock' }
 export interface ApprovalMessage { kind: 'approval'; id: string; who: string; t: string; data: ApprovalData; resolved?: 'approved' | 'denied'; resolvedAt?: string }
-export type ThreadMessage = TextMessage | ApprovalMessage;
+/** a line the app says in a thread and nobody in it does: a message that was not sent, a reply that failed */
+export interface NoteMessage { kind: 'note'; id: string; who: 'app'; t: string; text: string }
+export type ThreadMessage = TextMessage | ApprovalMessage | NoteMessage;
+
+/* ───────── bot groups (team chat) ───────── */
+/** one member of a group: a bot, by the profile it is. `handle` is what `@` names in a message */
+export interface GroupMember { id: string; profile: string; handle: string; name: string }
+export interface Group {
+  id: string; name: string;
+  members: readonly GroupMember[];
+  /** the ids of the members working on a reply now */
+  working: readonly string[];
+}
+/** a group put away: kept, with its messages, until it is restored */
+export interface ArchivedGroup { id: string; name: string; members: readonly GroupMember[] }
+/** a message in a group's thread: `who` is 'you' or a member's id */
+export interface GroupText { kind: 'text'; id: string; who: string; t: string; text: string }
+/** a line the app says in the thread: a member that could not reply, a conversation paused at its limit (`more` then names what Continue lets run) */
+export interface GroupNote { kind: 'note'; id: string; t: string; text: string; more?: string }
+export type GroupMessage = GroupText | GroupNote;
 
 /* ───────── what waits on the user ───────── */
 export interface BlankData {

@@ -9,28 +9,33 @@ import { data } from '../../data';
 import { oc } from '@boopis/ui';
 import { DRAFT_COLOR, paintOrb } from './paint';
 import { livenIn, orbHTML } from './orbs';
-import { bot, initModel, railOn, S } from './model';
-import type { ArchivedBot, Bot } from '../../data';
+import { bot, group, initGroups, initModel, railOn, S } from './model';
+import type { ArchivedBot, ArchivedGroup, Bot, Group } from '../../data';
 import { loadBots, saveBots } from '../../core/settings';
 import { archivedWhen, restoreBot, restoredWords } from '../../data/restore';
 import { focusConversation, openBot } from './room';
+import { openGroup, stackOf, namesOf } from './group-room';
+import { openNewGroup } from './new-group';
 import { checkClips, watchClips } from './clips';
 import { OUTSIDE_SHORT, outsideDescription, outsideRowMark } from './outside';
 
 const LIST_DESC = 'bt-outside-list';
 
 export function mountList(root: HTMLElement): void {
-  initModel();
+  initModel(); initGroups();
   if (S.listWrap && S.listWrap.parentNode) S.listWrap.remove();
-  S.listRoot = root; S.rows.clear(); S.draftRow = null;
+  S.listRoot = root; S.rows.clear(); S.draftRow = null; S.groupRows.clear();
   S.offArchived?.(); S.offArchived = null; S.archivedEl = null;
+  S.offGroupsArchived?.(); S.offGroupsArchived = null;
   if (root) root.dataset['rail'] = 'ok';
   const wrap = el('nav', { class: 'bt-list', 'aria-label': 'Bots' });
   const ul = el('ul', { class: 'ui-rows bt-rows', 'data-ui': 'rows' });
   if (data().info.preview.has('bots')) wrap.append(el('p', { class: 'bt-preview', role: 'note', text: 'Preview: sample bots' }));
   for (const b of S.bots) ul.append(makeRow(b));
+  const groupsHost = el('div', { class: 'bt-groups' });
   const archived = el('div', { class: 'bt-archived' });
-  wrap.append(ul, archived, outsideDescription(LIST_DESC));
+  wrap.append(ul, groupsHost, archived, outsideDescription(LIST_DESC));
+  S.groupsEl = groupsHost;
   (root || document.body).append(wrap);
   ui.hydrate(ul);
   ul.addEventListener('keydown', listKeys);
@@ -42,6 +47,7 @@ export function mountList(root: HTMLElement): void {
   S.listWrap = wrap; S.rowsEl = ul;
   S.archivedEl = archived; archivedOpen = loadBots().archivedOpen === true;
   mountArchived(archived);
+  mountGroups(groupsHost);
   watchClips(wrap); checkClips();
   syncListVisibility();
   syncRail();
@@ -124,6 +130,11 @@ export function markSelected(): void {
     const on = S.view === 'bot' && id === S.sel;
     if (on) r.btn.setAttribute('aria-current', 'true'); else r.btn.removeAttribute('aria-current');
   }
+  for (const [id, r] of S.groupRows) {
+    const on = S.view === 'group' && id === S.groupSel;
+    if (on) r.btn.setAttribute('aria-current', 'true'); else r.btn.removeAttribute('aria-current');
+  }
+  S.groupsEl?.querySelector('[data-new-group]')?.toggleAttribute('aria-current', S.view === 'new-group');
   showDraftRow(S.view === 'new');
   syncRoving();
 }
@@ -169,11 +180,12 @@ function archivedRow(a: ArchivedBot): string {
 }
 export function drawArchived(): void {
   const host = S.archivedEl; if (!host) return;
-  const list = data().bots.archived.get();
+  const list = data().bots.archived.get(), glist = data().groups.archived.get();
   host.replaceChildren();
-  host.hidden = !list.length;
-  if (!list.length) return;
-  const group = ui.group({ label: 'Archived (' + list.length + ')', collapsible: true, expanded: archivedOpen, id: 'bt-archived', rows: list.map(archivedRow).join('') });
+  host.hidden = !list.length && !glist.length;
+  if (host.hidden) return;
+  const total = list.length + glist.length;
+  const group = ui.group({ label: 'Archived (' + total + ')', collapsible: true, expanded: archivedOpen, id: 'bt-archived', rows: list.map(archivedRow).join('') + glist.map(archivedGroupRow).join('') });
   host.append(group);
   checkClips();
 }
@@ -184,6 +196,8 @@ function mountArchived(host: HTMLElement): void {
     saveBots({ archivedOpen });
   });
   host.addEventListener('click', (e) => {
+    const g = (e.target as Element).closest<HTMLElement>('[data-act="restore-group"]');
+    if (g?.dataset['id']) { const gid = g.dataset['id']; data().groups.restore(gid).then(() => { ui.toast('Restored a group'); openGroup(gid); }).catch((err: unknown) => { ui.toast('Could not restore it: ' + (err instanceof Error ? err.message : String(err))); }); return; }
     const b = (e.target as Element).closest<HTMLElement>('[data-act="restore"]');
     const id = b?.dataset['id'];
     if (b && id) void restoreArchivedBot(id, b);
@@ -202,4 +216,55 @@ async function restoreArchivedBot(id: string, button: HTMLElement): Promise<void
     ui.toast(restoredWords(r));
     if (r.ok) S.rows.get(r.name)?.btn.focus({ preventScroll: true });
   } finally { pending.delete(id); button.removeAttribute('aria-disabled'); }
+}
+
+/* ───────── the Groups under the roster (team chat) ─────────
+   A row for each group (its members as stacked orbs, its name, who is in it) and, last, "New group" beside the roster's own
+   "New bot". The block is drawn again on every change: a row is small and its orbs are still. */
+function groupRow(g: Group): string {
+  const busy = g.working.length > 0;
+  return ui.html.row({
+    title: g.name, sub: namesOf(g.members), value: g.id, lead: stackOf(g.members, railOn() ? 20 : 16, true),
+    end: busy ? ui.html.dot('run') : '', current: S.view === 'group' && g.id === S.groupSel,
+    attrs: { 'aria-label': g.name + ', ' + namesOf(g.members) + (busy ? ', replying' : ''), 'data-gid': g.id, 'data-tip': railOn() ? g.name : null, 'data-tip-pos': 'right' }
+  });
+}
+export function drawGroups(): void {
+  const host = S.groupsEl; if (!host) return;
+  const focusId = (document.activeElement as HTMLElement | null)?.closest<HTMLElement>('[data-gid],[data-new-group]')?.dataset['gid'] ?? ((document.activeElement as HTMLElement | null)?.closest('[data-new-group]') ? '__new' : null);
+  host.replaceChildren();
+  const ul = el('ul', { class: 'ui-rows bt-group-rows', 'data-ui': 'rows', 'aria-label': 'Groups' });
+  S.groupRows.clear();
+  for (const g of S.groups) {
+    const li = frag(groupRow(g));
+    ul.append(li);
+    S.groupRows.set(g.id, { li, btn: $('.ui-row', li) });
+  }
+  const nl = frag(ui.html.row({ title: 'New group', sub: 'Bots talking together', value: '__new-group', lead: '<span class="bt-group-add">' + ui.icon('plus') + '</span>', attrs: { 'data-new-group': '', 'data-tip': railOn() ? 'New group' : null, 'data-tip-pos': 'right', 'aria-label': 'New group, bots talking together' } }));
+  nl.querySelector('.ui-row')?.setAttribute('data-new-group', '');
+  ul.append(nl);
+  host.append(el('h2', { class: 'ui-group__head bt-groups-h', text: 'Groups' }), ul);
+  ui.hydrate(ul);
+  ul.addEventListener('keydown', listKeys);
+  ul.addEventListener('ui:select', (e) => {
+    const id = (e as CustomEvent<{ value?: string }>).detail.value;
+    e.preventDefault();
+    if (id === '__new-group') { openNewGroup(); return; }
+    if (id && group(id)) openGroup(id);
+  });
+  markSelected();
+  checkClips();
+  if (focusId) (focusId === '__new' ? host.querySelector<HTMLElement>('[data-new-group]') : host.querySelector<HTMLElement>('[data-gid="' + focusId + '"]'))?.focus({ preventScroll: true });
+}
+function mountGroups(host: HTMLElement): void {
+  void host;
+  drawGroups();
+  S.offGroupsArchived = data().groups.archived.subscribe(drawArchived);
+}
+function archivedGroupRow(a: ArchivedGroup): string {
+  return ui.html.row({
+    title: a.name, sub: 'Group · ' + namesOf(a.members), archived: true, value: a.id,
+    acts: ui.html.iconButton({ icon: 'unarchive', label: 'Restore ' + a.name, size: 's', attrs: { 'data-act': 'restore-group', 'data-id': a.id } }),
+    attrs: { 'data-id': a.id, 'data-archived-group': '', 'aria-label': a.name + ', archived group' }
+  });
 }

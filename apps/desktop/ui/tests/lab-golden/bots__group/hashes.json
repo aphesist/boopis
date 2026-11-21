@@ -1,0 +1,142 @@
+{
+ "a-long-name@bone": {
+  "sha": "1eb91a9c63fbd2e48f30a647f6df907073823527",
+  "w": 1196,
+  "h": 872
+ },
+ "a-long-name@catalog": {
+  "sha": "05e07c0dca4db983d71828059d20b3973d8372d4",
+  "w": 1196,
+  "h": 872
+ },
+ "a-long-name@graphite": {
+  "sha": "045d910fb9f4075747ef5e023b65d53ab98a4e79",
+  "w": 1196,
+  "h": 872
+ },
+ "a-long-name@typewriter": {
+  "sha": "00f2944ecaf737d459b186c34d82fdd35fe98cde",
+  "w": 1196,
+  "h": 872
+ },
+ "a-member-chip-hover@bone": {
+  "sha": "0de1a61eff4014d981d266824a6d6b4828586895",
+  "w": 1196,
+  "h": 872
+ },
+ "a-member-chip-hover@catalog": {
+  "sha": "a3d192846c2e1274305ae0a687bdc4589e332433",
+  "w": 1196,
+  "h": 872
+ },
+ "a-member-chip-hover@graphite": {
+  "sha": "3570821b42c356f09b01240894b03af9c27a56ad",
+  "w": 1196,
+  "h": 872
+ },
+ "a-member-chip-hover@typewriter": {
+  "sha": "36f0522dec933e466f74cd70b4f52c844b6f5182",
+  "w": 1196,
+  "h": 872
+ },
+ "group-chat-is-off@bone": {
+  "sha": "aa48ee54588d379c4d52a0c3a773132b2b2dcf2c",
+  "w": 1196,
+  "h": 872
+ },
+ "group-chat-is-off@catalog": {
+  "sha": "3be07686cd762ce054d0d356c0f9e5004d5e5f41",
+  "w": 1196,
+  "h": 872
+ },
+ "group-chat-is-off@graphite": {
+  "sha": "61ceb44e1bcef09237fc9cde401787e9adec0d99",
+  "w": 1196,
+  "h": 872
+ },
+ "group-chat-is-off@typewriter": {
+  "sha": "4c5fb916c9f860649d9d781e89810a24f634f919",
+  "w": 1196,
+  "h": 872
+ },
+ "no-messages-yet@bone": {
+  "sha": "f2cc749213346366173e29a444b5a03232c38e04",
+  "w": 1196,
+  "h": 872
+ },
+ "no-messages-yet@catalog": {
+  "sha": "c24f92da1e1a49cfa700fdeddce7de7f4de1873a",
+  "w": 1196,
+  "h": 872
+ },
+ "no-messages-yet@graphite": {
+  "sha": "ee8da1b9323a0b3538c415ad0089b6de438c4f5c",
+  "w": 1196,
+  "h": 872
+ },
+ "no-messages-yet@typewriter": {
+  "sha": "62df1cf8e7d488bff89565e4ebb3e721fb49a021",
+  "w": 1196,
+  "h": 872
+ },
+ "renaming@bone": {
+  "sha": "61b876f8f05bcff29930a612e11b1eefd4bb757a",
+  "w": 1196,
+  "h": 872
+ },
+ "renaming@catalog": {
+  "sha": "c5a636fa7e7f423413aafcdf7ba695517ab8c098",
+  "w": 1196,
+  "h": 872
+ },
+ "renaming@graphite": {
+  "sha": "8e4e41ad5ec4131c8c18af86ae526fc77245f460",
+  "w": 1196,
+  "h": 872
+ },
+ "renaming@typewriter": {
+  "sha": "c298db4b482e71317e799983067a13f6365b7e89",
+  "w": 1196,
+  "h": 872
+ },
+ "several-members-answered@bone": {
+  "sha": "381f3e261c31dca8564adf8cef57107c24d8279a",
+  "w": 1196,
+  "h": 872
+ },
+ "several-members-answered@catalog": {
+  "sha": "9e4c0746a0ed7bbdbf545207c6b4697186f8ed3f",
+  "w": 1196,
+  "h": 872
+ },
+ "several-members-answered@graphite": {
+  "sha": "dcf879874ac70fd1cbba49ec82af25bfedbf31f0",
+  "w": 1196,
+  "h": 872
+ },
+ "several-members-answered@typewriter": {
+  "sha": "a4c10b303983bc00994defe30579cc9849cb038a",
+  "w": 1196,
+  "h": 872
+ },
+ "two-members-replying@bone": {
+  "sha": "2f3ac66b6e251c1975780466ca7c00896e9f88f5",
+  "w": 1196,
+  "h": 872
+ },
+ "two-members-replying@catalog": {
+  "sha": "5402e2cb0d9461acdd2f92d38da4ed52d00f50b4",
+  "w": 1196,
+  "h": 872
+ },
+ "two-members-replying@graphite": {
+  "sha": "a5d45068af3aac2013f9c6223a4adfb99eac80a7",
+  "w": 1196,
+  "h": 872
+ },
+ "two-members-replying@typewriter": {
+  "sha": "f4beeae15a9848553506bcf425d921d8f1b5ba4c",
+  "w": 1196,
+  "h": 872
+ }
+}

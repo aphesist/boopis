@@ -150,6 +150,10 @@ function wireData(): void {
       const known = th.find((x) => x.id === ev.messageId);
       if (!known) th.push({ kind: 'text', id: ev.messageId, who: ev.botId, t: new Date().toTimeString().slice(0, 5), text: m });
       paintSession(b, true);
+    } else if (ev.type === 'thread') {
+      const b = botById(ev.botId); if (!b) return;
+      S.threads[ev.botId] = [...ev.messages];
+      paintSession(b, true);
     } else if (ev.type === 'message-resolved') {
       const th = S.threads[ev.botId]; const i = th ? th.findIndex((x) => x.id === ev.messageId) : -1;
       const cur = th && th[i];

@@ -46,6 +46,7 @@ function paletteItems(): Item[] {
   const api = getDockApi();
   cmd('New session', state.tab === 'session' ? 'mod+shift+O' : '', () => newThing('session'), ICON('plus'));
   cmd('New bot', state.tab === 'bots' ? 'mod+shift+O' : '', () => newThing('bots'), ICON('plus'));
+  cmd('New group', '', () => { if (state.tab !== 'bots') setState({ tab: 'bots' }); emit('hx:new-group', { from: 'palette' }); }, ICON('plus'), 'team chat several bots together');
   if (archivedBots.length) cmd('Restore bot…', '', () => { const back = pal.ret; openPalette({ scope: 'archived' }); pal.ret = back; }, ICON('unarchive'), 'archived archive undo bring back bots');
   cmd(state.tab === 'session' ? 'Go to bots' : 'Go to sessions', state.tab === 'session' ? 'alt+2' : 'alt+1', () => toggle('tab'), ICON(state.tab === 'session' ? 'bots' : 'session'), 'tab switch');
   cmd(state.left === 'open' ? 'Hide sidebar' : 'Show sidebar', 'mod+B', () => toggle('left'), ICON('sidebar-left'), 'sidebar left');

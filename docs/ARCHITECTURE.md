@@ -210,12 +210,11 @@ One hash-chained JSONL per session at `<profile home>/boopis/ledger/<session_id>
   - "Surprise me" picks from a curated list in `apps/shared/data/bot-names.json`: short, lowercase names in the house style (atlas, nina, kai, iris, …).
   - Availability is derived from the teammates that exist (never stored), so a name returns to the pool when its teammate is archived or deleted. An empty name is auto-assigned, and with the list used up "Surprise me" adds a number (`nova-2`) and says so.
 - **Team chat** is a shared channel where the user and several teammates talk, @mention each other, and hand off work. A large hand-off carries a contract lane, so its scope and tests travel with it.
-- Team chat builds on Hermes's multi-profile primitives, never on new infrastructure:
-  - group sessions (`groups.*`);
-  - bot relay (`bot_relay.*`: roster, deliver, reply);
-  - agent-to-agent forwarding (`a2a.forward`);
-  - the shared Kanban board (`kanban.db`) for durable task hand-offs.
-  **[verify]**: a phase-2 spike settles which primitive carries chat versus hand-offs.
+- **Team chat is carried** by the engine's Group Chat rooms (`groups.*`), settled by ADR-0033:
+  - a group is a room of two to six bots; the thread is the room's log; `@name` is the engine's own mention;
+  - a conversation with one bot is a session of its own profile on its own link;
+  - bot relay (`bot_relay.*`) is not used; agent-to-agent forwarding (`a2a.forward`) and the shared Kanban board (`kanban.db`) stay for durable hand-offs;
+  - a room's roster is frozen and a room cannot be archived, so changing members makes a new room and archiving is boopis's own mark (ADR-0033).
 - **Attribution at a glance:** every card and message carries an **origin**:
   - one teammate (its orb, name and colour);
   - several (stacked orbs with a count);

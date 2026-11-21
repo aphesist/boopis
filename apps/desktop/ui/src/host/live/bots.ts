@@ -5,8 +5,9 @@
      the models to pick from                                     `model.options` of the profile boopis is attached to, whose keys a new profile copies
      its look and boopis's own settings                          the plugin's store in the profile's `boopis/` folder (`plugin.boopis.bots.*`)
      archive, restore, delete                                    the plugin, through Hermes's `profile rename` and `profile delete`
+   a conversation with it                                     a session of its own profile on its own link (`./bot-chat.ts`)
    Nothing is written to a Hermes file here, and nothing is invented: what Hermes did not answer is null and says why in
-   `info.notes`. A teammate cannot be messaged yet (team chat is phase 2), so the thread is empty and `send` says so. */
+   `info.notes`. */
 import { unlessEngine } from '../errors';
 import { logger } from '../../core/log';
 import { NeedsConfirmation } from '../../data/confirm';
@@ -14,13 +15,14 @@ import { botIdBase, numbered } from '../../data/bot-id';
 import { APPROVALS, SUGGESTIONS } from '../../data/bot-catalog';
 import { scheduleWords } from '../../data/cron';
 import { lineDiff, valueDiff } from '../../data/diff';
-import type { BotPatch, BotsAdmin, BotsEvent, BotsSource, BotsSnapshot, CreatePlan, PlannedWrite, RemovalNote, SchedulesSource } from '../../data/provider';
+import type { BotPatch, BotSessions, BotsAdmin, BotsEvent, BotsSource, BotsSnapshot, CreatePlan, PlannedWrite, RemovalNote, SchedulesSource } from '../../data/provider';
 import { emitter, feed, store } from '../../data/store';
 import type { ArchivedBot, Bot, BotCatalog, BotInfo, BotJob, BotSession, Schedule, ThreadMessage } from '../../data/types';
 import type { CronManageResult, ModelOptionsResult, ProfileRow, ProfilesDescribeResult, SessionListRow } from '../../vendor/hermes-shared/gateway-contract.generated';
 import type { GatewayClient, GatewayEvent } from '../gateway';
 import { whenLabel } from '../map';
 import { isUnknownMethod } from './wire';
+import { createBotChat } from './bot-chat';
 import { botFrom, botName, capabilitiesFrom, isArchived, jobFrom, modelLabel, sessionFrom, sortJobs, splitModel } from './map-bots';
 import type { Known, PluginBot } from './map-bots';
 
@@ -46,7 +48,7 @@ export interface LiveBots {
   unavailable: Readonly<Record<string, string>>;
 }
 
-export const NOT_MESSAGEABLE = 'Talking to a teammate arrives with team chat; for now its schedule and its sessions are what you see here.';
+export const NO_TEAMMATE_LINK = 'This build cannot talk to a teammate: its own link to the engine is not available here.';
 export const NO_RUN_NOW = 'A routine cannot be run on demand from here yet.';
 const FEATURED_LIMIT = 40;
 const LOAD_AT_ONCE = 3;
@@ -60,6 +62,8 @@ interface Rec {
   sessions: BotSession[] | null;
   notes: Record<string, string>;
   loaded: boolean;
+  /** what it is doing in a conversation now: overrides the state Hermes's roster gives */
+  live?: { state: string; activity: string; attention: string | null };
 }
 const why = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 const asJson = <T>(v: unknown): T => v as T;
@@ -79,6 +83,13 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
   let rosterNote: string | null = null;
   const pending = new Set<Promise<unknown>>();
   const track = <T>(p: Promise<T>): Promise<T> => { pending.add(p); const done = (): void => { pending.delete(p); }; p.then(done, done); return p; };
+
+  /* ───────── a conversation with a teammate ───────── */
+  const chat = createBotChat({
+    link: (id) => link(id), emit: (ev) => { events.emit(ev); }, now,
+    live(id, st) { const r = recs.get(id); if (!r) return; if (st) r.live = st; else delete r.live; events.emit({ type: 'bot', bot: toBot(r) }); },
+    changed(id) { const r = recs.get(id); if (r?.loaded) void track(loadLinked(id, r)); }
+  });
 
   /* ───────── a teammate's own link ───────── */
   const links = new Map<string, Promise<GatewayClient>>();
@@ -101,14 +112,18 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
     if (l) await l.then((c) => c.close(), () => undefined);
   }
   function onTeammateEvent(id: string, ev: GatewayEvent): void {
+    if (chat.onEvent(id, ev)) return;
     if (ev.type === 'cron.changed' || ev.type === 'sessions.changed') { const r = recs.get(id); if (r?.loaded) void track(loadLinked(id, r)); }
   }
 
   /* ───────── what is known of a bot, as a Bot ───────── */
   const known = (r: Rec): Known => ({ row: r.row, plugin: r.plugin, detail: r.detail, jobs: r.jobs, sessions: r.sessions, notes: r.notes as BotInfo['notes'] });
-  const toBot = (r: Rec): Bot => botFrom(known(r), now().getTime() / 1000);
+  const toBot = (r: Rec): Bot => {
+    const b = botFrom(known(r), now().getTime() / 1000);
+    return r.live ? { ...b, state: r.live.state, activity: r.live.activity, attention: r.live.attention } : b;
+  };
   const snapshotBots = (): Bot[] => [...recs.values()].map(toBot);
-  const emptyThreads = (): Record<string, readonly ThreadMessage[]> => Object.fromEntries([...recs.keys()].map((id) => [id, [] as ThreadMessage[]]));
+  const emptyThreads = (): Record<string, readonly ThreadMessage[]> => Object.fromEntries([...recs.keys()].map((id) => [id, [...chat.thread(id)]]));
 
   function rebuildSchedules(): void {
     const out: Schedule[] = [];
@@ -170,7 +185,7 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
       recs.set(row.name, r);
       if (r.loaded) emitFor(before, toBot(r)); else if (!had) { events.emit({ type: 'bot-created', bot: toBot(r) }); void track(loadDetail(row.name)); }
     }
-    for (const id of gone) { recs.delete(id); events.emit({ type: 'bot-archived', id }); void closeLink(id); }
+    for (const id of gone) { recs.delete(id); chat.forget(id); events.emit({ type: 'bot-archived', id }); void closeLink(id); }
     const t = now();
     archivedNow.set(mine.filter((r) => isArchived(r.name, ownRecords.get(r.name))).map((r): ArchivedBot => {
       const p = ownRecords.get(r.name);
@@ -438,12 +453,16 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
     suggestions: SUGGESTIONS,
     reserved: ['default']
   });
+  const sessionsOf: BotSessions = { open: (id, sessionId) => { need(id); return chat.open(id, sessionId); }, fresh: (id) => { chat.fresh(id); }, current: (id) => chat.current(id) };
   const source: BotsSource = {
     ...feed<BotsSnapshot, BotsEvent>(() => ({ bots: snapshotBots(), threads: emptyThreads() }), events),
     catalog,
-    send() { log.warn(NOT_MESSAGEABLE); },
-    stop: () => false,
-    decide() { log.warn('a teammate has no approvals to decide yet'); },
+    send(id, text, via) {
+      if (!recs.has(id)) { log.warn('there is no teammate called ' + id); return; }
+      chat.send(id, text, via);
+    },
+    stop: (id) => chat.stop(id),
+    decide: (id, messageId, decision) => { chat.decide(id, messageId, decision); },
     update(id, patch) {
       if (patch.role !== undefined) admin.save(id, { role: patch.role }).catch((e: unknown) => { log.error('the role was not saved', e); });
       const { gov, cap, workspace, approvals } = patch.cfg ?? {};
@@ -454,7 +473,8 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
     archive(id) { admin.archive(id).catch((e: unknown) => { log.error('the bot was not archived', e); }); },
     archived: archivedNow,
     restore: restoreArchived,
-    admin
+    admin,
+    sessions: sessionsOf
   };
   const schedulesSource: SchedulesSource = {
     list: schedules,
@@ -478,6 +498,6 @@ export function createLiveBots(deps: BotsDeps): LiveBots {
   return {
     source, schedules: schedulesSource, ready,
     settled: async () => { while (pending.size) await Promise.allSettled([...pending]); },
-    unavailable: { 'bots.send': NOT_MESSAGEABLE, 'schedules.runNow': NO_RUN_NOW }
+    unavailable: { ...(deps.linkTo ? {} : { 'bots.send': NO_TEAMMATE_LINK }), 'schedules.runNow': NO_RUN_NOW }
   };
 }

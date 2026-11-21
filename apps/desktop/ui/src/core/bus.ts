@@ -27,6 +27,7 @@ export interface EventMap {
   'hx:new': { tab: Tab };
   'hx:new-session': { from?: string; project?: string };
   'hx:new-bot': { from?: string; source?: string };
+  'hx:new-group': { from?: string };
   'hx:nav': { action: 'first' | 'last'; region: RegionName | null };
   'hx:region': { region: RegionName };
   'hx:bot-settings': { open?: boolean; toggle?: boolean; from?: string };
