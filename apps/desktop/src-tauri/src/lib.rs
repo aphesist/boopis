@@ -29,6 +29,7 @@ pub mod secrets;
 pub mod settings;
 pub mod setup;
 pub mod state;
+pub mod store;
 pub mod webkit;
 pub mod window;
 

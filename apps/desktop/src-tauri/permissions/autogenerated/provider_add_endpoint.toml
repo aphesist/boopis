@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-provider-add-endpoint"
+description = "Enables the provider_add_endpoint command without any pre-configured scope."
+commands.allow = ["provider_add_endpoint"]
+
+[[permission]]
+identifier = "deny-provider-add-endpoint"
+description = "Denies the provider_add_endpoint command without any pre-configured scope."
+commands.deny = ["provider_add_endpoint"]
