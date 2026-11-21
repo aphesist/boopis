@@ -154,6 +154,7 @@ impl Gateway {
 struct Mem {
     servers: BTreeMap<String, Value>,
     config: BTreeMap<String, String>,
+    switched: Vec<(String, bool)>,
 }
 
 struct MemMcp(Mutex<Mem>);
@@ -198,7 +199,12 @@ impl McpOps for MemMcp {
         self.0.lock().unwrap().servers.remove(name);
         Ok(())
     }
-    async fn set_enabled(&self, _name: &str, _enabled: bool) -> Result<()> {
+    async fn set_enabled(&self, name: &str, enabled: bool) -> Result<()> {
+        self.0
+            .lock()
+            .unwrap()
+            .switched
+            .push((name.to_owned(), enabled));
         Ok(())
     }
     async fn config_get(&self, key: &str) -> Result<Option<Value>> {
@@ -1686,4 +1692,114 @@ async fn a_github_address_is_read_through_the_refs_and_a_marketplace_file() {
         "the commit comes from the refs, not the API"
     );
     assert!(urls.iter().all(|u| !u.contains("api.github.com")));
+}
+
+// ---------------------------------------------------------------- switching an installed item on or off
+
+#[tokio::test]
+async fn a_connector_is_switched_through_the_connector_flow_and_the_host_record_follows() {
+    let r = rig_with(world(|_| None), quiet());
+    let st = r.store.stage("boopis:firecrawl", None).await.unwrap();
+    let plan = r.store.plan(&st.stage_id, None, None).await.unwrap();
+    let mut req = request(&st.stage_id, &plan.plan_hash);
+    req.secrets = secrets_of(&[("firecrawl_api_key", "fc-0123456789-secret")]);
+    r.store.install(req, None, false).await.unwrap();
+    r.store
+        .set_item_enabled("boopis:firecrawl", false, None)
+        .await
+        .unwrap();
+    assert_eq!(
+        r.mcp.0.lock().unwrap().switched,
+        vec![("firecrawl".to_owned(), false)]
+    );
+    let listed = r.store.installed(None).await.unwrap();
+    assert!(!listed[0].enabled, "the record says it is off");
+    r.store
+        .set_item_enabled("boopis:firecrawl", true, None)
+        .await
+        .unwrap();
+    assert!(r.store.installed(None).await.unwrap()[0].enabled);
+    assert_eq!(
+        r.store
+            .set_item_enabled("boopis:nothing", true, None)
+            .await
+            .unwrap_err()
+            .code(),
+        "hx.store.not_installed"
+    );
+}
+
+#[tokio::test]
+async fn a_plugin_item_is_switched_by_the_plugin_and_a_failure_comes_back_as_its_code() {
+    let pin = super::types::Pin {
+        kind: PinKind::Commit,
+        value: "e5".repeat(20),
+        repo: None,
+    };
+    let item = receipt_json(
+        "anthropic:lint-kit",
+        ItemKind::Plugin,
+        Layer::Plugin,
+        &pin,
+        "h",
+    );
+    let listed = item.clone();
+    let r = rig_with(world(|_| None), move |m, p| match m {
+        "plugin.boopis.store.list" => Ok(json!({"items": [listed.clone()], "kill_listed": []})),
+        "plugin.boopis.store.set_enabled" if p["enabled"] == true => {
+            Err(Error::Store("hx.store.removed", "it was taken down".into()))
+        }
+        "plugin.boopis.store.set_enabled" => Ok(json!({"receipt": null})),
+        other => quiet()(other, p),
+    });
+    r.store
+        .set_item_enabled("anthropic:lint-kit", false, None)
+        .await
+        .unwrap();
+    let sent = &r.gw.called("plugin.boopis.store.set_enabled")[0];
+    assert_eq!(
+        (
+            sent["item_id"].as_str(),
+            sent["kind"].as_str(),
+            sent["enabled"].as_bool()
+        ),
+        (Some("anthropic:lint-kit"), Some("plugin"), Some(false))
+    );
+    assert_eq!(
+        r.store
+            .set_item_enabled("anthropic:lint-kit", true, None)
+            .await
+            .unwrap_err()
+            .code(),
+        "hx.store.removed"
+    );
+}
+
+#[tokio::test]
+async fn an_engine_plugin_is_switched_through_the_same_plugin_record() {
+    let pin = super::types::Pin {
+        kind: PinKind::Commit,
+        value: "e5".repeat(20),
+        repo: None,
+    };
+    let item = receipt_json(
+        "engine-plugins:0bull",
+        ItemKind::EnginePlugin,
+        Layer::Engine,
+        &pin,
+        "h",
+    );
+    let r = rig_with(world(|_| None), move |m, p| match m {
+        "plugin.boopis.store.list" => Ok(json!({"items": [item.clone()], "kill_listed": []})),
+        "plugin.boopis.store.set_enabled" => Ok(json!({"receipt": null})),
+        other => quiet()(other, p),
+    });
+    r.store
+        .set_item_enabled("engine-plugins:0bull", false, None)
+        .await
+        .unwrap();
+    assert_eq!(
+        r.gw.called("plugin.boopis.store.set_enabled")[0]["kind"],
+        "engine-plugin"
+    );
 }

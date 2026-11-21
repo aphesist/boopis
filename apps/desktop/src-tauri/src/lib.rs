@@ -102,6 +102,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::store_update_check,
             commands::store_update,
             commands::store_rollback,
+            commands::store_set_enabled,
             commands::store_sources,
             commands::store_source_set_enabled,
             commands::store_source_add,

@@ -21,6 +21,7 @@ from ..compat.inventory import trust_items
 from ..compat.scan import ScanEnv, scan
 from ..compat.trust import Trust, tree_hash
 from ..config.trust import TrustStore
+from ..errors import InvalidParamsError
 from . import analyse, engine, generate, policy, records
 from . import plan as planner
 from .enable import Enabler, EngineCli
@@ -480,6 +481,37 @@ def uninstall(rt: Runtime, params: Mapping[str, Any], *, enabler: Enabler | None
     records.save_items(rt.home, items)
     removed.append("the store's record")
     return {"item_id": item_id, "removed": removed, "kept_secrets": [], "notes": notes}
+
+
+# ---------------------------------------------------------------- on and off
+
+
+def set_enabled(rt: Runtime, params: Mapping[str, Any], *, enabler: Enabler | None = None) -> dict[str, Any]:
+    """Switch an installed item on or off through the engine's own ``plugins enable`` and ``plugins disable`` (the engine's flag
+    is the single truth), then record it. A failure of the engine's command leaves the record as it was and is refused. An item
+    on the kill list cannot be switched on. It takes effect in the next session."""
+    items, entry = _installed(rt, params)
+    item_id = str(params["item_id"])
+    enabled = params.get("enabled")
+    if not isinstance(enabled, bool):
+        raise InvalidParamsError("enabled must be true or false", data={"found": repr(enabled)})
+    if enabled and item_id in records.load_removed(rt.home):
+        raise StoreError(
+            "hx.store.removed", f"{item_id} was taken down by its source, so it stays off", data={"item_id": item_id}
+        )
+    receipt = entry["receipt"]
+    if bool(receipt.get("enabled")) != enabled:
+        switch = enabler or make_enabler(rt.home)
+        ok, why = switch.enable(str(entry["slug"])) if enabled else switch.disable(str(entry["slug"]))
+        if not ok:
+            raise StoreError(
+                "hx.store.install_failed", why or "the engine refused it", data={"layer": "engine", "step": "switch"}
+            )
+        receipt["enabled"] = enabled
+        receipt["notes"] = [n for n in receipt.get("notes", []) if n != "It is installed but off."]
+        receipt["effective"] = "next-session"
+        records.save_items(rt.home, items)
+    return {"receipt": receipt}
 
 
 # ---------------------------------------------------------------- rollback

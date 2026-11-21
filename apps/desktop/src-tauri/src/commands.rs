@@ -1125,6 +1125,18 @@ pub async fn store_rollback(
     Ok(state.store.rollback(&id, profile).await?)
 }
 
+/// Switch an installed item on or off for the bot. It takes effect in the next session.
+#[tauri::command]
+#[specta::specta]
+pub async fn store_set_enabled(
+    state: State<'_, AppState>,
+    id: String,
+    enabled: bool,
+    profile: Option<String>,
+) -> std::result::Result<(), HostError> {
+    Ok(state.store.set_item_enabled(&id, enabled, profile).await?)
+}
+
 /// The sources, with their state.
 #[tauri::command]
 #[specta::specta]

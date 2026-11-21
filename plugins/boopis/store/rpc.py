@@ -47,6 +47,12 @@ def store_uninstall(params: Mapping[str, Any], **_: Any) -> dict[str, Any]:
     return uninstall(_rt(), params)
 
 
+def store_set_enabled(params: Mapping[str, Any], **_: Any) -> dict[str, Any]:
+    from .install import set_enabled
+
+    return set_enabled(_rt(), params)
+
+
 def store_diff(params: Mapping[str, Any], **_: Any) -> dict[str, Any]:
     from .install import diff
 
@@ -90,6 +96,7 @@ HANDLERS = {
     "store.prepare": store_prepare,
     "store.confirm": store_confirm,
     "store.uninstall": store_uninstall,
+    "store.set_enabled": store_set_enabled,
     "store.diff": store_diff,
     "store.rollback": store_rollback,
     "store.list": store_list,

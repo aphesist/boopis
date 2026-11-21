@@ -504,3 +504,51 @@ def test_install_params_are_checked_before_anything_is_read(rt: Runtime, tmp_pat
         with pytest.raises(StoreError):
             install.confirm(rt, {**confirm_params(plan, params), **bad}, enabler=enabler)
     assert not enabler.enabled and not where(rt)[0].exists()
+
+
+def test_set_enabled_switches_through_the_engine_and_records_it(
+    rt: Runtime, tmp_path: Path, enabler: FakeEnabler
+) -> None:
+    install_it(rt, stage(tmp_path), enabler)
+    off = install.set_enabled(rt, {"item_id": ITEM, "enabled": False}, enabler=enabler)["receipt"]
+    assert off["enabled"] is False and enabler.disabled == ["lint-kit"]
+    assert records.load_items(rt.home)[ITEM]["receipt"]["enabled"] is False
+    again = install.set_enabled(rt, {"item_id": ITEM, "enabled": False}, enabler=enabler)["receipt"]
+    assert again["enabled"] is False and enabler.disabled == ["lint-kit"], "already off: the engine is not asked again"
+    on = install.set_enabled(rt, {"item_id": ITEM, "enabled": True}, enabler=enabler)["receipt"]
+    assert on["enabled"] is True and enabler.enabled == ["lint-kit", "lint-kit"]
+
+
+def test_set_enabled_refuses_what_is_not_installed_a_bad_flag_a_failed_engine_and_a_taken_down_item(
+    rt: Runtime, tmp_path: Path, enabler: FakeEnabler
+) -> None:
+    with pytest.raises(StoreError) as missing:
+        install.set_enabled(rt, {"item_id": ITEM, "enabled": True}, enabler=enabler)
+    assert missing.value.code == "hx.store.not_installed"
+    install_it(rt, stage(tmp_path), enabler)
+    with pytest.raises(Exception, match="enabled must be true or false"):
+        install.set_enabled(rt, {"item_id": ITEM, "enabled": "yes"}, enabler=enabler)
+    broken = FakeEnabler(ok=False)
+    install.set_enabled(rt, {"item_id": ITEM, "enabled": False}, enabler=enabler)
+    with pytest.raises(StoreError) as failed:
+        install.set_enabled(rt, {"item_id": ITEM, "enabled": True}, enabler=broken)
+    assert failed.value.code == "hx.store.install_failed"
+    assert records.load_items(rt.home)[ITEM]["receipt"]["enabled"] is False, "a refused switch changes nothing"
+    records.save_removed(rt.home, {ITEM: {"reason": "withdrawn", "by": "boopis"}})
+    with pytest.raises(StoreError) as gone:
+        install.set_enabled(rt, {"item_id": ITEM, "enabled": True}, enabler=enabler)
+    assert gone.value.code == "hx.store.removed"
+
+
+def test_set_enabled_switches_an_engine_plugin_by_its_name(rt: Runtime, enabler: FakeEnabler) -> None:
+    items = {
+        EID: {
+            "kind": "engine-plugin",
+            "slug": "scout",
+            "name": "scout",
+            "receipt": {"item_id": EID, "enabled": True, "notes": []},
+        }
+    }
+    records.save_items(rt.home, items)
+    install.set_enabled(rt, {"item_id": EID, "enabled": False}, enabler=enabler)
+    assert enabler.disabled == ["scout"] and records.load_items(rt.home)[EID]["receipt"]["enabled"] is False

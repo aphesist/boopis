@@ -64,6 +64,7 @@
     "allow-store-update-check",
     "allow-store-update",
     "allow-store-rollback",
+    "allow-store-set-enabled",
     "allow-store-sources",
     "allow-store-source-set-enabled",
     "allow-store-source-add",

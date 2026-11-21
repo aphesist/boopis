@@ -83,6 +83,7 @@ def test_register_wires_hooks_rpc_and_the_prompt_section() -> None:
         "store.uninstall",
         "store.diff",
         "store.rollback",
+        "store.set_enabled",
         "store.list",
         "store.removed.set",
         "store.policy.get",

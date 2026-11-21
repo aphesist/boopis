@@ -62,6 +62,7 @@ RPC_METHODS = (
     "store.uninstall",
     "store.diff",
     "store.rollback",
+    "store.set_enabled",
     "store.list",
     "store.removed.set",
     "store.policy.get",

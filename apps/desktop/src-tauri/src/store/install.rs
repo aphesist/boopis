@@ -1584,6 +1584,60 @@ impl Store {
         Ok(result)
     }
 
+    // ------------------------------------------------------------ on and off
+
+    /// Switch an installed item on or off for a bot; it takes effect in the next session. The layer that owns the item does it: a
+    /// connector through the connector flow's switch, a plugin, mod, skill or engine plugin through the plugin's record (which asks
+    /// the engine's own `plugins enable` and `plugins disable`). A skill from the engine's hub has no switch of its own.
+    ///
+    /// # Errors
+    /// `hx.store.not_installed`, `hx.store.kind_unsupported` for a hub skill, `hx.store.install_failed` when the layer refuses.
+    pub async fn set_item_enabled(
+        &self,
+        id: &str,
+        enabled: bool,
+        profile: Option<String>,
+    ) -> Result<()> {
+        let _one = self.busy.lock().await;
+        let bot = self.host.bot(profile.clone())?;
+        if let Some(rec) = self.record_of(&bot, id) {
+            if rec.receipt.layer != Layer::Connector {
+                return Err(err(
+                    "hx.store.kind_unsupported",
+                    "a skill from the engine's store is on while it is installed; remove it to turn it off",
+                ));
+            }
+            let name = rec.extra["name"].as_str().unwrap_or_default().to_owned();
+            self.host
+                .connectors(&bot)?
+                .set_enabled(&name, enabled)
+                .await?;
+            let mut all = self.cache.installed();
+            for r in &mut all.items {
+                if r.bot == bot && r.receipt.item_id == id {
+                    r.receipt.enabled = enabled;
+                }
+            }
+            self.cache.save_installed(&all)?;
+            return Ok(());
+        }
+        let mine = self
+            .installed(profile)
+            .await?
+            .into_iter()
+            .find(|r| r.item_id == id)
+            .ok_or_else(|| err("hx.store.not_installed", "that item is not installed"))?;
+        let mut params = json!({"item_id": id, "kind": mine.kind, "enabled": enabled});
+        if let Some(p) = &mine.scope.project {
+            params["cwd"] = json!(p);
+        }
+        self.host
+            .backend(&bot)?
+            .rpc("plugin.boopis.store.set_enabled", &params)
+            .await?;
+        Ok(())
+    }
+
     // ------------------------------------------------------------ updates and rollback
 
     /// Which installed items have a different pin in the catalogue now, or were taken down, or lost their pin. Refreshes the

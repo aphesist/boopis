@@ -58,6 +58,7 @@ const COMMANDS: &[&str] = &[
     "store_update_check",
     "store_update",
     "store_rollback",
+    "store_set_enabled",
     "store_sources",
     "store_source_set_enabled",
     "store_source_add",
