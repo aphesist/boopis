@@ -27,7 +27,8 @@
 #   enabled-features.json    the extras the venv carries
 #   bin/hermes               Hermes's own launcher, location-independent
 #   plugins/<name>/          the plugins the app carries (ADR-0030), each unmodified at the commit Hermes's own plugin
-#                            catalog pins, with its licence: claude-subscription-directsdk (MIT), the Claude subscription.
+#                            catalog pins, with its licence: claude-subscription-directsdk (MIT), the Claude subscription, and
+#                            github-copilot (MIT, a community plugin), the GitHub Copilot models.
 #                            First-run setup places them in the profile; nothing is downloaded on the user's machine.
 #
 # Left out on purpose (Hermes's package manager fetches them on first use, into the private home): Chromium, Node and npm,
@@ -142,11 +143,21 @@ bundle_plugin() {  # <catalog name>
   # the plugin's code, manifest, licence and docs; not its tests, evals, images or development files
   (cd "$from" && find . -maxdepth 1 -type f \( -name '*.py' -o -name 'plugin.yaml' -o -name 'LICENSE' -o -name 'README.md' \
       -o -name 'CHANGELOG.md' \) ! -name 'conftest.py' -exec cp {} "$dest/" \;)
+  # a plugin made of packages (github-copilot has copilot/ and copilot_acp/) brings each package beside its top-level files: a
+  # directory that holds an __init__.py, with its .py files, never its tests or caches
+  for pkg in "$from"/*/; do
+    pkg="${pkg%/}"; name="$(basename "$pkg")"
+    [ -f "$pkg/__init__.py" ] || continue
+    case "$name" in tests|evals|__pycache__) continue ;; esac
+    mkdir -p "$dest/$name"
+    (cd "$pkg" && find . -type f -name '*.py' ! -path '*/tests/*' ! -path '*/__pycache__/*' -exec cp --parents {} "$dest/$name/" \;)
+  done
   PLUGINS_JSON="$("$BOOT_PYTHON" -c 'import json,sys; l=json.loads(sys.argv[1]); l.append(dict(zip(["name","catalog","version","repo","sha","licence"],sys.argv[2:]))); print(json.dumps(l))' \
     "$PLUGINS_JSON" "$manifest_name" "$1" "$version" "$repo" "$sha" "MIT")"
   rm -rf "$WORK/plugin-$1"
 }
 bundle_plugin claude-subscription-directsdk
+bundle_plugin github-copilot
 
 # 3. what the manifest says: the launcher and interpreter paths inside the archive, the interpreter's build
 read -r HERMES_CMD PY_REL PY_VERSION TARGET < <("$BOOT_PYTHON" - "$PAYLOAD/manifest.json" <<'PY'

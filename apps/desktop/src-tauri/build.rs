@@ -72,6 +72,7 @@ const COMMANDS: &[&str] = &[
     "provider_signin_start",
     "provider_signin_cancel",
     "provider_sign_out",
+    "provider_signin_status",
 ];
 
 fn main() {

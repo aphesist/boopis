@@ -48,7 +48,8 @@ pub enum ProviderStatus {
 pub struct SigninCode {
     /// The lab's own page.
     pub verification_url: String,
-    /// The code to type there.
+    /// The code to type there. Empty for a flow whose page does everything (ChatGPT's: the person signs in and allows boopis in
+    /// the browser, which comes back to the host by itself), and the card then shows no code.
     pub user_code: String,
     /// When the code lapses, in milliseconds since the Unix epoch.
     #[specta(type = f64)]

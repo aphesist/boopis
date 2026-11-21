@@ -132,8 +132,11 @@ export const commands = {
 	chatgptSigninStart: (options?: InvokeOptions) => __TAURI_INVOKE<ChatgptCode>("chatgpt_signin_start", undefined, options),
 	/**  Cancel the ChatGPT sign-in that is waiting. */
 	chatgptSigninCancel: (options?: InvokeOptions) => __TAURI_INVOKE<void>("chatgpt_signin_cancel", undefined, options),
-	/**  Sign out of ChatGPT: both tokens leave the keychain. */
-	chatgptSignOut: (options?: InvokeOptions) => __TAURI_INVOKE<null>("chatgpt_sign_out", undefined, options),
+	/**
+	 *  Sign out of ChatGPT: OpenAI is asked to end the renewable session, then both tokens leave the keychain. The answer says
+	 *  whether OpenAI confirmed it.
+	 */
+	chatgptSignOut: (options?: InvokeOptions) => __TAURI_INVOKE<ChatgptSignedOut>("chatgpt_sign_out", undefined, options),
 	/**  A page of the catalogue, from the cache. Works offline; `stale` and `offline` say how old it is. */
 	storeCatalogList: (filter: StoreFilter_Deserialize | null, cursor: string | null, limit: number | null, options?: InvokeOptions) => __TAURI_INVOKE<StoreBrowse_Serialize>("store_catalog_list", { filter, cursor, limit }, options),
 	/**  Search the catalogue. Local: no query leaves the machine. */
@@ -219,27 +222,37 @@ export const commands = {
 	 */
 	providerProbeLocal: (profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<ProviderState_Serialize[]>("provider_probe_local", { profile }, options),
 	/**
-	 *  Start a sign-in for a sign-in way the host owns (`SuperGrok`, GitHub Copilot, and ChatGPT once it moves to OpenAI's program):
-	 *  returns the lab's own page to open and the code to type. The wait runs in the host and ends with a `ProviderSigninEvent`; the
-	 *  tokens go to the keychain and never to the webview. A way owned by someone else (Claude's, which is Claude Code's own
-	 *  sign-in, and driving the user's own grok program) has nothing to start. Mirrors `chatgpt_signin_start`.
+	 *  Start a sign-in for a sign-in way the host owns (ChatGPT through OpenAI's Sign in with ChatGPT program, GitHub Copilot, and
+	 *  `SuperGrok` once it lands): returns the lab's own page to open and the code to type; a flow whose page does everything
+	 *  (ChatGPT's) has an empty `user_code`. The host opens the browser itself for ChatGPT; the page address returned carries no
+	 *  token. The wait runs in the host and ends with a `ProviderSigninEvent`; the tokens go to the keychain and never to the
+	 *  webview. A way owned by someone else (Claude's, which is Claude Code's own sign-in, and driving the user's own grok program)
+	 *  has nothing to start. Mirrors `chatgpt_signin_start`.
 	 * 
-	 *  Errors: `hx.provider.unknown`, `hx.provider.unsupported`, `hx.provider.unreachable`, `hx.secrets.*`.
+	 *  Errors: `hx.provider.unknown`, `hx.provider.unsupported`, `hx.provider.unreachable`, `hx.secrets.*`, `hx.signin.*`.
 	 */
 	providerSigninStart: (way: string, profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<SigninCode>("provider_signin_start", { way, profile }, options),
 	/**
 	 *  Cancel the sign-in that is waiting for `way`. Mirrors `chatgpt_signin_cancel`.
 	 * 
-	 *  Errors: `hx.provider.unknown`.
+	 *  Errors: `hx.provider.unknown`, `hx.provider.unsupported`.
 	 */
 	providerSigninCancel: (way: string, options?: InvokeOptions) => __TAURI_INVOKE<null>("provider_signin_cancel", { way }, options),
 	/**
 	 *  Sign out of a sign-in way the host owns: its tokens leave the keychain and the engine's copy is dropped. Returns the state
-	 *  afterwards. Mirrors `chatgpt_sign_out`.
+	 *  afterwards; its `detail` says so when OpenAI did not confirm ending a ChatGPT session. Mirrors `chatgpt_sign_out`.
 	 * 
 	 *  Errors: `hx.provider.unknown`, `hx.provider.unsupported`, `hx.secrets.*`.
 	 */
 	providerSignOut: (way: string, profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<ProviderState_Serialize>("provider_sign_out", { way, profile }, options),
+	/**
+	 *  Where a sign-in way the host owns stands: signed in (with the plan or the account), not signed in (with the reason the last
+	 *  sign-in ended, if it ended by itself), or waiting for the person (with the page and the code). Read-only; the sign-in
+	 *  cards draw from it and from `ProviderSigninEvent`.
+	 * 
+	 *  Errors: `hx.provider.unknown`, `hx.provider.unsupported`, `hx.secrets.*`.
+	 */
+	providerSigninStatus: (way: string, options?: InvokeOptions) => __TAURI_INVOKE<ProviderState_Serialize>("provider_signin_status", { way }, options),
 };
 
 /** Events */
@@ -344,17 +357,35 @@ export type Attachment_Serialize = {
 	bytes: number | null,
 };
 
-/**  The code the user types, and where. */
+/**  Where to go, and (for a flow that has one) the code to type. */
 export type ChatgptCode = {
-	/**  The page to open (OpenAI's own). */
+	/**  OpenAI's own page, free of any token: the card shows it and opens it again when the browser did not open. */
 	verification_url: string,
-	/**  The one-time code to type there. */
+	/**  A one-time code to type there. Empty for this flow: the page does everything, and there is nothing to type. */
 	user_code: string,
+	/**  When the attempt lapses, in milliseconds since the Unix epoch. */
+	expires_at: number | null,
+};
+
+/**  Which route a signed-in account is on. */
+export type ChatgptRoute = 
+/**  OpenAI's Sign in with ChatGPT program. */
+"program" | 
+/**  The older sign-in with the Codex CLI's client, from before the program: it works until the person signs in again. */
+"older";
+
+/**  What signing out did at OpenAI. */
+export type ChatgptSignedOut = {
+	/**
+	 *  OpenAI confirmed that it ended the renewable session. When false, the tokens are gone from this computer all the same,
+	 *  and the person can disconnect boopis in ChatGPT's settings.
+	 */
+	revoked: boolean,
 };
 
 /**  How a sign-in ended, pushed to every window. */
 export type ChatgptSigninEvent = {
-	/**  `signed_in`, `failed`, `cancelled` or `timed_out`. */
+	/**  `signed_in`, `failed`, `cancelled`, `timed_out`, or `signed_out` (OpenAI stopped accepting the saved sign-in). */
 	outcome: string,
 	/**  What to tell the user, in plain words; empty when signed in. */
 	message: string,
@@ -364,7 +395,7 @@ export type ChatgptSigninEvent = {
 export type ChatgptState = 
 /**  No ChatGPT account is signed in. */
 "signed_out" | 
-/**  A sign-in is waiting for the user to type the code. */
+/**  A sign-in is waiting for the person to finish in the browser. */
 "signing_in" | 
 /**  Signed in. */
 "signed_in";
@@ -378,8 +409,17 @@ export type ChatgptStatus_Deserialize = {
 	state: ChatgptState,
 	/**  The ChatGPT plan the account's token names (`plus`, `pro`), when it names one. */
 	plan?: string | null,
-	/**  While signing in: the code and its page. */
+	/**  While signing in: the page to open. */
 	code?: ChatgptCode | null,
+	/**  While signed in: the route the account is on. */
+	route?: ChatgptRoute | null,
+	/**  The account's email, when OpenAI said one. */
+	account?: string | null,
+	/**
+	 *  One plain sentence the person should read, when there is one: an older sign-in that should be redone, or why the last
+	 *  one ended.
+	 */
+	notice?: string | null,
 };
 
 /**  What the Models tab and setup show. */
@@ -388,8 +428,17 @@ export type ChatgptStatus_Serialize = {
 	state: ChatgptState,
 	/**  The ChatGPT plan the account's token names (`plus`, `pro`), when it names one. */
 	plan: string | null,
-	/**  While signing in: the code and its page. */
+	/**  While signing in: the page to open. */
 	code: ChatgptCode | null,
+	/**  While signed in: the route the account is on. */
+	route: ChatgptRoute | null,
+	/**  The account's email, when OpenAI said one. */
+	account: string | null,
+	/**
+	 *  One plain sentence the person should read, when there is one: an older sign-in that should be redone, or why the last
+	 *  one ended.
+	 */
+	notice: string | null,
 };
 
 /**  Whether first-run setup still has to run, without changing anything. */
@@ -2149,7 +2198,10 @@ export type SignIn = {
 export type SigninCode = {
 	/**  The lab's own page. */
 	verification_url: string,
-	/**  The code to type there. */
+	/**
+	 *  The code to type there. Empty for a flow whose page does everything (ChatGPT's: the person signs in and allows boopis in
+	 *  the browser, which comes back to the host by itself), and the card then shows no code.
+	 */
 	user_code: string,
 	/**  When the code lapses, in milliseconds since the Unix epoch. */
 	expires_at: number | null,

@@ -11,6 +11,7 @@ pub mod endpoint;
 pub mod endpoints;
 pub mod http;
 pub mod service;
+pub mod signin;
 pub mod state;
 
 #[cfg(test)]

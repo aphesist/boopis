@@ -29,7 +29,7 @@ const CLAUDE_SUBSCRIPTION_LABEL: &str = "Claude subscription (your Claude Code l
 /// The choice that runs on the user's ChatGPT subscription, signed in through boopis's own ChatGPT sign-in (ADR-0030).
 pub const CHATGPT_SUBSCRIPTION: &str = "chatgpt-subscription";
 const CHATGPT_SUBSCRIPTION_LABEL: &str = "ChatGPT subscription (sign in with your ChatGPT account)";
-/// The engine's provider for a ChatGPT sign-in (OpenAI's Codex models on chatgpt.com).
+/// The engine's provider for a ChatGPT sign-in (its Codex provider, called on the Responses API through OpenAI's program, ADR-0030).
 pub const CHATGPT_PROVIDER: &str = "openai-codex";
 /// The ChatGPT and OpenAI ladder, cheapest first (ADR-0037, ADR-0039): `(family id in the frontier list, tier name)`. Terra
 /// (70.4% at about $0.46 a task in Ramp's benchmark) is the cheapest rung, then Sol, then Astra, so work that fails the gate on
@@ -1474,7 +1474,7 @@ fn chatgpt_form() -> Form {
         "setup.chatgpt",
         "setup",
         "Sign in with ChatGPT",
-        "Choose Sign in with ChatGPT: boopis shows a one-time code, you open OpenAI's sign-in page, sign in with your ChatGPT account and type the code. boopis keeps the sign-in in your OS keychain and renews it by itself. Governed work then runs on the models your ChatGPT plan includes.",
+        "Choose Sign in with ChatGPT: boopis opens OpenAI's sign-in page in your browser, you sign in with your ChatGPT account and allow boopis to use your ChatGPT plan, and the browser sends you back. boopis keeps the sign-in in your OS keychain and renews it by itself. Governed work then runs on the models your ChatGPT plan includes.",
         json!({"type": "object", "properties": {}}),
     );
     form.signin = Some(super::SignIn {

@@ -10,6 +10,7 @@ pub mod cli;
 pub mod commands;
 pub mod config;
 pub mod connectors;
+pub mod copilot;
 pub mod endpoint;
 #[cfg(test)]
 mod engine_words;
@@ -118,6 +119,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::provider_signin_start,
             commands::provider_signin_cancel,
             commands::provider_sign_out,
+            commands::provider_signin_status,
         ])
         .events(collect_events![
             ConnectionStateEvent,
@@ -438,9 +440,10 @@ pub fn run() {
                     Arc::new(|_, _| {})
                 }
             };
-            // boopis's own ChatGPT sign-in (ADR-0030): its outcome reaches every window, and its refresher keeps the access
-            // token fresh in the keychain for as long as the app runs.
+            // boopis's own ChatGPT sign-in (ADR-0030, on OpenAI's program) and Copilot sign-in (ADR-0039): their outcomes reach
+            // every window, and the ChatGPT refresher keeps the access token fresh in the keychain for as long as the app runs.
             let signin_events = app.handle().clone();
+            let browser_app = app.handle().clone();
             let chatgpt = Arc::new(
                 chatgpt::ChatGpt::new(
                     secrets.clone(),
@@ -451,7 +454,18 @@ pub fn run() {
                         refresh_every: limits.chatgpt_refresh_every,
                     },
                 )
+                .with_browser(Arc::new(commands::SystemBrowser(browser_app)))
                 .with_sink(Arc::new(move |e| {
+                    let way = providers::signin::CHATGPT.to_owned();
+                    if let Err(err) = (providers::ProviderSigninEvent {
+                        way,
+                        outcome: e.outcome.clone(),
+                        message: e.message.clone(),
+                    })
+                    .emit(&signin_events)
+                    {
+                        tracing::debug!(error = %err, "could not emit the ChatGPT sign-in outcome");
+                    }
                     if let Err(err) = e.emit(&signin_events) {
                         tracing::debug!(error = %err, "could not emit the ChatGPT sign-in outcome");
                     }
@@ -468,8 +482,25 @@ pub fn run() {
                 )
                 .map_err(|e| e.to_string())?,
             );
+            let copilot_events = app.handle().clone();
+            let copilot = Arc::new(
+                copilot::Copilot::new(
+                    secrets.clone(),
+                    Arc::new(chatgpt::oauth::Https::new(limits.chatgpt_http_timeout)),
+                    copilot::Timing {
+                        signin: limits.chatgpt_signin_timeout,
+                    },
+                )
+                .with_sink(Arc::new(move |e| {
+                    if let Err(err) = e.emit(&copilot_events) {
+                        tracing::debug!(error = %err, "could not emit the Copilot sign-in outcome");
+                    }
+                })),
+            );
+            tauri::async_runtime::spawn(copilot.clone().run_watcher(limits.chatgpt_refresh_every));
             app.manage(AppState {
                 chatgpt,
+                copilot,
                 hubs: state::Hubs::new(supervisor.clone(), limits.clone(), emitter).with_observer(observer),
                 supervisor: supervisor.clone(),
                 secrets: secrets.clone(),

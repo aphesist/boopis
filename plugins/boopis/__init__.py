@@ -170,16 +170,17 @@ def _register_secret_source(ctx: Any) -> None:
 
 
 def _start_signins() -> None:
-    """Hand the desktop host's ChatGPT sign-in to the runtime (``signins/chatgpt.py``, ADR-0030), now and every few
-    minutes, on a daemon thread in a copy of this context (the same profile home). Only in a gateway the desktop host
-    started: with no secret channel there is no sign-in to hand over."""
+    """Hand the desktop host's ChatGPT and Copilot sign-ins to the runtime (``signins/``, ADR-0030 and 0039), now and
+    every few minutes, on a daemon thread in a copy of this context (the same profile home). Only in a gateway the
+    desktop host started: with no secret channel there is no sign-in to hand over."""
     from .hostsecrets.channel import capture_environment
 
     if capture_environment() is None:
         return
-    from .signins.chatgpt import start
+    from .signins import chatgpt, copilot
 
-    start()
+    chatgpt.start()
+    copilot.start()
 
 
 def _start_recovery() -> None:

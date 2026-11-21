@@ -436,6 +436,7 @@ dependencies = [
  "hex",
  "keyring",
  "libc",
+ "ring",
  "rustls",
  "serde",
  "serde_json",

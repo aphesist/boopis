@@ -65,6 +65,9 @@ zstd = { version = "0.13", default-features = false }
 # Apache-2.0; ring is Apache-2.0 and ISC.
 ureq = { version = "3.4", default-features = false, features = ["rustls-no-provider", "platform-verifier"] }
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+# Checking the signature of OpenAI's ID token (RS256) against its published keys (the Sign in with ChatGPT program asks for
+# it). Already in the tree through rustls; Apache-2.0 and ISC.
+ring = { version = "0.17", default-features = false, features = ["std"] }
 
 # The Linux webview (ADR-0025): GDK's monitor refresh rate and the web view's settings object, through safe wrappers, and
 # `dlsym` for the one preference the `webkit2gtk` crate has no binding for. Versions match what Tauri's wry already uses.

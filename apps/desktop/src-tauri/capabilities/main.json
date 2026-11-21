@@ -77,6 +77,7 @@
     "allow-provider-probe-local",
     "allow-provider-signin-start",
     "allow-provider-signin-cancel",
-    "allow-provider-sign-out"
+    "allow-provider-sign-out",
+    "allow-provider-signin-status"
   ]
 }

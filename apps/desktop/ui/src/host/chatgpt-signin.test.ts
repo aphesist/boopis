@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-/* The ChatGPT sign-in card and the sign-ins setup's forms offer (ADR-0030), against fakes of the host. */
+/* The ChatGPT sign-in card (on OpenAI's Sign in with ChatGPT program) and the sign-ins setup's forms offer (ADR-0030), against
+   fakes of the host. The card's own behaviour is `signin-card.test.ts`; here are ChatGPT's words and its bridge. */
 import { beforeEach, describe, expect, it } from 'vitest';
 import { mountChatgptSignin, pageText } from './chatgpt-signin';
 import type { ChatgptBridge, ChatgptSigninEvent, ChatgptStatus } from './chatgpt-signin';
@@ -9,7 +10,9 @@ import type { SetupBridge, SetupProgress, SetupStatus } from './setup-bridge';
 import type { ConnectorLogin } from './bindings';
 
 const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
-const CODE = { verification_url: 'https://auth.openai.com/codex/device', user_code: 'ABCD-1234' };
+/* the program's sign-in has a page and nothing to type */
+const PAGE = { verification_url: 'https://auth.openai.com/api/accounts/authorize?client_id=dynamic_agent_client&state=s', user_code: '', expires_at: Date.now() + 15 * 60000 };
+const OUT: ChatgptStatus = { state: 'signed_out', plan: null, code: null, route: null, account: null, notice: null };
 
 function fake(over: Partial<ChatgptBridge> = {}): ChatgptBridge & { calls: string[]; end: (e: ChatgptSigninEvent) => void; listening: () => boolean } {
   let listener: ((e: ChatgptSigninEvent) => void) | null = null;
@@ -18,10 +21,10 @@ function fake(over: Partial<ChatgptBridge> = {}): ChatgptBridge & { calls: strin
     calls,
     end: (e) => { listener?.(e); },
     listening: () => listener !== null,
-    status: (): Promise<ChatgptStatus> => Promise.resolve({ state: 'signed_out', plan: null, code: null }),
-    start: () => { calls.push('start'); return Promise.resolve(CODE); },
+    status: (): Promise<ChatgptStatus> => Promise.resolve(OUT),
+    start: () => { calls.push('start'); return Promise.resolve(PAGE); },
     cancel: () => { calls.push('cancel'); return Promise.resolve(); },
-    signOut: () => { calls.push('signout'); return Promise.resolve(); },
+    signOut: () => { calls.push('signout'); return Promise.resolve({ revoked: true }); },
     onEnd: (cb) => { listener = cb; return Promise.resolve(() => { listener = null; }); },
     open: (url) => { calls.push('open:' + url); return Promise.resolve(); },
     copy: (t) => { calls.push('copy:' + t); return Promise.resolve(); },
@@ -33,7 +36,7 @@ const act = (root: ParentNode, name: string): HTMLButtonElement | null => root.q
 beforeEach(() => { document.body.replaceChildren(); });
 
 describe('the ChatGPT sign-in card', () => {
-  it('shows OpenAI’s page as a button and the code in large mono with a copy button, then says it is signed in', async () => {
+  it('opens OpenAI’s page for the program\u2019s sign-in, shows no code to type, and says it is signed in', async () => {
     const host = document.createElement('div');
     const b = fake();
     let signedIn = 0;
@@ -41,70 +44,34 @@ describe('the ChatGPT sign-in card', () => {
     expect(act(host, 'start')?.textContent).toBe('Sign in with ChatGPT');
     act(host, 'start')?.click();
     await tick(); await tick();
-    const code = host.querySelector<HTMLElement>('[data-code]');
-    expect(code?.textContent).toBe('ABCD-1234');
-    expect(code?.getAttribute('style')).toContain('var(--mono)');
-    expect(code?.getAttribute('style')).toContain('var(--fs-xl)');
-    expect(host.querySelector('[data-page]')?.textContent).toBe('auth.openai.com/codex/device');
+    expect(host.querySelector('[data-code]'), 'the page does everything: nothing to type').toBeNull();
+    expect(host.querySelector('[data-act="copy"]')).toBeNull();
+    expect(host.querySelector('[data-page]')?.textContent).toBe('auth.openai.com/api/accounts/authorize');
+    expect(host.textContent).toContain('allow boopis to use your ChatGPT plan');
     expect(host.textContent).toContain('Waiting for you to finish signing in');
-    expect(host.textContent).toContain('only if you started this sign-in in boopis');
+    expect(host.textContent).toContain('auth.openai.com');
     act(host, 'open')?.click();
-    act(host, 'copy')?.click();
     await tick();
-    expect(b.calls).toEqual(['start', 'open:https://auth.openai.com/codex/device', 'copy:ABCD-1234']);
-    expect(host.textContent).toContain('Copied');
+    expect(b.calls).toEqual(['start', 'open:' + PAGE.verification_url]);
     b.end({ outcome: 'signed_in', message: '' });
     expect(host.textContent).toContain('Signed in with ChatGPT.');
     expect(signedIn).toBe(1);
     expect(host.textContent).not.toContain('Hermes');
   });
 
-  it('cancel, an expired code and a refusal each say so and offer to try again', async () => {
-    const host = document.createElement('div');
-    const b = fake();
-    mountChatgptSignin(host, b);
-    act(host, 'start')?.click();
-    await tick(); await tick();
-    act(host, 'cancel')?.click();
-    await tick();
-    expect(b.calls).toContain('cancel');
-    b.end({ outcome: 'cancelled', message: 'The sign-in was cancelled.' });
-    expect(host.querySelector('[role="status"]')?.textContent).toBe('The sign-in was cancelled.');
-    expect(act(host, 'start')?.textContent).toBe('Try again');
-    act(host, 'start')?.click();
-    await tick(); await tick();
-    b.end({ outcome: 'timed_out', message: 'The code expired before the sign-in finished. Start again for a new code.' });
-    expect(host.querySelector('[role="alert"]')?.textContent).toContain('code expired');
-  });
-
-  it('says why when OpenAI gives no code, and draws a sign-in already waiting at its code', async () => {
-    const host = document.createElement('div');
-    mountChatgptSignin(host, fake({ start: () => Promise.reject(new Error('OpenAI is limiting sign-in requests right now. Wait a minute and try again.')) }));
-    act(host, 'start')?.click();
-    await tick(); await tick();
-    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Wait a minute');
+  it('draws a sign-in already waiting at its page without opening another', async () => {
     const again = document.createElement('div');
-    const b = fake({ status: () => Promise.resolve({ state: 'signing_in', plan: null, code: CODE }) });
+    const b = fake({ status: () => Promise.resolve({ ...OUT, state: 'signing_in', code: PAGE }) });
     mountChatgptSignin(again, b);
     await tick(); await tick();
-    expect(again.querySelector('[data-code]')?.textContent).toBe('ABCD-1234');
-    expect(b.calls, 'no new code is asked for').toEqual([]);
+    expect(again.querySelector('[data-page]')?.textContent).toBe('auth.openai.com/api/accounts/authorize');
+    expect(b.calls, 'no new sign-in is started').toEqual([]);
   });
 
-  it('taking the card away stops listening and leaves the host’s wait running', async () => {
-    const host = document.createElement('div');
-    const b = fake();
-    const card = mountChatgptSignin(host, b);
-    act(host, 'start')?.click();
-    await tick(); await tick();
-    expect(b.listening()).toBe(true);
-    card.destroy();
-    expect(b.listening()).toBe(false);
-    expect(b.calls).toEqual(['start']);
-    expect(host.children).toHaveLength(0);
+  it('prints the page without its scheme, query or trailing slash', () => {
+    expect(pageText('https://auth.openai.com/codex/device/')).toBe('auth.openai.com/codex/device');
+    expect(pageText('https://auth.openai.com/api/accounts/authorize?client_id=x#y')).toBe('auth.openai.com/api/accounts/authorize');
   });
-
-  it('prints the page without its scheme', () => { expect(pageText('https://auth.openai.com/codex/device/')).toBe('auth.openai.com/codex/device'); });
 });
 
 /* first-run setup: the forms that carry a sign-in or a page */
@@ -139,7 +106,7 @@ describe('first-run setup: the sign-ins and pages a form offers', () => {
     expect(extras).toBeTruthy();
     act(document, 'start')?.click();
     await tick(); await tick();
-    expect(document.querySelector('[data-code]')?.textContent).toBe('ABCD-1234');
+    expect(document.querySelector('[data-page]')?.textContent).toBe('auth.openai.com/api/accounts/authorize');
     b.end({ outcome: 'signed_in', message: '' });
     await tick(); await tick();
     expect(bridge.answers.at(-1)).toEqual({ form_id: 'setup.chatgpt', cancelled: false, values: {}, secrets: {} });
