@@ -79,7 +79,10 @@ def main() -> int:
     app = str(Path(sys.argv[1]).resolve())
     shot = sys.argv[2] if len(sys.argv) > 2 else None
     stack = subprocess.Popen(
-        [sys.executable, str(HERE / "serve_stack.py")], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True
+        [sys.executable, str(HERE / "serve_stack.py"), "--governed-default"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        text=True,
     )
     driver = None
     sid = None
