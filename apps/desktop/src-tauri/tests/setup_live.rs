@@ -38,6 +38,9 @@ use tokio::sync::mpsc;
 
 const WAIT: Duration = Duration::from_mins(2);
 const KEY: &str = "sk-setup-e2e-0123456789";
+/// The model the fake provider serves for the session and the ladder: governed mode runs only on frontier models
+/// (ADR-0037) and matches by the model id, so the fake model carries a frontier id. Side calls stay on `fake-a`.
+const FRONTIER: &str = "claude-opus-5-5";
 const AUX: &[&str] = &[
     "vision",
     "compression",
@@ -381,11 +384,11 @@ async fn run_flow(install: Install) {
         aux.insert((*t).into(), json!({"provider": "main", "model": "fake-a"}));
     }
     let fixture = json!({
-        "model": {"provider": "main", "default": "fake-a"}, "updates": {"check": false},
+        "model": {"provider": "main", "default": FRONTIER}, "updates": {"check": false},
         "model_catalog": {"enabled": false},
         "models_dev": {"url": fake.url.trim_end_matches("/v1").to_owned() + "/models-dev-api.json"},
         "providers": {"main": {"api": fake.url, "transport": "openai_chat", "discover_models": false,
-            "models": {"fake-a": {"context_length": 200_000}}}},
+            "models": {"fake-a": {"context_length": 200_000}, FRONTIER: {"context_length": 200_000}}}},
         "auxiliary": aux,
     });
     std::fs::write(hermes_home.join("config.yaml"), fixture.to_string()).unwrap(); // JSON is YAML
@@ -533,7 +536,7 @@ async fn run_flow(install: Install) {
         .advance(
             Some(answer(
                 "setup.ladder",
-                json!({"choice": "main/fake-a"}),
+                json!({"choice": format!("main/{FRONTIER}")}),
                 json!({}),
             )),
             false,
@@ -613,7 +616,7 @@ async fn run_flow(install: Install) {
     hub.send(
         1,
         json!({"jsonrpc":"2.0","id":2,"method":"session.create","params":{
-        "source":"gui","cwd":work,"model":"fake-a","provider":"main","toolsets":["boopis"]}}),
+        "source":"gui","cwd":work,"model":FRONTIER,"provider":"main","toolsets":["boopis"]}}),
     )
     .await
     .unwrap();
