@@ -11,8 +11,9 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 
 use super::types::{
-    CodeKind, CodeRun, CodeWhere, ConsentItem, Cost, FindingLevel, GovernedNote, HostBasis, HostList, InstallPlan, ItemKind, Layer,
-    Pin, PluginPlan, Scan, ScanVerdict, Scope, StoreItem, Tier, Warning, WarningLevel,
+    CodeKind, CodeRun, CodeWhere, ConsentItem, Cost, FindingLevel, GovernedNote, HostBasis,
+    HostList, InstallPlan, ItemKind, Layer, Pin, PluginPlan, Scan, ScanVerdict, Scope, StoreItem,
+    Tier, Warning, WarningLevel,
 };
 
 /// The JSON of `v` with every object's keys sorted and no whitespace.
@@ -63,6 +64,17 @@ pub fn plan_hash(plan: &InstallPlan) -> String {
     hex::encode(Sha256::digest(canonical(&v).as_bytes()))
 }
 
+/// The plugin's hash of its own plan: the SHA-256 of the canonical JSON of the `PluginPlan` without `plugin_hash` (the rule of
+/// `plugins/boopis/store/`, pinned by the golden vectors in `apps/shared/data/store.golden.json`).
+#[must_use]
+pub fn plugin_hash(plan: &Value) -> String {
+    let mut v = plan.clone();
+    if let Some(o) = v.as_object_mut() {
+        o.remove("plugin_hash");
+    }
+    hex::encode(Sha256::digest(canonical(&v).as_bytes()))
+}
+
 /// Set the plan's hash from its contents.
 pub fn seal(plan: &mut InstallPlan) {
     plan.plan_hash = plan_hash(plan);
@@ -80,16 +92,25 @@ fn rank(v: ScanVerdict) -> u8 {
 /// The two scans as one: the worse verdict, both scanners named, every finding.
 #[must_use]
 pub fn join_scans(a: &Scan, b: &Scan) -> Scan {
-    let verdict = if rank(a.verdict) >= rank(b.verdict) { a.verdict } else { b.verdict };
+    let verdict = if rank(a.verdict) >= rank(b.verdict) {
+        a.verdict
+    } else {
+        b.verdict
+    };
     // "Not scanned" must not hide behind a clean scan of the other half, and a clean scan must not read as not scanned.
     let verdict = match (a.verdict, b.verdict) {
-        (ScanVerdict::NotScanned, ScanVerdict::Safe) | (ScanVerdict::Safe, ScanVerdict::NotScanned) => ScanVerdict::Safe,
+        (ScanVerdict::NotScanned, ScanVerdict::Safe)
+        | (ScanVerdict::Safe, ScanVerdict::NotScanned) => ScanVerdict::Safe,
         _ => verdict,
     };
     let mut findings = a.findings.clone();
     findings.extend(b.findings.iter().cloned());
     findings.truncate(100);
-    Scan { verdict, scanner: format!("{}; {}", a.scanner, b.scanner), findings }
+    Scan {
+        verdict,
+        scanner: format!("{}; {}", a.scanner, b.scanner),
+        findings,
+    }
 }
 
 /// The stronger warning an item nobody reviewed carries (`docs/STORE.md` 5.5 step 4).
@@ -103,7 +124,9 @@ pub fn unreviewed_warning(kind: ItemKind) -> Warning {
     Warning {
         code: "unreviewed".into(),
         level: WarningLevel::Strong,
-        text: format!("Nobody reviewed this. It is {what}. Read what it runs below before you approve."),
+        text: format!(
+            "Nobody reviewed this. It is {what}. Read what it runs below before you approve."
+        ),
     }
 }
 
@@ -129,7 +152,11 @@ pub fn connector_governed() -> GovernedNote {
 pub fn connector_code_run(command: &str, args: &[String]) -> CodeRun {
     let package = matches!(command, "npx" | "uvx" | "docker" | "pipx" | "bunx");
     CodeRun {
-        what: if package { CodeKind::PackageStart } else { CodeKind::McpCommand },
+        what: if package {
+            CodeKind::PackageStart
+        } else {
+            CodeKind::McpCommand
+        },
         command: crate::connectors::validate::display_command(command, args),
         runs_where: CodeWhere::OutsideSandbox,
         sha256: None,
@@ -165,8 +192,16 @@ pub struct Base<'a> {
 #[must_use]
 pub fn merge_plugin(base: Base<'_>, layer: Layer, p: PluginPlan) -> InstallPlan {
     let item = base.item;
-    let hosts = if p.hosts.basis == HostBasis::Unknown && item.hosts.basis != HostBasis::Unknown { item.hosts.clone() } else { p.hosts };
-    let secrets = if p.secrets.is_empty() { item.secrets.clone() } else { p.secrets };
+    let hosts = if p.hosts.basis == HostBasis::Unknown && item.hosts.basis != HostBasis::Unknown {
+        item.hosts.clone()
+    } else {
+        p.hosts
+    };
+    let secrets = if p.secrets.is_empty() {
+        item.secrets.clone()
+    } else {
+        p.secrets
+    };
     let mut warnings = p.warnings;
     ensure_tier_warnings(&mut warnings, item.tier, p.kind);
     let mut plan = InstallPlan {
@@ -202,19 +237,29 @@ pub fn merge_plugin(base: Base<'_>, layer: Layer, p: PluginPlan) -> InstallPlan 
 /// The consent item for a key.
 #[must_use]
 pub fn key_consent(title: &str, id: &str) -> ConsentItem {
-    ConsentItem { id: format!("key-{id}"), text: format!("Keep {title} in your keychain and give it to this server when it starts."), runs_code: false }
+    ConsentItem {
+        id: format!("key-{id}"),
+        text: format!("Keep {title} in your keychain and give it to this server when it starts."),
+        runs_code: false,
+    }
 }
 
 /// A host list for a bundle or a local program: this computer only is not claimed; it is not known.
 #[must_use]
 pub fn unknown_hosts() -> HostList {
-    HostList { basis: HostBasis::Unknown, hosts: vec![] }
+    HostList {
+        basis: HostBasis::Unknown,
+        hosts: vec![],
+    }
 }
 
 /// A cost nobody measured.
 #[must_use]
 pub fn unknown_cost() -> Cost {
-    Cost { tools: None, context_tokens: None }
+    Cost {
+        tools: None,
+        context_tokens: None,
+    }
 }
 
 /// Whether a finding level blocks an install.
@@ -230,13 +275,20 @@ mod tests {
     use crate::store::types::Bundle;
 
     fn fixture_plans() -> Vec<InstallPlan> {
-        serde_json::from_str::<Bundle>(include_str!("../../../../shared/data/store.fixtures.json")).unwrap().plans.unwrap()
+        serde_json::from_str::<Bundle>(include_str!("../../../../shared/data/store.fixtures.json"))
+            .unwrap()
+            .plans
+            .unwrap()
     }
 
     #[test]
     fn the_canonical_form_sorts_every_key_and_has_no_whitespace() {
-        let v: Value = serde_json::from_str(r#"{"b":[{"z":1,"a":"é\n"},2],"a":{"y":null,"x":true}}"#).unwrap();
-        assert_eq!(canonical(&v), r#"{"a":{"x":true,"y":null},"b":[{"a":"é\n","z":1},2]}"#);
+        let v: Value =
+            serde_json::from_str(r#"{"b":[{"z":1,"a":"é\n"},2],"a":{"y":null,"x":true}}"#).unwrap();
+        assert_eq!(
+            canonical(&v),
+            r#"{"a":{"x":true,"y":null},"b":[{"a":"é\n","z":1},2]}"#
+        );
     }
 
     #[test]
@@ -253,7 +305,11 @@ mod tests {
         let mut q = p.clone();
         q.sessions_open = Some(99);
         q.plan_hash = "junk".into();
-        assert_eq!(plan_hash(&q), h, "what the user agrees to does not include how many sessions are open");
+        assert_eq!(
+            plan_hash(&q),
+            h,
+            "what the user agrees to does not include how many sessions are open"
+        );
         let mut changes: Vec<(&str, InstallPlan)> = Vec::new();
         let mut c = p.clone();
         c.pinned.value.push('0');
@@ -295,7 +351,9 @@ mod tests {
             // Rebuild every object with its keys reversed.
             fn flip(v: &Value) -> Value {
                 match v {
-                    Value::Object(m) => Value::Object(m.iter().rev().map(|(k, x)| (k.clone(), flip(x))).collect()),
+                    Value::Object(m) => {
+                        Value::Object(m.iter().rev().map(|(k, x)| (k.clone(), flip(x))).collect())
+                    }
                     Value::Array(a) => Value::Array(a.iter().map(flip).collect()),
                     o => o.clone(),
                 }
@@ -308,12 +366,43 @@ mod tests {
 
     #[test]
     fn scans_join_to_the_worse_verdict_and_not_scanned_never_hides_or_fakes_a_result() {
-        let mk = |v, s: &str| Scan { verdict: v, scanner: s.into(), findings: vec![] };
-        assert_eq!(join_scans(&mk(ScanVerdict::Safe, "a"), &mk(ScanVerdict::Caution, "b")).verdict, ScanVerdict::Caution);
-        assert_eq!(join_scans(&mk(ScanVerdict::Dangerous, "a"), &mk(ScanVerdict::Safe, "b")).verdict, ScanVerdict::Dangerous);
-        assert_eq!(join_scans(&mk(ScanVerdict::NotScanned, "a"), &mk(ScanVerdict::NotScanned, "b")).verdict, ScanVerdict::NotScanned);
-        assert_eq!(join_scans(&mk(ScanVerdict::NotScanned, "a"), &mk(ScanVerdict::Safe, "b")).verdict, ScanVerdict::Safe);
-        assert_eq!(join_scans(&mk(ScanVerdict::Safe, "a"), &mk(ScanVerdict::Safe, "b")).scanner, "a; b");
+        let mk = |v, s: &str| Scan {
+            verdict: v,
+            scanner: s.into(),
+            findings: vec![],
+        };
+        assert_eq!(
+            join_scans(&mk(ScanVerdict::Safe, "a"), &mk(ScanVerdict::Caution, "b")).verdict,
+            ScanVerdict::Caution
+        );
+        assert_eq!(
+            join_scans(
+                &mk(ScanVerdict::Dangerous, "a"),
+                &mk(ScanVerdict::Safe, "b")
+            )
+            .verdict,
+            ScanVerdict::Dangerous
+        );
+        assert_eq!(
+            join_scans(
+                &mk(ScanVerdict::NotScanned, "a"),
+                &mk(ScanVerdict::NotScanned, "b")
+            )
+            .verdict,
+            ScanVerdict::NotScanned
+        );
+        assert_eq!(
+            join_scans(
+                &mk(ScanVerdict::NotScanned, "a"),
+                &mk(ScanVerdict::Safe, "b")
+            )
+            .verdict,
+            ScanVerdict::Safe
+        );
+        assert_eq!(
+            join_scans(&mk(ScanVerdict::Safe, "a"), &mk(ScanVerdict::Safe, "b")).scanner,
+            "a; b"
+        );
     }
 
     #[test]
@@ -322,7 +411,10 @@ mod tests {
         ensure_tier_warnings(&mut w, Tier::NotReviewed, ItemKind::Plugin);
         ensure_tier_warnings(&mut w, Tier::NotReviewed, ItemKind::Plugin);
         assert_eq!(w.len(), 1);
-        assert_eq!((w[0].code.as_str(), w[0].level), ("unreviewed", WarningLevel::Strong));
+        assert_eq!(
+            (w[0].code.as_str(), w[0].level),
+            ("unreviewed", WarningLevel::Strong)
+        );
         let mut none = Vec::new();
         ensure_tier_warnings(&mut none, Tier::Verified, ItemKind::Plugin);
         ensure_tier_warnings(&mut none, Tier::Recommended, ItemKind::Skill);

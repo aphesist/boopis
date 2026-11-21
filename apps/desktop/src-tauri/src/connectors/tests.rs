@@ -462,7 +462,11 @@ async fn an_optional_key_left_out_leaves_the_header_out() {
         .unwrap();
     assert!(r.hermes.st().servers["firecrawl"].get("headers").is_none());
     assert!(
-        r.hermes.st().config.keys().all(|k| k == super::GOVERNED_ALLOWLIST),
+        r.hermes
+            .st()
+            .config
+            .keys()
+            .all(|k| k == super::GOVERNED_ALLOWLIST),
         "no key was wired; only the governed allowlist was written"
     );
 }
@@ -1603,7 +1607,11 @@ fn governed_list(r: &Rig) -> Vec<String> {
 fn plain(name: &str) -> Request {
     req(
         SourceKind::Command,
-        &[("name", name), ("command", "npx"), ("args", "-y\nfoo@1.0.0")],
+        &[
+            ("name", name),
+            ("command", "npx"),
+            ("args", "-y\nfoo@1.0.0"),
+        ],
     )
 }
 
@@ -1621,7 +1629,11 @@ async fn an_install_puts_the_server_on_the_governed_list_and_a_removal_takes_it_
     }
     assert_eq!(governed_list(&r), ["alpha", "beta"], "sorted, each once");
     r.engine.grant_governed("alpha").await.unwrap();
-    assert_eq!(governed_list(&r), ["alpha", "beta"], "granting twice changes nothing");
+    assert_eq!(
+        governed_list(&r),
+        ["alpha", "beta"],
+        "granting twice changes nothing"
+    );
     r.engine.remove("alpha", false).await.unwrap();
     assert_eq!(governed_list(&r), ["beta"]);
     r.engine.remove("beta", false).await.unwrap();
@@ -1642,7 +1654,10 @@ async fn a_refused_grant_undoes_the_add() {
         .await
         .unwrap_err();
     assert_eq!(e.code(), "hx.connectors.failed");
-    assert!(r.hermes.st().servers.is_empty(), "the server was removed again");
+    assert!(
+        r.hermes.st().servers.is_empty(),
+        "the server was removed again"
+    );
     assert!(governed_list(&r).is_empty());
 }
 

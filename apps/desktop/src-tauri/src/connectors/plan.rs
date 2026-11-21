@@ -633,7 +633,11 @@ pub fn build_server(spec: &ServerSpec, provided: Option<&BTreeSet<String>>) -> R
             b.row("Command", command);
             b.row(
                 "Arguments",
-                if args.is_empty() { "none".to_owned() } else { validate::display_args(args) },
+                if args.is_empty() {
+                    "none".to_owned()
+                } else {
+                    validate::display_args(args)
+                },
             );
         }
         SpecTransport::Url { url, headers } => {
@@ -666,9 +670,9 @@ pub fn build_server(spec: &ServerSpec, provided: Option<&BTreeSet<String>>) -> R
     b.row("Reaches", spec.reaches.clone());
     b.row(
         "Version",
-        spec.pinned
-            .clone()
-            .unwrap_or_else(|| "Not pinned: the publisher runs this server and can change it".into()),
+        spec.pinned.clone().unwrap_or_else(|| {
+            "Not pinned: the publisher runs this server and can change it".into()
+        }),
     );
     for (k, v) in &spec.rows {
         b.row(k, v.clone());

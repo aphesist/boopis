@@ -18,8 +18,8 @@ use super::net::{Ask, Fetcher, Hosts};
 use super::normalize::{self, Entry, Found, MarketBase};
 use super::stage::{self, Select, Staging};
 use super::types::{
-    Bundle, InstallReceipt, ItemKind, NamespaceProof, Pin, PinKind, Removed, RemovedBy, SourceFetch, StoreBrowse, StoreFilter,
-    StoreItem, StoreSource, Terms, Tier,
+    Bundle, InstallReceipt, ItemKind, NamespaceProof, Pin, PinKind, Removed, RemovedBy,
+    SourceFetch, StoreBrowse, StoreFilter, StoreItem, StoreSource, Terms, Tier,
 };
 use super::{discover, search, time};
 use crate::config::Limits;
@@ -29,13 +29,17 @@ const SOURCES_JSON: &str = include_str!("../../../../shared/data/store-sources.j
 
 /// The published catalogue of the engine's plugins. The engine's own loader reads the same file (a 301 to
 /// `nousresearch.github.io`, which the host list allows); the gateway has a lookup for one name but no listing.
-pub const ENGINE_CATALOGUE_URL: &str = "https://hermes-agent.nousresearch.com/docs/api/plugin-catalog.json";
+pub const ENGINE_CATALOGUE_URL: &str =
+    "https://hermes-agent.nousresearch.com/docs/api/plugin-catalog.json";
 /// The registry's API.
 pub const REGISTRY_URL: &str = "https://registry.modelcontextprotocol.io";
 
 /// Anthropic's two repositories: where each marketplace file is, and the licence its root file states (read when the terms were
 /// checked, 2026-11-21; `anthropics/skills` has no root licence file, each skill has its own).
-const ANTHROPIC: &[(&str, &str, Option<&str>)] = &[("anthropics", "claude-plugins-official", Some("Apache-2.0")), ("anthropics", "skills", None)];
+const ANTHROPIC: &[(&str, &str, Option<&str>)] = &[
+    ("anthropics", "claude-plugins-official", Some("Apache-2.0")),
+    ("anthropics", "skills", None),
+];
 
 /// Items boopis took down itself, `(id, reason)`. Empty today; the list exists so a bad entry can be stopped without an update
 /// of any source.
@@ -64,8 +68,17 @@ pub(super) fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 }
 
 /// Run blocking work off the async threads.
-pub(super) async fn blocking<T: Send + 'static>(f: impl FnOnce() -> Result<T> + Send + 'static) -> Result<T> {
-    tokio::task::spawn_blocking(f).await.map_err(|e| Error::Io(e.to_string()))?
+pub(super) async fn blocking<T: Send + 'static>(
+    f: impl FnOnce() -> Result<T> + Send + 'static,
+) -> Result<T> {
+    tokio::task::spawn_blocking(f)
+        .await
+        .map_err(|e| Error::Io(e.to_string()))?
+}
+
+/// The two built-in sources that hold nothing until the user adds one.
+fn is_placeholder(s: &StoreSource) -> bool {
+    !s.user_added && matches!(s.id.as_str(), "marketplace-url" | "local")
 }
 
 fn added_id(key: &str) -> String {
@@ -77,7 +90,12 @@ impl Store {
     ///
     /// # Errors
     /// `Config` when the compiled-in sources file does not parse.
-    pub fn new(root: &Path, limits: Limits, fetcher: Arc<dyn Fetcher>, host: Arc<dyn Host>) -> Result<Self> {
+    pub fn new(
+        root: &Path,
+        limits: Limits,
+        fetcher: Arc<dyn Fetcher>,
+        host: Arc<dyn Host>,
+    ) -> Result<Self> {
         let builtin = serde_json::from_str::<Bundle>(SOURCES_JSON)
             .map_err(|e| Error::Config(format!("the store's sources do not parse: {e}")))?
             .sources
@@ -148,7 +166,9 @@ impl Store {
 
     pub(super) fn source_cache(&self, id: &str) -> Arc<SourceCache> {
         let mut m = lock(&self.mem);
-        m.entry(id.to_owned()).or_insert_with(|| Arc::new(self.cache.source(id).unwrap_or_default())).clone()
+        m.entry(id.to_owned())
+            .or_insert_with(|| Arc::new(self.cache.source(id).unwrap_or_default()))
+            .clone()
     }
 
     fn put_cache(&self, id: &str, c: SourceCache) -> Result<()> {
@@ -160,7 +180,11 @@ impl Store {
     fn refresh_compiled(&self) -> Result<()> {
         let catalog = crate::connectors::catalog::load()?;
         let now = time::now();
-        let c = SourceCache { fetched_at: Some(now.clone()), entries: normalize::boopis_connectors(catalog, &now), ..SourceCache::default() };
+        let c = SourceCache {
+            fetched_at: Some(now.clone()),
+            entries: normalize::boopis_connectors(catalog, &now),
+            ..SourceCache::default()
+        };
         self.put_cache("boopis", c)
     }
 
@@ -169,20 +193,28 @@ impl Store {
     /// # Errors
     /// `hx.store.not_found`.
     pub fn find(&self, id: &str) -> Result<Entry> {
-        let (source, _) = id.split_once(':').ok_or_else(|| Error::Store("hx.store.not_found", "that is not an item id".into()))?;
+        let (source, _) = id
+            .split_once(':')
+            .ok_or_else(|| Error::Store("hx.store.not_found", "that is not an item id".into()))?;
         self.source_cache(source)
             .entries
             .iter()
             .find(|e| e.item.id == id)
             .cloned()
-            .ok_or_else(|| Error::Store("hx.store.not_found", "that item is not in the store".into()))
+            .ok_or_else(|| {
+                Error::Store("hx.store.not_found", "that item is not in the store".into())
+            })
     }
 
     /// The items of every source that is on, with the kill list applied.
     fn enabled_items(&self) -> Vec<StoreItem> {
         let user = self.user();
         let mut out = Vec::new();
-        for s in self.all_sources().iter().filter(|s| self.is_enabled(s, &user)) {
+        for s in self
+            .all_sources()
+            .iter()
+            .filter(|s| self.is_enabled(s, &user))
+        {
             for e in &self.source_cache(&s.id).entries {
                 out.push(self.with_kill_list(e.item.clone()));
             }
@@ -196,7 +228,11 @@ impl Store {
         if item.removed.is_none()
             && let Some((_, why)) = BOOPIS_KILL_LIST.iter().find(|(id, _)| *id == item.id)
         {
-            item.removed = Some(Removed { reason: (*why).to_owned(), by: RemovedBy::Boopis, date: None });
+            item.removed = Some(Removed {
+                reason: (*why).to_owned(),
+                by: RemovedBy::Boopis,
+                date: None,
+            });
         }
         item
     }
@@ -204,8 +240,14 @@ impl Store {
     // ------------------------------------------------------------ browse and search
 
     pub(super) fn installed_ids(&self, bot: &str) -> BTreeSet<String> {
-        let mut ids: BTreeSet<String> =
-            self.cache.installed().items.into_iter().filter(|r| r.bot == bot).map(|r| r.receipt.item_id).collect();
+        let mut ids: BTreeSet<String> = self
+            .cache
+            .installed()
+            .items
+            .into_iter()
+            .filter(|r| r.bot == bot)
+            .map(|r| r.receipt.item_id)
+            .collect();
         if let Some(seen) = lock(&self.seen_plugin).get(bot) {
             ids.extend(seen.iter().map(|r| r.item_id.clone()));
         }
@@ -216,24 +258,58 @@ impl Store {
     ///
     /// # Errors
     /// `InvalidInput` for a bot that is not one.
-    pub fn browse(&self, query: Option<&str>, filter: &StoreFilter, cursor: Option<&str>, limit: Option<u32>) -> Result<StoreBrowse> {
+    pub fn browse(
+        &self,
+        query: Option<&str>,
+        filter: &StoreFilter,
+        cursor: Option<&str>,
+        limit: Option<u32>,
+    ) -> Result<StoreBrowse> {
         let items = self.enabled_items();
-        let installed = if filter.installed.is_some() { self.installed_ids(&self.host.bot(None)?) } else { BTreeSet::new() };
+        let installed = if filter.installed.is_some() {
+            self.installed_ids(&self.host.bot(None)?)
+        } else {
+            BTreeSet::new()
+        };
         let kept: Vec<&StoreItem> = items
             .iter()
-            .filter(|i| search::passes(i, filter) && filter.installed.is_none_or(|want| installed.contains(&i.id) == want))
+            .filter(|i| {
+                search::passes(i, filter)
+                    && filter
+                        .installed
+                        .is_none_or(|want| installed.contains(&i.id) == want)
+            })
             .collect();
         let ranked = search::rank(kept.into_iter(), query.unwrap_or(""));
         let total = u32::try_from(ranked.len()).unwrap_or(u32::MAX);
         let (page, next_cursor) = search::page(&ranked, cursor, limit);
         let front = cursor.is_none() && query.is_none() && *filter == StoreFilter::default();
-        let recommended = front.then(|| items.iter().filter(|i| i.tier == Tier::Recommended && i.removed.is_none()).take(12).cloned().collect());
+        let recommended = front.then(|| {
+            items
+                .iter()
+                .filter(|i| i.tier == Tier::Recommended && i.removed.is_none())
+                .take(12)
+                .cloned()
+                .collect()
+        });
         let user = self.user();
         let (mut newest, mut stale, mut offline) = (None::<String>, false, false);
-        for s in self.all_sources().iter().filter(|s| self.is_enabled(s, &user) && s.fetch != SourceFetch::CompiledIn) {
+        for s in self.all_sources().iter().filter(|s| {
+            self.is_enabled(s, &user)
+                && !matches!(s.fetch, SourceFetch::CompiledIn | SourceFetch::GithubApi)
+                && !is_placeholder(s)
+        }) {
             let c = self.source_cache(&s.id);
-            let every = if s.fetch == SourceFetch::RegistryApi { self.limits.store.registry_refresh_every } else { self.limits.store.refresh_every };
-            let age = c.fetched_at.as_deref().and_then(time::parse).map(|t| time::now_secs().saturating_sub(t));
+            let every = if s.fetch == SourceFetch::RegistryApi {
+                self.limits.store.registry_refresh_every
+            } else {
+                self.limits.store.refresh_every
+            };
+            let age = c
+                .fetched_at
+                .as_deref()
+                .and_then(time::parse)
+                .map(|t| time::now_secs().saturating_sub(t));
             stale |= c.error.is_some() || age.is_none_or(|a| a > every.as_secs());
             offline |= c.offline;
             if let Some(t) = &c.fetched_at
@@ -277,8 +353,16 @@ impl Store {
         let user = self.user();
         let all = self.all_sources();
         let targets: Vec<StoreSource> = match only {
-            Some(id) => vec![all.iter().find(|s| s.id == id).cloned().ok_or_else(|| bad_source("there is no source by that id"))?],
-            None => all.into_iter().filter(|s| self.is_enabled(s, &user)).collect(),
+            Some(id) => vec![
+                all.iter()
+                    .find(|s| s.id == id)
+                    .cloned()
+                    .ok_or_else(|| bad_source("there is no source by that id"))?,
+            ],
+            None => all
+                .into_iter()
+                .filter(|s| self.is_enabled(s, &user))
+                .collect(),
         };
         let (mut failed, mut tried, mut last) = (0, 0, None);
         for s in &targets {
@@ -286,8 +370,10 @@ impl Store {
                 self.refresh_compiled()?;
                 continue;
             }
-            if matches!(s.fetch, SourceFetch::GithubApi) {
-                continue; // boopis's cached GitHub lists are part of its own index; live search needs a sign-in
+            if matches!(s.fetch, SourceFetch::GithubApi) || is_placeholder(s) {
+                // GitHub's cached lists are part of boopis's own index and live search needs a sign-in; the two placeholders
+                // hold nothing until the user adds a source.
+                continue;
             }
             tried += 1;
             let prev = self.source_cache(&s.id);
@@ -309,9 +395,20 @@ impl Store {
             }
         }
         if let Some(e) = last
-            && (only.is_some() || (failed == tried && targets.iter().all(|s| self.source_cache(&s.id).entries.is_empty())))
+            && (only.is_some()
+                || (failed == tried
+                    && targets
+                        .iter()
+                        .filter(|s| s.fetch != SourceFetch::CompiledIn)
+                        .all(|s| self.source_cache(&s.id).entries.is_empty())))
         {
-            return Err(if only.is_some() || e.code() != "hx.store.source_unreachable" { e } else { Error::Store("hx.store.offline", "no source could be reached".into()) });
+            return Err(
+                if only.is_some() || e.code() != "hx.store.source_unreachable" {
+                    e
+                } else {
+                    Error::Store("hx.store.offline", "no source could be reached".into())
+                },
+            );
         }
         self.push_kill_list().await;
         Ok(self.sources())
@@ -323,26 +420,70 @@ impl Store {
             ("skills-hub", _) => self.read_skills_hub().await,
             ("mcp-registry", _) => self.read_registry(s, prev).await,
             ("anthropic", _) => self.read_anthropic(s).await,
-            (_, SourceFetch::Local) | (_, SourceFetch::GitRepo | SourceFetch::HttpJson | SourceFetch::GitMarketplace) if s.user_added => {
+            (
+                _,
+                SourceFetch::Local
+                | SourceFetch::GitRepo
+                | SourceFetch::HttpJson
+                | SourceFetch::GitMarketplace,
+            ) if s.user_added => {
                 let entries = self.read_user_source(s).await?;
-                Ok(SourceCache { entries, ..SourceCache::default() })
+                Ok(SourceCache {
+                    entries,
+                    ..SourceCache::default()
+                })
             }
             _ => Ok(prev.clone()),
         }
     }
 
-    async fn read_engine_catalogue(&self, s: &StoreSource, prev: &SourceCache) -> Result<SourceCache> {
-        let (f, hosts, max) = (self.fetcher.clone(), self.hosts_for(s), self.limits.store.max_catalogue_bytes);
-        let url = s.url.clone().unwrap_or_else(|| ENGINE_CATALOGUE_URL.to_owned());
+    async fn read_engine_catalogue(
+        &self,
+        s: &StoreSource,
+        prev: &SourceCache,
+    ) -> Result<SourceCache> {
+        let (f, hosts, max) = (
+            self.fetcher.clone(),
+            self.hosts_for(s),
+            self.limits.store.max_catalogue_bytes,
+        );
+        let url = s
+            .url
+            .clone()
+            .unwrap_or_else(|| ENGINE_CATALOGUE_URL.to_owned());
         let etag = prev.etag.clone();
-        let reply = blocking(move || f.get(&url, &hosts, &Ask { max_bytes: max, etag: etag.as_deref(), accept: Some("application/json") })).await?;
+        let reply = blocking(move || {
+            f.get(
+                &url,
+                &hosts,
+                &Ask {
+                    max_bytes: max,
+                    etag: etag.as_deref(),
+                    accept: Some("application/json"),
+                },
+            )
+        })
+        .await?;
         if reply.status == 304 && !prev.entries.is_empty() {
-            return Ok(SourceCache { etag: reply.etag, entries: prev.entries.clone(), ..SourceCache::default() });
+            return Ok(SourceCache {
+                etag: reply.etag,
+                entries: prev.entries.clone(),
+                ..SourceCache::default()
+            });
         }
-        let doc: Value = serde_json::from_slice(&reply.body).map_err(|e| Error::Store("hx.store.source_unreachable", format!("the engine's catalogue is not JSON: {e}")))?;
+        let doc: Value = serde_json::from_slice(&reply.body).map_err(|e| {
+            Error::Store(
+                "hx.store.source_unreachable",
+                format!("the engine's catalogue is not JSON: {e}"),
+            )
+        })?;
         let mut entries = normalize::engine_catalogue(&doc, &time::now());
         entries.truncate(self.limits.store.max_items_per_source);
-        Ok(SourceCache { etag: reply.etag, entries, ..SourceCache::default() })
+        Ok(SourceCache {
+            etag: reply.etag,
+            entries,
+            ..SourceCache::default()
+        })
     }
 
     async fn read_skills_hub(&self) -> Result<SourceCache> {
@@ -350,7 +491,12 @@ impl Store {
         let backend = self.host.backend(&bot)?;
         let mut rows: Vec<Value> = Vec::new();
         for page in 1..=30u32 {
-            let a = backend.rpc("skills.manage", &json!({"action": "browse", "page": page, "page_size": 100})).await?;
+            let a = backend
+                .rpc(
+                    "skills.manage",
+                    &json!({"action": "browse", "page": page, "page_size": 100}),
+                )
+                .await?;
             rows.extend(a["items"].as_array().cloned().unwrap_or_default());
             if u64::from(page) >= a["total_pages"].as_u64().unwrap_or(1) {
                 break;
@@ -358,12 +504,19 @@ impl Store {
         }
         let mut entries = normalize::skills_hub(&rows, &time::now());
         entries.truncate(self.limits.store.max_items_per_source);
-        Ok(SourceCache { entries, ..SourceCache::default() })
+        Ok(SourceCache {
+            entries,
+            ..SourceCache::default()
+        })
     }
 
     async fn read_registry(&self, s: &StoreSource, prev: &SourceCache) -> Result<SourceCache> {
         let base = s.url.clone().unwrap_or_else(|| REGISTRY_URL.to_owned());
-        let (f, hosts, lim) = (self.fetcher.clone(), self.hosts_for(s), self.limits.store.clone());
+        let (f, hosts, lim) = (
+            self.fetcher.clone(),
+            self.hosts_for(s),
+            self.limits.store.clone(),
+        );
         let since = prev.fetched_at.clone().filter(|_| !prev.entries.is_empty());
         let started = time::now();
         let incremental = since.is_some();
@@ -371,15 +524,34 @@ impl Store {
             let (mut out, mut gone): (Vec<Entry>, Vec<String>) = (Vec::new(), Vec::new());
             let mut cursor: Option<String> = None;
             for _ in 0..lim.registry_max_pages {
-                let mut url = format!("{}/v0.1/servers?limit=100&version=latest", base.trim_end_matches('/'));
+                let mut url = format!(
+                    "{}/v0.1/servers?limit=100&version=latest",
+                    base.trim_end_matches('/')
+                );
                 if let Some(t) = &since {
                     url.push_str(&format!("&updated_since={t}"));
                 }
                 if let Some(c) = &cursor {
-                    url.push_str(&format!("&cursor={}", url::form_urlencoded::byte_serialize(c.as_bytes()).collect::<String>()));
+                    url.push_str(&format!(
+                        "&cursor={}",
+                        url::form_urlencoded::byte_serialize(c.as_bytes()).collect::<String>()
+                    ));
                 }
-                let reply = f.get(&url, &hosts, &Ask { max_bytes: lim.max_catalogue_bytes, etag: None, accept: Some("application/json") })?;
-                let doc: Value = serde_json::from_slice(&reply.body).map_err(|e| Error::Store("hx.store.source_unreachable", format!("the registry's answer is not JSON: {e}")))?;
+                let reply = f.get(
+                    &url,
+                    &hosts,
+                    &Ask {
+                        max_bytes: lim.max_catalogue_bytes,
+                        etag: None,
+                        accept: Some("application/json"),
+                    },
+                )?;
+                let doc: Value = serde_json::from_slice(&reply.body).map_err(|e| {
+                    Error::Store(
+                        "hx.store.source_unreachable",
+                        format!("the registry's answer is not JSON: {e}"),
+                    )
+                })?;
                 let page = normalize::registry_page(&doc, &time::now());
                 out.extend(page.entries);
                 gone.extend(page.deleted);
@@ -395,7 +567,14 @@ impl Store {
         })
         .await?;
         // An incremental read replaces what changed and keeps the rest; deleted names are dropped (spam, malware or worse).
-        let mut by_id: BTreeMap<String, Entry> = if incremental { prev.entries.iter().map(|e| (e.item.id.clone(), e.clone())).collect() } else { BTreeMap::new() };
+        let mut by_id: BTreeMap<String, Entry> = if incremental {
+            prev.entries
+                .iter()
+                .map(|e| (e.item.id.clone(), e.clone()))
+                .collect()
+        } else {
+            BTreeMap::new()
+        };
         for e in fresh {
             by_id.insert(e.item.id.clone(), e);
         }
@@ -404,29 +583,71 @@ impl Store {
         }
         let mut entries: Vec<Entry> = by_id.into_values().collect();
         entries.truncate(self.limits.store.max_items_per_source);
-        Ok(SourceCache { fetched_at: Some(started), entries, ..SourceCache::default() })
+        Ok(SourceCache {
+            fetched_at: Some(started),
+            entries,
+            ..SourceCache::default()
+        })
     }
 
     async fn read_anthropic(&self, s: &StoreSource) -> Result<SourceCache> {
         let mut entries = Vec::new();
         let mut errors = Vec::new();
         for (owner, name, license) in ANTHROPIC {
-            let repo = Repo { owner: (*owner).into(), name: (*name).into(), reference: None, path: None };
-            let (f, hosts, lim) = (self.fetcher.clone(), self.hosts_for(s), self.limits.store.clone());
+            let repo = Repo {
+                owner: (*owner).into(),
+                name: (*name).into(),
+                reference: None,
+                path: None,
+            };
+            let (f, hosts, lim) = (
+                self.fetcher.clone(),
+                self.hosts_for(s),
+                self.limits.store.clone(),
+            );
             let r = repo.clone();
             let got = blocking(move || {
                 let sha = github::resolve_commit(f.as_ref(), &hosts, &lim, &r)?;
-                let url = github::raw_url(&r.owner, &r.name, &sha, ".claude-plugin/marketplace.json");
-                let reply = f.get(&url, &hosts, &Ask { max_bytes: lim.max_catalogue_bytes, etag: None, accept: None })?;
-                let doc: Value = serde_json::from_slice(&reply.body).map_err(|e| Error::Store("hx.store.invalid_manifest", format!("a marketplace that is not JSON: {e}")))?;
+                let url =
+                    github::raw_url(&r.owner, &r.name, &sha, ".claude-plugin/marketplace.json");
+                let reply = f.get(
+                    &url,
+                    &hosts,
+                    &Ask {
+                        max_bytes: lim.max_catalogue_bytes,
+                        etag: None,
+                        accept: None,
+                    },
+                )?;
+                let doc: Value = serde_json::from_slice(&reply.body).map_err(|e| {
+                    Error::Store(
+                        "hx.store.invalid_manifest",
+                        format!("a marketplace that is not JSON: {e}"),
+                    )
+                })?;
                 Ok((sha, doc))
             })
             .await;
             match got {
                 Ok((sha, doc)) => {
-                    let base = MarketBase { repo: Some(repo.url()), commit: Some(sha), root_license: license.map(str::to_owned) };
-                    let label = if *name == "skills" { "Anthropic's skills" } else { "Anthropic's plugins" };
-                    entries.extend(normalize::marketplace("anthropic", Tier::Verified, label, &doc, &base, &time::now()));
+                    let base = MarketBase {
+                        repo: Some(repo.url()),
+                        commit: Some(sha),
+                        root_license: license.map(str::to_owned),
+                    };
+                    let label = if *name == "skills" {
+                        "Anthropic's skills"
+                    } else {
+                        "Anthropic's plugins"
+                    };
+                    entries.extend(normalize::marketplace(
+                        "anthropic",
+                        Tier::Verified,
+                        label,
+                        &doc,
+                        &base,
+                        &time::now(),
+                    ));
                 }
                 Err(e) => errors.push(e),
             }
@@ -437,7 +658,10 @@ impl Store {
             return Err(e);
         }
         entries.truncate(self.limits.store.max_items_per_source);
-        Ok(SourceCache { entries, ..SourceCache::default() })
+        Ok(SourceCache {
+            entries,
+            ..SourceCache::default()
+        })
     }
 
     // ------------------------------------------------------------ sources the user adds
@@ -447,27 +671,53 @@ impl Store {
     ///
     /// # Errors
     /// `hx.store.invalid_source`, `source_unreachable`, `too_large`, `unsafe_archive`, `invalid_manifest`.
-    pub async fn source_add(&self, url: Option<String>, path: Option<String>, label: Option<String>) -> Result<StoreSource> {
+    pub async fn source_add(
+        &self,
+        url: Option<String>,
+        path: Option<String>,
+        label: Option<String>,
+    ) -> Result<StoreSource> {
         let _one = self.busy.lock().await;
         let (key, fetch, display) = match (&url, &path) {
             (Some(u), None) => {
                 let u = u.trim().to_owned();
                 if let Ok(r) = github::parse(&u) {
-                    (r.url() + &r.path.clone().map(|p| format!("/{p}")).unwrap_or_default(), SourceFetch::GitRepo, format!("{}/{}", r.owner, r.name))
+                    (
+                        r.url() + &r.path.clone().map(|p| format!("/{p}")).unwrap_or_default(),
+                        SourceFetch::GitRepo,
+                        format!("{}/{}", r.owner, r.name),
+                    )
                 } else {
-                    let parsed = url::Url::parse(&u).map_err(|_| bad_source("that is not an address"))?;
-                    if parsed.scheme() != "https" || !parsed.username().is_empty() || parsed.password().is_some() {
-                        return Err(bad_source("an address must be https, with no user name or password"));
+                    let parsed =
+                        url::Url::parse(&u).map_err(|_| bad_source("that is not an address"))?;
+                    if parsed.scheme() != "https"
+                        || !parsed.username().is_empty()
+                        || parsed.password().is_some()
+                    {
+                        return Err(bad_source(
+                            "an address must be https, with no user name or password",
+                        ));
                     }
-                    (parsed.to_string(), SourceFetch::HttpJson, parsed.host_str().unwrap_or("marketplace").to_owned())
+                    (
+                        parsed.to_string(),
+                        SourceFetch::HttpJson,
+                        parsed.host_str().unwrap_or("marketplace").to_owned(),
+                    )
                 }
             }
             (None, Some(p)) => {
-                let c = std::fs::canonicalize(p).map_err(|_| bad_source("that folder or file does not exist"))?;
-                let name = c.file_name().map_or_else(|| "folder".into(), |n| n.to_string_lossy().into_owned());
+                let c = std::fs::canonicalize(p)
+                    .map_err(|_| bad_source("that folder or file does not exist"))?;
+                let name = c
+                    .file_name()
+                    .map_or_else(|| "folder".into(), |n| n.to_string_lossy().into_owned());
                 (c.to_string_lossy().into_owned(), SourceFetch::Local, name)
             }
-            _ => return Err(Error::InvalidInput("give an address or a path, not both and not neither".into())),
+            _ => {
+                return Err(Error::InvalidInput(
+                    "give an address or a path, not both and not neither".into(),
+                ));
+            }
         };
         let id = added_id(&key);
         if self.all_sources().iter().any(|s| s.id == id) {
@@ -475,7 +725,10 @@ impl Store {
         }
         let mut src = StoreSource {
             id: id.clone(),
-            label: label.map(|l| l.trim().chars().take(60).collect::<String>()).filter(|l| !l.is_empty()).unwrap_or(display),
+            label: label
+                .map(|l| l.trim().chars().take(60).collect::<String>())
+                .filter(|l| !l.is_empty())
+                .unwrap_or(display),
             description: Some("Added by you. Nothing here was reviewed.".into()),
             kinds: vec![],
             fetch,
@@ -494,7 +747,11 @@ impl Store {
         };
         let entries = self.read_user_source(&src).await?;
         if entries.is_empty() {
-            return Err(Error::Store("hx.store.invalid_manifest", "nothing installable was found there (no skill, plugin, marketplace or bundle)".into()));
+            return Err(Error::Store(
+                "hx.store.invalid_manifest",
+                "nothing installable was found there (no skill, plugin, marketplace or bundle)"
+                    .into(),
+            ));
         }
         let mut kinds: Vec<ItemKind> = entries.iter().map(|e| e.item.kind).collect();
         kinds.sort_by_key(|k| format!("{k:?}"));
@@ -503,8 +760,19 @@ impl Store {
         let mut u = self.user();
         u.added.push(src.clone());
         self.cache.save_user_sources(&u)?;
-        self.put_cache(&id, SourceCache { fetched_at: Some(time::now()), entries, ..SourceCache::default() })?;
-        Ok(self.sources().into_iter().find(|s| s.id == id).unwrap_or(src))
+        self.put_cache(
+            &id,
+            SourceCache {
+                fetched_at: Some(time::now()),
+                entries,
+                ..SourceCache::default()
+            },
+        )?;
+        Ok(self
+            .sources()
+            .into_iter()
+            .find(|s| s.id == id)
+            .unwrap_or(src))
     }
 
     /// Remove a source the user added. Its items leave the cache; installed items stay.
@@ -528,23 +796,64 @@ impl Store {
     async fn read_user_source(&self, s: &StoreSource) -> Result<Vec<Entry>> {
         match s.fetch {
             SourceFetch::Local => {
-                let (p, l, id, st) = (s.path.clone().unwrap_or_default(), self.limits.store.clone(), s.id.clone(), self.staging.clone());
+                let (p, l, id, st) = (
+                    s.path.clone().unwrap_or_default(),
+                    self.limits.store.clone(),
+                    s.id.clone(),
+                    self.staging.clone(),
+                );
                 blocking(move || local_items(&id, Path::new(&p), &l, &st)).await
             }
             SourceFetch::GitRepo | SourceFetch::GitMarketplace => {
                 let repo = github::parse(s.url.as_deref().unwrap_or_default())?;
-                let (f, hosts, lim, id) = (self.fetcher.clone(), self.hosts_for(s), self.limits.store.clone(), s.id.clone());
+                let (f, hosts, lim, id) = (
+                    self.fetcher.clone(),
+                    self.hosts_for(s),
+                    self.limits.store.clone(),
+                    s.id.clone(),
+                );
                 let staging = self.staging.clone();
                 blocking(move || github_items(f.as_ref(), &hosts, &lim, &staging, &id, &repo)).await
             }
             SourceFetch::HttpJson => {
-                let (f, hosts, max, url) = (self.fetcher.clone(), self.hosts_for(s), self.limits.store.max_catalogue_bytes, s.url.clone().unwrap_or_default());
-                let reply = blocking(move || f.get(&url, &hosts, &Ask { max_bytes: max, etag: None, accept: Some("application/json") })).await?;
-                let doc: Value = serde_json::from_slice(&reply.body).map_err(|_| Error::Store("hx.store.invalid_manifest", "that address does not hold a marketplace file (JSON)".into()))?;
+                let (f, hosts, max, url) = (
+                    self.fetcher.clone(),
+                    self.hosts_for(s),
+                    self.limits.store.max_catalogue_bytes,
+                    s.url.clone().unwrap_or_default(),
+                );
+                let reply = blocking(move || {
+                    f.get(
+                        &url,
+                        &hosts,
+                        &Ask {
+                            max_bytes: max,
+                            etag: None,
+                            accept: Some("application/json"),
+                        },
+                    )
+                })
+                .await?;
+                let doc: Value = serde_json::from_slice(&reply.body).map_err(|_| {
+                    Error::Store(
+                        "hx.store.invalid_manifest",
+                        "that address does not hold a marketplace file (JSON)".into(),
+                    )
+                })?;
                 if !doc.get("plugins").is_some_and(Value::is_array) {
-                    return Err(Error::Store("hx.store.invalid_manifest", "that file has no plugins list".into()));
+                    return Err(Error::Store(
+                        "hx.store.invalid_manifest",
+                        "that file has no plugins list".into(),
+                    ));
                 }
-                Ok(normalize::marketplace(&s.id, Tier::NotReviewed, "added by you", &doc, &MarketBase::default(), &time::now()))
+                Ok(normalize::marketplace(
+                    &s.id,
+                    Tier::NotReviewed,
+                    "added by you",
+                    &doc,
+                    &MarketBase::default(),
+                    &time::now(),
+                ))
             }
             _ => Err(bad_source("that kind of source cannot be read")),
         }
@@ -571,44 +880,112 @@ impl Store {
     /// down, and the next refresh tries again.
     async fn push_kill_list(&self) {
         let Ok(bot) = self.host.bot(None) else { return };
-        let Ok(backend) = self.host.backend(&bot) else { return };
+        let Ok(backend) = self.host.backend(&bot) else {
+            return;
+        };
         let removed: Vec<Value> = self
             .kill_list()
             .into_iter()
             .map(|(id, r)| json!({"id": id, "reason": r.reason, "by": r.by}))
             .collect();
-        if let Err(e) = backend.rpc("plugin.boopis.store.removed.set", &json!({"removed": removed})).await {
+        if let Err(e) = backend
+            .rpc(
+                "plugin.boopis.store.removed.set",
+                &json!({"removed": removed}),
+            )
+            .await
+        {
             tracing::debug!(error = %e, "the plugin did not take the kill list");
         }
     }
 
     pub(super) fn record_of(&self, bot: &str, id: &str) -> Option<HostRecord> {
-        self.cache.installed().items.into_iter().find(|r| r.bot == bot && r.receipt.item_id == id)
+        self.cache
+            .installed()
+            .items
+            .into_iter()
+            .find(|r| r.bot == bot && r.receipt.item_id == id)
     }
 }
 
 // ---------------------------------------------------------------- reading what the user pointed at
 
 /// The items of a GitHub repository: its marketplace file when it has one, else what its tree holds.
-fn github_items(f: &dyn Fetcher, hosts: &Hosts, lim: &crate::config::StoreLimits, staging: &Staging, source: &str, repo: &Repo) -> Result<Vec<Entry>> {
+fn github_items(
+    f: &dyn Fetcher,
+    hosts: &Hosts,
+    lim: &crate::config::StoreLimits,
+    staging: &Staging,
+    source: &str,
+    repo: &Repo,
+) -> Result<Vec<Entry>> {
     let sha = github::resolve_commit(f, hosts, lim, repo)?;
     let now = time::now();
-    let raw = github::raw_url(&repo.owner, &repo.name, &sha, ".claude-plugin/marketplace.json");
-    if let Ok(reply) = f.get(&raw, hosts, &Ask { max_bytes: lim.max_catalogue_bytes, etag: None, accept: None })
-        && let Ok(doc) = serde_json::from_slice::<Value>(&reply.body)
+    let raw = github::raw_url(
+        &repo.owner,
+        &repo.name,
+        &sha,
+        ".claude-plugin/marketplace.json",
+    );
+    if let Ok(reply) = f.get(
+        &raw,
+        hosts,
+        &Ask {
+            max_bytes: lim.max_catalogue_bytes,
+            etag: None,
+            accept: None,
+        },
+    ) && let Ok(doc) = serde_json::from_slice::<Value>(&reply.body)
         && doc.get("plugins").is_some_and(Value::is_array)
     {
-        let base = MarketBase { repo: Some(repo.url()), commit: Some(sha), root_license: None };
-        return Ok(normalize::marketplace(source, Tier::NotReviewed, "added by you", &doc, &base, &now));
+        let base = MarketBase {
+            repo: Some(repo.url()),
+            commit: Some(sha),
+            root_license: None,
+        };
+        return Ok(normalize::marketplace(
+            source,
+            Tier::NotReviewed,
+            "added by you",
+            &doc,
+            &base,
+            &now,
+        ));
     }
-    let reply = f.get(&github::archive_url(&repo.owner, &repo.name, &sha), hosts, &Ask { max_bytes: lim.max_archive_bytes, etag: None, accept: None })?;
+    let reply = f.get(
+        &github::archive_url(&repo.owner, &repo.name, &sha),
+        hosts,
+        &Ask {
+            max_bytes: lim.max_archive_bytes,
+            etag: None,
+            accept: None,
+        },
+    )?;
     let (id, dir) = staging.create()?;
     let out = (|| {
-        let stats = stage::unpack_tar_gz(&reply.body, &dir, &Select { strip_top: true, subdir: repo.path.clone() }, lim)?;
+        let stats = stage::unpack_tar_gz(
+            &reply.body,
+            &dir,
+            &Select {
+                strip_top: true,
+                subdir: repo.path.clone(),
+            },
+            lim,
+        )?;
         if stats.commit.as_deref().is_some_and(|c| c != sha) {
-            return Err(Error::Store("hx.store.digest_mismatch", "the download is not the commit that was asked for".into()));
+            return Err(Error::Store(
+                "hx.store.digest_mismatch",
+                "the download is not the commit that was asked for".into(),
+            ));
         }
-        Ok(tree_items(source, repo, &sha, &dir, repo.path.as_deref().unwrap_or(""), &now))
+        Ok(tree_items(
+            source,
+            repo,
+            &sha,
+            &dir,
+            repo.path.as_deref().unwrap_or(""),
+            &now,
+        ))
     })();
     staging.remove(&id);
     out
@@ -616,27 +993,63 @@ fn github_items(f: &dyn Fetcher, hosts: &Hosts, lim: &crate::config::StoreLimits
 
 fn license_of(dir: &Path, stated: Option<String>) -> Option<String> {
     stated.or_else(|| {
-        let text = std::fs::read_to_string(dir.join("LICENSE")).or_else(|_| std::fs::read_to_string(dir.join("LICENSE.txt"))).ok()?;
-        let head = text.lines().take(5).collect::<Vec<_>>().join(" ").to_lowercase();
-        [("apache license", "Apache-2.0"), ("mit license", "MIT"), ("permission is hereby granted", "MIT"), ("bsd", "BSD"), ("mozilla public license", "MPL-2.0"), ("gnu general public license", "GPL")]
-            .iter()
-            .find(|(needle, _)| head.contains(needle))
-            .map(|(_, l)| (*l).to_owned())
+        let text = std::fs::read_to_string(dir.join("LICENSE"))
+            .or_else(|_| std::fs::read_to_string(dir.join("LICENSE.txt")))
+            .ok()?;
+        let head = text
+            .lines()
+            .take(5)
+            .collect::<Vec<_>>()
+            .join(" ")
+            .to_lowercase();
+        [
+            ("apache license", "Apache-2.0"),
+            ("mit license", "MIT"),
+            ("permission is hereby granted", "MIT"),
+            ("bsd", "BSD"),
+            ("mozilla public license", "MPL-2.0"),
+            ("gnu general public license", "GPL"),
+        ]
+        .iter()
+        .find(|(needle, _)| head.contains(needle))
+        .map(|(_, l)| (*l).to_owned())
     })
 }
 
 /// What an unpacked repository holds, as items pinned at `sha`.
-fn tree_items(source: &str, repo: &Repo, sha: &str, dir: &Path, sub: &str, now: &str) -> Vec<Entry> {
-    let pin = Pin { kind: PinKind::Commit, value: sha.to_owned(), repo: Some(repo.url()) };
+fn tree_items(
+    source: &str,
+    repo: &Repo,
+    sha: &str,
+    dir: &Path,
+    sub: &str,
+    now: &str,
+) -> Vec<Entry> {
+    let pin = Pin {
+        kind: PinKind::Commit,
+        value: sha.to_owned(),
+        repo: Some(repo.url()),
+    };
     let base_name = format!("{}/{}", repo.owner, repo.name);
-    let join = |a: &str, b: &str| [a, b].iter().filter(|p| !p.is_empty()).copied().collect::<Vec<_>>().join("/");
+    let join = |a: &str, b: &str| {
+        [a, b]
+            .iter()
+            .filter(|p| !p.is_empty())
+            .copied()
+            .collect::<Vec<_>>()
+            .join("/")
+    };
     let mut out = Vec::new();
     if let Ok(Some(doc)) = discover::plugin_doc(dir) {
         let name = join(&base_name, sub);
         out.push(normalize::found(
             Found {
                 source: source.to_owned(),
-                kind: if doc.is_mod { ItemKind::Mod } else { ItemKind::Plugin },
+                kind: if doc.is_mod {
+                    ItemKind::Mod
+                } else {
+                    ItemKind::Plugin
+                },
                 name,
                 title: doc.name.clone(),
                 publisher: doc.author.clone().unwrap_or_else(|| repo.owner.clone()),
@@ -657,7 +1070,11 @@ fn tree_items(source: &str, repo: &Repo, sha: &str, dir: &Path, sub: &str, now: 
     for (rel, doc) in discover::find_skills(dir) {
         let Ok(doc) = doc else { continue };
         let at = join(sub, &rel);
-        let skill_dir = if rel.is_empty() { dir.to_owned() } else { dir.join(&rel) };
+        let skill_dir = if rel.is_empty() {
+            dir.to_owned()
+        } else {
+            dir.join(&rel)
+        };
         out.push(normalize::found(
             Found {
                 source: source.to_owned(),
@@ -682,7 +1099,12 @@ fn tree_items(source: &str, repo: &Repo, sha: &str, dir: &Path, sub: &str, now: 
 }
 
 /// What a local folder or `.mcpb` file holds, pinned by the hash of its bytes now.
-fn local_items(source: &str, path: &Path, lim: &crate::config::StoreLimits, staging: &Staging) -> Result<Vec<Entry>> {
+fn local_items(
+    source: &str,
+    path: &Path,
+    lim: &crate::config::StoreLimits,
+    staging: &Staging,
+) -> Result<Vec<Entry>> {
     let now = time::now();
     if path.is_file() {
         if path.extension().and_then(|e| e.to_str()) != Some("mcpb") {
@@ -690,7 +1112,10 @@ fn local_items(source: &str, path: &Path, lim: &crate::config::StoreLimits, stag
         }
         let bytes = std::fs::read(path).map_err(|e| Error::Io(e.to_string()))?;
         if bytes.len() as u64 > lim.max_archive_bytes {
-            return Err(Error::Store("hx.store.too_large", "that bundle is larger than boopis accepts".into()));
+            return Err(Error::Store(
+                "hx.store.too_large",
+                "that bundle is larger than boopis accepts".into(),
+            ));
         }
         let (tmp_id, tmp) = staging.create()?;
         let unpacked = stage::unpack_zip(&bytes, &tmp, &Select::default(), lim);
@@ -698,22 +1123,54 @@ fn local_items(source: &str, path: &Path, lim: &crate::config::StoreLimits, stag
         let manifest_bytes = std::fs::read(tmp.join("manifest.json"));
         staging.remove(&tmp_id);
         unpacked?;
-        let manifest: Value = serde_json::from_slice(&manifest_bytes.map_err(|_| Error::Store("hx.store.invalid_manifest", "the bundle has no manifest.json".into()))?)
-            .map_err(|_| Error::Store("hx.store.invalid_manifest", "the bundle's manifest.json is not JSON".into()))?;
-        let name = manifest["name"].as_str().ok_or_else(|| Error::Store("hx.store.invalid_manifest", "the manifest has no name".into()))?.to_owned();
+        let manifest: Value = serde_json::from_slice(&manifest_bytes.map_err(|_| {
+            Error::Store(
+                "hx.store.invalid_manifest",
+                "the bundle has no manifest.json".into(),
+            )
+        })?)
+        .map_err(|_| {
+            Error::Store(
+                "hx.store.invalid_manifest",
+                "the bundle's manifest.json is not JSON".into(),
+            )
+        })?;
+        let name = manifest["name"]
+            .as_str()
+            .ok_or_else(|| {
+                Error::Store(
+                    "hx.store.invalid_manifest",
+                    "the manifest has no name".into(),
+                )
+            })?
+            .to_owned();
         let sha = stage::sha256_hex(&bytes);
         return Ok(vec![normalize::found(
             Found {
                 source: source.to_owned(),
                 kind: ItemKind::Connector,
-                title: manifest["display_name"].as_str().unwrap_or(&name).to_owned(),
+                title: manifest["display_name"]
+                    .as_str()
+                    .unwrap_or(&name)
+                    .to_owned(),
                 name,
-                publisher: manifest.pointer("/author/name").and_then(Value::as_str).unwrap_or("unknown").to_owned(),
-                summary: manifest["description"].as_str().unwrap_or_default().to_owned(),
+                publisher: manifest
+                    .pointer("/author/name")
+                    .and_then(Value::as_str)
+                    .unwrap_or("unknown")
+                    .to_owned(),
+                summary: manifest["description"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .to_owned(),
                 license: manifest["license"].as_str().map(str::to_owned),
                 homepage: manifest["homepage"].as_str().map(str::to_owned),
                 version: manifest["version"].as_str().map(str::to_owned),
-                pinned: Some(Pin { kind: PinKind::ArchiveSha256, value: sha, repo: None }),
+                pinned: Some(Pin {
+                    kind: PinKind::ArchiveSha256,
+                    value: sha,
+                    repo: None,
+                }),
                 components: counts,
                 proof: NamespaceProof::None,
                 source_url: path.to_string_lossy().into_owned(),
@@ -726,8 +1183,20 @@ fn local_items(source: &str, path: &Path, lim: &crate::config::StoreLimits, stag
         return Err(bad_source("that is not a folder or a bundle"));
     }
     let mut out = Vec::new();
-    let mut add = |kind: ItemKind, rel: &str, name: String, title: String, summary: String, license: Option<String>, version: Option<String>, publisher: Option<String>| -> Result<()> {
-        let dir = if rel.is_empty() { path.to_owned() } else { path.join(rel) };
+    let mut add = |kind: ItemKind,
+                   rel: &str,
+                   name: String,
+                   title: String,
+                   summary: String,
+                   license: Option<String>,
+                   version: Option<String>,
+                   publisher: Option<String>|
+     -> Result<()> {
+        let dir = if rel.is_empty() {
+            path.to_owned()
+        } else {
+            path.join(rel)
+        };
         let hash = stage::tree_sha256(&dir)?;
         out.push(normalize::found(
             Found {
@@ -740,7 +1209,11 @@ fn local_items(source: &str, path: &Path, lim: &crate::config::StoreLimits, stag
                 license: license_of(&dir, license),
                 homepage: None,
                 version,
-                pinned: Some(Pin { kind: PinKind::TreeSha256, value: hash, repo: None }),
+                pinned: Some(Pin {
+                    kind: PinKind::TreeSha256,
+                    value: hash,
+                    repo: None,
+                }),
                 components: discover::count_components(&dir),
                 proof: NamespaceProof::None,
                 source_url: dir.to_string_lossy().into_owned(),
@@ -750,14 +1223,44 @@ fn local_items(source: &str, path: &Path, lim: &crate::config::StoreLimits, stag
         ));
         Ok(())
     };
-    let leaf = path.file_name().map_or_else(|| "folder".into(), |n| n.to_string_lossy().into_owned());
-    if let Some(doc) = discover::plugin_doc(path).map_err(|e| Error::Store("hx.store.invalid_manifest", e))? {
-        add(if doc.is_mod { ItemKind::Mod } else { ItemKind::Plugin }, "", doc.name.clone(), doc.name.clone(), doc.description.clone().unwrap_or_default(), doc.license.clone(), doc.version.clone(), doc.author.clone())?;
+    let leaf = path
+        .file_name()
+        .map_or_else(|| "folder".into(), |n| n.to_string_lossy().into_owned());
+    if let Some(doc) =
+        discover::plugin_doc(path).map_err(|e| Error::Store("hx.store.invalid_manifest", e))?
+    {
+        add(
+            if doc.is_mod {
+                ItemKind::Mod
+            } else {
+                ItemKind::Plugin
+            },
+            "",
+            doc.name.clone(),
+            doc.name.clone(),
+            doc.description.clone().unwrap_or_default(),
+            doc.license.clone(),
+            doc.version.clone(),
+            doc.author.clone(),
+        )?;
     } else {
         for (rel, doc) in discover::find_skills(path) {
             if let Ok(doc) = doc {
-                let name = if rel.is_empty() { leaf.clone() } else { format!("{leaf}/{rel}") };
-                add(ItemKind::Skill, &rel, name, doc.name.clone(), doc.description.clone(), doc.license.clone(), None, None)?;
+                let name = if rel.is_empty() {
+                    leaf.clone()
+                } else {
+                    format!("{leaf}/{rel}")
+                };
+                add(
+                    ItemKind::Skill,
+                    &rel,
+                    name,
+                    doc.name.clone(),
+                    doc.description.clone(),
+                    doc.license.clone(),
+                    None,
+                    None,
+                )?;
             }
         }
     }

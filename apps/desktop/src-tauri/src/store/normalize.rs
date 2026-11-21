@@ -14,8 +14,8 @@ use serde_json::Value;
 
 use super::servers;
 use super::types::{
-    ComponentCounts, HostBasis, HostList, ItemKind, NamespaceProof, Pin, PinKind, Provenance, Removed, RemovedBy,
-    Scan, ScanVerdict, SecretNeed, StoreItem, Tier,
+    ComponentCounts, HostBasis, HostList, ItemKind, NamespaceProof, Pin, PinKind, Provenance,
+    Removed, RemovedBy, Scan, ScanVerdict, SecretNeed, StoreItem, Tier,
 };
 
 /// An item and the source's own record of it.
@@ -31,7 +31,11 @@ pub struct Entry {
 pub const NOT_STATED: &str = "not stated";
 
 fn s(v: &Value, k: &str) -> Option<String> {
-    v.get(k).and_then(Value::as_str).map(str::trim).filter(|t| !t.is_empty()).map(str::to_owned)
+    v.get(k)
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|t| !t.is_empty())
+        .map(str::to_owned)
 }
 
 fn cap(text: &str, n: usize) -> String {
@@ -60,7 +64,17 @@ pub fn not_scanned() -> Scan {
 }
 
 fn no_components() -> ComponentCounts {
-    ComponentCounts { known: false, skills: 0, commands: 0, agents: 0, hooks: 0, mcp_servers: 0, modules: 0, scripts: 0, python: 0 }
+    ComponentCounts {
+        known: false,
+        skills: 0,
+        commands: 0,
+        agents: 0,
+        hooks: 0,
+        mcp_servers: 0,
+        modules: 0,
+        scripts: 0,
+        python: 0,
+    }
 }
 
 /// The pieces every item shares, so each normaliser fills only what its source knows.
@@ -102,7 +116,10 @@ impl<'a> Draft<'a> {
             version: None,
             pinned: None,
             components: no_components(),
-            hosts: HostList { basis: HostBasis::Unknown, hosts: vec![] },
+            hosts: HostList {
+                basis: HostBasis::Unknown,
+                hosts: vec![],
+            },
             secrets: vec![],
             tier: Tier::NotReviewed,
             verified: None,
@@ -141,7 +158,11 @@ impl<'a> Draft<'a> {
                 pinned: self.pinned,
                 tree_sha256: None,
                 scan: not_scanned(),
-                source_url: if self.source_url.is_empty() { self.homepage.unwrap_or_default() } else { self.source_url },
+                source_url: if self.source_url.is_empty() {
+                    self.homepage.unwrap_or_default()
+                } else {
+                    self.source_url
+                },
                 fetched_at: fetched_at.to_owned(),
                 last_updated: self.last_updated,
                 source_tier: self.source_tier,
@@ -155,7 +176,10 @@ impl<'a> Draft<'a> {
 /// The curated connectors (`apps/shared/data/connectors.json`) as items. Only boopis's list yields `recommended`, and only
 /// for an entry a person checked: its `verified.date` is that check. The pin is the verified package at its exact version.
 #[must_use]
-pub fn boopis_connectors(catalog: &crate::connectors::catalog::Catalog, fetched_at: &str) -> Vec<Entry> {
+pub fn boopis_connectors(
+    catalog: &crate::connectors::catalog::Catalog,
+    fetched_at: &str,
+) -> Vec<Entry> {
     catalog
         .connectors
         .iter()
@@ -172,7 +196,11 @@ pub fn boopis_connectors(catalog: &crate::connectors::catalog::Catalog, fetched_
                 .package
                 .as_ref()
                 .zip(c.verified.version.as_ref())
-                .map(|(p, v)| Pin { kind: PinKind::Version, value: v.clone(), repo: Some(format!("npm:{p}")) });
+                .map(|(p, v)| Pin {
+                    kind: PinKind::Version,
+                    value: v.clone(),
+                    repo: Some(format!("npm:{p}")),
+                });
             let mut hosts: Vec<String> = Vec::new();
             let mut any = false;
             let mut loopback_only = true;
@@ -190,13 +218,26 @@ pub fn boopis_connectors(catalog: &crate::connectors::catalog::Catalog, fetched_
             hosts.sort();
             hosts.dedup();
             d.hosts = if any {
-                HostList { basis: HostBasis::Unknown, hosts: vec![] }
+                HostList {
+                    basis: HostBasis::Unknown,
+                    hosts: vec![],
+                }
             } else if hosts.is_empty() && loopback_only {
-                HostList { basis: HostBasis::Loopback, hosts: vec![] }
+                HostList {
+                    basis: HostBasis::Loopback,
+                    hosts: vec![],
+                }
             } else {
-                HostList { basis: HostBasis::Verified, hosts }
+                HostList {
+                    basis: HostBasis::Verified,
+                    hosts,
+                }
             };
-            d.components = ComponentCounts { known: true, mcp_servers: 1, ..no_components() };
+            d.components = ComponentCounts {
+                known: true,
+                mcp_servers: 1,
+                ..no_components()
+            };
             d.secrets = c
                 .variants
                 .iter()
@@ -215,13 +256,16 @@ pub fn boopis_connectors(catalog: &crate::connectors::catalog::Catalog, fetched_
                 .collect();
             d.tier = Tier::Recommended;
             d.verified = Some(c.verified.date.clone());
-            d.tags = c.categories.clone();
+            d.tags.clone_from(&c.categories);
             d.proof = NamespaceProof::Curated;
             d.source_url.clone_from(&c.source);
             d.last_updated = Some(c.verified.date.clone());
             d.source_tier = Some("curated by boopis".into());
             let item = d.build(fetched_at);
-            Entry { raw: serde_json::json!({"connector": c.id}), item }
+            Entry {
+                raw: serde_json::json!({"connector": c.id}),
+                item,
+            }
         })
         .collect()
 }
@@ -277,7 +321,10 @@ pub fn found(f: Found, fetched_at: &str) -> Entry {
     d.proof = f.proof;
     d.source_url = f.source_url;
     d.source_tier = Some("added by you".into());
-    Entry { item: d.build(fetched_at), raw: f.raw }
+    Entry {
+        item: d.build(fetched_at),
+        raw: f.raw,
+    }
 }
 
 // ---------------------------------------------------------------- the MCP Registry
@@ -309,21 +356,42 @@ pub struct RegistryPage {
 #[must_use]
 pub fn registry_page(page: &Value, fetched_at: &str) -> RegistryPage {
     let mut out = RegistryPage {
-        next: page.pointer("/metadata/nextCursor").and_then(Value::as_str).map(str::to_owned),
+        next: page
+            .pointer("/metadata/nextCursor")
+            .and_then(Value::as_str)
+            .map(str::to_owned),
         ..RegistryPage::default()
     };
-    for row in page.get("servers").and_then(Value::as_array).into_iter().flatten() {
-        let Some(server) = row.get("server") else { continue };
-        let Some(name) = s(server, "name") else { continue };
-        let meta = row.pointer("/_meta/io.modelcontextprotocol.registry~1official").or_else(|| {
-            row.get("_meta").and_then(|m| m.get("io.modelcontextprotocol.registry/official"))
-        });
-        let status = meta.and_then(|m| s(m, "status")).unwrap_or_else(|| "active".into());
+    for row in page
+        .get("servers")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        let Some(server) = row.get("server") else {
+            continue;
+        };
+        let Some(name) = s(server, "name") else {
+            continue;
+        };
+        let meta = row
+            .pointer("/_meta/io.modelcontextprotocol.registry~1official")
+            .or_else(|| {
+                row.get("_meta")
+                    .and_then(|m| m.get("io.modelcontextprotocol.registry/official"))
+            });
+        let status = meta
+            .and_then(|m| s(m, "status"))
+            .unwrap_or_else(|| "active".into());
         if status == "deleted" {
             out.deleted.push(name);
             continue;
         }
-        if meta.and_then(|m| m.get("isLatest")).and_then(Value::as_bool) == Some(false) {
+        if meta
+            .and_then(|m| m.get("isLatest"))
+            .and_then(Value::as_bool)
+            == Some(false)
+        {
             continue;
         }
         let mut d = Draft::new("mcp-registry", &name, ItemKind::Connector);
@@ -333,14 +401,30 @@ pub fn registry_page(page: &Value, fetched_at: &str) -> RegistryPage {
         d.proof = proof;
         d.summary = cap(&s(server, "description").unwrap_or_default(), 400);
         d.version = s(server, "version");
-        d.homepage = s(server, "websiteUrl").or_else(|| server.pointer("/repository/url").and_then(Value::as_str).map(str::to_owned));
-        d.source_url = format!("https://registry.modelcontextprotocol.io/v0.1/servers/{}/versions/latest", name.replace('/', "%2F"));
-        d.last_updated = meta.and_then(|m| s(m, "updatedAt")).map(|t| t.chars().take(10).collect());
+        d.homepage = s(server, "websiteUrl").or_else(|| {
+            server
+                .pointer("/repository/url")
+                .and_then(Value::as_str)
+                .map(str::to_owned)
+        });
+        d.source_url = format!(
+            "https://registry.modelcontextprotocol.io/v0.1/servers/{}/versions/latest",
+            name.replace('/', "%2F")
+        );
+        d.last_updated = meta
+            .and_then(|m| s(m, "updatedAt"))
+            .map(|t| t.chars().take(10).collect());
         d.source_tier = Some(match proof {
-            NamespaceProof::Github => "the registry proved this name belongs to its GitHub account".to_owned(),
+            NamespaceProof::Github => {
+                "the registry proved this name belongs to its GitHub account".to_owned()
+            }
             _ => "the registry proved this name belongs to its publisher".to_owned(),
         });
-        d.components = ComponentCounts { known: true, mcp_servers: 1, ..no_components() };
+        d.components = ComponentCounts {
+            known: true,
+            mcp_servers: 1,
+            ..no_components()
+        };
         if status == "deprecated" {
             d.tags.push("deprecated".into());
             d.summary = format!("Deprecated in the registry. {}", d.summary);
@@ -351,10 +435,16 @@ pub fn registry_page(page: &Value, fetched_at: &str) -> RegistryPage {
                 d.hosts = c.hosts;
                 d.secrets = c.secrets;
             }
-            Err(why) => d.summary = format!("{} (Not installable here: {why}.)", d.summary).trim().to_owned(),
+            Err(why) => {
+                let note = format!("{} (Not installable here: {why}.)", d.summary);
+                note.trim().clone_into(&mut d.summary);
+            }
         }
         let item = d.build(fetched_at);
-        out.entries.push(Entry { item, raw: server.clone() });
+        out.entries.push(Entry {
+            item,
+            raw: server.clone(),
+        });
     }
     out
 }
@@ -375,7 +465,12 @@ pub fn engine_catalogue(doc: &Value, fetched_at: &str) -> Vec<Entry> {
         .filter_map(|r| Some((s(r, "name")?, r)))
         .collect();
     let mut out = Vec::new();
-    for e in doc.get("entries").and_then(Value::as_array).into_iter().flatten() {
+    for e in doc
+        .get("entries")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
         let Some(name) = s(e, "name") else { continue };
         let mut d = Draft::new("engine-plugins", &name, ItemKind::EnginePlugin);
         d.title = s(e, "title").unwrap_or_else(|| name.clone());
@@ -386,15 +481,33 @@ pub fn engine_catalogue(doc: &Value, fetched_at: &str) -> Vec<Entry> {
         d.source_url = s(e, "repo").unwrap_or_default();
         d.pinned = s(e, "repo")
             .zip(s(e, "sha").filter(|h| is_sha1(h)))
-            .map(|(repo, sha)| Pin { kind: PinKind::Commit, value: sha.to_ascii_lowercase(), repo: Some(repo) });
+            .map(|(repo, sha)| Pin {
+                kind: PinKind::Commit,
+                value: sha.to_ascii_lowercase(),
+                repo: Some(repo),
+            });
         let tier = s(e, "tier").unwrap_or_else(|| "community".into());
-        d.tier = if matches!(tier.as_str(), "official" | "verified") { Tier::Verified } else { Tier::NotReviewed };
+        d.tier = if matches!(tier.as_str(), "official" | "verified") {
+            Tier::Verified
+        } else {
+            Tier::NotReviewed
+        };
         d.source_tier = Some(format!("the engine's store lists it as {tier}"));
-        d.proof = if d.tier == Tier::Verified { NamespaceProof::Curated } else { NamespaceProof::None };
+        d.proof = if d.tier == Tier::Verified {
+            NamespaceProof::Curated
+        } else {
+            NamespaceProof::None
+        };
         d.tags = s(e, "category").into_iter().collect();
         let caps = e.get("capabilities");
-        let count = |k: &str| caps.and_then(|c| c.get(k)).and_then(Value::as_array).map_or(0, Vec::len);
-        let portable = d.summary.contains("Agent Plugins v1") && count("provides_tools") + count("provides_hooks") + count("provides_middleware") == 0;
+        let count = |k: &str| {
+            caps.and_then(|c| c.get(k))
+                .and_then(Value::as_array)
+                .map_or(0, Vec::len)
+        };
+        let portable = d.summary.contains("Agent Plugins v1")
+            && count("provides_tools") + count("provides_hooks") + count("provides_middleware")
+                == 0;
         d.components = ComponentCounts {
             known: false,
             hooks: u32::try_from(count("provides_hooks")).unwrap_or(u32::MAX),
@@ -407,7 +520,13 @@ pub fn engine_catalogue(doc: &Value, fetched_at: &str) -> Vec<Entry> {
             .into_iter()
             .flatten()
             .filter_map(Value::as_str)
-            .map(|env| SecretNeed { id: env.to_ascii_lowercase(), title: env.to_owned(), env: Some(env.to_owned()), host: None, optional: false })
+            .map(|env| SecretNeed {
+                id: env.to_ascii_lowercase(),
+                title: env.to_owned(),
+                env: Some(env.to_owned()),
+                host: None,
+                optional: false,
+            })
             .collect();
         if let Some(r) = removed.get(&name) {
             d.removed = Some(Removed {
@@ -416,7 +535,10 @@ pub fn engine_catalogue(doc: &Value, fetched_at: &str) -> Vec<Entry> {
                 date: s(r, "date"),
             });
         }
-        out.push(Entry { item: d.build(fetched_at), raw: e.clone() });
+        out.push(Entry {
+            item: d.build(fetched_at),
+            raw: e.clone(),
+        });
     }
     out
 }
@@ -436,19 +558,32 @@ pub fn skills_hub(rows: &[Value], fetched_at: &str) -> Vec<Entry> {
         d.title = name;
         d.summary = cap(&s(r, "description").unwrap_or_default(), 400);
         let trust = s(r, "trust").unwrap_or_else(|| "community".into());
-        d.tier = if matches!(trust.as_str(), "trusted" | "builtin") { Tier::Verified } else { Tier::NotReviewed };
+        d.tier = if matches!(trust.as_str(), "trusted" | "builtin") {
+            Tier::Verified
+        } else {
+            Tier::NotReviewed
+        };
         d.source_tier = Some(format!("the engine's hub lists it as {trust}"));
         let mut parts = identifier.splitn(3, '/');
         if let (Some(owner), Some(repo)) = (parts.next(), parts.next()) {
-            d.publisher = owner.to_owned();
-            if s(r, "source").as_deref() == Some("github") || s(r, "source").as_deref() == Some("official") {
+            owner.clone_into(&mut d.publisher);
+            if s(r, "source").as_deref() == Some("github")
+                || s(r, "source").as_deref() == Some("official")
+            {
                 d.homepage = Some(format!("https://github.com/{owner}/{repo}"));
             }
         } else {
             d.publisher = s(r, "source").unwrap_or_else(|| "unknown".into());
         }
-        d.components = ComponentCounts { known: true, skills: 1, ..no_components() };
-        out.push(Entry { item: d.build(fetched_at), raw: r.clone() });
+        d.components = ComponentCounts {
+            known: true,
+            skills: 1,
+            ..no_components()
+        };
+        out.push(Entry {
+            item: d.build(fetched_at),
+            raw: r.clone(),
+        });
     }
     out
 }
@@ -475,7 +610,8 @@ fn anthropic_own(source: Option<&PluginSource>, entry: &Value) -> bool {
         Some(PluginSource::Git { repo, subdir, .. }) => {
             let rel = entry.get("source").and_then(Value::as_str).is_some();
             if rel {
-                subdir.as_deref().is_some_and(|p| p.starts_with("plugins/")) || subdir.is_none() && repo.starts_with("https://github.com/anthropics/")
+                subdir.as_deref().is_some_and(|p| p.starts_with("plugins/"))
+                    || subdir.is_none() && repo.starts_with("https://github.com/anthropics/")
             } else {
                 repo.starts_with("https://github.com/anthropics/")
             }
@@ -515,7 +651,11 @@ pub enum PluginSource {
 }
 
 fn github_url(repo: &str) -> String {
-    if repo.starts_with("http") { repo.trim_end_matches(".git").to_owned() } else { format!("https://github.com/{}", repo.trim_end_matches(".git")) }
+    if repo.starts_with("http") {
+        repo.trim_end_matches(".git").to_owned()
+    } else {
+        format!("https://github.com/{}", repo.trim_end_matches(".git"))
+    }
 }
 
 /// Read a marketplace entry's `source` (a relative path, or an object with a `source` word).
@@ -531,13 +671,33 @@ pub fn plugin_source(entry: &Value, base: &MarketBase) -> Option<PluginSource> {
         });
     }
     let kind = s(src, "source")?;
-    let sha = s(src, "sha").filter(|h| is_sha1(h)).map(|h| h.to_ascii_lowercase());
+    let sha = s(src, "sha")
+        .filter(|h| is_sha1(h))
+        .map(|h| h.to_ascii_lowercase());
     match kind.as_str() {
-        "github" => Some(PluginSource::Git { repo: github_url(&s(src, "repo")?), subdir: None, sha }),
-        "url" => Some(PluginSource::Git { repo: github_url(&s(src, "url")?), subdir: None, sha }),
-        "git-subdir" => Some(PluginSource::Git { repo: github_url(&s(src, "url")?), subdir: s(src, "path"), sha }),
-        "npm" => Some(PluginSource::Npm { package: s(src, "package")?, version: s(src, "version") }),
-        "archive" => Some(PluginSource::Archive { url: s(src, "url")?, sha256: s(src, "sha256") }),
+        "github" => Some(PluginSource::Git {
+            repo: github_url(&s(src, "repo")?),
+            subdir: None,
+            sha,
+        }),
+        "url" => Some(PluginSource::Git {
+            repo: github_url(&s(src, "url")?),
+            subdir: None,
+            sha,
+        }),
+        "git-subdir" => Some(PluginSource::Git {
+            repo: github_url(&s(src, "url")?),
+            subdir: s(src, "path"),
+            sha,
+        }),
+        "npm" => Some(PluginSource::Npm {
+            package: s(src, "package")?,
+            version: s(src, "version"),
+        }),
+        "archive" => Some(PluginSource::Archive {
+            url: s(src, "url")?,
+            sha256: s(src, "sha256"),
+        }),
         "command" => Some(PluginSource::Command),
         _ => None,
     }
@@ -561,22 +721,54 @@ fn count_of(v: Option<&Value>) -> u32 {
 ///   version; a relative source is pinned at the marketplace's commit when that is known. `command` sources and unpinned ones
 ///   are listed with no pin.
 #[must_use]
-pub fn marketplace(source_id: &str, tier: Tier, source_tier: &str, doc: &Value, base: &MarketBase, fetched_at: &str) -> Vec<Entry> {
-    let owner = doc.pointer("/owner/name").and_then(Value::as_str).unwrap_or("unknown").to_owned();
+pub fn marketplace(
+    source_id: &str,
+    tier: Tier,
+    source_tier: &str,
+    doc: &Value,
+    base: &MarketBase,
+    fetched_at: &str,
+) -> Vec<Entry> {
+    let owner = doc
+        .pointer("/owner/name")
+        .and_then(Value::as_str)
+        .unwrap_or("unknown")
+        .to_owned();
     let market = s(doc, "name").unwrap_or_default();
     let mut out: Vec<Entry> = Vec::new();
     let mut seen_skills = std::collections::BTreeSet::new();
-    for e in doc.get("plugins").and_then(Value::as_array).into_iter().flatten() {
+    for e in doc
+        .get("plugins")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
         let Some(name) = s(e, "name") else { continue };
         let source = plugin_source(e, base);
-        let publisher = e.pointer("/author/name").and_then(Value::as_str).map_or_else(|| owner.clone(), str::to_owned);
+        let publisher = e
+            .pointer("/author/name")
+            .and_then(Value::as_str)
+            .map_or_else(|| owner.clone(), str::to_owned);
         let license = s(e, "license");
         let skills_list: Vec<String> = e
             .get("skills")
             .and_then(Value::as_array)
-            .map(|a| a.iter().filter_map(Value::as_str).map(str::to_owned).collect())
+            .map(|a| {
+                a.iter()
+                    .filter_map(Value::as_str)
+                    .map(str::to_owned)
+                    .collect()
+            })
             .unwrap_or_default();
-        if let (Some(PluginSource::Git { repo, subdir: None, sha }), false) = (&source, skills_list.is_empty()) {
+        if let (
+            Some(PluginSource::Git {
+                repo,
+                subdir: None,
+                sha,
+            }),
+            false,
+        ) = (&source, skills_list.is_empty())
+        {
             let repo_path = repo.trim_start_matches("https://github.com/");
             for path in &skills_list {
                 let sub = path.trim_start_matches("./").trim_matches('/').to_owned();
@@ -587,23 +779,39 @@ pub fn marketplace(source_id: &str, tier: Tier, source_tier: &str, doc: &Value, 
                 let mut d = Draft::new(source_id, &format!("{repo_path}/{sub}"), ItemKind::Skill);
                 d.title = leaf;
                 d.publisher.clone_from(&publisher);
-                d.summary = format!("A skill from {repo_path}. Its SKILL.md is read when you open it to install.");
+                d.summary = format!(
+                    "A skill from {repo_path}. Its SKILL.md is read when you open it to install."
+                );
                 d.license.clone_from(&license);
-                d.homepage = Some(format!("{repo}/tree/{}/{sub}", sha.as_deref().unwrap_or("HEAD")));
+                d.homepage = Some(format!(
+                    "{repo}/tree/{}/{sub}",
+                    sha.as_deref().unwrap_or("HEAD")
+                ));
                 d.source_url = d.homepage.clone().unwrap_or_default();
-                d.pinned = sha.as_ref().map(|c| Pin { kind: PinKind::Commit, value: c.clone(), repo: Some(repo.clone()) });
-                d.components = ComponentCounts { known: true, skills: 1, ..no_components() };
+                d.pinned = sha.as_ref().map(|c| Pin {
+                    kind: PinKind::Commit,
+                    value: c.clone(),
+                    repo: Some(repo.clone()),
+                });
+                d.components = ComponentCounts {
+                    known: true,
+                    skills: 1,
+                    ..no_components()
+                };
                 let own = source_id != "anthropic" || anthropic_own(source.as_ref(), e);
                 d.tier = if own { tier } else { Tier::NotReviewed };
                 d.proof = NamespaceProof::Github;
                 d.source_tier = Some(source_tier.to_owned());
                 let raw = serde_json::json!({"kind": "skill", "repo": repo, "subdir": sub, "sha": sha, "marketplace": market});
-                out.push(Entry { item: d.build(fetched_at), raw });
+                out.push(Entry {
+                    item: d.build(fetched_at),
+                    raw,
+                });
             }
             continue;
         }
         let mut d = Draft::new(source_id, &name, ItemKind::Plugin);
-        d.title = name.clone();
+        d.title.clone_from(&name);
         d.publisher = publisher;
         d.summary = cap(&s(e, "description").unwrap_or_default(), 400);
         d.version = s(e, "version");
@@ -615,22 +823,47 @@ pub fn marketplace(source_id: &str, tier: Tier, source_tier: &str, doc: &Value, 
         d.tags = e
             .get("tags")
             .and_then(Value::as_array)
-            .map(|a| a.iter().filter_map(Value::as_str).map(str::to_owned).collect::<Vec<_>>())
+            .map(|a| {
+                a.iter()
+                    .filter_map(Value::as_str)
+                    .map(str::to_owned)
+                    .collect::<Vec<_>>()
+            })
             .unwrap_or_default();
         if let Some(c) = s(e, "category") {
             d.tags.push(c);
         }
         d.pinned = match &source {
-            Some(PluginSource::Git { repo, sha: Some(sha), .. }) => Some(Pin { kind: PinKind::Commit, value: sha.clone(), repo: Some(repo.clone()) }),
-            Some(PluginSource::Archive { url, sha256: Some(h) }) if url.starts_with("https://") && h.len() == 64 => {
-                Some(Pin { kind: PinKind::ArchiveSha256, value: h.to_ascii_lowercase(), repo: Some(url.clone()) })
-            }
-            Some(PluginSource::Npm { package, version: Some(v) }) if !v.contains(['^', '~', '*', '>', '<', ' ']) && v != "latest" => {
-                Some(Pin { kind: PinKind::Version, value: v.clone(), repo: Some(format!("npm:{package}")) })
-            }
+            Some(PluginSource::Git {
+                repo,
+                sha: Some(sha),
+                ..
+            }) => Some(Pin {
+                kind: PinKind::Commit,
+                value: sha.clone(),
+                repo: Some(repo.clone()),
+            }),
+            Some(PluginSource::Archive {
+                url,
+                sha256: Some(h),
+            }) if url.starts_with("https://") && h.len() == 64 => Some(Pin {
+                kind: PinKind::ArchiveSha256,
+                value: h.to_ascii_lowercase(),
+                repo: Some(url.clone()),
+            }),
+            Some(PluginSource::Npm {
+                package,
+                version: Some(v),
+            }) if !v.contains(['^', '~', '*', '>', '<', ' ']) && v != "latest" => Some(Pin {
+                kind: PinKind::Version,
+                value: v.clone(),
+                repo: Some(format!("npm:{package}")),
+            }),
             _ => None,
         };
-        let any = ["skills", "commands", "agents", "hooks", "mcpServers"].iter().any(|k| e.get(*k).is_some());
+        let any = ["skills", "commands", "agents", "hooks", "mcpServers"]
+            .iter()
+            .any(|k| e.get(*k).is_some());
         d.components = ComponentCounts {
             known: any,
             skills: count_of(e.get("skills")),
@@ -642,14 +875,25 @@ pub fn marketplace(source_id: &str, tier: Tier, source_tier: &str, doc: &Value, 
         };
         let own = source_id != "anthropic" || anthropic_own(source.as_ref(), e);
         d.tier = if own { tier } else { Tier::NotReviewed };
-        if source_id == "anthropic" && own && d.license.is_none() && matches!(&source, Some(PluginSource::Git { subdir: Some(p), .. }) if p.starts_with("plugins/")) {
+        if source_id == "anthropic"
+            && own
+            && d.license.is_none()
+            && matches!(&source, Some(PluginSource::Git { subdir: Some(p), .. }) if p.starts_with("plugins/"))
+        {
             d.license.clone_from(&base.root_license);
         }
-        d.proof = if matches!(&source, Some(PluginSource::Git { repo, .. }) if repo.starts_with("https://github.com/")) { NamespaceProof::Github } else { NamespaceProof::None };
+        d.proof = if matches!(&source, Some(PluginSource::Git { repo, .. }) if repo.starts_with("https://github.com/"))
+        {
+            NamespaceProof::Github
+        } else {
+            NamespaceProof::None
+        };
         d.source_tier = Some(if own {
             source_tier.to_owned()
         } else {
-            format!("listed in {market}, which says its publisher cannot verify what a third-party plugin does")
+            format!(
+                "listed in {market}, which says its publisher cannot verify what a third-party plugin does"
+            )
         });
         d.source_url = base.repo.clone().unwrap_or_default();
         out.push(Entry { item: d.build(fetched_at), raw: serde_json::json!({"kind": "plugin", "entry": e, "marketplace": market, "base_commit": base.commit, "base_repo": base.repo}) });
@@ -666,9 +910,9 @@ mod tests {
 
     const NOW: &str = "2026-11-21T09:30:00Z";
 
-    /// Saved from `https://registry.modelcontextprotocol.io/v0.1/servers?limit=100&version=latest` on 2026-11-21, the pages
+    /// Saved from the `MCP Registry`'s `/v0.1/servers?limit=100&version=latest` on 2026-11-21, the pages
     /// narrowed to seven real entries: one of each shape the registry has (an npm package with a secret, a remote with a
-    /// header key, a plain remote, a PyPI package, an npm package that also lists a bundle, an image with a tag and no digest,
+    /// header key, a plain remote, a `PyPI` package, an npm package that also lists a bundle, an image with a tag and no digest,
     /// and an entry the registry marks deprecated).
     const REGISTRY: &str = include_str!("fixtures/mcp-registry.servers.json");
     /// The two marketplaces, saved from `raw.githubusercontent.com/anthropics/claude-plugins-official/main/.claude-plugin/marketplace.json`
@@ -681,7 +925,16 @@ mod tests {
     const ENGINE: &str = include_str!("fixtures/engine-plugin-catalog.json");
 
     fn by_id<'a>(items: &'a [Entry], id: &str) -> &'a StoreItem {
-        &items.iter().find(|e| e.item.id == id).unwrap_or_else(|| panic!("{id} in {:?}", items.iter().map(|e| &e.item.id).collect::<Vec<_>>())).item
+        &items
+            .iter()
+            .find(|e| e.item.id == id)
+            .unwrap_or_else(|| {
+                panic!(
+                    "{id} in {:?}",
+                    items.iter().map(|e| &e.item.id).collect::<Vec<_>>()
+                )
+            })
+            .item
     }
 
     #[test]
@@ -691,29 +944,64 @@ mod tests {
         assert!(page.deleted.is_empty());
         let e = &page.entries;
         let npm = by_id(e, "mcp-registry:ai.2kw/mcp-server");
-        assert_eq!((npm.kind, npm.tier, npm.title.as_str()), (ItemKind::Connector, Tier::NotReviewed, "2kw.ai"));
-        assert_eq!(npm.pinned.as_ref().unwrap().repo.as_deref(), Some("npm:@2kw/ai-mcp-server"));
+        assert_eq!(
+            (npm.kind, npm.tier, npm.title.as_str()),
+            (ItemKind::Connector, Tier::NotReviewed, "2kw.ai")
+        );
+        assert_eq!(
+            npm.pinned.as_ref().unwrap().repo.as_deref(),
+            Some("npm:@2kw/ai-mcp-server")
+        );
         assert_eq!(npm.version.as_deref(), Some("8.0.3"));
         assert_eq!(npm.secrets[0].env.as_deref(), Some("AI_2KW_API_KEY"));
-        assert_eq!(npm.hosts.basis, HostBasis::Unknown, "a local package's reach is not known");
-        assert_eq!((npm.publisher.as_str(), npm.provenance.namespace_proof), ("2kw.ai", NamespaceProof::Registry));
+        assert_eq!(
+            npm.hosts.basis,
+            HostBasis::Unknown,
+            "a local package's reach is not known"
+        );
+        assert_eq!(
+            (npm.publisher.as_str(), npm.provenance.namespace_proof),
+            ("2kw.ai", NamespaceProof::Registry)
+        );
         assert_eq!(npm.license, NOT_STATED);
         assert_eq!(npm.provenance.scan.verdict, ScanVerdict::NotScanned);
         let hdr = by_id(e, "mcp-registry:academy.apexai/apex-ai-academy");
-        assert_eq!(hdr.hosts, HostList { basis: HostBasis::Declared, hosts: vec!["apexai.academy".into()] });
+        assert_eq!(
+            hdr.hosts,
+            HostList {
+                basis: HostBasis::Declared,
+                hosts: vec!["apexai.academy".into()]
+            }
+        );
         assert_eq!(hdr.secrets[0].host.as_deref(), Some("apexai.academy"));
-        assert!(hdr.secrets[0].optional, "its description says the key is optional and isRequired is absent");
-        assert_eq!(hdr.pinned.as_ref().unwrap().repo.as_deref(), Some("remote:https://apexai.academy/mcp"));
+        assert!(
+            hdr.secrets[0].optional,
+            "its description says the key is optional and isRequired is absent"
+        );
+        assert_eq!(
+            hdr.pinned.as_ref().unwrap().repo.as_deref(),
+            Some("remote:https://apexai.academy/mcp")
+        );
         let py = by_id(e, "mcp-registry:ai.arsentev/contextburn");
-        assert_eq!(py.pinned.as_ref().unwrap().repo.as_deref(), Some("pypi:contextburn"));
+        assert_eq!(
+            py.pinned.as_ref().unwrap().repo.as_deref(),
+            Some("pypi:contextburn")
+        );
         let both = by_id(e, "mcp-registry:ai.autonomous.harness/harness");
-        assert_eq!(both.pinned.as_ref().unwrap().repo.as_deref(), Some("npm:@autonomous-ai/harness-mcp"), "the npm package, pinned, before the bundle");
+        assert_eq!(
+            both.pinned.as_ref().unwrap().repo.as_deref(),
+            Some("npm:@autonomous-ai/harness-mcp"),
+            "the npm package, pinned, before the bundle"
+        );
         let image = by_id(e, "mcp-registry:ai.aliengiraffe/spotdb");
         assert!(image.pinned.is_none(), "an image tag is not a digest");
         let dep = by_id(e, "mcp-registry:ai.agentgates/mcp");
         assert_eq!(dep.tags.as_deref(), Some(&["deprecated".to_owned()][..]));
         assert!(dep.summary.starts_with("Deprecated in the registry."));
-        assert!(dep.removed.is_none(), "deprecated is flagged, not a takedown");
+        assert!(
+            dep.removed.is_none(),
+            "deprecated is flagged, not a takedown"
+        );
     }
 
     #[test]
@@ -725,58 +1013,161 @@ mod tests {
         doc["metadata"]["nextCursor"] = json!("next:1");
         let page = registry_page(&doc, NOW);
         assert_eq!(page.deleted, vec!["ai.2kw/mcp-server".to_owned()]);
-        assert!(!page.entries.iter().any(|e| e.item.id.ends_with("apex-ai-academy")));
+        assert!(
+            !page
+                .entries
+                .iter()
+                .any(|e| e.item.id.ends_with("apex-ai-academy"))
+        );
         assert_eq!(page.entries.len(), 5);
         assert_eq!(page.next.as_deref(), Some("next:1"));
     }
 
     #[test]
     fn an_anthropic_plugin_is_pinned_by_the_commit_its_source_names_or_the_marketplaces() {
-        let base = MarketBase { repo: Some("https://github.com/anthropics/claude-plugins-official".into()), commit: Some("a".repeat(40)), root_license: Some("Apache-2.0".into()) };
-        let items = marketplace("anthropic", Tier::Verified, "Anthropic's marketplace", &serde_json::from_str(OFFICIAL).unwrap(), &base, NOW);
+        let base = MarketBase {
+            repo: Some("https://github.com/anthropics/claude-plugins-official".into()),
+            commit: Some("a".repeat(40)),
+            root_license: Some("Apache-2.0".into()),
+        };
+        let items = marketplace(
+            "anthropic",
+            Tier::Verified,
+            "Anthropic's marketplace",
+            &serde_json::from_str(OFFICIAL).unwrap(),
+            &base,
+            NOW,
+        );
         assert_eq!(items.len(), 6);
         let sub = by_id(&items, "anthropic:42crunch-api-security-testing");
-        assert_eq!((sub.kind, sub.tier, sub.publisher.as_str()), (ItemKind::Plugin, Tier::NotReviewed, "42Crunch"), "a third-party git-subdir source");
-        assert!(sub.provenance.source_tier.as_deref().unwrap().contains("cannot verify"));
+        assert_eq!(
+            (sub.kind, sub.tier, sub.publisher.as_str()),
+            (ItemKind::Plugin, Tier::NotReviewed, "42Crunch"),
+            "a third-party git-subdir source"
+        );
+        assert!(
+            sub.provenance
+                .source_tier
+                .as_deref()
+                .unwrap()
+                .contains("cannot verify")
+        );
         let pin = sub.pinned.as_ref().unwrap();
         assert_eq!(pin.kind, PinKind::Commit);
         assert_eq!(pin.value.len(), 40);
-        assert!(pin.repo.as_deref().unwrap().starts_with("https://github.com/"));
+        assert!(
+            pin.repo
+                .as_deref()
+                .unwrap()
+                .starts_with("https://github.com/")
+        );
         let rel = by_id(&items, "anthropic:asana");
-        assert_eq!(rel.tier, Tier::NotReviewed, "external_plugins are third-party");
-        assert_eq!(rel.pinned.as_ref().unwrap().value, "a".repeat(40), "a relative source is pinned at the marketplace's commit");
+        assert_eq!(
+            rel.tier,
+            Tier::NotReviewed,
+            "external_plugins are third-party"
+        );
+        assert_eq!(
+            rel.pinned.as_ref().unwrap().value,
+            "a".repeat(40),
+            "a relative source is pinned at the marketplace's commit"
+        );
         let own = by_id(&items, "anthropic:agent-sdk-dev");
-        assert_eq!((own.tier, own.license.as_str()), (Tier::Verified, "Apache-2.0"), "plugins/ is Anthropic's own, under the repository's root licence");
-        assert_eq!(own.provenance.source_tier.as_deref(), Some("Anthropic's marketplace"));
-        assert_eq!(by_id(&items, "anthropic:agentforce-adlc").tier, Tier::NotReviewed, "a url source outside anthropics");
+        assert_eq!(
+            (own.tier, own.license.as_str()),
+            (Tier::Verified, "Apache-2.0"),
+            "plugins/ is Anthropic's own, under the repository's root licence"
+        );
+        assert_eq!(
+            own.provenance.source_tier.as_deref(),
+            Some("Anthropic's marketplace")
+        );
+        assert_eq!(
+            by_id(&items, "anthropic:agentforce-adlc").tier,
+            Tier::NotReviewed,
+            "a url source outside anthropics"
+        );
         assert_eq!(by_id(&items, "anthropic:xcode").tier, Tier::NotReviewed);
-        assert_eq!(by_id(&items, "anthropic:github").license, NOT_STATED, "a third-party entry does not take the repository's licence");
+        assert_eq!(
+            by_id(&items, "anthropic:github").license,
+            NOT_STATED,
+            "a third-party entry does not take the repository's licence"
+        );
         let cmd = by_id(&items, "anthropic:xcode");
-        assert!(cmd.pinned.is_none(), "a command source is never pinned, so never installed");
-
+        assert!(
+            cmd.pinned.is_none(),
+            "a command source is never pinned, so never installed"
+        );
     }
 
     #[test]
     fn a_relative_source_with_no_known_commit_is_listed_unpinned() {
-        let base = MarketBase { repo: Some("https://github.com/anthropics/claude-plugins-official".into()), commit: None, root_license: None };
-        let items = marketplace("anthropic", Tier::Verified, "x", &serde_json::from_str(OFFICIAL).unwrap(), &base, NOW);
+        let base = MarketBase {
+            repo: Some("https://github.com/anthropics/claude-plugins-official".into()),
+            commit: None,
+            root_license: None,
+        };
+        let items = marketplace(
+            "anthropic",
+            Tier::Verified,
+            "x",
+            &serde_json::from_str(OFFICIAL).unwrap(),
+            &base,
+            NOW,
+        );
         assert!(by_id(&items, "anthropic:asana").pinned.is_none());
-        assert!(by_id(&items, "anthropic:42crunch-api-security-testing").pinned.is_some(), "its own sha still pins it");
+        assert!(
+            by_id(&items, "anthropic:42crunch-api-security-testing")
+                .pinned
+                .is_some(),
+            "its own sha still pins it"
+        );
     }
 
     #[test]
     fn a_skills_marketplace_lists_each_skill_once_at_the_marketplaces_commit() {
-        let base = MarketBase { repo: Some("https://github.com/anthropics/skills".into()), commit: Some("b".repeat(40)), root_license: None };
-        let items = marketplace("anthropic", Tier::Verified, "Anthropic's skills", &serde_json::from_str(SKILLS).unwrap(), &base, NOW);
-        let skills: Vec<_> = items.iter().filter(|e| e.item.kind == ItemKind::Skill).collect();
+        let base = MarketBase {
+            repo: Some("https://github.com/anthropics/skills".into()),
+            commit: Some("b".repeat(40)),
+            root_license: None,
+        };
+        let items = marketplace(
+            "anthropic",
+            Tier::Verified,
+            "Anthropic's skills",
+            &serde_json::from_str(SKILLS).unwrap(),
+            &base,
+            NOW,
+        );
+        let skills: Vec<_> = items
+            .iter()
+            .filter(|e| e.item.kind == ItemKind::Skill)
+            .collect();
         assert!(skills.len() >= 16, "{}", skills.len());
         let pdf = by_id(&items, "anthropic:anthropics/skills/skills/pdf");
         assert_eq!(pdf.title, "pdf");
         assert_eq!(pdf.pinned.as_ref().unwrap().value, "b".repeat(40));
-        assert_eq!(pdf.tier, Tier::Verified, "anthropics/skills is Anthropic's own");
-        assert_eq!(pdf.license, NOT_STATED, "each skill carries its own LICENSE.txt, read when it is staged");
-        assert_eq!(items.iter().filter(|e| e.item.id.ends_with("/skills/pdf")).count(), 1);
-        let raw = &items.iter().find(|e| e.item.id.ends_with("/skills/pdf")).unwrap().raw;
+        assert_eq!(
+            pdf.tier,
+            Tier::Verified,
+            "anthropics/skills is Anthropic's own"
+        );
+        assert_eq!(
+            pdf.license, NOT_STATED,
+            "each skill carries its own LICENSE.txt, read when it is staged"
+        );
+        assert_eq!(
+            items
+                .iter()
+                .filter(|e| e.item.id.ends_with("/skills/pdf"))
+                .count(),
+            1
+        );
+        let raw = &items
+            .iter()
+            .find(|e| e.item.id.ends_with("/skills/pdf"))
+            .unwrap()
+            .raw;
         assert_eq!(raw["subdir"], "skills/pdf");
     }
 
@@ -785,18 +1176,40 @@ mod tests {
         let items = engine_catalogue(&serde_json::from_str(ENGINE).unwrap(), NOW);
         assert_eq!(items.len(), 5);
         let official = by_id(&items, "engine-plugins:accent-picker");
-        assert_eq!((official.kind, official.tier), (ItemKind::EnginePlugin, Tier::Verified));
-        assert!(official.provenance.source_tier.as_deref().unwrap().contains("official"));
+        assert_eq!(
+            (official.kind, official.tier),
+            (ItemKind::EnginePlugin, Tier::Verified)
+        );
+        assert!(
+            official
+                .provenance
+                .source_tier
+                .as_deref()
+                .unwrap()
+                .contains("official")
+        );
         let verified = by_id(&items, "engine-plugins:adaption");
         assert_eq!(verified.tier, Tier::Verified);
         let community = by_id(&items, "engine-plugins:0bull");
         assert_eq!(community.tier, Tier::NotReviewed);
-        assert_eq!(community.pinned.as_ref().unwrap().value, "240890a71715375bc877b238491e414517e9d902");
-        assert_eq!(community.pinned.as_ref().unwrap().repo.as_deref(), Some("https://github.com/0bull/agent-plugin"));
+        assert_eq!(
+            community.pinned.as_ref().unwrap().value,
+            "240890a71715375bc877b238491e414517e9d902"
+        );
+        assert_eq!(
+            community.pinned.as_ref().unwrap().repo.as_deref(),
+            Some("https://github.com/0bull/agent-plugin")
+        );
         assert_eq!(community.publisher, "0bull");
-        assert_eq!(community.components.python, 0, "it says it is a portable package with no plugin code");
+        assert_eq!(
+            community.components.python, 0,
+            "it says it is a portable package with no plugin code"
+        );
         assert!(!community.components.known);
-        assert!(community.summary.contains("Disclosure"), "the catalogue's disclosure stays in the summary");
+        assert!(
+            community.summary.contains("Disclosure"),
+            "the catalogue's disclosure stays in the summary"
+        );
         assert_eq!(community.license, NOT_STATED);
         assert!(items.iter().all(|e| e.item.pinned.is_some()));
     }
@@ -826,18 +1239,33 @@ mod tests {
         ];
         let items = skills_hub(&rows, NOW);
         let pdf = by_id(&items, "skills-hub:anthropics/skills/skills/pdf");
-        assert_eq!((pdf.tier, pdf.pinned.is_none(), pdf.publisher.as_str()), (Tier::Verified, true, "anthropics"));
-        assert_eq!(pdf.homepage.as_deref(), Some("https://github.com/anthropics/skills"));
+        assert_eq!(
+            (pdf.tier, pdf.pinned.is_none(), pdf.publisher.as_str()),
+            (Tier::Verified, true, "anthropics")
+        );
+        assert_eq!(
+            pdf.homepage.as_deref(),
+            Some("https://github.com/anthropics/skills")
+        );
         let odd = by_id(&items, "skills-hub:odd-abc123");
-        assert_eq!((odd.tier, odd.publisher.as_str()), (Tier::NotReviewed, "clawhub"));
+        assert_eq!(
+            (odd.tier, odd.publisher.as_str()),
+            (Tier::NotReviewed, "clawhub")
+        );
     }
 
     #[test]
     fn boopis_connectors_are_recommended_with_the_date_somebody_checked_them() {
         let items = boopis_connectors(crate::connectors::catalog::load().unwrap(), NOW);
         let fc = by_id(&items, "boopis:firecrawl");
-        assert_eq!((fc.tier, fc.verified.as_deref()), (Tier::Recommended, Some("2026-11-19")));
-        assert_eq!(fc.pinned.as_ref().unwrap().repo.as_deref(), Some("npm:firecrawl-mcp"));
+        assert_eq!(
+            (fc.tier, fc.verified.as_deref()),
+            (Tier::Recommended, Some("2026-11-19"))
+        );
+        assert_eq!(
+            fc.pinned.as_ref().unwrap().repo.as_deref(),
+            Some("npm:firecrawl-mcp")
+        );
         assert_eq!(fc.hosts.basis, HostBasis::Verified);
         assert!(fc.hosts.hosts.contains(&"mcp.firecrawl.dev".to_owned()));
         assert_eq!(fc.secrets.len(), 1);
@@ -849,11 +1277,20 @@ mod tests {
         // Ids are `source:name`; the provenance repeats the source; nothing is missing a required field. Round-tripping through
         // the typed JSON is the schema's check on this side (`types.rs` refuses unknown keys).
         let mut all = registry_page(&serde_json::from_str(REGISTRY).unwrap(), NOW).entries;
-        all.extend(engine_catalogue(&serde_json::from_str(ENGINE).unwrap(), NOW));
+        all.extend(engine_catalogue(
+            &serde_json::from_str(ENGINE).unwrap(),
+            NOW,
+        ));
         for e in all {
             let (src, name) = e.item.id.split_once(':').unwrap();
-            assert_eq!((src, e.item.provenance.source.as_str()), (e.item.source.as_str(), src));
-            assert!(!name.is_empty() && !e.item.summary.is_empty() || e.item.kind == ItemKind::Connector);
+            assert_eq!(
+                (src, e.item.provenance.source.as_str()),
+                (e.item.source.as_str(), src)
+            );
+            assert!(
+                !name.is_empty() && !e.item.summary.is_empty()
+                    || e.item.kind == ItemKind::Connector
+            );
             let v = serde_json::to_value(&e.item).unwrap();
             assert_eq!(serde_json::from_value::<StoreItem>(v).unwrap(), e.item);
         }

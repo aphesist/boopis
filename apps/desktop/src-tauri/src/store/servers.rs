@@ -38,7 +38,10 @@ fn inputs(v: Option<&Value>) -> Vec<Input> {
                     name: text(i, "name").unwrap_or_default(),
                     value: text(i, "value"),
                     default: text(i, "default"),
-                    required: i.get("isRequired").and_then(Value::as_bool).unwrap_or(false),
+                    required: i
+                        .get("isRequired")
+                        .and_then(Value::as_bool)
+                        .unwrap_or(false),
                     secret: i.get("isSecret").and_then(Value::as_bool).unwrap_or(false),
                     description: text(i, "description").unwrap_or_default(),
                 })
@@ -88,15 +91,25 @@ pub fn install_name(registry_name: &str) -> String {
     let mut out = String::new();
     for c in leaf.chars() {
         let c = c.to_ascii_lowercase();
-        let c = if c.is_ascii_alphanumeric() || c == '_' { c } else { '-' };
+        let c = if c.is_ascii_alphanumeric() || c == '_' {
+            c
+        } else {
+            '-'
+        };
         if c == '-' && (out.ends_with('-') || out.is_empty()) {
             continue;
         }
         out.push(c);
     }
-    let mut out: String = out.trim_matches('-').chars().take(validate::MAX_NAME).collect();
+    let mut out: String = out
+        .trim_matches('-')
+        .chars()
+        .take(validate::MAX_NAME)
+        .collect();
     if out.is_empty() || !out.starts_with(|c: char| c.is_ascii_alphanumeric()) {
-        out = format!("mcp-{out}").trim_end_matches('-').to_owned();
+        format!("mcp-{out}")
+            .trim_end_matches('-')
+            .clone_into(&mut out);
     }
     out
 }
@@ -105,7 +118,13 @@ fn field_of(name: &str, taken: &[SpecSecret]) -> String {
     let mut f: String = name
         .to_ascii_lowercase()
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() || c == '_' { c } else { '_' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
         .take(40)
         .collect();
     if f.is_empty() || !f.starts_with(|c: char| c.is_ascii_alphanumeric()) {
@@ -122,7 +141,11 @@ fn field_of(name: &str, taken: &[SpecSecret]) -> String {
 
 fn title_of(i: &Input) -> String {
     let t = i.description.split(['.', '\n']).next().unwrap_or("").trim();
-    if t.is_empty() || t.len() > 80 { i.name.clone() } else { t.to_owned() }
+    if t.is_empty() || t.len() > 80 {
+        i.name.clone()
+    } else {
+        t.to_owned()
+    }
 }
 
 fn exact_version(v: &str) -> bool {
@@ -145,12 +168,22 @@ pub fn choose(server: &Value) -> Result<Chosen, String> {
     let name = text(server, "name").ok_or("no name")?;
     let title = text(server, "title").unwrap_or_else(|| name.clone());
     let mut candidates: Vec<Chosen> = Vec::new();
-    for r in server.get("remotes").and_then(Value::as_array).into_iter().flatten() {
+    for r in server
+        .get("remotes")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
         if let Some(c) = remote(&name, &title, r) {
             candidates.push(c);
         }
     }
-    for p in server.get("packages").and_then(Value::as_array).into_iter().flatten() {
+    for p in server
+        .get("packages")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
         if let Some(c) = package(&name, &title, p, server) {
             candidates.push(c);
         }
@@ -160,7 +193,10 @@ pub fn choose(server: &Value) -> Result<Chosen, String> {
         .position(|c| c.pin.is_some())
         .map(|i| candidates.swap_remove(i))
         .or_else(|| candidates.into_iter().next())
-        .ok_or_else(|| "it lists no remote address or package type boopis can run (npm, PyPI, OCI and bundles)".to_owned())
+        .ok_or_else(|| {
+            "it lists no remote address or package type boopis can run (npm, PyPI, OCI and bundles)"
+                .to_owned()
+        })
 }
 
 fn remote(name: &str, title: &str, r: &Value) -> Option<Chosen> {
@@ -204,18 +240,25 @@ fn remote(name: &str, title: &str, r: &Value) -> Option<Chosen> {
         spec: Some(ServerSpec {
             name: install_name(name),
             title: title.to_owned(),
-            transport: SpecTransport::Url { url: url.clone(), headers },
+            transport: SpecTransport::Url {
+                url: url.clone(),
+                headers,
+            },
             secrets,
             pinned: None,
             reaches: host.clone(),
             rows: vec![(
                 "Run by".into(),
-                "its publisher: boopis cannot pin what a hosted server does, and it can change".into(),
+                "its publisher: boopis cannot pin what a hosted server does, and it can change"
+                    .into(),
             )],
             why: format!("{title}: the server at {host}, from the MCP Registry."),
         }),
         pin: None,
-        hosts: HostList { basis: HostBasis::Declared, hosts: vec![host] },
+        hosts: HostList {
+            basis: HostBasis::Declared,
+            hosts: vec![host],
+        },
         secrets: needs,
         unfilled,
         bundle: None,
@@ -231,7 +274,11 @@ fn remote(name: &str, title: &str, r: &Value) -> Option<Chosen> {
 
 fn server_version_pin(_r: &Value, url: &str) -> Option<Pin> {
     // The version comes from the server entry, which `remote` does not hold; `choose`'s caller sets it (see `with_version`).
-    Some(Pin { kind: PinKind::Version, value: String::new(), repo: Some(format!("remote:{url}")) })
+    Some(Pin {
+        kind: PinKind::Version,
+        value: String::new(),
+        repo: Some(format!("remote:{url}")),
+    })
 }
 
 /// Fill the version of a remote's pin from the entry that holds it.
@@ -288,17 +335,29 @@ fn package(name: &str, title: &str, p: &Value, server: &Value) -> Option<Chosen>
     }
     let mut args = Vec::new();
     for a in inputs(p.get("packageArguments")) {
-        let fixed = a.value.clone().or_else(|| a.default.clone()).filter(|v| plain(v));
+        let fixed = a
+            .value
+            .clone()
+            .or_else(|| a.default.clone())
+            .filter(|v| plain(v));
         let is_named = a.name.starts_with('-');
         match fixed {
             Some(v) if is_named => args.push(format!("{}={v}", a.name)),
             Some(v) => args.push(v),
-            None if a.required => unfilled.push(if a.name.is_empty() { "an argument".into() } else { a.name.clone() }),
+            None if a.required => unfilled.push(if a.name.is_empty() {
+                "an argument".into()
+            } else {
+                a.name.clone()
+            }),
             None => {}
         }
     }
     let version_pin = |repo: String| {
-        exact_version(&version).then(|| Pin { kind: PinKind::Version, value: version.clone(), repo: Some(repo) })
+        exact_version(&version).then(|| Pin {
+            kind: PinKind::Version,
+            value: version.clone(),
+            repo: Some(repo),
+        })
     };
     let (command, mut full, pin, pinned_text, bundle) = match kind.as_str() {
         "npm" => (
@@ -322,29 +381,43 @@ fn package(name: &str, title: &str, p: &Value, server: &Value) -> Option<Chosen>
                 a.push(n.clone());
             }
             a.push(id.clone());
-            let digest = id.split_once("@sha256:").map(|(_, d)| format!("sha256:{d}"));
+            let digest = id
+                .split_once("@sha256:")
+                .map(|(_, d)| format!("sha256:{d}"));
             (
                 "docker".to_owned(),
                 a,
-                digest.map(|d| Pin { kind: PinKind::OciDigest, value: d, repo: Some(id.clone()) }),
+                digest.map(|d| Pin {
+                    kind: PinKind::OciDigest,
+                    value: d,
+                    repo: Some(id.clone()),
+                }),
                 Some(id.clone()),
                 None,
             )
         }
         "mcpb" => {
-            let sha = text(p, "fileSha256").filter(|s| s.len() == 64 && s.bytes().all(|b| b.is_ascii_hexdigit()));
+            let sha = text(p, "fileSha256")
+                .filter(|s| s.len() == 64 && s.bytes().all(|b| b.is_ascii_hexdigit()));
             let url = id.clone();
             let ok = url.starts_with("https://");
-            let pin = sha
-                .clone()
-                .filter(|_| ok)
-                .map(|s| Pin { kind: PinKind::ArchiveSha256, value: s.to_ascii_lowercase(), repo: Some(url.clone()) });
+            let pin = sha.clone().filter(|_| ok).map(|s| Pin {
+                kind: PinKind::ArchiveSha256,
+                value: s.to_ascii_lowercase(),
+                repo: Some(url.clone()),
+            });
             return Some(Chosen {
                 spec: None,
-                hosts: HostList { basis: HostBasis::Unknown, hosts: vec![] },
+                hosts: HostList {
+                    basis: HostBasis::Unknown,
+                    hosts: vec![],
+                },
                 secrets: needs,
                 unfilled,
-                bundle: sha.filter(|_| ok).map(|s| Bundle { url, sha256: s.to_ascii_lowercase() }),
+                bundle: sha.filter(|_| ok).map(|s| Bundle {
+                    url,
+                    sha256: s.to_ascii_lowercase(),
+                }),
                 pin,
                 how: "a bundle that runs on this computer".into(),
             });
@@ -399,16 +472,28 @@ fn platform() -> &'static str {
 ///
 /// # Errors
 /// The reason, in words.
-pub fn bundle_spec(manifest: &Value, dir: &Path, install: &str) -> Result<(ServerSpec, Vec<String>), String> {
+pub fn bundle_spec(
+    manifest: &Value,
+    dir: &Path,
+    install: &str,
+) -> Result<(ServerSpec, Vec<String>), String> {
     let name = text(manifest, "name").ok_or("the manifest has no name")?;
     let title = text(manifest, "display_name").unwrap_or_else(|| name.clone());
     let server = manifest.get("server").ok_or("the manifest has no server")?;
     let kind = text(server, "type").unwrap_or_default();
     if !matches!(kind.as_str(), "node" | "python" | "binary") {
-        return Err(format!("a {kind:?} bundle is not one boopis runs yet (node, python and binary are)"));
+        return Err(format!(
+            "a {kind:?} bundle is not one boopis runs yet (node, python and binary are)"
+        ));
     }
-    let mut cfg = server.get("mcp_config").cloned().ok_or("the manifest has no mcp_config")?;
-    if let Some(over) = cfg.get("platform_overrides").and_then(|o| o.get(platform())).cloned()
+    let mut cfg = server
+        .get("mcp_config")
+        .cloned()
+        .ok_or("the manifest has no mcp_config")?;
+    if let Some(over) = cfg
+        .get("platform_overrides")
+        .and_then(|o| o.get(platform()))
+        .cloned()
         && let (Some(base), Some(add)) = (cfg.as_object_mut(), over.as_object())
     {
         for (k, v) in add {
@@ -420,7 +505,13 @@ pub fn bundle_spec(manifest: &Value, dir: &Path, install: &str) -> Result<(Serve
     let command = sub(&text(&cfg, "command").ok_or("the manifest has no command")?);
     let mut unfilled = Vec::new();
     let mut args = Vec::new();
-    for a in cfg.get("args").and_then(Value::as_array).into_iter().flatten().filter_map(Value::as_str) {
+    for a in cfg
+        .get("args")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+    {
         let a = sub(a);
         if a.contains("${") {
             unfilled.push(a);
@@ -434,14 +525,24 @@ pub fn bundle_spec(manifest: &Value, dir: &Path, install: &str) -> Result<(Serve
     if let Some(map) = cfg.get("env").and_then(Value::as_object) {
         for (k, v) in map {
             let v = sub(v.as_str().unwrap_or_default());
-            if let Some(key) = v.strip_prefix("${user_config.").and_then(|r| r.strip_suffix('}')) {
+            if let Some(key) = v
+                .strip_prefix("${user_config.")
+                .and_then(|r| r.strip_suffix('}'))
+            {
                 let def = user_config.get(key);
-                if def.and_then(|d| d.get("sensitive")).and_then(Value::as_bool) == Some(true) {
+                if def
+                    .and_then(|d| d.get("sensitive"))
+                    .and_then(Value::as_bool)
+                    == Some(true)
+                {
                     let field = field_of(k, &secrets);
                     secrets.push(SpecSecret {
                         field,
-                        title: def.and_then(|d| text(d, "title")).unwrap_or_else(|| k.clone()),
-                        optional: def.and_then(|d| d.get("required")).and_then(Value::as_bool) != Some(true),
+                        title: def
+                            .and_then(|d| text(d, "title"))
+                            .unwrap_or_else(|| k.clone()),
+                        optional: def.and_then(|d| d.get("required")).and_then(Value::as_bool)
+                            != Some(true),
                         target: SecretTarget::Env(k.clone()),
                     });
                 } else {
@@ -479,7 +580,7 @@ mod tests {
         assert_eq!(install_name("io.github.user/My Server!"), "my-server");
         assert_eq!(install_name("com.example/tickets"), "tickets");
         assert_eq!(install_name("ai.x/-weird--name-"), "weird-name");
-        assert_eq!(install_name("a.b/").is_empty(), false);
+        assert!(!install_name("a.b/").is_empty());
         for n in [install_name("io.github.0x/Ünïcode"), install_name("a/b_c")] {
             validate::name(&n).unwrap();
         }
@@ -501,7 +602,10 @@ mod tests {
                 env: vec![("TICKETS_REGION".into(), "eu".into())],
             }
         );
-        assert_eq!(c.pin.unwrap().repo.as_deref(), Some("npm:@example/tickets-mcp"));
+        assert_eq!(
+            c.pin.unwrap().repo.as_deref(),
+            Some("npm:@example/tickets-mcp")
+        );
         assert_eq!(c.secrets[0].id, "tickets_token");
         assert_eq!(c.secrets[0].title, "Your token");
         assert_eq!(c.hosts.basis, HostBasis::Unknown);
@@ -520,13 +624,27 @@ mod tests {
         let s = json!({"name":"ai.x/hosted","version":"2.0.1","remotes":[
             {"type":"streamable-http","url":"https://api.x.ai/mcp","headers":[{"name":"Authorization","isSecret":true,"isRequired":true}]}]});
         let c = pick(&s).unwrap();
-        assert_eq!(c.hosts, HostList { basis: HostBasis::Declared, hosts: vec!["api.x.ai".into()] });
+        assert_eq!(
+            c.hosts,
+            HostList {
+                basis: HostBasis::Declared,
+                hosts: vec!["api.x.ai".into()]
+            }
+        );
         let pin = c.pin.unwrap();
         assert_eq!((pin.kind, pin.value.as_str()), (PinKind::Version, "2.0.1"));
         let spec = c.spec.unwrap();
-        assert_eq!(spec.secrets[0].target, SecretTarget::Header("Authorization".into()));
+        assert_eq!(
+            spec.secrets[0].target,
+            SecretTarget::Header("Authorization".into())
+        );
         let plan = crate::connectors::plan::build_server(&spec, None).unwrap();
-        assert_eq!(plan.config["headers"]["Authorization"].as_str().unwrap().starts_with("Bearer ${BOOPIS_CONNECTOR_"), true);
+        assert!(
+            plan.config["headers"]["Authorization"]
+                .as_str()
+                .unwrap()
+                .starts_with("Bearer ${BOOPIS_CONNECTOR_")
+        );
     }
 
     #[test]
@@ -544,8 +662,13 @@ mod tests {
             "environmentVariables":[{"name":"ROOT_DIR","isRequired":true}],
             "packageArguments":[{"type":"named","name":"--mode","value":"safe"},{"type":"positional","valueHint":"path","isRequired":true}]}]});
         let c = pick(&s).unwrap();
-        assert_eq!(c.unfilled, vec!["ROOT_DIR".to_owned(), "an argument".to_owned()]);
-        let SpecTransport::Command { args, .. } = c.spec.unwrap().transport else { panic!() };
+        assert_eq!(
+            c.unfilled,
+            vec!["ROOT_DIR".to_owned(), "an argument".to_owned()]
+        );
+        let SpecTransport::Command { args, .. } = c.spec.unwrap().transport else {
+            panic!()
+        };
         assert_eq!(args.last().unwrap(), "--mode=safe");
     }
 
@@ -579,9 +702,21 @@ mod tests {
         let (spec, unfilled) = bundle_spec(&m, Path::new("/data/store/bundles/ab"), "x").unwrap();
         assert_eq!(unfilled, vec!["MODE".to_owned()]);
         assert_eq!(spec.secrets[0].title, "API key");
-        let SpecTransport::Command { command, args, env } = spec.transport else { panic!() };
-        assert_eq!((command.as_str(), args[0].as_str()), ("node", "/data/store/bundles/ab/server/index.js"));
+        let SpecTransport::Command { command, args, env } = spec.transport else {
+            panic!()
+        };
+        assert_eq!(
+            (command.as_str(), args[0].as_str()),
+            ("node", "/data/store/bundles/ab/server/index.js")
+        );
         assert_eq!(env, vec![("FIXED".to_owned(), "1".to_owned())]);
-        assert!(bundle_spec(&json!({"name":"x","server":{"type":"uv","mcp_config":{"command":"uv"}}}), Path::new("/d"), "x").is_err());
+        assert!(
+            bundle_spec(
+                &json!({"name":"x","server":{"type":"uv","mcp_config":{"command":"uv"}}}),
+                Path::new("/d"),
+                "x"
+            )
+            .is_err()
+        );
     }
 }

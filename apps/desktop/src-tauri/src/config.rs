@@ -103,7 +103,7 @@ impl Default for StoreLimits {
             max_depth: 32,
             max_file_bytes: 16 * 1024 * 1024,
             connect_timeout: Duration::from_secs(10),
-            request_timeout: Duration::from_secs(60),
+            request_timeout: Duration::from_mins(1),
             max_redirects: 5,
             refresh_every: Duration::from_hours(6),
             registry_refresh_every: Duration::from_hours(1),

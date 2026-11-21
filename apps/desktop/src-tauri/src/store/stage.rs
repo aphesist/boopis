@@ -76,7 +76,11 @@ fn clean(raw: &str, max_depth: usize) -> Result<Vec<String>> {
         match c {
             Component::Normal(p) => parts.push(p.to_string_lossy().into_owned()),
             Component::CurDir if parts.is_empty() && trimmed == "." => {}
-            _ => return Err(unsafe_archive(format!("the path {raw:?} leaves the folder"))),
+            _ => {
+                return Err(unsafe_archive(format!(
+                    "the path {raw:?} leaves the folder"
+                )));
+            }
         }
     }
     if parts.iter().any(String::is_empty) {
@@ -112,7 +116,8 @@ pub(super) fn link_stays_inside(at: &[String], target: &str) -> bool {
 
 impl Sink {
     fn new(root: &Path, limits: &StoreLimits) -> Result<Self> {
-        fs::create_dir_all(root).map_err(|e| Error::Io(format!("cannot make the staging folder: {e}")))?;
+        fs::create_dir_all(root)
+            .map_err(|e| Error::Io(format!("cannot make the staging folder: {e}")))?;
         Ok(Self {
             root: root.to_owned(),
             limits: limits.clone(),
@@ -135,7 +140,10 @@ impl Sink {
 
     fn unique(&mut self, parts: &[String]) -> Result<()> {
         if !self.seen.insert(parts.join("/")) {
-            return Err(unsafe_archive(format!("the path {:?} appears twice", parts.join("/"))));
+            return Err(unsafe_archive(format!(
+                "the path {:?} appears twice",
+                parts.join("/")
+            )));
         }
         Ok(())
     }
@@ -148,14 +156,23 @@ impl Sink {
         fs::create_dir_all(self.root.join(parts.join("/"))).map_err(|e| Error::Io(e.to_string()))
     }
 
-    fn file(&mut self, parts: &[String], declared: u64, exec: bool, mut data: impl Read) -> Result<()> {
+    fn file(
+        &mut self,
+        parts: &[String],
+        declared: u64,
+        exec: bool,
+        mut data: impl Read,
+    ) -> Result<()> {
         self.count()?;
         if parts.is_empty() {
             return Err(unsafe_archive("a file with no name"));
         }
         self.unique(parts)?;
         if declared > self.limits.max_file_bytes {
-            return Err(too_large(format!("a file larger than the {} MB boopis accepts", self.limits.max_file_bytes >> 20)));
+            return Err(too_large(format!(
+                "a file larger than the {} MB boopis accepts",
+                self.limits.max_file_bytes >> 20
+            )));
         }
         let path = self.root.join(parts.join("/"));
         if let Some(dir) = path.parent() {
@@ -176,7 +193,9 @@ impl Sink {
         let mut buf = vec![0u8; 64 * 1024];
         let mut written = 0u64;
         loop {
-            let n = limited.read(&mut buf).map_err(|e| unsafe_archive(format!("a damaged entry ({e})")))?;
+            let n = limited
+                .read(&mut buf)
+                .map_err(|e| unsafe_archive(format!("a damaged entry ({e})")))?;
             if n == 0 {
                 break;
             }
@@ -190,7 +209,8 @@ impl Sink {
                     self.limits.max_archive_bytes >> 20
                 )));
             }
-            out.write_all(&buf[..n]).map_err(|e| Error::Io(e.to_string()))?;
+            out.write_all(&buf[..n])
+                .map_err(|e| Error::Io(e.to_string()))?;
         }
         self.stats.bytes += written;
         self.stats.files += 1;
@@ -243,7 +263,12 @@ impl Select {
 ///
 /// # Errors
 /// `hx.store.unsafe_archive`, `hx.store.too_large`, `hx.store.invalid_manifest` when it is not a tar.
-pub fn unpack_tar_gz(bytes: &[u8], dest: &Path, select: &Select, limits: &StoreLimits) -> Result<Stats> {
+pub fn unpack_tar_gz(
+    bytes: &[u8],
+    dest: &Path,
+    select: &Select,
+    limits: &StoreLimits,
+) -> Result<Stats> {
     let mut sink = Sink::new(dest, limits)?;
     let decoder = GzDecoder::new(bytes).take(limits.max_archive_bytes.saturating_mul(2));
     let mut tar = tar::Archive::new(decoder);
@@ -288,7 +313,9 @@ pub fn unpack_tar_gz(bytes: &[u8], dest: &Path, select: &Select, limits: &StoreL
         }
         let parts = clean(&raw, limits.max_depth + 2)?;
         if kind.is_hard_link() {
-            return Err(unsafe_archive(format!("{raw:?} is a hard link, which boopis does not unpack")));
+            return Err(unsafe_archive(format!(
+                "{raw:?} is a hard link, which boopis does not unpack"
+            )));
         }
         let Some(rel) = select.apply(parts) else {
             sink.count()?;
@@ -334,11 +361,17 @@ fn crc32(data: &[u8]) -> u32 {
     for (i, slot) in table.iter_mut().enumerate() {
         let mut c = u32::try_from(i).unwrap_or(0);
         for _ in 0..8 {
-            c = if c & 1 == 1 { 0xEDB8_8320 ^ (c >> 1) } else { c >> 1 };
+            c = if c & 1 == 1 {
+                0xEDB8_8320 ^ (c >> 1)
+            } else {
+                c >> 1
+            };
         }
         *slot = c;
     }
-    !data.iter().fold(!0u32, |c, b| table[usize::from((c as u8) ^ *b)] ^ (c >> 8))
+    !data
+        .iter()
+        .fold(!0u32, |c, b| table[usize::from((c as u8) ^ *b)] ^ (c >> 8))
 }
 
 /// Unpack a zip into `dest`. Entries are read from the central directory; a stored or deflated entry is read up to its
@@ -346,7 +379,12 @@ fn crc32(data: &[u8]) -> u32 {
 ///
 /// # Errors
 /// `hx.store.unsafe_archive`, `hx.store.too_large`.
-pub fn unpack_zip(bytes: &[u8], dest: &Path, select: &Select, limits: &StoreLimits) -> Result<Stats> {
+pub fn unpack_zip(
+    bytes: &[u8],
+    dest: &Path,
+    select: &Select,
+    limits: &StoreLimits,
+) -> Result<Stats> {
     let mut sink = Sink::new(dest, limits)?;
     let tail_from = bytes.len().saturating_sub(22 + 65_535);
     let eocd = bytes[tail_from..]
@@ -354,7 +392,11 @@ pub fn unpack_zip(bytes: &[u8], dest: &Path, select: &Select, limits: &StoreLimi
         .rposition(|w| w == [0x50, 0x4b, 0x05, 0x06])
         .map(|p| p + tail_from)
         .ok_or_else(|| unsafe_archive("not a zip file"))?;
-    let (total, cd_size, cd_off) = (le16(bytes, eocd + 10)?, le32(bytes, eocd + 12)?, le32(bytes, eocd + 16)?);
+    let (total, cd_size, cd_off) = (
+        le16(bytes, eocd + 10)?,
+        le32(bytes, eocd + 12)?,
+        le32(bytes, eocd + 16)?,
+    );
     if total == 0xFFFF || cd_size == 0xFFFF_FFFF || cd_off == 0xFFFF_FFFF {
         return Err(unsafe_archive("a zip64 file, which boopis does not read"));
     }
@@ -394,10 +436,14 @@ pub fn unpack_zip(bytes: &[u8], dest: &Path, select: &Select, limits: &StoreLimi
         let mode = if unix { eattr >> 16 } else { 0 };
         let ftype = mode & 0o170_000;
         if unix && matches!(ftype, 0o020_000 | 0o060_000 | 0o010_000 | 0o140_000) {
-            return Err(unsafe_archive(format!("{name:?} is a device, a pipe or a socket")));
+            return Err(unsafe_archive(format!(
+                "{name:?} is a device, a pipe or a socket"
+            )));
         }
         if unix && mode & 0o7000 != 0 {
-            return Err(unsafe_archive(format!("{name:?} has a setuid, setgid or sticky bit")));
+            return Err(unsafe_archive(format!(
+                "{name:?} has a setuid, setgid or sticky bit"
+            )));
         }
         let parts = clean(&name, limits.max_depth + 2)?;
         let Some(rel) = select.apply(parts) else {
@@ -414,7 +460,10 @@ pub fn unpack_zip(bytes: &[u8], dest: &Path, select: &Select, limits: &StoreLimi
         if le32(bytes, local)? != 0x0403_4b50 {
             return Err(unsafe_archive("a damaged zip entry"));
         }
-        let start = local + 30 + usize::from(le16(bytes, local + 26)?) + usize::from(le16(bytes, local + 28)?);
+        let start = local
+            + 30
+            + usize::from(le16(bytes, local + 26)?)
+            + usize::from(le16(bytes, local + 28)?);
         let raw = bytes
             .get(start..start + csize)
             .ok_or_else(|| unsafe_archive("a zip entry cut short"))?;
@@ -428,15 +477,26 @@ pub fn unpack_zip(bytes: &[u8], dest: &Path, select: &Select, limits: &StoreLimi
                     .read_to_end(&mut data)
                     .map_err(|e| unsafe_archive(format!("a damaged entry ({e})")))?;
             }
-            m => return Err(unsafe_archive(format!("a zip entry compressed with method {m}, which boopis does not read"))),
+            m => {
+                return Err(unsafe_archive(format!(
+                    "a zip entry compressed with method {m}, which boopis does not read"
+                )));
+            }
         }
         if data.len() as u64 != u64::from(usize_) || crc32(&data) != crc {
-            return Err(unsafe_archive(format!("{name:?} does not match its recorded size or checksum")));
+            return Err(unsafe_archive(format!(
+                "{name:?} does not match its recorded size or checksum"
+            )));
         }
         if ftype == 0o120_000 {
             sink.symlink(&rel, &String::from_utf8_lossy(&data))?;
         } else {
-            sink.file(&rel, u64::from(usize_), unix && mode & 0o111 != 0, data.as_slice())?;
+            sink.file(
+                &rel,
+                u64::from(usize_),
+                unix && mode & 0o111 != 0,
+                data.as_slice(),
+            )?;
         }
     }
     Ok(sink.stats)
@@ -496,8 +556,14 @@ pub fn list_files(root: &Path) -> Result<Vec<String>> {
 // ---------------------------------------------------------------- the check
 
 const DANGEROUS: &[(&str, &str)] = &[
-    ("/dev/tcp/", "opens a raw network connection from the shell (a reverse shell)"),
-    ("bash -i >&", "starts an interactive shell on a network connection"),
+    (
+        "/dev/tcp/",
+        "opens a raw network connection from the shell (a reverse shell)",
+    ),
+    (
+        "bash -i >&",
+        "starts an interactive shell on a network connection",
+    ),
     ("nc -e ", "hands a shell to a network connection"),
     ("rm -rf /\n", "deletes the whole file system"),
     ("rm -rf / ", "deletes the whole file system"),
@@ -516,9 +582,18 @@ const CAUTION: &[(&str, &str)] = &[
     ("base64 -d", "decodes hidden text to run it"),
     ("base64 --decode", "decodes hidden text to run it"),
     ("eval $(", "runs text built at run time as a command"),
-    ("ignore previous instructions", "tries to override the assistant's instructions"),
-    ("ignore all previous instructions", "tries to override the assistant's instructions"),
-    ("disregard your instructions", "tries to override the assistant's instructions"),
+    (
+        "ignore previous instructions",
+        "tries to override the assistant's instructions",
+    ),
+    (
+        "ignore all previous instructions",
+        "tries to override the assistant's instructions",
+    ),
+    (
+        "disregard your instructions",
+        "tries to override the assistant's instructions",
+    ),
     (".ssh/id_", "mentions a private key"),
     (".aws/credentials", "mentions cloud credentials"),
 ];
@@ -538,7 +613,9 @@ pub fn scan(root: &Path) -> Result<Scan> {
             break;
         }
         let path = root.join(&rel);
-        let Ok(meta) = fs::metadata(&path) else { continue };
+        let Ok(meta) = fs::metadata(&path) else {
+            continue;
+        };
         let mut head = Vec::new();
         if File::open(&path)
             .and_then(|f| f.take(meta.len().min(MAX_SCAN_FILE)).read_to_end(&mut head))
@@ -546,7 +623,10 @@ pub fn scan(root: &Path) -> Result<Scan> {
         {
             continue;
         }
-        if head.starts_with(b"\x7fELF") || head.starts_with(b"MZ") || head.starts_with(&[0xCF, 0xFA, 0xED, 0xFE]) {
+        if head.starts_with(b"\x7fELF")
+            || head.starts_with(b"MZ")
+            || head.starts_with(&[0xCF, 0xFA, 0xED, 0xFE])
+        {
             findings.push(ScanFinding {
                 level: FindingLevel::Caution,
                 text: "contains a compiled program, which boopis cannot read".into(),
@@ -557,7 +637,11 @@ pub fn scan(root: &Path) -> Result<Scan> {
         let text = String::from_utf8_lossy(&head).to_ascii_lowercase();
         let mut hit = |level: FindingLevel, why: &str, list: &[(&str, &str)]| {
             for (needle, what) in list {
-                if text.contains(needle) && !findings.iter().any(|f: &ScanFinding| f.path.as_deref() == Some(rel.as_str()) && f.text.ends_with(what)) {
+                if text.contains(needle)
+                    && !findings.iter().any(|f: &ScanFinding| {
+                        f.path.as_deref() == Some(rel.as_str()) && f.text.ends_with(what)
+                    })
+                {
                     findings.push(ScanFinding {
                         level,
                         text: format!("{why} {what}"),
@@ -568,7 +652,11 @@ pub fn scan(root: &Path) -> Result<Scan> {
         };
         hit(FindingLevel::Dangerous, "this file", DANGEROUS);
         hit(FindingLevel::Caution, "this file", CAUTION);
-        if rel.starts_with("scripts/") || rel.ends_with(".sh") || rel.ends_with(".py") || rel.ends_with(".js") {
+        if rel.starts_with("scripts/")
+            || rel.ends_with(".sh")
+            || rel.ends_with(".py")
+            || rel.ends_with(".js")
+        {
             findings.push(ScanFinding {
                 level: FindingLevel::Info,
                 text: "is a script that can run once the item is active".into(),
@@ -620,7 +708,12 @@ impl Staging {
     /// # Errors
     /// `hx.store.stage_missing` for an id that is not one or has no folder.
     pub fn dir(&self, id: &str) -> Result<PathBuf> {
-        let missing = || Error::Store("hx.store.stage_missing", "the downloaded copy is gone".into());
+        let missing = || {
+            Error::Store(
+                "hx.store.stage_missing",
+                "the downloaded copy is gone".into(),
+            )
+        };
         if !Self::valid_id(id) {
             return Err(missing());
         }
@@ -648,7 +741,9 @@ impl Staging {
 
     /// Delete every folder older than `ttl`.
     pub fn sweep(&self, ttl: std::time::Duration) {
-        let Ok(rd) = fs::read_dir(&self.root) else { return };
+        let Ok(rd) = fs::read_dir(&self.root) else {
+            return;
+        };
         for e in rd.flatten() {
             let old = e
                 .metadata()
@@ -672,13 +767,17 @@ impl Staging {
 /// `hx.store.unsafe_archive`, `hx.store.too_large`, `Io`.
 pub fn copy_tree(src: &Path, dst: &Path, limits: &StoreLimits) -> Result<Stats> {
     let mut sink = Sink::new(dst, limits)?;
-    let root = fs::canonicalize(src).map_err(|e| Error::Io(format!("cannot read that folder: {e}")))?;
+    let root =
+        fs::canonicalize(src).map_err(|e| Error::Io(format!("cannot read that folder: {e}")))?;
     copy_dir(&root, &root, &mut Vec::new(), &mut sink)?;
     Ok(sink.stats)
 }
 
 fn copy_dir(root: &Path, dir: &Path, parts: &mut Vec<String>, sink: &mut Sink) -> Result<()> {
-    let mut names: Vec<_> = fs::read_dir(dir).map_err(|e| Error::Io(e.to_string()))?.flatten().collect();
+    let mut names: Vec<_> = fs::read_dir(dir)
+        .map_err(|e| Error::Io(e.to_string()))?
+        .flatten()
+        .collect();
     names.sort_by_key(std::fs::DirEntry::file_name);
     for e in names {
         let name = e.file_name().to_string_lossy().into_owned();
@@ -693,7 +792,10 @@ fn copy_dir(root: &Path, dir: &Path, parts: &mut Vec<String>, sink: &mut Sink) -
         if ft.is_symlink() {
             let target = fs::canonicalize(e.path()).ok();
             if !target.is_some_and(|t| t.starts_with(root)) {
-                return Err(unsafe_archive(format!("the link {:?} points outside the folder", parts.join("/"))));
+                return Err(unsafe_archive(format!(
+                    "the link {:?} points outside the folder",
+                    parts.join("/")
+                )));
             }
             sink.count()?;
             sink.stats.skipped_links.push(parts.join("/"));
@@ -704,18 +806,24 @@ fn copy_dir(root: &Path, dir: &Path, parts: &mut Vec<String>, sink: &mut Sink) -
             #[cfg(unix)]
             let exec = {
                 use std::os::unix::fs::PermissionsExt;
-                e.metadata().map(|m| m.permissions().mode()).unwrap_or(0)
+                e.metadata().map_or(0, |m| m.permissions().mode())
             };
             #[cfg(not(unix))]
             let exec = 0u32;
             if exec & 0o7000 != 0 {
-                return Err(unsafe_archive(format!("{:?} has a setuid, setgid or sticky bit", parts.join("/"))));
+                return Err(unsafe_archive(format!(
+                    "{:?} has a setuid, setgid or sticky bit",
+                    parts.join("/")
+                )));
             }
             let size = e.metadata().map_or(0, |m| m.len());
             let f = File::open(e.path()).map_err(|e| Error::Io(e.to_string()))?;
             sink.file(parts, size, exec & 0o111 != 0, f)?;
         } else {
-            return Err(unsafe_archive(format!("{:?} is a device, a pipe or a socket", parts.join("/"))));
+            return Err(unsafe_archive(format!(
+                "{:?} is a device, a pipe or a socket",
+                parts.join("/")
+            )));
         }
         parts.pop();
     }

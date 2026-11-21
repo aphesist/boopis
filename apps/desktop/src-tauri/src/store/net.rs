@@ -73,10 +73,12 @@ impl Hosts {
             "http" if loopback && self.loopback_http => return Ok(()),
             _ => return Err(unreachable_msg("an address that is not https")),
         }
-        if self.allowed.iter().any(|h| *h == host) {
+        if self.allowed.contains(&host) {
             Ok(())
         } else {
-            Err(unreachable_msg(&format!("{host}, which is not a host boopis reads from")))
+            Err(unreachable_msg(&format!(
+                "{host}, which is not a host boopis reads from"
+            )))
         }
     }
 }
@@ -170,9 +172,9 @@ impl Fetcher for Https {
             if let Some(a) = ask.accept {
                 req = req.header("Accept", a);
             }
-            let mut resp = req
-                .call()
-                .map_err(|e| unreachable_msg(&format!("{} ({e})", current.host_str().unwrap_or(""))))?;
+            let mut resp = req.call().map_err(|e| {
+                unreachable_msg(&format!("{} ({e})", current.host_str().unwrap_or("")))
+            })?;
             let status = resp.status().as_u16();
             match status {
                 200 => {
@@ -197,9 +199,9 @@ impl Fetcher for Https {
                     let Some(location) = header(&resp, "location") else {
                         return Err(unreachable_msg("a redirect with no address"));
                     };
-                    current = current
-                        .join(&location)
-                        .map_err(|_| unreachable_msg("a redirect to an address that does not parse"))?;
+                    current = current.join(&location).map_err(|_| {
+                        unreachable_msg("a redirect to an address that does not parse")
+                    })?;
                 }
                 429 => return Err(rate_limited(header(&resp, "retry-after"))),
                 403 if header(&resp, "x-ratelimit-remaining").as_deref() == Some("0") => {
@@ -245,7 +247,10 @@ pub fn read_capped(mut r: impl Read, max: u64) -> Result<Vec<u8>> {
     if out.len() as u64 > max {
         return Err(Error::Store(
             "hx.store.too_large",
-            format!("a response is larger than the {} MB boopis accepts", max / (1024 * 1024)),
+            format!(
+                "a response is larger than the {} MB boopis accepts",
+                max / (1024 * 1024)
+            ),
         ));
     }
     Ok(out)
@@ -264,5 +269,5 @@ pub fn retry_after_s(message: &str) -> Option<u64> {
 /// A pause between two tries, for callers that wait on a rate limit (none do automatically: the user is told).
 #[must_use]
 pub fn default_wait() -> Duration {
-    Duration::from_secs(60)
+    Duration::from_mins(1)
 }

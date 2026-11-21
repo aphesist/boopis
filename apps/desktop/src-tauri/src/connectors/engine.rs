@@ -40,8 +40,7 @@ pub trait Opener: Send + Sync {
 }
 
 /// A way of building a connector's plan: `None` is the plan shown, `Some(keys)` the one installed with those keys given.
-pub type Planner<'a> =
-    &'a (dyn Fn(Option<&BTreeSet<String>>) -> Result<plan::Plan> + Send + Sync);
+pub type Planner<'a> = &'a (dyn Fn(Option<&BTreeSet<String>>) -> Result<plan::Plan> + Send + Sync);
 
 /// The engine's own key for the servers the boopis plugin may call from governed `exec`.
 pub const GOVERNED_ALLOWLIST: &str = "plugins.entries.boopis.mcp_allowlist";
@@ -535,7 +534,11 @@ impl Engine {
             .config_get(GOVERNED_ALLOWLIST)
             .await?
             .and_then(|v| v.as_array().cloned())
-            .map(|a| a.into_iter().filter_map(|x| x.as_str().map(str::to_owned)).collect())
+            .map(|a| {
+                a.into_iter()
+                    .filter_map(|x| x.as_str().map(str::to_owned))
+                    .collect()
+            })
             .unwrap_or_default())
     }
 
@@ -552,7 +555,10 @@ impl Engine {
         list.push(name.to_owned());
         list.sort();
         self.ops
-            .config_set(GOVERNED_ALLOWLIST, &serde_json::to_string(&list).unwrap_or_default())
+            .config_set(
+                GOVERNED_ALLOWLIST,
+                &serde_json::to_string(&list).unwrap_or_default(),
+            )
             .await
     }
 
@@ -570,7 +576,10 @@ impl Engine {
             self.ops.config_unset(GOVERNED_ALLOWLIST).await
         } else {
             self.ops
-                .config_set(GOVERNED_ALLOWLIST, &serde_json::to_string(&rest).unwrap_or_default())
+                .config_set(
+                    GOVERNED_ALLOWLIST,
+                    &serde_json::to_string(&rest).unwrap_or_default(),
+                )
                 .await
         }
     }

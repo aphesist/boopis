@@ -7,11 +7,28 @@
 //! - [`servers`]: registry `server.json` and MCP bundle manifests as connector specs.
 //! - [`normalize`]: each source's shape to a `StoreItem`.
 
+// The store's flows are long and linear (one step per route, one row per plan line) and its tests build byte-level fixtures; the
+// lints below ask for shapes that would hide that. Everything else of the workspace's set applies.
+#![allow(
+    clippy::too_many_lines,
+    clippy::too_many_arguments,
+    clippy::type_complexity,
+    clippy::large_enum_variant,
+    clippy::case_sensitive_file_extension_comparisons,
+    clippy::cast_possible_truncation,
+    clippy::many_single_char_names,
+    clippy::unused_self,
+    clippy::unused_async,
+    clippy::unnecessary_wraps,
+    clippy::format_push_string,
+    clippy::items_after_statements
+)]
+
 pub mod backend;
 pub mod cache;
 pub mod discover;
-pub mod install;
 pub mod github;
+pub mod install;
 pub mod net;
 pub mod normalize;
 pub mod plan;
@@ -25,6 +42,10 @@ pub mod types;
 pub use service::Store;
 
 #[cfg(test)]
+mod golden_tests;
+#[cfg(test)]
 mod net_tests;
+#[cfg(test)]
+mod service_tests;
 #[cfg(test)]
 mod stage_tests;

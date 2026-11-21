@@ -28,8 +28,16 @@ pub fn score(item: &StoreItem, words: &[String]) -> Option<u32> {
     let id = item.id.to_lowercase();
     let publisher = item.publisher.to_lowercase();
     let summary = item.summary.to_lowercase();
-    let kind = serde_json::to_value(item.kind).ok().and_then(|v| v.as_str().map(str::to_owned)).unwrap_or_default();
-    let tags: Vec<String> = item.tags.iter().flatten().map(|t| t.to_lowercase()).collect();
+    let kind = serde_json::to_value(item.kind)
+        .ok()
+        .and_then(|v| v.as_str().map(str::to_owned))
+        .unwrap_or_default();
+    let tags: Vec<String> = item
+        .tags
+        .iter()
+        .flatten()
+        .map(|t| t.to_lowercase())
+        .collect();
     let mut total = 0;
     for w in words {
         let mut s = 0;
@@ -79,7 +87,15 @@ pub fn words(query: &str) -> Vec<String> {
 #[must_use]
 pub fn rank<'a>(items: impl Iterator<Item = &'a StoreItem>, query: &str) -> Vec<&'a StoreItem> {
     let w = words(query);
-    let mut scored: Vec<(u32, &StoreItem)> = items.filter_map(|i| if w.is_empty() { Some((0, i)) } else { score(i, &w).map(|s| (s, i)) }).collect();
+    let mut scored: Vec<(u32, &StoreItem)> = items
+        .filter_map(|i| {
+            if w.is_empty() {
+                Some((0, i))
+            } else {
+                score(i, &w).map(|s| (s, i))
+            }
+        })
+        .collect();
     scored.sort_by(|a, b| {
         b.0.cmp(&a.0)
             .then(tier_rank(a.1.tier).cmp(&tier_rank(b.1.tier)))
@@ -91,11 +107,21 @@ pub fn rank<'a>(items: impl Iterator<Item = &'a StoreItem>, query: &str) -> Vec<
 
 /// A page: `cursor` is the offset (decimal text), `limit` is clamped to 1..=100. Returns the slice and the next cursor.
 #[must_use]
-pub fn page<T: Clone>(all: &[T], cursor: Option<&str>, limit: Option<u32>) -> (Vec<T>, Option<String>) {
-    let start = cursor.and_then(|c| c.parse::<usize>().ok()).unwrap_or(0).min(all.len());
+pub fn page<T: Clone>(
+    all: &[T],
+    cursor: Option<&str>,
+    limit: Option<u32>,
+) -> (Vec<T>, Option<String>) {
+    let start = cursor
+        .and_then(|c| c.parse::<usize>().ok())
+        .unwrap_or(0)
+        .min(all.len());
     let n = usize::try_from(limit.unwrap_or(30).clamp(1, 100)).unwrap_or(30);
     let end = (start + n).min(all.len());
-    (all[start..end].to_vec(), (end < all.len()).then(|| end.to_string()))
+    (
+        all[start..end].to_vec(),
+        (end < all.len()).then(|| end.to_string()),
+    )
 }
 
 #[cfg(test)]
@@ -105,7 +131,10 @@ mod tests {
     use crate::store::types::{Bundle, ItemKind};
 
     fn items() -> Vec<StoreItem> {
-        serde_json::from_str::<Bundle>(include_str!("../../../../shared/data/store.fixtures.json")).unwrap().items.unwrap()
+        serde_json::from_str::<Bundle>(include_str!("../../../../shared/data/store.fixtures.json"))
+            .unwrap()
+            .items
+            .unwrap()
     }
 
     #[test]
@@ -116,7 +145,10 @@ mod tests {
         assert!(rank(all.iter(), "zzzzqqq").is_empty());
         let both = rank(all.iter(), "sql review");
         assert_eq!(both[0].id, "skills-hub:example-org/sql-review");
-        assert!(rank(all.iter(), "sql zzzz").is_empty(), "every word must match");
+        assert!(
+            rank(all.iter(), "sql zzzz").is_empty(),
+            "every word must match"
+        );
     }
 
     #[test]
@@ -124,7 +156,10 @@ mod tests {
         let all = items();
         let r = rank(all.iter(), "  ");
         assert_eq!(r.len(), all.len());
-        assert!(r.windows(2).all(|w| tier_rank(w[0].tier) <= tier_rank(w[1].tier)));
+        assert!(
+            r.windows(2)
+                .all(|w| tier_rank(w[0].tier) <= tier_rank(w[1].tier))
+        );
     }
 
     #[test]
@@ -132,10 +167,34 @@ mod tests {
         let all = items();
         let f = |f: StoreFilter| all.iter().filter(|i| passes(i, &f)).count();
         assert_eq!(f(StoreFilter::default()), all.len());
-        assert_eq!(f(StoreFilter { kind: Some(ItemKind::Skill), ..StoreFilter::default() }), 4);
-        assert_eq!(f(StoreFilter { tier: Some(Tier::Recommended), ..StoreFilter::default() }), 2);
-        assert_eq!(f(StoreFilter { source: Some("github".into()), ..StoreFilter::default() }), 2);
-        assert_eq!(f(StoreFilter { hide_unpinned: Some(true), ..StoreFilter::default() }), all.len() - 1);
+        assert_eq!(
+            f(StoreFilter {
+                kind: Some(ItemKind::Skill),
+                ..StoreFilter::default()
+            }),
+            4
+        );
+        assert_eq!(
+            f(StoreFilter {
+                tier: Some(Tier::Recommended),
+                ..StoreFilter::default()
+            }),
+            2
+        );
+        assert_eq!(
+            f(StoreFilter {
+                source: Some("github".into()),
+                ..StoreFilter::default()
+            }),
+            2
+        );
+        assert_eq!(
+            f(StoreFilter {
+                hide_unpinned: Some(true),
+                ..StoreFilter::default()
+            }),
+            all.len() - 1
+        );
     }
 
     #[test]
@@ -148,6 +207,10 @@ mod tests {
         let (c, next) = page(&v, Some("6"), Some(3));
         assert_eq!((c, next), (vec![6], None));
         assert!(page(&v, Some("99"), Some(3)).0.is_empty());
-        assert_eq!(page(&v, Some("junk"), Some(0)).0.len(), 1, "a limit of 0 is clamped to 1");
+        assert_eq!(
+            page(&v, Some("junk"), Some(0)).0.len(),
+            1,
+            "a limit of 0 is clamped to 1"
+        );
     }
 }

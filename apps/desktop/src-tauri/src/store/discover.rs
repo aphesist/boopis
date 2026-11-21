@@ -42,7 +42,9 @@ pub fn frontmatter(text: &str) -> Option<BTreeMap<String, String>> {
             }
             open = None;
         }
-        let Some((k, v)) = line.split_once(':') else { continue };
+        let Some((k, v)) = line.split_once(':') else {
+            continue;
+        };
         if k.starts_with([' ', '\t']) || k.is_empty() {
             continue;
         }
@@ -75,7 +77,8 @@ fn skill_name_ok(n: &str) -> bool {
     (1..=64).contains(&n.len())
         && !n.starts_with('-')
         && !n.ends_with('-')
-        && n.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+        && n.bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
 }
 
 /// Check a `SKILL.md` against the agentskills format: a front matter with a `name` (1 to 64 of a-z, 0-9 and `-`, equal to its
@@ -84,20 +87,36 @@ fn skill_name_ok(n: &str) -> bool {
 /// # Errors
 /// What is wrong, in words.
 pub fn skill_doc(dir: &str, text: &str) -> Result<SkillDoc, String> {
-    let fm = frontmatter(text).ok_or("SKILL.md has no front matter (--- name and description ---)")?;
-    let name = fm.get("name").filter(|n| !n.is_empty()).ok_or("the front matter has no name")?;
+    let fm =
+        frontmatter(text).ok_or("SKILL.md has no front matter (--- name and description ---)")?;
+    let name = fm
+        .get("name")
+        .filter(|n| !n.is_empty())
+        .ok_or("the front matter has no name")?;
     if !skill_name_ok(name) {
-        return Err(format!("the name {name:?} is not 1 to 64 of a-z, 0-9 and -"));
+        return Err(format!(
+            "the name {name:?} is not 1 to 64 of a-z, 0-9 and -"
+        ));
     }
     let leaf = dir.rsplit('/').next().unwrap_or("");
     if !dir.is_empty() && leaf != name {
-        return Err(format!("the name {name:?} is not the folder's name {leaf:?}"));
+        return Err(format!(
+            "the name {name:?} is not the folder's name {leaf:?}"
+        ));
     }
-    let description = fm.get("description").filter(|d| !d.is_empty()).ok_or("the front matter has no description")?;
+    let description = fm
+        .get("description")
+        .filter(|d| !d.is_empty())
+        .ok_or("the front matter has no description")?;
     if description.chars().count() > 1024 {
         return Err("the description is longer than 1024 characters".into());
     }
-    Ok(SkillDoc { dir: dir.to_owned(), name: name.clone(), description: description.clone(), license: fm.get("license").cloned() })
+    Ok(SkillDoc {
+        dir: dir.to_owned(),
+        name: name.clone(),
+        description: description.clone(),
+        license: fm.get("license").cloned(),
+    })
 }
 
 /// Every folder under `root` with a `SKILL.md`, each checked.
@@ -108,7 +127,12 @@ pub fn find_skills(root: &Path) -> Vec<(String, Result<SkillDoc, String>)> {
         if out.len() >= MAX_SKILLS {
             break;
         }
-        let Some(dir) = rel.strip_suffix("SKILL.md").map(|d| d.trim_end_matches('/')) else { continue };
+        let Some(dir) = rel
+            .strip_suffix("SKILL.md")
+            .map(|d| d.trim_end_matches('/'))
+        else {
+            continue;
+        };
         if !(rel == "SKILL.md" || rel.ends_with("/SKILL.md")) {
             continue;
         }
@@ -151,16 +175,27 @@ pub fn plugin_doc(root: &Path) -> Result<Option<PluginDoc>, String> {
         return Ok(None);
     }
     let v = read_json(&path).ok_or("plugin.json is not readable JSON")?;
-    let text = |k: &str| v.get(k).and_then(Value::as_str).map(str::to_owned).filter(|t| !t.is_empty());
+    let text = |k: &str| {
+        v.get(k)
+            .and_then(Value::as_str)
+            .map(str::to_owned)
+            .filter(|t| !t.is_empty())
+    };
     let name = text("name").ok_or("plugin.json has no name")?;
     let hooks = read_json(&root.join("hooks/hooks.json"));
-    let is_mod = hooks.as_ref().is_some_and(|h| h.get("modules").is_some() || h.pointer("/hooks/modules").is_some());
+    let is_mod = hooks
+        .as_ref()
+        .is_some_and(|h| h.get("modules").is_some() || h.pointer("/hooks/modules").is_some());
     Ok(Some(PluginDoc {
         name,
         version: text("version"),
         description: text("description"),
         license: text("license"),
-        author: v.pointer("/author/name").and_then(Value::as_str).map(str::to_owned).or_else(|| text("author")),
+        author: v
+            .pointer("/author/name")
+            .and_then(Value::as_str)
+            .map(str::to_owned)
+            .or_else(|| text("author")),
         homepage: text("homepage"),
         is_mod,
     }))
@@ -174,27 +209,43 @@ fn u(n: usize) -> u32 {
 #[must_use]
 pub fn count_components(root: &Path) -> ComponentCounts {
     let files = stage::list_files(root).unwrap_or_default();
-    let under = |prefix: &str, suffix: &str| files.iter().filter(|f| f.starts_with(prefix) && f.ends_with(suffix)).count();
+    let under = |prefix: &str, suffix: &str| {
+        files
+            .iter()
+            .filter(|f| f.starts_with(prefix) && f.ends_with(suffix))
+            .count()
+    };
     let hooks = read_json(&root.join("hooks/hooks.json"));
     let modules = hooks
         .as_ref()
         .and_then(|h| h.get("modules").or_else(|| h.pointer("/hooks/modules")))
         .and_then(Value::as_array)
         .map_or(0, Vec::len);
-    let hook_count = hooks.as_ref().and_then(|h| h.get("hooks")).and_then(Value::as_object).map_or(usize::from(hooks.is_some()), |o| o.len());
-    let mcp = read_json(&root.join(".mcp.json"))
-        .map(|m| m.get("mcpServers").and_then(Value::as_object).map_or(m.as_object().map_or(0, serde_json::Map::len), serde_json::Map::len))
-        .unwrap_or(0);
+    let hook_count = hooks
+        .as_ref()
+        .and_then(|h| h.get("hooks"))
+        .and_then(Value::as_object)
+        .map_or(usize::from(hooks.is_some()), serde_json::Map::len);
+    let mcp = read_json(&root.join(".mcp.json")).map_or(0, |m| {
+        m.get("mcpServers").and_then(Value::as_object).map_or(
+            m.as_object().map_or(0, serde_json::Map::len),
+            serde_json::Map::len,
+        )
+    });
     let scripts = files
         .iter()
         .filter(|f| {
             let ext = f.rsplit('.').next().unwrap_or("");
-            (f.starts_with("scripts/") || f.contains("/scripts/") || f.starts_with("bin/")) && matches!(ext, "sh" | "py" | "js" | "ts" | "rb" | "ps1" | "bash")
+            (f.starts_with("scripts/") || f.contains("/scripts/") || f.starts_with("bin/"))
+                && matches!(ext, "sh" | "py" | "js" | "ts" | "rb" | "ps1" | "bash")
         })
         .count();
     ComponentCounts {
         known: true,
-        skills: u(files.iter().filter(|f| f.ends_with("/SKILL.md") || *f == "SKILL.md").count()),
+        skills: u(files
+            .iter()
+            .filter(|f| f.ends_with("/SKILL.md") || *f == "SKILL.md")
+            .count()),
         commands: u(under("commands/", ".md")),
         agents: u(under("agents/", ".md")),
         hooks: u(hook_count),
@@ -215,19 +266,40 @@ mod tests {
     #[test]
     fn front_matter_is_read_with_folded_values_and_quotes() {
         let fm = frontmatter(SKILL).unwrap();
-        assert_eq!(fm["description"], "Turns commits into notes. Grouped by reader impact.");
+        assert_eq!(
+            fm["description"],
+            "Turns commits into notes. Grouped by reader impact."
+        );
         assert_eq!(fm["license"], "Apache-2.0");
         assert!(frontmatter("# no front matter").is_none());
-        assert!(frontmatter("---\nname: x\n").is_none(), "an unclosed block is not one");
+        assert!(
+            frontmatter("---\nname: x\n").is_none(),
+            "an unclosed block is not one"
+        );
     }
 
     #[test]
     fn a_skill_is_checked_against_the_format() {
-        assert_eq!(skill_doc("skills/release-notes", SKILL).unwrap().name, "release-notes");
-        assert!(skill_doc("skills/other", SKILL).unwrap_err().contains("folder's name"));
+        assert_eq!(
+            skill_doc("skills/release-notes", SKILL).unwrap().name,
+            "release-notes"
+        );
+        assert!(
+            skill_doc("skills/other", SKILL)
+                .unwrap_err()
+                .contains("folder's name")
+        );
         assert!(skill_doc("", SKILL).is_ok(), "the root may hold any name");
-        assert!(skill_doc("x", "---\nname: Bad Name\ndescription: d\n---\n").unwrap_err().contains("not 1 to 64"));
-        assert!(skill_doc("x", "---\nname: x\n---\n").unwrap_err().contains("description"));
+        assert!(
+            skill_doc("x", "---\nname: Bad Name\ndescription: d\n---\n")
+                .unwrap_err()
+                .contains("not 1 to 64")
+        );
+        assert!(
+            skill_doc("x", "---\nname: x\n---\n")
+                .unwrap_err()
+                .contains("description")
+        );
         let long = format!("---\nname: x\ndescription: {}\n---\n", "d".repeat(1025));
         assert!(skill_doc("x", &long).unwrap_err().contains("1024"));
     }
@@ -245,19 +317,48 @@ mod tests {
         write(r, "skills/release-notes/SKILL.md", SKILL);
         write(r, "skills/broken/SKILL.md", "no front matter");
         write(r, "skills/release-notes/scripts/run.sh", "echo hi");
-        write(r, ".claude-plugin/plugin.json", r#"{"name":"kit","version":"1.2.0","author":{"name":"A"},"license":"MIT"}"#);
-        write(r, "hooks/hooks.json", r#"{"hooks":{"PreToolUse":[]},"modules":["a.js","b.js"]}"#);
+        write(
+            r,
+            ".claude-plugin/plugin.json",
+            r#"{"name":"kit","version":"1.2.0","author":{"name":"A"},"license":"MIT"}"#,
+        );
+        write(
+            r,
+            "hooks/hooks.json",
+            r#"{"hooks":{"PreToolUse":[]},"modules":["a.js","b.js"]}"#,
+        );
         write(r, "commands/go.md", "x");
         write(r, ".mcp.json", r#"{"mcpServers":{"a":{},"b":{}}}"#);
         let skills = find_skills(r);
         assert_eq!(skills.len(), 2);
-        assert!(skills.iter().any(|(d, s)| d == "skills/broken" && s.is_err()));
+        assert!(
+            skills
+                .iter()
+                .any(|(d, s)| d == "skills/broken" && s.is_err())
+        );
         let doc = plugin_doc(r).unwrap().unwrap();
-        assert_eq!((doc.name.as_str(), doc.is_mod, doc.author.as_deref()), ("kit", true, Some("A")));
+        assert_eq!(
+            (doc.name.as_str(), doc.is_mod, doc.author.as_deref()),
+            ("kit", true, Some("A"))
+        );
         let c = count_components(r);
-        assert_eq!((c.skills, c.commands, c.hooks, c.mcp_servers, c.modules, c.scripts), (2, 1, 1, 2, 2, 1));
+        assert_eq!(
+            (
+                c.skills,
+                c.commands,
+                c.hooks,
+                c.mcp_servers,
+                c.modules,
+                c.scripts
+            ),
+            (2, 1, 1, 2, 2, 1)
+        );
         assert!(c.known);
-        assert!(plugin_doc(d.path().join("skills").as_path()).unwrap().is_none());
+        assert!(
+            plugin_doc(d.path().join("skills").as_path())
+                .unwrap()
+                .is_none()
+        );
         write(r, ".claude-plugin/plugin.json", "{}");
         assert!(plugin_doc(r).is_err());
     }
