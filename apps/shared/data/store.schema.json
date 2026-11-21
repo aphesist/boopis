@@ -1,0 +1,1719 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/aphesist/boopis/apps/shared/data/store.schema.json",
+  "title": "boopis store contract",
+  "description": "The shapes of the boopis store (ADR-0038, docs/STORE.md): what the catalogue lists (StoreItem), where it came from (Provenance, StoreSource), what an install would do (InstallPlan), what it did (InstallReceipt) and what an update changes (UpdateDiff). One source of truth for three languages: the host's Rust types (apps/desktop/src-tauri/src/store/types.rs) and the UI's TypeScript types (apps/desktop/ui/src/data/types.ts) match it field for field, and the plugin's JSON uses the same names. Every key is snake_case on the wire. The root is a bundle of the shapes so a fixture file (store.fixtures.json) and the sources file (store-sources.json) validate against it; an RPC or command returns one shape, never the bundle. Keywords used: type, enum, const, required, properties, additionalProperties, items, minItems, maxItems, minLength, maxLength, minimum, pattern, format (date, date-time, uri) and $ref; a new keyword needs the test's validator extended (apps/desktop/ui/src/data/store-schema.test.ts).",
+  "type": "object",
+  "required": [
+    "schema_version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/StoreSource"
+      }
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/StoreItem"
+      }
+    },
+    "plans": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/InstallPlan"
+      }
+    },
+    "receipts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/InstallReceipt"
+      }
+    },
+    "diffs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/UpdateDiff"
+      }
+    }
+  },
+  "$defs": {
+    "ItemKind": {
+      "description": "What an item is. A plugin is a Claude Code plugin (it may hold skills, hooks, MCP servers and agents); a mod is a plugin whose hooks name `modules`; an engine-plugin is Python that runs inside the engine.",
+      "enum": [
+        "skill",
+        "connector",
+        "plugin",
+        "mod",
+        "engine-plugin"
+      ]
+    },
+    "Tier": {
+      "description": "The item's tier in plain words: recommended (\"Recommended by boopis\"), verified (\"Verified by its source\"), not-reviewed (\"Not reviewed\"). The tier is a property of the item and its source together; boopis never promotes an item it did not check.",
+      "enum": [
+        "recommended",
+        "verified",
+        "not-reviewed"
+      ]
+    },
+    "SourceId": {
+      "description": "A source's id: lowercase token. The built-in ids are boopis, engine-plugins, skills-hub, anthropic, mcp-registry, github, marketplace-url and local; a source the user adds gets `added-` and a short hash.",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$",
+      "maxLength": 48
+    },
+    "ItemId": {
+      "description": "`source:name`. The name is the source's own (a registry's reverse-DNS name, a repository path, a marketplace plugin name) and is never normalised beyond the characters allowed here.",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*:[A-Za-z0-9][A-Za-z0-9._@/+-]*$",
+      "maxLength": 200
+    },
+    "Sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "Pin": {
+      "description": "What an item is pinned to. Pinned or refused: a branch, a tag and `latest` are not pins. `commit` is a 40-hex git commit, `archive-sha256` the sha256 of the archive bytes (also an MCP bundle's `fileSha256`), `tree-sha256` the content hash of a folder the user picked (the pin of a local source), `oci-digest` an image digest `sha256:<hex>`, `version` an exact registry version (npm, PyPI, crates, NuGet) that a layer runs without install scripts.",
+      "type": "object",
+      "required": [
+        "type",
+        "value"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": [
+            "commit",
+            "archive-sha256",
+            "tree-sha256",
+            "oci-digest",
+            "version"
+          ]
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "repo": {
+          "type": "string",
+          "description": "The repository or package the pin applies to (a git URL, `npm:name`, an image name)."
+        }
+      }
+    },
+    "HostList": {
+      "description": "The network hosts an item reaches. `basis` says how far to trust the list: declared (by the publisher; not enforced by anything), verified (checked by boopis on the item's verified date), loopback (this machine only), unknown (nothing declared: shown as not known, never as none).",
+      "type": "object",
+      "required": [
+        "basis",
+        "hosts"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "basis": {
+          "enum": [
+            "declared",
+            "verified",
+            "loopback",
+            "unknown"
+          ]
+        },
+        "hosts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 253
+          }
+        }
+      }
+    },
+    "SecretNeed": {
+      "description": "A key or credential the item needs. The value is never in any store shape: it goes UI to host to the keychain.",
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "optional"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+$"
+        },
+        "title": {
+          "type": "string"
+        },
+        "env": {
+          "type": "string",
+          "description": "The variable name the item reads."
+        },
+        "host": {
+          "type": "string",
+          "description": "The host the key is for, when the item says."
+        },
+        "optional": {
+          "type": "boolean"
+        }
+      }
+    },
+    "ComponentCounts": {
+      "description": "What an item holds, as counts: the catalogue's summary, taken from the source's own listing. `known` is false when the source does not say (nothing was staged yet); the counts are then 0 and the UI says \"not known until you review it\".",
+      "type": "object",
+      "required": [
+        "known",
+        "skills",
+        "commands",
+        "agents",
+        "hooks",
+        "mcp_servers",
+        "modules",
+        "scripts",
+        "python"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "known": {
+          "type": "boolean"
+        },
+        "skills": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "commands": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "agents": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "hooks": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "mcp_servers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "modules": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "scripts": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "python": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Python plugin files that run inside the engine."
+        }
+      }
+    },
+    "Removed": {
+      "description": "The kill list: the item was taken down. It cannot be installed; an installed copy is flagged and switched off at the next session.",
+      "type": "object",
+      "required": [
+        "reason",
+        "by"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "type": "string"
+        },
+        "by": {
+          "enum": [
+            "boopis",
+            "source",
+            "registry",
+            "engine"
+          ]
+        },
+        "date": {
+          "type": "string",
+          "format": "date"
+        }
+      }
+    },
+    "ScanVerdict": {
+      "description": "A static check of the staged files. `dangerous` is never installable; `caution` needs the user's reading; `not-scanned` is what the catalogue shows before staging (unknown, not safe).",
+      "enum": [
+        "safe",
+        "caution",
+        "dangerous",
+        "not-scanned"
+      ]
+    },
+    "ScanFinding": {
+      "type": "object",
+      "required": [
+        "level",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "enum": [
+            "info",
+            "caution",
+            "dangerous"
+          ]
+        },
+        "text": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      }
+    },
+    "Scan": {
+      "type": "object",
+      "required": [
+        "verdict",
+        "scanner",
+        "findings"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "verdict": {
+          "$ref": "#/$defs/ScanVerdict"
+        },
+        "scanner": {
+          "type": "string",
+          "description": "Which check produced it (the engine's skill scanner, the plugin's component scan, boopis's own manifest checks)."
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ScanFinding"
+          }
+        }
+      }
+    },
+    "Provenance": {
+      "description": "Where an item came from and how far that can be checked, shown on the detail page and on the review card. Everything is data from the source or from what the host measured: nothing here is the item's own marketing.",
+      "type": "object",
+      "required": [
+        "source",
+        "publisher",
+        "namespace_proof",
+        "pinned",
+        "tree_sha256",
+        "scan",
+        "source_url",
+        "fetched_at"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "$ref": "#/$defs/SourceId"
+        },
+        "publisher": {
+          "type": "string"
+        },
+        "namespace_proof": {
+          "description": "How the source proved the publisher owns the name: github (a GitHub account), dns, http (a challenge), curated (a person at boopis or the engine read it), registry (the source's own listing, not checked), none.",
+          "enum": [
+            "github",
+            "dns",
+            "http",
+            "curated",
+            "registry",
+            "none"
+          ]
+        },
+        "pinned": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/Pin"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tree_sha256": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/Sha256"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The content hash of the staged tree, computed by the host with the compat trust store's function. Null until staged."
+        },
+        "scan": {
+          "$ref": "#/$defs/Scan"
+        },
+        "source_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "The page or repository at the source."
+        },
+        "fetched_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the host last read the source's listing of this item."
+        },
+        "last_updated": {
+          "type": "string",
+          "format": "date",
+          "description": "The source's own last-update date, when it gives one."
+        },
+        "source_tier": {
+          "type": "string",
+          "description": "The source's own tier word for the item, kept so the card can say who vouched (\"official\", \"verified\", \"community\", \"trusted\"). boopis's Tier is derived from it."
+        }
+      }
+    },
+    "StoreItem": {
+      "description": "One catalogue entry, normalised from any source. The same shape serves browse, search and the detail page.",
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "title",
+        "publisher",
+        "summary",
+        "license",
+        "homepage",
+        "version",
+        "pinned",
+        "components",
+        "hosts",
+        "secrets",
+        "tier",
+        "source",
+        "verified",
+        "removed",
+        "provenance"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/ItemId"
+        },
+        "kind": {
+          "$ref": "#/$defs/ItemKind"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "publisher": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "summary": {
+          "type": "string",
+          "maxLength": 280
+        },
+        "license": {
+          "type": "string",
+          "description": "An SPDX expression, or `not stated` when the source gives none. Shown on the item's page."
+        },
+        "homepage": {
+          "oneOf": [
+            {
+              "type": "string",
+              "format": "uri"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "version": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pinned": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/Pin"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Null means unpinned: the item is listed and cannot be installed (hx.store.unpinned)."
+        },
+        "components": {
+          "$ref": "#/$defs/ComponentCounts"
+        },
+        "hosts": {
+          "$ref": "#/$defs/HostList"
+        },
+        "secrets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SecretNeed"
+          }
+        },
+        "tier": {
+          "$ref": "#/$defs/Tier"
+        },
+        "source": {
+          "$ref": "#/$defs/SourceId"
+        },
+        "verified": {
+          "oneOf": [
+            {
+              "type": "string",
+              "format": "date"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The date boopis (or the curating source) checked the item against its publisher's own sources. Null: nobody did."
+        },
+        "removed": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/Removed"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        }
+      }
+    },
+    "SourceFetch": {
+      "description": "How the host reads a source: compiled-in (data in the binary), engine-gateway (the engine's own catalogue and hub through `plugins.manage`, `plugins.catalog.lookup` and `skills.manage`; the host never reads the engine's files), git-marketplace (a marketplace.json in a git repository, pinned at a commit the host resolves), git-repo (one repository with SKILL.md files or a plugin), http-json (a JSON listing over https), registry-api (the MCP Registry's /v0.1 REST), github-api (GitHub's REST, signed in or not), local (a folder or file the user picked).",
+      "enum": [
+        "compiled-in",
+        "engine-gateway",
+        "git-marketplace",
+        "git-repo",
+        "http-json",
+        "registry-api",
+        "github-api",
+        "local"
+      ]
+    },
+    "StoreSource": {
+      "description": "A place items come from. The built-in ones are in store-sources.json; a user-added one has `user_added: true` and a `url` (or a `path` for a local source). The runtime fields (`enabled`, `refreshed_at`, `items`, `error`) are the host's and are absent in the data file.",
+      "type": "object",
+      "required": [
+        "id",
+        "label",
+        "kinds",
+        "fetch",
+        "default_tier",
+        "default_on",
+        "user_added",
+        "engine_origin"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/SourceId"
+        },
+        "label": {
+          "type": "string",
+          "description": "The source in boopis's words. Never the engine's name."
+        },
+        "description": {
+          "type": "string"
+        },
+        "kinds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ItemKind"
+          },
+          "minItems": 1
+        },
+        "fetch": {
+          "$ref": "#/$defs/SourceFetch"
+        },
+        "default_tier": {
+          "$ref": "#/$defs/Tier",
+          "description": "The tier an item gets from this source when nothing says better: the lowest the source's own review supports. A source's own marks may raise single items to verified; only boopis's list yields recommended."
+        },
+        "default_on": {
+          "type": "boolean",
+          "description": "Searched out of the box. The user can switch any source off in the store, in the same place."
+        },
+        "user_added": {
+          "type": "boolean"
+        },
+        "engine_origin": {
+          "type": "boolean",
+          "description": "Items come from the engine's own store, so an item's name or publisher may be the engine's: the UI marks that text `data-store-item` (ADR-0031) and the source's label stays in boopis's words."
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "path": {
+          "type": "string"
+        },
+        "terms": {
+          "enum": [
+            "own",
+            "checked",
+            "unverified",
+            "not-applicable"
+          ],
+          "description": "Whether the terms that apply to listing this source's items in a third-party app were read: own (boopis's own list), checked (read and allowed), unverified (not read: the source is off by default), not-applicable (the user's own choice)."
+        },
+        "note": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "refreshed_at": {
+          "oneOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "items": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "error": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The last refresh failed: the stable code (hx.store.source_unreachable, hx.store.rate_limited, ...)."
+        }
+      }
+    },
+    "Layer": {
+      "description": "Which layer installs the item (docs/STORE.md 5.9): connector (the host's connector engine), plugin (boopis's Python plugin: Claude plugins and mods), engine (the engine's own skills hub and plugin manager, driven through the gateway).",
+      "enum": [
+        "connector",
+        "plugin",
+        "engine"
+      ]
+    },
+    "Component": {
+      "description": "One thing an install adds, listed on the review card.",
+      "type": "object",
+      "required": [
+        "type",
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": [
+            "skill",
+            "command",
+            "agent",
+            "hook",
+            "mcp-server",
+            "module",
+            "script",
+            "python-plugin",
+            "theme",
+            "other"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "detail": {
+          "type": "string"
+        }
+      }
+    },
+    "CodeRun": {
+      "description": "Code that runs on the user's machine once the item is installed and active, with where it runs. Every hook command, server command, script and Python file is listed; \"outside-sandbox\" and \"engine-process\" are said as they are.",
+      "type": "object",
+      "required": [
+        "what",
+        "command",
+        "where"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "what": {
+          "enum": [
+            "hook",
+            "mcp-command",
+            "package-start",
+            "script",
+            "module",
+            "python"
+          ]
+        },
+        "command": {
+          "type": "string",
+          "description": "The program and arguments, or the file, exactly."
+        },
+        "where": {
+          "enum": [
+            "sandbox",
+            "outside-sandbox",
+            "engine-process"
+          ]
+        },
+        "sha256": {
+          "$ref": "#/$defs/Sha256"
+        },
+        "detail": {
+          "type": "string"
+        }
+      }
+    },
+    "FileWrite": {
+      "type": "object",
+      "required": [
+        "path",
+        "purpose"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Home-relative (`~/...`) when under the home folder."
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "Scope": {
+      "description": "Where the install lives. `bot` is the default and, for code, the only install scope. `bot-project` is the same install plus the user's trust for one project (a plugin's hooks and servers run only where trusted). v1 writes no project files.",
+      "type": "object",
+      "required": [
+        "level",
+        "bot"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "enum": [
+            "bot",
+            "bot-project"
+          ]
+        },
+        "bot": {
+          "type": "string",
+          "description": "The bot (engine profile) name; `default` for the default one."
+        },
+        "project": {
+          "type": "string",
+          "description": "The project folder for `bot-project`."
+        }
+      }
+    },
+    "ConsentItem": {
+      "description": "One thing the user agrees to. `runs_code` items need the hold-to-approve (one second); the card cannot be approved with one unread.",
+      "type": "object",
+      "required": [
+        "id",
+        "text",
+        "runs_code"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "runs_code": {
+          "type": "boolean"
+        }
+      }
+    },
+    "Warning": {
+      "description": "A line the card must show. `strong` is the warning an unreviewed item carries; `info` is a fact (\"takes effect in new sessions\").",
+      "type": "object",
+      "required": [
+        "code",
+        "level",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "description": "unreviewed, outside-sandbox, engine-process, governed-engine-plugin, governed-hooks, undeclared-egress, remote-tools-unpinned, caution-scan, sessions-open, next-session, kill-listed, widened.",
+          "type": "string"
+        },
+        "level": {
+          "enum": [
+            "info",
+            "caution",
+            "strong"
+          ]
+        },
+        "text": {
+          "type": "string"
+        }
+      }
+    },
+    "GovernedNote": {
+      "description": "What governed mode does with the item (the table in docs/STORE.md 5.8). `allowed` is whether it can be installed; `switch_blocks` is true when a project's \"no engine plugins and no plugin hooks\" switch (on by default for governed projects) would stop it from running there.",
+      "type": "object",
+      "required": [
+        "allowed",
+        "switch_blocks",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "allowed": {
+          "type": "boolean"
+        },
+        "switch_blocks": {
+          "type": "boolean"
+        },
+        "text": {
+          "type": "string"
+        }
+      }
+    },
+    "Cost": {
+      "description": "What the item costs every session once installed: tool count and a context estimate (the engine's tool search is off in boopis sessions, so every added tool is eager). Null members are unknown.",
+      "type": "object",
+      "required": [
+        "tools",
+        "context_tokens"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "tools": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "context_tokens": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "InstallPlan": {
+      "description": "What an install would do, exactly: the review card's data. The host builds it for connectors, the plugin for plugins and mods, the engine's own inspect feeds it for engine plugins and hub skills (the host maps it). `plan_hash` is the sha256 of the plan's canonical JSON (keys sorted, no whitespace, UTF-8) without `plan_hash` and `sessions_open`. An install names the hash; the layer that owns it rebuilds the plan and refuses with hx.store.plan_changed when it differs.",
+      "type": "object",
+      "required": [
+        "item_id",
+        "kind",
+        "title",
+        "source",
+        "publisher",
+        "version",
+        "pinned",
+        "tree_sha256",
+        "layer",
+        "components",
+        "code_runs",
+        "hosts",
+        "secrets",
+        "files_written",
+        "scope",
+        "consent",
+        "warnings",
+        "governed",
+        "cost",
+        "tier",
+        "scan",
+        "sessions_open",
+        "plan_hash"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "item_id": {
+          "$ref": "#/$defs/ItemId"
+        },
+        "kind": {
+          "$ref": "#/$defs/ItemKind"
+        },
+        "title": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/SourceId"
+        },
+        "publisher": {
+          "type": "string"
+        },
+        "version": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pinned": {
+          "$ref": "#/$defs/Pin"
+        },
+        "tree_sha256": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/Sha256"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Null for a remote connector (nothing is staged)."
+        },
+        "stage_id": {
+          "type": "string",
+          "description": "The staging handle the plan was built from; absent for a remote connector."
+        },
+        "layer": {
+          "$ref": "#/$defs/Layer"
+        },
+        "components": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Component"
+          }
+        },
+        "code_runs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CodeRun"
+          }
+        },
+        "hosts": {
+          "$ref": "#/$defs/HostList"
+        },
+        "secrets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SecretNeed"
+          }
+        },
+        "files_written": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/FileWrite"
+          }
+        },
+        "scope": {
+          "$ref": "#/$defs/Scope"
+        },
+        "consent": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ConsentItem"
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Warning"
+          }
+        },
+        "governed": {
+          "$ref": "#/$defs/GovernedNote"
+        },
+        "cost": {
+          "$ref": "#/$defs/Cost"
+        },
+        "tier": {
+          "$ref": "#/$defs/Tier"
+        },
+        "scan": {
+          "$ref": "#/$defs/Scan"
+        },
+        "sessions_open": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Sessions with a turn running now (they keep the tools they started with); null when the engine could not say. Not part of the hash."
+        },
+        "plan_hash": {
+          "$ref": "#/$defs/Sha256"
+        }
+      }
+    },
+    "InstallStep": {
+      "type": "object",
+      "required": [
+        "name",
+        "ok"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "ok": {
+          "type": "boolean"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "PreviousVersion": {
+      "description": "The version kept one step back for rollback.",
+      "type": "object",
+      "required": [
+        "version",
+        "pinned"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pinned": {
+          "$ref": "#/$defs/Pin"
+        },
+        "tree_sha256": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/Sha256"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "InstallReceipt": {
+      "description": "What an install (or update, or rollback) did. Also the row of the installed list: the store keeps one per installed item and bot.",
+      "type": "object",
+      "required": [
+        "item_id",
+        "kind",
+        "source",
+        "layer",
+        "version",
+        "pinned",
+        "plan_hash",
+        "tree_sha256",
+        "installed_at",
+        "scope",
+        "files",
+        "enabled",
+        "effective",
+        "previous",
+        "steps",
+        "notes"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "item_id": {
+          "$ref": "#/$defs/ItemId"
+        },
+        "kind": {
+          "$ref": "#/$defs/ItemKind"
+        },
+        "title": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/SourceId"
+        },
+        "layer": {
+          "$ref": "#/$defs/Layer"
+        },
+        "version": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pinned": {
+          "$ref": "#/$defs/Pin"
+        },
+        "plan_hash": {
+          "$ref": "#/$defs/Sha256"
+        },
+        "tree_sha256": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/Sha256"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "installed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "scope": {
+          "$ref": "#/$defs/Scope"
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Every path written, home-relative where possible."
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "effective": {
+          "const": "next-session",
+          "description": "An install never changes a running session (invariant 4)."
+        },
+        "trusted_projects": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "previous": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/PreviousVersion"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "kill_listed": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/Removed"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "restart_needed": {
+          "type": "boolean",
+          "description": "The engine must restart for the install to be seen; never silent (the connector rule)."
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/InstallStep"
+          }
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "Change": {
+      "description": "One line of an update's component diff.",
+      "type": "object",
+      "required": [
+        "change",
+        "type",
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "change": {
+          "enum": [
+            "added",
+            "removed",
+            "changed"
+          ]
+        },
+        "type": {
+          "enum": [
+            "skill",
+            "command",
+            "agent",
+            "hook",
+            "mcp-server",
+            "module",
+            "script",
+            "python-plugin",
+            "theme",
+            "other",
+            "host",
+            "secret",
+            "license"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "detail": {
+          "type": "string"
+        }
+      }
+    },
+    "UpdateDiff": {
+      "description": "What changes if an installed item moves to the catalogue's pin. Nothing updates itself: a diff is the first half of an update, and `widened` (new code, hosts or secrets) needs the whole review card again.",
+      "type": "object",
+      "required": [
+        "item_id",
+        "status",
+        "from",
+        "to",
+        "changes",
+        "new_hosts",
+        "new_secrets",
+        "new_code",
+        "widened",
+        "tier_changed",
+        "removed",
+        "to_plan_hash"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "item_id": {
+          "$ref": "#/$defs/ItemId"
+        },
+        "status": {
+          "enum": [
+            "available",
+            "up-to-date",
+            "removed",
+            "unpinned",
+            "source-unreachable"
+          ]
+        },
+        "from": {
+          "$ref": "#/$defs/PreviousVersion"
+        },
+        "to": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/PreviousVersion"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "changes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Change"
+          }
+        },
+        "new_hosts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "new_secrets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SecretNeed"
+          }
+        },
+        "new_code": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CodeRun"
+          }
+        },
+        "widened": {
+          "type": "boolean"
+        },
+        "tier_changed": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "from",
+                "to"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "from": {
+                  "$ref": "#/$defs/Tier"
+                },
+                "to": {
+                  "$ref": "#/$defs/Tier"
+                }
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "removed": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/Removed"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "to_plan_hash": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/Sha256"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The hash of the plan an update would show; null until the update is staged and planned."
+        }
+      }
+    },
+    "StoreFilter": {
+      "description": "What browse and search narrow by. Every member is optional; absent means no narrowing. Sources the user switched off are never searched.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/ItemKind"
+        },
+        "tier": {
+          "$ref": "#/$defs/Tier"
+        },
+        "source": {
+          "$ref": "#/$defs/SourceId"
+        },
+        "installed": {
+          "type": "boolean",
+          "description": "true: only what is installed for the bot; false: only what is not."
+        },
+        "hide_unpinned": {
+          "type": "boolean",
+          "description": "Leave out items that cannot be installed (no pin). Default false: they are listed and marked."
+        }
+      }
+    },
+    "StoreBrowse": {
+      "description": "A page of the catalogue, from the local cache. `recommended` is the front page (boopis's own list) and is present on the first page of an unfiltered browse. `stale` says the cache is older than its refresh interval; `offline` says the last refresh failed for lack of a network; `refreshed_at` is the oldest refresh among the searched sources.",
+      "type": "object",
+      "required": [
+        "items",
+        "total",
+        "next_cursor",
+        "refreshed_at",
+        "stale",
+        "offline"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/StoreItem"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "next_cursor": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "recommended": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/StoreItem"
+          }
+        },
+        "refreshed_at": {
+          "oneOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stale": {
+          "type": "boolean"
+        },
+        "offline": {
+          "type": "boolean"
+        }
+      }
+    },
+    "StoreDetail": {
+      "description": "Everything the detail page shows: the item, what is installed of it, the pending update, and the governed note and cost that apply before any staging (from the catalogue's own summary; the review card has the exact ones).",
+      "type": "object",
+      "required": [
+        "item",
+        "installed",
+        "update",
+        "governed",
+        "cost"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "item": {
+          "$ref": "#/$defs/StoreItem"
+        },
+        "installed": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/InstallReceipt"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "update": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/UpdateDiff"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "governed": {
+          "$ref": "#/$defs/GovernedNote"
+        },
+        "cost": {
+          "$ref": "#/$defs/Cost"
+        }
+      }
+    },
+    "StageResult": {
+      "description": "What staging an item left in the store's staging folder: bytes fetched, verified against the pin, unpacked within the caps and hashed. Nothing has run.",
+      "type": "object",
+      "required": [
+        "stage_id",
+        "item_id",
+        "pinned",
+        "tree_sha256",
+        "files",
+        "bytes",
+        "scan",
+        "expires_at"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "stage_id": {
+          "type": "string"
+        },
+        "item_id": {
+          "$ref": "#/$defs/ItemId"
+        },
+        "pinned": {
+          "$ref": "#/$defs/Pin"
+        },
+        "tree_sha256": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/Sha256"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "files": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "scan": {
+          "$ref": "#/$defs/Scan"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "InstallRequest": {
+      "description": "What an install, update or engine-plugin install sends: the staging handle and the hash of the plan the user saw. Secret values go in `secrets` to the keychain and no further; they are never part of a plan, a receipt or a log.",
+      "type": "object",
+      "required": [
+        "stage_id",
+        "plan_hash"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "stage_id": {
+          "type": "string"
+        },
+        "plan_hash": {
+          "$ref": "#/$defs/Sha256"
+        },
+        "secrets": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "restart": {
+          "enum": [
+            "now",
+            "when-idle"
+          ],
+          "description": "When the install needs an engine restart and a turn may be running: the connector flow's choice."
+        }
+      }
+    },
+    "UninstallResult": {
+      "type": "object",
+      "required": [
+        "item_id",
+        "removed",
+        "kept_secrets",
+        "notes"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "item_id": {
+          "$ref": "#/$defs/ItemId"
+        },
+        "removed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Paths and records removed."
+        },
+        "kept_secrets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Keychain entries left because the user did not ask to delete them."
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "ProjectPolicy": {
+      "description": "A project's switch \"no engine plugins and no plugin hooks\" (docs/STORE.md 5.8). `effective` is what applies now: the explicit choice when there is one, else on for a governed project and off for an ungoverned one.",
+      "type": "object",
+      "required": [
+        "project",
+        "governed",
+        "explicit",
+        "effective"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "project": {
+          "type": "string"
+        },
+        "governed": {
+          "type": "boolean"
+        },
+        "explicit": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "effective": {
+          "type": "boolean"
+        }
+      }
+    },
+    "PluginPlan": {
+      "description": "What boopis's plugin returns from `plugin.boopis.store.prepare`: its half of an InstallPlan (components, code, files, consent, warnings, the governed note and the cost), computed from the staged tree and nothing else. The host merges it into the InstallPlan it shows and hashes the merge; at confirm it passes `plugin_hash` back and the plugin rebuilds this plan and refuses with hx.store.plan_changed if it differs. `plugin_hash` is the sha256 of this object's canonical JSON without `plugin_hash`.",
+      "type": "object",
+      "required": [
+        "kind",
+        "slug",
+        "tree_sha256",
+        "components",
+        "code_runs",
+        "hosts",
+        "secrets",
+        "files_written",
+        "consent",
+        "warnings",
+        "governed",
+        "cost",
+        "scan",
+        "plugin_hash"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "skill",
+            "plugin",
+            "mod",
+            "engine-plugin"
+          ]
+        },
+        "slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        },
+        "tree_sha256": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/Sha256"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "components": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Component"
+          }
+        },
+        "code_runs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CodeRun"
+          }
+        },
+        "hosts": {
+          "$ref": "#/$defs/HostList"
+        },
+        "secrets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SecretNeed"
+          }
+        },
+        "files_written": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/FileWrite"
+          }
+        },
+        "consent": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ConsentItem"
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Warning"
+          }
+        },
+        "governed": {
+          "$ref": "#/$defs/GovernedNote"
+        },
+        "cost": {
+          "$ref": "#/$defs/Cost"
+        },
+        "scan": {
+          "$ref": "#/$defs/Scan"
+        },
+        "plugin_hash": {
+          "$ref": "#/$defs/Sha256"
+        }
+      }
+    }
+  }
+}

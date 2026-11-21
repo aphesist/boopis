@@ -1,0 +1,985 @@
+{
+  "$schema": "./store.schema.json",
+  "schema_version": 1,
+  "description": "Realistic items for tests and the preview: one of every kind and tier, an unpinned item, a kill-listed item, two plans, two receipts and two update diffs. Invented, apart from Firecrawl (from connectors.json): publishers at example.com and example-org are not real, and nothing here is a catalogue entry. Plan hashes are the sha256 of each plan's canonical JSON without plan_hash and sessions_open (docs/STORE.md 5.5). Read by the Rust round-trip test (store/types.rs), the UI's schema test and the mock provider.",
+  "items": [
+    {
+      "id": "boopis:firecrawl",
+      "kind": "connector",
+      "title": "Firecrawl",
+      "publisher": "Firecrawl",
+      "summary": "Scrape, crawl, map and search the web into clean Markdown or structured data.",
+      "license": "MIT",
+      "homepage": "https://www.firecrawl.dev",
+      "version": "3.40.0",
+      "pinned": {
+        "type": "version",
+        "value": "3.40.0",
+        "repo": "npm:firecrawl-mcp"
+      },
+      "components": {
+        "known": true,
+        "skills": 0,
+        "commands": 0,
+        "agents": 0,
+        "hooks": 0,
+        "mcp_servers": 1,
+        "modules": 0,
+        "scripts": 0,
+        "python": 0
+      },
+      "hosts": {
+        "basis": "verified",
+        "hosts": [
+          "api.firecrawl.dev",
+          "mcp.firecrawl.dev"
+        ]
+      },
+      "secrets": [
+        {
+          "id": "firecrawl_api_key",
+          "title": "Firecrawl API key",
+          "env": "FIRECRAWL_API_KEY",
+          "host": "api.firecrawl.dev",
+          "optional": true
+        }
+      ],
+      "tier": "recommended",
+      "source": "boopis",
+      "verified": "2026-11-19",
+      "removed": null,
+      "provenance": {
+        "source": "boopis",
+        "publisher": "Firecrawl",
+        "namespace_proof": "curated",
+        "pinned": {
+          "type": "version",
+          "value": "3.40.0",
+          "repo": "npm:firecrawl-mcp"
+        },
+        "tree_sha256": null,
+        "scan": {
+          "verdict": "not-scanned",
+          "scanner": "not scanned yet",
+          "findings": []
+        },
+        "source_url": "https://github.com/firecrawl/firecrawl-mcp-server",
+        "fetched_at": "2026-11-21T09:30:00Z",
+        "last_updated": "2026-11-19",
+        "source_tier": "curated by boopis"
+      },
+      "tags": [
+        "web",
+        "research"
+      ]
+    },
+    {
+      "id": "boopis:release-notes",
+      "kind": "skill",
+      "title": "Release notes",
+      "publisher": "Example Org",
+      "summary": "Turns a range of commits into release notes grouped by what changed for the reader. An example item for tests and the preview, not a catalogue entry.",
+      "license": "Apache-2.0",
+      "homepage": "https://example.com/release-notes",
+      "version": "1.2.0",
+      "pinned": {
+        "type": "commit",
+        "value": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+        "repo": "https://github.com/example-org/release-notes"
+      },
+      "components": {
+        "known": true,
+        "skills": 1,
+        "commands": 0,
+        "agents": 0,
+        "hooks": 0,
+        "mcp_servers": 0,
+        "modules": 0,
+        "scripts": 0,
+        "python": 0
+      },
+      "hosts": {
+        "basis": "declared",
+        "hosts": []
+      },
+      "secrets": [],
+      "tier": "recommended",
+      "source": "boopis",
+      "verified": "2026-11-18",
+      "removed": null,
+      "provenance": {
+        "source": "boopis",
+        "publisher": "Example Org",
+        "namespace_proof": "curated",
+        "pinned": {
+          "type": "commit",
+          "value": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "repo": "https://github.com/example-org/release-notes"
+        },
+        "tree_sha256": null,
+        "scan": {
+          "verdict": "safe",
+          "scanner": "boopis manifest check",
+          "findings": []
+        },
+        "source_url": "https://example.com/release-notes",
+        "fetched_at": "2026-11-21T09:30:00Z",
+        "last_updated": "2026-11-10",
+        "source_tier": "curated by boopis"
+      },
+      "tags": [
+        "writing",
+        "git"
+      ]
+    },
+    {
+      "id": "skills-hub:example-org/sql-review",
+      "kind": "skill",
+      "title": "SQL review",
+      "publisher": "Example Org",
+      "summary": "Reviews a SQL migration for locks, missing indexes and data-loss risks before it runs. An example item for tests and the preview.",
+      "license": "MIT",
+      "homepage": "https://example.com/sql-review",
+      "version": "0.9.1",
+      "pinned": {
+        "type": "commit",
+        "value": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "repo": "https://github.com/example-org/sql-review"
+      },
+      "components": {
+        "known": true,
+        "skills": 1,
+        "commands": 0,
+        "agents": 0,
+        "hooks": 0,
+        "mcp_servers": 0,
+        "modules": 0,
+        "scripts": 1,
+        "python": 0
+      },
+      "hosts": {
+        "basis": "unknown",
+        "hosts": []
+      },
+      "secrets": [],
+      "tier": "verified",
+      "source": "skills-hub",
+      "verified": null,
+      "removed": null,
+      "provenance": {
+        "source": "skills-hub",
+        "publisher": "Example Org",
+        "namespace_proof": "github",
+        "pinned": {
+          "type": "commit",
+          "value": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "repo": "https://github.com/example-org/sql-review"
+        },
+        "tree_sha256": null,
+        "scan": {
+          "verdict": "not-scanned",
+          "scanner": "not scanned yet",
+          "findings": []
+        },
+        "source_url": "https://example.com/sql-review",
+        "fetched_at": "2026-11-21T09:30:00Z",
+        "last_updated": "2026-10-30",
+        "source_tier": "trusted"
+      },
+      "tags": [
+        "database"
+      ]
+    },
+    {
+      "id": "github:example-org/changelog-skills",
+      "kind": "skill",
+      "title": "Changelog skills",
+      "publisher": "example-org",
+      "summary": "Three small skills for keeping a changelog: add an entry, cut a release, check for gaps. An example item for tests and the preview.",
+      "license": "not stated",
+      "homepage": "https://github.com/example-org/changelog-skills",
+      "version": null,
+      "pinned": {
+        "type": "commit",
+        "value": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+        "repo": "https://github.com/example-org/changelog-skills"
+      },
+      "components": {
+        "known": true,
+        "skills": 3,
+        "commands": 0,
+        "agents": 0,
+        "hooks": 0,
+        "mcp_servers": 0,
+        "modules": 0,
+        "scripts": 0,
+        "python": 0
+      },
+      "hosts": {
+        "basis": "unknown",
+        "hosts": []
+      },
+      "secrets": [],
+      "tier": "not-reviewed",
+      "source": "github",
+      "verified": null,
+      "removed": null,
+      "provenance": {
+        "source": "github",
+        "publisher": "example-org",
+        "namespace_proof": "github",
+        "pinned": {
+          "type": "commit",
+          "value": "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "repo": "https://github.com/example-org/changelog-skills"
+        },
+        "tree_sha256": null,
+        "scan": {
+          "verdict": "not-scanned",
+          "scanner": "not scanned yet",
+          "findings": []
+        },
+        "source_url": "https://github.com/example-org/changelog-skills",
+        "fetched_at": "2026-11-21T09:30:00Z",
+        "last_updated": "2026-09-14"
+      }
+    },
+    {
+      "id": "github:example-org/loose-skill",
+      "kind": "skill",
+      "title": "Loose skill",
+      "publisher": "example-org",
+      "summary": "A skill repository with no tag and no commit named: listed, but boopis will not install what it cannot pin. An example item for tests and the preview.",
+      "license": "MIT",
+      "homepage": "https://github.com/example-org/loose-skill",
+      "version": null,
+      "pinned": null,
+      "components": {
+        "known": false,
+        "skills": 0,
+        "commands": 0,
+        "agents": 0,
+        "hooks": 0,
+        "mcp_servers": 0,
+        "modules": 0,
+        "scripts": 0,
+        "python": 0
+      },
+      "hosts": {
+        "basis": "unknown",
+        "hosts": []
+      },
+      "secrets": [],
+      "tier": "not-reviewed",
+      "source": "github",
+      "verified": null,
+      "removed": null,
+      "provenance": {
+        "source": "github",
+        "publisher": "example-org",
+        "namespace_proof": "github",
+        "pinned": null,
+        "tree_sha256": null,
+        "scan": {
+          "verdict": "not-scanned",
+          "scanner": "not scanned yet",
+          "findings": []
+        },
+        "source_url": "https://github.com/example-org/loose-skill",
+        "fetched_at": "2026-11-21T09:30:00Z"
+      }
+    },
+    {
+      "id": "mcp-registry:com.example/tickets",
+      "kind": "connector",
+      "title": "Tickets",
+      "publisher": "Example Inc.",
+      "summary": "Read and update tickets in an example issue tracker over a remote MCP server. An example item for tests and the preview.",
+      "license": "not stated",
+      "homepage": "https://example.com/tickets-mcp",
+      "version": "0.4.2",
+      "pinned": {
+        "type": "version",
+        "value": "0.4.2",
+        "repo": "npm:@example/tickets-mcp"
+      },
+      "components": {
+        "known": false,
+        "skills": 0,
+        "commands": 0,
+        "agents": 0,
+        "hooks": 0,
+        "mcp_servers": 0,
+        "modules": 0,
+        "scripts": 0,
+        "python": 0
+      },
+      "hosts": {
+        "basis": "unknown",
+        "hosts": []
+      },
+      "secrets": [
+        {
+          "id": "TICKETS_TOKEN",
+          "title": "Tickets access token",
+          "env": "TICKETS_TOKEN",
+          "optional": false
+        }
+      ],
+      "tier": "not-reviewed",
+      "source": "mcp-registry",
+      "verified": null,
+      "removed": null,
+      "provenance": {
+        "source": "mcp-registry",
+        "publisher": "Example Inc.",
+        "namespace_proof": "dns",
+        "pinned": {
+          "type": "version",
+          "value": "0.4.2",
+          "repo": "npm:@example/tickets-mcp"
+        },
+        "tree_sha256": null,
+        "scan": {
+          "verdict": "not-scanned",
+          "scanner": "not scanned yet",
+          "findings": []
+        },
+        "source_url": "https://registry.modelcontextprotocol.io/v0.1/servers/com.example%2Ftickets",
+        "fetched_at": "2026-11-21T09:30:00Z",
+        "last_updated": "2026-11-02",
+        "source_tier": "registry (namespace verified)"
+      }
+    },
+    {
+      "id": "anthropic:example-lint-kit",
+      "kind": "plugin",
+      "title": "Lint kit",
+      "publisher": "Example Org",
+      "summary": "A plugin with two skills, a command and a hook that runs a linter after each edit. An example item for tests and the preview.",
+      "license": "Apache-2.0",
+      "homepage": "https://example.com/lint-kit",
+      "version": "2.0.3",
+      "pinned": {
+        "type": "commit",
+        "value": "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+        "repo": "https://github.com/example-org/lint-kit"
+      },
+      "components": {
+        "known": true,
+        "skills": 2,
+        "commands": 1,
+        "agents": 0,
+        "hooks": 1,
+        "mcp_servers": 0,
+        "modules": 0,
+        "scripts": 1,
+        "python": 0
+      },
+      "hosts": {
+        "basis": "declared",
+        "hosts": []
+      },
+      "secrets": [],
+      "tier": "verified",
+      "source": "anthropic",
+      "verified": "2026-11-12",
+      "removed": null,
+      "provenance": {
+        "source": "anthropic",
+        "publisher": "Example Org",
+        "namespace_proof": "github",
+        "pinned": {
+          "type": "commit",
+          "value": "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+          "repo": "https://github.com/example-org/lint-kit"
+        },
+        "tree_sha256": null,
+        "scan": {
+          "verdict": "caution",
+          "scanner": "boopis component scan",
+          "findings": [
+            {
+              "level": "caution",
+              "text": "A hook runs a script after every file edit.",
+              "path": "hooks/hooks.json"
+            }
+          ]
+        },
+        "source_url": "https://example.com/lint-kit",
+        "fetched_at": "2026-11-21T09:30:00Z",
+        "last_updated": "2026-11-12",
+        "source_tier": "official"
+      },
+      "tags": [
+        "quality"
+      ]
+    },
+    {
+      "id": "local:focus-theme",
+      "kind": "mod",
+      "title": "Focus theme",
+      "publisher": "you",
+      "summary": "A theme and a status line that dims everything but the conversation. An example item for tests and the preview.",
+      "license": "not stated",
+      "homepage": null,
+      "version": "0.1.0",
+      "pinned": {
+        "type": "tree-sha256",
+        "value": "e21312acd4508574efb5293f6a01ba1c11fade6118345dc70cf4b0dded202ed4"
+      },
+      "components": {
+        "known": true,
+        "skills": 0,
+        "commands": 0,
+        "agents": 0,
+        "hooks": 1,
+        "mcp_servers": 0,
+        "modules": 2,
+        "scripts": 0,
+        "python": 0
+      },
+      "hosts": {
+        "basis": "unknown",
+        "hosts": []
+      },
+      "secrets": [],
+      "tier": "not-reviewed",
+      "source": "local",
+      "verified": null,
+      "removed": null,
+      "provenance": {
+        "source": "local",
+        "publisher": "you",
+        "namespace_proof": "none",
+        "pinned": {
+          "type": "tree-sha256",
+          "value": "e21312acd4508574efb5293f6a01ba1c11fade6118345dc70cf4b0dded202ed4"
+        },
+        "tree_sha256": "e21312acd4508574efb5293f6a01ba1c11fade6118345dc70cf4b0dded202ed4",
+        "scan": {
+          "verdict": "not-scanned",
+          "scanner": "not scanned yet",
+          "findings": []
+        },
+        "source_url": "file:///home/you/mods/focus-theme",
+        "fetched_at": "2026-11-21T09:30:00Z"
+      }
+    },
+    {
+      "id": "engine-plugins:example-metrics",
+      "kind": "engine-plugin",
+      "title": "Session metrics",
+      "publisher": "Example Org",
+      "summary": "Counts tool calls and turn times in every session and writes a daily summary. An example item for tests and the preview.",
+      "license": "MIT",
+      "homepage": "https://example.com/metrics",
+      "version": "1.4.0",
+      "pinned": {
+        "type": "commit",
+        "value": "e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5",
+        "repo": "https://github.com/example-org/metrics-plugin"
+      },
+      "components": {
+        "known": true,
+        "skills": 0,
+        "commands": 0,
+        "agents": 0,
+        "hooks": 2,
+        "mcp_servers": 0,
+        "modules": 0,
+        "scripts": 0,
+        "python": 3
+      },
+      "hosts": {
+        "basis": "declared",
+        "hosts": []
+      },
+      "secrets": [],
+      "tier": "verified",
+      "source": "engine-plugins",
+      "verified": null,
+      "removed": null,
+      "provenance": {
+        "source": "engine-plugins",
+        "publisher": "Example Org",
+        "namespace_proof": "curated",
+        "pinned": {
+          "type": "commit",
+          "value": "e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5",
+          "repo": "https://github.com/example-org/metrics-plugin"
+        },
+        "tree_sha256": null,
+        "scan": {
+          "verdict": "not-scanned",
+          "scanner": "not scanned yet",
+          "findings": []
+        },
+        "source_url": "https://example.com/metrics",
+        "fetched_at": "2026-11-21T09:30:00Z",
+        "last_updated": "2026-11-05",
+        "source_tier": "verified"
+      },
+      "tags": [
+        "observability"
+      ]
+    },
+    {
+      "id": "engine-plugins:example-old-sync",
+      "kind": "engine-plugin",
+      "title": "Old sync",
+      "publisher": "Example Org",
+      "summary": "A sync plugin its source took down. An example item for tests and the preview.",
+      "license": "MIT",
+      "homepage": "https://example.com/old-sync",
+      "version": "0.2.0",
+      "pinned": {
+        "type": "commit",
+        "value": "f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6",
+        "repo": "https://github.com/example-org/old-sync"
+      },
+      "components": {
+        "known": true,
+        "skills": 0,
+        "commands": 0,
+        "agents": 0,
+        "hooks": 0,
+        "mcp_servers": 0,
+        "modules": 0,
+        "scripts": 0,
+        "python": 1
+      },
+      "hosts": {
+        "basis": "unknown",
+        "hosts": []
+      },
+      "secrets": [],
+      "tier": "not-reviewed",
+      "source": "engine-plugins",
+      "verified": null,
+      "removed": {
+        "reason": "Removed by its source after it was found to send session text to a third party.",
+        "by": "engine",
+        "date": "2026-11-15"
+      },
+      "provenance": {
+        "source": "engine-plugins",
+        "publisher": "Example Org",
+        "namespace_proof": "none",
+        "pinned": {
+          "type": "commit",
+          "value": "f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6",
+          "repo": "https://github.com/example-org/old-sync"
+        },
+        "tree_sha256": null,
+        "scan": {
+          "verdict": "not-scanned",
+          "scanner": "not scanned yet",
+          "findings": []
+        },
+        "source_url": "https://example.com/old-sync",
+        "fetched_at": "2026-11-21T09:30:00Z",
+        "last_updated": "2026-06-01",
+        "source_tier": "community"
+      }
+    }
+  ],
+  "plans": [
+    {
+      "item_id": "engine-plugins:example-metrics",
+      "kind": "engine-plugin",
+      "title": "Session metrics",
+      "source": "engine-plugins",
+      "publisher": "Example Org",
+      "version": "1.4.0",
+      "pinned": {
+        "type": "commit",
+        "value": "e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5",
+        "repo": "https://github.com/example-org/metrics-plugin"
+      },
+      "tree_sha256": "0a192b1dc85b9ab8ba60372731fa2e1375a7f4659fb57dd5f9f8e38ea2078662",
+      "stage_id": "stg-9eb0c7b0518a",
+      "layer": "engine",
+      "components": [
+        {
+          "type": "python-plugin",
+          "name": "metrics",
+          "detail": "3 Python files"
+        },
+        {
+          "type": "hook",
+          "name": "post_tool_call",
+          "detail": "counts each tool call"
+        },
+        {
+          "type": "hook",
+          "name": "on_session_end",
+          "detail": "writes the daily summary"
+        }
+      ],
+      "code_runs": [
+        {
+          "what": "python",
+          "command": "plugins/example-metrics/__init__.py",
+          "where": "engine-process",
+          "sha256": "00d1554e4a6e8efa045a600d5d3352cbbdfe4b5557505e4f2685b85ed0c1a057",
+          "detail": "Runs inside the engine with the bot's credentials and sessions; boopis's sandbox does not cover it."
+        }
+      ],
+      "hosts": {
+        "basis": "declared",
+        "hosts": []
+      },
+      "secrets": [],
+      "files_written": [
+        {
+          "path": "~/.local/share/boopis/engine/plugins/example-metrics/",
+          "purpose": "the plugin's files",
+          "bytes": 18432
+        },
+        {
+          "path": "~/.local/share/boopis/engine/plugins/example-metrics/.install-metadata.json",
+          "purpose": "where it came from"
+        }
+      ],
+      "scope": {
+        "level": "bot",
+        "bot": "default"
+      },
+      "consent": [
+        {
+          "id": "runs-python",
+          "text": "Run this plugin's Python inside the engine, in every session of this bot, governed ones included.",
+          "runs_code": true
+        },
+        {
+          "id": "capabilities",
+          "text": "It declares two hooks (after each tool call, at the end of a session).",
+          "runs_code": true
+        }
+      ],
+      "warnings": [
+        {
+          "code": "engine-process",
+          "level": "strong",
+          "text": "This is Python that runs inside the engine, in every session, outside boopis's sandbox. Permission rules do not see what it does."
+        },
+        {
+          "code": "governed-engine-plugin",
+          "level": "caution",
+          "text": "Governed projects have a switch that turns engine plugins off; it is on by default for them, so this plugin does not run there until you turn it off for the project."
+        },
+        {
+          "code": "next-session",
+          "level": "info",
+          "text": "It takes effect in new sessions. 2 sessions have a turn running; they keep what they started with."
+        }
+      ],
+      "governed": {
+        "allowed": true,
+        "switch_blocks": true,
+        "text": "Allowed. It runs in every session outside the sandbox; a governed project's \"no engine plugins and no plugin hooks\" switch is on by default and stops it there."
+      },
+      "cost": {
+        "tools": 0,
+        "context_tokens": 0
+      },
+      "tier": "verified",
+      "scan": {
+        "verdict": "safe",
+        "scanner": "the engine's install check",
+        "findings": []
+      },
+      "sessions_open": 2,
+      "plan_hash": "abf24c5e567f58403aea328e9b0880da2b7be34ff4f036247bd3eec7760e4442"
+    },
+    {
+      "item_id": "boopis:firecrawl",
+      "kind": "connector",
+      "title": "Firecrawl",
+      "source": "boopis",
+      "publisher": "Firecrawl",
+      "version": "3.40.0",
+      "pinned": {
+        "type": "version",
+        "value": "3.40.0",
+        "repo": "npm:firecrawl-mcp"
+      },
+      "tree_sha256": null,
+      "layer": "connector",
+      "components": [
+        {
+          "type": "mcp-server",
+          "name": "firecrawl",
+          "detail": "npx -y firecrawl-mcp@3.40.0 (a package with an API key)"
+        }
+      ],
+      "code_runs": [
+        {
+          "what": "package-start",
+          "command": "npx -y firecrawl-mcp@3.40.0",
+          "where": "outside-sandbox",
+          "detail": "The first start downloads this exact version and runs it as you."
+        }
+      ],
+      "hosts": {
+        "basis": "verified",
+        "hosts": [
+          "api.firecrawl.dev",
+          "mcp.firecrawl.dev"
+        ]
+      },
+      "secrets": [
+        {
+          "id": "firecrawl_api_key",
+          "title": "Firecrawl API key",
+          "env": "FIRECRAWL_API_KEY",
+          "host": "api.firecrawl.dev",
+          "optional": true
+        }
+      ],
+      "files_written": [
+        {
+          "path": "~/.local/share/boopis/engine/config.yaml",
+          "purpose": "adds the server `firecrawl` (no key; a reference only)"
+        }
+      ],
+      "scope": {
+        "level": "bot",
+        "bot": "default"
+      },
+      "consent": [
+        {
+          "id": "run-package",
+          "text": "Run firecrawl-mcp 3.40.0 on this machine as you.",
+          "runs_code": true
+        },
+        {
+          "id": "key",
+          "text": "Keep the Firecrawl API key in your keychain.",
+          "runs_code": false
+        }
+      ],
+      "warnings": [
+        {
+          "code": "outside-sandbox",
+          "level": "caution",
+          "text": "A local server runs outside boopis's sandbox, as you."
+        },
+        {
+          "code": "next-session",
+          "level": "info",
+          "text": "It takes effect in new sessions."
+        }
+      ],
+      "governed": {
+        "allowed": true,
+        "switch_blocks": false,
+        "text": "Allowed. In governed mode this server is reachable only through exec, and each call is decided by your permissions."
+      },
+      "cost": {
+        "tools": 12,
+        "context_tokens": 3400
+      },
+      "tier": "recommended",
+      "scan": {
+        "verdict": "not-scanned",
+        "scanner": "not applicable: nothing is staged",
+        "findings": []
+      },
+      "sessions_open": 2,
+      "plan_hash": "a5bc60fb932eaaf7c9754a8be7df5bfb7b8408848ad0f32db671e36196ef45e2"
+    }
+  ],
+  "receipts": [
+    {
+      "item_id": "boopis:firecrawl",
+      "kind": "connector",
+      "title": "Firecrawl",
+      "source": "boopis",
+      "layer": "connector",
+      "version": "3.40.0",
+      "pinned": {
+        "type": "version",
+        "value": "3.40.0",
+        "repo": "npm:firecrawl-mcp"
+      },
+      "plan_hash": "a5bc60fb932eaaf7c9754a8be7df5bfb7b8408848ad0f32db671e36196ef45e2",
+      "tree_sha256": null,
+      "installed_at": "2026-11-21T10:02:11Z",
+      "scope": {
+        "level": "bot",
+        "bot": "default"
+      },
+      "files": [
+        "~/.local/share/boopis/engine/config.yaml"
+      ],
+      "enabled": true,
+      "effective": "next-session",
+      "previous": null,
+      "restart_needed": false,
+      "steps": [
+        {
+          "name": "add the server",
+          "ok": true
+        },
+        {
+          "name": "save the key to the keychain",
+          "ok": true
+        },
+        {
+          "name": "test the connection",
+          "ok": true,
+          "note": "12 tools"
+        }
+      ],
+      "notes": [
+        "It takes effect in new sessions."
+      ]
+    },
+    {
+      "item_id": "anthropic:example-lint-kit",
+      "kind": "plugin",
+      "title": "Lint kit",
+      "source": "anthropic",
+      "layer": "plugin",
+      "version": "2.0.3",
+      "pinned": {
+        "type": "commit",
+        "value": "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+        "repo": "https://github.com/example-org/lint-kit"
+      },
+      "plan_hash": "dad84329793ca58d8dbb5cf21a40db6b96bfaade49246806a3b47a1b979d7ff7",
+      "tree_sha256": "5979b800217fc2c11d3b15dc9740680e97d424c3a5f52779f670928445bfe950",
+      "installed_at": "2026-11-20T16:40:00Z",
+      "scope": {
+        "level": "bot-project",
+        "bot": "default",
+        "project": "~/work/api"
+      },
+      "files": [
+        "~/.local/share/boopis/engine/boopis/compat/plugins/example-lint-kit/source/",
+        "~/.local/share/boopis/engine/boopis/compat/plugins/example-lint-kit/lock.json"
+      ],
+      "enabled": true,
+      "effective": "next-session",
+      "trusted_projects": [
+        "~/work/api"
+      ],
+      "previous": {
+        "version": "1.9.0",
+        "pinned": {
+          "type": "commit",
+          "value": "9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a9a",
+          "repo": "https://github.com/example-org/lint-kit"
+        },
+        "tree_sha256": "6c70a2396c29c42abd42eda932b97b666b6344563c67bcbcf73f217cf86f7902"
+      },
+      "restart_needed": false,
+      "steps": [
+        {
+          "name": "stage",
+          "ok": true
+        },
+        {
+          "name": "copy into the bot's plugins",
+          "ok": true
+        },
+        {
+          "name": "write the lock",
+          "ok": true
+        },
+        {
+          "name": "trust for ~/work/api",
+          "ok": true
+        }
+      ],
+      "notes": []
+    }
+  ],
+  "diffs": [
+    {
+      "item_id": "anthropic:example-lint-kit",
+      "status": "available",
+      "from": {
+        "version": "2.0.3",
+        "pinned": {
+          "type": "commit",
+          "value": "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4",
+          "repo": "https://github.com/example-org/lint-kit"
+        },
+        "tree_sha256": "5979b800217fc2c11d3b15dc9740680e97d424c3a5f52779f670928445bfe950"
+      },
+      "to": {
+        "version": "2.1.0",
+        "pinned": {
+          "type": "commit",
+          "value": "7b7b7b7b7b7b7b7b7b7b7b7b7b7b7b7b7b7b7b7b",
+          "repo": "https://github.com/example-org/lint-kit"
+        },
+        "tree_sha256": "39a1ff95f553ab8af7b250912d1df1a6fb51a1f6ec5f41c4e3dc74e774cf906b"
+      },
+      "changes": [
+        {
+          "change": "added",
+          "type": "hook",
+          "name": "PreToolUse",
+          "detail": "runs scripts/guard.sh before shell commands"
+        },
+        {
+          "change": "added",
+          "type": "host",
+          "name": "api.example.com"
+        },
+        {
+          "change": "changed",
+          "type": "skill",
+          "name": "lint-fix",
+          "detail": "instructions rewritten"
+        }
+      ],
+      "new_hosts": [
+        "api.example.com"
+      ],
+      "new_secrets": [],
+      "new_code": [
+        {
+          "what": "hook",
+          "command": "scripts/guard.sh",
+          "where": "outside-sandbox",
+          "sha256": "a4486580b574f86a4aa59fe4750150e6d783a2b0e4b781475526d67c37907cc7"
+        }
+      ],
+      "widened": true,
+      "tier_changed": null,
+      "removed": null,
+      "to_plan_hash": null
+    },
+    {
+      "item_id": "engine-plugins:example-old-sync",
+      "status": "removed",
+      "from": {
+        "version": "0.2.0",
+        "pinned": {
+          "type": "commit",
+          "value": "f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6",
+          "repo": "https://github.com/example-org/old-sync"
+        },
+        "tree_sha256": "a0dd40b0e4c50ec8283083f9c04ac8a58a5bce144f0eb5baf2150412e9f81258"
+      },
+      "to": null,
+      "changes": [],
+      "new_hosts": [],
+      "new_secrets": [],
+      "new_code": [],
+      "widened": false,
+      "tier_changed": null,
+      "removed": {
+        "reason": "Removed by its source after it was found to send session text to a third party.",
+        "by": "engine",
+        "date": "2026-11-15"
+      },
+      "to_plan_hash": null
+    }
+  ]
+}
