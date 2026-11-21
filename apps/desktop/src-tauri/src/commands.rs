@@ -1031,11 +1031,11 @@ pub fn provider_add_endpoint(
 /// Errors: none for a runtime that does not answer; `hx.internal_error` only for a bug.
 #[tauri::command]
 #[specta::specta]
-pub fn provider_probe_local(
+pub async fn provider_probe_local(
     profile: Option<String>,
 ) -> std::result::Result<Vec<crate::providers::ProviderState>, HostError> {
     let _ = profile;
-    provider_stub("provider_probe_local")
+    Ok(crate::local::probe_local().await)
 }
 
 /// Start a sign-in for a sign-in way the host owns (`SuperGrok`, GitHub Copilot, and ChatGPT once it moves to OpenAI's program):

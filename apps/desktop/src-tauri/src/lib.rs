@@ -20,6 +20,7 @@ pub mod frontier;
 pub mod gateway;
 pub mod gpu;
 pub mod hermes;
+pub mod local;
 pub mod migrate;
 pub mod os;
 pub mod providers;
