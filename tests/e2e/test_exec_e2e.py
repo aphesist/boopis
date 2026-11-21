@@ -70,7 +70,7 @@ def create_session(gw: GatewayClient, cwd: Path, **extra: Any) -> str:
             "source": "gui",
             "cwd": str(cwd),
             "request_id": f"req-{time.time_ns()}",
-            "model": "fake-a",
+            "model": "claude-opus-5-5",
             "provider": "main",
             "toolsets": ["boopis"],
             "client": {"name": "boopis-e2e", "version": "0"},

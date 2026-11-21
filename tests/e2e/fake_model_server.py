@@ -274,7 +274,7 @@ class FakeModelServer(ThreadingHTTPServer):
     """``with FakeModelServer() as fake:`` serves on 127.0.0.1 in a thread; ``fake.url`` is the base."""
 
     daemon_threads = True
-    default_models: ClassVar[tuple[str, ...]] = ("fake-a", "fake-b")
+    default_models: ClassVar[tuple[str, ...]] = ("claude-opus-5-5", "claude-fable-5-2")
 
     def __init__(
         self,

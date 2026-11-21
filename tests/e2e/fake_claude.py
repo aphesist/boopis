@@ -39,7 +39,7 @@ def main() -> int:
             "message": {
                 "role": "assistant",
                 "id": "msg_fake",
-                "model": "sonnet",
+                "model": "opus",
                 "stop_reason": "end_turn",
                 "content": [{"type": "text", "text": text}],
             },
@@ -54,7 +54,7 @@ def main() -> int:
             "num_turns": 1,
             "usage": json.loads(os.environ["FAKE_CLAUDE_USAGE"]),
             "total_cost_usd": float(os.environ["FAKE_CLAUDE_PRICE"]),
-            "modelUsage": {"sonnet": {"costBasis": "list"}},
+            "modelUsage": {"opus": {"costBasis": "list"}},
         }
     )
     return 0

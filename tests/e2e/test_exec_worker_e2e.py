@@ -66,8 +66,8 @@ def call(tool: str, args: JsonObject) -> str:
 
 GOOD = call("ship", {"edits": [{"op": "replace", "path": "calc.py", "old": "return a - b", "new": "return a + b"}]})
 SCRIPTS: dict[str, Any] = {
-    "orch": ["reply the orchestrator read the outcome"],
-    "model-a": [
+    "claude-opus-5-6": ["reply the orchestrator read the outcome"],
+    "claude-opus-5-5": [
         call("exec", {"code": CELL_PARALLEL}),
         call("exec", {"code": CELL_WRITE}),
         call("exec", {"code": CELL_BLANK}),
@@ -79,7 +79,7 @@ SCRIPTS: dict[str, Any] = {
 
 @pytest.fixture(scope="module")
 def endpoint() -> Iterator[FakeModelServer]:
-    with FakeModelServer(models=("orch", "model-a"), scripts=SCRIPTS) as server:
+    with FakeModelServer(models=("claude-opus-5-6", "claude-opus-5-5"), scripts=SCRIPTS) as server:
         yield server
 
 
@@ -87,12 +87,16 @@ def endpoint() -> Iterator[FakeModelServer]:
 def stack(hermes_install: HermesInstall, stack_root: Path, endpoint: FakeModelServer) -> Iterator[HermesStack]:
     settings = {
         "hx_path": HX_BIN,
-        "ladder": {"tiers": [{"name": "cheap", "model": "main/model-a", "effort": "low"}]},
+        "ladder": {"tiers": [{"name": "cheap", "model": "main/claude-opus-5-5", "effort": "low"}]},
     }
     extra: JsonObject = {
-        "model": {"provider": "main", "default": "orch"},
+        "model": {"provider": "main", "default": "claude-opus-5-6"},
         "delegation": {"backend": "boopis"},
-        "providers": {"main": {"models": {"orch": {"context_length": 200000}, "model-a": {"context_length": 200000}}}},
+        "providers": {
+            "main": {
+                "models": {"claude-opus-5-6": {"context_length": 200000}, "claude-opus-5-5": {"context_length": 200000}}
+            }
+        },
     }
     yield from run_stack(hermes_install, stack_root / "exec-worker", endpoint.url, settings, extra)
 
@@ -164,7 +168,7 @@ def test_a_worker_runs_exec_in_the_sandbox_and_every_kernel_call_is_governed(
             "source": "gui",
             "cwd": str(project),
             "request_id": f"req-{time.time_ns()}",
-            "model": "orch",
+            "model": "claude-opus-5-6",
             "provider": "main",
             "toolsets": ["boopis"],
             "client": {"name": "boopis-e2e", "version": "0"},
@@ -198,7 +202,7 @@ def test_a_worker_runs_exec_in_the_sandbox_and_every_kernel_call_is_governed(
     # the orchestrator never had exec; the worker's kernel calls are in the parent's ledger, tagged as the worker's
     kernel = [e for e in by("tool.called") if e["payload"].get("via") == "exec"]
     assert [e["payload"]["tool"] for e in kernel].count("pack") == 2
-    assert all(e["payload"]["role"] == "worker" and e["actor"] == "worker:main/model-a" for e in kernel)
+    assert all(e["payload"]["role"] == "worker" and e["actor"] == "worker:main/claude-opus-5-5" for e in kernel)
     denied = [e["payload"] for e in kernel if e["payload"]["tool"] == "write_file"]
     assert [(d["status"], d["error_code"]) for d in denied] == [("blocked", "hx.policy.denied")]
     execs = [e["payload"] for e in by("tool.called") if e["payload"]["tool"] == "exec"]

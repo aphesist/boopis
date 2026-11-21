@@ -3,8 +3,8 @@
 Two fake model endpoints serve different model ids, and each model id has a fixed behaviour (its script), so which
 tier did the work is a fact of the servers' request logs:
 
-    endpoint 1 ("main")    serves  orch (the session model)  and  model-a (tier 1, "cheap")
-    endpoint 2 ("second")  serves  model-b (tier 2, "strong")
+    endpoint 1 ("main")    serves  claude-opus-5-6 (the session model)  and  claude-opus-5-5 (tier 1, "cheap")
+    endpoint 2 ("second")  serves  claude-fable-5-2 (tier 2, "strong")
 
 The project is a real, tiny one: ``calc.add`` has a bug, ``tests/test_calc.py`` is its test suite, and the pinned
 gate command runs it. Model A's attempt is wrong, so the gate blocks and the workspace comes back; the plugin (not
@@ -50,23 +50,23 @@ WRONG = replace_edit("return a - b", "return a * b")  # 2 * 3 = 6: the suite exp
 SCOPE_MARK = "SCENARIO-SCOPE"
 TWICE_MARK = "SCENARIO-TWICE"
 SCRIPTS_1: dict[str, Any] = {
-    "orch": ["reply the orchestrator read the outcome"],
+    "claude-opus-5-6": ["reply the orchestrator read the outcome"],
     # a retry names the previous failure; the scope scenario's first attempt strays outside the scope
-    "model-a": {
+    "claude-opus-5-5": {
         "Previous attempt failed": [GOOD, "reply cheap worker, second try"],
         SCOPE_MARK: [create_edit("extra.py", "x = 1\n"), "reply cheap worker, stray"],
         TWICE_MARK: [WRONG, GOOD, "reply cheap worker, shipped twice"],
         "": [WRONG, "reply cheap worker, first try"],
     },
 }
-SCRIPTS_2: dict[str, Any] = {"model-b": [GOOD, "reply strong worker done"]}
+SCRIPTS_2: dict[str, Any] = {"claude-fable-5-2": [GOOD, "reply strong worker done"]}
 
 
 @pytest.fixture(scope="module")
 def endpoints() -> Iterator[tuple[FakeModelServer, FakeModelServer]]:
     with (
-        FakeModelServer(models=("orch", "model-a"), scripts=SCRIPTS_1) as one,
-        FakeModelServer(models=("model-b",), scripts=SCRIPTS_2) as two,
+        FakeModelServer(models=("claude-opus-5-6", "claude-opus-5-5"), scripts=SCRIPTS_1) as one,
+        FakeModelServer(models=("claude-fable-5-2",), scripts=SCRIPTS_2) as two,
     ):
         yield one, two
 
@@ -85,19 +85,19 @@ def stack(
         "ladder": {
             "same_tier_scope_retry": True,
             "tiers": [
-                {"name": "cheap", "model": "main/model-a", "effort": "low"},
-                {"name": "strong", "model": "second/model-b", "effort": "high"},
+                {"name": "cheap", "model": "main/claude-opus-5-5", "effort": "low"},
+                {"name": "strong", "model": "second/claude-fable-5-2", "effort": "high"},
             ],
         },
     }
     extra: JsonObject = {
-        "model": {"provider": "main", "default": "orch"},
+        "model": {"provider": "main", "default": "claude-opus-5-6"},
         "delegation": {"backend": "boopis"},  # set by the host or installer, with consent (ADR-0007)
         "providers": {
             "main": {
                 "models": {
-                    "orch": {"context_length": 200000},
-                    "model-a": {"context_length": 200000},
+                    "claude-opus-5-6": {"context_length": 200000},
+                    "claude-opus-5-5": {"context_length": 200000},
                 }
             },
             "second": {
@@ -105,7 +105,7 @@ def stack(
                 "api_key": "k2",
                 "transport": "openai_chat",
                 "discover_models": False,
-                "models": {"model-b": {"context_length": 200000}},
+                "models": {"claude-fable-5-2": {"context_length": 200000}},
             },
         },
     }
@@ -162,7 +162,7 @@ def start_session(gw: GatewayClient, project: Path) -> str:
             "source": "gui",
             "cwd": str(project),
             "request_id": f"req-{time.time_ns()}",
-            "model": "orch",
+            "model": "claude-opus-5-6",
             "provider": "main",
             "toolsets": ["boopis"],
             "client": {"name": "boopis-e2e", "version": "0"},
@@ -266,8 +266,8 @@ def test_a_gate_block_climbs_to_the_stronger_model_and_the_orchestrator_hears_th
     assert task["max_attempts"] == 4  # two tiers: one try each, plus one same-tier scope retry per tier
     routes = of_type(ledger, "route.decided")
     assert [(r["tier"], r["action"], r["decision"], r["propensities"]) for r in routes] == [
-        ("cheap", "model-a", "initial", {"model-a": 1.0}),
-        ("strong", "model-b", "after_gate_failure", {"model-b": 1.0}),
+        ("cheap", "claude-opus-5-5", "initial", {"claude-opus-5-5": 1.0}),
+        ("strong", "claude-fable-5-2", "after_gate_failure", {"claude-fable-5-2": 1.0}),
     ]
     assert {r["task_id"] for r in routes} == {task_id}
     decided = of_type(ledger, "gate.decided")
@@ -281,21 +281,21 @@ def test_a_gate_block_climbs_to_the_stronger_model_and_the_orchestrator_hears_th
     ]
     claimed = of_type(ledger, "task.claimed")
     assert [c["worker"] for c in claimed] == [
-        "worker:main/model-a",
-        "worker:second/model-b",
+        "worker:main/claude-opus-5-5",
+        "worker:second/claude-fable-5-2",
     ]
     (scored,) = of_type(ledger, "outcome.scored")
     assert (scored["solved"], scored["model"], scored["evidence"]["source"]) == (
         True,
-        "model-b",
+        "claude-fable-5-2",
         "project gate",
     )
 
     # the children's usage is in the parent's ledger, tagged with the task, the tier and the worker role
     usage = [e for e in ledger if e["type"] == "usage.recorded" and e["payload"].get("role") == "worker"]
     assert {(u["payload"]["tier"], u["payload"]["model"], u["actor"]) for u in usage} == {
-        ("cheap", "model-a", "worker:main/model-a"),
-        ("strong", "model-b", "worker:second/model-b"),
+        ("cheap", "claude-opus-5-5", "worker:main/claude-opus-5-5"),
+        ("strong", "claude-fable-5-2", "worker:second/claude-fable-5-2"),
     }
     assert {u["payload"]["task_id"] for u in usage} == {task_id}
     tools = [e for e in ledger if e["type"] == "tool.called" and e["payload"].get("role") == "worker"]
@@ -308,12 +308,12 @@ def test_a_gate_block_climbs_to_the_stronger_model_and_the_orchestrator_hears_th
     assert done.returncode == 0, done.stderr
 
     # the servers saw tier 1 on model A at endpoint 1, and tier 2 on model B at endpoint 2
-    a_requests = [r for r in one.chat_requests()[before[0] :] if r.model == "model-a"]
+    a_requests = [r for r in one.chat_requests()[before[0] :] if r.model == "claude-opus-5-5"]
     b_requests = two.chat_requests()[before[1] :]
     assert a_requests
     assert b_requests
-    assert {r.model for r in b_requests} == {"model-b"}
-    assert not [r for r in b_requests if r.model != "model-b"]
+    assert {r.model for r in b_requests} == {"claude-fable-5-2"}
+    assert not [r for r in b_requests if r.model != "claude-fable-5-2"]
     # each role read its own cache-stable prompt section: the worker's, not the orchestrator's
     system = next(m["content"] for m in a_requests[0].messages if m.get("role") == "system")
     assert "boopis: governed worker" in system
@@ -330,14 +330,20 @@ def test_a_gate_block_climbs_to_the_stronger_model_and_the_orchestrator_hears_th
     assert "first try" not in handed  # the first worker's report is not the handover
 
     # the orchestrator was told the final outcome, in the turn that carried the last child's result
-    told = [r for r in one.chat_requests()[before[0] :] if r.model == "orch" and "[boopis cascade]" in user_text(r)]
+    told = [
+        r
+        for r in one.chat_requests()[before[0] :]
+        if r.model == "claude-opus-5-6" and "[boopis cascade]" in user_text(r)
+    ]
     assert len(told) == 1
     assert "PASSED at tier 2 of 2 (strong)" in user_text(told[0])
     assert task_id in user_text(told[0])
 
     # the interim completion (tier 1 blocked, tier 2 already running) was answered by the plugin alone
     orch_turns = [
-        r for r in one.chat_requests()[before[0] :] if r.model == "orch" and "ASYNC DELEGATION" in user_text(r)
+        r
+        for r in one.chat_requests()[before[0] :]
+        if r.model == "claude-opus-5-6" and "ASYNC DELEGATION" in user_text(r)
     ]
     assert len(orch_turns) == 1, "the interim completion must not cost a model call"
 
@@ -388,7 +394,7 @@ def test_a_pure_scope_violation_retries_the_same_tier_once(
     retry = [
         r
         for r in one.chat_requests()[before[0] :]
-        if r.model == "model-a" and "Previous attempt failed" in user_text(r)
+        if r.model == "claude-opus-5-5" and "Previous attempt failed" in user_text(r)
     ]
     assert retry
     assert "extra.py" in user_text(retry[0])
@@ -396,7 +402,7 @@ def test_a_pure_scope_violation_retries_the_same_tier_once(
     assert verify(stack.ledger_dir / f"{sid}.jsonl").returncode == 0
     (scored,) = of_type(ledger, "outcome.scored")
     assert scored["solved"] is True
-    assert scored["model"] == "model-a"
+    assert scored["model"] == "claude-opus-5-5"
 
 
 def test_a_second_ship_after_the_gate_decided_is_refused(

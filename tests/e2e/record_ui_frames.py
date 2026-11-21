@@ -75,7 +75,7 @@ def create(gw: GatewayClient, cwd: Path, **extra: Any) -> str:
     created = gw.result(
         "session.create",
         {
-            "source": "gui", "cwd": str(cwd), "request_id": f"req-{time.time_ns()}", "model": "fake-a",
+            "source": "gui", "cwd": str(cwd), "request_id": f"req-{time.time_ns()}", "model": "claude-opus-5-5",
             "provider": "main", "toolsets": ["boopis", "todo"], "client": {"name": "boopis", "version": "0"},
             **extra,
         },
@@ -157,7 +157,7 @@ def priced(install: Any, tmp: Path, url: str, name: str, with_prices: bool) -> N
     settings: dict[str, Any] = {"hx_path": HX}  # no cap on the unpriced stack: a cap blocks on an unknown cost
     if with_prices:
         settings["cost_cap_usd"] = 2.0
-        settings["prices"] = {"overrides": {"custom/fake-a": RATES, "main/fake-a": RATES}}
+        settings["prices"] = {"overrides": {"custom/claude-opus-5-5": RATES, "main/claude-opus-5-5": RATES}}
     stack = HermesStack(install, tmp, url, settings, mcp)
     stack.start()
     try:

@@ -22,6 +22,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+# The model Hermes's own side calls (titles, compression...) use: not the session's model nor any ladder tier, so a test
+# that counts a model's requests counts only the model's own work (side calls are not governed work).
+AUX_MODEL = "claude-haiku-5-5"
+
 # Every auxiliary task Hermes may run is pointed at the fake model, so nothing leaves the machine.
 AUX_TASKS = (
     "vision", "compression", "approval", "review", "mcp", "title_generation", "memory_query_rewrite",
@@ -140,16 +144,20 @@ class HermesStack:
             "api_key": "fake-key",
             "transport": "openai_chat",
             "discover_models": False,
-            "models": {"fake-a": {"context_length": 200000}},
+            # frontier-shaped ids (ADR-0037: governed mode refuses the rest), plus a real one it refuses
+            "models": {
+                m: {"context_length": 200000}
+                for m in ("claude-opus-5-5", "claude-fable-5-2", "claude-sonnet-5-5", AUX_MODEL)
+            },
         }
         config: dict[str, Any] = {
-            "model": {"provider": "main", "default": "fake-a"},
+            "model": {"provider": "main", "default": "claude-opus-5-5"},
             "updates": {"check": False},
             "model_catalog": {"enabled": False},
             "models_dev": {"url": self.model_url.removesuffix("/v1") + "/models-dev-api.json"},
             "tools": {"tool_search": {"enabled": "off"}},  # ADR-0014: direct tool surface
             "providers": {"main": provider},
-            "auxiliary": {t: {"provider": "main", "model": "fake-a"} for t in AUX_TASKS},
+            "auxiliary": {t: {"provider": "main", "model": AUX_MODEL} for t in AUX_TASKS},
             "plugins": {
                 "enabled": ["boopis"],
                 "entries": {"boopis": {"settings": self.plugin_settings}},

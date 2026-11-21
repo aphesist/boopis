@@ -20,7 +20,7 @@ from typing import Any
 import pytest
 from fake_model_server import FakeModelServer
 from hx_ws_client import GatewayClient, RpcError
-from stack import HermesInstall, HermesStack, run_stack
+from stack import AUX_MODEL, HermesInstall, HermesStack, run_stack
 
 JsonObject = dict[str, Any]
 # What the fake server reports for the scripted prompts: OpenAI chat usage with a cache read and reasoning.
@@ -34,8 +34,9 @@ USAGE = {
 # USD per Mtok, so one scripted turn costs about $1.1. Hermes reports the provider of a custom endpoint
 # as "custom" for the turn itself and as the configured name ("main") for its title call.
 RATES = {"input": 1000.0, "output": 2000.0}
-PRICES = {"custom/fake-a": RATES, "main/fake-a": RATES}
+PRICES = {f"{p}/{m}": RATES for p in ("custom", "main") for m in ("claude-opus-5-5", "claude-sonnet-5-5", AUX_MODEL)}
 CAP = 0.5
+NOT_FRONTIER = "claude-sonnet-5-5"  # a real model the lock refuses (ADR-0037); the fake provider serves it too
 SUBSCRIPTIONS: dict[str, str] = {}  # session id -> the viewer subscription session.create returned
 
 
@@ -59,7 +60,7 @@ def create_session(gw: GatewayClient, stack: HermesStack, **extra: Any) -> str:
         "source": "gui",
         "cwd": str(stack.workdir),
         "request_id": f"req-{time.time_ns()}",
-        "model": "fake-a",
+        "model": "claude-opus-5-5",
         "provider": "main",
         # The built-in file and terminal toolsets give the model write tools to attempt, which is what the
         # policy has to stop; the tools tests below use toolsets: ["boopis"].
@@ -102,7 +103,7 @@ def test_hermes_loaded_the_plugin_and_serves_its_rpc(gateway: GatewayClient, sta
     assert gateway.result("plugin.boopis.mode.set", {"session_id": sid, "mode": "governed"}) == {}
     state = gateway.result("plugin.boopis.cascade.state", {"session_id": sid})
     assert state["status"] == "idle"
-    assert [t["name"] for t in state["ladder"]] == ["haiku", "sonnet", "opus"]  # contraprova's measured default
+    assert [t["name"] for t in state["ladder"]] == ["opus", "fable"]  # the plugin's frontier default (ADR-0037)
 
 
 def test_a_prompt_writes_a_verifiable_ledger_with_the_models_usage(gateway: GatewayClient, stack: HermesStack) -> None:
@@ -129,7 +130,7 @@ def test_a_prompt_writes_a_verifiable_ledger_with_the_models_usage(gateway: Gate
     assert (u["input_tokens"], u["cache_read_tokens"]) == (600, 400)
     assert (u["output_tokens"], u["reasoning_tokens"]) == (50, 20)
     assert (u["cache_write_5m_tokens"], u["cache_write_1h_tokens"]) == (0, 0)
-    assert u["model"] == "fake-a"
+    assert u["model"] == "claude-opus-5-5"
     assert u["usage_schema"] == 2
     assert u["latency_ms"] >= 0
     assert "request_id" in u
@@ -151,6 +152,32 @@ def test_a_prompt_writes_a_verifiable_ledger_with_the_models_usage(gateway: Gate
     assert stats["tokens"]["input_uncached"] >= 600
     assert stats["cost_usd"] is not None
     assert stats["round_trips"] >= 1
+
+
+def test_a_governed_session_on_a_model_that_is_not_frontier_is_refused_with_the_allowed_models(
+    gateway: GatewayClient, stack: HermesStack, fake_model: FakeModelServer
+) -> None:
+    """ADR-0037, end to end: the fake provider serves a model that is real but not frontier (Sonnet 5.5), the session
+    is governed, and the turn is refused before any model call, with the plugin's sentence."""
+    sid = create_session(gateway, stack, model=NOT_FRONTIER)
+    gateway.result("plugin.boopis.mode.set", {"session_id": sid, "mode": "governed"})
+    before = len(fake_model.chat_requests())
+    turn = run_prompt(gateway, sid, "@@reply this must not be answered@@")
+
+    told = json.dumps([e for e in turn if e.get("type") == "message.complete"])
+    assert "Governed mode runs only on frontier models" in told, told
+    for allowed in ("Claude Opus 5.5", "Claude Fable 5.2", "GPT-6.2 Astra", "Gemini 4 Carbon"):
+        assert f"{allowed} or later" in told, told
+    assert NOT_FRONTIER in told, told  # it names the model that was refused
+    assert "this must not be answered" not in told
+    assert len(fake_model.chat_requests()) == before, "a refused turn must not reach the model"
+    assert not [e for e in read_ledger(stack, sid) if e["type"] == "usage.recorded"]
+    assert contraprova_verify(stack.ledger_dir / f"{sid}.jsonl").returncode == 0
+
+    # the plugin's own view agrees, so the UI says the same thing
+    frontier = gateway.result("plugin.boopis.describe", {"session_id": sid})["frontier"]
+    assert frontier["session_model"]["frontier"] is False
+    assert frontier["session_model"]["model"] == NOT_FRONTIER
 
 
 def test_the_mode_is_locked_after_the_first_prompt(gateway: GatewayClient, stack: HermesStack) -> None:
@@ -313,7 +340,7 @@ def test_an_ungoverned_session_uses_pack_and_ship_end_to_end(
         "source": "gui",
         "cwd": str(project),
         "request_id": f"req-{time.time_ns()}",
-        "model": "fake-a",
+        "model": "claude-opus-5-5",
         "provider": "main",
         "toolsets": ["boopis"],
         "client": {"name": "boopis-e2e", "version": "0"},

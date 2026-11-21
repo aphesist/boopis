@@ -37,7 +37,7 @@ COMMAND_VAR = "CLAUDE_SUBSCRIPTION_DIRECTSDK_COMMAND"
 LIST_PRICE_USD = 0.012345  # what the fake CLI reports natively as `total_cost_usd`
 USAGE = {"input_tokens": 1000, "output_tokens": 50, "cache_read_input_tokens": 400, "cache_creation_input_tokens": 0}
 # The ladder the host writes for a Claude Code that serves every alias (setup/providers.rs, `subscription_tiers`).
-LADDER = {"tiers": [{"name": a, "model": f"{PROVIDER}/{a}"} for a in ("haiku", "sonnet", "opus")]}
+LADDER = {"tiers": [{"name": a, "model": f"{PROVIDER}/{a}"} for a in ("opus", "fable")]}
 
 
 def plugin_source() -> Path | None:
@@ -157,7 +157,7 @@ def create_session(gw: GatewayClient, stack: HermesStack) -> str:
             "source": "gui",
             "cwd": str(stack.workdir),
             "request_id": f"req-{time.time_ns()}",
-            "model": "sonnet",
+            "model": "opus",
             "provider": PROVIDER,
             "toolsets": [],
             "client": {"name": "boopis-e2e", "version": "0"},
@@ -174,9 +174,8 @@ def test_the_hosts_ladder_is_read_by_the_plugin_under_the_providers_id(
     assert described["config"]["errors"] == []
     state = gateway.result("plugin.boopis.cascade.state", {"session_id": sid})
     assert [(t["name"], t["model"]["provider"], t["model"]["id"]) for t in state["ladder"]] == [
-        ("haiku", PROVIDER, "haiku"),
-        ("sonnet", PROVIDER, "sonnet"),
         ("opus", PROVIDER, "opus"),
+        ("fable", PROVIDER, "fable"),
     ]
 
 

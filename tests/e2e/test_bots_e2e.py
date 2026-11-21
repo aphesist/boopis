@@ -66,7 +66,7 @@ def create(gw: GatewayClient, name: str) -> JsonObject:
             "name": name,
             "description": "reviews pull requests",
             "soul": "You review.",
-            "model": "fake-a",
+            "model": "claude-opus-5-5",
             "provider": "main",
             "no_alias": True,
         },
@@ -86,7 +86,7 @@ def test_create_sets_the_model_and_the_role_and_the_soul_through_hermes(
     # config.yaml is right and `describe` reads it), so the UI takes the model from `describe`
     assert gateway.result("profiles.describe", {"name": "atlas"}, timeout=60)["model"] == {
         "provider": "main",
-        "default": "fake-a",
+        "default": "claude-opus-5-5",
     }
     assert "default" in rows(gateway)  # the user's own profile is listed by Hermes; the Bots tab leaves it out
 
@@ -111,7 +111,7 @@ def test_the_store_is_boopis_s_own_file_under_the_profile(gateway: GatewayClient
 def test_describe_reports_the_soul_the_model_the_skills_and_the_toolsets(gateway: GatewayClient) -> None:
     d = gateway.result("profiles.describe", {"name": "atlas"}, timeout=60)
     assert d["soul"] == "You review."
-    assert d["model"] == {"provider": "main", "default": "fake-a"}
+    assert d["model"] == {"provider": "main", "default": "claude-opus-5-5"}
     assert isinstance(d["skills"], list) and isinstance(d["toolsets"], list)
     assert all("name" in t and "enabled" in t for t in d["toolsets"])
 
@@ -128,7 +128,7 @@ def test_the_settings_sheet_saves_the_role_the_soul_and_the_model(gateway: Gatew
     assert rows(gateway)["atlas"]["description"] == "the reviewer"
     model = gateway.result(
         "profiles.configure",
-        {"name": "atlas", "model": "fake-a", "provider": "main", "confirm_expensive_model": True},
+        {"name": "atlas", "model": "claude-opus-5-5", "provider": "main", "confirm_expensive_model": True},
         timeout=60,
     )
     assert model["ok"] and model["applied"]["model"] is True
@@ -137,7 +137,7 @@ def test_the_settings_sheet_saves_the_role_the_soul_and_the_model(gateway: Gatew
 def test_the_model_options_name_the_configured_providers(gateway: GatewayClient) -> None:
     opts = gateway.result("model.options", {}, timeout=90)
     main = next(p for p in opts["providers"] if p["slug"] == "main")
-    assert "fake-a" in main["models"]
+    assert "claude-opus-5-5" in main["models"]
     with pytest.raises(
         RpcError
     ):  # a profile argument is refused here (profile_mismatch): a teammate is reached on its own link
