@@ -59,7 +59,7 @@ export interface FormModel {
   spec: FormSpec;
 }
 
-const KINDS: ReadonlySet<string> = new Set<FormKind>(['credential', 'question', 'approval', 'permission', 'signin', 'setup', 'connector', 'choice', 'plan', 'feedback']);
+const KINDS: ReadonlySet<string> = new Set<FormKind>(['credential', 'question', 'approval', 'permission', 'signin', 'setup', 'connector', 'choice', 'plan', 'feedback', 'endpoint']);
 const kindOf = (k: unknown): FormKind => (typeof k === 'string' && KINDS.has(k) ? (k as FormKind) : 'question');
 /** who asks, from the sender's word for it (docs/FORMS.md section 4a); the agent is known by the model the session runs on.
     A teammate or an MCP server carries no name in the event, so none is shown: nothing is invented. */
