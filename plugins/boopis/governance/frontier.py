@@ -62,7 +62,9 @@ class Frontier:
     families: tuple[Family, ...]
     ignorable: frozenset[str]
     aliases: Mapping[str, Mapping[str, str]]
-    never_engines: frozenset[str] = frozenset()  # providers whose models are never frontier (a runtime on this computer)
+    never_engines: frozenset[str] = (
+        frozenset()
+    )  # providers whose models are never frontier (a runtime on this computer)
     never_prefixes: tuple[str, ...] = ()  # slug prefixes whose models are never frontier (``custom-``)
 
 
@@ -107,8 +109,8 @@ def load() -> Frontier:
 
 def never_frontier(provider: str) -> bool:
     """Whether ``provider``'s models can never be frontier: a custom endpoint or a runtime on this computer (ADR-0039,
-    ``never_frontier`` in ``data/providers.json``). The rule comes first, before the name is looked at: no model name can
-    make such a model frontier (fail closed). The engine reads a provider name in lower case, so this does too."""
+    ``never_frontier`` in ``data/providers.json``). The rule comes first, before the name is looked at: no model name
+    can make such a model frontier (fail closed). The engine reads a provider name in lower case, so this does too."""
     name = provider.strip().lower()
     rule = load()
     return name in rule.never_engines or any(name.startswith(p) for p in rule.never_prefixes)
@@ -172,8 +174,8 @@ def match(provider: str, model: str) -> Match | None:
 
 
 def is_frontier(provider: str, model: str) -> bool:
-    """Whether ``provider``/``model`` may do governed work. Unknown, empty and unrecognised are not, and neither is anything
-    on a custom endpoint or a runtime on this computer, whatever it is called."""
+    """Whether ``provider``/``model`` may do governed work. Unknown, empty and unrecognised are not, and neither is
+    anything on a custom endpoint or a runtime on this computer, whatever it is called."""
     if never_frontier(provider):
         return False
     found = match(provider, model)
