@@ -125,7 +125,7 @@ def main() -> int:
                 "-screen 0 1440x900x24",
                 "sh",
                 "-c",
-                f'echo "$DISPLAY" > {display_file}; exec WebKitWebDriver --port={PORT}',
+                f'echo "$DISPLAY $XAUTHORITY" > {display_file}; exec WebKitWebDriver --port={PORT}',
             ],
             env=env,
             stdout=subprocess.DEVNULL,
@@ -215,8 +215,9 @@ def hide_and_return(s: str, display_file: Path, agent_text) -> None:
     if not shutil.which("xdotool"):
         print("xdotool is not installed: the hidden-window check is skipped")
         return
-    display = display_file.read_text().strip()
-    xenv = {**os.environ, "DISPLAY": display}
+    # xvfb-run guards its server with a cookie: xdotool needs the display and the cookie's file
+    display, _, auth = display_file.read_text().strip().partition(" ")
+    xenv = {**os.environ, "DISPLAY": display, **({"XAUTHORITY": auth} if auth else {})}
 
     def js(script: str, timeout: float = 120):
         return call("POST", f"{s}/execute/sync", {"script": script, "args": []}, timeout)["value"]
