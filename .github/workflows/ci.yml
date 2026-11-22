@@ -328,6 +328,13 @@ jobs:
           app-dir: ${{ runner.temp }}/app
           screenshot-artifact: desktop-smoke-screenshot
 
+  desktop-window:
+    # The built app's own window on a fresh profile, on windows-latest and ubuntu-22.04 (.github/workflows/desktop-window.yml,
+    # also dispatchable alone): first run shows the window's controls for the desktop, and on Windows the undecorated window
+    # resizes from its edges, keeps Snap's styles, maximises, minimises and closes. NON-BLOCKING for now: its job carries
+    # continue-on-error (a job that calls a workflow cannot), so this result stays green when it fails.
+    uses: ./.github/workflows/desktop-window.yml
+
   ui:
     runs-on: ubuntu-22.04
     defaults:

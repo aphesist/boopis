@@ -1,0 +1,401 @@
+"""The built desktop app's own window on a fresh profile: first run shows the window's controls, and they work.
+
+    python3 tests/e2e/smoke_window.py <app binary> [--shot shot.png] [--expect close|all|mac] [--tiling]
+
+The window is undecorated (``tauri.conf.json``), so the title bar the UI draws is its only chrome. First run covers the
+whole window, so it must carry that bar itself. This starts the app through WebDriver on a profile with no engine (first
+run shows its welcome) and checks, in the real webview:
+
+- the host's ``window_facts``: the platform this runs on, and on Windows a floating desktop;
+- the first-run layer's title bar: a drag region (``data-tauri-drag-region``), and the buttons the desktop calls for
+  (``--expect``; by default all three, or close alone with ``--tiling``), visible at the top of the window;
+- the drag region's double click is allowed (``plugin:window|internal_toggle_maximize``, the drag script's call);
+- on Windows, through the Win32 API: the window keeps the styles Snap, the taskbar and the system menu need, its left,
+  right and bottom edges and the top strip answer as resize borders, Maximize and a double click on the bar maximise and
+  restore it, Minimize minimises it, Win+Left snaps it (reported, not required: a runner's desktop may refuse synthetic
+  keys), and Close closes it;
+- elsewhere, Close closes the app.
+
+Linux: ``WebKitWebDriver`` under ``xvfb-run`` (Debian/Ubuntu: ``webkit2gtk-driver``, ``xvfb``), with no window manager,
+so maximise and minimise are not checked there. Windows: ``tauri-driver`` with ``msedgedriver`` matching the WebView2
+runtime (``--native-driver`` or ``MSEDGEDRIVER``). ``--tiling`` sets Hyprland's variable, so the host detects a tiling
+desktop (Linux only). Exit 0 on success, 1 on a failed check, 3 when a prerequisite is missing. Everything it starts is
+stopped.
+"""
+
+from __future__ import annotations
+
+import argparse
+import base64
+import contextlib
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+PORT = 4466
+WINDOWS = sys.platform == "win32"
+LABELS = {"min": "Minimize", "max": "Maximize", "close": "Close window"}
+
+
+class Driver:
+    def __init__(self, port: int) -> None:
+        self.base = f"http://127.0.0.1:{port}"
+        self.sid = ""
+
+    def call(self, method: str, path: str, body: object | None = None, timeout: float = 60) -> dict:
+        req = urllib.request.Request(
+            self.base + path,
+            method=method,
+            data=None if body is None else json.dumps(body).encode(),
+            headers={"Content-Type": "application/json"},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return json.loads(r.read() or b"{}")
+        except urllib.error.HTTPError as e:
+            raise RuntimeError(f"{method} {path}: HTTP {e.code} {e.read().decode(errors='replace')[:400]}") from None
+
+    def s(self, method: str, path: str, body: object | None = None) -> object:
+        return self.call(method, f"/session/{self.sid}{path}", body).get("value")
+
+    def js(self, script: str, *args: object) -> object:
+        return self.s("POST", "/execute/sync", {"script": script, "args": list(args)})
+
+    def invoke(self, cmd: str, payload: object | None = None) -> dict:
+        """A host command from the page, as the UI calls it: {"ok": result} or {"err": message}."""
+        script = (
+            "const done = arguments[arguments.length - 1];"
+            "window.__TAURI_INTERNALS__.invoke(arguments[0], arguments[1] || {})"
+            ".then((r) => done({ ok: r === undefined ? null : r }), (e) => done({ err: String(e && e.message || e) }));"
+        )
+        got = self.s("POST", "/execute/async", {"script": script, "args": [cmd, payload]})
+        return got if isinstance(got, dict) else {"err": repr(got)}
+
+    def find(self, css: str) -> str | None:
+        try:
+            v = self.s("POST", "/element", {"using": "css selector", "value": css})
+        except RuntimeError:
+            return None
+        return next(iter(v.values())) if isinstance(v, dict) and v else None
+
+
+def wait_for(fn, what: str, timeout: float = 60.0):
+    end = time.time() + timeout
+    last: object = None
+    while time.time() < end:
+        try:
+            got = fn()
+            if got:
+                return got
+        except Exception as e:  # the page is still loading, or the window is changing
+            last = e
+        time.sleep(0.3)
+    raise SystemExit(f"FAIL: timed out waiting for {what} ({last})")
+
+
+FAILED: list[str] = []
+
+
+def check(ok: bool, what: str, detail: object = "") -> None:
+    print(("ok   " if ok else "FAIL ") + what + (f": {detail}" if detail != "" else ""))
+    if not ok:
+        FAILED.append(what)
+
+
+BAR_SCRIPT = """
+const root = document.querySelector('.hx-first-run');
+if (!root) return null;
+const bar = root.querySelector(':scope > .hx-bar');
+const buttons = [...root.querySelectorAll('.hx-win [data-win]')].map((b) => {
+  const r = b.getBoundingClientRect();
+  return { win: b.dataset.win, label: b.getAttribute('aria-label'), shown: !b.hidden && r.width > 0 && r.height > 0,
+           top: r.top, bottom: r.bottom, left: r.left, right: r.right };
+});
+const r = bar ? bar.getBoundingClientRect() : null;
+return { drag: bar ? bar.getAttribute('data-tauri-drag-region') : null,
+         bar: r && { top: r.top, height: r.height, width: r.width },
+         width: innerWidth, layout: root.querySelector('.hx-win')?.dataset.layout ?? null, buttons };
+"""
+
+# A double click on an empty part of the bar, as Tauri's drag script sees one: a press with detail 2 on the drag region.
+DBLCLICK_SCRIPT = """
+const bar = document.querySelector('.hx-first-run > .hx-bar');
+const r = bar.getBoundingClientRect();
+const at = { bubbles: true, cancelable: true, composed: true, button: 0, detail: 2,
+             clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 };
+bar.dispatchEvent(new MouseEvent('mousedown', at));
+bar.dispatchEvent(new MouseEvent('mouseup', at));
+return true;
+"""
+
+
+def win32_checks(d: Driver) -> None:
+    """The undecorated window as Windows sees it: styles, resize borders, maximise, minimise, Snap, close."""
+    import ctypes
+    from ctypes import wintypes
+
+    user32 = ctypes.windll.user32  # type: ignore[attr-defined]
+    with contextlib.suppress(Exception):
+        user32.SetProcessDPIAware()
+    user32.FindWindowW.restype = wintypes.HWND
+    user32.FindWindowExW.restype = wintypes.HWND
+    user32.SendMessageW.restype = ctypes.c_ssize_t
+    user32.SendMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+    user32.GetWindowLongW.restype = ctypes.c_long
+    hwnd = wait_for(lambda: user32.FindWindowW(None, "boopis"), "the app's window (title boopis)", 30)
+
+    style = user32.GetWindowLongW(hwnd, -16) & 0xFFFFFFFF  # GWL_STYLE
+    wanted = {
+        "WS_THICKFRAME": 0x00040000,
+        "WS_MAXIMIZEBOX": 0x00010000,
+        "WS_MINIMIZEBOX": 0x00020000,
+        "WS_SYSMENU": 0x00080000,
+    }
+    missing = [k for k, v in wanted.items() if not style & v]
+    check(
+        not missing,
+        "window styles Snap, the taskbar and Alt+Space need",
+        f"style {style:#010x}, missing {missing or 'none'}",
+    )
+
+    def rect(h: int) -> tuple[int, int, int, int]:
+        r = wintypes.RECT()
+        user32.GetWindowRect(h, ctypes.byref(r))
+        return r.left, r.top, r.right, r.bottom
+
+    def hit(h: int, x: int, y: int) -> int:
+        return user32.SendMessageW(h, 0x0084, 0, (y & 0xFFFF) << 16 | (x & 0xFFFF))  # WM_NCHITTEST
+
+    left, top, right, bottom = rect(hwnd)
+    origin = wintypes.POINT(0, 0)
+    user32.ClientToScreen(hwnd, ctypes.byref(origin))
+    mid_x, mid_y = (left + right) // 2, (top + bottom) // 2
+    # HTLEFT 10, HTRIGHT 11, HTTOP 12, HTBOTTOM 15, HTBOTTOMRIGHT 17: the shadow's invisible frame outside the client
+    # area (left, right, bottom) and the top strip inside it
+    borders = {
+        "left edge": (hit(hwnd, left + 2, mid_y), 10),
+        "right edge": (hit(hwnd, right - 3, mid_y), 11),
+        "bottom edge": (hit(hwnd, mid_x, bottom - 3), 15),
+        "bottom-right corner": (hit(hwnd, right - 3, bottom - 3), 17),
+        "top strip": (hit(hwnd, mid_x, origin.y + 1), 12),
+    }
+    strip = user32.FindWindowExW(hwnd, None, "TAURI_DRAG_RESIZE_BORDERS", None)
+    if strip:  # Tauri's own child window that takes the top strip above the web view
+        borders["top strip (over the web view)"] = (hit(strip, mid_x, origin.y + 1), 12)
+    for name, (got, want) in borders.items():
+        check(got == want, f"the {name} resizes", f"hit test {got}, want {want}")
+    print(f"     window {left},{top} to {right},{bottom}; client origin {origin.x},{origin.y}")
+
+    def facts() -> dict:
+        return d.invoke("window_facts").get("ok") or {}
+
+    d.s("POST", f"/element/{d.find('.hx-first-run [data-win=max]')}/click", {})
+    check(
+        bool(wait_for(lambda: facts().get("maximized"), "maximised after Maximize", 10)),
+        "Maximize maximises the window",
+    )
+    label = d.js("return document.querySelector('.hx-first-run [data-win=max]').getAttribute('aria-label')")
+    check(label == "Restore", "the button then says Restore", label)
+    d.s("POST", f"/element/{d.find('.hx-first-run [data-win=max]')}/click", {})
+    check(bool(wait_for(lambda: facts().get("maximized") is False, "restored", 10)), "Restore restores it")
+
+    d.js(DBLCLICK_SCRIPT)
+    check(
+        bool(wait_for(lambda: facts().get("maximized"), "maximised after a double click", 10)),
+        "a double click on the bar maximises",
+    )
+    d.js(DBLCLICK_SCRIPT)
+    check(bool(wait_for(lambda: facts().get("maximized") is False, "restored", 10)), "a second double click restores")
+
+    d.s("POST", f"/element/{d.find('.hx-first-run [data-win=min]')}/click", {})
+    check(bool(wait_for(lambda: user32.IsIconic(hwnd), "minimised", 10)), "Minimize minimises the window")
+    user32.ShowWindow(hwnd, 9)  # SW_RESTORE
+    wait_for(lambda: not user32.IsIconic(hwnd), "restored from the taskbar", 10)
+    time.sleep(0.5)
+
+    # Win+Left, as a person presses it: reported, since a runner's desktop may not take synthetic keys
+    user32.SetForegroundWindow(hwnd)
+    time.sleep(0.3)
+    before = rect(hwnd)
+    for vk, up in ((0x5B, 0), (0x25, 0), (0x25, 2), (0x5B, 2)):  # VK_LWIN, VK_LEFT; KEYEVENTF_KEYUP = 2
+        user32.keybd_event(vk, 0, up, 0)
+        time.sleep(0.05)
+    time.sleep(1.0)
+    work = wintypes.RECT()
+    user32.SystemParametersInfoW(0x0030, 0, ctypes.byref(work), 0)  # SPI_GETWORKAREA
+    after = rect(hwnd)
+    snapped = (
+        after != before and abs((after[0] + after[2]) / 2 - (work.left + work.right) / 4) < (work.right - work.left) / 8
+    )
+    print(
+        f"info Win+Left snapped to the left half: {'yes' if snapped else 'no'} (before {before}, after {after}, "
+        f"work area {work.left},{work.top} to {work.right},{work.bottom})"
+    )
+    if after != before:
+        user32.SetForegroundWindow(hwnd)
+        for vk, up in ((0x5B, 0), (0x27, 0), (0x27, 2), (0x5B, 2)):  # Win+Right puts it back
+            user32.keybd_event(vk, 0, up, 0)
+            time.sleep(0.05)
+        time.sleep(0.5)
+
+    try:
+        d.s("POST", f"/element/{d.find('.hx-first-run [data-win=close]')}/click", {})
+    except RuntimeError as e:  # the app quit before the driver could answer the click
+        print("     the click's answer:", str(e)[-120:])
+    check(bool(wait_for(lambda: not user32.IsWindow(hwnd), "the window to close", 15)), "Close closes the window")
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=(__doc__ or "").split("\n", 1)[0])
+    ap.add_argument("app")
+    ap.add_argument("--shot", help="where to save a screenshot of the first-run screen")
+    ap.add_argument("--expect", choices=["close", "all", "mac"], help="the layout the bar should draw")
+    ap.add_argument(
+        "--tiling", action="store_true", help="look like Hyprland (Linux): the host detects a tiling desktop"
+    )
+    ap.add_argument("--native-driver", default=os.environ.get("MSEDGEDRIVER"), help="msedgedriver.exe (Windows)")
+    a = ap.parse_args()
+    app = str(Path(a.app).resolve())
+    expect = a.expect or ("close" if a.tiling else "mac" if sys.platform == "darwin" else "all")
+    profile = Path(tempfile.mkdtemp(prefix="hx-window-"))
+    env = {
+        k: v
+        for k, v in os.environ.items()
+        if not k.startswith(("XDG_CURRENT", "XDG_SESSION", "HYPRLAND", "SWAYSOCK", "I3SOCK", "NIRI"))
+    }
+    env.pop("DESKTOP_SESSION", None)
+    env.update({"BOOPIS_HERMES": "existing", "HERMES_HOME": str(profile / "engine"), "RUST_LOG": "info"})
+    if WINDOWS:
+        driver_bin = shutil.which("tauri-driver")
+        if not driver_bin or not a.native_driver or not Path(a.native_driver).exists():
+            print("needs tauri-driver on PATH and msedgedriver (--native-driver or MSEDGEDRIVER)", file=sys.stderr)
+            return 3
+        cmd = [driver_bin, "--port", str(PORT), "--native-driver", a.native_driver]
+        caps = {"capabilities": {"alwaysMatch": {"tauri:options": {"application": app}}}}
+    else:
+        if not shutil.which("xvfb-run") or not shutil.which("WebKitWebDriver"):
+            print("needs xvfb-run and WebKitWebDriver", file=sys.stderr)
+            return 3
+        runtime = profile / "run"
+        runtime.mkdir(mode=0o700)
+        for k, sub in (
+            ("HOME", "home"),
+            ("XDG_CONFIG_HOME", "config"),
+            ("XDG_DATA_HOME", "data"),
+            ("XDG_CACHE_HOME", "cache"),
+            ("XDG_STATE_HOME", "state"),
+        ):
+            (profile / sub).mkdir()
+            env[k] = str(profile / sub)
+        env.update(
+            {
+                "XDG_RUNTIME_DIR": str(runtime),
+                "GDK_BACKEND": "x11",
+                "TAURI_WEBVIEW_AUTOMATION": "true",
+                "WEBKIT_DISABLE_COMPOSITING_MODE": "1",
+                "LIBGL_ALWAYS_SOFTWARE": "1",
+            }
+        )
+        binary = app
+        if a.tiling:  # WebKitWebDriver does not pass this variable on to the browser it starts, so a shim sets it
+            shim = profile / "tiling.sh"
+            shim.write_text(f'#!/bin/sh\nHYPRLAND_INSTANCE_SIGNATURE=smoke exec "{app}" "$@"\n')
+            shim.chmod(0o700)
+            binary = str(shim)
+        cmd = ["xvfb-run", "-a", "-s", "-screen 0 1440x900x24", "WebKitWebDriver", f"--port={PORT}"]
+        caps = {"capabilities": {"alwaysMatch": {"webkitgtk:browserOptions": {"binary": binary, "args": []}}}}
+    proc = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=None)
+    d = Driver(PORT)
+    try:
+        wait_for(lambda: d.call("GET", "/status").get("value", {}).get("ready") is not None, "the web driver")
+        d.sid = d.call("POST", "/session", caps, timeout=120)["value"]["sessionId"]
+
+        def drawn() -> bool:
+            got = d.js(BAR_SCRIPT)
+            return isinstance(got, dict) and bool(got.get("buttons"))
+
+        wait_for(drawn, "the first-run screen", 90)
+        time.sleep(1.0)  # the host answers window_facts once; the bar lays itself out again then
+        bar = d.js(BAR_SCRIPT)
+        assert isinstance(bar, dict)
+        print("first run:", json.dumps(bar))
+
+        facts = d.invoke("window_facts")
+        print("window_facts:", json.dumps(facts))
+        detected = (facts.get("ok") or {}).get("detected") or {}
+        want_platform = "windows" if WINDOWS else "macos" if sys.platform == "darwin" else "linux"
+        check(detected.get("platform") == want_platform, "the host recognises the platform", detected.get("platform"))
+        if WINDOWS:
+            check(detected.get("kind") == "floating", "Windows is a floating desktop", detected.get("kind"))
+        if a.tiling:
+            check(detected.get("kind") == "tiling", "Hyprland is a tiling desktop", detected.get("kind"))
+
+        check(bar.get("drag") in ("", "true", "deep"), "the first-run bar is a drag region", bar.get("drag"))
+        check(
+            bool(bar.get("bar")) and bar["bar"]["top"] == 0 and bar["bar"]["height"] > 0,
+            "the bar is at the top of the window",
+            bar.get("bar"),
+        )
+        shown = [b["win"] for b in bar["buttons"] if b["shown"]]
+        order = {"all": ["min", "max", "close"], "mac": ["close", "min", "max"], "close": ["close"]}[expect]
+        check(shown == order, f"the bar shows {expect}: {', '.join(order)}", shown)
+        check(bar.get("layout") == expect, "the layout the host's facts call for", bar.get("layout"))
+        for b in bar["buttons"]:
+            if b["shown"]:
+                check(b["label"] in (LABELS[b["win"]], "Restore", "Full screen"), f"{b['win']} is named", b["label"])
+                check(
+                    b["top"] >= 0 and b["bottom"] <= bar["bar"]["height"] + 0.5 and b["right"] <= bar["width"],
+                    f"{b['win']} sits in the bar, in the window",
+                    b,
+                )
+
+        acl = d.invoke("plugin:window|internal_toggle_maximize")
+        check("ok" in acl, "the drag region's double click is allowed (internal_toggle_maximize)", acl)
+        time.sleep(0.5)
+        if "ok" in acl:  # put the window back as it was
+            d.invoke("plugin:window|internal_toggle_maximize")
+            time.sleep(0.5)
+
+        if a.shot:
+            Path(a.shot).write_bytes(base64.b64decode(str(d.s("GET", "/screenshot"))))
+            print("screenshot:", a.shot)
+
+        if WINDOWS:
+            win32_checks(d)
+        else:
+            close = d.find(".hx-first-run [data-win=close]")
+            try:
+                d.s("POST", f"/element/{close}/click", {})
+            except RuntimeError as e:  # the app quit before the driver could answer the click
+                print("     the click's answer:", str(e)[-120:])
+
+            def gone() -> bool:
+                try:
+                    d.js("return 1")
+                except RuntimeError:
+                    return True
+                return False
+
+            check(bool(wait_for(gone, "the app to quit", 15)), "Close closes the app")
+        print("FAILED: " + "; ".join(FAILED) if FAILED else "every check passed")
+        return 1 if FAILED else 0
+    finally:
+        with contextlib.suppress(Exception):
+            d.call("DELETE", f"/session/{d.sid}", timeout=15)
+        proc.terminate()
+        try:
+            proc.wait(10)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+        shutil.rmtree(profile, ignore_errors=True)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

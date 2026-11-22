@@ -1,0 +1,92 @@
+name: desktop-window
+# The built app's own window, on a fresh profile (tests/e2e/smoke_window.py): first run shows the window's controls laid out
+# for the desktop, the drag region's double click is allowed, and Close quits. On Windows it also checks the undecorated
+# window through the Win32 API (Snap's styles, the resize edges, Maximize, a double click on the bar, Minimize, Win+Left,
+# Close); on Linux it runs again as a tiling desktop (close alone). The app is a debug build with the UI embedded; no engine
+# is installed, so first run stays on its welcome. macOS is left out: WebDriver cannot drive a WKWebView app.
+# Runs as part of ci.yml's gate, and alone on any branch: `gh workflow run desktop-window.yml --ref <branch>`.
+on:
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  RUSTUP_TOOLCHAIN: "1.97.0"
+
+jobs:
+  window:
+    # NON-BLOCKING for now, like ci.yml's `appimage` and `desktop-smoke`: it is new, and the first Windows run of the app
+    # itself. continue-on-error keeps the caller's result green when it fails; the failure still shows red on the run. Remove
+    # it once both have been green for a few runs.
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-22.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 50
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.97.0
+      - uses: Swatinem/rust-cache@v2
+        with: { shared-key: "desktop-window-${{ matrix.os }}" }
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/desktop/ui/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        working-directory: apps/desktop/ui
+      - name: Tauri's Linux prerequisites, Xvfb and WebKitWebDriver
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev \
+            build-essential pkg-config xvfb webkit2gtk-driver
+      - name: build the app (a debug build with the UI embedded)
+        working-directory: apps/desktop/src-tauri
+        run: pnpm dlx @tauri-apps/cli@2 build --debug --no-bundle
+      - name: tauri-driver, and the msedgedriver of the WebView2 runtime on this runner
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cargo install tauri-driver --version 2.1.0 --locked
+          $id = '{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
+          $ver = $null
+          foreach ($k in "HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\$id", "HKLM:\SOFTWARE\Microsoft\EdgeUpdate\Clients\$id", "HKCU:\Software\Microsoft\EdgeUpdate\Clients\$id") {
+            if (-not $ver) { $ver = (Get-ItemProperty -Path $k -ErrorAction SilentlyContinue).pv }
+          }
+          Write-Output "WebView2 runtime: $ver"
+          $dir = Join-Path $env:RUNNER_TEMP 'edgedriver'
+          try {
+            Invoke-WebRequest "https://msedgedriver.microsoft.com/$ver/edgedriver_win64.zip" -OutFile "$dir.zip"
+            Expand-Archive "$dir.zip" -DestinationPath $dir -Force
+            $driver = Join-Path $dir 'msedgedriver.exe'
+          } catch {
+            Write-Output "no msedgedriver $ver to download ($_); using the runner's own"
+            $driver = Join-Path $env:EDGEWEBDRIVER 'msedgedriver.exe'
+          }
+          & $driver --version
+          "MSEDGEDRIVER=$driver" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: first run's window on Windows (the controls, the Win32 checks)
+        if: runner.os == 'Windows'
+        run: python tests/e2e/smoke_window.py target/debug/boopis.exe --shot "$RUNNER_TEMP/window-windows.png"
+      - name: first run's window on Linux (a floating desktop, then a tiling one)
+        if: runner.os == 'Linux'
+        run: |
+          python3 tests/e2e/smoke_window.py target/debug/boopis --shot "$RUNNER_TEMP/window-linux.png"
+          python3 tests/e2e/smoke_window.py target/debug/boopis --tiling --shot "$RUNNER_TEMP/window-linux-tiling.png"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: desktop-window-${{ matrix.os }}
+          path: ${{ runner.temp }}/window-*.png
+          if-no-files-found: ignore
+          retention-days: 7
