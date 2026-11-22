@@ -199,12 +199,8 @@ function Get-ReleaseTag {
     }
     catch { }
     try {
-        # Windows PowerShell 5.1 passes a JSON array down the pipeline as ONE object: @(Invoke-RestMethod ...) was then a list
-        # holding the whole list, and its [0].tag_name every tag at once ("v0.1.7 v0.1.6 ..."). Assigned first, then
-        # enumerated, it is the newest release alone in 5.1 and in 7 (ci.yml's installer-windows checks both).
-        $resp = Invoke-RestMethod -Uri "$ApiUrl/repos/$Owner/$Repo/releases" -Headers $headers -UseBasicParsing
-        $first = @($resp) | Select-Object -First 1
-        if ($first -and $first.tag_name) { return [string]$first.tag_name }
+        $list = @(Invoke-RestMethod -Uri "$ApiUrl/repos/$Owner/$Repo/releases" -Headers $headers -UseBasicParsing)
+        if ($list.Count -gt 0 -and $list[0].tag_name) { return [string]$list[0].tag_name }
         throw 'no release'
     }
     catch {
