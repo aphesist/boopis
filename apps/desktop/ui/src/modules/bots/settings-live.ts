@@ -15,7 +15,7 @@ import { inventoryLine } from './glance';
 import { bot, S } from './model';
 import { orbButton } from './orbs';
 import { checkClips } from './clips';
-import { closeSettings, hintOf, openSettings, sectionOf, wireSectionKeys } from './settings';
+import { closeSettings, hintOf, lookSection, openSettings, sectionOf, wireSectionKeys } from './settings';
 import { focusConversation, openBot, refreshPresence } from './room';
 import { openNew } from './new-bot';
 import { updateRow } from './list';
@@ -150,6 +150,7 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
   const jobsMeta = info.jobs ? (info.jobs.filter((j) => j.enabled).length ? info.jobs.filter((j) => j.enabled).length + ' on' : 'none') : 'unknown';
   body.append(
     who, review, gone,
+    lookSection(b),
     sec('role', 'Role and instructions', null, [roleF, instrF]),
     sec('model', 'Model', info.model ?? 'not set', [modelF]),
     sec('schedule', 'Schedule', jobsMeta, [hint('What it does when you have not asked. Each is a job in this bot’s own schedule.'), routines, routineErr, promptF, presets, cronF, el('div', { class: 'bt-add-row' }, addBtn)]),

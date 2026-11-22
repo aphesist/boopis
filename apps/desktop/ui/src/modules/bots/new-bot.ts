@@ -5,7 +5,9 @@ import { setState, state } from '../../core/state';
 import { ui } from '@boopis/ui';
 import { oc } from '@boopis/ui';
 import { data } from '../../data';
-import { DRAFT_COLOR, paintOrb, paintOrbColour, SHAPES, SWATCHES } from './paint';
+import { DRAFT_COLOR, paintOrb } from './paint';
+import { lookPicker, lookWords, offeredShapes } from './look-picker';
+import type { LookTab } from './look-picker';
 import { rollLook } from '@boopis/ui';
 import { gentleFollow, orbButton, orbEl, setReact } from './orbs';
 import { S } from './model';
@@ -49,10 +51,15 @@ function buildNew(seed?: Partial<Draft>): void {
   const dice = ui.iconButton({ icon: 'dice', label: 'Surprise me with a name, colour and shape', tip: 'Surprise me', keys: 'alt+R', size: 's' });
   dice.classList.add('bt-dice');
   const note = el('p', { class: 'bt-name-note', id: noteId });
-  const TABS = [['colour', 'Colour'], ['shape', 'Shape']] as const;
-  const rowId = 'bt-pick-' + Math.random().toString(36).slice(2, 7);
-  const tabs = ui.segmented({ mode: 'tabs', label: 'Appearance', value: d.tab, options: TABS.map(([value, label]) => ({ value, label })), controls: { colour: rowId, shape: rowId } });
-  const row = el('div', { class: 'bt-pick', role: 'tabpanel', id: rowId });
+  /* Colour and Shape: the look picker the look editor uses too */
+  const picker = lookPicker({
+    value: d, tab: d.tab === 'shape' ? 'shape' : 'colour',
+    onTab: (t: LookTab) => { d.tab = t; },
+    onPick: (what, look) => {
+      if (what === 'color') { d.color = look.color; apply('color'); oc(preview, 'blink'); }
+      else { follow.faceOn(560); d.shape = look.shape; apply('shape'); oc(preview, 'poke', 0.5, { react: false }); }
+    }
+  });
   const roleField = ui.field({ kind: 'textarea', label: 'What it does', placeholder: 'For example: reviews every pull request before I merge', value: d.role, raised: true });
   const roleIn = $<HTMLTextAreaElement>('textarea', roleField);
   const go = ui.button({ label: 'Create bot', variant: 'primary', disabled: true });
@@ -65,7 +72,7 @@ function buildNew(seed?: Partial<Draft>): void {
     el('div', { class: 'bt-stage' }, pv),
     el('div', { class: 'bt-name-row' }, [nameIn, dice]),
     note,
-    el('div', { class: 'bt-appearance' }, [tabs, row]),
+    picker.el,
     el('div', { class: 'bt-new-field' }, roleField),
     goRow
   ]);
@@ -78,70 +85,16 @@ function buildNew(seed?: Partial<Draft>): void {
         const reshape = s.shape !== d.shape;
         Object.assign(d, { name: s.name.replace(/\s+/g, '-'), role: s.desc, shape: s.shape, color: s.color });
         if (reshape) follow.faceOn(560);
-        nameIn.value = d.name; roleIn.value = d.role; roleIn.dispatchEvent(new Event('input')); apply('all'); oc(preview, 'poke', reshape ? 0.5 : 0.9, { react: !reshape });
+        nameIn.value = d.name; roleIn.value = d.role; roleIn.dispatchEvent(new Event('input')); picker.set(d); apply('all'); oc(preview, 'poke', reshape ? 0.5 : 0.9, { react: !reshape });
       });
       return btn;
     }))
   ]) : null;
   pane.append(el('div', { class: 'bt-new-scroll ui-scroll' }, [el('div', { class: 'bt-new-col' }, [back, form, suggest])]));
 
-  tabs.addEventListener('ui:change', (e) => { d.tab = (e as CustomEvent<{ value: string }>).detail.value; paintRow(); });
-  /* The tiles are built when the tab changes, never on a choice: rebuilding 15 orb canvases (each with its 3D body)
-     on every click cost 45-90ms in WebKitGTK, right as the morph started, so its first frames dropped and the
-     change read as a jump. A choice now moves the selection; a new colour repaints the tiles in place. */
-  function syncRow(): void {
-    const cur = d.tab === 'colour' ? d.color : d.shape;
-    for (const b of row.querySelectorAll<HTMLElement>('.bt-opt')) { const on = b.dataset['val'] === cur; b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1; }
-  }
-  function recolourRow(): void {
-    if (d.tab === 'colour') return;
-    for (const o of row.querySelectorAll('.bt-opt orb-avatar')) paintOrbColour(o, d.color);
-  }
-  const offeredShapes = (): string[] => window.OrbAvatar && window.OrbAvatar.bodyShapes ? window.OrbAvatar.bodyShapes.filter((s) => SHAPES.includes(String(s))).map(String) : SHAPES;
-  function paintRow(): void {
-    row.textContent = ''; row.dataset['kind'] = d.tab;
-    row.setAttribute('aria-label', cap1(d.tab));
-    const shapes = offeredShapes();
-    const opts: ReadonlyArray<readonly [string, string] | string> = d.tab === 'colour' ? SWATCHES : shapes;
-    const group = el('div', { class: 'bt-opts', role: 'radiogroup', 'aria-label': cap1(d.tab) });
-    for (const o of opts) {
-      const val = typeof o === 'string' ? o : o[0];
-      const lab = typeof o === 'string' ? cap1(o) : o[1];
-      const on = (d.tab === 'colour' ? d.color : d.shape) === val;
-      /* the picker tiles are the one place orbs stay still: 28px, many at once, a choice not a creature */
-      const inner = d.tab === 'colour'
-        ? el('span', { class: 'bt-swatch', style: '--c:' + val })
-        : ui.orb({ ...d, shape: val, name: lab }, { size: 28, still: true });
-      group.append(el('button', {
-        class: 'bt-opt', type: 'button', role: 'radio', 'aria-checked': on ? 'true' : 'false', 'aria-label': lab, 'data-tip': lab, 'data-val': val, tabindex: on ? '0' : '-1',
-        onclick: () => choose(val)
-      }, inner));
-    }
-    group.addEventListener('keydown', (e) => {
-      const items = [...group.children] as HTMLElement[], i = items.indexOf(document.activeElement as HTMLElement);
-      if (i < 0) return;
-      let j = -1;
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') j = (i + 1) % items.length;
-      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') j = (i - 1 + items.length) % items.length;
-      if (e.key === 'Home') j = 0;
-      if (e.key === 'End') j = items.length - 1;
-      const t = items[j];
-      if (j >= 0 && t) { e.preventDefault(); t.focus(); t.click(); }
-    });
-    row.append(group);
-  }
-  function choose(val: string): void {
-    if (d.tab === 'colour') { d.color = val; apply('color'); oc(preview, 'blink'); }
-    if (d.tab === 'shape' && val !== d.shape) { follow.faceOn(560); d.shape = val; apply('shape'); oc(preview, 'poke', 0.5, { react: false }); }
-    syncRow();
-    const sel = row.querySelector<HTMLElement>('[aria-checked="true"]');
-    if (sel && sel !== document.activeElement) sel.focus({ preventScroll: true });
-  }
   function apply(what: 'color' | 'shape' | 'all'): void {
     if (what === 'color' || what === 'all') paintOrb(preview, d);
     if (what === 'shape' || what === 'all') preview.setAttribute('shape', d.shape);
-    if (what === 'color' || what === 'all') recolourRow();
-    if (what === 'all') syncRow();
     paintGo(); paintDraftRow();
   }
   /* the caption under the preview is the button: it names the bot as you type or roll (an empty name gets one from
@@ -174,9 +127,9 @@ function buildNew(seed?: Partial<Draft>): void {
     const reshape = look.shape !== d.shape;
     if (reshape) follow.faceOn(560);
     d.shape = look.shape; d.color = look.color;
-    apply('color'); apply('shape'); syncRow();
+    picker.set(d); apply('color'); apply('shape');
     oc(preview, 'blink');
-    ui.announce('Name: ' + name + ', ' + (SWATCHES.find(([c]) => c === look.color)?.[1] ?? 'new colour').toLowerCase() + ' ' + look.shape + (rolledOut ? '. Every name in the list is taken, so it has a number.' : ''));
+    ui.announce('Name: ' + name + ', ' + lookWords(look) + (rolledOut ? '. Every name in the list is taken, so it has a number.' : ''));
   }
   dice.addEventListener('click', () => roll());
   form.addEventListener('focusin', (e) => {
@@ -245,6 +198,6 @@ function buildNew(seed?: Partial<Draft>): void {
       S.composer?.focus();
     }, 900);
   }
-  paintRow(); paintGo();
+  paintGo();
   if (!seed) later(() => nameIn.focus({ preventScroll: true }), 60);
 }

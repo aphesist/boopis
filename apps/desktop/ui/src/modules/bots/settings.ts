@@ -13,6 +13,7 @@ import { updateRow } from './list';
 import { focusConversation, openBot, paintToolbar, refreshPresence } from './room';
 import { checkClips } from './clips';
 import { openLiveSheet } from './settings-live';
+import { lookEditor } from './look-edit';
 
 /** a section of the sheet: the library's, open, with its kids in its body */
 export function sectionOf(name: string, label: string, meta: string | null, kids: Array<Node | null>): HTMLElement {
@@ -21,6 +22,14 @@ export function sectionOf(name: string, label: string, meta: string | null, kids
   return s;
 }
 export const hintOf = (text: string): HTMLElement => el('p', { class: 'ui-field__hint', text });
+/** the Look section (the look editor), the same in the mock's sheet and a live bot's */
+export function lookSection(b: Bot): HTMLElement {
+  let meta: HTMLElement | null = null;
+  const ed = lookEditor(b, (words) => { if (meta) meta.textContent = words; });
+  const s = sectionOf('look', 'Look', ed.meta, ed.kids);
+  meta = s.querySelector<HTMLElement>('.ui-sec__meta');
+  return s;
+}
 /** the headers are the sheet's tab stops: up and down move between them, home and end jump (KEYMAP section 9) */
 export function wireSectionKeys(body: HTMLElement): HTMLElement[] {
   const heads = [...body.querySelectorAll<HTMLElement>('.ui-sec__head')];
@@ -132,6 +141,7 @@ export function openSettings(id: string | null, focusSection?: string | null, op
   checkClips();
   body.append(
     who,
+    lookSection(b),
     sec('role', 'Role and instructions', null, [roleF, instrF]),
     sec('model', 'Model', c.gov === 'governed' ? 'governed' : c.model, [hint('Governed starts cheap and climbs the ladder only when a step fails.'), gov, modelBox]),
     sec('schedule', 'Schedule', c.cron ? (cronValid(c.cron) ? cronWords(c.cron) : 'incomplete') : null, [hint('When it runs without being asked.'), presets, cronF]),

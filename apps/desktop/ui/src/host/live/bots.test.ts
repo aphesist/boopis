@@ -291,6 +291,18 @@ describe('the settings sheet edits the real profile, and shows the diff first', 
     expect(h.main.calls.some((c) => c.method === 'profiles.configure')).toBe(false);
     expect(botOf(bots, 'atlas')).toMatchObject({ shape: 'star', cfg: { gov: 'governed', cap: '1.00' } });
   });
+  it('a look changed in the editor is written with bots.write, shape and colour only, and a profile made outside gets its store', async () => {
+    const { h, bots, events } = await open();
+    expect(botOf(bots, 'nina')).toMatchObject({ ...lookFor('Nina'), madeOutside: true });   /* no record: the name's look */
+    events.length = 0;
+    bots.source.update('nina', { look: { shape: 'cloud', color: '#9b5cf6' } });
+    await bots.settled(); await new Promise((r) => setTimeout(r, 0));
+    expect(h.main.calls.at(-1)).toEqual({ method: 'plugin.boopis.bots.write', params: { name: 'nina', look: { shape: 'cloud', color: '#9b5cf6' } } });
+    expect(h.own['nina']).toEqual({ look: { shape: 'cloud', color: '#9b5cf6' } });
+    const ev = events.find((e) => e.type === 'bot') as { bot: { id: string; shape: string; color: string; madeOutside?: true } };
+    expect(ev.bot).toMatchObject({ id: 'nina', shape: 'cloud', color: '#9b5cf6' });
+    expect('madeOutside' in ev.bot).toBe(false);
+  });
 });
 
 describe('archive keeps everything, delete asks first and says what goes', () => {

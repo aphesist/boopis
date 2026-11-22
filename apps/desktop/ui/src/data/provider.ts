@@ -162,8 +162,8 @@ export interface BotsSource extends Feed<BotsSnapshot, BotsEvent> {
   stop(botId: string): boolean;
   /** decide an approval card in a thread (the dock decides through `waits`) */
   decide(botId: string, messageId: string, decision: 'approved' | 'denied'): void;
-  /** changes the role or the settings; the change comes back as a `bot` event */
-  update(id: string, patch: { role?: string; cfg?: Partial<BotConfig> }): void;
+  /** changes the role, the settings or the look (shape and colour, never the eyes); the change comes back as a `bot` event */
+  update(id: string, patch: { role?: string; cfg?: Partial<BotConfig>; look?: { shape?: string; color?: string } }): void;
   create(draft: BotDraft & { instructions: string }): Bot;
   archive(id: string): void;
   /** archived teammates (profiles renamed out of the way, newest first): `id` is the profile's name now, `was` the name it returns to */

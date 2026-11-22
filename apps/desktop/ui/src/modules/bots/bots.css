@@ -96,6 +96,13 @@
 .bt-name:focus { border-bottom-color: var(--brass); }
 .bt-name:focus-visible { outline: none; }
 .bt-appearance { display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); width: 100%; margin-bottom: var(--sp-6); }
+/* in a bot's settings (the look editor) the picker sits in a section: flush with its fields, the dice at the end of the tabs' line */
+.bt-appearance--sheet { align-items: stretch; margin-bottom: 0; }
+.bt-appearance--sheet .bt-pick { justify-content: flex-start; }
+.bt-appearance--sheet .bt-opts { justify-content: flex-start; }
+.bt-appearance-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.bt-look-dice { color: var(--text-quiet); }
+.bt-look-dice:hover, .bt-look-dice:focus-visible { color: var(--text); }
 .bt-pick { width: 100%; min-height: calc(var(--ctl) + 6px); display: flex; justify-content: center; }
 .bt-opts { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-1); }
 .bt-opt { width: calc(var(--ctl) + 6px); height: calc(var(--ctl) + 6px); border-radius: var(--r-pill);   /* a pill: the colour circle in it stays a circle at --sp-2 (R-corner-9) */ display: grid; place-items: center; transition: background-color var(--dur-out) var(--ease); --sq-bg: transparent; background: var(--sq-bg); }

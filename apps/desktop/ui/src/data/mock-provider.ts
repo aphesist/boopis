@@ -187,8 +187,10 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
       const b = botById(id); if (!b) return;
       if (patch.role !== undefined) b.role = patch.role;
       if (patch.cfg) b.cfg = { ...b.cfg, ...patch.cfg, channels: { ...b.cfg.channels, ...patch.cfg.channels }, approvals: { ...b.cfg.approvals, ...patch.cfg.approvals } } as BotConfig;
-      /* a boopis setting is saved in the bot's own store, which a bot made outside boopis did not have: the mark goes */
-      if (patch.cfg && ['gov', 'cap', 'workspace', 'approvals'].some((k) => k in patch.cfg!)) delete b.madeOutside;
+      if (patch.look?.shape) b.shape = patch.look.shape;   /* a look is its shape and colour, never its eyes */
+      if (patch.look?.color) b.color = patch.look.color;
+      /* a boopis setting or a look is saved in the bot's own store, which a bot made outside boopis did not have: the mark goes */
+      if ((patch.cfg && ['gov', 'cap', 'workspace', 'approvals'].some((k) => k in patch.cfg!)) || patch.look) delete b.madeOutside;
       announceBot(b);
     },
     create(draft) {
