@@ -4,9 +4,16 @@ name: claude-cli
 # it. For every case, scripts/claude-cli-check.py runs the host's own lookup and probe (examples/claude_probe.rs: the version,
 # Claude Code's own `auth status`, the card's state and installer) and then the Claude subscription plugin's own `_resolve`, at
 # the commit the engine's catalogue pins, in the environment the engine gets, and checks that both run the same file.
-# Not part of every push: it downloads Claude Code from claude.ai and npm, and Anthropic's installers change on their own
-# schedule, so it is dispatched on a branch and runs weekly on main.
+# Not part of every push: it downloads Claude Code from claude.ai and npm. It runs when a push changes the lookup itself (on
+# any branch: a workflow that is not yet on the default branch cannot be dispatched), weekly on main, since Anthropic's
+# installers change on their own schedule, and on demand.
 on:
+  push:
+    paths:
+      - apps/desktop/src-tauri/src/claude.rs
+      - apps/desktop/src-tauri/examples/claude_probe.rs
+      - scripts/claude-cli-check.py
+      - .github/workflows/claude-cli.yml
   workflow_dispatch:
     inputs:
       macos:
