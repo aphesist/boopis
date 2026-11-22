@@ -9,11 +9,16 @@ import type { MarkdownCtx } from '@boopis/ui';
 import type { GroupMember, GroupMessage, GroupText } from '../../data';
 import { listWords, unreadDivider } from './ledger';
 
+/* Held back for 0.1.9: nothing draws a huddle until `setHuddle(true)`, and no setting or entry point turns it on yet. */
+let ON = false;
+export const setHuddle = (on: boolean): void => { ON = on; };
+export const huddleOn = (): boolean => ON;
 /** a message the members wrote among themselves: a member's, in a later round (round 0 answers the user) */
 export const isBetween = (m: GroupMessage): m is GroupText & { round: number } => m.kind === 'text' && m.who !== 'you' && typeof m.round === 'number' && m.round > 0;
 /** the runs of two or more such messages in a thread, as [start, end) index pairs */
 export function huddleRuns(msgs: readonly GroupMessage[]): Array<[number, number]> {
   const runs: Array<[number, number]> = [];
+  if (!ON) return runs;
   for (let i = 0; i < msgs.length;) {
     const at = msgs[i];
     if (!at || !isBetween(at)) { i++; continue; }

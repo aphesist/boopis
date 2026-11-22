@@ -673,6 +673,9 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
   border: 0; border-radius: var(--r-pill); background: var(--current); color: var(--text-strong); font: 500 var(--fs-s)/1 var(--sans); letter-spacing: 0;
   vertical-align: -4px; cursor: pointer; white-space: nowrap; transition: background-color var(--dur-out) var(--ease), box-shadow var(--dur-out) var(--ease);
 }
+.ui-mention--out { background: transparent; box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--text-dim); font-weight: 400; cursor: default; }
+.ui-mention--out .ui-orb, .ui-mention--out orb-avatar { opacity: .6; }
+.ui-mention--out:focus-visible { outline: var(--focus-w) solid var(--focus); outline-offset: 1px; }
 .ui-mention__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .ui-mention__stack { display: inline-flex; align-items: center; }
 .ui-mention__stack > .ui-orb + .ui-orb { margin-left: calc(var(--sp-1) * -1); }

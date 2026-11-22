@@ -20,7 +20,7 @@ import { closeSettings } from './settings';
 import { openNewGroup } from './new-group';
 import { arrival, atEnd, dropPending, entryActs, glanceAt, jumpButton, listWords, pendingEntry, placeToLine, setJump, toLine, unreadDivider, updatePending } from './ledger';
 import { mentionCtx, resolvePaths, wireRefs } from '../chat/refs';
-import { foldHuddles, huddleEntry, huddleRuns, isBetween, liveAt } from './huddle';
+import { foldHuddles, huddleEntry, huddleOn, huddleRuns, isBetween, liveAt } from './huddle';
 import type { HuddleDeps } from './huddle';
 
 const groups = () => data().groups;
@@ -48,8 +48,9 @@ export function mountGroupPane(root: HTMLElement): HTMLElement {
   scroll.append(col);
   const zone = el('div', { class: 'bt-composer-zone' });
   const working = el('p', { class: 'bt-working', role: 'status', 'aria-live': 'polite' });
+  const hint = el('p', { class: 'bt-hint', role: 'status', 'aria-live': 'polite', hidden: true });
   U.jump = jumpButton(() => { jumpToLatest(); });
-  zone.append(U.jump, working);
+  zone.append(U.jump, hint, working);
   scroll.addEventListener('scroll', () => { const g = group(S.groupSel); if (g && !pane.hidden) markSeen(g); }, { passive: true });
   wireRefs(log, {
     bot: (id) => { const b = bot(id); const g = group(S.groupSel); const m = g ? memberOf(g, id) : undefined; if (!b && !m) return null; return { bot: b ? { ...b, id: b.id, name: b.name } : mdBot(m as GroupMember), state: b?.state ?? 'idle', model: b?.info?.model ?? null, where: g?.name ?? null }; },
@@ -65,6 +66,9 @@ export function mountGroupPane(root: HTMLElement): HTMLElement {
   c.input.setAttribute('data-hx-focus', 'composer');
   c.addEventListener('ui:send', (e) => { send((e as CustomEvent<{ text: string }>).detail.text); });
   c.addEventListener('ui:stop', () => { stopTalk(); });
+  const showHint = (): void => { const g = group(S.groupSel); const t = g ? outsideHint(g, c.value) : ''; hint.textContent = t; hint.hidden = !t; };
+  c.input.addEventListener('input', showHint);
+  c.addEventListener('ui:send', () => { window.setTimeout(showHint, 0); });
   G.composer = c;
   const measure = (): void => { S.viewRoot?.style.setProperty('--bt-composer-h', zone.offsetHeight + 'px'); };
   new ResizeObserver(measure).observe(zone);
@@ -147,7 +151,17 @@ const SEEN = new Map<string, string>();
 const U = { unread: 0, divider: null as HTMLElement | null, jump: null as HTMLButtonElement | null };
 
 const mdBot = (m: GroupMember): MdBot => { const b = bot(m.profile); return { ...memberBot(m), id: m.profile || m.id, name: m.name, handle: m.handle, ...(b?.role ? { role: b.role } : {}) }; };
-const ctxOf = (g: Group): MarkdownCtx => mentionCtx(g.members.map(mdBot), { everyone: true });
+/** the bots that exist and are not in the room: a mention of one is a muted chip, and the composer says so before sending */
+const outsiders = (g: Group): Array<MdBot & { handle: string }> => S.bots.filter((b) => !g.members.some((m) => m.profile === b.id)).map((b) => ({ ...b, id: b.id, name: b.name, handle: b.id }));
+const ctxOf = (g: Group): MarkdownCtx => mentionCtx(g.members.map(mdBot), { everyone: true, outside: outsiders(g) });
+/** the quiet hint under a draft that names a bot that is not here: "nimbus isn't in this room: add them, or send without them" */
+export function outsideHint(g: Group, text: string): string {
+  const out = ui.markdown.outsiders(text, g.members, outsiders(g));
+  return out.length ? listWords(out.map((b) => b.name)) + (out.length === 1 ? " isn't" : " aren't") + ' in this room: add them, or send without them' : '';
+}
+/** other parts of the room's composer can hold a message back (a running turn it would cancel): a guard returns false to stop the send */
+const GUARDS: Array<(g: Group, text: string) => boolean> = [];
+export const addSendGuard = (fn: (g: Group, text: string) => boolean): void => { GUARDS.push(fn); };
 const memberOf = (g: Group, idOrProfile: string): GroupMember | undefined => g.members.find((m) => m.id === idOrProfile || m.profile === idOrProfile);
 /** the folders a member's paths resolve in: the folder the engine said its bot works in (none known: absolute paths only) */
 const rootsOf = (g: Group, who: string): string[] => { const m = memberOf(g, who); const ws = m ? data().bots.workspace?.(m.profile) : null; return ws ? [ws] : []; };
@@ -267,7 +281,7 @@ function appendMsg(g: Group, m: GroupMessage): void {
   const lastIsLast = !!last && !last.nextElementSibling?.matches('.bt-note, .bt-unread');
   if (m.kind === 'text' && m.who === 'you') foldHuddles(log);
   /* a member's message among the members: two or more in a row fold into one huddle, which stays open while the talk is live */
-  if (isBetween(m)) {
+  if (huddleOn() && isBetween(m)) {
     const run: GroupText[] = [];
     for (let i = list.length - 1; i >= 0; i--) { const x = list[i] as GroupMessage; if (isBetween(x)) run.unshift(x); else break; }
     if (run.length >= 2) { paintHuddle(g, run, m); if (follow) { sc.scrollTo({ top: sc.scrollHeight, behavior: reduced() ? 'auto' : 'smooth' }); markSeen(g); } else { U.unread++; setJump(U.jump, U.unread); } return; }
@@ -390,7 +404,7 @@ function paintWorking(g: Group, more: readonly MemberActivity[] = []): void {
   livenIn(w);
 }
 function send(text: string): void {
-  const g = group(S.groupSel); if (!g || !text.trim()) return;
+  const g = group(S.groupSel); if (!g || !text.trim() || !GUARDS.every((f) => f(g, text))) return;
   groups().send(g.id, text.trim());
 }
 export function stopTalk(): boolean {

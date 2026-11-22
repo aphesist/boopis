@@ -43,7 +43,7 @@ const room: Story = {
     'live bot: a session open, with a line the app says': st(['variant', 'owner'], live(true), pick('atlas')),
     'live bot: a long name': st(['long'], { fixtures: ['long'], simulate: false, patch: (p) => liveShaped(p) }, pick('cassiopeia-staging-deploy-guardian')),
     'a reply in markdown: lists, a quote, code, a path, a mention': st(['typical', 'owner'], { simulate: false, patch: (p) => withMarkdownThread(p, 'atlas') }, pick('atlas')),
-    'a reply under way: the pending entry': st(['loading', 'owner'], { simulate: false, patch: (p) => withRun(p, 'atlas') }, pick('atlas')),
+    'a reply under way: the pending entry': st(['loading', 'owner'], { simulate: false, patch: (p) => withRun(p, 'atlas') }, pick('atlas'), { allow: { 'stability.render': 'the pending entry counts the seconds the reply has taken (a clock, text only), so two draws a moment apart differ in that one number' } }),
     'no bots at all': st(['empty', 'owner'], { bots: 'none' }, bots),
     'composer send hover': st(['hover', 'owner'], {}, pick('atlas'), { force: [{ sel: '#hx-view-bots .ui-send', state: 'hover' }] }),
     'composer attach tooltip': st(['tooltip', 'owner'], {}, async (c) => { await pick('atlas')(c); const b = document.querySelector<HTMLElement>('#hx-view-bots .ui-composer__attach, #hx-view-bots .ui-composer__mic'); if (b) { b.focus(); c.hx.ui.tooltip.show(b); } await c.wait(250); }, { overlay: { anchor: '#hx-view-bots .ui-composer__attach, #hx-view-bots .ui-composer__mic', layer: '.ui-tip' } })
@@ -74,13 +74,16 @@ const groupRoom: Story = {
     'several members answered': st(['typical', 'owner'], grp, openGroup),
     'two members replying': st(['loading'], { ...grp, patch: (p) => withWorking(p) }, openGroup),
     'a team across rounds: to-lines, mentions, paths, code': st(['typical', 'owner'], paper, openPaper),
-    'the huddle, folded: the owner wrote again': st(['variant', 'owner'], paper, openPaper),
-    'the huddle, open while live': st(['variant', 'owner'], { ...paper, patch: (p) => ({ ...p, groups: { ...p.groups, snapshot: () => { const s = p.groups.snapshot(); return { ...s, threads: Object.fromEntries(Object.entries(s.threads).map(([k, v]) => [k, v.slice(0, 6)])) }; } } }) }, openPaper),
-    'the huddle opened by the disclosure': st(['variant', 'open'], paper, async (c) => { await openPaper(c); await c.click('#hx-view-bots .bt-huddle-entry .ui-disclosure'); await c.wait(300); }),
-    'the huddle head hover': st(['hover'], paper, openPaper, { force: [{ sel: '#hx-view-bots .bt-huddle-entry .ui-disclosure', state: 'hover' }] }),
     'three members at work, each in a tool': st(['loading', 'owner'], { ...paper, patch: (p) => withActivity(p, [{ at: 0, status: 'running', tool: 'read_file' }, { at: 1, status: 'running', tool: 'terminal' }, { at: 2, status: 'queued' }]) }, openPaper),
     'five at work: the rest in one line above the composer': st(['many', 'loading'], { ...paper, patch: (p) => withActivity(p, [0, 1, 2, 3, 4].map((at) => ({ at, status: at < 2 ? 'running' as const : 'queued' as const }))) }, openPaper),
     'a mention hovered': st(['hover', 'owner'], paper, async (c) => { await openPaper(c); const m = document.querySelector<HTMLElement>('#hx-view-bots .ui-mention'); if (m) { m.focus(); } await c.wait(700); }),
+    'a mention of a bot that is not in the room: the chip and the hint': st(['variant', 'owner'], { fixtures: ['groups'], simulate: false }, async (c) => {
+      await openGroup(c);
+      const comp = document.querySelector<HTMLElement & { insert(t: string): void; focus(): void }>('#hx-view-bots .bt-group .ui-composer');
+      comp?.dispatchEvent(new CustomEvent('ui:send', { detail: { text: '@sol can you look at this? @nimbus. and @kai' } }));
+      await c.wait(300);
+      comp?.focus(); comp?.insert('@sol are you there'); await c.wait(400);
+    }),
     'no messages yet': st(['empty'], { fixtures: ['groups'], simulate: false, patch: (p) => ({ ...p, groups: { ...p.groups, snapshot: () => ({ groups: p.groups.snapshot().groups, threads: {} }) } }) }, openGroup),
     'group chat is off': st(['error'], { ...grp, patch: (p) => ({ ...p, groups: { ...p.groups, note: () => 'Group chat is not running in the engine. Restart boopis and try again.' } }) }, openGroup),
     'renaming': st(['variant'], grp, async (c) => { await openGroup(c); await c.click('#hx-view-bots [aria-label^="Rename"]'); await c.wait(300); }),

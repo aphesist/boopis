@@ -36,7 +36,7 @@ import type { SigninButtonOpts } from './signin-button';
 import { tooltip } from './tooltip';
 import { hydrate, hydrateOne } from './wire';
 import { scrollClass } from './scroll';
-import { codeHTML, everyoneHTML, inlineHTML, plainHTML, markdownHTML, mentionHandles, mentionHTML, pathCandidate, pathCandidates, pathHTML, resolveMentions, splitBlocks, upgradePaths } from './markdown';
+import { codeHTML, everyoneHTML, inlineHTML, plainHTML, markdownHTML, mentionHandles, mentionHTML, mentionOutsideHTML, mentionsOutside, pathCandidate, pathCandidates, pathHTML, resolveMentions, splitBlocks, upgradePaths } from './markdown';
 import { arrive, codeOf, markdown as markdownEl, streamMarkdown, wireMarkdown } from './md-view';
 import { copyText } from './clipboard';
 import type { SegElement } from './wire';
@@ -83,7 +83,7 @@ const factories = {
 /** `ui.markdown(text, ctx)` draws what a bot or an agent wrote (markdown.ts); its properties are the parts the surfaces use */
 const markdown = Object.assign(markdownEl, {
   html: markdownHTML, inline: inlineHTML, plain: plainHTML, code: codeHTML, blocks: splitBlocks, stream: streamMarkdown, arrive, wire: wireMarkdown, codeOf,
-  mention: mentionHTML, everyone: everyoneHTML, handles: mentionHandles, resolve: resolveMentions,
+  mention: mentionHTML, outside: mentionOutsideHTML, outsiders: mentionsOutside, everyone: everyoneHTML, handles: mentionHandles, resolve: resolveMentions,
   path: pathHTML, pathCandidate, candidates: pathCandidates, upgradePaths
 });
 const legend = (parts: readonly MeasurePart[], fmt?: (n: number) => string): HTMLElement => frag(html.legend(parts, fmt));

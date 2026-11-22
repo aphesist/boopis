@@ -30,6 +30,10 @@ export interface MdBot extends BotLike { id: string; name: string; handle?: stri
 export interface MarkdownCtx {
   /** a handle as written (without "@") to the bot it names, or null: a handle nobody has stays text */
   mention?: ((handle: string) => MdBot | null) | undefined;
+  /** a handle that names a bot that exists but is not in this room: it is drawn as a muted chip saying so (a handle no bot has stays text) */
+  outside?: ((handle: string) => MdBot | null) | undefined;
+  /** what the muted chip says after the name (default "isn't in this room") */
+  outsideNote?: string | undefined;
   /** the room's members: `@all` and `@everyone` become one chip with their orbs; without it they stay text */
   everyone?: readonly MdBot[] | undefined;
   /** code longer than this many lines folds to `fold - 2` lines (default 14, so 12 show) */
@@ -54,6 +58,19 @@ export function resolveMentions<M extends { handle: string }>(text: string, memb
   const everyone = hs.some((h) => EVERYONE.has(h));
   if (everyone) return { members: [...members], everyone };
   return { members: members.filter((m) => hs.includes(m.handle.toLowerCase())), everyone };
+}
+
+/** the bots a text mentions that are not among `members`, by the engine's rule (a handle is the whole run after the `@`, so "@nimbus."
+    names nobody; `@all` and `@everyone` name the room, never an outsider); `known` are the bots that exist, by `handle` */
+export function mentionsOutside<M extends { handle: string }, B extends { handle: string }>(text: string, members: readonly M[], known: readonly B[]): B[] {
+  const inside = new Set(members.map((m) => m.handle.toLowerCase()));
+  const out: B[] = [];
+  for (const h of mentionHandles(text)) {
+    if (EVERYONE.has(h) || inside.has(h)) continue;
+    const b = known.find((k) => k.handle.toLowerCase() === h);
+    if (b && !out.includes(b)) out.push(b);
+  }
+  return out;
 }
 
 /* ───────────── paths ───────────── */
@@ -103,6 +120,11 @@ export function mentionHTML(b: MdBot): string {
   return '<button type="button" class="ui-mention"' + attrs({ 'data-mention': b.id, 'aria-haspopup': 'dialog', 'aria-label': b.name + (b.role ? ', ' + b.role : '') + '. Open its chat' }) + '>' +
     orbHtml(b, { size: 16, still: true }) + '<span class="ui-mention__name">' + esc(b.name) + '</span></button>';
 }
+/** a mention of a bot that is not in this room: the same capsule, muted, saying so (not a button: there is nothing to open here) */
+export function mentionOutsideHTML(b: MdBot, note = "isn't in this room"): string {
+  const said = b.name + ' ' + note;
+  return '<span class="ui-mention ui-mention--out" tabindex="0"' + attrs({ 'data-tip': said, 'aria-label': said }) + '>' + orbHtml(b, { size: 16, still: true }) + '<span class="ui-mention__name">' + esc(b.name) + '</span></span>';
+}
 /** `@all`: the members' orbs, overlapping, and the word */
 export function everyoneHTML(word: string, members: readonly MdBot[]): string {
   return '<button type="button" class="ui-mention ui-mention--all"' + attrs({ 'data-mention': '@all', 'aria-label': word + ': ' + members.map((m) => m.name).join(', ') }) + '>' +
@@ -150,12 +172,14 @@ export function inlineHTML(src: string, ctx: MarkdownCtx = {}): string {
     .replace(/(^|[^\w])_(?=[^\s_])([^_]*?[^\s_])_(?!\w)/g, '$1<em>$2</em>')
     .replace(/~~(?=\S)([\s\S]*?\S)~~/g, '<del>$1</del>');
   /* mentions, by the engine's pattern; an unknown handle stays as written */
-  if (ctx.mention || ctx.everyone) {
+  if (ctx.mention || ctx.everyone || ctx.outside) {
     s = s.replace(new RegExp(MENTION_SOURCE, 'g'), (m, h: string) => {
       const k = h.toLowerCase();
       if (EVERYONE.has(k)) return ctx.everyone?.length ? hold(everyoneHTML('@' + h, ctx.everyone)) : m;
       const b = ctx.mention?.(h);
-      return b ? hold(mentionHTML(b)) : m;
+      if (b) return hold(mentionHTML(b));
+      const o = ctx.outside?.(h);
+      return o ? hold(mentionOutsideHTML(o, ctx.outsideNote)) : m;
     });
   }
   for (let i = held.length - 1; i >= 0; i--) s = s.split(PH('h', i)).join(held[i] ?? '');
@@ -166,10 +190,11 @@ export function inlineHTML(src: string, ctx: MarkdownCtx = {}): string {
 export function plainHTML(src: string, ctx: MarkdownCtx = {}): string {
   const held: string[] = [];
   let s = String(src ?? '');
-  if (ctx.mention || ctx.everyone) {
+  if (ctx.mention || ctx.everyone || ctx.outside) {
     s = s.replace(new RegExp(MENTION_SOURCE, 'g'), (m, h: string) => {
       const k = h.toLowerCase();
-      const chip = EVERYONE.has(k) ? (ctx.everyone?.length ? everyoneHTML('@' + h, ctx.everyone) : null) : (ctx.mention?.(h) ? mentionHTML(ctx.mention(h) as MdBot) : null);
+      const out = ctx.outside?.(h);
+      const chip = EVERYONE.has(k) ? (ctx.everyone?.length ? everyoneHTML('@' + h, ctx.everyone) : null) : (ctx.mention?.(h) ? mentionHTML(ctx.mention(h) as MdBot) : out ? mentionOutsideHTML(out, ctx.outsideNote) : null);
       if (!chip) return m;
       held.push(chip); return PH('h', held.length - 1);
     });

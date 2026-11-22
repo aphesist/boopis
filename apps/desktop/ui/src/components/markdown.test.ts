@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { blockHTML, inlineHTML, markdownHTML, mentionHandles, pathCandidate, pathCandidates, resolveMentions, splitBlocks, upgradePaths } from './markdown';
+import { blockHTML, inlineHTML, markdownHTML, mentionHandles, mentionsOutside, pathCandidate, pathCandidates, resolveMentions, splitBlocks, upgradePaths } from './markdown';
 import type { MarkdownCtx, MdBot } from './markdown';
 import { codeOf, markdown, streamMarkdown } from './md-view';
 
@@ -162,5 +162,27 @@ describe('the element side', () => {
     expect(el.firstElementChild).toBe(first);
     expect(drawn).toHaveLength(1);
     expect(el.lastElementChild?.textContent).toBe('second, longer');
+  });
+});
+
+describe('a mention of a bot that is not in the room', () => {
+  const members = [{ handle: 'kai' }, { handle: 'nina' }];
+  const known = [{ handle: 'kai', name: 'kai' }, { handle: 'nina', name: 'nina' }, { handle: 'nimbus', name: 'nimbus' }];
+  it('finds the bots a text names that exist and are not members, by the engine handle rule', () => {
+    expect(mentionsOutside('@nimbus can you look?', members, known).map((b) => b.name)).toEqual(['nimbus']);
+    expect(mentionsOutside('@NIMBUS and @nimbus and @kai', members, known).map((b) => b.name)).toEqual(['nimbus']);
+    /* a trailing full stop is part of the handle, as the engine reads it: "@nimbus." names nobody */
+    expect(mentionsOutside('thanks @nimbus.', members, known)).toEqual([]);
+    expect(mentionsOutside('ask @nimbus, then @all', members, known).map((b) => b.name)).toEqual(['nimbus']);
+    expect(mentionsOutside('@nobody and @kai', members, known)).toEqual([]);
+  });
+  it('draws a muted chip that says so, and leaves a handle no bot has as text', () => {
+    const nimbus = { id: 'nimbus', name: 'nimbus', handle: 'nimbus' };
+    const ctx = { mention: () => null, outside: (h: string) => (h === 'nimbus' ? nimbus : null) };
+    const html = inlineHTML('@nimbus and @nobody', ctx);
+    expect(html).toContain('ui-mention--out');
+    expect(html).toContain("nimbus isn&#39;t in this room");
+    expect(html).toContain('@nobody');
+    expect(html).not.toContain('data-mention');
   });
 });

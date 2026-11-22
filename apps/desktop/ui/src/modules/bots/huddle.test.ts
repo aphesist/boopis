@@ -1,12 +1,17 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import type { GroupMessage, GroupText } from '../../data';
-import { foldHuddles, huddleRuns, isBetween, liveAt } from './huddle';
+import { foldHuddles, huddleOn, huddleRuns, isBetween, liveAt, setHuddle } from './huddle';
 
 const t = (id: string, who: string, round?: number): GroupText => ({ kind: 'text', id, who, t: '09:0' + id.length, text: 'hello', ...(round === undefined ? {} : { round }) });
 const thread: GroupMessage[] = [t('a', 'you'), t('b', 'kai', 0), t('cc', 'nina', 1), t('ddd', 'kai', 2), t('eeee', 'moss', 3), t('f', 'you'), t('gg', 'kai', 0)];
 
 describe('the huddle', () => {
+  it('draws nothing until it is switched on (held back for 0.1.9)', () => {
+    expect(huddleOn()).toBe(false);
+    expect(huddleRuns(thread)).toEqual([]);
+    setHuddle(true);
+  });
   it('folds only what the members say among themselves, two or more in a row', () => {
     expect(thread.filter(isBetween).map((m) => m.id)).toEqual(['cc', 'ddd', 'eeee']);
     expect(huddleRuns(thread)).toEqual([[2, 5]]);
