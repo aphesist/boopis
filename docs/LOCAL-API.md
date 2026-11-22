@@ -118,6 +118,114 @@ Each event's `data` is `{id, at, type, data}`:
 - **A cron run's result as the notification's body.** The notification carries the session's id; the words are in the session's transcript.
 - **Windows.** The endpoint is built for every platform and tested on Linux; the token file's privacy relies on the profile folder's access list there.
 
+## A worked example: an island in Quickshell
+
+What a shell's island needs, in the order it needs it. The token and the address are two small files in `<app data>` (see above); read them with the shell's own file reader, never put the token in an address, and never log the headers. Every call below can be tried first in a terminal (fish; `$data` is the app data folder):
+
+```fish
+set data ~/.local/share/dev.aphesist.boopis
+set url (jq -r .url $data/client-endpoint)
+set auth "Authorization: Bearer "(cat $data/client-token)
+
+# 1. the roster, each bot's look and what it is doing, and where the stream stands
+curl -s -H $auth -H 'X-Boopis-Client: panacea-island' $url/v1/bots | jq '.bots[] | {name, look, presence}'
+
+# 2. follow the events (-N: do not buffer). It stays open; it ends when the token is rotated or boopis stops
+curl -sN -H $auth -H 'X-Boopis-Client: panacea-island' $url/v1/events
+
+# 3. answer an approval that arrived as an `approvals.changed` event with state "pending"
+curl -s -H $auth -H 'Content-Type: application/json' -H 'X-Boopis-Client: panacea-island' \
+     -d '{"choice":"once"}' $url/v1/approvals/<id>
+
+# 4. say something to a bot, in its own latest conversation
+curl -s -H $auth -H 'Content-Type: application/json' -H 'X-Boopis-Client: panacea-island' \
+     -d '{"text":"how is the build?","session":"latest"}' $url/v1/bots/kai/say
+```
+
+A client that sends `Expect: 100-continue` (older `curl` does for any body over 1 KiB) is refused with `400 unsupported`; add `-H 'Expect:'`. A browser's `fetch` or `EventSource` is refused by design (`403 browser_refused`, and `EventSource` cannot send the token header), so a shell talks to it through a process or its own HTTP client, as below.
+
+The `curl` commands above are run as written by a test of the host (`the_documented_curl_commands_work_and_an_expect_header_is_refused`). The shell's side, in QML (Quickshell). It reads the two files, takes a snapshot, then follows the stream and keeps its own state from the events. It is a sketch written from the contract above and from the requests the tests make; it has not been run inside Quickshell here.
+
+```qml
+import QtQuick
+import Quickshell
+import Quickshell.Io
+
+Scope {
+    id: root
+    property var bots: ({})          // name -> {look, presence, ...}
+    property var pending: ({})       // approval id -> Approval
+    readonly property string dataDir: Quickshell.env("HOME") + "/.local/share/dev.aphesist.boopis"
+
+    FileView { id: endpointFile; path: root.dataDir + "/client-endpoint"; blockLoading: true }
+    FileView { id: tokenFile;    path: root.dataDir + "/client-token";    blockLoading: true }
+
+    readonly property string url: { try { return JSON.parse(endpointFile.text()).url } catch (e) { return "" } }
+    // trim: the file ends with a newline
+    readonly property string token: tokenFile.text().trim()
+
+    function headers() {
+        return ["-H", "Authorization: Bearer " + token, "-H", "X-Boopis-Client: panacea-island"]
+    }
+
+    // 1. the snapshot, then 2. the stream
+    Process {
+        id: snapshot
+        running: root.url !== "" && root.token !== ""
+        command: ["curl", "-s", ...root.headers(), root.url + "/v1/bots"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const all = JSON.parse(text)
+                for (const b of all.bots) root.bots[b.name] = b
+                root.botsChanged()
+                stream.running = true
+            }
+        }
+    }
+
+    property string eventName: ""
+    Process {
+        id: stream
+        command: ["curl", "-sN", ...root.headers(), root.url + "/v1/events"]
+        stdout: SplitParser {                 // one line at a time
+            onRead: line => {
+                if (line.startsWith("event:")) root.eventName = line.slice(6).trim()
+                else if (line.startsWith("data:")) root.onEvent(root.eventName, JSON.parse(line.slice(5)))
+            }
+        }
+        // the stream ends when the token is rotated or boopis stops: read both files again and reconnect
+        onRunningChanged: if (!running && root.url !== "") retry.start()
+    }
+    Timer { id: retry; interval: 3000; onTriggered: { endpointFile.reload(); tokenFile.reload(); snapshot.running = true } }
+
+    function onEvent(name, e) {
+        switch (name) {
+        case "bots.presence":     root.bots[e.data.profile].presence = e.data; root.botsChanged(); break
+        case "bots.changed":      snapshot.running = true; break          // a look, a model or the set of bots moved
+        case "approvals.changed":
+            if (e.data.state === "pending") root.pending[e.data.id] = e.data
+            else delete root.pending[e.data.id]                            // someone answered, or it expired
+            root.pendingChanged(); break
+        case "notifications.new": /* show e.data.title and e.data.body */ break
+        case "lagged":            snapshot.running = true; break          // fell behind: read the snapshot again
+        }
+    }
+
+    // 3. answering: only "once" and "deny"; a refusal is in the answer's error.message, show it
+    function answer(id, choice) {
+        answerProc.command = ["curl", "-s", ...headers(), "-H", "Content-Type: application/json",
+                              "-d", JSON.stringify({ choice }), url + "/v1/approvals/" + id]
+        answerProc.running = true
+    }
+    Process {
+        id: answerProc
+        stdout: StdioCollector { onStreamFinished: { const r = JSON.parse(text); if (r.error) console.warn(r.error.message) } }
+    }
+}
+```
+
+What to draw from it: `bots[name].look.{shape,color}` is the orb's body and colour; `presence.state` is orb2's state word (`idle`, `listening`, `thinking`, `working`, `compute`, `speaking`, `needs`, `done`, `error`, `sleeping`) and `presence.activity` the tool's name while `working`; `needs` with `attention: "approval"` is the cue to open `pending`. A second client answering first is not an error to hide: the `409 already_answered` says who did, and the `approvals.changed` that follows closes the row.
+
 ## The reference client
 
 `scripts/boopis-local-client.py` (Python 3.10+, standard library only) speaks all of the above: `bots`, `presence`, `events [--approve]`, `approvals`, `answer <id> once|deny`, `say <bot> <text> [--session ...]`, `rooms`, `say-room`. `events --approve` follows the stream and asks on the terminal for each approval. It reads the endpoint and token files, refuses a token file other users can read, never prints the token, and labels itself `boopis-reference`. In fish:
