@@ -87,7 +87,8 @@
 .bt-acts { display: flex; gap: 0; margin: auto 0 var(--corner-inset, 0px) var(--corner-inset, 0px); opacity: 0; transition: opacity var(--dur-1) var(--ease); }
 .bt-log > [data-hx-turn]:is(:hover, :focus-within) .bt-acts { opacity: 1; }
 .bt-acts .ui-ib:focus-visible { outline: none; background: var(--current); box-shadow: inset 0 0 0 2px var(--focus); }
-[data-margin="off"] .bt-acts { margin: var(--corner-inset, 0px) var(--corner-inset, 0px) 0 auto; }
+[data-margin="off"] .bt-acts { margin: var(--corner-inset, 0px) var(--corner-inset, 0px) var(--corner-inset, 0px) auto; }
+[data-margin="off"] .bt-log > [data-hx-turn] .ui-entry__body:not(:has(.bt-cardslot)) { padding-left: var(--sp-1); }
 .bt-log > [data-hx-turn]:has(.bt-cardslot) { --pad: 0px; }   /* a card sits flush in the entry's bottom corners (see .bt-cardslot) */
 
 /* the composer (the library's) sits on centerX, above the dock */

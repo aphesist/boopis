@@ -55,7 +55,11 @@ export async function resolvePaths(root: ParentNode, roots: readonly string[]): 
   }
   const map = new Map<string, PathTarget>();
   for (const p of want) { const r = RESOLVED.get(key(p, roots)); if (r) map.set(p, { path: r.path, abs: r.abs, kind: r.kind }); }
+  /* a path button is wider than its code: a conversation that was at its end stays there */
+  const sc = (root as Element).closest?.('.ui-scroll') as HTMLElement | null | undefined;
+  const atEnd = !!sc && sc.scrollHeight - sc.scrollTop - sc.clientHeight < 48;
   ui.markdown.upgradePaths(root, map);
+  if (sc && atEnd) sc.scrollTop = sc.scrollHeight;
   for (const b of root.querySelectorAll<HTMLElement>('.ui-path')) {
     const r = RESOLVED.get(key(b.dataset['path'] ?? '', roots));
     if (r?.rel != null) b.dataset['rel'] = r.rel;

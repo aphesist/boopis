@@ -43,7 +43,8 @@ export function createMockGroups(o: MockGroupsOptions): GroupsSource {
     if (team.length === 6) {
       const g: Group = { id: 'room-paper', name: 'paper past', members: team.map(memberOf), working: [], busy: false, queued: [] };
       groups.push(g);
-      threads[g.id] = PAPER_PAST.map((m) => text(m.who, m.text, m.round, m.to));
+      /* the sample room has a fixed clock, so what it draws does not change with the minute */
+      threads[g.id] = PAPER_PAST.map((m, i) => ({ ...text(m.who, m.text, m.round, m.to), t: '09:' + String(2 + i).padStart(2, '0') }) as GroupMessage);
     }
   }
   const addressed = (g: Group, t: string): GroupMember[] => {
