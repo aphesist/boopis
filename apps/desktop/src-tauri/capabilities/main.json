@@ -34,6 +34,7 @@
     "allow-pick-attachments",
     "core:window:allow-start-dragging",
     "core:window:allow-toggle-maximize",
+    "core:webview:allow-set-webview-zoom",
     "allow-renderer-report",
     "allow-renderer-open-gpu-page",
     "allow-app-restart",

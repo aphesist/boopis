@@ -19,6 +19,7 @@ import { collectEls, els, sh } from './ctx';
 import { reportAttention, seedAttention, setTitleOverride, updateAttentionDots, updateTitle } from './attention';
 import { newThing, toast, toggleDockExpand, toggleLightDark, togglePanel } from './actions';
 import { wireWindowControls } from './window';
+import { wireUiSize } from './ui-size';
 import { go, pushHistory } from './history';
 import { classifyKey, keysTableHTML } from './keymap';
 import { computeNow, layoutNow, markResized, queueLayout, setDockHeight, setInset } from './layout';
@@ -240,6 +241,7 @@ function wire(): void {
   el.btnSearch.addEventListener('click', () => openPalette({}));
   el.btnRight.addEventListener('click', () => toggle('right'));
   wireWindowControls();
+  wireUiSize();
 
   // tabs (both the pill and the rail): the library moves the thumb and the focus, the shell owns the state
   for (const sg of [sh.seg.tabs, sh.seg.rail]) sg?.addEventListener('ui:change', (e) => setState({ tab: (e as CustomEvent<{ value: string }>).detail.value }));

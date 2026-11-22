@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { KEYS, SCHEMA_VERSION, clearAll, loadBots, loadShell, readJSON, readText, saveBots, writeJSON, writeText } from './settings';
+import { KEYS, SCHEMA_VERSION, UI_ZOOM, clearAll, loadBots, loadShell, loadUiSize, readJSON, readText, saveBots, saveUiSize, writeJSON, writeText } from './settings';
 
 afterEach(() => { localStorage.clear(); vi.restoreAllMocks(); });
 
@@ -56,5 +56,27 @@ describe('the Bots tab’s own setting: whether the Archived group is open', () 
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked'); });
     expect(loadBots().archivedOpen).toBe(false);
     expect(saveBots({ archivedOpen: true })).toBe(false);
+  });
+});
+
+describe('the interface size', () => {
+  afterEach(() => { localStorage.clear(); vi.restoreAllMocks(); });
+  it('is the default until one is chosen, and remembers the choice', () => {
+    expect(loadUiSize()).toBe('default');
+    expect(saveUiSize('larger')).toBe(true);
+    expect(loadUiSize()).toBe('larger');
+    saveUiSize('largest');
+    expect(loadUiSize()).toBe('largest');
+  });
+  it('ignores a value it does not know, and blocked storage', () => {
+    localStorage.setItem(KEYS.size, JSON.stringify({ size: 'huge' }));
+    expect(loadUiSize()).toBe('default');
+    localStorage.setItem(KEYS.size, '{not json');
+    expect(loadUiSize()).toBe('default');
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked'); });
+    expect(loadUiSize()).toBe('default');
+  });
+  it('zooms by 100%, 112% and 125%', () => {
+    expect(UI_ZOOM).toEqual({ default: 1, larger: 1.12, largest: 1.25 });
   });
 });

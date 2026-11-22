@@ -95,6 +95,10 @@ export interface State {
   app?: { provider?: ProviderSpec; setup?(ctx: AppCtx): void | Promise<void> };
   /** the stage cell's width in px (else the window less the stage padding) */
   width?: number;
+  /** the window's zoom, as the desktop app's interface size makes it (1.12, 1.25): the checker lays the page out at 1/zoom of the
+      window's width and draws it `zoom` times larger (the device pixel ratio times it), which is what a web view's page zoom does.
+      Widths under 900 are not checked: no desktop window is that narrow */
+  zoom?: number;
   /** the stage's ground: the conversation's (default), the frame's, or the dock's black */
   ground?: 'ground' | 'frame' | 'dock' | 'raised';
   /** pseudo-states forced on part of the state */

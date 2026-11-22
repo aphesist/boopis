@@ -16,6 +16,9 @@ import { logger } from '../../core/log';
 import type { WindowControlsPref } from '../../core/settings';
 import { describeDesktop } from '../../host/window';
 import { onWindowChange, setWindowPref, windowInfo, windowPref } from './window';
+import { canZoom, onUiSizeChange, setUiSize, uiSize, uiZoomPercent } from './ui-size';
+import { UI_SIZES } from '../../core/settings';
+import type { UiSize } from '../../core/settings';
 
 const log = logger('settings');
 
@@ -44,7 +47,7 @@ function showSettingsSection(section?: string): void {
   if (sec === 'general') { mountWindowControls(); mountDiagnostics(); }
   if (sec === 'models') showModels();
   if (sec === 'connectors') showConnectors();
-  if (sec === 'appearance' && !themeMounted) { mountThemePanel($('#hx-dpanel-appearance')); themeMounted = true; mountOrbGrow(); }
+  if (sec === 'appearance' && !themeMounted) { mountThemePanel($('#hx-dpanel-appearance')); themeMounted = true; mountInterfaceSize(); mountOrbGrow(); }
   d.classList.toggle('is-side', sec === 'appearance');
   $('.hx-dialog__body', d).scrollTop = 0;
 }
@@ -166,6 +169,26 @@ function mountGpuChoice(sec: HTMLElement, fail: (e: unknown) => void): void {
     });
     restart.addEventListener('click', () => { void m.restartApp().catch(fail); });
   }).catch(fail);
+}
+/* Settings > Appearance > Size: the window's zoom in three steps (`ui-size.ts`). One segmented control in a settings row, as the
+   rows above it; the hint says what the step is and, off the desktop app, that this page keeps the browser's zoom. */
+const SIZE_LABELS: Readonly<Record<UiSize, string>> = { default: 'Default', larger: 'Larger', largest: 'Largest' };
+const sizeHint = (): string => 'Text, bots and layout grow together. ' + (canZoom() ? 'Now ' + uiZoomPercent() + '%.' : 'The desktop app applies it.');
+function mountInterfaceSize(): void {
+  const panel = $('#hx-dpanel-appearance'); if (!panel || panel.querySelector('#hx-set-size-h')) return;
+  const sec = document.createElement('section');
+  sec.className = 'ui-set'; sec.setAttribute('aria-labelledby', 'hx-set-size-h');
+  sec.innerHTML = ui.html.setHead({ id: 'hx-set-size-h', label: 'Size' }) +
+    ui.html.setRow({ label: 'Interface size', labelId: 'hx-ui-size-l', hint: sizeHint(), control: '<div id="hx-ui-size-seg"></div>' });
+  const before = panel.querySelector('[aria-labelledby="hxt-h-type"]');
+  panel.insertBefore(sec, before);
+  ui.hydrate(sec);
+  const seg = ui.segmented({ mode: 'radio', size: 's', labelledby: 'hx-ui-size-l', value: uiSize(), attrs: { 'data-name': 'hx-ui-size' },
+    options: UI_SIZES.map((s) => ({ value: s, label: SIZE_LABELS[s] })) });
+  $('#hx-ui-size-seg', sec).replaceWith(seg);
+  const hint = $('.ui-set__label small', sec);
+  onUiSizeChange(() => { hint.textContent = sizeHint(); });
+  seg.addEventListener('ui:change', (e) => { setUiSize((e as CustomEvent<{ value: string }>).detail.value as UiSize); });
 }
 function mountOrbGrow(): void {
   const panel = $('#hx-dpanel-appearance'); if (!panel || panel.querySelector('#hx-set-orb-grow')) return;
