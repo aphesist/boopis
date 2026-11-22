@@ -855,3 +855,26 @@ An unpriced model shows unknown cost, never zero. A session with a cost cap bloc
 - `setup_check` and `setup_advance` keep their contract. The ladder form gained two choices, `connected` and `later`, after the existing ones; a build that cannot reach the Providers commands draws the old two-step question.
 - The Providers section takes a `layout` and `onStates`; Settings > Models draws the same section as before, with the branded button on the four sign-in rows.
 - The ChatGPT status has no `route` field any more.
+
+## ADR-0042 A bot is ungoverned unless the owner turns Governed on, and its home gets what the root has (owner decision, 22 November 2026)
+**Context.**
+- A bot is a named engine profile, `<root>/profiles/<bot>` (ADR-0006). The engine gives every home its own plugin manager (it scans `<home>/plugins`, gated by that home's `plugins.enabled`), its own configuration and its own secret sources, all inside one gateway process (`multiplex_profiles`). A bot made with `profiles.create` had none of what setup gave the root: no provider plugin ("Unknown provider" on the Claude subscription), no boopis plugin, no seat in groups (`groups.capabilities` offered `default` only).
+- So the `gov`, `cap`, `workspace` and `approvals` boopis saved for each bot were written and never applied: every bot ran ungoverned, kai included, although its record said governed (the old default).
+- The owner, 22 November 2026: "the bots actually should only be governed if i toggle it so. if i want an ungoverned opus bot, i should be able to have one. that's because technically the bot pipeline is already a governance of some kind, you just configure it manually. no need to make kai governed."
+
+**Decision.**
+- **Governance is opt-in per bot.** A new bot starts ungoverned, whatever its model; an ungoverned bot may use any model, opus included. The bot's Governed switch is the plugin's `plugins.entries.boopis.settings.mode` in the bot's own home, written from its `bots.write` record.
+- **Turning Governed on needs a frontier model (ADR-0037).** On any other model the switch is refused with the plain reason and goes back; moving a governed bot to a model that is not frontier is refused the same way. Nothing flips silently.
+- **Upgrade, once per install** (`governance_opt_in` in the host's `boopis/bots.json`): every existing bot whose record says governed is made ungoverned through the plugin's own `bots.write`, and one notice says, once: governed mode now really applies to a bot when turned on, these bots stay ungoverned as they ran, and Governed can be turned on per bot.
+- **Main-window sessions keep their defaults**; this decision is about bots only.
+- **Every bot's home gets what the root has, whether governed or not** (`bots::prepare`, at creation, restore, a model or switch change, and at every start through `bots::repair`, each step only when something differs):
+  - boopis and every plugin the runtime carries in `<bot>/plugins/`: a relative symlink on Unix, a versioned copy on Windows (symlinks need a privilege there); a link that already reaches the root's copy is kept however it was written, so hand-made links stay;
+  - through the engine's CLI in the bot's home: the root's `secrets.boopis_host` wiring, the settings consented in setup, the plugin's `hx_path`, its mode and a ladder of the bot's own model when that is frontier; on a new bot (and once on existing ones), skills made for another OS are switched off;
+  - `plugins enable boopis` after those, so the gateway loads the plugin with them; otherwise the control socket's `reload-plugins`, otherwise one gateway restart, never while work runs;
+  - in the root, `hosted_rooms.profiles.<bot>` = the bot's home, so groups can seat it; removed on archive and delete, and a gone bot's entry is removed at start. A host-scoped ticket (what the engine's own desktop uses) was not chosen: the entries also work on Windows and for clients bound to a profile.
+  - The plugin is in every bot's home because its hooks, the secret channel and the sign-in hand-overs must work for ungoverned bots too. Its copies share the host's captured credentials process-wide, in memory only, and only the root's copy syncs the sign-in pool (a bot reads the root's `auth.json`).
+
+**Consequences.**
+- An ungoverned bot is exactly what ran before, now with its model reachable; a governed one is really governed.
+- The repair is idempotent over a home that already holds hand-made links and room entries; they are kept where they are right.
+- A plugin update reaches every bot at the next start (a link follows the root; a copy is replaced when its version differs).
