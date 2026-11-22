@@ -91,9 +91,10 @@ export function k1(film: Film, units: HTMLElement[], at: number, o: { dur?: numb
 }
 /** when the last word lands: the start for a K1 entrance of n units that lands at `land` */
 export const k1Start = (land: number, n: number, dur = 20 / 60, st = 4 / 60): number => Math.round((land - dur - (n - 1) * st) * 60) / 60;
-/** K1 exit: the whole line up 16 px with blur, 12 f on depart, never word by word (a film line is under 10% of the frame) */
-export function k1Exit(film: Film, el: HTMLElement, at: number, dur = 12 / 60): void {
-  film.tl.fromTo(el, { y: 0, filter: 'blur(0px)', opacity: 1 }, { y: -16, filter: 'blur(6px)', opacity: 0, duration: dur, ease: depart, immediateRender: false, data: { role: 'type' } }, at);
+/** K1 exit: the whole line up 16 px with blur, 12 f on depart, never word by word: every word on the same frames, so the
+    line leaves as one (the words are the targets, each a small unit; the line's own box spans the frame's width) */
+export function k1Exit(film: Film, units: HTMLElement[], at: number, dur = 12 / 60): void {
+  film.tl.fromTo(units, { y: 0, filter: 'blur(0px)', opacity: 1 }, { y: -16, filter: 'blur(6px)', opacity: 0, duration: dur, ease: depart, immediateRender: false, data: { role: 'type' } }, at);
 }
 
 /* the selection (look.md 3): the product's own text selection sweeps in behind the accent word (10 f on arrive, K7),

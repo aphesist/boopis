@@ -39,8 +39,10 @@ export async function b02(ctx: ActCtx): Promise<void> {
     const c = centre(m.btn[i]!);
     const st = land - dur - (btns.length - 1 - i) * d(f(3));
     film.tl.fromTo(b, { x: (O[0] - c[0]) / z, y: (O[1] - c[1]) / z, scale: 0.6 }, { x: 0, y: 0, scale: 1, duration: dur, ease, immediateRender: true, data: { role: 'ui' } }, st);
+    /* the labels wipe on down the column once the promise has landed, one a sixteenth: the eye reads the line, then
+       the four plans in order (a moving edge, not a fade) */
     const label = b.querySelector<HTMLElement>('.ui-sso__label');
-    if (label) film.tl.fromTo(label, { opacity: 0, x: -10 / z, filter: 'blur(3px)' }, { opacity: 1, x: 0, filter: 'blur(0px)', duration: d(f(14)), ease: arrive, immediateRender: true, data: { role: 'ui' } }, st + d(f(9)));
+    if (label) film.tl.fromTo(label, { clipPath: 'inset(0% 100% 0% 0%)', x: -8 / z }, { clipPath: 'inset(0% 0% 0% 0%)', x: 0, duration: d(f(12)), ease: arrive, immediateRender: true, data: { role: 'ui' } }, t(g.beat(6.75 + i * 0.25)));
   });
 
   /* the promise rises */
@@ -50,12 +52,16 @@ export async function b02(ctx: ActCtx): Promise<void> {
     const landed = k1(film, units, k1Start(t(g.beat(6.5)), units.length, d(22 / 60), d(5 / 60)), { dur: d(22 / 60), stagger: d(5 / 60) });
     const sel = line.querySelector<HTMLElement>('.sel');
     if (sel) selSweep(film, sel, landed + d(f(3)));
-    k1Exit(film, line, t(4.933), d(12 / 60));
+    k1Exit(film, units, t(4.933), d(12 / 60));
   }
 
-  /* the camera breathes in across the promise and the cast in one long move (B03 writes the zoom, which runs on to the
-     orbs' flight); here it leans toward the column */
-  cam.drift({ y: stage.height / 2 + (O[1] - stage.height / 2) * 0.3 }, { at: T.start, dur: T.end - T.start });
-  s.camZoomFrom = T.start;
-  s.camFree = T.end;
+  /* the camera moves with the motion and holds while you read: it eases in toward the column while the buttons fan out
+     and the promise rises, and is still for the read (a slow drift over this much type measures as a cross-fade: every
+     edge brightens and darkens in a straight line); B03 moves it on with the cards */
+  const settleAt = t(g.beat(6));
+  cam.to({ zoom: 1.045, y: stage.height / 2 + (O[1] - stage.height / 2) * 0.3 }, { at: T.start, dur: settleAt - T.start, ease: arrive });
+  /* a punch-in on the downbeat of bar 3, mid-read: short and fast, so it reads as a move, never as a drift */
+  const punch = t(g.beat(8));
+  cam.to({ zoom: 1.075 }, { at: punch, dur: d(f(16)), ease: arrive });
+  s.camFree = punch + d(f(16));
 }

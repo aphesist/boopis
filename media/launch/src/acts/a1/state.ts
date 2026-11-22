@@ -31,9 +31,8 @@ export interface A1State {
   /** B03 to B04: when the first orb leaves its card, and when each lands in the room's stack (by bot name) */
   flightStart?: number;
   landAt: Record<string, number>;
-  /** when the last camera move written so far ends; where the long zoom across B02 and B03 starts */
+  /** when the last camera move written so far ends */
   camFree?: number;
-  camZoomFrom?: number;
 }
 
 const states = new WeakMap<ActCtx, A1State>();

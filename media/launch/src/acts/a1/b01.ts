@@ -44,7 +44,13 @@ export async function b01(ctx: ActCtx): Promise<void> {
   G.appendChild(kf);
   kf.style.visibility = '';
   const swap = T.end;
-  vis(film, G, (x) => x < swap - 1e-9);
+  /* with the dive, B01 is gone once the window has become B02; without it (the 6 s bumper) it stays, and its orbs are
+     handed on: the bumper's B18 pushes into nina from this frame */
+  if (dive) vis(film, G, (x) => x < swap - 1e-9);
+  else {
+    vis(film, G, () => true, { until: swap, after: true });
+    ctx.carry.orbs = new Map([...(ctx.carry.orbs ?? []), ...orbs]);
+  }
 
   /* measured before any tween: kai's centre, the eye the camera falls into */
   const kc = centre(boxOf(kaiS.holder, stage));

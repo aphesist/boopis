@@ -32,6 +32,8 @@ const SHELL_CSS = `
     inset 0 1px 0 color-mix(in srgb, var(--text) var(--a1-edge, 9%), transparent),
     0 24px 60px rgba(0, 0, 0, var(--a1-drop, .35)); }
 .a1-pltext { font-style: normal; display: inline-block; }
+.a1-mask { display: inline-block; overflow: clip; overflow-clip-margin: 0; vertical-align: top; font-style: normal; padding: .1em .02em .2em; margin: -.1em -.02em -.2em; }
+.a1-unit { display: inline-block; font-style: normal; }
 `;
 /** a token's share of --text, as the product mixes its lines (`color-mix(in srgb, var(--text) 26%, transparent)`) */
 function mixPct(token: string, fallback: number): string {
@@ -133,7 +135,17 @@ export async function b03(ctx: ActCtx): Promise<void> {
     film.tl.fromTo(orbWrap, { clipPath: 'circle(0px at 50% 50%)' }, { clipPath: 'circle(' + Math.round(OB.w * 0.75) + 'px at 50% 50%)', duration: d(f(20)), ease: arrive, immediateRender: true, data: { role: 'reveal' } }, at + d(f(8)));
 
     /* ── the words rise 4 f after the container ── */
-    [nm, rl, plText].forEach((u, j) => film.tl.fromTo(u, { y: 16, opacity: 0, filter: 'blur(4px)' }, { y: 0, opacity: 1, filter: 'blur(0px)', duration: d(f(18)), ease: arrive, immediateRender: true, data: { role: 'type' } }, at + MORPH + d(f(4)) - d(f(18)) + j * d(f(3))));
+    /* each line rises into its own mask (no opacity: a moving edge, never a fade) */
+    [nm, rl, plText].forEach((u, j) => {
+      const unit = document.createElement('i');
+      unit.className = 'a1-unit';
+      while (u.firstChild) unit.appendChild(u.firstChild);
+      const mask = document.createElement('i');
+      mask.className = 'a1-mask';
+      mask.appendChild(unit);
+      u.appendChild(mask);
+      film.tl.fromTo(unit, { yPercent: 115 }, { yPercent: 0, duration: d(f(20)), ease: arrive, immediateRender: true, data: { role: 'type' } }, at + MORPH + d(f(4)) - d(f(20)) + j * d(f(3)));
+    });
 
     /* ── the faces ── */
     if (so) {
@@ -216,14 +228,19 @@ export async function b03(ctx: ActCtx): Promise<void> {
     const landed = k1(film, units, k1Start(t(g.beat(11)), units.length, d(20 / 60), d(4 / 60)), { dur: d(20 / 60), stagger: d(4 / 60) });
     const sel = line.querySelector<HTMLElement>('.sel');
     if (sel) selSweep(film, sel, landed + d(f(3)));
-    k1Exit(film, line, t(7.267), d(12 / 60));
+    k1Exit(film, units, t(7.267), d(12 / 60));
   }
 
   /* the lamp follows the cards; the camera keeps breathing in */
   if (s.ground && s.pool.b02 && s.pool.b03) poolTo(film, s.ground, s.pool.b02, s.pool.b03, T.start, d(0.8));
-  const camFrom = s.camFree ?? T.start, zoomFrom = s.camZoomFrom ?? camFrom;
-  cam.drift({ zoom: 1.12 }, { at: zoomFrom, dur: (s.flightStart ?? T.end) - zoomFrom });
-  cam.drift({ y: ctx.stage.height / 2 }, { at: camFrom, dur: (s.flightStart ?? T.end) - camFrom });
+  /* the camera moves on with the cards (from the old line's exit to the cards at rest), then holds while they wake */
+  const W = ctx.stage.width, H = ctx.stage.height;
+  const camFrom = Math.max(s.camFree ?? 0, T.start), camTo = T.start + MORPH + d(f(12));
+  cam.to({ zoom: 1.095, y: H / 2 }, { at: camFrom, dur: camTo - camFrom, ease: arrive });
+  /* it leans toward the faces as they wake, and again with their ripple: short moves that follow the subject */
+  const faceX = m.orb[0] ? W / 2 + (centre(m.orb[0])[0] - W / 2) * 0.12 : W / 2;
+  cam.to({ x: faceX, zoom: 1.115 }, { at: wakeAt[0]!, dur: d(f(22)), ease: arrive });
+  cam.to({ x: (faceX + W / 2) / 2, zoom: 1.12 }, { at: t(6.4), dur: d(f(18)), ease: arrive });
   s.camFree = s.flightStart ?? T.end;
   void ui;
 }
