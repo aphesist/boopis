@@ -173,7 +173,7 @@ impl<'a> Draft<'a> {
 
 // ---------------------------------------------------------------- boopis's own list
 
-/// The pin of an entry of boopis's own list: the package a way of running it pins (`npx` an npm version, `uvx` a PyPI version,
+/// The pin of an entry of boopis's own list: the package a way of running it pins (`npx` an npm version, `uvx` a `PyPI` version,
 /// `docker` an image digest), else, for a connector only its publisher hosts, its address (`remote:<url>`, the owner's decision
 /// of 21 November 2026: hosted connectors are allowed with a standing caution) at the version boopis checked.
 fn curated_pin(c: &crate::connectors::catalog::Connector) -> Option<Pin> {
