@@ -695,13 +695,12 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
 
 /* a code block: the well (--bg-0, mono 11/1.6), its language and line count, Wrap, Copy concentric in its top corner (.ui-corner),
    sideways scroll by default, folded past 14 lines to 12 with "Show N more lines" (no fade mask), diffs in the add and del tints */
-.ui-codeblock { position: relative; --r-outer: var(--r-m); --pad: var(--pad-menu); --corner-size: 24px; width: 100%; min-width: 0; box-sizing: border-box; margin: 0 0 var(--sp-3); border-radius: var(--r-outer); --sq-bg: var(--bg-0); background: var(--sq-bg); }
+.ui-codeblock { position: relative; --r-outer: var(--r-m); --pad: var(--pad-menu); width: 100%; min-width: 0; box-sizing: border-box; margin: 0 0 var(--sp-3); border-radius: var(--r-outer); --sq-bg: var(--bg-0); background: var(--sq-bg); }
 .ui-codeblock__head {
   display: flex; align-items: center; gap: var(--sp-3); min-height: calc(var(--corner-inset) * 2 + var(--corner-size)); box-sizing: border-box;
-  padding: 0 calc(var(--corner-inset) + var(--corner-size) + var(--sp-2)) 0 var(--sp-4);
   font: 400 var(--fs-2xs)/var(--lh-meta) var(--mono); letter-spacing: var(--track-mono); color: var(--text-quiet); font-variant-numeric: tabular-nums;
 }
-.ui-codeblock__lang { color: var(--text-dim); }
+.ui-codeblock__lang { color: var(--text-dim); margin-left: var(--sp-3); }
 .ui-codeblock__wrap { margin-left: auto; }
 .ui-codeblock__wrap[aria-pressed="true"] { color: var(--text-strong); background: var(--current); }
 .ui-codeblock__pre {
@@ -709,8 +708,9 @@ textarea.ui-input { resize: none; overflow: hidden; min-height: calc(var(--ctl) 
   font: 400 var(--fs-2xs)/1.6 var(--mono); letter-spacing: var(--track-mono); color: var(--text); white-space: pre; tab-size: 2;
 }
 .ui-codeblock[data-folded] .ui-codeblock__pre, .ui-codeblock:has(.ui-codeblock__foot) .ui-codeblock__pre { padding-bottom: var(--sp-2); }
-.ui-codeblock__pre:focus-visible { outline: var(--focus-w) solid var(--focus); outline-offset: -2px; }
-.ui-codeblock__pre > code { display: block; min-width: fit-content; }
+.ui-codeblock__pre:focus-visible { outline: none; }
+.ui-codeblock:has(.ui-codeblock__pre:focus-visible) { outline: var(--focus-w) solid var(--focus); outline-offset: var(--corner-ring); }
+.ui-codeblock__pre > code { display: block; min-width: fit-content; font: inherit; letter-spacing: inherit; }
 .ui-codeblock[data-wrap] .ui-codeblock__pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 .ui-codeblock[data-wrap] .ui-codeblock__pre > code { min-width: 0; }
 .ui-codeblock__l { display: block; min-height: 1.6em; }

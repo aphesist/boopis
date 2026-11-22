@@ -292,11 +292,12 @@ export function codeHTML(lang: string, code: readonly string[], ctx: MarkdownCtx
   const body = folded ? lines.slice(0, show).map(lineHTML).join('') + '<span class="ui-codeblock__rest" hidden>' + lines.slice(show).map(lineHTML).join('') + '</span>' : lines.map(lineHTML).join('');
   const name = lang || 'text', count = n + (n === 1 ? ' line' : ' lines');
   return '<div class="ui-codeblock ui-nest" data-sq' + attrs({ role: 'group', 'aria-label': name + ' code, ' + count, 'data-lang': lang || null, 'data-folded': folded ? '' : null }) + '>' +
-    '<div class="ui-codeblock__head"><span class="ui-codeblock__lang">' + esc(name) + '</span><span class="ui-codeblock__n">' + esc(count) + '</span>' +
-    html.button({ label: 'Wrap', size: 's', variant: 'ghost', class: 'ui-codeblock__wrap', attrs: { 'aria-pressed': 'false', 'data-tip': 'Wrap long lines' } }) + '</div>' +
+    '<div class="ui-codeblock__head ui-corners" data-edge="both"><span class="ui-codeblock__lang">' + esc(name) + '</span><span class="ui-codeblock__n">' + esc(count) + '</span>' +
+    html.button({ label: 'Wrap', size: 's', variant: 'ghost', class: 'ui-codeblock__wrap', attrs: { 'aria-pressed': 'false', 'data-tip': 'Wrap long lines' } }) +
+    html.iconButton({ icon: 'copy', label: 'Copy the code', size: 's', tip: 'Copy', tipPos: 'top', class: 'ui-corner ui-codeblock__copy' }) + '</div>' +
     '<pre class="ui-codeblock__pre" tabindex="0"' + attrs({ 'aria-label': name + ' code' }) + '><code>' + body + '</code></pre>' +
     (folded ? '<div class="ui-codeblock__foot">' + html.button({ label: 'Show ' + (n - show) + ' more lines', size: 's', variant: 'ghost', class: 'ui-codeblock__fold', attrs: { 'aria-expanded': 'false', 'data-more': String(n - show) } }) + '</div>' : '') +
-    html.iconButton({ icon: 'copy', label: 'Copy the code', size: 's', tip: 'Copy', tipPos: 'top', class: 'ui-corner ui-codeblock__copy', attrs: { 'data-corner': 'tr' } }) + '</div>';
+    '</div>';
 }
 
 /** one block to HTML */
