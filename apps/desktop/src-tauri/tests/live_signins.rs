@@ -542,10 +542,20 @@ fn local(p: &mut Probe) {
                 return f;
             }
             let state = format!("{:?}", s.status);
-            (
-                Verdict::Pass,
-                if detail.is_empty() { state } else { format!("{state}: {detail}") },
-            )
+            let note = if detail.is_empty() {
+                state
+            } else {
+                format!("{state}: {detail}")
+            };
+            // nothing runs on a clean runner: an error here means a closed port was taken for a runtime (Windows' slow refusals)
+            if s.status == ProviderStatus::Error {
+                (
+                    Verdict::Fail,
+                    format!("{note} (is something really running on that port?)"),
+                )
+            } else {
+                (Verdict::Pass, note)
+            }
         });
     }
 }
