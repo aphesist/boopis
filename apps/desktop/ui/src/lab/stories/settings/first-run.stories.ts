@@ -42,7 +42,7 @@ const FREE = view([{ name: 'free', model: 'nous/nous/welcome' }], false, 'Govern
 const kindOf = (kind: string): ProviderState['kind'] => kind as ProviderState['kind'];
 const baseline = (over: Over = {}, extra: ProviderState[] = []): ProviderState[] => [
   ...entries().flatMap((e) => e.ways.filter((w) => !w.hidden && w.kind !== 'custom').map((w): ProviderState => ({
-    provider: e.id, way: w.id, kind: kindOf(w.kind), code: null, detail: null, plan: null, models_count: null, base_url: null, signin: null, checked_at: null,
+    provider: e.id, way: w.id, kind: kindOf(w.kind), code: null, detail: null, plan: null, models_count: null, base_url: null, signin: null, checked_at: null, install: null,
     status: w.kind === 'key' ? 'needs_key' : w.kind === 'signin' ? 'signed_out' : w.kind === 'local' ? 'not_found' : 'connected', ...over[w.id]
   }))), ...extra
 ];
@@ -50,9 +50,9 @@ const SOME = baseline({ 'openai.signin': { status: 'connected', plan: 'ChatGPT P
 const EVERYTHING = baseline({
   'anthropic.signin': { status: 'connected', plan: 'Claude Max' }, 'openai.signin': { status: 'connected', plan: 'ChatGPT Plus' }, 'github-copilot.signin': { status: 'connected' }, 'xai.signin': { status: 'connected', plan: 'SuperGrok' },
   'google.key': { status: 'connected', models_count: 9 }, 'deepseek.key': { status: 'connected', models_count: 3 }, 'openrouter.key': { status: 'connected', models_count: 200 }
-}, [{ provider: 'custom', way: 'custom.lab-server', kind: 'custom', status: 'connected', code: null, detail: null, plan: null, models_count: null, base_url: 'http://127.0.0.1:8000/v1', signin: null, checked_at: 1 }]);
+}, [{ provider: 'custom', way: 'custom.lab-server', kind: 'custom', status: 'connected', code: null, detail: null, plan: null, models_count: null, base_url: 'http://127.0.0.1:8000/v1', signin: null, checked_at: 1, install: null }]);
 const TROUBLE = baseline({ 'openai.signin': { status: 'connected', plan: 'ChatGPT Plus' }, 'google.key': { status: 'error', code: 'hx.provider.key_rejected', detail: 'Google refused the key.' }, 'anthropic.signin': { status: 'error', code: 'hx.provider.not_installed', detail: 'Claude Code is not installed. Install it, then sign in by running `claude auth login`.' } });
-const OLLAMA: ProviderState = { provider: 'ollama', way: 'ollama.local', kind: 'local', status: 'found_local', code: null, detail: 'llama3.2:latest, qwen3:8b', plan: null, models_count: 2, base_url: 'http://127.0.0.1:11434/v1', signin: null, checked_at: 1 };
+const OLLAMA: ProviderState = { provider: 'ollama', way: 'ollama.local', kind: 'local', status: 'found_local', code: null, detail: 'llama3.2:latest, qwen3:8b', plan: null, models_count: 2, base_url: 'http://127.0.0.1:11434/v1', signin: null, checked_at: 1, install: null };
 
 /** a sign-in that the host runs and the person has not finished: the page, and a code when the lab uses one */
 const waiting = (page: SigninPage): SigninBridge => ({ waiting: () => Promise.resolve(null), start: () => Promise.resolve(page), cancel: () => Promise.resolve(), onEnd: (cb: (e: SigninEnd) => void) => { void cb; return Promise.resolve(() => undefined); }, open: () => Promise.resolve(), copy: () => Promise.resolve() });

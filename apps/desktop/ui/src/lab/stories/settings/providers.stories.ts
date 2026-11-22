@@ -12,7 +12,7 @@ const kindOf = (kind: string): ProviderState['kind'] => kind as ProviderState['k
 /** what the host answers when nothing is set up: keys missing, sign-ins out, runtimes never checked */
 const baseline = (over: Over = {}, extra: ProviderState[] = []): ProviderState[] => [
   ...entries().flatMap((e) => e.ways.filter((w) => !w.hidden).map((w): ProviderState => ({
-    provider: e.id, way: w.id, kind: kindOf(w.kind), code: null, detail: null, plan: null, models_count: null, base_url: null, signin: null, checked_at: null,
+    provider: e.id, way: w.id, kind: kindOf(w.kind), code: null, detail: null, plan: null, models_count: null, base_url: null, signin: null, checked_at: null, install: null,
     status: w.kind === 'key' ? 'needs_key' : w.kind === 'signin' ? 'signed_out' : w.kind === 'local' ? 'not_found' : 'connected', ...over[w.id]
   }))),
   ...extra
@@ -25,8 +25,8 @@ const bridge = (list: () => Promise<ProviderState[]>, probe: ProviderState[] = [
   addEndpoint: () => Promise.reject(new Error('lab')),
   useLocal: () => Promise.reject(new Error('lab'))
 });
-const found = (way: string, base: string, n: number, detail: string): ProviderState => ({ provider: way.split('.')[0] ?? way, way, kind: 'local', status: 'found_local', code: null, detail, plan: null, models_count: n, base_url: base, signin: null, checked_at: 1 });
-const endpoint = (slug: string, status: ProviderState['status'], base: string, detail: string | null = null): ProviderState => ({ provider: 'custom', way: 'custom.' + slug, kind: 'custom', status, code: status === 'error' ? 'hx.provider.unreachable' : null, detail, plan: null, models_count: null, base_url: base, signin: null, checked_at: null });
+const found = (way: string, base: string, n: number, detail: string): ProviderState => ({ provider: way.split('.')[0] ?? way, way, kind: 'local', status: 'found_local', code: null, detail, plan: null, models_count: n, base_url: base, signin: null, checked_at: 1, install: null });
+const endpoint = (slug: string, status: ProviderState['status'], base: string, detail: string | null = null): ProviderState => ({ provider: 'custom', way: 'custom.' + slug, kind: 'custom', status, code: status === 'error' ? 'hx.provider.unreachable' : null, detail, plan: null, models_count: null, base_url: base, signin: null, checked_at: null, install: null });
 
 interface Opts { list?: ProviderState[]; probe?: ProviderState[]; fail?: string; after?: (el: HTMLElement) => void | Promise<void> }
 /** the section in a settings sheet's own markup, read from a fake host */

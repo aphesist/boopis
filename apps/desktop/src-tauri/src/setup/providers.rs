@@ -13,7 +13,7 @@ use serde_json::{Value, json};
 use super::ops::HermesOps;
 use super::state::Optins;
 use super::{DiffLine, Form};
-use crate::claude::{self, ClaudeCli, INSTALL_COMMAND, PROVIDER_ID, Probe, State};
+use crate::claude::{self, ClaudeCli, PROVIDER_ID, Probe, State};
 use crate::commands::Json;
 use crate::config::FREE_TIER_ENABLED;
 use crate::error::{Error, Result};
@@ -1168,6 +1168,9 @@ fn ladder_form(
         );
     } else {
         let _ = write!(body, "\n\nClaude subscription: {}", claude.detail);
+        if let Some(h) = &claude.install {
+            let _ = write!(body, " In {}: `{}` ({}).", h.shell, h.command, h.page);
+        }
     }
     let _ = write!(
         body,
@@ -1412,10 +1415,12 @@ async fn single_tier(
 
 /// Why the subscription needs the user before it can go on, and what fixes it. Signing in is Claude Code's own
 /// `claude auth login` (Anthropic's program: it opens the browser and keeps the login), offered as a sign-in on the card; the
-/// install and the update are commands the user runs. boopis checks the result through the CLI (ADR-0029, ADR-0030).
+/// install and the update are commands the user runs: Anthropic's own installer for their system, where to paste it, and
+/// Anthropic's page. boopis checks the result through the CLI (ADR-0029, ADR-0030).
 fn claude_form(probe: &Probe) -> Form {
     let title = match probe.state {
         State::NotInstalled => "Install Claude Code to use your Claude subscription",
+        State::Failed => "Claude Code did not start",
         State::SignedOut => "Sign in to Claude",
         State::Metered => "Claude Code is not signed in with your Claude account",
         State::OldVersion => "Update Claude Code",
@@ -1423,19 +1428,19 @@ fn claude_form(probe: &Probe) -> Form {
     };
     let mut steps: Vec<(String, String)> = Vec::new();
     let sign_in = matches!(probe.state, State::SignedOut | State::Metered);
-    let tail = match probe.state {
-        State::NotInstalled => {
-            steps.push(("Install it".into(), format!("`{INSTALL_COMMAND}`")));
-            "Run it in a terminal, then choose Check again."
-        }
-        State::OldVersion => {
-            steps.push(("Update it".into(), format!("`{}`", claude::UPDATE_COMMAND)));
-            "Run it in a terminal, then choose Check again."
-        }
-        State::SignedOut | State::Metered => {
-            "Choose Sign in to Claude: Claude Code opens your browser to sign in with your Claude account."
-        }
-        State::SignedIn => "",
+    let tail = if let Some(hint) = &probe.install {
+        let what = match hint.kind {
+            crate::providers::InstallKind::Install => "Install it",
+            crate::providers::InstallKind::Update => "Update it",
+        };
+        steps.push((what.into(), format!("`{}`", hint.command)));
+        steps.push(("Where".into(), hint.shell.clone()));
+        steps.push(("Anthropic's guide".into(), hint.page.clone()));
+        "Paste the command into a new window, run it, then choose Check again."
+    } else if sign_in {
+        "Choose Sign in to Claude: Claude Code opens your browser to sign in with your Claude account."
+    } else {
+        ""
     };
     let mut form = Form::new(
         "setup.claude",

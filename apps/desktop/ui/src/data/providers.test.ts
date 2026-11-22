@@ -64,7 +64,7 @@ describe('the provider catalogue, read in the UI (the same file and examples as 
   });
 
   it('has a word for every status', () => {
-    expect(Object.keys(P.STATUS_WORDS).sort()).toEqual(['connected', 'error', 'found_local', 'needs_key', 'not_found', 'signed_out', 'signing_in']);
+    expect(Object.keys(P.STATUS_WORDS).sort()).toEqual(['connected', 'error', 'found_local', 'needs_install', 'needs_key', 'not_found', 'signed_out', 'signing_in']);
   });
 
   it('builds the endpoint form: the checklist only after a Test, the key secret and never given a value', () => {

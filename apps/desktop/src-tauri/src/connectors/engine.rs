@@ -934,8 +934,9 @@ impl Engine {
                 Error::Connector(
                     "hx.connectors.command_failed",
                     format!(
-                        "Claude Code is not installed. Install it with `{}`, then try again.",
-                        crate::claude::INSTALL_COMMAND
+                        "Claude Code is not installed. Install it with `{}` in {}, then try again.",
+                        crate::claude::install_command(),
+                        crate::claude::Os::HERE.shell()
                     ),
                 )
             })?;
