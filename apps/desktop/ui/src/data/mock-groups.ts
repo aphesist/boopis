@@ -8,6 +8,8 @@ const hhmm = (): string => { const d = new Date(); return String(d.getHours()).p
 let n = 0;
 const gid = (p: string): string => p + (++n).toString(36);
 
+/** the cap a group without its own has (`rooms/settings.rs`) */
+export const ROUND_LIMIT_DEFAULT = 30;
 export const GROUP_NATURE = 'Each member reads what you write and what the others said, and answers in its own words. Write @name to ask one of them.';
 export const memberOf = (b: Pick<Bot, 'id' | 'name'>): GroupMember => ({ id: b.id, profile: b.id, handle: b.id, name: b.name });
 
@@ -19,6 +21,7 @@ export function createMockGroups(o: MockGroupsOptions): GroupsSource {
   const threads: Record<string, GroupMessage[]> = {};
   const archivedList = store<readonly ArchivedGroup[]>([]);
   const kept = new Map<string, { group: Group; thread: GroupMessage[] }>();
+  const limits = new Map<string, number>();
   const find = (id: string): Group => { const g = groups.find((x) => x.id === id); if (!g) throw new Error('There is no group called ' + id + '.'); return g; };
   const botsOf = (ids: readonly string[]): GroupMember[] => ids.map((id) => { const b = o.bots().find((x) => x.id === id); if (!b) throw new Error(id + ' is not a bot you have.'); return memberOf(b); });
   const post = (groupId: string, m: GroupMessage): void => { (threads[groupId] ??= []).push(m); ev.emit({ type: 'message', groupId, message: m }); };
@@ -110,6 +113,13 @@ export function createMockGroups(o: MockGroupsOptions): GroupsSource {
     },
     stop(groupId) { const g = find(groupId); const was = g.working.length > 0; g.working = []; delete g.activity; g.busy = false; if (was) ev.emit({ type: 'group', group: { ...g } }); return was; },
     continueTalk: () => Promise.resolve(),
+    roundLimit: (id) => Promise.resolve({ rounds: limits.get(id) ?? null, fallback: ROUND_LIMIT_DEFAULT }),
+    setRoundLimit(id, rounds) {
+      if (rounds === null) limits.delete(id);
+      else if (Number.isInteger(rounds) && rounds >= 1 && rounds <= 1000) limits.set(id, rounds);
+      else return Promise.reject(new Error('A group runs for 1 to 1000 rounds.'));
+      return Promise.resolve({ rounds: limits.get(id) ?? null, fallback: ROUND_LIMIT_DEFAULT });
+    },
     create(draft) {
       if (draft.bots.length < 2 || draft.bots.length > 6) return Promise.reject(new Error('A group is two to six bots.'));
       const g: Group = { id: gid('room-'), name: draft.name.trim() || 'new group', members: botsOf(draft.bots), working: [], busy: false, queued: [] };

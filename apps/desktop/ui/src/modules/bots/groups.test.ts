@@ -19,7 +19,7 @@ let provider: DataProvider;
 const calls: { fn: string; args: unknown[] }[] = [];
 function spyGroups(g: GroupsSource): GroupsSource {
   const rec = <A extends unknown[], R>(fn: string, f: (...a: A) => R) => (...args: A): R => { calls.push({ fn, args }); return f(...args); };
-  return { ...g, send: rec('send', g.send), unqueue: rec('unqueue', g.unqueue), sendNow: rec('sendNow', g.sendNow), stop: rec('stop', g.stop), create: rec('create', g.create), rename: rec('rename', g.rename), setMembers: rec('setMembers', g.setMembers), archive: rec('archive', g.archive), restore: rec('restore', g.restore), open: rec('open', g.open) };
+  return { ...g, send: rec('send', g.send), unqueue: rec('unqueue', g.unqueue), sendNow: rec('sendNow', g.sendNow), stop: rec('stop', g.stop), create: rec('create', g.create), rename: rec('rename', g.rename), setMembers: rec('setMembers', g.setMembers), archive: rec('archive', g.archive), restore: rec('restore', g.restore), open: rec('open', g.open), setRoundLimit: rec('setRoundLimit', g.setRoundLimit) };
 }
 function mount(p: DataProvider): void {
   provider = p; setProvider(p);
@@ -153,6 +153,26 @@ describe('a group’s thread', () => {
     q('.bt-ghead [aria-label^="Rename"]').click();
     q<HTMLInputElement>('.bt-gname').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     expect(q('.bt-group .bt-p-name').textContent).toBe('launch crew');
+  });
+  it('sets the most rounds a run may take from the header, and says what the default is', async () => {
+    await flush();
+    q('.bt-group [aria-label^="Rounds a run may take"]').click();
+    await flush();
+    const items = [...document.querySelectorAll<HTMLElement>('.ui-menu__item')];
+    expect(document.querySelector('.ui-menu__title')?.textContent).toBe('Most rounds a run may take');
+    expect(items.map((i) => i.textContent?.trim())).toEqual(['Default (30)', '6', '12', '30', '60', '100']);
+    expect(items[0]!.getAttribute('aria-checked')).toBe('true');
+    items[2]!.click();
+    await flush();
+    expect(calls.filter((c) => c.fn === 'setRoundLimit').map((c) => c.args)).toEqual([[expect.any(String), 12]]);
+    q('.bt-group [aria-label^="Rounds a run may take"]').click();
+    await flush();
+    // the first menu is still leaving (animations are off here), so read the newest one
+    const open = [...document.querySelectorAll('.ui-menu')].at(-1)!;
+    expect(open.querySelector('.ui-menu__item[aria-checked="true"]')?.textContent?.trim()).toBe('12');
+    open.querySelectorAll<HTMLElement>('.ui-menu__item')[0]!.click();
+    await flush();
+    expect(calls.filter((c) => c.fn === 'setRoundLimit').at(-1)!.args[1]).toBeNull();
   });
   it('archives it, drops it from the list and offers Undo', async () => {
     q('.bt-ghead [aria-label^="Archive"]').click();

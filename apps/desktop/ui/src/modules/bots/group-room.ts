@@ -128,12 +128,31 @@ function renderHead(g: Group): void {
   rename.addEventListener('click', () => { startRename(g, name, rename); });
   const members = ui.iconButton({ icon: 'bots', label: 'Change the members of ' + g.name, tip: 'Members' });
   members.addEventListener('click', () => { openNewGroup({ edit: g.id }); });
+  const limit = ui.iconButton({ icon: 'sliders', label: 'Rounds a run may take in ' + g.name, tip: 'Run limit' });
+  limit.addEventListener('click', () => { openRoundLimit(g, limit); });
   const archive = ui.iconButton({ icon: 'archive', label: 'Archive ' + g.name, tip: 'Archive' });
   archive.addEventListener('click', () => { archiveGroup(g); });
-  acts.append(rename, members, archive);
+  acts.append(rename, members, limit, archive);
   h.append(el('div', { class: 'bt-p-orb', html: stackOf(g.members, 'head') }), el('div', { class: 'bt-p-text' }, [name, line]), acts);
   livenIn(h);
   checkClips();
+}
+/** The most rounds `boopis run --group` lets one discussion take in this group. The engine pauses a discussion at its own limit and has
+ *  none per room, so this is boopis's cap, kept by the host and read by the command line; the app's own Continue button is unchanged. */
+const ROUND_CHOICES = [6, 12, 30, 60, 100];
+function openRoundLimit(g: Group, anchor: HTMLElement): void {
+  groups().roundLimit(g.id).then((cur) => {
+    const choices = cur.rounds !== null && !ROUND_CHOICES.includes(cur.rounds) ? [...ROUND_CHOICES, cur.rounds].sort((a, b) => a - b) : ROUND_CHOICES;
+    const items = [
+      { title: 'Most rounds a run may take' },
+      { label: 'Default (' + cur.fallback + ')', value: 'default', checked: cur.rounds === null },
+      ...choices.map((n) => ({ label: String(n), value: String(n), mono: true, checked: cur.rounds === n }))
+    ];
+    ui.menu.open(anchor, items, {
+      align: 'end', label: 'Rounds a run may take in ' + g.name,
+      onSelect: (v) => { groups().setRoundLimit(g.id, v === 'default' ? null : Number(v)).then((now) => { toast(now.rounds === null ? g.name + ' runs for up to ' + now.fallback + ' rounds.' : g.name + ' runs for up to ' + now.rounds + ' rounds.'); }).catch((e: unknown) => { toast('The limit was not saved: ' + sentence(e)); }); }
+    });
+  }).catch((e: unknown) => { toast('The limit could not be read: ' + sentence(e)); });
 }
 function startRename(g: Group, nameEl: HTMLElement, btn: HTMLElement): void {
   if (G.renaming) return;

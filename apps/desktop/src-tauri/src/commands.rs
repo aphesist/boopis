@@ -1671,6 +1671,59 @@ pub async fn bots_release(
     Ok(())
 }
 
+/// boopis's own settings for one group (`rooms/settings.rs`): the most rounds `boopis run --group` lets a discussion take.
+/// The engine has one pair of limits for every room and no per-room value, so this is boopis's, kept in the app's data folder.
+#[derive(Debug, Clone, Serialize, Type)]
+pub struct RoomSettingsView {
+    /// The cap kept for the group, or none (the default applies).
+    pub max_rounds: Option<u32>,
+    /// The cap a group without its own has.
+    pub default_max_rounds: u32,
+}
+
+fn room_settings_path(app: &AppHandle) -> Result<std::path::PathBuf> {
+    app.path()
+        .app_data_dir()
+        .map(|d| d.join(crate::rooms::settings::FILE))
+        .map_err(|e| Error::Io(e.to_string()))
+}
+
+/// What boopis keeps for the group `room_id`.
+///
+/// Errors: `hx.invalid_params` for a bad id, `hx.host.config` for a file this build cannot read.
+#[tauri::command]
+#[specta::specta]
+pub fn room_settings_get(
+    app: AppHandle,
+    room_id: String,
+) -> std::result::Result<RoomSettingsView, HostError> {
+    let kept = crate::rooms::settings::RoomSettings::load(&room_settings_path(&app)?)?;
+    Ok(RoomSettingsView {
+        max_rounds: kept.max_rounds(&room_id),
+        default_max_rounds: crate::rooms::settings::DEFAULT_MAX_ROUNDS,
+    })
+}
+
+/// Keep the cap on rounds for the group `room_id` (`None`: the default again).
+///
+/// Errors: `hx.invalid_params` for a bad id or a cap outside 1 to 1000.
+#[tauri::command]
+#[specta::specta]
+pub fn room_settings_set(
+    app: AppHandle,
+    room_id: String,
+    max_rounds: Option<u32>,
+) -> std::result::Result<RoomSettingsView, HostError> {
+    let path = room_settings_path(&app)?;
+    let mut kept = crate::rooms::settings::RoomSettings::load(&path)?;
+    kept.set_max_rounds(&room_id, max_rounds)?;
+    kept.save(&path)?;
+    Ok(RoomSettingsView {
+        max_rounds: kept.max_rounds(&room_id),
+        default_max_rounds: crate::rooms::settings::DEFAULT_MAX_ROUNDS,
+    })
+}
+
 /// The one notice the bots' repair left (the governance change), taken: the app shows it once. `None` when there is none.
 #[tauri::command]
 #[specta::specta]

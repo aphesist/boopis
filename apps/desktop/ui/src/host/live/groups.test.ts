@@ -3,6 +3,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Bot, GroupsEvent } from '../../data';
 import type { GatewayClient, GatewayEvent } from '../gateway';
+import type { RoomsBridge } from '../rooms-bridge';
 import { createLiveGroups } from './groups';
 
 type Json = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -56,10 +57,10 @@ class FakeEngine {
 const room = (id: string, name: string, profiles: string[]): Json => ({ room_id: id, name, members: profiles.map((x) => ({ member_id: x, profile: x, handle: x, display_name: x === 'nina' ? 'Nina' : x })), authority_gateway_id: 'g', authority_epoch: 1, revision: 1, created_at: 1, updated_at: 1 });
 const tickAll = async (): Promise<void> => { for (let i = 0; i < 20; i++) await Promise.resolve(); };
 
-async function open(setup?: (e: FakeEngine) => void) {
+async function open(setup?: (e: FakeEngine) => void, bridge?: RoomsBridge) {
   const e = new FakeEngine();
   setup?.(e);
-  const g = createLiveGroups({ client: e.client, bots: () => BOTS, now: () => new Date('2026-11-19T10:00:00Z'), pollMs: null });
+  const g = createLiveGroups({ client: e.client, bots: () => BOTS, now: () => new Date('2026-11-19T10:00:00Z'), pollMs: null, ...(bridge ? { bridge } : {}) });
   const events: GroupsEvent[] = [];
   g.source.subscribe((x) => events.push(x));
   await g.ready; await g.settled();
@@ -387,5 +388,27 @@ describe('archiving and changing members, which the engine’s rooms cannot do t
     const { g } = await open((x) => { x.rooms.push(room('r1', 'crew', ['atlas', 'nina'])); });
     expect(g.source.snapshot().groups).toEqual([]);
     expect(g.source.archived.get()).toHaveLength(1);
+  });
+});
+
+describe('boopis’s own cap on rounds for a group', () => {
+  const bridge = (kept: Map<string, number>): RoomsBridge => ({
+    get: (id) => Promise.resolve({ rounds: kept.get(id) ?? null, fallback: 30 }),
+    set: (id, rounds) => { if (rounds === null) kept.delete(id); else kept.set(id, rounds); return Promise.resolve({ rounds: kept.get(id) ?? null, fallback: 30 }); }
+  });
+  it('reads and keeps the cap through the host, and the engine is never asked', async () => {
+    const kept = new Map<string, number>();
+    const { e, g } = await open((x) => { x.rooms.push(room('r1', 'release crew', ['atlas', 'nina'])); }, bridge(kept));
+    expect(await g.source.roundLimit('r1')).toEqual({ rounds: null, fallback: 30 });
+    expect(await g.source.setRoundLimit('r1', 12)).toEqual({ rounds: 12, fallback: 30 });
+    expect(await g.source.roundLimit('r1')).toEqual({ rounds: 12, fallback: 30 });
+    expect(await g.source.setRoundLimit('r1', null)).toEqual({ rounds: null, fallback: 30 });
+    expect(e.calls.some((c) => /max_rounds|max_messages|config\.set/.test(JSON.stringify(c)))).toBe(false);
+  });
+  it('says so where there is no host to keep it, and for a group that is not there', async () => {
+    const { g } = await open((x) => { x.rooms.push(room('r1', 'release crew', ['atlas', 'nina'])); });
+    expect(await g.source.roundLimit('r1')).toEqual({ rounds: null, fallback: 30 });
+    await expect(g.source.setRoundLimit('r1', 12)).rejects.toThrow(/desktop app/);
+    await expect(g.source.roundLimit('nope')).rejects.toThrow();
   });
 });

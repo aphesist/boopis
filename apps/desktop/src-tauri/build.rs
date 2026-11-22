@@ -86,6 +86,8 @@ const COMMANDS: &[&str] = &[
     "bots_prepare",
     "bots_release",
     "bots_notice",
+    "room_settings_get",
+    "room_settings_set",
 ];
 
 fn main() {

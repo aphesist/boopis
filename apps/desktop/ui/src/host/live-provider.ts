@@ -28,6 +28,8 @@ import { createLiveStore } from './live/store';
 import { tauriStoreBridge } from './store-bridge';
 import type { StoreBridge } from './store-bridge';
 import { tauriBotsBridge } from './bots-bridge';
+import { tauriRoomsBridge } from './rooms-bridge';
+import type { RoomsBridge } from './rooms-bridge';
 import type { BotsBridge } from './bots-bridge';
 import { ui } from '@boopis/ui';
 import { inTauri } from './bridge';
@@ -77,6 +79,8 @@ export interface LiveOptions {
   storeBridge?: StoreBridge | null;
   /** the host's bot commands (default in the desktop app: `bots_*`; elsewhere none: a bot is then the bare profile the engine made) */
   botsBridge?: BotsBridge | null;
+  /** the host's room settings; defaults to the desktop app's commands, none outside it */
+  roomsBridge?: RoomsBridge | null;
 }
 
 interface Running { /** the tiers the ladder ran this turn on, as 'provider/model', in order */ tiers: string[]; turn: AgentTurn; text: string; steps: AgentTurn['steps'][number][]; startedAt: number }
@@ -558,7 +562,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
 
   const liveBots = createLiveBots({ client, now, ...(opts.linkTo ? { linkTo: opts.linkTo } : {}), ...(opts.botsPollMs !== undefined ? { pollMs: opts.botsPollMs } : {}), bridge: opts.botsBridge !== undefined ? opts.botsBridge : inTauri() ? tauriBotsBridge() : null, notify: (text) => { ui.toast(text); } });
   Object.assign(details.unavailable, liveBots.unavailable);
-  const liveGroups = createLiveGroups({ client, bots: () => liveBots.source.snapshot().bots, now, ...(opts.botsPollMs !== undefined ? { pollMs: opts.botsPollMs } : {}) });
+  const liveGroups = createLiveGroups({ client, bots: () => liveBots.source.snapshot().bots, now, bridge: opts.roomsBridge !== undefined ? opts.roomsBridge : inTauri() ? tauriRoomsBridge() : null, ...(opts.botsPollMs !== undefined ? { pollMs: opts.botsPollMs } : {}) });
   const liveStore = createLiveStore({ bridge: opts.storeBridge !== undefined ? opts.storeBridge : inTauri() ? tauriStoreBridge() : null, plugin: (method, params) => client.requestRaw('plugin.boopis.' + method, params) });
   const ready = Promise.all([refreshList(), details.start(), liveBots.ready, liveGroups.ready]).then(() => undefined);
   const flag = readFlag('feedforward');

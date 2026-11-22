@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/aphesist/boopis/docs/team.schema.json",
+  "title": "A boopis team file",
+  "description": "One document for a whole team: `boopis team apply` makes it, `boopis team export` writes it. See docs/CLI.md. Unknown keys are mistakes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version"],
+  "properties": {
+    "version": {"const": 1},
+    "name": {"type": "string", "description": "A label; nothing reads it."},
+    "bots": {"type": "object", "propertyNames": {"pattern": "^[a-z0-9][a-z0-9_-]{0,63}$", "not": {"const": "default"}}, "additionalProperties": {"$ref": "#/$defs/bot"}},
+    "rooms": {"type": "object", "additionalProperties": {"$ref": "#/$defs/room"}},
+    "boards": {"type": "object", "propertyNames": {"pattern": "^[a-z0-9][a-z0-9-]{0,62}$"}, "additionalProperties": {"$ref": "#/$defs/board"}},
+    "cron": {"type": "array", "items": {"$ref": "#/$defs/cron"}}
+  },
+  "$defs": {
+    "bot": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "role": {"type": "string", "description": "What the bot is for (its description)."},
+        "soul": {"type": "string", "description": "A file with its instructions, inside the team file's folder. Read when the file is loaded. Not with soul_text."},
+        "soul_text": {"type": "string", "description": "Its instructions, written here. Export writes this."},
+        "model": {"type": "string", "minLength": 1, "description": "`opus` (the app's provider) or `provider/model`."},
+        "look": {"type": "object", "additionalProperties": false, "required": ["shape", "color"], "properties": {
+          "shape": {"enum": ["circle", "squircle", "soft", "wide", "tall", "bean", "drop", "ghost", "triangle", "hexagon", "diamond", "cloud", "clover", "flower", "star"]},
+          "color": {"type": "string", "pattern": "^#[0-9a-fA-F]{6}$"}}},
+        "skills": {"type": "array", "items": {"type": "string"}, "description": "Skills it must have: checked, and switched on when off."},
+        "connectors": {"type": "array", "items": {"$ref": "#/$defs/connector"}},
+        "governed": {"type": "boolean", "description": "The Governed switch (frontier models only)."}
+      }
+    },
+    "connector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": {"type": "string", "pattern": "^[a-z0-9_-]+$"},
+        "command": {"type": "string"},
+        "args": {"type": "array", "items": {"type": "string"}},
+        "env": {"type": "object", "additionalProperties": {"type": "string"}, "description": "Plain values only; keys belong in Settings > Connectors."},
+        "url": {"type": "string", "pattern": "^https://|^http://(127\\.0\\.0\\.1|localhost)"}
+      },
+      "oneOf": [{"required": ["command"], "not": {"required": ["url"]}}, {"required": ["url"], "not": {"anyOf": [{"required": ["command"]}, {"required": ["args"]}, {"required": ["env"]}]}}]
+    },
+    "room": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["members"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$", "description": "The id a room that exists has; a new room gets g-<name>."},
+        "members": {"type": "array", "minItems": 2, "maxItems": 6, "uniqueItems": true, "items": {"type": "string"}, "description": "Frozen once the room is made."},
+        "lead": {"type": "string", "description": "One of the members."},
+        "purpose": {"type": "string"},
+        "purpose_file": {"type": "string", "description": "A file inside the team file's folder. Not with purpose."},
+        "max_rounds": {"type": "integer", "minimum": 1, "maximum": 1000, "description": "boopis's cap for `boopis run --group`."}
+      }
+    },
+    "board": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {"type": "string"},
+        "workdir": {"type": "string", "description": "An absolute path, or one starting with ~/."}
+      }
+    },
+    "cron": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bot", "name", "schedule"],
+      "properties": {
+        "bot": {"type": "string"},
+        "name": {"type": "string", "minLength": 1},
+        "schedule": {"type": "string", "minLength": 1, "description": "A cron expression, `every 2h`, or a delay."},
+        "prompt": {"type": "string"},
+        "prompt_file": {"type": "string", "description": "A file inside the team file's folder. Not with prompt."},
+        "room": {"type": "string", "description": "A room's name; the result is posted there. Not with deliver."},
+        "as": {"type": "string", "description": "Who posts in that room (the job's bot by default). Only with room."},
+        "deliver": {"type": "string", "description": "A delivery target as the engine writes it. Not with room."},
+        "paused": {"type": "boolean"}
+      },
+      "oneOf": [{"required": ["prompt"]}, {"required": ["prompt_file"]}]
+    }
+  }
+}
