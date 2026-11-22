@@ -2,6 +2,8 @@
    never user-settable, they belong to states; the dice agent, w11/dice, fixes), the Archived group and the "made outside
    boopis" mark, with no bots, one, many and long names. */
 import type { AppCtx, ProviderSpec, State, Story } from '../../types';
+import { MANY, TASKS, withKanban } from '../../kanban-fixtures';
+import type { Kanban } from '../../kanban-fixtures';
 import { drivable, groupRowOverlaps, liveShaped, lookMismatches, recordsArrive, teamBeforeRecords, teamGroups, withActivity, withKanbanWorker, withMarkdownThread, withQueue, withRun, withWorking } from '../../live-bots';
 
 const bots = async (c: AppCtx): Promise<void> => { c.hx.setState({ tab: 'bots' }); await c.wait(500); };
@@ -88,6 +90,9 @@ const sheet: Story = {
   states: {
     nina: st(['typical'], {}, async (c) => { await pick('nina')(c); await c.key('i', { ctrlKey: true }); await c.wait(500); }),
     'a long name': st(['long'], { fixtures: ['long'] }, async (c) => { await pick('cassiopeia-staging-deploy-guardian')(c); await c.key('i', { ctrlKey: true }); await c.wait(500); }),
+    'live bot: where each routine posts': st(['typical', 'variant'], { fixtures: ['groups'], simulate: false, patch: (p) => liveShaped(p) }, async (c) => { await pick('atlas')(c); await c.key('i', { ctrlKey: true }); await c.wait(500); document.querySelector('#hx-view-bots .bt-routines')?.scrollIntoView({ block: 'center' }); await c.wait(200); }),
+    'live bot: the room link, focused': st(['focus'], { fixtures: ['groups'], simulate: false, patch: (p) => liveShaped(p) }, async (c) => { await pick('atlas')(c); await c.key('i', { ctrlKey: true }); await c.wait(500); document.querySelector('#hx-view-bots .bt-routines')?.scrollIntoView({ block: 'center' }); await c.wait(200); }, { force: [{ sel: '#hx-view-bots .bt-routine-open', state: 'focus' }] }),
+    'live bot: a routine posting to a long group name': st(['long'], { fixtures: ['groups'], simulate: false, patch: (p) => { const l = liveShaped(p); return { ...l, groups: { ...l.groups, snapshot: () => { const s = l.groups.snapshot(); return { ...s, groups: s.groups.map((g) => ({ ...g, name: 'the quarterly close review with finance, audit and the platform team' })) }; } } }; } }, async (c) => { await pick('atlas')(c); await c.key('i', { ctrlKey: true }); await c.wait(500); document.querySelector('#hx-view-bots .bt-routines')?.scrollIntoView({ block: 'center' }); await c.wait(200); }),
     'look: the shape tab': st(['variant', 'owner'], {}, async (c) => { await openSheet('nina')(c); await lookTab('Shape')(); }),
     'look: a new shape, on every orb at once': st(['variant', 'owner'], {}, async (c) => { await openSheet('nina')(c); await lookTab('Shape')(); document.querySelector<HTMLElement>('#hx-view-bots [data-name="look"] .bt-opt[aria-label="Star"]')?.click(); await c.wait(2500); const bad = [...document.querySelectorAll('.ui-orb[data-bot="nina"] > orb-avatar')].filter((o) => o.getAttribute('shape') !== 'star'); if (bad.length) throw new Error(bad.length + ' orbs of nina did not take the new shape'); }, { note: 'the sheet\'s orb, the room\'s header, the roster row and the dock wear the new shape; it is saved when the choosing stops' }),
     'look: a live bot made outside boopis': st(['variant'], { fixtures: ['outside'], simulate: false, patch: (p) => liveShaped(p) }, openSheet('sage')),
@@ -137,6 +142,28 @@ const groupRoom: Story = {
   }
 };
 
+const boardOf = (k: Kanban): ProviderSpec => ({ fixtures: ['groups'], simulate: false, patch: (p) => withKanban(p, k) });
+const openBoard = async (c: AppCtx): Promise<void> => { await openGroup(c); const b = [...document.querySelectorAll<HTMLElement>('#hx-view-bots .bt-ghead button')].find((x) => x.textContent === 'Board'); if (!b) throw new Error('lab: no Board button'); b.click(); await c.wait(600); };
+const groupBoard: Story = {
+  id: 'bots/group-board', title: 'Group kanban board', area: 'bots', kind: 'surface', covers: ['surface:bots-kanban'], scope: '#hx-view-bots', mock: MOCK,
+  states: {
+    'columns and their tasks': st(['typical', 'owner'], boardOf({}), openBoard),
+    'reading the board': st(['loading'], boardOf({ never: true }), openBoard),
+    'nothing on the board yet': st(['empty'], boardOf({ tasks: [] }), openBoard),
+    'no board named like the group': st(['variant'], boardOf({ boards: [{ slug: 'default', name: 'Default', archived: false, counts: {} }, { slug: 'paper-past', name: 'Paper past', archived: false, counts: {} }] }), openBoard),
+    'the engine has no board': st(['empty', 'variant'], boardOf({ boards: [] }), openBoard),
+    'the board could not be read': st(['error'], boardOf({ failView: 'The engine is not running. Open boopis again to start it.' }), openBoard),
+    'the boards could not be listed': st(['error'], boardOf({ failBoards: 'The engine is not running. Open boopis again to start it.' }), openBoard),
+    'this build cannot read boards': st(['disabled'], { fixtures: ['groups'], simulate: false }, openBoard),
+    'a blocked task and long titles': st(['long'], boardOf({ tasks: [...TASKS, { ...TASKS[4]!, id: 't_99', title: 'Compare every figure in the quarterly close report against the ledger, the bank statements and last year\'s filing, and list each difference with its page', problem: 'two of the sources could not be opened and the checker stopped before it reached the second table of the ledger' }] }), openBoard),
+    'forty tasks, scrolling': st(['many', 'scroll'], boardOf({ tasks: MANY }), openBoard),
+    'a column collapsed': st(['variant'], boardOf({}), async (c) => { await openBoard(c); document.querySelector<HTMLElement>('#hx-view-bots .bt-board .ui-sec__head')?.click(); await c.wait(300); }),
+    'the board button hover': st(['hover'], boardOf({}), openGroup, { force: [{ sel: '#hx-view-bots .bt-ghead button:not([aria-label])', state: 'hover' }] }),
+    'the board button focus': st(['focus'], boardOf({}), openGroup, { force: [{ sel: '#hx-view-bots .bt-ghead button:not([aria-label])', state: 'focus' }] }),
+    'a long group name': st(['long'], { fixtures: ['groups'], simulate: false, patch: (p) => { const k = withKanban(p, {}); return { ...k, groups: { ...k.groups, snapshot: () => { const s = k.groups.snapshot(); return { ...s, groups: s.groups.map((g) => ({ ...g, name: 'the quarterly close review with finance, audit and the platform team' })) }; } } }; } }, openBoard)
+  }
+};
+
 const newGroup: Story = {
   id: 'bots/new-group', title: 'New group', area: 'bots', kind: 'surface', covers: ['surface:bots-new-group'], scope: '#hx-view-bots', mock: MOCK,
   states: {
@@ -148,4 +175,4 @@ const newGroup: Story = {
   }
 };
 
-export default [roster, room, sheet, newBot, groupRoom, newGroup];
+export default [roster, room, sheet, newBot, groupRoom, groupBoard, newGroup];

@@ -38,7 +38,7 @@ class FakeHermes {
     atlas: { name: 'atlas', description: 'reviews pull requests', soul: 'You review.\n', model: { provider: 'main', default: 'fake-a' }, skills: [{ name: 'git', enabled: true }, { name: 'web', enabled: false }], toolsets: [{ name: 'terminal', label: 'Terminal', enabled: true }], mcp_servers: [{ name: 'fs', enabled: true }] },
     nina: { name: 'nina', description: 'deploys', soul: '', model: { provider: '', default: '' }, skills: [], toolsets: [] }
   };
-  jobs: Record<string, Json[]> = { atlas: [{ job_id: 'j1', name: 'morning', schedule: '0 9 * * 1-5', prompt_preview: 'Review what changed', enabled: true, next_run_at: '2026-11-19T12:00:00Z' }], nina: [] };
+  jobs: Record<string, Json[]> = { atlas: [{ job_id: 'j1', name: 'morning', schedule: '0 9 * * 1-5', prompt_preview: 'Review what changed', enabled: true, next_run_at: '2026-11-19T12:00:00Z', deliver: ' room:g-paper-past-@atlas ' }], nina: [] };
   own: Record<string, Json> = { atlas: { look: { shape: 'triangle', color: '#f23b5a', eyes: 'pill' }, settings: { gov: 'ungoverned' } } };
   archived: Record<string, Json> = {};
   failProfilesList = false;
@@ -160,7 +160,7 @@ describe('the roster is the user’s Hermes profiles, minus the default one', ()
     expect(info.model).toBe('main/fake-a');
     expect(info.skills).toEqual([{ name: 'git', label: 'git', enabled: true }, { name: 'web', label: 'web', enabled: false }]);
     expect(info.toolsets?.[0]).toMatchObject({ name: 'terminal', enabled: true });
-    expect(info.jobs).toEqual([{ id: 'j1', name: 'morning', schedule: '0 9 * * 1-5', prompt: 'Review what changed', enabled: true, next: 'in 2 h', last: null }]);
+    expect(info.jobs).toEqual([{ id: 'j1', name: 'morning', schedule: '0 9 * * 1-5', prompt: 'Review what changed', enabled: true, next: 'in 2 h', last: null, deliver: 'room:g-paper-past-@atlas' }]);
     expect(info.sessions?.map((s) => s.title)).toEqual(['review billing', 'first words']);
     expect(info.running).toBe(true);                       // it wrote 30 s ago
     expect(botOf(bots, 'nina')!.info!.running).toBe(false);

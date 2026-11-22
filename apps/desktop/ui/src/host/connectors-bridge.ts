@@ -38,18 +38,19 @@ async function call<T>(p: Promise<T>): Promise<T> {
   try { return await p; } catch (e) { throw asHostError(e); }
 }
 
-export function tauriConnectorsBridge(): ConnectorsBridge {
+/** `profile`: a bot's profile name; `null` is the profile boopis is set to (the main one). */
+export function tauriConnectorsBridge(profile: string | null = null): ConnectorsBridge {
   return {
     catalog: () => call(commands.connectorCatalog()),
     inputs: async (source, connector, variant) => (await call(commands.connectorInputs(source, connector ?? null, variant ?? null))) as ConnectorForm,
-    review: async (request) => (await call(commands.connectorReview(null, request))) as ConnectorReview,
-    install: (request, planHash, secrets, restart) => call(commands.connectorInstall(null, request, planHash, { ...secrets }, restart ?? null)),
-    list: async () => (await call(commands.connectorList(null))) as ConnectorInfo[],
-    test: (name) => call(commands.connectorTest(null, name)),
-    setEnabled: async (name, enabled) => { await call(commands.connectorSetEnabled(null, name, enabled)); },
-    remove: (name, deleteCredentials) => call(commands.connectorRemove(null, name, deleteCredentials)),
-    signin: (name) => call(commands.connectorSignin(null, name)),
-    cancelSignin: async (name) => { await call(commands.connectorSigninCancel(null, name)); },
+    review: async (request) => (await call(commands.connectorReview(profile, request))) as ConnectorReview,
+    install: (request, planHash, secrets, restart) => call(commands.connectorInstall(profile, request, planHash, { ...secrets }, restart ?? null)),
+    list: async () => (await call(commands.connectorList(profile))) as ConnectorInfo[],
+    test: (name) => call(commands.connectorTest(profile, name)),
+    setEnabled: async (name, enabled) => { await call(commands.connectorSetEnabled(profile, name, enabled)); },
+    remove: (name, deleteCredentials) => call(commands.connectorRemove(profile, name, deleteCredentials)),
+    signin: (name) => call(commands.connectorSignin(profile, name)),
+    cancelSignin: async (name) => { await call(commands.connectorSigninCancel(profile, name)); },
     login: (provider, connector) => call(commands.connectorLogin(provider, connector ?? null))
   };
 }

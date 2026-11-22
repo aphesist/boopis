@@ -82,7 +82,7 @@ function showConnectors(): void {
   if (!inTauri()) { panel.innerHTML = '<p class="ui-field__hint">Connectors are added in the desktop app. This page cannot reach boopis\'s engine.</p>'; return; }
   connectorsMounting = true;
   void Promise.all([import('../../host/connectors'), import('../../host/connectors-bridge')])
-    .then(([view, bridge]) => view.mountConnectors(panel, { bridge: bridge.tauriConnectorsBridge(), toast: (t) => { ui.toast(t); }, openStore: () => { openStore(); } }))
+    .then(([view, bridge]) => view.mountConnectors(panel, { bridge: bridge.tauriConnectorsBridge(), bridgeFor: (bot) => bridge.tauriConnectorsBridge(bot), bots: () => data().bots.snapshot().bots.map((b) => ({ id: b.id, name: b.name })), toast: (t) => { ui.toast(t); }, openStore: () => { openStore(); } }))
     .then((m) => { connectors = m; })
     .catch((e: unknown) => { log.warn('the connectors tab did not mount', e); })
     .finally(() => { connectorsMounting = false; });

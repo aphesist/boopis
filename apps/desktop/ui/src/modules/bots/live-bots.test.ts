@@ -26,7 +26,7 @@ const tick = async (): Promise<void> => { for (let i = 0; i < 6; i++) await Prom
 const INFO: BotInfo = {
   profile: 'atlas', path: '/h/profiles/atlas', model: 'main/fake-a', provider: 'main',
   skills: [{ name: 'git', label: 'git', enabled: true }, { name: 'web', label: 'web', enabled: false }], toolsets: [{ name: 'terminal', label: 'Terminal', enabled: true }], mcpServers: [],
-  jobs: [{ id: 'j1', name: 'morning', schedule: '0 9 * * 1-5', prompt: 'Review', enabled: true, next: 'in 2 h', last: null }],
+  jobs: [{ id: 'j1', name: 'morning', schedule: '0 9 * * 1-5', prompt: 'Review', enabled: true, next: 'in 2 h', last: null, deliver: '' }],
   sessions: [{ id: 's1', title: 'review billing', when: '5m', messages: 4, source: 'gui' }],
   soul: 'You review.\n', running: false, notes: {}
 };

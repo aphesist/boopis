@@ -11,6 +11,7 @@ export const KEYS = {
   lastDark: 'hx.v6.lastDark',
   dock: 'hx.dock.v6',
   bots: 'hx.v6.bots',
+  boards: 'hx.v6.boards',
   preview: 'hx.v6.preview',
   window: 'hx.v6.window',
   size: 'hx.v6.size'
@@ -67,6 +68,18 @@ export const loadBots = (): Required<SavedBots> => {
 };
 /** merges into what is kept: a field left out stays as it was */
 export const saveBots = (v: SavedBots): boolean => { const cur = loadBots(); return writeJSON(KEYS.bots, { archivedOpen: (v.archivedOpen ?? cur.archivedOpen) === true, archivedGroups: v.archivedGroups ?? cur.archivedGroups }); };
+
+/* ───────── a group's kanban board: which of the engine's boards the user chose for it (the default is the board named like the group) ───────── */
+export const loadBoardChoice = (group: string): string | null => {
+  const m = readJSON<Record<string, unknown>>(KEYS.boards)?.['groups'];
+  const v = m && typeof m === 'object' ? (m as Record<string, unknown>)[group] : null;
+  return typeof v === 'string' && v ? v : null;
+};
+export const saveBoardChoice = (group: string, slug: string): boolean => {
+  const m = readJSON<Record<string, unknown>>(KEYS.boards)?.['groups'];
+  const cur = m && typeof m === 'object' ? (m as Record<string, unknown>) : {};
+  return writeJSON(KEYS.boards, { groups: { ...cur, [group]: slug } });
+};
 
 /* ───────── preview flags: mock content a live build shows only when asked, always marked as a preview ───────── */
 /** `hx.v6.preview` is `{ "feedforward": true }` to turn a preview on; the default is off, and `VITE_PREVIEW_<NAME>=1` does the same in a build */

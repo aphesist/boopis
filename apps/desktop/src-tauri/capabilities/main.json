@@ -55,6 +55,8 @@
     "allow-connector-signin",
     "allow-connector-signin-cancel",
     "allow-connector-login",
+    "allow-kanban-boards",
+    "allow-kanban-view",
     "allow-chatgpt-status",
     "allow-chatgpt-signin-start",
     "allow-chatgpt-signin-cancel",

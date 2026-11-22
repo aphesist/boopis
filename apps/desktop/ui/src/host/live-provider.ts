@@ -24,6 +24,7 @@ import { tiersFromHost } from './live/models';
 import { chooseAnotherModel, createFormsHost, hasHostDialogs, hostCancelSignin, hostSignin, tauriPickFolder } from './live/forms';
 import type { XSignin } from './live/forms';
 import { tauriConnectorsBridge } from './connectors-bridge';
+import { liveKanban } from './live/kanban';
 import { createLiveStore } from './live/store';
 import { tauriStoreBridge } from './store-bridge';
 import type { StoreBridge } from './store-bridge';
@@ -570,7 +571,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     ...mock,
     info: { live: true, preview: new Set(['feedforward']), unavailable: details.unavailable },
     ready, sessions, waits, user, forms: formsHost.source, bots: liveBots.source, groups: liveGroups.source, schedules: liveBots.schedules,
-    details: details.source, run: details.run, mods: modsHost.source, store: liveStore,
+    details: details.source, run: details.run, mods: modsHost.source, store: liveStore, kanban: liveKanban(),
     council: councilHost, files: { pick: (kind) => pickAttachments(kind), drops: dropsFromHost(), complete: (word, id) => details.files.complete(word, id), paths: hostPaths() },
     dictation: { start: () => () => undefined }, // nothing hears you yet: the mock's transcript is invented text
     feedforward: { catalog: () => (flag ? mock.feedforward.catalog() : []) },

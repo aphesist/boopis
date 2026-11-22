@@ -16,6 +16,7 @@ use crate::{frame_rate, gpu, runtime, startup, webkit};
 
 mod args;
 mod bots;
+pub mod connectors;
 mod groups;
 mod headless;
 mod remote;
@@ -52,6 +53,8 @@ pub enum Command {
     Version,
     /// `doctor`.
     Doctor,
+    /// `connectors ...`: the arguments after the word.
+    Connectors(Vec<String>),
     /// `--help`.
     Help,
     /// `groups ...`, with what follows it (group chats from a terminal).
@@ -81,6 +84,7 @@ pub fn parse(args: &[String]) -> Command {
         "run" => Command::Run(args[1..].to_vec()),
         "team" => Command::Team(args[1..].to_vec()),
         "bots" => Command::Bots(args[1..].to_vec()),
+        "connectors" => Command::Connectors(args[1..].to_vec()),
         "--help" | "-h" | "help" if rest_ok => Command::Help,
         "--version" | "-V" | "version" | "doctor" | "--help" | "-h" | "help" => {
             Command::Unknown(args[1].clone())
@@ -182,6 +186,9 @@ pub fn dispatch(args: &[String], resource_dir: &dyn Fn() -> Option<PathBuf>) -> 
         Command::Version => version_lines(&out, version, &facts(resource_dir().as_deref())),
         Command::Doctor => doctor_lines(&out, version, &gather(resource_dir().as_deref())),
         Command::Help => help_lines(&out, version),
+        Command::Connectors(rest) => {
+            return Some(connectors::run(&rest, resource_dir().as_deref()));
+        }
         Command::Unknown(what) => {
             eprintln!(
                 "{PRODUCT}: {what} is not something {PRODUCT} understands. Try {PRODUCT} --help for what it does."
@@ -363,6 +370,9 @@ fn help_lines(out: &Out, version: &str) -> Vec<String> {
         ),
         format!("2 a usage mistake, 3 stopped at a cap, 4 a bot needs you."),
     ]
+    .into_iter()
+    .chain(connectors::usage(PRODUCT))
+    .collect()
 }
 
 /// What `--version` shows beside the version.

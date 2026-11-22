@@ -24,6 +24,10 @@ export interface ConnectorsDeps {
   toast: (text: string) => void;
   /** opens the store view ("Browse the store"); absent: the row is left out */
   openStore?: () => void;
+  /** the bots a connector can be set up for, asked each time the tab shows; absent or empty: the choice is not drawn and the main profile's connectors are the only ones */
+  bots?: () => readonly { id: string; name: string }[];
+  /** the connectors of one bot (its own link); the bridge of the main profile is `bridge` */
+  bridgeFor?: (bot: string) => ConnectorsBridge;
   /** the delay before the next card replaces one that just answered, so its receipt shows (0 in tests) */
   settle?: number;
 }
@@ -90,12 +94,15 @@ const sink = (h: Handlers): FormsSource => ({
 
 /** Put the tab into `panel`. `refresh` asks the host again and drops any form that was open; call it each time the tab shows. */
 export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps): Promise<{ refresh: () => Promise<void> }> {
-  const { bridge } = deps;
+  /* who the tab is about: null is the main profile, else a bot's profile name. Every list, switch, test, add and removal goes to that one. */
+  let target: string | null = null;
+  const br = (): ConnectorsBridge => (target !== null && deps.bridgeFor ? deps.bridgeFor(target) : deps.bridge);
   const settle = deps.settle ?? (reduced() ? 200 : 700);
+  const forBot = el('section', { class: 'ui-set', 'aria-labelledby': 'hx-conn-for-h', hidden: '' });
   const installed = el('section', { class: 'ui-set', 'aria-labelledby': 'hx-conn-installed-h' });
   const add = el('section', { class: 'ui-set', 'aria-labelledby': 'hx-conn-add-h' });
   const flow = el('section', { class: 'ui-set', 'aria-label': 'Add a connector', hidden: '' });
-  panel.append(installed, add, flow);
+  panel.append(forBot, installed, add, flow);
   let catalog: ConnectorCatalogEntry[] = [];
   let busy = false;
 
@@ -110,11 +117,13 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
     flow.replaceChildren();
     installed.hidden = false;
     add.hidden = false;
+    drawFor();
     await drawInstalled();
   };
   const showFlow = (...kids: Node[]): void => {
     installed.hidden = true;
     add.hidden = true;
+    forBot.hidden = true;
     flow.hidden = false;
     const back = ui.button({ label: 'Back to connectors', size: 's', variant: 'ghost' });
     back.addEventListener('click', () => { void showList(); });
@@ -128,12 +137,25 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
   };
   const later = (fn: () => void): void => { window.setTimeout(fn, settle); };
 
+  /* ───────── for: the main profile or one bot ───────── */
+  function drawFor(): void {
+    const bots = deps.bots?.() ?? [];
+    if (!bots.length || !deps.bridgeFor) { target = null; forBot.hidden = true; forBot.replaceChildren(); return; }
+    if (target !== null && !bots.some((b) => b.id === target)) target = null;
+    forBot.hidden = false;
+    forBot.innerHTML = ui.html.setHead({ id: 'hx-conn-for-h', label: 'For' }) +
+      ui.html.setRow({ label: 'Connectors for', hint: target === null ? 'The main profile. Each bot keeps connectors of its own: pick a bot to see and change its.' : `Only ${bots.find((b) => b.id === target)?.name ?? target} has these. The main profile and the other bots are not changed.`, control: '<span data-conn-for></span>' });
+    const pick = ui.select({ id: 'hx-conn-for', label: 'Connectors for', entries: [{ value: '', label: 'The main profile' }, ...bots.map((b) => ({ value: b.id, label: b.name }))], value: target ?? '' });
+    forBot.querySelector('[data-conn-for]')?.replaceWith(pick);
+    pick.addEventListener('ui:change', (e) => { const v = (e as CustomEvent<{ value: string }>).detail.value; target = v || null; void showList(); });
+  }
+
   /* ───────── installed ───────── */
   async function drawInstalled(): Promise<void> {
     let rows: string[];
     let list: ConnectorInfo[] = [];
     try {
-      list = await bridge.list();
+      list = await br().list();
       rows = list.length
         ? list.map((c) => {
           const v = describeConnector(c);
@@ -164,7 +186,7 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
     if (busy) { sw.checked = !sw.checked; return; }
     busy = true;
     try {
-      await bridge.setEnabled(name, sw.checked);
+      await br().setEnabled(name, sw.checked);
       deps.toast(`${name} is ${sw.checked ? 'on' : 'off'}. Open sessions keep the tools they started with; new ones use this.`);
     } catch (e) {
       sw.checked = !sw.checked;
@@ -176,7 +198,7 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
   async function test(name: string): Promise<void> {
     say(`Testing ${name}…`);
     try {
-      const t = await bridge.test(name);
+      const t = await br().test(name);
       say(t.ok ? `${name}: connected, ${String(t.tools.length)} tool${t.tools.length === 1 ? '' : 's'}${t.tools.length ? ': ' + t.tools.slice(0, 8).map((x) => x.name).join(', ') : ''}.` : `${name}: ${t.signin_needed ? 'needs you to sign in. ' : ''}${t.error ?? 'it did not connect'}`);
     } catch (e) { say(`${name}: ${message(e)}`); }
   }
@@ -187,13 +209,13 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
     return card(model.spec, {
       submit: () => Promise.resolve(),
       cancel: () => Promise.resolve(),
-      signin: async () => { await bridge.signin(name); later(then); },
-      cancelSignin: async () => { await bridge.cancelSignin(name); }
+      signin: async () => { await br().signin(name); later(then); },
+      cancelSignin: async () => { await br().cancelSignin(name); }
     });
   }
   async function signinFlow(name: string): Promise<void> {
     let host = name;
-    try { const c = (await bridge.list()).find((x) => x.name === name); try { if (c?.url) host = new URL(c.url).host; } catch { /* a URL Hermes holds that does not parse: the name stands */ } } catch { /* the card still works by name */ }
+    try { const c = (await br().list()).find((x) => x.name === name); try { if (c?.url) host = new URL(c.url).host; } catch { /* a URL Hermes holds that does not parse: the name stands */ } } catch { /* the card still works by name */ }
     showFlow(signinCard(name, name, host, () => { void showList(); }));
   }
 
@@ -209,7 +231,7 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
     showFlow(card(spec, {
       async submit(_id, outcome) {
         try {
-          const r = await bridge.remove(c.name, outcome.values['keys'] === 'delete');
+          const r = await br().remove(c.name, outcome.values['keys'] === 'delete');
           deps.toast([`Removed ${c.name}.`, ...r.notes.slice(0, 1)].join(' '));
         } catch (e) { throw new Error(message(e)); }
         later(() => { void showList(); });
@@ -221,13 +243,13 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
   /* ───────── add ───────── */
   async function addFlow(source: ConnectorSource, entry?: { id: string; variant: string }): Promise<void> {
     let form;
-    try { form = await bridge.inputs(source, entry?.id, entry?.variant); } catch (e) { deps.toast(message(e)); return; }
+    try { form = await br().inputs(source, entry?.id, entry?.variant); } catch (e) { deps.toast(message(e)); return; }
     const model = fromConnectorForm(form as ConnectorFormIn);
     const request = (values: Readonly<Record<string, unknown>>): ConnectorRequest => ({ source, values: { ...textValues(values), ...(entry ? { connector: entry.id, variant: entry.variant } : {}) } });
     showFlow(card({ ...model.spec, receipt: 'Checked. The review is next.' }, {
       async submit(_id, outcome) {
         let review;
-        try { review = await bridge.review(request(outcome.values)); } catch (e) { throw new Error(message(e)); }
+        try { review = await br().review(request(outcome.values)); } catch (e) { throw new Error(message(e)); }
         later(() => { reviewFlow(request(outcome.values), review.plan_hash, review.name, fromConnectorForm(review.form as ConnectorFormIn)); });
       },
       cancel() { void showList(); return Promise.resolve(); }
@@ -239,7 +261,7 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
     showFlow(card({ ...model.spec, name }, {
       async submit(_id, outcome) {
         let report: ConnectorInstall;
-        const choice = outcome.values['restart']; try { report = await bridge.install(request, hash, outcome.secrets, choice === 'now' || choice === 'when_idle' ? choice : undefined); } catch (e) { throw new Error(message(e)); }
+        const choice = outcome.values['restart']; try { report = await br().install(request, hash, outcome.secrets, choice === 'now' || choice === 'when_idle' ? choice : undefined); } catch (e) { throw new Error(message(e)); }
         later(() => { drawResult(result, report, request); });
       },
       cancel() { void showList(); return Promise.resolve(); }
@@ -286,8 +308,9 @@ export async function mountConnectors(panel: HTMLElement, deps: ConnectorsDeps):
     add.querySelector('[data-add-command]')?.addEventListener('click', () => { void addFlow('command'); });
   }
 
-  try { catalog = await bridge.catalog(); } catch (e) { log.warn('the collection did not load', e); }
+  try { catalog = await deps.bridge.catalog(); } catch (e) { log.warn('the collection did not load', e); }
   drawAdd();
+  drawFor();
   await drawInstalled();
   return { refresh: showList };
 }

@@ -67,6 +67,11 @@
 [data-margin="off"] .bt-empty { margin-left: 0; }
 .bt-ideas { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); }
 
+/* a group's kanban board takes the thread's place: the board's chooser and its state line, then a section of rows for each column */
+.bt-board { display: grid; gap: var(--sp-3); padding-bottom: var(--sp-6); }
+.bt-board-bar { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.bt-board-status { margin: 0; }
+.bt-board-body { display: grid; gap: var(--sp-3); }
 /* ───────── the ledger (ledger.ts): whom a message is for, a member at work, unread, the actions in the margin ───────── */
 .bt-log > [data-hx-turn], .bt-log > .bt-pending-entry { --r-outer: var(--r-s); --pad: var(--sp-1); --corner-size: 24px; }   /* a corner container: the actions in the margin sit in its corner (R-corner-3) */
 .bt-log > [data-hx-turn]:has(.bt-acts) { min-height: calc(var(--ctl-s) + var(--sp-6) + var(--sp-4)); }   /* the margin holds the name, the time and the actions: a one-line reply is as tall as that */
@@ -227,6 +232,8 @@ orb-avatar.is-live { cursor: pointer; }
 .bt-routine { display: flex; align-items: center; gap: var(--sp-2); }
 .bt-routine > :first-child { flex: 1; min-width: 0; }
 .bt-routine.is-going { opacity: .6; }
+.bt-routine-main { display: grid; gap: var(--sp-1); }
+.bt-routine-to { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
 .bt-routine-text { display: grid; gap: 2px; font-size: var(--fs-s); }
 .bt-routine-note { font-size: var(--fs-xs); color: var(--text-quiet); }
 .bt-add-row { display: flex; justify-content: flex-end; margin-top: var(--sp-2); }

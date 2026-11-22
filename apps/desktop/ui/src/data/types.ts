@@ -55,6 +55,8 @@ export interface BotJob {
   next: string;
   /** how the last run ended, as Hermes says ('ok', 'error'), null when it has not run */
   last: string | null;
+  /** where its result goes, as Hermes keeps it (`local`, `origin`, `room:<room id>[@<profile>]`, a platform); '' when it names none */
+  deliver: string;
 }
 /** a session of a bot's profile (a thread: a chat, a routine's run, a delegated job) */
 export interface BotSession { id: string; title: string; when: string; messages: number | null; source: string }
@@ -603,3 +605,17 @@ export interface UninstallResult { item_id: string; removed: readonly string[]; 
 export interface ProjectPolicy { project: string; governed: boolean; explicit: boolean | null; effective: boolean }
 /** a rejection of a store call: the stable code (`hx.store.*`, `hx.connectors.*`) and a sentence the UI shows */
 export interface StoreError { code: string; message: string }
+
+/* ───────── the engine's kanban boards, read only (a group's board view) ───────── */
+export interface KanbanBoardInfo { slug: string; name: string; archived: boolean; counts: Readonly<Record<string, number>> }
+/** one task of a board: `status` is its column (`triage`, `todo`, `scheduled`, `ready`, `running`, `blocked`, `review`, `done`, or one the engine adds); times are Unix seconds, null when the engine has none */
+export interface KanbanTask {
+  id: string; title: string; status: string;
+  /** the profile it is assigned to, null when nobody is */
+  assignee: string | null;
+  priority: number;
+  createdAt: number | null; startedAt: number | null; completedAt: number | null;
+  /** why it stopped, in the engine's words, when it says */
+  problem: string | null;
+}
+export interface KanbanView { board: KanbanBoardInfo; tasks: readonly KanbanTask[] }
