@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 from collections.abc import Iterator
 from dataclasses import dataclass, field, replace
 from pathlib import Path
@@ -83,6 +84,7 @@ def clean_channel_state(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv(channel_mod.SOCKET_ENV, raising=False)
     monkeypatch.delenv(channel_mod.TOKEN_ENV, raising=False)
     monkeypatch.setattr(channel_mod, "_captured", None)
+    monkeypatch.delitem(sys.modules, channel_mod.SLOT, raising=False)
 
 
 def serve(run: Path, secrets: list[str]) -> tuple[subprocess.Popen[str], dict[str, str]]:
