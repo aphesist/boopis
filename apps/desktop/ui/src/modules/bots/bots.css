@@ -191,6 +191,12 @@ orb-avatar.is-live { cursor: pointer; }
   .bt-sheet { width: 100%; }
   .bt-sheet-corner { display: none; }
 }
+/* a narrow window: a group's head buttons take a row of their own under the name, so the name and its members are never squeezed
+   to a letter (the head has five, the board's text button among them; the kit has no board glyph to make it an icon) */
+@media (max-width: 640px) {
+  .bt-presence.bt-ghead { grid-template-columns: auto minmax(0, 1fr); row-gap: var(--sp-2); }
+  .bt-presence.bt-ghead > .bt-p-actions { grid-column: 1 / -1; justify-self: end; }
+}
 
 /* drawn corners (DESIGN-SYSTEM.md §8; bound at start-up with HX.ui.squircle.auto): the line is --sq-line */
 .bt-sugg { --sq-line: var(--hair); }

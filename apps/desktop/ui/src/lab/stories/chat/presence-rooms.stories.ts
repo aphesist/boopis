@@ -37,6 +37,9 @@ const story: Story = {
     'a group: six at work': st(['many'], paper((p) => withActivity(firstMessages(liveShaped(p), 2), [0, 1, 2, 3, 4, 5].map((at) => ({ at, status: 'running' as const, tool: ['read_file', 'terminal', 'web_search', 'patch', 'execute_code', 'web_extract'][at] ?? null })))), openPaper),
     'a group: scrolled away while two think': st(['scroll'], paper((p) => withActivity(liveShaped(p), [{ at: 0, status: 'running' }, { at: 1, status: 'running', tool: 'read_file' }])), async (c) => {
       await openPaper(c);
+      /* the bots' own rounds fold into one huddle, which leaves the thread shorter than the window: opened, it scrolls again */
+      document.querySelector<HTMLElement>('#hx-view-bots .bt-group .bt-huddle-entry .ui-disclosure')?.click();
+      await c.wait(400);
       const sc = document.querySelector<HTMLElement>('#hx-view-bots .bt-group .bt-scroll');
       if (sc) sc.scrollTop = 0;
       await c.wait(500);

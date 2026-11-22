@@ -751,6 +751,31 @@
           opaqueCache.set(e, ok);
           return ok;
         };
+        /* a strip drawn by an ancestor's positioned ::before or ::after (a conversation's ground under its composer, .ui-scroll--ground)
+           covers what lies under it, but hit-testing never returns a pseudo-element: read its box from its resolved offsets, and count
+           the point covered when it lies below the strip's fade, where its gradient is solid */
+        const raisedOver = (e, p, z) => { for (let q = e; q && q !== p; q = q.parentElement) { const qs = getComputedStyle(q); if (qs.position !== 'static' && parseInt(qs.zIndex, 10) > z) return true; } return false; };
+        const pseudoCover = (lo, x, y) => {
+          for (let p = lo.parentElement; p && p !== document.body; p = p.parentElement) {
+            for (const which of ['::after', '::before']) {
+              const ps = getComputedStyle(p, which);
+              if (ps.content === 'none' || ps.content === 'normal' || ps.display === 'none' || (ps.position !== 'absolute' && ps.position !== 'fixed')) continue;
+              if (!(parseInt(ps.zIndex, 10) >= 1 || which === '::after')) continue;
+              const pr = p.getBoundingClientRect();
+              const h = parseFloat(ps.height), w = parseFloat(ps.width);
+              const top = ps.top !== 'auto' ? pr.top + parseFloat(ps.top) : pr.bottom - parseFloat(ps.bottom) - h;
+              const left = ps.left !== 'auto' ? pr.left + parseFloat(ps.left) : pr.right - parseFloat(ps.right) - w;
+              if (!(x >= left && x <= left + w && y >= top && y <= top + h)) continue;
+              const stops = [...(ps.backgroundImage || '').matchAll(/rgba?\([^)]*\)\s*([\d.]+px)?/g)];
+              const solidAt = stops.find((m) => alphaOf(m[0].replace(/\s*[\d.]+px$/, '')) >= 0.9);
+              const from = solidAt && solidAt[1] ? parseFloat(solidAt[1]) : 0;
+              const fill = alphaOf(ps.backgroundColor) >= 0.9 || !!solidAt;
+              const z = parseInt(ps.zIndex, 10) || 0;
+              if (fill && y >= top + from && !raisedOver(lo.el, p, z)) return { p, z };
+            }
+          }
+          return null;
+        };
         const done = new Set();
         try {
           for (const [A, B, l, t, r, bt] of pairs) {
@@ -763,6 +788,8 @@
               if (ia < 0 || ib < 0) continue;   /* one is clipped away at this point */
               const [hi, lo, ilo] = ia < ib ? [A, B, ib] : [B, A, ia];
               if (stack.slice(0, ilo).some((e) => !e.contains(lo.el) && opaque(e))) continue;   /* an opaque surface sits above the lower text */
+              const strip = hi.el.contains(lo.el) ? null : pseudoCover(lo, x, y);
+              if (strip && raisedOver(hi.el, strip.p, strip.z)) continue;   /* a drawn strip covers the lower text, and the upper is raised over it */
               const dk = describe(hi.el) + '|' + describe(lo.el);
               if (done.has(dk)) break; done.add(dk);
               add('geometry.overlap', hi.el, 'text "' + hi.text + '" is painted over the text "' + lo.text + '" of ' + describe(lo.el) + ', ' + r1(w) + ' x ' + r1(h) + 'px of it, with no opaque surface between', { rect: { x: r1(l + scrollX), y: r1(t + scrollY), w: r1(w), h: r1(h) }, container: rectOf(lo.el) });

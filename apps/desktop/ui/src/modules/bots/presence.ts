@@ -67,6 +67,7 @@ export function roomPresence(o: RoomPresenceOpts): RoomPresence {
   const paintPill = (): void => {
     const show = !!el && el.isConnected && away && el.actors.length > 0;
     if (show && el) pill.paint(el.actors, unread());
+    else pill.removeAttribute('aria-label');   /* a hidden pill names nothing: the last words it had would differ by when it last showed */
     pill.hidden = !show;
     if (show) o.zone.dataset['away'] = ''; else delete o.zone.dataset['away'];
   };
