@@ -197,5 +197,5 @@ describe('a bot looks the same in every place', () => {
 
     /* 4. nothing anywhere on the page draws one of the six in another look */
     for (const id of TEAM) for (const o of orbsOf(id)) expect(lookOn(o), id).toBe(want(LOOKS[id]!));
-  });
+  }, 30_000);   /* it mounts the whole Bots tab and the dock and walks six rooms */
 });
