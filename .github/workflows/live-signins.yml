@@ -48,7 +48,8 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev build-essential pkg-config
       - uses: dtolnay/rust-toolchain@1.97.0
       - uses: Swatinem/rust-cache@v2
-        with: { shared-key: live-signins-${{ matrix.platform }} }
+        with:
+          shared-key: live-signins-${{ matrix.platform }}
       - name: the live probe
         env:
           HX_LIVE_PLATFORM: ${{ matrix.platform }}
