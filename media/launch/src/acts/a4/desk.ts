@@ -258,7 +258,8 @@ export async function b14(ctx: ActCtx): Promise<void> {
      message is seen landing in boopis (camera spring). No slow drift: over this much type it crawls the frame sub-pixel,
      which reads as a dissolve */
   const lean = g.f(22);
-  cam.to({ x: C.x + (V ? 0 : 110), y: C.y + (V ? 150 : 24), zoom: V ? 1.06 : 1.08 }, { at: b(2.5) + g.f(4), dur: lean, ease: travel });
+  /* (in 9:16 a small push only: the line above must stay inside the safe band, y 220 and down) */
+  cam.to({ x: C.x + (V ? 0 : 110), y: C.y + (V ? 0 : 24), zoom: V ? 1.025 : 1.08 }, { at: b(2.5) + g.f(4), dur: lean, ease: travel });
   if (ctx.has('B15')) cam.to({ x: C.x, y: C.y, zoom: 1 }, { at: ctx.win('B15').start, dur: lean, ease: travel });
 
   /* the film line rises (K1), "Same" in the selection; it leaves before B15's line comes */
@@ -294,7 +295,7 @@ export async function b14(ctx: ActCtx): Promise<void> {
   /* the session's own content enters (220 ms, the product's entrance), the head's words first */
   const nameEl = (_.head.body as HTMLElement).lastElementChild as HTMLElement;
   const enter = (el: HTMLElement, at: number): void => { film.tl.fromTo(el, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.22, ease: uiEase, data: { role: 'ui' } }, at); };
-  enter(nameEl, click + g.f(3));
+  enter(nameEl, click + g.f(9));      /* her name as her orb comes home (the spring is 80% there), so it never passes over it */
   enter(_.rB1.body, click + g.f(5)); enter(_.rB2.body, click + g.f(7)); enter(_.rComp.body, click + g.f(9));
 
   /* nina looks at you once she has landed, and blinks */
