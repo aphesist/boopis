@@ -531,6 +531,85 @@ async fn an_unreachable_source_keeps_its_last_copy_and_says_so() {
 }
 
 #[tokio::test]
+async fn a_source_says_whether_a_read_reaches_it_and_why_a_read_failed() {
+    let r = rig_with(world(|_| Some(Err(down()))), |_, _| {
+        Err(Error::Unavailable("the engine is not running".into()))
+    });
+    let s = |id: &str| r.store.sources().into_iter().find(|s| s.id == id).unwrap();
+    // Nothing read yet: every source a read reaches is due, the rest are not reached by a read at all.
+    for id in ["engine-plugins", "skills-hub", "anthropic", "mcp-registry"] {
+        assert_eq!(
+            (s(id).refreshable, s(id).stale, s(id).refreshed_at.is_none()),
+            (Some(true), Some(true), true),
+            "{id}"
+        );
+    }
+    for id in ["boopis", "github", "marketplace-url", "local"] {
+        assert_eq!(
+            (s(id).refreshable, s(id).stale),
+            (Some(false), Some(false)),
+            "{id}"
+        );
+    }
+    assert!(s("boopis").refreshed_at.is_some() && s("boopis").items >= Some(1));
+    // Each read that fails says why in plain words, naming where it could not reach (never the engine's address), and stays due.
+    for id in ["engine-plugins", "skills-hub", "anthropic", "mcp-registry"] {
+        r.store.refresh(Some(id)).await.unwrap_err();
+    }
+    assert_eq!(
+        s("mcp-registry").error.as_deref(),
+        Some(
+            "Could not reach registry.modelcontextprotocol.io. Check the connection or proxy, then read the sources again."
+        )
+    );
+    assert!(
+        s("anthropic")
+            .error
+            .unwrap()
+            .starts_with("Could not reach github.com.")
+    );
+    assert!(
+        s("engine-plugins")
+            .error
+            .unwrap()
+            .starts_with("Could not reach the engine's online store.")
+    );
+    assert!(
+        s("skills-hub")
+            .error
+            .unwrap()
+            .starts_with("The engine is not running yet."),
+        "{:?}",
+        s("skills-hub").error
+    );
+    assert_eq!(s("mcp-registry").stale, Some(true));
+    // A source that is off is never due.
+    r.store.set_enabled("mcp-registry", false).unwrap();
+    assert_eq!(s("mcp-registry").stale, Some(false));
+}
+
+#[tokio::test]
+async fn a_source_read_just_now_holds_its_items_and_is_not_due() {
+    let r = rig_with(world(|_| None), quiet());
+    for id in ["engine-plugins", "skills-hub", "anthropic", "mcp-registry"] {
+        r.store.refresh(Some(id)).await.unwrap();
+        let s = r.store.sources().into_iter().find(|s| s.id == id).unwrap();
+        assert_eq!(
+            (s.stale, s.error.is_none(), s.refreshed_at.is_some()),
+            (Some(false), true, true),
+            "{id}"
+        );
+        assert!(s.items.unwrap() > 0, "{id}");
+    }
+    assert!(
+        !r.store
+            .browse(None, &StoreFilter::default(), None, None)
+            .unwrap()
+            .stale
+    );
+}
+
+#[tokio::test]
 async fn the_registry_is_read_again_incrementally_and_its_deleted_entries_go() {
     let calls = Arc::new(Mutex::new(Vec::<String>::new()));
     let c2 = calls.clone();

@@ -81,6 +81,12 @@ fn is_placeholder(s: &StoreSource) -> bool {
     !s.user_added && matches!(s.id.as_str(), "marketplace-url" | "local")
 }
 
+/// Whether reading the sources again reads `s`: not boopis's own list (built in), not GitHub (its lists are part of boopis's index
+/// and live search needs a sign-in), not the two placeholders.
+fn refreshable(s: &StoreSource) -> bool {
+    !matches!(s.fetch, SourceFetch::CompiledIn | SourceFetch::GithubApi) && !is_placeholder(s)
+}
+
 fn added_id(key: &str) -> String {
     format!("added-{}", &stage::sha256_hex(key.as_bytes())[..8])
 }
@@ -132,6 +138,22 @@ impl Store {
         user.enabled.get(&s.id).copied().unwrap_or(s.default_on)
     }
 
+    /// Whether a source's copy is due a read: never read, its last read failed, or older than its period (the registry's is
+    /// shorter).
+    fn is_stale(&self, s: &StoreSource, c: &SourceCache) -> bool {
+        let every = if s.fetch == SourceFetch::RegistryApi {
+            self.limits.store.registry_refresh_every
+        } else {
+            self.limits.store.refresh_every
+        };
+        let age = c
+            .fetched_at
+            .as_deref()
+            .and_then(time::parse)
+            .map(|t| time::now_secs().saturating_sub(t));
+        c.error.is_some() || age.is_none_or(|a| a > every.as_secs())
+    }
+
     /// Every source with its state: whether it is on, when it was read, how many items it holds, and why its last read failed.
     #[must_use]
     pub fn sources(&self) -> Vec<StoreSource> {
@@ -140,10 +162,14 @@ impl Store {
             .into_iter()
             .map(|mut s| {
                 let c = self.source_cache(&s.id);
-                s.enabled = Some(self.is_enabled(&s, &user));
+                let on = self.is_enabled(&s, &user);
+                let readable = refreshable(&s);
+                s.enabled = Some(on);
                 s.refreshed_at.clone_from(&c.fetched_at);
                 s.items = Some(u32::try_from(c.entries.len()).unwrap_or(u32::MAX));
                 s.error.clone_from(&c.error);
+                s.refreshable = Some(readable);
+                s.stale = Some(on && readable && self.is_stale(&s, &c));
                 s
             })
             .collect()
@@ -294,23 +320,13 @@ impl Store {
         });
         let user = self.user();
         let (mut newest, mut stale, mut offline) = (None::<String>, false, false);
-        for s in self.all_sources().iter().filter(|s| {
-            self.is_enabled(s, &user)
-                && !matches!(s.fetch, SourceFetch::CompiledIn | SourceFetch::GithubApi)
-                && !is_placeholder(s)
-        }) {
+        for s in self
+            .all_sources()
+            .iter()
+            .filter(|s| self.is_enabled(s, &user) && refreshable(s))
+        {
             let c = self.source_cache(&s.id);
-            let every = if s.fetch == SourceFetch::RegistryApi {
-                self.limits.store.registry_refresh_every
-            } else {
-                self.limits.store.refresh_every
-            };
-            let age = c
-                .fetched_at
-                .as_deref()
-                .and_then(time::parse)
-                .map(|t| time::now_secs().saturating_sub(t));
-            stale |= c.error.is_some() || age.is_none_or(|a| a > every.as_secs());
+            stale |= self.is_stale(s, &c);
             offline |= c.offline;
             if let Some(t) = &c.fetched_at
                 && newest.as_ref().is_none_or(|n| t > n)
@@ -387,7 +403,7 @@ impl Store {
                 Err(e) => {
                     failed += 1;
                     let mut c = (*prev).clone();
-                    c.error = Some(crate::error::user_message(e.code(), &e.to_string()));
+                    c.error = Some(super::reasons::reason(s, &e));
                     c.offline = e.code() == "hx.store.source_unreachable";
                     self.put_cache(&s.id, c)?;
                     last = Some(e);
@@ -744,6 +760,8 @@ impl Store {
             refreshed_at: None,
             items: None,
             error: None,
+            refreshable: None,
+            stale: None,
         };
         let entries = self.read_user_source(&src).await?;
         if entries.is_empty() {

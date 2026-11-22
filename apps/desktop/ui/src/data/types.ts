@@ -491,7 +491,7 @@ export interface StoreItem {
   provenance: Provenance;
 }
 export type StoreSourceFetch = 'compiled-in' | 'engine-gateway' | 'git-marketplace' | 'git-repo' | 'http-json' | 'registry-api' | 'github-api' | 'local';
-/** a place items come from; the last five members are the host's state and are absent in the data file */
+/** a place items come from; the last seven members are the host's state and are absent in the data file */
 export interface StoreSource {
   id: StoreSourceId; label: string; description?: string; kinds: readonly StoreKind[]; fetch: StoreSourceFetch;
   default_tier: StoreTier; default_on: boolean; user_added: boolean;
@@ -499,6 +499,10 @@ export interface StoreSource {
   engine_origin: boolean;
   url?: string; path?: string; terms?: 'own' | 'checked' | 'unverified' | 'not-applicable'; note?: string;
   enabled?: boolean; refreshed_at?: string | null; items?: number | null; error?: string | null;
+  /** reading the sources again reads this one (false: boopis's own built-in list, GitHub, and the places that hold nothing until you add one) */
+  refreshable?: boolean;
+  /** due a read: on, refreshable, and never read, failed last time, or older than its period; the store reads these when it opens */
+  stale?: boolean;
 }
 /** which layer installs it: the host's connector engine, boopis's plugin (Claude plugins and mods) or the engine's own manager */
 export type StoreLayer = 'connector' | 'plugin' | 'engine';
