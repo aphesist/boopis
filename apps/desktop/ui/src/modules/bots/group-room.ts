@@ -19,8 +19,10 @@ import { closeSettings } from './settings';
 import { openNewGroup } from './new-group';
 import { mountBoard } from './group-board';
 import type { BoardView } from './group-board';
-import { arrival, atEnd, dropPending, entryActs, glanceAt, jumpButton, listWords, pendingEntry, placeToLine, setJump, toLine, unreadDivider, updatePending } from './ledger';
+import { arrival, atEnd, entryActs, glanceAt, jumpButton, listWords, placeToLine, setJump, toLine, unreadDivider } from './ledger';
 import { followZone } from '../chat/follow-zone';
+import { memberActor, placeInLog, roomPresence } from './presence';
+import type { RoomPresence } from './presence';
 import { mentionCtx, resolvePaths, wireRefs } from '../chat/refs';
 import { foldHuddles, huddleEntry, huddleRuns, isBetween, liveAt } from './huddle';
 import type { HuddleDeps } from './huddle';
@@ -37,8 +39,8 @@ export const memberBot = (m: GroupMember): BotLike => bot(m.profile) ?? { id: m.
 /** how a group shows its members, wherever it does (the sidebar's row, the room's header, who is replying): the kit's stack,
     one overlap step, the members in the group's order (the first underneath), "+N" the last member. One orb size per place:
     STACK says which. The members that are bots of the user; `still` for an aria-hidden slot (a row's lead), where nothing takes
-    focus. */
-export const STACK = { row: { size: 16, max: 4 }, rail: { size: 16, max: 1 }, head: { size: 32, max: 4 }, working: { size: 16, max: 4 } } as const;
+    focus. Who is at work is the presence entry's own live stack (presence.ts), drawn the same way. */
+export const STACK = { row: { size: 16, max: 4 }, rail: { size: 16, max: 1 }, head: { size: 32, max: 4 } } as const;
 export function stackOf(members: readonly GroupMember[], place: keyof typeof STACK, still?: boolean): string {
   const ids = members.map((m) => m.profile).filter((id) => bot(id));
   if (!ids.length) return '';
@@ -99,9 +101,10 @@ export function mountGroupPane(root: HTMLElement): HTMLElement {
     takeBack: (gid, qid) => { const t = groups().unqueue(gid, qid); if (t) { c.setValue(c.value ? t + '\n' + c.value : t); c.focus(); } }
   });
   followZone(zone, () => G.scroll, () => S.viewRoot, '--bt-composer-h');
+  G.presence = roomPresence({ log: () => G.log, scroll: () => G.scroll, zone, jump: () => U.jump, onJump: () => { jumpToLatest(); } });
   return pane;
 }
-const G = { scroll: null as HTMLElement | null, head: null as HTMLElement | null, log: null as HTMLElement | null, zone: null as HTMLElement | null, working: null as HTMLElement | null, composer: null as import('../../components').ComposerEl | null, queue: null as GroupQueue | null, boardEl: null as HTMLElement | null, board: null as BoardView | null, boardOpen: false, renaming: false };
+const G = { scroll: null as HTMLElement | null, head: null as HTMLElement | null, log: null as HTMLElement | null, zone: null as HTMLElement | null, working: null as HTMLElement | null, composer: null as import('../../components').ComposerEl | null, queue: null as GroupQueue | null, presence: null as RoomPresence | null, boardEl: null as HTMLElement | null, board: null as BoardView | null, boardOpen: false, renaming: false };
 
 export function openGroup(id: string | null): void {
   initGroups();
@@ -202,10 +205,9 @@ function archiveGroup(g: Group): void {
 
 /* ───────── thread ─────────
    Each message is a call-number entry (orb, name, "to" line, time in the margin) with what the member wrote drawn by the kit's
-   markdown renderer; its mentions open the bot's chat, its paths open on this computer (refs.ts). While members work, each has a
-   pending entry where its message will land (ledger.ts); the message takes that place when it arrives. */
+   markdown renderer; its mentions open the bot's chat, its paths open on this computer (refs.ts). While members work, one presence
+   entry at the tail says who (presence.ts); a member's message lands above it, or in its place when that member was the last at work. */
 const ENTRY = new WeakMap<HTMLElement, { msgs: GroupText[]; who: string; to: string }>();
-const PENDING = new Map<string, HTMLElement>();
 /** the last message the user has seen in each group (this run), and how many arrived below the fold since */
 const SEEN = new Map<string, string>();
 const U = { unread: 0, divider: null as HTMLElement | null, jump: null as HTMLButtonElement | null };
@@ -269,7 +271,7 @@ function huddleDeps(g: Group): HuddleDeps {
 }
 function renderLog(g: Group): void {
   const log = G.log as HTMLElement; log.textContent = '';
-  NODE.clear(); PENDING.clear();
+  NODE.clear();
   U.divider = null; U.unread = 0; setJump(U.jump, 0);
   const msgs = groupThread(g.id);
   if (!msgs.length) {
@@ -304,10 +306,9 @@ function renderLog(g: Group): void {
   });
 }
 /** the entry a message joins: the previous one, when the same member wrote it to the same people */
-function renderMsg(g: Group, m: GroupMessage, prev: GroupMessage | null, prevEntry: HTMLElement | null): HTMLElement | null {
+function renderMsg(g: Group, m: GroupMessage, prev: GroupMessage | null, prevEntry: HTMLElement | null, put?: (n: HTMLElement) => void): HTMLElement | null {
   const log = G.log as HTMLElement;
-  const before = log.querySelector<HTMLElement>(':scope > .bt-pending-entry');
-  const place = (n: HTMLElement): void => { if (before) before.before(n); else log.append(n); };
+  const place = (n: HTMLElement): void => { if (put) put(n); else placeInLog(log, n); };
   if (m.kind === 'note') {
     const p = el('p', { class: 'bt-note', role: 'status', text: m.text });
     if (m.more) { const more = m.more; const b = ui.button({ label: 'Let them continue', size: 's' }); b.addEventListener('click', () => { b.disabled = true; groups().continueTalk(g.id, more).catch((e: unknown) => { b.disabled = false; toast('It could not go on: ' + sentence(e)); }); }); p.append(' ', b); }
@@ -368,10 +369,10 @@ function appendMsg(g: Group, m: GroupMessage): void {
     for (let i = list.length - 1; i >= 0; i--) { const x = list[i] as GroupMessage; if (isBetween(x)) run.unshift(x); else break; }
     if (run.length >= 2) { paintHuddle(g, run, m); if (follow) { sc.scrollTo({ top: sc.scrollHeight, behavior: reduced() ? 'auto' : 'smooth' }); markSeen(g); } else { U.unread++; setJump(U.jump, U.unread); } return; }
   }
-  const pend = m.kind === 'text' ? PENDING.get(m.who) : undefined;
-  const entry = renderMsg(g, m, pend ? null : prev, pend || !lastIsLast ? null : last);
+  /* a member at work: its message lands above the presence entry, or in its place when it was the last one at work */
+  const pres = G.presence, working = m.kind === 'text' && !!pres?.el?.actors.some((a) => a.id === m.who);
+  const entry = renderMsg(g, m, working ? null : prev, working || !lastIsLast ? null : last, working && pres ? (n) => { pres.land(n, m.kind === 'text' ? m.who : ''); } : undefined);
   const node = NODE.get(m.id) ?? null;
-  if (pend && entry && entry !== pend) { pend.replaceWith(entry); PENDING.delete(m.kind === 'text' ? m.who : ''); }
   if (entry && m.kind === 'text') arrival(entry, m.who === 'you' ? null : node);
   else if (node && !reduced()) node.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: 'cubic-bezier(.2,.8,.2,1)' });
   if (follow || (m.kind === 'text' && m.who === 'you')) { sc.scrollTo({ top: sc.scrollHeight, behavior: reduced() ? 'auto' : 'smooth' }); markSeen(g); }
@@ -390,10 +391,7 @@ function paintHuddle(g: Group, run: readonly GroupText[], arriving: GroupText): 
   const open = kept ? kept.querySelector('.ui-disclosure')?.getAttribute('aria-expanded') === 'true' : true;
   const h = huddleEntry(run, huddleDeps(g), { open });
   if (kept?.dataset['user']) h.dataset['user'] = kept.dataset['user'];
-  const pend = PENDING.get(arriving.who);
-  if (pend) { PENDING.delete(arriving.who); pend.remove(); }
-  const tail = log.querySelector(':scope > .bt-pending-entry');
-  if (old) old.before(h); else if (tail) tail.before(h); else log.append(h);
+  if (old) old.before(h); else placeInLog(log, h);
   for (const e of gone) e.remove();
   const node = NODE.get(arriving.id);
   if (node && open) ui.markdown.arrive(node);
@@ -413,8 +411,7 @@ function jumpToLatest(): void {
   (G.composer as NonNullable<typeof G.composer>).focus();
 }
 
-/* ───────── who is at work: a pending entry each (the first three), the rest in one line above the composer ───────── */
-const SHOWN = 3;
+/* ───────── who is at work: one presence entry at the tail of the thread (presence.ts) ───────── */
 function activityOf(g: Group): MemberActivity[] {
   if (g.activity?.length) return [...g.activity];
   return g.working.map((id) => ({ member: id, status: 'running' as const, round: null, startedAt: null, tool: null }));
@@ -430,31 +427,20 @@ function askedBy(g: Group, member: GroupMember): string | null {
   return null;
 }
 function paintPending(g: Group): void {
-  const log = G.log as HTMLElement;
-  if (groups().note()) { for (const e of PENDING.values()) e.remove(); PENDING.clear(); return; }
-  const acts = activityOf(g).filter((a) => memberOf(g, a.member));
-  const shown = acts.slice(0, SHOWN), ids = new Set(shown.map((a) => a.member));
-  for (const [id, e] of PENDING) if (!ids.has(id)) { PENDING.delete(id); dropPending(e); }
-  const follow = G.scroll ? atEnd(G.scroll) : false;
-  let added: HTMLElement | null = null;
-  for (const a of shown) {
-    const m = memberOf(g, a.member) as GroupMember;
-    const o = { bot: { ...mdBot(m), id: m.id }, status: a.status, tool: a.tool, by: askedBy(g, m), startedAt: a.startedAt };
-    const had = PENDING.get(a.member);
-    if (had) { updatePending(had, o); continue; }
-    const e = pendingEntry(o);
-    PENDING.set(a.member, e);
-    log.querySelector('.bt-empty')?.remove();
-    log.append(e);
-    if (!reduced()) e.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 200, easing: 'cubic-bezier(.2,.8,.2,1)' });
-    added ??= e;
+  const p = G.presence; if (!p) return;
+  if (groups().note()) { p.paint([]); return; }
+  const had = new Set(p.el?.actors.map((a) => a.id) ?? []);
+  const actors = activityOf(g).flatMap((a) => {
+    const m = memberOf(g, a.member); if (!m) return [];
+    return [memberActor(a, m, memberBot(m), { attention: !!bot(m.profile)?.attention, by: askedBy(g, m) })];
+  });
+  p.paint(actors);
+  /* the one who spoke last glances at a teammate that starts working (a hand-off) */
+  if (actors.some((a) => !had.has(a.id)) && G.log) {
+    const turnsNow = [...G.log.querySelectorAll<HTMLElement>(':scope > [data-hx-turn]')];
+    glanceAt(turnsNow[turnsNow.length - 1], p.el);
   }
-  if (added) {
-    const turnsNow = [...log.querySelectorAll<HTMLElement>(':scope > [data-hx-turn]')];
-    glanceAt(turnsNow[turnsNow.length - 1], added);
-    if (follow && G.scroll) G.scroll.scrollTo({ top: G.scroll.scrollHeight, behavior: reduced() ? 'auto' : 'smooth' });
-  }
-  paintWorking(g, acts.slice(SHOWN));
+  paintWorking(g);
 }
 
 /* ───────── composer and who is replying ───────── */
@@ -473,31 +459,26 @@ function renderComposer(g: Group): void {
   c.setRunning(g.busy);
   G.queue?.paint(g, g.working);
 }
-/** the line above the composer: why group chat cannot run, or the members at work past the three drawn in the thread */
-function paintWorking(g: Group, more: readonly MemberActivity[] = []): void {
+/** the line above the composer: why group chat cannot run, who answers first, who is also on a kanban task (who is at work is the
+    presence entry in the thread) */
+function paintWorking(g: Group): void {
   const w = G.working as HTMLElement;
   const why = groups().note();
-  const busy = more.map((a) => memberOf(g, a.member)).filter((m): m is GroupMember => !!m);
   /* a member that is also running a kanban card is two sessions at once: the engine does not tie them together, so the room says it */
   const onBoard = g.members.filter((m) => !!bot(m.profile)?.info?.worker);
   w.textContent = '';
   if (why) { w.className = 'bt-working bt-working--note'; w.textContent = why; return; }
   w.className = 'bt-working';
-  if (!busy.length && !onBoard.length) {
+  if (!onBoard.length) {
     /* a room that routes through a lead: who answers first, and that an @name brings a member in at once (the engine's rule) */
     const lead = g.lead ? g.members.find((m) => m.id === g.lead) : undefined;
     if (lead) { w.className = 'bt-working bt-working--note'; w.textContent = lead.name + ' answers first. An @name brings that bot in now.'; }
     return;
   }
-  if (busy.length) {
-    w.insertAdjacentHTML('beforeend', '<span class="bt-working-orbs" aria-hidden="true">' + stackOf(busy, 'working', true) + '</span>');
-    w.append(el('span', { text: namesOf(busy) + (busy.length === 1 ? ' is next' : ' are next') }));
-  }
-  if (onBoard.length) w.append(el('span', { class: 'bt-working-board', text: (busy.length ? '. ' : '') + namesOf(onBoard) + (onBoard.length === 1 ? ' is also running a kanban task' : ' are also running kanban tasks') }));
-  livenIn(w);
+  w.append(el('span', { class: 'bt-working-board', text: namesOf(onBoard) + (onBoard.length === 1 ? ' is also running a kanban task' : ' are also running kanban tasks') }));
 }
 /** the roster moved (a bot started or finished a kanban card): the open group says it */
-export function repaintWorking(): void { const g = group(S.groupSel); if (g && S.view === 'group') paintWorking(g, activityOf(g).filter((a) => memberOf(g, a.member)).slice(SHOWN)); }
+export function repaintWorking(): void { const g = group(S.groupSel); if (g && S.view === 'group') paintWorking(g); }
 /** a message while members are working is held and sent when they are done (it never stops them); "Send now" in the strip stops them */
 function send(text: string): void {
   const g = group(S.groupSel); if (!g || !text.trim() || !GUARDS.every((f) => f(g, text))) return;

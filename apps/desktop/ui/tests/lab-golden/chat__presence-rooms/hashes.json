@@ -1,0 +1,282 @@
+{
+ "a-bot-s-chat-at-125@bone": {
+  "sha": "cee5c955982aef5c8370e43264f0c9510f70c65f",
+  "w": 1135,
+  "h": 865
+ },
+ "a-bot-s-chat-at-125@catalog": {
+  "sha": "4978e10cd4dceeb71b1da18f8f4216922fb2f1a3",
+  "w": 1135,
+  "h": 865
+ },
+ "a-bot-s-chat-at-125@graphite": {
+  "sha": "5b1f8a82cb3b1020487c5fc68608a3b06d7e5a38",
+  "w": 1135,
+  "h": 865
+ },
+ "a-bot-s-chat-at-125@typewriter": {
+  "sha": "940dce1afeee28a0b741234f61959b11232a095a",
+  "w": 1135,
+  "h": 865
+ },
+ "a-bot-s-chat-in-a-tool@bone": {
+  "sha": "5f5b817936cd3f8a26ffc3b32ccc5b3423d3aa69",
+  "w": 1196,
+  "h": 872
+ },
+ "a-bot-s-chat-in-a-tool@catalog": {
+  "sha": "73b1d365806e4ef53964ae5240ed2eb41c562c89",
+  "w": 1196,
+  "h": 872
+ },
+ "a-bot-s-chat-in-a-tool@graphite": {
+  "sha": "06f716d479d99550744153c41a67f83325004ec8",
+  "w": 1196,
+  "h": 872
+ },
+ "a-bot-s-chat-in-a-tool@typewriter": {
+  "sha": "ffb552d81177599fa9ae0690ebacf49f54ce3e36",
+  "w": 1196,
+  "h": 872
+ },
+ "a-bot-s-chat-needs-your-approval@bone": {
+  "sha": "58ff5843a86b2e353eb5eb6ff744dbfffd326a0f",
+  "w": 1196,
+  "h": 872
+ },
+ "a-bot-s-chat-needs-your-approval@catalog": {
+  "sha": "1f1329ac46ee0b72dafc8d7e838faa6342293b03",
+  "w": 1196,
+  "h": 872
+ },
+ "a-bot-s-chat-needs-your-approval@graphite": {
+  "sha": "79f50204530be849602680abd80c6bf3dd205fae",
+  "w": 1196,
+  "h": 872
+ },
+ "a-bot-s-chat-needs-your-approval@typewriter": {
+  "sha": "a732bbab24861384ec4b49e0a10bda54f08c7116",
+  "w": 1196,
+  "h": 872
+ },
+ "a-bot-s-chat-thinking@bone": {
+  "sha": "0483a9983f049841f7e28098d5c84050e109bc42",
+  "w": 1196,
+  "h": 872
+ },
+ "a-bot-s-chat-thinking@catalog": {
+  "sha": "cf14fec5f5e1ae98e4d46fa782e803da382f7f41",
+  "w": 1196,
+  "h": 872
+ },
+ "a-bot-s-chat-thinking@graphite": {
+  "sha": "2e191a1d6b6a9f7bcd4d17dc9a20c9a3b36ce817",
+  "w": 1196,
+  "h": 872
+ },
+ "a-bot-s-chat-thinking@typewriter": {
+  "sha": "a2f39f87f471013e2636e0bf5e5acd4212c56779",
+  "w": 1196,
+  "h": 872
+ },
+ "a-bot-s-chat-watch-a-turn@bone": {
+  "sha": "daa2dbcdaff9294b4b5fb3e3ebfc227bd0955891",
+  "w": 1196,
+  "h": 872
+ },
+ "a-bot-s-chat-watch-a-turn@catalog": {
+  "sha": "0ddbaaeb9a06e73a0717e7ea1b822556b1c66479",
+  "w": 1196,
+  "h": 872
+ },
+ "a-bot-s-chat-watch-a-turn@graphite": {
+  "sha": "4f9e75d77fb4ce30cdd4116631fa13dd907e623f",
+  "w": 1196,
+  "h": 872
+ },
+ "a-bot-s-chat-watch-a-turn@typewriter": {
+  "sha": "d0e2409343414ed066f5027c44c96e966687e3fb",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-a-lead-answers-first@bone": {
+  "sha": "d62d838402698348fa993e1701eceec39598aa4d",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-a-lead-answers-first@catalog": {
+  "sha": "80ff778949cca91d8168697a4b536fd0a7476773",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-a-lead-answers-first@graphite": {
+  "sha": "5f688e27e608bb6b0e52078078d344b7203b79dd",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-a-lead-answers-first@typewriter": {
+  "sha": "b76d50b6615f1860cbeb061818bd8a45eb483539",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-a-message-held-while-they-work@bone": {
+  "sha": "c0a1334f55b28d7db3d6f1bfa90db6759fd87179",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-a-message-held-while-they-work@catalog": {
+  "sha": "8ccf3f5032d887e20056e413435b74f3b4fadb76",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-a-message-held-while-they-work@graphite": {
+  "sha": "5b2ee878558971f68ede10847deb57f64f4eada7",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-a-message-held-while-they-work@typewriter": {
+  "sha": "dbd911e539fc170f432c882d72d040ef8acaaeba",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-one-also-on-a-kanban-task@bone": {
+  "sha": "8575cafa17a5d95c174573900df1146e52960840",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-one-also-on-a-kanban-task@catalog": {
+  "sha": "bd8775e6d151093803745e9a19665458098fb355",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-one-also-on-a-kanban-task@graphite": {
+  "sha": "07c9db18a3bd6cbcc733200f6f671a09bc22d285",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-one-also-on-a-kanban-task@typewriter": {
+  "sha": "d527222c2f9053adb1e725f9579b5e17e406ca58",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-scrolled-away-while-two-think@bone": {
+  "sha": "ea63bd4bea80bafec857cd59e29f80f45baaaacf",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-scrolled-away-while-two-think@catalog": {
+  "sha": "dbf8971c85d1bcb097a94a516dffe3bf42859968",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-scrolled-away-while-two-think@graphite": {
+  "sha": "a3b1fbf02af656c875f2c9f07ae96a8d046d35d7",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-scrolled-away-while-two-think@typewriter": {
+  "sha": "d627df902bbc9b2f4cd81f89de0ad9df994c055f",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-six-at-work@bone": {
+  "sha": "fc9cacc9932ce841a0c6bf27c56bb4ffe41a3053",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-six-at-work@catalog": {
+  "sha": "38b9272e387555abbec52ff2f15e3e4f64eb69de",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-six-at-work@graphite": {
+  "sha": "fd78bc1c5e8dcacd14fa19ed486cd62923f618e9",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-six-at-work@typewriter": {
+  "sha": "23181759b5417e4469210a0c6ff28c3e0ab47726",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-three-doing-different-things@bone": {
+  "sha": "4e18536b66f207a3722bd112df7160232229e0e4",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-three-doing-different-things@catalog": {
+  "sha": "e925a2046801575877209c3407f47ae1991316f1",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-three-doing-different-things@graphite": {
+  "sha": "07a12046a272bbd76e538a779727cecf9065c4e5",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-three-doing-different-things@typewriter": {
+  "sha": "f1f89b3765cb7e0c3371c31c7714135491fd75e0",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-two-thinking@bone": {
+  "sha": "f2814002d685e97d817b08bf0ca8a0c236a63f3a",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-two-thinking@catalog": {
+  "sha": "60191180dcd3330c3e006c350ed0847066d38d97",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-two-thinking@graphite": {
+  "sha": "46bbb337c147dc27ce4e9f47f42832c95ba09261",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-two-thinking@typewriter": {
+  "sha": "96eff5c1c61e1becc7451e0eae3f0f208c09d411",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-watch-them-answer@bone": {
+  "sha": "902d659faac00407b1e803f290890c099f08c9a9",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-watch-them-answer@catalog": {
+  "sha": "a2489301cc3cf2049709d607c17eb3d4f15b674e",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-watch-them-answer@graphite": {
+  "sha": "a91316bed08c0d1ac726c04bfe04fcd7ad089e29",
+  "w": 1196,
+  "h": 872
+ },
+ "a-group-watch-them-answer@typewriter": {
+  "sha": "38cf31c0d7069cf582ef47539a80b8de81274f0a",
+  "w": 1196,
+  "h": 872
+ },
+ "the-dock-the-sidebar-and-the-chat-agree@bone": {
+  "sha": "454608a4e3a97351773e5404791a66e47ca1d719",
+  "w": 1440,
+  "h": 900
+ },
+ "the-dock-the-sidebar-and-the-chat-agree@catalog": {
+  "sha": "5a6b4ad8b5712c1e753247ea0652ecb0683210fd",
+  "w": 1440,
+  "h": 900
+ },
+ "the-dock-the-sidebar-and-the-chat-agree@graphite": {
+  "sha": "74cbdfd4c415e38973e55627b1b081a0b8b9c44e",
+  "w": 1440,
+  "h": 900
+ },
+ "the-dock-the-sidebar-and-the-chat-agree@typewriter": {
+  "sha": "d5b91f9b71d6ea735f8bfdf3f6a233957331a76f",
+  "w": 1440,
+  "h": 900
+ }
+}

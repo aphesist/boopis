@@ -19,8 +19,10 @@ import { openSettings, toggleSettings } from './settings';
 import { checkClips, watchClips } from './clips';
 import { renderGlance } from './glance';
 import { outsideDescription, outsideRoomMark } from './outside';
-import { arrival, atEnd, dropPending, entryActs, pendingEntry, updatePending } from './ledger';
+import { arrival, atEnd, entryActs } from './ledger';
 import { followZone } from '../chat/follow-zone';
+import { botActor, placeInLog, roomPresence } from './presence';
+import type { RoomPresence } from './presence';
 import { mentionCtx, resolvePaths, wireRefs } from '../chat/refs';
 
 const bots = () => data().bots;
@@ -79,6 +81,7 @@ function buildRoom(): void {
   zone.hidden = !!data().info.unavailable['bots.send'];
   followZone(zone, () => S.scroll, () => S.viewRoot, '--bt-composer-h')();
   S.follow = gentleFollow(() => S.presence, 0.45);
+  PRES = roomPresence({ log: () => S.log, scroll: () => S.scroll, zone, jump: () => null, onJump: () => { S.scroll?.scrollTo({ top: S.scroll.scrollHeight, behavior: reduced() ? 'auto' : 'smooth' }); S.composer?.focus(); } });
 }
 
 export function openBot(id: string | null): void {
@@ -144,7 +147,7 @@ export function refreshPresence(): void {
 /* ───────── thread ───────── */
 function renderThread(b: Bot): void {
   const log = S.log as HTMLElement; log.textContent = '';
-  NODE.clear(); PEND.el = null; PEND.for = null;
+  NODE.clear(); PEND.for = null;
   const msgs = thread(b.id);
   if (!msgs.length && b.info) log.append(renderGlance(b, openSession));
   else if (!msgs.length) {
@@ -174,10 +177,11 @@ function msgContent(b: Bot, m: ThreadMessage): HTMLElement {
   void resolvePaths(md, rootsOf(m.who === 'you' ? b.id : (bot(m.who)?.id ?? b.id)));
   return md;
 }
-function renderMsg(b: Bot, m: ThreadMessage, prev: ThreadMessage | null, prevEntry: HTMLElement | null): HTMLElement | null {
+function renderMsg(b: Bot, m: ThreadMessage, prev: ThreadMessage | null, prevEntry: HTMLElement | null, put?: (n: HTMLElement) => void): HTMLElement | null {
   const node = msgContent(b, m);
   NODE.set(m.id, node);
-  if (m.kind === 'note') { (S.log as HTMLElement).append(node); return null; }
+  const place = (n: HTMLElement): void => { if (put) put(n); else placeInLog(S.log as HTMLElement, n); };
+  if (m.kind === 'note') { place(node); return null; }
   if (prev && prev.who === m.who && prevEntry && prevEntry.isConnected) {
     $('.ui-entry__body', prevEntry).append(node);
     ENTRY.get(prevEntry)?.msgs.push(m);
@@ -195,7 +199,7 @@ function renderMsg(b: Bot, m: ThreadMessage, prev: ThreadMessage | null, prevEnt
   ENTRY.set(entry, { msgs: [m], who: m.who });
   if (!you) entryActs(entry, { name: (who as Bot).name, copy: () => turnText(entry) });
   livenIn(entry);
-  (S.log as HTMLElement).append(entry);
+  place(entry);
   checkClips();
   return entry;
 }
@@ -207,12 +211,11 @@ function appendMsg(id: string, m: ThreadMessage, streaming: boolean): void {
   const log = S.log as HTMLElement;
   log.querySelector('.bt-empty')?.remove();
   const follow = S.scroll ? atEnd(S.scroll) : true;
-  const pend = m.who !== 'you' && m.kind !== 'note' ? PEND.el : null;
-  if (pend) { PEND.el = null; }
-  const lastEntry = !pend && log.lastElementChild && log.lastElementChild.matches('[data-hx-turn]') ? (log.lastElementChild as HTMLElement) : null;
-  const entry = renderMsg(bot(id) as Bot, m, pend ? null : prev, lastEntry);
-  if (pend) { if (entry) pend.replaceWith(entry); else pend.remove(); }
-  else if (PEND.el && PEND.el.isConnected) log.append(PEND.el);   /* the pending entry stays last */
+  /* the bot at work writes: its reply takes the presence entry's place; anything else lands above it */
+  const pres = m.who !== 'you' && m.kind === 'text' ? PRES?.el ?? null : null;   /* an approval card lands above it: the entry then says "needs you" */
+  const tail = PRES?.el ?? null, lastEl = tail ? tail.previousElementSibling : log.lastElementChild;
+  const lastEntry = !pres && lastEl && lastEl.matches('[data-hx-turn]') ? (lastEl as HTMLElement) : null;
+  const entry = renderMsg(bot(id) as Bot, m, pres ? null : prev, lastEntry, pres && PRES ? (n) => { (PRES as RoomPresence).land(n, id); } : undefined);
   syncTurns();
   const node = NODE.get(m.id);
   if (streaming) log.setAttribute('aria-busy', 'true');
@@ -221,24 +224,22 @@ function appendMsg(id: string, m: ThreadMessage, streaming: boolean): void {
   else if (!reduced() && node) node.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 200, easing: 'cubic-bezier(.2,.8,.2,1)' });
   if (follow || m.who === 'you') S.scroll?.scrollTo({ top: S.scroll.scrollHeight, behavior: reduced() ? 'auto' : 'smooth' });
 }
-/* ───────── the bot at work: a pending entry where its reply will land, until the reply's first words arrive ───────── */
-const PEND = { el: null as HTMLElement | null, for: null as string | null, since: 0 };
+/* ───────── the bot at work: the presence entry where its reply will land, until the reply's first words arrive ───────── */
+let PRES: RoomPresence | null = null;
+const PEND = { for: null as string | null, since: 0 };
 function paintPending(id: string): void {
   const b = bot(id); const log = S.log;
   const list = thread(id), last = list[list.length - 1];
   const replying = !!last && last.who !== 'you' && last.kind === 'text' && log?.getAttribute('aria-busy') === 'true';
   const want = !!b && !!log && S.runs.has(id) && !replying;
-  if (!want) { if (PEND.el) { const e = PEND.el; PEND.el = null; PEND.for = null; dropPending(e); } return; }
-  if (PEND.for !== id || !PEND.el?.isConnected) { PEND.el?.remove(); PEND.el = null; PEND.since = Date.now(); }
-  const s = stateOf(b, null);
-  const o = { bot: b, status: 'running' as const, tool: s.key === 'compute' ? 'terminal' : s.key === 'working' ? 'work' : null, activity: b.activity || null, startedAt: PEND.since };
-  if (PEND.el) { updatePending(PEND.el, o); return; }
-  const e = pendingEntry(o);
-  PEND.el = e; PEND.for = id;
-  log.querySelector('.bt-empty')?.remove();
-  log.append(e);
-  if (!reduced()) e.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 200, easing: 'cubic-bezier(.2,.8,.2,1)' });
-  if (S.scroll && atEnd(S.scroll)) S.scroll.scrollTo({ top: S.scroll.scrollHeight, behavior: reduced() ? 'auto' : 'smooth' });
+  if (!want) {
+    /* a turn that ended in an error shows the error face for a moment; any other end lets the entry go */
+    PRES?.end(b && PEND.for === id && PRES.el && ui.botState(b).key === 'error' ? botActor(b, PEND.since) : null);
+    PEND.for = null;
+    return;
+  }
+  if (PEND.for !== id || !PRES?.el) { PEND.since = Date.now(); PEND.for = id; }
+  PRES?.paint([botActor(b, PEND.since)]);
 }
 
 /* roving tabindex across turns: the focused (or latest) turn is the one tab stop */

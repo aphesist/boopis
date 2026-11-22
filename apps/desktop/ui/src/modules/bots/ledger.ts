@@ -2,19 +2,18 @@
    room and a bot's own chat.
      the "to" line     one margin line under the name: "to you" for an answer to the user (round 0, "you" in --text-strong), "to nina
                        and moss" for a message the members pass among themselves
-     a pending entry   where a member's message will land while it works: its live orb in the state's eyes, its name, who asked and
-                       the clock in the margin; the travelling dot, the state word and the tool in words in the body. A queued member
-                       reads "next"
-     the arrival       the entry stays where the pending one was; its blocks fade up in turn; the orb speaks for a moment
+     who is at work    one presence entry where the replies will land (the kit's `ui.presence`, placed by presence.ts); the tool a
+                       member is in, in words, is here
+     the arrival       a reply lands where the presence entry was (above it while others still work); its blocks fade up in
+                       turn; the orb speaks for a moment
      unread            a hairline with a brass dot and "new" before the first message the user has not seen, and "N new messages"
                        above the composer while they are below the fold
      hover actions     copy, reply (prefills @handle) and open the bot's chat, in the margin under the time, on hover or focus
-   Frame cost: one timer a second for the clocks while anything is pending, text only; no layout read in it. */
-import { el, esc, frag, reduced } from '../../core/dom';
+   Frame cost: no timer here; the presence keeps the one clock. */
+import { el, esc, reduced } from '../../core/dom';
 import { ui } from '@boopis/ui';
-import type { BotLike } from '@boopis/ui';
-import { oc, progressDots } from '@boopis/ui';
-import { livenIn, orbHTML, setReact } from './orbs';
+import { oc } from '@boopis/ui';
+import { setReact } from './orbs';
 
 export const listWords = (n: readonly string[]): string => (n.length < 2 ? n.join('') : n.slice(0, -1).join(', ') + ' and ' + (n[n.length - 1] ?? ''));
 
@@ -49,87 +48,6 @@ export function toolWords(tool: string | null | undefined): string {
   return 'using ' + t.replace(/^mcp_/, '').replace(/[_-]+/g, ' ');
 }
 
-/* ───────── the clock ───────── */
-export function elapsedWords(ms: number): string {
-  const s = Math.max(0, Math.floor(ms / 1000));
-  if (s < 60) return s + 's';
-  const m = Math.floor(s / 60), r = s % 60;
-  if (m < 60) return m + 'm ' + String(r).padStart(2, '0') + 's';
-  return Math.floor(m / 60) + 'h ' + String(m % 60).padStart(2, '0') + 'm';
-}
-const CLOCKS = new Set<HTMLElement>();
-let tick = 0;
-function runClocks(): void {
-  if (tick) return;
-  tick = window.setInterval(() => {
-    const now = Date.now();
-    for (const c of CLOCKS) {
-      if (!c.isConnected) { CLOCKS.delete(c); continue; }
-      const from = Number(c.dataset['since']);
-      if (Number.isFinite(from)) c.textContent = elapsedWords(now - from);
-    }
-    if (!CLOCKS.size) { window.clearInterval(tick); tick = 0; }
-  }, 1000);
-}
-
-/* ───────── a pending entry ───────── */
-export interface PendingOpts {
-  bot: BotLike & { id: string; name: string };
-  status: 'queued' | 'running' | 'stopping';
-  tool?: string | null | undefined;
-  /** who asked it (a member's name, or "you"); omitted when nobody in particular */
-  by?: string | null | undefined;
-  startedAt?: number | null | undefined;
-  /** what it is doing, in words already (a bot's own activity line); wins over the tool */
-  activity?: string | null | undefined;
-}
-const stateOf = (o: PendingOpts): { word: string; state: string } =>
-  o.status === 'queued' ? { word: 'next', state: 'listening' } : o.status === 'stopping' ? { word: 'stopping', state: 'thinking' } : o.tool ? { word: 'working', state: o.tool === 'terminal' || o.tool === 'execute_code' ? 'compute' : 'working' } : { word: 'thinking', state: 'thinking' };
-
-/** where a member's message will land while it works */
-export function pendingEntry(o: PendingOpts): HTMLElement {
-  const s = stateOf(o);
-  const e = frag(ui.html.entry({ kind: 'bot', who: orbHTML(o.bot, 20, { state: s.state }) + '<span class="bt-who-name">' + esc(o.bot.name) + '</span>', callno: [], label: o.bot.name + ', ' + s.word }));
-  e.classList.add('bt-pending-entry');
-  e.dataset['pending'] = o.bot.id;
-  const body = e.querySelector('.ui-entry__body') as HTMLElement;
-  const line = el('p', { class: 'bt-pending', role: 'status' });
-  line.append(progressDots({ value: null, label: o.bot.name + ' is ' + s.word, dots: 5 }));
-  line.append(el('span', { class: 'bt-pending__word' }), el('span', { class: 'bt-pending__act' }));
-  body.append(line);
-  livenIn(e);
-  updatePending(e, o);
-  return e;
-}
-/** change what a pending entry says, in place (its dot keeps travelling, its clock keeps counting) */
-export function updatePending(e: HTMLElement, o: PendingOpts): void {
-  const s = stateOf(o);
-  const callno = e.querySelector('.ui-callno') as HTMLElement;
-  const doing = o.activity || toolWords(o.tool);
-  e.setAttribute('aria-label', o.bot.name + ', ' + s.word + (doing && o.status === 'running' ? ', ' + doing : ''));
-  e.classList.toggle('is-queued', o.status === 'queued');
-  setReact(e.querySelector<HTMLElement>('.ui-callno__who orb-avatar'), s.state);
-  const word = e.querySelector('.bt-pending__word'); if (word) word.textContent = s.word;
-  const act = e.querySelector('.bt-pending__act'); if (act) act.textContent = o.status === 'running' ? (o.activity || toolWords(o.tool)) : '';
-  const dots = e.querySelector<HTMLElement>('.bt-pending .ui-progress'); if (dots) dots.hidden = o.status === 'queued';
-  let by = callno.querySelector<HTMLElement>('.bt-to');
-  if (o.by) { const want = toLine([o.by], 'asked by'); if (want && (!by || by.innerHTML !== want.innerHTML)) { if (by) by.replaceWith(want); else callno.append(want); } }
-  else by?.remove();
-  let clock = callno.querySelector<HTMLElement>('.bt-elapsed');
-  if (o.startedAt && o.status !== 'queued') {
-    if (!clock) { clock = el('span', { class: 'bt-elapsed' }); callno.append(clock); }
-    clock.dataset['since'] = String(o.startedAt);
-    clock.textContent = elapsedWords(Date.now() - o.startedAt);
-    CLOCKS.add(clock); runClocks();
-  } else if (clock) { CLOCKS.delete(clock); clock.remove(); }
-}
-/** a pending entry that goes without a message (stopped, failed): it fades out */
-export function dropPending(e: HTMLElement): void {
-  if (reduced() || typeof e.animate !== 'function') { e.remove(); return; }
-  const a = e.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, easing: 'cubic-bezier(.2,.8,.2,1)' }) as Animation | undefined;
-  if (a?.finished) a.finished.then(() => { e.remove(); }, () => { e.remove(); }); else e.remove();
-}
-
 /* ───────── the arrival ───────── */
 /** a message lands: its blocks fade up in turn, the orb speaks for a moment and settles */
 export function arrival(entry: HTMLElement, body: HTMLElement | null): void {
@@ -157,6 +75,7 @@ export function jumpButton(onJump: () => void): HTMLButtonElement {
 }
 export function setJump(b: HTMLButtonElement | null, n: number): void {
   if (!b) return;
+  b.dataset['unread'] = String(Math.max(0, n));   /* the presence pill reads it (presence.ts) */
   b.hidden = n <= 0;
   const label = b.querySelector('span'); if (label) label.textContent = n === 1 ? '1 new message' : n + ' new messages';
 }

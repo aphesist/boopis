@@ -104,7 +104,7 @@ describe('no module re-implements a kit component', () => {
 
 describe('every component exports its variants for the UI lab', () => {
   it('each variant list names a template the kit draws', () => {
-    const drawn = new Set([...Object.keys(html), 'menu', 'progress', 'composer', 'orb', 'select', 'tip']);
+    const drawn = new Set([...Object.keys(html), 'menu', 'progress', 'composer', 'orb', 'select', 'tip', 'presence']);
     expect(Object.keys(variants).filter((k) => !drawn.has(k))).toEqual([]);
   });
   it('the new templates render from props alone (pure: the same output twice, no global read)', () => {

@@ -39,23 +39,23 @@
   "w": 1196,
   "h": 872
  },
- "a-reply-under-way-the-pending-entry@bone": {
-  "sha": "a40477477334cd97104816d9d2b63889846fc6d3",
+ "a-reply-under-way-the-presence-entry@bone": {
+  "sha": "76c86b7185e7c8b81ff02fc04c1f14f442a0f60a",
   "w": 1196,
   "h": 872
  },
- "a-reply-under-way-the-pending-entry@catalog": {
-  "sha": "bade2dafb0794e3f6455bd1ec7d0e21c65a24652",
+ "a-reply-under-way-the-presence-entry@catalog": {
+  "sha": "2cc3e6808c3198657b0992015f23590f89055c4b",
   "w": 1196,
   "h": 872
  },
- "a-reply-under-way-the-pending-entry@graphite": {
-  "sha": "43ba5ade1f85b3561ba940e3c7a042b3df1c3f3e",
+ "a-reply-under-way-the-presence-entry@graphite": {
+  "sha": "9087377fcb2b1bf752a0ac7d5e22a19818b2f2b6",
   "w": 1196,
   "h": 872
  },
- "a-reply-under-way-the-pending-entry@typewriter": {
-  "sha": "08f0e2e99c758a1e67bc36c556944e79c9f91962",
+ "a-reply-under-way-the-presence-entry@typewriter": {
+  "sha": "eecc5c2503a02e21486b1cb84183fca507ae51f2",
   "w": 1196,
   "h": 872
  },
