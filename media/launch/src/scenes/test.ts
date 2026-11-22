@@ -43,8 +43,8 @@ const VERTICAL: Layout = {
   headline: { x: 540, y: 640, size: 104, width: 900 },
   orb: { x: 540, y: 1180, size: 340 },
   markWidth: 380,
-  composer: { x: 1080 + 560, y: 1080, zoom: 2.25, width: 400 },
-  push: { x: 1080 + 560, y: 1040, zoom: 1.12 }
+  composer: { x: 1080 + 540, y: 1080, zoom: 2.25, width: 390 },
+  push: { x: 1080 + 540, y: 1030, zoom: 1.08 }
 };
 
 const KAI = { shape: 'circle', color: '#4fc9a8' };   /* the house bot "kai" (the app's demo data) */
@@ -54,6 +54,10 @@ const scene: Scene = {
   build(film: Film, stage: Stage) {
     const L = film.variant === 'vertical' ? VERTICAL : LANDSCAPE;
     const g = grid(film);
+    film.mark('A: the line and the orb', 0);
+    film.mark('A: orb to mark', g.land(g.beat(3), 30));
+    film.mark('A: mark to orb', g.land(g.beat(5), 30));
+    film.mark('B: the composer (whip, the orb carried)', g.land(g.beat(7), 18));
     ground(film, stage);
     const world = stage.layer('stage', 1);
     const front = stage.layer('front', 1.25);

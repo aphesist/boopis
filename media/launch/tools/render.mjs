@@ -22,15 +22,13 @@
 import { fork } from 'node:child_process';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { serve } from './lib/serve.mjs';
+import { buildFilm, openFilm, ROOT, SC } from './lib/build.mjs';
 import { concat, EXT, mux, probe } from './lib/encode.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const ROOT = resolve(HERE, '..');
-export const SC = process.env.FILM_SC || '/tmp/claude-0/-home-user/b86134f0-5066-55eb-9eed-e7bff27da970/scratchpad/launch-video';
 
 const argv = process.argv.slice(2);
 const flag = (k) => { const i = argv.indexOf(k); if (i < 0) return false; argv.splice(i, 1); return true; };
@@ -60,12 +58,6 @@ const o = {
 if (argv.length) { console.error('unknown arguments: ' + argv.join(' ')); process.exit(2); }
 
 const log = (...a) => { if (!o.quiet) console.log(...a); };
-
-async function buildFilm() {
-  const require = createRequire(join(ROOT, 'package.json'));
-  const vite = await import(require.resolve('vite'));
-  await vite.build({ configFile: join(ROOT, 'vite.config.ts'), logLevel: 'error' });
-}
 
 async function main() {
   if (o.mux) {
@@ -156,18 +148,10 @@ async function main() {
 }
 
 async function readMeta(url) {
-  const require = createRequire(join(ROOT, 'package.json'));
-  const { chromium } = require('playwright');
-  const b = await chromium.launch();
+  const { browser, page } = await openFilm(url);
   try {
-    const p = await b.newPage();
-    await p.route(/^https?:\/\/(?!127\.0\.0\.1)/, (r) => r.abort());
-    await p.goto(url);
-    await p.waitForFunction(() => document.documentElement.dataset.filmReady, null, { timeout: 60000 });
-    const err = await p.evaluate(() => window.__filmError || null);
-    if (err) throw new Error('page failed: ' + err);
-    return await p.evaluate(() => { const f = window.__film; return { duration: f.duration, fps: f.fps, width: f.width, height: f.height, variant: f.variant, cuts: f.cuts }; });
-  } finally { await b.close(); }
+    return await page.evaluate(() => { const f = window.__film; return { duration: f.duration, fps: f.fps, width: f.width, height: f.height, variant: f.variant, cuts: f.cuts }; });
+  } finally { await browser.close(); }
 }
 
 main().catch((e) => { console.error(e.stack || e); process.exit(1); });

@@ -8,13 +8,13 @@ import { createRequire } from 'node:module';
 import { decodePNG } from './png.mjs';
 import { encoder } from './encode.mjs';
 import { grainer } from './grain.mjs';
+import { CHROME_ARGS } from './build.mjs';
 
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
 const job = JSON.parse(process.argv[2]);
 const send = (m) => { if (process.send && process.connected) process.send(m); };
 
-export const CHROME_ARGS = ['--force-color-profile=srgb', '--font-render-hinting=none', '--disable-lcd-text', '--hide-scrollbars', '--disable-threaded-animation', '--disable-checker-imaging'];
 
 /* sRGB <-> linear light */
 const TO_LIN = new Float32Array(256);

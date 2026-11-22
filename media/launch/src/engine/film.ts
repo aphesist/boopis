@@ -40,6 +40,8 @@ export class Film {
   readonly height: number;
   readonly tl: gsap.core.Timeline;
   readonly cuts: number[] = [];
+  /** scene boundaries by name (a script beat's id at its start): the checker counts and lists them */
+  readonly marks: { name: string; t: number }[] = [];
   private readonly renderers: { fn: Renderer; priority: number; order: number }[] = [];
   private readonly extraMotion: [number, number, number][] = [];
   private motionSpans: [number, number, number][] = [];
@@ -68,6 +70,8 @@ export class Film {
     this.renderers.push({ fn, priority, order: this.renderers.length });
     this.renderers.sort((a, b) => a.priority - b.priority || a.order - b.order);
   }
+  /** a scene boundary: where one idea hands off to the next (a beat of the script) */
+  mark(name: string, t: number): void { this.marks.push({ name, t }); this.marks.sort((a, b) => a.t - b.t); }
   /** a hard cut at t: motion blur never mixes samples across it */
   cut(t: number): void { this.cuts.push(t); this.cuts.sort((a, b) => a - b); }
   /** motion that GSAP does not know about (a renderer that moves things between t0 and t1); `samples` as in TweenData */
