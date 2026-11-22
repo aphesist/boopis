@@ -102,11 +102,12 @@ export function lineIn(film: Film, line: Line, at: number, o: { stagger?: number
   return landed;
 }
 
-/** K1 exit: the whole line up 16 px into a 6 px blur, 12 f on depart, as one: every word takes the same move on the same
-    frame (a centred line's box spans the frame, so the move is given to its words, each a small element) */
+/** the line leaves as one, up and out through a mask at the top of each word's own line box (12 f on depart): every word
+    takes the same move on the same frame, cut by an edge, never faded (the clip lets the selection and its caret, which
+    reach past the glyphs, travel with their word) */
 export function lineOut(film: Film, line: Line, at: number, o: { dur?: number } = {}): number {
   const dur = (o.dur ?? 12) / film.fps;
-  film.tl.to(line.words, { y: -16, filter: 'blur(6px)', opacity: 0, duration: dur, ease: depart, immediateRender: false, data: { role: 'type' } }, at);
+  film.tl.fromTo(line.words, { yPercent: 0, clipPath: 'inset(-30% -25% -30% -25%)' }, { yPercent: -100, clipPath: 'inset(100% -25% -30% -25%)', duration: dur, ease: depart, immediateRender: false, data: { role: 'type' } }, at);
   return at + dur;
 }
 
