@@ -1,8 +1,9 @@
 name: live-signins
 # The live probe (apps/desktop/src-tauri/tests/live_signins.rs): every sign-in and key check of the host against the real
 # services, up to the step that needs a person, on Linux, Windows and macOS, through the app's own code. It is not part of the
-# gate, because it calls real services: it runs on demand, every Monday, and when the probe, the TLS setup or this file
-# changes. No secret is used: no account signs in, and every key it sends is one no provider issued.
+# gate, because it calls real services: it runs on demand, every Monday, and when the probe, the TLS setup, the keychain or this
+# file changes. No secret is used: no account signs in, every key it sends is one no provider issued, and the keychain row saves
+# and deletes one made-up token.
 # The table (service, step, result per platform) is the `table` job's summary; scripts/live-table.py builds it.
 on:
   workflow_dispatch:
@@ -13,6 +14,7 @@ on:
       - .github/workflows/live-signins.yml
       - apps/desktop/src-tauri/tests/live_signins.rs
       - apps/desktop/src-tauri/src/tls.rs
+      - apps/desktop/src-tauri/src/secrets/store.rs
       - scripts/live-table.py
 permissions:
   contents: read
@@ -46,6 +48,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev build-essential pkg-config
+          # a Secret Service for the keychain row (GNOME Keyring, started unlocked in the probe's own session bus)
+          sudo apt-get install -y gnome-keyring dbus
       - uses: dtolnay/rust-toolchain@1.97.0
       - uses: Swatinem/rust-cache@v2
         with:
@@ -54,7 +58,13 @@ jobs:
         env:
           HX_LIVE_PLATFORM: ${{ matrix.platform }}
           HX_LIVE_REPORT: ${{ runner.temp }}/live-${{ matrix.platform }}.jsonl
-        run: cargo test -p boopis-host --test live_signins -- --ignored --nocapture
+        run: |
+          probe="cargo test -p boopis-host --test live_signins -- --ignored --nocapture"
+          if [ "$RUNNER_OS" = Linux ]; then
+            dbus-run-session -- bash -c "printf '' | gnome-keyring-daemon --unlock --components=secrets >/dev/null && $probe"
+          else
+            $probe
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:

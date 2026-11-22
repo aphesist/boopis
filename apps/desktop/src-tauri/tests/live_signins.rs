@@ -7,8 +7,9 @@
 //!
 //! `.github/workflows/live-signins.yml` runs it on Linux, Windows and macOS, on demand and every week.
 //!
-//! - **No account and nothing saved.** Each sign-in stops where a person would type a code or sign in; each key check sends a
-//!   key no provider issued. Nothing touches the keychain or the engine.
+//! - **No account and nothing kept.** Each sign-in stops where a person would type a code or sign in; each key check sends a
+//!   key no provider issued. Nothing touches the engine. The keychain row saves one made-up token as long as a ChatGPT ID token
+//!   under `boopis.live-probe`, reads it back and deletes it (Windows keeps it in parts: `secrets/store.rs`).
 //! - **The app's own code**, not a copy: the same transports, the same wire functions and the same mapping to what the card says.
 //!   rustls's process default is never installed here, so the TLS rows prove that each HTTPS agent names its own provider.
 //! - **Every message a person would read is checked for plain words** ([`raw_words`]): no panic, no transport error, no status
@@ -622,6 +623,70 @@ fn local(p: &mut Probe) {
     }
 }
 
+// ---------------------------------------------------------------- the keychain, with a value as long as a sign-in's token
+
+fn keychain(p: &mut Probe) {
+    p.check(
+        "Keychain",
+        "a 2400-character token (a ChatGPT ID token's size), saved, read back and deleted",
+        || {
+            // a keychain that asks a person (a locked one) must not hold the probe: one minute, then a failure
+            let (tx, rx) = std::sync::mpsc::channel();
+            std::thread::spawn(move || {
+                let _ = tx.send(keychain_round_trip());
+            });
+            rx.recv_timeout(Duration::from_mins(1)).unwrap_or_else(|_| {
+                (
+                    Verdict::Fail,
+                    "the keychain did not answer within a minute".into(),
+                )
+            })
+        },
+    );
+}
+
+fn keychain_round_trip() -> (Verdict, String) {
+    use boopis_host::secrets::{Keychain, SecretStore as _};
+    let (service, account) = ("boopis.live-probe", "id_token");
+    let token = format!("eyJ{}", "a1B2-_".repeat(400));
+    let k = Keychain;
+    if let Err(e) = k.set(service, account, &token) {
+        let (code, message) = shown(e);
+        if let Some(f) = plain_or_fail(&message) {
+            return f;
+        }
+        return if code == "hx.secrets.unavailable" {
+            (
+                Verdict::Blocked,
+                format!("no keychain runs on this machine; the card says: {message}"),
+            )
+        } else {
+            (Verdict::Fail, format!("{code}: {message}"))
+        };
+    }
+    let back = k.get(service, account);
+    let deleted = k.delete(service, account);
+    let after = k.get(service, account);
+    let part_left = k.get(service, &format!("{account}.part-1"));
+    match (back, deleted, after, part_left) {
+        (Ok(Some(v)), Ok(()), Ok(None), Ok(None)) if v == token => (
+            Verdict::Pass,
+            "read back whole, and nothing left after the delete".into(),
+        ),
+        (back, deleted, after, part_left) => (
+            Verdict::Fail,
+            format!(
+                "read back {:?} characters (of {}), delete {:?}, after it {:?}, a part left {:?}",
+                back.map(|o| o.map(|v| v.len())).map_err(|e| e.code()),
+                token.len(),
+                deleted.map_err(|e| e.code()),
+                after.map(|o| o.is_some()).map_err(|e| e.code()),
+                part_left.map(|o| o.is_some()).map_err(|e| e.code()),
+            ),
+        ),
+    }
+}
+
 // ---------------------------------------------------------------- the report
 
 fn markdown(rows: &[Row]) -> String {
@@ -682,6 +747,7 @@ fn every_signin_and_key_check_against_the_real_services() {
     keys(&mut p);
     endpoints(&mut p);
     local(&mut p);
+    keychain(&mut p);
     write_reports(&p.rows);
     let failed: Vec<String> = p
         .rows
