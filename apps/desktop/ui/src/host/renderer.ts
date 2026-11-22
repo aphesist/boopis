@@ -72,6 +72,26 @@ export function errorLines(host: readonly { code: string; detail: string; at: nu
   return ['errors behind the messages shown (the raw words, kept here only):', ...all.map((e) => `  ${new Date(e.at).toISOString()}  ${e.code}  ${e.detail}`)];
 }
 
+type Health = NonNullable<RendererReport['health']>;
+type Run = Health['this_run'];
+const when = (secs: number): string => new Date(secs * 1000).toISOString().replace('T', ' ').replace(/\.\d+Z$/, ' UTC');
+function runLines(label: string, r: Run): string[] {
+  const head = `${label}: boopis ${r.version}, started ${when(r.started)}; ${r.recoveries} ${r.recoveries === 1 ? 'recovery' : 'recoveries'}; longest page stall ${r.longest_stall_ms} ms; outbox peak ${r.outbox_peak} frames`;
+  const beat = r.last_heartbeat != null ? [`  last page heartbeat ${when(r.last_heartbeat)} (${r.last_visible === false ? 'hidden' : r.last_visible ? 'visible' : 'visibility unknown'})`] : [];
+  const events = r.events.map((e) => `  ${when(e.at)}  ${e.kind}${e.detail ? ` (${e.detail})` : ''}${e.value != null ? ` ${e.value}` : ''}`);
+  return [head, ...beat, ...(events.length ? events : ['  no web view events'])];
+}
+/** the web view's health (src-tauri/src/webview_health.rs): web-process ends and why, unresponsive periods, recoveries, the
+    page's longest stall and the outbox peak, this run and the last */
+export function healthLines(h: RendererReport['health']): string[] {
+  if (!h) return [];
+  return [
+    `window watchdog: ${h.watching ? 'watching the web process' : 'not watching (no web view signals here)'}`,
+    ...runLines('this run', h.this_run),
+    ...(h.last_run ? runLines('last run', h.last_run) : ['last run: no record'])
+  ];
+}
+
 /** the report as plain text, one fact a line, for a message */
 /** the renderer report, with the models plan when the live connection can ask */
 export type Report = RendererReport & { plan?: PlanView | null };
@@ -108,6 +128,7 @@ export function reportText(r: Report, d: DisplayFacts, f?: FrameStats | null): s
     `user agent: ${d.userAgent}`,
     'choices: ' + r.choices.map(([k, v]) => `${k} = ${v}`).join('; '),
     ...(r.plan ? planLines(r.plan) : []),
+    ...healthLines(r.health),
     ...(f ? [`frames over ${f.seconds} s: ${describeFrames(f, rate)} (p50 ${f.p50} ms, p95 ${f.p95} ms, max ${f.max} ms, ${f.over33} over 33 ms, ${f.frames} frames)`] : []),
     ...errorLines(r.errors ?? [], engineDetails())
   ].join('\n');

@@ -49,6 +49,13 @@ export const commands = {
 	gatewayDisconnect: (connectionId: number, options?: InvokeOptions) => __TAURI_INVOKE<null>("gateway_disconnect", { connectionId }, options),
 	/**  The proxy's counters and timings, for diagnostics. */
 	gatewayStats: (profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<ProxyStats_Serialize>("gateway_stats", { profile }, options),
+	/**  The page took one delivery of frames on this connection (`FrameSink::acks`): the host may send the next. */
+	gatewayAck: (connectionId: number, options?: InvokeOptions) => __TAURI_INVOKE<null>("gateway_ack", { connectionId }, options),
+	/**
+	 *  The page's heartbeat (every few seconds): whether it is visible and the longest main-thread stall it measured since
+	 *  the last one, in milliseconds. Kept for Diagnostics with the proxy's outbox peak (`webview_health`).
+	 */
+	webviewHeartbeat: (visible: boolean, stallMs: number, options?: InvokeOptions) => __TAURI_INVOKE<HeartbeatReply_Serialize>("webview_heartbeat", { visible, stallMs }, options),
 	/**  Store a secret in the OS keychain. There is no command that reads one back. */
 	secretSet: (service: string, account: string, value: string, options?: InvokeOptions) => __TAURI_INVOKE<null>("secret_set", { service, account, value }, options),
 	/**  Delete a secret from the OS keychain (deleting a missing one succeeds). */
@@ -1458,6 +1465,21 @@ export type Gpu_Serialize = {
 	boot_display: boolean,
 };
 
+/**  What the host answers the page's heartbeat: the plain notice to show once after the host recovered the page. */
+export type HeartbeatReply = HeartbeatReply_Serialize | HeartbeatReply_Deserialize;
+
+/**  What the host answers the page's heartbeat: the plain notice to show once after the host recovered the page. */
+export type HeartbeatReply_Deserialize = {
+	/**  The sentence to show, once, when the host reloaded the page to recover the window. */
+	notice?: string | null,
+};
+
+/**  What the host answers the page's heartbeat: the plain notice to show once after the host recovered the page. */
+export type HeartbeatReply_Serialize = {
+	/**  The sentence to show, once, when the host reloaded the page to recover the window. */
+	notice: string | null,
+};
+
 /**
  *  One heavy model's opt-in (Settings > Models, the governed section): a model that is frontier but token-heavy or costly, so
  *  governed mode runs it only when the user turned it on (ADR-0037, ADR-0039). The data file marks the family heavy and holds the
@@ -2057,6 +2079,12 @@ export type ProxyStats_Deserialize = {
 	sink_p95_us?: number | null,
 	/**  p95 of writing a frame to the gateway socket, in microseconds. */
 	write_p95_us?: number | null,
+	/**  The deepest any UI connection's queue went, in frames. */
+	outbox_peak: number,
+	/**  Deliveries to the UI. */
+	batches: number,
+	/**  Frames delivered to the UI, after merging. */
+	frames_to_ui: number,
 };
 
 /**  A snapshot for the UI's diagnostics. */
@@ -2079,6 +2107,12 @@ export type ProxyStats_Serialize = {
 	sink_p95_us: number | null,
 	/**  p95 of writing a frame to the gateway socket, in microseconds. */
 	write_p95_us: number | null,
+	/**  The deepest any UI connection's queue went, in frames. */
+	outbox_peak: number,
+	/**  Deliveries to the UI. */
+	batches: number,
+	/**  Frames delivered to the UI, after merging. */
+	frames_to_ui: number,
 };
 
 /**  The short "you're set" note. */
@@ -2137,6 +2171,12 @@ export type RendererReport_Deserialize = {
 	 *  Filled when the report is asked for; Diagnostics is the one place they are shown.
 	 */
 	errors: RecentError[],
+	/**
+	 *  The web view's health (`webview_health`): web-process terminations and why, unresponsive periods, recoveries,
+	 *  the page's longest stall and the outbox peak, for this run and the one before. Filled when the report is asked
+	 *  for; `None` from `boopis doctor` (it prints the previous run's file itself).
+	 */
+	health?: WebviewHealthReport_Deserialize | null,
 };
 
 /**  Everything the diagnostics show: what was found, what was decided and what the web process will see. */
@@ -2176,6 +2216,12 @@ export type RendererReport_Serialize = {
 	 *  Filled when the report is asked for; Diagnostics is the one place they are shown.
 	 */
 	errors: RecentError[],
+	/**
+	 *  The web view's health (`webview_health`): web-process terminations and why, unresponsive periods, recoveries,
+	 *  the page's longest stall and the outbox peak, for this run and the one before. Filled when the report is asked
+	 *  for; `None` from `boopis doctor` (it prints the previous run's file itself).
+	 */
+	health: WebviewHealthReport_Serialize | null,
 };
 
 /**  Why the decision came out as it did (stable names: they go in the log and in the diagnostics). */
@@ -2995,6 +3041,105 @@ export type WebkitReport_Serialize = {
 	origin: WebkitOrigin,
 	/**  The path of the loaded `libwebkit2gtk`. */
 	library: string | null,
+};
+
+/**  One thing that happened to the web view. */
+export type WebviewEvent = WebviewEvent_Serialize | WebviewEvent_Deserialize;
+
+/**  One thing that happened to the web view. */
+export type WebviewEvent_Deserialize = {
+	/**  When, in seconds since the Unix epoch. */
+	at: number,
+	/**  `terminated`, `unresponsive`, `responsive`, `reloaded`, `stall` or `outbox`. */
+	kind: string,
+	/**  The reason or detail (`crashed`, `exceeded_memory`, the page's visibility...). */
+	detail: string,
+	/**  A duration in seconds, or a count, where the kind has one. */
+	value?: number | null,
+};
+
+/**  One thing that happened to the web view. */
+export type WebviewEvent_Serialize = {
+	/**  When, in seconds since the Unix epoch. */
+	at: number,
+	/**  `terminated`, `unresponsive`, `responsive`, `reloaded`, `stall` or `outbox`. */
+	kind: string,
+	/**  The reason or detail (`crashed`, `exceeded_memory`, the page's visibility...). */
+	detail: string,
+	/**  A duration in seconds, or a count, where the kind has one. */
+	value: number | null,
+};
+
+/**  What Diagnostics and `boopis doctor` show. */
+export type WebviewHealthReport = WebviewHealthReport_Serialize | WebviewHealthReport_Deserialize;
+
+/**  What Diagnostics and `boopis doctor` show. */
+export type WebviewHealthReport_Deserialize = {
+	/**  Whether the host watches the web process (Linux, once the window exists). */
+	watching: boolean,
+	/**  This run. */
+	this_run: WebviewRun_Deserialize,
+	/**
+	 *  The run before, as it was left (the file is written as things happen, so a run that was killed still says
+	 *  what it saw).
+	 */
+	last_run?: WebviewRun_Deserialize | null,
+};
+
+/**  What Diagnostics and `boopis doctor` show. */
+export type WebviewHealthReport_Serialize = {
+	/**  Whether the host watches the web process (Linux, once the window exists). */
+	watching: boolean,
+	/**  This run. */
+	this_run: WebviewRun_Serialize,
+	/**
+	 *  The run before, as it was left (the file is written as things happen, so a run that was killed still says
+	 *  what it saw).
+	 */
+	last_run: WebviewRun_Serialize | null,
+};
+
+/**  One run's record. */
+export type WebviewRun = WebviewRun_Serialize | WebviewRun_Deserialize;
+
+/**  One run's record. */
+export type WebviewRun_Deserialize = {
+	/**  When this run started, in seconds since the Unix epoch. */
+	started: number,
+	/**  The app's version. */
+	version: string,
+	/**  The events, oldest first, at most `MAX_EVENTS` (the oldest are dropped). */
+	events: WebviewEvent_Deserialize[],
+	/**  The longest main-thread stall the page measured while it was visible, in milliseconds. */
+	longest_stall_ms: number,
+	/**  The deepest any window's frame queue in the host went. */
+	outbox_peak: number,
+	/**  How many times the page was reloaded to recover it. */
+	recoveries: number,
+	/**  The last time the page said it was alive, in seconds since the Unix epoch, and whether it was visible then. */
+	last_heartbeat?: number | null,
+	/**  Whether the page was visible at the last heartbeat. */
+	last_visible?: boolean | null,
+};
+
+/**  One run's record. */
+export type WebviewRun_Serialize = {
+	/**  When this run started, in seconds since the Unix epoch. */
+	started: number,
+	/**  The app's version. */
+	version: string,
+	/**  The events, oldest first, at most `MAX_EVENTS` (the oldest are dropped). */
+	events: WebviewEvent_Serialize[],
+	/**  The longest main-thread stall the page measured while it was visible, in milliseconds. */
+	longest_stall_ms: number,
+	/**  The deepest any window's frame queue in the host went. */
+	outbox_peak: number,
+	/**  How many times the page was reloaded to recover it. */
+	recoveries: number,
+	/**  The last time the page said it was alive, in seconds since the Unix epoch, and whether it was visible then. */
+	last_heartbeat: number | null,
+	/**  Whether the page was visible at the last heartbeat. */
+	last_visible: boolean | null,
 };
 
 /**  What a title-bar button asks of the window. */

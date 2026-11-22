@@ -17,6 +17,8 @@ const COMMANDS: &[&str] = &[
     "gateway_send",
     "gateway_disconnect",
     "gateway_stats",
+    "gateway_ack",
+    "webview_heartbeat",
     "secret_set",
     "secret_delete",
     "secret_exists",

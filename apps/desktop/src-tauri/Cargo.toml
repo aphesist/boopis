@@ -75,7 +75,7 @@ ring = { version = "0.17", default-features = false, features = ["std"] }
 # `dlsym` for the one preference the `webkit2gtk` crate has no binding for. Versions match what Tauri's wry already uses.
 [target.'cfg(target_os = "linux")'.dependencies]
 gtk = "0.18"
-webkit2gtk = "2.0"
+webkit2gtk = { version = "2.0", features = ["v2_34"] }
 libc = "0.2"
 
 # Attaching to the parent console for `boopis --version` and `boopis doctor`: the release binary is a GUI-subsystem one.

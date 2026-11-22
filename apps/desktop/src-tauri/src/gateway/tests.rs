@@ -806,3 +806,133 @@ async fn a_window_opened_after_the_event_still_runs_the_challenge_the_status_nam
         tokio::time::sleep(Duration::from_millis(5)).await;
     }
 }
+
+/// A sink that acknowledges deliveries, like the web view's channel: each message is one batch (an array, or one frame).
+struct AckCollect(mpsc::UnboundedSender<String>);
+impl FrameSink for AckCollect {
+    fn send(&self, frame: &str) -> Result<()> {
+        self.0
+            .send(frame.to_owned())
+            .map_err(|_| Error::Io("gone".into()))
+    }
+    fn send_batch(&self, frames: &[Arc<str>]) -> Result<()> {
+        let joined: Vec<&str> = frames.iter().map(|f| &**f).collect();
+        self.send(&format!("[{}]", joined.join(",")))
+    }
+    fn acks(&self) -> bool {
+        true
+    }
+}
+
+fn event(n: u64) -> Value {
+    json!({"jsonrpc":"2.0","method":"event","params":{"type":"tool.start","session_id":"s","payload":{"n":n},"seq":n}})
+}
+
+/// Every frame a message holds (a batch is an array).
+fn frames_of(msg: &str) -> Vec<Value> {
+    match serde_json::from_str::<Value>(msg).unwrap() {
+        Value::Array(v) => v,
+        one => vec![one],
+    }
+}
+
+#[tokio::test]
+async fn an_acknowledging_page_gets_batches_only_while_it_has_credit_and_a_stuck_one_is_dropped_alone()
+ {
+    let (handles, mut gateways) = mpsc::unbounded_channel();
+    let endpoint = Arc::new(FakeEndpoint {
+        handles,
+        failures: Mutex::new(Vec::new()),
+    });
+    let hub = Hub::new(
+        endpoint,
+        Limits {
+            queue_soft_cap: 4,
+            queue_hard_cap: 12,
+            batch_frames: 3,
+            ui_credit: 1,
+            ..limits()
+        },
+    );
+    let (tx, mut page) = mpsc::unbounded_channel();
+    let open = hub.open(1, Arc::new(AckCollect(tx)), WAIT);
+    let (res, gw) = tokio::join!(open, async {
+        let mut gw = gateways.recv().await.unwrap();
+        gw.handshake().await;
+        gw
+    });
+    res.unwrap();
+    let (tx2, mut other) = mpsc::unbounded_channel();
+    hub.open(2, Arc::new(Collect(tx2)), WAIT).await.unwrap();
+    // the page takes its first delivery and acknowledges nothing yet
+    let first = tokio::time::timeout(WAIT, page.recv())
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(!frames_of(&first).is_empty());
+    for n in 0..6 {
+        gw.send(&event(n));
+        tokio::time::sleep(Duration::from_millis(2)).await;
+    }
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    assert!(
+        page.try_recv().is_err(),
+        "no credit: nothing more reaches the page"
+    );
+    // an acknowledgement lets one batch through, at most three frames
+    hub.ack(1);
+    let batch = tokio::time::timeout(WAIT, page.recv())
+        .await
+        .unwrap()
+        .unwrap();
+    assert!((1..=3).contains(&frames_of(&batch).len()));
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    assert!(page.try_recv().is_err());
+    // the page is stuck: its queue fills to the hard cap and it alone is dropped
+    for n in 6..40 {
+        gw.send(&event(n));
+        tokio::time::sleep(Duration::from_millis(2)).await; // the other window's drain keeps up
+    }
+    let mut seen = Vec::new();
+    while seen.len() < 40 {
+        let v: Value = serde_json::from_str(
+            &tokio::time::timeout(WAIT, other.recv())
+                .await
+                .unwrap()
+                .unwrap(),
+        )
+        .unwrap();
+        if v["params"]["type"] == "tool.start" {
+            seen.push(v["params"]["payload"]["n"].as_u64().unwrap());
+        }
+    }
+    assert_eq!(
+        seen,
+        (0..40).collect::<Vec<_>>(),
+        "the other window gets every frame, in order"
+    );
+    let mut goodbye = None;
+    while let Ok(Some(m)) = tokio::time::timeout(Duration::from_secs(1), page.recv()).await {
+        for f in frames_of(&m) {
+            if f["params"]["payload"]["reason"] == "slow_consumer" {
+                goodbye = Some(f);
+            }
+        }
+    }
+    assert!(
+        goodbye.is_some(),
+        "the stuck page is told it was dropped as too slow"
+    );
+    assert_eq!(hub.stats().slow_closed, 1);
+    assert_eq!(hub.connections(), 1, "only the stuck connection was closed");
+    assert!(hub.stats().outbox_peak >= 12);
+    gw.send(&event(99));
+    let v: Value = serde_json::from_str(
+        &tokio::time::timeout(WAIT, other.recv())
+            .await
+            .unwrap()
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(v["params"]["payload"]["n"], 99, "the other window goes on");
+}
