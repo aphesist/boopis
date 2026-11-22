@@ -484,9 +484,9 @@ async fn a_new_bot_gets_everything_and_its_seat() {
     assert_eq!(done.skills_off, vec!["findmy".to_owned()]);
     assert_eq!(
         fake.get(&home.root, "hosted_rooms.profiles.iris2"),
-        Some(json!(
-            std::fs::canonicalize(&bot).unwrap().display().to_string()
-        ))
+        Some(json!(super::plain(
+            &std::fs::canonicalize(&bot).unwrap().display().to_string()
+        )))
     );
     // the settings and the secrets come before the enable, so the gateway loads the plugin with them
     let log = fake.writes();
@@ -718,4 +718,20 @@ fn the_notice_names_the_bots_plainly() {
         "{many}"
     );
     assert!(!crate::error::names_engine(&many));
+}
+
+#[test]
+fn a_room_entry_has_no_windows_verbatim_prefix() {
+    assert_eq!(
+        super::plain(r"\\?\C:\Users\me\engine\profiles\kai"),
+        r"C:\Users\me\engine\profiles\kai"
+    );
+    assert_eq!(
+        super::plain(r"\\?\UNC\server\share\profiles\kai"),
+        r"\\server\share\profiles\kai"
+    );
+    assert_eq!(
+        super::plain("/home/me/engine/profiles/kai"),
+        "/home/me/engine/profiles/kai"
+    );
 }
