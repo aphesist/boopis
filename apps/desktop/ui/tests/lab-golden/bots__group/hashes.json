@@ -1,341 +1,381 @@
 {
  "a-lead-answers-first@bone": {
-  "sha": "b67ef8032e9908855f2d880450f414a7c25e349d",
+  "sha": "dc9a26e22928def6738ad2a5d79ae22dfc15db18",
   "w": 1196,
   "h": 872
  },
  "a-lead-answers-first@catalog": {
-  "sha": "2dab29cc15aa2cd7663c972bafa1c3b91c145d6b",
+  "sha": "7b90f2bc7307883be5a1671863bde38668ff203c",
   "w": 1196,
   "h": 872
  },
  "a-lead-answers-first@graphite": {
-  "sha": "cd2468e71a092c316a1d34a4e7ce8666667599dc",
+  "sha": "9071af34926197c035ddf105b965e7abccdb4d53",
   "w": 1196,
   "h": 872
  },
  "a-lead-answers-first@typewriter": {
-  "sha": "69ee7aeaf623ae8a2706a367b0b3e8fa33cf9fb5",
+  "sha": "bd0090229a8c0c2316156bb49553c6c2843ee6a1",
   "w": 1196,
   "h": 872
  },
  "a-long-name@bone": {
-  "sha": "14d38c254952c906af15d2d0502dbd73ad2109be",
+  "sha": "4fac5a6436e996e9c60f126b72ba024da2c8f30e",
   "w": 1196,
   "h": 872
  },
  "a-long-name@catalog": {
-  "sha": "0722bbbc6b395de50cbf0f2d3e490dbcca64b418",
+  "sha": "d07b61d3aab872394a7e1b158b37c15ef071f003",
   "w": 1196,
   "h": 872
  },
  "a-long-name@graphite": {
-  "sha": "6a9284f38170d0b5edc7f707e51d835091e265c1",
+  "sha": "199fa6c2d314dc02a9f691472c6b68d1e6a904bf",
   "w": 1196,
   "h": 872
  },
  "a-long-name@typewriter": {
-  "sha": "855c9448f27e9ffe6eab919c216ec52307d9629c",
+  "sha": "7002f0e92c1aa0a74f4a8ad37ea3701dfa1b29ed",
   "w": 1196,
   "h": 872
  },
  "a-member-also-running-a-kanban-task@bone": {
-  "sha": "311abb0732e986181fbf0d345c241ae61e152cc5",
+  "sha": "f7f988eee54f680350c4a0264a4876840dcaae78",
   "w": 1196,
   "h": 872
  },
  "a-member-also-running-a-kanban-task@catalog": {
-  "sha": "3502920e5474e1898779ce6e70d971df1e81837d",
+  "sha": "2f2a0f597c3b63a4cf08f09d94ef576123182fd4",
   "w": 1196,
   "h": 872
  },
  "a-member-also-running-a-kanban-task@graphite": {
-  "sha": "53739e3a37dbd3e01b396f90aff932bee09fb46a",
+  "sha": "3b6d1b26c24a3a165d2252ffc78ce7daaec02a5d",
   "w": 1196,
   "h": 872
  },
  "a-member-also-running-a-kanban-task@typewriter": {
-  "sha": "f15f0b1029a3a38baae9d799f729a4e87adec9d6",
+  "sha": "70a3708908d7006ea33f6b8ba4d445d7cafc2d1a",
   "w": 1196,
   "h": 872
  },
  "a-member-chip-hover@bone": {
-  "sha": "59d3e42a105a96c8d6fb55179e842d32b0c846ed",
+  "sha": "7b04fdbf14d1d45a62f4e7d655aabb1a4e46b523",
   "w": 1196,
   "h": 872
  },
  "a-member-chip-hover@catalog": {
-  "sha": "3ffeabdf6cf1c5d361e5db9b8f6d227cbbccc7ac",
+  "sha": "f34713d108caa506cd1d377ead08aaf3da0252ff",
   "w": 1196,
   "h": 872
  },
  "a-member-chip-hover@graphite": {
-  "sha": "6ad74a5fdc35a3b9276348f4756d14a45902613d",
+  "sha": "abc2e21e4944b0ce8f80b991f26e36a0fcc07c12",
   "w": 1196,
   "h": 872
  },
  "a-member-chip-hover@typewriter": {
-  "sha": "5d66b0482c5f3553e97383fc2465cad586896a96",
+  "sha": "8d5302d090d30d1c17b0cc891740f18eefa96953",
   "w": 1196,
   "h": 872
  },
  "a-member-names-a-bot-that-is-not-in-the-room-the-note-and-send-to@bone": {
-  "sha": "ab0b068aec0c999103784a1444ee52fa4e33afc0",
+  "sha": "40b1c553c82966dc8541139dea68a87cfc0327fc",
   "w": 1196,
   "h": 872
  },
  "a-member-names-a-bot-that-is-not-in-the-room-the-note-and-send-to@catalog": {
-  "sha": "3a00b485e849008205dc2ff3651ad15cb45f8ad2",
+  "sha": "fce18ce841ae3fd2d4900ba51f86945180b4ffb9",
   "w": 1196,
   "h": 872
  },
  "a-member-names-a-bot-that-is-not-in-the-room-the-note-and-send-to@graphite": {
-  "sha": "e0cdf0d2d2974203880ad8f6eee8002c68aed5e9",
+  "sha": "598e2073f8590de92645ac62901dec40683664da",
   "w": 1196,
   "h": 872
  },
  "a-member-names-a-bot-that-is-not-in-the-room-the-note-and-send-to@typewriter": {
-  "sha": "3969683cfd42f5bfc0487f3829cf16e36123624e",
+  "sha": "1e591f264222bf0df389bbaa0c9fa8c4b32e4f20",
   "w": 1196,
   "h": 872
  },
  "a-mention-hovered@bone": {
-  "sha": "85951ca2326f6d42f92977c451a12fdc63243558",
+  "sha": "39082ce832ceeefb989be96fc88cd6f6d7608c8a",
   "w": 1196,
   "h": 872
  },
  "a-mention-hovered@catalog": {
-  "sha": "e8f9362e6f1cf7cc0eedbdbbb85cedde69b21962",
+  "sha": "5c3f6264908333ea7a1cba00a3dfefc634724ddd",
   "w": 1196,
   "h": 872
  },
  "a-mention-hovered@graphite": {
-  "sha": "573375c4e48ec8f0cf3097fe2439b2feb073b17a",
+  "sha": "69125ce2baedaf1bf94687415f5c63f5340f0647",
   "w": 1196,
   "h": 872
  },
  "a-mention-hovered@typewriter": {
-  "sha": "fa940de7733e727625a15cf1914d0f1c74cd7991",
+  "sha": "da20883c36e635a007307076eb5ddb2e76892d7f",
   "w": 1196,
   "h": 872
  },
  "a-mention-of-a-bot-that-is-not-in-the-room-the-chip-and-the-hint@bone": {
-  "sha": "c3a68af4becbe94c803b4545edf6a372422be60d",
+  "sha": "53584d79c770442798a06fe3bc980af88419e375",
   "w": 1196,
   "h": 872
  },
  "a-mention-of-a-bot-that-is-not-in-the-room-the-chip-and-the-hint@catalog": {
-  "sha": "28f8c6ebfbcce19ed35183ecba5e86bff4f901c5",
+  "sha": "1906748aa474be037e2f6500ad52cf37c9fef8f1",
   "w": 1196,
   "h": 872
  },
  "a-mention-of-a-bot-that-is-not-in-the-room-the-chip-and-the-hint@graphite": {
-  "sha": "af799a853860d5ca897546a8319c0b60e3cec8b6",
+  "sha": "fa5337b715d877f4c440acca0d5ad17bd26c20cd",
   "w": 1196,
   "h": 872
  },
  "a-mention-of-a-bot-that-is-not-in-the-room-the-chip-and-the-hint@typewriter": {
-  "sha": "5ea2f3175582c107e31e3b9faf55a8fe0d7b5002",
+  "sha": "ac1db7ec801498d1fccb4638b3c4734afdaa92cf",
   "w": 1196,
   "h": 872
  },
  "a-message-waiting-for-a-member@bone": {
-  "sha": "21d945a0071712d6f93e5da465a826aa1ae335d9",
+  "sha": "d3ae215c7b78493b20d5acc8b00d12bcf6860670",
   "w": 1196,
   "h": 872
  },
  "a-message-waiting-for-a-member@catalog": {
-  "sha": "667556c5659033c1502def816a1f0519762f1411",
+  "sha": "57be4ebe03bbc95d7792c5a3fa10301904a6fce6",
   "w": 1196,
   "h": 872
  },
  "a-message-waiting-for-a-member@graphite": {
-  "sha": "57605a15656fa61ebbbd1a80778ab392a05c97e5",
+  "sha": "9f3a1453e6c4f5d145bf6614ca46d6b87481272e",
   "w": 1196,
   "h": 872
  },
  "a-message-waiting-for-a-member@typewriter": {
-  "sha": "7f46ef3e12851d43f99d893879eb6b65da166a6a",
+  "sha": "c6bb8618613eaecefc088142bd867a851c37501d",
   "w": 1196,
   "h": 872
  },
  "a-team-across-rounds-to-lines-mentions-paths-code@bone": {
-  "sha": "1f52538f4b51db8891c676ae9766f4e3748fc2c2",
+  "sha": "b8ea7858bc4ea2b29736a60bd24cf3da57678930",
   "w": 1196,
   "h": 872
  },
  "a-team-across-rounds-to-lines-mentions-paths-code@catalog": {
-  "sha": "2706267e1ad92215dcabfb63f482a92198f417a0",
+  "sha": "8377342f73d8e2c5c51facab8cae62c6c97d254f",
   "w": 1196,
   "h": 872
  },
  "a-team-across-rounds-to-lines-mentions-paths-code@graphite": {
-  "sha": "5d0ecd12d3b3bd24120dd052beac2fefd0781afc",
+  "sha": "742d71780f94cad3ce84f5def67e3ba5fabd20d2",
   "w": 1196,
   "h": 872
  },
  "a-team-across-rounds-to-lines-mentions-paths-code@typewriter": {
-  "sha": "1f4f109a0044418ac0fe1e1e61a2ad723da0fe70",
+  "sha": "5cc7b2a3b5963bc611a3b52f9f8191fec4def6b2",
   "w": 1196,
   "h": 872
  },
  "five-at-work-the-rest-in-one-line-above-the-composer@bone": {
-  "sha": "c331329da3df03e06009f701e639470f8fb60daf",
+  "sha": "ab634ea7ae8beb70945276a385fd201971950937",
   "w": 1196,
   "h": 872
  },
  "five-at-work-the-rest-in-one-line-above-the-composer@catalog": {
-  "sha": "4199d9399b47095802b510397e4d1841c5100d4c",
+  "sha": "1dbe4cf9b3fdbe17f5393d7340eaf28e94d0f940",
   "w": 1196,
   "h": 872
  },
  "five-at-work-the-rest-in-one-line-above-the-composer@graphite": {
-  "sha": "6a320d0442169dbc204618df4adc4f3c558234ec",
+  "sha": "893a731ec174d843136c7002d302794ab8b40268",
   "w": 1196,
   "h": 872
  },
  "five-at-work-the-rest-in-one-line-above-the-composer@typewriter": {
-  "sha": "5c08e52082d85b186fc32c2bf678a282d2989c41",
+  "sha": "5533eff1cc75e6ce37f424ffd8c36ca3c2ac6ed6",
   "w": 1196,
   "h": 872
  },
  "group-chat-is-off@bone": {
-  "sha": "ed1eb21e3752e59445cf1912f296ccf5c53f628c",
+  "sha": "8e9e8267aece80e91418a35b6fc8de34dde0f77b",
   "w": 1196,
   "h": 872
  },
  "group-chat-is-off@catalog": {
-  "sha": "6c83155f7821260bfa22c639be9a40b98f70966a",
+  "sha": "e989db247e9f01c7513fabc918cd930b66ddcd3e",
   "w": 1196,
   "h": 872
  },
  "group-chat-is-off@graphite": {
-  "sha": "d1ed16e1003d962b66f77c05a1eda5b95c0d4ca9",
+  "sha": "5697f8ffefaebd7a86834e58445482c222ec78aa",
   "w": 1196,
   "h": 872
  },
  "group-chat-is-off@typewriter": {
-  "sha": "1cfaff12b73884198110132eb76b36f9bbc1051a",
+  "sha": "eb2a82b3cc89999494836f80c2af30110f12f5d2",
   "w": 1196,
   "h": 872
  },
  "no-messages-yet@bone": {
-  "sha": "e35b280894d0acda62a38f2c3989088c932fa9da",
+  "sha": "7bd3a4013b02793bf4db00ed82e4da3a3d8906a8",
   "w": 1196,
   "h": 872
  },
  "no-messages-yet@catalog": {
-  "sha": "9637ef4c2ee490655f9ae3b6d98f54ff94d51fa2",
+  "sha": "312a679f4738cd4f86833600e7d604c04f8216aa",
   "w": 1196,
   "h": 872
  },
  "no-messages-yet@graphite": {
-  "sha": "e14a1472445d26ef3e2a07a464581e6211687cf2",
+  "sha": "2bb488cee3a28a59a0bd3646f7ad6a161ab84560",
   "w": 1196,
   "h": 872
  },
  "no-messages-yet@typewriter": {
-  "sha": "fb269763d35dd7375154a175da8c9d659d359f26",
+  "sha": "9ef9b7f00288371a62598adaab51678a153d64b6",
   "w": 1196,
   "h": 872
  },
  "renaming@bone": {
-  "sha": "c145b66afa4bec3cfba469fcb0fb60ccf20dc0ca",
+  "sha": "6b7c7442e8dafee98b7e81a4046562004dc60a41",
   "w": 1196,
   "h": 872
  },
  "renaming@catalog": {
-  "sha": "cc4b5545afb426781358e7b58817333e509d834a",
+  "sha": "19cabfa5f213db30d44bddbdc54ea78bbb7b3d50",
   "w": 1196,
   "h": 872
  },
  "renaming@graphite": {
-  "sha": "3bb906564179ff51cb930fb7c7cb0e6eabec7422",
+  "sha": "459859eebb15ecd01cef3ee69ba042337933d15f",
   "w": 1196,
   "h": 872
  },
  "renaming@typewriter": {
-  "sha": "317ea8421f2b2f3115a8da0d3d42dadfc2cd2676",
+  "sha": "5d4bcaa3b12c961b8896bc92776acd1df72c58b7",
+  "w": 1196,
+  "h": 872
+ },
+ "run-limit-menu-open@bone": {
+  "sha": "fd4622e9e3088d0ad6789126e4bd829b4d0cacb1",
+  "w": 1196,
+  "h": 872
+ },
+ "run-limit-menu-open@catalog": {
+  "sha": "34dec24f19a0a2721f296d51d220452c25d6ef94",
+  "w": 1196,
+  "h": 872
+ },
+ "run-limit-menu-open@graphite": {
+  "sha": "f3d34b63f33bed4e98853b8c50f4f5a44be9ae03",
+  "w": 1196,
+  "h": 872
+ },
+ "run-limit-menu-open@typewriter": {
+  "sha": "6aa2dc7d79335ad1c0e518c31a5e9d5401b5939c",
+  "w": 1196,
+  "h": 872
+ },
+ "run-limit-menu-the-group-has-its-own@bone": {
+  "sha": "4e1b3d79ae9ce0aed04be09c6dde568fcfbd9e7f",
+  "w": 1196,
+  "h": 872
+ },
+ "run-limit-menu-the-group-has-its-own@catalog": {
+  "sha": "1828a3b274b24de94e6c508a5365407232f6eebd",
+  "w": 1196,
+  "h": 872
+ },
+ "run-limit-menu-the-group-has-its-own@graphite": {
+  "sha": "0b3a236bacb00b57e21f68e0f91c15bb1eccf357",
+  "w": 1196,
+  "h": 872
+ },
+ "run-limit-menu-the-group-has-its-own@typewriter": {
+  "sha": "8b6fb90151f29ba977fe3c6cd7f10e1581768ce8",
   "w": 1196,
   "h": 872
  },
  "several-members-answered@bone": {
-  "sha": "e295dfa6f456cebc1f25107abc390b7e6da3cdc7",
+  "sha": "57960e119b53c55c54d7021972a97b1098f76ab6",
   "w": 1196,
   "h": 872
  },
  "several-members-answered@catalog": {
-  "sha": "f9b6d54c395d49bc63fdbc25db1c8da86b49ac0d",
+  "sha": "bd08e00d7fe5ca781541cf69e3fc77c78f3c6fca",
   "w": 1196,
   "h": 872
  },
  "several-members-answered@graphite": {
-  "sha": "9a261e8157120bf269f02aeb979054c17d55d81a",
+  "sha": "0f78e0a9f34288855703e2b5bc55566b3ba6169a",
   "w": 1196,
   "h": 872
  },
  "several-members-answered@typewriter": {
-  "sha": "758e1b7834e5b6e1a641380b3408d1cc26ddf91c",
+  "sha": "7a858af4fc1c189791a54561c151631d11cc44ab",
   "w": 1196,
   "h": 872
  },
  "three-members-at-work-each-in-a-tool@bone": {
-  "sha": "9d01966dca30024c644d6ed4d800635f16631b49",
+  "sha": "2f4abf2f1067deccd371342ad68056439eaae218",
   "w": 1196,
   "h": 872
  },
  "three-members-at-work-each-in-a-tool@catalog": {
-  "sha": "24bdb0faccd32b307b74830e4f97968603640b1e",
+  "sha": "8088aee209e80c8d1ae0995fc469f558281323ca",
   "w": 1196,
   "h": 872
  },
  "three-members-at-work-each-in-a-tool@graphite": {
-  "sha": "e5d1c2df9d58601e820d9d2e8bb4ac52ce7b251f",
+  "sha": "89f9f441857ae8b3ebc751bff6a1dd855484383d",
   "w": 1196,
   "h": 872
  },
  "three-members-at-work-each-in-a-tool@typewriter": {
-  "sha": "3dbe6d08c335c6d9aee0b9bd4fd3cc5b19474ba6",
+  "sha": "0290a238bcfe2535f0f2bcb1cc21c3dda9afb8c8",
   "w": 1196,
   "h": 872
  },
  "two-members-replying@bone": {
-  "sha": "45d11638cf22637fdd2d448fd2ded4b3d33d6adf",
+  "sha": "1114a4e28a9172d67b293f594a10ebe66879b85c",
   "w": 1196,
   "h": 872
  },
  "two-members-replying@catalog": {
-  "sha": "d2c59fd0eb2bcd5a0e0b493a9f27d28c0b8ce91d",
+  "sha": "1e5e7a61ca448506d5cbd16bd74fb197e6bb5b60",
   "w": 1196,
   "h": 872
  },
  "two-members-replying@graphite": {
-  "sha": "1aa42aaa03ec81622b8be45707abae145b6571dc",
+  "sha": "7cc9dc20adc559250f001014d998661d5e82ece9",
   "w": 1196,
   "h": 872
  },
  "two-members-replying@typewriter": {
-  "sha": "fe9be785ca7c4d07e6dc0e3a894067b4da13b9d9",
+  "sha": "a50f8e1d458981aa5871b372b52638ee6a0593d8",
   "w": 1196,
   "h": 872
  },
  "two-messages-waiting@bone": {
-  "sha": "64a8930e07c9aa3f6df38feb7a2b7f81e183fb8b",
+  "sha": "6c1e5fa6fdca40a7f15d15f9104fe51d6b2161ca",
   "w": 1196,
   "h": 872
  },
  "two-messages-waiting@catalog": {
-  "sha": "d7540fb6311db737a13eba10dbd00ac896845400",
+  "sha": "89be253f7d60d5b0e862aad59b5265a2b905abfe",
   "w": 1196,
   "h": 872
  },
  "two-messages-waiting@graphite": {
-  "sha": "67775d01d014c30e194bc7ce96baaa6098622176",
+  "sha": "7dfb39b157804250c9bd42f5b3df939af82495db",
   "w": 1196,
   "h": 872
  },
  "two-messages-waiting@typewriter": {
-  "sha": "0a65af88c13a5ee685aa63ec4e9c8a05f71b4436",
+  "sha": "686c229cea174da7f825cb1a8ac25e07820abad2",
   "w": 1196,
   "h": 872
  }
