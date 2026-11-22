@@ -28,6 +28,7 @@ const dock: Story = {
     'one bot': dockState(['single', 'owner'], { bots: 'one' }, undefined, { interact: [HOVER_ROW] }),
     'one bot, expanded': dockState(['single', 'owner'], { bots: 'one' }, mode('expanded')),
     '120 bots': dockState(['many', 'owner'], { bots: 120 }, undefined, { interact: [HOVER_ROW] }),
+    '120 bots, minimised': dockState(['many', 'variant'], { bots: 120 }, mode('minimal')),
     '120 bots, expanded': dockState(['many', 'owner', 'scroll'], { bots: 120 }, mode('expanded')),
     /* the roster scrolls inside the window: its last bots and "New bot" are reachable */
     '120 bots, expanded, scrolled to the end': dockState(['many', 'scroll'], { bots: 120 }, async (c) => {

@@ -146,7 +146,8 @@ function tileHTML(p: { id: string; on: boolean }, i: number): string {
 export const V: Record<string, () => string> = {
   'bots:min': () => {
     const n = attCount();
-    return `${pillBtn('Show the dock' + (n ? ', ' + needLabel(n) : ''))}<span class="dk-mini" aria-hidden="true">${S.bots.map((b) => slot(b)).join('')}</span>${preview('bots')}${pillAtt()}`;
+    /* the pill carries the bots the row shows (never more: it would run past the window as the row did) */
+    return `${pillBtn('Show the dock' + (n ? ', ' + needLabel(n) : ''))}<span class="dk-mini" aria-hidden="true">${S.bots.slice(0, rowNow().shown).map((b) => slot(b)).join('')}</span>${preview('bots')}${pillAtt()}`;
   },
   /* the row shows as many bots as its room holds (geometry.ts rowFit); when some are left out, "All bots" follows them and
      opens the expanded roster, which holds every bot */
