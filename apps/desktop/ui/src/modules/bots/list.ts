@@ -6,7 +6,7 @@ import { $, el, frag, reduced } from '../../core/dom';
 import { state } from '../../core/state';
 import { ui } from '@boopis/ui';
 import { data } from '../../data';
-import { oc } from '@boopis/ui';
+import { lookOf, oc, paintLook } from '@boopis/ui';
 import { DRAFT_COLOR, paintOrb } from './paint';
 import { livenIn, orbHTML } from './orbs';
 import { bot, group, initGroups, initModel, railOn, S } from './model';
@@ -92,6 +92,7 @@ export function updateRow(id: string): void {
     oldWrap.replaceChildren(oldOrb); if (flag) oldWrap.append(flag);
     oldWrap.setAttribute('style', newWrap.getAttribute('style') ?? '');
     newWrap.replaceWith(oldWrap);
+    paintLook(oldOrb, lookOf(b));   /* the live orb is kept so it never restarts, but it wears the bot's look now, not the one it was drawn in */
     const orbReaction = ui.botState(b).reaction;
     oldOrb.dataset['base'] = orbReaction;
     if (!(oldOrb as HTMLElement & { _hover?: boolean })._hover && oldOrb.getAttribute('reaction') !== orbReaction) oldOrb.setAttribute('reaction', orbReaction);

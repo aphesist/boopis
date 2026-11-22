@@ -1,7 +1,7 @@
 /* The pieces every card kind draws with: text helpers, the library's buttons, the head, the one-row mini and the origin
    slot (who is asking, FORMS.md section 4a). Pure string templates over the library; nothing here touches the DOM. */
 import { esc } from '../../core/dom';
-import { ui } from '@boopis/ui';
+import { lookOf, ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { Origin } from '../../data';
 import type { Ctx, Data } from './types';
@@ -118,7 +118,7 @@ export const byline = (c: Pick<Ctx, 'origin' | 'size'>): string => {
     toward the ink so the ring still shows on dark grounds */
 export function accentOf(o: KnownOrigin | null): string {
   if (!o || o.kind !== 'teammate' || o.ids.length !== 1) return '';
-  const col = String(bot(o.ids[0])?.color ?? '');
+  const one = bot(o.ids[0]), col = one ? lookOf(one).color : '';   /* the colour its orb wears (the kit's one resolver) */
   const m = /^#?([0-9a-f]{6})$/i.exec(col);
   if (!m) return col;
   const n = parseInt(m[1] ?? '0', 16), lin = (v: number): number => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); };

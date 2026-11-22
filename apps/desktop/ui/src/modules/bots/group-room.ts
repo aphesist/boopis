@@ -10,7 +10,6 @@ import { ui } from '@boopis/ui';
 import type { BotLike } from '@boopis/ui';
 import { data } from '../../data';
 import type { Group, GroupMember, GroupMessage, GroupsEvent } from '../../data';
-import { lookFor } from '../../data/looks';
 import { namesText, originVisual } from '../cards/parts';
 import { bot, group, groupThread, initGroups, S } from './model';
 import { livenIn, orbHTML } from './orbs';
@@ -24,8 +23,8 @@ const toast = (t: string, o?: Parameters<typeof ui.toast>[1]): void => { ui.toas
 const NODE = new Map<string, HTMLElement>();
 const sentence = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
-/** a member as an orb draws it: the bot it is when the user has it, else the look its name gives */
-export const memberBot = (m: GroupMember): BotLike => bot(m.profile) ?? { id: m.profile, name: m.name, ...lookFor(m.name), state: 'idle' };
+/** a member as an orb draws it: the bot it is when the user has it, else the look its name gives (the kit's one resolver) */
+export const memberBot = (m: GroupMember): BotLike => bot(m.profile) ?? { id: m.profile, name: m.name, state: 'idle' };
 /** stacked orbs for several, the one orb for one (the origin slot, FORMS.md section 4a) */
 export function stackOf(members: readonly GroupMember[], size: number, still?: boolean): string {
   const ids = members.map((m) => m.profile).filter((id) => bot(id));

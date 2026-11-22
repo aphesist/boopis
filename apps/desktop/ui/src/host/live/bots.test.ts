@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import type { BotsEvent } from '../../data';
 import type { GatewayClient, GatewayEvent } from '../gateway';
 import { NeedsConfirmation } from '../../data/confirm';
-import { lookFor } from '../../data/looks';
+import { lookFor } from '@boopis/ui';
 import { createLiveBots } from './bots';
 import { madeOutside } from './map-bots';
 import type { LiveBots } from './bots';

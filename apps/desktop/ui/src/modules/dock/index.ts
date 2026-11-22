@@ -11,7 +11,7 @@ import { KEYS, readJSON } from '../../core/settings';
 import { register, setDockApi } from '../../core/registry';
 import { state as appState } from '../../core/state';
 import { $$, clamp, isMac } from '../../core/dom';
-import { ui } from '@boopis/ui';
+import { lookOf, repaintLook, ui } from '@boopis/ui';
 import { data } from '../../data';
 import {
   K_DOT, K_SINK, K_SLAB, PAGE_IDS, S, X, botById, flags, motion, presence, readRadius, rendered, shownPages, snapS, spring
@@ -136,6 +136,11 @@ function wireData(): void {
     } else if (ev.type === 'bot') {
       const b = botById(ev.bot.id); if (!b) return;
       b.state = ev.bot.state; b.attention = ev.bot.attention; b.activity = ev.bot.activity; b.role = ev.bot.role;
+      /* the look too (the plugin's record read late, a look saved in the editor): the dock's copy follows, and its live orb
+         (kept in X.orbs, in a slot or not) and every copy of it on the row take it at once */
+      const look = lookOf(ev.bot);
+      b.shape = look.shape; b.color = look.color;
+      repaintLook(X.orbs.get(b.id), b.id, look); repaintLook(X.root, b.id, look);
       refreshBot(b);
       paintSession(b, false);
     } else if (ev.type === 'message') {

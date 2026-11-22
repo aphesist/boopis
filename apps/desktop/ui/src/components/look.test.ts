@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rollLook, SHAPES, SWATCHES } from './looks';
+import { rollLook, SHAPES, SWATCHES } from './look';
 
 const colours = SWATCHES.map(([c]) => c);
 /** a seeded generator (mulberry32): the same seed, the same rolls */

@@ -6,7 +6,7 @@ import { ui } from '@boopis/ui';
 import { oc } from '@boopis/ui';
 import { data } from '../../data';
 import { DRAFT_COLOR, paintOrb, paintOrbColour, SHAPES, SWATCHES } from './paint';
-import { rollLook } from '../../data/looks';
+import { rollLook } from '@boopis/ui';
 import { gentleFollow, orbButton, orbEl, setReact } from './orbs';
 import { S } from './model';
 import type { Draft } from './model';
