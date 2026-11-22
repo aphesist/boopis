@@ -160,6 +160,8 @@ export interface BotsSource extends Feed<BotsSnapshot, BotsEvent> {
   send(botId: string, text: string, via: 'bots' | 'dock'): void;
   /** stops the bot's reply; false when it was not replying */
   stop(botId: string): boolean;
+  /** the folder the bot works in, as the engine said (paths in its messages resolve there); null while unknown */
+  workspace?(botId: string): string | null;
   /** decide an approval card in a thread (the dock decides through `waits`) */
   decide(botId: string, messageId: string, decision: 'approved' | 'denied'): void;
   /** changes the role or the settings; the change comes back as a `bot` event */
@@ -324,6 +326,21 @@ export interface FilesSource {
   drops?: { subscribe(fn: (e: FileDrag) => void): Unsubscribe };
   /** completions of the `@` word being typed, for the session the composer belongs to */
   complete(word: string, sessionId: string | null): Promise<FileCompletions>;
+  /** paths a message names, opened on this computer (the desktop app's host; absent where nothing can be opened) */
+  paths?: PathsSource;
+}
+/** a path a message names, as the host found it: only inside one of the given workspaces, or an absolute path that exists */
+export interface ResolvedPath { path: string; abs: string; kind: 'file' | 'folder'; /** the path inside the workspace it was found in */ rel: string | null }
+/** an editor the host found on this computer, to open a file in */
+export interface PathEditor { id: string; name: string }
+export interface PathsSource {
+  /** which of `paths` exist, relative to one of `roots` (the session's or room's workspaces) or absolute; null for the others */
+  resolve(paths: readonly string[], roots: readonly string[]): Promise<ReadonlyArray<ResolvedPath | null>>;
+  /** open a resolved path with the system's default app, or in one of `editors()` */
+  open(abs: string, editor?: string | null): Promise<void>;
+  /** show it in the file manager */
+  reveal(abs: string): Promise<void>;
+  editors(): Promise<readonly PathEditor[]>;
 }
 
 export interface DataProvider {

@@ -4,7 +4,7 @@
    visual parity tests; the app never falls back to it when the live provider fails (STANDARDS section 1, rule 4). */
 import { hhmm, reduced } from '../core/dom';
 import type {
-  BotsEvent, BotsSource, BotsSnapshot, DataProvider, DetailsSource, DictationSource, FeedforwardSource, FilesSource, FormsSource, ModsSource, RunSource, SchedulesSource, SessionsSource, WaitsEvent, WaitsSource
+  BotsEvent, BotsSource, BotsSnapshot, DataProvider, DetailsSource, DictationSource, FeedforwardSource, FilesSource, FormsSource, ModsSource, PathsSource, RunSource, SchedulesSource, SessionsSource, WaitsEvent, WaitsSource
 } from './provider';
 import { botIdBase } from './bot-id';
 import { createModsModel } from './mods-model';
@@ -28,6 +28,25 @@ export interface MockOptions {
   /** names from `BOT_FIXTURES` to add (a bot with a long name), `none` for an empty roster, or `fresh` for a first install (no bots and
       no session started: the first message starts one): tests and the e2e build only */
   fixtures?: readonly string[];
+}
+
+/** the mock's paths: the sample workspace's files (and their folders) exist, under any workspace it is asked about; nothing opens in
+    a page */
+function mockPaths(): PathsSource {
+  const files = new Set(M.WORKSPACE_FILES);
+  const folders = new Set([...files].flatMap((f) => f.split('/').slice(0, -1).map((_, i, a) => a.slice(0, i + 1).join('/'))));
+  const clean = (p: string): string => p.replace(/^\.\//, '').replace(/\/$/, '');
+  return {
+    resolve: (paths, roots) => Promise.resolve(paths.map((p) => {
+      const rel = clean(p), root = roots[0];
+      if (!root || p.startsWith('/') || p.startsWith('~')) return null;
+      const kind = files.has(rel) ? 'file' as const : folders.has(rel) ? 'folder' as const : null;
+      return kind ? { path: p, abs: root.replace(/\/$/, '') + '/' + rel, kind, rel } : null;
+    })),
+    open: () => Promise.reject(new Error('Files open in the desktop app; this page is a preview.')),
+    reveal: () => Promise.reject(new Error('Files open in the desktop app; this page is a preview.')),
+    editors: () => Promise.resolve([])
+  };
 }
 
 export function createMockProvider(opts: MockOptions = {}): DataProvider {
@@ -175,6 +194,8 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
       botsEv.emit({ type: 'message', botId, message: m, streaming: false });
       respond(botId);
     },
+    /* the sample bots all work in the sample workspace */
+    workspace: () => M.ENVIRONMENT.cwd,
     stop(botId) {
       const run = runs.get(botId); if (!run) return false;
       endRun(botId, run);
@@ -414,7 +435,8 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
   };
   const files: FilesSource = {
     pick: (kind) => Promise.resolve([kind === 'file' ? { name: 'invoices-sample.csv', kind: 'file' as const } : { name: 'src/billing/fixtures', kind: 'folder' as const }]),
-    complete: (word) => Promise.resolve({ items: M.FILE_PATHS.filter((p) => p.includes(word.replace(/^@(file:)?/, ''))).map((p) => ({ text: '@file:' + p, display: p.slice(p.lastIndexOf('/') + 1), meta: '' })) })
+    complete: (word) => Promise.resolve({ items: M.FILE_PATHS.filter((p) => p.includes(word.replace(/^@(file:)?/, ''))).map((p) => ({ text: '@file:' + p, display: p.slice(p.lastIndexOf('/') + 1), meta: '' })) }),
+    paths: mockPaths()
   };
 
   /* the mock has no mods: a session's mods are always empty, and a press goes nowhere */
@@ -427,6 +449,6 @@ export function createMockProvider(opts: MockOptions = {}): DataProvider {
     arm: () => Promise.reject(new Error('A council needs the desktop app.')),
     armed: () => null, disarm() { /* nothing is armed */ }, subscribe: () => () => undefined
   };
-  const groups = createMockGroups({ bots: () => bots, simulate, seed: !!opts.fixtures?.includes('groups') });
+  const groups = createMockGroups({ bots: () => bots, simulate, seed: !!opts.fixtures?.includes('groups'), paper: !!opts.fixtures?.includes('paper-past') });
   return { info: { live: false, preview: new Set(), unavailable: {} }, ready: Promise.resolve(), user: store(M.USER), sessions, details, bots: botsSource, groups, waits: waitsSource, forms, run: runSource, schedules, feedforward, dictation, files, council, mods, store: createMockStore() };
 }

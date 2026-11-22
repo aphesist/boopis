@@ -618,6 +618,80 @@ pub fn open_external(app: AppHandle, url: String) -> std::result::Result<(), Hos
     Ok(())
 }
 
+/// Which of the paths a message names exist: inside one of `roots` (the session's or the bot's workspace) or absolute and
+/// there. Nothing is guessed (`paths.rs`).
+#[tauri::command]
+#[specta::specta]
+pub async fn path_resolve(
+    candidates: Vec<String>,
+    roots: Vec<String>,
+) -> std::result::Result<Vec<Option<crate::paths::ResolvedPath>>, HostError> {
+    let home = dirs::home_dir();
+    tokio::task::spawn_blocking(move || crate::paths::resolve(&candidates, &roots, home.as_deref()))
+        .await
+        .map_err(|e| Error::Os(e.to_string()))?
+        .map_err(HostError::from)
+}
+
+/// Open a path with the system's default app, or with one of the editors `path_editors` found (`editor`: its id). The
+/// default app never runs a program: a file that would run is refused (Show in folder and an editor still work).
+#[tauri::command]
+#[specta::specta]
+pub async fn path_open(
+    app: AppHandle,
+    path: String,
+    editor: Option<String>,
+) -> std::result::Result<(), HostError> {
+    use tauri_plugin_opener::OpenerExt;
+    let (abs, _kind) = crate::paths::existing(&path)?;
+    let target = abs.to_string_lossy().into_owned();
+    if let Some(id) = editor {
+        let path_var = std::env::var_os("PATH");
+        let (_e, program) = crate::paths::editors_on(path_var.as_deref())
+            .into_iter()
+            .find(|(e, _)| e.id == id)
+            .ok_or_else(|| Error::InvalidInput("that editor is not on this computer".into()))?;
+        app.opener()
+            .open_path(target, Some(program.to_string_lossy().into_owned()))
+            .map_err(|e| Error::Os(e.to_string()))?;
+    } else {
+        if crate::paths::runs_something(&abs) {
+            return Err(Error::InvalidInput(
+                "boopis does not run programs from a message: open it in an editor, or show it in its folder".into(),
+            )
+            .into());
+        }
+        app.opener()
+            .open_path(target, None::<&str>)
+            .map_err(|e| Error::Os(e.to_string()))?;
+    }
+    Ok(())
+}
+
+/// Show a path in the file manager, selected.
+#[tauri::command]
+#[specta::specta]
+pub fn path_reveal(app: AppHandle, path: String) -> std::result::Result<(), HostError> {
+    use tauri_plugin_opener::OpenerExt;
+    let (abs, _kind) = crate::paths::existing(&path)?;
+    app.opener()
+        .reveal_item_in_dir(abs)
+        .map_err(|e| Error::Os(e.to_string()))?;
+    Ok(())
+}
+
+/// The editors found on this computer, to open a file in.
+#[tauri::command]
+#[specta::specta]
+#[must_use]
+pub fn path_editors() -> Vec<crate::paths::PathEditor> {
+    let path_var = std::env::var_os("PATH");
+    crate::paths::editors_on(path_var.as_deref())
+        .into_iter()
+        .map(|(e, _)| e)
+        .collect()
+}
+
 /// Opens a sign-in page in the person's browser through the system opener (the ChatGPT sign-in's authorization address carries
 /// the account hints, so the host opens it itself and the webview is never handed it).
 pub struct SystemBrowser(pub AppHandle);
