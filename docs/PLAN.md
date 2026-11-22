@@ -21,6 +21,11 @@ checked and released.
 | `w24/grey-window` | The window going grey and unresponsive after switching workspaces: the cause, and a watchdog that recovers the page instead of leaving it grey, with diagnostics. | in progress |
 | `w25/dock-fit` | The dock row and the expanded dock fit the window with many bots, and the rail's account button fits the rail. | in progress |
 | `w24/orbs-size` | Orbs never blink empty when a bot changes state, and an interface size setting in Settings > Appearance. | in progress |
+| `w24/rooms` | The owner's round 2 (seven bots, two rooms). B16: a new message in a room must never silently cancel a running bot's turn ("Send when done" by default, "Send now" says it stops the turn). Classify and mitigate B17 (a cancelled turn's kanban tasks created twice), B18 (dependent tasks without parent links), B19 and B21 (one bot running in a room and a kanban worker at once). Engine-only parts become upstream drafts. | in progress |
+
+Round 2 also covers B13 (every new bot needs the plugin and room fixes, including bots made outside boopis: `w24/team`) and
+B20 (a mention of a bot that isn't in the room: `w24/chat`). B14 (a SOUL that includes a project file and flags dead paths)
+and B15 (steering a bot mid-turn without stopping it, unless the engine already offers it) are 0.1.9.
 
 Already released from this round (on `main`): the Windows installer picks the newest pre-release alone in Windows
 PowerShell 5.1; the Arch menu entry names its icon by absolute path; CI runs the desktop smoke.
