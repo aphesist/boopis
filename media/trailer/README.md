@@ -2,8 +2,8 @@
 
 A 102-second launch trailer, 1920x1080 at 60 fps (and a 1080x1920 cut), drawn by boopis's own components (the kit,
 the card layer, the session's feedforward reader, `<orb-avatar>` and `<boopis-logo>`) and rendered frame by frame. The soundtrack is
-synthesised from nothing by `score.py`. `research.md` is what each feature is and where it lives; `script.md` is the
-beat sheet, word for word.
+synthesised from nothing by `score.py`. `treatment.md` is the concept, the beats and the look in short; `research.md` is what each feature is and where it
+lives; `script.md` is the beat sheet, word for word.
 
 | File | What it is |
 |---|---|
