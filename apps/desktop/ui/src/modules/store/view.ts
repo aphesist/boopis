@@ -100,7 +100,9 @@ export function mountStore(root: HTMLElement, deps: StoreDeps): StoreView {
     const mine = ++gen;
     const sources = store.sources.get().filter((s) => s.enabled !== false);
     const search = ui.search({ size: 'm', label: 'Search the store', placeholder: 'Search skills, connectors, plugins and mods', value: B.query, id: 'hx-store-q' });
-    const seg = ui.segmented({ mode: 'radio', size: 's', label: 'Kind', value: B.kind, options: KIND_FILTERS.map(([value, label, name]) => ({ value, label, ariaLabel: name })) });
+    /* the kind filter is the kit's option chips (a radio group, as the bot settings' schedule presets): they wrap at a narrow
+       width, where a segmented control of six options cut every label to a few letters */
+    const seg = ui.chipGroup({ label: 'Kind', value: B.kind, options: KIND_FILTERS.map(([value, label]) => ({ value, label })) });
     const pick = ui.select({ id: 'hx-store-source', label: 'Source', entries: [{ value: 'any', label: 'All sources' }, ...sources.map((s) => ({ value: s.id, label: s.label }))], value: B.source });
     const strip = el('div', { class: 'hx-store__filters' }, seg, pick);
     const status = el('p', { class: 'ui-field__hint', role: 'status', 'aria-live': 'polite', 'data-store-status': '' });
