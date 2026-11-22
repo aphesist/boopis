@@ -758,6 +758,26 @@ async fn unreachable_and_rate_limited_services_fail_with_words_and_keep_nothing(
     }
 }
 
+/// A captive portal's or a firewall's page that answers a renewal with 401 is not OpenAI ending the session: the tokens stay and
+/// the error is plain, where reading it as a revoked token would have signed the person out.
+#[test]
+fn a_network_page_that_answers_a_renewal_does_not_sign_out() {
+    let script = Script::default();
+    script.replies.lock().unwrap().push_back(Reply1::Post(
+        "/api/accounts/oauth/token".to_owned(),
+        Ok(Reply {
+            status: 401,
+            body: "<html><body>Sign in to the hotel Wi-Fi</body></html>".into(),
+        }),
+    ));
+    let ep = Endpoints::at("http://127.0.0.1:9").unwrap();
+    let Err(e) = oauth::refresh(&script, &ep, "oaiapp_1", "rt", None) else {
+        panic!("a portal's page is not a renewal")
+    };
+    assert_eq!(e.code(), "hx.provider.signin_blocked");
+    assert!(e.to_string().contains("Something on your network"), "{e}");
+}
+
 /// The owner's Windows screen (22 November 2026): the HTTPS client panicked inside the blocking task ("No `CryptoProvider` for
 /// Rustls"), and the task's raw text reached the card. A transport that panics the same way now ends the sign-in in plain words.
 #[tokio::test]

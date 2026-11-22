@@ -766,6 +766,8 @@ pub fn refresh(
 
 fn refreshed(r: &Reply, refresh_token: &str, previous_id: Option<&str>) -> Result<Refreshed> {
     match r.status {
+        // a firewall's or a portal's page is not OpenAI ending the session: keep the tokens and try again later
+        _ if answered_by_network(r) => Err(unexpected(r, "renewing the sign-in")),
         200 => {
             let v: Value = serde_json::from_str(&r.body).unwrap_or(Value::Null);
             let mut tokens = tokens_of(&v, Some(refresh_token), "refresh")?;
