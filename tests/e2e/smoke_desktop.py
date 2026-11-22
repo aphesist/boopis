@@ -119,8 +119,13 @@ def main() -> int:
         display_file = Path(runtime) / "display"
         driver = subprocess.Popen(
             [
-                "xvfb-run", "-a", "-s", "-screen 0 1440x900x24",
-                "sh", "-c", f'echo "$DISPLAY" > {display_file}; exec WebKitWebDriver --port={PORT}',
+                "xvfb-run",
+                "-a",
+                "-s",
+                "-screen 0 1440x900x24",
+                "sh",
+                "-c",
+                f'echo "$DISPLAY" > {display_file}; exec WebKitWebDriver --port={PORT}',
             ],
             env=env,
             stdout=subprocess.DEVNULL,
@@ -220,11 +225,20 @@ def hide_and_return(s: str, display_file: Path, agent_text) -> None:
         return call("POST", f"{s}/execute/async", {"script": script, "args": []}, timeout)["value"]
 
     def webprocs() -> set[int]:
-        out = subprocess.run(["pgrep", "-f", "WebKitWebProcess"], capture_output=True, text=True).stdout
+        out = subprocess.run(["pgrep", "-f", "WebKitWebProcess"], check=False, capture_output=True, text=True).stdout
         return {int(x) for x in out.split()}
 
-    windows = subprocess.run(["xdotool", "search", "--onlyvisible", "--name", "boopis"], env=xenv,
-                             capture_output=True, text=True).stdout.split()
+    def search(*how: str) -> list[str]:
+        found = subprocess.run(
+            ["xdotool", "search", "--onlyvisible", *how], check=False, env=xenv, capture_output=True, text=True
+        )
+        return found.stdout.split()
+
+    # The window's class is the binary's name; its title may be empty (the window is undecorated). By process last.
+    windows = search("--class", "boopis") or search("--classname", "boopis")
+    if not windows:
+        pids = subprocess.run(["pgrep", "-x", "boopis"], check=False, capture_output=True, text=True).stdout.split()
+        windows = [w for pid in pids for w in search("--pid", pid)]
     if not windows:
         raise SystemExit("could not find the app's window to hide")
     before = webprocs()
@@ -252,7 +266,8 @@ def hide_and_return(s: str, display_file: Path, agent_text) -> None:
     wait_for(lambda: marker in agent_text(), "the reply streamed while hidden", 90)
     stats = ajs(
         "const done = arguments[arguments.length - 1];"
-        "window.__TAURI_INTERNALS__.invoke('gateway_stats', {profile: null}).then(done, (e) => done({error: String(e)}));"
+        "window.__TAURI_INTERNALS__.invoke('gateway_stats', {profile: null})"
+        ".then(done, (e) => done({error: String(e)}));"
     )
     print("proxy after the return:", json.dumps(stats))
     if not isinstance(stats, dict) or not stats.get("batches") or stats.get("slow_closed"):
