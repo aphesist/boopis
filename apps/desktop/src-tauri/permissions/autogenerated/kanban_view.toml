@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-kanban-view"
+description = "Enables the kanban_view command without any pre-configured scope."
+commands.allow = ["kanban_view"]
+
+[[permission]]
+identifier = "deny-kanban-view"
+description = "Denies the kanban_view command without any pre-configured scope."
+commands.deny = ["kanban_view"]

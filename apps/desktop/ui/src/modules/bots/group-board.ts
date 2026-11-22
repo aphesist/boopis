@@ -10,7 +10,7 @@ import { loadBoardChoice, saveBoardChoice } from '../../core/settings';
 import { ui } from '@boopis/ui';
 import type { BotLike } from '@boopis/ui';
 import type { KanbanBoardInfo, KanbanSource, KanbanTask, KanbanView } from '../../data';
-import { lookFor } from '../../components/look';
+import { lookFor } from '@boopis/ui';
 import { bot } from './model';
 import { livenIn, orbHTML } from './orbs';
 

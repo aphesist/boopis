@@ -122,6 +122,7 @@ fn is_flag(a: &str) -> bool {
 ///
 /// # Errors
 /// The mistake, in a sentence.
+#[allow(clippy::too_many_lines)] // one flat match over the arguments: a branch per flag
 pub fn parse(args: &[String]) -> Result<Parsed, String> {
     let (verb_word, rest) = args
         .split_first()
@@ -350,6 +351,7 @@ fn tools_line(t: &TestReport) -> String {
 }
 
 /// Do what `parsed` asks against `engine`.
+#[allow(clippy::too_many_lines)] // one match over the verbs: list, add, test, remove, each with its plain and JSON output
 pub async fn execute(engine: &Engine, parsed: &Parsed) -> Outcome {
     let who = parsed
         .bot

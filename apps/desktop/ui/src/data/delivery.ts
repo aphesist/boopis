@@ -18,21 +18,24 @@ export function deliveryParts(
   if (!targets.length) return [];
   const out: DeliveryPart[] = [];
   const add = (...p: DeliveryPart[]): void => { out.push(...p); };
+  /* a verb opens each run of one kind of target: "posts to news, paper past and delivers to telegram" */
+  let before = '';
   targets.forEach((t, i) => {
-    add({ text: i === 0 ? '' : i === targets.length - 1 ? ' and ' : ', ' });
+    const sep = i === 0 ? '' : i === targets.length - 1 ? ' and ' : ', ';
+    const word = t.toLowerCase();
     const m = ROOM.exec(t);
+    const kind = m ? (rooms.some((r) => r.id === m[1]) ? 'room' : 'lost') : word === 'local' ? 'local' : word === 'origin' ? 'origin' : 'other';
+    const same = kind === before;
+    before = kind;
+    const lead = (verb: string): string => sep + (same ? '' : verb);
     if (m) {
       const [, id = '', host] = m;
       const room = rooms.find((r) => r.id === id);
-      const by = host ? ` (hosted by ${nameOf(host)})` : '';
-      if (room) add({ text: (i === 0 ? 'posts to ' : '') }, { text: room.name, room: room.id }, { text: by });
-      else add({ text: (i === 0 ? 'posts to ' : '') + t + ' (not one of your groups)' });
-      return;
-    }
-    const word = t.toLowerCase();
-    if (word === 'local') add({ text: (i === 0 ? 'saved on this computer, ' : '') + 'sent nowhere' });
-    else if (word === 'origin') add({ text: (i === 0 ? 'replies ' : '') + 'where it was made' });
-    else add({ text: (i === 0 ? 'delivers to ' : '') + t });
+      if (room) add({ text: lead('posts to ') }, { text: room.name, room: room.id }, { text: host ? ` (hosted by ${nameOf(host)})` : '' });
+      else add({ text: lead('posts to ') + t + ' (not one of your groups)' });
+    } else if (word === 'local') add({ text: lead('saved on this computer, ') + 'sent nowhere' });
+    else if (word === 'origin') add({ text: lead('replies ') + 'where it was made' });
+    else add({ text: lead('delivers to ') + t });
   });
   return out;
 }

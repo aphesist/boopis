@@ -1,5 +1,5 @@
 //! The engine's Kanban boards, read only, for a group's board view (`docs/ARCHITECTURE.md` section 10a: the board is where a
-//! hand-off that must survive lives). The gateway has no method that lists a board, and the board is a SQLite file the engine
+//! hand-off that must survive lives). The gateway has no method that lists a board, and the board is a `SQLite` file the engine
 //! owns, so the host asks the engine's own command, `kanban boards list --json` and `kanban --board <slug> list --json`, and
 //! reads what it prints. It never opens a board file and never writes to one: the view has no way to move a task.
 //!
