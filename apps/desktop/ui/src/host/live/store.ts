@@ -94,6 +94,7 @@ export function createLiveStore(opts: LiveStoreOptions): StoreProvider & { settl
       sources.set(list);
       return list;
     },
+    reloadSources: loadSources,
     async setSourceEnabled(id, enabled) { await run((b) => b.sourceSetEnabled(id, enabled)); await loadSources(); },
     async addSource(input) { const s = await run((b) => b.sourceAdd(input)); await loadSources(); return s; },
     async removeSource(id) { await run((b) => b.sourceRemove(id)); await loadSources(); },

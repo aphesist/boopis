@@ -8,8 +8,8 @@ import type { StoreSource } from '../../data';
 import { createMockProvider } from '../../data/mock-provider';
 import { createMockStore } from '../../data/mock-store';
 import type { MockStoreOptions } from '../../data/mock-store';
-import { freshness, readingWords, sourceState } from './model';
-import { dueSources, isRefreshable, isStale, readerFor } from './reading';
+import { freshness, listWords, outOfDate, readingWords, sourceState, upToDateWords } from './model';
+import { dueSources, isRefreshable, isStale, keepFresh, readerFor, retryWait } from './reading';
 import { mountStore } from './view';
 
 const tick = (ms = 0): Promise<void> => new Promise((r) => { setTimeout(r, ms); });
@@ -73,9 +73,12 @@ describe('a source row and the line over Browse', () => {
     const reg = src({ id: 'mcp-registry', label: 'The MCP Registry', refreshable: true });
     const hub = src({ id: 'skills-hub', label: 'Skills from the engine\'s hub', refreshable: true });
     expect(freshness(b, NOW, [{ ...reg, error: REG_DOWN }, { ...hub, refreshed_at: b.refreshed_at }])).toBe(`This list is out of date: The MCP Registry could not be read. ${REG_DOWN}`);
-    expect(freshness(b, NOW, [{ ...reg, error: REG_DOWN }, { ...hub, error: HUB_DOWN }])).toBe('This list is out of date: 2 sources could not be read. Sources says why for each.');
-    expect(freshness(b, NOW, [reg, hub])).toBe('This list is out of date: 2 sources have not been read yet.');
+    expect(freshness(b, NOW, [{ ...reg, error: REG_DOWN }, { ...hub, error: HUB_DOWN }])).toBe('This list is out of date: The MCP Registry and Skills from the engine\'s hub could not be read. Sources gives the reason for each.');
+    expect(freshness(b, NOW, [reg, hub])).toBe('This list is out of date: The MCP Registry and Skills from the engine\'s hub have not been read yet.');
+    expect(freshness(b, NOW, [{ ...reg, refreshed_at: b.refreshed_at, stale: true }])).toBe('This list is out of date: The MCP Registry was last read 24 hours ago.');
+    expect(freshness(b, NOW, [{ ...reg, refreshed_at: b.refreshed_at, stale: true }, { ...hub, refreshed_at: '2026-11-19T10:00:00Z', stale: true }])).toBe('This list is out of date: The MCP Registry and Skills from the engine\'s hub are due a read; the oldest was read 3 days ago.');
     expect(freshness(b, NOW, [{ ...reg, refreshed_at: b.refreshed_at }])).toBe('This list is out of date: it was read 24 hours ago.');
+    expect(freshness({ ...b, offline: true }, NOW, [])).toBe('You are offline. This is the last copy boopis saved, from 24 hours ago. Read the sources again when you are back online.');
     expect(freshness({ ...b, stale: false }, NOW, [{ ...reg, error: REG_DOWN }])).toBeNull();
   });
 });
@@ -122,7 +125,7 @@ describe('the store view while the sources are read', () => {
   it('Browse says the sources were not read, reads them when the store opens, and lists their items as each one is read', async () => {
     const { root, view } = mount({ start: 'unread', now: () => NOW, reads: { 'engine-plugins': { ms: 30 }, 'skills-hub': { ms: 30 }, anthropic: { ms: 30 }, 'mcp-registry': { ms: 30 } } });
     await tick(20);
-    expect(text(root)).toContain('This list is out of date: 4 sources have not been read yet.');
+    expect(text(root)).toMatch(/This list is out of date: .* and 2 more have not been read yet\./);
     expect([...root.querySelectorAll('button')].some((b) => b.textContent === 'Read the sources again')).toBe(true);
     const before = root.querySelectorAll('[data-store-open]').length;
     const reading = view.readDue();
@@ -152,5 +155,167 @@ describe('the store view while the sources are read', () => {
     expect(text(root)).toContain('2 sources read; 2 could not be, and their rows say why.');
     expect(toasts.at(-1)).toBe('2 sources read; 2 could not be, and their rows say why.');
     expect(document.activeElement?.id).toBe('hx-store-read');
+  });
+});
+
+describe('the sources that fall due while the store stays open', () => {
+  const HOUR = 3600_000;
+  const aged = (start: number): { store: ReturnType<typeof createMockStore>; clock: { t: number } } => {
+    const clock = { t: start };
+    return { store: createMockStore({ now: () => clock.t, reads: {} }), clock };
+  };
+  it('the host\'s rule is followed: a copy ages out after its period, the registry\'s is an hour and the rest six', async () => {
+    const { store, clock } = aged(NOW);
+    expect(dueSources(store.sources.get(), false)).toEqual([]);
+    clock.t = NOW + 2 * HOUR;
+    await store.reloadSources?.();
+    expect(dueSources(store.sources.get(), false).map((s) => s.id)).toEqual(['mcp-registry']);
+    clock.t = NOW + 7 * HOUR;
+    await store.reloadSources?.();
+    expect(dueSources(store.sources.get(), false).map((s) => s.id)).toEqual(READ);
+  });
+  it('asks the host how old the sources are before it decides what is due, so a store opened hours later reads what aged', async () => {
+    const { store, clock } = aged(NOW);
+    const reader = readerFor(store);
+    await reader.readDue();
+    expect(reader.state.get().total).toBe(0);
+    clock.t = NOW + 2 * HOUR;
+    await reader.readDue();
+    expect(reader.state.get()).toMatchObject({ total: 1, done: 1, order: ['mcp-registry'] });
+    expect(store.sources.get().find((s) => s.id === 'mcp-registry')?.refreshed_at).toBe(new Date(NOW + 2 * HOUR).toISOString());
+  });
+  it('keeps looking while open: reads what falls due, nothing while closed, and not a source that failed until its wait is over', async () => {
+    const clock = { t: NOW };
+    const calls: string[] = [];
+    const base = createMockStore({ now: () => clock.t, reads: { 'mcp-registry': { error: REG_DOWN } } });
+    const store = { ...base, refresh: (id?: string) => { calls.push(String(id)); return base.refresh(id); } };
+    let open = false;
+    const stop = keepFresh(store, { open: () => open, every: 10, now: () => clock.t });
+    clock.t = NOW + 2 * HOUR;
+    await tick(40);
+    expect(calls).toEqual([]);                           // closed: nothing is read, however old
+    open = true;
+    await vi.waitFor(() => { expect(calls).toEqual(['mcp-registry']); }, { timeout: 1000 });
+    await tick(60);
+    expect(calls).toEqual(['mcp-registry']);             // it failed: it waits, though it is still due
+    expect(base.sources.get().find((s) => s.id === 'mcp-registry')).toMatchObject({ error: REG_DOWN, stale: true });
+    clock.t += retryWait(1);
+    await vi.waitFor(() => { expect(calls).toEqual(['mcp-registry', 'mcp-registry']); }, { timeout: 1000 });
+    clock.t += retryWait(1);
+    await tick(60);
+    expect(calls).toHaveLength(2);                       // the second failure waits twice as long
+    clock.t += retryWait(2) - retryWait(1);
+    await vi.waitFor(() => { expect(calls).toHaveLength(3); }, { timeout: 1000 });
+    stop();
+    clock.t += 10 * HOUR; await tick(60);
+    expect(calls).toHaveLength(3);                       // stopped
+  });
+  it('waits longer after each failure, at most an hour', () => {
+    expect([1, 2, 3, 4, 5, 9].map(retryWait)).toEqual([5, 10, 20, 40, 60, 60].map((m) => m * 60_000));
+  });
+  it('the open store reads a source by itself when it falls due, and shows the read as it happens', async () => {
+    const clock = { t: NOW };
+    const root = document.createElement('div'); document.body.append(root);
+    const store = createMockStore({ now: () => clock.t, reads: { 'mcp-registry': { ms: 40 } } });
+    const view = mountStore(root, { store, toast: () => undefined, project: () => null, settle: 0, enter: false, now: () => clock.t, every: 15 });
+    await tick(30);
+    expect(root.textContent).not.toContain('Reading the sources');
+    clock.t = NOW + 2 * HOUR;
+    await vi.waitFor(() => { expect(root.textContent).toContain('Reading the sources: 0 of 1 read…'); }, { timeout: 2000, interval: 3 });
+    await vi.waitFor(() => { expect(root.textContent).toContain('The list is up to date: the source was read just now.'); }, { timeout: 2000 });
+    expect(store.sources.get().find((s) => s.id === 'mcp-registry')?.stale).toBe(false);
+    view.stop(); root.remove();
+  });
+  it('a store that is not in the document reads nothing', async () => {
+    const clock = { t: NOW + 2 * HOUR };
+    const root = document.createElement('div');             // never attached
+    const store = createMockStore({ now: () => NOW, reads: {} });
+    const seen: string[] = [];
+    const wrapped = { ...store, refresh: (id?: string) => { seen.push(String(id)); return store.refresh(id); } };
+    const view = mountStore(root, { store: wrapped, toast: () => undefined, project: () => null, settle: 0, enter: false, now: () => clock.t, every: 10 });
+    await tick(60); view.stop();
+    expect(seen).toEqual([]);
+  });
+});
+
+describe('the progress of a read, source by source, on Browse', () => {
+  const mount = (o: MockStoreOptions): { root: HTMLElement; view: ReturnType<typeof mountStore>; store: ReturnType<typeof createMockStore> } => {
+    const root = document.createElement('div'); document.body.append(root);
+    const store = createMockStore(o);
+    const view = mountStore(root, { store, toast: () => undefined, project: () => null, settle: 0, enter: false, now: () => NOW });
+    return { root, view, store };
+  };
+  const rows = (root: HTMLElement): string[] => [...root.querySelectorAll('#hx-store-reading ~ .ui-set__row, .hx-store__reading .ui-set__row')].map((r) => (r.textContent ?? '').replace(/\s+/g, ' ').trim());
+
+  it('lists every source of the read with whether it is waiting, being read, read, or could not be read', async () => {
+    const { root, view } = mount({ start: 'unread', now: () => NOW, reads: { 'engine-plugins': { ms: 20 }, 'skills-hub': { ms: 20, error: HUB_DOWN }, anthropic: { ms: 120 }, 'mcp-registry': { ms: 20 } } });
+    await tick(10);
+    const run = view.readDue();
+    await vi.waitFor(() => { expect(rows(root)).toHaveLength(4); }, { timeout: 2000, interval: 3 });
+    expect(rows(root)[0]).toMatch(/Reading it now/);
+    expect(rows(root)[0]).toMatch(/Reading$/);
+    expect(rows(root)[3]).toMatch(/Waiting for its turn to be read.*Waiting$/);
+    expect(root.querySelector('.hx-store__note .ui-progress [role=progressbar]')).not.toBeNull();
+    await vi.waitFor(() => { expect(rows(root)[1]).toContain(HUB_DOWN); }, { timeout: 2000, interval: 3 });
+    expect(rows(root)[1]).toMatch(/Could not read$/);
+    expect(rows(root)[0]).toMatch(/items?\. Read just now\..*Read$/);
+    await run;
+    await vi.waitFor(() => { expect(root.querySelector('.hx-store__reading')?.children.length).toBe(0); }, { timeout: 2000 });
+    expect(root.querySelector('.hx-store__note .ui-progress')).toBeNull();
+  });
+  it('says why the list is still out of date after a read that could not reach a source, and offers the reasons and another try', async () => {
+    const { root, view } = mount({ start: 'unread', now: () => NOW, reads: { 'skills-hub': { ms: 5, error: HUB_DOWN }, 'mcp-registry': { ms: 5, error: REG_DOWN } } });
+    await tick(10);
+    await view.readDue();
+    await vi.waitFor(() => { expect(root.textContent).toContain('could not be read. Sources gives the reason for each.'); }, { timeout: 2000 });
+    const buttons = [...root.querySelectorAll('button')].map((b) => b.textContent);
+    expect(buttons).toContain('Read the sources again');
+    expect(buttons).toContain('Show why');
+    [...root.querySelectorAll('button')].find((b) => b.textContent === 'Show why')?.click();
+    await vi.waitFor(() => { expect(root.textContent).toContain(HUB_DOWN); }, { timeout: 2000 });
+    expect(root.textContent).toContain(REG_DOWN);
+  });
+  it('checks the fix: pressing the button on an out-of-date list reads again, and the line then says the list is current', async () => {
+    const reads: Record<string, { ms?: number; error?: string }> = { 'skills-hub': { ms: 5, error: HUB_DOWN } };
+    const { root, view } = mount({ start: 'unread', now: () => NOW, reads });
+    await tick(10);
+    await view.readDue();
+    await vi.waitFor(() => { expect(root.textContent).toContain('Skills from the engine\'s hub could not be read. ' + HUB_DOWN); }, { timeout: 2000 });
+    // the first press, with the engine still not running: the list is still out of date, and the line still says why
+    const press = (): void => { [...root.querySelectorAll('button')].find((b) => b.textContent === 'Read the sources again')?.click(); };
+    press();
+    await vi.waitFor(() => { expect(root.textContent).toMatch(/Reading the sources: \d of 4 read…/); }, { timeout: 2000, interval: 3 });
+    await vi.waitFor(() => { expect(root.textContent).toContain('Skills from the engine\'s hub could not be read. ' + HUB_DOWN); expect(root.textContent).not.toContain('Reading the sources'); }, { timeout: 3000 });
+    expect(root.textContent).not.toContain('The list is up to date');
+    // the engine has started: the same press now puts the list right, and the line says so
+    delete reads['skills-hub'];
+    press();
+    await vi.waitFor(() => { expect(root.textContent).toContain('The list is up to date: the 4 sources were read just now.'); }, { timeout: 3000 });
+    expect(root.textContent).not.toContain('out of date');
+    expect([...root.querySelectorAll('button')].some((b) => b.textContent === 'Read the sources again')).toBe(false);
+  });
+});
+
+describe('the words of an out-of-date list and of the check after a read', () => {
+  const reg = src({ id: 'mcp-registry', label: 'The MCP Registry', refreshable: true });
+  it('names the cause: offline, failed, never read, or old', () => {
+    const b = { offline: false, stale: true, refreshed_at: '2026-11-21T10:00:00Z' };
+    expect(outOfDate({ ...b, offline: true }, NOW, [])).toMatchObject({ why: 'offline', failed: 0 });
+    expect(outOfDate(b, NOW, [{ ...reg, error: REG_DOWN }])).toMatchObject({ why: 'failed', failed: 1 });
+    expect(outOfDate(b, NOW, [reg])).toMatchObject({ why: 'unread', failed: 0 });
+    expect(outOfDate(b, NOW, [{ ...reg, refreshed_at: b.refreshed_at, stale: true }])).toMatchObject({ why: 'old' });
+    expect(outOfDate(b, NOW, [])).toMatchObject({ why: 'unknown' });
+    expect(outOfDate({ ...b, stale: false }, NOW, [reg])).toBeNull();
+  });
+  it('lists names in words', () => {
+    expect(listWords(['a'])).toBe('a');
+    expect(listWords(['a', 'b'])).toBe('a and b');
+    expect(listWords(['a', 'b', 'c'])).toBe('a, b and c');
+    expect(listWords(['a', 'b', 'c', 'd', 'e'])).toBe('a, b and 3 more');
+  });
+  it('says the list is current only when a read covered something', () => {
+    expect(upToDateWords({ last: null })).toBe('');
+    expect(upToDateWords({ last: { total: 1, failed: 0 } })).toBe('The list is up to date: the source was read just now.');
+    expect(upToDateWords({ last: { total: 4, failed: 0 } })).toBe('The list is up to date: the 4 sources were read just now.');
   });
 });
