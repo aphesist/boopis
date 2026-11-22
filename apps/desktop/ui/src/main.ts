@@ -31,6 +31,8 @@ let landing: 'connectors' | 'store' | null = null;
 
 async function start(): Promise<void> {
   await orbs;
+  /* the host's watchdog hears from the page from the start (host/heartbeat.ts); after it reloaded a dead or stuck page, the first beat brings its one notice */
+  if (inTauri()) void import('./host/heartbeat').then((m) => { m.startHeartbeat((text) => { ui.toast(text, { ms: 8000 }); }); }).catch((e: unknown) => { log.warn('the heartbeat did not start', e); });
   if (inTauri()) {
     /* first run: the host sets Hermes up for boopis (plugin, settings, a key) before anything connects; a screen of its own, thin on purpose */
     const [{ runFirstRun }, { tauriSetupBridge }] = await Promise.all([import('./host/first-run'), import('./host/setup-bridge')]);

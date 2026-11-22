@@ -90,6 +90,28 @@ impl FrameSink for ChannelSink {
             .send(Frame(raw))
             .map_err(|e| Error::Io(e.to_string()))
     }
+
+    /// One message holding a JSON array of the frames: one script run in the web view for the lot, where one per
+    /// frame queued thousands of scripts while the window was out of sight.
+    fn send_batch(&self, frames: &[Arc<str>]) -> Result<()> {
+        if let [one] = frames {
+            return self.send(one);
+        }
+        let mut text = String::with_capacity(frames.iter().map(|f| f.len() + 1).sum::<usize>() + 2);
+        text.push('[');
+        for (i, f) in frames.iter().enumerate() {
+            if i > 0 {
+                text.push(',');
+            }
+            text.push_str(f);
+        }
+        text.push(']');
+        self.send(&text)
+    }
+
+    fn acks(&self) -> bool {
+        true
+    }
 }
 
 /// The app-wide link-state event (`connecting`, `ready`, `degraded`, `incompatible`), for windows that have no
@@ -305,6 +327,43 @@ pub async fn gateway_send(
 ) -> std::result::Result<(), HostError> {
     let hub = state.hubs.route(connection_id)?;
     Ok(hub.send(connection_id, frame.0).await?)
+}
+
+/// The page took one delivery of frames on this connection (`FrameSink::acks`): the host may send the next.
+#[tauri::command]
+#[specta::specta]
+pub fn gateway_ack(
+    state: State<'_, AppState>,
+    connection_id: u32,
+) -> std::result::Result<(), HostError> {
+    state.hubs.route(connection_id)?.ack(connection_id);
+    Ok(())
+}
+
+/// What the host answers the page's heartbeat: the plain notice to show once after the host recovered the page.
+#[derive(Debug, Clone, Serialize, Type)]
+pub struct HeartbeatReply {
+    /// The sentence to show, once, when the host reloaded the page to recover the window.
+    pub notice: Option<String>,
+}
+
+/// The page's heartbeat (every few seconds): whether it is visible and the longest main-thread stall it measured since
+/// the last one, in milliseconds. Kept for Diagnostics with the proxy's outbox peak (`webview_health`).
+#[tauri::command]
+#[specta::specta]
+#[must_use]
+pub fn webview_heartbeat(
+    state: State<'_, AppState>,
+    health: State<'_, Arc<crate::webview_health::Health>>,
+    visible: bool,
+    stall_ms: u32,
+) -> HeartbeatReply {
+    let peak = state.hubs.outbox_peak();
+    HeartbeatReply {
+        notice: health
+            .heartbeat(visible, stall_ms, peak)
+            .map(|why| why.notice().to_owned()),
+    }
 }
 
 /// Close a UI connection. The link to the gateway stays up for the others.
@@ -664,6 +723,9 @@ pub async fn renderer_report(
         .unwrap_or(crate::gpu::PowerSource::Unknown);
     report.gpu = crate::gpu::report(&gpu.inputs, gpu.source, &gpu.decision, power);
     report.errors = crate::error::recent();
+    if let Some(health) = app.try_state::<Arc<crate::webview_health::Health>>() {
+        report.health = Some(health.report());
+    }
     Ok(report)
 }
 

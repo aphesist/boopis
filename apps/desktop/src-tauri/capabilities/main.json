@@ -21,6 +21,8 @@
     "allow-gateway-send",
     "allow-gateway-disconnect",
     "allow-gateway-stats",
+    "allow-gateway-ack",
+    "allow-webview-heartbeat",
     "allow-secret-set",
     "allow-secret-delete",
     "allow-secret-exists",

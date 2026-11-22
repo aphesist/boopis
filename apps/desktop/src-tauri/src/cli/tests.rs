@@ -87,6 +87,7 @@ fn fixture(unpacked: bool) -> Gathered {
             unpacked,
         },
         folders: vec![("data", "/nonexistent/boopis".into(), false)],
+        last_webview: None,
     }
 }
 
