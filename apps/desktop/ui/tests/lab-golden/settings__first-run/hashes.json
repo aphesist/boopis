@@ -399,6 +399,26 @@
   "w": 1416,
   "h": 24
  },
+ "models-hub-claude-code-not-installed-linux@bone": {
+  "sha": "b2b62e0619d8a049ae12a013f76f2f676495802b",
+  "w": 1416,
+  "h": 24
+ },
+ "models-hub-claude-code-not-installed-linux@catalog": {
+  "sha": "b551b10325ea90863b9382d4f2dc1045c2787400",
+  "w": 1416,
+  "h": 24
+ },
+ "models-hub-claude-code-not-installed-linux@graphite": {
+  "sha": "12828489a66dfd03405f7d13202b882e7ffd842f",
+  "w": 1416,
+  "h": 24
+ },
+ "models-hub-claude-code-not-installed-linux@typewriter": {
+  "sha": "12828489a66dfd03405f7d13202b882e7ffd842f",
+  "w": 1416,
+  "h": 24
+ },
  "models-hub-claude-code-not-installed-windows@bone": {
   "sha": "b2b62e0619d8a049ae12a013f76f2f676495802b",
   "w": 1416,
@@ -435,6 +455,26 @@
   "h": 24
  },
  "models-hub-claude-code-only-the-desktop-app-s-copy@typewriter": {
+  "sha": "12828489a66dfd03405f7d13202b882e7ffd842f",
+  "w": 1416,
+  "h": 24
+ },
+ "models-hub-claude-code-signed-out-in-the-host-s-words@bone": {
+  "sha": "b2b62e0619d8a049ae12a013f76f2f676495802b",
+  "w": 1416,
+  "h": 24
+ },
+ "models-hub-claude-code-signed-out-in-the-host-s-words@catalog": {
+  "sha": "b551b10325ea90863b9382d4f2dc1045c2787400",
+  "w": 1416,
+  "h": 24
+ },
+ "models-hub-claude-code-signed-out-in-the-host-s-words@graphite": {
+  "sha": "12828489a66dfd03405f7d13202b882e7ffd842f",
+  "w": 1416,
+  "h": 24
+ },
+ "models-hub-claude-code-signed-out-in-the-host-s-words@typewriter": {
   "sha": "12828489a66dfd03405f7d13202b882e7ffd842f",
   "w": 1416,
   "h": 24

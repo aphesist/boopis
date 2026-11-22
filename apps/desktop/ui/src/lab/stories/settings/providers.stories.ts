@@ -5,6 +5,7 @@ import type { Render, State, Story } from '../../types';
 import { LONG_NAME, URLISH } from '../../fixtures';
 import { entries } from '../../../data/providers';
 import { mountProviders } from '../../../host/providers-view';
+import type { ProvidersDeps } from '../../../host/providers-view';
 import type { ProviderState, ProvidersBridge } from '../../../host/providers-bridge';
 
 type Over = Readonly<Record<string, Partial<ProviderState>>>;
@@ -28,7 +29,7 @@ const bridge = (list: () => Promise<ProviderState[]>, probe: ProviderState[] = [
 const found = (way: string, base: string, n: number, detail: string): ProviderState => ({ provider: way.split('.')[0] ?? way, way, kind: 'local', status: 'found_local', code: null, detail, plan: null, models_count: n, base_url: base, signin: null, checked_at: 1, install: null });
 const endpoint = (slug: string, status: ProviderState['status'], base: string, detail: string | null = null): ProviderState => ({ provider: 'custom', way: 'custom.' + slug, kind: 'custom', status, code: status === 'error' ? 'hx.provider.unreachable' : null, detail, plan: null, models_count: null, base_url: base, signin: null, checked_at: null, install: null });
 
-interface Opts { list?: ProviderState[]; probe?: ProviderState[]; fail?: string; after?: (el: HTMLElement) => void | Promise<void> }
+interface Opts { list?: ProviderState[]; probe?: ProviderState[]; fail?: string; login?: ProvidersDeps['login']; after?: (el: HTMLElement) => void | Promise<void> }
 /** the section in a settings sheet's own markup, read from a fake host */
 const draw = (o: Opts = {}): Render => async ({ root }) => {
   const el = document.createElement('section');
@@ -36,7 +37,7 @@ const draw = (o: Opts = {}): Render => async ({ root }) => {
   el.setAttribute('aria-labelledby', 'hx-set-providers-h');
   fill(root, el);
   const b = bridge(o.fail ? () => Promise.reject(new Error(o.fail)) : () => Promise.resolve(o.list ?? baseline()), o.probe);
-  const view = mountProviders(el, { bridge: b, toast: () => undefined, settle: 0 });
+  const view = mountProviders(el, { bridge: b, toast: () => undefined, settle: 0, ...(o.login ? { login: o.login } : {}) });
   await view.ready;
   await frames(2);
   if (o.after) { await o.after(el); await frames(3); if (el.querySelector('[data-prov-flow]:not([hidden])')) await new Promise((r) => setTimeout(r, 900)); }
@@ -63,6 +64,8 @@ const EVERY = baseline({
 /* the Claude subscription's row in each state the host reports besides those above (claude.rs, ADR-0029 as amended on 22 November 2026) */
 const claudeRow = (over: Partial<ProviderState>): Opts => ({ list: baseline({ 'anthropic.signin': over }), after: (el) => { pick(el, 'signin'); } });
 const CLAUDE_ROWS = {
+  out: claudeRow({ status: 'signed_out', detail: 'Claude Code 2.1.330 is installed but not signed in. Choose Sign in: boopis runs Claude Code’s own `claude auth login`, which opens your browser to sign in with your Claude account.' }),
+  desktop: claudeRow({ status: 'needs_install', detail: 'The Claude desktop app is here, but its Claude Code works only inside the app. boopis needs the Claude Code command-line tool, which is separate: install it, then choose Check again.', install: { kind: 'install', command: 'irm https://claude.ai/install.ps1 | iex', shell: 'PowerShell', page: 'https://code.claude.com/docs/en/setup' } }),
   missing: claudeRow({ status: 'needs_install', detail: 'Claude Code, Anthropic’s command-line tool, is not installed yet. boopis runs your Claude plan through it: install it, then choose Check again.', install: { kind: 'install', command: 'curl -fsSL https://claude.ai/install.sh | bash', shell: 'a terminal', page: 'https://code.claude.com/docs/en/setup' } }),
   broken: claudeRow({ status: 'error', code: 'hx.provider.cli_failed', detail: 'Claude Code is installed (/home/ana/.npm-global/bin/claude), but it did not answer within 20 seconds. Install it again with Anthropic’s installer, then choose Check again.', install: { kind: 'install', command: 'curl -fsSL https://claude.ai/install.sh | bash', shell: 'a terminal', page: 'https://code.claude.com/docs/en/setup' } }),
   old: claudeRow({ status: 'error', code: 'hx.provider.needs_update', detail: 'Claude Code 2.1.200 is older than the oldest one that serves a Claude model here (2.1.280). Update it with `claude update`, then choose Check again.', install: { kind: 'update', command: 'claude update', shell: 'Terminal', page: 'https://code.claude.com/docs/en/setup#update-claude-code' } }),
@@ -75,7 +78,11 @@ const providers: Story = {
     typical: st(['typical'], { list: MIXED, probe: [OLLAMA] }),
     'nothing set up': st(['empty'], {}),
     'every state in words': st(['variant', 'error'], { list: EVERY }),
+    'Claude: signed out, in the host’s words': st(['variant'], CLAUDE_ROWS.out),
+    'Claude: signing in (Claude Code’s own sign-in is open)': st(['loading'], { ...CLAUDE_ROWS.out, login: () => new Promise<never>(() => undefined), after: (el) => { pick(el, 'signin'); press(el, '[data-do="signin"][data-way="anthropic.signin"]'); } }),
     'Claude: not installed, with the installer': st(['variant'], CLAUDE_ROWS.missing),
+    'Claude: not installed, narrow': st(['size'], CLAUDE_ROWS.missing, { width: 340 }),
+    'Claude: only the desktop app’s copy': st(['variant'], CLAUDE_ROWS.desktop),
     'Claude: did not start': st(['error'], CLAUDE_ROWS.broken),
     'Claude: too old': st(['variant'], CLAUDE_ROWS.old),
     'Claude: billed per use': st(['variant'], CLAUDE_ROWS.metered),

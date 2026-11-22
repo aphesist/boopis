@@ -99,6 +99,26 @@
   "w": 544,
   "h": 1027
  },
+ "claude-not-installed-narrow@bone": {
+  "sha": "93e6ad3af48b3ba95f2e9d61c1d5367b5f644bfc",
+  "w": 364,
+  "h": 1340
+ },
+ "claude-not-installed-narrow@catalog": {
+  "sha": "bf0aa1fa7c2a4eac1358571664fa0c41e1b9a496",
+  "w": 364,
+  "h": 1340
+ },
+ "claude-not-installed-narrow@graphite": {
+  "sha": "d7b836e229a39a5d373e290b80e865ac0ad94cea",
+  "w": 364,
+  "h": 1340
+ },
+ "claude-not-installed-narrow@typewriter": {
+  "sha": "de288706688a7b9fec96e20a3ac3b8eaa9a9dca4",
+  "w": 364,
+  "h": 1600
+ },
  "claude-not-installed-with-the-installer@bone": {
   "sha": "0e5054363e339c22fb8b61f74f899a501ecf6bc4",
   "w": 544,
@@ -119,23 +139,83 @@
   "w": 544,
   "h": 991
  },
+ "claude-only-the-desktop-app-s-copy@bone": {
+  "sha": "b16fc19d2c59992279123b7ac71b130c4ee05405",
+  "w": 544,
+  "h": 897
+ },
+ "claude-only-the-desktop-app-s-copy@catalog": {
+  "sha": "b8f8e71c7fcc1cc8a425ccc820f5868df6492161",
+  "w": 544,
+  "h": 897
+ },
+ "claude-only-the-desktop-app-s-copy@graphite": {
+  "sha": "530bec850a10d48e2f3a9afd64caa1b10d2ea073",
+  "w": 544,
+  "h": 897
+ },
+ "claude-only-the-desktop-app-s-copy@typewriter": {
+  "sha": "2ab711ab4731d469a839cd12c8f1580bf1949b73",
+  "w": 544,
+  "h": 1027
+ },
+ "claude-signed-out-in-the-host-s-words@bone": {
+  "sha": "2333bec00aa408c05bd1e235e1afa9d217c5e045",
+  "w": 544,
+  "h": 879
+ },
+ "claude-signed-out-in-the-host-s-words@catalog": {
+  "sha": "000499ff5cd7e2753784d55bd3754e0a533ea755",
+  "w": 544,
+  "h": 879
+ },
+ "claude-signed-out-in-the-host-s-words@graphite": {
+  "sha": "a9ff917ca39366af31a3a4a3e0e5b2298a040d3e",
+  "w": 544,
+  "h": 879
+ },
+ "claude-signed-out-in-the-host-s-words@typewriter": {
+  "sha": "41c4e681027d3e6f80deab566189681b599ec5a4",
+  "w": 544,
+  "h": 1027
+ },
+ "claude-signing-in-claude-code-s-own-sign-in-is-open@bone": {
+  "sha": "17808319ad09f4374202fac1f129eefa794fc1a9",
+  "w": 544,
+  "h": 879
+ },
+ "claude-signing-in-claude-code-s-own-sign-in-is-open@catalog": {
+  "sha": "fec99c57fc6a81606dab34eadcdcd2d9276e2482",
+  "w": 544,
+  "h": 879
+ },
+ "claude-signing-in-claude-code-s-own-sign-in-is-open@graphite": {
+  "sha": "a5e72059ab0162db52572de5a25ca8083b4a4ff1",
+  "w": 544,
+  "h": 879
+ },
+ "claude-signing-in-claude-code-s-own-sign-in-is-open@typewriter": {
+  "sha": "8508963435dccc4d8ef1a5e75e572d26ebf23399",
+  "w": 544,
+  "h": 1027
+ },
  "claude-too-old@bone": {
-  "sha": "dd6920fd9e395ec18ea5e2c37b9f5fd531d5452a",
+  "sha": "35d16cedd590e476bf6aef58e9fa767329faeb87",
   "w": 544,
   "h": 879
  },
  "claude-too-old@catalog": {
-  "sha": "90a522cb1f72215ab5a77ace8fb5ad0b98a65ace",
+  "sha": "59f14699f7f708764a190c368c2bd60b884b6ba4",
   "w": 544,
   "h": 879
  },
  "claude-too-old@graphite": {
-  "sha": "b05fe7733eb73d9698c703fe85e16a4ff53f258e",
+  "sha": "f6ad5b910a4e41e29e11d655e875ee97f71dab0b",
   "w": 544,
   "h": 879
  },
  "claude-too-old@typewriter": {
-  "sha": "7d4fdc16498c99afd51c3f5704b93e91c159a58c",
+  "sha": "733a43f1b7bd1459f186eb46ed15f93a3bca98d1",
   "w": 544,
   "h": 1009
  },
