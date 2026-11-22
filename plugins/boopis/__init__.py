@@ -176,8 +176,8 @@ def _start_signins() -> None:
     ADR-0030), GitHub Copilot's (``signins/copilot.py``, ADR-0039) and SuperGrok's (``signins/xai.py``, ADR-0039, every
     minute: its tokens are short-lived). Each runs on a daemon thread in a copy of this context (the same profile home).
     Only in a gateway the desktop host started: with no secret channel there is no sign-in to hand over. And only in the
-    root home: a bot's copy of the plugin (``profiles/<name>``) has no ``auth.json`` of its own and reads the root's logins
-    through the engine's own fallback, so a second writer there would only fork the pool (ADR-0042)."""
+    root home: a bot's copy of the plugin (``profiles/<name>``) has no ``auth.json`` of its own and reads the root's
+    logins through the engine's own fallback, so a second writer there would only fork the pool (ADR-0042)."""
     from .hostsecrets.channel import capture_environment
 
     if capture_environment() is None or not _in_root_home():
@@ -190,8 +190,9 @@ def _start_signins() -> None:
 
 
 def _in_root_home() -> bool:
-    """Whether this copy of the plugin loaded in the root home, not in a bot's (``profiles/<name>``). When the engine cannot
-    say (a test double, an older engine), the answer is yes: that is how the plugin behaved before bots loaded it."""
+    """Whether this copy of the plugin loaded in the root home, not in a bot's (``profiles/<name>``). When the engine
+    cannot say (a test double, an older engine), the answer is yes: that is how the plugin behaved before bots loaded
+    it."""
     try:
         from .bots.homes import default_root
         from .hermes_api import hermes_home

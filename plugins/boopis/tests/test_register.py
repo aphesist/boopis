@@ -181,7 +181,7 @@ def test_only_the_root_homes_copy_hands_the_sign_ins_over(monkeypatch: pytest.Mo
     from boopis.hostsecrets import channel
 
     started: list[str] = []
-    monkeypatch.setattr(channel, "capture_environment", lambda: object())
+    monkeypatch.setattr(channel, "capture_environment", object)
     for name in ("chatgpt", "copilot", "xai"):
         module = importlib.import_module(f"boopis.signins.{name}")
         monkeypatch.setattr(module, "start", lambda name=name: started.append(name))
