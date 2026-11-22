@@ -9,16 +9,17 @@ import type { MockStoreOptions } from '../../../data/mock-store';
 import type { StoreProvider } from '../../../data/provider';
 import type { InstallReceipt, StoreBrowse, StoreItem } from '../../../data/types';
 import type { StageCtx, State, Story } from '../../types';
+import { recommendedItems } from './recommended-items';
 
 const MOCK = { url: '/v6/__index.html', note: 'the owner has not drawn a store view: it is composed from the kit, for review' };
 const NOW = Date.parse('2026-11-21T10:00:00Z');
 type Drive = (c: { root: HTMLElement; wait(ms: number): Promise<void>; view: ReturnType<typeof mountStore>; store: StoreProvider }) => Promise<void> | void;
 
-interface Opts { mock?: MockStoreOptions; patch?(s: StoreProvider): StoreProvider; project?: string | null; screen?: StoreScreen; item?: string }
+interface Opts { mock?: MockStoreOptions | (() => MockStoreOptions); patch?(s: StoreProvider): StoreProvider; project?: string | null; screen?: StoreScreen; item?: string }
 const view = (tags: State['tags'], drive: Drive | null, o: Opts = {}): State => ({
   tags, scope: '.hx-store', mock: MOCK,
   render: async (ctx: StageCtx) => {
-    const base = createMockStore({ ...(o.mock ?? {}) });
+    const base = createMockStore(typeof o.mock === 'function' ? o.mock() : { ...(o.mock ?? {}) });
     const store = o.patch ? o.patch(base) : base;
     const project = o.project === undefined ? null : o.project;
     const host = document.createElement('div'); host.className = 'lab-fill'; ctx.root.append(host);
@@ -56,6 +57,13 @@ const hosted = (s: StoreProvider): StoreProvider => withItems((i) => (i.id === '
   detail: async (id) => { const d = await s.detail(id); return d.item.pinned ? { ...d, item: { ...d.item, pinned: { ...d.item.pinned, repo: 'remote:https://mcp.example.com/' } } } : d; },
   review: async (id, sc) => { const r = await s.review(id, sc); return { ...r, plan: { ...r.plan, pinned: { ...r.plan.pinned, repo: 'remote:https://mcp.example.com/' } } }; }
 });
+/* the host's own sentences for a source that could not be read (store/reasons.rs) */
+const HUB_DOWN = 'The engine is not running yet. This source is read through it: read the sources again once it has started.';
+const REG_DOWN = 'Could not reach registry.modelcontextprotocol.io. Check the connection or proxy, then read the sources again.';
+const PROXY_PAGE = 'github.com answered with something that is not its list (a proxy or a sign-in page can do that). Check the connection or proxy, then read it again.';
+const NEVER = { ms: Number.POSITIVE_INFINITY };
+/* the clock of the store that ages: it starts eight hours before `NOW`, where its sources were read, and the state moves it to `NOW` */
+const clock = { t: NOW - 8 * 3600_000 };
 const LONG = 'A connector with an extremely long name that goes on and on without any sensible place to stop, ending in a_very_long_unbroken_identifier_that_must_not_push_the_row_wider_than_the_window';
 
 const browse: Story = {
@@ -70,6 +78,13 @@ const browse: Story = {
     'long names': view(['long'], null, { patch: withItems((i) => ({ ...i, title: LONG, publisher: 'A publisher whose name is also far too long to fit on one line of the row at a narrow width' })) }),
     'details focus': { ...view(['focus'], null), force: [{ sel: '[data-store-open]', state: 'focus' as const }] },
     'details hover': { ...view(['hover'], null), force: [{ sel: '[data-store-open]', state: 'hover' as const }] },
+    'the front page with boopis\'s skills and plugins, most used first': view(['many'], null, { mock: { extraItems: recommendedItems() } }),
+    'skills only, most used first': view(['variant'], (c) => click(c, '[role=radio][data-value="skill"]'), { mock: { extraItems: recommendedItems() } }),
+    'the sources being read, source by source': view(['loading'], (c) => { void c.view.readDue(); return c.wait(250); }, { mock: { start: 'unread', now: () => NOW, reads: { 'engine-plugins': { ms: 20 }, 'skills-hub': NEVER } } }),
+    'out of date: a source could not be read': view(['error'], (c) => c.view.readDue(), { mock: { start: 'unread', now: () => NOW, reads: { 'engine-plugins': { ms: 5 }, 'skills-hub': { ms: 5, error: HUB_DOWN }, anthropic: { ms: 5 }, 'mcp-registry': { ms: 5 } } } }),
+    'out of date: several could not be read (with the reasons one tap away)': view(['error', 'variant'], (c) => c.view.readDue(), { mock: { start: 'unread', now: () => NOW, reads: { 'skills-hub': { ms: 5, error: HUB_DOWN }, anthropic: { ms: 5, error: PROXY_PAGE }, 'mcp-registry': { ms: 5, error: REG_DOWN } } } }),
+    'out of date: due a read again': view(['variant'], async (c) => { clock.t = NOW; await c.store.reloadSources?.(); c.view.show('browse'); await c.wait(150); }, { mock: () => { clock.t = NOW - 8 * 3600_000; return { now: () => clock.t }; } }),
+    'up to date after a read': view(['typical'], (c) => c.view.readDue(), { mock: { start: 'unread', now: () => NOW, reads: { 'engine-plugins': { ms: 5 }, 'skills-hub': { ms: 5 }, anthropic: { ms: 5 }, 'mcp-registry': { ms: 5 } } } }),
     'no sources on': view(['empty'], async (c) => { for (const s of c.store.sources.get()) await c.store.setSourceEnabled(s.id, false); await click(c, '[role=radio][data-value="skill"]'); })
   }
 };
