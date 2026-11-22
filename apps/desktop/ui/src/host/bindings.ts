@@ -2786,13 +2786,13 @@ export type StoreSecret_Serialize = {
 	optional: boolean,
 };
 
-/**  A place items come from. The last five fields are the host's runtime state and are absent in the data file. */
+/**  A place items come from. The last seven fields are the host's runtime state and are absent in the data file. */
 export type StoreSource = StoreSource_Serialize | StoreSource_Deserialize;
 
 /**  How the host reads a source. */
 export type StoreSourceFetch = "compiled-in" | "engine-gateway" | "git-marketplace" | "git-repo" | "http-json" | "registry-api" | "github-api" | "local";
 
-/**  A place items come from. The last five fields are the host's runtime state and are absent in the data file. */
+/**  A place items come from. The last seven fields are the host's runtime state and are absent in the data file. */
 export type StoreSource_Deserialize = {
 	id: string,
 	label: string,
@@ -2811,9 +2811,13 @@ export type StoreSource_Deserialize = {
 	refreshed_at?: string | null,
 	items?: number | null,
 	error?: string | null,
+	/**  Whether reading the sources again reads this one (the host's runtime state). */
+	refreshable?: boolean | null,
+	/**  Whether this source is due a read: on, refreshable, and never read, failed, or older than its period. */
+	stale?: boolean | null,
 };
 
-/**  A place items come from. The last five fields are the host's runtime state and are absent in the data file. */
+/**  A place items come from. The last seven fields are the host's runtime state and are absent in the data file. */
 export type StoreSource_Serialize = {
 	id: string,
 	label: string,
@@ -2832,6 +2836,10 @@ export type StoreSource_Serialize = {
 	refreshed_at?: string,
 	items?: number,
 	error?: string,
+	/**  Whether reading the sources again reads this one (the host's runtime state). */
+	refreshable?: boolean,
+	/**  Whether this source is due a read: on, refreshable, and never read, failed, or older than its period. */
+	stale?: boolean,
 };
 
 /**  Whether the terms for listing a source's items were read. */

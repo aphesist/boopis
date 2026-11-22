@@ -422,9 +422,41 @@ async fn refresh_reads_every_source_and_search_finds_across_them() {
         .store
         .browse(None, &StoreFilter::default(), None, Some(5))
         .unwrap();
+    let curated: Vec<String> = crate::connectors::catalog::load()
+        .unwrap()
+        .connectors
+        .iter()
+        .map(|c| format!("boopis:{}", c.id))
+        .collect();
+    let rec: Vec<String> = front
+        .recommended
+        .as_ref()
+        .unwrap()
+        .iter()
+        .map(|i| i.id.clone())
+        .collect();
     assert_eq!(
-        front.recommended.as_ref().unwrap()[0].id,
-        "boopis:firecrawl"
+        rec, curated,
+        "the front page leads with boopis's own list, most popular first"
+    );
+    // Browse > Connectors, before any search: boopis's list first, most popular first, then the other sources' connectors
+    let conn = r
+        .store
+        .browse(
+            None,
+            &StoreFilter {
+                kind: Some(ItemKind::Connector),
+                ..StoreFilter::default()
+            },
+            None,
+            Some(100),
+        )
+        .unwrap();
+    let ids: Vec<String> = conn.items.iter().map(|i| i.id.clone()).collect();
+    assert_eq!(ids[..curated.len()], curated[..]);
+    assert!(
+        ids.len() > curated.len(),
+        "the registry's connectors follow"
     );
     assert!(front.total > 30 && !front.stale && !front.offline);
     assert!(front.refreshed_at.is_some());
@@ -527,6 +559,85 @@ async fn an_unreachable_source_keeps_its_last_copy_and_says_so() {
             .total
             >= 1,
         "boopis's own list needs no network"
+    );
+}
+
+#[tokio::test]
+async fn a_source_says_whether_a_read_reaches_it_and_why_a_read_failed() {
+    let r = rig_with(world(|_| Some(Err(down()))), |_, _| {
+        Err(Error::Unavailable("the engine is not running".into()))
+    });
+    let s = |id: &str| r.store.sources().into_iter().find(|s| s.id == id).unwrap();
+    // Nothing read yet: every source a read reaches is due, the rest are not reached by a read at all.
+    for id in ["engine-plugins", "skills-hub", "anthropic", "mcp-registry"] {
+        assert_eq!(
+            (s(id).refreshable, s(id).stale, s(id).refreshed_at.is_none()),
+            (Some(true), Some(true), true),
+            "{id}"
+        );
+    }
+    for id in ["boopis", "github", "marketplace-url", "local"] {
+        assert_eq!(
+            (s(id).refreshable, s(id).stale),
+            (Some(false), Some(false)),
+            "{id}"
+        );
+    }
+    assert!(s("boopis").refreshed_at.is_some() && s("boopis").items >= Some(1));
+    // Each read that fails says why in plain words, naming where it could not reach (never the engine's address), and stays due.
+    for id in ["engine-plugins", "skills-hub", "anthropic", "mcp-registry"] {
+        r.store.refresh(Some(id)).await.unwrap_err();
+    }
+    assert_eq!(
+        s("mcp-registry").error.as_deref(),
+        Some(
+            "Could not reach registry.modelcontextprotocol.io. Check the connection or proxy, then read the sources again."
+        )
+    );
+    assert!(
+        s("anthropic")
+            .error
+            .unwrap()
+            .starts_with("Could not reach github.com.")
+    );
+    assert!(
+        s("engine-plugins")
+            .error
+            .unwrap()
+            .starts_with("Could not reach the engine's online store.")
+    );
+    assert!(
+        s("skills-hub")
+            .error
+            .unwrap()
+            .starts_with("The engine is not running yet."),
+        "{:?}",
+        s("skills-hub").error
+    );
+    assert_eq!(s("mcp-registry").stale, Some(true));
+    // A source that is off is never due.
+    r.store.set_enabled("mcp-registry", false).unwrap();
+    assert_eq!(s("mcp-registry").stale, Some(false));
+}
+
+#[tokio::test]
+async fn a_source_read_just_now_holds_its_items_and_is_not_due() {
+    let r = rig_with(world(|_| None), quiet());
+    for id in ["engine-plugins", "skills-hub", "anthropic", "mcp-registry"] {
+        r.store.refresh(Some(id)).await.unwrap();
+        let s = r.store.sources().into_iter().find(|s| s.id == id).unwrap();
+        assert_eq!(
+            (s.stale, s.error.is_none(), s.refreshed_at.is_some()),
+            (Some(false), true, true),
+            "{id}"
+        );
+        assert!(s.items.unwrap() > 0, "{id}");
+    }
+    assert!(
+        !r.store
+            .browse(None, &StoreFilter::default(), None, None)
+            .unwrap()
+            .stale
     );
 }
 

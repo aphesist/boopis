@@ -3,7 +3,7 @@
 The **connector collection** (`apps/shared/data/connectors.json`, schema `connectors.schema.json`) is the curated list of MCP servers boopis knows how to install, configure and trust. Any MCP server still works without being listed (COMPAT §6); listing adds a one-click install, the right forms and verified settings.
 
 ## What an entry promises
-- **Pinned.** An exact package version or image digest, never `latest`. Bumps are reviewed changes to the file.
+- **Pinned.** An exact package version or image digest, never `latest`. A server only its publisher hosts has nothing to pin: the store lists it by its address at the version its publisher's registry entry showed on the check (`remote:<url>`), with the standing caution that the publisher can change the service (the owner's decision of 21 November 2026, ADR-0038). Bumps are reviewed changes to the file.
 - **Verified.** Checked against the publisher's own sources on the date in `verified`, with those sources listed. Nothing in an entry is guessed: a value we couldn't confirm becomes a setup field the user fills in.
 - **Variants.** One connector can run several ways, for example local, hosted, or a package with a key. The default variant is the one that keeps the most on the user's machine.
 - **Honest network.** Each variant states its egress: `loopback`, a host list, or `any`. The sandbox and the policy use it, and the install form shows it.
@@ -46,12 +46,54 @@ Settings > Connectors: the servers Hermes has (a switch, Test, Remove, and Sign 
 - Not built: Hermes's **device flow** for MCP servers (`oauth.flow: device`) has no gateway method, so only the browser flow runs; and `client_redirect_uri` (the client hosts the loopback, for a gateway on another machine) is the seam for a Remote endpoint, which does not exist yet.
 
 ## Adding an entry
-- Read the publisher's README, docs and releases.
-- Pin the version.
-- Fill `verified` with the date and the sources.
+- Read the publisher's README, docs and releases, and its entry in the official MCP Registry when it has one.
+- Pin the version: the npm or PyPI version, the image digest (read from the registry of the image, not from a tag), or for a
+  hosted-only server the version its registry entry shows.
+- Fill `verified` with the date and the sources (the repository, the registry entry, the package or image manifest).
+- Record its `popularity`: the publisher's official repository, and its stars when the order is read again (below).
 - Validate against the schema. CI validates the file.
 
+## The order
+The array is the store's order: the front page and Browse show boopis's list most popular first (within a search, the better
+match first). The signal is **the GitHub stars of each publisher's official repository**, read through the GitHub API on one
+date by one run, both recorded in the file's top-level `popularity` (`read`, `evidence`) and each count in the entry's own
+`popularity.stars`. Stars were chosen because every entry has an official repository, the count is public and anyone can read
+it again, and it is the same kind of number for a package, an image and a hosted server; install counts are not (npm counts
+downloads, a hosted server has none, an image has pulls). A repository that holds many servers (the MCP project's reference
+servers) has a count that is the collection's, not one server's, so those entries (`shared: true`) follow the ones with a
+repository of their own. The `popularity` job of `.github/workflows/live-store.yml` reads the stars again every week and says
+when the recorded order no longer follows them; reorder only after reading the list again from its sources. A test
+(`connectors::catalog`, `the_list_is_ordered_by_its_cited_popularity`) holds the file to this order.
+
+Which servers is an editorial choice, and the order is the signal: widely used MCP servers that have an official server kept
+by their publisher (its own repository and its entry in the official MCP Registry, or the MCP project's reference servers), a
+licence that allows it, and a way boopis can install it (a pinned npm package, an image digest, or a hosted address). A server
+whose official repository is archived, or that runs only inside one vendor's desktop app, is left out. The list grows by the
+steps above.
+
 ## Entries
-| Connector | Variants | Notes |
-|---|---|---|
-| Firecrawl | **local** (Firecrawl Local, default), hosted (OAuth, or a key), package with a key | Firecrawl Local (announced 2026-11-18) runs scrape, crawl and map as Rust primitives on the user's machine. The MCP server talks to it through `FIRECRAWL_API_URL`. Hermes's own web tools also use Firecrawl, and pointing them at the same local instance is a follow-up **[verify]** |
+In the file's order, with the stars read on 22 November 2026 by the `popularity` job of
+[this run](https://github.com/aphesist/boopis/actions/runs/44982090776/job/137084587857). "Needs" is what the person gives at
+install; a hosted server signs in with OAuth through the engine's flow.
+
+| Connector | Publisher | Variants (default first) | Pinned to | Needs | Licence | Stars, 22 November 2026 |
+|---|---|---|---|---|---|---|
+| Context7 | Upstash | **local** (npx), hosted (OAuth or a key) | `@upstash/context7-mcp@4.7.3` | nothing; a key raises its limits | MIT | `upstash/context7`, 65,246 |
+| Chrome DevTools | Google (Chrome DevTools) | **local** (npx) | `chrome-devtools-mcp@1.13.0` | Google Chrome | Apache-2.0 | `ChromeDevTools/chrome-devtools-mcp`, 58,713 |
+| Playwright | Microsoft | **local** (npx) | `@playwright/mcp@0.0.86` | a browser Playwright can drive | Apache-2.0 | `microsoft/playwright-mcp`, 39,982 |
+| GitHub | GitHub | **Docker** with a personal access token | `ghcr.io/github/github-mcp-server@sha256:040c4e99…` (release 2.2.0) | Docker, a GitHub token | MIT | `github/github-mcp-server`, 34,660 |
+| Firecrawl | Firecrawl | **local** (Firecrawl Local), hosted (OAuth or a key), package with a key | `firecrawl-mcp@3.40.0` | Firecrawl Local, or a key | MIT | `firecrawl/firecrawl-mcp-server`, 7,877 |
+| Exa | Exa | **hosted** | `remote:https://mcp.exa.ai/mcp` (3.5.1) | a sign-in, or a key | MIT | `exa-labs/exa-mcp-server`, 5,254 |
+| Notion | Notion | **hosted** | `remote:https://mcp.notion.com/mcp` (1.0.1) | a Notion sign-in | MIT | `makenotion/notion-mcp-server`, 4,721 |
+| Supabase | Supabase | **hosted** | `remote:https://mcp.supabase.com/mcp` (0.19.0) | a Supabase sign-in | Apache-2.0 | `supabase-community/supabase-mcp`, 3,022 |
+| Brave Search | Brave | **local** (npx) | `@brave/brave-search-mcp-server@2.2.0` | a Brave Search API key | MIT | `brave/brave-search-mcp-server`, 1,585 |
+| Atlassian | Atlassian | **hosted** | `remote:https://mcp.atlassian.com/v2/mcp` (2.0.0) | an Atlassian sign-in | Apache-2.0 | `atlassian/atlassian-mcp-server`, 1,185 |
+| MongoDB | MongoDB | **local** (npx) | `mongodb-mcp-server@3.3.0` | a connection string | Apache-2.0 | `mongodb-js/mongodb-mcp-server`, 1,163 |
+| Sentry | Sentry | **hosted** | `remote:https://mcp.sentry.dev/mcp` (0.50.0) | a Sentry sign-in | FSL-1.1-ALv2 | `getsentry/sentry-mcp`, 973 |
+| Neon | Neon | **hosted** | `remote:https://mcp.neon.tech/mcp` (2.0.0) | a Neon sign-in | MIT | `neondatabase/mcp-server-neon`, 667 |
+| Sequential Thinking | MCP reference servers | **local** (npx) | `@modelcontextprotocol/server-sequential-thinking@2.2.0` | nothing | Apache-2.0 and MIT | `modelcontextprotocol/servers`, 92,150 (shared) |
+| Memory | MCP reference servers | **local** (npx) | `@modelcontextprotocol/server-memory@2.2.1` | nothing | Apache-2.0 and MIT | `modelcontextprotocol/servers`, 92,150 (shared) |
+
+Firecrawl Local (announced 2026-11-18) runs scrape, crawl and map as Rust primitives on the user's machine; the MCP server talks
+to it through `FIRECRAWL_API_URL`. The engine's own web tools also use Firecrawl, and pointing them at the same local instance
+is a follow-up **[verify]**.

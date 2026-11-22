@@ -195,7 +195,9 @@ export function openStore(screen: 'browse' | 'installed' | 'sources' = 'browse',
   const d = storeDialog();
   if (els().settings.open) els().settings.close();
   const ret = document.activeElement as HTMLElement | null;
-  const go = (): void => { storeView?.show(screen, item); };
+  /* every time it opens, the store reads the sources that are due (never read, failed last time, or old), with its progress on
+     the page: a source is never left at "Not read yet" with no attempt */
+  const go = (): void => { storeView?.show(screen, item); void storeView?.readDue(); };
   if (!d.open) { try { d.showModal(); } catch { d.setAttribute('open', ''); } }
   d.addEventListener('close', () => { ret?.focus?.(); }, { once: true });
   if (storeView) { go(); } else {

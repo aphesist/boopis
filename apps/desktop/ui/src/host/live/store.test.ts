@@ -32,6 +32,18 @@ describe('the live store', () => {
     expect(s.installed.get().map((r) => r.item_id)).toEqual(['boopis:x']);
     expect(s.sources.get()).toEqual([]);
   });
+  it('a read that failed still shows each source\'s reason: the sources are read back from the host', async () => {
+    const reason = 'Could not reach registry.modelcontextprotocol.io. Check the connection or proxy, then read the sources again.';
+    let read = false;
+    const src = { id: 'mcp-registry', label: 'The MCP Registry', kinds: [], fetch: 'registry-api', default_tier: 'verified', default_on: true, user_added: false, engine_origin: false };
+    const s = createLiveStore({ bridge: bridge({
+      sources: () => Promise.resolve([read ? { ...src, error: reason, stale: true } : { ...src, stale: true }]),
+      refresh: () => { read = true; return Promise.reject({ code: 'hx.store.source_unreachable', message: 'boopis could not reach that source.' }); }
+    } as unknown as Partial<StoreBridge>) });
+    await s.settled();
+    await expect(s.refresh('mcp-registry')).rejects.toMatchObject({ code: 'hx.store.source_unreachable' });
+    expect(s.sources.get()[0]?.error).toBe(reason);
+  });
   it('review is stage then plan, and the install of an update stage goes to `store_update`', async () => {
     const b = bridge(); const s = createLiveStore({ bridge: b });
     const { stage } = await s.review('boopis:x');

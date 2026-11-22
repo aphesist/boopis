@@ -4,6 +4,8 @@
 import type {
   FormSpec, InstallPlan, InstallReceipt, StoreBrowse, StoreCodeRun, StoreComponent, StoreError, StoreFilter, StoreHosts, StoreItem, StoreKind, StorePin, StoreScanVerdict, StoreSource, StoreTier, UpdateDiff
 } from '../../data';
+import { isRefreshable } from './reading';
+import type { ReadState, Reading } from './reading';
 
 export const TIER_WORDS: Readonly<Record<StoreTier, string>> = { recommended: 'Recommended by boopis', verified: 'Verified by its source', 'not-reviewed': 'Not reviewed' };
 export const TIER_TIPS: Readonly<Record<StoreTier, string>> = {
@@ -76,14 +78,32 @@ export const componentWords = (c: StoreComponent): string => `${c.type.replace('
 /** the item's own sentence for an engine plugin, said plainly on its page and its card */
 export const ENGINE_PLUGIN_NOTE = 'This is Python that runs inside the engine, in every session, governed ones included. It runs outside the sandbox, and permission rules do not see it.';
 
-/** a source's state in words: off (and why), unreachable, or its age */
-export function sourceState(s: StoreSource, now: number = Date.now()): { word: 'off' | 'on' | 'trouble'; text: string } {
+/** a source's state in words: off (and why), being read, why it could not be read, what it holds and when it was read, or, for a
+    source a read does not reach, what it is (built in; GitHub without a sign-in; empty until you add one) */
+export function sourceState(s: StoreSource, now: number = Date.now(), reading?: ReadState): { word: 'off' | 'on' | 'trouble' | 'reading'; text: string } {
   if (s.enabled === false) {
     return { word: 'off', text: s.terms === 'unverified' ? 'Off until its terms are checked. ' + (s.note ?? '') : (s.note ?? 'Switched off.') };
   }
+  if (reading === 'reading') return { word: 'reading', text: 'Reading it now…' };
+  if (reading === 'waiting') return { word: 'reading', text: 'Waiting for its turn to be read…' };
   if (s.error) return { word: 'trouble', text: s.error };
-  const n = s.items == null ? '' : plural(s.items, 'item') + '. ';
-  return { word: 'on', text: n + (s.refreshed_at ? 'Read ' + ageWords(s.refreshed_at, now) + '.' : 'Not read yet.') };
+  /* a source that was never read holds nothing yet: no count, only that it is read when the store opens */
+  const n = s.items == null || (isRefreshable(s) && !s.refreshed_at) ? '' : plural(s.items, 'item') + '. ';
+  if (!isRefreshable(s)) {
+    if (s.fetch === 'compiled-in') return { word: 'on', text: n + 'Built into this version of boopis.' };
+    if (s.fetch === 'github-api') return { word: 'on', text: 'Searching GitHub needs a GitHub sign-in, which boopis does not have yet. Add a repository by its address under Add a source.' };
+    return { word: 'on', text: 'Empty until you add one under Add a source.' };
+  }
+  return { word: 'on', text: n + (s.refreshed_at ? 'Read ' + ageWords(s.refreshed_at, now) + '.' : 'Not read yet: it is read when the store opens.') };
+}
+
+/** the progress of a read in words: how far it is, then how it ended */
+export function readingWords(r: Pick<Reading, 'running' | 'done' | 'total' | 'last'>): string {
+  if (r.running) return `Reading the sources: ${r.done} of ${r.total} read…`;
+  if (!r.last) return '';
+  if (!r.last.failed) return r.last.total === 1 ? 'The source was read.' : `The ${r.last.total} sources were read.`;
+  return r.last.failed === r.last.total ? (r.last.total === 1 ? 'The source could not be read. Its row says why.' : 'No source could be read. Each row says why.')
+    : `${plural(r.last.total - r.last.failed, 'source')} read; ${r.last.failed} could not be, and ${r.last.failed === 1 ? 'its row says' : 'their rows say'} why.`;
 }
 
 /** the sentence for a failure: the host's own (a stable `hx.*` code) and never raw engine text */
@@ -98,11 +118,21 @@ export function filterOf(kind: 'all' | StoreKind, source: string): StoreFilter {
   return { ...(kind !== 'all' ? { kind } : {}), ...(source !== 'any' ? { source } : {}) };
 }
 export const isFront = (f: StoreFilter, query: string): boolean => !query.trim() && Object.keys(f).length === 0;
-/** what a browse page says when there is nothing, or the catalogue is old */
-export function freshness(b: Pick<StoreBrowse, 'offline' | 'stale' | 'refreshed_at'>, now: number = Date.now()): string | null {
+/** what a browse page says when the catalogue is old, and why: the sources that could not be read (with the reason when there is
+    one), the ones not read yet, or the age of the newest copy. Null when it is current. `sources` are the store's sources. */
+export function freshness(b: Pick<StoreBrowse, 'offline' | 'stale' | 'refreshed_at'>, now: number = Date.now(), sources: readonly StoreSource[] = []): string | null {
   if (b.offline) return `You are offline. This is the last copy boopis saved${b.refreshed_at ? ', from ' + ageWords(b.refreshed_at, now) : ''}.`;
-  if (b.stale) return `This list is out of date${b.refreshed_at ? ': it was read ' + ageWords(b.refreshed_at, now) : ''}.`;
-  return null;
+  if (!b.stale) return null;
+  const on = sources.filter((s) => s.enabled !== false && isRefreshable(s));
+  const failed = on.filter((s) => s.error);
+  const unread = on.filter((s) => !s.error && !s.refreshed_at);
+  const one = failed[0];
+  if (failed.length === 1 && one) return `This list is out of date: ${one.label} could not be read. ${one.error ?? ''}`.trim();
+  if (failed.length > 1) return `This list is out of date: ${failed.length} sources could not be read. Sources says why for each.`;
+  const first = unread[0];
+  if (unread.length === 1 && first) return `This list is out of date: ${first.label} has not been read yet.`;
+  if (unread.length > 1) return `This list is out of date: ${unread.length} sources have not been read yet.`;
+  return `This list is out of date${b.refreshed_at ? ': it was read ' + ageWords(b.refreshed_at, now) : ''}.`;
 }
 
 /* ───────── the review card ───────── */
