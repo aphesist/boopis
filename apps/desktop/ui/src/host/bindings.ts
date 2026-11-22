@@ -49,6 +49,13 @@ export const commands = {
 	gatewayDisconnect: (connectionId: number, options?: InvokeOptions) => __TAURI_INVOKE<null>("gateway_disconnect", { connectionId }, options),
 	/**  The proxy's counters and timings, for diagnostics. */
 	gatewayStats: (profile: string | null, options?: InvokeOptions) => __TAURI_INVOKE<ProxyStats_Serialize>("gateway_stats", { profile }, options),
+	/**  The page took one delivery of frames on this connection (`FrameSink::acks`): the host may send the next. */
+	gatewayAck: (connectionId: number, options?: InvokeOptions) => __TAURI_INVOKE<null>("gateway_ack", { connectionId }, options),
+	/**
+	 *  The page's heartbeat (every few seconds): whether it is visible and the longest main-thread stall it measured since
+	 *  the last one, in milliseconds. Kept for Diagnostics with the proxy's outbox peak (`webview_health`).
+	 */
+	webviewHeartbeat: (visible: boolean, stallMs: number, options?: InvokeOptions) => __TAURI_INVOKE<HeartbeatReply_Serialize>("webview_heartbeat", { visible, stallMs }, options),
 	/**  Store a secret in the OS keychain. There is no command that reads one back. */
 	secretSet: (service: string, account: string, value: string, options?: InvokeOptions) => __TAURI_INVOKE<null>("secret_set", { service, account, value }, options),
 	/**  Delete a secret from the OS keychain (deleting a missing one succeeds). */
@@ -65,6 +72,20 @@ export const commands = {
 	pickFolder: (options?: InvokeOptions) => __TAURI_INVOKE<PickedFolder | null>("pick_folder", undefined, options),
 	/**  Open an `http` or `https` link in the user's browser. */
 	openExternal: (url: string, options?: InvokeOptions) => __TAURI_INVOKE<null>("open_external", { url }, options),
+	/**
+	 *  Which of the paths a message names exist: inside one of `roots` (the session's or the bot's workspace) or absolute and
+	 *  there. Nothing is guessed (`paths.rs`).
+	 */
+	pathResolve: (candidates: string[], roots: string[], options?: InvokeOptions) => __TAURI_INVOKE<(ResolvedPath_Serialize | null)[]>("path_resolve", { candidates, roots }, options),
+	/**
+	 *  Open a path with the system's default app, or with one of the editors `path_editors` found (`editor`: its id). The
+	 *  default app never runs a program: a file that would run is refused (Show in folder and an editor still work).
+	 */
+	pathOpen: (path: string, editor: string | null, options?: InvokeOptions) => __TAURI_INVOKE<null>("path_open", { path, editor }, options),
+	/**  Show a path in the file manager, selected. */
+	pathReveal: (path: string, options?: InvokeOptions) => __TAURI_INVOKE<null>("path_reveal", { path }, options),
+	/**  The editors found on this computer, to open a file in. */
+	pathEditors: (options?: InvokeOptions) => __TAURI_INVOKE<PathEditor[]>("path_editors", undefined, options),
 	/**  The desktop's kind and the window's state. */
 	windowFacts: (options?: InvokeOptions) => __TAURI_INVOKE<WindowFacts_Serialize>("window_facts", undefined, options),
 	/**  Minimise, maximise or restore, full screen, or close the main window. */
@@ -264,6 +285,16 @@ export const commands = {
 	 *  Errors: `hx.provider.unknown`, `hx.provider.unsupported`, `hx.secrets.*`.
 	 */
 	providerSigninStatus: (way: string, options?: InvokeOptions) => __TAURI_INVOKE<ProviderState_Serialize>("provider_signin_status", { way }, options),
+	/**
+	 *  Give the bot `name` what its home needs (ADR-0042): the plugins boopis manages, its configuration (the Governed switch of
+	 *  its record among it) and its seat in groups. `fresh` is a bot made just now (its skills for another OS are switched off).
+	 *  The UI calls it after it makes, restores or changes a bot.
+	 */
+	botsPrepare: (name: string, fresh: boolean, options?: InvokeOptions) => __TAURI_INVOKE<BotPrepared>("bots_prepare", { name, fresh }, options),
+	/**  Take the bot `name` out of the root's groups (its `hosted_rooms.profiles` entry): after it is archived or deleted. */
+	botsRelease: (name: string, options?: InvokeOptions) => __TAURI_INVOKE<null>("bots_release", { name }, options),
+	/**  The one notice the bots' repair left (the governance change), taken: the app shows it once. `None` when there is none. */
+	botsNotice: (options?: InvokeOptions) => __TAURI_INVOKE<string | null>("bots_notice", undefined, options),
 };
 
 /** Events */
@@ -366,6 +397,14 @@ export type Attachment_Serialize = {
 	kind: AttachmentKind,
 	/**  The size of a file in bytes; unknown for a folder. */
 	bytes: number | null,
+};
+
+/**  What preparing a bot did: whether anything changed, and each step that could not be done, in plain words. */
+export type BotPrepared = {
+	/**  Its home changed (a plugin placed, a setting written, its seat in groups). */
+	changed: boolean,
+	/**  What could not be done; the other steps were. */
+	problems: string[],
 };
 
 /**  Where to go, and (for a flow that has one) the code to type. */
@@ -1440,6 +1479,21 @@ export type Gpu_Serialize = {
 	boot_display: boolean,
 };
 
+/**  What the host answers the page's heartbeat: the plain notice to show once after the host recovered the page. */
+export type HeartbeatReply = HeartbeatReply_Serialize | HeartbeatReply_Deserialize;
+
+/**  What the host answers the page's heartbeat: the plain notice to show once after the host recovered the page. */
+export type HeartbeatReply_Deserialize = {
+	/**  The sentence to show, once, when the host reloaded the page to recover the window. */
+	notice?: string | null,
+};
+
+/**  What the host answers the page's heartbeat: the plain notice to show once after the host recovered the page. */
+export type HeartbeatReply_Serialize = {
+	/**  The sentence to show, once, when the host reloaded the page to recover the window. */
+	notice: string | null,
+};
+
 /**
  *  One heavy model's opt-in (Settings > Models, the governed section): a model that is frontier but token-heavy or costly, so
  *  governed mode runs it only when the user turned it on (ADR-0037, ADR-0039). The data file marks the family heavy and holds the
@@ -1536,6 +1590,28 @@ export type HostError = {
 	/**  A human-readable message. */
 	message: string,
 };
+
+/**
+ *  How to get the program a way runs on, from the program's maker: the one command for this computer's system, where to paste
+ *  it, and the maker's page about it. The person runs it themselves; boopis never runs an installer.
+ */
+export type InstallHint = {
+	/**  Install or update. */
+	kind: InstallKind,
+	/**  The command, exactly as the maker publishes it (`irm https://claude.ai/install.ps1 | iex`). */
+	command: string,
+	/**  Where to paste it, as a person names it: `PowerShell`, `Terminal`, `a terminal`. */
+	shell: string,
+	/**  The maker's own page about installing or updating it. */
+	page: string,
+};
+
+/**  Whether a program is to be installed or brought up to date. */
+export type InstallKind = 
+/**  It is not on this computer, or it is there and does not start: the installer puts it (back) in place. */
+"install" | 
+/**  It is there and too old: the command updates it. */
+"update";
 
 /**  What an install would do, exactly: the review card's data. */
 export type InstallPlan = InstallPlan_Serialize | InstallPlan_Deserialize;
@@ -1761,6 +1837,14 @@ export type Pass =
 /**  Extracting into the temporary directory. */
 "unpack";
 
+/**  An editor found on this computer. */
+export type PathEditor = {
+	/**  Stable id, what `path_open` takes. */
+	id: string,
+	/**  Its name as people know it. */
+	name: string,
+};
+
 /**  Where the link to the gateway is. */
 export type Phase = 
 /**  Dialling, or waiting for the handshake. */
@@ -1846,6 +1930,8 @@ export type Probe_Deserialize = {
 	detail: string,
 	/**  The model aliases its version serves, cheapest first. Empty unless the version was read. */
 	aliases: string[],
+	/**  How to install it (not installed, or it did not start) or update it (too old), for this computer's system. */
+	install?: InstallHint | null,
 };
 
 /**  What a look at the CLI found. Nothing here is a credential. */
@@ -1860,6 +1946,8 @@ export type Probe_Serialize = {
 	detail: string,
 	/**  The model aliases its version serves, cheapest first. Empty unless the version was read. */
 	aliases: string[],
+	/**  How to install it (not installed, or it did not start) or update it (too old), for this computer's system. */
+	install: InstallHint | null,
 };
 
 /**  Where an item came from and how far that can be checked. */
@@ -1930,6 +2018,11 @@ export type ProviderState_Deserialize = {
 	signin?: SigninCode | null,
 	/**  When it was last checked, in milliseconds since the Unix epoch; `None` when never. */
 	checked_at?: number | null,
+	/**
+	 *  How to install or update the program the way runs on, when that is what stands in the way (`needs_install`, or an
+	 *  error that installing or updating fixes).
+	 */
+	install?: InstallHint | null,
 };
 
 /**  One way's state. */
@@ -1956,6 +2049,11 @@ export type ProviderState_Serialize = {
 	signin: SigninCode | null,
 	/**  When it was last checked, in milliseconds since the Unix epoch; `None` when never. */
 	checked_at: number | null,
+	/**
+	 *  How to install or update the program the way runs on, when that is what stands in the way (`needs_install`, or an
+	 *  error that installing or updating fixes).
+	 */
+	install: InstallHint | null,
 };
 
 /**  Where a way stands. */
@@ -1966,6 +2064,11 @@ export type ProviderStatus =
 "needs_key" | 
 /**  A sign-in way not signed in. */
 "signed_out" | 
+/**
+ *  A sign-in way whose program is not on this computer (Claude Code for the Claude subscription). Nothing failed: `install`
+ *  says how to get it, and the person checks again after.
+ */
+"needs_install" | 
 /**  A sign-in is waiting for the person (`signin` holds the page and the code). */
 "signing_in" | 
 /**  A runtime on this computer answered the last probe. */
@@ -1998,6 +2101,12 @@ export type ProxyStats_Deserialize = {
 	sink_p95_us?: number | null,
 	/**  p95 of writing a frame to the gateway socket, in microseconds. */
 	write_p95_us?: number | null,
+	/**  The deepest any UI connection's queue went, in frames. */
+	outbox_peak: number,
+	/**  Deliveries to the UI. */
+	batches: number,
+	/**  Frames delivered to the UI, after merging. */
+	frames_to_ui: number,
 };
 
 /**  A snapshot for the UI's diagnostics. */
@@ -2020,6 +2129,12 @@ export type ProxyStats_Serialize = {
 	sink_p95_us: number | null,
 	/**  p95 of writing a frame to the gateway socket, in microseconds. */
 	write_p95_us: number | null,
+	/**  The deepest any UI connection's queue went, in frames. */
+	outbox_peak: number,
+	/**  Deliveries to the UI. */
+	batches: number,
+	/**  Frames delivered to the UI, after merging. */
+	frames_to_ui: number,
 };
 
 /**  The short "you're set" note. */
@@ -2078,6 +2193,12 @@ export type RendererReport_Deserialize = {
 	 *  Filled when the report is asked for; Diagnostics is the one place they are shown.
 	 */
 	errors: RecentError[],
+	/**
+	 *  The web view's health (`webview_health`): web-process terminations and why, unresponsive periods, recoveries,
+	 *  the page's longest stall and the outbox peak, for this run and the one before. Filled when the report is asked
+	 *  for; `None` from `boopis doctor` (it prints the previous run's file itself).
+	 */
+	health?: WebviewHealthReport_Deserialize | null,
 };
 
 /**  Everything the diagnostics show: what was found, what was decided and what the web process will see. */
@@ -2117,6 +2238,39 @@ export type RendererReport_Serialize = {
 	 *  Filled when the report is asked for; Diagnostics is the one place they are shown.
 	 */
 	errors: RecentError[],
+	/**
+	 *  The web view's health (`webview_health`): web-process terminations and why, unresponsive periods, recoveries,
+	 *  the page's longest stall and the outbox peak, for this run and the one before. Filled when the report is asked
+	 *  for; `None` from `boopis doctor` (it prints the previous run's file itself).
+	 */
+	health: WebviewHealthReport_Serialize | null,
+};
+
+/**  What a path a message names turned out to be. */
+export type ResolvedPath = ResolvedPath_Serialize | ResolvedPath_Deserialize;
+
+/**  What a path a message names turned out to be. */
+export type ResolvedPath_Deserialize = {
+	/**  The path as the message wrote it. */
+	path: string,
+	/**  Where it is: absolute and canonical. */
+	abs: string,
+	/**  `file` or `folder`. */
+	kind: string,
+	/**  The path inside the workspace it was found in, `/`-separated; none for an absolute path outside every workspace. */
+	rel?: string | null,
+};
+
+/**  What a path a message names turned out to be. */
+export type ResolvedPath_Serialize = {
+	/**  The path as the message wrote it. */
+	path: string,
+	/**  Where it is: absolute and canonical. */
+	abs: string,
+	/**  `file` or `folder`. */
+	kind: string,
+	/**  The path inside the workspace it was found in, `/`-separated; none for an absolute path outside every workspace. */
+	rel: string | null,
 };
 
 /**  Why the decision came out as it did (stable names: they go in the log and in the diagnostics). */
@@ -2243,8 +2397,13 @@ export type StageResult_Serialize = {
 
 /**  Where the CLI stands, in the words a person needs. */
 export type State = 
-/**  No `claude` was found. */
+/**  No `claude` was found. Not a failure: the person installs it and checks again. */
 "not_installed" | 
+/**
+ *  A `claude` was found, but it did not start when boopis ran it (Windows could not run the file, it hung, it was removed
+ *  while boopis looked). A real failure: reinstalling fixes it.
+ */
+"failed" | 
 /**  Installed, and it says it is not signed in. */
 "signed_out" | 
 /**  Installed and signed in, but with a key or a cloud login that bills API usage, not the subscription. */
@@ -2931,6 +3090,105 @@ export type WebkitReport_Serialize = {
 	origin: WebkitOrigin,
 	/**  The path of the loaded `libwebkit2gtk`. */
 	library: string | null,
+};
+
+/**  One thing that happened to the web view. */
+export type WebviewEvent = WebviewEvent_Serialize | WebviewEvent_Deserialize;
+
+/**  One thing that happened to the web view. */
+export type WebviewEvent_Deserialize = {
+	/**  When, in seconds since the Unix epoch. */
+	at: number,
+	/**  `terminated`, `unresponsive`, `responsive`, `reloaded`, `stall` or `outbox`. */
+	kind: string,
+	/**  The reason or detail (`crashed`, `exceeded_memory`, the page's visibility...). */
+	detail: string,
+	/**  A duration in seconds, or a count, where the kind has one. */
+	value?: number | null,
+};
+
+/**  One thing that happened to the web view. */
+export type WebviewEvent_Serialize = {
+	/**  When, in seconds since the Unix epoch. */
+	at: number,
+	/**  `terminated`, `unresponsive`, `responsive`, `reloaded`, `stall` or `outbox`. */
+	kind: string,
+	/**  The reason or detail (`crashed`, `exceeded_memory`, the page's visibility...). */
+	detail: string,
+	/**  A duration in seconds, or a count, where the kind has one. */
+	value: number | null,
+};
+
+/**  What Diagnostics and `boopis doctor` show. */
+export type WebviewHealthReport = WebviewHealthReport_Serialize | WebviewHealthReport_Deserialize;
+
+/**  What Diagnostics and `boopis doctor` show. */
+export type WebviewHealthReport_Deserialize = {
+	/**  Whether the host watches the web process (Linux, once the window exists). */
+	watching: boolean,
+	/**  This run. */
+	this_run: WebviewRun_Deserialize,
+	/**
+	 *  The run before, as it was left (the file is written as things happen, so a run that was killed still says
+	 *  what it saw).
+	 */
+	last_run?: WebviewRun_Deserialize | null,
+};
+
+/**  What Diagnostics and `boopis doctor` show. */
+export type WebviewHealthReport_Serialize = {
+	/**  Whether the host watches the web process (Linux, once the window exists). */
+	watching: boolean,
+	/**  This run. */
+	this_run: WebviewRun_Serialize,
+	/**
+	 *  The run before, as it was left (the file is written as things happen, so a run that was killed still says
+	 *  what it saw).
+	 */
+	last_run: WebviewRun_Serialize | null,
+};
+
+/**  One run's record. */
+export type WebviewRun = WebviewRun_Serialize | WebviewRun_Deserialize;
+
+/**  One run's record. */
+export type WebviewRun_Deserialize = {
+	/**  When this run started, in seconds since the Unix epoch. */
+	started: number,
+	/**  The app's version. */
+	version: string,
+	/**  The events, oldest first, at most `MAX_EVENTS` (the oldest are dropped). */
+	events: WebviewEvent_Deserialize[],
+	/**  The longest main-thread stall the page measured while it was visible, in milliseconds. */
+	longest_stall_ms: number,
+	/**  The deepest any window's frame queue in the host went. */
+	outbox_peak: number,
+	/**  How many times the page was reloaded to recover it. */
+	recoveries: number,
+	/**  The last time the page said it was alive, in seconds since the Unix epoch, and whether it was visible then. */
+	last_heartbeat?: number | null,
+	/**  Whether the page was visible at the last heartbeat. */
+	last_visible?: boolean | null,
+};
+
+/**  One run's record. */
+export type WebviewRun_Serialize = {
+	/**  When this run started, in seconds since the Unix epoch. */
+	started: number,
+	/**  The app's version. */
+	version: string,
+	/**  The events, oldest first, at most `MAX_EVENTS` (the oldest are dropped). */
+	events: WebviewEvent_Serialize[],
+	/**  The longest main-thread stall the page measured while it was visible, in milliseconds. */
+	longest_stall_ms: number,
+	/**  The deepest any window's frame queue in the host went. */
+	outbox_peak: number,
+	/**  How many times the page was reloaded to recover it. */
+	recoveries: number,
+	/**  The last time the page said it was alive, in seconds since the Unix epoch, and whether it was visible then. */
+	last_heartbeat: number | null,
+	/**  Whether the page was visible at the last heartbeat. */
+	last_visible: boolean | null,
 };
 
 /**  What a title-bar button asks of the window. */

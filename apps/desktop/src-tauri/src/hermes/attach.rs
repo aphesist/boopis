@@ -32,8 +32,51 @@ pub struct EndpointInfo {
     pub runtime_protocol: Option<u32>,
 }
 
-/// The JSON `ensure --json` and `attach --json` print. Unknown fields are ignored.
-#[derive(Debug, Clone, Deserialize)]
+/// Every ticket in `text` replaced by `<redacted>`: the value of a `"ticket"` member, and the ticket subprotocol
+/// (`hermes-gateway-ticket.<ticket>`), which `attach --json` also prints in `protocols`, so hiding `ticket` alone would leave
+/// it there (the owner's B6). For anything that may hold what the engine printed for an attach: a `Debug`, a log line.
+#[must_use]
+pub fn redact_tickets(text: &str) -> String {
+    let token = |c: char| c.is_ascii_alphanumeric() || c == '-' || c == '_';
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    loop {
+        let at_proto = rest
+            .find(TICKET_PREFIX)
+            .map(|i| (i, i + TICKET_PREFIX.len()));
+        let at_member = rest.find("\"ticket\"").and_then(|i| {
+            let after = &rest[i + 8..];
+            let colon = after.find(|c: char| !c.is_whitespace())?;
+            if !after[colon..].starts_with(':') {
+                return None;
+            }
+            let quote = after[colon + 1..].find(|c: char| !c.is_whitespace())? + colon + 1;
+            after[quote..]
+                .starts_with('"')
+                .then_some((i, i + 8 + quote + 1))
+        });
+        let next = match (at_proto, at_member) {
+            (Some(a), Some(b)) => Some(if a.0 <= b.0 { a } else { b }),
+            (a, b) => a.or(b),
+        };
+        let Some((_, value_at)) = next else {
+            out.push_str(rest);
+            return out;
+        };
+        out.push_str(&rest[..value_at]);
+        let len = rest[value_at..]
+            .find(|c: char| !token(c))
+            .unwrap_or(rest.len() - value_at);
+        if len > 0 {
+            out.push_str("<redacted>");
+        }
+        rest = &rest[value_at + len..];
+    }
+}
+
+/// The JSON `ensure --json` and `attach --json` print. Unknown fields are ignored. Its `Debug` shows neither the ticket nor
+/// the protocols (one of which carries it).
+#[derive(Clone, Deserialize)]
 pub struct Verdict {
     /// `ready`, `starting`, `draining`, `inaccessible`, `incompatible`, `absent`, `conflict`.
     pub state: String,
@@ -53,6 +96,22 @@ pub struct Verdict {
     pub protocols: Option<Vec<String>>,
     /// `attach` only: the single-use ticket.
     pub ticket: Option<String>,
+}
+
+impl fmt::Debug for Verdict {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Verdict")
+            .field("state", &self.state)
+            .field("reason_code", &self.reason_code)
+            .field("detail", &self.detail)
+            .field("message", &self.message)
+            .field("endpoint", &self.endpoint)
+            .field("client_code_sha", &self.client_code_sha)
+            .field("url", &self.url)
+            .field("protocols", &self.protocols.as_ref().map(|_| "<redacted>"))
+            .field("ticket", &self.ticket.as_ref().map(|_| "<redacted>"))
+            .finish()
+    }
 }
 
 impl Verdict {
@@ -287,6 +346,40 @@ mod tests {
                 .capabilities
                 .contains(&"event-replay-v1".to_owned())
         );
+    }
+
+    /// B6: `attach --json` repeats the ticket inside `protocols`; nothing the host can print shows either copy.
+    #[test]
+    fn the_ticket_in_protocols_is_never_printed_either() {
+        let v = Verdict::parse(ATTACH).unwrap();
+        let shown = format!("{v:?}");
+        assert!(!shown.contains("9XrhLALJ"), "{shown}");
+        assert!(shown.contains("ready"), "the rest is still there: {shown}");
+        let refused = Verdict {
+            state: "conflict".into(),
+            ..v.clone()
+        }
+        .refusal()
+        .to_string();
+        assert!(!refused.contains("9XrhLALJ"), "{refused}");
+        // what the CLI printed, wherever it might be shown
+        let out = crate::hermes::cli::Output {
+            code: 0,
+            stdout: ATTACH.to_owned(),
+            stderr: String::new(),
+        };
+        let shown = format!("{out:?}");
+        assert!(!shown.contains("9XrhLALJ"), "{shown}");
+        assert_eq!(
+            redact_tickets(ATTACH).matches("<redacted>").count(),
+            2,
+            "the member and the subprotocol"
+        );
+        assert_eq!(
+            redact_tickets(r#"{"ticket" : "abc", "protocols": ["hermes-gateway-v1"]}"#),
+            r#"{"ticket" : "<redacted>", "protocols": ["hermes-gateway-v1"]}"#
+        );
+        assert_eq!(redact_tickets("no ticket here"), "no ticket here");
     }
 
     #[test]

@@ -3,8 +3,8 @@
    not answer is `null` or empty and is shown as unknown: nothing here invents a model, a schedule or a session. */
 import type { CronJobRow, ProfileRow, ProfilesDescribeResult, SessionListRow } from '../../vendor/hermes-shared/gateway-contract.generated';
 import { OWN_SETTINGS } from '../../data/bot-catalog';
-import { lookFor } from '../../data/looks';
-import type { Bot, BotCapability, BotConfig, BotInfo, BotJob, BotSession } from '../../data/types';
+import { lookOf } from '@boopis/ui';
+import type { Bot, BotCapability, BotConfig, BotInfo, BotJob, BotSession, BotWorker } from '../../data/types';
 import { whenLabel } from '../map';
 
 /** what an archived teammate's profile is called: this, then its name (the plugin's rule, `bots/homes.py`) */
@@ -14,7 +14,7 @@ export const ACTIVE_SECONDS = 90;
 
 /** a teammate's own record as the plugin reads it (`plugin.boopis.bots.read`) */
 export interface OwnRecord {
-  look?: { shape?: string; color?: string; eyes?: unknown };
+  look?: { shape?: unknown; color?: unknown; eyes?: unknown };   /* as written: by boopis, or by hand for a profile made outside it */
   settings?: { gov?: string; cap?: string; workspace?: string };
   approvals?: Record<string, boolean>;
 }
@@ -50,6 +50,14 @@ export function runningFrom(row: ProfileRow, nowSeconds: number): boolean | null
   const stamps = [row.last_session?.last_active, row.worker_session?.last_active].filter((n): n is number => typeof n === 'number' && Number.isFinite(n));
   if (!stamps.length) return row.last_session === undefined && row.worker_session === undefined ? null : false;
   return nowSeconds - Math.max(...stamps) <= ACTIVE_SECONDS;
+}
+
+/** a kanban worker of the profile wrote lately (`worker_session`, the newest session whose source is kanban, tool or oneshot) */
+export function workerFrom(row: ProfileRow, nowSeconds: number): BotWorker | null {
+  const w = row.worker_session;
+  if (!w || (w.source ?? '').trim().toLowerCase() !== 'kanban') return null;
+  if (typeof w.last_active !== 'number' || !Number.isFinite(w.last_active) || nowSeconds - w.last_active > ACTIVE_SECONDS) return null;
+  return { title: (w.title ?? '').trim() };
 }
 
 /** "in 7 min", "in 3 h", "tomorrow 09:00": when a job runs next, '' when Hermes gives no time */
@@ -93,7 +101,7 @@ export function capabilitiesFrom(d: ProfilesDescribeResult): Pick<BotInfo, 'skil
 export function ownConfig(record: OwnRecord | null | undefined): Pick<BotConfig, 'gov' | 'cap' | 'workspace' | 'approvals'> {
   const s = record?.settings ?? {};
   return {
-    gov: s.gov === 'ungoverned' ? 'ungoverned' : OWN_SETTINGS.gov,
+    gov: s.gov === 'governed' ? 'governed' : OWN_SETTINGS.gov,   /* opt-in: governed only when the owner turned it on (ADR-0042) */
     cap: s.cap ?? OWN_SETTINGS.cap,
     workspace: s.workspace === 'sandbox' ? 'sandbox' : OWN_SETTINGS.workspace,
     approvals: { ...OWN_SETTINGS.approvals, ...(record?.approvals ?? {}) }
@@ -109,26 +117,27 @@ export interface Known {
   sessions: readonly BotSession[] | null;
   notes: BotInfo['notes'];
 }
+/** what a working bot is doing, said plainly: a kanban card is named as one */
+const activityOf = (row: ProfileRow, worker: BotWorker | null): string => (worker ? 'kanban task' + (worker.title ? ': ' + worker.title : '') : (row.worker_session?.title ?? '').trim());
 export function botFrom(k: Known, nowSeconds: number): Bot {
   const { row, plugin, detail } = k;
   const name = botName(row);
   const own = plugin?.record ?? null;
-  /* the stored `eyes` is left in the record and ignored here: eyes follow the bot's state, never a stored look */
-  const own_ = own?.look ?? {};
-  const base = lookFor(name);
-  const look = { shape: own_.shape ?? base.shape, color: own_.color ?? base.color };
+  /* the one resolver (`lookOf`): the record's shape and colour where they are valid, else the name's. The stored `eyes` is left in
+     the record and ignored: eyes follow the bot's state, never a stored look */
+  const look = lookOf({ name, shape: own?.look?.shape, color: own?.look?.color });
   const model = detail ? modelLabel(detail.provider, detail.model) : modelLabel(row.provider, row.model);
   const running = runningFrom(row, nowSeconds);
   const jobs = k.jobs;
   const info: BotInfo = {
     profile: row.name, path: row.path, model, provider: detail?.provider ?? (row.provider || null),
     skills: detail?.skills ?? null, toolsets: detail?.toolsets ?? null, mcpServers: detail?.mcpServers ?? null,
-    jobs, sessions: k.sessions, soul: detail?.soul ?? null, running, notes: k.notes
+    jobs, sessions: k.sessions, soul: detail?.soul ?? null, running, worker: workerFrom(row, nowSeconds), notes: k.notes
   };
   return {
     id: row.name, name, role: (detail?.role ?? row.description ?? '').trim(),
     ...look,
-    state: running ? 'working' : 'idle', attention: null, paused: false, activity: running ? (row.worker_session?.title ?? '').trim() : '', spent: '', last: null, ideas: [],
+    state: running ? 'working' : 'idle', attention: null, paused: false, activity: running ? activityOf(row, info.worker ?? null) : '', spent: '', last: null, ideas: [],
     ...(madeOutside(plugin) ? { madeOutside: true as const } : {}),
     cfg: {
       instructions: detail?.soul ?? '', model: model ?? '',

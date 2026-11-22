@@ -146,6 +146,41 @@ impl Hubs {
             .ok_or(Error::UnknownConnection(id))
     }
 
+    /// Close every UI connection: the main window's page is loading again (a reload, or the watchdog's recovery), so
+    /// the connections the old page opened have no reader any more. Their queues would otherwise fill to the hard cap
+    /// before they were dropped. The links to the gateway stay up.
+    pub fn close_all_connections(&self) -> usize {
+        let ids: Vec<ConnectionId> = self
+            .index
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .keys()
+            .copied()
+            .collect();
+        for id in &ids {
+            if let Some(hub) = self.forget(*id) {
+                hub.close(*id);
+            }
+        }
+        ids.len()
+    }
+
+    /// The deepest any UI connection's queue went, across every proxy.
+    #[must_use]
+    pub fn outbox_peak(&self) -> u32 {
+        self.by_profile
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .values()
+            .map(|h| {
+                h.metrics()
+                    .outbox_peak
+                    .load(std::sync::atomic::Ordering::Relaxed)
+            })
+            .max()
+            .unwrap_or(0)
+    }
+
     /// Stop every proxy (app exit).
     pub fn shutdown(&self) {
         for h in self

@@ -593,6 +593,37 @@ mod tests {
         assert!(all[0].path.ends_with("notes.md") && Path::new(&all[0].path).is_absolute());
     }
 
+    /// The window is undecorated, so the UI's title bars are its only chrome. Their drag region (`data-tauri-drag-region`)
+    /// calls Tauri's `start_dragging` on a press and `internal_toggle_maximize` on a double click; without both permissions
+    /// the window neither moves nor maximises from its bar. Windows needs the shadow and a resizable window for its edges to
+    /// resize (the invisible frame left, right and below, Tauri's own strip at the top) and for Snap.
+    #[test]
+    fn the_undecorated_window_keeps_what_a_normal_window_does() {
+        let caps: serde_json::Value =
+            serde_json::from_str(include_str!("../capabilities/main.json")).unwrap();
+        let perms: Vec<&str> = caps["permissions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(serde_json::Value::as_str)
+            .collect();
+        for want in [
+            "core:window:allow-start-dragging",
+            "core:window:allow-internal-toggle-maximize",
+            "allow-window-facts",
+            "allow-window-control",
+        ] {
+            assert!(perms.contains(&want), "the main window lacks {want}");
+        }
+        let conf: serde_json::Value =
+            serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+        let main = &conf["app"]["windows"][0];
+        assert_eq!(main["label"], "main");
+        assert_eq!(main["decorations"], false);
+        assert_eq!(main["shadow"], true);
+        assert_eq!(main["resizable"], true);
+    }
+
     #[test]
     fn a_drop_of_a_thousand_paths_attaches_the_first_sixty_four() {
         let dir = tempfile::tempdir().unwrap();

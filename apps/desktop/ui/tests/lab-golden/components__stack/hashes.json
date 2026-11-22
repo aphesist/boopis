@@ -1,0 +1,142 @@
+{
+ "a-hundred-and-twenty@bone": {
+  "sha": "19af9d837e54c3888e643e3c577163a766a7e428",
+  "w": 1416,
+  "h": 60
+ },
+ "a-hundred-and-twenty@catalog": {
+  "sha": "b48e2c40507bac13ef7721639d961dcc885955d6",
+  "w": 1416,
+  "h": 60
+ },
+ "a-hundred-and-twenty@graphite": {
+  "sha": "23e4d904429fca985a8a1d23f36d0562978c5a87",
+  "w": 1416,
+  "h": 60
+ },
+ "a-hundred-and-twenty@typewriter": {
+  "sha": "23e4d904429fca985a8a1d23f36d0562978c5a87",
+  "w": 1416,
+  "h": 60
+ },
+ "focused-with-n@bone": {
+  "sha": "77e52ecf2be51d7b46412d904fa738ebbf17ba8f",
+  "w": 1416,
+  "h": 48
+ },
+ "focused-with-n@catalog": {
+  "sha": "aff0962e99145a2cab62280fefd1a30a06684f80",
+  "w": 1416,
+  "h": 48
+ },
+ "focused-with-n@graphite": {
+  "sha": "2bea5a9aaef65c5130700dce9cb44ae7c2ff7c00",
+  "w": 1416,
+  "h": 48
+ },
+ "focused-with-n@typewriter": {
+  "sha": "7f3266d52097e66ca7f445430c21482156ee25de",
+  "w": 1416,
+  "h": 48
+ },
+ "four-places-and-n@bone": {
+  "sha": "0c9e29b0f5aa318f57c429870b2c818414f300f1",
+  "w": 1416,
+  "h": 136
+ },
+ "four-places-and-n@catalog": {
+  "sha": "a6d4105bcbbb98f4bbf739a1ddcf57fcbd65148a",
+  "w": 1416,
+  "h": 136
+ },
+ "four-places-and-n@graphite": {
+  "sha": "3f4829ce629481655604b4dd445b1f4f9850f455",
+  "w": 1416,
+  "h": 136
+ },
+ "four-places-and-n@typewriter": {
+  "sha": "3f4829ce629481655604b4dd445b1f4f9850f455",
+  "w": 1416,
+  "h": 136
+ },
+ "long@bone": {
+  "sha": "ff02dd0b2e2ba581de8b40439f572cc76b11e23a",
+  "w": 1416,
+  "h": 48
+ },
+ "long@catalog": {
+  "sha": "92f2fdd8b9861a2841c2ee969dbfa1bfd9aa0756",
+  "w": 1416,
+  "h": 48
+ },
+ "long@graphite": {
+  "sha": "6ddf12ed10977ac8d04a5428c0a4032b11822dad",
+  "w": 1416,
+  "h": 48
+ },
+ "long@typewriter": {
+  "sha": "6ddf12ed10977ac8d04a5428c0a4032b11822dad",
+  "w": 1416,
+  "h": 48
+ },
+ "on-the-dock@bone": {
+  "sha": "d7913268086fca02ade0fd969afe3ef5970d8e9b",
+  "w": 1416,
+  "h": 48
+ },
+ "on-the-dock@catalog": {
+  "sha": "f4768da9725e379e1e8f47d4f3b163c15b0ef8f6",
+  "w": 1416,
+  "h": 48
+ },
+ "on-the-dock@graphite": {
+  "sha": "f0a4680d847f085fa6eccc8c9762a88a34eab40e",
+  "w": 1416,
+  "h": 48
+ },
+ "on-the-dock@typewriter": {
+  "sha": "f0a4680d847f085fa6eccc8c9762a88a34eab40e",
+  "w": 1416,
+  "h": 48
+ },
+ "one-and-two@bone": {
+  "sha": "6ce5ed7de6ce248797c3668c9b193a942e984aa4",
+  "w": 1416,
+  "h": 60
+ },
+ "one-and-two@catalog": {
+  "sha": "d0f0dfe50f83d80de81f100a2f68a280bcebf704",
+  "w": 1416,
+  "h": 60
+ },
+ "one-and-two@graphite": {
+  "sha": "2f37377274facb075a01e81e294c6f390b1c5f58",
+  "w": 1416,
+  "h": 60
+ },
+ "one-and-two@typewriter": {
+  "sha": "2f37377274facb075a01e81e294c6f390b1c5f58",
+  "w": 1416,
+  "h": 60
+ },
+ "typical@bone": {
+  "sha": "8c4b4ce2988c5364728e9e31177377330f2b88ce",
+  "w": 1416,
+  "h": 136
+ },
+ "typical@catalog": {
+  "sha": "2b32e2994a52a6da4cac93d923aadbc81a94a346",
+  "w": 1416,
+  "h": 136
+ },
+ "typical@graphite": {
+  "sha": "7ce6799a2fa3e68c6c0f7a55fe783f1d02e4002c",
+  "w": 1416,
+  "h": 136
+ },
+ "typical@typewriter": {
+  "sha": "7ce6799a2fa3e68c6c0f7a55fe783f1d02e4002c",
+  "w": 1416,
+  "h": 136
+ }
+}

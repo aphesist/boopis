@@ -49,10 +49,10 @@ pub enum Error {
     #[error("{0} needs the user's consent")]
     ConsentRequired(&'static str),
     /// No secret store is running (on Linux: no Secret Service).
-    #[error("no secret store is available: {0}")]
+    #[error("{0}")]
     SecretsUnavailable(String),
     /// The secret store refused or failed.
-    #[error("secret store: {0}")]
+    #[error("{0}")]
     Secrets(String),
     /// The secret does not exist.
     #[error("no such secret")]
@@ -84,6 +84,13 @@ pub enum Error {
     /// A provider operation failed with its own stable code (`hx.provider.*`).
     #[error("{1}")]
     Provider(&'static str, String),
+    /// A background task ended without an answer: it panicked (a bug in boopis) or was cancelled at shutdown. The text is the
+    /// raw one, for Diagnostics; a person reads `hx.host.task_failed`'s sentence ([`joined`]).
+    #[error("{0}")]
+    Task(String),
+    /// A bot could not be made, changed or prepared, with its own stable code (`hx.bots.*`, ADR-0042).
+    #[error("{1}")]
+    Bots(&'static str, String),
 }
 
 /// A specialised `Result`.
@@ -145,10 +152,12 @@ impl Error {
             Self::Secrets(_) => "hx.secrets.failed",
             Self::SecretNotFound => "hx.secrets.not_found",
             Self::Os(_) => "hx.host.os",
+            Self::Task(_) => "hx.host.task_failed",
             Self::Setup(code, _)
             | Self::Connector(code, _)
             | Self::Store(code, _)
-            | Self::Provider(code, _) => code,
+            | Self::Provider(code, _)
+            | Self::Bots(code, _) => code,
         }
     }
 }
@@ -204,6 +213,9 @@ const ENGINE_CODES: &[&str] = &[
     "hx.store.install_failed",
 ];
 
+/// The codes whose message is raw by nature (a panic's text, a cancelled task): the UI always gets the catalog's sentence.
+const RAW_CODES: &[&str] = &["hx.host.task_failed"];
+
 /// The fallback for a code the catalog gives no sentence.
 const FALLBACK: &str = "hx.engine.refused";
 
@@ -252,7 +264,11 @@ pub fn names_engine(text: &str) -> bool {
 /// Diagnostics and logged; nothing else is.
 #[must_use]
 pub fn user_message(code: &str, raw: &str) -> String {
-    if !ENGINE_CODES.contains(&code) && !names_engine(raw) && !raw.trim().is_empty() {
+    if !ENGINE_CODES.contains(&code)
+        && !RAW_CODES.contains(&code)
+        && !names_engine(raw)
+        && !raw.trim().is_empty()
+    {
         return raw.to_owned();
     }
     record(code, raw);
@@ -269,6 +285,30 @@ pub fn unless_engine(code: &str, raw: &str) -> String {
     } else {
         raw.to_owned()
     }
+}
+
+/// What a person reads for `e`: the one mapper's words (the text of a sign-in's end event goes through here too).
+#[must_use]
+pub fn shown(e: Error) -> String {
+    HostError::from(e).message
+}
+
+/// `e`, whose message is already plain words, after keeping `raw` (what the transport, the server or the parser actually said)
+/// for Diagnostics and the log. The raw text never reaches a message.
+#[must_use]
+pub fn kept(e: Error, raw: impl AsRef<str>) -> Error {
+    record(e.code(), raw.as_ref());
+    e
+}
+
+/// A blocking task that ended without an answer (`spawn_blocking`'s `JoinError`): a panic, which is a bug in boopis, or a
+/// cancellation at shutdown. Never shown as it is: a person reads `hx.host.task_failed`'s sentence and Diagnostics keeps the text.
+#[must_use]
+pub fn joined(e: &tokio::task::JoinError) -> Error {
+    if e.is_panic() {
+        tracing::error!(error = %e, "a background task panicked");
+    }
+    Error::Task(e.to_string())
 }
 
 /// One raw error kept for Diagnostics: the code, what was actually said, and when (Unix seconds).
@@ -297,7 +337,7 @@ fn record(code: &str, raw: &str) {
     tracing::warn!(
         code,
         detail = raw,
-        "an engine error was shown as its catalog sentence"
+        "raw error text kept for Diagnostics; the person read plain words"
     );
     let at = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -365,6 +405,7 @@ mod tests {
             Error::Ws(raw.into()),
             Error::Timeout("hermes gateway ensure"),
             Error::Os(raw.into()),
+            Error::Task(raw.into()),
             Error::Setup("hx.setup.config_failed", raw.into()),
             Error::Setup("hx.setup.runtime_corrupt", "anything".into()),
             Error::Connector("hx.connectors.failed", raw.into()),
@@ -402,10 +443,40 @@ mod tests {
         );
     }
 
+    /// A panic in a blocking task reaches a person as a plain sentence; its text is kept for Diagnostics.
+    #[tokio::test]
+    async fn a_panicking_task_is_a_plain_sentence() {
+        let joined = tokio::task::spawn_blocking(|| -> u8 {
+            panic!("No CryptoProvider for Rustls. Either enable feature `rustls`")
+        })
+        .await
+        .map_err(|e| joined(&e))
+        .unwrap_err();
+        assert_eq!(joined.code(), "hx.host.task_failed");
+        let seen: HostError = joined.into();
+        assert!(!seen.message.contains("panicked"), "{}", seen.message);
+        assert!(!seen.message.contains("CryptoProvider"), "{}", seen.message);
+        assert!(seen.message.contains("Try again"), "{}", seen.message);
+        assert!(
+            recent()
+                .iter()
+                .any(|r| r.code == "hx.host.task_failed" && r.detail.contains("panicked"))
+        );
+        let plain = kept(
+            Error::Provider(
+                "hx.provider.unreachable",
+                "boopis could not reach GitHub.".into(),
+            ),
+            "io: Connection refused (os error 111)",
+        );
+        assert_eq!(shown(plain), "boopis could not reach GitHub.");
+        assert!(recent().iter().any(|r| r.detail.contains("os error 111")));
+    }
+
     /// Every code the host can raise has a sentence of its own in the catalog, and no sentence names the engine.
     #[test]
     fn the_catalog_has_a_sentence_for_every_host_code() {
-        for code in ENGINE_CODES {
+        for code in ENGINE_CODES.iter().chain(RAW_CODES) {
             assert!(
                 sentences().contains_key(*code),
                 "{code} has no user sentence"

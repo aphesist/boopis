@@ -11,6 +11,13 @@ app carries its own runtime and would otherwise unpack it and ignore this one. A
 (``setup-done.json``, which the host's own tests read as "set up"), because the UI shows first-run setup instead of a
 session until setup has finished; the first-run flow itself is tested by ``tests/setup_live.rs``.
 
+Then, when ``xdotool`` is installed, the window is hidden (unmapped, as a switch of workspace hides it) for
+``HX_SMOKE_HIDE`` seconds (30 by default; 0 skips it) while a long reply streams into it, and shown again: the page
+must answer a script and draw a frame within ``HX_SMOKE_RETURN_BUDGET`` seconds (10), the reply must be in the
+conversation, the web process must still be the same one, and the host must have delivered in batches with the page's
+acknowledgements (``gateway_stats``) and heard its heartbeat. The owner's report: a window left on another workspace
+came back grey and unresponsive.
+
 Needs ``xvfb-run`` and
 ``WebKitWebDriver`` (Debian/Ubuntu: ``webkit2gtk-driver``). Exit 0 on success, 3 when a prerequisite is missing.
 Everything it starts is stopped on the way out.
@@ -36,7 +43,7 @@ SETUP_DONE = HERE / "setup-done.json"  # what the host's setup leaves in a home 
 REPLY = "Hello from the fake model, streamed through the host."
 
 
-def call(method: str, path: str, body: object | None = None) -> dict:
+def call(method: str, path: str, body: object | None = None, timeout: float = 60) -> dict:
     req = urllib.request.Request(
         f"http://127.0.0.1:{PORT}{path}",
         method=method,
@@ -44,7 +51,7 @@ def call(method: str, path: str, body: object | None = None) -> dict:
         headers={"Content-Type": "application/json"},
     )
     try:
-        with urllib.request.urlopen(req, timeout=60) as r:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
             return json.loads(r.read() or b"{}")
     except urllib.error.HTTPError as e:
         raise RuntimeError(f"{method} {path}: HTTP {e.code} {e.read().decode(errors='replace')[:400]}") from None
@@ -109,8 +116,17 @@ def main() -> int:
             "LIBGL_ALWAYS_SOFTWARE": "1",
             "RUST_LOG": "info",
         }
+        display_file = Path(runtime) / "display"
         driver = subprocess.Popen(
-            ["xvfb-run", "-a", "-s", "-screen 0 1440x900x24", "WebKitWebDriver", f"--port={PORT}"],
+            [
+                "xvfb-run",
+                "-a",
+                "-s",
+                "-screen 0 1440x900x24",
+                "sh",
+                "-c",
+                f'echo "$DISPLAY $XAUTHORITY" > {display_file}; exec WebKitWebDriver --port={PORT}',
+            ],
             env=env,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -167,6 +183,7 @@ def main() -> int:
         assert "proration" not in text(), "no mock draft or mock data in the live window"
         time.sleep(1)
         print("streamed reply seen in the window:", REPLY)
+        hide_and_return(s, display_file, agent_text)
         if shot:
             png = call("GET", f"{s}/screenshot")["value"]
             import base64
@@ -187,6 +204,115 @@ def main() -> int:
         if stack.stdin:
             stack.stdin.close()
         stack.wait(60)
+
+
+def hide_and_return(s: str, display_file: Path, agent_text) -> None:
+    """Hide the window while a long reply streams, show it again, and check it came back alive (see the docstring)."""
+    seconds = float(os.environ.get("HX_SMOKE_HIDE", "30"))
+    budget = float(os.environ.get("HX_SMOKE_RETURN_BUDGET", "10"))
+    if seconds <= 0:
+        return
+    if not shutil.which("xdotool"):
+        print("xdotool is not installed: the hidden-window check is skipped")
+        return
+    # xvfb-run guards its server with a cookie: xdotool needs the display and the cookie's file
+    display, _, auth = display_file.read_text().strip().partition(" ")
+    xenv = {**os.environ, "DISPLAY": display, **({"XAUTHORITY": auth} if auth else {})}
+
+    def js(script: str, timeout: float = 120):
+        return call("POST", f"{s}/execute/sync", {"script": script, "args": []}, timeout)["value"]
+
+    def ajs(script: str, timeout: float = 120):
+        return call("POST", f"{s}/execute/async", {"script": script, "args": []}, timeout)["value"]
+
+    def webprocs() -> set[int]:
+        out = subprocess.run(["pgrep", "-f", "WebKitWebProcess"], check=False, capture_output=True, text=True).stdout
+        return {int(x) for x in out.split()}
+
+    def search(*how: str) -> list[str]:
+        found = subprocess.run(
+            ["xdotool", "search", "--onlyvisible", *how], check=False, env=xenv, capture_output=True, text=True
+        )
+        return found.stdout.split()
+
+    # The window's class is the binary's name; its title may be empty (the window is undecorated). By process last.
+    windows = search("--class", "boopis") or search("--classname", "boopis")
+    if not windows:
+        pids = subprocess.run(["pgrep", "-x", "boopis"], check=False, capture_output=True, text=True).stdout.split()
+        windows = [w for pid in pids for w in search("--pid", pid)]
+    if not windows:
+        raise SystemExit("could not find the app's window to hide")
+    before = webprocs()
+    # about 700 deltas: the engine streams them at its own pace (tens to hundreds a second on a runner)
+    long_reply = "Hidden " + ("streaming while the window is away. " * 240)
+    marker = "window-came-back"
+    prompt = "@@reply " + long_reply + marker + "@@"
+    # the first turn has ended (the send button is not Stop), then the long prompt goes in and Enter sends it
+    wait_for(
+        lambda: js(
+            "const b = document.querySelector('.ui-send'); return !!b && b.getAttribute('aria-label') === 'Send'"
+        ),
+        "the first turn to end",
+        60,
+    )
+    js(
+        "const c = document.querySelector('.ui-composer__input'); c.focus();"
+        f"document.execCommand('insertText', false, {json.dumps(prompt)}); return true;"
+    )
+    composer = call("POST", f"{s}/element", {"using": "css selector", "value": ".ui-composer__input"})["value"]
+    call("POST", f"{s}/element/{next(iter(composer.values()))}/value", {"text": "\ue007"})
+    wait_for(
+        lambda: (
+            js("return document.querySelector('.ui-send')?.getAttribute('aria-label') === 'Stop'")
+            or marker in agent_text()
+        ),
+        "the long prompt to start a turn",
+        30,
+    )
+    for w in windows:
+        subprocess.run(["xdotool", "windowunmap", w], env=xenv, check=False)
+    print(f"window hidden for {seconds:.0f} s while a reply of {len(long_reply)} characters streams")
+    time.sleep(seconds)
+    for w in windows:
+        subprocess.run(["xdotool", "windowmap", w], env=xenv, check=False)
+    t0 = time.time()
+    js("return document.visibilityState")
+    answered = time.time() - t0
+    ajs("const done = arguments[arguments.length - 1]; requestAnimationFrame(() => done(true));")
+    drew = time.time() - t0
+    print(f"shown again: a script answered after {answered:.2f} s, a frame was drawn after {drew:.2f} s")
+    if drew > budget:
+        raise SystemExit(f"the window took {drew:.1f} s to come back (budget {budget:.0f} s)")
+    try:
+        wait_for(lambda: marker in agent_text(), "the reply streamed while hidden", 180)
+    except SystemExit:
+        with contextlib.suppress(Exception):
+            tail = agent_text()
+            print(f"--- the conversation's prose ({len(tail)} characters), its end:", tail[-400:], sep="\n")
+        with contextlib.suppress(Exception):
+            print(
+                "--- the proxy:",
+                json.dumps(
+                    ajs(
+                        "const done = arguments[arguments.length - 1];"
+                        "window.__TAURI_INTERNALS__.invoke('gateway_stats', {profile: null})"
+                        ".then(done, (e) => done(String(e)));"
+                    )
+                ),
+            )
+        raise
+    stats = ajs(
+        "const done = arguments[arguments.length - 1];"
+        "window.__TAURI_INTERNALS__.invoke('gateway_stats', {profile: null})"
+        ".then(done, (e) => done({error: String(e)}));"
+    )
+    print("proxy after the return:", json.dumps(stats))
+    if not isinstance(stats, dict) or not stats.get("batches") or stats.get("slow_closed"):
+        raise SystemExit(f"the host did not deliver in acknowledged batches: {stats}")
+    after = webprocs()
+    if before and not (before & after):
+        raise SystemExit(f"the web process changed while hidden (before {before}, after {after})")
+    print("the window came back alive: same web process, reply in place")
 
 
 if __name__ == "__main__":

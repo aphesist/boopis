@@ -109,8 +109,31 @@ fn has_prefix(name: &str, prefix: &str, windows: bool) -> bool {
     }
 }
 
-/// What a finished `hermes` call produced. `stdout` and `stderr` are capped.
-#[derive(Debug)]
+/// The environment a `hermes` child gets, before the secret channel and `HERMES_HOME`: the allowlist of this process's own
+/// variables (without the user's Hermes settings when `isolated`), then `extra`. When the Claude subscription plugin's own
+/// lookup would miss the `claude` setup found (only in npm's or winget's folder, or behind the Claude desktop app's alias on
+/// Windows), the plugin's override variable names it, so the engine runs the program setup checked (ADR-0029).
+#[must_use]
+pub fn child_vars(isolated: bool, extra: &[(String, String)]) -> Vec<(String, String)> {
+    let mut vars: Vec<(String, String)> = std::env::vars_os()
+        .filter_map(|(k, v)| Some((k.into_string().ok()?, v.into_string().ok()?)))
+        .filter(|(k, _)| {
+            if isolated {
+                passes_isolated(k)
+            } else {
+                passes(k)
+            }
+        })
+        .chain(extra.iter().cloned())
+        .collect();
+    if let Some(claude) = crate::claude::engine_override(&vars.iter().cloned().collect()) {
+        vars.push(claude);
+    }
+    vars
+}
+
+/// What a finished `hermes` call produced. `stdout` and `stderr` are capped. Its `Debug` hides any gateway ticket either
+/// holds (`attach --json` prints one twice).
 pub struct Output {
     /// The exit code, `-1` when the process was killed by a signal.
     pub code: i32,
@@ -118,6 +141,17 @@ pub struct Output {
     pub stdout: String,
     /// Standard error as UTF-8 (lossy).
     pub stderr: String,
+}
+
+impl std::fmt::Debug for Output {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use super::attach::redact_tickets;
+        f.debug_struct("Output")
+            .field("code", &self.code)
+            .field("stdout", &redact_tickets(&self.stdout))
+            .field("stderr", &redact_tickets(&self.stderr))
+            .finish()
+    }
 }
 
 /// What a call that starts a gateway adds: the secret channel's socket and token, for that call's environment only, and
@@ -228,16 +262,7 @@ impl Cli {
         let mut cmd = Command::new(binary);
         cmd.args(args)
             .env_clear()
-            .envs(std::env::vars_os().filter(|(k, _)| {
-                k.to_str().is_some_and(|k| {
-                    if self.isolated {
-                        passes_isolated(k)
-                    } else {
-                        passes(k)
-                    }
-                })
-            }))
-            .envs(self.extra.iter().map(|(k, v)| (k, v)))
+            .envs(child_vars(self.isolated, &self.extra))
             .envs(
                 channel
                     .iter()
@@ -283,13 +308,45 @@ impl Cli {
         Ok(Output {
             code: status.code().unwrap_or(-1),
             stdout: String::from_utf8_lossy(&o).into_owned(),
-            stderr: String::from_utf8_lossy(&e).into_owned(),
+            stderr: without_sync_notice(&String::from_utf8_lossy(&e)),
         })
     }
 }
 
+/// The engine's package manager checks, on every command, that the tools of its lock file are in its own store, and prints
+/// `⚠ install out of sync (ffmpeg, node, npm, pnpm, ripgrep: not installed or outdated)` when they are not. The runtime boopis
+/// carries ships only the interpreter and `uv` by design (`scripts/runtime/build_payload.py`): the engine fetches the other
+/// tools into the home's own store the first time it needs them, and uses the machine's own copies on `PATH` meanwhile. So the
+/// line says nothing the person can act on; it is kept out of everything the host reads back from the engine's CLI (an error's
+/// tail, a step's note), and logged once (B7).
+#[must_use]
+pub fn without_sync_notice(stderr: &str) -> String {
+    static LOGGED: std::sync::Once = std::sync::Once::new();
+    let mut kept = String::with_capacity(stderr.len());
+    for line in stderr.split_inclusive('\n') {
+        let bare = line.trim_start_matches(['⚠', ' ', '\u{fe0f}']);
+        if bare.starts_with("install out of sync (") {
+            LOGGED.call_once(|| tracing::debug!(notice = %line.trim(), "the engine's tool store notice (expected for the bundled runtime)"));
+        } else {
+            kept.push_str(line);
+        }
+    }
+    kept
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn the_tool_store_notice_never_reaches_what_the_host_reads() {
+        let stderr = "⚠ install out of sync (ffmpeg: not installed or outdated; node: not installed or outdated) — this desktop-app-managed install must rebuild the artifact to fix\nConfig key not set\n";
+        assert_eq!(super::without_sync_notice(stderr), "Config key not set\n");
+        assert_eq!(
+            super::without_sync_notice("a real error\n"),
+            "a real error\n"
+        );
+        assert_eq!(super::without_sync_notice(""), "");
+    }
+
     #[test]
     fn on_windows_the_list_matches_names_in_any_case_and_on_unix_exactly() {
         // the names a real Windows environment carries, in the case Windows keeps them
@@ -468,6 +525,40 @@ mod tests {
         let _ = std::process::Command::new("kill")
             .arg(daemon.to_string())
             .status();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn the_engine_is_handed_the_claude_setup_found_only_when_the_plugin_would_miss_it() {
+        use std::os::unix::fs::PermissionsExt;
+        let home = tempfile::tempdir().unwrap();
+        let place = |rel: &str| {
+            let p = home.path().join(rel);
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+            std::fs::write(&p, "#!/bin/sh\n").unwrap();
+            std::fs::set_permissions(&p, std::fs::Permissions::from_mode(0o755)).unwrap();
+            p
+        };
+        let extra = vec![
+            ("HOME".to_owned(), home.path().display().to_string()),
+            ("PATH".to_owned(), "/nonexistent".to_owned()),
+        ];
+        let override_of = |vars: Vec<(String, String)>| {
+            vars.into_iter()
+                .filter(|(k, _)| k == crate::claude::COMMAND_VAR)
+                .map(|(_, v)| v)
+                .collect::<Vec<_>>()
+        };
+        // npm with the person's own prefix: the plugin does not look there, so the engine is told
+        let npm = place(".npm-packages/bin/claude");
+        std::fs::write(home.path().join(".npmrc"), "prefix=${HOME}/.npm-packages\n").unwrap();
+        assert_eq!(
+            override_of(child_vars(true, &extra)),
+            [npm.display().to_string()]
+        );
+        // Anthropic's native installer: the plugin's own place, nothing to hand over
+        place(".local/bin/claude");
+        assert!(override_of(child_vars(true, &extra)).is_empty());
     }
 
     #[test]

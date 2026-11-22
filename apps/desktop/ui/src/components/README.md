@@ -68,11 +68,17 @@ Each row: what it is for, its variants (the options `variants.ts` lists for the 
 | `entry`, `steps`, `disclosure`, `blank`, `request` | the conversation's parts | `entry.kind: user, agent, bot, mod`; `steps[].kind` | §14.5 to 14.9 |
 | `composer` | every composer (session, Bots tab, dock) | `running`; mic in each | §14.10 |
 | `orb`, `modelMark`, `icon`, `logo` | bots, provider marks, icons, the mark | `orb.size`, `still`; `modelMark.color: mono, brand` | §10, §12, §13 |
+| `stack` | several bots as overlapped orbs: a group's members, teammates who ask together | `size` (one per place), `max` places ("+N" is the last), `label`, `focusable`, `still` | R-orb-*, R-corner-4 |
 | `child` | a task a session handed to another model: mark and name, goal, what it does now, how it ended; open and stop | `status: queued, running, done, failed, stopped`; `canOpen`, `canStop`; `time`, `now`, `tools`, `summary` | §8 containers, R-corner-3, R-state-* |
 | `modView` | a mod's element tree, drawn with the kit | `limits`, `colors` | §14.29 |
 | `squircle`, `shape` | continuous corners; nested corners fit | `frame`, `clip`, `surface` modes | R-corner-1 to 9 |
 
 ## Rules the kit keeps in one place
+
+- **A bot's look.** `lookOf` (`look.ts`) is the one resolver: a bot's saved shape and colour where they are valid, else
+  the look its name gives (`lookFor`). `orb` draws every orb through it, `paintLook` writes a look onto a drawn orb (only
+  what changed, so orb2 morphs) and `repaintLook` repaints every orb of one bot under a root, so a look that changes
+  after a bot was drawn reaches every place. Eyes are never part of a look.
 
 - **Corners.** One rule derives `--r-in`, `--r-corner`, `--corner-inset` and `--corner-ring` from a container's
   `--r-outer` and `--pad` (`corners.ts`; containers carry `.ui-nest` or are in the rule's list). A control in a corner is

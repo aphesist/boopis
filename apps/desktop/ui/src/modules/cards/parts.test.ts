@@ -42,7 +42,7 @@ describe('the origin slot', () => {
     const all = ids();
     expect(originVisual({ kind: 'teammate', ids: [all[0] as string], via: null }, 20)).toContain('orb-avatar');
     const stack = originVisual({ kind: 'teammate', ids: all.slice(0, 5), via: null }, 20);
-    expect(stack).toContain('cd-stack__more');
+    expect(stack).toContain('ui-stack__more');
     expect(stack).toContain('role="img"');
     expect(stack).toContain('aria-label="' + namesText(all.slice(0, 5)));
   });

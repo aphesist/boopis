@@ -9,6 +9,10 @@ import type { OrbAvatar } from '../../vendor/orb-avatar';
 import { attrs, frag, onReducedChange, reduced } from '../core/dom';
 import { botState } from './bot-state';
 import type { BotLike } from './bot-state';
+import { lookAttrs, lookOf } from './look';
+import type { Look } from './look';
+
+export { lumHex } from './look';
 
 export type OrbEl = OrbAvatar;
 export interface OrbOpts {
@@ -22,28 +26,42 @@ export function oc<K extends keyof OrbAvatar>(o: Element | null | undefined, m: 
   if (typeof fn === 'function') { try { (fn as (...x: unknown[]) => unknown).apply(o, a); } catch { /* not upgraded yet */ } }
 }
 
-export function lumHex(hex: string | undefined): number {
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex ?? ''); if (!m) return 1;
-  const n = parseInt(m[1] ?? '0', 16);
-  const c = [n >> 16, (n >> 8) & 255, n & 255].map((v) => { const x = v / 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
-  return 0.2126 * (c[0] ?? 0) + 0.7152 * (c[1] ?? 0) + 0.0722 * (c[2] ?? 0);
-}
-
 export const orbIsStill = (o: Pick<OrbOpts, 'live' | 'still'>, size: number): boolean => (o.live ? false : (!!o.still || size <= 16));
 
 /** <span class="ui-orb"><orb-avatar …></span> as a string */
 export function orbHtml(b: BotLike, o: OrbOpts = {}): string {
   const size = o.size ?? 20, s = botState(o.state ? { ...b, state: o.state } : b);
   const still = orbIsStill(o, size);
-  const dark = lumHex(b.color) < 0.05;
+  const look = lookAttrs(lookOf(b));   /* the one resolver: the bot's own look, else its name's */
   const render = o.render && o.render !== size ? o.render : null;
   return '<span class="ui-orb"' + attrs({ 'data-bot': b.id, 'data-render': render ? '' : null, style: '--o:' + size + (render ? ';--r:' + render : ''), 'data-size': size >= 40 ? 'l' : null }) + '>' +
-    '<orb-avatar' + attrs({ size: render ?? size, shape: b.shape ?? 'circle', color: b.color, 'eye-color': dark ? 'var(--ink-on-dock)' : null,
+    '<orb-avatar' + attrs({ size: render ?? size, shape: look.shape, color: look.color, 'eye-color': look['eye-color'],
       reaction: s.reaction, 'idle-motion': o.motion ?? 'calm', mode: o.mode ?? 'drift', static: still, jelly: !still && reduced() ? '.12' : null,
       'data-glance': still ? null : '', label: b.name, 'aria-hidden': 'true' }) + '></orb-avatar>' +
     (o.flag && s.attention ? '<span class="ui-dot ui-dot--flag" aria-hidden="true"></span>' : '') + '</span>';
 }
 export const orb = (b: BotLike, o?: OrbOpts): HTMLElement => frag(orbHtml(b, o));
+
+/** paint a drawn orb in a look: only the attributes that change are written, so orb2 morphs the body and fades the
+    colour instead of starting again (the same attributes `orbHtml` writes: `lookAttrs`) */
+export function paintLook(o: Element | null | undefined, look: Look): void {
+  if (!o) return;
+  for (const [k, v] of Object.entries(lookAttrs(look))) {
+    if (v === null) { if (o.hasAttribute(k)) o.removeAttribute(k); } else if (o.getAttribute(k) !== v) o.setAttribute(k, v);
+  }
+}
+/** every orb of one bot drawn under `root` (`ui.orb` marks its wrapper with `data-bot`), in its look now: a look that
+    changed after something drew the bot (the plugin's record read late, a look saved in the editor) reaches every
+    place at once. Returns how many orbs were painted. */
+export function repaintLook(root: ParentNode | null | undefined, id: string, look: Look): number {
+  if (!root || !id) return 0;
+  const sel = String(id).replace(/["\\]/g, '');
+  const q = '.ui-orb[data-bot="' + sel + '"] > orb-avatar';
+  const own = root instanceof Element && root.matches('.ui-orb[data-bot="' + sel + '"]') ? [...root.querySelectorAll(':scope > orb-avatar')] : [];
+  let n = 0;
+  for (const o of [...own, ...root.querySelectorAll(q)]) { paintLook(o, look); n++; }
+  return n;
+}
 
 /* ───────────── glance: small eye steps for live orbs under reduced motion (shared by bots and the dock) ─────────────
    orb2 holds its ambient gaze still under prefers-reduced-motion. While reduced motion is on, every few seconds up

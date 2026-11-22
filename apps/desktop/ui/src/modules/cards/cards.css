@@ -359,15 +359,8 @@ hx-card[data-size="inline"] .cd-by[data-origin="teammate"] .cd-by__label { white
 hx-card[data-size="inline"] .cd-by[data-origin="teammate"] .cd-names__first { white-space: normal; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .cd-glyph { width: 16px; height: 16px; flex: none; color: var(--icon); }
 .cd-by .cd-tile, .cd-mini .cd-tile, .cd-collapsed .cd-tile { width: var(--cd-orb); height: var(--cd-orb); font-size: var(--fs-2xs); }
-/* several teammates: stacked orbs, three at most, then +N; each on a disc of the card so the overlap reads */
-.cd-stack { display: inline-flex; align-items: center; flex: none; padding: 2px; }   /* the 2px holds the discs' ring inside the stack (R-corner-4); the stack is a row, not a surface: it has no corner of its own */
-.cd-stack__one, .cd-stack__more { margin-left: calc(var(--s) * -.32); border-radius: var(--r-pill); box-shadow: 0 0 0 2px var(--cd-surface); }
-.cd-stack__one { display: inline-flex; background: var(--cd-surface); }
-.cd-stack > :first-child { margin-left: 0; }
-.cd-stack__more {
-  display: inline-grid; place-items: center; min-width: var(--s); height: var(--s); padding: 0 4px; box-sizing: border-box;
-  background: var(--bg-3); color: var(--text-dim); font-family: var(--mono); font-size: var(--fs-2xs); font-weight: 500; letter-spacing: var(--track-mono);
-}
+/* several teammates: the kit's stack (ui.html.stack), its discs on the card's surface so the overlap reads */
+hx-card, .cd-queue { --stack-ground: var(--cd-surface); }
 /* one teammate lends the card its colour: a 1px ring and a 5% tint (text contrast is unchanged in every preset) */
 hx-card[data-accent]:is([data-size="inline"], [data-size="compact"]) {
   --sq-bg: color-mix(in srgb, var(--cd-accent) 5%, var(--cd-surface)); background: var(--sq-bg);
@@ -379,7 +372,7 @@ hx-card[data-accent] .cd-mini {
   --sq-bg: color-mix(in srgb, var(--cd-accent) 6%, var(--cd-surface)); background: var(--sq-bg);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cd-accent) 36%, transparent);
 }
-hx-card[data-accent] .cd-stack__one, hx-card[data-accent] .cd-stack__more { box-shadow: 0 0 0 2px color-mix(in srgb, var(--cd-accent) 5%, var(--cd-surface)); }
+hx-card[data-accent] { --stack-ground: color-mix(in srgb, var(--cd-accent) 5%, var(--cd-surface)); }
 .cd-mini__who { display: inline-block; vertical-align: top; max-width: var(--cd-who-max, 50%); overflow: hidden; color: var(--text-strong); font-weight: 500; text-transform: none; }
 .cd-mini__who.cd-mono, .cd-mini__who .cd-mono { font-weight: 400; }
 

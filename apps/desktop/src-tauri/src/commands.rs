@@ -78,6 +78,26 @@ pub struct AppState {
     pub xai: Arc<crate::xai::Xai>,
     /// The connector engine of each profile home, kept so a sign-in started by one command can be cancelled by another.
     pub connectors: std::sync::Mutex<std::collections::HashMap<std::path::PathBuf, Arc<Engine>>>,
+    /// The bots: what each one's home needs, and the repair once per run (ADR-0042).
+    pub bots: Arc<crate::bots::engine::Service>,
+}
+
+/// Where the bots live and what each gets: the root home, and boopis plus the plugins the bundled runtime carries.
+#[must_use]
+pub fn bots_layout(state: &AppState) -> crate::bots::Layout {
+    let carried: Vec<String> = state
+        .runtime
+        .as_ref()
+        .map(|p| {
+            p.runtime
+                .manifest()
+                .plugins
+                .iter()
+                .map(|c| c.name.clone())
+                .collect()
+        })
+        .unwrap_or_default();
+    crate::bots::Layout::new(state.supervisor.environment().hermes_root(), &carried)
 }
 
 struct ChannelSink(Channel<Frame>);
@@ -89,6 +109,28 @@ impl FrameSink for ChannelSink {
         self.0
             .send(Frame(raw))
             .map_err(|e| Error::Io(e.to_string()))
+    }
+
+    /// One message holding a JSON array of the frames: one script run in the web view for the lot, where one per
+    /// frame queued thousands of scripts while the window was out of sight.
+    fn send_batch(&self, frames: &[Arc<str>]) -> Result<()> {
+        if let [one] = frames {
+            return self.send(one);
+        }
+        let mut text = String::with_capacity(frames.iter().map(|f| f.len() + 1).sum::<usize>() + 2);
+        text.push('[');
+        for (i, f) in frames.iter().enumerate() {
+            if i > 0 {
+                text.push(',');
+            }
+            text.push_str(f);
+        }
+        text.push(']');
+        self.send(&text)
+    }
+
+    fn acks(&self) -> bool {
+        true
     }
 }
 
@@ -284,10 +326,17 @@ pub async fn gateway_connect(
     state.hubs.register(id, key);
     let wait = state.limits.ensure_timeout + state.limits.cli_timeout;
     match hub.open(id, Arc::new(ChannelSink(frames)), wait).await {
-        Ok(opened) => Ok(Connected {
-            connection_id: id,
-            describe: Json(opened.describe),
-        }),
+        Ok(opened) => {
+            // The first link of a run to the root's gateway: every bot is given what its home needs (ADR-0042), in the
+            // background, once.
+            if matches!(profile.as_deref(), None | Some("" | "default")) {
+                state.bots.repair_once(bots_layout(&state));
+            }
+            Ok(Connected {
+                connection_id: id,
+                describe: Json(opened.describe),
+            })
+        }
         Err(e) => {
             state.hubs.forget(id);
             Err(e.into())
@@ -305,6 +354,43 @@ pub async fn gateway_send(
 ) -> std::result::Result<(), HostError> {
     let hub = state.hubs.route(connection_id)?;
     Ok(hub.send(connection_id, frame.0).await?)
+}
+
+/// The page took one delivery of frames on this connection (`FrameSink::acks`): the host may send the next.
+#[tauri::command]
+#[specta::specta]
+pub fn gateway_ack(
+    state: State<'_, AppState>,
+    connection_id: u32,
+) -> std::result::Result<(), HostError> {
+    state.hubs.route(connection_id)?.ack(connection_id);
+    Ok(())
+}
+
+/// What the host answers the page's heartbeat: the plain notice to show once after the host recovered the page.
+#[derive(Debug, Clone, Serialize, Type)]
+pub struct HeartbeatReply {
+    /// The sentence to show, once, when the host reloaded the page to recover the window.
+    pub notice: Option<String>,
+}
+
+/// The page's heartbeat (every few seconds): whether it is visible and the longest main-thread stall it measured since
+/// the last one, in milliseconds. Kept for Diagnostics with the proxy's outbox peak (`webview_health`).
+#[tauri::command]
+#[specta::specta]
+#[must_use]
+pub fn webview_heartbeat(
+    state: State<'_, AppState>,
+    health: State<'_, Arc<crate::webview_health::Health>>,
+    visible: bool,
+    stall_ms: u32,
+) -> HeartbeatReply {
+    let peak = state.hubs.outbox_peak();
+    HeartbeatReply {
+        notice: health
+            .heartbeat(visible, stall_ms, peak)
+            .map(|why| why.notice().to_owned()),
+    }
 }
 
 /// Close a UI connection. The link to the gateway stays up for the others.
@@ -347,7 +433,7 @@ pub async fn secret_set(
     let store = state.secrets.clone();
     tokio::task::spawn_blocking(move || store.set(&service, &account, &value))
         .await
-        .map_err(|e| Error::Secrets(e.to_string()))??;
+        .map_err(|e| crate::error::joined(&e))??;
     Ok(())
 }
 
@@ -363,7 +449,7 @@ pub async fn secret_delete(
     let store = state.secrets.clone();
     tokio::task::spawn_blocking(move || store.delete(&service, &account))
         .await
-        .map_err(|e| Error::Secrets(e.to_string()))??;
+        .map_err(|e| crate::error::joined(&e))??;
     Ok(())
 }
 
@@ -379,7 +465,7 @@ pub async fn secret_exists(
     let store = state.secrets.clone();
     let found = tokio::task::spawn_blocking(move || store.get(&service, &account))
         .await
-        .map_err(|e| Error::Secrets(e.to_string()))??;
+        .map_err(|e| crate::error::joined(&e))??;
     Ok(found.is_some())
 }
 
@@ -618,6 +704,80 @@ pub fn open_external(app: AppHandle, url: String) -> std::result::Result<(), Hos
     Ok(())
 }
 
+/// Which of the paths a message names exist: inside one of `roots` (the session's or the bot's workspace) or absolute and
+/// there. Nothing is guessed (`paths.rs`).
+#[tauri::command]
+#[specta::specta]
+pub async fn path_resolve(
+    candidates: Vec<String>,
+    roots: Vec<String>,
+) -> std::result::Result<Vec<Option<crate::paths::ResolvedPath>>, HostError> {
+    let home = dirs::home_dir();
+    tokio::task::spawn_blocking(move || crate::paths::resolve(&candidates, &roots, home.as_deref()))
+        .await
+        .map_err(|e| Error::Os(e.to_string()))?
+        .map_err(HostError::from)
+}
+
+/// Open a path with the system's default app, or with one of the editors `path_editors` found (`editor`: its id). The
+/// default app never runs a program: a file that would run is refused (Show in folder and an editor still work).
+#[tauri::command]
+#[specta::specta]
+pub async fn path_open(
+    app: AppHandle,
+    path: String,
+    editor: Option<String>,
+) -> std::result::Result<(), HostError> {
+    use tauri_plugin_opener::OpenerExt;
+    let (abs, _kind) = crate::paths::existing(&path)?;
+    let target = abs.to_string_lossy().into_owned();
+    if let Some(id) = editor {
+        let path_var = std::env::var_os("PATH");
+        let (_e, program) = crate::paths::editors_on(path_var.as_deref())
+            .into_iter()
+            .find(|(e, _)| e.id == id)
+            .ok_or_else(|| Error::InvalidInput("that editor is not on this computer".into()))?;
+        app.opener()
+            .open_path(target, Some(program.to_string_lossy().into_owned()))
+            .map_err(|e| Error::Os(e.to_string()))?;
+    } else {
+        if crate::paths::runs_something(&abs) {
+            return Err(Error::InvalidInput(
+                "boopis does not run programs from a message: open it in an editor, or show it in its folder".into(),
+            )
+            .into());
+        }
+        app.opener()
+            .open_path(target, None::<&str>)
+            .map_err(|e| Error::Os(e.to_string()))?;
+    }
+    Ok(())
+}
+
+/// Show a path in the file manager, selected.
+#[tauri::command]
+#[specta::specta]
+pub fn path_reveal(app: AppHandle, path: String) -> std::result::Result<(), HostError> {
+    use tauri_plugin_opener::OpenerExt;
+    let (abs, _kind) = crate::paths::existing(&path)?;
+    app.opener()
+        .reveal_item_in_dir(abs)
+        .map_err(|e| Error::Os(e.to_string()))?;
+    Ok(())
+}
+
+/// The editors found on this computer, to open a file in.
+#[tauri::command]
+#[specta::specta]
+#[must_use]
+pub fn path_editors() -> Vec<crate::paths::PathEditor> {
+    let path_var = std::env::var_os("PATH");
+    crate::paths::editors_on(path_var.as_deref())
+        .into_iter()
+        .map(|(e, _)| e)
+        .collect()
+}
+
 /// Opens a sign-in page in the person's browser through the system opener (the ChatGPT sign-in's authorization address carries
 /// the account hints, so the host opens it itself and the webview is never handed it).
 pub struct SystemBrowser(pub AppHandle);
@@ -664,6 +824,9 @@ pub async fn renderer_report(
         .unwrap_or(crate::gpu::PowerSource::Unknown);
     report.gpu = crate::gpu::report(&gpu.inputs, gpu.source, &gpu.decision, power);
     report.errors = crate::error::recent();
+    if let Some(health) = app.try_state::<Arc<crate::webview_health::Health>>() {
+        report.health = Some(health.report());
+    }
     Ok(report)
 }
 
@@ -1421,4 +1584,51 @@ pub async fn provider_signin_status(
     way: String,
 ) -> std::result::Result<crate::providers::ProviderState, HostError> {
     Ok(signins(&state).status(&way).await?)
+}
+
+/// What preparing a bot did: whether anything changed, and each step that could not be done, in plain words.
+#[derive(Debug, Clone, Serialize, Type)]
+pub struct BotPrepared {
+    /// Its home changed (a plugin placed, a setting written, its seat in groups).
+    pub changed: bool,
+    /// What could not be done; the other steps were.
+    pub problems: Vec<String>,
+}
+
+/// Give the bot `name` what its home needs (ADR-0042): the plugins boopis manages, its configuration (the Governed switch of
+/// its record among it) and its seat in groups. `fresh` is a bot made just now (its skills for another OS are switched off).
+/// The UI calls it after it makes, restores or changes a bot.
+#[tauri::command]
+#[specta::specta]
+pub async fn bots_prepare(
+    state: State<'_, AppState>,
+    name: String,
+    fresh: bool,
+) -> std::result::Result<BotPrepared, HostError> {
+    let layout = bots_layout(&state);
+    let done = state.bots.prepare(&layout, &name, fresh).await?;
+    Ok(BotPrepared {
+        changed: done.changed(),
+        problems: done.problems,
+    })
+}
+
+/// Take the bot `name` out of the root's groups (its `hosted_rooms.profiles` entry): after it is archived or deleted.
+#[tauri::command]
+#[specta::specta]
+pub async fn bots_release(
+    state: State<'_, AppState>,
+    name: String,
+) -> std::result::Result<(), HostError> {
+    let root = state.supervisor.environment().hermes_root();
+    state.bots.release(&root, &name).await?;
+    Ok(())
+}
+
+/// The one notice the bots' repair left (the governance change), taken: the app shows it once. `None` when there is none.
+#[tauri::command]
+#[specta::specta]
+pub fn bots_notice(state: State<'_, AppState>) -> std::result::Result<Option<String>, HostError> {
+    let root = state.supervisor.environment().hermes_root();
+    Ok(crate::bots::take_notice(&root)?)
 }

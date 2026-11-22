@@ -112,8 +112,13 @@
 .dk-v-min [data-k^="s:bot:"] { max-width: 14ch; overflow: hidden; text-overflow: ellipsis; }
 
 /* ===== bots · roster (expanded): library rows in a four-column grid ===== */
-.dk-v-bots-exp { padding: var(--sp-4) var(--dock-pad-x) var(--dock-band-x); width: 640px; }
+/* The expanded roster never grows past the window: the slab stops --sp-5 below the title bar and the roster scrolls inside
+   it (an inner scroller: R-scroll-4, 8; `.ui-scroll--stable` keeps the gutter, so the grid never reflows when the bar
+   comes, and the end padding is the side padding less the bar, so the grid stays centred). The roster's own --sp-1 of
+   padding, given back by its margin, keeps a row's focus ring inside the box that scrolls it. */
+.dk-v-bots-exp { padding: var(--sp-4) calc(var(--dock-pad-x) - var(--scroll-size)) var(--dock-band-x) var(--dock-pad-x); width: 640px; display: flex; flex-direction: column; max-height: calc(100vh - var(--chrome-h) - var(--sp-5)); }
 .dk-roster { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-1) var(--sp-2); --o: 26; }
+.dk-v-bots-exp .dk-roster { flex: 0 1 auto; min-height: 0; align-content: start; padding: var(--sp-1); margin: calc(-1 * var(--sp-1)); touch-action: pan-y; }
 .dk-roster .dk-orb .ui-dot--flag { width: 6px; height: 6px; }
 /* the library lead is a 16px column for 20px orbs; these are 26px, so the column takes the orb's width and the row's
    8px gap sits between orb and label, as in the bots list. orb2 paints up to a quarter of its size past its box

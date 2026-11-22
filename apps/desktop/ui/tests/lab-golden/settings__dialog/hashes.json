@@ -1,41 +1,61 @@
 {
+ "appearance-a-larger-interface-chosen@bone": {
+  "sha": "7e93ca86a5295f63aa57d0bb0e67e19fe4ee9033",
+  "w": 444,
+  "h": 900
+ },
+ "appearance-a-larger-interface-chosen@catalog": {
+  "sha": "71f8ae253d7f2f9ab82ddf2db12773d5ef98fc01",
+  "w": 444,
+  "h": 900
+ },
+ "appearance-a-larger-interface-chosen@graphite": {
+  "sha": "abf362fe68c4c72b5e1e2065d40cc74944c2fd60",
+  "w": 444,
+  "h": 900
+ },
+ "appearance-a-larger-interface-chosen@typewriter": {
+  "sha": "55e8f8c81ace11dd5d31bab91010d12b33a7982e",
+  "w": 444,
+  "h": 900
+ },
  "appearance-scrolled@bone": {
-  "sha": "2177a208a9a4d78a350273b0d81d12f13a206d61",
+  "sha": "7ba7c16e0b81731d2467fb2ecc1383ee94a15c1f",
   "w": 444,
   "h": 900
  },
  "appearance-scrolled@catalog": {
-  "sha": "1c8cffd722ceb74ba433b523b145d44dfdb86c96",
+  "sha": "73225a1d994de6514f3466d9ff67e168dcb9f52f",
   "w": 444,
   "h": 900
  },
  "appearance-scrolled@graphite": {
-  "sha": "854f27191a88b0d0f3239a4be63e51de98bc3eef",
+  "sha": "22aefa32103f1d568f7854864b37598d30033bca",
   "w": 444,
   "h": 900
  },
  "appearance-scrolled@typewriter": {
-  "sha": "65962c81b1a2cd930740fe43a115e542c569589d",
+  "sha": "c58c5f171151b67472197500652884e0af86c860",
   "w": 444,
   "h": 900
  },
  "appearance@bone": {
-  "sha": "8e22413ba1ac74da2544e2084af6b781fa1bf496",
+  "sha": "8b2f054eaf17591daa7c582fbf8fc4d3043121d0",
   "w": 444,
   "h": 900
  },
  "appearance@catalog": {
-  "sha": "1290c4b32b0367cd6886805bdb37af574d113950",
+  "sha": "e236d93e5828f623fab6ce5e068d82792eb60c96",
   "w": 444,
   "h": 900
  },
  "appearance@graphite": {
-  "sha": "13a6a263017bd4b344749e20a25821ae8d9decc1",
+  "sha": "7276dac05862203e8053c6839be33979408b7397",
   "w": 444,
   "h": 900
  },
  "appearance@typewriter": {
-  "sha": "fd3854ccfa6ee0cc7d26f7f143a5ce121cc40753",
+  "sha": "fe7febda140a8c03849b65965115c1ce4824b5ac",
   "w": 444,
   "h": 900
  },
@@ -118,6 +138,26 @@
   "sha": "19047461acf517a539fa6b0fa5919cbf7fd6ff26",
   "w": 624,
   "h": 704
+ },
+ "interface-size-focus@bone": {
+  "sha": "251306cd76e6e747b26614e85be96e758d9e819e",
+  "w": 444,
+  "h": 900
+ },
+ "interface-size-focus@catalog": {
+  "sha": "73e9b79c44bbdf310f41f582aab85e26dfdc1eb2",
+  "w": 444,
+  "h": 900
+ },
+ "interface-size-focus@graphite": {
+  "sha": "e4c9310421368856823d3d7ce1a9725bfd7f532e",
+  "w": 444,
+  "h": 900
+ },
+ "interface-size-focus@typewriter": {
+  "sha": "5d4e338727bc6fbcfebe1d69ffc16937be587d1e",
+  "w": 444,
+  "h": 900
  },
  "keyboard@bone": {
   "sha": "80ee92d0f72321745ce7324bea03fe9407dff740",

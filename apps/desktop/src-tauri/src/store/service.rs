@@ -76,7 +76,7 @@ pub(super) async fn blocking<T: Send + 'static>(
 ) -> Result<T> {
     tokio::task::spawn_blocking(f)
         .await
-        .map_err(|e| Error::Io(e.to_string()))?
+        .map_err(|e| crate::error::joined(&e))?
 }
 
 /// The two built-in sources that hold nothing until the user adds one.

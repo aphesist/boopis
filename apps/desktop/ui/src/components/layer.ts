@@ -93,7 +93,7 @@ export const menu = {
   still(items: readonly MenuEntry[], o: MenuOpts = {}): HTMLElement { return frag('<div class="ui-menu" role="menu" data-static' + attrs({ 'aria-label': o.label } as Attrs) + '>' + html.menuItems(items, o) + '</div>'); }
 };
 
-export interface PopoverOpts extends LayerOpts { label?: string | undefined }
+export interface PopoverOpts extends LayerOpts { label?: string | undefined; /** false: a card shown on hover keeps focus where it was (Tab still reaches it) */ focus?: boolean | undefined }
 export const popover = {
   /** a dialog-like layer with a focus loop */
   open(anchor: HTMLElement, content: Node, o: PopoverOpts = {}): HTMLElement | null {
@@ -101,7 +101,7 @@ export const popover = {
     node.appendChild(content);
     if (!openLayerAt(anchor, node, o)) return null;
     const f = node.querySelector<HTMLElement>('[data-autofocus]') ?? node.querySelector<HTMLElement>('button, input, textarea, select, [tabindex="0"]');
-    if (f) f.focus({ preventScroll: true });
+    if (f && o.focus !== false) f.focus({ preventScroll: true });
     return node;
   },
   close: closeLayer,

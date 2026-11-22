@@ -18,8 +18,8 @@
 
 use serde_json::Value;
 
-use crate::chatgpt::oauth::{Reply, Transport};
-use crate::error::{Error, Result};
+use crate::chatgpt::oauth::{BLOCKED, Reply, Transport, answered_by_network};
+use crate::error::{Error, Result, kept};
 
 pub use crate::chatgpt::oauth::{claims, lifetime};
 
@@ -144,13 +144,37 @@ fn failed(code: &'static str, message: impl Into<String>) -> Error {
 fn send(t: &dyn Transport, url: &str, body: &str) -> Result<Reply> {
     t.post(url, "application/x-www-form-urlencoded", body)
         .map_err(|e| {
-            failed(
-                "hx.provider.unreachable",
-                format!(
-                    "could not reach xAI's sign-in service ({e}); check your internet connection"
+            kept(
+                failed(
+                    "hx.provider.unreachable",
+                    "boopis could not reach xAI to sign you in. Check your internet connection or proxy, then try again.",
                 ),
+                format!("{url}: {e}"),
             )
         })
+}
+
+/// An answer that is not the one the step expects, in plain words; what xAI actually sent goes to Diagnostics.
+fn unexpected(r: &Reply, step: &str) -> Error {
+    let raw = format!(
+        "xAI, {step}: HTTP {}: {}",
+        r.status,
+        r.body.chars().take(300).collect::<String>()
+    );
+    let e = if answered_by_network(r) {
+        failed("hx.provider.signin_blocked", BLOCKED)
+    } else if r.status >= 500 {
+        failed(
+            "hx.provider.signin_failed",
+            "xAI's sign-in service is having trouble right now. Try again in a few minutes. Nothing was saved.",
+        )
+    } else {
+        failed(
+            "hx.provider.signin_failed",
+            "xAI's sign-in service sent an answer boopis could not use. Try again; if it happens again, the details are in Settings, General, Diagnostics. Nothing was saved.",
+        )
+    };
+    kept(e, raw)
 }
 
 fn form(pairs: &[(&str, &str)]) -> String {
@@ -171,7 +195,7 @@ fn rate_limited(during: &str) -> Error {
 fn denied() -> Error {
     failed(
         "hx.provider.signin_denied",
-        "xAI did not allow this account to use the SuperGrok sign-in. It does this for some plans whatever the subscription says; an xAI API key works instead",
+        "xAI did not allow this account to use the SuperGrok sign-in. It does this for some plans whatever the subscription says. Use an xAI API key instead.",
     )
 }
 
@@ -206,37 +230,28 @@ pub fn request_code(t: &dyn Transport, ep: &Endpoints) -> Result<DeviceCode> {
     let body = form(&[("client_id", CLIENT_ID), ("scope", SCOPE)]);
     let r = send(t, &ep.device(), &body)?;
     match r.status {
+        // a web page in place of the service's JSON is the network (a firewall, a bot check), not xAI refusing an account
+        _ if answered_by_network(&r) => return Err(unexpected(&r, "asking for a code")),
         200 => {}
         429 => return Err(rate_limited("")),
         403 => return Err(denied()),
-        s => {
-            return Err(failed(
-                "hx.provider.signin_failed",
-                format!("xAI's sign-in service answered {s} when asked for a code"),
-            ));
-        }
+        _ => return Err(unexpected(&r, "asking for a code")),
     }
-    let v: Value = serde_json::from_str(&r.body).map_err(|_| {
-        failed(
-            "hx.provider.signin_failed",
-            "xAI's sign-in service sent an answer that is not JSON",
-        )
-    })?;
+    let Ok(v) = serde_json::from_str::<Value>(&r.body) else {
+        return Err(unexpected(&r, "asking for a code (not JSON)"));
+    };
     let (Some(device_code), Some(user_code)) =
         (str_field(&v, "device_code"), str_field(&v, "user_code"))
     else {
-        return Err(failed(
-            "hx.provider.signin_failed",
-            "xAI's sign-in service did not send a code",
-        ));
+        return Err(unexpected(&r, "asking for a code (no code)"));
     };
     let Some(verification_url) = str_field(&v, "verification_uri_complete")
         .or_else(|| str_field(&v, "verification_uri"))
         .filter(|u| page_ok(u))
     else {
-        return Err(failed(
-            "hx.provider.signin_failed",
-            "xAI's sign-in service did not name a page to open",
+        return Err(unexpected(
+            &r,
+            "asking for a code (no page on x.ai to open)",
         ));
     };
     Ok(DeviceCode {
@@ -268,17 +283,17 @@ fn page_ok(url: &str) -> bool {
 fn tokens_of(r: &Reply, previous_refresh: Option<&str>, what: &str) -> Result<Tokens> {
     let v: Value = serde_json::from_str(&r.body).unwrap_or(Value::Null);
     let Some(access) = str_field(&v, "access_token") else {
-        return Err(failed(
-            "hx.provider.signin_failed",
-            format!("xAI's {what} answer carried no access token"),
+        return Err(unexpected(
+            r,
+            &format!("the {what} answer (no access token)"),
         ));
     };
     let Some(refresh) =
         str_field(&v, "refresh_token").or_else(|| previous_refresh.map(str::to_owned))
     else {
-        return Err(failed(
-            "hx.provider.signin_failed",
-            format!("xAI's {what} answer carried no refresh token"),
+        return Err(unexpected(
+            r,
+            &format!("the {what} answer (no refresh token)"),
         ));
     };
     Ok(Tokens {
@@ -301,6 +316,7 @@ pub fn poll(t: &dyn Transport, ep: &Endpoints, code: &DeviceCode) -> Result<Poll
     ]);
     let r = send(t, &ep.token(), &body)?;
     match r.status {
+        _ if answered_by_network(&r) => Err(unexpected(&r, "waiting for you")),
         200 => tokens_of(&r, None, "sign-in").map(Poll::Approved),
         429 => Err(rate_limited(" while waiting for you")),
         403 => Err(denied()),
@@ -317,19 +333,10 @@ pub fn poll(t: &dyn Transport, ep: &Endpoints, code: &DeviceCode) -> Result<Poll
                     "hx.provider.signin_refused",
                     "The sign-in was declined on xAI's page.",
                 )),
-                other => Err(failed(
-                    "hx.provider.signin_failed",
-                    format!(
-                        "xAI's sign-in service refused the sign-in ({})",
-                        if other.is_empty() { "no reason" } else { other }
-                    ),
-                )),
+                _ => Err(unexpected(&r, "waiting for you")),
             }
         }
-        s => Err(failed(
-            "hx.provider.signin_failed",
-            format!("xAI's sign-in service answered {s} while waiting for you"),
-        )),
+        _ => Err(unexpected(&r, "waiting for you")),
     }
 }
 
@@ -356,15 +363,14 @@ pub fn refresh(t: &dyn Transport, ep: &Endpoints, refresh_token: &str) -> Result
     ]);
     let r = send(t, &ep.token(), &body)?;
     match r.status {
+        // a firewall's page is not xAI ending the sign-in: keep it, and try again later
+        _ if answered_by_network(&r) => Err(unexpected(&r, "renewing the sign-in")),
         200 => tokens_of(&r, Some(refresh_token), "refresh").map(Refreshed::Tokens),
         429 => Err(rate_limited(" while renewing the sign-in")),
         403 => Ok(Refreshed::Denied),
         // OAuth's `invalid_grant` comes as 400; a revoked or reused token as 401
         400 | 401 => Ok(Refreshed::Revoked),
-        s => Err(failed(
-            "hx.provider.signin_failed",
-            format!("xAI's sign-in service answered {s} when renewing the sign-in"),
-        )),
+        _ => Err(unexpected(&r, "renewing the sign-in")),
     }
 }
 
@@ -384,12 +390,6 @@ pub fn revoke(t: &dyn Transport, ep: &Endpoints, refresh_token: &str) -> Result<
     if r.status == 200 {
         Ok(())
     } else {
-        Err(failed(
-            "hx.provider.signin_failed",
-            format!(
-                "xAI's sign-in service answered {} when asked to end the sign-in",
-                r.status
-            ),
-        ))
+        Err(unexpected(&r, "ending the sign-in"))
     }
 }

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-bots-release"
+description = "Enables the bots_release command without any pre-configured scope."
+commands.allow = ["bots_release"]
+
+[[permission]]
+identifier = "deny-bots-release"
+description = "Denies the bots_release command without any pre-configured scope."
+commands.deny = ["bots_release"]

@@ -27,10 +27,14 @@ import { tauriConnectorsBridge } from './connectors-bridge';
 import { createLiveStore } from './live/store';
 import { tauriStoreBridge } from './store-bridge';
 import type { StoreBridge } from './store-bridge';
+import { tauriBotsBridge } from './bots-bridge';
+import type { BotsBridge } from './bots-bridge';
+import { ui } from '@boopis/ui';
 import { inTauri } from './bridge';
 import type { FormEntry } from './live/forms';
 import { tauriSecrets } from './secrets';
 import { dropsFromHost, pickAttachments } from './attach';
+import { hostPaths } from './paths';
 import { stageAttachments, withRefs } from './live/attachments';
 import type { SecretsBridge } from './secrets';
 import type { GatewayClient, GatewayEvent } from './gateway';
@@ -71,6 +75,8 @@ export interface LiveOptions {
   botsPollMs?: number | null;
   /** the store's host commands (default in the desktop app: the host's `store_*` commands; elsewhere none, and the store says so: it never shows fixtures) */
   storeBridge?: StoreBridge | null;
+  /** the host's bot commands (default in the desktop app: `bots_*`; elsewhere none: a bot is then the bare profile the engine made) */
+  botsBridge?: BotsBridge | null;
 }
 
 interface Running { /** the tiers the ladder ran this turn on, as 'provider/model', in order */ tiers: string[]; turn: AgentTurn; text: string; steps: AgentTurn['steps'][number][]; startedAt: number }
@@ -550,7 +556,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     }
   };
 
-  const liveBots = createLiveBots({ client, now, ...(opts.linkTo ? { linkTo: opts.linkTo } : {}), ...(opts.botsPollMs !== undefined ? { pollMs: opts.botsPollMs } : {}) });
+  const liveBots = createLiveBots({ client, now, ...(opts.linkTo ? { linkTo: opts.linkTo } : {}), ...(opts.botsPollMs !== undefined ? { pollMs: opts.botsPollMs } : {}), bridge: opts.botsBridge !== undefined ? opts.botsBridge : inTauri() ? tauriBotsBridge() : null, notify: (text) => { ui.toast(text); } });
   Object.assign(details.unavailable, liveBots.unavailable);
   const liveGroups = createLiveGroups({ client, bots: () => liveBots.source.snapshot().bots, now, ...(opts.botsPollMs !== undefined ? { pollMs: opts.botsPollMs } : {}) });
   const liveStore = createLiveStore({ bridge: opts.storeBridge !== undefined ? opts.storeBridge : inTauri() ? tauriStoreBridge() : null, plugin: (method, params) => client.requestRaw('plugin.boopis.' + method, params) });
@@ -561,7 +567,7 @@ export function createLiveProvider(opts: LiveOptions): LiveProvider {
     info: { live: true, preview: new Set(['feedforward']), unavailable: details.unavailable },
     ready, sessions, waits, user, forms: formsHost.source, bots: liveBots.source, groups: liveGroups.source, schedules: liveBots.schedules,
     details: details.source, run: details.run, mods: modsHost.source, store: liveStore,
-    council: councilHost, files: { pick: (kind) => pickAttachments(kind), drops: dropsFromHost(), complete: (word, id) => details.files.complete(word, id) },
+    council: councilHost, files: { pick: (kind) => pickAttachments(kind), drops: dropsFromHost(), complete: (word, id) => details.files.complete(word, id), paths: hostPaths() },
     dictation: { start: () => () => undefined }, // nothing hears you yet: the mock's transcript is invented text
     feedforward: { catalog: () => (flag ? mock.feedforward.catalog() : []) },
     settled: async () => { await liveStore.settled(); await details.settled(); await liveBots.settled(); await liveGroups.settled(); },
