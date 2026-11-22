@@ -182,7 +182,12 @@ async function shot(page, row) {
   const clip = await page.evaluate((app) => {
       const scope = window.__lab.scope();
       if (app && (!scope || scope.id === 'hx-app' || scope === document.body)) return null;
-      const els = [app ? scope : document.querySelector('.lab-cell'), ...document.querySelectorAll('.ui-tip.is-in, .ui-menu:not([data-static]), .ui-pop, .ui-listbox, .ui-toast.is-in')].filter(Boolean);
+      /* an app state is its scope. A stage state is its cell, and the element its scope names when it names one (the default
+         scope, the stage, holds the cell and adds nothing): a view that lays itself over the window, as the first run does
+         (`position: fixed`), is drawn outside the cell's box even as the cell's child, and the cell alone is an empty strip */
+      const cell = document.querySelector('.lab-cell');
+      const own = app ? [scope] : [cell, scope && cell && !scope.contains(cell) ? scope : null];
+      const els = [...own, ...document.querySelectorAll('.ui-tip.is-in, .ui-menu:not([data-static]), .ui-pop, .ui-listbox, .ui-toast.is-in')].filter(Boolean);
       let x0 = Infinity, y0 = Infinity, x1 = 0, y1 = 0;
       for (const e of els) { const r = e.getBoundingClientRect(); if (!r.width) continue; x0 = Math.min(x0, r.left); y0 = Math.min(y0, r.top); x1 = Math.max(x1, r.right); y1 = Math.max(y1, r.bottom); }
       const pad = 12;

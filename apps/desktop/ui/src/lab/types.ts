@@ -106,7 +106,7 @@ export interface State {
   /** checks this state is excused from, each with the reason (shown in the report): a string excuses the whole check, an
       `Allowance` with `el` only the findings whose element description contains that text (one element, not the state) */
   allow?: Readonly<Partial<Record<CheckId, Allowance>>>;
-  /** the element the checks look at, overriding the story's */
+  /** the element the checks look at, overriding the story's; a stage state's screenshot covers it beside the cell */
   scope?: string;
   mock?: MockRef;
   /** right to left */

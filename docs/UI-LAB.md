@@ -121,7 +121,10 @@ export default {
 
 - A **stage** state (`render`) draws kit components on the stage: import the kit, `@boopis/ui` (`ui`, `html`), and use
   its public API (props and the variants it exports, `variants`), never a module's internals or hand-built kit markup
-  (the kit's guard, `src/components/kit.guard.test.ts`, reads the lab too).
+  (the kit's guard, `src/components/kit.guard.test.ts`, reads the lab too). Its checks and its screenshot look at its
+  cell; a state that names a `scope` is checked there instead, and its screenshot covers the cell and that element both.
+  A view that lays itself over the window (the first run's `.hx-first-run`, `position: fixed`) names itself as the scope:
+  drawn into the cell it still sits outside the cell's box, and the cell alone would be an empty strip.
 - An **app** state (`app: { provider, setup }`) boots the whole app on a provider (`src/lab/provider.ts`: the mock with
   fixtures, no bots, one, `120`, no sessions, or `replay: 'session'` for the live provider over recorded gateway
   frames) and drives it in `setup` (`c.hx.setState`, `c.hx.dock()`, `c.click`, `c.key`). `scope` says what the checks
