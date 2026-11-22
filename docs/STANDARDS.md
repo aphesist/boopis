@@ -148,6 +148,8 @@ Before writing any of these, use the existing one.
 | Logging | `tracing` setup in `hx-proto::log` | `boopis.util.log` | `ui/core/log` |
 | Event bus | — | — | `ui/core/bus` (the v6 `HX.on/emit`) |
 | UI primitives | — | — | `ui/components` (the v6 `HX.ui.*` library) |
+| HTTPS (TLS) in the desktop host | `boopis-host::tls` (`config()`: rustls, ring named on every agent, the system's trust store) | — | — |
+| Words a person reads for an error | `boopis-host::error` (`user_message`, `shown`; `kept` keeps the raw words for Diagnostics, `joined` maps a failed blocking task) | — | `ui/host/errors` (`sentenceFor`, `keepDetail`) |
 
 The redaction rules, protected-path patterns and the error-code list are data files shared by every language. They're never re-typed in each one.
 
@@ -166,6 +168,7 @@ The redaction rules, protected-path patterns and the error-code list are data fi
   - performance budgets.
   boopis's gate dogfoods on boopis.
 - **Test hygiene:** no network in unit tests, no sleeps (use clocks and events), temp dirs via `tempfile`/`tmp_path`.
+- **Live checks** against real services are ignored tests (`#[ignore]`) in an integration test, run by a workflow that is not the gate: `apps/desktop/src-tauri/tests/live_signins.rs` and `live-signins.yml` (docs/RELEASING.md).
 
 ## 11. Documentation
 
