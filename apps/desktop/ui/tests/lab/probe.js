@@ -729,6 +729,13 @@
         const [outer, inner] = A.el.contains(B.el) ? [A.el, B.el] : B.el.contains(A.el) ? [B.el, A.el] : [null, null];
         if (outer) { let flow = true; for (let p = inner; p && p !== outer; p = p.parentElement) { const ps = cs.get(p) || getComputedStyle(p); if (ps.position === 'absolute' || ps.position === 'fixed') { flow = false; break; } } if (flow) continue; }
         if (inOverlay(A.el) || inOverlay(B.el)) continue;
+        /* a conversation's own composer zone floats over the conversation's foot by design, with the conversation's ground strip
+           between them (.ui-scroll--ground); while the zone grows, the strip follows it a frame later (its height is the zone's
+           measured height), so a probe between the two would see text the strip is about to hide */
+        { const zoneOf = (e) => e.closest('.bt-composer-zone, .ss-composer'), convOf = (e) => e.closest('.ui-scroll--ground');
+          const pane = (e) => e.closest('.bt-room, .ss-view');
+          const z = zoneOf(A.el) || zoneOf(B.el), c = convOf(A.el) || convOf(B.el);
+          if (z && c && !zoneOf(A.el) !== !zoneOf(B.el) && pane(z) === pane(c)) continue; }
         /* a drawn copy of the same words, hidden from assistive technology, is the reveal layer of a control (the hold button's inverted label), not other text */
         if (A.full === B.full && (A.el.closest('[aria-hidden="true"]') || B.el.closest('[aria-hidden="true"]'))) continue;
         pairs.push([A, B, l, t, r, bt]);
