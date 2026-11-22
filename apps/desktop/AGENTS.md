@@ -59,7 +59,7 @@ src-tauri/
   tests/connectors_live.rs  the connector flow against a real Hermes: a stdio test MCP server (`tests/e2e/fake_mcp_stdio.py`) added, tested, switched off and on and removed; one that needs a key, which reaches it through the keychain, the host's secret channel and Hermes's secret source; and an OAuth server (`tests/e2e/fake_mcp_oauth.py`, a fake MCP server with its own authorization server) signed in through Hermes's own flow (skips without HX_E2E_HERMES_ENV, python3, and an install with the `mcp` Python SDK: `uv pip install --python <the install's venv>/bin/python mcp==2.3.0`, Hermes's pinned version; the test tries every launcher in the spike, because which install a launcher runs is Hermes's choice)
   tests/setup_live.rs     first-run setup on a fresh profile against a real Hermes (skips without HX_E2E_HERMES_ENV and an hx binary); its `bundled` twin unpacks the real runtime archive (HX_E2E_RUNTIME_ARCHIVE) and runs the same flow on it
   examples/secret_channel_server.rs   the real secret channel over an in-memory map, with one pid as the gateway, for the plugin's Python tests
-  examples/claude_probe.rs   what the host finds of Claude Code here, as JSON (the lookup, the plugin's own answer, the engine's override and environment, the probe), for `.github/workflows/claude-cli.yml`
+  examples/claude_probe.rs   what the host finds of Claude Code here, as JSON (the lookup, the plugin's own answer, the engine's override and environment, the probe); `claude_probe signin` starts the card's sign-in (`connectors::engine::login_command`) and stops at the page Claude Code names; for `.github/workflows/claude-cli.yml`
 ```
 
 ## The command line

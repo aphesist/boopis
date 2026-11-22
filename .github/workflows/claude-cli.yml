@@ -8,7 +8,7 @@ name: claude-cli
 # boopis found, and checks that Claude Code names Claude's own sign-in page and that the page answers; the step after that
 # needs a person.
 # Not part of every push: it downloads Claude Code from claude.ai and npm. It runs when a push changes the lookup itself (on
-# any branch: a workflow that is not yet on the default branch cannot be dispatched), weekly on main, since Anthropic's
+# any branch: GitHub dispatches a workflow only once it has seen it run), weekly on main, since Anthropic's
 # installers change on their own schedule, and on demand.
 on:
   push:
