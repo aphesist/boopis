@@ -994,3 +994,35 @@ async fn the_feed_copies_the_words_of_a_reply_and_of_a_typed_message_only_while_
         .unwrap();
     assert_eq!(last.payload, None);
 }
+
+#[tokio::test]
+async fn a_message_said_by_another_surface_is_announced_to_every_window_as_a_host_event() {
+    let mut r = rig();
+    let (mut a, gw) = r.open(1).await;
+    let _gw = gw.unwrap();
+    let (mut b, _) = r.open(2).await;
+    let _ = (a.next_data().await, b.next_data().await); // gateway.ready
+    r.hub.announce_said(
+        "live-1",
+        &json!({"text": "from the island", "stored_session_id": "stored-1"}),
+        false,
+    );
+    r.hub.announce_said(
+        "live-1",
+        &json!({"reason": "the engine did not answer"}),
+        true,
+    );
+    for ui in [&mut a, &mut b] {
+        let said = ui.next_data().await;
+        assert_eq!(said["params"]["type"], "connection.said");
+        assert_eq!(said["params"]["session_id"], "live-1");
+        assert_eq!(said["params"]["payload"]["text"], "from the island");
+        assert_eq!(said["params"]["payload"]["stored_session_id"], "stored-1");
+        let failed = ui.next_data().await;
+        assert_eq!(failed["params"]["type"], "connection.said_failed");
+        assert_eq!(
+            failed["params"]["payload"]["reason"],
+            "the engine did not answer"
+        );
+    }
+}

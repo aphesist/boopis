@@ -142,7 +142,36 @@ export function createBotChat(deps: ChatDeps) {
   }
 
   /* ───────── the bot's side: events on its link ───────── */
+  /* A message another surface said into this conversation (the local API, docs/LOCAL-API.md). The engine sends a window nothing
+     for a message that was submitted elsewhere, so the host says it (`connection.said`, before the engine can start the reply) and
+     the chat draws it as the owner's own message, with nothing of where it came from. Its reply then arrives as any reply does.
+     A conversation that is not open here shows the message when it is opened, as before. */
+  function said(botId: string, ev: GatewayEvent): boolean {
+    const c = chats.get(botId);
+    const gw = ev.session_id ?? '';
+    const p = (ev.payload ?? {}) as Record<string, unknown>;
+    const stored = str(p['stored_session_id']);
+    if (!c || !gw) return false;
+    const here = byGw.get(gw) === botId;
+    /* the same conversation under another live id (the engine opened it again): follow it, unless a reply is being written */
+    if (!here && !(stored && c.stored === stored && !c.running)) return false;
+    if (!here) bind(botId, c, gw, stored);
+    if (ev.type === 'connection.said_failed') {
+      if (!c.running) { deps.emit({ type: 'run', botId, running: false }); deps.live(botId, null); }
+      note(botId, c, str(p['reason']) || 'A message to ' + botId + ' was not sent.');
+      return true;
+    }
+    const text = str(p['text']);
+    if (!text) return true;
+    const m: TextMessage = { kind: 'text', id: nextId('m'), who: 'you', t: t(), text };
+    add(botId, c, m);
+    deps.emit({ type: 'run', botId, running: true });
+    deps.live(botId, { state: 'thinking', activity: '', attention: null });
+    return true;
+  }
+
   function onEvent(botId: string, ev: GatewayEvent): boolean {
+    if (ev.type === 'connection.said' || ev.type === 'connection.said_failed') return said(botId, ev);
     const mine = ev.session_id ? byGw.get(ev.session_id) : undefined;
     if (mine !== botId) return false;
     const c = chat(botId);

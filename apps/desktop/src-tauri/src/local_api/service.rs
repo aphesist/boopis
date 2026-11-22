@@ -462,14 +462,36 @@ impl<E: Engine> Service<E> {
         };
         self.feed
             .note_session(profile, &live, Source::Gui, Some(&kept), None);
+        // The windows hear it before the engine does: the engine starts the reply at once and sends a window nothing for a
+        // message another surface submits, so a chat that has this conversation open draws it first, as the owner's own.
         self.engine
+            .said(
+                profile,
+                &live,
+                json!({"text": message, "stored_session_id": kept}),
+                false,
+            )
+            .await;
+        if let Err(e) = self
+            .engine
             .request(
                 profile,
                 "prompt.submit",
                 json!({"session_id": live, "text": message, "submission_id": format!("api-{}", uuid::Uuid::now_v7())}),
             )
             .await
-            .map_err(|e| failed("deliver the message", &e))?;
+        {
+            let refused = failed("deliver the message", &e);
+            self.engine
+                .said(
+                    profile,
+                    &live,
+                    json!({"reason": refused.message, "stored_session_id": kept}),
+                    true,
+                )
+                .await;
+            return Err(refused);
+        }
         self.feed.on_user_message(profile, &live, message);
         self.feed.on_frame(
             profile,
@@ -1099,6 +1121,66 @@ mod tests {
                 .state,
             State::Listening
         );
+    }
+
+    #[tokio::test]
+    async fn the_windows_hear_a_said_message_before_the_engine_does_and_a_refusal_after() {
+        let (s, e, _d) = service(say_engine(false));
+        s.refresh_roster().await;
+        s.say(
+            "kai",
+            "hello kai",
+            &Pick::Latest,
+            &Caller::through("endpoint"),
+        )
+        .await
+        .unwrap();
+        let calls = e.calls.lock().unwrap().clone();
+        let order: Vec<&str> = calls
+            .iter()
+            .map(|(_, m, _)| m.as_str())
+            .filter(|m| m.starts_with("window.") || *m == "prompt.submit")
+            .collect();
+        assert_eq!(
+            order,
+            ["window.said", "prompt.submit"],
+            "the window draws it before the reply can start"
+        );
+        let said = e.of("window.said");
+        assert_eq!(said[0].1["session_id"], "live-1");
+        assert_eq!(
+            said[0].1["payload"],
+            json!({"text": "hello kai", "stored_session_id": "stored-1"})
+        );
+        // the engine does not take it: the windows are told, in words, and the caller gets the refusal
+        let (s, e, _d) = service(|p, m, params| {
+            if m == "prompt.submit" {
+                return Err(Error::Unavailable("boom with /home/x/secret".into()));
+            }
+            say_engine(false)(p, m, params)
+        });
+        s.refresh_roster().await;
+        let err = s
+            .say("kai", "hi", &Pick::Latest, &Caller::through("endpoint"))
+            .await
+            .unwrap_err();
+        assert_eq!(err.code, "engine_unavailable");
+        let failed = e.of("window.said_failed");
+        assert_eq!(failed.len(), 1);
+        let reason = failed[0].1["payload"]["reason"].as_str().unwrap();
+        assert!(
+            !reason.contains("secret") && !reason.contains("boom"),
+            "{reason}"
+        );
+        // nothing is announced for a message the API refused before it tried
+        let (s, e, _d) = service(say_engine(true));
+        s.refresh_roster().await;
+        assert!(
+            s.say("kai", "hi", &Pick::Latest, &Caller::through("endpoint"))
+                .await
+                .is_err()
+        );
+        assert!(e.of("window.said").is_empty());
     }
 
     #[tokio::test]

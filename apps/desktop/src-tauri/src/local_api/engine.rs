@@ -12,6 +12,11 @@ pub trait Engine: Send + Sync + 'static {
     /// Ask `profile`'s link (`default` is the root) `method`, starting the link if it is not up. An error answer from the
     /// engine is an `Err` whose text carries the engine's words (the caller never shows them).
     async fn request(&self, profile: &str, method: &str, params: Value) -> Result<Value>;
+
+    /// Tell the windows that a message was said into `session` of `profile` through this API (`failed` when the engine did not
+    /// take it), so a chat that has the conversation open shows it as the owner's own. `payload` is `{text, stored_session_id}`
+    /// or, when it failed, `{reason}`. Nothing to do where there is no window.
+    async fn said(&self, _profile: &str, _session: &str, _payload: Value, _failed: bool) {}
 }
 
 /// The engine through the host's proxies.
@@ -36,6 +41,14 @@ impl Engine for Hubbed {
         let (_, hub) = state.hubs.hub_for(Some(profile))?;
         hub.ensure_ready(self.wait).await?;
         hub.request(method, params, self.wait).await
+    }
+
+    async fn said(&self, profile: &str, session: &str, payload: Value, failed: bool) {
+        use tauri::Manager as _;
+        let state = self.handle.state::<crate::commands::AppState>();
+        if let Ok((_, hub)) = state.hubs.hub_for(Some(profile)) {
+            hub.announce_said(session, &payload, failed);
+        }
     }
 }
 
@@ -89,6 +102,21 @@ pub mod scripted {
                 c.push((profile.to_owned(), method.to_owned(), params.clone()));
             }
             (self.respond)(profile, method, &params)
+        }
+
+        async fn said(&self, profile: &str, session: &str, payload: Value, failed: bool) {
+            if let Ok(mut c) = self.calls.lock() {
+                let method = if failed {
+                    "window.said_failed"
+                } else {
+                    "window.said"
+                };
+                c.push((
+                    profile.to_owned(),
+                    method.to_owned(),
+                    serde_json::json!({"session_id": session, "payload": payload}),
+                ));
+            }
         }
     }
 }
