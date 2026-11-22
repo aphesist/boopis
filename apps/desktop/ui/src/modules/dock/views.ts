@@ -240,6 +240,7 @@ export function cardFor(w: Wait, size: string, at: 'list' | 'ask' = 'list'): HTM
     el = ui.card(w.kind, w.data as unknown as Record<string, unknown>, { size: size as 'compact' | 'mini', ground: 'dock' });
     el.dataset['wait'] = w.id;
     el.dataset['k'] = 'card:' + w.id + ':' + size;
+    if (at === 'ask') el.setAttribute('data-mirror', '');     /* the same ask as the needs-you page's: it is not another one waiting (cards/card.ts attn) */
     X.cardEls.set(k, el);
   }
   return el;

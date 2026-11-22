@@ -194,7 +194,9 @@ export class HxCard extends HTMLElement {
   }
 
   attn(): boolean {
-    if (this.size === 'popover') return false;
+    /* a popover is a preview, and a mirror is the same ask drawn a second time in another place (the dock's session beside its
+       needs-you page), so neither waits on the user a second time */
+    if (this.size === 'popover' || this.hasAttribute('data-mirror')) return false;
     const c = { d: this.data, s: this.state, size: this.size };
     if (this.K.attention) return this.K.attention(c);
     return this.K.tone(c) === 'red';
