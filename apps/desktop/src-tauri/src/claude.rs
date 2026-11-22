@@ -953,10 +953,7 @@ pub(crate) async fn run_cli(
         })
         .kill_on_drop(true);
     #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        cmd.creation_flags(0x0800_0000);
-    }
+    cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW: tokio's own method, as in `hermes::cli`
     let out = match tokio::time::timeout(timeout, cmd.output()).await {
         Err(_) => {
             tracing::warn!(program = %exe.display(), ?args, "a CLI did not answer in time");
@@ -1587,7 +1584,6 @@ mod tests {
         let home = tmp.path().join("home");
         let on_path = script(&tmp.path().join("bin"), "claude");
         let in_home = script(&home.join(".npm-global/bin"), "claude");
-        let _ = &in_home;
         let path = tmp.path().join("bin").display().to_string();
         let home_s = home.display().to_string();
 
