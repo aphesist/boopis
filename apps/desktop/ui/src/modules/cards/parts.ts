@@ -70,11 +70,9 @@ export function originVisual(o: KnownOrigin | null, size: number, max?: number, 
   if (o.kind === 'teammate') {
     const one = bot(o.ids[0]);
     if (o.ids.length === 1 && one) return U.html.orb(one, { size });
-    const lim = max || 3;
-    const shown = o.ids.slice(0, Math.max(1, Math.min(lim, o.ids.length > lim ? lim - 1 : o.ids.length))), more = o.ids.length - shown.length;
-    return '<span class="cd-stack" style="--s:' + size + 'px"' + (more && !still ? ' tabindex="0"' : '') + ' data-tip="' + esc(namesText(o.ids)) + '" role="img" aria-label="' + esc(namesText(o.ids)) + '">' +
-      shown.map((id) => { const b = bot(id); return '<span class="cd-stack__one">' + (b ? U.html.orb(b, { size }) : '') + '</span>'; }).join('') +
-      (more ? '<span class="cd-stack__more" aria-hidden="true">+' + more + '</span>' : '') + '</span>';
+    /* the kit's stack: one overlap step, the first underneath, "+N" the last member (the same stack as a group's members) */
+    const members = o.ids.map((id) => bot(id) ?? { id, name: id });   /* one not on the roster: the look its name gives (the kit's resolver) */
+    return U.html.stack({ members, size, max: max || 3, label: namesText(o.ids), focusable: !still });
   }
   if (o.kind === 'agent') return U.html.modelMark(o.model, { size: 16, class: 'cd-glyph' });
   if (o.kind === 'mod') return U.icon('mod', { class: 'cd-glyph' });

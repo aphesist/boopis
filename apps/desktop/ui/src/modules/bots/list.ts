@@ -162,6 +162,7 @@ export function syncRail(): void {
   if (rail === lastRail) return;
   lastRail = rail;
   for (const id of S.rows.keys()) updateRow(id);
+  drawGroups();   /* a group's stack has a size and a length of its own in the rail */
   if (S.draftRow) { S.draftRow.o.setAttribute('size', rail ? '24' : '20'); const w = S.draftRow.o.closest<HTMLElement>('.ui-orb'); w?.style.setProperty('--o', rail ? '24' : '20'); paintDraftRow(); }
 }
 
@@ -225,7 +226,7 @@ async function restoreArchivedBot(id: string, button: HTMLElement): Promise<void
 function groupRow(g: Group): string {
   const busy = g.working.length > 0;
   return ui.html.row({
-    title: g.name, sub: namesOf(g.members), value: g.id, lead: stackOf(g.members, railOn() ? 20 : 16, true),
+    title: g.name, sub: namesOf(g.members), value: g.id, lead: stackOf(g.members, railOn() ? 'rail' : 'row', true),
     end: busy ? ui.html.dot('run') : '', current: S.view === 'group' && g.id === S.groupSel,
     attrs: { 'aria-label': g.name + ', ' + namesOf(g.members) + (busy ? ', replying' : ''), 'data-gid': g.id, 'data-tip': railOn() ? g.name : null, 'data-tip-pos': 'right' }
   });

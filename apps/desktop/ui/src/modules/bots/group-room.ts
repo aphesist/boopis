@@ -10,7 +10,7 @@ import { ui } from '@boopis/ui';
 import type { BotLike } from '@boopis/ui';
 import { data } from '../../data';
 import type { Group, GroupMember, GroupMessage, GroupsEvent } from '../../data';
-import { namesText, originVisual } from '../cards/parts';
+import { namesText } from '../cards/parts';
 import { bot, group, groupThread, initGroups, S } from './model';
 import { livenIn, orbHTML } from './orbs';
 import { markSelected, drawGroups } from './list';
@@ -25,10 +25,16 @@ const sentence = (e: unknown): string => (e instanceof Error ? e.message : Strin
 
 /** a member as an orb draws it: the bot it is when the user has it, else the look its name gives (the kit's one resolver) */
 export const memberBot = (m: GroupMember): BotLike => bot(m.profile) ?? { id: m.profile, name: m.name, state: 'idle' };
-/** stacked orbs for several, the one orb for one (the origin slot, FORMS.md section 4a) */
-export function stackOf(members: readonly GroupMember[], size: number, still?: boolean): string {
+/** how a group shows its members, wherever it does (the sidebar's row, the room's header, who is replying): the kit's stack,
+    one overlap step, the members in the group's order (the first underneath), "+N" the last member. One orb size per place:
+    STACK says which. The members that are bots of the user; `still` for an aria-hidden slot (a row's lead), where nothing takes
+    focus. */
+export const STACK = { row: { size: 16, max: 4 }, rail: { size: 20, max: 2 }, head: { size: 32, max: 4 }, working: { size: 16, max: 4 } } as const;
+export function stackOf(members: readonly GroupMember[], place: keyof typeof STACK, still?: boolean): string {
   const ids = members.map((m) => m.profile).filter((id) => bot(id));
-  return ids.length ? originVisual({ kind: 'teammate', ids, via: null }, size, 4, still) : '';
+  if (!ids.length) return '';
+  const { size, max } = STACK[place];
+  return ui.html.stack({ members: ids.map((id) => bot(id) as BotLike), size, max, label: namesText(ids.map((id) => bot(id)?.name ?? id)), focusable: !still, still: !!still });
 }
 export const namesOf = (members: readonly GroupMember[]): string => namesText(members.map((m) => m.name));
 const quietName = (g: Group, id: string): GroupMember | undefined => g.members.find((m) => m.id === id);
@@ -95,7 +101,7 @@ function renderHead(g: Group): void {
   const archive = ui.iconButton({ icon: 'archive', label: 'Archive ' + g.name, tip: 'Archive' });
   archive.addEventListener('click', () => { archiveGroup(g); });
   acts.append(rename, members, archive);
-  h.append(el('div', { class: 'bt-p-orb', html: stackOf(g.members, 32) }), el('div', { class: 'bt-p-text' }, [name, line]), acts);
+  h.append(el('div', { class: 'bt-p-orb', html: stackOf(g.members, 'head') }), el('div', { class: 'bt-p-text' }, [name, line]), acts);
   livenIn(h);
   checkClips();
 }
@@ -202,7 +208,7 @@ function paintWorking(g: Group): void {
   if (why) { w.className = 'bt-working bt-working--note'; w.textContent = why; return; }
   w.className = 'bt-working';
   if (!busy.length) return;
-  w.insertAdjacentHTML('beforeend', '<span class="bt-working-orbs" aria-hidden="true">' + stackOf(busy, 16, true) + '</span>');
+  w.insertAdjacentHTML('beforeend', '<span class="bt-working-orbs" aria-hidden="true">' + stackOf(busy, 'working', true) + '</span>');
   w.append(el('span', { text: namesOf(busy) + (busy.length === 1 ? ' is replying' : ' are replying') }));
   livenIn(w);
 }
