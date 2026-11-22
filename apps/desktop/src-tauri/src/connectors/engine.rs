@@ -944,10 +944,29 @@ impl Engine {
         } else {
             (entry.program.clone(), Vec::new())
         };
-        let mut report = run_login(&program, &entry.args, &env, &self.limits).await?;
+        let mut report = match run_login(&program, &entry.args, &env, &self.limits).await {
+            Err(e) if entry.program == CLAUDE_PROGRAM => {
+                return Err(claude_signin_failed(&program, &e));
+            }
+            r => r?,
+        };
         report.command_line = entry.line();
         Ok(report)
     }
+}
+
+/// Claude Code was found but its sign-in did not start (the system refused the file, or its output could not be read): plain
+/// words for the card, with Anthropic's installer for this system; the system's own message goes to the log only.
+pub(crate) fn claude_signin_failed(program: &str, e: &Error) -> Error {
+    tracing::warn!(error = %e, program, "Claude Code's sign-in did not start");
+    Error::Connector(
+        "hx.connectors.command_failed",
+        format!(
+            "Claude Code is installed ({program}), but the system could not start its sign-in. Install it again with `{}` in {}, then choose Sign in again.",
+            crate::claude::install_command(),
+            crate::claude::Os::HERE.shell()
+        ),
+    )
 }
 
 /// Environment variables a login command may see: the allowlist Hermes's CLI runs with, plus what a browser or a terminal
