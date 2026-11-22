@@ -2,7 +2,7 @@
    never user-settable, they belong to states; the dice agent, w11/dice, fixes), the Archived group and the "made outside
    boopis" mark, with no bots, one, many and long names. */
 import type { AppCtx, ProviderSpec, State, Story } from '../../types';
-import { liveShaped, withActivity, withMarkdownThread, withRun, withWorking } from '../../live-bots';
+import { liveShaped, withActivity, withKanbanWorker, withMarkdownThread, withQueue, withRun, withWorking } from '../../live-bots';
 
 const bots = async (c: AppCtx): Promise<void> => { c.hx.setState({ tab: 'bots' }); await c.wait(500); };
 const pick = (id: string) => async (c: AppCtx): Promise<void> => { await bots(c); c.hx.emit('hx:bot-select', { id, from: 'lab' }); await c.wait(500); };
@@ -39,6 +39,7 @@ const room: Story = {
     'kai (no thread yet)': st(['empty'], {}, pick('kai')),
     'a long name': st(['long'], { fixtures: ['long'] }, pick('cassiopeia-staging-deploy-guardian')),
     'made outside boopis': st(['variant'], { fixtures: ['outside'] }, pick('sage')),
+    'also running a kanban task': st(['variant', 'loading'], { simulate: false, patch: (p) => withKanbanWorker(liveShaped(p), 'review the render') }, pick('atlas')),
     'live bot: recent sessions and a live composer': st(['typical', 'owner'], live(), pick('atlas')),
     'live bot: a session open, with a line the app says': st(['variant', 'owner'], live(true), pick('atlas')),
     'live bot: a long name': st(['long'], { fixtures: ['long'], simulate: false, patch: (p) => liveShaped(p) }, pick('cassiopeia-staging-deploy-guardian')),
@@ -84,6 +85,9 @@ const groupRoom: Story = {
       await c.wait(300);
       comp?.focus(); comp?.insert('@sol are you there'); await c.wait(400);
     }),
+    'a message waiting for a member': st(['variant'], { ...grp, patch: (p) => withQueue(p, ['and could you add the changelog to the notes?']) }, openGroup),
+    'two messages waiting': st(['variant'], { ...grp, patch: (p) => withQueue(p, ['and could you add the changelog to the notes?', '@nina what did staging say about the migration on the copy of production, and how long did it take to run end to end?'], 2) }, openGroup),
+    'a member also running a kanban task': st(['variant'], { ...grp, patch: (p) => withKanbanWorker(liveShaped(p), 'review the render') }, openGroup),
     'no messages yet': st(['empty'], { fixtures: ['groups'], simulate: false, patch: (p) => ({ ...p, groups: { ...p.groups, snapshot: () => ({ groups: p.groups.snapshot().groups, threads: {} }) } }) }, openGroup),
     'group chat is off': st(['error'], { ...grp, patch: (p) => ({ ...p, groups: { ...p.groups, note: () => 'Group chat is not running in the engine. Restart boopis and try again.' } }) }, openGroup),
     'renaming': st(['variant'], grp, async (c) => { await openGroup(c); await c.click('#hx-view-bots [aria-label^="Rename"]'); await c.wait(300); }),

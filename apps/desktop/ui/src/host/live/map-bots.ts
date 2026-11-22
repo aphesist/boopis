@@ -4,7 +4,7 @@
 import type { CronJobRow, ProfileRow, ProfilesDescribeResult, SessionListRow } from '../../vendor/hermes-shared/gateway-contract.generated';
 import { OWN_SETTINGS } from '../../data/bot-catalog';
 import { lookFor } from '../../data/looks';
-import type { Bot, BotCapability, BotConfig, BotInfo, BotJob, BotSession } from '../../data/types';
+import type { Bot, BotCapability, BotConfig, BotInfo, BotJob, BotSession, BotWorker } from '../../data/types';
 import { whenLabel } from '../map';
 
 /** what an archived teammate's profile is called: this, then its name (the plugin's rule, `bots/homes.py`) */
@@ -50,6 +50,14 @@ export function runningFrom(row: ProfileRow, nowSeconds: number): boolean | null
   const stamps = [row.last_session?.last_active, row.worker_session?.last_active].filter((n): n is number => typeof n === 'number' && Number.isFinite(n));
   if (!stamps.length) return row.last_session === undefined && row.worker_session === undefined ? null : false;
   return nowSeconds - Math.max(...stamps) <= ACTIVE_SECONDS;
+}
+
+/** a kanban worker of the profile wrote lately (`worker_session`, the newest session whose source is kanban, tool or oneshot) */
+export function workerFrom(row: ProfileRow, nowSeconds: number): BotWorker | null {
+  const w = row.worker_session;
+  if (!w || (w.source ?? '').trim().toLowerCase() !== 'kanban') return null;
+  if (typeof w.last_active !== 'number' || !Number.isFinite(w.last_active) || nowSeconds - w.last_active > ACTIVE_SECONDS) return null;
+  return { title: (w.title ?? '').trim() };
 }
 
 /** "in 7 min", "in 3 h", "tomorrow 09:00": when a job runs next, '' when Hermes gives no time */
@@ -109,6 +117,8 @@ export interface Known {
   sessions: readonly BotSession[] | null;
   notes: BotInfo['notes'];
 }
+/** what a working bot is doing, said plainly: a kanban card is named as one */
+const activityOf = (row: ProfileRow, worker: BotWorker | null): string => (worker ? 'kanban task' + (worker.title ? ': ' + worker.title : '') : (row.worker_session?.title ?? '').trim());
 export function botFrom(k: Known, nowSeconds: number): Bot {
   const { row, plugin, detail } = k;
   const name = botName(row);
@@ -123,12 +133,12 @@ export function botFrom(k: Known, nowSeconds: number): Bot {
   const info: BotInfo = {
     profile: row.name, path: row.path, model, provider: detail?.provider ?? (row.provider || null),
     skills: detail?.skills ?? null, toolsets: detail?.toolsets ?? null, mcpServers: detail?.mcpServers ?? null,
-    jobs, sessions: k.sessions, soul: detail?.soul ?? null, running, notes: k.notes
+    jobs, sessions: k.sessions, soul: detail?.soul ?? null, running, worker: workerFrom(row, nowSeconds), notes: k.notes
   };
   return {
     id: row.name, name, role: (detail?.role ?? row.description ?? '').trim(),
     ...look,
-    state: running ? 'working' : 'idle', attention: null, paused: false, activity: running ? (row.worker_session?.title ?? '').trim() : '', spent: '', last: null, ideas: [],
+    state: running ? 'working' : 'idle', attention: null, paused: false, activity: running ? activityOf(row, info.worker ?? null) : '', spent: '', last: null, ideas: [],
     ...(madeOutside(plugin) ? { madeOutside: true as const } : {}),
     cfg: {
       instructions: detail?.soul ?? '', model: model ?? '',

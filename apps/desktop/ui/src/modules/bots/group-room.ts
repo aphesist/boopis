@@ -22,6 +22,8 @@ import { arrival, atEnd, dropPending, entryActs, glanceAt, jumpButton, listWords
 import { mentionCtx, resolvePaths, wireRefs } from '../chat/refs';
 import { foldHuddles, huddleEntry, huddleOn, huddleRuns, isBetween, liveAt } from './huddle';
 import type { HuddleDeps } from './huddle';
+import { mountGroupQueue } from './group-queue';
+import type { GroupQueue } from './group-queue';
 
 const groups = () => data().groups;
 const toast = (t: string, o?: Parameters<typeof ui.toast>[1]): void => { ui.toast(t, o); };
@@ -60,7 +62,7 @@ export function mountGroupPane(root: HTMLElement): HTMLElement {
   root.append(pane);
   S.groupPane = pane;
   G.scroll = scroll; G.head = head; G.log = log; G.zone = zone; G.working = working;
-  const c = ui.composer({ placeholder: 'Message the group', label: 'Message the group', attach: false });
+  const c = ui.composer({ placeholder: 'Message the group', label: 'Message the group', attach: false, queue: true });
   c.classList.add('bt-composer');
   zone.append(c);
   c.input.setAttribute('data-hx-focus', 'composer');
@@ -70,11 +72,16 @@ export function mountGroupPane(root: HTMLElement): HTMLElement {
   c.input.addEventListener('input', showHint);
   c.addEventListener('ui:send', () => { window.setTimeout(showHint, 0); });
   G.composer = c;
+  /* the messages held back while members work (`Group.queued`): the strip sits above the composer */
+  G.queue = mountGroupQueue(zone, c, {
+    sendNow: (gid, qid) => { groups().sendNow(gid, qid).catch((e: unknown) => { toast('It was not sent: ' + sentence(e)); }); },
+    takeBack: (gid, qid) => { const t = groups().unqueue(gid, qid); if (t) { c.setValue(c.value ? t + '\n' + c.value : t); c.focus(); } }
+  });
   const measure = (): void => { S.viewRoot?.style.setProperty('--bt-composer-h', zone.offsetHeight + 'px'); };
   new ResizeObserver(measure).observe(zone);
   return pane;
 }
-const G = { scroll: null as HTMLElement | null, head: null as HTMLElement | null, log: null as HTMLElement | null, zone: null as HTMLElement | null, working: null as HTMLElement | null, composer: null as import('../../components').ComposerEl | null, renaming: false };
+const G = { scroll: null as HTMLElement | null, head: null as HTMLElement | null, log: null as HTMLElement | null, zone: null as HTMLElement | null, working: null as HTMLElement | null, composer: null as import('../../components').ComposerEl | null, queue: null as GroupQueue | null, renaming: false };
 
 export function openGroup(id: string | null): void {
   initGroups();
@@ -388,29 +395,38 @@ function renderComposer(g: Group): void {
   c.chips.replaceChildren(...chips);
   const why = groups().note();
   (G.working as HTMLElement).dataset['note'] = why ? '1' : '';
-  c.setRunning(g.working.length > 0);
+  c.setRunning(g.busy);
+  G.queue?.paint(g, g.working);
 }
 /** the line above the composer: why group chat cannot run, or the members at work past the three drawn in the thread */
 function paintWorking(g: Group, more: readonly MemberActivity[] = []): void {
   const w = G.working as HTMLElement;
   const why = groups().note();
+  const busy = more.map((a) => memberOf(g, a.member)).filter((m): m is GroupMember => !!m);
+  /* a member that is also running a kanban card is two sessions at once: the engine does not tie them together, so the room says it */
+  const onBoard = g.members.filter((m) => !!bot(m.profile)?.info?.worker);
   w.textContent = '';
   if (why) { w.className = 'bt-working bt-working--note'; w.textContent = why; return; }
   w.className = 'bt-working';
-  const busy = more.map((a) => memberOf(g, a.member)).filter((m): m is GroupMember => !!m);
-  if (!busy.length) return;
-  w.insertAdjacentHTML('beforeend', '<span class="bt-working-orbs" aria-hidden="true">' + stackOf(busy, 16, true) + '</span>');
-  w.append(el('span', { text: namesOf(busy) + (busy.length === 1 ? ' is next' : ' are next') }));
+  if (busy.length) {
+    w.insertAdjacentHTML('beforeend', '<span class="bt-working-orbs" aria-hidden="true">' + stackOf(busy, 16, true) + '</span>');
+    w.append(el('span', { text: namesOf(busy) + (busy.length === 1 ? ' is next' : ' are next') }));
+  }
+  if (onBoard.length) w.append(el('span', { class: 'bt-working-board', text: (busy.length ? '. ' : '') + namesOf(onBoard) + (onBoard.length === 1 ? ' is also running a kanban task' : ' are also running kanban tasks') }));
   livenIn(w);
 }
+/** the roster moved (a bot started or finished a kanban card): the open group says it */
+export function repaintWorking(): void { const g = group(S.groupSel); if (g && S.view === 'group') paintWorking(g, activityOf(g).filter((a) => memberOf(g, a.member)).slice(SHOWN)); }
+/** a message while members are working is held and sent when they are done (it never stops them); "Send now" in the strip stops them */
 function send(text: string): void {
   const g = group(S.groupSel); if (!g || !text.trim() || !GUARDS.every((f) => f(g, text))) return;
-  groups().send(g.id, text.trim());
+  void groups().send(g.id, text.trim(), 'when-done').then((how) => { if (how === 'queued') ui.announce('Message held until the group has finished'); });
 }
 export function stopTalk(): boolean {
   const g = group(S.groupSel); if (!g) return false;
+  const held = g.queued.length;
   const was = groups().stop(g.id);
-  if (was) toast('Stopped ' + g.name);
+  if (was) toast('Stopped ' + g.name + (held ? '. The message waiting goes out now.' : ''));
   return was;
 }
 

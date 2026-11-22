@@ -28,7 +28,7 @@ export function createMockGroups(o: MockGroupsOptions): GroupsSource {
     const have = o.bots();
     const pick = have.slice(0, 3);
     if (pick.length >= 2) {
-      const g: Group = { id: 'room-release', name: 'release crew', members: pick.map(memberOf), working: [] };
+      const g: Group = { id: 'room-release', name: 'release crew', members: pick.map(memberOf), working: [], busy: false, queued: [] };
       groups.push(g);
       threads[g.id] = [
         text('you', 'Is Friday’s release safe to cut? @' + pick[0]!.id + ' what changed, @' + (pick[1]?.id ?? '') + ' what is left to deploy.'),
@@ -41,16 +41,37 @@ export function createMockGroups(o: MockGroupsOptions): GroupsSource {
   if (o.paper) {
     const team = ['kai', 'nina', 'moss', 'iris', 'hex', 'nimbus'].map((id) => o.bots().find((b) => b.id === id)).filter((b): b is Bot => !!b);
     if (team.length === 6) {
-      const g: Group = { id: 'room-paper', name: 'paper past', members: team.map(memberOf), working: [] };
+      const g: Group = { id: 'room-paper', name: 'paper past', members: team.map(memberOf), working: [], busy: false, queued: [] };
       groups.push(g);
       threads[g.id] = PAPER_PAST.map((m) => text(m.who, m.text, m.round, m.to));
     }
   }
-  const nameList = (g: Group, who: readonly string[]): string => who.map((w) => g.members.find((m) => m.id === w)?.name ?? w).join(' and ');
   const addressed = (g: Group, t: string): GroupMember[] => {
     const hit = g.members.filter((m) => new RegExp('@' + m.handle + '(?![\\w.:-])', 'i').test(t));
     return /@(all|everyone)\b/i.test(t) || !hit.length ? [...g.members] : hit;
   };
+
+  /** the message into the room, and (when the page simulates) the members' replies; the next held message goes when they are done */
+  function deliver(g: Group, t: string): void {
+    post(g.id, text('you', t));
+    if (!o.simulate) { ev.emit({ type: 'group', group: { ...g } }); return; }
+    const who = addressed(g, t);
+    g.working = who.map((m) => m.id); g.busy = true;
+    const started = Date.now();
+    const act = (): void => { g.activity = g.working.map((id, k) => ({ member: id, status: k === 0 ? 'running' as const : 'queued' as const, round: 0, startedAt: k === 0 ? started : null, tool: null })); };
+    act();
+    ev.emit({ type: 'group', group: { ...g } });
+    who.forEach((m, i) => window.setTimeout(() => {
+      if (!g.working.includes(m.id)) return;
+      post(g.id, text(m.id, 'Seen. I will take my part and say so here when it is done.', 0, ['you']));
+      g.working = g.working.filter((x) => x !== m.id);
+      act();
+      const next = g.working.length ? undefined : g.queued[0];
+      if (next) { g.queued = g.queued.slice(1); deliver(g, next.text); return; }
+      g.busy = g.working.length > 0;
+      ev.emit({ type: 'group', group: { ...g } });
+    }, 700 + i * 900));
+  }
 
   const source: GroupsSource = {
     ...feed<GroupsSnapshot, GroupsEvent>(() => ({ groups: groups.map((g) => ({ ...g })), threads: Object.fromEntries(Object.entries(threads).map(([k, v]) => [k, [...v]])) }), ev),
@@ -58,28 +79,39 @@ export function createMockGroups(o: MockGroupsOptions): GroupsSource {
     limits: { min: 2, max: 6 },
     note: () => null,
     open: () => Promise.resolve(),
-    send(groupId, t) {
+    send(groupId, t, how = 'when-done') {
       const g = find(groupId);
-      post(groupId, text('you', t));
-      if (!o.simulate) return;
-      const who = addressed(g, t);
-      const started = Date.now();
-      const busy = (): void => { g.activity = g.working.map((id, k) => ({ member: id, status: k === 0 ? 'running' as const : 'queued' as const, round: 0, startedAt: k === 0 ? started : null, tool: null })); ev.emit({ type: 'group', group: { ...g } }); };
-      g.working = who.map((m) => m.id);
-      busy();
-      who.forEach((m, i) => window.setTimeout(() => {
-        if (!g.working.includes(m.id)) return;
-        post(groupId, text(m.id, 'Seen. I will take my part and say so here when it is done.', 0, ['you']));
-        g.working = g.working.filter((x) => x !== m.id);
-        busy();
-      }, 700 + i * 900));
-      void nameList;
+      if (g.working.length && how === 'when-done') {
+        g.queued = [...g.queued, { id: gid('q'), text: t, t: hhmm() }];
+        ev.emit({ type: 'group', group: { ...g } });
+        return Promise.resolve('queued');
+      }
+      if (g.working.length) g.working = [];
+      deliver(g, t);
+      return Promise.resolve('sent');
     },
-    stop(groupId) { const g = find(groupId); const was = g.working.length > 0; g.working = []; delete g.activity; if (was) ev.emit({ type: 'group', group: { ...g } }); return was; },
+    unqueue(groupId, queuedId) {
+      const g = find(groupId);
+      const at = g.queued.find((q) => q.id === queuedId);
+      if (!at) return null;
+      g.queued = g.queued.filter((q) => q !== at);
+      ev.emit({ type: 'group', group: { ...g } });
+      return at.text;
+    },
+    sendNow(groupId, queuedId) {
+      const g = find(groupId);
+      const at = g.queued.find((q) => q.id === queuedId);
+      if (!at) return Promise.resolve();
+      g.queued = g.queued.filter((q) => q !== at);
+      g.working = [];
+      deliver(g, at.text);
+      return Promise.resolve();
+    },
+    stop(groupId) { const g = find(groupId); const was = g.working.length > 0; g.working = []; delete g.activity; g.busy = false; if (was) ev.emit({ type: 'group', group: { ...g } }); return was; },
     continueTalk: () => Promise.resolve(),
     create(draft) {
       if (draft.bots.length < 2 || draft.bots.length > 6) return Promise.reject(new Error('A group is two to six bots.'));
-      const g: Group = { id: gid('room-'), name: draft.name.trim() || 'new group', members: botsOf(draft.bots), working: [] };
+      const g: Group = { id: gid('room-'), name: draft.name.trim() || 'new group', members: botsOf(draft.bots), working: [], busy: false, queued: [] };
       groups.push(g); threads[g.id] = [];
       ev.emit({ type: 'group-created', group: { ...g } });
       return Promise.resolve({ ...g });

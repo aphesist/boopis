@@ -19,6 +19,26 @@
   "w": 1196,
   "h": 872
  },
+ "a-member-also-running-a-kanban-task@bone": {
+  "sha": "fcc8b4a8d30db2b83561f9f87350f2564631fd18",
+  "w": 1196,
+  "h": 872
+ },
+ "a-member-also-running-a-kanban-task@catalog": {
+  "sha": "67aa3caee3d95fb41252c2d928240d085a948c4c",
+  "w": 1196,
+  "h": 872
+ },
+ "a-member-also-running-a-kanban-task@graphite": {
+  "sha": "969ef20ee22545abe853fe4db774e87af8262376",
+  "w": 1196,
+  "h": 872
+ },
+ "a-member-also-running-a-kanban-task@typewriter": {
+  "sha": "f0057043fd7098c553988a3c5eb5c8bbf5756293",
+  "w": 1196,
+  "h": 872
+ },
  "a-member-chip-hover@bone": {
   "sha": "3bdb857724c50d119d87658ae81ba1e7550e2a8b",
   "w": 1196,
@@ -96,6 +116,26 @@
  },
  "five-at-work-the-rest-in-one-line-above-the-composer@typewriter": {
   "sha": "9968c4b95963765d3fb33b230b71af674f7d99a4",
+  "w": 1196,
+  "h": 872
+ },
+ "a-message-waiting-for-a-member@bone": {
+  "sha": "76fead6791618c43f8073b2a19c7980fd3f99ea3",
+  "w": 1196,
+  "h": 872
+ },
+ "a-message-waiting-for-a-member@catalog": {
+  "sha": "20ff62fe51f69e095fca3ed428d5051f80a455ed",
+  "w": 1196,
+  "h": 872
+ },
+ "a-message-waiting-for-a-member@graphite": {
+  "sha": "155c05142d179617a866f795b00f789c7145e102",
+  "w": 1196,
+  "h": 872
+ },
+ "a-message-waiting-for-a-member@typewriter": {
+  "sha": "2ac44b38b9bd13aabcac91680d772e86bff0ce28",
   "w": 1196,
   "h": 872
  },
@@ -216,6 +256,26 @@
  },
  "two-members-replying@typewriter": {
   "sha": "e9d638f2f7d284387eaad83ae16bfa5184382739",
+  "w": 1196,
+  "h": 872
+ },
+ "two-messages-waiting@bone": {
+  "sha": "f75a328bb9f2eedeb28c9a8a13a262bf99b39844",
+  "w": 1196,
+  "h": 872
+ },
+ "two-messages-waiting@catalog": {
+  "sha": "8c62a1d0b791e00b60b9fec16b187c0217a6a26d",
+  "w": 1196,
+  "h": 872
+ },
+ "two-messages-waiting@graphite": {
+  "sha": "c6af215aa10530d09039b30fe4e037b77df775fe",
+  "w": 1196,
+  "h": 872
+ },
+ "two-messages-waiting@typewriter": {
+  "sha": "ca08530a4d440ee44a699ea9eebd6ed802988975",
   "w": 1196,
   "h": 872
  }

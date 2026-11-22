@@ -262,3 +262,6 @@ orb-avatar.is-live { cursor: pointer; }
 .bt-huddle__body > .bt-unread { margin: 0; }
 .bt-hint { margin: 0 0 var(--sp-2); text-align: center; font: 400 var(--fs-xs)/var(--lh-small) var(--sans); color: var(--text-quiet); }
 .bt-hint[hidden] { display: none; }
+/* the messages a group holds back while its members work (group-queue.ts): the kit's group and rows, above the composer */
+.bt-queue { margin: 0 0 var(--sp-2); }
+.bt-queue[hidden] { display: none; }

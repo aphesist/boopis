@@ -8,6 +8,12 @@
                                    paused at its cap (`room.activity` bounded) are lines the app says
      who is replying               `groups.state` (`driver_status.member_activity`)
      rename                        `groups.rename`; stop `groups.stop`; continue after the cap `groups.continue`
+     a message while members work  the engine runs one Discussion per thread, and a newer message in the thread ends it: a member
+                                   still working has its answer dropped (`turn.cancelled`, `superseded_by_newer_user_event`,
+                                   `gateway/hosted_room_discussion.py plan_publication`). The engine has no queue, steer or
+                                   interjection for a room (`groups.send` is the only way in), so boopis holds the message
+                                   until the Discussion is over (`room.activity` settled or bounded) and then sends it; "send now"
+                                   stops the running turns first (`groups.stop`) and says so
    The engine moves a room's log with `groups.changed`; a slow poll is only the backstop. A room's roster is frozen when it is
    made, and a room cannot be archived (only disbanded, for good): so changing members makes a new room with the same name,
    and archiving a group is boopis's own mark on this computer (`core/settings`), which a restore takes off. Replies arrive
@@ -17,7 +23,7 @@ import { logger } from '../../core/log';
 import { GROUP_NATURE } from '../../data/mock-groups';
 import type { GroupsEvent, GroupsSnapshot, GroupsSource } from '../../data/provider';
 import { emitter, feed, store } from '../../data/store';
-import type { ArchivedGroup, Bot, Group, GroupMember, GroupMessage, GroupText, MemberActivity } from '../../data/types';
+import type { ArchivedGroup, Bot, Group, GroupMember, GroupMessage, GroupQueued, GroupText, MemberActivity } from '../../data/types';
 import type { GroupsListResult, GroupsLogResult, GroupsStateResult, Room, RoomEvent } from '../../vendor/hermes-shared/gateway-contract.generated';
 import type { GatewayClient } from '../gateway';
 import { clock } from '../map';
@@ -28,6 +34,11 @@ const POLL_MS = 8_000;
 const WORKING_MS = 1_200;
 const MIN = 2, MAX = 6;
 const THREAD = 'main';
+/** a Discussion that is open in the log but shows no sign of life (no turn running, nothing new in the log) for this long is
+ *  taken as stuck: the engine's router waits 20 s at most and its worker polls every 5 s, so a healthy gap is far shorter */
+const GRACE_MS = 45_000;
+/** how long a room is followed for a held message (a turn may run half an hour: `turn_timeout_seconds` is 1830) */
+const HOLD_WATCH_MS = 3 * 60 * 60_000;
 export const NO_GROUPS = 'This version of boopis’s engine has no group chat.';
 export const GROUPS_OFF = 'Group chat is not running in the engine. Restart boopis and try again.';
 
@@ -49,6 +60,17 @@ interface Rec {
   /** what each member at work is doing (`member_activity`) */
   activity: MemberActivity[];
   watching: boolean;
+  /** the messages held until the Discussion is over */
+  queue: GroupQueued[];
+  /** a held message is being sent */
+  pumping: boolean;
+  /** what the log says of the Discussions, as the engine's `_pending_discussion` reads it (`gateway/hosted_room_discussion.py`) */
+  latest: Map<string, { id: string; seq: number }>;
+  done: Map<string, number>;
+  continued: Map<string, number>;
+  stopped: number;
+  /** when a turn was last seen running, and when the log last moved (ms) */
+  aliveAt: number;
 }
 /** one row of `member_activity` as the app reads it: the status the room names (anything else is running), the round, when it started, the tool */
 export function activityOf(a: { member_id: string; status: string; round_index?: number | null; started_at?: number | null; tool?: string | null }): MemberActivity {
@@ -77,7 +99,17 @@ export function createLiveGroups(deps: GroupsDeps) {
   const pending = new Set<Promise<unknown>>();
   const track = <T>(p: Promise<T>): Promise<T> => { pending.add(p); const done = (): void => { pending.delete(p); }; p.then(done, done); return p; };
 
-  const toGroup = (r: Rec): Group => ({ id: r.room.room_id, name: r.room.name, members: r.room.members.map(memberFrom), working: [...r.working], ...(r.activity.length ? { activity: [...r.activity] } : {}) });
+  /** a Discussion the room has not finished: the newest user message of a thread, not stopped and not closed by a
+   *  `room.activity` (settled or bounded) that came after the last `room.continued` */
+  const open = (r: Rec): boolean => {
+    for (const u of r.latest.values()) if (u.seq > r.stopped && !((r.done.get(u.id) ?? 0) > (r.continued.get(u.id) ?? 0))) return true;
+    return false;
+  };
+  /** members are working, or a Discussion is open and showed life lately: a message sent now would cut it short */
+  const busyOf = (r: Rec): boolean => r.working.length > 0 || (open(r) && Date.now() - r.aliveAt < GRACE_MS);
+  const toGroup = (r: Rec): Group => ({ id: r.room.room_id, name: r.room.name, members: r.room.members.map(memberFrom), working: [...r.working], busy: busyOf(r), queued: r.queue.map((q) => ({ ...q })), ...(r.activity.length ? { activity: [...r.activity] } : {}) });
+  const signature = (r: Rec): string => r.working.join(',') + '|' + busyOf(r) + '|' + r.queue.map((q) => q.id).join(',') + '|' + JSON.stringify(r.activity);
+  const publish = (r: Rec): void => { if (!archivedIds.has(r.room.room_id)) events.emit({ type: 'group', group: toGroup(r) }); };
   const nameOf = (r: Rec, id: string): string => r.room.members.map(memberFrom).find((m) => m.id === id)?.name ?? id;
   const live = (): Rec[] => [...recs.values()].filter((r) => !archivedIds.has(r.room.room_id));
 
@@ -108,9 +140,22 @@ export function createLiveGroups(deps: GroupsDeps) {
       case 'turn.failed': return { kind: 'note', id: e.event_id, t, text: nameOf(r, String(p['member_id'] ?? '')) + ' could not reply.' };
       case 'member.unavailable': return { kind: 'note', id: e.event_id, t, text: nameOf(r, String(p['member_id'] ?? '')) + ' is not available.' };
       case 'room.assignment': return assignmentNote(r, e, t);
+      case 'turn.cancelled': return p['reason'] === 'superseded_by_newer_user_event' ? { kind: 'note', id: e.event_id, t, text: nameOf(r, String(p['member_id'] ?? '')) + '’s turn was stopped because a newer message arrived, so its answer is not shown.' } : null;
       case 'room.stop_requested': return { kind: 'note', id: e.event_id, t, text: 'Stopped.' };
       case 'room.activity': return p['status'] === 'bounded' && typeof p['discussion_event_id'] === 'string' ? { kind: 'note', id: e.event_id, t, text: 'The conversation paused at its limit.', more: p['discussion_event_id'] } : null;
       default: return null;
+    }
+  }
+  /** what an event does to the room's Discussions (the engine's own reading of its log) */
+  function follow(r: Rec, e: RoomEvent): void {
+    const p = e.payload ?? {};
+    const id = typeof p['discussion_event_id'] === 'string' ? p['discussion_event_id'] : '';
+    switch (e.kind) {
+      case 'message.user': r.latest.set(typeof p['thread_id'] === 'string' ? p['thread_id'] : THREAD, { id: e.event_id, seq: e.seq }); break;
+      case 'room.activity': if (id && (p['status'] === 'settled' || p['status'] === 'bounded')) r.done.set(id, Math.max(r.done.get(id) ?? 0, e.seq)); break;
+      case 'room.continued': if (id) r.continued.set(id, Math.max(r.continued.get(id) ?? 0, e.seq)); break;
+      case 'room.stop_requested': r.stopped = Math.max(r.stopped, e.seq); break;
+      default: break;
     }
   }
   function ingest(r: Rec, evs: readonly RoomEvent[], announce: boolean): void {
@@ -118,6 +163,8 @@ export function createLiveGroups(deps: GroupsDeps) {
       if (r.seen.has(e.seq)) continue;
       r.seen.add(e.seq);
       r.cursor = Math.max(r.cursor, e.seq);
+      follow(r, e);
+      if (announce) r.aliveAt = Date.now();
       const m = messageOf(r, e);
       if (!m || r.thread.some((x) => x.id === m.id)) continue;
       r.thread.push(m);
@@ -129,7 +176,7 @@ export function createLiveGroups(deps: GroupsDeps) {
       let page: GroupsLogResult;
       try { page = await client.request('groups.log', { room_id: r.room.room_id, since_seq: r.cursor, limit: 200 }); }
       catch (e) {
-        if (/ahead of/.test(why(e))) { r.cursor = 0; r.seen.clear(); r.thread = []; continue; }
+        if (/ahead of/.test(why(e))) { r.cursor = 0; r.seen.clear(); r.thread = []; r.latest.clear(); r.done.clear(); r.continued.clear(); r.stopped = 0; continue; }
         throw e;
       }
       ingest(r, page.events ?? [], announce);
@@ -142,28 +189,66 @@ export function createLiveGroups(deps: GroupsDeps) {
     const d = st.driver_status;
     const acts = d?.working ? (d.member_activity ?? []) : [];
     const active = acts.map((a) => a.member_id);
-    const was = r.working.join(',') + '|' + JSON.stringify(r.activity);
+    const was = signature(r);
     r.working = active;
     r.activity = acts.map(activityOf);
-    if (was !== active.join(',') + '|' + JSON.stringify(r.activity)) events.emit({ type: 'group', group: toGroup(r) });
+    if (active.length) r.aliveAt = Date.now();
+    if (was !== signature(r)) publish(r);
     return !!d?.working;
   }
-  /** follows a room while its members work: the log and who is replying, until two reads in a row find it idle */
+  /** follows a room while its members work (and while a message is held for them): the log and who is replying, until two reads in a
+   *  row find it idle. A held message is sent as soon as the Discussion is over. */
   function watch(r: Rec): void {
     if (r.watching) return;
     r.watching = true;
     void track((async () => {
       let idle = 0;
+      const began = Date.now();
       try {
-        for (let i = 0; i < 600 && idle < 2; i++) {
-          await new Promise((res) => setTimeout(res, WORKING_MS));
+        for (let i = 0; ; i++) {
+          const holding = r.queue.length > 0;
+          if (holding ? Date.now() - began > HOLD_WATCH_MS : idle >= 2 || i >= 600) break;
+          await new Promise((res) => setTimeout(res, i < 250 ? WORKING_MS : 5 * WORKING_MS));
           const busy = await readState(r);
           await readLog(r);
-          idle = busy ? 0 : idle + 1;
+          await pump(r);
+          idle = busy || busyOf(r) ? 0 : idle + 1;
         }
       } catch (e) { log.warn('a room could not be followed', e); }
-      finally { r.watching = false; if (r.working.length) { r.working = []; r.activity = []; events.emit({ type: 'group', group: toGroup(r) }); } }
+      finally { r.watching = false; if (r.working.length) { r.working = []; r.activity = []; publish(r); } }
     })());
+  }
+  /** sends the held messages one at a time, each once the room has finished the one before: two messages written into a running
+   *  Discussion would drop the first one's answers. The engine's reply to a send already shows the room as busy again. */
+  async function pump(r: Rec): Promise<void> {
+    if (r.pumping) return;
+    r.pumping = true;
+    try {
+      while (r.queue.length && !busyOf(r)) {
+        const next = r.queue.shift() as GroupQueued;
+        publish(r);
+        await post(r, next.text);
+      }
+    } finally { r.pumping = false; }
+  }
+  /** the message into the room; true when the engine took it */
+  async function post(r: Rec, text: string): Promise<boolean> {
+    const id = r.room.room_id;
+    try {
+      const res = await track(client.request('groups.send', { room_id: id, event_id: 'ui-' + uid(), payload: { thread_id: THREAD, text } }));
+      ingest(r, [res.event], true);
+      publish(r);
+      watch(r);
+      return true;
+    } catch (e) {
+      log.error('the message to a group was not sent', e);
+      events.emit({ type: 'message', groupId: id, message: { kind: 'note', id: 'n-' + uid(), t: clock(now()), text: 'The message was not sent: ' + why(e) } });
+      return false;
+    }
+  }
+  /** the room as it is now, so that a message is held or sent on what the engine says and not on a poll's last answer */
+  async function fresh(r: Rec): Promise<void> {
+    try { await readLog(r); await readState(r); } catch (e) { log.warn('a room could not be read before a message', e); }
   }
 
   /* ───────── the rooms ───────── */
@@ -182,7 +267,7 @@ export function createLiveGroups(deps: GroupsDeps) {
         for (const room of rooms) {
           const had = recs.get(room.room_id);
           if (!had) {
-            const r: Rec = { room, thread: [], seen: new Set(), cursor: 0, loaded: false, working: [], activity: [], watching: false };
+            const r: Rec = { room, thread: [], seen: new Set(), cursor: 0, loaded: false, working: [], activity: [], watching: false, queue: [], pumping: false, latest: new Map(), done: new Map(), continued: new Map(), stopped: 0, aliveAt: 0 };
             recs.set(room.room_id, r);
             if (!archivedIds.has(room.room_id)) events.emit({ type: 'group-created', group: toGroup(r) });
           } else if (had.room.name !== room.name || had.room.revision !== room.revision) {
@@ -203,7 +288,7 @@ export function createLiveGroups(deps: GroupsDeps) {
     await refreshRooms();
     for (const r of recs.values()) {
       if (!r.loaded || (ids && !ids.includes(r.room.room_id))) continue;
-      await track(readLog(r).then(() => readState(r))).then(() => { if (r.working.length) watch(r); }, (e: unknown) => { log.warn('a room could not be read', e); });
+      await track(readLog(r).then(() => readState(r)).then(() => pump(r))).then(() => { if (r.working.length || r.queue.length) watch(r); }, (e: unknown) => { log.warn('a room could not be read', e); });
     }
   }
   async function checkDriver(): Promise<void> {
@@ -213,6 +298,13 @@ export function createLiveGroups(deps: GroupsDeps) {
     } catch (e) { if (isUnknownMethod(e)) unavailable = NO_GROUPS; }
   }
   const need = (id: string): Rec => { const r = recs.get(id); if (!r) throw new Error('There is no group called ' + id + '.'); return r; };
+
+  /** `groups.stop`: the running turns end and the Discussion with them (the engine's stop fence) */
+  async function halt(r: Rec): Promise<void> {
+    try { await client.request('groups.stop', { room_id: r.room.room_id, cancel_id: 'stop-' + uid() }); }
+    catch (e) { log.warn('could not stop a group', e); }
+    watch(r);
+  }
 
   /* ───────── the source ───────── */
   const snapshot = (): GroupsSnapshot => ({ groups: live().map(toGroup), threads: Object.fromEntries(live().map((r) => [r.room.room_id, [...r.thread]])) });
@@ -244,19 +336,43 @@ export function createLiveGroups(deps: GroupsDeps) {
       try { await readLog(r, false); await readState(r); events.emit({ type: 'thread', groupId: id, messages: [...r.thread] }); if (r.working.length) watch(r); }
       catch (e) { r.loaded = false; throw e; }
     },
-    send(id, text) {
+    async send(id, text, how = 'when-done') {
       const r = recs.get(id);
-      if (!r) { log.warn('there is no group called ' + id); return; }
-      const failed = (e: unknown): void => { log.error('the message to a group was not sent', e); events.emit({ type: 'message', groupId: id, message: { kind: 'note', id: 'n-' + uid(), t: clock(now()), text: 'The message was not sent: ' + why(e) } }); };
-      void track(client.request('groups.send', { room_id: id, event_id: 'ui-' + uid(), payload: { thread_id: THREAD, text } }).then((res) => {
-        ingest(r, [res.event], true);
+      if (!r) { log.warn('there is no group called ' + id); return 'sent'; }
+      if (!r.loaded) { try { await source.open(id); } catch (e) { log.warn('a room could not be read before a message', e); } }
+      await fresh(r);
+      if (how === 'now' && busyOf(r)) await halt(r);
+      else if (busyOf(r) || r.queue.length || r.pumping) {
+        r.queue.push({ id: 'q-' + uid(), text, t: clock(now()) });
+        publish(r);
         watch(r);
-      }, failed));
+        return 'queued';
+      }
+      await post(r, text);
+      return 'sent';
+    },
+    unqueue(id, queuedId) {
+      const r = recs.get(id);
+      const at = r ? r.queue.findIndex((q) => q.id === queuedId) : -1;
+      if (!r || at < 0) return null;
+      const [gone] = r.queue.splice(at, 1) as [GroupQueued];
+      publish(r);
+      return gone.text;
+    },
+    async sendNow(id, queuedId) {
+      const r = need(id);
+      const at = r.queue.findIndex((q) => q.id === queuedId);
+      if (at < 0) return;
+      const [gone] = r.queue.splice(at, 1) as [GroupQueued];
+      publish(r);
+      await fresh(r);
+      if (busyOf(r)) await halt(r);
+      await post(r, gone.text);
     },
     stop(id) {
       const r = recs.get(id);
-      if (!r || !r.working.length) return false;
-      void client.request('groups.stop', { room_id: id, cancel_id: 'stop-' + uid() }).catch((e: unknown) => { log.warn('could not stop a group', e); });
+      if (!r || !busyOf(r)) return false;
+      void halt(r);
       return true;
     },
     async continueTalk(id, more) { const r = need(id); await client.request('groups.continue', { room_id: id, discussion_event_id: more }); watch(r); },

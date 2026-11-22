@@ -126,7 +126,8 @@ export function updatePending(e: HTMLElement, o: PendingOpts): void {
 /** a pending entry that goes without a message (stopped, failed): it fades out */
 export function dropPending(e: HTMLElement): void {
   if (reduced() || typeof e.animate !== 'function') { e.remove(); return; }
-  e.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, easing: 'cubic-bezier(.2,.8,.2,1)' }).finished.then(() => { e.remove(); }, () => { e.remove(); });
+  const a = e.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, easing: 'cubic-bezier(.2,.8,.2,1)' }) as Animation | undefined;
+  if (a?.finished) a.finished.then(() => { e.remove(); }, () => { e.remove(); }); else e.remove();
 }
 
 /* ───────── the arrival ───────── */
