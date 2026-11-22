@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from ..util.log import get_logger
-from . import homes, store
+from . import guides, homes, store
 from .cli import HermesCli
 from .errors import BotExistsError, BotRefusedError, HermesCliError
 
@@ -86,6 +86,13 @@ class BotService:
         patch_settings = store.clean_settings(settings) if settings is not None else None
         patch_approvals = store.clean_approvals(approvals) if approvals is not None else None
         return store.update(path, look=patch_look, settings=patch_settings, approvals=patch_approvals)
+
+    def guide(self, name: str) -> dict[str, Any]:
+        """Give the teammate the hand-off skill (``guides``). Idempotent; an archived teammate is left as it is."""
+        path = homes.profile_dir(self.root, name)
+        if homes.is_archived_name(name):
+            raise BotRefusedError("an archived teammate is read only; restore it first")
+        return {"skill": guides.NAME, "version": guides.VERSION, "written": guides.install(path)}
 
     # ───────── archive, restore, delete: Hermes's own CLI ─────────
     def archive(self, name: str, paused_jobs: Sequence[str] = ()) -> dict[str, Any]:
