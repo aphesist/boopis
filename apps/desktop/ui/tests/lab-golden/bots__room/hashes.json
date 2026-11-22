@@ -1,266 +1,286 @@
 {
  "a-long-name@bone": {
-  "sha": "27e9cfcb3f4372dcd460a5105ce01c2519e12271",
+  "sha": "6fd2b838b6abdd84b7d55ae6cd3324fb2d350c16",
   "w": 1196,
   "h": 872
  },
  "a-long-name@catalog": {
-  "sha": "6c94218b11971bc565fc71d6add5e52e9ad6b3d7",
+  "sha": "e9286e9516fb33bc1509bc3195be110f2c9e7b01",
   "w": 1196,
   "h": 872
  },
  "a-long-name@graphite": {
-  "sha": "d819eeb522556952020ea63f79463f44424e5e8a",
+  "sha": "055c10fabcf7527dc5c2cfb8b06e1508c3d13f82",
   "w": 1196,
   "h": 872
  },
  "a-long-name@typewriter": {
-  "sha": "d12ee4cd5832db10a3acbe3db68f0b1123c9139f",
+  "sha": "2ebeb745494af36a97c1c247f73db1ef14b70b19",
   "w": 1196,
   "h": 872
  },
  "a-reply-in-markdown-lists-a-quote-code-a-path-a-mention@bone": {
-  "sha": "d12835e60c0e3d4367191109bbe32403cd12f722",
+  "sha": "1c7dd1fbdc28859c2f9364a03364993508350824",
   "w": 1196,
   "h": 872
  },
  "a-reply-in-markdown-lists-a-quote-code-a-path-a-mention@catalog": {
-  "sha": "fcd1c4e5e85b9fb082e242e3f033c3fbb3ad8746",
+  "sha": "848157dc7fcd7cf8d542c5a4a6ff5e6a2200db8b",
   "w": 1196,
   "h": 872
  },
  "a-reply-in-markdown-lists-a-quote-code-a-path-a-mention@graphite": {
-  "sha": "7a140aacd98ddb89e366f5a4dc9b397a910033a7",
+  "sha": "b3e453c5ee9267b803bdf5e49c8ccfcf74d2c232",
   "w": 1196,
   "h": 872
  },
  "a-reply-in-markdown-lists-a-quote-code-a-path-a-mention@typewriter": {
-  "sha": "64633440cb0da9f9d6592c69568a7a2a582540c9",
+  "sha": "c86470cf5b6e69017520b73cf76e1603413ddbaa",
   "w": 1196,
   "h": 872
  },
  "a-reply-under-way-the-pending-entry@bone": {
-  "sha": "78569160ec374109d13afcb127c246a8d1807e2b",
+  "sha": "a40477477334cd97104816d9d2b63889846fc6d3",
   "w": 1196,
   "h": 872
  },
  "a-reply-under-way-the-pending-entry@catalog": {
-  "sha": "1a66ba62b91259f83fd4e369760accfd5d63199d",
+  "sha": "bade2dafb0794e3f6455bd1ec7d0e21c65a24652",
   "w": 1196,
   "h": 872
  },
  "a-reply-under-way-the-pending-entry@graphite": {
-  "sha": "96c7e7f63f23f2d8505888e25ea8dc2555f7e2ac",
+  "sha": "43ba5ade1f85b3561ba940e3c7a042b3df1c3f3e",
   "w": 1196,
   "h": 872
  },
  "a-reply-under-way-the-pending-entry@typewriter": {
-  "sha": "52f326abe0d4368621ee241fbffae44a3b840acb",
+  "sha": "08f0e2e99c758a1e67bc36c556944e79c9f91962",
   "w": 1196,
   "h": 872
  },
  "also-running-a-kanban-task@bone": {
-  "sha": "809235ef8ac258565a4a0a36cd7ee149041ada06",
+  "sha": "4c8545cbc93b97a0dc353e2c075b36259718ce2d",
   "w": 1196,
   "h": 872
  },
  "also-running-a-kanban-task@catalog": {
-  "sha": "a3806628f643e5a7035f5be6e2fe2952a925a38e",
+  "sha": "47a7e6ee30e4be9777ab97394c0b55a65cda3b23",
   "w": 1196,
   "h": 872
  },
  "also-running-a-kanban-task@graphite": {
-  "sha": "7a85544e00e13916b3c8613083729825cacef538",
+  "sha": "5d3d7abdc705164bb9cf02a738c071660c86ab05",
   "w": 1196,
   "h": 872
  },
  "also-running-a-kanban-task@typewriter": {
-  "sha": "f3972c8304463cf2731cddfe2ce4bfc5816ae9f5",
+  "sha": "3b55c266bbfe59a4263890e3fc1981c6ded2acc5",
   "w": 1196,
   "h": 872
  },
  "atlas-a-thread@bone": {
-  "sha": "36a070c9ecc788b7bb9b50b850cdd82e3109f130",
+  "sha": "b8c9c0ef6a2b1170988418e582490177ff873b2f",
   "w": 1196,
   "h": 872
  },
  "atlas-a-thread@catalog": {
-  "sha": "e19e9212a720960953079cbad8ff2bbb23eed073",
+  "sha": "308765c8a60baf55af7d096a30906277d8b0d042",
   "w": 1196,
   "h": 872
  },
  "atlas-a-thread@graphite": {
-  "sha": "6e05f07106c546968df415f2b93c0dd8c71a52da",
+  "sha": "61dea3e10b821f4f005f79fcbb4bf0e34cac8d3f",
   "w": 1196,
   "h": 872
  },
  "atlas-a-thread@typewriter": {
-  "sha": "474e32af445ad21cd77240ac1d0e5dac961c6cb9",
+  "sha": "2512e6c4264db11c63db5b4bae6bc6dc7d6a89b1",
   "w": 1196,
   "h": 872
  },
  "composer-attach-tooltip@bone": {
-  "sha": "51d37b2385d090cd4905a7a49b6d898656785412",
+  "sha": "b17a54c06a447203f52951552d70a5c5c708f7a3",
   "w": 1196,
   "h": 872
  },
  "composer-attach-tooltip@catalog": {
-  "sha": "c3503cc40695fba7b86c6829e7134ebd26771a36",
+  "sha": "7a230dabb4bd3e62bd90641bdf63749e44774b39",
   "w": 1196,
   "h": 872
  },
  "composer-attach-tooltip@graphite": {
-  "sha": "ecd8c539a67c97e2f1af00af7b93cc5ad020fb28",
+  "sha": "9ac1dae40508fc3f255a0d0045e0639bfb21c35f",
   "w": 1196,
   "h": 872
  },
  "composer-attach-tooltip@typewriter": {
-  "sha": "f4f5591dad6464fdf28f128dd06ed041073855bb",
+  "sha": "24c62bd60fa38f4fb710203a247a1c93790ad638",
   "w": 1196,
   "h": 872
  },
  "composer-send-hover@bone": {
-  "sha": "36a070c9ecc788b7bb9b50b850cdd82e3109f130",
+  "sha": "1ba23d639ad80b68864e5c6ef6bca359bade65af",
   "w": 1196,
   "h": 872
  },
  "composer-send-hover@catalog": {
-  "sha": "bd663ff72924966ed6dee5153e2000494c31d776",
+  "sha": "308765c8a60baf55af7d096a30906277d8b0d042",
   "w": 1196,
   "h": 872
  },
  "composer-send-hover@graphite": {
-  "sha": "6e05f07106c546968df415f2b93c0dd8c71a52da",
+  "sha": "61dea3e10b821f4f005f79fcbb4bf0e34cac8d3f",
   "w": 1196,
   "h": 872
  },
  "composer-send-hover@typewriter": {
-  "sha": "474e32af445ad21cd77240ac1d0e5dac961c6cb9",
+  "sha": "90f7d7f956a88f37396a8f995953de08aa3f6b7a",
+  "w": 1196,
+  "h": 872
+ },
+ "kai-its-record-read-after-the-roster@bone": {
+  "sha": "a2bd00734a783993a9d54ef41196d22f019eae0f",
+  "w": 1196,
+  "h": 872
+ },
+ "kai-its-record-read-after-the-roster@catalog": {
+  "sha": "61fe96b6cfa17f0241e77166409a315ac7acb820",
+  "w": 1196,
+  "h": 872
+ },
+ "kai-its-record-read-after-the-roster@graphite": {
+  "sha": "b3669a350e6570b000f4f1be765e22868b88bed7",
+  "w": 1196,
+  "h": 872
+ },
+ "kai-its-record-read-after-the-roster@typewriter": {
+  "sha": "eaf3eb5c46e06345ee907a6468d366706096d992",
   "w": 1196,
   "h": 872
  },
  "kai-no-thread-yet@bone": {
-  "sha": "c8bf27d0787d5c818539a52ebf2e4db0a3fdb833",
+  "sha": "f167e4e5e9b693299b082b22757fbe4fac85c099",
   "w": 1196,
   "h": 872
  },
  "kai-no-thread-yet@catalog": {
-  "sha": "7c8ed3e51bb97e25bcdff4ddf3a9160b2b22fdea",
+  "sha": "dd2f2cc8f443563abbe32986c165a8820a4cd65d",
   "w": 1196,
   "h": 872
  },
  "kai-no-thread-yet@graphite": {
-  "sha": "b920e6d609205afa74dc3314e05a8940f31f6614",
+  "sha": "9ef61051ae7953d861a5c26bdc4bf5835470e84b",
   "w": 1196,
   "h": 872
  },
  "kai-no-thread-yet@typewriter": {
-  "sha": "6057a857f991248e3d79452b4e0355d2223a22ac",
+  "sha": "61c9e54b91245706fdddc107a458aa10ea905f77",
   "w": 1196,
   "h": 872
  },
  "live-bot-a-long-name@bone": {
-  "sha": "077db350abb67a7f55c0c5da960ef75ae8b00b53",
+  "sha": "3b3d4a35f0e73c2ed3747e83808b5acb2dfde9cf",
   "w": 1196,
   "h": 872
  },
  "live-bot-a-long-name@catalog": {
-  "sha": "91f53821f176f695ef3ad897d0b018c7c5040219",
+  "sha": "e2e2a78ebe7f40ecc431e8f3f3d9741876cc7216",
   "w": 1196,
   "h": 872
  },
  "live-bot-a-long-name@graphite": {
-  "sha": "a5c75ca5acb6d631aea877c8ca68c591df4bb2e8",
+  "sha": "36603278dde8b42fefef457ff3dc7d2b953bd0c0",
   "w": 1196,
   "h": 872
  },
  "live-bot-a-long-name@typewriter": {
-  "sha": "8a1ea38bc620e0f1fe624bd13e6acd24f4b98817",
+  "sha": "de24b713ebd3b3ed96883a1ce91b598517bc3e07",
   "w": 1196,
   "h": 872
  },
  "live-bot-a-session-open-with-a-line-the-app-says@bone": {
-  "sha": "b726cf25610bb8e2a6fc61bc3b1b58ec2e994ba5",
+  "sha": "daa2dbcdaff9294b4b5fb3e3ebfc227bd0955891",
   "w": 1196,
   "h": 872
  },
  "live-bot-a-session-open-with-a-line-the-app-says@catalog": {
-  "sha": "12bb4800d7022c35241191d0a3ca004e6bb791f2",
+  "sha": "0ddbaaeb9a06e73a0717e7ea1b822556b1c66479",
   "w": 1196,
   "h": 872
  },
  "live-bot-a-session-open-with-a-line-the-app-says@graphite": {
-  "sha": "ea2f735ea5e7edc9dbe125deeda07f27b9d6a4fa",
+  "sha": "4f9e75d77fb4ce30cdd4116631fa13dd907e623f",
   "w": 1196,
   "h": 872
  },
  "live-bot-a-session-open-with-a-line-the-app-says@typewriter": {
-  "sha": "c3682b617350edd2d43cf37329ccb8185d9919f4",
+  "sha": "ca5f124641d2bc044677488b65b5b2201df24d09",
   "w": 1196,
   "h": 872
  },
  "live-bot-recent-sessions-and-a-live-composer@bone": {
-  "sha": "fbc63819d31d1f9ee420ead60460e0beea9061a1",
+  "sha": "b82300a225468884bfa527ef42a5ec62278873ea",
   "w": 1196,
   "h": 872
  },
  "live-bot-recent-sessions-and-a-live-composer@catalog": {
-  "sha": "ff6fe24985f50d6a169e7300dac8da2d49ff2163",
+  "sha": "7bb94dbc69ebde07475dfa8ab146dcb69a1a9798",
   "w": 1196,
   "h": 872
  },
  "live-bot-recent-sessions-and-a-live-composer@graphite": {
-  "sha": "5cd6d3fbcd22d270406a5cf1480c9d9859e81b25",
+  "sha": "ba4ddce2940e41508a943022528c7fe018723c8e",
   "w": 1196,
   "h": 872
  },
  "live-bot-recent-sessions-and-a-live-composer@typewriter": {
-  "sha": "a0cf53fcd868e26190f33139110ea35852aea8c3",
+  "sha": "cd021236c5c1fcf3e96f01ad686e9f3896d73f53",
   "w": 1196,
   "h": 872
  },
  "made-outside-boopis@bone": {
-  "sha": "053087a47b6b0194099fe9da987ce69fbc8e1d61",
+  "sha": "f66d68f60514633f070c467d485a4247816f81ef",
   "w": 1196,
   "h": 872
  },
  "made-outside-boopis@catalog": {
-  "sha": "e4006fbda9ee491465f136a445854ef0143d38b1",
+  "sha": "6170984820f95e8cd017a704690a754702ae5ec2",
   "w": 1196,
   "h": 872
  },
  "made-outside-boopis@graphite": {
-  "sha": "ae973d20338870670b86effc55bd34a7a4284ab3",
+  "sha": "b5fa383288df0ad974fcb1b8d37195ff262d6764",
   "w": 1196,
   "h": 872
  },
  "made-outside-boopis@typewriter": {
-  "sha": "82c5733acda8fad3aadcae91701ce6132c24709f",
+  "sha": "bbe15d9aae014bf630f540fd23e78d9963d74fd7",
   "w": 1196,
   "h": 872
  },
  "nina-an-approval@bone": {
-  "sha": "91a48a1c49ef18c8fe2d00771a641f7a1e01be03",
+  "sha": "369748a354c65c074525ff14ddeef8558de1a397",
   "w": 1196,
   "h": 872
  },
  "nina-an-approval@catalog": {
-  "sha": "003fe948c6e35b1d0143d274e583f698d17862e3",
+  "sha": "e5af8db4bc02a3cb2b9c38cce335cc9fb5a3c0a0",
   "w": 1196,
   "h": 872
  },
  "nina-an-approval@graphite": {
-  "sha": "a9ab0874ba52a634be7d4446d6629b8c36676552",
+  "sha": "781497692851200575a75e8724fac477c2837608",
   "w": 1196,
   "h": 872
  },
  "nina-an-approval@typewriter": {
-  "sha": "d012e137b968737cfb9931707a04dacb835c5405",
+  "sha": "3c0778ecc1a015fd07f57777928b316a84482ad2",
   "w": 1196,
   "h": 872
  },
  "no-bots-at-all@bone": {
-  "sha": "0602f4eeede11c332256a788b67d8b8a54a71a34",
+  "sha": "83edc05f2987f77981341f1dfb3daa3d74886573",
   "w": 1196,
   "h": 872
  },
@@ -270,7 +290,7 @@
   "h": 872
  },
  "no-bots-at-all@graphite": {
-  "sha": "5733b3cf83814af3313ed80ac8cdb1dfa1d804e5",
+  "sha": "8609bf0f8efe172db1727e09e9bd8bcc27055a37",
   "w": 1196,
   "h": 872
  },

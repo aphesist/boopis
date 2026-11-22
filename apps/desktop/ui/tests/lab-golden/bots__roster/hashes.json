@@ -1,61 +1,61 @@
 {
  "120-bots-scrolling@bone": {
-  "sha": "4bf0f59e106460a2c177ad57767ad210fc2e8158",
+  "sha": "ec6664595e472fe32bbd77ffeeea3955589ca6e2",
   "w": 280,
   "h": 872
  },
  "120-bots-scrolling@catalog": {
-  "sha": "4e9c38525389a9f7bd9fc8b8bb5bf6434b03a351",
+  "sha": "a353e58267f3ebfeec94c853e58be41f1a26c3b2",
   "w": 280,
   "h": 872
  },
  "120-bots-scrolling@graphite": {
-  "sha": "4a2831ac618285108154111fafdb19a02d2067cf",
+  "sha": "5cb8a96cff544cca6d81a038abf53504ef5b0f73",
   "w": 280,
   "h": 872
  },
  "120-bots-scrolling@typewriter": {
-  "sha": "dd86c37b36c99fcfb6170b1b42903a92f801dd64",
+  "sha": "dae38153debedf700856ca036fa0dae2569b7516",
   "w": 280,
   "h": 872
  },
  "a-long-name-and-the-made-outside-mark@bone": {
-  "sha": "4a8e97da50d6a448e98c8c390fb9adcbd0973476",
+  "sha": "93369b3df60d129825bd63ad2eaceeceaa5880d4",
   "w": 280,
   "h": 872
  },
  "a-long-name-and-the-made-outside-mark@catalog": {
-  "sha": "f3263ee9448d33d91fa0293467906a5c9cd920d0",
+  "sha": "7a9c99bf832866c54b2a4dbce1783870db31a788",
   "w": 280,
   "h": 872
  },
  "a-long-name-and-the-made-outside-mark@graphite": {
-  "sha": "4d3ba40cc8e8b8a6ca3549bfa409c674a1796e36",
+  "sha": "4b4a463e7164582e0c1203ab2ee5007688c30039",
   "w": 280,
   "h": 872
  },
  "a-long-name-and-the-made-outside-mark@typewriter": {
-  "sha": "2e007228aa01dfe7e799faa7ed2ebc3d92a0fd08",
+  "sha": "1a78278d98803aef44d06d1dbe55d080cd7d236d",
   "w": 280,
   "h": 872
  },
  "archived-group-open@bone": {
-  "sha": "c9f32aecec6ff0ea9de87c2ca2bf53f4ccb07bbc",
+  "sha": "1299aeeda8abc3e822b81a722fb22c04f570487c",
   "w": 280,
   "h": 872
  },
  "archived-group-open@catalog": {
-  "sha": "78d0a73b0a9e52f281f4c0e6f7362a279410b481",
+  "sha": "ecbeaba5c924c3969c80fbed6c6db56c9eb1e022",
   "w": 280,
   "h": 872
  },
  "archived-group-open@graphite": {
-  "sha": "169dbf8c07e77569aafe67b8e4a3944eaf58b770",
+  "sha": "4806b6e1a5f8d95619be3259554a52a9f9f6dee3",
   "w": 280,
   "h": 872
  },
  "archived-group-open@typewriter": {
-  "sha": "e54275c971ac8443d66556c590a670b0cceced0d",
+  "sha": "b2f40c3fec2628c0d8b95546437936f7d370401c",
   "w": 280,
   "h": 872
  },
@@ -65,7 +65,7 @@
   "h": 872
  },
  "groups-one-two-three-and-six-members-a-long-name@catalog": {
-  "sha": "fbdf9cb0ef45e5e23a3bf15651ed724f77c1ba91",
+  "sha": "11a28ddf2a7d770d464394f63f73f781cf0e1db5",
   "w": 280,
   "h": 872
  },
@@ -80,32 +80,32 @@
   "h": 872
  },
  "live-updates-of-several-bots@bone": {
-  "sha": "ecf11e04dc5680c98e043fd2dbf6c69c5a388b8e",
+  "sha": "6bccaf8eadd1731f6ee77744e937374628636c01",
   "w": 280,
   "h": 872
  },
  "live-updates-of-several-bots@catalog": {
-  "sha": "f3c8eed70cb829ec242e2b167fd7dc4dcf24d71d",
+  "sha": "58b1179c6ca1985a37664d8d0b8dc0a3b0e20643",
   "w": 280,
   "h": 872
  },
  "live-updates-of-several-bots@graphite": {
-  "sha": "7998516591dc4038037b56309af7e185164b87e3",
+  "sha": "bbc47bc441223a395fcb3bd3e929fed9b65652d9",
   "w": 280,
   "h": 872
  },
  "live-updates-of-several-bots@typewriter": {
-  "sha": "6d7ae7781b2f51644a41e15caa0f565895292900",
+  "sha": "dcb2758825235ba111d747104b4f7913b1d47a9e",
   "w": 280,
   "h": 872
  },
  "no-bots@bone": {
-  "sha": "821cfd15efef6f9dcd67eb2160765c02398f102f",
+  "sha": "a0d8c832d5f52fad0fb17cb2add921db4cc80c27",
   "w": 280,
   "h": 872
  },
  "no-bots@catalog": {
-  "sha": "f57cd673d73f913532f27921d2ba795ab25340a5",
+  "sha": "e5198adc73ca96767d3227999d4c8de54e190f55",
   "w": 280,
   "h": 872
  },
@@ -125,7 +125,7 @@
   "h": 872
  },
  "one-bot@catalog": {
-  "sha": "3fbc93db3c4e57bc481028ff87017c07c3d0bcd5",
+  "sha": "c195df2e5ce677e9cefc537081b05ffd68d34cfc",
   "w": 280,
   "h": 872
  },
@@ -150,12 +150,12 @@
   "h": 872
  },
  "rail-with-a-group@graphite": {
-  "sha": "0ca76ea08e1ce4775e3a3ae319e382084f5fdb99",
+  "sha": "0de1e1d94bc2e5f9e389316d4467404b746dcb75",
   "w": 80,
   "h": 872
  },
  "rail-with-a-group@typewriter": {
-  "sha": "f04dc703cef1dcde0ad5de024a10caf7f2ea738b",
+  "sha": "c5a6f43111afd5112e2ef5607c3c9cc2479a8c1a",
   "w": 80,
   "h": 872
  },
@@ -195,12 +195,12 @@
   "h": 872
  },
  "rail@typewriter": {
-  "sha": "9a79660bf1cccff0b3d39087b32363bb93dc33a7",
+  "sha": "4d41e880ce6843ccdae48b075bcb5b11d51a6dc2",
   "w": 80,
   "h": 872
  },
  "row-focus@bone": {
-  "sha": "bb6d032f2122d384f4cdff5fb1bf2e7dbbb52e5c",
+  "sha": "51090a08656b508cd7cfa34888457fb73a0642c4",
   "w": 280,
   "h": 872
  },
@@ -215,7 +215,7 @@
   "h": 872
  },
  "row-focus@typewriter": {
-  "sha": "294c304fef570846e63cb81a7700a6bd343e3469",
+  "sha": "721011302d24001e3c66d61c96f76c37e245cc1f",
   "w": 280,
   "h": 872
  },
@@ -235,12 +235,12 @@
   "h": 872
  },
  "row-hover@typewriter": {
-  "sha": "44b39890e949ef26d6193a5d35f33e26b2598a10",
+  "sha": "cceafd7a569726f4f433a72f77cc026d2b6b649e",
   "w": 280,
   "h": 872
  },
  "the-owner-s-six-their-records-read-after-the-roster@bone": {
-  "sha": "36bc94a4e64e380ea53545a910cd5a6553691a6f",
+  "sha": "320044f1f7dc9646a1382b01301b2b7ee9169b21",
   "w": 280,
   "h": 872
  },
@@ -250,7 +250,7 @@
   "h": 872
  },
  "the-owner-s-six-their-records-read-after-the-roster@graphite": {
-  "sha": "598bd7bba5975c5d72cf36085490a06bed7849d4",
+  "sha": "e82140ed54f961aafdf45c4c9be2aebd50f85dfc",
   "w": 280,
   "h": 872
  },
@@ -260,12 +260,12 @@
   "h": 872
  },
  "those-groups-a-row-hovered@bone": {
-  "sha": "8196b1bc59fa0965ec2d0b8ce8c115f106d1356a",
+  "sha": "30bc69c3418ddb2dcf53b4efc6e5a3c47a1998bb",
   "w": 280,
   "h": 872
  },
  "those-groups-a-row-hovered@catalog": {
-  "sha": "434055332805d04fcb323ae7aa4b01131cb14303",
+  "sha": "acf0d1b24322fad8db8372bcc304b68a07739698",
   "w": 280,
   "h": 872
  },
@@ -285,7 +285,7 @@
   "h": 872
  },
  "those-groups-the-current-one@catalog": {
-  "sha": "8c66b6528a8bacb5ba9a0bdf3a5cff338a26c83f",
+  "sha": "ef14d04fdcaf6de302e0f1db118a6a1e928f5d81",
   "w": 280,
   "h": 872
  },
@@ -320,12 +320,12 @@
   "h": 872
  },
  "with-a-group@bone": {
-  "sha": "a9f7d153595fced76e179d88b00dfb29c71c05c2",
+  "sha": "99f885dc1b70a3ae74ee8b58d8e63d12bb188f22",
   "w": 280,
   "h": 872
  },
  "with-a-group@catalog": {
-  "sha": "8aafa1b4aad344df92c5c9b34be57cc81b8156c8",
+  "sha": "b58371e283ca805431817f369bbddd64ff5ac3c6",
   "w": 280,
   "h": 872
  },

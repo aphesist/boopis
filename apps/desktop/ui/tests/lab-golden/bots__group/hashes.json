@@ -1,321 +1,341 @@
 {
+ "a-lead-answers-first@bone": {
+  "sha": "b67ef8032e9908855f2d880450f414a7c25e349d",
+  "w": 1196,
+  "h": 872
+ },
+ "a-lead-answers-first@catalog": {
+  "sha": "2dab29cc15aa2cd7663c972bafa1c3b91c145d6b",
+  "w": 1196,
+  "h": 872
+ },
+ "a-lead-answers-first@graphite": {
+  "sha": "cd2468e71a092c316a1d34a4e7ce8666667599dc",
+  "w": 1196,
+  "h": 872
+ },
+ "a-lead-answers-first@typewriter": {
+  "sha": "69ee7aeaf623ae8a2706a367b0b3e8fa33cf9fb5",
+  "w": 1196,
+  "h": 872
+ },
  "a-long-name@bone": {
-  "sha": "a39cace390d3adfb1cd3567e94c1f77016e77435",
+  "sha": "14d38c254952c906af15d2d0502dbd73ad2109be",
   "w": 1196,
   "h": 872
  },
  "a-long-name@catalog": {
-  "sha": "32979b14d50bf8e4bd0539a70441fcfb57926bff",
+  "sha": "0722bbbc6b395de50cbf0f2d3e490dbcca64b418",
   "w": 1196,
   "h": 872
  },
  "a-long-name@graphite": {
-  "sha": "cd60c64cee36a25d03969df23ae97382b13ece90",
+  "sha": "6a9284f38170d0b5edc7f707e51d835091e265c1",
   "w": 1196,
   "h": 872
  },
  "a-long-name@typewriter": {
-  "sha": "a0b24332baa5d31a17eeb39eff9754c37ee9918a",
+  "sha": "855c9448f27e9ffe6eab919c216ec52307d9629c",
   "w": 1196,
   "h": 872
  },
  "a-member-also-running-a-kanban-task@bone": {
-  "sha": "180ba342db2d6293f504b774fd51de009c95b9fb",
+  "sha": "311abb0732e986181fbf0d345c241ae61e152cc5",
   "w": 1196,
   "h": 872
  },
  "a-member-also-running-a-kanban-task@catalog": {
-  "sha": "64a31b2015541d8c91ccc79074a0b5490d06d71f",
+  "sha": "3502920e5474e1898779ce6e70d971df1e81837d",
   "w": 1196,
   "h": 872
  },
  "a-member-also-running-a-kanban-task@graphite": {
-  "sha": "ebbb962a79d161f8f8c6055b794dda42709ab8ef",
+  "sha": "53739e3a37dbd3e01b396f90aff932bee09fb46a",
   "w": 1196,
   "h": 872
  },
  "a-member-also-running-a-kanban-task@typewriter": {
-  "sha": "c9c488108701b21940a7d760ad93e1409e0e2145",
+  "sha": "f15f0b1029a3a38baae9d799f729a4e87adec9d6",
   "w": 1196,
   "h": 872
  },
  "a-member-chip-hover@bone": {
-  "sha": "55e8ca4f2d7a8bfeaa570ef4a6aad2805220c475",
+  "sha": "59d3e42a105a96c8d6fb55179e842d32b0c846ed",
   "w": 1196,
   "h": 872
  },
  "a-member-chip-hover@catalog": {
-  "sha": "ed8186b24968e7caf3642305cd416d15e4e05694",
+  "sha": "3ffeabdf6cf1c5d361e5db9b8f6d227cbbccc7ac",
   "w": 1196,
   "h": 872
  },
  "a-member-chip-hover@graphite": {
-  "sha": "227aa33d76392a366b633c8170c4d48b770dae42",
+  "sha": "6ad74a5fdc35a3b9276348f4756d14a45902613d",
   "w": 1196,
   "h": 872
  },
  "a-member-chip-hover@typewriter": {
-  "sha": "8e5158a8901e10573fd1bf2f3342e31f987d1337",
+  "sha": "5d66b0482c5f3553e97383fc2465cad586896a96",
   "w": 1196,
   "h": 872
  },
  "a-member-names-a-bot-that-is-not-in-the-room-the-note-and-send-to@bone": {
-  "sha": "45bda2cad9cda7b2d93f57c907e817f4424ebfc8",
+  "sha": "ab0b068aec0c999103784a1444ee52fa4e33afc0",
   "w": 1196,
   "h": 872
  },
  "a-member-names-a-bot-that-is-not-in-the-room-the-note-and-send-to@catalog": {
-  "sha": "6738cb57cfef76e88df1197012bf654bcb5661b2",
+  "sha": "3a00b485e849008205dc2ff3651ad15cb45f8ad2",
   "w": 1196,
   "h": 872
  },
  "a-member-names-a-bot-that-is-not-in-the-room-the-note-and-send-to@graphite": {
-  "sha": "5d17ef14c333919207ca32b681dc04e938cd1c93",
+  "sha": "e0cdf0d2d2974203880ad8f6eee8002c68aed5e9",
   "w": 1196,
   "h": 872
  },
  "a-member-names-a-bot-that-is-not-in-the-room-the-note-and-send-to@typewriter": {
-  "sha": "9f474e703c58fa5d131c641cfec54391d17c3678",
+  "sha": "3969683cfd42f5bfc0487f3829cf16e36123624e",
   "w": 1196,
   "h": 872
  },
  "a-mention-hovered@bone": {
-  "sha": "9b93b81b23b6999140a7875415eb458a9fede0bc",
+  "sha": "85951ca2326f6d42f92977c451a12fdc63243558",
   "w": 1196,
   "h": 872
  },
  "a-mention-hovered@catalog": {
-  "sha": "6621df9f55c28f2fabde0ff52067b511891d9ebe",
+  "sha": "e8f9362e6f1cf7cc0eedbdbbb85cedde69b21962",
   "w": 1196,
   "h": 872
  },
  "a-mention-hovered@graphite": {
-  "sha": "de8ad51c7d86b169ff2c3c339a63218a762c82d3",
+  "sha": "573375c4e48ec8f0cf3097fe2439b2feb073b17a",
   "w": 1196,
   "h": 872
  },
  "a-mention-hovered@typewriter": {
-  "sha": "20a2e58c0408961b82c2585bcd1750c55abaf30a",
+  "sha": "fa940de7733e727625a15cf1914d0f1c74cd7991",
   "w": 1196,
   "h": 872
  },
  "a-mention-of-a-bot-that-is-not-in-the-room-the-chip-and-the-hint@bone": {
-  "sha": "b395e428fc50404ae0b070ef085692265c412ed3",
+  "sha": "c3a68af4becbe94c803b4545edf6a372422be60d",
   "w": 1196,
   "h": 872
  },
  "a-mention-of-a-bot-that-is-not-in-the-room-the-chip-and-the-hint@catalog": {
-  "sha": "c7c7e919e64ae49e09453d0645a0fb51a30be4ff",
+  "sha": "28f8c6ebfbcce19ed35183ecba5e86bff4f901c5",
   "w": 1196,
   "h": 872
  },
  "a-mention-of-a-bot-that-is-not-in-the-room-the-chip-and-the-hint@graphite": {
-  "sha": "e1c4a33e8580911c019a80fd4116a4e8f3273fc1",
+  "sha": "af799a853860d5ca897546a8319c0b60e3cec8b6",
   "w": 1196,
   "h": 872
  },
  "a-mention-of-a-bot-that-is-not-in-the-room-the-chip-and-the-hint@typewriter": {
-  "sha": "d465a8f868acbf84273a7a5b044254cab4ac171f",
+  "sha": "5ea2f3175582c107e31e3b9faf55a8fe0d7b5002",
   "w": 1196,
   "h": 872
  },
  "a-message-waiting-for-a-member@bone": {
-  "sha": "76d2fb08d200026b484cc30e83693e884962da8e",
+  "sha": "21d945a0071712d6f93e5da465a826aa1ae335d9",
   "w": 1196,
   "h": 872
  },
  "a-message-waiting-for-a-member@catalog": {
-  "sha": "e099c2468efee033b8367dab6a9066f49930d343",
+  "sha": "667556c5659033c1502def816a1f0519762f1411",
   "w": 1196,
   "h": 872
  },
  "a-message-waiting-for-a-member@graphite": {
-  "sha": "f6fb55c637cd3e9b99f32c20d124a044a40da6eb",
+  "sha": "57605a15656fa61ebbbd1a80778ab392a05c97e5",
   "w": 1196,
   "h": 872
  },
  "a-message-waiting-for-a-member@typewriter": {
-  "sha": "491e0b9805e97b934abc3cfd5b1d03a230099e95",
+  "sha": "7f46ef3e12851d43f99d893879eb6b65da166a6a",
   "w": 1196,
   "h": 872
  },
  "a-team-across-rounds-to-lines-mentions-paths-code@bone": {
-  "sha": "2eff7d4db4c447782036f2ac0ca6ff72e0cba7e6",
+  "sha": "1f52538f4b51db8891c676ae9766f4e3748fc2c2",
   "w": 1196,
   "h": 872
  },
  "a-team-across-rounds-to-lines-mentions-paths-code@catalog": {
-  "sha": "769e8be24c2db783b4298ba245dd1df96312fdf8",
+  "sha": "2706267e1ad92215dcabfb63f482a92198f417a0",
   "w": 1196,
   "h": 872
  },
  "a-team-across-rounds-to-lines-mentions-paths-code@graphite": {
-  "sha": "567ae26c0abb5d88efdec50445710095f3ec8ae9",
+  "sha": "5d0ecd12d3b3bd24120dd052beac2fefd0781afc",
   "w": 1196,
   "h": 872
  },
  "a-team-across-rounds-to-lines-mentions-paths-code@typewriter": {
-  "sha": "b4b74c246ec6cb22477ce243e08c0c08744b065a",
+  "sha": "1f4f109a0044418ac0fe1e1e61a2ad723da0fe70",
   "w": 1196,
   "h": 872
  },
  "five-at-work-the-rest-in-one-line-above-the-composer@bone": {
-  "sha": "73db2d028bea41ec99bcac54dc1d76962fcbe1ab",
+  "sha": "c331329da3df03e06009f701e639470f8fb60daf",
   "w": 1196,
   "h": 872
  },
  "five-at-work-the-rest-in-one-line-above-the-composer@catalog": {
-  "sha": "bb761bae19504b6e4ee2179e52c9edf2cfc0409a",
+  "sha": "4199d9399b47095802b510397e4d1841c5100d4c",
   "w": 1196,
   "h": 872
  },
  "five-at-work-the-rest-in-one-line-above-the-composer@graphite": {
-  "sha": "098f588bd55f87b91db8557f5b1ebb988a3849ca",
+  "sha": "6a320d0442169dbc204618df4adc4f3c558234ec",
   "w": 1196,
   "h": 872
  },
  "five-at-work-the-rest-in-one-line-above-the-composer@typewriter": {
-  "sha": "aad99534b9376be36378d14dedfe1e155385dab1",
+  "sha": "5c08e52082d85b186fc32c2bf678a282d2989c41",
   "w": 1196,
   "h": 872
  },
  "group-chat-is-off@bone": {
-  "sha": "55e8ca4f2d7a8bfeaa570ef4a6aad2805220c475",
+  "sha": "ed1eb21e3752e59445cf1912f296ccf5c53f628c",
   "w": 1196,
   "h": 872
  },
  "group-chat-is-off@catalog": {
-  "sha": "ed8186b24968e7caf3642305cd416d15e4e05694",
+  "sha": "6c83155f7821260bfa22c639be9a40b98f70966a",
   "w": 1196,
   "h": 872
  },
  "group-chat-is-off@graphite": {
-  "sha": "227aa33d76392a366b633c8170c4d48b770dae42",
+  "sha": "d1ed16e1003d962b66f77c05a1eda5b95c0d4ca9",
   "w": 1196,
   "h": 872
  },
  "group-chat-is-off@typewriter": {
-  "sha": "8e5158a8901e10573fd1bf2f3342e31f987d1337",
+  "sha": "1cfaff12b73884198110132eb76b36f9bbc1051a",
   "w": 1196,
   "h": 872
  },
  "no-messages-yet@bone": {
-  "sha": "53a78562c8f7aadd176c76256e5fe1bbab3e12d8",
+  "sha": "e35b280894d0acda62a38f2c3989088c932fa9da",
   "w": 1196,
   "h": 872
  },
  "no-messages-yet@catalog": {
-  "sha": "c24f92da1e1a49cfa700fdeddce7de7f4de1873a",
+  "sha": "9637ef4c2ee490655f9ae3b6d98f54ff94d51fa2",
   "w": 1196,
   "h": 872
  },
  "no-messages-yet@graphite": {
-  "sha": "ee8da1b9323a0b3538c415ad0089b6de438c4f5c",
+  "sha": "e14a1472445d26ef3e2a07a464581e6211687cf2",
   "w": 1196,
   "h": 872
  },
  "no-messages-yet@typewriter": {
-  "sha": "62df1cf8e7d488bff89565e4ebb3e721fb49a021",
+  "sha": "fb269763d35dd7375154a175da8c9d659d359f26",
   "w": 1196,
   "h": 872
  },
  "renaming@bone": {
-  "sha": "25fade81ea38cc08be33b0410a2e874a760592f1",
+  "sha": "c145b66afa4bec3cfba469fcb0fb60ccf20dc0ca",
   "w": 1196,
   "h": 872
  },
  "renaming@catalog": {
-  "sha": "2679a76f4f3355fdbd1dfa01cfe07bf337dbd1b5",
+  "sha": "cc4b5545afb426781358e7b58817333e509d834a",
   "w": 1196,
   "h": 872
  },
  "renaming@graphite": {
-  "sha": "172f10f4004b2c5a23b06cd6a3375f575c760386",
+  "sha": "3bb906564179ff51cb930fb7c7cb0e6eabec7422",
   "w": 1196,
   "h": 872
  },
  "renaming@typewriter": {
-  "sha": "637089be4e5c432e4f3b8aa99daf93e89c56dcc9",
+  "sha": "317ea8421f2b2f3115a8da0d3d42dadfc2cd2676",
   "w": 1196,
   "h": 872
  },
  "several-members-answered@bone": {
-  "sha": "e4e30a29293dae1e3884b05757d09086b386b095",
+  "sha": "e295dfa6f456cebc1f25107abc390b7e6da3cdc7",
   "w": 1196,
   "h": 872
  },
  "several-members-answered@catalog": {
-  "sha": "850400d4ff7beeea9dd50b143eb66114a7730714",
+  "sha": "f9b6d54c395d49bc63fdbc25db1c8da86b49ac0d",
   "w": 1196,
   "h": 872
  },
  "several-members-answered@graphite": {
-  "sha": "8eb3d80bdf972090a079bd0c99048f943974aa21",
+  "sha": "9a261e8157120bf269f02aeb979054c17d55d81a",
   "w": 1196,
   "h": 872
  },
  "several-members-answered@typewriter": {
-  "sha": "125f0ca12d6d468cd5d754879e66a9d26b696641",
+  "sha": "758e1b7834e5b6e1a641380b3408d1cc26ddf91c",
   "w": 1196,
   "h": 872
  },
  "three-members-at-work-each-in-a-tool@bone": {
-  "sha": "00b357773c5257846bb222054dbfa44f7ae8710c",
+  "sha": "9d01966dca30024c644d6ed4d800635f16631b49",
   "w": 1196,
   "h": 872
  },
  "three-members-at-work-each-in-a-tool@catalog": {
-  "sha": "557ce3f9dc10179c7bb0e63649359aa82bc0bf7c",
+  "sha": "24bdb0faccd32b307b74830e4f97968603640b1e",
   "w": 1196,
   "h": 872
  },
  "three-members-at-work-each-in-a-tool@graphite": {
-  "sha": "f98f6cf7c0c6b5a34ad955eab608253edb432f7c",
+  "sha": "e5d1c2df9d58601e820d9d2e8bb4ac52ce7b251f",
   "w": 1196,
   "h": 872
  },
  "three-members-at-work-each-in-a-tool@typewriter": {
-  "sha": "5d74c5349213dab1fc7415098df833f7be83114f",
+  "sha": "3dbe6d08c335c6d9aee0b9bd4fd3cc5b19474ba6",
   "w": 1196,
   "h": 872
  },
  "two-members-replying@bone": {
-  "sha": "7ca18f637482304cd581a24bbb8385c0d271b7ea",
+  "sha": "45d11638cf22637fdd2d448fd2ded4b3d33d6adf",
   "w": 1196,
   "h": 872
  },
  "two-members-replying@catalog": {
-  "sha": "b6208406a42592cb350942a0bda3b8af384719cd",
+  "sha": "d2c59fd0eb2bcd5a0e0b493a9f27d28c0b8ce91d",
   "w": 1196,
   "h": 872
  },
  "two-members-replying@graphite": {
-  "sha": "1f18288556eed646cebb3e3dcb0704915ae21afe",
+  "sha": "1aa42aaa03ec81622b8be45707abae145b6571dc",
   "w": 1196,
   "h": 872
  },
  "two-members-replying@typewriter": {
-  "sha": "aef0287f9ceca848047ec064ef705c17a0cbaa16",
+  "sha": "fe9be785ca7c4d07e6dc0e3a894067b4da13b9d9",
   "w": 1196,
   "h": 872
  },
  "two-messages-waiting@bone": {
-  "sha": "6905cba574dfda0ef5e075838795f247f2cb774c",
+  "sha": "64a8930e07c9aa3f6df38feb7a2b7f81e183fb8b",
   "w": 1196,
   "h": 872
  },
  "two-messages-waiting@catalog": {
-  "sha": "2362bea80e6cc37c692ae03bf6ea8dcc0fc6685f",
+  "sha": "d7540fb6311db737a13eba10dbd00ac896845400",
   "w": 1196,
   "h": 872
  },
  "two-messages-waiting@graphite": {
-  "sha": "6d934a86f24491ecb442102b2315a4b420d387df",
+  "sha": "67775d01d014c30e194bc7ce96baaa6098622176",
   "w": 1196,
   "h": 872
  },
  "two-messages-waiting@typewriter": {
-  "sha": "b22838e066c622dd6b1a3b85d3878699384e32c4",
+  "sha": "0a65af88c13a5ee685aa63ec4e9c8a05f71b4436",
   "w": 1196,
   "h": 872
  }
