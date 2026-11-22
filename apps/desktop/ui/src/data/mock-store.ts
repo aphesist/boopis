@@ -256,7 +256,7 @@ export function createMockStore(opts: MockStoreOptions = {}): StoreProvider {
       const s: StoreSource = {
         id: 'added-' + mockHash(where).slice(0, 8), label: input.label ?? where, kinds: ['skill', 'connector', 'plugin', 'mod'], fetch: input.url ? 'git-marketplace' : 'local',
         default_tier: 'not-reviewed', default_on: true, user_added: true, engine_origin: false, ...(input.url ? { url: input.url } : { path: input.path as string }),
-        terms: 'not-applicable', enabled: true, refreshed_at: FETCHED, items: 0, error: null
+        terms: 'not-applicable', enabled: true, refreshed_at: stamp(), items: 0, error: null, refreshable: true, stale: false
       };
       sources.update((l) => [...l, s]);
       return Promise.resolve(clone(s));
