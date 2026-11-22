@@ -481,6 +481,59 @@ describe('a conversation with a teammate is a session of its own profile', () =>
     expect(events.filter((e) => e.type === 'run').pop()).toMatchObject({ running: false });
     expect(bots.source.snapshot().threads['atlas']!.map((m) => m.kind === 'text' ? m.text : '')).toEqual(['hello', 'On it.']);
   });
+  it('a message said through the local API shows in the open chat as the owner’s own, and its reply streams there as any reply does', async () => {
+    const { h, bots, events } = await open();
+    bots.source.send('atlas', 'hello', 'bots');
+    await tickAll();
+    events.length = 0;
+    const link = h.links.get('atlas')!;
+    link.emit({ type: 'connection.said', session_id: 'gw-atlas', payload: { text: 'how is the build?', stored_session_id: 'st-atlas' } });
+    // the reply, as the engine streams it on the same link
+    link.emit({ type: 'message.start', session_id: 'gw-atlas', payload: {} });
+    link.emit({ type: 'message.delta', session_id: 'gw-atlas', payload: { text: 'Green' } });
+    link.emit({ type: 'message.delta', session_id: 'gw-atlas', payload: { text: ', all of it.' } });
+    link.emit({ type: 'message.complete', session_id: 'gw-atlas', payload: { text: 'Green, all of it.' } });
+    const msgs = events.filter((e): e is Extract<BotsEvent, { type: 'message' }> => e.type === 'message');
+    expect(msgs.map((m) => [m.message.who, m.streaming])).toEqual([['you', false], ['atlas', true]]);
+    const mine = msgs[0]!.message;
+    expect(mine.kind === 'text' && mine.text).toBe('how is the build?');
+    expect(JSON.stringify(mine)).not.toMatch(/island|api|endpoint|client/i);   // no word of where it came from
+    expect(events.filter((e) => e.type === 'message-text').length).toBe(2);   // the reply streamed
+    expect(events.find((e) => e.type === 'message-end')).toMatchObject({ text: 'Green, all of it.' });
+    expect(bots.source.snapshot().threads['atlas']!.map((m) => m.kind === 'text' ? [m.who, m.text] : [])).toEqual([['you', 'hello'], ['atlas', 'On it.'], ['you', 'how is the build?'], ['atlas', 'Green, all of it.']]);
+    expect(events.find((e) => e.type === 'run')).toMatchObject({ running: true });
+    expect(events.filter((e) => e.type === 'run').pop()).toMatchObject({ running: false });
+  });
+  it('a said message for a conversation that is not open draws nothing (it shows when the conversation is opened)', async () => {
+    const { h, bots, events } = await open();
+    events.length = 0;
+    h.links.get('atlas')!.emit({ type: 'connection.said', session_id: 'gw-other', payload: { text: 'unseen', stored_session_id: 'st-other' } });
+    expect(events.filter((e) => e.type === 'message')).toEqual([]);
+    expect(bots.source.snapshot().threads['atlas']).toEqual([]);
+  });
+  it('the same conversation opened again by the engine under a new id still shows the said message, and the reply after it', async () => {
+    const { h, bots, events } = await open();
+    bots.source.send('atlas', 'hello', 'bots');
+    await tickAll();
+    events.length = 0;
+    const link = h.links.get('atlas')!;
+    link.emit({ type: 'connection.said', session_id: 'gw-new', payload: { text: 'again', stored_session_id: 'st-atlas' } });
+    link.emit({ type: 'message.start', session_id: 'gw-new', payload: {} });
+    link.emit({ type: 'message.complete', session_id: 'gw-new', payload: { text: 'Back.' } });
+    expect(bots.source.snapshot().threads['atlas']!.map((m) => m.kind === 'text' ? m.text : '').slice(-2)).toEqual(['again', 'Back.']);
+  });
+  it('a said message the engine did not take is a note in the thread, in the words the host gave, and the run stops', async () => {
+    const { h, bots, events } = await open();
+    bots.source.send('atlas', 'hello', 'bots');
+    await tickAll();
+    events.length = 0;
+    const link = h.links.get('atlas')!;
+    link.emit({ type: 'connection.said', session_id: 'gw-atlas', payload: { text: 'lost', stored_session_id: 'st-atlas' } });
+    link.emit({ type: 'connection.said_failed', session_id: 'gw-atlas', payload: { reason: 'boopis could not deliver the message: its engine did not answer. Try again in a moment.', stored_session_id: 'st-atlas' } });
+    const thread = bots.source.snapshot().threads['atlas']!;
+    expect(thread.at(-1)).toMatchObject({ kind: 'note', text: 'boopis could not deliver the message: its engine did not answer. Try again in a moment.' });
+    expect(events.filter((e) => e.type === 'run').pop()).toMatchObject({ running: false });
+  });
   it('says a failed turn in boopis’s words, never the engine’s', async () => {
     const { bots, events } = await open();
     events.length = 0;

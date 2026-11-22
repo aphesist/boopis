@@ -581,6 +581,21 @@ impl Hub {
         self.shared.feed.subscribe()
     }
 
+    /// Tell every window a message was said into a conversation by another surface (the local API): a host-made event of
+    /// type `connection.said` (the owner's words, `payload.text`, with the conversation's stored id) or, when the engine did
+    /// not take it, `connection.said_failed` (`payload.reason`, in words). The engine sends a window nothing for a message
+    /// another surface submits, so a chat that has the conversation open draws it from this.
+    pub fn announce_said(&self, session_id: &str, payload: &Value, failed: bool) {
+        let kind = if failed {
+            "connection.said_failed"
+        } else {
+            "connection.said"
+        };
+        let frame: Arc<str> = frame::host_session_event(kind, session_id, payload).into();
+        let mut st = self.shared.lock();
+        self.shared.broadcast(&mut st, &frame, None);
+    }
+
     /// Whether the feed should carry the words of replies and of the owner's messages (a reader follows conversations).
     pub fn set_feed_text(&self, on: bool) {
         self.shared.feed_text.store(on, Ordering::Relaxed);

@@ -5,6 +5,7 @@ import type { Bot, GroupsEvent } from '../../data';
 import type { GatewayClient, GatewayEvent } from '../gateway';
 import type { RoomsBridge } from '../rooms-bridge';
 import { createLiveGroups } from './groups';
+import { ROUND_LIMIT_DEFAULT } from '../../data/mock-groups';
 
 type Json = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 const bot = (id: string, name = id): Bot => ({ id, name, role: '', shape: 'circle', color: '#fff', state: 'idle', attention: null, paused: false, activity: '', spent: '', last: null, ideas: [], cfg: { instructions: '', gov: 'governed', model: '', cap: '0.6', cron: '', channels: {}, approvals: {}, workspace: 'worktree' } });
@@ -158,6 +159,25 @@ describe('talking to a group', () => {
     e.emit({ type: 'groups.changed', payload: { room_ids: ['r1'] } });
     await tickAll(); await g.settled();
     expect(g.source.snapshot().threads['r1']).toMatchObject([{ who: 'atlas', text: 'later' }]);
+  });
+  it('a message said into the open room from outside (the local API) shows as the owner’s own when the engine says the room moved, and the replies follow', async () => {
+    const { e, g, events } = await open((x) => { x.rooms.push(room('r1', 'crew', ['atlas', 'nina'])); });
+    await g.source.open('r1');
+    events.length = 0;
+    // the island's `groups.send` is the app's: the engine appends a message.user and tells every window the room moved
+    e.push('r1', 'message.user', { thread_id: 'main', text: 'status?' }, { kind: 'user', id: 'u' });
+    e.working = true; e.activity = [{ member_id: 'atlas', status: 'running' }];
+    e.emit({ type: 'groups.changed', payload: { room_ids: ['r1'] } });
+    await tickAll();
+    expect(g.source.snapshot().threads['r1']).toMatchObject([{ kind: 'text', who: 'you', text: 'status?' }]);
+    expect(JSON.stringify(g.source.snapshot().threads['r1'])).not.toMatch(/island|api|endpoint|client/i);
+    expect(events.find((x) => x.type === 'message')).toMatchObject({ groupId: 'r1', message: { who: 'you', text: 'status?' } });
+    expect(g.source.snapshot().groups[0]!.working).toEqual(['atlas']);   // the room shows its members replying, as for a message typed here
+    e.push('r1', 'message.member', { member_id: 'atlas', text: 'All green.' }, { kind: 'member', id: 'atlas', profile: 'atlas' });
+    e.working = false; e.activity = [];
+    e.emit({ type: 'groups.changed', payload: { room_ids: ['r1'] } });
+    await tickAll();
+    expect(g.source.snapshot().threads['r1']!.map((m) => m.kind === 'text' ? m.text : '')).toEqual(['status?', 'All green.']);
   });
   it('a message that is not accepted says so in the thread', async () => {
     const { e, g, events } = await open((x) => { x.rooms.push(room('r1', 'crew', ['atlas', 'nina'])); });
@@ -407,7 +427,7 @@ describe('boopis’s own cap on rounds for a group', () => {
   });
   it('says so where there is no host to keep it, and for a group that is not there', async () => {
     const { g } = await open((x) => { x.rooms.push(room('r1', 'release crew', ['atlas', 'nina'])); });
-    expect(await g.source.roundLimit('r1')).toEqual({ rounds: null, fallback: 30 });
+    expect(await g.source.roundLimit('r1')).toEqual({ rounds: null, fallback: ROUND_LIMIT_DEFAULT });
     await expect(g.source.setRoundLimit('r1', 12)).rejects.toThrow(/desktop app/);
     await expect(g.source.roundLimit('nope')).rejects.toThrow();
   });
