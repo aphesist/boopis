@@ -140,24 +140,24 @@
   "h": 900
  },
  "first-run@bone": {
-  "sha": "b2b62e0619d8a049ae12a013f76f2f676495802b",
-  "w": 1416,
-  "h": 24
+  "sha": "a456168702fcbdfb00e08a95756d5de43e35146e",
+  "w": 1440,
+  "h": 900
  },
  "first-run@catalog": {
-  "sha": "b551b10325ea90863b9382d4f2dc1045c2787400",
-  "w": 1416,
-  "h": 24
+  "sha": "420f6e5bba11889152f0c2a31241df40b420fd34",
+  "w": 1440,
+  "h": 900
  },
  "first-run@graphite": {
-  "sha": "12828489a66dfd03405f7d13202b882e7ffd842f",
-  "w": 1416,
-  "h": 24
+  "sha": "61456dcc7db3d0065efb13c9f8401f2aeb213d48",
+  "w": 1440,
+  "h": 900
  },
  "first-run@typewriter": {
-  "sha": "12828489a66dfd03405f7d13202b882e7ffd842f",
-  "w": 1416,
-  "h": 24
+  "sha": "047e90c62ab8032b63fceb4472b51dc532a8ce1f",
+  "w": 1440,
+  "h": 900
  },
  "long-names-everywhere@bone": {
   "sha": "df93960e885c22011fbedcbe7ab82cdc6e58144b",

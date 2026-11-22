@@ -4,6 +4,7 @@
      { check, msg, el, rect: {x, y, w, h} (page coordinates), key (stable, for de-duplication) }
    The checks (docs/UI-LAB.md):
      geometry.contain   a shaped child's box (and its rounded corners) stays inside its shaped container's rounded rect
+                        (and is not cut part-way by a scroller on a side it does not scroll)
      geometry.center    items of a control row are vertically centred within 1 px
      geometry.clip      text is not clipped unless it ends in an ellipsis
      geometry.hscroll   no horizontal scroll (the page, or a scroller that is not code)
@@ -321,6 +322,40 @@
           const off = (kr.top + kr.bottom) / 2 - mid;
           if (Math.abs(off) > 1) { add('geometry.center', k, 'sits ' + r1(Math.abs(off)) + 'px ' + (off > 0 ? 'below' : 'above') + ' the centre of its row ' + describe(e)); }
         }
+      }
+    }
+
+    /* geometry.contain, cut: a control that shows in part because a box above it cuts it on a side that box does not scroll.
+       The owner's Store dialog cut its switches, search field and Details buttons at the right edge, and the lab passed: its
+       scroller was wider than the dialog's card, so the switch sat whole inside the nearest clipper, and the card (overflow
+       hidden, not a scroller) cut it. Every clipping box from the control up is followed, keeping what stays visible: a part a
+       box scrolls away is hidden by scrolling (fine), a part a box that does not scroll that way cuts off, while some of the
+       control still shows, is reported. A control wholly out of view (a closed drawer) is not. */
+    if (want.has('geometry.contain')) {
+      const CONTROL = 'button, a[href], input, textarea, select, [role="button"], [role="switch"], [role="checkbox"], [role="radio"], [role="tab"], [role="slider"], [role="combobox"], [role="menuitem"], [role="option"], [tabindex]:not([tabindex="-1"])';
+      for (const e of els) {
+        if (!e.matches(CONTROL) || e.matches(OVERHANG_OK)) continue;
+        const r0 = e.getBoundingClientRect();
+        let v = { l: r0.left, r: r0.right, t: r0.top, b: r0.bottom };
+        let worst = null;
+        for (let a = e.parentElement; a && a !== document.body && a !== document.documentElement; a = a.parentElement) {
+          const acs = cs.get(a) || getComputedStyle(a);
+          if (!clipsContent(acs)) continue;
+          const ar = a.getBoundingClientRect();
+          const axes = [['x', 'l', 'r', ar.left, ar.right, acs.overflowX], ['y', 't', 'b', ar.top, ar.bottom, acs.overflowY]];
+          for (const [, lo, hi, alo, ahi, ov] of axes) {
+            if (v[lo] >= alo - 1 && v[hi] <= ahi + 1) continue;
+            const shows = v[lo] < ahi && v[hi] > alo;
+            if (shows && !/auto|scroll/.test(ov)) {
+              const pastHi = v[hi] - ahi, pastLo = alo - v[lo];
+              const [side, by] = pastHi >= pastLo ? [lo === 'l' ? 'right' : 'bottom', pastHi] : [lo === 'l' ? 'left' : 'top', pastLo];
+              if (by > 1 && (!worst || by > worst.by)) worst = { a, side, by };
+            }
+            v[lo] = Math.max(v[lo], alo); v[hi] = Math.min(v[hi], ahi);
+          }
+          if (v.l >= v.r || v.t >= v.b) { worst = null; break; }   /* wholly out of view */
+        }
+        if (worst) add('geometry.contain', e, 'cut by ' + describe(worst.a) + ', which does not scroll that way: ' + r1(worst.by) + 'px past its ' + worst.side + ' edge', { container: rectOf(worst.a) });
       }
     }
 
