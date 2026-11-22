@@ -177,7 +177,7 @@ describe('a group’s thread', () => {
     await flush();
     const items = [...document.querySelectorAll<HTMLElement>('.ui-menu__item')];
     expect(document.querySelector('.ui-menu__title')?.textContent).toBe('Most rounds a run may take');
-    expect(items.map((i) => i.textContent?.trim())).toEqual(['Default (30)', '6', '12', '30', '60', '100']);
+    expect(items.map((i) => i.textContent?.trim())).toEqual(['Default (10)', '5', '20', '30', '60', '100']);
     expect(items[0]!.getAttribute('aria-checked')).toBe('true');
     items[2]!.click();
     await flush();

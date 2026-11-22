@@ -150,7 +150,7 @@ function renderHead(g: Group): void {
 }
 /** The most rounds `boopis run --group` lets one discussion take in this group. The engine pauses a discussion at its own limit and has
  *  none per room, so this is boopis's cap, kept by the host and read by the command line; the app's own Continue button is unchanged. */
-const ROUND_CHOICES = [6, 12, 30, 60, 100];
+const ROUND_CHOICES = [5, 20, 30, 60, 100];
 function openRoundLimit(g: Group, anchor: HTMLElement): void {
   groups().roundLimit(g.id).then((cur) => {
     const choices = cur.rounds !== null && !ROUND_CHOICES.includes(cur.rounds) ? [...ROUND_CHOICES, cur.rounds].sort((a, b) => a - b) : ROUND_CHOICES;

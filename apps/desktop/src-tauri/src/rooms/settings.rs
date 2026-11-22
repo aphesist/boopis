@@ -15,8 +15,9 @@ use crate::error::{Error, Result};
 
 /// The file's name, in the app's data folder.
 pub const FILE: &str = "rooms.json";
-/// The cap when neither the room nor the command says: thirty rounds, ten engine budgets of three.
-pub const DEFAULT_MAX_ROUNDS: u32 = 30;
+/// The cap when neither the room nor the command says: ten rounds, about three engine budgets of three (the owner, 22
+/// November 2026: "10 is fine as a default, but it should be editable"; a room sets its own, a run's flag beats both).
+pub const DEFAULT_MAX_ROUNDS: u32 = 10;
 /// The largest cap a room may have.
 pub const LIMIT_MAX_ROUNDS: u32 = 1_000;
 const VERSION: u32 = 1;

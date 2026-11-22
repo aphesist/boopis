@@ -463,7 +463,7 @@ async fn set_keeps_and_clears_the_rooms_cap() {
     let (_d, s) = tmp();
     let fake = Fake::new(Script::default());
     let o = go(&fake, None, &s, false, &["set", "paper past"]).await;
-    assert!(o.out.contains("default, 30 rounds"), "{}", o.out);
+    assert!(o.out.contains("default, 10 rounds"), "{}", o.out);
     let o = go(
         &fake,
         None,

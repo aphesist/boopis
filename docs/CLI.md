@@ -59,8 +59,8 @@ every reply as it arrives and ends with one line that says why it stopped:
 | error | 1 | A bot's turn failed (said in boopis's words, with what to do), or the group went quiet without finishing. The group's work is stopped. |
 | timed out | 1 | `--timeout` (60 minutes by default) passed. The group keeps its place. |
 
-**The cap.** It counts rounds in all, in the engine's budgets: with the engine's 3 rounds a budget, a cap of 30 allows nine
-continues. The order is the flag `--max-rounds`, then the group's own setting, then 30. A group's setting is made with
+**The cap.** It counts rounds in all, in the engine's budgets: with the engine's 3 rounds a budget, the default cap of 10
+allows three continues. The order is the flag `--max-rounds`, then the group's own setting, then 10. A group's setting is made with
 `boopis groups set <group> --max-rounds N`, with `boopis groups create ... --max-rounds N`, with `max_rounds` in a team
 file, or in the app, in the group's settings.
 
