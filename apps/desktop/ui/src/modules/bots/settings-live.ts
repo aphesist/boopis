@@ -17,7 +17,7 @@ import { inventoryLine } from './glance';
 import { bot, S } from './model';
 import { orbButton } from './orbs';
 import { checkClips } from './clips';
-import { closeSettings, hintOf, openSettings, sectionOf, wireSectionKeys } from './settings';
+import { closeSettings, hintOf, lookSection, openSettings, sectionOf, wireSectionKeys } from './settings';
 import { focusConversation, openBot, refreshPresence } from './room';
 import { openNew } from './new-bot';
 import { updateRow } from './list';
@@ -132,8 +132,8 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
 
   /* ───────── what boopis keeps for it: its own store, saved at once ───────── */
   const c = b.cfg;
-  const own = (patch: Partial<Pick<BotConfig, 'gov' | 'cap' | 'workspace'>> & { approvals?: Readonly<Record<string, boolean>> }, then?: () => void): void => {
-    admin.saveOwn(b.id, { cfg: patch }).then(() => { then?.(); }).catch((e: unknown) => { ownErr.textContent = 'boopis did not save it: ' + sentence(e); ownErr.hidden = false; });
+  const own = (patch: Partial<Pick<BotConfig, 'gov' | 'cap' | 'workspace'>> & { approvals?: Readonly<Record<string, boolean>> }, then?: () => void, undo?: () => void): void => {
+    admin.saveOwn(b.id, { cfg: patch }).then(() => { if (patch.gov) c.gov = patch.gov; then?.(); }).catch((e: unknown) => { undo?.(); ownErr.textContent = 'boopis did not save it: ' + sentence(e); ownErr.hidden = false; });
     ownErr.hidden = true;
   };
   const ownErr = el('p', { class: 'ui-field__hint', role: 'alert', 'data-tone': 'attention', hidden: true });
@@ -143,7 +143,12 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
   capRow.hidden = c.gov !== 'governed';
   let capTimer = 0;
   $<HTMLInputElement>('input', capRow).addEventListener('input', (e) => { const v = (e.target as HTMLInputElement).value.trim(); window.clearTimeout(capTimer); capTimer = window.setTimeout(() => { if (/^\d{1,4}(\.\d{1,4})?$/.test(v)) own({ cap: v }); }, 500); });
-  gov.addEventListener('ui:change', (e) => { const v = (e as CustomEvent<{ value: string }>).detail.value as BotConfig['gov']; capRow.hidden = v !== 'governed'; own({ gov: v }); });
+  gov.addEventListener('ui:change', (e) => {
+    const v = (e as CustomEvent<{ value: string }>).detail.value as BotConfig['gov'];
+    capRow.hidden = v !== 'governed';
+    /* refused (governed mode needs a frontier model): the switch goes back to what is saved, and the reason shows below */
+    own({ gov: v }, undefined, () => { gov.select(c.gov); capRow.hidden = c.gov !== 'governed'; });
+  });
   const ws = ui.segmented({ mode: 'radio', label: 'Workspace', value: c.workspace, options: [{ value: 'worktree', label: 'Worktree' }, { value: 'sandbox', label: 'Sandbox' }], fill: true });
   ws.addEventListener('ui:change', (e) => { own({ workspace: (e as CustomEvent<{ value: string }>).detail.value as BotConfig['workspace'] }); });
   const switchRow = (key: string, label: string, on: boolean, onChange: (v: boolean) => void): HTMLElement => {
@@ -168,11 +173,12 @@ export function openLiveSheet(b: Bot, sh: HTMLElement, focusSection: string | nu
   const jobsMeta = info.jobs ? (info.jobs.filter((j) => j.enabled).length ? info.jobs.filter((j) => j.enabled).length + ' on' : 'none') : 'unknown';
   body.append(
     who, review, gone,
+    lookSection(b),
     sec('role', 'Role and instructions', null, [roleF, instrF]),
     sec('model', 'Model', info.model ?? 'not set', [modelF]),
     sec('schedule', 'Schedule', jobsMeta, [hint('What it does when you have not asked. Each is a job in this bot’s own schedule.'), routines, routineErr, promptF, presets, cronF, el('div', { class: 'bt-add-row' }, addBtn)]),
     sec('capabilities', 'What it can use', null, [hint('The tools and skills this bot has. boopis shows them here; changing them is not offered here yet.'), caps]),
-    sec('rules', 'Rules', null, [hint('Saved with the teammate, in its boopis folder. They apply when it works in a session of its own, which is not wired yet.'), gov, capRow, ws, appr, ownErr])
+    sec('rules', 'Rules', null, [hint('Saved with the bot, in its boopis folder. Governed applies from its next session and needs a frontier model; the workspace and what it asks first do not apply yet.'), gov, capRow, ws, appr, ownErr])
   );
   paintRoutines();
   const heads = wireSectionKeys(body);

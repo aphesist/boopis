@@ -10,6 +10,7 @@ const base: RendererReport = {
   frame_rate: { policy: 'auto', rule: 'faster_than_sixty', refresh_millihertz: 120000, monitor: 'eDP', preference_off: true, refusal: null, power_profile: 'balanced', platform_profile: 'balanced' },
   note: null,
   errors: [],
+  health: null,
   gpu: { policy: 'auto', policy_source: 'default', rule: 'auto_dedicated', set: [['__NV_PRIME_RENDER_OFFLOAD', '1']], env_source: 'nvidia_documented', warning: null, power: 'ac', restart_advice: null, display_gpu: 'card1 0x8086 i915', dedicated_gpu: 'card0 0x10de nvidia' }
 };
 const display = { devicePixelRatio: 2, innerWidth: 1800, innerHeight: 1125, userAgent: 'ua' };
@@ -84,5 +85,16 @@ describe('the frame meter', () => {
     expect(t).toContain('1 over 33 ms');
     expect(t).toContain('of 120 fps, p99 40 ms');
     expect(reportText(base, display)).not.toContain('frames over');
+  });
+
+  it('says what the window watchdog saw, this run and the last', () => {
+    const run = { started: 1795000000, version: '0.1.8', events: [{ at: 1795000100, kind: 'terminated', detail: 'crashed', value: null }, { at: 1795000101, kind: 'reloaded', detail: 'crashed', value: null }], longest_stall_ms: 3300, outbox_peak: 512, recoveries: 1, last_heartbeat: 1795000200, last_visible: true };
+    const t = reportText({ ...base, health: { watching: true, this_run: { ...run, events: [], recoveries: 0 }, last_run: run } }, display);
+    expect(t).toContain('window watchdog: watching the web process');
+    expect(t).toContain('this run: boopis 0.1.8, started 2026-11-18 11:06:40 UTC; 0 recoveries');
+    expect(t).toContain('  no web view events');
+    expect(t).toContain('last run: boopis 0.1.8, started 2026-11-18 11:06:40 UTC; 1 recovery; longest page stall 3300 ms; outbox peak 512 frames');
+    expect(t).toContain('  2026-11-18 11:08:20 UTC  terminated (crashed)');
+    expect(reportText(base, display)).not.toContain('window watchdog');
   });
 });

@@ -324,7 +324,7 @@ impl ChatGpt {
         let (store, transport) = (self.store.clone(), self.transport.clone());
         tokio::task::spawn_blocking(move || f(store.as_ref(), transport.as_ref()))
             .await
-            .map_err(|e| Error::Io(e.to_string()))?
+            .map_err(|e| crate::error::joined(&e))?
     }
 
     fn waiting(&self) -> Option<CodeView> {
@@ -443,9 +443,12 @@ impl ChatGpt {
         let listener = callback::Listener::bind(self.preferred_port)
             .await
             .map_err(|e| {
-                Error::Setup(
-                    "hx.signin.failed",
-                    format!("boopis could not listen on this computer for OpenAI's answer ({e})"),
+                crate::error::kept(
+                    Error::Setup(
+                        "hx.signin.failed",
+                        "boopis could not open the page your browser comes back to after signing in. Restart boopis and try again.".into(),
+                    ),
+                    format!("could not listen on 127.0.0.1 for OpenAI's answer: {e}"),
                 )
             })?;
         let mut attempt = Attempt::new(
@@ -517,7 +520,8 @@ impl ChatGpt {
             callback::Wait::TimedOut => {
                 return (
                     "timed_out",
-                    "The sign-in did not finish in time. Start again.".into(),
+                    "Your browser did not come back to boopis in time, so nothing was signed in. Start again, and finish signing in on OpenAI's page."
+                        .into(),
                 );
             }
             callback::Wait::Got(p) => p,
@@ -584,7 +588,7 @@ impl ChatGpt {
                     "OpenAI did not accept the sign-in code. Try again.".into(),
                 )
             }
-            Err(e) => ("failed", e.to_string()),
+            Err(e) => ("failed", crate::error::shown(e)),
         }
     }
 

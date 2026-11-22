@@ -119,7 +119,8 @@ async function cropFor(page, x, f) {
 
 /* ───────── the in-page work ───────── */
 async function openState(browser, origin, row, o = {}) {
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: o.dpr ?? DPR, reducedMotion: o.motion ? 'no-preference' : 'reduce' });
+  const z = row.zoom || 1;   /* a zoomed window: laid out at 1/z of its width, drawn z times larger (the desktop's interface size) */
+  const ctx = await browser.newContext({ viewport: { width: Math.round(1440 / z), height: Math.round(900 / z) }, deviceScaleFactor: (o.dpr ?? DPR) * z, reducedMotion: o.motion ? 'no-preference' : 'reduce' });
   const page = await ctx.newPage();
   page.errorsSeen = [];
   page.on('console', (m) => { if (m.type() === 'error') page.errorsSeen.push('console: ' + m.text().slice(0, 300)); });
@@ -139,7 +140,8 @@ const settle = async (page, ms) => {
   await page.evaluate(() => (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))).catch(() => {});
 };
 async function setWidth(page, row, w) {
-  const size = { width: w, height: w <= 390 ? 844 : 900 };
+  const z = row.zoom || 1;
+  const size = { width: Math.round(w / z), height: Math.round((w <= 390 ? 844 : 900) / z) };
   const cur = page.viewportSize();
   if (cur && cur.width === size.width && cur.height === size.height) return;
   await page.setViewportSize(size);
@@ -182,7 +184,12 @@ async function shot(page, row) {
   const clip = await page.evaluate((app) => {
       const scope = window.__lab.scope();
       if (app && (!scope || scope.id === 'hx-app' || scope === document.body)) return null;
-      const els = [app ? scope : document.querySelector('.lab-cell'), ...document.querySelectorAll('.ui-tip.is-in, .ui-menu:not([data-static]), .ui-pop, .ui-listbox, .ui-toast.is-in')].filter(Boolean);
+      /* a stage state is cropped to its cell, joined with the scope it names: the first-run layer is drawn inside the cell
+         but fixed over the whole window, so the cell alone was a 24 px strip and its screenshot compared nothing. A scope
+         that holds the cell (the default, the stage) changes nothing; one inside the cell's box changes nothing either */
+      const cell = document.querySelector('.lab-cell');
+      const apart = !app && scope && cell && scope !== document.body && !scope.contains(cell) ? scope : null;
+      const els = [app ? scope : cell, apart, ...document.querySelectorAll('.ui-tip.is-in, .ui-menu:not([data-static]), .ui-pop, .ui-listbox, .ui-toast.is-in')].filter(Boolean);
       let x0 = Infinity, y0 = Infinity, x1 = 0, y1 = 0;
       for (const e of els) { const r = e.getBoundingClientRect(); if (!r.width) continue; x0 = Math.min(x0, r.left); y0 = Math.min(y0, r.top); x1 = Math.max(x1, r.right); y1 = Math.max(y1, r.bottom); }
       const pad = 12;
@@ -255,6 +262,7 @@ async function checkRow(browser, origin, row, log) {
       await page.evaluate((p) => window.__lab.preset(p), preset);
       await settle(page, 80);
       for (const w of WIDTHS) {
+        if (row.zoom && w < 900) continue;   /* a zoomed window is a desktop window: not 390 wide */
         if (!row.app && row.width && row.width + 48 > w) continue;   /* a fixed-width cell wider than this window: not meaningful */
         await setWidth(page, row, w);
         const where = preset + '/' + w;
@@ -320,7 +328,7 @@ async function checkRow(browser, origin, row, log) {
         const list = await second.page.evaluate(() => window.__lab.interact);
         for (const it of list) {
           const p = second.page;
-          await p.evaluate((w) => { window.__labSampler = window.__labProbe.sampler(w || null); }, it.watch ?? null);
+          await p.evaluate((o) => { window.__labSampler = window.__labProbe.sampler(o.watch || null, { orbs: o.orbs }); }, { watch: it.watch ?? null, orbs: it.orbs === 'stay' });
           for (const s of it.steps) {
             if (s.do === 'hover') await p.hover(s.sel, { timeout: 4000 }).catch(() => {});
             else if (s.do === 'click') await p.click(s.sel, { timeout: 4000 }).catch(() => {});
@@ -370,7 +378,15 @@ build();
 rmSync(REPORT, { recursive: true, force: true });
 for (const d of ['crops', 'mock', 'diffs']) mkdirSync(join(REPORT, d), { recursive: true });
 const srv = await serve();
-const browser = await chromium.launch();
+/* a long run can lose its browser (it closed itself at state 1043 of a local run, and the whole report went with it): the
+   next state relaunches it, and the run still ends in a report */
+let browser = await chromium.launch();
+let relaunching = null;
+const liveBrowser = async () => {
+  if (browser.isConnected()) return browser;
+  relaunching ??= chromium.launch().then((b) => { browser = b; relaunching = null; console.warn('lab: the browser closed; relaunched it'); return b; });
+  return relaunching;
+};
 let rows;
 {
   const ctx = await browser.newContext();
@@ -392,8 +408,12 @@ const queue = [...rows];
 await Promise.all(Array.from({ length: Math.max(1, JOBS) }, async () => {
   while (queue.length) {
     const row = queue.shift();
-    try { await checkRow(browser, srv.origin, row, log); }
-    catch (e) { record(row, { check: 'errors', msg: 'the checker failed on this state: ' + String(e.message).split('\n')[0], key: 'errors|harness' }, 'harness'); log(row, 0); }
+    const b = await liveBrowser();
+    try { await checkRow(b, srv.origin, row, log); }
+    catch (e) {
+      if (!b.isConnected() && !row.retried) { row.retried = true; queue.push(row); continue; }   /* the browser died under this state: checked once more in the new one */
+      record(row, { check: 'errors', msg: 'the checker failed on this state: ' + String(e.message).split('\n')[0], key: 'errors|harness' }, 'harness'); log(row, 0);
+    }
   }
 }));
 
@@ -403,9 +423,9 @@ const staticFindings = STORY || STATE ? [] : scan().filter((f) => !AREA || AREA.
 const list = [...findings.values()].map(({ isNew, ...x }) => x).filter((x) => !AREA || AREA.includes(x.area));
 const failing = list.filter((x) => x.severity !== 'warn');
 const mocks = [...new Map(failing.filter((x) => x.mock).map((x) => [x.mock.url + '|' + (x.mock.crop ?? ''), x.mock])).values()];
-const mockFiles = await mockShots(browser, srv.origin, mocks);
+const mockFiles = await mockShots(await liveBrowser(), srv.origin, mocks).catch((e) => { console.warn('lab: the mock counterparts could not be taken: ' + String(e.message).split('\n')[0]); return {}; });
 for (const x of list) if (x.mock) x.mockShot = mockFiles[x.mock.url + '|' + (x.mock.crop ?? '')] ?? null;
-await browser.close();
+await browser.close().catch(() => {});
 await srv.close();
 
 const RULES_MD = join(UI_ROOT, '..', '..', '..', 'design', 'v6', 'design-system', 'RULES.md');

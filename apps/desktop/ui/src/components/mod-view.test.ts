@@ -161,13 +161,13 @@ describe('Select', () => {
 describe('Markdown', () => {
   it('draws paragraphs, headings, lists, inline code, bold, italic and https links only', () => {
     const { root } = view(Markdown({ text: '# Title\n\nSome **bold** and *it* and `code` words.\n\n- one\n- two\n\n1. first\n\n[ok](https://ci.example.com/r?a=1&b=2) [bad](http://x.test) [js](javascript:alert(1))' }));
-    expect(q(root, '.mv-md__h').textContent).toBe('Title');
+    expect(q(root, '.ui-md__h').textContent).toBe('Title');
     expect(q(root, 'strong').textContent).toBe('bold');
     expect(q(root, 'em').textContent).toBe('it');
     expect(q(root, 'code.ui-code').textContent).toBe('code');
     expect([...root.querySelectorAll('ul li')].map((l) => l.textContent)).toEqual(['one', 'two']);
     expect(root.querySelectorAll('ol li').length).toBe(1);
-    const links = [...root.querySelectorAll<HTMLAnchorElement>('a.mv-link')];
+    const links = [...root.querySelectorAll<HTMLAnchorElement>('a.ui-link')];
     expect(links.map((a) => [a.textContent, a.getAttribute('href'), a.rel])).toEqual([['ok', 'https://ci.example.com/r?a=1&b=2', 'noopener noreferrer']]);
   });
   it('escapes markup: a mod cannot put HTML in a tree', () => {

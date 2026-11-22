@@ -37,7 +37,7 @@ export function renderGlance(b: Bot, onOpen?: (sessionId: string) => void): HTML
   root.append(head('What it can use'));
   root.append(el('p', { class: 'bt-glance-line', text: inventoryLine('Skills', 'skill', 'skills', info.skills, info.notes.detail) }));
   root.append(el('p', { class: 'bt-glance-line', text: inventoryLine('Toolsets', 'toolset', 'toolsets', info.toolsets, info.notes.detail) }));
-  for (const n of [info.notes.jobs, info.notes.store]) if (n) root.append(el('p', { class: 'bt-glance-line bt-glance-note', role: 'note', text: n }));
+  for (const n of [info.notes.jobs, info.notes.store, info.notes.setup]) if (n) root.append(el('p', { class: 'bt-glance-line bt-glance-note', role: 'note', text: n }));
   const why = data().info.unavailable['bots.send'];
   if (why) root.append(el('p', { class: 'bt-glance-line bt-glance-note', role: 'note', text: why }));
   return root;

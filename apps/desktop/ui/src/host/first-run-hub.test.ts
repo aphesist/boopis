@@ -18,7 +18,7 @@ const AT_MODELS = status({ steps: [step('runtime', 'done'), step('models', 'need
 const DONE = status({ steps: [step('runtime', 'done'), step('models', 'done', 'ChatGPT subscription: gpt-6.2-sol on your ChatGPT sign-in')], done: true, receipt: { lines: ['models: x'] } });
 
 const state = (way: string, status: ProviderState['status'], extra: Partial<ProviderState> = {}): ProviderState =>
-  ({ provider: way.split('.')[0] ?? way, way, kind: way.endsWith('signin') ? 'signin' : 'key', status, code: null, detail: null, plan: null, models_count: null, base_url: null, signin: null, checked_at: null, ...extra });
+  ({ provider: way.split('.')[0] ?? way, way, kind: way.endsWith('signin') ? 'signin' : 'key', status, code: null, detail: null, plan: null, models_count: null, base_url: null, signin: null, checked_at: null, install: null, ...extra });
 
 class Setup implements SetupBridge {
   answers: Array<Parameters<SetupBridge['advance']>[0]> = [];

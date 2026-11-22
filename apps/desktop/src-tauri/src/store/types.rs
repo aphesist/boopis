@@ -250,7 +250,7 @@ pub enum Terms {
     NotApplicable,
 }
 
-/// A place items come from. The last five fields are the host's runtime state and are absent in the data file.
+/// A place items come from. The last seven fields are the host's runtime state and are absent in the data file.
 #[derive(Debug, Clone, Serialize, Deserialize, Type, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct StoreSource {
@@ -280,6 +280,12 @@ pub struct StoreSource {
     pub items: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
+    /// Whether reading the sources again reads this one (the host's runtime state).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub refreshable: Option<bool>,
+    /// Whether this source is due a read: on, refreshable, and never read, failed, or older than its period.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stale: Option<bool>,
 }
 
 /// Which layer installs the item.

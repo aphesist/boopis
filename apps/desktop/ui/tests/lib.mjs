@@ -95,6 +95,10 @@ export async function open(browser, o) {
   await page.goto(url + q);
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(o.settle || 700);
+  /* the shell turns its motion off while it boots (`is-booting`, removed two frames after boot) and while the window resizes
+     (`is-resizing`): a check that acts then sees no motion, so wait for both (a page still booting after 5 s is left as it is,
+     for the boot check to report) */
+  if (which !== 'v6') await page.waitForFunction(() => { const a = document.getElementById('hx-app'); return !a || !(a.classList.contains('is-booting') || a.classList.contains('is-resizing')); }, null, { timeout: 5000 }).catch(() => {});
   page.ctx = ctx;
   return page;
 }

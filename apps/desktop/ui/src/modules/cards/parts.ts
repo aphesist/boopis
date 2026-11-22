@@ -1,7 +1,7 @@
 /* The pieces every card kind draws with: text helpers, the library's buttons, the head, the one-row mini and the origin
    slot (who is asking, FORMS.md section 4a). Pure string templates over the library; nothing here touches the DOM. */
 import { esc } from '../../core/dom';
-import { ui } from '@boopis/ui';
+import { lookOf, ui } from '@boopis/ui';
 import { data } from '../../data';
 import type { Origin } from '../../data';
 import type { Ctx, Data } from './types';
@@ -70,11 +70,9 @@ export function originVisual(o: KnownOrigin | null, size: number, max?: number, 
   if (o.kind === 'teammate') {
     const one = bot(o.ids[0]);
     if (o.ids.length === 1 && one) return U.html.orb(one, { size });
-    const lim = max || 3;
-    const shown = o.ids.slice(0, Math.max(1, Math.min(lim, o.ids.length > lim ? lim - 1 : o.ids.length))), more = o.ids.length - shown.length;
-    return '<span class="cd-stack" style="--s:' + size + 'px"' + (more && !still ? ' tabindex="0"' : '') + ' data-tip="' + esc(namesText(o.ids)) + '" role="img" aria-label="' + esc(namesText(o.ids)) + '">' +
-      shown.map((id) => { const b = bot(id); return '<span class="cd-stack__one">' + (b ? U.html.orb(b, { size }) : '') + '</span>'; }).join('') +
-      (more ? '<span class="cd-stack__more" aria-hidden="true">+' + more + '</span>' : '') + '</span>';
+    /* the kit's stack: one overlap step, the first underneath, "+N" the last member (the same stack as a group's members) */
+    const members = o.ids.map((id) => bot(id) ?? { id, name: id });   /* one not on the roster: the look its name gives (the kit's resolver) */
+    return U.html.stack({ members, size, max: max || 3, label: namesText(o.ids), focusable: !still });
   }
   if (o.kind === 'agent') return U.html.modelMark(o.model, { size: 16, class: 'cd-glyph' });
   if (o.kind === 'mod') return U.icon('mod', { class: 'cd-glyph' });
@@ -118,7 +116,7 @@ export const byline = (c: Pick<Ctx, 'origin' | 'size'>): string => {
     toward the ink so the ring still shows on dark grounds */
 export function accentOf(o: KnownOrigin | null): string {
   if (!o || o.kind !== 'teammate' || o.ids.length !== 1) return '';
-  const col = String(bot(o.ids[0])?.color ?? '');
+  const one = bot(o.ids[0]), col = one ? lookOf(one).color : '';   /* the colour its orb wears (the kit's one resolver) */
   const m = /^#?([0-9a-f]{6})$/i.exec(col);
   if (!m) return col;
   const n = parseInt(m[1] ?? '0', 16), lin = (v: number): number => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); };

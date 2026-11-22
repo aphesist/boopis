@@ -45,9 +45,10 @@ export function sessionRowToSummary(row: SessionListRow, now: Date): SessionSumm
   return { id: row.id, project: '', title: sessionTitle(row), when: whenLabel(row.started_at, now) };
 }
 
-/** an answer's text as paragraphs: split on blank lines, trimmed, empty ones dropped */
+/** an answer's text as paragraphs: split on blank lines, empty ones dropped; a paragraph keeps the indent of its first line (code
+    and nested lists read by the markdown renderer need it) and loses only the blank space around it */
 export function paragraphs(text: string | null | undefined): string[] {
-  return (text ?? '').split(/\n{2,}/).map((p) => p.trim()).filter((p) => p.length > 0);
+  return (text ?? '').split(/\n{2,}/).map((p) => p.replace(/^\s*\n/, '').trimEnd()).filter((p) => p.trim().length > 0);
 }
 
 const str = (v: unknown): string => (typeof v === 'string' ? v : '');

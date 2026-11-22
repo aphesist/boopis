@@ -29,8 +29,16 @@ ui.squircle.start();
 /** where first run's optional steps asked to land once the app is up (`connectors`, `store`) */
 let landing: 'connectors' | 'store' | null = null;
 
+/* the watchdog's notice waits for the shell: a toast shown while the app is still booting has no layout to sit in */
+let shellReady = false;
+const owedNotices: string[] = [];
+on('hx:ready', () => { shellReady = true; for (const t of owedNotices.splice(0)) ui.toast(t, { ms: 8000 }); });
+function noticeWhenReady(text: string): void { if (shellReady) ui.toast(text, { ms: 8000 }); else owedNotices.push(text); }
+
 async function start(): Promise<void> {
   await orbs;
+  /* the host's watchdog hears from the page from the start (host/heartbeat.ts); after it reloaded a dead or stuck page, the first beat brings its one notice */
+  if (inTauri()) void import('./host/heartbeat').then((m) => { m.startHeartbeat(noticeWhenReady); }).catch((e: unknown) => { log.warn('the heartbeat did not start', e); });
   if (inTauri()) {
     /* first run: the host sets Hermes up for boopis (plugin, settings, a key) before anything connects; a screen of its own, thin on purpose */
     const [{ runFirstRun }, { tauriSetupBridge }] = await Promise.all([import('./host/first-run'), import('./host/setup-bridge')]);

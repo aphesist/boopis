@@ -4,7 +4,8 @@ import { createMockProvider } from '../../data/mock-provider';
 import { setProvider } from '../../data';
 import { S } from './ctx';
 import type { DockBot } from './ctx';
-import { slabCorner, slabWidthFor } from './geometry';
+import { rowFit, rowMagRoom, rowWidth, slabCorner, slabWidthFor } from './geometry';
+import { MAG, MAG_ADD, SIG } from './ctx';
 import { V } from './views';
 
 /* Boopis owner, Linux: with no bot on the dock the slab was a tall black tombstone around the "+", the foot's controls
@@ -50,5 +51,32 @@ describe('the bots row with no bots', () => {
     const html = (V['bots:norm'] as () => string)();
     expect(html).toContain('data-act="new-bot"');
     expect(html).not.toContain('dk-bot"');
+  });
+});
+
+/* Boopis owner's lab, 120 bots at 1440: the row ran 8px past the window and the slab's right corner off it. The row now fits
+   its room with its padding and the most magnification widens it, at every width. */
+describe('the bot row in its room', () => {
+  const room = (w: number, pad = 16) => ({ room: w, floor: 24, ctl: 28, pad, mag: MAG, magCtl: MAG_ADD, sig: SIG });
+  it('keeps 40px orbs at a 54px pitch while every bot fits', () => {
+    expect(rowFit(11, room(696))).toEqual({ orb: 40, gap: 14, shown: 11, more: false });
+  });
+  it('shrinks the orbs before it leaves any bot out, never below the floor', () => {
+    const f = rowFit(17, room(696));
+    expect(f.more).toBe(false);
+    expect(f.orb).toBeLessThan(40);
+    expect(f.orb).toBeGreaterThanOrEqual(24);
+  });
+  for (const w of [256, 298, 640, 696, 1092]) {
+    it(`with 120 bots in ${w}px it shows what fits, then "All bots", magnified included`, () => {
+      const r = room(w, w < 300 ? 10 : 16), f = rowFit(120, r);
+      expect(f.more).toBe(true);
+      expect(f.orb).toBe(24);
+      expect(rowWidth(f.orb, f.shown, true, r) + rowMagRoom(f.orb, f.shown, r)).toBeLessThanOrEqual(w);
+      expect(rowWidth(f.orb, f.shown + 1, true, r) + rowMagRoom(f.orb, f.shown + 1, r)).toBeGreaterThan(w);
+    });
+  }
+  it('the magnification room is at least what the orb under the pointer and the "+" add', () => {
+    expect(rowMagRoom(24, 1, room(600))).toBeGreaterThanOrEqual(Math.ceil((MAG - 1) * 24 + (MAG_ADD - 1) * 28));
   });
 });

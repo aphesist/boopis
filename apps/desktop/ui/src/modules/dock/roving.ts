@@ -3,7 +3,15 @@
    The row and the grid share one index (S.rowIdx: the bots, then "+"), so Up from the row lands on the same bot in the
    grid. The index maths are pure and tested; the DOM part follows them. */
 import { $$, clamp } from '../../core/dom';
-import { S, X } from './ctx';
+import { S, X, rowNow } from './ctx';
+
+/** The row may show fewer bots than there are (`shown` of `n`, then "All bots", then "+"); the shared index still counts
+    every bot. The row's item for an index: a bot the row leaves out is "All bots", which leads to it in the grid. */
+export const rowItemOf = (idx: number, n: number, shown: number, more: boolean): number =>
+  idx < shown ? idx : more && idx < n ? shown : shown + (more ? 1 : 0);
+/** the shared index for the row's item `k`: "All bots" stands for the first bot the row leaves out, "+" for "+" */
+export const rowIdxOf = (k: number, n: number, shown: number, more: boolean): number =>
+  k < shown ? k : more && k === shown ? shown : n;
 
 /** the item a Left / Right / Up / Down / Home / End press goes to, in a line of n (not clamped: `rove` clamps) */
 export const stepIndex = (key: string, i: number, n: number): number =>
@@ -30,7 +38,8 @@ export function gridTarget(key: string, i: number, n: number, cols: number): num
 export function syncRoving(): void {
   const root = X.root;
   S.rowIdx = clamp(S.rowIdx, 0, S.bots.length);
-  for (const box of $$('.dk-row', root)) $$('.dk-bot, .dk-add', box).forEach((el, k) => { el.tabIndex = k === S.rowIdx ? 0 : -1; });
+  const { shown, more } = rowNow(), at = rowItemOf(S.rowIdx, S.bots.length, shown, more);
+  for (const box of $$('.dk-row', root)) $$('.dk-bot, .dk-add', box).forEach((el, k) => { el.tabIndex = k === at ? 0 : -1; });
   for (const box of $$('.dk-roster', root)) $$('.ui-row', box).forEach((el, k) => { el.tabIndex = k === S.rowIdx ? 0 : -1; });
   for (const box of $$('.dk-strip', root)) {
     const items = $$('.dk-strip-bot', box);
@@ -48,6 +57,18 @@ export function rove(items: readonly HTMLElement[], i: number, j: number): numbe
   if (!items.length) return i;
   const to = clamp(j, 0, items.length - 1);
   items.forEach((el, k) => { el.tabIndex = k === to ? 0 : -1; });
-  items[to]?.focus({ preventScroll: true });
+  const el = items[to];
+  if (el) { el.focus({ preventScroll: true }); keepInView(el); }
   return to;
+}
+/** A roster row (the expanded dock's inner scroller) that takes focus is scrolled into the roster's view, at once (R-scroll-8:
+    instant under reduced motion; the dock moves focus with preventScroll, so nothing else would scroll it). Only the roster
+    scrolls: scrollIntoView would also scroll the app's own clipping boxes. */
+export function keepInView(el: HTMLElement): void {
+  const box = el.closest<HTMLElement>('.dk-roster');
+  if (!box || box.scrollHeight <= box.clientHeight) return;
+  const b = box.getBoundingClientRect(), r = el.getBoundingClientRect();
+  const pad = parseFloat(getComputedStyle(box).paddingTop) || 0;
+  if (r.top < b.top + pad) box.scrollTop -= b.top + pad - r.top;
+  else if (r.bottom > b.bottom - pad) box.scrollTop += r.bottom - (b.bottom - pad);
 }

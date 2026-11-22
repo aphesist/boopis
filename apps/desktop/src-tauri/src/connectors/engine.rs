@@ -273,7 +273,7 @@ impl Engine {
         let store = self.secrets.clone();
         tokio::task::spawn_blocking(move || op(store.as_ref()))
             .await
-            .map_err(|e| Error::Secrets(e.to_string()))?
+            .map_err(|e| crate::error::joined(&e))?
     }
 
     /// Install what the review showed. `plan_hash` is the review's; `secrets` are the key fields' values, which go to the
@@ -934,8 +934,9 @@ impl Engine {
                 Error::Connector(
                     "hx.connectors.command_failed",
                     format!(
-                        "Claude Code is not installed. Install it with `{}`, then try again.",
-                        crate::claude::INSTALL_COMMAND
+                        "Claude Code is not installed. Install it with `{}` in {}, then try again.",
+                        crate::claude::install_command(),
+                        crate::claude::Os::HERE.shell()
                     ),
                 )
             })?;
@@ -943,10 +944,29 @@ impl Engine {
         } else {
             (entry.program.clone(), Vec::new())
         };
-        let mut report = run_login(&program, &entry.args, &env, &self.limits).await?;
+        let mut report = match run_login(&program, &entry.args, &env, &self.limits).await {
+            Err(e) if entry.program == CLAUDE_PROGRAM => {
+                return Err(claude_signin_failed(&program, &e));
+            }
+            r => r?,
+        };
         report.command_line = entry.line();
         Ok(report)
     }
+}
+
+/// Claude Code was found but its sign-in did not start (the system refused the file, or its output could not be read): plain
+/// words for the card, with Anthropic's installer for this system; the system's own message goes to the log only.
+pub(crate) fn claude_signin_failed(program: &str, e: &Error) -> Error {
+    tracing::warn!(error = %e, program, "Claude Code's sign-in did not start");
+    Error::Connector(
+        "hx.connectors.command_failed",
+        format!(
+            "Claude Code is installed ({program}), but the system could not start its sign-in. Install it again with `{}` in {}, then choose Sign in again.",
+            crate::claude::install_command(),
+            crate::claude::Os::HERE.shell()
+        ),
+    )
 }
 
 /// Environment variables a login command may see: the allowlist Hermes's CLI runs with, plus what a browser or a terminal
@@ -1011,13 +1031,11 @@ pub fn clean_line(line: &str) -> String {
     out
 }
 
-/// Run a program the host chose (from the table), never one a form named. `env` is added on top of the allowlist.
-async fn run_login(
-    command: &str,
-    args: &[String],
-    env: &[(String, String)],
-    limits: &Limits,
-) -> Result<LoginReport> {
+/// The process a sign-in command runs as: exactly `command` and `args`, no shell, the login allowlist ([`login_env`]) plus `env`,
+/// stdin closed, output captured, no console window on Windows, killed when dropped. [`Engine::login`] runs it; the CI probe
+/// (`examples/claude_probe.rs`) starts the same process to prove "Sign in to Claude" reaches Claude's sign-in page.
+#[must_use]
+pub fn login_command(command: &str, args: &[String], env: &[(String, String)]) -> Command {
     let mut cmd = Command::new(command);
     cmd.args(args)
         .env_clear()
@@ -1029,6 +1047,17 @@ async fn run_login(
         .kill_on_drop(true);
     #[cfg(windows)]
     cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+    cmd
+}
+
+/// Run a program the host chose (from the table), never one a form named. `env` is added on top of the allowlist.
+async fn run_login(
+    command: &str,
+    args: &[String],
+    env: &[(String, String)],
+    limits: &Limits,
+) -> Result<LoginReport> {
+    let mut cmd = login_command(command, args, env);
     let command_line = validate::display_command(command, args);
     let mut child = cmd.spawn().map_err(|e| {
         Error::Connector(

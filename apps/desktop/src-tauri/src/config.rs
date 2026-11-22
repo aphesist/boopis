@@ -14,6 +14,13 @@ pub struct Limits {
     pub queue_soft_cap: usize,
     /// Frames queued per UI connection before the connection is declared too slow and closed.
     pub queue_hard_cap: usize,
+    /// The most frames the host hands a UI connection in one delivery (one script run in the web view).
+    pub batch_frames: usize,
+    /// About the most bytes of one delivery (a single larger frame still goes alone).
+    pub batch_bytes: usize,
+    /// Deliveries a UI connection may have unacknowledged. Past it the host waits for the page, so frames wait in
+    /// the bounded queue (where they coalesce and are counted) instead of piling up unbounded inside the web view.
+    pub ui_credit: usize,
     /// How often the host pings the gateway.
     pub ping_every: std::time::Duration,
     /// How long the gateway may stay silent (no frame, no pong) before the link counts as dead.
@@ -122,6 +129,9 @@ impl Default for Limits {
             max_outbound_frame: 8 * 1024 * 1024,
             queue_soft_cap: 2048,
             queue_hard_cap: 16 * 1024,
+            batch_frames: 256,
+            batch_bytes: 1024 * 1024,
+            ui_credit: 4,
             ping_every: Duration::from_secs(20),
             silence_limit: Duration::from_secs(75),
             request_timeout: Duration::from_mins(2),

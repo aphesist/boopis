@@ -13,7 +13,8 @@ export const KEYS = {
   bots: 'hx.v6.bots',
   boards: 'hx.v6.boards',
   preview: 'hx.v6.preview',
-  window: 'hx.v6.window'
+  window: 'hx.v6.window',
+  size: 'hx.v6.size'
 } as const;
 export type StoreKey = (typeof KEYS)[keyof typeof KEYS];
 
@@ -95,3 +96,12 @@ export const loadWindowPref = (): WindowControlsPref => {
   return v === 'close' || v === 'all' ? v : 'auto';
 };
 export const saveWindowPref = (controls: WindowControlsPref): boolean => writeJSON(KEYS.window, { controls });
+
+/* ───────── the interface size: the window's zoom, one of three steps (Settings > Appearance > Size) ───────── */
+export const UI_SIZES = ['default', 'larger', 'largest'] as const;
+export type UiSize = (typeof UI_SIZES)[number];
+/** what each step scales the web view by: text, layout and bots together, so no size changes against another */
+export const UI_ZOOM: Readonly<Record<UiSize, number>> = { default: 1, larger: 1.12, largest: 1.25 };
+export const isUiSize = (v: unknown): v is UiSize => typeof v === 'string' && (UI_SIZES as readonly string[]).includes(v);
+export const loadUiSize = (): UiSize => { const v = readJSON<Record<string, unknown>>(KEYS.size)?.['size']; return isUiSize(v) ? v : 'default'; };
+export const saveUiSize = (size: UiSize): boolean => writeJSON(KEYS.size, { size });

@@ -32,6 +32,7 @@ pub mod install;
 pub mod net;
 pub mod normalize;
 pub mod plan;
+pub mod reasons;
 pub mod search;
 pub mod servers;
 pub mod service;

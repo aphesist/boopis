@@ -527,7 +527,7 @@
       ]
     },
     "StoreSource": {
-      "description": "A place items come from. The built-in ones are in store-sources.json; a user-added one has `user_added: true` and a `url` (or a `path` for a local source). The runtime fields (`enabled`, `refreshed_at`, `items`, `error`) are the host's and are absent in the data file.",
+      "description": "A place items come from. The built-in ones are in store-sources.json; a user-added one has `user_added: true` and a `url` (or a `path` for a local source). The runtime fields (`enabled`, `refreshed_at`, `items`, `error`, `refreshable`, `stale`) are the host's and are absent in the data file.",
       "type": "object",
       "required": [
         "id",
@@ -619,6 +619,14 @@
               "type": "null"
             }
           ]
+        },
+        "refreshable": {
+          "type": "boolean",
+          "description": "Whether reading the sources again reads this one (from the network or through the engine). False for boopis's own list (built in), GitHub (live search needs a sign-in) and the two places that hold nothing until the user adds one."
+        },
+        "stale": {
+          "type": "boolean",
+          "description": "The host's word that this source is due a read: it is refreshable and on, and it was never read, its last read failed, or its copy is older than its refresh period. The store reads such sources when it opens."
         },
         "error": {
           "oneOf": [

@@ -1,41 +1,81 @@
 {
+ "120-bots-expanded-scrolled-to-the-end@bone": {
+  "sha": "fc014537ec2960ce65dcb34f9d74964b0819526b",
+  "w": 1440,
+  "h": 84
+ },
+ "120-bots-expanded-scrolled-to-the-end@catalog": {
+  "sha": "6055a70ae2aa026fbcf64fe91019954ee452310e",
+  "w": 1440,
+  "h": 84
+ },
+ "120-bots-expanded-scrolled-to-the-end@graphite": {
+  "sha": "f89fd50053a577b585de3d04e76c8aed6153ab3d",
+  "w": 1440,
+  "h": 84
+ },
+ "120-bots-expanded-scrolled-to-the-end@typewriter": {
+  "sha": "e51155aff0425b32b35ec8aadd1f3b122356d4cd",
+  "w": 1440,
+  "h": 84
+ },
  "120-bots-expanded@bone": {
-  "sha": "13c5ac40f29aacba443264db71ae587bba917560",
+  "sha": "8215cf858799c016f02cbc3c89083000645e3af1",
   "w": 1440,
   "h": 84
  },
  "120-bots-expanded@catalog": {
-  "sha": "9521842b0046cbea78151c70a82e068dc84992e4",
+  "sha": "51a9c737b798fb6e881dbb7063a1139faec14e6b",
   "w": 1440,
   "h": 84
  },
  "120-bots-expanded@graphite": {
-  "sha": "752c8d9f8438699cf96bda195c0fd042e60387b7",
+  "sha": "62afbabece69b01ebd410db43b077adaa3677075",
   "w": 1440,
   "h": 84
  },
  "120-bots-expanded@typewriter": {
-  "sha": "b09563561a109d86fe2e43a4a086076c1171bb3f",
+  "sha": "c9a2801eab7d24a7b51c42cd0e912e4c89dd9307",
+  "w": 1440,
+  "h": 84
+ },
+ "120-bots-minimised@bone": {
+  "sha": "0da120f1ca14ccea489bb70a56da24e9646704be",
+  "w": 1440,
+  "h": 84
+ },
+ "120-bots-minimised@catalog": {
+  "sha": "414911dff55c3e4417714707574e9575e79999fd",
+  "w": 1440,
+  "h": 84
+ },
+ "120-bots-minimised@graphite": {
+  "sha": "f27dc69cd19a26f80106980c7161a968a86337c7",
+  "w": 1440,
+  "h": 84
+ },
+ "120-bots-minimised@typewriter": {
+  "sha": "3806a35f0f004974591980268d12382e703e0001",
   "w": 1440,
   "h": 84
  },
  "120-bots@bone": {
-  "sha": "2dccc18ebf1e3c5bd7244f4e4f3814acf0be0b5c",
+  "sha": "852e29f33442b33a6a36cd580e184b062667a0ce",
   "w": 1440,
   "h": 84
  },
  "120-bots@catalog": {
-  "sha": "c76ccd8214ee3419f9833438aa739510d7e6969a",
+  "sha": "c57956c214cc9300715a25e168344e3f58648881",
   "w": 1440,
   "h": 84
  },
  "120-bots@graphite": {
-  "sha": "d2644e394c5e57700c32daf285c6a29b15a086aa",
+  "sha": "0213f43b960a453d52583dd6dc319af5b5c00d5a",
   "w": 1440,
   "h": 84
  },
  "120-bots@typewriter": {
-  "sha": "911dbfbcd2c7da5c3396527288d25a882d30ab75",
+  "sha": "b1eeef3dd783431d532aec9e195dd6ed33fcdb9d",
   "w": 1440,
   "h": 84
  },
@@ -55,27 +95,27 @@
   "h": 84
  },
  "a-long-named-bot-its-session@typewriter": {
-  "sha": "14172964707ba9cd7ba6a5ad71957cc2fd61f5cb",
+  "sha": "ca77b9f46fa2de4425fb249c91e2b0f57660649b",
   "w": 1440,
   "h": 84
  },
  "a-long-named-bot@bone": {
-  "sha": "22cba551bbf6e46263f3d2a6dda110196982eb47",
+  "sha": "a8b818d004200c4db2e6a0b23ed6b15833b6ffee",
   "w": 1440,
   "h": 84
  },
  "a-long-named-bot@catalog": {
-  "sha": "2359c469e797d6518e56bfee0ec4c0886d215dd8",
+  "sha": "705779c2a08696f8fe4183e671b66426584ad24e",
   "w": 1440,
   "h": 84
  },
  "a-long-named-bot@graphite": {
-  "sha": "a17ced26c0009052192bf2d65bf2b07894416088",
+  "sha": "a658938cd0f4106f3596350b6463492b2c847aa5",
   "w": 1440,
   "h": 84
  },
  "a-long-named-bot@typewriter": {
-  "sha": "8161e8c4050038c6e50ee365852c2b2675c7af96",
+  "sha": "9f0e38763e99f6f5e5a63d1a5aa5ee58c9d7dff9",
   "w": 1440,
   "h": 84
  },
@@ -125,7 +165,7 @@
   "h": 84
  },
  "expanded@catalog": {
-  "sha": "2d5c7826269fcb458c7c303e8ad6e0008ef25b4e",
+  "sha": "263192b988d941c97c5a89767258455853029b55",
   "w": 1440,
   "h": 84
  },
@@ -260,22 +300,22 @@
   "h": 84
  },
  "one-bot-expanded@bone": {
-  "sha": "8f84ad2bbd11d5aa60209433b77b97ff685c2c14",
+  "sha": "a47d3e99dd77ab09dfa7bdd7cb7681c7e146e627",
   "w": 1440,
   "h": 84
  },
  "one-bot-expanded@catalog": {
-  "sha": "2e6bf19234a46f438b93ecbde9fc9aa6ad1ac2fd",
+  "sha": "629dac7666f33c1e07ae97ce0ac901aeea96327f",
   "w": 1440,
   "h": 84
  },
  "one-bot-expanded@graphite": {
-  "sha": "b3fff26d715040c4bf1a97f7dbcdb974c8c7c7d8",
+  "sha": "8ebe32c36a37a3c338762b75fc06a21c44232e5e",
   "w": 1440,
   "h": 84
  },
  "one-bot-expanded@typewriter": {
-  "sha": "362b0c1cd3eab494f8bbcb4754c4bbb0d1d024d0",
+  "sha": "0daa3ad584cef504f76469e202ad9e7e900b77e2",
   "w": 1440,
   "h": 84
  },

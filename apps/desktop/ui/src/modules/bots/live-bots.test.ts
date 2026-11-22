@@ -302,3 +302,70 @@ describe('a bot that leaves the roster while it is open', () => {
     expect(data().bots.snapshot().bots.map((b) => b.id)).toEqual(['nina']);
   });
 });
+
+describe('the look editor: a bot’s colour and shape, changed in its settings', () => {
+  const look = (o: Element | null | undefined): string => (o ? o.getAttribute('shape') + ' ' + o.getAttribute('color') : 'none');
+  const orbs = (): Element[] => [...document.querySelectorAll('.ui-orb[data-bot="atlas"] > orb-avatar')];
+  const tab = (name: string): void => { [...document.querySelectorAll<HTMLElement>('.bt-sheet [data-name="look"] [role="tab"]')].find((t) => t.textContent === name)!.click(); };
+  const pick = (label: string): void => { q('.bt-sheet [data-name="look"] .bt-opt[aria-label="' + label + '"]').click(); };
+  beforeEach(async () => {
+    mount([atlas()]);
+    /* the provider sends the bot back with its new look, as the live provider does after bots.write */
+    f.admin.saveOwn = (id, patch) => {
+      f.calls.push({ fn: 'saveOwn', args: [id, patch] });
+      if (f.saveError) return Promise.reject(f.saveError);
+      const b = f.bots.find((x) => x.id === id)!;
+      Object.assign(b, patch.look ?? {}); delete b.madeOutside;
+      f.events.emit({ type: 'bot', bot: { ...b } });
+      return Promise.resolve();
+    };
+    openSettings('atlas'); await flush();
+  });
+  it('is the sheet’s Look section, with the new-bot sheet’s Colour and Shape tabs and a dice, and no eyes', () => {
+    const sec = q('.bt-sheet [data-name="look"]');
+    expect([...sec.querySelectorAll('[role="tab"]')].map((t) => t.textContent)).toEqual(['Colour', 'Shape']);
+    expect(sec.querySelector('[aria-label="Surprise me with a colour and shape"]')).not.toBeNull();
+    expect(sec.querySelector('.ui-sec__meta')?.textContent).toBe('rose triangle');
+    expect(sec.textContent).not.toMatch(/eyes?\b(?! follow)/i);
+  });
+  it('shows a choice on every orb of the bot at once, then saves it with bots.write', async () => {
+    tab('Shape'); pick('Star');
+    expect(orbs().length).toBeGreaterThan(1);   /* the roster, the room's header, the sheet's own */
+    for (const o of orbs()) expect(look(o)).toBe('star #f23b5a');
+    expect(f.calls.some((c) => c.fn === 'saveOwn')).toBe(false);   /* not on every arrow key: when the choosing stops */
+    await flush(); await vi.advanceTimersByTimeAsync(400); await flush();
+    expect(f.calls.filter((c) => c.fn === 'saveOwn').map((c) => c.args)).toEqual([['atlas', { look: { shape: 'star', color: '#f23b5a' } }]]);
+    for (const o of orbs()) { expect(look(o)).toBe('star #f23b5a'); expect(o.hasAttribute('eye-shape')).toBe(false); }
+    expect(q('.bt-sheet [data-name="look"] .ui-sec__meta').textContent).toBe('rose star');
+  });
+  it('saves the last of several choices once', async () => {
+    pick('Mint'); pick('Blue'); tab('Shape'); pick('Cloud');
+    await vi.advanceTimersByTimeAsync(400); await flush();
+    expect(f.calls.filter((c) => c.fn === 'saveOwn').map((c) => c.args)).toEqual([['atlas', { look: { shape: 'cloud', color: '#3b82f6' } }]]);
+    for (const o of orbs()) expect(look(o)).toBe('cloud #3b82f6');
+  });
+  it('the dice rolls a colour and shape no other bot wears, and saves it', async () => {
+    q('.bt-sheet [aria-label="Surprise me with a colour and shape"]').click();
+    await vi.advanceTimersByTimeAsync(400); await flush();
+    const saved = f.calls.find((c) => c.fn === 'saveOwn')!.args[1] as { look: { shape: string; color: string } };
+    expect(saved.look).not.toEqual({ shape: 'triangle', color: '#f23b5a' });
+    expect(Object.keys(saved.look).sort()).toEqual(['color', 'shape']);
+  });
+  it('a save that fails puts the saved look back everywhere and says why', async () => {
+    f.saveError = new Error('the store could not be written');
+    tab('Shape'); pick('Star');
+    await vi.advanceTimersByTimeAsync(400); await flush();
+    for (const o of orbs()) expect(look(o)).toBe('triangle #f23b5a');
+    expect(q('.bt-sheet [data-name="look"] [role="alert"]').textContent).toBe('boopis did not save its look: the store could not be written');
+  });
+  it('a bot made outside boopis gets its store on the first save, and the mark goes', async () => {
+    mount([{ ...atlas(), madeOutside: true }]);
+    f.admin.saveOwn = (id, patch) => { const b = f.bots.find((x) => x.id === id)!; Object.assign(b, patch.look ?? {}); delete b.madeOutside; f.events.emit({ type: 'bot', bot: { ...b } }); return Promise.resolve(); };
+    openSettings('atlas'); await flush();
+    expect(document.querySelectorAll('[data-outside]').length).toBeGreaterThan(0);
+    pick('Mint'); await vi.advanceTimersByTimeAsync(400); await flush();
+    expect(data().bots.snapshot().bots[0]!.madeOutside).toBeUndefined();
+    expect(document.querySelectorAll('[data-outside]').length).toBe(0);
+    for (const o of orbs()) expect(look(o)).toBe('triangle #4fc9a8');
+  });
+});

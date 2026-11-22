@@ -72,6 +72,17 @@ pub struct Manifest {
     /// How many entries the archive holds. Optional: without it the cap is derived from `unpacked_size`.
     #[serde(default)]
     pub entries: u64,
+    /// The plugins the runtime carries (`plugins/<name>/` in the archive, ADR-0030), each by the name the engine lists it by.
+    /// Every bot gets them too (ADR-0042). Optional: an older `runtime.json` names none.
+    #[serde(default)]
+    pub plugins: Vec<CarriedPlugin>,
+}
+
+/// One plugin a runtime carries, as `runtime.json` names it (the rest of its entry, the source and licence, is for people).
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+pub struct CarriedPlugin {
+    /// The directory name, which is the name the engine lists it by.
+    pub name: String,
 }
 
 fn bad_manifest(m: impl Into<String>) -> Error {

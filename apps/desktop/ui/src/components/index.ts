@@ -33,9 +33,13 @@ import { shape } from './shape';
 import { squircle } from './squircle';
 import { toast } from './toast';
 import type { SigninButtonOpts } from './signin-button';
+import type { StackOpts } from './stack';
 import { tooltip } from './tooltip';
 import { hydrate, hydrateOne } from './wire';
 import { scrollClass } from './scroll';
+import { codeHTML, everyoneHTML, inlineHTML, plainHTML, markdownHTML, mentionHandles, mentionHTML, mentionOutsideHTML, mentionsOutside, pathCandidate, pathCandidates, pathHTML, resolveMentions, splitBlocks, upgradePaths } from './markdown';
+import { arrive, codeOf, markdown as markdownEl, streamMarkdown, wireMarkdown } from './md-view';
+import { copyText } from './clipboard';
 import type { SegElement } from './wire';
 
 export const version = '1.0.0';
@@ -75,8 +79,15 @@ const factories = {
   row: make<RowOpts, HTMLLIElement>(html.row),
   group: make<Parameters<typeof html.group>[0]>(html.group),
   child: make<ChildOpts, HTMLElement>(html.child),
-  signinButton: make<SigninButtonOpts, HTMLButtonElement>(html.signinButton)
+  signinButton: make<SigninButtonOpts, HTMLButtonElement>(html.signinButton),
+  stack: make<StackOpts>(html.stack)
 };
+/** `ui.markdown(text, ctx)` draws what a bot or an agent wrote (markdown.ts); its properties are the parts the surfaces use */
+const markdown = Object.assign(markdownEl, {
+  html: markdownHTML, inline: inlineHTML, plain: plainHTML, code: codeHTML, blocks: splitBlocks, stream: streamMarkdown, arrive, wire: wireMarkdown, codeOf,
+  mention: mentionHTML, outside: mentionOutsideHTML, outsiders: mentionsOutside, everyone: everyoneHTML, handles: mentionHandles, resolve: resolveMentions,
+  path: pathHTML, pathCandidate, candidates: pathCandidates, upgradePaths
+});
 const legend = (parts: readonly MeasurePart[], fmt?: (n: number) => string): HTMLElement => frag(html.legend(parts, fmt));
 const keys = (k: string): HTMLElement => frag(html.keys(k));
 const inline = (text: string): HTMLSpanElement => { const s = document.createElement('span'); s.innerHTML = html.inline(text); return s; };
@@ -89,6 +100,7 @@ const modelRoute = (text: string, o?: ModelOpts): HTMLElement => frag(routeHTML(
 export const ui = {
   version, html, esc, icon, icons: iconNames, announce, botState, botLabel, states: STATES,
   ...factories, legend, keys, inline, scrollClass,
+  markdown, copyText,
   hydrate, orb, liven, glance, shape, squircle, modelMark, model, modelRoute, menu, popover, layer, listbox, modelEntries, wireSelect, tooltip, toast, composer, card,
   hold: Object.assign(holdElement, { wire: wireHold }),
   /** a Claude Code mod's element tree, drawn with the library (MODS.md section 2) */
@@ -100,8 +112,13 @@ export type { SegElement } from './wire';
 export { fileChip } from './composer';
 export type { FileChipOpts } from './composer';
 /* runtime pieces the app's modules and host wire (the orbs' engine, the card layer's factory, the first run's moments) */
-export { oc, startGlance } from './orb';
+export { oc, startGlance, paintLook, repaintLook } from './orb';
 export type { OrbOpts } from './orb';
+/* a bot's look: the one resolver every orb is drawn through, the name's default, the picker's palettes and the dice */
+export { lookOf, lookFor, lookAttrs, sameLook, shapeOf, colourOf, colourName, rollLook, SWATCHES, SHAPES, DRAFT_COLOR } from './look';
+export type { Look, LookSource, RollOpts } from './look';
+export { namesList, stackSplit } from './stack';
+export type { StackOpts } from './stack';
 export { holdOutsideDock, releaseOutsideDock } from './orb-runtime';
 export { orbState, setupOrbs } from './orb-worker/host';
 export { setCardFactory } from './card-registry';
@@ -135,4 +152,6 @@ export type { ComposerEl, ComposerOpts, DecisionDetail, AssumptionDetail, Dictat
 export type { PageDef, MenuEntry, MenuItem, StepItem, LadderOpts, MeasurePart, Station, CallLine } from './html';
 export type { ModelRef, ModelOpts, MarkOpts, ModelFamily } from './model-mark';
 export type { BotLike } from './bot-state';
+export type { MarkdownCtx, MdBot, PathTarget, Block as MarkdownBlock } from './markdown';
+export { MENTION_SOURCE } from './markdown';
 export type { CardKind, CardOpts, CardLike, CardData } from './card-registry';

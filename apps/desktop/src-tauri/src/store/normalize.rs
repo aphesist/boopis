@@ -173,8 +173,46 @@ impl<'a> Draft<'a> {
 
 // ---------------------------------------------------------------- boopis's own list
 
-/// The curated connectors (`apps/shared/data/connectors.json`) as items. Only boopis's list yields `recommended`, and only
-/// for an entry a person checked: its `verified.date` is that check. The pin is the verified package at its exact version.
+/// The pin of an entry of boopis's own list: the package a way of running it pins (`npx` an npm version, `uvx` a `PyPI` version,
+/// `docker` an image digest), else, for a connector only its publisher hosts, its address (`remote:<url>`, the owner's decision
+/// of 21 November 2026: hosted connectors are allowed with a standing caution) at the version boopis checked.
+fn curated_pin(c: &crate::connectors::catalog::Connector) -> Option<Pin> {
+    if let Some(v) = c.variants.iter().find(|v| c.pinned(v).is_some()) {
+        let (p, ver) = (c.verified.package.clone()?, c.verified.version.clone()?);
+        let (kind, registry) = match v
+            .command
+            .as_deref()
+            .map(|cmd| cmd.rsplit(['/', '\\']).next().unwrap_or(cmd))
+        {
+            Some("uvx" | "uv") => (PinKind::Version, "pypi"),
+            Some("docker" | "podman") if ver.starts_with("sha256:") => (PinKind::OciDigest, "oci"),
+            _ => (PinKind::Version, "npm"),
+        };
+        return Some(Pin {
+            kind,
+            value: ver,
+            repo: Some(format!("{registry}:{p}")),
+        });
+    }
+    let hosted = c
+        .variants
+        .iter()
+        .find(|v| v.default && v.url.is_some())
+        .or_else(|| c.variants.iter().find(|v| v.url.is_some()))?;
+    Some(Pin {
+        kind: PinKind::Version,
+        value: c
+            .verified
+            .version
+            .clone()
+            .unwrap_or_else(|| format!("checked {}", c.verified.date)),
+        repo: Some(format!("remote:{}", hosted.url.as_deref()?)),
+    })
+}
+
+/// The curated connectors (`apps/shared/data/connectors.json`) as items, in the file's order (most popular first). Only boopis's
+/// list yields `recommended`, and only for an entry a person checked: its `verified.date` is that check. The pin is the verified
+/// package at its exact version, or a hosted connector's address ([`curated_pin`]).
 #[must_use]
 pub fn boopis_connectors(
     catalog: &crate::connectors::catalog::Catalog,
@@ -191,16 +229,7 @@ pub fn boopis_connectors(
             d.license = Some(c.license.clone());
             d.homepage = Some(c.source.clone());
             d.version.clone_from(&c.verified.version);
-            d.pinned = c
-                .verified
-                .package
-                .as_ref()
-                .zip(c.verified.version.as_ref())
-                .map(|(p, v)| Pin {
-                    kind: PinKind::Version,
-                    value: v.clone(),
-                    repo: Some(format!("npm:{p}")),
-                });
+            d.pinned = curated_pin(c);
             let mut hosts: Vec<String> = Vec::new();
             let mut any = false;
             let mut loopback_only = true;
@@ -1270,6 +1299,55 @@ mod tests {
         assert!(fc.hosts.hosts.contains(&"mcp.firecrawl.dev".to_owned()));
         assert_eq!(fc.secrets.len(), 1);
         assert_eq!(fc.license, "MIT");
+    }
+
+    #[test]
+    fn each_curated_connector_is_pinned_the_way_it_runs_in_the_lists_order() {
+        let cat = crate::connectors::catalog::load().unwrap();
+        let items = boopis_connectors(cat, NOW);
+        let ids: Vec<String> = cat
+            .connectors
+            .iter()
+            .map(|c| format!("boopis:{}", c.id))
+            .collect();
+        assert_eq!(
+            items.iter().map(|e| e.item.id.clone()).collect::<Vec<_>>(),
+            ids,
+            "the list's order, most popular first"
+        );
+        let pin = |id: &str| {
+            let p = by_id(&items, id).pinned.clone().unwrap();
+            (p.kind, p.value, p.repo.unwrap())
+        };
+        // a Docker image by its digest
+        let gh = pin("boopis:github");
+        assert_eq!(
+            (gh.0, gh.2.as_str()),
+            (PinKind::OciDigest, "oci:ghcr.io/github/github-mcp-server")
+        );
+        assert!(gh.1.starts_with("sha256:") && gh.1.len() == 71, "{}", gh.1);
+        // an npm package at its exact version
+        assert_eq!(
+            pin("boopis:playwright"),
+            (
+                PinKind::Version,
+                "0.0.86".into(),
+                "npm:@playwright/mcp".into()
+            )
+        );
+        // a server only its publisher hosts, by its address at the version checked (the owner's decision of 21 November 2026)
+        assert_eq!(
+            pin("boopis:notion"),
+            (
+                PinKind::Version,
+                "1.0.1".into(),
+                "remote:https://mcp.notion.com/mcp".into()
+            )
+        );
+        for e in &items {
+            assert_eq!(e.item.tier, Tier::Recommended, "{}", e.item.id);
+            assert!(e.item.pinned.is_some(), "{}: pinned or refused", e.item.id);
+        }
     }
 
     #[test]

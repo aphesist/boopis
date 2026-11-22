@@ -1579,11 +1579,9 @@ async fn the_models_question_offers_the_subscription_with_a_note_when_claude_cod
     );
     assert_eq!(form.schema.0["properties"]["choice"]["default"], "free");
     assert!(
-        form.body.contains("Claude Code is not installed")
-            && form
-                .body
-                .contains("npm install -g @anthropic-ai/claude-code")
-            && form.body.contains("claude auth login"),
+        form.body.contains("is not installed yet")
+            && form.body.contains(claude::install_command())
+            && form.body.contains(claude::INSTALL_PAGE),
         "{}",
         form.body
     );
@@ -1603,7 +1601,7 @@ async fn the_models_question_offers_the_subscription_with_a_note_when_claude_cod
         form.body
     );
     assert!(
-        !form.body.contains("npm install"),
+        !form.body.contains(claude::install_command()),
         "signed out is not 'not installed'"
     );
 
@@ -1630,7 +1628,13 @@ async fn not_installed_shows_the_install_command_and_changes_nothing() {
     assert!(form.title.contains("Install Claude Code"), "{}", form.title);
     assert_eq!(
         rows(&form),
-        "Install it: `npm install -g @anthropic-ai/claude-code`"
+        format!(
+            "Install it: `{}`\nWhere: {}\nAnthropic's guide: {}",
+            claude::install_command(),
+            claude::Os::HERE.shell(),
+            claude::INSTALL_PAGE
+        ),
+        "Anthropic's own installer for this system, where to paste it, and Anthropic's page"
     );
     assert!(
         form.signin.is_none(),
@@ -1681,7 +1685,10 @@ async fn signed_out_offers_sign_in_to_claude_through_claude_code_s_own_login() {
         "no command to copy into a terminal"
     );
     assert!(
-        form.body.contains("Choose Sign in to Claude")
+        form.body
+            .contains("Choose Sign in: boopis runs Claude Code's own `claude auth login`")
+            && form.body.contains("opens your browser")
+            && form.body.matches("Choose Sign in").count() == 1
             && form.body.contains("never sees, reads or stores it"),
         "{}",
         form.body
@@ -1723,7 +1730,14 @@ async fn an_old_claude_code_is_told_the_minimum_and_how_to_update() {
         "{}",
         form.body
     );
-    assert_eq!(rows(&form), "Update it: `claude update`");
+    assert_eq!(
+        rows(&form),
+        format!(
+            "Update it: `claude update`\nWhere: {}\nAnthropic's guide: {}",
+            claude::Os::HERE.shell(),
+            claude::UPDATE_PAGE
+        )
+    );
 }
 
 #[tokio::test]
