@@ -443,46 +443,66 @@ fn keys(p: &mut Probe) {
         .filter(|(_, w)| w.kind == WayKind::Key && !w.hidden)
     {
         let service = format!("{} key", entry.label);
-        p.check(&service, &format!("check refuses a bad key ({})", way.id), || {
-            let found = check_way_key(&t, way, BAD_KEY);
-            let state = key_state(entry, way, &found, None);
-            let detail = state.detail.clone().unwrap_or_default();
-            if let Some(f) = plain_or_fail(&detail) {
-                return f;
-            }
-            match (&found, state.status, state.code.as_deref()) {
-                (Ok(KeyCheck::Rejected), ProviderStatus::Error, Some("hx.provider.key_rejected")) => {
-                    (Verdict::Pass, detail)
+        p.check(
+            &service,
+            &format!("check of a key no provider issued ({})", way.id),
+            || {
+                let found = check_way_key(&t, way, BAD_KEY);
+                let state = key_state(entry, way, &found, None);
+                let detail = state.detail.clone().unwrap_or_default();
+                if let Some(f) = plain_or_fail(&detail) {
+                    return f;
                 }
-                (Ok(KeyCheck::Unreachable), ..) => {
-                    let listing = way
-                        .base_url
-                        .as_ref()
-                        .and_then(|b| b.default.clone())
-                        .unwrap_or_default();
-                    let why = {
-                                        match t.get(&format!("{listing}/models"), &[]) {
-                            Ok(r) => blocked_by(r.status, &r.body),
-                            Err(e) => blocked_transport(&e).or(Some(e)),
-                        }
-                    };
-                    match why {
-                        Some(w) if blocked_transport(&w).is_some() || w.contains("Cloudflare") => {
-                            (Verdict::Blocked, format!("{w}; the card says: {detail}"))
-                        }
-                        Some(w) => (Verdict::Fail, format!("unreachable ({w}); the card says: {detail}")),
-                        None => (Verdict::Fail, format!("unreachable; the card says: {detail}")),
+                match (&found, state.status, state.code.as_deref()) {
+                    (
+                        Ok(KeyCheck::Rejected),
+                        ProviderStatus::Error,
+                        Some("hx.provider.key_rejected"),
+                    ) => (Verdict::Pass, detail),
+                    // a list open to anyone cannot tell a wrong key: the card must say so, not call the key accepted
+                    (Ok(KeyCheck::Public), ProviderStatus::Connected, None)
+                        if state.models_count.is_none() && detail.contains("anyone") =>
+                    {
+                        (Verdict::Pass, format!("open model list: {detail}"))
                     }
-                }
-                (found, status, code) => (
-                    Verdict::Fail,
-                    format!(
-                        "a bad key came out as {found:?}, {status:?} ({}): {detail}",
-                        code.unwrap_or("no code")
+                    (Ok(KeyCheck::Unreachable), ..) => {
+                        let listing = way
+                            .base_url
+                            .as_ref()
+                            .and_then(|b| b.default.clone())
+                            .unwrap_or_default();
+                        let why = {
+                            match t.get(&format!("{listing}/models"), &[]) {
+                                Ok(r) => blocked_by(r.status, &r.body),
+                                Err(e) => blocked_transport(&e).or(Some(e)),
+                            }
+                        };
+                        match why {
+                            Some(w)
+                                if blocked_transport(&w).is_some() || w.contains("Cloudflare") =>
+                            {
+                                (Verdict::Blocked, format!("{w}; the card says: {detail}"))
+                            }
+                            Some(w) => (
+                                Verdict::Fail,
+                                format!("unreachable ({w}); the card says: {detail}"),
+                            ),
+                            None => (
+                                Verdict::Fail,
+                                format!("unreachable; the card says: {detail}"),
+                            ),
+                        }
+                    }
+                    (found, status, code) => (
+                        Verdict::Fail,
+                        format!(
+                            "a bad key came out as {found:?}, {status:?} ({}): {detail}",
+                            code.unwrap_or("no code")
+                        ),
                     ),
-                ),
-            }
-        });
+                }
+            },
+        );
     }
 }
 

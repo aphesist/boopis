@@ -94,10 +94,38 @@ enum Attempt {
     Silent,
 }
 
+/// Whether an answer refuses the key: 401 or 403, or a 400 whose error is about the key. A listing is a bare `GET` whose only
+/// variable is the key, and some providers (xAI) answer a wrong one with 400 and "Incorrect API key provided"; the words stay here.
+#[must_use]
+pub fn refuses_key(reply: &Reply) -> bool {
+    match reply.status {
+        401 | 403 => true,
+        400 => {
+            let lower = reply
+                .body
+                .chars()
+                .take(2048)
+                .collect::<String>()
+                .to_ascii_lowercase();
+            [
+                "api key",
+                "api_key",
+                "apikey",
+                "authenticat",
+                "unauthorized",
+                "credential",
+            ]
+            .iter()
+            .any(|w| lower.contains(w))
+        }
+        _ => false,
+    }
+}
+
 fn classify(reply: &Reply, max: usize, max_chars: usize) -> Attempt {
     let status = reply.status;
     let outcome_models = match status {
-        401 | 403 => (EndpointOutcome::NeedsKey, Vec::new()),
+        _ if refuses_key(reply) => (EndpointOutcome::NeedsKey, Vec::new()),
         200..=299 => match parse_listing(&reply.body, max, max_chars) {
             Listing::Models(m) if m.is_empty() => (EndpointOutcome::Empty, m),
             Listing::Models(m) => (EndpointOutcome::Listed, m),
@@ -230,10 +258,13 @@ pub enum KeyCheck {
     Accepted(u32),
     /// The provider answered (this status), but not with a listing the check can read: the key is saved and not verified.
     Unverified(u16),
-    /// 401 or 403.
+    /// 401 or 403 (or a 400 about the key: [`refuses_key`]).
     Rejected,
     /// No answer.
     Unreachable,
+    /// The listing is open to anyone: it listed models without the key too, so it cannot tell a wrong key from a right one. The key
+    /// is saved and checked when it is first used.
+    Public,
 }
 
 /// Check a key with one model listing at `listing_url` (a fixed address from the data, https), following no redirect to another origin.

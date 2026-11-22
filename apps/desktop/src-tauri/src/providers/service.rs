@@ -653,8 +653,13 @@ pub fn check_way_key(t: &dyn Transport, way: &Way, key: &str) -> Result<KeyCheck
     let address = Address::parse(&base)?;
     let (url, key_route) = listing_url(&address, mode);
     Ok(match check_key(t, &address, &url, mode, key)? {
-        // a listing that is public (OpenRouter's) cannot tell a bad key; its key check answers 200 with no list
+        // OpenRouter's listing is public, so its key has its own route, which answers 200 with no list
         KeyCheck::Unverified(s) if key_route && (200..300).contains(&s) => KeyCheck::Accepted(0),
+        // a listing that lists models for any key may be open to anyone: asked once more with no key, it says which
+        KeyCheck::Accepted(n) if !key_route => match check_key(t, &address, &url, mode, "")? {
+            KeyCheck::Accepted(m) if m > 0 => KeyCheck::Public,
+            _ => KeyCheck::Accepted(n),
+        },
         c => c,
     })
 }
@@ -727,20 +732,31 @@ pub fn key_state(
             "hx.provider.key_rejected",
             "The provider did not accept that key. Check it, or make a new one.",
         ),
+        Ok(KeyCheck::Public) => {
+            let mut c = ProviderState::connected(e, w, WayKind::Key);
+            c.detail = Some(
+                "Saved. This provider shows its models to anyone, so boopis can check the key only when you first use it."
+                    .into(),
+            );
+            c
+        }
         Ok(KeyCheck::Unreachable) => ProviderState::error(
             e,
             w,
             WayKind::Key,
             "hx.provider.unreachable",
-            "boopis could not reach the provider to check the key. The key is saved.",
+            "boopis could not reach the provider to check the key. The key is saved. Check your internet connection or proxy.",
         ),
-        Err(err) => ProviderState::error(
-            e,
-            w,
-            WayKind::Key,
-            err.code(),
-            "boopis could not check the key. The key is saved.",
-        ),
+        Err(err) => {
+            crate::error::keep(err.code(), &err.to_string());
+            ProviderState::error(
+                e,
+                w,
+                WayKind::Key,
+                err.code(),
+                "boopis could not check the key. The key is saved.",
+            )
+        }
     };
     s.checked_at = Some(now_ms());
     if let (Some(n), None) = (note, s.code.as_ref()) {

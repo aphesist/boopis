@@ -266,17 +266,27 @@ async fn each_key_way_writes_exactly_its_config_keys_and_its_secret() {
             way.id
         );
 
-        // the check asked the way's own address, once, and nothing else
+        // the check asked the way's own address and nothing else: once with the key, and (a list came back) once without it,
+        // which tells a list open to anyone from one the key opened
         let seen = r.seen.lock().unwrap().clone();
-        assert_eq!(seen.len(), 1, "{}", way.id);
+        assert!((1..=2).contains(&seen.len()), "{}", way.id);
         let base = way.base_url.as_ref().unwrap().default.clone().unwrap();
         let host = url::Url::parse(&base).unwrap();
-        assert_eq!(
-            url::Url::parse(&seen[0].0).unwrap().host_str(),
-            host.host_str(),
-            "{}",
-            way.id
-        );
+        for (url, _) in &seen {
+            assert_eq!(
+                url::Url::parse(url).unwrap().host_str(),
+                host.host_str(),
+                "{}",
+                way.id
+            );
+        }
+        if let Some((_, headers)) = seen.get(1) {
+            assert!(
+                !headers.iter().any(|(_, v)| v.contains(KEY)),
+                "{}: the second ask carries no key",
+                way.id
+            );
+        }
 
         // running it again with the same key changes nothing in the configuration
         let before = r.fake.sets().len();
@@ -456,6 +466,52 @@ async fn the_check_says_what_the_provider_said_and_the_key_stays_saved() {
             );
         }
     }
+}
+
+/// What the live probe found (`tests/live_signins.rs`): xAI answers a wrong key with 400 and "Incorrect API key provided", and six
+/// providers list their models for any key at all. A wrong key is refused in plain words, and a list open to anyone is not taken
+/// for an accepted key.
+#[tokio::test]
+async fn a_400_about_the_key_refuses_it_and_an_open_list_is_not_an_accepted_key() {
+    let r = rig(vec![answer(
+        400,
+        r#"{"code":"invalid-argument","error":"Incorrect API key provided. You can obtain an API key from https://console.x.ai."}"#,
+    )]);
+    let s = r.svc.set_key("xai.key", KEY).await.unwrap();
+    assert_eq!(s.status, ProviderStatus::Error);
+    assert_eq!(s.code.as_deref(), Some("hx.provider.key_rejected"));
+    assert!(!s.detail.as_deref().unwrap().contains("console.x.ai"));
+    // a 400 about something else is not a refused key
+    let r = rig(vec![answer(400, r#"{"error":"model field is required"}"#)]);
+    let s = r.svc.set_key("deepseek.key", KEY).await.unwrap();
+    assert_eq!(s.status, ProviderStatus::Connected);
+
+    // the same list with no key at all: open to anyone, so the key is saved and not called accepted
+    let r = rig(vec![listing(&["a", "b"]), listing(&["a", "b"])]);
+    let s = r.svc.set_key("nvidia.key", KEY).await.unwrap();
+    assert_eq!(s.status, ProviderStatus::Connected);
+    assert_eq!(s.models_count, None, "no count that suggests the key works");
+    assert!(
+        s.detail
+            .as_deref()
+            .unwrap()
+            .contains("shows its models to anyone"),
+        "{:?}",
+        s.detail
+    );
+    let seen = r.seen.lock().unwrap().clone();
+    assert_eq!(seen.len(), 2);
+    assert!(
+        !seen[1]
+            .1
+            .iter()
+            .any(|(k, _)| k.eq_ignore_ascii_case("authorization")),
+        "the second ask carries no key"
+    );
+    // a list that needs the key: the second ask is refused, and the key is accepted with its count
+    let r = rig(vec![listing(&["a", "b"]), answer(401, "{}")]);
+    let s = r.svc.set_key("nvidia.key", KEY).await.unwrap();
+    assert_eq!(s.models_count, Some(2));
 }
 
 #[tokio::test]
@@ -1185,6 +1241,7 @@ fn the_check_enum_is_what_the_state_reads() {
         KeyCheck::Unverified(404),
         KeyCheck::Rejected,
         KeyCheck::Unreachable,
+        KeyCheck::Public,
     ] {
         let _ = format!("{c:?}");
     }
